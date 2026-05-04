@@ -46,18 +46,18 @@ export default defineEventHandler(async (event) => {
   ])
 
   const [sites, games] = await Promise.all([
-    $fetch<ApiResult<SiteRecord[]>>('/nav/page/site/list', {
-      baseURL: config.navApiInternalBase,
+    $fetch<ApiResult<SiteRecord[]>>('/api/nav/page/site/list', {
       query: { lang: 'zh' }
     }).then((res) => res.code === 1 ? res.data : []).catch(() => []),
-    $fetch<ApiResult<GameListPayload>>('/game/info/list', {
-      baseURL: config.gameApiInternalBase,
+    $fetch<ApiResult<GameListPayload>>('/api/game/info/list', {
       query: { num: '9999', lang: 'zh' }
     }).then((res) => res.code === 1 ? res.data : []).catch(() => [])
   ])
 
   for (const site of sites) {
-    urls.add(`/sites/${site.id}`)
+    if (site?.id != null) {
+      urls.add(`/sites/${String(site.id)}`)
+    }
   }
 
   const gameList = Array.isArray(games)
@@ -66,8 +66,8 @@ export default defineEventHandler(async (event) => {
 
   for (const game of gameList) {
     const gameId = game.id ?? game.game_id
-    if (gameId) {
-      urls.add(`/games/${gameId}`)
+    if (gameId != null && gameId !== '') {
+      urls.add(`/games/${String(gameId)}`)
     }
   }
 
