@@ -38,6 +38,8 @@ func (s *Server) RegisterRoutes(v1 fiber.Router) {
 	protected.Get("/documents", s.listDocuments)
 	protected.Get("/documents/:id/chunks", s.listChunks)
 	protected.Delete("/documents/:id", s.deleteDocument)
+	protected.Patch("/chunks/:id", s.updateChunk)
+	protected.Delete("/chunks/:id", s.deleteChunk)
 	v1.Post("/chat/query", s.query)
 }
 
@@ -173,6 +175,39 @@ func (s *Server) deleteDocument(c fiber.Ctx) error {
 		return fail(c, service.ErrValidation)
 	}
 	if err := s.service.DeleteDocument(context.Background(), id); err != nil {
+		return fail(c, err)
+	}
+	return ok(c, fiber.Map{"deleted": true})
+}
+
+func (s *Server) updateChunk(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fail(c, service.ErrValidation)
+	}
+	var req service.UpdateChunkRequest
+	if err := json.Unmarshal(c.Body(), &req); err != nil {
+		return fail(c, err)
+	}
+	chunk, err := s.service.UpdateChunk(context.Background(), id, req)
+	if err != nil {
+		return fail(c, err)
+	}
+	return ok(c, chunk)
+}
+
+func (s *Server) deleteChunk(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fail(c, service.ErrValidation)
+	}
+	if err := s.service.DeleteChunk(context.Background(), id); err != nil {
 		return fail(c, err)
 	}
 	return ok(c, fiber.Map{"deleted": true})

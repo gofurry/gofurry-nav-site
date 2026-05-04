@@ -112,6 +112,32 @@ func TestQueryReturnsSources(t *testing.T) {
 	}
 }
 
+func TestUpdateAndDeleteChunkRequireCookie(t *testing.T) {
+	app := testApp()
+	cookie := loginCookie(t, app)
+
+	updateReq := httptest.NewRequest(http.MethodPatch, "/api/v1/admin/chunks/1", bytes.NewBufferString(`{"content":"updated chunk"}`))
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateReq.AddCookie(cookie)
+	updateResp, err := app.Test(updateReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updateResp.StatusCode != http.StatusOK {
+		t.Fatalf("update status = %d", updateResp.StatusCode)
+	}
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/chunks/1", nil)
+	deleteReq.AddCookie(cookie)
+	deleteResp, err := app.Test(deleteReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if deleteResp.StatusCode != http.StatusOK {
+		t.Fatalf("delete status = %d", deleteResp.StatusCode)
+	}
+}
+
 func TestLogoutClearsCookie(t *testing.T) {
 	app := testApp()
 	cookie := loginCookie(t, app)
@@ -208,6 +234,14 @@ func (r *fakeRepo) ListDocuments(ctx context.Context, filter db.ListDocumentsFil
 
 func (r *fakeRepo) ListChunks(ctx context.Context, documentID int64, page, pageSize int) (db.PageResult[db.Chunk], error) {
 	return db.PageResult[db.Chunk]{Items: []db.Chunk{}, Total: 0}, nil
+}
+
+func (r *fakeRepo) UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int) (db.Chunk, error) {
+	return db.Chunk{ID: id, DocumentID: 1, Content: content, ContentHash: contentHash, TokenCount: tokenCount}, nil
+}
+
+func (r *fakeRepo) DeleteChunk(ctx context.Context, id int64) error {
+	return nil
 }
 
 func (r *fakeRepo) DeleteDocument(ctx context.Context, id int64) error {

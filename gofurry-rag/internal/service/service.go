@@ -19,6 +19,8 @@ type Repository interface {
 	CreateDocument(ctx context.Context, params db.CreateDocumentParams) (db.Document, error)
 	ListDocuments(ctx context.Context, filter db.ListDocumentsFilter) (db.PageResult[db.Document], error)
 	ListChunks(ctx context.Context, documentID int64, page, pageSize int) (db.PageResult[db.Chunk], error)
+	UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int) (db.Chunk, error)
+	DeleteChunk(ctx context.Context, id int64) error
 	DeleteDocument(ctx context.Context, id int64) error
 	Overview(ctx context.Context) (db.Overview, error)
 	SearchChunks(ctx context.Context, embedding []float64, topK int) ([]db.Source, error)
@@ -42,6 +44,10 @@ type TextDocumentRequest struct {
 type QueryRequest struct {
 	Question string `json:"question"`
 	TopK     int    `json:"top_k"`
+}
+
+type UpdateChunkRequest struct {
+	Content string `json:"content"`
 }
 
 type QueryResponse struct {
@@ -132,6 +138,24 @@ func (s *Service) ListChunks(ctx context.Context, documentID int64, page, pageSi
 		return db.PageResult[db.Chunk]{}, wrapValidation("document id is required")
 	}
 	return s.repo.ListChunks(ctx, documentID, page, pageSize)
+}
+
+func (s *Service) UpdateChunk(ctx context.Context, id int64, req UpdateChunkRequest) (db.Chunk, error) {
+	if id <= 0 {
+		return db.Chunk{}, wrapValidation("chunk id is required")
+	}
+	content := strings.TrimSpace(req.Content)
+	if content == "" {
+		return db.Chunk{}, wrapValidation("content is required")
+	}
+	return s.repo.UpdateChunkContent(ctx, id, content, ingest.Checksum(content), len([]rune(content)))
+}
+
+func (s *Service) DeleteChunk(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return wrapValidation("chunk id is required")
+	}
+	return s.repo.DeleteChunk(ctx, id)
 }
 
 func (s *Service) DeleteDocument(ctx context.Context, id int64) error {

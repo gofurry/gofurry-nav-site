@@ -273,13 +273,37 @@ LIMIT $2 OFFSET $3
 
 	items := []Chunk{}
 	for rows.Next() {
-		var item Chunk
-		if err := rows.Scan(&item.ID, &item.DocumentID, &item.ChunkIndex, &item.Content, &item.ContentHash, &item.TokenCount, &item.HasEmbedding, &item.EmbeddingDim, &item.CreatedAt); err != nil {
+		item, err := scanChunk(rows)
+		if err != nil {
 			return PageResult[Chunk]{}, err
 		}
 		items = append(items, item)
 	}
 	return PageResult[Chunk]{Items: items, Total: total}, rows.Err()
+}
+
+func (r *Repository) UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int) (Chunk, error) {
+	row := r.pool.QueryRow(ctx, `
+UPDATE rag_chunks
+SET content = $2, content_hash = $3, token_count = $4, embedding = NULL
+WHERE id = $1
+RETURNING id, document_id, chunk_index, content, content_hash, COALESCE(token_count, 0),
+       embedding IS NOT NULL AS has_embedding,
+       CASE WHEN embedding IS NULL THEN 0 ELSE vector_dims(embedding) END AS embedding_dim,
+       created_at
+`, id, content, contentHash, tokenCount)
+	return scanChunk(row)
+}
+
+func (r *Repository) DeleteChunk(ctx context.Context, id int64) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM rag_chunks WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
 }
 
 func (r *Repository) DeleteDocument(ctx context.Context, id int64) error {
@@ -385,6 +409,12 @@ func scanDocumentWithCount(row pgx.Row) (Document, error) {
 	var doc Document
 	err := row.Scan(&doc.ID, &doc.SourceType, &doc.SourceID, &doc.Title, &doc.URL, &doc.Checksum, &doc.Content, &doc.Status, &doc.ErrorMessage, &doc.Metadata, &doc.CreatedAt, &doc.UpdatedAt, &doc.ChunkCount)
 	return doc, err
+}
+
+func scanChunk(row pgx.Row) (Chunk, error) {
+	var item Chunk
+	err := row.Scan(&item.ID, &item.DocumentID, &item.ChunkIndex, &item.Content, &item.ContentHash, &item.TokenCount, &item.HasEmbedding, &item.EmbeddingDim, &item.CreatedAt)
+	return item, err
 }
 
 func normalizePage(page, pageSize int) (int, int) {

@@ -5,6 +5,8 @@
 **/build/
 **/dist/
 **/coverage/
+!gofurry-rag/internal/web/dist/
+!gofurry-rag/internal/web/dist/**
 
 # Runtime files
 **/logs/

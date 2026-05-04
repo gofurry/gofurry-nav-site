@@ -74,6 +74,17 @@ export function deleteDocument(documentId: number) {
   return request<{ deleted: boolean }>(`/api/v1/admin/documents/${documentId}`, { method: 'DELETE' })
 }
 
+export function updateChunk(chunkId: number, content: string) {
+  return request<ChunkItem>(`/api/v1/admin/chunks/${chunkId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ content }),
+  })
+}
+
+export function deleteChunk(chunkId: number) {
+  return request<{ deleted: boolean }>(`/api/v1/admin/chunks/${chunkId}`, { method: 'DELETE' })
+}
+
 export function queryRag(question: string, topK: number) {
   return request<QueryResponse>('/api/v1/chat/query', {
     method: 'POST',
