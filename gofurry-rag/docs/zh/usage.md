@@ -76,8 +76,12 @@ go run . --config ./config/server.yaml uninstall
 ## 控制台
 
 - 登录使用 `auth.console_passcode` 配置的唯一口令。
+- 管理接口通过 HttpOnly JWT Cookie 鉴权，不再使用 Admin Token 或 Bearer Header。
 - 整体态势页每 5 秒自动刷新，展示文档总量、chunk 总量、状态分布、数据库连接信息和 Ollama 连接信息。
-- 文档列表 tab 打开时每 3 秒自动刷新，所以入库后的 pending 状态会自动变成 ready。
+- 文档管理支持手动文本入库，也支持拖拽文件和批量导入文件。
+- 文档列表每页 6 条，打开文档 tab 时每 3 秒自动刷新。
+- Chunks tab 左侧文档列表每页 7 条，可按文档标题或 ID 搜索。
+- Chunk 支持查看、编辑和删除；编辑保存时会重新生成 embedding 并写回 pgvector。
 - 文档检索页调用公开检索接口，并展示返回的 sources。
 
 ## 文本入库
@@ -99,15 +103,19 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
   -d '{"title":"GoFurry","content":"GoFurry is a content discovery website.","source_type":"manual"}'
 ```
 
-只有 `content` 是必填字段。`title` 强烈建议填写，方便检索结果和来源展示。`source_type`、`source_id`、`url` 是可选的来源追踪字段：
+只有 `content` 是必填字段。`title` 强烈建议填写，方便检索结果和来源展示。
 
-- `source_type`：文本来源类型，例如 `manual`、`website`、`nav`、`game`。
-- `source_id`：外部系统里的唯一 ID，例如页面 slug、文章 ID、站点 ID、游戏 ID。
-- `url`：原始页面 URL，方便后续展示引用和回溯来源。
+`source_type`、`source_id`、`url` 是可选的来源追踪字段：
+
+- `source_type`：文本来源类型，例如 `manual`、`website`、`nav`、`game`、`file`
+- `source_id`：外部系统里的唯一 ID，例如页面 slug、文章 ID、站点 ID、游戏 ID、文件名
+- `url`：原始页面 URL，方便后续展示引用和回溯来源
 
 这些字段对后续爬虫导入、重新索引、按来源删除、展示引用很有用。手动录入普通文本时，保留 `source_type: "manual"` 就够了。
 
-服务会创建 pending 文档，ingest worker 会异步切分并写入 embedding。
+文件导入会使用去掉后缀的文件名作为标题，文件内容作为正文。
+
+服务会创建 `pending` 文档，ingest worker 会异步切分并写入 embedding。
 
 ## 检索
 
@@ -126,3 +134,7 @@ curl http://127.0.0.1:8080/api/v1/health
 ```
 
 返回内容包含整体状态、数据库连接信息和 Ollama 模型信息。
+
+## 后续路线图
+
+后续优化方向见 [Roadmap](./roadmap.md)。

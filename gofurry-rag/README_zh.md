@@ -9,12 +9,15 @@
 
 ## 功能
 
-- Cobra CLI 与 Viper `server.yaml` 配置，骨架对齐 `gofurry-admin`
+- Cobra CLI 与 Viper `server.yaml` 配置，启动骨架对齐 `gofurry-admin`
 - 单个 Go 二进制，内嵌 Vue + Tailwind 暗色控制台
 - PostgreSQL + pgvector 存储
 - Ollama embedding client，默认模型 `qwen3-embedding:0.6b`
 - 异步文本入库 worker
-- 管理接口使用 HttpOnly JWT Cookie 登录态
+- 控制台使用唯一口令登录，服务端签发 HttpOnly JWT Cookie
+- 文本入库支持手动表单和文件拖拽/批量导入
+- 文档管理支持状态过滤、分页、删除确认、Chunks 查看/编辑/删除
+- Chunk 编辑保存时会同步重新生成 embedding 并写回 pgvector
 - 检索接口公开，只返回 `sources`，暂不生成自然语言答案
 - 控制台整体态势自动刷新，展示文档、chunk、数据库和 Ollama 状态
 
@@ -65,6 +68,8 @@ go build ./cmd/server
 - `POST /api/v1/admin/documents/text`
 - `GET /api/v1/admin/documents`
 - `GET /api/v1/admin/documents/:id/chunks`
+- `PATCH /api/v1/admin/chunks/:id`
+- `DELETE /api/v1/admin/chunks/:id`
 - `DELETE /api/v1/admin/documents/:id`
 - `POST /api/v1/chat/query`
 - `GET /livez`、`GET /readyz`、`GET /startupz`、`GET /healthz`
@@ -88,6 +93,7 @@ APP_SERVER_PORT=8081 APP_RAG_OLLAMA_BASE_URL=http://127.0.0.1:11434 go run . --c
 ## 文档
 
 - [使用说明](./docs/zh/usage.md)
+- [Roadmap](./docs/zh/roadmap.md)
 - [冒烟测试](./docs/zh/smoke-test.md)
 - [MVP 设计](./docs/rag-design.md)
 
