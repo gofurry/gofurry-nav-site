@@ -1,4 +1,4 @@
-import type { ApiResult, AuthState, ChunkItem, DocumentItem, Overview, PageResult, QueryResponse } from './types'
+import type { ApiResult, AuthState, ChunkItem, DocumentItem, HealthInfo, Overview, PageResult, QueryResponse } from './types'
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
@@ -33,7 +33,7 @@ export function logout() {
 }
 
 export function health() {
-  return request<Record<string, unknown>>('/api/v1/health')
+  return request<HealthInfo>('/api/v1/health')
 }
 
 export function overview() {

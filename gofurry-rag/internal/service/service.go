@@ -64,14 +64,31 @@ func (s *Service) Health(ctx context.Context) map[string]any {
 		"status":          "ok",
 		"app_name":        s.cfg.AppName,
 		"embedding_model": s.embedder.Model(),
+		"database": map[string]any{
+			"type":      s.cfg.Database.DBType,
+			"name":      s.cfg.Database.Postgres.DBName,
+			"host":      s.cfg.Database.Postgres.DBHost,
+			"port":      s.cfg.Database.Postgres.DBPort,
+			"connected": true,
+		},
+		"ollama": map[string]any{
+			"base_url":  s.cfg.OllamaBaseURL,
+			"model":     s.embedder.Model(),
+			"embed_dim": s.cfg.EmbedDim,
+			"healthy":   true,
+		},
 	}
 	if err := s.repo.Ping(ctx); err != nil {
 		result["status"] = "degraded"
 		result["database_error"] = err.Error()
+		result["database"].(map[string]any)["connected"] = false
+		result["database"].(map[string]any)["error"] = err.Error()
 	}
 	if err := s.embedder.Health(ctx); err != nil {
 		result["status"] = "degraded"
 		result["ollama_error"] = err.Error()
+		result["ollama"].(map[string]any)["healthy"] = false
+		result["ollama"].(map[string]any)["error"] = err.Error()
 	}
 	return result
 }

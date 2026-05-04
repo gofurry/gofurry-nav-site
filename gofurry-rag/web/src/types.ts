@@ -26,6 +26,27 @@ export type Overview = {
   last_document_update_at?: string
 }
 
+export type HealthInfo = {
+  status: string
+  app_name?: string
+  embedding_model?: string
+  database?: {
+    type?: string
+    name?: string
+    host?: string
+    port?: string
+    connected?: boolean
+    error?: string
+  }
+  ollama?: {
+    base_url?: string
+    model?: string
+    embed_dim?: number
+    healthy?: boolean
+    error?: string
+  }
+}
+
 export type DocumentItem = {
   id: number
   title: string
