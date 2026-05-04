@@ -206,8 +206,8 @@
             <div v-else class="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
               <aside class="border border-white/10 bg-white/[0.03]">
                 <div class="border-b border-white/10 p-4">
-                  <Field label="按文档搜索 Chunks"><input v-model="chunkDocumentKeyword" class="control h-10" placeholder="输入文档标题或 ID" @keyup.enter="searchChunkDocuments" /></Field>
-                  <button class="ghost-button mt-3 w-full" type="button" @click="searchChunkDocuments"><Search :size="16" />搜索文档</button>
+                  <Field label="按文档搜索 Chunks"><input v-model="chunkDocumentKeyword" class="control h-10" placeholder="输入文档标题或 ID" @keyup.enter="searchChunkDocuments(1)" /></Field>
+                  <button class="ghost-button mt-3 w-full" type="button" @click="searchChunkDocuments(1)"><Search :size="16" />搜索文档</button>
                 </div>
                 <div class="thin-scrollbar max-h-[560px] overflow-auto">
                   <button v-for="doc in chunkDocuments.items" :key="doc.id" class="w-full border-b border-white/10 px-4 py-3 text-left transition hover:bg-white/[0.04]" :class="selectedDocument?.id === doc.id ? 'bg-teal-300/10 text-teal-100' : 'text-slate-300'" type="button" @click="openChunksForDocument(doc, false)">
@@ -216,6 +216,7 @@
                   </button>
                   <p v-if="chunkDocuments.items.length === 0" class="px-4 py-12 text-center text-sm text-slate-500">搜索文档后查看 chunks</p>
                 </div>
+                <PaginationBar :buttons="chunkDocumentPageButtons" :current-page="chunkDocumentPage" :total-pages="chunkDocumentTotalPages" v-model:jump="chunkDocumentJump" @go="goChunkDocumentPage" @jump="jumpChunkDocumentPage" />
               </aside>
               <section class="border border-white/10 bg-white/[0.03]">
                 <div class="flex items-center justify-between border-b border-white/10 p-4">
@@ -468,6 +469,8 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const pendingFiles = ref<PendingFile[]>([])
 const documentsPage = ref(1)
 const documentJump = ref('')
+const chunkDocumentPage = ref(1)
+const chunkDocumentJump = ref('')
 const chunkDocumentKeyword = ref('')
 const editingChunkId = ref<number | null>(null)
 const editingChunkContent = ref('')
@@ -492,6 +495,8 @@ const selectedDocumentLabel = computed(() => (selectedDocument.value ? '#' + sel
 const selectedStatusLabel = computed(() => statusOptions.find((item) => item.value === filters.status)?.label || '全部状态')
 const documentTotalPages = computed(() => Math.max(1, Math.ceil(Number(documents.total || 0) / 6)))
 const documentPageButtons = computed(() => buildPageButtons(documentsPage.value, documentTotalPages.value))
+const chunkDocumentTotalPages = computed(() => Math.max(1, Math.ceil(Number(chunkDocuments.total || 0) / 7)))
+const chunkDocumentPageButtons = computed(() => buildPageButtons(chunkDocumentPage.value, chunkDocumentTotalPages.value))
 const currentTitle = computed(() => {
   if (activeMenu.value === 'documents') return '文档管理'
   if (activeMenu.value === 'search') return '文档检索'
@@ -645,7 +650,7 @@ async function submitFiles() {
 function switchDocumentTab(tab: DocumentTab) {
   documentTab.value = tab
   if (tab === 'list') void loadDocuments(documentsPage.value)
-  if (tab === 'chunks') void searchChunkDocuments()
+  if (tab === 'chunks') void searchChunkDocuments(chunkDocumentPage.value)
 }
 
 async function openChunksForDocument(doc: DocumentItem, switchTab = true) {
@@ -661,12 +666,16 @@ async function reloadChunks() {
   await openChunksForDocument(selectedDocument.value, false)
 }
 
-async function searchChunkDocuments() {
-  const keyword = chunkDocumentKeyword.value.trim()
-  const numericID = /^\d+$/.test(keyword) ? `#${keyword}` : ''
-  const result = await listDocuments({ page: 1, page_size: 20, status: '', keyword: numericID ? '' : keyword })
-  chunkDocuments.items = numericID ? result.items.filter((doc) => doc.id === Number(keyword)) : result.items
-  chunkDocuments.total = chunkDocuments.items.length
+async function searchChunkDocuments(page = 1) {
+  chunkDocumentPage.value = page
+  const result = await listDocuments({ page: chunkDocumentPage.value, page_size: 7, status: '', keyword: chunkDocumentKeyword.value.trim() })
+  chunkDocuments.items = result.items
+  chunkDocuments.total = result.total
+  const maxPage = Math.max(1, Math.ceil(Number(result.total || 0) / 7))
+  if (chunkDocumentPage.value > maxPage) {
+    chunkDocumentPage.value = maxPage
+    await searchChunkDocuments(maxPage)
+  }
 }
 
 function askDeleteDocument(doc: DocumentItem) {
@@ -687,7 +696,7 @@ async function confirmDelete() {
       selectedDocument.value = null
       chunks.items = []
     }
-    await Promise.all([loadDocuments(documentsPage.value), loadOverview(), searchChunkDocuments()])
+    await Promise.all([loadDocuments(documentsPage.value), loadOverview(), searchChunkDocuments(chunkDocumentPage.value)])
     return
   }
   await deleteChunk(target.id)
@@ -703,7 +712,7 @@ function startEditChunk(chunk: ChunkItem) {
 async function saveChunk(id: number) {
   const updated = await updateChunk(id, editingChunkContent.value)
   const index = chunks.items.findIndex((item) => item.id === id)
-  if (index >= 0) chunks.items[index] = updated
+  if (index >= 0) chunks.items[index] = { ...updated, has_embedding: false, embedding_dim: 0 }
   editingChunkId.value = null
   editingChunkContent.value = ''
   notice.value = 'Chunk 已保存，旧 embedding 已清空。'
@@ -772,8 +781,22 @@ function jumpDocumentPage() {
   documentJump.value = ''
 }
 
+function goChunkDocumentPage(page: number) {
+  void searchChunkDocuments(clampChunkDocumentPage(page))
+}
+
+function jumpChunkDocumentPage() {
+  if (!chunkDocumentJump.value) return
+  void searchChunkDocuments(clampChunkDocumentPage(Number(chunkDocumentJump.value)))
+  chunkDocumentJump.value = ''
+}
+
 function clampPage(page: number) {
   return Math.min(Math.max(1, page), documentTotalPages.value)
+}
+
+function clampChunkDocumentPage(page: number) {
+  return Math.min(Math.max(1, page), chunkDocumentTotalPages.value)
 }
 
 function buildPageButtons(current: number, total: number) {

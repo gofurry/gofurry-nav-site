@@ -214,7 +214,7 @@ func (r *Repository) ListDocuments(ctx context.Context, filter ListDocumentsFilt
 	}
 	if filter.Keyword != "" {
 		args = append(args, "%"+filter.Keyword+"%")
-		clauses = append(clauses, fmt.Sprintf("d.title ILIKE $%d", len(args)))
+		clauses = append(clauses, fmt.Sprintf("(d.title ILIKE $%d OR d.id::text ILIKE $%d)", len(args), len(args)))
 	}
 	where := strings.Join(clauses, " AND ")
 
