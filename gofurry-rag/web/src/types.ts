@@ -75,8 +75,12 @@ export type ChunkItem = {
 export type QuerySource = {
   document_id: number
   chunk_id: number
+  source_type: string
+  source_id?: string
   title: string
   url?: string
+  chunk_index: number
+  token_count: number
   score: number
   content: string
 }
@@ -88,4 +92,31 @@ export type QueryResponse = {
     top_k: number
     embedding_model: string
   }
+}
+
+export type ChunkPreviewVariantInput = {
+  chunk_size: number
+  chunk_overlap: number
+}
+
+export type ChunkPreviewChunk = {
+  index: number
+  char_count: number
+  content: string
+}
+
+export type ChunkPreviewVariant = {
+  chunk_size: number
+  chunk_overlap: number
+  chunk_count: number
+  min_chars: number
+  max_chars: number
+  avg_chars: number
+  chunks: ChunkPreviewChunk[]
+}
+
+export type ChunkPreviewResponse = {
+  source: string
+  title: string
+  variants: ChunkPreviewVariant[]
 }

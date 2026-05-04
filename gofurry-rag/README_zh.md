@@ -19,7 +19,9 @@
 - 文件导入限制单文件 10 MiB，支持 txt、md、csv、json、yaml、log、html
 - 文档管理支持状态过滤、分页、删除确认、单文档重新索引
 - Chunks 支持查看、编辑、删除；编辑保存时会重新生成 embedding 并写回 pgvector
-- 检索接口公开，只返回 `sources`，暂不生成自然语言答案
+- 检索接口公开，只返回 `sources`，并提供 rank、score、来源和 chunk 调试字段；暂不生成自然语言答案
+- 控制台支持 chunk 参数切分预览，不调用 Ollama、不写数据库
+- 向量化输入会包含标题和来源上下文，展示和保存的 chunk 内容仍保持原文
 - 控制台整体态势自动刷新，展示文档、chunk、数据库和 Ollama 状态
 
 ## 快速开始
@@ -72,6 +74,7 @@ go build ./cmd/server
 - `POST /api/v1/admin/documents/:id/reindex`
 - `PATCH /api/v1/admin/chunks/:id`
 - `DELETE /api/v1/admin/chunks/:id`
+- `POST /api/v1/admin/debug/chunk-preview`
 - `DELETE /api/v1/admin/documents/:id`
 - `POST /api/v1/chat/query`
 - `GET /livez`、`GET /readyz`、`GET /startupz`、`GET /healthz`

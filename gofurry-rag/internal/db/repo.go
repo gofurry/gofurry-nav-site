@@ -56,8 +56,12 @@ type Chunk struct {
 type Source struct {
 	DocumentID int64   `json:"document_id"`
 	ChunkID    int64   `json:"chunk_id"`
+	SourceType string  `json:"source_type"`
+	SourceID   string  `json:"source_id,omitempty"`
 	Title      string  `json:"title"`
 	URL        string  `json:"url,omitempty"`
+	ChunkIndex int     `json:"chunk_index"`
+	TokenCount int     `json:"token_count"`
 	Score      float64 `json:"score"`
 	Content    string  `json:"content"`
 }
@@ -131,6 +135,27 @@ VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7::jsonb)
 RETURNING id, source_type, COALESCE(source_id, ''), COALESCE(title, ''), COALESCE(url, ''),
           checksum, content, status, error_message, metadata, created_at, updated_at
 `, params.SourceType, params.SourceID, params.Title, params.URL, params.Checksum, params.Content, string(params.Metadata))
+	return scanDocument(row)
+}
+
+func (r *Repository) GetDocument(ctx context.Context, id int64) (Document, error) {
+	row := r.pool.QueryRow(ctx, `
+SELECT id, source_type, COALESCE(source_id, ''), COALESCE(title, ''), COALESCE(url, ''),
+       checksum, content, status, error_message, metadata, created_at, updated_at
+FROM rag_documents
+WHERE id = $1
+`, id)
+	return scanDocument(row)
+}
+
+func (r *Repository) GetDocumentByChunkID(ctx context.Context, chunkID int64) (Document, error) {
+	row := r.pool.QueryRow(ctx, `
+SELECT d.id, d.source_type, COALESCE(d.source_id, ''), COALESCE(d.title, ''), COALESCE(d.url, ''),
+       d.checksum, d.content, d.status, d.error_message, d.metadata, d.created_at, d.updated_at
+FROM rag_documents d
+JOIN rag_chunks c ON c.document_id = d.id
+WHERE c.id = $1
+`, chunkID)
 	return scanDocument(row)
 }
 
@@ -383,7 +408,9 @@ func (r *Repository) SearchChunks(ctx context.Context, embedding []float64, topK
 		topK = 6
 	}
 	rows, err := r.pool.Query(ctx, `
-SELECT c.document_id, c.id AS chunk_id, COALESCE(d.title, ''), COALESCE(d.url, ''),
+SELECT c.document_id, c.id AS chunk_id, d.source_type, COALESCE(d.source_id, ''),
+       COALESCE(d.title, ''), COALESCE(d.url, ''),
+       c.chunk_index, COALESCE(c.token_count, 0),
        1 - (c.embedding <=> $1::vector) AS score, c.content
 FROM rag_chunks c
 JOIN rag_documents d ON d.id = c.document_id
@@ -399,7 +426,7 @@ LIMIT $2
 	sources := []Source{}
 	for rows.Next() {
 		var item Source
-		if err := rows.Scan(&item.DocumentID, &item.ChunkID, &item.Title, &item.URL, &item.Score, &item.Content); err != nil {
+		if err := rows.Scan(&item.DocumentID, &item.ChunkID, &item.SourceType, &item.SourceID, &item.Title, &item.URL, &item.ChunkIndex, &item.TokenCount, &item.Score, &item.Content); err != nil {
 			return nil, err
 		}
 		sources = append(sources, item)

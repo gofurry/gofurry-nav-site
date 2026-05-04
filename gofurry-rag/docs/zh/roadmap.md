@@ -37,7 +37,9 @@
 - 单文档支持重新索引：删除旧 chunks，将文档设为 `pending`，由现有 worker 重新切分和向量化。
 - Chunks tab 支持按文档标题或 ID 搜索，左侧文档列表每页 7 条。
 - Chunk 支持查看、编辑和删除；编辑保存时会重新生成 embedding 并写回 pgvector。
-- 查询页展示 top_k sources、score、标题和 chunk 内容。
+- 查询页展示 top_k sources、rank、score、document/chunk 标识、来源字段和 chunk 内容。
+- 控制台支持 chunk 参数切分预览，用于快速比较不同 `chunk_size/chunk_overlap` 的切分结果。
+- embedding 输入模板已加入标题、来源类型、来源 ID、URL 和 chunk 正文，新入库、reindex、chunk 编辑保存都会使用。
 - 已补充中文 usage、smoke-test、导入规范和 roadmap 入口。
 
 当前暂未实现：
@@ -46,7 +48,7 @@
 - 全量 reindex 和失败 retry。
 - metadata filter。
 - PDF、DOCX、OCR 等复杂文件解析。
-- 检索质量评估集和批量评估工具。
+- 检索质量测试集、评估记录模板和批量评估工具。
 
 ## v0.1.x：MVP 打磨与控制台完善
 
@@ -67,13 +69,19 @@
 
 目标：用真实问题证明“找得准”。
 
-建议新增：
+当前阶段已完成：
 
-- 建立 20 到 50 条真实问题测试集，覆盖站点介绍、导航条目、游戏内容、投稿规则、FAQ、更新日志和中英混合表达。
-- 增加评估记录模板，至少包含 question、expected_document、expected_keywords、top1/top3/top5 命中、score 分布和备注。
-- 在控制台强化查询调试体验：展示命中的 chunk、score、document、source 信息，并突出 top_k 排序。
-- 对比不同 chunk 参数，例如 `500/80`、`700/120`、`900/150`，观察 top1、top3 和无关 chunk 比例。
-- 优化 embedding 输入模板，在生成向量时加入标题、来源类型或上级 heading，但展示时仍保留原始 chunk 内容。
+- 控制台强化查询调试体验：展示命中的 rank、score、document、chunk、source、URL、token_count 和原始 chunk 内容。
+- `POST /api/v1/chat/query` 的 sources 增加 `source_type`、`source_id`、`chunk_index`、`token_count`，保持原有响应结构兼容。
+- 新增登录态切分预览接口 `POST /api/v1/admin/debug/chunk-preview`，可用已有文档正文或临时文本对比 `500/80`、`700/120`、`900/150` 等参数。
+- 切分预览只做 splitter 结果预览，不调用 Ollama、不写数据库、不改变现有文档。
+- 优化 embedding 输入模板：向量化时加入标题、来源类型、来源 ID、URL 和 chunk 正文；数据库保存的 chunk 内容仍保持原文片段。
+- 新入库、单文档 reindex、chunk 编辑保存都会使用新的 embedding 输入模板；旧数据需要手动重新索引后生效。
+
+本阶段暂缓：
+
+- 真实问题测试集暂不建立。
+- 评估记录模板暂不新增。
 
 阶段验收建议：
 

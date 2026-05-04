@@ -84,7 +84,8 @@ go run . --config ./config/server.yaml uninstall
 - 文档可以重新索引；重新索引会删除旧 chunks，把文档设为 `pending`，由后台 worker 重新切分和向量化。
 - Chunks tab 左侧文档列表每页 7 条，可按文档标题或 ID 搜索。
 - Chunk 支持查看、编辑和删除；编辑保存时会重新生成 embedding 并写回 pgvector。
-- 文档检索页调用公开检索接口，并展示返回的 sources。
+- 文档检索页调用公开检索接口，并展示 rank、score、document、chunk、source、URL、token_count 和原始 chunk 内容。
+- 文档检索页提供切分预览工具，可对已有文档或临时文本预览不同 `chunk_size/chunk_overlap` 的切分结果。
 
 ## 导入规范
 
@@ -119,7 +120,7 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
   -d '{"title":"GoFurry","content":"GoFurry is a content discovery website.","source_type":"manual"}'
 ```
 
-服务会创建 `pending` 文档，ingest worker 会异步切分并写入 embedding。
+服务会创建 `pending` 文档，ingest worker 会异步切分并写入 embedding。向量化时会把标题、来源类型、来源 ID、URL 和 chunk 正文组合成 embedding 输入；数据库中保存和展示的 chunk 内容仍保持原文。
 
 ## 重新索引
 
@@ -128,7 +129,31 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/1/reindex \
   -b cookies.txt
 ```
 
-重新索引会删除该文档旧 chunks，把文档设为 `pending`。在 worker 重新处理完成前，该文档会短暂不可检索。
+重新索引会删除该文档旧 chunks，把文档设为 `pending`。在 worker 重新处理完成前，该文档会短暂不可检索。旧数据如果需要使用新的 embedding 输入模板，也通过单文档重新索引迁移。
+
+## 切分预览
+
+切分预览是登录态管理接口，只预览 splitter 结果，不调用 Ollama，不写数据库。
+
+使用已有文档正文：
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/debug/chunk-preview \
+  -b cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"document_id":1}'
+```
+
+使用临时文本和自定义参数：
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/debug/chunk-preview \
+  -b cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"text":"GoFurry knowledge text","variants":[{"chunk_size":500,"chunk_overlap":80},{"chunk_size":700,"chunk_overlap":120}]}'
+```
+
+响应会返回每组参数的 chunk 数、最短/最长/平均字符数和前 20 个 chunk 预览。
 
 ## 检索
 
@@ -139,6 +164,8 @@ curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
 ```
 
 `POST /api/v1/chat/query` 是公开接口，不需要管理端 Cookie。
+
+返回的 `sources` 会包含调试字段：`source_type`、`source_id`、`chunk_index`、`token_count`。这些字段用于判断命中来自哪个来源、哪个文档和哪个 chunk。
 
 ## 健康检查
 

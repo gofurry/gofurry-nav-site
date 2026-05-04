@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -151,12 +152,112 @@ func TestQueryReturnsSources(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d", resp.StatusCode)
 	}
-	var result Result
+	var result struct {
+		Code int                   `json:"code"`
+		Data service.QueryResponse `json:"data"`
+	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		t.Fatal(err)
 	}
 	if result.Code != 1 {
 		t.Fatalf("result = %+v", result)
+	}
+	if len(result.Data.Sources) != 1 {
+		t.Fatalf("sources = %+v", result.Data.Sources)
+	}
+	source := result.Data.Sources[0]
+	if source.SourceType != "manual" || source.SourceID != "about" || source.ChunkIndex != 2 || source.TokenCount != 6 {
+		t.Fatalf("source debug fields = %+v", source)
+	}
+}
+
+func TestChunkPreviewRequiresCookie(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/debug/chunk-preview", bytes.NewBufferString(`{"text":"hello"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestChunkPreviewWithText(t *testing.T) {
+	app := testApp()
+	cookie := loginCookie(t, app)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/debug/chunk-preview", bytes.NewBufferString(`{"text":"`+strings.Repeat("猫", 25)+`","variants":[{"chunk_size":10,"chunk_overlap":3}]}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	var result struct {
+		Code int                          `json:"code"`
+		Data service.ChunkPreviewResponse `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != 1 || result.Data.Source != "text" || len(result.Data.Variants) != 1 {
+		t.Fatalf("result = %+v", result)
+	}
+	if result.Data.Variants[0].ChunkCount != 4 || len(result.Data.Variants[0].Chunks) != 4 {
+		t.Fatalf("variant = %+v", result.Data.Variants[0])
+	}
+}
+
+func TestChunkPreviewWithDocument(t *testing.T) {
+	app := testApp()
+	cookie := loginCookie(t, app)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/admin/documents/text", bytes.NewBufferString(`{"title":"T","content":"hello world","source_type":"manual"}`))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq.AddCookie(cookie)
+	if resp, err := app.Test(createReq); err != nil {
+		t.Fatal(err)
+	} else if resp.StatusCode != http.StatusOK {
+		t.Fatalf("create status = %d", resp.StatusCode)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/debug/chunk-preview", bytes.NewBufferString(`{"document_id":1}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	var result struct {
+		Code int                          `json:"code"`
+		Data service.ChunkPreviewResponse `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != 1 || result.Data.Source != "document" || result.Data.Title != "T" || len(result.Data.Variants) != 3 {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
+func TestChunkPreviewRejectsInvalidVariant(t *testing.T) {
+	app := testApp()
+	cookie := loginCookie(t, app)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/debug/chunk-preview", bytes.NewBufferString(`{"text":"hello","variants":[{"chunk_size":10,"chunk_overlap":10}]}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d", resp.StatusCode)
 	}
 }
 
@@ -264,6 +365,9 @@ func (r *fakeRepo) CreateDocument(ctx context.Context, params db.CreateDocumentP
 		ID:         r.next,
 		Title:      params.Title,
 		SourceType: params.SourceType,
+		SourceID:   params.SourceID,
+		URL:        params.URL,
+		Content:    params.Content,
 		Status:     db.StatusPending,
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
@@ -271,6 +375,21 @@ func (r *fakeRepo) CreateDocument(ctx context.Context, params db.CreateDocumentP
 	r.next++
 	r.docs = append(r.docs, doc)
 	return doc, nil
+}
+
+func (r *fakeRepo) GetDocument(ctx context.Context, id int64) (db.Document, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, doc := range r.docs {
+		if doc.ID == id {
+			return doc, nil
+		}
+	}
+	return db.Document{}, service.ErrValidation
+}
+
+func (r *fakeRepo) GetDocumentByChunkID(ctx context.Context, chunkID int64) (db.Document, error) {
+	return db.Document{ID: 1, Title: "GoFurry", SourceType: "manual", SourceID: "about"}, nil
 }
 
 func (r *fakeRepo) ListDocuments(ctx context.Context, filter db.ListDocumentsFilter) (db.PageResult[db.Document], error) {
@@ -315,7 +434,7 @@ func (r *fakeRepo) Overview(ctx context.Context) (db.Overview, error) {
 }
 
 func (r *fakeRepo) SearchChunks(ctx context.Context, embedding []float64, topK int) ([]db.Source, error) {
-	return []db.Source{{DocumentID: 1, ChunkID: 1, Title: "GoFurry", Score: 0.9, Content: "source"}}, nil
+	return []db.Source{{DocumentID: 1, ChunkID: 1, SourceType: "manual", SourceID: "about", Title: "GoFurry", ChunkIndex: 2, TokenCount: 6, Score: 0.9, Content: "source"}}, nil
 }
 
 type fakeEmbedder struct{}

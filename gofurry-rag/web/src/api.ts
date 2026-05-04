@@ -1,4 +1,15 @@
-import type { ApiResult, AuthState, ChunkItem, DocumentItem, HealthInfo, Overview, PageResult, QueryResponse } from './types'
+import type {
+  ApiResult,
+  AuthState,
+  ChunkItem,
+  ChunkPreviewResponse,
+  ChunkPreviewVariantInput,
+  DocumentItem,
+  HealthInfo,
+  Overview,
+  PageResult,
+  QueryResponse,
+} from './types'
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
@@ -95,5 +106,16 @@ export function queryRag(question: string, topK: number) {
   return request<QueryResponse>('/api/v1/chat/query', {
     method: 'POST',
     body: JSON.stringify({ question, top_k: topK }),
+  })
+}
+
+export function chunkPreview(payload: {
+  document_id?: number
+  text?: string
+  variants?: ChunkPreviewVariantInput[]
+}) {
+  return request<ChunkPreviewResponse>('/api/v1/admin/debug/chunk-preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   })
 }

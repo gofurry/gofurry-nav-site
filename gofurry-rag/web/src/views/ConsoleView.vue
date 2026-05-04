@@ -262,23 +262,94 @@
             </div>
           </section>
 
-          <section v-else key="search" class="grid gap-6 xl:grid-cols-[520px_1fr]">
-            <form class="border border-white/10 bg-white/[0.035] p-6" @submit.prevent="runQuery">
-              <Field label="问题"><textarea v-model="question" class="control min-h-36 resize-none py-3" /></Field>
-              <Field label="Top K"><input v-model="topKText" class="control" inputmode="numeric" pattern="[0-9]*" @input="sanitizeTopK" /></Field>
-              <button class="primary-button mt-5" :disabled="busy" type="submit"><Search :size="17" />检索</button>
-            </form>
-            <div class="border border-white/10 bg-white/[0.03] p-6">
-              <div class="mb-5 flex items-center gap-2 text-slate-300"><BookOpen :size="18" class="text-teal-200" />Sources</div>
-              <div v-if="!queryResult" class="py-20 text-center text-sm text-slate-500">等待检索</div>
-              <div v-else class="space-y-4">
-                <p class="text-slate-300">{{ queryResult.answer }}</p>
-                <article v-for="source in queryResult.sources" :key="source.chunk_id" class="border-l border-teal-300/40 bg-black/20 p-4">
-                  <div class="mb-2 flex items-center justify-between gap-4"><strong class="text-sm text-white">{{ source.title || documentLabel(source.document_id) }}</strong><span class="text-xs text-teal-200">{{ source.score.toFixed(4) }}</span></div>
-                  <p class="whitespace-pre-wrap break-words text-sm leading-6 text-slate-400">{{ source.content }}</p>
-                </article>
+          <section v-else key="search" class="space-y-6">
+            <div class="grid gap-6 xl:grid-cols-[460px_minmax(0,1fr)]">
+              <form class="border border-white/10 bg-white/[0.035] p-6" @submit.prevent="runQuery">
+                <Field label="问题"><textarea v-model="question" class="control min-h-36 resize-none py-3" /></Field>
+                <Field label="Top K"><input v-model="topKText" class="control" inputmode="numeric" pattern="[0-9]*" @input="sanitizeTopK" /></Field>
+                <button class="primary-button mt-5" :disabled="busy" type="submit"><Search :size="17" />检索</button>
+              </form>
+              <div class="border border-white/10 bg-white/[0.03] p-6">
+                <div class="mb-5 flex items-center justify-between gap-4">
+                  <div class="flex items-center gap-2 text-slate-300"><BookOpen :size="18" class="text-teal-200" />Sources 调试</div>
+                  <span v-if="queryResult" class="text-xs text-slate-500">top_k {{ queryResult.usage.top_k }} / {{ queryResult.usage.embedding_model }}</span>
+                </div>
+                <div v-if="!queryResult" class="py-20 text-center text-sm text-slate-500">等待检索</div>
+                <div v-else class="space-y-4">
+                  <p class="text-sm text-slate-400">{{ queryResult.answer }}</p>
+                  <article v-for="(source, index) in queryResult.sources" :key="source.chunk_id" class="border border-white/10 bg-black/20 p-4 transition hover:border-teal-300/30">
+                    <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span class="status-pill border-teal-300/30 bg-teal-300/10 text-teal-100">#{{ index + 1 }}</span>
+                          <strong class="text-sm text-white">{{ source.title || documentLabel(source.document_id) }}</strong>
+                        </div>
+                        <p class="mt-2 text-xs text-slate-500">{{ sourceDebugLine(source) }}</p>
+                      </div>
+                      <span class="text-sm font-semibold text-teal-200">{{ source.score.toFixed(4) }}</span>
+                    </div>
+                    <a v-if="source.url" class="mb-3 block truncate text-xs text-teal-200/80 hover:text-teal-100" :href="source.url" target="_blank" rel="noreferrer">{{ source.url }}</a>
+                    <p class="whitespace-pre-wrap break-words border-l border-white/10 pl-4 text-sm leading-7 text-slate-300">{{ source.content }}</p>
+                  </article>
+                  <div v-if="queryResult.sources.length === 0" class="py-16 text-center text-sm text-slate-500">没有命中 sources</div>
+                </div>
               </div>
             </div>
+
+            <section class="border border-white/10 bg-white/[0.03] p-6">
+              <div class="mb-5 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div class="flex items-center gap-2 text-slate-300"><Layers :size="18" class="text-teal-200" />切分预览</div>
+                  <p class="mt-2 text-sm text-slate-500">只做本地切分对比，不调用 Ollama，不写入数据库。</p>
+                </div>
+                <button class="primary-button" :disabled="operation === 'chunk-preview'" type="button" @click="runChunkPreview"><Search :size="16" />生成预览</button>
+              </div>
+              <div class="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+                <div class="space-y-4">
+                  <Field label="文档 ID"><input v-model="previewDocumentId" class="control" inputmode="numeric" pattern="[0-9]*" placeholder="优先使用已有文档正文" @input="sanitizePreviewDocumentId" /></Field>
+                  <Field label="临时文本"><textarea v-model="previewText" class="control min-h-40 resize-y py-3" placeholder="不填文档 ID 时使用这里的文本" /></Field>
+                  <div class="border border-white/10 bg-black/20 p-4">
+                    <p class="mb-3 text-xs uppercase tracking-[0.18em] text-slate-500">Variants</p>
+                    <div v-for="(variant, index) in previewVariants" :key="index" class="mb-3 grid grid-cols-2 gap-3 last:mb-0">
+                      <input v-model="variant.chunk_size" class="control h-10" inputmode="numeric" placeholder="chunk_size" @input="sanitizeVariantNumber(variant, 'chunk_size')" />
+                      <input v-model="variant.chunk_overlap" class="control h-10" inputmode="numeric" placeholder="overlap" @input="sanitizeVariantNumber(variant, 'chunk_overlap')" />
+                    </div>
+                  </div>
+                </div>
+                <div class="min-h-[360px] border border-white/10 bg-black/10">
+                  <div v-if="!previewResult" class="py-24 text-center text-sm text-slate-500">输入文档 ID 或临时文本后生成切分预览</div>
+                  <div v-else class="thin-scrollbar max-h-[620px] overflow-auto p-4">
+                    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p class="text-sm text-white">{{ previewResult.title || (previewResult.source === 'document' ? '未命名文档' : '临时文本') }}</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ previewResult.source === 'document' ? '来自文档正文' : '来自临时文本' }}</p>
+                      </div>
+                      <span class="status-pill border-white/10 bg-white/[0.04] text-slate-300">{{ previewResult.variants.length }} 组参数</span>
+                    </div>
+                    <div class="space-y-5">
+                      <article v-for="variant in previewResult.variants" :key="variant.chunk_size + '-' + variant.chunk_overlap" class="border border-white/10 bg-white/[0.025]">
+                        <div class="grid gap-px border-b border-white/10 bg-white/10 sm:grid-cols-4">
+                          <MetricCell label="参数" :value="variant.chunk_size" />
+                          <MetricCell label="Chunks" :value="variant.chunk_count" />
+                          <MetricCell label="最长" :value="variant.max_chars" />
+                          <MetricCell label="平均" :value="Math.round(variant.avg_chars)" />
+                        </div>
+                        <div class="px-4 py-3 text-xs text-slate-500">overlap {{ variant.chunk_overlap }} / min {{ variant.min_chars }} / avg {{ formatAvg(variant.avg_chars) }}</div>
+                        <div class="divide-y divide-white/10">
+                          <details v-for="chunk in variant.chunks" :key="chunk.index" class="group px-4 py-3">
+                            <summary class="cursor-pointer list-none text-sm text-slate-300 transition hover:text-teal-100">
+                              <span class="text-teal-200">#{{ chunk.index }}</span>
+                              <span class="ml-2 text-slate-500">{{ chunk.char_count }} chars</span>
+                            </summary>
+                            <p class="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-slate-400">{{ chunk.content }}</p>
+                          </details>
+                        </div>
+                      </article>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
           </section>
         </transition>
         <p v-if="notice" class="fixed bottom-5 right-6 z-40 border border-teal-300/20 bg-black/80 px-4 py-3 text-sm text-teal-100 shadow-xl shadow-black/30">{{ notice }}</p>
@@ -333,6 +404,7 @@ import {
 } from 'lucide-vue-next'
 import {
   authState,
+  chunkPreview,
   createTextDocument,
   deleteChunk,
   deleteDocument,
@@ -346,7 +418,7 @@ import {
   reindexDocument,
   updateChunk,
 } from '../api'
-import type { ChunkItem, DocumentItem, HealthInfo, Overview, PageResult, QueryResponse } from '../types'
+import type { ChunkItem, ChunkPreviewResponse, DocumentItem, HealthInfo, Overview, PageResult, QueryResponse, QuerySource } from '../types'
 
 type MenuKey = 'overview' | 'documents' | 'search'
 type DocumentTab = 'ingest' | 'list' | 'chunks'
@@ -355,6 +427,7 @@ type ConfirmTarget =
   | { kind: 'chunk'; id: number; title: string; label: string; description: string; confirmText: string }
   | { kind: 'reindex'; id: number; title: string; label: string; description: string; confirmText: string }
 type PendingFile = { id: string; name: string; title: string; size: number; type: string; lastModified: number; content: string }
+type PreviewVariantForm = { chunk_size: string; chunk_overlap: string }
 
 const maxFileSize = 10 * 1024 * 1024
 const allowedExtensions = ['.txt', '.md', '.csv', '.json', '.yaml', '.yml', '.log', '.html', '.htm']
@@ -490,6 +563,14 @@ const filters = reactive({ status: '', keyword: '' })
 const queryResult = ref<QueryResponse | null>(null)
 const question = ref('GoFurry 是个公益网站吗？')
 const topKText = ref('6')
+const previewDocumentId = ref('')
+const previewText = ref('')
+const previewResult = ref<ChunkPreviewResponse | null>(null)
+const previewVariants = reactive<PreviewVariantForm[]>([
+  { chunk_size: '500', chunk_overlap: '80' },
+  { chunk_size: '700', chunk_overlap: '120' },
+  { chunk_size: '900', chunk_overlap: '150' },
+])
 const sourceFieldsOpen = ref(false)
 const statusOpen = ref(false)
 const dragActive = ref(false)
@@ -832,6 +913,27 @@ async function runQuery() {
   }
 }
 
+async function runChunkPreview() {
+  operation.value = 'chunk-preview'
+  notice.value = ''
+  try {
+    const documentId = Number(previewDocumentId.value || '0')
+    const payload = {
+      document_id: documentId > 0 ? documentId : undefined,
+      text: documentId > 0 ? undefined : previewText.value,
+      variants: previewVariants.map((variant) => ({
+        chunk_size: Number(variant.chunk_size || '0'),
+        chunk_overlap: Number(variant.chunk_overlap || '0'),
+      })),
+    }
+    previewResult.value = await chunkPreview(payload)
+  } catch (error) {
+    notifyError(error)
+  } finally {
+    operation.value = ''
+  }
+}
+
 function startDocumentPolling() {
   stopDocumentPolling()
   void loadDocuments(documentsPage.value)
@@ -870,6 +972,14 @@ function selectStatus(status: string) {
 
 function sanitizeTopK(event: Event) {
   topKText.value = (event.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 2)
+}
+
+function sanitizePreviewDocumentId(event: Event) {
+  previewDocumentId.value = (event.target as HTMLInputElement).value.replace(/\D/g, '')
+}
+
+function sanitizeVariantNumber(variant: PreviewVariantForm, key: keyof PreviewVariantForm) {
+  variant[key] = variant[key].replace(/\D/g, '').slice(0, 4)
 }
 
 function goDocumentPage(page: number) {
@@ -932,6 +1042,18 @@ function documentLabel(id: number) {
   return 'Document #' + id
 }
 
+function sourceDebugLine(source: QuerySource) {
+  const pieces = [
+    `doc #${source.document_id}`,
+    `chunk #${source.chunk_index}`,
+    `chunk_id ${source.chunk_id}`,
+    `${source.token_count || 0} chars`,
+    source.source_type,
+    source.source_id,
+  ].filter(Boolean)
+  return pieces.join(' / ')
+}
+
 function stripExtension(name: string) {
   return name.replace(/\.[^/.]+$/, '') || name
 }
@@ -945,6 +1067,10 @@ function formatBytes(size: number) {
   if (size < 1024) return `${size} B`
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
   return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+
+function formatAvg(value: number) {
+  return value.toFixed(1)
 }
 
 function formatDate(value?: string) {

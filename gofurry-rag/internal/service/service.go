@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/GoFurry/gofurry-rag/config"
 	"github.com/GoFurry/gofurry-rag/internal/db"
@@ -17,6 +18,8 @@ var ErrValidation = errors.New("validation failed")
 type Repository interface {
 	Ping(ctx context.Context) error
 	CreateDocument(ctx context.Context, params db.CreateDocumentParams) (db.Document, error)
+	GetDocument(ctx context.Context, id int64) (db.Document, error)
+	GetDocumentByChunkID(ctx context.Context, chunkID int64) (db.Document, error)
 	ListDocuments(ctx context.Context, filter db.ListDocumentsFilter) (db.PageResult[db.Document], error)
 	ListChunks(ctx context.Context, documentID int64, page, pageSize int) (db.PageResult[db.Chunk], error)
 	ReindexDocument(ctx context.Context, id int64) (db.Document, error)
@@ -49,6 +52,39 @@ type QueryRequest struct {
 
 type UpdateChunkRequest struct {
 	Content string `json:"content"`
+}
+
+type ChunkPreviewRequest struct {
+	DocumentID int64                 `json:"document_id"`
+	Text       string                `json:"text"`
+	Variants   []ChunkPreviewVariant `json:"variants"`
+}
+
+type ChunkPreviewVariant struct {
+	ChunkSize    int `json:"chunk_size"`
+	ChunkOverlap int `json:"chunk_overlap"`
+}
+
+type ChunkPreviewResponse struct {
+	Source   string                      `json:"source"`
+	Title    string                      `json:"title"`
+	Variants []ChunkPreviewVariantResult `json:"variants"`
+}
+
+type ChunkPreviewVariantResult struct {
+	ChunkSize    int                 `json:"chunk_size"`
+	ChunkOverlap int                 `json:"chunk_overlap"`
+	ChunkCount   int                 `json:"chunk_count"`
+	MinChars     int                 `json:"min_chars"`
+	MaxChars     int                 `json:"max_chars"`
+	AvgChars     float64             `json:"avg_chars"`
+	Chunks       []ChunkPreviewChunk `json:"chunks"`
+}
+
+type ChunkPreviewChunk struct {
+	Index     int    `json:"index"`
+	CharCount int    `json:"char_count"`
+	Content   string `json:"content"`
 }
 
 type QueryResponse struct {
@@ -156,11 +192,66 @@ func (s *Service) UpdateChunk(ctx context.Context, id int64, req UpdateChunkRequ
 	if content == "" {
 		return db.Chunk{}, wrapValidation("content is required")
 	}
-	embeddings, err := s.embedder.Embed(ctx, []string{content})
+	doc, err := s.repo.GetDocumentByChunkID(ctx, id)
+	if err != nil {
+		return db.Chunk{}, err
+	}
+	embeddings, err := s.embedder.Embed(ctx, []string{ingest.BuildEmbeddingInput(doc, content)})
 	if err != nil {
 		return db.Chunk{}, err
 	}
 	return s.repo.UpdateChunkContent(ctx, id, content, ingest.Checksum(content), len([]rune(content)), embeddings[0])
+}
+
+func (s *Service) ChunkPreview(ctx context.Context, req ChunkPreviewRequest) (ChunkPreviewResponse, error) {
+	req.Text = strings.TrimSpace(req.Text)
+	if (req.DocumentID <= 0 && req.Text == "") || (req.DocumentID > 0 && req.Text != "") {
+		return ChunkPreviewResponse{}, wrapValidation("provide exactly one of document_id or text")
+	}
+
+	source := "text"
+	title := "临时文本"
+	text := req.Text
+	if req.DocumentID > 0 {
+		doc, err := s.repo.GetDocument(ctx, req.DocumentID)
+		if err != nil {
+			return ChunkPreviewResponse{}, err
+		}
+		source = "document"
+		title = doc.Title
+		text = strings.TrimSpace(doc.Content)
+	}
+	if text == "" {
+		return ChunkPreviewResponse{}, wrapValidation("text is required")
+	}
+
+	variants := req.Variants
+	if len(variants) == 0 {
+		variants = []ChunkPreviewVariant{
+			{ChunkSize: 500, ChunkOverlap: 80},
+			{ChunkSize: 700, ChunkOverlap: 120},
+			{ChunkSize: 900, ChunkOverlap: 150},
+		}
+	}
+	if len(variants) > 10 {
+		return ChunkPreviewResponse{}, wrapValidation("variants cannot exceed 10")
+	}
+
+	response := ChunkPreviewResponse{Source: source, Title: title, Variants: make([]ChunkPreviewVariantResult, 0, len(variants))}
+	for _, variant := range variants {
+		if variant.ChunkSize <= 0 {
+			return ChunkPreviewResponse{}, wrapValidation("chunk_size must be positive")
+		}
+		if variant.ChunkOverlap < 0 {
+			return ChunkPreviewResponse{}, wrapValidation("chunk_overlap cannot be negative")
+		}
+		if variant.ChunkOverlap >= variant.ChunkSize {
+			return ChunkPreviewResponse{}, wrapValidation("chunk_overlap must be smaller than chunk_size")
+		}
+		chunks := ingest.NewSplitter(variant.ChunkSize, variant.ChunkOverlap).Split(text)
+		response.Variants = append(response.Variants, buildChunkPreviewVariant(variant, chunks))
+	}
+	return response, nil
 }
 
 func (s *Service) DeleteChunk(ctx context.Context, id int64) error {
@@ -210,4 +301,32 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 
 func wrapValidation(message string) error {
 	return errors.Join(ErrValidation, errors.New(message))
+}
+
+func buildChunkPreviewVariant(variant ChunkPreviewVariant, chunks []string) ChunkPreviewVariantResult {
+	result := ChunkPreviewVariantResult{
+		ChunkSize:    variant.ChunkSize,
+		ChunkOverlap: variant.ChunkOverlap,
+		ChunkCount:   len(chunks),
+		Chunks:       make([]ChunkPreviewChunk, 0, min(len(chunks), 20)),
+	}
+	if len(chunks) == 0 {
+		return result
+	}
+	total := 0
+	for i, chunk := range chunks {
+		count := utf8.RuneCountInString(chunk)
+		total += count
+		if i == 0 || count < result.MinChars {
+			result.MinChars = count
+		}
+		if count > result.MaxChars {
+			result.MaxChars = count
+		}
+		if i < 20 {
+			result.Chunks = append(result.Chunks, ChunkPreviewChunk{Index: i, CharCount: count, Content: chunk})
+		}
+	}
+	result.AvgChars = float64(total) / float64(len(chunks))
+	return result
 }

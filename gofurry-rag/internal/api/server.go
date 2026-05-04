@@ -41,6 +41,7 @@ func (s *Server) RegisterRoutes(v1 fiber.Router) {
 	protected.Delete("/documents/:id", s.deleteDocument)
 	protected.Patch("/chunks/:id", s.updateChunk)
 	protected.Delete("/chunks/:id", s.deleteChunk)
+	protected.Post("/debug/chunk-preview", s.chunkPreview)
 	v1.Post("/chat/query", s.query)
 }
 
@@ -227,6 +228,21 @@ func (s *Server) deleteChunk(c fiber.Ctx) error {
 		return fail(c, err)
 	}
 	return ok(c, fiber.Map{"deleted": true})
+}
+
+func (s *Server) chunkPreview(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
+	var req service.ChunkPreviewRequest
+	if err := json.Unmarshal(c.Body(), &req); err != nil {
+		return fail(c, err)
+	}
+	result, err := s.service.ChunkPreview(context.Background(), req)
+	if err != nil {
+		return fail(c, err)
+	}
+	return ok(c, result)
 }
 
 func (s *Server) query(c fiber.Ctx) error {

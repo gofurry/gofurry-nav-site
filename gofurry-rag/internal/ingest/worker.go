@@ -99,7 +99,11 @@ func (w *Worker) process(ctx context.Context, doc db.Document) error {
 			end = len(textChunks)
 		}
 		batch := textChunks[start:end]
-		embeddings, err := w.embedder.Embed(ctx, batch)
+		inputs := make([]string, 0, len(batch))
+		for _, content := range batch {
+			inputs = append(inputs, BuildEmbeddingInput(doc, content))
+		}
+		embeddings, err := w.embedder.Embed(ctx, inputs)
 		if err != nil {
 			return err
 		}

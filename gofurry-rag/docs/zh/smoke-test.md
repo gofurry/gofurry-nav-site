@@ -101,7 +101,25 @@ curl -X PATCH http://127.0.0.1:8080/api/v1/admin/chunks/1 \
 
 响应中的 `has_embedding` 应为 `true`，`embedding_dim` 应为配置的 embedding 维度。
 
-## 10. 检索命中
+Chunk 编辑保存会重新生成 embedding。新入库、重新索引、chunk 编辑保存都会使用带标题和来源上下文的 embedding 输入模板，但返回的 chunk `content` 仍应是原文。
+
+## 10. 切分预览
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/debug/chunk-preview \
+  -b cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"document_id":1}'
+
+curl -X POST http://127.0.0.1:8080/api/v1/admin/debug/chunk-preview \
+  -b cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"text":"GoFurry stores searchable knowledge chunks.","variants":[{"chunk_size":20,"chunk_overlap":4}]}'
+```
+
+响应应包含 `variants`，每组参数应返回 `chunk_count`、`min_chars`、`max_chars`、`avg_chars` 和最多 20 个 chunk 预览。该接口不应创建文档，也不会触发重新索引。
+
+## 11. 检索命中
 
 ```bash
 curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
@@ -109,9 +127,9 @@ curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
   -d '{"question":"What does GoFurry store?","top_k":3}'
 ```
 
-ingest worker 完成后，检索结果应至少包含一个 source。
+ingest worker 完成后，检索结果应至少包含一个 source。source 中应包含 `source_type`、`source_id`、`chunk_index`、`token_count` 等调试字段。
 
-## 11. 控制台手动检查
+## 12. 控制台手动检查
 
 打开：
 
@@ -127,4 +145,5 @@ http://127.0.0.1:8080/admin
 - 不支持或过大的文件会显示拒绝原因。
 - 文档页可重新索引，且使用非原生确认模态框。
 - Chunks 页可查看、编辑、删除，长文本保持换行并可阅读。
-- 检索页能展示 sources 和 score。
+- 检索页能展示 rank、sources、score、document/chunk 标识和来源字段。
+- 检索页切分预览能通过文档 ID 或临时文本展示不同 chunk 参数的切分结果。
