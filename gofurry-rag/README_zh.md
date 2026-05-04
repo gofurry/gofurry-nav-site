@@ -10,12 +10,13 @@
 ## 功能
 
 - Cobra CLI 与 Viper `server.yaml` 配置，骨架对齐 `gofurry-admin`
-- 单个 Go 二进制，内嵌 Vue + Tailwind 控制台
+- 单个 Go 二进制，内嵌 Vue + Tailwind 暗色控制台
 - PostgreSQL + pgvector 存储
 - Ollama embedding client，默认模型 `qwen3-embedding:0.6b`
 - 异步文本入库 worker
 - 管理接口使用 HttpOnly JWT Cookie 登录态
 - 检索接口公开，只返回 `sources`，暂不生成自然语言答案
+- 控制台整体态势自动刷新，展示文档、chunk、数据库和 Ollama 状态
 
 ## 快速开始
 
@@ -23,6 +24,12 @@
 
 ```bash
 go run . --config ./config/server.yaml serve
+```
+
+打开内嵌控制台：
+
+```text
+http://127.0.0.1:8080/admin
 ```
 
 常用 CLI：
@@ -42,6 +49,9 @@ npm ci
 npm run build
 cd ..
 go test ./...
+go vet ./...
+go build .
+go build ./cmd/server
 ```
 
 ## API
@@ -50,6 +60,7 @@ go test ./...
 - `GET /api/v1/admin/auth/state`
 - `POST /api/v1/admin/auth/login`
 - `POST /api/v1/admin/auth/logout`
+- `GET /api/v1/admin/auth/me`
 - `GET /api/v1/admin/overview`
 - `POST /api/v1/admin/documents/text`
 - `GET /api/v1/admin/documents`
@@ -58,11 +69,21 @@ go test ./...
 - `POST /api/v1/chat/query`
 - `GET /livez`、`GET /readyz`、`GET /startupz`、`GET /healthz`
 
-管理接口需要先通过 `/api/v1/admin/auth/login` 登录。服务会把 JWT 写入 HttpOnly Cookie，方式与 `gofurry-admin` 类似。
+管理接口需要先通过 `/api/v1/admin/auth/login` 登录。服务会把 JWT 写入 HttpOnly Cookie，方式与 `gofurry-admin` 类似。`POST /api/v1/chat/query` 保持公开。
+
+`GET /api/v1/health` 会返回数据库和 Ollama 连接信息，供控制台整体态势页展示。
 
 ## 配置
 
-运行时配置读取 `server.yaml`。默认搜索 `/etc/gofurry-rag/server.yaml` 和 `./config/server.yaml`；也可以通过 `--config` 指定任意文件。环境变量覆盖使用 `APP_` 前缀，例如 `APP_SERVER_PORT=8081` 或 `APP_RAG_OLLAMA_BASE_URL=http://127.0.0.1:11434`。
+运行时配置读取 `server.yaml`。默认搜索 `/etc/gofurry-rag/server.yaml` 和 `./config/server.yaml`；也可以通过 `--config` 指定任意文件。
+
+环境变量覆盖使用 `APP_` 前缀：
+
+```bash
+APP_SERVER_PORT=8081 APP_RAG_OLLAMA_BASE_URL=http://127.0.0.1:11434 go run . --config ./config/server.yaml serve
+```
+
+不要提交真实数据库密码、控制台口令或 JWT Secret。
 
 ## 文档
 

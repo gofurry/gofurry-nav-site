@@ -18,13 +18,15 @@ go build .
 go build ./cmd/server
 ```
 
-3. Edit `config/server.yaml` with a valid PostgreSQL password and start the service:
+3. Edit `config/server.yaml` with a valid PostgreSQL password, console passcode, and JWT secret.
+
+4. Start the service:
 
 ```bash
 go run . --config ./config/server.yaml serve
 ```
 
-4. Check health and probes:
+5. Check health and probes:
 
 ```bash
 curl http://127.0.0.1:8080/api/v1/health
@@ -34,13 +36,25 @@ curl http://127.0.0.1:8080/startupz
 curl http://127.0.0.1:8080/healthz
 ```
 
-5. Login, create a text document, wait a few seconds, then query:
+The health response should include `database` and `ollama` objects. If either dependency is unavailable, `status` becomes `degraded`.
+
+6. Confirm admin auth:
 
 ```bash
+curl -i http://127.0.0.1:8080/api/v1/admin/documents
+
 curl -c cookies.txt -X POST http://127.0.0.1:8080/api/v1/admin/auth/login \
   -H "Content-Type: application/json" \
   -d '{"password":"change-me"}'
 
+curl -b cookies.txt http://127.0.0.1:8080/api/v1/admin/overview
+```
+
+The first request should return 401. After login, overview should return document and chunk stats.
+
+7. Create a text document, wait a few seconds, then query:
+
+```bash
 curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
   -b cookies.txt \
   -H "Content-Type: application/json" \
@@ -51,4 +65,4 @@ curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
   -d '{"question":"What does GoFurry store?","top_k":3}'
 ```
 
-The query should return at least one source after the ingest worker finishes.
+The query should return at least one source after the ingest worker finishes. The console document list refreshes every 3 seconds, and the overview page refreshes every 5 seconds.

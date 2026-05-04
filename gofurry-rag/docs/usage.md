@@ -27,6 +27,10 @@ auth:
 rag:
   ollama_base_url: "http://148.70.18.111:43434"
   embed_model: "qwen3-embedding:0.6b"
+  embed_dim: 1024
+  chunk_size: 700
+  chunk_overlap: 120
+  top_k: 6
 ```
 
 The default config lookup matches `gofurry-admin`: `/etc/gofurry-rag/server.yaml`, then `./config/server.yaml`. You can always pass `--config`.
@@ -67,6 +71,15 @@ go run . --config ./config/server.yaml install
 go run . --config ./config/server.yaml uninstall
 ```
 
+`reset-password` updates `auth.console_passcode` in the active `server.yaml`.
+
+## Console
+
+- Login uses the unique passcode from `auth.console_passcode`.
+- The overview page refreshes every 5 seconds and shows document totals, chunk totals, status distribution, database connection info, and Ollama connection info.
+- The document list refreshes every 3 seconds while the list tab is open, so pending documents move to ready without manual refresh.
+- The search page calls the public retrieval API and displays returned sources.
+
 ## Add Text
 
 Login first and save the HttpOnly session cookie:
@@ -77,12 +90,22 @@ curl -c cookies.txt -X POST http://127.0.0.1:8080/api/v1/admin/auth/login \
   -d '{"password":"change-me"}'
 ```
 
+Create a manual text document:
+
 ```bash
 curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
   -b cookies.txt \
   -H "Content-Type: application/json" \
   -d '{"title":"GoFurry","content":"GoFurry is a content discovery website.","source_type":"manual"}'
 ```
+
+Only `content` is required. `title` is strongly recommended for readable sources. `source_type`, `source_id`, and `url` are optional provenance fields:
+
+- `source_type`: where the text came from, such as `manual`, `website`, `nav`, or `game`.
+- `source_id`: an external identifier, such as a page slug, article ID, site ID, or game ID.
+- `url`: the original page URL, useful for citations and later source review.
+
+These fields are useful for future crawler imports, reindexing, deleting by source, and showing citations. For hand-written text, `source_type: "manual"` is enough.
 
 The service creates a pending document and the ingest worker embeds chunks asynchronously.
 
@@ -93,3 +116,13 @@ curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
   -H "Content-Type: application/json" \
   -d '{"question":"What is GoFurry?","top_k":6}'
 ```
+
+`POST /api/v1/chat/query` is public and does not require the admin session cookie.
+
+## Health
+
+```bash
+curl http://127.0.0.1:8080/api/v1/health
+```
+
+The response includes overall status, database connection information, and Ollama model information.

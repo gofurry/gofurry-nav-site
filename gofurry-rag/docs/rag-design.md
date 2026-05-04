@@ -10,6 +10,9 @@ This service implements the minimum runnable version from that draft:
 - PostgreSQL + pgvector storage
 - top-k source retrieval
 - embedded admin console
+- Cobra/Viper `server.yaml` runtime skeleton aligned with `gofurry-admin`
+- JWT Cookie login for admin APIs
+- overview console with database and Ollama health information
 
 Deferred capabilities:
 
