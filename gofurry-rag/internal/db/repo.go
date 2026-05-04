@@ -282,16 +282,16 @@ LIMIT $2 OFFSET $3
 	return PageResult[Chunk]{Items: items, Total: total}, rows.Err()
 }
 
-func (r *Repository) UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int) (Chunk, error) {
+func (r *Repository) UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int, embedding []float64) (Chunk, error) {
 	row := r.pool.QueryRow(ctx, `
 UPDATE rag_chunks
-SET content = $2, content_hash = $3, token_count = $4, embedding = NULL
+SET content = $2, content_hash = $3, token_count = $4, embedding = $5::vector
 WHERE id = $1
 RETURNING id, document_id, chunk_index, content, content_hash, COALESCE(token_count, 0),
        embedding IS NOT NULL AS has_embedding,
        CASE WHEN embedding IS NULL THEN 0 ELSE vector_dims(embedding) END AS embedding_dim,
        created_at
-`, id, content, contentHash, tokenCount)
+`, id, content, contentHash, tokenCount, VectorLiteral(embedding))
 	return scanChunk(row)
 }
 

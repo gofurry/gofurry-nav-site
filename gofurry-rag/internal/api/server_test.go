@@ -236,8 +236,8 @@ func (r *fakeRepo) ListChunks(ctx context.Context, documentID int64, page, pageS
 	return db.PageResult[db.Chunk]{Items: []db.Chunk{}, Total: 0}, nil
 }
 
-func (r *fakeRepo) UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int) (db.Chunk, error) {
-	return db.Chunk{ID: id, DocumentID: 1, Content: content, ContentHash: contentHash, TokenCount: tokenCount}, nil
+func (r *fakeRepo) UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int, embedding []float64) (db.Chunk, error) {
+	return db.Chunk{ID: id, DocumentID: 1, Content: content, ContentHash: contentHash, TokenCount: tokenCount, HasEmbedding: len(embedding) > 0, EmbeddingDim: len(embedding)}, nil
 }
 
 func (r *fakeRepo) DeleteChunk(ctx context.Context, id int64) error {

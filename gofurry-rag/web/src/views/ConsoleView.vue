@@ -712,10 +712,10 @@ function startEditChunk(chunk: ChunkItem) {
 async function saveChunk(id: number) {
   const updated = await updateChunk(id, editingChunkContent.value)
   const index = chunks.items.findIndex((item) => item.id === id)
-  if (index >= 0) chunks.items[index] = { ...updated, has_embedding: false, embedding_dim: 0 }
+  if (index >= 0) chunks.items[index] = updated
   editingChunkId.value = null
   editingChunkContent.value = ''
-  notice.value = 'Chunk 已保存，旧 embedding 已清空。'
+  notice.value = 'Chunk 已保存并重新向量化。'
 }
 
 async function runQuery() {

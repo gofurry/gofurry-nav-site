@@ -19,7 +19,7 @@ type Repository interface {
 	CreateDocument(ctx context.Context, params db.CreateDocumentParams) (db.Document, error)
 	ListDocuments(ctx context.Context, filter db.ListDocumentsFilter) (db.PageResult[db.Document], error)
 	ListChunks(ctx context.Context, documentID int64, page, pageSize int) (db.PageResult[db.Chunk], error)
-	UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int) (db.Chunk, error)
+	UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int, embedding []float64) (db.Chunk, error)
 	DeleteChunk(ctx context.Context, id int64) error
 	DeleteDocument(ctx context.Context, id int64) error
 	Overview(ctx context.Context) (db.Overview, error)
@@ -148,7 +148,11 @@ func (s *Service) UpdateChunk(ctx context.Context, id int64, req UpdateChunkRequ
 	if content == "" {
 		return db.Chunk{}, wrapValidation("content is required")
 	}
-	return s.repo.UpdateChunkContent(ctx, id, content, ingest.Checksum(content), len([]rune(content)))
+	embeddings, err := s.embedder.Embed(ctx, []string{content})
+	if err != nil {
+		return db.Chunk{}, err
+	}
+	return s.repo.UpdateChunkContent(ctx, id, content, ingest.Checksum(content), len([]rune(content)), embeddings[0])
 }
 
 func (s *Service) DeleteChunk(ctx context.Context, id int64) error {
