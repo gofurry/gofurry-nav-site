@@ -27,7 +27,9 @@
     <section v-else class="grid min-h-screen grid-cols-[260px_minmax(0,1fr)]">
       <aside class="relative border-r border-white/10 bg-black/20 px-5 py-6 backdrop-blur-xl">
         <div class="mb-10 flex items-center gap-3">
-          <div class="grid h-10 w-10 place-items-center border border-teal-300/30 bg-teal-300/10 text-teal-200"><Database :size="21" /></div>
+          <div class="grid h-10 w-10 place-items-center border border-teal-300/30 bg-teal-300/10 text-teal-200">
+            <Database :size="21" />
+          </div>
           <div>
             <strong class="block text-sm tracking-[0.2em] text-white">GOFURRY RAG</strong>
             <span class="text-xs text-slate-500">Knowledge Observatory</span>
@@ -66,7 +68,9 @@
             </div>
             <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
               <div class="border border-white/10 bg-white/[0.035] p-6">
-                <div class="mb-5 flex items-center gap-2 text-slate-300"><Activity :size="18" class="text-teal-200" />状态分布</div>
+                <div class="mb-5 flex items-center gap-2 text-slate-300">
+                  <Activity :size="18" class="text-teal-200" />状态分布
+                </div>
                 <div class="space-y-4">
                   <StatusBar label="待处理" :value="overviewData?.pending_documents ?? 0" :total="overviewData?.document_total ?? 0" tone="bg-slate-400" />
                   <StatusBar label="处理中" :value="overviewData?.processing_documents ?? 0" :total="overviewData?.document_total ?? 0" tone="bg-amber-300" />
@@ -75,7 +79,9 @@
                 </div>
               </div>
               <div class="border border-white/10 bg-white/[0.035] p-6">
-                <div class="mb-6 flex items-center gap-2 text-slate-300"><Database :size="18" class="text-teal-200" />连接信息</div>
+                <div class="mb-6 flex items-center gap-2 text-slate-300">
+                  <Database :size="18" class="text-teal-200" />连接信息
+                </div>
                 <div class="space-y-5">
                   <section class="border border-white/10 bg-black/20 p-4">
                     <div class="mb-3 flex items-center justify-between">
@@ -109,7 +115,9 @@
 
           <section v-else-if="activeMenu === 'documents'" key="documents" class="space-y-6">
             <div class="flex gap-2 border-b border-white/10">
-              <button v-for="tab in documentTabs" :key="tab.key" class="px-4 py-3 text-sm transition" :class="documentTab === tab.key ? 'border-b border-teal-300 text-teal-100' : 'text-slate-500 hover:text-slate-200'" @click="switchDocumentTab(tab.key)">{{ tab.label }}</button>
+              <button v-for="tab in documentTabs" :key="tab.key" class="px-4 py-3 text-sm transition" :class="documentTab === tab.key ? 'border-b border-teal-300 text-teal-100' : 'text-slate-500 hover:text-slate-200'" @click="switchDocumentTab(tab.key)">
+                {{ tab.label }}
+              </button>
             </div>
 
             <div v-if="documentTab === 'ingest'" class="grid gap-6 xl:grid-cols-[minmax(0,560px)_1fr]">
@@ -122,7 +130,7 @@
                 <div v-if="sourceFieldsOpen" class="space-y-4 border border-white/10 bg-black/20 p-4">
                   <p class="text-xs leading-5 text-slate-500">来源信息用于回溯文档来自哪里；纯手动录入可以不填，系统会按 manual 处理。</p>
                   <div class="grid gap-4 md:grid-cols-2">
-                    <Field label="来源类型"><input v-model="form.source_type" class="control" placeholder="manual / website / note" /></Field>
+                    <Field label="来源类型"><input v-model="form.source_type" class="control" placeholder="manual / website / nav / game" /></Field>
                     <Field label="来源 ID"><input v-model="form.source_id" class="control" placeholder="about-page" /></Field>
                   </div>
                   <Field label="URL"><input v-model="form.url" class="control" placeholder="https://example.com/about" /></Field>
@@ -131,14 +139,21 @@
               </form>
 
               <section class="border border-white/10 bg-black/10 p-6">
-                <input ref="fileInput" class="hidden" type="file" multiple accept=".txt,.md,.csv,.json,.yaml,.yml,.log,text/*,application/json" @change="onFileInputChange" />
+                <input ref="fileInput" class="hidden" type="file" multiple :accept="fileAccept" @change="onFileInputChange" />
                 <div class="drop-zone" :class="dragActive ? 'border-teal-300/60 bg-teal-300/10' : 'border-white/10 bg-white/[0.025]'" @dragenter.prevent="dragActive = true" @dragover.prevent="dragActive = true" @dragleave.prevent="dragActive = false" @drop.prevent="onFileDrop">
                   <UploadCloud :size="30" class="text-teal-200" />
                   <div>
                     <p class="text-base font-medium text-white">拖入文件或选择文件</p>
-                    <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">文件名去掉后缀作为标题，文件内容作为正文；适合 txt、md、json、yaml 等文本文件。</p>
+                    <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">单文件最大 10 MiB；支持 txt、md、csv、json、yaml、log、html。文件名去掉后缀作为标题，内容作为正文。</p>
                   </div>
                   <button class="ghost-button" type="button" @click="fileInput?.click()">导入文件</button>
+                </div>
+
+                <div v-if="fileIssues.length" class="mt-4 border border-amber-300/20 bg-amber-300/10 p-3">
+                  <div class="mb-2 flex items-center gap-2 text-sm text-amber-100"><AlertTriangle :size="15" />被跳过的文件</div>
+                  <ul class="space-y-1 text-xs leading-5 text-amber-100/80">
+                    <li v-for="issue in fileIssues" :key="issue">{{ issue }}</li>
+                  </ul>
                 </div>
 
                 <div class="mt-6 border border-white/10">
@@ -146,7 +161,7 @@
                     <span class="text-sm text-slate-300">待入库文件 {{ pendingFiles.length }}</span>
                     <button class="primary-button h-10" :disabled="busy || pendingFiles.length === 0" type="button" @click="submitFiles"><UploadCloud :size="16" />批量提交入库</button>
                   </div>
-                  <div v-if="pendingFiles.length === 0" class="py-12 text-center text-sm text-slate-500">文件会显示在这里</div>
+                  <div v-if="pendingFiles.length === 0" class="py-12 text-center text-sm text-slate-500">通过拖拽或导入按钮添加文件</div>
                   <ul v-else class="thin-scrollbar max-h-[340px] divide-y divide-white/10 overflow-auto">
                     <li v-for="file in pendingFiles" :key="file.id" class="flex items-center gap-4 px-4 py-3">
                       <FileText :size="18" class="shrink-0 text-teal-200" />
@@ -191,7 +206,8 @@
                       <td class="px-4 py-4 text-slate-500">{{ formatDate(doc.updated_at) }}</td>
                       <td class="px-4 py-4">
                         <div class="flex justify-end gap-2">
-                          <button class="ghost-button h-9" title="查看 Chunks" @click="openChunksForDocument(doc)"><Layers :size="15" />查看 Chunks</button>
+                          <button class="ghost-button h-9" title="查看 Chunks" @click="openChunksForDocument(doc)"><Layers :size="15" />查看</button>
+                          <button class="ghost-button h-9" title="重新索引" @click="askReindexDocument(doc)"><RotateCcw :size="15" />重建</button>
                           <button class="icon-button text-rose-200 hover:border-rose-300/40 hover:bg-rose-300/10" title="删除" @click="askDeleteDocument(doc)"><Trash2 :size="16" /></button>
                         </div>
                       </td>
@@ -224,23 +240,23 @@
                     <p class="text-sm text-slate-300">Chunks {{ selectedDocumentLabel }}</p>
                     <p class="mt-1 text-xs text-slate-500">{{ selectedDocument?.title || '请选择一个文档' }}</p>
                   </div>
-                  <button class="ghost-button" :disabled="!selectedDocument" @click="reloadChunks"><RefreshCw :size="16" />刷新</button>
+                  <button class="ghost-button" :disabled="!selectedDocument || operation === 'reload-chunks'" @click="reloadChunks"><RefreshCw :size="16" />刷新</button>
                 </div>
-                <div v-if="!selectedDocument" class="py-24 text-center text-sm text-slate-500">从左侧选择文档，或在文档页点击“查看 Chunks”</div>
+                <div v-if="!selectedDocument" class="py-24 text-center text-sm text-slate-500">从左侧选择文档，或在文档页点击“查看”</div>
                 <div v-else class="thin-scrollbar max-h-[640px] divide-y divide-white/10 overflow-auto">
                   <article v-for="chunk in chunks.items" :key="chunk.id" class="p-5 transition hover:bg-white/[0.035]">
                     <div class="mb-3 flex items-center justify-between gap-4">
                       <div class="text-xs text-slate-500">#{{ chunk.chunk_index }} · {{ chunk.token_count }} chars · <span :class="chunk.has_embedding ? 'text-teal-200' : 'text-amber-200'">{{ chunk.has_embedding ? chunk.embedding_dim + 'd' : '未向量化' }}</span></div>
                       <div class="flex gap-2">
-                        <button v-if="editingChunkId !== chunk.id" class="icon-button" title="编辑" @click="startEditChunk(chunk)"><Pencil :size="15" /></button>
-                        <button v-else class="icon-button text-teal-100" title="保存" @click="saveChunk(chunk.id)"><Save :size="15" /></button>
-                        <button class="icon-button text-rose-200 hover:border-rose-300/40 hover:bg-rose-300/10" title="删除" @click="askDeleteChunk(chunk)"><Trash2 :size="15" /></button>
+                        <button v-if="editingChunkId !== chunk.id" class="icon-button" title="编辑" :disabled="operation !== ''" @click="startEditChunk(chunk)"><Pencil :size="15" /></button>
+                        <button v-else class="icon-button text-teal-100" title="保存" :disabled="operation === 'save-chunk'" @click="saveChunk(chunk.id)"><Save :size="15" /></button>
+                        <button class="icon-button text-rose-200 hover:border-rose-300/40 hover:bg-rose-300/10" title="删除" :disabled="operation !== ''" @click="askDeleteChunk(chunk)"><Trash2 :size="15" /></button>
                       </div>
                     </div>
-                    <textarea v-if="editingChunkId === chunk.id" v-model="editingChunkContent" class="control min-h-36 resize-y py-3" />
-                    <p v-else class="whitespace-pre-wrap text-sm leading-6 text-slate-300">{{ chunk.content }}</p>
+                    <textarea v-if="editingChunkId === chunk.id" v-model="editingChunkContent" class="control min-h-40 resize-y py-3 leading-6" />
+                    <p v-else class="whitespace-pre-wrap break-words text-sm leading-7 text-slate-300">{{ chunk.content }}</p>
                   </article>
-                  <p v-if="chunks.items.length === 0" class="py-20 text-center text-sm text-slate-500">这个文档还没有 chunks</p>
+                  <p v-if="chunks.items.length === 0" class="py-20 text-center text-sm text-slate-500">这个文档暂时没有 chunks。可以等待入库完成，或重新索引文档。</p>
                 </div>
               </section>
             </div>
@@ -259,7 +275,7 @@
                 <p class="text-slate-300">{{ queryResult.answer }}</p>
                 <article v-for="source in queryResult.sources" :key="source.chunk_id" class="border-l border-teal-300/40 bg-black/20 p-4">
                   <div class="mb-2 flex items-center justify-between gap-4"><strong class="text-sm text-white">{{ source.title || documentLabel(source.document_id) }}</strong><span class="text-xs text-teal-200">{{ source.score.toFixed(4) }}</span></div>
-                  <p class="text-sm leading-6 text-slate-400">{{ source.content }}</p>
+                  <p class="whitespace-pre-wrap break-words text-sm leading-6 text-slate-400">{{ source.content }}</p>
                 </article>
               </div>
             </div>
@@ -269,19 +285,21 @@
       </section>
     </section>
 
-    <div v-if="deleteTarget" class="fixed inset-0 z-50 grid place-items-center bg-black/70 px-6 backdrop-blur-sm">
+    <div v-if="confirmTarget" class="fixed inset-0 z-50 grid place-items-center bg-black/70 px-6 backdrop-blur-sm">
       <section class="w-full max-w-md border border-white/10 bg-[#090e15] p-6 shadow-2xl shadow-black/50">
         <div class="mb-5 flex items-center gap-3">
-          <div class="grid h-10 w-10 place-items-center border border-rose-300/30 bg-rose-300/10 text-rose-200"><AlertTriangle :size="20" /></div>
+          <div class="grid h-10 w-10 place-items-center border text-rose-200" :class="confirmTarget.kind === 'reindex' ? 'border-teal-300/30 bg-teal-300/10 text-teal-200' : 'border-rose-300/30 bg-rose-300/10'">
+            <component :is="confirmTarget.kind === 'reindex' ? RotateCcw : AlertTriangle" :size="20" />
+          </div>
           <div>
-            <h3 class="text-lg font-semibold text-white">确认删除</h3>
-            <p class="mt-1 text-sm text-slate-500">{{ deleteTarget.label }}</p>
+            <h3 class="text-lg font-semibold text-white">{{ confirmTarget.title }}</h3>
+            <p class="mt-1 text-sm text-slate-500">{{ confirmTarget.label }}</p>
           </div>
         </div>
-        <p class="text-sm leading-6 text-slate-400">删除后无法从控制台恢复，请确认这不是还需要检索的内容。</p>
+        <p class="text-sm leading-6 text-slate-400">{{ confirmTarget.description }}</p>
         <div class="mt-6 flex justify-end gap-3">
-          <button class="ghost-button" type="button" @click="deleteTarget = null">取消</button>
-          <button class="danger-button" type="button" @click="confirmDelete">删除</button>
+          <button class="ghost-button" type="button" @click="confirmTarget = null">取消</button>
+          <button class="danger-button" :class="confirmTarget.kind === 'reindex' ? 'reindex-confirm' : ''" type="button" @click="confirmAction">{{ confirmTarget.confirmText }}</button>
         </div>
       </section>
     </div>
@@ -304,6 +322,7 @@ import {
   LogOut,
   Pencil,
   RefreshCw,
+  RotateCcw,
   Save,
   Search,
   Send,
@@ -324,14 +343,22 @@ import {
   logout,
   overview,
   queryRag,
+  reindexDocument,
   updateChunk,
 } from '../api'
 import type { ChunkItem, DocumentItem, HealthInfo, Overview, PageResult, QueryResponse } from '../types'
 
 type MenuKey = 'overview' | 'documents' | 'search'
 type DocumentTab = 'ingest' | 'list' | 'chunks'
-type DeleteTarget = { type: 'document'; id: number; label: string } | { type: 'chunk'; id: number; label: string }
+type ConfirmTarget =
+  | { kind: 'document'; id: number; title: string; label: string; description: string; confirmText: string }
+  | { kind: 'chunk'; id: number; title: string; label: string; description: string; confirmText: string }
+  | { kind: 'reindex'; id: number; title: string; label: string; description: string; confirmText: string }
 type PendingFile = { id: string; name: string; title: string; size: number; type: string; lastModified: number; content: string }
+
+const maxFileSize = 10 * 1024 * 1024
+const allowedExtensions = ['.txt', '.md', '.csv', '.json', '.yaml', '.yml', '.log', '.html', '.htm']
+const fileAccept = `${allowedExtensions.join(',')},text/*`
 
 const MetricCell = defineComponent({
   props: {
@@ -449,6 +476,7 @@ const statusOptions = [
 const authenticated = ref(false)
 const password = ref('')
 const busy = ref(false)
+const operation = ref('')
 const notice = ref('')
 const activeMenu = ref<MenuKey>('overview')
 const documentTab = ref<DocumentTab>('ingest')
@@ -467,6 +495,7 @@ const statusOpen = ref(false)
 const dragActive = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const pendingFiles = ref<PendingFile[]>([])
+const fileIssues = ref<string[]>([])
 const documentsPage = ref(1)
 const documentJump = ref('')
 const chunkDocumentPage = ref(1)
@@ -474,7 +503,7 @@ const chunkDocumentJump = ref('')
 const chunkDocumentKeyword = ref('')
 const editingChunkId = ref<number | null>(null)
 const editingChunkContent = ref('')
-const deleteTarget = ref<DeleteTarget | null>(null)
+const confirmTarget = ref<ConfirmTarget | null>(null)
 const form = reactive({
   title: '',
   source_type: 'manual',
@@ -517,7 +546,7 @@ async function performLogin() {
     password.value = ''
     await loadInitialData()
   } catch (error) {
-    notice.value = (error as Error).message
+    notifyError(error)
   } finally {
     busy.value = false
   }
@@ -574,11 +603,11 @@ async function submitText() {
   try {
     await createTextDocument({ ...form, metadata: {} })
     form.content = ''
-    notice.value = '文档上传 pending 中。'
+    notice.value = '文档已提交，等待后台入库。'
     switchDocumentTab('list')
     await Promise.all([loadDocuments(1), loadOverview()])
   } catch (error) {
-    notice.value = (error as Error).message
+    notifyError(error)
   } finally {
     busy.value = false
   }
@@ -586,8 +615,23 @@ async function submitText() {
 
 async function addFiles(fileList: FileList | File[]) {
   const files = Array.from(fileList)
+  const accepted: File[] = []
+  const issues: string[] = []
+  for (const file of files) {
+    const ext = fileExtension(file.name)
+    if (!allowedExtensions.includes(ext)) {
+      issues.push(`${file.name}：不支持的文件类型`)
+      continue
+    }
+    if (file.size > maxFileSize) {
+      issues.push(`${file.name}：超过 10 MiB`)
+      continue
+    }
+    accepted.push(file)
+  }
+  fileIssues.value = issues
   const loaded = await Promise.all(
-    files.map(async (file) => ({
+    accepted.map(async (file) => ({
       id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
       name: file.name,
       title: stripExtension(file.name),
@@ -641,7 +685,7 @@ async function submitFiles() {
     switchDocumentTab('list')
     await Promise.all([loadDocuments(1), loadOverview()])
   } catch (error) {
-    notice.value = (error as Error).message
+    notifyError(error)
   } finally {
     busy.value = false
   }
@@ -656,14 +700,25 @@ function switchDocumentTab(tab: DocumentTab) {
 async function openChunksForDocument(doc: DocumentItem, switchTab = true) {
   selectedDocument.value = doc
   if (switchTab) documentTab.value = 'chunks'
-  const result = await listChunks(doc.id, 1, 100)
-  chunks.items = result.items
-  chunks.total = result.total
+  try {
+    const result = await listChunks(doc.id, 1, 100)
+    chunks.items = result.items
+    chunks.total = result.total
+  } catch (error) {
+    notifyError(error)
+  }
 }
 
 async function reloadChunks() {
   if (!selectedDocument.value) return
-  await openChunksForDocument(selectedDocument.value, false)
+  operation.value = 'reload-chunks'
+  try {
+    await openChunksForDocument(selectedDocument.value, false)
+  } catch (error) {
+    notifyError(error)
+  } finally {
+    operation.value = ''
+  }
 }
 
 async function searchChunkDocuments(page = 1) {
@@ -679,29 +734,68 @@ async function searchChunkDocuments(page = 1) {
 }
 
 function askDeleteDocument(doc: DocumentItem) {
-  deleteTarget.value = { type: 'document', id: doc.id, label: `删除文档 #${doc.id} ${doc.title || 'Untitled'}` }
+  confirmTarget.value = {
+    kind: 'document',
+    id: doc.id,
+    title: '确认删除文档',
+    label: `#${doc.id} ${doc.title || 'Untitled'}`,
+    description: '删除后文档和所有 chunks 都无法从控制台恢复。',
+    confirmText: '删除',
+  }
+}
+
+function askReindexDocument(doc: DocumentItem) {
+  confirmTarget.value = {
+    kind: 'reindex',
+    id: doc.id,
+    title: '确认重新索引',
+    label: `#${doc.id} ${doc.title || 'Untitled'}`,
+    description: '系统会删除旧 chunks，把文档设为待处理，并由后台 worker 重新切分和向量化。期间该文档会短暂不可检索。',
+    confirmText: '重新索引',
+  }
 }
 
 function askDeleteChunk(chunk: ChunkItem) {
-  deleteTarget.value = { type: 'chunk', id: chunk.id, label: `删除 Chunk #${chunk.chunk_index}` }
+  confirmTarget.value = {
+    kind: 'chunk',
+    id: chunk.id,
+    title: '确认删除 Chunk',
+    label: `Chunk #${chunk.chunk_index}`,
+    description: '删除后这个片段不会再参与检索。需要恢复时可以重新索引所属文档。',
+    confirmText: '删除',
+  }
 }
 
-async function confirmDelete() {
-  if (!deleteTarget.value) return
-  const target = deleteTarget.value
-  deleteTarget.value = null
-  if (target.type === 'document') {
-    await deleteDocument(target.id)
-    if (selectedDocument.value?.id === target.id) {
-      selectedDocument.value = null
-      chunks.items = []
+async function confirmAction() {
+  if (!confirmTarget.value) return
+  const target = confirmTarget.value
+  confirmTarget.value = null
+  operation.value = target.kind
+  try {
+    if (target.kind === 'document') {
+      await deleteDocument(target.id)
+      if (selectedDocument.value?.id === target.id) {
+        selectedDocument.value = null
+        chunks.items = []
+      }
+      notice.value = '文档已删除。'
+      await Promise.all([loadDocuments(documentsPage.value), loadOverview(), searchChunkDocuments(chunkDocumentPage.value)])
+      return
     }
-    await Promise.all([loadDocuments(documentsPage.value), loadOverview(), searchChunkDocuments(chunkDocumentPage.value)])
-    return
+    if (target.kind === 'reindex') {
+      await reindexDocument(target.id)
+      notice.value = '文档已提交重新索引。'
+      await Promise.all([loadDocuments(documentsPage.value), loadOverview(), searchChunkDocuments(chunkDocumentPage.value)])
+      return
+    }
+    await deleteChunk(target.id)
+    notice.value = 'Chunk 已删除。'
+    await Promise.all([reloadChunks(), loadOverview(), searchChunkDocuments(chunkDocumentPage.value)])
+  } catch (error) {
+    notifyError(error)
+  } finally {
+    operation.value = ''
   }
-  await deleteChunk(target.id)
-  await reloadChunks()
-  await loadOverview()
 }
 
 function startEditChunk(chunk: ChunkItem) {
@@ -710,12 +804,19 @@ function startEditChunk(chunk: ChunkItem) {
 }
 
 async function saveChunk(id: number) {
-  const updated = await updateChunk(id, editingChunkContent.value)
-  const index = chunks.items.findIndex((item) => item.id === id)
-  if (index >= 0) chunks.items[index] = updated
-  editingChunkId.value = null
-  editingChunkContent.value = ''
-  notice.value = 'Chunk 已保存并重新向量化。'
+  operation.value = 'save-chunk'
+  try {
+    const updated = await updateChunk(id, editingChunkContent.value)
+    const index = chunks.items.findIndex((item) => item.id === id)
+    if (index >= 0) chunks.items[index] = updated
+    editingChunkId.value = null
+    editingChunkContent.value = ''
+    notice.value = 'Chunk 已保存并重新向量化。'
+  } catch (error) {
+    notifyError(error)
+  } finally {
+    operation.value = ''
+  }
 }
 
 async function runQuery() {
@@ -725,7 +826,7 @@ async function runQuery() {
     const topK = Number(topKText.value || '6')
     queryResult.value = await queryRag(question.value, topK)
   } catch (error) {
-    notice.value = (error as Error).message
+    notifyError(error)
   } finally {
     busy.value = false
   }
@@ -835,6 +936,11 @@ function stripExtension(name: string) {
   return name.replace(/\.[^/.]+$/, '') || name
 }
 
+function fileExtension(name: string) {
+  const dot = name.lastIndexOf('.')
+  return dot >= 0 ? name.slice(dot).toLowerCase() : ''
+}
+
 function formatBytes(size: number) {
   if (size < 1024) return `${size} B`
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
@@ -844,6 +950,10 @@ function formatBytes(size: number) {
 function formatDate(value?: string) {
   if (!value) return '暂无记录'
   return new Date(value).toLocaleString()
+}
+
+function notifyError(error: unknown) {
+  notice.value = (error as Error).message || '操作失败'
 }
 
 watch([activeMenu, documentTab, authenticated], ([menu, tab, loggedIn]) => {
@@ -935,7 +1045,8 @@ select.control {
 }
 
 .primary-button:disabled,
-.ghost-button:disabled {
+.ghost-button:disabled,
+.icon-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -963,6 +1074,16 @@ select.control {
 
 .danger-button:hover {
   background: rgba(244, 63, 94, 0.22);
+}
+
+.reindex-confirm {
+  border-color: rgba(94, 234, 212, 0.34);
+  background: rgba(94, 234, 212, 0.12);
+  color: #ccfbf1;
+}
+
+.reindex-confirm:hover {
+  background: rgba(94, 234, 212, 0.2);
 }
 
 .icon-button {

@@ -37,6 +37,7 @@ func (s *Server) RegisterRoutes(v1 fiber.Router) {
 	protected.Post("/documents/text", s.createTextDocument)
 	protected.Get("/documents", s.listDocuments)
 	protected.Get("/documents/:id/chunks", s.listChunks)
+	protected.Post("/documents/:id/reindex", s.reindexDocument)
 	protected.Delete("/documents/:id", s.deleteDocument)
 	protected.Patch("/chunks/:id", s.updateChunk)
 	protected.Delete("/chunks/:id", s.deleteChunk)
@@ -178,6 +179,21 @@ func (s *Server) deleteDocument(c fiber.Ctx) error {
 		return fail(c, err)
 	}
 	return ok(c, fiber.Map{"deleted": true})
+}
+
+func (s *Server) reindexDocument(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil {
+		return fail(c, service.ErrValidation)
+	}
+	doc, err := s.service.ReindexDocument(context.Background(), id)
+	if err != nil {
+		return fail(c, err)
+	}
+	return ok(c, fiber.Map{"document_id": doc.ID, "status": doc.Status})
 }
 
 func (s *Server) updateChunk(c fiber.Ctx) error {

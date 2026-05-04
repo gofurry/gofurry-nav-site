@@ -74,6 +74,12 @@ export function deleteDocument(documentId: number) {
   return request<{ deleted: boolean }>(`/api/v1/admin/documents/${documentId}`, { method: 'DELETE' })
 }
 
+export function reindexDocument(documentId: number) {
+  return request<{ document_id: number; status: string }>(`/api/v1/admin/documents/${documentId}/reindex`, {
+    method: 'POST',
+  })
+}
+
 export function updateChunk(chunkId: number, content: string) {
   return request<ChunkItem>(`/api/v1/admin/chunks/${chunkId}`, {
     method: 'PATCH',

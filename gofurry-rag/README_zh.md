@@ -16,8 +16,9 @@
 - 异步文本入库 worker
 - 控制台使用唯一口令登录，服务端签发 HttpOnly JWT Cookie
 - 文本入库支持手动表单和文件拖拽/批量导入
-- 文档管理支持状态过滤、分页、删除确认、Chunks 查看/编辑/删除
-- Chunk 编辑保存时会同步重新生成 embedding 并写回 pgvector
+- 文件导入限制单文件 10 MiB，支持 txt、md、csv、json、yaml、log、html
+- 文档管理支持状态过滤、分页、删除确认、单文档重新索引
+- Chunks 支持查看、编辑、删除；编辑保存时会重新生成 embedding 并写回 pgvector
 - 检索接口公开，只返回 `sources`，暂不生成自然语言答案
 - 控制台整体态势自动刷新，展示文档、chunk、数据库和 Ollama 状态
 
@@ -68,6 +69,7 @@ go build ./cmd/server
 - `POST /api/v1/admin/documents/text`
 - `GET /api/v1/admin/documents`
 - `GET /api/v1/admin/documents/:id/chunks`
+- `POST /api/v1/admin/documents/:id/reindex`
 - `PATCH /api/v1/admin/chunks/:id`
 - `DELETE /api/v1/admin/chunks/:id`
 - `DELETE /api/v1/admin/documents/:id`
@@ -75,8 +77,6 @@ go build ./cmd/server
 - `GET /livez`、`GET /readyz`、`GET /startupz`、`GET /healthz`
 
 管理接口需要先通过 `/api/v1/admin/auth/login` 登录。服务会把 JWT 写入 HttpOnly Cookie，方式与 `gofurry-admin` 类似。`POST /api/v1/chat/query` 保持公开。
-
-`GET /api/v1/health` 会返回数据库和 Ollama 连接信息，供控制台整体态势页展示。
 
 ## 配置
 

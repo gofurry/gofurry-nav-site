@@ -92,6 +92,54 @@ func TestOverviewRequiresCookie(t *testing.T) {
 	}
 }
 
+func TestReindexDocumentRequiresCookie(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/documents/1/reindex", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestReindexDocumentSetsPending(t *testing.T) {
+	app := testApp()
+	cookie := loginCookie(t, app)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/admin/documents/text", bytes.NewBufferString(`{"title":"T","content":"hello","source_type":"manual"}`))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq.AddCookie(cookie)
+	if resp, err := app.Test(createReq); err != nil {
+		t.Fatal(err)
+	} else if resp.StatusCode != http.StatusOK {
+		t.Fatalf("create status = %d", resp.StatusCode)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/documents/1/reindex", nil)
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	var result struct {
+		Code int `json:"code"`
+		Data struct {
+			DocumentID int64  `json:"document_id"`
+			Status     string `json:"status"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != 1 || result.Data.DocumentID != 1 || result.Data.Status != db.StatusPending {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
 func TestQueryReturnsSources(t *testing.T) {
 	app := testApp()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"GoFurry","top_k":1}`))
@@ -234,6 +282,20 @@ func (r *fakeRepo) ListDocuments(ctx context.Context, filter db.ListDocumentsFil
 
 func (r *fakeRepo) ListChunks(ctx context.Context, documentID int64, page, pageSize int) (db.PageResult[db.Chunk], error) {
 	return db.PageResult[db.Chunk]{Items: []db.Chunk{}, Total: 0}, nil
+}
+
+func (r *fakeRepo) ReindexDocument(ctx context.Context, id int64) (db.Document, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for i := range r.docs {
+		if r.docs[i].ID == id {
+			r.docs[i].Status = db.StatusPending
+			r.docs[i].ErrorMessage = ""
+			r.docs[i].UpdatedAt = time.Now()
+			return r.docs[i], nil
+		}
+	}
+	return db.Document{}, service.ErrValidation
 }
 
 func (r *fakeRepo) UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int, embedding []float64) (db.Chunk, error) {

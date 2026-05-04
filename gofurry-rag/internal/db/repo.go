@@ -200,6 +200,33 @@ func (r *Repository) MarkDocumentFailed(ctx context.Context, id int64, message s
 	return err
 }
 
+func (r *Repository) ReindexDocument(ctx context.Context, id int64) (Document, error) {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return Document{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	if _, err := tx.Exec(ctx, `DELETE FROM rag_chunks WHERE document_id = $1`, id); err != nil {
+		return Document{}, err
+	}
+	row := tx.QueryRow(ctx, `
+UPDATE rag_documents
+SET status = 'pending', error_message = '', updated_at = now()
+WHERE id = $1
+RETURNING id, source_type, COALESCE(source_id, ''), COALESCE(title, ''), COALESCE(url, ''),
+          checksum, content, status, error_message, metadata, created_at, updated_at
+`, id)
+	doc, err := scanDocument(row)
+	if err != nil {
+		return Document{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Document{}, err
+	}
+	return doc, nil
+}
+
 func (r *Repository) ListDocuments(ctx context.Context, filter ListDocumentsFilter) (PageResult[Document], error) {
 	page, pageSize := normalizePage(filter.Page, filter.PageSize)
 	args := []any{}

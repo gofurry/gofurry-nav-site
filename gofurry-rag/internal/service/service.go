@@ -19,6 +19,7 @@ type Repository interface {
 	CreateDocument(ctx context.Context, params db.CreateDocumentParams) (db.Document, error)
 	ListDocuments(ctx context.Context, filter db.ListDocumentsFilter) (db.PageResult[db.Document], error)
 	ListChunks(ctx context.Context, documentID int64, page, pageSize int) (db.PageResult[db.Chunk], error)
+	ReindexDocument(ctx context.Context, id int64) (db.Document, error)
 	UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int, embedding []float64) (db.Chunk, error)
 	DeleteChunk(ctx context.Context, id int64) error
 	DeleteDocument(ctx context.Context, id int64) error
@@ -138,6 +139,13 @@ func (s *Service) ListChunks(ctx context.Context, documentID int64, page, pageSi
 		return db.PageResult[db.Chunk]{}, wrapValidation("document id is required")
 	}
 	return s.repo.ListChunks(ctx, documentID, page, pageSize)
+}
+
+func (s *Service) ReindexDocument(ctx context.Context, id int64) (db.Document, error) {
+	if id <= 0 {
+		return db.Document{}, wrapValidation("document id is required")
+	}
+	return s.repo.ReindexDocument(ctx, id)
 }
 
 func (s *Service) UpdateChunk(ctx context.Context, id int64, req UpdateChunkRequest) (db.Chunk, error) {

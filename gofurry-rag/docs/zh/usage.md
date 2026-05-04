@@ -79,10 +79,26 @@ go run . --config ./config/server.yaml uninstall
 - 管理接口通过 HttpOnly JWT Cookie 鉴权，不再使用 Admin Token 或 Bearer Header。
 - 整体态势页每 5 秒自动刷新，展示文档总量、chunk 总量、状态分布、数据库连接信息和 Ollama 连接信息。
 - 文档管理支持手动文本入库，也支持拖拽文件和批量导入文件。
+- 文件导入限制单文件最大 10 MiB，允许 `.txt`、`.md`、`.csv`、`.json`、`.yaml`、`.yml`、`.log`、`.html`、`.htm`。
 - 文档列表每页 6 条，打开文档 tab 时每 3 秒自动刷新。
+- 文档可以重新索引；重新索引会删除旧 chunks，把文档设为 `pending`，由后台 worker 重新切分和向量化。
 - Chunks tab 左侧文档列表每页 7 条，可按文档标题或 ID 搜索。
 - Chunk 支持查看、编辑和删除；编辑保存时会重新生成 embedding 并写回 pgvector。
 - 文档检索页调用公开检索接口，并展示返回的 sources。
+
+## 导入规范
+
+只有 `content` 是必填字段。`title` 强烈建议填写，方便检索结果和来源展示。
+
+`source_type`、`source_id`、`url` 是可选的来源追踪字段：
+
+- 手动录入：`source_type=manual`，`source_id` 和 `url` 可空。
+- 文件导入：`source_type=file`，`source_id` 使用原始文件名，标题使用去掉后缀的文件名。
+- 网页内容：推荐 `source_type=website`，`source_id` 使用页面 slug 或路径，`url` 填原始页面地址。
+- 导航条目：推荐 `source_type=nav`，`source_id` 使用站点 ID 或 slug。
+- 游戏内容：推荐 `source_type=game`，`source_id` 使用游戏 ID 或 slug。
+
+这些字段对后续爬虫导入、重新索引、按来源删除、展示引用很有用。
 
 ## 文本入库
 
@@ -103,19 +119,16 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
   -d '{"title":"GoFurry","content":"GoFurry is a content discovery website.","source_type":"manual"}'
 ```
 
-只有 `content` 是必填字段。`title` 强烈建议填写，方便检索结果和来源展示。
-
-`source_type`、`source_id`、`url` 是可选的来源追踪字段：
-
-- `source_type`：文本来源类型，例如 `manual`、`website`、`nav`、`game`、`file`
-- `source_id`：外部系统里的唯一 ID，例如页面 slug、文章 ID、站点 ID、游戏 ID、文件名
-- `url`：原始页面 URL，方便后续展示引用和回溯来源
-
-这些字段对后续爬虫导入、重新索引、按来源删除、展示引用很有用。手动录入普通文本时，保留 `source_type: "manual"` 就够了。
-
-文件导入会使用去掉后缀的文件名作为标题，文件内容作为正文。
-
 服务会创建 `pending` 文档，ingest worker 会异步切分并写入 embedding。
+
+## 重新索引
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/1/reindex \
+  -b cookies.txt
+```
+
+重新索引会删除该文档旧 chunks，把文档设为 `pending`。在 worker 重新处理完成前，该文档会短暂不可检索。
 
 ## 检索
 

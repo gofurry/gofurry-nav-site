@@ -6,7 +6,7 @@
 
 ```text
 先让它找得准，再让它说得好。
-先让问题可观察，再谈复杂优化。
+先让问题可观测，再谈复杂优化。
 先完善管理闭环，再扩展文件格式和生成模型。
 ```
 
@@ -29,19 +29,21 @@
 - Go 服务骨架对齐 `gofurry-admin`，使用 Cobra + Viper，运行配置以 `config/server.yaml` 为主。
 - 控制台使用唯一口令登录，服务端签发 HttpOnly JWT Cookie；管理接口不再使用 Admin Token 或 Bearer Header。
 - `POST /api/v1/chat/query` 保持公开，用于前台或外部系统检索。
-- 控制台使用 Vue + Tailwind，暗色左侧菜单与右侧工作区布局。
-- 整体态势页每 5 秒自动刷新，并展示文档、chunk、数据库和 Ollama 状态。
+- 控制台使用 Vue + Tailwind，提供暗色左侧菜单与右侧工作区布局。
+- 整体态势页每 5 秒自动刷新，并展示文档、chunks、数据库和 Ollama 状态。
 - 文档管理支持手动文本入库、文件拖拽导入、批量提交入库、状态过滤、分页和删除确认。
+- 文件导入已限制单文件最大 10 MiB，并限制为 `.txt`、`.md`、`.csv`、`.json`、`.yaml`、`.yml`、`.log`、`.html`、`.htm` 等文本类文件。
 - 文档列表每页 6 条，并在文档 tab 打开时每 3 秒自动刷新。
+- 单文档支持重新索引：删除旧 chunks，将文档设为 `pending`，由现有 worker 重新切分和向量化。
 - Chunks tab 支持按文档标题或 ID 搜索，左侧文档列表每页 7 条。
 - Chunk 支持查看、编辑和删除；编辑保存时会重新生成 embedding 并写回 pgvector。
 - 查询页展示 top_k sources、score、标题和 chunk 内容。
-- 后端已有 config、auth、splitter、checksum、Ollama client 和主要 API 测试。
+- 已补充中文 usage、smoke-test、导入规范和 roadmap 入口。
 
 当前暂未实现：
 
 - 生成模型回答。
-- reindex 和 retry。
+- 全量 reindex 和失败 retry。
 - metadata filter。
 - PDF、DOCX、OCR 等复杂文件解析。
 - 检索质量评估集和批量评估工具。
@@ -50,15 +52,16 @@
 
 目标：让当前闭环更稳定、更容易手动运营。
 
-建议优先做：
+当前阶段已完成：
 
-- 完善 Chunks 管理体验：编辑失败提示、删除后的计数刷新、空状态和长文本阅读体验。
-- 给文档增加单文档 reindex 入口，让 chunk 参数或文本修改后可以重新切分和向量化。
-- 明确文件导入限制：最大文件大小、允许扩展名、非文本文件拒绝提示。
-- 补充控制台端到端冒烟文档，覆盖登录、文件入库、状态刷新、chunk 编辑、检索命中。
-- 将 `source_type`、`source_id`、`url` 的推荐使用方式写进导入规范。
+- 完善 Chunks 管理体验：编辑失败提示、删除后刷新计数、空状态、长文本阅读、保存中反馈。
+- 增加单文档 reindex 入口：`POST /api/v1/admin/documents/:id/reindex`，用于重新切分和向量化单个文档。
+- 明确文件导入限制：单文件最大 10 MiB，限制文本类扩展名，不符合规则的文件会显示拒绝原因。
+- 补充控制台端到端冒烟文档，覆盖登录、文件入库、状态刷新、reindex、chunk 编辑重向量化、检索命中。
+- 将 `source_type`、`source_id`、`url` 的推荐使用方式写入导入规范。
+- 修复控制台中文文案乱码，保持中文 UI 可读。
 
-不建议在这个阶段接生成模型。现在更重要的是确认 sources 是否稳定、准确、可解释。
+这个阶段仍然不接入生成模型。现在更重要的是确认 sources 是否稳定、准确、可解释。
 
 ## v0.2.0：检索质量与评估体系
 
@@ -88,7 +91,6 @@ top5 命中率 >= 90%
 
 建议新增：
 
-- 单文档 reindex：`POST /api/v1/admin/documents/:id/reindex`
 - 全量 reindex：`POST /api/v1/admin/documents/reindex`
 - 按来源 reindex：支持通过 `source_type` 或 metadata 选择目标文档。
 - 完善状态机：`pending`、`processing`、`ready`、`failed`、`reindexing`。
@@ -117,7 +119,6 @@ nav           导航条目
 - 对公开 query 接口增加限流，优先按 IP 限制。
 - 限制 `top_k` 最大值和 question 最大长度。
 - 给 query、embedding、ingest worker 增加明确超时。
-- 给文件导入增加大小限制和扩展名白名单。
 - 增加结构化日志，记录 document_id、chunk_id、耗时、错误原因和 Ollama 调用状态。
 - 在整体态势页增加 worker 状态、最近失败原因和处理耗时统计。
 - 补充 systemd 部署和回滚文档。
@@ -131,7 +132,7 @@ nav           导航条目
 建议前置条件：
 
 - 查询 sources 稳定，top_k 命中率达标。
-- 控制台能清楚看到每次命中的 chunks 和 score。
+- 控制台能清晰看到每次命中的 chunks 和 score。
 - 支持 reindex 和失败 retry。
 - query 有超时、长度限制和最大 top_k 限制。
 
@@ -165,18 +166,17 @@ nav           导航条目
 
 ## 近期任务清单
 
-建议按这个顺序推进：
+建议按这个顺序推进后续版本：
 
 ```text
 1. 准备真实问题测试集
 2. 增强查询调试和评估记录
 3. 对比 chunk_size / chunk_overlap
 4. 给 embedding 输入增加标题和来源上下文
-5. 增加单文档 reindex
-6. 增加 retry 和更完整状态机
-7. 增加 metadata filter
-8. 增加 query 限流、超时和长度限制
-9. 再接入生成模型和引用答案
+5. 增加失败 retry 和更完整状态机
+6. 增加 metadata filter
+7. 增加 query 限流、超时和长度限制
+8. 再接入生成模型和引用答案
 ```
 
 最重要的一句话：
