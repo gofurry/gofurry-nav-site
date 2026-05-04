@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoFurry/gofurry-rag/internal/config"
+	"github.com/GoFurry/gofurry-rag/config"
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -70,12 +70,18 @@ func (s *Service) ParseAndValidateToken(tokenValue string) (*Claims, error) {
 }
 
 func (s *Service) BuildAuthCookie(token string) *fiber.Cookie {
+	maxAge := s.cfg.Auth.CookieMaxAgeSecs
+	if maxAge <= 0 {
+		maxAge = s.cfg.SessionTTLHours * 3600
+	}
 	return &fiber.Cookie{
 		Name:     s.cfg.AuthCookieName,
 		Value:    token,
 		Path:     "/",
-		SameSite: "Lax",
-		MaxAge:   s.cfg.SessionTTLHours * 3600,
+		Domain:   s.cfg.Auth.CookieDomain,
+		SameSite: s.cfg.Auth.SameSite,
+		Secure:   s.cfg.Auth.CookieSecure,
+		MaxAge:   maxAge,
 		HTTPOnly: true,
 	}
 }
@@ -85,7 +91,9 @@ func (s *Service) BuildLogoutCookie() *fiber.Cookie {
 		Name:     s.cfg.AuthCookieName,
 		Value:    "",
 		Path:     "/",
-		SameSite: "Lax",
+		Domain:   s.cfg.Auth.CookieDomain,
+		SameSite: s.cfg.Auth.SameSite,
+		Secure:   s.cfg.Auth.CookieSecure,
 		MaxAge:   -1,
 		HTTPOnly: true,
 		Expires:  time.Unix(0, 0),

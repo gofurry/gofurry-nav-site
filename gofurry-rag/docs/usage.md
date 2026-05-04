@@ -9,20 +9,38 @@
 
 ## Configure
 
-Copy `.env.example` to `.env` and set the PostgreSQL password:
+Edit `config/server.yaml`. The most important fields are:
 
-```env
-RAG_DB_DSN=postgres://postgres:your_password@192.168.153.121:5432/postgres?sslmode=disable
-RAG_OLLAMA_BASE_URL=http://148.70.18.111:43434
-RAG_EMBED_MODEL=qwen3-embedding:0.6b
-RAG_CONSOLE_PASSCODE=change-me
-RAG_JWT_SECRET=change-this-jwt-secret
+```yaml
+database:
+  postgres:
+    db_name: "gfr"
+    db_username: "postgres"
+    db_password: "your_password"
+    db_host: "192.168.153.121"
+    db_port: "5432"
+
+auth:
+  console_passcode: "change-me"
+  jwt_secret: "change-this-jwt-secret"
+
+rag:
+  ollama_base_url: "http://148.70.18.111:43434"
+  embed_model: "qwen3-embedding:0.6b"
+```
+
+The default config lookup matches `gofurry-admin`: `/etc/gofurry-rag/server.yaml`, then `./config/server.yaml`. You can always pass `--config`.
+
+Environment overrides use the `APP_` prefix:
+
+```bash
+APP_SERVER_PORT=8081 APP_RAG_TOP_K=8 go run . --config ./config/server.yaml serve
 ```
 
 ## Run
 
 ```bash
-go run ./cmd/server
+go run . --config ./config/server.yaml serve
 ```
 
 Open the production console at:
@@ -39,6 +57,15 @@ npm run dev
 ```
 
 Use the Vite URL and let it proxy `/api` to the Go server.
+
+## CLI
+
+```bash
+go run . --config ./config/server.yaml version
+go run . --config ./config/server.yaml reset-password --password change-me
+go run . --config ./config/server.yaml install
+go run . --config ./config/server.yaml uninstall
+```
 
 ## Add Text
 

@@ -9,26 +9,29 @@
 
 ## Features
 
-- Single Go binary with an embedded Vue admin console
+- Cobra CLI and Viper `server.yaml` configuration, aligned with `gofurry-admin`
+- Single Go binary with an embedded Vue + Tailwind admin console
 - PostgreSQL + pgvector storage
 - Ollama embedding client for `qwen3-embedding:0.6b`
 - Async text ingest worker
-- Admin token protection for document APIs and console workflows
-- Minimal retrieval API that returns `sources` first, without LLM answer generation
+- HttpOnly JWT Cookie login for admin APIs
+- Public retrieval API that returns `sources` first, without LLM answer generation
 
 ## Quick Start
 
+Edit `config/server.yaml`, then start the service:
+
 ```bash
-cp .env.example .env
-go run ./cmd/server
+go run . --config ./config/server.yaml serve
 ```
 
-Start the admin console in development:
+Common CLI commands:
 
 ```bash
-cd web
-npm install
-npm run dev
+go run . --config ./config/server.yaml version
+go run . --config ./config/server.yaml reset-password --password change-me
+go run . --config ./config/server.yaml install
+go run . --config ./config/server.yaml uninstall
 ```
 
 Build the embedded console and verify Go code:
@@ -53,12 +56,13 @@ go test ./...
 - `GET /api/v1/admin/documents/:id/chunks`
 - `DELETE /api/v1/admin/documents/:id`
 - `POST /api/v1/chat/query`
+- `GET /livez`, `GET /readyz`, `GET /startupz`, `GET /healthz`
 
 Admin routes require logging in through `/api/v1/admin/auth/login`. The service writes a JWT to an HttpOnly cookie, similar to `gofurry-admin`.
 
 ## Configuration
 
-See [.env.example](./.env.example). Do not commit real `.env` files or database passwords.
+Runtime configuration is read from `server.yaml`. By default, the service searches `/etc/gofurry-rag/server.yaml` and `./config/server.yaml`; `--config` can point to any file. Environment overrides use the `APP_` prefix, for example `APP_SERVER_PORT=8081` or `APP_RAG_OLLAMA_BASE_URL=http://127.0.0.1:11434`.
 
 ## Documentation
 

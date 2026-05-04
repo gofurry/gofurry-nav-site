@@ -49,6 +49,7 @@ Thumbs.db
 **/config/*.local.yaml
 **/config/*.prod.yaml
 **/config/*.secret.yaml
+!gofurry-rag/config/server.yaml
 
 # Certificates and private keys
 **/*.key

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/GoFurry/gofurry-rag/internal/config"
+	"github.com/GoFurry/gofurry-rag/config"
 	"github.com/GoFurry/gofurry-rag/internal/db"
 	"github.com/GoFurry/gofurry-rag/internal/embedder"
 	"github.com/GoFurry/gofurry-rag/internal/ingest"
@@ -146,7 +146,7 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 		return QueryResponse{}, err
 	}
 	return QueryResponse{
-		Answer:  "已找到以下相关资料，请参考 sources。",
+		Answer:  "Relevant sources were found. Please review the sources field.",
 		Sources: sources,
 		Usage: QueryUsage{
 			TopK:           topK,

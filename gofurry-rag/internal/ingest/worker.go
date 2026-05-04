@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GoFurry/gofurry-rag/internal/config"
+	"github.com/GoFurry/gofurry-rag/config"
 	"github.com/GoFurry/gofurry-rag/internal/db"
 	"github.com/GoFurry/gofurry-rag/internal/embedder"
 )

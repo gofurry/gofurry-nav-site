@@ -1,0 +1,103 @@
+cluster_id: 1
+
+server:
+  app_id: "gofurry-rag"
+  app_name: "GoFurry RAG"
+  app_version: "v1.0.0"
+  mode: "debug"
+  ip_address: "127.0.0.1"
+  port: "8080"
+  memory_limit: 1
+  gc_percent: 1000
+  network: "tcp"
+  enable_prefork: false
+  is_full_stack: true
+
+database:
+  enabled: true
+  auto_migrate: true
+  db_type: "postgres"
+  postgres:
+    dsn: ""
+    db_name: "gfr"
+    db_username: "postgres"
+    db_password: "your_password"
+    db_host: "192.168.153.121"
+    db_port: "5432"
+
+auth:
+  console_passcode: "change-me"
+  jwt_secret: "change-this-jwt-secret"
+  cookie_name: "gofurry_rag_session"
+  cookie_domain: ""
+  cookie_secure: false
+  cookie_max_age_seconds: 43200
+  session_ttl_hours: 12
+  cookie_same_site: "Lax"
+  csrf_header_required: false
+
+rag:
+  ollama_base_url: "http://148.70.18.111:43434"
+  embed_model: "qwen3-embedding:0.6b"
+  embed_dim: 1024
+  chunk_size: 700
+  chunk_overlap: 120
+  top_k: 6
+  ingest_workers: 1
+  embed_batch_size: 8
+
+log:
+  log_max_size: 100
+  log_max_backups: 30
+  log_max_age: 7
+  log_level: "debug"
+  log_mode: "dev"
+  log_path: "./logs/gofurry-rag.log"
+
+middleware:
+  request_id:
+    enabled: true
+    header: "X-Request-ID"
+  access_log:
+    enabled: true
+    format: "${time} | ${status} | ${latency} | ${method} | ${path} | rid=${respHeader:X-Request-ID}"
+    time_format: "2006-01-02 15:04:05.000"
+    time_zone: "Local"
+  timeout:
+    enabled: true
+    duration_seconds: 30
+    exclude_paths: ["/livez", "/readyz", "/startupz", "/healthz"]
+  health:
+    enabled: true
+    include_legacy: true
+  security_headers:
+    enabled: true
+    content_security_policy: ""
+    permission_policy: ""
+    hsts_max_age: 0
+    hsts_exclude_subdomains: false
+    hsts_preload_enabled: false
+    csp_report_only: false
+  compression:
+    enabled: true
+    level: "default"
+  cors:
+    allow_origins: ["http://127.0.0.1:5173", "http://127.0.0.1:8080"]
+  limiter:
+    enabled: true
+    max_requests: 3000
+    expiration: 60
+    strategy: "fixed"
+    key_source: "ip"
+    key_header: ""
+    skip_failed_requests: false
+    skip_successful_requests: false
+    disable_headers: false
+    exclude_paths: ["/livez", "/readyz", "/startupz", "/healthz"]
+  etag:
+    enabled: true
+    weak: false
+
+waf:
+  enabled: false
+  conf_path: ["./config/coraza.conf"]

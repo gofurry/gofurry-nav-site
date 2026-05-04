@@ -3,21 +3,15 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"io/fs"
-	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/GoFurry/gofurry-rag/config"
 	"github.com/GoFurry/gofurry-rag/internal/auth"
-	"github.com/GoFurry/gofurry-rag/internal/config"
 	"github.com/GoFurry/gofurry-rag/internal/db"
 	"github.com/GoFurry/gofurry-rag/internal/ingest"
 	"github.com/GoFurry/gofurry-rag/internal/service"
-	"github.com/GoFurry/gofurry-rag/internal/web"
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/cors"
-	"github.com/gofiber/fiber/v3/middleware/recover"
 )
 
 type Server struct {
@@ -25,39 +19,15 @@ type Server struct {
 	service     *service.Service
 	authService *auth.Service
 	worker      *ingest.Worker
-	app         *fiber.App
 }
 
 func NewServer(cfg config.Config, svc *service.Service, worker *ingest.Worker) *Server {
-	server := &Server{cfg: cfg, service: svc, authService: auth.New(cfg), worker: worker}
-	server.app = server.build()
-	return server
+	return &Server{cfg: cfg, service: svc, authService: auth.New(cfg), worker: worker}
 }
 
-func (s *Server) App() *fiber.App {
-	return s.app
-}
-
-func (s *Server) build() *fiber.App {
-	app := fiber.New(fiber.Config{
-		AppName:      s.cfg.AppName,
-		ServerHeader: s.cfg.AppName,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		ErrorHandler: func(c fiber.Ctx, err error) error {
-			return fail(c, err)
-		},
-	})
-	app.Use(recover.New())
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
-		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
-		AllowMethods: []string{fiber.MethodGet, fiber.MethodPost, fiber.MethodDelete, fiber.MethodOptions},
-	}))
-
-	api := app.Group("/api/v1")
-	api.Get("/health", s.health)
-	admin := api.Group("/admin")
+func (s *Server) RegisterRoutes(v1 fiber.Router) {
+	v1.Get("/health", s.health)
+	admin := v1.Group("/admin")
 	admin.Get("/auth/state", s.authState)
 	admin.Post("/auth/login", s.authLogin)
 	admin.Post("/auth/logout", s.authLogout)
@@ -68,10 +38,7 @@ func (s *Server) build() *fiber.App {
 	protected.Get("/documents", s.listDocuments)
 	protected.Get("/documents/:id/chunks", s.listChunks)
 	protected.Delete("/documents/:id", s.deleteDocument)
-	api.Post("/chat/query", s.query)
-
-	attachAdminUI(app)
-	return app
+	v1.Post("/chat/query", s.query)
 }
 
 func (s *Server) requireAdmin(c fiber.Ctx) error {
@@ -132,11 +99,17 @@ func (s *Server) authMe(c fiber.Ctx) error {
 }
 
 func (s *Server) health(c fiber.Ctx) error {
+	if s.service == nil {
+		return ok(c, fiber.Map{"status": "not_ready"})
+	}
 	ctx := context.Background()
 	return ok(c, s.service.Health(ctx))
 }
 
 func (s *Server) overview(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
 	result, err := s.service.Overview(context.Background())
 	if err != nil {
 		return fail(c, err)
@@ -145,6 +118,9 @@ func (s *Server) overview(c fiber.Ctx) error {
 }
 
 func (s *Server) createTextDocument(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
 	var req service.TextDocumentRequest
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
@@ -157,6 +133,9 @@ func (s *Server) createTextDocument(c fiber.Ctx) error {
 }
 
 func (s *Server) listDocuments(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
 	result, err := s.service.ListDocuments(context.Background(), db.ListDocumentsFilter{
 		Page:       queryInt(c, "page", 1),
 		PageSize:   queryInt(c, "page_size", 20),
@@ -171,6 +150,9 @@ func (s *Server) listDocuments(c fiber.Ctx) error {
 }
 
 func (s *Server) listChunks(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return fail(c, service.ErrValidation)
@@ -183,6 +165,9 @@ func (s *Server) listChunks(c fiber.Ctx) error {
 }
 
 func (s *Server) deleteDocument(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return fail(c, service.ErrValidation)
@@ -194,6 +179,9 @@ func (s *Server) deleteDocument(c fiber.Ctx) error {
 }
 
 func (s *Server) query(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
 	var req service.QueryRequest
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
@@ -211,39 +199,4 @@ func queryInt(c fiber.Ctx, key string, fallback int) int {
 		return fallback
 	}
 	return value
-}
-
-func attachAdminUI(app *fiber.App) {
-	uiFS, err := fs.Sub(web.FS, "dist")
-	if err != nil {
-		return
-	}
-	index, err := fs.ReadFile(uiFS, "index.html")
-	if err != nil {
-		return
-	}
-	sendIndex := func(c fiber.Ctx) error {
-		c.Type("html", "utf-8")
-		return c.Send(index)
-	}
-	app.Get("/", func(c fiber.Ctx) error {
-		return c.Redirect().To("/admin")
-	})
-	app.Get("/admin", sendIndex)
-	app.Get("/admin/*", func(c fiber.Ctx) error {
-		asset := strings.TrimPrefix(c.Path(), "/admin/")
-		if asset == "" || asset == "." {
-			return sendIndex(c)
-		}
-		if stat, err := fs.Stat(uiFS, asset); err == nil && !stat.IsDir() {
-			return c.SendFile(asset, fiber.SendFile{FS: uiFS})
-		}
-		return sendIndex(c)
-	})
-	app.Use(func(c fiber.Ctx) error {
-		if strings.HasPrefix(c.Path(), "/api/") {
-			return fiber.ErrNotFound
-		}
-		return c.Status(http.StatusNotFound).SendString("not found")
-	})
 }

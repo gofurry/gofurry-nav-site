@@ -13,24 +13,25 @@ cd ..
 
 ```bash
 go test ./...
+go vet ./...
+go build .
+go build ./cmd/server
 ```
 
-3. Configure `.env` with a valid PostgreSQL password and start the service:
+3. Edit `config/server.yaml` with a valid PostgreSQL password and start the service:
 
 ```bash
-go run ./cmd/server
+go run . --config ./config/server.yaml serve
 ```
 
-4. Check health:
+4. Check health and probes:
 
 ```bash
 curl http://127.0.0.1:8080/api/v1/health
-```
-
-Expected result:
-
-```json
-{"code":1,"message":"success","data":{"status":"ok"}}
+curl http://127.0.0.1:8080/livez
+curl http://127.0.0.1:8080/readyz
+curl http://127.0.0.1:8080/startupz
+curl http://127.0.0.1:8080/healthz
 ```
 
 5. Login, create a text document, wait a few seconds, then query:

@@ -20,6 +20,14 @@ func ok(c fiber.Ctx, data any) error {
 	return c.Status(http.StatusOK).JSON(Result{Code: 1, Message: "success", Data: data})
 }
 
+func ErrorHandler(c fiber.Ctx, err error) error {
+	return fail(c, err)
+}
+
+func ErrorWithCode(c fiber.Ctx, status int, message string) error {
+	return c.Status(status).JSON(Result{Code: 0, Message: message, Data: fiber.Map{}})
+}
+
 func fail(c fiber.Ctx, err error) error {
 	status := http.StatusInternalServerError
 	message := "internal server error"

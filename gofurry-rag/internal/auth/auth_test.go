@@ -3,7 +3,7 @@ package auth
 import (
 	"testing"
 
-	"github.com/GoFurry/gofurry-rag/internal/config"
+	"github.com/GoFurry/gofurry-rag/config"
 )
 
 func TestLoginAndValidateToken(t *testing.T) {
@@ -13,6 +13,12 @@ func TestLoginAndValidateToken(t *testing.T) {
 		JWTSecret:       "jwt-secret",
 		AuthCookieName:  "session",
 		SessionTTLHours: 1,
+		Auth: config.AuthConfig{
+			CookieName:       "session",
+			CookieMaxAgeSecs: 3600,
+			SessionTTLHours:  1,
+			SameSite:         "Lax",
+		},
 	})
 	token, claims, err := svc.Login("secret")
 	if err != nil {

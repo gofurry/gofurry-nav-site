@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GoFurry/gofurry-rag/internal/config"
+	"github.com/GoFurry/gofurry-rag/config"
 	"github.com/GoFurry/gofurry-rag/internal/db"
 	"github.com/GoFurry/gofurry-rag/internal/service"
 	"github.com/gofiber/fiber/v3"
@@ -138,9 +138,17 @@ func testApp() *fiber.App {
 		AuthCookieName:  "gofurry_rag_session",
 		SessionTTLHours: 1,
 		TopK:            6,
+		Auth: config.AuthConfig{
+			CookieName:       "gofurry_rag_session",
+			CookieMaxAgeSecs: 3600,
+			SessionTTLHours:  1,
+			SameSite:         "Lax",
+		},
 	}
 	svc := service.New(newFakeRepo(), fakeEmbedder{}, cfg)
-	return NewServer(cfg, svc, nil).App()
+	app := fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
+	NewServer(cfg, svc, nil).RegisterRoutes(app.Group("/api/v1"))
+	return app
 }
 
 func loginCookie(t *testing.T, app *fiber.App) *http.Cookie {

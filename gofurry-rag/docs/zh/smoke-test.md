@@ -1,6 +1,6 @@
 # 冒烟测试
 
-1. 构建管理控制台：
+1. 构建控制台：
 
 ```bash
 cd web
@@ -9,31 +9,32 @@ npm run build
 cd ..
 ```
 
-2. 运行后端测试：
+2. 运行后端检查：
 
 ```bash
 go test ./...
+go vet ./...
+go build .
+go build ./cmd/server
 ```
 
-3. 在 `.env` 中配置有效 PostgreSQL 密码并启动服务：
+3. 在 `config/server.yaml` 中填入有效 PostgreSQL 密码并启动服务：
 
 ```bash
-go run ./cmd/server
+go run . --config ./config/server.yaml serve
 ```
 
-4. 检查健康状态：
+4. 检查健康接口和探针：
 
 ```bash
 curl http://127.0.0.1:8080/api/v1/health
+curl http://127.0.0.1:8080/livez
+curl http://127.0.0.1:8080/readyz
+curl http://127.0.0.1:8080/startupz
+curl http://127.0.0.1:8080/healthz
 ```
 
-期望返回：
-
-```json
-{"code":1,"message":"success","data":{"status":"ok"}}
-```
-
-5. 登录、创建文本文档，等待几秒后查询：
+5. 登录、创建文本文档，等待几秒后检索：
 
 ```bash
 curl -c cookies.txt -X POST http://127.0.0.1:8080/api/v1/admin/auth/login \
@@ -43,11 +44,11 @@ curl -c cookies.txt -X POST http://127.0.0.1:8080/api/v1/admin/auth/login \
 curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
   -b cookies.txt \
   -H "Content-Type: application/json" \
-  -d '{"title":"Smoke Test","content":"GoFurry 会存储可检索的知识片段。","source_type":"manual"}'
+  -d '{"title":"Smoke Test","content":"GoFurry stores searchable knowledge chunks.","source_type":"manual"}'
 
 curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
   -H "Content-Type: application/json" \
-  -d '{"question":"GoFurry 会存储什么？","top_k":3}'
+  -d '{"question":"What does GoFurry store?","top_k":3}'
 ```
 
-后台 worker 完成后，查询结果应该包含至少一个 source。
+ingest worker 完成后，检索结果应该至少包含一个 source。
