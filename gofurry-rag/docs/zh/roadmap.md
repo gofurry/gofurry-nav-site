@@ -106,18 +106,6 @@ top5 命中率 >= 90%
 - 在 query 请求中支持 metadata filters，例如 category、language、source_type。
 - 给文档和 chunk 建立更规范的 metadata 结构。
 
-推荐的 GoFurry 初始分类：
-
-```text
-site          站点介绍
-game          游戏内容
-faq           常见问题
-update        更新日志
-creator       创作者说明
-submission    投稿规则
-nav           导航条目
-```
-
 ## v0.4.0：安全、限流与运维观测
 
 目标：让服务可以更放心地部署和长期运行。
