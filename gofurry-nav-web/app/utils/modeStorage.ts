@@ -3,7 +3,15 @@ export type DisplayMode = 'sfw' | 'nsfw'
 export const MODE_STORAGE_KEY = 'mode'
 export const MODE_CHANGE_EVENT = 'mode-change'
 
+function canUseModeStorage() {
+  return typeof window !== 'undefined' && typeof localStorage !== 'undefined'
+}
+
 export function readMode() {
+  if (!canUseModeStorage()) {
+    return ''
+  }
+
   return localStorage.getItem(MODE_STORAGE_KEY)?.trim() ?? ''
 }
 
@@ -12,6 +20,10 @@ export function readDisplayMode(): DisplayMode {
 }
 
 export function writeMode(value: string) {
+  if (!canUseModeStorage()) {
+    return
+  }
+
   const trimmed = value.trim()
 
   if (trimmed) {
@@ -24,6 +36,10 @@ export function writeMode(value: string) {
 }
 
 export function dispatchModeChange(mode = readMode()) {
+  if (!canUseModeStorage()) {
+    return
+  }
+
   window.dispatchEvent(
     new CustomEvent(MODE_CHANGE_EVENT, {
       detail: {
@@ -37,6 +53,10 @@ export function dispatchModeChange(mode = readMode()) {
 export function subscribeModeChange(
   callback: (payload: { mode: string; displayMode: DisplayMode }) => void
 ) {
+  if (!canUseModeStorage()) {
+    return () => {}
+  }
+
   const handleStorage = (event: StorageEvent) => {
     if (event.key !== MODE_STORAGE_KEY) {
       return

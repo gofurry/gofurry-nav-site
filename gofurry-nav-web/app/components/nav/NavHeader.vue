@@ -34,12 +34,16 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SearchBox from './SearchBox.vue'
 import SiteIconStrip from './SiteIconStrip.vue'
-import { getImageUrl } from '@/utils/api/nav'
 import { loadRecentSites, RECENT_SITES_EVENT, type RecentSiteItem } from '@/utils/recentSites'
 import {
   CUSTOM_NAV_HEADER_BG_EVENT,
   loadRandomCustomNavHeaderBackground,
 } from '@/utils/customNavHeaderBackground'
+
+const props = defineProps<{
+  desktopBgUrl?: string | null
+  mobileBgUrl?: string | null
+}>()
 
 const { t } = useI18n()
 const bgImage = ref<string | null>(null)
@@ -98,13 +102,10 @@ function handleRecentSitesChange() {
 
 onMounted(async () => {
   try {
-    const [resizedUrl, normalUrl] = await Promise.all([
-      getImageUrl('standard'),
-      getImageUrl('mobile'),
-    ])
-
     fallbackBackgroundUpdater = () => {
-      bgImage.value = window.innerWidth >= 768 ? resizedUrl : normalUrl
+      bgImage.value = window.innerWidth >= 768
+        ? (props.desktopBgUrl ?? props.mobileBgUrl ?? null)
+        : (props.mobileBgUrl ?? props.desktopBgUrl ?? null)
     }
 
     await applyBackground()

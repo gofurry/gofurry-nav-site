@@ -1,39 +1,116 @@
 <template>
   <div class="flex min-h-screen w-full flex-col bg-gray-50">
-    <NavHeader />
+    <NavHeader
+      :desktop-bg-url="navPageData.desktopBgUrl"
+      :mobile-bg-url="navPageData.mobileBgUrl"
+    />
     <main
-        v-if="isContentRevealed"
-        ref="contentRef"
-        class="relative z-10 flex-1 bg-[#f2e3d0]"
-        :style="{
+      v-show="isContentRevealed"
+      ref="contentRef"
+      class="relative z-10 flex-1 bg-[#f2e3d0]"
+      :style="{
         backgroundImage: `url(${bgGrid})`,
         backgroundRepeat: 'repeat'
       }"
     >
       <div class="absolute w-full">
-        <NavTransitionBar />
+        <NavTransitionBar :initial-saying="navPageData.saying" />
       </div>
       <div class="h-10"></div>
-      <NavContent />
+      <NavContent
+        :initial-groups="navPageData.groups"
+        :initial-sites="navPageData.sites"
+        :initial-ping-data="navPageData.pingData"
+      />
       <div class="h-10"></div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { getGroups, getImageUrl, getPing, getSaying, getSites } from '~/services/nav'
+import type { Delay, Group, SayingModel, Site } from '~/types/nav'
 import NavHeader from '@/components/nav/NavHeader.vue'
 import NavTransitionBar from '@/components/nav/NavTransitionBar.vue'
 import NavContent from '@/components/nav/NavContent.vue'
 import bgGrid from '@/assets/pngs/bg-grid.png'
 import { debounce, throttle } from '@/utils/util'
 import { dispatchNavPageReveal, isNavPageRevealLocked } from '@/utils/navPageReveal'
+import { useI18n } from 'vue-i18n'
+
+interface NavPageData {
+  desktopBgUrl: string | null
+  mobileBgUrl: string | null
+  saying: SayingModel | null
+  groups: Group[]
+  sites: Site[]
+  pingData: Record<string, Delay>
+}
 
 const isContentRevealed = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
+const { locale } = useI18n()
 
 let touchStartY = 0
 let mobileMediaQuery: MediaQueryList | null = null
+
+function parsePingData(data: Record<string, string | undefined>) {
+  const result: Record<string, Delay> = {}
+
+  for (const key in data) {
+    const value = data[key]
+    if (typeof value === 'string') {
+      try {
+        result[key] = JSON.parse(value) as Delay
+      } catch {
+        result[key] = { status: 'down', delay: '-', loss: '-', time: '-' }
+      }
+    } else {
+      result[key] = { status: 'down', delay: '-', loss: '-', time: '-' }
+    }
+  }
+
+  return result
+}
+
+const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
+
+const { data } = await useAsyncData<NavPageData>(
+  () => `nav-page:${lang.value}`,
+  async () => {
+    const [groups, sites, ping, saying, desktopBgUrl, mobileBgUrl] = await Promise.all([
+      getGroups(lang.value),
+      getSites(lang.value),
+      getPing(),
+      getSaying().catch(() => null),
+      getImageUrl('standard').catch(() => null),
+      getImageUrl('mobile').catch(() => null),
+    ])
+
+    return {
+      desktopBgUrl,
+      mobileBgUrl,
+      saying,
+      groups: groups.sort((a, b) => Number(a.priority) - Number(b.priority)),
+      sites,
+      pingData: parsePingData(ping),
+    }
+  },
+  {
+    watch: [lang],
+    default: () => ({
+      desktopBgUrl: null,
+      mobileBgUrl: null,
+      saying: null,
+      groups: [],
+      sites: [],
+      pingData: {},
+    }),
+  }
+)
+
+const navPageData = computed(() => data.value!)
 
 function revealContent(shouldScroll = true, force = false) {
   if (!force && isNavPageRevealLocked()) {
