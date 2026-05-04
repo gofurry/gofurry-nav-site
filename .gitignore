@@ -5,8 +5,6 @@
 **/build/
 **/dist/
 **/coverage/
-!gofurry-rag/internal/web/dist/
-!gofurry-rag/internal/web/dist/**
 
 # Runtime files
 **/logs/
@@ -49,7 +47,6 @@ Thumbs.db
 **/config/*.local.yaml
 **/config/*.prod.yaml
 **/config/*.secret.yaml
-!gofurry-rag/config/server.yaml
 
 # Certificates and private keys
 **/*.key
@@ -60,5 +57,3 @@ Thumbs.db
 **/*.pfx
 
 .idea/*
-
-server.yaml
