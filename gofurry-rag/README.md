@@ -44,17 +44,17 @@ go test ./...
 ## API
 
 - `GET /api/v1/health`
+- `GET /api/v1/admin/auth/state`
+- `POST /api/v1/admin/auth/login`
+- `POST /api/v1/admin/auth/logout`
+- `GET /api/v1/admin/overview`
 - `POST /api/v1/admin/documents/text`
 - `GET /api/v1/admin/documents`
 - `GET /api/v1/admin/documents/:id/chunks`
 - `DELETE /api/v1/admin/documents/:id`
 - `POST /api/v1/chat/query`
 
-Admin routes require:
-
-```http
-Authorization: Bearer <RAG_ADMIN_TOKEN>
-```
+Admin routes require logging in through `/api/v1/admin/auth/login`. The service writes a JWT to an HttpOnly cookie, similar to `gofurry-admin`.
 
 ## Configuration
 

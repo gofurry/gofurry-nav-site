@@ -28,12 +28,40 @@ func TestAdminRoutesRequireToken(t *testing.T) {
 	}
 }
 
+func TestLoginRejectsWrongPassword(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/auth/login", bytes.NewBufferString(`{"password":"wrong"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestLoginSetsCookieAndMeWorks(t *testing.T) {
+	app := testApp()
+	cookie := loginCookie(t, app)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/auth/me", nil)
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
 func TestCreateTextDocument(t *testing.T) {
 	app := testApp()
+	cookie := loginCookie(t, app)
 	reqBody := bytes.NewBufferString(`{"title":"T","content":"hello","source_type":"manual"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/documents/text", reqBody)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer test-token")
+	req.AddCookie(cookie)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)
@@ -47,6 +75,20 @@ func TestCreateTextDocument(t *testing.T) {
 	}
 	if result.Code != 1 {
 		t.Fatalf("result = %+v", result)
+	}
+}
+
+func TestOverviewRequiresCookie(t *testing.T) {
+	app := testApp()
+	cookie := loginCookie(t, app)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/overview", nil)
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
 	}
 }
 
@@ -70,14 +112,53 @@ func TestQueryReturnsSources(t *testing.T) {
 	}
 }
 
+func TestLogoutClearsCookie(t *testing.T) {
+	app := testApp()
+	cookie := loginCookie(t, app)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/auth/logout", nil)
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	if len(resp.Cookies()) == 0 || resp.Cookies()[0].MaxAge != -1 {
+		t.Fatalf("logout cookie not expired: %#v", resp.Cookies())
+	}
+}
+
 func testApp() *fiber.App {
 	cfg := config.Config{
-		AppName:    "test",
-		AdminToken: "test-token",
-		TopK:       6,
+		AppName:         "test",
+		AdminToken:      "test-token",
+		ConsolePasscode: "test-token",
+		JWTSecret:       "jwt-secret",
+		AuthCookieName:  "gofurry_rag_session",
+		SessionTTLHours: 1,
+		TopK:            6,
 	}
 	svc := service.New(newFakeRepo(), fakeEmbedder{}, cfg)
 	return NewServer(cfg, svc, nil).App()
+}
+
+func loginCookie(t *testing.T, app *fiber.App) *http.Cookie {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/auth/login", bytes.NewBufferString(`{"password":"test-token"}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("login status = %d", resp.StatusCode)
+	}
+	cookies := resp.Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("login did not set cookie")
+	}
+	return cookies[0]
 }
 
 type fakeRepo struct {
@@ -123,6 +204,10 @@ func (r *fakeRepo) ListChunks(ctx context.Context, documentID int64, page, pageS
 
 func (r *fakeRepo) DeleteDocument(ctx context.Context, id int64) error {
 	return nil
+}
+
+func (r *fakeRepo) Overview(ctx context.Context) (db.Overview, error) {
+	return db.Overview{DocumentTotal: int64(len(r.docs)), ChunkTotal: 2, EmbeddedChunkTotal: 2}, nil
 }
 
 func (r *fakeRepo) SearchChunks(ctx context.Context, embedding []float64, topK int) ([]db.Source, error) {

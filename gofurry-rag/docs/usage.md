@@ -15,7 +15,8 @@ Copy `.env.example` to `.env` and set the PostgreSQL password:
 RAG_DB_DSN=postgres://postgres:your_password@192.168.153.121:5432/postgres?sslmode=disable
 RAG_OLLAMA_BASE_URL=http://148.70.18.111:43434
 RAG_EMBED_MODEL=qwen3-embedding:0.6b
-RAG_ADMIN_TOKEN=change-me
+RAG_CONSOLE_PASSCODE=change-me
+RAG_JWT_SECRET=change-this-jwt-secret
 ```
 
 ## Run
@@ -41,9 +42,17 @@ Use the Vite URL and let it proxy `/api` to the Go server.
 
 ## Add Text
 
+Login first and save the HttpOnly session cookie:
+
+```bash
+curl -c cookies.txt -X POST http://127.0.0.1:8080/api/v1/admin/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"password":"change-me"}'
+```
+
 ```bash
 curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
-  -H "Authorization: Bearer change-me" \
+  -b cookies.txt \
   -H "Content-Type: application/json" \
   -d '{"title":"GoFurry","content":"GoFurry is a content discovery website.","source_type":"manual"}'
 ```

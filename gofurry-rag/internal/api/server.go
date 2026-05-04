@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GoFurry/gofurry-rag/internal/auth"
 	"github.com/GoFurry/gofurry-rag/internal/config"
 	"github.com/GoFurry/gofurry-rag/internal/db"
 	"github.com/GoFurry/gofurry-rag/internal/ingest"
@@ -20,14 +21,15 @@ import (
 )
 
 type Server struct {
-	cfg     config.Config
-	service *service.Service
-	worker  *ingest.Worker
-	app     *fiber.App
+	cfg         config.Config
+	service     *service.Service
+	authService *auth.Service
+	worker      *ingest.Worker
+	app         *fiber.App
 }
 
 func NewServer(cfg config.Config, svc *service.Service, worker *ingest.Worker) *Server {
-	server := &Server{cfg: cfg, service: svc, worker: worker}
+	server := &Server{cfg: cfg, service: svc, authService: auth.New(cfg), worker: worker}
 	server.app = server.build()
 	return server
 }
@@ -55,11 +57,17 @@ func (s *Server) build() *fiber.App {
 
 	api := app.Group("/api/v1")
 	api.Get("/health", s.health)
-	admin := api.Group("/admin", s.requireAdmin)
-	admin.Post("/documents/text", s.createTextDocument)
-	admin.Get("/documents", s.listDocuments)
-	admin.Get("/documents/:id/chunks", s.listChunks)
-	admin.Delete("/documents/:id", s.deleteDocument)
+	admin := api.Group("/admin")
+	admin.Get("/auth/state", s.authState)
+	admin.Post("/auth/login", s.authLogin)
+	admin.Post("/auth/logout", s.authLogout)
+	protected := admin.Group("", s.requireAdmin)
+	protected.Get("/auth/me", s.authMe)
+	protected.Get("/overview", s.overview)
+	protected.Post("/documents/text", s.createTextDocument)
+	protected.Get("/documents", s.listDocuments)
+	protected.Get("/documents/:id/chunks", s.listChunks)
+	protected.Delete("/documents/:id", s.deleteDocument)
 	api.Post("/chat/query", s.query)
 
 	attachAdminUI(app)
@@ -67,16 +75,73 @@ func (s *Server) build() *fiber.App {
 }
 
 func (s *Server) requireAdmin(c fiber.Ctx) error {
-	token := strings.TrimSpace(strings.TrimPrefix(c.Get("Authorization"), "Bearer "))
-	if token == "" || token != s.cfg.AdminToken {
-		return fiber.ErrUnauthorized
+	token := strings.TrimSpace(c.Cookies(s.cfg.AuthCookieName))
+	claims, err := s.authService.ParseAndValidateToken(token)
+	if err != nil {
+		return fail(c, err)
 	}
+	c.Locals(auth.ClaimsContextKey, claims)
 	return c.Next()
+}
+
+type passwordRequest struct {
+	Password string `json:"password"`
+}
+
+func (s *Server) authState(c fiber.Ctx) error {
+	authenticated := false
+	token := strings.TrimSpace(c.Cookies(s.cfg.AuthCookieName))
+	if token != "" {
+		if claims, err := s.authService.ParseAndValidateToken(token); err == nil {
+			authenticated = true
+			c.Locals(auth.ClaimsContextKey, claims)
+		}
+	}
+	return ok(c, fiber.Map{"initialized": true, "authenticated": authenticated})
+}
+
+func (s *Server) authLogin(c fiber.Ctx) error {
+	var req passwordRequest
+	if err := json.Unmarshal(c.Body(), &req); err != nil {
+		return fail(c, err)
+	}
+	token, claims, err := s.authService.Login(req.Password)
+	if err != nil {
+		return fail(c, err)
+	}
+	c.Cookie(s.authService.BuildAuthCookie(token))
+	return ok(c, fiber.Map{
+		"initialized":     true,
+		"authenticated":   true,
+		"session_version": claims.SessionVersion,
+	})
+}
+
+func (s *Server) authLogout(c fiber.Ctx) error {
+	c.Cookie(s.authService.BuildLogoutCookie())
+	return ok(c, fiber.Map{"authenticated": false})
+}
+
+func (s *Server) authMe(c fiber.Ctx) error {
+	claims, _ := c.Locals(auth.ClaimsContextKey).(*auth.Claims)
+	version := int64(0)
+	if claims != nil {
+		version = claims.SessionVersion
+	}
+	return ok(c, fiber.Map{"initialized": true, "authenticated": true, "session_version": version})
 }
 
 func (s *Server) health(c fiber.Ctx) error {
 	ctx := context.Background()
 	return ok(c, s.service.Health(ctx))
+}
+
+func (s *Server) overview(c fiber.Ctx) error {
+	result, err := s.service.Overview(context.Background())
+	if err != nil {
+		return fail(c, err)
+	}
+	return ok(c, result)
 }
 
 func (s *Server) createTextDocument(c fiber.Ctx) error {

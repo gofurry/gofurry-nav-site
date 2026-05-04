@@ -20,6 +20,7 @@ type Repository interface {
 	ListDocuments(ctx context.Context, filter db.ListDocumentsFilter) (db.PageResult[db.Document], error)
 	ListChunks(ctx context.Context, documentID int64, page, pageSize int) (db.PageResult[db.Chunk], error)
 	DeleteDocument(ctx context.Context, id int64) error
+	Overview(ctx context.Context) (db.Overview, error)
 	SearchChunks(ctx context.Context, embedding []float64, topK int) ([]db.Source, error)
 }
 
@@ -121,6 +122,10 @@ func (s *Service) DeleteDocument(ctx context.Context, id int64) error {
 		return wrapValidation("document id is required")
 	}
 	return s.repo.DeleteDocument(ctx, id)
+}
+
+func (s *Service) Overview(ctx context.Context) (db.Overview, error) {
+	return s.repo.Overview(ctx)
 }
 
 func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, error) {

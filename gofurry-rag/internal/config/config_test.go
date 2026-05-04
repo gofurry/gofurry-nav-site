@@ -22,6 +22,8 @@ func TestLoadDefaults(t *testing.T) {
 func TestLoadOverrides(t *testing.T) {
 	t.Setenv("APP_ADDR", "0.0.0.0:9000")
 	t.Setenv("RAG_CHUNK_SIZE", "300")
+	t.Setenv("RAG_ADMIN_TOKEN", "legacy")
+	t.Setenv("RAG_CONSOLE_PASSCODE", "")
 
 	cfg := Load()
 	if cfg.AppAddr != "0.0.0.0:9000" {
@@ -29,5 +31,8 @@ func TestLoadOverrides(t *testing.T) {
 	}
 	if cfg.ChunkSize != 300 {
 		t.Fatalf("ChunkSize = %d", cfg.ChunkSize)
+	}
+	if cfg.ConsolePasscode != "legacy" {
+		t.Fatalf("ConsolePasscode = %q", cfg.ConsolePasscode)
 	}
 }

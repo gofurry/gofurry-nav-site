@@ -9,6 +9,23 @@ export type PageResult<T> = {
   total: number
 }
 
+export type AuthState = {
+  initialized: boolean
+  authenticated: boolean
+  session_version?: number
+}
+
+export type Overview = {
+  document_total: number
+  chunk_total: number
+  embedded_chunk_total: number
+  pending_documents: number
+  processing_documents: number
+  ready_documents: number
+  failed_documents: number
+  last_document_update_at?: string
+}
+
 export type DocumentItem = {
   id: number
   title: string

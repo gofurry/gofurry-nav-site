@@ -85,6 +85,17 @@ type PageResult[T any] struct {
 	Total int64 `json:"total"`
 }
 
+type Overview struct {
+	DocumentTotal        int64      `json:"document_total"`
+	ChunkTotal           int64      `json:"chunk_total"`
+	EmbeddedChunkTotal   int64      `json:"embedded_chunk_total"`
+	PendingDocuments     int64      `json:"pending_documents"`
+	ProcessingDocuments  int64      `json:"processing_documents"`
+	ReadyDocuments       int64      `json:"ready_documents"`
+	FailedDocuments      int64      `json:"failed_documents"`
+	LastDocumentUpdateAt *time.Time `json:"last_document_update_at,omitempty"`
+}
+
 func Connect(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
@@ -280,6 +291,40 @@ func (r *Repository) DeleteDocument(ctx context.Context, id int64) error {
 		return pgx.ErrNoRows
 	}
 	return nil
+}
+
+func (r *Repository) Overview(ctx context.Context) (Overview, error) {
+	var overview Overview
+	err := r.pool.QueryRow(ctx, `
+SELECT
+    count(*)::bigint AS document_total,
+    count(*) FILTER (WHERE status = 'pending')::bigint AS pending_documents,
+    count(*) FILTER (WHERE status = 'processing')::bigint AS processing_documents,
+    count(*) FILTER (WHERE status = 'ready')::bigint AS ready_documents,
+    count(*) FILTER (WHERE status = 'failed')::bigint AS failed_documents,
+    max(updated_at) AS last_document_update_at
+FROM rag_documents
+`).Scan(
+		&overview.DocumentTotal,
+		&overview.PendingDocuments,
+		&overview.ProcessingDocuments,
+		&overview.ReadyDocuments,
+		&overview.FailedDocuments,
+		&overview.LastDocumentUpdateAt,
+	)
+	if err != nil {
+		return Overview{}, err
+	}
+	err = r.pool.QueryRow(ctx, `
+SELECT
+    count(*)::bigint AS chunk_total,
+    count(*) FILTER (WHERE embedding IS NOT NULL)::bigint AS embedded_chunk_total
+FROM rag_chunks
+`).Scan(&overview.ChunkTotal, &overview.EmbeddedChunkTotal)
+	if err != nil {
+		return Overview{}, err
+	}
+	return overview, nil
 }
 
 func (r *Repository) SearchChunks(ctx context.Context, embedding []float64, topK int) ([]Source, error) {

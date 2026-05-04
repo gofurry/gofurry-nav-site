@@ -33,11 +33,15 @@ curl http://127.0.0.1:8080/api/v1/health
 {"code":1,"message":"success","data":{"status":"ok"}}
 ```
 
-5. 创建文本文档，等待几秒后查询：
+5. 登录、创建文本文档，等待几秒后查询：
 
 ```bash
+curl -c cookies.txt -X POST http://127.0.0.1:8080/api/v1/admin/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"password":"change-me"}'
+
 curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
-  -H "Authorization: Bearer change-me" \
+  -b cookies.txt \
   -H "Content-Type: application/json" \
   -d '{"title":"Smoke Test","content":"GoFurry 会存储可检索的知识片段。","source_type":"manual"}'
 

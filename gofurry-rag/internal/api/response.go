@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/GoFurry/gofurry-rag/internal/auth"
 	"github.com/GoFurry/gofurry-rag/internal/service"
 	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,9 @@ func fail(c fiber.Ctx, err error) error {
 	switch {
 	case errors.Is(err, service.ErrValidation):
 		status = http.StatusBadRequest
+		message = err.Error()
+	case errors.Is(err, auth.ErrInvalidPassword), errors.Is(err, auth.ErrNotLoggedIn), errors.Is(err, auth.ErrInvalidSession):
+		status = http.StatusUnauthorized
 		message = err.Error()
 	case errors.Is(err, pgx.ErrNoRows):
 		status = http.StatusNotFound

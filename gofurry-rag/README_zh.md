@@ -44,17 +44,17 @@ go test ./...
 ## API
 
 - `GET /api/v1/health`
+- `GET /api/v1/admin/auth/state`
+- `POST /api/v1/admin/auth/login`
+- `POST /api/v1/admin/auth/logout`
+- `GET /api/v1/admin/overview`
 - `POST /api/v1/admin/documents/text`
 - `GET /api/v1/admin/documents`
 - `GET /api/v1/admin/documents/:id/chunks`
 - `DELETE /api/v1/admin/documents/:id`
 - `POST /api/v1/chat/query`
 
-管理接口需要：
-
-```http
-Authorization: Bearer <RAG_ADMIN_TOKEN>
-```
+管理接口需要先通过 `/api/v1/admin/auth/login` 登录。服务会把 JWT 写入 HttpOnly Cookie，方式与 `gofurry-admin` 类似。
 
 ## 配置
 

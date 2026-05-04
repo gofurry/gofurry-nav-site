@@ -1,25 +1,14 @@
-import type { ApiResult, ChunkItem, DocumentItem, PageResult, QueryResponse } from './types'
-
-const TOKEN_KEY = 'gofurry-rag-admin-token'
-
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY) || ''
-}
-
-export function setToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token.trim())
-}
+import type { ApiResult, AuthState, ChunkItem, DocumentItem, Overview, PageResult, QueryResponse } from './types'
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
-  headers.set('Content-Type', 'application/json')
-  const token = getToken()
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
+  if (init.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
   }
   const response = await fetch(path, {
     ...init,
     headers,
+    credentials: 'include',
   })
   const result = (await response.json()) as ApiResult<T>
   if (!response.ok || result.code !== 1) {
@@ -28,8 +17,27 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return result.data
 }
 
+export function authState() {
+  return request<AuthState>('/api/v1/admin/auth/state')
+}
+
+export function login(password: string) {
+  return request<AuthState>('/api/v1/admin/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  })
+}
+
+export function logout() {
+  return request<{ authenticated: boolean }>('/api/v1/admin/auth/logout', { method: 'POST' })
+}
+
 export function health() {
   return request<Record<string, unknown>>('/api/v1/health')
+}
+
+export function overview() {
+  return request<Overview>('/api/v1/admin/overview')
 }
 
 export function createTextDocument(payload: {
@@ -56,7 +64,7 @@ export function listDocuments(params: { page: number; page_size: number; status:
   return request<PageResult<DocumentItem>>(`/api/v1/admin/documents?${query}`)
 }
 
-export function listChunks(documentId: number, page = 1, pageSize = 20) {
+export function listChunks(documentId: number, page = 1, pageSize = 100) {
   return request<PageResult<ChunkItem>>(
     `/api/v1/admin/documents/${documentId}/chunks?page=${page}&page_size=${pageSize}`,
   )

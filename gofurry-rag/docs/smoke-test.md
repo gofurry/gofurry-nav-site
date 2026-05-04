@@ -33,11 +33,15 @@ Expected result:
 {"code":1,"message":"success","data":{"status":"ok"}}
 ```
 
-5. Create a text document, wait a few seconds, then query:
+5. Login, create a text document, wait a few seconds, then query:
 
 ```bash
+curl -c cookies.txt -X POST http://127.0.0.1:8080/api/v1/admin/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"password":"change-me"}'
+
 curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
-  -H "Authorization: Bearer change-me" \
+  -b cookies.txt \
   -H "Content-Type: application/json" \
   -d '{"title":"Smoke Test","content":"GoFurry stores searchable knowledge chunks.","source_type":"manual"}'
 
