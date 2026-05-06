@@ -1,6 +1,7 @@
 <template>
   <header
-      class="relative z-[70] w-full border-b border-white/10 bg-[rgba(18,24,37,0.7)] text-gray-100 shadow-lg backdrop-blur-xl transition-all duration-300"
+    class="relative z-[70] w-full text-gray-100 shadow-lg backdrop-blur-xl transition-all duration-300"
+    :class="headerClass"
   >
     <div
         class="mx-auto flex w-full max-w-[1700px] items-center gap-3 px-4 py-2 transition-all duration-300 sm:px-6"
@@ -171,6 +172,9 @@ import { readMode, subscribeModeChange, writeMode } from '@/utils/modeStorage'
 const { t } = useI18n()
 const route = useRoute()
 const langStore = useLangStore()
+const props = defineProps<{
+  navOverlayDesktop?: boolean
+}>()
 
 const showModeModal = ref(false)
 const mobileMenuOpen = ref(false)
@@ -201,6 +205,12 @@ const languageOptions = [
   { value: 'zh' as const, label: 'CN', flag: cnFlag },
   { value: 'en' as const, label: 'EN', flag: usFlag },
 ]
+
+const headerClass = computed(() => (
+  props.navOverlayDesktop
+    ? 'border-b border-white/15 bg-[rgba(10,16,28,0.88)] md:border-white/10 md:bg-[rgba(18,24,37,0.7)]'
+    : 'border-b border-white/15 bg-[rgba(10,16,28,0.88)]'
+))
 
 const isActive = (link: NavLink) =>
     Boolean(link.to && (route.path === link.to || route.path.startsWith(`${link.to}/`)))

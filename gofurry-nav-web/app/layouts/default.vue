@@ -1,7 +1,7 @@
 <template>
   <div class="relative flex min-h-screen flex-col bg-gray-50">
     <div :class="navBarWrapperClass">
-      <NavBar />
+      <NavBar :nav-overlay-desktop="isNavPage" />
     </div>
     <main class="relative flex min-w-0 flex-1 flex-col">
       <slot />
