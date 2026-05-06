@@ -29,18 +29,11 @@
           </div>
 
           <div class="flex items-center gap-2 self-start sm:self-auto">
-            <span
-              class="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-white/70 px-3 py-1 text-xs font-medium text-gray-600 backdrop-blur"
-            >
-              <strong class="text-orange-600">{{ (site.viewCount ?? 0).toLocaleString() }}</strong>
-              <span>{{ t('common.visits') }}</span>
-            </span>
-
             <a
               :href="`https://${site.domain}`"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex transform items-center gap-2 rounded-full bg-orange-200 px-4 py-2 text-sm font-semibold transition-transform duration-500 hover:bg-orange-300"
+              class="inline-flex transform items-center gap-2 rounded-lg bg-orange-200/60 px-4 py-2 text-sm font-semibold hover:bg-orange-200 duration-500"
             >
               <img src="@/assets/svgs/go.svg" alt="go" class="h-5 w-5 opacity-90" />
               {{ t('site.overview.goto') }}
@@ -49,15 +42,29 @@
         </div>
 
         <div class="group relative mb-3 flex items-center">
-          <span
-            class="cursor-pointer font-mono text-gray-500 hover:text-orange-400"
-            @click="copyToClipboard(site.domain)"
-          >
-            {{ site.domain }}
-          </span>
-          <span class="ml-2 text-xs text-gray-400 opacity-0 transition-opacity group-hover:opacity-100">
-            {{ t('common.copy') }}
-          </span>
+          <div class="flex justify-between items-center w-full">
+            <div>
+              <span
+                class="cursor-pointer font-mono text-gray-500 hover:text-orange-400 duration-300"
+                @click="copyToClipboard(site.domain)"
+              >
+                {{ site.domain }}
+              </span>
+              <span class="duration-300 ml-2 text-xs text-gray-400 opacity-0 transition-opacity group-hover:opacity-100">
+                {{ t('common.copy') }}
+              </span>
+            </div>
+            <div>
+              <span
+                class="flex shrink-0 items-center gap-1 text-xs text-orange-500"
+              >
+                <strong>{{ t('common.visits') }}: </strong>
+                <div>{{ (site.viewCount ?? 0).toLocaleString() }}</div>
+              </span>
+            </div>
+          </div>
+          
+          
 
           <transition name="fade">
             <div

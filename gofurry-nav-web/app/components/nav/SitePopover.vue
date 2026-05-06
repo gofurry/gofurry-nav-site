@@ -2,7 +2,7 @@
   <div
       v-if="site"
       ref="popoverRef"
-      class="fixed z-9999 bg-orange-50 border border-gray-200 shadow-xl rounded-xl p-4 w-72 text-sm text-gray-700"
+      class="fixed z-9999 bg-orange-50 border border-gray-200 shadow-xl rounded-xl p-4 w-72 text-sm text-gray-700 duration-300"
       :style="popoverStyle"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"

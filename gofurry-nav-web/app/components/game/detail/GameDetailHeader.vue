@@ -17,10 +17,10 @@
 
         <div class="flex items-center gap-2 shrink-0">
           <span
-            class="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-orange-200 bg-white/70 px-3 py-1 text-xs font-medium text-gray-600 backdrop-blur"
+            class="flex shrink-0 items-center gap-1 text-xs text-orange-500"
           >
-            <strong class="text-orange-600">{{ (game?.view_count ?? 0).toLocaleString() }}</strong>
-            <span>{{ t('common.visits') }}</span>
+            <strong>{{ t('common.visits') }}: </strong>
+            <div>{{ (game?.view_count ?? 0).toLocaleString() }}</div>
           </span>
 
           <span
