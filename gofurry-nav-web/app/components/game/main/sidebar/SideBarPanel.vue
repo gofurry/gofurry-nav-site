@@ -1,13 +1,10 @@
 <template>
-  <div class="bg-white/50 backdrop-blur-md rounded-2xl shadow p-6 min-h-[900px]">
-    <!-- 顶部搜索 -->
+  <div class="min-h-[900px] rounded-2xl bg-white/50 p-6 shadow backdrop-blur-md">
     <div class="mb-2">
       <GameSidebarSearch />
     </div>
 
-    <!-- 快捷功能 -->
     <GameSidebarActions>
-      <!-- 默认前6个网站 -->
       <template #default-sites>
         <GameSiteItem href="https://store.steampowered.com" :icon="icons.steam" title="Steam" subtitle="steam" />
         <GameSiteItem href="https://itch.io" :icon="icons.itch" title="itch.io" subtitle="itch" />
@@ -17,7 +14,6 @@
         <GameSiteItem href="https://byrutgame.org/" :icon="icons.byrut" title="ByRUT Game" subtitle="byrut" />
       </template>
 
-      <!-- 可展开的更多网站 -->
       <template #extra-sites>
         <GameSiteItem href="https://www.xiaoheihe.cn/" :icon="icons.xiaoheihe" title="小黑盒" subtitle="xiaoheihe" />
         <GameSiteItem href="https://afdian.com/" :icon="icons.afdian" title="爱发电" subtitle="afdian" />
@@ -34,19 +30,23 @@
       </template>
     </GameSidebarActions>
 
-    <!-- 近期评论 -->
-    <GameSidebarLatestReviews />
+    <GameSidebarLatestReviews :initial-reviews="initialReviews" />
   </div>
 </template>
 
 <script setup lang="ts">
-import GameSidebarActions from "@/components/game/main/sidebar/GameSidebarActions.vue";
-import GameSidebarSearch from "@/components/game/main/sidebar/GameSidebarSearch.vue";
-import GameSidebarLatestReviews from "@/components/game/main/sidebar/GameSidebarLatestReviews.vue";
-import GameSiteItem from "@/components/game/main/sidebar/GameSiteItem.vue";
+import type { AnonymousReviewModel } from '~/types/game'
+import GameSidebarActions from '@/components/game/main/sidebar/GameSidebarActions.vue'
+import GameSidebarSearch from '@/components/game/main/sidebar/GameSidebarSearch.vue'
+import GameSidebarLatestReviews from '@/components/game/main/sidebar/GameSidebarLatestReviews.vue'
+import GameSiteItem from '@/components/game/main/sidebar/GameSiteItem.vue'
 
-const LOGO_PREFIX = import.meta.env.VITE_GAME_SITE_LOGO_PREFIX_URL || '';
-const defaultLogo = import.meta.env.VITE_SITE_DEFAULT_LOGO || '';
+defineProps<{
+  initialReviews?: AnonymousReviewModel[]
+}>()
+
+const LOGO_PREFIX = import.meta.env.VITE_GAME_SITE_LOGO_PREFIX_URL || ''
+const defaultLogo = import.meta.env.VITE_SITE_DEFAULT_LOGO || ''
 
 const icons = {
   defaultLogo,
@@ -66,6 +66,6 @@ const icons = {
   metacritic: `${LOGO_PREFIX}metacritic.com-favicon-32.png`,
   pcgamingwiki: `${LOGO_PREFIX}www.pcgamingwiki.com-favicon.ico`,
   gamefaqs: `${LOGO_PREFIX}gamefaqs.gamespot.com-favicon.ico`,
-  xiaoheihe: `${LOGO_PREFIX}xiaoheihe.png`
-};
+  xiaoheihe: `${LOGO_PREFIX}xiaoheihe.png`,
+}
 </script>

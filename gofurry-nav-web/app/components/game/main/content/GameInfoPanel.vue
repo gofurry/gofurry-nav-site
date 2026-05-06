@@ -1,125 +1,150 @@
 <template>
-  <div class="bg-white/50 backdrop-blur-md rounded-2xl shadow p-5 mb-8">
+  <div class="mb-8 rounded-2xl bg-white/50 p-5 shadow backdrop-blur-md">
     <GameInfoGroup
-        v-if="firstGroup"
-        :group="firstGroup"
-        :key="firstGroup.title"
-        @more="handleMore"
+      v-if="firstGroup"
+      :key="firstGroup.title"
+      :group="firstGroup"
+      @more="handleMore"
     />
 
     <GameStatsPanels
-        v-if="panelData"
-        :topPriceList="panelData.top_price_vo"
-        :discountList="panelData.top_discount_vo"
-        :topCountList="panelData.top_count"
-        :bottomPriceList="panelData.bottom_price"
+      v-if="panelData"
+      :top-price-list="panelData.top_price_vo"
+      :discount-list="panelData.top_discount_vo"
+      :top-count-list="panelData.top_count"
+      :bottom-price-list="panelData.bottom_price"
     />
 
     <GameInfoGroup
-        v-for="g in middleGroups"
-        :key="g.title"
-        :group="g"
-        @more="handleMore"
+      v-for="group in middleGroups"
+      :key="group.title"
+      :group="group"
+      @more="handleMore"
     />
 
-    <GameUpdateNews />
+    <GameUpdateNews :initial-news-record="initialNewsRecord" />
 
     <GameInfoGroup
-        v-if="lastGroup"
-        :group="lastGroup"
-        :key="lastGroup.title"
-        @more="handleMore"
+      v-if="lastGroup"
+      :key="lastGroup.title"
+      :group="lastGroup"
+      @more="handleMore"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import {ref, onMounted, watch, computed} from "vue";
-import GameInfoGroup from "@/components/game/main/content/GameInfoGroup.vue";
-import GameStatsPanels from "@/components/game/main/content/GameStatsPanels.vue";
+import { computed, onMounted, ref, watch } from 'vue'
+import GameInfoGroup from '@/components/game/main/content/GameInfoGroup.vue'
+import GameStatsPanels from '@/components/game/main/content/GameStatsPanels.vue'
+import GameUpdateNews from '@/components/game/main/content/GameUpdateNews.vue'
 import { useLangStore } from '@/store/langStore'
-import { getGameMainInfo, getGameMainPanel } from "@/utils/api/game"
-import type { GameGroupRecord, BaseGameInfoRecord, GamePanelRecord } from "@/types/game"
-import GameUpdateNews from "@/components/game/main/content/GameUpdateNews.vue";
+import { getGameMainInfo, getGameMainPanel } from '~/services/game'
+import type { BaseGameInfoRecord, GameGroupRecord, GamePanelRecord, LatestNewsRecord } from '~/types/game'
+
+interface GameItem {
+  id: string
+  name: string
+  cover: string
+  desc: string
+  score: number
+  scoreCount: number
+}
+
+interface GameGroupViewModel {
+  title: string
+  games: GameItem[]
+}
+
+const props = defineProps<{
+  initialRawData?: GameGroupRecord | null
+  initialPanelData?: GamePanelRecord | null
+  initialNewsRecord?: LatestNewsRecord | null
+}>()
 
 const langStore = useLangStore()
 const lang = computed(() => langStore.lang)
 
+const rawData = ref<GameGroupRecord | null>(props.initialRawData ?? null)
+const panelData = ref<GamePanelRecord | null>(props.initialPanelData ?? null)
+const groups = ref<GameGroupViewModel[]>([])
+
 const firstGroup = computed(() => groups.value[0] || null)
 const middleGroups = computed(() => groups.value.slice(1, groups.value.length - 1))
-const lastGroup = computed(() => groups.value.length > 1 ? groups.value[groups.value.length - 1] : null)
+const lastGroup = computed(() => (groups.value.length > 1 ? groups.value[groups.value.length - 1] : null))
 
-// 后端原始数据
-const rawData = ref<GameGroupRecord | null>(null);
-
-// 渲染用的数据
-const groups = ref<
-    {
-      title: string;
-      games: {
-        id: string;
-        name: string;
-        cover: string;
-        desc: string;
-        score: number;
-        scoreCount: number;
-      }[];
-    }[]
->([]);
-
-function mapGames(list: BaseGameInfoRecord[], lang: string) {
-  return list.map(g => ({
-    id: g.game_id,
-    name: lang === "en" ? g.name_en : g.name,
-    cover: g.header,
-    desc: lang === "en" ? g.info_en : g.info,
-    score: g.avg_score,
-    scoreCount: g.comment_count
+function mapGames(list: BaseGameInfoRecord[], currentLang: string): GameItem[] {
+  return list.map((game) => ({
+    id: game.game_id,
+    name: currentLang === 'en' ? game.name_en : game.name,
+    cover: game.header,
+    desc: currentLang === 'en' ? game.info_en : game.info,
+    score: game.avg_score,
+    scoreCount: game.comment_count,
   }))
 }
 
 function updateGroups() {
-  if (!rawData.value) return;
+  if (!rawData.value) {
+    groups.value = []
+    return
+  }
 
-  const r = rawData.value;
-  const currentLang = lang.value;
+  const currentLang = lang.value
 
   groups.value = [
     {
-      title: currentLang === "en" ? "Latest Release" : "最近发售",
-      games: mapGames(r.latest, currentLang)
+      title: currentLang === 'en' ? 'Latest Release' : '最近发售',
+      games: mapGames(rawData.value.latest, currentLang),
     },
     {
-      title: currentLang === "en" ? "Recently Added" : "最近收录",
-      games: mapGames(r.recent, currentLang)
+      title: currentLang === 'en' ? 'Recently Added' : '最近收录',
+      games: mapGames(rawData.value.recent, currentLang),
     },
     {
-      title: currentLang === "en" ? "Free to Play" : "免费专区",
-      games: mapGames(r.free, currentLang)
+      title: currentLang === 'en' ? 'Free to Play' : '免费专区',
+      games: mapGames(rawData.value.free, currentLang),
     },
     {
-      title: currentLang === "en" ? "Hot Ranking" : "热门排行",
-      games: mapGames(r.hot, currentLang)
-    }
-  ];
+      title: currentLang === 'en' ? 'Hot Ranking' : '热门排行',
+      games: mapGames(rawData.value.hot, currentLang),
+    },
+  ]
 }
 
-const panelData = ref<GamePanelRecord | null>(null);
+async function loadGameInfoPanel() {
+  try {
+    const [nextRawData, nextPanelData] = await Promise.all([
+      rawData.value ? Promise.resolve(rawData.value) : getGameMainInfo(),
+      panelData.value ? Promise.resolve(panelData.value) : getGameMainPanel(),
+    ])
 
-onMounted(async () => {
-  const groupRes = await getGameMainInfo();
-  rawData.value = groupRes;
-  updateGroups();
+    rawData.value = nextRawData
+    panelData.value = nextPanelData
+    updateGroups()
+  } catch (error) {
+    console.error('Failed to load games page content:', error)
+  }
+}
 
-  panelData.value = await getGameMainPanel();
-});
+watch(
+  () => langStore.lang,
+  () => {
+    updateGroups()
+  }
+)
 
-// 监听语言变化
-watch(() => langStore.lang, () => {
-  updateGroups();
-});
+if (rawData.value) {
+  updateGroups()
+}
 
-const handleMore = (group: any) => {
-  console.log("查看更多:", group.title);
-};
+onMounted(() => {
+  if (!rawData.value || !panelData.value) {
+    loadGameInfoPanel()
+  }
+})
+
+function handleMore(group: GameGroupViewModel) {
+  console.log('show more:', group.title)
+}
 </script>

@@ -41,6 +41,11 @@ import {
   loadRandomCustomNavHeaderBackground,
 } from '@/utils/customNavHeaderBackground'
 
+const props = defineProps<{
+  desktopBgUrl?: string | null
+  mobileBgUrl?: string | null
+}>()
+
 const { t } = useI18n()
 const bgImage = ref<string | null>(null)
 const recentSites = ref<RecentSiteItem[]>([])
@@ -98,13 +103,21 @@ function handleRecentSitesChange() {
 
 onMounted(async () => {
   try {
-    const [resizedUrl, normalUrl] = await Promise.all([
-      getImageUrl('standard'),
-      getImageUrl('mobile'),
-    ])
-
     fallbackBackgroundUpdater = () => {
-      bgImage.value = window.innerWidth >= 768 ? resizedUrl : normalUrl
+      bgImage.value = window.innerWidth >= 768
+        ? (props.desktopBgUrl ?? props.mobileBgUrl ?? null)
+        : (props.mobileBgUrl ?? props.desktopBgUrl ?? null)
+    }
+
+    if (!props.desktopBgUrl && !props.mobileBgUrl) {
+      const [resizedUrl, normalUrl] = await Promise.all([
+        getImageUrl('standard'),
+        getImageUrl('mobile'),
+      ])
+
+      fallbackBackgroundUpdater = () => {
+        bgImage.value = window.innerWidth >= 768 ? resizedUrl : normalUrl
+      }
     }
 
     await applyBackground()

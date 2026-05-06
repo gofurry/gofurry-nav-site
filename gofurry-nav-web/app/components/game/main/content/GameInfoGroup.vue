@@ -1,105 +1,103 @@
 <template>
-  <div class="p-5 mb-8">
-
-    <!-- 标题 -->
-    <div class="flex justify-between items-center mb-4">
+  <div class="mb-8 p-5">
+    <div class="mb-4 flex items-center justify-between">
       <h3 class="text-2xl font-bold text-gray-800">
         {{ group.title }}
       </h3>
 
-      <router-link
-          to="/games/search"
-          class="text-md text-orange-900 hover:text-orange-700 transition cursor-pointer
-         hover:bg-orange-200/50 p-2 rounded-md"
+      <NuxtLink
+        to="/games/search"
+        class="cursor-pointer rounded-md p-2 text-md text-orange-900 transition hover:bg-orange-200/50 hover:text-orange-700"
       >
-        {{ t("common.showMore") }}
-      </router-link>
+        {{ t('common.showMore') }}
+      </NuxtLink>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
       <div
-          v-for="item in visibleGames"
-          :key="item.id"
-          class="cursor-pointer p-2 rounded-lg hover:bg-orange-200/50 transition"
+        v-for="item in visibleGames"
+        :key="item.id"
+        class="cursor-pointer rounded-lg p-2 transition hover:bg-orange-200/50"
       >
-        <!-- 封面 -->
         <img
-            :src="item.cover"
-            class="w-full h-32 object-cover rounded-md mb-2"
-            alt="封面图加载失败"
-            @click.stop="goGameDetail(item.id)"
+          :src="item.cover"
+          class="mb-2 h-32 w-full rounded-md object-cover"
+          alt="Game cover"
+          @click.stop="goGameDetail(item.id)"
         />
 
-        <!-- 标题 -->
-        <p class="text-sm font-semibold text-gray-900 line-clamp-1">
+        <p class="line-clamp-1 text-sm font-semibold text-gray-900">
           {{ item.name }}
         </p>
 
-        <!-- 简介 -->
-        <p class="text-xs text-gray-600 mt-1 overflow-hidden h-[2rem]">
+        <p class="mt-1 h-[2rem] overflow-hidden text-xs text-gray-600">
           {{ item.desc }}
         </p>
 
-        <!-- 评分 -->
         <div class="mt-2">
           <RatingStar :score="item.score" :count="item.scoreCount" />
         </div>
       </div>
     </div>
-
-
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import RatingStar from "@/components/common/RatingStar.vue";
-import { i18n } from '@/main'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import RatingStar from '@/components/common/RatingStar.vue'
 
-const { t } = i18n.global
-const router = useRouter();
+const { t } = useI18n()
+const router = useRouter()
 
 interface GameItem {
-  id: string;
-  name: string;
-  cover: string;
-  desc: string;
-  score: number;
-  scoreCount: number;
+  id: string
+  name: string
+  cover: string
+  desc: string
+  score: number
+  scoreCount: number
 }
 
 interface GameGroup {
-  title: string;
-  games: GameItem[];
+  title: string
+  games: GameItem[]
 }
 
 const props = defineProps<{
-  group: GameGroup;
-}>();
+  group: GameGroup
+}>()
 
 defineEmits<{
-  (e: "more", group: GameGroup): void;
-}>();
+  (e: 'more', group: GameGroup): void
+}>()
 
 function goGameDetail(id: string) {
-  router.push(`/games/${id}`);
+  router.push(`/games/${id}`)
 }
 
-const screenWidth = ref(window.innerWidth);
+const screenWidth = ref(import.meta.client ? window.innerWidth : 1280)
 
-const updateWidth = () => {
-  screenWidth.value = window.innerWidth;
-};
+function updateWidth() {
+  if (import.meta.client) {
+    screenWidth.value = window.innerWidth
+  }
+}
 
 onMounted(() => {
-  window.addEventListener("resize", updateWidth);
-});
+  updateWidth()
+  window.addEventListener('resize', updateWidth)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWidth)
+})
 
 const visibleGames = computed(() => {
   if (screenWidth.value >= 1024) {
-    return props.group.games.slice(0, 8);
-  } else {
-    return props.group.games.slice(0, 6);
+    return props.group.games.slice(0, 8)
   }
-});
+
+  return props.group.games.slice(0, 6)
+})
 </script>

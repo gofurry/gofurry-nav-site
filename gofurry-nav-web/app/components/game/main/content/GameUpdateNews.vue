@@ -8,19 +8,19 @@
     <div class="overflow-x-auto">
       <div class="flex min-w-max gap-4">
         <div
-            v-for="news in newsList"
-            :key="news.id"
-            ref="newsRefs"
-            class="relative mb-1 w-36 flex-shrink-0 cursor-pointer rounded-lg bg-orange-100/60 p-3 transition hover:bg-orange-200/50 sm:w-72"
-            @click="openUrl(news.url)"
+          v-for="news in newsList"
+          :key="news.id"
+          ref="newsRefs"
+          class="relative mb-1 w-36 flex-shrink-0 cursor-pointer rounded-lg bg-orange-100/60 p-3 transition hover:bg-orange-200/50 sm:w-72"
+          @click="openUrl(news.url)"
         >
           <img
-              :src="news.header"
-              alt="cover"
-              ref="coverRefs"
-              class="mb-2 w-full rounded-lg object-cover"
-              @mouseenter="onNewsMouseEnter(news, $event)"
-              @mouseleave="onNewsMouseLeave"
+            :src="news.header"
+            alt="cover"
+            ref="coverRefs"
+            class="mb-2 w-full rounded-lg object-cover"
+            @mouseenter="onNewsMouseEnter(news, $event)"
+            @mouseleave="onNewsMouseLeave"
           />
 
           <h3 class="truncate font-semibold">{{ htmlToPlainText(news.headline) }}</h3>
@@ -39,20 +39,20 @@
 
     <Teleport to="body">
       <Transition
-          enter-active-class="transition duration-200 ease-out"
-          enter-from-class="opacity-0 scale-95"
-          enter-to-class="opacity-100 scale-100"
-          leave-active-class="transition duration-150 ease-in"
-          leave-from-class="opacity-100 scale-100"
-          leave-to-class="opacity-0 scale-95"
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 scale-95"
+        enter-to-class="opacity-100 scale-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
       >
         <div
-            v-if="hoverNews"
-            data-game-update-popover
-            class="fixed max-h-[60vh] w-80 overflow-x-hidden overflow-y-auto rounded-lg bg-orange-100 p-4 text-sm text-gray-800 shadow-lg backdrop-blur-md"
-            :style="{ left: `${hoverLeft}px`, top: `${hoverTop}px` }"
-            @mouseenter="onDetailMouseEnter"
-            @mouseleave="onDetailMouseLeave"
+          v-if="hoverNews"
+          data-game-update-popover
+          class="fixed max-h-[60vh] w-80 overflow-x-hidden overflow-y-auto rounded-lg bg-orange-100 p-4 text-sm text-gray-800 shadow-lg backdrop-blur-md"
+          :style="{ left: `${hoverLeft}px`, top: `${hoverTop}px` }"
+          @mouseenter="onDetailMouseEnter"
+          @mouseleave="onDetailMouseLeave"
         >
           <div v-html="hoverNews.content"></div>
         </div>
@@ -63,12 +63,16 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue'
-import { i18n } from '@/main'
+import { useI18n } from 'vue-i18n'
 import { useLangStore } from '@/store/langStore'
-import type { LatestNewsRecord, NewsBaseModel } from '@/types/game'
-import { getLatestGameNews } from '@/utils/api/game'
+import { getLatestGameNews } from '~/services/game'
+import type { LatestNewsRecord, NewsBaseModel } from '~/types/game'
 
-const { t } = i18n.global
+const props = defineProps<{
+  initialNewsRecord?: LatestNewsRecord | null
+}>()
+
+const { t } = useI18n()
 const langStore = useLangStore()
 const lang = ref(langStore.lang)
 
@@ -96,9 +100,14 @@ function formatTime(postTime: string) {
 }
 
 function htmlToPlainText(html: string) {
-  const div = document.createElement('div')
-  div.innerHTML = html
-  return div.textContent || div.innerText || ''
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function openUrl(url: string) {
@@ -167,28 +176,44 @@ function onDetailMouseLeave() {
   hoverNews.value = null
 }
 
+function applyNewsRecord(record: LatestNewsRecord) {
+  newsList.value = lang.value === 'en' ? record.news_en : record.news_zh
+  nextTick(() => {
+    newsRefs.value = newsRefs.value.slice(0, newsList.value.length)
+    coverRefs.value = coverRefs.value.slice(0, newsList.value.length)
+  })
+}
+
 async function loadNews() {
   try {
-    const res: LatestNewsRecord = await getLatestGameNews()
-    newsList.value = lang.value === 'en' ? res.news_en : res.news_zh
-    nextTick(() => {
-      newsRefs.value = newsRefs.value.slice(0, newsList.value.length)
-      coverRefs.value = coverRefs.value.slice(0, newsList.value.length)
-    })
+    const record = props.initialNewsRecord ?? await getLatestGameNews()
+    applyNewsRecord(record)
   } catch (error) {
-    console.error('加载新闻失败', error)
+    console.error('Failed to load latest game news:', error)
     newsList.value = []
   }
 }
 
+if (props.initialNewsRecord) {
+  applyNewsRecord(props.initialNewsRecord)
+}
+
 onMounted(() => {
-  loadNews()
+  if (!newsList.value.length) {
+    loadNews()
+  }
 })
 
 watch(
   () => langStore.lang,
   (newLang) => {
     lang.value = newLang
+
+    if (props.initialNewsRecord) {
+      applyNewsRecord(props.initialNewsRecord)
+      return
+    }
+
     loadNews()
   }
 )
