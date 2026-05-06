@@ -25,6 +25,7 @@ import (
 	cm "github.com/GoFurry/gofurry-nav-backend/common/models"
 	"github.com/GoFurry/gofurry-nav-backend/roof/env"
 	"github.com/bwmarrin/snowflake"
+	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/pkg/errors"
 )
@@ -48,6 +49,23 @@ func CreateMD5(str string) string {
 	h := md5.New()
 	h.Write([]byte(str))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func GetClientIP(c fiber.Ctx) string {
+	for _, header := range []string{"X-Forwarded-For", "X-Real-IP"} {
+		if value := strings.TrimSpace(c.Get(header)); value != "" {
+			if header == "X-Forwarded-For" {
+				if idx := strings.Index(value, ","); idx >= 0 {
+					value = strings.TrimSpace(value[:idx])
+				}
+			}
+			if value != "" {
+				return value
+			}
+		}
+	}
+
+	return strings.TrimSpace(c.IP())
 }
 
 // 判断是否为数字

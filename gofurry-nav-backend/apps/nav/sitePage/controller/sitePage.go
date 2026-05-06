@@ -3,6 +3,7 @@ package controller
 import (
 	"github.com/GoFurry/gofurry-nav-backend/apps/nav/sitePage/service"
 	"github.com/GoFurry/gofurry-nav-backend/common"
+	"github.com/GoFurry/gofurry-nav-backend/common/util"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -26,7 +27,7 @@ func init() {
 // @Router /api/nav/site/getSiteDetail [Get]
 func (api sitePageApi) GetSiteDetail(c fiber.Ctx) error {
 	id, lang := c.Query("id"), c.Query("lang")
-	data, err := service.GetSitePageService().GetSiteDetailService(id, lang)
+	data, err := service.GetSitePageService().GetSiteDetailService(id, lang, util.GetClientIP(c))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}

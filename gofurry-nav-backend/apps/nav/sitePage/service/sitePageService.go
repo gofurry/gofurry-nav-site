@@ -15,7 +15,7 @@ var sitePageSingleton = new(sitePageService)
 func GetSitePageService() *sitePageService { return sitePageSingleton }
 
 // 获取单个站点信息
-func (svc *sitePageService) GetSiteDetailService(id string, lang string) (siteInfoVo models.SiteInfoVo, err common.GFError) {
+func (svc *sitePageService) GetSiteDetailService(id string, lang string, clientIP string) (siteInfoVo models.SiteInfoVo, err common.GFError) {
 	siteId, utilErr := util.String2Int64(id)
 	if utilErr != nil {
 		return siteInfoVo, common.NewServiceError("string2int64转换错误: " + utilErr.Error())
@@ -25,6 +25,7 @@ func (svc *sitePageService) GetSiteDetailService(id string, lang string) (siteIn
 	siteInfoVo.Nsfw = record.Nsfw
 	siteInfoVo.Country = record.Country
 	siteInfoVo.Welfare = record.Welfare
+	siteInfoVo.ViewCount = svc.touchSiteViewCount(siteId, record.ViewCount, clientIP)
 	switch lang {
 	case "zh":
 		siteInfoVo.Name = record.Name

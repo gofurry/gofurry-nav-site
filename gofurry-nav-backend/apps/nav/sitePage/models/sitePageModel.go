@@ -5,12 +5,13 @@ import (
 )
 
 type SiteInfoVo struct {
-	Name    string  `form:"name"  json:"name"`
-	Info    string  `form:"info"  json:"info"`
-	Icon    *string `form:"icon"  json:"icon"`
-	Country *string `form:"country"  json:"country"`
-	Nsfw    string  `form:"nsfw"  json:"nsfw"`
-	Welfare string  `form:"welfare"  json:"welfare"`
+	Name      string  `form:"name"  json:"name"`
+	Info      string  `form:"info"  json:"info"`
+	Icon      *string `form:"icon"  json:"icon"`
+	Country   *string `form:"country"  json:"country"`
+	Nsfw      string  `form:"nsfw"  json:"nsfw"`
+	Welfare   string  `form:"welfare"  json:"welfare"`
+	ViewCount int64   `form:"viewCount" json:"view_count"`
 }
 
 type SiteDnsVo struct {

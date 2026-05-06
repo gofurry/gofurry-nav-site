@@ -214,6 +214,7 @@ type GameBaseInfoVo struct {
 	PcRequirements      PcRequirementModel   `json:"pc_requirements"`
 	OnlineCount         int64                `json:"online_count"`
 	CountCollectTime    string               `json:"count_collect_time"`
+	ViewCount           int64                `json:"view_count"`
 }
 
 type NewsVo struct {

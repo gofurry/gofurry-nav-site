@@ -36,6 +36,7 @@ export interface SiteInfo {
     country: string | null;
     nsfw: string;
     welfare: string;
+    view_count: number;
 }
 
 export interface HttpRecord {

@@ -19,6 +19,7 @@
             welfare: sitePageData.siteInfo.welfare === '1',
             nsfw: sitePageData.siteInfo.nsfw === '1',
             description: sitePageData.siteInfo.info || '',
+            viewCount: sitePageData.siteInfo.view_count ?? 0,
           }"
         />
       </div>

@@ -31,6 +31,19 @@ func (dao gameDao) GetGame(id int64) (res models.GfgGame, err common.GFError) {
 	return
 }
 
+func (dao gameDao) GetGameViewCount(id int64) (res int64, err common.GFError) {
+	var record struct {
+		ViewCount int64 `gorm:"column:view_count"`
+	}
+
+	db := dao.Gm.Table(models.TableNameGfgGame).Select("view_count").Where("id = ?", id).Take(&record)
+	if dbErr := db.Error; dbErr != nil {
+		return 0, common.NewDaoError(dbErr.Error())
+	}
+
+	return record.ViewCount, nil
+}
+
 func (dao gameDao) GetGameRecord(id int64, lang string) (res models.GfgGameRecord, err common.GFError) {
 	db := dao.Gm.Table(models.TableNameGfgGameRecord).Where("game_id = ? AND lang=?", id, lang)
 	db.Take(&res)

@@ -160,6 +160,7 @@ export interface GameBaseInfoResponse {
     pc_requirements: RequirementsModel
     online_count: number
     count_collect_time: string
+    view_count: number
 }
 
 export interface RequirementsModel {

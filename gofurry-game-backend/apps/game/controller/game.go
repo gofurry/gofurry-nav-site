@@ -3,6 +3,7 @@ package controller
 import (
 	"github.com/GoFurry/gofurry-game-backend/apps/game/service"
 	"github.com/GoFurry/gofurry-game-backend/common"
+	"github.com/GoFurry/gofurry-game-backend/common/util"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -118,7 +119,7 @@ func (api *gameApi) GetTagList(c fiber.Ctx) error {
 func (api *gameApi) GetGameInfo(c fiber.Ctx) error {
 	num := c.Query("id", "0")
 	lang := c.Query("lang", "zh")
-	data, err := service.GetGameService().GetGameInfo(num, lang)
+	data, err := service.GetGameService().GetGameInfoWithViewCount(num, lang, util.GetClientIP(c))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
