@@ -17,6 +17,7 @@
 - HttpOnly JWT Cookie login for admin APIs
 - Public retrieval API that returns `sources` first, without LLM answer generation
 - Overview console with auto refresh, document/chunk stats, worker status, database status, and Ollama status
+- AI Q&A console page for Tencent Cloud inference debugging
 
 ## Quick Start
 
@@ -67,9 +68,10 @@ go build ./cmd/server
 - `GET /api/v1/admin/documents/:id/chunks`
 - `DELETE /api/v1/admin/documents/:id`
 - `POST /api/v1/chat/query`
+- `POST /api/v1/chat/stream`
 - `GET /livez`, `GET /readyz`, `GET /startupz`, `GET /healthz`
 
-Admin routes require logging in through `/api/v1/admin/auth/login`. The service writes a JWT to an HttpOnly cookie, similar to `gofurry-admin`. `POST /api/v1/chat/query` remains public.
+Admin routes require logging in through `/api/v1/admin/auth/login`. The service writes a JWT to an HttpOnly cookie, similar to `gofurry-admin`. `POST /api/v1/chat/query` and `POST /api/v1/chat/stream` remain public.
 
 `GET /api/v1/health` includes database and Ollama connection information for the console overview.
 
@@ -83,7 +85,22 @@ Environment overrides use the `APP_` prefix:
 APP_SERVER_PORT=8081 APP_RAG_OLLAMA_BASE_URL=http://127.0.0.1:11434 go run . --config ./config/server.yaml serve
 ```
 
+Tencent Cloud inference can be configured the same way without committing secrets:
+
+```bash
+APP_RAG_TENCENT_BASE_URL=https://tokenhub.tencentmaas.com/v1 \
+APP_RAG_TENCENT_MODEL=deepseek-v4-flash \
+APP_RAG_TENCENT_API_KEY=your-secret-key \
+go run . --config ./config/server.yaml serve
+```
+
 Do not commit real database passwords, console passcodes, or JWT secrets.
+
+## Console Debugging
+
+- The embedded console includes an `AI 问答` page for live RAG debugging.
+- The page streams status updates, sources, answer tokens, and final usage from `POST /api/v1/chat/stream`.
+- The existing `文档检索` page still exposes the plain retrieval API and source debug details.
 
 ## Documentation
 

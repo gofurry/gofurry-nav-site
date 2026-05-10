@@ -12,6 +12,7 @@ import type {
   PageResult,
   QueryFilters,
   QueryResponse,
+  QuerySource,
 } from './types'
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -29,6 +30,23 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error(result.message || '请求失败')
   }
   return result.data
+}
+
+async function readApiError(response: Response) {
+  try {
+    const result = (await response.json()) as ApiResult<unknown>
+    return new Error(result.message || '请求失败')
+  } catch {
+    return new Error('请求失败')
+  }
+}
+
+type QueryStreamHandlers = {
+  onStatus?: (payload: { stage: string; message: string }) => void
+  onSources?: (sources: QuerySource[]) => void
+  onDelta?: (text: string) => void
+  onDone?: (response: QueryResponse) => void
+  onError?: (message: string) => void
 }
 
 export function authState() {
@@ -135,6 +153,134 @@ export function queryRag(question: string, topK: number, filters?: QueryFilters)
     method: 'POST',
     body: JSON.stringify({ question, top_k: topK, filters }),
   })
+}
+
+export async function queryRagStream(
+  question: string,
+  topK: number,
+  filters: QueryFilters | undefined,
+  handlers: QueryStreamHandlers = {},
+  signal?: AbortSignal,
+) {
+  const response = await fetch('/api/v1/chat/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ question, top_k: topK, filters }),
+    credentials: 'include',
+    signal,
+  })
+
+  if (!response.ok) {
+    throw await readApiError(response)
+  }
+  if (!response.body) {
+    throw new Error('流式响应不可用')
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let eventName = ''
+  let dataLines: string[] = []
+  let finalResponse: QueryResponse | null = null
+  let answerText = ''
+  let sourceList: QuerySource[] = []
+
+  const dispatch = () => {
+    const payload = dataLines.join('\n').trim()
+    dataLines = []
+    const currentEvent = eventName || 'message'
+    eventName = ''
+    if (!payload) return
+    if (payload === '[DONE]') return
+    try {
+      if (currentEvent === 'status') {
+        const parsed = JSON.parse(payload) as { stage: string; message: string }
+        handlers.onStatus?.(parsed)
+        return
+      }
+      if (currentEvent === 'sources') {
+        const parsed = JSON.parse(payload) as { sources: QuerySource[] }
+        sourceList = parsed.sources || []
+        handlers.onSources?.(sourceList)
+        return
+      }
+      if (currentEvent === 'delta') {
+        const parsed = JSON.parse(payload) as { text: string }
+        answerText += parsed.text || ''
+        handlers.onDelta?.(parsed.text || '')
+        return
+      }
+      if (currentEvent === 'error') {
+        const parsed = JSON.parse(payload) as { message?: string }
+        const message = parsed.message || '请求失败'
+        handlers.onError?.(message)
+        throw new Error(message)
+      }
+      if (currentEvent === 'done') {
+        finalResponse = JSON.parse(payload) as QueryResponse
+        handlers.onDone?.(finalResponse)
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '流式数据解析失败'
+      handlers.onError?.(message)
+      throw new Error(message)
+    }
+  }
+
+  const consumeLine = (line: string) => {
+    if (line.startsWith('event:')) {
+      eventName = line.slice('event:'.length).trim()
+      return
+    }
+    if (line.startsWith('data:')) {
+      dataLines.push(line.slice('data:'.length).trim())
+      return
+    }
+    if (line === '') {
+      dispatch()
+    }
+  }
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (value) {
+        buffer += decoder.decode(value, { stream: true })
+        let newlineIndex = buffer.indexOf('\n')
+        while (newlineIndex >= 0) {
+          const line = buffer.slice(0, newlineIndex).replace(/\r$/, '')
+          buffer = buffer.slice(newlineIndex + 1)
+          consumeLine(line)
+          newlineIndex = buffer.indexOf('\n')
+        }
+      }
+      if (done) {
+        break
+      }
+    }
+
+    if (buffer.trim()) {
+      consumeLine(buffer.replace(/\r$/, ''))
+    }
+    dispatch()
+  } finally {
+    reader.releaseLock()
+  }
+
+  if (!finalResponse) {
+    finalResponse = {
+      answer: answerText,
+      sources: sourceList,
+      usage: {
+        top_k: topK,
+        embedding_model: '',
+      },
+    }
+  }
+  return finalResponse
 }
 
 export function chunkPreview(payload: {

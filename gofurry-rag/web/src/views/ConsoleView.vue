@@ -330,6 +330,10 @@
             </div>
           </section>
 
+          <section v-else-if="activeMenu === 'ai'" key="ai" class="space-y-6">
+            <AiChatPanel />
+          </section>
+
           <section v-else key="search" class="space-y-6">
             <div class="grid gap-6 xl:grid-cols-[460px_minmax(0,1fr)]">
               <form class="border border-white/10 bg-white/[0.035] p-6" @submit.prevent="runQuery">
@@ -478,6 +482,7 @@ import {
   Search,
   Send,
   ShieldCheck,
+  Sparkles,
   Trash2,
   UploadCloud,
   X,
@@ -501,8 +506,9 @@ import {
   updateChunk,
 } from '../api'
 import type { ChunkItem, ChunkPreviewResponse, DocumentItem, HealthInfo, Overview, PageResult, QueryResponse, QuerySource } from '../types'
+import AiChatPanel from '../components/AiChatPanel.vue'
 
-type MenuKey = 'overview' | 'documents' | 'search'
+type MenuKey = 'overview' | 'documents' | 'ai' | 'search'
 type DocumentTab = 'ingest' | 'list' | 'chunks'
 type ConfirmTarget =
   | { kind: 'document'; id: number; title: string; label: string; description: string; confirmText: string }
@@ -615,6 +621,7 @@ const PaginationBar = defineComponent({
 const menuItems = [
   { key: 'overview' as MenuKey, label: '整体态势', icon: Gauge },
   { key: 'documents' as MenuKey, label: '文档管理', icon: FileText },
+  { key: 'ai' as MenuKey, label: 'AI 问答', icon: Sparkles },
   { key: 'search' as MenuKey, label: '文档检索', icon: Search },
 ]
 const documentTabs = [
@@ -699,11 +706,13 @@ const chunkDocumentTotalPages = computed(() => Math.max(1, Math.ceil(Number(chun
 const chunkDocumentPageButtons = computed(() => buildPageButtons(chunkDocumentPage.value, chunkDocumentTotalPages.value))
 const currentTitle = computed(() => {
   if (activeMenu.value === 'documents') return '文档管理'
+  if (activeMenu.value === 'ai') return 'AI 问答'
   if (activeMenu.value === 'search') return '文档检索'
   return '整体态势'
 })
 const currentKicker = computed(() => {
   if (activeMenu.value === 'documents') return 'INGEST / DOCUMENTS / CHUNKS'
+  if (activeMenu.value === 'ai') return 'RAG / CHAT / TENCENT'
   if (activeMenu.value === 'search') return 'RETRIEVAL'
   return 'OBSERVABILITY'
 })

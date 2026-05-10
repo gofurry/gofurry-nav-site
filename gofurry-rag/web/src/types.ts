@@ -62,6 +62,13 @@ export type HealthInfo = {
     healthy?: boolean
     error?: string
   }
+  tencent?: {
+    base_url?: string
+    model?: string
+    configured?: boolean
+    healthy?: boolean
+    error?: string
+  }
 }
 
 export type DocumentItem = {
@@ -133,6 +140,12 @@ export type QueryResponse = {
   usage: {
     top_k: number
     embedding_model: string
+    answer_model?: string
+    prompt_tokens?: number
+    completion_tokens?: number
+    total_tokens?: number
+    cached_tokens?: number
+    reasoning_tokens?: number
   }
 }
 

@@ -36,6 +36,14 @@ rag:
   ingest_timeout_seconds: 300
   max_query_question_runes: 4000
   max_query_top_k: 12
+  tencent_base_url: "https://tokenhub.tencentmaas.com/v1"
+  tencent_model: "deepseek-v4-flash"
+  tencent_api_key: ""
+  tencent_timeout_seconds: 60
+  tencent_temperature: 0.2
+  tencent_top_p: 0.8
+  tencent_max_tokens: 1024
+  tencent_reasoning_effort: "low"
 ```
 
 The default config lookup matches `gofurry-admin`: `/etc/gofurry-rag/server.yaml`, then `./config/server.yaml`. You can always pass `--config`.
@@ -44,6 +52,15 @@ Environment overrides use the `APP_` prefix:
 
 ```bash
 APP_SERVER_PORT=8081 APP_RAG_TOP_K=8 go run . --config ./config/server.yaml serve
+```
+
+Tencent Cloud inference can be configured through local overrides or environment variables without committing the secret:
+
+```bash
+APP_RAG_TENCENT_BASE_URL=https://tokenhub.tencentmaas.com/v1 \
+APP_RAG_TENCENT_MODEL=deepseek-v4-flash \
+APP_RAG_TENCENT_API_KEY=your-secret-key \
+go run . --config ./config/server.yaml serve
 ```
 
 ## Run
@@ -84,6 +101,7 @@ go run . --config ./config/server.yaml uninstall
 - The overview page refreshes every 5 seconds and shows document totals, chunk totals, status distribution, database connection info, and Ollama connection info.
 - The document list refreshes every 3 seconds while the list tab is open, so pending documents move to ready without manual refresh.
 - The search page calls the public retrieval API and displays returned sources.
+- The new `AI 问答` page streams status updates, sources, and final answers from `POST /api/v1/chat/stream` for real-environment debugging.
 
 ## Add Text
 
@@ -123,6 +141,16 @@ curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
 ```
 
 `POST /api/v1/chat/query` is public and does not require the admin session cookie.
+
+Streaming version:
+
+```bash
+curl -N -X POST http://127.0.0.1:8080/api/v1/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What is GoFurry?","top_k":6}'
+```
+
+`POST /api/v1/chat/stream` is public and returns server-sent events that include `status`, `sources`, `delta`, and `done` events.
 
 ## Health
 

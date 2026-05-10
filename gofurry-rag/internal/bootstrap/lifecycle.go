@@ -15,6 +15,7 @@ import (
 	"github.com/GoFurry/gofurry-rag/internal/embedder"
 	"github.com/GoFurry/gofurry-rag/internal/ingest"
 	ragservice "github.com/GoFurry/gofurry-rag/internal/service"
+	"github.com/GoFurry/gofurry-rag/internal/tencentmaas"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -62,8 +63,18 @@ func Start() error {
 	}
 
 	embedClient := embedder.NewOllamaClient(cfg.OllamaBaseURL, cfg.EmbedModel, cfg.EmbedDim)
+	chatClient := tencentmaas.New(
+		cfg.TencentBaseURL,
+		cfg.TencentAPIKey,
+		cfg.TencentModel,
+		time.Duration(cfg.TencentTimeoutSeconds)*time.Second,
+		cfg.TencentTemperature,
+		cfg.TencentTopP,
+		cfg.TencentMaxTokens,
+		cfg.TencentReasoningEffort,
+	)
 	worker := ingest.NewWorker(repo, embedClient, *cfg)
-	ragService := ragservice.New(repo, embedClient, *cfg, worker)
+	ragService := ragservice.New(repo, embedClient, chatClient, *cfg, worker)
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	worker.Start(workerCtx)
 

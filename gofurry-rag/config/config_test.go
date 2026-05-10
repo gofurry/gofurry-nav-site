@@ -47,6 +47,9 @@ func TestEnvOverrideUsesAppPrefix(t *testing.T) {
 	t.Cleanup(ResetForTest)
 	t.Setenv("APP_SERVER_PORT", "19191")
 	t.Setenv("RAG_CHUNK_SIZE", "999")
+	t.Setenv("APP_RAG_TENCENT_BASE_URL", "https://example.test/v1")
+	t.Setenv("APP_RAG_TENCENT_MODEL", "deepseek-v4-flash")
+	t.Setenv("APP_RAG_TENCENT_API_KEY", "secret-key")
 	dir := t.TempDir()
 	path := filepath.Join(dir, "server.yaml")
 	if err := os.WriteFile(path, []byte(`
@@ -71,6 +74,9 @@ rag:
 	}
 	if cfg.ChunkSize != 300 {
 		t.Fatalf("legacy env should not override chunk size, got %d", cfg.ChunkSize)
+	}
+	if cfg.TencentBaseURL != "https://example.test/v1" || cfg.TencentModel != "deepseek-v4-flash" || cfg.TencentAPIKey != "secret-key" {
+		t.Fatalf("tencent env override failed: %+v", cfg.RAG)
 	}
 }
 

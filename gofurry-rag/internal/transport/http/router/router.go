@@ -46,7 +46,7 @@ func (builder *Builder) Init() *fiber.App {
 		ErrorHandler: api.ErrorHandler,
 		TrustProxy:   true,
 		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		WriteTimeout: 90 * time.Second,
 	})
 
 	registerMiddlewares(app)
@@ -147,10 +147,20 @@ func registerMiddlewares(app *fiber.App) {
 		}))
 	}
 	if cfg.Middleware.Compression.Enabled {
-		app.Use(fibercompress.New(fibercompress.Config{Level: compressionLevel(cfg.Middleware.Compression.Level)}))
+		app.Use(fibercompress.New(fibercompress.Config{
+			Level: compressionLevel(cfg.Middleware.Compression.Level),
+			Next: func(c fiber.Ctx) bool {
+				return c.Path() == "/api/v1/chat/stream"
+			},
+		}))
 	}
 	if cfg.Middleware.ETag.Enabled {
-		app.Use(fiberetag.New(fiberetag.Config{Weak: cfg.Middleware.ETag.Weak}))
+		app.Use(fiberetag.New(fiberetag.Config{
+			Weak: cfg.Middleware.ETag.Weak,
+			Next: func(c fiber.Ctx) bool {
+				return c.Path() == "/api/v1/chat/stream"
+			},
+		}))
 	}
 	if cfg.Middleware.Limiter.Enabled {
 		app.Use(limiter.New(limiter.Config{

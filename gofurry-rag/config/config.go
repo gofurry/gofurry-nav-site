@@ -42,28 +42,36 @@ type Config struct {
 	Auth       AuthConfig       `mapstructure:"auth" yaml:"auth"`
 	RAG        RAGConfig        `mapstructure:"rag" yaml:"rag"`
 
-	AppName               string `mapstructure:"-" yaml:"-"`
-	AppEnv                string `mapstructure:"-" yaml:"-"`
-	AppAddr               string `mapstructure:"-" yaml:"-"`
-	AdminToken            string `mapstructure:"-" yaml:"-"`
-	ConsolePasscode       string `mapstructure:"-" yaml:"-"`
-	JWTSecret             string `mapstructure:"-" yaml:"-"`
-	AuthCookieName        string `mapstructure:"-" yaml:"-"`
-	SessionTTLHours       int    `mapstructure:"-" yaml:"-"`
-	DatabaseDSN           string `mapstructure:"-" yaml:"-"`
-	OllamaBaseURL         string `mapstructure:"-" yaml:"-"`
-	EmbedModel            string `mapstructure:"-" yaml:"-"`
-	EmbedDim              int    `mapstructure:"-" yaml:"-"`
-	ChunkSize             int    `mapstructure:"-" yaml:"-"`
-	ChunkOverlap          int    `mapstructure:"-" yaml:"-"`
-	TopK                  int    `mapstructure:"-" yaml:"-"`
-	QueryTimeoutSeconds   int    `mapstructure:"-" yaml:"-"`
-	EmbedTimeoutSeconds   int    `mapstructure:"-" yaml:"-"`
-	IngestTimeoutSeconds  int    `mapstructure:"-" yaml:"-"`
-	MaxQueryQuestionRunes int    `mapstructure:"-" yaml:"-"`
-	MaxQueryTopK          int    `mapstructure:"-" yaml:"-"`
-	IngestWorkers         int    `mapstructure:"-" yaml:"-"`
-	EmbedBatchSize        int    `mapstructure:"-" yaml:"-"`
+	AppName                string  `mapstructure:"-" yaml:"-"`
+	AppEnv                 string  `mapstructure:"-" yaml:"-"`
+	AppAddr                string  `mapstructure:"-" yaml:"-"`
+	AdminToken             string  `mapstructure:"-" yaml:"-"`
+	ConsolePasscode        string  `mapstructure:"-" yaml:"-"`
+	JWTSecret              string  `mapstructure:"-" yaml:"-"`
+	AuthCookieName         string  `mapstructure:"-" yaml:"-"`
+	SessionTTLHours        int     `mapstructure:"-" yaml:"-"`
+	DatabaseDSN            string  `mapstructure:"-" yaml:"-"`
+	OllamaBaseURL          string  `mapstructure:"-" yaml:"-"`
+	EmbedModel             string  `mapstructure:"-" yaml:"-"`
+	EmbedDim               int     `mapstructure:"-" yaml:"-"`
+	ChunkSize              int     `mapstructure:"-" yaml:"-"`
+	ChunkOverlap           int     `mapstructure:"-" yaml:"-"`
+	TopK                   int     `mapstructure:"-" yaml:"-"`
+	QueryTimeoutSeconds    int     `mapstructure:"-" yaml:"-"`
+	EmbedTimeoutSeconds    int     `mapstructure:"-" yaml:"-"`
+	IngestTimeoutSeconds   int     `mapstructure:"-" yaml:"-"`
+	MaxQueryQuestionRunes  int     `mapstructure:"-" yaml:"-"`
+	MaxQueryTopK           int     `mapstructure:"-" yaml:"-"`
+	TencentBaseURL         string  `mapstructure:"-" yaml:"-"`
+	TencentModel           string  `mapstructure:"-" yaml:"-"`
+	TencentAPIKey          string  `mapstructure:"-" yaml:"-"`
+	TencentTimeoutSeconds  int     `mapstructure:"-" yaml:"-"`
+	TencentTemperature     float64 `mapstructure:"-" yaml:"-"`
+	TencentTopP            float64 `mapstructure:"-" yaml:"-"`
+	TencentMaxTokens       int     `mapstructure:"-" yaml:"-"`
+	TencentReasoningEffort string  `mapstructure:"-" yaml:"-"`
+	IngestWorkers          int     `mapstructure:"-" yaml:"-"`
+	EmbedBatchSize         int     `mapstructure:"-" yaml:"-"`
 }
 
 type ServerConfig struct {
@@ -201,19 +209,27 @@ type AuthConfig struct {
 }
 
 type RAGConfig struct {
-	OllamaBaseURL         string `mapstructure:"ollama_base_url" yaml:"ollama_base_url"`
-	EmbedModel            string `mapstructure:"embed_model" yaml:"embed_model"`
-	EmbedDim              int    `mapstructure:"embed_dim" yaml:"embed_dim"`
-	ChunkSize             int    `mapstructure:"chunk_size" yaml:"chunk_size"`
-	ChunkOverlap          int    `mapstructure:"chunk_overlap" yaml:"chunk_overlap"`
-	TopK                  int    `mapstructure:"top_k" yaml:"top_k"`
-	QueryTimeoutSeconds   int    `mapstructure:"query_timeout_seconds" yaml:"query_timeout_seconds"`
-	EmbedTimeoutSeconds   int    `mapstructure:"embed_timeout_seconds" yaml:"embed_timeout_seconds"`
-	IngestTimeoutSeconds  int    `mapstructure:"ingest_timeout_seconds" yaml:"ingest_timeout_seconds"`
-	MaxQueryQuestionRunes int    `mapstructure:"max_query_question_runes" yaml:"max_query_question_runes"`
-	MaxQueryTopK          int    `mapstructure:"max_query_top_k" yaml:"max_query_top_k"`
-	IngestWorkers         int    `mapstructure:"ingest_workers" yaml:"ingest_workers"`
-	EmbedBatchSize        int    `mapstructure:"embed_batch_size" yaml:"embed_batch_size"`
+	OllamaBaseURL          string  `mapstructure:"ollama_base_url" yaml:"ollama_base_url"`
+	EmbedModel             string  `mapstructure:"embed_model" yaml:"embed_model"`
+	EmbedDim               int     `mapstructure:"embed_dim" yaml:"embed_dim"`
+	ChunkSize              int     `mapstructure:"chunk_size" yaml:"chunk_size"`
+	ChunkOverlap           int     `mapstructure:"chunk_overlap" yaml:"chunk_overlap"`
+	TopK                   int     `mapstructure:"top_k" yaml:"top_k"`
+	QueryTimeoutSeconds    int     `mapstructure:"query_timeout_seconds" yaml:"query_timeout_seconds"`
+	EmbedTimeoutSeconds    int     `mapstructure:"embed_timeout_seconds" yaml:"embed_timeout_seconds"`
+	IngestTimeoutSeconds   int     `mapstructure:"ingest_timeout_seconds" yaml:"ingest_timeout_seconds"`
+	MaxQueryQuestionRunes  int     `mapstructure:"max_query_question_runes" yaml:"max_query_question_runes"`
+	MaxQueryTopK           int     `mapstructure:"max_query_top_k" yaml:"max_query_top_k"`
+	TencentBaseURL         string  `mapstructure:"tencent_base_url" yaml:"tencent_base_url"`
+	TencentModel           string  `mapstructure:"tencent_model" yaml:"tencent_model"`
+	TencentAPIKey          string  `mapstructure:"tencent_api_key" yaml:"tencent_api_key"`
+	TencentTimeoutSeconds  int     `mapstructure:"tencent_timeout_seconds" yaml:"tencent_timeout_seconds"`
+	TencentTemperature     float64 `mapstructure:"tencent_temperature" yaml:"tencent_temperature"`
+	TencentTopP            float64 `mapstructure:"tencent_top_p" yaml:"tencent_top_p"`
+	TencentMaxTokens       int     `mapstructure:"tencent_max_tokens" yaml:"tencent_max_tokens"`
+	TencentReasoningEffort string  `mapstructure:"tencent_reasoning_effort" yaml:"tencent_reasoning_effort"`
+	IngestWorkers          int     `mapstructure:"ingest_workers" yaml:"ingest_workers"`
+	EmbedBatchSize         int     `mapstructure:"embed_batch_size" yaml:"embed_batch_size"`
 }
 
 func ConfigureServerConfig(projectName, fileName, configFile string) {
@@ -513,6 +529,14 @@ func (cfg *Config) fillCompatibilityFields() {
 	cfg.IngestTimeoutSeconds = cfg.RAG.IngestTimeoutSeconds
 	cfg.MaxQueryQuestionRunes = cfg.RAG.MaxQueryQuestionRunes
 	cfg.MaxQueryTopK = cfg.RAG.MaxQueryTopK
+	cfg.TencentBaseURL = cfg.RAG.TencentBaseURL
+	cfg.TencentModel = cfg.RAG.TencentModel
+	cfg.TencentAPIKey = cfg.RAG.TencentAPIKey
+	cfg.TencentTimeoutSeconds = cfg.RAG.TencentTimeoutSeconds
+	cfg.TencentTemperature = cfg.RAG.TencentTemperature
+	cfg.TencentTopP = cfg.RAG.TencentTopP
+	cfg.TencentMaxTokens = cfg.RAG.TencentMaxTokens
+	cfg.TencentReasoningEffort = cfg.RAG.TencentReasoningEffort
 	cfg.IngestWorkers = cfg.RAG.IngestWorkers
 	cfg.EmbedBatchSize = cfg.RAG.EmbedBatchSize
 }
@@ -612,6 +636,27 @@ func (cfg *RAGConfig) normalize() {
 	if cfg.MaxQueryTopK <= 0 {
 		cfg.MaxQueryTopK = 12
 	}
+	if cfg.TencentBaseURL == "" {
+		cfg.TencentBaseURL = "https://tokenhub.tencentmaas.com/v1"
+	}
+	if cfg.TencentModel == "" {
+		cfg.TencentModel = "deepseek-v4-flash"
+	}
+	if cfg.TencentTimeoutSeconds <= 0 {
+		cfg.TencentTimeoutSeconds = 60
+	}
+	if cfg.TencentTemperature == 0 {
+		cfg.TencentTemperature = 0.2
+	}
+	if cfg.TencentTopP == 0 {
+		cfg.TencentTopP = 0.8
+	}
+	if cfg.TencentMaxTokens <= 0 {
+		cfg.TencentMaxTokens = 1024
+	}
+	if cfg.TencentReasoningEffort == "" {
+		cfg.TencentReasoningEffort = "low"
+	}
 	if cfg.IngestWorkers <= 0 {
 		cfg.IngestWorkers = 1
 	}
@@ -670,7 +715,7 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("middleware.access_log.time_zone", "Local")
 	v.SetDefault("middleware.timeout.enabled", true)
 	v.SetDefault("middleware.timeout.duration_seconds", 30)
-	v.SetDefault("middleware.timeout.exclude_paths", []string{"/livez", "/readyz", "/startupz", "/healthz"})
+	v.SetDefault("middleware.timeout.exclude_paths", []string{"/livez", "/readyz", "/startupz", "/healthz", "/api/v1/chat/stream"})
 	v.SetDefault("middleware.health.enabled", true)
 	v.SetDefault("middleware.health.include_legacy", true)
 	v.SetDefault("middleware.security_headers.enabled", true)
@@ -682,7 +727,7 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("middleware.limiter.expiration", 60)
 	v.SetDefault("middleware.limiter.strategy", "fixed")
 	v.SetDefault("middleware.limiter.key_source", "ip")
-	v.SetDefault("middleware.limiter.exclude_paths", []string{"/livez", "/readyz", "/startupz", "/healthz"})
+	v.SetDefault("middleware.limiter.exclude_paths", []string{"/livez", "/readyz", "/startupz", "/healthz", "/api/v1/chat/stream"})
 	v.SetDefault("middleware.etag.enabled", true)
 	v.SetDefault("waf.enabled", false)
 	v.SetDefault("waf.conf_path", []string{"./config/coraza.conf"})
@@ -706,6 +751,14 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("rag.ingest_timeout_seconds", 300)
 	v.SetDefault("rag.max_query_question_runes", 4000)
 	v.SetDefault("rag.max_query_top_k", 12)
+	v.SetDefault("rag.tencent_base_url", "https://tokenhub.tencentmaas.com/v1")
+	v.SetDefault("rag.tencent_model", "deepseek-v4-flash")
+	v.SetDefault("rag.tencent_api_key", "")
+	v.SetDefault("rag.tencent_timeout_seconds", 60)
+	v.SetDefault("rag.tencent_temperature", 0.2)
+	v.SetDefault("rag.tencent_top_p", 0.8)
+	v.SetDefault("rag.tencent_max_tokens", 1024)
+	v.SetDefault("rag.tencent_reasoning_effort", "low")
 	v.SetDefault("rag.ingest_workers", 1)
 	v.SetDefault("rag.embed_batch_size", 8)
 }

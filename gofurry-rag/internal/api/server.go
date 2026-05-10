@@ -45,6 +45,7 @@ func (s *Server) RegisterRoutes(v1 fiber.Router) {
 	protected.Delete("/chunks/:id", s.deleteChunk)
 	protected.Post("/debug/chunk-preview", s.chunkPreview)
 	v1.Post("/chat/query", s.query)
+	v1.Post("/chat/stream", s.chatStream)
 }
 
 func (s *Server) requireAdmin(c fiber.Ctx) error {

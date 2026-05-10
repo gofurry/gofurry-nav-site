@@ -37,6 +37,7 @@ type Repository interface {
 type Service struct {
 	repo     Repository
 	embedder embedder.Client
+	chat     chatClient
 	cfg      config.Config
 	worker   workerStatusProvider
 }
@@ -124,12 +125,18 @@ type QueryResponse struct {
 }
 
 type QueryUsage struct {
-	TopK           int    `json:"top_k"`
-	EmbeddingModel string `json:"embedding_model"`
+	TopK             int    `json:"top_k"`
+	EmbeddingModel   string `json:"embedding_model"`
+	AnswerModel      string `json:"answer_model,omitempty"`
+	PromptTokens     int    `json:"prompt_tokens,omitempty"`
+	CompletionTokens int    `json:"completion_tokens,omitempty"`
+	TotalTokens      int    `json:"total_tokens,omitempty"`
+	CachedTokens     int    `json:"cached_tokens,omitempty"`
+	ReasoningTokens  int    `json:"reasoning_tokens,omitempty"`
 }
 
-func New(repo Repository, embedder embedder.Client, cfg config.Config, worker workerStatusProvider) *Service {
-	return &Service{repo: repo, embedder: embedder, cfg: cfg, worker: worker}
+func New(repo Repository, embedder embedder.Client, chat chatClient, cfg config.Config, worker workerStatusProvider) *Service {
+	return &Service{repo: repo, embedder: embedder, chat: chat, cfg: cfg, worker: worker}
 }
 
 func (s *Service) Health(ctx context.Context) map[string]any {
@@ -149,6 +156,12 @@ func (s *Service) Health(ctx context.Context) map[string]any {
 			"model":     s.embedder.Model(),
 			"embed_dim": s.cfg.EmbedDim,
 			"healthy":   true,
+		},
+		"tencent": map[string]any{
+			"base_url":   s.cfg.TencentBaseURL,
+			"model":      s.cfg.TencentModel,
+			"configured": s.chat != nil && s.chat.Configured(),
+			"healthy":    false,
 		},
 	}
 	if s.worker != nil {
@@ -180,6 +193,15 @@ func (s *Service) Health(ctx context.Context) map[string]any {
 		result["ollama_error"] = err.Error()
 		result["ollama"].(map[string]any)["healthy"] = false
 		result["ollama"].(map[string]any)["error"] = err.Error()
+	}
+	if s.chat != nil && s.chat.Configured() {
+		if err := s.chat.Health(ctx); err != nil {
+			result["status"] = "degraded"
+			result["tencent_error"] = err.Error()
+			result["tencent"].(map[string]any)["error"] = err.Error()
+		} else {
+			result["tencent"].(map[string]any)["healthy"] = true
+		}
 	}
 	return result
 }
@@ -378,68 +400,7 @@ func (s *Service) Overview(ctx context.Context) (db.Overview, error) {
 }
 
 func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, error) {
-	req.Question = strings.TrimSpace(req.Question)
-	if req.Question == "" {
-		return QueryResponse{}, wrapValidation("question is required")
-	}
-	if limit := s.cfg.MaxQueryQuestionRunes; limit > 0 && utf8.RuneCountInString(req.Question) > limit {
-		return QueryResponse{}, wrapValidation("question exceeds the maximum length")
-	}
-	topK := req.TopK
-	if topK <= 0 {
-		topK = s.cfg.TopK
-	}
-	if maxTopK := s.cfg.MaxQueryTopK; maxTopK > 0 && topK > maxTopK {
-		return QueryResponse{}, wrapValidation("top_k exceeds the maximum limit")
-	}
-	queryCtx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.QueryTimeoutSeconds)*time.Second)
-	defer cancel()
-	startedAt := time.Now()
-	slog.InfoContext(queryCtx, "query start",
-		"question_runes", utf8.RuneCountInString(req.Question),
-		"top_k", topK,
-		"query_timeout_seconds", s.cfg.QueryTimeoutSeconds,
-		"embedding_model", s.embedder.Model(),
-	)
-	embeddings, err := s.embedder.Embed(queryCtx, []string{req.Question})
-	if err != nil {
-		slog.ErrorContext(queryCtx, "query embedding failed",
-			"elapsed_ms", time.Since(startedAt).Milliseconds(),
-			"top_k", topK,
-			"embedding_model", s.embedder.Model(),
-			"error", err,
-		)
-		return QueryResponse{}, err
-	}
-	sources, err := s.repo.SearchChunks(queryCtx, embeddings[0], topK, db.BatchDocumentFilter{
-		DocumentIDs: cleanDocumentIDs(req.Filters.DocumentIDs),
-		SourceTypes: cleanStrings(req.Filters.SourceType),
-		Categories:  cleanStrings(req.Filters.Category),
-		Languages:   cleanStrings(req.Filters.Language),
-	})
-	if err != nil {
-		slog.ErrorContext(queryCtx, "query search failed",
-			"elapsed_ms", time.Since(startedAt).Milliseconds(),
-			"top_k", topK,
-			"embedding_model", s.embedder.Model(),
-			"error", err,
-		)
-		return QueryResponse{}, err
-	}
-	slog.InfoContext(queryCtx, "query complete",
-		"elapsed_ms", time.Since(startedAt).Milliseconds(),
-		"top_k", topK,
-		"source_count", len(sources),
-		"embedding_model", s.embedder.Model(),
-	)
-	return QueryResponse{
-		Answer:  "Relevant sources were found. Please review the sources field.",
-		Sources: sources,
-		Usage: QueryUsage{
-			TopK:           topK,
-			EmbeddingModel: s.embedder.Model(),
-		},
-	}, nil
+	return s.executeQuery(ctx, req, QueryCallbacks{})
 }
 
 func wrapValidation(message string) error {

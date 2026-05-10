@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/GoFurry/gofurry-rag/config"
 	"github.com/GoFurry/gofurry-rag/internal/db"
 	"github.com/GoFurry/gofurry-rag/internal/service"
+	"github.com/GoFurry/gofurry-rag/internal/tencentmaas"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -233,6 +235,29 @@ func TestQueryReturnsSources(t *testing.T) {
 	}
 }
 
+func TestChatStreamReturnsSSE(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/stream", bytes.NewBufferString(`{"question":"GoFurry","top_k":1}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(body)
+	for _, needle := range []string{"event: status", "event: sources", "event: delta", "event: done"} {
+		if !strings.Contains(text, needle) {
+			t.Fatalf("missing %q in stream: %s", needle, text)
+		}
+	}
+}
+
 func TestQueryPassesFilters(t *testing.T) {
 	app, repo := testAppWithRepo()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{
@@ -445,7 +470,7 @@ func testAppWithRepo() (*fiber.App, *fakeRepo) {
 		},
 	}
 	repo := newFakeRepo()
-	svc := service.New(repo, fakeEmbedder{}, cfg, nil)
+	svc := service.New(repo, fakeEmbedder{}, &fakeChat{configured: true, model: "deepseek-v4-flash", answer: "GoFurry is a content discovery website."}, cfg, nil)
 	app := fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
 	NewServer(cfg, svc, nil).RegisterRoutes(app.Group("/api/v1"))
 	return app, repo
@@ -598,4 +623,60 @@ func (fakeEmbedder) Health(ctx context.Context) error {
 
 func (fakeEmbedder) Model() string {
 	return "fake"
+}
+
+type fakeChat struct {
+	configured    bool
+	model         string
+	answer        string
+	completeCalls int
+	streamCalls   int
+}
+
+func (f *fakeChat) Model() string {
+	if f.model != "" {
+		return f.model
+	}
+	return "fake-chat"
+}
+
+func (f *fakeChat) Configured() bool {
+	return f != nil && f.configured
+}
+
+func (f *fakeChat) Health(ctx context.Context) error {
+	return nil
+}
+
+func (f *fakeChat) Complete(ctx context.Context, _ []tencentmaas.Message) (tencentmaas.CompletionResult, error) {
+	f.completeCalls++
+	return tencentmaas.CompletionResult{
+		Model:            f.Model(),
+		Answer:           f.answer,
+		PromptTokens:     12,
+		CompletionTokens: 34,
+		TotalTokens:      46,
+		CachedTokens:     2,
+		ReasoningTokens:  8,
+	}, nil
+}
+
+func (f *fakeChat) Stream(ctx context.Context, _ []tencentmaas.Message, onDelta func(string) error) (tencentmaas.CompletionResult, error) {
+	f.streamCalls++
+	for _, piece := range []string{"GoFurry", " is", " a site."} {
+		if onDelta != nil {
+			if err := onDelta(piece); err != nil {
+				return tencentmaas.CompletionResult{}, err
+			}
+		}
+	}
+	return tencentmaas.CompletionResult{
+		Model:            f.Model(),
+		Answer:           f.answer,
+		PromptTokens:     12,
+		CompletionTokens: 34,
+		TotalTokens:      46,
+		CachedTokens:     2,
+		ReasoningTokens:  8,
+	}, nil
 }
