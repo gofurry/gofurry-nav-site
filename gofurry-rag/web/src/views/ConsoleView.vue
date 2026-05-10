@@ -114,11 +114,11 @@
                       <span class="status-pill" :class="workerStatusClass">{{ overviewData?.worker_state || 'idle' }}</span>
                     </div>
                     <dl class="space-y-2 text-sm">
-                      <div class="flex justify-between gap-4"><dt class="text-slate-500">鏉板湪鏁?</dt><dd class="text-slate-200">{{ overviewData?.worker_active_workers ?? 0 }}</dd></div>
-                      <div class="flex justify-between gap-4"><dt class="text-slate-500">宸插鐞?</dt><dd class="text-slate-200">{{ overviewData?.worker_total_processed ?? 0 }}</dd></div>
-                      <div class="flex justify-between gap-4"><dt class="text-slate-500">宸茶繃澶?</dt><dd class="text-slate-200">{{ overviewData?.worker_total_failed ?? 0 }}</dd></div>
-                      <div class="flex justify-between gap-4"><dt class="text-slate-500">涓婃鑰楁椂</dt><dd class="text-slate-200">{{ formatDuration(overviewData?.worker_last_duration_ms) }}</dd></div>
-                      <div class="flex justify-between gap-4"><dt class="text-slate-500">骞冲潎鑰楁椂</dt><dd class="text-slate-200">{{ formatDuration(overviewData?.worker_average_duration_ms) }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">当前活跃</dt><dd class="text-slate-200">{{ overviewData?.worker_active_workers ?? 0 }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">已处理</dt><dd class="text-slate-200">{{ overviewData?.worker_total_processed ?? 0 }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">已失败</dt><dd class="text-slate-200">{{ overviewData?.worker_total_failed ?? 0 }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">上次耗时</dt><dd class="text-slate-200">{{ formatDuration(overviewData?.worker_last_duration_ms) }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">平均耗时</dt><dd class="text-slate-200">{{ formatDuration(overviewData?.worker_average_duration_ms) }}</dd></div>
                     </dl>
                     <div class="border border-white/10 bg-white/[0.03] p-3">
                       <div class="flex items-center justify-between gap-3">
