@@ -177,6 +177,21 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 	response.Usage.TotalTokens = completion.TotalTokens
 	response.Usage.CachedTokens = completion.CachedTokens
 	response.Usage.ReasoningTokens = completion.ReasoningTokens
+	if req.IncludeDetails {
+		citations, err := buildQueryCitations(queryCtx, s.repo, sources, usedSources)
+		if err != nil {
+			slog.WarnContext(queryCtx, "chat citation build failed",
+				"elapsed_ms", time.Since(startedAt).Milliseconds(),
+				"top_k", topK,
+				"source_count", len(sources),
+				"embedding_model", s.embedder.Model(),
+				"answer_model", response.Usage.AnswerModel,
+				"error", err,
+			)
+		} else {
+			response.Citations = citations
+		}
+	}
 
 	if err := emitStatus("completed", "回答已生成"); err != nil {
 		return QueryResponse{}, err
@@ -192,6 +207,93 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 		"completion_tokens", response.Usage.CompletionTokens,
 	)
 	return response, nil
+}
+
+func buildQueryCitations(ctx context.Context, repo Repository, sources, usedSources []db.Source) ([]QueryCitation, error) {
+	if len(sources) == 0 {
+		return nil, nil
+	}
+
+	used := make(map[int64]struct{}, len(usedSources))
+	for _, source := range usedSources {
+		used[source.ChunkID] = struct{}{}
+	}
+
+	docCache := make(map[int64]db.Document, len(sources))
+	citations := make([]QueryCitation, 0, len(sources))
+	for i, source := range sources {
+		doc, ok := docCache[source.DocumentID]
+		if !ok {
+			fetched, err := repo.GetDocument(ctx, source.DocumentID)
+			if err != nil {
+				return nil, err
+			}
+			docCache[source.DocumentID] = fetched
+			doc = fetched
+		}
+		_, usedInPrompt := used[source.ChunkID]
+		citations = append(citations, QueryCitation{
+			Rank:         i + 1,
+			UsedInPrompt: usedInPrompt,
+			Source:       source,
+			Lineage: QueryCitationLineage{
+				DocumentID: source.DocumentID,
+				ChunkID:    source.ChunkID,
+				ChunkIndex: source.ChunkIndex,
+				SourceType: source.SourceType,
+				SourceID:   source.SourceID,
+				Title:      source.Title,
+				URL:        source.URL,
+				Score:      source.Score,
+				TokenCount: source.TokenCount,
+			},
+			Document: buildQueryCitationDocument(doc, source),
+			Chunk:    buildQueryCitationChunk(source),
+		})
+	}
+	return citations, nil
+}
+
+func buildQueryCitationDocument(doc db.Document, source db.Source) QueryCitationDocument {
+	title := doc.Title
+	if title == "" {
+		title = source.Title
+	}
+	url := doc.URL
+	if url == "" {
+		url = source.URL
+	}
+	return QueryCitationDocument{
+		ID:                 doc.ID,
+		SourceType:         doc.SourceType,
+		SourceID:           doc.SourceID,
+		Title:              title,
+		URL:                url,
+		Checksum:           doc.Checksum,
+		Content:            doc.Content,
+		Status:             doc.Status,
+		ErrorMessage:       doc.ErrorMessage,
+		Metadata:           doc.Metadata,
+		ChunkCount:         doc.ChunkCount,
+		RetryCount:         doc.RetryCount,
+		LastErrorAt:        doc.LastErrorAt,
+		ProcessedAt:        doc.ProcessedAt,
+		ReindexRequestedAt: doc.ReindexRequestedAt,
+		LastIndexedAt:      doc.LastIndexedAt,
+		CreatedAt:          doc.CreatedAt,
+		UpdatedAt:          doc.UpdatedAt,
+	}
+}
+
+func buildQueryCitationChunk(source db.Source) QueryCitationChunk {
+	return QueryCitationChunk{
+		ID:          source.ChunkID,
+		DocumentID:  source.DocumentID,
+		ChunkIndex:  source.ChunkIndex,
+		Content:     source.Content,
+		ContentHash: "",
+		TokenCount:  source.TokenCount,
+	}
 }
 
 func buildChatMessages(question string, sources []db.Source, budgetRunes int) ([]tencentmaas.Message, []db.Source) {

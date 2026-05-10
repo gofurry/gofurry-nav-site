@@ -148,10 +148,10 @@ export function deleteChunk(chunkId: number) {
   return request<{ deleted: boolean }>(`/api/v1/admin/chunks/${chunkId}`, { method: 'DELETE' })
 }
 
-export function queryRag(question: string, topK: number, filters?: QueryFilters) {
+export function queryRag(question: string, topK: number, filters?: QueryFilters, includeDetails = false) {
   return request<QueryResponse>('/api/v1/chat/query', {
     method: 'POST',
-    body: JSON.stringify({ question, top_k: topK, filters }),
+    body: JSON.stringify({ question, top_k: topK, filters, include_details: includeDetails }),
   })
 }
 
@@ -161,13 +161,14 @@ export async function queryRagStream(
   filters: QueryFilters | undefined,
   handlers: QueryStreamHandlers = {},
   signal?: AbortSignal,
+  includeDetails = false,
 ) {
   const response = await fetch('/api/v1/chat/stream', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ question, top_k: topK, filters }),
+    body: JSON.stringify({ question, top_k: topK, filters, include_details: includeDetails }),
     credentials: 'include',
     signal,
   })

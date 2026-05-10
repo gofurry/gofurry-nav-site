@@ -56,9 +56,10 @@ type TextDocumentRequest struct {
 }
 
 type QueryRequest struct {
-	Question string       `json:"question"`
-	TopK     int          `json:"top_k"`
-	Filters  QueryFilters `json:"filters"`
+	Question       string       `json:"question"`
+	TopK           int          `json:"top_k"`
+	Filters        QueryFilters `json:"filters"`
+	IncludeDetails bool         `json:"include_details"`
 }
 
 type UpdateChunkRequest struct {
@@ -119,9 +120,62 @@ type ChunkPreviewChunk struct {
 }
 
 type QueryResponse struct {
-	Answer  string      `json:"answer"`
-	Sources []db.Source `json:"sources"`
-	Usage   QueryUsage  `json:"usage"`
+	Answer    string          `json:"answer"`
+	Sources   []db.Source     `json:"sources"`
+	Citations []QueryCitation `json:"citations,omitempty"`
+	Usage     QueryUsage      `json:"usage"`
+}
+
+type QueryCitation struct {
+	Rank         int                   `json:"rank"`
+	UsedInPrompt bool                  `json:"used_in_prompt"`
+	Source       db.Source             `json:"source"`
+	Lineage      QueryCitationLineage  `json:"lineage"`
+	Document     QueryCitationDocument `json:"document"`
+	Chunk        QueryCitationChunk    `json:"chunk"`
+}
+
+type QueryCitationLineage struct {
+	DocumentID int64   `json:"document_id"`
+	ChunkID    int64   `json:"chunk_id"`
+	ChunkIndex int     `json:"chunk_index"`
+	SourceType string  `json:"source_type"`
+	SourceID   string  `json:"source_id,omitempty"`
+	Title      string  `json:"title"`
+	URL        string  `json:"url,omitempty"`
+	Score      float64 `json:"score"`
+	TokenCount int     `json:"token_count"`
+}
+
+type QueryCitationDocument struct {
+	ID                 int64           `json:"id"`
+	SourceType         string          `json:"source_type"`
+	SourceID           string          `json:"source_id,omitempty"`
+	Title              string          `json:"title"`
+	URL                string          `json:"url,omitempty"`
+	Checksum           string          `json:"checksum,omitempty"`
+	Content            string          `json:"content"`
+	Status             string          `json:"status"`
+	ErrorMessage       string          `json:"error_message"`
+	Metadata           json.RawMessage `json:"metadata,omitempty"`
+	ChunkCount         int             `json:"chunk_count"`
+	RetryCount         int             `json:"retry_count"`
+	LastErrorAt        *time.Time      `json:"last_error_at,omitempty"`
+	ProcessedAt        *time.Time      `json:"processed_at,omitempty"`
+	ReindexRequestedAt *time.Time      `json:"reindex_requested_at,omitempty"`
+	LastIndexedAt      *time.Time      `json:"last_indexed_at,omitempty"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+}
+
+type QueryCitationChunk struct {
+	ID          int64      `json:"id"`
+	DocumentID  int64      `json:"document_id"`
+	ChunkIndex  int        `json:"chunk_index"`
+	Content     string     `json:"content"`
+	ContentHash string     `json:"content_hash"`
+	TokenCount  int        `json:"token_count"`
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
 }
 
 type QueryUsage struct {

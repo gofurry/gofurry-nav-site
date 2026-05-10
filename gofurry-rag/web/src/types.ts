@@ -134,9 +134,56 @@ export type QuerySource = {
   content: string
 }
 
+export type QueryCitation = {
+  rank: number
+  used_in_prompt: boolean
+  source: QuerySource
+  lineage: {
+    document_id: number
+    chunk_id: number
+    chunk_index: number
+    source_type: string
+    source_id?: string
+    title: string
+    url?: string
+    score: number
+    token_count: number
+  }
+  document: {
+    id: number
+    source_type: string
+    source_id?: string
+    title: string
+    url?: string
+    checksum?: string
+    content: string
+    status: string
+    error_message: string
+    metadata?: Record<string, unknown> | null
+    chunk_count: number
+    retry_count: number
+    last_error_at?: string
+    processed_at?: string
+    reindex_requested_at?: string
+    last_indexed_at?: string
+    created_at: string
+    updated_at: string
+  }
+  chunk: {
+    id: number
+    document_id: number
+    chunk_index: number
+    content: string
+    content_hash: string
+    token_count: number
+    created_at?: string
+  }
+}
+
 export type QueryResponse = {
   answer: string
   sources: QuerySource[]
+  citations?: QueryCitation[]
   usage: {
     top_k: number
     embedding_model: string

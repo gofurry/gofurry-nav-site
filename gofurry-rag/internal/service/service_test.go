@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -89,6 +90,61 @@ func TestQueryReturnsAnswerAndSources(t *testing.T) {
 	}
 	if len(chat.lastMessages) != 2 || !strings.Contains(chat.lastMessages[1].Content, "资料：") {
 		t.Fatalf("messages = %+v", chat.lastMessages)
+	}
+}
+
+func TestQueryReturnsCitationDetails(t *testing.T) {
+	repo := &serviceRepo{
+		doc: db.Document{
+			ID:           1,
+			SourceType:   "manual",
+			SourceID:     "about",
+			Title:        "GoFurry",
+			URL:          "https://example.com/about",
+			Content:      "GoFurry is a content discovery website.",
+			Status:       db.StatusReady,
+			ErrorMessage: "",
+			Metadata:     json.RawMessage(`{"category":"intro","language":"zh-CN"}`),
+			ChunkCount:   3,
+		},
+		sources: []db.Source{{
+			DocumentID: 1,
+			ChunkID:    2,
+			SourceType: "manual",
+			SourceID:   "about",
+			Title:      "GoFurry",
+			URL:        "https://example.com/about",
+			ChunkIndex: 2,
+			TokenCount: 6,
+			Score:      0.91,
+			Content:    "GoFurry is a content discovery website.",
+		}},
+	}
+	chat := &fakeChat{
+		configured: true,
+		model:      "deepseek-v4-flash",
+		answer:     "GoFurry is a content discovery website.",
+	}
+	svc := New(repo, &serviceEmbedder{}, chat, config.Config{TopK: 6}, nil)
+	result, err := svc.Query(context.Background(), QueryRequest{Question: "What is GoFurry?", IncludeDetails: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Citations) != 1 {
+		t.Fatalf("citations = %+v", result.Citations)
+	}
+	citation := result.Citations[0]
+	if !citation.UsedInPrompt || citation.Lineage.ChunkID != 2 || citation.Lineage.DocumentID != 1 {
+		t.Fatalf("citation lineage = %+v", citation)
+	}
+	if citation.Document.Content != "GoFurry is a content discovery website." {
+		t.Fatalf("document = %+v", citation.Document)
+	}
+	if string(citation.Document.Metadata) != `{"category":"intro","language":"zh-CN"}` {
+		t.Fatalf("metadata = %s", string(citation.Document.Metadata))
+	}
+	if citation.Chunk.Content != "GoFurry is a content discovery website." {
+		t.Fatalf("chunk = %+v", citation.Chunk)
 	}
 }
 
