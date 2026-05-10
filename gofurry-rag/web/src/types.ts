@@ -41,6 +41,19 @@ export type Overview = {
   worker_last_success_at?: string
   worker_last_started_at?: string
   worker_last_completed_at?: string
+  ollama_queue?: OllamaQueueStatus
+}
+
+export type OllamaQueueStatus = {
+  max_concurrency: number
+  query_queue_size: number
+  ingest_queue_size: number
+  active: number
+  queued_query: number
+  queued_ingest: number
+  rejected: number
+  oldest_wait_ms: number
+  wait_timeout_seconds: number
 }
 
 export type HealthInfo = {
@@ -61,6 +74,7 @@ export type HealthInfo = {
     embed_dim?: number
     healthy?: boolean
     error?: string
+    queue?: OllamaQueueStatus
   }
   tencent?: {
     base_url?: string

@@ -16,6 +16,10 @@ type Result struct {
 	Data    any    `json:"data,omitempty"`
 }
 
+type statusCoder interface {
+	HTTPStatus() int
+}
+
 func ok(c fiber.Ctx, data any) error {
 	return c.Status(http.StatusOK).JSON(Result{Code: 1, Message: "success", Data: data})
 }
@@ -29,8 +33,7 @@ func ErrorWithCode(c fiber.Ctx, status int, message string) error {
 }
 
 func fail(c fiber.Ctx, err error) error {
-	status := http.StatusInternalServerError
-	message := "internal server error"
+	status, message := errorStatus(err)
 	switch {
 	case errors.Is(err, service.ErrValidation):
 		status = http.StatusBadRequest
@@ -48,4 +51,18 @@ func fail(c fiber.Ctx, err error) error {
 		message = err.Error()
 	}
 	return c.Status(status).JSON(Result{Code: 0, Message: message, Data: fiber.Map{}})
+}
+
+func errorStatus(err error) (int, string) {
+	status := http.StatusInternalServerError
+	message := "internal server error"
+	var sc statusCoder
+	switch {
+	case errors.As(err, &sc):
+		status = sc.HTTPStatus()
+		message = err.Error()
+	case err != nil:
+		message = err.Error()
+	}
+	return status, message
 }

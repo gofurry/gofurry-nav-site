@@ -75,6 +75,8 @@ func (s *Server) chatStream(c fiber.Ctx) error {
 
 		response, err := s.service.StreamQuery(ctx, req, callbacks)
 		if err != nil {
+			status, _ := errorStatus(err)
+			c.Status(status)
 			_ = writeEvent("error", fiber.Map{
 				"message": err.Error(),
 			})

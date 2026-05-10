@@ -12,18 +12,20 @@ import (
 )
 
 type OllamaClient struct {
-	baseURL string
-	model   string
-	dim     int
-	client  *http.Client
+	baseURL   string
+	model     string
+	dim       int
+	client    *http.Client
+	admission *AdmissionController
 }
 
-func NewOllamaClient(baseURL, model string, dim int) *OllamaClient {
+func NewOllamaClient(baseURL, model string, dim int, admission *AdmissionController) *OllamaClient {
 	return &OllamaClient{
-		baseURL: strings.TrimRight(baseURL, "/"),
-		model:   model,
-		dim:     dim,
-		client:  &http.Client{Timeout: 60 * time.Second},
+		baseURL:   strings.TrimRight(baseURL, "/"),
+		model:     model,
+		dim:       dim,
+		client:    &http.Client{Timeout: 60 * time.Second},
+		admission: admission,
 	}
 }
 
@@ -32,6 +34,12 @@ func (c *OllamaClient) Model() string {
 }
 
 func (c *OllamaClient) Health(ctx context.Context) error {
+	release, err := c.acquire(ctx, PriorityQuery)
+	if err != nil {
+		return err
+	}
+	defer release()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/api/tags", nil)
 	if err != nil {
 		return err
@@ -51,6 +59,12 @@ func (c *OllamaClient) Embed(ctx context.Context, input []string) ([][]float64, 
 	if len(input) == 0 {
 		return [][]float64{}, nil
 	}
+	release, err := c.acquire(ctx, priorityFromContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+
 	payload := map[string]any{
 		"model": c.model,
 		"input": input,
@@ -89,6 +103,20 @@ func (c *OllamaClient) Embed(ctx context.Context, input []string) ([][]float64, 
 		}
 	}
 	return result.Embeddings, nil
+}
+
+func (c *OllamaClient) QueueStatus() OllamaQueueStatus {
+	if c == nil || c.admission == nil {
+		return OllamaQueueStatus{}
+	}
+	return c.admission.Status()
+}
+
+func (c *OllamaClient) acquire(ctx context.Context, priority Priority) (func(), error) {
+	if c == nil || c.admission == nil {
+		return func() {}, nil
+	}
+	return c.admission.Acquire(ctx, priority)
 }
 
 var ErrModelUnavailable = errors.New("embedding model unavailable")

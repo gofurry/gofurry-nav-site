@@ -62,7 +62,13 @@ func Start() error {
 		}
 	}
 
-	embedClient := embedder.NewOllamaClient(cfg.OllamaBaseURL, cfg.EmbedModel, cfg.EmbedDim)
+	ollamaAdmission := embedder.NewAdmissionController(
+		cfg.OllamaMaxConcurrency,
+		cfg.OllamaQueryQueueSize,
+		cfg.OllamaIngestQueueSize,
+		time.Duration(cfg.OllamaQueueWaitTimeoutSeconds)*time.Second,
+	)
+	embedClient := embedder.NewOllamaClient(cfg.OllamaBaseURL, cfg.EmbedModel, cfg.EmbedDim, ollamaAdmission)
 	chatClient := tencentmaas.New(
 		cfg.TencentBaseURL,
 		cfg.TencentAPIKey,

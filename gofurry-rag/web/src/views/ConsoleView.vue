@@ -108,6 +108,20 @@
                     </dl>
                     <p v-if="healthState.ollama?.error" class="mt-3 text-xs leading-5 text-rose-300">{{ healthState.ollama.error }}</p>
                   </section>
+                  <section v-if="overviewData?.ollama_queue" class="grid gap-3 border border-white/10 bg-black/20 p-4">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-slate-300">Ollama 队列</span>
+                      <span class="status-pill" :class="ollamaQueueClass">{{ ollamaQueueLabel }}</span>
+                    </div>
+                    <dl class="space-y-2 text-sm">
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">当前活跃</dt><dd class="text-slate-200">{{ overviewData?.ollama_queue?.active ?? 0 }}/{{ overviewData?.ollama_queue?.max_concurrency ?? 4 }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">问答队列</dt><dd class="text-slate-200">{{ overviewData?.ollama_queue?.queued_query ?? 0 }}/{{ overviewData?.ollama_queue?.query_queue_size ?? 0 }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">入库队列</dt><dd class="text-slate-200">{{ overviewData?.ollama_queue?.queued_ingest ?? 0 }}/{{ overviewData?.ollama_queue?.ingest_queue_size ?? 0 }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">最近等待</dt><dd class="text-slate-200">{{ formatDuration(overviewData?.ollama_queue?.oldest_wait_ms) }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">等待上限</dt><dd class="text-slate-200">{{ overviewData?.ollama_queue?.wait_timeout_seconds ?? 0 }} s</dd></div>
+                    </dl>
+                    <p class="text-xs leading-5 text-slate-500">rejected {{ overviewData?.ollama_queue?.rejected ?? 0 }}</p>
+                  </section>
                   <section class="grid gap-3 border border-white/10 bg-black/20 p-4">
                     <div class="flex items-center justify-between">
                       <span class="text-sm text-slate-300">Worker 状态</span>
@@ -1314,6 +1328,34 @@ const workerStatusClass = computed(() => {
     return 'border-rose-300/30 bg-rose-300/10 text-rose-100'
   }
   return 'border-teal-300/30 bg-teal-300/10 text-teal-100'
+})
+
+const ollamaQueueClass = computed(() => {
+  const queue = overviewData.value?.ollama_queue
+  if (!queue) {
+    return 'border-slate-500/30 bg-slate-500/10 text-slate-200'
+  }
+  if (queue.rejected > 0) {
+    return 'border-rose-300/30 bg-rose-300/10 text-rose-100'
+  }
+  if (queue.active >= queue.max_concurrency || queue.queued_query > 0 || queue.queued_ingest > 0) {
+    return 'border-amber-300/30 bg-amber-300/10 text-amber-100'
+  }
+  return 'border-teal-300/30 bg-teal-300/10 text-teal-100'
+})
+
+const ollamaQueueLabel = computed(() => {
+  const queue = overviewData.value?.ollama_queue
+  if (!queue) {
+    return 'idle'
+  }
+  if (queue.rejected > 0) {
+    return 'rejected'
+  }
+  if (queue.active >= queue.max_concurrency || queue.queued_query > 0 || queue.queued_ingest > 0) {
+    return 'busy'
+  }
+  return 'idle'
 })
 
 function notifyError(error: unknown) {

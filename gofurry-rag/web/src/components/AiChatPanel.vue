@@ -39,6 +39,32 @@
             <dd class="mt-2 text-slate-100">{{ provider?.healthy ? 'healthy' : 'degraded' }}</dd>
           </div>
         </dl>
+        <div v-if="ollamaQueue" class="mt-4 border border-white/10 bg-black/20 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-sm text-slate-300">Ollama 队列</span>
+            <span class="mini-chip border-teal-300/30 bg-teal-300/10 text-teal-100">
+              {{ ollamaQueue.active }}/{{ ollamaQueue.max_concurrency }}
+            </span>
+          </div>
+          <div class="mt-3 grid gap-3 text-sm md:grid-cols-3">
+            <div>
+              <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Query</p>
+              <p class="mt-2 text-slate-100">{{ ollamaQueue.queued_query }}/{{ ollamaQueue.query_queue_size }}</p>
+            </div>
+            <div>
+              <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Ingest</p>
+              <p class="mt-2 text-slate-100">{{ ollamaQueue.queued_ingest }}/{{ ollamaQueue.ingest_queue_size }}</p>
+            </div>
+            <div>
+              <p class="text-xs uppercase tracking-[0.18em] text-slate-500">Oldest wait</p>
+              <p class="mt-2 text-slate-100">{{ formatDuration(ollamaQueue.oldest_wait_ms) }}</p>
+            </div>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+            <span class="mini-chip">rejected {{ ollamaQueue.rejected }}</span>
+            <span class="mini-chip">timeout {{ ollamaQueue.wait_timeout_seconds }} s</span>
+          </div>
+        </div>
         <p v-if="healthError" class="mt-4 text-sm leading-6 text-rose-200">{{ healthError }}</p>
       </article>
 
@@ -379,6 +405,7 @@ let copyFeedbackTimer: number | undefined
 
 const topKValue = computed(() => parsePositiveInt(topKText.value, 6))
 const provider = computed(() => healthInfo.value?.tencent || null)
+const ollamaQueue = computed(() => healthInfo.value?.ollama?.queue || null)
 const providerTone = computed(() => {
   if (provider.value?.healthy) {
     return 'border-teal-300/30 bg-teal-300/10 text-teal-100'

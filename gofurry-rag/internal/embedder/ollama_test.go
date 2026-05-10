@@ -29,7 +29,7 @@ func TestOllamaEmbed(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewOllamaClient(server.URL, "qwen3-embedding:0.6b", 2)
+	client := NewOllamaClient(server.URL, "qwen3-embedding:0.6b", 2, nil)
 	embeddings, err := client.Embed(context.Background(), []string{"a", "b"})
 	if err != nil {
 		t.Fatal(err)
@@ -47,7 +47,7 @@ func TestOllamaEmbedRejectsWrongDim(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewOllamaClient(server.URL, "model", 2)
+	client := NewOllamaClient(server.URL, "model", 2, nil)
 	if _, err := client.Embed(context.Background(), []string{"a"}); err == nil {
 		t.Fatal("expected dimension error")
 	}

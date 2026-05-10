@@ -46,6 +46,10 @@ type workerStatusProvider interface {
 	Status() ingest.WorkerStatus
 }
 
+type ollamaQueueStatuser interface {
+	QueueStatus() embedder.OllamaQueueStatus
+}
+
 type TextDocumentRequest struct {
 	Title      string          `json:"title"`
 	Content    string          `json:"content"`
@@ -194,6 +198,7 @@ func New(repo Repository, embedder embedder.Client, chat chatClient, cfg config.
 }
 
 func (s *Service) Health(ctx context.Context) map[string]any {
+	ollamaQueue := s.ollamaQueueStatus()
 	result := map[string]any{
 		"status":          "ok",
 		"app_name":        s.cfg.AppName,
@@ -210,6 +215,7 @@ func (s *Service) Health(ctx context.Context) map[string]any {
 			"model":     s.embedder.Model(),
 			"embed_dim": s.cfg.EmbedDim,
 			"healthy":   true,
+			"queue":     ollamaQueue,
 		},
 		"tencent": map[string]any{
 			"base_url":   s.cfg.TencentBaseURL,
@@ -341,6 +347,7 @@ func (s *Service) UpdateChunk(ctx context.Context, id int64, req UpdateChunkRequ
 	}
 	embedCtx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.EmbedTimeoutSeconds)*time.Second)
 	defer cancel()
+	embedCtx = embedder.WithPriority(embedCtx, embedder.PriorityIngest)
 	slog.InfoContext(embedCtx, "chunk embedding start",
 		"document_id", doc.ID,
 		"chunk_id", id,
@@ -434,6 +441,7 @@ func (s *Service) Overview(ctx context.Context) (db.Overview, error) {
 	if err != nil {
 		return db.Overview{}, err
 	}
+	overview.OllamaQueue = s.ollamaQueueStatus()
 	if s.worker != nil {
 		status := s.worker.Status()
 		overview.WorkerState = status.State
@@ -451,6 +459,24 @@ func (s *Service) Overview(ctx context.Context) (db.Overview, error) {
 		overview.WorkerLastCompletedAt = status.LastCompletedAt
 	}
 	return overview, nil
+}
+
+func (s *Service) ollamaQueueStatus() db.OllamaQueueStatus {
+	if statuser, ok := s.embedder.(ollamaQueueStatuser); ok {
+		queue := statuser.QueueStatus()
+		return db.OllamaQueueStatus{
+			MaxConcurrency:     queue.MaxConcurrency,
+			QueryQueueSize:     queue.QueryQueueSize,
+			IngestQueueSize:    queue.IngestQueueSize,
+			Active:             queue.Active,
+			QueuedQuery:        queue.QueuedQuery,
+			QueuedIngest:       queue.QueuedIngest,
+			Rejected:           queue.Rejected,
+			OldestWaitMs:       queue.OldestWaitMs,
+			WaitTimeoutSeconds: queue.WaitTimeoutSeconds,
+		}
+	}
+	return db.OllamaQueueStatus{}
 }
 
 func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, error) {

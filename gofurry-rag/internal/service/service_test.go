@@ -9,6 +9,7 @@ import (
 
 	"github.com/GoFurry/gofurry-rag/config"
 	"github.com/GoFurry/gofurry-rag/internal/db"
+	"github.com/GoFurry/gofurry-rag/internal/embedder"
 	"github.com/GoFurry/gofurry-rag/internal/ingest"
 	"github.com/GoFurry/gofurry-rag/internal/tencentmaas"
 )
@@ -222,6 +223,55 @@ func TestOverviewIncludesWorkerSnapshot(t *testing.T) {
 	}
 }
 
+func TestOverviewIncludesOllamaQueueSnapshot(t *testing.T) {
+	repo := &serviceRepo{}
+	svc := New(repo, &serviceEmbedder{queue: embedder.OllamaQueueStatus{
+		MaxConcurrency:     4,
+		QueryQueueSize:     8,
+		IngestQueueSize:    32,
+		Active:             3,
+		QueuedQuery:        2,
+		QueuedIngest:       5,
+		Rejected:           7,
+		OldestWaitMs:       1250,
+		WaitTimeoutSeconds: 30,
+	}}, &fakeChat{configured: false}, config.Config{}, nil)
+	overview, err := svc.Overview(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if overview.OllamaQueue.Active != 3 || overview.OllamaQueue.QueuedQuery != 2 || overview.OllamaQueue.Rejected != 7 {
+		t.Fatalf("overview queue = %+v", overview.OllamaQueue)
+	}
+}
+
+func TestHealthIncludesOllamaQueueSnapshot(t *testing.T) {
+	repo := &serviceRepo{}
+	svc := New(repo, &serviceEmbedder{queue: embedder.OllamaQueueStatus{
+		MaxConcurrency:     4,
+		QueryQueueSize:     8,
+		IngestQueueSize:    32,
+		Active:             1,
+		QueuedQuery:        1,
+		QueuedIngest:       3,
+		Rejected:           5,
+		OldestWaitMs:       800,
+		WaitTimeoutSeconds: 30,
+	}}, &fakeChat{configured: false}, config.Config{}, nil)
+	health := svc.Health(context.Background())
+	ollama, ok := health["ollama"].(map[string]any)
+	if !ok {
+		t.Fatalf("health ollama = %#v", health["ollama"])
+	}
+	queue, ok := ollama["queue"].(db.OllamaQueueStatus)
+	if !ok {
+		t.Fatalf("health queue = %#v", ollama["queue"])
+	}
+	if queue.Active != 1 || queue.QueuedQuery != 1 || queue.Rejected != 5 {
+		t.Fatalf("queue = %+v", queue)
+	}
+}
+
 type serviceRepo struct {
 	doc     db.Document
 	sources []db.Source
@@ -285,6 +335,7 @@ func (f *fakeWorkerStatusProvider) Status() ingest.WorkerStatus {
 
 type serviceEmbedder struct {
 	inputs []string
+	queue  embedder.OllamaQueueStatus
 }
 
 func (e *serviceEmbedder) Embed(ctx context.Context, input []string) ([][]float64, error) {
@@ -295,6 +346,8 @@ func (e *serviceEmbedder) Embed(ctx context.Context, input []string) ([][]float6
 func (e *serviceEmbedder) Health(ctx context.Context) error { return nil }
 
 func (e *serviceEmbedder) Model() string { return "fake" }
+
+func (e *serviceEmbedder) QueueStatus() embedder.OllamaQueueStatus { return e.queue }
 
 type fakeChat struct {
 	configured    bool

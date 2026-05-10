@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/GoFurry/gofurry-rag/internal/db"
+	"github.com/GoFurry/gofurry-rag/internal/embedder"
 	"github.com/GoFurry/gofurry-rag/internal/tencentmaas"
 )
 
@@ -84,9 +85,10 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 	if err := emitStatus("validating", "正在校验问题与参数"); err != nil {
 		return QueryResponse{}, err
 	}
-	embeddings, err := s.embedder.Embed(queryCtx, []string{req.Question})
+	embedCtx := embedder.WithPriority(queryCtx, embedder.PriorityQuery)
+	embeddings, err := s.embedder.Embed(embedCtx, []string{req.Question})
 	if err != nil {
-		slog.ErrorContext(queryCtx, "chat query embedding failed",
+		slog.ErrorContext(embedCtx, "chat query embedding failed",
 			"elapsed_ms", time.Since(startedAt).Milliseconds(),
 			"top_k", topK,
 			"embedding_model", s.embedder.Model(),

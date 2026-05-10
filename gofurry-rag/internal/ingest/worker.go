@@ -180,9 +180,10 @@ func (w *Worker) process(ctx context.Context, doc db.Document) error {
 			"input_count", len(inputs),
 			"model", w.embedder.Model(),
 		)
-		embeddings, err := w.embedder.Embed(ctx, inputs)
+		embedCtx := embedder.WithPriority(ctx, embedder.PriorityIngest)
+		embeddings, err := w.embedder.Embed(embedCtx, inputs)
 		if err != nil {
-			slog.ErrorContext(ctx, "ollama embed batch failed",
+			slog.ErrorContext(embedCtx, "ollama embed batch failed",
 				"document_id", doc.ID,
 				"chunk_start", start,
 				"chunk_end", end,
