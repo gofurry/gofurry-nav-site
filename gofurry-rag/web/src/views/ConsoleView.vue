@@ -60,11 +60,12 @@
 
         <transition name="fade-slide" mode="out-in">
           <section v-if="activeMenu === 'overview'" key="overview" class="space-y-7">
-            <div class="grid gap-px overflow-hidden border border-white/10 bg-white/10 md:grid-cols-4">
+            <div class="grid gap-px overflow-hidden border border-white/10 bg-white/10 md:grid-cols-5">
               <MetricCell label="文档" :value="overviewData?.document_total ?? 0" />
               <MetricCell label="Chunks" :value="overviewData?.chunk_total ?? 0" />
               <MetricCell label="已向量化" :value="overviewData?.embedded_chunk_total ?? 0" />
               <MetricCell label="可检索" :value="overviewData?.ready_documents ?? 0" />
+              <MetricCell label="失败文档" :value="overviewData?.failed_documents ?? 0" />
             </div>
             <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
               <div class="border border-white/10 bg-white/[0.035] p-6">
@@ -107,6 +108,22 @@
                     </dl>
                     <p v-if="healthState.ollama?.error" class="mt-3 text-xs leading-5 text-rose-300">{{ healthState.ollama.error }}</p>
                   </section>
+                  <section class="grid gap-3 border border-white/10 bg-black/20 p-4">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-slate-300">待处理队列</span>
+                      <span class="text-lg font-semibold text-white">{{ overviewData?.queue_documents ?? 0 }}</span>
+                    </div>
+                    <div class="border border-white/10 bg-white/[0.03] p-3">
+                      <div class="flex items-center justify-between gap-3">
+                        <span class="text-sm text-slate-300">最近失败</span>
+                        <span class="text-xs text-slate-500">{{ formatDate(overviewData?.recent_failure_at) }}</span>
+                      </div>
+                      <p v-if="overviewData?.recent_failure_message" class="mt-2 text-sm leading-6 text-rose-200">
+                        #{{ overviewData?.recent_failed_document_id }} {{ overviewData?.recent_failure_message }}
+                      </p>
+                      <p v-else class="mt-2 text-sm text-slate-500">当前没有失败中的文档。</p>
+                    </div>
+                  </section>
                   <p class="text-xs text-slate-500">整体态势每 5 秒自动刷新</p>
                 </div>
               </div>
@@ -134,6 +151,15 @@
                     <Field label="来源 ID"><input v-model="form.source_id" class="control" placeholder="about-page" /></Field>
                   </div>
                   <Field label="URL"><input v-model="form.url" class="control" placeholder="https://example.com/about" /></Field>
+                  <div class="grid gap-4 md:grid-cols-2">
+                    <Field label="分类"><input v-model="form.category" class="control" placeholder="faq / intro / docs" /></Field>
+                    <Field label="语言"><input v-model="form.language" class="control" placeholder="zh-CN / en-US" /></Field>
+                  </div>
+                  <div class="grid gap-4 md:grid-cols-2">
+                    <Field label="作者"><input v-model="form.author" class="control" placeholder="内容负责人" /></Field>
+                    <Field label="发布时间"><input v-model="form.published_at" class="control" placeholder="2026-05-10" /></Field>
+                  </div>
+                  <Field label="标签"><input v-model="form.tags" class="control" placeholder="多个标签用逗号分隔" /></Field>
                 </div>
                 <button class="primary-button" :disabled="busy" type="submit"><Send :size="17" />提交入库</button>
               </form>
@@ -177,33 +203,52 @@
             </div>
 
             <div v-else-if="documentTab === 'list'" class="border border-white/10 bg-white/[0.03]">
-              <div class="flex flex-wrap items-center gap-3 border-b border-white/10 p-4">
-                <div class="relative w-44">
-                  <button class="custom-select" type="button" @click="statusOpen = !statusOpen">
-                    <span>{{ selectedStatusLabel }}</span><ChevronDown :size="16" :class="statusOpen ? 'rotate-180 text-teal-200' : 'text-slate-500'" />
-                  </button>
-                  <div v-if="statusOpen" class="absolute left-0 top-12 z-20 w-full border border-white/10 bg-[#090e15] p-1 shadow-2xl shadow-black/40">
-                    <button v-for="option in statusOptions" :key="option.value || 'all'" class="flex h-9 w-full items-center justify-between px-3 text-left text-sm transition hover:bg-white/[0.06]" :class="filters.status === option.value ? 'text-teal-100' : 'text-slate-400'" type="button" @click="selectStatus(option.value)">
-                      {{ option.label }}<Check v-if="filters.status === option.value" :size="14" />
+              <div class="space-y-4 border-b border-white/10 p-4">
+                <div class="grid gap-3 xl:grid-cols-[180px_200px_180px_180px_minmax(0,1fr)_auto]">
+                  <div class="relative">
+                    <button class="custom-select" type="button" @click="statusOpen = !statusOpen">
+                      <span>{{ selectedStatusLabel }}</span><ChevronDown :size="16" :class="statusOpen ? 'rotate-180 text-teal-200' : 'text-slate-500'" />
                     </button>
+                    <div v-if="statusOpen" class="absolute left-0 top-12 z-20 w-full border border-white/10 bg-[#090e15] p-1 shadow-2xl shadow-black/40">
+                      <button v-for="option in statusOptions" :key="option.value || 'all'" class="flex h-9 w-full items-center justify-between px-3 text-left text-sm transition hover:bg-white/[0.06]" :class="filters.status === option.value ? 'text-teal-100' : 'text-slate-400'" type="button" @click="selectStatus(option.value)">
+                        {{ option.label }}<Check v-if="filters.status === option.value" :size="14" />
+                      </button>
+                    </div>
                   </div>
+                  <input v-model="filters.sourceType" class="control h-10" placeholder="来源类型，逗号分隔" @keyup.enter="reloadDocumentsFromFirstPage" />
+                  <input v-model="filters.category" class="control h-10" placeholder="分类" @keyup.enter="reloadDocumentsFromFirstPage" />
+                  <input v-model="filters.language" class="control h-10" placeholder="语言" @keyup.enter="reloadDocumentsFromFirstPage" />
+                  <input v-model="filters.keyword" class="control h-10" placeholder="标题关键字" @keyup.enter="reloadDocumentsFromFirstPage" />
+                  <button class="ghost-button" @click="reloadDocumentsFromFirstPage"><RefreshCw :size="16" />刷新</button>
                 </div>
-                <input v-model="filters.keyword" class="control h-10 w-64" placeholder="标题关键字" @keyup.enter="reloadDocumentsFromFirstPage" />
-                <button class="ghost-button" @click="reloadDocumentsFromFirstPage"><RefreshCw :size="16" />刷新</button>
-                <span class="ml-auto text-xs text-slate-500">每 3 秒自动刷新</span>
+                <div class="flex flex-wrap items-center gap-3">
+                  <button class="ghost-button" type="button" @click="askBatchReindex"><RotateCcw :size="16" />按当前过滤批量重建</button>
+                  <button class="ghost-button" type="button" @click="askRetryFailed"><AlertTriangle :size="16" />重试失败文档</button>
+                  <span class="text-xs text-slate-500">批量操作使用状态、来源类型、分类、语言过滤；关键词搜索仅用于列表查看。</span>
+                  <span class="ml-auto text-xs text-slate-500">每 3 秒自动刷新</span>
+                </div>
               </div>
               <div class="min-h-[452px]">
                 <table class="w-full border-collapse text-sm">
                   <thead class="bg-[#080d14] text-left text-xs uppercase tracking-[0.16em] text-slate-500">
-                    <tr><th class="px-4 py-3">ID</th><th class="px-4 py-3">标题</th><th class="px-4 py-3">状态</th><th class="px-4 py-3">Chunks</th><th class="px-4 py-3">更新</th><th class="px-4 py-3"></th></tr>
+                    <tr><th class="px-4 py-3">ID</th><th class="px-4 py-3">标题</th><th class="px-4 py-3">状态</th><th class="px-4 py-3">Chunks</th><th class="px-4 py-3">重试</th><th class="px-4 py-3">索引信息</th><th class="px-4 py-3"></th></tr>
                   </thead>
                   <tbody>
                     <tr v-for="doc in documents.items" :key="doc.id" class="border-t border-white/10 transition hover:bg-white/[0.04]">
                       <td class="px-4 py-4 text-slate-500">#{{ doc.id }}</td>
-                      <td class="px-4 py-4"><p class="font-medium text-slate-100">{{ doc.title || 'Untitled' }}</p><p class="mt-1 text-xs text-slate-500">{{ documentSourceLine(doc) }}</p></td>
+                      <td class="px-4 py-4">
+                        <p class="font-medium text-slate-100">{{ doc.title || 'Untitled' }}</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ documentSourceLine(doc) }}</p>
+                        <p v-if="documentMetaLine(doc)" class="mt-1 text-xs text-slate-600">{{ documentMetaLine(doc) }}</p>
+                      </td>
                       <td class="px-4 py-4"><span class="status-pill" :class="statusClass(doc.status)">{{ statusLabel(doc.status) }}</span><p v-if="doc.error_message" class="mt-2 text-xs text-rose-300">{{ doc.error_message }}</p></td>
                       <td class="px-4 py-4 text-slate-300">{{ doc.chunk_count }}</td>
-                      <td class="px-4 py-4 text-slate-500">{{ formatDate(doc.updated_at) }}</td>
+                      <td class="px-4 py-4 text-slate-300">{{ doc.retry_count }}</td>
+                      <td class="px-4 py-4 text-xs leading-6 text-slate-500">
+                        <p>完成：{{ formatDate(doc.last_indexed_at || doc.processed_at) }}</p>
+                        <p>请求：{{ formatDate(doc.reindex_requested_at) }}</p>
+                        <p>失败：{{ formatDate(doc.last_error_at) }}</p>
+                      </td>
                       <td class="px-4 py-4">
                         <div class="flex justify-end gap-2">
                           <button class="ghost-button h-9" title="查看 Chunks" @click="openChunksForDocument(doc)"><Layers :size="15" />查看</button>
@@ -212,7 +257,7 @@
                         </div>
                       </td>
                     </tr>
-                    <tr v-if="documents.items.length === 0"><td class="px-4 py-16 text-center text-sm text-slate-500" colspan="6">暂无文档</td></tr>
+                    <tr v-if="documents.items.length === 0"><td class="px-4 py-16 text-center text-sm text-slate-500" colspan="7">暂无文档</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -267,6 +312,18 @@
               <form class="border border-white/10 bg-white/[0.035] p-6" @submit.prevent="runQuery">
                 <Field label="问题"><textarea v-model="question" class="control min-h-36 resize-none py-3" /></Field>
                 <Field label="Top K"><input v-model="topKText" class="control" inputmode="numeric" pattern="[0-9]*" @input="sanitizeTopK" /></Field>
+                <div class="mt-5 space-y-4 border border-white/10 bg-black/20 p-4">
+                  <div>
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-500">检索范围</p>
+                    <p class="mt-2 text-xs leading-5 text-slate-500">支持按来源类型、分类、语言和文档 ID 精确收窄检索范围。</p>
+                  </div>
+                  <Field label="来源类型"><input v-model="queryFilters.sourceType" class="control h-10" placeholder="site, faq, manual" /></Field>
+                  <div class="grid gap-4 md:grid-cols-2">
+                    <Field label="分类"><input v-model="queryFilters.category" class="control h-10" placeholder="intro, faq" /></Field>
+                    <Field label="语言"><input v-model="queryFilters.language" class="control h-10" placeholder="zh-CN, en-US" /></Field>
+                  </div>
+                  <Field label="文档 ID"><input v-model="queryFilters.documentIds" class="control h-10" inputmode="numeric" placeholder="1,2,3" /></Field>
+                </div>
                 <button class="primary-button mt-5" :disabled="busy" type="submit"><Search :size="17" />检索</button>
               </form>
               <div class="border border-white/10 bg-white/[0.03] p-6">
@@ -359,8 +416,8 @@
     <div v-if="confirmTarget" class="fixed inset-0 z-50 grid place-items-center bg-black/70 px-6 backdrop-blur-sm">
       <section class="w-full max-w-md border border-white/10 bg-[#090e15] p-6 shadow-2xl shadow-black/50">
         <div class="mb-5 flex items-center gap-3">
-          <div class="grid h-10 w-10 place-items-center border text-rose-200" :class="confirmTarget.kind === 'reindex' ? 'border-teal-300/30 bg-teal-300/10 text-teal-200' : 'border-rose-300/30 bg-rose-300/10'">
-            <component :is="confirmTarget.kind === 'reindex' ? RotateCcw : AlertTriangle" :size="20" />
+          <div class="grid h-10 w-10 place-items-center border text-rose-200" :class="confirmTarget.kind === 'reindex' || confirmTarget.kind === 'batch-reindex' ? 'border-teal-300/30 bg-teal-300/10 text-teal-200' : 'border-rose-300/30 bg-rose-300/10'">
+            <component :is="confirmTarget.kind === 'reindex' || confirmTarget.kind === 'batch-reindex' ? RotateCcw : AlertTriangle" :size="20" />
           </div>
           <div>
             <h3 class="text-lg font-semibold text-white">{{ confirmTarget.title }}</h3>
@@ -370,7 +427,7 @@
         <p class="text-sm leading-6 text-slate-400">{{ confirmTarget.description }}</p>
         <div class="mt-6 flex justify-end gap-3">
           <button class="ghost-button" type="button" @click="confirmTarget = null">取消</button>
-          <button class="danger-button" :class="confirmTarget.kind === 'reindex' ? 'reindex-confirm' : ''" type="button" @click="confirmAction">{{ confirmTarget.confirmText }}</button>
+          <button class="danger-button" :class="confirmTarget.kind === 'reindex' || confirmTarget.kind === 'batch-reindex' ? 'reindex-confirm' : ''" type="button" @click="confirmAction">{{ confirmTarget.confirmText }}</button>
         </div>
       </section>
     </div>
@@ -404,6 +461,7 @@ import {
 } from 'lucide-vue-next'
 import {
   authState,
+  batchReindexDocuments,
   chunkPreview,
   createTextDocument,
   deleteChunk,
@@ -416,6 +474,7 @@ import {
   overview,
   queryRag,
   reindexDocument,
+  retryFailedDocuments,
   updateChunk,
 } from '../api'
 import type { ChunkItem, ChunkPreviewResponse, DocumentItem, HealthInfo, Overview, PageResult, QueryResponse, QuerySource } from '../types'
@@ -426,6 +485,8 @@ type ConfirmTarget =
   | { kind: 'document'; id: number; title: string; label: string; description: string; confirmText: string }
   | { kind: 'chunk'; id: number; title: string; label: string; description: string; confirmText: string }
   | { kind: 'reindex'; id: number; title: string; label: string; description: string; confirmText: string }
+  | { kind: 'batch-reindex'; title: string; label: string; description: string; confirmText: string }
+  | { kind: 'batch-retry'; title: string; label: string; description: string; confirmText: string }
 type PendingFile = { id: string; name: string; title: string; size: number; type: string; lastModified: number; content: string }
 type PreviewVariantForm = { chunk_size: string; chunk_overlap: string }
 
@@ -559,7 +620,8 @@ const documents = reactive<PageResult<DocumentItem>>({ items: [], total: 0 })
 const chunks = reactive<PageResult<ChunkItem>>({ items: [], total: 0 })
 const chunkDocuments = reactive<PageResult<DocumentItem>>({ items: [], total: 0 })
 const selectedDocument = ref<DocumentItem | null>(null)
-const filters = reactive({ status: '', keyword: '' })
+const filters = reactive({ status: '', keyword: '', sourceType: '', category: '', language: '' })
+const queryFilters = reactive({ sourceType: '', category: '', language: '', documentIds: '' })
 const queryResult = ref<QueryResponse | null>(null)
 const question = ref('GoFurry 是个公益网站吗？')
 const topKText = ref('6')
@@ -591,6 +653,11 @@ const form = reactive({
   source_id: '',
   url: '',
   content: '',
+  category: '',
+  language: '',
+  tags: '',
+  author: '',
+  published_at: '',
 })
 let documentPoll: number | undefined
 let overviewPoll: number | undefined
@@ -659,7 +726,15 @@ async function loadOverview() {
 
 async function loadDocuments(page = documentsPage.value) {
   documentsPage.value = page
-  const result = await listDocuments({ page: documentsPage.value, page_size: 6, status: filters.status, keyword: filters.keyword })
+  const result = await listDocuments({
+    page: documentsPage.value,
+    page_size: 6,
+    status: filters.status,
+    keyword: filters.keyword,
+    source_type: parseCSVInput(filters.sourceType),
+    category: filters.category.trim(),
+    language: filters.language.trim(),
+  })
   documents.items = result.items
   documents.total = result.total
   const maxPage = Math.max(1, Math.ceil(Number(result.total || 0) / 6))
@@ -682,8 +757,16 @@ async function submitText() {
   busy.value = true
   notice.value = ''
   try {
-    await createTextDocument({ ...form, metadata: {} })
+    await createTextDocument({
+      title: form.title,
+      content: form.content,
+      source_type: form.source_type,
+      source_id: form.source_id,
+      url: form.url,
+      metadata: buildMetadataPayload(),
+    })
     form.content = ''
+    form.title = ''
     notice.value = '文档已提交，等待后台入库。'
     switchDocumentTab('list')
     await Promise.all([loadDocuments(1), loadOverview()])
@@ -804,7 +887,15 @@ async function reloadChunks() {
 
 async function searchChunkDocuments(page = 1) {
   chunkDocumentPage.value = page
-  const result = await listDocuments({ page: chunkDocumentPage.value, page_size: 7, status: '', keyword: chunkDocumentKeyword.value.trim() })
+  const result = await listDocuments({
+    page: chunkDocumentPage.value,
+    page_size: 7,
+    status: '',
+    keyword: chunkDocumentKeyword.value.trim(),
+    source_type: [],
+    category: '',
+    language: '',
+  })
   chunkDocuments.items = result.items
   chunkDocuments.total = result.total
   const maxPage = Math.max(1, Math.ceil(Number(result.total || 0) / 7))
@@ -833,6 +924,26 @@ function askReindexDocument(doc: DocumentItem) {
     label: `#${doc.id} ${doc.title || 'Untitled'}`,
     description: '系统会删除旧 chunks，把文档设为待处理，并由后台 worker 重新切分和向量化。期间该文档会短暂不可检索。',
     confirmText: '重新索引',
+  }
+}
+
+function askBatchReindex() {
+  confirmTarget.value = {
+    kind: 'batch-reindex',
+    title: '确认批量重新索引',
+    label: currentFilterLabel(),
+    description: '会删除命中文档的旧 chunks，并将这些文档重新投入后台切分与向量化队列。处理期间这些文档会短暂不可检索。',
+    confirmText: '批量重建',
+  }
+}
+
+function askRetryFailed() {
+  confirmTarget.value = {
+    kind: 'batch-retry',
+    title: '确认重试失败文档',
+    label: currentFilterLabel(),
+    description: '只会重试命中过滤条件的失败文档，成功提交后会重新进入待处理队列。',
+    confirmText: '重试失败',
   }
 }
 
@@ -866,6 +977,18 @@ async function confirmAction() {
     if (target.kind === 'reindex') {
       await reindexDocument(target.id)
       notice.value = '文档已提交重新索引。'
+      await Promise.all([loadDocuments(documentsPage.value), loadOverview(), searchChunkDocuments(chunkDocumentPage.value)])
+      return
+    }
+    if (target.kind === 'batch-reindex') {
+      const result = await batchReindexDocuments(buildBatchRequest())
+      notice.value = `已提交批量重建：${result.accepted_count} 个文档进入待处理，跳过 ${result.skipped_count} 个。`
+      await Promise.all([loadDocuments(documentsPage.value), loadOverview(), searchChunkDocuments(chunkDocumentPage.value)])
+      return
+    }
+    if (target.kind === 'batch-retry') {
+      const result = await retryFailedDocuments(buildBatchRequest())
+      notice.value = `已提交失败重试：${result.accepted_count} 个文档进入待处理，跳过 ${result.skipped_count} 个。`
       await Promise.all([loadDocuments(documentsPage.value), loadOverview(), searchChunkDocuments(chunkDocumentPage.value)])
       return
     }
@@ -905,7 +1028,12 @@ async function runQuery() {
   notice.value = ''
   try {
     const topK = Number(topKText.value || '6')
-    queryResult.value = await queryRag(question.value, topK)
+    queryResult.value = await queryRag(question.value, topK, {
+      source_type: parseCSVInput(queryFilters.sourceType),
+      category: parseCSVInput(queryFilters.category),
+      language: parseCSVInput(queryFilters.language),
+      document_ids: parseDocumentIDs(queryFilters.documentIds),
+    })
   } catch (error) {
     notifyError(error)
   } finally {
@@ -1052,6 +1180,68 @@ function sourceDebugLine(source: QuerySource) {
     source.source_id,
   ].filter(Boolean)
   return pieces.join(' / ')
+}
+
+function documentMetaLine(doc: DocumentItem) {
+  const metadata = doc.metadata || {}
+  const pieces = [metadata.category, metadata.language, metadata.author]
+    .map((value) => (typeof value === 'string' ? value : ''))
+    .filter(Boolean)
+  return pieces.join(' / ')
+}
+
+function buildMetadataPayload() {
+  const metadata: Record<string, unknown> = {}
+  if (form.category.trim()) metadata.category = form.category.trim()
+  if (form.language.trim()) metadata.language = form.language.trim()
+  const tags = parseCSVInput(form.tags)
+  if (tags.length) metadata.tags = tags
+  if (form.author.trim()) metadata.author = form.author.trim()
+  if (form.published_at.trim()) metadata.published_at = form.published_at.trim()
+  return metadata
+}
+
+function buildBatchRequest() {
+  const filterPayload = {
+    source_type: parseCSVInput(filters.sourceType),
+    category: parseCSVInput(filters.category),
+    language: parseCSVInput(filters.language),
+    status: filters.status ? [filters.status] : [],
+  }
+  if (filterPayload.source_type.length || filterPayload.category.length || filterPayload.language.length || filterPayload.status.length) {
+    return {
+      scope: 'filters' as const,
+      filters: filterPayload,
+    }
+  }
+  return { scope: 'all' as const }
+}
+
+function parseCSVInput(value: string) {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function parseDocumentIDs(value: string) {
+  return value
+    .split(',')
+    .map((item) => Number(item.trim()))
+    .filter((item) => Number.isInteger(item) && item > 0)
+}
+
+function currentFilterLabel() {
+  const pieces = [
+    filters.status ? `状态 ${statusLabel(filters.status)}` : '',
+    filters.sourceType.trim() ? `来源 ${filters.sourceType.trim()}` : '',
+    filters.category.trim() ? `分类 ${filters.category.trim()}` : '',
+    filters.language.trim() ? `语言 ${filters.language.trim()}` : '',
+  ].filter(Boolean)
+  if (pieces.length === 0) {
+    return '当前范围：全部文档'
+  }
+  return `当前范围：${pieces.join(' / ')}`
 }
 
 function stripExtension(name: string) {

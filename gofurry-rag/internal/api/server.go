@@ -36,6 +36,8 @@ func (s *Server) RegisterRoutes(v1 fiber.Router) {
 	protected.Get("/overview", s.overview)
 	protected.Post("/documents/text", s.createTextDocument)
 	protected.Get("/documents", s.listDocuments)
+	protected.Post("/documents/reindex", s.batchReindexDocuments)
+	protected.Post("/documents/retry-failed", s.retryFailedDocuments)
 	protected.Get("/documents/:id/chunks", s.listChunks)
 	protected.Post("/documents/:id/reindex", s.reindexDocument)
 	protected.Delete("/documents/:id", s.deleteDocument)
@@ -141,12 +143,44 @@ func (s *Server) listDocuments(c fiber.Ctx) error {
 		return fail(c, fiber.ErrServiceUnavailable)
 	}
 	result, err := s.service.ListDocuments(context.Background(), db.ListDocumentsFilter{
-		Page:       queryInt(c, "page", 1),
-		PageSize:   queryInt(c, "page_size", 20),
-		Status:     c.Query("status"),
-		SourceType: c.Query("source_type"),
-		Keyword:    c.Query("keyword"),
+		Page:        queryInt(c, "page", 1),
+		PageSize:    queryInt(c, "page_size", 20),
+		Status:      c.Query("status"),
+		SourceTypes: queryCSV(c, "source_type"),
+		Category:    c.Query("category"),
+		Language:    c.Query("language"),
+		Keyword:     c.Query("keyword"),
 	})
+	if err != nil {
+		return fail(c, err)
+	}
+	return ok(c, result)
+}
+
+func (s *Server) batchReindexDocuments(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
+	var req service.BatchDocumentsRequest
+	if err := json.Unmarshal(c.Body(), &req); err != nil {
+		return fail(c, err)
+	}
+	result, err := s.service.BatchReindexDocuments(context.Background(), req)
+	if err != nil {
+		return fail(c, err)
+	}
+	return ok(c, result)
+}
+
+func (s *Server) retryFailedDocuments(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
+	var req service.BatchDocumentsRequest
+	if err := json.Unmarshal(c.Body(), &req); err != nil {
+		return fail(c, err)
+	}
+	result, err := s.service.RetryFailedDocuments(context.Background(), req)
 	if err != nil {
 		return fail(c, err)
 	}
@@ -258,6 +292,22 @@ func (s *Server) query(c fiber.Ctx) error {
 		return fail(c, err)
 	}
 	return ok(c, result)
+}
+
+func queryCSV(c fiber.Ctx, key string) []string {
+	raw := strings.TrimSpace(c.Query(key))
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			result = append(result, part)
+		}
+	}
+	return result
 }
 
 func queryInt(c fiber.Ctx, key string, fallback int) int {

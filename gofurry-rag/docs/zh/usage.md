@@ -78,13 +78,16 @@ go run . --config ./config/server.yaml uninstall
 - 登录使用 `auth.console_passcode` 配置的唯一口令。
 - 管理接口通过 HttpOnly JWT Cookie 鉴权，不再使用 Admin Token 或 Bearer Header。
 - 整体态势页每 5 秒自动刷新，展示文档总量、chunk 总量、状态分布、数据库连接信息和 Ollama 连接信息。
+- 整体态势页会额外展示失败文档数、待处理队列规模和最近失败摘要。
 - 文档管理支持手动文本入库，也支持拖拽文件和批量导入文件。
 - 文件导入限制单文件最大 10 MiB，允许 `.txt`、`.md`、`.csv`、`.json`、`.yaml`、`.yml`、`.log`、`.html`、`.htm`。
 - 文档列表每页 6 条，打开文档 tab 时每 3 秒自动刷新。
+- 文档列表支持按 `status`、`source_type`、`category`、`language` 过滤，并可按当前过滤条件批量重新索引或重试失败文档。
 - 文档可以重新索引；重新索引会删除旧 chunks，把文档设为 `pending`，由后台 worker 重新切分和向量化。
 - Chunks tab 左侧文档列表每页 7 条，可按文档标题或 ID 搜索。
 - Chunk 支持查看、编辑和删除；编辑保存时会重新生成 embedding 并写回 pgvector。
 - 文档检索页调用公开检索接口，并展示 rank、score、document、chunk、source、URL、token_count 和原始 chunk 内容。
+- 文档检索页支持按 `source_type`、`document_ids`、`category`、`language` 收窄检索范围。
 - 文档检索页提供切分预览工具，可对已有文档或临时文本预览不同 `chunk_size/chunk_overlap` 的切分结果。
 
 ## 导入规范
@@ -99,7 +102,15 @@ go run . --config ./config/server.yaml uninstall
 - 导航条目：推荐 `source_type=nav`，`source_id` 使用站点 ID 或 slug。
 - 游戏内容：推荐 `source_type=game`，`source_id` 使用游戏 ID 或 slug。
 
-这些字段对后续爬虫导入、重新索引、按来源删除、展示引用很有用。
+推荐的 metadata 顶层字段：
+
+- `category`：内容分类，例如 `intro`、`faq`、`policy`
+- `language`：语言，例如 `zh-CN`、`en-US`
+- `tags`：字符串数组，多个标签
+- `author`：内容作者或责任人
+- `published_at`：发布时间字符串，例如 `2026-05-10`
+
+这些字段对后续批量重建、失败重试、按范围检索和展示引用很有用。
 
 ## 文本入库
 
@@ -117,7 +128,16 @@ curl -c cookies.txt -X POST http://127.0.0.1:8080/api/v1/admin/auth/login \
 curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
   -b cookies.txt \
   -H "Content-Type: application/json" \
-  -d '{"title":"GoFurry","content":"GoFurry is a content discovery website.","source_type":"manual"}'
+  -d '{
+    "title":"GoFurry",
+    "content":"GoFurry is a content discovery website.",
+    "source_type":"manual",
+    "metadata":{
+      "category":"intro",
+      "language":"en-US",
+      "tags":["about","brand"]
+    }
+  }'
 ```
 
 服务会创建 `pending` 文档，ingest worker 会异步切分并写入 embedding。向量化时会把标题、来源类型、来源 ID、URL 和 chunk 正文组合成 embedding 输入；数据库中保存和展示的 chunk 内容仍保持原文。
@@ -130,6 +150,31 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/1/reindex \
 ```
 
 重新索引会删除该文档旧 chunks，把文档设为 `pending`。在 worker 重新处理完成前，该文档会短暂不可检索。旧数据如果需要使用新的 embedding 输入模板，也通过单文档重新索引迁移。
+
+批量重新索引当前过滤范围：
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/reindex \
+  -b cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scope":"filters",
+    "filters":{
+      "source_type":["website"],
+      "category":["faq"],
+      "language":["zh-CN"]
+    }
+  }'
+```
+
+重试失败文档：
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/retry-failed \
+  -b cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"scope":"all"}'
+```
 
 ## 切分预览
 
@@ -166,6 +211,22 @@ curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
 `POST /api/v1/chat/query` 是公开接口，不需要管理端 Cookie。
 
 返回的 `sources` 会包含调试字段：`source_type`、`source_id`、`chunk_index`、`token_count`。这些字段用于判断命中来自哪个来源、哪个文档和哪个 chunk。
+
+带过滤条件的检索示例：
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question":"What is GoFurry?",
+    "top_k":6,
+    "filters":{
+      "source_type":["website"],
+      "category":["intro"],
+      "language":["en-US"]
+    }
+  }'
+```
 
 ## 健康检查
 

@@ -23,11 +23,13 @@ type Repository interface {
 	ListDocuments(ctx context.Context, filter db.ListDocumentsFilter) (db.PageResult[db.Document], error)
 	ListChunks(ctx context.Context, documentID int64, page, pageSize int) (db.PageResult[db.Chunk], error)
 	ReindexDocument(ctx context.Context, id int64) (db.Document, error)
+	BatchReindexDocuments(ctx context.Context, filter db.BatchDocumentFilter) (db.BatchResult, error)
+	RetryFailedDocuments(ctx context.Context, filter db.BatchDocumentFilter) (db.BatchResult, error)
 	UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int, embedding []float64) (db.Chunk, error)
 	DeleteChunk(ctx context.Context, id int64) error
 	DeleteDocument(ctx context.Context, id int64) error
 	Overview(ctx context.Context) (db.Overview, error)
-	SearchChunks(ctx context.Context, embedding []float64, topK int) ([]db.Source, error)
+	SearchChunks(ctx context.Context, embedding []float64, topK int, filter db.BatchDocumentFilter) ([]db.Source, error)
 }
 
 type Service struct {
@@ -46,12 +48,33 @@ type TextDocumentRequest struct {
 }
 
 type QueryRequest struct {
-	Question string `json:"question"`
-	TopK     int    `json:"top_k"`
+	Question string       `json:"question"`
+	TopK     int          `json:"top_k"`
+	Filters  QueryFilters `json:"filters"`
 }
 
 type UpdateChunkRequest struct {
 	Content string `json:"content"`
+}
+
+type MetadataFilters struct {
+	SourceType []string `json:"source_type"`
+	Category   []string `json:"category"`
+	Language   []string `json:"language"`
+	Status     []string `json:"status"`
+}
+
+type BatchDocumentsRequest struct {
+	Scope       string          `json:"scope"`
+	DocumentIDs []int64         `json:"document_ids"`
+	Filters     MetadataFilters `json:"filters"`
+}
+
+type QueryFilters struct {
+	SourceType  []string `json:"source_type"`
+	DocumentIDs []int64  `json:"document_ids"`
+	Category    []string `json:"category"`
+	Language    []string `json:"language"`
 }
 
 type ChunkPreviewRequest struct {
@@ -166,7 +189,10 @@ func (s *Service) CreateTextDocument(ctx context.Context, req TextDocumentReques
 func (s *Service) ListDocuments(ctx context.Context, filter db.ListDocumentsFilter) (db.PageResult[db.Document], error) {
 	filter.Keyword = strings.TrimSpace(filter.Keyword)
 	filter.Status = strings.TrimSpace(filter.Status)
-	filter.SourceType = strings.TrimSpace(filter.SourceType)
+	filter.Category = strings.TrimSpace(filter.Category)
+	filter.Language = strings.TrimSpace(filter.Language)
+	filter.SourceTypes = cleanStrings(filter.SourceTypes)
+	filter.DocumentIDs = cleanDocumentIDs(filter.DocumentIDs)
 	return s.repo.ListDocuments(ctx, filter)
 }
 
@@ -182,6 +208,22 @@ func (s *Service) ReindexDocument(ctx context.Context, id int64) (db.Document, e
 		return db.Document{}, wrapValidation("document id is required")
 	}
 	return s.repo.ReindexDocument(ctx, id)
+}
+
+func (s *Service) BatchReindexDocuments(ctx context.Context, req BatchDocumentsRequest) (db.BatchResult, error) {
+	filter, err := buildBatchDocumentFilter(req)
+	if err != nil {
+		return db.BatchResult{}, err
+	}
+	return s.repo.BatchReindexDocuments(ctx, filter)
+}
+
+func (s *Service) RetryFailedDocuments(ctx context.Context, req BatchDocumentsRequest) (db.BatchResult, error) {
+	filter, err := buildBatchDocumentFilter(req)
+	if err != nil {
+		return db.BatchResult{}, err
+	}
+	return s.repo.RetryFailedDocuments(ctx, filter)
 }
 
 func (s *Service) UpdateChunk(ctx context.Context, id int64, req UpdateChunkRequest) (db.Chunk, error) {
@@ -285,7 +327,12 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 	if err != nil {
 		return QueryResponse{}, err
 	}
-	sources, err := s.repo.SearchChunks(ctx, embeddings[0], topK)
+	sources, err := s.repo.SearchChunks(ctx, embeddings[0], topK, db.BatchDocumentFilter{
+		DocumentIDs: cleanDocumentIDs(req.Filters.DocumentIDs),
+		SourceTypes: cleanStrings(req.Filters.SourceType),
+		Categories:  cleanStrings(req.Filters.Category),
+		Languages:   cleanStrings(req.Filters.Language),
+	})
 	if err != nil {
 		return QueryResponse{}, err
 	}
@@ -328,5 +375,53 @@ func buildChunkPreviewVariant(variant ChunkPreviewVariant, chunks []string) Chun
 		}
 	}
 	result.AvgChars = float64(total) / float64(len(chunks))
+	return result
+}
+
+func buildBatchDocumentFilter(req BatchDocumentsRequest) (db.BatchDocumentFilter, error) {
+	scope := strings.TrimSpace(req.Scope)
+	filter := db.BatchDocumentFilter{
+		DocumentIDs: cleanDocumentIDs(req.DocumentIDs),
+		Statuses:    cleanStrings(req.Filters.Status),
+		SourceTypes: cleanStrings(req.Filters.SourceType),
+		Categories:  cleanStrings(req.Filters.Category),
+		Languages:   cleanStrings(req.Filters.Language),
+	}
+	switch scope {
+	case "all":
+		return db.BatchDocumentFilter{}, nil
+	case "filters":
+		if len(filter.Statuses) == 0 && len(filter.SourceTypes) == 0 && len(filter.Categories) == 0 && len(filter.Languages) == 0 {
+			return db.BatchDocumentFilter{}, wrapValidation("filters scope requires at least one filter")
+		}
+		return filter, nil
+	case "document_ids":
+		if len(filter.DocumentIDs) == 0 {
+			return db.BatchDocumentFilter{}, wrapValidation("document_ids scope requires document_ids")
+		}
+		return filter, nil
+	default:
+		return db.BatchDocumentFilter{}, wrapValidation("scope must be one of all, filters, document_ids")
+	}
+}
+
+func cleanStrings(values []string) []string {
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func cleanDocumentIDs(values []int64) []int64 {
+	result := make([]int64, 0, len(values))
+	for _, value := range values {
+		if value > 0 {
+			result = append(result, value)
+		}
+	}
 	return result
 }

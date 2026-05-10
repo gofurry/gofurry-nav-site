@@ -97,14 +97,23 @@ top5 命中率 >= 90%
 
 目标：让知识库可以反复调整、失败可恢复、检索可按范围约束。
 
-建议新增：
+当前阶段已完成：
 
-- 全量 reindex：`POST /api/v1/admin/documents/reindex`
-- 按来源 reindex：支持通过 `source_type` 或 metadata 选择目标文档。
-- 完善状态机：`pending`、`processing`、`ready`、`failed`、`reindexing`。
-- 增加 retry 计数、失败时间、处理完成时间和更清晰的错误信息。
-- 在 query 请求中支持 metadata filters，例如 category、language、source_type。
-- 给文档和 chunk 建立更规范的 metadata 结构。
+- 新增批量重新索引接口 `POST /api/v1/admin/documents/reindex`，支持 `all`、`filters`、`document_ids` 三种范围。
+- 新增失败重试接口 `POST /api/v1/admin/documents/retry-failed`，只会把命中条件的失败文档重新投入现有 worker 队列。
+- 文档状态仍保持四态：`pending`、`processing`、`ready`、`failed`，没有引入独立 `reindexing` 状态。
+- `rag_documents` 已补充 `retry_count`、`last_error_at`、`processed_at`、`reindex_requested_at`、`last_indexed_at` 等运维字段。
+- 文档管理页支持按 `status`、`source_type`、`category`、`language` 过滤，并可按当前过滤条件触发批量重建或失败重试。
+- 整体态势页增加失败文档数、待处理队列规模和最近失败摘要。
+- 公开检索接口 `POST /api/v1/chat/query` 已支持按 `source_type`、`document_ids`、`category`、`language` 过滤。
+- 文档检索页增加“检索范围”面板，用于验证 metadata filter 是否生效。
+- 文本入库表单已补充 `category`、`language`、`tags`、`author`、`published_at` 等推荐 metadata 字段。
+
+当前约束：
+
+- metadata filter 只支持文档级顶层字段精确匹配。
+- 暂不支持 tags 模糊匹配、日期区间过滤、任意 JSONPath 查询。
+- 批量操作仍走现有 ingest worker，不新增独立任务队列。
 
 ## v0.4.0：安全、限流与运维观测
 

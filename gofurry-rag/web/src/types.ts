@@ -23,6 +23,10 @@ export type Overview = {
   processing_documents: number
   ready_documents: number
   failed_documents: number
+  queue_documents: number
+  recent_failure_message?: string
+  recent_failure_at?: string
+  recent_failed_document_id?: number
   last_document_update_at?: string
 }
 
@@ -55,9 +59,34 @@ export type DocumentItem = {
   url?: string
   status: string
   error_message: string
+  metadata?: Record<string, unknown>
   chunk_count: number
+  retry_count: number
+  last_error_at?: string
+  processed_at?: string
+  reindex_requested_at?: string
+  last_indexed_at?: string
   created_at: string
   updated_at: string
+}
+
+export type DocumentFilters = {
+  source_type?: string[]
+  category?: string[]
+  language?: string[]
+  status?: string[]
+}
+
+export type BatchDocumentsRequest = {
+  scope: 'all' | 'filters' | 'document_ids'
+  document_ids?: number[]
+  filters?: DocumentFilters
+}
+
+export type BatchResult = {
+  accepted_count: number
+  skipped_count: number
+  status: string
 }
 
 export type ChunkItem = {
@@ -119,4 +148,11 @@ export type ChunkPreviewResponse = {
   source: string
   title: string
   variants: ChunkPreviewVariant[]
+}
+
+export type QueryFilters = {
+  source_type?: string[]
+  document_ids?: number[]
+  category?: string[]
+  language?: string[]
 }

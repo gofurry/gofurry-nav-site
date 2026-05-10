@@ -1,6 +1,8 @@
 import type {
   ApiResult,
   AuthState,
+  BatchDocumentsRequest,
+  BatchResult,
   ChunkItem,
   ChunkPreviewResponse,
   ChunkPreviewVariantInput,
@@ -8,6 +10,7 @@ import type {
   HealthInfo,
   Overview,
   PageResult,
+  QueryFilters,
   QueryResponse,
 } from './types'
 
@@ -65,13 +68,24 @@ export function createTextDocument(payload: {
   })
 }
 
-export function listDocuments(params: { page: number; page_size: number; status: string; keyword: string }) {
+export function listDocuments(params: {
+  page: number
+  page_size: number
+  status: string
+  keyword: string
+  source_type?: string[]
+  category?: string
+  language?: string
+}) {
   const query = new URLSearchParams({
     page: String(params.page),
     page_size: String(params.page_size),
   })
   if (params.status) query.set('status', params.status)
   if (params.keyword) query.set('keyword', params.keyword)
+  if (params.source_type?.length) query.set('source_type', params.source_type.join(','))
+  if (params.category) query.set('category', params.category)
+  if (params.language) query.set('language', params.language)
   return request<PageResult<DocumentItem>>(`/api/v1/admin/documents?${query}`)
 }
 
@@ -91,6 +105,20 @@ export function reindexDocument(documentId: number) {
   })
 }
 
+export function batchReindexDocuments(payload: BatchDocumentsRequest) {
+  return request<BatchResult>('/api/v1/admin/documents/reindex', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function retryFailedDocuments(payload: BatchDocumentsRequest) {
+  return request<BatchResult>('/api/v1/admin/documents/retry-failed', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export function updateChunk(chunkId: number, content: string) {
   return request<ChunkItem>(`/api/v1/admin/chunks/${chunkId}`, {
     method: 'PATCH',
@@ -102,10 +130,10 @@ export function deleteChunk(chunkId: number) {
   return request<{ deleted: boolean }>(`/api/v1/admin/chunks/${chunkId}`, { method: 'DELETE' })
 }
 
-export function queryRag(question: string, topK: number) {
+export function queryRag(question: string, topK: number, filters?: QueryFilters) {
   return request<QueryResponse>('/api/v1/chat/query', {
     method: 'POST',
-    body: JSON.stringify({ question, top_k: topK }),
+    body: JSON.stringify({ question, top_k: topK, filters }),
   })
 }
 

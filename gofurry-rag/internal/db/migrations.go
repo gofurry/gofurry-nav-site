@@ -18,6 +18,13 @@ CREATE TABLE IF NOT EXISTS rag_documents (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE rag_documents
+    ADD COLUMN IF NOT EXISTS retry_count INT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS last_error_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS reindex_requested_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS last_indexed_at TIMESTAMPTZ;
+
 CREATE INDEX IF NOT EXISTS idx_rag_documents_checksum
 ON rag_documents(checksum);
 
@@ -26,6 +33,12 @@ ON rag_documents(status);
 
 CREATE INDEX IF NOT EXISTS idx_rag_documents_source
 ON rag_documents(source_type, source_id);
+
+CREATE INDEX IF NOT EXISTS idx_rag_documents_metadata_category
+ON rag_documents ((metadata->>'category'));
+
+CREATE INDEX IF NOT EXISTS idx_rag_documents_metadata_language
+ON rag_documents ((metadata->>'language'));
 
 CREATE TABLE IF NOT EXISTS rag_chunks (
     id BIGSERIAL PRIMARY KEY,

@@ -58,6 +58,14 @@ func (r *serviceRepo) ReindexDocument(ctx context.Context, id int64) (db.Documen
 	return db.Document{}, nil
 }
 
+func (r *serviceRepo) BatchReindexDocuments(ctx context.Context, filter db.BatchDocumentFilter) (db.BatchResult, error) {
+	return db.BatchResult{}, nil
+}
+
+func (r *serviceRepo) RetryFailedDocuments(ctx context.Context, filter db.BatchDocumentFilter) (db.BatchResult, error) {
+	return db.BatchResult{}, nil
+}
+
 func (r *serviceRepo) UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int, embedding []float64) (db.Chunk, error) {
 	return db.Chunk{ID: id, DocumentID: r.doc.ID, Content: content, TokenCount: tokenCount, HasEmbedding: len(embedding) > 0, EmbeddingDim: len(embedding)}, nil
 }
@@ -68,7 +76,7 @@ func (r *serviceRepo) DeleteDocument(ctx context.Context, id int64) error { retu
 
 func (r *serviceRepo) Overview(ctx context.Context) (db.Overview, error) { return db.Overview{}, nil }
 
-func (r *serviceRepo) SearchChunks(ctx context.Context, embedding []float64, topK int) ([]db.Source, error) {
+func (r *serviceRepo) SearchChunks(ctx context.Context, embedding []float64, topK int, filter db.BatchDocumentFilter) ([]db.Source, error) {
 	return nil, nil
 }
 

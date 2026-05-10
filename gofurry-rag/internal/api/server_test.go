@@ -141,6 +141,68 @@ func TestReindexDocumentSetsPending(t *testing.T) {
 	}
 }
 
+func TestBatchReindexDocuments(t *testing.T) {
+	app, repo := testAppWithRepo()
+	cookie := loginCookie(t, app)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/documents/reindex", bytes.NewBufferString(`{
+		"scope":"filters",
+		"filters":{
+			"source_type":["website"],
+			"category":["faq"],
+			"language":["zh-CN"],
+			"status":["ready"]
+		}
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	if repo.lastBatchMode != "reindex" {
+		t.Fatalf("batch mode = %q", repo.lastBatchMode)
+	}
+	if len(repo.lastBatchFilter.SourceTypes) != 1 || repo.lastBatchFilter.SourceTypes[0] != "website" {
+		t.Fatalf("source types = %+v", repo.lastBatchFilter.SourceTypes)
+	}
+	if len(repo.lastBatchFilter.Categories) != 1 || repo.lastBatchFilter.Categories[0] != "faq" {
+		t.Fatalf("categories = %+v", repo.lastBatchFilter.Categories)
+	}
+	if len(repo.lastBatchFilter.Languages) != 1 || repo.lastBatchFilter.Languages[0] != "zh-CN" {
+		t.Fatalf("languages = %+v", repo.lastBatchFilter.Languages)
+	}
+	if len(repo.lastBatchFilter.Statuses) != 1 || repo.lastBatchFilter.Statuses[0] != "ready" {
+		t.Fatalf("statuses = %+v", repo.lastBatchFilter.Statuses)
+	}
+}
+
+func TestRetryFailedDocuments(t *testing.T) {
+	app, repo := testAppWithRepo()
+	cookie := loginCookie(t, app)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/documents/retry-failed", bytes.NewBufferString(`{
+		"scope":"document_ids",
+		"document_ids":[1,2,0]
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	if repo.lastBatchMode != "retry-failed" {
+		t.Fatalf("batch mode = %q", repo.lastBatchMode)
+	}
+	if len(repo.lastBatchFilter.DocumentIDs) != 2 || repo.lastBatchFilter.DocumentIDs[0] != 1 || repo.lastBatchFilter.DocumentIDs[1] != 2 {
+		t.Fatalf("document ids = %+v", repo.lastBatchFilter.DocumentIDs)
+	}
+}
+
 func TestQueryReturnsSources(t *testing.T) {
 	app := testApp()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"GoFurry","top_k":1}`))
@@ -168,6 +230,63 @@ func TestQueryReturnsSources(t *testing.T) {
 	source := result.Data.Sources[0]
 	if source.SourceType != "manual" || source.SourceID != "about" || source.ChunkIndex != 2 || source.TokenCount != 6 {
 		t.Fatalf("source debug fields = %+v", source)
+	}
+}
+
+func TestQueryPassesFilters(t *testing.T) {
+	app, repo := testAppWithRepo()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{
+		"question":"GoFurry",
+		"top_k":2,
+		"filters":{
+			"source_type":["site"],
+			"document_ids":[3,4],
+			"category":["intro"],
+			"language":["zh-CN"]
+		}
+	}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	if len(repo.lastSearchFilter.SourceTypes) != 1 || repo.lastSearchFilter.SourceTypes[0] != "site" {
+		t.Fatalf("source types = %+v", repo.lastSearchFilter.SourceTypes)
+	}
+	if len(repo.lastSearchFilter.DocumentIDs) != 2 || repo.lastSearchFilter.DocumentIDs[0] != 3 || repo.lastSearchFilter.DocumentIDs[1] != 4 {
+		t.Fatalf("document ids = %+v", repo.lastSearchFilter.DocumentIDs)
+	}
+	if len(repo.lastSearchFilter.Categories) != 1 || repo.lastSearchFilter.Categories[0] != "intro" {
+		t.Fatalf("categories = %+v", repo.lastSearchFilter.Categories)
+	}
+	if len(repo.lastSearchFilter.Languages) != 1 || repo.lastSearchFilter.Languages[0] != "zh-CN" {
+		t.Fatalf("languages = %+v", repo.lastSearchFilter.Languages)
+	}
+}
+
+func TestListDocumentsPassesFilters(t *testing.T) {
+	app, repo := testAppWithRepo()
+	cookie := loginCookie(t, app)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/documents?page=2&page_size=6&status=failed&source_type=website,nav&category=faq&language=zh-CN&keyword=about", nil)
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	if repo.lastListFilter.Page != 2 || repo.lastListFilter.PageSize != 6 || repo.lastListFilter.Status != "failed" {
+		t.Fatalf("list filter = %+v", repo.lastListFilter)
+	}
+	if len(repo.lastListFilter.SourceTypes) != 2 || repo.lastListFilter.SourceTypes[0] != "website" || repo.lastListFilter.SourceTypes[1] != "nav" {
+		t.Fatalf("source types = %+v", repo.lastListFilter.SourceTypes)
+	}
+	if repo.lastListFilter.Category != "faq" || repo.lastListFilter.Language != "zh-CN" || repo.lastListFilter.Keyword != "about" {
+		t.Fatalf("list filter = %+v", repo.lastListFilter)
 	}
 }
 
@@ -305,6 +424,11 @@ func TestLogoutClearsCookie(t *testing.T) {
 }
 
 func testApp() *fiber.App {
+	app, _ := testAppWithRepo()
+	return app
+}
+
+func testAppWithRepo() (*fiber.App, *fakeRepo) {
 	cfg := config.Config{
 		AppName:         "test",
 		AdminToken:      "test-token",
@@ -320,10 +444,11 @@ func testApp() *fiber.App {
 			SameSite:         "Lax",
 		},
 	}
-	svc := service.New(newFakeRepo(), fakeEmbedder{}, cfg)
+	repo := newFakeRepo()
+	svc := service.New(repo, fakeEmbedder{}, cfg)
 	app := fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
 	NewServer(cfg, svc, nil).RegisterRoutes(app.Group("/api/v1"))
-	return app
+	return app, repo
 }
 
 func loginCookie(t *testing.T, app *fiber.App) *http.Cookie {
@@ -345,9 +470,13 @@ func loginCookie(t *testing.T, app *fiber.App) *http.Cookie {
 }
 
 type fakeRepo struct {
-	mu   sync.Mutex
-	next int64
-	docs []db.Document
+	mu               sync.Mutex
+	next             int64
+	docs             []db.Document
+	lastListFilter   db.ListDocumentsFilter
+	lastSearchFilter db.BatchDocumentFilter
+	lastBatchFilter  db.BatchDocumentFilter
+	lastBatchMode    string
 }
 
 func newFakeRepo() *fakeRepo {
@@ -395,6 +524,7 @@ func (r *fakeRepo) GetDocumentByChunkID(ctx context.Context, chunkID int64) (db.
 func (r *fakeRepo) ListDocuments(ctx context.Context, filter db.ListDocumentsFilter) (db.PageResult[db.Document], error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	r.lastListFilter = filter
 	items := append([]db.Document(nil), r.docs...)
 	return db.PageResult[db.Document]{Items: items, Total: int64(len(items))}, nil
 }
@@ -417,6 +547,22 @@ func (r *fakeRepo) ReindexDocument(ctx context.Context, id int64) (db.Document, 
 	return db.Document{}, service.ErrValidation
 }
 
+func (r *fakeRepo) BatchReindexDocuments(ctx context.Context, filter db.BatchDocumentFilter) (db.BatchResult, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.lastBatchFilter = filter
+	r.lastBatchMode = "reindex"
+	return db.BatchResult{AcceptedCount: 2, SkippedCount: 1, Status: db.StatusPending}, nil
+}
+
+func (r *fakeRepo) RetryFailedDocuments(ctx context.Context, filter db.BatchDocumentFilter) (db.BatchResult, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.lastBatchFilter = filter
+	r.lastBatchMode = "retry-failed"
+	return db.BatchResult{AcceptedCount: 1, SkippedCount: 0, Status: db.StatusPending}, nil
+}
+
 func (r *fakeRepo) UpdateChunkContent(ctx context.Context, id int64, content, contentHash string, tokenCount int, embedding []float64) (db.Chunk, error) {
 	return db.Chunk{ID: id, DocumentID: 1, Content: content, ContentHash: contentHash, TokenCount: tokenCount, HasEmbedding: len(embedding) > 0, EmbeddingDim: len(embedding)}, nil
 }
@@ -433,7 +579,10 @@ func (r *fakeRepo) Overview(ctx context.Context) (db.Overview, error) {
 	return db.Overview{DocumentTotal: int64(len(r.docs)), ChunkTotal: 2, EmbeddedChunkTotal: 2}, nil
 }
 
-func (r *fakeRepo) SearchChunks(ctx context.Context, embedding []float64, topK int) ([]db.Source, error) {
+func (r *fakeRepo) SearchChunks(ctx context.Context, embedding []float64, topK int, filter db.BatchDocumentFilter) ([]db.Source, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.lastSearchFilter = filter
 	return []db.Source{{DocumentID: 1, ChunkID: 1, SourceType: "manual", SourceID: "about", Title: "GoFurry", ChunkIndex: 2, TokenCount: 6, Score: 0.9, Content: "source"}}, nil
 }
 

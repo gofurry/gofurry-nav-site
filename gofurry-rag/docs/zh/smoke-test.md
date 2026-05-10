@@ -67,7 +67,7 @@ curl -b cookies.txt "http://127.0.0.1:8080/api/v1/admin/documents?page=1&page_si
 
 文档初始状态应为 `pending`。等待几秒后再次请求，状态应变为 `ready`，`chunk_count` 应大于 0。
 
-控制台文档列表每 3 秒自动刷新，整体态势页每 5 秒自动刷新。
+控制台文档列表每 3 秒自动刷新，整体态势页每 5 秒自动刷新；overview 中应能看到待处理队列规模和最近失败摘要区域。
 
 ## 8. 重新索引
 
@@ -82,7 +82,29 @@ curl -b cookies.txt "http://127.0.0.1:8080/api/v1/admin/documents?page=1&page_si
 
 重新索引后该文档会回到 `pending`，旧 chunks 会被删除。等待 worker 处理后，文档应重新变为 `ready`。
 
-## 9. Chunk 编辑重向量化
+## 9. 批量重建和失败重试
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/reindex \
+  -b cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scope":"filters",
+    "filters":{
+      "status":["ready"],
+      "source_type":["manual"]
+    }
+  }'
+
+curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/retry-failed \
+  -b cookies.txt \
+  -H "Content-Type: application/json" \
+  -d '{"scope":"all"}'
+```
+
+第一条请求应返回 `accepted_count`、`skipped_count` 和 `status="pending"`。如果当前没有失败文档，第二条请求允许返回 `accepted_count=0`。
+
+## 10. Chunk 编辑重向量化
 
 先查看 chunks：
 
@@ -103,7 +125,7 @@ curl -X PATCH http://127.0.0.1:8080/api/v1/admin/chunks/1 \
 
 Chunk 编辑保存会重新生成 embedding。新入库、重新索引、chunk 编辑保存都会使用带标题和来源上下文的 embedding 输入模板，但返回的 chunk `content` 仍应是原文。
 
-## 10. 切分预览
+## 11. 切分预览
 
 ```bash
 curl -X POST http://127.0.0.1:8080/api/v1/admin/debug/chunk-preview \
@@ -119,7 +141,7 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/debug/chunk-preview \
 
 响应应包含 `variants`，每组参数应返回 `chunk_count`、`min_chars`、`max_chars`、`avg_chars` 和最多 20 个 chunk 预览。该接口不应创建文档，也不会触发重新索引。
 
-## 11. 检索命中
+## 12. 检索命中
 
 ```bash
 curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
@@ -129,7 +151,23 @@ curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
 
 ingest worker 完成后，检索结果应至少包含一个 source。source 中应包含 `source_type`、`source_id`、`chunk_index`、`token_count` 等调试字段。
 
-## 12. 控制台手动检查
+验证过滤检索：
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question":"What does GoFurry store?",
+    "top_k":3,
+    "filters":{
+      "source_type":["manual"]
+    }
+  }'
+```
+
+返回结果应只来自指定范围。
+
+## 13. 控制台手动检查
 
 打开：
 
@@ -143,7 +181,8 @@ http://127.0.0.1:8080/admin
 - 文本入库可提交。
 - 文件拖拽只接受 10 MiB 内的 txt、md、csv、json、yaml、log、html 文件。
 - 不支持或过大的文件会显示拒绝原因。
-- 文档页可重新索引，且使用非原生确认模态框。
+- 文档页可按状态、来源类型、分类、语言过滤，并能执行批量重建或失败重试，且使用非原生确认模态框。
 - Chunks 页可查看、编辑、删除，长文本保持换行并可阅读。
-- 检索页能展示 rank、sources、score、document/chunk 标识和来源字段。
+- 整体态势页能看到失败文档数、待处理队列和最近失败摘要。
+- 检索页能展示 rank、sources、score、document/chunk 标识和来源字段，并能通过检索范围过滤命中结果。
 - 检索页切分预览能通过文档 ID 或临时文本展示不同 chunk 参数的切分结果。
