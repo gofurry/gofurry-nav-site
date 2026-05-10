@@ -26,7 +26,7 @@ func NewServer(cfg config.Config, svc *service.Service, worker *ingest.Worker) *
 }
 
 func (s *Server) RegisterRoutes(v1 fiber.Router) {
-	v1.Get("/health", s.health)
+	v1.Get("/health", s.requireAdmin, s.health)
 	admin := v1.Group("/admin")
 	admin.Get("/auth/state", s.authState)
 	admin.Post("/auth/login", s.authLogin)
@@ -44,8 +44,17 @@ func (s *Server) RegisterRoutes(v1 fiber.Router) {
 	protected.Patch("/chunks/:id", s.updateChunk)
 	protected.Delete("/chunks/:id", s.deleteChunk)
 	protected.Post("/debug/chunk-preview", s.chunkPreview)
+	v1.Get("/chat/status", s.chatStatus)
 	v1.Post("/chat/query", s.query)
 	v1.Post("/chat/stream", s.chatStream)
+}
+
+func requestContext(c fiber.Ctx) context.Context {
+	ctx := c.Context()
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }
 
 func (s *Server) requireAdmin(c fiber.Ctx) error {
@@ -56,6 +65,19 @@ func (s *Server) requireAdmin(c fiber.Ctx) error {
 	}
 	c.Locals(auth.ClaimsContextKey, claims)
 	return c.Next()
+}
+
+func (s *Server) requireDetailedQueryAdmin(c fiber.Ctx, includeDetails bool) error {
+	if !includeDetails {
+		return nil
+	}
+	token := strings.TrimSpace(c.Cookies(s.cfg.AuthCookieName))
+	claims, err := s.authService.ParseAndValidateToken(token)
+	if err != nil {
+		return err
+	}
+	c.Locals(auth.ClaimsContextKey, claims)
+	return nil
 }
 
 type passwordRequest struct {
@@ -109,15 +131,21 @@ func (s *Server) health(c fiber.Ctx) error {
 	if s.service == nil {
 		return ok(c, fiber.Map{"status": "not_ready"})
 	}
-	ctx := context.Background()
-	return ok(c, s.service.Health(ctx))
+	return ok(c, s.service.Health(requestContext(c)))
+}
+
+func (s *Server) chatStatus(c fiber.Ctx) error {
+	if s.service == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
+	return ok(c, s.service.ChatStatus())
 }
 
 func (s *Server) overview(c fiber.Ctx) error {
 	if s.service == nil {
 		return fail(c, fiber.ErrServiceUnavailable)
 	}
-	result, err := s.service.Overview(context.Background())
+	result, err := s.service.Overview(requestContext(c))
 	if err != nil {
 		return fail(c, err)
 	}
@@ -132,7 +160,7 @@ func (s *Server) createTextDocument(c fiber.Ctx) error {
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
 	}
-	doc, err := s.service.CreateTextDocument(context.Background(), req)
+	doc, err := s.service.CreateTextDocument(requestContext(c), req)
 	if err != nil {
 		return fail(c, err)
 	}
@@ -143,7 +171,7 @@ func (s *Server) listDocuments(c fiber.Ctx) error {
 	if s.service == nil {
 		return fail(c, fiber.ErrServiceUnavailable)
 	}
-	result, err := s.service.ListDocuments(context.Background(), db.ListDocumentsFilter{
+	result, err := s.service.ListDocuments(requestContext(c), db.ListDocumentsFilter{
 		Page:        queryInt(c, "page", 1),
 		PageSize:    queryInt(c, "page_size", 20),
 		Status:      c.Query("status"),
@@ -166,7 +194,7 @@ func (s *Server) batchReindexDocuments(c fiber.Ctx) error {
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
 	}
-	result, err := s.service.BatchReindexDocuments(context.Background(), req)
+	result, err := s.service.BatchReindexDocuments(requestContext(c), req)
 	if err != nil {
 		return fail(c, err)
 	}
@@ -181,7 +209,7 @@ func (s *Server) retryFailedDocuments(c fiber.Ctx) error {
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
 	}
-	result, err := s.service.RetryFailedDocuments(context.Background(), req)
+	result, err := s.service.RetryFailedDocuments(requestContext(c), req)
 	if err != nil {
 		return fail(c, err)
 	}
@@ -196,7 +224,7 @@ func (s *Server) listChunks(c fiber.Ctx) error {
 	if err != nil {
 		return fail(c, service.ErrValidation)
 	}
-	result, err := s.service.ListChunks(context.Background(), id, queryInt(c, "page", 1), queryInt(c, "page_size", 20))
+	result, err := s.service.ListChunks(requestContext(c), id, queryInt(c, "page", 1), queryInt(c, "page_size", 20))
 	if err != nil {
 		return fail(c, err)
 	}
@@ -211,7 +239,7 @@ func (s *Server) deleteDocument(c fiber.Ctx) error {
 	if err != nil {
 		return fail(c, service.ErrValidation)
 	}
-	if err := s.service.DeleteDocument(context.Background(), id); err != nil {
+	if err := s.service.DeleteDocument(requestContext(c), id); err != nil {
 		return fail(c, err)
 	}
 	return ok(c, fiber.Map{"deleted": true})
@@ -225,7 +253,7 @@ func (s *Server) reindexDocument(c fiber.Ctx) error {
 	if err != nil {
 		return fail(c, service.ErrValidation)
 	}
-	doc, err := s.service.ReindexDocument(context.Background(), id)
+	doc, err := s.service.ReindexDocument(requestContext(c), id)
 	if err != nil {
 		return fail(c, err)
 	}
@@ -244,7 +272,7 @@ func (s *Server) updateChunk(c fiber.Ctx) error {
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
 	}
-	chunk, err := s.service.UpdateChunk(context.Background(), id, req)
+	chunk, err := s.service.UpdateChunk(requestContext(c), id, req)
 	if err != nil {
 		return fail(c, err)
 	}
@@ -259,7 +287,7 @@ func (s *Server) deleteChunk(c fiber.Ctx) error {
 	if err != nil {
 		return fail(c, service.ErrValidation)
 	}
-	if err := s.service.DeleteChunk(context.Background(), id); err != nil {
+	if err := s.service.DeleteChunk(requestContext(c), id); err != nil {
 		return fail(c, err)
 	}
 	return ok(c, fiber.Map{"deleted": true})
@@ -273,7 +301,7 @@ func (s *Server) chunkPreview(c fiber.Ctx) error {
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
 	}
-	result, err := s.service.ChunkPreview(context.Background(), req)
+	result, err := s.service.ChunkPreview(requestContext(c), req)
 	if err != nil {
 		return fail(c, err)
 	}
@@ -288,7 +316,10 @@ func (s *Server) query(c fiber.Ctx) error {
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
 	}
-	result, err := s.service.Query(context.Background(), req)
+	if err := s.requireDetailedQueryAdmin(c, req.IncludeDetails); err != nil {
+		return fail(c, err)
+	}
+	result, err := s.service.Query(requestContext(c), req)
 	if err != nil {
 		return fail(c, err)
 	}

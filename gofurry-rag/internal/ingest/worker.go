@@ -261,10 +261,11 @@ func (s *workerStats) snapshot() WorkerStatus {
 func (s *workerStats) markIdle() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.activeWorkers = 0
-	s.state = "idle"
-	s.currentDocumentID = nil
-	s.currentBatchCount = 0
+	if s.activeWorkers == 0 {
+		s.state = "idle"
+		s.currentDocumentID = nil
+		s.currentBatchCount = 0
+	}
 }
 
 func (s *workerStats) markProcessing(documentID int64, startedAt time.Time, model string) {

@@ -96,3 +96,61 @@ func TestUpdateConsolePasscode(t *testing.T) {
 		t.Fatalf("content = %s", content)
 	}
 }
+
+func TestProdConfigRejectsPlaceholderSecrets(t *testing.T) {
+	t.Cleanup(ResetForTest)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "server.yaml")
+	if err := os.WriteFile(path, []byte(`
+server:
+  mode: "prod"
+auth:
+  console_passcode: "change-me"
+  jwt_secret: "change-this-jwt-secret"
+  cookie_secure: true
+database:
+  postgres:
+    db_name: "ragtest"
+rag:
+  embed_dim: 1024
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	err := MustInitServerConfig("gofurry-rag", path)
+	if err == nil {
+		t.Fatal("expected placeholder secret validation error")
+	}
+	if !strings.Contains(err.Error(), "auth.console_passcode") || !strings.Contains(err.Error(), "auth.jwt_secret") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestProdConfigRequiresSecureCookie(t *testing.T) {
+	t.Cleanup(ResetForTest)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "server.yaml")
+	if err := os.WriteFile(path, []byte(`
+server:
+  mode: "prod"
+auth:
+  console_passcode: "dev-secret"
+  jwt_secret: "jwt-secret"
+  cookie_secure: false
+database:
+  postgres:
+    db_name: "ragtest"
+rag:
+  embed_dim: 1024
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	err := MustInitServerConfig("gofurry-rag", path)
+	if err == nil {
+		t.Fatal("expected secure cookie validation error")
+	}
+	if !strings.Contains(err.Error(), "auth.cookie_secure") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

@@ -193,8 +193,27 @@ type QueryUsage struct {
 	ReasoningTokens  int    `json:"reasoning_tokens,omitempty"`
 }
 
+type ChatStatusResponse struct {
+	Queue       db.OllamaQueueStatus `json:"queue"`
+	ChatReady   bool                 `json:"chat_ready"`
+	AnswerModel string               `json:"answer_model,omitempty"`
+}
+
 func New(repo Repository, embedder embedder.Client, chat chatClient, cfg config.Config, worker workerStatusProvider) *Service {
 	return &Service{repo: repo, embedder: embedder, chat: chat, cfg: cfg, worker: worker}
+}
+
+func (s *Service) ChatStatus() ChatStatusResponse {
+	answerModel := ""
+	chatReady := s.chat != nil && s.chat.Configured()
+	if s.chat != nil {
+		answerModel = s.chat.Model()
+	}
+	return ChatStatusResponse{
+		Queue:       s.ollamaQueueStatus(),
+		ChatReady:   chatReady,
+		AnswerModel: answerModel,
+	}
 }
 
 func (s *Service) Health(ctx context.Context) map[string]any {

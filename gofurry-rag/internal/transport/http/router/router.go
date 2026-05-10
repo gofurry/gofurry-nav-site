@@ -22,7 +22,6 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/helmet"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	fiberlogger "github.com/gofiber/fiber/v3/middleware/logger"
-	"github.com/gofiber/fiber/v3/middleware/pprof"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 )
@@ -180,9 +179,6 @@ func registerMiddlewares(app *fiber.App) {
 				return api.ErrorWithCode(c, fiber.StatusTooManyRequests, "too many requests")
 			},
 		}))
-	}
-	if cfg.Server.Mode == "debug" {
-		app.Use(pprof.New())
 	}
 }
 

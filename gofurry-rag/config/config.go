@@ -26,6 +26,11 @@ var (
 	configOptionsMu sync.Mutex
 )
 
+const (
+	defaultConsolePasscode = "change-me"
+	defaultJWTSecret       = "change-this-jwt-secret"
+)
+
 type configLoaderOptions struct {
 	projectName string
 	fileName    string
@@ -468,10 +473,10 @@ func (cfg *Config) normalize() {
 		cfg.Middleware.Limiter.KeySource = "ip"
 	}
 	if cfg.Auth.ConsolePasscode == "" {
-		cfg.Auth.ConsolePasscode = "change-me"
+		cfg.Auth.ConsolePasscode = defaultConsolePasscode
 	}
 	if cfg.Auth.JWTSecret == "" {
-		cfg.Auth.JWTSecret = "change-this-jwt-secret"
+		cfg.Auth.JWTSecret = defaultJWTSecret
 	}
 	if cfg.Auth.CookieName == "" {
 		cfg.Auth.CookieName = "gofurry_rag_session"
@@ -509,6 +514,17 @@ func (cfg *Config) validate() error {
 	}
 	if strings.TrimSpace(cfg.Auth.JWTSecret) == "" {
 		errs = append(errs, fmt.Errorf("auth.jwt_secret is required"))
+	}
+	if cfg.Server.Mode != "debug" {
+		if strings.TrimSpace(cfg.Auth.ConsolePasscode) == defaultConsolePasscode {
+			errs = append(errs, fmt.Errorf("auth.console_passcode must be changed outside debug mode"))
+		}
+		if strings.TrimSpace(cfg.Auth.JWTSecret) == defaultJWTSecret {
+			errs = append(errs, fmt.Errorf("auth.jwt_secret must be changed outside debug mode"))
+		}
+		if !cfg.Auth.CookieSecure {
+			errs = append(errs, fmt.Errorf("auth.cookie_secure must be true outside debug mode"))
+		}
 	}
 	if cfg.RAG.EmbedDim <= 0 {
 		errs = append(errs, fmt.Errorf("rag.embed_dim must be positive"))
@@ -755,8 +771,8 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("middleware.etag.enabled", true)
 	v.SetDefault("waf.enabled", false)
 	v.SetDefault("waf.conf_path", []string{"./config/coraza.conf"})
-	v.SetDefault("auth.console_passcode", "change-me")
-	v.SetDefault("auth.jwt_secret", "change-this-jwt-secret")
+	v.SetDefault("auth.console_passcode", defaultConsolePasscode)
+	v.SetDefault("auth.jwt_secret", defaultJWTSecret)
 	v.SetDefault("auth.cookie_name", "gofurry_rag_session")
 	v.SetDefault("auth.cookie_domain", "")
 	v.SetDefault("auth.cookie_secure", false)

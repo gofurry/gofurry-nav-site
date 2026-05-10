@@ -95,6 +95,44 @@ func TestOverviewRequiresCookie(t *testing.T) {
 	}
 }
 
+func TestHealthRequiresCookie(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestHealthWithCookieWorks(t *testing.T) {
+	app := testApp()
+	cookie := loginCookie(t, app)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestChatStatusIsPublic(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/chat/status", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
 func TestReindexDocumentRequiresCookie(t *testing.T) {
 	app := testApp()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/documents/1/reindex", nil)
@@ -235,6 +273,53 @@ func TestQueryReturnsSources(t *testing.T) {
 	}
 }
 
+func TestQueryIncludeDetailsRequiresAdmin(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"GoFurry","top_k":1,"include_details":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestQueryIncludeDetailsWithAdminReturnsCitations(t *testing.T) {
+	app := testApp()
+	cookie := loginCookie(t, app)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/admin/documents/text", bytes.NewBufferString(`{"title":"T","content":"hello","source_type":"manual"}`))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq.AddCookie(cookie)
+	if resp, err := app.Test(createReq); err != nil {
+		t.Fatal(err)
+	} else if resp.StatusCode != http.StatusOK {
+		t.Fatalf("create status = %d", resp.StatusCode)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"GoFurry","top_k":1,"include_details":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	var result struct {
+		Code int                   `json:"code"`
+		Data service.QueryResponse `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != 1 || len(result.Data.Citations) == 0 {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
 func TestChatStreamReturnsSSE(t *testing.T) {
 	app := testApp()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/stream", bytes.NewBufferString(`{"question":"GoFurry","top_k":1}`))
@@ -255,6 +340,19 @@ func TestChatStreamReturnsSSE(t *testing.T) {
 		if !strings.Contains(text, needle) {
 			t.Fatalf("missing %q in stream: %s", needle, text)
 		}
+	}
+}
+
+func TestChatStreamIncludeDetailsRequiresAdmin(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/stream", bytes.NewBufferString(`{"question":"GoFurry","top_k":1,"include_details":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d", resp.StatusCode)
 	}
 }
 

@@ -20,6 +20,9 @@ func (s *Server) chatStream(c fiber.Ctx) error {
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
 	}
+	if err := s.requireDetailedQueryAdmin(c, req.IncludeDetails); err != nil {
+		return fail(c, err)
+	}
 
 	c.Set(fiber.HeaderContentType, "text/event-stream; charset=utf-8")
 	c.Set(fiber.HeaderCacheControl, "no-cache, no-transform")

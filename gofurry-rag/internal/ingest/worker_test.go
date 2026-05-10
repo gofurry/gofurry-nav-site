@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GoFurry/gofurry-rag/config"
 	"github.com/GoFurry/gofurry-rag/internal/db"
@@ -41,6 +42,23 @@ func TestWorkerUsesEmbeddingInputTemplate(t *testing.T) {
 	}
 	if len(repo.chunks) != 1 || strings.Contains(repo.chunks[0].Content, "Title:") {
 		t.Fatalf("stored chunk should remain raw: %#v", repo.chunks)
+	}
+}
+
+func TestWorkerStatsMarkIdleKeepsActiveProcessingState(t *testing.T) {
+	var stats workerStats
+	stats.markProcessing(42, time.Now(), "fake")
+	stats.markIdle()
+
+	snapshot := stats.snapshot()
+	if snapshot.ActiveWorkers != 1 {
+		t.Fatalf("active workers = %d", snapshot.ActiveWorkers)
+	}
+	if snapshot.State != "processing" {
+		t.Fatalf("state = %q", snapshot.State)
+	}
+	if snapshot.CurrentDocumentID == nil || *snapshot.CurrentDocumentID != 42 {
+		t.Fatalf("current document = %+v", snapshot.CurrentDocumentID)
 	}
 }
 
