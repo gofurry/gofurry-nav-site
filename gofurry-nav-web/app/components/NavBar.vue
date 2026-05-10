@@ -188,16 +188,14 @@ type NavLink = {
   external?: boolean
 }
 
-const openPlatformLink = computed<NavLink>(() => (
-  import.meta.env.PROD
-    ? { label: langStore.lang === 'zh' ? '开放平台' : 'Open Platform', href: 'https://open.go-furry.com', external: true }
-    : { label: langStore.lang === 'zh' ? '开放平台' : 'Open Platform', to: '/updates' }
+const archiveLink = computed<NavLink>(() => (
+  { label: t('sidebar.archive'), to: '/archive' }
 ))
 
 const navLinks = computed<NavLink[]>(() => [
   { label: t('sidebar.nav'), to: '/nav' },
   { label: t('sidebar.games'), to: '/games' },
-  openPlatformLink.value,
+  archiveLink.value,
   { label: langStore.lang === 'zh' ? '深度兽研' : 'DeepFurry', href: 'https://www.deepfurry.com', external: true },
 ])
 

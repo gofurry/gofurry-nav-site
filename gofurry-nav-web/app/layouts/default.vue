@@ -1,6 +1,6 @@
 <template>
   <div class="relative flex min-h-screen flex-col bg-gray-50">
-    <div :class="navBarWrapperClass">
+    <div v-if="showNavBar" :class="navBarWrapperClass">
       <NavBar :nav-overlay-desktop="isNavPage" />
     </div>
     <main class="relative flex min-w-0 flex-1 flex-col">
@@ -18,7 +18,10 @@ import { NAV_PAGE_REVEAL_EVENT } from '@/utils/navPageReveal'
 
 const route = useRoute()
 const navPageRevealed = ref(true)
-const isNavPage = computed(() => route.path === '/nav')
+const normalizedPath = computed(() => route.path.replace(/^\/(zh|en)(?=\/|$)/, '') || '/')
+const isNavPage = computed(() => normalizedPath.value === '/nav')
+const isFullViewportPage = computed(() => normalizedPath.value === '/archive')
+const showNavBar = computed(() => !isFullViewportPage.value)
 const navBarWrapperClass = computed(() => (
   isNavPage.value
     ? 'md:absolute md:inset-x-0 md:top-0 md:z-[70] md:w-full'
@@ -26,7 +29,11 @@ const navBarWrapperClass = computed(() => (
 ))
 
 const showFooter = computed(() => {
-  if (route.path === '/nav') {
+  if (isFullViewportPage.value) {
+    return false
+  }
+
+  if (isNavPage.value) {
     return navPageRevealed.value
   }
 
@@ -40,8 +47,8 @@ function handleNavPageReveal(event: Event) {
 
 watch(
   () => route.path,
-  (path) => {
-    navPageRevealed.value = path === '/nav'
+  () => {
+    navPageRevealed.value = isNavPage.value
       ? import.meta.client && window.innerWidth < 768
       : true
   },

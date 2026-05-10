@@ -108,7 +108,8 @@
     "survey": "DeepFurry",
     "about": "About Us",
     "join": "Join Us",
-    "panel": "Panel"
+    "panel": "Panel",
+    "archive": "Archive"
   },
   "footer": {
     "sections": {
@@ -520,6 +521,68 @@
       "bubble": {
         "lottery": "Lottery"
       }
+    }
+  },
+  "archive": {
+    "actions": {
+      "toggleSidebar": "Collapse sidebar",
+      "newChat": "New chat",
+      "backHome": "Back to home",
+      "openGuide": "View guide",
+      "closeGuide": "Close guide",
+      "copy": "Copy",
+      "copySourceContent": "Copy source text",
+      "stop": "Stop",
+      "send": "Send"
+    },
+    "searchPlaceholder": "Search history questions",
+    "untitledQuestion": "Untitled question",
+    "noMatchedQuestions": "No matching questions",
+    "askPlaceholder": "Ask the GoFurry knowledge base...",
+    "pagination": {
+      "prev": "Previous page",
+      "next": "Next page"
+    },
+    "empty": {
+      "eyebrow": "Furry Archive",
+      "title": "Ask the GoFurry knowledge base",
+      "description": "Enter a specific question. The system will retrieve relevant materials and return both the answer and cited snippets."
+    },
+    "sections": {
+      "question": "Question",
+      "answer": "Answer",
+      "sources": "Sources"
+    },
+    "status": {
+      "streaming": "Generating",
+      "requestFailed": "Request failed"
+    },
+    "sources": {
+      "count": "{count} items",
+      "document": "Document {id}",
+      "chunk": "Chunk {index}",
+      "noContent": "This source did not return original content.",
+      "open": "Open source"
+    },
+    "queue": {
+      "unknown": "Queue unknown",
+      "status": "Inference {active}/{max} · Queue {queued}"
+    },
+    "errors": {
+      "requestFailedWithStatus": "Request failed: {status}",
+      "serviceUnavailable": "Q&A service is temporarily unavailable",
+      "serviceReturnedError": "Q&A service returned an error"
+    },
+    "guide": {
+      "eyebrow": "Guide",
+      "title": "GoFurry RAG Guide",
+      "description": "This page retrieves and answers based on materials already indexed by GoFurry. Answers prioritize cited snippets and are not intended as open-ended chat outside the knowledge base.",
+      "usageTitle": "How to use",
+      "usageDesc": "After you enter a question, the system retrieves the knowledge base first and then streams the answer. History is stored only in this browser and keeps up to 50 records.",
+      "boundaryTitle": "Knowledge boundary",
+      "boundaryDesc": "If the knowledge base does not cover the topic, the answer may state that there is not enough material. The original snippets in sources are the main evidence for judging the answer.",
+      "noticeTitle": "User notice",
+      "noticeDesc": "Do not submit private information, accounts, secrets, or API keys. This page has no user system; history disappears if you switch browsers or clear local data."
     }
   }
 }

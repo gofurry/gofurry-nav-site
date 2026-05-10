@@ -108,7 +108,8 @@
     "survey": "兽圈调研",
     "about": "关于本站",
     "join": "加入我们",
-    "panel": "本站数据"
+    "panel": "本站数据",
+    "archive": "兽圈档案"
   },
   "footer": {
     "sections": {
@@ -520,6 +521,68 @@
       "bubble": {
         "lottery": "去抽奖"
       }
+    }
+  },
+  "archive": {
+    "actions": {
+      "toggleSidebar": "折叠菜单",
+      "newChat": "新对话",
+      "backHome": "返回首页",
+      "openGuide": "查看使用文档",
+      "closeGuide": "关闭使用文档",
+      "copy": "复制",
+      "copySourceContent": "复制原文",
+      "stop": "停止",
+      "send": "发送"
+    },
+    "searchPlaceholder": "搜索历史问题",
+    "untitledQuestion": "未命名问题",
+    "noMatchedQuestions": "暂无匹配的问题",
+    "askPlaceholder": "问问 GoFurry 知识库...",
+    "pagination": {
+      "prev": "上一页",
+      "next": "下一页"
+    },
+    "empty": {
+      "eyebrow": "兽圈档案",
+      "title": "向 GoFurry 知识库提问",
+      "description": "输入一个具体问题，系统会从已整理的资料中寻找依据，并把回答和引用片段一起返回。"
+    },
+    "sections": {
+      "question": "问题",
+      "answer": "回答",
+      "sources": "引用"
+    },
+    "status": {
+      "streaming": "生成中",
+      "requestFailed": "请求失败"
+    },
+    "sources": {
+      "count": "{count} 条",
+      "document": "文档 {id}",
+      "chunk": "Chunk {index}",
+      "noContent": "该引用没有返回原文片段。",
+      "open": "打开来源"
+    },
+    "queue": {
+      "unknown": "队列未知",
+      "status": "推理 {active}/{max} · 排队 {queued}"
+    },
+    "errors": {
+      "requestFailedWithStatus": "请求失败：{status}",
+      "serviceUnavailable": "问答服务暂时不可用",
+      "serviceReturnedError": "问答服务返回错误"
+    },
+    "guide": {
+      "eyebrow": "使用说明",
+      "title": "GoFurry RAG 使用文档",
+      "description": "这里会根据 GoFurry 已入库资料进行检索和回答。回答会优先基于引用片段，不适合作为事实之外的自由聊天工具。",
+      "usageTitle": "使用方式",
+      "usageDesc": "输入问题后系统会先检索知识库，再流式生成答案。历史记录只保存在当前浏览器本地，最多保留 50 条。",
+      "boundaryTitle": "知识边界",
+      "boundaryDesc": "如果知识库没有覆盖相关内容，回答可能会提示资料不足。引用里的原文片段是判断答案依据的主要材料。",
+      "noticeTitle": "用户须知",
+      "noticeDesc": "请不要提交隐私、账号、密钥等敏感信息。页面没有用户系统，换浏览器或清理本地数据后历史记录会消失。"
     }
   }
 }
