@@ -12,6 +12,11 @@ import (
 	"github.com/GoFurry/gofurry-rag/internal/tencentmaas"
 )
 
+const (
+	minPromptBudgetRunes = 8000
+	maxPromptBudgetRunes = 20000
+)
+
 type chatClient interface {
 	Model() string
 	Configured() bool
@@ -123,7 +128,7 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 		},
 	}
 	if len(sources) == 0 {
-		response.Answer = "当前资料中没有找到足够相关的信息。"
+		response.Answer = formatStructuredAnswer("当前资料中没有找到足够相关的信息。", nil, false)
 		if err := emitStatus("completed", "检索完成，未找到足够资料"); err != nil {
 			return QueryResponse{}, err
 		}
@@ -140,7 +145,7 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 	if err := emitStatus("generating", "正在生成回答"); err != nil {
 		return QueryResponse{}, err
 	}
-	messages := buildChatMessages(req.Question, sources)
+	messages, usedSources := buildChatMessages(req.Question, sources, promptBudgetForTokens(s.cfg.TencentMaxTokens))
 
 	var completion tencentmaas.CompletionResult
 	if callbacks.Delta != nil {
@@ -166,10 +171,7 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 	if response.Usage.AnswerModel == "" {
 		response.Usage.AnswerModel = s.chat.Model()
 	}
-	response.Answer = strings.TrimSpace(completion.Answer)
-	if response.Answer == "" {
-		response.Answer = "当前资料中没有找到足够相关的信息。"
-	}
+	response.Answer = formatStructuredAnswer(strings.TrimSpace(completion.Answer), usedSources, len(usedSources) < len(sources))
 	response.Usage.PromptTokens = completion.PromptTokens
 	response.Usage.CompletionTokens = completion.CompletionTokens
 	response.Usage.TotalTokens = completion.TotalTokens
@@ -183,6 +185,7 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 		"elapsed_ms", time.Since(startedAt).Milliseconds(),
 		"top_k", topK,
 		"source_count", len(sources),
+		"used_source_count", len(usedSources),
 		"embedding_model", s.embedder.Model(),
 		"answer_model", response.Usage.AnswerModel,
 		"prompt_tokens", response.Usage.PromptTokens,
@@ -191,46 +194,197 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 	return response, nil
 }
 
-func buildChatMessages(question string, sources []db.Source) []tencentmaas.Message {
+func buildChatMessages(question string, sources []db.Source, budgetRunes int) ([]tencentmaas.Message, []db.Source) {
 	var builder strings.Builder
-	builder.WriteString("你是 GoFurry RAG 控制台里的知识问答助手。\n")
-	builder.WriteString("你必须严格依据用户问题和检索资料作答，不要编造，不要超出资料内容。\n")
-	builder.WriteString("如果资料不足以支撑回答，请直接回复：当前资料中没有找到足够相关的信息。\n")
-	builder.WriteString("回答请使用简洁中文；如果需要引用资料，请使用 [1]、[2] 这样的编号标注。\n\n")
-	builder.WriteString("用户问题：\n")
-	builder.WriteString(question)
-	builder.WriteString("\n\n检索资料：\n")
+	budget := newRuneBudget(budgetRunes)
+	usedSources := make([]db.Source, 0, len(sources))
+
+	writeLine := func(text string) bool {
+		return budget.writeLine(&builder, text)
+	}
+
+	writeLine("问题：")
+	writeLine(question)
+	writeLine("")
+	writeLine("资料：")
+
 	for i, source := range sources {
-		builder.WriteString(fmt.Sprintf("[%d] %s\n", i+1, trimLine(source.Title)))
+		if !writeLine(fmt.Sprintf("[%d] %s", i+1, trimLine(source.Title))) {
+			break
+		}
 		if source.SourceType != "" || source.SourceID != "" {
-			builder.WriteString("来源：")
-			builder.WriteString(trimLine(source.SourceType))
-			if source.SourceID != "" {
-				builder.WriteString(" / ")
-				builder.WriteString(trimLine(source.SourceID))
+			if !writeLine(formatSourceOrigin(source)) {
+				usedSources = append(usedSources, source)
+				break
 			}
-			builder.WriteString("\n")
 		}
 		if source.URL != "" {
-			builder.WriteString("URL：")
-			builder.WriteString(trimLine(source.URL))
-			builder.WriteString("\n")
+			if !writeLine("URL：" + trimLine(source.URL)) {
+				usedSources = append(usedSources, source)
+				break
+			}
 		}
-		builder.WriteString(fmt.Sprintf("文档ID：%d，ChunkID：%d，ChunkIndex：%d，Score：%.4f，Token：%d\n", source.DocumentID, source.ChunkID, source.ChunkIndex, source.Score, source.TokenCount))
-		builder.WriteString("内容：\n")
-		builder.WriteString(strings.TrimSpace(source.Content))
-		builder.WriteString("\n\n")
+		if !writeLine(fmt.Sprintf("文档ID：%d，ChunkID：%d，ChunkIndex：%d，Score：%.4f，Token：%d", source.DocumentID, source.ChunkID, source.ChunkIndex, source.Score, source.TokenCount)) {
+			usedSources = append(usedSources, source)
+			break
+		}
+		if !writeLine("内容：") {
+			usedSources = append(usedSources, source)
+			break
+		}
+		if !budget.writeText(&builder, strings.TrimSpace(source.Content)) {
+			usedSources = append(usedSources, source)
+			break
+		}
+		writeLine("")
+		usedSources = append(usedSources, source)
 	}
+
+	if budget.truncated {
+		writeLine("")
+		writeLine("注：资料已按长度预算截断，未展示的资料不会进入模型上下文。")
+	}
+
+	systemPrompt := "你是 GoFurry RAG 控制台里的检索问答助手。\n" +
+		"你只能依据我提供的资料回答，不要编造，不要补充资料外的信息。\n" +
+		"请只输出答案内容，不要自行输出引用段。\n" +
+		"如果资料不足，请直接回答：当前资料中没有找到足够相关的信息。"
+
 	return []tencentmaas.Message{
 		{
 			Role:    "system",
-			Content: "你是一个基于检索资料回答问题的助手。",
+			Content: systemPrompt,
 		},
 		{
 			Role:    "user",
 			Content: builder.String(),
 		},
+	}, usedSources
+}
+
+func formatStructuredAnswer(answer string, sources []db.Source, truncated bool) string {
+	answer = strings.TrimSpace(answer)
+	if answer == "" {
+		answer = "当前资料中没有找到足够相关的信息。"
 	}
+
+	var builder strings.Builder
+	builder.WriteString("答案：\n")
+	builder.WriteString(answer)
+	builder.WriteString("\n\n引用：\n")
+	if len(sources) == 0 {
+		builder.WriteString("无\n")
+	} else {
+		for i, source := range sources {
+			builder.WriteString(fmt.Sprintf("- [%d] %s\n", i+1, citationSummary(source)))
+		}
+	}
+	if truncated {
+		builder.WriteString("注：引用已按长度预算截断。\n")
+	}
+	return strings.TrimSpace(builder.String())
+}
+
+func citationSummary(source db.Source) string {
+	parts := make([]string, 0, 4)
+	if title := trimLine(source.Title); title != "" {
+		parts = append(parts, title)
+	}
+	meta := make([]string, 0, 2)
+	if source.SourceType != "" {
+		meta = append(meta, trimLine(source.SourceType))
+	}
+	if source.SourceID != "" {
+		meta = append(meta, trimLine(source.SourceID))
+	}
+	if len(meta) > 0 {
+		parts = append(parts, strings.Join(meta, "/"))
+	}
+	parts = append(parts, fmt.Sprintf("文档%d / Chunk%d / Score %.4f / Token %d", source.DocumentID, source.ChunkIndex, source.Score, source.TokenCount))
+	if source.URL != "" {
+		parts = append(parts, trimLine(source.URL))
+	}
+	return strings.Join(parts, " | ")
+}
+
+func formatSourceOrigin(source db.Source) string {
+	if source.SourceType == "" && source.SourceID == "" {
+		return ""
+	}
+	if source.SourceID == "" {
+		return "来源：" + trimLine(source.SourceType)
+	}
+	if source.SourceType == "" {
+		return "来源：" + trimLine(source.SourceID)
+	}
+	return "来源：" + trimLine(source.SourceType) + " / " + trimLine(source.SourceID)
+}
+
+func promptBudgetForTokens(maxTokens int) int {
+	if maxTokens <= 0 {
+		maxTokens = 1024
+	}
+	budget := maxTokens * 6
+	if budget < minPromptBudgetRunes {
+		budget = minPromptBudgetRunes
+	}
+	if budget > maxPromptBudgetRunes {
+		budget = maxPromptBudgetRunes
+	}
+	return budget
+}
+
+type runeBudget struct {
+	limit     int
+	used      int
+	truncated bool
+}
+
+func newRuneBudget(limit int) *runeBudget {
+	return &runeBudget{limit: limit}
+}
+
+func (b *runeBudget) remaining() int {
+	if b.limit <= 0 {
+		return int(^uint(0) >> 1)
+	}
+	if remaining := b.limit - b.used; remaining > 0 {
+		return remaining
+	}
+	b.truncated = true
+	return 0
+}
+
+func (b *runeBudget) writeLine(builder *strings.Builder, text string) bool {
+	return b.writeText(builder, text+"\n")
+}
+
+func (b *runeBudget) writeText(builder *strings.Builder, text string) bool {
+	if text == "" {
+		return true
+	}
+	remaining := b.remaining()
+	if remaining <= 0 {
+		return false
+	}
+	runes := []rune(text)
+	if len(runes) <= remaining {
+		builder.WriteString(text)
+		b.used += len(runes)
+		return true
+	}
+	if remaining <= 3 {
+		builder.WriteString(string(runes[:remaining]))
+		b.used += remaining
+		b.truncated = true
+		return false
+	}
+	keep := remaining - 3
+	builder.WriteString(string(runes[:keep]))
+	builder.WriteString("...")
+	b.used += remaining
+	b.truncated = true
+	return false
 }
 
 func trimLine(value string) string {

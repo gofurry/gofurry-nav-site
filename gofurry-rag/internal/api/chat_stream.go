@@ -27,6 +27,11 @@ func (s *Server) chatStream(c fiber.Ctx) error {
 	c.Set("X-Accel-Buffering", "no")
 
 	return c.SendStreamWriter(func(w *bufio.Writer) {
+		ctx := c.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+
 		writeEvent := func(event string, payload any) error {
 			if event != "" {
 				if _, err := fmt.Fprintf(w, "event: %s\n", event); err != nil {
@@ -68,7 +73,7 @@ func (s *Server) chatStream(c fiber.Ctx) error {
 			},
 		}
 
-		response, err := s.service.StreamQuery(context.Background(), req, callbacks)
+		response, err := s.service.StreamQuery(ctx, req, callbacks)
 		if err != nil {
 			_ = writeEvent("error", fiber.Map{
 				"message": err.Error(),

@@ -107,3 +107,32 @@ func TestClientErrorResponse(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestClientHealthProbe(t *testing.T) {
+	var got requestPayload
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if auth := r.Header.Get("Authorization"); auth != "Bearer secret" {
+			t.Fatalf("authorization = %q", auth)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+			t.Fatal(err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"id":"1","object":"chat.completion","model":"deepseek-v4-flash","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens_details":{"reasoning_tokens":0}}}`)
+	}))
+	defer server.Close()
+
+	client := New(server.URL+"/v1", "secret", "deepseek-v4-flash", time.Second, 0.2, 0.8, 1024, "low")
+	if err := client.Health(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got.Stream {
+		t.Fatalf("health probe should not stream: %+v", got)
+	}
+	if got.MaxTokens != 1 {
+		t.Fatalf("health probe max_tokens = %d", got.MaxTokens)
+	}
+	if len(got.Messages) != 2 || got.Messages[1].Content != "ping" {
+		t.Fatalf("health probe messages = %+v", got.Messages)
+	}
+}

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/GoFurry/gofurry-rag/config"
@@ -16,17 +17,17 @@ func TestUpdateChunkUsesEmbeddingInputTemplate(t *testing.T) {
 	embedder := &serviceEmbedder{}
 	svc := New(repo, embedder, &fakeChat{configured: false}, config.Config{}, nil)
 
-	chunk, err := svc.UpdateChunk(context.Background(), 7, UpdateChunkRequest{Content: "鏇存柊鍚庣殑鍐呭"})
+	chunk, err := svc.UpdateChunk(context.Background(), 7, UpdateChunkRequest{Content: "updated content"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if chunk.Content != "鏇存柊鍚庣殑鍐呭" {
+	if chunk.Content != "updated content" {
 		t.Fatalf("chunk = %+v", chunk)
 	}
-	if len(embedder.inputs) != 1 || embedder.inputs[0] == "鏇存柊鍚庣殑鍐呭" {
+	if len(embedder.inputs) != 1 || embedder.inputs[0] == "updated content" {
 		t.Fatalf("embedding input was not templated: %#v", embedder.inputs)
 	}
-	if want := "Title: GoFurry"; !contains(embedder.inputs[0], want) {
+	if want := "Title: GoFurry"; !strings.Contains(embedder.inputs[0], want) {
 		t.Fatalf("missing %q in %q", want, embedder.inputs[0])
 	}
 }
@@ -71,7 +72,13 @@ func TestQueryReturnsAnswerAndSources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Answer == "" || result.Usage.AnswerModel != "deepseek-v4-flash" {
+	if !strings.Contains(result.Answer, "答案：") || !strings.Contains(result.Answer, "引用：") {
+		t.Fatalf("result = %+v", result)
+	}
+	if !strings.Contains(result.Answer, "[1]") {
+		t.Fatalf("result = %+v", result)
+	}
+	if result.Usage.AnswerModel != "deepseek-v4-flash" {
 		t.Fatalf("result = %+v", result)
 	}
 	if len(result.Sources) != 1 || result.Sources[0].ChunkID != 2 {
@@ -79,6 +86,9 @@ func TestQueryReturnsAnswerAndSources(t *testing.T) {
 	}
 	if chat.completeCalls != 1 {
 		t.Fatalf("completeCalls = %d", chat.completeCalls)
+	}
+	if len(chat.lastMessages) != 2 || !strings.Contains(chat.lastMessages[1].Content, "资料：") {
+		t.Fatalf("messages = %+v", chat.lastMessages)
 	}
 }
 
@@ -89,11 +99,49 @@ func TestQueryReturnsNoSourcesMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Answer != "当前资料中没有找到足够相关的信息。" {
+	if !strings.Contains(result.Answer, "答案：") || !strings.Contains(result.Answer, "引用：") || !strings.Contains(result.Answer, "无") {
 		t.Fatalf("answer = %q", result.Answer)
 	}
 	if chat.completeCalls != 0 {
 		t.Fatalf("completeCalls = %d", chat.completeCalls)
+	}
+}
+
+func TestBuildChatMessagesTruncatesSources(t *testing.T) {
+	sources := []db.Source{
+		{
+			DocumentID: 1,
+			ChunkID:    11,
+			SourceType: "manual",
+			SourceID:   "about",
+			Title:      "Alpha",
+			ChunkIndex: 0,
+			TokenCount: 20,
+			Score:      0.99,
+			Content:    strings.Repeat("甲", 600),
+		},
+		{
+			DocumentID: 2,
+			ChunkID:    22,
+			SourceType: "manual",
+			SourceID:   "faq",
+			Title:      "Beta",
+			ChunkIndex: 1,
+			TokenCount: 20,
+			Score:      0.88,
+			Content:    strings.Repeat("乙", 600),
+		},
+	}
+
+	messages, usedSources := buildChatMessages("What is GoFurry?", sources, 220)
+	if len(messages) != 2 {
+		t.Fatalf("messages = %+v", messages)
+	}
+	if !strings.Contains(messages[1].Content, "问题：") || !strings.Contains(messages[1].Content, "资料：") {
+		t.Fatalf("prompt = %q", messages[1].Content)
+	}
+	if len(usedSources) == len(sources) {
+		t.Fatalf("expected truncation, usedSources = %+v", usedSources)
 	}
 }
 
@@ -192,20 +240,12 @@ func (e *serviceEmbedder) Health(ctx context.Context) error { return nil }
 
 func (e *serviceEmbedder) Model() string { return "fake" }
 
-func contains(text, needle string) bool {
-	for i := 0; i+len(needle) <= len(text); i++ {
-		if text[i:i+len(needle)] == needle {
-			return true
-		}
-	}
-	return false
-}
-
 type fakeChat struct {
 	configured    bool
 	model         string
 	answer        string
 	streamPieces  []string
+	lastMessages  []tencentmaas.Message
 	completeCalls int
 	streamCalls   int
 }
@@ -225,8 +265,9 @@ func (f *fakeChat) Health(ctx context.Context) error {
 	return nil
 }
 
-func (f *fakeChat) Complete(ctx context.Context, _ []tencentmaas.Message) (tencentmaas.CompletionResult, error) {
+func (f *fakeChat) Complete(ctx context.Context, messages []tencentmaas.Message) (tencentmaas.CompletionResult, error) {
 	f.completeCalls++
+	f.lastMessages = append([]tencentmaas.Message(nil), messages...)
 	return tencentmaas.CompletionResult{
 		Model:            f.Model(),
 		Answer:           f.answer,
@@ -238,8 +279,9 @@ func (f *fakeChat) Complete(ctx context.Context, _ []tencentmaas.Message) (tence
 	}, nil
 }
 
-func (f *fakeChat) Stream(ctx context.Context, _ []tencentmaas.Message, onDelta func(string) error) (tencentmaas.CompletionResult, error) {
+func (f *fakeChat) Stream(ctx context.Context, messages []tencentmaas.Message, onDelta func(string) error) (tencentmaas.CompletionResult, error) {
 	f.streamCalls++
+	f.lastMessages = append([]tencentmaas.Message(nil), messages...)
 	pieces := f.streamPieces
 	if len(pieces) == 0 {
 		pieces = []string{"GoFurry", " is", " a site."}

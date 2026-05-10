@@ -134,6 +134,34 @@ func (c *Client) Health(ctx context.Context) error {
 	if !c.Configured() {
 		return ErrNotConfigured
 	}
+	probeTimeout := c.timeout
+	if probeTimeout > 5*time.Second {
+		probeTimeout = 5 * time.Second
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+
+	resp, err := c.doRequest(probeCtx, requestPayload{
+		Model:           c.model,
+		Messages:        []Message{{Role: "system", Content: "You are a helpful assistant."}, {Role: "user", Content: "ping"}},
+		Stream:          false,
+		Temperature:     0,
+		TopP:            1,
+		MaxTokens:       1,
+		ReasoningEffort: c.reasoningEffort,
+	})
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return readErrorResponse(resp.Body, resp.StatusCode)
+	}
+
+	var decoded completionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil {
+		return err
+	}
 	return nil
 }
 
