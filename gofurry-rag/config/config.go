@@ -42,23 +42,28 @@ type Config struct {
 	Auth       AuthConfig       `mapstructure:"auth" yaml:"auth"`
 	RAG        RAGConfig        `mapstructure:"rag" yaml:"rag"`
 
-	AppName         string `mapstructure:"-" yaml:"-"`
-	AppEnv          string `mapstructure:"-" yaml:"-"`
-	AppAddr         string `mapstructure:"-" yaml:"-"`
-	AdminToken      string `mapstructure:"-" yaml:"-"`
-	ConsolePasscode string `mapstructure:"-" yaml:"-"`
-	JWTSecret       string `mapstructure:"-" yaml:"-"`
-	AuthCookieName  string `mapstructure:"-" yaml:"-"`
-	SessionTTLHours int    `mapstructure:"-" yaml:"-"`
-	DatabaseDSN     string `mapstructure:"-" yaml:"-"`
-	OllamaBaseURL   string `mapstructure:"-" yaml:"-"`
-	EmbedModel      string `mapstructure:"-" yaml:"-"`
-	EmbedDim        int    `mapstructure:"-" yaml:"-"`
-	ChunkSize       int    `mapstructure:"-" yaml:"-"`
-	ChunkOverlap    int    `mapstructure:"-" yaml:"-"`
-	TopK            int    `mapstructure:"-" yaml:"-"`
-	IngestWorkers   int    `mapstructure:"-" yaml:"-"`
-	EmbedBatchSize  int    `mapstructure:"-" yaml:"-"`
+	AppName               string `mapstructure:"-" yaml:"-"`
+	AppEnv                string `mapstructure:"-" yaml:"-"`
+	AppAddr               string `mapstructure:"-" yaml:"-"`
+	AdminToken            string `mapstructure:"-" yaml:"-"`
+	ConsolePasscode       string `mapstructure:"-" yaml:"-"`
+	JWTSecret             string `mapstructure:"-" yaml:"-"`
+	AuthCookieName        string `mapstructure:"-" yaml:"-"`
+	SessionTTLHours       int    `mapstructure:"-" yaml:"-"`
+	DatabaseDSN           string `mapstructure:"-" yaml:"-"`
+	OllamaBaseURL         string `mapstructure:"-" yaml:"-"`
+	EmbedModel            string `mapstructure:"-" yaml:"-"`
+	EmbedDim              int    `mapstructure:"-" yaml:"-"`
+	ChunkSize             int    `mapstructure:"-" yaml:"-"`
+	ChunkOverlap          int    `mapstructure:"-" yaml:"-"`
+	TopK                  int    `mapstructure:"-" yaml:"-"`
+	QueryTimeoutSeconds   int    `mapstructure:"-" yaml:"-"`
+	EmbedTimeoutSeconds   int    `mapstructure:"-" yaml:"-"`
+	IngestTimeoutSeconds  int    `mapstructure:"-" yaml:"-"`
+	MaxQueryQuestionRunes int    `mapstructure:"-" yaml:"-"`
+	MaxQueryTopK          int    `mapstructure:"-" yaml:"-"`
+	IngestWorkers         int    `mapstructure:"-" yaml:"-"`
+	EmbedBatchSize        int    `mapstructure:"-" yaml:"-"`
 }
 
 type ServerConfig struct {
@@ -196,14 +201,19 @@ type AuthConfig struct {
 }
 
 type RAGConfig struct {
-	OllamaBaseURL  string `mapstructure:"ollama_base_url" yaml:"ollama_base_url"`
-	EmbedModel     string `mapstructure:"embed_model" yaml:"embed_model"`
-	EmbedDim       int    `mapstructure:"embed_dim" yaml:"embed_dim"`
-	ChunkSize      int    `mapstructure:"chunk_size" yaml:"chunk_size"`
-	ChunkOverlap   int    `mapstructure:"chunk_overlap" yaml:"chunk_overlap"`
-	TopK           int    `mapstructure:"top_k" yaml:"top_k"`
-	IngestWorkers  int    `mapstructure:"ingest_workers" yaml:"ingest_workers"`
-	EmbedBatchSize int    `mapstructure:"embed_batch_size" yaml:"embed_batch_size"`
+	OllamaBaseURL         string `mapstructure:"ollama_base_url" yaml:"ollama_base_url"`
+	EmbedModel            string `mapstructure:"embed_model" yaml:"embed_model"`
+	EmbedDim              int    `mapstructure:"embed_dim" yaml:"embed_dim"`
+	ChunkSize             int    `mapstructure:"chunk_size" yaml:"chunk_size"`
+	ChunkOverlap          int    `mapstructure:"chunk_overlap" yaml:"chunk_overlap"`
+	TopK                  int    `mapstructure:"top_k" yaml:"top_k"`
+	QueryTimeoutSeconds   int    `mapstructure:"query_timeout_seconds" yaml:"query_timeout_seconds"`
+	EmbedTimeoutSeconds   int    `mapstructure:"embed_timeout_seconds" yaml:"embed_timeout_seconds"`
+	IngestTimeoutSeconds  int    `mapstructure:"ingest_timeout_seconds" yaml:"ingest_timeout_seconds"`
+	MaxQueryQuestionRunes int    `mapstructure:"max_query_question_runes" yaml:"max_query_question_runes"`
+	MaxQueryTopK          int    `mapstructure:"max_query_top_k" yaml:"max_query_top_k"`
+	IngestWorkers         int    `mapstructure:"ingest_workers" yaml:"ingest_workers"`
+	EmbedBatchSize        int    `mapstructure:"embed_batch_size" yaml:"embed_batch_size"`
 }
 
 func ConfigureServerConfig(projectName, fileName, configFile string) {
@@ -498,6 +508,11 @@ func (cfg *Config) fillCompatibilityFields() {
 	cfg.ChunkSize = cfg.RAG.ChunkSize
 	cfg.ChunkOverlap = cfg.RAG.ChunkOverlap
 	cfg.TopK = cfg.RAG.TopK
+	cfg.QueryTimeoutSeconds = cfg.RAG.QueryTimeoutSeconds
+	cfg.EmbedTimeoutSeconds = cfg.RAG.EmbedTimeoutSeconds
+	cfg.IngestTimeoutSeconds = cfg.RAG.IngestTimeoutSeconds
+	cfg.MaxQueryQuestionRunes = cfg.RAG.MaxQueryQuestionRunes
+	cfg.MaxQueryTopK = cfg.RAG.MaxQueryTopK
 	cfg.IngestWorkers = cfg.RAG.IngestWorkers
 	cfg.EmbedBatchSize = cfg.RAG.EmbedBatchSize
 }
@@ -581,6 +596,21 @@ func (cfg *RAGConfig) normalize() {
 	}
 	if cfg.TopK <= 0 {
 		cfg.TopK = 6
+	}
+	if cfg.QueryTimeoutSeconds <= 0 {
+		cfg.QueryTimeoutSeconds = 20
+	}
+	if cfg.EmbedTimeoutSeconds <= 0 {
+		cfg.EmbedTimeoutSeconds = 45
+	}
+	if cfg.IngestTimeoutSeconds <= 0 {
+		cfg.IngestTimeoutSeconds = 300
+	}
+	if cfg.MaxQueryQuestionRunes <= 0 {
+		cfg.MaxQueryQuestionRunes = 4000
+	}
+	if cfg.MaxQueryTopK <= 0 {
+		cfg.MaxQueryTopK = 12
 	}
 	if cfg.IngestWorkers <= 0 {
 		cfg.IngestWorkers = 1
@@ -671,6 +701,11 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("rag.chunk_size", 700)
 	v.SetDefault("rag.chunk_overlap", 120)
 	v.SetDefault("rag.top_k", 6)
+	v.SetDefault("rag.query_timeout_seconds", 20)
+	v.SetDefault("rag.embed_timeout_seconds", 45)
+	v.SetDefault("rag.ingest_timeout_seconds", 300)
+	v.SetDefault("rag.max_query_question_runes", 4000)
+	v.SetDefault("rag.max_query_top_k", 12)
 	v.SetDefault("rag.ingest_workers", 1)
 	v.SetDefault("rag.embed_batch_size", 8)
 }

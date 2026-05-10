@@ -98,18 +98,31 @@ type PageResult[T any] struct {
 }
 
 type Overview struct {
-	DocumentTotal          int64      `json:"document_total"`
-	ChunkTotal             int64      `json:"chunk_total"`
-	EmbeddedChunkTotal     int64      `json:"embedded_chunk_total"`
-	PendingDocuments       int64      `json:"pending_documents"`
-	ProcessingDocuments    int64      `json:"processing_documents"`
-	ReadyDocuments         int64      `json:"ready_documents"`
-	FailedDocuments        int64      `json:"failed_documents"`
-	QueueDocuments         int64      `json:"queue_documents"`
-	RecentFailureMessage   string     `json:"recent_failure_message,omitempty"`
-	RecentFailureAt        *time.Time `json:"recent_failure_at,omitempty"`
-	RecentFailedDocumentID *int64     `json:"recent_failed_document_id,omitempty"`
-	LastDocumentUpdateAt   *time.Time `json:"last_document_update_at,omitempty"`
+	DocumentTotal           int64      `json:"document_total"`
+	ChunkTotal              int64      `json:"chunk_total"`
+	EmbeddedChunkTotal      int64      `json:"embedded_chunk_total"`
+	PendingDocuments        int64      `json:"pending_documents"`
+	ProcessingDocuments     int64      `json:"processing_documents"`
+	ReadyDocuments          int64      `json:"ready_documents"`
+	FailedDocuments         int64      `json:"failed_documents"`
+	QueueDocuments          int64      `json:"queue_documents"`
+	RecentFailureMessage    string     `json:"recent_failure_message,omitempty"`
+	RecentFailureAt         *time.Time `json:"recent_failure_at,omitempty"`
+	RecentFailedDocumentID  *int64     `json:"recent_failed_document_id,omitempty"`
+	LastDocumentUpdateAt    *time.Time `json:"last_document_update_at,omitempty"`
+	WorkerState             string     `json:"worker_state,omitempty"`
+	WorkerActiveWorkers     int        `json:"worker_active_workers,omitempty"`
+	WorkerCurrentDocumentID *int64     `json:"worker_current_document_id,omitempty"`
+	WorkerLastDocumentID    *int64     `json:"worker_last_document_id,omitempty"`
+	WorkerTotalProcessed    int64      `json:"worker_total_processed,omitempty"`
+	WorkerTotalFailed       int64      `json:"worker_total_failed,omitempty"`
+	WorkerLastDurationMs    int64      `json:"worker_last_duration_ms,omitempty"`
+	WorkerAverageDurationMs float64    `json:"worker_average_duration_ms,omitempty"`
+	WorkerRecentError       string     `json:"worker_recent_error,omitempty"`
+	WorkerRecentErrorAt     *time.Time `json:"worker_recent_error_at,omitempty"`
+	WorkerLastSuccessAt     *time.Time `json:"worker_last_success_at,omitempty"`
+	WorkerLastStartedAt     *time.Time `json:"worker_last_started_at,omitempty"`
+	WorkerLastCompletedAt   *time.Time `json:"worker_last_completed_at,omitempty"`
 }
 
 type BatchDocumentFilter struct {

@@ -23,7 +23,7 @@
 - 检索接口公开，只返回 `sources`，并提供 rank、score、来源和 chunk 调试字段；支持按 `source_type`、`document_ids`、`category`、`language` 过滤；暂不生成自然语言答案
 - 控制台支持 chunk 参数切分预览，不调用 Ollama、不写数据库
 - 向量化输入会包含标题和来源上下文，展示和保存的 chunk 内容仍保持原文
-- 控制台整体态势自动刷新，展示文档、chunk、失败摘要、队列规模、数据库和 Ollama 状态
+- 控制台整体态势自动刷新，展示文档、chunk、失败摘要、worker 状态、队列规模、数据库和 Ollama 状态
 
 ## 快速开始
 
@@ -101,6 +101,7 @@ APP_SERVER_PORT=8081 APP_RAG_OLLAMA_BASE_URL=http://127.0.0.1:11434 go run . --c
 - [使用说明](./docs/zh/usage.md)
 - [Roadmap](./docs/zh/roadmap.md)
 - [冒烟测试](./docs/zh/smoke-test.md)
+- [systemd 部署与回滚](./docs/zh/deployment.md)
 - [MVP 设计](./docs/rag-design.md)
 
 ## 许可证

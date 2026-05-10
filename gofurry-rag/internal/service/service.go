@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/GoFurry/gofurry-rag/config"
@@ -36,6 +38,11 @@ type Service struct {
 	repo     Repository
 	embedder embedder.Client
 	cfg      config.Config
+	worker   workerStatusProvider
+}
+
+type workerStatusProvider interface {
+	Status() ingest.WorkerStatus
 }
 
 type TextDocumentRequest struct {
@@ -121,8 +128,8 @@ type QueryUsage struct {
 	EmbeddingModel string `json:"embedding_model"`
 }
 
-func New(repo Repository, embedder embedder.Client, cfg config.Config) *Service {
-	return &Service{repo: repo, embedder: embedder, cfg: cfg}
+func New(repo Repository, embedder embedder.Client, cfg config.Config, worker workerStatusProvider) *Service {
+	return &Service{repo: repo, embedder: embedder, cfg: cfg, worker: worker}
 }
 
 func (s *Service) Health(ctx context.Context) map[string]any {
@@ -143,6 +150,24 @@ func (s *Service) Health(ctx context.Context) map[string]any {
 			"embed_dim": s.cfg.EmbedDim,
 			"healthy":   true,
 		},
+	}
+	if s.worker != nil {
+		status := s.worker.Status()
+		result["worker"] = map[string]any{
+			"state":                   status.State,
+			"active_workers":          status.ActiveWorkers,
+			"total_processed":         status.TotalProcessed,
+			"total_failed":            status.TotalFailed,
+			"last_duration_ms":        status.LastDurationMs,
+			"average_duration_ms":     status.AverageDurationMs,
+			"recent_error":            status.RecentError,
+			"recent_error_at":         status.RecentErrorAt,
+			"last_success_at":         status.LastSuccessAt,
+			"last_started_at":         status.LastStartedAt,
+			"last_completed_at":       status.LastCompletedAt,
+			"current_document_id":     status.CurrentDocumentID,
+			"current_embedding_model": status.CurrentEmbeddingModel,
+		}
 	}
 	if err := s.repo.Ping(ctx); err != nil {
 		result["status"] = "degraded"
@@ -238,10 +263,28 @@ func (s *Service) UpdateChunk(ctx context.Context, id int64, req UpdateChunkRequ
 	if err != nil {
 		return db.Chunk{}, err
 	}
-	embeddings, err := s.embedder.Embed(ctx, []string{ingest.BuildEmbeddingInput(doc, content)})
+	embedCtx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.EmbedTimeoutSeconds)*time.Second)
+	defer cancel()
+	slog.InfoContext(embedCtx, "chunk embedding start",
+		"document_id", doc.ID,
+		"chunk_id", id,
+		"model", s.embedder.Model(),
+	)
+	embeddings, err := s.embedder.Embed(embedCtx, []string{ingest.BuildEmbeddingInput(doc, content)})
 	if err != nil {
+		slog.ErrorContext(embedCtx, "chunk embedding failed",
+			"document_id", doc.ID,
+			"chunk_id", id,
+			"model", s.embedder.Model(),
+			"error", err,
+		)
 		return db.Chunk{}, err
 	}
+	slog.InfoContext(embedCtx, "chunk embedding complete",
+		"document_id", doc.ID,
+		"chunk_id", id,
+		"model", s.embedder.Model(),
+	)
 	return s.repo.UpdateChunkContent(ctx, id, content, ingest.Checksum(content), len([]rune(content)), embeddings[0])
 }
 
@@ -311,7 +354,27 @@ func (s *Service) DeleteDocument(ctx context.Context, id int64) error {
 }
 
 func (s *Service) Overview(ctx context.Context) (db.Overview, error) {
-	return s.repo.Overview(ctx)
+	overview, err := s.repo.Overview(ctx)
+	if err != nil {
+		return db.Overview{}, err
+	}
+	if s.worker != nil {
+		status := s.worker.Status()
+		overview.WorkerState = status.State
+		overview.WorkerActiveWorkers = status.ActiveWorkers
+		overview.WorkerCurrentDocumentID = status.CurrentDocumentID
+		overview.WorkerLastDocumentID = status.LastDocumentID
+		overview.WorkerTotalProcessed = status.TotalProcessed
+		overview.WorkerTotalFailed = status.TotalFailed
+		overview.WorkerLastDurationMs = status.LastDurationMs
+		overview.WorkerAverageDurationMs = status.AverageDurationMs
+		overview.WorkerRecentError = status.RecentError
+		overview.WorkerRecentErrorAt = status.RecentErrorAt
+		overview.WorkerLastSuccessAt = status.LastSuccessAt
+		overview.WorkerLastStartedAt = status.LastStartedAt
+		overview.WorkerLastCompletedAt = status.LastCompletedAt
+	}
+	return overview, nil
 }
 
 func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, error) {
@@ -319,23 +382,56 @@ func (s *Service) Query(ctx context.Context, req QueryRequest) (QueryResponse, e
 	if req.Question == "" {
 		return QueryResponse{}, wrapValidation("question is required")
 	}
+	if limit := s.cfg.MaxQueryQuestionRunes; limit > 0 && utf8.RuneCountInString(req.Question) > limit {
+		return QueryResponse{}, wrapValidation("question exceeds the maximum length")
+	}
 	topK := req.TopK
 	if topK <= 0 {
 		topK = s.cfg.TopK
 	}
-	embeddings, err := s.embedder.Embed(ctx, []string{req.Question})
+	if maxTopK := s.cfg.MaxQueryTopK; maxTopK > 0 && topK > maxTopK {
+		return QueryResponse{}, wrapValidation("top_k exceeds the maximum limit")
+	}
+	queryCtx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.QueryTimeoutSeconds)*time.Second)
+	defer cancel()
+	startedAt := time.Now()
+	slog.InfoContext(queryCtx, "query start",
+		"question_runes", utf8.RuneCountInString(req.Question),
+		"top_k", topK,
+		"query_timeout_seconds", s.cfg.QueryTimeoutSeconds,
+		"embedding_model", s.embedder.Model(),
+	)
+	embeddings, err := s.embedder.Embed(queryCtx, []string{req.Question})
 	if err != nil {
+		slog.ErrorContext(queryCtx, "query embedding failed",
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+			"top_k", topK,
+			"embedding_model", s.embedder.Model(),
+			"error", err,
+		)
 		return QueryResponse{}, err
 	}
-	sources, err := s.repo.SearchChunks(ctx, embeddings[0], topK, db.BatchDocumentFilter{
+	sources, err := s.repo.SearchChunks(queryCtx, embeddings[0], topK, db.BatchDocumentFilter{
 		DocumentIDs: cleanDocumentIDs(req.Filters.DocumentIDs),
 		SourceTypes: cleanStrings(req.Filters.SourceType),
 		Categories:  cleanStrings(req.Filters.Category),
 		Languages:   cleanStrings(req.Filters.Language),
 	})
 	if err != nil {
+		slog.ErrorContext(queryCtx, "query search failed",
+			"elapsed_ms", time.Since(startedAt).Milliseconds(),
+			"top_k", topK,
+			"embedding_model", s.embedder.Model(),
+			"error", err,
+		)
 		return QueryResponse{}, err
 	}
+	slog.InfoContext(queryCtx, "query complete",
+		"elapsed_ms", time.Since(startedAt).Milliseconds(),
+		"top_k", topK,
+		"source_count", len(sources),
+		"embedding_model", s.embedder.Model(),
+	)
 	return QueryResponse{
 		Answer:  "Relevant sources were found. Please review the sources field.",
 		Sources: sources,

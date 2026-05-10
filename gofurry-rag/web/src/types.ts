@@ -28,6 +28,19 @@ export type Overview = {
   recent_failure_at?: string
   recent_failed_document_id?: number
   last_document_update_at?: string
+  worker_state?: string
+  worker_active_workers?: number
+  worker_current_document_id?: number
+  worker_last_document_id?: number
+  worker_total_processed?: number
+  worker_total_failed?: number
+  worker_last_duration_ms?: number
+  worker_average_duration_ms?: number
+  worker_recent_error?: string
+  worker_recent_error_at?: string
+  worker_last_success_at?: string
+  worker_last_started_at?: string
+  worker_last_completed_at?: string
 }
 
 export type HealthInfo = {

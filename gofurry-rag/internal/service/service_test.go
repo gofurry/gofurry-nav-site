@@ -2,16 +2,18 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/GoFurry/gofurry-rag/config"
 	"github.com/GoFurry/gofurry-rag/internal/db"
+	"github.com/GoFurry/gofurry-rag/internal/ingest"
 )
 
 func TestUpdateChunkUsesEmbeddingInputTemplate(t *testing.T) {
 	repo := &serviceRepo{doc: db.Document{ID: 1, Title: "GoFurry", SourceType: "site", SourceID: "about"}}
 	embedder := &serviceEmbedder{}
-	svc := New(repo, embedder, config.Config{})
+	svc := New(repo, embedder, config.Config{}, nil)
 
 	chunk, err := svc.UpdateChunk(context.Background(), 7, UpdateChunkRequest{Content: "更新后的内容"})
 	if err != nil {
@@ -25,6 +27,43 @@ func TestUpdateChunkUsesEmbeddingInputTemplate(t *testing.T) {
 	}
 	if want := "Title: GoFurry"; !contains(embedder.inputs[0], want) {
 		t.Fatalf("missing %q in %q", want, embedder.inputs[0])
+	}
+}
+
+func TestQueryRejectsLongQuestion(t *testing.T) {
+	svc := New(&serviceRepo{}, &serviceEmbedder{}, config.Config{MaxQueryQuestionRunes: 3}, nil)
+	_, err := svc.Query(context.Background(), QueryRequest{Question: "hello"})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestQueryRejectsTooLargeTopK(t *testing.T) {
+	svc := New(&serviceRepo{}, &serviceEmbedder{}, config.Config{TopK: 3, MaxQueryTopK: 2}, nil)
+	_, err := svc.Query(context.Background(), QueryRequest{Question: "hello", TopK: 3})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestOverviewIncludesWorkerSnapshot(t *testing.T) {
+	repo := &serviceRepo{}
+	worker := &fakeWorkerStatusProvider{status: ingest.WorkerStatus{
+		State:             "processing",
+		ActiveWorkers:     2,
+		TotalProcessed:    11,
+		TotalFailed:       3,
+		LastDurationMs:    1200,
+		AverageDurationMs: 890.5,
+		RecentError:       "timeout",
+	}}
+	svc := New(repo, &serviceEmbedder{}, config.Config{}, worker)
+	overview, err := svc.Overview(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if overview.WorkerState != "processing" || overview.WorkerActiveWorkers != 2 || overview.WorkerTotalProcessed != 11 {
+		t.Fatalf("overview = %+v", overview)
 	}
 }
 
@@ -78,6 +117,14 @@ func (r *serviceRepo) Overview(ctx context.Context) (db.Overview, error) { retur
 
 func (r *serviceRepo) SearchChunks(ctx context.Context, embedding []float64, topK int, filter db.BatchDocumentFilter) ([]db.Source, error) {
 	return nil, nil
+}
+
+type fakeWorkerStatusProvider struct {
+	status ingest.WorkerStatus
+}
+
+func (f *fakeWorkerStatusProvider) Status() ingest.WorkerStatus {
+	return f.status
 }
 
 type serviceEmbedder struct {

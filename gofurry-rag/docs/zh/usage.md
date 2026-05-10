@@ -31,6 +31,11 @@ rag:
   chunk_size: 700
   chunk_overlap: 120
   top_k: 6
+  query_timeout_seconds: 20
+  embed_timeout_seconds: 45
+  ingest_timeout_seconds: 300
+  max_query_question_runes: 4000
+  max_query_top_k: 12
 ```
 
 默认配置搜索方式与 `gofurry-admin` 一致：先找 `/etc/gofurry-rag/server.yaml`，再找当前工作目录下的 `./config/server.yaml`。也可以通过 `--config` 指定。

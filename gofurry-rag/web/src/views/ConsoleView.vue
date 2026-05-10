@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <main class="min-h-screen overflow-hidden bg-[#05080d] text-slate-100">
     <section v-if="!authenticated" class="gate-enter relative grid min-h-screen place-items-center px-6">
       <div class="absolute inset-0 opacity-70">
@@ -107,6 +107,29 @@
                       <div class="flex justify-between gap-4"><dt class="text-slate-500">地址</dt><dd class="text-right text-slate-200">{{ healthState.ollama?.base_url || '-' }}</dd></div>
                     </dl>
                     <p v-if="healthState.ollama?.error" class="mt-3 text-xs leading-5 text-rose-300">{{ healthState.ollama.error }}</p>
+                  </section>
+                  <section class="grid gap-3 border border-white/10 bg-black/20 p-4">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-slate-300">Worker 状态</span>
+                      <span class="status-pill" :class="workerStatusClass">{{ overviewData?.worker_state || 'idle' }}</span>
+                    </div>
+                    <dl class="space-y-2 text-sm">
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">鏉板湪鏁?</dt><dd class="text-slate-200">{{ overviewData?.worker_active_workers ?? 0 }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">宸插鐞?</dt><dd class="text-slate-200">{{ overviewData?.worker_total_processed ?? 0 }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">宸茶繃澶?</dt><dd class="text-slate-200">{{ overviewData?.worker_total_failed ?? 0 }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">涓婃鑰楁椂</dt><dd class="text-slate-200">{{ formatDuration(overviewData?.worker_last_duration_ms) }}</dd></div>
+                      <div class="flex justify-between gap-4"><dt class="text-slate-500">骞冲潎鑰楁椂</dt><dd class="text-slate-200">{{ formatDuration(overviewData?.worker_average_duration_ms) }}</dd></div>
+                    </dl>
+                    <div class="border border-white/10 bg-white/[0.03] p-3">
+                      <div class="flex items-center justify-between gap-3">
+                        <span class="text-sm text-slate-300">最近失败</span>
+                        <span class="text-xs text-slate-500">{{ formatDate(overviewData?.worker_recent_error_at) }}</span>
+                      </div>
+                      <p v-if="overviewData?.worker_recent_error" class="mt-2 text-sm leading-6 text-rose-200">
+                        #{{ overviewData?.worker_current_document_id || overviewData?.worker_last_document_id }} {{ overviewData?.worker_recent_error }}
+                      </p>
+                      <p v-else class="mt-2 text-sm text-slate-500">Worker 当前没有活跃任务。</p>
+                    </div>
                   </section>
                   <section class="grid gap-3 border border-white/10 bg-black/20 p-4">
                     <div class="flex items-center justify-between">
@@ -1267,6 +1290,22 @@ function formatDate(value?: string) {
   if (!value) return '暂无记录'
   return new Date(value).toLocaleString()
 }
+
+function formatDuration(value?: number) {
+  if (value === undefined || value === null) return '-'
+  if (value < 1000) return `${value} ms`
+  return `${(value / 1000).toFixed(1)} s`
+}
+
+const workerStatusClass = computed(() => {
+  if (overviewData.value?.worker_state === 'processing') {
+    return 'border-amber-300/30 bg-amber-300/10 text-amber-100'
+  }
+  if (overviewData.value?.worker_state === 'failed') {
+    return 'border-rose-300/30 bg-rose-300/10 text-rose-100'
+  }
+  return 'border-teal-300/30 bg-teal-300/10 text-teal-100'
+})
 
 function notifyError(error: unknown) {
   notice.value = (error as Error).message || '操作失败'

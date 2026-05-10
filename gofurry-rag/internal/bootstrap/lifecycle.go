@@ -62,8 +62,8 @@ func Start() error {
 	}
 
 	embedClient := embedder.NewOllamaClient(cfg.OllamaBaseURL, cfg.EmbedModel, cfg.EmbedDim)
-	ragService := ragservice.New(repo, embedClient, *cfg)
 	worker := ingest.NewWorker(repo, embedClient, *cfg)
+	ragService := ragservice.New(repo, embedClient, *cfg, worker)
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	worker.Start(workerCtx)
 

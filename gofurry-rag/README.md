@@ -16,7 +16,7 @@
 - Async text ingest worker
 - HttpOnly JWT Cookie login for admin APIs
 - Public retrieval API that returns `sources` first, without LLM answer generation
-- Overview console with auto refresh, document/chunk stats, database status, and Ollama status
+- Overview console with auto refresh, document/chunk stats, worker status, database status, and Ollama status
 
 ## Quick Start
 
@@ -89,6 +89,7 @@ Do not commit real database passwords, console passcodes, or JWT secrets.
 
 - [Usage](./docs/usage.md)
 - [Smoke Test](./docs/smoke-test.md)
+- [Deployment](./docs/deployment.md)
 - [MVP Design](./docs/rag-design.md)
 
 ## License

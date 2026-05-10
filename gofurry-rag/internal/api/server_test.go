@@ -445,7 +445,7 @@ func testAppWithRepo() (*fiber.App, *fakeRepo) {
 		},
 	}
 	repo := newFakeRepo()
-	svc := service.New(repo, fakeEmbedder{}, cfg)
+	svc := service.New(repo, fakeEmbedder{}, cfg, nil)
 	app := fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
 	NewServer(cfg, svc, nil).RegisterRoutes(app.Group("/api/v1"))
 	return app, repo
