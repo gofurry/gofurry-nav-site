@@ -312,11 +312,23 @@ function loadRecords() {
   try {
     const raw = window.localStorage.getItem(storageKey)
     const parsed = raw ? JSON.parse(raw) : []
-    records.value = Array.isArray(parsed) ? parsed.slice(0, maxRecords) : []
+    records.value = Array.isArray(parsed)
+      ? parsed.slice(0, maxRecords).map(normalizeStoredRecord)
+      : []
   } catch {
     records.value = []
   }
   activeId.value = null
+}
+
+function normalizeStoredRecord(record: ChatRecord): ChatRecord {
+  if (record.status !== 'streaming') {
+    return record
+  }
+  return {
+    ...record,
+    status: record.answer ? 'done' : 'idle'
+  }
 }
 
 function persistRecords() {
@@ -442,7 +454,7 @@ function stopStream() {
 
 function touchRecord(record: ChatRecord) {
   record.updatedAt = Date.now()
-  records.value = [...records.value]
+  records.value = records.value.map(item => item.id === record.id ? { ...record, sources: [...record.sources] } : item)
 }
 
 async function refreshQueue() {
@@ -473,10 +485,11 @@ async function readSseStream(
       break
     }
     buffer += decoder.decode(value, { stream: true })
-    const frames = buffer.split('\n\n')
+    const frames = buffer.split(/\r?\n\r?\n/)
     buffer = frames.pop() || ''
     frames.forEach(frame => handleSseFrame(frame, handlers))
   }
+  buffer += decoder.decode()
   if (buffer.trim()) {
     handleSseFrame(buffer, handlers)
   }
@@ -491,7 +504,7 @@ function handleSseFrame(
     onError: (message: string) => void
   }
 ) {
-  const lines = frame.split('\n')
+  const lines = frame.split(/\r?\n/)
   const event = lines.find(line => line.startsWith('event:'))?.slice(6).trim() || 'message'
   const data = lines
     .filter(line => line.startsWith('data:'))
