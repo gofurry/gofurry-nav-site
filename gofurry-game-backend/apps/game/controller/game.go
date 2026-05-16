@@ -1,10 +1,10 @@
 package controller
 
 import (
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/apps/game/service"
 	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofurry/gofurry-game-backend/common/util"
-	"github.com/gofiber/fiber/v3"
 )
 
 type gameApi struct{}
@@ -127,6 +127,46 @@ func (api *gameApi) GetGameInfo(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
+// @Summary 获取同步用的游戏列表
+// @Schemes
+// @Description 返回全量游戏轻量列表，供 RAG 同步使用
+// @Tags Game
+// @Accept json
+// @Produce json
+// @Param lang query string true "语言"
+// @Success 200 {object} []models.GameRespVo
+// @Router /api/game/sync/list [Get]
+func (api *gameApi) GetGameSyncList(c fiber.Ctx) error {
+	lang := c.Query("lang", "zh")
+	data, err := service.GetGameService().GetGameSyncList(lang)
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
+// @Summary 获取同步用的游戏详情
+// @Schemes
+// @Description 获取游戏 ID 对应的基础信息，不触发浏览量统计
+// @Tags Game
+// @Accept json
+// @Produce json
+// @Param id query string true "游戏id"
+// @Param lang query string true "语言"
+// @Success 200 {object} []models.GameBaseInfoVo
+// @Router /api/game/sync/info [Get]
+func (api *gameApi) GetGameSyncInfo(c fiber.Ctx) error {
+	num := c.Query("id", "0")
+	lang := c.Query("lang", "zh")
+	data, err := service.GetGameService().GetGameInfo(num, lang)
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
 // @Summary 获取游戏的评论
 // @Schemes
 // @Description 获取游戏ID对应的评论
@@ -165,6 +205,25 @@ func (api *gameApi) GetGameCreator(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
+// @Summary 获取同步用的创作者列表
+// @Schemes
+// @Description 获取创作者列表，供 RAG 同步使用
+// @Tags Game
+// @Accept json
+// @Produce json
+// @Param lang query string true "语言"
+// @Success 200 {object} []models.CreatorVo
+// @Router /api/game/sync/creators [Get]
+func (api *gameApi) GetGameSyncCreators(c fiber.Ctx) error {
+	lang := c.Query("lang", "zh")
+	data, err := service.GetGameService().GetGameCreator(lang)
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
 // @Summary 获取更多首页更新公告
 // @Schemes
 // @Description 获取更多首页更新公告
@@ -175,6 +234,25 @@ func (api *gameApi) GetGameCreator(c fiber.Ctx) error {
 // @Success 200 {object} []models.UpdateNewsModels
 // @Router /api/game/update/latest/more [Get]
 func (api *gameApi) GetUpdateNewsMore(c fiber.Ctx) error {
+	lang := c.Query("lang", "zh")
+	data, err := service.GetGameService().GetMoreUpdateNews(lang)
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
+// @Summary 获取同步用的游戏新闻
+// @Schemes
+// @Description 获取全量游戏新闻列表，供 RAG 同步使用
+// @Tags Game
+// @Accept json
+// @Produce json
+// @Param lang query string true "语言"
+// @Success 200 {object} []models.UpdateNewsModels
+// @Router /api/game/sync/news [Get]
+func (api *gameApi) GetGameSyncNews(c fiber.Ctx) error {
 	lang := c.Query("lang", "zh")
 	data, err := service.GetGameService().GetMoreUpdateNews(lang)
 	if err != nil {

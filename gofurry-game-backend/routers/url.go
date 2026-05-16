@@ -1,12 +1,12 @@
 package routers
 
 import (
+	"github.com/gofiber/fiber/v3"
 	game "github.com/gofurry/gofurry-game-backend/apps/game/controller"
 	prize "github.com/gofurry/gofurry-game-backend/apps/prize/controller"
 	recommend "github.com/gofurry/gofurry-game-backend/apps/recommend/controller"
 	review "github.com/gofurry/gofurry-game-backend/apps/review/controller"
 	search "github.com/gofurry/gofurry-game-backend/apps/search/controller"
-	"github.com/gofiber/fiber/v3"
 )
 
 /*
@@ -23,6 +23,10 @@ func gameApi(g fiber.Router) {
 	g.Get("/panel/main", game.GameApi.GetPanelMainList)          // 获取首页面板数据
 	g.Get("/update/latest", game.GameApi.GetUpdateNews)          // 获取首页更新公告
 	g.Get("/update/latest/more", game.GameApi.GetUpdateNewsMore) // 获取更多首页更新公告
+	g.Get("/sync/list", game.GameApi.GetGameSyncList)            // 获取同步用的全量游戏列表
+	g.Get("/sync/info", game.GameApi.GetGameSyncInfo)            // 获取同步用的游戏详情（不触发浏览量）
+	g.Get("/sync/news", game.GameApi.GetGameSyncNews)            // 获取同步用的全量游戏新闻
+	g.Get("/sync/creators", game.GameApi.GetGameSyncCreators)    // 获取同步用的创作者列表
 
 	g.Get("/remark", game.GameApi.GetGameRemark) // 获取单条游戏的评论
 

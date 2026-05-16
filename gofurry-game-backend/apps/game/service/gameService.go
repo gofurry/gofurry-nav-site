@@ -1,13 +1,13 @@
 package service
 
 import (
+	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-game-backend/apps/game/dao"
 	"github.com/gofurry/gofurry-game-backend/apps/game/models"
 	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofurry/gofurry-game-backend/common/log"
 	cs "github.com/gofurry/gofurry-game-backend/common/service"
 	"github.com/gofurry/gofurry-game-backend/common/util"
-	"github.com/bytedance/sonic"
 )
 
 type gameService struct{}
@@ -27,6 +27,19 @@ func (s gameService) GetGameList(num string, lang string) (gameVo []models.GameR
 		return
 	}
 
+	return buildGameListResp(gameList, lang), nil
+}
+
+func (s gameService) GetGameSyncList(lang string) (gameVo []models.GameRespVo, err common.GFError) {
+	gameList, err := dao.GetGameDao().GetAllGames()
+	if err != nil {
+		return
+	}
+
+	return buildGameListResp(gameList, lang), nil
+}
+
+func buildGameListResp(gameList []models.GfgGame, lang string) (gameVo []models.GameRespVo) {
 	for _, v := range gameList {
 		newGameVo := models.GameRespVo{
 			ID:          util.Int642String(v.ID),
