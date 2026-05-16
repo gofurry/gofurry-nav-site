@@ -73,7 +73,7 @@ func (dao *Dao[T]) Add(record *T) common.GFError {
 	}
 
 	// 获取表名
-	tableName := dao.GetTableName
+	tableName := dao.GetTableName()
 
 	// 执行新增
 	result := dao.db.Create(record)
@@ -112,7 +112,7 @@ func (dao *Dao[T]) UpdateById(id int64, record *T, omitFields ...string) (int64,
 		return 0, common.NewDaoError(err.Error())
 	}
 
-	tableName := dao.GetTableName
+	tableName := dao.GetTableName()
 	db := dao.db.Model(new(T)).Where("id = ?", id)
 
 	// 忽略指定字段
@@ -152,7 +152,7 @@ func (dao *Dao[T]) UpdateByIdSelective(id int64, record *T, omitFields ...string
 		return 0, common.NewDaoError(err.Error())
 	}
 
-	tableName := dao.GetTableName
+	tableName := dao.GetTableName()
 	db := dao.db.Model(new(T)).Where("id = ?", id)
 
 	omitFields = append(omitFields, "create_time")
@@ -185,7 +185,7 @@ func (dao *Dao[T]) DeleteById(id int64) (int64, common.GFError) {
 		return 0, common.NewDaoError(err.Error())
 	}
 
-	tableName := dao.GetTableName
+	tableName := dao.GetTableName()
 	result := dao.db.Where("id = ?", id).Delete(new(T))
 
 	if err := result.Error; err != nil {
@@ -223,7 +223,7 @@ func (dao *Dao[T]) DeleteByIds(idList []int64) (int64, common.GFError) {
 		}
 	}
 
-	tableName := dao.GetTableName
+	tableName := dao.GetTableName()
 	result := dao.db.Where("id IN (?)", idList).Delete(new(T))
 
 	if err := result.Error; err != nil {
@@ -281,7 +281,7 @@ func (dao *Dao[T]) GetById(id int64) (*T, common.GFError) {
 // Count 统计总数
 func (dao *Dao[T]) Count(conditions ...interface{}) (int64, common.GFError) {
 	var count int64
-	tableName := dao.GetTableName
+	tableName := dao.GetTableName()
 
 	db := dao.db.Model(new(T))
 	if len(conditions) > 0 {
@@ -318,7 +318,7 @@ func (dao *Dao[T]) PageQuery(page, pageSize int, conditions ...interface{}) ([]T
 	}
 
 	var list []T
-	tableName := dao.GetTableName
+	tableName := dao.GetTableName()
 
 	// 统计总数
 	total, err := dao.Count(conditions...)
@@ -362,7 +362,7 @@ func (dao *Dao[T]) PageQueryFormatted(pageReq *models.PageReq, conditions ...int
 	pageReq.InitPageIfAbsent()
 
 	// 获取表名
-	tableName := dao.GetTableName
+	tableName := dao.GetTableName()
 
 	// 统计总数
 	var total int64
@@ -487,7 +487,7 @@ func (dao *Dao[T]) SoftDeleteById(id int64) (int64, common.GFError) {
 		return 0, common.NewDaoError(err.Error())
 	}
 
-	tableName := dao.GetTableName
+	tableName := dao.GetTableName()
 	result := dao.db.Model(new(T)).Where("id = ?", id).Update("deleted_at", gorm.Expr("NOW()"))
 
 	if err := result.Error; err != nil {

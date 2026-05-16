@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	corazalite "github.com/GoFurry/coraza-fiber-lite"
 	swagger "github.com/gofiber/contrib/v3/swaggerui"
 	"github.com/gofiber/fiber/v3"
 	fibercompress "github.com/gofiber/fiber/v3/middleware/compress"
@@ -28,7 +29,6 @@ import (
 	applog "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/logging"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/transport/http/webui"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
-	corazalite "github.com/gofurry/coraza-fiber-lite"
 )
 
 type Builder struct{}

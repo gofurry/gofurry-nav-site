@@ -3,7 +3,8 @@ module github.com/gofurry/awesome-fiber-template/v3/medium
 go 1.26.0
 
 require (
-	github.com/gofurry/coraza-fiber-lite v1.0.1
+	github.com/GoFurry/coraza-fiber-lite v1.0.1
+	github.com/GoFurry/easyhash v1.0.0
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-playground/locales v0.14.1
@@ -11,6 +12,7 @@ require (
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/gofiber/contrib/v3/swaggerui v1.0.1
 	github.com/gofiber/fiber/v3 v3.1.0
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/kardianos/service v1.2.4
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/spf13/cobra v1.10.2
@@ -18,7 +20,6 @@ require (
 	go.uber.org/zap v1.27.1
 	golang.org/x/net v0.52.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
@@ -26,7 +27,6 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/gofurry/easyhash v1.0.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/corazawaf/coraza/v3 v3.4.0 // indirect
@@ -61,7 +61,6 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.10 // indirect
 	github.com/gofiber/schema v1.7.0 // indirect
 	github.com/gofiber/utils/v2 v2.0.2 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -107,6 +106,7 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect
 	modernc.org/memory v1.5.0 // indirect

@@ -91,7 +91,7 @@ func Error(msg ...interface{}) {
 	if ok {
 		functionName = runtime.FuncForPC(pc).Name()
 	}
-	logger.WithFields(buildCallerFields(functionName, line, "")).Error(msg)
+	logger.WithFields(buildCallerFields(functionName, line, "")).Error(msg...)
 }
 
 func Debug(msg ...interface{}) {
@@ -100,7 +100,7 @@ func Debug(msg ...interface{}) {
 	if ok {
 		functionName = runtime.FuncForPC(pc).Name()
 	}
-	logger.WithFields(buildCallerFields(functionName, line, "")).Debug(msg)
+	logger.WithFields(buildCallerFields(functionName, line, "")).Debug(msg...)
 }
 
 func Warn(msg ...interface{}) {
@@ -109,7 +109,7 @@ func Warn(msg ...interface{}) {
 	if ok {
 		functionName = runtime.FuncForPC(pc).Name()
 	}
-	logger.WithFields(buildCallerFields(functionName, line, "")).Warn(msg)
+	logger.WithFields(buildCallerFields(functionName, line, "")).Warn(msg...)
 }
 
 func Info(msg ...interface{}) {
@@ -118,5 +118,5 @@ func Info(msg ...interface{}) {
 	if ok {
 		functionName = runtime.FuncForPC(pc).Name()
 	}
-	logger.WithFields(buildCallerFields(functionName, line, "")).Info(msg)
+	logger.WithFields(buildCallerFields(functionName, line, "")).Info(msg...)
 }

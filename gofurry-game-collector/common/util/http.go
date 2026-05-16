@@ -220,11 +220,11 @@ func getClientWithProxy(proxy *string, timeout time.Duration) *http.Client {
 	}
 
 	// 仅修改Proxy
-	proxyTransport := *defaultTransport
+	proxyTransport := defaultTransport.Clone()
 	proxyTransport.Proxy = http.ProxyURL(proxyURL)
 
 	return &http.Client{
-		Transport: &proxyTransport,
+		Transport: proxyTransport,
 		Timeout:   timeout,
 	}
 }
