@@ -532,7 +532,8 @@
       "openGuide": "View guide",
       "closeGuide": "Close guide",
       "copy": "Copy",
-      "copySourceContent": "Copy source text",
+      "copyCitationSnippet": "Copy snippet",
+      "copyWithSources": "Copy answer + sources",
       "stop": "Stop",
       "send": "Send"
     },
@@ -552,18 +553,21 @@
     "sections": {
       "question": "Question",
       "answer": "Answer",
-      "sources": "Sources"
+      "citations": "Sources"
     },
     "status": {
       "streaming": "Generating",
       "requestFailed": "Request failed"
     },
-    "sources": {
+    "citations": {
       "count": "{count} items",
-      "document": "Document {id}",
       "chunk": "Chunk {index}",
+      "untitled": "Source {index}",
       "noContent": "This source did not return original content.",
       "open": "Open source"
+    },
+    "copy": {
+      "sourcesHeading": "Sources"
     },
     "queue": {
       "unknown": "Queue unknown",

@@ -532,7 +532,8 @@
       "openGuide": "查看使用文档",
       "closeGuide": "关闭使用文档",
       "copy": "复制",
-      "copySourceContent": "复制原文",
+      "copyCitationSnippet": "复制片段",
+      "copyWithSources": "复制回答+引用",
       "stop": "停止",
       "send": "发送"
     },
@@ -552,18 +553,21 @@
     "sections": {
       "question": "问题",
       "answer": "回答",
-      "sources": "引用"
+      "citations": "引用"
     },
     "status": {
       "streaming": "生成中",
       "requestFailed": "请求失败"
     },
-    "sources": {
+    "citations": {
       "count": "{count} 条",
-      "document": "文档 {id}",
       "chunk": "Chunk {index}",
+      "untitled": "引用 {index}",
       "noContent": "该引用没有返回原文片段。",
       "open": "打开来源"
+    },
+    "copy": {
+      "sourcesHeading": "参考来源"
     },
     "queue": {
       "unknown": "队列未知",

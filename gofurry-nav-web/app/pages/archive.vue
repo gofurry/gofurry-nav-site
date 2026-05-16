@@ -134,6 +134,7 @@
                     <div class="block-actions">
                       <span v-if="activeRecord.status === 'streaming'" class="typing-state">{{ t('archive.status.streaming') }}</span>
                       <span v-else-if="activeRecord.status === 'error'" class="error-state">{{ t('archive.status.requestFailed') }}</span>
+                      <button class="copy-button" type="button" :disabled="!activeRecord.answer || !activeRecord.citations.length" @click="copyAnswerWithCitations(activeRecord)">{{ t('archive.actions.copyWithSources') }}</button>
                       <button class="copy-button" type="button" :disabled="!activeRecord.answer" @click="copyText(activeRecord.answer)">{{ t('archive.actions.copy') }}</button>
                     </div>
                   </div>
@@ -147,26 +148,27 @@
                 </div>
               </div>
 
-              <div v-if="activeRecord.sources.length" class="sources-block">
-                <div class="sources-title">
-                  <span>{{ t('archive.sections.sources') }}</span>
-                  <span>{{ t('archive.sources.count', { count: activeRecord.sources.length }) }}</span>
+              <div v-if="activeRecord.citations.length" class="citations-block">
+                <div class="citations-title">
+                  <span>{{ t('archive.sections.citations') }}</span>
+                  <span>{{ t('archive.citations.count', { count: activeRecord.citations.length }) }}</span>
                 </div>
-                <details v-for="(source, index) in activeRecord.sources" :key="sourceKey(source, index)" class="source-item">
+                <details v-for="(citation, index) in activeRecord.citations" :key="citationKey(citation, index)" class="citation-item">
                   <summary>
-                    <span class="source-rank">[{{ index + 1 }}]</span>
-                    <span class="source-name">{{ source.title || t('archive.sources.document', { id: source.document_id }) }}</span>
-                    <span class="source-score">{{ scoreText(source.score) }}</span>
+                    <span class="citation-rank">[{{ index + 1 }}]</span>
+                    <span class="citation-head">
+                      <span class="citation-name">{{ citation.title || t('archive.citations.untitled', { index: index + 1 }) }}</span>
+                    </span>
+                    <span class="citation-score">{{ scoreText(citation.score) }}</span>
                   </summary>
-                  <div class="source-content">
-                    <div class="source-meta">
-                      <span>{{ source.source_type || 'unknown' }}</span>
-                      <span v-if="source.document_id">{{ t('archive.sources.document', { id: source.document_id }) }}</span>
-                      <span v-if="typeof source.chunk_index === 'number'">{{ t('archive.sources.chunk', { index: source.chunk_index }) }}</span>
+                  <div class="citation-content">
+                    <div class="citation-meta">
+                      <span v-if="citation.source_type" class="citation-type">{{ citation.source_type }}</span>
+                      <span v-if="typeof citation.chunk_index === 'number'">{{ t('archive.citations.chunk', { index: citation.chunk_index }) }}</span>
                     </div>
-                    <button class="copy-button source-copy-button" type="button" :disabled="!sourceText(source)" @click="copyText(sourceText(source))">{{ t('archive.actions.copySourceContent') }}</button>
-                    <p>{{ sourceText(source) || t('archive.sources.noContent') }}</p>
-                    <a v-if="source.url" :href="source.url" target="_blank" rel="noopener noreferrer">{{ t('archive.sources.open') }}</a>
+                    <button class="copy-button citation-copy-button" type="button" :disabled="!citationText(citation)" @click="copyText(citationText(citation))">{{ t('archive.actions.copyCitationSnippet') }}</button>
+                    <p>{{ citationText(citation) || t('archive.citations.noContent') }}</p>
+                    <a v-if="citation.url" :href="citation.url" target="_blank" rel="noopener noreferrer">{{ t('archive.citations.open') }}</a>
                   </div>
                 </details>
               </div>
@@ -249,18 +251,21 @@ definePageMeta({
   ssr: false
 })
 
-type RagSource = {
-  document_id?: number
-  chunk_id?: number
+type ArchiveCitation = {
   source_type?: string
-  source_id?: string
   title?: string
   url?: string
   chunk_index?: number
-  token_count?: number
   score?: number
-  content?: string
   snippet?: string
+}
+
+type LegacyArchiveSource = ArchiveCitation & {
+  document_id?: number
+  chunk_id?: number
+  source_id?: string
+  token_count?: number
+  content?: string
 }
 
 type QueueStatus = {
@@ -290,11 +295,15 @@ type ChatRecord = {
   id: string
   question: string
   answer: string
-  sources: RagSource[]
+  citations: ArchiveCitation[]
   createdAt: number
   updatedAt: number
   status: 'idle' | 'streaming' | 'done' | 'error'
   error?: string
+}
+
+type StoredChatRecord = Partial<ChatRecord> & {
+  sources?: LegacyArchiveSource[]
 }
 
 const storageKey = 'gofurry.archive.chat.records.v1'
@@ -405,14 +414,48 @@ function loadRecords() {
   scheduleWorkspaceMetrics()
 }
 
-function normalizeStoredRecord(record: ChatRecord): ChatRecord {
-  if (record.status !== 'streaming') {
-    return record
+function normalizeStoredRecord(record: StoredChatRecord): ChatRecord {
+  const createdAt = typeof record?.createdAt === 'number' ? record.createdAt : Date.now()
+  const citations = normalizeArchiveCitations(record?.citations ?? record.sources)
+  const normalized: ChatRecord = {
+    id: typeof record?.id === 'string' && record.id ? record.id : crypto.randomUUID(),
+    question: typeof record?.question === 'string' ? record.question : '',
+    answer: typeof record?.answer === 'string' ? record.answer : '',
+    citations,
+    createdAt,
+    updatedAt: typeof record?.updatedAt === 'number' ? record.updatedAt : createdAt,
+    status: record?.status === 'streaming' || record?.status === 'done' || record?.status === 'error' ? record.status : 'idle',
+    error: typeof record?.error === 'string' ? record.error : undefined
+  }
+  if (normalized.status !== 'streaming') {
+    return normalized
   }
   return {
-    ...record,
-    status: record.answer ? 'done' : 'idle'
+    ...normalized,
+    status: normalized.answer ? 'done' : 'idle'
   }
+}
+
+function normalizeArchiveCitations(input: unknown): ArchiveCitation[] {
+  if (!Array.isArray(input)) {
+    return []
+  }
+
+  return input.map((item) => {
+    const citation = item && typeof item === 'object' ? item as LegacyArchiveSource : {}
+    return {
+      source_type: typeof citation.source_type === 'string' ? citation.source_type : '',
+      title: typeof citation.title === 'string' ? citation.title : '',
+      url: typeof citation.url === 'string' ? citation.url : '',
+      chunk_index: typeof citation.chunk_index === 'number' ? citation.chunk_index : undefined,
+      score: typeof citation.score === 'number' ? citation.score : undefined,
+      snippet: typeof citation.snippet === 'string'
+        ? citation.snippet
+        : typeof citation.content === 'string'
+          ? citation.content
+          : ''
+    }
+  })
 }
 
 function persistRecords() {
@@ -455,7 +498,7 @@ async function submitQuestion() {
       id: crypto.randomUUID(),
       question,
       answer: '',
-      sources: [],
+      citations: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
       status: 'error',
@@ -470,7 +513,7 @@ async function submitQuestion() {
     id: crypto.randomUUID(),
     question,
     answer: '',
-    sources: [],
+    citations: [],
     createdAt: Date.now(),
     updatedAt: Date.now(),
     status: 'streaming'
@@ -505,8 +548,8 @@ async function streamAnswer(record: ChatRecord) {
     }
 
     await readSseStream(response.body, {
-      onSources: (sources) => {
-        record.sources = sources
+      onCitations: (citations) => {
+        record.citations = citations
         touchRecord(record)
       },
       onDelta: (text) => {
@@ -517,9 +560,7 @@ async function streamAnswer(record: ChatRecord) {
         if (typeof payload?.answer === 'string') {
           record.answer = payload.answer
         }
-        if (Array.isArray(payload?.sources)) {
-          record.sources = payload.sources
-        }
+        record.citations = normalizeArchiveCitations(payload?.citations ?? payload?.sources)
         record.status = 'done'
         touchRecord(record)
       },
@@ -558,7 +599,7 @@ function stopStream() {
 
 function touchRecord(record: ChatRecord) {
   record.updatedAt = Date.now()
-  records.value = records.value.map(item => item.id === record.id ? { ...record, sources: [...record.sources] } : item)
+  records.value = records.value.map(item => item.id === record.id ? { ...record, citations: [...record.citations] } : item)
   scheduleWorkspaceMetrics()
 }
 
@@ -578,7 +619,7 @@ async function refreshQueue() {
 async function readSseStream(
   body: ReadableStream<Uint8Array>,
   handlers: {
-    onSources: (sources: RagSource[]) => void
+    onCitations: (citations: ArchiveCitation[]) => void
     onDelta: (text: string) => void
     onDone: (payload: any) => void
     onError: (message: string) => void
@@ -607,7 +648,7 @@ async function readSseStream(
 function handleSseFrame(
   frame: string,
   handlers: {
-    onSources: (sources: RagSource[]) => void
+    onCitations: (citations: ArchiveCitation[]) => void
     onDelta: (text: string) => void
     onDone: (payload: any) => void
     onError: (message: string) => void
@@ -631,8 +672,10 @@ function handleSseFrame(
     payload = { text: data }
   }
 
-  if (event === 'sources' && Array.isArray(payload.sources)) {
-    handlers.onSources(payload.sources)
+  if (event === 'citations' && Array.isArray(payload.citations)) {
+    handlers.onCitations(normalizeArchiveCitations(payload.citations))
+  } else if (event === 'sources' && Array.isArray(payload.sources)) {
+    handlers.onCitations(normalizeArchiveCitations(payload.sources))
   } else if (event === 'delta') {
     handlers.onDelta(String(payload.text || ''))
   } else if (event === 'done') {
@@ -655,16 +698,44 @@ function historyNumber(index: number) {
   return String((page.value - 1) * pageSize + index + 1).padStart(2, '0')
 }
 
-function sourceKey(source: RagSource, index: number) {
-  return `${source.document_id ?? 'public'}-${source.chunk_id ?? source.title ?? source.url ?? 'source'}-${index}`
+function citationKey(citation: ArchiveCitation, index: number) {
+  return `${citation.title ?? citation.url ?? citation.source_type ?? 'citation'}-${citation.chunk_index ?? index}-${index}`
 }
 
 function scoreText(score?: number) {
   return typeof score === 'number' ? score.toFixed(3) : '0.000'
 }
 
-function sourceText(source: RagSource) {
-  return source.snippet || source.content || ''
+function citationText(citation: ArchiveCitation) {
+  return citation.snippet || ''
+}
+
+function copyAnswerWithCitations(record: ChatRecord) {
+  copyText(formatAnswerWithCitations(record))
+}
+
+function formatAnswerWithCitations(record: ChatRecord) {
+  const answer = record.answer.trim()
+  if (!answer) {
+    return ''
+  }
+  if (!record.citations.length) {
+    return answer
+  }
+
+  const citations = record.citations.map((citation, index) => {
+    const lines = [`[${index + 1}] ${citation.title || t('archive.citations.untitled', { index: index + 1 })}`]
+    const snippet = citationText(citation)
+    if (snippet) {
+      lines.push(snippet)
+    }
+    if (citation.url) {
+      lines.push(citation.url)
+    }
+    return lines.join('\n')
+  }).join('\n\n')
+
+  return `${answer}\n\n${t('archive.copy.sourcesHeading')}\n${citations}`
 }
 
 function ragMetricText(value?: number) {
@@ -1402,7 +1473,7 @@ function copyTextFallback(content: string) {
 }
 
 .guide-grid h3,
-.sources-title,
+.citations-title,
 .answer-heading,
 .block-title {
   color: #aede9b;
@@ -1453,14 +1524,14 @@ function copyTextFallback(content: string) {
     grid-column: 1;
   }
 
-  .sources-block {
+  .citations-block {
     grid-column: 2;
   }
 }
 
 .question-block,
 .answer-block,
-.sources-block {
+.citations-block {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.055);
   padding: clamp(16px, 3vw, 24px);
@@ -1478,7 +1549,7 @@ function copyTextFallback(content: string) {
 }
 
 .answer-heading,
-.sources-title,
+.citations-title,
 .block-title {
   display: flex;
   align-items: center;
@@ -1489,6 +1560,8 @@ function copyTextFallback(content: string) {
 .block-actions {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
 }
 
@@ -1554,13 +1627,13 @@ function copyTextFallback(content: string) {
   width: 58%;
 }
 
-.source-item {
+.citation-item {
   margin-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   color: rgba(241, 248, 238, 0.82);
 }
 
-.source-item summary {
+.citation-item summary {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
@@ -1569,35 +1642,42 @@ function copyTextFallback(content: string) {
   padding: 14px 0;
 }
 
-.source-name {
+.citation-head {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.citation-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.source-rank,
-.source-score {
+.citation-rank,
+.citation-score {
   color: rgba(174, 222, 155, 0.9);
   font-size: 12px;
   font-weight: 800;
 }
 
-.source-content {
+.citation-content {
   padding: 0 0 16px 28px;
 }
 
-.source-copy-button {
+.citation-copy-button {
   margin: 0 0 10px;
 }
 
-.source-meta {
+.citation-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 10px;
 }
 
-.source-meta span {
+.citation-type,
+.citation-meta span {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
   color: rgba(235, 241, 231, 0.62);
@@ -1605,13 +1685,13 @@ function copyTextFallback(content: string) {
   font-size: 12px;
 }
 
-.source-content p {
+.citation-content p {
   white-space: pre-wrap;
   color: rgba(244, 250, 242, 0.78);
   line-height: 1.8;
 }
 
-.source-content a {
+.citation-content a {
   color: #bde99f;
   font-size: 13px;
   font-weight: 800;
