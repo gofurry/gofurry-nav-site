@@ -528,6 +528,7 @@
       "toggleSidebar": "Collapse sidebar",
       "newChat": "New chat",
       "backHome": "Back to home",
+      "backToTop": "Back to top",
       "openGuide": "View guide",
       "closeGuide": "Close guide",
       "copy": "Copy",
@@ -568,10 +569,28 @@
       "unknown": "Queue unknown",
       "status": "Inference {active}/{max} · Queue {queued}"
     },
+    "rag": {
+      "kicker": "Transparency",
+      "title": "Current RAG Setup",
+      "expand": "Expand RAG info",
+      "collapse": "Collapse RAG info",
+      "summary": "Docs {documents} · Chunks {chunks}",
+      "summaryEmpty": "Waiting for RAG status",
+      "embeddingModel": "Embedding model",
+      "answerModel": "Answer model",
+      "documentTotal": "Total documents",
+      "chunkTotal": "Total chunks"
+    },
+    "scroll": {
+      "progress": "Read {percent}%"
+    },
     "errors": {
       "requestFailedWithStatus": "Request failed: {status}",
       "serviceUnavailable": "Q&A service is temporarily unavailable",
-      "serviceReturnedError": "Q&A service returned an error"
+      "serviceReturnedError": "Q&A service returned an error",
+      "questionTooLong": "This question is too long. Public Q&A supports up to {limit} characters.",
+      "rateLimited": "Too many requests. Please try again in {seconds} seconds.",
+      "invalidRequest": "The question or parameters do not meet public Q&A limits."
     },
     "guide": {
       "eyebrow": "Guide",

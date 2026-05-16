@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
+	"unicode/utf8"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-rag/config"
 	"github.com/gofurry/gofurry-rag/internal/auth"
 	"github.com/gofurry/gofurry-rag/internal/db"
 	"github.com/gofurry/gofurry-rag/internal/ingest"
 	"github.com/gofurry/gofurry-rag/internal/service"
-	"github.com/gofiber/fiber/v3"
 )
 
 type Server struct {
@@ -19,10 +22,24 @@ type Server struct {
 	service     *service.Service
 	authService *auth.Service
 	worker      *ingest.Worker
+	chatLimiter *publicChatLimiter
 }
 
 func NewServer(cfg config.Config, svc *service.Service, worker *ingest.Worker) *Server {
-	return &Server{cfg: cfg, service: svc, authService: auth.New(cfg), worker: worker}
+	limitRequests := cfg.PublicQueryRateLimitRequests
+	limitWindow := cfg.PublicQueryRateLimitWindowSec
+	if svc != nil {
+		limits := svc.ChatStatus().Limits
+		limitRequests = limits.PublicQueryRateLimitRequests
+		limitWindow = limits.PublicQueryRateLimitWindowSeconds
+	}
+	return &Server{
+		cfg:         cfg,
+		service:     svc,
+		authService: auth.New(cfg),
+		worker:      worker,
+		chatLimiter: newPublicChatLimiter(limitRequests, time.Duration(limitWindow)*time.Second),
+	}
 }
 
 func (s *Server) RegisterRoutes(v1 fiber.Router) {
@@ -78,6 +95,143 @@ func (s *Server) requireDetailedQueryAdmin(c fiber.Ctx, includeDetails bool) err
 	}
 	c.Locals(auth.ClaimsContextKey, claims)
 	return nil
+}
+
+func (s *Server) queryAdminState(c fiber.Ctx) bool {
+	if !strings.Contains(c.Get(fiber.HeaderCookie), s.cfg.AuthCookieName+"=") {
+		return false
+	}
+	token := strings.TrimSpace(c.Cookies(s.cfg.AuthCookieName))
+	if token == "" {
+		return false
+	}
+	claims, err := s.authService.ParseAndValidateToken(token)
+	if err != nil {
+		return false
+	}
+	c.Locals(auth.ClaimsContextKey, claims)
+	return true
+}
+
+func (s *Server) preparePublicQuery(c fiber.Ctx, req *service.QueryRequest, admin bool) error {
+	if admin {
+		return nil
+	}
+	req.IncludeDetails = false
+	questionRunes := utf8.RuneCountInString(strings.TrimSpace(req.Question))
+	limits := s.publicChatLimits()
+	if limit := limits.PublicQueryMaxQuestionRunes; limit > 0 && questionRunes > limit {
+		return publicQueryError{status: fiber.StatusBadRequest, message: "question exceeds the public maximum length"}
+	}
+	if req.TopK <= 0 {
+		req.TopK = minPositive(s.cfg.TopK, limits.PublicQueryMaxTopK)
+	}
+	if maxTopK := limits.PublicQueryMaxTopK; maxTopK > 0 && req.TopK > maxTopK {
+		return publicQueryError{status: fiber.StatusBadRequest, message: "top_k exceeds the public maximum limit"}
+	}
+	if s.chatLimiter != nil && !s.chatLimiter.Allow(c.IP()) {
+		return publicQueryError{status: fiber.StatusTooManyRequests, message: "too many public chat requests"}
+	}
+	return nil
+}
+
+type publicQueryError struct {
+	status  int
+	message string
+}
+
+func (e publicQueryError) Error() string {
+	return e.message
+}
+
+func (e publicQueryError) HTTPStatus() int {
+	return e.status
+}
+
+func (s *Server) publicChatLimits() service.ChatLimits {
+	limits := service.ChatLimits{
+		PublicQueryMaxQuestionRunes:       s.cfg.PublicQueryMaxQuestionRunes,
+		PublicQueryMaxTopK:                s.cfg.PublicQueryMaxTopK,
+		PublicQueryRateLimitRequests:      s.cfg.PublicQueryRateLimitRequests,
+		PublicQueryRateLimitWindowSeconds: s.cfg.PublicQueryRateLimitWindowSec,
+	}
+	if s.service != nil {
+		serviceLimits := s.service.ChatStatus().Limits
+		if limits.PublicQueryMaxQuestionRunes <= 0 {
+			limits.PublicQueryMaxQuestionRunes = serviceLimits.PublicQueryMaxQuestionRunes
+		}
+		if limits.PublicQueryMaxTopK <= 0 {
+			limits.PublicQueryMaxTopK = serviceLimits.PublicQueryMaxTopK
+		}
+		if limits.PublicQueryRateLimitRequests <= 0 {
+			limits.PublicQueryRateLimitRequests = serviceLimits.PublicQueryRateLimitRequests
+		}
+		if limits.PublicQueryRateLimitWindowSeconds <= 0 {
+			limits.PublicQueryRateLimitWindowSeconds = serviceLimits.PublicQueryRateLimitWindowSeconds
+		}
+	}
+	return limits
+}
+
+func minPositive(left, right int) int {
+	switch {
+	case left <= 0 && right <= 0:
+		return 0
+	case left <= 0:
+		return right
+	case right <= 0:
+		return left
+	case left < right:
+		return left
+	default:
+		return right
+	}
+}
+
+type publicChatLimiter struct {
+	mu       sync.Mutex
+	max      int
+	window   time.Duration
+	requests map[string]publicChatWindow
+}
+
+type publicChatWindow struct {
+	resetAt time.Time
+	count   int
+}
+
+func newPublicChatLimiter(max int, window time.Duration) *publicChatLimiter {
+	if max <= 0 {
+		max = 10
+	}
+	if window <= 0 {
+		window = time.Minute
+	}
+	return &publicChatLimiter{max: max, window: window, requests: make(map[string]publicChatWindow)}
+}
+
+func (l *publicChatLimiter) Allow(key string) bool {
+	if l == nil {
+		return true
+	}
+	key = strings.TrimSpace(key)
+	if key == "" {
+		key = "unknown"
+	}
+	now := time.Now()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	window := l.requests[key]
+	if window.resetAt.IsZero() || !now.Before(window.resetAt) {
+		l.requests[key] = publicChatWindow{resetAt: now.Add(l.window), count: 1}
+		return true
+	}
+	if window.count >= l.max {
+		return false
+	}
+	window.count++
+	l.requests[key] = window
+	return true
 }
 
 type passwordRequest struct {
@@ -316,12 +470,19 @@ func (s *Server) query(c fiber.Ctx) error {
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
 	}
-	if err := s.requireDetailedQueryAdmin(c, req.IncludeDetails); err != nil {
+	admin := s.queryAdminState(c)
+	if req.IncludeDetails && !admin {
+		return fail(c, auth.ErrNotLoggedIn)
+	}
+	if err := s.preparePublicQuery(c, &req, admin); err != nil {
 		return fail(c, err)
 	}
 	result, err := s.service.Query(requestContext(c), req)
 	if err != nil {
 		return fail(c, err)
+	}
+	if !admin {
+		return ok(c, newPublicQueryResponse(result))
 	}
 	return ok(c, result)
 }

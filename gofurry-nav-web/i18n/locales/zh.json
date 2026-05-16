@@ -528,6 +528,7 @@
       "toggleSidebar": "折叠菜单",
       "newChat": "新对话",
       "backHome": "返回首页",
+      "backToTop": "返回顶部",
       "openGuide": "查看使用文档",
       "closeGuide": "关闭使用文档",
       "copy": "复制",
@@ -568,10 +569,28 @@
       "unknown": "队列未知",
       "status": "推理 {active}/{max} · 排队 {queued}"
     },
+    "rag": {
+      "kicker": "透明信息",
+      "title": "当前 RAG 配置",
+      "expand": "展开 RAG 信息",
+      "collapse": "折叠 RAG 信息",
+      "summary": "文档 {documents} · Chunks {chunks}",
+      "summaryEmpty": "正在等待 RAG 状态",
+      "embeddingModel": "Embedding 模型",
+      "answerModel": "对话模型",
+      "documentTotal": "总文档数",
+      "chunkTotal": "总 Chunks"
+    },
+    "scroll": {
+      "progress": "已阅读 {percent}%"
+    },
     "errors": {
       "requestFailedWithStatus": "请求失败：{status}",
       "serviceUnavailable": "问答服务暂时不可用",
-      "serviceReturnedError": "问答服务返回错误"
+      "serviceReturnedError": "问答服务返回错误",
+      "questionTooLong": "问题太长了，公开问答最多支持 {limit} 个字符。",
+      "rateLimited": "请求太频繁了，请稍等 {seconds} 秒后再试。",
+      "invalidRequest": "问题格式或参数不符合公开问答限制。"
     },
     "guide": {
       "eyebrow": "使用说明",

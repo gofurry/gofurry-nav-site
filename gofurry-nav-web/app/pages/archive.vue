@@ -79,7 +79,37 @@
         </div>
       </header>
 
-      <section class="workspace-body">
+      <section ref="workspaceBodyRef" class="workspace-body" @scroll="handleWorkspaceScroll">
+        <div class="workspace-overlay">
+          <section class="rag-flyout" :class="{ expanded: ragInfoExpanded }">
+            <div class="rag-flyout-panel">
+              <div class="rag-flyout-summary">{{ ragSummaryText }}</div>
+              <div class="rag-flyout-list">
+                <div class="rag-flyout-row">
+                  <span>{{ t('archive.rag.embeddingModel') }}</span>
+                  <strong :title="ragInfo?.embedding_model || '-'">{{ ragInfo?.embedding_model || '-' }}</strong>
+                </div>
+                <div class="rag-flyout-row">
+                  <span>{{ t('archive.rag.answerModel') }}</span>
+                  <strong :title="ragInfo?.answer_model || '-'">{{ ragInfo?.answer_model || '-' }}</strong>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="rag-flyout-toggle"
+              :aria-expanded="ragInfoExpanded"
+              :title="ragInfoExpanded ? t('archive.rag.collapse') : t('archive.rag.expand')"
+              :aria-label="ragInfoExpanded ? t('archive.rag.collapse') : t('archive.rag.expand')"
+              @click="ragInfoExpanded = !ragInfoExpanded"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path v-if="ragInfoExpanded" d="m9 6 6 6-6 6" />
+                <path v-else d="m15 6-6 6 6 6" />
+              </svg>
+            </button>
+          </section>
+        </div>
         <section class="answer-panel">
           <Transition name="conversation-fade" mode="out-in">
             <div v-if="!activeRecord" key="empty" class="empty-conversation">
@@ -131,11 +161,11 @@
                   <div class="source-content">
                     <div class="source-meta">
                       <span>{{ source.source_type || 'unknown' }}</span>
-                      <span>{{ t('archive.sources.document', { id: source.document_id }) }}</span>
-                      <span>{{ t('archive.sources.chunk', { index: source.chunk_index }) }}</span>
+                      <span v-if="source.document_id">{{ t('archive.sources.document', { id: source.document_id }) }}</span>
+                      <span v-if="typeof source.chunk_index === 'number'">{{ t('archive.sources.chunk', { index: source.chunk_index }) }}</span>
                     </div>
-                    <button class="copy-button source-copy-button" type="button" :disabled="!source.content" @click="copyText(source.content || '')">{{ t('archive.actions.copySourceContent') }}</button>
-                    <p>{{ source.content || t('archive.sources.noContent') }}</p>
+                    <button class="copy-button source-copy-button" type="button" :disabled="!sourceText(source)" @click="copyText(sourceText(source))">{{ t('archive.actions.copySourceContent') }}</button>
+                    <p>{{ sourceText(source) || t('archive.sources.noContent') }}</p>
                     <a v-if="source.url" :href="source.url" target="_blank" rel="noopener noreferrer">{{ t('archive.sources.open') }}</a>
                   </div>
                 </details>
@@ -144,6 +174,20 @@
           </Transition>
         </section>
       </section>
+
+      <button
+        v-if="hasScrollableWorkspace"
+        type="button"
+        class="scroll-dock"
+        :style="{ '--scroll-progress': `${scrollProgressLabel}%` }"
+        :title="t('archive.actions.backToTop')"
+        :aria-label="t('archive.actions.backToTop')"
+        @click="scrollWorkspaceToTop()"
+      >
+        <div class="scroll-progress">
+          <span>{{ scrollProgressLabel }}%</span>
+        </div>
+      </button>
 
       <form class="ask-bar" @submit.prevent="submitQuestion">
         <input
@@ -206,8 +250,8 @@ definePageMeta({
 })
 
 type RagSource = {
-  document_id: number
-  chunk_id: number
+  document_id?: number
+  chunk_id?: number
   source_type?: string
   source_id?: string
   title?: string
@@ -216,6 +260,7 @@ type RagSource = {
   token_count?: number
   score?: number
   content?: string
+  snippet?: string
 }
 
 type QueueStatus = {
@@ -225,6 +270,20 @@ type QueueStatus = {
   queued_ingest: number
   rejected: number
   oldest_wait_ms: number
+}
+
+type ChatLimits = {
+  public_query_max_question_runes: number
+  public_query_max_top_k: number
+  public_query_rate_limit_requests: number
+  public_query_rate_limit_window_seconds: number
+}
+
+type RagInfo = {
+  embedding_model?: string
+  answer_model?: string
+  document_total?: number
+  chunk_total?: number
 }
 
 type ChatRecord = {
@@ -252,8 +311,15 @@ const page = ref(1)
 const sidebarCollapsed = ref(false)
 const showGuide = ref(false)
 const queueStatus = ref<QueueStatus | null>(null)
+const chatLimits = ref<ChatLimits | null>(null)
+const ragInfo = ref<RagInfo | null>(null)
+const ragInfoExpanded = ref(false)
 const streamController = ref<AbortController | null>(null)
+const workspaceBodyRef = ref<HTMLElement | null>(null)
+const scrollProgress = ref(0)
+const hasScrollableWorkspace = ref(false)
 let queueTimer: number | null = null
+let workspaceMetricsFrame: number | null = null
 
 const filteredRecords = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
@@ -272,6 +338,7 @@ const pagedRecords = computed(() => {
 
 const activeRecord = computed(() => records.value.find(item => item.id === activeId.value) || null)
 const isStreaming = computed(() => Boolean(activeRecord.value?.status === 'streaming'))
+const scrollProgressLabel = computed(() => Math.round(scrollProgress.value))
 
 const titleText = computed(() => {
   return activeRecord.value?.question || t('archive.actions.newChat')
@@ -287,6 +354,16 @@ const queueText = computed(() => {
   return t('archive.queue.status', { active, max, queued })
 })
 
+const ragSummaryText = computed(() => {
+  if (!ragInfo.value) {
+    return t('archive.rag.summaryEmpty')
+  }
+  return t('archive.rag.summary', {
+    documents: ragMetricText(ragInfo.value.document_total),
+    chunks: ragMetricText(ragInfo.value.chunk_total)
+  })
+})
+
 watch(searchText, () => {
   page.value = 1
 })
@@ -297,12 +374,18 @@ onMounted(() => {
   loadRecords()
   refreshQueue()
   window.addEventListener('keydown', handleGuideKeydown)
+  window.addEventListener('resize', scheduleWorkspaceMetrics)
   queueTimer = window.setInterval(refreshQueue, 8000)
+  scheduleWorkspaceMetrics()
 })
 
 onUnmounted(() => {
   stopStream()
   window.removeEventListener('keydown', handleGuideKeydown)
+  window.removeEventListener('resize', scheduleWorkspaceMetrics)
+  if (workspaceMetricsFrame) {
+    window.cancelAnimationFrame(workspaceMetricsFrame)
+  }
   if (queueTimer) {
     window.clearInterval(queueTimer)
   }
@@ -319,6 +402,7 @@ function loadRecords() {
     records.value = []
   }
   activeId.value = null
+  scheduleWorkspaceMetrics()
 }
 
 function normalizeStoredRecord(record: ChatRecord): ChatRecord {
@@ -344,6 +428,7 @@ function startNewChat() {
   activeId.value = null
   draftQuestion.value = ''
   showGuide.value = false
+  scrollWorkspaceToTop('smooth')
   nextTick(() => {
     document.querySelector<HTMLInputElement>('.ask-bar input')?.focus()
   })
@@ -354,11 +439,30 @@ function openRecord(id: string) {
   activeId.value = id
   draftQuestion.value = ''
   showGuide.value = false
+  nextTick(() => {
+    scheduleWorkspaceMetrics()
+  })
 }
 
 async function submitQuestion() {
   const question = draftQuestion.value.trim()
   if (!question || isStreaming.value) {
+    return
+  }
+  const maxRunes = chatLimits.value?.public_query_max_question_runes ?? 0
+  if (maxRunes > 0 && runeLength(question) > maxRunes) {
+    const record: ChatRecord = {
+      id: crypto.randomUUID(),
+      question,
+      answer: '',
+      sources: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      status: 'error',
+      error: t('archive.errors.questionTooLong', { limit: maxRunes })
+    }
+    records.value = [record, ...records.value.filter(item => item.id !== record.id)].slice(0, maxRecords)
+    activeId.value = record.id
     return
   }
 
@@ -397,7 +501,7 @@ async function streamAnswer(record: ChatRecord) {
     })
 
     if (!response.ok || !response.body) {
-      throw new Error(t('archive.errors.requestFailedWithStatus', { status: response.status }))
+      throw new Error(await responseErrorMessage(response))
     }
 
     await readSseStream(response.body, {
@@ -437,7 +541,7 @@ async function streamAnswer(record: ChatRecord) {
       return
     }
     record.status = 'error'
-    record.error = error?.message || t('archive.errors.serviceUnavailable')
+    record.error = userFacingError(error?.message || t('archive.errors.serviceUnavailable'))
     touchRecord(record)
   } finally {
     if (streamController.value === controller) {
@@ -455,14 +559,19 @@ function stopStream() {
 function touchRecord(record: ChatRecord) {
   record.updatedAt = Date.now()
   records.value = records.value.map(item => item.id === record.id ? { ...record, sources: [...record.sources] } : item)
+  scheduleWorkspaceMetrics()
 }
 
 async function refreshQueue() {
   try {
     const response: any = await $fetch('/api/rag/chat/status')
     queueStatus.value = response?.data?.queue ?? null
+    chatLimits.value = response?.data?.limits ?? null
+    ragInfo.value = response?.data?.rag ?? null
   } catch {
     queueStatus.value = null
+    chatLimits.value = null
+    ragInfo.value = null
   }
 }
 
@@ -547,11 +656,91 @@ function historyNumber(index: number) {
 }
 
 function sourceKey(source: RagSource, index: number) {
-  return `${source.document_id}-${source.chunk_id}-${index}`
+  return `${source.document_id ?? 'public'}-${source.chunk_id ?? source.title ?? source.url ?? 'source'}-${index}`
 }
 
 function scoreText(score?: number) {
   return typeof score === 'number' ? score.toFixed(3) : '0.000'
+}
+
+function sourceText(source: RagSource) {
+  return source.snippet || source.content || ''
+}
+
+function ragMetricText(value?: number) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? new Intl.NumberFormat(langStore.lang === 'zh' ? 'zh-CN' : 'en-US').format(value)
+    : '-'
+}
+
+function runeLength(value: string) {
+  return Array.from(value).length
+}
+
+async function responseErrorMessage(response: Response) {
+  try {
+    const payload = await response.json()
+    const message = payload?.message || payload?.statusMessage
+    if (message) {
+      return `${response.status}: ${message}`
+    }
+  } catch {
+    // ignore malformed error body and fall back to status mapping
+  }
+  return String(response.status)
+}
+
+function userFacingError(message: string) {
+  if (message.includes('429') || message.toLowerCase().includes('too many public chat requests')) {
+    const windowSeconds = chatLimits.value?.public_query_rate_limit_window_seconds ?? 60
+    return t('archive.errors.rateLimited', { seconds: windowSeconds })
+  }
+  if (message.includes('400')) {
+    return t('archive.errors.invalidRequest')
+  }
+  if (message.includes('502') || message.includes('503') || message.toLowerCase().includes('unable to reach')) {
+    return t('archive.errors.serviceUnavailable')
+  }
+  return message
+}
+
+function handleWorkspaceScroll() {
+  updateWorkspaceMetrics()
+}
+
+function scrollWorkspaceToTop(behavior: ScrollBehavior = 'smooth') {
+  workspaceBodyRef.value?.scrollTo({ top: 0, behavior })
+  if (behavior === 'auto') {
+    updateWorkspaceMetrics()
+    return
+  }
+  window.setTimeout(updateWorkspaceMetrics, 220)
+}
+
+function scheduleWorkspaceMetrics() {
+  if (!import.meta.client || workspaceMetricsFrame) {
+    return
+  }
+  workspaceMetricsFrame = window.requestAnimationFrame(() => {
+    workspaceMetricsFrame = null
+    updateWorkspaceMetrics()
+  })
+}
+
+function updateWorkspaceMetrics() {
+  const body = workspaceBodyRef.value
+  if (!body) {
+    hasScrollableWorkspace.value = false
+    scrollProgress.value = 0
+    return
+  }
+  const maxScroll = Math.max(body.scrollHeight - body.clientHeight, 0)
+  hasScrollableWorkspace.value = maxScroll > 24
+  if (maxScroll <= 0) {
+    scrollProgress.value = 0
+    return
+  }
+  scrollProgress.value = Math.min(100, Math.max(0, (body.scrollTop / maxScroll) * 100))
 }
 
 function handleGuideKeydown(event: KeyboardEvent) {
@@ -721,7 +910,13 @@ function copyTextFallback(content: string) {
   min-height: 0;
   flex: 1;
   overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   padding: 6px 12px 14px;
+}
+
+.history-list::-webkit-scrollbar {
+  display: none;
 }
 
 .history-item {
@@ -949,18 +1144,196 @@ function copyTextFallback(content: string) {
   box-shadow: 0 0 0 5px rgba(155, 214, 125, 0.12);
 }
 
+.workspace-overlay {
+  position: sticky;
+  top: 14px;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  height: 0;
+  pointer-events: none;
+}
+
+.rag-flyout {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  pointer-events: auto;
+}
+
+.rag-flyout-panel {
+  max-width: 0;
+  border: 1px solid rgba(190, 229, 172, 0.14);
+  border-right: 0;
+  border-radius: 16px 0 0 16px;
+  background:
+    linear-gradient(145deg, rgba(19, 27, 26, 0.94), rgba(11, 17, 18, 0.92)),
+    radial-gradient(circle at 12% 12%, rgba(174, 222, 155, 0.1), transparent 36%);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
+  margin-right: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+  transform: translateX(10px) scale(0.98);
+  transition:
+    max-width 0.3s ease,
+    margin-right 0.3s ease,
+    opacity 0.22s ease,
+    padding 0.3s ease,
+    transform 0.3s ease;
+}
+
+.rag-flyout.expanded .rag-flyout-panel {
+  max-width: min(228px, calc(100vw - 88px));
+  margin-right: 10px;
+  opacity: 1;
+  padding: 12px 14px;
+  transform: translateX(0) scale(1);
+}
+
+.rag-flyout-summary {
+  color: rgba(233, 242, 229, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  margin-bottom: 12px;
+}
+
+.rag-flyout-list {
+  display: grid;
+  gap: 12px;
+}
+
+.rag-flyout-row {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.rag-flyout-row span {
+  color: rgba(222, 234, 218, 0.58);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rag-flyout-row strong {
+  overflow: hidden;
+  color: #f8fcf7;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rag-flyout-toggle {
+  display: inline-flex;
+  height: 44px;
+  width: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(190, 229, 172, 0.18);
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(24, 33, 31, 0.96), rgba(12, 18, 19, 0.94));
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+  color: #eff8ea;
+  margin-top: 10px;
+  transition: transform var(--motion-duration) ease, background var(--motion-duration) ease, border-color var(--motion-duration) ease;
+}
+
+.rag-flyout.expanded .rag-flyout-toggle {
+  margin-top: 10px;
+  border-radius: 0 999px 999px 0;
+}
+
+.rag-flyout-toggle:hover {
+  background: linear-gradient(145deg, rgba(39, 54, 49, 0.98), rgba(18, 27, 26, 0.96));
+  border-color: rgba(190, 229, 172, 0.28);
+  transform: translateX(-1px);
+}
+
+.rag-flyout-toggle svg {
+  height: 18px;
+  width: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
 .workspace-body {
   position: relative;
   z-index: 1;
   min-height: 0;
   flex: 1;
   overflow-y: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   padding: 26px clamp(18px, 4vw, 54px);
+}
+
+.workspace-body::-webkit-scrollbar {
+  display: none;
 }
 
 .answer-panel {
   margin: 0 auto;
   width: min(1280px, 100%);
+}
+
+.scroll-dock {
+  position: absolute;
+  right: clamp(14px, 2.8vw, 28px);
+  bottom: calc(var(--control-bar-height) + 18px);
+  z-index: 4;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border: 1px solid rgba(187, 226, 169, 0.18);
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(13, 20, 19, 0.88), rgba(25, 36, 33, 0.8));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px) saturate(140%);
+  cursor: pointer;
+  padding: 8px;
+  transition: transform var(--motion-duration) ease, background var(--motion-duration) ease, border-color var(--motion-duration) ease;
+}
+
+.scroll-dock:hover {
+  background: linear-gradient(145deg, rgba(21, 33, 30, 0.92), rgba(34, 50, 45, 0.84));
+  border-color: rgba(187, 226, 169, 0.28);
+  transform: translateY(-1px);
+}
+
+.scroll-progress {
+  position: relative;
+  display: grid;
+  height: 50px;
+  width: 50px;
+  place-items: center;
+  border-radius: 999px;
+  background:
+    conic-gradient(from 210deg, rgba(173, 234, 149, 0.96) var(--scroll-progress), rgba(255, 255, 255, 0.08) 0),
+    radial-gradient(circle at 50% 45%, rgba(227, 255, 215, 0.18), transparent 68%);
+  color: #f7fff3;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.scroll-progress::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(7, 12, 12, 0.94), rgba(17, 25, 23, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.scroll-progress span {
+  position: relative;
+  z-index: 1;
 }
 
 .guide-panel {
@@ -1390,18 +1763,24 @@ function copyTextFallback(content: string) {
     max-width: 48vw;
   }
 
+  .workspace-overlay {
+    display: none;
+  }
+
   .guide-grid {
     grid-template-columns: 1fr;
   }
 
   .queue-pill {
-    grid-column: 1 / -1;
-    justify-self: start;
     max-width: 100%;
   }
 
   .workspace-body {
     padding: 18px 14px;
+  }
+
+  .scroll-dock {
+    display: none;
   }
 
   .ask-bar {

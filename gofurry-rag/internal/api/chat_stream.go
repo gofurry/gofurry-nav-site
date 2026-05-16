@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-rag/internal/db"
 	"github.com/gofurry/gofurry-rag/internal/service"
-	"github.com/gofiber/fiber/v3"
 )
 
 func (s *Server) chatStream(c fiber.Ctx) error {
@@ -20,7 +20,11 @@ func (s *Server) chatStream(c fiber.Ctx) error {
 	if err := json.Unmarshal(c.Body(), &req); err != nil {
 		return fail(c, err)
 	}
-	if err := s.requireDetailedQueryAdmin(c, req.IncludeDetails); err != nil {
+	admin := s.queryAdminState(c)
+	if req.IncludeDetails && !admin {
+		return fail(c, fiber.ErrUnauthorized)
+	}
+	if err := s.preparePublicQuery(c, &req, admin); err != nil {
 		return fail(c, err)
 	}
 
@@ -65,6 +69,11 @@ func (s *Server) chatStream(c fiber.Ctx) error {
 				})
 			},
 			Sources: func(sources []db.Source) error {
+				if !admin {
+					return writeEvent("sources", fiber.Map{
+						"sources": publicQuerySources(sources),
+					})
+				}
 				return writeEvent("sources", fiber.Map{
 					"sources": sources,
 				})
@@ -83,6 +92,10 @@ func (s *Server) chatStream(c fiber.Ctx) error {
 			_ = writeEvent("error", fiber.Map{
 				"message": err.Error(),
 			})
+			return
+		}
+		if !admin {
+			_ = writeEvent("done", newPublicQueryResponse(response))
 			return
 		}
 		_ = writeEvent("done", response)

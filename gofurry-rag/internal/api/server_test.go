@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-rag/config"
 	"github.com/gofurry/gofurry-rag/internal/db"
 	"github.com/gofurry/gofurry-rag/internal/service"
 	"github.com/gofurry/gofurry-rag/internal/tencentmaas"
-	"github.com/gofiber/fiber/v3"
 )
 
 func TestAdminRoutesRequireToken(t *testing.T) {
@@ -130,6 +130,28 @@ func TestChatStatusIsPublic(t *testing.T) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	var result struct {
+		Code int `json:"code"`
+		Data struct {
+			Limits service.ChatLimits `json:"limits"`
+			RAG    service.PublicRAGInfo `json:"rag"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Data.Limits.PublicQueryMaxQuestionRunes != 800 ||
+		result.Data.Limits.PublicQueryMaxTopK != 6 ||
+		result.Data.Limits.PublicQueryRateLimitRequests != 10 ||
+		result.Data.Limits.PublicQueryRateLimitWindowSeconds != 60 {
+		t.Fatalf("limits = %+v", result.Data.Limits)
+	}
+	if result.Data.RAG.EmbeddingModel != "fake" ||
+		result.Data.RAG.AnswerModel != "deepseek-v4-flash" ||
+		result.Data.RAG.DocumentTotal != 0 ||
+		result.Data.RAG.ChunkTotal != 2 {
+		t.Fatalf("rag = %+v", result.Data.RAG)
 	}
 }
 
@@ -255,8 +277,10 @@ func TestQueryReturnsSources(t *testing.T) {
 		t.Fatalf("status = %d", resp.StatusCode)
 	}
 	var result struct {
-		Code int                   `json:"code"`
-		Data service.QueryResponse `json:"data"`
+		Code int `json:"code"`
+		Data struct {
+			Sources []map[string]any `json:"sources"`
+		} `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		t.Fatal(err)
@@ -268,8 +292,68 @@ func TestQueryReturnsSources(t *testing.T) {
 		t.Fatalf("sources = %+v", result.Data.Sources)
 	}
 	source := result.Data.Sources[0]
-	if source.SourceType != "manual" || source.SourceID != "about" || source.ChunkIndex != 2 || source.TokenCount != 6 {
-		t.Fatalf("source debug fields = %+v", source)
+	if source["source_type"] != "manual" || source["title"] != "gofurry" || source["snippet"] != "source" {
+		t.Fatalf("source = %+v", source)
+	}
+	for _, internalField := range []string{"document_id", "chunk_id", "source_id", "token_count", "content"} {
+		if _, ok := source[internalField]; ok {
+			t.Fatalf("public source leaked %q: %+v", internalField, source)
+		}
+	}
+}
+
+func TestQueryRejectsPublicLongQuestion(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"`+strings.Repeat("猫", 801)+`","top_k":1}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestQueryRejectsPublicTopKLimit(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"gofurry","top_k":7}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestQueryRateLimitsPublicRequests(t *testing.T) {
+	app, _ := testAppWithConfig(config.Config{
+		PublicQueryRateLimitRequests:  2,
+		PublicQueryRateLimitWindowSec: 60,
+		PublicQueryMaxQuestionRunes:   800,
+		PublicQueryMaxTopK:            6,
+	})
+	for i := 0; i < 2; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"gofurry","top_k":1}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("request %d status = %d", i+1, resp.StatusCode)
+		}
+	}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"gofurry","top_k":1}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("status = %d", resp.StatusCode)
 	}
 }
 
@@ -318,6 +402,9 @@ func TestQueryIncludeDetailsWithAdminReturnsCitations(t *testing.T) {
 	if result.Code != 1 || len(result.Data.Citations) == 0 {
 		t.Fatalf("result = %+v", result)
 	}
+	if len(result.Data.Sources) != 1 || result.Data.Sources[0].DocumentID != 1 || result.Data.Sources[0].Content != "source" {
+		t.Fatalf("sources = %+v", result.Data.Sources)
+	}
 }
 
 func TestChatStreamReturnsSSE(t *testing.T) {
@@ -340,6 +427,14 @@ func TestChatStreamReturnsSSE(t *testing.T) {
 		if !strings.Contains(text, needle) {
 			t.Fatalf("missing %q in stream: %s", needle, text)
 		}
+	}
+	for _, leaked := range []string{`"document_id"`, `"chunk_id"`, `"content"`, `"token_count"`} {
+		if strings.Contains(text, leaked) {
+			t.Fatalf("public stream leaked %s: %s", leaked, text)
+		}
+	}
+	if !strings.Contains(text, `"snippet":"source"`) {
+		t.Fatalf("public stream missing snippet: %s", text)
 	}
 }
 
@@ -552,20 +647,40 @@ func testApp() *fiber.App {
 }
 
 func testAppWithRepo() (*fiber.App, *fakeRepo) {
+	return testAppWithConfig(config.Config{})
+}
+
+func testAppWithConfig(overrides config.Config) (*fiber.App, *fakeRepo) {
 	cfg := config.Config{
-		AppName:         "test",
-		AdminToken:      "test-token",
-		ConsolePasscode: "test-token",
-		JWTSecret:       "jwt-secret",
-		AuthCookieName:  "gofurry_rag_session",
-		SessionTTLHours: 1,
-		TopK:            6,
+		AppName:                       "test",
+		AdminToken:                    "test-token",
+		ConsolePasscode:               "test-token",
+		JWTSecret:                     "jwt-secret",
+		AuthCookieName:                "gofurry_rag_session",
+		SessionTTLHours:               1,
+		TopK:                          6,
+		PublicQueryRateLimitRequests:  10,
+		PublicQueryRateLimitWindowSec: 60,
+		PublicQueryMaxQuestionRunes:   800,
+		PublicQueryMaxTopK:            6,
 		Auth: config.AuthConfig{
 			CookieName:       "gofurry_rag_session",
 			CookieMaxAgeSecs: 3600,
 			SessionTTLHours:  1,
 			SameSite:         "Lax",
 		},
+	}
+	if overrides.PublicQueryRateLimitRequests != 0 {
+		cfg.PublicQueryRateLimitRequests = overrides.PublicQueryRateLimitRequests
+	}
+	if overrides.PublicQueryRateLimitWindowSec != 0 {
+		cfg.PublicQueryRateLimitWindowSec = overrides.PublicQueryRateLimitWindowSec
+	}
+	if overrides.PublicQueryMaxQuestionRunes != 0 {
+		cfg.PublicQueryMaxQuestionRunes = overrides.PublicQueryMaxQuestionRunes
+	}
+	if overrides.PublicQueryMaxTopK != 0 {
+		cfg.PublicQueryMaxTopK = overrides.PublicQueryMaxTopK
 	}
 	repo := newFakeRepo()
 	svc := service.New(repo, fakeEmbedder{}, &fakeChat{configured: true, model: "deepseek-v4-flash", answer: "gofurry is a content discovery website."}, cfg, nil)

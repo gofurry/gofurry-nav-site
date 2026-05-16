@@ -67,6 +67,10 @@ type Config struct {
 	IngestTimeoutSeconds          int     `mapstructure:"-" yaml:"-"`
 	MaxQueryQuestionRunes         int     `mapstructure:"-" yaml:"-"`
 	MaxQueryTopK                  int     `mapstructure:"-" yaml:"-"`
+	PublicQueryRateLimitRequests  int     `mapstructure:"-" yaml:"-"`
+	PublicQueryRateLimitWindowSec int     `mapstructure:"-" yaml:"-"`
+	PublicQueryMaxQuestionRunes   int     `mapstructure:"-" yaml:"-"`
+	PublicQueryMaxTopK            int     `mapstructure:"-" yaml:"-"`
 	OllamaMaxConcurrency          int     `mapstructure:"-" yaml:"-"`
 	OllamaQueryQueueSize          int     `mapstructure:"-" yaml:"-"`
 	OllamaIngestQueueSize         int     `mapstructure:"-" yaml:"-"`
@@ -229,6 +233,10 @@ type RAGConfig struct {
 	IngestTimeoutSeconds          int     `mapstructure:"ingest_timeout_seconds" yaml:"ingest_timeout_seconds"`
 	MaxQueryQuestionRunes         int     `mapstructure:"max_query_question_runes" yaml:"max_query_question_runes"`
 	MaxQueryTopK                  int     `mapstructure:"max_query_top_k" yaml:"max_query_top_k"`
+	PublicQueryRateLimitRequests  int     `mapstructure:"public_query_rate_limit_requests" yaml:"public_query_rate_limit_requests"`
+	PublicQueryRateLimitWindowSec int     `mapstructure:"public_query_rate_limit_window_seconds" yaml:"public_query_rate_limit_window_seconds"`
+	PublicQueryMaxQuestionRunes   int     `mapstructure:"public_query_max_question_runes" yaml:"public_query_max_question_runes"`
+	PublicQueryMaxTopK            int     `mapstructure:"public_query_max_top_k" yaml:"public_query_max_top_k"`
 	OllamaMaxConcurrency          int     `mapstructure:"ollama_max_concurrency" yaml:"ollama_max_concurrency"`
 	OllamaQueryQueueSize          int     `mapstructure:"ollama_query_queue_size" yaml:"ollama_query_queue_size"`
 	OllamaIngestQueueSize         int     `mapstructure:"ollama_ingest_queue_size" yaml:"ollama_ingest_queue_size"`
@@ -553,6 +561,10 @@ func (cfg *Config) fillCompatibilityFields() {
 	cfg.IngestTimeoutSeconds = cfg.RAG.IngestTimeoutSeconds
 	cfg.MaxQueryQuestionRunes = cfg.RAG.MaxQueryQuestionRunes
 	cfg.MaxQueryTopK = cfg.RAG.MaxQueryTopK
+	cfg.PublicQueryRateLimitRequests = cfg.RAG.PublicQueryRateLimitRequests
+	cfg.PublicQueryRateLimitWindowSec = cfg.RAG.PublicQueryRateLimitWindowSec
+	cfg.PublicQueryMaxQuestionRunes = cfg.RAG.PublicQueryMaxQuestionRunes
+	cfg.PublicQueryMaxTopK = cfg.RAG.PublicQueryMaxTopK
 	cfg.OllamaMaxConcurrency = cfg.RAG.OllamaMaxConcurrency
 	cfg.OllamaQueryQueueSize = cfg.RAG.OllamaQueryQueueSize
 	cfg.OllamaIngestQueueSize = cfg.RAG.OllamaIngestQueueSize
@@ -663,6 +675,18 @@ func (cfg *RAGConfig) normalize() {
 	}
 	if cfg.MaxQueryTopK <= 0 {
 		cfg.MaxQueryTopK = 12
+	}
+	if cfg.PublicQueryRateLimitRequests <= 0 {
+		cfg.PublicQueryRateLimitRequests = 10
+	}
+	if cfg.PublicQueryRateLimitWindowSec <= 0 {
+		cfg.PublicQueryRateLimitWindowSec = 60
+	}
+	if cfg.PublicQueryMaxQuestionRunes <= 0 {
+		cfg.PublicQueryMaxQuestionRunes = 800
+	}
+	if cfg.PublicQueryMaxTopK <= 0 {
+		cfg.PublicQueryMaxTopK = 6
 	}
 	if cfg.OllamaMaxConcurrency <= 0 {
 		cfg.OllamaMaxConcurrency = 4
@@ -791,6 +815,10 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("rag.ingest_timeout_seconds", 300)
 	v.SetDefault("rag.max_query_question_runes", 4000)
 	v.SetDefault("rag.max_query_top_k", 12)
+	v.SetDefault("rag.public_query_rate_limit_requests", 10)
+	v.SetDefault("rag.public_query_rate_limit_window_seconds", 60)
+	v.SetDefault("rag.public_query_max_question_runes", 800)
+	v.SetDefault("rag.public_query_max_top_k", 6)
 	v.SetDefault("rag.ollama_max_concurrency", 4)
 	v.SetDefault("rag.ollama_query_queue_size", 8)
 	v.SetDefault("rag.ollama_ingest_queue_size", 32)

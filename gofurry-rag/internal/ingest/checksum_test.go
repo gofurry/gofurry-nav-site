@@ -8,7 +8,7 @@ func TestChecksumStable(t *testing.T) {
 	if first != second {
 		t.Fatalf("checksum changed: %s != %s", first, second)
 	}
-	if first == Checksum("gofurry") {
+	if first == Checksum("gofurry updated") {
 		t.Fatal("checksum should change when content changes")
 	}
 }

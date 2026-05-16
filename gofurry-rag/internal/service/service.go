@@ -197,6 +197,22 @@ type ChatStatusResponse struct {
 	Queue       db.OllamaQueueStatus `json:"queue"`
 	ChatReady   bool                 `json:"chat_ready"`
 	AnswerModel string               `json:"answer_model,omitempty"`
+	Limits      ChatLimits           `json:"limits"`
+	RAG         PublicRAGInfo        `json:"rag"`
+}
+
+type ChatLimits struct {
+	PublicQueryMaxQuestionRunes       int `json:"public_query_max_question_runes"`
+	PublicQueryMaxTopK                int `json:"public_query_max_top_k"`
+	PublicQueryRateLimitRequests      int `json:"public_query_rate_limit_requests"`
+	PublicQueryRateLimitWindowSeconds int `json:"public_query_rate_limit_window_seconds"`
+}
+
+type PublicRAGInfo struct {
+	EmbeddingModel string `json:"embedding_model"`
+	AnswerModel    string `json:"answer_model,omitempty"`
+	DocumentTotal  int64  `json:"document_total"`
+	ChunkTotal     int64  `json:"chunk_total"`
 }
 
 func New(repo Repository, embedder embedder.Client, chat chatClient, cfg config.Config, worker workerStatusProvider) *Service {
@@ -209,11 +225,59 @@ func (s *Service) ChatStatus() ChatStatusResponse {
 	if s.chat != nil {
 		answerModel = s.chat.Model()
 	}
+	limits := s.chatLimits()
 	return ChatStatusResponse{
 		Queue:       s.ollamaQueueStatus(),
 		ChatReady:   chatReady,
 		AnswerModel: answerModel,
+		Limits:      limits,
+		RAG:         s.publicRAGInfo(answerModel),
 	}
+}
+
+func (s *Service) publicRAGInfo(answerModel string) PublicRAGInfo {
+	info := PublicRAGInfo{
+		EmbeddingModel: strings.TrimSpace(s.cfg.EmbedModel),
+		AnswerModel:    strings.TrimSpace(answerModel),
+	}
+	if info.EmbeddingModel == "" && s.embedder != nil {
+		info.EmbeddingModel = strings.TrimSpace(s.embedder.Model())
+	}
+	if info.AnswerModel == "" {
+		info.AnswerModel = strings.TrimSpace(s.cfg.TencentModel)
+	}
+	if s.repo == nil {
+		return info
+	}
+	overview, err := s.repo.Overview(context.Background())
+	if err != nil {
+		return info
+	}
+	info.DocumentTotal = overview.DocumentTotal
+	info.ChunkTotal = overview.ChunkTotal
+	return info
+}
+
+func (s *Service) chatLimits() ChatLimits {
+	limits := ChatLimits{
+		PublicQueryMaxQuestionRunes:       s.cfg.PublicQueryMaxQuestionRunes,
+		PublicQueryMaxTopK:                s.cfg.PublicQueryMaxTopK,
+		PublicQueryRateLimitRequests:      s.cfg.PublicQueryRateLimitRequests,
+		PublicQueryRateLimitWindowSeconds: s.cfg.PublicQueryRateLimitWindowSec,
+	}
+	if limits.PublicQueryMaxQuestionRunes <= 0 {
+		limits.PublicQueryMaxQuestionRunes = 800
+	}
+	if limits.PublicQueryMaxTopK <= 0 {
+		limits.PublicQueryMaxTopK = 6
+	}
+	if limits.PublicQueryRateLimitRequests <= 0 {
+		limits.PublicQueryRateLimitRequests = 10
+	}
+	if limits.PublicQueryRateLimitWindowSeconds <= 0 {
+		limits.PublicQueryRateLimitWindowSeconds = 60
+	}
+	return limits
 }
 
 func (s *Service) Health(ctx context.Context) map[string]any {
