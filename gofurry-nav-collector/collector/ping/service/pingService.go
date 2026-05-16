@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytedance/sonic"
+	"github.com/go-ping/ping"
 	"github.com/gofurry/gofurry-nav-collector/collector/ping/dao"
 	models2 "github.com/gofurry/gofurry-nav-collector/collector/ping/models"
 	"github.com/gofurry/gofurry-nav-collector/common"
@@ -13,8 +15,6 @@ import (
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
 	cu "github.com/gofurry/gofurry-nav-collector/common/util"
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
-	"github.com/bytedance/sonic"
-	"github.com/go-ping/ping"
 	"github.com/sourcegraph/conc/pool"
 )
 

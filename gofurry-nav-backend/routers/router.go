@@ -12,9 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofurry/gofurry-nav-backend/common"
-	"github.com/gofurry/gofurry-nav-backend/middleware"
-	"github.com/gofurry/gofurry-nav-backend/roof/env"
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/contrib/v3/swagger"
 	"github.com/gofiber/fiber/v3"
@@ -22,6 +19,9 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/pprof"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/middleware"
+	"github.com/gofurry/gofurry-nav-backend/roof/env"
 )
 
 var Router *router

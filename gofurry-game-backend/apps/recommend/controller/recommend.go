@@ -1,9 +1,9 @@
 package controller
 
 import (
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/apps/recommend/service"
 	"github.com/gofurry/gofurry-game-backend/common"
-	"github.com/gofiber/fiber/v3"
 )
 
 type recommendApi struct{}

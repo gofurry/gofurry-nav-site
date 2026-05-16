@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 )
 
 type PageQuery struct {

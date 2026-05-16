@@ -8,6 +8,7 @@ import (
 	"runtime/debug"
 	"syscall"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/apps/schedule"
 	"github.com/gofurry/gofurry-game-backend/common"
 	gfLog "github.com/gofurry/gofurry-game-backend/common/log"
@@ -15,7 +16,6 @@ import (
 	"github.com/gofurry/gofurry-game-backend/middleware"
 	"github.com/gofurry/gofurry-game-backend/roof/env"
 	"github.com/gofurry/gofurry-game-backend/routers"
-	"github.com/gofiber/fiber/v3"
 	"github.com/kardianos/service"
 )
 

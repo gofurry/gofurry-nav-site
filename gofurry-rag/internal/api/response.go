@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-rag/internal/auth"
 	"github.com/gofurry/gofurry-rag/internal/service"
-	"github.com/gofiber/fiber/v3"
 	"github.com/jackc/pgx/v5"
 )
 

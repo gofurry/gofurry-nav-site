@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
 	"github.com/bwmarrin/snowflake"
+	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
 )
 
 // Snowflake node state derived from the configured cluster id.

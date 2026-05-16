@@ -1,11 +1,11 @@
 package controller
 
 import (
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/apps/prize/models"
 	"github.com/gofurry/gofurry-game-backend/apps/prize/service"
 	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofurry/gofurry-game-backend/common/util"
-	"github.com/gofiber/fiber/v3"
 )
 
 type prizeApi struct{}

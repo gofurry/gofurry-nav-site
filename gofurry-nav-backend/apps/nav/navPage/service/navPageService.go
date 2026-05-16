@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/dao"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
@@ -18,7 +19,6 @@ import (
 	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 	"github.com/gofurry/gofurry-nav-backend/common/util"
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
-	"github.com/bytedance/sonic"
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/transform"
 )

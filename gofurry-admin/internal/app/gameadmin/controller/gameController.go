@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/gameadmin/models"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/adminutil"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
@@ -14,7 +15,6 @@ import (
 	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	pkgmodels "github.com/gofurry/awesome-fiber-template/v3/medium/pkg/models"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/util"
-	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )
 

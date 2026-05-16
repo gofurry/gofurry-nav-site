@@ -1,9 +1,9 @@
 package controller
 
 import (
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/service"
 	"github.com/gofurry/gofurry-nav-backend/common"
-	"github.com/gofiber/fiber/v3"
 )
 
 type navPageApi struct{}

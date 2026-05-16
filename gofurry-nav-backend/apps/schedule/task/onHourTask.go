@@ -3,10 +3,10 @@ package task
 import (
 	"time"
 
+	"github.com/bytedance/sonic"
 	siteDao "github.com/gofurry/gofurry-nav-backend/apps/system/site/dao"
 	"github.com/gofurry/gofurry-nav-backend/common/log"
 	cs "github.com/gofurry/gofurry-nav-backend/common/service"
-	"github.com/bytedance/sonic"
 )
 
 func UpdateChangeLog() {

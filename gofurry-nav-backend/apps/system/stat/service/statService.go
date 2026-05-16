@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bytedance/sonic"
 	logModels "github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/models"
 	"github.com/gofurry/gofurry-nav-backend/apps/system/stat/dao"
 	"github.com/gofurry/gofurry-nav-backend/apps/system/stat/models"
@@ -13,7 +14,6 @@ import (
 	"github.com/gofurry/gofurry-nav-backend/common/log"
 	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 	"github.com/gofurry/gofurry-nav-backend/common/util"
-	"github.com/bytedance/sonic"
 )
 
 type statService struct{}

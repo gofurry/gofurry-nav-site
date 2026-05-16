@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/bytedance/sonic"
 	gd "github.com/gofurry/gofurry-game-backend/apps/game/dao"
 	gm "github.com/gofurry/gofurry-game-backend/apps/game/models"
 	pd "github.com/gofurry/gofurry-game-backend/apps/prize/dao"
@@ -16,7 +17,6 @@ import (
 	cm "github.com/gofurry/gofurry-game-backend/common/models"
 	cs "github.com/gofurry/gofurry-game-backend/common/service"
 	"github.com/gofurry/gofurry-game-backend/common/util"
-	"github.com/bytedance/sonic"
 )
 
 func UpdateMainInfoCache() {

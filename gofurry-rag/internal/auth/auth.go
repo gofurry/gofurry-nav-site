@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofurry/gofurry-rag/config"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofurry/gofurry-rag/config"
 	"github.com/golang-jwt/jwt/v5"
 )
 

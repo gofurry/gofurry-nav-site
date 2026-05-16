@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-nav-collector/collector/http/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/http/models"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
@@ -17,7 +18,6 @@ import (
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
 	"github.com/gofurry/gofurry-nav-collector/common/util"
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
-	"github.com/bytedance/sonic"
 	"github.com/sourcegraph/conc/pool"
 )
 

@@ -14,11 +14,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gofiber/fiber/v3"
 	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/bootstrap"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/transport/http/router"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
-	"github.com/gofiber/fiber/v3"
 	"github.com/kardianos/service"
 	"github.com/spf13/viper"
 )

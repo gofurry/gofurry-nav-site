@@ -9,13 +9,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-game-backend/apps/recommend/dao"
 	"github.com/gofurry/gofurry-game-backend/apps/recommend/models"
 	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofurry/gofurry-game-backend/common/log"
 	cs "github.com/gofurry/gofurry-game-backend/common/service"
 	"github.com/gofurry/gofurry-game-backend/common/util"
-	"github.com/bytedance/sonic"
 	"golang.org/x/sync/errgroup"
 
 	gd "github.com/gofurry/gofurry-game-backend/apps/game/dao"

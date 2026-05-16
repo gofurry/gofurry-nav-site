@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/common/log"
 	cs "github.com/gofurry/gofurry-game-backend/common/service"
 	"github.com/gofurry/gofurry-game-backend/roof/env"
-	"github.com/bytedance/sonic"
-	"github.com/gofiber/fiber/v3"
 	"github.com/oschwald/geoip2-golang"
 )
 

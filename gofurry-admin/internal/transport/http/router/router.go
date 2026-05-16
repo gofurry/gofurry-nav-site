@@ -10,12 +10,6 @@ import (
 	"strings"
 	"time"
 
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/bootstrap"
-	applog "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/logging"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/transport/http/webui"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
-	corazalite "github.com/gofurry/coraza-fiber-lite"
 	swagger "github.com/gofiber/contrib/v3/swaggerui"
 	"github.com/gofiber/fiber/v3"
 	fibercompress "github.com/gofiber/fiber/v3/middleware/compress"
@@ -29,6 +23,12 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/pprof"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
+	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/bootstrap"
+	applog "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/logging"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/transport/http/webui"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	corazalite "github.com/gofurry/coraza-fiber-lite"
 )
 
 type Builder struct{}

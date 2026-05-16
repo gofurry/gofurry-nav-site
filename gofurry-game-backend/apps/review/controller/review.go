@@ -1,10 +1,10 @@
 package controller
 
 import (
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/apps/review/models"
 	"github.com/gofurry/gofurry-game-backend/apps/review/service"
 	"github.com/gofurry/gofurry-game-backend/common"
-	"github.com/gofiber/fiber/v3"
 )
 
 type reviewApi struct{}

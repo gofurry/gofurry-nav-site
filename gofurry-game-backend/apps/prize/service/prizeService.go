@@ -5,6 +5,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/bytedance/sonic"
+	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/apps/prize/dao"
 	"github.com/gofurry/gofurry-game-backend/apps/prize/models"
 	"github.com/gofurry/gofurry-game-backend/common"
@@ -13,8 +15,6 @@ import (
 	cm "github.com/gofurry/gofurry-game-backend/common/models"
 	cs "github.com/gofurry/gofurry-game-backend/common/service"
 	"github.com/gofurry/gofurry-game-backend/common/util"
-	"github.com/bytedance/sonic"
-	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 )
 

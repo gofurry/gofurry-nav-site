@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/models"
 	"github.com/gofurry/gofurry-nav-collector/common"
@@ -14,7 +15,6 @@ import (
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
 	"github.com/gofurry/gofurry-nav-collector/common/util"
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
-	"github.com/bytedance/sonic"
 	"github.com/miekg/dns"
 	_ "github.com/miekg/dns"
 	"github.com/oschwald/geoip2-golang"

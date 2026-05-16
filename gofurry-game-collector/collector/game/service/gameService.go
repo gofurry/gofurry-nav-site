@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-game-collector/collector/game/dao"
 	"github.com/gofurry/gofurry-game-collector/collector/game/models"
 	"github.com/gofurry/gofurry-game-collector/common"
@@ -16,7 +17,6 @@ import (
 	cs "github.com/gofurry/gofurry-game-collector/common/service"
 	"github.com/gofurry/gofurry-game-collector/common/util"
 	"github.com/gofurry/gofurry-game-collector/roof/env"
-	"github.com/bytedance/sonic"
 	"github.com/sourcegraph/conc/pool"
 	"github.com/tidwall/gjson"
 	"golang.org/x/time/rate"

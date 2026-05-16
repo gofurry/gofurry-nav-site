@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/gofurry/gofurry-nav-backend/common"
-	"github.com/gofurry/gofurry-nav-backend/roof/env"
 	fibercoraza "github.com/gofiber/contrib/v3/coraza"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/roof/env"
 )
 
 var (

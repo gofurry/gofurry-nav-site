@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/gofurry/gofurry-game-collector/roof/env"
 	"github.com/bwmarrin/snowflake"
+	"github.com/gofurry/gofurry-game-collector/roof/env"
 )
 
 var clusterId, _ = snowflake.NewNode(int64(env.GetServerConfig().ClusterId))

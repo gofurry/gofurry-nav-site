@@ -3,10 +3,10 @@ package router
 import (
 	"time"
 
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	"github.com/gofiber/fiber/v3"
 	fibertimeout "github.com/gofiber/fiber/v3/middleware/timeout"
+	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 )
 
 type timeoutRouter struct {
