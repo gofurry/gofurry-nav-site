@@ -77,7 +77,9 @@ export function syncStatus() {
   return request<SyncStatusResponse>('/api/v1/admin/sync/status')
 }
 
-export function runSync(source: 'nav_sites' | 'site_changelog' | 'all') {
+export function runSync(
+  source: 'nav_sites' | 'site_changelog' | 'game_details' | 'game_news' | 'game_creators' | 'all',
+) {
   return request<{ accepted: boolean; source: string }>('/api/v1/admin/sync/run', {
     method: 'POST',
     body: JSON.stringify({ source }),

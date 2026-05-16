@@ -87,7 +87,7 @@ func Start() error {
 	ragService := ragservice.New(repo, embedClient, chatClient, *cfg, worker)
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	worker.Start(workerCtx)
-	syncManager := contentsync.NewManager(*cfg, repo, nil)
+	syncManager := contentsync.NewManager(*cfg, repo, nil, nil)
 	syncCtx, syncCancel := context.WithCancel(context.Background())
 	syncManager.Start(syncCtx)
 

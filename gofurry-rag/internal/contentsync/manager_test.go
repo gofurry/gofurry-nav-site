@@ -13,7 +13,7 @@ import (
 
 func TestRunNowCreatesAndSkipsAndUpdatesDocuments(t *testing.T) {
 	repo := newFakeRepo()
-	client := &fakeNavClient{
+	client := &fakeSyncClient{
 		sites: map[string][]NavSite{
 			"zh-CN": {{ID: "1", Name: "站点", Domain: "example.com", Info: "简介", Country: "CN", NSFW: "no", Welfare: "no"}},
 			"en-US": {{ID: "1", Name: "Site", Domain: "example.com", Info: "Intro", Country: "CN", NSFW: "no", Welfare: "no"}},
@@ -32,7 +32,7 @@ func TestRunNowCreatesAndSkipsAndUpdatesDocuments(t *testing.T) {
 			}{Description: "desc"}},
 		},
 	}
-	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, repo, client)
+	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, repo, client, client)
 
 	if err := manager.RunNow(context.Background(), SourceNavSites, TriggerManual); err != nil {
 		t.Fatal(err)
@@ -60,13 +60,13 @@ func TestRunNowCreatesAndSkipsAndUpdatesDocuments(t *testing.T) {
 
 func TestRunNowRecordsChangelogRun(t *testing.T) {
 	repo := newFakeRepo()
-	client := &fakeNavClient{
+	client := &fakeSyncClient{
 		changelogs: []ChangeLog{{Title: "v1", URL: "https://example.com/changelog/v1.md", CreateTime: "2026-05-01", UpdateTime: "2026-05-02"}},
 		markdown: map[string]string{
 			"https://example.com/changelog/v1.md": "# hello",
 		},
 	}
-	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, repo, client)
+	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, repo, client, client)
 	if err := manager.RunNow(context.Background(), SourceSiteChangelog, TriggerManual); err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func TestRunNowRecordsChangelogRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(runs.Sources) != 2 {
+	if len(runs.Sources) != 5 {
 		t.Fatalf("sources = %+v", runs.Sources)
 	}
 	var found bool
@@ -93,7 +93,7 @@ func TestRunNowRecordsChangelogRun(t *testing.T) {
 
 func TestTriggerRejectsConcurrentRun(t *testing.T) {
 	repo := newFakeRepo()
-	client := &fakeNavClient{
+	client := &fakeSyncClient{
 		sites: map[string][]NavSite{
 			"zh-CN": {{ID: "1", Name: "站点", Domain: "example.com"}},
 			"en-US": {{ID: "1", Name: "Site", Domain: "example.com"}},
@@ -108,7 +108,7 @@ func TestTriggerRejectsConcurrentRun(t *testing.T) {
 		},
 		block: make(chan struct{}),
 	}
-	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, repo, client)
+	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, repo, client, client)
 	if err := manager.Trigger(context.Background(), SourceNavSites, TriggerManual); err != nil {
 		t.Fatal(err)
 	}
@@ -122,6 +122,93 @@ func TestTriggerRejectsConcurrentRun(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 	close(client.block)
+}
+
+func TestRunNowSyncsGameSources(t *testing.T) {
+	repo := newFakeRepo()
+	client := &fakeSyncClient{
+		gameLists: map[string][]GameSummary{
+			"zh": {{ID: "7", Name: "星火", Info: "中文简介", ReleaseDate: "2026-01-01", Developers: []string{"Team A"}, Publishers: []string{"Pub A"}}},
+			"en": {{ID: "7", Name: "Spark", Info: "English intro", ReleaseDate: "2026-01-01", Developers: []string{"Team A"}, Publishers: []string{"Pub A"}}},
+		},
+		gameDetails: map[string]GameDetail{
+			"7:zh": {
+				Name:                "星火",
+				Info:                "中文简介",
+				Platform:            "Windows",
+				SupportedLanguages:  "简体中文, English",
+				Website:             "https://example.com/games/7",
+				DetailedDescription: "很长的介绍",
+				AboutTheGame:        "关于内容",
+				Developers:          []string{"Team A"},
+				Publishers:          []string{"Pub A"},
+				Groups:              []GameKV{{Key: "group", Value: "剧情"}},
+				Tags:                []GameTag{{ID: "1", Name: "RPG"}},
+			},
+			"7:en": {
+				Name:                "Spark",
+				Info:                "English intro",
+				Platform:            "Windows",
+				SupportedLanguages:  "English, Simplified Chinese",
+				Website:             "https://example.com/games/7",
+				DetailedDescription: "Long description",
+				AboutTheGame:        "About text",
+				Developers:          []string{"Team A"},
+				Publishers:          []string{"Pub A"},
+				Groups:              []GameKV{{Key: "group", Value: "Story"}},
+				Tags:                []GameTag{{ID: "1", Name: "RPG"}},
+			},
+		},
+		gameNews: map[string][]GameNews{
+			"zh": {{Name: "星火", Headline: "更新 1", PostTime: "2026-05-01", Author: "福狼", Content: "中文内容", URL: "https://example.com/news/1"}},
+			"en": {{Name: "Spark", Headline: "Update 1", PostTime: "2026-05-01", Author: "Furry", Content: "English content", URL: ""}},
+		},
+		gameCreators: map[string][]GameCreator{
+			"zh": {{ID: "3", Name: "创作者", Info: "中文简介", URL: "https://example.com/creator/3", Type: 1, Links: []GameKV{{Key: "X", Value: "https://x.com/creator"}}}},
+			"en": {{ID: "3", Name: "Creator", Info: "English intro", URL: "https://example.com/creator/3", Type: 1}},
+		},
+	}
+	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, repo, client, client)
+
+	if err := manager.RunNow(context.Background(), SourceGameDetails, TriggerManual); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.RunNow(context.Background(), SourceGameNews, TriggerManual); err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.RunNow(context.Background(), SourceGameCreators, TriggerManual); err != nil {
+		t.Fatal(err)
+	}
+	if repo.created != 6 {
+		t.Fatalf("created = %d", repo.created)
+	}
+
+	if err := manager.RunNow(context.Background(), SourceAll, TriggerManual); err != nil {
+		t.Fatal(err)
+	}
+	if repo.skipped < 6 {
+		t.Fatalf("expected game documents to skip on second sync, skipped = %d", repo.skipped)
+	}
+
+	client.gameDetails["7:zh"] = GameDetail{
+		Name:                "星火",
+		Info:                "中文简介更新",
+		Platform:            "Windows",
+		SupportedLanguages:  "简体中文, English",
+		Website:             "https://example.com/games/7",
+		DetailedDescription: "很长的介绍",
+		AboutTheGame:        "关于内容",
+		Developers:          []string{"Team A"},
+		Publishers:          []string{"Pub A"},
+		Groups:              []GameKV{{Key: "group", Value: "剧情"}},
+		Tags:                []GameTag{{ID: "1", Name: "RPG"}},
+	}
+	if err := manager.RunNow(context.Background(), SourceGameDetails, TriggerManual); err != nil {
+		t.Fatal(err)
+	}
+	if repo.updated == 0 {
+		t.Fatalf("expected updates, got %+v", repo.docs)
+	}
 }
 
 type fakeRepo struct {
@@ -220,39 +307,59 @@ func (r *fakeRepo) LatestSyncRuns(ctx context.Context) (map[string]db.SyncRun, e
 	return result, nil
 }
 
-type fakeNavClient struct {
-	sites       map[string][]NavSite
-	groups      map[string][]NavGroup
-	details     map[string]NavSiteDetail
-	httpRecords map[string]NavHTTPRecord
-	changelogs  []ChangeLog
-	markdown    map[string]string
-	block       chan struct{}
+type fakeSyncClient struct {
+	sites        map[string][]NavSite
+	groups       map[string][]NavGroup
+	details      map[string]NavSiteDetail
+	httpRecords  map[string]NavHTTPRecord
+	changelogs   []ChangeLog
+	markdown     map[string]string
+	gameLists    map[string][]GameSummary
+	gameDetails  map[string]GameDetail
+	gameNews     map[string][]GameNews
+	gameCreators map[string][]GameCreator
+	block        chan struct{}
 }
 
-func (f *fakeNavClient) ListSites(ctx context.Context, locale string) ([]NavSite, error) {
+func (f *fakeSyncClient) ListSites(ctx context.Context, locale string) ([]NavSite, error) {
 	if f.block != nil {
 		<-f.block
 	}
 	return append([]NavSite(nil), f.sites[locale]...), nil
 }
 
-func (f *fakeNavClient) ListGroups(ctx context.Context, locale string) ([]NavGroup, error) {
+func (f *fakeSyncClient) ListGroups(ctx context.Context, locale string) ([]NavGroup, error) {
 	return append([]NavGroup(nil), f.groups[locale]...), nil
 }
 
-func (f *fakeNavClient) GetSiteDetail(ctx context.Context, id, locale string) (NavSiteDetail, error) {
+func (f *fakeSyncClient) GetSiteDetail(ctx context.Context, id, locale string) (NavSiteDetail, error) {
 	return f.details[id+":"+locale], nil
 }
 
-func (f *fakeNavClient) GetSiteHTTP(ctx context.Context, domain string) (NavHTTPRecord, error) {
+func (f *fakeSyncClient) GetSiteHTTP(ctx context.Context, domain string) (NavHTTPRecord, error) {
 	return f.httpRecords[domain], nil
 }
 
-func (f *fakeNavClient) ListChangelogs(ctx context.Context) ([]ChangeLog, error) {
+func (f *fakeSyncClient) ListChangelogs(ctx context.Context) ([]ChangeLog, error) {
 	return append([]ChangeLog(nil), f.changelogs...), nil
 }
 
-func (f *fakeNavClient) FetchMarkdown(ctx context.Context, rawURL string) (string, error) {
+func (f *fakeSyncClient) FetchMarkdown(ctx context.Context, rawURL string) (string, error) {
 	return f.markdown[rawURL], nil
+}
+
+func (f *fakeSyncClient) ListGames(ctx context.Context, locale string) ([]GameSummary, error) {
+	return append([]GameSummary(nil), f.gameLists[locale]...), nil
+}
+
+func (f *fakeSyncClient) GetGameInfo(ctx context.Context, id, locale string) (GameDetail, error) {
+	return f.gameDetails[id+":"+locale], nil
+}
+
+func (f *fakeSyncClient) ListGameNews(ctx context.Context, locale string) ([]GameNews, error) {
+	return append([]GameNews(nil), f.gameNews[locale]...), nil
+}
+
+func (f *fakeSyncClient) ListCreators(ctx context.Context, locale string) ([]GameCreator, error) {
+	return append([]GameCreator(nil), f.gameCreators[locale]...), nil
 }

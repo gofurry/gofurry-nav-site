@@ -89,6 +89,7 @@ type Config struct {
 	SyncIntervalMinutes           int     `mapstructure:"-" yaml:"-"`
 	SyncTimeoutSeconds            int     `mapstructure:"-" yaml:"-"`
 	SyncNavBaseURL                string  `mapstructure:"-" yaml:"-"`
+	SyncGameBaseURL               string  `mapstructure:"-" yaml:"-"`
 }
 
 type ServerConfig struct {
@@ -259,6 +260,7 @@ type RAGConfig struct {
 	SyncIntervalMinutes           int     `mapstructure:"sync_interval_minutes" yaml:"sync_interval_minutes"`
 	SyncTimeoutSeconds            int     `mapstructure:"sync_timeout_seconds" yaml:"sync_timeout_seconds"`
 	SyncNavBaseURL                string  `mapstructure:"sync_nav_base_url" yaml:"sync_nav_base_url"`
+	SyncGameBaseURL               string  `mapstructure:"sync_game_base_url" yaml:"sync_game_base_url"`
 }
 
 func ConfigureServerConfig(projectName, fileName, configFile string) {
@@ -548,6 +550,9 @@ func (cfg *Config) validate() error {
 	if cfg.RAG.SyncEnabled && strings.TrimSpace(cfg.RAG.SyncNavBaseURL) == "" {
 		errs = append(errs, fmt.Errorf("rag.sync_nav_base_url is required when rag.sync_enabled is true"))
 	}
+	if cfg.RAG.SyncEnabled && strings.TrimSpace(cfg.RAG.SyncGameBaseURL) == "" {
+		errs = append(errs, fmt.Errorf("rag.sync_game_base_url is required when rag.sync_enabled is true"))
+	}
 	return errors.Join(errs...)
 }
 
@@ -594,6 +599,7 @@ func (cfg *Config) fillCompatibilityFields() {
 	cfg.SyncIntervalMinutes = cfg.RAG.SyncIntervalMinutes
 	cfg.SyncTimeoutSeconds = cfg.RAG.SyncTimeoutSeconds
 	cfg.SyncNavBaseURL = cfg.RAG.SyncNavBaseURL
+	cfg.SyncGameBaseURL = cfg.RAG.SyncGameBaseURL
 }
 
 func (cfg *DatabaseConfig) normalize() {
@@ -743,12 +749,13 @@ func (cfg *RAGConfig) normalize() {
 		cfg.EmbedBatchSize = 8
 	}
 	if cfg.SyncIntervalMinutes <= 0 {
-		cfg.SyncIntervalMinutes = 60
+		cfg.SyncIntervalMinutes = 12 * 60
 	}
 	if cfg.SyncTimeoutSeconds <= 0 {
 		cfg.SyncTimeoutSeconds = 30
 	}
 	cfg.SyncNavBaseURL = strings.TrimRight(strings.TrimSpace(cfg.SyncNavBaseURL), "/")
+	cfg.SyncGameBaseURL = strings.TrimRight(strings.TrimSpace(cfg.SyncGameBaseURL), "/")
 }
 
 func normalizeSQLDefaults(target *SQLDatabaseConfig, defaults SQLDatabaseConfig) {
@@ -856,9 +863,10 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("rag.ingest_workers", 1)
 	v.SetDefault("rag.embed_batch_size", 8)
 	v.SetDefault("rag.sync_enabled", false)
-	v.SetDefault("rag.sync_interval_minutes", 60)
+	v.SetDefault("rag.sync_interval_minutes", 720)
 	v.SetDefault("rag.sync_timeout_seconds", 30)
 	v.SetDefault("rag.sync_nav_base_url", "")
+	v.SetDefault("rag.sync_game_base_url", "")
 }
 
 func mappingChild(node *yaml.Node, key string) *yaml.Node {

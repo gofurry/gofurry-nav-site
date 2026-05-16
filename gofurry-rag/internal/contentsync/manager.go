@@ -19,6 +19,9 @@ const (
 	SourceAll           = "all"
 	SourceNavSites      = "nav_sites"
 	SourceSiteChangelog = "site_changelog"
+	SourceGameDetails   = "game_details"
+	SourceGameNews      = "game_news"
+	SourceGameCreators  = "game_creators"
 	TriggerManual       = "manual"
 	TriggerAuto         = "auto"
 )
@@ -39,10 +42,18 @@ type NavClient interface {
 	FetchMarkdown(ctx context.Context, rawURL string) (string, error)
 }
 
+type GameClient interface {
+	ListGames(ctx context.Context, locale string) ([]GameSummary, error)
+	GetGameInfo(ctx context.Context, id, locale string) (GameDetail, error)
+	ListGameNews(ctx context.Context, locale string) ([]GameNews, error)
+	ListCreators(ctx context.Context, locale string) ([]GameCreator, error)
+}
+
 type Manager struct {
-	cfg    config.Config
-	repo   Repository
-	client NavClient
+	cfg        config.Config
+	repo       Repository
+	navClient  NavClient
+	gameClient GameClient
 
 	mu               sync.Mutex
 	running          bool
@@ -77,11 +88,14 @@ type syncError struct {
 func (e syncError) Error() string   { return e.message }
 func (e syncError) HTTPStatus() int { return e.status }
 
-func NewManager(cfg config.Config, repo Repository, client NavClient) *Manager {
-	if client == nil {
-		client = NewHTTPNavClient(cfg.SyncNavBaseURL, time.Duration(cfg.SyncTimeoutSeconds)*time.Second)
+func NewManager(cfg config.Config, repo Repository, navClient NavClient, gameClient GameClient) *Manager {
+	if navClient == nil {
+		navClient = NewHTTPNavClient(cfg.SyncNavBaseURL, time.Duration(cfg.SyncTimeoutSeconds)*time.Second)
 	}
-	return &Manager{cfg: cfg, repo: repo, client: client}
+	if gameClient == nil {
+		gameClient = NewHTTPGameClient(cfg.SyncGameBaseURL, time.Duration(cfg.SyncTimeoutSeconds)*time.Second)
+	}
+	return &Manager{cfg: cfg, repo: repo, navClient: navClient, gameClient: gameClient}
 }
 
 func (m *Manager) Start(ctx context.Context) {
@@ -94,10 +108,9 @@ func (m *Manager) Start(ctx context.Context) {
 }
 
 func (m *Manager) scheduler(ctx context.Context) {
-	initialDelay := 5 * time.Second
-	timer := time.NewTimer(initialDelay)
-	defer timer.Stop()
 	interval := time.Duration(maxInt(m.cfg.SyncIntervalMinutes, 1)) * time.Minute
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
 	for {
 		select {
 		case <-ctx.Done():
@@ -123,7 +136,7 @@ func (m *Manager) Trigger(ctx context.Context, source, trigger string) error {
 	if err != nil {
 		return err
 	}
-	go m.execute(ctx, source, trigger, startedAt)
+	go m.execute(context.Background(), source, trigger, startedAt)
 	return nil
 }
 
@@ -183,6 +196,7 @@ func (m *Manager) execute(ctx context.Context, source, trigger string, startedAt
 
 	var errs []error
 	for _, item := range expandSources(source) {
+		m.setCurrentSource(startedAt, item)
 		runCtx, cancel := context.WithTimeout(ctx, time.Duration(maxInt(m.cfg.SyncTimeoutSeconds, 1))*time.Second)
 		err := m.runSource(runCtx, item, trigger)
 		cancel()
@@ -254,6 +268,14 @@ func (m *Manager) finishRun(startedAt time.Time) {
 	}
 }
 
+func (m *Manager) setCurrentSource(startedAt time.Time, source string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.currentStartedAt != nil && m.currentStartedAt.Equal(startedAt) {
+		m.currentSource = source
+	}
+}
+
 type syncCounts struct {
 	Added   int
 	Updated int
@@ -270,6 +292,9 @@ func sourceDefinitions() []sourceDefinition {
 	return []sourceDefinition{
 		{Source: SourceNavSites, Service: "gofurry-nav-backend"},
 		{Source: SourceSiteChangelog, Service: "gofurry-nav-backend"},
+		{Source: SourceGameDetails, Service: "gofurry-game-backend"},
+		{Source: SourceGameNews, Service: "gofurry-game-backend"},
+		{Source: SourceGameCreators, Service: "gofurry-game-backend"},
 	}
 }
 
@@ -279,6 +304,12 @@ func sourceRunner(source string) (func(context.Context, *Manager) (syncCounts, e
 		return runNavSitesSync, true
 	case SourceSiteChangelog:
 		return runChangeLogSync, true
+	case SourceGameDetails:
+		return runGameDetailsSync, true
+	case SourceGameNews:
+		return runGameNewsSync, true
+	case SourceGameCreators:
+		return runGameCreatorsSync, true
 	default:
 		return nil, false
 	}
@@ -302,10 +333,10 @@ func normalizeSource(source string) (string, error) {
 		source = SourceAll
 	}
 	switch source {
-	case SourceAll, SourceNavSites, SourceSiteChangelog:
+	case SourceAll, SourceNavSites, SourceSiteChangelog, SourceGameDetails, SourceGameNews, SourceGameCreators:
 		return source, nil
 	default:
-		return "", syncError{status: 400, message: "source must be one of nav_sites, site_changelog, all"}
+		return "", syncError{status: 400, message: "source must be one of nav_sites, site_changelog, game_details, game_news, game_creators, all"}
 	}
 }
 
@@ -319,25 +350,25 @@ func runNavSitesSync(ctx context.Context, m *Manager) (syncCounts, error) {
 	var counts syncCounts
 	var errs []error
 	for _, locale := range locales {
-		groups, err := m.client.ListGroups(ctx, locale)
+		groups, err := m.navClient.ListGroups(ctx, locale)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("load %s groups: %w", locale, err))
 			continue
 		}
-		sites, err := m.client.ListSites(ctx, locale)
+		sites, err := m.navClient.ListSites(ctx, locale)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("load %s sites: %w", locale, err))
 			continue
 		}
 		siteGroups := buildSiteGroups(groups)
 		for _, site := range sites {
-			detail, err := m.client.GetSiteDetail(ctx, site.ID, locale)
+			detail, err := m.navClient.GetSiteDetail(ctx, site.ID, locale)
 			if err != nil {
 				counts.Failed++
 				errs = append(errs, fmt.Errorf("load site detail %s/%s: %w", site.ID, locale, err))
 				continue
 			}
-			httpRecord, httpErr := m.client.GetSiteHTTP(ctx, site.Domain)
+			httpRecord, httpErr := m.navClient.GetSiteHTTP(ctx, site.Domain)
 			if httpErr != nil {
 				slog.Warn("load site http record failed", "site_id", site.ID, "locale", locale, "domain", site.Domain, "error", httpErr)
 			}
@@ -369,13 +400,13 @@ func runNavSitesSync(ctx context.Context, m *Manager) (syncCounts, error) {
 
 func runChangeLogSync(ctx context.Context, m *Manager) (syncCounts, error) {
 	var counts syncCounts
-	list, err := m.client.ListChangelogs(ctx)
+	list, err := m.navClient.ListChangelogs(ctx)
 	if err != nil {
 		return counts, err
 	}
 	var errs []error
 	for _, item := range list {
-		text, err := m.client.FetchMarkdown(ctx, item.URL)
+		text, err := m.navClient.FetchMarkdown(ctx, item.URL)
 		if err != nil {
 			counts.Failed++
 			errs = append(errs, fmt.Errorf("load changelog %s: %w", item.URL, err))

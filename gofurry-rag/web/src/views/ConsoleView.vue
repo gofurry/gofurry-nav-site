@@ -635,7 +635,13 @@ import AiChatPanel from '../components/AiChatPanel.vue'
 
 type MenuKey = 'overview' | 'documents' | 'sync' | 'ai' | 'search'
 type DocumentTab = 'ingest' | 'list' | 'chunks'
-type SyncSourceKey = 'nav_sites' | 'site_changelog' | 'all'
+type SyncSourceKey =
+  | 'nav_sites'
+  | 'site_changelog'
+  | 'game_details'
+  | 'game_news'
+  | 'game_creators'
+  | 'all'
 type ConfirmTarget =
   | { kind: 'document'; id: number; title: string; label: string; description: string; confirmText: string }
   | { kind: 'chunk'; id: number; title: string; label: string; description: string; confirmText: string }
@@ -821,16 +827,39 @@ let documentPoll: number | undefined
 let overviewPoll: number | undefined
 let syncPoll: number | undefined
 
-const syncSourceMeta: Record<Exclude<SyncSourceKey, 'all'>, { label: string; badge: string; description: string }> = {
+const syncSourceMeta: Record<
+  Exclude<SyncSourceKey, 'all'>,
+  { label: string; badge: string; description: string; service: string }
+> = {
   nav_sites: {
     label: '导航站点',
     badge: 'NAV',
     description: '按中英双语拉取导航站点、分组、详情与可选页面描述，适合回答站点是什么、属于什么分类。',
+    service: 'gofurry-nav-backend',
   },
   site_changelog: {
     label: '更新日志',
     badge: 'LOG',
     description: '从站点 changelog 列表抓取 markdown 原文，适合回答 gofurry 最近做了什么、何时更新。',
+    service: 'gofurry-nav-backend',
+  },
+  game_details: {
+    label: '游戏详情',
+    badge: 'GAME',
+    description: '按中英双语拉取游戏详情、标签、分组与官网信息，适合回答某个游戏是什么、支持什么平台。',
+    service: 'gofurry-game-backend',
+  },
+  game_news: {
+    label: '游戏新闻',
+    badge: 'NEWS',
+    description: '同步游戏更新公告与新闻正文，适合回答最近有什么动态、某个游戏更新了什么。',
+    service: 'gofurry-game-backend',
+  },
+  game_creators: {
+    label: '创作者资料',
+    badge: 'CREATOR',
+    description: '同步创作者简介、主页、社交链接与联系方式，适合回答开发者是谁、在哪里关注。',
+    service: 'gofurry-game-backend',
   },
 }
 
@@ -855,7 +884,7 @@ const currentTitle = computed(() => {
 })
 const currentKicker = computed(() => {
   if (activeMenu.value === 'documents') return 'INGEST / DOCUMENTS / CHUNKS'
-  if (activeMenu.value === 'sync') return 'SYNC / NAV / CHANGELOG'
+  if (activeMenu.value === 'sync') return 'SYNC / NAV / GAME'
   if (activeMenu.value === 'ai') return 'RAG / CHAT / TENCENT'
   if (activeMenu.value === 'search') return 'RETRIEVAL'
   return 'OBSERVABILITY'
@@ -878,16 +907,20 @@ const currentSyncTriggerText = computed(() => {
 })
 const syncCards = computed(() => {
   const sourceMap = new Map<string, SyncSourceStatus>((syncState.value?.sources || []).map((item) => [item.source, item]))
-  return (Object.entries(syncSourceMeta) as Array<[Exclude<SyncSourceKey, 'all'>, { label: string; badge: string; description: string }]>).map(([source, meta]) => {
+  return (
+    Object.entries(syncSourceMeta) as Array<
+      [Exclude<SyncSourceKey, 'all'>, { label: string; badge: string; description: string; service: string }]
+    >
+  ).map(([source, meta]) => {
     const sourceState = sourceMap.get(source)
     return {
       source,
       ...meta,
-      service: sourceState?.service || 'gofurry-nav-backend',
+      service: sourceState?.service || meta.service,
       auto_enabled: sourceState?.auto_enabled ?? Boolean(syncState.value?.enabled),
       last_run: sourceState?.last_run,
     }
-  })
+    })
 })
 
 async function performLogin() {
