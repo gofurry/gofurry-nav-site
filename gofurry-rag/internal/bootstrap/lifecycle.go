@@ -11,6 +11,7 @@ import (
 	"time"
 
 	env "github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/contentsync"
 	"github.com/gofurry/gofurry-rag/internal/db"
 	"github.com/gofurry/gofurry-rag/internal/embedder"
 	"github.com/gofurry/gofurry-rag/internal/ingest"
@@ -33,6 +34,9 @@ type Runtime struct {
 	worker       *ingest.Worker
 	workerCtx    context.Context
 	workerCancel context.CancelFunc
+	syncManager  *contentsync.Manager
+	syncCtx      context.Context
+	syncCancel   context.CancelFunc
 }
 
 func Start() error {
@@ -83,6 +87,9 @@ func Start() error {
 	ragService := ragservice.New(repo, embedClient, chatClient, *cfg, worker)
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	worker.Start(workerCtx)
+	syncManager := contentsync.NewManager(*cfg, repo, nil)
+	syncCtx, syncCancel := context.WithCancel(context.Background())
+	syncManager.Start(syncCtx)
 
 	runtime = &Runtime{
 		pool:         pool,
@@ -92,6 +99,9 @@ func Start() error {
 		worker:       worker,
 		workerCtx:    workerCtx,
 		workerCancel: workerCancel,
+		syncManager:  syncManager,
+		syncCtx:      syncCtx,
+		syncCancel:   syncCancel,
 	}
 	started.Store(true)
 	slog.Info("application bootstrap completed")
@@ -110,6 +120,9 @@ func Shutdown() error {
 	if runtime != nil {
 		if runtime.workerCancel != nil {
 			runtime.workerCancel()
+		}
+		if runtime.syncCancel != nil {
+			runtime.syncCancel()
 		}
 		if runtime.pool != nil {
 			runtime.pool.Close()
@@ -132,6 +145,13 @@ func Worker() *ingest.Worker {
 		return nil
 	}
 	return runtime.worker
+}
+
+func SyncManager() *contentsync.Manager {
+	if runtime == nil {
+		return nil
+	}
+	return runtime.syncManager
 }
 
 func initLogger(cfg *env.Config) {

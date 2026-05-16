@@ -85,6 +85,10 @@ type Config struct {
 	TencentReasoningEffort        string  `mapstructure:"-" yaml:"-"`
 	IngestWorkers                 int     `mapstructure:"-" yaml:"-"`
 	EmbedBatchSize                int     `mapstructure:"-" yaml:"-"`
+	SyncEnabled                   bool    `mapstructure:"-" yaml:"-"`
+	SyncIntervalMinutes           int     `mapstructure:"-" yaml:"-"`
+	SyncTimeoutSeconds            int     `mapstructure:"-" yaml:"-"`
+	SyncNavBaseURL                string  `mapstructure:"-" yaml:"-"`
 }
 
 type ServerConfig struct {
@@ -251,6 +255,10 @@ type RAGConfig struct {
 	TencentReasoningEffort        string  `mapstructure:"tencent_reasoning_effort" yaml:"tencent_reasoning_effort"`
 	IngestWorkers                 int     `mapstructure:"ingest_workers" yaml:"ingest_workers"`
 	EmbedBatchSize                int     `mapstructure:"embed_batch_size" yaml:"embed_batch_size"`
+	SyncEnabled                   bool    `mapstructure:"sync_enabled" yaml:"sync_enabled"`
+	SyncIntervalMinutes           int     `mapstructure:"sync_interval_minutes" yaml:"sync_interval_minutes"`
+	SyncTimeoutSeconds            int     `mapstructure:"sync_timeout_seconds" yaml:"sync_timeout_seconds"`
+	SyncNavBaseURL                string  `mapstructure:"sync_nav_base_url" yaml:"sync_nav_base_url"`
 }
 
 func ConfigureServerConfig(projectName, fileName, configFile string) {
@@ -537,6 +545,9 @@ func (cfg *Config) validate() error {
 	if cfg.RAG.EmbedDim <= 0 {
 		errs = append(errs, fmt.Errorf("rag.embed_dim must be positive"))
 	}
+	if cfg.RAG.SyncEnabled && strings.TrimSpace(cfg.RAG.SyncNavBaseURL) == "" {
+		errs = append(errs, fmt.Errorf("rag.sync_nav_base_url is required when rag.sync_enabled is true"))
+	}
 	return errors.Join(errs...)
 }
 
@@ -579,6 +590,10 @@ func (cfg *Config) fillCompatibilityFields() {
 	cfg.TencentReasoningEffort = cfg.RAG.TencentReasoningEffort
 	cfg.IngestWorkers = cfg.RAG.IngestWorkers
 	cfg.EmbedBatchSize = cfg.RAG.EmbedBatchSize
+	cfg.SyncEnabled = cfg.RAG.SyncEnabled
+	cfg.SyncIntervalMinutes = cfg.RAG.SyncIntervalMinutes
+	cfg.SyncTimeoutSeconds = cfg.RAG.SyncTimeoutSeconds
+	cfg.SyncNavBaseURL = cfg.RAG.SyncNavBaseURL
 }
 
 func (cfg *DatabaseConfig) normalize() {
@@ -727,6 +742,13 @@ func (cfg *RAGConfig) normalize() {
 	if cfg.EmbedBatchSize <= 0 {
 		cfg.EmbedBatchSize = 8
 	}
+	if cfg.SyncIntervalMinutes <= 0 {
+		cfg.SyncIntervalMinutes = 60
+	}
+	if cfg.SyncTimeoutSeconds <= 0 {
+		cfg.SyncTimeoutSeconds = 30
+	}
+	cfg.SyncNavBaseURL = strings.TrimRight(strings.TrimSpace(cfg.SyncNavBaseURL), "/")
 }
 
 func normalizeSQLDefaults(target *SQLDatabaseConfig, defaults SQLDatabaseConfig) {
@@ -833,6 +855,10 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("rag.tencent_reasoning_effort", "low")
 	v.SetDefault("rag.ingest_workers", 1)
 	v.SetDefault("rag.embed_batch_size", 8)
+	v.SetDefault("rag.sync_enabled", false)
+	v.SetDefault("rag.sync_interval_minutes", 60)
+	v.SetDefault("rag.sync_timeout_seconds", 30)
+	v.SetDefault("rag.sync_nav_base_url", "")
 }
 
 func mappingChild(node *yaml.Node, key string) *yaml.Node {

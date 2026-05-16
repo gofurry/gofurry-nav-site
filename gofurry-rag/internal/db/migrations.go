@@ -34,6 +34,10 @@ ON rag_documents(status);
 CREATE INDEX IF NOT EXISTS idx_rag_documents_source
 ON rag_documents(source_type, source_id);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rag_documents_source_unique
+ON rag_documents(source_type, source_id)
+WHERE source_id IS NOT NULL AND source_id <> '';
+
 CREATE INDEX IF NOT EXISTS idx_rag_documents_metadata_category
 ON rag_documents ((metadata->>'category'));
 
@@ -57,4 +61,21 @@ ON rag_chunks(document_id);
 
 CREATE INDEX IF NOT EXISTS idx_rag_chunks_content_hash
 ON rag_chunks(content_hash);
+
+CREATE TABLE IF NOT EXISTS rag_sync_runs (
+    id BIGSERIAL PRIMARY KEY,
+    source TEXT NOT NULL,
+    trigger TEXT NOT NULL DEFAULT 'manual',
+    status TEXT NOT NULL DEFAULT 'running',
+    started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at TIMESTAMPTZ,
+    added_count INT NOT NULL DEFAULT 0,
+    updated_count INT NOT NULL DEFAULT 0,
+    skipped_count INT NOT NULL DEFAULT 0,
+    failed_count INT NOT NULL DEFAULT 0,
+    message TEXT NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_rag_sync_runs_source_started
+ON rag_sync_runs(source, started_at DESC);
 `

@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-rag/config"
 	"github.com/gofurry/gofurry-rag/internal/auth"
+	"github.com/gofurry/gofurry-rag/internal/contentsync"
 	"github.com/gofurry/gofurry-rag/internal/db"
 	"github.com/gofurry/gofurry-rag/internal/ingest"
 	"github.com/gofurry/gofurry-rag/internal/service"
@@ -22,10 +23,16 @@ type Server struct {
 	service     *service.Service
 	authService *auth.Service
 	worker      *ingest.Worker
+	syncManager syncManager
 	chatLimiter *publicChatLimiter
 }
 
-func NewServer(cfg config.Config, svc *service.Service, worker *ingest.Worker) *Server {
+type syncManager interface {
+	Status(ctx context.Context) (contentsync.StatusResponse, error)
+	Trigger(ctx context.Context, source, trigger string) error
+}
+
+func NewServer(cfg config.Config, svc *service.Service, worker *ingest.Worker, syncManager syncManager) *Server {
 	limitRequests := cfg.PublicQueryRateLimitRequests
 	limitWindow := cfg.PublicQueryRateLimitWindowSec
 	if svc != nil {
@@ -38,6 +45,7 @@ func NewServer(cfg config.Config, svc *service.Service, worker *ingest.Worker) *
 		service:     svc,
 		authService: auth.New(cfg),
 		worker:      worker,
+		syncManager: syncManager,
 		chatLimiter: newPublicChatLimiter(limitRequests, time.Duration(limitWindow)*time.Second),
 	}
 }
@@ -60,6 +68,8 @@ func (s *Server) RegisterRoutes(v1 fiber.Router) {
 	protected.Delete("/documents/:id", s.deleteDocument)
 	protected.Patch("/chunks/:id", s.updateChunk)
 	protected.Delete("/chunks/:id", s.deleteChunk)
+	protected.Get("/sync/status", s.syncStatus)
+	protected.Post("/sync/run", s.syncRun)
 	protected.Post("/debug/chunk-preview", s.chunkPreview)
 	v1.Get("/chat/status", s.chatStatus)
 	v1.Post("/chat/query", s.query)
@@ -304,6 +314,42 @@ func (s *Server) overview(c fiber.Ctx) error {
 		return fail(c, err)
 	}
 	return ok(c, result)
+}
+
+func (s *Server) syncStatus(c fiber.Ctx) error {
+	if s.syncManager == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
+	result, err := s.syncManager.Status(requestContext(c))
+	if err != nil {
+		return fail(c, err)
+	}
+	return ok(c, result)
+}
+
+type syncRunRequest struct {
+	Source string `json:"source"`
+}
+
+func (s *Server) syncRun(c fiber.Ctx) error {
+	if s.syncManager == nil {
+		return fail(c, fiber.ErrServiceUnavailable)
+	}
+	var req syncRunRequest
+	if err := json.Unmarshal(c.Body(), &req); err != nil {
+		return fail(c, err)
+	}
+	if err := s.syncManager.Trigger(requestContext(c), req.Source, contentsync.TriggerManual); err != nil {
+		return fail(c, err)
+	}
+	return c.Status(fiber.StatusAccepted).JSON(Result{
+		Code:    1,
+		Message: "accepted",
+		Data: fiber.Map{
+			"accepted": true,
+			"source":   strings.TrimSpace(req.Source),
+		},
+	})
 }
 
 func (s *Server) createTextDocument(c fiber.Ctx) error {

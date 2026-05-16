@@ -152,6 +152,49 @@ type BatchResult struct {
 	Status        string `json:"status"`
 }
 
+type SyncDocumentParams struct {
+	Title      string
+	Content    string
+	SourceType string
+	SourceID   string
+	URL        string
+	Checksum   string
+	Metadata   json.RawMessage
+}
+
+type SyncDocumentResult struct {
+	Action   string   `json:"action"`
+	Document Document `json:"document"`
+}
+
+type SyncRun struct {
+	ID           int64      `json:"id"`
+	Source       string     `json:"source"`
+	Trigger      string     `json:"trigger"`
+	Status       string     `json:"status"`
+	StartedAt    time.Time  `json:"started_at"`
+	CompletedAt  *time.Time `json:"completed_at,omitempty"`
+	AddedCount   int        `json:"added_count"`
+	UpdatedCount int        `json:"updated_count"`
+	SkippedCount int        `json:"skipped_count"`
+	FailedCount  int        `json:"failed_count"`
+	Message      string     `json:"message"`
+}
+
+type CreateSyncRunParams struct {
+	Source  string
+	Trigger string
+}
+
+type CompleteSyncRunParams struct {
+	Status       string
+	AddedCount   int
+	UpdatedCount int
+	SkippedCount int
+	FailedCount  int
+	Message      string
+}
+
 func Connect(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
@@ -199,6 +242,17 @@ SELECT id, source_type, COALESCE(source_id, ''), COALESCE(title, ''), COALESCE(u
 FROM rag_documents
 WHERE id = $1
 `, id)
+	return scanDocument(row)
+}
+
+func (r *Repository) GetDocumentBySource(ctx context.Context, sourceType, sourceID string) (Document, error) {
+	row := r.pool.QueryRow(ctx, `
+SELECT id, source_type, COALESCE(source_id, ''), COALESCE(title, ''), COALESCE(url, ''),
+       checksum, content, status, error_message, metadata, retry_count, last_error_at,
+       processed_at, reindex_requested_at, last_indexed_at, created_at, updated_at
+FROM rag_documents
+WHERE source_type = $1 AND source_id = $2
+`, sourceType, sourceID)
 	return scanDocument(row)
 }
 
@@ -325,6 +379,80 @@ RETURNING id, source_type, COALESCE(source_id, ''), COALESCE(title, ''), COALESC
 		return Document{}, err
 	}
 	return doc, nil
+}
+
+func (r *Repository) UpsertSyncedDocument(ctx context.Context, params SyncDocumentParams) (SyncDocumentResult, error) {
+	if len(params.Metadata) == 0 {
+		params.Metadata = json.RawMessage(`{}`)
+	}
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return SyncDocumentResult{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	row := tx.QueryRow(ctx, `
+SELECT id, source_type, COALESCE(source_id, ''), COALESCE(title, ''), COALESCE(url, ''),
+       checksum, content, status, error_message, metadata, retry_count, last_error_at,
+       processed_at, reindex_requested_at, last_indexed_at, created_at, updated_at
+FROM rag_documents
+WHERE source_type = $1 AND source_id = $2
+FOR UPDATE
+`, params.SourceType, params.SourceID)
+	doc, err := scanDocument(row)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return SyncDocumentResult{}, err
+		}
+		created, createErr := scanDocument(tx.QueryRow(ctx, `
+INSERT INTO rag_documents (source_type, source_id, title, url, checksum, content, status, metadata)
+VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7::jsonb)
+RETURNING id, source_type, COALESCE(source_id, ''), COALESCE(title, ''), COALESCE(url, ''),
+          checksum, content, status, error_message, metadata, retry_count, last_error_at,
+          processed_at, reindex_requested_at, last_indexed_at, created_at, updated_at
+`, params.SourceType, params.SourceID, params.Title, params.URL, params.Checksum, params.Content, string(params.Metadata)))
+		if createErr != nil {
+			return SyncDocumentResult{}, createErr
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return SyncDocumentResult{}, err
+		}
+		return SyncDocumentResult{Action: "created", Document: created}, nil
+	}
+
+	if doc.Checksum == params.Checksum {
+		if err := tx.Commit(ctx); err != nil {
+			return SyncDocumentResult{}, err
+		}
+		return SyncDocumentResult{Action: "skipped", Document: doc}, nil
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM rag_chunks WHERE document_id = $1`, doc.ID); err != nil {
+		return SyncDocumentResult{}, err
+	}
+	updated, err := scanDocument(tx.QueryRow(ctx, `
+UPDATE rag_documents
+SET title = $2,
+    url = $3,
+    checksum = $4,
+    content = $5,
+    metadata = $6::jsonb,
+    status = 'pending',
+    error_message = '',
+    updated_at = now(),
+    reindex_requested_at = now()
+WHERE id = $1
+RETURNING id, source_type, COALESCE(source_id, ''), COALESCE(title, ''), COALESCE(url, ''),
+          checksum, content, status, error_message, metadata, retry_count, last_error_at,
+          processed_at, reindex_requested_at, last_indexed_at, created_at, updated_at
+`, doc.ID, params.Title, params.URL, params.Checksum, params.Content, string(params.Metadata)))
+	if err != nil {
+		return SyncDocumentResult{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return SyncDocumentResult{}, err
+	}
+	return SyncDocumentResult{Action: "updated", Document: updated}, nil
 }
 
 func (r *Repository) ListDocuments(ctx context.Context, filter ListDocumentsFilter) (PageResult[Document], error) {
@@ -535,6 +663,53 @@ LIMIT $`+strconv.Itoa(limitPlaceholder)+`
 	return sources, rows.Err()
 }
 
+func (r *Repository) CreateSyncRun(ctx context.Context, params CreateSyncRunParams) (SyncRun, error) {
+	row := r.pool.QueryRow(ctx, `
+INSERT INTO rag_sync_runs (source, trigger, status)
+VALUES ($1, $2, 'running')
+RETURNING id, source, trigger, status, started_at, completed_at, added_count, updated_count, skipped_count, failed_count, message
+`, strings.TrimSpace(params.Source), strings.TrimSpace(params.Trigger))
+	return scanSyncRun(row)
+}
+
+func (r *Repository) CompleteSyncRun(ctx context.Context, id int64, params CompleteSyncRunParams) error {
+	_, err := r.pool.Exec(ctx, `
+UPDATE rag_sync_runs
+SET status = $2,
+    completed_at = now(),
+    added_count = $3,
+    updated_count = $4,
+    skipped_count = $5,
+    failed_count = $6,
+    message = $7
+WHERE id = $1
+`, id, params.Status, params.AddedCount, params.UpdatedCount, params.SkippedCount, params.FailedCount, params.Message)
+	return err
+}
+
+func (r *Repository) LatestSyncRuns(ctx context.Context) (map[string]SyncRun, error) {
+	rows, err := r.pool.Query(ctx, `
+SELECT DISTINCT ON (source)
+       id, source, trigger, status, started_at, completed_at, added_count, updated_count, skipped_count, failed_count, message
+FROM rag_sync_runs
+ORDER BY source, started_at DESC, id DESC
+`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]SyncRun)
+	for rows.Next() {
+		run, err := scanSyncRun(rows)
+		if err != nil {
+			return nil, err
+		}
+		result[run.Source] = run
+	}
+	return result, rows.Err()
+}
+
 type NewChunk struct {
 	ChunkIndex  int
 	Content     string
@@ -607,6 +782,24 @@ func scanChunk(row pgx.Row) (Chunk, error) {
 	var item Chunk
 	err := row.Scan(&item.ID, &item.DocumentID, &item.ChunkIndex, &item.Content, &item.ContentHash, &item.TokenCount, &item.HasEmbedding, &item.EmbeddingDim, &item.CreatedAt)
 	return item, err
+}
+
+func scanSyncRun(row pgx.Row) (SyncRun, error) {
+	var run SyncRun
+	err := row.Scan(
+		&run.ID,
+		&run.Source,
+		&run.Trigger,
+		&run.Status,
+		&run.StartedAt,
+		&run.CompletedAt,
+		&run.AddedCount,
+		&run.UpdatedCount,
+		&run.SkippedCount,
+		&run.FailedCount,
+		&run.Message,
+	)
+	return run, err
 }
 
 func normalizePage(page, pageSize int) (int, int) {

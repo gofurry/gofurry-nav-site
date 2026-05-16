@@ -14,6 +14,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/contentsync"
 	"github.com/gofurry/gofurry-rag/internal/db"
 	"github.com/gofurry/gofurry-rag/internal/service"
 	"github.com/gofurry/gofurry-rag/internal/tencentmaas"
@@ -134,7 +135,7 @@ func TestChatStatusIsPublic(t *testing.T) {
 	var result struct {
 		Code int `json:"code"`
 		Data struct {
-			Limits service.ChatLimits `json:"limits"`
+			Limits service.ChatLimits    `json:"limits"`
 			RAG    service.PublicRAGInfo `json:"rag"`
 		} `json:"data"`
 	}
@@ -329,7 +330,7 @@ func TestQueryRejectsPublicTopKLimit(t *testing.T) {
 }
 
 func TestQueryRateLimitsPublicRequests(t *testing.T) {
-	app, _ := testAppWithConfig(config.Config{
+	app, _, _ := testAppWithConfig(config.Config{
 		PublicQueryRateLimitRequests:  2,
 		PublicQueryRateLimitWindowSec: 60,
 		PublicQueryMaxQuestionRunes:   800,
@@ -598,6 +599,85 @@ func TestChunkPreviewRejectsInvalidVariant(t *testing.T) {
 	}
 }
 
+func TestSyncStatusRequiresCookie(t *testing.T) {
+	app := testApp()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/sync/status", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestSyncStatusReturnsSources(t *testing.T) {
+	app, _, syncer := testAppWithConfig(config.Config{})
+	cookie := loginCookie(t, app)
+	syncer.status = contentsync.StatusResponse{
+		Enabled:         true,
+		Running:         false,
+		IntervalMinutes: 60,
+		Sources: []contentsync.SourceStatus{
+			{Source: contentsync.SourceNavSites, Service: "gofurry-nav-backend"},
+			{Source: contentsync.SourceSiteChangelog, Service: "gofurry-nav-backend"},
+		},
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/sync/status", nil)
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	var result struct {
+		Code int                        `json:"code"`
+		Data contentsync.StatusResponse `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Code != 1 || len(result.Data.Sources) != 2 {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
+func TestSyncRunReturnsAccepted(t *testing.T) {
+	app, _, syncer := testAppWithConfig(config.Config{})
+	cookie := loginCookie(t, app)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/sync/run", bytes.NewBufferString(`{"source":"nav_sites"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	if syncer.lastSource != "nav_sites" || syncer.lastTrigger != contentsync.TriggerManual {
+		t.Fatalf("trigger = %q / %q", syncer.lastSource, syncer.lastTrigger)
+	}
+}
+
+func TestSyncRunReturnsConflictWhenBusy(t *testing.T) {
+	app, _, syncer := testAppWithConfig(config.Config{})
+	cookie := loginCookie(t, app)
+	syncer.triggerErr = fakeStatusError{status: http.StatusConflict, message: "sync already running"}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/sync/run", bytes.NewBufferString(`{"source":"all"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
 func TestUpdateAndDeleteChunkRequireCookie(t *testing.T) {
 	app := testApp()
 	cookie := loginCookie(t, app)
@@ -642,15 +722,16 @@ func TestLogoutClearsCookie(t *testing.T) {
 }
 
 func testApp() *fiber.App {
-	app, _ := testAppWithRepo()
+	app, _, _ := testAppWithConfig(config.Config{})
 	return app
 }
 
 func testAppWithRepo() (*fiber.App, *fakeRepo) {
-	return testAppWithConfig(config.Config{})
+	app, repo, _ := testAppWithConfig(config.Config{})
+	return app, repo
 }
 
-func testAppWithConfig(overrides config.Config) (*fiber.App, *fakeRepo) {
+func testAppWithConfig(overrides config.Config) (*fiber.App, *fakeRepo, *fakeSyncManager) {
 	cfg := config.Config{
 		AppName:                       "test",
 		AdminToken:                    "test-token",
@@ -683,10 +764,11 @@ func testAppWithConfig(overrides config.Config) (*fiber.App, *fakeRepo) {
 		cfg.PublicQueryMaxTopK = overrides.PublicQueryMaxTopK
 	}
 	repo := newFakeRepo()
+	syncer := &fakeSyncManager{}
 	svc := service.New(repo, fakeEmbedder{}, &fakeChat{configured: true, model: "deepseek-v4-flash", answer: "gofurry is a content discovery website."}, cfg, nil)
 	app := fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
-	NewServer(cfg, svc, nil).RegisterRoutes(app.Group("/api/v1"))
-	return app, repo
+	NewServer(cfg, svc, nil, syncer).RegisterRoutes(app.Group("/api/v1"))
+	return app, repo, syncer
 }
 
 func loginCookie(t *testing.T, app *fiber.App) *http.Cookie {
@@ -716,6 +798,31 @@ type fakeRepo struct {
 	lastBatchFilter  db.BatchDocumentFilter
 	lastBatchMode    string
 }
+
+type fakeSyncManager struct {
+	status      contentsync.StatusResponse
+	lastSource  string
+	lastTrigger string
+	triggerErr  error
+}
+
+func (f *fakeSyncManager) Status(ctx context.Context) (contentsync.StatusResponse, error) {
+	return f.status, nil
+}
+
+func (f *fakeSyncManager) Trigger(ctx context.Context, source, trigger string) error {
+	f.lastSource = source
+	f.lastTrigger = trigger
+	return f.triggerErr
+}
+
+type fakeStatusError struct {
+	status  int
+	message string
+}
+
+func (e fakeStatusError) Error() string   { return e.message }
+func (e fakeStatusError) HTTPStatus() int { return e.status }
 
 func newFakeRepo() *fakeRepo {
 	return &fakeRepo{next: 1}

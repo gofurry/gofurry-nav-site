@@ -9,11 +9,6 @@ import (
 	"strings"
 	"time"
 
-	env "github.com/gofurry/gofurry-rag/config"
-	"github.com/gofurry/gofurry-rag/internal/api"
-	"github.com/gofurry/gofurry-rag/internal/bootstrap"
-	"github.com/gofurry/gofurry-rag/internal/web"
-	"github.com/gofurry/gofurry-rag/pkg/common"
 	"github.com/gofiber/fiber/v3"
 	fibercompress "github.com/gofiber/fiber/v3/middleware/compress"
 	"github.com/gofiber/fiber/v3/middleware/cors"
@@ -24,6 +19,11 @@ import (
 	fiberlogger "github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
+	env "github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/api"
+	"github.com/gofurry/gofurry-rag/internal/bootstrap"
+	"github.com/gofurry/gofurry-rag/internal/web"
+	"github.com/gofurry/gofurry-rag/pkg/common"
 )
 
 type Builder struct{}
@@ -50,7 +50,7 @@ func (builder *Builder) Init() *fiber.App {
 
 	registerMiddlewares(app)
 	registerHealthRoutes(app, appName)
-	api.NewServer(*cfg, bootstrap.RAGService(), bootstrap.Worker()).RegisterRoutes(wrapTimeoutRouter(app.Group("/api"), cfg.Middleware.Timeout).Group("/v1"))
+	api.NewServer(*cfg, bootstrap.RAGService(), bootstrap.Worker(), bootstrap.SyncManager()).RegisterRoutes(wrapTimeoutRouter(app.Group("/api"), cfg.Middleware.Timeout).Group("/v1"))
 
 	if cfg.Server.IsFullStack {
 		attachEmbeddedUI(app)
