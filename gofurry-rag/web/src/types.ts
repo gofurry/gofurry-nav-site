@@ -243,3 +243,34 @@ export type QueryFilters = {
   category?: string[]
   language?: string[]
 }
+
+export type SyncRun = {
+  id: number
+  source: string
+  trigger: string
+  status: string
+  started_at: string
+  completed_at?: string
+  added_count: number
+  updated_count: number
+  skipped_count: number
+  failed_count: number
+  message?: string
+}
+
+export type SyncSourceStatus = {
+  source: string
+  service: string
+  auto_enabled: boolean
+  last_run?: SyncRun
+}
+
+export type SyncStatusResponse = {
+  enabled: boolean
+  running: boolean
+  current_source?: string
+  current_trigger?: string
+  current_started_at?: string
+  interval_minutes: number
+  sources: SyncSourceStatus[]
+}

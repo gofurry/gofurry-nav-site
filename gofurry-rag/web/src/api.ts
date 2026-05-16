@@ -13,6 +13,7 @@ import type {
   QueryFilters,
   QueryResponse,
   QuerySource,
+  SyncStatusResponse,
 } from './types'
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -70,6 +71,17 @@ export function health() {
 
 export function overview() {
   return request<Overview>('/api/v1/admin/overview')
+}
+
+export function syncStatus() {
+  return request<SyncStatusResponse>('/api/v1/admin/sync/status')
+}
+
+export function runSync(source: 'nav_sites' | 'site_changelog' | 'all') {
+  return request<{ accepted: boolean; source: string }>('/api/v1/admin/sync/run', {
+    method: 'POST',
+    body: JSON.stringify({ source }),
+  })
 }
 
 export function createTextDocument(payload: {

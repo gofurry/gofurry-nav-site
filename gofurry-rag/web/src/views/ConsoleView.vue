@@ -344,6 +344,104 @@
             </div>
           </section>
 
+          <section v-else-if="activeMenu === 'sync'" key="sync" class="space-y-6">
+            <section class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
+              <div class="border border-white/10 bg-white/[0.035] p-6">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div class="flex items-center gap-2 text-slate-300">
+                      <RefreshCw :size="18" class="text-teal-200" />
+                      <span>同步调度</span>
+                    </div>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">
+                      服务内定时同步导航站点和更新日志。控制台可以查看最近一次结果，也可以手动触发。
+                    </p>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="status-pill" :class="syncEnabledClass">{{ syncEnabledLabel }}</span>
+                    <span class="status-pill" :class="syncRunningClass">{{ syncRunningLabel }}</span>
+                  </div>
+                </div>
+                <dl class="mt-5 grid gap-4 sm:grid-cols-3">
+                  <div class="border border-white/10 bg-black/20 p-4">
+                    <dt class="text-xs uppercase tracking-[0.16em] text-slate-500">自动同步</dt>
+                    <dd class="mt-3 text-lg font-semibold text-white">{{ syncState?.enabled ? '已开启' : '已关闭' }}</dd>
+                    <p class="mt-2 text-xs text-slate-500">interval {{ syncState?.interval_minutes ?? '-' }} min</p>
+                  </div>
+                  <div class="border border-white/10 bg-black/20 p-4">
+                    <dt class="text-xs uppercase tracking-[0.16em] text-slate-500">当前任务</dt>
+                    <dd class="mt-3 text-lg font-semibold text-white">{{ currentSyncSourceLabel }}</dd>
+                    <p class="mt-2 text-xs text-slate-500">{{ currentSyncTriggerText }}</p>
+                  </div>
+                  <div class="border border-white/10 bg-black/20 p-4">
+                    <dt class="text-xs uppercase tracking-[0.16em] text-slate-500">开始时间</dt>
+                    <dd class="mt-3 text-lg font-semibold text-white">{{ formatDate(syncState?.current_started_at) }}</dd>
+                    <p class="mt-2 text-xs text-slate-500">运行中会每 3 秒自动刷新</p>
+                  </div>
+                </dl>
+              </div>
+              <div class="flex flex-col gap-3">
+                <button class="ghost-button h-11 w-full min-w-[180px]" :disabled="operation === 'sync-refresh'" type="button" @click="refreshSyncStatus">
+                  <RefreshCw :size="16" :class="operation === 'sync-refresh' ? 'animate-spin' : ''" />刷新状态
+                </button>
+                <button class="primary-button h-11 w-full min-w-[180px]" :disabled="syncRunDisabled('all')" type="button" @click="runSyncNow('all')">
+                  <RefreshCw :size="16" :class="operation === 'sync:all' ? 'animate-spin' : ''" />立即同步全部
+                </button>
+              </div>
+            </section>
+
+            <section class="grid gap-5 xl:grid-cols-2">
+              <article v-for="card in syncCards" :key="card.source" class="border border-white/10 bg-white/[0.03] p-6">
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="status-pill border-teal-300/30 bg-teal-300/10 text-teal-100">{{ card.badge }}</span>
+                      <strong class="text-base text-white">{{ card.label }}</strong>
+                    </div>
+                    <p class="mt-3 text-sm leading-6 text-slate-500">{{ card.description }}</p>
+                  </div>
+                  <span class="status-pill" :class="syncLastRunClass(card.last_run?.status)">{{ syncLastRunLabel(card.last_run?.status) }}</span>
+                </div>
+
+                <dl class="mt-5 space-y-3 text-sm">
+                  <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                    <dt class="text-slate-500">来源服务</dt>
+                    <dd class="text-right text-slate-200">{{ card.service }}</dd>
+                  </div>
+                  <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                    <dt class="text-slate-500">自动同步</dt>
+                    <dd class="text-right text-slate-200">{{ card.auto_enabled ? '启用' : '关闭' }}</dd>
+                  </div>
+                  <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                    <dt class="text-slate-500">上次同步</dt>
+                    <dd class="text-right text-slate-200">{{ formatDate(card.last_run?.completed_at || card.last_run?.started_at) }}</dd>
+                  </div>
+                  <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                    <dt class="text-slate-500">触发方式</dt>
+                    <dd class="text-right text-slate-200">{{ syncTriggerLabel(card.last_run?.trigger) }}</dd>
+                  </div>
+                </dl>
+
+                <div class="mt-5 grid gap-px overflow-hidden border border-white/10 bg-white/10 sm:grid-cols-4">
+                  <MetricCell label="新增" :value="card.last_run?.added_count ?? 0" />
+                  <MetricCell label="更新" :value="card.last_run?.updated_count ?? 0" />
+                  <MetricCell label="跳过" :value="card.last_run?.skipped_count ?? 0" />
+                  <MetricCell label="失败" :value="card.last_run?.failed_count ?? 0" />
+                </div>
+
+                <p v-if="card.last_run?.message" class="mt-4 border border-amber-300/20 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
+                  {{ card.last_run?.message }}
+                </p>
+
+                <div class="mt-5 flex justify-end">
+                  <button class="primary-button h-11" :disabled="syncRunDisabled(card.source)" type="button" @click="runSyncNow(card.source)">
+                    <RefreshCw :size="16" :class="operation === `sync:${card.source}` ? 'animate-spin' : ''" />立即同步
+                  </button>
+                </div>
+              </article>
+            </section>
+          </section>
+
           <section v-else-if="activeMenu === 'ai'" key="ai" class="space-y-6">
             <AiChatPanel />
           </section>
@@ -516,14 +614,28 @@ import {
   overview,
   queryRag,
   reindexDocument,
+  runSync,
   retryFailedDocuments,
+  syncStatus,
   updateChunk,
 } from '../api'
-import type { ChunkItem, ChunkPreviewResponse, DocumentItem, HealthInfo, Overview, PageResult, QueryResponse, QuerySource } from '../types'
+import type {
+  ChunkItem,
+  ChunkPreviewResponse,
+  DocumentItem,
+  HealthInfo,
+  Overview,
+  PageResult,
+  QueryResponse,
+  QuerySource,
+  SyncSourceStatus,
+  SyncStatusResponse,
+} from '../types'
 import AiChatPanel from '../components/AiChatPanel.vue'
 
-type MenuKey = 'overview' | 'documents' | 'ai' | 'search'
+type MenuKey = 'overview' | 'documents' | 'sync' | 'ai' | 'search'
 type DocumentTab = 'ingest' | 'list' | 'chunks'
+type SyncSourceKey = 'nav_sites' | 'site_changelog' | 'all'
 type ConfirmTarget =
   | { kind: 'document'; id: number; title: string; label: string; description: string; confirmText: string }
   | { kind: 'chunk'; id: number; title: string; label: string; description: string; confirmText: string }
@@ -635,6 +747,7 @@ const PaginationBar = defineComponent({
 const menuItems = [
   { key: 'overview' as MenuKey, label: '整体态势', icon: Gauge },
   { key: 'documents' as MenuKey, label: '文档管理', icon: FileText },
+  { key: 'sync' as MenuKey, label: '同步源', icon: RefreshCw },
   { key: 'ai' as MenuKey, label: 'AI 问答', icon: Sparkles },
   { key: 'search' as MenuKey, label: '文档检索', icon: Search },
 ]
@@ -660,6 +773,7 @@ const activeMenu = ref<MenuKey>('overview')
 const documentTab = ref<DocumentTab>('ingest')
 const healthState = reactive<HealthInfo>({ status: 'unknown' })
 const overviewData = ref<Overview | null>(null)
+const syncState = ref<SyncStatusResponse | null>(null)
 const documents = reactive<PageResult<DocumentItem>>({ items: [], total: 0 })
 const chunks = reactive<PageResult<ChunkItem>>({ items: [], total: 0 })
 const chunkDocuments = reactive<PageResult<DocumentItem>>({ items: [], total: 0 })
@@ -705,6 +819,20 @@ const form = reactive({
 })
 let documentPoll: number | undefined
 let overviewPoll: number | undefined
+let syncPoll: number | undefined
+
+const syncSourceMeta: Record<Exclude<SyncSourceKey, 'all'>, { label: string; badge: string; description: string }> = {
+  nav_sites: {
+    label: '导航站点',
+    badge: 'NAV',
+    description: '按中英双语拉取导航站点、分组、详情与可选页面描述，适合回答站点是什么、属于什么分类。',
+  },
+  site_changelog: {
+    label: '更新日志',
+    badge: 'LOG',
+    description: '从站点 changelog 列表抓取 markdown 原文，适合回答 gofurry 最近做了什么、何时更新。',
+  },
+}
 
 const databaseAddress = computed(() => {
   const host = healthState.database?.host
@@ -720,15 +848,46 @@ const chunkDocumentTotalPages = computed(() => Math.max(1, Math.ceil(Number(chun
 const chunkDocumentPageButtons = computed(() => buildPageButtons(chunkDocumentPage.value, chunkDocumentTotalPages.value))
 const currentTitle = computed(() => {
   if (activeMenu.value === 'documents') return '文档管理'
+  if (activeMenu.value === 'sync') return '同步源'
   if (activeMenu.value === 'ai') return 'AI 问答'
   if (activeMenu.value === 'search') return '文档检索'
   return '整体态势'
 })
 const currentKicker = computed(() => {
   if (activeMenu.value === 'documents') return 'INGEST / DOCUMENTS / CHUNKS'
+  if (activeMenu.value === 'sync') return 'SYNC / NAV / CHANGELOG'
   if (activeMenu.value === 'ai') return 'RAG / CHAT / TENCENT'
   if (activeMenu.value === 'search') return 'RETRIEVAL'
   return 'OBSERVABILITY'
+})
+const syncEnabledClass = computed(() => (syncState.value?.enabled ? 'border-teal-300/30 bg-teal-300/10 text-teal-100' : 'border-slate-400/20 bg-slate-400/10 text-slate-300'))
+const syncEnabledLabel = computed(() => (syncState.value?.enabled ? 'auto on' : 'auto off'))
+const syncRunningClass = computed(() => {
+  if (syncState.value?.running) {
+    return 'border-amber-300/30 bg-amber-300/10 text-amber-100'
+  }
+  return 'border-slate-400/20 bg-slate-400/10 text-slate-300'
+})
+const syncRunningLabel = computed(() => (syncState.value?.running ? 'running' : 'idle'))
+const currentSyncSourceLabel = computed(() => syncSourceLabel(syncState.value?.current_source) || '暂无任务')
+const currentSyncTriggerText = computed(() => {
+  if (!syncState.value?.running) {
+    return '当前没有进行中的同步任务'
+  }
+  return `${syncTriggerLabel(syncState.value.current_trigger)} · ${syncSourceLabel(syncState.value.current_source)}`
+})
+const syncCards = computed(() => {
+  const sourceMap = new Map<string, SyncSourceStatus>((syncState.value?.sources || []).map((item) => [item.source, item]))
+  return (Object.entries(syncSourceMeta) as Array<[Exclude<SyncSourceKey, 'all'>, { label: string; badge: string; description: string }]>).map(([source, meta]) => {
+    const sourceState = sourceMap.get(source)
+    return {
+      source,
+      ...meta,
+      service: sourceState?.service || 'gofurry-nav-backend',
+      auto_enabled: sourceState?.auto_enabled ?? Boolean(syncState.value?.enabled),
+      last_run: sourceState?.last_run,
+    }
+  })
 })
 
 async function performLogin() {
@@ -751,6 +910,7 @@ async function performLogout() {
   authenticated.value = false
   stopDocumentPolling()
   stopOverviewPolling()
+  stopSyncPolling()
   activeMenu.value = 'overview'
   documents.items = []
   chunks.items = []
@@ -768,6 +928,35 @@ async function loadHealth() {
 
 async function loadOverview() {
   overviewData.value = await overview()
+}
+
+async function loadSyncStatus() {
+  syncState.value = await syncStatus()
+}
+
+async function refreshSyncStatus() {
+  operation.value = 'sync-refresh'
+  try {
+    await loadSyncStatus()
+  } catch (error) {
+    notifyError(error)
+  } finally {
+    operation.value = ''
+  }
+}
+
+async function runSyncNow(source: SyncSourceKey) {
+  operation.value = `sync:${source}`
+  notice.value = ''
+  try {
+    await runSync(source)
+    notice.value = source === 'all' ? '已提交全部同步任务。' : `已提交 ${syncSourceLabel(source)} 同步任务。`
+    await Promise.all([loadSyncStatus(), loadOverview()])
+  } catch (error) {
+    notifyError(error)
+  } finally {
+    operation.value = ''
+  }
 }
 
 async function loadDocuments(page = documentsPage.value) {
@@ -1138,6 +1327,21 @@ function stopOverviewPolling() {
   }
 }
 
+function startSyncPolling() {
+  stopSyncPolling()
+  void loadSyncStatus()
+  syncPoll = window.setInterval(() => {
+    void loadSyncStatus()
+  }, 3000)
+}
+
+function stopSyncPolling() {
+  if (syncPoll) {
+    window.clearInterval(syncPoll)
+    syncPoll = undefined
+  }
+}
+
 function selectStatus(status: string) {
   filters.status = status
   statusOpen.value = false
@@ -1214,6 +1418,42 @@ function documentSourceLine(doc: DocumentItem) {
 
 function documentLabel(id: number) {
   return 'Document #' + id
+}
+
+function syncSourceLabel(source?: string) {
+  if (!source) return ''
+  if (source === 'all') return '全部同步源'
+  return syncSourceMeta[source as Exclude<SyncSourceKey, 'all'>]?.label || source
+}
+
+function syncTriggerLabel(trigger?: string) {
+  if (trigger === 'auto') return '自动'
+  if (trigger === 'manual') return '手动'
+  return trigger || '暂无记录'
+}
+
+function syncLastRunLabel(status?: string) {
+  if (status === 'success') return 'success'
+  if (status === 'partial') return 'partial'
+  if (status === 'failed') return 'failed'
+  return '未运行'
+}
+
+function syncLastRunClass(status?: string) {
+  if (status === 'success') return 'border-teal-300/30 bg-teal-300/10 text-teal-100'
+  if (status === 'partial') return 'border-amber-300/30 bg-amber-300/10 text-amber-100'
+  if (status === 'failed') return 'border-rose-300/30 bg-rose-300/10 text-rose-100'
+  return 'border-slate-400/20 bg-slate-400/10 text-slate-300'
+}
+
+function syncRunDisabled(source: SyncSourceKey) {
+  if (operation.value === `sync:${source}` || operation.value === 'sync-refresh') {
+    return true
+  }
+  if (source === 'all') {
+    return Boolean(syncState.value?.running)
+  }
+  return Boolean(syncState.value?.running)
 }
 
 function sourceDebugLine(source: QuerySource) {
@@ -1374,6 +1614,12 @@ watch([activeMenu, documentTab, authenticated], ([menu, tab, loggedIn]) => {
   } else {
     stopDocumentPolling()
   }
+
+  if (loggedIn && menu === 'sync') {
+    startSyncPolling()
+  } else {
+    stopSyncPolling()
+  }
 })
 
 onMounted(async () => {
@@ -1394,6 +1640,7 @@ onMounted(async () => {
 onUnmounted(() => {
   stopDocumentPolling()
   stopOverviewPolling()
+  stopSyncPolling()
 })
 </script>
 
