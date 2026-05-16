@@ -76,8 +76,9 @@
       <SitePopover
         v-if="!!activeSite"
         :site="activeSite"
-        :target-element="activeSiteTarget"
-        :visible="!!activeSite"
+        :visible="activeSiteVisible"
+        :position="activeSitePosition"
+        :placement="activeSitePlacement"
         :display-mode="displayMode"
         :ping-data="pingData"
         @get-popover-height="handleGetPopoverHeight"
@@ -91,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLangStore } from '@/store/langStore'
 import { getGroups, getPing, getSites } from '~/services/nav'
@@ -252,25 +253,40 @@ function cancelGroupHide() {
 }
 
 const activeSite = ref<Site | null>(null)
+const activeSiteVisible = ref(false)
 const activeSiteTarget = ref<HTMLElement | null>(null)
+const activeSitePosition = ref<{ left: number; top: number } | null>(null)
+const activeSitePlacement = ref<'top' | 'bottom'>('bottom')
 const popoverHeight = ref(0)
 let siteHideTimer: number | null = null
 
 function onSiteMouseEnter(event: MouseEvent, site: Site) {
   cancelSiteHide()
+  const currentTarget = event.currentTarget as HTMLElement
+  const isSwitchingSite = activeSite.value?.id !== site.id
+
   activeSite.value = site
-  activeSiteTarget.value = event.currentTarget as HTMLElement
+  activeSiteTarget.value = currentTarget
   popoverHeight.value = 0
-  nextTick(() => updateSitePopoverPosition())
+  updateSitePopoverPosition(220)
+
+  if (isSwitchingSite && !activeSiteVisible.value) {
+    requestAnimationFrame(() => {
+      activeSiteVisible.value = true
+    })
+    return
+  }
+
+  activeSiteVisible.value = true
 }
 
 function handleGetPopoverHeight(height: number) {
   popoverHeight.value = height
-  updateSitePopoverPosition()
+  updateSitePopoverPosition(height)
 }
 
-function updateSitePopoverPosition() {
-  if (!activeSite.value || !activeSiteTarget.value || popoverHeight.value === 0) {
+function updateSitePopoverPosition(measuredHeight = popoverHeight.value || 220) {
+  if (!activeSite.value || !activeSiteTarget.value) {
     return
   }
 
@@ -278,31 +294,31 @@ function updateSitePopoverPosition() {
   const popoverWidth = 288
   const viewportHeight = window.innerHeight
   const viewportWidth = window.innerWidth
+  const gap = 10
+  const safeInset = 12
 
   let left = targetRect.left + (targetRect.width - popoverWidth) / 2
-  left = Math.max(8, Math.min(left, viewportWidth - popoverWidth - 8))
+  left = Math.max(safeInset, Math.min(left, viewportWidth - popoverWidth - safeInset))
 
-  const bottomPositionIfDown = targetRect.top + 90 + popoverHeight.value
-  let top = bottomPositionIfDown > viewportHeight
-    ? targetRect.top - popoverHeight.value - 12
-    : targetRect.top + 90
-  top = Math.max(8, top)
+  const canPlaceBelow = targetRect.bottom + gap + measuredHeight <= viewportHeight - safeInset
+  const placement = canPlaceBelow ? 'bottom' : 'top'
+  let top = placement === 'bottom'
+    ? targetRect.bottom + gap
+    : targetRect.top - measuredHeight - gap
+  top = Math.max(safeInset, Math.min(top, viewportHeight - measuredHeight - safeInset))
 
-  const navWindow = window as typeof window & {
-    sitePopoverUpdate?: (position: { left: number; top: number }) => void
-  }
-
-  if (navWindow.sitePopoverUpdate) {
-    navWindow.sitePopoverUpdate({ left, top })
-  }
+  activeSitePlacement.value = placement
+  activeSitePosition.value = { left, top }
 }
 
 function scheduleSiteHide() {
+  activeSiteVisible.value = false
   siteHideTimer = window.setTimeout(() => {
     activeSite.value = null
     activeSiteTarget.value = null
+    activeSitePosition.value = null
     popoverHeight.value = 0
-  }, 200)
+  }, 220)
 }
 
 function cancelSiteHide() {
@@ -310,6 +326,8 @@ function cancelSiteHide() {
     clearTimeout(siteHideTimer)
     siteHideTimer = null
   }
+
+  activeSiteVisible.value = true
 }
 
 function handleScrollOrResize() {
@@ -358,6 +376,5 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleScrollOrResize)
   cancelSiteHide()
   cancelGroupHide()
-  delete (window as typeof window & { sitePopoverUpdate?: unknown }).sitePopoverUpdate
 })
 </script>

@@ -168,11 +168,13 @@
     "dailyQuote": "Daily Quote",
     "author": "Author",
     "anonymous": "Anonymous",
-    "scrollHint": "Scroll down to load"
+    "scrollHint": "Scroll down to load",
+    "scrollStep": "Move up 25%"
   },
   "customSites": {
     "title": "Custom Sites",
     "description": "Keep your most visited websites here and preserve them after refresh.",
+    "recentTitle": "Recent Visits",
     "panelTitle": "Panel",
     "recentEmptyTitle": "No recent visits yet",
     "recentEmptyDescription": "Open a few sites from navigation and they will appear here automatically.",
@@ -197,6 +199,9 @@
     "fixedEmptyDescription": "You can populate this column with fixed content sites later.",
     "customTitle": "Custom Sites",
     "customDescription": "Keep your own frequently used site entries here.",
+    "manageTitle": "Manage Quick Sites",
+    "manageDescription": "Save up to {max} quick sites. You currently have {count}.",
+    "manageShort": "Manage",
     "addSite": "Add Site",
     "nameLabel": "Site Name",
     "urlLabel": "Site URL",
@@ -205,6 +210,7 @@
     "nameRequired": "Please enter a site name",
     "urlRequired": "Please enter a site URL",
     "urlInvalid": "Please enter a valid site URL",
+    "maxReached": "Quick sites are already at the limit",
     "prevPage": "Previous page",
     "nextPage": "Next page",
     "pageInfo": "Page {current} / {total}",

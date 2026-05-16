@@ -168,11 +168,13 @@
     "dailyQuote": "今日短句",
     "author": "作者",
     "anonymous": "佚名",
-    "scrollHint": "下滑加载更多"
+    "scrollHint": "下滑加载更多",
+    "scrollStep": "向上回退 25%"
   },
   "customSites": {
     "title": "常用网站",
     "description": "把你最常访问的网站固定在这里，刷新后也会保留。",
+    "recentTitle": "最近浏览",
     "panelTitle": "Panel",
     "recentEmptyTitle": "还没有最近访问记录",
     "recentEmptyDescription": "从导航里点开几个网站后，这里就会自动出现。",
@@ -197,6 +199,9 @@
     "fixedEmptyDescription": "后续把固定内容网站补到这里即可。",
     "customTitle": "常用网站",
     "customDescription": "这里保存你自己常用的网站入口。",
+    "manageTitle": "管理快捷站点",
+    "manageDescription": "最多可保存 {max} 个快捷站点，当前已保存 {count} 个。",
+    "manageShort": "管理",
     "addSite": "添加网站",
     "nameLabel": "网站名称",
     "urlLabel": "网站链接",
@@ -205,6 +210,7 @@
     "nameRequired": "请输入网站名称",
     "urlRequired": "请输入网站链接",
     "urlInvalid": "请输入有效的网站链接",
+    "maxReached": "快捷站点已达到上限",
     "prevPage": "上一页",
     "nextPage": "下一页",
     "pageInfo": "第 {current} / {total} 页",

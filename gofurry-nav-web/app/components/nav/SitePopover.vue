@@ -2,7 +2,8 @@
   <div
       v-if="site"
       ref="popoverRef"
-      class="fixed z-9999 bg-orange-50 border border-gray-200 shadow-xl rounded-xl p-4 w-72 text-sm text-gray-700 duration-300"
+      class="fixed z-9999 w-72 rounded-xl border border-orange-100/85 bg-orange-50/95 p-4 text-sm text-gray-700 shadow-[0_16px_40px_rgba(25,35,38,0.16)] backdrop-blur-md transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform,filter]"
+      :class="popoverClasses"
       :style="popoverStyle"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
@@ -41,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type { Site, Delay } from '@/types/nav'
 import greenCircle from '@/assets/svgs/green-circle.svg'
 import redCircle from '@/assets/svgs/red-circle.svg'
@@ -53,8 +54,9 @@ const router = useRouter()
 // Props定义
 const props = defineProps<{
   site: Site | null
-  targetElement: HTMLElement | null
   visible: boolean
+  position: { left: number; top: number } | null
+  placement: 'top' | 'bottom'
   displayMode: 'sfw' | 'nsfw'
   pingData: Record<string, Delay>
 }>()
@@ -72,9 +74,18 @@ const site = computed(() => props.site || null)
 // 悬浮卡片Ref和样式
 const popoverRef = ref<HTMLElement | null>(null)
 const popoverStyle = ref<Record<string, string>>({
-  display: 'block',
   left: '0px',
-  top: '0px'
+  top: '0px',
+})
+
+const isReady = computed(() => props.visible && !!site.value && !!props.position)
+const popoverClasses = computed(() => {
+  const hiddenTransform = props.placement === 'bottom'
+    ? 'translate-y-2 scale-[0.988] blur-[1.5px]'
+    : '-translate-y-2 scale-[0.988] blur-[1.5px]'
+  return isReady.value
+    ? 'pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0'
+    : `pointer-events-none opacity-0 ${hiddenTransform}`
 })
 
 // 计算域名列表
@@ -91,17 +102,6 @@ const domains = computed(() => {
     return siteData.domain ? [siteData.domain] : []
   }
 })
-
-// 提供全局更新函数给父组件
-function setupGlobalUpdate() {
-  ;(window as any).sitePopoverUpdate = (position: { left: number; top: number }) => {
-    popoverStyle.value = {
-      ...popoverStyle.value,
-      left: `${position.left}px`,
-      top: `${position.top}px`
-    }
-  }
-}
 
 // 获取并传递实际高度给父组件
 function sendPopoverHeight() {
@@ -134,23 +134,28 @@ function onMouseLeave() {
 watch([() => props.visible, site], () => {
   if (props.visible && site.value) {
     sendPopoverHeight()
-  } else {
-    popoverStyle.value.display = 'none'
   }
 })
 
+watch(
+  () => props.position,
+  (position) => {
+    if (!position) {
+      return
+    }
+
+    popoverStyle.value = {
+      left: `${position.left}px`,
+      top: `${position.top}px`,
+    }
+  },
+  { immediate: true }
+)
+
 // 生命周期
 onMounted(() => {
-  setupGlobalUpdate()
-
-  // DOM渲染完成后传递高度
   nextTick(() => {
     sendPopoverHeight()
   })
-})
-
-onUnmounted(() => {
-  // 清理全局函数
-  delete (window as any).sitePopoverUpdate
 })
 </script>

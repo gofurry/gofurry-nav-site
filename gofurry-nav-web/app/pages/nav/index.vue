@@ -24,6 +24,20 @@
       />
       <div class="h-10"></div>
     </main>
+
+    <button
+      v-if="showScrollDock"
+      class="scroll-dock"
+      :style="{ '--scroll-progress': `${scrollProgressLabel}%` }"
+      :title="t('navHeader.scrollStep')"
+      :aria-label="t('navHeader.scrollStep')"
+      type="button"
+      @click="scrollUpQuarter()"
+    >
+      <div class="scroll-progress">
+        <span>{{ scrollProgressLabel }}%</span>
+      </div>
+    </button>
   </div>
 </template>
 
@@ -50,7 +64,9 @@ interface NavPageData {
 
 const isContentRevealed = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
-const { locale } = useI18n()
+const { locale, t } = useI18n()
+const scrollProgress = ref(0)
+const isDesktopViewport = ref(false)
 
 let touchStartY = 0
 let mobileMediaQuery: MediaQueryList | null = null
@@ -111,6 +127,54 @@ const { data } = await useAsyncData<NavPageData>(
 )
 
 const navPageData = computed(() => data.value!)
+const scrollProgressLabel = computed(() => Math.round(scrollProgress.value))
+const showScrollDock = computed(() => isDesktopViewport.value && windowScrollY.value > 180)
+const windowScrollY = ref(0)
+
+function updateViewportState() {
+  if (!import.meta.client) {
+    return
+  }
+
+  isDesktopViewport.value = window.innerWidth >= 1024
+}
+
+function updateScrollProgress() {
+  if (!import.meta.client) {
+    return
+  }
+
+  const root = document.documentElement
+  const maxScroll = Math.max(root.scrollHeight - window.innerHeight, 0)
+  windowScrollY.value = window.scrollY
+
+  if (maxScroll <= 0) {
+    scrollProgress.value = 0
+    return
+  }
+
+  scrollProgress.value = Math.min(100, Math.max(0, (window.scrollY / maxScroll) * 100))
+}
+
+function scrollUpQuarter() {
+  if (!import.meta.client) {
+    return
+  }
+
+  const root = document.documentElement
+  const maxScroll = Math.max(root.scrollHeight - window.innerHeight, 0)
+  const nextTop = Math.max(0, window.scrollY - maxScroll * 0.25)
+  window.scrollTo({ top: nextTop, behavior: 'smooth' })
+}
+
+function togglePageScrollbar(hidden: boolean) {
+  if (!import.meta.client) {
+    return
+  }
+
+  document.documentElement.classList.toggle('nav-page-scrollbar-hidden', hidden)
+  document.body.classList.toggle('nav-page-scrollbar-hidden', hidden)
+}
 
 function revealContent(shouldScroll = true, force = false) {
   if (!force && isNavPageRevealLocked()) {
@@ -140,6 +204,9 @@ function syncRevealByViewport() {
   if (window.innerWidth < 768) {
     revealContent(false, true)
   }
+
+  updateViewportState()
+  updateScrollProgress()
 }
 
 function handleViewportChange(event: MediaQueryListEvent) {
@@ -163,6 +230,12 @@ const handleRevealScrollEnd = debounce(() => {
 function handleScroll() {
   handleRevealScroll()
   handleRevealScrollEnd()
+  updateScrollProgress()
+}
+
+function handleResize() {
+  updateViewportState()
+  updateScrollProgress()
 }
 
 function handleWheel(event: WheelEvent) {
@@ -190,11 +263,13 @@ function handleKeydown(event: KeyboardEvent) {
 
 onMounted(() => {
   dispatchNavPageReveal(false)
+  togglePageScrollbar(true)
   syncRevealByViewport()
 
   mobileMediaQuery = window.matchMedia('(max-width: 767px)')
   mobileMediaQuery.addEventListener('change', handleViewportChange)
   window.addEventListener('scroll', handleScroll, { passive: true })
+  window.addEventListener('resize', handleResize)
   window.addEventListener('wheel', handleWheel, { passive: true })
   window.addEventListener('touchstart', handleTouchStart, { passive: true })
   window.addEventListener('touchmove', handleTouchMove, { passive: true })
@@ -203,11 +278,83 @@ onMounted(() => {
 
 onUnmounted(() => {
   dispatchNavPageReveal(true)
+  togglePageScrollbar(false)
   mobileMediaQuery?.removeEventListener('change', handleViewportChange)
   window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('resize', handleResize)
   window.removeEventListener('wheel', handleWheel)
   window.removeEventListener('touchstart', handleTouchStart)
   window.removeEventListener('touchmove', handleTouchMove)
   window.removeEventListener('keydown', handleKeydown)
 })
 </script>
+
+<style scoped>
+:global(html.nav-page-scrollbar-hidden),
+:global(body.nav-page-scrollbar-hidden) {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+:global(html.nav-page-scrollbar-hidden::-webkit-scrollbar),
+:global(body.nav-page-scrollbar-hidden::-webkit-scrollbar) {
+  display: none;
+}
+
+.scroll-dock {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  background: transparent;
+  opacity: 0.82;
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.scroll-dock:hover {
+  opacity: 0.94;
+  filter: drop-shadow(0 10px 24px rgba(10, 20, 28, 0.16));
+}
+
+.scroll-progress {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background:
+    conic-gradient(from 210deg, rgba(132, 219, 255, 0.88) var(--scroll-progress), rgba(255, 255, 255, 0.08) 0),
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.12), transparent 42%);
+}
+
+.scroll-progress::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(10, 17, 21, 0.64), rgba(18, 28, 33, 0.56));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+}
+
+.scroll-progress span {
+  position: relative;
+  z-index: 1;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(232, 248, 255, 0.86);
+  letter-spacing: 0;
+}
+
+@media (max-width: 1023px) {
+  .scroll-dock {
+    display: none;
+  }
+}
+</style>
