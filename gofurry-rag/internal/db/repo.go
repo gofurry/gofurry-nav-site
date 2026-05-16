@@ -168,17 +168,18 @@ type SyncDocumentResult struct {
 }
 
 type SyncRun struct {
-	ID           int64      `json:"id"`
-	Source       string     `json:"source"`
-	Trigger      string     `json:"trigger"`
-	Status       string     `json:"status"`
-	StartedAt    time.Time  `json:"started_at"`
-	CompletedAt  *time.Time `json:"completed_at,omitempty"`
-	AddedCount   int        `json:"added_count"`
-	UpdatedCount int        `json:"updated_count"`
-	SkippedCount int        `json:"skipped_count"`
-	FailedCount  int        `json:"failed_count"`
-	Message      string     `json:"message"`
+	ID               int64      `json:"id"`
+	Source           string     `json:"source"`
+	Trigger          string     `json:"trigger"`
+	Status           string     `json:"status"`
+	StartedAt        time.Time  `json:"started_at"`
+	CompletedAt      *time.Time `json:"completed_at,omitempty"`
+	SourceTotalCount int        `json:"source_total_count"`
+	AddedCount       int        `json:"added_count"`
+	UpdatedCount     int        `json:"updated_count"`
+	SkippedCount     int        `json:"skipped_count"`
+	FailedCount      int        `json:"failed_count"`
+	Message          string     `json:"message"`
 }
 
 type CreateSyncRunParams struct {
@@ -187,12 +188,13 @@ type CreateSyncRunParams struct {
 }
 
 type CompleteSyncRunParams struct {
-	Status       string
-	AddedCount   int
-	UpdatedCount int
-	SkippedCount int
-	FailedCount  int
-	Message      string
+	Status           string
+	SourceTotalCount int
+	AddedCount       int
+	UpdatedCount     int
+	SkippedCount     int
+	FailedCount      int
+	Message          string
 }
 
 func Connect(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
@@ -663,11 +665,34 @@ LIMIT $`+strconv.Itoa(limitPlaceholder)+`
 	return sources, rows.Err()
 }
 
+func (r *Repository) CountDocumentsBySourceType(ctx context.Context) (map[string]int64, error) {
+	rows, err := r.pool.Query(ctx, `
+SELECT source_type, count(*)::bigint
+FROM rag_documents
+GROUP BY source_type
+`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]int64)
+	for rows.Next() {
+		var sourceType string
+		var total int64
+		if err := rows.Scan(&sourceType, &total); err != nil {
+			return nil, err
+		}
+		result[sourceType] = total
+	}
+	return result, rows.Err()
+}
+
 func (r *Repository) CreateSyncRun(ctx context.Context, params CreateSyncRunParams) (SyncRun, error) {
 	row := r.pool.QueryRow(ctx, `
 INSERT INTO rag_sync_runs (source, trigger, status)
 VALUES ($1, $2, 'running')
-RETURNING id, source, trigger, status, started_at, completed_at, added_count, updated_count, skipped_count, failed_count, message
+RETURNING id, source, trigger, status, started_at, completed_at, source_total_count, added_count, updated_count, skipped_count, failed_count, message
 `, strings.TrimSpace(params.Source), strings.TrimSpace(params.Trigger))
 	return scanSyncRun(row)
 }
@@ -677,20 +702,21 @@ func (r *Repository) CompleteSyncRun(ctx context.Context, id int64, params Compl
 UPDATE rag_sync_runs
 SET status = $2,
     completed_at = now(),
-    added_count = $3,
-    updated_count = $4,
-    skipped_count = $5,
-    failed_count = $6,
-    message = $7
+    source_total_count = $3,
+    added_count = $4,
+    updated_count = $5,
+    skipped_count = $6,
+    failed_count = $7,
+    message = $8
 WHERE id = $1
-`, id, params.Status, params.AddedCount, params.UpdatedCount, params.SkippedCount, params.FailedCount, params.Message)
+`, id, params.Status, params.SourceTotalCount, params.AddedCount, params.UpdatedCount, params.SkippedCount, params.FailedCount, params.Message)
 	return err
 }
 
 func (r *Repository) LatestSyncRuns(ctx context.Context) (map[string]SyncRun, error) {
 	rows, err := r.pool.Query(ctx, `
 SELECT DISTINCT ON (source)
-       id, source, trigger, status, started_at, completed_at, added_count, updated_count, skipped_count, failed_count, message
+       id, source, trigger, status, started_at, completed_at, source_total_count, added_count, updated_count, skipped_count, failed_count, message
 FROM rag_sync_runs
 ORDER BY source, started_at DESC, id DESC
 `)
@@ -793,6 +819,7 @@ func scanSyncRun(row pgx.Row) (SyncRun, error) {
 		&run.Status,
 		&run.StartedAt,
 		&run.CompletedAt,
+		&run.SourceTotalCount,
 		&run.AddedCount,
 		&run.UpdatedCount,
 		&run.SkippedCount,

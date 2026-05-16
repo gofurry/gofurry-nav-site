@@ -251,6 +251,7 @@ export type SyncRun = {
   status: string
   started_at: string
   completed_at?: string
+  source_total_count: number
   added_count: number
   updated_count: number
   skipped_count: number
@@ -262,6 +263,7 @@ export type SyncSourceStatus = {
   source: string
   service: string
   auto_enabled: boolean
+  current_document_count: number
   last_run?: SyncRun
 }
 

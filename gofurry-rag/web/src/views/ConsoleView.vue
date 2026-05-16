@@ -354,7 +354,7 @@
                       <span>同步调度</span>
                     </div>
                     <p class="mt-2 text-sm leading-6 text-slate-500">
-                      服务内定时同步导航站点和更新日志。控制台可以查看最近一次结果，也可以手动触发。
+                      服务内定时同步站点导航、更新日志、游戏详情、游戏新闻和创作者资料。控制台可以查看最近一次结果，也可以手动触发。
                     </p>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
@@ -419,6 +419,14 @@
                   <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
                     <dt class="text-slate-500">触发方式</dt>
                     <dd class="text-right text-slate-200">{{ syncTriggerLabel(card.last_run?.trigger) }}</dd>
+                  </div>
+                  <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                    <dt class="text-slate-500">当前文档数</dt>
+                    <dd class="text-right text-slate-200">{{ card.current_document_count ?? 0 }}</dd>
+                  </div>
+                  <div class="flex items-center justify-between gap-4 border-b border-white/10 pb-3">
+                    <dt class="text-slate-500">上次扫描总量</dt>
+                    <dd class="text-right text-slate-200">{{ card.last_run?.source_total_count ?? 0 }}</dd>
                   </div>
                 </dl>
 
@@ -918,6 +926,7 @@ const syncCards = computed(() => {
       ...meta,
       service: sourceState?.service || meta.service,
       auto_enabled: sourceState?.auto_enabled ?? Boolean(syncState.value?.enabled),
+      current_document_count: sourceState?.current_document_count ?? 0,
       last_run: sourceState?.last_run,
     }
     })

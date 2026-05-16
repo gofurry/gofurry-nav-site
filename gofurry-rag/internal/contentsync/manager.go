@@ -31,6 +31,7 @@ type Repository interface {
 	CreateSyncRun(ctx context.Context, params db.CreateSyncRunParams) (db.SyncRun, error)
 	CompleteSyncRun(ctx context.Context, id int64, params db.CompleteSyncRunParams) error
 	LatestSyncRuns(ctx context.Context) (map[string]db.SyncRun, error)
+	CountDocumentsBySourceType(ctx context.Context) (map[string]int64, error)
 }
 
 type NavClient interface {
@@ -74,10 +75,11 @@ type StatusResponse struct {
 }
 
 type SourceStatus struct {
-	Source      string      `json:"source"`
-	Service     string      `json:"service"`
-	AutoEnabled bool        `json:"auto_enabled"`
-	LastRun     *db.SyncRun `json:"last_run,omitempty"`
+	Source               string      `json:"source"`
+	Service              string      `json:"service"`
+	AutoEnabled          bool        `json:"auto_enabled"`
+	CurrentDocumentCount int64       `json:"current_document_count"`
+	LastRun              *db.SyncRun `json:"last_run,omitempty"`
 }
 
 type syncError struct {
@@ -160,6 +162,10 @@ func (m *Manager) Status(ctx context.Context) (StatusResponse, error) {
 	if err != nil {
 		return StatusResponse{}, err
 	}
+	documentCounts, err := m.repo.CountDocumentsBySourceType(ctx)
+	if err != nil {
+		return StatusResponse{}, err
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	resp := StatusResponse{
@@ -179,10 +185,11 @@ func (m *Manager) Status(ctx context.Context) (StatusResponse, error) {
 			latest = &copied
 		}
 		resp.Sources = append(resp.Sources, SourceStatus{
-			Source:      item.Source,
-			Service:     item.Service,
-			AutoEnabled: m.cfg.SyncEnabled,
-			LastRun:     latest,
+			Source:               item.Source,
+			Service:              item.Service,
+			AutoEnabled:          m.cfg.SyncEnabled,
+			CurrentDocumentCount: documentCounts[item.DocumentSource],
+			LastRun:              latest,
 		})
 	}
 	return resp, nil
@@ -231,12 +238,13 @@ func (m *Manager) runSource(ctx context.Context, source, trigger string) error {
 		status = "partial"
 	}
 	if err := m.repo.CompleteSyncRun(ctx, run.ID, db.CompleteSyncRunParams{
-		Status:       status,
-		AddedCount:   counts.Added,
-		UpdatedCount: counts.Updated,
-		SkippedCount: counts.Skipped,
-		FailedCount:  counts.Failed,
-		Message:      message,
+		Status:           status,
+		SourceTotalCount: counts.Total,
+		AddedCount:       counts.Added,
+		UpdatedCount:     counts.Updated,
+		SkippedCount:     counts.Skipped,
+		FailedCount:      counts.Failed,
+		Message:          message,
 	}); err != nil {
 		return err
 	}
@@ -277,6 +285,7 @@ func (m *Manager) setCurrentSource(startedAt time.Time, source string) {
 }
 
 type syncCounts struct {
+	Total   int
 	Added   int
 	Updated int
 	Skipped int
@@ -284,17 +293,18 @@ type syncCounts struct {
 }
 
 type sourceDefinition struct {
-	Source  string
-	Service string
+	Source         string
+	Service        string
+	DocumentSource string
 }
 
 func sourceDefinitions() []sourceDefinition {
 	return []sourceDefinition{
-		{Source: SourceNavSites, Service: "gofurry-nav-backend"},
-		{Source: SourceSiteChangelog, Service: "gofurry-nav-backend"},
-		{Source: SourceGameDetails, Service: "gofurry-game-backend"},
-		{Source: SourceGameNews, Service: "gofurry-game-backend"},
-		{Source: SourceGameCreators, Service: "gofurry-game-backend"},
+		{Source: SourceNavSites, Service: "gofurry-nav-backend", DocumentSource: "nav_site"},
+		{Source: SourceSiteChangelog, Service: "gofurry-nav-backend", DocumentSource: "site_changelog"},
+		{Source: SourceGameDetails, Service: "gofurry-game-backend", DocumentSource: "game_detail"},
+		{Source: SourceGameNews, Service: "gofurry-game-backend", DocumentSource: "game_news"},
+		{Source: SourceGameCreators, Service: "gofurry-game-backend", DocumentSource: "game_creator"},
 	}
 }
 
@@ -362,6 +372,7 @@ func runNavSitesSync(ctx context.Context, m *Manager) (syncCounts, error) {
 		}
 		siteGroups := buildSiteGroups(groups)
 		for _, site := range sites {
+			counts.Total++
 			detail, err := m.navClient.GetSiteDetail(ctx, site.ID, locale)
 			if err != nil {
 				counts.Failed++
@@ -406,6 +417,7 @@ func runChangeLogSync(ctx context.Context, m *Manager) (syncCounts, error) {
 	}
 	var errs []error
 	for _, item := range list {
+		counts.Total++
 		text, err := m.navClient.FetchMarkdown(ctx, item.URL)
 		if err != nil {
 			counts.Failed++

@@ -81,7 +81,10 @@ func TestRunNowRecordsChangelogRun(t *testing.T) {
 	for _, item := range runs.Sources {
 		if item.Source == SourceSiteChangelog {
 			found = true
-			if item.LastRun == nil || item.LastRun.Status != "success" || item.LastRun.AddedCount != 1 {
+			if item.CurrentDocumentCount != 1 {
+				t.Fatalf("current document count = %d", item.CurrentDocumentCount)
+			}
+			if item.LastRun == nil || item.LastRun.Status != "success" || item.LastRun.AddedCount != 1 || item.LastRun.SourceTotalCount != 1 {
 				t.Fatalf("last run = %+v", item.LastRun)
 			}
 		}
@@ -287,6 +290,7 @@ func (r *fakeRepo) CompleteSyncRun(ctx context.Context, id int64, params db.Comp
 			completed := time.Now()
 			run.Status = params.Status
 			run.CompletedAt = &completed
+			run.SourceTotalCount = params.SourceTotalCount
 			run.AddedCount = params.AddedCount
 			run.UpdatedCount = params.UpdatedCount
 			run.SkippedCount = params.SkippedCount
@@ -303,6 +307,14 @@ func (r *fakeRepo) LatestSyncRuns(ctx context.Context) (map[string]db.SyncRun, e
 	result := make(map[string]db.SyncRun, len(r.runs))
 	for key, run := range r.runs {
 		result[key] = run
+	}
+	return result, nil
+}
+
+func (r *fakeRepo) CountDocumentsBySourceType(ctx context.Context) (map[string]int64, error) {
+	result := make(map[string]int64)
+	for _, doc := range r.docs {
+		result[doc.SourceType]++
 	}
 	return result, nil
 }

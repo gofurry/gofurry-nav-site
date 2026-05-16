@@ -76,6 +76,9 @@ CREATE TABLE IF NOT EXISTS rag_sync_runs (
     message TEXT NOT NULL DEFAULT ''
 );
 
+ALTER TABLE rag_sync_runs
+    ADD COLUMN IF NOT EXISTS source_total_count INT NOT NULL DEFAULT 0;
+
 CREATE INDEX IF NOT EXISTS idx_rag_sync_runs_source_started
 ON rag_sync_runs(source, started_at DESC);
 `

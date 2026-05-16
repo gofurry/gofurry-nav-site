@@ -24,6 +24,7 @@ func runGameDetailsSync(ctx context.Context, m *Manager) (syncCounts, error) {
 			continue
 		}
 		for _, game := range games {
+			counts.Total++
 			detail, err := m.gameClient.GetGameInfo(ctx, game.ID, locale)
 			if err != nil {
 				counts.Failed++
@@ -67,6 +68,7 @@ func runGameNewsSync(ctx context.Context, m *Manager) (syncCounts, error) {
 			continue
 		}
 		for _, item := range items {
+			counts.Total++
 			metadata, content, title, targetURL, sourceID, checksum, err := buildGameNewsPayload(item, locale)
 			if err != nil {
 				counts.Failed++
@@ -104,6 +106,7 @@ func runGameCreatorsSync(ctx context.Context, m *Manager) (syncCounts, error) {
 			continue
 		}
 		for _, item := range items {
+			counts.Total++
 			metadata, content, title, targetURL, checksum, err := buildGameCreatorPayload(item, locale)
 			if err != nil {
 				counts.Failed++
