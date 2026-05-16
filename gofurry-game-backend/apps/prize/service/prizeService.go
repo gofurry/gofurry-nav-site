@@ -5,14 +5,14 @@ import (
 	"net"
 	"time"
 
-	"github.com/GoFurry/gofurry-game-backend/apps/prize/dao"
-	"github.com/GoFurry/gofurry-game-backend/apps/prize/models"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	ca "github.com/GoFurry/gofurry-game-backend/common/abstract"
-	"github.com/GoFurry/gofurry-game-backend/common/log"
-	cm "github.com/GoFurry/gofurry-game-backend/common/models"
-	cs "github.com/GoFurry/gofurry-game-backend/common/service"
-	"github.com/GoFurry/gofurry-game-backend/common/util"
+	"github.com/gofurry/gofurry-game-backend/apps/prize/dao"
+	"github.com/gofurry/gofurry-game-backend/apps/prize/models"
+	"github.com/gofurry/gofurry-game-backend/common"
+	ca "github.com/gofurry/gofurry-game-backend/common/abstract"
+	"github.com/gofurry/gofurry-game-backend/common/log"
+	cm "github.com/gofurry/gofurry-game-backend/common/models"
+	cs "github.com/gofurry/gofurry-game-backend/common/service"
+	"github.com/gofurry/gofurry-game-backend/common/util"
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
@@ -98,10 +98,10 @@ func (s prizeService) PrizeParticipation(req models.PrizeParticipationRequest, c
 	}
 
 	gfsError = cs.GetEmailService().SendActivationEmail(req.Email,
-		"GoFurry 抽奖服务 - 参与",
+		"gofurry 抽奖服务 - 参与",
 		"https://game.go-furry.com/api/prize/participation/activation?key="+key+"&id="+util.Int642String(req.ID),
 		"点击此处完成参与",
-		"您正在申请 GoFurry 的抽奖服务，点击下方链接完成报名的最后一步: ",
+		"您正在申请 gofurry 的抽奖服务，点击下方链接完成报名的最后一步: ",
 		"10分钟")
 	if gfsError != nil {
 		cs.Del(emailLockKey, prizeKey)

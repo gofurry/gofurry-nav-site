@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	env "github.com/GoFurry/awesome-fiber-template/v3/medium/config"
-	authservice "github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/auth/service"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/bootstrap"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/common"
+	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
+	authservice "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/service"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/bootstrap"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -27,7 +27,7 @@ func Execute() {
 func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:           common.COMMON_PROJECT_NAME,
-		Short:         "GoFurry admin service",
+		Short:         "gofurry admin service",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

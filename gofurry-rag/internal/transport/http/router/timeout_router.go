@@ -3,8 +3,8 @@ package router
 import (
 	"time"
 
-	env "github.com/GoFurry/gofurry-rag/config"
-	"github.com/GoFurry/gofurry-rag/internal/api"
+	env "github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/api"
 	"github.com/gofiber/fiber/v3"
 	fibertimeout "github.com/gofiber/fiber/v3/middleware/timeout"
 )

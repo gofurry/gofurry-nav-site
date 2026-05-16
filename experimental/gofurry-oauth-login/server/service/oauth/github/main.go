@@ -7,11 +7,11 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/GoFurry/gofurry-oauth-login/common"
-	"github.com/GoFurry/gofurry-oauth-login/common/log"
-	cs "github.com/GoFurry/gofurry-oauth-login/common/service"
-	"github.com/GoFurry/gofurry-oauth-login/env"
-	"github.com/GoFurry/gofurry-oauth-login/server/service/oauth/github/api"
+	"github.com/gofurry/gofurry-oauth-login/common"
+	"github.com/gofurry/gofurry-oauth-login/common/log"
+	cs "github.com/gofurry/gofurry-oauth-login/common/service"
+	"github.com/gofurry/gofurry-oauth-login/env"
+	"github.com/gofurry/gofurry-oauth-login/server/service/oauth/github/api"
 	"github.com/kardianos/service"
 )
 

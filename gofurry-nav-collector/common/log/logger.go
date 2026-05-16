@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/GoFurry/gofurry-nav-collector/roof/env"
+	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"github.com/sirupsen/logrus"
 )
 

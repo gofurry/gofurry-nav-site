@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/middleware"
-	"github.com/GoFurry/gofurry-game-backend/roof/env"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/middleware"
+	"github.com/gofurry/gofurry-game-backend/roof/env"
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/contrib/v3/swagger"
 	"github.com/gofiber/fiber/v3"
@@ -44,7 +44,7 @@ func (router *router) Init() *fiber.App {
 
 	app := fiber.New(fiber.Config{
 		AppName:      common.COMMON_PROJECT_NAME,
-		ServerHeader: "GoFurry-Game",
+		ServerHeader: "gofurry-Game",
 		ErrorHandler: customErrorHandler,
 		TrustProxy:   true,
 		ReadTimeout:  5 * time.Second,

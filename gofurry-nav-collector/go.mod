@@ -1,4 +1,4 @@
-module github.com/GoFurry/gofurry-nav-collector
+module github.com/gofurry/gofurry-nav-collector
 
 go 1.26.0
 

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/roof/env"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/roof/env"
 	fibercoraza "github.com/gofiber/contrib/v3/coraza"
 	"github.com/gofiber/fiber/v3"
 )

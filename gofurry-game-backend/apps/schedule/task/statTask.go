@@ -4,18 +4,18 @@ import (
 	"encoding/json"
 	"time"
 
-	gd "github.com/GoFurry/gofurry-game-backend/apps/game/dao"
-	gm "github.com/GoFurry/gofurry-game-backend/apps/game/models"
-	pd "github.com/GoFurry/gofurry-game-backend/apps/prize/dao"
-	pm "github.com/GoFurry/gofurry-game-backend/apps/prize/models"
-	rd "github.com/GoFurry/gofurry-game-backend/apps/review/dao"
-	rm "github.com/GoFurry/gofurry-game-backend/apps/review/models"
-	"github.com/GoFurry/gofurry-game-backend/apps/schedule/models"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/common/log"
-	cm "github.com/GoFurry/gofurry-game-backend/common/models"
-	cs "github.com/GoFurry/gofurry-game-backend/common/service"
-	"github.com/GoFurry/gofurry-game-backend/common/util"
+	gd "github.com/gofurry/gofurry-game-backend/apps/game/dao"
+	gm "github.com/gofurry/gofurry-game-backend/apps/game/models"
+	pd "github.com/gofurry/gofurry-game-backend/apps/prize/dao"
+	pm "github.com/gofurry/gofurry-game-backend/apps/prize/models"
+	rd "github.com/gofurry/gofurry-game-backend/apps/review/dao"
+	rm "github.com/gofurry/gofurry-game-backend/apps/review/models"
+	"github.com/gofurry/gofurry-game-backend/apps/schedule/models"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/log"
+	cm "github.com/gofurry/gofurry-game-backend/common/models"
+	cs "github.com/gofurry/gofurry-game-backend/common/service"
+	"github.com/gofurry/gofurry-game-backend/common/util"
 	"github.com/bytedance/sonic"
 )
 
@@ -460,7 +460,7 @@ func performLottery(record pm.GfgPrize) {
 	// 异步发送中奖通知
 	for _, winner := range winners {
 		go func(m pm.GfgPrizeMember) {
-			subject := "GoFurry 抽奖服务-获奖"
+			subject := "gofurry 抽奖服务-获奖"
 			body := "您已中奖，奖品为 [" + prizeRecord.Platform + "] 平台的 [" +
 				prizeRecord.Title + "] 请不要忘记自行兑换~"
 

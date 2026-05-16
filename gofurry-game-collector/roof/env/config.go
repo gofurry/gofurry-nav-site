@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoFurry/gofurry-game-collector/common"
+	"github.com/gofurry/gofurry-game-collector/common"
 	"gopkg.in/yaml.v2"
 )
 

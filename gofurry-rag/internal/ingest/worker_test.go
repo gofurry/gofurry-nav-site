@@ -6,15 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GoFurry/gofurry-rag/config"
-	"github.com/GoFurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/db"
 )
 
 func TestWorkerUsesEmbeddingInputTemplate(t *testing.T) {
 	repo := &workerRepo{
 		doc: &db.Document{
 			ID:         1,
-			Title:      "GoFurry",
+			Title:      "gofurry",
 			SourceType: "site",
 			SourceID:   "about",
 			URL:        "https://example.com/about",
@@ -35,7 +35,7 @@ func TestWorkerUsesEmbeddingInputTemplate(t *testing.T) {
 		t.Fatalf("inputs = %#v", embedder.inputs)
 	}
 	input := embedder.inputs[0]
-	for _, want := range []string{"Title: GoFurry", "Source Type: site", "Source ID: about", "URL: https://example.com/about", "Content:\n第一段"} {
+	for _, want := range []string{"Title: gofurry", "Source Type: site", "Source ID: about", "URL: https://example.com/about", "Content:\n第一段"} {
 		if !strings.Contains(input, want) {
 			t.Fatalf("missing %q in %q", want, input)
 		}

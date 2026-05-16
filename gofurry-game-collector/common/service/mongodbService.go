@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GoFurry/gofurry-game-collector/roof/env"
+	"github.com/gofurry/gofurry-game-collector/roof/env"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"

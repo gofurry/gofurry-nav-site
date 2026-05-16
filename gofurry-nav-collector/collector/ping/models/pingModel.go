@@ -1,6 +1,6 @@
 package models
 
-import "github.com/GoFurry/gofurry-nav-collector/common/models"
+import "github.com/gofurry/gofurry-nav-collector/common/models"
 
 type PingVo struct {
 	Domain string `json:"domain"`

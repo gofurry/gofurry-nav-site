@@ -1,11 +1,11 @@
 # gofurry-rag
 
-![License](https://img.shields.io/github/license/GoFurry/gofurry-rag)
+![License](https://img.shields.io/github/license/gofurry/gofurry-rag)
 ![Go Version](https://img.shields.io/badge/go-1.26.0-00ADD8)
 
 [中文说明](./README_zh.md)
 
-`gofurry-rag` is a lightweight RAG service for GoFurry content. It stores text knowledge in PostgreSQL with pgvector, creates embeddings through Ollama, and returns relevant source chunks for user questions.
+`gofurry-rag` is a lightweight RAG service for gofurry content. It stores text knowledge in PostgreSQL with pgvector, creates embeddings through Ollama, and returns relevant source chunks for user questions.
 
 ## Features
 
@@ -111,4 +111,4 @@ Do not commit real database passwords, console passcodes, or JWT secrets.
 
 ## License
 
-MIT, following the parent GoFurry repository.
+MIT, following the parent gofurry repository.

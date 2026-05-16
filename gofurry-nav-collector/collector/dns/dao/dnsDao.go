@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-collector/collector/dns/models"
-	"github.com/GoFurry/gofurry-nav-collector/common"
-	"github.com/GoFurry/gofurry-nav-collector/common/abstract"
+	"github.com/gofurry/gofurry-nav-collector/collector/dns/models"
+	"github.com/gofurry/gofurry-nav-collector/common"
+	"github.com/gofurry/gofurry-nav-collector/common/abstract"
 )
 
 var newDNSDao = new(dnsDao)

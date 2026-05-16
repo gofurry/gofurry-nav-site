@@ -32,18 +32,18 @@ export default defineNuxtConfig({
       htmlAttrs: {
         lang: 'zh-CN'
       },
-      title: 'GoFurry 兽人控导航站 - 发现兽人文化相关资源与社区',
+      title: 'gofurry 兽人控导航站 - 发现兽人文化相关资源与社区',
       meta: [
         // SEO
-        { name: 'description', content: 'GoFurry 兽人控导航站是一个专注于兽人文化整合的导航站点，为兽人爱好者提供便捷的资源发现与社区入口。' },
-        { name: 'keywords', content: 'furry, 兽人, 兽人控, 兽人导航, 兽人文化, 兽人社区, GoFurry, 兽人资源, fur, furries, game, anthro, scalies, kemono' },
+        { name: 'description', content: 'gofurry 兽人控导航站是一个专注于兽人文化整合的导航站点，为兽人爱好者提供便捷的资源发现与社区入口。' },
+        { name: 'keywords', content: 'furry, 兽人, 兽人控, 兽人导航, 兽人文化, 兽人社区, gofurry, 兽人资源, fur, furries, game, anthro, scalies, kemono' },
         // 搜索引擎 爬虫
         { name: 'robots', content: 'index, follow' },
         { name: 'googlebot', content: 'index, follow' },
         // 社交平台
-        { property: 'og:site_name', content: 'GoFurry 兽人控导航站' },
-        { property: 'og:title', content: 'GoFurry 兽人控导航站' },
-        { property: 'og:description', content: 'GoFurry 兽人控导航站是一个专注于兽人文化整合的导航站点，为兽人爱好者提供便捷的资源发现与社区入口。' },
+        { property: 'og:site_name', content: 'gofurry 兽人控导航站' },
+        { property: 'og:title', content: 'gofurry 兽人控导航站' },
+        { property: 'og:description', content: 'gofurry 兽人控导航站是一个专注于兽人文化整合的导航站点，为兽人爱好者提供便捷的资源发现与社区入口。' },
         { property: 'og:type', content: 'website' },
         { property: 'og:url', content: siteUrl },
         { property: 'og:image', content: `${siteUrl.replace(/\/$/, '')}/og-image.jpg` },
@@ -52,7 +52,7 @@ export default defineNuxtConfig({
         { name: 'format-detection', content: 'telephone=no' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-title', content: 'GoFurry 兽人控导航站' }
+        { name: 'apple-mobile-web-app-title', content: 'gofurry 兽人控导航站' }
       ],
       link: [
         { rel: 'icon', type: 'image/png', href: '/logo-mini.png' },

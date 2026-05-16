@@ -3,7 +3,7 @@ package ingest
 import (
 	"strings"
 
-	"github.com/GoFurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/internal/db"
 )
 
 func BuildEmbeddingInput(doc db.Document, chunk string) string {

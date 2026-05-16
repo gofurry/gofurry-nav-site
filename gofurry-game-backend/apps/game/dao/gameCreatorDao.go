@@ -1,9 +1,9 @@
 package dao
 
 import (
-	"github.com/GoFurry/gofurry-game-backend/apps/game/models"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/common/abstract"
+	"github.com/gofurry/gofurry-game-backend/apps/game/models"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/abstract"
 )
 
 var newGameCreatorDao = new(gameCreatorDao)

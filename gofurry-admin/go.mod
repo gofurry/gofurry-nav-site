@@ -1,9 +1,9 @@
-module github.com/GoFurry/awesome-fiber-template/v3/medium
+module github.com/gofurry/awesome-fiber-template/v3/medium
 
 go 1.26.0
 
 require (
-	github.com/GoFurry/coraza-fiber-lite v1.0.1
+	github.com/gofurry/coraza-fiber-lite v1.0.1
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/glebarez/sqlite v1.11.0
 	github.com/go-playground/locales v0.14.1
@@ -26,7 +26,7 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/GoFurry/easyhash v1.0.0 // indirect
+	github.com/gofurry/easyhash v1.0.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/corazawaf/coraza/v3 v3.4.0 // indirect

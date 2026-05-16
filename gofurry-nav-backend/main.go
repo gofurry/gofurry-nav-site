@@ -8,21 +8,21 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/GoFurry/gofurry-nav-backend/apps/schedule"
-	"github.com/GoFurry/gofurry-nav-backend/common"
-	gfLog "github.com/GoFurry/gofurry-nav-backend/common/log"
-	cs "github.com/GoFurry/gofurry-nav-backend/common/service"
-	"github.com/GoFurry/gofurry-nav-backend/middleware"
-	"github.com/GoFurry/gofurry-nav-backend/roof/db"
-	"github.com/GoFurry/gofurry-nav-backend/roof/env"
-	"github.com/GoFurry/gofurry-nav-backend/routers"
+	"github.com/gofurry/gofurry-nav-backend/apps/schedule"
+	"github.com/gofurry/gofurry-nav-backend/common"
+	gfLog "github.com/gofurry/gofurry-nav-backend/common/log"
+	cs "github.com/gofurry/gofurry-nav-backend/common/service"
+	"github.com/gofurry/gofurry-nav-backend/middleware"
+	"github.com/gofurry/gofurry-nav-backend/roof/db"
+	"github.com/gofurry/gofurry-nav-backend/roof/env"
+	"github.com/gofurry/gofurry-nav-backend/routers"
 	"github.com/gofiber/fiber/v3"
 	"github.com/kardianos/service"
 )
 
-//@title GoFurry-Nav-Backend
+//@title gofurry-Nav-Backend
 //@version v1.0.0
-//@description GoFurry-Nav-Backend
+//@description gofurry-Nav-Backend
 
 var (
 	errChan = make(chan error)

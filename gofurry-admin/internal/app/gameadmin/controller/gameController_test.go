@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/gameadmin/models"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/gameadmin/models"
 )
 
 func TestGameDTOParsesJSONCollections(t *testing.T) {

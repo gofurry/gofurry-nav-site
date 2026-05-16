@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	env "github.com/GoFurry/awesome-fiber-template/v3/medium/config"
+	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
 	"github.com/bwmarrin/snowflake"
 )
 

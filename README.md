@@ -1,11 +1,11 @@
 ![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)
-![License](https://img.shields.io/github/license/GoFurry/gofurry-nav-site)
+![License](https://img.shields.io/github/license/gofurry/gofurry-nav-site)
 ![Weekend Project](https://img.shields.io/badge/weekend-project-8B5CF6?style=flat)
 ![Made with Love](https://img.shields.io/badge/made%20with-%E2%9D%A4-E11D48?style=flat&color=orange)
 
 [English](./README_en.md)
 
-GoFurry 是一个面向兽圈文化内容发现与整理的开源多服务仓库，包含公开站点前台、导航与游戏数据接口、采集服务，以及运营后台。
+gofurry 是一个面向兽圈文化内容发现与整理的开源多服务仓库，包含公开站点前台、导航与游戏数据接口、采集服务，以及运营后台。
 
 线上主站当前已迁移到 Nuxt 4 前台，重点提升公开页面的 SEO 与首屏可见性；原 Vue 前台保留为迁移参考，不再作为新的生产前台入口。
 
@@ -24,7 +24,7 @@ GoFurry 是一个面向兽圈文化内容发现与整理的开源多服务仓库
 ## 项目定位
 
 - 公开网站：`https://go-furry.com`
-- 面向对象：希望了解、部署、维护或参与 GoFurry 的开发者与维护者
+- 面向对象：希望了解、部署、维护或参与 gofurry 的开发者与维护者
 - 仓库形态：按服务拆分的 monorepo，而不是单一可执行项目
 
 ## 仓库结构

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GoFurry/gofurry-oauth-login/env"
+	"github.com/gofurry/gofurry-oauth-login/env"
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc/resolver"

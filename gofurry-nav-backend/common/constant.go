@@ -9,10 +9,10 @@ package common
 // 项目
 const (
 	COMMON_PROJECT_NAME = "gf-nav"          // 项目名
-	COMMON_AUTH_SALT    = "GoFurry20250816" // 盐
+	COMMON_AUTH_SALT    = "gofurry20250816" // 盐
 	COMMON_AUTH_CURRENT = "currentUser"     // 当前用户
 	COMMON_PROJECT_HELP = `
-GF-Nav is a backend service for GoFurry Navigation Site.
+GF-Nav is a backend service for gofurry Navigation Site.
 Usage:
   ./gf-nav [params]
     - install: install this backend to systemd.

@@ -1,11 +1,11 @@
 package service
 
 import (
-	"github.com/GoFurry/gofurry-nav-backend/apps/nav/sitePage/dao"
-	"github.com/GoFurry/gofurry-nav-backend/apps/nav/sitePage/models"
-	"github.com/GoFurry/gofurry-nav-backend/common"
-	cs "github.com/GoFurry/gofurry-nav-backend/common/service"
-	"github.com/GoFurry/gofurry-nav-backend/common/util"
+	"github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/dao"
+	"github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/models"
+	"github.com/gofurry/gofurry-nav-backend/common"
+	cs "github.com/gofurry/gofurry-nav-backend/common/service"
+	"github.com/gofurry/gofurry-nav-backend/common/util"
 )
 
 type sitePageService struct{}

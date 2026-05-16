@@ -118,10 +118,10 @@ if (active.value?.url && state.text) {
 }
 
 useSeoMeta({
-  title: () => 'GoFurry Updates',
-  description: () => 'Latest changelog and updates from GoFurry.',
-  ogTitle: () => 'GoFurry Updates',
-  ogDescription: () => 'Latest changelog and updates from GoFurry.',
+  title: () => 'gofurry Updates',
+  description: () => 'Latest changelog and updates from gofurry.',
+  ogTitle: () => 'gofurry Updates',
+  ogDescription: () => 'Latest changelog and updates from gofurry.',
 })
 
 async function loadMarkdown(item: changelogResp) {

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/GoFurry/gofurry-user/apps/oauth/service"
-	"github.com/GoFurry/gofurry-user/common"
+	"github.com/gofurry/gofurry-user/apps/oauth/service"
+	"github.com/gofurry/gofurry-user/common"
 	"github.com/gofiber/fiber/v2"
 )
 

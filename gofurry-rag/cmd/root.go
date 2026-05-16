@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	env "github.com/GoFurry/gofurry-rag/config"
-	"github.com/GoFurry/gofurry-rag/pkg/common"
+	env "github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/pkg/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -24,7 +24,7 @@ func Execute() {
 func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:           common.COMMON_PROJECT_NAME,
-		Short:         "GoFurry RAG service",
+		Short:         "gofurry RAG service",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

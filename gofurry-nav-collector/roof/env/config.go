@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoFurry/gofurry-nav-collector/common"
+	"github.com/gofurry/gofurry-nav-collector/common"
 	"gopkg.in/yaml.v2"
 )
 

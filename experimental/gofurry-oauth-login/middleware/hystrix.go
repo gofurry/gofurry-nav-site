@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GoFurry/gofurry-oauth-login/common/log"
+	"github.com/gofurry/gofurry-oauth-login/common/log"
 	"github.com/afex/hystrix-go/hystrix"
 )
 

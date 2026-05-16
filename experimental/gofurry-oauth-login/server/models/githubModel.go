@@ -1,6 +1,6 @@
 package models
 
-import "github.com/GoFurry/gofurry-oauth-login/api/proto/githuboauth"
+import "github.com/gofurry/gofurry-oauth-login/api/proto/githuboauth"
 
 type GithubOAuthServer struct {
 	githuboauth.UnimplementedGithubOAuthServiceServer

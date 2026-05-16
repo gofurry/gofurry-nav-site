@@ -9,10 +9,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/GoFurry/gofurry-rag/config"
-	"github.com/GoFurry/gofurry-rag/internal/db"
-	"github.com/GoFurry/gofurry-rag/internal/embedder"
-	"github.com/GoFurry/gofurry-rag/internal/ingest"
+	"github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/internal/embedder"
+	"github.com/gofurry/gofurry-rag/internal/ingest"
 )
 
 var ErrValidation = errors.New("validation failed")

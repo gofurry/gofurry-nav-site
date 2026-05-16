@@ -119,7 +119,7 @@ Create a manual text document:
 curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
   -b cookies.txt \
   -H "Content-Type: application/json" \
-  -d '{"title":"GoFurry","content":"GoFurry is a content discovery website.","source_type":"manual"}'
+  -d '{"title":"gofurry","content":"gofurry is a content discovery website.","source_type":"manual"}'
 ```
 
 Only `content` is required. `title` is strongly recommended for readable sources. `source_type`, `source_id`, and `url` are optional provenance fields:
@@ -137,7 +137,7 @@ The service creates a pending document and the ingest worker embeds chunks async
 ```bash
 curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
   -H "Content-Type: application/json" \
-  -d '{"question":"What is GoFurry?","top_k":6}'
+  -d '{"question":"What is gofurry?","top_k":6}'
 ```
 
 `POST /api/v1/chat/query` is public and does not require the admin session cookie.
@@ -147,7 +147,7 @@ Streaming version:
 ```bash
 curl -N -X POST http://127.0.0.1:8080/api/v1/chat/stream \
   -H "Content-Type: application/json" \
-  -d '{"question":"What is GoFurry?","top_k":6}'
+  -d '{"question":"What is gofurry?","top_k":6}'
 ```
 
 `POST /api/v1/chat/stream` is public and returns server-sent events that include `status`, `sources`, `delta`, and `done` events.

@@ -3,12 +3,12 @@ package dao
 import (
 	"strings"
 
-	gm "github.com/GoFurry/gofurry-game-backend/apps/game/models"
-	rm "github.com/GoFurry/gofurry-game-backend/apps/review/models"
-	"github.com/GoFurry/gofurry-game-backend/apps/search/models"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/common/abstract"
-	cm "github.com/GoFurry/gofurry-game-backend/common/models"
+	gm "github.com/gofurry/gofurry-game-backend/apps/game/models"
+	rm "github.com/gofurry/gofurry-game-backend/apps/review/models"
+	"github.com/gofurry/gofurry-game-backend/apps/search/models"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/abstract"
+	cm "github.com/gofurry/gofurry-game-backend/common/models"
 	"gorm.io/gorm"
 )
 

@@ -1,9 +1,9 @@
 package service
 
 import (
-	"github.com/GoFurry/gofurry-nav-backend/apps/system/site/models"
-	"github.com/GoFurry/gofurry-nav-backend/common"
-	cs "github.com/GoFurry/gofurry-nav-backend/common/service"
+	"github.com/gofurry/gofurry-nav-backend/apps/system/site/models"
+	"github.com/gofurry/gofurry-nav-backend/common"
+	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 	"github.com/bytedance/sonic"
 )
 

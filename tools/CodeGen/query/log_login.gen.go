@@ -16,7 +16,7 @@ import (
 
 	"gorm.io/plugin/dbresolver"
 
-	"github.com/GoFurry/gorm-generator/model"
+	"github.com/gofurry/gorm-generator/model"
 )
 
 func newLogLogin(db *gorm.DB, opts ...gen.DOOption) logLogin {

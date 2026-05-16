@@ -1,4 +1,4 @@
-module github.com/GoFurry/gofurry-game-backend
+module github.com/gofurry/gofurry-game-backend
 
 go 1.26.2
 

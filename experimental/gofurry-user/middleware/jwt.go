@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoFurry/gofurry-user/apps/user/models"
-	"github.com/GoFurry/gofurry-user/common"
-	"github.com/GoFurry/gofurry-user/common/log"
-	cs "github.com/GoFurry/gofurry-user/common/service"
-	"github.com/GoFurry/gofurry-user/common/util"
+	"github.com/gofurry/gofurry-user/apps/user/models"
+	"github.com/gofurry/gofurry-user/common"
+	"github.com/gofurry/gofurry-user/common/log"
+	cs "github.com/gofurry/gofurry-user/common/service"
+	"github.com/gofurry/gofurry-user/common/util"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 )

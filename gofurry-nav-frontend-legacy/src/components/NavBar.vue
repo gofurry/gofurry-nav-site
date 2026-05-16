@@ -11,7 +11,7 @@
             : 'rounded-lg px-1 py-1 md:px-3 md:py-2 sm:px-5'"
       >
         <div class="flex shrink-0 items-center justify-center">
-          <img :src="logo" alt="GoFurry logo" class="w-10 h-10" />
+          <img :src="logo" alt="gofurry logo" class="w-10 h-10" />
         </div>
 
         <div

@@ -79,7 +79,7 @@
 
         <label class="block">
           <span class="label">问题</span>
-          <textarea v-model="question" class="control min-h-36 resize-none py-3" placeholder="例如：GoFurry 现在可以回答哪些问题？" />
+          <textarea v-model="question" class="control min-h-36 resize-none py-3" placeholder="例如：gofurry 现在可以回答哪些问题？" />
         </label>
 
         <div class="grid gap-4 md:grid-cols-2">
@@ -379,7 +379,7 @@ type TimelineItem = {
   at: string
 }
 
-const question = ref('GoFurry 现在可以回答哪些问题？')
+const question = ref('gofurry 现在可以回答哪些问题？')
 const topKText = ref('6')
 const includeDetails = ref(false)
 const filters = ref<QueryFilterFields>({
@@ -553,7 +553,7 @@ function stopQuery() {
 }
 
 function resetPanel() {
-  question.value = 'GoFurry 现在可以回答哪些问题？'
+  question.value = 'gofurry 现在可以回答哪些问题？'
   topKText.value = '6'
   includeDetails.value = false
   filters.value = {

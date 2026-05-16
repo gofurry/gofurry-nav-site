@@ -7,18 +7,18 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/GoFurry/gofurry-user/common"
-	cs "github.com/GoFurry/gofurry-user/common/service"
-	"github.com/GoFurry/gofurry-user/common/util"
-	"github.com/GoFurry/gofurry-user/roof/env"
-	"github.com/GoFurry/gofurry-user/routers"
+	"github.com/gofurry/gofurry-user/common"
+	cs "github.com/gofurry/gofurry-user/common/service"
+	"github.com/gofurry/gofurry-user/common/util"
+	"github.com/gofurry/gofurry-user/roof/env"
+	"github.com/gofurry/gofurry-user/routers"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/kardianos/service"
 )
 
-//@title GoFurry-User
+//@title gofurry-User
 //@version v1.0.0
-//@description GoFurry-User
+//@description gofurry-User
 
 var (
 	errChan = make(chan error)

@@ -3,7 +3,7 @@ package retrieval
 import (
 	"context"
 
-	"github.com/GoFurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/internal/db"
 )
 
 type Repository interface {

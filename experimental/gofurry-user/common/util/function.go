@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoFurry/gofurry-user/common"
-	cm "github.com/GoFurry/gofurry-user/common/models"
-	"github.com/GoFurry/gofurry-user/roof/env"
+	"github.com/gofurry/gofurry-user/common"
+	cm "github.com/gofurry/gofurry-user/common/models"
+	"github.com/gofurry/gofurry-user/roof/env"
 	"github.com/bwmarrin/snowflake"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"

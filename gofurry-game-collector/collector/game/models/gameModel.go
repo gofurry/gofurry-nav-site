@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	cm "github.com/GoFurry/gofurry-game-collector/common/models"
+	cm "github.com/gofurry/gofurry-game-collector/common/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 

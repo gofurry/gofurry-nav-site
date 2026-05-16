@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-collector/common/models"
+	"github.com/gofurry/gofurry-nav-collector/common/models"
 )
 
 // HTTP 采集结果

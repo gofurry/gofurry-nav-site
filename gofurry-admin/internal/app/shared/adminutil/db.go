@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/common"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/models"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/models"
 	"gorm.io/gorm"
 )
 

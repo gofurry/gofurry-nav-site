@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GoFurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common"
 )
 
 type LocalTime time.Time

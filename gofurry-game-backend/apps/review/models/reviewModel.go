@@ -1,7 +1,7 @@
 package models
 
 import (
-	cm "github.com/GoFurry/gofurry-game-backend/common/models"
+	cm "github.com/gofurry/gofurry-game-backend/common/models"
 )
 
 const TableNameGfgGameComment = "gfg_game_comment"

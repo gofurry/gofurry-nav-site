@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/GoFurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common"
 	"gopkg.in/yaml.v2"
 )
 

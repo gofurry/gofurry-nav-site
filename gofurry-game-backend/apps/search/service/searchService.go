@@ -1,12 +1,12 @@
 package service
 
 import (
-	"github.com/GoFurry/gofurry-game-backend/apps/search/dao"
-	"github.com/GoFurry/gofurry-game-backend/apps/search/models"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/common/log"
-	cm "github.com/GoFurry/gofurry-game-backend/common/models"
-	"github.com/GoFurry/gofurry-game-backend/common/util"
+	"github.com/gofurry/gofurry-game-backend/apps/search/dao"
+	"github.com/gofurry/gofurry-game-backend/apps/search/models"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/log"
+	cm "github.com/gofurry/gofurry-game-backend/common/models"
+	"github.com/gofurry/gofurry-game-backend/common/util"
 )
 
 type searchService struct{}

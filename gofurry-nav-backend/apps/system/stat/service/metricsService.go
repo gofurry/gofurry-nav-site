@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-backend/apps/system/stat/models"
-	"github.com/GoFurry/gofurry-nav-backend/common"
-	"github.com/GoFurry/gofurry-nav-backend/common/log"
-	cs "github.com/GoFurry/gofurry-nav-backend/common/service"
-	"github.com/GoFurry/gofurry-nav-backend/common/util"
-	"github.com/GoFurry/gofurry-nav-backend/roof/env"
+	"github.com/gofurry/gofurry-nav-backend/apps/system/stat/models"
+	"github.com/gofurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/common/log"
+	cs "github.com/gofurry/gofurry-nav-backend/common/service"
+	"github.com/gofurry/gofurry-nav-backend/common/util"
+	"github.com/gofurry/gofurry-nav-backend/roof/env"
 	"github.com/redis/go-redis/v9"
 )
 

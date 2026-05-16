@@ -1,8 +1,8 @@
 package models
 
 import (
-	"github.com/GoFurry/gofurry-user/common/abstract"
-	cm "github.com/GoFurry/gofurry-user/common/models"
+	"github.com/gofurry/gofurry-user/common/abstract"
+	cm "github.com/gofurry/gofurry-user/common/models"
 )
 
 const TableNameGfUser = "gf_user"

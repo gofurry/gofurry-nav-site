@@ -1,6 +1,6 @@
 package abstract
 
-import "github.com/GoFurry/gofurry-game-collector/common/util"
+import "github.com/gofurry/gofurry-game-collector/common/util"
 
 /*
  * @Desc: 公共模型

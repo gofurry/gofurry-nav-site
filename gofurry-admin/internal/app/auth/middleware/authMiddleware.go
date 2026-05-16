@@ -3,9 +3,9 @@ package middleware
 import (
 	"strings"
 
-	env "github.com/GoFurry/awesome-fiber-template/v3/medium/config"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/auth/service"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/common"
+	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/service"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	"github.com/gofiber/fiber/v3"
 )
 

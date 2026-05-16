@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	database "github.com/GoFurry/awesome-fiber-template/v3/medium/internal/infra/db"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/common"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/models"
+	database "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/models"
 	"gorm.io/gorm"
 )
 

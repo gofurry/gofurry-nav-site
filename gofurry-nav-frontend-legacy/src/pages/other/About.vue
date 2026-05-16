@@ -38,7 +38,7 @@
                 {{ hero.primaryAction }}
               </RouterLink>
               <a
-                  href="https://github.com/GoFurry/gofurry-nav-site"
+                  href="https://github.com/gofurry/gofurry-nav-site"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="inline-flex items-center justify-center rounded-xl border border-white/18 bg-white/8 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/14"
@@ -164,15 +164,15 @@ const isZh = computed(() => i18n.global.locale.value === 'zh')
 const hero = computed(() => (
   isZh.value
     ? {
-        title: 'GoFurry 正在把导航、游戏情报与开放生态整理成一个更清晰的入口。',
+        title: 'gofurry 正在把导航、游戏情报与开放生态整理成一个更清晰的入口。',
         lead: '我们希望把分散的兽圈站点、项目、游戏和长期内容串成一条更容易理解的路径。它不是复杂的门户，而是一个轻量、稳定、持续演进的公共入口。',
         tags: ['导航与发现', '游戏情报', '开放平台', 'DeepFurry'],
         primaryAction: '进入导航站',
         secondaryAction: '查看 GitHub',
       }
     : {
-        title: 'GoFurry brings navigation, game intelligence, and open ecosystem entry points into one clearer experience.',
-        lead: 'We want scattered furry sites, projects, games, and long-form work to feel connected instead of fragmented. GoFurry is designed as a lightweight, stable, and sustainable public-facing gateway.',
+        title: 'gofurry brings navigation, game intelligence, and open ecosystem entry points into one clearer experience.',
+        lead: 'We want scattered furry sites, projects, games, and long-form work to feel connected instead of fragmented. gofurry is designed as a lightweight, stable, and sustainable public-facing gateway.',
         tags: ['Navigation', 'Game Intel', 'Open Platform', 'DeepFurry'],
         primaryAction: 'Open Navigation',
         secondaryAction: 'View GitHub',
@@ -213,7 +213,7 @@ const features = computed(() => (
         {
           icon: apiIcon,
           title: '开放平台',
-          desc: '承接后续开放能力、公共服务和外部扩展页面，作为 GoFurry 的延展入口。',
+          desc: '承接后续开放能力、公共服务和外部扩展页面，作为 gofurry 的延展入口。',
           meta: 'Open Surface',
         },
         {
@@ -239,7 +239,7 @@ const features = computed(() => (
         {
           icon: apiIcon,
           title: 'Open Platform',
-          desc: 'A future-facing surface for public capabilities, open integrations, and external ecosystem pages built around GoFurry.',
+          desc: 'A future-facing surface for public capabilities, open integrations, and external ecosystem pages built around gofurry.',
           meta: 'Open Surface',
         },
         {
@@ -260,7 +260,7 @@ const teamSection = computed(() => (
           name: '福狼',
           role: '开发者 / 维护者',
           avatar: 'https://qcdn.go-furry.com/game/creator/100/avatar.jpg',
-          link: 'https://github.com/GoFurry',
+          link: 'https://github.com/gofurry',
           action: '前往个人主页',
         },
       }
@@ -271,7 +271,7 @@ const teamSection = computed(() => (
           name: 'Fu Lang',
           role: 'Developer / Maintainer',
           avatar: 'https://qcdn.go-furry.com/game/creator/100/avatar.jpg',
-          link: 'https://github.com/GoFurry',
+          link: 'https://github.com/gofurry',
           action: 'Open project page',
         },
       }
@@ -285,7 +285,7 @@ const contact = computed(() => (
         desc: '欢迎反馈站点问题、提出想法，或者交流关于开放平台与 DeepFurry 的后续方向。',
         links: [
           { label: '邮箱', value: '2660621624@qq.com', href: 'mailto:2660621624@qq.com', external: false },
-          { label: 'GitHub', value: 'GoFurry', href: 'https://github.com/GoFurry', external: true },
+          { label: 'GitHub', value: 'gofurry', href: 'https://github.com/gofurry', external: true },
           { label: 'DeepFurry', value: 'www.deepfurry.com', href: 'https://www.deepfurry.com', external: true },
         ],
       }
@@ -295,7 +295,7 @@ const contact = computed(() => (
         desc: 'Feedback, ideas, and conversations around the open platform or DeepFurry direction are always welcome.',
         links: [
           { label: 'Email', value: '2660621624@qq.com', href: 'mailto:2660621624@qq.com', external: false },
-          { label: 'GitHub', value: 'GoFurry', href: 'https://github.com/GoFurry', external: true },
+          { label: 'GitHub', value: 'gofurry', href: 'https://github.com/gofurry', external: true },
           { label: 'DeepFurry', value: 'www.deepfurry.com', href: 'https://www.deepfurry.com', external: true },
         ],
       }

@@ -3,9 +3,9 @@ package dao
 import (
 	"errors"
 
-	"github.com/GoFurry/gofurry-user/apps/oauth/models"
-	"github.com/GoFurry/gofurry-user/common"
-	"github.com/GoFurry/gofurry-user/common/abstract"
+	"github.com/gofurry/gofurry-user/apps/oauth/models"
+	"github.com/gofurry/gofurry-user/common"
+	"github.com/gofurry/gofurry-user/common/abstract"
 	"gorm.io/gorm"
 )
 

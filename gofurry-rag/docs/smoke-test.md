@@ -58,11 +58,11 @@ The first request should return 401. After login, overview should return documen
 curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
   -b cookies.txt \
   -H "Content-Type: application/json" \
-  -d '{"title":"Smoke Test","content":"GoFurry stores searchable knowledge chunks.","source_type":"manual"}'
+  -d '{"title":"Smoke Test","content":"gofurry stores searchable knowledge chunks.","source_type":"manual"}'
 
 curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
   -H "Content-Type: application/json" \
-  -d '{"question":"What does GoFurry store?","top_k":3}'
+  -d '{"question":"What does gofurry store?","top_k":3}'
 ```
 
 The query should return at least one source after the ingest worker finishes. The console document list refreshes every 3 seconds, and the overview page refreshes every 5 seconds.

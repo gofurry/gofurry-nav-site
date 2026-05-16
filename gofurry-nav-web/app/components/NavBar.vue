@@ -11,8 +11,8 @@
           class="flex shrink-0 items-center gap-2 px-2 py-1"
           @click.stop="closeMenus"
       >
-        <img :src="logo" alt="GoFurry logo" class="h-10 w-10" />
-        <span class="hidden text-sm font-semibold tracking-wide text-white sm:inline">GoFurry</span>
+        <img :src="logo" alt="gofurry logo" class="h-10 w-10" />
+        <span class="hidden text-sm font-semibold tracking-wide text-white sm:inline">gofurry</span>
       </NuxtLink>
 
       <div class="hidden min-w-0 flex-1 items-center justify-center overflow-hidden transition-all duration-300 sm:flex">

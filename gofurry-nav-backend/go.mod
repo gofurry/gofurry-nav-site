@@ -1,4 +1,4 @@
-module github.com/GoFurry/gofurry-nav-backend
+module github.com/gofurry/gofurry-nav-backend
 
 go 1.26.2
 

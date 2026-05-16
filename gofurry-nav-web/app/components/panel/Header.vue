@@ -6,7 +6,7 @@
     }"
   >
     <h1 class="font-bold text-center text-[clamp(1rem,2vw,1.5rem)]">
-      GoFurry {{t("dashboard.overview")}}
+      gofurry {{t("dashboard.overview")}}
     </h1>
     <div class="hidden sm:block time absolute right-6 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.8)] text-[clamp(0.8rem,1.5vw,1.2rem)]">
       {{ currentTime }}

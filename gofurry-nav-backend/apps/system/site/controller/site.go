@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"github.com/GoFurry/gofurry-nav-backend/apps/system/site/service"
-	"github.com/GoFurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/apps/system/site/service"
+	"github.com/gofurry/gofurry-nav-backend/common"
 	"github.com/gofiber/fiber/v3"
 )
 

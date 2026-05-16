@@ -1,8 +1,8 @@
 package schedule
 
 import (
-	game "github.com/GoFurry/gofurry-game-collector/collector/game/controller"
-	"github.com/GoFurry/gofurry-game-collector/common/log"
+	game "github.com/gofurry/gofurry-game-collector/collector/game/controller"
+	"github.com/gofurry/gofurry-game-collector/common/log"
 )
 
 func InitSchedule() {

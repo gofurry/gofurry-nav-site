@@ -25,7 +25,7 @@ function isActive(path: string) {
   <div class="min-h-screen md:grid md:grid-cols-[260px_1fr]">
     <aside class="border-b border-[var(--line)] bg-[var(--bg-muted)]/80 p-5 md:min-h-screen md:border-b-0 md:border-r">
       <div class="mb-8">
-        <div class="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">GoFurry</div>
+        <div class="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">gofurry</div>
         <div class="mt-2 text-2xl font-semibold">Admin</div>
       </div>
 

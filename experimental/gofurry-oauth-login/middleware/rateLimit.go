@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/GoFurry/gofurry-oauth-login/common/log"
+	"github.com/gofurry/gofurry-oauth-login/common/log"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

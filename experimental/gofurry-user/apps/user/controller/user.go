@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"github.com/GoFurry/gofurry-user/apps/user/models"
-	"github.com/GoFurry/gofurry-user/apps/user/service"
-	"github.com/GoFurry/gofurry-user/common"
+	"github.com/gofurry/gofurry-user/apps/user/models"
+	"github.com/gofurry/gofurry-user/apps/user/service"
+	"github.com/gofurry/gofurry-user/common"
 	"github.com/gofiber/fiber/v2"
 )
 

@@ -1,11 +1,11 @@
 ![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)
-![License](https://img.shields.io/github/license/GoFurry/gofurry-nav-site)
+![License](https://img.shields.io/github/license/gofurry/gofurry-nav-site)
 ![Weekend Project](https://img.shields.io/badge/weekend-project-8B5CF6?style=flat)
 ![Made with Love](https://img.shields.io/badge/made%20with-%E2%9D%A4-E11D48?style=flat&color=orange)
 
 [中文说明](./README.md)
 
-GoFurry is an open-source multi-service repository for a furry culture discovery website. It contains the public web frontend, navigation and game APIs, data collectors, and the operations backend.
+gofurry is an open-source multi-service repository for a furry culture discovery website. It contains the public web frontend, navigation and game APIs, data collectors, and the operations backend.
 
 The production public site has now moved to a Nuxt 4 frontend to improve SEO and first-page rendering. The older Vue frontend is kept in the repository as an archived migration reference rather than the active production entrypoint.
 
@@ -24,7 +24,7 @@ The production public site has now moved to a Nuxt 4 frontend to improve SEO and
 ## Project Scope
 
 - Public website: `https://go-furry.com`
-- Audience: developers and maintainers who want to understand, run, extend, or deploy GoFurry
+- Audience: developers and maintainers who want to understand, run, extend, or deploy gofurry
 - Repository model: a service-oriented monorepo rather than a single runnable app
 
 ## Repository Layout

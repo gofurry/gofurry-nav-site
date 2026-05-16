@@ -1,6 +1,6 @@
 package models
 
-import cm "github.com/GoFurry/gofurry-game-backend/common/models"
+import cm "github.com/gofurry/gofurry-game-backend/common/models"
 
 type SearchGameVo struct {
 	ID    string `json:"id"`

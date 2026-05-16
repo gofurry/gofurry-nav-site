@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/navadmin/models"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/navadmin/models"
 )
 
 func TestSiteDTOParsesDomainJSON(t *testing.T) {

@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoFurry/gofurry-user/common"
-	"github.com/GoFurry/gofurry-user/roof/env"
+	"github.com/gofurry/gofurry-user/common"
+	"github.com/gofurry/gofurry-user/roof/env"
 	"github.com/corazawaf/coraza/v3"
 	"github.com/corazawaf/coraza/v3/experimental"
 	"github.com/corazawaf/coraza/v3/types"

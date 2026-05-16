@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"github.com/GoFurry/gofurry-game-backend/apps/recommend/service"
-	"github.com/GoFurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/apps/recommend/service"
+	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofiber/fiber/v3"
 )
 

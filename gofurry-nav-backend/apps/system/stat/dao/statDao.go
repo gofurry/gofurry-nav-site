@@ -1,11 +1,11 @@
 package dao
 
 import (
-	navModels "github.com/GoFurry/gofurry-nav-backend/apps/nav/navPage/models"
-	logModels "github.com/GoFurry/gofurry-nav-backend/apps/nav/sitePage/models"
-	"github.com/GoFurry/gofurry-nav-backend/apps/system/stat/models"
-	"github.com/GoFurry/gofurry-nav-backend/common"
-	"github.com/GoFurry/gofurry-nav-backend/common/abstract"
+	navModels "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
+	logModels "github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/models"
+	"github.com/gofurry/gofurry-nav-backend/apps/system/stat/models"
+	"github.com/gofurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/common/abstract"
 )
 
 var newStatDao = new(statDao)

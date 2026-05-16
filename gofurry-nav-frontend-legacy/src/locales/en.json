@@ -58,14 +58,14 @@
     }
   },
   "about": {
-    "introTitle": "Welcome to GoFurry",
-    "introContent": "GoFurry is a non-profit navigation site focused on Furry content. We provide site monitoring, game news, open ecosystem links, and creator projects to help you discover and share what you love. Our mission is to build a lightweight, open platform where everyone can enjoy exploring content.",
+    "introTitle": "Welcome to gofurry",
+    "introContent": "gofurry is a non-profit navigation site focused on Furry content. We provide site monitoring, game news, open ecosystem links, and creator projects to help you discover and share what you love. Our mission is to build a lightweight, open platform where everyone can enjoy exploring content.",
     "featureNavigationTitle": "Navigation",
     "featureNavigationDesc": "The most comprehensive Furry site navigation with basic network monitoring",
     "featureGamesTitle": "Games",
     "featureGamesDesc": "The most complete Steam Furry game news, automatically collecting recent data",
     "featureToolsTitle": "Open Platform",
-    "featureToolsDesc": "A dedicated entry for the future GoFurry open ecosystem and external capability pages",
+    "featureToolsDesc": "A dedicated entry for the future gofurry open ecosystem and external capability pages",
     "featureSurveyTitle": "DeepFurry",
     "featureSurveyDesc": "The public-facing project page for DeepFurry and its long-form furry research direction",
     "teamTitle": "Our Team",
@@ -77,8 +77,8 @@
     "changelog": "Change Log"
   },
   "navbar": {
-    "slogan": "GoFurry is a non-profit organization.",
-    "sortSlogan": "🐺GoFurry",
+    "slogan": "gofurry is a non-profit organization.",
+    "sortSlogan": "🐺gofurry",
     "mode": "Mode",
     "modeSetting": "Mode Settings",
     "modeDesc": "Used to control page display mode, for example: nsfw",
@@ -89,7 +89,7 @@
     "customPanelHeightPlaceholder": "320",
     "customPanelHeightDesc": "Controls the height of all three CustomSitesPanel columns in pixels. Default is 320.",
     "customPanelCode": "Custom first panel frontend code",
-    "customPanelCodePlaceholder": "<div style='padding:24px;color:white'>Hello GoFurry</div>",
+    "customPanelCodePlaceholder": "<div style='padding:24px;color:white'>Hello gofurry</div>",
     "customPanelCodeDesc": "When filled, it overrides the default content of the first panel. You can use HTML / CSS / JS; leave it empty to keep the default view.",
     "customNavHeaderBg": "NavHeader background folder",
     "customNavHeaderBgDesc": "Pick a local image folder and one image from it will be chosen at random for the nav page background; if unset, the default background logic stays in place.",
@@ -473,7 +473,7 @@
     },
     "lottery": {
       "home": {
-        "title": "GoFurry Lottery",
+        "title": "gofurry Lottery",
         "activePool": "Active Pools",
         "noActiveLottery": "No active lotteries currently",
         "clickToJoin": "Click to Join",

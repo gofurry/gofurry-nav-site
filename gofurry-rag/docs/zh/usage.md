@@ -134,8 +134,8 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/documents/text \
   -b cookies.txt \
   -H "Content-Type: application/json" \
   -d '{
-    "title":"GoFurry",
-    "content":"GoFurry is a content discovery website.",
+    "title":"gofurry",
+    "content":"gofurry is a content discovery website.",
     "source_type":"manual",
     "metadata":{
       "category":"intro",
@@ -200,7 +200,7 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/debug/chunk-preview \
 curl -X POST http://127.0.0.1:8080/api/v1/admin/debug/chunk-preview \
   -b cookies.txt \
   -H "Content-Type: application/json" \
-  -d '{"text":"GoFurry knowledge text","variants":[{"chunk_size":500,"chunk_overlap":80},{"chunk_size":700,"chunk_overlap":120}]}'
+  -d '{"text":"gofurry knowledge text","variants":[{"chunk_size":500,"chunk_overlap":80},{"chunk_size":700,"chunk_overlap":120}]}'
 ```
 
 响应会返回每组参数的 chunk 数、最短/最长/平均字符数和前 20 个 chunk 预览。
@@ -210,7 +210,7 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/debug/chunk-preview \
 ```bash
 curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
   -H "Content-Type: application/json" \
-  -d '{"question":"What is GoFurry?","top_k":6}'
+  -d '{"question":"What is gofurry?","top_k":6}'
 ```
 
 `POST /api/v1/chat/query` 是公开接口，不需要管理端 Cookie。
@@ -223,7 +223,7 @@ curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
 curl -X POST http://127.0.0.1:8080/api/v1/chat/query \
   -H "Content-Type: application/json" \
   -d '{
-    "question":"What is GoFurry?",
+    "question":"What is gofurry?",
     "top_k":6,
     "filters":{
       "source_type":["website"],

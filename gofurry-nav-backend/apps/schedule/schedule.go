@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-backend/apps/schedule/task"
-	"github.com/GoFurry/gofurry-nav-backend/common/log"
-	cs "github.com/GoFurry/gofurry-nav-backend/common/service"
+	"github.com/gofurry/gofurry-nav-backend/apps/schedule/task"
+	"github.com/gofurry/gofurry-nav-backend/common/log"
+	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 )
 
 func InitScheduleOnStart() {

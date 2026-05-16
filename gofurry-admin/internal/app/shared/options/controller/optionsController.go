@@ -1,11 +1,11 @@
 package controller
 
 import (
-	gamemodels "github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/gameadmin/models"
-	navmodels "github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/navadmin/models"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/shared/adminutil"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/infra/db"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/common"
+	gamemodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/gameadmin/models"
+	navmodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/navadmin/models"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/adminutil"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	"github.com/gofiber/fiber/v3"
 )
 

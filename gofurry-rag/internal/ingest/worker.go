@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GoFurry/gofurry-rag/config"
-	"github.com/GoFurry/gofurry-rag/internal/db"
-	"github.com/GoFurry/gofurry-rag/internal/embedder"
+	"github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/internal/embedder"
 )
 
 type Repository interface {

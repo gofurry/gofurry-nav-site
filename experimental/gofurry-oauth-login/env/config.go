@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GoFurry/gofurry-oauth-login/common"
+	"github.com/gofurry/gofurry-oauth-login/common"
 	"gopkg.in/yaml.v2"
 )
 

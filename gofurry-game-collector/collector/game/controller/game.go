@@ -5,10 +5,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/GoFurry/gofurry-game-collector/collector/game/service"
-	"github.com/GoFurry/gofurry-game-collector/common/log"
-	cs "github.com/GoFurry/gofurry-game-collector/common/service"
-	"github.com/GoFurry/gofurry-game-collector/roof/env"
+	"github.com/gofurry/gofurry-game-collector/collector/game/service"
+	"github.com/gofurry/gofurry-game-collector/common/log"
+	cs "github.com/gofurry/gofurry-game-collector/common/service"
+	"github.com/gofurry/gofurry-game-collector/roof/env"
 )
 
 type gameApi struct{}

@@ -1,12 +1,12 @@
 package service
 
 import (
-	"github.com/GoFurry/gofurry-game-backend/apps/game/dao"
-	"github.com/GoFurry/gofurry-game-backend/apps/game/models"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/common/log"
-	cs "github.com/GoFurry/gofurry-game-backend/common/service"
-	"github.com/GoFurry/gofurry-game-backend/common/util"
+	"github.com/gofurry/gofurry-game-backend/apps/game/dao"
+	"github.com/gofurry/gofurry-game-backend/apps/game/models"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/log"
+	cs "github.com/gofurry/gofurry-game-backend/common/service"
+	"github.com/gofurry/gofurry-game-backend/common/util"
 	"github.com/bytedance/sonic"
 )
 

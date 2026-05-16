@@ -3,9 +3,9 @@ package dao
 import (
 	"errors"
 
-	"github.com/GoFurry/gofurry-game-backend/apps/prize/models"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/common/abstract"
+	"github.com/gofurry/gofurry-game-backend/apps/prize/models"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/abstract"
 	"gorm.io/gorm"
 )
 

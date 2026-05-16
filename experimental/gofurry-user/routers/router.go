@@ -9,9 +9,9 @@ package routers
 import (
 	"sync"
 
-	"github.com/GoFurry/gofurry-user/common"
-	"github.com/GoFurry/gofurry-user/middleware"
-	"github.com/GoFurry/gofurry-user/roof/env"
+	"github.com/gofurry/gofurry-user/common"
+	"github.com/gofurry/gofurry-user/middleware"
+	"github.com/gofurry/gofurry-user/roof/env"
 	"github.com/gofiber/contrib/swagger"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -41,7 +41,7 @@ func (router *router) Init() *fiber.App {
 		// 使用 ipv6 不用 NAT 速度更快, 降低被扫地址的可能性
 		Network:      fiber.NetworkTCP4, // tcp tcp4 tcp6 三种模式
 		AppName:      common.COMMON_PROJECT_NAME,
-		ServerHeader: "GoFurry-User",
+		ServerHeader: "gofurry-User",
 		Prefork:      false, // 多核cpu处理高并发 业务量小需关闭
 		// 在生产环境禁用错误堆栈跟踪
 		EnablePrintRoutes: env.GetServerConfig().Server.Mode == "debug",

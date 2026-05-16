@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/GoFurry/gofurry-user/common"
-	"github.com/GoFurry/gofurry-user/common/util"
-	"github.com/GoFurry/gofurry-user/roof/env"
+	"github.com/gofurry/gofurry-user/common"
+	"github.com/gofurry/gofurry-user/common/util"
+	"github.com/gofurry/gofurry-user/roof/env"
 	"gopkg.in/gomail.v2"
 )
 
@@ -23,17 +23,17 @@ func EmailSendCode(email string) (code string, gfsError common.GFError) {
 	// 生成6位随机验证码
 	code = util.GenerateRandomCode(common.EMAIL_CODE_LENGTH)
 	m := gomail.NewMessage()
-	encodedName := mimeEncode("GoFurry邮件服务")
+	encodedName := mimeEncode("gofurry邮件服务")
 	from := encodedName + " <" + env.GetServerConfig().Email.EmailUser + ">"
 	m.SetHeader("From", from)
 	m.SetHeader("To", email)
-	m.SetHeader("Subject", mimeEncode("GoFurry 邮箱验证码"))
+	m.SetHeader("Subject", mimeEncode("gofurry 邮箱验证码"))
 
 	msg := `
 	<html>
 	<head>
 		<meta charset="UTF-8">
-		<title>GoFurry 验证码</title>
+		<title>gofurry 验证码</title>
 		<style>
 			body { font-family: "Microsoft YaHei", "Helvetica Neue", sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
 			.container { background-color: #f9f9f9; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -50,10 +50,10 @@ func EmailSendCode(email string) (code string, gfsError common.GFError) {
 	<body>
 		<div class="container">
 			<div class="logo">
-				<span>🐺</span> GoFurry
+				<span>🐺</span> gofurry
 			</div>
 			<div class="greeting">您好！</div>
-			<p>感谢您使用 GoFurry 服务，您正在进行邮箱验证操作。</p>
+			<p>感谢您使用 gofurry 服务，您正在进行邮箱验证操作。</p>
 			<div class="code-box">
 				<p class="code">[ ` + code + ` ]</p>
 			</div>
@@ -65,7 +65,7 @@ func EmailSendCode(email string) (code string, gfsError common.GFError) {
 				如果您未发起此操作，请忽略本邮件，您的账号安全不会受到影响。
 			</div>
 			<div class="footer">
-				<p>GoFurry 邮箱服务 © ` + strconv.Itoa(time.Now().Year()) + `</p>
+				<p>gofurry 邮箱服务 © ` + strconv.Itoa(time.Now().Year()) + `</p>
 			</div>
 		</div>
 	</body>

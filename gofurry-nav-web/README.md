@@ -1,6 +1,6 @@
 # gofurry-nav-web
 
-Nuxt 4 frontend for GoFurry navigation and game discovery.
+Nuxt 4 frontend for gofurry navigation and game discovery.
 
 This project replaces the legacy Vue SPA frontend for the public site. It keeps the existing Go APIs unchanged and focuses on SSR, prerendering, and SEO-friendly public pages.
 

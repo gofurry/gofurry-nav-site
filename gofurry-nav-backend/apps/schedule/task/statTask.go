@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	navDao "github.com/GoFurry/gofurry-nav-backend/apps/nav/navPage/dao"
-	statDao "github.com/GoFurry/gofurry-nav-backend/apps/system/stat/dao"
-	"github.com/GoFurry/gofurry-nav-backend/common/log"
-	cs "github.com/GoFurry/gofurry-nav-backend/common/service"
-	"github.com/GoFurry/gofurry-nav-backend/common/util"
+	navDao "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/dao"
+	statDao "github.com/gofurry/gofurry-nav-backend/apps/system/stat/dao"
+	"github.com/gofurry/gofurry-nav-backend/common/log"
+	cs "github.com/gofurry/gofurry-nav-backend/common/service"
+	"github.com/gofurry/gofurry-nav-backend/common/util"
 	"github.com/bytedance/sonic"
 )
 

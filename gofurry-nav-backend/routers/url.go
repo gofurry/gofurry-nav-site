@@ -1,10 +1,10 @@
 package routers
 
 import (
-	nav "github.com/GoFurry/gofurry-nav-backend/apps/nav/navPage/controller"
-	site "github.com/GoFurry/gofurry-nav-backend/apps/nav/sitePage/controller"
-	siteCommon "github.com/GoFurry/gofurry-nav-backend/apps/system/site/controller"
-	stat "github.com/GoFurry/gofurry-nav-backend/apps/system/stat/controller"
+	nav "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/controller"
+	site "github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/controller"
+	siteCommon "github.com/gofurry/gofurry-nav-backend/apps/system/site/controller"
+	stat "github.com/gofurry/gofurry-nav-backend/apps/system/stat/controller"
 	"github.com/gofiber/fiber/v3"
 )
 

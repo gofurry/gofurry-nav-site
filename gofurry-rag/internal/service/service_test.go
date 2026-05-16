@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GoFurry/gofurry-rag/config"
-	"github.com/GoFurry/gofurry-rag/internal/db"
-	"github.com/GoFurry/gofurry-rag/internal/embedder"
-	"github.com/GoFurry/gofurry-rag/internal/ingest"
-	"github.com/GoFurry/gofurry-rag/internal/tencentmaas"
+	"github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/internal/embedder"
+	"github.com/gofurry/gofurry-rag/internal/ingest"
+	"github.com/gofurry/gofurry-rag/internal/tencentmaas"
 )
 
 func TestUpdateChunkUsesEmbeddingInputTemplate(t *testing.T) {
-	repo := &serviceRepo{doc: db.Document{ID: 1, Title: "GoFurry", SourceType: "site", SourceID: "about"}}
+	repo := &serviceRepo{doc: db.Document{ID: 1, Title: "gofurry", SourceType: "site", SourceID: "about"}}
 	embedder := &serviceEmbedder{}
 	svc := New(repo, embedder, &fakeChat{configured: false}, config.Config{}, nil)
 
@@ -29,7 +29,7 @@ func TestUpdateChunkUsesEmbeddingInputTemplate(t *testing.T) {
 	if len(embedder.inputs) != 1 || embedder.inputs[0] == "updated content" {
 		t.Fatalf("embedding input was not templated: %#v", embedder.inputs)
 	}
-	if want := "Title: GoFurry"; !strings.Contains(embedder.inputs[0], want) {
+	if want := "Title: gofurry"; !strings.Contains(embedder.inputs[0], want) {
 		t.Fatalf("missing %q in %q", want, embedder.inputs[0])
 	}
 }
@@ -57,20 +57,20 @@ func TestQueryReturnsAnswerAndSources(t *testing.T) {
 			ChunkID:    2,
 			SourceType: "manual",
 			SourceID:   "about",
-			Title:      "GoFurry",
+			Title:      "gofurry",
 			ChunkIndex: 2,
 			TokenCount: 6,
 			Score:      0.91,
-			Content:    "GoFurry is a content discovery website.",
+			Content:    "gofurry is a content discovery website.",
 		}},
 	}
 	chat := &fakeChat{
 		configured: true,
 		model:      "deepseek-v4-flash",
-		answer:     "GoFurry is a content discovery website.",
+		answer:     "gofurry is a content discovery website.",
 	}
 	svc := New(repo, &serviceEmbedder{}, chat, config.Config{TopK: 6}, nil)
-	result, err := svc.Query(context.Background(), QueryRequest{Question: "What is GoFurry?"})
+	result, err := svc.Query(context.Background(), QueryRequest{Question: "What is gofurry?"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,9 +100,9 @@ func TestQueryReturnsCitationDetails(t *testing.T) {
 			ID:           1,
 			SourceType:   "manual",
 			SourceID:     "about",
-			Title:        "GoFurry",
+			Title:        "gofurry",
 			URL:          "https://example.com/about",
-			Content:      "GoFurry is a content discovery website.",
+			Content:      "gofurry is a content discovery website.",
 			Status:       db.StatusReady,
 			ErrorMessage: "",
 			Metadata:     json.RawMessage(`{"category":"intro","language":"zh-CN"}`),
@@ -113,21 +113,21 @@ func TestQueryReturnsCitationDetails(t *testing.T) {
 			ChunkID:    2,
 			SourceType: "manual",
 			SourceID:   "about",
-			Title:      "GoFurry",
+			Title:      "gofurry",
 			URL:        "https://example.com/about",
 			ChunkIndex: 2,
 			TokenCount: 6,
 			Score:      0.91,
-			Content:    "GoFurry is a content discovery website.",
+			Content:    "gofurry is a content discovery website.",
 		}},
 	}
 	chat := &fakeChat{
 		configured: true,
 		model:      "deepseek-v4-flash",
-		answer:     "GoFurry is a content discovery website.",
+		answer:     "gofurry is a content discovery website.",
 	}
 	svc := New(repo, &serviceEmbedder{}, chat, config.Config{TopK: 6}, nil)
-	result, err := svc.Query(context.Background(), QueryRequest{Question: "What is GoFurry?", IncludeDetails: true})
+	result, err := svc.Query(context.Background(), QueryRequest{Question: "What is gofurry?", IncludeDetails: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,13 +138,13 @@ func TestQueryReturnsCitationDetails(t *testing.T) {
 	if !citation.UsedInPrompt || citation.Lineage.ChunkID != 2 || citation.Lineage.DocumentID != 1 {
 		t.Fatalf("citation lineage = %+v", citation)
 	}
-	if citation.Document.Content != "GoFurry is a content discovery website." {
+	if citation.Document.Content != "gofurry is a content discovery website." {
 		t.Fatalf("document = %+v", citation.Document)
 	}
 	if string(citation.Document.Metadata) != `{"category":"intro","language":"zh-CN"}` {
 		t.Fatalf("metadata = %s", string(citation.Document.Metadata))
 	}
-	if citation.Chunk.Content != "GoFurry is a content discovery website." {
+	if citation.Chunk.Content != "gofurry is a content discovery website." {
 		t.Fatalf("chunk = %+v", citation.Chunk)
 	}
 }
@@ -152,7 +152,7 @@ func TestQueryReturnsCitationDetails(t *testing.T) {
 func TestQueryReturnsNoSourcesMessage(t *testing.T) {
 	chat := &fakeChat{configured: true, model: "deepseek-v4-flash"}
 	svc := New(&serviceRepo{}, &serviceEmbedder{}, chat, config.Config{TopK: 6}, nil)
-	result, err := svc.Query(context.Background(), QueryRequest{Question: "What is GoFurry?"})
+	result, err := svc.Query(context.Background(), QueryRequest{Question: "What is gofurry?"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestBuildChatMessagesTruncatesSources(t *testing.T) {
 		},
 	}
 
-	messages, usedSources := buildChatMessages("What is GoFurry?", sources, 220)
+	messages, usedSources := buildChatMessages("What is gofurry?", sources, 220)
 	if len(messages) != 2 {
 		t.Fatalf("messages = %+v", messages)
 	}
@@ -393,7 +393,7 @@ func (f *fakeChat) Stream(ctx context.Context, messages []tencentmaas.Message, o
 	f.lastMessages = append([]tencentmaas.Message(nil), messages...)
 	pieces := f.streamPieces
 	if len(pieces) == 0 {
-		pieces = []string{"GoFurry", " is", " a site."}
+		pieces = []string{"gofurry", " is", " a site."}
 	}
 	for _, piece := range pieces {
 		if onDelta != nil {

@@ -4,7 +4,7 @@ package common
 const (
 	COMMON_PROJECT_NAME = "gofurry-admin"
 	COMMON_PROJECT_HELP = `
-GoFurry Admin is the maintenance console for GoFurry public services.
+gofurry Admin is the maintenance console for gofurry public services.
 Usage:
   ./gofurry-admin [command]
     install: install this service into systemd.

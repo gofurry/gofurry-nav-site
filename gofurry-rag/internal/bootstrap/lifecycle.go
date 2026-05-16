@@ -10,12 +10,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	env "github.com/GoFurry/gofurry-rag/config"
-	"github.com/GoFurry/gofurry-rag/internal/db"
-	"github.com/GoFurry/gofurry-rag/internal/embedder"
-	"github.com/GoFurry/gofurry-rag/internal/ingest"
-	ragservice "github.com/GoFurry/gofurry-rag/internal/service"
-	"github.com/GoFurry/gofurry-rag/internal/tencentmaas"
+	env "github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/internal/embedder"
+	"github.com/gofurry/gofurry-rag/internal/ingest"
+	ragservice "github.com/gofurry/gofurry-rag/internal/service"
+	"github.com/gofurry/gofurry-rag/internal/tencentmaas"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

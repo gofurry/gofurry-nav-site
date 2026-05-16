@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/GoFurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"

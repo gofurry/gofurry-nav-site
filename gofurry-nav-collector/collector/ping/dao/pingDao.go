@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-collector/collector/ping/models"
-	"github.com/GoFurry/gofurry-nav-collector/common"
-	"github.com/GoFurry/gofurry-nav-collector/common/abstract"
-	"github.com/GoFurry/gofurry-nav-collector/common/log"
+	"github.com/gofurry/gofurry-nav-collector/collector/ping/models"
+	"github.com/gofurry/gofurry-nav-collector/common"
+	"github.com/gofurry/gofurry-nav-collector/common/abstract"
+	"github.com/gofurry/gofurry-nav-collector/common/log"
 )
 
 var newPingDao = new(pingDao)

@@ -1,6 +1,6 @@
 package main
 
-import "github.com/GoFurry/gofurry-rag/cmd"
+import "github.com/gofurry/gofurry-rag/cmd"
 
 func main() {
 	cmd.Execute()

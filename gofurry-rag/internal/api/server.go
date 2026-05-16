@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/GoFurry/gofurry-rag/config"
-	"github.com/GoFurry/gofurry-rag/internal/auth"
-	"github.com/GoFurry/gofurry-rag/internal/db"
-	"github.com/GoFurry/gofurry-rag/internal/ingest"
-	"github.com/GoFurry/gofurry-rag/internal/service"
+	"github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/auth"
+	"github.com/gofurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/internal/ingest"
+	"github.com/gofurry/gofurry-rag/internal/service"
 	"github.com/gofiber/fiber/v3"
 )
 

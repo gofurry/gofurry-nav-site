@@ -36,7 +36,7 @@ async function submit() {
   <main class="flex min-h-screen items-center justify-center px-4">
     <div class="w-full max-w-lg border border-[var(--line-strong)] bg-[var(--panel)]/80 p-8 shadow-[0_0_0_1px_rgba(111,224,255,0.06),0_24px_80px_rgba(0,0,0,0.45)]">
       <div class="mb-6">
-        <div class="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">GoFurry Admin</div>
+        <div class="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">gofurry Admin</div>
         <h1 class="mt-3 text-3xl font-semibold">首次初始化口令</h1>
         <p class="mt-2 text-sm text-[var(--text-muted)]">只会创建一个后台账号。完成后通过口令登录，后续可用 CLI 重置。</p>
       </div>

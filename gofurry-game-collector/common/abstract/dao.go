@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/GoFurry/gofurry-game-collector/common"
-	"github.com/GoFurry/gofurry-game-collector/common/models"
-	database "github.com/GoFurry/gofurry-game-collector/roof/db"
+	"github.com/gofurry/gofurry-game-collector/common"
+	"github.com/gofurry/gofurry-game-collector/common/models"
+	database "github.com/gofurry/gofurry-game-collector/roof/db"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )

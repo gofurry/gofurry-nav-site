@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/GoFurry/gofurry-rag/internal/db"
-	"github.com/GoFurry/gofurry-rag/internal/service"
+	"github.com/gofurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/internal/service"
 	"github.com/gofiber/fiber/v3"
 )
 

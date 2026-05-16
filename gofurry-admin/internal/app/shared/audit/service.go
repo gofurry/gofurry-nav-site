@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	authmodels "github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/auth/models"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/infra/db"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/common"
+	authmodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/models"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )

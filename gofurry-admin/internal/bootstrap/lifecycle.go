@@ -7,14 +7,14 @@ import (
 	"sync"
 	"sync/atomic"
 
-	env "github.com/GoFurry/awesome-fiber-template/v3/medium/config"
-	authmodels "github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/auth/models"
-	auditmodels "github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
-	cache "github.com/GoFurry/awesome-fiber-template/v3/medium/internal/infra/cache"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/infra/db"
-	log "github.com/GoFurry/awesome-fiber-template/v3/medium/internal/infra/logging"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/common"
-	corazalite "github.com/GoFurry/coraza-fiber-lite"
+	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
+	authmodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/models"
+	auditmodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
+	cache "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/cache"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
+	log "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/logging"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	corazalite "github.com/gofurry/coraza-fiber-lite"
 )
 
 var (

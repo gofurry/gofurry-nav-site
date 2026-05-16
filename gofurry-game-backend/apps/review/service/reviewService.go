@@ -9,12 +9,12 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/GoFurry/gofurry-game-backend/apps/review/dao"
-	"github.com/GoFurry/gofurry-game-backend/apps/review/models"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/common/log"
-	cm "github.com/GoFurry/gofurry-game-backend/common/models"
-	"github.com/GoFurry/gofurry-game-backend/common/util"
+	"github.com/gofurry/gofurry-game-backend/apps/review/dao"
+	"github.com/gofurry/gofurry-game-backend/apps/review/models"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/log"
+	cm "github.com/gofurry/gofurry-game-backend/common/models"
+	"github.com/gofurry/gofurry-game-backend/common/util"
 	"github.com/gofiber/fiber/v3"
 )
 

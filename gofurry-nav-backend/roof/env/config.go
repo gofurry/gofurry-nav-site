@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/common"
 	"gopkg.in/yaml.v2"
 )
 

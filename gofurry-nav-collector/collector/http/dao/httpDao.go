@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-collector/collector/http/models"
-	"github.com/GoFurry/gofurry-nav-collector/common"
-	"github.com/GoFurry/gofurry-nav-collector/common/abstract"
+	"github.com/gofurry/gofurry-nav-collector/collector/http/models"
+	"github.com/gofurry/gofurry-nav-collector/common"
+	"github.com/gofurry/gofurry-nav-collector/common/abstract"
 )
 
 var newHTTPDao = new(httpDao)

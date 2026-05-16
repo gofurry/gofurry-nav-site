@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GoFurry/gofurry-rag/config"
-	"github.com/GoFurry/gofurry-rag/internal/db"
-	"github.com/GoFurry/gofurry-rag/internal/service"
-	"github.com/GoFurry/gofurry-rag/internal/tencentmaas"
+	"github.com/gofurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/internal/service"
+	"github.com/gofurry/gofurry-rag/internal/tencentmaas"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -245,7 +245,7 @@ func TestRetryFailedDocuments(t *testing.T) {
 
 func TestQueryReturnsSources(t *testing.T) {
 	app := testApp()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"GoFurry","top_k":1}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"gofurry","top_k":1}`))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	if err != nil {
@@ -275,7 +275,7 @@ func TestQueryReturnsSources(t *testing.T) {
 
 func TestQueryIncludeDetailsRequiresAdmin(t *testing.T) {
 	app := testApp()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"GoFurry","top_k":1,"include_details":true}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"gofurry","top_k":1,"include_details":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	if err != nil {
@@ -298,7 +298,7 @@ func TestQueryIncludeDetailsWithAdminReturnsCitations(t *testing.T) {
 		t.Fatalf("create status = %d", resp.StatusCode)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"GoFurry","top_k":1,"include_details":true}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"gofurry","top_k":1,"include_details":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.AddCookie(cookie)
 	resp, err := app.Test(req)
@@ -322,7 +322,7 @@ func TestQueryIncludeDetailsWithAdminReturnsCitations(t *testing.T) {
 
 func TestChatStreamReturnsSSE(t *testing.T) {
 	app := testApp()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/stream", bytes.NewBufferString(`{"question":"GoFurry","top_k":1}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/stream", bytes.NewBufferString(`{"question":"gofurry","top_k":1}`))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	if err != nil {
@@ -345,7 +345,7 @@ func TestChatStreamReturnsSSE(t *testing.T) {
 
 func TestChatStreamIncludeDetailsRequiresAdmin(t *testing.T) {
 	app := testApp()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/stream", bytes.NewBufferString(`{"question":"GoFurry","top_k":1,"include_details":true}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/stream", bytes.NewBufferString(`{"question":"gofurry","top_k":1,"include_details":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	if err != nil {
@@ -359,7 +359,7 @@ func TestChatStreamIncludeDetailsRequiresAdmin(t *testing.T) {
 func TestQueryPassesFilters(t *testing.T) {
 	app, repo := testAppWithRepo()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{
-		"question":"GoFurry",
+		"question":"gofurry",
 		"top_k":2,
 		"filters":{
 			"source_type":["site"],
@@ -568,7 +568,7 @@ func testAppWithRepo() (*fiber.App, *fakeRepo) {
 		},
 	}
 	repo := newFakeRepo()
-	svc := service.New(repo, fakeEmbedder{}, &fakeChat{configured: true, model: "deepseek-v4-flash", answer: "GoFurry is a content discovery website."}, cfg, nil)
+	svc := service.New(repo, fakeEmbedder{}, &fakeChat{configured: true, model: "deepseek-v4-flash", answer: "gofurry is a content discovery website."}, cfg, nil)
 	app := fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
 	NewServer(cfg, svc, nil).RegisterRoutes(app.Group("/api/v1"))
 	return app, repo
@@ -641,7 +641,7 @@ func (r *fakeRepo) GetDocument(ctx context.Context, id int64) (db.Document, erro
 }
 
 func (r *fakeRepo) GetDocumentByChunkID(ctx context.Context, chunkID int64) (db.Document, error) {
-	return db.Document{ID: 1, Title: "GoFurry", SourceType: "manual", SourceID: "about"}, nil
+	return db.Document{ID: 1, Title: "gofurry", SourceType: "manual", SourceID: "about"}, nil
 }
 
 func (r *fakeRepo) ListDocuments(ctx context.Context, filter db.ListDocumentsFilter) (db.PageResult[db.Document], error) {
@@ -706,7 +706,7 @@ func (r *fakeRepo) SearchChunks(ctx context.Context, embedding []float64, topK i
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.lastSearchFilter = filter
-	return []db.Source{{DocumentID: 1, ChunkID: 1, SourceType: "manual", SourceID: "about", Title: "GoFurry", ChunkIndex: 2, TokenCount: 6, Score: 0.9, Content: "source"}}, nil
+	return []db.Source{{DocumentID: 1, ChunkID: 1, SourceType: "manual", SourceID: "about", Title: "gofurry", ChunkIndex: 2, TokenCount: 6, Score: 0.9, Content: "source"}}, nil
 }
 
 type fakeEmbedder struct{}
@@ -761,7 +761,7 @@ func (f *fakeChat) Complete(ctx context.Context, _ []tencentmaas.Message) (tence
 
 func (f *fakeChat) Stream(ctx context.Context, _ []tencentmaas.Message, onDelta func(string) error) (tencentmaas.CompletionResult, error) {
 	f.streamCalls++
-	for _, piece := range []string{"GoFurry", " is", " a site."} {
+	for _, piece := range []string{"gofurry", " is", " a site."} {
 		if onDelta != nil {
 			if err := onDelta(piece); err != nil {
 				return tencentmaas.CompletionResult{}, err

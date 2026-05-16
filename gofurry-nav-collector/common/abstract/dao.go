@@ -3,9 +3,9 @@ package abstract
 import (
 	"errors"
 
-	"github.com/GoFurry/gofurry-nav-collector/common"
-	"github.com/GoFurry/gofurry-nav-collector/common/log"
-	database "github.com/GoFurry/gofurry-nav-collector/roof/db"
+	"github.com/gofurry/gofurry-nav-collector/common"
+	"github.com/gofurry/gofurry-nav-collector/common/log"
+	database "github.com/gofurry/gofurry-nav-collector/roof/db"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )

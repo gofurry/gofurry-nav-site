@@ -1,10 +1,10 @@
 package dao
 
 import (
-	siteModel "github.com/GoFurry/gofurry-nav-backend/apps/nav/navPage/models"
-	"github.com/GoFurry/gofurry-nav-backend/apps/nav/sitePage/models"
-	"github.com/GoFurry/gofurry-nav-backend/common"
-	"github.com/GoFurry/gofurry-nav-backend/common/abstract"
+	siteModel "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
+	"github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/models"
+	"github.com/gofurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/common/abstract"
 )
 
 var newSitePageDao = new(sitePageDao)

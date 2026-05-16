@@ -1,4 +1,4 @@
-module github.com/GoFurry/gofurry-game-collector
+module github.com/gofurry/gofurry-game-collector
 
 go 1.26.0
 

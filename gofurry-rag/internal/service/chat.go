@@ -8,9 +8,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/GoFurry/gofurry-rag/internal/db"
-	"github.com/GoFurry/gofurry-rag/internal/embedder"
-	"github.com/GoFurry/gofurry-rag/internal/tencentmaas"
+	"github.com/gofurry/gofurry-rag/internal/db"
+	"github.com/gofurry/gofurry-rag/internal/embedder"
+	"github.com/gofurry/gofurry-rag/internal/tencentmaas"
 )
 
 const (
@@ -349,7 +349,7 @@ func buildChatMessages(question string, sources []db.Source, budgetRunes int) ([
 		writeLine("注：资料已按长度预算截断，未展示的资料不会进入模型上下文。")
 	}
 
-	systemPrompt := "你是 GoFurry RAG 控制台里的检索问答助手。\n" +
+	systemPrompt := "你是 gofurry RAG 控制台里的检索问答助手。\n" +
 		"你只能依据我提供的资料回答，不要编造，不要补充资料外的信息。\n" +
 		"请只输出答案内容，不要自行输出引用段。\n" +
 		"如果资料不足，请直接回答：当前资料中没有找到足够相关的信息。"

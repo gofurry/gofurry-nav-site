@@ -1,4 +1,4 @@
-module github.com/GoFurry/gofurry-rag
+module github.com/gofurry/gofurry-rag
 
 go 1.26.0
 

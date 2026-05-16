@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/common"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	"github.com/spf13/viper"
 )
 
@@ -263,7 +263,7 @@ func (cfg *serverConfig) normalize() {
 		cfg.Server.AppID = common.COMMON_PROJECT_NAME
 	}
 	if cfg.Server.AppName == "" {
-		cfg.Server.AppName = "GoFurry Admin"
+		cfg.Server.AppName = "gofurry Admin"
 	}
 	if cfg.Server.AppVersion == "" {
 		cfg.Server.AppVersion = "v1.0.0"
@@ -591,7 +591,7 @@ func ensureServerConfig() {
 func applyDefaults(v *viper.Viper) {
 	v.SetDefault("cluster_id", 1)
 	v.SetDefault("server.app_id", common.COMMON_PROJECT_NAME)
-	v.SetDefault("server.app_name", "GoFurry Admin")
+	v.SetDefault("server.app_name", "gofurry Admin")
 	v.SetDefault("server.app_version", "v1.0.0")
 	v.SetDefault("server.mode", "debug")
 	v.SetDefault("server.ip_address", "127.0.0.1")

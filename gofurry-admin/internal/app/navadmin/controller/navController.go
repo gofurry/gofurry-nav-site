@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/navadmin/models"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/shared/adminutil"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/internal/infra/db"
-	"github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/common"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/navadmin/models"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/adminutil"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	"github.com/gofiber/fiber/v3"
 	"gorm.io/gorm"
 )

@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-backend/common/log"
-	cs "github.com/GoFurry/gofurry-nav-backend/common/service"
-	"github.com/GoFurry/gofurry-nav-backend/roof/env"
+	"github.com/gofurry/gofurry-nav-backend/common/log"
+	cs "github.com/gofurry/gofurry-nav-backend/common/service"
+	"github.com/gofurry/gofurry-nav-backend/roof/env"
 
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"

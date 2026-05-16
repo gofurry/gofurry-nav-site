@@ -1,4 +1,4 @@
-module github.com/GoFurry/gofurry-user
+module github.com/gofurry/gofurry-user
 
 go 1.24.0
 

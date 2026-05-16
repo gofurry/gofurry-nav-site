@@ -1,10 +1,10 @@
 package routers
 
 import (
-	oauth "github.com/GoFurry/gofurry-user/apps/oauth/controller"
-	user "github.com/GoFurry/gofurry-user/apps/user/controller"
-	email "github.com/GoFurry/gofurry-user/apps/util/email/controller"
-	"github.com/GoFurry/gofurry-user/middleware"
+	oauth "github.com/gofurry/gofurry-user/apps/oauth/controller"
+	user "github.com/gofurry/gofurry-user/apps/user/controller"
+	email "github.com/gofurry/gofurry-user/apps/util/email/controller"
+	"github.com/gofurry/gofurry-user/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 

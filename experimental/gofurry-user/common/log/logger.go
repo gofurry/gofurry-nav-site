@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/GoFurry/gofurry-user/roof/env"
+	"github.com/gofurry/gofurry-user/roof/env"
 	"github.com/bytedance/sonic"
 	"github.com/sirupsen/logrus"
 )

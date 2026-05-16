@@ -97,7 +97,7 @@
       </div>
 
       <div class="flex flex-col justify-end gap-3 text-sm text-slate-400">
-        <div>{{ currentYear }} GoFurry {{ t('footer.rights') }}</div>
+        <div>{{ currentYear }} gofurry {{ t('footer.rights') }}</div>
         <div>{{ t('footer.license') }}</div>
         <a
             href="https://beian.miit.gov.cn/"
@@ -151,7 +151,7 @@ const feedbackLinks = [
   },
   {
     key: 'github',
-    href: 'https://github.com/GoFurry',
+    href: 'https://github.com/gofurry',
     labelKey: 'footer.links.github',
     icon: githubIcon,
     hoverClass: 'hover:drop-shadow-[0_0_6px_rgb(56,189,248)]'

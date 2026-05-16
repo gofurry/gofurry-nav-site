@@ -1,4 +1,4 @@
-module github.com/GoFurry/gofurry-oauth-login
+module github.com/gofurry/gofurry-oauth-login
 
 go 1.24.0
 

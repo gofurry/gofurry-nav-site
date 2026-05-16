@@ -3,11 +3,11 @@ package task
 import (
 	"strings"
 
-	"github.com/GoFurry/gofurry-game-backend/apps/game/dao"
-	gameModels "github.com/GoFurry/gofurry-game-backend/apps/game/models"
-	"github.com/GoFurry/gofurry-game-backend/common/log"
-	cs "github.com/GoFurry/gofurry-game-backend/common/service"
-	"github.com/GoFurry/gofurry-game-backend/common/util"
+	"github.com/gofurry/gofurry-game-backend/apps/game/dao"
+	gameModels "github.com/gofurry/gofurry-game-backend/apps/game/models"
+	"github.com/gofurry/gofurry-game-backend/common/log"
+	cs "github.com/gofurry/gofurry-game-backend/common/service"
+	"github.com/gofurry/gofurry-game-backend/common/util"
 )
 
 const gameViewCountPrefix = "game:view:count:"

@@ -1,10 +1,10 @@
 package schedule
 
 import (
-	dnsService "github.com/GoFurry/gofurry-nav-collector/collector/dns/service"
-	httpService "github.com/GoFurry/gofurry-nav-collector/collector/http/service"
-	pingService "github.com/GoFurry/gofurry-nav-collector/collector/ping/service"
-	"github.com/GoFurry/gofurry-nav-collector/common/log"
+	dnsService "github.com/gofurry/gofurry-nav-collector/collector/dns/service"
+	httpService "github.com/gofurry/gofurry-nav-collector/collector/http/service"
+	pingService "github.com/gofurry/gofurry-nav-collector/collector/ping/service"
+	"github.com/gofurry/gofurry-nav-collector/common/log"
 )
 
 func InitSchedule() {

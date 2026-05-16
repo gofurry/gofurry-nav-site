@@ -31,7 +31,7 @@ async function submit() {
   <main class="flex min-h-screen items-center justify-center px-4">
     <div class="w-full max-w-lg border border-[var(--line-strong)] bg-[var(--panel)]/80 p-8 shadow-[0_0_0_1px_rgba(111,224,255,0.06),0_24px_80px_rgba(0,0,0,0.45)]">
       <div class="mb-6">
-        <div class="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">GoFurry Admin</div>
+        <div class="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">gofurry Admin</div>
         <h1 class="mt-3 text-3xl font-semibold">运维后台登录</h1>
         <p class="mt-2 text-sm text-[var(--text-muted)]">唯一账户，只输入口令。登录态基于 HttpOnly Cookie。</p>
       </div>

@@ -8,20 +8,20 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/GoFurry/gofurry-game-backend/apps/schedule"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	gfLog "github.com/GoFurry/gofurry-game-backend/common/log"
-	cs "github.com/GoFurry/gofurry-game-backend/common/service"
-	"github.com/GoFurry/gofurry-game-backend/middleware"
-	"github.com/GoFurry/gofurry-game-backend/roof/env"
-	"github.com/GoFurry/gofurry-game-backend/routers"
+	"github.com/gofurry/gofurry-game-backend/apps/schedule"
+	"github.com/gofurry/gofurry-game-backend/common"
+	gfLog "github.com/gofurry/gofurry-game-backend/common/log"
+	cs "github.com/gofurry/gofurry-game-backend/common/service"
+	"github.com/gofurry/gofurry-game-backend/middleware"
+	"github.com/gofurry/gofurry-game-backend/roof/env"
+	"github.com/gofurry/gofurry-game-backend/routers"
 	"github.com/gofiber/fiber/v3"
 	"github.com/kardianos/service"
 )
 
-//@title GoFurry-Game-Backend
+//@title gofurry-Game-Backend
 //@version v1.0.0
-//@description GoFurry-Game-Backend
+//@description gofurry-Game-Backend
 
 var (
 	errChan = make(chan error)

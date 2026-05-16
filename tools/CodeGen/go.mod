@@ -1,4 +1,4 @@
-module github.com/GoFurry/gorm-generator
+module github.com/gofurry/gorm-generator
 
 go 1.23
 

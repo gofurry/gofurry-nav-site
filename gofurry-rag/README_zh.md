@@ -1,11 +1,11 @@
 # gofurry-rag
 
-![License](https://img.shields.io/github/license/GoFurry/gofurry-rag)
+![License](https://img.shields.io/github/license/gofurry/gofurry-rag)
 ![Go Version](https://img.shields.io/badge/go-1.26.0-00ADD8)
 
 [English](./README.md)
 
-`gofurry-rag` 是面向 GoFurry 内容场景的轻量 RAG 服务。它使用 PostgreSQL + pgvector 存储知识片段，使用本地 Ollama 生成 embedding，并通过腾讯云推理服务生成基于引用的 AI 问答结果。
+`gofurry-rag` 是面向 gofurry 内容场景的轻量 RAG 服务。它使用 PostgreSQL + pgvector 存储知识片段，使用本地 Ollama 生成 embedding，并通过腾讯云推理服务生成基于引用的 AI 问答结果。
 
 ## 当前能力
 

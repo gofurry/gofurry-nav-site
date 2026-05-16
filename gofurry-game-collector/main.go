@@ -5,17 +5,17 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/GoFurry/gofurry-game-collector/common"
-	"github.com/GoFurry/gofurry-game-collector/common/log"
-	cs "github.com/GoFurry/gofurry-game-collector/common/service"
-	"github.com/GoFurry/gofurry-game-collector/roof/env"
-	"github.com/GoFurry/gofurry-game-collector/schedule"
+	"github.com/gofurry/gofurry-game-collector/common"
+	"github.com/gofurry/gofurry-game-collector/common/log"
+	cs "github.com/gofurry/gofurry-game-collector/common/service"
+	"github.com/gofurry/gofurry-game-collector/roof/env"
+	"github.com/gofurry/gofurry-game-collector/schedule"
 	"github.com/kardianos/service"
 )
 
-//@title GoFurry-game-Collector
+//@title gofurry-game-Collector
 //@version v1.0.0
-//@description Collector for GoFurry Game Page
+//@description Collector for gofurry Game Page
 
 var (
 	errChan = make(chan error)

@@ -6,13 +6,13 @@ import (
 	"sort"
 	"time"
 
-	logModels "github.com/GoFurry/gofurry-nav-backend/apps/nav/sitePage/models"
-	"github.com/GoFurry/gofurry-nav-backend/apps/system/stat/dao"
-	"github.com/GoFurry/gofurry-nav-backend/apps/system/stat/models"
-	"github.com/GoFurry/gofurry-nav-backend/common"
-	"github.com/GoFurry/gofurry-nav-backend/common/log"
-	cs "github.com/GoFurry/gofurry-nav-backend/common/service"
-	"github.com/GoFurry/gofurry-nav-backend/common/util"
+	logModels "github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/models"
+	"github.com/gofurry/gofurry-nav-backend/apps/system/stat/dao"
+	"github.com/gofurry/gofurry-nav-backend/apps/system/stat/models"
+	"github.com/gofurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/common/log"
+	cs "github.com/gofurry/gofurry-nav-backend/common/service"
+	"github.com/gofurry/gofurry-nav-backend/common/util"
 	"github.com/bytedance/sonic"
 )
 

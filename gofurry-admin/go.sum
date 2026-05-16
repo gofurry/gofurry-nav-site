@@ -1,9 +1,9 @@
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
-github.com/GoFurry/coraza-fiber-lite v1.0.1 h1:0uBc7oHcMCHxN1hbowBeOlD3cS6I16vd2WTXGcfGwy8=
-github.com/GoFurry/coraza-fiber-lite v1.0.1/go.mod h1:DCc/43/hFlfCxK1F1/bP/ohI+nN1lRF/xjh92VioTG8=
-github.com/GoFurry/easyhash v1.0.0 h1:S2B59J4WpVEpLED652Qj5LdKWwJs4AVqdckYHdstkhc=
-github.com/GoFurry/easyhash v1.0.0/go.mod h1:zMM/iOE5HAzoGHIzdBSbYie7zwxEDlbbiYQ/11DngZk=
+github.com/gofurry/coraza-fiber-lite v1.0.1 h1:0uBc7oHcMCHxN1hbowBeOlD3cS6I16vd2WTXGcfGwy8=
+github.com/gofurry/coraza-fiber-lite v1.0.1/go.mod h1:DCc/43/hFlfCxK1F1/bP/ohI+nN1lRF/xjh92VioTG8=
+github.com/gofurry/easyhash v1.0.0 h1:S2B59J4WpVEpLED652Qj5LdKWwJs4AVqdckYHdstkhc=
+github.com/gofurry/easyhash v1.0.0/go.mod h1:zMM/iOE5HAzoGHIzdBSbYie7zwxEDlbbiYQ/11DngZk=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=

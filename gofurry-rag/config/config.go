@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/GoFurry/gofurry-rag/pkg/common"
+	"github.com/gofurry/gofurry-rag/pkg/common"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
@@ -410,7 +410,7 @@ func (cfg *Config) normalize() {
 		cfg.Server.AppID = common.COMMON_PROJECT_NAME
 	}
 	if cfg.Server.AppName == "" {
-		cfg.Server.AppName = "GoFurry RAG"
+		cfg.Server.AppName = "gofurry RAG"
 	}
 	if cfg.Server.AppVersion == "" {
 		cfg.Server.AppVersion = "v1.0.0"
@@ -726,7 +726,7 @@ func normalizeSQLDefaults(target *SQLDatabaseConfig, defaults SQLDatabaseConfig)
 func applyDefaults(v *viper.Viper) {
 	v.SetDefault("cluster_id", 1)
 	v.SetDefault("server.app_id", common.COMMON_PROJECT_NAME)
-	v.SetDefault("server.app_name", "GoFurry RAG")
+	v.SetDefault("server.app_name", "gofurry RAG")
 	v.SetDefault("server.app_version", "v1.0.0")
 	v.SetDefault("server.mode", "debug")
 	v.SetDefault("server.ip_address", "127.0.0.1")

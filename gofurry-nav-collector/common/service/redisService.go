@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-collector/common"
-	"github.com/GoFurry/gofurry-nav-collector/common/log"
-	"github.com/GoFurry/gofurry-nav-collector/roof/env"
+	"github.com/gofurry/gofurry-nav-collector/common"
+	"github.com/gofurry/gofurry-nav-collector/common/log"
+	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"github.com/redis/go-redis/v9"
 )
 

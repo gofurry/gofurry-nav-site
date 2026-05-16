@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"github.com/GoFurry/gofurry-game-backend/apps/search/models"
-	"github.com/GoFurry/gofurry-game-backend/apps/search/service"
-	"github.com/GoFurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/apps/search/models"
+	"github.com/gofurry/gofurry-game-backend/apps/search/service"
+	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofiber/fiber/v3"
 )
 

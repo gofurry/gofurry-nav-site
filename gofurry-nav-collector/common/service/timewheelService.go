@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-collector/common/log"
+	"github.com/gofurry/gofurry-nav-collector/common/log"
 	"github.com/rfyiamcool/go-timewheel"
 )
 

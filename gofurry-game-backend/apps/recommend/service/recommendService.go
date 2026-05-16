@@ -9,17 +9,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GoFurry/gofurry-game-backend/apps/recommend/dao"
-	"github.com/GoFurry/gofurry-game-backend/apps/recommend/models"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/common/log"
-	cs "github.com/GoFurry/gofurry-game-backend/common/service"
-	"github.com/GoFurry/gofurry-game-backend/common/util"
+	"github.com/gofurry/gofurry-game-backend/apps/recommend/dao"
+	"github.com/gofurry/gofurry-game-backend/apps/recommend/models"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/log"
+	cs "github.com/gofurry/gofurry-game-backend/common/service"
+	"github.com/gofurry/gofurry-game-backend/common/util"
 	"github.com/bytedance/sonic"
 	"golang.org/x/sync/errgroup"
 
-	gd "github.com/GoFurry/gofurry-game-backend/apps/game/dao"
-	gm "github.com/GoFurry/gofurry-game-backend/apps/game/models"
+	gd "github.com/gofurry/gofurry-game-backend/apps/game/dao"
+	gm "github.com/gofurry/gofurry-game-backend/apps/game/models"
 )
 
 type recommendService struct{}

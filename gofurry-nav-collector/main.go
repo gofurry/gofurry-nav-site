@@ -5,17 +5,17 @@ import (
 	"os"
 	"runtime/debug"
 
-	"github.com/GoFurry/gofurry-nav-collector/common"
-	"github.com/GoFurry/gofurry-nav-collector/common/log"
-	cs "github.com/GoFurry/gofurry-nav-collector/common/service"
-	"github.com/GoFurry/gofurry-nav-collector/roof/env"
-	"github.com/GoFurry/gofurry-nav-collector/schedule"
+	"github.com/gofurry/gofurry-nav-collector/common"
+	"github.com/gofurry/gofurry-nav-collector/common/log"
+	cs "github.com/gofurry/gofurry-nav-collector/common/service"
+	"github.com/gofurry/gofurry-nav-collector/roof/env"
+	"github.com/gofurry/gofurry-nav-collector/schedule"
 	"github.com/kardianos/service"
 )
 
-//@title GoFurry-Collector
+//@title gofurry-Collector
 //@version v1.0.0
-//@description Collector for GoFurry Nav Page
+//@description Collector for gofurry Nav Page
 
 var (
 	errChan = make(chan error)

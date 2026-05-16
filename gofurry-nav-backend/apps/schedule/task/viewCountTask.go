@@ -3,11 +3,11 @@ package task
 import (
 	"strings"
 
-	navModels "github.com/GoFurry/gofurry-nav-backend/apps/nav/navPage/models"
-	navDao "github.com/GoFurry/gofurry-nav-backend/apps/nav/sitePage/dao"
-	"github.com/GoFurry/gofurry-nav-backend/common/log"
-	cs "github.com/GoFurry/gofurry-nav-backend/common/service"
-	"github.com/GoFurry/gofurry-nav-backend/common/util"
+	navModels "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
+	navDao "github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/dao"
+	"github.com/gofurry/gofurry-nav-backend/common/log"
+	cs "github.com/gofurry/gofurry-nav-backend/common/service"
+	"github.com/gofurry/gofurry-nav-backend/common/util"
 )
 
 const siteViewCountPrefix = "site:view:count:"

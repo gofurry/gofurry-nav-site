@@ -3,7 +3,7 @@ package auth
 import (
 	"testing"
 
-	"github.com/GoFurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/config"
 )
 
 func TestLoginAndValidateToken(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/GoFurry/gofurry-nav-collector/roof/env"
+	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"github.com/bwmarrin/snowflake"
 )
 

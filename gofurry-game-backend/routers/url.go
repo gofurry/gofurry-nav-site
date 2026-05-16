@@ -1,11 +1,11 @@
 package routers
 
 import (
-	game "github.com/GoFurry/gofurry-game-backend/apps/game/controller"
-	prize "github.com/GoFurry/gofurry-game-backend/apps/prize/controller"
-	recommend "github.com/GoFurry/gofurry-game-backend/apps/recommend/controller"
-	review "github.com/GoFurry/gofurry-game-backend/apps/review/controller"
-	search "github.com/GoFurry/gofurry-game-backend/apps/search/controller"
+	game "github.com/gofurry/gofurry-game-backend/apps/game/controller"
+	prize "github.com/gofurry/gofurry-game-backend/apps/prize/controller"
+	recommend "github.com/gofurry/gofurry-game-backend/apps/recommend/controller"
+	review "github.com/gofurry/gofurry-game-backend/apps/review/controller"
+	search "github.com/gofurry/gofurry-game-backend/apps/search/controller"
 	"github.com/gofiber/fiber/v3"
 )
 

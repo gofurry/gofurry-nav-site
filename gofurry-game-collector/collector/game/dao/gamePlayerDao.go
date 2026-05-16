@@ -3,10 +3,10 @@ package dao
 import (
 	"context"
 
-	"github.com/GoFurry/gofurry-game-collector/collector/game/models"
-	"github.com/GoFurry/gofurry-game-collector/common"
-	"github.com/GoFurry/gofurry-game-collector/common/abstract"
-	database "github.com/GoFurry/gofurry-game-collector/roof/db"
+	"github.com/gofurry/gofurry-game-collector/collector/game/models"
+	"github.com/gofurry/gofurry-game-collector/common"
+	"github.com/gofurry/gofurry-game-collector/common/abstract"
+	database "github.com/gofurry/gofurry-game-collector/roof/db"
 )
 
 var playerDao = abstract.NewDaoWithDB[models.GfgGamePlayerCount](context.Background(), database.Orm.DB().Table(models.TableNameGfgGamePlayerCount))

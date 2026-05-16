@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GoFurry/gofurry-rag/config"
+	"github.com/gofurry/gofurry-rag/config"
 	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 )

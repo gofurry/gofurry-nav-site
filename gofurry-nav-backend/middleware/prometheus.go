@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GoFurry/gofurry-nav-backend/common/log"
+	"github.com/gofurry/gofurry-nav-backend/common/log"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/GoFurry/gofurry-nav-backend/metrics"
+	"github.com/gofurry/gofurry-nav-backend/metrics"
 )
 
 /*

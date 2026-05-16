@@ -9,7 +9,7 @@ package models
 import (
 	"database/sql/driver"
 	"fmt"
-	"github.com/GoFurry/gofurry-nav-collector/common"
+	"github.com/gofurry/gofurry-nav-collector/common"
 	"time"
 )
 

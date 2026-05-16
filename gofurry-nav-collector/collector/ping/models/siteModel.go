@@ -1,7 +1,7 @@
 package models
 
 import (
-	cm "github.com/GoFurry/gofurry-nav-collector/common/models"
+	cm "github.com/gofurry/gofurry-nav-collector/common/models"
 )
 
 const TableNameGfnSite = "gfn_site"

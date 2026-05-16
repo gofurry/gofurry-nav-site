@@ -82,7 +82,7 @@ const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'F
 
 const seoTitle = computed(() => {
   const name = sitePageData.value.siteInfo?.name?.trim()
-  return name ? `${name} - GoFurry` : 'GoFurry Sites'
+  return name ? `${name} - gofurry` : 'gofurry Sites'
 })
 const seoDescription = computed(() => {
   const description = sitePageData.value.siteInfo?.info?.trim() ?? ''

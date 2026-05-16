@@ -1,6 +1,6 @@
 package models
 
-import cm "github.com/GoFurry/gofurry-nav-backend/common/models"
+import cm "github.com/gofurry/gofurry-nav-backend/common/models"
 
 type ViewsCountVo struct {
 	Total      int64    `json:"total"`

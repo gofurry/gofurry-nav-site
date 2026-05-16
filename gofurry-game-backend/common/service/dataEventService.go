@@ -2,9 +2,9 @@ package service
 
 import (
 	"fmt"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/common/log"
-	"github.com/GoFurry/gofurry-game-backend/roof/env"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/log"
+	"github.com/gofurry/gofurry-game-backend/roof/env"
 	"github.com/sourcegraph/conc/pool"
 	"sync"
 )

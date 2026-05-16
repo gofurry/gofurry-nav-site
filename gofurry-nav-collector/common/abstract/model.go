@@ -1,6 +1,6 @@
 package abstract
 
-import "github.com/GoFurry/gofurry-nav-collector/common/util"
+import "github.com/gofurry/gofurry-nav-collector/common/util"
 
 /*
  * @Desc: 公共模型

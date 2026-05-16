@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	pkgmodels "github.com/GoFurry/awesome-fiber-template/v3/medium/pkg/models"
+	pkgmodels "github.com/gofurry/awesome-fiber-template/v3/medium/pkg/models"
 )
 
 type Saying struct {

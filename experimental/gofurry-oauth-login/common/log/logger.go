@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/GoFurry/gofurry-oauth-login/env"
+	"github.com/gofurry/gofurry-oauth-login/env"
 	"github.com/goccy/go-json"
 	"github.com/sirupsen/logrus"
 )

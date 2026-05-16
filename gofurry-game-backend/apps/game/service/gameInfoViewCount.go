@@ -1,10 +1,10 @@
 package service
 
 import (
-	"github.com/GoFurry/gofurry-game-backend/apps/game/dao"
-	"github.com/GoFurry/gofurry-game-backend/apps/game/models"
-	"github.com/GoFurry/gofurry-game-backend/common"
-	"github.com/GoFurry/gofurry-game-backend/common/util"
+	"github.com/gofurry/gofurry-game-backend/apps/game/dao"
+	"github.com/gofurry/gofurry-game-backend/apps/game/models"
+	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/util"
 )
 
 func (s gameService) GetGameInfoWithViewCount(id string, lang string, clientIP string) (res models.GameBaseInfoVo, err common.GFError) {

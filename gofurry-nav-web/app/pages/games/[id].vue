@@ -73,7 +73,7 @@ const { data } = await useAsyncData<GameDetailPageData>(
 const gameDetailData = computed(() => data.value!)
 const seoTitle = computed(() => {
   const name = gameDetailData.value.gameBaseInfo?.name?.trim()
-  return name ? `${name} - GoFurry` : 'GoFurry Games'
+  return name ? `${name} - gofurry` : 'gofurry Games'
 })
 const seoDescription = computed(() => {
   const description = gameDetailData.value.gameBaseInfo?.info?.trim() ?? ''

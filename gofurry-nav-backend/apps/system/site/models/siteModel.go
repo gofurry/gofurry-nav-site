@@ -1,7 +1,7 @@
 package models
 
 import (
-	cm "github.com/GoFurry/gofurry-nav-backend/common/models"
+	cm "github.com/gofurry/gofurry-nav-backend/common/models"
 )
 
 const TableNameGfnLogUpdate = "gfn_log_update"

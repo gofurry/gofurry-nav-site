@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/GoFurry/gofurry-game-collector/collector/game/models"
-	"github.com/GoFurry/gofurry-game-collector/common"
-	cs "github.com/GoFurry/gofurry-game-collector/common/service"
+	"github.com/gofurry/gofurry-game-collector/collector/game/models"
+	"github.com/gofurry/gofurry-game-collector/common"
+	cs "github.com/gofurry/gofurry-game-collector/common/service"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

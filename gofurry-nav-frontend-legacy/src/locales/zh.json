@@ -58,8 +58,8 @@
     }
   },
   "about": {
-    "introTitle": "欢迎来到 GoFurry",
-    "introContent": "GoFurry 是一个以 Furry 内容为核心的非盈利导航站点。我们提供站点监测、游戏资讯、问卷调查和实用工具，帮助你发现、分享你所爱好的内容。我们的使命是打造一个轻量的公开站点，让每个人都能愉快地探索和享受内容。",
+    "introTitle": "欢迎来到 gofurry",
+    "introContent": "gofurry 是一个以 Furry 内容为核心的非盈利导航站点。我们提供站点监测、游戏资讯、问卷调查和实用工具，帮助你发现、分享你所爱好的内容。我们的使命是打造一个轻量的公开站点，让每个人都能愉快地探索和享受内容。",
     "featureNavigationTitle": "导航",
     "featureNavigationDesc": "全网最全的福瑞控站点导航，提供基础网络检测",
     "featureGamesTitle": "游戏",
@@ -77,8 +77,8 @@
     "changelog": "更新日志"
   },
   "navbar": {
-    "slogan": "GoFurry 是致力于维护兽圈基础建设的公益组织.",
-    "sortSlogan": "🐺GoFurry",
+    "slogan": "gofurry 是致力于维护兽圈基础建设的公益组织.",
+    "sortSlogan": "🐺gofurry",
     "mode": "模式",
     "modeSetting": "Mode 设置",
     "modeDesc": "用于控制页面显示模式, 例如: nsfw",
@@ -86,7 +86,7 @@
     "showCustomSites": "显示常用网站区域",
     "expandNav": "展开导航栏",
     "customPanelCode": "面板自定义前端代码",
-    "customPanelCodePlaceholder": "<div style='padding:24px;color:white'>Hello GoFurry</div>",
+    "customPanelCodePlaceholder": "<div style='padding:24px;color:white'>Hello gofurry</div>",
     "customPanelCodeDesc": "填写后将覆盖第一个分栏的默认内容，可使用 HTML / CSS / JS；留空则保持默认展示。",
     "customNavHeaderBg": "自定义首屏背景",
     "customNavHeaderBgDesc": "选择一个装有图片的本地文件夹来自定义你的首屏背景",

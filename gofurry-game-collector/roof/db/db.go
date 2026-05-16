@@ -2,7 +2,7 @@ package db
 
 import (
 	"fmt"
-	"github.com/GoFurry/gofurry-game-collector/roof/env"
+	"github.com/gofurry/gofurry-game-collector/roof/env"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"log"

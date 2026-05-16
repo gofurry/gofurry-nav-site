@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <main class="min-h-screen overflow-hidden bg-[#05080d] text-slate-100">
     <section v-if="!authenticated" class="gate-enter relative grid min-h-screen place-items-center px-6">
       <div class="absolute inset-0 opacity-70">
@@ -176,7 +176,7 @@
 
             <div v-if="documentTab === 'ingest'" class="grid gap-6 xl:grid-cols-[minmax(0,560px)_1fr]">
               <form class="space-y-5 border border-white/10 bg-white/[0.035] p-6" @submit.prevent="submitText">
-                <Field label="标题"><input v-model="form.title" class="control" placeholder="GoFurry 网站介绍" /></Field>
+                <Field label="标题"><input v-model="form.title" class="control" placeholder="gofurry 网站介绍" /></Field>
                 <Field label="正文"><textarea v-model="form.content" class="control min-h-56 resize-none py-3" /></Field>
                 <button class="flex items-center gap-2 text-sm text-slate-400 transition hover:text-teal-100" type="button" @click="sourceFieldsOpen = !sourceFieldsOpen">
                   <ChevronDown :size="16" class="transition" :class="sourceFieldsOpen ? 'rotate-180 text-teal-200' : ''" />来源信息（可选）
@@ -667,7 +667,7 @@ const selectedDocument = ref<DocumentItem | null>(null)
 const filters = reactive({ status: '', keyword: '', sourceType: '', category: '', language: '' })
 const queryFilters = reactive({ sourceType: '', category: '', language: '', documentIds: '' })
 const queryResult = ref<QueryResponse | null>(null)
-const question = ref('GoFurry 是个公益网站吗？')
+const question = ref('gofurry 是个公益网站吗？')
 const topKText = ref('6')
 const previewDocumentId = ref('')
 const previewText = ref('')
