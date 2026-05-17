@@ -19,6 +19,7 @@ if /I "%TARGET%"=="gofurry-nav-collector" goto build_nav_collector
 if /I "%TARGET%"=="gofurry-game-backend" goto build_game_backend
 if /I "%TARGET%"=="gofurry-game-collector" goto build_game_collector
 if /I "%TARGET%"=="gofurry-admin" goto build_admin
+if /I "%TARGET%"=="gofurry-rag" goto build_rag
 
 echo Unknown target: %TARGET%
 echo Supported targets:
@@ -28,6 +29,7 @@ echo   gofurry-nav-collector
 echo   gofurry-game-backend
 echo   gofurry-game-collector
 echo   gofurry-admin
+echo   gofurry-rag
 exit /b 1
 
 :build_all
@@ -36,6 +38,7 @@ call "%~f0" gofurry-nav-collector || exit /b 1
 call "%~f0" gofurry-game-backend || exit /b 1
 call "%~f0" gofurry-game-collector || exit /b 1
 call "%~f0" gofurry-admin || exit /b 1
+call "%~f0" gofurry-rag || exit /b 1
 echo Build completed. Artifacts are in "%BUILD_ROOT%".
 exit /b 0
 
@@ -119,4 +122,28 @@ if not exist "%ROOT%\gofurry-admin\internal\transport\http\webui\dist" (
 mkdir "%BUILD_ROOT%\gofurry-admin\dist" || exit /b 1
 xcopy "%ROOT%\gofurry-admin\internal\transport\http\webui\dist\*" "%BUILD_ROOT%\gofurry-admin\dist\" /E /I /Y >nul
 if errorlevel 1 exit /b 1
+exit /b 0
+
+:build_rag
+echo [BUILD] gofurry-rag console
+pushd "%ROOT%\gofurry-rag\web" || exit /b 1
+call npm run build
+if errorlevel 1 (
+    popd
+    exit /b 1
+)
+popd
+
+echo [BUILD] gofurry-rag binary
+set "OUTPUT_DIR=%BUILD_ROOT%\gofurry-rag"
+set "OUTPUT_BIN=%OUTPUT_DIR%\gofurry-rag"
+if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
+mkdir "%OUTPUT_DIR%" || exit /b 1
+pushd "%ROOT%\gofurry-rag" || exit /b 1
+go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" .
+if errorlevel 1 (
+    popd
+    exit /b 1
+)
+popd
 exit /b 0
