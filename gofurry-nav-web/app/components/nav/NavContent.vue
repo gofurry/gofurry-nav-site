@@ -63,14 +63,16 @@
       </div>
     </div>
 
-    <GroupPopover
-      v-if="!!activeGroup"
-      :group="activeGroup"
-      :target-element="activeGroupTarget"
-      :visible="!!activeGroup"
-      @mouseenter="cancelGroupHide"
-      @mouseleave="scheduleGroupHide"
-    />
+    <Teleport to="body">
+      <GroupPopover
+        v-if="!!activeGroup"
+        :group="activeGroup"
+        :target-element="activeGroupTarget"
+        :visible="!!activeGroup"
+        @mouseenter="cancelGroupHide"
+        @mouseleave="scheduleGroupHide"
+      />
+    </Teleport>
 
     <Teleport to="body">
       <SitePopover

@@ -22,15 +22,15 @@
       </div>
     </main>
 
-    <PrizeBubble />
+    <GameToolDock />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import bgGrid from '@/assets/pngs/bg-grid.png'
-import PrizeBubble from '@/components/game/lottery/PrizeBubble.vue'
 import GameInfoPanel from '@/components/game/main/content/GameInfoPanel.vue'
+import GameToolDock from '@/components/game/main/GameToolDock.vue'
 import SideBarPanel from '@/components/game/main/sidebar/SideBarPanel.vue'
 import { getGameMainInfo, getGameMainPanel, getLatestGameNews, getLatestReview } from '~/services/game'
 import type { AnonymousReviewModel, GameGroupRecord, GamePanelRecord, LatestNewsRecord } from '~/types/game'

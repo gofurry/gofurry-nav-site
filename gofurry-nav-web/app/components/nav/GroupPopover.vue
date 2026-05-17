@@ -1,17 +1,17 @@
 <template>
   <div
-      v-if="group"
-      class="absolute z-50 bg-orange-50 border border-gray-200 shadow-lg rounded-lg p-3 w-64 text-sm text-gray-700"
-      :style="popoverStyle"
-      @mouseenter="onMouseEnter"
-      @mouseleave="onMouseLeave"
+    v-if="group"
+    class="group-popover"
+    :style="popoverStyle"
+    @mouseenter="onMouseEnter"
+    @mouseleave="onMouseLeave"
   >
-    {{ group?.info || '' }}
+    {{ group?.info || group?.name || '' }}
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Group } from '@/types/nav'
 
 // Props定义
@@ -30,26 +30,11 @@ const emit = defineEmits<{
 // 获取group
 const group = computed(() => props.group || null)
 
-// 悬浮卡片样式
 const popoverStyle = ref<Record<string, string>>({
   left: '0px',
   top: '0px',
   display: 'none'
 })
-
-function getElementDocumentOffset(el: HTMLElement | null) {
-  if (!el) return { top: 0, left: 0 }
-
-  let top = 0
-  let left = 0
-  let current: HTMLElement | null = el
-  while (current) {
-    top += current.offsetTop
-    left += current.offsetLeft
-    current = current.offsetParent as HTMLElement
-  }
-  return { top, left }
-}
 
 function updatePosition() {
   if (!props.visible || !group.value || !props.targetElement) {
@@ -59,23 +44,29 @@ function updatePosition() {
 
   const target = props.targetElement
   const w = 256
-  const h = 280
+  const gap = 8
+  const safeInset = 12
+  const targetRect = target.getBoundingClientRect()
+  const popoverHeight = 96
 
-  const docOffset = getElementDocumentOffset(target)
-  let left = docOffset.left - w
-  let top = docOffset.top - h
+  let left = targetRect.left
+  let top = targetRect.bottom + gap
 
-  // 边界处理
-  const minLeft = 8
-  const maxLeft = document.body?.scrollWidth ? (document.body.scrollWidth - w - 8) : minLeft
-  left = Math.max(minLeft, Math.min(left, maxLeft))
+  if (left + w > window.innerWidth - safeInset) {
+    left = window.innerWidth - w - safeInset
+  }
+
+  left = Math.max(safeInset, left)
+
+  if (top + popoverHeight > window.innerHeight - safeInset) {
+    top = Math.max(safeInset, targetRect.top - popoverHeight - gap)
+  }
 
   popoverStyle.value = {
     left: `${left}px`,
     top: `${top}px`,
     display: 'block',
-    position: 'absolute',
-    zIndex: '50'
+    position: 'fixed',
   }
 }
 
@@ -120,3 +111,21 @@ onUnmounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.group-popover {
+  z-index: 95;
+  width: 16rem;
+  border-radius: 0.875rem;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 247, 237, 0.94);
+  padding: 0.75rem 0.85rem;
+  color: rgba(86, 47, 14, 0.86);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  box-shadow:
+    0 18px 42px rgba(87, 48, 10, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(12px);
+}
+</style>

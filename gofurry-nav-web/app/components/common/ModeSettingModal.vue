@@ -25,18 +25,6 @@
             />
           </div>
 
-          <label for="show-bubble" class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 px-4 py-3 transition hover:bg-white/10">
-            <span class="text-sm text-gray-200">
-              {{ t("navbar.showBubble") }}
-            </span>
-            <input
-                id="show-bubble"
-                v-model="showBubbleLocal"
-                type="checkbox"
-                class="h-4 w-4 rounded border-white/20 bg-white/10 text-orange-300"
-            />
-          </label>
-
           <div class="rounded-lg border border-white/10 bg-white/5 px-4 py-4">
             <div class="space-y-2">
               <div class="flex items-start justify-between gap-3">
@@ -130,7 +118,6 @@ const emit = defineEmits<{
 }>()
 
 const localMode = ref('')
-const showBubbleLocal = ref(true)
 const supportsCustomBgPicker = supportsCustomNavHeaderBackground()
 const customBgFolderNameLocal = ref('')
 
@@ -162,8 +149,6 @@ watch(
 )
 
 onMounted(() => {
-  const savedBubble = localStorage.getItem('showBubble')
-  showBubbleLocal.value = savedBubble !== 'false'
   syncCustomBgState()
 })
 
@@ -191,12 +176,6 @@ function clearCustomBgDirectory() {
 const save = async () => {
   localMode.value = localMode.value.trim().slice(0, 32)
   emit('save', localMode.value)
-  localStorage.setItem('showBubble', showBubbleLocal.value ? 'true' : 'false')
-  window.dispatchEvent(
-    new CustomEvent('show-bubble-change', {
-      detail: { visible: showBubbleLocal.value },
-    })
-  )
 
   if (shouldClearCustomBg) {
     await clearCustomNavHeaderBackgroundDirectory()

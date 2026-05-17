@@ -1,38 +1,87 @@
 <template>
-  <div class="mb-8 rounded-2xl bg-orange-50 p-5 backdrop-blur-md">
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-lg font-bold">{{ t('game.news.title') }}</h2>
-      <div class="hidden text-sm text-gray-500 sm:block">{{ t('game.news.desc') }}</div>
+  <div class="mb-8 overflow-hidden rounded-2xl border border-white/35 bg-orange-50/92 p-5 shadow-[0_20px_50px_rgba(120,68,20,0.08)] backdrop-blur-md">
+    <div class="mb-4 flex items-center justify-between gap-4">
+      <div class="min-w-0">
+        <h2 class="text-lg font-bold text-orange-950">{{ t('game.news.title') }}</h2>
+        <div class="hidden text-sm text-orange-900/55 sm:block">{{ t('game.news.desc') }}</div>
+      </div>
+
+      <div v-if="showControls" class="flex items-center gap-2">
+        <span class="hidden text-xs font-medium text-orange-900/45 sm:block">
+          {{ activeIndex + 1 }}/{{ newsList.length }}
+        </span>
+        <button
+          class="news-nav-button"
+          :class="{ 'news-nav-button--disabled': !canMovePrev }"
+          :aria-label="t('game.news.previous')"
+          :title="t('game.news.previous')"
+          type="button"
+          :disabled="!canMovePrev"
+          @click="moveByStep(-1)"
+        >
+          <span aria-hidden="true">‹</span>
+        </button>
+        <button
+          class="news-nav-button"
+          :class="{ 'news-nav-button--disabled': !canMoveNext }"
+          :aria-label="t('game.news.next')"
+          :title="t('game.news.next')"
+          type="button"
+          :disabled="!canMoveNext"
+          @click="moveByStep(1)"
+        >
+          <span aria-hidden="true">›</span>
+        </button>
+      </div>
     </div>
 
-    <div class="overflow-x-auto">
-      <div class="flex min-w-max gap-4">
+    <div class="relative">
+      <div class="news-edge news-edge--left" :class="{ 'news-edge--visible': canMovePrev }"></div>
+      <div class="news-edge news-edge--right" :class="{ 'news-edge--visible': canMoveNext }"></div>
+
+      <div
+        ref="viewportRef"
+        class="news-viewport"
+      >
         <div
-          v-for="news in newsList"
-          :key="news.id"
-          ref="newsRefs"
-          class="relative mb-1 w-36 flex-shrink-0 cursor-pointer rounded-lg bg-orange-100/60 p-3 transition hover:bg-orange-200/50 sm:w-72"
-          @click="openUrl(news.url)"
+          ref="trackRef"
+          class="news-track"
+          :style="{ transform: `translate3d(-${trackOffset}px, 0, 0)` }"
         >
-          <img
-            :src="news.header"
-            alt="cover"
-            ref="coverRefs"
-            class="mb-2 w-full rounded-lg object-cover"
-            @mouseenter="onNewsMouseEnter(news, $event)"
-            @mouseleave="onNewsMouseLeave"
-          />
+          <div
+            v-for="(news, index) in newsList"
+            :key="newsKey(news, index)"
+            :ref="(el) => setCardRef(el, index)"
+            class="news-card"
+            @click="openUrl(news.url)"
+          >
+            <img
+              :src="news.header"
+              alt="cover"
+              class="news-card__cover"
+              @mouseenter="onNewsMouseEnter(news, $event)"
+              @mouseleave="onNewsMouseLeave"
+            />
 
-          <h3 class="truncate font-semibold">{{ htmlToPlainText(news.headline) }}</h3>
+            <div class="news-card__body">
+              <h3 class="news-card__title">{{ htmlToPlainText(news.headline) }}</h3>
 
-          <div class="mt-1 flex justify-between text-xs text-gray-500">
-            <span>{{ formatTime(news.post_time) }}</span>
-            <span class="hidden sm:block">{{ news.author }}</span>
+              <div class="mt-2 flex items-center justify-between gap-3 text-xs text-orange-900/45">
+                <span>{{ formatTime(news.post_time) }}</span>
+                <span class="truncate text-right">{{ news.author }}</span>
+              </div>
+
+              <p class="news-card__summary">
+                {{ htmlToPlainText(news.content) }}
+              </p>
+            </div>
           </div>
+        </div>
+      </div>
 
-          <p class="mt-2 line-clamp-3 text-sm text-gray-700">
-            {{ htmlToPlainText(news.content) }}
-          </p>
+      <div v-if="showControls" class="mt-4">
+        <div class="news-progress-track">
+          <div class="news-progress-fill" :style="{ width: `${progressWidth}%` }"></div>
         </div>
       </div>
     </div>
@@ -62,7 +111,8 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLangStore } from '@/store/langStore'
 import { getLatestGameNews } from '~/services/game'
@@ -77,8 +127,11 @@ const langStore = useLangStore()
 const lang = ref(langStore.lang)
 
 const newsList = ref<NewsBaseModel[]>([])
-const newsRefs = ref<HTMLElement[]>([])
-const coverRefs = ref<HTMLElement[]>([])
+const viewportRef = ref<HTMLElement | null>(null)
+const trackRef = ref<HTMLElement | null>(null)
+const cardRefs = ref<Record<number, HTMLElement>>({})
+const activeIndex = ref(0)
+const trackOffset = ref(0)
 
 const hoverNews = ref<NewsBaseModel | null>(null)
 const hoveringDetail = ref(false)
@@ -88,6 +141,21 @@ const hoverTop = ref(0)
 const hoverLeft = ref(0)
 const HOVER_WIDTH = 320
 const HOVER_GAP = 12
+
+const showControls = computed(() => newsList.value.length > 1)
+const canMovePrev = computed(() => activeIndex.value > 0)
+const canMoveNext = computed(() => activeIndex.value < newsList.value.length - 1)
+const progressWidth = computed(() => {
+  if (!newsList.value.length) {
+    return 0
+  }
+
+  if (newsList.value.length === 1) {
+    return 100
+  }
+
+  return ((activeIndex.value + 1) / newsList.value.length) * 100
+})
 
 function formatTime(postTime: string) {
   const date = new Date(postTime)
@@ -112,6 +180,64 @@ function htmlToPlainText(html: string) {
 
 function openUrl(url: string) {
   window.open(url, '_blank')
+}
+
+function newsKey(news: NewsBaseModel, index: number) {
+  return `${news.id}:${news.post_time}:${news.url}:${index}`
+}
+
+function setCardRef(element: Element | ComponentPublicInstance | null, index: number) {
+  if (element instanceof HTMLElement) {
+    cardRefs.value[index] = element
+    return
+  }
+
+  delete cardRefs.value[index]
+}
+
+function getOrderedCards() {
+  return newsList.value
+    .map((_, index) => cardRefs.value[index])
+    .filter((card): card is HTMLElement => card instanceof HTMLElement)
+}
+
+function getTargetOffset(targetIndex: number) {
+  const viewport = viewportRef.value
+  const track = trackRef.value
+  const cards = getOrderedCards()
+  const target = cards[targetIndex]
+
+  if (!viewport || !track || !target) {
+    return 0
+  }
+
+  const maxOffset = Math.max(track.scrollWidth - viewport.clientWidth, 0)
+  return Math.min(target.offsetLeft, maxOffset)
+}
+
+function updateTrackOffset() {
+  if (!newsList.value.length) {
+    activeIndex.value = 0
+    trackOffset.value = 0
+    return
+  }
+
+  activeIndex.value = Math.min(Math.max(activeIndex.value, 0), newsList.value.length - 1)
+  trackOffset.value = getTargetOffset(activeIndex.value)
+}
+
+function moveByStep(direction: -1 | 1) {
+  const nextIndex = Math.min(
+    Math.max(activeIndex.value + direction, 0),
+    newsList.value.length - 1
+  )
+
+  if (nextIndex === activeIndex.value) {
+    return
+  }
+
+  activeIndex.value = nextIndex
+  trackOffset.value = getTargetOffset(nextIndex)
 }
 
 function onNewsMouseEnter(news: NewsBaseModel, event: MouseEvent) {
@@ -177,10 +303,11 @@ function onDetailMouseLeave() {
 }
 
 function applyNewsRecord(record: LatestNewsRecord) {
+  cardRefs.value = {}
   newsList.value = lang.value === 'en' ? record.news_en : record.news_zh
+  activeIndex.value = 0
   nextTick(() => {
-    newsRefs.value = newsRefs.value.slice(0, newsList.value.length)
-    coverRefs.value = coverRefs.value.slice(0, newsList.value.length)
+    updateTrackOffset()
   })
 }
 
@@ -201,7 +328,17 @@ if (props.initialNewsRecord) {
 onMounted(() => {
   if (!newsList.value.length) {
     loadNews()
+  } else {
+    nextTick(() => {
+      updateTrackOffset()
+    })
   }
+
+  window.addEventListener('resize', updateTrackOffset)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateTrackOffset)
 })
 
 watch(
@@ -227,21 +364,145 @@ watch(
   overflow: hidden;
 }
 
-::-webkit-scrollbar {
-  height: 8px;
+.news-viewport {
+  overflow: hidden;
+  padding: 0.1rem 0 0.35rem;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+.news-track {
+  display: flex;
+  gap: 1rem;
+  will-change: transform;
+  transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(249, 115, 22, 0.4);
-  border-radius: 4px;
-  backdrop-filter: blur(4px);
+.news-card {
+  position: relative;
+  width: 15.5rem;
+  flex-shrink: 0;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  background:
+    linear-gradient(180deg, rgba(255, 251, 245, 0.95), rgba(254, 239, 217, 0.92));
+  box-shadow:
+    0 14px 28px rgba(128, 77, 24, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+  transition: background-color 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(249, 115, 22, 0.7);
+.news-card:hover {
+  border-color: rgba(255, 255, 255, 0.52);
+  background:
+    linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(252, 236, 214, 0.96));
+  box-shadow:
+    0 20px 34px rgba(128, 77, 24, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.news-card__cover {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  object-fit: cover;
+}
+
+.news-card__body {
+  padding: 0.95rem 0.95rem 1rem;
+}
+
+.news-card__title {
+  display: -webkit-box;
+  min-height: 2.8rem;
+  overflow: hidden;
+  color: rgba(89, 45, 10, 0.96);
+  font-weight: 700;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.news-card__summary {
+  display: -webkit-box;
+  margin-top: 0.7rem;
+  min-height: 4rem;
+  overflow: hidden;
+  color: rgba(87, 56, 28, 0.78);
+  font-size: 0.925rem;
+  line-height: 1.45;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.news-nav-button {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid rgba(180, 96, 24, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 250, 244, 0.8);
+  color: rgba(139, 72, 16, 0.88);
+  backdrop-filter: blur(10px);
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, opacity 180ms ease;
+}
+
+.news-nav-button:hover {
+  background: rgba(255, 245, 233, 0.95);
+  border-color: rgba(180, 96, 24, 0.24);
+}
+
+.news-nav-button--disabled {
+  opacity: 0.36;
+}
+
+.news-edge {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 1.6rem;
+  z-index: 1;
+  width: 2.5rem;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.news-edge--visible {
+  opacity: 1;
+}
+
+.news-edge--left {
+  left: -0.25rem;
+  background: linear-gradient(90deg, rgba(252, 243, 231, 0.92), rgba(252, 243, 231, 0));
+}
+
+.news-edge--right {
+  right: -0.25rem;
+  background: linear-gradient(270deg, rgba(252, 243, 231, 0.92), rgba(252, 243, 231, 0));
+}
+
+.news-progress-track {
+  height: 0.25rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(181, 101, 37, 0.12);
+}
+
+.news-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.9), rgba(251, 191, 36, 0.96));
+  transition: width 220ms ease;
+}
+
+@media (min-width: 640px) {
+  .news-card {
+    width: 19.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .news-card {
+    width: 21rem;
+  }
 }
 </style>

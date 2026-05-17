@@ -8,6 +8,16 @@ html, body, #app {
   width: 100%;
 }
 
+html, body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
 /* 去掉列表默认样式 */
 ul, ol {
   list-style: none;

@@ -47,6 +47,8 @@
     "result": "结果",
     "refresh": "刷新",
     "visits": "浏览量",
+    "scrollStep": "向上回退 25%",
+    "scrollProgress": "当前位置 {percent}%",
     "modal": {
       "adultContent": "该游戏包含成人内容.",
       "galleryBlur": "由于成人内容, 截图和视频已被模糊处理.",
@@ -83,7 +85,6 @@
     "mode": "模式",
     "modeSetting": "Mode 设置",
     "modeDesc": "用于控制页面显示模式, 例如: nsfw",
-    "showBubble": "显示悬浮球",
     "showCustomSites": "显示常用网站区域",
     "expandNav": "展开导航栏",
     "customPanelCode": "面板自定义前端代码",
@@ -383,7 +384,9 @@
     },
     "news": {
       "title": "更新情报",
-      "desc": "近期 Steam 兽游更新公告"
+      "desc": "近期 Steam 兽游更新公告",
+      "previous": "上一条情报",
+      "next": "下一条情报"
     },
     "action": {
       "shortcutFunction": "快捷功能",
@@ -490,6 +493,10 @@
       "contentCreator": "内容创作者",
       "contact": "联系方式",
       "link": "相关链接"
+    },
+    "tools": {
+      "label": "游戏工具入口",
+      "lottery": "去抽奖"
     },
     "lottery": {
       "home": {

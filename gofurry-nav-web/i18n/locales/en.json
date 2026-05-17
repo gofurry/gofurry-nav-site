@@ -47,6 +47,8 @@
     "result": "result",
     "refresh": "Refresh",
     "visits": "Visits",
+    "scrollStep": "Move up 25%",
+    "scrollProgress": "Position {percent}%",
     "modal": {
       "adultContent": "This game contains adult content.",
       "galleryBlur": "Screenshots and videos are blurred due to adult content.",
@@ -83,7 +85,6 @@
     "mode": "Mode",
     "modeSetting": "Mode Settings",
     "modeDesc": "Used to control page display mode, for example: nsfw",
-    "showBubble": "Show Bubbles",
     "showCustomSites": "Show custom sites section",
     "expandNav": "Expand navigation bar",
     "customPanelHeight": "CustomSitesPanel height",
@@ -383,7 +384,9 @@
     },
     "news": {
       "title": "Update News",
-      "desc": "Recent furry game update news from steam"
+      "desc": "Recent furry game update news from steam",
+      "previous": "Previous update",
+      "next": "Next update"
     },
     "action": {
       "shortcutFunction": "Shortcut Functions",
@@ -490,6 +493,10 @@
       "contentCreator": "Content Creator",
       "contact": "Contact",
       "link": "Links"
+    },
+    "tools": {
+      "label": "Game tools",
+      "lottery": "Lottery"
     },
     "lottery": {
       "home": {

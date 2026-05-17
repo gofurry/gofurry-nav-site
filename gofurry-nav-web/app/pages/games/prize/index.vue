@@ -1,163 +1,186 @@
 <template>
-  <div class="min-h-full flex flex-col w-full bg-orange-50">
-    <div
-        class="top-0 w-full flex items-center justify-between p-4 bg-orange-100 backdrop-blur-sm shadow-sm"
-    >
-      <h2 class="h-4 text-lg font-semibold text-gray-800 flex items-center gap-2">
-        {{ t('game.lottery.home.title') }}
-      </h2>
+  <div class="lottery-page relative min-h-full overflow-hidden bg-[#11100f] text-stone-100">
+    <div class="absolute inset-0 opacity-[0.24]" aria-hidden="true">
+      <img
+        src="https://qcdn.go-furry.com/game/background/steam.jpg"
+        alt=""
+        class="h-full w-full object-cover"
+      />
     </div>
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_74%_18%,rgba(244,170,96,0.24),transparent_30%),linear-gradient(115deg,rgba(17,16,15,0.96)_0%,rgba(17,16,15,0.86)_54%,rgba(17,16,15,0.64)_100%)]" aria-hidden="true" />
+    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-200/60 to-transparent" aria-hidden="true" />
 
-    <div class="flex flex-col px-6 py-10 max-w-6xl mx-auto">
+    <div class="relative mx-auto flex w-full max-w-6xl flex-col px-5 py-10 sm:px-8 lg:py-14">
+      <header class="lottery-hero grid gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
+        <div class="max-w-3xl">
+          <p class="mb-4 text-xs font-medium uppercase tracking-[0.28em] text-orange-200/70">
+            gofurry games
+          </p>
+          <h1 class="text-4xl font-semibold leading-tight text-white sm:text-6xl">
+            {{ t('game.lottery.home.title') }}
+          </h1>
+          <p class="mt-5 max-w-2xl text-sm leading-7 text-stone-300 sm:text-base">
+            {{ t('game.lottery.home.activePool') }} · {{ t('game.lottery.home.winnerAnnouncement') }}
+          </p>
+        </div>
 
-      <div v-if="loading" class="text-center py-10 text-gray-400">
+        <div class="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-white/10 bg-white/10 backdrop-blur-md">
+          <div class="bg-black/[0.24] p-4">
+            <div class="text-[11px] uppercase tracking-[0.18em] text-stone-400">
+              {{ t('game.lottery.home.activePool') }}
+            </div>
+            <div class="mt-2 text-3xl font-semibold text-white">{{ activeList.length }}</div>
+          </div>
+          <div class="bg-black/[0.24] p-4">
+            <div class="text-[11px] uppercase tracking-[0.18em] text-stone-400">
+              {{ t('game.lottery.home.winnerAnnouncement') }}
+            </div>
+            <div class="mt-2 text-3xl font-semibold text-white">{{ prizeCount }}</div>
+          </div>
+        </div>
+      </header>
+
+      <div v-if="loading" class="py-20 text-sm text-stone-400">
         {{ t('common.loading') }}
       </div>
 
-      <div v-else>
+      <div v-else class="space-y-16 pb-16">
+        <section>
+          <div class="mb-5 flex items-end justify-between gap-4">
+            <h2 class="text-sm font-medium uppercase tracking-[0.22em] text-stone-300">
+              {{ t('game.lottery.home.activePool') }}
+            </h2>
+            <div class="h-px flex-1 bg-gradient-to-r from-white/14 to-transparent" aria-hidden="true" />
+          </div>
 
-        <section class="mb-16">
-          <h3 class="text-xl font-bold text-gray-800 mb-4">
-            {{ t('game.lottery.home.activePool') }}
-          </h3>
-
-          <div v-if="!activeList.length" class="text-gray-400">
+          <div v-if="!activeList.length" class="rounded-lg border border-white/10 bg-white/[0.04] px-5 py-8 text-sm text-stone-400">
             {{ t('game.lottery.home.noActiveLottery') }}
           </div>
 
-          <div class="grid md:grid-cols-2 gap-6">
-            <div
-                v-for="item in activeList"
-                :key="item.lottery.id"
-                @click="openLottery(item)"
-                class="bg-orange-100 border-2 border-orange-200 rounded-xl
-                 hover:border-[#E49C69] px-4 py-2 transition duration-300"
+          <div class="grid gap-4 md:grid-cols-2">
+            <button
+              v-for="item in activeList"
+              :key="item.lottery.id"
+              type="button"
+              class="lottery-pool group rounded-lg border border-white/10 bg-white/[0.055] p-5 text-left shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl transition duration-300 hover:border-orange-200/40 hover:bg-white/[0.08]"
+              @click="openLottery(item)"
             >
-              <div class="flex justify-between items-center">
-                <div class="text-lg font-bold text-orange-800 mb-2">
+              <div class="flex items-start justify-between gap-4">
+                <h3 class="min-w-0 text-lg font-semibold leading-7 text-white">
                   {{ item.lottery.title }}
-                </div>
-
-                <div class="text-xs text-gray-400">{{ t('game.lottery.home.clickToJoin') }}</div>
+                </h3>
+                <span class="shrink-0 rounded-full border border-orange-200/20 px-2.5 py-1 text-[11px] text-orange-100/80">
+                  {{ t('game.lottery.home.clickToJoin') }}
+                </span>
               </div>
 
-              <p class="text-gray-600 mb-4 line-clamp-2 h-12 overflow-hidden">
+              <p class="mt-3 line-clamp-2 min-h-12 text-sm leading-6 text-stone-300">
                 {{ item.lottery.desc }}
               </p>
 
-              <div class="text-sm text-gray-500 mb-2 flex">
-                <div class="font-bold text-gray-600">{{ t('game.lottery.home.prize') }}:&nbsp;</div>
-                <div class="truncate">{{ item.lottery.prize.title }} ({{ item.lottery.prize.platform }})</div>
+              <div class="mt-5 grid gap-3 text-sm text-stone-300">
+                <div class="flex items-center justify-between gap-4">
+                  <span class="text-stone-500">{{ t('game.lottery.home.prize') }}</span>
+                  <span class="min-w-0 truncate text-right text-stone-100">
+                    {{ item.lottery.prize.title }} · {{ item.lottery.prize.platform }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <span class="text-stone-500">{{ t('game.lottery.home.prizeQuantity') }}</span>
+                  <span class="text-stone-100">{{ item.lottery.prize.count }}</span>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <span class="text-stone-500">{{ t('game.lottery.home.participants') }}</span>
+                  <span class="text-stone-100">{{ item.count }}</span>
+                </div>
               </div>
 
-              <div class="flex justify-between items-center">
-                <div class="text-sm text-gray-500 mb-2 flex">
-                  <div class="font-bold text-gray-600">{{ t('game.lottery.home.prizeQuantity') }}:&nbsp;</div>
-                  <div>{{ item.lottery.prize.count }}</div>
-                </div>
-
-                <div class="text-sm text-gray-500 mb-3 flex">
-                  <div class="font-bold text-gray-600">{{ t('game.lottery.home.participants') }}:&nbsp;</div>
-                  <div>{{ item.count }}</div>
-                </div>
-              </div>
-
-              <div class="mb-2">
-                <div class="w-full bg-orange-50 h-2 rounded-full">
+              <div class="mt-5">
+                <div class="h-1 overflow-hidden rounded-full bg-white/10">
                   <div
-                      class="bg-orange-500 h-2 rounded-full transition-all"
-                      :style="{ width: calcProgress(item.lottery.start_time, item.lottery.end_time) + '%' }"
-                  ></div>
+                    class="h-full rounded-full bg-gradient-to-r from-orange-200 to-orange-400 transition-all duration-500"
+                    :style="{ width: calcProgress(item.lottery.start_time, item.lottery.end_time) + '%' }"
+                  />
                 </div>
-                <div class="flex justify-between items-center mt-0.5">
-                  <div class="text-xs text-gray-400">
-                    {{ formatDate(item.lottery.start_time) }}
-                  </div>
-                  <div class="text-xs text-gray-400">
-                    {{ formatDate(item.lottery.end_time) }}
-                  </div>
+                <div class="mt-2 flex justify-between gap-3 text-[11px] text-stone-500">
+                  <span>{{ formatDate(item.lottery.start_time) }}</span>
+                  <span>{{ formatDate(item.lottery.end_time) }}</span>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
         </section>
 
         <section>
-          <h2 class="text-xl font-semibold mb-6 text-gray-800">
-            {{ t('game.lottery.home.winnerAnnouncement') }} - {{ t('common.total') }} {{ prizeCount }}
-          </h2>
+          <div class="mb-5 flex items-center justify-between gap-4">
+            <h2 class="text-sm font-medium uppercase tracking-[0.22em] text-stone-300">
+              {{ t('game.lottery.home.winnerAnnouncement') }}
+            </h2>
+            <span class="text-xs text-stone-500">{{ t('common.total') }} {{ prizeCount }}</span>
+          </div>
 
-          <div v-if="!historyList.length" class="text-gray-400">
+          <div v-if="!historyList.length" class="rounded-lg border border-white/10 bg-white/[0.04] px-5 py-8 text-sm text-stone-400">
             {{ t('game.lottery.home.noHistory') }}
           </div>
 
-          <div class="space-y-6">
-            <div
-                v-for="item in historyList"
-                :key="item.name"
-                class="bg-orange-100 border-2 border-orange-200 rounded-lg px-4 py-2 transition"
+          <div class="divide-y divide-white/10 overflow-hidden rounded-lg border border-white/10 bg-black/[0.18] backdrop-blur-md">
+            <article
+              v-for="item in historyList"
+              :key="`${item.name}-${item.end_time}`"
+              class="grid gap-4 px-5 py-5 transition duration-200 hover:bg-white/[0.035] lg:grid-cols-[minmax(0,1fr)_17rem]"
             >
-              <div class="flex justify-between items-center mb-2">
-                <h3 class="font-bold text-orange-800">
-                  {{ item.name }}
-                </h3>
-                <span class="text-xs text-gray-400">
-                  {{ t('game.lottery.home.deadline') }}:&nbsp;{{ formatDate(item.end_time) }}
-                </span>
-              </div>
-
-              <p class="text-gray-600 mb-3">
-                {{ item.desc }}
-              </p>
-
-              <div class="flex justify-between items-center mb-2">
-                <div class="text-sm text-gray-500 flex">
-                  <div class="font-bold text-gray-600">{{ t('game.lottery.home.prize') }}:&nbsp;</div>
-                  <div>
-                    {{ item.prize.title }} ({{ item.prize.platform }})
-                    * {{ item.prize.count }}
-                  </div>
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <h3 class="text-base font-semibold text-white">
+                    {{ item.name }}
+                  </h3>
+                  <span class="text-xs text-stone-500">
+                    {{ t('game.lottery.home.deadline') }} {{ formatDate(item.end_time) }}
+                  </span>
                 </div>
 
-                <div class="text-sm text-gray-500 flex">
-                  <div class="font-bold text-gray-600">{{ t('game.lottery.home.participants') }}:&nbsp;</div>
-                  <div>
-                    {{ item.count }}
-                  </div>
-                </div>
+                <p class="mt-2 line-clamp-2 text-sm leading-6 text-stone-400">
+                  {{ item.desc }}
+                </p>
               </div>
 
-              <div
-                  v-if="item.winner.length"
-                  class="flex flex-wrap gap-2"
-              >
-                <span
+              <div class="space-y-3 text-sm text-stone-300">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-stone-500">{{ t('game.lottery.home.prize') }}</span>
+                  <span class="min-w-0 truncate text-right">
+                    {{ item.prize.title }} · {{ item.prize.platform }} × {{ item.prize.count }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-stone-500">{{ t('game.lottery.home.participants') }}</span>
+                  <span>{{ item.count }}</span>
+                </div>
+
+                <div v-if="item.winner.length" class="flex flex-wrap justify-end gap-1.5">
+                  <span
                     v-for="winner in item.winner"
                     :key="winner.email"
-                    class="bg-[#343131] text-orange-100 text-xs px-3 py-1 rounded-full"
-                >
-                  {{ winner.name }} - {{ winner.email }}
-                </span>
-              </div>
+                    class="max-w-full truncate rounded-full border border-orange-200/16 bg-orange-200/10 px-2.5 py-1 text-[11px] text-orange-100/90"
+                  >
+                    {{ winner.name }} · {{ winner.email }}
+                  </span>
+                </div>
 
-              <div
-                  v-else
-                  class="text-xs text-gray-400 mt-2"
-              >
-                {{ t('game.lottery.home.noWinner') }}
+                <div v-else class="text-right text-xs text-stone-500">
+                  {{ t('game.lottery.home.noWinner') }}
+                </div>
               </div>
-            </div>
+            </article>
           </div>
         </section>
-
       </div>
     </div>
   </div>
 
   <LotteryJoinModal
-      v-if="showModal && currentLottery"
-      :lottery="currentLottery"
-      @close="showModal = false"
+    v-if="showModal && currentLottery"
+    :lottery="currentLottery"
+    @close="showModal = false"
   />
 </template>
 
@@ -211,3 +234,25 @@ function calcProgress(start: string, end: string) {
   return Math.floor(((now - s) / (e - s)) * 100)
 }
 </script>
+
+<style scoped>
+.lottery-hero {
+  animation: lottery-enter 520ms ease-out both;
+}
+
+.lottery-pool {
+  animation: lottery-enter 420ms ease-out both;
+}
+
+@keyframes lottery-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
