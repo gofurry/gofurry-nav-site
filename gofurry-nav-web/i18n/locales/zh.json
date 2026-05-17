@@ -496,7 +496,29 @@
     },
     "tools": {
       "label": "游戏工具入口",
-      "lottery": "去抽奖"
+      "lottery": "去抽奖",
+      "ask": "问问兽游资料",
+      "askTitle": "问问兽游资料",
+      "askDescription": "基于 gofurry 已入库的游戏详情、新闻和创作者资料回答。",
+      "askPlaceholder": "输入你想了解的游戏问题",
+      "askSubmit": "提问",
+      "prompts": {
+        "recent": {
+          "title": "最近更新",
+          "description": "看看近期值得关注的兽游动态",
+          "prompt": "请基于 gofurry 已入库的游戏新闻和游戏详情，帮我总结最近有哪些兽游更新值得关注，并给出引用来源。"
+        },
+        "similar": {
+          "title": "找相似作品",
+          "description": "按题材、氛围或平台寻找游戏",
+          "prompt": "我想找几款相似的兽游作品，请基于 gofurry 游戏资料推荐，并说明每款游戏的特点、平台和引用来源。"
+        },
+        "beginner": {
+          "title": "新手入门",
+          "description": "推荐容易开始了解的作品",
+          "prompt": "请基于 gofurry 已入库的游戏资料，推荐几款适合新手了解兽游的作品，并说明推荐理由和引用来源。"
+        }
+      }
     },
     "lottery": {
       "home": {
@@ -533,6 +555,36 @@
       },
       "bubble": {
         "lottery": "去抽奖"
+      }
+    }
+  },
+  "nav": {
+    "tools": {
+      "label": "导航工具入口",
+      "search": "搜索站点",
+      "searchPlaceholder": "搜索站点名称或简介...",
+      "noSearchResults": "没有找到匹配站点",
+      "ask": "问问导航资料",
+      "askTitle": "问问导航资料",
+      "askDescription": "基于 gofurry 导航站点、分组和简介帮你找方向。",
+      "askPlaceholder": "输入你想找的网站或类别",
+      "askSubmit": "提问",
+      "prompts": {
+        "discover": {
+          "title": "找站点",
+          "description": "按用途发现站点和社区",
+          "prompt": "请基于 gofurry 导航资料，帮我推荐几个适合发现 furry 内容、社区或创作者的站点，并说明各自适合什么用途。"
+        },
+        "publish": {
+          "title": "发布作品",
+          "description": "找适合发布或展示作品的入口",
+          "prompt": "我想发布或展示自己的 furry 相关作品，请基于 gofurry 导航资料推荐适合的站点，并说明它们的差异和引用来源。"
+        },
+        "alternative": {
+          "title": "替代选择",
+          "description": "某类站点不可用时找备选",
+          "prompt": "如果某个 furry 相关站点暂时不可用，请基于 gofurry 导航资料帮我找同类型或相近用途的替代站点，并给出引用来源。"
+        }
       }
     }
   },

@@ -496,7 +496,29 @@
     },
     "tools": {
       "label": "Game tools",
-      "lottery": "Lottery"
+      "lottery": "Lottery",
+      "ask": "Ask game knowledge",
+      "askTitle": "Ask Game Knowledge",
+      "askDescription": "Answers from indexed gofurry game details, news, and creator profiles.",
+      "askPlaceholder": "Ask about games",
+      "askSubmit": "Ask",
+      "prompts": {
+        "recent": {
+          "title": "Recent updates",
+          "description": "See notable game updates",
+          "prompt": "Based on the indexed gofurry game news and game details, summarize recent furry game updates worth watching and include cited sources."
+        },
+        "similar": {
+          "title": "Find similar games",
+          "description": "Match by theme, mood, or platform",
+          "prompt": "I want to find similar furry games. Based on gofurry game data, recommend several titles and explain each game's traits, platform, and cited sources."
+        },
+        "beginner": {
+          "title": "Beginner picks",
+          "description": "Start with approachable games",
+          "prompt": "Based on indexed gofurry game data, recommend a few furry games suitable for beginners and explain why, with cited sources."
+        }
+      }
     },
     "lottery": {
       "home": {
@@ -533,6 +555,36 @@
       },
       "bubble": {
         "lottery": "Lottery"
+      }
+    }
+  },
+  "nav": {
+    "tools": {
+      "label": "Navigation tools",
+      "search": "Search sites",
+      "searchPlaceholder": "Search site name or description...",
+      "noSearchResults": "No matching sites",
+      "ask": "Ask navigation knowledge",
+      "askTitle": "Ask Navigation Knowledge",
+      "askDescription": "Find direction from indexed gofurry sites, groups, and descriptions.",
+      "askPlaceholder": "Ask about sites or categories",
+      "askSubmit": "Ask",
+      "prompts": {
+        "discover": {
+          "title": "Find sites",
+          "description": "Discover communities and resources",
+          "prompt": "Based on gofurry navigation data, recommend several sites for discovering furry content, communities, or creators, and explain what each is useful for."
+        },
+        "publish": {
+          "title": "Publish work",
+          "description": "Find places to share or showcase work",
+          "prompt": "I want to publish or showcase my furry-related work. Based on gofurry navigation data, recommend suitable sites, explain their differences, and include cited sources."
+        },
+        "alternative": {
+          "title": "Alternatives",
+          "description": "Find nearby choices when a site is unavailable",
+          "prompt": "If a furry-related site is temporarily unavailable, use gofurry navigation data to find similar or nearby alternative sites and include cited sources."
+        }
       }
     }
   },

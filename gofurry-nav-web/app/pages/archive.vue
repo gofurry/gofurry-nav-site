@@ -311,6 +311,7 @@ const maxRecords = 50
 const pageSize = 10
 const { t } = useI18n()
 const langStore = useLangStore()
+const route = useRoute()
 
 const records = ref<ChatRecord[]>([])
 const activeId = ref<string | null>(null)
@@ -329,6 +330,7 @@ const scrollProgress = ref(0)
 const hasScrollableWorkspace = ref(false)
 let queueTimer: number | null = null
 let workspaceMetricsFrame: number | null = null
+let lastAppliedRoutePrompt = ''
 
 const filteredRecords = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
@@ -379,8 +381,16 @@ watch(searchText, () => {
 
 watch(records, persistRecords, { deep: true })
 
+watch(
+  () => route.query.q,
+  () => {
+    applyRoutePrompt()
+  }
+)
+
 onMounted(() => {
   loadRecords()
+  applyRoutePrompt()
   refreshQueue()
   window.addEventListener('keydown', handleGuideKeydown)
   window.addEventListener('resize', scheduleWorkspaceMetrics)
@@ -472,6 +482,31 @@ function startNewChat() {
   draftQuestion.value = ''
   showGuide.value = false
   scrollWorkspaceToTop('smooth')
+  nextTick(() => {
+    document.querySelector<HTMLInputElement>('.ask-bar input')?.focus()
+  })
+}
+
+function routePromptText() {
+  const raw = route.query.q
+  if (Array.isArray(raw)) {
+    return raw[0]?.trim() || ''
+  }
+  return typeof raw === 'string' ? raw.trim() : ''
+}
+
+function applyRoutePrompt() {
+  if (!import.meta.client) {
+    return
+  }
+  const prompt = routePromptText()
+  if (!prompt || prompt === lastAppliedRoutePrompt || isStreaming.value) {
+    return
+  }
+  lastAppliedRoutePrompt = prompt
+  activeId.value = null
+  draftQuestion.value = prompt
+  showGuide.value = false
   nextTick(() => {
     document.querySelector<HTMLInputElement>('.ask-bar input')?.focus()
   })

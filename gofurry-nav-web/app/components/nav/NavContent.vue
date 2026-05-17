@@ -89,7 +89,7 @@
       />
     </Teleport>
 
-    <FloatingSearch :items="sites" />
+    <NavToolDock :items="sites" />
   </div>
 </template>
 
@@ -103,7 +103,7 @@ import { recordRecentSite, toExternalUrl } from '@/utils/recentSites'
 import { readDisplayMode, subscribeModeChange } from '@/utils/modeStorage'
 import GroupPopover from './GroupPopover.vue'
 import SitePopover from './SitePopover.vue'
-import FloatingSearch from '@/components/nav/FloatingSearch.vue'
+import NavToolDock from '@/components/nav/NavToolDock.vue'
 
 const props = defineProps<{
   initialGroups?: Group[]
