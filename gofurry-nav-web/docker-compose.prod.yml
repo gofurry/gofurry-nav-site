@@ -17,6 +17,8 @@ services:
         NUXT_PUBLIC_STEAM_COVER_PREFIX_URL: ${NUXT_PUBLIC_STEAM_COVER_PREFIX_URL:-https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/}
         NAV_API_INTERNAL_BASE: ${NAV_API_INTERNAL_BASE:-http://10.6.0.11:9999/api}
         GAME_API_INTERNAL_BASE: ${GAME_API_INTERNAL_BASE:-http://10.6.0.11:9998/api}
+        RAG_API_INTERNAL_BASE: ${RAG_API_INTERNAL_BASE:-http://10.6.0.11:9997}
+
     environment:
       HOST: 0.0.0.0
       PORT: 3000
@@ -32,6 +34,7 @@ services:
       NUXT_PUBLIC_STEAM_COVER_PREFIX_URL: ${NUXT_PUBLIC_STEAM_COVER_PREFIX_URL:-https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/}
       NAV_API_INTERNAL_BASE: ${NAV_API_INTERNAL_BASE:-http://10.6.0.11:9999/api}
       GAME_API_INTERNAL_BASE: ${GAME_API_INTERNAL_BASE:-http://10.6.0.11:9998/api}
+      RAG_API_INTERNAL_BASE: ${RAG_API_INTERNAL_BASE:-http://10.6.0.11:9997}
     ports:
       - "127.0.0.1:3000:3000"
     restart: always
