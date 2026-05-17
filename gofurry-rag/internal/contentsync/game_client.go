@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -150,8 +149,7 @@ func (c *HTTPGameClient) fetchJSON(ctx context.Context, endpoint string, query m
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, readErrorBody(resp.Body))
 	}
 	var envelope apiEnvelope[json.RawMessage]
 	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {

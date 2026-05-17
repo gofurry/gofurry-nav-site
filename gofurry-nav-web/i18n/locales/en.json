@@ -504,19 +504,19 @@
       "askSubmit": "Ask",
       "prompts": {
         "recent": {
-          "title": "Recent updates",
-          "description": "See notable game updates",
-          "prompt": "Based on the indexed gofurry game news and game details, summarize recent furry game updates worth watching and include cited sources."
+          "title": "Furry game picks",
+          "description": "Find games by preference",
+          "prompt": "Based on indexed gofurry game details, recommend several furry games worth trying, explain why, include platform or tag context, and cite sources."
         },
         "similar": {
-          "title": "Find similar games",
-          "description": "Match by theme, mood, or platform",
-          "prompt": "I want to find similar furry games. Based on gofurry game data, recommend several titles and explain each game's traits, platform, and cited sources."
+          "title": "Recent updates",
+          "description": "Catch up on new changes",
+          "prompt": "Based on the indexed gofurry game news and game details, summarize recent furry game updates worth watching and include cited sources."
         },
         "beginner": {
-          "title": "Beginner picks",
-          "description": "Start with approachable games",
-          "prompt": "Based on indexed gofurry game data, recommend a few furry games suitable for beginners and explain why, with cited sources."
+          "title": "Similar works",
+          "description": "Explore by theme or mood",
+          "prompt": "I want to find similar furry games. Based on gofurry game data, recommend several titles and explain each game's traits, platform, and cited sources."
         }
       }
     },
@@ -571,19 +571,19 @@
       "askSubmit": "Ask",
       "prompts": {
         "discover": {
-          "title": "Find sites",
-          "description": "Discover communities and resources",
-          "prompt": "Based on gofurry navigation data, recommend several sites for discovering furry content, communities, or creators, and explain what each is useful for."
+          "title": "Find furry game sites",
+          "description": "Discover game resources",
+          "prompt": "Based on gofurry navigation data, recommend several sites for discovering furry games, furry game news, or related communities, and explain what each is useful for with cited sources."
         },
         "publish": {
-          "title": "Publish work",
-          "description": "Find places to share or showcase work",
-          "prompt": "I want to publish or showcase my furry-related work. Based on gofurry navigation data, recommend suitable sites, explain their differences, and include cited sources."
+          "title": "Find furry fiction sites",
+          "description": "Reading and publishing paths",
+          "prompt": "Based on gofurry navigation data, recommend several sites for reading, publishing, or discovering furry fiction, explain their differences, and include cited sources."
         },
         "alternative": {
-          "title": "Alternatives",
-          "description": "Find nearby choices when a site is unavailable",
-          "prompt": "If a furry-related site is temporarily unavailable, use gofurry navigation data to find similar or nearby alternative sites and include cited sources."
+          "title": "Find furry art communities",
+          "description": "Art spaces and creators",
+          "prompt": "Based on gofurry navigation data, recommend several sites for browsing furry art, following creators, or joining art communities, and explain their traits with cited sources."
         }
       }
     }
@@ -597,14 +597,26 @@
       "openGuide": "View guide",
       "closeGuide": "Close guide",
       "copy": "Copy",
+      "clearSearch": "Clear search",
       "copyCitationSnippet": "Copy snippet",
       "copyWithSources": "Copy answer + sources",
+      "deleteSession": "Delete chat",
+      "cancel": "Cancel",
+      "confirmDelete": "Delete",
       "stop": "Stop",
       "send": "Send"
     },
-    "searchPlaceholder": "Search history questions",
-    "untitledQuestion": "Untitled question",
-    "noMatchedQuestions": "No matching questions",
+    "searchPlaceholder": "Search chats",
+    "untitledQuestion": "Untitled chat",
+    "noMatchedQuestions": "No matching chats",
+    "session": {
+      "meta": "{count} turns · {time}"
+    },
+    "deleteSession": {
+      "eyebrow": "Delete chat",
+      "title": "Delete this chat?",
+      "description": "“{title}” will be removed from local history in this browser. This cannot be undone."
+    },
     "askPlaceholder": "Ask the gofurry knowledge base...",
     "pagination": {
       "prev": "Previous page",
@@ -643,7 +655,7 @@
       "title": "Current RAG Setup",
       "expand": "Expand RAG info",
       "collapse": "Collapse RAG info",
-      "summary": "Docs {documents} · Chunks {chunks}",
+      "summary": "Docs {documents} · Chunks {chunks} · Memory {memory} turns",
       "summaryEmpty": "Waiting for RAG status",
       "embeddingModel": "Embedding model",
       "answerModel": "Answer model",
@@ -666,7 +678,7 @@
       "title": "gofurry RAG Guide",
       "description": "This page retrieves and answers based on materials already indexed by gofurry. Answers prioritize cited snippets and are not intended as open-ended chat outside the knowledge base.",
       "usageTitle": "How to use",
-      "usageDesc": "After you enter a question, the system retrieves the knowledge base first and then streams the answer. History is stored only in this browser and keeps up to 50 records.",
+      "usageDesc": "After you enter a question, the system retrieves the knowledge base first and then streams the answer. Chats are stored only in this browser and keep up to 50 sessions, 20 turns each.",
       "boundaryTitle": "Knowledge boundary",
       "boundaryDesc": "If the knowledge base does not cover the topic, the answer may state that there is not enough material. The original snippets in sources are the main evidence for judging the answer.",
       "noticeTitle": "User notice",

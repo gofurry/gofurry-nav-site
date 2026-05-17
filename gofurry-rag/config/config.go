@@ -47,63 +47,72 @@ type Config struct {
 	Auth       AuthConfig       `mapstructure:"auth" yaml:"auth"`
 	RAG        RAGConfig        `mapstructure:"rag" yaml:"rag"`
 
-	AppName                       string  `mapstructure:"-" yaml:"-"`
-	AppEnv                        string  `mapstructure:"-" yaml:"-"`
-	AppAddr                       string  `mapstructure:"-" yaml:"-"`
-	AdminToken                    string  `mapstructure:"-" yaml:"-"`
-	ConsolePasscode               string  `mapstructure:"-" yaml:"-"`
-	JWTSecret                     string  `mapstructure:"-" yaml:"-"`
-	AuthCookieName                string  `mapstructure:"-" yaml:"-"`
-	SessionTTLHours               int     `mapstructure:"-" yaml:"-"`
-	DatabaseDSN                   string  `mapstructure:"-" yaml:"-"`
-	OllamaBaseURL                 string  `mapstructure:"-" yaml:"-"`
-	EmbedModel                    string  `mapstructure:"-" yaml:"-"`
-	EmbedDim                      int     `mapstructure:"-" yaml:"-"`
-	ChunkSize                     int     `mapstructure:"-" yaml:"-"`
-	ChunkOverlap                  int     `mapstructure:"-" yaml:"-"`
-	TopK                          int     `mapstructure:"-" yaml:"-"`
-	QueryTimeoutSeconds           int     `mapstructure:"-" yaml:"-"`
-	EmbedTimeoutSeconds           int     `mapstructure:"-" yaml:"-"`
-	IngestTimeoutSeconds          int     `mapstructure:"-" yaml:"-"`
-	MaxQueryQuestionRunes         int     `mapstructure:"-" yaml:"-"`
-	MaxQueryTopK                  int     `mapstructure:"-" yaml:"-"`
-	PublicQueryRateLimitRequests  int     `mapstructure:"-" yaml:"-"`
-	PublicQueryRateLimitWindowSec int     `mapstructure:"-" yaml:"-"`
-	PublicQueryMaxQuestionRunes   int     `mapstructure:"-" yaml:"-"`
-	PublicQueryMaxTopK            int     `mapstructure:"-" yaml:"-"`
-	OllamaMaxConcurrency          int     `mapstructure:"-" yaml:"-"`
-	OllamaQueryQueueSize          int     `mapstructure:"-" yaml:"-"`
-	OllamaIngestQueueSize         int     `mapstructure:"-" yaml:"-"`
-	OllamaQueueWaitTimeoutSeconds int     `mapstructure:"-" yaml:"-"`
-	TencentBaseURL                string  `mapstructure:"-" yaml:"-"`
-	TencentModel                  string  `mapstructure:"-" yaml:"-"`
-	TencentAPIKey                 string  `mapstructure:"-" yaml:"-"`
-	TencentTimeoutSeconds         int     `mapstructure:"-" yaml:"-"`
-	TencentTemperature            float64 `mapstructure:"-" yaml:"-"`
-	TencentTopP                   float64 `mapstructure:"-" yaml:"-"`
-	TencentMaxTokens              int     `mapstructure:"-" yaml:"-"`
-	TencentReasoningEffort        string  `mapstructure:"-" yaml:"-"`
-	IngestWorkers                 int     `mapstructure:"-" yaml:"-"`
-	EmbedBatchSize                int     `mapstructure:"-" yaml:"-"`
-	SyncEnabled                   bool    `mapstructure:"-" yaml:"-"`
-	SyncIntervalMinutes           int     `mapstructure:"-" yaml:"-"`
-	SyncTimeoutSeconds            int     `mapstructure:"-" yaml:"-"`
-	SyncNavBaseURL                string  `mapstructure:"-" yaml:"-"`
-	SyncGameBaseURL               string  `mapstructure:"-" yaml:"-"`
+	AppName                       string   `mapstructure:"-" yaml:"-"`
+	AppEnv                        string   `mapstructure:"-" yaml:"-"`
+	AppAddr                       string   `mapstructure:"-" yaml:"-"`
+	AdminToken                    string   `mapstructure:"-" yaml:"-"`
+	ConsolePasscode               string   `mapstructure:"-" yaml:"-"`
+	JWTSecret                     string   `mapstructure:"-" yaml:"-"`
+	AuthCookieName                string   `mapstructure:"-" yaml:"-"`
+	SessionTTLHours               int      `mapstructure:"-" yaml:"-"`
+	DatabaseDSN                   string   `mapstructure:"-" yaml:"-"`
+	OllamaBaseURL                 string   `mapstructure:"-" yaml:"-"`
+	EmbedModel                    string   `mapstructure:"-" yaml:"-"`
+	EmbedDim                      int      `mapstructure:"-" yaml:"-"`
+	ChunkSize                     int      `mapstructure:"-" yaml:"-"`
+	ChunkOverlap                  int      `mapstructure:"-" yaml:"-"`
+	TopK                          int      `mapstructure:"-" yaml:"-"`
+	QueryTimeoutSeconds           int      `mapstructure:"-" yaml:"-"`
+	EmbedTimeoutSeconds           int      `mapstructure:"-" yaml:"-"`
+	IngestTimeoutSeconds          int      `mapstructure:"-" yaml:"-"`
+	MaxQueryQuestionRunes         int      `mapstructure:"-" yaml:"-"`
+	MaxQueryTopK                  int      `mapstructure:"-" yaml:"-"`
+	PublicQueryRateLimitRequests  int      `mapstructure:"-" yaml:"-"`
+	PublicQueryRateLimitWindowSec int      `mapstructure:"-" yaml:"-"`
+	PublicQueryMaxQuestionRunes   int      `mapstructure:"-" yaml:"-"`
+	PublicQueryMaxTopK            int      `mapstructure:"-" yaml:"-"`
+	PublicQueryContextMaxTurns    int      `mapstructure:"-" yaml:"-"`
+	PublicQueryContextMaxRunes    int      `mapstructure:"-" yaml:"-"`
+	OllamaMaxConcurrency          int      `mapstructure:"-" yaml:"-"`
+	OllamaQueryQueueSize          int      `mapstructure:"-" yaml:"-"`
+	OllamaIngestQueueSize         int      `mapstructure:"-" yaml:"-"`
+	OllamaQueueWaitTimeoutSeconds int      `mapstructure:"-" yaml:"-"`
+	TencentBaseURL                string   `mapstructure:"-" yaml:"-"`
+	TencentModel                  string   `mapstructure:"-" yaml:"-"`
+	TencentAPIKey                 string   `mapstructure:"-" yaml:"-"`
+	TencentTimeoutSeconds         int      `mapstructure:"-" yaml:"-"`
+	TencentTemperature            float64  `mapstructure:"-" yaml:"-"`
+	TencentTopP                   float64  `mapstructure:"-" yaml:"-"`
+	TencentMaxTokens              int      `mapstructure:"-" yaml:"-"`
+	TencentReasoningEffort        string   `mapstructure:"-" yaml:"-"`
+	IngestWorkers                 int      `mapstructure:"-" yaml:"-"`
+	EmbedBatchSize                int      `mapstructure:"-" yaml:"-"`
+	SyncEnabled                   bool     `mapstructure:"-" yaml:"-"`
+	SyncIntervalMinutes           int      `mapstructure:"-" yaml:"-"`
+	SyncTimeoutSeconds            int      `mapstructure:"-" yaml:"-"`
+	SyncNavBaseURL                string   `mapstructure:"-" yaml:"-"`
+	SyncGameBaseURL               string   `mapstructure:"-" yaml:"-"`
+	SyncAllowedMarkdownHosts      []string `mapstructure:"-" yaml:"-"`
 }
 
 type ServerConfig struct {
-	AppID         string `mapstructure:"app_id" yaml:"app_id"`
-	AppName       string `mapstructure:"app_name" yaml:"app_name"`
-	AppVersion    string `mapstructure:"app_version" yaml:"app_version"`
-	Mode          string `mapstructure:"mode" yaml:"mode"`
-	IPAddress     string `mapstructure:"ip_address" yaml:"ip_address"`
-	Port          string `mapstructure:"port" yaml:"port"`
-	MemoryLimit   int    `mapstructure:"memory_limit" yaml:"memory_limit"`
-	GCPercent     int    `mapstructure:"gc_percent" yaml:"gc_percent"`
-	Network       string `mapstructure:"network" yaml:"network"`
-	EnablePrefork bool   `mapstructure:"enable_prefork" yaml:"enable_prefork"`
-	IsFullStack   bool   `mapstructure:"is_full_stack" yaml:"is_full_stack"`
+	AppID               string   `mapstructure:"app_id" yaml:"app_id"`
+	AppName             string   `mapstructure:"app_name" yaml:"app_name"`
+	AppVersion          string   `mapstructure:"app_version" yaml:"app_version"`
+	Mode                string   `mapstructure:"mode" yaml:"mode"`
+	IPAddress           string   `mapstructure:"ip_address" yaml:"ip_address"`
+	Port                string   `mapstructure:"port" yaml:"port"`
+	MemoryLimit         int      `mapstructure:"memory_limit" yaml:"memory_limit"`
+	GCPercent           int      `mapstructure:"gc_percent" yaml:"gc_percent"`
+	Network             string   `mapstructure:"network" yaml:"network"`
+	EnablePrefork       bool     `mapstructure:"enable_prefork" yaml:"enable_prefork"`
+	IsFullStack         bool     `mapstructure:"is_full_stack" yaml:"is_full_stack"`
+	TrustProxy          bool     `mapstructure:"trust_proxy" yaml:"trust_proxy"`
+	ProxyHeader         string   `mapstructure:"proxy_header" yaml:"proxy_header"`
+	TrustedProxies      []string `mapstructure:"trusted_proxies" yaml:"trusted_proxies"`
+	TrustProxyLoopback  bool     `mapstructure:"trust_proxy_loopback" yaml:"trust_proxy_loopback"`
+	TrustProxyPrivate   bool     `mapstructure:"trust_proxy_private" yaml:"trust_proxy_private"`
+	TrustProxyLinkLocal bool     `mapstructure:"trust_proxy_link_local" yaml:"trust_proxy_link_local"`
 }
 
 type DatabaseConfig struct {
@@ -227,40 +236,43 @@ type AuthConfig struct {
 }
 
 type RAGConfig struct {
-	OllamaBaseURL                 string  `mapstructure:"ollama_base_url" yaml:"ollama_base_url"`
-	EmbedModel                    string  `mapstructure:"embed_model" yaml:"embed_model"`
-	EmbedDim                      int     `mapstructure:"embed_dim" yaml:"embed_dim"`
-	ChunkSize                     int     `mapstructure:"chunk_size" yaml:"chunk_size"`
-	ChunkOverlap                  int     `mapstructure:"chunk_overlap" yaml:"chunk_overlap"`
-	TopK                          int     `mapstructure:"top_k" yaml:"top_k"`
-	QueryTimeoutSeconds           int     `mapstructure:"query_timeout_seconds" yaml:"query_timeout_seconds"`
-	EmbedTimeoutSeconds           int     `mapstructure:"embed_timeout_seconds" yaml:"embed_timeout_seconds"`
-	IngestTimeoutSeconds          int     `mapstructure:"ingest_timeout_seconds" yaml:"ingest_timeout_seconds"`
-	MaxQueryQuestionRunes         int     `mapstructure:"max_query_question_runes" yaml:"max_query_question_runes"`
-	MaxQueryTopK                  int     `mapstructure:"max_query_top_k" yaml:"max_query_top_k"`
-	PublicQueryRateLimitRequests  int     `mapstructure:"public_query_rate_limit_requests" yaml:"public_query_rate_limit_requests"`
-	PublicQueryRateLimitWindowSec int     `mapstructure:"public_query_rate_limit_window_seconds" yaml:"public_query_rate_limit_window_seconds"`
-	PublicQueryMaxQuestionRunes   int     `mapstructure:"public_query_max_question_runes" yaml:"public_query_max_question_runes"`
-	PublicQueryMaxTopK            int     `mapstructure:"public_query_max_top_k" yaml:"public_query_max_top_k"`
-	OllamaMaxConcurrency          int     `mapstructure:"ollama_max_concurrency" yaml:"ollama_max_concurrency"`
-	OllamaQueryQueueSize          int     `mapstructure:"ollama_query_queue_size" yaml:"ollama_query_queue_size"`
-	OllamaIngestQueueSize         int     `mapstructure:"ollama_ingest_queue_size" yaml:"ollama_ingest_queue_size"`
-	OllamaQueueWaitTimeoutSeconds int     `mapstructure:"ollama_queue_wait_timeout_seconds" yaml:"ollama_queue_wait_timeout_seconds"`
-	TencentBaseURL                string  `mapstructure:"tencent_base_url" yaml:"tencent_base_url"`
-	TencentModel                  string  `mapstructure:"tencent_model" yaml:"tencent_model"`
-	TencentAPIKey                 string  `mapstructure:"tencent_api_key" yaml:"tencent_api_key"`
-	TencentTimeoutSeconds         int     `mapstructure:"tencent_timeout_seconds" yaml:"tencent_timeout_seconds"`
-	TencentTemperature            float64 `mapstructure:"tencent_temperature" yaml:"tencent_temperature"`
-	TencentTopP                   float64 `mapstructure:"tencent_top_p" yaml:"tencent_top_p"`
-	TencentMaxTokens              int     `mapstructure:"tencent_max_tokens" yaml:"tencent_max_tokens"`
-	TencentReasoningEffort        string  `mapstructure:"tencent_reasoning_effort" yaml:"tencent_reasoning_effort"`
-	IngestWorkers                 int     `mapstructure:"ingest_workers" yaml:"ingest_workers"`
-	EmbedBatchSize                int     `mapstructure:"embed_batch_size" yaml:"embed_batch_size"`
-	SyncEnabled                   bool    `mapstructure:"sync_enabled" yaml:"sync_enabled"`
-	SyncIntervalMinutes           int     `mapstructure:"sync_interval_minutes" yaml:"sync_interval_minutes"`
-	SyncTimeoutSeconds            int     `mapstructure:"sync_timeout_seconds" yaml:"sync_timeout_seconds"`
-	SyncNavBaseURL                string  `mapstructure:"sync_nav_base_url" yaml:"sync_nav_base_url"`
-	SyncGameBaseURL               string  `mapstructure:"sync_game_base_url" yaml:"sync_game_base_url"`
+	OllamaBaseURL                 string   `mapstructure:"ollama_base_url" yaml:"ollama_base_url"`
+	EmbedModel                    string   `mapstructure:"embed_model" yaml:"embed_model"`
+	EmbedDim                      int      `mapstructure:"embed_dim" yaml:"embed_dim"`
+	ChunkSize                     int      `mapstructure:"chunk_size" yaml:"chunk_size"`
+	ChunkOverlap                  int      `mapstructure:"chunk_overlap" yaml:"chunk_overlap"`
+	TopK                          int      `mapstructure:"top_k" yaml:"top_k"`
+	QueryTimeoutSeconds           int      `mapstructure:"query_timeout_seconds" yaml:"query_timeout_seconds"`
+	EmbedTimeoutSeconds           int      `mapstructure:"embed_timeout_seconds" yaml:"embed_timeout_seconds"`
+	IngestTimeoutSeconds          int      `mapstructure:"ingest_timeout_seconds" yaml:"ingest_timeout_seconds"`
+	MaxQueryQuestionRunes         int      `mapstructure:"max_query_question_runes" yaml:"max_query_question_runes"`
+	MaxQueryTopK                  int      `mapstructure:"max_query_top_k" yaml:"max_query_top_k"`
+	PublicQueryRateLimitRequests  int      `mapstructure:"public_query_rate_limit_requests" yaml:"public_query_rate_limit_requests"`
+	PublicQueryRateLimitWindowSec int      `mapstructure:"public_query_rate_limit_window_seconds" yaml:"public_query_rate_limit_window_seconds"`
+	PublicQueryMaxQuestionRunes   int      `mapstructure:"public_query_max_question_runes" yaml:"public_query_max_question_runes"`
+	PublicQueryMaxTopK            int      `mapstructure:"public_query_max_top_k" yaml:"public_query_max_top_k"`
+	PublicQueryContextMaxTurns    int      `mapstructure:"public_query_context_max_turns" yaml:"public_query_context_max_turns"`
+	PublicQueryContextMaxRunes    int      `mapstructure:"public_query_context_max_runes" yaml:"public_query_context_max_runes"`
+	OllamaMaxConcurrency          int      `mapstructure:"ollama_max_concurrency" yaml:"ollama_max_concurrency"`
+	OllamaQueryQueueSize          int      `mapstructure:"ollama_query_queue_size" yaml:"ollama_query_queue_size"`
+	OllamaIngestQueueSize         int      `mapstructure:"ollama_ingest_queue_size" yaml:"ollama_ingest_queue_size"`
+	OllamaQueueWaitTimeoutSeconds int      `mapstructure:"ollama_queue_wait_timeout_seconds" yaml:"ollama_queue_wait_timeout_seconds"`
+	TencentBaseURL                string   `mapstructure:"tencent_base_url" yaml:"tencent_base_url"`
+	TencentModel                  string   `mapstructure:"tencent_model" yaml:"tencent_model"`
+	TencentAPIKey                 string   `mapstructure:"tencent_api_key" yaml:"tencent_api_key"`
+	TencentTimeoutSeconds         int      `mapstructure:"tencent_timeout_seconds" yaml:"tencent_timeout_seconds"`
+	TencentTemperature            float64  `mapstructure:"tencent_temperature" yaml:"tencent_temperature"`
+	TencentTopP                   float64  `mapstructure:"tencent_top_p" yaml:"tencent_top_p"`
+	TencentMaxTokens              int      `mapstructure:"tencent_max_tokens" yaml:"tencent_max_tokens"`
+	TencentReasoningEffort        string   `mapstructure:"tencent_reasoning_effort" yaml:"tencent_reasoning_effort"`
+	IngestWorkers                 int      `mapstructure:"ingest_workers" yaml:"ingest_workers"`
+	EmbedBatchSize                int      `mapstructure:"embed_batch_size" yaml:"embed_batch_size"`
+	SyncEnabled                   bool     `mapstructure:"sync_enabled" yaml:"sync_enabled"`
+	SyncIntervalMinutes           int      `mapstructure:"sync_interval_minutes" yaml:"sync_interval_minutes"`
+	SyncTimeoutSeconds            int      `mapstructure:"sync_timeout_seconds" yaml:"sync_timeout_seconds"`
+	SyncNavBaseURL                string   `mapstructure:"sync_nav_base_url" yaml:"sync_nav_base_url"`
+	SyncGameBaseURL               string   `mapstructure:"sync_game_base_url" yaml:"sync_game_base_url"`
+	SyncAllowedMarkdownHosts      []string `mapstructure:"sync_allowed_markdown_hosts" yaml:"sync_allowed_markdown_hosts"`
 }
 
 func ConfigureServerConfig(projectName, fileName, configFile string) {
@@ -451,6 +463,9 @@ func (cfg *Config) normalize() {
 	if cfg.Server.Network == "" {
 		cfg.Server.Network = "tcp"
 	}
+	if cfg.Server.ProxyHeader == "" {
+		cfg.Server.ProxyHeader = "X-Forwarded-For"
+	}
 	cfg.Server.IsFullStack = true
 
 	cfg.Database.normalize()
@@ -546,6 +561,11 @@ func (cfg *Config) validate() error {
 	}
 	if cfg.RAG.EmbedDim <= 0 {
 		errs = append(errs, fmt.Errorf("rag.embed_dim must be positive"))
+	} else if cfg.RAG.EmbedDim != 1024 {
+		errs = append(errs, fmt.Errorf("rag.embed_dim must be 1024 with the current rag_chunks.embedding schema"))
+	}
+	if cfg.Server.TrustProxy && len(cfg.Server.TrustedProxies) == 0 && !cfg.Server.TrustProxyLoopback && !cfg.Server.TrustProxyPrivate && !cfg.Server.TrustProxyLinkLocal {
+		errs = append(errs, fmt.Errorf("server.trusted_proxies or a trust_proxy_* range is required when server.trust_proxy is true"))
 	}
 	if cfg.RAG.SyncEnabled && strings.TrimSpace(cfg.RAG.SyncNavBaseURL) == "" {
 		errs = append(errs, fmt.Errorf("rag.sync_nav_base_url is required when rag.sync_enabled is true"))
@@ -581,6 +601,8 @@ func (cfg *Config) fillCompatibilityFields() {
 	cfg.PublicQueryRateLimitWindowSec = cfg.RAG.PublicQueryRateLimitWindowSec
 	cfg.PublicQueryMaxQuestionRunes = cfg.RAG.PublicQueryMaxQuestionRunes
 	cfg.PublicQueryMaxTopK = cfg.RAG.PublicQueryMaxTopK
+	cfg.PublicQueryContextMaxTurns = cfg.RAG.PublicQueryContextMaxTurns
+	cfg.PublicQueryContextMaxRunes = cfg.RAG.PublicQueryContextMaxRunes
 	cfg.OllamaMaxConcurrency = cfg.RAG.OllamaMaxConcurrency
 	cfg.OllamaQueryQueueSize = cfg.RAG.OllamaQueryQueueSize
 	cfg.OllamaIngestQueueSize = cfg.RAG.OllamaIngestQueueSize
@@ -600,6 +622,7 @@ func (cfg *Config) fillCompatibilityFields() {
 	cfg.SyncTimeoutSeconds = cfg.RAG.SyncTimeoutSeconds
 	cfg.SyncNavBaseURL = cfg.RAG.SyncNavBaseURL
 	cfg.SyncGameBaseURL = cfg.RAG.SyncGameBaseURL
+	cfg.SyncAllowedMarkdownHosts = append([]string(nil), cfg.RAG.SyncAllowedMarkdownHosts...)
 }
 
 func (cfg *DatabaseConfig) normalize() {
@@ -709,6 +732,12 @@ func (cfg *RAGConfig) normalize() {
 	if cfg.PublicQueryMaxTopK <= 0 {
 		cfg.PublicQueryMaxTopK = 6
 	}
+	if cfg.PublicQueryContextMaxTurns <= 0 {
+		cfg.PublicQueryContextMaxTurns = 3
+	}
+	if cfg.PublicQueryContextMaxRunes <= 0 {
+		cfg.PublicQueryContextMaxRunes = 8000
+	}
 	if cfg.OllamaMaxConcurrency <= 0 {
 		cfg.OllamaMaxConcurrency = 4
 	}
@@ -756,6 +785,30 @@ func (cfg *RAGConfig) normalize() {
 	}
 	cfg.SyncNavBaseURL = strings.TrimRight(strings.TrimSpace(cfg.SyncNavBaseURL), "/")
 	cfg.SyncGameBaseURL = strings.TrimRight(strings.TrimSpace(cfg.SyncGameBaseURL), "/")
+	cfg.SyncAllowedMarkdownHosts = cleanHostList(cfg.SyncAllowedMarkdownHosts)
+}
+
+func cleanHostList(items []string) []string {
+	result := make([]string, 0, len(items))
+	seen := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		host := strings.ToLower(strings.TrimSpace(item))
+		host = strings.TrimPrefix(host, "http://")
+		host = strings.TrimPrefix(host, "https://")
+		host = strings.TrimRight(host, "/")
+		if idx := strings.IndexByte(host, '/'); idx >= 0 {
+			host = host[:idx]
+		}
+		if host == "" {
+			continue
+		}
+		if _, ok := seen[host]; ok {
+			continue
+		}
+		seen[host] = struct{}{}
+		result = append(result, host)
+	}
+	return result
 }
 
 func normalizeSQLDefaults(target *SQLDatabaseConfig, defaults SQLDatabaseConfig) {
@@ -789,6 +842,12 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("server.network", "tcp")
 	v.SetDefault("server.enable_prefork", false)
 	v.SetDefault("server.is_full_stack", true)
+	v.SetDefault("server.trust_proxy", false)
+	v.SetDefault("server.proxy_header", "X-Forwarded-For")
+	v.SetDefault("server.trusted_proxies", []string{})
+	v.SetDefault("server.trust_proxy_loopback", false)
+	v.SetDefault("server.trust_proxy_private", false)
+	v.SetDefault("server.trust_proxy_link_local", false)
 	v.SetDefault("database.enabled", true)
 	v.SetDefault("database.auto_migrate", true)
 	v.SetDefault("database.db_type", "postgres")
@@ -848,6 +907,8 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("rag.public_query_rate_limit_window_seconds", 60)
 	v.SetDefault("rag.public_query_max_question_runes", 800)
 	v.SetDefault("rag.public_query_max_top_k", 6)
+	v.SetDefault("rag.public_query_context_max_turns", 3)
+	v.SetDefault("rag.public_query_context_max_runes", 8000)
 	v.SetDefault("rag.ollama_max_concurrency", 4)
 	v.SetDefault("rag.ollama_query_queue_size", 8)
 	v.SetDefault("rag.ollama_ingest_queue_size", 32)
@@ -867,6 +928,7 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("rag.sync_timeout_seconds", 30)
 	v.SetDefault("rag.sync_nav_base_url", "")
 	v.SetDefault("rag.sync_game_base_url", "")
+	v.SetDefault("rag.sync_allowed_markdown_hosts", []string{"raw.githubusercontent.com"})
 }
 
 func mappingChild(node *yaml.Node, key string) *yaml.Node {

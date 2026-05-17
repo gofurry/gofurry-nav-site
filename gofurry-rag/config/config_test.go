@@ -41,6 +41,12 @@ rag:
 	if !strings.Contains(cfg.DatabaseDSN, "ragtest") {
 		t.Fatalf("dsn = %q", cfg.DatabaseDSN)
 	}
+	if cfg.Server.TrustProxy {
+		t.Fatal("trust_proxy should default to false")
+	}
+	if cfg.Server.ProxyHeader != "X-Forwarded-For" {
+		t.Fatalf("proxy header = %q", cfg.Server.ProxyHeader)
+	}
 }
 
 func TestEnvOverrideUsesAppPrefix(t *testing.T) {
@@ -151,6 +157,60 @@ rag:
 		t.Fatal("expected secure cookie validation error")
 	}
 	if !strings.Contains(err.Error(), "auth.cookie_secure") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestConfigRejectsUnsupportedEmbedDim(t *testing.T) {
+	t.Cleanup(ResetForTest)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "server.yaml")
+	if err := os.WriteFile(path, []byte(`
+auth:
+  console_passcode: "secret"
+  jwt_secret: "jwt"
+database:
+  postgres:
+    db_name: "ragtest"
+rag:
+  embed_dim: 768
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	err := MustInitServerConfig("gofurry-rag", path)
+	if err == nil {
+		t.Fatal("expected embed_dim validation error")
+	}
+	if !strings.Contains(err.Error(), "rag.embed_dim") || !strings.Contains(err.Error(), "1024") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestTrustProxyRequiresTrustedSource(t *testing.T) {
+	t.Cleanup(ResetForTest)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "server.yaml")
+	if err := os.WriteFile(path, []byte(`
+server:
+  trust_proxy: true
+auth:
+  console_passcode: "secret"
+  jwt_secret: "jwt"
+database:
+  postgres:
+    db_name: "ragtest"
+rag:
+  embed_dim: 1024
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	err := MustInitServerConfig("gofurry-rag", path)
+	if err == nil {
+		t.Fatal("expected trusted proxy validation error")
+	}
+	if !strings.Contains(err.Error(), "server.trusted_proxies") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

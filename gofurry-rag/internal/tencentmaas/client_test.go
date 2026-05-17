@@ -108,6 +108,23 @@ func TestClientErrorResponse(t *testing.T) {
 	}
 }
 
+func TestClientErrorResponseIsCapped(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+		_, _ = io.WriteString(w, strings.Repeat("x", maxErrorBodyBytes+1024))
+	}))
+	defer server.Close()
+
+	client := New(server.URL+"/v1", "secret", "deepseek-v4-flash", time.Second, 0.2, 0.8, 1024, "low")
+	_, err := client.Complete(context.Background(), []Message{{Role: "user", Content: "你好"}})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if strings.Count(err.Error(), "x") > maxErrorBodyBytes {
+		t.Fatalf("error body was not capped: %d", strings.Count(err.Error(), "x"))
+	}
+}
+
 func TestClientHealthProbe(t *testing.T) {
 	var got requestPayload
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -24,10 +24,6 @@
         :aria-label="tool.label"
         @click="tool.action"
       >
-        <span
-          class="absolute inset-x-2 top-1 h-px bg-gradient-to-r from-transparent via-orange-200/80 to-transparent opacity-80"
-          aria-hidden="true"
-        />
         <img
           v-if="tool.image"
           :src="tool.image"

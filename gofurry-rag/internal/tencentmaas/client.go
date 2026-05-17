@@ -15,6 +15,8 @@ import (
 
 var ErrNotConfigured = errors.New("tencent chat client is not configured")
 
+const maxErrorBodyBytes = 64 * 1024
+
 type Client struct {
 	baseURL         string
 	apiKey          string
@@ -336,7 +338,7 @@ func completionFromResponse(resp completionResponse) CompletionResult {
 }
 
 func readErrorResponse(body io.Reader, statusCode int) error {
-	data, _ := io.ReadAll(body)
+	data, _ := io.ReadAll(io.LimitReader(body, maxErrorBodyBytes))
 	message := strings.TrimSpace(string(data))
 	if message == "" {
 		return fmt.Errorf("tencent chat returned %d", statusCode)

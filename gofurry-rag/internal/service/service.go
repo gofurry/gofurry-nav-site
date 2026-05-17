@@ -61,9 +61,25 @@ type TextDocumentRequest struct {
 
 type QueryRequest struct {
 	Question       string       `json:"question"`
+	Context        []QueryTurn  `json:"context"`
 	TopK           int          `json:"top_k"`
 	Filters        QueryFilters `json:"filters"`
 	IncludeDetails bool         `json:"include_details"`
+}
+
+type QueryTurn struct {
+	Question  string                 `json:"question"`
+	Answer    string                 `json:"answer"`
+	Citations []QueryContextCitation `json:"citations,omitempty"`
+}
+
+type QueryContextCitation struct {
+	Title      string  `json:"title,omitempty"`
+	URL        string  `json:"url,omitempty"`
+	SourceType string  `json:"source_type,omitempty"`
+	Snippet    string  `json:"snippet,omitempty"`
+	Score      float64 `json:"score,omitempty"`
+	ChunkIndex *int    `json:"chunk_index,omitempty"`
 }
 
 type UpdateChunkRequest struct {
@@ -206,6 +222,8 @@ type ChatLimits struct {
 	PublicQueryMaxTopK                int `json:"public_query_max_top_k"`
 	PublicQueryRateLimitRequests      int `json:"public_query_rate_limit_requests"`
 	PublicQueryRateLimitWindowSeconds int `json:"public_query_rate_limit_window_seconds"`
+	PublicQueryContextMaxTurns        int `json:"public_query_context_max_turns"`
+	PublicQueryContextMaxRunes        int `json:"public_query_context_max_runes"`
 }
 
 type PublicRAGInfo struct {
@@ -264,6 +282,8 @@ func (s *Service) chatLimits() ChatLimits {
 		PublicQueryMaxTopK:                s.cfg.PublicQueryMaxTopK,
 		PublicQueryRateLimitRequests:      s.cfg.PublicQueryRateLimitRequests,
 		PublicQueryRateLimitWindowSeconds: s.cfg.PublicQueryRateLimitWindowSec,
+		PublicQueryContextMaxTurns:        s.cfg.PublicQueryContextMaxTurns,
+		PublicQueryContextMaxRunes:        s.cfg.PublicQueryContextMaxRunes,
 	}
 	if limits.PublicQueryMaxQuestionRunes <= 0 {
 		limits.PublicQueryMaxQuestionRunes = 800
@@ -276,6 +296,12 @@ func (s *Service) chatLimits() ChatLimits {
 	}
 	if limits.PublicQueryRateLimitWindowSeconds <= 0 {
 		limits.PublicQueryRateLimitWindowSeconds = 60
+	}
+	if limits.PublicQueryContextMaxTurns <= 0 {
+		limits.PublicQueryContextMaxTurns = 3
+	}
+	if limits.PublicQueryContextMaxRunes <= 0 {
+		limits.PublicQueryContextMaxRunes = 8000
 	}
 	return limits
 }

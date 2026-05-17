@@ -74,7 +74,7 @@ func TestQueryReturnsAnswerAndSources(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(result.Answer, "答案：") || !strings.Contains(result.Answer, "引用：") {
+	if !strings.Contains(result.Answer, "## 答案") || !strings.Contains(result.Answer, "## 引用") {
 		t.Fatalf("result = %+v", result)
 	}
 	if !strings.Contains(result.Answer, "[1]") {
@@ -91,6 +91,9 @@ func TestQueryReturnsAnswerAndSources(t *testing.T) {
 	}
 	if len(chat.lastMessages) != 2 || !strings.Contains(chat.lastMessages[1].Content, "资料：") {
 		t.Fatalf("messages = %+v", chat.lastMessages)
+	}
+	if !strings.Contains(chat.lastMessages[0].Content, "Markdown") {
+		t.Fatalf("system prompt = %q", chat.lastMessages[0].Content)
 	}
 }
 
@@ -156,7 +159,7 @@ func TestQueryReturnsNoSourcesMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(result.Answer, "答案：") || !strings.Contains(result.Answer, "引用：") || !strings.Contains(result.Answer, "无") {
+	if !strings.Contains(result.Answer, "## 答案") || !strings.Contains(result.Answer, "## 引用") || !strings.Contains(result.Answer, "无") {
 		t.Fatalf("answer = %q", result.Answer)
 	}
 	if chat.completeCalls != 0 {
@@ -190,7 +193,7 @@ func TestBuildChatMessagesTruncatesSources(t *testing.T) {
 		},
 	}
 
-	messages, usedSources := buildChatMessages("What is gofurry?", sources, 220)
+	messages, usedSources := buildChatMessages("What is gofurry?", nil, sources, 220)
 	if len(messages) != 2 {
 		t.Fatalf("messages = %+v", messages)
 	}
@@ -199,6 +202,119 @@ func TestBuildChatMessagesTruncatesSources(t *testing.T) {
 	}
 	if len(usedSources) == len(sources) {
 		t.Fatalf("expected truncation, usedSources = %+v", usedSources)
+	}
+}
+
+func TestQueryUsesContextInRetrievalAndPrompt(t *testing.T) {
+	repo := &serviceRepo{
+		sources: []db.Source{{
+			DocumentID: 1,
+			ChunkID:    2,
+			SourceType: "game_detail",
+			Title:      "Wolf Quest",
+			ChunkIndex: 0,
+			TokenCount: 8,
+			Score:      0.93,
+			Content:    "Wolf Quest supports Windows and Linux.",
+		}},
+	}
+	embedder := &serviceEmbedder{}
+	chat := &fakeChat{configured: true, answer: "It supports Windows and Linux."}
+	svc := New(repo, embedder, chat, config.Config{TopK: 3, PublicQueryContextMaxTurns: 3, PublicQueryContextMaxRunes: 2400}, nil)
+
+	_, err := svc.Query(context.Background(), QueryRequest{
+		Question: "它支持哪些平台？",
+		Context: []QueryTurn{{
+			Question: "Wolf Quest 是什么？",
+			Answer:   "Wolf Quest 是一款兽游。",
+			Citations: []QueryContextCitation{{
+				Title:      "Wolf Quest",
+				SourceType: "game_detail",
+				Snippet:    "Wolf Quest supports Windows and Linux.",
+				Score:      0.93,
+			}},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(embedder.inputs) != 1 || embedder.inputs[0] != "它支持哪些平台？" {
+		t.Fatalf("embedding input = %#v", embedder.inputs)
+	}
+	if len(chat.lastMessages) != 2 ||
+		!strings.Contains(chat.lastMessages[1].Content, "上文参考：") ||
+		!strings.Contains(chat.lastMessages[1].Content, "Wolf Quest 是一款兽游。") ||
+		!strings.Contains(chat.lastMessages[1].Content, "Wolf Quest supports Windows and Linux.") {
+		t.Fatalf("messages = %+v", chat.lastMessages)
+	}
+	if !strings.Contains(chat.lastMessages[0].Content, "上文参考中的引用") || !strings.Contains(chat.lastMessages[0].Content, "没有引用支撑的历史回答") {
+		t.Fatalf("system prompt should constrain context usage: %s", chat.lastMessages[0].Content)
+	}
+}
+
+func TestQueryAlwaysUsesCurrentQuestionForRetrieval(t *testing.T) {
+	repo := &serviceRepo{
+		sources: []db.Source{{
+			DocumentID: 3,
+			ChunkID:    4,
+			SourceType: "nav_site",
+			Title:      "Furry Novel Archive",
+			ChunkIndex: 0,
+			TokenCount: 10,
+			Score:      0.91,
+			Content:    "Furry Novel Archive is a furry novel website.",
+		}},
+	}
+	embedder := &serviceEmbedder{}
+	chat := &fakeChat{configured: true, answer: "可以看看 Furry Novel Archive。"}
+	svc := New(repo, embedder, chat, config.Config{TopK: 3, PublicQueryContextMaxTurns: 3, PublicQueryContextMaxRunes: 2400}, nil)
+
+	_, err := svc.Query(context.Background(), QueryRequest{
+		Question: "找兽人小说网站",
+		Context: []QueryTurn{{
+			Question: "Wolf Quest 是什么？",
+			Answer:   "Wolf Quest 是一款兽游。",
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(embedder.inputs) != 1 || embedder.inputs[0] != "找兽人小说网站" {
+		t.Fatalf("embedding input = %#v", embedder.inputs)
+	}
+	if len(chat.lastMessages) != 2 {
+		t.Fatalf("messages = %+v", chat.lastMessages)
+	}
+	if !strings.Contains(chat.lastMessages[1].Content, "Wolf Quest") || !strings.Contains(chat.lastMessages[1].Content, "上文参考：") {
+		t.Fatalf("prompt should keep history as reference: %s", chat.lastMessages[1].Content)
+	}
+}
+
+func TestQueryRejectsTooManyContextTurns(t *testing.T) {
+	svc := New(&serviceRepo{}, &serviceEmbedder{}, &fakeChat{configured: true}, config.Config{TopK: 3, PublicQueryContextMaxTurns: 1, PublicQueryContextMaxRunes: 2400}, nil)
+	_, err := svc.Query(context.Background(), QueryRequest{
+		Question: "hello",
+		Context: []QueryTurn{
+			{Question: "one", Answer: "one"},
+			{Question: "two", Answer: "two"},
+		},
+	})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestQueryRejectsTooLongContext(t *testing.T) {
+	svc := New(&serviceRepo{}, &serviceEmbedder{}, &fakeChat{configured: true}, config.Config{TopK: 3, PublicQueryContextMaxTurns: 3, PublicQueryContextMaxRunes: 5}, nil)
+	_, err := svc.Query(context.Background(), QueryRequest{
+		Question: "hello",
+		Context: []QueryTurn{{
+			Question: "hello",
+			Answer:   "world",
+		}},
+	})
+	if !errors.Is(err, ErrValidation) {
+		t.Fatalf("err = %v", err)
 	}
 }
 

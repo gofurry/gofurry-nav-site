@@ -221,14 +221,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
-.nav-tool-button::before {
-  content: '';
-  position: absolute;
-  inset: 0.25rem 0.5rem auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(251, 146, 60, 0.8), transparent);
-}
-
 .nav-tool-button:hover,
 .nav-tool-button.active {
   border-color: rgba(253, 186, 116, 0.9);

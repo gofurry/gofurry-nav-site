@@ -33,20 +33,14 @@ type syncManager interface {
 }
 
 func NewServer(cfg config.Config, svc *service.Service, worker *ingest.Worker, syncManager syncManager) *Server {
-	limitRequests := cfg.PublicQueryRateLimitRequests
-	limitWindow := cfg.PublicQueryRateLimitWindowSec
-	if svc != nil {
-		limits := svc.ChatStatus().Limits
-		limitRequests = limits.PublicQueryRateLimitRequests
-		limitWindow = limits.PublicQueryRateLimitWindowSeconds
-	}
+	limits := publicChatLimitsFromConfig(cfg)
 	return &Server{
 		cfg:         cfg,
 		service:     svc,
 		authService: auth.New(cfg),
 		worker:      worker,
 		syncManager: syncManager,
-		chatLimiter: newPublicChatLimiter(limitRequests, time.Duration(limitWindow)*time.Second),
+		chatLimiter: newPublicChatLimiter(limits.PublicQueryRateLimitRequests, time.Duration(limits.PublicQueryRateLimitWindowSeconds)*time.Second),
 	}
 }
 
@@ -128,6 +122,9 @@ func (s *Server) preparePublicQuery(c fiber.Ctx, req *service.QueryRequest, admi
 		return nil
 	}
 	req.IncludeDetails = false
+	if s.chatLimiter != nil && !s.chatLimiter.Allow(c.IP()) {
+		return publicQueryError{status: fiber.StatusTooManyRequests, message: "too many public chat requests"}
+	}
 	questionRunes := utf8.RuneCountInString(strings.TrimSpace(req.Question))
 	limits := s.publicChatLimits()
 	if limit := limits.PublicQueryMaxQuestionRunes; limit > 0 && questionRunes > limit {
@@ -139,10 +136,36 @@ func (s *Server) preparePublicQuery(c fiber.Ctx, req *service.QueryRequest, admi
 	if maxTopK := limits.PublicQueryMaxTopK; maxTopK > 0 && req.TopK > maxTopK {
 		return publicQueryError{status: fiber.StatusBadRequest, message: "top_k exceeds the public maximum limit"}
 	}
-	if s.chatLimiter != nil && !s.chatLimiter.Allow(c.IP()) {
-		return publicQueryError{status: fiber.StatusTooManyRequests, message: "too many public chat requests"}
+	contextTurns, contextRunes := publicQueryContextStats(req.Context)
+	if maxTurns := limits.PublicQueryContextMaxTurns; maxTurns > 0 && contextTurns > maxTurns {
+		return publicQueryError{status: fiber.StatusBadRequest, message: "context exceeds the public maximum turns"}
+	}
+	if maxRunes := limits.PublicQueryContextMaxRunes; maxRunes > 0 && contextRunes > maxRunes {
+		return publicQueryError{status: fiber.StatusBadRequest, message: "context exceeds the public maximum length"}
 	}
 	return nil
+}
+
+func publicQueryContextStats(context []service.QueryTurn) (int, int) {
+	turns := 0
+	runes := 0
+	for _, turn := range context {
+		question := strings.TrimSpace(turn.Question)
+		answer := strings.TrimSpace(turn.Answer)
+		citationRunes := 0
+		for _, citation := range turn.Citations {
+			citationRunes += utf8.RuneCountInString(strings.TrimSpace(citation.Title))
+			citationRunes += utf8.RuneCountInString(strings.TrimSpace(citation.URL))
+			citationRunes += utf8.RuneCountInString(strings.TrimSpace(citation.SourceType))
+			citationRunes += utf8.RuneCountInString(strings.TrimSpace(citation.Snippet))
+		}
+		if question == "" && answer == "" && citationRunes == 0 {
+			continue
+		}
+		turns++
+		runes += utf8.RuneCountInString(question) + utf8.RuneCountInString(answer) + citationRunes
+	}
+	return turns, runes
 }
 
 type publicQueryError struct {
@@ -159,26 +182,35 @@ func (e publicQueryError) HTTPStatus() int {
 }
 
 func (s *Server) publicChatLimits() service.ChatLimits {
+	return publicChatLimitsFromConfig(s.cfg)
+}
+
+func publicChatLimitsFromConfig(cfg config.Config) service.ChatLimits {
 	limits := service.ChatLimits{
-		PublicQueryMaxQuestionRunes:       s.cfg.PublicQueryMaxQuestionRunes,
-		PublicQueryMaxTopK:                s.cfg.PublicQueryMaxTopK,
-		PublicQueryRateLimitRequests:      s.cfg.PublicQueryRateLimitRequests,
-		PublicQueryRateLimitWindowSeconds: s.cfg.PublicQueryRateLimitWindowSec,
+		PublicQueryMaxQuestionRunes:       cfg.PublicQueryMaxQuestionRunes,
+		PublicQueryMaxTopK:                cfg.PublicQueryMaxTopK,
+		PublicQueryRateLimitRequests:      cfg.PublicQueryRateLimitRequests,
+		PublicQueryRateLimitWindowSeconds: cfg.PublicQueryRateLimitWindowSec,
+		PublicQueryContextMaxTurns:        cfg.PublicQueryContextMaxTurns,
+		PublicQueryContextMaxRunes:        cfg.PublicQueryContextMaxRunes,
 	}
-	if s.service != nil {
-		serviceLimits := s.service.ChatStatus().Limits
-		if limits.PublicQueryMaxQuestionRunes <= 0 {
-			limits.PublicQueryMaxQuestionRunes = serviceLimits.PublicQueryMaxQuestionRunes
-		}
-		if limits.PublicQueryMaxTopK <= 0 {
-			limits.PublicQueryMaxTopK = serviceLimits.PublicQueryMaxTopK
-		}
-		if limits.PublicQueryRateLimitRequests <= 0 {
-			limits.PublicQueryRateLimitRequests = serviceLimits.PublicQueryRateLimitRequests
-		}
-		if limits.PublicQueryRateLimitWindowSeconds <= 0 {
-			limits.PublicQueryRateLimitWindowSeconds = serviceLimits.PublicQueryRateLimitWindowSeconds
-		}
+	if limits.PublicQueryMaxQuestionRunes <= 0 {
+		limits.PublicQueryMaxQuestionRunes = 800
+	}
+	if limits.PublicQueryMaxTopK <= 0 {
+		limits.PublicQueryMaxTopK = 6
+	}
+	if limits.PublicQueryRateLimitRequests <= 0 {
+		limits.PublicQueryRateLimitRequests = 10
+	}
+	if limits.PublicQueryRateLimitWindowSeconds <= 0 {
+		limits.PublicQueryRateLimitWindowSeconds = 60
+	}
+	if limits.PublicQueryContextMaxTurns <= 0 {
+		limits.PublicQueryContextMaxTurns = 3
+	}
+	if limits.PublicQueryContextMaxRunes <= 0 {
+		limits.PublicQueryContextMaxRunes = 8000
 	}
 	return limits
 }
@@ -202,6 +234,7 @@ type publicChatLimiter struct {
 	mu       sync.Mutex
 	max      int
 	window   time.Duration
+	maxKeys  int
 	requests map[string]publicChatWindow
 }
 
@@ -217,7 +250,7 @@ func newPublicChatLimiter(max int, window time.Duration) *publicChatLimiter {
 	if window <= 0 {
 		window = time.Minute
 	}
-	return &publicChatLimiter{max: max, window: window, requests: make(map[string]publicChatWindow)}
+	return &publicChatLimiter{max: max, window: window, maxKeys: 4096, requests: make(map[string]publicChatWindow)}
 }
 
 func (l *publicChatLimiter) Allow(key string) bool {
@@ -231,6 +264,14 @@ func (l *publicChatLimiter) Allow(key string) bool {
 	now := time.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	if window, ok := l.requests[key]; !ok || window.resetAt.IsZero() || !now.Before(window.resetAt) {
+		l.cleanupExpiredLocked(now)
+		if l.maxKeys > 0 && len(l.requests) >= l.maxKeys {
+			if _, exists := l.requests[key]; !exists {
+				return false
+			}
+		}
+	}
 	window := l.requests[key]
 	if window.resetAt.IsZero() || !now.Before(window.resetAt) {
 		l.requests[key] = publicChatWindow{resetAt: now.Add(l.window), count: 1}
@@ -242,6 +283,17 @@ func (l *publicChatLimiter) Allow(key string) bool {
 	window.count++
 	l.requests[key] = window
 	return true
+}
+
+func (l *publicChatLimiter) cleanupExpiredLocked(now time.Time) {
+	if l == nil {
+		return
+	}
+	for key, window := range l.requests {
+		if window.resetAt.IsZero() || !now.Before(window.resetAt) {
+			delete(l.requests, key)
+		}
+	}
 }
 
 type passwordRequest struct {

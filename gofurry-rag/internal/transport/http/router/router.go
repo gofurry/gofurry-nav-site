@@ -39,14 +39,7 @@ func (builder *Builder) Init() *fiber.App {
 		appName = common.COMMON_PROJECT_NAME
 	}
 
-	app := fiber.New(fiber.Config{
-		AppName:      appName,
-		ServerHeader: appName,
-		ErrorHandler: api.ErrorHandler,
-		TrustProxy:   true,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 90 * time.Second,
-	})
+	app := fiber.New(newFiberConfig(*cfg, appName))
 
 	registerMiddlewares(app)
 	registerHealthRoutes(app, appName)
@@ -56,6 +49,24 @@ func (builder *Builder) Init() *fiber.App {
 		attachEmbeddedUI(app)
 	}
 	return app
+}
+
+func newFiberConfig(cfg env.Config, appName string) fiber.Config {
+	return fiber.Config{
+		AppName:      appName,
+		ServerHeader: appName,
+		ErrorHandler: api.ErrorHandler,
+		TrustProxy:   cfg.Server.TrustProxy,
+		ProxyHeader:  cfg.Server.ProxyHeader,
+		TrustProxyConfig: fiber.TrustProxyConfig{
+			Proxies:   cfg.Server.TrustedProxies,
+			Loopback:  cfg.Server.TrustProxyLoopback,
+			Private:   cfg.Server.TrustProxyPrivate,
+			LinkLocal: cfg.Server.TrustProxyLinkLocal,
+		},
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 90 * time.Second,
+	}
 }
 
 func registerHealthRoutes(app *fiber.App, appName string) {

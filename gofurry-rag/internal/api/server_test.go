@@ -145,7 +145,9 @@ func TestChatStatusIsPublic(t *testing.T) {
 	if result.Data.Limits.PublicQueryMaxQuestionRunes != 800 ||
 		result.Data.Limits.PublicQueryMaxTopK != 6 ||
 		result.Data.Limits.PublicQueryRateLimitRequests != 10 ||
-		result.Data.Limits.PublicQueryRateLimitWindowSeconds != 60 {
+		result.Data.Limits.PublicQueryRateLimitWindowSeconds != 60 ||
+		result.Data.Limits.PublicQueryContextMaxTurns != 3 ||
+		result.Data.Limits.PublicQueryContextMaxRunes != 8000 {
 		t.Fatalf("limits = %+v", result.Data.Limits)
 	}
 	if result.Data.RAG.EmbeddingModel != "fake" ||
@@ -329,6 +331,41 @@ func TestQueryRejectsPublicTopKLimit(t *testing.T) {
 	}
 }
 
+func TestQueryRejectsPublicContextLimit(t *testing.T) {
+	app := testApp()
+	body := `{"question":"gofurry","top_k":1,"context":[{"question":"one","answer":"one"},{"question":"two","answer":"two"},{"question":"three","answer":"three"},{"question":"four","answer":"four"}]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestStreamAcceptsPublicContext(t *testing.T) {
+	app := testApp()
+	body := `{"question":"它支持哪些平台？","top_k":1,"context":[{"question":"Wolf Quest 是什么？","answer":"Wolf Quest 是一款兽游。"}]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/stream", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "event: done") {
+		t.Fatalf("stream = %s", string(data))
+	}
+}
+
 func TestQueryRateLimitsPublicRequests(t *testing.T) {
 	app, _, _ := testAppWithConfig(config.Config{
 		PublicQueryRateLimitRequests:  2,
@@ -355,6 +392,27 @@ func TestQueryRateLimitsPublicRequests(t *testing.T) {
 	}
 	if resp.StatusCode != http.StatusTooManyRequests {
 		t.Fatalf("status = %d", resp.StatusCode)
+	}
+}
+
+func TestNewServerDoesNotReadOverviewForPublicLimits(t *testing.T) {
+	app, repo, _ := testAppWithConfig(config.Config{
+		PublicQueryRateLimitRequests:  1,
+		PublicQueryRateLimitWindowSec: 60,
+	})
+	if repo.overviewCalls != 0 {
+		t.Fatalf("overview calls after NewServer = %d", repo.overviewCalls)
+	}
+
+	for i := 0; i < 2; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/query", bytes.NewBufferString(`{"question":"gofurry","top_k":1}`))
+		req.Header.Set("Content-Type", "application/json")
+		if _, err := app.Test(req); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if repo.overviewCalls != 0 {
+		t.Fatalf("overview calls after public queries = %d", repo.overviewCalls)
 	}
 }
 
@@ -436,6 +494,56 @@ func TestChatStreamReturnsSSE(t *testing.T) {
 	}
 	if !strings.Contains(text, `"snippet":"source"`) {
 		t.Fatalf("public stream missing snippet: %s", text)
+	}
+}
+
+func TestStreamGenerationErrorUsesSSEErrorEvent(t *testing.T) {
+	cfg := config.Config{
+		AppName:                       "test",
+		AdminToken:                    "test-token",
+		ConsolePasscode:               "test-token",
+		JWTSecret:                     "jwt-secret",
+		AuthCookieName:                "gofurry_rag_session",
+		SessionTTLHours:               1,
+		TopK:                          6,
+		PublicQueryRateLimitRequests:  10,
+		PublicQueryRateLimitWindowSec: 60,
+		PublicQueryMaxQuestionRunes:   800,
+		PublicQueryMaxTopK:            6,
+		PublicQueryContextMaxTurns:    3,
+		PublicQueryContextMaxRunes:    8000,
+		Auth: config.AuthConfig{
+			CookieName:       "gofurry_rag_session",
+			CookieMaxAgeSecs: 3600,
+			SessionTTLHours:  1,
+			SameSite:         "Lax",
+		},
+	}
+	repo := newFakeRepo()
+	svc := service.New(repo, fakeEmbedder{}, &fakeChat{
+		configured: true,
+		model:      "deepseek-v4-flash",
+		streamErr:  fakeStatusError{status: http.StatusBadGateway, message: "model unavailable"},
+	}, cfg, nil)
+	app := fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
+	NewServer(cfg, svc, nil, nil).RegisterRoutes(app.Group("/api/v1"))
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/chat/stream", bytes.NewBufferString(`{"question":"gofurry","top_k":1}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("stream status after writer start = %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(body)
+	if !strings.Contains(text, "event: error") || !strings.Contains(text, `"status":502`) || !strings.Contains(text, "model unavailable") {
+		t.Fatalf("stream error event = %s", text)
 	}
 }
 
@@ -747,6 +855,8 @@ func testAppWithConfig(overrides config.Config) (*fiber.App, *fakeRepo, *fakeSyn
 		PublicQueryRateLimitWindowSec: 60,
 		PublicQueryMaxQuestionRunes:   800,
 		PublicQueryMaxTopK:            6,
+		PublicQueryContextMaxTurns:    3,
+		PublicQueryContextMaxRunes:    8000,
 		Auth: config.AuthConfig{
 			CookieName:       "gofurry_rag_session",
 			CookieMaxAgeSecs: 3600,
@@ -765,6 +875,12 @@ func testAppWithConfig(overrides config.Config) (*fiber.App, *fakeRepo, *fakeSyn
 	}
 	if overrides.PublicQueryMaxTopK != 0 {
 		cfg.PublicQueryMaxTopK = overrides.PublicQueryMaxTopK
+	}
+	if overrides.PublicQueryContextMaxTurns != 0 {
+		cfg.PublicQueryContextMaxTurns = overrides.PublicQueryContextMaxTurns
+	}
+	if overrides.PublicQueryContextMaxRunes != 0 {
+		cfg.PublicQueryContextMaxRunes = overrides.PublicQueryContextMaxRunes
 	}
 	repo := newFakeRepo()
 	syncer := &fakeSyncManager{}
@@ -800,6 +916,7 @@ type fakeRepo struct {
 	lastSearchFilter db.BatchDocumentFilter
 	lastBatchFilter  db.BatchDocumentFilter
 	lastBatchMode    string
+	overviewCalls    int
 }
 
 type fakeSyncManager struct {
@@ -924,6 +1041,9 @@ func (r *fakeRepo) DeleteDocument(ctx context.Context, id int64) error {
 }
 
 func (r *fakeRepo) Overview(ctx context.Context) (db.Overview, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.overviewCalls++
 	return db.Overview{DocumentTotal: int64(len(r.docs)), ChunkTotal: 2, EmbeddedChunkTotal: 2}, nil
 }
 
@@ -952,6 +1072,8 @@ type fakeChat struct {
 	configured    bool
 	model         string
 	answer        string
+	completeErr   error
+	streamErr     error
 	completeCalls int
 	streamCalls   int
 }
@@ -973,6 +1095,9 @@ func (f *fakeChat) Health(ctx context.Context) error {
 
 func (f *fakeChat) Complete(ctx context.Context, _ []tencentmaas.Message) (tencentmaas.CompletionResult, error) {
 	f.completeCalls++
+	if f.completeErr != nil {
+		return tencentmaas.CompletionResult{}, f.completeErr
+	}
 	return tencentmaas.CompletionResult{
 		Model:            f.Model(),
 		Answer:           f.answer,
@@ -986,6 +1111,9 @@ func (f *fakeChat) Complete(ctx context.Context, _ []tencentmaas.Message) (tence
 
 func (f *fakeChat) Stream(ctx context.Context, _ []tencentmaas.Message, onDelta func(string) error) (tencentmaas.CompletionResult, error) {
 	f.streamCalls++
+	if f.streamErr != nil {
+		return tencentmaas.CompletionResult{}, f.streamErr
+	}
 	for _, piece := range []string{"gofurry", " is", " a site."} {
 		if onDelta != nil {
 			if err := onDelta(piece); err != nil {

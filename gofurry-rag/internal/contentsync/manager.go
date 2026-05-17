@@ -92,7 +92,7 @@ func (e syncError) HTTPStatus() int { return e.status }
 
 func NewManager(cfg config.Config, repo Repository, navClient NavClient, gameClient GameClient) *Manager {
 	if navClient == nil {
-		navClient = NewHTTPNavClient(cfg.SyncNavBaseURL, time.Duration(cfg.SyncTimeoutSeconds)*time.Second)
+		navClient = NewHTTPNavClient(cfg.SyncNavBaseURL, time.Duration(cfg.SyncTimeoutSeconds)*time.Second, cfg.SyncAllowedMarkdownHosts)
 	}
 	if gameClient == nil {
 		gameClient = NewHTTPGameClient(cfg.SyncGameBaseURL, time.Duration(cfg.SyncTimeoutSeconds)*time.Second)

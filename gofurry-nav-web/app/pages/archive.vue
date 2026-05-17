@@ -19,23 +19,46 @@
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="m21 21-4.4-4.4M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
         </svg>
-        <input v-model.trim="searchText" type="search" :placeholder="t('archive.searchPlaceholder')" />
+        <input v-model.trim="searchText" type="text" :placeholder="t('archive.searchPlaceholder')" />
+        <button
+          v-if="searchText"
+          class="search-clear-button"
+          type="button"
+          :title="t('archive.actions.clearSearch')"
+          :aria-label="t('archive.actions.clearSearch')"
+          @click="searchText = ''"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 7l10 10M17 7 7 17" />
+          </svg>
+        </button>
       </div>
 
       <div class="history-list">
-        <button
-          v-for="(item, index) in pagedRecords"
+        <div
+          v-for="(item, index) in pagedSessions"
           :key="item.id"
-          class="history-item"
-          :class="{ active: item.id === activeId }"
-          type="button"
-          @click="openRecord(item.id)"
+          class="history-row"
+          :class="{ active: item.id === activeSessionId }"
         >
-          <span class="history-index">{{ historyNumber(index) }}</span>
-          <span class="history-title">{{ item.question || t('archive.untitledQuestion') }}</span>
-          <span class="history-meta">{{ formatTime(item.createdAt) }}</span>
-        </button>
-        <div v-if="pagedRecords.length === 0" class="history-empty">
+          <button class="history-item" type="button" @click="openSession(item.id)">
+            <span class="history-index">{{ historyNumber(index) }}</span>
+            <span class="history-title">{{ sessionTitle(item) }}</span>
+            <span class="history-meta">{{ sessionMeta(item) }}</span>
+          </button>
+          <button
+            class="history-delete-button"
+            type="button"
+            :title="t('archive.actions.deleteSession')"
+            :aria-label="t('archive.actions.deleteSession')"
+            @click="requestDeleteSession(item.id)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 7h8M10 7V5h4v2M9 10v7M15 10v7M6 7l1 13h10l1-13" />
+            </svg>
+          </button>
+        </div>
+        <div v-if="pagedSessions.length === 0" class="history-empty">
           {{ t('archive.noMatchedQuestions') }}
         </div>
       </div>
@@ -112,66 +135,83 @@
         </div>
         <section class="answer-panel">
           <Transition name="conversation-fade" mode="out-in">
-            <div v-if="!activeRecord" key="empty" class="empty-conversation">
+            <div v-if="!activeSession" key="empty" class="empty-conversation">
               <p class="eyebrow">{{ t('archive.empty.eyebrow') }}</p>
               <h1>{{ t('archive.empty.title') }}</h1>
               <p>{{ t('archive.empty.description') }}</p>
             </div>
 
-            <div v-else :key="activeRecord.id" class="conversation">
-              <div class="response-column">
-                <div class="question-block">
-                  <div class="block-title">
-                    <span>{{ t('archive.sections.question') }}</span>
-                    <button class="copy-button" type="button" @click="copyText(activeRecord.question)">{{ t('archive.actions.copy') }}</button>
+            <div v-else :key="activeSession.id" class="conversation-list">
+              <article v-for="message in activeSession.messages" :key="message.id" class="conversation">
+                <div class="response-column">
+                  <div class="question-block">
+                    <div class="block-title">
+                      <span>{{ t('archive.sections.question') }}</span>
+                      <button class="copy-button" type="button" @click="copyText(message.question)">{{ t('archive.actions.copy') }}</button>
+                    </div>
+                    <h1>{{ message.question }}</h1>
                   </div>
-                  <h1>{{ activeRecord.question }}</h1>
+
+                  <div class="answer-block" :class="{ streaming: message.status === 'streaming' }">
+                    <div class="answer-heading">
+                      <span>{{ t('archive.sections.answer') }}</span>
+                      <div class="block-actions">
+                        <span v-if="message.status === 'streaming'" class="typing-state">{{ t('archive.status.streaming') }}</span>
+                        <span v-else-if="message.status === 'error'" class="error-state">{{ t('archive.status.requestFailed') }}</span>
+                        <button class="copy-button" type="button" :disabled="!message.answer || !message.citations.length" @click="copyAnswerWithCitations(message)">{{ t('archive.actions.copyWithSources') }}</button>
+                        <button class="copy-button" type="button" :disabled="!message.answer" @click="copyText(message.answer)">{{ t('archive.actions.copy') }}</button>
+                      </div>
+                    </div>
+                    <MdPreview
+                      v-if="message.answer"
+                      class="answer-text answer-markdown"
+                      :editor-id="`archive-answer-${message.id}`"
+                      :model-value="message.answer"
+                      preview-theme="vuepress"
+                      code-theme="github"
+                    />
+                    <div v-else class="answer-placeholder">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                    <p v-if="message.error" class="error-message">{{ message.error }}</p>
+                  </div>
                 </div>
 
-                <div class="answer-block" :class="{ streaming: activeRecord.status === 'streaming' }">
-                  <div class="answer-heading">
-                    <span>{{ t('archive.sections.answer') }}</span>
-                    <div class="block-actions">
-                      <span v-if="activeRecord.status === 'streaming'" class="typing-state">{{ t('archive.status.streaming') }}</span>
-                      <span v-else-if="activeRecord.status === 'error'" class="error-state">{{ t('archive.status.requestFailed') }}</span>
-                      <button class="copy-button" type="button" :disabled="!activeRecord.answer || !activeRecord.citations.length" @click="copyAnswerWithCitations(activeRecord)">{{ t('archive.actions.copyWithSources') }}</button>
-                      <button class="copy-button" type="button" :disabled="!activeRecord.answer" @click="copyText(activeRecord.answer)">{{ t('archive.actions.copy') }}</button>
+                <div v-if="message.citations.length" class="citations-block">
+                  <div class="citations-title">
+                    <span>{{ t('archive.sections.citations') }}</span>
+                    <span>{{ t('archive.citations.count', { count: message.citations.length }) }}</span>
+                  </div>
+                  <details v-for="(citation, index) in message.citations" :key="citationKey(citation, index)" class="citation-item">
+                    <summary>
+                      <span class="citation-rank">[{{ index + 1 }}]</span>
+                      <span class="citation-head">
+                        <span class="citation-name">{{ citation.title || t('archive.citations.untitled', { index: index + 1 }) }}</span>
+                      </span>
+                      <span class="citation-score">{{ scoreText(citation.score) }}</span>
+                    </summary>
+                    <div class="citation-content">
+                      <div class="citation-meta">
+                        <span v-if="citation.source_type" class="citation-type">{{ citation.source_type }}</span>
+                        <span v-if="typeof citation.chunk_index === 'number'">{{ t('archive.citations.chunk', { index: citation.chunk_index }) }}</span>
+                      </div>
+                      <button class="copy-button citation-copy-button" type="button" :disabled="!citationText(citation)" @click="copyText(citationText(citation))">{{ t('archive.actions.copyCitationSnippet') }}</button>
+                      <MdPreview
+                        v-if="citationText(citation)"
+                        class="citation-markdown"
+                        :editor-id="`archive-citation-${message.id}-${index}`"
+                        :model-value="citationText(citation)"
+                        preview-theme="vuepress"
+                        code-theme="github"
+                      />
+                      <p v-else class="citation-empty">{{ t('archive.citations.noContent') }}</p>
+                      <a v-if="citation.url" :href="citation.url" target="_blank" rel="noopener noreferrer">{{ t('archive.citations.open') }}</a>
                     </div>
-                  </div>
-                  <p v-if="activeRecord.answer" class="answer-text">{{ activeRecord.answer }}</p>
-                  <div v-else class="answer-placeholder">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                  <p v-if="activeRecord.error" class="error-message">{{ activeRecord.error }}</p>
+                  </details>
                 </div>
-              </div>
-
-              <div v-if="activeRecord.citations.length" class="citations-block">
-                <div class="citations-title">
-                  <span>{{ t('archive.sections.citations') }}</span>
-                  <span>{{ t('archive.citations.count', { count: activeRecord.citations.length }) }}</span>
-                </div>
-                <details v-for="(citation, index) in activeRecord.citations" :key="citationKey(citation, index)" class="citation-item">
-                  <summary>
-                    <span class="citation-rank">[{{ index + 1 }}]</span>
-                    <span class="citation-head">
-                      <span class="citation-name">{{ citation.title || t('archive.citations.untitled', { index: index + 1 }) }}</span>
-                    </span>
-                    <span class="citation-score">{{ scoreText(citation.score) }}</span>
-                  </summary>
-                  <div class="citation-content">
-                    <div class="citation-meta">
-                      <span v-if="citation.source_type" class="citation-type">{{ citation.source_type }}</span>
-                      <span v-if="typeof citation.chunk_index === 'number'">{{ t('archive.citations.chunk', { index: citation.chunk_index }) }}</span>
-                    </div>
-                    <button class="copy-button citation-copy-button" type="button" :disabled="!citationText(citation)" @click="copyText(citationText(citation))">{{ t('archive.actions.copyCitationSnippet') }}</button>
-                    <p>{{ citationText(citation) || t('archive.citations.noContent') }}</p>
-                    <a v-if="citation.url" :href="citation.url" target="_blank" rel="noopener noreferrer">{{ t('archive.citations.open') }}</a>
-                  </div>
-                </details>
-              </div>
+              </article>
             </div>
           </Transition>
         </section>
@@ -238,6 +278,31 @@
           </article>
         </div>
       </transition>
+
+      <transition name="modal">
+        <div v-if="deleteSessionTarget" class="guide-modal-backdrop" @click.self="closeDeleteSessionDialog">
+          <article class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-session-title">
+            <div class="delete-dialog-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8 7h8M10 7V5h4v2M9 10v7M15 10v7M6 7l1 13h10l1-13" />
+              </svg>
+            </div>
+            <div class="delete-dialog-copy">
+              <p class="eyebrow">{{ t('archive.deleteSession.eyebrow') }}</p>
+              <h2 id="delete-session-title">{{ t('archive.deleteSession.title') }}</h2>
+              <p>{{ t('archive.deleteSession.description', { title: sessionTitle(deleteSessionTarget) }) }}</p>
+            </div>
+            <div class="delete-dialog-actions">
+              <button type="button" class="delete-dialog-cancel" @click="closeDeleteSessionDialog">
+                {{ t('archive.actions.cancel') }}
+              </button>
+              <button type="button" class="delete-dialog-confirm" @click="confirmDeleteSession">
+                {{ t('archive.actions.confirmDelete') }}
+              </button>
+            </div>
+          </article>
+        </div>
+      </transition>
     </main>
   </div>
 </template>
@@ -245,6 +310,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { MdPreview } from 'md-editor-v3'
+import 'md-editor-v3/lib/preview.css'
 import { useLangStore } from '@/store/langStore'
 
 definePageMeta({
@@ -282,6 +349,8 @@ type ChatLimits = {
   public_query_max_top_k: number
   public_query_rate_limit_requests: number
   public_query_rate_limit_window_seconds: number
+  public_query_context_max_turns: number
+  public_query_context_max_runes: number
 }
 
 type RagInfo = {
@@ -291,7 +360,7 @@ type RagInfo = {
   chunk_total?: number
 }
 
-type ChatRecord = {
+type ChatMessage = {
   id: string
   question: string
   answer: string
@@ -302,19 +371,35 @@ type ChatRecord = {
   error?: string
 }
 
-type StoredChatRecord = Partial<ChatRecord> & {
+type ChatSession = {
+  id: string
+  title: string
+  messages: ChatMessage[]
+  createdAt: number
+  updatedAt: number
+}
+
+type StoredChatSession = Partial<ChatSession> & {
+  messages?: Partial<ChatMessage>[]
+}
+
+type StoredChatRecord = Partial<ChatMessage> & {
   sources?: LegacyArchiveSource[]
 }
 
-const storageKey = 'gofurry.archive.chat.records.v1'
-const maxRecords = 50
+const storageKey = 'gofurry.archive.chat.sessions.v1'
+const legacyStorageKey = 'gofurry.archive.chat.records.v1'
+const maxSessions = 50
+const maxTurnsPerSession = 20
+const defaultContextTurns = 3
 const pageSize = 10
 const { t } = useI18n()
 const langStore = useLangStore()
 const route = useRoute()
 
-const records = ref<ChatRecord[]>([])
-const activeId = ref<string | null>(null)
+const sessions = ref<ChatSession[]>([])
+const activeSessionId = ref<string | null>(null)
+const deleteSessionId = ref<string | null>(null)
 const draftQuestion = ref('')
 const searchText = ref('')
 const page = ref(1)
@@ -332,27 +417,34 @@ let queueTimer: number | null = null
 let workspaceMetricsFrame: number | null = null
 let lastAppliedRoutePrompt = ''
 
-const filteredRecords = computed(() => {
+const filteredSessions = computed(() => {
   const keyword = searchText.value.trim().toLowerCase()
   if (!keyword) {
-    return records.value
+    return sessions.value
   }
-  return records.value.filter(item => item.question.toLowerCase().includes(keyword) || item.answer.toLowerCase().includes(keyword))
+  return sessions.value.filter(session => {
+    const title = sessionTitle(session).toLowerCase()
+    return title.includes(keyword) || session.messages.some(message =>
+      message.question.toLowerCase().includes(keyword) || message.answer.toLowerCase().includes(keyword)
+    )
+  })
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredRecords.value.length / pageSize)))
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredSessions.value.length / pageSize)))
 
-const pagedRecords = computed(() => {
+const pagedSessions = computed(() => {
   const start = (page.value - 1) * pageSize
-  return filteredRecords.value.slice(start, start + pageSize)
+  return filteredSessions.value.slice(start, start + pageSize)
 })
 
-const activeRecord = computed(() => records.value.find(item => item.id === activeId.value) || null)
-const isStreaming = computed(() => Boolean(activeRecord.value?.status === 'streaming'))
+const activeSession = computed(() => sessions.value.find(item => item.id === activeSessionId.value) || null)
+const deleteSessionTarget = computed(() => sessions.value.find(item => item.id === deleteSessionId.value) || null)
+const isStreaming = computed(() => Boolean(activeSession.value?.messages.some(message => message.status === 'streaming')))
 const scrollProgressLabel = computed(() => Math.round(scrollProgress.value))
+const contextTurnsLimit = computed(() => chatLimits.value?.public_query_context_max_turns ?? defaultContextTurns)
 
 const titleText = computed(() => {
-  return activeRecord.value?.question || t('archive.actions.newChat')
+  return activeSession.value ? sessionTitle(activeSession.value) : t('archive.actions.newChat')
 })
 
 const queueText = computed(() => {
@@ -371,7 +463,8 @@ const ragSummaryText = computed(() => {
   }
   return t('archive.rag.summary', {
     documents: ragMetricText(ragInfo.value.document_total),
-    chunks: ragMetricText(ragInfo.value.chunk_total)
+    chunks: ragMetricText(ragInfo.value.chunk_total),
+    memory: ragMetricText(contextTurnsLimit.value)
   })
 })
 
@@ -379,7 +472,7 @@ watch(searchText, () => {
   page.value = 1
 })
 
-watch(records, persistRecords, { deep: true })
+watch(sessions, persistSessions, { deep: true })
 
 watch(
   () => route.query.q,
@@ -389,7 +482,7 @@ watch(
 )
 
 onMounted(() => {
-  loadRecords()
+  loadSessions()
   applyRoutePrompt()
   refreshQueue()
   window.addEventListener('keydown', handleGuideKeydown)
@@ -410,39 +503,55 @@ onUnmounted(() => {
   }
 })
 
-function loadRecords() {
+function loadSessions() {
   try {
     const raw = window.localStorage.getItem(storageKey)
     const parsed = raw ? JSON.parse(raw) : []
-    records.value = Array.isArray(parsed)
-      ? parsed.slice(0, maxRecords).map(normalizeStoredRecord)
+    sessions.value = Array.isArray(parsed)
+      ? parsed.slice(0, maxSessions).map(normalizeStoredSession).filter(session => session.messages.length > 0)
       : []
+    window.localStorage.removeItem(legacyStorageKey)
   } catch {
-    records.value = []
+    sessions.value = []
   }
-  activeId.value = null
+  activeSessionId.value = null
   scheduleWorkspaceMetrics()
 }
 
-function normalizeStoredRecord(record: StoredChatRecord): ChatRecord {
+function normalizeStoredSession(session: StoredChatSession): ChatSession {
+  const createdAt = typeof session?.createdAt === 'number' ? session.createdAt : Date.now()
+  const messages = Array.isArray(session?.messages)
+    ? session.messages.slice(0, maxTurnsPerSession).map(normalizeStoredMessage).filter(message => message.question || message.answer)
+    : []
+  const lastMessage = messages.length ? messages[messages.length - 1] : null
+  const updatedAt = typeof session?.updatedAt === 'number'
+    ? session.updatedAt
+    : lastMessage?.updatedAt ?? createdAt
+  return {
+    id: typeof session?.id === 'string' && session.id ? session.id : crypto.randomUUID(),
+    title: typeof session?.title === 'string' ? session.title : '',
+    messages,
+    createdAt,
+    updatedAt
+  }
+}
+
+function normalizeStoredMessage(record: StoredChatRecord): ChatMessage {
   const createdAt = typeof record?.createdAt === 'number' ? record.createdAt : Date.now()
-  const citations = normalizeArchiveCitations(record?.citations ?? record.sources)
-  const normalized: ChatRecord = {
+  const status = record?.status === 'streaming'
+    ? record.answer ? 'done' : 'idle'
+    : record?.status === 'done' || record?.status === 'error'
+      ? record.status
+      : 'idle'
+  return {
     id: typeof record?.id === 'string' && record.id ? record.id : crypto.randomUUID(),
     question: typeof record?.question === 'string' ? record.question : '',
     answer: typeof record?.answer === 'string' ? record.answer : '',
-    citations,
+    citations: normalizeArchiveCitations(record?.citations ?? record.sources),
     createdAt,
     updatedAt: typeof record?.updatedAt === 'number' ? record.updatedAt : createdAt,
-    status: record?.status === 'streaming' || record?.status === 'done' || record?.status === 'error' ? record.status : 'idle',
+    status,
     error: typeof record?.error === 'string' ? record.error : undefined
-  }
-  if (normalized.status !== 'streaming') {
-    return normalized
-  }
-  return {
-    ...normalized,
-    status: normalized.answer ? 'done' : 'idle'
   }
 }
 
@@ -468,17 +577,20 @@ function normalizeArchiveCitations(input: unknown): ArchiveCitation[] {
   })
 }
 
-function persistRecords() {
+function persistSessions() {
   if (!import.meta.client) {
     return
   }
-  const snapshot = records.value.slice(0, maxRecords)
+  const snapshot = sessions.value.slice(0, maxSessions).map(session => ({
+    ...session,
+    messages: session.messages.slice(-maxTurnsPerSession)
+  }))
   window.localStorage.setItem(storageKey, JSON.stringify(snapshot))
 }
 
 function startNewChat() {
   stopStream()
-  activeId.value = null
+  activeSessionId.value = null
   draftQuestion.value = ''
   showGuide.value = false
   scrollWorkspaceToTop('smooth')
@@ -504,7 +616,7 @@ function applyRoutePrompt() {
     return
   }
   lastAppliedRoutePrompt = prompt
-  activeId.value = null
+  activeSessionId.value = null
   draftQuestion.value = prompt
   showGuide.value = false
   nextTick(() => {
@@ -512,9 +624,9 @@ function applyRoutePrompt() {
   })
 }
 
-function openRecord(id: string) {
+function openSession(id: string) {
   stopStream()
-  activeId.value = id
+  activeSessionId.value = id
   draftQuestion.value = ''
   showGuide.value = false
   nextTick(() => {
@@ -522,14 +634,39 @@ function openRecord(id: string) {
   })
 }
 
+function requestDeleteSession(id: string) {
+  deleteSessionId.value = id
+}
+
+function closeDeleteSessionDialog() {
+  deleteSessionId.value = null
+}
+
+function confirmDeleteSession() {
+  const id = deleteSessionId.value
+  if (!id) {
+    return
+  }
+  if (id === activeSessionId.value) {
+    stopStream()
+    activeSessionId.value = null
+    draftQuestion.value = ''
+  }
+  sessions.value = sessions.value.filter(session => session.id !== id)
+  deleteSessionId.value = null
+  page.value = Math.min(page.value, Math.max(1, Math.ceil(filteredSessions.value.length / pageSize)))
+  scheduleWorkspaceMetrics()
+}
+
 async function submitQuestion() {
   const question = draftQuestion.value.trim()
   if (!question || isStreaming.value) {
     return
   }
+  const session = ensureActiveSession(question)
   const maxRunes = chatLimits.value?.public_query_max_question_runes ?? 0
   if (maxRunes > 0 && runeLength(question) > maxRunes) {
-    const record: ChatRecord = {
+    const message: ChatMessage = {
       id: crypto.randomUUID(),
       question,
       answer: '',
@@ -539,12 +676,11 @@ async function submitQuestion() {
       status: 'error',
       error: t('archive.errors.questionTooLong', { limit: maxRunes })
     }
-    records.value = [record, ...records.value.filter(item => item.id !== record.id)].slice(0, maxRecords)
-    activeId.value = record.id
+    appendMessage(session, message)
     return
   }
 
-  const record: ChatRecord = {
+  const message: ChatMessage = {
     id: crypto.randomUUID(),
     question,
     answer: '',
@@ -554,16 +690,16 @@ async function submitQuestion() {
     status: 'streaming'
   }
 
-  records.value = [record, ...records.value.filter(item => item.id !== record.id)].slice(0, maxRecords)
-  activeId.value = record.id
+  appendMessage(session, message)
   draftQuestion.value = ''
   showGuide.value = false
-  await streamAnswer(record)
+  await streamAnswer(session.id, message)
 }
 
-async function streamAnswer(record: ChatRecord) {
+async function streamAnswer(sessionId: string, message: ChatMessage) {
   const controller = new AbortController()
   streamController.value = controller
+  const context = buildRequestContext(sessionId, message.id)
   await refreshQueue()
 
   try {
@@ -571,7 +707,8 @@ async function streamAnswer(record: ChatRecord) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        question: record.question,
+        question: message.question,
+        context,
         top_k: 6,
         include_details: false
       }),
@@ -584,41 +721,41 @@ async function streamAnswer(record: ChatRecord) {
 
     await readSseStream(response.body, {
       onCitations: (citations) => {
-        record.citations = citations
-        touchRecord(record)
+        message.citations = citations
+        touchMessage(sessionId, message)
       },
       onDelta: (text) => {
-        record.answer += text
-        touchRecord(record)
+        message.answer += text
+        touchMessage(sessionId, message)
       },
       onDone: (payload) => {
         if (typeof payload?.answer === 'string') {
-          record.answer = payload.answer
+          message.answer = payload.answer
         }
-        record.citations = normalizeArchiveCitations(payload?.citations ?? payload?.sources)
-        record.status = 'done'
-        touchRecord(record)
+        message.citations = normalizeArchiveCitations(payload?.citations ?? payload?.sources)
+        message.status = 'done'
+        touchMessage(sessionId, message)
       },
-      onError: (message) => {
-        record.status = 'error'
-        record.error = message
-        touchRecord(record)
+      onError: (errorMessage) => {
+        message.status = 'error'
+        message.error = errorMessage
+        touchMessage(sessionId, message)
       }
     })
 
-    if (record.status === 'streaming') {
-      record.status = 'done'
-      touchRecord(record)
+    if (message.status === 'streaming') {
+      message.status = 'done'
+      touchMessage(sessionId, message)
     }
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      record.status = record.answer ? 'done' : 'idle'
-      touchRecord(record)
+      message.status = message.answer ? 'done' : 'idle'
+      touchMessage(sessionId, message)
       return
     }
-    record.status = 'error'
-    record.error = userFacingError(error?.message || t('archive.errors.serviceUnavailable'))
-    touchRecord(record)
+    message.status = 'error'
+    message.error = userFacingError(error?.message || t('archive.errors.serviceUnavailable'))
+    touchMessage(sessionId, message)
   } finally {
     if (streamController.value === controller) {
       streamController.value = null
@@ -632,10 +769,167 @@ function stopStream() {
   streamController.value = null
 }
 
-function touchRecord(record: ChatRecord) {
-  record.updatedAt = Date.now()
-  records.value = records.value.map(item => item.id === record.id ? { ...record, citations: [...record.citations] } : item)
+function ensureActiveSession(question: string) {
+  const active = activeSession.value
+  if (active) {
+    return active
+  }
+  const now = Date.now()
+  const session: ChatSession = {
+    id: crypto.randomUUID(),
+    title: question,
+    messages: [],
+    createdAt: now,
+    updatedAt: now
+  }
+  sessions.value = [session, ...sessions.value].slice(0, maxSessions)
+  activeSessionId.value = session.id
+  return session
+}
+
+function appendMessage(session: ChatSession, message: ChatMessage) {
+  const nextSession = {
+    ...session,
+    title: session.title || message.question,
+    messages: [...session.messages, message].slice(-maxTurnsPerSession),
+    updatedAt: Date.now()
+  }
+  sessions.value = [nextSession, ...sessions.value.filter(item => item.id !== session.id)].slice(0, maxSessions)
+  activeSessionId.value = nextSession.id
   scheduleWorkspaceMetrics()
+}
+
+function touchMessage(sessionId: string, message: ChatMessage) {
+  message.updatedAt = Date.now()
+  sessions.value = sessions.value.map((session) => {
+    if (session.id !== sessionId) {
+      return session
+    }
+    return {
+      ...session,
+      messages: session.messages.map(item => item.id === message.id ? { ...message, citations: [...message.citations] } : item),
+      updatedAt: message.updatedAt
+    }
+  }).sort((left, right) => right.updatedAt - left.updatedAt).slice(0, maxSessions)
+  scheduleWorkspaceMetrics()
+}
+
+function sessionTitle(session: ChatSession) {
+  return session.title || session.messages[0]?.question || t('archive.untitledQuestion')
+}
+
+function sessionMeta(session: ChatSession) {
+  return t('archive.session.meta', {
+    count: session.messages.length,
+    time: formatTime(session.updatedAt)
+  })
+}
+
+type QueryContextTurn = {
+  question: string
+  answer: string
+  citations: QueryContextCitation[]
+}
+
+type QueryContextCitation = {
+  title?: string
+  url?: string
+  source_type?: string
+  snippet?: string
+  score?: number
+  chunk_index?: number
+}
+
+function buildRequestContext(sessionId: string, currentMessageId: string): QueryContextTurn[] {
+  const maxTurns = Math.max(0, contextTurnsLimit.value)
+  const maxRunes = chatLimits.value?.public_query_context_max_runes ?? 8000
+  if (maxTurns <= 0 || maxRunes <= 0) {
+    return []
+  }
+
+  const session = sessions.value.find(item => item.id === sessionId)
+  const turns = (session?.messages ?? [])
+    .filter(item => item.id !== currentMessageId && item.status === 'done' && item.question.trim() && item.answer.trim())
+    .slice(-maxTurns)
+    .map(item => ({
+      question: item.question.trim(),
+      answer: item.answer.trim(),
+      citations: item.citations.map(citation => ({
+        title: citation.title,
+        url: citation.url,
+        source_type: citation.source_type,
+        snippet: citation.snippet,
+        score: citation.score,
+        chunk_index: citation.chunk_index
+      }))
+    }))
+
+  return trimContextTurns(turns, maxRunes)
+}
+
+function trimContextTurns(turns: QueryContextTurn[], maxRunes: number): QueryContextTurn[] {
+  let remaining = maxRunes
+  const result: QueryContextTurn[] = []
+
+  for (const turn of [...turns].reverse()) {
+    if (remaining <= 0) {
+      break
+    }
+    const question = clipRunes(turn.question, remaining)
+    remaining -= runeLength(question)
+    const answer = clipRunes(turn.answer, remaining)
+    remaining -= runeLength(answer)
+    const citations = trimContextCitations(turn.citations, remaining)
+    remaining -= citations.reduce((total, citation) => {
+      return total
+        + runeLength(citation.title || '')
+        + runeLength(citation.url || '')
+        + runeLength(citation.source_type || '')
+        + runeLength(citation.snippet || '')
+    }, 0)
+    if (question || answer || citations.length) {
+      result.unshift({ question, answer, citations })
+    }
+  }
+
+  return result
+}
+
+function trimContextCitations(citations: QueryContextCitation[], maxRunes: number): QueryContextCitation[] {
+  let remaining = maxRunes
+  const result: QueryContextCitation[] = []
+  for (const citation of citations) {
+    if (remaining <= 0) {
+      break
+    }
+    const title = clipRunes(citation.title || '', remaining)
+    remaining -= runeLength(title)
+    const url = clipRunes(citation.url || '', remaining)
+    remaining -= runeLength(url)
+    const sourceType = clipRunes(citation.source_type || '', remaining)
+    remaining -= runeLength(sourceType)
+    const snippet = clipRunes(citation.snippet || '', remaining)
+    remaining -= runeLength(snippet)
+    if (title || url || sourceType || snippet) {
+      result.push({
+        title,
+        url,
+        source_type: sourceType,
+        snippet,
+        score: citation.score,
+        chunk_index: citation.chunk_index
+      })
+    }
+  }
+  return result
+}
+
+function clipRunes(value: string, limit: number) {
+  if (limit <= 0) {
+    return ''
+  }
+  const runes = Array.from(value)
+  return runes.length <= limit ? value : runes.slice(0, limit).join('')
 }
 
 async function refreshQueue() {
@@ -745,11 +1039,11 @@ function citationText(citation: ArchiveCitation) {
   return citation.snippet || ''
 }
 
-function copyAnswerWithCitations(record: ChatRecord) {
+function copyAnswerWithCitations(record: ChatMessage) {
   copyText(formatAnswerWithCitations(record))
 }
 
-function formatAnswerWithCitations(record: ChatRecord) {
+function formatAnswerWithCitations(record: ChatMessage) {
   const answer = record.answer.trim()
   if (!answer) {
     return ''
@@ -1012,6 +1306,30 @@ function copyTextFallback(content: string) {
   padding: 12px 0;
 }
 
+.search-clear-button {
+  display: inline-grid;
+  height: 24px;
+  width: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(238, 246, 235, 0.68);
+  padding: 0;
+  transition: background var(--motion-duration) ease, color var(--motion-duration) ease;
+}
+
+.search-clear-button:hover,
+.search-clear-button:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  color: #f7fff3;
+}
+
+.search-clear-button svg {
+  width: 14px;
+}
+
 .history-list {
   min-height: 0;
   flex: 1;
@@ -1025,30 +1343,48 @@ function copyTextFallback(content: string) {
   display: none;
 }
 
+.history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: stretch;
+  width: 100%;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
 .history-item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  min-width: 0;
   width: 100%;
   gap: 6px 10px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: rgba(241, 248, 242, 0.78);
-  margin-bottom: 8px;
   padding: 12px;
   text-align: left;
   transition: background var(--motion-duration) ease, border-color var(--motion-duration) ease;
 }
 
+.archive-sidebar.collapsed .history-row {
+  grid-template-columns: 1fr;
+  margin-bottom: 10px;
+}
+
 .archive-sidebar.collapsed .history-item {
   grid-template-columns: 1fr;
   justify-items: center;
-  margin-bottom: 10px;
   padding: 10px 0;
 }
 
-.history-item:hover,
-.history-item.active {
+.archive-sidebar.collapsed .history-delete-button {
+  display: none;
+}
+
+.history-row:hover .history-item,
+.history-row.active .history-item,
+.history-item:focus-visible {
   border-color: rgba(187, 218, 169, 0.22);
   background: rgba(255, 255, 255, 0.075);
 }
@@ -1078,6 +1414,40 @@ function copyTextFallback(content: string) {
 
 .history-empty {
   padding: 18px 12px;
+}
+
+.history-delete-button {
+  display: inline-grid;
+  min-height: 100%;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(238, 220, 216, 0.42);
+  opacity: 0.55;
+  padding: 0;
+  transition: background var(--motion-duration) ease, border-color var(--motion-duration) ease, color var(--motion-duration) ease, opacity var(--motion-duration) ease;
+}
+
+.history-row:hover .history-delete-button,
+.history-delete-button:focus-visible {
+  opacity: 1;
+}
+
+.history-delete-button:hover,
+.history-delete-button:focus-visible {
+  border-color: rgba(255, 145, 125, 0.22);
+  background: rgba(150, 61, 48, 0.18);
+  color: #ffd5ce;
+}
+
+.history-delete-button svg {
+  width: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .pager {
@@ -1482,6 +1852,88 @@ function copyTextFallback(content: string) {
   border-color: rgba(255, 255, 255, 0.14);
 }
 
+.delete-dialog {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px 18px;
+  width: min(460px, calc(100vw - 32px));
+  border: 1px solid rgba(241, 172, 153, 0.16);
+  border-radius: 14px;
+  background:
+    linear-gradient(145deg, rgba(22, 29, 28, 0.96), rgba(11, 16, 17, 0.94)),
+    radial-gradient(circle at 12% 8%, rgba(255, 134, 110, 0.1), transparent 36%);
+  box-shadow: 0 24px 88px rgba(0, 0, 0, 0.5);
+  padding: 22px;
+}
+
+.delete-dialog-icon {
+  display: grid;
+  height: 42px;
+  width: 42px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(146, 59, 48, 0.18);
+  color: #ffd4cd;
+}
+
+.delete-dialog-icon svg {
+  width: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.delete-dialog-copy {
+  min-width: 0;
+}
+
+.delete-dialog-copy h2 {
+  margin: 4px 0 8px;
+  color: #fff8f3;
+  font-size: 21px;
+  line-height: 1.25;
+}
+
+.delete-dialog-copy p:last-child {
+  margin: 0;
+  color: rgba(244, 236, 231, 0.68);
+  line-height: 1.7;
+}
+
+.delete-dialog-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.delete-dialog-actions button {
+  height: 38px;
+  border-radius: 8px;
+  font-weight: 800;
+  padding: 0 16px;
+}
+
+.delete-dialog-cancel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(242, 248, 239, 0.76);
+}
+
+.delete-dialog-confirm {
+  border: 1px solid rgba(255, 145, 125, 0.32);
+  background: rgba(142, 58, 47, 0.36);
+  color: #fff0eb;
+}
+
+.delete-dialog-confirm:hover,
+.delete-dialog-cancel:hover {
+  filter: brightness(1.08);
+}
+
 .guide-panel h2,
 .empty-conversation h1,
 .question-block h1 {
@@ -1541,6 +1993,11 @@ function copyTextFallback(content: string) {
 .conversation {
   display: grid;
   gap: 18px;
+}
+
+.conversation-list {
+  display: grid;
+  gap: 26px;
 }
 
 .response-column {
@@ -1634,10 +2091,94 @@ function copyTextFallback(content: string) {
 
 .answer-text {
   margin: 14px 0 0;
-  white-space: pre-wrap;
+  background: transparent;
   color: rgba(248, 252, 246, 0.9);
   font-size: 16px;
   line-height: 1.9;
+}
+
+.answer-markdown :deep(.md-editor-preview-wrapper) {
+  padding: 0;
+  background: transparent;
+}
+
+.answer-markdown :deep(.md-editor-preview) {
+  color: rgba(248, 252, 246, 0.9);
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.answer-markdown :deep(.md-editor-preview > *:first-child) {
+  margin-top: 0;
+}
+
+.answer-markdown :deep(.md-editor-preview h1),
+.answer-markdown :deep(.md-editor-preview h2),
+.answer-markdown :deep(.md-editor-preview h3),
+.answer-markdown :deep(.md-editor-preview h4) {
+  border: 0;
+  color: #f8fff4;
+  letter-spacing: 0;
+}
+
+.answer-markdown :deep(.md-editor-preview h1) {
+  font-size: 22px;
+}
+
+.answer-markdown :deep(.md-editor-preview h2) {
+  font-size: 19px;
+}
+
+.answer-markdown :deep(.md-editor-preview h3) {
+  font-size: 17px;
+}
+
+.answer-markdown :deep(.md-editor-preview p),
+.answer-markdown :deep(.md-editor-preview li) {
+  color: rgba(248, 252, 246, 0.9);
+}
+
+.answer-markdown :deep(.md-editor-preview a) {
+  color: rgba(178, 224, 255, 0.95);
+  text-decoration-color: rgba(178, 224, 255, 0.38);
+}
+
+.answer-markdown :deep(.md-editor-preview blockquote) {
+  border-left-color: rgba(174, 222, 155, 0.42);
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(235, 244, 230, 0.82);
+}
+
+.answer-markdown :deep(.md-editor-preview table) {
+  overflow: hidden;
+  border-color: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.answer-markdown :deep(.md-editor-preview th),
+.answer-markdown :deep(.md-editor-preview td) {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.answer-markdown :deep(.md-editor-preview tr) {
+  background: transparent;
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.answer-markdown :deep(.md-editor-preview tr:nth-child(2n)) {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.answer-markdown :deep(.md-editor-preview code) {
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.09);
+  color: #eef9e9;
+}
+
+.answer-markdown :deep(.md-editor-preview pre) {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(6, 12, 10, 0.76);
 }
 
 .answer-placeholder {
@@ -1720,9 +2261,81 @@ function copyTextFallback(content: string) {
   font-size: 12px;
 }
 
-.citation-content p {
-  white-space: pre-wrap;
+.citation-markdown {
+  background: transparent;
+}
+
+.citation-markdown :deep(.md-editor-preview-wrapper) {
+  padding: 0;
+  background: transparent;
+}
+
+.citation-markdown :deep(.md-editor-preview) {
   color: rgba(244, 250, 242, 0.78);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.citation-markdown :deep(.md-editor-preview > *:first-child) {
+  margin-top: 0;
+}
+
+.citation-markdown :deep(.md-editor-preview > *:last-child) {
+  margin-bottom: 0;
+}
+
+.citation-markdown :deep(.md-editor-preview h1),
+.citation-markdown :deep(.md-editor-preview h2),
+.citation-markdown :deep(.md-editor-preview h3),
+.citation-markdown :deep(.md-editor-preview h4) {
+  border: 0;
+  color: rgba(248, 255, 244, 0.92);
+  letter-spacing: 0;
+}
+
+.citation-markdown :deep(.md-editor-preview h1) {
+  font-size: 18px;
+}
+
+.citation-markdown :deep(.md-editor-preview h2) {
+  font-size: 16px;
+}
+
+.citation-markdown :deep(.md-editor-preview h3),
+.citation-markdown :deep(.md-editor-preview h4) {
+  font-size: 15px;
+}
+
+.citation-markdown :deep(.md-editor-preview p),
+.citation-markdown :deep(.md-editor-preview li) {
+  color: rgba(244, 250, 242, 0.78);
+}
+
+.citation-markdown :deep(.md-editor-preview a) {
+  color: #bde99f;
+  text-decoration-color: rgba(189, 233, 159, 0.35);
+}
+
+.citation-markdown :deep(.md-editor-preview blockquote) {
+  border-left-color: rgba(174, 222, 155, 0.38);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.citation-markdown :deep(.md-editor-preview code) {
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.09);
+  color: #eef9e9;
+}
+
+.citation-markdown :deep(.md-editor-preview pre) {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(6, 12, 10, 0.74);
+}
+
+.citation-empty {
+  margin: 0;
+  color: rgba(244, 250, 242, 0.62);
   line-height: 1.8;
 }
 
@@ -1784,7 +2397,9 @@ function copyTextFallback(content: string) {
 }
 
 .modal-enter-active .guide-panel,
-.modal-leave-active .guide-panel {
+.modal-leave-active .guide-panel,
+.modal-enter-active .delete-dialog,
+.modal-leave-active .delete-dialog {
   transition: opacity var(--motion-duration) ease, transform var(--motion-duration) ease;
 }
 
@@ -1794,7 +2409,9 @@ function copyTextFallback(content: string) {
 }
 
 .modal-enter-from .guide-panel,
-.modal-leave-to .guide-panel {
+.modal-leave-to .guide-panel,
+.modal-enter-from .delete-dialog,
+.modal-leave-to .delete-dialog {
   opacity: 0;
   transform: translateY(-8px);
 }

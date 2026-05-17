@@ -41,6 +41,10 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 	if req.Question == "" {
 		return QueryResponse{}, wrapValidation("question is required")
 	}
+	normalizedContext, err := normalizeQueryContext(req.Context, s.chatLimits())
+	if err != nil {
+		return QueryResponse{}, err
+	}
 	if limit := s.cfg.MaxQueryQuestionRunes; limit > 0 && utf8.RuneCountInString(req.Question) > limit {
 		return QueryResponse{}, wrapValidation("question exceeds the maximum length")
 	}
@@ -77,6 +81,7 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 	slog.InfoContext(queryCtx, "chat query start",
 		"question_runes", questionRunes,
 		"top_k", topK,
+		"context_turns", len(normalizedContext),
 		"query_timeout_seconds", s.cfg.QueryTimeoutSeconds,
 		"embedding_model", s.embedder.Model(),
 		"answer_model", s.chat.Model(),
@@ -147,7 +152,7 @@ func (s *Service) executeQuery(ctx context.Context, req QueryRequest, callbacks 
 	if err := emitStatus("generating", "正在生成回答"); err != nil {
 		return QueryResponse{}, err
 	}
-	messages, usedSources := buildChatMessages(req.Question, sources, promptBudgetForTokens(s.cfg.TencentMaxTokens))
+	messages, usedSources := buildChatMessages(req.Question, normalizedContext, sources, promptBudgetForTokens(s.cfg.TencentMaxTokens))
 
 	var completion tencentmaas.CompletionResult
 	if callbacks.Delta != nil {
@@ -298,7 +303,7 @@ func buildQueryCitationChunk(source db.Source) QueryCitationChunk {
 	}
 }
 
-func buildChatMessages(question string, sources []db.Source, budgetRunes int) ([]tencentmaas.Message, []db.Source) {
+func buildChatMessages(question string, context []QueryTurn, sources []db.Source, budgetRunes int) ([]tencentmaas.Message, []db.Source) {
 	var builder strings.Builder
 	budget := newRuneBudget(budgetRunes)
 	usedSources := make([]db.Source, 0, len(sources))
@@ -310,7 +315,7 @@ func buildChatMessages(question string, sources []db.Source, budgetRunes int) ([
 	writeLine("问题：")
 	writeLine(question)
 	writeLine("")
-	writeLine("资料：")
+	writeLine("本轮检索资料：")
 
 	for i, source := range sources {
 		if !writeLine(fmt.Sprintf("[%d] %s", i+1, trimLine(source.Title))) {
@@ -343,6 +348,26 @@ func buildChatMessages(question string, sources []db.Source, budgetRunes int) ([
 		writeLine("")
 		usedSources = append(usedSources, source)
 	}
+	writeLine("")
+	writeLine("上文参考：")
+	if len(context) == 0 {
+		writeLine("无")
+	} else {
+		for i, turn := range context {
+			writeLine(fmt.Sprintf("[%d] 用户：%s", i+1, turn.Question))
+			writeLine(fmt.Sprintf("[%d] 助手：%s", i+1, turn.Answer))
+			if len(turn.Citations) == 0 {
+				writeLine(fmt.Sprintf("[%d] 上文引用：无", i+1))
+			} else {
+				writeLine(fmt.Sprintf("[%d] 上文引用：", i+1))
+				for j, citation := range turn.Citations {
+					if !writeContextCitation(&builder, budget, j+1, citation) {
+						break
+					}
+				}
+			}
+		}
+	}
 
 	if budget.truncated {
 		writeLine("")
@@ -351,6 +376,9 @@ func buildChatMessages(question string, sources []db.Source, budgetRunes int) ([
 
 	systemPrompt := "你是 gofurry RAG 控制台里的检索问答助手。\n" +
 		"你只能依据我提供的资料回答，不要编造，不要补充资料外的信息。\n" +
+		"本轮检索资料是当前问题的主要事实依据；上文参考中的引用可用于理解追问、延续话题和补足上一轮已检索到的证据。\n" +
+		"不要把没有引用支撑的历史回答当作事实依据；如果当前问题明显是新话题，优先依据本轮检索资料。\n" +
+		"请使用 Markdown 格式组织答案正文，可使用小标题、列表、表格、加粗关键词或行内代码，但不要输出 HTML。\n" +
 		"请只输出答案内容，不要自行输出引用段。\n" +
 		"如果资料不足，请直接回答：当前资料中没有找到足够相关的信息。"
 
@@ -366,6 +394,100 @@ func buildChatMessages(question string, sources []db.Source, budgetRunes int) ([
 	}, usedSources
 }
 
+func normalizeQueryContext(context []QueryTurn, limits ChatLimits) ([]QueryTurn, error) {
+	if len(context) == 0 {
+		return nil, nil
+	}
+	maxTurns := limits.PublicQueryContextMaxTurns
+	maxRunes := limits.PublicQueryContextMaxRunes
+	result := make([]QueryTurn, 0, len(context))
+	totalRunes := 0
+	for _, turn := range context {
+		question := strings.TrimSpace(turn.Question)
+		answer := strings.TrimSpace(turn.Answer)
+		citations := normalizeQueryContextCitations(turn.Citations)
+		if question == "" && answer == "" && len(citations) == 0 {
+			continue
+		}
+		result = append(result, QueryTurn{
+			Question:  question,
+			Answer:    answer,
+			Citations: citations,
+		})
+		totalRunes += utf8.RuneCountInString(question) + utf8.RuneCountInString(answer)
+		for _, citation := range citations {
+			totalRunes += utf8.RuneCountInString(citation.Title)
+			totalRunes += utf8.RuneCountInString(citation.URL)
+			totalRunes += utf8.RuneCountInString(citation.SourceType)
+			totalRunes += utf8.RuneCountInString(citation.Snippet)
+		}
+	}
+	if maxTurns > 0 && len(result) > maxTurns {
+		return nil, wrapValidation("context exceeds the maximum turns")
+	}
+	if maxRunes > 0 && totalRunes > maxRunes {
+		return nil, wrapValidation("context exceeds the maximum length")
+	}
+	return result, nil
+}
+
+func normalizeQueryContextCitations(citations []QueryContextCitation) []QueryContextCitation {
+	result := make([]QueryContextCitation, 0, len(citations))
+	for _, citation := range citations {
+		normalized := QueryContextCitation{
+			Title:      strings.TrimSpace(citation.Title),
+			URL:        strings.TrimSpace(citation.URL),
+			SourceType: strings.TrimSpace(citation.SourceType),
+			Snippet:    strings.TrimSpace(citation.Snippet),
+			Score:      citation.Score,
+			ChunkIndex: citation.ChunkIndex,
+		}
+		if normalized.Title == "" && normalized.URL == "" && normalized.SourceType == "" && normalized.Snippet == "" {
+			continue
+		}
+		result = append(result, normalized)
+	}
+	return result
+}
+
+func writeContextCitation(builder *strings.Builder, budget *runeBudget, index int, citation QueryContextCitation) bool {
+	if !budget.writeLine(builder, fmt.Sprintf("  - [%d] %s", index, trimLine(citation.Title))) {
+		return false
+	}
+	if citation.SourceType != "" || citation.Score > 0 || citation.ChunkIndex != nil {
+		parts := make([]string, 0, 3)
+		if citation.SourceType != "" {
+			parts = append(parts, "类型："+trimLine(citation.SourceType))
+		}
+		if citation.Score > 0 {
+			parts = append(parts, fmt.Sprintf("分数：%.4f", citation.Score))
+		}
+		if citation.ChunkIndex != nil {
+			parts = append(parts, fmt.Sprintf("ChunkIndex：%d", *citation.ChunkIndex))
+		}
+		if !budget.writeLine(builder, "    "+strings.Join(parts, "，")) {
+			return false
+		}
+	}
+	if citation.URL != "" {
+		if !budget.writeLine(builder, "    URL："+trimLine(citation.URL)) {
+			return false
+		}
+	}
+	if citation.Snippet != "" {
+		if !budget.writeLine(builder, "    原文：") {
+			return false
+		}
+		if !budget.writeText(builder, citation.Snippet) {
+			return false
+		}
+		if !budget.writeLine(builder, "") {
+			return false
+		}
+	}
+	return true
+}
+
 func formatStructuredAnswer(answer string, sources []db.Source, truncated bool) string {
 	answer = strings.TrimSpace(answer)
 	if answer == "" {
@@ -373,9 +495,9 @@ func formatStructuredAnswer(answer string, sources []db.Source, truncated bool) 
 	}
 
 	var builder strings.Builder
-	builder.WriteString("答案：\n")
+	builder.WriteString("## 答案\n\n")
 	builder.WriteString(answer)
-	builder.WriteString("\n\n引用：\n")
+	builder.WriteString("\n\n## 引用\n\n")
 	if len(sources) == 0 {
 		builder.WriteString("无\n")
 	} else {
@@ -384,7 +506,7 @@ func formatStructuredAnswer(answer string, sources []db.Source, truncated bool) 
 		}
 	}
 	if truncated {
-		builder.WriteString("注：引用已按长度预算截断。\n")
+		builder.WriteString("\n> 注：引用已按长度预算截断。\n")
 	}
 	return strings.TrimSpace(builder.String())
 }
