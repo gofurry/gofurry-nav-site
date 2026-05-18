@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -79,5 +81,32 @@ func TestAgentIngestRequiresValidSignature(t *testing.T) {
 	}
 	if !store.ingested {
 		t.Fatal("expected payload ingested")
+	}
+}
+
+func TestEmbeddedDashboardServed(t *testing.T) {
+	cfg := config.Config{
+		CenterID: "ops",
+		Region:   "cn",
+		Security: config.SecurityConfig{
+			DashboardPasscode: "pass",
+			SessionSecret:     "session",
+			AgentTokens:       []config.AgentToken{{NodeID: "node", Token: "token"}},
+		},
+	}
+	app := New(cfg, service.New(cfg, &fakeStore{}))
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/admin", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("expected ok, got %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "GoFurry Ops Center") {
+		t.Fatalf("dashboard shell was not served: %q", string(body))
 	}
 }

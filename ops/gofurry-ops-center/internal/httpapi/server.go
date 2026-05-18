@@ -2,6 +2,8 @@ package httpapi
 
 import (
 	"encoding/json"
+	"io/fs"
+	"path"
 	"strings"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/gofurry/gofurry-nav-site/ops/gofurry-ops-center/internal/model"
 	"github.com/gofurry/gofurry-nav-site/ops/gofurry-ops-center/internal/security"
 	"github.com/gofurry/gofurry-nav-site/ops/gofurry-ops-center/internal/service"
+	"github.com/gofurry/gofurry-nav-site/ops/gofurry-ops-center/internal/web"
 )
 
 type Server struct {
@@ -70,6 +73,7 @@ func New(cfg config.Config, svc *service.Service) *fiber.App {
 	admin.Get("/sync-runs", server.syncRuns)
 	admin.Get("/peer/status", server.peerStatus)
 	admin.Get("/deployments", server.deployments)
+	attachEmbeddedUI(app)
 	return app
 }
 
@@ -217,4 +221,34 @@ func (s *Server) deployments(c fiber.Ctx) error {
 		return fail(c, fiber.StatusInternalServerError, err.Error())
 	}
 	return ok(c, result)
+}
+
+func attachEmbeddedUI(app *fiber.App) {
+	uiFS, err := fs.Sub(web.FS, "dist")
+	if err != nil {
+		return
+	}
+	index, err := fs.ReadFile(uiFS, "index.html")
+	if err != nil {
+		return
+	}
+	sendIndex := func(c fiber.Ctx) error {
+		c.Type("html", "utf-8")
+		return c.Send(index)
+	}
+	app.Get("/", func(c fiber.Ctx) error {
+		return c.Redirect().To("/admin")
+	})
+	app.Get("/admin", sendIndex)
+	app.Get("/admin/*", func(c fiber.Ctx) error {
+		asset := strings.TrimPrefix(c.Path(), "/admin/")
+		if asset == "" || asset == "." {
+			return sendIndex(c)
+		}
+		cleaned := path.Clean(asset)
+		if stat, err := fs.Stat(uiFS, cleaned); err == nil && !stat.IsDir() {
+			return c.SendFile(cleaned, fiber.SendFile{FS: uiFS})
+		}
+		return sendIndex(c)
+	})
 }

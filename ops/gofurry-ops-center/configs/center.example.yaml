@@ -1,0 +1,47 @@
+center_id: ops-center-local
+region: local
+log_level: info
+
+server:
+  host: 127.0.0.1
+  port: 8080
+
+runtime:
+  memory_limit_mb: 256
+  gc_percent: 100
+
+storage:
+  dsn: postgres://gofurry_ops:change-me-db-password@127.0.0.1:5432/gofurry_ops?sslmode=disable
+  auto_migrate: true
+
+security:
+  dashboard_passcode: change-me-dashboard-passcode
+  session_secret: change-me-long-random-session-secret
+  cookie_name: gofurry_ops_session
+  cookie_secure: false
+  signature_window: 5m
+  session_ttl: 12h
+  agent_tokens:
+    - node_id: gofurry-local-01
+      token: change-me-agent-token
+  peer_token: change-me-peer-token
+  event_token: change-me-event-token
+
+alert:
+  enabled: true
+  node_down_after: 3m
+  http_failure_threshold: 3
+  disk_usage_warn: 85
+  memory_usage_warn: 90
+  cert_warn_days: 14
+  sync_stale_after: 24h
+  peer_unreachable_after: 5m
+
+peer:
+  enabled: false
+  remote_summary_url: ""
+  token: ""
+  interval: 1m
+
+retention:
+  raw_samples_days: 7

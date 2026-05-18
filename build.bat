@@ -20,6 +20,8 @@ if /I "%TARGET%"=="gofurry-game-backend" goto build_game_backend
 if /I "%TARGET%"=="gofurry-game-collector" goto build_game_collector
 if /I "%TARGET%"=="gofurry-admin" goto build_admin
 if /I "%TARGET%"=="gofurry-rag" goto build_rag
+if /I "%TARGET%"=="gofurry-ops-agent" goto build_ops_agent
+if /I "%TARGET%"=="gofurry-ops-center" goto build_ops_center
 
 echo Unknown target: %TARGET%
 echo Supported targets:
@@ -30,6 +32,8 @@ echo   gofurry-game-backend
 echo   gofurry-game-collector
 echo   gofurry-admin
 echo   gofurry-rag
+echo   gofurry-ops-agent
+echo   gofurry-ops-center
 exit /b 1
 
 :build_all
@@ -39,6 +43,8 @@ call "%~f0" gofurry-game-backend || exit /b 1
 call "%~f0" gofurry-game-collector || exit /b 1
 call "%~f0" gofurry-admin || exit /b 1
 call "%~f0" gofurry-rag || exit /b 1
+call "%~f0" gofurry-ops-agent || exit /b 1
+call "%~f0" gofurry-ops-center || exit /b 1
 echo Build completed. Artifacts are in "%BUILD_ROOT%".
 exit /b 0
 
@@ -141,6 +147,52 @@ if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
 mkdir "%OUTPUT_DIR%" || exit /b 1
 pushd "%ROOT%\gofurry-rag" || exit /b 1
 go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" .
+if errorlevel 1 (
+    popd
+    exit /b 1
+)
+popd
+exit /b 0
+
+:build_ops_agent
+echo [BUILD] gofurry-ops-agent
+set "OUTPUT_DIR=%BUILD_ROOT%\gofurry-ops-agent"
+set "OUTPUT_BIN=%OUTPUT_DIR%\gofurry-ops-agent"
+if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
+mkdir "%OUTPUT_DIR%" || exit /b 1
+pushd "%ROOT%\ops\gofurry-ops-agent" || exit /b 1
+go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" ./cmd/agent
+if errorlevel 1 (
+    popd
+    exit /b 1
+)
+popd
+exit /b 0
+
+:build_ops_center
+echo [BUILD] gofurry-ops-center console
+pushd "%ROOT%\ops\gofurry-ops-center\web" || exit /b 1
+if not exist "node_modules" (
+    call npm ci
+    if errorlevel 1 (
+        popd
+        exit /b 1
+    )
+)
+call npm run build
+if errorlevel 1 (
+    popd
+    exit /b 1
+)
+popd
+
+echo [BUILD] gofurry-ops-center binary
+set "OUTPUT_DIR=%BUILD_ROOT%\gofurry-ops-center"
+set "OUTPUT_BIN=%OUTPUT_DIR%\gofurry-ops-center"
+if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
+mkdir "%OUTPUT_DIR%" || exit /b 1
+pushd "%ROOT%\ops\gofurry-ops-center" || exit /b 1
+go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" ./cmd/center
 if errorlevel 1 (
     popd
     exit /b 1
