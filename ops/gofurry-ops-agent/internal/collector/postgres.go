@@ -6,7 +6,7 @@ import (
 
 	"github.com/gofurry/gofurry-nav-site/ops/gofurry-ops-agent/internal/config"
 	"github.com/gofurry/gofurry-nav-site/ops/gofurry-ops-agent/internal/model"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
 )
 
 func collectPostgres(ctx context.Context, cfg config.PostgresConfig) model.ServiceCheck {
@@ -15,22 +15,22 @@ func collectPostgres(ctx context.Context, cfg config.PostgresConfig) model.Servi
 	defer cancel()
 
 	start := time.Now()
-	pool, err := pgxpool.New(checkCtx, cfg.DSN)
+	conn, err := pgx.Connect(checkCtx, cfg.DSN)
 	if err != nil {
 		result.Status = statusFromError(err)
 		result.ErrorMessage = err.Error()
 		return result
 	}
-	defer pool.Close()
+	defer conn.Close(context.Background())
 
-	if err := pool.Ping(checkCtx); err != nil {
+	if err := conn.Ping(checkCtx); err != nil {
 		result.LatencyMS = time.Since(start).Milliseconds()
 		result.Status = statusFromError(err)
 		result.ErrorMessage = err.Error()
 		return result
 	}
 	var one int
-	if err := pool.QueryRow(checkCtx, `SELECT 1`).Scan(&one); err != nil {
+	if err := conn.QueryRow(checkCtx, `SELECT 1`).Scan(&one); err != nil {
 		result.LatencyMS = time.Since(start).Milliseconds()
 		result.Status = statusFromError(err)
 		result.ErrorMessage = err.Error()
@@ -38,7 +38,7 @@ func collectPostgres(ctx context.Context, cfg config.PostgresConfig) model.Servi
 	}
 	result.LatencyMS = time.Since(start).Milliseconds()
 	result.Status = "ok"
-	_ = pool.QueryRow(checkCtx, `SELECT pg_database_size(current_database())`).Scan(&result.DatabaseSize)
-	_ = pool.QueryRow(checkCtx, `SELECT count(*)::bigint FROM pg_stat_activity WHERE datname = current_database()`).Scan(&result.Connections)
+	_ = conn.QueryRow(checkCtx, `SELECT pg_database_size(current_database())`).Scan(&result.DatabaseSize)
+	_ = conn.QueryRow(checkCtx, `SELECT count(*)::bigint FROM pg_stat_activity WHERE datname = current_database()`).Scan(&result.Connections)
 	return result
 }

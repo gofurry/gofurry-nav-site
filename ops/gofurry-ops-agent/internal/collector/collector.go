@@ -70,7 +70,7 @@ func statusFromError(err error) string {
 	if err == nil {
 		return "ok"
 	}
-	if errors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 		return "timeout"
 	}
 	return "down"

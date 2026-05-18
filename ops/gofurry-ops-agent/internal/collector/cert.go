@@ -17,13 +17,20 @@ func collectCert(ctx context.Context, cfg config.CertCheckConfig) model.CertChec
 	checkCtx, cancel := context.WithTimeout(ctx, cfg.Timeout.Duration)
 	defer cancel()
 
-	conn, err := tls.DialWithDialer(dialer, "tcp", net.JoinHostPort(cfg.Host, cfg.Port), tlsCfg)
+	tlsDialer := tls.Dialer{NetDialer: dialer, Config: tlsCfg}
+	rawConn, err := tlsDialer.DialContext(checkCtx, "tcp", net.JoinHostPort(cfg.Host, cfg.Port))
 	if err != nil {
 		result.Status = statusFromError(err)
 		result.ErrorMessage = err.Error()
 		return result
 	}
-	defer conn.Close()
+	defer rawConn.Close()
+	conn, ok := rawConn.(*tls.Conn)
+	if !ok {
+		result.Status = "down"
+		result.ErrorMessage = "unexpected tls connection type"
+		return result
+	}
 	select {
 	case <-checkCtx.Done():
 		result.Status = "timeout"

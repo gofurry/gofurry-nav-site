@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +17,8 @@ type Store struct {
 	dir      string
 	maxFiles int
 }
+
+const maxReplayLineBytes = 2 * 1024 * 1024
 
 func New(dir string, maxFiles int) *Store {
 	return &Store{dir: dir, maxFiles: maxFiles}
@@ -69,12 +72,16 @@ func (s *Store) replayFile(ctx context.Context, path string, send func(context.C
 
 	var remaining [][]byte
 	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 0, 64*1024), maxReplayLineBytes)
 	failed := false
 	for scanner.Scan() {
 		line := bytes.TrimSpace(scanner.Bytes())
 		if len(line) == 0 {
 			continue
+		}
+		if len(line) > maxReplayLineBytes || !json.Valid(line) {
+			_ = file.Close()
+			return quarantineFile(path)
 		}
 		copied := append([]byte(nil), line...)
 		if failed {
@@ -88,7 +95,7 @@ func (s *Store) replayFile(ctx context.Context, path string, send func(context.C
 	}
 	if err := scanner.Err(); err != nil {
 		_ = file.Close()
-		return err
+		return quarantineFile(path)
 	}
 	if err := file.Close(); err != nil {
 		return err
@@ -116,6 +123,14 @@ func (s *Store) replayFile(ctx context.Context, path string, send func(context.C
 		return err
 	}
 	return os.Rename(tmp, path)
+}
+
+func quarantineFile(path string) error {
+	badPath := strings.TrimSuffix(path, ".jsonl") + "." + time.Now().UTC().Format("20060102T150405.000000000") + ".bad"
+	if err := os.Rename(path, badPath); err != nil {
+		return fmt.Errorf("quarantine spool %s: %w", path, err)
+	}
+	return nil
 }
 
 func (s *Store) files() ([]string, error) {
