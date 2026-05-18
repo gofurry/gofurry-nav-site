@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AlertTriangle, Activity, GitBranch, Server } from 'lucide-vue-next'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import * as api from '../api'
 import { alertClass, formatTime, statusClass } from '../format'
 import type { Overview } from '../types'
@@ -8,6 +8,8 @@ import type { Overview } from '../types'
 const data = ref<Overview | null>(null)
 const loading = ref(false)
 const error = ref('')
+const services = computed(() => data.value?.services ?? [])
+const alerts = computed(() => data.value?.alerts ?? [])
 
 async function load() {
   loading.value = true
@@ -44,7 +46,7 @@ onMounted(load)
             <p class="text-sm font-medium text-[var(--ops-muted)]">服务</p>
             <Activity class="size-5 text-[var(--ops-teal)]" />
           </div>
-          <p class="mt-3 text-3xl font-semibold">{{ data.services.length }}</p>
+          <p class="mt-3 text-3xl font-semibold">{{ services.length }}</p>
           <p class="mt-1 text-sm text-[var(--ops-muted)]">最近心跳 {{ formatTime(data.last_heartbeat_at) }}</p>
         </div>
         <div class="metric">
@@ -83,7 +85,7 @@ onMounted(load)
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="service in data.services.slice(0, 8)" :key="service.key">
+                <tr v-for="service in services.slice(0, 8)" :key="service.key">
                   <td>
                     <p class="font-medium">{{ service.name }}</p>
                     <p class="text-xs text-[var(--ops-muted)]">{{ service.service_type }}</p>
@@ -96,7 +98,7 @@ onMounted(load)
               </tbody>
             </table>
           </div>
-          <div v-if="data.services.length === 0" class="p-4">
+          <div v-if="services.length === 0" class="p-4">
             <div class="empty">暂无服务样本</div>
           </div>
         </div>
@@ -105,8 +107,8 @@ onMounted(load)
           <div class="border-b border-[var(--ops-border)] px-4 py-3">
             <h2 class="font-semibold">活跃告警</h2>
           </div>
-          <div class="divide-y divide-[#edf0ed]">
-            <div v-for="alert in data.alerts.slice(0, 8)" :key="alert.key" class="space-y-2 p-4">
+          <div class="divide-y divide-[var(--ops-border)]">
+            <div v-for="alert in alerts.slice(0, 8)" :key="alert.key" class="space-y-2 p-4">
               <div class="flex items-center justify-between gap-3">
                 <p class="font-medium">{{ alert.title }}</p>
                 <span :class="alertClass(alert.level)">{{ alert.level }}</span>
@@ -115,7 +117,7 @@ onMounted(load)
               <p class="text-xs text-[var(--ops-muted)]">{{ alert.node_id || alert.region }} · {{ formatTime(alert.last_seen_at) }}</p>
             </div>
           </div>
-          <div v-if="data.alerts.length === 0" class="p-4">
+          <div v-if="alerts.length === 0" class="p-4">
             <div class="empty">暂无活跃告警</div>
           </div>
         </div>

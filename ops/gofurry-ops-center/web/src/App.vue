@@ -51,10 +51,10 @@ async function submitLogin() {
 </script>
 
 <template>
-  <main v-if="session.authenticated" class="min-h-screen bg-[var(--ops-bg)] text-[var(--ops-ink)]">
-    <aside class="fixed inset-y-0 left-0 hidden w-64 border-r border-[var(--ops-border)] bg-white lg:block">
+  <main v-if="session.authenticated" class="ops-shell min-h-screen text-[var(--ops-ink)]">
+    <aside class="ops-sidebar fixed inset-y-0 left-0 hidden w-64 lg:block">
       <div class="flex h-16 items-center gap-3 border-b border-[var(--ops-border)] px-5">
-        <div class="flex size-9 items-center justify-center rounded-md bg-[var(--ops-ink)] text-white">
+        <div class="brand-mark flex size-9 items-center justify-center">
           <ShieldCheck class="size-5" />
         </div>
         <div>
@@ -78,7 +78,7 @@ async function submitLogin() {
 
     <section class="lg:pl-64">
       <header
-        class="sticky top-0 z-20 flex min-h-16 items-center justify-between border-b border-[var(--ops-border)] bg-white/95 px-4 backdrop-blur md:px-6"
+        class="ops-header sticky top-0 z-20 flex min-h-16 items-center justify-between px-4 md:px-6"
       >
         <div>
           <p class="text-xs font-medium uppercase tracking-[0.18em] text-[var(--ops-muted)]">Ops Center</p>
@@ -94,7 +94,7 @@ async function submitLogin() {
         </div>
       </header>
 
-      <nav class="flex gap-2 overflow-x-auto border-b border-[var(--ops-border)] bg-white px-4 py-2 lg:hidden">
+      <nav class="ops-mobile-nav flex gap-2 overflow-x-auto px-4 py-2 lg:hidden">
         <RouterLink
           v-for="item in navItems"
           :key="item.to"
@@ -113,10 +113,10 @@ async function submitLogin() {
     </section>
   </main>
 
-  <main v-else class="flex min-h-screen items-center justify-center bg-[var(--ops-bg)] p-4 text-[var(--ops-ink)]">
-    <form class="panel w-full max-w-sm space-y-5 p-6" @submit.prevent="submitLogin">
+  <main v-else class="ops-shell flex min-h-screen items-center justify-center p-4 text-[var(--ops-ink)]">
+    <form class="panel login-panel w-full max-w-sm space-y-5 p-6" @submit.prevent="submitLogin">
       <div class="space-y-2">
-        <div class="flex size-10 items-center justify-center rounded-md bg-[var(--ops-ink)] text-white">
+        <div class="brand-mark flex size-10 items-center justify-center">
           <ShieldCheck class="size-5" />
         </div>
         <h1 class="text-xl font-semibold">GoFurry Ops Center</h1>
