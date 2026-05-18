@@ -10,6 +10,8 @@ on:
       - 'gofurry-nav-collector/**'
       - 'gofurry-nav-frontend/**'
       - 'gofurry-rag/**'
+      - 'ops/gofurry-ops-agent/**'
+      - 'ops/gofurry-ops-center/**'
       - '.github/workflows/checks.yml'
   pull_request:
     paths:
@@ -20,6 +22,8 @@ on:
       - 'gofurry-nav-collector/**'
       - 'gofurry-nav-frontend/**'
       - 'gofurry-rag/**'
+      - 'ops/gofurry-ops-agent/**'
+      - 'ops/gofurry-ops-center/**'
       - '.github/workflows/checks.yml'
 
 jobs:
@@ -33,6 +37,8 @@ jobs:
       gofurry_nav_collector: ${{ steps.detect.outputs.gofurry_nav_collector }}
       gofurry_nav_frontend: ${{ steps.detect.outputs.gofurry_nav_frontend }}
       gofurry_rag: ${{ steps.detect.outputs.gofurry_rag }}
+      gofurry_ops_agent: ${{ steps.detect.outputs.gofurry_ops_agent }}
+      gofurry_ops_center: ${{ steps.detect.outputs.gofurry_ops_center }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -76,6 +82,8 @@ jobs:
           set_output "gofurry_nav_collector" '^gofurry-nav-collector/'
           set_output "gofurry_nav_frontend" '^gofurry-nav-frontend/'
           set_output "gofurry_rag" '^gofurry-rag/'
+          set_output "gofurry_ops_agent" '^ops/gofurry-ops-agent/'
+          set_output "gofurry_ops_center" '^ops/gofurry-ops-center/'
 
   gofurry-admin:
     needs: detect-changes
@@ -158,6 +166,88 @@ jobs:
       - name: Go test
         working-directory: gofurry-rag
         run: go test ./...
+
+  gofurry-ops-agent:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.gofurry_ops_agent == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ops/gofurry-ops-agent/go.mod
+          cache-dependency-path: ops/gofurry-ops-agent/go.sum
+
+      - name: Check gofmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ops/gofurry-ops-agent
+          files="$(gofmt -l .)"
+          if [[ -n "${files}" ]]; then
+            echo "${files}"
+            exit 1
+          fi
+
+      - name: Go vet
+        working-directory: ops/gofurry-ops-agent
+        run: go vet ./...
+
+      - name: Go test
+        working-directory: ops/gofurry-ops-agent
+        run: go test ./...
+
+      - name: Go build
+        working-directory: ops/gofurry-ops-agent
+        run: go build -trimpath -ldflags="-s -w" -o /tmp/gofurry-ops-agent ./cmd/agent
+
+  gofurry-ops-center:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.gofurry_ops_center == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ops/gofurry-ops-center/go.mod
+          cache-dependency-path: ops/gofurry-ops-center/go.sum
+
+      - name: Check gofmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ops/gofurry-ops-center
+          files="$(gofmt -l .)"
+          if [[ -n "${files}" ]]; then
+            echo "${files}"
+            exit 1
+          fi
+
+      - name: Build center console
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ops/gofurry-ops-center/web
+          npm ci
+          npm run build
+
+      - name: Go vet
+        working-directory: ops/gofurry-ops-center
+        run: go vet ./...
+
+      - name: Go test
+        working-directory: ops/gofurry-ops-center
+        run: go test ./...
+
+      - name: Go build
+        working-directory: ops/gofurry-ops-center
+        run: go build -trimpath -ldflags="-s -w" -o /tmp/gofurry-ops-center ./cmd/center
 
   gofurry-nav-backend:
     needs: detect-changes
