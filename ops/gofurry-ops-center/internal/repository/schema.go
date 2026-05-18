@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS node_heartbeats (
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_node_heartbeats_node_reported ON node_heartbeats(node_id, reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_node_heartbeats_reported ON node_heartbeats(reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_node_heartbeats_received ON node_heartbeats(received_at);
 
 CREATE TABLE IF NOT EXISTS system_samples (
     id BIGSERIAL PRIMARY KEY,
@@ -38,6 +40,8 @@ CREATE TABLE IF NOT EXISTS system_samples (
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_system_samples_node_reported ON system_samples(node_id, reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_samples_reported ON system_samples(reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_samples_received ON system_samples(received_at);
 
 CREATE TABLE IF NOT EXISTS disk_samples (
     id BIGSERIAL PRIMARY KEY,
@@ -51,6 +55,8 @@ CREATE TABLE IF NOT EXISTS disk_samples (
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_disk_samples_node_reported ON disk_samples(node_id, reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_disk_samples_reported ON disk_samples(reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_disk_samples_received ON disk_samples(received_at);
 
 CREATE TABLE IF NOT EXISTS network_samples (
     id BIGSERIAL PRIMARY KEY,
@@ -63,6 +69,9 @@ CREATE TABLE IF NOT EXISTS network_samples (
     reported_at TIMESTAMPTZ NOT NULL,
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_network_samples_node_reported ON network_samples(node_id, reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_network_samples_reported ON network_samples(reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_network_samples_received ON network_samples(received_at);
 
 CREATE TABLE IF NOT EXISTS docker_container_samples (
     id BIGSERIAL PRIMARY KEY,
@@ -76,6 +85,9 @@ CREATE TABLE IF NOT EXISTS docker_container_samples (
     reported_at TIMESTAMPTZ NOT NULL,
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_docker_container_samples_node_reported ON docker_container_samples(node_id, reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_docker_container_samples_reported ON docker_container_samples(reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_docker_container_samples_received ON docker_container_samples(received_at);
 
 CREATE TABLE IF NOT EXISTS http_check_results (
     id BIGSERIAL PRIMARY KEY,
@@ -89,6 +101,9 @@ CREATE TABLE IF NOT EXISTS http_check_results (
     reported_at TIMESTAMPTZ NOT NULL,
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_http_check_results_node_reported ON http_check_results(node_id, reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_http_check_results_reported ON http_check_results(reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_http_check_results_received ON http_check_results(received_at);
 
 CREATE TABLE IF NOT EXISTS service_check_results (
     id BIGSERIAL PRIMARY KEY,
@@ -105,6 +120,9 @@ CREATE TABLE IF NOT EXISTS service_check_results (
     reported_at TIMESTAMPTZ NOT NULL,
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_service_check_results_node_reported ON service_check_results(node_id, reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_service_check_results_reported ON service_check_results(reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_service_check_results_received ON service_check_results(received_at);
 
 CREATE TABLE IF NOT EXISTS cert_check_results (
     id BIGSERIAL PRIMARY KEY,
@@ -119,6 +137,9 @@ CREATE TABLE IF NOT EXISTS cert_check_results (
     reported_at TIMESTAMPTZ NOT NULL,
     received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_cert_check_results_node_reported ON cert_check_results(node_id, reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cert_check_results_reported ON cert_check_results(reported_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cert_check_results_received ON cert_check_results(received_at);
 
 CREATE TABLE IF NOT EXISTS service_status (
     key TEXT PRIMARY KEY,

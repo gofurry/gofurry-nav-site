@@ -26,9 +26,9 @@ type fakeStore struct {
 	nodeMetricsID string
 }
 
-func (f *fakeStore) Ingest(context.Context, model.AgentPayload, int) error {
+func (f *fakeStore) Ingest(context.Context, model.AgentPayload) (repository.ServiceFailureCounts, error) {
 	f.ingested = true
-	return nil
+	return repository.ServiceFailureCounts{}, nil
 }
 func (f *fakeStore) UpsertAlert(context.Context, repository.AlertInput) error { return nil }
 func (f *fakeStore) ResolveAlert(context.Context, string) error               { return nil }

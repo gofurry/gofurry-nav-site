@@ -13,7 +13,7 @@ import (
 )
 
 type Store interface {
-	Ingest(ctx context.Context, payload model.AgentPayload, alertThreshold int) error
+	Ingest(ctx context.Context, payload model.AgentPayload) (repository.ServiceFailureCounts, error)
 	UpsertAlert(ctx context.Context, input repository.AlertInput) error
 	ResolveAlert(ctx context.Context, key string) error
 	ListNodes(ctx context.Context) ([]model.Node, error)
@@ -55,11 +55,12 @@ func (s *Service) Ingest(ctx context.Context, payload model.AgentPayload) error 
 	if err := validateAndNormalizePayload(&payload); err != nil {
 		return err
 	}
-	if err := s.store.Ingest(ctx, payload, s.cfg.Alert.HTTPFailureThreshold); err != nil {
+	failureCounts, err := s.store.Ingest(ctx, payload)
+	if err != nil {
 		return err
 	}
 	if s.cfg.Alert.Enabled {
-		return s.evaluatePayloadAlerts(ctx, payload)
+		return s.evaluatePayloadAlerts(ctx, payload, failureCounts)
 	}
 	return nil
 }
@@ -324,7 +325,7 @@ func (s *Service) PeerStatus(ctx context.Context) (*model.PeerSummary, error) {
 	return s.store.LatestPeerSummary(ctx)
 }
 
-func (s *Service) evaluatePayloadAlerts(ctx context.Context, payload model.AgentPayload) error {
+func (s *Service) evaluatePayloadAlerts(ctx context.Context, payload model.AgentPayload, failureCounts repository.ServiceFailureCounts) error {
 	if payload.System != nil {
 		key := alertKey("memory", payload.Region, payload.NodeID)
 		if payload.System.MemoryUsage >= s.cfg.Alert.MemoryUsageWarn {
@@ -364,6 +365,13 @@ func (s *Service) evaluatePayloadAlerts(ctx context.Context, payload model.Agent
 	for _, item := range payload.HTTPChecks {
 		key := alertKey("http", payload.NodeID, item.Name)
 		if item.Status != "ok" {
+			failureCount := failureCounts[repository.ServiceStatusKey(payload.NodeID, "http", item.Name)]
+			if failureCount < s.cfg.Alert.HTTPFailureThreshold {
+				if err := s.store.ResolveAlert(ctx, key); err != nil {
+					return err
+				}
+				continue
+			}
 			if err := s.store.UpsertAlert(ctx, repository.AlertInput{
 				Key:     key,
 				Region:  payload.Region,

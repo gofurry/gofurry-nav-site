@@ -26,6 +26,8 @@ type AlertInput struct {
 	Message string
 }
 
+type ServiceFailureCounts map[string]int
+
 func Connect(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
@@ -57,12 +59,13 @@ func (r *Repository) Ping(ctx context.Context) error {
 	return r.pool.Ping(ctx)
 }
 
-func (r *Repository) Ingest(ctx context.Context, payload model.AgentPayload, alertThreshold int) error {
+func (r *Repository) Ingest(ctx context.Context, payload model.AgentPayload) (ServiceFailureCounts, error) {
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
+	failureCounts := ServiceFailureCounts{}
 
 	reportedAt := payload.Timestamp
 	if reportedAt.IsZero() {
@@ -81,14 +84,14 @@ SET region = EXCLUDED.region,
     updated_at = now()
 `, payload.NodeID, payload.Region, payload.Role, payload.NodeName, payload.AgentVersion, reportedAt)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_, err = tx.Exec(ctx, `
 INSERT INTO node_heartbeats (node_id, region, agent_version, reported_at)
 VALUES ($1, $2, $3, $4)
 `, payload.NodeID, payload.Region, payload.AgentVersion, reportedAt)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if payload.System != nil {
 		_, err = tx.Exec(ctx, `
@@ -96,7 +99,7 @@ INSERT INTO system_samples (node_id, cpu_usage, memory_usage, memory_used, memor
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `, payload.NodeID, payload.System.CPUUsage, payload.System.MemoryUsage, int64(payload.System.MemoryUsed), int64(payload.System.MemoryTotal), payload.System.Load1, payload.System.Load5, payload.System.Load15, int64(payload.System.UptimeSeconds), reportedAt)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	for _, item := range payload.Disks {
@@ -104,7 +107,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 INSERT INTO disk_samples (node_id, mount, usage, inode_usage, used, total, reported_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 `, payload.NodeID, item.Mount, item.Usage, item.InodeUsage, int64(item.Used), int64(item.Total), reportedAt); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	for _, item := range payload.Networks {
@@ -112,7 +115,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 INSERT INTO network_samples (node_id, name, bytes_sent, bytes_recv, packets_sent, packets_recv, reported_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 `, payload.NodeID, item.Name, int64(item.BytesSent), int64(item.BytesRecv), int64(item.PacketsSent), int64(item.PacketsRecv), reportedAt); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	for _, item := range payload.Docker {
@@ -120,7 +123,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 INSERT INTO docker_container_samples (node_id, name, running, status, health_status, restart_count, error_message, reported_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `, payload.NodeID, item.Name, item.Running, item.Status, item.HealthStatus, item.RestartCount, item.ErrorMessage, reportedAt); err != nil {
-			return err
+			return nil, err
 		}
 		status := "ok"
 		message := item.Status
@@ -128,49 +131,62 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			status = "down"
 			message = firstNonEmpty(item.ErrorMessage, item.HealthStatus, item.Status)
 		}
-		if _, err = upsertServiceStatus(ctx, tx, payload.NodeID, "docker", item.Name, status, message, 0); err != nil {
-			return err
+		count, err := upsertServiceStatus(ctx, tx, payload.NodeID, "docker", item.Name, status, message, 0)
+		if err != nil {
+			return nil, err
 		}
+		failureCounts[ServiceStatusKey(payload.NodeID, "docker", item.Name)] = count
 	}
 	for _, item := range payload.HTTPChecks {
 		if _, err = tx.Exec(ctx, `
 INSERT INTO http_check_results (node_id, name, url, status, status_code, latency_ms, error_message, reported_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `, payload.NodeID, item.Name, item.URL, item.Status, item.StatusCode, item.LatencyMS, item.ErrorMessage, reportedAt); err != nil {
-			return err
+			return nil, err
 		}
-		if _, err = upsertServiceStatus(ctx, tx, payload.NodeID, "http", item.Name, item.Status, item.ErrorMessage, item.LatencyMS); err != nil {
-			return err
+		count, err := upsertServiceStatus(ctx, tx, payload.NodeID, "http", item.Name, item.Status, item.ErrorMessage, item.LatencyMS)
+		if err != nil {
+			return nil, err
 		}
+		failureCounts[ServiceStatusKey(payload.NodeID, "http", item.Name)] = count
 	}
 	for _, item := range payload.Postgres {
 		if err = insertServiceCheck(ctx, tx, payload.NodeID, "postgres", item, reportedAt); err != nil {
-			return err
+			return nil, err
 		}
-		if _, err = upsertServiceStatus(ctx, tx, payload.NodeID, "postgres", item.Name, item.Status, item.ErrorMessage, item.LatencyMS); err != nil {
-			return err
+		count, err := upsertServiceStatus(ctx, tx, payload.NodeID, "postgres", item.Name, item.Status, item.ErrorMessage, item.LatencyMS)
+		if err != nil {
+			return nil, err
 		}
+		failureCounts[ServiceStatusKey(payload.NodeID, "postgres", item.Name)] = count
 	}
 	for _, item := range payload.Redis {
 		if err = insertServiceCheck(ctx, tx, payload.NodeID, "redis", item, reportedAt); err != nil {
-			return err
+			return nil, err
 		}
-		if _, err = upsertServiceStatus(ctx, tx, payload.NodeID, "redis", item.Name, item.Status, item.ErrorMessage, item.LatencyMS); err != nil {
-			return err
+		count, err := upsertServiceStatus(ctx, tx, payload.NodeID, "redis", item.Name, item.Status, item.ErrorMessage, item.LatencyMS)
+		if err != nil {
+			return nil, err
 		}
+		failureCounts[ServiceStatusKey(payload.NodeID, "redis", item.Name)] = count
 	}
 	for _, item := range payload.Certs {
 		if _, err = tx.Exec(ctx, `
 INSERT INTO cert_check_results (node_id, name, host, status, expires_at, days_remaining, matched_name, error_message, reported_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `, payload.NodeID, item.Name, item.Host, item.Status, nullableTime(item.ExpiresAt), item.DaysRemaining, item.MatchedName, item.ErrorMessage, reportedAt); err != nil {
-			return err
+			return nil, err
 		}
-		if _, err = upsertServiceStatus(ctx, tx, payload.NodeID, "cert", item.Name, item.Status, item.ErrorMessage, 0); err != nil {
-			return err
+		count, err := upsertServiceStatus(ctx, tx, payload.NodeID, "cert", item.Name, item.Status, item.ErrorMessage, 0)
+		if err != nil {
+			return nil, err
 		}
+		failureCounts[ServiceStatusKey(payload.NodeID, "cert", item.Name)] = count
 	}
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return failureCounts, nil
 }
 
 func insertServiceCheck(ctx context.Context, tx pgx.Tx, nodeID, typ string, item model.ServiceCheck, reportedAt time.Time) error {
@@ -455,6 +471,10 @@ func (r *Repository) CleanupRawSamples(ctx context.Context, olderThan time.Time)
 
 func serviceKey(nodeID, typ, name string) string {
 	return nodeID + ":" + typ + ":" + name
+}
+
+func ServiceStatusKey(nodeID, typ, name string) string {
+	return serviceKey(nodeID, typ, name)
 }
 
 func nullableTime(value time.Time) any {

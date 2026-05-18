@@ -17,11 +17,12 @@ type fakeStore struct {
 	nodes    []model.Node
 	bucket   time.Duration
 	payload  model.AgentPayload
+	counts   repository.ServiceFailureCounts
 }
 
-func (f *fakeStore) Ingest(_ context.Context, payload model.AgentPayload, _ int) error {
+func (f *fakeStore) Ingest(_ context.Context, payload model.AgentPayload) (repository.ServiceFailureCounts, error) {
 	f.payload = payload
-	return nil
+	return f.counts, nil
 }
 func (f *fakeStore) UpsertAlert(_ context.Context, input repository.AlertInput) error {
 	if f.alerts == nil {
@@ -132,6 +133,67 @@ func TestIngestTruncatesLongErrorMessages(t *testing.T) {
 	}
 	if got := len(store.payload.HTTPChecks[0].ErrorMessage); got != maxErrorLength {
 		t.Fatalf("expected truncated error length %d, got %d", maxErrorLength, got)
+	}
+}
+
+func TestHTTPAlertRequiresFailureThreshold(t *testing.T) {
+	key := repository.ServiceStatusKey("cn-business-a", "http", "web")
+	payload := model.AgentPayload{
+		NodeID:    "cn-business-a",
+		Region:    "cn",
+		Timestamp: time.Now(),
+		HTTPChecks: []model.HTTPCheckResult{{
+			Name:         "web",
+			URL:          "https://example.com",
+			Status:       "down",
+			ErrorMessage: "bad gateway",
+		}},
+	}
+	store := &fakeStore{counts: repository.ServiceFailureCounts{key: 2}}
+	svc := New(config.Config{
+		Region: "cn",
+		Alert: config.AlertConfig{
+			Enabled:              true,
+			HTTPFailureThreshold: 3,
+		},
+	}, store)
+	if err := svc.Ingest(context.Background(), payload); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.alerts) != 0 {
+		t.Fatalf("expected no alert below threshold, got %#v", store.alerts)
+	}
+
+	store = &fakeStore{counts: repository.ServiceFailureCounts{key: 3}}
+	svc = New(config.Config{
+		Region: "cn",
+		Alert: config.AlertConfig{
+			Enabled:              true,
+			HTTPFailureThreshold: 3,
+		},
+	}, store)
+	if err := svc.Ingest(context.Background(), payload); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := store.alerts[alertKey("http", "cn-business-a", "web")]; !ok {
+		t.Fatalf("expected threshold alert, got %#v", store.alerts)
+	}
+
+	payload.HTTPChecks[0].Status = "ok"
+	payload.HTTPChecks[0].ErrorMessage = ""
+	store = &fakeStore{counts: repository.ServiceFailureCounts{key: 0}}
+	svc = New(config.Config{
+		Region: "cn",
+		Alert: config.AlertConfig{
+			Enabled:              true,
+			HTTPFailureThreshold: 3,
+		},
+	}, store)
+	if err := svc.Ingest(context.Background(), payload); err != nil {
+		t.Fatal(err)
+	}
+	if len(store.resolved) == 0 || store.resolved[0] != alertKey("http", "cn-business-a", "web") {
+		t.Fatalf("expected resolved http alert, got %#v", store.resolved)
 	}
 }
 
