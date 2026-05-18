@@ -98,6 +98,68 @@ func TestAgentIngestRequiresValidSignature(t *testing.T) {
 	}
 }
 
+func TestAgentIngestRejectsOversizedBody(t *testing.T) {
+	cfg := config.Config{
+		CenterID: "ops",
+		Region:   "cn",
+		Security: config.SecurityConfig{
+			DashboardPasscode: "pass",
+			SessionSecret:     "session",
+			AgentTokens:       []config.AgentToken{{NodeID: "node", Token: "token"}},
+		},
+	}
+	app := New(cfg, service.New(cfg, &fakeStore{}))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agent/ingest", bytes.NewReader(bytes.Repeat([]byte("x"), centerBodyLimit+1)))
+	_, err := app.Test(req)
+	if err == nil {
+		t.Fatal("expected body limit rejection")
+	}
+	if !strings.Contains(err.Error(), "body size exceeds") {
+		t.Fatalf("expected body size error, got %v", err)
+	}
+}
+
+func TestLoginRateLimitCountsFailuresOnly(t *testing.T) {
+	cfg := config.Config{
+		CenterID: "ops",
+		Region:   "cn",
+		Security: config.SecurityConfig{
+			DashboardPasscode: "correct-passcode",
+			SessionSecret:     "session",
+		},
+	}
+	app := New(cfg, service.New(cfg, &fakeStore{}))
+	for i := 0; i < 5; i++ {
+		resp, err := app.Test(httptest.NewRequest(http.MethodPost, "/api/v1/admin/auth/login", strings.NewReader(`{"passcode":"wrong"}`)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.StatusCode != fiber.StatusUnauthorized {
+			t.Fatalf("expected unauthorized attempt %d, got %d", i+1, resp.StatusCode)
+		}
+	}
+	resp, err := app.Test(httptest.NewRequest(http.MethodPost, "/api/v1/admin/auth/login", strings.NewReader(`{"passcode":"wrong"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusTooManyRequests {
+		t.Fatalf("expected rate limit, got %d", resp.StatusCode)
+	}
+
+	successApp := New(cfg, service.New(cfg, &fakeStore{}))
+	for i := 0; i < 6; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/auth/login", strings.NewReader(`{"passcode":"correct-passcode"}`))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := successApp.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.StatusCode != fiber.StatusOK {
+			t.Fatalf("expected successful login attempt %d, got %d", i+1, resp.StatusCode)
+		}
+	}
+}
+
 func TestEmbeddedDashboardServed(t *testing.T) {
 	cfg := config.Config{
 		CenterID: "ops",
@@ -157,7 +219,7 @@ func TestDashboardMetricsRangeFallback(t *testing.T) {
 	}
 	app := New(cfg, service.New(cfg, store))
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/metrics/overview?range=bad", nil)
-	req.AddCookie(&http.Cookie{Name: "ops_session", Value: security.NewSession("session", time.Hour)})
+	req.AddCookie(sessionCookie(t, "ops_session", "session"))
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)
@@ -190,7 +252,7 @@ func TestNodeMetricsRoute(t *testing.T) {
 	}
 	app := New(cfg, service.New(cfg, store))
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/nodes/node-a/metrics?range=6h", nil)
-	req.AddCookie(&http.Cookie{Name: "ops_session", Value: security.NewSession("session", time.Hour)})
+	req.AddCookie(sessionCookie(t, "ops_session", "session"))
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatal(err)
@@ -204,4 +266,13 @@ func TestNodeMetricsRoute(t *testing.T) {
 	if store.metricsBucket != 5*time.Minute {
 		t.Fatalf("expected 6h bucket 5m, got %s", store.metricsBucket)
 	}
+}
+
+func sessionCookie(t *testing.T, name, secret string) *http.Cookie {
+	t.Helper()
+	token, err := security.NewSession(secret, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &http.Cookie{Name: name, Value: token}
 }

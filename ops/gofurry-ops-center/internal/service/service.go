@@ -52,6 +52,9 @@ func (s *Service) Ingest(ctx context.Context, payload model.AgentPayload) error 
 	if payload.Timestamp.IsZero() {
 		payload.Timestamp = s.now()
 	}
+	if err := validateAndNormalizePayload(&payload); err != nil {
+		return err
+	}
 	if err := s.store.Ingest(ctx, payload, s.cfg.Alert.HTTPFailureThreshold); err != nil {
 		return err
 	}

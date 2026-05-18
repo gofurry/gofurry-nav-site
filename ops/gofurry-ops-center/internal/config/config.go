@@ -12,6 +12,8 @@ import (
 )
 
 const defaultConfigPath = "/etc/gofurry-ops-center/config.yaml"
+const minDashboardPasscodeLength = 12
+const minTokenLength = 32
 
 type Duration struct {
 	time.Duration
@@ -196,9 +198,13 @@ func (cfg Config) Validate() error {
 	}
 	if strings.TrimSpace(cfg.Security.DashboardPasscode) == "" {
 		errs = append(errs, errors.New("security.dashboard_passcode is required"))
+	} else if err := validateSecret("security.dashboard_passcode", cfg.Security.DashboardPasscode, minDashboardPasscodeLength); err != nil {
+		errs = append(errs, err)
 	}
 	if strings.TrimSpace(cfg.Security.SessionSecret) == "" {
 		errs = append(errs, errors.New("security.session_secret is required"))
+	} else if err := validateSecret("security.session_secret", cfg.Security.SessionSecret, minTokenLength); err != nil {
+		errs = append(errs, err)
 	}
 	if len(cfg.Security.AgentTokens) == 0 {
 		errs = append(errs, errors.New("security.agent_tokens is required"))
@@ -206,6 +212,20 @@ func (cfg Config) Validate() error {
 	for _, item := range cfg.Security.AgentTokens {
 		if strings.TrimSpace(item.NodeID) == "" || strings.TrimSpace(item.Token) == "" {
 			errs = append(errs, errors.New("security.agent_tokens entries require node_id and token"))
+			continue
+		}
+		if err := validateSecret("security.agent_tokens token for "+strings.TrimSpace(item.NodeID), item.Token, minTokenLength); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if strings.TrimSpace(cfg.Security.PeerToken) != "" {
+		if err := validateSecret("security.peer_token", cfg.Security.PeerToken, minTokenLength); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if strings.TrimSpace(cfg.Security.EventToken) != "" {
+		if err := validateSecret("security.event_token", cfg.Security.EventToken, minTokenLength); err != nil {
+			errs = append(errs, err)
 		}
 	}
 	return errors.Join(errs...)
@@ -217,4 +237,18 @@ func (cfg Config) AgentTokenMap() map[string]string {
 		result[strings.TrimSpace(item.NodeID)] = strings.TrimSpace(item.Token)
 	}
 	return result
+}
+
+func validateSecret(name, value string, minLen int) error {
+	value = strings.TrimSpace(value)
+	if len(value) < minLen {
+		return fmt.Errorf("%s must be at least %d characters", name, minLen)
+	}
+	lower := strings.ToLower(value)
+	for _, weak := range []string{"change-me", "change_me", "changeme", "password", "passwd", "example", "placeholder", "secret", "token", "test"} {
+		if strings.Contains(lower, weak) {
+			return fmt.Errorf("%s contains weak placeholder text", name)
+		}
+	}
+	return nil
 }

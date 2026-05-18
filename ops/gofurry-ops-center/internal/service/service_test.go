@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,9 +16,13 @@ type fakeStore struct {
 	resolved []string
 	nodes    []model.Node
 	bucket   time.Duration
+	payload  model.AgentPayload
 }
 
-func (f *fakeStore) Ingest(context.Context, model.AgentPayload, int) error { return nil }
+func (f *fakeStore) Ingest(_ context.Context, payload model.AgentPayload, _ int) error {
+	f.payload = payload
+	return nil
+}
 func (f *fakeStore) UpsertAlert(_ context.Context, input repository.AlertInput) error {
 	if f.alerts == nil {
 		f.alerts = map[string]repository.AlertInput{}
@@ -78,6 +83,55 @@ func TestIngestCreatesDiskAlert(t *testing.T) {
 	}
 	if _, ok := store.alerts["disk:cn-business-a:_"]; !ok {
 		t.Fatalf("expected disk alert, got %#v", store.alerts)
+	}
+}
+
+func TestIngestRejectsInvalidPayloadBoundaries(t *testing.T) {
+	store := &fakeStore{}
+	svc := New(config.Config{Region: "cn"}, store)
+	err := svc.Ingest(context.Background(), model.AgentPayload{
+		NodeID:    "cn-business-a",
+		Timestamp: time.Now(),
+		Networks:  make([]model.NetworkSample, maxNetworks+1),
+	})
+	if err == nil {
+		t.Fatal("expected oversized networks error")
+	}
+	if !strings.Contains(err.Error(), "networks exceeds") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	err = svc.Ingest(context.Background(), model.AgentPayload{
+		NodeID:     "cn-business-a",
+		Timestamp:  time.Now(),
+		HTTPChecks: []model.HTTPCheckResult{{Name: "web", URL: "https://example.com", Status: "maybe"}},
+	})
+	if err == nil {
+		t.Fatal("expected invalid status error")
+	}
+	if !strings.Contains(err.Error(), "status is invalid") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestIngestTruncatesLongErrorMessages(t *testing.T) {
+	store := &fakeStore{}
+	svc := New(config.Config{Region: "cn"}, store)
+	err := svc.Ingest(context.Background(), model.AgentPayload{
+		NodeID:    "cn-business-a",
+		Timestamp: time.Now(),
+		HTTPChecks: []model.HTTPCheckResult{{
+			Name:         "web",
+			URL:          "https://example.com",
+			Status:       "down",
+			ErrorMessage: strings.Repeat("x", maxErrorLength+50),
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := len(store.payload.HTTPChecks[0].ErrorMessage); got != maxErrorLength {
+		t.Fatalf("expected truncated error length %d, got %d", maxErrorLength, got)
 	}
 }
 

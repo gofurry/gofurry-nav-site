@@ -17,12 +17,29 @@ func TestVerifySignature(t *testing.T) {
 }
 
 func TestSession(t *testing.T) {
-	token := NewSession("secret", time.Hour)
+	token, err := NewSession("secret", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !VerifySession("secret", token) {
 		t.Fatal("expected valid session")
 	}
 	if VerifySession("other", token) {
 		t.Fatal("expected invalid session")
+	}
+}
+
+func TestSessionUsesRandomNonce(t *testing.T) {
+	first, err := NewSession("secret", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := NewSession("secret", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first == second {
+		t.Fatal("expected unique session tokens")
 	}
 }
 

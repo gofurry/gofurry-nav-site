@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/etag"
 	"github.com/gofiber/fiber/v3/middleware/healthcheck"
 	"github.com/gofiber/fiber/v3/middleware/helmet"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofurry/gofurry-nav-site/ops/gofurry-ops-center/internal/config"
 	"github.com/gofurry/gofurry-nav-site/ops/gofurry-ops-center/internal/model"
@@ -20,6 +21,8 @@ import (
 	"github.com/gofurry/gofurry-nav-site/ops/gofurry-ops-center/internal/service"
 	"github.com/gofurry/gofurry-nav-site/ops/gofurry-ops-center/internal/web"
 )
+
+const centerBodyLimit = 2 * 1024 * 1024
 
 type Server struct {
 	cfg       config.Config
@@ -35,6 +38,7 @@ func New(cfg config.Config, svc *service.Service) *fiber.App {
 		ErrorHandler: ErrorHandler,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
+		BodyLimit:    centerBodyLimit,
 	})
 	app.Use(recover.New())
 	app.Use(helmet.New())
@@ -52,15 +56,15 @@ func New(cfg config.Config, svc *service.Service) *fiber.App {
 	app.Get("/healthz", server.health)
 
 	v1 := app.Group("/api/v1")
-	v1.Post("/agent/ingest", server.agentIngest)
+	v1.Post("/agent/ingest", writeLimiter("agent", 120), server.agentIngest)
 	v1.Get("/peer/summary", server.requirePeer, server.peerSummary)
-	v1.Post("/peer/heartbeat", server.requirePeer, server.peerHeartbeat)
-	v1.Post("/events/sync", server.requireEvent, server.createSyncRun)
-	v1.Post("/events/deploy", server.requireEvent, server.createDeployEvent)
+	v1.Post("/peer/heartbeat", writeLimiter("peer-heartbeat", 60), server.requirePeer, server.peerHeartbeat)
+	v1.Post("/events/sync", writeLimiter("event-sync", 60), server.requireEvent, server.createSyncRun)
+	v1.Post("/events/deploy", writeLimiter("event-deploy", 60), server.requireEvent, server.createDeployEvent)
 
 	auth := v1.Group("/admin/auth")
 	auth.Get("/state", server.authState)
-	auth.Post("/login", server.authLogin)
+	auth.Post("/login", loginLimiter(), server.authLogin)
 	auth.Post("/logout", server.authLogout)
 	auth.Get("/me", server.requireAdmin, server.authMe)
 
@@ -77,6 +81,37 @@ func New(cfg config.Config, svc *service.Service) *fiber.App {
 	admin.Get("/deployments", server.deployments)
 	attachEmbeddedUI(app)
 	return app
+}
+
+func loginLimiter() fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:                    5,
+		Expiration:             time.Minute,
+		SkipSuccessfulRequests: true,
+		KeyGenerator: func(c fiber.Ctx) string {
+			return "login:" + c.IP()
+		},
+		LimitReached: rateLimitReached,
+	})
+}
+
+func writeLimiter(prefix string, max int) fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:        max,
+		Expiration: time.Minute,
+		KeyGenerator: func(c fiber.Ctx) string {
+			nodeID := strings.TrimSpace(c.Get("X-GoFurry-Node-ID"))
+			if nodeID != "" {
+				return prefix + ":" + nodeID + ":" + c.IP()
+			}
+			return prefix + ":" + c.IP()
+		},
+		LimitReached: rateLimitReached,
+	})
+}
+
+func rateLimitReached(c fiber.Ctx) error {
+	return fail(c, fiber.StatusTooManyRequests, "rate limit exceeded")
 }
 
 func (s *Server) health(c fiber.Ctx) error {

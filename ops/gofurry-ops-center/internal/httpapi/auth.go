@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -29,10 +30,13 @@ func (s *Server) authLogin(c fiber.Ctx) error {
 	if passcode == "" {
 		passcode = strings.TrimSpace(req.Password)
 	}
-	if passcode == "" || passcode != s.cfg.Security.DashboardPasscode {
+	if passcode == "" || !constantTimeEqual(passcode, strings.TrimSpace(s.cfg.Security.DashboardPasscode)) {
 		return fail(c, fiber.StatusUnauthorized, "invalid passcode")
 	}
-	token := security.NewSession(s.cfg.Security.SessionSecret, s.cfg.Security.SessionTTL.Duration)
+	token, err := security.NewSession(s.cfg.Security.SessionSecret, s.cfg.Security.SessionTTL.Duration)
+	if err != nil {
+		return fail(c, fiber.StatusInternalServerError, "create session failed")
+	}
 	c.Cookie(&fiber.Cookie{
 		Name:     s.cfg.Security.CookieName,
 		Value:    token,
@@ -93,6 +97,14 @@ func (s *Server) requireEvent(c fiber.Ctx) error {
 func (s *Server) validSession(c fiber.Ctx) bool {
 	token := strings.TrimSpace(c.Cookies(s.cfg.Security.CookieName))
 	return token != "" && security.VerifySession(s.cfg.Security.SessionSecret, token)
+}
+
+func constantTimeEqual(a, b string) bool {
+	if len(a) != len(b) {
+		subtle.ConstantTimeCompare([]byte(a), []byte(b))
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
 }
 
 func bearerToken(value string) string {

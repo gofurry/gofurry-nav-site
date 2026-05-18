@@ -2,6 +2,7 @@ package security
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
@@ -29,13 +30,17 @@ func Verify(token, timestamp, nodeID string, body []byte, signature string) bool
 	return subtle.ConstantTimeCompare([]byte(expected), []byte(strings.TrimSpace(signature))) == 1
 }
 
-func NewSession(secret string, ttl time.Duration) string {
+func NewSession(secret string, ttl time.Duration) (string, error) {
 	expires := time.Now().Add(ttl).Unix()
-	payload := strconv.FormatInt(expires, 10)
+	nonceBytes := make([]byte, 16)
+	if _, err := rand.Read(nonceBytes); err != nil {
+		return "", err
+	}
+	payload := strconv.FormatInt(expires, 10) + ":" + hex.EncodeToString(nonceBytes)
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(payload))
 	sig := hex.EncodeToString(mac.Sum(nil))
-	return base64.RawURLEncoding.EncodeToString([]byte(payload + ":" + sig))
+	return base64.RawURLEncoding.EncodeToString([]byte(payload + ":" + sig)), nil
 }
 
 func VerifySession(secret, token string) bool {
@@ -43,18 +48,23 @@ func VerifySession(secret, token string) bool {
 	if err != nil {
 		return false
 	}
-	parts := strings.SplitN(string(raw), ":", 2)
-	if len(parts) != 2 {
+	parts := strings.Split(string(raw), ":")
+	if len(parts) != 3 {
 		return false
 	}
 	expires, err := strconv.ParseInt(parts[0], 10, 64)
 	if err != nil || time.Now().Unix() > expires {
 		return false
 	}
+	nonce, err := hex.DecodeString(parts[1])
+	if err != nil || len(nonce) != 16 {
+		return false
+	}
+	payload := parts[0] + ":" + parts[1]
 	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(parts[0]))
+	mac.Write([]byte(payload))
 	expected := hex.EncodeToString(mac.Sum(nil))
-	return subtle.ConstantTimeCompare([]byte(expected), []byte(parts[1])) == 1
+	return subtle.ConstantTimeCompare([]byte(expected), []byte(parts[2])) == 1
 }
 
 func CheckTimestamp(value string, window time.Duration, now time.Time) error {
