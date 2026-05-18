@@ -5,7 +5,7 @@
 
 [English](./README_en.md)
 
-gofurry 是一个面向兽圈文化内容发现与整理的开源多服务仓库，包含公开站点前台、导航与游戏数据接口、采集服务，以及运营后台。
+gofurry 是一个面向兽圈文化内容发现与整理的开源多服务仓库，包含公开站点前台、导航与游戏数据接口、采集服务、RAG 服务，以及运营与周边能力模块。
 
 线上主站当前已迁移到 Nuxt 4 前台，重点提升公开页面的 SEO 与首屏可见性；原 Vue 前台保留为迁移参考，不再作为新的生产前台入口。
 
@@ -35,7 +35,11 @@ gofurry 是一个面向兽圈文化内容发现与整理的开源多服务仓库
 - `gofurry-nav-collector`：导航数据采集服务
 - `gofurry-game-backend`：兽游相关后端 API
 - `gofurry-game-collector`：兽游数据采集服务
+- `gofurry-rag`：轻量 RAG 服务，包含嵌入式管理控制台、公开问答接口与内容同步
 - `gofurry-admin`：运营后台，包含嵌入式前端
+- `gofurry-intl`：国际化相关服务与前端实验目录
+- `ops`：运维与运营辅助模块
+- `sql`：数据库相关脚本与结构文件
 - `experimental`：实验性代码，不参与正式发布
 - `tools`：辅助脚本与本地工具
 
@@ -50,7 +54,7 @@ gofurry 是一个面向兽圈文化内容发现与整理的开源多服务仓库
 
 ## 快速开始
 
-仓库内各服务独立开发、独立运行。最常见的两类入口如下。
+仓库内各服务独立开发、独立运行。下面是当前最常见的几个入口。
 
 前台开发：
 
@@ -67,15 +71,33 @@ cd gofurry-nav-backend
 go run .
 ```
 
-如果你要构建旧的根级打包产物，可使用：
+RAG 服务开发：
+
+```bash
+cd gofurry-rag
+go run . --config ./config/server.yaml serve
+```
+
+如果你要构建根级打包产物，可使用：
 
 ```bat
 build.bat all
 ```
 
-这个脚本主要用于当前仓库里的传统构建产物输出到 `build/` 目录。Nuxt 前台的生产部署则使用 `gofurry-nav-web` 目录内的 Docker 化流程。
+当前支持的目标包括：
+
+- `gofurry-nav-backend`
+- `gofurry-nav-collector`
+- `gofurry-game-backend`
+- `gofurry-game-collector`
+- `gofurry-admin`
+- `gofurry-rag`
+
+这个脚本会把构建产物输出到根级 `build/` 目录。Nuxt 前台的生产部署则使用 `gofurry-nav-web` 目录内的 Docker 化流程。
 
 ## 生产部署
+
+当前仓库内主要有两类部署路径。
 
 Nuxt 前台使用独立 Docker 部署路径，相关说明见：
 
@@ -89,12 +111,19 @@ cd gofurry-nav-web
 ./update.sh
 ```
 
+Go 服务与 RAG 则延续各自目录内的二进制 / install 路线，建议分别查看对应子项目文档，尤其是：
+
+- [gofurry-rag/README_zh.md](./gofurry-rag/README_zh.md)
+- [gofurry-rag/docs/deployment.md](./gofurry-rag/docs/deployment.md)
+
 ## 当前状态
 
 - 主站前台已迁移到 Nuxt 4，并已在生产环境使用
+- `archive` 自由问答页与站内 RAG 能力已经接入生产链路
+- `gofurry-rag` 已包含公开问答边界、轻量多轮上下文与站内同步框架
 - `robots.txt` 与 `sitemap.xml` 由 Nuxt server routes 动态生成
 - 旧 Vue 前台已归档为 legacy 参考实现
-- 基础 GitHub Actions 检查已覆盖核心 Go 服务、管理后台与旧前台路径
+- 根级 `build.bat` 已覆盖核心 Go 服务、管理后台与 RAG 二进制产物
 
 ## 贡献说明
 
