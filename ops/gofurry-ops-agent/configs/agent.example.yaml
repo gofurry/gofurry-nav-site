@@ -1,0 +1,77 @@
+node:
+  id: cn-business-a
+  name: CN Business Server A
+  region: cn
+  role: business
+
+center:
+  endpoint: https://ops-cn.go-furry.com/api/v1/agent/ingest
+  token: ${GOFURRY_OPS_AGENT_TOKEN}
+  timeout: 5s
+  retries: 3
+
+collect:
+  interval: 30s
+
+runtime:
+  memory_limit_mb: 128
+  gc_percent: 100
+
+log_level: info
+
+system:
+  enabled: true
+  disk_mounts:
+    - /
+    - /data
+
+docker:
+  enabled: true
+  socket: /var/run/docker.sock
+  timeout: 3s
+  containers:
+    - nginx
+    - postgres
+    - redis
+    - gofurry-nav-backend
+
+http_checks:
+  - name: cn-home
+    url: https://go-furry.com/
+    method: GET
+    timeout: 5s
+    expect_status: 200
+  - name: cn-api-health
+    url: https://go-furry.com/api/health
+    method: GET
+    timeout: 5s
+    expect_status: 200
+
+postgres:
+  - name: main-postgres
+    enabled: false
+    dsn: ${GOFURRY_OPS_POSTGRES_DSN}
+    timeout: 3s
+
+redis:
+  - name: main-redis
+    enabled: false
+    addr: 127.0.0.1:6379
+    username: ""
+    password: ${GOFURRY_OPS_REDIS_PASSWORD}
+    db: 0
+    timeout: 3s
+
+cert_checks:
+  - name: cn-home-cert
+    host: go-furry.com
+    port: "443"
+    server_name: go-furry.com
+    timeout: 5s
+    warn_days: 14
+
+spool:
+  enabled: true
+  dir: /var/lib/gofurry-ops-agent/spool
+  max_files: 1000
+

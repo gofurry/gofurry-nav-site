@@ -1,0 +1,16 @@
+[Unit]
+Description=GoFurry Ops Agent
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/gofurry-ops-agent run --config /etc/gofurry-ops-agent/config.yaml
+Restart=always
+RestartSec=5
+User=root
+WorkingDirectory=/var/lib/gofurry-ops-agent
+
+[Install]
+WantedBy=multi-user.target
+
