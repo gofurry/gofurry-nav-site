@@ -1,0 +1,22 @@
+[Unit]
+Description=GoFurry Ops Center
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gofurry
+Group=gofurry
+ExecStart=/opt/gofurry-ops-center/gofurry-ops-center serve --config /etc/gofurry-ops-center/config.yaml
+Restart=always
+RestartSec=5s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/gofurry-ops-center /var/log/gofurry-ops-center
+Environment=GOMEMLIMIT=256MiB
+Environment=GOGC=100
+
+[Install]
+WantedBy=multi-user.target

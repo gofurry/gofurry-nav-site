@@ -1,0 +1,18 @@
+services:
+  gofurry-ops-center:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: gofurry-ops-center:local
+    restart: unless-stopped
+    command: ["serve", "--config", "/etc/gofurry-ops-center/config.yaml"]
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./config.yaml:/etc/gofurry-ops-center/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/readyz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
