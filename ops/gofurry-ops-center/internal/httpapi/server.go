@@ -66,7 +66,9 @@ func New(cfg config.Config, svc *service.Service) *fiber.App {
 
 	admin := v1.Group("/dashboard", server.requireAdmin)
 	admin.Get("/overview", server.overview)
+	admin.Get("/metrics/overview", server.metricsOverview)
 	admin.Get("/nodes", server.nodes)
+	admin.Get("/nodes/:id/metrics", server.nodeMetrics)
 	admin.Get("/nodes/:id", server.node)
 	admin.Get("/services", server.services)
 	admin.Get("/alerts", server.alerts)
@@ -166,6 +168,14 @@ func (s *Server) overview(c fiber.Ctx) error {
 	return ok(c, result)
 }
 
+func (s *Server) metricsOverview(c fiber.Ctx) error {
+	result, err := s.svc.OverviewMetrics(requestContext(c), c.Query("range", "1h"))
+	if err != nil {
+		return fail(c, fiber.StatusInternalServerError, err.Error())
+	}
+	return ok(c, result)
+}
+
 func (s *Server) nodes(c fiber.Ctx) error {
 	result, err := s.svc.Nodes(requestContext(c))
 	if err != nil {
@@ -176,6 +186,14 @@ func (s *Server) nodes(c fiber.Ctx) error {
 
 func (s *Server) node(c fiber.Ctx) error {
 	result, err := s.svc.Node(requestContext(c), c.Params("id"))
+	if err != nil {
+		return fail(c, fiber.StatusNotFound, "node not found")
+	}
+	return ok(c, result)
+}
+
+func (s *Server) nodeMetrics(c fiber.Ctx) error {
+	result, err := s.svc.NodeMetrics(requestContext(c), c.Params("id"), c.Query("range", "1h"))
 	if err != nil {
 		return fail(c, fiber.StatusNotFound, "node not found")
 	}

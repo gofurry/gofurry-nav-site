@@ -20,7 +20,10 @@ import (
 )
 
 type fakeStore struct {
-	ingested bool
+	ingested      bool
+	metricsSince  time.Time
+	metricsBucket time.Duration
+	nodeMetricsID string
 }
 
 func (f *fakeStore) Ingest(context.Context, model.AgentPayload, int) error {
@@ -48,6 +51,17 @@ func (f *fakeStore) CreateDeployEvent(context.Context, model.DeployEventRequest)
 }
 func (f *fakeStore) ListDeployEvents(context.Context, int) ([]model.DeployEvent, error) {
 	return nil, nil
+}
+func (f *fakeStore) OverviewMetrics(_ context.Context, since time.Time, bucket time.Duration) (model.OverviewMetrics, error) {
+	f.metricsSince = since
+	f.metricsBucket = bucket
+	return model.OverviewMetrics{CPUTrend: []model.MetricPoint{}}, nil
+}
+func (f *fakeStore) NodeMetrics(_ context.Context, nodeID string, since time.Time, bucket time.Duration) (model.NodeMetrics, error) {
+	f.nodeMetricsID = nodeID
+	f.metricsSince = since
+	f.metricsBucket = bucket
+	return model.NodeMetrics{}, nil
 }
 
 func TestAgentIngestRequiresValidSignature(t *testing.T) {
@@ -108,5 +122,86 @@ func TestEmbeddedDashboardServed(t *testing.T) {
 	}
 	if !strings.Contains(string(body), "GoFurry Ops Center") {
 		t.Fatalf("dashboard shell was not served: %q", string(body))
+	}
+}
+
+func TestDashboardMetricsRequiresAdmin(t *testing.T) {
+	cfg := config.Config{
+		CenterID: "ops",
+		Region:   "cn",
+		Security: config.SecurityConfig{
+			DashboardPasscode: "pass",
+			SessionSecret:     "session",
+		},
+	}
+	app := New(cfg, service.New(cfg, &fakeStore{}))
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/metrics/overview", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusUnauthorized {
+		t.Fatalf("expected unauthorized, got %d", resp.StatusCode)
+	}
+}
+
+func TestDashboardMetricsRangeFallback(t *testing.T) {
+	store := &fakeStore{}
+	cfg := config.Config{
+		CenterID: "ops",
+		Region:   "cn",
+		Security: config.SecurityConfig{
+			DashboardPasscode: "pass",
+			SessionSecret:     "session",
+			CookieName:        "ops_session",
+		},
+	}
+	app := New(cfg, service.New(cfg, store))
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/metrics/overview?range=bad", nil)
+	req.AddCookie(&http.Cookie{Name: "ops_session", Value: security.NewSession("session", time.Hour)})
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("expected ok, got %d", resp.StatusCode)
+	}
+	if store.metricsBucket != time.Minute {
+		t.Fatalf("expected fallback bucket 1m, got %s", store.metricsBucket)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"range":"1h"`) {
+		t.Fatalf("expected fallback range in body, got %s", string(body))
+	}
+}
+
+func TestNodeMetricsRoute(t *testing.T) {
+	store := &fakeStore{}
+	cfg := config.Config{
+		CenterID: "ops",
+		Region:   "cn",
+		Security: config.SecurityConfig{
+			DashboardPasscode: "pass",
+			SessionSecret:     "session",
+			CookieName:        "ops_session",
+		},
+	}
+	app := New(cfg, service.New(cfg, store))
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/dashboard/nodes/node-a/metrics?range=6h", nil)
+	req.AddCookie(&http.Cookie{Name: "ops_session", Value: security.NewSession("session", time.Hour)})
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("expected ok, got %d", resp.StatusCode)
+	}
+	if store.nodeMetricsID != "node-a" {
+		t.Fatalf("expected node metrics for node-a, got %q", store.nodeMetricsID)
+	}
+	if store.metricsBucket != 5*time.Minute {
+		t.Fatalf("expected 6h bucket 5m, got %s", store.metricsBucket)
 	}
 }

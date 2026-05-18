@@ -183,6 +183,165 @@ type Overview struct {
 	Alerts          []AlertState    `json:"alerts"`
 }
 
+type MetricPoint struct {
+	Timestamp time.Time `json:"timestamp"`
+	Value     float64   `json:"value"`
+}
+
+type MetricSeries struct {
+	Name   string        `json:"name"`
+	Unit   string        `json:"unit,omitempty"`
+	Points []MetricPoint `json:"points"`
+}
+
+type StatusCount struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
+type TopResource struct {
+	NodeID    string    `json:"node_id"`
+	Name      string    `json:"name,omitempty"`
+	Value     float64   `json:"value"`
+	Unit      string    `json:"unit,omitempty"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type SystemAggregate struct {
+	NodesReported int        `json:"nodes_reported"`
+	CPUAvg        float64    `json:"cpu_avg"`
+	MemoryAvg     float64    `json:"memory_avg"`
+	Load1Avg      float64    `json:"load1_avg"`
+	ReportedAt    *time.Time `json:"reported_at,omitempty"`
+}
+
+type OverviewMetrics struct {
+	CenterID               string          `json:"center_id"`
+	Region                 string          `json:"region"`
+	Range                  string          `json:"range"`
+	GeneratedAt            time.Time       `json:"generated_at"`
+	LastSampleAt           *time.Time      `json:"last_sample_at,omitempty"`
+	SampleFreshnessSeconds int64           `json:"sample_freshness_seconds"`
+	LatestSystem           SystemAggregate `json:"latest_system"`
+	HighestDisk            *TopResource    `json:"highest_disk,omitempty"`
+	ServiceStatusCounts    []StatusCount   `json:"service_status_counts"`
+	AlertLevelCounts       []StatusCount   `json:"alert_level_counts"`
+	TopCPU                 []TopResource   `json:"top_cpu"`
+	TopMemory              []TopResource   `json:"top_memory"`
+	TopDisk                []TopResource   `json:"top_disk"`
+	CPUTrend               []MetricPoint   `json:"cpu_trend"`
+	MemoryTrend            []MetricPoint   `json:"memory_trend"`
+	LoadTrend              []MetricPoint   `json:"load_trend"`
+	DiskTrend              []MetricPoint   `json:"disk_trend"`
+	LatencyTrend           []MetricPoint   `json:"latency_trend"`
+}
+
+type SystemSnapshot struct {
+	CPUUsage      float64   `json:"cpu_usage"`
+	MemoryUsage   float64   `json:"memory_usage"`
+	MemoryUsed    int64     `json:"memory_used"`
+	MemoryTotal   int64     `json:"memory_total"`
+	Load1         float64   `json:"load1"`
+	Load5         float64   `json:"load5"`
+	Load15        float64   `json:"load15"`
+	UptimeSeconds int64     `json:"uptime_seconds"`
+	ReportedAt    time.Time `json:"reported_at"`
+}
+
+type DiskSnapshot struct {
+	Mount      string    `json:"mount"`
+	Usage      float64   `json:"usage"`
+	InodeUsage float64   `json:"inode_usage"`
+	Used       int64     `json:"used"`
+	Total      int64     `json:"total"`
+	ReportedAt time.Time `json:"reported_at"`
+}
+
+type NetworkSnapshot struct {
+	Name          string    `json:"name"`
+	BytesSent     int64     `json:"bytes_sent"`
+	BytesRecv     int64     `json:"bytes_recv"`
+	PacketsSent   int64     `json:"packets_sent"`
+	PacketsRecv   int64     `json:"packets_recv"`
+	TxBytesPerSec float64   `json:"tx_bytes_per_sec"`
+	RxBytesPerSec float64   `json:"rx_bytes_per_sec"`
+	ReportedAt    time.Time `json:"reported_at"`
+}
+
+type DockerSnapshot struct {
+	Name         string    `json:"name"`
+	Running      bool      `json:"running"`
+	Status       string    `json:"status"`
+	HealthStatus string    `json:"health_status,omitempty"`
+	RestartCount int       `json:"restart_count"`
+	ErrorMessage string    `json:"error_message,omitempty"`
+	ReportedAt   time.Time `json:"reported_at"`
+}
+
+type HTTPCheckSnapshot struct {
+	Name         string    `json:"name"`
+	URL          string    `json:"url,omitempty"`
+	Status       string    `json:"status"`
+	StatusCode   int       `json:"status_code,omitempty"`
+	LatencyMS    int64     `json:"latency_ms"`
+	ErrorMessage string    `json:"error_message,omitempty"`
+	ReportedAt   time.Time `json:"reported_at"`
+}
+
+type ServiceCheckSnapshot struct {
+	ServiceType  string    `json:"service_type"`
+	Name         string    `json:"name"`
+	Status       string    `json:"status"`
+	LatencyMS    int64     `json:"latency_ms"`
+	ErrorMessage string    `json:"error_message,omitempty"`
+	DatabaseSize int64     `json:"database_size,omitempty"`
+	Connections  int64     `json:"connections,omitempty"`
+	MemoryUsed   int64     `json:"memory_used,omitempty"`
+	KeyCount     int64     `json:"key_count,omitempty"`
+	ReportedAt   time.Time `json:"reported_at"`
+}
+
+type CertSnapshot struct {
+	Name          string     `json:"name"`
+	Host          string     `json:"host"`
+	Status        string     `json:"status"`
+	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
+	DaysRemaining int        `json:"days_remaining"`
+	MatchedName   bool       `json:"matched_name"`
+	ErrorMessage  string     `json:"error_message,omitempty"`
+	ReportedAt    time.Time  `json:"reported_at"`
+}
+
+type NodeLatestMetrics struct {
+	System        *SystemSnapshot        `json:"system,omitempty"`
+	Disks         []DiskSnapshot         `json:"disks"`
+	Networks      []NetworkSnapshot      `json:"networks"`
+	Docker        []DockerSnapshot       `json:"docker"`
+	HTTPChecks    []HTTPCheckSnapshot    `json:"http_checks"`
+	ServiceChecks []ServiceCheckSnapshot `json:"service_checks"`
+	Certs         []CertSnapshot         `json:"certs"`
+}
+
+type NodeTrendMetrics struct {
+	CPU            []MetricPoint  `json:"cpu"`
+	Memory         []MetricPoint  `json:"memory"`
+	Load           []MetricPoint  `json:"load"`
+	NetworkRx      []MetricPoint  `json:"network_rx"`
+	NetworkTx      []MetricPoint  `json:"network_tx"`
+	DiskUsage      []MetricSeries `json:"disk_usage"`
+	ServiceLatency []MetricSeries `json:"service_latency"`
+}
+
+type NodeMetrics struct {
+	Node                   Node              `json:"node"`
+	Range                  string            `json:"range"`
+	GeneratedAt            time.Time         `json:"generated_at"`
+	LastSampleAt           *time.Time        `json:"last_sample_at,omitempty"`
+	SampleFreshnessSeconds int64             `json:"sample_freshness_seconds"`
+	Latest                 NodeLatestMetrics `json:"latest"`
+	Trends                 NodeTrendMetrics  `json:"trends"`
+}
+
 type SyncEventRequest struct {
 	Region       string     `json:"region"`
 	SyncName     string     `json:"sync_name"`

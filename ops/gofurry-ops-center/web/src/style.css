@@ -141,6 +141,82 @@ button:disabled {
   transform: translateY(-1px);
 }
 
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ops-ink);
+}
+
+.fine-label {
+  color: var(--ops-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.segmented-control {
+  display: inline-flex;
+  gap: 4px;
+  border: 1px solid var(--ops-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 4px;
+}
+
+.segmented-button {
+  min-width: 44px;
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--ops-muted);
+  font-size: 12px;
+  font-weight: 700;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.segmented-button:hover,
+.segmented-button.active {
+  background: rgba(216, 225, 232, 0.13);
+  color: var(--ops-accent-soft);
+}
+
+.chart-shell {
+  position: relative;
+  width: 100%;
+}
+
+.chart-empty {
+  display: flex;
+  height: 100%;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--ops-border);
+  border-radius: 8px;
+  color: var(--ops-muted);
+  font-size: 14px;
+}
+
+.meter {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(215, 224, 232, 0.75), rgba(152, 191, 169, 0.85));
+}
+
+.meter.warn > span {
+  background: linear-gradient(90deg, rgba(208, 173, 114, 0.68), rgba(209, 136, 136, 0.78));
+}
+
 .nav-link {
   display: flex;
   align-items: center;

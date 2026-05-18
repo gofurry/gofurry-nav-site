@@ -28,6 +28,8 @@ type Store interface {
 	ListSyncRuns(ctx context.Context, limit int) ([]model.SyncRun, error)
 	CreateDeployEvent(ctx context.Context, req model.DeployEventRequest) (model.DeployEvent, error)
 	ListDeployEvents(ctx context.Context, limit int) ([]model.DeployEvent, error)
+	OverviewMetrics(ctx context.Context, since time.Time, bucket time.Duration) (model.OverviewMetrics, error)
+	NodeMetrics(ctx context.Context, nodeID string, since time.Time, bucket time.Duration) (model.NodeMetrics, error)
 }
 
 type Service struct {
@@ -143,6 +145,66 @@ func (s *Service) PeerSummary(ctx context.Context) (model.PeerSummary, error) {
 		LastSyncStatus:  lastSyncStatus,
 		UpdatedAt:       s.now(),
 	}, nil
+}
+
+type metricsWindow struct {
+	Label  string
+	Since  time.Time
+	Bucket time.Duration
+}
+
+func resolveMetricsWindow(value string, now time.Time) metricsWindow {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "6h":
+		return metricsWindow{Label: "6h", Since: now.Add(-6 * time.Hour), Bucket: 5 * time.Minute}
+	case "24h":
+		return metricsWindow{Label: "24h", Since: now.Add(-24 * time.Hour), Bucket: 15 * time.Minute}
+	default:
+		return metricsWindow{Label: "1h", Since: now.Add(-time.Hour), Bucket: time.Minute}
+	}
+}
+
+func (s *Service) OverviewMetrics(ctx context.Context, rangeValue string) (model.OverviewMetrics, error) {
+	now := s.now()
+	window := resolveMetricsWindow(rangeValue, now)
+	result, err := s.store.OverviewMetrics(ctx, window.Since, window.Bucket)
+	if err != nil {
+		return model.OverviewMetrics{}, err
+	}
+	result.CenterID = cfgString(s.cfg.CenterID)
+	result.Region = s.cfg.Region
+	result.Range = window.Label
+	result.GeneratedAt = now
+	if result.LastSampleAt != nil {
+		result.SampleFreshnessSeconds = int64(now.Sub(*result.LastSampleAt).Seconds())
+		if result.SampleFreshnessSeconds < 0 {
+			result.SampleFreshnessSeconds = 0
+		}
+	}
+	return result, nil
+}
+
+func (s *Service) NodeMetrics(ctx context.Context, nodeID, rangeValue string) (model.NodeMetrics, error) {
+	node, err := s.store.GetNode(ctx, nodeID)
+	if err != nil {
+		return model.NodeMetrics{}, err
+	}
+	now := s.now()
+	window := resolveMetricsWindow(rangeValue, now)
+	result, err := s.store.NodeMetrics(ctx, nodeID, window.Since, window.Bucket)
+	if err != nil {
+		return model.NodeMetrics{}, err
+	}
+	result.Node = node
+	result.Range = window.Label
+	result.GeneratedAt = now
+	if result.LastSampleAt != nil {
+		result.SampleFreshnessSeconds = int64(now.Sub(*result.LastSampleAt).Seconds())
+		if result.SampleFreshnessSeconds < 0 {
+			result.SampleFreshnessSeconds = 0
+		}
+	}
+	return result, nil
 }
 
 func (s *Service) RecordPeerSummary(ctx context.Context, item model.PeerSummary) error {

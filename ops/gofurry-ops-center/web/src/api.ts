@@ -3,8 +3,11 @@ import type {
   ApiResult,
   AuthState,
   DeployEvent,
+  MetricsRange,
+  NodeMetrics,
   OpsNode,
   Overview,
+  OverviewMetrics,
   PeerSummary,
   ServiceStatus,
   SyncRun,
@@ -46,12 +49,20 @@ export function overview() {
   return request<Overview>('/api/v1/dashboard/overview')
 }
 
+export function overviewMetrics(range: MetricsRange = '1h') {
+  return request<OverviewMetrics>(`/api/v1/dashboard/metrics/overview?range=${encodeURIComponent(range)}`)
+}
+
 export function nodes() {
   return request<OpsNode[]>('/api/v1/dashboard/nodes')
 }
 
 export function node(id: string) {
   return request<OpsNode>(`/api/v1/dashboard/nodes/${encodeURIComponent(id)}`)
+}
+
+export function nodeMetrics(id: string, range: MetricsRange = '1h') {
+  return request<NodeMetrics>(`/api/v1/dashboard/nodes/${encodeURIComponent(id)}/metrics?range=${encodeURIComponent(range)}`)
 }
 
 export function services() {

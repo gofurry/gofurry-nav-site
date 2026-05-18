@@ -14,6 +14,7 @@ type fakeStore struct {
 	alerts   map[string]repository.AlertInput
 	resolved []string
 	nodes    []model.Node
+	bucket   time.Duration
 }
 
 func (f *fakeStore) Ingest(context.Context, model.AgentPayload, int) error { return nil }
@@ -47,6 +48,14 @@ func (f *fakeStore) CreateDeployEvent(context.Context, model.DeployEventRequest)
 }
 func (f *fakeStore) ListDeployEvents(context.Context, int) ([]model.DeployEvent, error) {
 	return nil, nil
+}
+func (f *fakeStore) OverviewMetrics(_ context.Context, _ time.Time, bucket time.Duration) (model.OverviewMetrics, error) {
+	f.bucket = bucket
+	return model.OverviewMetrics{}, nil
+}
+func (f *fakeStore) NodeMetrics(_ context.Context, _ string, _ time.Time, bucket time.Duration) (model.NodeMetrics, error) {
+	f.bucket = bucket
+	return model.NodeMetrics{}, nil
 }
 
 func TestIngestCreatesDiskAlert(t *testing.T) {
@@ -86,5 +95,43 @@ func TestEvaluateNodeOffline(t *testing.T) {
 	}
 	if _, ok := store.alerts["node_down:cn:n1"]; !ok {
 		t.Fatalf("expected node down alert, got %#v", store.alerts)
+	}
+}
+
+func TestResolveMetricsWindow(t *testing.T) {
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		input  string
+		label  string
+		since  time.Time
+		bucket time.Duration
+	}{
+		{input: "", label: "1h", since: now.Add(-time.Hour), bucket: time.Minute},
+		{input: "bad", label: "1h", since: now.Add(-time.Hour), bucket: time.Minute},
+		{input: "6h", label: "6h", since: now.Add(-6 * time.Hour), bucket: 5 * time.Minute},
+		{input: "24h", label: "24h", since: now.Add(-24 * time.Hour), bucket: 15 * time.Minute},
+	}
+	for _, tt := range tests {
+		got := resolveMetricsWindow(tt.input, now)
+		if got.Label != tt.label || !got.Since.Equal(tt.since) || got.Bucket != tt.bucket {
+			t.Fatalf("resolveMetricsWindow(%q) = %#v", tt.input, got)
+		}
+	}
+}
+
+func TestOverviewMetricsAddsMetadata(t *testing.T) {
+	store := &fakeStore{}
+	svc := New(config.Config{CenterID: "ops", Region: "cn"}, store)
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return now }
+	result, err := svc.OverviewMetrics(context.Background(), "6h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.CenterID != "ops" || result.Region != "cn" || result.Range != "6h" || !result.GeneratedAt.Equal(now) {
+		t.Fatalf("unexpected metadata: %#v", result)
+	}
+	if store.bucket != 5*time.Minute {
+		t.Fatalf("expected 6h bucket, got %s", store.bucket)
 	}
 }
