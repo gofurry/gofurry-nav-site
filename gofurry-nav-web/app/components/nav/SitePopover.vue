@@ -2,7 +2,7 @@
   <div
       v-if="site"
       ref="popoverRef"
-      class="fixed z-9999 w-72 rounded-xl border border-orange-100/85 bg-orange-50/95 p-4 text-sm text-gray-700 shadow-[0_16px_40px_rgba(25,35,38,0.16)] backdrop-blur-md transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform,filter]"
+      class="fixed z-9999 w-72 rounded-xl border border-orange-100/85 bg-orange-50/95 p-4 text-sm text-gray-700 shadow-[0_16px_40px_rgba(25,35,38,0.16)] backdrop-blur-md transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform,filter]"
       :class="popoverClasses"
       :style="popoverStyle"
       @mouseenter="onMouseEnter"

@@ -4,6 +4,7 @@
       :desktop-bg-url="navPageData.desktopBgUrl"
       :mobile-bg-url="navPageData.mobileBgUrl"
     />
+    <NavToolDock :items="toolDockSites" />
     <main
         v-show="isContentRevealed"
         ref="contentRef"
@@ -21,6 +22,7 @@
         :initial-groups="navPageData.groups"
         :initial-sites="navPageData.sites"
         :initial-ping-data="navPageData.pingData"
+        :initial-display-mode="routeDisplayMode"
       />
       <div class="h-10"></div>
     </main>
@@ -28,16 +30,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getGroups, getImageUrl, getPing, getSaying, getSites } from '~/services/nav'
 import type { Delay, Group, SayingModel, Site } from '~/types/nav'
 import NavHeader from '@/components/nav/NavHeader.vue'
+import NavToolDock from '@/components/nav/NavToolDock.vue'
 import NavTransitionBar from '@/components/nav/NavTransitionBar.vue'
 import NavContent from '@/components/nav/NavContent.vue'
 import bgGrid from '@/assets/pngs/bg-grid.png'
 import { debounce, throttle } from '@/utils/util'
 import { dispatchNavPageReveal, isNavPageRevealLocked } from '@/utils/navPageReveal'
+import { normalizeDisplayMode, readDisplayMode, subscribeModeChange, writeMode, type DisplayMode } from '@/utils/modeStorage'
 
 interface NavPageData {
   desktopBgUrl: string | null
@@ -51,9 +55,12 @@ interface NavPageData {
 const isContentRevealed = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 const { locale } = useI18n()
+const route = useRoute()
+const displayMode = ref<DisplayMode>(readDisplayMode())
 
 let touchStartY = 0
 let mobileMediaQuery: MediaQueryList | null = null
+let stopModeSubscription: (() => void) | null = null
 
 function parsePingData(data: Record<string, string | undefined>) {
   const result: Record<string, Delay> = {}
@@ -75,6 +82,12 @@ function parsePingData(data: Record<string, string | undefined>) {
 }
 
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
+const routeDisplayMode = computed(() => {
+  return route.query.mode == null ? undefined : normalizeDisplayMode(route.query.mode)
+})
+const toolDockSites = computed(() => {
+  return navPageData.value.sites.filter(site => displayMode.value === 'nsfw' || String(site.nsfw) !== '1')
+})
 
 const { data } = await useAsyncData<NavPageData>(
   () => `nav-page:${lang.value}`,
@@ -111,6 +124,17 @@ const { data } = await useAsyncData<NavPageData>(
 )
 
 const navPageData = computed(() => data.value!)
+
+watch(
+  routeDisplayMode,
+  (mode) => {
+    if (mode) {
+      displayMode.value = mode
+      writeMode(mode)
+    }
+  },
+  { immediate: true }
+)
 
 function revealContent(shouldScroll = true, force = false) {
   if (!force && isNavPageRevealLocked()) {
@@ -193,6 +217,10 @@ function handleKeydown(event: KeyboardEvent) {
 onMounted(() => {
   dispatchNavPageReveal(false)
   syncRevealByViewport()
+  displayMode.value = routeDisplayMode.value ?? readDisplayMode()
+  stopModeSubscription = subscribeModeChange(({ displayMode: nextMode }) => {
+    displayMode.value = nextMode
+  })
 
   mobileMediaQuery = window.matchMedia('(max-width: 767px)')
   mobileMediaQuery.addEventListener('change', handleViewportChange)
@@ -206,6 +234,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   dispatchNavPageReveal(true)
+  stopModeSubscription?.()
   mobileMediaQuery?.removeEventListener('change', handleViewportChange)
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('resize', handleResize)

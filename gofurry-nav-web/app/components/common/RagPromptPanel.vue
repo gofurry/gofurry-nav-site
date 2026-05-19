@@ -74,6 +74,8 @@ function ask(prompt: string) {
   box-shadow: 0 18px 44px rgba(76, 42, 18, 0.16);
   color: #1f2937;
   backdrop-filter: blur(18px);
+  transform-origin: top right;
+  will-change: opacity, transform;
 }
 
 .rag-prompt-panel__header {
@@ -112,11 +114,18 @@ function ask(prompt: string) {
   padding: 0.58rem 0.65rem;
   text-align: left;
   cursor: pointer;
-  transition: background 160ms ease, color 160ms ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+  transition:
+    background 500ms ease,
+    box-shadow 500ms ease,
+    color 500ms ease;
 }
 
 .rag-prompt-panel__templates button:hover {
   background: rgba(254, 215, 170, 0.56);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.58),
+    0 8px 22px rgba(76, 42, 18, 0.08);
   color: #9a3412;
 }
 
@@ -152,10 +161,16 @@ function ask(prompt: string) {
   padding: 0.52rem 0.62rem;
   font-size: 0.76rem;
   outline: none;
+  transition:
+    background 500ms ease,
+    border-color 500ms ease,
+    box-shadow 500ms ease;
 }
 
 .rag-prompt-panel__custom input:focus {
+  background: rgba(255, 255, 255, 0.92);
   border-color: rgba(251, 146, 60, 0.56);
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.16);
 }
 
 .rag-prompt-panel__custom button {
@@ -166,7 +181,15 @@ function ask(prompt: string) {
   color: #fff7ed;
   font-size: 0.74rem;
   cursor: pointer;
-  transition: opacity 160ms ease;
+  transition:
+    background 500ms ease,
+    opacity 500ms ease,
+    box-shadow 500ms ease;
+}
+
+.rag-prompt-panel__custom button:not(:disabled):hover {
+  background: #1c1917;
+  box-shadow: 0 8px 20px rgba(41, 37, 36, 0.16);
 }
 
 .rag-prompt-panel__custom button:disabled {
