@@ -1,21 +1,23 @@
 <template>
-  <div class="relative flex w-full flex-1 flex-col overflow-hidden bg-[#f5ead8] text-slate-900">
+  <div :class="pageClass" :style="pageVars">
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <div class="absolute -left-20 top-10 h-72 w-72 rounded-full bg-orange-300/20 blur-3xl"></div>
-      <div class="absolute right-0 top-0 h-96 w-96 rounded-full bg-amber-200/35 blur-3xl"></div>
-      <div class="absolute bottom-10 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-sky-200/15 blur-3xl"></div>
+      <div class="absolute -left-24 top-8 h-72 w-72 rounded-full bg-[var(--about-orb-a)] blur-3xl"></div>
+      <div class="absolute right-[-8rem] top-24 h-96 w-96 rounded-full bg-[var(--about-orb-b)] blur-3xl"></div>
+      <div class="absolute bottom-16 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-[var(--about-orb-c)] blur-3xl"></div>
     </div>
 
-    <main class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col gap-10 px-4 py-8 sm:px-6 md:gap-14 md:px-8 md:py-12">
-      <section class="relative overflow-hidden rounded-xl border border-white/40 bg-[linear-gradient(135deg,rgba(15,23,42,0.94),rgba(51,65,85,0.92)_52%,rgba(194,120,3,0.88))] px-6 py-8 text-white shadow-[0_30px_80px_rgba(15,23,42,0.22)] md:px-10 md:py-12">
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(251,191,36,0.18),transparent_28%)]"></div>
-        <div class="relative grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)] lg:items-center">
+    <main class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 md:gap-12 md:px-8 md:py-12">
+      <section class="about-hero">
+        <div class="relative grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.85fr)] lg:items-end">
           <div class="space-y-6">
             <div class="space-y-4">
-              <h1 class="max-w-4xl text-4xl font-semibold leading-tight md:text-5xl md:leading-[1.05]">
+              <p class="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--about-accent)]">
+                {{ hero.kicker }}
+              </p>
+              <h1 class="max-w-4xl text-4xl font-semibold leading-tight md:text-6xl md:leading-[1.02]">
                 {{ hero.title }}
               </h1>
-              <p class="max-w-3xl text-sm leading-7 text-slate-200 md:text-base">
+              <p class="max-w-3xl text-sm leading-7 text-[var(--about-muted)] md:text-base">
                 {{ hero.lead }}
               </p>
             </div>
@@ -24,7 +26,7 @@
               <span
                   v-for="tag in hero.tags"
                   :key="tag"
-                  class="rounded-lg border border-white/12 bg-white/8 px-4 py-2 text-sm text-slate-100"
+                  class="rounded-lg border border-[var(--about-chip-border)] bg-[var(--about-chip-bg)] px-4 py-2 text-sm text-[var(--about-chip-text)]"
               >
                 {{ tag }}
               </span>
@@ -33,7 +35,7 @@
             <div class="flex flex-wrap gap-3">
               <NuxtLink
                   to="/nav"
-                  class="inline-flex items-center justify-center rounded-xl bg-orange-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-orange-200"
+                  class="inline-flex items-center justify-center rounded-xl bg-[var(--about-action-bg)] px-5 py-3 text-sm font-semibold text-[var(--about-action-text)] transition hover:brightness-105"
               >
                 {{ hero.primaryAction }}
               </NuxtLink>
@@ -41,24 +43,24 @@
                   href="https://github.com/gofurry/gofurry-nav-site"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="inline-flex items-center justify-center rounded-xl border border-white/18 bg-white/8 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/14"
+                  class="inline-flex items-center justify-center rounded-xl border border-[var(--about-button-border)] bg-[var(--about-button-bg)] px-5 py-3 text-sm font-semibold text-[var(--about-button-text)] transition hover:bg-[var(--about-button-hover)]"
               >
                 {{ hero.secondaryAction }}
               </a>
             </div>
           </div>
 
-          <div class="grid gap-4 self-center sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+          <div class="grid gap-3">
             <article
-                v-for="stat in stats"
-                :key="stat.label"
-                class="flex h-full flex-col justify-center rounded-lg border border-white/12 bg-white/10 p-5 backdrop-blur-sm"
+                v-for="item in overview"
+                :key="item.label"
+                class="about-compact"
             >
-              <div class="text-xs uppercase tracking-[0.24em] text-orange-100/80">
-                {{ stat.label }}
+              <div class="text-xs uppercase tracking-[0.24em] text-[var(--about-accent-soft)]">
+                {{ item.label }}
               </div>
-              <p class="mt-2 text-sm leading-6 text-slate-200">
-                {{ stat.desc }}
+              <p class="mt-2 text-sm leading-6 text-[var(--about-muted)]">
+                {{ item.desc }}
               </p>
             </article>
           </div>
@@ -69,65 +71,64 @@
         <article
             v-for="feature in features"
             :key="feature.title"
-            class="group relative flex h-full flex-col overflow-hidden rounded-lg border border-orange-200/60 bg-white/70 p-6 shadow-[0_18px_40px_rgba(148,163,184,0.12)] backdrop-blur-sm transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_rgba(194,120,3,0.18)]"
+            class="about-card group"
         >
-          <div class="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#fb923c,#fbbf24,#38bdf8)] opacity-80"></div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900/90 shadow-lg shadow-slate-900/10">
+          <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--about-icon-bg)] shadow-sm">
             <img :src="feature.icon" :alt="feature.title" class="h-6 w-6 opacity-95" />
           </div>
-          <h2 class="mt-5 text-xl font-semibold text-slate-900">
+          <h2 class="mt-5 text-xl font-semibold text-[var(--about-heading)]">
             {{ feature.title }}
           </h2>
-          <p class="mt-3 text-sm leading-7 text-slate-600">
+          <p class="mt-3 text-sm leading-7 text-[var(--about-muted)]">
             {{ feature.desc }}
           </p>
-          <div class="mt-auto pt-5 text-xs uppercase tracking-[0.24em] text-orange-600">
+          <div class="mt-auto pt-5 text-xs uppercase tracking-[0.24em] text-[var(--about-accent)]">
             {{ feature.meta }}
           </div>
         </article>
       </section>
 
-      <section class="grid gap-6 lg:grid-cols-2">
-        <article class="rounded-xl border border-slate-900/8 bg-slate-900 p-6 text-slate-100 shadow-[0_22px_50px_rgba(15,23,42,0.2)] md:p-8">
-          <div class="text-xs uppercase tracking-[0.28em] text-orange-300/90">
+      <section class="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+        <article class="about-panel">
+          <div class="text-xs uppercase tracking-[0.28em] text-[var(--about-accent)]">
             {{ teamSection.kicker }}
           </div>
           <div class="mt-5 flex items-center gap-4">
             <img
                 :src="teamSection.member.avatar"
                 :alt="teamSection.member.name"
-                class="h-20 w-20 rounded-2xl object-cover ring-2 ring-white/10"
+                class="h-20 w-20 rounded-2xl object-cover ring-2 ring-[var(--about-avatar-ring)]"
             />
             <div>
-              <div class="text-2xl font-semibold text-white">
+              <div class="text-2xl font-semibold text-[var(--about-heading)]">
                 {{ teamSection.member.name }}
               </div>
-              <div class="mt-1 text-sm text-slate-300">
+              <div class="mt-1 text-sm text-[var(--about-muted)]">
                 {{ teamSection.member.role }}
               </div>
             </div>
           </div>
-          <p class="mt-5 text-sm leading-7 text-slate-300">
+          <p class="mt-5 text-sm leading-7 text-[var(--about-muted)]">
             {{ teamSection.desc }}
           </p>
           <a
               :href="teamSection.member.link"
               target="_blank"
               rel="noopener noreferrer"
-              class="mt-6 inline-flex items-center rounded-lg border border-white/14 bg-white/6 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/12"
+              class="mt-6 inline-flex items-center rounded-lg border border-[var(--about-button-border)] bg-[var(--about-button-bg)] px-4 py-2 text-sm font-medium text-[var(--about-button-text)] transition hover:bg-[var(--about-button-hover)]"
           >
             {{ teamSection.member.action }}
           </a>
         </article>
 
-        <article class="rounded-xl border border-orange-200/70 bg-white/70 p-6 shadow-[0_18px_48px_rgba(148,163,184,0.14)] backdrop-blur-sm md:p-8">
-          <div class="text-xs uppercase tracking-[0.28em] text-orange-500">
+        <article class="about-panel">
+          <div class="text-xs uppercase tracking-[0.28em] text-[var(--about-accent)]">
             {{ contact.kicker }}
           </div>
-          <h2 class="mt-3 text-2xl font-semibold text-slate-900">
+          <h2 class="mt-3 text-2xl font-semibold text-[var(--about-heading)]">
             {{ contact.title }}
           </h2>
-          <p class="mt-4 text-sm leading-7 text-slate-600">
+          <p class="mt-4 text-sm leading-7 text-[var(--about-muted)]">
             {{ contact.desc }}
           </p>
 
@@ -138,10 +139,10 @@
                 :href="item.href"
                 :target="item.external ? '_blank' : undefined"
                 :rel="item.external ? 'noopener noreferrer' : undefined"
-                class="flex items-center justify-between rounded-lg bg-slate-950/[0.04] px-4 py-3 text-sm text-slate-700 transition hover:bg-orange-100/80"
+                class="about-link"
             >
               <span>{{ item.label }}</span>
-              <span class="font-medium text-orange-600">{{ item.value }}</span>
+              <span class="font-medium text-[var(--about-accent)]">{{ item.value }}</span>
             </a>
           </div>
         </article>
@@ -151,46 +152,109 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { i18n } from '@/main'
+import { useThemeStore } from '@/stores/theme'
 import compassIcon from '@/assets/svgs/compass.svg'
 import gamepadIcon from '@/assets/svgs/gamepad.svg'
 import apiIcon from '@/assets/svgs/api.svg'
 import featherIcon from '@/assets/svgs/feather.svg'
 
+const themeStore = useThemeStore()
 const isZh = computed(() => i18n.global.locale.value === 'zh')
+const isDark = computed(() => themeStore.theme === 'dark')
+
+onMounted(() => {
+  themeStore.initTheme()
+})
+
+const pageClass = computed(() => [
+  'relative flex w-full flex-1 flex-col overflow-hidden transition-colors duration-500',
+  isDark.value ? 'bg-[#070a10] text-slate-100' : 'bg-[#f7efe2] text-slate-950'
+])
+
+const pageVars = computed(() => isDark.value
+  ? {
+      '--about-surface': 'rgba(12, 17, 27, 0.88)',
+      '--about-surface-strong': 'rgba(6, 9, 15, 0.92)',
+      '--about-border': 'rgba(148, 163, 184, 0.16)',
+      '--about-rule': 'rgba(148, 163, 184, 0.18)',
+      '--about-heading': 'rgb(248 250 252)',
+      '--about-muted': 'rgb(148 163 184)',
+      '--about-accent': 'rgb(251 191 36)',
+      '--about-accent-soft': 'rgb(253 230 138)',
+      '--about-chip-bg': 'rgba(255, 255, 255, 0.06)',
+      '--about-chip-border': 'rgba(255, 255, 255, 0.1)',
+      '--about-chip-text': 'rgb(226 232 240)',
+      '--about-icon-bg': 'rgba(255, 255, 255, 0.08)',
+      '--about-avatar-ring': 'rgba(255, 255, 255, 0.12)',
+      '--about-action-bg': 'rgb(251 191 36)',
+      '--about-action-text': 'rgb(15 23 42)',
+      '--about-button-bg': 'rgba(255, 255, 255, 0.06)',
+      '--about-button-border': 'rgba(255, 255, 255, 0.12)',
+      '--about-button-text': 'rgb(248 250 252)',
+      '--about-button-hover': 'rgba(255, 255, 255, 0.1)',
+      '--about-orb-a': 'rgba(251, 191, 36, 0.12)',
+      '--about-orb-b': 'rgba(56, 189, 248, 0.1)',
+      '--about-orb-c': 'rgba(99, 102, 241, 0.08)'
+    }
+  : {
+      '--about-surface': 'rgba(255, 255, 255, 0.7)',
+      '--about-surface-strong': 'rgba(15, 23, 42, 0.94)',
+      '--about-border': 'rgba(194, 120, 3, 0.18)',
+      '--about-rule': 'rgba(194, 120, 3, 0.2)',
+      '--about-heading': 'rgb(15 23 42)',
+      '--about-muted': 'rgb(71 85 105)',
+      '--about-accent': 'rgb(217 119 6)',
+      '--about-accent-soft': 'rgb(180 83 9)',
+      '--about-chip-bg': 'rgba(255, 255, 255, 0.66)',
+      '--about-chip-border': 'rgba(251, 146, 60, 0.24)',
+      '--about-chip-text': 'rgb(51 65 85)',
+      '--about-icon-bg': 'rgba(15, 23, 42, 0.92)',
+      '--about-avatar-ring': 'rgba(15, 23, 42, 0.12)',
+      '--about-action-bg': 'rgb(251 191 36)',
+      '--about-action-text': 'rgb(15 23 42)',
+      '--about-button-bg': 'rgba(15, 23, 42, 0.04)',
+      '--about-button-border': 'rgba(15, 23, 42, 0.12)',
+      '--about-button-text': 'rgb(15 23 42)',
+      '--about-button-hover': 'rgba(15, 23, 42, 0.07)',
+      '--about-orb-a': 'rgba(251, 146, 60, 0.18)',
+      '--about-orb-b': 'rgba(251, 191, 36, 0.22)',
+      '--about-orb-c': 'rgba(56, 189, 248, 0.12)'
+    }
+)
 
 const hero = computed(() => (
   isZh.value
     ? {
-        title: 'gofurry 正在把导航、游戏情报与开放生态整理成一个更清晰的入口。',
-        lead: '我们希望把分散的兽圈站点、项目、游戏和长期内容串成一条更容易理解的路径。它不是复杂的门户，而是一个轻量、稳定、持续演进的公共入口。',
-        tags: ['导航与发现', '游戏情报', '开放平台', 'DeepFurry'],
-        primaryAction: '进入导航站',
-        secondaryAction: '查看 GitHub',
+        kicker: 'About GoFurry',
+        title: '一个面向兽圈的导航、游戏情报与长期内容入口。',
+        lead: 'GoFurry 现在更像一个清晰的发现层：把站点导航、热门兽游、兽圈档案和深度兽研放在同一条路径里，让分散的信息更容易被找到、理解和持续维护。',
+        tags: ['站点导航', '热门兽游', '兽圈档案', '深度兽研'],
+        primaryAction: '进入站点导航',
+        secondaryAction: '查看开源仓库',
       }
     : {
-        title: 'gofurry brings navigation, game intelligence, and open ecosystem entry points into one clearer experience.',
-        lead: 'We want scattered furry sites, projects, games, and long-form work to feel connected instead of fragmented. gofurry is designed as a lightweight, stable, and sustainable public-facing gateway.',
-        tags: ['Navigation', 'Game Intel', 'Open Platform', 'DeepFurry'],
+        kicker: 'About GoFurry',
+        title: 'A discovery gateway for furry sites, games, archives, and long-form research.',
+        lead: 'GoFurry is becoming a clearer discovery layer: navigation, game intelligence, community archives, and DeepFurry research are organized into one maintainable public path.',
+        tags: ['Navigation', 'Furry Games', 'Archive', 'DeepFurry'],
         primaryAction: 'Open Navigation',
-        secondaryAction: 'View GitHub',
+        secondaryAction: 'View Repository',
       }
 ))
 
-const stats = computed(() => (
+const overview = computed(() => (
   isZh.value
     ? [
-        { label: 'Core Surface', desc: '导航、游戏、开放平台与 DeepFurry 共同构成当前的核心展示面。' },
-        { label: 'Design Goal', desc: '一个更轻量、更顺手、也更持续更新的兽圈入口。' },
-        { label: 'Operating Style', desc: '以公共性、开放性和长期可维护性作为主要方向。' },
-        { label: 'Focus', desc: '比起堆叠功能，我们更重视结构清晰和信息密度。' },
+        { label: 'Current Focus', desc: '先把主要页面、搜索体验和内容结构打磨稳定，再逐步扩展开放能力。' },
+        { label: 'Design Direction', desc: '轻量、克制、可持续，不做拥挤的门户，也不把探索变成信息噪音。' },
+        { label: 'Open Source', desc: '站点前端持续在 GitHub 上公开迭代，方便反馈、审阅和协作。' },
       ]
     : [
-        { label: 'Core Surface', desc: 'Navigation, games, open platform, and DeepFurry form the current core surface.' },
-        { label: 'Design Goal', desc: 'A lighter, clearer, and more maintainable furry gateway.' },
-        { label: 'Operating Style', desc: 'Public value, openness, and long-term sustainability shape the direction.' },
-        { label: 'Focus', desc: 'We value clarity and information density more than feature sprawl.' },
+        { label: 'Current Focus', desc: 'Stabilize the core pages, search experience, and content structure before expanding open capabilities.' },
+        { label: 'Design Direction', desc: 'Lightweight, restrained, and sustainable, without turning discovery into portal noise.' },
+        { label: 'Open Source', desc: 'The frontend keeps evolving in public on GitHub for feedback, review, and collaboration.' },
       ]
 ))
 
@@ -199,53 +263,53 @@ const features = computed(() => (
     ? [
         {
           icon: compassIcon,
-          title: '导航',
-          desc: '把分散的网站入口、分组和基础状态整合成清晰的浏览路径，帮助用户更快找到目标内容。',
-          meta: 'Discovery Layer',
+          title: '站点导航',
+          desc: '整理兽圈相关网站、工具、社区与内容入口，让图标、分类、搜索和访问路径保持清晰。',
+          meta: 'Navigation',
         },
         {
           icon: gamepadIcon,
-          title: '游戏',
-          desc: '围绕 Steam 兽游构建更新情报、检索、详情和作者视角，让内容浏览和深入追踪都更顺手。',
+          title: '热门兽游',
+          desc: '围绕 Steam 兽游建立索引、更新和详情页，帮助玩家更快发现作品，也帮助作者被看见。',
           meta: 'Game Intel',
         },
         {
           icon: apiIcon,
-          title: '开放平台',
-          desc: '承接后续开放能力、公共服务和外部扩展页面，作为 gofurry 的延展入口。',
-          meta: 'Open Surface',
+          title: '兽圈档案',
+          desc: '沉淀长期有价值的资料、站点变化和项目记录，让信息不只停留在一次性的浏览里。',
+          meta: 'Archive',
         },
         {
           icon: featherIcon,
-          title: 'DeepFurry',
-          desc: '面向更长篇、更研究化、更具表达深度的内容，承担宣传页与长期叙事延伸。',
-          meta: 'Long-form Research',
+          title: '深度兽研',
+          desc: '承接更长篇、更研究化的表达，给文化、作品和社区议题留出更安静的阅读空间。',
+          meta: 'Research',
         },
       ]
     : [
         {
           icon: compassIcon,
           title: 'Navigation',
-          desc: 'A clearer path across scattered furry sites, groups, and status signals, so discovery feels intentional instead of noisy.',
-          meta: 'Discovery Layer',
+          desc: 'Curated furry websites, tools, communities, and content entry points with clearer icons, categories, search, and routes.',
+          meta: 'Navigation',
         },
         {
           icon: gamepadIcon,
-          title: 'Games',
-          desc: 'Steam furry game updates, search, details, and creator views are organized for both fast browsing and deeper tracking.',
+          title: 'Furry Games',
+          desc: 'Steam furry game indexes, updates, and detail pages that help players discover work and help creators become visible.',
           meta: 'Game Intel',
         },
         {
           icon: apiIcon,
-          title: 'Open Platform',
-          desc: 'A future-facing surface for public capabilities, open integrations, and external ecosystem pages built around gofurry.',
-          meta: 'Open Surface',
+          title: 'Community Archive',
+          desc: 'Long-lived records for useful resources, site changes, and project traces so information does not vanish after one visit.',
+          meta: 'Archive',
         },
         {
           icon: featherIcon,
           title: 'DeepFurry',
-          desc: 'A space for longer-form thinking, research-oriented writing, and a more expressive public-facing narrative.',
-          meta: 'Long-form Research',
+          desc: 'A quieter reading space for long-form, research-oriented writing around culture, works, and community topics.',
+          meta: 'Research',
         },
       ]
 ))
@@ -280,23 +344,83 @@ const contact = computed(() => (
   isZh.value
     ? {
         kicker: 'Contact',
-        title: '如果你想交流项目、内容或合作方向，可以从这里找到我们。',
-        desc: '欢迎反馈站点问题、提出想法，或者交流关于开放平台与 DeepFurry 的后续方向。',
+        title: '想反馈站点、补充资料或交流合作，可以从这里找到我们。',
+        desc: '欢迎提交问题、建议站点、补充游戏信息，或者讨论开放平台与 DeepFurry 后续方向。',
         links: [
           { label: '邮箱', value: '2660621624@qq.com', href: 'mailto:2660621624@qq.com', external: false },
-          { label: 'GitHub', value: 'gofurry', href: 'https://github.com/gofurry', external: true },
+          { label: 'GitHub', value: 'gofurry/gofurry-nav-site', href: 'https://github.com/gofurry/gofurry-nav-site', external: true },
           { label: 'DeepFurry', value: 'www.deepfurry.com', href: 'https://www.deepfurry.com', external: true },
         ],
       }
     : {
         kicker: 'Contact',
-        title: 'If you want to talk about the project, content, or possible collaboration, start here.',
-        desc: 'Feedback, ideas, and conversations around the open platform or DeepFurry direction are always welcome.',
+        title: 'For feedback, resource updates, or collaboration, you can reach us here.',
+        desc: 'Issues, site suggestions, game information, and conversations around the open platform or DeepFurry direction are welcome.',
         links: [
           { label: 'Email', value: '2660621624@qq.com', href: 'mailto:2660621624@qq.com', external: false },
-          { label: 'GitHub', value: 'gofurry', href: 'https://github.com/gofurry', external: true },
+          { label: 'GitHub', value: 'gofurry/gofurry-nav-site', href: 'https://github.com/gofurry/gofurry-nav-site', external: true },
           { label: 'DeepFurry', value: 'www.deepfurry.com', href: 'https://www.deepfurry.com', external: true },
         ],
       }
 ))
 </script>
+
+<style scoped>
+.about-hero,
+.about-panel,
+.about-card,
+.about-compact {
+  border: 1px solid var(--about-border);
+  background: var(--about-surface);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px);
+  transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, transform 0.3s ease;
+}
+
+.about-hero {
+  border-radius: 18px;
+  padding: clamp(1.5rem, 3vw, 3rem);
+}
+
+.about-card,
+.about-panel,
+.about-compact {
+  border-radius: 14px;
+}
+
+.about-card {
+  display: flex;
+  min-height: 16rem;
+  flex-direction: column;
+  padding: 1.5rem;
+}
+
+.about-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.16);
+}
+
+.about-panel {
+  padding: clamp(1.5rem, 2vw, 2rem);
+}
+
+.about-compact {
+  padding: 1rem;
+}
+
+.about-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 0.75rem;
+  background: var(--about-button-bg);
+  padding: 0.875rem 1rem;
+  color: var(--about-button-text);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.about-link:hover {
+  background: var(--about-button-hover);
+}
+</style>

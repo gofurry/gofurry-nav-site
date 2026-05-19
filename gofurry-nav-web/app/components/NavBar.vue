@@ -114,7 +114,8 @@
     <transition name="mobile-menu">
       <div
           v-if="mobileMenuOpen"
-          class="absolute left-3 right-3 top-full z-[90] mt-2 rounded-xl border border-white/10 bg-[rgba(18,24,37,0.96)] px-4 pb-4 pt-3 text-gray-100 shadow-2xl shadow-slate-950/30 backdrop-blur-xl xl:hidden"
+          class="absolute left-3 right-3 top-full z-[90] mt-2 rounded-xl px-4 pb-4 pt-3 text-gray-100 shadow-2xl shadow-slate-950/30 backdrop-blur-xl transition-colors duration-500 xl:hidden"
+          :class="mobileMenuClass"
           @click.stop
       >
         <div class="mx-auto flex w-full max-w-[1700px] flex-col gap-2">
@@ -240,10 +241,22 @@ const themeToggleLabel = computed(() => (
   langStore.lang === 'zh' ? '切换明暗主题图标' : 'Toggle theme icon'
 ))
 
-const headerClass = computed(() => (
-  props.navOverlayDesktop
+const headerClass = computed(() => {
+  if (themeStore.theme === 'dark') {
+    return props.navOverlayDesktop
+      ? 'border-b border-white/8 bg-[rgba(5,7,13,0.94)] shadow-black/35 md:border-white/6 md:bg-[rgba(5,7,13,0.76)]'
+      : 'border-b border-white/8 bg-[rgba(5,7,13,0.94)] shadow-black/35'
+  }
+
+  return props.navOverlayDesktop
     ? 'border-b border-white/15 bg-[rgba(10,16,28,0.88)] md:border-white/10 md:bg-[rgba(18,24,37,0.7)]'
     : 'border-b border-white/15 bg-[rgba(10,16,28,0.88)]'
+})
+
+const mobileMenuClass = computed(() => (
+  themeStore.theme === 'dark'
+    ? 'border border-white/8 bg-[rgba(5,7,13,0.97)]'
+    : 'border border-white/10 bg-[rgba(18,24,37,0.96)]'
 ))
 
 const isActive = (link: NavLink) =>
