@@ -1,54 +1,61 @@
 <template>
   <div class="fixed right-4 top-24 z-40 hidden items-start gap-2 lg:flex">
-    <section
-      v-if="activePanel === 'search'"
-      class="nav-tool-panel nav-tool-search"
-      :aria-label="t('nav.tools.search')"
-    >
-      <div class="nav-tool-search__input">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="m21 21-4.4-4.4M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
-        </svg>
-        <input
-          v-model.trim="keyword"
-          type="search"
-          :placeholder="t('nav.tools.searchPlaceholder')"
-          @keydown.esc="closePanel"
-        />
-      </div>
-
-      <div v-if="keyword && results.length" class="nav-tool-results">
-        <button
-          v-for="item in results"
-          :key="item.id"
-          type="button"
-          @click="openSite(item)"
-        >
-          <img
-            :src="`${logoPrefix ? `${logoPrefix}/` : ''}${item.icon || defaultLogo}`"
-            alt=""
+    <Transition name="nav-tool-panel-transition" mode="out-in">
+      <section
+        v-if="activePanel === 'search'"
+        key="search"
+        class="nav-tool-panel nav-tool-search"
+        :aria-label="t('nav.tools.search')"
+      >
+        <div class="nav-tool-search__input">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m21 21-4.4-4.4M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
+          </svg>
+          <input
+            ref="searchInputRef"
+            v-model.trim="keyword"
+            type="search"
+            :placeholder="t('nav.tools.searchPlaceholder')"
+            @keydown.esc.prevent.stop="closePanel"
           />
-          <span>
-            <strong>{{ item.name }}</strong>
-            <small>{{ item.info }}</small>
-          </span>
-        </button>
-      </div>
+        </div>
 
-      <div v-else-if="keyword" class="nav-tool-empty">
-        {{ t('nav.tools.noSearchResults') }}
-      </div>
-    </section>
+        <Transition name="nav-tool-list-transition" mode="out-in">
+          <div v-if="keyword && results.length" key="results" class="nav-tool-results">
+            <button
+              v-for="item in results"
+              :key="item.id"
+              type="button"
+              @click="openSite(item)"
+            >
+              <img
+                :src="`${logoPrefix ? `${logoPrefix}/` : ''}${item.icon || defaultLogo}`"
+                alt=""
+              />
+              <span>
+                <strong>{{ item.name }}</strong>
+                <small>{{ item.info }}</small>
+              </span>
+            </button>
+          </div>
 
-    <RagPromptPanel
-      v-if="activePanel === 'ask'"
-      :title="t('nav.tools.askTitle')"
-      :description="t('nav.tools.askDescription')"
-      :placeholder="t('nav.tools.askPlaceholder')"
-      :submit-label="t('nav.tools.askSubmit')"
-      :templates="navPromptTemplates"
-      @ask="openArchivePrompt"
-    />
+          <div v-else-if="keyword" key="empty" class="nav-tool-empty">
+            {{ t('nav.tools.noSearchResults') }}
+          </div>
+        </Transition>
+      </section>
+
+      <RagPromptPanel
+        v-else-if="activePanel === 'ask'"
+        key="ask"
+        :title="t('nav.tools.askTitle')"
+        :description="t('nav.tools.askDescription')"
+        :placeholder="t('nav.tools.askPlaceholder')"
+        :submit-label="t('nav.tools.askSubmit')"
+        :templates="navPromptTemplates"
+        @ask="openArchivePrompt"
+      />
+    </Transition>
 
     <nav class="flex flex-col gap-2" :aria-label="t('nav.tools.label')">
       <button
@@ -74,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Site } from '@/types/nav'
 import { recordRecentSite, toExternalUrl } from '@/utils/recentSites'
@@ -98,6 +105,7 @@ const defaultLogo = 'defaultLogo.svg'
 
 const activePanel = ref<'search' | 'ask' | null>(null)
 const keyword = ref('')
+const searchInputRef = ref<HTMLInputElement | null>(null)
 
 const results = computed(() => {
   const query = keyword.value.trim().toLowerCase()
@@ -148,6 +156,15 @@ const tools = computed(() => [
     },
   },
 ])
+
+watch(activePanel, async (panel) => {
+  if (panel !== 'search') {
+    return
+  }
+
+  await nextTick()
+  searchInputRef.value?.focus()
+})
 
 function closePanel() {
   activePanel.value = null
@@ -218,7 +235,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   box-shadow: 0 12px 32px rgba(76, 42, 18, 0.14);
   color: #334155;
   backdrop-filter: blur(18px);
-  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+  transition:
+    background 500ms ease,
+    border-color 500ms ease,
+    color 500ms ease,
+    box-shadow 500ms ease,
+    filter 500ms ease;
 }
 
 .nav-tool-button:hover,
@@ -226,6 +248,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   border-color: rgba(253, 186, 116, 0.9);
   background: rgba(255, 255, 255, 0.9);
   color: #c2410c;
+  box-shadow: 0 14px 36px rgba(76, 42, 18, 0.18);
+  filter: saturate(1.05);
 }
 
 .nav-tool-button svg {
@@ -247,6 +271,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   box-shadow: 0 18px 44px rgba(76, 42, 18, 0.16);
   color: #1f2937;
   backdrop-filter: blur(18px);
+  transform-origin: top right;
+  will-change: opacity, transform;
 }
 
 .nav-tool-search__input {
@@ -275,12 +301,21 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   background: transparent;
   font-size: 0.82rem;
   outline: none;
+  transition: color 500ms ease;
 }
 
 .nav-tool-results {
   max-height: 18rem;
   overflow: auto;
   padding: 0.45rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.nav-tool-results::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .nav-tool-results button {
@@ -294,11 +329,15 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   padding: 0.52rem;
   cursor: pointer;
   text-align: left;
-  transition: background 160ms ease;
+  transition:
+    background 500ms ease,
+    color 500ms ease,
+    box-shadow 500ms ease;
 }
 
 .nav-tool-results button:hover {
-  background: rgba(254, 215, 170, 0.5);
+  background: rgba(254, 215, 170, 0.52);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
 .nav-tool-results img {
@@ -336,5 +375,33 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   padding: 1.2rem 0.9rem;
   color: rgba(68, 64, 60, 0.68);
   font-size: 0.78rem;
+}
+
+.nav-tool-panel-transition-enter-active,
+.nav-tool-panel-transition-leave-active {
+  transition:
+    opacity 500ms ease,
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 500ms ease;
+}
+
+.nav-tool-panel-transition-enter-from,
+.nav-tool-panel-transition-leave-to {
+  opacity: 0;
+  transform: translateX(10px) scale(0.975);
+  filter: blur(6px);
+}
+
+.nav-tool-list-transition-enter-active,
+.nav-tool-list-transition-leave-active {
+  transition:
+    opacity 500ms ease,
+    transform 500ms ease;
+}
+
+.nav-tool-list-transition-enter-from,
+.nav-tool-list-transition-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

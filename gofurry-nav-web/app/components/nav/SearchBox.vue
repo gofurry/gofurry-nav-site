@@ -1,18 +1,19 @@
 <template>
   <div
       ref="searchBoxRef"
-      class="relative z-30 mt-2 flex w-full flex-col items-center md:mt-0"
+      class="search-box-shell relative isolate z-30 mt-2 flex w-full flex-col items-center md:mt-0"
   >
     <!-- 搜索类别 -->
-    <div class="mb-3 w-full max-w-[620px] rounded-2xl px-3 py-2.5">
+    <div class="mb-3 w-full max-w-[620px] px-3 py-2.5">
       <div class="flex flex-wrap justify-center gap-2 sm:gap-3">
         <div
             v-for="item in categories"
             :key="item"
             @click="selectedCategory = item"
-            :class="['cursor-pointer rounded-lg px-3 py-1.5 text-sm transition-all duration-500 backdrop-blur-lg border-2 border-slate-400/30', selectedCategory === item
-              ? 'bg-slate-900/80 text-gray-100 border-white/40'
-              : 'bg-slate-900/60 text-gray-100 hover:bg-slate-900/80']"
+            :class="[
+              'search-chip cursor-pointer rounded-xl px-3 py-1.5 text-sm font-medium transition-all duration-500',
+              selectedCategory === item ? 'search-chip-active' : ''
+            ]"
         >
           {{ item }}
         </div>
@@ -28,16 +29,17 @@
           @keydown.enter.prevent="handleEnterKey"
           @keydown.down.prevent="handleArrowDown"
           @keydown.up.prevent="handleArrowUp"
+          @keydown.esc.prevent.stop="closeSearchSuggestions"
           @input="debouncedFetch"
           @focus="handleInputFocus"
           @blur="handleInputBlur"
           placeholder="搜索站点或内容..."
-          class="w-full h-12 px-4 pr-10 rounded-lg bg-slate-50/30 ring-2 ring-slate-900/60 backdrop-blur-sm focus:outline-none focus:ring-3 focus:ring-slate-900/80 duration-500"
+          class="search-input h-12 w-full rounded-xl px-4 pr-10 duration-500 focus:outline-none"
       />
       <img src="@/assets/svgs/search.svg"
            alt="search"
-           class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500
-             hover:scale-110 transition-transform duration-200 cursor-pointer"
+           class="search-icon absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2
+             cursor-pointer transition-transform duration-500 hover:scale-110"
            @click="doSearch()"
       />
 
@@ -45,8 +47,8 @@
       <ul
           ref="dropdownRef"
           v-if="(keyword.trim() && dropdownVisible) || isLoading"
-          class="absolute left-0 top-[calc(100%+0.5rem)] z-[999] w-full max-h-60 overflow-y-auto overscroll-contain rounded-2xl border border-white/12 bg-slate-950/72
-            backdrop-blur-2xl shadow-2xl shadow-slate-950/35 ring-1 ring-white/8 transition-all duration-200 origin-top-left
+          class="search-suggestion-list absolute left-0 top-[calc(100%+0.5rem)] z-[999] w-full max-h-60 overflow-y-auto overscroll-contain rounded-2xl border border-white/12 bg-slate-950/72
+            origin-top-left backdrop-blur-2xl shadow-2xl shadow-slate-950/35 ring-1 ring-white/8 transition-all duration-500
             animate-fadeIn"
           @wheel.stop
           @touchmove.stop
@@ -70,8 +72,8 @@
               @click="selectSuggestion(index)"
               @mouseenter="hoveredIndex = index"
               @mouseleave="hoveredIndex = -1"
-              class="cursor-pointer px-4 py-3 text-sm font-medium text-slate-100/90 transition-colors duration-150 hover:bg-white/8 hover:text-white"
-              :class="hoveredIndex === index ? 'bg-white/10 text-white' : ''"
+              class="search-suggestion-item cursor-pointer px-4 py-3 text-sm font-medium text-slate-100/90"
+              :class="hoveredIndex === index ? 'search-suggestion-item-active' : ''"
           >
             <!-- 关键词高亮 -->
             <span v-html="highlightKeyword(item)"></span>
@@ -92,11 +94,9 @@
             :key="platform.name"
             @click="selectedPlatform = platform"
             :class="[
-        'cursor-pointer rounded-lg px-2.5 py-1.5 text-center text-xs whitespace-nowrap transition-all duration-500 backdrop-blur-lg border-1 border-slate-400/30',
-        selectedPlatform.name === platform.name
-          ? 'bg-slate-900/80 text-gray-100 border-white/40'
-          : 'bg-slate-900/60 text-gray-100 hover:bg-slate-900/80'
-      ]"
+              'search-chip cursor-pointer rounded-xl px-2.5 py-1.5 text-center text-xs font-medium whitespace-nowrap transition-all duration-500',
+              selectedPlatform.name === platform.name ? 'search-chip-active' : ''
+            ]"
         >
           {{ platform.name }}
         </div>
@@ -363,10 +363,14 @@ const handleInputBlur = () => {
 
 const handleClickOutside = (e: MouseEvent) => {
   if (searchBoxRef.value && !searchBoxRef.value.contains(e.target as Node)) {
-    dropdownVisible.value = false
-    hoveredIndex.value = -1
-    isInputFocused.value = false
+    closeSearchSuggestions()
   }
+}
+
+const closeSearchSuggestions = () => {
+  dropdownVisible.value = false
+  hoveredIndex.value = -1
+  isInputFocused.value = false
 }
 
 watch(
@@ -392,12 +396,113 @@ onBeforeUnmount(() => {
 
 
 <style scoped>
-ul::-webkit-scrollbar {
-  width: 6px;
+.search-box-shell::before {
+  content: "";
+  position: absolute;
+  top: -1rem;
+  bottom: -0.9rem;
+  left: 50%;
+  width: min(calc(100% - 2rem), 38rem);
+  z-index: -1;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse 66% 58% at 50% 50%, rgba(15, 23, 42, 0.48), rgba(15, 23, 42, 0.22) 48%, rgba(15, 23, 42, 0.08) 64%, transparent 82%);
+  filter: blur(18px);
+  opacity: 0.86;
+  pointer-events: none;
+  transition: opacity 500ms ease, background 500ms ease;
 }
-ul::-webkit-scrollbar-thumb {
-  background-color: rgba(0,0,0,0.2);
-  border-radius: 3px;
+
+.search-chip {
+  color: rgba(248, 250, 252, 0.92);
+  background: rgba(15, 23, 42, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 24px rgba(2, 6, 23, 0.14);
+  backdrop-filter: blur(14px) saturate(1.12);
+  -webkit-backdrop-filter: blur(14px) saturate(1.12);
+  transition:
+    background 500ms ease,
+    box-shadow 500ms ease,
+    color 500ms ease;
+}
+
+.search-chip:hover {
+  color: rgba(255, 255, 255, 0.98);
+  background: rgba(15, 23, 42, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 10px 28px rgba(2, 6, 23, 0.18);
+}
+
+.search-chip-active {
+  color: rgba(15, 23, 42, 0.94);
+  background: rgba(255, 248, 241, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 12px 30px rgba(2, 6, 23, 0.2);
+}
+
+.search-chip-active:hover {
+  color: rgba(15, 23, 42, 0.96);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.search-input {
+  color: rgba(15, 23, 42, 0.94);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 12px 36px rgba(2, 6, 23, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  transition:
+    background 500ms ease,
+    box-shadow 500ms ease,
+    color 500ms ease;
+}
+
+.search-input::placeholder {
+  color: rgba(71, 85, 105, 0.72);
+}
+
+.search-input:focus {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 16px 42px rgba(2, 6, 23, 0.26),
+    0 0 0 1px rgba(255, 255, 255, 0.34),
+    0 0 0 4px rgba(15, 23, 42, 0.2);
+}
+
+.search-icon {
+  opacity: 0.72;
+  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.42));
+}
+
+.search-suggestion-list {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.search-suggestion-list::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.search-suggestion-item {
+  transition:
+    background 500ms ease,
+    color 500ms ease;
+}
+
+.search-suggestion-item:hover,
+.search-suggestion-item-active {
+  color: rgba(255, 255, 255, 0.98);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* 淡入动画 */
@@ -412,7 +517,7 @@ ul::-webkit-scrollbar-thumb {
   }
 }
 .animate-fadeIn {
-  animation: fadeIn 0.2s ease-out forwards;
+  animation: fadeIn 0.5s ease-out forwards;
 }
 
 /* 加载动画 */

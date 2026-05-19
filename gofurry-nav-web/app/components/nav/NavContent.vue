@@ -89,8 +89,6 @@
         @mouseleave="scheduleSiteHide"
       />
     </Teleport>
-
-    <NavToolDock :items="visibleSites" />
   </div>
 </template>
 
@@ -104,7 +102,6 @@ import { recordRecentSite, toExternalUrl } from '@/utils/recentSites'
 import { readDisplayMode, subscribeModeChange, type DisplayMode } from '@/utils/modeStorage'
 import GroupPopover from './GroupPopover.vue'
 import SitePopover from './SitePopover.vue'
-import NavToolDock from '@/components/nav/NavToolDock.vue'
 
 const props = defineProps<{
   initialGroups?: Group[]
@@ -138,10 +135,6 @@ const siteById = computed(() => {
     map.set(site.id, site)
   })
   return map
-})
-
-const visibleSites = computed(() => {
-  return sites.value.filter(isSiteVisible)
 })
 
 const domainsMap = computed(() => {
@@ -295,6 +288,7 @@ const activeSitePosition = ref<{ left: number; top: number } | null>(null)
 const activeSitePlacement = ref<'top' | 'bottom'>('bottom')
 const popoverHeight = ref(0)
 let siteHideTimer: number | null = null
+let siteCleanupTimer: number | null = null
 
 function onSiteMouseEnter(event: MouseEvent, site: Site) {
   cancelSiteHide()
@@ -348,19 +342,37 @@ function updateSitePopoverPosition(measuredHeight = popoverHeight.value || 220) 
 }
 
 function scheduleSiteHide() {
-  activeSiteVisible.value = false
+  if (siteHideTimer) {
+    clearTimeout(siteHideTimer)
+  }
+  if (siteCleanupTimer) {
+    clearTimeout(siteCleanupTimer)
+    siteCleanupTimer = null
+  }
+
   siteHideTimer = window.setTimeout(() => {
-    activeSite.value = null
-    activeSiteTarget.value = null
-    activeSitePosition.value = null
-    popoverHeight.value = 0
-  }, 220)
+    activeSiteVisible.value = false
+
+    siteCleanupTimer = window.setTimeout(() => {
+      activeSite.value = null
+      activeSiteTarget.value = null
+      activeSitePosition.value = null
+      popoverHeight.value = 0
+      siteCleanupTimer = null
+    }, 320)
+
+    siteHideTimer = null
+  }, 520)
 }
 
 function cancelSiteHide() {
   if (siteHideTimer) {
     clearTimeout(siteHideTimer)
     siteHideTimer = null
+  }
+  if (siteCleanupTimer) {
+    clearTimeout(siteCleanupTimer)
+    siteCleanupTimer = null
   }
 
   activeSiteVisible.value = true
