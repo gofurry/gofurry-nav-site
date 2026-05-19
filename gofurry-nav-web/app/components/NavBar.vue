@@ -12,18 +12,19 @@
           @click.stop="closeMenus"
       >
         <img :src="logo" alt="gofurry logo" class="h-10 w-10" />
-        <span class="hidden text-sm font-semibold tracking-wide text-white sm:inline">gofurry</span>
+        <span class="hidden text-sm font-semibold tracking-wide text-white sm:inline">GoFurry</span>
       </NuxtLink>
 
-      <div class="hidden min-w-0 flex-1 items-center justify-center overflow-hidden transition-all duration-300 sm:flex">
-        <nav class="flex min-w-max max-w-[760px] items-center justify-center gap-1 transition-all duration-200 opacity-100">
-          <template v-for="link in navLinks" :key="link.label">
+      <div class="flex min-w-0 flex-1 items-center justify-center overflow-hidden transition-all duration-300">
+        <nav class="flex min-w-0 items-center justify-center gap-1 transition-all duration-200 opacity-100 md:min-w-max md:max-w-[760px]">
+          <template v-for="(link, index) in navLinks" :key="link.label">
             <a
                 v-if="link.external"
                 :href="link.href"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap text-gray-100 transition-all duration-200 hover:bg-white/10 hover:text-white"
+                class="rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap text-gray-100 transition-all duration-200 hover:bg-white/10 hover:text-white sm:px-3 md:px-4"
+                :class="index > 1 ? 'hidden md:inline-flex' : 'inline-flex'"
                 @click.stop
             >
               {{ link.label }}
@@ -31,10 +32,13 @@
             <NuxtLink
                 v-else
                 :to="link.to"
-                class="rounded-lg px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-200"
-                :class="isActive(link)
-                  ? 'bg-white/20 text-white'
-                  : 'text-gray-100 hover:bg-white/10 hover:text-white'"
+                class="rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 sm:px-3 md:px-4"
+                :class="[
+                  index > 1 ? 'hidden md:inline-flex' : 'inline-flex',
+                  isActive(link)
+                    ? 'bg-white/20 text-white'
+                    : 'text-gray-100 hover:bg-white/10 hover:text-white'
+                ]"
                 @click.stop="closeMenus"
             >
               {{ link.label }}
@@ -43,8 +47,20 @@
         </nav>
       </div>
 
-      <div class="ml-auto hidden items-center gap-2 overflow-hidden transition-all duration-300 xl:flex">
-        <div class="flex items-center gap-1">
+      <div class="ml-auto flex shrink-0 items-center gap-2 transition-all duration-300">
+        <a
+            href="https://github.com/gofurry/gofurry-nav-site"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hidden h-8 w-16 items-center justify-center rounded-lg transition hover:bg-white/12 xl:inline-flex"
+            aria-label="GitHub"
+            title="GitHub"
+            @click.stop
+        >
+          <img :src="githubIconSrc" class="h-auto w-12 object-contain" alt="GitHub" />
+        </a>
+
+        <div class="hidden items-center gap-1 xl:flex">
           <button
               v-for="option in languageOptions"
               :key="option.value"
@@ -61,34 +77,44 @@
 
         <button
             type="button"
-            class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-sm ring-1 ring-white/10 transition hover:bg-white/20"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-sm transition hover:bg-white/12 xl:h-8 xl:w-8"
+            :aria-label="themeToggleLabel"
+            :title="themeToggleLabel"
+            @click.stop="toggleThemeIcon"
+        >
+          <img :src="themeIconSrc" class="h-4 w-4" alt="" />
+        </button>
+
+        <button
+            type="button"
+            class="hidden h-8 w-8 items-center justify-center rounded-lg bg-white/8 text-sm ring-1 ring-white/10 transition hover:bg-white/20 xl:flex"
             :aria-label="t('navbar.mode')"
             @click.stop="showModeModal = true"
         >
           <img :src="gear" class="h-4 w-4" alt="mode" />
         </button>
-      </div>
 
-      <button
-          type="button"
-          class="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-white transition hover:bg-white/14 xl:hidden"
-          :aria-expanded="mobileMenuOpen"
-          :aria-label="t('navbar.expandNav')"
-          @click.stop="mobileMenuOpen = !mobileMenuOpen"
-      >
-        <svg v-if="!mobileMenuOpen" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-        <svg v-else class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M6 18L18 6" />
-        </svg>
-      </button>
+        <button
+            type="button"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/8 text-white transition hover:bg-white/14 xl:hidden"
+            :aria-expanded="mobileMenuOpen"
+            :aria-label="t('navbar.expandNav')"
+            @click.stop="mobileMenuOpen = !mobileMenuOpen"
+        >
+          <svg v-if="!mobileMenuOpen" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          <svg v-else class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M6 18L18 6" />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <transition name="mobile-menu">
       <div
           v-if="mobileMenuOpen"
-          class="border-t border-white/10 bg-[rgba(18,24,37,0.96)] px-4 pb-4 pt-3 text-gray-100 shadow-lg xl:hidden"
+          class="absolute left-3 right-3 top-full z-[90] mt-2 rounded-xl border border-white/10 bg-[rgba(18,24,37,0.96)] px-4 pb-4 pt-3 text-gray-100 shadow-2xl shadow-slate-950/30 backdrop-blur-xl xl:hidden"
           @click.stop
       >
         <div class="mx-auto flex w-full max-w-[1700px] flex-col gap-2">
@@ -161,17 +187,22 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useLangStore } from '@/store/langStore'
+import { useThemeStore } from '@/stores/theme'
 import { useI18n } from 'vue-i18n'
 import cnFlag from '@/assets/flags/cn.svg'
 import usFlag from '@/assets/flags/us.svg'
 import logo from '@/assets/svgs/logo-mini.svg'
 import gear from '@/assets/svgs/gear.svg'
+import githubLightIcon from '@/assets/svgs/logo-github-light.svg'
+import moonIcon from '@/assets/svgs/moon-light.svg'
+import sunIcon from '@/assets/svgs/sun.svg'
 import ModeSettingModal from '@/components/common/ModeSettingModal.vue'
 import { readMode, subscribeModeChange, writeMode } from '@/utils/modeStorage'
 
 const { t } = useI18n()
 const route = useRoute()
 const langStore = useLangStore()
+const themeStore = useThemeStore()
 const props = defineProps<{
   navOverlayDesktop?: boolean
 }>()
@@ -203,6 +234,11 @@ const languageOptions = [
   { value: 'zh' as const, label: 'CN', flag: cnFlag },
   { value: 'en' as const, label: 'EN', flag: usFlag },
 ]
+const themeIconSrc = computed(() => themeStore.theme === 'light' ? sunIcon : moonIcon)
+const githubIconSrc = githubLightIcon
+const themeToggleLabel = computed(() => (
+  langStore.lang === 'zh' ? '切换明暗主题图标' : 'Toggle theme icon'
+))
 
 const headerClass = computed(() => (
   props.navOverlayDesktop
@@ -215,6 +251,7 @@ const isActive = (link: NavLink) =>
 
 onMounted(() => {
   mode.value = readMode()
+  themeStore.initTheme()
 
   stopModeSubscription = subscribeModeChange(({ mode: nextMode }) => {
     mode.value = nextMode
@@ -246,6 +283,10 @@ function switchLang(lang: 'zh' | 'en') {
 function openModeModalFromMobile() {
   mobileMenuOpen.value = false
   showModeModal.value = true
+}
+
+function toggleThemeIcon() {
+  themeStore.setTheme(themeStore.theme === 'light' ? 'dark' : 'light')
 }
 
 function closeMenus() {
