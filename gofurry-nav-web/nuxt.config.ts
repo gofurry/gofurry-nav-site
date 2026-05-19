@@ -1,6 +1,36 @@
 import tailwindcss from '@tailwindcss/vite'
 
 const siteUrl = process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+const normalizedSiteUrl = siteUrl.replace(/\/$/, '')
+const siteName = 'GoFurry 兽人控导航站 - GoFurry Navigation'
+const siteTitle = 'GoFurry 兽人控导航站 - 发现兽人文化相关资源与社区'
+const siteDescription = 'GoFurry 是面向兽人文化爱好者的双语导航站，收录 Furry 社区、艺术、小说、游戏、工具与站点监测资源。GoFurry is a bilingual Furry navigation hub for communities, art, fiction, games, tools, and site monitoring.'
+const siteKeywords = [
+  'gofurry',
+  'furry',
+  'furries',
+  'furry navigation',
+  'furry community',
+  'furry art',
+  'furry games',
+  'furry fiction',
+  'anthro',
+  'kemono',
+  'scalies',
+  '兽人',
+  '兽人控',
+  '福瑞',
+  '毛茸茸',
+  '兽人导航',
+  '兽人文化',
+  '兽人社区',
+  '兽人资源',
+  '兽游',
+  '兽人游戏',
+  '兽人小说',
+  '兽人艺术'
+].join(', ')
+const ogImage = `${normalizedSiteUrl}/og-image.jpg`
 const ragApiInternalBase = process.env.RAG_API_INTERNAL_BASE
   || process.env.NUXT_RAG_API_INTERNAL_BASE
   || (process.env.NODE_ENV === 'production' ? 'http://10.6.0.11:9997' : 'http://192.168.153.1:9997')
@@ -29,35 +59,79 @@ export default defineNuxtConfig({
     head: {
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
-      htmlAttrs: {
-        lang: 'zh-CN'
-      },
-      title: 'gofurry 兽人控导航站 - 发现兽人文化相关资源与社区',
+      title: siteTitle,
       meta: [
-        // SEO
-        { name: 'description', content: 'gofurry 兽人控导航站是一个专注于兽人文化整合的导航站点，为兽人爱好者提供便捷的资源发现与社区入口。' },
-        { name: 'keywords', content: 'furry, 兽人, 兽人控, 兽人导航, 兽人文化, 兽人社区, gofurry, 兽人资源, fur, furries, game, anthro, scalies, kemono' },
-        // 搜索引擎 爬虫
-        { name: 'robots', content: 'index, follow' },
-        { name: 'googlebot', content: 'index, follow' },
-        // 社交平台
-        { property: 'og:site_name', content: 'gofurry 兽人控导航站' },
-        { property: 'og:title', content: 'gofurry 兽人控导航站' },
-        { property: 'og:description', content: 'gofurry 兽人控导航站是一个专注于兽人文化整合的导航站点，为兽人爱好者提供便捷的资源发现与社区入口。' },
-        { property: 'og:type', content: 'website' },
-        { property: 'og:url', content: siteUrl },
-        { property: 'og:image', content: `${siteUrl.replace(/\/$/, '')}/og-image.jpg` },
+        { name: 'description', content: siteDescription },
+        { name: 'keywords', content: siteKeywords },
+        { name: 'robots', content: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' },
+        { name: 'googlebot', content: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' },
+        { name: 'bingbot', content: 'index, follow, max-image-preview:large' },
+        { name: 'author', content: 'gofurry' },
+        { name: 'application-name', content: 'gofurry' },
+        { name: 'apple-mobile-web-app-title', content: 'gofurry' },
         { name: 'theme-color', content: '#f97316' },
-        // 移动端
+        { name: 'color-scheme', content: 'light' },
         { name: 'format-detection', content: 'telephone=no' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-title', content: 'gofurry 兽人控导航站' }
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
+        { property: 'og:site_name', content: siteName },
+        { property: 'og:title', content: siteTitle },
+        { property: 'og:description', content: siteDescription },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:url', content: normalizedSiteUrl },
+        { property: 'og:image', content: ogImage },
+        { property: 'og:image:secure_url', content: ogImage },
+        { property: 'og:image:type', content: 'image/jpeg' },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { property: 'og:image:alt', content: siteTitle },
+        { property: 'og:locale', content: 'zh_CN' },
+        { property: 'og:locale:alternate', content: 'en_US' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: siteTitle },
+        { name: 'twitter:description', content: siteDescription },
+        { name: 'twitter:image', content: ogImage },
+        { name: 'twitter:image:alt', content: siteTitle }
       ],
       link: [
         { rel: 'icon', type: 'image/png', href: '/logo-mini.png' },
         { rel: 'apple-touch-icon', sizes: '180x180', href: '/logo-mini.png' },
-        { rel: 'shortcut icon', href: '/logo-mini.png' }
+        { rel: 'shortcut icon', href: '/logo-mini.png' },
+        { rel: 'manifest', href: '/manifest.webmanifest' }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          textContent: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'gofurry',
+            alternateName: ['GoFurry 兽人控导航站', 'GoFurry Navigation'],
+            url: normalizedSiteUrl,
+            inLanguage: ['zh-CN', 'en-US'],
+            description: siteDescription,
+            image: ogImage,
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: `${normalizedSiteUrl}/nav?q={search_term_string}`,
+              'query-input': 'required name=search_term_string'
+            }
+          })
+        },
+        {
+          type: 'application/ld+json',
+          textContent: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'gofurry',
+            url: normalizedSiteUrl,
+            logo: `${normalizedSiteUrl}/logo-mini.png`,
+            sameAs: [
+              'https://github.com/gofurry'
+            ]
+          })
+        }
       ]
     }
   },
@@ -96,6 +170,7 @@ export default defineNuxtConfig({
     '/panel': { ssr: false }
   },
   i18n: {
+    baseUrl: normalizedSiteUrl,
     defaultLocale: 'zh',
     strategy: 'prefix_except_default',
     langDir: 'locales',

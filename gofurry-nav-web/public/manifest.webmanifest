@@ -1,0 +1,25 @@
+{
+  "name": "GoFurry 兽人控导航站",
+  "short_name": "GoFurry",
+  "description": "Bilingual Furry navigation hub for communities, art, fiction, games, tools, and site monitoring.",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fff7ed",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "/logo-mini.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "social",
+    "entertainment",
+    "reference"
+  ]
+}
