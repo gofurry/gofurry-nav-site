@@ -3,6 +3,13 @@ export type DisplayMode = 'sfw' | 'nsfw'
 export const MODE_STORAGE_KEY = 'mode'
 export const MODE_CHANGE_EVENT = 'mode-change'
 
+export function normalizeDisplayMode(value: unknown): DisplayMode {
+  const rawValue = Array.isArray(value) ? value[0] : value
+  return typeof rawValue === 'string' && rawValue.trim().toLowerCase() === 'nsfw'
+    ? 'nsfw'
+    : 'sfw'
+}
+
 function canUseModeStorage() {
   return typeof window !== 'undefined' && typeof localStorage !== 'undefined'
 }
@@ -16,7 +23,7 @@ export function readMode() {
 }
 
 export function readDisplayMode(): DisplayMode {
-  return readMode() === 'nsfw' ? 'nsfw' : 'sfw'
+  return normalizeDisplayMode(readMode())
 }
 
 export function writeMode(value: string) {
@@ -44,7 +51,7 @@ export function dispatchModeChange(mode = readMode()) {
     new CustomEvent(MODE_CHANGE_EVENT, {
       detail: {
         mode,
-        displayMode: mode === 'nsfw' ? 'nsfw' : 'sfw',
+        displayMode: normalizeDisplayMode(mode),
       },
     })
   )
@@ -65,7 +72,7 @@ export function subscribeModeChange(
     const mode = event.newValue?.trim() ?? ''
     callback({
       mode,
-      displayMode: mode === 'nsfw' ? 'nsfw' : 'sfw',
+      displayMode: normalizeDisplayMode(mode),
     })
   }
 
@@ -74,7 +81,7 @@ export function subscribeModeChange(
     const mode = customEvent.detail?.mode?.trim() ?? readMode()
     callback({
       mode,
-      displayMode: customEvent.detail?.displayMode ?? (mode === 'nsfw' ? 'nsfw' : 'sfw'),
+      displayMode: customEvent.detail?.displayMode ?? normalizeDisplayMode(mode),
     })
   }
 

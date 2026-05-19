@@ -21,6 +21,7 @@
         :initial-groups="navPageData.groups"
         :initial-sites="navPageData.sites"
         :initial-ping-data="navPageData.pingData"
+        :initial-display-mode="routeDisplayMode"
       />
       <div class="h-10"></div>
     </main>
@@ -28,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getGroups, getImageUrl, getPing, getSaying, getSites } from '~/services/nav'
 import type { Delay, Group, SayingModel, Site } from '~/types/nav'
@@ -38,6 +39,7 @@ import NavContent from '@/components/nav/NavContent.vue'
 import bgGrid from '@/assets/pngs/bg-grid.png'
 import { debounce, throttle } from '@/utils/util'
 import { dispatchNavPageReveal, isNavPageRevealLocked } from '@/utils/navPageReveal'
+import { normalizeDisplayMode, writeMode } from '@/utils/modeStorage'
 
 interface NavPageData {
   desktopBgUrl: string | null
@@ -51,6 +53,7 @@ interface NavPageData {
 const isContentRevealed = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 const { locale } = useI18n()
+const route = useRoute()
 
 let touchStartY = 0
 let mobileMediaQuery: MediaQueryList | null = null
@@ -75,6 +78,9 @@ function parsePingData(data: Record<string, string | undefined>) {
 }
 
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
+const routeDisplayMode = computed(() => {
+  return route.query.mode == null ? undefined : normalizeDisplayMode(route.query.mode)
+})
 
 const { data } = await useAsyncData<NavPageData>(
   () => `nav-page:${lang.value}`,
@@ -111,6 +117,16 @@ const { data } = await useAsyncData<NavPageData>(
 )
 
 const navPageData = computed(() => data.value!)
+
+watch(
+  routeDisplayMode,
+  (mode) => {
+    if (mode) {
+      writeMode(mode)
+    }
+  },
+  { immediate: true }
+)
 
 function revealContent(shouldScroll = true, force = false) {
   if (!force && isNavPageRevealLocked()) {

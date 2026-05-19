@@ -33,9 +33,10 @@
         >
           <div class="h-12 w-12 flex-shrink-0 overflow-hidden rounded">
             <img
-              :src="`${logoPrefix ? `${logoPrefix}/` : ''}${site.icon || defaultLogo}`"
+              :key="siteLogoKey(site)"
+              :src="siteLogoSrc(site)"
               class="h-full w-full object-cover"
-              alt="Site logo"
+              :alt="site.name"
             />
           </div>
 
@@ -89,7 +90,7 @@
       />
     </Teleport>
 
-    <NavToolDock :items="sites" />
+    <NavToolDock :items="visibleSites" />
   </div>
 </template>
 
@@ -100,7 +101,7 @@ import { useLangStore } from '@/store/langStore'
 import { getGroups, getPing, getSites } from '~/services/nav'
 import type { Delay, Group, Site } from '~/types/nav'
 import { recordRecentSite, toExternalUrl } from '@/utils/recentSites'
-import { readDisplayMode, subscribeModeChange } from '@/utils/modeStorage'
+import { readDisplayMode, subscribeModeChange, type DisplayMode } from '@/utils/modeStorage'
 import GroupPopover from './GroupPopover.vue'
 import SitePopover from './SitePopover.vue'
 import NavToolDock from '@/components/nav/NavToolDock.vue'
@@ -109,6 +110,7 @@ const props = defineProps<{
   initialGroups?: Group[]
   initialSites?: Site[]
   initialPingData?: Record<string, Delay>
+  initialDisplayMode?: DisplayMode
 }>()
 
 const { t } = useI18n()
@@ -127,8 +129,20 @@ const langStore = useLangStore()
 const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
 const defaultLogo = 'defaultLogo.svg'
 
-const displayMode = ref<'sfw' | 'nsfw'>(readDisplayMode())
+const displayMode = ref<DisplayMode>(props.initialDisplayMode ?? readDisplayMode())
 let stopModeSubscription: (() => void) | null = null
+
+const siteById = computed(() => {
+  const map = new Map<string, Site>()
+  sites.value.forEach((site) => {
+    map.set(site.id, site)
+  })
+  return map
+})
+
+const visibleSites = computed(() => {
+  return sites.value.filter(isSiteVisible)
+})
 
 const domainsMap = computed(() => {
   const map: Record<string, string[]> = {}
@@ -169,6 +183,10 @@ function parsePingData(data: Record<string, string | undefined>) {
   pingData.value = result
 }
 
+function isSiteVisible(site: Site) {
+  return displayMode.value === 'nsfw' || String(site.nsfw) !== '1'
+}
+
 async function loadData() {
   loading.value = true
   try {
@@ -190,9 +208,9 @@ async function loadData() {
 }
 
 function filteredSites(group: Group) {
-  return sites.value.filter(
-    (site) => group.sites.includes(site.id) && (displayMode.value === 'nsfw' || site.nsfw !== '1')
-  )
+  return group.sites
+    .map(siteId => siteById.value.get(siteId))
+    .filter((site): site is Site => !!site && isSiteVisible(site))
 }
 
 function displaySites(group: Group) {
@@ -206,6 +224,22 @@ function displaySites(group: Group) {
 
 function toggleGroup(groupId: string) {
   expandedGroups.value[groupId] = !expandedGroups.value[groupId]
+}
+
+function joinAssetUrl(prefix: string, path: string) {
+  if (!prefix) {
+    return path
+  }
+
+  return `${prefix.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+}
+
+function siteLogoSrc(site: Site) {
+  return joinAssetUrl(logoPrefix, site.icon || defaultLogo)
+}
+
+function siteLogoKey(site: Site) {
+  return `${site.id}:${site.icon || defaultLogo}`
 }
 
 function goDomain(domains: string[], site?: Site) {
@@ -347,6 +381,16 @@ watch(
       await loadData()
     }
   }
+)
+
+watch(
+  () => props.initialDisplayMode,
+  (mode) => {
+    if (mode) {
+      displayMode.value = mode
+    }
+  },
+  { immediate: true }
 )
 
 onMounted(() => {
