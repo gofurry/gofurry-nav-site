@@ -1,9 +1,9 @@
 <template>
-  <footer class="bg-slate-800 text-slate-300">
+  <footer :class="footerClass" :style="footerStyle">
     <div class="mx-auto grid w-full max-w-[1700px] gap-10 px-4 py-10 sm:px-6 md:grid-cols-3">
       <div class="space-y-8">
         <section class="space-y-3">
-          <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+          <h3 :class="sectionTitleClass">
             <img :src="compassIcon" alt="sitemap" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.sitemap') }}
           </h3>
@@ -18,7 +18,7 @@
         </section>
 
         <section class="space-y-3">
-          <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+          <h3 :class="sectionTitleClass">
             <img :src="apiIcon" alt="open platform" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.openPlatform') }}
           </h3>
@@ -49,7 +49,7 @@
 
       <div class="space-y-8">
         <section class="space-y-3">
-          <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+          <h3 :class="sectionTitleClass">
             <img :src="siteIcon" alt="open platform" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.feedback') }}
           </h3>
@@ -73,7 +73,7 @@
         </section>
 
         <section class="space-y-3">
-          <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+          <h3 :class="sectionTitleClass">
             <img :src="featherIcon" alt="about" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.about') }}
           </h3>
@@ -96,7 +96,7 @@
         </section>
       </div>
 
-      <div class="flex flex-col justify-end gap-3 text-sm text-slate-400">
+      <div :class="metaClass">
         <div>{{ currentYear }} gofurry {{ t('footer.rights') }}</div>
         <div>{{ t('footer.license') }}</div>
         <a
@@ -115,6 +115,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useThemeStore } from '@/stores/theme'
 import siteIcon from '@/assets/svgs/site.svg'
 import apiIcon from '@/assets/svgs/api.svg'
 import compassIcon from '@/assets/svgs/compass.svg'
@@ -125,9 +126,29 @@ import githubIcon from '@/assets/icons/github.svg'
 import twitterIcon from '@/assets/icons/twitter.svg'
 
 const { t } = useI18n()
+const themeStore = useThemeStore()
 
 const currentYear = new Date().getFullYear()
 const sitemapUrl = '/sitemap.xml'
+const isDark = computed(() => themeStore.theme === 'dark')
+const footerClass = computed(() => [
+  'border-t transition-colors duration-500',
+  isDark.value
+    ? 'border-white/5 bg-[#05070d] text-slate-400'
+    : 'border-slate-700/40 bg-slate-800 text-slate-300'
+])
+const footerStyle = computed(() => ({
+  '--footer-link-color': isDark.value ? 'rgb(148 163 184)' : 'rgb(203 213 225)',
+  '--footer-link-hover-color': 'rgb(255 255 255)'
+}))
+const sectionTitleClass = computed(() => [
+  'flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] transition-colors duration-500',
+  isDark.value ? 'text-slate-600' : 'text-slate-500'
+])
+const metaClass = computed(() => [
+  'flex flex-col justify-end gap-3 text-sm transition-colors duration-500',
+  isDark.value ? 'text-slate-500' : 'text-slate-400'
+])
 const openPlatformApiLink = computed(() => (
   import.meta.env.PROD
     ? { external: true, href: 'https://open.go-furry.com' }
@@ -168,11 +189,11 @@ const feedbackLinks = [
 
 <style scoped>
 .footer-link {
-  color: rgb(203 213 225);
+  color: var(--footer-link-color);
   transition: color 0.2s ease;
 }
 
 .footer-link:hover {
-  color: white;
+  color: var(--footer-link-hover-color);
 }
 </style>
