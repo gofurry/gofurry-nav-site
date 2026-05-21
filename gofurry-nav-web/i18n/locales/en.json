@@ -109,7 +109,6 @@
     "survey": "DeepFurry",
     "about": "About Us",
     "join": "Join Us",
-    "panel": "Panel",
     "archive": "Archive"
   },
   "footer": {
@@ -137,30 +136,6 @@
     "collapseCards": "Collapse Cards",
     "siteData": "Site Data",
     "hotNews": "Hot News"
-  },
-  "dashboard": {
-    "overview": "Nav Overview",
-    "collectResult": "Crawl Result",
-    "visitStats": "Traffic",
-    "siteCount": "Sites",
-    "domainCount": "Domains",
-    "siteAvailability": "Availability",
-    "categoryStats": "Categories",
-    "latestCollected": "Latest",
-    "regionDistribution": "Regions",
-    "visit7Days": "7d Visits",
-    "cityDistribution": "Cities",
-    "provinceDistribution": "Provinces",
-    "countryDistribution": "Countries",
-    "logCount": "Logs",
-    "totalVisits": "Total Visits",
-    "yearVisits": "Yearly",
-    "monthVisits": "Monthly",
-    "dayVisits": "Daily",
-    "publicBenefitRate": "Public Sites",
-    "nsfwRate": "NSFW",
-    "visits": "visits",
-    "siteGroupCount": "{count} sites in this group"
   },
   "navHeader": {
     "home": "Home",
@@ -260,25 +235,6 @@
       "itchIo": "itch.io",
       "steam": "Steam"
     }
-  },
-  "metrics": {
-    "global": "Global",
-    "screen": "Screen",
-    "cpuUsage": "CPU",
-    "memoryUsage": "Memory",
-    "diskUsage": "Disk",
-    "netIn": "Net In",
-    "netOut": "Net Out",
-    "uptime": "Uptime",
-    "service": "Service",
-    "avgResponse": "Avg Resp",
-    "p99Response": "P99",
-    "p95Response": "P95",
-    "errorRate": "Error %",
-    "requestCount": "Requests",
-    "tcpConnections": "TCP Conn",
-    "nodeTrend": "Node Trend",
-    "apiPath": "API Path"
   },
   "site": {
     "title": "Site details",

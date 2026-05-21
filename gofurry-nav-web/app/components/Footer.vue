@@ -32,9 +32,6 @@
             >
               {{ t('footer.links.api') }}
             </component>
-            <NuxtLink to="/panel" class="footer-link">
-              {{ t('sidebar.panel') }}
-            </NuxtLink>
             <a
                 href="https://op.go-furry.com"
                 target="_blank"
