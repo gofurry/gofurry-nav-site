@@ -16,8 +16,7 @@ import (
  */
 
 func gameApi(g fiber.Router) {
-	g.Get("/info", game.GameApi.GetGameInfo) // 获取单条游戏的基础信息
-	//g.Get("/info/intro", game.GameApi.GetGameIntro)     // 获取游戏内容详情
+	g.Get("/info", game.GameApi.GetGameInfo)                     // 获取单条游戏的基础信息
 	g.Get("/info/list", game.GameApi.GetGameList)                // 获取前 num 条游戏记录
 	g.Get("/info/main", game.GameApi.GetGameMainList)            // 获取首页展示数据
 	g.Get("/panel/main", game.GameApi.GetPanelMainList)          // 获取首页面板数据

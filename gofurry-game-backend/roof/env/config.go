@@ -23,7 +23,6 @@ type serverConfig struct {
 	DataBase   DataBaseConfig   `yaml:"database"`
 	Log        LogConfig        `yaml:"log"`
 	Redis      RedisConfig      `yaml:"redis"`
-	Mongodb    MongodbConfig    `yaml:"mongodb"`
 	Thread     ThreadConfig     `yaml:"thread"`
 	Middleware MiddlewareConfig `yaml:"middleware"`
 	Waf        WafConfig        `yaml:"waf"`
@@ -36,15 +35,6 @@ type EmailConfig struct {
 	EmailPort     int    `yaml:"email_port"`
 	EmailUser     string `yaml:"email_user"`
 	EmailPassword string `yaml:"email_password"`
-}
-
-type MongodbConfig struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	AuthDB   string `yaml:"auth_db"`
-	DBName   string `yaml:"db_name"`
 }
 
 type WafConfig struct {

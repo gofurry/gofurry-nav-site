@@ -1,11 +1,8 @@
 package models
 
 import (
-	"time"
-
 	rm "github.com/gofurry/gofurry-game-backend/apps/review/models"
 	cm "github.com/gofurry/gofurry-game-backend/common/models"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const TableNameGfgGame = "gfg_game"
@@ -244,26 +241,6 @@ type CommentItem struct {
 	CreateTime cm.LocalTime `json:"create_time"`
 	IP         string       `json:"ip"`
 	Name       *string      `json:"name"`
-}
-
-// GameIntro 游戏简介HTML存储模型
-type GameIntro struct {
-	ID         primitive.ObjectID `bson:"_id,omitempty" json:"id"`        // MongoDB自动生成的ID
-	GameID     int64              `bson:"game_id" json:"game_id"`         // 游戏表ID（核心业务标识）
-	Content    string             `bson:"content" json:"content"`         // HTML内容
-	Lang       string             `bson:"lang" json:"lang"`               // 语言
-	CreateTime time.Time          `bson:"create_time" json:"create_time"` // 创建时间
-	UpdateTime time.Time          `bson:"update_time" json:"update_time"` // 更新时间
-}
-
-// TableName 返回集合名
-func (GameIntro) TableName() string {
-	return "game_intro"
-}
-
-type GameIntroVo struct {
-	Content    string       `json:"content"`
-	UpdateTime cm.LocalTime `json:"update_time"`
 }
 
 const TableNameGfgGameCreator = "gfg_game_creator"
