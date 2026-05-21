@@ -5,7 +5,6 @@ import (
 	nav "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/controller"
 	site "github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/controller"
 	siteCommon "github.com/gofurry/gofurry-nav-backend/apps/system/site/controller"
-	stat "github.com/gofurry/gofurry-nav-backend/apps/system/stat/controller"
 )
 
 /*
@@ -34,24 +33,6 @@ func navApi(g fiber.Router) {
 	g.Get("/site/getSitePingRecord", site.SitePageApi.GetSitePingRecord) // 获取单个站点的 Ping 记录
 	g.Get("/site/getSiteHttpRecord", site.SitePageApi.GetSiteHttpRecord) // 获取单个站点的 HTTP 记录
 	g.Get("/site/getSiteDnsRecord", site.SitePageApi.GetSiteDnsRecord)   // 获取单个站点的 DNS 记录
-}
-
-func statApi(g fiber.Router) {
-	g.Get("/image/url", stat.StatApi.GetImageUrl) // 获取 CDN 中随机壁纸
-
-	// 数据
-	g.Get(("/chart/views/count"), stat.StatApi.GetViewsCount)              // 获取访问量数据
-	g.Get(("/chart/views/region/country"), stat.StatApi.GetCountryCount)   // 获取访问国家统计
-	g.Get(("/chart/views/region/province"), stat.StatApi.GetProvinceCount) // 获取访问省份统计
-	g.Get(("/chart/views/region/city"), stat.StatApi.GetCityCount)         // 获取访问城市统计
-	g.Get(("/chart/group/count"), stat.StatApi.GetGroupCount)              // 获取站点分组统计
-	g.Get("/nav/site/list", stat.StatApi.GetSiteList)                      // 获取近日收录的站点
-	g.Get("/nav/site/ping/list", stat.StatApi.GetSitePingList)             // 获取最近的最高延迟的 ping 记录
-	g.Get("/nav/site/common", stat.StatApi.GetSiteCommonInfo)              // 获取导航站点的基本数据
-
-	// metrics
-	g.Get("/prom/metrics", stat.StatApi.GetPromMetrics)                // metrics 的缓存
-	g.Get("/prom/metrics/history", stat.StatApi.GetPromMetricsHistory) // 时序指标的缓存
 }
 
 func siteApi(g fiber.Router) {

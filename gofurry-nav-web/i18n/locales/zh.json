@@ -109,7 +109,6 @@
     "survey": "兽圈调研",
     "about": "关于本站",
     "join": "加入我们",
-    "panel": "本站数据",
     "archive": "兽圈档案"
   },
   "footer": {
@@ -137,30 +136,6 @@
     "collapseCards": "收起卡片",
     "siteData": "本站数据",
     "hotNews": "热门资讯"
-  },
-  "dashboard": {
-    "overview": "导航站数据总览",
-    "collectResult": "采集结果",
-    "visitStats": "访问统计",
-    "siteCount": "收录站点数",
-    "domainCount": "采集域名数",
-    "siteAvailability": "站点可达率",
-    "categoryStats": "站点分类统计",
-    "latestCollected": "最新收录",
-    "regionDistribution": "访问地区分布",
-    "visit7Days": "7日访问量",
-    "cityDistribution": "城市分布",
-    "provinceDistribution": "省份分布",
-    "countryDistribution": "国家分布",
-    "logCount": "日志数",
-    "totalVisits": "总访问量",
-    "yearVisits": "年访问量",
-    "monthVisits": "月访问量",
-    "dayVisits": "日访问量",
-    "publicBenefitRate": "公益网站率",
-    "nsfwRate": "NSFW率",
-    "visits": "访问量",
-    "siteGroupCount": "此分组共 {count} 个网站"
   },
   "navHeader": {
     "home": "首页",
@@ -260,25 +235,6 @@
       "itchIo": "itch.io",
       "steam": "Steam"
     }
-  },
-  "metrics": {
-    "global": "全站数据",
-    "screen": "大屏数据",
-    "cpuUsage": "CPU 使用率",
-    "memoryUsage": "内存使用",
-    "diskUsage": "磁盘使用率",
-    "netIn": "网络接收",
-    "netOut": "网络发送",
-    "uptime": "运行时长",
-    "service": "服务",
-    "avgResponse": "平均响应",
-    "p99Response": "P99 响应",
-    "p95Response": "P95 响应",
-    "errorRate": "失败率",
-    "requestCount": "请求量",
-    "tcpConnections": "TCP 连接数",
-    "nodeTrend": "节点资源趋势",
-    "apiPath": "接口路径"
   },
   "site": {
     "title": "站点详情",

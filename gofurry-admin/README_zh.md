@@ -2,7 +2,7 @@
 
 [English](./README.md)
 
-`medium` 是偏均衡的 HTTP 服务模板。它保留了 Redis、WAF、service 安装卸载、embedded UI 和较完整的中间件支持，但去掉了 scheduler 和 Prometheus 这一层更偏平台化的复杂度。
+`medium` 是偏均衡的 HTTP 服务模板。它保留了 Redis、WAF、service 安装卸载、embedded UI 和较完整的中间件支持，但去掉了更偏平台化的运行时复杂度。
 
 ## 这个版本包含什么
 
@@ -17,7 +17,7 @@
 ## 适用场景
 
 - 希望模板更偏真实业务服务
-- 不想引入 scheduler 和 Prometheus 的额外负担
+- 不想引入额外的平台运行时负担
 - 想要完整中间件和部分增强能力，但业务层仍保持简单
 
 ## 快速开始

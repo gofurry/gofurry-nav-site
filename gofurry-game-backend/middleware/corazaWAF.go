@@ -51,9 +51,6 @@ func CorazaMiddleware() fiber.Handler {
 
 func buildCorazaConfig(cfg env.WafConfig) fibercoraza.Config {
 	corazaCfg := fibercoraza.ConfigDefault
-	corazaCfg.Next = func(c fiber.Ctx) bool {
-		return c.Path() == "/metrics"
-	}
 	corazaCfg.DirectivesFile = cfg.ResolveDirectivesFiles()
 	corazaCfg.BlockMessage = "Request blocked by WAF"
 	corazaCfg.BlockHandler = func(c fiber.Ctx, details fibercoraza.InterruptionDetails) error {

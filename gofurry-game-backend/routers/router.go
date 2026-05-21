@@ -128,17 +128,6 @@ func registerMiddlewares(app *fiber.App) {
 		}
 	}
 
-	// Prometheus
-	app.Use(middleware.PrometheusMiddleware)
-	app.Get("/metrics", middleware.MetricsHandler)
-
-	// IP地理位置统计 本地GeoIP + API接入 跳过/metrics
-	app.Use(func(c fiber.Ctx) error {
-		if c.Path() == "/metrics" {
-			return c.Next()
-		}
-		return middleware.GeoIPStat(c)
-	})
 }
 
 // customErrorHandler 自定义错误处理

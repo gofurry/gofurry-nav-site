@@ -166,8 +166,7 @@ export default defineNuxtConfig({
     '/games/prize/**': { ssr: false },
     '/archive': { ssr: false },
     '/user/**': { ssr: false },
-    '/settings/**': { ssr: false },
-    '/panel': { ssr: false }
+    '/settings/**': { ssr: false }
   },
   i18n: {
     baseUrl: normalizedSiteUrl,
