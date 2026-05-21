@@ -2,7 +2,7 @@
 
 [Chinese](./README_zh.md)
 
-`medium` is the balanced HTTP service edition of this scaffold. It keeps the practical runtime baseline from `heavy`, but removes scheduler and Prometheus-related complexity so day-to-day API development stays straightforward.
+`medium` is the balanced HTTP service edition of this scaffold. It keeps the practical runtime baseline from `heavy`, but removes platform-oriented runtime complexity so day-to-day API development stays straightforward.
 
 ## What This Template Includes
 
@@ -20,7 +20,7 @@
 
 This is the current `medium` version.
 
-- Compared with `heavy`, it removes scheduler and Prometheus-related runtime burden.
+- Compared with `heavy`, it removes extra platform runtime burden.
 - Compared with `light`, it still keeps Redis, WAF, service install/uninstall, and embedded UI support ready to use.
 - Compared with the old over-assembled style, it keeps business code plain: `controller`, `dao`, `service`, and `models`, with routes registered directly in `url.go`.
 
