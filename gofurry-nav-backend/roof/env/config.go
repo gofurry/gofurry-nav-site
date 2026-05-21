@@ -29,20 +29,11 @@ type serverConfig struct {
 	Waf        WafConfig        `yaml:"waf"`
 	Proxy      ProxyConfig      `yaml:"proxy"`
 	Resource   ResourceConfig   `yaml:"resource"`
-	Prometheus PrometheusConfig `yaml:"prometheus"`
-}
-
-type PrometheusConfig struct {
-	Url      string `yaml:"url"`
-	AuthName string `yaml:"auth_name"`
-	AuthPass string `yaml:"auth_pass"`
 }
 
 type ResourceConfig struct {
-	Geolite2Path       string `yaml:"geolite2_path"`
-	NavImageNum        int    `yaml:"nav_image_num"`
-	NavResizedImageNum int    `yaml:"nav_resized_image_num"`
-	StatImageNum       int    `yaml:"stat_image_num"`
+	NavImageNum        int `yaml:"nav_image_num"`
+	NavResizedImageNum int `yaml:"nav_resized_image_num"`
 }
 
 type ProxyConfig struct {

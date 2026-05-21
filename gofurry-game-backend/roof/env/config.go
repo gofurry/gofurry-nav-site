@@ -29,9 +29,7 @@ type serverConfig struct {
 	Middleware MiddlewareConfig `yaml:"middleware"`
 	Waf        WafConfig        `yaml:"waf"`
 	Proxy      ProxyConfig      `yaml:"proxy"`
-	Resource   ResourceConfig   `yaml:"resource"`
 	Auth       AuthConfig       `yaml:"auth"`
-	Prometheus PrometheusConfig `yaml:"prometheus"`
 	Email      EmailConfig      `yaml:"email"`
 }
 
@@ -41,12 +39,6 @@ type EmailConfig struct {
 	EmailPort     int    `yaml:"email_port"`
 	EmailUser     string `yaml:"email_user"`
 	EmailPassword string `yaml:"email_password"`
-}
-
-type PrometheusConfig struct {
-	Url      string `yaml:"url"`
-	AuthName string `yaml:"auth_name"`
-	AuthPass string `yaml:"auth_pass"`
 }
 
 type MongodbConfig struct {
@@ -61,10 +53,6 @@ type MongodbConfig struct {
 type AuthConfig struct {
 	AuthSalt  string `yaml:"auth_salt"`
 	JwtSecret string `yaml:"jwt_secret"`
-}
-
-type ResourceConfig struct {
-	Geolite2Path string `yaml:"geolite2_path"`
 }
 
 type ProxyConfig struct {

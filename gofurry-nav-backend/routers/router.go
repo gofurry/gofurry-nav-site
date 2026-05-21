@@ -57,7 +57,6 @@ func (router *router) Init() *fiber.App {
 	registerMiddlewares(app)
 
 	// 路由分组
-	statApi(app.Group("/api/stat"))
 	navApi(app.Group("/api/nav"))
 	siteApi(app.Group("/api/site"))
 
@@ -124,18 +123,6 @@ func registerMiddlewares(app *fiber.App) {
 			app.Use(swagger.New(swaggerCfg))
 		}
 	}
-
-	// Prometheus
-	app.Use(middleware.PrometheusMiddleware)
-	app.Get("/metrics", middleware.MetricsHandler)
-
-	// IP地理位置统计 本地GeoIP + API接入 跳过/metrics
-	app.Use(func(c fiber.Ctx) error {
-		if c.Path() == "/metrics" {
-			return c.Next()
-		}
-		return middleware.GeoIPStat(c)
-	})
 
 }
 

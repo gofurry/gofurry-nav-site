@@ -18,12 +18,10 @@ func InitScheduleOnStart() {
 	log.Debug("[Schedule] init start module initialization begin...")
 
 	go Schedule()
-	go MetricsCache()
 	go OneHourTask()
 	go task.UpdateSiteViewCountCache()
 
 	cs.AddCronJob(10*time.Minute, Schedule)
-	cs.AddCronJob(1*time.Minute, MetricsCache)
 	cs.AddCronJob(1*time.Hour, OneHourTask)
 	cs.AddCronJob(24*time.Hour, task.UpdateSiteViewCountCache)
 
@@ -35,12 +33,6 @@ func OneHourTask() {
 }
 
 func Schedule() {
-	task.UpdateTopCountCache()
-	task.UpdateLatestPingLog()
 	task.UpdateSiteListCache()
 	task.UpdateGroupListCache()
-}
-
-func MetricsCache() {
-	task.UpdateMetricsCache()
 }

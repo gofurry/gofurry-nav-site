@@ -31,8 +31,6 @@ func GetNavPageService() *navPageService { return navPageSingleton }
 
 // 获取导航站点信息
 func (svc *navPageService) GetSiteList(lang string) (res []models.SiteVo, err common.GFError) {
-	defer addCount() // 请求就增加访问量
-
 	var jsonErr error
 
 	// 先从缓存读取
@@ -333,25 +331,6 @@ func (svc *navPageService) GetImageUrl(t string) string {
 		num = res.NavResizedImageNum
 	}
 	return addr + "bg-" + util.Int2String(rand.Intn(num)+1) + ".avif"
-}
-
-// 增加浏览量
-func addCount() {
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Error("addCount async error: ", r)
-			}
-		}()
-
-		cs.Incr("stat-count:total")
-		year := util.Int642String(int64(time.Now().Year()))
-		month := util.Int642String(int64(time.Now().Month()))
-		day := util.Int642String(int64(time.Now().Day()))
-		cs.Incr("stat-count:" + year)
-		cs.Incr("stat-count:" + year + "-" + month)
-		cs.Incr("stat-count:" + year + "-" + month + "-" + day)
-	}()
 }
 
 func (svc *navPageService) convertRecords(records []models.GfnSite, lang string) []models.SiteVo {
