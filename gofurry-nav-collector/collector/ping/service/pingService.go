@@ -344,13 +344,18 @@ func Ping() {
 // ============== Ping解析 - 采集和解析部分 ==============
 
 // 执行 ping 采集
-func performPing(ip string) models2.PingModel {
-	pinger, err := ping.NewPinger(ip)
-	// 初始化结果字段
-	var pingModel models2.PingModel
+func performPing(ip string) (pingModel models2.PingModel) {
+	start := time.Now()
 	pingModel.PingTime = cm.LocalTime(time.Now())
+	defer func() {
+		pingModel.ProbeDurationMS = time.Since(start).Milliseconds()
+	}()
+
+	pinger, err := ping.NewPinger(ip)
 	if err != nil {
-		return pingModel
+		pingModel.ErrorCode = "ping_init_failed"
+		pingModel.ErrorMessage = err.Error()
+		return
 	}
 	defer pinger.Stop()
 	pingModel.AvgLossRate = 100
@@ -364,7 +369,9 @@ func performPing(ip string) models2.PingModel {
 	// 运行 Pinger
 	err = pinger.Run()
 	if err != nil {
-		return pingModel
+		pingModel.ErrorCode = "ping_run_failed"
+		pingModel.ErrorMessage = err.Error()
+		return
 	}
 	// 转换数据
 	stats := pinger.Statistics()
@@ -427,21 +434,17 @@ func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock
 
 		// 存数据库
 		dao.GetPingDao().Add(pindSaveRecord)
+		payload, errorCode := buildPingObservationPayload(result, pingRecord, pindSaveRecord.Status)
 		saveErr := observation.SaveIfEnabled(observation.Input{
-			SiteID:     target.SiteID,
-			Target:     ip,
-			Protocol:   observation.ProtocolPing,
-			Status:     observationStatusFromPing(pindSaveRecord.Status),
-			ObservedAt: time.Time(result.PingTime),
-			DurationMS: result.AvgDelayTime,
-			ErrorCode:  errorCodeFromStatus(pindSaveRecord.Status, "ping_unreachable"),
-			Payload: map[string]any{
-				"delay_ms":      result.AvgDelayTime,
-				"loss_rate":     result.AvgLossRate,
-				"legacy_delay":  pingRecord.Delay,
-				"legacy_loss":   pingRecord.Loss,
-				"legacy_status": pingRecord.Status,
-			},
+			SiteID:       target.SiteID,
+			Target:       ip,
+			Protocol:     observation.ProtocolPing,
+			Status:       observationStatusFromPing(pindSaveRecord.Status),
+			ObservedAt:   time.Time(result.PingTime),
+			DurationMS:   result.ProbeDurationMS,
+			ErrorCode:    errorCode,
+			ErrorMessage: result.ErrorMessage,
+			Payload:      payload,
 		})
 		if saveErr != nil {
 			log.WarnFields(map[string]interface{}{
@@ -452,6 +455,30 @@ func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock
 			}, "Ping v2 observation 旁路写入失败: "+saveErr.GetMsg())
 		}
 	}
+}
+
+func buildPingObservationPayload(result models2.PingModel, pingRecord *models2.PingSaveModel, status string) (map[string]any, string) {
+	errorCode := result.ErrorCode
+	icmpStatus := "unreachable"
+	var avgRTTMS any
+	if status == "up" {
+		icmpStatus = "reachable"
+		avgRTTMS = result.AvgDelayTime
+	} else if errorCode == "" {
+		errorCode = "ping_unreachable"
+	}
+
+	return map[string]any{
+		"icmp_status":   icmpStatus,
+		"avg_rtt_ms":    avgRTTMS,
+		"loss_rate":     result.AvgLossRate,
+		"duration_ms":   result.ProbeDurationMS,
+		"error_code":    errorCode,
+		"delay_ms":      result.AvgDelayTime,
+		"legacy_delay":  pingRecord.Delay,
+		"legacy_loss":   pingRecord.Loss,
+		"legacy_status": pingRecord.Status,
+	}, errorCode
 }
 
 func observationStatusFromPing(status string) string {

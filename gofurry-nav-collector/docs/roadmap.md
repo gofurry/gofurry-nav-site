@@ -111,7 +111,7 @@
 
 #### 任务
 
-- [ ] Ping v2 payload 增加 `icmp_status`、`loss_rate`、`avg_rtt_ms`、`error_code`、`duration_ms`。
+- [x] Ping v2 payload 增加 `icmp_status`、`loss_rate`、`avg_rtt_ms`、`error_code`、`duration_ms`。
 - [ ] Ping 失败只影响健康评分，不单独判定站点 down。
 - [ ] 评估 TCP connect fallback，但默认关闭。
 - [ ] HTTP v2 增加 redirect chain、content type、常见安全 header 是否存在。
