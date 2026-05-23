@@ -2,9 +2,12 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -29,6 +32,13 @@ const (
 	MaxDepth = 2
 	// PTR 查询并发数控制
 	PTRWorkers = 5
+
+	maxDNSObservationTextLength = 512
+
+	dnsRiskPrivateIP          = "private_ip"
+	dnsRiskLowTTL             = "low_ttl"
+	dnsRiskNXDomainWithAnswer = "nxdomain_with_answer"
+	dnsRiskPTREmpty           = "ptr_empty"
 )
 
 // 按域名并行查 加锁
@@ -389,7 +399,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 			ObservedAt: newRecord.CreateTime,
 			DurationMS: time.Since(probeStart).Milliseconds(),
 			ErrorCode:  errorCode,
-			Payload:    results,
+			Payload:    buildDNSObservationPayload(results),
 		})
 		if saveErr != nil {
 			log.WarnFields(map[string]interface{}{
@@ -408,6 +418,117 @@ func observationStatusFromDNS(status string) string {
 		return observation.StatusSuccess
 	}
 	return observation.StatusFailure
+}
+
+func buildDNSObservationPayload(results map[string][]models.DNSRecord) map[string]any {
+	payload := make(map[string]any, len(results)+1)
+	aggregateRisks := map[string]struct{}{}
+
+	for recordType, records := range results {
+		v2Records := make([]map[string]any, 0, len(records))
+		for _, record := range records {
+			v2Record, risks := buildDNSObservationRecord(record)
+			v2Records = append(v2Records, v2Record)
+			for _, risk := range risks {
+				aggregateRisks[risk] = struct{}{}
+			}
+		}
+		payload[recordType] = v2Records
+	}
+	payload["risk_flags"] = sortedRiskFlags(aggregateRisks)
+	return payload
+}
+
+func buildDNSObservationRecord(record models.DNSRecord) (map[string]any, []string) {
+	value, truncated := limitDNSObservationText(record.Value)
+	reversePTR, _ := limitDNSObservationText(record.ReversePTR)
+	riskFlags := sortedStringSlice(record.RiskFlags)
+	riskSet := make(map[string]struct{}, len(riskFlags))
+	for _, risk := range riskFlags {
+		riskSet[risk] = struct{}{}
+	}
+
+	children := make([]map[string]any, 0, len(record.Children))
+	for _, child := range record.Children {
+		childRecord, childRisks := buildDNSObservationRecord(child)
+		children = append(children, childRecord)
+		for _, risk := range childRisks {
+			riskSet[risk] = struct{}{}
+		}
+	}
+
+	v2Record := map[string]any{
+		"type":          record.Type,
+		"value":         value,
+		"ttl":           record.TTL,
+		"dnssec":        record.DNSSEC,
+		"asn":           record.ASN,
+		"country":       record.Country,
+		"city":          record.City,
+		"provider_type": record.ProviderType,
+		"isp":           record.ISP,
+		"duration_ms":   record.Duration.Milliseconds(),
+		"children":      children,
+		"reverse_ptr":   reversePTR,
+		"risk_flags":    sortedRiskFlags(riskSet),
+	}
+	if truncated {
+		v2Record["value_truncated"] = true
+		v2Record["value_original_length"] = len([]rune(record.Value))
+		v2Record["value_sha256"] = sha256Hex(record.Value)
+	}
+	if textKind := dnsTextKind(record); textKind != "" {
+		v2Record["text_kind"] = textKind
+	}
+	return v2Record, sortedRiskFlags(riskSet)
+}
+
+func limitDNSObservationText(value string) (string, bool) {
+	if len([]rune(value)) <= maxDNSObservationTextLength {
+		return value, false
+	}
+	return string([]rune(value)[:maxDNSObservationTextLength]), true
+}
+
+func sha256Hex(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
+}
+
+func dnsTextKind(record models.DNSRecord) string {
+	switch record.Type {
+	case "CAA":
+		return "caa"
+	case "TXT":
+		normalized := strings.ToLower(strings.TrimSpace(record.Value))
+		if strings.HasPrefix(normalized, "v=spf1") {
+			return "spf"
+		}
+		if strings.HasPrefix(normalized, "v=dmarc1") {
+			return "dmarc"
+		}
+		return "txt"
+	default:
+		return ""
+	}
+}
+
+func sortedRiskFlags(riskSet map[string]struct{}) []string {
+	risks := make([]string, 0, len(riskSet))
+	for risk := range riskSet {
+		risks = append(risks, risk)
+	}
+	sort.Strings(risks)
+	return risks
+}
+
+func sortedStringSlice(values []string) []string {
+	if values == nil {
+		return nil
+	}
+	copied := append([]string(nil), values...)
+	sort.Strings(copied)
+	return copied
 }
 
 func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityDB *geoip2.Reader, countryDB *geoip2.Reader) map[string][]models.DNSRecord {
@@ -532,12 +653,14 @@ func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader
 			rec.Country, rec.City, rec.ASN, rec.ISP = lookupGeoASN(v.A, countryDB, cityDB, asnDB)
 			rec.ProviderType = detectCDN(rec.ASN, v.A, domain)
 			rec.ReversePTR = reversePTR(v.A)
+			rec.RiskFlags = detectDNSRiskFlags(v.A, in, v.Hdr.Ttl, rec.ReversePTR)
 			rec.Hijacked = detectHijack(v.A, in, v.Hdr.Ttl)
 		case *dns.AAAA:
 			rec.Value = v.AAAA.String()
 			rec.Country, rec.City, rec.ASN, rec.ISP = lookupGeoASN(v.AAAA, countryDB, cityDB, asnDB)
 			rec.ProviderType = detectCDN(rec.ASN, v.AAAA, domain)
 			rec.ReversePTR = reversePTR(v.AAAA)
+			rec.RiskFlags = detectDNSRiskFlags(v.AAAA, in, v.Hdr.Ttl, rec.ReversePTR)
 			rec.Hijacked = detectHijack(v.AAAA, in, v.Hdr.Ttl)
 		case *dns.CNAME:
 			rec.Value = v.Target
@@ -655,6 +778,14 @@ func detectCDN(asn string, ip net.IP, domain string) string {
 // detectHijack 检测是否存在 DNS 劫持行为
 // 包括私网 IP、TTL 异常、NXDOMAIN 等
 func detectHijack(ip net.IP, msg *dns.Msg, ttl uint32) bool {
+	risks := detectDNSRiskFlags(ip, msg, ttl, "skip_ptr_check")
+	return containsRiskFlag(risks, dnsRiskPrivateIP) ||
+		containsRiskFlag(risks, dnsRiskNXDomainWithAnswer) ||
+		containsRiskFlag(risks, dnsRiskLowTTL)
+}
+
+func detectDNSRiskFlags(ip net.IP, msg *dns.Msg, ttl uint32, reversePTR string) []string {
+	riskSet := map[string]struct{}{}
 	privateRanges := []string{
 		"0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8",
 		"169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16",
@@ -663,20 +794,34 @@ func detectHijack(ip net.IP, msg *dns.Msg, ttl uint32) bool {
 	for _, cidr := range privateRanges {
 		_, block, _ := net.ParseCIDR(cidr)
 		if block.Contains(ip) {
-			return true
+			riskSet[dnsRiskPrivateIP] = struct{}{}
+			break
 		}
 	}
 
 	// RcodeNameError 且有 Answer 也可能劫持
-	if msg.Rcode == dns.RcodeNameError && len(msg.Answer) > 0 {
-		return true
+	if msg != nil && msg.Rcode == dns.RcodeNameError && len(msg.Answer) > 0 {
+		riskSet[dnsRiskNXDomainWithAnswer] = struct{}{}
 	}
 
 	// TTL 异常过低也认为可能劫持
 	if ttl > 0 && ttl < 10 {
-		return true
+		riskSet[dnsRiskLowTTL] = struct{}{}
 	}
 
+	if reversePTR == "" {
+		riskSet[dnsRiskPTREmpty] = struct{}{}
+	}
+
+	return sortedRiskFlags(riskSet)
+}
+
+func containsRiskFlag(risks []string, target string) bool {
+	for _, risk := range risks {
+		if risk == target {
+			return true
+		}
+	}
 	return false
 }
 

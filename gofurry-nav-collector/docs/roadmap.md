@@ -119,8 +119,8 @@
 - [x] HTTP title/meta/header 字符串限制长度，并确保后端/Nuxt 按纯文本展示。
 - [x] TLS 拆分 `cert_collected` 与 `cert_verified`。
 - [x] TLS 先尝试正常校验，失败后再受控地采集证书详情，并记录 `verify_error`。
-- [ ] DNS 将 `hijacked` 语义替换为 `risk_flags`，例如 `private_ip`、`low_ttl`、`resolver_timeout`。
-- [ ] DNS TXT、SPF、DMARC、CAA 只保存摘要或限长原文，不保存无限长外部内容。
+- [x] DNS 将 `hijacked` 语义替换为 `risk_flags`，例如 `private_ip`、`low_ttl`、`nxdomain_with_answer`、`ptr_empty`。
+- [x] DNS TXT、SPF、DMARC、CAA 只保存摘要或限长原文，不保存无限长外部内容。
 - [ ] multi-resolver 只作为可选对比能力，默认关闭，不进入 Phase 0 默认路径。
 
 #### 验收标准
