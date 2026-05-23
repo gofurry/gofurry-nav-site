@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"gopkg.in/yaml.v2"
@@ -24,10 +26,22 @@ type serverConfig struct {
 }
 
 type CollectorConfig struct {
-	Proxy   string        `yaml:"proxy"`
-	Ping    PingConfig    `yaml:"ping"`
-	Request RequestConfig `yaml:"request"`
-	Dns     DnsConfig     `yaml:"dns"`
+	Proxy       string            `yaml:"proxy"`
+	Ping        PingConfig        `yaml:"ping"`
+	Request     RequestConfig     `yaml:"request"`
+	Dns         DnsConfig         `yaml:"dns"`
+	ProbeBudget ProbeBudgetConfig `yaml:"probe_budget"`
+}
+
+type ProbeBudgetConfig struct {
+	RedisTimeoutSeconds        int `yaml:"redis_timeout_seconds"`
+	HTTPTimeoutSeconds         int `yaml:"http_timeout_seconds"`
+	HTTPRedirects              int `yaml:"http_redirects"`
+	TLSHandshakeTimeoutSeconds int `yaml:"tls_handshake_timeout_seconds"`
+	DNSTimeoutSeconds          int `yaml:"dns_timeout_seconds"`
+	PTRTimeoutSeconds          int `yaml:"ptr_timeout_seconds"`
+	MaxDNSRecordsPerQuery      int `yaml:"max_dns_records_per_query"`
+	MaxResponseBytes           int `yaml:"max_response_bytes"`
 }
 
 type DnsConfig struct {
@@ -61,11 +75,15 @@ type ServerConfig struct {
 }
 
 type DataBaseConfig struct {
-	DBName     string `yaml:"db_name"`
-	DBUsername string `yaml:"db_username"`
-	DBPassword string `yaml:"db_password"`
-	DBHost     string `yaml:"db_host"`
-	DBPort     string `yaml:"db_port"`
+	DBName                 string `yaml:"db_name"`
+	DBUsername             string `yaml:"db_username"`
+	DBPassword             string `yaml:"db_password"`
+	DBHost                 string `yaml:"db_host"`
+	DBPort                 string `yaml:"db_port"`
+	MaxOpenConns           int    `yaml:"max_open_conns"`
+	MaxIdleConns           int    `yaml:"max_idle_conns"`
+	ConnMaxLifetimeSeconds int    `yaml:"conn_max_lifetime_seconds"`
+	ConnMaxIdleTimeSeconds int    `yaml:"conn_max_idle_time_seconds"`
 }
 
 type RedisConfig struct {
@@ -96,8 +114,8 @@ func InitConfig(projectName string, fileName string, conf interface{}) {
 		if err != nil {
 			fmt.Println("Error loading pwd dir:", err.Error())
 		} else {
-			filePath := pwd + "/conf/" + fileName
-			if FileExists(filePath) {
+			filePath := findLocalConfig(pwd, fileName)
+			if filePath != "" && FileExists(filePath) {
 				err = loadYaml(filePath, conf)
 				if err != nil {
 					fmt.Println("Error loading "+fileName+" file:", err.Error())
@@ -111,6 +129,22 @@ func InitConfig(projectName string, fileName string, conf interface{}) {
 	if hit == false {
 		fmt.Println("can not find any " + fileName + " file")
 		panic("can not find any " + fileName + " file")
+	}
+}
+
+func findLocalConfig(startDir string, fileName string) string {
+	dir := startDir
+	for {
+		filePath := filepath.Join(dir, "conf", fileName)
+		if FileExists(filePath) {
+			return filePath
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
 	}
 }
 
@@ -147,4 +181,47 @@ func loadYaml(path string, conf interface{}) (err error) {
 
 func GetServerConfig() *serverConfig {
 	return configuration
+}
+
+func (cfg ProbeBudgetConfig) RedisTimeout() time.Duration {
+	return secondsOrDefault(cfg.RedisTimeoutSeconds, 2)
+}
+
+func (cfg ProbeBudgetConfig) HTTPTimeout() time.Duration {
+	return secondsOrDefault(cfg.HTTPTimeoutSeconds, 25)
+}
+
+func (cfg ProbeBudgetConfig) MaxHTTPRedirects() int {
+	return intOrDefault(cfg.HTTPRedirects, 5)
+}
+
+func (cfg ProbeBudgetConfig) TLSHandshakeTimeout() time.Duration {
+	return secondsOrDefault(cfg.TLSHandshakeTimeoutSeconds, 5)
+}
+
+func (cfg ProbeBudgetConfig) DNSTimeout() time.Duration {
+	return secondsOrDefault(cfg.DNSTimeoutSeconds, 5)
+}
+
+func (cfg ProbeBudgetConfig) PTRTimeout() time.Duration {
+	return secondsOrDefault(cfg.PTRTimeoutSeconds, 2)
+}
+
+func (cfg ProbeBudgetConfig) MaxDNSRecords() int {
+	return intOrDefault(cfg.MaxDNSRecordsPerQuery, 64)
+}
+
+func (cfg ProbeBudgetConfig) MaxHTTPResponseBytes() int64 {
+	return int64(intOrDefault(cfg.MaxResponseBytes, 1024*1024))
+}
+
+func secondsOrDefault(value int, def int) time.Duration {
+	return time.Duration(intOrDefault(value, def)) * time.Second
+}
+
+func intOrDefault(value int, def int) int {
+	if value > 0 {
+		return value
+	}
+	return def
 }

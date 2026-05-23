@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -18,9 +19,7 @@ import (
 	"github.com/sourcegraph/conc/pool"
 )
 
-var pingThread = pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Ping.PingThread)
-var pingRWLock sync.RWMutex
-var wg sync.WaitGroup
+var pingRunning atomic.Bool
 
 // ============== Ping模块 - 初始化部分 ==============
 
@@ -109,6 +108,15 @@ func Ping() {
 			log.Error(fmt.Sprintf("receive Ping recover: %v", err))
 		}
 	}()
+	if !pingRunning.CompareAndSwap(false, true) {
+		log.WithFieldsMsg(map[string]interface{}{
+			"protocol": "ping",
+			"status":   "skipped",
+			"reason":   "previous_run_running",
+		}, "Ping skipped: previous run is still running")
+		return
+	}
+	defer pingRunning.Store(false)
 
 	// 查询数据库所有 IP 存 redis 每次采集都请求记录 热更新
 	err := addAllIpToPing()
@@ -154,13 +162,14 @@ func Ping() {
 	}
 
 	log.Info("Ping 采集开始")
+	pingThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Ping.PingThread)
+	var pingRWLock sync.Mutex
 	// 遍历 IP 列表, 每个 IP 开一个线程执行 Ping
 	for _, v := range pingList {
-		wg.Add(1)
-		pingThread.Go(getPingResult(v, nowData))
+		pingThread.Go(getPingResult(v, nowData, &pingRWLock))
 	}
 	// 等待所有 Ping 执行完毕
-	wg.Wait()
+	pingThread.Wait()
 	log.Info("Ping 采集结束")
 
 	// 删除旧记录中不在站点列表中的部分
@@ -185,14 +194,6 @@ func Ping() {
 		log.Error("存储ping结果失败: ", err)
 	}
 	log.Info("ping结果储存成功")
-
-	// 每个域名仅保留 5000 条 ping 记录
-	count, deleteErr := dao.GetPingDao().DeleteByNum(env.GetServerConfig().Collector.Ping.LogCount)
-	if deleteErr != nil {
-		log.Error("删除多余Ping记录失败: ", deleteErr)
-	} else {
-		log.Info("删除多余Ping记录成功, 共删除: ", count)
-	}
 }
 
 // ============== Ping解析 - 采集和解析部分 ==============
@@ -200,18 +201,15 @@ func Ping() {
 // 执行 ping 采集
 func performPing(ip string) models2.PingModel {
 	pinger, err := ping.NewPinger(ip)
-	defer pinger.Stop()
 	// 初始化结果字段
 	var pingModel models2.PingModel
 	pingModel.PingTime = cm.LocalTime(time.Now())
 	if err != nil {
 		return pingModel
 	}
+	defer pinger.Stop()
 	pingModel.AvgLossRate = 100
 	pingModel.AvgDelayTime = 100000000
-	if err != nil {
-		return pingModel
-	}
 	// 初始化 pinger
 	pinger.Count = 5
 	pinger.Size = 64
@@ -234,14 +232,13 @@ func performPing(ip string) models2.PingModel {
 }
 
 // 解析 ping 采集结果
-func getPingResult(ip string, data map[string]string) func() {
+func getPingResult(ip string, data map[string]string, pingRWLock *sync.Mutex) func() {
 	return func() {
 		defer func() {
 			if err := recover(); err != nil {
 				log.Error(fmt.Sprintf("receive PingThread recover: %v", err))
 			}
 		}()
-		defer wg.Done() // 确保线程结束时组数减少
 
 		// 执行 Ping 获取结果
 		result := performPing(ip)

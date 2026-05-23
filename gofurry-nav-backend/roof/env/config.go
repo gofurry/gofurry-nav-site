@@ -111,11 +111,15 @@ type LogConfig struct {
 }
 
 type DataBaseConfig struct {
-	DBName     string `yaml:"db_name"`
-	DBUsername string `yaml:"db_username"`
-	DBPassword string `yaml:"db_password"`
-	DBHost     string `yaml:"db_host"`
-	DBPort     string `yaml:"db_port"`
+	DBName                 string `yaml:"db_name"`
+	DBUsername             string `yaml:"db_username"`
+	DBPassword             string `yaml:"db_password"`
+	DBHost                 string `yaml:"db_host"`
+	DBPort                 string `yaml:"db_port"`
+	MaxOpenConns           int    `yaml:"max_open_conns"`
+	MaxIdleConns           int    `yaml:"max_idle_conns"`
+	ConnMaxLifetimeSeconds int    `yaml:"conn_max_lifetime_seconds"`
+	ConnMaxIdleTimeSeconds int    `yaml:"conn_max_idle_time_seconds"`
 }
 
 type ServerConfig struct {

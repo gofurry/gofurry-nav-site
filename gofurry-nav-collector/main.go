@@ -97,5 +97,6 @@ func (gf *goFurry) run() {
 }
 
 func (gf *goFurry) Stop(s service.Service) error {
+	schedule.StopSchedule()
 	return nil
 }

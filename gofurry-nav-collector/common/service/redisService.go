@@ -20,7 +20,6 @@ import (
 )
 
 var client *redis.Client
-var ctx = context.Background()
 
 func GetRedisService() *redis.Client { return client }
 
@@ -50,7 +49,13 @@ func OnConnectFunc(ctx context.Context, cn *redis.Conn) error {
 	return nil
 }
 
+func commandContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), env.GetServerConfig().Collector.ProbeBudget.RedisTimeout())
+}
+
 func Del(keys ...string) common.GFError {
+	ctx, cancel := commandContext()
+	defer cancel()
 	err := client.Del(ctx, keys...).Err()
 	if err != nil {
 		log.Error("删除缓存失败..." + err.Error())
@@ -60,6 +65,8 @@ func Del(keys ...string) common.GFError {
 }
 
 func SetNX(key string, value any, expiration time.Duration) bool {
+	ctx, cancel := commandContext()
+	defer cancel()
 	bool, err := client.SetNX(ctx, key, value, expiration).Result()
 	if err != nil {
 		log.Error("设置缓存失败..." + err.Error())
@@ -74,6 +81,8 @@ func Set(key string, value any) common.GFError {
 }
 
 func SetExpire(key string, value any, expiration time.Duration) common.GFError {
+	ctx, cancel := commandContext()
+	defer cancel()
 	err := client.Set(ctx, key, value, expiration).Err()
 	if err != nil {
 		log.Error("设置缓存失败..." + err.Error())
@@ -83,11 +92,15 @@ func SetExpire(key string, value any, expiration time.Duration) common.GFError {
 }
 
 func Get(key string) *redis.Cmd {
+	ctx, cancel := commandContext()
+	defer cancel()
 	val := client.Do(ctx, "get", key)
 	return val
 }
 
 func GetString(key string) (data string, gfsError common.GFError) {
+	ctx, cancel := commandContext()
+	defer cancel()
 	val, err := client.Get(ctx, key).Result()
 
 	switch {
@@ -101,6 +114,8 @@ func GetString(key string) (data string, gfsError common.GFError) {
 }
 
 func HSetMap(key string, kvMap map[string]string) common.GFError {
+	ctx, cancel := commandContext()
+	defer cancel()
 	err := client.HSet(ctx, key, kvMap).Err()
 	if err != nil {
 		log.Error("设置缓存失败..." + err.Error())
@@ -110,6 +125,8 @@ func HSetMap(key string, kvMap map[string]string) common.GFError {
 }
 
 func HSet(key string, fieldName string, fieldVal string) common.GFError {
+	ctx, cancel := commandContext()
+	defer cancel()
 	err := client.HSet(ctx, key, fieldName, fieldVal).Err()
 	if err != nil {
 		log.Error("设置缓存失败..." + err.Error())
@@ -119,6 +136,8 @@ func HSet(key string, fieldName string, fieldVal string) common.GFError {
 }
 
 func HGet(key string, fieldName string) (data string, gfsError common.GFError) {
+	ctx, cancel := commandContext()
+	defer cancel()
 	res, err := client.HGet(ctx, key, fieldName).Result()
 	switch {
 	case errors.Is(err, redis.Nil):
@@ -131,6 +150,8 @@ func HGet(key string, fieldName string) (data string, gfsError common.GFError) {
 }
 
 func HMGet(key string, fields ...string) (data []interface{}, gfsError common.GFError) {
+	ctx, cancel := commandContext()
+	defer cancel()
 	res, err := client.HMGet(ctx, key, fields...).Result()
 	switch {
 	case errors.Is(err, redis.Nil):
@@ -143,6 +164,8 @@ func HMGet(key string, fields ...string) (data []interface{}, gfsError common.GF
 }
 
 func HGetAll(key string) (data map[string]string, gfsError common.GFError) {
+	ctx, cancel := commandContext()
+	defer cancel()
 	res, err := client.HGetAll(ctx, key).Result()
 	switch {
 	case errors.Is(err, redis.Nil):
@@ -155,6 +178,8 @@ func HGetAll(key string) (data map[string]string, gfsError common.GFError) {
 }
 
 func HDel(key string, fields ...string) (res int64, gfsError common.GFError) {
+	ctx, cancel := commandContext()
+	defer cancel()
 	intVal, err := client.HDel(ctx, key, fields...).Result()
 	switch {
 	case errors.Is(err, redis.Nil):
@@ -167,6 +192,8 @@ func HDel(key string, fields ...string) (res int64, gfsError common.GFError) {
 }
 
 func Incr(key string) {
+	ctx, cancel := commandContext()
+	defer cancel()
 	client.Incr(ctx, key)
 }
 
@@ -177,8 +204,10 @@ func CountByPrefix(prefix string) (res int64, gfsError common.GFError) {
 	pattern := prefix + "*" // 匹配指定前缀的键
 
 	for {
+		ctx, cancel := commandContext()
 		// SCAN 命令，返回匹配的键和新的游标
 		keys, newCursor, err := client.Scan(ctx, cursor, pattern, 100).Result()
+		cancel()
 		if err != nil {
 			return 0, common.NewServiceError("redis统计失败.")
 		}
@@ -200,8 +229,10 @@ func DelByPrefix(prefix string) common.GFError {
 	pattern := prefix + "*" // 匹配指定前缀的键
 
 	for {
+		ctx, cancel := commandContext()
 		// SCAN 命令，返回匹配的键和新的游标
 		keys, newCursor, err := client.Scan(ctx, cursor, pattern, 100).Result()
+		cancel()
 		if err != nil {
 			log.Error(fmt.Sprintf("redis scan err:%v", err))
 			return common.NewServiceError(err.Error())
@@ -229,8 +260,10 @@ func FindByPrefix(prefix string) ([]string, common.GFError) {
 	pattern := prefix + "*" // 匹配指定前缀的键
 
 	for {
+		ctx, cancel := commandContext()
 		// SCAN 命令，返回匹配的键和新的游标
 		keys, newCursor, err := client.Scan(ctx, cursor, pattern, 100).Result()
+		cancel()
 		if err != nil {
 			log.Error(fmt.Sprintf("redis scan err:%v", err))
 			return nil, common.NewServiceError(err.Error())
@@ -250,6 +283,8 @@ func FindByPrefix(prefix string) ([]string, common.GFError) {
 }
 
 func GetFields(key string) (fields []string, gfsError common.GFError) {
+	ctx, cancel := commandContext()
+	defer cancel()
 	existingFields, err := client.HKeys(ctx, key).Result()
 	if err != nil && err != redis.Nil {
 		log.Error("获取缓存字段失败: " + err.Error())

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -21,9 +21,7 @@ import (
 	"github.com/sourcegraph/conc/pool"
 )
 
-var requestThread = pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Request.RequestThread)
-var requestRWLock sync.RWMutex
-var wg sync.WaitGroup
+var requestRunning atomic.Bool
 
 // ============== HTTP模块 - 初始化部分 ==============
 
@@ -72,6 +70,15 @@ func Request() {
 			log.Error(fmt.Sprintf("receive Request recover: %v", err))
 		}
 	}()
+	if !requestRunning.CompareAndSwap(false, true) {
+		log.WithFieldsMsg(map[string]interface{}{
+			"protocol": "http",
+			"status":   "skipped",
+			"reason":   "previous_run_running",
+		}, "Request skipped: previous run is still running")
+		return
+	}
+	defer requestRunning.Store(false)
 
 	requestList, err := dao.GetHTTPDao().GetList()
 	if err != nil {
@@ -84,23 +91,14 @@ func Request() {
 		return
 	}
 	log.Info("HTTP 采集开始")
+	requestThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Request.RequestThread)
 	// 遍历站点列表, 每个站点开一个线程执行 request
 	for _, v := range requestList {
-		wg.Add(1)
 		requestThread.Go(getRequestResult(v))
 	}
 	// 等待所有采集和解析执行完毕
-	wg.Wait()
+	requestThread.Wait()
 	log.Info("HTTP 采集结束")
-
-	// 每个域名仅保留 1500 条 request 记录
-	count, deleteErr := dao.GetHTTPDao().DeleteByNum(env.GetServerConfig().Collector.Request.LogCount)
-	if deleteErr != nil {
-		log.Error("删除多余Request记录失败: ", deleteErr)
-	} else {
-		log.Info("删除多余Request记录成功, 共删除: ", count)
-	}
-
 }
 
 // ============== HTTP模块 - 存储部分 ==============
@@ -113,7 +111,6 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 				log.Error(fmt.Sprintf("receive RequestThread recover: %v", err))
 			}
 		}()
-		defer wg.Done() // 确保线程结束时数组减少
 
 		// 执行 Request 获取结果
 		result := performRequest(site)
@@ -192,11 +189,13 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.Meta = make(map[string]string)
 	res.Headers = make(map[string][]string)
 	res.Redirects = []string{}
+	probeBudget := env.GetServerConfig().Collector.ProbeBudget
 
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},
+		TLSHandshakeTimeout: probeBudget.TLSHandshakeTimeout(),
 	}
 	// 设置代理
 	if site.Proxy == "1" {
@@ -205,11 +204,15 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	}
 
 	redirects := []string{}
+	maxRedirects := probeBudget.MaxHTTPRedirects()
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   25 * time.Second,
+		Timeout:   probeBudget.HTTPTimeout(),
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			redirects = append(redirects, req.URL.String())
+			if len(via) >= maxRedirects {
+				return http.ErrUseLastResponse
+			}
 			return nil
 		},
 	}
@@ -249,7 +252,7 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.Server = resp.Header.Get("Server")
 
 	// 读取响应体 限制 1MB
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1*1024*1024))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, probeBudget.MaxHTTPResponseBytes()))
 	if err == nil {
 		res.ContentLength = int64(len(body))
 

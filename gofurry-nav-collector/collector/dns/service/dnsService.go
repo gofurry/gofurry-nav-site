@@ -1,10 +1,13 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -16,7 +19,6 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/common/util"
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"github.com/miekg/dns"
-	_ "github.com/miekg/dns"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/sourcegraph/conc/pool"
 )
@@ -29,9 +31,7 @@ const (
 )
 
 // 按域名并行查 加锁
-var dnsThread = pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
-var dnsRWLock sync.RWMutex
-var wg sync.WaitGroup
+var dnsRunning atomic.Bool
 
 // 缓存 IP
 var geoCache sync.Map                        // geoCache 缓存 IP 的 GeoIP/ASN 查询结果
@@ -39,6 +39,60 @@ var ptrCache sync.Map                        // ptrCache 缓存 IP 的反向 PTR
 var ptrSem = make(chan struct{}, PTRWorkers) // ptrSem 用于限制 PTR 查询并发
 
 var resolver = env.GetServerConfig().Collector.Dns.Resolver
+var geoDBs *GeoDBSet
+
+type GeoDBSet struct {
+	Country *geoip2.Reader
+	City    *geoip2.Reader
+	ASN     *geoip2.Reader
+}
+
+func InitGeoDB(dbPath string) *GeoDBSet {
+	return &GeoDBSet{
+		Country: openGeoDB(dbPath, "GeoLite2-Country.mmdb", "Country"),
+		City:    openGeoDB(dbPath, "GeoLite2-City.mmdb", "City"),
+		ASN:     openGeoDB(dbPath, "GeoLite2-ASN.mmdb", "ASN"),
+	}
+}
+
+func openGeoDB(dbPath string, fileName string, label string) *geoip2.Reader {
+	reader, err := geoip2.Open(filepath.Join(dbPath, fileName))
+	if err != nil {
+		log.Error("打开 ", label, " DB 失败: ", err.Error())
+		return nil
+	}
+	return reader
+}
+
+func CloseGeoDB() {
+	if geoDBs == nil {
+		return
+	}
+	geoDBs.Close()
+	geoDBs = nil
+}
+
+func (g *GeoDBSet) Close() {
+	if g == nil {
+		return
+	}
+	if g.Country != nil {
+		_ = g.Country.Close()
+	}
+	if g.City != nil {
+		_ = g.City.Close()
+	}
+	if g.ASN != nil {
+		_ = g.ASN.Close()
+	}
+}
+
+func currentGeoDBs() *GeoDBSet {
+	if geoDBs != nil {
+		return geoDBs
+	}
+	return &GeoDBSet{}
+}
 
 // ============== DNS解析 - 初始化部分 ==============
 
@@ -50,6 +104,7 @@ func InitDNSOnStart() {
 		}
 	}()
 	fmt.Println("DNS 模块初始化开始...")
+	geoDBs = InitGeoDB(env.GetServerConfig().Collector.Dns.Geolite2Path)
 
 	//初始化后执行一次 ParseDNS
 	go ParseDNS()
@@ -87,6 +142,15 @@ func ParseDNS() {
 			log.Error(fmt.Sprintf("receive ParseDNS recover: %v", err))
 		}
 	}()
+	if !dnsRunning.CompareAndSwap(false, true) {
+		log.WithFieldsMsg(map[string]interface{}{
+			"protocol": "dns",
+			"status":   "skipped",
+			"reason":   "previous_run_running",
+		}, "DNS skipped: previous run is still running")
+		return
+	}
+	defer dnsRunning.Store(false)
 
 	requestList, err := dao.GetDNSDao().GetList()
 	if err != nil {
@@ -100,22 +164,14 @@ func ParseDNS() {
 	}
 
 	log.Info("DNS 采集开始")
+	dnsThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
 	// 遍历站点列表, 每个站点开一个线程执行采集
 	for _, v := range requestList {
-		wg.Add(1)
 		dnsThread.Go(getDNSResult(v))
 	}
 	// 等待所有采集和解析执行完毕
-	wg.Wait()
+	dnsThread.Wait()
 	log.Info("DNS 采集结束")
-
-	// 每个域名仅保留 500 条 DNS 记录
-	count, deleteErr := dao.GetDNSDao().DeleteByNum(env.GetServerConfig().Collector.Dns.LogCount)
-	if deleteErr != nil {
-		log.Error("删除多余DNS记录失败: ", deleteErr.GetMsg())
-	} else {
-		log.Info("删除多余DNS记录成功, 共删除: ", count)
-	}
 }
 
 func getDNSResult(site models.GfnCollectorDomain) func() {
@@ -125,28 +181,10 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 				log.Error(fmt.Sprintf("receive DnsThread recover: %v", err))
 			}
 		}()
-		defer wg.Done() // 确保线程结束时数组减少
-
-		// 打开 GeoIP / ASN 数据库
-		dbPath := env.GetServerConfig().Collector.Dns.Geolite2Path
-		countryDB, err := geoip2.Open(dbPath + "GeoLite2-Country.mmdb")
-		if err != nil {
-			log.Error("打开 Country DB 失败: ", err.Error())
-		}
-		defer countryDB.Close()
-		cityDB, err := geoip2.Open(dbPath + "GeoLite2-City.mmdb")
-		if err != nil {
-			log.Error("打开 City DB 失败: ", err.Error())
-		}
-		defer cityDB.Close()
-		asnDB, err := geoip2.Open(dbPath + "GeoLite2-ASN.mmdb")
-		if err != nil {
-			log.Error("打开 ASN DB 失败: ", err.Error())
-		}
-		defer asnDB.Close()
 
 		// 执行 Request 获取结果
-		results := performDNSQuery(site, asnDB, cityDB, countryDB)
+		geoDBSet := currentGeoDBs()
+		results := performDNSQuery(site, geoDBSet.ASN, geoDBSet.City, geoDBSet.Country)
 
 		var siteName string
 		if site.Prefix != nil {
@@ -164,7 +202,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		}
 		gfError := cs.HSetMap(resultKey, resultMap)
 		if gfError != nil {
-			log.Error("存储request结果失败: ", err.Error())
+			log.Error("存储DNS结果失败: ", gfError.GetMsg())
 		}
 
 		newRecord := models.GfnCollectorLogDn{
@@ -208,7 +246,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		// 存数据库
 		daoErr := dao.GetDNSDao().Add(&newRecord)
 		if daoErr != nil {
-			log.Error("添加DNS采集结果到数据库失败: ", err.Error())
+			log.Error("添加DNS采集结果到数据库失败: ", daoErr.GetMsg())
 		}
 
 	}
@@ -279,8 +317,10 @@ func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader
 
 	start := time.Now()
 
+	probeBudget := env.GetServerConfig().Collector.ProbeBudget
+
 	// UDP DNS 查询客户端
-	c := &dns.Client{Net: "udp"}
+	c := &dns.Client{Net: "udp", Timeout: probeBudget.DNSTimeout()}
 	m := new(dns.Msg)
 	m.SetQuestion(dns.Fqdn(domain), qtype)
 	m.SetEdns0(4096, true) // 支持 DNSSEC
@@ -307,7 +347,11 @@ func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader
 	var durations []time.Duration
 
 	// 遍历每条 Answer 记录
+	maxRecords := probeBudget.MaxDNSRecords()
 	for _, rr := range in.Answer {
+		if len(results) >= maxRecords {
+			break
+		}
 		recStart := time.Now()
 		rec := models.DNSRecord{
 			Type:   dns.TypeToString[rr.Header().Rrtype],
@@ -487,7 +531,10 @@ func reversePTR(ip net.IP) string {
 	ptrSem <- struct{}{}
 	defer func() { <-ptrSem }()
 
-	names, err := net.LookupAddr(ip.String())
+	ctx, cancel := context.WithTimeout(context.Background(), env.GetServerConfig().Collector.ProbeBudget.PTRTimeout())
+	defer cancel()
+
+	names, err := net.DefaultResolver.LookupAddr(ctx, ip.String())
 	ptr := ""
 	if err == nil && len(names) > 0 {
 		ptr = strings.Join(names, ",")

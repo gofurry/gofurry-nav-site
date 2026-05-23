@@ -1,0 +1,65 @@
+package retention
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"gorm.io/gorm"
+)
+
+const DefaultBatchSize = 500
+
+func BuildDeleteSQL(tableName string) string {
+	return fmt.Sprintf(`
+WITH doomed AS (
+	SELECT id
+	FROM (
+		SELECT
+			id,
+			ROW_NUMBER() OVER (
+				PARTITION BY name
+				ORDER BY create_time DESC, id DESC
+			) AS rn
+		FROM %s
+	) ranked
+	WHERE ranked.rn > ?
+	ORDER BY id
+	LIMIT ?
+)
+DELETE FROM %s target
+USING doomed
+WHERE target.id = doomed.id;`, tableName, tableName)
+}
+
+func DeleteByNameLimit(db *gorm.DB, tableName string, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
+	if batchSize <= 0 {
+		batchSize = DefaultBatchSize
+	}
+	if batchTimeout <= 0 {
+		batchTimeout = 2 * time.Minute
+	}
+
+	var totalDeleted int64
+	sql := BuildDeleteSQL(tableName)
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), batchTimeout)
+		result := db.WithContext(ctx).Exec(sql, keepCount, batchSize)
+		cancel()
+
+		if result.Error != nil {
+			return totalDeleted, result.Error
+		}
+
+		deleted := result.RowsAffected
+		totalDeleted += deleted
+		if deleted < int64(batchSize) {
+			break
+		}
+		if pause > 0 {
+			time.Sleep(pause)
+		}
+	}
+
+	return totalDeleted, nil
+}

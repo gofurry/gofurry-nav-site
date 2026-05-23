@@ -18,3 +18,7 @@ func InitSchedule() {
 	httpService.InitHTTPOnStart() // http
 	dnsService.InitDNSOnStart()   // dns
 }
+
+func StopSchedule() {
+	dnsService.CloseGeoDB()
+}
