@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/common"
@@ -12,6 +13,9 @@ import (
 )
 
 func init() {
+	if isRunningGoTest() && os.Getenv("GF_NAV_COLLECTOR_LOAD_CONFIG_IN_TEST") != "1" {
+		return
+	}
 	InitServerConfig(common.COMMON_PROJECT_NAME)
 }
 
@@ -146,6 +150,15 @@ func findLocalConfig(startDir string, fileName string) string {
 		}
 		dir = parent
 	}
+}
+
+func isRunningGoTest() bool {
+	name := filepath.Base(os.Args[0])
+	return strings.HasSuffix(name, ".test") || strings.HasSuffix(name, ".test.exe")
+}
+
+func RunningInGoTest() bool {
+	return isRunningGoTest()
 }
 
 func getOrDefault(key string, def string) string {

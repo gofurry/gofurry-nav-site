@@ -2,10 +2,12 @@ package abstract
 
 import (
 	"errors"
+	"os"
 
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	database "github.com/gofurry/gofurry-nav-collector/roof/db"
+	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
@@ -22,6 +24,9 @@ type Dao struct {
 }
 
 func (dao *Dao) Init() {
+	if env.RunningInGoTest() && os.Getenv("GF_NAV_COLLECTOR_LOAD_DB_IN_TEST") != "1" {
+		return
+	}
 	dao.Gm = database.Orm.DB()
 }
 
