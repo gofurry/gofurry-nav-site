@@ -201,7 +201,7 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 				log.ErrorFields(map[string]interface{}{
 					"event":    "probe_recovered",
 					"protocol": "http",
-					"site":     site.Name,
+					"site":     site.TargetName(),
 				}, fmt.Sprintf("HTTP 单目标探测触发 panic，已恢复: %v", err))
 			}
 		}()
@@ -233,12 +233,7 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 		}
 		jsonResult, _ := sonic.Marshal(httpRecord)
 
-		var siteName string
-		if site.Prefix != nil {
-			siteName = *site.Prefix + site.Name
-		} else {
-			siteName = site.Name
-		}
+		siteName := site.TargetName()
 
 		httpSaveRecord := models.GfnCollectorLogHTTP{
 			ID:         util.GenerateId(),
@@ -317,12 +312,8 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 
 // 执行 Request 采集
 func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
-	res.Domain = site.Name
-	if site.Prefix != nil {
-		res.Url = *site.Prefix + site.Name
-	} else {
-		res.Url = site.Name
-	}
+	res.Domain = site.TargetName()
+	res.Url = res.Domain
 	if site.TLS == "1" {
 		res.Url = "https://" + res.Url
 	} else {

@@ -115,21 +115,17 @@ func Delete() {
 	}
 }
 
-// 添加数据库全部 IP 到 redis
+// 添加数据库全部采集域名到 redis
 func addAllIpToPing() (map[string]int64, common.GFError) {
 	// 查记录
 	domainRecords, err := dao.GetPingDao().GetList()
 	if err != nil {
-		log.Error(fmt.Sprintf("查询IP失败: %v", err.GetMsg()))
-		return nil, common.NewServiceError(fmt.Sprintf("查询IP失败: %v", err))
+		log.Error(fmt.Sprintf("查询 Ping 目标失败: %v", err.GetMsg()))
+		return nil, common.NewServiceError(fmt.Sprintf("查询 Ping 目标失败: %v", err))
 	}
 
 	// 添加 ping 的站点
-	pingList, siteIDByDomain, jsonErr := buildPingTargets(domainRecords)
-	if jsonErr != nil {
-		log.Error(fmt.Sprintf("json转换失败: %v", jsonErr))
-		return siteIDByDomain, nil
-	}
+	pingList, siteIDByDomain := buildPingTargets(domainRecords)
 
 	// 存入 redis
 	pingJsonList, jsonErr := sonic.Marshal(pingList)
@@ -149,20 +145,25 @@ func addAllIpToPing() (map[string]int64, common.GFError) {
 	return siteIDByDomain, nil
 }
 
-func buildPingTargets(domainRecords []models2.Domain) ([]string, map[string]int64, error) {
+func buildPingTargets(domainRecords []models2.GfnCollectorDomain) ([]string, map[string]int64) {
 	pingList := []string{}
 	siteIDByDomain := map[string]int64{}
 	for _, v := range domainRecords {
-		newDomains := models2.Domains{}
-		if jsonErr := sonic.Unmarshal([]byte(v.Domain), &newDomains); jsonErr != nil {
-			return pingList, siteIDByDomain, jsonErr
+		domain := collectorDomainTarget(v)
+		if domain == "" || v.SiteID <= 0 {
+			continue
 		}
-		for _, domain := range newDomains.Domain {
-			pingList = append(pingList, domain)
-			siteIDByDomain[domain] = v.ID
-		}
+		pingList = append(pingList, domain)
+		siteIDByDomain[domain] = v.SiteID
 	}
-	return pingList, siteIDByDomain, nil
+	return pingList, siteIDByDomain
+}
+
+func collectorDomainTarget(record models2.GfnCollectorDomain) string {
+	if record.Prefix == nil {
+		return record.Name
+	}
+	return *record.Prefix + record.Name
 }
 
 // ============== Ping解析 - 执行部分 ==============

@@ -7,13 +7,13 @@ import (
 )
 
 func TestBuildPingTargetsKeepsSiteID(t *testing.T) {
-	domains, siteIDByDomain, err := buildPingTargets([]models2.Domain{
-		{ID: 101, Domain: `{"domain":["example.com","www.example.com"]}`},
-		{ID: 202, Domain: `{"domain":["example.net"]}`},
+	www := "www."
+	domains, siteIDByDomain := buildPingTargets([]models2.GfnCollectorDomain{
+		{ID: 1, SiteID: 101, Name: "example.com"},
+		{ID: 2, SiteID: 101, Name: "example.com", Prefix: &www},
+		{ID: 3, SiteID: 202, Name: "example.net"},
+		{ID: 4, SiteID: 0, Name: "missing-site-id.example"},
 	})
-	if err != nil {
-		t.Fatalf("buildPingTargets() error = %v", err)
-	}
 	if len(domains) != 3 {
 		t.Fatalf("domains length = %d, want 3", len(domains))
 	}

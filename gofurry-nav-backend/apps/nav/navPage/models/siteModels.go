@@ -7,6 +7,7 @@ import (
 )
 
 const TableNameGfnSite = "gfn_site"
+const TableNameGfnCollectorDomain = "gfn_collector_domain"
 
 func (*GfnSite) TableName() string {
 	return TableNameGfnSite

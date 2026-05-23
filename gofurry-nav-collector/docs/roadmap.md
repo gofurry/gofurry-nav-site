@@ -55,34 +55,44 @@
 
 ---
 
-### v0.2.1 - 采集域名与站点关系迁移
+### v0.2.1 - 采集域名与站点关系迁移闭环
 
-- **状态：** 计划中
-- **范围：** 数据模型 / gofurry-admin / 业务治理 / 兼容迁移
-- **目标：** 在 v2 observation 稳定后，把采集域名正式纳入站点关系管理，并逐步移除 `gfn_site.domain` 的历史职责。
+- **状态：** 已完成
+- **范围：** 数据模型 / Collector / Backend / gofurry-admin / 兼容迁移
+- **目标：** 让 `gfn_collector_domain.site_id` 成为采集域名与站点的正式关联，解决 v2 observation 缺少 `site_id` 跳过的问题。
 
 #### 重点
 
-- `gfn_collector_domain.site_id` 成为采集目标和站点的正式关联。
-- `gfn_collector_domain.deleted` 成为采集域名软删除标记。
-- gofurry-admin 支持按站点管理采集域名。
-- `gfn_site.domain` 进入兼容迁移期，不在 v0.2.0 直接移除。
+- `gfn_collector_domain` 成为 Ping / HTTP / DNS 的统一采集目标来源。
+- backend 导航站点列表的 `domain` 字段改由 `gfn_collector_domain` 聚合生成，wire shape 保持兼容。
+- gofurry-admin 的“采集域名”必须绑定站点，删除改为软删除。
+- “网站”管理不再编辑 `gfn_site.domain`，该字段仅作为历史兼容字段保留。
+- 提供手动同步脚本，将历史 `gfn_site.domain` 回填并补齐到 `gfn_collector_domain.site_id`。
 
 #### 任务
 
-- [ ] gofurry-admin 采集域名模型、接口、表单增加 `site_id`。
-- [ ] gofurry-admin 采集域名删除从硬删除改为软删除。
-- [ ] 为历史 `gfn_collector_domain` 数据补齐 `site_id`。
-- [ ] 设计 `gfn_site.domain` 到 `gfn_collector_domain` 的迁移脚本和回滚脚本。
-- [ ] 评估 Nuxt 和 backend 是否仍依赖 `gfn_site.domain`。
-- [ ] 在确认无读取依赖后，再安排移除 `gfn_site.domain`。
+- [x] gofurry-admin 采集域名模型、接口、表单增加 `site_id`。
+- [x] gofurry-admin 采集域名删除从硬删除改为软删除。
+- [x] 新增 `sql/20260523_collector_domain_site_sync.sql`，回填已有采集域名并补齐缺失域名。
+- [x] Ping 采集目标从 `gfn_site.domain` 切换到 `gfn_collector_domain`。
+- [x] Ping / HTTP / DNS 只采集未软删除、带 `site_id`、且所属站点未软删除的采集域名。
+- [x] backend 导航页域名从 `gfn_collector_domain` 聚合，Nuxt 现有读取结构不变。
+- [x] gofurry-admin 网站表单移除历史 `domains` 字段，不再写入 `gfn_site.domain`。
+- [ ] 生产观察稳定后，评估是否物理移除 `gfn_site.domain`。
 
 #### 验收标准
 
 - 新增或修改采集域名必须绑定站点。
 - 软删除采集域名后 collector 不再采集该目标。
-- 旧站点展示不因迁移中断。
-- `gfn_site.domain` 移除前有明确回滚路径。
+- 旧站点展示不因迁移中断，`domain` 返回结构保持兼容。
+- v2 observation 不再因 HTTP/DNS 目标缺少 `site_id` 而大量跳过。
+- `gfn_site.domain` 物理移除前仍有数据库字段作为回滚窗口。
+
+#### 后续观察
+
+- 生产执行同步脚本后，检查未绑定 `site_id` 的采集域名是否为真实脏数据。
+- 观察 admin 新增/修改采集域名是否能被 collector 下一轮采集自动接入。
+- 若连续一段时间确认 backend、Nuxt、admin、collector 均不再依赖 `gfn_site.domain`，再单独安排字段物理移除。
 
 ---
 

@@ -22,7 +22,11 @@ func GetHTTPDao() *httpDao { return newHTTPDao }
 
 func (dao httpDao) GetList() ([]models.GfnCollectorDomain, common.GFError) {
 	var res []models.GfnCollectorDomain
-	db := dao.Gm.Table(models.TableNameGfnCollectorDomain).Where("deleted IS NOT TRUE")
+	db := dao.Gm.Table(models.TableNameGfnCollectorDomain + " AS cd").
+		Select("cd.*").
+		Joins("JOIN " + models.TableNameGfnSite + " AS s ON s.id = cd.site_id").
+		Where("cd.deleted IS NOT TRUE AND cd.site_id > 0 AND s.deleted IS NOT TRUE").
+		Order("cd.site_id ASC, cd.id ASC")
 	db.Find(&res)
 	if err := db.Error; err != nil {
 		return nil, common.NewDaoError(err.Error())

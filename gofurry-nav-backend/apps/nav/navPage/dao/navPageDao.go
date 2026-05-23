@@ -17,8 +17,35 @@ type navPageDao struct{ abstract.Dao }
 func GetNavPageDao() *navPageDao { return newNavPageDao }
 
 func (dao *navPageDao) GetSiteList() (res []models.GfnSite, err common.GFError) {
-	db := dao.Gm.Table(models.TableNameGfnSite).Where("deleted IS NOT TRUE")
-	db.Order("id ASC")
+	db := dao.Gm.Table(models.TableNameGfnSite + " AS s").
+		Select(`
+			s.id,
+			s.name,
+			s.name_en,
+			json_build_object('domain', COALESCE(cd.domains, ARRAY[]::text[]))::text AS domain,
+			s.info,
+			s.info_en,
+			s.create_time,
+			s.update_time,
+			s.country,
+			s.nsfw,
+			s.welfare,
+			s.view_count,
+			s.icon,
+			s.deleted
+		`).
+		Joins(`
+			LEFT JOIN LATERAL (
+				SELECT array_agg(TRIM(COALESCE(prefix, '') || name) ORDER BY id ASC) AS domains
+				FROM ` + models.TableNameGfnCollectorDomain + `
+				WHERE site_id = s.id
+					AND site_id > 0
+					AND deleted IS NOT TRUE
+					AND TRIM(COALESCE(prefix, '') || name) <> ''
+			) cd ON TRUE
+		`).
+		Where("s.deleted IS NOT TRUE")
+	db.Order("s.id ASC")
 	db.Find(&res)
 	if dbErr := db.Error; dbErr != nil {
 		return res, common.NewDaoError(dbErr.Error())

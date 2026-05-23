@@ -5,6 +5,7 @@ import (
 )
 
 const TableNameGfnCollectorDomain = "gfn_collector_domain"
+const TableNameGfnSite = "gfn_site"
 
 // GfnCollectorDomain mapped from table <gfn_collector_domain>
 type GfnCollectorDomain struct {
@@ -20,6 +21,13 @@ type GfnCollectorDomain struct {
 // TableName GfnCollectorDomain's table name
 func (*GfnCollectorDomain) TableName() string {
 	return TableNameGfnCollectorDomain
+}
+
+func (d GfnCollectorDomain) TargetName() string {
+	if d.Prefix == nil {
+		return d.Name
+	}
+	return *d.Prefix + d.Name
 }
 
 const TableNameGfnCollectorLogHTTP = "gfn_collector_log_http"

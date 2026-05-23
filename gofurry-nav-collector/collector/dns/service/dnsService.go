@@ -294,7 +294,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 				log.ErrorFields(map[string]interface{}{
 					"event":    "probe_recovered",
 					"protocol": "dns",
-					"site":     site.Name,
+					"site":     site.TargetName(),
 				}, fmt.Sprintf("DNS 单目标探测触发 panic，已恢复: %v", err))
 			}
 		}()
@@ -304,12 +304,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		geoDBSet := currentGeoDBs()
 		results := performDNSQuery(site, geoDBSet.ASN, geoDBSet.City, geoDBSet.Country)
 
-		var siteName string
-		if site.Prefix != nil {
-			siteName = *site.Prefix + site.Name
-		} else {
-			siteName = site.Name
-		}
+		siteName := site.TargetName()
 
 		// Ping 结果储存回 redis
 		resultKey := "dns:" + siteName
@@ -428,12 +423,7 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 	// 最终结果
 	result := make(map[string][]models.DNSRecord)
 
-	var domain string
-	if site.Prefix != nil {
-		domain = *site.Prefix + site.Name
-	} else {
-		domain = site.Name
-	}
+	domain := site.TargetName()
 
 	// 并行查询每种记录类型
 	for _, rt := range models.RecordTypes {

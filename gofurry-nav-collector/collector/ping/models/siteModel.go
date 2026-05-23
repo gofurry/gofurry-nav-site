@@ -5,6 +5,7 @@ import (
 )
 
 const TableNameGfnSite = "gfn_site"
+const TableNameGfnCollectorDomain = "gfn_collector_domain"
 
 // TableName GfnSite's table name
 func (*GfnSite) TableName() string {
@@ -35,6 +36,21 @@ type Domain struct {
 
 type Domains struct {
 	Domain []string `json:"domain"`
+}
+
+// GfnCollectorDomain mapped from table <gfn_collector_domain>.
+type GfnCollectorDomain struct {
+	ID      int64   `gorm:"column:id;type:bigint;primaryKey;comment:域名请求表id" json:"id"`
+	SiteID  int64   `gorm:"column:site_id;type:bigint;comment:关联站点 id" json:"site_id"`
+	Name    string  `gorm:"column:name;type:character varying(255);not null;comment:域名" json:"name"`
+	Proxy   string  `gorm:"column:proxy;type:character varying(4);not null;comment:是否需要代理加速 1 0" json:"proxy"`
+	Prefix  *string `gorm:"column:prefix;type:character varying(255);comment:是否有前缀" json:"prefix"`
+	TLS     string  `gorm:"column:tls;type:character varying(4);not null;comment:是否 https 1 0" json:"tls"`
+	Deleted bool    `gorm:"column:deleted;type:boolean;comment:软删除" json:"deleted"`
+}
+
+func (*GfnCollectorDomain) TableName() string {
+	return TableNameGfnCollectorDomain
 }
 
 type PingTarget struct {
