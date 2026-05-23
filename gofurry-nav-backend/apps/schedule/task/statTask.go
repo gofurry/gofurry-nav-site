@@ -9,6 +9,8 @@ import (
 	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 )
 
+const siteListCacheKey = "site:list:v2"
+
 func UpdateSiteListCache() {
 	start := time.Now()
 	log.Debug("[StatTask UpdateSiteListCache] start...")
@@ -18,7 +20,7 @@ func UpdateSiteListCache() {
 	}
 
 	if b, jsonErr := sonic.Marshal(records); jsonErr == nil {
-		cs.Set("site:list", string(b))
+		cs.Set(siteListCacheKey, string(b))
 	}
 	log.Debug("[StatTask UpdateSiteListCache] update site list finished, cost: %v", time.Since(start))
 }

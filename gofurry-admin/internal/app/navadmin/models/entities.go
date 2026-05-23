@@ -28,14 +28,27 @@ type LogUpdate struct {
 func (*LogUpdate) TableName() string { return "gfn_log_update" }
 
 type CollectorDomain struct {
-	ID     int64   `gorm:"column:id;primaryKey" json:"id"`
-	Name   string  `gorm:"column:name;not null" json:"name"`
-	Proxy  string  `gorm:"column:proxy;not null" json:"proxy"`
-	Prefix *string `gorm:"column:prefix" json:"prefix"`
-	TLS    string  `gorm:"column:tls;not null" json:"tls"`
+	ID      int64   `gorm:"column:id;primaryKey" json:"id"`
+	SiteID  int64   `gorm:"column:site_id" json:"site_id"`
+	Name    string  `gorm:"column:name;not null" json:"name"`
+	Proxy   string  `gorm:"column:proxy;not null" json:"proxy"`
+	Prefix  *string `gorm:"column:prefix" json:"prefix"`
+	TLS     string  `gorm:"column:tls;not null" json:"tls"`
+	Deleted bool    `gorm:"column:deleted" json:"deleted"`
 }
 
 func (*CollectorDomain) TableName() string { return "gfn_collector_domain" }
+
+type CollectorDomainDTO struct {
+	ID       int64   `json:"id"`
+	SiteID   int64   `json:"site_id"`
+	SiteName string  `json:"site_name"`
+	Name     string  `json:"name"`
+	Proxy    string  `json:"proxy"`
+	Prefix   *string `json:"prefix"`
+	TLS      string  `json:"tls"`
+	Deleted  bool    `json:"deleted"`
+}
 
 type Site struct {
 	ID         int64               `gorm:"column:id;primaryKey" json:"id"`
@@ -89,6 +102,7 @@ type LogUpdatePayload struct {
 }
 
 type CollectorDomainPayload struct {
+	SiteID int64   `json:"site_id"`
 	Name   string  `json:"name"`
 	Proxy  string  `json:"proxy"`
 	Prefix *string `json:"prefix"`
@@ -96,22 +110,20 @@ type CollectorDomainPayload struct {
 }
 
 type SitePayload struct {
-	Name    string   `json:"name"`
-	NameEn  string   `json:"name_en"`
-	Domains []string `json:"domains"`
-	Info    string   `json:"info"`
-	InfoEn  string   `json:"info_en"`
-	Country *string  `json:"country"`
-	Nsfw    string   `json:"nsfw"`
-	Welfare string   `json:"welfare"`
-	Icon    *string  `json:"icon"`
+	Name    string  `json:"name"`
+	NameEn  string  `json:"name_en"`
+	Info    string  `json:"info"`
+	InfoEn  string  `json:"info_en"`
+	Country *string `json:"country"`
+	Nsfw    string  `json:"nsfw"`
+	Welfare string  `json:"welfare"`
+	Icon    *string `json:"icon"`
 }
 
 type SiteDTO struct {
 	ID         int64               `json:"id"`
 	Name       string              `json:"name"`
 	NameEn     string              `json:"name_en"`
-	Domains    []string            `json:"domains"`
 	Info       string              `json:"info"`
 	InfoEn     string              `json:"info_en"`
 	CreateTime pkgmodels.LocalTime `json:"create_time"`

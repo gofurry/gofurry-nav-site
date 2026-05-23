@@ -71,3 +71,43 @@ func TestProbeBudgetOverrides(t *testing.T) {
 		t.Fatalf("MaxHTTPResponseBytes() = %d, want 512", got)
 	}
 }
+
+func TestCollectorV2DefaultsDisabled(t *testing.T) {
+	cfg := CollectorV2Config{}
+	for _, protocol := range []string{"ping", "http", "dns"} {
+		if cfg.ProtocolEnabled(protocol) {
+			t.Fatalf("ProtocolEnabled(%q) should be false by default", protocol)
+		}
+		if cfg.ObservationEnabled(protocol) {
+			t.Fatalf("ObservationEnabled(%q) should be false by default", protocol)
+		}
+		if cfg.LatestRedisEnabled(protocol) {
+			t.Fatalf("LatestRedisEnabled(%q) should be false by default", protocol)
+		}
+	}
+}
+
+func TestCollectorV2ProtocolSwitches(t *testing.T) {
+	cfg := CollectorV2Config{
+		Enabled:       true,
+		ObservationDB: true,
+		LatestRedis:   true,
+		Protocols: CollectorProtocols{
+			Ping: true,
+			HTTP: false,
+			DNS:  true,
+		},
+	}
+	if !cfg.ProtocolEnabled("ping") || !cfg.ObservationEnabled("ping") || !cfg.LatestRedisEnabled("ping") {
+		t.Fatal("ping should be fully enabled")
+	}
+	if cfg.ProtocolEnabled("http") || cfg.ObservationEnabled("http") || cfg.LatestRedisEnabled("http") {
+		t.Fatal("http should stay disabled by protocol switch")
+	}
+	if !cfg.ProtocolEnabled("dns") || !cfg.ObservationEnabled("dns") || !cfg.LatestRedisEnabled("dns") {
+		t.Fatal("dns should be fully enabled")
+	}
+	if cfg.ProtocolEnabled("unknown") {
+		t.Fatal("unknown protocol should be disabled")
+	}
+}

@@ -29,12 +29,14 @@ var navPageSingleton = new(navPageService)
 
 func GetNavPageService() *navPageService { return navPageSingleton }
 
+const siteListCacheKey = "site:list:v2"
+
 // 获取导航站点信息
 func (svc *navPageService) GetSiteList(lang string) (res []models.SiteVo, err common.GFError) {
 	var jsonErr error
 
 	// 先从缓存读取
-	if cacheStr, _ := cs.GetString("site:list"); cacheStr != "" {
+	if cacheStr, _ := cs.GetString(siteListCacheKey); cacheStr != "" {
 		var records []models.GfnSite
 		if jsonErr = sonic.Unmarshal([]byte(cacheStr), &records); jsonErr == nil {
 			return svc.convertRecords(records, lang), nil
@@ -51,7 +53,7 @@ func (svc *navPageService) GetSiteList(lang string) (res []models.SiteVo, err co
 	// 更新缓存
 	go func() {
 		if b, jsonErr := sonic.Marshal(records); jsonErr == nil {
-			cs.Set("site:list", string(b))
+			cs.Set(siteListCacheKey, string(b))
 		}
 	}()
 

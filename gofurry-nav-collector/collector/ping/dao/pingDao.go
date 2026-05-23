@@ -21,9 +21,13 @@ type pingDao struct{ abstract.Dao }
 func GetPingDao() *pingDao { return newPingDao }
 
 // 获取站点列表
-func (dao pingDao) GetList() ([]models.Domain, common.GFError) {
-	var res []models.Domain
-	db := dao.Gm.Table(models.TableNameGfnSite).Select("domain").Where("deleted IS NOT TRUE")
+func (dao pingDao) GetList() ([]models.GfnCollectorDomain, common.GFError) {
+	var res []models.GfnCollectorDomain
+	db := dao.Gm.Table(models.TableNameGfnCollectorDomain + " AS cd").
+		Select("cd.*").
+		Joins("JOIN " + models.TableNameGfnSite + " AS s ON s.id = cd.site_id").
+		Where("cd.deleted IS NOT TRUE AND cd.site_id > 0 AND s.deleted IS NOT TRUE").
+		Order("cd.site_id ASC, cd.id ASC")
 	db.Find(&res)
 	if err := db.Error; err != nil {
 		return nil, common.NewDaoError(err.Error())

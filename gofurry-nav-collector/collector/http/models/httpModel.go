@@ -35,7 +35,9 @@ type HTTPModel struct {
 	CertIsCA      bool      `json:"certIsCA"`      // 是否CA
 
 	// 其他
-	StartTime models.LocalTime `json:"startTime"` // 请求开始时间
+	StartTime    models.LocalTime `json:"startTime"` // 请求开始时间
+	ErrorCode    string           `json:"-"`         // v2 observation 错误码
+	ErrorMessage string           `json:"-"`         // v2 observation 错误信息
 }
 
 type HTTPSaveModel struct {

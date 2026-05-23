@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -202,8 +201,13 @@ func (api *navAPI) DeleteLogUpdate(c fiber.Ctx) error {
 
 func (api *navAPI) ListCollectorDomains(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(navDB().Model(&models.CollectorDomain{}).Order("id DESC"), page.Keyword, "name", "proxy", "tls", "CAST(id AS TEXT)")
-	var items []models.CollectorDomain
+	base := navDB().Table((&models.CollectorDomain{}).TableName() + " AS cd").
+		Select("cd.id, cd.site_id, COALESCE(s.name, '') AS site_name, cd.name, cd.proxy, cd.prefix, cd.tls, cd.deleted").
+		Joins("LEFT JOIN " + (&models.Site{}).TableName() + " AS s ON s.id = cd.site_id").
+		Where("cd.deleted IS NOT TRUE").
+		Order("cd.id DESC")
+	base = adminutil.ApplyKeyword(base, page.Keyword, "cd.name", "cd.proxy", "cd.tls", "s.name", "s.name_en", "CAST(cd.id AS TEXT)", "CAST(cd.site_id AS TEXT)")
+	var items []models.CollectorDomainDTO
 	total, err := adminutil.Paginate(base, page, &items)
 	if err != nil {
 		return common.NewResponse(c).Error(err)
@@ -216,21 +220,23 @@ func (api *navAPI) CreateCollectorDomain(c fiber.Ctx) error {
 	if err := adminutil.DecodeBody(c, &req); err != nil {
 		return common.NewResponse(c).Error(err)
 	}
-	if strings.TrimSpace(req.Name) == "" {
-		return common.NewResponse(c).Error(common.NewValidationError("name is required"))
-	}
 	var created models.CollectorDomain
 	err := navDB().Transaction(func(tx *gorm.DB) error {
+		if validateErr := validateCollectorDomainPayload(tx, req); validateErr != nil {
+			return validateErr
+		}
 		ids, allocErr := adminutil.AllocateSequentialIDs(tx, created.TableName(), 1)
 		if allocErr != nil {
 			return allocErr
 		}
 		created = models.CollectorDomain{
-			ID:     ids[0],
-			Name:   strings.TrimSpace(req.Name),
-			Proxy:  strings.TrimSpace(req.Proxy),
-			Prefix: req.Prefix,
-			TLS:    strings.TrimSpace(req.TLS),
+			ID:      ids[0],
+			SiteID:  req.SiteID,
+			Name:    strings.TrimSpace(req.Name),
+			Proxy:   strings.TrimSpace(req.Proxy),
+			Prefix:  normalizeStringPtr(req.Prefix),
+			TLS:     strings.TrimSpace(req.TLS),
+			Deleted: false,
 		}
 		if err := tx.Create(&created).Error; err != nil {
 			return err
@@ -248,7 +254,22 @@ func (api *navAPI) CreateCollectorDomain(c fiber.Ctx) error {
 }
 
 func (api *navAPI) GetCollectorDomain(c fiber.Ctx) error {
-	return api.getOne(c, navDB(), &models.CollectorDomain{})
+	id, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var item models.CollectorDomainDTO
+	collectorDomainTable := (&models.CollectorDomain{}).TableName()
+	siteTable := (&models.Site{}).TableName()
+	dbErr := navDB().Table(collectorDomainTable+" AS cd").
+		Select("cd.id, cd.site_id, COALESCE(s.name, '') AS site_name, cd.name, cd.proxy, cd.prefix, cd.tls, cd.deleted").
+		Joins("LEFT JOIN "+siteTable+" AS s ON s.id = cd.site_id").
+		Where("cd.id = ? AND cd.deleted IS NOT TRUE", id).
+		Take(&item).Error
+	if dbErr != nil {
+		return common.NewResponse(c).Error(common.NewDaoError(dbErr.Error()))
+	}
+	return common.NewResponse(c).SuccessWithData(item)
 }
 
 func (api *navAPI) UpdateCollectorDomain(c fiber.Ctx) error {
@@ -260,19 +281,20 @@ func (api *navAPI) UpdateCollectorDomain(c fiber.Ctx) error {
 	if err := adminutil.DecodeBody(c, &req); err != nil {
 		return common.NewResponse(c).Error(err)
 	}
-	if strings.TrimSpace(req.Name) == "" {
-		return common.NewResponse(c).Error(common.NewValidationError("name is required"))
-	}
 	txErr := navDB().Transaction(func(tx *gorm.DB) error {
+		if validateErr := validateCollectorDomainPayload(tx, req); validateErr != nil {
+			return validateErr
+		}
 		before, snapErr := audit.SnapshotByID(tx, (&models.CollectorDomain{}).TableName(), id)
 		if snapErr != nil {
 			return snapErr
 		}
-		if err := tx.Model(&models.CollectorDomain{}).Where("id = ?", id).Updates(map[string]any{
-			"name":   strings.TrimSpace(req.Name),
-			"proxy":  strings.TrimSpace(req.Proxy),
-			"prefix": req.Prefix,
-			"tls":    strings.TrimSpace(req.TLS),
+		if err := tx.Model(&models.CollectorDomain{}).Where("id = ? AND deleted IS NOT TRUE", id).Updates(map[string]any{
+			"site_id": req.SiteID,
+			"name":    strings.TrimSpace(req.Name),
+			"proxy":   strings.TrimSpace(req.Proxy),
+			"prefix":  normalizeStringPtr(req.Prefix),
+			"tls":     strings.TrimSpace(req.TLS),
 		}).Error; err != nil {
 			return common.NewDaoError(err.Error())
 		}
@@ -289,7 +311,7 @@ func (api *navAPI) UpdateCollectorDomain(c fiber.Ctx) error {
 }
 
 func (api *navAPI) DeleteCollectorDomain(c fiber.Ctx) error {
-	return api.deleteHard(c, &models.CollectorDomain{})
+	return api.deleteSoft(c, &models.CollectorDomain{})
 }
 
 func (api *navAPI) ListSites(c fiber.Ctx) error {
@@ -327,7 +349,7 @@ func (api *navAPI) CreateSite(c fiber.Ctx) error {
 			ID:      ids[0],
 			Name:    strings.TrimSpace(req.Name),
 			NameEn:  strings.TrimSpace(req.NameEn),
-			Domain:  adminutil.MustJSON(map[string][]string{"domain": normalizedDomains(req.Domains)}),
+			Domain:  adminutil.MustJSON(map[string][]string{"domain": []string{}}),
 			Info:    strings.TrimSpace(req.Info),
 			InfoEn:  strings.TrimSpace(req.InfoEn),
 			Country: req.Country,
@@ -382,7 +404,6 @@ func (api *navAPI) UpdateSite(c fiber.Ctx) error {
 		if err := tx.Model(&models.Site{}).Where("id = ? AND deleted IS NOT TRUE", id).Updates(map[string]any{
 			"name":    strings.TrimSpace(req.Name),
 			"name_en": strings.TrimSpace(req.NameEn),
-			"domain":  adminutil.MustJSON(map[string][]string{"domain": normalizedDomains(req.Domains)}),
 			"info":    strings.TrimSpace(req.Info),
 			"info_en": strings.TrimSpace(req.InfoEn),
 			"country": req.Country,
@@ -698,40 +719,49 @@ func validateSitePayload(req models.SitePayload) common.Error {
 	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.NameEn) == "" {
 		return common.NewValidationError("name and name_en are required")
 	}
-	if len(normalizedDomains(req.Domains)) == 0 {
-		return common.NewValidationError("at least one domain is required")
+	return nil
+}
+
+func validateCollectorDomainPayload(tx *gorm.DB, req models.CollectorDomainPayload) common.Error {
+	if req.SiteID <= 0 {
+		return common.NewValidationError("site_id is required")
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		return common.NewValidationError("name is required")
+	}
+	if strings.TrimSpace(req.Proxy) == "" {
+		return common.NewValidationError("proxy is required")
+	}
+	if strings.TrimSpace(req.TLS) == "" {
+		return common.NewValidationError("tls is required")
+	}
+
+	var count int64
+	if err := tx.Model(&models.Site{}).Where("id = ? AND deleted IS NOT TRUE", req.SiteID).Count(&count).Error; err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	if count == 0 {
+		return common.NewValidationError("site_id must reference an existing site")
 	}
 	return nil
 }
 
-func normalizedDomains(input []string) []string {
-	result := make([]string, 0, len(input))
-	seen := make(map[string]struct{}, len(input))
-	for _, item := range input {
-		item = strings.TrimSpace(item)
-		if item == "" {
-			continue
-		}
-		if _, ok := seen[item]; ok {
-			continue
-		}
-		seen[item] = struct{}{}
-		result = append(result, item)
+func normalizeStringPtr(value *string) *string {
+	if value == nil {
+		return nil
 	}
-	return result
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }
 
 func siteDTO(item models.Site) models.SiteDTO {
-	type domainPayload struct {
-		Domain []string `json:"domain"`
-	}
-	var payload domainPayload
-	_ = jsonUnmarshalString(item.Domain, &payload)
 	return models.SiteDTO{
 		ID:         item.ID,
 		Name:       item.Name,
 		NameEn:     item.NameEn,
-		Domains:    normalizedDomains(payload.Domain),
 		Info:       item.Info,
 		InfoEn:     item.InfoEn,
 		CreateTime: item.CreateTime,
@@ -758,10 +788,6 @@ func uniqueInt64s(input []int64) []int64 {
 		result = append(result, item)
 	}
 	return result
-}
-
-func jsonUnmarshalString(raw string, target any) error {
-	return json.Unmarshal([]byte(strings.TrimSpace(raw)), target)
 }
 
 func (api *navAPI) auditTx(c fiber.Ctx, tx *gorm.DB, action, resource string, targetID int64, before, after any) common.Error {

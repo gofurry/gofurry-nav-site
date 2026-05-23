@@ -35,6 +35,7 @@ type CollectorConfig struct {
 	Request     RequestConfig     `yaml:"request"`
 	Dns         DnsConfig         `yaml:"dns"`
 	ProbeBudget ProbeBudgetConfig `yaml:"probe_budget"`
+	V2          CollectorV2Config `yaml:"v2"`
 }
 
 type ProbeBudgetConfig struct {
@@ -46,6 +47,20 @@ type ProbeBudgetConfig struct {
 	PTRTimeoutSeconds          int `yaml:"ptr_timeout_seconds"`
 	MaxDNSRecordsPerQuery      int `yaml:"max_dns_records_per_query"`
 	MaxResponseBytes           int `yaml:"max_response_bytes"`
+}
+
+type CollectorV2Config struct {
+	Enabled       bool               `yaml:"enabled"`
+	ObservationDB bool               `yaml:"observation_db"`
+	LatestRedis   bool               `yaml:"latest_redis"`
+	CompareLog    bool               `yaml:"compare_log"`
+	Protocols     CollectorProtocols `yaml:"protocols"`
+}
+
+type CollectorProtocols struct {
+	Ping bool `yaml:"ping"`
+	HTTP bool `yaml:"http"`
+	DNS  bool `yaml:"dns"`
 }
 
 type DnsConfig struct {
@@ -237,4 +252,28 @@ func intOrDefault(value int, def int) int {
 		return value
 	}
 	return def
+}
+
+func (cfg CollectorV2Config) ProtocolEnabled(protocol string) bool {
+	if !cfg.Enabled {
+		return false
+	}
+	switch protocol {
+	case "ping":
+		return cfg.Protocols.Ping
+	case "http":
+		return cfg.Protocols.HTTP
+	case "dns":
+		return cfg.Protocols.DNS
+	default:
+		return false
+	}
+}
+
+func (cfg CollectorV2Config) ObservationEnabled(protocol string) bool {
+	return cfg.ObservationDB && cfg.ProtocolEnabled(protocol)
+}
+
+func (cfg CollectorV2Config) LatestRedisEnabled(protocol string) bool {
+	return cfg.LatestRedis && cfg.ProtocolEnabled(protocol)
 }

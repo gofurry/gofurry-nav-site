@@ -13,6 +13,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-nav-collector/collector/http/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/http/models"
+	"github.com/gofurry/gofurry-nav-collector/collector/observation"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	cm "github.com/gofurry/gofurry-nav-collector/common/models"
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
@@ -93,6 +94,26 @@ func Delete() {
 			"keep_count": keepCount,
 			"protocol":   "http",
 		}, "HTTP 历史日志保留清理完成")
+	}
+	if env.GetServerConfig().Collector.V2.ProtocolEnabled(observation.ProtocolHTTP) {
+		v2Count, v2DeleteErr := observation.DeleteByProtocolLimit(observation.ProtocolHTTP, keepCount)
+		if v2DeleteErr != nil {
+			log.ErrorFields(map[string]interface{}{
+				"deleted":    v2Count,
+				"duration":   time.Since(start),
+				"event":      "v2_retention_failed",
+				"keep_count": keepCount,
+				"protocol":   "http",
+			}, "HTTP v2 observation 保留清理失败: "+v2DeleteErr.GetMsg())
+		} else if v2Count > 0 {
+			log.InfoFields(map[string]interface{}{
+				"deleted":    v2Count,
+				"duration":   time.Since(start),
+				"event":      "v2_retention_complete",
+				"keep_count": keepCount,
+				"protocol":   "http",
+			}, "HTTP v2 observation 保留清理完成")
+		}
 	}
 }
 
@@ -180,7 +201,7 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 				log.ErrorFields(map[string]interface{}{
 					"event":    "probe_recovered",
 					"protocol": "http",
-					"site":     site.Name,
+					"site":     site.TargetName(),
 				}, fmt.Sprintf("HTTP 单目标探测触发 panic，已恢复: %v", err))
 			}
 		}()
@@ -212,12 +233,7 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 		}
 		jsonResult, _ := sonic.Marshal(httpRecord)
 
-		var siteName string
-		if site.Prefix != nil {
-			siteName = *site.Prefix + site.Name
-		} else {
-			siteName = site.Name
-		}
+		siteName := site.TargetName()
 
 		httpSaveRecord := models.GfnCollectorLogHTTP{
 			ID:         util.GenerateId(),
@@ -247,6 +263,48 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 				"url":      result.Url,
 			}, "HTTP 探测结果写入数据库失败: "+err.GetMsg())
 		}
+		saveErr := observation.SaveIfEnabled(observation.Input{
+			SiteID:       site.SiteID,
+			Target:       siteName,
+			Protocol:     observation.ProtocolHTTP,
+			Status:       httpSaveRecord.Status,
+			ObservedAt:   time.Time(result.StartTime),
+			DurationMS:   result.ResponseTime,
+			ErrorCode:    result.ErrorCode,
+			ErrorMessage: result.ErrorMessage,
+			Payload: map[string]any{
+				"domain":           httpRecord.Domain,
+				"url":              httpRecord.Url,
+				"status_code":      httpRecord.StatusCode,
+				"response_time_ms": result.ResponseTime,
+				"content_length":   httpRecord.ContentLength,
+				"title":            httpRecord.Title,
+				"server":           httpRecord.Server,
+				"redirects":        httpRecord.Redirects,
+				"headers":          httpRecord.Headers,
+				"meta":             httpRecord.Meta,
+				"tls_version":      httpRecord.TLSVersion,
+				"cipher_suite":     httpRecord.CipherSuite,
+				"cert_expiry":      httpRecord.CertExpiry,
+				"cert_days_left":   httpRecord.CertDaysLeft,
+				"cert_issuer":      httpRecord.CertIssuer,
+				"cert_issuer_org":  httpRecord.CertIssuerOrg,
+				"cert_dns_names":   httpRecord.CertDNSNames,
+				"cert_pub_key_alg": httpRecord.CertPubKeyAlg,
+				"cert_sig_alg":     httpRecord.CertSigAlg,
+				"cert_email":       httpRecord.CertEmail,
+				"cert_is_ca":       httpRecord.CertIsCA,
+			},
+		})
+		if saveErr != nil {
+			log.WarnFields(map[string]interface{}{
+				"event":    "v2_observation_write_failed",
+				"protocol": "http",
+				"site_id":  site.SiteID,
+				"site":     siteName,
+				"url":      result.Url,
+			}, "HTTP v2 observation 旁路写入失败: "+saveErr.GetMsg())
+		}
 	}
 }
 
@@ -254,12 +312,8 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 
 // 执行 Request 采集
 func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
-	res.Domain = site.Name
-	if site.Prefix != nil {
-		res.Url = *site.Prefix + site.Name
-	} else {
-		res.Url = site.Name
-	}
+	res.Domain = site.TargetName()
+	res.Url = res.Domain
 	if site.TLS == "1" {
 		res.Url = "https://" + res.Url
 	} else {
@@ -299,6 +353,8 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	// 构建请求
 	req, err := http.NewRequest("GET", res.Url, nil)
 	if err != nil {
+		res.ErrorCode = "http_request_create_failed"
+		res.ErrorMessage = err.Error()
 		log.ErrorFields(map[string]interface{}{
 			"event":    "request_create_failed",
 			"protocol": "http",
@@ -316,6 +372,8 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.StartTime = cm.LocalTime(time.Now())
 	resp, err := client.Do(req)
 	if err != nil {
+		res.ErrorCode = "http_probe_failed"
+		res.ErrorMessage = err.Error()
 		log.WarnFields(map[string]interface{}{
 			"duration": time.Since(start),
 			"event":    "probe_failed",

@@ -17,41 +17,82 @@
 
 ## 版本计划
 
-### v0.2.0 - v2 数据旁路
+### v0.2.0 - v2 Observation 核心数据面
 
-- **状态：** 计划中
-- **范围：** 数据模型 / Redis / Backend API / 灰度安全
+- **状态：** 已完成
+- **范围：** 数据模型 / Redis / 灰度安全
 - **目标：** 新增 v2 observation 数据面，但不影响现有后端和 Nuxt 前端读取路径。
 
 #### 重点
 
 - 通用 observation 表。
 - v2 latest Redis key。
-- 后端只读 v2 接口。
-- v1/v2 双写对比。
+- v1/v2 旁路双写。
 - 配置开关与回滚路径。
+- `site_id` 显式关联的兼容期基础。
 
 #### 任务
 
-- [ ] 新增 `gfn_collector_observation` 表，使用 JSONB 保存协议 payload。
-- [ ] 为 observation 表增加必要索引，索引脚本必须可手动、可低峰执行、可重复检查。
-- [ ] 新增 v2 latest Redis key，例如 `collector:v2:latest:{protocol}:{site_id}`。
-- [ ] 旧表和旧 Redis key 继续写入，v2 只旁路双写。
-- [ ] 增加 collector v2 写入开关：observation 写入、v2 Redis 写入、按协议启停。
-- [ ] 在 gofurry-nav-backend 增加只读 v2 latest / summary 接口，默认关闭。
-- [ ] 增加抽样对比日志，记录 v1/v2 差异但不影响旧页面展示。
-- [ ] 文档化 v2 数据体积、Redis key 数量和回滚方式。
+- [x] 新增 `gfn_collector_observation` 表，使用 JSONB 保存协议 payload。
+- [x] 为 observation 表增加必要索引，索引脚本必须可手动、可低峰执行、可重复检查。
+- [x] 新增 v2 latest Redis key，例如 `collector:v2:latest:{protocol}:{site_id}`。
+- [x] 旧表和旧 Redis key 继续写入，v2 只旁路双写。
+- [x] 增加 collector v2 写入开关：observation 写入、v2 Redis 写入、按协议启停。
+- [x] Ping / HTTP / DNS observation 按 `site_id + protocol` 保留指定条数。
+- [x] `gfn_collector_domain` 增加 `site_id` 与 `deleted`，HTTP/DNS 过滤软删除目标。
+- [x] Ping 从 `gfn_site.id + gfn_site.domain` 展开带 `site_id` 的内部目标。
 
 #### 验收标准
 
 - 关闭 v2 配置后，v1 行为完全不变。
-- 旧 `/api/nav`、旧 Redis key、旧表写入不受影响。
+- 当前 `/api/v1/nav` 展示链路、旧 Redis key、旧表写入不受影响。
 - 可以通过 SQL / Redis / 日志人工确认 v2 写入量和写入频率。
-- 后端 v2 接口默认关闭，打开后只读，不改变 Nuxt 当前展示。
+- 本轮不要求后端 v2 接口上线，不改变 Nuxt 当前展示。
 
 #### 备注
 
-这一阶段只建立旁路数据面，不切换前端读取，不引入健康评分新展示。
+这一阶段只建立 collector 旁路数据面，不切换前端读取，不引入健康评分新展示。后端只读 v2 API 已记录到 `gofurry-nav-backend/docs/roadmap.md`，不纳入本轮实施。
+
+---
+
+### v0.2.1 - 采集域名与站点关系迁移闭环
+
+- **状态：** 已完成
+- **范围：** 数据模型 / Collector / Backend / gofurry-admin / 兼容迁移
+- **目标：** 让 `gfn_collector_domain.site_id` 成为采集域名与站点的正式关联，解决 v2 observation 缺少 `site_id` 跳过的问题。
+
+#### 重点
+
+- `gfn_collector_domain` 成为 Ping / HTTP / DNS 的统一采集目标来源。
+- backend 导航站点列表的 `domain` 字段改由 `gfn_collector_domain` 聚合生成，wire shape 保持兼容。
+- gofurry-admin 的“采集域名”必须绑定站点，删除改为软删除。
+- “网站”管理不再编辑 `gfn_site.domain`，该字段仅作为历史兼容字段保留。
+- 提供手动同步脚本，将历史 `gfn_site.domain` 回填并补齐到 `gfn_collector_domain.site_id`。
+
+#### 任务
+
+- [x] gofurry-admin 采集域名模型、接口、表单增加 `site_id`。
+- [x] gofurry-admin 采集域名删除从硬删除改为软删除。
+- [x] 新增 `sql/20260523_collector_domain_site_sync.sql`，回填已有采集域名并补齐缺失域名。
+- [x] Ping 采集目标从 `gfn_site.domain` 切换到 `gfn_collector_domain`。
+- [x] Ping / HTTP / DNS 只采集未软删除、带 `site_id`、且所属站点未软删除的采集域名。
+- [x] backend 导航页域名从 `gfn_collector_domain` 聚合，Nuxt 现有读取结构不变。
+- [x] gofurry-admin 网站表单移除历史 `domains` 字段，不再写入 `gfn_site.domain`。
+- [ ] 生产观察稳定后，评估是否物理移除 `gfn_site.domain`。
+
+#### 验收标准
+
+- 新增或修改采集域名必须绑定站点。
+- 软删除采集域名后 collector 不再采集该目标。
+- 旧站点展示不因迁移中断，`domain` 返回结构保持兼容。
+- v2 observation 不再因 HTTP/DNS 目标缺少 `site_id` 而大量跳过。
+- `gfn_site.domain` 物理移除前仍有数据库字段作为回滚窗口。
+
+#### 后续观察
+
+- 生产执行同步脚本后，检查未绑定 `site_id` 的采集域名是否为真实脏数据。
+- 观察 admin 新增/修改采集域名是否能被 collector 下一轮采集自动接入。
+- 若连续一段时间确认 backend、Nuxt、admin、collector 均不再依赖 `gfn_site.domain`，再单独安排字段物理移除。
 
 ---
 

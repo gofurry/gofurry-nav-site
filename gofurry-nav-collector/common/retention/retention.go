@@ -32,6 +32,29 @@ USING doomed
 WHERE target.id = doomed.id;`, tableName, tableName)
 }
 
+func BuildObservationDeleteSQL(tableName string) string {
+	return fmt.Sprintf(`
+WITH doomed AS (
+	SELECT id
+	FROM (
+		SELECT
+			id,
+			ROW_NUMBER() OVER (
+				PARTITION BY site_id, protocol
+				ORDER BY observed_at DESC, id DESC
+			) AS rn
+		FROM %s
+		WHERE protocol = ?
+	) ranked
+	WHERE ranked.rn > ?
+	ORDER BY id
+	LIMIT ?
+)
+DELETE FROM %s target
+USING doomed
+WHERE target.id = doomed.id;`, tableName, tableName)
+}
+
 func DeleteByNameLimit(db *gorm.DB, tableName string, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
 	if batchSize <= 0 {
 		batchSize = DefaultBatchSize
@@ -45,6 +68,38 @@ func DeleteByNameLimit(db *gorm.DB, tableName string, keepCount int, batchSize i
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), batchTimeout)
 		result := db.WithContext(ctx).Exec(sql, keepCount, batchSize)
+		cancel()
+
+		if result.Error != nil {
+			return totalDeleted, result.Error
+		}
+
+		deleted := result.RowsAffected
+		totalDeleted += deleted
+		if deleted < int64(batchSize) {
+			break
+		}
+		if pause > 0 {
+			time.Sleep(pause)
+		}
+	}
+
+	return totalDeleted, nil
+}
+
+func DeleteObservationByProtocolLimit(db *gorm.DB, tableName string, protocol string, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
+	if batchSize <= 0 {
+		batchSize = DefaultBatchSize
+	}
+	if batchTimeout <= 0 {
+		batchTimeout = 2 * time.Minute
+	}
+
+	var totalDeleted int64
+	sql := BuildObservationDeleteSQL(tableName)
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), batchTimeout)
+		result := db.WithContext(ctx).Exec(sql, protocol, keepCount, batchSize)
 		cancel()
 
 		if result.Error != nil {

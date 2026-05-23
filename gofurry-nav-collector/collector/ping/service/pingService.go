@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/go-ping/ping"
+	"github.com/gofurry/gofurry-nav-collector/collector/observation"
 	"github.com/gofurry/gofurry-nav-collector/collector/ping/dao"
 	models2 "github.com/gofurry/gofurry-nav-collector/collector/ping/models"
 	"github.com/gofurry/gofurry-nav-collector/common"
@@ -92,46 +93,77 @@ func Delete() {
 			"protocol":   "ping",
 		}, "Ping 历史日志保留清理完成")
 	}
+	if env.GetServerConfig().Collector.V2.ProtocolEnabled(observation.ProtocolPing) {
+		v2Count, v2DeleteErr := observation.DeleteByProtocolLimit(observation.ProtocolPing, keepCount)
+		if v2DeleteErr != nil {
+			log.ErrorFields(map[string]interface{}{
+				"deleted":    v2Count,
+				"duration":   time.Since(start),
+				"event":      "v2_retention_failed",
+				"keep_count": keepCount,
+				"protocol":   "ping",
+			}, "Ping v2 observation 保留清理失败: "+v2DeleteErr.GetMsg())
+		} else if v2Count > 0 {
+			log.InfoFields(map[string]interface{}{
+				"deleted":    v2Count,
+				"duration":   time.Since(start),
+				"event":      "v2_retention_complete",
+				"keep_count": keepCount,
+				"protocol":   "ping",
+			}, "Ping v2 observation 保留清理完成")
+		}
+	}
 }
 
-// 添加数据库全部 IP 到 redis
-func addAllIpToPing() common.GFError {
+// 添加数据库全部采集域名到 redis
+func addAllIpToPing() (map[string]int64, common.GFError) {
 	// 查记录
 	domainRecords, err := dao.GetPingDao().GetList()
 	if err != nil {
-		log.Error(fmt.Sprintf("查询IP失败: %v", err.GetMsg()))
-		return common.NewServiceError(fmt.Sprintf("查询IP失败: %v", err))
+		log.Error(fmt.Sprintf("查询 Ping 目标失败: %v", err.GetMsg()))
+		return nil, common.NewServiceError(fmt.Sprintf("查询 Ping 目标失败: %v", err))
 	}
 
 	// 添加 ping 的站点
-	var pingList = []string{}
-	for _, v := range domainRecords {
-		newDomains := models2.Domains{}
-		if jsonErr := sonic.Unmarshal([]byte(v.Domain), &newDomains); jsonErr != nil {
-			log.Error(fmt.Sprintf("json转换失败: %v", jsonErr))
-			return nil
-		}
-		for _, domain := range newDomains.Domain {
-			pingList = append(pingList, domain)
-		}
-	}
+	pingList, siteIDByDomain := buildPingTargets(domainRecords)
 
 	// 存入 redis
 	pingJsonList, jsonErr := sonic.Marshal(pingList)
 	if jsonErr != nil {
 		log.Error(fmt.Sprintf("json转换失败: %v", jsonErr))
-		return nil
+		return siteIDByDomain, nil
 	}
 
 	err = cs.Del(env.GetServerConfig().Collector.Ping.PingKey)
 	if err != nil {
 		log.Error("删除ping结果失败: ", err)
-		return err
+		return siteIDByDomain, err
 	}
 
 	cs.SetNX(env.GetServerConfig().Collector.Ping.PingKey, pingJsonList, 24*time.Hour)
 
-	return nil
+	return siteIDByDomain, nil
+}
+
+func buildPingTargets(domainRecords []models2.GfnCollectorDomain) ([]string, map[string]int64) {
+	pingList := []string{}
+	siteIDByDomain := map[string]int64{}
+	for _, v := range domainRecords {
+		domain := collectorDomainTarget(v)
+		if domain == "" || v.SiteID <= 0 {
+			continue
+		}
+		pingList = append(pingList, domain)
+		siteIDByDomain[domain] = v.SiteID
+	}
+	return pingList, siteIDByDomain
+}
+
+func collectorDomainTarget(record models2.GfnCollectorDomain) string {
+	if record.Prefix == nil {
+		return record.Name
+	}
+	return *record.Prefix + record.Name
 }
 
 // ============== Ping解析 - 执行部分 ==============
@@ -167,7 +199,7 @@ func Ping() {
 	}, "Ping 采集运行开始")
 
 	// 查询数据库所有 IP 存 redis 每次采集都请求记录 热更新
-	err := addAllIpToPing()
+	siteIDByDomain, err := addAllIpToPing()
 	if err != nil {
 		log.ErrorFields(map[string]interface{}{
 			"duration": time.Since(start),
@@ -249,7 +281,8 @@ func Ping() {
 	var pingRWLock sync.Mutex
 	// 遍历 IP 列表, 每个 IP 开一个线程执行 Ping
 	for _, v := range pingList {
-		pingThread.Go(getPingResult(v, nowData, &pingRWLock))
+		target := models2.PingTarget{SiteID: siteIDByDomain[v], Domain: v}
+		pingThread.Go(getPingResult(target, nowData, &pingRWLock))
 	}
 	// 等待所有 Ping 执行完毕
 	pingThread.Wait()
@@ -344,8 +377,9 @@ func performPing(ip string) models2.PingModel {
 }
 
 // 解析 ping 采集结果
-func getPingResult(ip string, data map[string]string, pingRWLock *sync.Mutex) func() {
+func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock *sync.Mutex) func() {
 	return func() {
+		ip := target.Domain
 		defer func() {
 			if err := recover(); err != nil {
 				log.ErrorFields(map[string]interface{}{
@@ -393,5 +427,43 @@ func getPingResult(ip string, data map[string]string, pingRWLock *sync.Mutex) fu
 
 		// 存数据库
 		dao.GetPingDao().Add(pindSaveRecord)
+		saveErr := observation.SaveIfEnabled(observation.Input{
+			SiteID:     target.SiteID,
+			Target:     ip,
+			Protocol:   observation.ProtocolPing,
+			Status:     observationStatusFromPing(pindSaveRecord.Status),
+			ObservedAt: time.Time(result.PingTime),
+			DurationMS: result.AvgDelayTime,
+			ErrorCode:  errorCodeFromStatus(pindSaveRecord.Status, "ping_unreachable"),
+			Payload: map[string]any{
+				"delay_ms":      result.AvgDelayTime,
+				"loss_rate":     result.AvgLossRate,
+				"legacy_delay":  pingRecord.Delay,
+				"legacy_loss":   pingRecord.Loss,
+				"legacy_status": pingRecord.Status,
+			},
+		})
+		if saveErr != nil {
+			log.WarnFields(map[string]interface{}{
+				"event":    "v2_observation_write_failed",
+				"protocol": "ping",
+				"site_id":  target.SiteID,
+				"target":   ip,
+			}, "Ping v2 observation 旁路写入失败: "+saveErr.GetMsg())
+		}
 	}
+}
+
+func observationStatusFromPing(status string) string {
+	if status == "up" {
+		return observation.StatusSuccess
+	}
+	return observation.StatusFailure
+}
+
+func errorCodeFromStatus(status string, code string) string {
+	if status == "up" || status == observation.StatusSuccess {
+		return ""
+	}
+	return code
 }
