@@ -117,8 +117,8 @@
 - [x] HTTP v2 增加 redirect chain、content type、常见安全 header 是否存在。
 - [ ] 评估 HEAD-first 模式，必须放在配置开关后，默认先保持当前 GET 行为。
 - [x] HTTP title/meta/header 字符串限制长度，并确保后端/Nuxt 按纯文本展示。
-- [ ] TLS 拆分 `cert_collected` 与 `cert_verified`。
-- [ ] TLS 先尝试正常校验，失败后再受控地采集证书详情，并记录 `verify_error`。
+- [x] TLS 拆分 `cert_collected` 与 `cert_verified`。
+- [x] TLS 先尝试正常校验，失败后再受控地采集证书详情，并记录 `verify_error`。
 - [ ] DNS 将 `hijacked` 语义替换为 `risk_flags`，例如 `private_ip`、`low_ttl`、`resolver_timeout`。
 - [ ] DNS TXT、SPF、DMARC、CAA 只保存摘要或限长原文，不保存无限长外部内容。
 - [ ] multi-resolver 只作为可选对比能力，默认关闭，不进入 Phase 0 默认路径。

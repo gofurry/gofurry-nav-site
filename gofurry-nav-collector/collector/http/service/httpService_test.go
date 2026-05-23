@@ -1,8 +1,15 @@
 package service
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"math/big"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/collector/http/models"
 )
@@ -21,6 +28,10 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 			"strict_transport_security": true,
 			"x_frame_options":           true,
 		},
+		CertCollected: true,
+		CertVerified:  true,
+		VerifyError:   repeated("e", 600),
+		TLSHandshake:  tlsHandshakeCollected,
 	}
 	httpRecord := models.HTTPSaveModel{
 		Domain:        "example.com",
@@ -39,6 +50,14 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 		},
 		TLSVersion:  "TLS1.3",
 		CipherSuite: "AES_128_GCM_SHA256",
+		CertIssuer:  repeated("i", 300),
+		CertIssuerOrg: []string{
+			repeated("o", 300),
+		},
+		CertDNSNames: repeatedSlice("dns", 70),
+		CertEmail: []string{
+			repeated("m", 300),
+		},
 	}
 
 	payload := buildHTTPObservationPayload(result, httpRecord)
@@ -90,6 +109,33 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 	if got := runeLen(headers["Server"][0]); got != maxHTTPPayloadHeaderValueLength {
 		t.Fatalf("header value 未限长，got %d", got)
 	}
+	if got := runeLen(payload["cert_issuer"].(string)); got != maxHTTPPayloadCertTextLength {
+		t.Fatalf("cert_issuer 未限长，got %d", got)
+	}
+	certIssuerOrg := payload["cert_issuer_org"].([]string)
+	if got := runeLen(certIssuerOrg[0]); got != maxHTTPPayloadCertTextLength {
+		t.Fatalf("cert_issuer_org 未限长，got %d", got)
+	}
+	certDNSNames := payload["cert_dns_names"].([]string)
+	if got := len(certDNSNames); got != maxHTTPPayloadCertItems {
+		t.Fatalf("cert_dns_names 未限制条数，got %d", got)
+	}
+	certEmail := payload["cert_email"].([]string)
+	if got := runeLen(certEmail[0]); got != maxHTTPPayloadCertTextLength {
+		t.Fatalf("cert_email 未限长，got %d", got)
+	}
+	if got := runeLen(payload["verify_error"].(string)); got != maxHTTPPayloadVerifyErrorLength {
+		t.Fatalf("verify_error 未限长，got %d", got)
+	}
+	if payload["cert_collected"] != true {
+		t.Fatalf("cert_collected 错误，got %v", payload["cert_collected"])
+	}
+	if payload["cert_verified"] != true {
+		t.Fatalf("cert_verified 错误，got %v", payload["cert_verified"])
+	}
+	if payload["tls_handshake"] != tlsHandshakeCollected {
+		t.Fatalf("tls_handshake 错误，got %v", payload["tls_handshake"])
+	}
 	if _, ok := payload["redirects"]; !ok {
 		t.Fatal("兼容字段 redirects 丢失")
 	}
@@ -123,6 +169,55 @@ func TestBuildHTTPObservationPayloadSecurityHeadersHaveDefaults(t *testing.T) {
 	}
 }
 
+func TestBuildHTTPObservationPayloadTLSDefaultsForNoTLS(t *testing.T) {
+	payload := buildHTTPObservationPayload(models.HTTPModel{
+		TLSHandshake: tlsHandshakeNotTLS,
+	}, models.HTTPSaveModel{})
+
+	if payload["cert_collected"] != false {
+		t.Fatalf("无 TLS 时 cert_collected 应为 false，got %v", payload["cert_collected"])
+	}
+	if payload["cert_verified"] != false {
+		t.Fatalf("无 TLS 时 cert_verified 应为 false，got %v", payload["cert_verified"])
+	}
+	if payload["tls_handshake"] != tlsHandshakeNotTLS {
+		t.Fatalf("无 TLS 时 tls_handshake 应为 not_tls，got %v", payload["tls_handshake"])
+	}
+}
+
+func TestVerifyTLSCertificateWithRoots(t *testing.T) {
+	cert := newTestCertificate(t, "example.com")
+	roots := x509.NewCertPool()
+	roots.AddCert(cert)
+	state := &tls.ConnectionState{PeerCertificates: []*x509.Certificate{cert}}
+
+	verified, verifyError := verifyTLSCertificateWithRoots(state, "example.com", roots)
+	if !verified {
+		t.Fatalf("证书应校验通过: %s", verifyError)
+	}
+	if verifyError != "" {
+		t.Fatalf("校验通过时 verify_error 应为空，got %q", verifyError)
+	}
+
+	verified, verifyError = verifyTLSCertificateWithRoots(state, "wrong.example.com", roots)
+	if verified {
+		t.Fatal("域名不匹配时证书不应校验通过")
+	}
+	if verifyError == "" {
+		t.Fatal("域名不匹配时 verify_error 不应为空")
+	}
+}
+
+func TestVerifyTLSCertificateMissingCertificate(t *testing.T) {
+	verified, verifyError := verifyTLSCertificateWithRoots(&tls.ConnectionState{}, "example.com", nil)
+	if verified {
+		t.Fatal("没有证书时不应校验通过")
+	}
+	if verifyError == "" {
+		t.Fatal("没有证书时 verify_error 不应为空")
+	}
+}
+
 func TestDetectHTTPSecurityHeaders(t *testing.T) {
 	header := http.Header{}
 	header.Set("Strict-Transport-Security", "max-age=31536000")
@@ -148,6 +243,45 @@ func repeated(value string, count int) string {
 	return result
 }
 
+func repeatedSlice(value string, count int) []string {
+	result := make([]string, 0, count)
+	for i := 0; i < count; i++ {
+		result = append(result, repeated(value, 300))
+	}
+	return result
+}
+
 func runeLen(value string) int {
 	return len([]rune(value))
+}
+
+func newTestCertificate(t *testing.T, dnsName string) *x509.Certificate {
+	t.Helper()
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("生成测试私钥失败: %v", err)
+	}
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: dnsName,
+		},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		DNSNames:              []string{dnsName},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("生成测试证书失败: %v", err)
+	}
+	cert, err := x509.ParseCertificate(der)
+	if err != nil {
+		t.Fatalf("解析测试证书失败: %v", err)
+	}
+	return cert
 }

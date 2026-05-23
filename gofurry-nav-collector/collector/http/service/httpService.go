@@ -2,8 +2,10 @@ package service
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -31,6 +33,13 @@ const (
 	maxHTTPPayloadServerLength      = 256
 	maxHTTPPayloadMetaValueLength   = 512
 	maxHTTPPayloadHeaderValueLength = 512
+	maxHTTPPayloadCertTextLength    = 256
+	maxHTTPPayloadCertItems         = 64
+	maxHTTPPayloadVerifyErrorLength = 512
+
+	tlsHandshakeNotTLS    = "not_tls"
+	tlsHandshakeCollected = "collected"
+	tlsHandshakeFailed    = "failed"
 )
 
 // ============== HTTP模块 - 初始化部分 ==============
@@ -322,13 +331,17 @@ func buildHTTPObservationPayload(result models.HTTPModel, httpRecord models.HTTP
 		"cipher_suite":     httpRecord.CipherSuite,
 		"cert_expiry":      httpRecord.CertExpiry,
 		"cert_days_left":   httpRecord.CertDaysLeft,
-		"cert_issuer":      httpRecord.CertIssuer,
-		"cert_issuer_org":  httpRecord.CertIssuerOrg,
-		"cert_dns_names":   httpRecord.CertDNSNames,
+		"cert_issuer":      limitString(httpRecord.CertIssuer, maxHTTPPayloadCertTextLength),
+		"cert_issuer_org":  limitStringSliceItems(httpRecord.CertIssuerOrg, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
+		"cert_dns_names":   limitStringSliceItems(httpRecord.CertDNSNames, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
 		"cert_pub_key_alg": httpRecord.CertPubKeyAlg,
 		"cert_sig_alg":     httpRecord.CertSigAlg,
-		"cert_email":       httpRecord.CertEmail,
+		"cert_email":       limitStringSliceItems(httpRecord.CertEmail, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
 		"cert_is_ca":       httpRecord.CertIsCA,
+		"cert_collected":   result.CertCollected,
+		"cert_verified":    result.CertVerified,
+		"verify_error":     limitString(result.VerifyError, maxHTTPPayloadVerifyErrorLength),
+		"tls_handshake":    result.TLSHandshake,
 	}
 }
 
@@ -343,11 +356,21 @@ func limitString(value string, limit int) string {
 }
 
 func limitStringSlice(values []string, limit int) []string {
+	return limitStringSliceItems(values, limit, len(values))
+}
+
+func limitStringSliceItems(values []string, limit int, maxItems int) []string {
 	if values == nil {
 		return nil
 	}
-	limited := make([]string, 0, len(values))
-	for _, value := range values {
+	if maxItems < 0 {
+		maxItems = 0
+	}
+	if len(values) < maxItems {
+		maxItems = len(values)
+	}
+	limited := make([]string, 0, maxItems)
+	for _, value := range values[:maxItems] {
 		limited = append(limited, limitString(value, limit))
 	}
 	return limited
@@ -396,6 +419,51 @@ func securityHeadersWithDefaults(values map[string]bool) map[string]bool {
 	return defaults
 }
 
+func verifyTLSCertificate(state *tls.ConnectionState, dnsName string) (bool, string) {
+	return verifyTLSCertificateWithRoots(state, dnsName, nil)
+}
+
+func verifyTLSCertificateWithRoots(state *tls.ConnectionState, dnsName string, roots *x509.CertPool) (bool, string) {
+	if state == nil || len(state.PeerCertificates) == 0 {
+		return false, "未采集到服务端证书"
+	}
+	if dnsName == "" {
+		return false, "无法确定证书校验域名"
+	}
+
+	intermediates := x509.NewCertPool()
+	for _, cert := range state.PeerCertificates[1:] {
+		intermediates.AddCert(cert)
+	}
+	_, err := state.PeerCertificates[0].Verify(x509.VerifyOptions{
+		DNSName:       dnsName,
+		Roots:         roots,
+		Intermediates: intermediates,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	})
+	if err != nil {
+		return false, err.Error()
+	}
+	return true, ""
+}
+
+func tlsVerifyHost(finalURL string, fallback string) string {
+	if parsed, err := url.Parse(finalURL); err == nil && parsed.Host != "" {
+		return parsed.Hostname()
+	}
+	return hostWithoutPort(fallback)
+}
+
+func hostWithoutPort(host string) string {
+	if host == "" {
+		return ""
+	}
+	if splitHost, _, err := net.SplitHostPort(host); err == nil {
+		return splitHost
+	}
+	return host
+}
+
 // ============== HTTP模块 - 采集和解析部分 ==============
 
 // 执行 Request 采集
@@ -412,6 +480,10 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.Headers = make(map[string][]string)
 	res.Redirects = []string{}
 	res.SecurityHeaders = securityHeadersWithDefaults(nil)
+	res.TLSHandshake = tlsHandshakeNotTLS
+	if site.TLS == "1" {
+		res.TLSHandshake = tlsHandshakeFailed
+	}
 	probeBudget := env.GetServerConfig().Collector.ProbeBudget
 
 	transport := &http.Transport{
@@ -527,6 +599,8 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 
 	// TLS 证书检查
 	if resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
+		res.TLSHandshake = tlsHandshakeCollected
+		res.CertCollected = true
 		cert := resp.TLS.PeerCertificates[0]                             // 服务器证书
 		res.CertExpiry = cert.NotAfter                                   // 证书过期时间
 		res.CertDaysLeft = int64(time.Until(cert.NotAfter).Hours() / 24) // 证书剩余可用天数
@@ -548,6 +622,8 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 		} else {
 			res.CipherSuite = fmt.Sprintf("未知(%d)", resp.TLS.CipherSuite)
 		}
+
+		res.CertVerified, res.VerifyError = verifyTLSCertificate(resp.TLS, tlsVerifyHost(res.FinalURL, res.Domain))
 	}
 
 	return

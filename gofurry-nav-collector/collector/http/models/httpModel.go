@@ -36,6 +36,10 @@ type HTTPModel struct {
 	CertSigAlg    string    `json:"certSigAlg"`    // 签名算法
 	CertEmail     []string  `json:"certEmail"`     // 绑定邮箱
 	CertIsCA      bool      `json:"certIsCA"`      // 是否CA
+	CertCollected bool      `json:"-"`             // v2 observation 是否采集到证书
+	CertVerified  bool      `json:"-"`             // v2 observation 证书是否校验通过
+	VerifyError   string    `json:"-"`             // v2 observation 证书校验失败原因
+	TLSHandshake  string    `json:"-"`             // v2 observation TLS 握手状态
 
 	// 其他
 	StartTime    models.LocalTime `json:"startTime"` // 请求开始时间
