@@ -58,18 +58,38 @@ func InitGeoDB(dbPath string) *GeoDBSet {
 func openGeoDB(dbPath string, fileName string, label string) *geoip2.Reader {
 	reader, err := geoip2.Open(filepath.Join(dbPath, fileName))
 	if err != nil {
-		log.Error("打开 ", label, " DB 失败: ", err.Error())
+		log.WarnFields(map[string]interface{}{
+			"db":       label,
+			"event":    "geoip_open_failed",
+			"path":     filepath.Join(dbPath, fileName),
+			"protocol": "dns",
+		}, "GeoIP database unavailable; DNS geo fields will fall back to Unknown: "+err.Error())
 		return nil
 	}
+	log.InfoFields(map[string]interface{}{
+		"db":       label,
+		"event":    "geoip_opened",
+		"path":     filepath.Join(dbPath, fileName),
+		"protocol": "dns",
+	}, "GeoIP database opened")
 	return reader
 }
 
 func CloseGeoDB() {
 	if geoDBs == nil {
+		log.InfoFields(map[string]interface{}{
+			"event":    "geoip_close_skipped",
+			"protocol": "dns",
+			"reason":   "not_open",
+		}, "GeoIP database close skipped")
 		return
 	}
 	geoDBs.Close()
 	geoDBs = nil
+	log.InfoFields(map[string]interface{}{
+		"event":    "geoip_closed",
+		"protocol": "dns",
+	}, "GeoIP databases closed")
 }
 
 func (g *GeoDBSet) Close() {
@@ -100,10 +120,20 @@ func currentGeoDBs() *GeoDBSet {
 func InitDNSOnStart() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive InitDnsOnStart recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "init_recovered",
+				"protocol": "dns",
+			}, err)
 		}
 	}()
-	fmt.Println("DNS 模块初始化开始...")
+	log.InfoFields(map[string]interface{}{
+		"event":           "module_init_start",
+		"interval":        time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval) * time.Hour,
+		"protocol":        "dns",
+		"resolver":        resolver,
+		"retention_every": time.Hour * 72,
+		"workers":         env.GetServerConfig().Collector.Dns.DnsThread,
+	}, "DNS collector module initialization started")
 	geoDBs = InitGeoDB(env.GetServerConfig().Collector.Dns.Geolite2Path)
 
 	//初始化后执行一次 ParseDNS
@@ -113,23 +143,49 @@ func InitDNSOnStart() {
 	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval)*time.Hour, ParseDNS)
 	cs.AddCronJob(72*time.Hour, Delete)
 
-	fmt.Println("DNS 模块初始化结束...")
+	log.InfoFields(map[string]interface{}{
+		"event":    "module_init_complete",
+		"protocol": "dns",
+	}, "DNS collector module initialization completed")
 }
 
 // 每天清理一次日志表
 func Delete() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive Ping Delete recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "retention_recovered",
+				"protocol": "dns",
+			}, err)
 		}
 	}()
 
+	start := time.Now()
+	keepCount := env.GetServerConfig().Collector.Dns.LogCount
+	log.InfoFields(map[string]interface{}{
+		"event":      "retention_start",
+		"keep_count": keepCount,
+		"protocol":   "dns",
+	}, "DNS retention cleanup started")
+
 	// 每个域名仅保留 500 条 DNS 记录
-	count, deleteErr := dao.GetDNSDao().DeleteByNum(env.GetServerConfig().Collector.Dns.LogCount)
+	count, deleteErr := dao.GetDNSDao().DeleteByNum(keepCount)
 	if deleteErr != nil {
-		log.Error("删除多余DNS记录失败: ", deleteErr.GetMsg())
+		log.ErrorFields(map[string]interface{}{
+			"deleted":    count,
+			"duration":   time.Since(start),
+			"event":      "retention_failed",
+			"keep_count": keepCount,
+			"protocol":   "dns",
+		}, "DNS retention cleanup failed: "+deleteErr.GetMsg())
 	} else {
-		log.Info("删除多余DNS记录成功, 共删除: ", count)
+		log.InfoFields(map[string]interface{}{
+			"deleted":    count,
+			"duration":   time.Since(start),
+			"event":      "retention_complete",
+			"keep_count": keepCount,
+			"protocol":   "dns",
+		}, "DNS retention cleanup completed")
 	}
 }
 
@@ -143,27 +199,55 @@ func ParseDNS() {
 		}
 	}()
 	if !dnsRunning.CompareAndSwap(false, true) {
-		log.WithFieldsMsg(map[string]interface{}{
+		log.WarnFields(map[string]interface{}{
+			"event":    "run_skipped",
 			"protocol": "dns",
-			"status":   "skipped",
 			"reason":   "previous_run_running",
-		}, "DNS skipped: previous run is still running")
+			"status":   "skipped",
+		}, "DNS collection skipped because the previous run is still running")
 		return
 	}
 	defer dnsRunning.Store(false)
 
+	start := time.Now()
+	log.InfoFields(map[string]interface{}{
+		"event":       "run_start",
+		"max_depth":   MaxDepth,
+		"protocol":    "dns",
+		"resolver":    resolver,
+		"timeout":     env.GetServerConfig().Collector.ProbeBudget.DNSTimeout(),
+		"ptr_timeout": env.GetServerConfig().Collector.ProbeBudget.PTRTimeout(),
+		"workers":     env.GetServerConfig().Collector.Dns.DnsThread,
+	}, "DNS collection run started")
+
 	requestList, err := dao.GetDNSDao().GetList()
 	if err != nil {
-		log.Error("Request 获取站点列表失败: " + err.GetMsg())
+		log.ErrorFields(map[string]interface{}{
+			"duration": time.Since(start),
+			"event":    "run_failed",
+			"protocol": "dns",
+			"stage":    "load_targets",
+		}, "DNS target list load failed: "+err.GetMsg())
 		return
 	}
 	// 判空
-	if cap(requestList) < 1 || len(requestList) < 1 {
-		log.Info("Request 站点列表为空")
+	if len(requestList) < 1 {
+		log.InfoFields(map[string]interface{}{
+			"duration": time.Since(start),
+			"event":    "run_complete",
+			"protocol": "dns",
+			"reason":   "empty_target_list",
+			"targets":  0,
+		}, "DNS collection completed with no targets")
 		return
 	}
 
-	log.Info("DNS 采集开始")
+	log.InfoFields(map[string]interface{}{
+		"event":    "probe_start",
+		"protocol": "dns",
+		"targets":  len(requestList),
+		"workers":  env.GetServerConfig().Collector.Dns.DnsThread,
+	}, "DNS probes started")
 	dnsThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
 	// 遍历站点列表, 每个站点开一个线程执行采集
 	for _, v := range requestList {
@@ -171,7 +255,12 @@ func ParseDNS() {
 	}
 	// 等待所有采集和解析执行完毕
 	dnsThread.Wait()
-	log.Info("DNS 采集结束")
+	log.InfoFields(map[string]interface{}{
+		"duration": time.Since(start),
+		"event":    "run_complete",
+		"protocol": "dns",
+		"targets":  len(requestList),
+	}, "DNS collection run completed")
 }
 
 func getDNSResult(site models.GfnCollectorDomain) func() {
@@ -202,7 +291,13 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		}
 		gfError := cs.HSetMap(resultKey, resultMap)
 		if gfError != nil {
-			log.Error("存储DNS结果失败: ", gfError.GetMsg())
+			log.ErrorFields(map[string]interface{}{
+				"event":     "redis_write_failed",
+				"protocol":  "dns",
+				"recordset": len(resultMap),
+				"redis_key": resultKey,
+				"site":      siteName,
+			}, "DNS probe result Redis write failed: "+gfError.GetMsg())
 		}
 
 		newRecord := models.GfnCollectorLogDn{
@@ -213,7 +308,12 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		for k, v := range results {
 			marshal, jsonErr := sonic.Marshal(v)
 			if jsonErr != nil {
-				log.Error("json转换错误: ", jsonErr)
+				log.ErrorFields(map[string]interface{}{
+					"event":       "result_encode_failed",
+					"protocol":    "dns",
+					"record_type": k,
+					"site":        siteName,
+				}, "DNS probe result JSON encode failed: "+jsonErr.Error())
 			}
 			jsonRecord := string(marshal)
 			if &jsonRecord != nil {
@@ -246,7 +346,12 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		// 存数据库
 		daoErr := dao.GetDNSDao().Add(&newRecord)
 		if daoErr != nil {
-			log.Error("添加DNS采集结果到数据库失败: ", daoErr.GetMsg())
+			log.ErrorFields(map[string]interface{}{
+				"event":    "db_write_failed",
+				"protocol": "dns",
+				"site":     siteName,
+				"status":   newRecord.Status,
+			}, "DNS probe result database write failed: "+daoErr.GetMsg())
 		}
 
 	}
@@ -280,7 +385,13 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 
 			records, stats, err := queryDNS(domain, rt.Type, resolver, countryDB, cityDB, asnDB, 0)
 			if err != nil {
-				log.Error(domain+" 查询 ", rt.Name, " 失败: ", err.GetMsg())
+				log.WarnFields(map[string]interface{}{
+					"domain":      domain,
+					"event":       "query_failed",
+					"protocol":    "dns",
+					"record_type": rt.Name,
+					"resolver":    resolver,
+				}, "DNS query failed: "+err.GetMsg())
 				return
 			}
 

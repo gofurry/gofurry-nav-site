@@ -9,7 +9,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -40,12 +39,16 @@ func connect() {
 	if err != nil {
 		panic("Failed to connect to Redis:" + err.Error())
 	}
-	log.Debug("connected to redis ok.")
+	log.InfoFields(map[string]interface{}{
+		"addr":    env.GetServerConfig().Redis.RedisAddr,
+		"event":   "redis_connected",
+		"timeout": time.Second * 5,
+	}, "Redis connection established")
 
 }
 
 func OnConnectFunc(ctx context.Context, cn *redis.Conn) error {
-	log.Debug("new redis connect...")
+	log.Debug("New Redis connection opened")
 	return nil
 }
 
@@ -58,7 +61,7 @@ func Del(keys ...string) common.GFError {
 	defer cancel()
 	err := client.Del(ctx, keys...).Err()
 	if err != nil {
-		log.Error("删除缓存失败..." + err.Error())
+		log.ErrorFields(redisFields("del", keys...), "Redis delete failed: "+err.Error())
 		return common.NewServiceError("删除缓存失败.")
 	}
 	return nil
@@ -69,7 +72,9 @@ func SetNX(key string, value any, expiration time.Duration) bool {
 	defer cancel()
 	bool, err := client.SetNX(ctx, key, value, expiration).Result()
 	if err != nil {
-		log.Error("设置缓存失败..." + err.Error())
+		fields := redisFields("setnx", key)
+		fields["ttl"] = expiration
+		log.ErrorFields(fields, "Redis set-if-not-exists failed: "+err.Error())
 		return false
 	}
 	return bool
@@ -85,7 +90,9 @@ func SetExpire(key string, value any, expiration time.Duration) common.GFError {
 	defer cancel()
 	err := client.Set(ctx, key, value, expiration).Err()
 	if err != nil {
-		log.Error("设置缓存失败..." + err.Error())
+		fields := redisFields("set", key)
+		fields["ttl"] = expiration
+		log.ErrorFields(fields, "Redis set failed: "+err.Error())
 		return common.NewServiceError("设置缓存失败.")
 	}
 	return nil
@@ -107,7 +114,7 @@ func GetString(key string) (data string, gfsError common.GFError) {
 	case errors.Is(err, redis.Nil):
 		return "", nil
 	case err != nil:
-		log.Error("获取缓存失败..." + err.Error())
+		log.ErrorFields(redisFields("get", key), "Redis get failed: "+err.Error())
 		return "", common.NewServiceError("获取缓存失败.")
 	}
 	return strings.TrimSpace(val), nil
@@ -118,7 +125,9 @@ func HSetMap(key string, kvMap map[string]string) common.GFError {
 	defer cancel()
 	err := client.HSet(ctx, key, kvMap).Err()
 	if err != nil {
-		log.Error("设置缓存失败..." + err.Error())
+		fields := redisFields("hset", key)
+		fields["fields"] = len(kvMap)
+		log.ErrorFields(fields, "Redis hash set failed: "+err.Error())
 		return common.NewServiceError("设置缓存失败.")
 	}
 	return nil
@@ -129,7 +138,9 @@ func HSet(key string, fieldName string, fieldVal string) common.GFError {
 	defer cancel()
 	err := client.HSet(ctx, key, fieldName, fieldVal).Err()
 	if err != nil {
-		log.Error("设置缓存失败..." + err.Error())
+		fields := redisFields("hset", key)
+		fields["field"] = fieldName
+		log.ErrorFields(fields, "Redis hash field set failed: "+err.Error())
 		return common.NewServiceError("设置缓存失败.")
 	}
 	return nil
@@ -143,7 +154,9 @@ func HGet(key string, fieldName string) (data string, gfsError common.GFError) {
 	case errors.Is(err, redis.Nil):
 		return "", common.NewServiceError(key + "缓存不存在.")
 	case err != nil:
-		log.Error("获取缓存失败..." + err.Error())
+		fields := redisFields("hget", key)
+		fields["field"] = fieldName
+		log.ErrorFields(fields, "Redis hash field get failed: "+err.Error())
 		return "", common.NewServiceError("获取缓存失败.")
 	}
 	return res, nil
@@ -157,7 +170,9 @@ func HMGet(key string, fields ...string) (data []interface{}, gfsError common.GF
 	case errors.Is(err, redis.Nil):
 		return nil, common.NewServiceError(key + "缓存不存在.")
 	case err != nil:
-		log.Error("获取缓存失败..." + err.Error())
+		logFields := redisFields("hmget", key)
+		logFields["fields"] = len(fields)
+		log.ErrorFields(logFields, "Redis hash multi-get failed: "+err.Error())
 		return nil, common.NewServiceError("获取缓存失败.")
 	}
 	return res, nil
@@ -171,7 +186,7 @@ func HGetAll(key string) (data map[string]string, gfsError common.GFError) {
 	case errors.Is(err, redis.Nil):
 		return nil, common.NewServiceError(key + "缓存不存在.")
 	case err != nil:
-		log.Error("获取缓存失败..." + err.Error())
+		log.ErrorFields(redisFields("hgetall", key), "Redis hash get-all failed: "+err.Error())
 		return nil, common.NewServiceError("获取缓存失败.")
 	}
 	return res, nil
@@ -185,7 +200,9 @@ func HDel(key string, fields ...string) (res int64, gfsError common.GFError) {
 	case errors.Is(err, redis.Nil):
 		return 0, common.NewServiceError(key + "缓存不存在.")
 	case err != nil:
-		log.Error("获取缓存失败..." + err.Error())
+		logFields := redisFields("hdel", key)
+		logFields["fields"] = len(fields)
+		log.ErrorFields(logFields, "Redis hash delete failed: "+err.Error())
 		return intVal, nil
 	}
 	return intVal, nil
@@ -209,6 +226,12 @@ func CountByPrefix(prefix string) (res int64, gfsError common.GFError) {
 		keys, newCursor, err := client.Scan(ctx, cursor, pattern, 100).Result()
 		cancel()
 		if err != nil {
+			log.ErrorFields(map[string]interface{}{
+				"event":     "redis_scan_failed",
+				"operation": "count_by_prefix",
+				"prefix":    prefix,
+				"timeout":   env.GetServerConfig().Collector.ProbeBudget.RedisTimeout(),
+			}, "Redis prefix count scan failed: "+err.Error())
 			return 0, common.NewServiceError("redis统计失败.")
 		}
 
@@ -234,13 +257,24 @@ func DelByPrefix(prefix string) common.GFError {
 		keys, newCursor, err := client.Scan(ctx, cursor, pattern, 100).Result()
 		cancel()
 		if err != nil {
-			log.Error(fmt.Sprintf("redis scan err:%v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":     "redis_scan_failed",
+				"operation": "delete_by_prefix",
+				"prefix":    prefix,
+				"timeout":   env.GetServerConfig().Collector.ProbeBudget.RedisTimeout(),
+			}, "Redis prefix delete scan failed: "+err.Error())
 			return common.NewServiceError(err.Error())
 		}
 		if len(keys) != 0 {
 			err := Del(keys...)
 			if err != nil {
-				log.Error(fmt.Sprintf("redis del err:%v", err))
+				log.ErrorFields(map[string]interface{}{
+					"event":     "redis_delete_failed",
+					"keys":      len(keys),
+					"operation": "delete_by_prefix",
+					"prefix":    prefix,
+					"timeout":   env.GetServerConfig().Collector.ProbeBudget.RedisTimeout(),
+				}, "Redis prefix delete failed: "+err.GetMsg())
 				return err
 			}
 		}
@@ -265,7 +299,12 @@ func FindByPrefix(prefix string) ([]string, common.GFError) {
 		keys, newCursor, err := client.Scan(ctx, cursor, pattern, 100).Result()
 		cancel()
 		if err != nil {
-			log.Error(fmt.Sprintf("redis scan err:%v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":     "redis_scan_failed",
+				"operation": "find_by_prefix",
+				"prefix":    prefix,
+				"timeout":   env.GetServerConfig().Collector.ProbeBudget.RedisTimeout(),
+			}, "Redis prefix find scan failed: "+err.Error())
 			return nil, common.NewServiceError(err.Error())
 		}
 		if len(keys) != 0 {
@@ -287,8 +326,21 @@ func GetFields(key string) (fields []string, gfsError common.GFError) {
 	defer cancel()
 	existingFields, err := client.HKeys(ctx, key).Result()
 	if err != nil && err != redis.Nil {
-		log.Error("获取缓存字段失败: " + err.Error())
+		log.ErrorFields(redisFields("hkeys", key), "Redis hash field list failed: "+err.Error())
 		return nil, common.NewServiceError(err.Error())
 	}
 	return existingFields, nil
+}
+
+func redisFields(operation string, keys ...string) map[string]interface{} {
+	fields := map[string]interface{}{
+		"event":     "redis_command_failed",
+		"keys":      len(keys),
+		"operation": operation,
+		"timeout":   env.GetServerConfig().Collector.ProbeBudget.RedisTimeout(),
+	}
+	if len(keys) == 1 {
+		fields["key"] = keys[0]
+	}
+	return fields
 }

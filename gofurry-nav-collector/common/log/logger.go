@@ -7,8 +7,14 @@ package log
  */
 
 import (
+	"bytes"
+	"fmt"
+	"path"
 	"runtime"
+	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"github.com/sirupsen/logrus"
@@ -16,11 +22,13 @@ import (
 
 var logger = logrus.New()
 
-const sFunctionName = "s-FunctionName"
-const sFunctionLine = "s-FunctionLine"
-const sFunctionEvent = "s-Event"
+const sFunctionName = "caller"
+const sFunctionLine = "line"
+const sFunctionEvent = "component"
 
 func init() {
+	logger.SetFormatter(&LoggerFormatter{})
+	logger.SetLevel(logrus.InfoLevel)
 
 	//writer, err := rotatelogs.New(
 	//	logName+".%Y%m%d.log",
@@ -67,15 +75,89 @@ func init() {
 type LoggerFormatter struct {
 }
 
+func (f *LoggerFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	var b bytes.Buffer
+
+	timestamp := entry.Time.Format("2006-01-02 15:04:05.000")
+	level := formatLevel(entry.Level)
+	component := formatFieldValue(entry.Data[sFunctionEvent])
+	if component == "" {
+		component = "collector"
+	}
+
+	b.WriteString(timestamp)
+	b.WriteByte(' ')
+	b.WriteString(fmt.Sprintf("%-5s", level))
+	b.WriteByte(' ')
+	b.WriteByte('[')
+	b.WriteString(component)
+	b.WriteString("] ")
+	b.WriteString(entry.Message)
+
+	caller := formatFieldValue(entry.Data[sFunctionName])
+	line := formatFieldValue(entry.Data[sFunctionLine])
+	if caller != "" {
+		b.WriteString(" | caller=")
+		b.WriteString(shortCaller(caller))
+		if line != "" && line != "0" {
+			b.WriteByte(':')
+			b.WriteString(line)
+		}
+	}
+
+	keys := make([]string, 0, len(entry.Data))
+	for key := range entry.Data {
+		if key == sFunctionName || key == sFunctionLine || key == sFunctionEvent {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		b.WriteByte(' ')
+		b.WriteString(key)
+		b.WriteByte('=')
+		b.WriteString(quoteIfNeeded(formatFieldValue(entry.Data[key])))
+	}
+
+	b.WriteByte('\n')
+	return b.Bytes(), nil
+}
+
 func WithFieldsMsg(fields map[string]interface{}, msg interface{}) {
+	logWithFields(logrus.InfoLevel, fields, msg)
+}
+
+func InfoFields(fields map[string]interface{}, msg interface{}) {
+	logWithFields(logrus.InfoLevel, fields, msg)
+}
+
+func WarnFields(fields map[string]interface{}, msg interface{}) {
+	logWithFields(logrus.WarnLevel, fields, msg)
+}
+
+func ErrorFields(fields map[string]interface{}, msg interface{}) {
+	logWithFields(logrus.ErrorLevel, fields, msg)
+}
+
+func logWithFields(level logrus.Level, fields map[string]interface{}, msg interface{}) {
 	line, functionName := 0, "???"
-	pc, _, line, ok := runtime.Caller(1)
+	pc, _, line, ok := runtime.Caller(2)
 	if ok {
 		functionName = runtime.FuncForPC(pc).Name()
 	}
-	fields[sFunctionName] = functionName
-	fields[sFunctionLine] = line
-	logger.WithFields(fields).Info(msg)
+
+	logFields := logrus.Fields{}
+	for key, value := range buildCallerFields(functionName, line, "") {
+		logFields[key] = value
+	}
+	for key, value := range fields {
+		if key == sFunctionName || key == sFunctionLine {
+			continue
+		}
+		logFields[key] = value
+	}
+	logger.WithFields(logFields).Log(level, msg)
 }
 
 func buildCallerFields(functionName string, line int, event string) logrus.Fields {
@@ -119,4 +201,44 @@ func Info(msg ...interface{}) {
 		functionName = runtime.FuncForPC(pc).Name()
 	}
 	logger.WithFields(buildCallerFields(functionName, line, "")).Info(msg...)
+}
+
+func formatFieldValue(value interface{}) string {
+	if value == nil {
+		return ""
+	}
+	switch v := value.(type) {
+	case time.Duration:
+		return v.String()
+	case fmt.Stringer:
+		return v.String()
+	default:
+		return fmt.Sprint(v)
+	}
+}
+
+func formatLevel(level logrus.Level) string {
+	if level == logrus.WarnLevel {
+		return "WARN"
+	}
+	return strings.ToUpper(level.String())
+}
+
+func shortCaller(caller string) string {
+	if caller == "" {
+		return ""
+	}
+	return path.Base(caller)
+}
+
+func quoteIfNeeded(value string) string {
+	if value == "" {
+		return `""`
+	}
+	if strings.IndexFunc(value, func(r rune) bool {
+		return r == ' ' || r == '\t' || r == '\n' || r == '"' || r == '|'
+	}) >= 0 {
+		return strconv.Quote(value)
+	}
+	return value
 }

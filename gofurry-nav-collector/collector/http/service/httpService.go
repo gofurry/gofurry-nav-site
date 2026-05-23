@@ -29,10 +29,19 @@ var requestRunning atomic.Bool
 func InitHTTPOnStart() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive InitHttpOnStart recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "init_recovered",
+				"protocol": "http",
+			}, err)
 		}
 	}()
-	fmt.Println("Request 模块初始化开始...")
+	log.InfoFields(map[string]interface{}{
+		"event":           "module_init_start",
+		"interval":        time.Duration(env.GetServerConfig().Collector.Request.RequestInterval) * time.Hour,
+		"protocol":        "http",
+		"retention_every": time.Hour * 48,
+		"workers":         env.GetServerConfig().Collector.Request.RequestThread,
+	}, "HTTP collector module initialization started")
 
 	//初始化后执行一次 Request
 	go Request()
@@ -41,23 +50,49 @@ func InitHTTPOnStart() {
 	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Request.RequestInterval)*time.Hour, Request)
 	cs.AddCronJob(48*time.Hour, Delete)
 
-	fmt.Println("Request 模块初始化结束...")
+	log.InfoFields(map[string]interface{}{
+		"event":    "module_init_complete",
+		"protocol": "http",
+	}, "HTTP collector module initialization completed")
 }
 
 // 每天清理一次日志表
 func Delete() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive Ping Delete recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "retention_recovered",
+				"protocol": "http",
+			}, err)
 		}
 	}()
 
+	start := time.Now()
+	keepCount := env.GetServerConfig().Collector.Request.LogCount
+	log.InfoFields(map[string]interface{}{
+		"event":      "retention_start",
+		"keep_count": keepCount,
+		"protocol":   "http",
+	}, "HTTP retention cleanup started")
+
 	// 每个域名仅保留 1500 条 request 记录
-	count, deleteErr := dao.GetHTTPDao().DeleteByNum(env.GetServerConfig().Collector.Request.LogCount)
+	count, deleteErr := dao.GetHTTPDao().DeleteByNum(keepCount)
 	if deleteErr != nil {
-		log.Error("删除多余Request记录失败: ", deleteErr)
+		log.ErrorFields(map[string]interface{}{
+			"deleted":    count,
+			"duration":   time.Since(start),
+			"event":      "retention_failed",
+			"keep_count": keepCount,
+			"protocol":   "http",
+		}, "HTTP retention cleanup failed: "+deleteErr.GetMsg())
 	} else {
-		log.Info("删除多余Request记录成功, 共删除: ", count)
+		log.InfoFields(map[string]interface{}{
+			"deleted":    count,
+			"duration":   time.Since(start),
+			"event":      "retention_complete",
+			"keep_count": keepCount,
+			"protocol":   "http",
+		}, "HTTP retention cleanup completed")
 	}
 }
 
@@ -71,26 +106,52 @@ func Request() {
 		}
 	}()
 	if !requestRunning.CompareAndSwap(false, true) {
-		log.WithFieldsMsg(map[string]interface{}{
+		log.WarnFields(map[string]interface{}{
+			"event":    "run_skipped",
 			"protocol": "http",
-			"status":   "skipped",
 			"reason":   "previous_run_running",
-		}, "Request skipped: previous run is still running")
+			"status":   "skipped",
+		}, "HTTP collection skipped because the previous run is still running")
 		return
 	}
 	defer requestRunning.Store(false)
 
+	start := time.Now()
+	log.InfoFields(map[string]interface{}{
+		"event":     "run_start",
+		"protocol":  "http",
+		"timeout":   env.GetServerConfig().Collector.ProbeBudget.HTTPTimeout(),
+		"workers":   env.GetServerConfig().Collector.Request.RequestThread,
+		"redirects": env.GetServerConfig().Collector.ProbeBudget.MaxHTTPRedirects(),
+	}, "HTTP collection run started")
+
 	requestList, err := dao.GetHTTPDao().GetList()
 	if err != nil {
-		log.Error("Request 获取站点列表失败: " + err.GetMsg())
+		log.ErrorFields(map[string]interface{}{
+			"duration": time.Since(start),
+			"event":    "run_failed",
+			"protocol": "http",
+			"stage":    "load_targets",
+		}, "HTTP target list load failed: "+err.GetMsg())
 		return
 	}
 	// 判空
-	if cap(requestList) < 1 || len(requestList) < 1 {
-		log.Info("Request 站点列表为空")
+	if len(requestList) < 1 {
+		log.InfoFields(map[string]interface{}{
+			"duration": time.Since(start),
+			"event":    "run_complete",
+			"protocol": "http",
+			"reason":   "empty_target_list",
+			"targets":  0,
+		}, "HTTP collection completed with no targets")
 		return
 	}
-	log.Info("HTTP 采集开始")
+	log.InfoFields(map[string]interface{}{
+		"event":    "probe_start",
+		"protocol": "http",
+		"targets":  len(requestList),
+		"workers":  env.GetServerConfig().Collector.Request.RequestThread,
+	}, "HTTP probes started")
 	requestThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Request.RequestThread)
 	// 遍历站点列表, 每个站点开一个线程执行 request
 	for _, v := range requestList {
@@ -98,7 +159,12 @@ func Request() {
 	}
 	// 等待所有采集和解析执行完毕
 	requestThread.Wait()
-	log.Info("HTTP 采集结束")
+	log.InfoFields(map[string]interface{}{
+		"duration": time.Since(start),
+		"event":    "run_complete",
+		"protocol": "http",
+		"targets":  len(requestList),
+	}, "HTTP collection run completed")
 }
 
 // ============== HTTP模块 - 存储部分 ==============
@@ -166,7 +232,13 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 		// 存数据库
 		err := dao.GetHTTPDao().Add(&httpSaveRecord)
 		if err != nil {
-			log.Error("添加http请求结果到数据库失败: ", err.GetMsg())
+			log.ErrorFields(map[string]interface{}{
+				"event":    "db_write_failed",
+				"protocol": "http",
+				"site":     siteName,
+				"status":   httpSaveRecord.Status,
+				"url":      result.Url,
+			}, "HTTP probe result database write failed: "+err.GetMsg())
 		}
 	}
 }
@@ -220,7 +292,11 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	// 构建请求
 	req, err := http.NewRequest("GET", res.Url, nil)
 	if err != nil {
-		log.Error("创建请求失败: ", err)
+		log.ErrorFields(map[string]interface{}{
+			"event":    "request_create_failed",
+			"protocol": "http",
+			"url":      res.Url,
+		}, "HTTP request creation failed: "+err.Error())
 		return
 	}
 	// 设置请求头
@@ -233,7 +309,12 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.StartTime = cm.LocalTime(time.Now())
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Error("请求失败: ", err)
+		log.WarnFields(map[string]interface{}{
+			"duration": time.Since(start),
+			"event":    "probe_failed",
+			"protocol": "http",
+			"url":      res.Url,
+		}, "HTTP probe failed: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
