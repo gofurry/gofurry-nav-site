@@ -1,128 +1,204 @@
-# Roadmap
+# GoFurry Nav Collector 路线图
 
-## Current Position
+## 当前状态
 
-`gofurry-nav-collector` 已经负责 Ping、HTTP/TLS、DNS 三类采集，并将 latest 数据写入 Redis、历史数据写入 PostgreSQL。当前生产风险主要集中在采集重入、网络操作超时、GeoIP 文件打开频率、Redis/DB 峰值和大表日志清理。
+`gofurry-nav-collector` 当前负责 Ping、HTTP/TLS、DNS 三类采集：
 
-## Roadmap Strategy
+- 最新结果写入 Redis，供现有页面和后端读取。
+- 历史结果写入 PostgreSQL，保留现有表结构和旧语义。
+- 当前阶段优先服务线上稳定性，不追求采集速度和功能扩张。
 
-优先完成不会改变旧接口、旧 Redis key、旧表语义的稳定性工作。后续能力必须保持低频、非侵入、可灰度、可关闭、可回滚；不引入 Prometheus 生态，不做漏洞扫描、端口全扫、目录爆破、弱口令尝试或高强度探测。
+生产侧主要风险仍然集中在：采集重入、网络超时、DNS/HTTP 单目标异常、Redis/DB 写入峰值、大表保留清理、GeoIP 文件可用性，以及采集结果和后端旧接口之间的兼容性。
 
-## Version Plan
+## 迭代策略
 
-### v0.1.0 - Phase 0 Stability
+优先完成不改变旧接口、旧 Redis key、旧表语义的稳定性工作。后续能力必须满足：
 
-**Status:** In progress
-**Scope:** Stability / Safety / Testing
-**Goal:** Make the existing collector safer to run against production-scale data.
+- 旁路接入，不直接替换旧路径。
+- 可灰度、可关闭、可回滚。
+- 低频、低强度，不做高频探测。
+- 不引入 Prometheus 生态。
+- 不做漏洞扫描、端口全扫、目录爆破、弱口令尝试等安全扫描能力。
+- 任何 `/api/v2` 或 v2 数据面都必须先双写、对比、验证，再考虑切读。
 
-#### Focus
+## 版本计划
 
-- prevent overlapping collector runs
-- bound network and Redis operations
-- reduce DB and filesystem pressure
-- keep old user-facing behavior unchanged
+### v0.1.0 - Phase 0 稳定化
 
-#### Tasks
+- **状态：** 进行中
+- **范围：** 稳定性 / 安全性 / 测试 / 运维可读性
+- **目标：** 在不改变现有业务读写路径的前提下，让采集器更适合线上长期运行。
 
-- [x] Add Ping / HTTP / DNS non-overlap guards.
-- [x] Replace global per-protocol `WaitGroup` state with per-run worker state.
-- [x] Add configurable probe budget defaults for Redis, HTTP, TLS, DNS, PTR, response size, and DNS record count.
-- [x] Open GeoIP databases once for the DNS module lifecycle and tolerate partial GeoIP availability.
-- [x] Move retention cleanup out of every collector run and keep it on scheduled cleanup tasks.
-- [x] Replace retention delete SQL with stable batched CTE cleanup.
-- [x] Add manual concurrent index SQL for retention queries.
-- [x] Add focused tests for defaults, retention SQL shape, and nil GeoIP readers.
+#### 重点
 
-#### Acceptance Criteria
+- 防止同协议采集任务重入。
+- 给 HTTP、DNS、PTR、Redis 操作设置明确预算。
+- 降低 Redis、数据库和 GeoIP 文件访问压力。
+- 改善日志可读性，便于单人维护时快速定位问题。
+- 保持旧接口、旧 Redis key、旧表结构和旧页面展示兼容。
 
-- Collector runs skip instead of overlapping when a previous run is still active.
-- DNS/PTR/HTTP operations have bounded timeouts.
-- Redis commands use per-command timeout contexts.
-- Existing Redis keys, database tables, and backend APIs keep their current behavior.
-- `gofmt`, `go vet`, and `go test` pass for `gofurry-nav-collector` and `gofurry-nav-backend`.
+#### 任务
 
----
+- [x] 为 Ping / HTTP / DNS 增加 non-overlap 防重入保护。
+- [x] 将三类采集的全局等待状态改为每轮局部 worker 状态。
+- [x] 增加 `collector.probe_budget` 默认值，覆盖 Redis、HTTP、TLS、DNS、PTR、响应体大小和 DNS 记录数。
+- [x] DNS 模块启动时一次性打开 GeoIP Country / City / ASN 数据库，并允许部分文件不可用时降级为 `Unknown`。
+- [x] 移除每轮采集结束后的同步保留清理，只保留定时清理任务。
+- [x] 将保留清理 SQL 改为稳定的分批 CTE 删除。
+- [x] 增加手动执行的并发索引 SQL，服务大表保留清理。
+- [x] 将日志底座从 logrus 切换到 zap，并保留现有 `common/log` 调用入口。
+- [x] 将运行期日志文案改为中文，保持一行式人类可读格式。
+- [x] 修复 Redis 空 Hash 写入问题：空 map 不再执行 `HSET key`。
+- [x] 增加默认值、保留 SQL、GeoIP nil reader、日志格式、空 Hash 写入等小范围测试。
 
-### v0.2.0 - v2 Data Plane
+#### 验收标准
 
-**Status:** Planned
-**Scope:** Architecture / Backend API / Safety
-**Goal:** Add a sidecar v2 data path without switching production reads.
+- 上一轮同协议采集未结束时，本轮只记录跳过日志，不并发放大写入。
+- HTTP / DNS / PTR / Redis 操作都有明确超时，不会无限阻塞。
+- DNS 空结果不会触发 Redis `ERR wrong number of arguments for 'hset' command`。
+- GeoIP 文件缺失不会导致 DNS 采集崩溃。
+- 旧 Redis key、旧数据库表和后端旧接口行为保持不变。
+- `gofmt -l .`、`go vet ./...`、`go test ./...` 在 collector 模块通过。
 
-#### Focus
+#### 备注
 
-- observation table
-- v2 latest Redis keys
-- read-only backend v2 endpoints
-- v1/v2 comparison
-
-#### Tasks
-
-- [ ] Add `gfn_collector_observation` with JSONB payloads.
-- [ ] Add `collector:v2:latest:{protocol}:{site_id}` keys behind feature flags.
-- [ ] Keep old table and old key writes unchanged during dual-write.
-- [ ] Add backend read-only collector latest / summary endpoints behind feature flags.
-- [ ] Add comparison logs for sampled v1/v2 results.
-
-#### Acceptance Criteria
-
-- v2 writes can be fully disabled without changing v1 behavior.
-- v2 data volume and write rate are measurable through logs and SQL/Redis checks.
-- Backend can read v2 latest data without changing existing `/api/nav` routes.
+Phase 0 只做稳定化和可维护性增强，不做 v2 observation 表、不新增 `/api/v2`、不改变 HTTP HEAD/GET 策略、不引入多 resolver 策略。
 
 ---
 
-### v0.3.0 - Protocol Semantics
+### v0.1.1 - Phase 0 线上观察与补丁
 
-**Status:** Planned
-**Scope:** User-facing / Stability / Safety
-**Goal:** Improve protocol result quality while keeping probing low intensity.
+- **状态：** 计划中
+- **范围：** 稳定性 / 运维 / 测试
+- **目标：** 根据预发或线上低峰运行结果，修补 Phase 0 暴露的小问题。
 
-#### Focus
+#### 重点
 
-- TLS verification semantics
-- HTTP redirect/header collection
-- DNS risk flags
-- Ping as auxiliary signal
+- 观察真实采集耗时。
+- 收敛单目标异常日志。
+- 检查大表清理对数据库的影响。
+- 完善最小化回归测试。
 
-#### Tasks
+#### 任务
 
-- [ ] Split TLS certificate collection from certificate verification.
-- [ ] Add HTTP redirect chain and security header presence checks without payload probing.
-- [ ] Replace strong DNS hijack wording with risk flags in v2 payloads.
-- [ ] Treat Ping as an auxiliary connectivity signal, not a site-down decision.
+- [ ] 低峰运行手动索引 SQL，并记录执行耗时与锁等待情况。
+- [ ] 观察 Ping 间隔短于实际耗时时的 skipped 日志比例。
+- [ ] 统计 HTTP 单目标失败原因，区分域名不存在、连接拒绝、超时和证书问题。
+- [ ] 统计 DNS 查询超时域名，评估是否需要后续阶段引入旁路 resolver 对比。
+- [ ] 根据日志样本调整字段名和中文文案，保证排查时足够直观。
+- [ ] 为 Redis 空 Hash、HTTP redirect cap、DNS timeout 增加更贴近实际数据的回归用例。
 
-#### Acceptance Criteria
+#### 验收标准
 
-- New protocol fields are explicitly marked as observations, not final judgments.
-- External title, meta, header, TXT, PTR, and certificate strings are treated as untrusted text.
-- No protocol change increases probe frequency or probe intensity by default.
+- 线上日志可以快速回答：哪类协议、哪个目标、哪个阶段失败。
+- 大表清理不造成明显周期性峰值。
+- Phase 0 的 bug fix 不改变旧页面展示和旧接口读数。
 
 ---
 
-### v1.0.0-alpha.1 - API Freeze Candidate
+### v0.2.0 - v2 数据面旁路
 
-**Status:** Planned
-**Scope:** Release / Documentation / Compatibility
-**Goal:** Freeze collector v2 payload candidates and prepare for stable operation.
+- **状态：** 计划中
+- **范围：** 架构 / 后端接口 / 安全性
+- **目标：** 增加 v2 数据旁路，但不立即切换生产读取路径。
 
-#### Focus
+#### 重点
 
-- documented payload schemas
-- migration and rollback notes
-- compatibility checks
-- production operating guide
+- observation 表。
+- v2 latest Redis key。
+- 后端只读 v2 接口。
+- v1/v2 结果对比。
 
-#### Tasks
+#### 任务
 
-- [ ] Document v2 payload schema versions and compatibility policy.
-- [ ] Document production rollout and rollback procedures.
-- [ ] Add regression tests for v1 compatibility and v2 read behavior.
-- [ ] Collect production feedback before promoting v2 reads.
+- [ ] 新增 `gfn_collector_observation`，使用 JSONB 保存协议 payload。
+- [ ] 增加 `collector:v2:latest:{protocol}:{site_id}` Redis key，并放在配置开关后。
+- [ ] v2 双写期间保持旧表和旧 key 写入不变。
+- [ ] 在 gofurry-nav-backend 增加只读 collector latest / summary v2 接口，并放在配置开关后。
+- [ ] 增加抽样对比日志，用于检查 v1/v2 结果差异。
 
-#### Acceptance Criteria
+#### 验收标准
 
-- v1 behavior remains available during the alpha period.
-- Operators can disable any v2 protocol or read path through configuration.
-- Known blocker-level safety issues are resolved before `v1.0.0`.
+- 关闭 v2 配置后，v1 行为完全不变。
+- 可以通过 SQL / Redis / 日志人工检查 v2 写入量和写入频率。
+- 后端可以读取 v2 latest 数据，但不影响现有 `/api/nav` 路由。
+
+#### 备注
+
+v2 数据面只允许旁路和灰度，不允许一次性替换旧读写路径。
+
+---
+
+### v0.3.0 - 协议语义增强
+
+- **状态：** 计划中
+- **范围：** 用户可见结果 / 稳定性 / 安全性
+- **目标：** 提升协议结果质量，但保持低强度探测。
+
+#### 重点
+
+- TLS 采集与验证语义拆分。
+- HTTP redirect/header 信息采集。
+- DNS 风险标记。
+- Ping 作为辅助信号。
+
+#### 任务
+
+- [ ] 拆分 TLS 证书信息采集和证书验证结论。
+- [ ] 增加 HTTP redirect chain 和常见安全 header 存在性检查，不做 payload 深探测。
+- [ ] 将强烈的 DNS “劫持”表述改为 v2 payload 中的风险标记。
+- [ ] 将 Ping 明确定位为辅助连通性信号，不作为站点下线的唯一判断。
+
+#### 验收标准
+
+- 新字段明确标记为 observation，不包装成最终判断。
+- 外部 title、meta、header、TXT、PTR、证书字符串都按不可信文本处理。
+- 默认情况下不提高采集频率，也不提高探测强度。
+
+---
+
+### v1.0.0-alpha.1 - 稳定版候选
+
+- **状态：** 计划中
+- **范围：** 发布 / 文档 / 兼容性
+- **目标：** 冻结 v2 payload 候选结构，准备进入稳定运行前的反馈期。
+
+#### 重点
+
+- payload schema 文档。
+- 迁移与回滚说明。
+- v1 兼容性检查。
+- 生产运维指南。
+
+#### 任务
+
+- [ ] 文档化 v2 payload schema version 和兼容策略。
+- [ ] 文档化生产灰度、切读、回滚流程。
+- [ ] 增加 v1 兼容性和 v2 读取行为的回归测试。
+- [ ] 在正式切换读取路径前收集生产反馈。
+
+#### 验收标准
+
+- alpha 阶段 v1 行为仍然完整可用。
+- 任一 v2 协议或读取路径都可以通过配置关闭。
+- 进入 `v1.0.0` 前不存在已知阻塞级稳定性问题。
+
+## 短中长期方向
+
+### 短期
+
+- 完成 Phase 0 的线上观察和补丁。
+- 修掉采集过程中暴露的确定性 bug。
+- 保持日志、测试和回滚路径清晰。
+
+### 中期
+
+- 建立 v2 数据旁路。
+- 用双写和对比验证新语义。
+- 在后端增加只读 v2 接口，但不直接影响旧页面。
+
+### 长期
+
+- 冻结 v2 payload schema。
+- 完成生产灰度和回滚文档。
+- 在确认兼容性和稳定性后，再考虑正式稳定版本。

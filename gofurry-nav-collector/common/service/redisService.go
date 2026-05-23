@@ -121,6 +121,15 @@ func GetString(key string) (data string, gfsError common.GFError) {
 }
 
 func HSetMap(key string, kvMap map[string]string) common.GFError {
+	if len(kvMap) == 0 {
+		log.InfoFields(map[string]interface{}{
+			"event":     "redis_empty_hash_skipped",
+			"key":       key,
+			"operation": "hset",
+		}, "Redis 哈希写入跳过：没有可写入字段")
+		return nil
+	}
+
 	ctx, cancel := commandContext()
 	defer cancel()
 	err := client.HSet(ctx, key, kvMap).Err()
