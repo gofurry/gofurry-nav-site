@@ -133,6 +133,101 @@
 
 ---
 
+### v0.3.1 - Collector 可靠性审计修复
+
+- **状态：** 计划中
+- **范围：** DNS / Ping / Redis / DB / 配置 / 日志
+- **目标：** 修复 2026-05-24 代码审计中发现的可靠性和数据可信度问题，不增加采集强度，不改变旧接口、旧 Redis key、旧表语义。
+
+#### 重点
+
+- 先修正影响 observation 数据可信度的问题。
+- 让旧表、Redis、DB 初始化错误更容易被发现。
+- 收紧配置语义，减少“配置写了但不生效”的维护陷阱。
+
+#### 任务
+
+- [ ] 修复 DNS GeoIP reader 参数顺序，确保 Country / City / ASN reader 不被交换。
+- [ ] 为 DNS GeoIP 查询增加最小单元测试，覆盖 nil reader 降级和参数顺序。
+- [ ] Ping 旧表写入检查错误并记录中文结构化日志。
+- [ ] 缩小 Ping `pingRWLock` 锁范围，只保护共享 Redis 结果 map 更新。
+- [ ] 修复 Redis `HDel` 吞错问题，删除失败必须向调用方返回错误。
+- [ ] 检查 Redis wrapper 中类似 `Get` / `Incr` 的错误处理边界，避免未来误用。
+- [ ] HTTP 代理 URL 解析失败时明确记录 `http_proxy_config_invalid`，不静默继续。
+- [ ] DB 初始化处理 `db.engine.DB()` 返回错误，并优化 DSN 构造/转义边界。
+- [ ] 让 `collector.dns.query_thread` 实际约束单目标 DNS 记录类型查询并发，或在文档中明确废弃。
+- [ ] 修正 `server.mode` yaml tag，减少配置加载阶段绕过 zap 的 stdout 输出。
+- [ ] 为 retention SQL builder 增加表名 allowlist，避免未来误传任意表名。
+- [ ] 为 observation 写入增加中心化 payload 大小保护，防止后续字段扩展时 Redis/DB 负载失控。
+
+#### 验收标准
+
+- 修复后 `go test ./...`、`go vet ./...` 通过。
+- DNS A / AAAA 的 Country / ASN / ISP 字段在测试环境恢复可信。
+- Redis 删除失败、Ping 旧表写入失败、HTTP 代理配置错误都能从中文结构化日志中明确定位。
+- 未配置新行为时，生产采集频率、并发、旧 Redis key、旧表写入和旧前端展示保持不变。
+
+#### 审计报告
+
+详见 `docs/code-audit-20260524.md`。
+
+---
+
+### v0.3.2 - v2 Observation 低风险信息丰富
+
+- **状态：** 计划中
+- **范围：** Ping / HTTP / TLS / DNS
+- **目标：** 在不增加默认探测次数和采集强度的前提下，把当前三种协议同一次探测中已经能得到的高价值字段写入 v2 observation，为站点安全参考和访客视角参考提供更丰富依据。
+
+#### 重点
+
+- 只采集“同一次 Ping / HTTP GET / DNS 查询中顺手可得”的字段。
+- 字段只作为 observation 信号，不直接包装成健康结论。
+- 外部文本继续限长、摘要化、按纯文本处理。
+- 默认不启用 HEAD-first、TCP fallback、multi-resolver、额外 `_dmarc` 查询等会改变探测行为的能力。
+
+#### Ping 可扩展字段
+
+- [ ] 增加 `min_rtt_ms`、`max_rtt_ms`、`stddev_rtt_ms`。
+- [ ] 增加 `jitter_ms`，先以 RTT 标准差作为保守近似。
+- [ ] 增加 `packets_sent`、`packets_recv`，让 `loss_rate` 更可解释。
+- [ ] 记录本轮 Ping 实际 `resolved_ip`，辅助对照 DNS 和访客访问路径。
+
+#### HTTP 可扩展字段
+
+- [ ] 使用 `httptrace` 记录 `dns_lookup_ms`、`tcp_connect_ms`、`tls_handshake_ms`、`ttfb_ms`、`transfer_ms`。
+- [ ] 记录 `http_protocol`，区分 HTTP/1.1、HTTP/2 等实际协议。
+- [ ] 记录最终连接 `remote_ip` / `remote_addr`，辅助和 DNS observation 对照。
+- [ ] 记录 `content_length`、`body_read_bytes`、`compressed`，作为访客体感大小参考。
+- [ ] 摘要化 `cache-control`、`etag`、`last-modified`，形成 `cache_policy`。
+- [ ] 细化常见安全 header 摘要，例如 HSTS `max-age`、CSP 是否包含高风险宽松项。
+
+#### TLS 可扩展字段
+
+- [ ] 增加 `cert_not_before`、`cert_not_after`、`cert_chain_length`。
+- [ ] 增加 `cert_subject_cn`、`cert_san_count`。
+- [ ] 增加 `cert_signature_algorithm`、`cert_public_key_algorithm`。
+- [ ] 增加 `ocsp_stapled`、`sct_count`，作为证书透明度和吊销响应参考。
+- [ ] 增加 `verify_error_category`，把原始校验错误归类为过期、域名不匹配、未知 CA 等。
+
+#### DNS 可扩展字段
+
+- [ ] 增加 `rcode`、`authoritative`、`truncated`、`recursion_available`。
+- [ ] 增加 `answer_count`、`authority_count`、`additional_count`。
+- [ ] 将已有 TTL 统计整理为 `ttl_min`、`ttl_max`、`ttl_avg` 写入 v2 payload。
+- [ ] 增加 `cname_chain_depth`，表达解析链复杂度。
+- [ ] 摘要化 MX 优先级、SOA serial/refresh/retry/expire/minTTL。
+- [ ] 区分 `dnssec_rrsig_present` 与 `dnssec_ad`，避免把“有签名记录”和“已验证”混为一谈。
+
+#### 验收标准
+
+- 所有新增字段都有单元测试或 payload builder 测试。
+- 不增加默认请求次数、DNS 目标数量、Ping 次数、并发或响应体上限。
+- v2 latest Redis 和 observation DB 新字段出现，旧 Redis key、旧表和旧前端展示不变化。
+- 字段解释写入 `docs/v2-observation-payload.md`，明确它们不是最终健康判断。
+
+---
+
 ### v0.4.0 - 健康状态聚合与展示旁路
 
 - **状态：** 计划中
