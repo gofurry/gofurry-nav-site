@@ -58,5 +58,5 @@ The CDN and logo URLs stay pointed at the existing `qcdn.go-furry.com` assets.
 ## Notes
 
 - `robots.txt` and `sitemap.xml` are served from Nuxt `server/routes`.
-- Deploy the Go nav/game backends with `/api/v1` support before switching this frontend to the `/api/v1` bases. The backends keep the old `/api/...` aliases during migration, so the old frontend and cached clients can continue to work while the Nuxt frontend moves to v1.
+- Deploy the Go nav/game backends and the Nuxt frontend together during a maintenance window. The public nav/game APIs now live under `/api/v1`, and the old non-versioned API aliases are intentionally removed.
 - The old Vue frontend can stay in the repository as a legacy reference, but it is no longer the production entrypoint.

@@ -71,19 +71,7 @@ func registerRoutes(app *fiber.App) {
 	v1 := api.Group("/v1")
 
 	// v1 正式路由：/api/v1/game/...
-	gameV1 := v1.Group("/game")
-	gameApi(gameV1)
-	recommendApi(gameV1.Group("/recommend"))
-	searchApi(gameV1.Group("/search"))
-	reviewApi(gameV1.Group("/review"))
-	prizeApi(gameV1.Group("/prize"))
-
-	// 兼容旧前端与灰度发布顺序，待生产全部迁移到 v1 后再移除。
-	gameApi(api.Group("/game"))
-	recommendApi(api.Group("/recommend"))
-	searchApi(api.Group("/search"))
-	reviewApi(api.Group("/review"))
-	prizeApi(api.Group("/prize"))
+	gameApi(v1.Group("/game"))
 }
 
 // registerMiddlewares 注册中间件

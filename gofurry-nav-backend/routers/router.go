@@ -70,13 +70,7 @@ func registerRoutes(app *fiber.App) {
 	v1 := api.Group("/v1")
 
 	// v1 正式路由：/api/v1/nav/...
-	navV1 := v1.Group("/nav")
-	navApi(navV1)
-	siteApi(navV1.Group("/site"))
-
-	// 兼容旧前端与灰度发布顺序，待生产全部迁移到 v1 后再移除。
-	navApi(api.Group("/nav"))
-	siteApi(api.Group("/site"))
+	navApi(v1.Group("/nav"))
 }
 
 // registerMiddlewares 注册中间件

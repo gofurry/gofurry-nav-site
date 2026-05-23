@@ -39,11 +39,11 @@ export function getMoreLatestGameNews(lang: string): Promise<NewsBaseModel[]> {
 }
 
 export function getRandomGame(): Promise<string> {
-  return useApi('game')('/game/recommend/game/random')
+  return useApi('game')('/game/recommend/random')
 }
 
 export function getSearchSimple(lang: string, txt: string): Promise<SearchItemModel[]> {
-  return useApi('game')('/game/search/game/simple', { method: 'POST', body: { txt, lang } })
+  return useApi('game')('/game/search/simple', { method: 'POST', body: { txt, lang } })
 }
 
 export function getLatestReview(): Promise<AnonymousReviewModel[]> {
@@ -55,7 +55,7 @@ export function getTagList(lang: string): Promise<GameTagRecord[]> {
 }
 
 export function searchGameAdvanced(query: SearchPageQueryRequest, lang: string): Promise<SearchPageResponse> {
-  return useApi('game')('/game/search/game/page', { method: 'POST', body: { ...query, lang } })
+  return useApi('game')('/game/search/page', { method: 'POST', body: { ...query, lang } })
 }
 
 export function getGameBaseInfo(id: string, lang: string): Promise<GameBaseInfoResponse> {
@@ -67,7 +67,7 @@ export function getGameRemark(id: string): Promise<RemarkResponse> {
 }
 
 export function getRecommendedGame(id: string, lang: string): Promise<RecommendedModel[]> {
-  return useApi('game')('/game/recommend/game/CBF', { query: { id, lang } })
+  return useApi('game')('/game/recommend/CBF', { query: { id, lang } })
 }
 
 export function getGameCreator(lang: string): Promise<CreatorResponse[]> {
