@@ -17,7 +17,6 @@ type GfnSite struct {
 	ID         int64        `gorm:"column:id;type:bigint;primaryKey;comment:站点表id" json:"id"`                                           // 站点表id
 	Name       string       `gorm:"column:name;type:character varying(255);not null;comment:站点名称" json:"name"`                          // 站点名称
 	NameEn     string       `gorm:"column:name_en;type:character varying(255);not null;comment:站点名称-英文" json:"nameEn"`                  // 站点名称-英文
-	Domain     string       `gorm:"column:domain;type:json;not null;comment:站点域名" json:"domain"`                                        // 站点域名
 	Info       string       `gorm:"column:info;type:text;not null;comment:站点描述" json:"info"`                                            // 站点描述
 	InfoEn     string       `gorm:"column:info_en;type:text;not null;comment:站点描述-英文" json:"infoEn"`                                    // 站点描述-英文
 	CreateTime cm.LocalTime `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:创建时间" json:"createTime"`   // 创建时间
@@ -27,15 +26,6 @@ type GfnSite struct {
 	Welfare    *string      `gorm:"column:welfare;type:character varying(4);comment:是否公益项目 1 0" json:"welfare"`                         // 是否公益项目 1 0
 	Icon       *string      `gorm:"column:icon;type:character varying(255);comment:站点图标" json:"icon"`                                   // 站点图标
 	Deleted    bool         `gorm:"column:deleted;type:boolean;comment:软删除" json:"deleted"`
-}
-
-type Domain struct {
-	ID     int64  `gorm:"column:id;type:bigint;primaryKey;comment:站点表id" json:"id"`
-	Domain string `gorm:"column:domain;type:json;not null;comment:站点域名" json:"domain"`
-}
-
-type Domains struct {
-	Domain []string `json:"domain"`
 }
 
 // GfnCollectorDomain mapped from table <gfn_collector_domain>.

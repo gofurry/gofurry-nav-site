@@ -66,8 +66,8 @@
 - `gfn_collector_domain` 成为 Ping / HTTP / DNS 的统一采集目标来源。
 - backend 导航站点列表的 `domain` 字段改由 `gfn_collector_domain` 聚合生成，wire shape 保持兼容。
 - gofurry-admin 的“采集域名”必须绑定站点，删除改为软删除。
-- “网站”管理不再编辑 `gfn_site.domain`，该字段仅作为历史兼容字段保留。
-- 提供手动同步脚本，将历史 `gfn_site.domain` 回填并补齐到 `gfn_collector_domain.site_id`。
+- “网站”管理不再编辑历史域名字段，`gfn_site.domain` 已在生产验证稳定后物理移除。
+- 提供手动同步脚本，将历史域名数据回填并补齐到 `gfn_collector_domain.site_id`。
 
 #### 任务
 
@@ -78,7 +78,8 @@
 - [x] Ping / HTTP / DNS 只采集未软删除、带 `site_id`、且所属站点未软删除的采集域名。
 - [x] backend 导航页域名从 `gfn_collector_domain` 聚合，Nuxt 现有读取结构不变。
 - [x] gofurry-admin 网站表单移除历史 `domains` 字段，不再写入 `gfn_site.domain`。
-- [ ] 生产观察稳定后，评估是否物理移除 `gfn_site.domain`。
+- [x] 新增 `sql/20260524_drop_gfn_site_domain.sql`，生产观察稳定后物理移除 `gfn_site.domain`。
+- [x] 清理 admin/collector 中对 `gfn_site.domain` 物理列的模型和写入依赖。
 
 #### 验收标准
 
@@ -86,13 +87,12 @@
 - 软删除采集域名后 collector 不再采集该目标。
 - 旧站点展示不因迁移中断，`domain` 返回结构保持兼容。
 - v2 observation 不再因 HTTP/DNS 目标缺少 `site_id` 而大量跳过。
-- `gfn_site.domain` 物理移除前仍有数据库字段作为回滚窗口。
+- `gfn_site.domain` 物理移除后，collector/backend/admin/Nuxt 均不依赖该列运行。
 
 #### 后续观察
 
-- 生产执行同步脚本后，检查未绑定 `site_id` 的采集域名是否为真实脏数据。
 - 观察 admin 新增/修改采集域名是否能被 collector 下一轮采集自动接入。
-- 若连续一段时间确认 backend、Nuxt、admin、collector 均不再依赖 `gfn_site.domain`，再单独安排字段物理移除。
+- 继续通过 `gfn_collector_domain` 维护采集目标；如需回滚，需要先恢复旧列结构和历史备份数据。
 
 ---
 
