@@ -1,5 +1,6 @@
 logs
-docs
+docs/*
+!docs/roadmap.md
 conf
 data
 bin
