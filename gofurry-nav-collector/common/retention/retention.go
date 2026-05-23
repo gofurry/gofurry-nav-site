@@ -2,6 +2,7 @@ package retention
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,7 +11,17 @@ import (
 
 const DefaultBatchSize = 500
 
-func BuildDeleteSQL(tableName string) string {
+var allowedRetentionTables = map[string]struct{}{
+	"gfn_collector_log_ping":    {},
+	"gfn_collector_log_http":    {},
+	"gfn_collector_log_dns":     {},
+	"gfn_collector_observation": {},
+}
+
+func BuildDeleteSQL(tableName string) (string, error) {
+	if !isAllowedRetentionTable(tableName) {
+		return "", errors.New("retention 表名不在允许列表: " + tableName)
+	}
 	return fmt.Sprintf(`
 WITH doomed AS (
 	SELECT id
@@ -29,10 +40,13 @@ WITH doomed AS (
 )
 DELETE FROM %s target
 USING doomed
-WHERE target.id = doomed.id;`, tableName, tableName)
+WHERE target.id = doomed.id;`, tableName, tableName), nil
 }
 
-func BuildObservationDeleteSQL(tableName string) string {
+func BuildObservationDeleteSQL(tableName string) (string, error) {
+	if !isAllowedRetentionTable(tableName) {
+		return "", errors.New("retention 表名不在允许列表: " + tableName)
+	}
 	return fmt.Sprintf(`
 WITH doomed AS (
 	SELECT id
@@ -52,7 +66,12 @@ WITH doomed AS (
 )
 DELETE FROM %s target
 USING doomed
-WHERE target.id = doomed.id;`, tableName, tableName)
+WHERE target.id = doomed.id;`, tableName, tableName), nil
+}
+
+func isAllowedRetentionTable(tableName string) bool {
+	_, ok := allowedRetentionTables[tableName]
+	return ok
 }
 
 func DeleteByNameLimit(db *gorm.DB, tableName string, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
@@ -64,7 +83,10 @@ func DeleteByNameLimit(db *gorm.DB, tableName string, keepCount int, batchSize i
 	}
 
 	var totalDeleted int64
-	sql := BuildDeleteSQL(tableName)
+	sql, err := BuildDeleteSQL(tableName)
+	if err != nil {
+		return 0, err
+	}
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), batchTimeout)
 		result := db.WithContext(ctx).Exec(sql, keepCount, batchSize)
@@ -96,7 +118,10 @@ func DeleteObservationByProtocolLimit(db *gorm.DB, tableName string, protocol st
 	}
 
 	var totalDeleted int64
-	sql := BuildObservationDeleteSQL(tableName)
+	sql, err := BuildObservationDeleteSQL(tableName)
+	if err != nil {
+		return 0, err
+	}
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), batchTimeout)
 		result := db.WithContext(ctx).Exec(sql, protocol, keepCount, batchSize)

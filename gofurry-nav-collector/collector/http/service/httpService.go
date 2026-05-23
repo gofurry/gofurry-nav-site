@@ -464,10 +464,22 @@ func hostWithoutPort(host string) string {
 	return host
 }
 
+func redactProxyURL(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return "(invalid)"
+	}
+	if parsed.User != nil {
+		parsed.User = url.UserPassword("****", "****")
+	}
+	return parsed.String()
+}
+
 // ============== HTTP模块 - 采集和解析部分 ==============
 
 // 执行 Request 采集
 func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
+	probeStart := time.Now()
 	res.Domain = site.TargetName()
 	res.Url = res.Domain
 	if site.TLS == "1" {
@@ -494,7 +506,27 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	}
 	// 设置代理
 	if site.Proxy == "1" {
-		proxyURL, _ := url.Parse(env.GetServerConfig().Collector.Proxy)
+		proxyRaw := env.GetServerConfig().Collector.Proxy
+		proxyURL, err := url.Parse(proxyRaw)
+		if err != nil || proxyURL.Scheme == "" || proxyURL.Host == "" {
+			res.StartTime = cm.LocalTime(time.Now())
+			res.ResponseTime = time.Since(probeStart).Milliseconds()
+			res.ErrorCode = "http_proxy_config_invalid"
+			if err != nil {
+				res.ErrorMessage = err.Error()
+			} else {
+				res.ErrorMessage = "代理地址缺少 scheme 或 host"
+			}
+			log.ErrorFields(map[string]interface{}{
+				"event":    "proxy_config_invalid",
+				"protocol": "http",
+				"proxy":    redactProxyURL(proxyRaw),
+				"site_id":  site.SiteID,
+				"target":   res.Domain,
+				"url":      res.Url,
+			}, "HTTP 代理配置无效: "+res.ErrorMessage)
+			return
+		}
 		transport.Proxy = http.ProxyURL(proxyURL)
 	}
 

@@ -141,6 +141,7 @@ func InitDNSOnStart() {
 		"event":           "module_init_start",
 		"interval":        time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval) * time.Hour,
 		"protocol":        "dns",
+		"query_workers":   dnsQueryThreadLimit(env.GetServerConfig().Collector.Dns.QueryThread, len(models.RecordTypes)),
 		"resolver":        resolver,
 		"retention_every": time.Hour * 72,
 		"workers":         env.GetServerConfig().Collector.Dns.DnsThread,
@@ -245,13 +246,14 @@ func ParseDNS() {
 
 	start := time.Now()
 	log.InfoFields(map[string]interface{}{
-		"event":       "run_start",
-		"max_depth":   MaxDepth,
-		"protocol":    "dns",
-		"resolver":    resolver,
-		"timeout":     env.GetServerConfig().Collector.ProbeBudget.DNSTimeout(),
-		"ptr_timeout": env.GetServerConfig().Collector.ProbeBudget.PTRTimeout(),
-		"workers":     env.GetServerConfig().Collector.Dns.DnsThread,
+		"event":         "run_start",
+		"max_depth":     MaxDepth,
+		"protocol":      "dns",
+		"resolver":      resolver,
+		"timeout":       env.GetServerConfig().Collector.ProbeBudget.DNSTimeout(),
+		"ptr_timeout":   env.GetServerConfig().Collector.ProbeBudget.PTRTimeout(),
+		"query_workers": dnsQueryThreadLimit(env.GetServerConfig().Collector.Dns.QueryThread, len(models.RecordTypes)),
+		"workers":       env.GetServerConfig().Collector.Dns.DnsThread,
 	}, "DNS 采集运行开始")
 
 	requestList, err := dao.GetDNSDao().GetList()
@@ -277,10 +279,11 @@ func ParseDNS() {
 	}
 
 	log.InfoFields(map[string]interface{}{
-		"event":    "probe_start",
-		"protocol": "dns",
-		"targets":  len(requestList),
-		"workers":  env.GetServerConfig().Collector.Dns.DnsThread,
+		"event":         "probe_start",
+		"protocol":      "dns",
+		"query_workers": dnsQueryThreadLimit(env.GetServerConfig().Collector.Dns.QueryThread, len(models.RecordTypes)),
+		"targets":       len(requestList),
+		"workers":       env.GetServerConfig().Collector.Dns.DnsThread,
 	}, "DNS 探测开始")
 	dnsThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
 	// 遍历站点列表, 每个站点开一个线程执行采集
@@ -547,10 +550,14 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 	domain := site.TargetName()
 
 	// 并行查询每种记录类型
+	queryWorkers := dnsQueryThreadLimit(env.GetServerConfig().Collector.Dns.QueryThread, len(models.RecordTypes))
+	querySem := make(chan struct{}, queryWorkers)
 	for _, rt := range models.RecordTypes {
 		queryMG.Add(1)
 		go func(rt models.RecordType) {
 			defer queryMG.Done()
+			querySem <- struct{}{}
+			defer func() { <-querySem }()
 
 			records, stats, err := queryDNS(domain, rt.Type, resolver, countryDB, cityDB, asnDB, 0)
 			if err != nil {
@@ -589,7 +596,17 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 
 // ============== DNS解析 - 采集和解析部分 ==============
 
-func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader, cityDB *geoip2.Reader, countryDB *geoip2.Reader, depth int) ([]models.DNSRecord, models.DNSStatistics, common.GFError) {
+func dnsQueryThreadLimit(configured int, recordTypeCount int) int {
+	if recordTypeCount <= 0 {
+		return 1
+	}
+	if configured <= 0 || configured > recordTypeCount {
+		return recordTypeCount
+	}
+	return configured
+}
+
+func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Reader, cityDB *geoip2.Reader, asnDB *geoip2.Reader, depth int) ([]models.DNSRecord, models.DNSStatistics, common.GFError) {
 	// 防止递归过深
 	if depth > MaxDepth {
 		return nil, models.DNSStatistics{}, nil

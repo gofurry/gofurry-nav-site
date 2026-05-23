@@ -135,7 +135,7 @@
 
 ### v0.3.1 - Collector 可靠性审计修复
 
-- **状态：** 计划中
+- **状态：** 已完成
 - **范围：** DNS / Ping / Redis / DB / 配置 / 日志
 - **目标：** 修复 2026-05-24 代码审计中发现的可靠性和数据可信度问题，不增加采集强度，不改变旧接口、旧 Redis key、旧表语义。
 
@@ -147,18 +147,18 @@
 
 #### 任务
 
-- [ ] 修复 DNS GeoIP reader 参数顺序，确保 Country / City / ASN reader 不被交换。
-- [ ] 为 DNS GeoIP 查询增加最小单元测试，覆盖 nil reader 降级和参数顺序。
-- [ ] Ping 旧表写入检查错误并记录中文结构化日志。
-- [ ] 缩小 Ping `pingRWLock` 锁范围，只保护共享 Redis 结果 map 更新。
-- [ ] 修复 Redis `HDel` 吞错问题，删除失败必须向调用方返回错误。
-- [ ] 检查 Redis wrapper 中类似 `Get` / `Incr` 的错误处理边界，避免未来误用。
-- [ ] HTTP 代理 URL 解析失败时明确记录 `http_proxy_config_invalid`，不静默继续。
-- [ ] DB 初始化处理 `db.engine.DB()` 返回错误，并优化 DSN 构造/转义边界。
-- [ ] 让 `collector.dns.query_thread` 实际约束单目标 DNS 记录类型查询并发，或在文档中明确废弃。
-- [ ] 修正 `server.mode` yaml tag，减少配置加载阶段绕过 zap 的 stdout 输出。
-- [ ] 为 retention SQL builder 增加表名 allowlist，避免未来误传任意表名。
-- [ ] 为 observation 写入增加中心化 payload 大小保护，防止后续字段扩展时 Redis/DB 负载失控。
+- [x] 修复 DNS GeoIP reader 参数顺序，确保 Country / City / ASN reader 不被交换。
+- [x] 为 DNS GeoIP 查询增加最小单元测试，覆盖 nil reader 降级和查询并发限制。
+- [x] Ping 旧表写入检查错误并记录中文结构化日志。
+- [x] 缩小 Ping `pingRWLock` 锁范围，只保护共享 Redis 结果 map 更新。
+- [x] 修复 Redis `HDel` 吞错问题，删除失败必须向调用方返回错误。
+- [x] 检查 Redis wrapper 中类似 `Get` / `Incr` 的错误处理边界，避免未来误用。
+- [x] HTTP 代理 URL 解析失败时明确记录 `http_proxy_config_invalid`，不静默继续。
+- [x] DB 初始化处理 `db.engine.DB()` 返回错误，并优化 DSN 构造/转义边界。
+- [x] 让 `collector.dns.query_thread` 实际约束单目标 DNS 记录类型查询并发。
+- [x] 修正 `server.mode` yaml tag，减少配置加载阶段绕过 zap 的 stdout 输出。
+- [x] 为 retention SQL builder 增加表名 allowlist，避免未来误传任意表名。
+- [x] 为 observation 写入增加中心化 payload 大小保护，防止后续字段扩展时 Redis/DB 负载失控。
 
 #### 验收标准
 

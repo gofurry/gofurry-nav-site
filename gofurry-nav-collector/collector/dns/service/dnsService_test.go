@@ -18,6 +18,29 @@ func TestLookupGeoASNNilReadersFallsBackToUnknown(t *testing.T) {
 	}
 }
 
+func TestDNSQueryThreadLimit(t *testing.T) {
+	tests := []struct {
+		name            string
+		configured      int
+		recordTypeCount int
+		want            int
+	}{
+		{name: "zero config uses current record type count", configured: 0, recordTypeCount: 8, want: 8},
+		{name: "negative config uses current record type count", configured: -1, recordTypeCount: 8, want: 8},
+		{name: "positive config limits workers", configured: 3, recordTypeCount: 8, want: 3},
+		{name: "too large config does not increase current concurrency", configured: 20, recordTypeCount: 8, want: 8},
+		{name: "empty record types stays safe", configured: 0, recordTypeCount: 0, want: 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := dnsQueryThreadLimit(tt.configured, tt.recordTypeCount); got != tt.want {
+				t.Fatalf("dnsQueryThreadLimit(%d, %d) = %d, want %d", tt.configured, tt.recordTypeCount, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestDetectDNSRiskFlags(t *testing.T) {
 	msg := &dns.Msg{
 		MsgHdr: dns.MsgHdr{Rcode: dns.RcodeNameError},

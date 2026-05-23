@@ -89,7 +89,7 @@ type PingConfig struct {
 type ServerConfig struct {
 	AppName     string `yaml:"app_name"`
 	AppVersion  string `yaml:"app_version"`
-	Mode        string `yaml:"models"`
+	Mode        string `yaml:"mode"`
 	MemoryLimit int    `yaml:"memory_limit"`
 }
 
@@ -185,7 +185,7 @@ func getOrDefault(key string, def string) string {
 }
 
 func FileExists(path string) bool {
-	fmt.Println("check filepath:" + path)
+	traceConfigPath("check filepath:" + path)
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -196,7 +196,7 @@ func FileExists(path string) bool {
 }
 
 func loadYaml(path string, conf interface{}) (err error) {
-	fmt.Println("load config:" + path)
+	traceConfigPath("load config:" + path)
 	if FileExists(path) {
 		fileBytes, err := os.ReadFile(path)
 		if err != nil {
@@ -205,6 +205,12 @@ func loadYaml(path string, conf interface{}) (err error) {
 		return yaml.Unmarshal(fileBytes, conf)
 	}
 	return errors.New("未找到配置文件" + path)
+}
+
+func traceConfigPath(message string) {
+	if os.Getenv("GF_NAV_COLLECTOR_CONFIG_TRACE") == "1" {
+		fmt.Println(message)
+	}
 }
 
 func GetServerConfig() *serverConfig {

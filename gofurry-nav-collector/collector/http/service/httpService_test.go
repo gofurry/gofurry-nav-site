@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/collector/http/models"
+	"github.com/gofurry/gofurry-nav-collector/roof/env"
 )
 
 func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing.T) {
@@ -232,6 +233,30 @@ func TestDetectHTTPSecurityHeaders(t *testing.T) {
 		if !value {
 			t.Fatalf("安全响应头 %s 应为 true", key)
 		}
+	}
+}
+
+func TestPerformRequestReturnsFailureForInvalidProxyConfig(t *testing.T) {
+	oldProxy := env.GetServerConfig().Collector.Proxy
+	env.GetServerConfig().Collector.Proxy = "://bad proxy"
+	t.Cleanup(func() {
+		env.GetServerConfig().Collector.Proxy = oldProxy
+	})
+
+	result := performRequest(models.GfnCollectorDomain{
+		Name:  "example.com",
+		Proxy: "1",
+		TLS:   "1",
+	})
+
+	if result.ErrorCode != "http_proxy_config_invalid" {
+		t.Fatalf("ErrorCode = %q, want http_proxy_config_invalid", result.ErrorCode)
+	}
+	if result.StatusCode != 0 {
+		t.Fatalf("StatusCode = %d, want 0", result.StatusCode)
+	}
+	if result.ErrorMessage == "" {
+		t.Fatal("ErrorMessage should explain invalid proxy config")
 	}
 }
 

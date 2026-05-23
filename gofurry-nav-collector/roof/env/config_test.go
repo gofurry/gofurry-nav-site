@@ -3,6 +3,8 @@ package env
 import (
 	"testing"
 	"time"
+
+	"gopkg.in/yaml.v2"
 )
 
 func TestProbeBudgetDefaults(t *testing.T) {
@@ -109,5 +111,22 @@ func TestCollectorV2ProtocolSwitches(t *testing.T) {
 	}
 	if cfg.ProtocolEnabled("unknown") {
 		t.Fatal("unknown protocol should be disabled")
+	}
+}
+
+func TestServerModeYAMLTag(t *testing.T) {
+	var cfg serverConfig
+	err := yaml.Unmarshal([]byte(`
+server:
+  app_name: "GF-Nav-Collector"
+  app_version: "v1.0.0"
+  mode: "debug"
+  memory_limit: 1
+`), &cfg)
+	if err != nil {
+		t.Fatalf("yaml.Unmarshal() error = %v", err)
+	}
+	if cfg.Server.Mode != "debug" {
+		t.Fatalf("Server.Mode = %q, want debug", cfg.Server.Mode)
 	}
 }

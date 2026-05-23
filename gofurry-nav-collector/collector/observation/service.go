@@ -12,7 +12,10 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 )
 
-const schemaVersion = 1
+const (
+	schemaVersion              = 1
+	maxObservationPayloadBytes = 512 * 1024
+)
 
 func LatestKey(protocol string, siteID int64) string {
 	return fmt.Sprintf("collector:v2:latest:%s:%d", protocol, siteID)
@@ -39,7 +42,7 @@ func SaveIfEnabled(input Input) common.GFError {
 		input.Status = StatusFailure
 	}
 
-	payloadBytes, err := sonic.Marshal(input.Payload)
+	payloadBytes, err := marshalPayload(input.Payload)
 	if err != nil {
 		log.ErrorFields(map[string]interface{}{
 			"event":    "v2_payload_encode_failed",
@@ -49,8 +52,16 @@ func SaveIfEnabled(input Input) common.GFError {
 		}, "v2 observation payload JSON 编码失败: "+err.Error())
 		return common.NewServiceError("v2 observation payload 编码失败")
 	}
-	if len(payloadBytes) == 0 || string(payloadBytes) == "null" {
-		payloadBytes = []byte("{}")
+	if len(payloadBytes) > maxObservationPayloadBytes {
+		log.ErrorFields(map[string]interface{}{
+			"bytes":    len(payloadBytes),
+			"event":    "v2_payload_too_large",
+			"limit":    maxObservationPayloadBytes,
+			"protocol": input.Protocol,
+			"site_id":  input.SiteID,
+			"target":   input.Target,
+		}, "v2 observation payload 超过大小限制，已跳过旁路写入")
+		return common.NewServiceError("v2 observation payload 超过大小限制")
 	}
 
 	var firstErr common.GFError
@@ -136,6 +147,17 @@ func SaveIfEnabled(input Input) common.GFError {
 	}
 
 	return firstErr
+}
+
+func marshalPayload(payload any) ([]byte, error) {
+	payloadBytes, err := sonic.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	if len(payloadBytes) == 0 || string(payloadBytes) == "null" {
+		return []byte("{}"), nil
+	}
+	return payloadBytes, nil
 }
 
 func DeleteByProtocolLimit(protocol string, count string) (int64, common.GFError) {

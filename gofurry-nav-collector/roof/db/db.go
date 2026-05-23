@@ -1,7 +1,9 @@
 package db
 
 import (
-	"fmt"
+	"net"
+	"net/url"
+
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -37,14 +39,17 @@ func (db *orm) loadDBConfig() {
 	dbPassword := env.GetServerConfig().DataBase.DBPassword
 	dbHost := env.GetServerConfig().DataBase.DBHost
 	dbPort := env.GetServerConfig().DataBase.DBPort
-	var url = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s", dbHost, dbPort, dbUser, dbPassword, dbName)
+	dsn := buildPostgresDSN(dbHost, dbPort, dbUser, dbPassword, dbName)
 
-	db.engine, err = gorm.Open(postgres.Open(url))
+	db.engine, err = gorm.Open(postgres.Open(dsn))
 
 	if err != nil {
 		log.Fatal("open database error: " + err.Error())
 	}
-	sqlDB, _ := db.engine.DB()
+	sqlDB, err := db.engine.DB()
+	if err != nil {
+		log.Fatal("get database handle error: " + err.Error())
+	}
 	sqlDB.SetMaxIdleConns(intOrDefault(env.GetServerConfig().DataBase.MaxIdleConns, 100))
 	sqlDB.SetMaxOpenConns(intOrDefault(env.GetServerConfig().DataBase.MaxOpenConns, 1000))
 	sqlDB.SetConnMaxLifetime(secondsOrDefault(env.GetServerConfig().DataBase.ConnMaxLifetimeSeconds, 60))
@@ -55,6 +60,16 @@ func (db *orm) loadDBConfig() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func buildPostgresDSN(host string, port string, user string, password string, dbName string) string {
+	dsn := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(user, password),
+		Host:   net.JoinHostPort(host, port),
+		Path:   "/" + dbName,
+	}
+	return dsn.String()
 }
 
 func (db *orm) DB() *gorm.DB {

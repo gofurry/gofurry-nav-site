@@ -426,14 +426,21 @@ func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock
 			pindSaveRecord.Status = "down"
 		}
 
-		// 开启读写锁
+		// 只在更新共享结果 map 时持有锁，外部存储写入不占用全局锁。
 		pingRWLock.Lock()
-		defer pingRWLock.Unlock()
-		// 更新字典
 		data[ip] = string(jsonResult)
+		pingRWLock.Unlock()
 
 		// 存数据库
-		dao.GetPingDao().Add(pindSaveRecord)
+		if daoErr := dao.GetPingDao().Add(pindSaveRecord); daoErr != nil {
+			log.ErrorFields(map[string]interface{}{
+				"event":    "db_write_failed",
+				"protocol": "ping",
+				"site_id":  target.SiteID,
+				"status":   pindSaveRecord.Status,
+				"target":   ip,
+			}, "Ping 探测结果写入数据库失败: "+daoErr.GetMsg())
+		}
 		payload, errorCode := buildPingObservationPayload(result, pingRecord, pindSaveRecord.Status)
 		saveErr := observation.SaveIfEnabled(observation.Input{
 			SiteID:       target.SiteID,
