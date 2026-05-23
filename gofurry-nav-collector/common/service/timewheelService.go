@@ -21,7 +21,7 @@ func InitTimeWheelOnStart() {
 		"event": "timewheel_started",
 		"slots": 1200,
 		"tick":  100 * time.Millisecond,
-	}, "Time wheel scheduler started")
+	}, "时间轮调度器已启动")
 }
 
 func StartTimeWheel() {
@@ -49,7 +49,7 @@ func RemoveTask(task *timewheel.Task) {
 	}()
 	log.InfoFields(map[string]interface{}{
 		"event": "cron_remove",
-	}, "Cron job removed")
+	}, "定时任务已移除")
 	timeWheel.Remove(task)
 }
 
@@ -58,6 +58,6 @@ func AddCronJob(tick time.Duration, job func()) *timewheel.Task {
 	log.InfoFields(map[string]interface{}{
 		"event":    "cron_add",
 		"interval": tick,
-	}, "Cron job registered")
+	}, "定时任务已注册")
 	return task
 }

@@ -63,7 +63,7 @@ func openGeoDB(dbPath string, fileName string, label string) *geoip2.Reader {
 			"event":    "geoip_open_failed",
 			"path":     filepath.Join(dbPath, fileName),
 			"protocol": "dns",
-		}, "GeoIP database unavailable; DNS geo fields will fall back to Unknown: "+err.Error())
+		}, "GeoIP 数据库不可用，DNS 地理字段将降级为 Unknown: "+err.Error())
 		return nil
 	}
 	log.InfoFields(map[string]interface{}{
@@ -71,7 +71,7 @@ func openGeoDB(dbPath string, fileName string, label string) *geoip2.Reader {
 		"event":    "geoip_opened",
 		"path":     filepath.Join(dbPath, fileName),
 		"protocol": "dns",
-	}, "GeoIP database opened")
+	}, "GeoIP 数据库已打开")
 	return reader
 }
 
@@ -81,7 +81,7 @@ func CloseGeoDB() {
 			"event":    "geoip_close_skipped",
 			"protocol": "dns",
 			"reason":   "not_open",
-		}, "GeoIP database close skipped")
+		}, "GeoIP 数据库未打开，跳过关闭")
 		return
 	}
 	geoDBs.Close()
@@ -89,7 +89,7 @@ func CloseGeoDB() {
 	log.InfoFields(map[string]interface{}{
 		"event":    "geoip_closed",
 		"protocol": "dns",
-	}, "GeoIP databases closed")
+	}, "GeoIP 数据库已关闭")
 }
 
 func (g *GeoDBSet) Close() {
@@ -133,7 +133,7 @@ func InitDNSOnStart() {
 		"resolver":        resolver,
 		"retention_every": time.Hour * 72,
 		"workers":         env.GetServerConfig().Collector.Dns.DnsThread,
-	}, "DNS collector module initialization started")
+	}, "DNS 采集模块初始化开始")
 	geoDBs = InitGeoDB(env.GetServerConfig().Collector.Dns.Geolite2Path)
 
 	//初始化后执行一次 ParseDNS
@@ -146,7 +146,7 @@ func InitDNSOnStart() {
 	log.InfoFields(map[string]interface{}{
 		"event":    "module_init_complete",
 		"protocol": "dns",
-	}, "DNS collector module initialization completed")
+	}, "DNS 采集模块初始化完成")
 }
 
 // 每天清理一次日志表
@@ -166,7 +166,7 @@ func Delete() {
 		"event":      "retention_start",
 		"keep_count": keepCount,
 		"protocol":   "dns",
-	}, "DNS retention cleanup started")
+	}, "DNS 历史日志保留清理开始")
 
 	// 每个域名仅保留 500 条 DNS 记录
 	count, deleteErr := dao.GetDNSDao().DeleteByNum(keepCount)
@@ -177,7 +177,7 @@ func Delete() {
 			"event":      "retention_failed",
 			"keep_count": keepCount,
 			"protocol":   "dns",
-		}, "DNS retention cleanup failed: "+deleteErr.GetMsg())
+		}, "DNS 历史日志保留清理失败: "+deleteErr.GetMsg())
 	} else {
 		log.InfoFields(map[string]interface{}{
 			"deleted":    count,
@@ -185,7 +185,7 @@ func Delete() {
 			"event":      "retention_complete",
 			"keep_count": keepCount,
 			"protocol":   "dns",
-		}, "DNS retention cleanup completed")
+		}, "DNS 历史日志保留清理完成")
 	}
 }
 
@@ -195,16 +195,19 @@ func Delete() {
 func ParseDNS() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive ParseDNS recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "run_recovered",
+				"protocol": "dns",
+			}, fmt.Sprintf("DNS 采集运行触发 panic，已恢复: %v", err))
 		}
 	}()
 	if !dnsRunning.CompareAndSwap(false, true) {
 		log.WarnFields(map[string]interface{}{
 			"event":    "run_skipped",
 			"protocol": "dns",
-			"reason":   "previous_run_running",
+			"reason":   "上一轮采集仍在运行",
 			"status":   "skipped",
-		}, "DNS collection skipped because the previous run is still running")
+		}, "DNS 采集已跳过：上一轮仍在运行")
 		return
 	}
 	defer dnsRunning.Store(false)
@@ -218,7 +221,7 @@ func ParseDNS() {
 		"timeout":     env.GetServerConfig().Collector.ProbeBudget.DNSTimeout(),
 		"ptr_timeout": env.GetServerConfig().Collector.ProbeBudget.PTRTimeout(),
 		"workers":     env.GetServerConfig().Collector.Dns.DnsThread,
-	}, "DNS collection run started")
+	}, "DNS 采集运行开始")
 
 	requestList, err := dao.GetDNSDao().GetList()
 	if err != nil {
@@ -227,7 +230,7 @@ func ParseDNS() {
 			"event":    "run_failed",
 			"protocol": "dns",
 			"stage":    "load_targets",
-		}, "DNS target list load failed: "+err.GetMsg())
+		}, "DNS 目标列表读取失败: "+err.GetMsg())
 		return
 	}
 	// 判空
@@ -236,9 +239,9 @@ func ParseDNS() {
 			"duration": time.Since(start),
 			"event":    "run_complete",
 			"protocol": "dns",
-			"reason":   "empty_target_list",
+			"reason":   "目标列表为空",
 			"targets":  0,
-		}, "DNS collection completed with no targets")
+		}, "DNS 采集完成：没有需要探测的目标")
 		return
 	}
 
@@ -247,7 +250,7 @@ func ParseDNS() {
 		"protocol": "dns",
 		"targets":  len(requestList),
 		"workers":  env.GetServerConfig().Collector.Dns.DnsThread,
-	}, "DNS probes started")
+	}, "DNS 探测开始")
 	dnsThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
 	// 遍历站点列表, 每个站点开一个线程执行采集
 	for _, v := range requestList {
@@ -260,14 +263,18 @@ func ParseDNS() {
 		"event":    "run_complete",
 		"protocol": "dns",
 		"targets":  len(requestList),
-	}, "DNS collection run completed")
+	}, "DNS 采集运行完成")
 }
 
 func getDNSResult(site models.GfnCollectorDomain) func() {
 	return func() {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Error(fmt.Sprintf("receive DnsThread recover: %v", err))
+				log.ErrorFields(map[string]interface{}{
+					"event":    "probe_recovered",
+					"protocol": "dns",
+					"site":     site.Name,
+				}, fmt.Sprintf("DNS 单目标探测触发 panic，已恢复: %v", err))
 			}
 		}()
 
@@ -297,7 +304,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 				"recordset": len(resultMap),
 				"redis_key": resultKey,
 				"site":      siteName,
-			}, "DNS probe result Redis write failed: "+gfError.GetMsg())
+			}, "DNS 探测结果写入 Redis 失败: "+gfError.GetMsg())
 		}
 
 		newRecord := models.GfnCollectorLogDn{
@@ -313,7 +320,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 					"protocol":    "dns",
 					"record_type": k,
 					"site":        siteName,
-				}, "DNS probe result JSON encode failed: "+jsonErr.Error())
+				}, "DNS 探测结果 JSON 编码失败: "+jsonErr.Error())
 			}
 			jsonRecord := string(marshal)
 			if &jsonRecord != nil {
@@ -351,7 +358,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 				"protocol": "dns",
 				"site":     siteName,
 				"status":   newRecord.Status,
-			}, "DNS probe result database write failed: "+daoErr.GetMsg())
+			}, "DNS 探测结果写入数据库失败: "+daoErr.GetMsg())
 		}
 
 	}
@@ -391,7 +398,7 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 					"protocol":    "dns",
 					"record_type": rt.Name,
 					"resolver":    resolver,
-				}, "DNS query failed: "+err.GetMsg())
+				}, "DNS 查询失败: "+err.GetMsg())
 				return
 			}
 

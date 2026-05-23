@@ -39,7 +39,7 @@ func InitPingOnStart() {
 		"protocol":        "ping",
 		"retention_every": time.Hour * 24,
 		"workers":         env.GetServerConfig().Collector.Ping.PingThread,
-	}, "Ping collector module initialization started")
+	}, "Ping 采集模块初始化开始")
 
 	//初始化后执行一次 Ping
 	go Ping()
@@ -51,7 +51,7 @@ func InitPingOnStart() {
 	log.InfoFields(map[string]interface{}{
 		"event":    "module_init_complete",
 		"protocol": "ping",
-	}, "Ping collector module initialization completed")
+	}, "Ping 采集模块初始化完成")
 }
 
 // 每天清理一次日志表
@@ -71,7 +71,7 @@ func Delete() {
 		"event":      "retention_start",
 		"keep_count": keepCount,
 		"protocol":   "ping",
-	}, "Ping retention cleanup started")
+	}, "Ping 历史日志保留清理开始")
 
 	// 每个域名仅保留 5000 条 ping 记录
 	count, deleteErr := dao.GetPingDao().DeleteByNum(keepCount)
@@ -82,7 +82,7 @@ func Delete() {
 			"event":      "retention_failed",
 			"keep_count": keepCount,
 			"protocol":   "ping",
-		}, "Ping retention cleanup failed: "+deleteErr.GetMsg())
+		}, "Ping 历史日志保留清理失败: "+deleteErr.GetMsg())
 	} else {
 		log.InfoFields(map[string]interface{}{
 			"deleted":    count,
@@ -90,7 +90,7 @@ func Delete() {
 			"event":      "retention_complete",
 			"keep_count": keepCount,
 			"protocol":   "ping",
-		}, "Ping retention cleanup completed")
+		}, "Ping 历史日志保留清理完成")
 	}
 }
 
@@ -140,16 +140,19 @@ func addAllIpToPing() common.GFError {
 func Ping() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive Ping recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "run_recovered",
+				"protocol": "ping",
+			}, fmt.Sprintf("Ping 采集运行触发 panic，已恢复: %v", err))
 		}
 	}()
 	if !pingRunning.CompareAndSwap(false, true) {
 		log.WarnFields(map[string]interface{}{
 			"event":    "run_skipped",
 			"protocol": "ping",
-			"reason":   "previous_run_running",
+			"reason":   "上一轮采集仍在运行",
 			"status":   "skipped",
-		}, "Ping collection skipped because the previous run is still running")
+		}, "Ping 采集已跳过：上一轮仍在运行")
 		return
 	}
 	defer pingRunning.Store(false)
@@ -161,7 +164,7 @@ func Ping() {
 		"protocol":   "ping",
 		"result_key": env.GetServerConfig().Collector.Ping.ResultKey,
 		"workers":    env.GetServerConfig().Collector.Ping.PingThread,
-	}, "Ping collection run started")
+	}, "Ping 采集运行开始")
 
 	// 查询数据库所有 IP 存 redis 每次采集都请求记录 热更新
 	err := addAllIpToPing()
@@ -171,7 +174,7 @@ func Ping() {
 			"event":    "run_failed",
 			"protocol": "ping",
 			"stage":    "load_targets_to_redis",
-		}, "Ping collection run failed: "+err.GetMsg())
+		}, "Ping 采集运行失败: "+err.GetMsg())
 		return
 	}
 
@@ -185,7 +188,7 @@ func Ping() {
 			"protocol":  "ping",
 			"redis_key": pingKey,
 			"stage":     "load_targets_from_redis",
-		}, "Ping target list load failed: "+err.GetMsg())
+		}, "Ping 目标列表读取失败: "+err.GetMsg())
 		return
 	}
 	// 判空
@@ -194,9 +197,9 @@ func Ping() {
 			"duration": time.Since(start),
 			"event":    "run_complete",
 			"protocol": "ping",
-			"reason":   "empty_target_list",
+			"reason":   "目标列表为空",
 			"targets":  0,
-		}, "Ping collection completed with no targets")
+		}, "Ping 采集完成：没有需要探测的目标")
 		return
 	}
 
@@ -210,7 +213,7 @@ func Ping() {
 			"protocol":  "ping",
 			"redis_key": resultKey,
 			"stage":     "load_previous_results",
-		}, "Ping previous result load failed: "+err.GetMsg())
+		}, "Ping 历史结果读取失败: "+err.GetMsg())
 		return
 	}
 	// 判空
@@ -225,7 +228,7 @@ func Ping() {
 			"event":    "run_failed",
 			"protocol": "ping",
 			"stage":    "decode_target_list",
-		}, "Ping target list JSON decode failed: "+jsonErr.Error())
+		}, "Ping 目标列表 JSON 解析失败: "+jsonErr.Error())
 		return
 	}
 
@@ -241,7 +244,7 @@ func Ping() {
 		"protocol":         "ping",
 		"targets":          len(pingList),
 		"workers":          env.GetServerConfig().Collector.Ping.PingThread,
-	}, "Ping probes started")
+	}, "Ping 探测开始")
 	pingThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Ping.PingThread)
 	var pingRWLock sync.Mutex
 	// 遍历 IP 列表, 每个 IP 开一个线程执行 Ping
@@ -255,7 +258,7 @@ func Ping() {
 		"event":    "probe_complete",
 		"protocol": "ping",
 		"targets":  len(pingList),
-	}, "Ping probes completed")
+	}, "Ping 探测完成")
 
 	// 删除旧记录中不在站点列表中的部分
 	var deleteList = []string{}
@@ -272,7 +275,7 @@ func Ping() {
 				"protocol":  "ping",
 				"redis_key": resultKey,
 				"targets":   len(deleteList),
-			}, "Ping stale Redis results cleanup failed: "+delErr.GetMsg())
+			}, "Ping 过期 Redis 结果清理失败: "+delErr.GetMsg())
 		}
 		if count > 0 {
 			log.InfoFields(map[string]interface{}{
@@ -280,7 +283,7 @@ func Ping() {
 				"event":     "redis_cleanup_complete",
 				"protocol":  "ping",
 				"redis_key": resultKey,
-			}, "Ping stale Redis results cleanup completed")
+			}, "Ping 过期 Redis 结果清理完成")
 		}
 	}
 	// Ping 结果储存回 redis
@@ -293,7 +296,7 @@ func Ping() {
 			"redis_key": resultKey,
 			"stage":     "save_results",
 			"targets":   len(nowData),
-		}, "Ping result save failed: "+err.GetMsg())
+		}, "Ping 结果保存失败: "+err.GetMsg())
 		return
 	}
 	log.InfoFields(map[string]interface{}{
@@ -302,7 +305,7 @@ func Ping() {
 		"protocol":  "ping",
 		"redis_key": resultKey,
 		"targets":   len(nowData),
-	}, "Ping collection run completed")
+	}, "Ping 采集运行完成")
 }
 
 // ============== Ping解析 - 采集和解析部分 ==============
@@ -345,7 +348,11 @@ func getPingResult(ip string, data map[string]string, pingRWLock *sync.Mutex) fu
 	return func() {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Error(fmt.Sprintf("receive PingThread recover: %v", err))
+				log.ErrorFields(map[string]interface{}{
+					"event":    "probe_recovered",
+					"protocol": "ping",
+					"target":   ip,
+				}, fmt.Sprintf("Ping 单目标探测触发 panic，已恢复: %v", err))
 			}
 		}()
 

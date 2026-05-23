@@ -23,7 +23,7 @@ func InitSchedule() {
 	log.InfoFields(map[string]interface{}{
 		"component": "scheduler",
 		"event":     "init_start",
-	}, "Collector schedule initialization started")
+	}, "采集调度初始化开始")
 	pingService.InitPingOnStart() // ping
 	httpService.InitHTTPOnStart() // http
 	dnsService.InitDNSOnStart()   // dns
@@ -31,13 +31,13 @@ func InitSchedule() {
 		"component": "scheduler",
 		"duration":  time.Since(start),
 		"event":     "init_complete",
-	}, "Collector schedule initialization completed")
+	}, "采集调度初始化完成")
 }
 
 func StopSchedule() {
 	log.InfoFields(map[string]interface{}{
 		"component": "scheduler",
 		"event":     "stop",
-	}, "Collector schedule stopping")
+	}, "采集调度正在停止")
 	dnsService.CloseGeoDB()
 }

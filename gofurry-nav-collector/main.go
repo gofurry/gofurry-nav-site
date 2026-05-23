@@ -93,7 +93,7 @@ func (gf *goFurry) run() {
 		log.InfoFields(map[string]interface{}{
 			"service": common.COMMON_PROJECT_NAME,
 			"version": env.GetServerConfig().Server.AppVersion,
-		}, "Collector service started")
+		}, "采集器服务已启动")
 		schedule.InitSchedule()
 	}()
 }
