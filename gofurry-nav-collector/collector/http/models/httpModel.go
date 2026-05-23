@@ -10,16 +10,19 @@ import (
 // HTTP 采集结果
 type HTTPModel struct {
 	// HTTP 基本信息
-	Domain        string              `json:"domain"`        // 域名
-	Url           string              `json:"url"`           // url
-	StatusCode    int64               `json:"statusCode"`    // 状态码
-	ResponseTime  int64               `json:"responseTime"`  // 响应时间
-	ContentLength int64               `json:"contentLength"` // 页面大小
-	Title         string              `json:"title"`         // 标题
-	Server        string              `json:"server"`        // 服务器类型
-	Redirects     []string            `json:"redirects"`     // 重定向链
-	Headers       map[string][]string `json:"headers"`       // 响应头
-	Meta          map[string]string   `json:"meta"`          // meta 标签
+	Domain          string              `json:"domain"`        // 域名
+	Url             string              `json:"url"`           // url
+	StatusCode      int64               `json:"statusCode"`    // 状态码
+	ResponseTime    int64               `json:"responseTime"`  // 响应时间
+	ContentLength   int64               `json:"contentLength"` // 页面大小
+	Title           string              `json:"title"`         // 标题
+	Server          string              `json:"server"`        // 服务器类型
+	Redirects       []string            `json:"redirects"`     // 重定向链
+	Headers         map[string][]string `json:"headers"`       // 响应头
+	Meta            map[string]string   `json:"meta"`          // meta 标签
+	FinalURL        string              `json:"-"`             // v2 observation 最终 URL
+	ContentType     string              `json:"-"`             // v2 observation Content-Type
+	SecurityHeaders map[string]bool     `json:"-"`             // v2 observation 常见安全响应头是否存在
 
 	// TLS
 	TLSVersion    string    `json:"tlsVersion"`    // TLS 版本

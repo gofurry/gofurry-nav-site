@@ -24,6 +24,15 @@ import (
 
 var requestRunning atomic.Bool
 
+const (
+	maxHTTPPayloadURLLength         = 2048
+	maxHTTPPayloadContentTypeLength = 256
+	maxHTTPPayloadTitleLength       = 256
+	maxHTTPPayloadServerLength      = 256
+	maxHTTPPayloadMetaValueLength   = 512
+	maxHTTPPayloadHeaderValueLength = 512
+)
+
 // ============== HTTP模块 - 初始化部分 ==============
 
 // 初始化
@@ -272,29 +281,7 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 			DurationMS:   result.ResponseTime,
 			ErrorCode:    result.ErrorCode,
 			ErrorMessage: result.ErrorMessage,
-			Payload: map[string]any{
-				"domain":           httpRecord.Domain,
-				"url":              httpRecord.Url,
-				"status_code":      httpRecord.StatusCode,
-				"response_time_ms": result.ResponseTime,
-				"content_length":   httpRecord.ContentLength,
-				"title":            httpRecord.Title,
-				"server":           httpRecord.Server,
-				"redirects":        httpRecord.Redirects,
-				"headers":          httpRecord.Headers,
-				"meta":             httpRecord.Meta,
-				"tls_version":      httpRecord.TLSVersion,
-				"cipher_suite":     httpRecord.CipherSuite,
-				"cert_expiry":      httpRecord.CertExpiry,
-				"cert_days_left":   httpRecord.CertDaysLeft,
-				"cert_issuer":      httpRecord.CertIssuer,
-				"cert_issuer_org":  httpRecord.CertIssuerOrg,
-				"cert_dns_names":   httpRecord.CertDNSNames,
-				"cert_pub_key_alg": httpRecord.CertPubKeyAlg,
-				"cert_sig_alg":     httpRecord.CertSigAlg,
-				"cert_email":       httpRecord.CertEmail,
-				"cert_is_ca":       httpRecord.CertIsCA,
-			},
+			Payload:      buildHTTPObservationPayload(result, httpRecord),
 		})
 		if saveErr != nil {
 			log.WarnFields(map[string]interface{}{
@@ -308,6 +295,107 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 	}
 }
 
+func buildHTTPObservationPayload(result models.HTTPModel, httpRecord models.HTTPSaveModel) map[string]any {
+	finalURL := result.FinalURL
+	if finalURL == "" {
+		finalURL = httpRecord.Url
+	}
+	redirectChain := limitStringSlice(result.Redirects, maxHTTPPayloadURLLength)
+
+	return map[string]any{
+		"domain":           httpRecord.Domain,
+		"url":              httpRecord.Url,
+		"status_code":      httpRecord.StatusCode,
+		"response_time_ms": result.ResponseTime,
+		"content_length":   httpRecord.ContentLength,
+		"title":            limitString(httpRecord.Title, maxHTTPPayloadTitleLength),
+		"server":           limitString(httpRecord.Server, maxHTTPPayloadServerLength),
+		"redirects":        redirectChain,
+		"headers":          limitHeaderValues(httpRecord.Headers, maxHTTPPayloadHeaderValueLength),
+		"meta":             limitStringMapValues(httpRecord.Meta, maxHTTPPayloadMetaValueLength),
+		"redirect_chain":   redirectChain,
+		"redirect_count":   len(result.Redirects),
+		"final_url":        limitString(finalURL, maxHTTPPayloadURLLength),
+		"content_type":     limitString(result.ContentType, maxHTTPPayloadContentTypeLength),
+		"security_headers": securityHeadersWithDefaults(result.SecurityHeaders),
+		"tls_version":      httpRecord.TLSVersion,
+		"cipher_suite":     httpRecord.CipherSuite,
+		"cert_expiry":      httpRecord.CertExpiry,
+		"cert_days_left":   httpRecord.CertDaysLeft,
+		"cert_issuer":      httpRecord.CertIssuer,
+		"cert_issuer_org":  httpRecord.CertIssuerOrg,
+		"cert_dns_names":   httpRecord.CertDNSNames,
+		"cert_pub_key_alg": httpRecord.CertPubKeyAlg,
+		"cert_sig_alg":     httpRecord.CertSigAlg,
+		"cert_email":       httpRecord.CertEmail,
+		"cert_is_ca":       httpRecord.CertIsCA,
+	}
+}
+
+func limitString(value string, limit int) string {
+	if limit <= 0 {
+		return ""
+	}
+	if len([]rune(value)) <= limit {
+		return value
+	}
+	return string([]rune(value)[:limit])
+}
+
+func limitStringSlice(values []string, limit int) []string {
+	if values == nil {
+		return nil
+	}
+	limited := make([]string, 0, len(values))
+	for _, value := range values {
+		limited = append(limited, limitString(value, limit))
+	}
+	return limited
+}
+
+func limitStringMapValues(values map[string]string, limit int) map[string]string {
+	if values == nil {
+		return nil
+	}
+	limited := make(map[string]string, len(values))
+	for key, value := range values {
+		limited[key] = limitString(value, limit)
+	}
+	return limited
+}
+
+func limitHeaderValues(values map[string][]string, limit int) map[string][]string {
+	if values == nil {
+		return nil
+	}
+	limited := make(map[string][]string, len(values))
+	for key, headerValues := range values {
+		limited[key] = limitStringSlice(headerValues, limit)
+	}
+	return limited
+}
+
+func detectHTTPSecurityHeaders(header http.Header) map[string]bool {
+	return map[string]bool{
+		"strict_transport_security": header.Get("Strict-Transport-Security") != "",
+		"content_security_policy":   header.Get("Content-Security-Policy") != "",
+		"x_frame_options":           header.Get("X-Frame-Options") != "",
+		"x_content_type_options":    header.Get("X-Content-Type-Options") != "",
+		"referrer_policy":           header.Get("Referrer-Policy") != "",
+		"permissions_policy":        header.Get("Permissions-Policy") != "",
+	}
+}
+
+func securityHeadersWithDefaults(values map[string]bool) map[string]bool {
+	defaults := detectHTTPSecurityHeaders(http.Header{})
+	for key, value := range values {
+		if _, ok := defaults[key]; ok {
+			defaults[key] = value
+		}
+	}
+	return defaults
+}
+
 // ============== HTTP模块 - 采集和解析部分 ==============
 
 // 执行 Request 采集
@@ -319,9 +407,11 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	} else {
 		res.Url = "http://" + res.Url
 	}
+	res.FinalURL = res.Url
 	res.Meta = make(map[string]string)
 	res.Headers = make(map[string][]string)
 	res.Redirects = []string{}
+	res.SecurityHeaders = securityHeadersWithDefaults(nil)
 	probeBudget := env.GetServerConfig().Collector.ProbeBudget
 
 	transport := &http.Transport{
@@ -372,6 +462,8 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.StartTime = cm.LocalTime(time.Now())
 	resp, err := client.Do(req)
 	if err != nil {
+		res.ResponseTime = time.Since(start).Milliseconds()
+		res.Redirects = redirects
 		res.ErrorCode = "http_probe_failed"
 		res.ErrorMessage = err.Error()
 		log.WarnFields(map[string]interface{}{
@@ -388,6 +480,11 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.ResponseTime = time.Since(start).Milliseconds()
 	res.StatusCode = int64(resp.StatusCode)
 	res.Redirects = redirects
+	if resp.Request != nil && resp.Request.URL != nil {
+		res.FinalURL = resp.Request.URL.String()
+	}
+	res.ContentType = resp.Header.Get("Content-Type")
+	res.SecurityHeaders = detectHTTPSecurityHeaders(resp.Header)
 
 	for _, v := range models.CommonHeaders {
 		if val := resp.Header.Values(v); len(val) > 0 {

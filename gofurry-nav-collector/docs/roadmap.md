@@ -114,9 +114,9 @@
 - [x] Ping v2 payload 增加 `icmp_status`、`loss_rate`、`avg_rtt_ms`、`error_code`、`duration_ms`。
 - [ ] Ping 失败只影响健康评分，不单独判定站点 down。
 - [ ] 评估 TCP connect fallback，但默认关闭。
-- [ ] HTTP v2 增加 redirect chain、content type、常见安全 header 是否存在。
+- [x] HTTP v2 增加 redirect chain、content type、常见安全 header 是否存在。
 - [ ] 评估 HEAD-first 模式，必须放在配置开关后，默认先保持当前 GET 行为。
-- [ ] HTTP title/meta/header 字符串限制长度，并确保后端/Nuxt 按纯文本展示。
+- [x] HTTP title/meta/header 字符串限制长度，并确保后端/Nuxt 按纯文本展示。
 - [ ] TLS 拆分 `cert_collected` 与 `cert_verified`。
 - [ ] TLS 先尝试正常校验，失败后再受控地采集证书详情，并记录 `verify_error`。
 - [ ] DNS 将 `hijacked` 语义替换为 `risk_flags`，例如 `private_ip`、`low_ttl`、`resolver_timeout`。
