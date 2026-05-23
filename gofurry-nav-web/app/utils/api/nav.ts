@@ -21,7 +21,7 @@ export function getPing(): Promise<Record<string, string>> {
 
 // 增加浏览量
 export function addCount() {
-    navRequest.get(`/stat/add/count`)
+    navRequest.get(`/nav/stat/add/count`)
 }
 
 // 搜索建议
@@ -68,5 +68,5 @@ export function getImageUrl(type: string): Promise<string> {
 }
 
 export function getChangeLog(): Promise<changelogResp[]> {
-    return navRequest.get('/site/changelog')
+    return navRequest.get('/nav/site/changelog')
 }

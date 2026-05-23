@@ -16,8 +16,7 @@ import (
  */
 
 func gameApi(g fiber.Router) {
-	g.Get("/info", game.GameApi.GetGameInfo) // 获取单条游戏的基础信息
-	//g.Get("/info/intro", game.GameApi.GetGameIntro)     // 获取游戏内容详情
+	g.Get("/info", game.GameApi.GetGameInfo)                     // 获取单条游戏的基础信息
 	g.Get("/info/list", game.GameApi.GetGameList)                // 获取前 num 条游戏记录
 	g.Get("/info/main", game.GameApi.GetGameMainList)            // 获取首页展示数据
 	g.Get("/panel/main", game.GameApi.GetPanelMainList)          // 获取首页面板数据
@@ -33,6 +32,11 @@ func gameApi(g fiber.Router) {
 	g.Get("/tag/list", game.GameApi.GetTagList) // 获取标签列表
 
 	g.Get("/creator", game.GameApi.GetGameCreator) // 获取相关开发者列表
+
+	recommendApi(g.Group("/recommend"))
+	searchApi(g.Group("/search"))
+	reviewApi(g.Group("/review"))
+	prizeApi(g.Group("/prize"))
 }
 
 func recommendApi(g fiber.Router) {
@@ -42,13 +46,13 @@ func recommendApi(g fiber.Router) {
 	// 优点: 存储小 速度快 无冷启动 无需用户行为数据
 	// 缺点: 需要传入初始物品, 特征值永远为静态, 每次推荐相同
 	// 实现重点: 余弦相似度 特征提取-独热编码
-	g.Get("/game/CBF", recommend.RecommendApi.RecommendByCBF)     // 用 CBF 返回游戏记录
-	g.Get("/game/random", recommend.RecommendApi.GetRandomGameID) // 返回一个随机的游戏记录 ID
+	g.Get("/CBF", recommend.RecommendApi.RecommendByCBF)     // 用 CBF 返回游戏记录
+	g.Get("/random", recommend.RecommendApi.GetRandomGameID) // 返回一个随机的游戏记录 ID
 }
 
 func searchApi(g fiber.Router) {
-	g.Post("/game/simple", search.SearchApi.SimpleSearch) // 简易搜索
-	g.Post("/game/page", search.SearchApi.PageSearch)     // 复杂查询
+	g.Post("/simple", search.SearchApi.SimpleSearch) // 简易搜索
+	g.Post("/page", search.SearchApi.PageSearch)     // 复杂查询
 }
 
 func reviewApi(g fiber.Router) {

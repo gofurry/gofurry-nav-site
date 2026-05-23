@@ -20,7 +20,6 @@ var configuration = new(serverConfig)
 type serverConfig struct {
 	ClusterId  int              `yaml:"cluster_id"`
 	Server     ServerConfig     `yaml:"server"`
-	Key        KeyConfig        `yaml:"key"`
 	DataBase   DataBaseConfig   `yaml:"database"`
 	Log        LogConfig        `yaml:"log"`
 	Redis      RedisConfig      `yaml:"redis"`
@@ -94,10 +93,7 @@ type SwaggerConfig struct {
 }
 
 type ThreadConfig struct {
-	WsStatusReceiveThread int `yaml:"ws_status_receive_thread"`
-	WsSubscribeSendCache  int `yaml:"ws_subscribe_send_cache"`
-	SteamAppInfoThread    int `yaml:"steam_app_info_thread"`
-	EventPublishThread    int `yaml:"event_publish_thread"`
+	EventPublishThread int `yaml:"event_publish_thread"`
 }
 
 type RedisConfig struct {
@@ -115,16 +111,18 @@ type LogConfig struct {
 }
 
 type DataBaseConfig struct {
-	DBName     string `yaml:"db_name"`
-	DBUsername string `yaml:"db_username"`
-	DBPassword string `yaml:"db_password"`
-	DBHost     string `yaml:"db_host"`
-	DBPort     string `yaml:"db_port"`
+	DBName                 string `yaml:"db_name"`
+	DBUsername             string `yaml:"db_username"`
+	DBPassword             string `yaml:"db_password"`
+	DBHost                 string `yaml:"db_host"`
+	DBPort                 string `yaml:"db_port"`
+	MaxOpenConns           int    `yaml:"max_open_conns"`
+	MaxIdleConns           int    `yaml:"max_idle_conns"`
+	ConnMaxLifetimeSeconds int    `yaml:"conn_max_lifetime_seconds"`
+	ConnMaxIdleTimeSeconds int    `yaml:"conn_max_idle_time_seconds"`
 }
 
 type ServerConfig struct {
-	AppName       string `yaml:"app_name"`
-	AppVersion    string `yaml:"app_version"`
 	Mode          string `yaml:"mode"`
 	IPAddress     string `yaml:"ip_address"`
 	Port          string `yaml:"port"`
@@ -132,13 +130,6 @@ type ServerConfig struct {
 	GCPercent     int    `yaml:"gc_percent"`
 	Network       string `yaml:"network"`
 	EnablePrefork bool   `yaml:"enable_prefork"`
-}
-
-type KeyConfig struct {
-	LoginPrivate string `yaml:"login_private"`
-	LoginPublic  string `yaml:"login_public"`
-	TlsKey       string `yaml:"tls_key"`
-	TlsPem       string `yaml:"tls_pem"`
 }
 
 func InitServerConfig(projectName string) {
@@ -180,14 +171,6 @@ func InitConfig(projectName string, fileName string, conf interface{}) {
 		fmt.Println("can not find any " + fileName + " file")
 		panic("can not find any " + fileName + " file")
 	}
-}
-
-func getOrDefault(key string, def string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return def
-	}
-	return value
 }
 
 func FileExists(path string) bool {

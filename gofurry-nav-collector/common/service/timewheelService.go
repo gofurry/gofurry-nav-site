@@ -7,7 +7,6 @@ package service
  */
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/common/log"
@@ -18,7 +17,11 @@ var timeWheel *timewheel.TimeWheel
 
 func InitTimeWheelOnStart() {
 	StartTimeWheel()
-	log.Info("StartTimeWheel finish")
+	log.InfoFields(map[string]interface{}{
+		"event": "timewheel_started",
+		"slots": 1200,
+		"tick":  100 * time.Millisecond,
+	}, "时间轮调度器已启动")
 }
 
 func StartTimeWheel() {
@@ -39,15 +42,22 @@ func Stop() {
 func RemoveTask(task *timewheel.Task) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(err)
+			log.ErrorFields(map[string]interface{}{
+				"event": "cron_remove_recovered",
+			}, err)
 		}
 	}()
-	log.Info(fmt.Sprintf("remove Cronn Job: %v", task))
+	log.InfoFields(map[string]interface{}{
+		"event": "cron_remove",
+	}, "定时任务已移除")
 	timeWheel.Remove(task)
 }
 
 func AddCronJob(tick time.Duration, job func()) *timewheel.Task {
 	task := timeWheel.AddCron(tick, job)
-	log.Info(fmt.Sprintf("AddOrUpdate Cron Job: %v", task))
+	log.InfoFields(map[string]interface{}{
+		"event":    "cron_add",
+		"interval": tick,
+	}, "定时任务已注册")
 	return task
 }

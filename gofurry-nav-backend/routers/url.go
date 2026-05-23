@@ -33,8 +33,7 @@ func navApi(g fiber.Router) {
 	g.Get("/site/getSitePingRecord", site.SitePageApi.GetSitePingRecord) // 获取单个站点的 Ping 记录
 	g.Get("/site/getSiteHttpRecord", site.SitePageApi.GetSiteHttpRecord) // 获取单个站点的 HTTP 记录
 	g.Get("/site/getSiteDnsRecord", site.SitePageApi.GetSiteDnsRecord)   // 获取单个站点的 DNS 记录
-}
 
-func siteApi(g fiber.Router) {
-	g.Get("/changelog", siteCommon.SiteApi.GetSiteChangeLog) // 更新公告
+	// 站点公共信息
+	g.Get("/site/changelog", siteCommon.SiteApi.GetSiteChangeLog) // 更新公告
 }

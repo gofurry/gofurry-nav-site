@@ -46,10 +46,10 @@ export default defineEventHandler(async (event) => {
   ])
 
   const [sites, games] = await Promise.all([
-    $fetch<ApiResult<SiteRecord[]>>('/api/nav/page/site/list', {
+    $fetch<ApiResult<SiteRecord[]>>('/api/v1/nav/page/site/list', {
       query: { lang: 'zh' }
     }).then((res) => res.code === 1 ? res.data : []).catch(() => []),
-    $fetch<ApiResult<GameListPayload>>('/api/game/info/list', {
+    $fetch<ApiResult<GameListPayload>>('/api/v1/game/info/list', {
       query: { num: '9999', lang: 'zh' }
     }).then((res) => res.code === 1 ? res.data : []).catch(() => [])
   ])

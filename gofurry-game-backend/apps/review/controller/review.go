@@ -23,7 +23,7 @@ func init() {
 // @Produce json
 // @Param body body models.AnonymousReviewRequest true "请求body"
 // @Success 200 {object} common.ResultData
-// @Router /api/review/anonymous [Post]
+// @Router /api/v1/game/review/anonymous [Post]
 func (api *reviewApi) AddAnonymousReview(c fiber.Ctx) error {
 	req := models.AnonymousReviewRequest{}
 	if err := c.Bind().Body(&req); err != nil {
@@ -45,7 +45,7 @@ func (api *reviewApi) AddAnonymousReview(c fiber.Ctx) error {
 // @Produce json
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.AnonymousReviewResponse
-// @Router /api/review/latest [Get]
+// @Router /api/v1/game/review/latest [Get]
 func (api *reviewApi) GetLatestReviewList(c fiber.Ctx) error {
 	lang := c.Query("lang", "zh")
 	data, err := service.GetReviewService().GetLatestReviewList(lang)

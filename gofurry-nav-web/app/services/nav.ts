@@ -22,7 +22,7 @@ export function getPing(): Promise<Record<string, string>> {
 }
 
 export function addCount(): Promise<unknown> {
-  return useApi('nav')('/stat/add/count')
+  return useApi('nav')('/nav/stat/add/count')
 }
 
 export function getSearchSuggestion(engine: 'baidu' | 'bing' | 'google' | 'bilibili', keyword: string): Promise<string[]> {
@@ -54,5 +54,5 @@ export function getImageUrl(type: string): Promise<string> {
 }
 
 export function getChangeLog(): Promise<changelogResp[]> {
-  return useApi('nav')('/site/changelog')
+  return useApi('nav')('/nav/site/changelog')
 }

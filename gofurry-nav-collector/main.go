@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"runtime/debug"
 
@@ -91,11 +90,15 @@ func (gf *goFurry) run() {
 	// 启动 collector
 	go func() {
 		// 初始化 collector
-		fmt.Println("gf-nav-collector已启动...")
+		log.InfoFields(map[string]interface{}{
+			"service": common.COMMON_PROJECT_NAME,
+			"version": env.GetServerConfig().Server.AppVersion,
+		}, "采集器服务已启动")
 		schedule.InitSchedule()
 	}()
 }
 
 func (gf *goFurry) Stop(s service.Service) error {
+	schedule.StopSchedule()
 	return nil
 }

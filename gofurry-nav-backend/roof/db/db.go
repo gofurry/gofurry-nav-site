@@ -45,10 +45,10 @@ func (db *orm) loadDBConfig() {
 	}
 
 	sqlDB, _ := db.engine.DB()
-	sqlDB.SetMaxIdleConns(100)                 // 设置空闲连接池中连接的最大数量
-	sqlDB.SetMaxOpenConns(1000)                // 设置打开数据库连接的最大数量
-	sqlDB.SetConnMaxLifetime(60 * time.Second) // 设置了可以重新使用连接的最大时间
-	sqlDB.SetConnMaxIdleTime(30 * time.Second) // 连接最大空闲时间
+	sqlDB.SetMaxIdleConns(intOrDefault(pgsql.MaxIdleConns, 100))                 // 设置空闲连接池中连接的最大数量
+	sqlDB.SetMaxOpenConns(intOrDefault(pgsql.MaxOpenConns, 1000))                // 设置打开数据库连接的最大数量
+	sqlDB.SetConnMaxLifetime(secondsOrDefault(pgsql.ConnMaxLifetimeSeconds, 60)) // 设置了可以重新使用连接的最大时间
+	sqlDB.SetConnMaxIdleTime(secondsOrDefault(pgsql.ConnMaxIdleTimeSeconds, 30)) // 连接最大空闲时间
 
 	err = sqlDB.Ping()
 	if err != nil {
@@ -82,4 +82,15 @@ func (db *orm) Close() {
 
 	db.engine = nil
 	slog.Info("数据库连接池已关闭")
+}
+
+func intOrDefault(value int, def int) int {
+	if value > 0 {
+		return value
+	}
+	return def
+}
+
+func secondsOrDefault(value int, def int) time.Duration {
+	return time.Duration(intOrDefault(value, def)) * time.Second
 }

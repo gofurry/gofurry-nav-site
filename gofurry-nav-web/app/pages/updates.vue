@@ -82,7 +82,7 @@ const loading = ref(false)
 const loadFailedText = 'Failed to load changelog.'
 
 async function fetchMarkdown(url: string) {
-  return await $fetch<string>('/api/site/changelog/content', {
+  return await $fetch<string>('/api/v1/nav/site/changelog/content', {
     query: { url },
     responseType: 'text',
   })

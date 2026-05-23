@@ -21,7 +21,7 @@ func init() {
 // @Accept json
 // @Produce json
 // @Success 200 {object} []models.ChangeLogVo
-// @Router /api/site/changelog [Get]
+// @Router /api/v1/nav/site/changelog [Get]
 func (api *siteApi) GetSiteChangeLog(c fiber.Ctx) error {
 	data, err := service.GetSiteService().GetChangeLog()
 	if err != nil {

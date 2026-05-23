@@ -39,15 +39,15 @@ export function getMoreLatestGameNews(lang: string): Promise<NewsBaseModel[]> {
 }
 
 export function getRandomGame(): Promise<string> {
-  return useApi('game')('/recommend/game/random')
+  return useApi('game')('/game/recommend/random')
 }
 
 export function getSearchSimple(lang: string, txt: string): Promise<SearchItemModel[]> {
-  return useApi('game')('/search/game/simple', { method: 'POST', body: { txt, lang } })
+  return useApi('game')('/game/search/simple', { method: 'POST', body: { txt, lang } })
 }
 
 export function getLatestReview(): Promise<AnonymousReviewModel[]> {
-  return useApi('game')('/review/latest')
+  return useApi('game')('/game/review/latest')
 }
 
 export function getTagList(lang: string): Promise<GameTagRecord[]> {
@@ -55,7 +55,7 @@ export function getTagList(lang: string): Promise<GameTagRecord[]> {
 }
 
 export function searchGameAdvanced(query: SearchPageQueryRequest, lang: string): Promise<SearchPageResponse> {
-  return useApi('game')('/search/game/page', { method: 'POST', body: { ...query, lang } })
+  return useApi('game')('/game/search/page', { method: 'POST', body: { ...query, lang } })
 }
 
 export function getGameBaseInfo(id: string, lang: string): Promise<GameBaseInfoResponse> {
@@ -67,7 +67,7 @@ export function getGameRemark(id: string): Promise<RemarkResponse> {
 }
 
 export function getRecommendedGame(id: string, lang: string): Promise<RecommendedModel[]> {
-  return useApi('game')('/recommend/game/CBF', { query: { id, lang } })
+  return useApi('game')('/game/recommend/CBF', { query: { id, lang } })
 }
 
 export function getGameCreator(lang: string): Promise<CreatorResponse[]> {
@@ -75,7 +75,7 @@ export function getGameCreator(lang: string): Promise<CreatorResponse[]> {
 }
 
 export function commitComment(query: CommentReq): Promise<ApiResult<string>> {
-  return $fetch('/review/anonymous', {
+  return $fetch('/game/review/anonymous', {
     baseURL: useRuntimeConfig().public.gameApiBase,
     credentials: 'include',
     method: 'POST',
@@ -84,11 +84,11 @@ export function commitComment(query: CommentReq): Promise<ApiResult<string>> {
 }
 
 export function getLottery(): Promise<LotteryResp> {
-  return useApi('game')('/prize/info')
+  return useApi('game')('/game/prize/info')
 }
 
 export function getLotteryParticipation(query: LotteryReq): Promise<ApiResult<string>> {
-  return $fetch('/prize/participation', {
+  return $fetch('/game/prize/participation', {
     baseURL: useRuntimeConfig().public.gameApiBase,
     credentials: 'include',
     method: 'POST',

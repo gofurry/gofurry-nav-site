@@ -1,10 +1,13 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"net"
+	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -16,7 +19,6 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/common/util"
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"github.com/miekg/dns"
-	_ "github.com/miekg/dns"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/sourcegraph/conc/pool"
 )
@@ -29,9 +31,7 @@ const (
 )
 
 // 按域名并行查 加锁
-var dnsThread = pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
-var dnsRWLock sync.RWMutex
-var wg sync.WaitGroup
+var dnsRunning atomic.Bool
 
 // 缓存 IP
 var geoCache sync.Map                        // geoCache 缓存 IP 的 GeoIP/ASN 查询结果
@@ -39,6 +39,80 @@ var ptrCache sync.Map                        // ptrCache 缓存 IP 的反向 PTR
 var ptrSem = make(chan struct{}, PTRWorkers) // ptrSem 用于限制 PTR 查询并发
 
 var resolver = env.GetServerConfig().Collector.Dns.Resolver
+var geoDBs *GeoDBSet
+
+type GeoDBSet struct {
+	Country *geoip2.Reader
+	City    *geoip2.Reader
+	ASN     *geoip2.Reader
+}
+
+func InitGeoDB(dbPath string) *GeoDBSet {
+	return &GeoDBSet{
+		Country: openGeoDB(dbPath, "GeoLite2-Country.mmdb", "Country"),
+		City:    openGeoDB(dbPath, "GeoLite2-City.mmdb", "City"),
+		ASN:     openGeoDB(dbPath, "GeoLite2-ASN.mmdb", "ASN"),
+	}
+}
+
+func openGeoDB(dbPath string, fileName string, label string) *geoip2.Reader {
+	reader, err := geoip2.Open(filepath.Join(dbPath, fileName))
+	if err != nil {
+		log.WarnFields(map[string]interface{}{
+			"db":       label,
+			"event":    "geoip_open_failed",
+			"path":     filepath.Join(dbPath, fileName),
+			"protocol": "dns",
+		}, "GeoIP 数据库不可用，DNS 地理字段将降级为 Unknown: "+err.Error())
+		return nil
+	}
+	log.InfoFields(map[string]interface{}{
+		"db":       label,
+		"event":    "geoip_opened",
+		"path":     filepath.Join(dbPath, fileName),
+		"protocol": "dns",
+	}, "GeoIP 数据库已打开")
+	return reader
+}
+
+func CloseGeoDB() {
+	if geoDBs == nil {
+		log.InfoFields(map[string]interface{}{
+			"event":    "geoip_close_skipped",
+			"protocol": "dns",
+			"reason":   "not_open",
+		}, "GeoIP 数据库未打开，跳过关闭")
+		return
+	}
+	geoDBs.Close()
+	geoDBs = nil
+	log.InfoFields(map[string]interface{}{
+		"event":    "geoip_closed",
+		"protocol": "dns",
+	}, "GeoIP 数据库已关闭")
+}
+
+func (g *GeoDBSet) Close() {
+	if g == nil {
+		return
+	}
+	if g.Country != nil {
+		_ = g.Country.Close()
+	}
+	if g.City != nil {
+		_ = g.City.Close()
+	}
+	if g.ASN != nil {
+		_ = g.ASN.Close()
+	}
+}
+
+func currentGeoDBs() *GeoDBSet {
+	if geoDBs != nil {
+		return geoDBs
+	}
+	return &GeoDBSet{}
+}
 
 // ============== DNS解析 - 初始化部分 ==============
 
@@ -46,10 +120,21 @@ var resolver = env.GetServerConfig().Collector.Dns.Resolver
 func InitDNSOnStart() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive InitDnsOnStart recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "init_recovered",
+				"protocol": "dns",
+			}, err)
 		}
 	}()
-	fmt.Println("DNS 模块初始化开始...")
+	log.InfoFields(map[string]interface{}{
+		"event":           "module_init_start",
+		"interval":        time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval) * time.Hour,
+		"protocol":        "dns",
+		"resolver":        resolver,
+		"retention_every": time.Hour * 72,
+		"workers":         env.GetServerConfig().Collector.Dns.DnsThread,
+	}, "DNS 采集模块初始化开始")
+	geoDBs = InitGeoDB(env.GetServerConfig().Collector.Dns.Geolite2Path)
 
 	//初始化后执行一次 ParseDNS
 	go ParseDNS()
@@ -58,23 +143,49 @@ func InitDNSOnStart() {
 	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval)*time.Hour, ParseDNS)
 	cs.AddCronJob(72*time.Hour, Delete)
 
-	fmt.Println("DNS 模块初始化结束...")
+	log.InfoFields(map[string]interface{}{
+		"event":    "module_init_complete",
+		"protocol": "dns",
+	}, "DNS 采集模块初始化完成")
 }
 
 // 每天清理一次日志表
 func Delete() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive Ping Delete recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "retention_recovered",
+				"protocol": "dns",
+			}, err)
 		}
 	}()
 
+	start := time.Now()
+	keepCount := env.GetServerConfig().Collector.Dns.LogCount
+	log.InfoFields(map[string]interface{}{
+		"event":      "retention_start",
+		"keep_count": keepCount,
+		"protocol":   "dns",
+	}, "DNS 历史日志保留清理开始")
+
 	// 每个域名仅保留 500 条 DNS 记录
-	count, deleteErr := dao.GetDNSDao().DeleteByNum(env.GetServerConfig().Collector.Dns.LogCount)
+	count, deleteErr := dao.GetDNSDao().DeleteByNum(keepCount)
 	if deleteErr != nil {
-		log.Error("删除多余DNS记录失败: ", deleteErr.GetMsg())
+		log.ErrorFields(map[string]interface{}{
+			"deleted":    count,
+			"duration":   time.Since(start),
+			"event":      "retention_failed",
+			"keep_count": keepCount,
+			"protocol":   "dns",
+		}, "DNS 历史日志保留清理失败: "+deleteErr.GetMsg())
 	} else {
-		log.Info("删除多余DNS记录成功, 共删除: ", count)
+		log.InfoFields(map[string]interface{}{
+			"deleted":    count,
+			"duration":   time.Since(start),
+			"event":      "retention_complete",
+			"keep_count": keepCount,
+			"protocol":   "dns",
+		}, "DNS 历史日志保留清理完成")
 	}
 }
 
@@ -84,69 +195,92 @@ func Delete() {
 func ParseDNS() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive ParseDNS recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "run_recovered",
+				"protocol": "dns",
+			}, fmt.Sprintf("DNS 采集运行触发 panic，已恢复: %v", err))
 		}
 	}()
+	if !dnsRunning.CompareAndSwap(false, true) {
+		log.WarnFields(map[string]interface{}{
+			"event":    "run_skipped",
+			"protocol": "dns",
+			"reason":   "上一轮采集仍在运行",
+			"status":   "skipped",
+		}, "DNS 采集已跳过：上一轮仍在运行")
+		return
+	}
+	defer dnsRunning.Store(false)
+
+	start := time.Now()
+	log.InfoFields(map[string]interface{}{
+		"event":       "run_start",
+		"max_depth":   MaxDepth,
+		"protocol":    "dns",
+		"resolver":    resolver,
+		"timeout":     env.GetServerConfig().Collector.ProbeBudget.DNSTimeout(),
+		"ptr_timeout": env.GetServerConfig().Collector.ProbeBudget.PTRTimeout(),
+		"workers":     env.GetServerConfig().Collector.Dns.DnsThread,
+	}, "DNS 采集运行开始")
 
 	requestList, err := dao.GetDNSDao().GetList()
 	if err != nil {
-		log.Error("Request 获取站点列表失败: " + err.GetMsg())
+		log.ErrorFields(map[string]interface{}{
+			"duration": time.Since(start),
+			"event":    "run_failed",
+			"protocol": "dns",
+			"stage":    "load_targets",
+		}, "DNS 目标列表读取失败: "+err.GetMsg())
 		return
 	}
 	// 判空
-	if cap(requestList) < 1 || len(requestList) < 1 {
-		log.Info("Request 站点列表为空")
+	if len(requestList) < 1 {
+		log.InfoFields(map[string]interface{}{
+			"duration": time.Since(start),
+			"event":    "run_complete",
+			"protocol": "dns",
+			"reason":   "目标列表为空",
+			"targets":  0,
+		}, "DNS 采集完成：没有需要探测的目标")
 		return
 	}
 
-	log.Info("DNS 采集开始")
+	log.InfoFields(map[string]interface{}{
+		"event":    "probe_start",
+		"protocol": "dns",
+		"targets":  len(requestList),
+		"workers":  env.GetServerConfig().Collector.Dns.DnsThread,
+	}, "DNS 探测开始")
+	dnsThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
 	// 遍历站点列表, 每个站点开一个线程执行采集
 	for _, v := range requestList {
-		wg.Add(1)
 		dnsThread.Go(getDNSResult(v))
 	}
 	// 等待所有采集和解析执行完毕
-	wg.Wait()
-	log.Info("DNS 采集结束")
-
-	// 每个域名仅保留 500 条 DNS 记录
-	count, deleteErr := dao.GetDNSDao().DeleteByNum(env.GetServerConfig().Collector.Dns.LogCount)
-	if deleteErr != nil {
-		log.Error("删除多余DNS记录失败: ", deleteErr.GetMsg())
-	} else {
-		log.Info("删除多余DNS记录成功, 共删除: ", count)
-	}
+	dnsThread.Wait()
+	log.InfoFields(map[string]interface{}{
+		"duration": time.Since(start),
+		"event":    "run_complete",
+		"protocol": "dns",
+		"targets":  len(requestList),
+	}, "DNS 采集运行完成")
 }
 
 func getDNSResult(site models.GfnCollectorDomain) func() {
 	return func() {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Error(fmt.Sprintf("receive DnsThread recover: %v", err))
+				log.ErrorFields(map[string]interface{}{
+					"event":    "probe_recovered",
+					"protocol": "dns",
+					"site":     site.Name,
+				}, fmt.Sprintf("DNS 单目标探测触发 panic，已恢复: %v", err))
 			}
 		}()
-		defer wg.Done() // 确保线程结束时数组减少
-
-		// 打开 GeoIP / ASN 数据库
-		dbPath := env.GetServerConfig().Collector.Dns.Geolite2Path
-		countryDB, err := geoip2.Open(dbPath + "GeoLite2-Country.mmdb")
-		if err != nil {
-			log.Error("打开 Country DB 失败: ", err.Error())
-		}
-		defer countryDB.Close()
-		cityDB, err := geoip2.Open(dbPath + "GeoLite2-City.mmdb")
-		if err != nil {
-			log.Error("打开 City DB 失败: ", err.Error())
-		}
-		defer cityDB.Close()
-		asnDB, err := geoip2.Open(dbPath + "GeoLite2-ASN.mmdb")
-		if err != nil {
-			log.Error("打开 ASN DB 失败: ", err.Error())
-		}
-		defer asnDB.Close()
 
 		// 执行 Request 获取结果
-		results := performDNSQuery(site, asnDB, cityDB, countryDB)
+		geoDBSet := currentGeoDBs()
+		results := performDNSQuery(site, geoDBSet.ASN, geoDBSet.City, geoDBSet.Country)
 
 		var siteName string
 		if site.Prefix != nil {
@@ -164,7 +298,13 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		}
 		gfError := cs.HSetMap(resultKey, resultMap)
 		if gfError != nil {
-			log.Error("存储request结果失败: ", err.Error())
+			log.ErrorFields(map[string]interface{}{
+				"event":     "redis_write_failed",
+				"protocol":  "dns",
+				"recordset": len(resultMap),
+				"redis_key": resultKey,
+				"site":      siteName,
+			}, "DNS 探测结果写入 Redis 失败: "+gfError.GetMsg())
 		}
 
 		newRecord := models.GfnCollectorLogDn{
@@ -175,7 +315,12 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		for k, v := range results {
 			marshal, jsonErr := sonic.Marshal(v)
 			if jsonErr != nil {
-				log.Error("json转换错误: ", jsonErr)
+				log.ErrorFields(map[string]interface{}{
+					"event":       "result_encode_failed",
+					"protocol":    "dns",
+					"record_type": k,
+					"site":        siteName,
+				}, "DNS 探测结果 JSON 编码失败: "+jsonErr.Error())
 			}
 			jsonRecord := string(marshal)
 			if &jsonRecord != nil {
@@ -208,7 +353,12 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		// 存数据库
 		daoErr := dao.GetDNSDao().Add(&newRecord)
 		if daoErr != nil {
-			log.Error("添加DNS采集结果到数据库失败: ", err.Error())
+			log.ErrorFields(map[string]interface{}{
+				"event":    "db_write_failed",
+				"protocol": "dns",
+				"site":     siteName,
+				"status":   newRecord.Status,
+			}, "DNS 探测结果写入数据库失败: "+daoErr.GetMsg())
 		}
 
 	}
@@ -242,7 +392,13 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 
 			records, stats, err := queryDNS(domain, rt.Type, resolver, countryDB, cityDB, asnDB, 0)
 			if err != nil {
-				log.Error(domain+" 查询 ", rt.Name, " 失败: ", err.GetMsg())
+				log.WarnFields(map[string]interface{}{
+					"domain":      domain,
+					"event":       "query_failed",
+					"protocol":    "dns",
+					"record_type": rt.Name,
+					"resolver":    resolver,
+				}, "DNS 查询失败: "+err.GetMsg())
 				return
 			}
 
@@ -279,8 +435,10 @@ func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader
 
 	start := time.Now()
 
+	probeBudget := env.GetServerConfig().Collector.ProbeBudget
+
 	// UDP DNS 查询客户端
-	c := &dns.Client{Net: "udp"}
+	c := &dns.Client{Net: "udp", Timeout: probeBudget.DNSTimeout()}
 	m := new(dns.Msg)
 	m.SetQuestion(dns.Fqdn(domain), qtype)
 	m.SetEdns0(4096, true) // 支持 DNSSEC
@@ -307,7 +465,11 @@ func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader
 	var durations []time.Duration
 
 	// 遍历每条 Answer 记录
+	maxRecords := probeBudget.MaxDNSRecords()
 	for _, rr := range in.Answer {
+		if len(results) >= maxRecords {
+			break
+		}
 		recStart := time.Now()
 		rec := models.DNSRecord{
 			Type:   dns.TypeToString[rr.Header().Rrtype],
@@ -487,7 +649,10 @@ func reversePTR(ip net.IP) string {
 	ptrSem <- struct{}{}
 	defer func() { <-ptrSem }()
 
-	names, err := net.LookupAddr(ip.String())
+	ctx, cancel := context.WithTimeout(context.Background(), env.GetServerConfig().Collector.ProbeBudget.PTRTimeout())
+	defer cancel()
+
+	names, err := net.DefaultResolver.LookupAddr(ctx, ip.String())
 	ptr := ""
 	if err == nil && len(names) > 0 {
 		ptr = strings.Join(names, ",")

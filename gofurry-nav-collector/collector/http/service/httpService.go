@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -21,9 +21,7 @@ import (
 	"github.com/sourcegraph/conc/pool"
 )
 
-var requestThread = pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Request.RequestThread)
-var requestRWLock sync.RWMutex
-var wg sync.WaitGroup
+var requestRunning atomic.Bool
 
 // ============== HTTP模块 - 初始化部分 ==============
 
@@ -31,10 +29,19 @@ var wg sync.WaitGroup
 func InitHTTPOnStart() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive InitHttpOnStart recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "init_recovered",
+				"protocol": "http",
+			}, err)
 		}
 	}()
-	fmt.Println("Request 模块初始化开始...")
+	log.InfoFields(map[string]interface{}{
+		"event":           "module_init_start",
+		"interval":        time.Duration(env.GetServerConfig().Collector.Request.RequestInterval) * time.Hour,
+		"protocol":        "http",
+		"retention_every": time.Hour * 48,
+		"workers":         env.GetServerConfig().Collector.Request.RequestThread,
+	}, "HTTP 采集模块初始化开始")
 
 	//初始化后执行一次 Request
 	go Request()
@@ -43,23 +50,49 @@ func InitHTTPOnStart() {
 	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Request.RequestInterval)*time.Hour, Request)
 	cs.AddCronJob(48*time.Hour, Delete)
 
-	fmt.Println("Request 模块初始化结束...")
+	log.InfoFields(map[string]interface{}{
+		"event":    "module_init_complete",
+		"protocol": "http",
+	}, "HTTP 采集模块初始化完成")
 }
 
 // 每天清理一次日志表
 func Delete() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive Ping Delete recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "retention_recovered",
+				"protocol": "http",
+			}, err)
 		}
 	}()
 
+	start := time.Now()
+	keepCount := env.GetServerConfig().Collector.Request.LogCount
+	log.InfoFields(map[string]interface{}{
+		"event":      "retention_start",
+		"keep_count": keepCount,
+		"protocol":   "http",
+	}, "HTTP 历史日志保留清理开始")
+
 	// 每个域名仅保留 1500 条 request 记录
-	count, deleteErr := dao.GetHTTPDao().DeleteByNum(env.GetServerConfig().Collector.Request.LogCount)
+	count, deleteErr := dao.GetHTTPDao().DeleteByNum(keepCount)
 	if deleteErr != nil {
-		log.Error("删除多余Request记录失败: ", deleteErr)
+		log.ErrorFields(map[string]interface{}{
+			"deleted":    count,
+			"duration":   time.Since(start),
+			"event":      "retention_failed",
+			"keep_count": keepCount,
+			"protocol":   "http",
+		}, "HTTP 历史日志保留清理失败: "+deleteErr.GetMsg())
 	} else {
-		log.Info("删除多余Request记录成功, 共删除: ", count)
+		log.InfoFields(map[string]interface{}{
+			"deleted":    count,
+			"duration":   time.Since(start),
+			"event":      "retention_complete",
+			"keep_count": keepCount,
+			"protocol":   "http",
+		}, "HTTP 历史日志保留清理完成")
 	}
 }
 
@@ -69,38 +102,72 @@ func Delete() {
 func Request() {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("receive Request recover: %v", err))
+			log.ErrorFields(map[string]interface{}{
+				"event":    "run_recovered",
+				"protocol": "http",
+			}, fmt.Sprintf("HTTP 采集运行触发 panic，已恢复: %v", err))
 		}
 	}()
+	if !requestRunning.CompareAndSwap(false, true) {
+		log.WarnFields(map[string]interface{}{
+			"event":    "run_skipped",
+			"protocol": "http",
+			"reason":   "上一轮采集仍在运行",
+			"status":   "skipped",
+		}, "HTTP 采集已跳过：上一轮仍在运行")
+		return
+	}
+	defer requestRunning.Store(false)
+
+	start := time.Now()
+	log.InfoFields(map[string]interface{}{
+		"event":     "run_start",
+		"protocol":  "http",
+		"timeout":   env.GetServerConfig().Collector.ProbeBudget.HTTPTimeout(),
+		"workers":   env.GetServerConfig().Collector.Request.RequestThread,
+		"redirects": env.GetServerConfig().Collector.ProbeBudget.MaxHTTPRedirects(),
+	}, "HTTP 采集运行开始")
 
 	requestList, err := dao.GetHTTPDao().GetList()
 	if err != nil {
-		log.Error("Request 获取站点列表失败: " + err.GetMsg())
+		log.ErrorFields(map[string]interface{}{
+			"duration": time.Since(start),
+			"event":    "run_failed",
+			"protocol": "http",
+			"stage":    "load_targets",
+		}, "HTTP 目标列表读取失败: "+err.GetMsg())
 		return
 	}
 	// 判空
-	if cap(requestList) < 1 || len(requestList) < 1 {
-		log.Info("Request 站点列表为空")
+	if len(requestList) < 1 {
+		log.InfoFields(map[string]interface{}{
+			"duration": time.Since(start),
+			"event":    "run_complete",
+			"protocol": "http",
+			"reason":   "目标列表为空",
+			"targets":  0,
+		}, "HTTP 采集完成：没有需要探测的目标")
 		return
 	}
-	log.Info("HTTP 采集开始")
+	log.InfoFields(map[string]interface{}{
+		"event":    "probe_start",
+		"protocol": "http",
+		"targets":  len(requestList),
+		"workers":  env.GetServerConfig().Collector.Request.RequestThread,
+	}, "HTTP 探测开始")
+	requestThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Request.RequestThread)
 	// 遍历站点列表, 每个站点开一个线程执行 request
 	for _, v := range requestList {
-		wg.Add(1)
 		requestThread.Go(getRequestResult(v))
 	}
 	// 等待所有采集和解析执行完毕
-	wg.Wait()
-	log.Info("HTTP 采集结束")
-
-	// 每个域名仅保留 1500 条 request 记录
-	count, deleteErr := dao.GetHTTPDao().DeleteByNum(env.GetServerConfig().Collector.Request.LogCount)
-	if deleteErr != nil {
-		log.Error("删除多余Request记录失败: ", deleteErr)
-	} else {
-		log.Info("删除多余Request记录成功, 共删除: ", count)
-	}
-
+	requestThread.Wait()
+	log.InfoFields(map[string]interface{}{
+		"duration": time.Since(start),
+		"event":    "run_complete",
+		"protocol": "http",
+		"targets":  len(requestList),
+	}, "HTTP 采集运行完成")
 }
 
 // ============== HTTP模块 - 存储部分 ==============
@@ -110,10 +177,13 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 	return func() {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Error(fmt.Sprintf("receive RequestThread recover: %v", err))
+				log.ErrorFields(map[string]interface{}{
+					"event":    "probe_recovered",
+					"protocol": "http",
+					"site":     site.Name,
+				}, fmt.Sprintf("HTTP 单目标探测触发 panic，已恢复: %v", err))
 			}
 		}()
-		defer wg.Done() // 确保线程结束时数组减少
 
 		// 执行 Request 获取结果
 		result := performRequest(site)
@@ -169,7 +239,13 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 		// 存数据库
 		err := dao.GetHTTPDao().Add(&httpSaveRecord)
 		if err != nil {
-			log.Error("添加http请求结果到数据库失败: ", err.GetMsg())
+			log.ErrorFields(map[string]interface{}{
+				"event":    "db_write_failed",
+				"protocol": "http",
+				"site":     siteName,
+				"status":   httpSaveRecord.Status,
+				"url":      result.Url,
+			}, "HTTP 探测结果写入数据库失败: "+err.GetMsg())
 		}
 	}
 }
@@ -192,11 +268,13 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.Meta = make(map[string]string)
 	res.Headers = make(map[string][]string)
 	res.Redirects = []string{}
+	probeBudget := env.GetServerConfig().Collector.ProbeBudget
 
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
 		},
+		TLSHandshakeTimeout: probeBudget.TLSHandshakeTimeout(),
 	}
 	// 设置代理
 	if site.Proxy == "1" {
@@ -205,11 +283,15 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	}
 
 	redirects := []string{}
+	maxRedirects := probeBudget.MaxHTTPRedirects()
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   25 * time.Second,
+		Timeout:   probeBudget.HTTPTimeout(),
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			redirects = append(redirects, req.URL.String())
+			if len(via) >= maxRedirects {
+				return http.ErrUseLastResponse
+			}
 			return nil
 		},
 	}
@@ -217,7 +299,11 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	// 构建请求
 	req, err := http.NewRequest("GET", res.Url, nil)
 	if err != nil {
-		log.Error("创建请求失败: ", err)
+		log.ErrorFields(map[string]interface{}{
+			"event":    "request_create_failed",
+			"protocol": "http",
+			"url":      res.Url,
+		}, "HTTP 请求创建失败: "+err.Error())
 		return
 	}
 	// 设置请求头
@@ -230,7 +316,12 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.StartTime = cm.LocalTime(time.Now())
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Error("请求失败: ", err)
+		log.WarnFields(map[string]interface{}{
+			"duration": time.Since(start),
+			"event":    "probe_failed",
+			"protocol": "http",
+			"url":      res.Url,
+		}, "HTTP 探测失败: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
@@ -249,7 +340,7 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.Server = resp.Header.Get("Server")
 
 	// 读取响应体 限制 1MB
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1*1024*1024))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, probeBudget.MaxHTTPResponseBytes()))
 	if err == nil {
 		res.ContentLength = int64(len(body))
 

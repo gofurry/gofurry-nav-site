@@ -24,7 +24,7 @@ func init() {
 // @Param id query string true "站点id"
 // @Param lang query string true "语言"
 // @Success 200 {object} models.SiteInfoVo
-// @Router /api/nav/site/getSiteDetail [Get]
+// @Router /api/v1/nav/site/getSiteDetail [Get]
 func (api sitePageApi) GetSiteDetail(c fiber.Ctx) error {
 	id, lang := c.Query("id"), c.Query("lang")
 	data, err := service.GetSitePageService().GetSiteDetailService(id, lang, util.GetClientIP(c))
@@ -43,7 +43,7 @@ func (api sitePageApi) GetSiteDetail(c fiber.Ctx) error {
 // @Produce json
 // @Param domain query string true "域名"
 // @Success 200 {object} common.ResultData
-// @Router /api/nav/site/getSiteHttpRecord [Get]
+// @Router /api/v1/nav/site/getSiteHttpRecord [Get]
 func (api sitePageApi) GetSiteHttpRecord(c fiber.Ctx) error {
 	domain := c.Query("domain")
 	data, err := service.GetSitePageService().GetSiteHttpRecordService(domain)
@@ -62,7 +62,7 @@ func (api sitePageApi) GetSiteHttpRecord(c fiber.Ctx) error {
 // @Produce json
 // @Param domain query string true "域名"
 // @Success 200 {object} common.ResultData
-// @Router /api/nav/site/getSiteDnsRecord [Get]
+// @Router /api/v1/nav/site/getSiteDnsRecord [Get]
 func (api sitePageApi) GetSiteDnsRecord(c fiber.Ctx) error {
 	domain := c.Query("domain")
 	data, err := service.GetSitePageService().GetSiteDnsRecordService(domain)
@@ -81,7 +81,7 @@ func (api sitePageApi) GetSiteDnsRecord(c fiber.Ctx) error {
 // @Produce json
 // @Param domain query string true "域名"
 // @Success 200 {object} models.SiteDelayVo
-// @Router /api/nav/site/getSitePingRecord [Get]
+// @Router /api/v1/nav/site/getSitePingRecord [Get]
 func (api sitePageApi) GetSitePingRecord(c fiber.Ctx) error {
 	domain := c.Query("domain")
 	data, err := service.GetSitePageService().GetSitePingRecordService(domain)

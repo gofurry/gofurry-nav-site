@@ -24,7 +24,7 @@ func init() {
 // @Param num query string true "请求数量"
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.GameRespVo
-// @Router /api/game/info/list [Get]
+// @Router /api/v1/game/info/list [Get]
 func (api *gameApi) GetGameList(c fiber.Ctx) error {
 	num := c.Query("num", "100")
 	lang := c.Query("lang", "zh")
@@ -43,7 +43,7 @@ func (api *gameApi) GetGameList(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Success 200 {object} models.GameMainInfoVo
-// @Router /api/game/info/main [Get]
+// @Router /api/v1/game/info/main [Get]
 func (api *gameApi) GetGameMainList(c fiber.Ctx) error {
 	data, err := service.GetGameService().GetGameMainList()
 	if err != nil {
@@ -60,7 +60,7 @@ func (api *gameApi) GetGameMainList(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Success 200 {object} models.GameMainPanelVo
-// @Router /api/game/panel/main [Get]
+// @Router /api/v1/game/panel/main [Get]
 func (api *gameApi) GetPanelMainList(c fiber.Ctx) error {
 	data, err := service.GetGameService().GetPanelMainList()
 	if err != nil {
@@ -77,7 +77,7 @@ func (api *gameApi) GetPanelMainList(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Success 200 {object} models.UpdateNewsVo
-// @Router /api/game/update/latest [Get]
+// @Router /api/v1/game/update/latest [Get]
 func (api *gameApi) GetUpdateNews(c fiber.Ctx) error {
 	data, err := service.GetGameService().GetUpdateNews()
 	if err != nil {
@@ -95,7 +95,7 @@ func (api *gameApi) GetUpdateNews(c fiber.Ctx) error {
 // @Produce json
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.TagModelVo
-// @Router /api/game/tag/list [Get]
+// @Router /api/v1/game/tag/list [Get]
 func (api *gameApi) GetTagList(c fiber.Ctx) error {
 	lang := c.Query("lang", "zh")
 	data, err := service.GetGameService().GetTagList(lang)
@@ -115,7 +115,7 @@ func (api *gameApi) GetTagList(c fiber.Ctx) error {
 // @Param id query string true "游戏id"
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.GameBaseInfoVo
-// @Router /api/game/info [Get]
+// @Router /api/v1/game/info [Get]
 func (api *gameApi) GetGameInfo(c fiber.Ctx) error {
 	num := c.Query("id", "0")
 	lang := c.Query("lang", "zh")
@@ -135,7 +135,7 @@ func (api *gameApi) GetGameInfo(c fiber.Ctx) error {
 // @Produce json
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.GameRespVo
-// @Router /api/game/sync/list [Get]
+// @Router /api/v1/game/sync/list [Get]
 func (api *gameApi) GetGameSyncList(c fiber.Ctx) error {
 	lang := c.Query("lang", "zh")
 	data, err := service.GetGameService().GetGameSyncList(lang)
@@ -155,7 +155,7 @@ func (api *gameApi) GetGameSyncList(c fiber.Ctx) error {
 // @Param id query string true "游戏id"
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.GameBaseInfoVo
-// @Router /api/game/sync/info [Get]
+// @Router /api/v1/game/sync/info [Get]
 func (api *gameApi) GetGameSyncInfo(c fiber.Ctx) error {
 	num := c.Query("id", "0")
 	lang := c.Query("lang", "zh")
@@ -175,7 +175,7 @@ func (api *gameApi) GetGameSyncInfo(c fiber.Ctx) error {
 // @Produce json
 // @Param id query string true "游戏id"
 // @Success 200 {object} []models.GameRemarkVo
-// @Router /api/game/remark [Get]
+// @Router /api/v1/game/remark [Get]
 func (api *gameApi) GetGameRemark(c fiber.Ctx) error {
 	num := c.Query("id", "0")
 	data, err := service.GetGameService().GetGameRemark(num)
@@ -194,7 +194,7 @@ func (api *gameApi) GetGameRemark(c fiber.Ctx) error {
 // @Produce json
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.CreatorVo
-// @Router /api/game/creator [Get]
+// @Router /api/v1/game/creator [Get]
 func (api *gameApi) GetGameCreator(c fiber.Ctx) error {
 	lang := c.Query("lang", "zh")
 	data, err := service.GetGameService().GetGameCreator(lang)
@@ -213,7 +213,7 @@ func (api *gameApi) GetGameCreator(c fiber.Ctx) error {
 // @Produce json
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.CreatorVo
-// @Router /api/game/sync/creators [Get]
+// @Router /api/v1/game/sync/creators [Get]
 func (api *gameApi) GetGameSyncCreators(c fiber.Ctx) error {
 	lang := c.Query("lang", "zh")
 	data, err := service.GetGameService().GetGameCreator(lang)
@@ -232,7 +232,7 @@ func (api *gameApi) GetGameSyncCreators(c fiber.Ctx) error {
 // @Produce json
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.UpdateNewsModels
-// @Router /api/game/update/latest/more [Get]
+// @Router /api/v1/game/update/latest/more [Get]
 func (api *gameApi) GetUpdateNewsMore(c fiber.Ctx) error {
 	lang := c.Query("lang", "zh")
 	data, err := service.GetGameService().GetMoreUpdateNews(lang)
@@ -251,7 +251,7 @@ func (api *gameApi) GetUpdateNewsMore(c fiber.Ctx) error {
 // @Produce json
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.UpdateNewsModels
-// @Router /api/game/sync/news [Get]
+// @Router /api/v1/game/sync/news [Get]
 func (api *gameApi) GetGameSyncNews(c fiber.Ctx) error {
 	lang := c.Query("lang", "zh")
 	data, err := service.GetGameService().GetMoreUpdateNews(lang)

@@ -21,7 +21,7 @@ func init() {
 // @Accept json
 // @Produce json
 // @Success 200 {object} string
-// @Router /api/recommend/game/random [Get]
+// @Router /api/v1/game/recommend/random [Get]
 func (api *recommendApi) GetRandomGameID(c fiber.Ctx) error {
 	data, err := service.GetRecommendService().GetRandomGameID()
 	if err != nil {
@@ -40,7 +40,7 @@ func (api *recommendApi) GetRandomGameID(c fiber.Ctx) error {
 // @Param id query string true "初始id"
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.GameRecommendVo
-// @Router /api/recommend/game/CBF [Get]
+// @Router /api/v1/game/recommend/CBF [Get]
 func (api *recommendApi) RecommendByCBF(c fiber.Ctx) error {
 	id := c.Query("id", "-1")
 	lang := c.Query("lang", "zh")

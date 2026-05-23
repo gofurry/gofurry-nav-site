@@ -57,13 +57,20 @@ func (router *router) Init() *fiber.App {
 	registerMiddlewares(app)
 
 	// 路由分组
-	navApi(app.Group("/api/nav"))
-	siteApi(app.Group("/api/site"))
+	registerRoutes(app)
 
 	app.Get("/api/swagger/doc.json", func(c fiber.Ctx) error {
 		return c.SendFile("./docs/swagger.json")
 	})
 	return app
+}
+
+func registerRoutes(app *fiber.App) {
+	api := app.Group("/api")
+	v1 := api.Group("/v1")
+
+	// v1 正式路由：/api/v1/nav/...
+	navApi(v1.Group("/nav"))
 }
 
 // registerMiddlewares 注册中间件
