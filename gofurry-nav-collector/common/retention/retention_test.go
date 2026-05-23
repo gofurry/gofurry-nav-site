@@ -29,3 +29,20 @@ func TestBuildDeleteSQLDoesNotUseLegacyLimitedWindow(t *testing.T) {
 		t.Fatalf("BuildDeleteSQL() should not limit the ranked source window:\n%s", sql)
 	}
 }
+
+func TestBuildObservationDeleteSQLPartitionsBySiteAndProtocol(t *testing.T) {
+	sql := BuildObservationDeleteSQL("gfn_collector_observation")
+
+	for _, want := range []string{
+		"PARTITION BY site_id, protocol",
+		"ORDER BY observed_at DESC, id DESC",
+		"FROM gfn_collector_observation",
+		"WHERE protocol = ?",
+		"LIMIT ?",
+		"DELETE FROM gfn_collector_observation target",
+	} {
+		if !strings.Contains(sql, want) {
+			t.Fatalf("BuildObservationDeleteSQL() missing %q in:\n%s", want, sql)
+		}
+	}
+}

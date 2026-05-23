@@ -8,11 +8,13 @@ const TableNameGfnCollectorDomain = "gfn_collector_domain"
 
 // GfnCollectorDomain mapped from table <gfn_collector_domain>
 type GfnCollectorDomain struct {
-	ID     int64   `gorm:"column:id;type:bigint;primaryKey;comment:域名请求表id" json:"id"`                        // 域名请求表id
-	Name   string  `gorm:"column:name;type:character varying(255);not null;comment:域名" json:"name"`           // 域名
-	Proxy  string  `gorm:"column:proxy;type:character varying(4);not null;comment:是否需要代理加速 1 0" json:"proxy"` // 是否需要代理加速 1 0
-	Prefix *string `gorm:"column:prefix;type:character varying(255);comment:是否有前缀" json:"prefix"`             // 是否有前缀
-	TLS    string  `gorm:"column:tls;type:character varying(4);not null;comment:是否 https 1 0" json:"tls"`     // 是否 https 1 0
+	ID      int64   `gorm:"column:id;type:bigint;primaryKey;comment:域名请求表id" json:"id"`                        // 域名请求表id
+	SiteID  int64   `gorm:"column:site_id;type:bigint;comment:关联站点 id" json:"site_id"`                         // 关联站点 id
+	Name    string  `gorm:"column:name;type:character varying(255);not null;comment:域名" json:"name"`           // 域名
+	Proxy   string  `gorm:"column:proxy;type:character varying(4);not null;comment:是否需要代理加速 1 0" json:"proxy"` // 是否需要代理加速 1 0
+	Prefix  *string `gorm:"column:prefix;type:character varying(255);comment:是否有前缀" json:"prefix"`             // 是否有前缀
+	TLS     string  `gorm:"column:tls;type:character varying(4);not null;comment:是否 https 1 0" json:"tls"`     // 是否 https 1 0
+	Deleted bool    `gorm:"column:deleted;type:boolean;comment:软删除" json:"deleted"`                            // 软删除
 }
 
 // TableName GfnCollectorDomain's table name

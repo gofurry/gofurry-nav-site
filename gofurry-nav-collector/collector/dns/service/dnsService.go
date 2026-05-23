@@ -13,6 +13,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/models"
+	"github.com/gofurry/gofurry-nav-collector/collector/observation"
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
@@ -187,6 +188,26 @@ func Delete() {
 			"protocol":   "dns",
 		}, "DNS 历史日志保留清理完成")
 	}
+	if env.GetServerConfig().Collector.V2.ProtocolEnabled(observation.ProtocolDNS) {
+		v2Count, v2DeleteErr := observation.DeleteByProtocolLimit(observation.ProtocolDNS, keepCount)
+		if v2DeleteErr != nil {
+			log.ErrorFields(map[string]interface{}{
+				"deleted":    v2Count,
+				"duration":   time.Since(start),
+				"event":      "v2_retention_failed",
+				"keep_count": keepCount,
+				"protocol":   "dns",
+			}, "DNS v2 observation 保留清理失败: "+v2DeleteErr.GetMsg())
+		} else if v2Count > 0 {
+			log.InfoFields(map[string]interface{}{
+				"deleted":    v2Count,
+				"duration":   time.Since(start),
+				"event":      "v2_retention_complete",
+				"keep_count": keepCount,
+				"protocol":   "dns",
+			}, "DNS v2 observation 保留清理完成")
+		}
+	}
 }
 
 // ============== DNS解析 - 执行部分 ==============
@@ -279,6 +300,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		}()
 
 		// 执行 Request 获取结果
+		probeStart := time.Now()
 		geoDBSet := currentGeoDBs()
 		results := performDNSQuery(site, geoDBSet.ASN, geoDBSet.City, geoDBSet.Country)
 
@@ -360,8 +382,37 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 				"status":   newRecord.Status,
 			}, "DNS 探测结果写入数据库失败: "+daoErr.GetMsg())
 		}
+		errorCode := ""
+		if newRecord.Status != "success" {
+			errorCode = "dns_no_records"
+		}
+		saveErr := observation.SaveIfEnabled(observation.Input{
+			SiteID:     site.SiteID,
+			Target:     siteName,
+			Protocol:   observation.ProtocolDNS,
+			Status:     observationStatusFromDNS(newRecord.Status),
+			ObservedAt: newRecord.CreateTime,
+			DurationMS: time.Since(probeStart).Milliseconds(),
+			ErrorCode:  errorCode,
+			Payload:    results,
+		})
+		if saveErr != nil {
+			log.WarnFields(map[string]interface{}{
+				"event":    "v2_observation_write_failed",
+				"protocol": "dns",
+				"site_id":  site.SiteID,
+				"site":     siteName,
+			}, "DNS v2 observation 旁路写入失败: "+saveErr.GetMsg())
+		}
 
 	}
+}
+
+func observationStatusFromDNS(status string) string {
+	if status == "success" {
+		return observation.StatusSuccess
+	}
+	return observation.StatusFailure
 }
 
 func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityDB *geoip2.Reader, countryDB *geoip2.Reader) map[string][]models.DNSRecord {

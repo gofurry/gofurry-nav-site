@@ -29,11 +29,17 @@ type GfnSite struct {
 }
 
 type Domain struct {
+	ID     int64  `gorm:"column:id;type:bigint;primaryKey;comment:站点表id" json:"id"`
 	Domain string `gorm:"column:domain;type:json;not null;comment:站点域名" json:"domain"`
 }
 
 type Domains struct {
 	Domain []string `json:"domain"`
+}
+
+type PingTarget struct {
+	SiteID int64
+	Domain string
 }
 
 const TableNameGfnCollectorLogPing = "gfn_collector_log_ping"

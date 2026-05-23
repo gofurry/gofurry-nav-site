@@ -23,7 +23,7 @@ func GetPingDao() *pingDao { return newPingDao }
 // 获取站点列表
 func (dao pingDao) GetList() ([]models.Domain, common.GFError) {
 	var res []models.Domain
-	db := dao.Gm.Table(models.TableNameGfnSite).Select("domain").Where("deleted IS NOT TRUE")
+	db := dao.Gm.Table(models.TableNameGfnSite).Select("id, domain").Where("deleted IS NOT TRUE")
 	db.Find(&res)
 	if err := db.Error; err != nil {
 		return nil, common.NewDaoError(err.Error())
