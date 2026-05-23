@@ -96,11 +96,11 @@
 
 ---
 
-### v0.3.0 - 协议语义增强
+### v0.3.0 - v2 Observation 协议语义增强
 
-- **状态：** 计划中
+- **状态：** 已完成
 - **范围：** Ping / HTTP / TLS / DNS / 安全展示
-- **目标：** 在低强度采集前提下，让协议结果更准确、更不容易被误读。
+- **目标：** 在不改变采集强度和旧展示链路的前提下，让 v2 observation 的协议 payload 更准确、更不容易被误读。
 
 #### 重点
 
@@ -112,16 +112,12 @@
 #### 任务
 
 - [x] Ping v2 payload 增加 `icmp_status`、`loss_rate`、`avg_rtt_ms`、`error_code`、`duration_ms`。
-- [ ] Ping 失败只影响健康评分，不单独判定站点 down。
-- [ ] 评估 TCP connect fallback，但默认关闭。
 - [x] HTTP v2 增加 redirect chain、content type、常见安全 header 是否存在。
-- [ ] 评估 HEAD-first 模式，必须放在配置开关后，默认先保持当前 GET 行为。
 - [x] HTTP title/meta/header 字符串限制长度，并确保后端/Nuxt 按纯文本展示。
 - [x] TLS 拆分 `cert_collected` 与 `cert_verified`。
 - [x] TLS 先尝试正常校验，失败后再受控地采集证书详情，并记录 `verify_error`。
 - [x] DNS 将 `hijacked` 语义替换为 `risk_flags`，例如 `private_ip`、`low_ttl`、`nxdomain_with_answer`、`ptr_empty`。
 - [x] DNS TXT、SPF、DMARC、CAA 只保存摘要或限长原文，不保存无限长外部内容。
-- [ ] multi-resolver 只作为可选对比能力，默认关闭，不进入 Phase 0 默认路径。
 
 #### 验收标准
 
@@ -129,6 +125,11 @@
 - 默认采集频率、并发和探测强度不增加。
 - 任一协议增强都可以按配置关闭。
 - 前端展示外部字段时不渲染 HTML，不拼接不可信内容。
+
+#### 后续归位
+
+- Ping 是否影响站点整体 `down` 状态归入 v0.4.0 健康状态聚合，不在 v0.3.0 单协议 payload 阶段下结论。
+- TCP connect fallback、HTTP HEAD-first、DNS multi-resolver 都会改变探测行为，归入后续可选协议能力，默认不启用。
 
 ---
 
@@ -153,6 +154,7 @@
 - [ ] 后端增加只读 summary 接口，默认关闭。
 - [ ] Nuxt 增加灰度展示入口，不影响当前主展示。
 - [ ] 明确规则：HTTP 正常但 Ping 失败不能判 down。
+- [ ] 明确规则：Ping 失败只作为低权重辅助信号，不单独判定站点 down。
 - [ ] 明确规则：DNS 失败但 HTTP latest 仍可用时优先 `degraded` 或 `unknown`。
 - [ ] 明确规则：TLS 临期优先 `warning`，已过期但 HTTP 可访问时优先 `degraded`。
 
@@ -228,6 +230,35 @@
 
 ---
 
+### v0.7.0 - 可选协议能力评估
+
+- **状态：** 计划中
+- **范围：** Ping / HTTP / DNS / 配置 / 灰度
+- **目标：** 只在 v2 observation 和 summary 稳定后，再评估会改变探测行为的可选协议能力。
+
+#### 重点
+
+- 默认关闭。
+- 可按协议灰度。
+- 不增加默认采集强度。
+- 任何能力都必须有回滚路径。
+
+#### 任务
+
+- [ ] 评估 TCP connect fallback，但默认关闭。
+- [ ] 评估 HEAD-first 模式，必须放在配置开关后，默认继续保持当前 GET 行为。
+- [ ] 评估 DNS multi-resolver 对比能力，默认关闭，不进入基础生产路径。
+- [ ] 文档化每个可选能力的适用场景、误判风险和关闭方式。
+
+#### 验收标准
+
+- 未配置时生产行为与当前版本一致。
+- 任一可选能力都可以单独关闭。
+- 不把可选探测结果直接包装成最终健康结论。
+- 生产灰度前必须有旧链路对照和回滚说明。
+
+---
+
 ### v1.0.0-alpha.1 - 稳定版候选
 
 - **状态：** 计划中
@@ -268,11 +299,11 @@
 ### 中期
 
 - 完成 v2 observation、v2 latest、只读 v2 接口。
-- 增强协议语义，但全部放在开关后。
-- 建立 summary 旁路展示，避免单协议误判站点健康。
+- 基于已完成的协议语义增强建立 summary 旁路展示，避免单协议误判站点健康。
 
 ### 长期
 
 - 只有出现多节点需求时才做 lease 和分片。
+- 只在 summary 稳定后评估 HEAD-first、TCP fallback、multi-resolver 等可选能力。
 - 完成站点治理、opt-out 和公开采集说明。
 - 冻结 v2 schema 后进入 `v1.0.0-alpha.1`。
