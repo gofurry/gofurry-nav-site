@@ -45,8 +45,8 @@ export default defineNuxtConfig({
   vite: {
     plugins: [tailwindcss()],
     define: {
-      'import.meta.env.VITE_NAV_API_BASE_URL': JSON.stringify(process.env.NUXT_PUBLIC_NAV_API_BASE || '/api'),
-      'import.meta.env.VITE_GAME_API_BASE_URL': JSON.stringify(process.env.NUXT_PUBLIC_GAME_API_BASE || '/api'),
+      'import.meta.env.VITE_NAV_API_BASE_URL': JSON.stringify(process.env.NUXT_PUBLIC_NAV_API_BASE || '/api/v1'),
+      'import.meta.env.VITE_GAME_API_BASE_URL': JSON.stringify(process.env.NUXT_PUBLIC_GAME_API_BASE || '/api/v1'),
       'import.meta.env.VITE_SITE_LOGO_PREFIX_URL': JSON.stringify(process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/'),
       'import.meta.env.VITE_SITE_DEFAULT_LOGO': JSON.stringify(process.env.NUXT_PUBLIC_SITE_DEFAULT_LOGO || 'https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg'),
       'import.meta.env.VITE_GAME_SITE_LOGO_PREFIX_URL': JSON.stringify(process.env.NUXT_PUBLIC_GAME_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/game/icons/'),
@@ -136,13 +136,13 @@ export default defineNuxtConfig({
     }
   },
   runtimeConfig: {
-    navApiInternalBase: process.env.NAV_API_INTERNAL_BASE || process.env.NUXT_NAV_API_INTERNAL_BASE || 'http://192.168.153.1:9999/api',
-    gameApiInternalBase: process.env.GAME_API_INTERNAL_BASE || process.env.NUXT_GAME_API_INTERNAL_BASE || 'http://192.168.153.1:9998/api',
+    navApiInternalBase: process.env.NAV_API_INTERNAL_BASE || process.env.NUXT_NAV_API_INTERNAL_BASE || 'http://192.168.153.1:9999/api/v1',
+    gameApiInternalBase: process.env.GAME_API_INTERNAL_BASE || process.env.NUXT_GAME_API_INTERNAL_BASE || 'http://192.168.153.1:9998/api/v1',
     ragApiInternalBase,
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-      navApiBase: process.env.NUXT_PUBLIC_NAV_API_BASE || '/api',
-      gameApiBase: process.env.NUXT_PUBLIC_GAME_API_BASE || '/api',
+      navApiBase: process.env.NUXT_PUBLIC_NAV_API_BASE || '/api/v1',
+      gameApiBase: process.env.NUXT_PUBLIC_GAME_API_BASE || '/api/v1',
       siteLogoPrefixUrl: process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/',
       siteDefaultLogo: process.env.NUXT_PUBLIC_SITE_DEFAULT_LOGO || 'https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg',
       gameSiteLogoPrefixUrl: process.env.NUXT_PUBLIC_GAME_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/game/icons/',

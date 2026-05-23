@@ -24,7 +24,7 @@ func init() {
 // @Produce json
 // @Param body body models.PrizeParticipationRequest true "请求body"
 // @Success 200 {object} common.ResultData
-// @Router /api/prize/participation [Post]
+// @Router /api/v1/game/prize/participation [Post]
 func (api *prizeApi) PrizeParticipation(c fiber.Ctx) error {
 	req := models.PrizeParticipationRequest{}
 	if err := c.Bind().Body(&req); err != nil {
@@ -47,7 +47,7 @@ func (api *prizeApi) PrizeParticipation(c fiber.Ctx) error {
 // @Param id query string true "抽奖活动id"
 // @Param key query string true "激活令牌"
 // @Success 200 {object} common.ResultData
-// @Router /api/prize/participation/activation [Get]
+// @Router /api/v1/game/prize/participation/activation [Get]
 func (api *prizeApi) ActiveParticipation(c fiber.Ctx) error {
 	id := c.Query("id")
 	key := c.Query("key")
@@ -68,7 +68,7 @@ func (api *prizeApi) ActiveParticipation(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Success 200 {object} models.LotteryResp
-// @Router /api/prize/info [Get]
+// @Router /api/v1/game/prize/info [Get]
 func (api *prizeApi) LotteryInfo(c fiber.Ctx) error {
 	data, err := service.GetPrizeService().LotteryInfo()
 	if err != nil {

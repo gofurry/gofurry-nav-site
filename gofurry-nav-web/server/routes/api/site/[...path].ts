@@ -1,1 +1,1 @@
-export default defineEventHandler((event) => proxyApiNamespace(event, 'nav', 'site'))
+export default defineEventHandler((event) => proxyApiNamespace(event, 'nav', 'nav/site'))

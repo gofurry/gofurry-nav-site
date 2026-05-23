@@ -23,7 +23,7 @@ func init() {
 // @Produce json
 // @Param body body models.SearchRequest true "请求body"
 // @Success 200 {object} models.SearchGameVo
-// @Router /api/search/game/simple [POST]
+// @Router /api/v1/game/search/game/simple [POST]
 func (api *searchApi) SimpleSearch(c fiber.Ctx) error {
 	req := models.SearchRequest{}
 	if err := c.Bind().Body(&req); err != nil {
@@ -45,7 +45,7 @@ func (api *searchApi) SimpleSearch(c fiber.Ctx) error {
 // @Produce json
 // @Param body body models.SearchPageQueryRequest true "请求body"
 // @Success 200 {object} models.PageResponse
-// @Router /api/search/game/page [POST]
+// @Router /api/v1/game/search/game/page [POST]
 func (api *searchApi) PageSearch(c fiber.Ctx) error {
 	req := models.SearchPageQueryRequest{}
 	if err := c.Bind().Body(&req); err != nil {

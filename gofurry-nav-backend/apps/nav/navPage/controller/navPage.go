@@ -22,7 +22,7 @@ func init() {
 // @Produce json
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.SiteVo
-// @Router /api/nav/page/site/list [Get]
+// @Router /api/v1/nav/page/site/list [Get]
 func (api *navPageApi) GetSiteList(c fiber.Ctx) error {
 	lang := c.Query("lang", "zh")
 	data, err := service.GetNavPageService().GetSiteList(lang)
@@ -41,7 +41,7 @@ func (api *navPageApi) GetSiteList(c fiber.Ctx) error {
 // @Produce json
 // @Param lang query string true "语言"
 // @Success 200 {object} []models.GroupVo
-// @Router /api/nav/page/group/list [Get]
+// @Router /api/v1/nav/page/group/list [Get]
 func (api *navPageApi) GetGroupList(c fiber.Ctx) error {
 	lang := c.Query("lang", "zh")
 	data, err := service.GetNavPageService().GetGroupList(lang)
@@ -59,7 +59,7 @@ func (api *navPageApi) GetGroupList(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Success 200 {object} map[string]string
-// @Router /api/nav/page/ping/list [Get]
+// @Router /api/v1/nav/page/ping/list [Get]
 func (api *navPageApi) GetPingList(c fiber.Ctx) error {
 	data, err := service.GetNavPageService().GetPingList()
 	if err != nil {
@@ -77,7 +77,7 @@ func (api *navPageApi) GetPingList(c fiber.Ctx) error {
 // @Produce json
 // @Param q query string true "查询"
 // @Success 200 {object} []string
-// @Router /api/nav/page/search/baidu [Get]
+// @Router /api/v1/nav/page/search/baidu [Get]
 func (api *navPageApi) GetBaiduSearchSuggestion(c fiber.Ctx) error {
 	q := c.Query("q")
 	data, err := service.GetNavPageService().GetBaiduSuggestion(q)
@@ -96,7 +96,7 @@ func (api *navPageApi) GetBaiduSearchSuggestion(c fiber.Ctx) error {
 // @Produce json
 // @Param q query string true "查询"
 // @Success 200 {object} []string
-// @Router /api/nav/page/search/bing [Get]
+// @Router /api/v1/nav/page/search/bing [Get]
 func (api *navPageApi) GetBingSearchSuggestion(c fiber.Ctx) error {
 	q := c.Query("q")
 	data, err := service.GetNavPageService().GetBingSuggestion(q)
@@ -115,7 +115,7 @@ func (api *navPageApi) GetBingSearchSuggestion(c fiber.Ctx) error {
 // @Produce json
 // @Param q query string true "查询"
 // @Success 200 {object} []string
-// @Router /api/nav/page/search/google [Get]
+// @Router /api/v1/nav/page/search/google [Get]
 func (api *navPageApi) GetGoogleSearchSuggestion(c fiber.Ctx) error {
 	q := c.Query("q")
 	data, err := service.GetNavPageService().GetGoogleSuggestion(q)
@@ -134,7 +134,7 @@ func (api *navPageApi) GetGoogleSearchSuggestion(c fiber.Ctx) error {
 // @Produce json
 // @Param q query string true "查询"
 // @Success 200 {object} []string
-// @Router /api/nav/page/search/bilibili [Get]
+// @Router /api/v1/nav/page/search/bilibili [Get]
 func (api *navPageApi) GetBiliBiliSearchSuggestion(c fiber.Ctx) error {
 	q := c.Query("q")
 	data, err := service.GetNavPageService().GetBiliBiliSuggestion(q)
@@ -152,7 +152,7 @@ func (api *navPageApi) GetBiliBiliSearchSuggestion(c fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Success 200 {object} string
-// @Router /api/nav/page/header/getSaying [Get]
+// @Router /api/v1/nav/page/header/getSaying [Get]
 func (api *navPageApi) GetSaying(c fiber.Ctx) error {
 	saying, err := service.GetNavPageService().GetSayingService()
 	if err != nil {
@@ -169,7 +169,7 @@ func (api *navPageApi) GetSaying(c fiber.Ctx) error {
 // @Produce json
 // @Param type query string true "图片类型"
 // @Success 200 {object} string
-// @Router /api/nav/page/header/image/url [Get]
+// @Router /api/v1/nav/page/header/image/url [Get]
 func (api *navPageApi) GetImageUrl(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(service.GetNavPageService().GetImageUrl(c.Query("type", "normal")))
 }

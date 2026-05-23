@@ -1,1 +1,1 @@
-export default defineEventHandler((event) => proxyApiNamespace(event, 'game', 'prize'))
+export default defineEventHandler((event) => proxyApiNamespace(event, 'game', 'game/prize'))

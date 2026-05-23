@@ -10,16 +10,16 @@ RUN npm ci
 FROM deps AS build
 
 ARG NUXT_PUBLIC_SITE_URL=https://go-furry.com
-ARG NUXT_PUBLIC_NAV_API_BASE=https://nav.go-furry.com/api
-ARG NUXT_PUBLIC_GAME_API_BASE=https://game.go-furry.com/api
+ARG NUXT_PUBLIC_NAV_API_BASE=https://nav.go-furry.com/api/v1
+ARG NUXT_PUBLIC_GAME_API_BASE=https://game.go-furry.com/api/v1
 ARG NUXT_PUBLIC_SITE_LOGO_PREFIX_URL=https://qcdn.go-furry.com/nav/static/SiteLogos/
 ARG NUXT_PUBLIC_SITE_DEFAULT_LOGO=https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg
 ARG NUXT_PUBLIC_GAME_SITE_LOGO_PREFIX_URL=https://qcdn.go-furry.com/game/icons/
 ARG NUXT_PUBLIC_GAME_PREFIX_URL=https://qcdn.go-furry.com/game/
 ARG NUXT_PUBLIC_STEAM_APP_PREFIX_URL=https://store.steampowered.com/app/
 ARG NUXT_PUBLIC_STEAM_COVER_PREFIX_URL=https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/
-ARG NAV_API_INTERNAL_BASE=http://10.6.0.11:9999/api
-ARG GAME_API_INTERNAL_BASE=http://10.6.0.11:9998/api
+ARG NAV_API_INTERNAL_BASE=http://10.6.0.11:9999/api/v1
+ARG GAME_API_INTERNAL_BASE=http://10.6.0.11:9998/api/v1
 ARG RAG_API_INTERNAL_BASE=http://10.6.0.11:9997
 
 ENV HOST=0.0.0.0
@@ -45,16 +45,16 @@ FROM deps AS runner
 WORKDIR /app
 
 ARG NUXT_PUBLIC_SITE_URL=https://go-furry.com
-ARG NUXT_PUBLIC_NAV_API_BASE=https://nav.go-furry.com/api
-ARG NUXT_PUBLIC_GAME_API_BASE=https://game.go-furry.com/api
+ARG NUXT_PUBLIC_NAV_API_BASE=https://nav.go-furry.com/api/v1
+ARG NUXT_PUBLIC_GAME_API_BASE=https://game.go-furry.com/api/v1
 ARG NUXT_PUBLIC_SITE_LOGO_PREFIX_URL=https://qcdn.go-furry.com/nav/static/SiteLogos/
 ARG NUXT_PUBLIC_SITE_DEFAULT_LOGO=https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg
 ARG NUXT_PUBLIC_GAME_SITE_LOGO_PREFIX_URL=https://qcdn.go-furry.com/game/icons/
 ARG NUXT_PUBLIC_GAME_PREFIX_URL=https://qcdn.go-furry.com/game/
 ARG NUXT_PUBLIC_STEAM_APP_PREFIX_URL=https://store.steampowered.com/app/
 ARG NUXT_PUBLIC_STEAM_COVER_PREFIX_URL=https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/
-ARG NAV_API_INTERNAL_BASE=http://10.6.0.11:9999/api
-ARG GAME_API_INTERNAL_BASE=http://10.6.0.11:9998/api
+ARG NAV_API_INTERNAL_BASE=http://10.6.0.11:9999/api/v1
+ARG GAME_API_INTERNAL_BASE=http://10.6.0.11:9998/api/v1
 ARG RAG_API_INTERNAL_BASE=http://10.6.0.11:9997
 
 ENV NODE_ENV=production
