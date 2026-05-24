@@ -124,3 +124,80 @@ DNS payload 仍使用当前记录类型、当前 resolver 和 `MaxDepth=2`，不
 - `mx_priorities` 和 `soa` 来自本次已有 MX/SOA 响应。
 - `mixed_private_public_ip` 只表示本次 payload 中同时出现私网/特殊 IP 与公网 IP，需要人工确认上下文。
 - TXT/SPF/DMARC/CAA 等外部文本继续做限长和 SHA256 摘要保护。
+
+## 低频轻探测
+
+`rdap`、`robots`、`security_txt` 是 v0.5.3 新增的低频旁路探测协议。它们默认关闭，只有 `collector.v2.enabled=true` 且对应 `collector.v2.light_probe.*.enabled=true` 时才会注册任务。
+
+这些结果只用于域名治理、访客视角和安全联系渠道参考，不参与当前健康摘要结论，也不影响 Ping / HTTP / DNS / TLS 主采集。
+
+### RDAP
+
+RDAP 按注册域归并查询，同一轮中 `www.example.com` 与 `api.example.com` 只查询一次 `example.com`，再把结果写回对应 target 的 observation/latest Redis。
+
+```json
+{
+  "registrable_domain": "example.com",
+  "rdap_server": "https://rdap.example/",
+  "registrar": "Example Registrar",
+  "statuses": ["active"],
+  "expires_at": "2030-01-01T00:00:00Z",
+  "nameservers": ["ns1.example.com", "ns2.example.com"],
+  "dnssec_delegation_signed": true,
+  "events_summary": {
+    "registration": "2020-01-01T00:00:00Z",
+    "expiration": "2030-01-01T00:00:00Z"
+  },
+  "raw_truncated": false
+}
+```
+
+- RDAP server 来自 IANA bootstrap JSON，进程内低频缓存，不新增 SQL 或 Redis 缓存。
+- 失败时 `status=failure`，`error_code` 可能为 `rdap_bootstrap_failed`、`rdap_no_server`、`rdap_request_failed`、`rdap_decode_failed`。
+- 不保存 RDAP 原始大 JSON，只提取治理摘要。
+
+### robots.txt
+
+robots.txt 按每个有效采集 target 低频请求一次 `/{robots.txt}`，scheme 复用采集域名的 TLS 配置。
+
+```json
+{
+  "exists": true,
+  "status_code": 200,
+  "content_type": "text/plain",
+  "sitemap_count": 2,
+  "sitemaps": [
+    "https://example.com/sitemap.xml"
+  ],
+  "global_disallow_all": false,
+  "user_agent_star_present": true,
+  "body_truncated": false
+}
+```
+
+- 只记录最多 `max_sitemap_links` 条 sitemap 链接，不抓取 sitemap 内容。
+- 404 会写入 `exists=false`，不视为 collector 程序错误。
+- 响应体受 `max_response_bytes` 限制，不保存全文。
+
+### security.txt
+
+security.txt 按每个有效采集 target 低频请求 `/.well-known/security.txt`，404 时再 fallback 到 `/security.txt`。
+
+```json
+{
+  "exists": true,
+  "path_used": "/.well-known/security.txt",
+  "status_code": 200,
+  "content_type": "text/plain",
+  "contact": ["mailto:security@example.com"],
+  "expires": "2030-01-01T00:00:00Z",
+  "policy": ["https://example.com/security-policy"],
+  "preferred_languages": ["zh,en"],
+  "canonical": ["https://example.com/.well-known/security.txt"],
+  "body_truncated": false
+}
+```
+
+- 只提取固定字段，不保存原始 security.txt 全文。
+- 字段值最长 512 字符，列表限项，避免外部文本膨胀。
+- 请求失败写 `status=failure` 和 `security_txt_request_failed`，不影响主采集。

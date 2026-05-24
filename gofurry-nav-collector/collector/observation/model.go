@@ -3,9 +3,12 @@ package observation
 import "time"
 
 const (
-	ProtocolPing = "ping"
-	ProtocolHTTP = "http"
-	ProtocolDNS  = "dns"
+	ProtocolPing        = "ping"
+	ProtocolHTTP        = "http"
+	ProtocolDNS         = "dns"
+	ProtocolRDAP        = "rdap"
+	ProtocolRobots      = "robots"
+	ProtocolSecurityTXT = "security_txt"
 
 	StatusSuccess = "success"
 	StatusFailure = "failure"

@@ -4,7 +4,7 @@
 
 `gofurry-nav-collector` 既定基础 roadmap 已完成。当前文档不再保留过长历史完成项，只记录后端正式进入 v2 前需要补齐的 collector 能力。
 
-`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段。后续 `v0.5.3` 到 `v0.5.7` 用于在不影响旧链路的前提下补齐少量明确授权的轻探测能力。
+`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段；`v0.5.3` 已完成默认关闭的域名治理低频轻探测。后续 `v0.5.4` 到 `v0.5.7` 用于在不影响旧链路的前提下补齐少量明确授权的轻探测能力。
 
 ## 迭代原则
 
@@ -102,9 +102,9 @@
 
 ### v0.5.3 - 域名治理低频轻探测
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** RDAP / robots.txt / security.txt / 低频任务
-**目标：** 为站点提供域名生命周期、爬虫策略和安全联系渠道参考，默认低频、失败降级为 Unknown。
+**目标：** 为站点提供域名生命周期、爬虫策略和安全联系渠道参考，默认低频，失败只记录旁路错误类别。
 
 #### Focus
 
@@ -114,12 +114,12 @@
 
 #### Tasks
 
-- [ ] 增加 RDAP 低频探测，默认周期建议 7 天，记录 registrar、domain status、expires_at、nameservers、dnssec delegation 状态。
-- [ ] RDAP 失败时记录 `unknown` 和错误类别，不影响 HTTP/DNS/Ping 主链路。
-- [ ] 增加 robots.txt 低频探测，记录是否存在、状态码、sitemap 链接数量、是否存在全站 disallow。
-- [ ] 增加 security.txt 低频探测，只检查 `/.well-known/security.txt` 和 `/security.txt`，记录是否存在、Contact、Expires、Policy 摘要。
-- [ ] 为 RDAP / robots.txt / security.txt 增加独立配置开关、超时、低频 interval 和 latest Redis key。
-- [ ] 文档化这些结果不是站点安全结论，只是治理参考。
+- [x] 增加 RDAP 低频探测，默认周期建议 7 天，记录 registrar、domain status、expires_at、nameservers、dnssec delegation 状态。
+- [x] RDAP 失败时记录错误类别，不影响 HTTP/DNS/Ping 主链路。
+- [x] 增加 robots.txt 低频探测，记录是否存在、状态码、sitemap 链接数量、是否存在全站 disallow。
+- [x] 增加 security.txt 低频探测，只检查 `/.well-known/security.txt` 和 `/security.txt`，记录是否存在、Contact、Expires、Policy 摘要。
+- [x] 为 RDAP / robots.txt / security.txt 增加独立配置开关、超时、低频 interval 和 latest Redis key。
+- [x] 文档化这些结果不是站点安全结论，只是治理参考。
 
 #### Acceptance Criteria
 
@@ -127,6 +127,12 @@
 - 每类轻探测都有独立关闭开关和超时。
 - 不抓取 sitemap 明细，不扫描目录，不解析或保存大体积文本。
 - v2 observation / latest Redis 能查询到低频探测结果。
+
+#### Notes
+
+- 配置位于 `collector.v2.light_probe`，三类探测默认全部关闭。
+- latest Redis key 继续复用 v2 latest 规则：`collector:v2:latest:{protocol}:{site_id}` 与 `collector:v2:latest:{protocol}:{site_id}:{target}`。
+- 字段说明：`docs/v2-observation-payload.md`。
 
 ---
 

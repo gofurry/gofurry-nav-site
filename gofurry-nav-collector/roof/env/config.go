@@ -56,12 +56,40 @@ type CollectorV2Config struct {
 	LatestRedis   bool               `yaml:"latest_redis"`
 	CompareLog    bool               `yaml:"compare_log"`
 	Protocols     CollectorProtocols `yaml:"protocols"`
+	LightProbe    LightProbeConfig   `yaml:"light_probe"`
 }
 
 type CollectorProtocols struct {
 	Ping bool `yaml:"ping"`
 	HTTP bool `yaml:"http"`
 	DNS  bool `yaml:"dns"`
+}
+
+type LightProbeConfig struct {
+	RDAP        LightProbeRDAPConfig        `yaml:"rdap"`
+	Robots      LightProbeRobotsConfig      `yaml:"robots"`
+	SecurityTXT LightProbeSecurityTXTConfig `yaml:"security_txt"`
+}
+
+type LightProbeRDAPConfig struct {
+	Enabled        bool `yaml:"enabled"`
+	IntervalHours  int  `yaml:"interval_hours"`
+	TimeoutSeconds int  `yaml:"timeout_seconds"`
+}
+
+type LightProbeRobotsConfig struct {
+	Enabled          bool `yaml:"enabled"`
+	IntervalHours    int  `yaml:"interval_hours"`
+	TimeoutSeconds   int  `yaml:"timeout_seconds"`
+	MaxResponseBytes int  `yaml:"max_response_bytes"`
+	MaxSitemapLinks  int  `yaml:"max_sitemap_links"`
+}
+
+type LightProbeSecurityTXTConfig struct {
+	Enabled          bool `yaml:"enabled"`
+	IntervalHours    int  `yaml:"interval_hours"`
+	TimeoutSeconds   int  `yaml:"timeout_seconds"`
+	MaxResponseBytes int  `yaml:"max_response_bytes"`
 }
 
 type SchedulerConfig struct {
@@ -280,6 +308,12 @@ func (cfg CollectorV2Config) ProtocolEnabled(protocol string) bool {
 		return cfg.Protocols.HTTP
 	case "dns":
 		return cfg.Protocols.DNS
+	case "rdap":
+		return cfg.LightProbe.RDAP.Enabled
+	case "robots":
+		return cfg.LightProbe.Robots.Enabled
+	case "security_txt":
+		return cfg.LightProbe.SecurityTXT.Enabled
 	default:
 		return false
 	}
@@ -306,4 +340,44 @@ func (cfg SchedulerConfig) RunStateTTL() time.Duration {
 		hours = 168
 	}
 	return time.Duration(hours) * time.Hour
+}
+
+func (cfg LightProbeRDAPConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbeRDAPConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbeRobotsConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbeRobotsConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbeRobotsConfig) MaxResponseSize() int64 {
+	return int64(intOrDefault(cfg.MaxResponseBytes, 64*1024))
+}
+
+func (cfg LightProbeRobotsConfig) MaxSitemaps() int {
+	return intOrDefault(cfg.MaxSitemapLinks, 20)
+}
+
+func (cfg LightProbeSecurityTXTConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbeSecurityTXTConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbeSecurityTXTConfig) MaxResponseSize() int64 {
+	return int64(intOrDefault(cfg.MaxResponseBytes, 64*1024))
+}
+
+func hoursOrDefault(value int, def int) time.Duration {
+	return time.Duration(intOrDefault(value, def)) * time.Hour
 }

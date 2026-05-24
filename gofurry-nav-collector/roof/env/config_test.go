@@ -76,7 +76,7 @@ func TestProbeBudgetOverrides(t *testing.T) {
 
 func TestCollectorV2DefaultsDisabled(t *testing.T) {
 	cfg := CollectorV2Config{}
-	for _, protocol := range []string{"ping", "http", "dns"} {
+	for _, protocol := range []string{"ping", "http", "dns", "rdap", "robots", "security_txt"} {
 		if cfg.ProtocolEnabled(protocol) {
 			t.Fatalf("ProtocolEnabled(%q) should be false by default", protocol)
 		}
@@ -111,6 +111,65 @@ func TestCollectorV2ProtocolSwitches(t *testing.T) {
 	}
 	if cfg.ProtocolEnabled("unknown") {
 		t.Fatal("unknown protocol should be disabled")
+	}
+}
+
+func TestLightProbeDefaults(t *testing.T) {
+	cfg := LightProbeConfig{}
+	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled {
+		t.Fatal("light probe should be disabled by default")
+	}
+	if cfg.RDAP.Interval() != 168*time.Hour || cfg.Robots.Interval() != 168*time.Hour || cfg.SecurityTXT.Interval() != 168*time.Hour {
+		t.Fatal("light probe interval should default to 168 hours")
+	}
+	if cfg.RDAP.Timeout() != 10*time.Second || cfg.Robots.Timeout() != 10*time.Second || cfg.SecurityTXT.Timeout() != 10*time.Second {
+		t.Fatal("light probe timeout should default to 10 seconds")
+	}
+	if cfg.Robots.MaxResponseSize() != 64*1024 || cfg.SecurityTXT.MaxResponseSize() != 64*1024 {
+		t.Fatal("light probe max response size should default to 64KiB")
+	}
+	if cfg.Robots.MaxSitemaps() != 20 {
+		t.Fatal("robots max sitemap links should default to 20")
+	}
+}
+
+func TestLightProbeYAMLConfig(t *testing.T) {
+	var cfg serverConfig
+	err := yaml.Unmarshal([]byte(`
+collector:
+  v2:
+    enabled: true
+    light_probe:
+      rdap:
+        enabled: true
+        interval_hours: 24
+        timeout_seconds: 3
+      robots:
+        enabled: true
+        interval_hours: 48
+        timeout_seconds: 4
+        max_response_bytes: 1234
+        max_sitemap_links: 7
+      security_txt:
+        enabled: true
+        interval_hours: 72
+        timeout_seconds: 5
+        max_response_bytes: 2345
+`), &cfg)
+	if err != nil {
+		t.Fatalf("yaml.Unmarshal() error = %v", err)
+	}
+	if !cfg.Collector.V2.ProtocolEnabled("rdap") || !cfg.Collector.V2.ProtocolEnabled("robots") || !cfg.Collector.V2.ProtocolEnabled("security_txt") {
+		t.Fatalf("light probe protocol switches not loaded: %+v", cfg.Collector.V2.LightProbe)
+	}
+	if cfg.Collector.V2.LightProbe.RDAP.Interval() != 24*time.Hour || cfg.Collector.V2.LightProbe.RDAP.Timeout() != 3*time.Second {
+		t.Fatalf("rdap config not loaded: %+v", cfg.Collector.V2.LightProbe.RDAP)
+	}
+	if cfg.Collector.V2.LightProbe.Robots.MaxResponseSize() != 1234 || cfg.Collector.V2.LightProbe.Robots.MaxSitemaps() != 7 {
+		t.Fatalf("robots limits not loaded: %+v", cfg.Collector.V2.LightProbe.Robots)
+	}
+	if cfg.Collector.V2.LightProbe.SecurityTXT.MaxResponseSize() != 2345 {
+		t.Fatalf("security_txt limits not loaded: %+v", cfg.Collector.V2.LightProbe.SecurityTXT)
 	}
 }
 
