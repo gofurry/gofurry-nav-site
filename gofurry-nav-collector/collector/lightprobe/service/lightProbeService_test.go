@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/collector/lightprobe/models"
+	"github.com/gofurry/gofurry-nav-collector/roof/env"
 )
 
 func TestParseRDAPBootstrapSelectsServer(t *testing.T) {
@@ -194,6 +195,111 @@ func TestHTTPClientInvalidProxyReturnsError(t *testing.T) {
 	client, err := httpClientWithError(time.Second, "://bad-proxy", true)
 	if err == nil || client != nil {
 		t.Fatalf("httpClientWithError() client=%v err=%v, want invalid proxy error", client, err)
+	}
+}
+
+func TestBuildPageAssetsPayloadFetchesDeclaredIconAndManifest(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/favicon.ico":
+			w.Header().Set("Content-Type", "image/png")
+			w.Header().Set("Content-Length", "7")
+			_, _ = w.Write([]byte("pngdata"))
+		case "/site.webmanifest":
+			w.Header().Set("Content-Type", "application/manifest+json")
+			_, _ = w.Write([]byte(`{
+				"name": "Example App",
+				"short_name": "Example",
+				"theme_color": "#ffffff",
+				"background_color": "#000000",
+				"display": "standalone",
+				"start_url": "/start",
+				"scope": "/",
+				"icons": [{"src": "/icon.png"}, {"src": "/icon-512.png"}]
+			}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	payload := buildPageAssetsPayloadFromHTTPPayload(targetFromTestServer(server.URL), map[string]any{
+		"icon_links": []any{
+			map[string]any{"rel": "icon", "href": server.URL + "/favicon.ico", "type": "image/png", "sizes": "32x32"},
+		},
+		"manifest_link": map[string]any{"rel": "manifest", "href": server.URL + "/site.webmanifest", "type": "application/manifest+json"},
+	}, testPageAssetsConfig())
+
+	icon := payload["icon"].(map[string]any)
+	if icon["exists"] != true || icon["content_type"] != "image/png" || icon["sha256"] == "" {
+		t.Fatalf("icon payload unexpected: %+v", icon)
+	}
+	manifest := payload["manifest"].(map[string]any)
+	if manifest["exists"] != true || manifest["name"] != "Example App" || manifest["icons_count"] != 2 {
+		t.Fatalf("manifest payload unexpected: %+v", manifest)
+	}
+	if manifest["start_url"] != server.URL+"/start" || manifest["scope"] != server.URL+"/" {
+		t.Fatalf("manifest URL resolution unexpected: %+v", manifest)
+	}
+}
+
+func TestBuildPageAssetsPayloadSkipsCrossSiteAsset(t *testing.T) {
+	payload := buildPageAssetsPayloadFromHTTPPayload(models.GfnCollectorDomain{SiteID: 1, Name: "example.com", TLS: "1"}, map[string]any{
+		"icon_links": []any{
+			map[string]any{"rel": "icon", "href": "https://evil.test/favicon.ico"},
+		},
+		"manifest_link": map[string]any{"rel": "manifest", "href": "https://evil.test/site.webmanifest"},
+	}, testPageAssetsConfig())
+
+	icon := payload["icon"].(map[string]any)
+	manifest := payload["manifest"].(map[string]any)
+	if icon["skipped_reason"] != "asset_host_not_allowed" || manifest["skipped_reason"] != "asset_host_not_allowed" {
+		t.Fatalf("cross-site assets should be skipped: icon=%+v manifest=%+v", icon, manifest)
+	}
+}
+
+func TestBuildPageAssetsPayloadAllowsConfiguredCrossSiteHost(t *testing.T) {
+	if !assetURLAllowed("example.com", "https://assets.example-cdn.test/favicon.ico", []string{"assets.example-cdn.test"}) {
+		t.Fatal("allowed_asset_hosts should allow exact cross-site host")
+	}
+}
+
+func TestBuildPageAssetsPayloadMarksTruncatedAsset(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write([]byte(strings.Repeat("x", 64)))
+	}))
+	defer server.Close()
+
+	cfg := testPageAssetsConfig()
+	cfg.MaxIconBytes = 8
+	payload := buildPageAssetsPayloadFromHTTPPayload(targetFromTestServer(server.URL), map[string]any{
+		"icon_links": []any{
+			map[string]any{"rel": "icon", "href": server.URL},
+		},
+	}, cfg)
+
+	icon := payload["icon"].(map[string]any)
+	if icon["exists"] != true || icon["body_truncated"] != true || icon["body_read_bytes"] != 8 {
+		t.Fatalf("truncated icon payload unexpected: %+v", icon)
+	}
+}
+
+func TestBuildPageAssetsPayloadNoDeclarationSkipsRequest(t *testing.T) {
+	payload := buildPageAssetsPayloadFromHTTPPayload(models.GfnCollectorDomain{SiteID: 1, Name: "example.com", TLS: "1"}, map[string]any{}, testPageAssetsConfig())
+	icon := payload["icon"].(map[string]any)
+	manifest := payload["manifest"].(map[string]any)
+	if icon["skipped_reason"] != "asset_link_missing" || manifest["skipped_reason"] != "asset_link_missing" {
+		t.Fatalf("missing declarations should be skipped: icon=%+v manifest=%+v", icon, manifest)
+	}
+}
+
+func testPageAssetsConfig() env.LightProbePageAssetsConfig {
+	return env.LightProbePageAssetsConfig{
+		Enabled:          true,
+		TimeoutSeconds:   1,
+		MaxIconBytes:     1024,
+		MaxManifestBytes: 4096,
 	}
 }
 

@@ -9,6 +9,7 @@ const (
 	ProtocolRDAP        = "rdap"
 	ProtocolRobots      = "robots"
 	ProtocolSecurityTXT = "security_txt"
+	ProtocolPageAssets  = "page_assets"
 
 	StatusSuccess = "success"
 	StatusFailure = "failure"

@@ -26,6 +26,7 @@ type HTTPModel struct {
 	HTMLLang             string              `json:"htmlLang,omitempty"`
 	MetaRefresh          *HTTPMetaRefresh    `json:"metaRefresh,omitempty"`
 	IconLinks            []HTTPLinkInfo      `json:"iconLinks,omitempty"`
+	ManifestLink         *HTTPLinkInfo       `json:"manifestLink,omitempty"`
 	CookieSummary        *HTTPCookieSummary  `json:"cookieSummary,omitempty"`
 	ServerHints          *HTTPServerHints    `json:"serverHints,omitempty"`
 	CrossOriginSummary   *HTTPCrossOrigin    `json:"crossOriginSummary,omitempty"`
@@ -117,6 +118,7 @@ type HTTPSaveModel struct {
 	HTMLLang      string              `json:"htmlLang,omitempty"`
 	MetaRefresh   *HTTPMetaRefresh    `json:"metaRefresh,omitempty"`
 	IconLinks     []HTTPLinkInfo      `json:"iconLinks,omitempty"`
+	ManifestLink  *HTTPLinkInfo       `json:"manifestLink,omitempty"`
 	CookieSummary *HTTPCookieSummary  `json:"cookieSummary,omitempty"`
 	ServerHints   *HTTPServerHints    `json:"serverHints,omitempty"`
 	CrossOrigin   *HTTPCrossOrigin    `json:"crossOriginSummary,omitempty"`

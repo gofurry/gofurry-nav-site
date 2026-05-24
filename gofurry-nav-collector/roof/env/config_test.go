@@ -76,7 +76,7 @@ func TestProbeBudgetOverrides(t *testing.T) {
 
 func TestCollectorV2DefaultsDisabled(t *testing.T) {
 	cfg := CollectorV2Config{}
-	for _, protocol := range []string{"ping", "http", "dns", "rdap", "robots", "security_txt"} {
+	for _, protocol := range []string{"ping", "http", "dns", "rdap", "robots", "security_txt", "page_assets"} {
 		if cfg.ProtocolEnabled(protocol) {
 			t.Fatalf("ProtocolEnabled(%q) should be false by default", protocol)
 		}
@@ -116,17 +116,20 @@ func TestCollectorV2ProtocolSwitches(t *testing.T) {
 
 func TestLightProbeDefaults(t *testing.T) {
 	cfg := LightProbeConfig{}
-	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled {
+	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled || cfg.PageAssets.Enabled {
 		t.Fatal("light probe should be disabled by default")
 	}
-	if cfg.RDAP.Interval() != 168*time.Hour || cfg.Robots.Interval() != 168*time.Hour || cfg.SecurityTXT.Interval() != 168*time.Hour {
+	if cfg.RDAP.Interval() != 168*time.Hour || cfg.Robots.Interval() != 168*time.Hour || cfg.SecurityTXT.Interval() != 168*time.Hour || cfg.PageAssets.Interval() != 168*time.Hour {
 		t.Fatal("light probe interval should default to 168 hours")
 	}
-	if cfg.RDAP.Timeout() != 10*time.Second || cfg.Robots.Timeout() != 10*time.Second || cfg.SecurityTXT.Timeout() != 10*time.Second {
+	if cfg.RDAP.Timeout() != 10*time.Second || cfg.Robots.Timeout() != 10*time.Second || cfg.SecurityTXT.Timeout() != 10*time.Second || cfg.PageAssets.Timeout() != 10*time.Second {
 		t.Fatal("light probe timeout should default to 10 seconds")
 	}
 	if cfg.Robots.MaxResponseSize() != 64*1024 || cfg.SecurityTXT.MaxResponseSize() != 64*1024 {
 		t.Fatal("light probe max response size should default to 64KiB")
+	}
+	if cfg.PageAssets.MaxIconSize() != 256*1024 || cfg.PageAssets.MaxManifestSize() != 64*1024 {
+		t.Fatal("page_assets max response size defaults are incorrect")
 	}
 	if cfg.Robots.MaxSitemaps() != 20 {
 		t.Fatal("robots max sitemap links should default to 20")
@@ -155,11 +158,19 @@ collector:
         interval_hours: 72
         timeout_seconds: 5
         max_response_bytes: 2345
+      page_assets:
+        enabled: true
+        interval_hours: 96
+        timeout_seconds: 6
+        max_icon_bytes: 3456
+        max_manifest_bytes: 4567
+        allowed_asset_hosts:
+          - cdn.example.com
 `), &cfg)
 	if err != nil {
 		t.Fatalf("yaml.Unmarshal() error = %v", err)
 	}
-	if !cfg.Collector.V2.ProtocolEnabled("rdap") || !cfg.Collector.V2.ProtocolEnabled("robots") || !cfg.Collector.V2.ProtocolEnabled("security_txt") {
+	if !cfg.Collector.V2.ProtocolEnabled("rdap") || !cfg.Collector.V2.ProtocolEnabled("robots") || !cfg.Collector.V2.ProtocolEnabled("security_txt") || !cfg.Collector.V2.ProtocolEnabled("page_assets") {
 		t.Fatalf("light probe protocol switches not loaded: %+v", cfg.Collector.V2.LightProbe)
 	}
 	if cfg.Collector.V2.LightProbe.RDAP.Interval() != 24*time.Hour || cfg.Collector.V2.LightProbe.RDAP.Timeout() != 3*time.Second {
@@ -170,6 +181,15 @@ collector:
 	}
 	if cfg.Collector.V2.LightProbe.SecurityTXT.MaxResponseSize() != 2345 {
 		t.Fatalf("security_txt limits not loaded: %+v", cfg.Collector.V2.LightProbe.SecurityTXT)
+	}
+	if cfg.Collector.V2.LightProbe.PageAssets.Interval() != 96*time.Hour || cfg.Collector.V2.LightProbe.PageAssets.Timeout() != 6*time.Second {
+		t.Fatalf("page_assets timing config not loaded: %+v", cfg.Collector.V2.LightProbe.PageAssets)
+	}
+	if cfg.Collector.V2.LightProbe.PageAssets.MaxIconSize() != 3456 || cfg.Collector.V2.LightProbe.PageAssets.MaxManifestSize() != 4567 {
+		t.Fatalf("page_assets size limits not loaded: %+v", cfg.Collector.V2.LightProbe.PageAssets)
+	}
+	if len(cfg.Collector.V2.LightProbe.PageAssets.AllowedAssetHosts) != 1 || cfg.Collector.V2.LightProbe.PageAssets.AllowedAssetHosts[0] != "cdn.example.com" {
+		t.Fatalf("page_assets allowed hosts not loaded: %+v", cfg.Collector.V2.LightProbe.PageAssets.AllowedAssetHosts)
 	}
 }
 

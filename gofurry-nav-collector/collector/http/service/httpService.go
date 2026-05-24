@@ -274,6 +274,7 @@ func getRequestResult(site models.GfnCollectorDomain, run *runstate.Run) func() 
 			HTMLLang:      result.HTMLLang,
 			MetaRefresh:   result.MetaRefresh,
 			IconLinks:     result.IconLinks,
+			ManifestLink:  result.ManifestLink,
 			CookieSummary: result.CookieSummary,
 			ServerHints:   result.ServerHints,
 			CrossOrigin:   result.CrossOriginSummary,
@@ -408,6 +409,7 @@ func buildHTTPObservationPayload(result models.HTTPModel, httpRecord models.HTTP
 		"html_lang":                         limitString(httpRecord.HTMLLang, maxHTTPPayloadMetaValueLength),
 		"meta_refresh":                      limitHTTPMetaRefresh(httpRecord.MetaRefresh),
 		"icon_links":                        limitHTTPLinkInfos(httpRecord.IconLinks),
+		"manifest_link":                     limitHTTPLinkInfo(httpRecord.ManifestLink),
 		"cookie_summary":                    httpRecord.CookieSummary,
 		"server_hints":                      limitHTTPServerHints(httpRecord.ServerHints),
 		"cross_origin_summary":              limitHTTPCrossOrigin(httpRecord.CrossOrigin),
@@ -576,14 +578,26 @@ func limitHTTPLinkInfos(values []models.HTTPLinkInfo) []models.HTTPLinkInfo {
 	}
 	limited := make([]models.HTTPLinkInfo, 0, len(values))
 	for _, value := range values {
-		limited = append(limited, models.HTTPLinkInfo{
-			Rel:   limitString(value.Rel, maxHTTPPayloadMetaValueLength),
-			Href:  limitString(value.Href, maxHTTPPayloadURLLength),
-			Type:  limitString(value.Type, maxHTTPPayloadMetaValueLength),
-			Sizes: limitString(value.Sizes, maxHTTPPayloadMetaValueLength),
-		})
+		limited = append(limited, limitHTTPLinkInfoValue(value))
 	}
 	return limited
+}
+
+func limitHTTPLinkInfo(value *models.HTTPLinkInfo) *models.HTTPLinkInfo {
+	if value == nil {
+		return nil
+	}
+	limited := limitHTTPLinkInfoValue(*value)
+	return &limited
+}
+
+func limitHTTPLinkInfoValue(value models.HTTPLinkInfo) models.HTTPLinkInfo {
+	return models.HTTPLinkInfo{
+		Rel:   limitString(value.Rel, maxHTTPPayloadMetaValueLength),
+		Href:  limitString(value.Href, maxHTTPPayloadURLLength),
+		Type:  limitString(value.Type, maxHTTPPayloadMetaValueLength),
+		Sizes: limitString(value.Sizes, maxHTTPPayloadMetaValueLength),
+	}
 }
 
 func limitHTTPMetaRefresh(value *models.HTTPMetaRefresh) *models.HTTPMetaRefresh {
@@ -1015,6 +1029,14 @@ func enrichHTTPPageDetails(res *models.HTTPModel, body []byte) {
 				Type:  limitString(normalizeHTTPText(selection.AttrOr("type", "")), maxHTTPPayloadMetaValueLength),
 				Sizes: limitString(normalizeHTTPText(selection.AttrOr("sizes", "")), maxHTTPPayloadMetaValueLength),
 			})
+		}
+		if strings.Contains(relLower, "manifest") && res.ManifestLink == nil {
+			res.ManifestLink = &models.HTTPLinkInfo{
+				Rel:   limitString(rel, maxHTTPPayloadMetaValueLength),
+				Href:  limitString(resolveHTTPURL(href, res.FinalURL), maxHTTPPayloadURLLength),
+				Type:  limitString(normalizeHTTPText(selection.AttrOr("type", "")), maxHTTPPayloadMetaValueLength),
+				Sizes: limitString(normalizeHTTPText(selection.AttrOr("sizes", "")), maxHTTPPayloadMetaValueLength),
+			}
 		}
 		return true
 	})

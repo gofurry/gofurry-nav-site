@@ -201,3 +201,48 @@ security.txt 按每个有效采集 target 低频请求 `/.well-known/security.tx
 - 只提取固定字段，不保存原始 security.txt 全文。
 - 字段值最长 512 字符，列表限项，避免外部文本膨胀。
 - 请求失败写 `status=failure` 和 `security_txt_request_failed`，不影响主采集。
+
+### Page Assets
+
+`page_assets` 基于 HTTP v2 latest 里已经存在的 HTML 声明工作，不会重新抓取首页。每个 target 单轮最多拉取 1 个 favicon 和 1 个 manifest；默认关闭。
+
+```json
+{
+  "http_latest_found": true,
+  "icon": {
+    "exists": true,
+    "source_url": "https://example.com/favicon.ico",
+    "selected_rel": "icon",
+    "selected_sizes": "32x32",
+    "status_code": 200,
+    "content_type": "image/png",
+    "content_length_header": 1024,
+    "body_read_bytes": 1024,
+    "body_truncated": false,
+    "sha256": "hex..."
+  },
+  "manifest": {
+    "exists": true,
+    "source_url": "https://example.com/site.webmanifest",
+    "status_code": 200,
+    "content_type": "application/manifest+json",
+    "body_read_bytes": 512,
+    "body_truncated": false,
+    "sha256": "hex...",
+    "name": "Example App",
+    "short_name": "Example",
+    "theme_color": "#ffffff",
+    "background_color": "#000000",
+    "display": "standalone",
+    "start_url": "https://example.com/start",
+    "scope": "https://example.com/",
+    "icons_count": 2
+  }
+}
+```
+
+- 只允许 `http` / `https` 资源 URL。
+- 默认只跟随 target 同注册域资源；跨站资源必须显式配置在 `allowed_asset_hosts`。
+- favicon 只保存元信息和 SHA256，不保存图片内容。
+- manifest 只保存摘要字段和 SHA256，不保存原始 manifest JSON。
+- 没有 HTTP latest、没有声明、资源 host 不允许、Content-Type 不允许、请求失败等场景会写 `exists=false` 和 `skipped_reason`，不影响主采集。

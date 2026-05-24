@@ -69,6 +69,7 @@ type LightProbeConfig struct {
 	RDAP        LightProbeRDAPConfig        `yaml:"rdap"`
 	Robots      LightProbeRobotsConfig      `yaml:"robots"`
 	SecurityTXT LightProbeSecurityTXTConfig `yaml:"security_txt"`
+	PageAssets  LightProbePageAssetsConfig  `yaml:"page_assets"`
 }
 
 type LightProbeRDAPConfig struct {
@@ -90,6 +91,15 @@ type LightProbeSecurityTXTConfig struct {
 	IntervalHours    int  `yaml:"interval_hours"`
 	TimeoutSeconds   int  `yaml:"timeout_seconds"`
 	MaxResponseBytes int  `yaml:"max_response_bytes"`
+}
+
+type LightProbePageAssetsConfig struct {
+	Enabled           bool     `yaml:"enabled"`
+	IntervalHours     int      `yaml:"interval_hours"`
+	TimeoutSeconds    int      `yaml:"timeout_seconds"`
+	MaxIconBytes      int      `yaml:"max_icon_bytes"`
+	MaxManifestBytes  int      `yaml:"max_manifest_bytes"`
+	AllowedAssetHosts []string `yaml:"allowed_asset_hosts"`
 }
 
 type SchedulerConfig struct {
@@ -314,6 +324,8 @@ func (cfg CollectorV2Config) ProtocolEnabled(protocol string) bool {
 		return cfg.LightProbe.Robots.Enabled
 	case "security_txt":
 		return cfg.LightProbe.SecurityTXT.Enabled
+	case "page_assets":
+		return cfg.LightProbe.PageAssets.Enabled
 	default:
 		return false
 	}
@@ -376,6 +388,22 @@ func (cfg LightProbeSecurityTXTConfig) Timeout() time.Duration {
 
 func (cfg LightProbeSecurityTXTConfig) MaxResponseSize() int64 {
 	return int64(intOrDefault(cfg.MaxResponseBytes, 64*1024))
+}
+
+func (cfg LightProbePageAssetsConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbePageAssetsConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbePageAssetsConfig) MaxIconSize() int64 {
+	return int64(intOrDefault(cfg.MaxIconBytes, 256*1024))
+}
+
+func (cfg LightProbePageAssetsConfig) MaxManifestSize() int64 {
+	return int64(intOrDefault(cfg.MaxManifestBytes, 64*1024))
 }
 
 func hoursOrDefault(value int, def int) time.Duration {

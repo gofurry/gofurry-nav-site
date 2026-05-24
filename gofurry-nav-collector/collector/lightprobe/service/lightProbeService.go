@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -42,6 +44,7 @@ var (
 	rdapRunning        atomic.Bool
 	robotsRunning      atomic.Bool
 	securityTXTRunning atomic.Bool
+	pageAssetsRunning  atomic.Bool
 
 	rdapBootstrapURL = rdapBootstrapURLDefault
 	rdapBootstrapMu  sync.Mutex
@@ -62,11 +65,19 @@ type probeResult struct {
 }
 
 type httpProbeResponse struct {
-	StatusCode    int
-	ContentType   string
-	Body          []byte
-	BodyTruncated bool
-	DurationMS    int64
+	StatusCode          int
+	ContentType         string
+	ContentLengthHeader int64
+	Body                []byte
+	BodyTruncated       bool
+	DurationMS          int64
+}
+
+type pageAssetDeclaration struct {
+	Rel   string `json:"rel,omitempty"`
+	Href  string `json:"href,omitempty"`
+	Type  string `json:"type,omitempty"`
+	Sizes string `json:"sizes,omitempty"`
 }
 
 // InitLightProbeOnStart 注册默认关闭的 v2 低频轻探测任务。
@@ -102,6 +113,16 @@ func InitLightProbeOnStart() {
 			"protocol": observation.ProtocolSecurityTXT,
 		}, "security.txt 低频轻探测已注册")
 	}
+	if cfg.ProtocolEnabled(observation.ProtocolPageAssets) {
+		interval := cfg.LightProbe.PageAssets.Interval()
+		go RunPageAssets()
+		cs.AddCronJob(interval, RunPageAssets)
+		log.InfoFields(map[string]interface{}{
+			"event":    "light_probe_registered",
+			"interval": interval,
+			"protocol": observation.ProtocolPageAssets,
+		}, "页面资源声明低频轻探测已注册")
+	}
 }
 
 func RunRDAP() {
@@ -114,6 +135,10 @@ func RunRobots() {
 
 func RunSecurityTXT() {
 	runLightProbe(observation.ProtocolSecurityTXT, env.GetServerConfig().Collector.V2.LightProbe.SecurityTXT.Interval(), &securityTXTRunning, runSecurityTXTTargets)
+}
+
+func RunPageAssets() {
+	runLightProbe(observation.ProtocolPageAssets, env.GetServerConfig().Collector.V2.LightProbe.PageAssets.Interval(), &pageAssetsRunning, runPageAssetsTargets)
 }
 
 func runLightProbe(protocol string, interval time.Duration, running *atomic.Bool, executor func([]models.GfnCollectorDomain, *runstate.Run)) {
@@ -216,6 +241,14 @@ func runSecurityTXTTargets(targets []models.GfnCollectorDomain, run *runstate.Ru
 	for _, target := range targets {
 		result := probeSecurityTXT(target, cfg.Timeout(), cfg.MaxResponseSize())
 		saveLightProbeResult(observation.ProtocolSecurityTXT, target, result, run)
+	}
+}
+
+func runPageAssetsTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+	cfg := env.GetServerConfig().Collector.V2.LightProbe.PageAssets
+	for _, target := range targets {
+		result := probePageAssets(target, cfg)
+		saveLightProbeResult(observation.ProtocolPageAssets, target, result, run)
 	}
 }
 
@@ -375,13 +408,57 @@ func probeSecurityTXT(target models.GfnCollectorDomain, timeout time.Duration, m
 	}
 }
 
+func probePageAssets(target models.GfnCollectorDomain, cfg env.LightProbePageAssetsConfig) probeResult {
+	start := time.Now()
+	raw, err := cs.Get(observation.TargetLatestKey(observation.ProtocolHTTP, target.SiteID, target.TargetName()))
+	if err != nil {
+		result := failureResult("page_assets_http_latest_read_failed", err.GetMsg(), emptyPageAssetsPayload("http_latest_read_failed"))
+		result.DurationMS = time.Since(start).Milliseconds()
+		return result
+	}
+	if raw == "" {
+		return probeResult{
+			Status:     observation.StatusSuccess,
+			DurationMS: time.Since(start).Milliseconds(),
+			Payload:    emptyPageAssetsPayload("http_latest_missing"),
+		}
+	}
+
+	var latest observation.LatestDocument
+	if err := sonic.UnmarshalString(raw, &latest); err != nil {
+		result := failureResult("page_assets_http_latest_decode_failed", err.Error(), emptyPageAssetsPayload("http_latest_decode_failed"))
+		result.DurationMS = time.Since(start).Milliseconds()
+		return result
+	}
+	payloadMap, ok := latest.Payload.(map[string]any)
+	if !ok {
+		return probeResult{
+			Status:     observation.StatusSuccess,
+			DurationMS: time.Since(start).Milliseconds(),
+			Payload:    emptyPageAssetsPayload("http_latest_payload_not_object"),
+		}
+	}
+
+	payload := buildPageAssetsPayloadFromHTTPPayload(target, payloadMap, cfg)
+	payload["http_latest_found"] = true
+	return probeResult{
+		Status:     observation.StatusSuccess,
+		DurationMS: time.Since(start).Milliseconds(),
+		Payload:    payload,
+	}
+}
+
 func probeHTTPGet(target models.GfnCollectorDomain, path string, timeout time.Duration, maxBytes int64) (httpProbeResponse, error) {
 	client, err := httpClientForTarget(timeout, target.Proxy == "1")
 	if err != nil {
 		return httpProbeResponse{}, err
 	}
+	return probeHTTPGetURL(client, targetURL(target, path), maxBytes)
+}
+
+func probeHTTPGetURL(client *http.Client, rawURL string, maxBytes int64) (httpProbeResponse, error) {
 	start := time.Now()
-	resp, err := client.Get(targetURL(target, path))
+	resp, err := client.Get(rawURL)
 	if err != nil {
 		return httpProbeResponse{}, err
 	}
@@ -396,12 +473,280 @@ func probeHTTPGet(target models.GfnCollectorDomain, path string, timeout time.Du
 		body = body[:maxBytes]
 	}
 	return httpProbeResponse{
-		StatusCode:    resp.StatusCode,
-		ContentType:   resp.Header.Get("Content-Type"),
-		Body:          body,
-		BodyTruncated: truncated,
-		DurationMS:    time.Since(start).Milliseconds(),
+		StatusCode:          resp.StatusCode,
+		ContentType:         resp.Header.Get("Content-Type"),
+		ContentLengthHeader: resp.ContentLength,
+		Body:                body,
+		BodyTruncated:       truncated,
+		DurationMS:          time.Since(start).Milliseconds(),
 	}, nil
+}
+
+func buildPageAssetsPayloadFromHTTPPayload(target models.GfnCollectorDomain, httpPayload map[string]any, cfg env.LightProbePageAssetsConfig) map[string]any {
+	iconDecl := selectPageAssetIcon(httpPayload)
+	manifestDecl := selectPageAssetManifest(httpPayload)
+	return map[string]any{
+		"icon":     probeDeclaredAsset(target, iconDecl, cfg.Timeout(), cfg.MaxIconSize(), cfg.AllowedAssetHosts, isAllowedIconContentType, nil),
+		"manifest": probeDeclaredAsset(target, manifestDecl, cfg.Timeout(), cfg.MaxManifestSize(), cfg.AllowedAssetHosts, isAllowedManifestContentType, parseManifestSummary),
+	}
+}
+
+func emptyPageAssetsPayload(reason string) map[string]any {
+	return map[string]any{
+		"http_latest_found": false,
+		"icon": map[string]any{
+			"exists":         false,
+			"skipped_reason": reason,
+		},
+		"manifest": map[string]any{
+			"exists":         false,
+			"skipped_reason": reason,
+		},
+	}
+}
+
+func probeDeclaredAsset(target models.GfnCollectorDomain, declaration pageAssetDeclaration, timeout time.Duration, maxBytes int64, allowedHosts []string, contentTypeAllowed func(string) bool, parser func([]byte, string) map[string]any) map[string]any {
+	payload := map[string]any{
+		"exists":         false,
+		"source_url":     limitLightURL(declaration.Href),
+		"selected_rel":   limitLightText(declaration.Rel),
+		"selected_sizes": limitLightText(declaration.Sizes),
+	}
+	if declaration.Href == "" {
+		payload["skipped_reason"] = "asset_link_missing"
+		return payload
+	}
+	if !assetURLAllowed(target.TargetName(), declaration.Href, allowedHosts) {
+		payload["skipped_reason"] = "asset_host_not_allowed"
+		return payload
+	}
+
+	client, err := httpClientForTarget(timeout, target.Proxy == "1")
+	if err != nil {
+		payload["skipped_reason"] = "http_client_config_invalid"
+		payload["error_message"] = limitLightText(err.Error())
+		return payload
+	}
+	resp, err := probeHTTPGetURL(client, declaration.Href, maxBytes)
+	if err != nil {
+		payload["skipped_reason"] = "asset_request_failed"
+		payload["error_message"] = limitLightText(err.Error())
+		return payload
+	}
+
+	payload["status_code"] = resp.StatusCode
+	payload["content_type"] = limitLightText(resp.ContentType)
+	payload["content_length_header"] = resp.ContentLengthHeader
+	payload["body_read_bytes"] = len(resp.Body)
+	payload["body_truncated"] = resp.BodyTruncated
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		payload["skipped_reason"] = "asset_not_success"
+		return payload
+	}
+	if !contentTypeAllowed(resp.ContentType) {
+		payload["skipped_reason"] = "content_type_not_allowed"
+		return payload
+	}
+	payload["exists"] = true
+	payload["sha256"] = sha256Hex(resp.Body)
+	if parser != nil {
+		for key, value := range parser(resp.Body, declaration.Href) {
+			payload[key] = value
+		}
+	}
+	return payload
+}
+
+func selectPageAssetIcon(payload map[string]any) pageAssetDeclaration {
+	for _, item := range pageAssetLinksFromPayload(payload["icon_links"]) {
+		rel := strings.ToLower(item.Rel)
+		if strings.Contains(rel, "manifest") {
+			continue
+		}
+		if strings.Contains(rel, "apple-touch-icon") {
+			return item
+		}
+	}
+	for _, item := range pageAssetLinksFromPayload(payload["icon_links"]) {
+		rel := strings.ToLower(item.Rel)
+		if strings.Contains(rel, "manifest") {
+			continue
+		}
+		if strings.Contains(rel, "icon") || strings.Contains(rel, "shortcut") {
+			return item
+		}
+	}
+	return pageAssetDeclaration{}
+}
+
+func selectPageAssetManifest(payload map[string]any) pageAssetDeclaration {
+	if manifest := pageAssetLinkFromPayload(payload["manifest_link"]); manifest.Href != "" {
+		return manifest
+	}
+	for _, item := range pageAssetLinksFromPayload(payload["icon_links"]) {
+		if strings.Contains(strings.ToLower(item.Rel), "manifest") {
+			return item
+		}
+	}
+	return pageAssetDeclaration{}
+}
+
+func pageAssetLinksFromPayload(raw any) []pageAssetDeclaration {
+	values, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	links := make([]pageAssetDeclaration, 0, len(values))
+	for _, value := range values {
+		link := pageAssetLinkFromPayload(value)
+		if link.Href != "" {
+			links = append(links, link)
+		}
+	}
+	return links
+}
+
+func pageAssetLinkFromPayload(raw any) pageAssetDeclaration {
+	values, ok := raw.(map[string]any)
+	if !ok {
+		return pageAssetDeclaration{}
+	}
+	return pageAssetDeclaration{
+		Rel:   stringFromAny(values["rel"]),
+		Href:  stringFromAny(values["href"]),
+		Type:  stringFromAny(values["type"]),
+		Sizes: stringFromAny(values["sizes"]),
+	}
+}
+
+func assetURLAllowed(target string, rawURL string, allowedHosts []string) bool {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || !parsed.IsAbs() {
+		return false
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return false
+	}
+	assetHost := strings.ToLower(parsed.Hostname())
+	if assetHost == "" {
+		return false
+	}
+	targetHost := strings.ToLower(hostnameOnly(target))
+	if assetHost == targetHost {
+		return true
+	}
+	for _, host := range allowedHosts {
+		if assetHost == strings.ToLower(hostnameOnly(host)) {
+			return true
+		}
+	}
+	return sameRegistrableDomain(assetHost, targetHost)
+}
+
+func sameRegistrableDomain(first string, second string) bool {
+	if first == "" || second == "" || net.ParseIP(first) != nil || net.ParseIP(second) != nil {
+		return false
+	}
+	firstDomain, firstErr := publicsuffix.EffectiveTLDPlusOne(first)
+	secondDomain, secondErr := publicsuffix.EffectiveTLDPlusOne(second)
+	return firstErr == nil && secondErr == nil && firstDomain == secondDomain
+}
+
+func hostnameOnly(value string) string {
+	value = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(value, "https://"), "http://"))
+	if host, _, err := net.SplitHostPort(value); err == nil {
+		return host
+	}
+	if parsed, err := url.Parse(value); err == nil && parsed.Hostname() != "" {
+		return parsed.Hostname()
+	}
+	return strings.Trim(value, "[]")
+}
+
+func isAllowedIconContentType(value string) bool {
+	contentType := strings.ToLower(strings.TrimSpace(strings.Split(value, ";")[0]))
+	switch contentType {
+	case "image/x-icon", "image/vnd.microsoft.icon", "image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml":
+		return true
+	default:
+		return false
+	}
+}
+
+func isAllowedManifestContentType(value string) bool {
+	contentType := strings.ToLower(strings.TrimSpace(strings.Split(value, ";")[0]))
+	switch contentType {
+	case "application/manifest+json", "application/json", "text/json":
+		return true
+	default:
+		return false
+	}
+}
+
+func parseManifestSummary(body []byte, sourceURL string) map[string]any {
+	var parsed struct {
+		Name            string `json:"name"`
+		ShortName       string `json:"short_name"`
+		ThemeColor      string `json:"theme_color"`
+		BackgroundColor string `json:"background_color"`
+		Display         string `json:"display"`
+		StartURL        string `json:"start_url"`
+		Scope           string `json:"scope"`
+		Icons           []any  `json:"icons"`
+	}
+	if err := sonic.Unmarshal(body, &parsed); err != nil {
+		return map[string]any{
+			"manifest_decode_error": limitLightText(err.Error()),
+		}
+	}
+	return map[string]any{
+		"name":             limitLightText(parsed.Name),
+		"short_name":       limitLightText(parsed.ShortName),
+		"theme_color":      limitLightText(parsed.ThemeColor),
+		"background_color": limitLightText(parsed.BackgroundColor),
+		"display":          limitLightText(parsed.Display),
+		"start_url":        limitLightURL(resolveManifestURL(parsed.StartURL, sourceURL)),
+		"scope":            limitLightURL(resolveManifestURL(parsed.Scope, sourceURL)),
+		"icons_count":      len(parsed.Icons),
+	}
+}
+
+func resolveManifestURL(value string, baseURL string) string {
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	parsed, err := url.Parse(value)
+	if err != nil {
+		return value
+	}
+	if parsed.IsAbs() {
+		return parsed.String()
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil {
+		return value
+	}
+	return base.ResolveReference(parsed).String()
+}
+
+func sha256Hex(body []byte) string {
+	sum := sha256.Sum256(body)
+	return hex.EncodeToString(sum[:])
+}
+
+func stringFromAny(value any) string {
+	if raw, ok := value.(string); ok {
+		return raw
+	}
+	return ""
+}
+
+func limitLightURL(value string) string {
+	runes := []rune(strings.TrimSpace(value))
+	if len(runes) <= 2048 {
+		return string(runes)
+	}
+	return string(runes[:2048])
 }
 
 func httpClientForTarget(timeout time.Duration, useProxy bool) (*http.Client, error) {

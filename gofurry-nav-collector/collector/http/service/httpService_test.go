@@ -405,6 +405,7 @@ func TestEnrichHTTPPageDetailsExtractsPageSemantics(t *testing.T) {
   <link rel="canonical" href="/canonical">
   <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="32x32">
   <link rel="apple-touch-icon" href="/apple.png">
+  <link rel="manifest" href="/site.webmanifest">
 </head><body></body></html>`)
 	result := models.HTTPModel{
 		Domain:          "example.com",
@@ -444,8 +445,11 @@ func TestEnrichHTTPPageDetailsExtractsPageSemantics(t *testing.T) {
 	if result.MetaRefresh == nil || !result.MetaRefresh.Present || result.MetaRefresh.DelaySeconds == nil || *result.MetaRefresh.DelaySeconds != 5 || result.MetaRefresh.URL != "https://example.com/jump" {
 		t.Fatalf("meta refresh 提取错误: %+v", result.MetaRefresh)
 	}
-	if len(result.IconLinks) != 2 || result.IconLinks[0].Href != "https://example.com/favicon.ico" {
+	if len(result.IconLinks) != 3 || result.IconLinks[0].Href != "https://example.com/favicon.ico" {
 		t.Fatalf("icon links 提取错误: %+v", result.IconLinks)
+	}
+	if result.ManifestLink == nil || result.ManifestLink.Href != "https://example.com/site.webmanifest" {
+		t.Fatalf("manifest link 提取错误: %+v", result.ManifestLink)
 	}
 	if result.SharePreview == nil || result.SharePreview.Title != "OG 标题" || result.SharePreview.Image != "https://example.com/og.png" {
 		t.Fatalf("share preview 提取错误: %+v", result.SharePreview)
@@ -496,6 +500,7 @@ func TestBuildHTTPObservationPayloadIncludesPageDetailFields(t *testing.T) {
 		IconLinks: []models.HTTPLinkInfo{
 			{Rel: "icon", Href: "https://example.com/favicon.ico", Type: "image/x-icon", Sizes: "32x32"},
 		},
+		ManifestLink:  &models.HTTPLinkInfo{Rel: "manifest", Href: "https://example.com/site.webmanifest", Type: "application/manifest+json"},
 		CookieSummary: &models.HTTPCookieSummary{SetCookieCount: 2, SecureCount: 1},
 		ServerHints:   &models.HTTPServerHints{Server: "nginx", XPoweredBy: "Next.js", Generator: "Nuxt"},
 		CrossOrigin:   &models.HTTPCrossOrigin{CrossOriginOpenerPolicy: "same-origin", AccessControlAllowOrigin: "*"},
@@ -528,6 +533,10 @@ func TestBuildHTTPObservationPayloadIncludesPageDetailFields(t *testing.T) {
 	iconLinks := payload["icon_links"].([]models.HTTPLinkInfo)
 	if len(iconLinks) != 1 || iconLinks[0].Href != "https://example.com/favicon.ico" {
 		t.Fatalf("icon_links 错误: %+v", iconLinks)
+	}
+	manifestLink := payload["manifest_link"].(*models.HTTPLinkInfo)
+	if manifestLink.Href != "https://example.com/site.webmanifest" || manifestLink.Rel != "manifest" {
+		t.Fatalf("manifest_link 错误: %+v", manifestLink)
 	}
 	if payload["cookie_summary"].(*models.HTTPCookieSummary).SetCookieCount != 2 {
 		t.Fatalf("cookie_summary 错误: %+v", payload["cookie_summary"])

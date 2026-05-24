@@ -4,7 +4,7 @@
 
 `gofurry-nav-collector` 既定基础 roadmap 已完成。当前文档不再保留过长历史完成项，只记录后端正式进入 v2 前需要补齐的 collector 能力。
 
-`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段；`v0.5.3` 已完成默认关闭的域名治理低频轻探测。后续 `v0.5.4` 到 `v0.5.7` 用于在不影响旧链路的前提下补齐少量明确授权的轻探测能力。
+`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段；`v0.5.3` 已完成默认关闭的域名治理低频轻探测；`v0.5.4` 已完成默认关闭的页面资源声明轻探测。后续 `v0.5.5` 到 `v0.5.7` 用于在不影响旧链路的前提下补齐少量明确授权的轻探测能力。
 
 ## 迭代原则
 
@@ -138,7 +138,7 @@
 
 ### v0.5.4 - 页面资源声明轻探测
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** favicon / manifest / 前端展示参考 / 低频任务
 **目标：** 在已有 HTML 声明的基础上低频补充页面资源元信息，为站点详情页提供更完整的视觉和 PWA 参考。
 
@@ -150,12 +150,12 @@
 
 #### Tasks
 
-- [ ] 基于现有 HTTP HTML 提取到的 icon links，低频拉取最多 1 个优先 favicon，只记录状态、Content-Type、大小、hash，不保存原始图片。
-- [ ] 基于 HTML 中声明的 manifest link，低频拉取 manifest，记录 `name`、`short_name`、`theme_color`、`background_color`、icons count、display。
-- [ ] 增加资源响应体大小上限、Content-Type allowlist、redirect 限制和超时。
-- [ ] 增加 `collector.v2.light_probe.page_assets` 开关，默认关闭或低频。
-- [ ] 对 manifest/icon URL 做同站或明确允许的跨站限制，避免任意第三方资源跟随。
-- [ ] 更新文档，说明本阶段不做截图、OCR、页面正文抓取或子资源枚举。
+- [x] 基于现有 HTTP HTML 提取到的 icon links，低频拉取最多 1 个优先 favicon，只记录状态、Content-Type、大小、hash，不保存原始图片。
+- [x] 基于 HTML 中声明的 manifest link，低频拉取 manifest，记录 `name`、`short_name`、`theme_color`、`background_color`、icons count、display。
+- [x] 增加资源响应体大小上限、Content-Type allowlist、redirect 限制和超时。
+- [x] 增加 `collector.v2.light_probe.page_assets` 开关，默认关闭或低频。
+- [x] 对 manifest/icon URL 做同站或明确允许的跨站限制，避免任意第三方资源跟随。
+- [x] 更新文档，说明本阶段不做截图、OCR、页面正文抓取或子资源枚举。
 
 #### Acceptance Criteria
 
@@ -163,6 +163,11 @@
 - 单站点单轮最多新增极少量请求，并可完全关闭。
 - 不保存图片、HTML 正文或 manifest 原文大字段。
 - 结果可作为站点详情页展示参考，但不参与健康判定。
+
+#### Notes
+
+- `page_assets` 只消费 HTTP v2 latest 中已存在的 `icon_links` / `manifest_link`，不会为了资源声明重新抓取首页。
+- 字段说明：`docs/v2-observation-payload.md`。
 
 ---
 
