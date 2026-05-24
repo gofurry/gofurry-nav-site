@@ -2,9 +2,9 @@
 
 ## 当前状态
 
-`gofurry-nav-collector` 既定 roadmap 已完成。当前文档不再保留历史完成项，只记录下一阶段需要处理的开放问题。
+`gofurry-nav-collector` 既定基础 roadmap 已完成。当前文档不再保留过长历史完成项，只记录后端正式进入 v2 前需要补齐的 collector 能力。
 
-本轮 roadmap 来自 2026-05-25 代码审计，目标是把已经上线后的稳定性、数据可信度和维护性问题整理为 `v0.5.1` 修复计划。
+`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁。后续 `v0.5.2` 到 `v0.5.7` 用于在不影响旧链路的前提下补齐 v2 observation 数据面和少量明确授权的轻探测能力。
 
 ## 迭代原则
 
@@ -13,6 +13,8 @@
 - 优先修复会影响数据可信度、错误可见性、运行稳定性的点。
 - 对外部站点返回的数据继续按不可信内容处理，所有新增说明都只作为 observation 信号。
 - 继续避免不必要复杂度；不引入 Prometheus 生态，不做漏洞扫描，不做高频探测。
+- 新增会对外发起额外请求或连接的能力必须默认关闭或低频，并具备按站点、按协议关闭能力。
+- 端口探测、WAF 规则验证等主动安全能力只允许对自有或明确授权目标启用，不对普通收录站点默认执行。
 
 ## 版本计划
 
@@ -56,5 +58,191 @@
 #### Notes
 
 - 审计报告：`docs/code-audit-20260525.md`。
-- 本阶段只做补丁修复，不规划新的协议采集字段。
-- v0.5.1 完成后，如没有新的生产问题，roadmap 可以继续保持只记录开放项。
+- 本阶段只做补丁修复，没有增加采集频率、探测次数或默认协议强度。
+
+---
+
+### v0.5.2 - v2 Schema 收口前的低风险字段补充
+
+**状态：** 计划中
+**范围：** Ping / DNS / TLS / HTTP / v2 observation
+**目标：** 在不增加请求次数和探测强度的前提下，把现有一次采集中已经能拿到的高价值字段补齐，为后端 v2 schema 稳定做准备。
+
+#### Focus
+
+- TLS 证书身份与指纹。
+- HTTP 页面/传输的完整性和访客体感字段。
+- DNS 解析结构摘要。
+- Ping 选择 IP 的解释信息。
+
+#### Tasks
+
+- [ ] TLS v2 payload 增加 `cert_serial_number`、`cert_fingerprint_sha256`、`cert_spki_sha256`。
+- [ ] TLS v2 payload 增加 `cert_public_key_bits`、`cert_subject_org`、`cert_issuer_cn`、`cert_chain_issuers`。
+- [ ] HTTP v2 payload 增加 `content_length_header`、`transfer_encoding`、`is_chunked`、`html_charset`、`doctype`。
+- [ ] HTTP v2 payload 增加 `robots_meta_policy`、`canonical_host_matches_final_host`、`compression_ratio_estimated`。
+- [ ] DNS v2 payload 增加 `has_a`、`has_aaaa`、`ipv4_count`、`ipv6_count`、`cname_terminal`。
+- [ ] DNS v2 payload 增加 `name_server_hosts`、`mx_hosts`、`ttl_spread`、`mixed_private_public_ip`。
+- [ ] Ping v2 payload 增加 `ip_family`、`resolved_ips`、`selected_ip`、`resolution_source`、`icmp_blocked_suspected`。
+- [ ] 更新 v2 observation payload 文档，给出字段边界和样例 JSON。
+
+#### Acceptance Criteria
+
+- 不新增 HTTP 请求、DNS 查询目标、Ping 次数或默认并发。
+- 旧 Redis key、旧日志表、旧前端展示结构不变化。
+- 新字段全部有 builder 级单元测试。
+- 新字段只作为 observation 信号，不作为健康结论。
+
+---
+
+### v0.5.3 - 域名治理低频轻探测
+
+**状态：** 计划中
+**范围：** RDAP / robots.txt / security.txt / 低频任务
+**目标：** 为站点提供域名生命周期、爬虫策略和安全联系渠道参考，默认低频、失败降级为 Unknown。
+
+#### Focus
+
+- 低频域名信息。
+- 明确缓存和退避。
+- 不抓取大量外部内容。
+
+#### Tasks
+
+- [ ] 增加 RDAP 低频探测，默认周期建议 7 天，记录 registrar、domain status、expires_at、nameservers、dnssec delegation 状态。
+- [ ] RDAP 失败时记录 `unknown` 和错误类别，不影响 HTTP/DNS/Ping 主链路。
+- [ ] 增加 robots.txt 低频探测，记录是否存在、状态码、sitemap 链接数量、是否存在全站 disallow。
+- [ ] 增加 security.txt 低频探测，只检查 `/.well-known/security.txt` 和 `/security.txt`，记录是否存在、Contact、Expires、Policy 摘要。
+- [ ] 为 RDAP / robots.txt / security.txt 增加独立配置开关、超时、低频 interval 和 latest Redis key。
+- [ ] 文档化这些结果不是站点安全结论，只是治理参考。
+
+#### Acceptance Criteria
+
+- 默认不会增加现有 Ping / HTTP / DNS / TLS 采集强度。
+- 每类轻探测都有独立关闭开关和超时。
+- 不抓取 sitemap 明细，不扫描目录，不解析或保存大体积文本。
+- v2 observation / latest Redis 能查询到低频探测结果。
+
+---
+
+### v0.5.4 - 页面资源声明轻探测
+
+**状态：** 计划中
+**范围：** favicon / manifest / 前端展示参考 / 低频任务
+**目标：** 在已有 HTML 声明的基础上低频补充页面资源元信息，为站点详情页提供更完整的视觉和 PWA 参考。
+
+#### Focus
+
+- 只跟随 HTML 中明确声明的资源。
+- 限制大小、数量和 Content-Type。
+- 不枚举子资源。
+
+#### Tasks
+
+- [ ] 基于现有 HTTP HTML 提取到的 icon links，低频拉取最多 1 个优先 favicon，只记录状态、Content-Type、大小、hash，不保存原始图片。
+- [ ] 基于 HTML 中声明的 manifest link，低频拉取 manifest，记录 `name`、`short_name`、`theme_color`、`background_color`、icons count、display。
+- [ ] 增加资源响应体大小上限、Content-Type allowlist、redirect 限制和超时。
+- [ ] 增加 `collector.v2.light_probe.page_assets` 开关，默认关闭或低频。
+- [ ] 对 manifest/icon URL 做同站或明确允许的跨站限制，避免任意第三方资源跟随。
+- [ ] 更新文档，说明本阶段不做截图、OCR、页面正文抓取或子资源枚举。
+
+#### Acceptance Criteria
+
+- 默认不拉取页面所有资源。
+- 单站点单轮最多新增极少量请求，并可完全关闭。
+- 不保存图片、HTML 正文或 manifest 原文大字段。
+- 结果可作为站点详情页展示参考，但不参与健康判定。
+
+---
+
+### v0.5.5 - 授权范围内的高价值端口轻探测
+
+**状态：** 计划中
+**范围：** TCP connect / 授权目标 / 安全边界
+**目标：** 对自有或明确授权站点做少量高价值端口连通性观测，帮助发现意外暴露或服务变更；不对普通收录站点默认执行。
+
+#### Focus
+
+- 默认关闭。
+- 按站点显式 opt-in。
+- 只做 TCP connect，不抓 banner，不发协议 payload。
+
+#### Tasks
+
+- [ ] 增加 `collector.v2.light_probe.port_check.enabled=false`，并要求站点级 opt-in。
+- [ ] 增加端口 allowlist，默认建议只包含少量高价值端口，例如 22、25、53、80、443、465、587、993、995、8080、8443。
+- [ ] 每个目标每轮限制端口数量、并发和超时，失败不重试。
+- [ ] 只记录 `open` / `closed` / `timeout` / `filtered_suspected`、connect 耗时和错误类别。
+- [ ] 明确禁止 banner grabbing、协议交互、弱口令、目录枚举和漏洞验证。
+- [ ] 为端口探测增加中文日志、run state、v2 observation payload 和测试。
+
+#### Acceptance Criteria
+
+- 未显式授权的站点不会被端口探测。
+- 端口探测失败不影响 Ping / HTTP / DNS / TLS 主链路。
+- 可通过配置一键关闭全部端口探测。
+- 文档明确适用范围和法律/授权边界。
+
+---
+
+### v0.5.6 - WAF / CDN 被动指纹推断
+
+**状态：** 计划中
+**范围：** HTTP headers / DNS / TLS / 被动推断
+**目标：** 基于已有采集结果做保守的 WAF/CDN 线索识别，帮助站点理解访问链路，但不把推断包装成确定事实。
+
+#### Focus
+
+- 被动推断优先。
+- 证据字段可解释。
+- 不新增攻击性请求。
+
+#### Tasks
+
+- [ ] 基于已有 HTTP header、DNS CNAME/NS/ASN、TLS issuer/SAN、server hints 建立保守规则。
+- [ ] 输出 `edge_provider_hints`，包含 provider、confidence、evidence，不输出绝对结论。
+- [ ] 区分 CDN、WAF、反代、对象存储、托管平台等不同 hint 类型。
+- [ ] 对 Cloudflare、Tencent Cloud、Aliyun、AWS CloudFront、Fastly、Vercel、Netlify、GitHub Pages 等常见服务做基础规则。
+- [ ] 规则表内置但保持简单，可通过配置禁用。
+- [ ] 增加测试，保证证据不足时返回空 hint 或 low confidence。
+
+#### Acceptance Criteria
+
+- 不额外请求目标站点。
+- 不影响现有健康状态和前端主展示。
+- 每个 hint 都能看到 evidence，避免误读。
+- 文档明确“推断不是事实”，需要人工确认。
+
+---
+
+### v0.5.7 - 自有站点轻量 WAF 规则无害验证
+
+**状态：** 计划中
+**范围：** 自有站点 / WAF canary / 安全测试 / 默认关闭
+**目标：** 只对 GoFurry 自有站点或明确授权的专用测试目标，验证基础 WAF 规则是否仍能拦截常见无害测试请求；不对导航收录的第三方站点执行。
+
+#### Focus
+
+- 默认关闭。
+- 只允许自有 allowlist。
+- 建议使用专用 canary 路径。
+- 只验证拦截行为，不做漏洞利用。
+
+#### Tasks
+
+- [ ] 增加 `collector.v2.light_probe.waf_canary.enabled=false`，并要求配置 `allowed_hosts` 和 `canary_path`。
+- [ ] WAF 测试请求必须带清晰 User-Agent，例如 `GoFurry-Nav-Collector-WAF-Canary`，便于日志识别。
+- [ ] 测试请求只打到无业务副作用的 canary 路径，不携带账号、Cookie、Token 或真实用户数据。
+- [ ] 按规则类别验证基础拦截：扫描器 UA、JSON 解析错误、参数数量、异常 URI 长度、SQLi 关键词、XSS 标记、命令注入标记、路径穿越标记、非法 HTTP 方法、非法 Content-Type、JSON 危险关键字。
+- [ ] 只记录状态码、是否命中预期、规则类别、耗时和错误类别，不保存完整攻击样本。
+- [ ] 增加严格频率限制，建议每天或手动触发，不做失败重试。
+- [ ] 如果目标 host 不在 allowlist 或 canary_path 为空，任务必须拒绝启动并记录中文错误日志。
+- [ ] 文档化该能力只适合自有 WAF 回归测试，不属于导航站点常规采集能力。
+
+#### Acceptance Criteria
+
+- 默认配置下不会发送任何 WAF 测试请求。
+- 不能对非 allowlist host 执行。
+- 测试结果只进入 v2 observation / latest Redis，不影响旧页面和站点健康结论。
+- 所有测试 payload 都保持无害、可解释、可在 WAF 日志中识别。
+- 误配置时安全失败，不发起请求。
