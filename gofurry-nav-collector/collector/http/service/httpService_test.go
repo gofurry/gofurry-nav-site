@@ -45,6 +45,14 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 			"strict_transport_security": true,
 			"x_frame_options":           true,
 		},
+		SecurityHeaderValues: map[string]string{
+			"strict_transport_security": "max-age=31536000; includeSubDomains; preload",
+			"content_security_policy":   "default-src 'self'; script-src 'unsafe-inline' *",
+			"x_frame_options":           "DENY",
+			"x_content_type_options":    "nosniff",
+			"referrer_policy":           "strict-origin-when-cross-origin",
+			"permissions_policy":        "geolocation=()",
+		},
 		CertCollected:       true,
 		CertVerified:        true,
 		VerifyError:         repeated("e", 600),
@@ -195,6 +203,38 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 	if got := runeLen(cachePolicy["last_modified"]); got != maxHTTPPayloadCacheValueLength {
 		t.Fatalf("last_modified 未限长，got %d", got)
 	}
+	securityHeaderSummary, ok := payload["security_header_summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("security_header_summary 类型错误: %T", payload["security_header_summary"])
+	}
+	hstsSummary, ok := securityHeaderSummary["hsts"].(map[string]any)
+	if !ok {
+		t.Fatalf("hsts summary 类型错误: %T", securityHeaderSummary["hsts"])
+	}
+	if hstsSummary["present"] != true || hstsSummary["max_age"] != int64(31536000) || hstsSummary["include_subdomains"] != true || hstsSummary["preload"] != true {
+		t.Fatalf("hsts summary 错误: %+v", hstsSummary)
+	}
+	cspSummary, ok := securityHeaderSummary["content_security_policy"].(map[string]any)
+	if !ok {
+		t.Fatalf("csp summary 类型错误: %T", securityHeaderSummary["content_security_policy"])
+	}
+	if cspSummary["has_default_src"] != true || cspSummary["unsafe_inline"] != true || cspSummary["wildcard_source"] != true {
+		t.Fatalf("csp summary 错误: %+v", cspSummary)
+	}
+	xfoSummary, ok := securityHeaderSummary["x_frame_options"].(map[string]any)
+	if !ok {
+		t.Fatalf("x_frame_options summary 类型错误: %T", securityHeaderSummary["x_frame_options"])
+	}
+	if xfoSummary["mode"] != "DENY" {
+		t.Fatalf("x_frame_options mode 错误: %+v", xfoSummary)
+	}
+	xctoSummary, ok := securityHeaderSummary["x_content_type_options"].(map[string]any)
+	if !ok {
+		t.Fatalf("x_content_type_options summary 类型错误: %T", securityHeaderSummary["x_content_type_options"])
+	}
+	if xctoSummary["nosniff"] != true {
+		t.Fatalf("x_content_type_options summary 错误: %+v", xctoSummary)
+	}
 	if payload["cert_not_before"] != notBefore.Format(time.RFC3339) {
 		t.Fatalf("cert_not_before 错误，got %v", payload["cert_not_before"])
 	}
@@ -246,6 +286,18 @@ func TestBuildHTTPObservationPayloadSecurityHeadersHaveDefaults(t *testing.T) {
 		if securityHeaders[key] {
 			t.Fatalf("缺失安全响应头时 %s 应为 false", key)
 		}
+	}
+	securityHeaderSummary, ok := payload["security_header_summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("security_header_summary 类型错误: %T", payload["security_header_summary"])
+	}
+	hstsSummary := securityHeaderSummary["hsts"].(map[string]any)
+	if hstsSummary["present"] != false || hstsSummary["max_age"] != nil {
+		t.Fatalf("缺省 hsts summary 错误: %+v", hstsSummary)
+	}
+	cspSummary := securityHeaderSummary["content_security_policy"].(map[string]any)
+	if cspSummary["present"] != false || cspSummary["has_default_src"] != false || cspSummary["unsafe_inline"] != false {
+		t.Fatalf("缺省 csp summary 错误: %+v", cspSummary)
 	}
 }
 

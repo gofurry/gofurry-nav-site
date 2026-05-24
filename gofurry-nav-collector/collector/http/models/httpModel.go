@@ -10,33 +10,34 @@ import (
 // HTTP 采集结果
 type HTTPModel struct {
 	// HTTP 基本信息
-	Domain          string              `json:"domain"`        // 域名
-	Url             string              `json:"url"`           // url
-	StatusCode      int64               `json:"statusCode"`    // 状态码
-	ResponseTime    int64               `json:"responseTime"`  // 响应时间
-	ContentLength   int64               `json:"contentLength"` // 页面大小
-	Title           string              `json:"title"`         // 标题
-	Server          string              `json:"server"`        // 服务器类型
-	Redirects       []string            `json:"redirects"`     // 重定向链
-	Headers         map[string][]string `json:"headers"`       // 响应头
-	Meta            map[string]string   `json:"meta"`          // meta 标签
-	FinalURL        string              `json:"-"`             // v2 observation 最终 URL
-	ContentType     string              `json:"-"`             // v2 observation Content-Type
-	SecurityHeaders map[string]bool     `json:"-"`             // v2 observation 常见安全响应头是否存在
-	DNSLookupMS     int64               `json:"-"`             // v2 observation DNS 查询耗时
-	TCPConnectMS    int64               `json:"-"`             // v2 observation TCP 连接耗时
-	TLSHandshakeMS  int64               `json:"-"`             // v2 observation TLS 握手耗时
-	TTFBMS          int64               `json:"-"`             // v2 observation 首字节耗时
-	TransferMS      int64               `json:"-"`             // v2 observation 响应体读取耗时
-	HTTPProtocol    string              `json:"-"`             // v2 observation HTTP 协议
-	RemoteAddr      string              `json:"-"`             // v2 observation 实际 TCP 对端
-	RemoteIP        string              `json:"-"`             // v2 observation 实际 TCP 对端 IP
-	BodyReadBytes   int64               `json:"-"`             // v2 observation 实际读取字节数
-	ContentEncoding string              `json:"-"`             // v2 observation Content-Encoding
-	Compressed      bool                `json:"-"`             // v2 observation 是否压缩响应
-	CacheControl    string              `json:"-"`             // v2 observation Cache-Control
-	ETag            string              `json:"-"`             // v2 observation ETag
-	LastModified    string              `json:"-"`             // v2 observation Last-Modified
+	Domain               string              `json:"domain"`        // 域名
+	Url                  string              `json:"url"`           // url
+	StatusCode           int64               `json:"statusCode"`    // 状态码
+	ResponseTime         int64               `json:"responseTime"`  // 响应时间
+	ContentLength        int64               `json:"contentLength"` // 页面大小
+	Title                string              `json:"title"`         // 标题
+	Server               string              `json:"server"`        // 服务器类型
+	Redirects            []string            `json:"redirects"`     // 重定向链
+	Headers              map[string][]string `json:"headers"`       // 响应头
+	Meta                 map[string]string   `json:"meta"`          // meta 标签
+	FinalURL             string              `json:"-"`             // v2 observation 最终 URL
+	ContentType          string              `json:"-"`             // v2 observation Content-Type
+	SecurityHeaders      map[string]bool     `json:"-"`             // v2 observation 常见安全响应头是否存在
+	SecurityHeaderValues map[string]string   `json:"-"`             // v2 observation 常见安全响应头原始值
+	DNSLookupMS          int64               `json:"-"`             // v2 observation DNS 查询耗时
+	TCPConnectMS         int64               `json:"-"`             // v2 observation TCP 连接耗时
+	TLSHandshakeMS       int64               `json:"-"`             // v2 observation TLS 握手耗时
+	TTFBMS               int64               `json:"-"`             // v2 observation 首字节耗时
+	TransferMS           int64               `json:"-"`             // v2 observation 响应体读取耗时
+	HTTPProtocol         string              `json:"-"`             // v2 observation HTTP 协议
+	RemoteAddr           string              `json:"-"`             // v2 observation 实际 TCP 对端
+	RemoteIP             string              `json:"-"`             // v2 observation 实际 TCP 对端 IP
+	BodyReadBytes        int64               `json:"-"`             // v2 observation 实际读取字节数
+	ContentEncoding      string              `json:"-"`             // v2 observation Content-Encoding
+	Compressed           bool                `json:"-"`             // v2 observation 是否压缩响应
+	CacheControl         string              `json:"-"`             // v2 observation Cache-Control
+	ETag                 string              `json:"-"`             // v2 observation ETag
+	LastModified         string              `json:"-"`             // v2 observation Last-Modified
 
 	// TLS
 	TLSVersion          string    `json:"tlsVersion"`    // TLS 版本

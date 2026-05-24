@@ -11,6 +11,8 @@ import (
 	"net/http/httptrace"
 	"net/url"
 	"regexp"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -330,6 +332,7 @@ func buildHTTPObservationPayload(result models.HTTPModel, httpRecord models.HTTP
 		"final_url":                 limitString(finalURL, maxHTTPPayloadURLLength),
 		"content_type":              limitString(result.ContentType, maxHTTPPayloadContentTypeLength),
 		"security_headers":          securityHeadersWithDefaults(result.SecurityHeaders),
+		"security_header_summary":   buildHTTPSecurityHeaderSummary(result.SecurityHeaderValues),
 		"http_protocol":             result.HTTPProtocol,
 		"dns_lookup_ms":             result.DNSLookupMS,
 		"tcp_connect_ms":            result.TCPConnectMS,
@@ -449,6 +452,17 @@ func detectHTTPSecurityHeaders(header http.Header) map[string]bool {
 	}
 }
 
+func captureHTTPSecurityHeaderValues(header http.Header) map[string]string {
+	return map[string]string{
+		"strict_transport_security": header.Get("Strict-Transport-Security"),
+		"content_security_policy":   header.Get("Content-Security-Policy"),
+		"x_frame_options":           header.Get("X-Frame-Options"),
+		"x_content_type_options":    header.Get("X-Content-Type-Options"),
+		"referrer_policy":           header.Get("Referrer-Policy"),
+		"permissions_policy":        header.Get("Permissions-Policy"),
+	}
+}
+
 func securityHeadersWithDefaults(values map[string]bool) map[string]bool {
 	defaults := detectHTTPSecurityHeaders(http.Header{})
 	for key, value := range values {
@@ -457,6 +471,118 @@ func securityHeadersWithDefaults(values map[string]bool) map[string]bool {
 		}
 	}
 	return defaults
+}
+
+func buildHTTPSecurityHeaderSummary(values map[string]string) map[string]any {
+	return map[string]any{
+		"hsts":                    summarizeHSTS(values["strict_transport_security"]),
+		"content_security_policy": summarizeCSP(values["content_security_policy"]),
+		"x_frame_options":         summarizeXFrameOptions(values["x_frame_options"]),
+		"x_content_type_options":  summarizeXContentTypeOptions(values["x_content_type_options"]),
+		"referrer_policy":         summarizeReferrerPolicy(values["referrer_policy"]),
+		"permissions_policy":      summarizePermissionsPolicy(values["permissions_policy"]),
+	}
+}
+
+func summarizeHSTS(value string) map[string]any {
+	summary := map[string]any{
+		"present":            value != "",
+		"max_age":            nil,
+		"include_subdomains": false,
+		"preload":            false,
+	}
+	if value == "" {
+		return summary
+	}
+
+	for _, part := range strings.Split(value, ";") {
+		token := strings.TrimSpace(part)
+		lowerToken := strings.ToLower(token)
+		switch {
+		case strings.HasPrefix(lowerToken, "max-age="):
+			raw := strings.TrimSpace(token[len("max-age="):])
+			if maxAge, err := strconv.ParseInt(raw, 10, 64); err == nil {
+				summary["max_age"] = maxAge
+			}
+		case lowerToken == "includesubdomains":
+			summary["include_subdomains"] = true
+		case lowerToken == "preload":
+			summary["preload"] = true
+		}
+	}
+	return summary
+}
+
+func summarizeCSP(value string) map[string]any {
+	summary := map[string]any{
+		"present":         value != "",
+		"has_default_src": false,
+		"unsafe_inline":   false,
+		"unsafe_eval":     false,
+		"wildcard_source": false,
+	}
+	if value == "" {
+		return summary
+	}
+
+	directives := strings.Split(value, ";")
+	for _, directive := range directives {
+		trimmed := strings.TrimSpace(directive)
+		if trimmed == "" {
+			continue
+		}
+		fields := strings.Fields(trimmed)
+		if len(fields) == 0 {
+			continue
+		}
+		if strings.ToLower(fields[0]) == "default-src" {
+			summary["has_default_src"] = true
+		}
+		for _, field := range fields[1:] {
+			switch strings.ToLower(field) {
+			case "'unsafe-inline'":
+				summary["unsafe_inline"] = true
+			case "'unsafe-eval'":
+				summary["unsafe_eval"] = true
+			case "*":
+				summary["wildcard_source"] = true
+			}
+		}
+	}
+	return summary
+}
+
+func summarizeXFrameOptions(value string) map[string]any {
+	mode := ""
+	if value != "" {
+		mode = strings.ToUpper(strings.TrimSpace(value))
+	}
+	return map[string]any{
+		"present": value != "",
+		"mode":    mode,
+	}
+}
+
+func summarizeXContentTypeOptions(value string) map[string]any {
+	mode := strings.ToLower(strings.TrimSpace(value))
+	return map[string]any{
+		"present": value != "",
+		"nosniff": mode == "nosniff",
+	}
+}
+
+func summarizeReferrerPolicy(value string) map[string]any {
+	return map[string]any{
+		"present": value != "",
+		"policy":  limitString(value, maxHTTPPayloadHeaderValueLength),
+	}
+}
+
+func summarizePermissionsPolicy(value string) map[string]any {
+	return map[string]any{
+		"present": value != "",
+		"policy":  limitString(value, maxHTTPPayloadHeaderValueLength),
+	}
 }
 
 func verifyTLSCertificate(state *tls.ConnectionState, dnsName string) (bool, string) {
@@ -718,6 +844,7 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	}
 	res.ContentType = resp.Header.Get("Content-Type")
 	res.SecurityHeaders = detectHTTPSecurityHeaders(resp.Header)
+	res.SecurityHeaderValues = captureHTTPSecurityHeaderValues(resp.Header)
 	res.HTTPProtocol = resp.Proto
 	res.ContentEncoding = resp.Header.Get("Content-Encoding")
 	res.Compressed = resp.Uncompressed || res.ContentEncoding != ""

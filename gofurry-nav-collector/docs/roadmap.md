@@ -200,7 +200,7 @@
 - [x] 记录最终连接 `remote_ip` / `remote_addr`，辅助和 DNS observation 对照。
 - [x] 记录 `content_length`、`body_read_bytes`、`compressed`，作为访客体感大小参考。
 - [x] 摘要化 `cache-control`、`etag`、`last-modified`，形成 `cache_policy`。
-- [ ] 细化常见安全 header 摘要，例如 HSTS `max-age`、CSP 是否包含高风险宽松项。
+- [x] 细化常见安全 header 摘要，例如 HSTS `max-age`、CSP 是否包含高风险宽松项。
 
 #### TLS 可扩展字段
 
@@ -225,10 +225,6 @@
 - 不增加默认请求次数、DNS 目标数量、Ping 次数、并发或响应体上限。
 - v2 latest Redis 和 observation DB 新字段出现，旧 Redis key、旧表和旧前端展示不变化。
 - 字段解释写入 `docs/v2-observation-payload.md`，明确它们不是最终健康判断。
-
-#### 备注
-
-本轮保留一项后续细化：常见安全 header 目前先记录“是否存在”，尚未把 HSTS `max-age`、CSP 高风险宽松项等做成结构化摘要。它更适合进入后续展示或健康聚合阶段，避免在当前 observation 层过早引入解释性逻辑。
 
 ---
 

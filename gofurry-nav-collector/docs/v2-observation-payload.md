@@ -52,6 +52,7 @@ HTTP v2 payload 当前包含：
 - 传输上下文字段：`http_protocol`、`remote_addr`、`remote_ip`、`body_read_bytes`、`compressed`、`content_encoding`。
 - 缓存摘要：`cache_policy.cache_control`、`cache_policy.etag`、`cache_policy.last_modified`。
 - 常见安全响应头是否存在：`security_headers`。
+- 常见安全响应头摘要：`security_header_summary`。
 - TLS 兼容字段：`tls_version`、`cipher_suite`、`cert_expiry`、`cert_days_left`、`cert_issuer`、`cert_issuer_org`、`cert_dns_names`、`cert_pub_key_alg`、`cert_sig_alg`、`cert_email`、`cert_is_ca`。
 - TLS 语义字段：`cert_collected`、`cert_verified`、`verify_error`、`verify_error_category`、`tls_handshake`。
 - TLS 补充字段：`cert_not_before`、`cert_not_after`、`cert_chain_length`、`cert_subject_cn`、`cert_san_count`、`cert_signature_algorithm`、`cert_public_key_algorithm`、`ocsp_stapled`、`sct_count`。
@@ -59,6 +60,17 @@ HTTP v2 payload 当前包含：
 HTTP 仍使用 GET。v0.3.0 不启用 HEAD-first，也不改变重定向、超时、响应体上限和旧展示结构。
 
 `remote_addr` / `remote_ip` 表示本次 TCP 实际连到的对端，目标走代理时它可能是代理地址，不应被直接当成源站结论。
+
+`security_header_summary` 当前会对这些 header 做保守结构化摘要：
+
+- `hsts`：`present`、`max_age`、`include_subdomains`、`preload`
+- `content_security_policy`：`present`、`has_default_src`、`unsafe_inline`、`unsafe_eval`、`wildcard_source`
+- `x_frame_options`：`present`、`mode`
+- `x_content_type_options`：`present`、`nosniff`
+- `referrer_policy`：`present`、`policy`
+- `permissions_policy`：`present`、`policy`
+
+这些摘要仍然只是 observation 信号，例如 `unsafe_inline=true` 只表示本次采到的 CSP 中出现了该项，不自动等价为站点存在确定风险结论。
 
 外部文本在 v2 payload 中做了限长：`title`、`server`、`meta`、`headers`、redirect URL、final URL、缓存相关 header、证书 issuer、证书 DNS names、证书 email、`verify_error`、`cert_subject_cn` 都按固定上限截断，旧 Redis/旧表不受影响。
 
