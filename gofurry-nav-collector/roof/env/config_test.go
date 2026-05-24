@@ -3,6 +3,8 @@ package env
 import (
 	"testing"
 	"time"
+
+	"gopkg.in/yaml.v2"
 )
 
 func TestProbeBudgetDefaults(t *testing.T) {
@@ -109,5 +111,60 @@ func TestCollectorV2ProtocolSwitches(t *testing.T) {
 	}
 	if cfg.ProtocolEnabled("unknown") {
 		t.Fatal("unknown protocol should be disabled")
+	}
+}
+
+func TestSchedulerDefaults(t *testing.T) {
+	cfg := SchedulerConfig{}
+	if cfg.LeaseEnabled {
+		t.Fatal("Scheduler lease should be disabled by default")
+	}
+	if !cfg.RunStateEnabled() {
+		t.Fatal("Scheduler run state should be enabled by default")
+	}
+	if got := cfg.RunStateTTL(); got != 168*time.Hour {
+		t.Fatalf("RunStateTTL() = %s, want 168h", got)
+	}
+}
+
+func TestSchedulerYAMLConfig(t *testing.T) {
+	var cfg serverConfig
+	err := yaml.Unmarshal([]byte(`
+collector:
+  scheduler:
+    collector_id: "collector-a"
+    lease_enabled: true
+    lease_ttl_seconds: 90
+    run_state_redis: false
+    run_state_ttl_hours: 24
+`), &cfg)
+	if err != nil {
+		t.Fatalf("yaml.Unmarshal() error = %v", err)
+	}
+	if cfg.Collector.Scheduler.CollectorID != "collector-a" || !cfg.Collector.Scheduler.LeaseEnabled {
+		t.Fatalf("Scheduler config not loaded: %+v", cfg.Collector.Scheduler)
+	}
+	if cfg.Collector.Scheduler.RunStateEnabled() {
+		t.Fatal("RunStateEnabled() should follow explicit false")
+	}
+	if got := cfg.Collector.Scheduler.RunStateTTL(); got != 24*time.Hour {
+		t.Fatalf("RunStateTTL() = %s, want 24h", got)
+	}
+}
+
+func TestServerModeYAMLTag(t *testing.T) {
+	var cfg serverConfig
+	err := yaml.Unmarshal([]byte(`
+server:
+  app_name: "GF-Nav-Collector"
+  app_version: "v1.0.0"
+  mode: "debug"
+  memory_limit: 1
+`), &cfg)
+	if err != nil {
+		t.Fatalf("yaml.Unmarshal() error = %v", err)
+	}
+	if cfg.Server.Mode != "debug" {
+		t.Fatalf("Server.Mode = %q, want debug", cfg.Server.Mode)
 	}
 }

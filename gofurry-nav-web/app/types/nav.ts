@@ -39,6 +39,53 @@ export interface SiteInfo {
     view_count: number;
 }
 
+export type HealthSummaryState = 'ready' | 'missing' | 'stale';
+export type HealthStatus = 'healthy' | 'warning' | 'degraded' | 'unknown' | 'down';
+
+export interface ProtocolHealthSummary {
+    protocol: 'ping' | 'http' | 'dns' | string;
+    status: string;
+    observed_at: string;
+    duration_ms: number;
+    stale: boolean;
+    stale_after_seconds: number;
+    error_code?: string;
+}
+
+export interface TargetHealthSummaryItem {
+    target: string;
+    status: HealthStatus;
+    reason_codes: string[];
+    reason_messages: string[];
+    observed_at: string;
+}
+
+export interface SiteHealthSummary {
+    state: HealthSummaryState;
+    site_id: number;
+    status: HealthStatus;
+    reason_codes: string[];
+    reason_messages: string[];
+    target_count: number;
+    status_counts: Record<string, number>;
+    targets: TargetHealthSummaryItem[];
+    generated_at: string;
+    schema_version: number;
+}
+
+export interface TargetHealthSummary {
+    state: HealthSummaryState;
+    site_id: number;
+    target: string;
+    status: HealthStatus;
+    reason_codes: string[];
+    reason_messages: string[];
+    protocols: Record<string, ProtocolHealthSummary>;
+    observed_at: string;
+    generated_at: string;
+    schema_version: number;
+}
+
 export interface HttpRecord {
     domain: string;
     url: string;

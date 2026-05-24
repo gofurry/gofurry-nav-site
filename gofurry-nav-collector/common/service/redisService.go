@@ -67,6 +67,23 @@ func Del(keys ...string) common.GFError {
 	return nil
 }
 
+func CompareAndDelete(key string, expected string) (bool, common.GFError) {
+	const script = `
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+	return redis.call("DEL", KEYS[1])
+end
+return 0
+`
+	ctx, cancel := commandContext()
+	defer cancel()
+	res, err := client.Eval(ctx, script, []string{key}, expected).Int64()
+	if err != nil {
+		log.ErrorFields(redisFields("compare_delete", key), "Redis 比较删除失败: "+err.Error())
+		return false, common.NewServiceError("比较删除缓存失败.")
+	}
+	return res > 0, nil
+}
+
 func SetNX(key string, value any, expiration time.Duration) bool {
 	ctx, cancel := commandContext()
 	defer cancel()
@@ -98,11 +115,18 @@ func SetExpire(key string, value any, expiration time.Duration) common.GFError {
 	return nil
 }
 
-func Get(key string) *redis.Cmd {
+func Get(key string) (string, common.GFError) {
 	ctx, cancel := commandContext()
 	defer cancel()
-	val := client.Do(ctx, "get", key)
-	return val
+	val, err := client.Get(ctx, key).Result()
+	switch {
+	case errors.Is(err, redis.Nil):
+		return "", nil
+	case err != nil:
+		log.ErrorFields(redisFields("get", key), "Redis 读取失败: "+err.Error())
+		return "", common.NewServiceError("获取缓存失败.")
+	}
+	return strings.TrimSpace(val), nil
 }
 
 func GetString(key string) (data string, gfsError common.GFError) {
@@ -212,15 +236,19 @@ func HDel(key string, fields ...string) (res int64, gfsError common.GFError) {
 		logFields := redisFields("hdel", key)
 		logFields["fields"] = len(fields)
 		log.ErrorFields(logFields, "Redis 哈希字段删除失败: "+err.Error())
-		return intVal, nil
+		return intVal, common.NewServiceError("删除缓存失败.")
 	}
 	return intVal, nil
 }
 
-func Incr(key string) {
+func Incr(key string) common.GFError {
 	ctx, cancel := commandContext()
 	defer cancel()
-	client.Incr(ctx, key)
+	if err := client.Incr(ctx, key).Err(); err != nil {
+		log.ErrorFields(redisFields("incr", key), "Redis 自增失败: "+err.Error())
+		return common.NewServiceError("自增缓存失败.")
+	}
+	return nil
 }
 
 // redis 前缀统计

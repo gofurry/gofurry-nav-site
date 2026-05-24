@@ -292,6 +292,29 @@
       "expandAlgDetails": "查看算法细节",
       "day": "天"
     },
+    "healthSummary": {
+      "title": "健康摘要",
+      "observationOnly": "基于采集器 v2 observation 汇总，仅作旁路参考。",
+      "siteStatus": "站点摘要",
+      "currentTarget": "当前采集目标",
+      "state": "数据状态",
+      "targetCount": "采集目标数",
+      "status": "状态",
+      "stale": "已过期",
+      "reasons": "原因",
+      "states": {
+        "ready": "可用",
+        "missing": "暂无数据",
+        "stale": "已过期"
+      },
+      "statuses": {
+        "healthy": "正常",
+        "warning": "需关注",
+        "degraded": "降级",
+        "unknown": "未知",
+        "down": "不可用"
+      }
+    },
     "siteDnsPanel": {
       "dnsRecord": "DNS 记录",
       "type": "类型",

@@ -349,7 +349,6 @@ func (api *navAPI) CreateSite(c fiber.Ctx) error {
 			ID:      ids[0],
 			Name:    strings.TrimSpace(req.Name),
 			NameEn:  strings.TrimSpace(req.NameEn),
-			Domain:  adminutil.MustJSON(map[string][]string{"domain": []string{}}),
 			Info:    strings.TrimSpace(req.Info),
 			InfoEn:  strings.TrimSpace(req.InfoEn),
 			Country: req.Country,

@@ -24,6 +24,13 @@
         />
       </div>
 
+      <div v-if="healthSummaryEnabled && (sitePageData.siteHealthSummary || sitePageData.targetHealthSummary)" class="mx-10 mb-8">
+        <SiteHealthSummaryPanel
+          :site-summary="sitePageData.siteHealthSummary"
+          :target-summary="sitePageData.targetHealthSummary"
+        />
+      </div>
+
       <div class="mx-10 mb-8">
         <SitePerformance
           v-if="sitePageData.sitePingRecord && sitePageData.siteHttpRecord"
@@ -69,13 +76,14 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SiteDnsPanel from '@/components/site/SiteDnsPanel.vue'
+import SiteHealthSummaryPanel from '@/components/site/SiteHealthSummaryPanel.vue'
 import SiteHttpPanel from '@/components/site/SiteHttpPanel.vue'
 import SiteOverview from '@/components/site/SiteOverview.vue'
 import SitePerformance from '@/components/site/SitePerformance.vue'
 import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
 
 const { t } = useI18n()
-const { data, pending, error, refresh } = await useSiteDetailPage()
+const { data, pending, error, refresh, healthSummaryEnabled } = await useSiteDetailPage()
 const sitePageData = computed(() => data.value!)
 const pageRoot = ref<HTMLElement | null>(null)
 const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'Failed to load site data.' : '站点数据加载失败。'))

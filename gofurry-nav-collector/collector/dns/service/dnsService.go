@@ -2,9 +2,12 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,6 +17,7 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/models"
 	"github.com/gofurry/gofurry-nav-collector/collector/observation"
+	runstate "github.com/gofurry/gofurry-nav-collector/collector/scheduler"
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
@@ -29,6 +33,13 @@ const (
 	MaxDepth = 2
 	// PTR 查询并发数控制
 	PTRWorkers = 5
+
+	maxDNSObservationTextLength = 512
+
+	dnsRiskPrivateIP          = "private_ip"
+	dnsRiskLowTTL             = "low_ttl"
+	dnsRiskNXDomainWithAnswer = "nxdomain_with_answer"
+	dnsRiskPTREmpty           = "ptr_empty"
 )
 
 // 按域名并行查 加锁
@@ -41,6 +52,42 @@ var ptrSem = make(chan struct{}, PTRWorkers) // ptrSem 用于限制 PTR 查询�
 
 var resolver = env.GetServerConfig().Collector.Dns.Resolver
 var geoDBs *GeoDBSet
+
+type dnsResponseSummary struct {
+	Rcode              string  `json:"rcode"`
+	Authoritative      bool    `json:"authoritative"`
+	Truncated          bool    `json:"truncated"`
+	RecursionAvailable bool    `json:"recursion_available"`
+	AnswerCount        int     `json:"answer_count"`
+	AuthorityCount     int     `json:"authority_count"`
+	AdditionalCount    int     `json:"additional_count"`
+	TTLMin             uint32  `json:"ttl_min"`
+	TTLMax             uint32  `json:"ttl_max"`
+	TTLAvg             float64 `json:"ttl_avg"`
+	DNSSECRRSIGPresent bool    `json:"dnssec_rrsig_present"`
+	DNSSECAD           bool    `json:"dnssec_ad"`
+}
+
+type dnsMXPriority struct {
+	Host     string `json:"host"`
+	Priority uint16 `json:"priority"`
+}
+
+type dnsSOASummary struct {
+	NS      string `json:"ns"`
+	Mbox    string `json:"mbox"`
+	Serial  uint32 `json:"serial"`
+	Refresh uint32 `json:"refresh"`
+	Retry   uint32 `json:"retry"`
+	Expire  uint32 `json:"expire"`
+	Minttl  uint32 `json:"minttl"`
+}
+
+type dnsQueryMetadata struct {
+	ResponseSummary dnsResponseSummary
+	MXPriorities    []dnsMXPriority
+	SOA             *dnsSOASummary
+}
 
 type GeoDBSet struct {
 	Country *geoip2.Reader
@@ -131,6 +178,7 @@ func InitDNSOnStart() {
 		"event":           "module_init_start",
 		"interval":        time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval) * time.Hour,
 		"protocol":        "dns",
+		"query_workers":   dnsQueryThreadLimit(env.GetServerConfig().Collector.Dns.QueryThread, len(models.RecordTypes)),
 		"resolver":        resolver,
 		"retention_every": time.Hour * 72,
 		"workers":         env.GetServerConfig().Collector.Dns.DnsThread,
@@ -214,80 +262,99 @@ func Delete() {
 
 // 执行 ParseDNS
 func ParseDNS() {
+	interval := time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval) * time.Hour
+	run := runstate.NewRun(observation.ProtocolDNS, interval)
 	defer func() {
 		if err := recover(); err != nil {
-			log.ErrorFields(map[string]interface{}{
-				"event":    "run_recovered",
-				"protocol": "dns",
-			}, fmt.Sprintf("DNS 采集运行触发 panic，已恢复: %v", err))
+			run.Fail("panic", int(run.Snapshot(runstate.StatusFailed, "").TargetCount))
+			fields := run.Fields()
+			fields["event"] = "run_recovered"
+			log.ErrorFields(fields, fmt.Sprintf("DNS 采集运行触发 panic，已恢复: %v", err))
 		}
 	}()
 	if !dnsRunning.CompareAndSwap(false, true) {
-		log.WarnFields(map[string]interface{}{
-			"event":    "run_skipped",
-			"protocol": "dns",
-			"reason":   "上一轮采集仍在运行",
-			"status":   "skipped",
-		}, "DNS 采集已跳过：上一轮仍在运行")
+		run.Skip("previous_run_running", 0)
+		fields := run.Fields()
+		fields["event"] = "run_skipped"
+		fields["reason"] = "上一轮采集仍在运行"
+		fields["skipped_reason"] = "previous_run_running"
+		fields["status"] = "skipped"
+		log.WarnFields(fields, "DNS 采集已跳过：上一轮仍在运行")
 		return
 	}
 	defer dnsRunning.Store(false)
+	if !run.AcquireLeaseOrSkip() {
+		fields := run.Fields()
+		fields["event"] = "run_skipped"
+		fields["reason"] = "采集 lease 已被其他实例持有"
+		fields["skipped_reason"] = "lease_held_by_other_collector"
+		fields["status"] = "skipped"
+		log.WarnFields(fields, "DNS 采集已跳过：采集 lease 已被其他实例持有")
+		return
+	}
+	defer run.ReleaseLease()
+	run.Start()
 
 	start := time.Now()
-	log.InfoFields(map[string]interface{}{
-		"event":       "run_start",
-		"max_depth":   MaxDepth,
-		"protocol":    "dns",
-		"resolver":    resolver,
-		"timeout":     env.GetServerConfig().Collector.ProbeBudget.DNSTimeout(),
-		"ptr_timeout": env.GetServerConfig().Collector.ProbeBudget.PTRTimeout(),
-		"workers":     env.GetServerConfig().Collector.Dns.DnsThread,
-	}, "DNS 采集运行开始")
+	fields := run.Fields()
+	fields["event"] = "run_start"
+	fields["max_depth"] = MaxDepth
+	fields["resolver"] = resolver
+	fields["timeout"] = env.GetServerConfig().Collector.ProbeBudget.DNSTimeout()
+	fields["ptr_timeout"] = env.GetServerConfig().Collector.ProbeBudget.PTRTimeout()
+	fields["query_workers"] = dnsQueryThreadLimit(env.GetServerConfig().Collector.Dns.QueryThread, len(models.RecordTypes))
+	fields["workers"] = env.GetServerConfig().Collector.Dns.DnsThread
+	log.InfoFields(fields, "DNS 采集运行开始")
 
 	requestList, err := dao.GetDNSDao().GetList()
 	if err != nil {
-		log.ErrorFields(map[string]interface{}{
-			"duration": time.Since(start),
-			"event":    "run_failed",
-			"protocol": "dns",
-			"stage":    "load_targets",
-		}, "DNS 目标列表读取失败: "+err.GetMsg())
+		run.Fail("load_targets", 0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_failed"
+		fields["stage"] = "load_targets"
+		log.ErrorFields(fields, "DNS 目标列表读取失败: "+err.GetMsg())
 		return
 	}
 	// 判空
 	if len(requestList) < 1 {
-		log.InfoFields(map[string]interface{}{
-			"duration": time.Since(start),
-			"event":    "run_complete",
-			"protocol": "dns",
-			"reason":   "目标列表为空",
-			"targets":  0,
-		}, "DNS 采集完成：没有需要探测的目标")
+		run.Complete(0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_complete"
+		fields["reason"] = "目标列表为空"
+		fields["targets"] = 0
+		log.InfoFields(fields, "DNS 采集完成：没有需要探测的目标")
 		return
 	}
+	run.SetTargetCount(len(requestList))
 
 	log.InfoFields(map[string]interface{}{
-		"event":    "probe_start",
-		"protocol": "dns",
-		"targets":  len(requestList),
-		"workers":  env.GetServerConfig().Collector.Dns.DnsThread,
+		"event":         "probe_start",
+		"protocol":      "dns",
+		"query_workers": dnsQueryThreadLimit(env.GetServerConfig().Collector.Dns.QueryThread, len(models.RecordTypes)),
+		"targets":       len(requestList),
+		"workers":       env.GetServerConfig().Collector.Dns.DnsThread,
 	}, "DNS 探测开始")
 	dnsThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
 	// 遍历站点列表, 每个站点开一个线程执行采集
 	for _, v := range requestList {
-		dnsThread.Go(getDNSResult(v))
+		dnsThread.Go(getDNSResult(v, run))
 	}
 	// 等待所有采集和解析执行完毕
 	dnsThread.Wait()
-	log.InfoFields(map[string]interface{}{
-		"duration": time.Since(start),
-		"event":    "run_complete",
-		"protocol": "dns",
-		"targets":  len(requestList),
-	}, "DNS 采集运行完成")
+	run.Complete(len(requestList))
+	snapshot := run.Snapshot(runstate.StatusComplete, "")
+	fields = run.Fields()
+	fields["duration"] = time.Since(start)
+	fields["event"] = "run_complete"
+	fields["failure_count"] = snapshot.FailureCount
+	fields["success_count"] = snapshot.SuccessCount
+	fields["targets"] = len(requestList)
+	log.InfoFields(fields, "DNS 采集运行完成")
 }
 
-func getDNSResult(site models.GfnCollectorDomain) func() {
+func getDNSResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
 	return func() {
 		defer func() {
 			if err := recover(); err != nil {
@@ -302,7 +369,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		// 执行 Request 获取结果
 		probeStart := time.Now()
 		geoDBSet := currentGeoDBs()
-		results := performDNSQuery(site, geoDBSet.ASN, geoDBSet.City, geoDBSet.Country)
+		results, metadata := performDNSQuery(site, geoDBSet.ASN, geoDBSet.City, geoDBSet.Country)
 
 		siteName := site.TargetName()
 
@@ -366,6 +433,13 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		if newRecord.Status != "success" {
 			newRecord.Status = "failure"
 		}
+		if run != nil {
+			if newRecord.Status == "success" {
+				run.RecordSuccess()
+			} else {
+				run.RecordFailure()
+			}
+		}
 
 		// 存数据库
 		daoErr := dao.GetDNSDao().Add(&newRecord)
@@ -381,15 +455,22 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		if newRecord.Status != "success" {
 			errorCode = "dns_no_records"
 		}
+		collectorID, jobID := "", ""
+		if run != nil {
+			collectorID = run.CollectorID
+			jobID = run.JobID
+		}
 		saveErr := observation.SaveIfEnabled(observation.Input{
-			SiteID:     site.SiteID,
-			Target:     siteName,
-			Protocol:   observation.ProtocolDNS,
-			Status:     observationStatusFromDNS(newRecord.Status),
-			ObservedAt: newRecord.CreateTime,
-			DurationMS: time.Since(probeStart).Milliseconds(),
-			ErrorCode:  errorCode,
-			Payload:    results,
+			SiteID:      site.SiteID,
+			Target:      siteName,
+			Protocol:    observation.ProtocolDNS,
+			Status:      observationStatusFromDNS(newRecord.Status),
+			ObservedAt:  newRecord.CreateTime,
+			DurationMS:  time.Since(probeStart).Milliseconds(),
+			ErrorCode:   errorCode,
+			Payload:     buildDNSObservationPayloadWithMetadata(results, metadata),
+			CollectorID: collectorID,
+			JobID:       jobID,
 		})
 		if saveErr != nil {
 			log.WarnFields(map[string]interface{}{
@@ -410,7 +491,161 @@ func observationStatusFromDNS(status string) string {
 	return observation.StatusFailure
 }
 
-func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityDB *geoip2.Reader, countryDB *geoip2.Reader) map[string][]models.DNSRecord {
+func buildDNSObservationPayload(results map[string][]models.DNSRecord) map[string]any {
+	return buildDNSObservationPayloadWithMetadata(results, nil)
+}
+
+func buildDNSObservationPayloadWithMetadata(results map[string][]models.DNSRecord, metadata map[string]dnsQueryMetadata) map[string]any {
+	payload := make(map[string]any, len(results)+1)
+	aggregateRisks := map[string]struct{}{}
+	responseSummary := make(map[string]dnsResponseSummary, len(results))
+
+	for recordType, records := range results {
+		v2Records := make([]map[string]any, 0, len(records))
+		for _, record := range records {
+			v2Record, risks := buildDNSObservationRecord(record)
+			v2Records = append(v2Records, v2Record)
+			for _, risk := range risks {
+				aggregateRisks[risk] = struct{}{}
+			}
+		}
+		payload[recordType] = v2Records
+		responseSummary[recordType] = buildDNSResponseSummary(recordType, records, metadata)
+	}
+	payload["risk_flags"] = sortedRiskFlags(aggregateRisks)
+	payload["response_summary"] = responseSummary
+	payload["cname_chain_depth"] = maxDNSRecordDepth(results)
+	payload["mx_priorities"] = buildDNSMXPriorities(metadata)
+	payload["soa"] = buildDNSSOA(metadata)
+	return payload
+}
+
+func buildDNSResponseSummary(recordType string, records []models.DNSRecord, metadata map[string]dnsQueryMetadata) dnsResponseSummary {
+	if metadata != nil {
+		if item, ok := metadata[recordType]; ok {
+			return item.ResponseSummary
+		}
+	}
+
+	summary := dnsResponseSummary{
+		AnswerCount: len(records),
+	}
+	if len(records) == 0 {
+		return summary
+	}
+
+	var ttlSum uint64
+	summary.TTLMin = records[0].TTL
+	summary.TTLMax = records[0].TTL
+	for _, record := range records {
+		ttlSum += uint64(record.TTL)
+		if record.TTL < summary.TTLMin {
+			summary.TTLMin = record.TTL
+		}
+		if record.TTL > summary.TTLMax {
+			summary.TTLMax = record.TTL
+		}
+		if record.DNSSEC {
+			summary.DNSSECRRSIGPresent = true
+		}
+	}
+	summary.TTLAvg = float64(ttlSum) / float64(len(records))
+	return summary
+}
+
+func buildDNSObservationRecord(record models.DNSRecord) (map[string]any, []string) {
+	value, truncated := limitDNSObservationText(record.Value)
+	reversePTR, _ := limitDNSObservationText(record.ReversePTR)
+	riskFlags := sortedStringSlice(record.RiskFlags)
+	riskSet := make(map[string]struct{}, len(riskFlags))
+	for _, risk := range riskFlags {
+		riskSet[risk] = struct{}{}
+	}
+
+	children := make([]map[string]any, 0, len(record.Children))
+	for _, child := range record.Children {
+		childRecord, childRisks := buildDNSObservationRecord(child)
+		children = append(children, childRecord)
+		for _, risk := range childRisks {
+			riskSet[risk] = struct{}{}
+		}
+	}
+
+	v2Record := map[string]any{
+		"type":          record.Type,
+		"value":         value,
+		"ttl":           record.TTL,
+		"dnssec":        record.DNSSEC,
+		"asn":           record.ASN,
+		"country":       record.Country,
+		"city":          record.City,
+		"provider_type": record.ProviderType,
+		"isp":           record.ISP,
+		"duration_ms":   record.Duration.Milliseconds(),
+		"children":      children,
+		"reverse_ptr":   reversePTR,
+		"risk_flags":    sortedRiskFlags(riskSet),
+	}
+	if truncated {
+		v2Record["value_truncated"] = true
+		v2Record["value_original_length"] = len([]rune(record.Value))
+		v2Record["value_sha256"] = sha256Hex(record.Value)
+	}
+	if textKind := dnsTextKind(record); textKind != "" {
+		v2Record["text_kind"] = textKind
+	}
+	return v2Record, sortedRiskFlags(riskSet)
+}
+
+func limitDNSObservationText(value string) (string, bool) {
+	if len([]rune(value)) <= maxDNSObservationTextLength {
+		return value, false
+	}
+	return string([]rune(value)[:maxDNSObservationTextLength]), true
+}
+
+func sha256Hex(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
+}
+
+func dnsTextKind(record models.DNSRecord) string {
+	switch record.Type {
+	case "CAA":
+		return "caa"
+	case "TXT":
+		normalized := strings.ToLower(strings.TrimSpace(record.Value))
+		if strings.HasPrefix(normalized, "v=spf1") {
+			return "spf"
+		}
+		if strings.HasPrefix(normalized, "v=dmarc1") {
+			return "dmarc"
+		}
+		return "txt"
+	default:
+		return ""
+	}
+}
+
+func sortedRiskFlags(riskSet map[string]struct{}) []string {
+	risks := make([]string, 0, len(riskSet))
+	for risk := range riskSet {
+		risks = append(risks, risk)
+	}
+	sort.Strings(risks)
+	return risks
+}
+
+func sortedStringSlice(values []string) []string {
+	if values == nil {
+		return nil
+	}
+	copied := append([]string(nil), values...)
+	sort.Strings(copied)
+	return copied
+}
+
+func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityDB *geoip2.Reader, countryDB *geoip2.Reader) (map[string][]models.DNSRecord, map[string]dnsQueryMetadata) {
 	// 按记录类型并行查 加锁
 	var queryMu sync.Mutex
 	var queryMG sync.WaitGroup
@@ -422,16 +657,21 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 	var globalTotalTime time.Duration
 	// 最终结果
 	result := make(map[string][]models.DNSRecord)
+	metadata := make(map[string]dnsQueryMetadata)
 
 	domain := site.TargetName()
 
 	// 并行查询每种记录类型
+	queryWorkers := dnsQueryThreadLimit(env.GetServerConfig().Collector.Dns.QueryThread, len(models.RecordTypes))
+	querySem := make(chan struct{}, queryWorkers)
 	for _, rt := range models.RecordTypes {
 		queryMG.Add(1)
 		go func(rt models.RecordType) {
 			defer queryMG.Done()
+			querySem <- struct{}{}
+			defer func() { <-querySem }()
 
-			records, stats, err := queryDNS(domain, rt.Type, resolver, countryDB, cityDB, asnDB, 0)
+			records, stats, queryMetadata, err := queryDNS(domain, rt.Type, resolver, countryDB, cityDB, asnDB, 0)
 			if err != nil {
 				log.WarnFields(map[string]interface{}{
 					"domain":      domain,
@@ -448,6 +688,7 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 			for _, record := range records {
 				result[record.Type] = append(result[record.Type], record)
 			}
+			metadata[rt.Name] = queryMetadata
 
 			if stats.MinTTL < globalMinTTL {
 				globalMinTTL = stats.MinTTL
@@ -463,15 +704,25 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 
 	}
 	queryMG.Wait()
-	return result
+	return result, metadata
 }
 
 // ============== DNS解析 - 采集和解析部分 ==============
 
-func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader, cityDB *geoip2.Reader, countryDB *geoip2.Reader, depth int) ([]models.DNSRecord, models.DNSStatistics, common.GFError) {
+func dnsQueryThreadLimit(configured int, recordTypeCount int) int {
+	if recordTypeCount <= 0 {
+		return 1
+	}
+	if configured <= 0 || configured > recordTypeCount {
+		return recordTypeCount
+	}
+	return configured
+}
+
+func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Reader, cityDB *geoip2.Reader, asnDB *geoip2.Reader, depth int) ([]models.DNSRecord, models.DNSStatistics, dnsQueryMetadata, common.GFError) {
 	// 防止递归过深
 	if depth > MaxDepth {
-		return nil, models.DNSStatistics{}, nil
+		return nil, models.DNSStatistics{}, dnsQueryMetadata{}, nil
 	}
 
 	start := time.Now()
@@ -487,7 +738,7 @@ func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader
 	// 执行 DNS 查询
 	in, _, err := c.Exchange(m, resolver)
 	if err != nil {
-		return nil, models.DNSStatistics{}, common.NewServiceError("DNS 查询失败: " + err.Error())
+		return nil, models.DNSStatistics{}, dnsQueryMetadata{}, common.NewServiceError("DNS 查询失败: " + err.Error())
 	}
 	totalTime := time.Since(start)
 
@@ -504,6 +755,19 @@ func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader
 	var ttlSum uint32
 	minTTL, maxTTL := uint32(1<<32-1), uint32(0)
 	var durations []time.Duration
+	metadata := dnsQueryMetadata{
+		ResponseSummary: dnsResponseSummary{
+			Rcode:              dnsRcodeName(in.Rcode),
+			Authoritative:      in.Authoritative,
+			Truncated:          in.Truncated,
+			RecursionAvailable: in.RecursionAvailable,
+			AnswerCount:        len(in.Answer),
+			AuthorityCount:     len(in.Ns),
+			AdditionalCount:    len(in.Extra),
+			DNSSECRRSIGPresent: dnssec,
+			DNSSECAD:           in.AuthenticatedData,
+		},
+	}
 
 	// 遍历每条 Answer 记录
 	maxRecords := probeBudget.MaxDNSRecords()
@@ -532,36 +796,51 @@ func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader
 			rec.Country, rec.City, rec.ASN, rec.ISP = lookupGeoASN(v.A, countryDB, cityDB, asnDB)
 			rec.ProviderType = detectCDN(rec.ASN, v.A, domain)
 			rec.ReversePTR = reversePTR(v.A)
+			rec.RiskFlags = detectDNSRiskFlags(v.A, in, v.Hdr.Ttl, rec.ReversePTR)
 			rec.Hijacked = detectHijack(v.A, in, v.Hdr.Ttl)
 		case *dns.AAAA:
 			rec.Value = v.AAAA.String()
 			rec.Country, rec.City, rec.ASN, rec.ISP = lookupGeoASN(v.AAAA, countryDB, cityDB, asnDB)
 			rec.ProviderType = detectCDN(rec.ASN, v.AAAA, domain)
 			rec.ReversePTR = reversePTR(v.AAAA)
+			rec.RiskFlags = detectDNSRiskFlags(v.AAAA, in, v.Hdr.Ttl, rec.ReversePTR)
 			rec.Hijacked = detectHijack(v.AAAA, in, v.Hdr.Ttl)
 		case *dns.CNAME:
 			rec.Value = v.Target
 			// 递归查询 CNAME 指向的 A/AAAA
-			childrenA, _, _ := queryDNS(v.Target, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
-			childrenAAAA, _, _ := queryDNS(v.Target, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenA, _, _, _ := queryDNS(v.Target, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenAAAA, _, _, _ := queryDNS(v.Target, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
 			rec.Children = append(rec.Children, childrenA...)
 			rec.Children = append(rec.Children, childrenAAAA...)
 		case *dns.MX:
 			rec.Value = fmt.Sprintf("%s (优先级 %d)", v.Mx, v.Preference)
-			childrenA, _, _ := queryDNS(v.Mx, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
-			childrenAAAA, _, _ := queryDNS(v.Mx, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
+			metadata.MXPriorities = append(metadata.MXPriorities, dnsMXPriority{
+				Host:     limitDNSObservationString(v.Mx),
+				Priority: v.Preference,
+			})
+			childrenA, _, _, _ := queryDNS(v.Mx, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenAAAA, _, _, _ := queryDNS(v.Mx, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
 			rec.Children = append(rec.Children, childrenA...)
 			rec.Children = append(rec.Children, childrenAAAA...)
 		case *dns.NS:
 			rec.Value = v.Ns
-			childrenA, _, _ := queryDNS(v.Ns, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
-			childrenAAAA, _, _ := queryDNS(v.Ns, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenA, _, _, _ := queryDNS(v.Ns, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenAAAA, _, _, _ := queryDNS(v.Ns, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
 			rec.Children = append(rec.Children, childrenA...)
 			rec.Children = append(rec.Children, childrenAAAA...)
 		case *dns.TXT:
 			rec.Value = strings.Join(v.Txt, " ")
 		case *dns.SOA:
 			rec.Value = fmt.Sprintf("%s %s", v.Ns, v.Mbox)
+			metadata.SOA = &dnsSOASummary{
+				NS:      limitDNSObservationString(v.Ns),
+				Mbox:    limitDNSObservationString(v.Mbox),
+				Serial:  v.Serial,
+				Refresh: v.Refresh,
+				Retry:   v.Retry,
+				Expire:  v.Expire,
+				Minttl:  v.Minttl,
+			}
 		case *dns.CAA:
 			rec.Value = fmt.Sprintf("%d %s %s", v.Flag, v.Tag, v.Value)
 		default:
@@ -581,6 +860,9 @@ func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader
 	}
 	if len(results) > 0 {
 		stats.AvgTTL = float64(ttlSum) / float64(len(results))
+		metadata.ResponseSummary.TTLMin = minTTL
+		metadata.ResponseSummary.TTLMax = maxTTL
+		metadata.ResponseSummary.TTLAvg = stats.AvgTTL
 		stats.MinTime, stats.MaxTime = durations[0], durations[0]
 		var total time.Duration
 		for _, d := range durations {
@@ -595,7 +877,66 @@ func queryDNS(domain string, qtype uint16, resolver string, asnDB *geoip2.Reader
 		stats.AvgTime = total / time.Duration(len(durations))
 	}
 
-	return results, stats, nil
+	return results, stats, metadata, nil
+}
+
+func dnsRcodeName(rcode int) string {
+	if name, ok := dns.RcodeToString[rcode]; ok {
+		return name
+	}
+	return fmt.Sprintf("RCODE_%d", rcode)
+}
+
+func buildDNSMXPriorities(metadata map[string]dnsQueryMetadata) []dnsMXPriority {
+	if metadata == nil {
+		return nil
+	}
+	item, ok := metadata["MX"]
+	if !ok || len(item.MXPriorities) == 0 {
+		return nil
+	}
+	return item.MXPriorities
+}
+
+func buildDNSSOA(metadata map[string]dnsQueryMetadata) any {
+	if metadata == nil {
+		return nil
+	}
+	item, ok := metadata["SOA"]
+	if !ok || item.SOA == nil {
+		return nil
+	}
+	return item.SOA
+}
+
+func maxDNSRecordDepth(results map[string][]models.DNSRecord) int {
+	maxDepth := 0
+	for _, records := range results {
+		for _, record := range records {
+			if depth := dnsRecordDepth(record); depth > maxDepth {
+				maxDepth = depth
+			}
+		}
+	}
+	return maxDepth
+}
+
+func dnsRecordDepth(record models.DNSRecord) int {
+	maxChildDepth := 0
+	for _, child := range record.Children {
+		if depth := dnsRecordDepth(child); depth > maxChildDepth {
+			maxChildDepth = depth
+		}
+	}
+	if len(record.Children) == 0 {
+		return 0
+	}
+	return maxChildDepth + 1
+}
+
+func limitDNSObservationString(value string) string {
+	limited, _ := limitDNSObservationText(value)
+	return limited
 }
 
 // lookupGeoASN 查询 IP 的国家、城市、ASN 和 ISP 信息
@@ -655,6 +996,14 @@ func detectCDN(asn string, ip net.IP, domain string) string {
 // detectHijack 检测是否存在 DNS 劫持行为
 // 包括私网 IP、TTL 异常、NXDOMAIN 等
 func detectHijack(ip net.IP, msg *dns.Msg, ttl uint32) bool {
+	risks := detectDNSRiskFlags(ip, msg, ttl, "skip_ptr_check")
+	return containsRiskFlag(risks, dnsRiskPrivateIP) ||
+		containsRiskFlag(risks, dnsRiskNXDomainWithAnswer) ||
+		containsRiskFlag(risks, dnsRiskLowTTL)
+}
+
+func detectDNSRiskFlags(ip net.IP, msg *dns.Msg, ttl uint32, reversePTR string) []string {
+	riskSet := map[string]struct{}{}
 	privateRanges := []string{
 		"0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8",
 		"169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16",
@@ -663,20 +1012,34 @@ func detectHijack(ip net.IP, msg *dns.Msg, ttl uint32) bool {
 	for _, cidr := range privateRanges {
 		_, block, _ := net.ParseCIDR(cidr)
 		if block.Contains(ip) {
-			return true
+			riskSet[dnsRiskPrivateIP] = struct{}{}
+			break
 		}
 	}
 
 	// RcodeNameError 且有 Answer 也可能劫持
-	if msg.Rcode == dns.RcodeNameError && len(msg.Answer) > 0 {
-		return true
+	if msg != nil && msg.Rcode == dns.RcodeNameError && len(msg.Answer) > 0 {
+		riskSet[dnsRiskNXDomainWithAnswer] = struct{}{}
 	}
 
 	// TTL 异常过低也认为可能劫持
 	if ttl > 0 && ttl < 10 {
-		return true
+		riskSet[dnsRiskLowTTL] = struct{}{}
 	}
 
+	if reversePTR == "" {
+		riskSet[dnsRiskPTREmpty] = struct{}{}
+	}
+
+	return sortedRiskFlags(riskSet)
+}
+
+func containsRiskFlag(risks []string, target string) bool {
+	for _, risk := range risks {
+		if risk == target {
+			return true
+		}
+	}
 	return false
 }
 

@@ -54,7 +54,6 @@ type Site struct {
 	ID         int64               `gorm:"column:id;primaryKey" json:"id"`
 	Name       string              `gorm:"column:name;not null" json:"name"`
 	NameEn     string              `gorm:"column:name_en;not null" json:"name_en"`
-	Domain     string              `gorm:"column:domain;not null" json:"-"`
 	Info       string              `gorm:"column:info;not null" json:"info"`
 	InfoEn     string              `gorm:"column:info_en;not null" json:"info_en"`
 	CreateTime pkgmodels.LocalTime `gorm:"column:create_time;autoCreateTime" json:"create_time"`

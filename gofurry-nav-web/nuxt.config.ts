@@ -34,6 +34,18 @@ const ogImage = `${normalizedSiteUrl}/og-image.jpg`
 const ragApiInternalBase = process.env.RAG_API_INTERNAL_BASE
   || process.env.NUXT_RAG_API_INTERNAL_BASE
   || (process.env.NODE_ENV === 'production' ? 'http://10.6.0.11:9997' : 'http://192.168.153.1:9997')
+const publicNavApiBase = process.env.NUXT_PUBLIC_NAV_API_BASE || '/api/v1'
+const navApiInternalBase = process.env.NAV_API_INTERNAL_BASE || process.env.NUXT_NAV_API_INTERNAL_BASE || 'http://192.168.153.1:9999/api/v1'
+
+function deriveNavV2ApiBase(base: string) {
+  if (base.includes('/api/v1')) {
+    return base.replace('/api/v1', '/api/v2')
+  }
+  return `${base.replace(/\/$/, '')}/api/v2`
+}
+
+const publicNavV2ApiBase = process.env.NUXT_PUBLIC_NAV_V2_API_BASE || deriveNavV2ApiBase(publicNavApiBase)
+const navV2ApiInternalBase = process.env.NAV_V2_API_INTERNAL_BASE || process.env.NUXT_NAV_V2_API_INTERNAL_BASE || deriveNavV2ApiBase(navApiInternalBase)
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-05-01',
@@ -136,12 +148,15 @@ export default defineNuxtConfig({
     }
   },
   runtimeConfig: {
-    navApiInternalBase: process.env.NAV_API_INTERNAL_BASE || process.env.NUXT_NAV_API_INTERNAL_BASE || 'http://192.168.153.1:9999/api/v1',
+    navApiInternalBase,
+    navV2ApiInternalBase,
     gameApiInternalBase: process.env.GAME_API_INTERNAL_BASE || process.env.NUXT_GAME_API_INTERNAL_BASE || 'http://192.168.153.1:9998/api/v1',
     ragApiInternalBase,
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-      navApiBase: process.env.NUXT_PUBLIC_NAV_API_BASE || '/api/v1',
+      navApiBase: publicNavApiBase,
+      navV2ApiBase: publicNavV2ApiBase,
+      navHealthSummaryEnabled: process.env.NUXT_PUBLIC_NAV_HEALTH_SUMMARY_ENABLED === 'true',
       gameApiBase: process.env.NUXT_PUBLIC_GAME_API_BASE || '/api/v1',
       siteLogoPrefixUrl: process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/',
       siteDefaultLogo: process.env.NUXT_PUBLIC_SITE_DEFAULT_LOGO || 'https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg',

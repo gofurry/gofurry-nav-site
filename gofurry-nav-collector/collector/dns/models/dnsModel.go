@@ -20,6 +20,7 @@ type DNSRecord struct {
 	Children     []DNSRecord   `json:"children"`      // 子记录（递归查询产生）
 	ReversePTR   string        `json:"reverse_ptr"`   // 反向 PTR
 	Hijacked     bool          `json:"hijacked"`      // 劫持检测标记
+	RiskFlags    []string      `json:"-"`             // v2 observation 风险标记
 }
 
 // DNSStatistics 统计结果

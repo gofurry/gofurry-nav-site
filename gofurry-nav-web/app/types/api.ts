@@ -17,4 +17,4 @@ export class ApiError extends Error {
   }
 }
 
-export type ApiService = 'nav' | 'game'
+export type ApiService = 'nav' | 'navV2' | 'game'

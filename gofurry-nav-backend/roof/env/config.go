@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-backend/common"
@@ -12,6 +13,9 @@ import (
 )
 
 func init() {
+	if isRunningGoTest() && os.Getenv("GF_NAV_BACKEND_LOAD_CONFIG_IN_TEST") != "1" {
+		return
+	}
 	InitServerConfig(common.COMMON_PROJECT_NAME)
 }
 
@@ -23,6 +27,7 @@ type serverConfig struct {
 	DataBase   DataBaseConfig   `yaml:"database"`
 	Log        LogConfig        `yaml:"log"`
 	Redis      RedisConfig      `yaml:"redis"`
+	NavV2      NavV2Config      `yaml:"nav_v2"`
 	Thread     ThreadConfig     `yaml:"thread"`
 	Middleware MiddlewareConfig `yaml:"middleware"`
 	Waf        WafConfig        `yaml:"waf"`
@@ -99,6 +104,18 @@ type ThreadConfig struct {
 type RedisConfig struct {
 	RedisAddr     string `yaml:"redis_addr"`
 	RedisPassword string `yaml:"redis_password"`
+}
+
+type NavV2Config struct {
+	SummaryEnabled           bool `yaml:"summary_enabled"`
+	SummaryStaleAfterSeconds int  `yaml:"summary_stale_after_seconds"`
+}
+
+func (cfg NavV2Config) SummaryStaleAfter() time.Duration {
+	if cfg.SummaryStaleAfterSeconds <= 0 {
+		return 24 * time.Hour
+	}
+	return time.Duration(cfg.SummaryStaleAfterSeconds) * time.Second
 }
 
 type LogConfig struct {
@@ -194,6 +211,11 @@ func loadYaml(path string, conf interface{}) (err error) {
 		return yaml.Unmarshal(fileBytes, conf)
 	}
 	return errors.New("未找到配置文件" + path)
+}
+
+func isRunningGoTest() bool {
+	name := filepath.Base(os.Args[0])
+	return strings.HasSuffix(name, ".test") || strings.HasSuffix(name, ".test.exe")
 }
 
 func GetServerConfig() *serverConfig {

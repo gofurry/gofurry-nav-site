@@ -36,6 +36,7 @@ type CollectorConfig struct {
 	Dns         DnsConfig         `yaml:"dns"`
 	ProbeBudget ProbeBudgetConfig `yaml:"probe_budget"`
 	V2          CollectorV2Config `yaml:"v2"`
+	Scheduler   SchedulerConfig   `yaml:"scheduler"`
 }
 
 type ProbeBudgetConfig struct {
@@ -61,6 +62,14 @@ type CollectorProtocols struct {
 	Ping bool `yaml:"ping"`
 	HTTP bool `yaml:"http"`
 	DNS  bool `yaml:"dns"`
+}
+
+type SchedulerConfig struct {
+	CollectorID      string `yaml:"collector_id"`
+	LeaseEnabled     bool   `yaml:"lease_enabled"`
+	LeaseTTLSeconds  int    `yaml:"lease_ttl_seconds"`
+	RunStateRedis    *bool  `yaml:"run_state_redis"`
+	RunStateTTLHours int    `yaml:"run_state_ttl_hours"`
 }
 
 type DnsConfig struct {
@@ -89,7 +98,7 @@ type PingConfig struct {
 type ServerConfig struct {
 	AppName     string `yaml:"app_name"`
 	AppVersion  string `yaml:"app_version"`
-	Mode        string `yaml:"models"`
+	Mode        string `yaml:"mode"`
 	MemoryLimit int    `yaml:"memory_limit"`
 }
 
@@ -185,7 +194,7 @@ func getOrDefault(key string, def string) string {
 }
 
 func FileExists(path string) bool {
-	fmt.Println("check filepath:" + path)
+	traceConfigPath("check filepath:" + path)
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -196,7 +205,7 @@ func FileExists(path string) bool {
 }
 
 func loadYaml(path string, conf interface{}) (err error) {
-	fmt.Println("load config:" + path)
+	traceConfigPath("load config:" + path)
 	if FileExists(path) {
 		fileBytes, err := os.ReadFile(path)
 		if err != nil {
@@ -205,6 +214,12 @@ func loadYaml(path string, conf interface{}) (err error) {
 		return yaml.Unmarshal(fileBytes, conf)
 	}
 	return errors.New("未找到配置文件" + path)
+}
+
+func traceConfigPath(message string) {
+	if os.Getenv("GF_NAV_COLLECTOR_CONFIG_TRACE") == "1" {
+		fmt.Println(message)
+	}
 }
 
 func GetServerConfig() *serverConfig {
@@ -276,4 +291,19 @@ func (cfg CollectorV2Config) ObservationEnabled(protocol string) bool {
 
 func (cfg CollectorV2Config) LatestRedisEnabled(protocol string) bool {
 	return cfg.LatestRedis && cfg.ProtocolEnabled(protocol)
+}
+
+func (cfg SchedulerConfig) RunStateEnabled() bool {
+	if cfg.RunStateRedis == nil {
+		return true
+	}
+	return *cfg.RunStateRedis
+}
+
+func (cfg SchedulerConfig) RunStateTTL() time.Duration {
+	hours := cfg.RunStateTTLHours
+	if hours <= 0 {
+		hours = 168
+	}
+	return time.Duration(hours) * time.Hour
 }

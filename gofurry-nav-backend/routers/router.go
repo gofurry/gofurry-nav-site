@@ -71,6 +71,11 @@ func registerRoutes(app *fiber.App) {
 
 	// v1 正式路由：/api/v1/nav/...
 	navApi(v1.Group("/nav"))
+
+	if env.GetServerConfig().NavV2.SummaryEnabled {
+		v2 := api.Group("/v2")
+		navV2Api(v2.Group("/nav"))
+	}
 }
 
 // registerMiddlewares 注册中间件

@@ -19,8 +19,11 @@ Use UTF-8 for all source files and environment files.
 
 ```bash
 NAV_API_INTERNAL_BASE=http://127.0.0.1:9999/api/v1
+NAV_V2_API_INTERNAL_BASE=http://127.0.0.1:9999/api/v2
 GAME_API_INTERNAL_BASE=http://127.0.0.1:9998/api/v1
 NUXT_PUBLIC_NAV_API_BASE=/api/v1
+NUXT_PUBLIC_NAV_V2_API_BASE=/api/v2
+NUXT_PUBLIC_NAV_HEALTH_SUMMARY_ENABLED=false
 NUXT_PUBLIC_GAME_API_BASE=/api/v1
 NUXT_PUBLIC_SITE_URL=http://localhost:3000
 ```

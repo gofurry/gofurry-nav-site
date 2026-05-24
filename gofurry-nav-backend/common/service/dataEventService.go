@@ -31,7 +31,15 @@ type EventBus struct {
 }
 
 // 发送线程池
-var threadPool = pool.New().WithMaxGoroutines(env.GetServerConfig().Thread.EventPublishThread)
+var threadPool = pool.New().WithMaxGoroutines(eventPublishThreadLimit())
+
+func eventPublishThreadLimit() int {
+	limit := env.GetServerConfig().Thread.EventPublishThread
+	if limit <= 0 {
+		return 1
+	}
+	return limit
+}
 
 func (eb *EventBus) PublishGlobalMsg(data any) {
 	eb.Publish(common.GLOBAL_MSG, data)

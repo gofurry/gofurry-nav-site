@@ -17,7 +17,7 @@ type GfnSite struct {
 	ID         int64        `gorm:"column:id;type:bigint;primaryKey;comment:site id" json:"id"`
 	Name       string       `gorm:"column:name;type:character varying(255);not null;comment:site name" json:"name"`
 	NameEn     string       `gorm:"column:name_en;type:character varying(255);not null;comment:site name en" json:"nameEn"`
-	Domain     string       `gorm:"column:domain;type:json;not null;comment:site domain" json:"domain"`
+	Domain     string       `gorm:"column:domain" json:"domain"`
 	Info       string       `gorm:"column:info;type:text;not null;comment:site info" json:"info"`
 	InfoEn     string       `gorm:"column:info_en;type:text;not null;comment:site info en" json:"infoEn"`
 	CreateTime cm.LocalTime `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:create time" json:"createTime"`

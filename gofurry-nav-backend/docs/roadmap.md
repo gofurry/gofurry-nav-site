@@ -11,23 +11,31 @@
 - 先完成 collector v2 observation 数据面，再考虑站点、分组、搜索、页面素材等业务接口的 v2 化。
 - `/api/v1/nav/...` 保持生产兼容，不因为 v2 observation 改造而改变响应结构。
 - `/api/v2/nav/...` 优先承载更清晰的资源语义，避免继续扩散 `getXxx`、`page/site/list` 这类历史命名。
-- v2 初期只读、默认关闭、可灰度、可回滚，不引入 Prometheus 生态，不做健康评分，不做高频探测。
+- v2 初期只读、默认关闭、可灰度、可回滚，不引入 Prometheus 生态，不做高频探测；健康摘要只展示 collector 已生成的 summary，不在 backend 重新评分。
 
 ## 版本计划
 
-### v0.2.0 - Collector Observation 只读接入
+### v0.2.0 - Collector Summary 只读接入
 
-**状态：** 规划中  
-**范围：** API / 架构 / 稳定性  
-**目标：** 在不影响 `/api/v1/nav` 生产展示链路的前提下，提供读取 collector v2 observation 的最小只读接口。
+**状态：** 已完成第一段
+**范围：** API / 架构 / 稳定性
+**目标：** 在不影响 `/api/v1/nav` 生产展示链路的前提下，先提供读取 collector v2 summary 的最小只读接口；raw observation 历史查询继续后置。
 
 #### 重点
 
-- 只接入 collector v2 observation 核心数据。
+- 第一段只接入 collector v2 summary Redis key。
 - 后端接口默认关闭，仅用于人工验证、灰度观察与后续前端改造准备。
-- 不改 Nuxt 当前数据源，不改 gofurry-admin。
+- Nuxt 只增加默认关闭的灰度展示入口，不替换当前 `/api/v1/nav` 主数据源。
+- 不改 gofurry-admin。
 
 #### 计划接口
+
+```text
+GET /api/v2/nav/sites/:siteId/summary
+GET /api/v2/nav/sites/:siteId/targets/:target/summary
+```
+
+raw observation 历史查询后置：
 
 ```text
 GET /api/v2/nav/observations/latest?protocol=ping
@@ -41,6 +49,10 @@ GET /api/v2/nav/sites/:siteId/observations?protocol=dns&limit=60
 
 #### 响应语义
 
+- summary 接口读取 Redis key：`collector:v2:summary:site:{site_id}`、`collector:v2:summary:target:{site_id}:{target}`。
+- summary 可用时返回 `state=ready`。
+- summary 缺失时返回成功响应，`state=missing`、`status=unknown`。
+- summary 过期时返回成功响应，`state=stale`、`status=unknown`。
 - `latest` 返回最新观测结果，不做健康评分。
 - `observations` 返回历史观测序列，按 `observed_at desc` 排序。
 - `protocol` 仅允许 `ping`、`http`、`dns`。
@@ -50,30 +62,33 @@ GET /api/v2/nav/sites/:siteId/observations?protocol=dns&limit=60
 
 #### 任务
 
-- [ ] 在配置中增加 v2 nav observation API 开关，默认关闭。
+- [x] 在配置中增加 v2 nav summary API 开关，默认关闭。
+- [x] 新增 `/api/v2/nav` 路由组，保持 `api := app.Group("/api")`、`v2 := api.Group("/v2")`、`nav := v2.Group("/nav")` 的结构。
+- [x] 新增站点级 summary 只读接口。
+- [x] 新增采集目标级 summary 只读接口。
+- [x] 增加 `siteId`、`target` 参数校验。
+- [x] 增加 Redis 缺失、summary 过期、JSON 解析失败的服务测试。
 - [ ] 新增 observation 只读 DAO，优先读 observation DB；必要时再考虑 v2 Redis latest。
-- [ ] 新增 `/api/v2/nav` 路由组，保持 `api := app.Group("/api")`、`v2 := api.Group("/v2")`、`nav := v2.Group("/nav")` 的结构。
 - [ ] 新增站点级最新观测接口。
 - [ ] 新增站点级历史观测接口。
 - [ ] 新增协议级全站最新观测接口。
-- [ ] 增加协议、limit、siteId 参数校验。
-- [ ] 增加只读查询单元测试或小范围服务测试。
+- [ ] 增加 raw observation 的协议、limit、siteId 参数校验。
 - [ ] 更新 Swagger 或接口文档。
 
 #### 验收标准
 
 - v2 开关关闭时，`/api/v1/nav/...` 行为完全不变。
-- v2 开关开启后，可以读取 Ping / HTTP / DNS observation 最新值与历史值。
+- v2 summary 开关开启后，可以读取站点级和目标级健康摘要。
 - v2 接口不写 DB、不写 Redis、不触发 collector 行为。
 - 查询失败时返回清晰错误，不影响 v1 生产接口。
-- Nuxt 与 gofurry-admin 不需要同步改动即可上线。
+- Nuxt 灰度开关关闭时展示不变；gofurry-admin 不需要同步改动即可上线。
 
 ---
 
 ### v0.3.0 - Nav v2 资源路由规范化
 
-**状态：** 规划中  
-**范围：** API / 架构 / 文档  
+**状态：** 规划中
+**范围：** API / 架构 / 文档
 **目标：** 在 observation 核心链路稳定后，逐步把 nav 业务接口整理为更清晰的 `/api/v2/nav` 资源风格。
 
 #### 重点
@@ -139,8 +154,8 @@ GET /api/v2/nav/sites/:siteId/observations
 
 ### v1.0.0-alpha.1 - API 稳定化候选
 
-**状态：** 规划中  
-**范围：** API / 测试 / 文档 / 发布  
+**状态：** 规划中
+**范围：** API / 测试 / 文档 / 发布
 **目标：** 在 v2 observation 与 nav v2 资源接口稳定后，进入正式稳定版前的 API 冻结阶段。
 
 #### 重点
