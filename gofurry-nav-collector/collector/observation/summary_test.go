@@ -17,6 +17,9 @@ func TestSummaryKeys(t *testing.T) {
 	if got := SiteSummaryKey(123); got != "collector:v2:summary:site:123" {
 		t.Fatalf("SiteSummaryKey() = %q", got)
 	}
+	if got := SiteSummaryTargetsKey(123); got != "collector:v2:summary:site_targets:123" {
+		t.Fatalf("SiteSummaryTargetsKey() = %q", got)
+	}
 }
 
 func TestBuildTargetSummaryHTTPHealthyPingFailureWarning(t *testing.T) {

@@ -18,7 +18,7 @@
 
 ### v0.5.1 - 审计发现修复与稳定性补丁
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** 稳定性 / 数据可信度 / Redis 错误语义 / 测试
 **目标：** 修复 2026-05-25 代码审计发现的问题，让 collector 在现有单实例生产模式下更可靠、更容易排查。
 
@@ -32,15 +32,15 @@
 
 #### Tasks
 
-- [ ] 为 DNS CNAME / MX / NS 递归 children 加入全局记录预算，避免 `max_dns_records_per_query` 只限制父级 Answer。
-- [ ] 为 DNS v2 `private_ip` 风险标记补齐 IPv6 特殊地址识别，例如 `::1`、`fc00::/7`、`fe80::/10`。
-- [ ] 优化 site summary 聚合路径，避免每次 observation 写入都用 Redis `SCAN` 全量扫 `collector:v2:summary:target:{site_id}:*`。
-- [ ] 将 Redis `SetNX` wrapper 改为返回 `created bool` 和 `GFError`，让 lease 获取失败能区分“其他实例持有”和“Redis 命令失败”。
-- [ ] 修复 Ping 目标列表刷新时忽略 `SetNX` 结果的问题；刷新失败必须记录清晰日志并返回旁路错误。
-- [ ] HTTP 读取响应体时显式记录是否被 `max_response_bytes` 截断，避免把截断 HTML 当作完整页面语义。
-- [ ] 检查 Ping / HTTP / DNS 旧 JSON 写入路径中被忽略的 `sonic.Marshal` 错误，至少记录中文结构化日志。
-- [ ] 为 DNS GeoIP / PTR 缓存增加边界或清理策略，避免长期运行中缓存无限增长。
-- [ ] 为上述修复补充小范围单元测试，不扩大生产默认行为。
+- [x] 为 DNS CNAME / MX / NS 递归 children 加入全局记录预算，避免 `max_dns_records_per_query` 只限制父级 Answer。
+- [x] 为 DNS v2 `private_ip` 风险标记补齐 IPv6 特殊地址识别，例如 `::1`、`fc00::/7`、`fe80::/10`。
+- [x] 优化 site summary 聚合路径，避免每次 observation 写入都用 Redis `SCAN` 全量扫 `collector:v2:summary:target:{site_id}:*`。
+- [x] 将 Redis `SetNX` wrapper 改为返回 `created bool` 和 `GFError`，让 lease 获取失败能区分“其他实例持有”和“Redis 命令失败”。
+- [x] 修复 Ping 目标列表刷新时忽略 `SetNX` 结果的问题；刷新失败必须记录清晰日志并返回旁路错误。
+- [x] HTTP 读取响应体时显式记录是否被 `max_response_bytes` 截断，避免把截断 HTML 当作完整页面语义。
+- [x] 检查 Ping / HTTP / DNS 旧 JSON 写入路径中被忽略的 `sonic.Marshal` 错误，至少记录中文结构化日志。
+- [x] 为 DNS GeoIP / PTR 缓存增加边界或清理策略，避免长期运行中缓存无限增长。
+- [x] 为上述修复补充小范围单元测试，不扩大生产默认行为。
 
 #### Acceptance Criteria
 

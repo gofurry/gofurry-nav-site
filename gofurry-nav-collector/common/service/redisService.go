@@ -84,7 +84,7 @@ return 0
 	return res > 0, nil
 }
 
-func SetNX(key string, value any, expiration time.Duration) bool {
+func SetNX(key string, value any, expiration time.Duration) (bool, common.GFError) {
 	ctx, cancel := commandContext()
 	defer cancel()
 	bool, err := client.SetNX(ctx, key, value, expiration).Result()
@@ -92,9 +92,9 @@ func SetNX(key string, value any, expiration time.Duration) bool {
 		fields := redisFields("setnx", key)
 		fields["ttl"] = expiration
 		log.ErrorFields(fields, "Redis SetNX 写入失败: "+err.Error())
-		return false
+		return false, common.NewServiceError("设置缓存失败.")
 	}
-	return bool
+	return bool, nil
 }
 
 func Set(key string, value any) common.GFError {
@@ -239,6 +239,32 @@ func HDel(key string, fields ...string) (res int64, gfsError common.GFError) {
 		return intVal, common.NewServiceError("删除缓存失败.")
 	}
 	return intVal, nil
+}
+
+func SAdd(key string, members ...string) common.GFError {
+	if len(members) == 0 {
+		return nil
+	}
+	ctx, cancel := commandContext()
+	defer cancel()
+	if err := client.SAdd(ctx, key, members).Err(); err != nil {
+		fields := redisFields("sadd", key)
+		fields["members"] = len(members)
+		log.ErrorFields(fields, "Redis 集合写入失败: "+err.Error())
+		return common.NewServiceError("设置集合缓存失败.")
+	}
+	return nil
+}
+
+func SMembers(key string) ([]string, common.GFError) {
+	ctx, cancel := commandContext()
+	defer cancel()
+	values, err := client.SMembers(ctx, key).Result()
+	if err != nil {
+		log.ErrorFields(redisFields("smembers", key), "Redis 集合读取失败: "+err.Error())
+		return nil, common.NewServiceError("读取集合缓存失败.")
+	}
+	return values, nil
 }
 
 func Incr(key string) common.GFError {

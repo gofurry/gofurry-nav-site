@@ -46,6 +46,8 @@ type HTTPModel struct {
 	RemoteAddr           string              `json:"-"` // v2 observation 实际 TCP 对端
 	RemoteIP             string              `json:"-"` // v2 observation 实际 TCP 对端 IP
 	BodyReadBytes        int64               `json:"-"` // v2 observation 实际读取字节数
+	BodyTruncated        bool                `json:"-"` // v2 observation 响应体是否被采集上限截断
+	BodyLimitBytes       int64               `json:"-"` // v2 observation 响应体读取上限
 	ContentEncoding      string              `json:"-"` // v2 observation Content-Encoding
 	Compressed           bool                `json:"-"` // v2 observation 是否压缩响应
 	CacheControl         string              `json:"-"` // v2 observation Cache-Control

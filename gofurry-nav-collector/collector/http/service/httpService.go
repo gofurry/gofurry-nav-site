@@ -288,7 +288,15 @@ func getRequestResult(site models.GfnCollectorDomain, run *runstate.Run) func() 
 			CertEmail:     result.CertEmail,
 			CertIsCA:      result.CertIsCA,
 		}
-		jsonResult, _ := sonic.Marshal(httpRecord)
+		jsonResult, jsonErr := sonic.Marshal(httpRecord)
+		if jsonErr != nil {
+			log.ErrorFields(map[string]interface{}{
+				"event":    "result_encode_failed",
+				"protocol": "http",
+				"site":     site.TargetName(),
+				"url":      result.Url,
+			}, "HTTP 探测结果 JSON 编码失败: "+jsonErr.Error())
+		}
 
 		siteName := site.TargetName()
 
@@ -313,8 +321,22 @@ func getRequestResult(site models.GfnCollectorDomain, run *runstate.Run) func() 
 		}
 
 		// 记录存redis
-		cs.SetNX("request:"+siteName, string(jsonResult), 48*time.Hour)     // 创建记录
-		cs.SetExpire("request:"+siteName, string(jsonResult), 48*time.Hour) // 更新记录
+		if _, setNXErr := cs.SetNX("request:"+siteName, string(jsonResult), 48*time.Hour); setNXErr != nil {
+			log.WarnFields(map[string]interface{}{
+				"event":     "redis_create_failed",
+				"protocol":  "http",
+				"redis_key": "request:" + siteName,
+				"site":      siteName,
+			}, "HTTP 探测结果创建 Redis 缓存失败: "+setNXErr.GetMsg())
+		}
+		if setErr := cs.SetExpire("request:"+siteName, string(jsonResult), 48*time.Hour); setErr != nil {
+			log.WarnFields(map[string]interface{}{
+				"event":     "redis_update_failed",
+				"protocol":  "http",
+				"redis_key": "request:" + siteName,
+				"site":      siteName,
+			}, "HTTP 探测结果更新 Redis 缓存失败: "+setErr.GetMsg())
+		}
 
 		// 存数据库
 		err := dao.GetHTTPDao().Add(&httpSaveRecord)
@@ -403,6 +425,8 @@ func buildHTTPObservationPayload(result models.HTTPModel, httpRecord models.HTTP
 		"remote_addr":                result.RemoteAddr,
 		"remote_ip":                  result.RemoteIP,
 		"body_read_bytes":            result.BodyReadBytes,
+		"body_truncated":             result.BodyTruncated,
+		"body_limit_bytes":           result.BodyLimitBytes,
 		"compressed":                 result.Compressed,
 		"content_encoding":           limitString(result.ContentEncoding, maxHTTPPayloadHeaderValueLength),
 		"cache_policy":               buildHTTPCachePolicy(result),
@@ -1281,11 +1305,17 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 		XPoweredBy: resp.Header.Get("X-Powered-By"),
 	}
 
-	// 读取响应体 限制 1MB
+	// 读取响应体，额外多读 1 字节用于判断是否被上限截断。
 	bodyReadStart := time.Now()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, probeBudget.MaxHTTPResponseBytes()))
+	bodyLimit := probeBudget.MaxHTTPResponseBytes()
+	res.BodyLimitBytes = bodyLimit
+	body, err := io.ReadAll(io.LimitReader(resp.Body, bodyLimit+1))
 	res.TransferMS = time.Since(bodyReadStart).Milliseconds()
 	if err == nil {
+		if int64(len(body)) > bodyLimit {
+			res.BodyTruncated = true
+			body = body[:bodyLimit]
+		}
 		res.ContentLength = int64(len(body))
 		res.BodyReadBytes = int64(len(body))
 		enrichHTTPPageDetails(&res, body)

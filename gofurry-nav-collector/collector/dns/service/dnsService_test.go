@@ -60,6 +60,33 @@ func TestDetectDNSRiskFlags(t *testing.T) {
 	assertContainsRisk(t, risks, dnsRiskPTREmpty)
 }
 
+func TestDetectDNSRiskFlagsIncludesIPv6PrivateAndSpecialRanges(t *testing.T) {
+	tests := []string{
+		"::1",
+		"fc00::1",
+		"fe80::1",
+	}
+	for _, ip := range tests {
+		t.Run(ip, func(t *testing.T) {
+			risks := detectDNSRiskFlags(net.ParseIP(ip), nil, 300, "skip_ptr_check")
+			assertContainsRisk(t, risks, dnsRiskPrivateIP)
+		})
+	}
+}
+
+func TestDNSRecordBudgetTracksExhaustion(t *testing.T) {
+	budget := newDNSRecordBudget(2)
+	if !budget.Take() || !budget.Take() {
+		t.Fatal("前两条记录应允许进入预算")
+	}
+	if budget.Take() {
+		t.Fatal("第三条记录应被预算拒绝")
+	}
+	if !budget.Exhausted() {
+		t.Fatal("预算耗尽后应标记 exhausted")
+	}
+}
+
 func TestBuildDNSObservationPayloadLimitsTextAndRemovesHijacked(t *testing.T) {
 	longTXT := "v=spf1 " + strings.Repeat("include:example.com ", 80)
 	results := map[string][]models.DNSRecord{
@@ -174,6 +201,32 @@ func TestBuildDNSObservationPayloadLimitsTextAndRemovesHijacked(t *testing.T) {
 	}
 	if payload["cname_chain_depth"] != 2 {
 		t.Fatalf("cname_chain_depth 错误，got %v", payload["cname_chain_depth"])
+	}
+}
+
+func TestBuildDNSObservationPayloadMarksRecordBudgetExhausted(t *testing.T) {
+	payload := buildDNSObservationPayloadWithMetadata(map[string][]models.DNSRecord{
+		"A": {{Type: "A", Value: "203.0.113.10"}},
+	}, map[string]dnsQueryMetadata{
+		"A": {RecordBudgetExhausted: true},
+	})
+
+	if payload["record_budget_exhausted"] != true {
+		t.Fatalf("record_budget_exhausted = %v, want true", payload["record_budget_exhausted"])
+	}
+}
+
+func TestResetDNSLookupCachesClearsCachedValues(t *testing.T) {
+	geoCache.Store("203.0.113.10", [4]string{"A", "B", "C", "D"})
+	ptrCache.Store("203.0.113.10", "ptr.example.")
+
+	resetDNSLookupCaches()
+
+	if _, ok := geoCache.Load("203.0.113.10"); ok {
+		t.Fatal("geoCache should be empty after reset")
+	}
+	if _, ok := ptrCache.Load("203.0.113.10"); ok {
+		t.Fatal("ptrCache should be empty after reset")
 	}
 }
 

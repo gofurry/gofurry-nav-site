@@ -135,13 +135,16 @@ func addAllIpToPing() (map[string]int64, common.GFError) {
 		return siteIDByDomain, nil
 	}
 
-	err = cs.Del(env.GetServerConfig().Collector.Ping.PingKey)
+	err = cs.SetExpire(env.GetServerConfig().Collector.Ping.PingKey, pingJsonList, 24*time.Hour)
 	if err != nil {
-		log.Error("删除ping结果失败: ", err)
+		log.ErrorFields(map[string]interface{}{
+			"event":     "target_refresh_failed",
+			"protocol":  "ping",
+			"redis_key": env.GetServerConfig().Collector.Ping.PingKey,
+			"targets":   len(pingList),
+		}, "Ping 目标列表刷新到 Redis 失败: "+err.GetMsg())
 		return siteIDByDomain, err
 	}
-
-	cs.SetNX(env.GetServerConfig().Collector.Ping.PingKey, pingJsonList, 24*time.Hour)
 
 	return siteIDByDomain, nil
 }
@@ -444,7 +447,15 @@ func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock
 			}
 		}
 		// 序列化为 json
-		jsonResult, _ := sonic.Marshal(pingRecord)
+		jsonResult, jsonErr := sonic.Marshal(pingRecord)
+		if jsonErr != nil {
+			log.ErrorFields(map[string]interface{}{
+				"event":    "result_encode_failed",
+				"protocol": "ping",
+				"site":     ip,
+				"status":   pingRecord.Status,
+			}, "Ping 探测结果 JSON 编码失败: "+jsonErr.Error())
+		}
 
 		// 存数据库
 		pindSaveRecord := &models2.GfnCollectorLogPing{

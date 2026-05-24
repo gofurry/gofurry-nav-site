@@ -13,6 +13,7 @@ type memoryStore struct {
 	values        map[string]string
 	ttls          map[string]time.Duration
 	setNXResult   bool
+	setNXErr      common.GFError
 	setNXCalls    int
 	compareResult bool
 }
@@ -37,14 +38,17 @@ func (s *memoryStore) SetExpire(key string, value any, expiration time.Duration)
 	return nil
 }
 
-func (s *memoryStore) SetNX(key string, value any, expiration time.Duration) bool {
+func (s *memoryStore) SetNX(key string, value any, expiration time.Duration) (bool, common.GFError) {
 	s.setNXCalls++
+	if s.setNXErr != nil {
+		return false, s.setNXErr
+	}
 	if !s.setNXResult {
-		return false
+		return false, nil
 	}
 	s.values[key] = value.(string)
 	s.ttls[key] = expiration
-	return true
+	return true, nil
 }
 
 func (s *memoryStore) CompareAndDelete(key string, expected string) (bool, common.GFError) {
@@ -160,6 +164,23 @@ func TestLeaseAcquireFailureSkipsRun(t *testing.T) {
 		t.Fatal("held lease should skip run")
 	}
 	doc := run.Snapshot(StatusSkipped, "lease_held_by_other_collector")
+	if doc.SkippedCount != 1 {
+		t.Fatalf("SkippedCount = %d, want 1", doc.SkippedCount)
+	}
+}
+
+func TestLeaseAcquireRedisErrorUsesDifferentSkipReason(t *testing.T) {
+	oldCfg := env.GetServerConfig().Collector.Scheduler
+	env.GetServerConfig().Collector.Scheduler = env.SchedulerConfig{LeaseEnabled: true}
+	t.Cleanup(func() { env.GetServerConfig().Collector.Scheduler = oldCfg })
+
+	store := newMemoryStore()
+	store.setNXErr = common.NewServiceError("redis down")
+	run := NewRunWithStore("dns", time.Hour, store)
+	if run.AcquireLeaseOrSkip() {
+		t.Fatal("Redis SetNX error should skip run")
+	}
+	doc := run.Snapshot(StatusSkipped, "lease_acquire_failed")
 	if doc.SkippedCount != 1 {
 		t.Fatalf("SkippedCount = %d, want 1", doc.SkippedCount)
 	}

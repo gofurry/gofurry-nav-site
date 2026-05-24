@@ -28,7 +28,7 @@ const (
 type Store interface {
 	Set(key string, value any) common.GFError
 	SetExpire(key string, value any, expiration time.Duration) common.GFError
-	SetNX(key string, value any, expiration time.Duration) bool
+	SetNX(key string, value any, expiration time.Duration) (bool, common.GFError)
 	CompareAndDelete(key string, expected string) (bool, common.GFError)
 }
 
@@ -42,7 +42,7 @@ func (redisStore) SetExpire(key string, value any, expiration time.Duration) com
 	return cs.SetExpire(key, value, expiration)
 }
 
-func (redisStore) SetNX(key string, value any, expiration time.Duration) bool {
+func (redisStore) SetNX(key string, value any, expiration time.Duration) (bool, common.GFError) {
 	return cs.SetNX(key, value, expiration)
 }
 
@@ -186,7 +186,16 @@ func (r *Run) AcquireLeaseOrSkip() bool {
 
 	key := LeaseKey(r.Protocol)
 	value := string(leaseBytes)
-	if !r.store.SetNX(key, value, ttl) {
+	created, setErr := r.store.SetNX(key, value, ttl)
+	if setErr != nil {
+		r.Skip("lease_acquire_failed", 0)
+		fields := r.Fields()
+		fields["event"] = "lease_acquire_failed"
+		fields["redis_key"] = key
+		log.WarnFields(fields, "采集 lease 获取失败: "+setErr.GetMsg())
+		return false
+	}
+	if !created {
 		r.Skip("lease_held_by_other_collector", 0)
 		return false
 	}

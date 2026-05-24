@@ -28,6 +28,10 @@ func TargetSummaryKey(siteID int64, target string) string {
 	return fmt.Sprintf("collector:v2:summary:target:%d:%s", siteID, target)
 }
 
+func SiteSummaryTargetsKey(siteID int64) string {
+	return fmt.Sprintf("collector:v2:summary:site_targets:%d", siteID)
+}
+
 func SiteSummaryKey(siteID int64) string {
 	return fmt.Sprintf("collector:v2:summary:site:%d", siteID)
 }
@@ -53,6 +57,14 @@ func UpdateSummaryIfEnabled(siteID int64, target string) common.GFError {
 		}, "v2 target summary Redis 写入失败: "+err.GetMsg())
 		return err
 	}
+	if err := rememberSummaryTarget(siteID, target); err != nil {
+		log.WarnFields(map[string]interface{}{
+			"event":     "v2_summary_target_index_failed",
+			"redis_key": SiteSummaryTargetsKey(siteID),
+			"site_id":   siteID,
+			"target":    target,
+		}, "v2 target summary 索引写入 Redis 失败: "+err.GetMsg())
+	}
 
 	if err := UpdateSiteSummary(siteID, now); err != nil {
 		log.ErrorFields(map[string]interface{}{
@@ -66,7 +78,7 @@ func UpdateSummaryIfEnabled(siteID int64, target string) common.GFError {
 }
 
 func UpdateSiteSummary(siteID int64, now time.Time) common.GFError {
-	keys, err := cs.FindByPrefix(fmt.Sprintf("collector:v2:summary:target:%d:", siteID))
+	keys, err := targetSummaryKeysForSite(siteID)
 	if err != nil {
 		return err
 	}
@@ -95,6 +107,32 @@ func UpdateSiteSummary(siteID int64, now time.Time) common.GFError {
 
 	siteSummary := BuildSiteSummary(siteID, summaries, now)
 	return writeJSON(SiteSummaryKey(siteID), siteSummary)
+}
+
+func rememberSummaryTarget(siteID int64, target string) common.GFError {
+	if siteID <= 0 || target == "" {
+		return nil
+	}
+	return cs.SAdd(SiteSummaryTargetsKey(siteID), target)
+}
+
+func targetSummaryKeysForSite(siteID int64) ([]string, common.GFError) {
+	targets, err := cs.SMembers(SiteSummaryTargetsKey(siteID))
+	if err != nil {
+		return nil, err
+	}
+	if len(targets) > 0 {
+		keys := make([]string, 0, len(targets))
+		for _, target := range targets {
+			if target == "" {
+				continue
+			}
+			keys = append(keys, TargetSummaryKey(siteID, target))
+		}
+		sort.Strings(keys)
+		return keys, nil
+	}
+	return cs.FindByPrefix(fmt.Sprintf("collector:v2:summary:target:%d:", siteID))
 }
 
 func latestDocumentsForTarget(siteID int64, target string) map[string]LatestDocument {

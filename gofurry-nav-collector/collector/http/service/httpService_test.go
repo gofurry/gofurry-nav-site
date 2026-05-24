@@ -30,6 +30,8 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 		RemoteAddr:      "203.0.113.5:443",
 		RemoteIP:        "203.0.113.5",
 		BodyReadBytes:   1987,
+		BodyTruncated:   true,
+		BodyLimitBytes:  1048576,
 		ContentEncoding: "gzip",
 		Compressed:      true,
 		CacheControl:    repeated("c", 600),
@@ -183,6 +185,12 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 	}
 	if payload["body_read_bytes"] != int64(1987) {
 		t.Fatalf("body_read_bytes 错误，got %v", payload["body_read_bytes"])
+	}
+	if payload["body_truncated"] != true {
+		t.Fatalf("body_truncated 错误，got %v", payload["body_truncated"])
+	}
+	if payload["body_limit_bytes"] != int64(1048576) {
+		t.Fatalf("body_limit_bytes 错误，got %v", payload["body_limit_bytes"])
 	}
 	if payload["compressed"] != true {
 		t.Fatalf("compressed 错误，got %v", payload["compressed"])
