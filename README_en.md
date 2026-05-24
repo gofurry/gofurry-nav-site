@@ -1,24 +1,28 @@
-![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)
-![License](https://img.shields.io/github/license/gofurry/gofurry-nav-site)
-![Weekend Project](https://img.shields.io/badge/weekend-project-8B5CF6?style=flat)
-![Made with Love](https://img.shields.io/badge/made%20with-%E2%9D%A4-E11D48?style=flat&color=orange)
+<p align="center">
+  <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white" alt="Go Version">&nbsp&nbsp
+  <img src="https://img.shields.io/github/license/gofurry/gofurry-nav-site" alt="License">&nbsp&nbsp
+  <img src="https://img.shields.io/badge/weekend-project-8B5CF6?style=flat" alt="Weekend Project">&nbsp&nbsp
+  <img src="https://img.shields.io/badge/made%20with-%E2%9D%A4-E11D48?style=flat&color=orange" alt="Made with Love">
+</p>
 
-[中文说明](./README.md)
+<p align="center">
+  ⭐🐺 <a href="https://github.com/gofurry/gofurry-nav-site/README.md">中文说明</a> 🐺⭐
+</P>
 
 gofurry is an open-source multi-service repository for furry culture discovery. It contains the public web frontend, navigation and game APIs, data collectors, a RAG service, and operations-related modules.
 
 The production public site has now moved to a Nuxt 4 frontend to improve SEO and first-page rendering. The older Vue frontend is kept in the repository as an archived migration reference rather than the active production entrypoint.
 
 ```text
-  ░██████             ░██████████                                        
- ░██   ░██            ░██                                                
-░██         ░███████  ░██        ░██    ░██ ░██░████ ░██░████ ░██    ░██ 
-░██  █████ ░██    ░██ ░█████████ ░██    ░██ ░███     ░███     ░██    ░██ 
-░██     ██ ░██    ░██ ░██        ░██    ░██ ░██      ░██      ░██    ░██ 
- ░██  ░███ ░██    ░██ ░██        ░██   ░███ ░██      ░██      ░██   ░███ 
-  ░█████░█  ░███████  ░██         ░█████░██ ░██      ░██       ░█████░██ 
-                                                                     ░██ 
-                                                               ░███████
+          ░██████             ░██████████                                        
+        ░██   ░██            ░██                                                
+        ░██         ░███████  ░██        ░██    ░██ ░██░████ ░██░████ ░██    ░██ 
+        ░██  █████ ░██    ░██ ░█████████ ░██    ░██ ░███     ░███     ░██    ░██ 
+        ░██     ██ ░██    ░██ ░██        ░██    ░██ ░██      ░██      ░██    ░██ 
+        ░██  ░███ ░██    ░██ ░██        ░██   ░███ ░██      ░██      ░██   ░███ 
+          ░█████░█  ░███████  ░██         ░█████░██ ░██      ░██       ░█████░██ 
+                                                                            ░██ 
+                                                                      ░███████
 ```
 
 ## Project Scope
