@@ -10,9 +10,9 @@
     </div>
 
     <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
-      <div>
+      <div class="md:flex md:flex-col">
         <h4 class="mb-2 text-sm font-bold text-gray-500">{{ t('site.healthSummary.siteStatus') }}</h4>
-        <div class="rounded-lg bg-orange-100 p-3">
+        <div class="rounded-lg bg-orange-100 p-3 md:flex-1">
           <div class="mb-2">
             <span class="font-bold">{{ t('site.healthSummary.state') }}:</span>
             {{ stateText(siteSummary?.state) }}
@@ -50,9 +50,9 @@
         </div>
       </div>
 
-      <div v-if="targetSummary">
+      <div v-if="targetSummary" class="md:flex md:flex-col">
         <h4 class="mb-2 text-sm font-bold text-gray-500">{{ t('site.healthSummary.currentTarget') }}</h4>
-        <div class="rounded-lg bg-orange-100 p-3">
+        <div class="rounded-lg bg-orange-100 p-3 md:flex-1">
           <div class="break-all font-mono text-xs">{{ targetSummary.target }}</div>
           <div class="mt-2">
             <span class="font-bold">{{ t('site.healthSummary.status') }}:</span>
