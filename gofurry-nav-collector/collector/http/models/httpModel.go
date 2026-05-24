@@ -20,24 +20,37 @@ type HTTPModel struct {
 	Redirects            []string            `json:"redirects"`     // 重定向链
 	Headers              map[string][]string `json:"headers"`       // 响应头
 	Meta                 map[string]string   `json:"meta"`          // meta 标签
-	FinalURL             string              `json:"-"`             // v2 observation 最终 URL
-	ContentType          string              `json:"-"`             // v2 observation Content-Type
-	SecurityHeaders      map[string]bool     `json:"-"`             // v2 observation 常见安全响应头是否存在
-	SecurityHeaderValues map[string]string   `json:"-"`             // v2 observation 常见安全响应头原始值
-	DNSLookupMS          int64               `json:"-"`             // v2 observation DNS 查询耗时
-	TCPConnectMS         int64               `json:"-"`             // v2 observation TCP 连接耗时
-	TLSHandshakeMS       int64               `json:"-"`             // v2 observation TLS 握手耗时
-	TTFBMS               int64               `json:"-"`             // v2 observation 首字节耗时
-	TransferMS           int64               `json:"-"`             // v2 observation 响应体读取耗时
-	HTTPProtocol         string              `json:"-"`             // v2 observation HTTP 协议
-	RemoteAddr           string              `json:"-"`             // v2 observation 实际 TCP 对端
-	RemoteIP             string              `json:"-"`             // v2 observation 实际 TCP 对端 IP
-	BodyReadBytes        int64               `json:"-"`             // v2 observation 实际读取字节数
-	ContentEncoding      string              `json:"-"`             // v2 observation Content-Encoding
-	Compressed           bool                `json:"-"`             // v2 observation 是否压缩响应
-	CacheControl         string              `json:"-"`             // v2 observation Cache-Control
-	ETag                 string              `json:"-"`             // v2 observation ETag
-	LastModified         string              `json:"-"`             // v2 observation Last-Modified
+	OpenGraph            map[string]string   `json:"openGraph,omitempty"`
+	TwitterCard          map[string]string   `json:"twitterCard,omitempty"`
+	CanonicalURL         string              `json:"canonicalUrl,omitempty"`
+	HTMLLang             string              `json:"htmlLang,omitempty"`
+	MetaRefresh          *HTTPMetaRefresh    `json:"metaRefresh,omitempty"`
+	IconLinks            []HTTPLinkInfo      `json:"iconLinks,omitempty"`
+	CookieSummary        *HTTPCookieSummary  `json:"cookieSummary,omitempty"`
+	ServerHints          *HTTPServerHints    `json:"serverHints,omitempty"`
+	CrossOriginSummary   *HTTPCrossOrigin    `json:"crossOriginSummary,omitempty"`
+	ContentLanguage      string              `json:"contentLanguageEffective,omitempty"`
+	PageTextSummary      string              `json:"pageTextSummary,omitempty"`
+	SharePreview         *HTTPSharePreview   `json:"sharePreview,omitempty"`
+	RedirectHint         *HTTPRedirectHint   `json:"redirectHint,omitempty"`
+	FinalURL             string              `json:"-"` // v2 observation 最终 URL
+	ContentType          string              `json:"-"` // v2 observation Content-Type
+	SecurityHeaders      map[string]bool     `json:"-"` // v2 observation 常见安全响应头是否存在
+	SecurityHeaderValues map[string]string   `json:"-"` // v2 observation 常见安全响应头原始值
+	DNSLookupMS          int64               `json:"-"` // v2 observation DNS 查询耗时
+	TCPConnectMS         int64               `json:"-"` // v2 observation TCP 连接耗时
+	TLSHandshakeMS       int64               `json:"-"` // v2 observation TLS 握手耗时
+	TTFBMS               int64               `json:"-"` // v2 observation 首字节耗时
+	TransferMS           int64               `json:"-"` // v2 observation 响应体读取耗时
+	HTTPProtocol         string              `json:"-"` // v2 observation HTTP 协议
+	RemoteAddr           string              `json:"-"` // v2 observation 实际 TCP 对端
+	RemoteIP             string              `json:"-"` // v2 observation 实际 TCP 对端 IP
+	BodyReadBytes        int64               `json:"-"` // v2 observation 实际读取字节数
+	ContentEncoding      string              `json:"-"` // v2 observation Content-Encoding
+	Compressed           bool                `json:"-"` // v2 observation 是否压缩响应
+	CacheControl         string              `json:"-"` // v2 observation Cache-Control
+	ETag                 string              `json:"-"` // v2 observation ETag
+	LastModified         string              `json:"-"` // v2 observation Last-Modified
 
 	// TLS
 	TLSVersion          string    `json:"tlsVersion"`    // TLS 版本
@@ -82,6 +95,19 @@ type HTTPSaveModel struct {
 	Redirects     []string            `json:"redirects"`     // 重定向链
 	Headers       map[string][]string `json:"headers"`       // 响应头
 	Meta          map[string]string   `json:"meta"`          // meta 标签
+	OpenGraph     map[string]string   `json:"openGraph,omitempty"`
+	TwitterCard   map[string]string   `json:"twitterCard,omitempty"`
+	CanonicalURL  string              `json:"canonicalUrl,omitempty"`
+	HTMLLang      string              `json:"htmlLang,omitempty"`
+	MetaRefresh   *HTTPMetaRefresh    `json:"metaRefresh,omitempty"`
+	IconLinks     []HTTPLinkInfo      `json:"iconLinks,omitempty"`
+	CookieSummary *HTTPCookieSummary  `json:"cookieSummary,omitempty"`
+	ServerHints   *HTTPServerHints    `json:"serverHints,omitempty"`
+	CrossOrigin   *HTTPCrossOrigin    `json:"crossOriginSummary,omitempty"`
+	ContentLang   string              `json:"contentLanguageEffective,omitempty"`
+	PageSummary   string              `json:"pageTextSummary,omitempty"`
+	SharePreview  *HTTPSharePreview   `json:"sharePreview,omitempty"`
+	RedirectHint  *HTTPRedirectHint   `json:"redirectHint,omitempty"`
 
 	// TLS
 	TLSVersion    string   `json:"tlsVersion"`    // TLS 版本
@@ -95,6 +121,56 @@ type HTTPSaveModel struct {
 	CertSigAlg    string   `json:"certSigAlg"`    // 签名算法
 	CertEmail     []string `json:"certEmail"`     // 绑定邮箱
 	CertIsCA      bool     `json:"certIsCA"`      // 是否CA
+}
+
+type HTTPLinkInfo struct {
+	Rel   string `json:"rel,omitempty"`
+	Href  string `json:"href,omitempty"`
+	Type  string `json:"type,omitempty"`
+	Sizes string `json:"sizes,omitempty"`
+}
+
+type HTTPMetaRefresh struct {
+	Present      bool   `json:"present"`
+	DelaySeconds *int64 `json:"delay_seconds,omitempty"`
+	URL          string `json:"url,omitempty"`
+}
+
+type HTTPCookieSummary struct {
+	SetCookieCount      int `json:"set_cookie_count"`
+	SecureCount         int `json:"secure_count"`
+	HTTPOnlyCount       int `json:"http_only_count"`
+	SameSiteLaxCount    int `json:"same_site_lax_count"`
+	SameSiteStrictCount int `json:"same_site_strict_count"`
+	SameSiteNoneCount   int `json:"same_site_none_count"`
+}
+
+type HTTPServerHints struct {
+	Server     string `json:"server,omitempty"`
+	XPoweredBy string `json:"x_powered_by,omitempty"`
+	Generator  string `json:"generator,omitempty"`
+}
+
+type HTTPCrossOrigin struct {
+	CrossOriginOpenerPolicy   string `json:"cross_origin_opener_policy,omitempty"`
+	CrossOriginEmbedderPolicy string `json:"cross_origin_embedder_policy,omitempty"`
+	CrossOriginResourcePolicy string `json:"cross_origin_resource_policy,omitempty"`
+	AccessControlAllowOrigin  string `json:"access_control_allow_origin,omitempty"`
+}
+
+type HTTPSharePreview struct {
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+	SiteName    string `json:"site_name,omitempty"`
+	Image       string `json:"image,omitempty"`
+	URL         string `json:"url,omitempty"`
+}
+
+type HTTPRedirectHint struct {
+	FinalURLDifferent     bool   `json:"final_url_different"`
+	CanonicalURLDifferent bool   `json:"canonical_url_different"`
+	MetaRefreshPresent    bool   `json:"meta_refresh_present"`
+	MetaRefreshURL        string `json:"meta_refresh_url,omitempty"`
 }
 
 // TLS 版本映射
@@ -124,5 +200,17 @@ var HeadersMap = map[string]string{
 
 // 需要解析的响应头
 var CommonHeaders = []string{
-	"Server", "Content-Type", "Content-Language",
+	"Server",
+	"Content-Type",
+	"Content-Language",
+	"Date",
+	"Last-Modified",
+	"ETag",
+	"Cache-Control",
+	"Vary",
+	"Content-Encoding",
+	"X-Robots-Tag",
+	"Link",
+	"Alt-Svc",
+	"X-Powered-By",
 }

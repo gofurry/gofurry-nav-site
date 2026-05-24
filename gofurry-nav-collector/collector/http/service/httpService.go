@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -10,12 +11,12 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-nav-collector/collector/http/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/http/models"
@@ -37,10 +38,12 @@ const (
 	maxHTTPPayloadServerLength      = 256
 	maxHTTPPayloadMetaValueLength   = 512
 	maxHTTPPayloadHeaderValueLength = 512
+	maxHTTPPayloadPageSummaryLength = 1024
 	maxHTTPPayloadCertTextLength    = 256
 	maxHTTPPayloadCertItems         = 64
 	maxHTTPPayloadVerifyErrorLength = 512
 	maxHTTPPayloadCacheValueLength  = 512
+	maxHTTPPayloadIconLinks         = 16
 
 	tlsHandshakeNotTLS    = "not_tls"
 	tlsHandshakeCollected = "collected"
@@ -242,6 +245,19 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 			Redirects:     result.Redirects,
 			Headers:       result.Headers,
 			Meta:          result.Meta,
+			OpenGraph:     result.OpenGraph,
+			TwitterCard:   result.TwitterCard,
+			CanonicalURL:  result.CanonicalURL,
+			HTMLLang:      result.HTMLLang,
+			MetaRefresh:   result.MetaRefresh,
+			IconLinks:     result.IconLinks,
+			CookieSummary: result.CookieSummary,
+			ServerHints:   result.ServerHints,
+			CrossOrigin:   result.CrossOriginSummary,
+			ContentLang:   result.ContentLanguage,
+			PageSummary:   result.PageTextSummary,
+			SharePreview:  result.SharePreview,
+			RedirectHint:  result.RedirectHint,
 			TLSVersion:    result.TLSVersion,
 			CipherSuite:   result.CipherSuite,
 			CertExpiry:    result.CertExpiry.String(),
@@ -317,59 +333,72 @@ func buildHTTPObservationPayload(result models.HTTPModel, httpRecord models.HTTP
 	redirectChain := limitStringSlice(result.Redirects, maxHTTPPayloadURLLength)
 
 	return map[string]any{
-		"domain":                    httpRecord.Domain,
-		"url":                       httpRecord.Url,
-		"status_code":               httpRecord.StatusCode,
-		"response_time_ms":          result.ResponseTime,
-		"content_length":            httpRecord.ContentLength,
-		"title":                     limitString(httpRecord.Title, maxHTTPPayloadTitleLength),
-		"server":                    limitString(httpRecord.Server, maxHTTPPayloadServerLength),
-		"redirects":                 redirectChain,
-		"headers":                   limitHeaderValues(httpRecord.Headers, maxHTTPPayloadHeaderValueLength),
-		"meta":                      limitStringMapValues(httpRecord.Meta, maxHTTPPayloadMetaValueLength),
-		"redirect_chain":            redirectChain,
-		"redirect_count":            len(result.Redirects),
-		"final_url":                 limitString(finalURL, maxHTTPPayloadURLLength),
-		"content_type":              limitString(result.ContentType, maxHTTPPayloadContentTypeLength),
-		"security_headers":          securityHeadersWithDefaults(result.SecurityHeaders),
-		"security_header_summary":   buildHTTPSecurityHeaderSummary(result.SecurityHeaderValues),
-		"http_protocol":             result.HTTPProtocol,
-		"dns_lookup_ms":             result.DNSLookupMS,
-		"tcp_connect_ms":            result.TCPConnectMS,
-		"tls_handshake_ms":          result.TLSHandshakeMS,
-		"ttfb_ms":                   result.TTFBMS,
-		"transfer_ms":               result.TransferMS,
-		"remote_addr":               result.RemoteAddr,
-		"remote_ip":                 result.RemoteIP,
-		"body_read_bytes":           result.BodyReadBytes,
-		"compressed":                result.Compressed,
-		"content_encoding":          limitString(result.ContentEncoding, maxHTTPPayloadHeaderValueLength),
-		"cache_policy":              buildHTTPCachePolicy(result),
-		"tls_version":               httpRecord.TLSVersion,
-		"cipher_suite":              httpRecord.CipherSuite,
-		"cert_expiry":               httpRecord.CertExpiry,
-		"cert_days_left":            httpRecord.CertDaysLeft,
-		"cert_issuer":               limitString(httpRecord.CertIssuer, maxHTTPPayloadCertTextLength),
-		"cert_issuer_org":           limitStringSliceItems(httpRecord.CertIssuerOrg, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
-		"cert_dns_names":            limitStringSliceItems(httpRecord.CertDNSNames, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
-		"cert_pub_key_alg":          httpRecord.CertPubKeyAlg,
-		"cert_sig_alg":              httpRecord.CertSigAlg,
-		"cert_public_key_algorithm": httpRecord.CertPubKeyAlg,
-		"cert_signature_algorithm":  httpRecord.CertSigAlg,
-		"cert_email":                limitStringSliceItems(httpRecord.CertEmail, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
-		"cert_is_ca":                httpRecord.CertIsCA,
-		"cert_collected":            result.CertCollected,
-		"cert_verified":             result.CertVerified,
-		"verify_error":              limitString(result.VerifyError, maxHTTPPayloadVerifyErrorLength),
-		"verify_error_category":     result.VerifyErrorCategory,
-		"tls_handshake":             result.TLSHandshake,
-		"cert_not_before":           formatObservationTime(result.CertNotBefore),
-		"cert_not_after":            formatObservationTime(result.CertNotAfter),
-		"cert_chain_length":         result.CertChainLen,
-		"cert_subject_cn":           limitString(result.CertSubjectCN, maxHTTPPayloadCertTextLength),
-		"cert_san_count":            result.CertSANCount,
-		"ocsp_stapled":              result.OCSPStapled,
-		"sct_count":                 result.SCTCount,
+		"domain":                     httpRecord.Domain,
+		"url":                        httpRecord.Url,
+		"status_code":                httpRecord.StatusCode,
+		"response_time_ms":           result.ResponseTime,
+		"content_length":             httpRecord.ContentLength,
+		"title":                      limitString(httpRecord.Title, maxHTTPPayloadTitleLength),
+		"server":                     limitString(httpRecord.Server, maxHTTPPayloadServerLength),
+		"redirects":                  redirectChain,
+		"headers":                    limitHeaderValues(httpRecord.Headers, maxHTTPPayloadHeaderValueLength),
+		"meta":                       limitStringMapValues(httpRecord.Meta, maxHTTPPayloadMetaValueLength),
+		"open_graph":                 limitStringMapValues(httpRecord.OpenGraph, maxHTTPPayloadMetaValueLength),
+		"twitter_card":               limitStringMapValues(httpRecord.TwitterCard, maxHTTPPayloadMetaValueLength),
+		"canonical_url":              limitString(httpRecord.CanonicalURL, maxHTTPPayloadURLLength),
+		"html_lang":                  limitString(httpRecord.HTMLLang, maxHTTPPayloadMetaValueLength),
+		"meta_refresh":               limitHTTPMetaRefresh(httpRecord.MetaRefresh),
+		"icon_links":                 limitHTTPLinkInfos(httpRecord.IconLinks),
+		"cookie_summary":             httpRecord.CookieSummary,
+		"server_hints":               limitHTTPServerHints(httpRecord.ServerHints),
+		"cross_origin_summary":       limitHTTPCrossOrigin(httpRecord.CrossOrigin),
+		"content_language_effective": limitString(httpRecord.ContentLang, maxHTTPPayloadMetaValueLength),
+		"page_text_summary":          limitString(httpRecord.PageSummary, maxHTTPPayloadPageSummaryLength),
+		"share_preview":              limitHTTPSharePreview(httpRecord.SharePreview),
+		"redirect_hint":              limitHTTPRedirectHint(httpRecord.RedirectHint),
+		"redirect_chain":             redirectChain,
+		"redirect_count":             len(result.Redirects),
+		"final_url":                  limitString(finalURL, maxHTTPPayloadURLLength),
+		"content_type":               limitString(result.ContentType, maxHTTPPayloadContentTypeLength),
+		"security_headers":           securityHeadersWithDefaults(result.SecurityHeaders),
+		"security_header_summary":    buildHTTPSecurityHeaderSummary(result.SecurityHeaderValues),
+		"http_protocol":              result.HTTPProtocol,
+		"dns_lookup_ms":              result.DNSLookupMS,
+		"tcp_connect_ms":             result.TCPConnectMS,
+		"tls_handshake_ms":           result.TLSHandshakeMS,
+		"ttfb_ms":                    result.TTFBMS,
+		"transfer_ms":                result.TransferMS,
+		"remote_addr":                result.RemoteAddr,
+		"remote_ip":                  result.RemoteIP,
+		"body_read_bytes":            result.BodyReadBytes,
+		"compressed":                 result.Compressed,
+		"content_encoding":           limitString(result.ContentEncoding, maxHTTPPayloadHeaderValueLength),
+		"cache_policy":               buildHTTPCachePolicy(result),
+		"tls_version":                httpRecord.TLSVersion,
+		"cipher_suite":               httpRecord.CipherSuite,
+		"cert_expiry":                httpRecord.CertExpiry,
+		"cert_days_left":             httpRecord.CertDaysLeft,
+		"cert_issuer":                limitString(httpRecord.CertIssuer, maxHTTPPayloadCertTextLength),
+		"cert_issuer_org":            limitStringSliceItems(httpRecord.CertIssuerOrg, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
+		"cert_dns_names":             limitStringSliceItems(httpRecord.CertDNSNames, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
+		"cert_pub_key_alg":           httpRecord.CertPubKeyAlg,
+		"cert_sig_alg":               httpRecord.CertSigAlg,
+		"cert_public_key_algorithm":  httpRecord.CertPubKeyAlg,
+		"cert_signature_algorithm":   httpRecord.CertSigAlg,
+		"cert_email":                 limitStringSliceItems(httpRecord.CertEmail, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
+		"cert_is_ca":                 httpRecord.CertIsCA,
+		"cert_collected":             result.CertCollected,
+		"cert_verified":              result.CertVerified,
+		"verify_error":               limitString(result.VerifyError, maxHTTPPayloadVerifyErrorLength),
+		"verify_error_category":      result.VerifyErrorCategory,
+		"tls_handshake":              result.TLSHandshake,
+		"cert_not_before":            formatObservationTime(result.CertNotBefore),
+		"cert_not_after":             formatObservationTime(result.CertNotAfter),
+		"cert_chain_length":          result.CertChainLen,
+		"cert_subject_cn":            limitString(result.CertSubjectCN, maxHTTPPayloadCertTextLength),
+		"cert_san_count":             result.CertSANCount,
+		"ocsp_stapled":               result.OCSPStapled,
+		"sct_count":                  result.SCTCount,
 	}
 }
 
@@ -439,6 +468,84 @@ func limitHeaderValues(values map[string][]string, limit int) map[string][]strin
 		limited[key] = limitStringSlice(headerValues, limit)
 	}
 	return limited
+}
+
+func limitHTTPLinkInfos(values []models.HTTPLinkInfo) []models.HTTPLinkInfo {
+	if values == nil {
+		return nil
+	}
+	if len(values) > maxHTTPPayloadIconLinks {
+		values = values[:maxHTTPPayloadIconLinks]
+	}
+	limited := make([]models.HTTPLinkInfo, 0, len(values))
+	for _, value := range values {
+		limited = append(limited, models.HTTPLinkInfo{
+			Rel:   limitString(value.Rel, maxHTTPPayloadMetaValueLength),
+			Href:  limitString(value.Href, maxHTTPPayloadURLLength),
+			Type:  limitString(value.Type, maxHTTPPayloadMetaValueLength),
+			Sizes: limitString(value.Sizes, maxHTTPPayloadMetaValueLength),
+		})
+	}
+	return limited
+}
+
+func limitHTTPMetaRefresh(value *models.HTTPMetaRefresh) *models.HTTPMetaRefresh {
+	if value == nil {
+		return nil
+	}
+	return &models.HTTPMetaRefresh{
+		Present:      value.Present,
+		DelaySeconds: value.DelaySeconds,
+		URL:          limitString(value.URL, maxHTTPPayloadURLLength),
+	}
+}
+
+func limitHTTPServerHints(value *models.HTTPServerHints) *models.HTTPServerHints {
+	if value == nil {
+		return nil
+	}
+	return &models.HTTPServerHints{
+		Server:     limitString(value.Server, maxHTTPPayloadServerLength),
+		XPoweredBy: limitString(value.XPoweredBy, maxHTTPPayloadServerLength),
+		Generator:  limitString(value.Generator, maxHTTPPayloadMetaValueLength),
+	}
+}
+
+func limitHTTPCrossOrigin(value *models.HTTPCrossOrigin) *models.HTTPCrossOrigin {
+	if value == nil {
+		return nil
+	}
+	return &models.HTTPCrossOrigin{
+		CrossOriginOpenerPolicy:   limitString(value.CrossOriginOpenerPolicy, maxHTTPPayloadHeaderValueLength),
+		CrossOriginEmbedderPolicy: limitString(value.CrossOriginEmbedderPolicy, maxHTTPPayloadHeaderValueLength),
+		CrossOriginResourcePolicy: limitString(value.CrossOriginResourcePolicy, maxHTTPPayloadHeaderValueLength),
+		AccessControlAllowOrigin:  limitString(value.AccessControlAllowOrigin, maxHTTPPayloadHeaderValueLength),
+	}
+}
+
+func limitHTTPSharePreview(value *models.HTTPSharePreview) *models.HTTPSharePreview {
+	if value == nil {
+		return nil
+	}
+	return &models.HTTPSharePreview{
+		Title:       limitString(value.Title, maxHTTPPayloadTitleLength),
+		Description: limitString(value.Description, maxHTTPPayloadMetaValueLength),
+		SiteName:    limitString(value.SiteName, maxHTTPPayloadMetaValueLength),
+		Image:       limitString(value.Image, maxHTTPPayloadURLLength),
+		URL:         limitString(value.URL, maxHTTPPayloadURLLength),
+	}
+}
+
+func limitHTTPRedirectHint(value *models.HTTPRedirectHint) *models.HTTPRedirectHint {
+	if value == nil {
+		return nil
+	}
+	return &models.HTTPRedirectHint{
+		FinalURLDifferent:     value.FinalURLDifferent,
+		CanonicalURLDifferent: value.CanonicalURLDifferent,
+		MetaRefreshPresent:    value.MetaRefreshPresent,
+		MetaRefreshURL:        limitString(value.MetaRefreshURL, maxHTTPPayloadURLLength),
+	}
 }
 
 func detectHTTPSecurityHeaders(header http.Header) map[string]bool {
@@ -677,6 +784,281 @@ func redactProxyURL(raw string) string {
 	return parsed.String()
 }
 
+func enrichHTTPPageDetails(res *models.HTTPModel, body []byte) {
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
+	if err != nil {
+		return
+	}
+	if res.Meta == nil {
+		res.Meta = make(map[string]string)
+	}
+	res.OpenGraph = make(map[string]string)
+	res.TwitterCard = make(map[string]string)
+
+	if title := normalizeHTTPText(doc.Find("title").First().Text()); title != "" {
+		res.Title = limitString(title, maxHTTPPayloadTitleLength)
+	}
+	if htmlLang, ok := doc.Find("html").First().Attr("lang"); ok {
+		res.HTMLLang = limitString(normalizeHTTPText(htmlLang), maxHTTPPayloadMetaValueLength)
+	}
+
+	doc.Find("meta").Each(func(_ int, selection *goquery.Selection) {
+		content := normalizeHTTPText(selection.AttrOr("content", ""))
+		if content == "" {
+			if charset := normalizeHTTPText(selection.AttrOr("charset", "")); charset != "" {
+				res.Meta["charset"] = limitString(charset, maxHTTPPayloadMetaValueLength)
+			}
+			return
+		}
+
+		name := strings.ToLower(strings.TrimSpace(selection.AttrOr("name", "")))
+		property := strings.ToLower(strings.TrimSpace(selection.AttrOr("property", "")))
+		httpEquiv := strings.ToLower(strings.TrimSpace(selection.AttrOr("http-equiv", "")))
+
+		switch name {
+		case "description", "keywords", "author", "generator", "theme-color", "robots", "viewport", "application-name":
+			res.Meta[normalizeHTTPMetaKey(name)] = limitString(content, maxHTTPPayloadMetaValueLength)
+		}
+		if httpEquiv == "content-type" {
+			if charset := charsetFromContentType(content); charset != "" {
+				res.Meta["charset"] = limitString(charset, maxHTTPPayloadMetaValueLength)
+			}
+		}
+		if httpEquiv == "refresh" {
+			res.MetaRefresh = parseHTTPMetaRefresh(content, res.FinalURL)
+		}
+		if strings.HasPrefix(property, "og:") {
+			addAllowedHTTPMapValue(res.OpenGraph, strings.TrimPrefix(property, "og:"), content, res.FinalURL)
+		}
+		if strings.HasPrefix(name, "twitter:") {
+			addAllowedHTTPMapValue(res.TwitterCard, strings.TrimPrefix(name, "twitter:"), content, res.FinalURL)
+		}
+	})
+
+	doc.Find("link").EachWithBreak(func(_ int, selection *goquery.Selection) bool {
+		rel := normalizeHTTPText(selection.AttrOr("rel", ""))
+		href := normalizeHTTPText(selection.AttrOr("href", ""))
+		if href == "" {
+			return true
+		}
+		relLower := strings.ToLower(rel)
+		if strings.Contains(relLower, "canonical") && res.CanonicalURL == "" {
+			res.CanonicalURL = resolveHTTPURL(href, res.FinalURL)
+		}
+		if isHTTPIconRel(relLower) && len(res.IconLinks) < maxHTTPPayloadIconLinks {
+			res.IconLinks = append(res.IconLinks, models.HTTPLinkInfo{
+				Rel:   limitString(rel, maxHTTPPayloadMetaValueLength),
+				Href:  limitString(resolveHTTPURL(href, res.FinalURL), maxHTTPPayloadURLLength),
+				Type:  limitString(normalizeHTTPText(selection.AttrOr("type", "")), maxHTTPPayloadMetaValueLength),
+				Sizes: limitString(normalizeHTTPText(selection.AttrOr("sizes", "")), maxHTTPPayloadMetaValueLength),
+			})
+		}
+		return true
+	})
+
+	if res.ServerHints == nil {
+		res.ServerHints = &models.HTTPServerHints{}
+	}
+	res.ServerHints.Generator = res.Meta["generator"]
+	if res.ContentLanguage == "" {
+		res.ContentLanguage = res.HTMLLang
+	}
+	res.SharePreview = buildHTTPSharePreview(res)
+	res.PageTextSummary = buildHTTPPageTextSummary(res)
+	res.RedirectHint = buildHTTPRedirectHint(res)
+	if len(res.OpenGraph) == 0 {
+		res.OpenGraph = nil
+	}
+	if len(res.TwitterCard) == 0 {
+		res.TwitterCard = nil
+	}
+}
+
+func normalizeHTTPText(value string) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(value)), " ")
+}
+
+func normalizeHTTPMetaKey(value string) string {
+	return strings.ReplaceAll(value, "-", "_")
+}
+
+func charsetFromContentType(value string) string {
+	for _, part := range strings.Split(value, ";") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(strings.ToLower(part), "charset=") {
+			return strings.Trim(strings.TrimSpace(part[len("charset="):]), `"'`)
+		}
+	}
+	return ""
+}
+
+func addAllowedHTTPMapValue(values map[string]string, key string, value string, baseURL string) {
+	allowed := map[string]bool{
+		"title":       true,
+		"description": true,
+		"site_name":   true,
+		"type":        true,
+		"image":       true,
+		"url":         true,
+		"card":        true,
+		"site":        true,
+	}
+	if !allowed[key] || value == "" {
+		return
+	}
+	if key == "image" || key == "url" {
+		value = resolveHTTPURL(value, baseURL)
+		values[key] = limitString(value, maxHTTPPayloadURLLength)
+		return
+	}
+	values[key] = limitString(value, maxHTTPPayloadMetaValueLength)
+}
+
+func resolveHTTPURL(value string, baseURL string) string {
+	parsed, err := url.Parse(value)
+	if err != nil {
+		return limitString(value, maxHTTPPayloadURLLength)
+	}
+	if parsed.IsAbs() {
+		return limitString(parsed.String(), maxHTTPPayloadURLLength)
+	}
+	base, err := url.Parse(baseURL)
+	if err != nil {
+		return limitString(value, maxHTTPPayloadURLLength)
+	}
+	return limitString(base.ResolveReference(parsed).String(), maxHTTPPayloadURLLength)
+}
+
+func parseHTTPMetaRefresh(content string, baseURL string) *models.HTTPMetaRefresh {
+	refresh := &models.HTTPMetaRefresh{Present: true}
+	parts := strings.Split(content, ";")
+	if len(parts) > 0 {
+		if delay, err := strconv.ParseInt(strings.TrimSpace(parts[0]), 10, 64); err == nil {
+			refresh.DelaySeconds = &delay
+		}
+	}
+	for _, part := range parts[1:] {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(strings.ToLower(part), "url=") {
+			refresh.URL = resolveHTTPURL(strings.Trim(strings.TrimSpace(part[len("url="):]), `"'`), baseURL)
+			break
+		}
+	}
+	return refresh
+}
+
+func isHTTPIconRel(rel string) bool {
+	if rel == "manifest" {
+		return true
+	}
+	for _, token := range strings.Fields(rel) {
+		switch token {
+		case "icon", "shortcut", "apple-touch-icon":
+			return true
+		}
+	}
+	return false
+}
+
+func buildHTTPCookieSummary(values []string) *models.HTTPCookieSummary {
+	if len(values) == 0 {
+		return nil
+	}
+	summary := &models.HTTPCookieSummary{SetCookieCount: len(values)}
+	for _, value := range values {
+		lowerValue := strings.ToLower(value)
+		if strings.Contains(lowerValue, "; secure") {
+			summary.SecureCount++
+		}
+		if strings.Contains(lowerValue, "; httponly") {
+			summary.HTTPOnlyCount++
+		}
+		switch {
+		case strings.Contains(lowerValue, "samesite=lax"):
+			summary.SameSiteLaxCount++
+		case strings.Contains(lowerValue, "samesite=strict"):
+			summary.SameSiteStrictCount++
+		case strings.Contains(lowerValue, "samesite=none"):
+			summary.SameSiteNoneCount++
+		}
+	}
+	return summary
+}
+
+func buildHTTPCrossOriginSummary(header http.Header) *models.HTTPCrossOrigin {
+	summary := &models.HTTPCrossOrigin{
+		CrossOriginOpenerPolicy:   header.Get("Cross-Origin-Opener-Policy"),
+		CrossOriginEmbedderPolicy: header.Get("Cross-Origin-Embedder-Policy"),
+		CrossOriginResourcePolicy: header.Get("Cross-Origin-Resource-Policy"),
+		AccessControlAllowOrigin:  header.Get("Access-Control-Allow-Origin"),
+	}
+	if summary.CrossOriginOpenerPolicy == "" &&
+		summary.CrossOriginEmbedderPolicy == "" &&
+		summary.CrossOriginResourcePolicy == "" &&
+		summary.AccessControlAllowOrigin == "" {
+		return nil
+	}
+	return summary
+}
+
+func buildHTTPSharePreview(res *models.HTTPModel) *models.HTTPSharePreview {
+	preview := &models.HTTPSharePreview{
+		Title:       firstNonEmpty(res.OpenGraph["title"], res.TwitterCard["title"], res.Title),
+		Description: firstNonEmpty(res.OpenGraph["description"], res.TwitterCard["description"], res.Meta["description"]),
+		SiteName:    firstNonEmpty(res.OpenGraph["site_name"], res.Domain),
+		Image:       firstNonEmpty(res.OpenGraph["image"], res.TwitterCard["image"]),
+		URL:         firstNonEmpty(res.OpenGraph["url"], res.CanonicalURL, res.FinalURL),
+	}
+	if preview.Title == "" && preview.Description == "" && preview.Image == "" && preview.URL == "" {
+		return nil
+	}
+	return limitHTTPSharePreview(preview)
+}
+
+func buildHTTPPageTextSummary(res *models.HTTPModel) string {
+	parts := []string{
+		res.Title,
+		res.Meta["description"],
+		res.Meta["keywords"],
+		res.OpenGraph["site_name"],
+	}
+	return limitString(normalizeHTTPText(strings.Join(nonEmptyHTTPStrings(parts), " ")), maxHTTPPayloadPageSummaryLength)
+}
+
+func buildHTTPRedirectHint(res *models.HTTPModel) *models.HTTPRedirectHint {
+	hint := &models.HTTPRedirectHint{
+		FinalURLDifferent:     res.FinalURL != "" && res.Url != "" && res.FinalURL != res.Url,
+		CanonicalURLDifferent: res.CanonicalURL != "" && res.FinalURL != "" && res.CanonicalURL != res.FinalURL,
+	}
+	if res.MetaRefresh != nil {
+		hint.MetaRefreshPresent = true
+		hint.MetaRefreshURL = res.MetaRefresh.URL
+	}
+	if !hint.FinalURLDifferent && !hint.CanonicalURLDifferent && !hint.MetaRefreshPresent {
+		return nil
+	}
+	return limitHTTPRedirectHint(hint)
+}
+
+func nonEmptyHTTPStrings(values []string) []string {
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if value != "" {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
 // ============== HTTP模块 - 采集和解析部分 ==============
 
 // 执行 Request 采集
@@ -851,14 +1233,21 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.CacheControl = resp.Header.Get("Cache-Control")
 	res.ETag = resp.Header.Get("ETag")
 	res.LastModified = resp.Header.Get("Last-Modified")
+	res.CookieSummary = buildHTTPCookieSummary(resp.Header.Values("Set-Cookie"))
+	res.CrossOriginSummary = buildHTTPCrossOriginSummary(resp.Header)
+	res.ContentLanguage = resp.Header.Get("Content-Language")
 
 	for _, v := range models.CommonHeaders {
 		if val := resp.Header.Values(v); len(val) > 0 {
-			res.Headers[v] = val
+			res.Headers[v] = limitStringSlice(val, maxHTTPPayloadHeaderValueLength)
 		}
 	}
 
 	res.Server = resp.Header.Get("Server")
+	res.ServerHints = &models.HTTPServerHints{
+		Server:     res.Server,
+		XPoweredBy: resp.Header.Get("X-Powered-By"),
+	}
 
 	// 读取响应体 限制 1MB
 	bodyReadStart := time.Now()
@@ -867,31 +1256,7 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	if err == nil {
 		res.ContentLength = int64(len(body))
 		res.BodyReadBytes = int64(len(body))
-
-		// 提取 <title>
-		re := regexp.MustCompile(`(?i)<title>(.*?)</title>`)
-		matches := re.FindSubmatch(body)
-		if len(matches) > 1 {
-			res.Title = string(matches[1])
-		}
-
-		// 提取 <meta charset="...">
-		reCharset := regexp.MustCompile(`(?i)<meta\s+[^>]*charset=["']?([^"'>\s]+)`)
-		if m := reCharset.FindSubmatch(body); len(m) > 1 {
-			res.Meta["charset"] = string(m[1])
-		}
-
-		// 提取 <meta name="description" content="...">
-		reDesc := regexp.MustCompile(`(?i)<meta\s+name=["']description["']\s+content=["']([^"']+)["']`)
-		if m := reDesc.FindSubmatch(body); len(m) > 1 {
-			res.Meta["description"] = string(m[1])
-		}
-
-		// 提取 <meta name="keywords" content="...">
-		reKeywords := regexp.MustCompile(`(?i)<meta\s+name=["']keywords["']\s+content=["']([^"']+)["']`)
-		if m := reKeywords.FindSubmatch(body); len(m) > 1 {
-			res.Meta["keywords"] = string(m[1])
-		}
+		enrichHTTPPageDetails(&res, body)
 	}
 
 	// TLS 证书检查

@@ -317,6 +317,180 @@ func TestBuildHTTPObservationPayloadTLSDefaultsForNoTLS(t *testing.T) {
 	}
 }
 
+func TestEnrichHTTPPageDetailsExtractsPageSemantics(t *testing.T) {
+	body := []byte(`<!doctype html>
+<html lang="zh-CN">
+<head>
+  <title>  示例站点  </title>
+  <meta charset="utf-8">
+  <meta name="description" content="  面向访客的介绍  ">
+  <meta name="keywords" content="furry, nav">
+  <meta name="author" content="GoFurry">
+  <meta name="generator" content="Nuxt">
+  <meta name="application-name" content="GoFurry Nav">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="robots" content="index,follow">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta property="og:title" content="OG 标题">
+  <meta property="og:description" content="OG 描述">
+  <meta property="og:site_name" content="GoFurry">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/og.png">
+  <meta property="og:url" content="/share">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Twitter 标题">
+  <meta name="twitter:description" content="Twitter 描述">
+  <meta name="twitter:image" content="/twitter.png">
+  <meta name="twitter:site" content="@gofurry">
+  <meta http-equiv="refresh" content="5; url=/jump">
+  <link rel="canonical" href="/canonical">
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple.png">
+</head><body></body></html>`)
+	result := models.HTTPModel{
+		Domain:          "example.com",
+		Url:             "https://example.com",
+		FinalURL:        "https://example.com/path/index.html",
+		Meta:            map[string]string{},
+		ServerHints:     &models.HTTPServerHints{Server: "nginx"},
+		ContentLanguage: "",
+	}
+
+	enrichHTTPPageDetails(&result, body)
+
+	if result.Title != "示例站点" {
+		t.Fatalf("title = %q", result.Title)
+	}
+	if result.HTMLLang != "zh-CN" || result.ContentLanguage != "zh-CN" {
+		t.Fatalf("语言提取错误 html=%q effective=%q", result.HTMLLang, result.ContentLanguage)
+	}
+	if result.Meta["charset"] != "utf-8" || result.Meta["description"] != "面向访客的介绍" {
+		t.Fatalf("meta 提取错误: %+v", result.Meta)
+	}
+	if result.Meta["application_name"] != "GoFurry Nav" || result.Meta["theme_color"] != "#ffffff" || result.Meta["robots"] != "index,follow" {
+		t.Fatalf("扩展 meta 提取错误: %+v", result.Meta)
+	}
+	if result.OpenGraph["image"] != "https://example.com/og.png" || result.OpenGraph["url"] != "https://example.com/share" {
+		t.Fatalf("OpenGraph URL 解析错误: %+v", result.OpenGraph)
+	}
+	if result.TwitterCard["card"] != "summary_large_image" || result.TwitterCard["image"] != "https://example.com/twitter.png" {
+		t.Fatalf("Twitter Card 提取错误: %+v", result.TwitterCard)
+	}
+	if result.CanonicalURL != "https://example.com/canonical" {
+		t.Fatalf("canonical URL = %q", result.CanonicalURL)
+	}
+	if result.MetaRefresh == nil || !result.MetaRefresh.Present || result.MetaRefresh.DelaySeconds == nil || *result.MetaRefresh.DelaySeconds != 5 || result.MetaRefresh.URL != "https://example.com/jump" {
+		t.Fatalf("meta refresh 提取错误: %+v", result.MetaRefresh)
+	}
+	if len(result.IconLinks) != 2 || result.IconLinks[0].Href != "https://example.com/favicon.ico" {
+		t.Fatalf("icon links 提取错误: %+v", result.IconLinks)
+	}
+	if result.SharePreview == nil || result.SharePreview.Title != "OG 标题" || result.SharePreview.Image != "https://example.com/og.png" {
+		t.Fatalf("share preview 提取错误: %+v", result.SharePreview)
+	}
+	if result.PageTextSummary == "" {
+		t.Fatal("page text summary 不应为空")
+	}
+	if result.RedirectHint == nil || !result.RedirectHint.CanonicalURLDifferent || !result.RedirectHint.MetaRefreshPresent {
+		t.Fatalf("redirect hint 提取错误: %+v", result.RedirectHint)
+	}
+	if result.ServerHints.Generator != "Nuxt" {
+		t.Fatalf("server hints generator = %q", result.ServerHints.Generator)
+	}
+}
+
+func TestBuildHTTPCookieSummaryDoesNotExposeRawCookie(t *testing.T) {
+	header := http.Header{}
+	header.Add("Set-Cookie", "sid=secret; Path=/; Secure; HttpOnly; SameSite=Lax")
+	header.Add("Set-Cookie", "theme=dark; Path=/; SameSite=None")
+	header.Add("Set-Cookie", "strict=1; Path=/; SameSite=Strict")
+	summary := buildHTTPCookieSummary(header.Values("Set-Cookie"))
+
+	if summary == nil {
+		t.Fatal("cookie summary 不应为空")
+	}
+	if summary.SetCookieCount != 3 || summary.SecureCount != 1 || summary.HTTPOnlyCount != 1 {
+		t.Fatalf("cookie summary 基础计数错误: %+v", summary)
+	}
+	if summary.SameSiteLaxCount != 1 || summary.SameSiteNoneCount != 1 || summary.SameSiteStrictCount != 1 {
+		t.Fatalf("SameSite 计数错误: %+v", summary)
+	}
+}
+
+func TestBuildHTTPObservationPayloadIncludesPageDetailFields(t *testing.T) {
+	delay := int64(3)
+	httpRecord := models.HTTPSaveModel{
+		Domain:       "example.com",
+		Url:          "https://example.com",
+		StatusCode:   http.StatusOK,
+		Title:        repeated("t", 300),
+		Headers:      map[string][]string{"X-Powered-By": {"Next.js"}},
+		Meta:         map[string]string{"description": repeated("d", 600), "viewport": "width=device-width"},
+		OpenGraph:    map[string]string{"title": repeated("o", 600), "image": "https://example.com/og.png"},
+		TwitterCard:  map[string]string{"card": "summary", "site": "@gofurry"},
+		CanonicalURL: "https://example.com/canonical",
+		HTMLLang:     "zh-CN",
+		MetaRefresh:  &models.HTTPMetaRefresh{Present: true, DelaySeconds: &delay, URL: "https://example.com/jump"},
+		IconLinks: []models.HTTPLinkInfo{
+			{Rel: "icon", Href: "https://example.com/favicon.ico", Type: "image/x-icon", Sizes: "32x32"},
+		},
+		CookieSummary: &models.HTTPCookieSummary{SetCookieCount: 2, SecureCount: 1},
+		ServerHints:   &models.HTTPServerHints{Server: "nginx", XPoweredBy: "Next.js", Generator: "Nuxt"},
+		CrossOrigin:   &models.HTTPCrossOrigin{CrossOriginOpenerPolicy: "same-origin", AccessControlAllowOrigin: "*"},
+		ContentLang:   "zh-CN",
+		PageSummary:   repeated("摘", 1200),
+		SharePreview:  &models.HTTPSharePreview{Title: "分享标题", Description: "分享描述", SiteName: "GoFurry", Image: "https://example.com/og.png", URL: "https://example.com"},
+		RedirectHint:  &models.HTTPRedirectHint{FinalURLDifferent: true, MetaRefreshPresent: true, MetaRefreshURL: "https://example.com/jump"},
+	}
+
+	payload := buildHTTPObservationPayload(models.HTTPModel{}, httpRecord)
+
+	if got := runeLen(payload["canonical_url"].(string)); got == 0 || got > maxHTTPPayloadURLLength {
+		t.Fatalf("canonical_url 限长错误，got %d", got)
+	}
+	meta := payload["meta"].(map[string]string)
+	if got := runeLen(meta["description"]); got != maxHTTPPayloadMetaValueLength {
+		t.Fatalf("meta description 未限长，got %d", got)
+	}
+	openGraph := payload["open_graph"].(map[string]string)
+	if got := runeLen(openGraph["title"]); got != maxHTTPPayloadMetaValueLength {
+		t.Fatalf("open_graph title 未限长，got %d", got)
+	}
+	if payload["html_lang"] != "zh-CN" || payload["content_language_effective"] != "zh-CN" {
+		t.Fatalf("语言字段错误 html=%v effective=%v", payload["html_lang"], payload["content_language_effective"])
+	}
+	metaRefresh := payload["meta_refresh"].(*models.HTTPMetaRefresh)
+	if metaRefresh.URL != "https://example.com/jump" || metaRefresh.DelaySeconds == nil || *metaRefresh.DelaySeconds != 3 {
+		t.Fatalf("meta_refresh 错误: %+v", metaRefresh)
+	}
+	iconLinks := payload["icon_links"].([]models.HTTPLinkInfo)
+	if len(iconLinks) != 1 || iconLinks[0].Href != "https://example.com/favicon.ico" {
+		t.Fatalf("icon_links 错误: %+v", iconLinks)
+	}
+	if payload["cookie_summary"].(*models.HTTPCookieSummary).SetCookieCount != 2 {
+		t.Fatalf("cookie_summary 错误: %+v", payload["cookie_summary"])
+	}
+	serverHints := payload["server_hints"].(*models.HTTPServerHints)
+	if serverHints.XPoweredBy != "Next.js" || serverHints.Generator != "Nuxt" {
+		t.Fatalf("server_hints 错误: %+v", serverHints)
+	}
+	crossOrigin := payload["cross_origin_summary"].(*models.HTTPCrossOrigin)
+	if crossOrigin.CrossOriginOpenerPolicy != "same-origin" || crossOrigin.AccessControlAllowOrigin != "*" {
+		t.Fatalf("cross_origin_summary 错误: %+v", crossOrigin)
+	}
+	if got := runeLen(payload["page_text_summary"].(string)); got != maxHTTPPayloadPageSummaryLength {
+		t.Fatalf("page_text_summary 未限长，got %d", got)
+	}
+	sharePreview := payload["share_preview"].(*models.HTTPSharePreview)
+	if sharePreview.Title != "分享标题" || sharePreview.Image != "https://example.com/og.png" {
+		t.Fatalf("share_preview 错误: %+v", sharePreview)
+	}
+	redirectHint := payload["redirect_hint"].(*models.HTTPRedirectHint)
+	if !redirectHint.FinalURLDifferent || !redirectHint.MetaRefreshPresent {
+		t.Fatalf("redirect_hint 错误: %+v", redirectHint)
+	}
+}
+
 func TestVerifyTLSCertificateWithRoots(t *testing.T) {
 	cert := newTestCertificate(t, "example.com")
 	roots := x509.NewCertPool()

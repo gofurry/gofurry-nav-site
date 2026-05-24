@@ -230,7 +230,7 @@
 
 ### v0.3.3 - HTTP 页面语义与展示信息丰富
 
-- **状态：** 计划中
+- **状态：** 已完成
 - **范围：** HTTP / 页面语义 / 访客参考 / SEO 线索
 - **目标：** 在不增加额外请求和默认探测强度的前提下，让站点详情页能展示更完整的页面语义、分享信息、基础 SEO 信号和访客参考信息。
 
@@ -239,30 +239,30 @@
 - 只使用同一次 HTTP GET 已拿到的响应头和响应体，不额外请求 favicon、manifest、截图或子资源。
 - 优先补充“前端详情页直接能看懂”的字段，而不是继续堆底层协议细节。
 - 外部文本继续限长，HTML 只做纯文本提取，不在 collector 端保留原始标签块。
-- 仍然保持旧 Redis key、旧表结构兼容；新增字段先进入 v2 observation，再评估是否同步增强旧 HTTP JSON。
+- 仍然保持旧 Redis key、旧表结构兼容；新增字段同步进入 v2 observation 和旧 HTTP JSON，后端现有透传接口不需要改动。
 
 #### 可扩展 meta / 页面字段
 
-- [ ] 增加 `meta.author`、`meta.generator`、`meta.application_name`、`meta.theme_color`、`meta.robots`。
-- [ ] 增加 Open Graph 摘要：`og.title`、`og.description`、`og.site_name`、`og.type`、`og.image`、`og.url`。
-- [ ] 增加 Twitter Card 摘要：`twitter.card`、`twitter.title`、`twitter.description`、`twitter.image`、`twitter.site`。
-- [ ] 增加 `canonical_url`、`html_lang`、`viewport`。
-- [ ] 增加 `meta_refresh` 摘要，区分正常页面和前端/站点级跳转页。
-- [ ] 增加 `icon_links` 摘要：只记录页面中声明的 `icon` / `shortcut icon` / `apple-touch-icon` / `manifest` 链接，不额外拉取资源。
+- [x] 增加 `meta.author`、`meta.generator`、`meta.application_name`、`meta.theme_color`、`meta.robots`。
+- [x] 增加 Open Graph 摘要：`og.title`、`og.description`、`og.site_name`、`og.type`、`og.image`、`og.url`。
+- [x] 增加 Twitter Card 摘要：`twitter.card`、`twitter.title`、`twitter.description`、`twitter.image`、`twitter.site`。
+- [x] 增加 `canonical_url`、`html_lang`、`viewport`。
+- [x] 增加 `meta_refresh` 摘要，区分正常页面和前端/站点级跳转页。
+- [x] 增加 `icon_links` 摘要：只记录页面中声明的 `icon` / `shortcut icon` / `apple-touch-icon` / `manifest` 链接，不额外拉取资源。
 
 #### 可扩展响应头字段
 
-- [ ] 扩展保留响应头白名单，增加 `Date`、`Last-Modified`、`ETag`、`Cache-Control`、`Vary`、`Content-Encoding`、`Content-Language`、`X-Robots-Tag`、`Link`、`Alt-Svc`、`X-Powered-By`。
-- [ ] 增加 `cookie_summary`：`set_cookie_count`、`secure_count`、`http_only_count`、`same_site_lax_count`、`same_site_strict_count`、`same_site_none_count`。
-- [ ] 增加跨域与隔离相关 header 摘要：`cross_origin_opener_policy`、`cross_origin_embedder_policy`、`cross_origin_resource_policy`、`access_control_allow_origin`。
-- [ ] 增加 `server_hints`，对 `server`、`x-powered-by`、`generator` 做保守归并，方便详情页展示“可能的技术栈线索”。
+- [x] 扩展保留响应头白名单，增加 `Date`、`Last-Modified`、`ETag`、`Cache-Control`、`Vary`、`Content-Encoding`、`Content-Language`、`X-Robots-Tag`、`Link`、`Alt-Svc`、`X-Powered-By`。
+- [x] 增加 `cookie_summary`：`set_cookie_count`、`secure_count`、`http_only_count`、`same_site_lax_count`、`same_site_strict_count`、`same_site_none_count`。
+- [x] 增加跨域与隔离相关 header 摘要：`cross_origin_opener_policy`、`cross_origin_embedder_policy`、`cross_origin_resource_policy`、`access_control_allow_origin`。
+- [x] 增加 `server_hints`，对 `server`、`x-powered-by`、`generator` 做保守归并，方便详情页展示“可能的技术栈线索”。
 
 #### 访客视角参考字段
 
-- [ ] 增加 `content_language_effective`，优先响应头，缺失时回退 `html lang`。
-- [ ] 增加 `page_text_summary`：页面标题、描述、关键词、站点名的合并纯文本摘要，便于后端或前端做摘要展示。
-- [ ] 增加 `share_preview`：从 OG/Twitter 中整理可直接用于详情页的小卡片字段。
-- [ ] 增加 `redirect_hint`，对 meta refresh、canonical、final URL 差异做保守提示，不下结论。
+- [x] 增加 `content_language_effective`，优先响应头，缺失时回退 `html lang`。
+- [x] 增加 `page_text_summary`：页面标题、描述、关键词、站点名的合并纯文本摘要，便于后端或前端做摘要展示。
+- [x] 增加 `share_preview`：从 OG/Twitter 中整理可直接用于详情页的小卡片字段。
+- [x] 增加 `redirect_hint`，对 meta refresh、canonical、final URL 差异做保守提示，不下结论。
 
 #### 验收标准
 
