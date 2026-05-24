@@ -40,7 +40,7 @@ interface GameDetailPageData {
 }
 
 const route = useRoute()
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 
 const gameId = computed(() => String(route.params.id ?? ''))
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
@@ -73,7 +73,7 @@ const { data } = await useAsyncData<GameDetailPageData>(
 const gameDetailData = computed(() => data.value!)
 const seoTitle = computed(() => {
   const name = gameDetailData.value.gameBaseInfo?.name?.trim()
-  return name ? `${name} - gofurry` : 'gofurry Games'
+  return name ? `${name} - GoFurry` : `${t('sidebar.games')} - GoFurry`
 })
 const seoDescription = computed(() => {
   const description = gameDetailData.value.gameBaseInfo?.info?.trim() ?? ''

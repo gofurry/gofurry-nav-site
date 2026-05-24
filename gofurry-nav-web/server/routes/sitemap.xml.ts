@@ -32,6 +32,26 @@ function urlEntry(loc: string) {
   return `<url><loc>${escapeXml(loc)}</loc></url>`
 }
 
+function firstDomain(rawDomain: string) {
+  if (!rawDomain) {
+    return ''
+  }
+
+  try {
+    const parsed = JSON.parse(rawDomain)
+    if (Array.isArray(parsed?.domain) && typeof parsed.domain[0] === 'string') {
+      return parsed.domain[0]
+    }
+    if (Array.isArray(parsed) && typeof parsed[0] === 'string') {
+      return parsed[0]
+    }
+  } catch {
+    return rawDomain
+  }
+
+  return rawDomain
+}
+
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
   const siteUrl = String(config.public.siteUrl).replace(/\/$/, '')
@@ -56,7 +76,10 @@ export default defineEventHandler(async (event) => {
 
   for (const site of sites) {
     if (site?.id != null) {
-      urls.add(`/sites/${String(site.id)}`)
+      const domain = firstDomain(site.domain)
+      urls.add(domain
+        ? `/site/${encodeURIComponent(String(site.id))}/${encodeURIComponent(domain)}`
+        : `/site/${encodeURIComponent(String(site.id))}`)
     }
   }
 

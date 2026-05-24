@@ -47,6 +47,7 @@ import type { Site, Delay } from '@/types/nav'
 import greenCircle from '@/assets/svgs/green-circle.svg'
 import redCircle from '@/assets/svgs/red-circle.svg'
 import { i18n } from "@/main";
+import { siteDetailPath } from '@/utils/siteRoutes'
 
 const { t } = i18n.global
 const router = useRouter()
@@ -57,7 +58,6 @@ const props = defineProps<{
   visible: boolean
   position: { left: number; top: number } | null
   placement: 'top' | 'bottom'
-  displayMode: 'sfw' | 'nsfw'
   pingData: Record<string, Delay>
 }>()
 
@@ -116,10 +116,7 @@ function sendPopoverHeight() {
 // 跳转站点详情
 function goSite(domain: string) {
   if (!site.value) return
-  router.push({
-    path: `/site/${site.value.id}`,
-    query: { domain, mode: props.displayMode }
-  })
+  router.push(siteDetailPath(site.value.id, domain))
 }
 
 // 事件处理

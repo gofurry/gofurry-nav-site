@@ -118,9 +118,9 @@ if (active.value?.url && state.text) {
 }
 
 useSeoMeta({
-  title: () => 'gofurry Updates',
+  title: () => 'GoFurry Updates',
   description: () => 'Latest changelog and updates from gofurry.',
-  ogTitle: () => 'gofurry Updates',
+  ogTitle: () => 'GoFurry Updates',
   ogDescription: () => 'Latest changelog and updates from gofurry.',
 })
 

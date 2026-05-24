@@ -22,7 +22,6 @@
         :initial-groups="navPageData.groups"
         :initial-sites="navPageData.sites"
         :initial-ping-data="navPageData.pingData"
-        :initial-display-mode="routeDisplayMode"
       />
       <div class="h-10"></div>
     </main>
@@ -41,7 +40,7 @@ import NavContent from '@/components/nav/NavContent.vue'
 import bgGrid from '@/assets/pngs/bg-grid.png'
 import { debounce, throttle } from '@/utils/util'
 import { dispatchNavPageReveal, isNavPageRevealLocked } from '@/utils/navPageReveal'
-import { normalizeDisplayMode, readDisplayMode, subscribeModeChange, writeMode, type DisplayMode } from '@/utils/modeStorage'
+import { readDisplayMode, subscribeModeChange, type DisplayMode } from '@/utils/modeStorage'
 
 interface NavPageData {
   desktopBgUrl: string | null
@@ -55,7 +54,6 @@ interface NavPageData {
 const isContentRevealed = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 const { locale } = useI18n()
-const route = useRoute()
 const displayMode = ref<DisplayMode>(readDisplayMode())
 
 let touchStartY = 0
@@ -82,9 +80,6 @@ function parsePingData(data: Record<string, string | undefined>) {
 }
 
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
-const routeDisplayMode = computed(() => {
-  return route.query.mode == null ? undefined : normalizeDisplayMode(route.query.mode)
-})
 const toolDockSites = computed(() => {
   return navPageData.value.sites.filter(site => displayMode.value === 'nsfw' || String(site.nsfw) !== '1')
 })
@@ -124,17 +119,6 @@ const { data } = await useAsyncData<NavPageData>(
 )
 
 const navPageData = computed(() => data.value!)
-
-watch(
-  routeDisplayMode,
-  (mode) => {
-    if (mode) {
-      displayMode.value = mode
-      writeMode(mode)
-    }
-  },
-  { immediate: true }
-)
 
 function revealContent(shouldScroll = true, force = false) {
   if (!force && isNavPageRevealLocked()) {
@@ -217,7 +201,7 @@ function handleKeydown(event: KeyboardEvent) {
 onMounted(() => {
   dispatchNavPageReveal(false)
   syncRevealByViewport()
-  displayMode.value = routeDisplayMode.value ?? readDisplayMode()
+  displayMode.value = readDisplayMode()
   stopModeSubscription = subscribeModeChange(({ displayMode: nextMode }) => {
     displayMode.value = nextMode
   })

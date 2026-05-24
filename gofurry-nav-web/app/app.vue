@@ -11,8 +11,22 @@
 import PageScrollDock from '~/components/common/PageScrollDock.vue'
 
 const route = useRoute()
+const { locale } = useI18n()
 const normalizedPath = computed(() => route.path.replace(/^\/(zh|en)(?=\/|$)/, '') || '/')
 const showGlobalScrollDock = computed(() => normalizedPath.value !== '/archive')
+const defaultSeo = computed(() => {
+  if (locale.value === 'en') {
+    return {
+      title: 'GoFurry Navigation - Discover furry culture resources and communities',
+      description: 'GoFurry is a bilingual Furry navigation hub for communities, art, fiction, games, tools, and site monitoring.',
+    }
+  }
+
+  return {
+    title: 'GoFurry 兽人控导航站 - 发现兽人文化相关资源与社区',
+    description: 'GoFurry 是面向兽人文化爱好者的双语导航站，收录 Furry 社区、艺术、小说、游戏、工具与站点监测资源。',
+  }
+})
 
 const localeHead = useLocaleHead({
   dir: true,
@@ -31,4 +45,13 @@ useHead(() => ({
     ...(localeHead.value.meta || []),
   ],
 }))
+
+useSeoMeta({
+  title: () => defaultSeo.value.title,
+  description: () => defaultSeo.value.description,
+  ogTitle: () => defaultSeo.value.title,
+  ogDescription: () => defaultSeo.value.description,
+  twitterTitle: () => defaultSeo.value.title,
+  twitterDescription: () => defaultSeo.value.description,
+})
 </script>

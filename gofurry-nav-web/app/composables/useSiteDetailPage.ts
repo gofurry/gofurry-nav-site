@@ -35,6 +35,19 @@ function extractPrimaryDomain(rawDomain: unknown): string {
   return rawDomain
 }
 
+function extractRouteParam(value: unknown): string {
+  const rawValue = Array.isArray(value) ? value[0] : value
+  if (typeof rawValue !== 'string') {
+    return ''
+  }
+
+  try {
+    return decodeURIComponent(rawValue).trim()
+  } catch {
+    return rawValue.trim()
+  }
+}
+
 function parseDnsRecord(record: DnsRecord | null): DnsRecord | null {
   if (!record) {
     return null
@@ -59,14 +72,16 @@ export async function useSiteDetailPage() {
   const navV2Api = useApi('navV2')
 
   const siteId = computed(() => String(route.params.id ?? ''))
+  const pathDomain = computed(() => extractRouteParam(route.params.domain))
   const queryDomain = computed(() => {
     const value = route.query.domain
     return typeof value === 'string' ? value : ''
   })
+  const selectedDomain = computed(() => pathDomain.value || queryDomain.value)
   const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
 
   const asyncData = await useAsyncData<SiteDetailPageData>(
-    () => `site-detail:${route.path}:${siteId.value}:${queryDomain.value}:${lang.value}`,
+    () => `site-detail:${route.path}:${siteId.value}:${selectedDomain.value}:${lang.value}`,
     async () => {
       const siteInfo = await navApi<SiteInfo>('/nav/site/getSiteDetail', {
         query: {
@@ -75,7 +90,7 @@ export async function useSiteDetailPage() {
         },
       }).catch(() => null)
 
-      let resolvedDomain = queryDomain.value
+      let resolvedDomain = selectedDomain.value
       if (!resolvedDomain && siteId.value) {
         const siteList = await navApi<Site[]>('/nav/page/site/list', {
           query: {
@@ -136,7 +151,7 @@ export async function useSiteDetailPage() {
       }
     },
     {
-      watch: [siteId, queryDomain, lang],
+      watch: [siteId, selectedDomain, lang],
       default: () => ({
         siteInfo: null,
         domain: '',
@@ -153,6 +168,7 @@ export async function useSiteDetailPage() {
     ...asyncData,
     siteId,
     queryDomain,
+    pathDomain,
     lang,
   }
 }
