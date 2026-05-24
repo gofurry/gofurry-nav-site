@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { DnsItem, DnsRecord, HttpRecord, PingRecord, Site, SiteInfo } from '~/types/nav'
+import type { DnsItem, DnsRecord, HttpRecord, PingRecord, Site, SiteHealthSummary, SiteInfo, TargetHealthSummary } from '~/types/nav'
 import { safeJsonParse } from '~/utils/util'
 
 export interface SiteDetailPageData {
@@ -9,6 +9,8 @@ export interface SiteDetailPageData {
   sitePingRecord: PingRecord | null
   siteHttpRecord: HttpRecord | null
   siteDnsRecord: DnsRecord | null
+  siteHealthSummary: SiteHealthSummary | null
+  targetHealthSummary: TargetHealthSummary | null
 }
 
 function extractPrimaryDomain(rawDomain: unknown): string {
@@ -53,7 +55,9 @@ function parseDnsRecord(record: DnsRecord | null): DnsRecord | null {
 export async function useSiteDetailPage() {
   const route = useRoute()
   const { locale } = useI18n()
+  const config = useRuntimeConfig()
   const navApi = useApi('nav')
+  const navV2Api = useApi('navV2')
 
   const siteId = computed(() => String(route.params.id ?? ''))
   const queryDomain = computed(() => {
@@ -61,6 +65,10 @@ export async function useSiteDetailPage() {
     return typeof value === 'string' ? value : ''
   })
   const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
+  const healthSummaryEnabled = computed(() => {
+    const enabled = config.public.navHealthSummaryEnabled
+    return String(enabled) === 'true'
+  })
 
   const asyncData = await useAsyncData<SiteDetailPageData>(
     () => `site-detail:${route.path}:${siteId.value}:${queryDomain.value}:${lang.value}`,
@@ -84,16 +92,21 @@ export async function useSiteDetailPage() {
       }
 
       if (!resolvedDomain) {
+        const siteHealthSummary = healthSummaryEnabled.value && siteId.value
+          ? await navV2Api<SiteHealthSummary>(`/nav/sites/${siteId.value}/summary`).catch(() => null)
+          : null
         return {
           siteInfo,
           domain: '',
           sitePingRecord: null,
           siteHttpRecord: null,
           siteDnsRecord: null,
+          siteHealthSummary,
+          targetHealthSummary: null,
         }
       }
 
-      const [httpRecord, dnsRecord, pingRecord] = await Promise.all([
+      const [httpRecord, dnsRecord, pingRecord, siteHealthSummary, targetHealthSummary] = await Promise.all([
         navApi<HttpRecord>('/nav/site/getSiteHttpRecord', {
           query: {
             domain: resolvedDomain,
@@ -109,6 +122,12 @@ export async function useSiteDetailPage() {
             domain: resolvedDomain,
           },
         }).catch(() => null),
+        healthSummaryEnabled.value && siteId.value
+          ? navV2Api<SiteHealthSummary>(`/nav/sites/${siteId.value}/summary`).catch(() => null)
+          : Promise.resolve(null),
+        healthSummaryEnabled.value && siteId.value
+          ? navV2Api<TargetHealthSummary>(`/nav/sites/${siteId.value}/targets/${encodeURIComponent(resolvedDomain)}/summary`).catch(() => null)
+          : Promise.resolve(null),
       ])
 
       return {
@@ -117,6 +136,8 @@ export async function useSiteDetailPage() {
         sitePingRecord: pingRecord,
         siteHttpRecord: safeJsonParse<HttpRecord>(httpRecord),
         siteDnsRecord: parseDnsRecord(dnsRecord),
+        siteHealthSummary,
+        targetHealthSummary,
       }
     },
     {
@@ -127,6 +148,8 @@ export async function useSiteDetailPage() {
         sitePingRecord: null,
         siteHttpRecord: null,
         siteDnsRecord: null,
+        siteHealthSummary: null,
+        targetHealthSummary: null,
       }),
     }
   )
@@ -136,5 +159,6 @@ export async function useSiteDetailPage() {
     siteId,
     queryDomain,
     lang,
+    healthSummaryEnabled,
   }
 }

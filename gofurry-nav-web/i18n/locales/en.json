@@ -292,6 +292,29 @@
       "expandAlgDetails": "View Algorithm Details",
       "day": "days"
     },
+    "healthSummary": {
+      "title": "Health Summary",
+      "observationOnly": "Generated from collector v2 observation data, shown as a side-channel reference only.",
+      "siteStatus": "Site Summary",
+      "currentTarget": "Current Target",
+      "state": "Data State",
+      "targetCount": "Targets",
+      "status": "Status",
+      "stale": "stale",
+      "reasons": "Reasons",
+      "states": {
+        "ready": "Ready",
+        "missing": "No Data",
+        "stale": "Stale"
+      },
+      "statuses": {
+        "healthy": "Healthy",
+        "warning": "Attention",
+        "degraded": "Degraded",
+        "unknown": "Unknown",
+        "down": "Down"
+      }
+    },
     "siteDnsPanel": {
       "dnsRecord": "DNS Record",
       "type": "type",

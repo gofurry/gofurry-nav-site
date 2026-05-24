@@ -319,7 +319,7 @@
 
 ### v0.4.1 - Summary 只读接口与灰度展示
 
-- **状态：** 计划中
+- **状态：** 已完成
 - **范围：** Backend / Nuxt 展示 / 兼容性
 - **目标：** 在 collector summary 生产观察稳定后，再把健康摘要通过只读接口和灰度 UI 暴露出来。
 
@@ -331,16 +331,21 @@
 
 #### 任务
 
-- [ ] 后端增加只读 summary 接口，默认关闭。
-- [ ] Nuxt 增加灰度展示入口，不影响当前主展示。
-- [ ] 明确 summary 外部字段全部按纯文本展示，不渲染 HTML。
-- [ ] 为接口增加 Redis 缺失、summary 过期、目标不存在等回退语义。
+- [x] 后端增加只读 summary 接口，默认关闭。
+- [x] Nuxt 增加灰度展示入口，不影响当前主展示。
+- [x] 明确 summary 外部字段全部按纯文本展示，不渲染 HTML。
+- [x] 为接口增加 Redis 缺失、summary 过期、目标不存在等回退语义。
 
 #### 验收标准
 
 - 未开启灰度时前端展示不变化。
 - Redis summary 缺失时接口返回 `unknown` 或空摘要，不影响旧接口。
 - 前端能解释 `healthy`、`warning`、`degraded`、`unknown`、`down` 的含义。
+
+#### 备注
+
+- 本阶段只暴露 v0.4.0 已生成的 Redis summary，不新增 raw observation 历史查询接口。
+- `/api/v1/nav` 仍是生产主链路；summary 展示入口由 Nuxt 灰度开关控制。
 
 ---
 
