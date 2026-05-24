@@ -4,7 +4,7 @@
 
 `gofurry-nav-collector` 既定基础 roadmap 已完成。当前文档不再保留过长历史完成项，只记录后端正式进入 v2 前需要补齐的 collector 能力。
 
-`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段；`v0.5.3` 已完成默认关闭的域名治理低频轻探测；`v0.5.4` 已完成默认关闭的页面资源声明轻探测。后续 `v0.5.5` 到 `v0.5.7` 用于在不影响旧链路的前提下补齐少量明确授权的轻探测能力。
+`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段；`v0.5.3` 已完成默认关闭的域名治理低频轻探测；`v0.5.4` 已完成默认关闭的页面资源声明轻探测；`v0.5.5` 已完成默认关闭的 TCP 端口连通性轻探测。后续 `v0.5.6` 到 `v0.5.7` 用于在不影响旧链路的前提下补齐少量明确授权的轻探测能力。
 
 ## 迭代原则
 
@@ -173,31 +173,38 @@
 
 ### v0.5.5 - 授权范围内的高价值端口轻探测
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** TCP connect / 授权目标 / 安全边界
 **目标：** 对自有或明确授权站点做少量高价值端口连通性观测，帮助发现意外暴露或服务变更；不对普通收录站点默认执行。
 
 #### Focus
 
 - 默认关闭。
-- 按站点显式 opt-in。
+- 开启即视为当前有效目标已获得授权。
+- 端口必须显式配置，空列表不探测。
 - 只做 TCP connect，不抓 banner，不发协议 payload。
 
 #### Tasks
 
-- [ ] 增加 `collector.v2.light_probe.port_check.enabled=false`，并要求站点级 opt-in。
-- [ ] 增加端口 allowlist，默认建议只包含少量高价值端口，例如 22、25、53、80、443、465、587、993、995、8080、8443。
-- [ ] 每个目标每轮限制端口数量、并发和超时，失败不重试。
-- [ ] 只记录 `open` / `closed` / `timeout` / `filtered_suspected`、connect 耗时和错误类别。
-- [ ] 明确禁止 banner grabbing、协议交互、弱口令、目录枚举和漏洞验证。
-- [ ] 为端口探测增加中文日志、run state、v2 observation payload 和测试。
+- [x] 增加 `collector.v2.light_probe.port_check.enabled=false`，默认不产生任何端口探测。
+- [x] 端口列表完全由配置 `ports` 显式提供；代码不内置默认扫描端口。
+- [x] 每个目标每轮限制端口数量、并发和超时，失败不重试。
+- [x] 只记录 `open` / `closed` / `timeout` / `filtered_suspected` / `skipped`、connect 耗时和错误类别。
+- [x] 明确禁止 banner grabbing、协议交互、弱口令、目录枚举和漏洞验证。
+- [x] 为端口探测增加中文日志、run state、v2 observation payload 和测试。
 
 #### Acceptance Criteria
 
-- 未显式授权的站点不会被端口探测。
+- 未启用 `port_check` 或未配置端口列表时不会发起 TCP 连接。
 - 端口探测失败不影响 Ping / HTTP / DNS / TLS 主链路。
 - 可通过配置一键关闭全部端口探测。
 - 文档明确适用范围和法律/授权边界。
+
+#### Notes
+
+- `port_check.enabled=true` 表示维护者已确认当前 collector 有效目标处于授权探测范围内。
+- Prometheus / Grafana 只作为端口名提示，不接入 Prometheus 生态，不抓取 metrics，不访问 Web 页面。
+- 字段说明：`docs/v2-observation-payload.md`。
 
 ---
 

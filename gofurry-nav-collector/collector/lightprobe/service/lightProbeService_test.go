@@ -1,6 +1,8 @@
 package service
 
 import (
+	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -291,6 +293,84 @@ func TestBuildPageAssetsPayloadNoDeclarationSkipsRequest(t *testing.T) {
 	manifest := payload["manifest"].(map[string]any)
 	if icon["skipped_reason"] != "asset_link_missing" || manifest["skipped_reason"] != "asset_link_missing" {
 		t.Fatalf("missing declarations should be skipped: icon=%+v manifest=%+v", icon, manifest)
+	}
+}
+
+func TestNormalizePortCheckPortsFiltersDedupesAndTruncates(t *testing.T) {
+	ports, meta := normalizePortCheckPorts([]int{443, 0, 70000, 80, 443, 3306, 5432}, 3)
+	if len(ports) != 3 || ports[0] != 80 || ports[1] != 443 || ports[2] != 3306 {
+		t.Fatalf("normalizePortCheckPorts() ports=%v, want [80 443 3306]", ports)
+	}
+	if meta.InvalidCount != 2 || meta.DuplicateCount != 1 || meta.TruncatedCount != 1 || !meta.Truncated {
+		t.Fatalf("normalizePortCheckPorts() meta=%+v, want invalid=2 duplicate=1 truncated=true", meta)
+	}
+	if meta.SkippedCount() != 4 {
+		t.Fatalf("SkippedCount() = %d, want 4", meta.SkippedCount())
+	}
+}
+
+func TestProbePortCheckEmptyPortsSkipsNetwork(t *testing.T) {
+	result := probePortCheck(models.GfnCollectorDomain{SiteID: 1, Name: "127.0.0.1"}, env.LightProbePortCheckConfig{
+		Enabled: true,
+		Ports:   []int{},
+	})
+	if result.Status != "success" || result.Payload["ports_checked"] != 0 || result.Payload["skipped_reason"] != "port_list_empty" {
+		t.Fatalf("probePortCheck() = %+v, want empty port skipped success", result)
+	}
+}
+
+func TestProbePortCheckOpenPort(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen() error = %v", err)
+	}
+	defer ln.Close()
+	go func() {
+		conn, acceptErr := ln.Accept()
+		if acceptErr == nil {
+			_ = conn.Close()
+		}
+	}()
+	port := ln.Addr().(*net.TCPAddr).Port
+	result := probePortCheck(models.GfnCollectorDomain{SiteID: 1, Name: "127.0.0.1"}, env.LightProbePortCheckConfig{
+		Enabled:           true,
+		TimeoutSeconds:    1,
+		Concurrency:       1,
+		MaxPortsPerTarget: 4,
+		Ports:             []int{port},
+	})
+	if result.Status != "success" || result.Payload["open_count"] != 1 {
+		t.Fatalf("probePortCheck() = %+v, want one open port", result)
+	}
+	results := result.Payload["results"].([]map[string]any)
+	if len(results) != 1 || results[0]["status"] != "open" || results[0]["port"] != port {
+		t.Fatalf("unexpected port results: %+v", results)
+	}
+}
+
+func TestClassifyPortCheckError(t *testing.T) {
+	if status, code := classifyPortCheckError(errors.New("connect: connection refused")); status != "closed" || code != "connection_refused" {
+		t.Fatalf("connection refused classified as %s/%s", status, code)
+	}
+	if status, code := classifyPortCheckError(&net.DNSError{Err: "no such host", Name: "bad.invalid"}); status != "filtered_suspected" || code != "dns_failed" {
+		t.Fatalf("dns error classified as %s/%s", status, code)
+	}
+}
+
+func TestServiceHintForPort(t *testing.T) {
+	cases := map[int]string{
+		3000:  "grafana",
+		3306:  "mysql",
+		5432:  "postgresql",
+		6379:  "redis",
+		9090:  "prometheus",
+		9092:  "kafka",
+		27017: "mongodb",
+	}
+	for port, want := range cases {
+		if got := serviceHintForPort(port); got != want {
+			t.Fatalf("serviceHintForPort(%d) = %q, want %q", port, got, want)
+		}
 	}
 }
 

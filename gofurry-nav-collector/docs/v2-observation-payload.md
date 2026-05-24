@@ -246,3 +246,46 @@ security.txt 按每个有效采集 target 低频请求 `/.well-known/security.tx
 - favicon 只保存元信息和 SHA256，不保存图片内容。
 - manifest 只保存摘要字段和 SHA256，不保存原始 manifest JSON。
 - 没有 HTTP latest、没有声明、资源 host 不允许、Content-Type 不允许、请求失败等场景会写 `exists=false` 和 `skipped_reason`，不影响主采集。
+
+### Port Check
+
+`port_check` 是 v0.5.5 新增的低频 TCP connect 轻探测协议。它默认关闭，启用后只检查配置中显式列出的端口；不内置默认端口列表，不抓 banner，不读取服务响应，不发送应用层协议 payload。
+
+```json
+{
+  "ports_configured": 3,
+  "ports_checked": 3,
+  "open_count": 2,
+  "closed_count": 1,
+  "timeout_count": 0,
+  "filtered_suspected_count": 0,
+  "skipped_count": 0,
+  "invalid_port_count": 0,
+  "duplicate_port_count": 0,
+  "truncated_port_count": 0,
+  "truncated": false,
+  "results": [
+    {
+      "port": 80,
+      "service_hint": "http",
+      "status": "open",
+      "duration_ms": 8,
+      "error_code": "",
+      "error_message": ""
+    },
+    {
+      "port": 3306,
+      "service_hint": "mysql",
+      "status": "closed",
+      "duration_ms": 2,
+      "error_code": "connection_refused",
+      "error_message": "connect: connection refused"
+    }
+  ]
+}
+```
+
+- `status` 只表示 TCP connect 结果，可能值为 `open`、`closed`、`timeout`、`filtered_suspected`、`skipped`。
+- `service_hint` 只是静态端口名提示，例如 `3306=mysql`、`5432=postgresql`、`6379=redis`、`9090=prometheus`、`3000=grafana`；它不代表真实服务识别。
+- Prometheus/Grafana 只作为普通端口提示，不接入 Prometheus 生态，不抓取 metrics，不访问 Web 页面。
+- `port_check.enabled=true` 表示维护者已确认当前采集目标处于授权探测范围内；该结果不参与当前健康摘要和站点状态判断。

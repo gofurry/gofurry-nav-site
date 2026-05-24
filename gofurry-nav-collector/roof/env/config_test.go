@@ -76,7 +76,7 @@ func TestProbeBudgetOverrides(t *testing.T) {
 
 func TestCollectorV2DefaultsDisabled(t *testing.T) {
 	cfg := CollectorV2Config{}
-	for _, protocol := range []string{"ping", "http", "dns", "rdap", "robots", "security_txt", "page_assets"} {
+	for _, protocol := range []string{"ping", "http", "dns", "rdap", "robots", "security_txt", "page_assets", "port_check"} {
 		if cfg.ProtocolEnabled(protocol) {
 			t.Fatalf("ProtocolEnabled(%q) should be false by default", protocol)
 		}
@@ -116,14 +116,17 @@ func TestCollectorV2ProtocolSwitches(t *testing.T) {
 
 func TestLightProbeDefaults(t *testing.T) {
 	cfg := LightProbeConfig{}
-	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled || cfg.PageAssets.Enabled {
+	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled || cfg.PageAssets.Enabled || cfg.PortCheck.Enabled {
 		t.Fatal("light probe should be disabled by default")
 	}
-	if cfg.RDAP.Interval() != 168*time.Hour || cfg.Robots.Interval() != 168*time.Hour || cfg.SecurityTXT.Interval() != 168*time.Hour || cfg.PageAssets.Interval() != 168*time.Hour {
+	if cfg.RDAP.Interval() != 168*time.Hour || cfg.Robots.Interval() != 168*time.Hour || cfg.SecurityTXT.Interval() != 168*time.Hour || cfg.PageAssets.Interval() != 168*time.Hour || cfg.PortCheck.Interval() != 168*time.Hour {
 		t.Fatal("light probe interval should default to 168 hours")
 	}
 	if cfg.RDAP.Timeout() != 10*time.Second || cfg.Robots.Timeout() != 10*time.Second || cfg.SecurityTXT.Timeout() != 10*time.Second || cfg.PageAssets.Timeout() != 10*time.Second {
 		t.Fatal("light probe timeout should default to 10 seconds")
+	}
+	if cfg.PortCheck.Timeout() != 2*time.Second || cfg.PortCheck.WorkerCount() != 8 || cfg.PortCheck.MaxPorts() != 24 {
+		t.Fatal("port_check defaults are incorrect")
 	}
 	if cfg.Robots.MaxResponseSize() != 64*1024 || cfg.SecurityTXT.MaxResponseSize() != 64*1024 {
 		t.Fatal("light probe max response size should default to 64KiB")
@@ -166,11 +169,21 @@ collector:
         max_manifest_bytes: 4567
         allowed_asset_hosts:
           - cdn.example.com
+      port_check:
+        enabled: true
+        interval_hours: 120
+        timeout_seconds: 2
+        concurrency: 3
+        max_ports_per_target: 4
+        ports:
+          - 80
+          - 443
+          - 3306
 `), &cfg)
 	if err != nil {
 		t.Fatalf("yaml.Unmarshal() error = %v", err)
 	}
-	if !cfg.Collector.V2.ProtocolEnabled("rdap") || !cfg.Collector.V2.ProtocolEnabled("robots") || !cfg.Collector.V2.ProtocolEnabled("security_txt") || !cfg.Collector.V2.ProtocolEnabled("page_assets") {
+	if !cfg.Collector.V2.ProtocolEnabled("rdap") || !cfg.Collector.V2.ProtocolEnabled("robots") || !cfg.Collector.V2.ProtocolEnabled("security_txt") || !cfg.Collector.V2.ProtocolEnabled("page_assets") || !cfg.Collector.V2.ProtocolEnabled("port_check") {
 		t.Fatalf("light probe protocol switches not loaded: %+v", cfg.Collector.V2.LightProbe)
 	}
 	if cfg.Collector.V2.LightProbe.RDAP.Interval() != 24*time.Hour || cfg.Collector.V2.LightProbe.RDAP.Timeout() != 3*time.Second {
@@ -190,6 +203,15 @@ collector:
 	}
 	if len(cfg.Collector.V2.LightProbe.PageAssets.AllowedAssetHosts) != 1 || cfg.Collector.V2.LightProbe.PageAssets.AllowedAssetHosts[0] != "cdn.example.com" {
 		t.Fatalf("page_assets allowed hosts not loaded: %+v", cfg.Collector.V2.LightProbe.PageAssets.AllowedAssetHosts)
+	}
+	if cfg.Collector.V2.LightProbe.PortCheck.Interval() != 120*time.Hour || cfg.Collector.V2.LightProbe.PortCheck.Timeout() != 2*time.Second {
+		t.Fatalf("port_check timing config not loaded: %+v", cfg.Collector.V2.LightProbe.PortCheck)
+	}
+	if cfg.Collector.V2.LightProbe.PortCheck.WorkerCount() != 3 || cfg.Collector.V2.LightProbe.PortCheck.MaxPorts() != 4 {
+		t.Fatalf("port_check limits not loaded: %+v", cfg.Collector.V2.LightProbe.PortCheck)
+	}
+	if len(cfg.Collector.V2.LightProbe.PortCheck.Ports) != 3 || cfg.Collector.V2.LightProbe.PortCheck.Ports[2] != 3306 {
+		t.Fatalf("port_check ports not loaded: %+v", cfg.Collector.V2.LightProbe.PortCheck.Ports)
 	}
 }
 

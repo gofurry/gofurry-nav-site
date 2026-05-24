@@ -70,6 +70,7 @@ type LightProbeConfig struct {
 	Robots      LightProbeRobotsConfig      `yaml:"robots"`
 	SecurityTXT LightProbeSecurityTXTConfig `yaml:"security_txt"`
 	PageAssets  LightProbePageAssetsConfig  `yaml:"page_assets"`
+	PortCheck   LightProbePortCheckConfig   `yaml:"port_check"`
 }
 
 type LightProbeRDAPConfig struct {
@@ -100,6 +101,15 @@ type LightProbePageAssetsConfig struct {
 	MaxIconBytes      int      `yaml:"max_icon_bytes"`
 	MaxManifestBytes  int      `yaml:"max_manifest_bytes"`
 	AllowedAssetHosts []string `yaml:"allowed_asset_hosts"`
+}
+
+type LightProbePortCheckConfig struct {
+	Enabled           bool  `yaml:"enabled"`
+	IntervalHours     int   `yaml:"interval_hours"`
+	TimeoutSeconds    int   `yaml:"timeout_seconds"`
+	Concurrency       int   `yaml:"concurrency"`
+	MaxPortsPerTarget int   `yaml:"max_ports_per_target"`
+	Ports             []int `yaml:"ports"`
 }
 
 type SchedulerConfig struct {
@@ -326,6 +336,8 @@ func (cfg CollectorV2Config) ProtocolEnabled(protocol string) bool {
 		return cfg.LightProbe.SecurityTXT.Enabled
 	case "page_assets":
 		return cfg.LightProbe.PageAssets.Enabled
+	case "port_check":
+		return cfg.LightProbe.PortCheck.Enabled
 	default:
 		return false
 	}
@@ -404,6 +416,22 @@ func (cfg LightProbePageAssetsConfig) MaxIconSize() int64 {
 
 func (cfg LightProbePageAssetsConfig) MaxManifestSize() int64 {
 	return int64(intOrDefault(cfg.MaxManifestBytes, 64*1024))
+}
+
+func (cfg LightProbePortCheckConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbePortCheckConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 2)
+}
+
+func (cfg LightProbePortCheckConfig) WorkerCount() int {
+	return intOrDefault(cfg.Concurrency, 8)
+}
+
+func (cfg LightProbePortCheckConfig) MaxPorts() int {
+	return intOrDefault(cfg.MaxPortsPerTarget, 24)
 }
 
 func hoursOrDefault(value int, def int) time.Duration {

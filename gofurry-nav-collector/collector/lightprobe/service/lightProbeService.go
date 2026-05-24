@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -45,6 +46,7 @@ var (
 	robotsRunning      atomic.Bool
 	securityTXTRunning atomic.Bool
 	pageAssetsRunning  atomic.Bool
+	portCheckRunning   atomic.Bool
 
 	rdapBootstrapURL = rdapBootstrapURLDefault
 	rdapBootstrapMu  sync.Mutex
@@ -123,6 +125,16 @@ func InitLightProbeOnStart() {
 			"protocol": observation.ProtocolPageAssets,
 		}, "页面资源声明低频轻探测已注册")
 	}
+	if cfg.ProtocolEnabled(observation.ProtocolPortCheck) {
+		interval := cfg.LightProbe.PortCheck.Interval()
+		go RunPortCheck()
+		cs.AddCronJob(interval, RunPortCheck)
+		log.InfoFields(map[string]interface{}{
+			"event":    "light_probe_registered",
+			"interval": interval,
+			"protocol": observation.ProtocolPortCheck,
+		}, "端口连通性低频轻探测已注册")
+	}
 }
 
 func RunRDAP() {
@@ -139,6 +151,10 @@ func RunSecurityTXT() {
 
 func RunPageAssets() {
 	runLightProbe(observation.ProtocolPageAssets, env.GetServerConfig().Collector.V2.LightProbe.PageAssets.Interval(), &pageAssetsRunning, runPageAssetsTargets)
+}
+
+func RunPortCheck() {
+	runLightProbe(observation.ProtocolPortCheck, env.GetServerConfig().Collector.V2.LightProbe.PortCheck.Interval(), &portCheckRunning, runPortCheckTargets)
 }
 
 func runLightProbe(protocol string, interval time.Duration, running *atomic.Bool, executor func([]models.GfnCollectorDomain, *runstate.Run)) {
@@ -249,6 +265,14 @@ func runPageAssetsTargets(targets []models.GfnCollectorDomain, run *runstate.Run
 	for _, target := range targets {
 		result := probePageAssets(target, cfg)
 		saveLightProbeResult(observation.ProtocolPageAssets, target, result, run)
+	}
+}
+
+func runPortCheckTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+	cfg := env.GetServerConfig().Collector.V2.LightProbe.PortCheck
+	for _, target := range targets {
+		result := probePortCheck(target, cfg)
+		saveLightProbeResult(observation.ProtocolPortCheck, target, result, run)
 	}
 }
 
@@ -445,6 +469,228 @@ func probePageAssets(target models.GfnCollectorDomain, cfg env.LightProbePageAss
 		Status:     observation.StatusSuccess,
 		DurationMS: time.Since(start).Milliseconds(),
 		Payload:    payload,
+	}
+}
+
+func probePortCheck(target models.GfnCollectorDomain, cfg env.LightProbePortCheckConfig) probeResult {
+	start := time.Now()
+	ports, meta := normalizePortCheckPorts(cfg.Ports, cfg.MaxPorts())
+	payload := map[string]any{
+		"ports_configured":         len(cfg.Ports),
+		"ports_checked":            len(ports),
+		"open_count":               0,
+		"closed_count":             0,
+		"timeout_count":            0,
+		"filtered_suspected_count": 0,
+		"skipped_count":            meta.SkippedCount(),
+		"invalid_port_count":       meta.InvalidCount,
+		"duplicate_port_count":     meta.DuplicateCount,
+		"truncated_port_count":     meta.TruncatedCount,
+		"truncated":                meta.Truncated,
+		"results":                  []map[string]any{},
+	}
+	if len(ports) == 0 {
+		payload["skipped_reason"] = "port_list_empty"
+		return probeResult{
+			Status:     observation.StatusSuccess,
+			DurationMS: time.Since(start).Milliseconds(),
+			Payload:    payload,
+		}
+	}
+
+	host := hostnameOnly(target.TargetName())
+	results := probePorts(host, ports, cfg.Timeout(), cfg.WorkerCount())
+	counts := portCheckCounts(results)
+	payload["open_count"] = counts["open"]
+	payload["closed_count"] = counts["closed"]
+	payload["timeout_count"] = counts["timeout"]
+	payload["filtered_suspected_count"] = counts["filtered_suspected"]
+	payload["results"] = results
+	return probeResult{
+		Status:     observation.StatusSuccess,
+		DurationMS: time.Since(start).Milliseconds(),
+		Payload:    payload,
+	}
+}
+
+type portCheckNormalizeMeta struct {
+	InvalidCount   int
+	DuplicateCount int
+	TruncatedCount int
+	Truncated      bool
+}
+
+func (m portCheckNormalizeMeta) SkippedCount() int {
+	return m.InvalidCount + m.DuplicateCount + m.TruncatedCount
+}
+
+func normalizePortCheckPorts(raw []int, maxPorts int) ([]int, portCheckNormalizeMeta) {
+	if maxPorts <= 0 {
+		maxPorts = 24
+	}
+	seen := map[int]bool{}
+	ports := make([]int, 0, len(raw))
+	meta := portCheckNormalizeMeta{}
+	for _, port := range raw {
+		if port < 1 || port > 65535 {
+			meta.InvalidCount++
+			continue
+		}
+		if seen[port] {
+			meta.DuplicateCount++
+			continue
+		}
+		seen[port] = true
+		if len(ports) >= maxPorts {
+			meta.TruncatedCount++
+			meta.Truncated = true
+			continue
+		}
+		ports = append(ports, port)
+	}
+	sort.Ints(ports)
+	return ports, meta
+}
+
+func probePorts(host string, ports []int, timeout time.Duration, concurrency int) []map[string]any {
+	if concurrency <= 0 {
+		concurrency = 8
+	}
+	if concurrency > len(ports) {
+		concurrency = len(ports)
+	}
+	results := make([]map[string]any, len(ports))
+	sem := make(chan struct{}, concurrency)
+	var wg sync.WaitGroup
+	for idx, port := range ports {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(index int, p int) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			results[index] = probeSinglePort(host, p, timeout)
+		}(idx, port)
+	}
+	wg.Wait()
+	return results
+}
+
+func probeSinglePort(host string, port int, timeout time.Duration) map[string]any {
+	start := time.Now()
+	result := map[string]any{
+		"port":          port,
+		"service_hint":  serviceHintForPort(port),
+		"status":        "filtered_suspected",
+		"duration_ms":   int64(0),
+		"error_code":    "",
+		"error_message": "",
+	}
+	if host == "" {
+		result["status"] = "skipped"
+		result["error_code"] = "target_host_empty"
+		return result
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	address := net.JoinHostPort(host, strconv.Itoa(port))
+	conn, err := (&net.Dialer{Timeout: timeout}).DialContext(ctx, "tcp", address)
+	result["duration_ms"] = time.Since(start).Milliseconds()
+	if err == nil {
+		_ = conn.Close()
+		result["status"] = "open"
+		return result
+	}
+	status, code := classifyPortCheckError(err)
+	result["status"] = status
+	result["error_code"] = code
+	result["error_message"] = limitLightText(err.Error())
+	return result
+}
+
+func classifyPortCheckError(err error) (string, string) {
+	if err == nil {
+		return "open", ""
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "timeout", "timeout"
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return "timeout", "timeout"
+	}
+	var dnsErr *net.DNSError
+	if errors.As(err, &dnsErr) {
+		return "filtered_suspected", "dns_failed"
+	}
+	message := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(message, "connection refused") || strings.Contains(message, "actively refused") || strings.Contains(message, "connectex: no connection"):
+		return "closed", "connection_refused"
+	case strings.Contains(message, "i/o timeout"):
+		return "timeout", "timeout"
+	case strings.Contains(message, "no route to host") || strings.Contains(message, "network is unreachable") || strings.Contains(message, "host is unreachable"):
+		return "filtered_suspected", "network_unreachable"
+	default:
+		return "filtered_suspected", "connect_failed"
+	}
+}
+
+func portCheckCounts(results []map[string]any) map[string]int {
+	counts := map[string]int{
+		"open":               0,
+		"closed":             0,
+		"timeout":            0,
+		"filtered_suspected": 0,
+	}
+	for _, result := range results {
+		status, _ := result["status"].(string)
+		if _, ok := counts[status]; ok {
+			counts[status]++
+		}
+	}
+	return counts
+}
+
+func serviceHintForPort(port int) string {
+	switch port {
+	case 22:
+		return "ssh"
+	case 25:
+		return "smtp"
+	case 53:
+		return "dns"
+	case 80:
+		return "http"
+	case 443:
+		return "https"
+	case 465:
+		return "smtps"
+	case 587:
+		return "submission"
+	case 993:
+		return "imaps"
+	case 995:
+		return "pop3s"
+	case 3000:
+		return "grafana"
+	case 3306:
+		return "mysql"
+	case 5432:
+		return "postgresql"
+	case 6379:
+		return "redis"
+	case 8080:
+		return "http_alt"
+	case 8443:
+		return "https_alt"
+	case 9090:
+		return "prometheus"
+	case 9092:
+		return "kafka"
+	case 27017:
+		return "mongodb"
+	default:
+		return ""
 	}
 }
 

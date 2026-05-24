@@ -10,6 +10,7 @@ const (
 	ProtocolRobots      = "robots"
 	ProtocolSecurityTXT = "security_txt"
 	ProtocolPageAssets  = "page_assets"
+	ProtocolPortCheck   = "port_check"
 
 	StatusSuccess = "success"
 	StatusFailure = "failure"
