@@ -3,10 +3,12 @@ package service
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"regexp"
 	"sync/atomic"
@@ -36,6 +38,7 @@ const (
 	maxHTTPPayloadCertTextLength    = 256
 	maxHTTPPayloadCertItems         = 64
 	maxHTTPPayloadVerifyErrorLength = 512
+	maxHTTPPayloadCacheValueLength  = 512
 
 	tlsHandshakeNotTLS    = "not_tls"
 	tlsHandshakeCollected = "collected"
@@ -312,37 +315,74 @@ func buildHTTPObservationPayload(result models.HTTPModel, httpRecord models.HTTP
 	redirectChain := limitStringSlice(result.Redirects, maxHTTPPayloadURLLength)
 
 	return map[string]any{
-		"domain":           httpRecord.Domain,
-		"url":              httpRecord.Url,
-		"status_code":      httpRecord.StatusCode,
-		"response_time_ms": result.ResponseTime,
-		"content_length":   httpRecord.ContentLength,
-		"title":            limitString(httpRecord.Title, maxHTTPPayloadTitleLength),
-		"server":           limitString(httpRecord.Server, maxHTTPPayloadServerLength),
-		"redirects":        redirectChain,
-		"headers":          limitHeaderValues(httpRecord.Headers, maxHTTPPayloadHeaderValueLength),
-		"meta":             limitStringMapValues(httpRecord.Meta, maxHTTPPayloadMetaValueLength),
-		"redirect_chain":   redirectChain,
-		"redirect_count":   len(result.Redirects),
-		"final_url":        limitString(finalURL, maxHTTPPayloadURLLength),
-		"content_type":     limitString(result.ContentType, maxHTTPPayloadContentTypeLength),
-		"security_headers": securityHeadersWithDefaults(result.SecurityHeaders),
-		"tls_version":      httpRecord.TLSVersion,
-		"cipher_suite":     httpRecord.CipherSuite,
-		"cert_expiry":      httpRecord.CertExpiry,
-		"cert_days_left":   httpRecord.CertDaysLeft,
-		"cert_issuer":      limitString(httpRecord.CertIssuer, maxHTTPPayloadCertTextLength),
-		"cert_issuer_org":  limitStringSliceItems(httpRecord.CertIssuerOrg, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
-		"cert_dns_names":   limitStringSliceItems(httpRecord.CertDNSNames, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
-		"cert_pub_key_alg": httpRecord.CertPubKeyAlg,
-		"cert_sig_alg":     httpRecord.CertSigAlg,
-		"cert_email":       limitStringSliceItems(httpRecord.CertEmail, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
-		"cert_is_ca":       httpRecord.CertIsCA,
-		"cert_collected":   result.CertCollected,
-		"cert_verified":    result.CertVerified,
-		"verify_error":     limitString(result.VerifyError, maxHTTPPayloadVerifyErrorLength),
-		"tls_handshake":    result.TLSHandshake,
+		"domain":                    httpRecord.Domain,
+		"url":                       httpRecord.Url,
+		"status_code":               httpRecord.StatusCode,
+		"response_time_ms":          result.ResponseTime,
+		"content_length":            httpRecord.ContentLength,
+		"title":                     limitString(httpRecord.Title, maxHTTPPayloadTitleLength),
+		"server":                    limitString(httpRecord.Server, maxHTTPPayloadServerLength),
+		"redirects":                 redirectChain,
+		"headers":                   limitHeaderValues(httpRecord.Headers, maxHTTPPayloadHeaderValueLength),
+		"meta":                      limitStringMapValues(httpRecord.Meta, maxHTTPPayloadMetaValueLength),
+		"redirect_chain":            redirectChain,
+		"redirect_count":            len(result.Redirects),
+		"final_url":                 limitString(finalURL, maxHTTPPayloadURLLength),
+		"content_type":              limitString(result.ContentType, maxHTTPPayloadContentTypeLength),
+		"security_headers":          securityHeadersWithDefaults(result.SecurityHeaders),
+		"http_protocol":             result.HTTPProtocol,
+		"dns_lookup_ms":             result.DNSLookupMS,
+		"tcp_connect_ms":            result.TCPConnectMS,
+		"tls_handshake_ms":          result.TLSHandshakeMS,
+		"ttfb_ms":                   result.TTFBMS,
+		"transfer_ms":               result.TransferMS,
+		"remote_addr":               result.RemoteAddr,
+		"remote_ip":                 result.RemoteIP,
+		"body_read_bytes":           result.BodyReadBytes,
+		"compressed":                result.Compressed,
+		"content_encoding":          limitString(result.ContentEncoding, maxHTTPPayloadHeaderValueLength),
+		"cache_policy":              buildHTTPCachePolicy(result),
+		"tls_version":               httpRecord.TLSVersion,
+		"cipher_suite":              httpRecord.CipherSuite,
+		"cert_expiry":               httpRecord.CertExpiry,
+		"cert_days_left":            httpRecord.CertDaysLeft,
+		"cert_issuer":               limitString(httpRecord.CertIssuer, maxHTTPPayloadCertTextLength),
+		"cert_issuer_org":           limitStringSliceItems(httpRecord.CertIssuerOrg, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
+		"cert_dns_names":            limitStringSliceItems(httpRecord.CertDNSNames, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
+		"cert_pub_key_alg":          httpRecord.CertPubKeyAlg,
+		"cert_sig_alg":              httpRecord.CertSigAlg,
+		"cert_public_key_algorithm": httpRecord.CertPubKeyAlg,
+		"cert_signature_algorithm":  httpRecord.CertSigAlg,
+		"cert_email":                limitStringSliceItems(httpRecord.CertEmail, maxHTTPPayloadCertTextLength, maxHTTPPayloadCertItems),
+		"cert_is_ca":                httpRecord.CertIsCA,
+		"cert_collected":            result.CertCollected,
+		"cert_verified":             result.CertVerified,
+		"verify_error":              limitString(result.VerifyError, maxHTTPPayloadVerifyErrorLength),
+		"verify_error_category":     result.VerifyErrorCategory,
+		"tls_handshake":             result.TLSHandshake,
+		"cert_not_before":           formatObservationTime(result.CertNotBefore),
+		"cert_not_after":            formatObservationTime(result.CertNotAfter),
+		"cert_chain_length":         result.CertChainLen,
+		"cert_subject_cn":           limitString(result.CertSubjectCN, maxHTTPPayloadCertTextLength),
+		"cert_san_count":            result.CertSANCount,
+		"ocsp_stapled":              result.OCSPStapled,
+		"sct_count":                 result.SCTCount,
 	}
+}
+
+func buildHTTPCachePolicy(result models.HTTPModel) map[string]string {
+	return map[string]string{
+		"cache_control": limitString(result.CacheControl, maxHTTPPayloadCacheValueLength),
+		"etag":          limitString(result.ETag, maxHTTPPayloadCacheValueLength),
+		"last_modified": limitString(result.LastModified, maxHTTPPayloadCacheValueLength),
+	}
+}
+
+func formatObservationTime(value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+	return value.UTC().Format(time.RFC3339)
 }
 
 func limitString(value string, limit int) string {
@@ -420,15 +460,21 @@ func securityHeadersWithDefaults(values map[string]bool) map[string]bool {
 }
 
 func verifyTLSCertificate(state *tls.ConnectionState, dnsName string) (bool, string) {
-	return verifyTLSCertificateWithRoots(state, dnsName, nil)
+	verified, verifyError, _ := verifyTLSCertificateDetailed(state, dnsName, nil)
+	return verified, verifyError
 }
 
 func verifyTLSCertificateWithRoots(state *tls.ConnectionState, dnsName string, roots *x509.CertPool) (bool, string) {
+	verified, verifyError, _ := verifyTLSCertificateDetailed(state, dnsName, roots)
+	return verified, verifyError
+}
+
+func verifyTLSCertificateDetailed(state *tls.ConnectionState, dnsName string, roots *x509.CertPool) (bool, string, string) {
 	if state == nil || len(state.PeerCertificates) == 0 {
-		return false, "未采集到服务端证书"
+		return false, "未采集到服务端证书", "other"
 	}
 	if dnsName == "" {
-		return false, "无法确定证书校验域名"
+		return false, "无法确定证书校验域名", "other"
 	}
 
 	intermediates := x509.NewCertPool()
@@ -442,9 +488,39 @@ func verifyTLSCertificateWithRoots(state *tls.ConnectionState, dnsName string, r
 		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	})
 	if err != nil {
-		return false, err.Error()
+		return false, err.Error(), classifyTLSVerifyError(err, state.PeerCertificates[0])
 	}
-	return true, ""
+	return true, "", ""
+}
+
+func classifyTLSVerifyError(err error, cert *x509.Certificate) string {
+	var hostnameErr x509.HostnameError
+	if errors.As(err, &hostnameErr) {
+		return "hostname_mismatch"
+	}
+
+	var unknownAuthorityErr x509.UnknownAuthorityError
+	if errors.As(err, &unknownAuthorityErr) {
+		return "unknown_authority"
+	}
+
+	var invalidErr x509.CertificateInvalidError
+	if errors.As(err, &invalidErr) {
+		switch invalidErr.Reason {
+		case x509.Expired:
+			now := time.Now()
+			if cert != nil && now.Before(cert.NotBefore) {
+				return "not_yet_valid"
+			}
+			return "expired"
+		case x509.IncompatibleUsage:
+			return "incompatible_usage"
+		default:
+			return "other"
+		}
+	}
+
+	return "other"
 }
 
 func tlsVerifyHost(finalURL string, fallback string) string {
@@ -561,8 +637,61 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 		req.Header.Set(k, v)
 	}
 
+	var start time.Time
+	var requestStartedAt time.Time
+	var dnsStartedAt time.Time
+	var tcpStartedAt time.Time
+	var tlsStartedAt time.Time
+	trace := &httptrace.ClientTrace{
+		GetConn: func(string) {
+			if requestStartedAt.IsZero() {
+				requestStartedAt = time.Now()
+			}
+		},
+		DNSStart: func(httptrace.DNSStartInfo) {
+			dnsStartedAt = time.Now()
+		},
+		DNSDone: func(httptrace.DNSDoneInfo) {
+			if !dnsStartedAt.IsZero() {
+				res.DNSLookupMS = time.Since(dnsStartedAt).Milliseconds()
+			}
+		},
+		ConnectStart: func(string, string) {
+			if tcpStartedAt.IsZero() {
+				tcpStartedAt = time.Now()
+			}
+		},
+		ConnectDone: func(string, string, error) {
+			if !tcpStartedAt.IsZero() && res.TCPConnectMS == 0 {
+				res.TCPConnectMS = time.Since(tcpStartedAt).Milliseconds()
+			}
+		},
+		TLSHandshakeStart: func() {
+			tlsStartedAt = time.Now()
+		},
+		TLSHandshakeDone: func(tls.ConnectionState, error) {
+			if !tlsStartedAt.IsZero() {
+				res.TLSHandshakeMS = time.Since(tlsStartedAt).Milliseconds()
+			}
+		},
+		GotConn: func(info httptrace.GotConnInfo) {
+			if info.Conn != nil {
+				res.RemoteAddr = info.Conn.RemoteAddr().String()
+				res.RemoteIP = hostWithoutPort(res.RemoteAddr)
+			}
+		},
+		GotFirstResponseByte: func() {
+			if requestStartedAt.IsZero() {
+				requestStartedAt = start
+			}
+			res.TTFBMS = time.Since(requestStartedAt).Milliseconds()
+		},
+	}
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+
 	// 请求开始
-	start := time.Now()
+	start = time.Now()
+	requestStartedAt = start
 	res.StartTime = cm.LocalTime(time.Now())
 	resp, err := client.Do(req)
 	if err != nil {
@@ -589,6 +718,12 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	}
 	res.ContentType = resp.Header.Get("Content-Type")
 	res.SecurityHeaders = detectHTTPSecurityHeaders(resp.Header)
+	res.HTTPProtocol = resp.Proto
+	res.ContentEncoding = resp.Header.Get("Content-Encoding")
+	res.Compressed = resp.Uncompressed || res.ContentEncoding != ""
+	res.CacheControl = resp.Header.Get("Cache-Control")
+	res.ETag = resp.Header.Get("ETag")
+	res.LastModified = resp.Header.Get("Last-Modified")
 
 	for _, v := range models.CommonHeaders {
 		if val := resp.Header.Values(v); len(val) > 0 {
@@ -599,9 +734,12 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 	res.Server = resp.Header.Get("Server")
 
 	// 读取响应体 限制 1MB
+	bodyReadStart := time.Now()
 	body, err := io.ReadAll(io.LimitReader(resp.Body, probeBudget.MaxHTTPResponseBytes()))
+	res.TransferMS = time.Since(bodyReadStart).Milliseconds()
 	if err == nil {
 		res.ContentLength = int64(len(body))
+		res.BodyReadBytes = int64(len(body))
 
 		// 提取 <title>
 		re := regexp.MustCompile(`(?i)<title>(.*?)</title>`)
@@ -643,6 +781,13 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 		res.CertSigAlg = cert.SignatureAlgorithm.String()                // 证书的签名算法
 		res.CertEmail = cert.EmailAddresses                              // 证绑定的邮箱
 		res.CertIsCA = cert.IsCA                                         // 是否CA证书
+		res.CertNotBefore = cert.NotBefore
+		res.CertNotAfter = cert.NotAfter
+		res.CertChainLen = len(resp.TLS.PeerCertificates)
+		res.CertSubjectCN = cert.Subject.CommonName
+		res.CertSANCount = len(cert.DNSNames)
+		res.OCSPStapled = len(resp.TLS.OCSPResponse) > 0
+		res.SCTCount = len(resp.TLS.SignedCertificateTimestamps)
 
 		if name, ok := models.TlsVersionMap[resp.TLS.Version]; ok {
 			res.TLSVersion = name
@@ -655,7 +800,7 @@ func performRequest(site models.GfnCollectorDomain) (res models.HTTPModel) {
 			res.CipherSuite = fmt.Sprintf("未知(%d)", resp.TLS.CipherSuite)
 		}
 
-		res.CertVerified, res.VerifyError = verifyTLSCertificate(resp.TLS, tlsVerifyHost(res.FinalURL, res.Domain))
+		res.CertVerified, res.VerifyError, res.VerifyErrorCategory = verifyTLSCertificateDetailed(resp.TLS, tlsVerifyHost(res.FinalURL, res.Domain), nil)
 	}
 
 	return

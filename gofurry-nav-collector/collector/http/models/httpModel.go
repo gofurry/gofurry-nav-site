@@ -23,23 +23,45 @@ type HTTPModel struct {
 	FinalURL        string              `json:"-"`             // v2 observation 最终 URL
 	ContentType     string              `json:"-"`             // v2 observation Content-Type
 	SecurityHeaders map[string]bool     `json:"-"`             // v2 observation 常见安全响应头是否存在
+	DNSLookupMS     int64               `json:"-"`             // v2 observation DNS 查询耗时
+	TCPConnectMS    int64               `json:"-"`             // v2 observation TCP 连接耗时
+	TLSHandshakeMS  int64               `json:"-"`             // v2 observation TLS 握手耗时
+	TTFBMS          int64               `json:"-"`             // v2 observation 首字节耗时
+	TransferMS      int64               `json:"-"`             // v2 observation 响应体读取耗时
+	HTTPProtocol    string              `json:"-"`             // v2 observation HTTP 协议
+	RemoteAddr      string              `json:"-"`             // v2 observation 实际 TCP 对端
+	RemoteIP        string              `json:"-"`             // v2 observation 实际 TCP 对端 IP
+	BodyReadBytes   int64               `json:"-"`             // v2 observation 实际读取字节数
+	ContentEncoding string              `json:"-"`             // v2 observation Content-Encoding
+	Compressed      bool                `json:"-"`             // v2 observation 是否压缩响应
+	CacheControl    string              `json:"-"`             // v2 observation Cache-Control
+	ETag            string              `json:"-"`             // v2 observation ETag
+	LastModified    string              `json:"-"`             // v2 observation Last-Modified
 
 	// TLS
-	TLSVersion    string    `json:"tlsVersion"`    // TLS 版本
-	CipherSuite   string    `json:"cipherSuite"`   // 加密套件
-	CertExpiry    time.Time `json:"certExpiry"`    // 证书过期时间
-	CertDaysLeft  int64     `json:"certDaysLeft"`  // 证书剩余天数
-	CertIssuer    string    `json:"certIssuer"`    // 签发机构
-	CertIssuerOrg []string  `json:"certIssuerOrg"` // 签发组织
-	CertDNSNames  []string  `json:"certDNSNames"`  // 绑定域名
-	CertPubKeyAlg string    `json:"certPubKeyAlg"` // 公钥算法
-	CertSigAlg    string    `json:"certSigAlg"`    // 签名算法
-	CertEmail     []string  `json:"certEmail"`     // 绑定邮箱
-	CertIsCA      bool      `json:"certIsCA"`      // 是否CA
-	CertCollected bool      `json:"-"`             // v2 observation 是否采集到证书
-	CertVerified  bool      `json:"-"`             // v2 observation 证书是否校验通过
-	VerifyError   string    `json:"-"`             // v2 observation 证书校验失败原因
-	TLSHandshake  string    `json:"-"`             // v2 observation TLS 握手状态
+	TLSVersion          string    `json:"tlsVersion"`    // TLS 版本
+	CipherSuite         string    `json:"cipherSuite"`   // 加密套件
+	CertExpiry          time.Time `json:"certExpiry"`    // 证书过期时间
+	CertDaysLeft        int64     `json:"certDaysLeft"`  // 证书剩余天数
+	CertIssuer          string    `json:"certIssuer"`    // 签发机构
+	CertIssuerOrg       []string  `json:"certIssuerOrg"` // 签发组织
+	CertDNSNames        []string  `json:"certDNSNames"`  // 绑定域名
+	CertPubKeyAlg       string    `json:"certPubKeyAlg"` // 公钥算法
+	CertSigAlg          string    `json:"certSigAlg"`    // 签名算法
+	CertEmail           []string  `json:"certEmail"`     // 绑定邮箱
+	CertIsCA            bool      `json:"certIsCA"`      // 是否CA
+	CertCollected       bool      `json:"-"`             // v2 observation 是否采集到证书
+	CertVerified        bool      `json:"-"`             // v2 observation 证书是否校验通过
+	VerifyError         string    `json:"-"`             // v2 observation 证书校验失败原因
+	TLSHandshake        string    `json:"-"`             // v2 observation TLS 握手状态
+	CertNotBefore       time.Time `json:"-"`             // v2 observation 证书生效时间
+	CertNotAfter        time.Time `json:"-"`             // v2 observation 证书过期时间
+	CertChainLen        int       `json:"-"`             // v2 observation 证书链长度
+	CertSubjectCN       string    `json:"-"`             // v2 observation 证书 Subject CN
+	CertSANCount        int       `json:"-"`             // v2 observation 证书 SAN 数量
+	OCSPStapled         bool      `json:"-"`             // v2 observation 是否带 OCSP Staple
+	SCTCount            int       `json:"-"`             // v2 observation SCT 数量
+	VerifyErrorCategory string    `json:"-"`             // v2 observation 证书校验错误分类
 
 	// 其他
 	StartTime    models.LocalTime `json:"startTime"` // 请求开始时间

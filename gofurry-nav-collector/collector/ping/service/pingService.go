@@ -377,6 +377,15 @@ func performPing(ip string) (pingModel models2.PingModel) {
 	stats := pinger.Statistics()
 	pingModel.AvgLossRate = stats.PacketLoss
 	pingModel.AvgDelayTime = stats.AvgRtt.Milliseconds()
+	pingModel.MinRTTMS = stats.MinRtt.Milliseconds()
+	pingModel.MaxRTTMS = stats.MaxRtt.Milliseconds()
+	pingModel.StdDevRTTMS = stats.StdDevRtt.Milliseconds()
+	pingModel.PacketsSent = stats.PacketsSent
+	pingModel.PacketsRecv = stats.PacketsRecv
+	pingModel.PacketsRecvDuplicates = stats.PacketsRecvDuplicates
+	if stats.IPAddr != nil {
+		pingModel.ResolvedIP = stats.IPAddr.IP.String()
+	}
 	if pingModel.AvgDelayTime == 0 && pingModel.AvgLossRate != 100 {
 		pingModel.AvgDelayTime = 1
 	}
@@ -468,23 +477,39 @@ func buildPingObservationPayload(result models2.PingModel, pingRecord *models2.P
 	errorCode := result.ErrorCode
 	icmpStatus := "unreachable"
 	var avgRTTMS any
+	var minRTTMS any
+	var maxRTTMS any
+	var stdDevRTTMS any
+	var jitterMS any
 	if status == "up" {
 		icmpStatus = "reachable"
 		avgRTTMS = result.AvgDelayTime
+		minRTTMS = result.MinRTTMS
+		maxRTTMS = result.MaxRTTMS
+		stdDevRTTMS = result.StdDevRTTMS
+		jitterMS = result.StdDevRTTMS
 	} else if errorCode == "" {
 		errorCode = "ping_unreachable"
 	}
 
 	return map[string]any{
-		"icmp_status":   icmpStatus,
-		"avg_rtt_ms":    avgRTTMS,
-		"loss_rate":     result.AvgLossRate,
-		"duration_ms":   result.ProbeDurationMS,
-		"error_code":    errorCode,
-		"delay_ms":      result.AvgDelayTime,
-		"legacy_delay":  pingRecord.Delay,
-		"legacy_loss":   pingRecord.Loss,
-		"legacy_status": pingRecord.Status,
+		"icmp_status":             icmpStatus,
+		"avg_rtt_ms":              avgRTTMS,
+		"min_rtt_ms":              minRTTMS,
+		"max_rtt_ms":              maxRTTMS,
+		"stddev_rtt_ms":           stdDevRTTMS,
+		"jitter_ms":               jitterMS,
+		"loss_rate":               result.AvgLossRate,
+		"packets_sent":            result.PacketsSent,
+		"packets_recv":            result.PacketsRecv,
+		"packets_recv_duplicates": result.PacketsRecvDuplicates,
+		"resolved_ip":             result.ResolvedIP,
+		"duration_ms":             result.ProbeDurationMS,
+		"error_code":              errorCode,
+		"delay_ms":                result.AvgDelayTime,
+		"legacy_delay":            pingRecord.Delay,
+		"legacy_loss":             pingRecord.Loss,
+		"legacy_status":           pingRecord.Status,
 	}, errorCode
 }
 

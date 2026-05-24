@@ -175,7 +175,7 @@
 
 ### v0.3.2 - v2 Observation 低风险信息丰富
 
-- **状态：** 计划中
+- **状态：** 已完成
 - **范围：** Ping / HTTP / TLS / DNS
 - **目标：** 在不增加默认探测次数和采集强度的前提下，把当前三种协议同一次探测中已经能得到的高价值字段写入 v2 observation，为站点安全参考和访客视角参考提供更丰富依据。
 
@@ -188,36 +188,36 @@
 
 #### Ping 可扩展字段
 
-- [ ] 增加 `min_rtt_ms`、`max_rtt_ms`、`stddev_rtt_ms`。
-- [ ] 增加 `jitter_ms`，先以 RTT 标准差作为保守近似。
-- [ ] 增加 `packets_sent`、`packets_recv`，让 `loss_rate` 更可解释。
-- [ ] 记录本轮 Ping 实际 `resolved_ip`，辅助对照 DNS 和访客访问路径。
+- [x] 增加 `min_rtt_ms`、`max_rtt_ms`、`stddev_rtt_ms`。
+- [x] 增加 `jitter_ms`，先以 RTT 标准差作为保守近似。
+- [x] 增加 `packets_sent`、`packets_recv`、`packets_recv_duplicates`，让 `loss_rate` 更可解释。
+- [x] 记录本轮 Ping 实际 `resolved_ip`，辅助对照 DNS 和访客访问路径。
 
 #### HTTP 可扩展字段
 
-- [ ] 使用 `httptrace` 记录 `dns_lookup_ms`、`tcp_connect_ms`、`tls_handshake_ms`、`ttfb_ms`、`transfer_ms`。
-- [ ] 记录 `http_protocol`，区分 HTTP/1.1、HTTP/2 等实际协议。
-- [ ] 记录最终连接 `remote_ip` / `remote_addr`，辅助和 DNS observation 对照。
-- [ ] 记录 `content_length`、`body_read_bytes`、`compressed`，作为访客体感大小参考。
-- [ ] 摘要化 `cache-control`、`etag`、`last-modified`，形成 `cache_policy`。
+- [x] 使用 `httptrace` 记录 `dns_lookup_ms`、`tcp_connect_ms`、`tls_handshake_ms`、`ttfb_ms`、`transfer_ms`。
+- [x] 记录 `http_protocol`，区分 HTTP/1.1、HTTP/2 等实际协议。
+- [x] 记录最终连接 `remote_ip` / `remote_addr`，辅助和 DNS observation 对照。
+- [x] 记录 `content_length`、`body_read_bytes`、`compressed`，作为访客体感大小参考。
+- [x] 摘要化 `cache-control`、`etag`、`last-modified`，形成 `cache_policy`。
 - [ ] 细化常见安全 header 摘要，例如 HSTS `max-age`、CSP 是否包含高风险宽松项。
 
 #### TLS 可扩展字段
 
-- [ ] 增加 `cert_not_before`、`cert_not_after`、`cert_chain_length`。
-- [ ] 增加 `cert_subject_cn`、`cert_san_count`。
-- [ ] 增加 `cert_signature_algorithm`、`cert_public_key_algorithm`。
-- [ ] 增加 `ocsp_stapled`、`sct_count`，作为证书透明度和吊销响应参考。
-- [ ] 增加 `verify_error_category`，把原始校验错误归类为过期、域名不匹配、未知 CA 等。
+- [x] 增加 `cert_not_before`、`cert_not_after`、`cert_chain_length`。
+- [x] 增加 `cert_subject_cn`、`cert_san_count`。
+- [x] 增加 `cert_signature_algorithm`、`cert_public_key_algorithm`。
+- [x] 增加 `ocsp_stapled`、`sct_count`，作为证书透明度和吊销响应参考。
+- [x] 增加 `verify_error_category`，把原始校验错误归类为过期、域名不匹配、未知 CA 等。
 
 #### DNS 可扩展字段
 
-- [ ] 增加 `rcode`、`authoritative`、`truncated`、`recursion_available`。
-- [ ] 增加 `answer_count`、`authority_count`、`additional_count`。
-- [ ] 将已有 TTL 统计整理为 `ttl_min`、`ttl_max`、`ttl_avg` 写入 v2 payload。
-- [ ] 增加 `cname_chain_depth`，表达解析链复杂度。
-- [ ] 摘要化 MX 优先级、SOA serial/refresh/retry/expire/minTTL。
-- [ ] 区分 `dnssec_rrsig_present` 与 `dnssec_ad`，避免把“有签名记录”和“已验证”混为一谈。
+- [x] 增加 `rcode`、`authoritative`、`truncated`、`recursion_available`。
+- [x] 增加 `answer_count`、`authority_count`、`additional_count`。
+- [x] 将已有 TTL 统计整理为 `ttl_min`、`ttl_max`、`ttl_avg` 写入 v2 payload。
+- [x] 增加 `cname_chain_depth`，表达解析链复杂度。
+- [x] 摘要化 MX 优先级、SOA serial/refresh/retry/expire/minTTL。
+- [x] 区分 `dnssec_rrsig_present` 与 `dnssec_ad`，避免把“有签名记录”和“已验证”混为一谈。
 
 #### 验收标准
 
@@ -225,6 +225,10 @@
 - 不增加默认请求次数、DNS 目标数量、Ping 次数、并发或响应体上限。
 - v2 latest Redis 和 observation DB 新字段出现，旧 Redis key、旧表和旧前端展示不变化。
 - 字段解释写入 `docs/v2-observation-payload.md`，明确它们不是最终健康判断。
+
+#### 备注
+
+本轮保留一项后续细化：常见安全 header 目前先记录“是否存在”，尚未把 HSTS `max-age`、CSP 高风险宽松项等做成结构化摘要。它更适合进入后续展示或健康聚合阶段，避免在当前 observation 层过早引入解释性逻辑。
 
 ---
 
@@ -388,8 +392,8 @@
 ### 短期
 
 - 保持 Phase 0 当前生产配置稳定运行。
-- 开始 v2 数据旁路设计，但不切换后端/Nuxt 读取路径。
-- 继续观察单目标失败、DNS timeout 和日志保留效果。
+- 在生产继续观察 v2 observation 新字段的体积、可读性和查询价值。
+- 不切换后端/Nuxt 读取路径，先积累一段时间旁路数据。
 
 ### 中期
 

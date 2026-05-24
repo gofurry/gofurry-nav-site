@@ -31,10 +31,17 @@ func TestBuildPingTargetsKeepsSiteID(t *testing.T) {
 
 func TestBuildPingObservationPayloadSuccess(t *testing.T) {
 	payload, errorCode := buildPingObservationPayload(models2.PingModel{
-		PingTime:        cm.LocalTime{},
-		AvgLossRate:     0,
-		AvgDelayTime:    42,
-		ProbeDurationMS: 5100,
+		PingTime:              cm.LocalTime{},
+		AvgLossRate:           0,
+		AvgDelayTime:          42,
+		MinRTTMS:              35,
+		MaxRTTMS:              50,
+		StdDevRTTMS:           4,
+		PacketsSent:           5,
+		PacketsRecv:           5,
+		PacketsRecvDuplicates: 1,
+		ResolvedIP:            "203.0.113.10",
+		ProbeDurationMS:       5100,
 	}, &models2.PingSaveModel{
 		Status: "up",
 		Loss:   "0",
@@ -49,6 +56,18 @@ func TestBuildPingObservationPayloadSuccess(t *testing.T) {
 	}
 	if payload["avg_rtt_ms"] != int64(42) {
 		t.Fatalf("avg_rtt_ms = %v, want 42", payload["avg_rtt_ms"])
+	}
+	if payload["min_rtt_ms"] != int64(35) || payload["max_rtt_ms"] != int64(50) || payload["stddev_rtt_ms"] != int64(4) {
+		t.Fatalf("RTT fields missing or changed: %#v", payload)
+	}
+	if payload["jitter_ms"] != int64(4) {
+		t.Fatalf("jitter_ms = %v, want 4", payload["jitter_ms"])
+	}
+	if payload["packets_sent"] != 5 || payload["packets_recv"] != 5 || payload["packets_recv_duplicates"] != 1 {
+		t.Fatalf("packet fields missing or changed: %#v", payload)
+	}
+	if payload["resolved_ip"] != "203.0.113.10" {
+		t.Fatalf("resolved_ip = %v, want 203.0.113.10", payload["resolved_ip"])
 	}
 	if payload["duration_ms"] != int64(5100) {
 		t.Fatalf("duration_ms = %v, want 5100", payload["duration_ms"])
@@ -77,6 +96,9 @@ func TestBuildPingObservationPayloadFailure(t *testing.T) {
 	}
 	if payload["avg_rtt_ms"] != nil {
 		t.Fatalf("avg_rtt_ms = %v, want nil", payload["avg_rtt_ms"])
+	}
+	if payload["min_rtt_ms"] != nil || payload["max_rtt_ms"] != nil || payload["stddev_rtt_ms"] != nil || payload["jitter_ms"] != nil {
+		t.Fatalf("failed ping RTT fields should be nil: %#v", payload)
 	}
 	if payload["error_code"] != "ping_unreachable" {
 		t.Fatalf("payload error_code = %v, want ping_unreachable", payload["error_code"])

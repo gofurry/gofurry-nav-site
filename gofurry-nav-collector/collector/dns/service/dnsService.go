@@ -52,6 +52,42 @@ var ptrSem = make(chan struct{}, PTRWorkers) // ptrSem 用于限制 PTR 查询�
 var resolver = env.GetServerConfig().Collector.Dns.Resolver
 var geoDBs *GeoDBSet
 
+type dnsResponseSummary struct {
+	Rcode              string  `json:"rcode"`
+	Authoritative      bool    `json:"authoritative"`
+	Truncated          bool    `json:"truncated"`
+	RecursionAvailable bool    `json:"recursion_available"`
+	AnswerCount        int     `json:"answer_count"`
+	AuthorityCount     int     `json:"authority_count"`
+	AdditionalCount    int     `json:"additional_count"`
+	TTLMin             uint32  `json:"ttl_min"`
+	TTLMax             uint32  `json:"ttl_max"`
+	TTLAvg             float64 `json:"ttl_avg"`
+	DNSSECRRSIGPresent bool    `json:"dnssec_rrsig_present"`
+	DNSSECAD           bool    `json:"dnssec_ad"`
+}
+
+type dnsMXPriority struct {
+	Host     string `json:"host"`
+	Priority uint16 `json:"priority"`
+}
+
+type dnsSOASummary struct {
+	NS      string `json:"ns"`
+	Mbox    string `json:"mbox"`
+	Serial  uint32 `json:"serial"`
+	Refresh uint32 `json:"refresh"`
+	Retry   uint32 `json:"retry"`
+	Expire  uint32 `json:"expire"`
+	Minttl  uint32 `json:"minttl"`
+}
+
+type dnsQueryMetadata struct {
+	ResponseSummary dnsResponseSummary
+	MXPriorities    []dnsMXPriority
+	SOA             *dnsSOASummary
+}
+
 type GeoDBSet struct {
 	Country *geoip2.Reader
 	City    *geoip2.Reader
@@ -315,7 +351,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		// 执行 Request 获取结果
 		probeStart := time.Now()
 		geoDBSet := currentGeoDBs()
-		results := performDNSQuery(site, geoDBSet.ASN, geoDBSet.City, geoDBSet.Country)
+		results, metadata := performDNSQuery(site, geoDBSet.ASN, geoDBSet.City, geoDBSet.Country)
 
 		siteName := site.TargetName()
 
@@ -402,7 +438,7 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 			ObservedAt: newRecord.CreateTime,
 			DurationMS: time.Since(probeStart).Milliseconds(),
 			ErrorCode:  errorCode,
-			Payload:    buildDNSObservationPayload(results),
+			Payload:    buildDNSObservationPayloadWithMetadata(results, metadata),
 		})
 		if saveErr != nil {
 			log.WarnFields(map[string]interface{}{
@@ -424,8 +460,13 @@ func observationStatusFromDNS(status string) string {
 }
 
 func buildDNSObservationPayload(results map[string][]models.DNSRecord) map[string]any {
+	return buildDNSObservationPayloadWithMetadata(results, nil)
+}
+
+func buildDNSObservationPayloadWithMetadata(results map[string][]models.DNSRecord, metadata map[string]dnsQueryMetadata) map[string]any {
 	payload := make(map[string]any, len(results)+1)
 	aggregateRisks := map[string]struct{}{}
+	responseSummary := make(map[string]dnsResponseSummary, len(results))
 
 	for recordType, records := range results {
 		v2Records := make([]map[string]any, 0, len(records))
@@ -437,9 +478,47 @@ func buildDNSObservationPayload(results map[string][]models.DNSRecord) map[strin
 			}
 		}
 		payload[recordType] = v2Records
+		responseSummary[recordType] = buildDNSResponseSummary(recordType, records, metadata)
 	}
 	payload["risk_flags"] = sortedRiskFlags(aggregateRisks)
+	payload["response_summary"] = responseSummary
+	payload["cname_chain_depth"] = maxDNSRecordDepth(results)
+	payload["mx_priorities"] = buildDNSMXPriorities(metadata)
+	payload["soa"] = buildDNSSOA(metadata)
 	return payload
+}
+
+func buildDNSResponseSummary(recordType string, records []models.DNSRecord, metadata map[string]dnsQueryMetadata) dnsResponseSummary {
+	if metadata != nil {
+		if item, ok := metadata[recordType]; ok {
+			return item.ResponseSummary
+		}
+	}
+
+	summary := dnsResponseSummary{
+		AnswerCount: len(records),
+	}
+	if len(records) == 0 {
+		return summary
+	}
+
+	var ttlSum uint64
+	summary.TTLMin = records[0].TTL
+	summary.TTLMax = records[0].TTL
+	for _, record := range records {
+		ttlSum += uint64(record.TTL)
+		if record.TTL < summary.TTLMin {
+			summary.TTLMin = record.TTL
+		}
+		if record.TTL > summary.TTLMax {
+			summary.TTLMax = record.TTL
+		}
+		if record.DNSSEC {
+			summary.DNSSECRRSIGPresent = true
+		}
+	}
+	summary.TTLAvg = float64(ttlSum) / float64(len(records))
+	return summary
 }
 
 func buildDNSObservationRecord(record models.DNSRecord) (map[string]any, []string) {
@@ -534,7 +613,7 @@ func sortedStringSlice(values []string) []string {
 	return copied
 }
 
-func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityDB *geoip2.Reader, countryDB *geoip2.Reader) map[string][]models.DNSRecord {
+func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityDB *geoip2.Reader, countryDB *geoip2.Reader) (map[string][]models.DNSRecord, map[string]dnsQueryMetadata) {
 	// 按记录类型并行查 加锁
 	var queryMu sync.Mutex
 	var queryMG sync.WaitGroup
@@ -546,6 +625,7 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 	var globalTotalTime time.Duration
 	// 最终结果
 	result := make(map[string][]models.DNSRecord)
+	metadata := make(map[string]dnsQueryMetadata)
 
 	domain := site.TargetName()
 
@@ -559,7 +639,7 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 			querySem <- struct{}{}
 			defer func() { <-querySem }()
 
-			records, stats, err := queryDNS(domain, rt.Type, resolver, countryDB, cityDB, asnDB, 0)
+			records, stats, queryMetadata, err := queryDNS(domain, rt.Type, resolver, countryDB, cityDB, asnDB, 0)
 			if err != nil {
 				log.WarnFields(map[string]interface{}{
 					"domain":      domain,
@@ -576,6 +656,7 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 			for _, record := range records {
 				result[record.Type] = append(result[record.Type], record)
 			}
+			metadata[rt.Name] = queryMetadata
 
 			if stats.MinTTL < globalMinTTL {
 				globalMinTTL = stats.MinTTL
@@ -591,7 +672,7 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 
 	}
 	queryMG.Wait()
-	return result
+	return result, metadata
 }
 
 // ============== DNS解析 - 采集和解析部分 ==============
@@ -606,10 +687,10 @@ func dnsQueryThreadLimit(configured int, recordTypeCount int) int {
 	return configured
 }
 
-func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Reader, cityDB *geoip2.Reader, asnDB *geoip2.Reader, depth int) ([]models.DNSRecord, models.DNSStatistics, common.GFError) {
+func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Reader, cityDB *geoip2.Reader, asnDB *geoip2.Reader, depth int) ([]models.DNSRecord, models.DNSStatistics, dnsQueryMetadata, common.GFError) {
 	// 防止递归过深
 	if depth > MaxDepth {
-		return nil, models.DNSStatistics{}, nil
+		return nil, models.DNSStatistics{}, dnsQueryMetadata{}, nil
 	}
 
 	start := time.Now()
@@ -625,7 +706,7 @@ func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Re
 	// 执行 DNS 查询
 	in, _, err := c.Exchange(m, resolver)
 	if err != nil {
-		return nil, models.DNSStatistics{}, common.NewServiceError("DNS 查询失败: " + err.Error())
+		return nil, models.DNSStatistics{}, dnsQueryMetadata{}, common.NewServiceError("DNS 查询失败: " + err.Error())
 	}
 	totalTime := time.Since(start)
 
@@ -642,6 +723,19 @@ func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Re
 	var ttlSum uint32
 	minTTL, maxTTL := uint32(1<<32-1), uint32(0)
 	var durations []time.Duration
+	metadata := dnsQueryMetadata{
+		ResponseSummary: dnsResponseSummary{
+			Rcode:              dnsRcodeName(in.Rcode),
+			Authoritative:      in.Authoritative,
+			Truncated:          in.Truncated,
+			RecursionAvailable: in.RecursionAvailable,
+			AnswerCount:        len(in.Answer),
+			AuthorityCount:     len(in.Ns),
+			AdditionalCount:    len(in.Extra),
+			DNSSECRRSIGPresent: dnssec,
+			DNSSECAD:           in.AuthenticatedData,
+		},
+	}
 
 	// 遍历每条 Answer 记录
 	maxRecords := probeBudget.MaxDNSRecords()
@@ -682,26 +776,39 @@ func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Re
 		case *dns.CNAME:
 			rec.Value = v.Target
 			// 递归查询 CNAME 指向的 A/AAAA
-			childrenA, _, _ := queryDNS(v.Target, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
-			childrenAAAA, _, _ := queryDNS(v.Target, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenA, _, _, _ := queryDNS(v.Target, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenAAAA, _, _, _ := queryDNS(v.Target, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
 			rec.Children = append(rec.Children, childrenA...)
 			rec.Children = append(rec.Children, childrenAAAA...)
 		case *dns.MX:
 			rec.Value = fmt.Sprintf("%s (优先级 %d)", v.Mx, v.Preference)
-			childrenA, _, _ := queryDNS(v.Mx, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
-			childrenAAAA, _, _ := queryDNS(v.Mx, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
+			metadata.MXPriorities = append(metadata.MXPriorities, dnsMXPriority{
+				Host:     limitDNSObservationString(v.Mx),
+				Priority: v.Preference,
+			})
+			childrenA, _, _, _ := queryDNS(v.Mx, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenAAAA, _, _, _ := queryDNS(v.Mx, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
 			rec.Children = append(rec.Children, childrenA...)
 			rec.Children = append(rec.Children, childrenAAAA...)
 		case *dns.NS:
 			rec.Value = v.Ns
-			childrenA, _, _ := queryDNS(v.Ns, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
-			childrenAAAA, _, _ := queryDNS(v.Ns, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenA, _, _, _ := queryDNS(v.Ns, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenAAAA, _, _, _ := queryDNS(v.Ns, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
 			rec.Children = append(rec.Children, childrenA...)
 			rec.Children = append(rec.Children, childrenAAAA...)
 		case *dns.TXT:
 			rec.Value = strings.Join(v.Txt, " ")
 		case *dns.SOA:
 			rec.Value = fmt.Sprintf("%s %s", v.Ns, v.Mbox)
+			metadata.SOA = &dnsSOASummary{
+				NS:      limitDNSObservationString(v.Ns),
+				Mbox:    limitDNSObservationString(v.Mbox),
+				Serial:  v.Serial,
+				Refresh: v.Refresh,
+				Retry:   v.Retry,
+				Expire:  v.Expire,
+				Minttl:  v.Minttl,
+			}
 		case *dns.CAA:
 			rec.Value = fmt.Sprintf("%d %s %s", v.Flag, v.Tag, v.Value)
 		default:
@@ -721,6 +828,9 @@ func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Re
 	}
 	if len(results) > 0 {
 		stats.AvgTTL = float64(ttlSum) / float64(len(results))
+		metadata.ResponseSummary.TTLMin = minTTL
+		metadata.ResponseSummary.TTLMax = maxTTL
+		metadata.ResponseSummary.TTLAvg = stats.AvgTTL
 		stats.MinTime, stats.MaxTime = durations[0], durations[0]
 		var total time.Duration
 		for _, d := range durations {
@@ -735,7 +845,66 @@ func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Re
 		stats.AvgTime = total / time.Duration(len(durations))
 	}
 
-	return results, stats, nil
+	return results, stats, metadata, nil
+}
+
+func dnsRcodeName(rcode int) string {
+	if name, ok := dns.RcodeToString[rcode]; ok {
+		return name
+	}
+	return fmt.Sprintf("RCODE_%d", rcode)
+}
+
+func buildDNSMXPriorities(metadata map[string]dnsQueryMetadata) []dnsMXPriority {
+	if metadata == nil {
+		return nil
+	}
+	item, ok := metadata["MX"]
+	if !ok || len(item.MXPriorities) == 0 {
+		return nil
+	}
+	return item.MXPriorities
+}
+
+func buildDNSSOA(metadata map[string]dnsQueryMetadata) any {
+	if metadata == nil {
+		return nil
+	}
+	item, ok := metadata["SOA"]
+	if !ok || item.SOA == nil {
+		return nil
+	}
+	return item.SOA
+}
+
+func maxDNSRecordDepth(results map[string][]models.DNSRecord) int {
+	maxDepth := 0
+	for _, records := range results {
+		for _, record := range records {
+			if depth := dnsRecordDepth(record); depth > maxDepth {
+				maxDepth = depth
+			}
+		}
+	}
+	return maxDepth
+}
+
+func dnsRecordDepth(record models.DNSRecord) int {
+	maxChildDepth := 0
+	for _, child := range record.Children {
+		if depth := dnsRecordDepth(child); depth > maxChildDepth {
+			maxChildDepth = depth
+		}
+	}
+	if len(record.Children) == 0 {
+		return 0
+	}
+	return maxChildDepth + 1
+}
+
+func limitDNSObservationString(value string) string {
+	limited, _ := limitDNSObservationText(value)
+	return limited
 }
 
 // lookupGeoASN 查询 IP 的国家、城市、ASN 和 ISP 信息

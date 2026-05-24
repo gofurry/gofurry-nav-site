@@ -72,6 +72,15 @@ func TestBuildDNSObservationPayloadLimitsTextAndRemovesHijacked(t *testing.T) {
 				ReversePTR: "",
 				Hijacked:   true,
 				RiskFlags:  []string{dnsRiskPrivateIP, dnsRiskLowTTL, dnsRiskPTREmpty},
+				Children: []models.DNSRecord{
+					{
+						Type:  "CNAME",
+						Value: "edge.example.com.",
+						Children: []models.DNSRecord{
+							{Type: "A", Value: "203.0.113.9"},
+						},
+					},
+				},
 			},
 		},
 		"TXT": {
@@ -84,8 +93,42 @@ func TestBuildDNSObservationPayloadLimitsTextAndRemovesHijacked(t *testing.T) {
 			},
 		},
 	}
+	metadata := map[string]dnsQueryMetadata{
+		"A": {
+			ResponseSummary: dnsResponseSummary{
+				Rcode:              "NOERROR",
+				Authoritative:      true,
+				Truncated:          false,
+				RecursionAvailable: true,
+				AnswerCount:        1,
+				AuthorityCount:     0,
+				AdditionalCount:    0,
+				TTLMin:             5,
+				TTLMax:             5,
+				TTLAvg:             5,
+				DNSSECRRSIGPresent: false,
+				DNSSECAD:           false,
+			},
+		},
+		"TXT": {
+			ResponseSummary: dnsResponseSummary{
+				Rcode:              "NOERROR",
+				Authoritative:      false,
+				Truncated:          false,
+				RecursionAvailable: true,
+				AnswerCount:        1,
+				AuthorityCount:     0,
+				AdditionalCount:    0,
+				TTLMin:             300,
+				TTLMax:             300,
+				TTLAvg:             300,
+				DNSSECRRSIGPresent: true,
+				DNSSECAD:           true,
+			},
+		},
+	}
 
-	payload := buildDNSObservationPayload(results)
+	payload := buildDNSObservationPayloadWithMetadata(results, metadata)
 
 	topRisks, ok := payload["risk_flags"].([]string)
 	if !ok {
@@ -119,6 +162,19 @@ func TestBuildDNSObservationPayloadLimitsTextAndRemovesHijacked(t *testing.T) {
 	if txt["text_kind"] != "spf" {
 		t.Fatalf("TXT SPF 类型识别错误，got %v", txt["text_kind"])
 	}
+	responseSummary, ok := payload["response_summary"].(map[string]dnsResponseSummary)
+	if !ok {
+		t.Fatalf("response_summary 类型错误: %T", payload["response_summary"])
+	}
+	if responseSummary["A"].Rcode != "NOERROR" || !responseSummary["A"].Authoritative {
+		t.Fatalf("A response_summary 错误: %+v", responseSummary["A"])
+	}
+	if !responseSummary["TXT"].DNSSECRRSIGPresent || !responseSummary["TXT"].DNSSECAD {
+		t.Fatalf("TXT DNSSEC 汇总错误: %+v", responseSummary["TXT"])
+	}
+	if payload["cname_chain_depth"] != 2 {
+		t.Fatalf("cname_chain_depth 错误，got %v", payload["cname_chain_depth"])
+	}
 }
 
 func TestBuildDNSObservationPayloadIdentifiesDMARCAndCAA(t *testing.T) {
@@ -138,6 +194,51 @@ func TestBuildDNSObservationPayloadIdentifiesDMARCAndCAA(t *testing.T) {
 	caaRecords := payload["CAA"].([]map[string]any)
 	if caaRecords[0]["text_kind"] != "caa" {
 		t.Fatalf("CAA 类型识别错误，got %v", caaRecords[0]["text_kind"])
+	}
+}
+
+func TestBuildDNSObservationPayloadAddsMXAndSOASummary(t *testing.T) {
+	payload := buildDNSObservationPayloadWithMetadata(map[string][]models.DNSRecord{
+		"MX": {
+			{Type: "MX", Value: "mail.example.com. (优先级 10)"},
+		},
+		"SOA": {
+			{Type: "SOA", Value: "ns1.example.com. hostmaster.example.com."},
+		},
+	}, map[string]dnsQueryMetadata{
+		"MX": {
+			ResponseSummary: dnsResponseSummary{Rcode: "NOERROR", AnswerCount: 1},
+			MXPriorities: []dnsMXPriority{
+				{Host: "mail.example.com.", Priority: 10},
+			},
+		},
+		"SOA": {
+			ResponseSummary: dnsResponseSummary{Rcode: "NOERROR", AnswerCount: 1},
+			SOA: &dnsSOASummary{
+				NS:      "ns1.example.com.",
+				Mbox:    "hostmaster.example.com.",
+				Serial:  2026052401,
+				Refresh: 7200,
+				Retry:   3600,
+				Expire:  1209600,
+				Minttl:  300,
+			},
+		},
+	})
+
+	mxPriorities, ok := payload["mx_priorities"].([]dnsMXPriority)
+	if !ok {
+		t.Fatalf("mx_priorities 类型错误: %T", payload["mx_priorities"])
+	}
+	if len(mxPriorities) != 1 || mxPriorities[0].Host != "mail.example.com." || mxPriorities[0].Priority != 10 {
+		t.Fatalf("mx_priorities 错误: %+v", mxPriorities)
+	}
+	soa, ok := payload["soa"].(*dnsSOASummary)
+	if !ok {
+		t.Fatalf("soa 类型错误: %T", payload["soa"])
+	}
+	if soa.NS != "ns1.example.com." || soa.Mbox != "hostmaster.example.com." || soa.Serial != 2026052401 {
+		t.Fatalf("soa 摘要错误: %+v", soa)
 	}
 }
 

@@ -17,8 +17,24 @@ import (
 
 func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing.T) {
 	longURL := "https://example.com/" + repeated("u", 2100)
+	notBefore := time.Date(2026, 5, 24, 10, 0, 0, 0, time.UTC)
+	notAfter := notBefore.Add(24 * time.Hour)
 	result := models.HTTPModel{
-		ResponseTime: 123,
+		ResponseTime:    123,
+		DNSLookupMS:     4,
+		TCPConnectMS:    7,
+		TLSHandshakeMS:  11,
+		TTFBMS:          23,
+		TransferMS:      31,
+		HTTPProtocol:    "HTTP/2.0",
+		RemoteAddr:      "203.0.113.5:443",
+		RemoteIP:        "203.0.113.5",
+		BodyReadBytes:   1987,
+		ContentEncoding: "gzip",
+		Compressed:      true,
+		CacheControl:    repeated("c", 600),
+		ETag:            repeated("e", 600),
+		LastModified:    repeated("l", 600),
 		Redirects: []string{
 			longURL,
 			"https://final.example/path",
@@ -29,10 +45,18 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 			"strict_transport_security": true,
 			"x_frame_options":           true,
 		},
-		CertCollected: true,
-		CertVerified:  true,
-		VerifyError:   repeated("e", 600),
-		TLSHandshake:  tlsHandshakeCollected,
+		CertCollected:       true,
+		CertVerified:        true,
+		VerifyError:         repeated("e", 600),
+		VerifyErrorCategory: "",
+		TLSHandshake:        tlsHandshakeCollected,
+		CertNotBefore:       notBefore,
+		CertNotAfter:        notAfter,
+		CertChainLen:        2,
+		CertSubjectCN:       repeated("n", 300),
+		CertSANCount:        5,
+		OCSPStapled:         true,
+		SCTCount:            3,
 	}
 	httpRecord := models.HTTPSaveModel{
 		Domain:        "example.com",
@@ -137,6 +161,61 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 	if payload["tls_handshake"] != tlsHandshakeCollected {
 		t.Fatalf("tls_handshake 错误，got %v", payload["tls_handshake"])
 	}
+	if payload["http_protocol"] != "HTTP/2.0" {
+		t.Fatalf("http_protocol 错误，got %v", payload["http_protocol"])
+	}
+	if payload["dns_lookup_ms"] != int64(4) || payload["tcp_connect_ms"] != int64(7) || payload["tls_handshake_ms"] != int64(11) {
+		t.Fatalf("trace timings 错误，got dns=%v tcp=%v tls=%v", payload["dns_lookup_ms"], payload["tcp_connect_ms"], payload["tls_handshake_ms"])
+	}
+	if payload["ttfb_ms"] != int64(23) || payload["transfer_ms"] != int64(31) {
+		t.Fatalf("ttfb/transfer 错误，got ttfb=%v transfer=%v", payload["ttfb_ms"], payload["transfer_ms"])
+	}
+	if payload["remote_addr"] != "203.0.113.5:443" || payload["remote_ip"] != "203.0.113.5" {
+		t.Fatalf("remote addr/ip 错误，got addr=%v ip=%v", payload["remote_addr"], payload["remote_ip"])
+	}
+	if payload["body_read_bytes"] != int64(1987) {
+		t.Fatalf("body_read_bytes 错误，got %v", payload["body_read_bytes"])
+	}
+	if payload["compressed"] != true {
+		t.Fatalf("compressed 错误，got %v", payload["compressed"])
+	}
+	if payload["content_encoding"] != "gzip" {
+		t.Fatalf("content_encoding 错误，got %v", payload["content_encoding"])
+	}
+	cachePolicy, ok := payload["cache_policy"].(map[string]string)
+	if !ok {
+		t.Fatalf("cache_policy 类型错误: %T", payload["cache_policy"])
+	}
+	if got := runeLen(cachePolicy["cache_control"]); got != maxHTTPPayloadCacheValueLength {
+		t.Fatalf("cache_control 未限长，got %d", got)
+	}
+	if got := runeLen(cachePolicy["etag"]); got != maxHTTPPayloadCacheValueLength {
+		t.Fatalf("etag 未限长，got %d", got)
+	}
+	if got := runeLen(cachePolicy["last_modified"]); got != maxHTTPPayloadCacheValueLength {
+		t.Fatalf("last_modified 未限长，got %d", got)
+	}
+	if payload["cert_not_before"] != notBefore.Format(time.RFC3339) {
+		t.Fatalf("cert_not_before 错误，got %v", payload["cert_not_before"])
+	}
+	if payload["cert_not_after"] != notAfter.Format(time.RFC3339) {
+		t.Fatalf("cert_not_after 错误，got %v", payload["cert_not_after"])
+	}
+	if payload["cert_chain_length"] != 2 {
+		t.Fatalf("cert_chain_length 错误，got %v", payload["cert_chain_length"])
+	}
+	if got := runeLen(payload["cert_subject_cn"].(string)); got != maxHTTPPayloadCertTextLength {
+		t.Fatalf("cert_subject_cn 未限长，got %d", got)
+	}
+	if payload["cert_san_count"] != 5 {
+		t.Fatalf("cert_san_count 错误，got %v", payload["cert_san_count"])
+	}
+	if payload["ocsp_stapled"] != true || payload["sct_count"] != 3 {
+		t.Fatalf("ocsp/sct 错误，got ocsp=%v sct=%v", payload["ocsp_stapled"], payload["sct_count"])
+	}
+	if payload["cert_public_key_algorithm"] != httpRecord.CertPubKeyAlg || payload["cert_signature_algorithm"] != httpRecord.CertSigAlg {
+		t.Fatalf("规范 TLS 算法字段错误，got pub=%v sig=%v", payload["cert_public_key_algorithm"], payload["cert_signature_algorithm"])
+	}
 	if _, ok := payload["redirects"]; !ok {
 		t.Fatal("兼容字段 redirects 丢失")
 	}
@@ -216,6 +295,24 @@ func TestVerifyTLSCertificateMissingCertificate(t *testing.T) {
 	}
 	if verifyError == "" {
 		t.Fatal("没有证书时 verify_error 不应为空")
+	}
+}
+
+func TestVerifyTLSCertificateDetailedClassifiesErrors(t *testing.T) {
+	cert := newTestCertificate(t, "example.com")
+	roots := x509.NewCertPool()
+	roots.AddCert(cert)
+	state := &tls.ConnectionState{PeerCertificates: []*x509.Certificate{cert}}
+
+	verified, verifyError, category := verifyTLSCertificateDetailed(state, "wrong.example.com", roots)
+	if verified {
+		t.Fatal("域名不匹配时不应校验通过")
+	}
+	if verifyError == "" {
+		t.Fatal("域名不匹配时 verify_error 不应为空")
+	}
+	if category != "hostname_mismatch" {
+		t.Fatalf("category = %q, want hostname_mismatch", category)
 	}
 }
 
