@@ -17,6 +17,7 @@
 - `error_code` / `error_message`：采集失败或降级原因。
 - `payload`：协议细节 JSON。
 - `schema_version`：当前为 `1`。
+- `collector_id` / `job_id`：v0.5.0 起写入 latest document，并在 payload 为对象时作为旁路追踪字段写入 payload。
 
 v2 latest Redis key 为：
 
@@ -39,6 +40,15 @@ summary 状态包括：
 - `down`：非常克制地使用；当前规则要求目标 HTTP 失败且 DNS 也失败，站点级则要求所有采集目标都为 `down`。
 
 summary 仍然是旁路 observation 汇总，不替换旧 Redis key、旧表或旧前端展示。
+
+v0.5.0 起，collector 会额外写入单轮运行状态 Redis key：
+
+- `collector:v2:run:{protocol}:latest`：某协议最近一轮运行状态。
+- `collector:v2:run:{protocol}:{job_id}`：某协议指定 job 的运行状态，默认保留 168 小时。
+
+run state 包含 `collector_id`、`job_id`、`protocol`、`status`、`started_at`、`finished_at`、`duration_ms`、`target_count`、`success_count`、`failure_count`、`skipped_count`、`error_count`、`skip_reason`。这些字段只用于运维排查和人工观察，不参与旧页面主链路。
+
+可选多实例 lease key 为 `collector:v2:lease:{protocol}`，默认关闭。启用后仅用于避免多实例重复执行同一协议采集，不改变 observation 或 summary 的健康语义。
 
 ## Ping Payload
 

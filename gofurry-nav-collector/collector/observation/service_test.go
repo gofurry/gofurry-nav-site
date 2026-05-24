@@ -37,6 +37,27 @@ func TestObservationPayloadSizeLimit(t *testing.T) {
 	}
 }
 
+func TestEnrichPayloadAddsRunIdentityToObjectPayload(t *testing.T) {
+	payload := map[string]any{"status": "ok"}
+	got := enrichPayload(payload, "collector-a", "ping-1").(map[string]any)
+	if got["collector_id"] != "collector-a" || got["job_id"] != "ping-1" || got["status"] != "ok" {
+		t.Fatalf("enriched payload wrong: %+v", got)
+	}
+	if _, exists := payload["collector_id"]; exists {
+		t.Fatal("enrichPayload should not mutate original map")
+	}
+}
+
+func TestEnrichPayloadHandlesNilAndNonObjectPayloadSafely(t *testing.T) {
+	got := enrichPayload(nil, "collector-a", "ping-1").(map[string]any)
+	if got["collector_id"] != "collector-a" || got["job_id"] != "ping-1" {
+		t.Fatalf("nil payload enrichment wrong: %+v", got)
+	}
+	if got := enrichPayload("raw", "collector-a", "ping-1"); got != "raw" {
+		t.Fatalf("non-object payload should stay unchanged, got %+v", got)
+	}
+}
+
 func TestSaveIfEnabledRejectsOversizedPayloadBeforeWriting(t *testing.T) {
 	oldV2 := env.GetServerConfig().Collector.V2
 	env.GetServerConfig().Collector.V2 = env.CollectorV2Config{

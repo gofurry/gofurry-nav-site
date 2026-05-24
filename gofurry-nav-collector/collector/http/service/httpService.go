@@ -21,6 +21,7 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/collector/http/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/http/models"
 	"github.com/gofurry/gofurry-nav-collector/collector/observation"
+	runstate "github.com/gofurry/gofurry-nav-collector/collector/scheduler"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	cm "github.com/gofurry/gofurry-nav-collector/common/models"
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
@@ -147,55 +148,69 @@ func Delete() {
 
 // 执行 Request
 func Request() {
+	interval := time.Duration(env.GetServerConfig().Collector.Request.RequestInterval) * time.Hour
+	run := runstate.NewRun(observation.ProtocolHTTP, interval)
 	defer func() {
 		if err := recover(); err != nil {
-			log.ErrorFields(map[string]interface{}{
-				"event":    "run_recovered",
-				"protocol": "http",
-			}, fmt.Sprintf("HTTP 采集运行触发 panic，已恢复: %v", err))
+			run.Fail("panic", int(run.Snapshot(runstate.StatusFailed, "").TargetCount))
+			fields := run.Fields()
+			fields["event"] = "run_recovered"
+			log.ErrorFields(fields, fmt.Sprintf("HTTP 采集运行触发 panic，已恢复: %v", err))
 		}
 	}()
 	if !requestRunning.CompareAndSwap(false, true) {
-		log.WarnFields(map[string]interface{}{
-			"event":    "run_skipped",
-			"protocol": "http",
-			"reason":   "上一轮采集仍在运行",
-			"status":   "skipped",
-		}, "HTTP 采集已跳过：上一轮仍在运行")
+		run.Skip("previous_run_running", 0)
+		fields := run.Fields()
+		fields["event"] = "run_skipped"
+		fields["reason"] = "上一轮采集仍在运行"
+		fields["skipped_reason"] = "previous_run_running"
+		fields["status"] = "skipped"
+		log.WarnFields(fields, "HTTP 采集已跳过：上一轮仍在运行")
 		return
 	}
 	defer requestRunning.Store(false)
+	if !run.AcquireLeaseOrSkip() {
+		fields := run.Fields()
+		fields["event"] = "run_skipped"
+		fields["reason"] = "采集 lease 已被其他实例持有"
+		fields["skipped_reason"] = "lease_held_by_other_collector"
+		fields["status"] = "skipped"
+		log.WarnFields(fields, "HTTP 采集已跳过：采集 lease 已被其他实例持有")
+		return
+	}
+	defer run.ReleaseLease()
+	run.Start()
 
 	start := time.Now()
-	log.InfoFields(map[string]interface{}{
-		"event":     "run_start",
-		"protocol":  "http",
-		"timeout":   env.GetServerConfig().Collector.ProbeBudget.HTTPTimeout(),
-		"workers":   env.GetServerConfig().Collector.Request.RequestThread,
-		"redirects": env.GetServerConfig().Collector.ProbeBudget.MaxHTTPRedirects(),
-	}, "HTTP 采集运行开始")
+	fields := run.Fields()
+	fields["event"] = "run_start"
+	fields["timeout"] = env.GetServerConfig().Collector.ProbeBudget.HTTPTimeout()
+	fields["workers"] = env.GetServerConfig().Collector.Request.RequestThread
+	fields["redirects"] = env.GetServerConfig().Collector.ProbeBudget.MaxHTTPRedirects()
+	log.InfoFields(fields, "HTTP 采集运行开始")
 
 	requestList, err := dao.GetHTTPDao().GetList()
 	if err != nil {
-		log.ErrorFields(map[string]interface{}{
-			"duration": time.Since(start),
-			"event":    "run_failed",
-			"protocol": "http",
-			"stage":    "load_targets",
-		}, "HTTP 目标列表读取失败: "+err.GetMsg())
+		run.Fail("load_targets", 0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_failed"
+		fields["stage"] = "load_targets"
+		log.ErrorFields(fields, "HTTP 目标列表读取失败: "+err.GetMsg())
 		return
 	}
 	// 判空
 	if len(requestList) < 1 {
-		log.InfoFields(map[string]interface{}{
-			"duration": time.Since(start),
-			"event":    "run_complete",
-			"protocol": "http",
-			"reason":   "目标列表为空",
-			"targets":  0,
-		}, "HTTP 采集完成：没有需要探测的目标")
+		run.Complete(0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_complete"
+		fields["reason"] = "目标列表为空"
+		fields["targets"] = 0
+		log.InfoFields(fields, "HTTP 采集完成：没有需要探测的目标")
 		return
 	}
+	run.SetTargetCount(len(requestList))
 	log.InfoFields(map[string]interface{}{
 		"event":    "probe_start",
 		"protocol": "http",
@@ -205,22 +220,25 @@ func Request() {
 	requestThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Request.RequestThread)
 	// 遍历站点列表, 每个站点开一个线程执行 request
 	for _, v := range requestList {
-		requestThread.Go(getRequestResult(v))
+		requestThread.Go(getRequestResult(v, run))
 	}
 	// 等待所有采集和解析执行完毕
 	requestThread.Wait()
-	log.InfoFields(map[string]interface{}{
-		"duration": time.Since(start),
-		"event":    "run_complete",
-		"protocol": "http",
-		"targets":  len(requestList),
-	}, "HTTP 采集运行完成")
+	run.Complete(len(requestList))
+	snapshot := run.Snapshot(runstate.StatusComplete, "")
+	fields = run.Fields()
+	fields["duration"] = time.Since(start)
+	fields["event"] = "run_complete"
+	fields["failure_count"] = snapshot.FailureCount
+	fields["success_count"] = snapshot.SuccessCount
+	fields["targets"] = len(requestList)
+	log.InfoFields(fields, "HTTP 采集运行完成")
 }
 
 // ============== HTTP模块 - 存储部分 ==============
 
 // 解析 Request 采集结果
-func getRequestResult(site models.GfnCollectorDomain) func() {
+func getRequestResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
 	return func() {
 		defer func() {
 			if err := recover(); err != nil {
@@ -286,6 +304,13 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 		} else {
 			httpSaveRecord.Status = "success"
 		}
+		if run != nil {
+			if httpSaveRecord.Status == "success" {
+				run.RecordSuccess()
+			} else {
+				run.RecordFailure()
+			}
+		}
 
 		// 记录存redis
 		cs.SetNX("request:"+siteName, string(jsonResult), 48*time.Hour)     // 创建记录
@@ -302,6 +327,11 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 				"url":      result.Url,
 			}, "HTTP 探测结果写入数据库失败: "+err.GetMsg())
 		}
+		collectorID, jobID := "", ""
+		if run != nil {
+			collectorID = run.CollectorID
+			jobID = run.JobID
+		}
 		saveErr := observation.SaveIfEnabled(observation.Input{
 			SiteID:       site.SiteID,
 			Target:       siteName,
@@ -312,6 +342,8 @@ func getRequestResult(site models.GfnCollectorDomain) func() {
 			ErrorCode:    result.ErrorCode,
 			ErrorMessage: result.ErrorMessage,
 			Payload:      buildHTTPObservationPayload(result, httpRecord),
+			CollectorID:  collectorID,
+			JobID:        jobID,
 		})
 		if saveErr != nil {
 			log.WarnFields(map[string]interface{}{

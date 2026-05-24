@@ -11,6 +11,7 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/collector/observation"
 	"github.com/gofurry/gofurry-nav-collector/collector/ping/dao"
 	models2 "github.com/gofurry/gofurry-nav-collector/collector/ping/models"
+	runstate "github.com/gofurry/gofurry-nav-collector/collector/scheduler"
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	cm "github.com/gofurry/gofurry-nav-collector/common/models"
@@ -170,43 +171,56 @@ func collectorDomainTarget(record models2.GfnCollectorDomain) string {
 
 // 检测是否在线
 func Ping() {
+	interval := time.Duration(env.GetServerConfig().Collector.Ping.PingInterval) * time.Second
+	run := runstate.NewRun(observation.ProtocolPing, interval)
 	defer func() {
 		if err := recover(); err != nil {
-			log.ErrorFields(map[string]interface{}{
-				"event":    "run_recovered",
-				"protocol": "ping",
-			}, fmt.Sprintf("Ping 采集运行触发 panic，已恢复: %v", err))
+			run.Fail("panic", int(run.Snapshot(runstate.StatusFailed, "").TargetCount))
+			fields := run.Fields()
+			fields["event"] = "run_recovered"
+			log.ErrorFields(fields, fmt.Sprintf("Ping 采集运行触发 panic，已恢复: %v", err))
 		}
 	}()
 	if !pingRunning.CompareAndSwap(false, true) {
-		log.WarnFields(map[string]interface{}{
-			"event":    "run_skipped",
-			"protocol": "ping",
-			"reason":   "上一轮采集仍在运行",
-			"status":   "skipped",
-		}, "Ping 采集已跳过：上一轮仍在运行")
+		run.Skip("previous_run_running", 0)
+		fields := run.Fields()
+		fields["event"] = "run_skipped"
+		fields["reason"] = "上一轮采集仍在运行"
+		fields["skipped_reason"] = "previous_run_running"
+		fields["status"] = "skipped"
+		log.WarnFields(fields, "Ping 采集已跳过：上一轮仍在运行")
 		return
 	}
 	defer pingRunning.Store(false)
+	if !run.AcquireLeaseOrSkip() {
+		fields := run.Fields()
+		fields["event"] = "run_skipped"
+		fields["reason"] = "采集 lease 已被其他实例持有"
+		fields["skipped_reason"] = "lease_held_by_other_collector"
+		fields["status"] = "skipped"
+		log.WarnFields(fields, "Ping 采集已跳过：采集 lease 已被其他实例持有")
+		return
+	}
+	defer run.ReleaseLease()
+	run.Start()
 
 	start := time.Now()
-	log.InfoFields(map[string]interface{}{
-		"event":      "run_start",
-		"ping_key":   env.GetServerConfig().Collector.Ping.PingKey,
-		"protocol":   "ping",
-		"result_key": env.GetServerConfig().Collector.Ping.ResultKey,
-		"workers":    env.GetServerConfig().Collector.Ping.PingThread,
-	}, "Ping 采集运行开始")
+	fields := run.Fields()
+	fields["event"] = "run_start"
+	fields["ping_key"] = env.GetServerConfig().Collector.Ping.PingKey
+	fields["result_key"] = env.GetServerConfig().Collector.Ping.ResultKey
+	fields["workers"] = env.GetServerConfig().Collector.Ping.PingThread
+	log.InfoFields(fields, "Ping 采集运行开始")
 
 	// 查询数据库所有 IP 存 redis 每次采集都请求记录 热更新
 	siteIDByDomain, err := addAllIpToPing()
 	if err != nil {
-		log.ErrorFields(map[string]interface{}{
-			"duration": time.Since(start),
-			"event":    "run_failed",
-			"protocol": "ping",
-			"stage":    "load_targets_to_redis",
-		}, "Ping 采集运行失败: "+err.GetMsg())
+		run.Fail("load_targets_to_redis", 0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_failed"
+		fields["stage"] = "load_targets_to_redis"
+		log.ErrorFields(fields, "Ping 采集运行失败: "+err.GetMsg())
 		return
 	}
 
@@ -214,24 +228,24 @@ func Ping() {
 	var pingKey = env.GetServerConfig().Collector.Ping.PingKey
 	domains, err := cs.GetString(pingKey)
 	if err != nil {
-		log.ErrorFields(map[string]interface{}{
-			"duration":  time.Since(start),
-			"event":     "run_failed",
-			"protocol":  "ping",
-			"redis_key": pingKey,
-			"stage":     "load_targets_from_redis",
-		}, "Ping 目标列表读取失败: "+err.GetMsg())
+		run.Fail("load_targets_from_redis", 0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_failed"
+		fields["redis_key"] = pingKey
+		fields["stage"] = "load_targets_from_redis"
+		log.ErrorFields(fields, "Ping 目标列表读取失败: "+err.GetMsg())
 		return
 	}
 	// 判空
 	if domains == "" || len(domains) < 1 {
-		log.InfoFields(map[string]interface{}{
-			"duration": time.Since(start),
-			"event":    "run_complete",
-			"protocol": "ping",
-			"reason":   "目标列表为空",
-			"targets":  0,
-		}, "Ping 采集完成：没有需要探测的目标")
+		run.Complete(0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_complete"
+		fields["reason"] = "目标列表为空"
+		fields["targets"] = 0
+		log.InfoFields(fields, "Ping 采集完成：没有需要探测的目标")
 		return
 	}
 
@@ -239,13 +253,13 @@ func Ping() {
 	var resultKey = env.GetServerConfig().Collector.Ping.ResultKey
 	data, err := cs.HGetAll(resultKey)
 	if err != nil {
-		log.ErrorFields(map[string]interface{}{
-			"duration":  time.Since(start),
-			"event":     "run_failed",
-			"protocol":  "ping",
-			"redis_key": resultKey,
-			"stage":     "load_previous_results",
-		}, "Ping 历史结果读取失败: "+err.GetMsg())
+		run.Fail("load_previous_results", 0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_failed"
+		fields["redis_key"] = resultKey
+		fields["stage"] = "load_previous_results"
+		log.ErrorFields(fields, "Ping 历史结果读取失败: "+err.GetMsg())
 		return
 	}
 	// 判空
@@ -255,14 +269,15 @@ func Ping() {
 
 	var pingList = []string{}
 	if jsonErr := sonic.Unmarshal([]byte(domains), &pingList); jsonErr != nil {
-		log.ErrorFields(map[string]interface{}{
-			"duration": time.Since(start),
-			"event":    "run_failed",
-			"protocol": "ping",
-			"stage":    "decode_target_list",
-		}, "Ping 目标列表 JSON 解析失败: "+jsonErr.Error())
+		run.Fail("decode_target_list", 0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_failed"
+		fields["stage"] = "decode_target_list"
+		log.ErrorFields(fields, "Ping 目标列表 JSON 解析失败: "+jsonErr.Error())
 		return
 	}
+	run.SetTargetCount(len(pingList))
 
 	// 复制旧记录中在站点列表中的部分到新纪录
 	var nowData = map[string]string{}
@@ -282,7 +297,7 @@ func Ping() {
 	// 遍历 IP 列表, 每个 IP 开一个线程执行 Ping
 	for _, v := range pingList {
 		target := models2.PingTarget{SiteID: siteIDByDomain[v], Domain: v}
-		pingThread.Go(getPingResult(target, nowData, &pingRWLock))
+		pingThread.Go(getPingResult(target, nowData, &pingRWLock, run))
 	}
 	// 等待所有 Ping 执行完毕
 	pingThread.Wait()
@@ -322,23 +337,26 @@ func Ping() {
 	// Ping 结果储存回 redis
 	err = cs.HSetMap(resultKey, nowData)
 	if err != nil {
-		log.ErrorFields(map[string]interface{}{
-			"duration":  time.Since(start),
-			"event":     "run_failed",
-			"protocol":  "ping",
-			"redis_key": resultKey,
-			"stage":     "save_results",
-			"targets":   len(nowData),
-		}, "Ping 结果保存失败: "+err.GetMsg())
+		run.Fail("save_results", len(nowData))
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_failed"
+		fields["redis_key"] = resultKey
+		fields["stage"] = "save_results"
+		fields["targets"] = len(nowData)
+		log.ErrorFields(fields, "Ping 结果保存失败: "+err.GetMsg())
 		return
 	}
-	log.InfoFields(map[string]interface{}{
-		"duration":  time.Since(start),
-		"event":     "run_complete",
-		"protocol":  "ping",
-		"redis_key": resultKey,
-		"targets":   len(nowData),
-	}, "Ping 采集运行完成")
+	run.Complete(len(nowData))
+	snapshot := run.Snapshot(runstate.StatusComplete, "")
+	fields = run.Fields()
+	fields["duration"] = time.Since(start)
+	fields["event"] = "run_complete"
+	fields["failure_count"] = snapshot.FailureCount
+	fields["redis_key"] = resultKey
+	fields["success_count"] = snapshot.SuccessCount
+	fields["targets"] = len(nowData)
+	log.InfoFields(fields, "Ping 采集运行完成")
 }
 
 // ============== Ping解析 - 采集和解析部分 ==============
@@ -393,7 +411,7 @@ func performPing(ip string) (pingModel models2.PingModel) {
 }
 
 // 解析 ping 采集结果
-func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock *sync.Mutex) func() {
+func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock *sync.Mutex, run *runstate.Run) func() {
 	return func() {
 		ip := target.Domain
 		defer func() {
@@ -417,6 +435,13 @@ func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock
 			pingRecord.Status = "up"
 		} else {
 			pingRecord.Status = "down"
+		}
+		if run != nil {
+			if pingRecord.Status == "up" {
+				run.RecordSuccess()
+			} else {
+				run.RecordFailure()
+			}
 		}
 		// 序列化为 json
 		jsonResult, _ := sonic.Marshal(pingRecord)
@@ -451,6 +476,11 @@ func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock
 			}, "Ping 探测结果写入数据库失败: "+daoErr.GetMsg())
 		}
 		payload, errorCode := buildPingObservationPayload(result, pingRecord, pindSaveRecord.Status)
+		collectorID, jobID := "", ""
+		if run != nil {
+			collectorID = run.CollectorID
+			jobID = run.JobID
+		}
 		saveErr := observation.SaveIfEnabled(observation.Input{
 			SiteID:       target.SiteID,
 			Target:       ip,
@@ -461,6 +491,8 @@ func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock
 			ErrorCode:    errorCode,
 			ErrorMessage: result.ErrorMessage,
 			Payload:      payload,
+			CollectorID:  collectorID,
+			JobID:        jobID,
 		})
 		if saveErr != nil {
 			log.WarnFields(map[string]interface{}{

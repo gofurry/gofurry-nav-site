@@ -67,6 +67,23 @@ func Del(keys ...string) common.GFError {
 	return nil
 }
 
+func CompareAndDelete(key string, expected string) (bool, common.GFError) {
+	const script = `
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+	return redis.call("DEL", KEYS[1])
+end
+return 0
+`
+	ctx, cancel := commandContext()
+	defer cancel()
+	res, err := client.Eval(ctx, script, []string{key}, expected).Int64()
+	if err != nil {
+		log.ErrorFields(redisFields("compare_delete", key), "Redis 比较删除失败: "+err.Error())
+		return false, common.NewServiceError("比较删除缓存失败.")
+	}
+	return res > 0, nil
+}
+
 func SetNX(key string, value any, expiration time.Duration) bool {
 	ctx, cancel := commandContext()
 	defer cancel()

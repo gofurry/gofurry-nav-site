@@ -42,7 +42,8 @@ func SaveIfEnabled(input Input) common.GFError {
 		input.Status = StatusFailure
 	}
 
-	payloadBytes, err := marshalPayload(input.Payload)
+	payload := enrichPayload(input.Payload, input.CollectorID, input.JobID)
+	payloadBytes, err := marshalPayload(payload)
 	if err != nil {
 		log.ErrorFields(map[string]interface{}{
 			"event":    "v2_payload_encode_failed",
@@ -105,8 +106,10 @@ func SaveIfEnabled(input Input) common.GFError {
 			DurationMS:    input.DurationMS,
 			ErrorCode:     input.ErrorCode,
 			ErrorMessage:  input.ErrorMessage,
-			Payload:       input.Payload,
+			Payload:       payload,
 			SchemaVersion: schemaVersion,
+			CollectorID:   input.CollectorID,
+			JobID:         input.JobID,
 		}
 		docBytes, err := sonic.Marshal(doc)
 		if err != nil {
@@ -163,6 +166,33 @@ func SaveIfEnabled(input Input) common.GFError {
 	}
 
 	return firstErr
+}
+
+func enrichPayload(payload any, collectorID string, jobID string) any {
+	if collectorID == "" && jobID == "" {
+		return payload
+	}
+	enriched := map[string]any{}
+	switch typed := payload.(type) {
+	case nil:
+	case map[string]any:
+		for key, value := range typed {
+			enriched[key] = value
+		}
+	case map[string]string:
+		for key, value := range typed {
+			enriched[key] = value
+		}
+	default:
+		return payload
+	}
+	if collectorID != "" {
+		enriched["collector_id"] = collectorID
+	}
+	if jobID != "" {
+		enriched["job_id"] = jobID
+	}
+	return enriched
 }
 
 func marshalPayload(payload any) ([]byte, error) {

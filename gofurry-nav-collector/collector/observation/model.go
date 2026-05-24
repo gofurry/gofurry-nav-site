@@ -42,6 +42,8 @@ type Input struct {
 	ErrorCode    string
 	ErrorMessage string
 	Payload      any
+	CollectorID  string
+	JobID        string
 }
 
 type LatestDocument struct {
@@ -55,6 +57,8 @@ type LatestDocument struct {
 	ErrorMessage  string    `json:"error_message,omitempty"`
 	Payload       any       `json:"payload"`
 	SchemaVersion int       `json:"schema_version"`
+	CollectorID   string    `json:"collector_id,omitempty"`
+	JobID         string    `json:"job_id,omitempty"`
 }
 
 type ProtocolSummary struct {

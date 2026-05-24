@@ -17,6 +17,7 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/models"
 	"github.com/gofurry/gofurry-nav-collector/collector/observation"
+	runstate "github.com/gofurry/gofurry-nav-collector/collector/scheduler"
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
@@ -261,58 +262,72 @@ func Delete() {
 
 // 执行 ParseDNS
 func ParseDNS() {
+	interval := time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval) * time.Hour
+	run := runstate.NewRun(observation.ProtocolDNS, interval)
 	defer func() {
 		if err := recover(); err != nil {
-			log.ErrorFields(map[string]interface{}{
-				"event":    "run_recovered",
-				"protocol": "dns",
-			}, fmt.Sprintf("DNS 采集运行触发 panic，已恢复: %v", err))
+			run.Fail("panic", int(run.Snapshot(runstate.StatusFailed, "").TargetCount))
+			fields := run.Fields()
+			fields["event"] = "run_recovered"
+			log.ErrorFields(fields, fmt.Sprintf("DNS 采集运行触发 panic，已恢复: %v", err))
 		}
 	}()
 	if !dnsRunning.CompareAndSwap(false, true) {
-		log.WarnFields(map[string]interface{}{
-			"event":    "run_skipped",
-			"protocol": "dns",
-			"reason":   "上一轮采集仍在运行",
-			"status":   "skipped",
-		}, "DNS 采集已跳过：上一轮仍在运行")
+		run.Skip("previous_run_running", 0)
+		fields := run.Fields()
+		fields["event"] = "run_skipped"
+		fields["reason"] = "上一轮采集仍在运行"
+		fields["skipped_reason"] = "previous_run_running"
+		fields["status"] = "skipped"
+		log.WarnFields(fields, "DNS 采集已跳过：上一轮仍在运行")
 		return
 	}
 	defer dnsRunning.Store(false)
+	if !run.AcquireLeaseOrSkip() {
+		fields := run.Fields()
+		fields["event"] = "run_skipped"
+		fields["reason"] = "采集 lease 已被其他实例持有"
+		fields["skipped_reason"] = "lease_held_by_other_collector"
+		fields["status"] = "skipped"
+		log.WarnFields(fields, "DNS 采集已跳过：采集 lease 已被其他实例持有")
+		return
+	}
+	defer run.ReleaseLease()
+	run.Start()
 
 	start := time.Now()
-	log.InfoFields(map[string]interface{}{
-		"event":         "run_start",
-		"max_depth":     MaxDepth,
-		"protocol":      "dns",
-		"resolver":      resolver,
-		"timeout":       env.GetServerConfig().Collector.ProbeBudget.DNSTimeout(),
-		"ptr_timeout":   env.GetServerConfig().Collector.ProbeBudget.PTRTimeout(),
-		"query_workers": dnsQueryThreadLimit(env.GetServerConfig().Collector.Dns.QueryThread, len(models.RecordTypes)),
-		"workers":       env.GetServerConfig().Collector.Dns.DnsThread,
-	}, "DNS 采集运行开始")
+	fields := run.Fields()
+	fields["event"] = "run_start"
+	fields["max_depth"] = MaxDepth
+	fields["resolver"] = resolver
+	fields["timeout"] = env.GetServerConfig().Collector.ProbeBudget.DNSTimeout()
+	fields["ptr_timeout"] = env.GetServerConfig().Collector.ProbeBudget.PTRTimeout()
+	fields["query_workers"] = dnsQueryThreadLimit(env.GetServerConfig().Collector.Dns.QueryThread, len(models.RecordTypes))
+	fields["workers"] = env.GetServerConfig().Collector.Dns.DnsThread
+	log.InfoFields(fields, "DNS 采集运行开始")
 
 	requestList, err := dao.GetDNSDao().GetList()
 	if err != nil {
-		log.ErrorFields(map[string]interface{}{
-			"duration": time.Since(start),
-			"event":    "run_failed",
-			"protocol": "dns",
-			"stage":    "load_targets",
-		}, "DNS 目标列表读取失败: "+err.GetMsg())
+		run.Fail("load_targets", 0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_failed"
+		fields["stage"] = "load_targets"
+		log.ErrorFields(fields, "DNS 目标列表读取失败: "+err.GetMsg())
 		return
 	}
 	// 判空
 	if len(requestList) < 1 {
-		log.InfoFields(map[string]interface{}{
-			"duration": time.Since(start),
-			"event":    "run_complete",
-			"protocol": "dns",
-			"reason":   "目标列表为空",
-			"targets":  0,
-		}, "DNS 采集完成：没有需要探测的目标")
+		run.Complete(0)
+		fields := run.Fields()
+		fields["duration"] = time.Since(start)
+		fields["event"] = "run_complete"
+		fields["reason"] = "目标列表为空"
+		fields["targets"] = 0
+		log.InfoFields(fields, "DNS 采集完成：没有需要探测的目标")
 		return
 	}
+	run.SetTargetCount(len(requestList))
 
 	log.InfoFields(map[string]interface{}{
 		"event":         "probe_start",
@@ -324,19 +339,22 @@ func ParseDNS() {
 	dnsThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
 	// 遍历站点列表, 每个站点开一个线程执行采集
 	for _, v := range requestList {
-		dnsThread.Go(getDNSResult(v))
+		dnsThread.Go(getDNSResult(v, run))
 	}
 	// 等待所有采集和解析执行完毕
 	dnsThread.Wait()
-	log.InfoFields(map[string]interface{}{
-		"duration": time.Since(start),
-		"event":    "run_complete",
-		"protocol": "dns",
-		"targets":  len(requestList),
-	}, "DNS 采集运行完成")
+	run.Complete(len(requestList))
+	snapshot := run.Snapshot(runstate.StatusComplete, "")
+	fields = run.Fields()
+	fields["duration"] = time.Since(start)
+	fields["event"] = "run_complete"
+	fields["failure_count"] = snapshot.FailureCount
+	fields["success_count"] = snapshot.SuccessCount
+	fields["targets"] = len(requestList)
+	log.InfoFields(fields, "DNS 采集运行完成")
 }
 
-func getDNSResult(site models.GfnCollectorDomain) func() {
+func getDNSResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
 	return func() {
 		defer func() {
 			if err := recover(); err != nil {
@@ -415,6 +433,13 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		if newRecord.Status != "success" {
 			newRecord.Status = "failure"
 		}
+		if run != nil {
+			if newRecord.Status == "success" {
+				run.RecordSuccess()
+			} else {
+				run.RecordFailure()
+			}
+		}
 
 		// 存数据库
 		daoErr := dao.GetDNSDao().Add(&newRecord)
@@ -430,15 +455,22 @@ func getDNSResult(site models.GfnCollectorDomain) func() {
 		if newRecord.Status != "success" {
 			errorCode = "dns_no_records"
 		}
+		collectorID, jobID := "", ""
+		if run != nil {
+			collectorID = run.CollectorID
+			jobID = run.JobID
+		}
 		saveErr := observation.SaveIfEnabled(observation.Input{
-			SiteID:     site.SiteID,
-			Target:     siteName,
-			Protocol:   observation.ProtocolDNS,
-			Status:     observationStatusFromDNS(newRecord.Status),
-			ObservedAt: newRecord.CreateTime,
-			DurationMS: time.Since(probeStart).Milliseconds(),
-			ErrorCode:  errorCode,
-			Payload:    buildDNSObservationPayloadWithMetadata(results, metadata),
+			SiteID:      site.SiteID,
+			Target:      siteName,
+			Protocol:    observation.ProtocolDNS,
+			Status:      observationStatusFromDNS(newRecord.Status),
+			ObservedAt:  newRecord.CreateTime,
+			DurationMS:  time.Since(probeStart).Milliseconds(),
+			ErrorCode:   errorCode,
+			Payload:     buildDNSObservationPayloadWithMetadata(results, metadata),
+			CollectorID: collectorID,
+			JobID:       jobID,
 		})
 		if saveErr != nil {
 			log.WarnFields(map[string]interface{}{

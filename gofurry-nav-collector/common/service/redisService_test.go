@@ -33,4 +33,7 @@ func TestRedisCommandErrorsReturnGFError(t *testing.T) {
 	if err := Incr("test:counter"); err == nil {
 		t.Fatal("Incr() should return GFError when Redis command fails")
 	}
+	if _, err := CompareAndDelete("test:key", "value"); err == nil {
+		t.Fatal("CompareAndDelete() should return GFError when Redis command fails")
+	}
 }

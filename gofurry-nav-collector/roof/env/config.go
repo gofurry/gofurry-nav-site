@@ -36,6 +36,7 @@ type CollectorConfig struct {
 	Dns         DnsConfig         `yaml:"dns"`
 	ProbeBudget ProbeBudgetConfig `yaml:"probe_budget"`
 	V2          CollectorV2Config `yaml:"v2"`
+	Scheduler   SchedulerConfig   `yaml:"scheduler"`
 }
 
 type ProbeBudgetConfig struct {
@@ -61,6 +62,14 @@ type CollectorProtocols struct {
 	Ping bool `yaml:"ping"`
 	HTTP bool `yaml:"http"`
 	DNS  bool `yaml:"dns"`
+}
+
+type SchedulerConfig struct {
+	CollectorID      string `yaml:"collector_id"`
+	LeaseEnabled     bool   `yaml:"lease_enabled"`
+	LeaseTTLSeconds  int    `yaml:"lease_ttl_seconds"`
+	RunStateRedis    *bool  `yaml:"run_state_redis"`
+	RunStateTTLHours int    `yaml:"run_state_ttl_hours"`
 }
 
 type DnsConfig struct {
@@ -282,4 +291,19 @@ func (cfg CollectorV2Config) ObservationEnabled(protocol string) bool {
 
 func (cfg CollectorV2Config) LatestRedisEnabled(protocol string) bool {
 	return cfg.LatestRedis && cfg.ProtocolEnabled(protocol)
+}
+
+func (cfg SchedulerConfig) RunStateEnabled() bool {
+	if cfg.RunStateRedis == nil {
+		return true
+	}
+	return *cfg.RunStateRedis
+}
+
+func (cfg SchedulerConfig) RunStateTTL() time.Duration {
+	hours := cfg.RunStateTTLHours
+	if hours <= 0 {
+		hours = 168
+	}
+	return time.Duration(hours) * time.Hour
 }

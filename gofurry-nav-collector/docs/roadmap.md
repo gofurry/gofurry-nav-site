@@ -349,35 +349,44 @@
 
 ---
 
-### v0.5.0 - 调度治理与可选多实例
+### v0.5.0 - 单实例调度治理与可选多实例保护
 
-- **状态：** 计划中
-- **范围：** 调度 / 分布式 / 可靠性
-- **目标：** 只有在需要多个 collector 节点时，再引入任务 lease 和 collector 身份，避免重复采集。
+- **状态：** 已完成
+- **范围：** 调度 / 运行状态 / 可选 lease / 可靠性
+- **目标：** 在单实例优先的生产前提下增强采集运行可观测性，同时保留默认关闭的多实例 lease 保护能力。
 
 #### 重点
 
-- Redis lease。
+- 单实例运行状态。
 - collector_id 与 job_id。
-- 站点分片。
-- 失败重试。
+- Redis run state。
+- 默认关闭的 Redis lease。
+- 失败统计，不做网络重试。
 
 #### 任务
 
-- [ ] 增加 `collector_id` 配置，并写入 v2 observation。
-- [ ] 增加 `job_id`，用于追踪单轮采集。
-- [ ] 设计 `collector:v2:lease:{protocol}`，必须带 TTL。
-- [ ] 获取 lease 失败时跳过本轮，不允许无 TTL 分布式锁。
-- [ ] 评估按站点 hash 分片，默认不开启。
-- [ ] 设计轻量失败重试策略，避免对失败目标高频重试。
-- [ ] 文档化单实例和多实例两种部署方式。
+- [x] 增加 `collector.scheduler.collector_id` 配置；为空时自动使用 hostname。
+- [x] 每轮 Ping / HTTP / DNS 生成 `job_id`，用于追踪单轮采集。
+- [x] `run_start`、`run_complete`、`run_skipped` 日志带 `collector_id`、`job_id`、目标数和成败统计。
+- [x] v2 latest document 和 observation payload 增加 `collector_id`、`job_id`。
+- [x] 写入 `collector:v2:run:{protocol}:latest` 与 `collector:v2:run:{protocol}:{job_id}`，默认保留 168 小时。
+- [x] 增加默认关闭的 `collector:v2:lease:{protocol}`，启用时使用 `SET NX EX` 和 compare-and-delete 释放。
+- [x] 获取 lease 失败时跳过本轮，并写入 skipped run state。
+- [x] 本轮只记录失败数量和错误数量，不做失败目标网络重试。
+- [x] 明确站点 hash 分片不进入当前实现，只作为远期多实例需求再评估。
 
 #### 验收标准
 
-- 单实例部署不需要启用 lease。
-- 多实例启用 lease 后不会重复采集同一协议任务。
+- 默认配置下单实例部署不需要启用 lease，采集频率和探测次数不变化。
+- Redis run state 能人工查询最近一轮运行状态、目标数、成败统计和跳过原因。
+- 多实例启用 lease 后，同一协议同一轮不会由多个实例同时执行。
 - collector 异常退出后 lease 可依赖 TTL 自动释放。
-- 任一分布式能力都可关闭并回退到单实例。
+- 分布式能力可关闭并回退到单实例。
+
+#### 备注
+
+- 当前生产站点规模只有几百个，单实例是推荐部署方式。
+- 不做站点分片、不做失败目标自动重试，避免引入不必要复杂度和额外探测压力。
 
 ---
 
