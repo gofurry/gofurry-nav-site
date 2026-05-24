@@ -280,35 +280,67 @@
 
 ### v0.4.0 - 健康状态聚合与展示旁路
 
-- **状态：** 计划中
+- **状态：** 已完成
 - **范围：** Backend / Redis summary / Nuxt 展示 / 兼容性
 - **目标：** 基于 v2 observation 生成站点健康摘要，但先旁路展示，不替换旧页面主逻辑。
 
 #### 重点
 
 - 多协议综合健康状态。
-- summary Redis key。
-- 后端 v2 summary 接口。
-- Nuxt 安全展示。
+- target 级和 site 级 summary Redis key。
+- 暂不接入后端 v2 summary 接口。
+- 暂不改 Nuxt 主展示链路。
 
 #### 任务
 
-- [ ] 设计健康状态：`healthy`、`warning`、`degraded`、`unknown`、`down`。
-- [ ] 定义协议权重：HTTP 高，TLS/DNS 中高，Ping 低。
-- [ ] 实现 `collector:v2:summary:{site_id}`，默认旁路写入。
-- [ ] 后端增加只读 summary 接口，默认关闭。
-- [ ] Nuxt 增加灰度展示入口，不影响当前主展示。
-- [ ] 明确规则：HTTP 正常但 Ping 失败不能判 down。
-- [ ] 明确规则：Ping 失败只作为低权重辅助信号，不单独判定站点 down。
-- [ ] 明确规则：DNS 失败但 HTTP latest 仍可用时优先 `degraded` 或 `unknown`。
-- [ ] 明确规则：TLS 临期优先 `warning`，已过期但 HTTP 可访问时优先 `degraded`。
+- [x] 设计健康状态：`healthy`、`warning`、`degraded`、`unknown`、`down`。
+- [x] 定义协议权重：HTTP 高，TLS/DNS 中高，Ping 低。
+- [x] 实现 `collector:v2:summary:target:{site_id}:{target}`，保留多采集域名明细。
+- [x] 实现 `collector:v2:summary:site:{site_id}`，由 target summary 保守聚合。
+- [x] 保留原 `collector:v2:latest:{protocol}:{site_id}`，额外增加 `collector:v2:latest:{protocol}:{site_id}:{target}`。
+- [x] 明确规则：HTTP 正常但 Ping 失败不能判 down。
+- [x] 明确规则：Ping 失败只作为低权重辅助信号，不单独判定站点 down。
+- [x] 明确规则：DNS 失败但 HTTP latest 仍可用时优先 `warning`，不判 down。
+- [x] 明确规则：TLS 临期优先 `warning`，已过期或证书校验失败但 HTTP 可访问时优先 `degraded`。
+- [x] 明确规则：HTTP observation 缺失或过期时为 `unknown`。
 
 #### 验收标准
 
-- 健康状态有可解释规则和示例。
+- 健康状态有可解释规则和单元测试覆盖。
 - 旧页面展示路径可随时恢复。
 - 单个协议异常不会误伤站点整体状态。
-- Nuxt 展示不渲染外部 HTML 字段。
+- 本轮不改 Nuxt，因此不存在外部 HTML 渲染入口。
+
+#### 后续归位
+
+- 后端 `/api/v2/nav` 只读 summary 接口和 Nuxt 灰度展示入口归入下一段实施，避免一次性扩大改动面。
+
+---
+
+### v0.4.1 - Summary 只读接口与灰度展示
+
+- **状态：** 计划中
+- **范围：** Backend / Nuxt 展示 / 兼容性
+- **目标：** 在 collector summary 生产观察稳定后，再把健康摘要通过只读接口和灰度 UI 暴露出来。
+
+#### 重点
+
+- 后端只读 summary 接口。
+- Nuxt 灰度展示入口。
+- 旧页面主展示不替换。
+
+#### 任务
+
+- [ ] 后端增加只读 summary 接口，默认关闭。
+- [ ] Nuxt 增加灰度展示入口，不影响当前主展示。
+- [ ] 明确 summary 外部字段全部按纯文本展示，不渲染 HTML。
+- [ ] 为接口增加 Redis 缺失、summary 过期、目标不存在等回退语义。
+
+#### 验收标准
+
+- 未开启灰度时前端展示不变化。
+- Redis summary 缺失时接口返回 `unknown` 或空摘要，不影响旧接口。
+- 前端能解释 `healthy`、`warning`、`degraded`、`unknown`、`down` 的含义。
 
 ---
 

@@ -134,6 +134,22 @@ func SaveIfEnabled(input Input) common.GFError {
 				firstErr = err
 			}
 		}
+		targetKey := TargetLatestKey(input.Protocol, input.SiteID, input.Target)
+		if err := cs.Set(targetKey, string(docBytes)); err != nil {
+			log.ErrorFields(map[string]interface{}{
+				"event":     "v2_target_latest_redis_write_failed",
+				"protocol":  input.Protocol,
+				"redis_key": targetKey,
+				"site_id":   input.SiteID,
+				"target":    input.Target,
+			}, "v2 target latest Redis 写入失败: "+err.GetMsg())
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+		if summaryErr := UpdateSummaryIfEnabled(input.SiteID, input.Target); summaryErr != nil && firstErr == nil {
+			firstErr = summaryErr
+		}
 	}
 
 	if cfg.CompareLog {

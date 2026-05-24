@@ -56,3 +56,45 @@ type LatestDocument struct {
 	Payload       any       `json:"payload"`
 	SchemaVersion int       `json:"schema_version"`
 }
+
+type ProtocolSummary struct {
+	Protocol          string    `json:"protocol"`
+	Status            string    `json:"status"`
+	ObservedAt        time.Time `json:"observed_at"`
+	DurationMS        int64     `json:"duration_ms"`
+	Stale             bool      `json:"stale"`
+	StaleAfterSeconds int64     `json:"stale_after_seconds"`
+	ErrorCode         string    `json:"error_code,omitempty"`
+}
+
+type TargetSummaryDocument struct {
+	SiteID         int64                      `json:"site_id"`
+	Target         string                     `json:"target"`
+	Status         string                     `json:"status"`
+	ReasonCodes    []string                   `json:"reason_codes"`
+	ReasonMessages []string                   `json:"reason_messages"`
+	Protocols      map[string]ProtocolSummary `json:"protocols"`
+	ObservedAt     time.Time                  `json:"observed_at"`
+	GeneratedAt    time.Time                  `json:"generated_at"`
+	SchemaVersion  int                        `json:"schema_version"`
+}
+
+type SiteSummaryDocument struct {
+	SiteID         int64               `json:"site_id"`
+	Status         string              `json:"status"`
+	ReasonCodes    []string            `json:"reason_codes"`
+	ReasonMessages []string            `json:"reason_messages"`
+	TargetCount    int                 `json:"target_count"`
+	StatusCounts   map[string]int      `json:"status_counts"`
+	Targets        []TargetSummaryItem `json:"targets"`
+	GeneratedAt    time.Time           `json:"generated_at"`
+	SchemaVersion  int                 `json:"schema_version"`
+}
+
+type TargetSummaryItem struct {
+	Target         string    `json:"target"`
+	Status         string    `json:"status"`
+	ReasonCodes    []string  `json:"reason_codes"`
+	ReasonMessages []string  `json:"reason_messages"`
+	ObservedAt     time.Time `json:"observed_at"`
+}

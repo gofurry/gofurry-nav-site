@@ -24,6 +24,22 @@ v2 latest Redis key 为：
 - `collector:v2:latest:http:{site_id}`
 - `collector:v2:latest:dns:{site_id}`
 
+v0.4.0 起，collector 还会在开启 v2 latest Redis 时写入更适合健康聚合的旁路 key：
+
+- `collector:v2:latest:{protocol}:{site_id}:{target}`：采集域名级 latest，保留多域名站点的明细。
+- `collector:v2:summary:target:{site_id}:{target}`：单采集域名健康摘要。
+- `collector:v2:summary:site:{site_id}`：站点级健康摘要，由该站点所有 target summary 聚合得到。
+
+summary 状态包括：
+
+- `healthy`：当前 HTTP 访问正常，未发现需要关注的已启用协议信号。
+- `warning`：当前 HTTP 访问正常，但 Ping、DNS、TLS 临期等 observation 需要关注。
+- `degraded`：HTTP 或 TLS/DNS 观测显示可用性或安全性下降，但不确定整站不可用。
+- `unknown`：HTTP observation 缺失或过期，无法判断访客是否可打开。
+- `down`：非常克制地使用；当前规则要求目标 HTTP 失败且 DNS 也失败，站点级则要求所有采集目标都为 `down`。
+
+summary 仍然是旁路 observation 汇总，不替换旧 Redis key、旧表或旧前端展示。
+
 ## Ping Payload
 
 Ping v2 payload 当前包含：
