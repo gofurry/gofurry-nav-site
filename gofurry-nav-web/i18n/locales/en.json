@@ -298,10 +298,15 @@
       "siteStatus": "Site Summary",
       "currentTarget": "Current Target",
       "state": "Data State",
-      "targetCount": "Targets",
-      "status": "Status",
-      "stale": "stale",
-      "reasons": "Reasons",
+        "targetCount": "Targets",
+        "status": "Status",
+        "stale": "stale",
+        "duration": "Duration",
+        "observedAt": "Observed At",
+        "staleAfter": "Stale After",
+        "errorCode": "Error Code",
+        "none": "None",
+        "reasons": "Reasons",
       "states": {
         "ready": "Ready",
         "missing": "No Data",
@@ -309,12 +314,14 @@
       },
       "statuses": {
         "healthy": "Healthy",
-        "warning": "Attention",
-        "degraded": "Degraded",
-        "unknown": "Unknown",
-        "down": "Down"
-      }
-    },
+          "warning": "Attention",
+          "degraded": "Degraded",
+          "unknown": "Unknown",
+          "down": "Down",
+          "success": "Success",
+          "failure": "Failure"
+        }
+      },
     "siteDnsPanel": {
       "dnsRecord": "DNS Record",
       "type": "type",

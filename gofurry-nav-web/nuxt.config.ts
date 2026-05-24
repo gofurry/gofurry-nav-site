@@ -156,7 +156,6 @@ export default defineNuxtConfig({
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
       navApiBase: publicNavApiBase,
       navV2ApiBase: publicNavV2ApiBase,
-      navHealthSummaryEnabled: process.env.NUXT_PUBLIC_NAV_HEALTH_SUMMARY_ENABLED === 'true',
       gameApiBase: process.env.NUXT_PUBLIC_GAME_API_BASE || '/api/v1',
       siteLogoPrefixUrl: process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/',
       siteDefaultLogo: process.env.NUXT_PUBLIC_SITE_DEFAULT_LOGO || 'https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg',

@@ -298,10 +298,15 @@
       "siteStatus": "站点摘要",
       "currentTarget": "当前采集目标",
       "state": "数据状态",
-      "targetCount": "采集目标数",
-      "status": "状态",
-      "stale": "已过期",
-      "reasons": "原因",
+        "targetCount": "采集目标数",
+        "status": "状态",
+        "stale": "已过期",
+        "duration": "耗时",
+        "observedAt": "采集时间",
+        "staleAfter": "过期阈值",
+        "errorCode": "错误码",
+        "none": "暂无",
+        "reasons": "原因",
       "states": {
         "ready": "可用",
         "missing": "暂无数据",
@@ -309,12 +314,14 @@
       },
       "statuses": {
         "healthy": "正常",
-        "warning": "需关注",
-        "degraded": "降级",
-        "unknown": "未知",
-        "down": "不可用"
-      }
-    },
+          "warning": "需关注",
+          "degraded": "降级",
+          "unknown": "未知",
+          "down": "不可用",
+          "success": "成功",
+          "failure": "失败"
+        }
+      },
     "siteDnsPanel": {
       "dnsRecord": "DNS 记录",
       "type": "类型",
