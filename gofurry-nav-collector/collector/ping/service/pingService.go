@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -368,6 +369,7 @@ func Ping() {
 func performPing(ip string) (pingModel models2.PingModel) {
 	start := time.Now()
 	pingModel.PingTime = cm.LocalTime(time.Now())
+	pingModel.ResolutionSource = "unresolved"
 	defer func() {
 		pingModel.ProbeDurationMS = time.Since(start).Milliseconds()
 	}()
@@ -406,6 +408,12 @@ func performPing(ip string) (pingModel models2.PingModel) {
 	pingModel.PacketsRecvDuplicates = stats.PacketsRecvDuplicates
 	if stats.IPAddr != nil {
 		pingModel.ResolvedIP = stats.IPAddr.IP.String()
+		pingModel.SelectedIP = pingModel.ResolvedIP
+		pingModel.ResolvedIPs = []string{pingModel.ResolvedIP}
+		pingModel.IPFamily = pingIPFamily(stats.IPAddr.IP)
+		pingModel.ResolutionSource = "go-ping"
+	} else {
+		pingModel.ResolutionSource = "unresolved"
 	}
 	if pingModel.AvgDelayTime == 0 && pingModel.AvgLossRate != 100 {
 		pingModel.AvgDelayTime = 1
@@ -547,6 +555,11 @@ func buildPingObservationPayload(result models2.PingModel, pingRecord *models2.P
 		"packets_recv":            result.PacketsRecv,
 		"packets_recv_duplicates": result.PacketsRecvDuplicates,
 		"resolved_ip":             result.ResolvedIP,
+		"resolved_ips":            result.ResolvedIPs,
+		"selected_ip":             result.SelectedIP,
+		"ip_family":               result.IPFamily,
+		"resolution_source":       result.ResolutionSource,
+		"icmp_blocked_suspected":  pingICMPBlockedSuspected(status, result),
 		"duration_ms":             result.ProbeDurationMS,
 		"error_code":              errorCode,
 		"delay_ms":                result.AvgDelayTime,
@@ -554,6 +567,27 @@ func buildPingObservationPayload(result models2.PingModel, pingRecord *models2.P
 		"legacy_loss":             pingRecord.Loss,
 		"legacy_status":           pingRecord.Status,
 	}, errorCode
+}
+
+func pingIPFamily(ip net.IP) string {
+	if ip == nil {
+		return ""
+	}
+	if ip.To4() != nil {
+		return "ipv4"
+	}
+	if ip.To16() != nil {
+		return "ipv6"
+	}
+	return ""
+}
+
+func pingICMPBlockedSuspected(status string, result models2.PingModel) bool {
+	return status != "up" &&
+		result.ErrorCode == "" &&
+		result.PacketsSent > 0 &&
+		result.PacketsRecv == 0 &&
+		result.ResolutionSource != "unresolved"
 }
 
 func observationStatusFromPing(status string) string {

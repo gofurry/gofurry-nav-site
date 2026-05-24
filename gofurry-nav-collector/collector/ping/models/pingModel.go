@@ -18,6 +18,10 @@ type PingModel struct {
 	PacketsRecv           int              `json:"-"`            // v2 observation 接收包数
 	PacketsRecvDuplicates int              `json:"-"`            // v2 observation 重复包数
 	ResolvedIP            string           `json:"-"`            // v2 observation 实际解析 IP
+	ResolvedIPs           []string         `json:"-"`            // v2 observation 已解析 IP 列表
+	SelectedIP            string           `json:"-"`            // v2 observation 本次选择 IP
+	IPFamily              string           `json:"-"`            // v2 observation IP 协议族
+	ResolutionSource      string           `json:"-"`            // v2 observation 解析来源
 	ProbeDurationMS       int64            `json:"-"`            // 单目标探测墙钟耗时
 	ErrorCode             string           `json:"-"`            // v2 observation 错误码
 	ErrorMessage          string           `json:"-"`            // v2 observation 错误信息

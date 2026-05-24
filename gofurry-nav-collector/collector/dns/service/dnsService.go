@@ -529,7 +529,135 @@ func buildDNSObservationPayloadWithMetadata(results map[string][]models.DNSRecor
 	payload["mx_priorities"] = buildDNSMXPriorities(metadata)
 	payload["soa"] = buildDNSSOA(metadata)
 	payload["record_budget_exhausted"] = dnsRecordBudgetExhausted(metadata)
+	enrichDNSObservationStructure(payload, results, metadata)
 	return payload
+}
+
+func enrichDNSObservationStructure(payload map[string]any, results map[string][]models.DNSRecord, metadata map[string]dnsQueryMetadata) {
+	stats := dnsObservationStructureStats{
+		NSHosts: map[string]struct{}{},
+		MXHosts: map[string]struct{}{},
+	}
+	for recordType, records := range results {
+		for _, record := range records {
+			collectDNSObservationStructure(recordType, record, &stats)
+		}
+	}
+	for _, mx := range buildDNSMXPriorities(metadata) {
+		if mx.Host != "" {
+			stats.MXHosts[mx.Host] = struct{}{}
+		}
+	}
+
+	payload["has_a"] = stats.IPv4Count > 0
+	payload["has_aaaa"] = stats.IPv6Count > 0
+	payload["ipv4_count"] = stats.IPv4Count
+	payload["ipv6_count"] = stats.IPv6Count
+	payload["cname_terminal"] = limitDNSObservationString(stats.CNAMETerminal)
+	payload["name_server_hosts"] = sortedLimitedDNSSet(stats.NSHosts)
+	payload["mx_hosts"] = sortedLimitedDNSSet(stats.MXHosts)
+	payload["ttl_spread"] = stats.TTLSpread()
+	payload["mixed_private_public_ip"] = stats.PrivateIPSeen && stats.PublicIPSeen
+}
+
+type dnsObservationStructureStats struct {
+	IPv4Count     int
+	IPv6Count     int
+	CNAMETerminal string
+	NSHosts       map[string]struct{}
+	MXHosts       map[string]struct{}
+	TTLSeen       bool
+	TTLMin        uint32
+	TTLMax        uint32
+	PrivateIPSeen bool
+	PublicIPSeen  bool
+}
+
+func (s dnsObservationStructureStats) TTLSpread() uint32 {
+	if !s.TTLSeen || s.TTLMax < s.TTLMin {
+		return 0
+	}
+	return s.TTLMax - s.TTLMin
+}
+
+func collectDNSObservationStructure(recordType string, record models.DNSRecord, stats *dnsObservationStructureStats) {
+	switch record.Type {
+	case "A":
+		stats.IPv4Count++
+		collectDNSIPPrivacy(record.Value, stats)
+	case "AAAA":
+		stats.IPv6Count++
+		collectDNSIPPrivacy(record.Value, stats)
+	case "CNAME":
+		if record.Value != "" {
+			stats.CNAMETerminal = record.Value
+		}
+	case "NS":
+		if record.Value != "" {
+			stats.NSHosts[limitDNSObservationString(record.Value)] = struct{}{}
+		}
+	case "MX":
+		if host := dnsMXHostFromValue(record.Value); host != "" {
+			stats.MXHosts[host] = struct{}{}
+		}
+	}
+	if recordType == "NS" && record.Value != "" {
+		stats.NSHosts[limitDNSObservationString(record.Value)] = struct{}{}
+	}
+	if recordType == "MX" {
+		if host := dnsMXHostFromValue(record.Value); host != "" {
+			stats.MXHosts[host] = struct{}{}
+		}
+	}
+	if record.TTL > 0 {
+		if !stats.TTLSeen || record.TTL < stats.TTLMin {
+			stats.TTLMin = record.TTL
+		}
+		if !stats.TTLSeen || record.TTL > stats.TTLMax {
+			stats.TTLMax = record.TTL
+		}
+		stats.TTLSeen = true
+	}
+	for _, child := range record.Children {
+		collectDNSObservationStructure(child.Type, child, stats)
+	}
+}
+
+func collectDNSIPPrivacy(value string, stats *dnsObservationStructureStats) {
+	ip := net.ParseIP(strings.TrimSpace(value))
+	if ip == nil {
+		return
+	}
+	if isPrivateOrSpecialIP(ip) {
+		stats.PrivateIPSeen = true
+		return
+	}
+	stats.PublicIPSeen = true
+}
+
+func dnsMXHostFromValue(value string) string {
+	host := strings.TrimSpace(value)
+	if host == "" {
+		return ""
+	}
+	if idx := strings.Index(host, " "); idx > 0 {
+		host = host[:idx]
+	}
+	return limitDNSObservationString(strings.TrimSpace(host))
+}
+
+func sortedLimitedDNSSet(values map[string]struct{}) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	for value := range values {
+		if value != "" {
+			result = append(result, limitDNSObservationString(value))
+		}
+	}
+	sort.Strings(result)
+	return result
 }
 
 func buildDNSResponseSummary(recordType string, records []models.DNSRecord, metadata map[string]dnsQueryMetadata) dnsResponseSummary {

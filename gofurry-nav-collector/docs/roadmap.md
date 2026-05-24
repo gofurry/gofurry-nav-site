@@ -4,7 +4,7 @@
 
 `gofurry-nav-collector` 既定基础 roadmap 已完成。当前文档不再保留过长历史完成项，只记录后端正式进入 v2 前需要补齐的 collector 能力。
 
-`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁。后续 `v0.5.2` 到 `v0.5.7` 用于在不影响旧链路的前提下补齐 v2 observation 数据面和少量明确授权的轻探测能力。
+`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段。后续 `v0.5.3` 到 `v0.5.7` 用于在不影响旧链路的前提下补齐少量明确授权的轻探测能力。
 
 ## 迭代原则
 
@@ -64,7 +64,7 @@
 
 ### v0.5.2 - v2 Schema 收口前的低风险字段补充
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** Ping / DNS / TLS / HTTP / v2 observation
 **目标：** 在不增加请求次数和探测强度的前提下，把现有一次采集中已经能拿到的高价值字段补齐，为后端 v2 schema 稳定做准备。
 
@@ -77,14 +77,14 @@
 
 #### Tasks
 
-- [ ] TLS v2 payload 增加 `cert_serial_number`、`cert_fingerprint_sha256`、`cert_spki_sha256`。
-- [ ] TLS v2 payload 增加 `cert_public_key_bits`、`cert_subject_org`、`cert_issuer_cn`、`cert_chain_issuers`。
-- [ ] HTTP v2 payload 增加 `content_length_header`、`transfer_encoding`、`is_chunked`、`html_charset`、`doctype`。
-- [ ] HTTP v2 payload 增加 `robots_meta_policy`、`canonical_host_matches_final_host`、`compression_ratio_estimated`。
-- [ ] DNS v2 payload 增加 `has_a`、`has_aaaa`、`ipv4_count`、`ipv6_count`、`cname_terminal`。
-- [ ] DNS v2 payload 增加 `name_server_hosts`、`mx_hosts`、`ttl_spread`、`mixed_private_public_ip`。
-- [ ] Ping v2 payload 增加 `ip_family`、`resolved_ips`、`selected_ip`、`resolution_source`、`icmp_blocked_suspected`。
-- [ ] 更新 v2 observation payload 文档，给出字段边界和样例 JSON。
+- [x] TLS v2 payload 增加 `cert_serial_number`、`cert_fingerprint_sha256`、`cert_spki_sha256`。
+- [x] TLS v2 payload 增加 `cert_public_key_bits`、`cert_subject_org`、`cert_issuer_cn`、`cert_chain_issuers`。
+- [x] HTTP v2 payload 增加 `content_length_header`、`transfer_encoding`、`is_chunked`、`html_charset`、`doctype`。
+- [x] HTTP v2 payload 增加 `robots_meta_policy`、`canonical_host_matches_final_host`、`compression_ratio_estimated`。
+- [x] DNS v2 payload 增加 `has_a`、`has_aaaa`、`ipv4_count`、`ipv6_count`、`cname_terminal`。
+- [x] DNS v2 payload 增加 `name_server_hosts`、`mx_hosts`、`ttl_spread`、`mixed_private_public_ip`。
+- [x] Ping v2 payload 增加 `ip_family`、`resolved_ips`、`selected_ip`、`resolution_source`、`icmp_blocked_suspected`。
+- [x] 更新 v2 observation payload 文档，给出字段边界和样例 JSON。
 
 #### Acceptance Criteria
 
@@ -92,6 +92,11 @@
 - 旧 Redis key、旧日志表、旧前端展示结构不变化。
 - 新字段全部有 builder 级单元测试。
 - 新字段只作为 observation 信号，不作为健康结论。
+
+#### Notes
+
+- 字段说明：`docs/v2-observation-payload.md`。
+- 本阶段没有新增 SQL、配置项、请求次数或默认并发。
 
 ---
 

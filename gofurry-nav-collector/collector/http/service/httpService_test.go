@@ -20,23 +20,30 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 	notBefore := time.Date(2026, 5, 24, 10, 0, 0, 0, time.UTC)
 	notAfter := notBefore.Add(24 * time.Hour)
 	result := models.HTTPModel{
-		ResponseTime:    123,
-		DNSLookupMS:     4,
-		TCPConnectMS:    7,
-		TLSHandshakeMS:  11,
-		TTFBMS:          23,
-		TransferMS:      31,
-		HTTPProtocol:    "HTTP/2.0",
-		RemoteAddr:      "203.0.113.5:443",
-		RemoteIP:        "203.0.113.5",
-		BodyReadBytes:   1987,
-		BodyTruncated:   true,
-		BodyLimitBytes:  1048576,
-		ContentEncoding: "gzip",
-		Compressed:      true,
-		CacheControl:    repeated("c", 600),
-		ETag:            repeated("e", 600),
-		LastModified:    repeated("l", 600),
+		ResponseTime:        123,
+		DNSLookupMS:         4,
+		TCPConnectMS:        7,
+		TLSHandshakeMS:      11,
+		TTFBMS:              23,
+		TransferMS:          31,
+		HTTPProtocol:        "HTTP/2.0",
+		RemoteAddr:          "203.0.113.5:443",
+		RemoteIP:            "203.0.113.5",
+		BodyReadBytes:       1987,
+		BodyTruncated:       true,
+		BodyLimitBytes:      1048576,
+		ContentEncoding:     "gzip",
+		Compressed:          true,
+		CacheControl:        repeated("c", 600),
+		ETag:                repeated("e", 600),
+		LastModified:        repeated("l", 600),
+		ContentLengthHeader: 512,
+		TransferEncoding:    []string{"chunked"},
+		IsChunked:           true,
+		HTMLCharset:         "utf-8",
+		Doctype:             "<!doctype html>",
+		RobotsMetaPolicy:    "index,follow",
+		CompressionRatio:    0.25,
 		Redirects: []string{
 			longURL,
 			"https://final.example/path",
@@ -55,18 +62,25 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 			"referrer_policy":           "strict-origin-when-cross-origin",
 			"permissions_policy":        "geolocation=()",
 		},
-		CertCollected:       true,
-		CertVerified:        true,
-		VerifyError:         repeated("e", 600),
-		VerifyErrorCategory: "",
-		TLSHandshake:        tlsHandshakeCollected,
-		CertNotBefore:       notBefore,
-		CertNotAfter:        notAfter,
-		CertChainLen:        2,
-		CertSubjectCN:       repeated("n", 300),
-		CertSANCount:        5,
-		OCSPStapled:         true,
-		SCTCount:            3,
+		CertCollected:         true,
+		CertVerified:          true,
+		VerifyError:           repeated("e", 600),
+		VerifyErrorCategory:   "",
+		TLSHandshake:          tlsHandshakeCollected,
+		CertNotBefore:         notBefore,
+		CertNotAfter:          notAfter,
+		CertChainLen:          2,
+		CertSubjectCN:         repeated("n", 300),
+		CertSANCount:          5,
+		OCSPStapled:           true,
+		SCTCount:              3,
+		CertSerialNumber:      repeated("9", 300),
+		CertFingerprintSHA256: "abc123",
+		CertSPKISHA256:        "def456",
+		CertPublicKeyBits:     2048,
+		CertSubjectOrg:        []string{repeated("sub", 120)},
+		CertIssuerCN:          repeated("issuer-cn", 40),
+		CertChainIssuers:      []string{"Root CA", repeated("Intermediate", 40)},
 	}
 	httpRecord := models.HTTPSaveModel{
 		Domain:        "example.com",
@@ -76,6 +90,7 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 		Title:         repeated("题", 300),
 		Server:        repeated("s", 300),
 		Redirects:     result.Redirects,
+		CanonicalURL:  "https://example.com/canonical",
 		Headers: map[string][]string{
 			"Server":       {repeated("s", 600)},
 			"Content-Type": {"text/html; charset=utf-8"},
@@ -211,6 +226,22 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 	if got := runeLen(cachePolicy["last_modified"]); got != maxHTTPPayloadCacheValueLength {
 		t.Fatalf("last_modified 未限长，got %d", got)
 	}
+	if payload["content_length_header"] != int64(512) || payload["is_chunked"] != true {
+		t.Fatalf("content length/chunked 字段错误: len=%v chunked=%v", payload["content_length_header"], payload["is_chunked"])
+	}
+	transferEncoding := payload["transfer_encoding"].([]string)
+	if len(transferEncoding) != 1 || transferEncoding[0] != "chunked" {
+		t.Fatalf("transfer_encoding 错误: %+v", transferEncoding)
+	}
+	if payload["html_charset"] != "utf-8" || payload["doctype"] != "<!doctype html>" || payload["robots_meta_policy"] != "index,follow" {
+		t.Fatalf("HTML 语义字段错误: charset=%v doctype=%v robots=%v", payload["html_charset"], payload["doctype"], payload["robots_meta_policy"])
+	}
+	if payload["canonical_host_matches_final_host"] != true {
+		t.Fatalf("canonical_host_matches_final_host 应为 true，got %v", payload["canonical_host_matches_final_host"])
+	}
+	if payload["compression_ratio_estimated"] != 0.25 {
+		t.Fatalf("compression_ratio_estimated 错误，got %v", payload["compression_ratio_estimated"])
+	}
 	securityHeaderSummary, ok := payload["security_header_summary"].(map[string]any)
 	if !ok {
 		t.Fatalf("security_header_summary 类型错误: %T", payload["security_header_summary"])
@@ -263,6 +294,26 @@ func TestBuildHTTPObservationPayloadAddsV2FieldsAndLimitsExternalText(t *testing
 	}
 	if payload["cert_public_key_algorithm"] != httpRecord.CertPubKeyAlg || payload["cert_signature_algorithm"] != httpRecord.CertSigAlg {
 		t.Fatalf("规范 TLS 算法字段错误，got pub=%v sig=%v", payload["cert_public_key_algorithm"], payload["cert_signature_algorithm"])
+	}
+	if got := runeLen(payload["cert_serial_number"].(string)); got != maxHTTPPayloadCertTextLength {
+		t.Fatalf("cert_serial_number 未限长，got %d", got)
+	}
+	if payload["cert_fingerprint_sha256"] != "abc123" || payload["cert_spki_sha256"] != "def456" {
+		t.Fatalf("证书指纹字段错误，got cert=%v spki=%v", payload["cert_fingerprint_sha256"], payload["cert_spki_sha256"])
+	}
+	if payload["cert_public_key_bits"] != 2048 {
+		t.Fatalf("cert_public_key_bits 错误，got %v", payload["cert_public_key_bits"])
+	}
+	certSubjectOrg := payload["cert_subject_org"].([]string)
+	if got := runeLen(certSubjectOrg[0]); got != maxHTTPPayloadCertTextLength {
+		t.Fatalf("cert_subject_org 未限长，got %d", got)
+	}
+	if got := runeLen(payload["cert_issuer_cn"].(string)); got != maxHTTPPayloadCertTextLength {
+		t.Fatalf("cert_issuer_cn 未限长，got %d", got)
+	}
+	certChainIssuers := payload["cert_chain_issuers"].([]string)
+	if len(certChainIssuers) != 2 || certChainIssuers[0] != "Root CA" {
+		t.Fatalf("cert_chain_issuers 错误: %+v", certChainIssuers)
 	}
 	if _, ok := payload["redirects"]; !ok {
 		t.Fatal("兼容字段 redirects 丢失")
@@ -377,6 +428,9 @@ func TestEnrichHTTPPageDetailsExtractsPageSemantics(t *testing.T) {
 	}
 	if result.Meta["application_name"] != "GoFurry Nav" || result.Meta["theme_color"] != "#ffffff" || result.Meta["robots"] != "index,follow" {
 		t.Fatalf("扩展 meta 提取错误: %+v", result.Meta)
+	}
+	if result.HTMLCharset != "utf-8" || result.Doctype != "<!doctype html>" || result.RobotsMetaPolicy != "index,follow" {
+		t.Fatalf("HTML charset/doctype/robots 提取错误: charset=%q doctype=%q robots=%q", result.HTMLCharset, result.Doctype, result.RobotsMetaPolicy)
 	}
 	if result.OpenGraph["image"] != "https://example.com/og.png" || result.OpenGraph["url"] != "https://example.com/share" {
 		t.Fatalf("OpenGraph URL 解析错误: %+v", result.OpenGraph)
