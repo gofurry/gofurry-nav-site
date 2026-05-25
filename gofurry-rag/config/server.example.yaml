@@ -1,0 +1,144 @@
+# GoFurry RAG 示例配置
+# 使用方式：
+# 1. 复制为 config/server.yaml（本地）或 /etc/gofurry-rag/server.yaml（生产）。
+# 2. 替换数据库、控制台口令、JWT、模型服务地址和 API Key。
+# 3. server.yaml 包含密钥和内网地址，不要提交到 Git。
+
+cluster_id: 1 # 集群编号；单实例保持 1 即可。
+
+server:
+  app_id: "gofurry-rag"
+  app_name: "GoFurry RAG"
+  app_version: "v1.0.0"
+  mode: "debug" # debug / release / prod。
+  ip_address: "127.0.0.1" # 建议由反向代理对外暴露。
+  port: "8080"
+  memory_limit: 1
+  gc_percent: 1000
+  network: "tcp"
+  enable_prefork: false
+  is_full_stack: true # true 表示服务内嵌并提供 RAG 控制台前端。
+  trust_proxy: false # 仅在明确位于可信 Nginx/Caddy 等反代后方时开启。
+  proxy_header: "X-Forwarded-For"
+  trusted_proxies: [] # 开启 trust_proxy 时建议填写实际反代 IP。
+  trust_proxy_loopback: false
+  trust_proxy_private: false
+  trust_proxy_link_local: false
+
+database:
+  enabled: true
+  auto_migrate: true # RAG 自身表可自动迁移；生产大改前仍建议备份。
+  db_type: "postgres"
+  postgres:
+    dsn: "" # 优先使用完整 DSN；为空时使用下面拆分字段。
+    db_name: "gfr"
+    db_username: "postgres"
+    db_password: "CHANGE_ME"
+    db_host: "127.0.0.1"
+    db_port: "5432"
+
+auth:
+  console_passcode: "CHANGE_ME_ADMIN_PASSCODE" # 控制台口令；生产必须修改。
+  jwt_secret: "CHANGE_ME_LONG_RANDOM_SECRET" # 生产必须改成长随机值。
+  cookie_name: "gofurry_rag_session"
+  cookie_domain: ""
+  cookie_secure: false # HTTPS 生产建议 true。
+  cookie_max_age_seconds: 43200
+  session_ttl_hours: 12
+  cookie_same_site: "Lax"
+  csrf_header_required: false
+
+log:
+  log_level: "info"
+  log_mode: "prod"
+  log_path: "./logs/gofurry-rag.log"
+  log_max_size: 100
+  log_max_backups: 30
+  log_max_age: 7
+
+middleware:
+  cors:
+    allow_origins: ["http://127.0.0.1:5173", "http://127.0.0.1:8080"]
+  request_id:
+    enabled: true
+    header: "X-Request-ID"
+  access_log:
+    enabled: true
+    format: "${time} | ${status} | ${latency} | ${method} | ${path} | rid=${respHeader:X-Request-ID}"
+    time_format: "2006-01-02 15:04:05.000"
+    time_zone: "Local"
+  timeout:
+    enabled: true
+    duration_seconds: 30
+    exclude_paths: ["/livez", "/readyz", "/startupz", "/healthz", "/api/v1/chat/stream"]
+  health:
+    enabled: true
+    include_legacy: true
+  security_headers:
+    enabled: true
+    content_security_policy: ""
+    permission_policy: ""
+    hsts_max_age: 0
+    hsts_exclude_subdomains: false
+    hsts_preload_enabled: false
+    csp_report_only: false
+  compression:
+    enabled: true
+    level: "default"
+  limiter:
+    enabled: true
+    max_requests: 3000
+    expiration: 60
+    strategy: "fixed"
+    key_source: "ip"
+    key_header: ""
+    skip_failed_requests: false
+    skip_successful_requests: false
+    disable_headers: false
+    exclude_paths: ["/livez", "/readyz", "/startupz", "/healthz", "/api/v1/chat/stream"]
+  etag:
+    enabled: true
+    weak: false
+
+waf:
+  enabled: false # 是否启用 RAG WAF；开启前先确认规则和误伤。
+  conf_path: ["./config/coraza.conf"]
+
+rag:
+  ollama_base_url: "http://127.0.0.1:11434" # Ollama 地址，用于 embedding。
+  embed_model: "qwen3-embedding:0.6b"
+  embed_dim: 1024 # 当前数据库向量维度固定为 1024，不要随意改。
+  chunk_size: 700
+  chunk_overlap: 120
+  top_k: 6
+  query_timeout_seconds: 60
+  embed_timeout_seconds: 60
+  ingest_timeout_seconds: 300
+  max_query_question_runes: 4000
+  max_query_top_k: 12
+  public_query_rate_limit_requests: 10
+  public_query_rate_limit_window_seconds: 60
+  public_query_max_question_runes: 800
+  public_query_max_top_k: 6
+  public_query_context_max_turns: 3
+  public_query_context_max_runes: 8000
+  ollama_max_concurrency: 4
+  ollama_query_queue_size: 8
+  ollama_ingest_queue_size: 32
+  ollama_queue_wait_timeout_seconds: 30
+  tencent_base_url: "https://tokenhub.tencentmaas.com/v1"
+  tencent_model: "deepseek-v4-flash"
+  tencent_api_key: "CHANGE_ME_OR_LEAVE_EMPTY" # 留空表示不启用腾讯 MaaS 聊天模型。
+  tencent_timeout_seconds: 60
+  tencent_temperature: 0.2
+  tencent_top_p: 0.8
+  tencent_max_tokens: 1024
+  tencent_reasoning_effort: "low"
+  ingest_workers: 1
+  embed_batch_size: 8
+  sync_enabled: false # 是否定时同步 nav/game 内容进入 RAG 知识库。
+  sync_interval_minutes: 720
+  sync_timeout_seconds: 30
+  sync_nav_base_url: "http://127.0.0.1:9999/api/v1"
+  sync_game_base_url: "http://127.0.0.1:9998/api/v1"
+  sync_allowed_markdown_hosts: ["raw.githubusercontent.com"]

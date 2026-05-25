@@ -1,0 +1,149 @@
+# GoFurry Admin 示例配置
+# 使用方式：
+# 1. 复制为 config/server.yaml（本地）或 /etc/gofurry-admin/server.yaml（生产）。
+# 2. 修改数据库、Redis、JWT、Cookie、CORS 等配置。
+# 3. server.yaml 包含密钥和密码，不要提交到 Git。
+
+cluster_id: 1 # 集群编号；单实例保持 1 即可。
+
+server:
+  app_id: "gofurry-admin"
+  app_name: "GoFurry Admin"
+  app_version: "v1.0.0"
+  mode: "debug" # debug / release / prod。
+  ip_address: "127.0.0.1" # 管理后台建议只监听内网或反代地址。
+  port: "10099"
+  memory_limit: 1
+  gc_percent: 1000
+  network: "tcp"
+  enable_prefork: false
+  is_full_stack: true # true 表示服务内嵌并提供管理前端。
+
+database:
+  enabled: true
+  auto_migrate: true # Admin 自身表可自动迁移；生产大改前仍建议备份。
+  db_type: "postgres" # postgres / mysql / sqlite。
+  postgres:
+    dsn: "" # 优先使用完整 DSN；为空时使用下面拆分字段。
+    db_name: "gfa"
+    db_username: "postgres"
+    db_password: "CHANGE_ME"
+    db_host: "127.0.0.1"
+    db_port: "5432"
+
+business_databases:
+  nav:
+    enabled: true
+    auto_migrate: false # 业务库不由 Admin 自动迁移。
+    db_type: "postgres"
+    postgres:
+      dsn: ""
+      db_name: "gfn"
+      db_username: "postgres"
+      db_password: "CHANGE_ME"
+      db_host: "127.0.0.1"
+      db_port: "5432"
+  game:
+    enabled: true
+    auto_migrate: false # 业务库不由 Admin 自动迁移。
+    db_type: "postgres"
+    postgres:
+      dsn: ""
+      db_name: "gfg"
+      db_username: "postgres"
+      db_password: "CHANGE_ME"
+      db_host: "127.0.0.1"
+      db_port: "5432"
+
+redis:
+  enabled: true
+  redis_username: ""
+  redis_addr: "127.0.0.1:6379"
+  redis_password: "CHANGE_ME"
+  redis_db: 0
+  redis_pool_size: 10
+
+auth:
+  jwt_secret: "CHANGE_ME_LONG_RANDOM_SECRET" # 生产必须改成长随机值。
+  cookie_name: "gofurry_admin_token"
+  cookie_domain: "" # 例如 .go-furry.com；本地可留空。
+  cookie_secure: false # HTTPS 生产建议 true。
+  cookie_max_age_seconds: 2592000
+  pbkdf2_iterations: 300000 # 密码哈希迭代次数，不建议低于 300000。
+  session_ttl_hours: 720
+  cookie_same_site: "Lax" # Lax / Strict / None。
+  csrf_header_required: true
+
+log:
+  log_max_size: 100
+  log_max_backups: 30
+  log_max_age: 7
+  log_level: "info"
+  log_mode: "prod"
+  log_path: "./logs/gofurry-admin.log"
+
+middleware:
+  request_id:
+    enabled: true
+    header: "X-Request-ID"
+  access_log:
+    enabled: true
+    format: "${time} | ${status} | ${latency} | ${method} | ${path} | rid=${respHeader:X-Request-ID}"
+    time_format: "2006-01-02 15:04:05.000"
+    time_zone: "Local"
+  timeout:
+    enabled: true
+    duration_seconds: 30
+    exclude_paths: ["/livez", "/readyz", "/startupz", "/healthz"]
+  health:
+    enabled: true
+    include_legacy: true
+  security_headers:
+    enabled: true
+    content_security_policy: ""
+    permission_policy: ""
+    hsts_max_age: 0
+    hsts_exclude_subdomains: false
+    hsts_preload_enabled: false
+    csp_report_only: false
+  compression:
+    enabled: true
+    level: "default"
+  swagger:
+    enabled: false # 生产建议关闭。
+    file_path: "./docs/swagger.json"
+    base_path: "/"
+    path: "/swagger"
+    title: "gofurry-admin"
+  cors:
+    allow_origins: ["http://127.0.0.1:5173", "http://127.0.0.1:8888"]
+  limiter:
+    enabled: true
+    max_requests: 3000
+    expiration: 60
+    strategy: "fixed"
+    key_source: "ip"
+    key_header: ""
+    skip_failed_requests: false
+    skip_successful_requests: false
+    disable_headers: false
+    exclude_paths: ["/livez", "/readyz", "/startupz", "/healthz"]
+  csrf:
+    enabled: true
+    token_path: "/csrf/token"
+    cookie_name: "csrf_"
+    cookie_same_site: "Lax"
+    cookie_secure: false
+    cookie_http_only: false
+    cookie_session_only: false
+    idle_timeout_seconds: 7200
+    single_use_token: false
+    trusted_origins: []
+    exclude_paths: ["/api/v1/auth/bootstrap", "/api/v1/auth/login", "/api/v1/auth/logout"]
+  etag:
+    enabled: true
+    weak: false
+
+waf:
+  enabled: false # 是否启用 Admin WAF；开启前先确认规则和误伤。
+  conf_path: ["./config/coraza.conf"]

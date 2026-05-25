@@ -45,9 +45,11 @@ Thumbs.db
 # Service configs that may contain production secrets
 **/conf/server.yaml
 **/conf/server.build.yaml
+!**/conf/server.example.yaml
 **/config/server.yaml
 **/config/server.local.yaml
 **/config/server.prod.yaml
+!**/config/server.example.yaml
 **/config/*.local.yaml
 **/config/*.prod.yaml
 **/config/*.secret.yaml

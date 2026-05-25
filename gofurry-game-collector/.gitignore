@@ -1,6 +1,8 @@
 logs
 docs
-conf
+conf/*
+!conf/
+!conf/server.example.yaml
 data
 bin
 test

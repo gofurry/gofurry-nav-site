@@ -1,0 +1,73 @@
+# GoFurry Nav Backend 示例配置
+# 使用方式：
+# 1. 复制为 conf/server.yaml（本地）或 /etc/gf-nav/server.yaml（生产）。
+# 2. 把 CHANGE_ME / 示例域名替换成自己的真实配置。
+# 3. server.yaml 可能包含密码和内网地址，不要提交到 Git。
+
+cluster_id: 1 # 集群编号；单实例保持 1 即可。
+
+server:
+  mode: "debug" # debug / release / prod。
+  ip_address: "0.0.0.0" # 服务监听地址；生产通常使用 0.0.0.0。
+  port: "9999" # Nav 后端 HTTP 端口。
+  memory_limit: 1 # 预留内存限制配置，当前主要用于运维标识。
+  gc_percent: 1000 # Go GC 百分比；不熟悉时保持默认。
+  network: "tcp" # Fiber 监听网络类型。
+  enable_prefork: false # Fiber prefork；单机小服务建议 false。
+
+database:
+  db_name: "gfn" # Nav 主业务库。
+  db_username: "postgres"
+  db_password: "CHANGE_ME"
+  db_host: "127.0.0.1"
+  db_port: "5432"
+  max_open_conns: 20 # 最大打开连接数；未配置时使用代码默认。
+  max_idle_conns: 5 # 最大空闲连接数。
+  conn_max_lifetime_seconds: 300 # 连接最大生命周期。
+  conn_max_idle_time_seconds: 60 # 空闲连接最大保留时间。
+
+redis:
+  redis_addr: "127.0.0.1:6379"
+  redis_password: "CHANGE_ME"
+
+nav_v2:
+  summary_enabled: true # 是否注册 /api/v2/nav summary 只读接口。
+  summary_stale_after_seconds: 86400 # summary 超过该时间视为 stale。
+
+log:
+  log_level: "info" # debug / info / warn / error。
+  log_mode: "prod" # dev / prod；影响日志格式。
+  log_path: "./logs/gf-nav.log"
+  log_max_size: 100 # 单个日志文件最大 MB。
+  log_max_backups: 30 # 最多保留日志文件数量。
+  log_max_age: 7 # 最多保留天数。
+
+thread:
+  event_publish_thread: 10 # 事件发布 worker 数。
+
+middleware:
+  swagger:
+    is_on: false # 生产建议关闭。
+    file_path: "./docs/swagger.json"
+    base_path: "/"
+    path: "/swagger"
+    title: "GoFurry Nav API"
+  cors:
+    allow_origins: "https://go-furry.com,http://localhost:3000" # 逗号分隔的前端来源。
+  limiter:
+    is_on: true
+    max_requests: 3000
+    expiration: 60 # Fiber limiter duration，单位按当前实现解析。
+
+waf:
+  waf_switch: false # 是否启用 Coraza WAF；开启前先确认规则和误伤。
+  conf_path: "./conf/coraza.conf"
+  crs_root: "" # 可选 OWASP CRS 根目录。
+  directives_files: [] # 可显式列出规则文件，留空时使用 conf_path / crs_root 推导。
+
+proxy:
+  url: "" # 后端主动访问外部资源时的代理；为空表示直连。
+
+resource:
+  nav_image_num: 10 # 导航资源图相关数量配置。
+  nav_resized_image_num: 10
