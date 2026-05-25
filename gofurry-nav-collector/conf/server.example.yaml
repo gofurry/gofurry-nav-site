@@ -28,83 +28,96 @@ log:
   log_choke_length: 1000
 
 collector:
-  proxy: ""
+  proxy: "" # HTTP 采集可选代理；为空表示直连。只影响需要代理的采集目标，不影响 Redis/DB。
+
+  # 单次探测预算。用于限制外部网络、DNS、Redis 命令的最长等待和最大读取量，避免单个目标卡住整轮采集。
   probe_budget:
-    redis_timeout_seconds: 2
-    http_timeout_seconds: 25
-    http_redirects: 5
-    tls_handshake_timeout_seconds: 5
-    dns_timeout_seconds: 5
-    ptr_timeout_seconds: 2
-    max_dns_records_per_query: 64
-    max_response_bytes: 1048576
+    redis_timeout_seconds: 2 # 单条 Redis 命令超时；建议保持 2 秒，失败只影响旁路写入或本次缓存操作。
+    http_timeout_seconds: 25 # 单个 HTTP GET 总超时；当前仍使用 GET，不做 HEAD-first。
+    http_redirects: 5 # HTTP 最大重定向次数，防止重定向循环。
+    tls_handshake_timeout_seconds: 5 # TLS 握手超时，用于 HTTPS 探测。
+    dns_timeout_seconds: 5 # 单次 DNS 查询超时。
+    ptr_timeout_seconds: 2 # PTR 反查超时；PTR 失败只作为 observation 信号，不判定站点异常。
+    max_dns_records_per_query: 64 # 单次 DNS 记录保留上限，避免异常响应撑大 payload。
+    max_response_bytes: 1048576 # HTTP 响应体最多读取 1MiB；不保存完整页面正文。
+
+  # 调度与运行状态。单实例生产建议 lease 关闭，只保留 run state 方便人工排查。
   scheduler:
-    collector_id: ""
-    lease_enabled: false
-    lease_ttl_seconds: 0
-    run_state_redis: true
-    run_state_ttl_hours: 168
+    collector_id: "" # 采集器实例名；为空时自动使用 hostname。生产建议填固定值，便于日志和 Redis run state 识别。
+    lease_enabled: false # 多实例互斥 lease；单实例保持 false。
+    lease_ttl_seconds: 0 # lease TTL；0 表示按协议间隔自动推导，仅 lease_enabled=true 时生效。
+    run_state_redis: true # 是否写 collector:v2:run:{protocol}:latest，建议开启。
+    run_state_ttl_hours: 168 # 单次运行详情保留时间，默认 7 天。
+
+  # v2 旁路数据面。开启后不改变旧 Redis key、旧日志表和旧前端展示，只额外写 observation/latest/summary。
   v2:
-    enabled: false
-    observation_db: false
-    latest_redis: false
-    compare_log: false
+    enabled: false # v2 总开关；false 时下面所有 v2 写入和 light probe 都不生效。
+    observation_db: false # 是否写入 gfn_collector_observation，用于历史趋势、变化事件和后端 v2 详情。
+    latest_redis: false # 是否写 Redis latest/summary key，后端 v2 实时读取主要依赖这里。
+    compare_log: false # 预留调试开关；生产保持 false。
+
+    # 主采集协议是否写入 v2。只控制旁路 v2 写入，不改变旧链路采集。
     protocols:
-      ping: false
-      http: false
-      dns: false
+      ping: false # Ping v2 payload：RTT、丢包、jitter、resolved_ip 等。
+      http: false # HTTP/TLS v2 payload：响应、header、meta、redirect、trace、证书等。
+      dns: false # DNS v2 payload：记录摘要、risk_flags、SOA/MX/CNAME 等。
+
     edge_hints:
-      enabled: true
+      enabled: true # 被动 CDN/WAF/托管平台线索推断；不发新请求，只基于已有 HTTP/DNS/TLS 数据。
+
+    # 从 observation 历史派生 trend/change。建议生产开启，但依赖 observation 索引和查询预算保护。
     derived:
-      trend_enabled: true
-      change_enabled: true
-      min_interval_seconds: 300
-      query_timeout_seconds: 2
-      trend_max_rows: 3000
-      change_max_rows: 80
+      trend_enabled: true # 生成 collector:v2:trend:target:{site_id}:{target}，例如成功率、P95、TTL/risk 统计。
+      change_enabled: true # 生成 collector:v2:change:target:{site_id}:{target}，记录 title/DNS/证书/端口等变化事件。
+      min_interval_seconds: 300 # 同一 target 的 trend/change 最短派生间隔，避免每次采集都查历史。
+      query_timeout_seconds: 2 # 派生查询最大等待时间；超时只跳过派生，不影响主采集。
+      trend_max_rows: 3000 # 单个 target 趋势计算最多读取的 observation 行数。
+      change_max_rows: 80 # 单个 target 变化检测最多读取的 observation 行数。
+
+    # 默认关闭的低频轻探测。开启前需要确认目标授权；结果只作为 observation 信号，不参与当前健康结论。
     light_probe:
       rdap:
-        enabled: false
-        interval_hours: 168
-        timeout_seconds: 10
-        run_on_start: false
+        enabled: false # 域名注册治理信息：注册商、过期时间、域名状态、nameserver、DNSSEC delegation。
+        interval_hours: 168 # 默认 7 天一次。
+        timeout_seconds: 10 # 单次 RDAP 请求超时。
+        run_on_start: false # 是否服务启动后立即补跑一轮；首次补数据可临时 true，完成后改回 false。
       robots:
-        enabled: false
-        interval_hours: 168
-        timeout_seconds: 10
-        max_response_bytes: 65536
-        max_sitemap_links: 20
-        run_on_start: false
+        enabled: false # 读取 /robots.txt，提取 sitemap、User-agent:*、Disallow:/ 等治理信息。
+        interval_hours: 168 # 默认 7 天一次。
+        timeout_seconds: 10 # 单个 robots.txt 请求超时。
+        max_response_bytes: 65536 # 最多读取 64KiB，不保存全文。
+        max_sitemap_links: 20 # 最多记录 20 条 sitemap 链接。
+        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
       security_txt:
-        enabled: false
-        interval_hours: 168
-        timeout_seconds: 10
-        max_response_bytes: 65536
-        run_on_start: false
+        enabled: false # 读取 /.well-known/security.txt，失败时尝试 /security.txt，提取 Contact/Policy/Expires 等。
+        interval_hours: 168 # 默认 7 天一次。
+        timeout_seconds: 10 # 单个 security.txt 请求超时。
+        max_response_bytes: 65536 # 最多读取 64KiB，不保存全文。
+        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
       page_assets:
-        enabled: false
-        interval_hours: 168
-        timeout_seconds: 10
-        max_icon_bytes: 262144
-        max_manifest_bytes: 65536
-        allowed_asset_hosts: []
-        run_on_start: false
+        enabled: false # 基于 HTTP latest 里的 HTML 声明，低频拉取最多 1 个 favicon 和 1 个 manifest。
+        interval_hours: 168 # 默认 7 天一次。
+        timeout_seconds: 10 # 单个资源请求超时。
+        max_icon_bytes: 262144 # favicon 最多读取 256KiB，不保存图片原文，只保存摘要和 hash。
+        max_manifest_bytes: 65536 # manifest 最多读取 64KiB，不保存原文，只保存摘要字段。
+        allowed_asset_hosts: [] # 跨站资源 allowlist；空数组表示默认只允许同注册域资源。
+        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
       port_check:
-        enabled: false
-        interval_hours: 168
-        timeout_seconds: 2
-        concurrency: 8
-        max_ports_per_target: 24
-        ports: []
-        run_on_start: false
+        enabled: false # TCP connect 级端口连通性检查；不读 banner，不发协议 payload，不做弱口令。
+        interval_hours: 168 # 默认 7 天一次。
+        timeout_seconds: 2 # 单个端口连接超时。
+        concurrency: 8 # 端口检查并发数。
+        max_ports_per_target: 24 # 单个 target 最多检查的端口数。
+        ports: [] # 显式端口列表；空数组表示不检查任何端口。
+        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
       waf_canary:
-        enabled: false
-        interval_hours: 720
-        timeout_seconds: 10
-        canary_path: "/.well-known/gofurry-waf-canary"
-        user_agent: "GoFurry-Nav-Collector-WAF-Canary/1.0"
-        run_on_start: false
-        max_targets_per_run: 0
+        enabled: false # 低频 WAF canary；启用即代表目标已授权，只做固定无害规则回归，不做漏洞扫描。
+        interval_hours: 720 # 默认 30 天一次。
+        timeout_seconds: 10 # 单个 canary 请求超时。
+        canary_path: "/.well-known/gofurry-waf-canary" # canary 路径，建议固定到 well-known，避免影响正常页面。
+        user_agent: "GoFurry-Nav-Collector-WAF-Canary/1.0" # 专用 UA，便于服务器日志识别。
+        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
+        max_targets_per_run: 0 # 每轮最多目标数；0 表示不限制。
   ping:
     ping_thread: 5
     ping_interval: 600
