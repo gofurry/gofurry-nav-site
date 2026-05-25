@@ -6,6 +6,8 @@
 
 `v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段；`v0.5.3` 已完成默认关闭的域名治理低频轻探测；`v0.5.4` 已完成默认关闭的页面资源声明轻探测；`v0.5.5` 已完成默认关闭的 TCP 端口连通性轻探测；`v0.5.6` 已完成 WAF / CDN 被动指纹推断；`v0.5.7` 已完成默认关闭的低频 WAF canary 无害验证。
 
+`v0.5.8` 来自 2026-05-25 代码审计，聚焦轻探测边界、安全预算和长任务可观测性补强。审计报告见 `docs/code-audit-v0.5.8-20260525.md`。
+
 ## 迭代原则
 
 - 不增加默认采集频率、请求次数、DNS 查询目标或并发强度。
@@ -274,3 +276,43 @@
 - 测试结果只进入 v2 observation / latest Redis，不影响旧页面和站点健康结论。
 - 所有测试 payload 都保持无害、可解释、可在 WAF 日志中识别。
 - 误配置时安全失败，不发起请求。
+
+---
+
+### v0.5.8 - 审计发现修复与轻探测边界加固
+
+**状态：** 计划中
+**范围：** 安全边界 / 运行可观测性 / WAF canary 可信度 / Redis summary 治理
+**目标：** 修复 v0.5.8 代码审计发现的中低风险问题，让默认关闭的轻探测能力在生产启用时更可控、更可信。
+
+#### Focus
+
+- page_assets SSRF 边界补强。
+- WAF canary 启动行为和结果判定收口。
+- 长任务 run state 进度可见。
+- summary target 索引轻量清理。
+
+#### Tasks
+
+- [ ] 为 `page_assets` 增加解析后 IP 校验，拒绝 loopback、private、link-local、multicast、unspecified 等地址。
+- [ ] 为 `page_assets` 增加单元测试：同注册域资源解析到 `127.0.0.1` / `10.0.0.1` 时不发起请求，公网地址正常放行。
+- [ ] 为 `waf_canary` 增加 `run_on_start` 配置，默认 `false`；本地测试可显式设为 `true`。
+- [ ] 调整 WAF canary 结果语义：`blocked=true` 即可计入拦截命中，状态码差异单独记录为 `status_code_expected=false` 与 `status_code_unexpected_count`。
+- [ ] 为 WAF canary 增加 `max_targets_per_run`，默认 `0` 表示不限；被截断时记录 `truncated_target_count`。
+- [ ] 在 light probe 加载目标后立即刷新 running run state，并在长任务执行中按目标进度刷新计数。
+- [ ] 为 site summary target Redis set 增加轻量清理：target summary 缺失或 site_id 不匹配时从索引中移除。
+- [ ] 更新 `docs/v2-observation-payload.md`，记录 WAF canary 新字段和 page_assets 私网地址拒绝语义。
+
+#### Acceptance Criteria
+
+- 默认配置下不会因为 v0.5.8 增强产生新的网络请求。
+- 启用 `waf_canary` 但未配置 `run_on_start=true` 时，服务启动不会立即执行 WAF canary。
+- WAF canary 对 `400/403/405/414/415` 的拦截结果解释一致，减少假阴性。
+- 长任务运行中 Redis run state 能看到目标总数和已完成计数。
+- page_assets 不会请求解析到内网或本机地址的资源。
+- `gofmt -l .`、`go test ./...`、`go vet ./...` 通过。
+
+#### Notes
+
+- 本阶段不新增协议、不新增 SQL、不改 backend / Nuxt / admin。
+- `v0.5.8` 是加固版本，不扩大探测范围。
