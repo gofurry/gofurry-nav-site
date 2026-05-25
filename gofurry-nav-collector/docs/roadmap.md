@@ -164,6 +164,49 @@
 - 文档能支持后端 v2 API 开发，不需要继续追 collector 源码确认字段含义。
 - collector v2 后续新增字段必须保持 additive，不破坏已稳定字段。
 
+---
+
+### v0.6.5 - 后端 v2 前审计修复
+
+**状态：** 计划中
+**范围：** 安全 / 稳定性 / 性能 / 配置治理 / 测试
+**目标：** 修复 `docs/code-audit-v0.6.5-20260525.md` 中进入后端 v2 前必须处理的 collector 风险，确保 v2 数据源可以更稳地被后端消费。
+
+#### Focus
+
+- 先处理可达依赖漏洞和工具链风险。
+- 控制 observation 历史派生查询成本。
+- 收敛主动 light probe 的启动行为和配置默认值。
+- 清理仓库内真实配置和遗留不安全 helper。
+
+#### Tasks
+
+- [ ] 升级 Go toolchain 到 `1.26.3+`，升级 `golang.org/x/net` 到 `v0.55.0+`，重新运行 `govulncheck`。
+- [ ] 新增手动 SQL 脚本，为 `gfn_collector_observation` 补充 `(site_id, target, protocol, observed_at DESC, id DESC)` 并发索引。
+- [ ] 为 trend / change event 派生增加更明确的查询预算、开关或去抖，避免每次 summary 更新都无条件放大历史查询。
+- [ ] 为 RDAP、robots.txt、security.txt、page_assets、port_check 增加统一 `run_on_start` 配置，默认关闭；保留显式开启时的立即运行能力。
+- [ ] 将仓库内 `conf/server.yaml` 收敛为安全示例配置或拆出 `conf/server.example.yaml`，真实本地配置放入 ignored local 文件。
+- [ ] 删除或加固 `common/util/http.go` 中无调用点的遗留 HTTP helper，移除 `InsecureSkipVerify`、无界 `ReadAll` 和无界 HTML parse 风险。
+- [ ] 缩小 RDAP bootstrap 缓存锁范围，避免持锁执行网络 I/O。
+- [ ] 为上述修复补充单元测试和配置加载测试。
+
+#### Acceptance Criteria
+
+- `go run golang.org/x/vuln/cmd/govulncheck@latest ./...` 不再报告 collector 可达漏洞；如有残留项必须写明接受风险。
+- `gofmt -l .` 为空。
+- `go test ./...` 通过。
+- `go vet ./...` 通过。
+- `git diff --check` 通过。
+- 仓库内不再跟踪真实 DB / Redis 密码。
+- light probe 默认不会因服务重启立即发起全量低频探测。
+- trend / change event 的历史查询有索引或预算保护。
+
+#### Notes
+
+- 本阶段仍不新增采集协议、不新增默认探测强度、不改旧 Redis key、旧表、旧接口或前端展示。
+- SQL 索引脚本只手动执行，生产执行时必须确认 `CREATE INDEX CONCURRENTLY` 不在事务块中。
+- 修复完成后再进入后端 `/api/v2/nav` 的正式实现会更稳。
+
 ## 暂不计划
 
 - 不做新的主动协议扩张。
