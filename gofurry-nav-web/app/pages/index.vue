@@ -3,5 +3,5 @@
 </template>
 
 <script setup lang="ts">
-await navigateTo({ path: '/nav', query: { mode: 'sfw' } }, { redirectCode: 302 })
+await navigateTo('/nav', { redirectCode: 302 })
 </script>

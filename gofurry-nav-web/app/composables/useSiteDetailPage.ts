@@ -35,6 +35,19 @@ function extractPrimaryDomain(rawDomain: unknown): string {
   return rawDomain
 }
 
+function extractRouteParam(value: unknown): string {
+  const rawValue = Array.isArray(value) ? value[0] : value
+  if (typeof rawValue !== 'string') {
+    return ''
+  }
+
+  try {
+    return decodeURIComponent(rawValue).trim()
+  } catch {
+    return rawValue.trim()
+  }
+}
+
 function parseDnsRecord(record: DnsRecord | null): DnsRecord | null {
   if (!record) {
     return null
@@ -55,23 +68,20 @@ function parseDnsRecord(record: DnsRecord | null): DnsRecord | null {
 export async function useSiteDetailPage() {
   const route = useRoute()
   const { locale } = useI18n()
-  const config = useRuntimeConfig()
   const navApi = useApi('nav')
   const navV2Api = useApi('navV2')
 
   const siteId = computed(() => String(route.params.id ?? ''))
+  const pathDomain = computed(() => extractRouteParam(route.params.domain))
   const queryDomain = computed(() => {
     const value = route.query.domain
     return typeof value === 'string' ? value : ''
   })
+  const selectedDomain = computed(() => pathDomain.value || queryDomain.value)
   const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
-  const healthSummaryEnabled = computed(() => {
-    const enabled = config.public.navHealthSummaryEnabled
-    return String(enabled) === 'true'
-  })
 
   const asyncData = await useAsyncData<SiteDetailPageData>(
-    () => `site-detail:${route.path}:${siteId.value}:${queryDomain.value}:${lang.value}`,
+    () => `site-detail:${route.path}:${siteId.value}:${selectedDomain.value}:${lang.value}`,
     async () => {
       const siteInfo = await navApi<SiteInfo>('/nav/site/getSiteDetail', {
         query: {
@@ -80,7 +90,7 @@ export async function useSiteDetailPage() {
         },
       }).catch(() => null)
 
-      let resolvedDomain = queryDomain.value
+      let resolvedDomain = selectedDomain.value
       if (!resolvedDomain && siteId.value) {
         const siteList = await navApi<Site[]>('/nav/page/site/list', {
           query: {
@@ -92,7 +102,7 @@ export async function useSiteDetailPage() {
       }
 
       if (!resolvedDomain) {
-        const siteHealthSummary = healthSummaryEnabled.value && siteId.value
+        const siteHealthSummary = siteId.value
           ? await navV2Api<SiteHealthSummary>(`/nav/sites/${siteId.value}/summary`).catch(() => null)
           : null
         return {
@@ -122,10 +132,10 @@ export async function useSiteDetailPage() {
             domain: resolvedDomain,
           },
         }).catch(() => null),
-        healthSummaryEnabled.value && siteId.value
+        siteId.value
           ? navV2Api<SiteHealthSummary>(`/nav/sites/${siteId.value}/summary`).catch(() => null)
           : Promise.resolve(null),
-        healthSummaryEnabled.value && siteId.value
+        siteId.value
           ? navV2Api<TargetHealthSummary>(`/nav/sites/${siteId.value}/targets/${encodeURIComponent(resolvedDomain)}/summary`).catch(() => null)
           : Promise.resolve(null),
       ])
@@ -141,7 +151,7 @@ export async function useSiteDetailPage() {
       }
     },
     {
-      watch: [siteId, queryDomain, lang],
+      watch: [siteId, selectedDomain, lang],
       default: () => ({
         siteInfo: null,
         domain: '',
@@ -158,7 +168,7 @@ export async function useSiteDetailPage() {
     ...asyncData,
     siteId,
     queryDomain,
+    pathDomain,
     lang,
-    healthSummaryEnabled,
   }
 }

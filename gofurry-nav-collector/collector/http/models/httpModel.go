@@ -26,6 +26,7 @@ type HTTPModel struct {
 	HTMLLang             string              `json:"htmlLang,omitempty"`
 	MetaRefresh          *HTTPMetaRefresh    `json:"metaRefresh,omitempty"`
 	IconLinks            []HTTPLinkInfo      `json:"iconLinks,omitempty"`
+	ManifestLink         *HTTPLinkInfo       `json:"manifestLink,omitempty"`
 	CookieSummary        *HTTPCookieSummary  `json:"cookieSummary,omitempty"`
 	ServerHints          *HTTPServerHints    `json:"serverHints,omitempty"`
 	CrossOriginSummary   *HTTPCrossOrigin    `json:"crossOriginSummary,omitempty"`
@@ -46,36 +47,52 @@ type HTTPModel struct {
 	RemoteAddr           string              `json:"-"` // v2 observation 实际 TCP 对端
 	RemoteIP             string              `json:"-"` // v2 observation 实际 TCP 对端 IP
 	BodyReadBytes        int64               `json:"-"` // v2 observation 实际读取字节数
+	BodyTruncated        bool                `json:"-"` // v2 observation 响应体是否被采集上限截断
+	BodyLimitBytes       int64               `json:"-"` // v2 observation 响应体读取上限
 	ContentEncoding      string              `json:"-"` // v2 observation Content-Encoding
 	Compressed           bool                `json:"-"` // v2 observation 是否压缩响应
 	CacheControl         string              `json:"-"` // v2 observation Cache-Control
 	ETag                 string              `json:"-"` // v2 observation ETag
 	LastModified         string              `json:"-"` // v2 observation Last-Modified
+	ContentLengthHeader  int64               `json:"-"` // v2 observation Content-Length 响应头值
+	TransferEncoding     []string            `json:"-"` // v2 observation Transfer-Encoding
+	IsChunked            bool                `json:"-"` // v2 observation 是否 chunked 传输
+	HTMLCharset          string              `json:"-"` // v2 observation HTML charset
+	Doctype              string              `json:"-"` // v2 observation doctype
+	RobotsMetaPolicy     string              `json:"-"` // v2 observation robots meta 策略
+	CompressionRatio     float64             `json:"-"` // v2 observation 压缩比例估算
 
 	// TLS
-	TLSVersion          string    `json:"tlsVersion"`    // TLS 版本
-	CipherSuite         string    `json:"cipherSuite"`   // 加密套件
-	CertExpiry          time.Time `json:"certExpiry"`    // 证书过期时间
-	CertDaysLeft        int64     `json:"certDaysLeft"`  // 证书剩余天数
-	CertIssuer          string    `json:"certIssuer"`    // 签发机构
-	CertIssuerOrg       []string  `json:"certIssuerOrg"` // 签发组织
-	CertDNSNames        []string  `json:"certDNSNames"`  // 绑定域名
-	CertPubKeyAlg       string    `json:"certPubKeyAlg"` // 公钥算法
-	CertSigAlg          string    `json:"certSigAlg"`    // 签名算法
-	CertEmail           []string  `json:"certEmail"`     // 绑定邮箱
-	CertIsCA            bool      `json:"certIsCA"`      // 是否CA
-	CertCollected       bool      `json:"-"`             // v2 observation 是否采集到证书
-	CertVerified        bool      `json:"-"`             // v2 observation 证书是否校验通过
-	VerifyError         string    `json:"-"`             // v2 observation 证书校验失败原因
-	TLSHandshake        string    `json:"-"`             // v2 observation TLS 握手状态
-	CertNotBefore       time.Time `json:"-"`             // v2 observation 证书生效时间
-	CertNotAfter        time.Time `json:"-"`             // v2 observation 证书过期时间
-	CertChainLen        int       `json:"-"`             // v2 observation 证书链长度
-	CertSubjectCN       string    `json:"-"`             // v2 observation 证书 Subject CN
-	CertSANCount        int       `json:"-"`             // v2 observation 证书 SAN 数量
-	OCSPStapled         bool      `json:"-"`             // v2 observation 是否带 OCSP Staple
-	SCTCount            int       `json:"-"`             // v2 observation SCT 数量
-	VerifyErrorCategory string    `json:"-"`             // v2 observation 证书校验错误分类
+	TLSVersion            string    `json:"tlsVersion"`    // TLS 版本
+	CipherSuite           string    `json:"cipherSuite"`   // 加密套件
+	CertExpiry            time.Time `json:"certExpiry"`    // 证书过期时间
+	CertDaysLeft          int64     `json:"certDaysLeft"`  // 证书剩余天数
+	CertIssuer            string    `json:"certIssuer"`    // 签发机构
+	CertIssuerOrg         []string  `json:"certIssuerOrg"` // 签发组织
+	CertDNSNames          []string  `json:"certDNSNames"`  // 绑定域名
+	CertPubKeyAlg         string    `json:"certPubKeyAlg"` // 公钥算法
+	CertSigAlg            string    `json:"certSigAlg"`    // 签名算法
+	CertEmail             []string  `json:"certEmail"`     // 绑定邮箱
+	CertIsCA              bool      `json:"certIsCA"`      // 是否CA
+	CertCollected         bool      `json:"-"`             // v2 observation 是否采集到证书
+	CertVerified          bool      `json:"-"`             // v2 observation 证书是否校验通过
+	VerifyError           string    `json:"-"`             // v2 observation 证书校验失败原因
+	TLSHandshake          string    `json:"-"`             // v2 observation TLS 握手状态
+	CertNotBefore         time.Time `json:"-"`             // v2 observation 证书生效时间
+	CertNotAfter          time.Time `json:"-"`             // v2 observation 证书过期时间
+	CertChainLen          int       `json:"-"`             // v2 observation 证书链长度
+	CertSubjectCN         string    `json:"-"`             // v2 observation 证书 Subject CN
+	CertSANCount          int       `json:"-"`             // v2 observation 证书 SAN 数量
+	OCSPStapled           bool      `json:"-"`             // v2 observation 是否带 OCSP Staple
+	SCTCount              int       `json:"-"`             // v2 observation SCT 数量
+	VerifyErrorCategory   string    `json:"-"`             // v2 observation 证书校验错误分类
+	CertSerialNumber      string    `json:"-"`             // v2 observation 证书序列号
+	CertFingerprintSHA256 string    `json:"-"`             // v2 observation 证书 SHA256 指纹
+	CertSPKISHA256        string    `json:"-"`             // v2 observation SPKI SHA256 指纹
+	CertPublicKeyBits     int       `json:"-"`             // v2 observation 公钥位数
+	CertSubjectOrg        []string  `json:"-"`             // v2 observation Subject 组织
+	CertIssuerCN          string    `json:"-"`             // v2 observation Issuer CN
+	CertChainIssuers      []string  `json:"-"`             // v2 observation 证书链签发者
 
 	// 其他
 	StartTime    models.LocalTime `json:"startTime"` // 请求开始时间
@@ -101,6 +118,7 @@ type HTTPSaveModel struct {
 	HTMLLang      string              `json:"htmlLang,omitempty"`
 	MetaRefresh   *HTTPMetaRefresh    `json:"metaRefresh,omitempty"`
 	IconLinks     []HTTPLinkInfo      `json:"iconLinks,omitempty"`
+	ManifestLink  *HTTPLinkInfo       `json:"manifestLink,omitempty"`
 	CookieSummary *HTTPCookieSummary  `json:"cookieSummary,omitempty"`
 	ServerHints   *HTTPServerHints    `json:"serverHints,omitempty"`
 	CrossOrigin   *HTTPCrossOrigin    `json:"crossOriginSummary,omitempty"`

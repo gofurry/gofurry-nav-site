@@ -1,156 +1,668 @@
-# v2 Observation Payload 说明
+# v2 Observation Payload 字段说明
 
-本文记录 `gofurry-nav-collector` 当前已经写入 `gfn_collector_observation.payload` 与 v2 latest Redis key 的协议字段。
+本文档记录 `gofurry-nav-collector` 写入 `gfn_collector_observation.payload` 与 `collector:v2:latest:{protocol}:{site_id}` 的主要字段。所有字段都只是 observation 信号，用于后端 v2、前端详情页和人工排查参考，不直接等同于站点健康结论。
 
-这些字段都是 observation 信号，只表示一次采集观察到的事实或风险提示，不是站点最终健康结论。旧 Redis key、旧日志表、旧 Nuxt 展示仍是兼容路径：`ping:result`、`request:{domain}`、`dns:{domain}`、`gfn_collector_log_ping`、`gfn_collector_log_http`、`gfn_collector_log_dns` 不因本文字段改变。
+旧 Redis key、旧日志表和旧前端展示结构仍是兼容路径；新增字段只在 v2 observation/latest Redis 中旁路出现。
 
-## 通用字段
+## 后端 v2 前稳定边界
 
-`gfn_collector_observation` 表外层字段包括：
+截至 collector v0.6.4，以下 v2 数据面进入后端 `/api/v2/nav` 前的稳定消费集合：
 
-- `site_id`：站点 ID。
-- `target`：本次采集目标。
-- `protocol`：`ping`、`http`、`dns`。
-- `status`：本次协议采集状态。
-- `observed_at`：采集时间。
-- `duration_ms`：本次协议探测墙钟耗时。
-- `error_code` / `error_message`：采集失败或降级原因。
-- `payload`：协议细节 JSON。
-- `schema_version`：当前为 `1`。
-- `collector_id` / `job_id`：v0.5.0 起写入 latest document，并在 payload 为对象时作为旁路追踪字段写入 payload。
+- `gfn_collector_observation`：raw observation 历史表，适合详情、历史、排障和后续后端聚合。
+- `collector:v2:latest:{protocol}:{site_id}`：site 级协议最新观测，保留兼容。
+- `collector:v2:latest:{protocol}:{site_id}:{target}`：target 级协议最新观测，后端 v2 优先读取。
+- `collector:v2:summary:target:{site_id}:{target}`：target 健康摘要。
+- `collector:v2:summary:site:{site_id}`：site 聚合健康摘要。
+- `collector:v2:summary:site_targets:{site_id}`：site 下 target summary key 索引。
+- `collector:v2:trend:target:{site_id}:{target}`：target 级 24h / 7d 历史趋势摘要。
+- `collector:v2:change:target:{site_id}:{target}`：target 级低噪声变化事件摘要。
+- `collector:v2:run:{protocol}:latest`：协议最新运行状态。
+- `collector:v2:run:{protocol}:{job_id}`：协议单次运行状态，默认 168 小时 TTL。
 
-v2 latest Redis key 为：
+冻结规则：
 
-- `collector:v2:latest:ping:{site_id}`
-- `collector:v2:latest:http:{site_id}`
-- `collector:v2:latest:dns:{site_id}`
+- 后端 v2 开始接入后，以上 key 的含义、核心字段名和 status/reason code 语义不做破坏性重命名。
+- 后续 collector 只能做兼容新增字段；后端应忽略未知字段。
+- light probe、edge hints、trend、change event 都是旁路信息，不直接作为站点上下架、排序或 down 判断依据。
+- 主动 light probe 仍需显式开启；默认配置不应扩大生产目标压力。
 
-v0.4.0 起，collector 还会在开启 v2 latest Redis 时写入更适合健康聚合的旁路 key：
+## Summary Status
 
-- `collector:v2:latest:{protocol}:{site_id}:{target}`：采集域名级 latest，保留多域名站点的明细。
-- `collector:v2:summary:target:{site_id}:{target}`：单采集域名健康摘要。
-- `collector:v2:summary:site:{site_id}`：站点级健康摘要，由该站点所有 target summary 聚合得到。
+v2 summary 目前只由 Ping / HTTP / DNS / TLS 相关信号参与健康聚合；RDAP、robots.txt、security.txt、page_assets、port_check、waf_canary 和 edge hints 都是旁路参考，不直接改变健康状态。
 
-summary 状态包括：
+| status | 中文含义 | 使用边界 |
+|---|---|---|
+| `healthy` | 当前主要访问链路健康 | HTTP 可用，且没有参与聚合的 warning/degraded/down 信号。 |
+| `warning` | 需要关注 | HTTP 可用，但 DNS、Ping、TLS 即将过期或 DNS risk_flags 等出现观察信号。 |
+| `degraded` | 降级 | HTTP 失败但尚未满足 down 条件，或 TLS 校验失败等影响访问信任的信号出现。 |
+| `unknown` | 状态未知 | 缺少可用 HTTP 观测、观测过期，或站点没有可聚合 target。 |
+| `down` | 不可用 | HTTP 与 DNS 均失败，或站点下所有 target 均为 down。 |
 
-- `healthy`：当前 HTTP 访问正常，未发现需要关注的已启用协议信号。
-- `warning`：当前 HTTP 访问正常，但 Ping、DNS、TLS 临期等 observation 需要关注。
-- `degraded`：HTTP 或 TLS/DNS 观测显示可用性或安全性下降，但不确定整站不可用。
-- `unknown`：HTTP observation 缺失或过期，无法判断访客是否可打开。
-- `down`：非常克制地使用；当前规则要求目标 HTTP 失败且 DNS 也失败，站点级则要求所有采集目标都为 `down`。
+## Reason Code 字典
 
-summary 仍然是旁路 observation 汇总，不替换旧 Redis key、旧表或旧前端展示。
+`reason_codes` 是稳定英文 key，`reason_messages` 是中文说明。后端 v2 应优先使用 `reason_codes` 做逻辑判断，用本表或后端自己的 i18n 字典做展示文案。`affects_health=true` 表示该 reason 当前参与 summary 状态聚合。
 
-v0.5.0 起，collector 会额外写入单轮运行状态 Redis key：
+| code | message_zh | severity | scope | affects_health |
+|---|---|---|---|---|
+| `http_missing_or_stale` | HTTP 观测缺失或已过期，无法判断访客是否可打开 | unknown | target | true |
+| `http_failed` | HTTP 访问失败 | degraded | target | true |
+| `dns_failed` | DNS 解析也失败 | down | target | true |
+| `dns_missing_or_stale` | DNS 观测缺失或已过期 | warning | target | true |
+| `dns_failed_but_http_ok` | DNS 失败但 HTTP 当前仍可访问 | warning | target | true |
+| `ping_failed_but_http_ok` | Ping 失败但 HTTP 当前仍可访问 | warning | target | true |
+| `dns_risk_private_ip` | DNS observation 出现风险信号: private_ip | warning | target | true |
+| `dns_risk_low_ttl` | DNS observation 出现风险信号: low_ttl | warning | target | true |
+| `dns_risk_nxdomain_with_answer` | DNS observation 出现风险信号: nxdomain_with_answer | warning | target | true |
+| `dns_risk_ptr_empty` | DNS observation 出现风险信号: ptr_empty | warning | target | true |
+| `dns_risk_other` | DNS observation 出现未知风险信号 | warning | target | true |
+| `tls_verify_expired` | TLS 证书校验未通过: expired | degraded | target | true |
+| `tls_verify_not_yet_valid` | TLS 证书校验未通过: not_yet_valid | degraded | target | true |
+| `tls_verify_hostname_mismatch` | TLS 证书校验未通过: hostname_mismatch | degraded | target | true |
+| `tls_verify_unknown_authority` | TLS 证书校验未通过: unknown_authority | degraded | target | true |
+| `tls_verify_incompatible_usage` | TLS 证书校验未通过: incompatible_usage | degraded | target | true |
+| `tls_verify_other` | TLS 证书校验未通过: other | degraded | target | true |
+| `tls_cert_expired` | TLS 证书已过期 | degraded | target | true |
+| `tls_cert_expiring_soon` | TLS 证书将在 30 天内过期 | warning | target | true |
+| `no_target_summary` | 没有可用的采集目标健康摘要 | unknown | site | true |
+| `all_targets_down` | 所有采集目标都判定为 down | down | site | true |
+| `all_targets_unknown` | 所有采集目标状态未知 | unknown | site | true |
+| `some_targets_degraded` | 部分采集目标不可用或降级 | degraded | site | true |
+| `some_targets_warning` | 部分采集目标存在需要关注的观测信号 | warning | site | true |
 
-- `collector:v2:run:{protocol}:latest`：某协议最近一轮运行状态。
-- `collector:v2:run:{protocol}:{job_id}`：某协议指定 job 的运行状态，默认保留 168 小时。
+## 后端 v2 消费建议
 
-run state 包含 `collector_id`、`job_id`、`protocol`、`status`、`started_at`、`finished_at`、`duration_ms`、`target_count`、`success_count`、`failure_count`、`skipped_count`、`error_count`、`skip_reason`。这些字段只用于运维排查和人工观察，不参与旧页面主链路。
+- 站点详情优先读取 `collector:v2:summary:site:{site_id}` 与 `collector:v2:summary:target:{site_id}:{target}`；raw observation 更适合历史详情、排障和趋势计算。
+- 趋势展示读取 `collector:v2:trend:target:{site_id}:{target}`；它是从 observation 历史派生的旁路摘要，缺失时不应影响站点详情主展示。
+- 变化展示读取 `collector:v2:change:target:{site_id}:{target}`；它只比较最近两次成功观测，用来解释“字段发生了什么变化”，缺失时不应影响健康状态。
+- 展示逻辑优先依赖 `status` 与 `reason_codes`，不要解析 `reason_messages` 文本做判断。
+- `light_probe` 系列协议和 `edge_provider_hints` 是治理/安全参考信号，不应直接作为站点上下架、排序或 down 判断依据。
+- 后端 v2 对字段应采用兼容读取策略：未知字段忽略，缺失字段使用安全默认值，避免 collector 后续 additive 字段影响接口稳定。
 
-可选多实例 lease key 为 `collector:v2:lease:{protocol}`，默认关闭。启用后仅用于避免多实例重复执行同一协议采集，不改变 observation 或 summary 的健康语义。
+## 字段契约速查
 
-## Ping Payload
+### Summary
 
-Ping v2 payload 当前包含：
+| 字段 | 类型 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `site_id` | number | 否 | collector domain/site | 是 |
+| `target` | string | target summary 否 | collector target | 是 |
+| `status` | string | 否 | summary builder | 是 |
+| `reason_codes` | string[] | 否 | reason 字典 | 是 |
+| `reason_messages` | string[] | 否 | reason 字典中文文案 | 否 |
+| `protocols` | object | target summary 否 | Ping / HTTP / DNS latest | 是 |
+| `canonical_target_hint` | object | 是 | HTTP target / final URL / canonical URL 保守比较 | 否 |
+| `target_relation_hints` | object[] | 是 | target host、final host、canonical host 关系判断 | 否 |
+| `edge_provider_hints` | object[] | 是 | HTTP / DNS / TLS 被动推断 | 否 |
 
-- `icmp_status`：`reachable` 或 `unreachable`。
-- `avg_rtt_ms`：平均 RTT，失败时为 `null`。
-- `min_rtt_ms`、`max_rtt_ms`、`stddev_rtt_ms`：同一次 Ping 的 RTT 范围和抖动统计，失败时为 `null`。
-- `jitter_ms`：当前先以 RTT 标准差作为保守近似。
-- `loss_rate`：丢包率。
-- `packets_sent`、`packets_recv`、`packets_recv_duplicates`：本轮发包、收包、重复包数量。
-- `resolved_ip`：本轮 Ping 解析并实际访问到的 IP。
-- `duration_ms`：单目标 Ping 探测墙钟耗时。
-- `error_code`：`ping_init_failed`、`ping_run_failed`、`ping_unreachable` 或空字符串。
-- 兼容字段：`delay_ms`、`legacy_delay`、`legacy_loss`、`legacy_status`。
+### Trend Summary
 
-Ping 只作为辅助信号；是否影响站点整体健康状态由后续 summary 规则决定。
+| 字段 | 类型 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `site_id` / `target` | number / string | 否 | trend builder 入参 | 否 |
+| `windows.24h` / `windows.7d` | object | 否 | 最近 24 小时 / 7 天 observation | 否 |
+| `protocols.{protocol}.observation_count` | number | 否 | observation 行数 | 否 |
+| `protocols.{protocol}.success_rate` | number | 否 | observation status 统计 | 否 |
+| `protocols.{protocol}.avg_duration_ms` / `p95_duration_ms` | number | 是 | observation duration_ms | 否 |
+| `protocols.http.http.avg_response_time_ms` / `p95_response_time_ms` | number | 是 | HTTP payload `response_time_ms` | 否 |
+| `protocols.ping.ping.avg_rtt_ms` / `avg_loss_rate` / `avg_jitter_ms` | number | 是 | Ping payload | 否 |
+| `protocols.dns.dns.risk_flag_counts` / `latest_risk_flags` | object / string[] | 是 | DNS payload `risk_flags` | 否 |
+| `protocols.dns.dns.latest_ttl_*` / `previous_ttl_*` | number | 是 | DNS `response_summary` TTL 统计 | 否 |
+| `protocols.http.tls.latest_cert_days_left` / `previous_cert_days_left` | number | 是 | HTTP/TLS payload `cert_not_after` | 否 |
+| `protocols.http.tls.cert_issuer_changed` / `cert_fingerprint_changed` | bool | 否 | HTTP/TLS payload issuer/fingerprint 去重 | 否 |
 
-## HTTP / TLS Payload
+### Change Event Summary
 
-HTTP v2 payload 当前包含：
+| 字段 | 类型 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `site_id` / `target` | number / string | 否 | change builder 入参 | 否 |
+| `events` | object[] | 否 | 最近两次成功 observation 的字段比较 | 否 |
+| `events[].event_id` | string | 否 | protocol/category/field/observed_at 稳定生成 | 否 |
+| `events[].protocol` | string | 否 | `http`、`dns`、`port_check`、`rdap` | 否 |
+| `events[].category` | string | 否 | `http`、`tls`、`dns`、`port_check`、`rdap` | 否 |
+| `events[].field` | string | 否 | 发生变化的字段名 | 否 |
+| `events[].old_value` / `new_value` | any | 是 | 限长后的变化摘要 | 否 |
+| `events[].old_observed_at` / `new_observed_at` | string | 否 | 两次成功观测时间 | 否 |
+| `events[].detected_at` | string | 否 | 派生时间 | 否 |
 
-- HTTP 基础字段：`url`、`status_code`、`response_time_ms`、`content_length`、`title`、`server`、`headers`、`meta`。
-- 重定向字段：`redirects`、`redirect_chain`、`redirect_count`、`final_url`。
-- 响应类型：`content_type`。
-- 连接和下载阶段字段：`dns_lookup_ms`、`tcp_connect_ms`、`tls_handshake_ms`、`ttfb_ms`、`transfer_ms`。
-- 传输上下文字段：`http_protocol`、`remote_addr`、`remote_ip`、`body_read_bytes`、`compressed`、`content_encoding`。
-- 缓存摘要：`cache_policy.cache_control`、`cache_policy.etag`、`cache_policy.last_modified`。
-- 常见安全响应头是否存在：`security_headers`。
-- 常见安全响应头摘要：`security_header_summary`。
-- 页面语义字段：`canonical_url`、`html_lang`、`meta_refresh`、`icon_links`。
-- 页面 meta 扩展：`meta.author`、`meta.generator`、`meta.application_name`、`meta.theme_color`、`meta.robots`、`meta.viewport`。
-- 分享信息摘要：`open_graph`、`twitter_card`、`share_preview`。
-- 响应头补充摘要：`cookie_summary`、`server_hints`、`cross_origin_summary`、`content_language_effective`。
-- 访客视角提示：`page_text_summary`、`redirect_hint`。
-- TLS 兼容字段：`tls_version`、`cipher_suite`、`cert_expiry`、`cert_days_left`、`cert_issuer`、`cert_issuer_org`、`cert_dns_names`、`cert_pub_key_alg`、`cert_sig_alg`、`cert_email`、`cert_is_ca`。
-- TLS 语义字段：`cert_collected`、`cert_verified`、`verify_error`、`verify_error_category`、`tls_handshake`。
-- TLS 补充字段：`cert_not_before`、`cert_not_after`、`cert_chain_length`、`cert_subject_cn`、`cert_san_count`、`cert_signature_algorithm`、`cert_public_key_algorithm`、`ocsp_stapled`、`sct_count`。
+### Ping
 
-HTTP 仍使用 GET。v0.3.0 不启用 HEAD-first，也不改变重定向、超时、响应体上限和旧展示结构。
+| 字段 | 类型 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `icmp_status` | string | 否 | go-ping 结果 | 否 |
+| `avg_rtt_ms` / `min_rtt_ms` / `max_rtt_ms` / `stddev_rtt_ms` / `jitter_ms` | number | 是 | go-ping 统计 | 否 |
+| `loss_rate` | number | 否 | go-ping 统计 | 否 |
+| `packets_sent` / `packets_recv` / `packets_recv_duplicates` | number | 否 | go-ping 统计 | 否 |
+| `resolved_ip` / `resolved_ips` / `selected_ip` / `ip_family` | string / string[] | 是 | go-ping 解析结果 | 否 |
+| `icmp_blocked_suspected` | bool | 否 | Ping payload builder | 否 |
 
-`remote_addr` / `remote_ip` 表示本次 TCP 实际连到的对端，目标走代理时它可能是代理地址，不应被直接当成源站结论。
+### HTTP / TLS
 
-`security_header_summary` 当前会对这些 header 做保守结构化摘要：
+| 字段 | 类型 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `status_code` / `response_time_ms` | number | 否 | HTTP GET | HTTP latest status 参与 |
+| `http_protocol` / `remote_addr` / `remote_ip` | string | 是 | HTTP transport | 否 |
+| `dns_lookup_ms` / `tcp_connect_ms` / `tls_handshake_ms` / `ttfb_ms` / `transfer_ms` | number | 是 | httptrace | 否 |
+| `body_read_bytes` / `body_truncated` | number / bool | 否 | HTTP body reader | 否 |
+| `security_headers` / `security_header_summary` | object | 是 | HTTP headers | 否 |
+| `tls_handshake` | string | 否 | TLS connection state | 是 |
+| `cert_verified` / `verify_error_category` | bool / string | 是 | TLS verify | 是 |
+| `cert_not_after` | string | 是 | TLS leaf certificate | 是 |
+| `cert_fingerprint_sha256` / `cert_spki_sha256` | string | 是 | TLS leaf certificate | 否 |
 
-- `hsts`：`present`、`max_age`、`include_subdomains`、`preload`
-- `content_security_policy`：`present`、`has_default_src`、`unsafe_inline`、`unsafe_eval`、`wildcard_source`
-- `x_frame_options`：`present`、`mode`
-- `x_content_type_options`：`present`、`nosniff`
-- `referrer_policy`：`present`、`policy`
-- `permissions_policy`：`present`、`policy`
+### DNS
 
-这些摘要仍然只是 observation 信号，例如 `unsafe_inline=true` 只表示本次采到的 CSP 中出现了该项，不自动等价为站点存在确定风险结论。
+| 字段 | 类型 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `risk_flags` | string[] | 是 | DNS payload builder | 是 |
+| `response_summary` | object | 是 | DNS response | 否 |
+| `has_a` / `has_aaaa` / `ipv4_count` / `ipv6_count` | bool / number | 否 | DNS records | 否 |
+| `cname_chain_depth` / `cname_terminal` | number / string | 是 | DNS recursive result | 否 |
+| `name_server_hosts` / `mx_hosts` / `mx_priorities` / `soa` | array / object | 是 | DNS records | 否 |
+| `record_budget_exhausted` | bool | 否 | DNS query budget | 否 |
 
-v0.3.3 增加的页面语义字段来自同一次 HTTP GET 已经读取到的响应头和 HTML body，不会额外请求 favicon、manifest、图片或子资源：
+### Light Probe
 
-- `open_graph`：保守提取 `title`、`description`、`site_name`、`type`、`image`、`url`。
-- `twitter_card`：保守提取 `card`、`title`、`description`、`image`、`site`。
-- `meta_refresh`：记录是否存在 meta refresh、延迟秒数和目标 URL。
-- `icon_links`：只保存页面声明的 icon / apple-touch-icon / manifest 链接，不拉取资源内容。
-- `cookie_summary`：只保存 `Set-Cookie` 数量和 `Secure`、`HttpOnly`、`SameSite` 计数，不保存 Cookie 原文。
-- `server_hints`：只记录响应头或 meta 显式暴露的信息，例如 `server`、`x-powered-by`、`generator`，不做技术栈确定性推断。
-- `redirect_hint`：只提示 final URL、canonical、meta refresh 之间是否存在差异，不表示站点异常。
+| 协议 | 关键字段 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `rdap` | `registrable_domain`、`registrar`、`statuses`、`expires_at`、`nameservers` | 是 | RDAP 官方服务 | 否 |
+| `robots` | `exists`、`status_code`、`sitemap_count`、`global_disallow_all` | 否 | `/robots.txt` | 否 |
+| `security_txt` | `exists`、`contact`、`expires`、`policy`、`canonical` | 是 | security.txt | 否 |
+| `page_assets` | `icon`、`manifest`、`sha256`、`body_truncated` | 是 | HTTP latest 声明资源 | 否 |
+| `port_check` | `ports_checked`、`open_count`、`results` | 否 | TCP connect | 否 |
+| `waf_canary` | `cases_total`、`blocked_count`、`unexpected_pass_count`、`cases` | 否 | 授权 WAF canary 请求 | 否 |
 
-外部文本在 v2 payload 中做了限长：`title`、`server`、`meta`、`headers`、redirect URL、final URL、缓存相关 header、证书 issuer、证书 DNS names、证书 email、`verify_error`、`cert_subject_cn`、Open Graph、Twitter Card、icon link、页面摘要等都按固定上限截断。v0.3.3 新字段也会同步进入旧 `request:{domain}` JSON 和旧 HTTP 日志 JSON，但只作为向后兼容的追加字段。
+## Summary Edge Provider Hints
 
-## DNS Payload
+`edge_provider_hints` 是 v0.5.6 新增的被动推断字段，出现在 v2 target summary 和 site summary 的 target item 中。它只基于已有 HTTP / DNS / TLS latest payload，不新增任何请求。
 
-DNS v2 payload 当前仍按记录类型提供顶层结果，例如 `A`、`AAAA`、`CNAME`、`MX`、`NS`、`TXT`、`SOA`、`CAA`。
+```json
+{
+  "edge_provider_hints": [
+    {
+      "provider": "cloudflare",
+      "hint_type": "cdn",
+      "confidence": "high",
+      "evidence": [
+        {
+          "source": "http",
+          "field": "headers.cf-ray",
+          "value": "abc-HKG"
+        },
+        {
+          "source": "dns",
+          "field": "A.asn",
+          "value": "AS13335 (Cloudflare, Inc.)"
+        }
+      ]
+    }
+  ]
+}
+```
 
-每条 v2 DNS 记录包含：
+- `provider` 是保守推断的服务方线索，例如 `cloudflare`、`tencent_cloud`、`aliyun`、`aws_cloudfront`、`fastly`、`vercel`、`netlify`、`github_pages`。
+- `hint_type` 可能为 `cdn`、`waf`、`reverse_proxy`、`object_storage`、`hosting_platform`。
+- `confidence` 可能为 `low`、`medium`、`high`。单一 DNS/TLS 弱证据通常只给 `low`，明确 HTTP header 或多源证据才提高置信度。
+- `evidence` 中的 value 已限长；这些 hints 是 observation 线索，不是事实判定，不参与健康状态计算。
 
-- `type`、`value`、`ttl`、`dnssec`。
-- `asn`、`country`、`city`、`provider_type`、`isp`。
-- `duration_ms`、`children`、`reverse_ptr`。
-- `risk_flags`：风险提示数组。
+## Summary Target Relation Hints
 
-顶层还包含聚合后的 `risk_flags`。当前风险标记包括：
+`canonical_target_hint` 与 `target_relation_hints` 是 v0.6.1 新增的目标治理提示字段。target summary 会直接输出这些字段；site summary 的 `targets[]` 会复制对应 target 的提示，site summary 顶层的 `target_relation_hints` 只记录同一站点下重复 target host / 重复 final host 的聚合提示。
 
-- `private_ip`
-- `low_ttl`
-- `nxdomain_with_answer`
-- `ptr_empty`
+这些字段只基于已有 HTTP latest 中的 `final_url`、`canonical_url` 与采集 target 做保守比较，不新增请求、不修改 `gfn_collector_domain`、不自动合并域名、不改变健康状态。
 
-顶层还包含：
+### `canonical_target_hint`
 
-- `response_summary`：按记录类型保存 `rcode`、`authoritative`、`truncated`、`recursion_available`、`answer_count`、`authority_count`、`additional_count`、`ttl_min`、`ttl_max`、`ttl_avg`、`dnssec_rrsig_present`、`dnssec_ad`。
-- `cname_chain_depth`：本次 observation 中最大的递归 children 深度。
-- `mx_priorities`：MX 主机和优先级摘要。
-- `soa`：SOA 的 `ns`、`mbox`、`serial`、`refresh`、`retry`、`expire`、`minttl` 摘要。
+| 字段 | 类型 | 可空 | 说明 |
+|---|---|---:|---|
+| `target_host` | string | 否 | 当前采集 target 归一化后的 host。 |
+| `final_host` | string | 是 | HTTP 最终 URL 的 host。 |
+| `canonical_host` | string | 是 | 页面 canonical URL 的 host。 |
+| `preferred_host` | string | 是 | 优先使用 canonical host；没有 canonical 时使用 final host。 |
+| `relation` | string | 否 | `same_host`、`redirect_to_www`、`redirect_to_apex`、`redirect_to_related_host`、`redirect_to_external` 或 `unknown`。 |
+| `source` | string | 否 | `canonical_url` 或 `final_url`。 |
+| `final_url` | string | 是 | 限长后的最终 URL。 |
+| `canonical_url` | string | 是 | 限长后的 canonical URL。 |
 
-旧 `DNSRecord.hijacked` 仍保留在旧 Redis/旧表兼容路径中；v2 payload 不输出 `hijacked`。
+### target 级 `target_relation_hints`
 
-TXT / SPF / DMARC / CAA 相关文本只基于当前已采到的记录识别，不额外查询 `_dmarc` 或其他新目标。超长文本会包含：
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `relation` | string | `same_host`、`redirect_to_www`、`redirect_to_apex`、`redirect_to_related_host`、`redirect_to_external`。 |
+| `source` | string | `final_url` 或 `canonical_url`。 |
+| `target_host` | string | 当前采集 target host。 |
+| `related_host` | string | final/canonical URL 对应 host。 |
+| `value` | string | 限长后的 final/canonical URL。 |
 
-- `value_truncated=true`
-- `value_original_length`
-- `value_sha256`
-- `text_kind`：`txt`、`spf`、`dmarc` 或 `caa`
+### site 级 `target_relation_hints`
 
-## 后续边界
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `relation` | string | `duplicate_target_host` 或 `duplicate_final_host`。 |
+| `host` | string | 重复出现的 host。 |
+| `targets` | string[] | 关联到该 host 的采集 target 列表。 |
 
-- 健康状态聚合、协议权重、站点是否 `down` 属于 v0.4.0。
-- TCP connect fallback、HTTP HEAD-first、DNS multi-resolver 属于后续可选协议能力，默认不启用。
-- v2 observation 仍是旁路数据面；切换后端或前端读取路径需要单独灰度计划。
+这些 relation 是治理参考：后端 v2 可以展示它们帮助维护者理解 `example.com` / `www.example.com` / 跳转后域名之间的关系，但不能把它们当作自动跳转、自动归并或删除采集域名的依据。
+
+## Trend Summary
+
+v0.6.2 起，collector 会在 v2 observation DB 与 latest Redis 均开启时，从已有 `gfn_collector_observation` 派生 target 级趋势摘要，并写入：
+
+```text
+collector:v2:trend:target:{site_id}:{target}
+```
+
+趋势派生不新增探测，只查询最近 7 天、最多 3000 条 `ping` / `http` / `dns` observation，并生成 `24h` 与 `7d` 两个窗口。查询有 2 秒超时；失败只记录日志，不影响旧 Redis、旧表、latest、summary 或前端展示。
+
+```json
+{
+  "site_id": 133,
+  "target": "go-furry.com",
+  "windows": {
+    "24h": {
+      "since": "2026-05-24T12:00:00Z",
+      "until": "2026-05-25T12:00:00Z",
+      "protocols": {
+        "http": {
+          "protocol": "http",
+          "observation_count": 4,
+          "success_count": 4,
+          "failure_count": 0,
+          "success_rate": 1,
+          "avg_duration_ms": 120,
+          "p95_duration_ms": 180,
+          "http": {
+            "avg_response_time_ms": 115,
+            "p95_response_time_ms": 170
+          },
+          "tls": {
+            "latest_cert_days_left": 80,
+            "previous_cert_days_left": 81,
+            "cert_issuer_changed": false,
+            "cert_fingerprint_changed": false
+          }
+        }
+      }
+    }
+  },
+  "generated_at": "2026-05-25T12:00:00Z",
+  "schema_version": 1
+}
+```
+
+当前趋势字段只供后端 v2 和人工排查展示使用，不参与现有健康摘要聚合。后续如果需要站点级趋势，可以由后端读取多个 target trend 后聚合，或者在 collector v0.6.4 收口时再评估是否增加 site trend key。
+
+## Change Event Summary
+
+v0.6.3 起，collector 会在 v2 observation DB 与 latest Redis 均开启时，从已有 observation 中派生 target 级变化摘要，并写入：
+
+```text
+collector:v2:change:target:{site_id}:{target}
+```
+
+变化事件不新增探测，只查询最近 60 天、最多 80 条 `http` / `dns` / `port_check` / `rdap` observation。每个协议只比较最近两次 `status=success` 的观测；失败观测会被忽略，避免一次网络抖动被误认为稳定变化。查询有 2 秒超时；失败只记录日志，不影响旧 Redis、旧表、latest、summary、trend 或前端展示。
+
+```json
+{
+  "site_id": 133,
+  "target": "go-furry.com",
+  "events": [
+    {
+      "event_id": "http:http:title:1780000000:1780003600",
+      "protocol": "http",
+      "category": "http",
+      "field": "title",
+      "old_value": "Old Title",
+      "new_value": "New Title",
+      "old_observed_at": "2026-05-24T12:00:00Z",
+      "new_observed_at": "2026-05-24T13:00:00Z",
+      "detected_at": "2026-05-24T13:00:05Z"
+    }
+  ],
+  "generated_at": "2026-05-24T13:00:05Z",
+  "schema_version": 1
+}
+```
+
+当前变化检测范围：
+
+- HTTP：`status_code`、`title`、`server`、`x_powered_by`、`final_url`、`security_headers`。
+- TLS：`cert_fingerprint_sha256`、`cert_issuer`、`cert_san_count`、`cert_not_after`。
+- DNS：`A`、`AAAA`、`cname_terminal`、`mx_hosts`、`name_server_hosts`、`soa_serial`。
+- Port check：每个端口的 `open`、`closed`、`timeout`、`filtered_suspected` 等状态变化。
+- RDAP：`statuses`、`expires_at`、`nameservers`。
+
+变化事件只保存摘要，外部文本最长 512 字符；它用于解释“最近发生过什么变化”，不发送通知，不触发告警，不参与当前健康状态聚合。
+
+## Ping
+
+Ping payload 保留旧兼容字段 `delay_ms`、`legacy_delay`、`legacy_loss`、`legacy_status`，并补充同一次 `go-ping` 统计中已经得到的信息。
+
+```json
+{
+  "icmp_status": "reachable",
+  "avg_rtt_ms": 42,
+  "min_rtt_ms": 35,
+  "max_rtt_ms": 50,
+  "stddev_rtt_ms": 4,
+  "jitter_ms": 4,
+  "loss_rate": 0,
+  "packets_sent": 5,
+  "packets_recv": 5,
+  "packets_recv_duplicates": 0,
+  "resolved_ip": "203.0.113.10",
+  "resolved_ips": ["203.0.113.10"],
+  "selected_ip": "203.0.113.10",
+  "ip_family": "ipv4",
+  "resolution_source": "go-ping",
+  "icmp_blocked_suspected": false,
+  "duration_ms": 5100,
+  "error_code": ""
+}
+```
+
+- `avg_rtt_ms`、`min_rtt_ms`、`max_rtt_ms`、`stddev_rtt_ms`、`jitter_ms`：失败或无有效 RTT 时为 `null`。
+- `resolved_ips`：当前阶段不额外做 DNS 解析，只从本次 ping 统计中得到的 IP 生成。
+- `icmp_blocked_suspected`：只表示“已解析 IP 但 ICMP 全丢包”的观测信号，不代表网站不可访问。
+
+## HTTP
+
+HTTP payload 继续使用同一次 GET 的响应、响应头和已读取 HTML body，不新增请求次数。
+
+```json
+{
+  "status_code": 200,
+  "response_time_ms": 812,
+  "http_protocol": "HTTP/2.0",
+  "remote_addr": "203.0.113.10:443",
+  "remote_ip": "203.0.113.10",
+  "dns_lookup_ms": 3,
+  "tcp_connect_ms": 8,
+  "tls_handshake_ms": 19,
+  "ttfb_ms": 120,
+  "transfer_ms": 24,
+  "body_read_bytes": 1987,
+  "body_truncated": false,
+  "content_length_header": 512,
+  "transfer_encoding": ["chunked"],
+  "is_chunked": true,
+  "html_charset": "utf-8",
+  "doctype": "<!doctype html>",
+  "robots_meta_policy": "index,follow",
+  "canonical_host_matches_final_host": true,
+  "compression_ratio_estimated": 0.25
+}
+```
+
+- `remote_addr` / `remote_ip` 是实际 TCP 对端；目标走代理时可能是代理地址，不应包装成源站结论。
+- `compression_ratio_estimated` 使用响应头 `Content-Length` 和实际读取 body 字节估算；缺少必要信息时为 `0`。
+- `html_charset`、`doctype`、`robots_meta_policy` 来自已读取 HTML，不抓取额外资源。
+
+## TLS
+
+TLS 字段基于当前 HTTPS 连接里拿到的证书链，不额外发起第二次请求。
+
+```json
+{
+  "cert_collected": true,
+  "cert_verified": true,
+  "verify_error": "",
+  "verify_error_category": "",
+  "tls_handshake": "collected",
+  "cert_serial_number": "123456789",
+  "cert_fingerprint_sha256": "hex...",
+  "cert_spki_sha256": "hex...",
+  "cert_public_key_bits": 2048,
+  "cert_subject_cn": "example.com",
+  "cert_subject_org": ["Example Org"],
+  "cert_issuer_cn": "Example CA",
+  "cert_chain_issuers": ["Example CA", "Root CA"],
+  "cert_chain_length": 2,
+  "cert_san_count": 3,
+  "ocsp_stapled": true,
+  "sct_count": 2
+}
+```
+
+- `cert_fingerprint_sha256`：叶子证书 DER 的 SHA256 指纹。
+- `cert_spki_sha256`：叶子证书 Subject Public Key Info 的 SHA256 指纹，适合识别同一公钥换证场景。
+- `cert_public_key_bits`：RSA/ECDSA/Ed25519 等常见公钥的位数；无法识别时为 `0`。
+- `verify_error_category` 仅做错误分类，可能值包括 `expired`、`not_yet_valid`、`hostname_mismatch`、`unknown_authority`、`incompatible_usage`、`other`。
+
+## DNS
+
+DNS payload 仍使用当前记录类型、当前 resolver 和 `MaxDepth=2`，不新增查询目标。旧 `DNSRecord.Hijacked` 不进入 v2 payload，v2 使用 `risk_flags` 表达观测信号。
+
+```json
+{
+  "risk_flags": ["low_ttl", "ptr_empty"],
+  "has_a": true,
+  "has_aaaa": false,
+  "ipv4_count": 2,
+  "ipv6_count": 0,
+  "cname_chain_depth": 1,
+  "cname_terminal": "edge.example.com.",
+  "name_server_hosts": ["ns1.example.com.", "ns2.example.com."],
+  "mx_hosts": ["mail.example.com."],
+  "ttl_spread": 295,
+  "mixed_private_public_ip": false,
+  "record_budget_exhausted": false
+}
+```
+
+- `response_summary` 继续按记录类型提供 `rcode`、`answer_count`、TTL 统计、DNSSEC AD/RRSIG 等摘要。
+- `mx_priorities` 和 `soa` 来自本次已有 MX/SOA 响应。
+- `mixed_private_public_ip` 只表示本次 payload 中同时出现私网/特殊 IP 与公网 IP，需要人工确认上下文。
+- TXT/SPF/DMARC/CAA 等外部文本继续做限长和 SHA256 摘要保护。
+
+## 低频轻探测
+
+`rdap`、`robots`、`security_txt` 是 v0.5.3 新增的低频旁路探测协议。它们默认关闭，只有 `collector.v2.enabled=true` 且对应 `collector.v2.light_probe.*.enabled=true` 时才会注册任务。
+
+这些结果只用于域名治理、访客视角和安全联系渠道参考，不参与当前健康摘要结论，也不影响 Ping / HTTP / DNS / TLS 主采集。
+
+### RDAP
+
+RDAP 按注册域归并查询，同一轮中 `www.example.com` 与 `api.example.com` 只查询一次 `example.com`，再把结果写回对应 target 的 observation/latest Redis。
+
+```json
+{
+  "registrable_domain": "example.com",
+  "rdap_server": "https://rdap.example/",
+  "registrar": "Example Registrar",
+  "statuses": ["active"],
+  "expires_at": "2030-01-01T00:00:00Z",
+  "nameservers": ["ns1.example.com", "ns2.example.com"],
+  "dnssec_delegation_signed": true,
+  "events_summary": {
+    "registration": "2020-01-01T00:00:00Z",
+    "expiration": "2030-01-01T00:00:00Z"
+  },
+  "raw_truncated": false
+}
+```
+
+- RDAP server 来自 IANA bootstrap JSON，进程内低频缓存，不新增 SQL 或 Redis 缓存。
+- 失败时 `status=failure`，`error_code` 可能为 `rdap_bootstrap_failed`、`rdap_no_server`、`rdap_request_failed`、`rdap_decode_failed`。
+- 不保存 RDAP 原始大 JSON，只提取治理摘要。
+
+### robots.txt
+
+robots.txt 按每个有效采集 target 低频请求一次 `/{robots.txt}`，scheme 复用采集域名的 TLS 配置。
+
+```json
+{
+  "exists": true,
+  "status_code": 200,
+  "content_type": "text/plain",
+  "sitemap_count": 2,
+  "sitemaps": [
+    "https://example.com/sitemap.xml"
+  ],
+  "global_disallow_all": false,
+  "user_agent_star_present": true,
+  "body_truncated": false
+}
+```
+
+- 只记录最多 `max_sitemap_links` 条 sitemap 链接，不抓取 sitemap 内容。
+- 404 会写入 `exists=false`，不视为 collector 程序错误。
+- 响应体受 `max_response_bytes` 限制，不保存全文。
+
+### security.txt
+
+security.txt 按每个有效采集 target 低频请求 `/.well-known/security.txt`，404 时再 fallback 到 `/security.txt`。
+
+```json
+{
+  "exists": true,
+  "path_used": "/.well-known/security.txt",
+  "status_code": 200,
+  "content_type": "text/plain",
+  "contact": ["mailto:security@example.com"],
+  "expires": "2030-01-01T00:00:00Z",
+  "policy": ["https://example.com/security-policy"],
+  "preferred_languages": ["zh,en"],
+  "canonical": ["https://example.com/.well-known/security.txt"],
+  "body_truncated": false
+}
+```
+
+- 只提取固定字段，不保存原始 security.txt 全文。
+- 字段值最长 512 字符，列表限项，避免外部文本膨胀。
+- 请求失败写 `status=failure` 和 `security_txt_request_failed`，不影响主采集。
+
+### Page Assets
+
+`page_assets` 基于 HTTP v2 latest 里已经存在的 HTML 声明工作，不会重新抓取首页。每个 target 单轮最多拉取 1 个 favicon 和 1 个 manifest；默认关闭。
+
+```json
+{
+  "http_latest_found": true,
+  "icon": {
+    "exists": true,
+    "source_url": "https://example.com/favicon.ico",
+    "selected_rel": "icon",
+    "selected_sizes": "32x32",
+    "status_code": 200,
+    "content_type": "image/png",
+    "content_length_header": 1024,
+    "body_read_bytes": 1024,
+    "body_truncated": false,
+    "sha256": "hex..."
+  },
+  "manifest": {
+    "exists": true,
+    "source_url": "https://example.com/site.webmanifest",
+    "status_code": 200,
+    "content_type": "application/manifest+json",
+    "body_read_bytes": 512,
+    "body_truncated": false,
+    "sha256": "hex...",
+    "name": "Example App",
+    "short_name": "Example",
+    "theme_color": "#ffffff",
+    "background_color": "#000000",
+    "display": "standalone",
+    "start_url": "https://example.com/start",
+    "scope": "https://example.com/",
+    "icons_count": 2
+  }
+}
+```
+
+- 只允许 `http` / `https` 资源 URL。
+- 默认只跟随 target 同注册域资源；跨站资源必须显式配置在 `allowed_asset_hosts`。
+- 发起请求前会解析资源 host，解析到 loopback、private、link-local、multicast、unspecified 等地址时跳过，写入 `skipped_reason=asset_ip_not_allowed`；解析失败写入 `asset_dns_resolve_failed`。
+- favicon 只保存元信息和 SHA256，不保存图片内容。
+- manifest 只保存摘要字段和 SHA256，不保存原始 manifest JSON。
+- 没有 HTTP latest、没有声明、资源 host 不允许、Content-Type 不允许、请求失败等场景会写 `exists=false` 和 `skipped_reason`，不影响主采集。
+
+### Port Check
+
+`port_check` 是 v0.5.5 新增的低频 TCP connect 轻探测协议。它默认关闭，启用后只检查配置中显式列出的端口；不内置默认端口列表，不抓 banner，不读取服务响应，不发送应用层协议 payload。
+
+```json
+{
+  "ports_configured": 3,
+  "ports_checked": 3,
+  "open_count": 2,
+  "closed_count": 1,
+  "timeout_count": 0,
+  "filtered_suspected_count": 0,
+  "skipped_count": 0,
+  "invalid_port_count": 0,
+  "duplicate_port_count": 0,
+  "truncated_port_count": 0,
+  "truncated": false,
+  "results": [
+    {
+      "port": 80,
+      "service_hint": "http",
+      "status": "open",
+      "duration_ms": 8,
+      "error_code": "",
+      "error_message": ""
+    },
+    {
+      "port": 3306,
+      "service_hint": "mysql",
+      "status": "closed",
+      "duration_ms": 2,
+      "error_code": "connection_refused",
+      "error_message": "connect: connection refused"
+    }
+  ]
+}
+```
+
+- `status` 只表示 TCP connect 结果，可能值为 `open`、`closed`、`timeout`、`filtered_suspected`、`skipped`。
+- `service_hint` 只是静态端口名提示，例如 `3306=mysql`、`5432=postgresql`、`6379=redis`、`9090=prometheus`、`3000=grafana`；它不代表真实服务识别。
+- Prometheus/Grafana 只作为普通端口提示，不接入 Prometheus 生态，不抓取 metrics，不访问 Web 页面。
+- `port_check.enabled=true` 表示维护者已确认当前采集目标处于授权探测范围内；该结果不参与当前健康摘要和站点状态判断。
+
+### WAF Canary
+
+`waf_canary` 是 v0.5.7 新增的低频 WAF 规则无害验证协议。它默认关闭；启用 `collector.v2.light_probe.waf_canary.enabled=true` 即表示维护者确认当前有效采集目标均处于授权验证范围内。默认每 30 天执行一次，不做失败重试，不参与健康摘要。
+
+```json
+{
+  "canary_path": "/.well-known/gofurry-waf-canary",
+  "cases_total": 12,
+  "cases_executed": 12,
+  "blocked_count": 11,
+  "expected_blocked_count": 11,
+  "expected_blocked_matched_count": 11,
+  "unexpected_pass_count": 0,
+  "network_error_count": 0,
+  "status_code_unexpected_count": 0,
+  "max_targets_per_run": 0,
+  "truncated_target_count": 0,
+  "target_run_truncated": false,
+  "cases": [
+    {
+      "case_id": "scanner_user_agent",
+      "category": "scanner_user_agent",
+      "method": "GET",
+      "expected_blocked": true,
+      "expected_status_codes": [403],
+      "status_code": 403,
+      "status_code_expected": true,
+      "blocked": true,
+      "matched_expected": true,
+      "duration_ms": 12,
+      "error_code": "",
+      "error_message": ""
+    }
+  ]
+}
+```
+
+- 默认 canary 路径为 `/.well-known/gofurry-waf-canary`，可通过 `canary_path` 覆盖；路径为空、绝对 URL、带 query/fragment 时会安全失败且不发起请求。
+- 默认 `run_on_start=false`，启用后只注册周期任务，不会在服务启动瞬间立即跑全量 canary；本地测试可显式设置 `run_on_start=true`。
+- 可配置 `max_targets_per_run` 限制单轮最多验证的 target 数量，默认 `0` 表示不限；被截断时写入 `truncated_target_count` 和 `target_run_truncated=true`。
+- 每个 target 执行一个 baseline GET 和 11 个基础规则 case：扫描器 UA、参数数量、URI 长度、SQLi 关键词、XSS 标记、命令注入标记、路径穿越标记、非法方法、非法 Content-Type、JSON 解析错误、JSON 危险关键字。
+- 请求带 `GoFurry-Nav-Collector-WAF-Canary/1.0` 类 User-Agent，便于 WAF 日志识别；不会携带 Cookie、Authorization、账号、Token 或真实用户数据。
+- `blocked=true` 只按响应码判断：`400`、`403`、`405`、`414`、`415` 视为拦截类响应；`404` 不视为拦截。
+- `matched_expected` 只表示“是否按预期拦截/放行”；状态码是否等于建议值由 `status_code_expected` 单独表达，差异会计入 `status_code_unexpected_count`，避免把 400/403/405/414/415 之间的拦截状态码差异误判为未拦截。
+- payload 只保存 case_id、分类、状态码、耗时和错误类别，不保存完整 query、body、URI 或测试样本原文。
+- 该能力是已授权站点的低频 WAF 回归验证，不是漏洞扫描、绕过测试、目录枚举或高频压测。

@@ -82,7 +82,6 @@
         :visible="activeSiteVisible"
         :position="activeSitePosition"
         :placement="activeSitePlacement"
-        :display-mode="displayMode"
         :ping-data="pingData"
         @get-popover-height="handleGetPopoverHeight"
         @mouseenter="cancelSiteHide"
@@ -107,7 +106,6 @@ const props = defineProps<{
   initialGroups?: Group[]
   initialSites?: Site[]
   initialPingData?: Record<string, Delay>
-  initialDisplayMode?: DisplayMode
 }>()
 
 const { t } = useI18n()
@@ -126,7 +124,7 @@ const langStore = useLangStore()
 const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
 const defaultLogo = 'defaultLogo.svg'
 
-const displayMode = ref<DisplayMode>(props.initialDisplayMode ?? readDisplayMode())
+const displayMode = ref<DisplayMode>(readDisplayMode())
 let stopModeSubscription: (() => void) | null = null
 
 const siteById = computed(() => {
@@ -393,16 +391,6 @@ watch(
       await loadData()
     }
   }
-)
-
-watch(
-  () => props.initialDisplayMode,
-  (mode) => {
-    if (mode) {
-      displayMode.value = mode
-    }
-  },
-  { immediate: true }
 )
 
 onMounted(() => {

@@ -84,9 +84,10 @@ type dnsSOASummary struct {
 }
 
 type dnsQueryMetadata struct {
-	ResponseSummary dnsResponseSummary
-	MXPriorities    []dnsMXPriority
-	SOA             *dnsSOASummary
+	ResponseSummary       dnsResponseSummary
+	MXPriorities          []dnsMXPriority
+	SOA                   *dnsSOASummary
+	RecordBudgetExhausted bool
 }
 
 type GeoDBSet struct {
@@ -294,6 +295,7 @@ func ParseDNS() {
 	}
 	defer run.ReleaseLease()
 	run.Start()
+	resetDNSLookupCaches()
 
 	start := time.Now()
 	fields := run.Fields()
@@ -377,7 +379,16 @@ func getDNSResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
 		resultKey := "dns:" + siteName
 		resultMap := make(map[string]string)
 		for k, result := range results {
-			jsonResult, _ := sonic.Marshal(result)
+			jsonResult, jsonErr := sonic.Marshal(result)
+			if jsonErr != nil {
+				log.ErrorFields(map[string]interface{}{
+					"event":       "result_encode_failed",
+					"protocol":    "dns",
+					"record_type": k,
+					"site":        siteName,
+				}, "DNS 探测结果 Redis JSON 编码失败: "+jsonErr.Error())
+				continue
+			}
 			resultMap[k] = string(jsonResult)
 		}
 		gfError := cs.HSetMap(resultKey, resultMap)
@@ -517,7 +528,136 @@ func buildDNSObservationPayloadWithMetadata(results map[string][]models.DNSRecor
 	payload["cname_chain_depth"] = maxDNSRecordDepth(results)
 	payload["mx_priorities"] = buildDNSMXPriorities(metadata)
 	payload["soa"] = buildDNSSOA(metadata)
+	payload["record_budget_exhausted"] = dnsRecordBudgetExhausted(metadata)
+	enrichDNSObservationStructure(payload, results, metadata)
 	return payload
+}
+
+func enrichDNSObservationStructure(payload map[string]any, results map[string][]models.DNSRecord, metadata map[string]dnsQueryMetadata) {
+	stats := dnsObservationStructureStats{
+		NSHosts: map[string]struct{}{},
+		MXHosts: map[string]struct{}{},
+	}
+	for recordType, records := range results {
+		for _, record := range records {
+			collectDNSObservationStructure(recordType, record, &stats)
+		}
+	}
+	for _, mx := range buildDNSMXPriorities(metadata) {
+		if mx.Host != "" {
+			stats.MXHosts[mx.Host] = struct{}{}
+		}
+	}
+
+	payload["has_a"] = stats.IPv4Count > 0
+	payload["has_aaaa"] = stats.IPv6Count > 0
+	payload["ipv4_count"] = stats.IPv4Count
+	payload["ipv6_count"] = stats.IPv6Count
+	payload["cname_terminal"] = limitDNSObservationString(stats.CNAMETerminal)
+	payload["name_server_hosts"] = sortedLimitedDNSSet(stats.NSHosts)
+	payload["mx_hosts"] = sortedLimitedDNSSet(stats.MXHosts)
+	payload["ttl_spread"] = stats.TTLSpread()
+	payload["mixed_private_public_ip"] = stats.PrivateIPSeen && stats.PublicIPSeen
+}
+
+type dnsObservationStructureStats struct {
+	IPv4Count     int
+	IPv6Count     int
+	CNAMETerminal string
+	NSHosts       map[string]struct{}
+	MXHosts       map[string]struct{}
+	TTLSeen       bool
+	TTLMin        uint32
+	TTLMax        uint32
+	PrivateIPSeen bool
+	PublicIPSeen  bool
+}
+
+func (s dnsObservationStructureStats) TTLSpread() uint32 {
+	if !s.TTLSeen || s.TTLMax < s.TTLMin {
+		return 0
+	}
+	return s.TTLMax - s.TTLMin
+}
+
+func collectDNSObservationStructure(recordType string, record models.DNSRecord, stats *dnsObservationStructureStats) {
+	switch record.Type {
+	case "A":
+		stats.IPv4Count++
+		collectDNSIPPrivacy(record.Value, stats)
+	case "AAAA":
+		stats.IPv6Count++
+		collectDNSIPPrivacy(record.Value, stats)
+	case "CNAME":
+		if record.Value != "" {
+			stats.CNAMETerminal = record.Value
+		}
+	case "NS":
+		if record.Value != "" {
+			stats.NSHosts[limitDNSObservationString(record.Value)] = struct{}{}
+		}
+	case "MX":
+		if host := dnsMXHostFromValue(record.Value); host != "" {
+			stats.MXHosts[host] = struct{}{}
+		}
+	}
+	if recordType == "NS" && record.Value != "" {
+		stats.NSHosts[limitDNSObservationString(record.Value)] = struct{}{}
+	}
+	if recordType == "MX" {
+		if host := dnsMXHostFromValue(record.Value); host != "" {
+			stats.MXHosts[host] = struct{}{}
+		}
+	}
+	if record.TTL > 0 {
+		if !stats.TTLSeen || record.TTL < stats.TTLMin {
+			stats.TTLMin = record.TTL
+		}
+		if !stats.TTLSeen || record.TTL > stats.TTLMax {
+			stats.TTLMax = record.TTL
+		}
+		stats.TTLSeen = true
+	}
+	for _, child := range record.Children {
+		collectDNSObservationStructure(child.Type, child, stats)
+	}
+}
+
+func collectDNSIPPrivacy(value string, stats *dnsObservationStructureStats) {
+	ip := net.ParseIP(strings.TrimSpace(value))
+	if ip == nil {
+		return
+	}
+	if isPrivateOrSpecialIP(ip) {
+		stats.PrivateIPSeen = true
+		return
+	}
+	stats.PublicIPSeen = true
+}
+
+func dnsMXHostFromValue(value string) string {
+	host := strings.TrimSpace(value)
+	if host == "" {
+		return ""
+	}
+	if idx := strings.Index(host, " "); idx > 0 {
+		host = host[:idx]
+	}
+	return limitDNSObservationString(strings.TrimSpace(host))
+}
+
+func sortedLimitedDNSSet(values map[string]struct{}) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	for value := range values {
+		if value != "" {
+			result = append(result, limitDNSObservationString(value))
+		}
+	}
+	sort.Strings(result)
+	return result
 }
 
 func buildDNSResponseSummary(recordType string, records []models.DNSRecord, metadata map[string]dnsQueryMetadata) dnsResponseSummary {
@@ -720,9 +860,45 @@ func dnsQueryThreadLimit(configured int, recordTypeCount int) int {
 }
 
 func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Reader, cityDB *geoip2.Reader, asnDB *geoip2.Reader, depth int) ([]models.DNSRecord, models.DNSStatistics, dnsQueryMetadata, common.GFError) {
+	return queryDNSWithBudget(domain, qtype, resolver, countryDB, cityDB, asnDB, depth, newDNSRecordBudget(env.GetServerConfig().Collector.ProbeBudget.MaxDNSRecords()))
+}
+
+type dnsRecordBudget struct {
+	remaining int
+	exhausted bool
+}
+
+func newDNSRecordBudget(limit int) *dnsRecordBudget {
+	if limit <= 0 {
+		limit = 1
+	}
+	return &dnsRecordBudget{remaining: limit}
+}
+
+func (b *dnsRecordBudget) Take() bool {
+	if b == nil {
+		return true
+	}
+	if b.remaining <= 0 {
+		b.exhausted = true
+		return false
+	}
+	b.remaining--
+	return true
+}
+
+func (b *dnsRecordBudget) Exhausted() bool {
+	return b != nil && b.exhausted
+}
+
+func queryDNSWithBudget(domain string, qtype uint16, resolver string, countryDB *geoip2.Reader, cityDB *geoip2.Reader, asnDB *geoip2.Reader, depth int, budget *dnsRecordBudget) ([]models.DNSRecord, models.DNSStatistics, dnsQueryMetadata, common.GFError) {
 	// 防止递归过深
 	if depth > MaxDepth {
 		return nil, models.DNSStatistics{}, dnsQueryMetadata{}, nil
+	}
+	if budget != nil && budget.remaining <= 0 {
+		budget.exhausted = true
+		return nil, models.DNSStatistics{}, dnsQueryMetadata{RecordBudgetExhausted: true}, nil
 	}
 
 	start := time.Now()
@@ -770,9 +946,8 @@ func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Re
 	}
 
 	// 遍历每条 Answer 记录
-	maxRecords := probeBudget.MaxDNSRecords()
 	for _, rr := range in.Answer {
-		if len(results) >= maxRecords {
+		if !budget.Take() {
 			break
 		}
 		recStart := time.Now()
@@ -808,26 +983,29 @@ func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Re
 		case *dns.CNAME:
 			rec.Value = v.Target
 			// 递归查询 CNAME 指向的 A/AAAA
-			childrenA, _, _, _ := queryDNS(v.Target, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
-			childrenAAAA, _, _, _ := queryDNS(v.Target, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenA, _, childMetaA, _ := queryDNSWithBudget(v.Target, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1, budget)
+			childrenAAAA, _, childMetaAAAA, _ := queryDNSWithBudget(v.Target, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1, budget)
 			rec.Children = append(rec.Children, childrenA...)
 			rec.Children = append(rec.Children, childrenAAAA...)
+			metadata.RecordBudgetExhausted = metadata.RecordBudgetExhausted || childMetaA.RecordBudgetExhausted || childMetaAAAA.RecordBudgetExhausted
 		case *dns.MX:
 			rec.Value = fmt.Sprintf("%s (优先级 %d)", v.Mx, v.Preference)
 			metadata.MXPriorities = append(metadata.MXPriorities, dnsMXPriority{
 				Host:     limitDNSObservationString(v.Mx),
 				Priority: v.Preference,
 			})
-			childrenA, _, _, _ := queryDNS(v.Mx, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
-			childrenAAAA, _, _, _ := queryDNS(v.Mx, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenA, _, childMetaA, _ := queryDNSWithBudget(v.Mx, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1, budget)
+			childrenAAAA, _, childMetaAAAA, _ := queryDNSWithBudget(v.Mx, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1, budget)
 			rec.Children = append(rec.Children, childrenA...)
 			rec.Children = append(rec.Children, childrenAAAA...)
+			metadata.RecordBudgetExhausted = metadata.RecordBudgetExhausted || childMetaA.RecordBudgetExhausted || childMetaAAAA.RecordBudgetExhausted
 		case *dns.NS:
 			rec.Value = v.Ns
-			childrenA, _, _, _ := queryDNS(v.Ns, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1)
-			childrenAAAA, _, _, _ := queryDNS(v.Ns, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1)
+			childrenA, _, childMetaA, _ := queryDNSWithBudget(v.Ns, dns.TypeA, resolver, countryDB, cityDB, asnDB, depth+1, budget)
+			childrenAAAA, _, childMetaAAAA, _ := queryDNSWithBudget(v.Ns, dns.TypeAAAA, resolver, countryDB, cityDB, asnDB, depth+1, budget)
 			rec.Children = append(rec.Children, childrenA...)
 			rec.Children = append(rec.Children, childrenAAAA...)
+			metadata.RecordBudgetExhausted = metadata.RecordBudgetExhausted || childMetaA.RecordBudgetExhausted || childMetaAAAA.RecordBudgetExhausted
 		case *dns.TXT:
 			rec.Value = strings.Join(v.Txt, " ")
 		case *dns.SOA:
@@ -851,6 +1029,7 @@ func queryDNS(domain string, qtype uint16, resolver string, countryDB *geoip2.Re
 		durations = append(durations, rec.Duration)
 		results = append(results, rec)
 	}
+	metadata.RecordBudgetExhausted = metadata.RecordBudgetExhausted || budget.Exhausted()
 
 	// 统计 TTL / 耗时信息
 	stats := models.DNSStatistics{
@@ -907,6 +1086,15 @@ func buildDNSSOA(metadata map[string]dnsQueryMetadata) any {
 		return nil
 	}
 	return item.SOA
+}
+
+func dnsRecordBudgetExhausted(metadata map[string]dnsQueryMetadata) bool {
+	for _, item := range metadata {
+		if item.RecordBudgetExhausted {
+			return true
+		}
+	}
+	return false
 }
 
 func maxDNSRecordDepth(results map[string][]models.DNSRecord) int {
@@ -1004,17 +1192,8 @@ func detectHijack(ip net.IP, msg *dns.Msg, ttl uint32) bool {
 
 func detectDNSRiskFlags(ip net.IP, msg *dns.Msg, ttl uint32, reversePTR string) []string {
 	riskSet := map[string]struct{}{}
-	privateRanges := []string{
-		"0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8",
-		"169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16",
-		"100.64.0.0/10",
-	}
-	for _, cidr := range privateRanges {
-		_, block, _ := net.ParseCIDR(cidr)
-		if block.Contains(ip) {
-			riskSet[dnsRiskPrivateIP] = struct{}{}
-			break
-		}
+	if isPrivateOrSpecialIP(ip) {
+		riskSet[dnsRiskPrivateIP] = struct{}{}
 	}
 
 	// RcodeNameError 且有 Answer 也可能劫持
@@ -1032,6 +1211,32 @@ func detectDNSRiskFlags(ip net.IP, msg *dns.Msg, ttl uint32, reversePTR string) 
 	}
 
 	return sortedRiskFlags(riskSet)
+}
+
+func isPrivateOrSpecialIP(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+	if ip.IsPrivate() || ip.IsLoopback() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+	privateRanges := []string{
+		"0.0.0.0/8",
+		"100.64.0.0/10",
+		"fc00::/7",
+	}
+	for _, cidr := range privateRanges {
+		_, block, err := net.ParseCIDR(cidr)
+		if err == nil && block.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func resetDNSLookupCaches() {
+	geoCache = sync.Map{}
+	ptrCache = sync.Map{}
 }
 
 func containsRiskFlag(risks []string, target string) bool {

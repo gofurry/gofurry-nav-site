@@ -1,0 +1,64 @@
+# GoFurry Game Backend 示例配置
+# 使用方式：
+# 1. 复制为 conf/server.yaml（本地）或 /etc/gf-game/server.yaml（生产）。
+# 2. 替换 CHANGE_ME 和示例地址。
+# 3. server.yaml 包含密码，不要提交到 Git。
+
+cluster_id: 1 # 集群编号；单实例保持 1 即可。
+
+server:
+  mode: "debug" # debug / release / prod。
+  ip_address: "0.0.0.0" # 服务监听地址。
+  port: "9998" # Game 后端 HTTP 端口。
+  memory_limit: 1
+  gc_percent: 1000
+  network: "tcp"
+  enable_prefork: false
+
+database:
+  db_name: "gfg" # Game 主业务库。
+  db_username: "postgres"
+  db_password: "CHANGE_ME"
+  db_host: "127.0.0.1"
+  db_port: "5432"
+
+redis:
+  redis_addr: "127.0.0.1:6379"
+  redis_password: "CHANGE_ME"
+
+email:
+  email_host: "smtp.example.com" # SMTP 服务器。
+  email_port: 465 # 常见 465 SSL / 587 STARTTLS，按邮件服务商要求填写。
+  email_user: "noreply@example.com"
+  email_password: "CHANGE_ME"
+
+log:
+  log_level: "info" # debug / info / warn / error。
+  log_mode: "prod" # dev / prod。
+  log_path: "./logs/gf-game.log"
+  log_max_size: 100
+  log_max_backups: 30
+  log_max_age: 7
+
+thread:
+  event_publish_thread: 10 # 事件发布 worker 数。
+
+middleware:
+  swagger:
+    is_on: false # 生产建议关闭。
+    file_path: "./docs/swagger.json"
+    base_path: "/"
+    path: "/swagger"
+    title: "GoFurry Game API"
+  cors:
+    allow_origins: "https://go-furry.com,http://localhost:3000" # 逗号分隔的前端来源。
+  limiter:
+    is_on: true
+    max_requests: 3000
+    expiration: 60
+
+waf:
+  waf_switch: false # 是否启用 Coraza WAF；开启前先确认规则和误伤。
+  conf_path: "./conf/coraza.conf"
+  crs_root: ""
+  directives_files: []

@@ -36,4 +36,16 @@ func TestRedisCommandErrorsReturnGFError(t *testing.T) {
 	if _, err := CompareAndDelete("test:key", "value"); err == nil {
 		t.Fatal("CompareAndDelete() should return GFError when Redis command fails")
 	}
+	if _, err := SetNX("test:key", "value", 0); err == nil {
+		t.Fatal("SetNX() should return GFError when Redis command fails")
+	}
+	if err := SAdd("test:set", "value"); err == nil {
+		t.Fatal("SAdd() should return GFError when Redis command fails")
+	}
+	if _, err := SMembers("test:set"); err == nil {
+		t.Fatal("SMembers() should return GFError when Redis command fails")
+	}
+	if err := SRem("test:set", "value"); err == nil {
+		t.Fatal("SRem() should return GFError when Redis command fails")
+	}
 }

@@ -56,6 +56,9 @@ type CollectorV2Config struct {
 	LatestRedis   bool               `yaml:"latest_redis"`
 	CompareLog    bool               `yaml:"compare_log"`
 	Protocols     CollectorProtocols `yaml:"protocols"`
+	LightProbe    LightProbeConfig   `yaml:"light_probe"`
+	EdgeHints     EdgeHintsConfig    `yaml:"edge_hints"`
+	Derived       V2DerivedConfig    `yaml:"derived"`
 }
 
 type CollectorProtocols struct {
@@ -64,12 +67,88 @@ type CollectorProtocols struct {
 	DNS  bool `yaml:"dns"`
 }
 
+type EdgeHintsConfig struct {
+	Enabled *bool `yaml:"enabled"`
+}
+
+type LightProbeConfig struct {
+	RDAP        LightProbeRDAPConfig        `yaml:"rdap"`
+	Robots      LightProbeRobotsConfig      `yaml:"robots"`
+	SecurityTXT LightProbeSecurityTXTConfig `yaml:"security_txt"`
+	PageAssets  LightProbePageAssetsConfig  `yaml:"page_assets"`
+	PortCheck   LightProbePortCheckConfig   `yaml:"port_check"`
+	WAFCanary   LightProbeWAFCanaryConfig   `yaml:"waf_canary"`
+}
+
+type LightProbeRDAPConfig struct {
+	Enabled        bool `yaml:"enabled"`
+	IntervalHours  int  `yaml:"interval_hours"`
+	TimeoutSeconds int  `yaml:"timeout_seconds"`
+	RunOnStart     bool `yaml:"run_on_start"`
+}
+
+type LightProbeRobotsConfig struct {
+	Enabled          bool `yaml:"enabled"`
+	IntervalHours    int  `yaml:"interval_hours"`
+	TimeoutSeconds   int  `yaml:"timeout_seconds"`
+	MaxResponseBytes int  `yaml:"max_response_bytes"`
+	MaxSitemapLinks  int  `yaml:"max_sitemap_links"`
+	RunOnStart       bool `yaml:"run_on_start"`
+}
+
+type LightProbeSecurityTXTConfig struct {
+	Enabled          bool `yaml:"enabled"`
+	IntervalHours    int  `yaml:"interval_hours"`
+	TimeoutSeconds   int  `yaml:"timeout_seconds"`
+	MaxResponseBytes int  `yaml:"max_response_bytes"`
+	RunOnStart       bool `yaml:"run_on_start"`
+}
+
+type LightProbePageAssetsConfig struct {
+	Enabled           bool     `yaml:"enabled"`
+	IntervalHours     int      `yaml:"interval_hours"`
+	TimeoutSeconds    int      `yaml:"timeout_seconds"`
+	MaxIconBytes      int      `yaml:"max_icon_bytes"`
+	MaxManifestBytes  int      `yaml:"max_manifest_bytes"`
+	AllowedAssetHosts []string `yaml:"allowed_asset_hosts"`
+	RunOnStart        bool     `yaml:"run_on_start"`
+}
+
+type LightProbePortCheckConfig struct {
+	Enabled           bool  `yaml:"enabled"`
+	IntervalHours     int   `yaml:"interval_hours"`
+	TimeoutSeconds    int   `yaml:"timeout_seconds"`
+	Concurrency       int   `yaml:"concurrency"`
+	MaxPortsPerTarget int   `yaml:"max_ports_per_target"`
+	Ports             []int `yaml:"ports"`
+	RunOnStart        bool  `yaml:"run_on_start"`
+}
+
+type LightProbeWAFCanaryConfig struct {
+	Enabled          bool   `yaml:"enabled"`
+	IntervalHours    int    `yaml:"interval_hours"`
+	TimeoutSeconds   int    `yaml:"timeout_seconds"`
+	CanaryPath       string `yaml:"canary_path"`
+	UserAgent        string `yaml:"user_agent"`
+	RunOnStart       bool   `yaml:"run_on_start"`
+	MaxTargetsPerRun int    `yaml:"max_targets_per_run"`
+}
+
 type SchedulerConfig struct {
 	CollectorID      string `yaml:"collector_id"`
 	LeaseEnabled     bool   `yaml:"lease_enabled"`
 	LeaseTTLSeconds  int    `yaml:"lease_ttl_seconds"`
 	RunStateRedis    *bool  `yaml:"run_state_redis"`
 	RunStateTTLHours int    `yaml:"run_state_ttl_hours"`
+}
+
+type V2DerivedConfig struct {
+	TrendEnabled        *bool `yaml:"trend_enabled"`
+	ChangeEnabled       *bool `yaml:"change_enabled"`
+	MinIntervalSeconds  int   `yaml:"min_interval_seconds"`
+	QueryTimeoutSeconds int   `yaml:"query_timeout_seconds"`
+	TrendMaxRows        int   `yaml:"trend_max_rows"`
+	ChangeMaxRows       int   `yaml:"change_max_rows"`
 }
 
 type DnsConfig struct {
@@ -280,6 +359,18 @@ func (cfg CollectorV2Config) ProtocolEnabled(protocol string) bool {
 		return cfg.Protocols.HTTP
 	case "dns":
 		return cfg.Protocols.DNS
+	case "rdap":
+		return cfg.LightProbe.RDAP.Enabled
+	case "robots":
+		return cfg.LightProbe.Robots.Enabled
+	case "security_txt":
+		return cfg.LightProbe.SecurityTXT.Enabled
+	case "page_assets":
+		return cfg.LightProbe.PageAssets.Enabled
+	case "port_check":
+		return cfg.LightProbe.PortCheck.Enabled
+	case "waf_canary":
+		return cfg.LightProbe.WAFCanary.Enabled
 	default:
 		return false
 	}
@@ -291,6 +382,13 @@ func (cfg CollectorV2Config) ObservationEnabled(protocol string) bool {
 
 func (cfg CollectorV2Config) LatestRedisEnabled(protocol string) bool {
 	return cfg.LatestRedis && cfg.ProtocolEnabled(protocol)
+}
+
+func (cfg EdgeHintsConfig) EnabledOrDefault() bool {
+	if cfg.Enabled == nil {
+		return true
+	}
+	return *cfg.Enabled
 }
 
 func (cfg SchedulerConfig) RunStateEnabled() bool {
@@ -306,4 +404,140 @@ func (cfg SchedulerConfig) RunStateTTL() time.Duration {
 		hours = 168
 	}
 	return time.Duration(hours) * time.Hour
+}
+
+func (cfg LightProbeRDAPConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbeRDAPConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbeRobotsConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbeRobotsConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbeRobotsConfig) MaxResponseSize() int64 {
+	return int64(intOrDefault(cfg.MaxResponseBytes, 64*1024))
+}
+
+func (cfg LightProbeRobotsConfig) MaxSitemaps() int {
+	return intOrDefault(cfg.MaxSitemapLinks, 20)
+}
+
+func (cfg LightProbeSecurityTXTConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbeSecurityTXTConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbeSecurityTXTConfig) MaxResponseSize() int64 {
+	return int64(intOrDefault(cfg.MaxResponseBytes, 64*1024))
+}
+
+func (cfg LightProbePageAssetsConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbePageAssetsConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbePageAssetsConfig) MaxIconSize() int64 {
+	return int64(intOrDefault(cfg.MaxIconBytes, 256*1024))
+}
+
+func (cfg LightProbePageAssetsConfig) MaxManifestSize() int64 {
+	return int64(intOrDefault(cfg.MaxManifestBytes, 64*1024))
+}
+
+func (cfg LightProbePortCheckConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbePortCheckConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 2)
+}
+
+func (cfg LightProbePortCheckConfig) WorkerCount() int {
+	return intOrDefault(cfg.Concurrency, 8)
+}
+
+func (cfg LightProbePortCheckConfig) MaxPorts() int {
+	return intOrDefault(cfg.MaxPortsPerTarget, 24)
+}
+
+func (cfg V2DerivedConfig) TrendEnabledOrDefault() bool {
+	if cfg.TrendEnabled == nil {
+		return true
+	}
+	return *cfg.TrendEnabled
+}
+
+func (cfg V2DerivedConfig) ChangeEnabledOrDefault() bool {
+	if cfg.ChangeEnabled == nil {
+		return true
+	}
+	return *cfg.ChangeEnabled
+}
+
+func (cfg V2DerivedConfig) MinInterval() time.Duration {
+	return secondsOrDefault(cfg.MinIntervalSeconds, 300)
+}
+
+func (cfg V2DerivedConfig) QueryTimeout() time.Duration {
+	return secondsOrDefault(cfg.QueryTimeoutSeconds, 2)
+}
+
+func (cfg V2DerivedConfig) TrendRows() int {
+	return intOrDefault(cfg.TrendMaxRows, 3000)
+}
+
+func (cfg V2DerivedConfig) ChangeRows() int {
+	return intOrDefault(cfg.ChangeMaxRows, 80)
+}
+
+func (cfg LightProbeWAFCanaryConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 720)
+}
+
+func (cfg LightProbeWAFCanaryConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbeWAFCanaryConfig) Path() string {
+	path := strings.TrimSpace(cfg.CanaryPath)
+	if path == "" {
+		return "/.well-known/gofurry-waf-canary"
+	}
+	return path
+}
+
+func (cfg LightProbeWAFCanaryConfig) UserAgentOrDefault() string {
+	userAgent := strings.TrimSpace(cfg.UserAgent)
+	if userAgent == "" {
+		return "GoFurry-Nav-Collector-WAF-Canary/1.0"
+	}
+	if !strings.Contains(userAgent, "WAF-Canary") {
+		return userAgent + " GoFurry-Nav-Collector-WAF-Canary/1.0"
+	}
+	return userAgent
+}
+
+func (cfg LightProbeWAFCanaryConfig) MaxTargets() int {
+	if cfg.MaxTargetsPerRun < 0 {
+		return 0
+	}
+	return cfg.MaxTargetsPerRun
+}
+
+func hoursOrDefault(value int, def int) time.Duration {
+	return time.Duration(intOrDefault(value, def)) * time.Hour
 }

@@ -1,0 +1,41 @@
+# GoFurry Game Collector 示例配置
+# 使用方式：
+# 1. 复制为 conf/server.yaml（本地）或 /etc/gf-game-collector/server.yaml（生产）。
+# 2. 替换数据库、Redis、MongoDB、代理等真实信息。
+# 3. server.yaml 可能包含密码和内网地址，不要提交到 Git。
+
+cluster_id: 1 # 集群编号；单实例保持 1 即可。
+
+server:
+  app_name: "GF-Game-Collector"
+  app_version: "v1.0.0"
+  models: "debug" # 当前代码读取的字段名是 models；建议保持该键名。
+  memory_limit: 1
+
+data_base:
+  db_name: "gfg" # Game 主业务库。
+  db_username: "postgres"
+  db_password: "CHANGE_ME"
+  db_host: "127.0.0.1"
+  db_port: "5432"
+
+redis:
+  redis_addr: "127.0.0.1:6379"
+  redis_password: "CHANGE_ME"
+
+mongodb:
+  username: "mongo"
+  password: "CHANGE_ME"
+  host: "127.0.0.1"
+  port: "27017"
+  auth_db: "admin"
+  db_name: "gofurry_game"
+
+collector:
+  proxy: "" # Steam / 外部页面采集可选代理；为空表示直连。
+  limiter:
+    steam_api: 60 # Steam API 访问限速预算，按当前业务逻辑使用。
+    steam_store: 60 # Steam Store 页面访问限速预算。
+  game:
+    game_thread: 3 # 游戏采集 worker 数。
+    game_player_interval: 24 # 玩家数据采集间隔，单位按当前调度实现解析。

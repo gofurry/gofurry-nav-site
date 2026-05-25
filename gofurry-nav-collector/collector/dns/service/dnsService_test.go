@@ -60,6 +60,33 @@ func TestDetectDNSRiskFlags(t *testing.T) {
 	assertContainsRisk(t, risks, dnsRiskPTREmpty)
 }
 
+func TestDetectDNSRiskFlagsIncludesIPv6PrivateAndSpecialRanges(t *testing.T) {
+	tests := []string{
+		"::1",
+		"fc00::1",
+		"fe80::1",
+	}
+	for _, ip := range tests {
+		t.Run(ip, func(t *testing.T) {
+			risks := detectDNSRiskFlags(net.ParseIP(ip), nil, 300, "skip_ptr_check")
+			assertContainsRisk(t, risks, dnsRiskPrivateIP)
+		})
+	}
+}
+
+func TestDNSRecordBudgetTracksExhaustion(t *testing.T) {
+	budget := newDNSRecordBudget(2)
+	if !budget.Take() || !budget.Take() {
+		t.Fatal("前两条记录应允许进入预算")
+	}
+	if budget.Take() {
+		t.Fatal("第三条记录应被预算拒绝")
+	}
+	if !budget.Exhausted() {
+		t.Fatal("预算耗尽后应标记 exhausted")
+	}
+}
+
 func TestBuildDNSObservationPayloadLimitsTextAndRemovesHijacked(t *testing.T) {
 	longTXT := "v=spf1 " + strings.Repeat("include:example.com ", 80)
 	results := map[string][]models.DNSRecord{
@@ -175,6 +202,47 @@ func TestBuildDNSObservationPayloadLimitsTextAndRemovesHijacked(t *testing.T) {
 	if payload["cname_chain_depth"] != 2 {
 		t.Fatalf("cname_chain_depth 错误，got %v", payload["cname_chain_depth"])
 	}
+	if payload["has_a"] != true || payload["has_aaaa"] != false {
+		t.Fatalf("A/AAAA 标记错误: has_a=%v has_aaaa=%v", payload["has_a"], payload["has_aaaa"])
+	}
+	if payload["ipv4_count"] != 2 || payload["ipv6_count"] != 0 {
+		t.Fatalf("IP 数量错误: ipv4=%v ipv6=%v", payload["ipv4_count"], payload["ipv6_count"])
+	}
+	if payload["cname_terminal"] != "edge.example.com." {
+		t.Fatalf("cname_terminal 错误，got %v", payload["cname_terminal"])
+	}
+	if payload["ttl_spread"] != uint32(295) {
+		t.Fatalf("ttl_spread 错误，got %v", payload["ttl_spread"])
+	}
+	if payload["mixed_private_public_ip"] != true {
+		t.Fatalf("mixed_private_public_ip 应为 true，got %v", payload["mixed_private_public_ip"])
+	}
+}
+
+func TestBuildDNSObservationPayloadMarksRecordBudgetExhausted(t *testing.T) {
+	payload := buildDNSObservationPayloadWithMetadata(map[string][]models.DNSRecord{
+		"A": {{Type: "A", Value: "203.0.113.10"}},
+	}, map[string]dnsQueryMetadata{
+		"A": {RecordBudgetExhausted: true},
+	})
+
+	if payload["record_budget_exhausted"] != true {
+		t.Fatalf("record_budget_exhausted = %v, want true", payload["record_budget_exhausted"])
+	}
+}
+
+func TestResetDNSLookupCachesClearsCachedValues(t *testing.T) {
+	geoCache.Store("203.0.113.10", [4]string{"A", "B", "C", "D"})
+	ptrCache.Store("203.0.113.10", "ptr.example.")
+
+	resetDNSLookupCaches()
+
+	if _, ok := geoCache.Load("203.0.113.10"); ok {
+		t.Fatal("geoCache should be empty after reset")
+	}
+	if _, ok := ptrCache.Load("203.0.113.10"); ok {
+		t.Fatal("ptrCache should be empty after reset")
+	}
 }
 
 func TestBuildDNSObservationPayloadIdentifiesDMARCAndCAA(t *testing.T) {
@@ -239,6 +307,30 @@ func TestBuildDNSObservationPayloadAddsMXAndSOASummary(t *testing.T) {
 	}
 	if soa.NS != "ns1.example.com." || soa.Mbox != "hostmaster.example.com." || soa.Serial != 2026052401 {
 		t.Fatalf("soa 摘要错误: %+v", soa)
+	}
+	mxHosts := payload["mx_hosts"].([]string)
+	if len(mxHosts) != 1 || mxHosts[0] != "mail.example.com." {
+		t.Fatalf("mx_hosts 错误: %+v", mxHosts)
+	}
+}
+
+func TestBuildDNSObservationPayloadAddsNameServerHosts(t *testing.T) {
+	payload := buildDNSObservationPayload(map[string][]models.DNSRecord{
+		"NS": {
+			{Type: "NS", Value: "ns2.example.com.", TTL: 600},
+			{Type: "NS", Value: "ns1.example.com.", TTL: 300},
+		},
+	})
+
+	nameServerHosts, ok := payload["name_server_hosts"].([]string)
+	if !ok {
+		t.Fatalf("name_server_hosts 类型错误: %T", payload["name_server_hosts"])
+	}
+	if len(nameServerHosts) != 2 || nameServerHosts[0] != "ns1.example.com." || nameServerHosts[1] != "ns2.example.com." {
+		t.Fatalf("name_server_hosts 错误: %+v", nameServerHosts)
+	}
+	if payload["ttl_spread"] != uint32(300) {
+		t.Fatalf("ttl_spread 错误，got %v", payload["ttl_spread"])
 	}
 }
 

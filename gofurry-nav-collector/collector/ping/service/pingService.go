@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -135,13 +136,16 @@ func addAllIpToPing() (map[string]int64, common.GFError) {
 		return siteIDByDomain, nil
 	}
 
-	err = cs.Del(env.GetServerConfig().Collector.Ping.PingKey)
+	err = cs.SetExpire(env.GetServerConfig().Collector.Ping.PingKey, pingJsonList, 24*time.Hour)
 	if err != nil {
-		log.Error("删除ping结果失败: ", err)
+		log.ErrorFields(map[string]interface{}{
+			"event":     "target_refresh_failed",
+			"protocol":  "ping",
+			"redis_key": env.GetServerConfig().Collector.Ping.PingKey,
+			"targets":   len(pingList),
+		}, "Ping 目标列表刷新到 Redis 失败: "+err.GetMsg())
 		return siteIDByDomain, err
 	}
-
-	cs.SetNX(env.GetServerConfig().Collector.Ping.PingKey, pingJsonList, 24*time.Hour)
 
 	return siteIDByDomain, nil
 }
@@ -365,6 +369,7 @@ func Ping() {
 func performPing(ip string) (pingModel models2.PingModel) {
 	start := time.Now()
 	pingModel.PingTime = cm.LocalTime(time.Now())
+	pingModel.ResolutionSource = "unresolved"
 	defer func() {
 		pingModel.ProbeDurationMS = time.Since(start).Milliseconds()
 	}()
@@ -403,6 +408,12 @@ func performPing(ip string) (pingModel models2.PingModel) {
 	pingModel.PacketsRecvDuplicates = stats.PacketsRecvDuplicates
 	if stats.IPAddr != nil {
 		pingModel.ResolvedIP = stats.IPAddr.IP.String()
+		pingModel.SelectedIP = pingModel.ResolvedIP
+		pingModel.ResolvedIPs = []string{pingModel.ResolvedIP}
+		pingModel.IPFamily = pingIPFamily(stats.IPAddr.IP)
+		pingModel.ResolutionSource = "go-ping"
+	} else {
+		pingModel.ResolutionSource = "unresolved"
 	}
 	if pingModel.AvgDelayTime == 0 && pingModel.AvgLossRate != 100 {
 		pingModel.AvgDelayTime = 1
@@ -444,7 +455,15 @@ func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock
 			}
 		}
 		// 序列化为 json
-		jsonResult, _ := sonic.Marshal(pingRecord)
+		jsonResult, jsonErr := sonic.Marshal(pingRecord)
+		if jsonErr != nil {
+			log.ErrorFields(map[string]interface{}{
+				"event":    "result_encode_failed",
+				"protocol": "ping",
+				"site":     ip,
+				"status":   pingRecord.Status,
+			}, "Ping 探测结果 JSON 编码失败: "+jsonErr.Error())
+		}
 
 		// 存数据库
 		pindSaveRecord := &models2.GfnCollectorLogPing{
@@ -536,6 +555,11 @@ func buildPingObservationPayload(result models2.PingModel, pingRecord *models2.P
 		"packets_recv":            result.PacketsRecv,
 		"packets_recv_duplicates": result.PacketsRecvDuplicates,
 		"resolved_ip":             result.ResolvedIP,
+		"resolved_ips":            result.ResolvedIPs,
+		"selected_ip":             result.SelectedIP,
+		"ip_family":               result.IPFamily,
+		"resolution_source":       result.ResolutionSource,
+		"icmp_blocked_suspected":  pingICMPBlockedSuspected(status, result),
 		"duration_ms":             result.ProbeDurationMS,
 		"error_code":              errorCode,
 		"delay_ms":                result.AvgDelayTime,
@@ -543,6 +567,27 @@ func buildPingObservationPayload(result models2.PingModel, pingRecord *models2.P
 		"legacy_loss":             pingRecord.Loss,
 		"legacy_status":           pingRecord.Status,
 	}, errorCode
+}
+
+func pingIPFamily(ip net.IP) string {
+	if ip == nil {
+		return ""
+	}
+	if ip.To4() != nil {
+		return "ipv4"
+	}
+	if ip.To16() != nil {
+		return "ipv6"
+	}
+	return ""
+}
+
+func pingICMPBlockedSuspected(status string, result models2.PingModel) bool {
+	return status != "up" &&
+		result.ErrorCode == "" &&
+		result.PacketsSent > 0 &&
+		result.PacketsRecv == 0 &&
+		result.ResolutionSource != "unresolved"
 }
 
 func observationStatusFromPing(status string) string {

@@ -78,9 +78,9 @@ export default defineNuxtConfig({
         { name: 'robots', content: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' },
         { name: 'googlebot', content: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' },
         { name: 'bingbot', content: 'index, follow, max-image-preview:large' },
-        { name: 'author', content: 'gofurry' },
-        { name: 'application-name', content: 'gofurry' },
-        { name: 'apple-mobile-web-app-title', content: 'gofurry' },
+        { name: 'author', content: 'GoFurry' },
+        { name: 'application-name', content: 'GoFurry' },
+        { name: 'apple-mobile-web-app-title', content: 'GoFurry' },
         { name: 'theme-color', content: '#f97316' },
         { name: 'color-scheme', content: 'light' },
         { name: 'format-detection', content: 'telephone=no' },
@@ -118,7 +118,7 @@ export default defineNuxtConfig({
           textContent: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'WebSite',
-            name: 'gofurry',
+            name: 'GoFurry',
             alternateName: ['GoFurry 兽人控导航站', 'GoFurry Navigation'],
             url: normalizedSiteUrl,
             inLanguage: ['zh-CN', 'en-US'],
@@ -136,7 +136,7 @@ export default defineNuxtConfig({
           textContent: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Organization',
-            name: 'gofurry',
+            name: 'GoFurry',
             url: normalizedSiteUrl,
             logo: `${normalizedSiteUrl}/logo-mini.png`,
             sameAs: [
@@ -156,7 +156,6 @@ export default defineNuxtConfig({
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
       navApiBase: publicNavApiBase,
       navV2ApiBase: publicNavV2ApiBase,
-      navHealthSummaryEnabled: process.env.NUXT_PUBLIC_NAV_HEALTH_SUMMARY_ENABLED === 'true',
       gameApiBase: process.env.NUXT_PUBLIC_GAME_API_BASE || '/api/v1',
       siteLogoPrefixUrl: process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/',
       siteDefaultLogo: process.env.NUXT_PUBLIC_SITE_DEFAULT_LOGO || 'https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg',

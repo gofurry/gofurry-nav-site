@@ -5,6 +5,7 @@ import (
 
 	dnsService "github.com/gofurry/gofurry-nav-collector/collector/dns/service"
 	httpService "github.com/gofurry/gofurry-nav-collector/collector/http/service"
+	lightProbeService "github.com/gofurry/gofurry-nav-collector/collector/lightprobe/service"
 	pingService "github.com/gofurry/gofurry-nav-collector/collector/ping/service"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 )
@@ -27,6 +28,7 @@ func InitSchedule() {
 	pingService.InitPingOnStart() // ping
 	httpService.InitHTTPOnStart() // http
 	dnsService.InitDNSOnStart()   // dns
+	lightProbeService.InitLightProbeOnStart()
 	log.InfoFields(map[string]interface{}{
 		"component": "scheduler",
 		"duration":  time.Since(start),
