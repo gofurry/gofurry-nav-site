@@ -36,7 +36,7 @@ The production public site has now moved to a Nuxt 4 frontend to improve SEO and
 - `gofurry-nav-web`: Nuxt 4 frontend, now used by the production public site
 - `gofurry-nav-frontend-legacy`: archived Vue frontend kept for migration reference
 - `gofurry-nav-backend`: navigation API service
-- `gofurry-nav-collector`: navigation data collector
+- `gofurry-nav-collector`: navigation data collector; the collector v2 data plane is complete and now provides observation, latest, summary, trend, change event, and low-frequency side-channel probe results
 - `gofurry-game-backend`: game-related API service
 - `gofurry-game-collector`: game-related data collector
 - `gofurry-rag`: lightweight RAG service with an embedded admin console, public Q&A endpoints, and content sync
@@ -141,6 +141,7 @@ Ops Agent / Center include lightweight systemd, Docker Compose, and Nginx exampl
 ## Current Status
 
 - The public site frontend has been migrated to Nuxt 4 and is already running in production
+- `gofurry-nav-collector` has completed its v2 data-plane hardening and is ready for the `gofurry-nav-backend /api/v2/nav` implementation stage
 - The `archive` free-form Q&A page and site-facing RAG integration are now part of the live stack
 - `gofurry-rag` now includes public Q&A guardrails, lightweight multi-turn context, and the first production content sync framework
 - `ops/gofurry-ops-agent` and `ops/gofurry-ops-center` now provide a lightweight monitoring loop for node samples, service health, alert state, peer summaries, sync/deploy events, and the embedded console
