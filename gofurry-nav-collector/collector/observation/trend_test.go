@@ -13,6 +13,23 @@ func TestTargetTrendKey(t *testing.T) {
 	}
 }
 
+func TestReserveDerivedRunDebouncesByKindSiteAndTarget(t *testing.T) {
+	resetDerivedRunGateForTest()
+	now := time.Date(2026, 5, 26, 10, 0, 0, 0, time.UTC)
+	if !reserveDerivedRun("trend", 1, "example.com", now, time.Minute) {
+		t.Fatal("first derived run should be reserved")
+	}
+	if reserveDerivedRun("trend", 1, "example.com", now.Add(30*time.Second), time.Minute) {
+		t.Fatal("second derived run within min interval should be skipped")
+	}
+	if !reserveDerivedRun("change", 1, "example.com", now.Add(30*time.Second), time.Minute) {
+		t.Fatal("different derived kind should have an independent debounce key")
+	}
+	if !reserveDerivedRun("trend", 1, "example.com", now.Add(time.Minute), time.Minute) {
+		t.Fatal("derived run after min interval should be reserved")
+	}
+}
+
 func TestBuildTargetTrendDerivesHTTPPingDNSTLSWindows(t *testing.T) {
 	now := time.Date(2026, 5, 25, 12, 0, 0, 0, time.UTC)
 	rows := []ObservationTrendRow{

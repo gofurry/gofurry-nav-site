@@ -58,6 +58,7 @@ type CollectorV2Config struct {
 	Protocols     CollectorProtocols `yaml:"protocols"`
 	LightProbe    LightProbeConfig   `yaml:"light_probe"`
 	EdgeHints     EdgeHintsConfig    `yaml:"edge_hints"`
+	Derived       V2DerivedConfig    `yaml:"derived"`
 }
 
 type CollectorProtocols struct {
@@ -83,6 +84,7 @@ type LightProbeRDAPConfig struct {
 	Enabled        bool `yaml:"enabled"`
 	IntervalHours  int  `yaml:"interval_hours"`
 	TimeoutSeconds int  `yaml:"timeout_seconds"`
+	RunOnStart     bool `yaml:"run_on_start"`
 }
 
 type LightProbeRobotsConfig struct {
@@ -91,6 +93,7 @@ type LightProbeRobotsConfig struct {
 	TimeoutSeconds   int  `yaml:"timeout_seconds"`
 	MaxResponseBytes int  `yaml:"max_response_bytes"`
 	MaxSitemapLinks  int  `yaml:"max_sitemap_links"`
+	RunOnStart       bool `yaml:"run_on_start"`
 }
 
 type LightProbeSecurityTXTConfig struct {
@@ -98,6 +101,7 @@ type LightProbeSecurityTXTConfig struct {
 	IntervalHours    int  `yaml:"interval_hours"`
 	TimeoutSeconds   int  `yaml:"timeout_seconds"`
 	MaxResponseBytes int  `yaml:"max_response_bytes"`
+	RunOnStart       bool `yaml:"run_on_start"`
 }
 
 type LightProbePageAssetsConfig struct {
@@ -107,6 +111,7 @@ type LightProbePageAssetsConfig struct {
 	MaxIconBytes      int      `yaml:"max_icon_bytes"`
 	MaxManifestBytes  int      `yaml:"max_manifest_bytes"`
 	AllowedAssetHosts []string `yaml:"allowed_asset_hosts"`
+	RunOnStart        bool     `yaml:"run_on_start"`
 }
 
 type LightProbePortCheckConfig struct {
@@ -116,6 +121,7 @@ type LightProbePortCheckConfig struct {
 	Concurrency       int   `yaml:"concurrency"`
 	MaxPortsPerTarget int   `yaml:"max_ports_per_target"`
 	Ports             []int `yaml:"ports"`
+	RunOnStart        bool  `yaml:"run_on_start"`
 }
 
 type LightProbeWAFCanaryConfig struct {
@@ -134,6 +140,15 @@ type SchedulerConfig struct {
 	LeaseTTLSeconds  int    `yaml:"lease_ttl_seconds"`
 	RunStateRedis    *bool  `yaml:"run_state_redis"`
 	RunStateTTLHours int    `yaml:"run_state_ttl_hours"`
+}
+
+type V2DerivedConfig struct {
+	TrendEnabled        *bool `yaml:"trend_enabled"`
+	ChangeEnabled       *bool `yaml:"change_enabled"`
+	MinIntervalSeconds  int   `yaml:"min_interval_seconds"`
+	QueryTimeoutSeconds int   `yaml:"query_timeout_seconds"`
+	TrendMaxRows        int   `yaml:"trend_max_rows"`
+	ChangeMaxRows       int   `yaml:"change_max_rows"`
 }
 
 type DnsConfig struct {
@@ -457,6 +472,36 @@ func (cfg LightProbePortCheckConfig) WorkerCount() int {
 
 func (cfg LightProbePortCheckConfig) MaxPorts() int {
 	return intOrDefault(cfg.MaxPortsPerTarget, 24)
+}
+
+func (cfg V2DerivedConfig) TrendEnabledOrDefault() bool {
+	if cfg.TrendEnabled == nil {
+		return true
+	}
+	return *cfg.TrendEnabled
+}
+
+func (cfg V2DerivedConfig) ChangeEnabledOrDefault() bool {
+	if cfg.ChangeEnabled == nil {
+		return true
+	}
+	return *cfg.ChangeEnabled
+}
+
+func (cfg V2DerivedConfig) MinInterval() time.Duration {
+	return secondsOrDefault(cfg.MinIntervalSeconds, 300)
+}
+
+func (cfg V2DerivedConfig) QueryTimeout() time.Duration {
+	return secondsOrDefault(cfg.QueryTimeoutSeconds, 2)
+}
+
+func (cfg V2DerivedConfig) TrendRows() int {
+	return intOrDefault(cfg.TrendMaxRows, 3000)
+}
+
+func (cfg V2DerivedConfig) ChangeRows() int {
+	return intOrDefault(cfg.ChangeMaxRows, 80)
 }
 
 func (cfg LightProbeWAFCanaryConfig) Interval() time.Duration {

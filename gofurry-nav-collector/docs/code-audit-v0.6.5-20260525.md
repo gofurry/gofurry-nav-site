@@ -41,7 +41,7 @@ No findings.
 - Severity: P1
 - Category: Security / Reliability
 - Location: `gofurry-nav-collector/go.mod:3`, `gofurry-nav-collector/go.mod:18`, `gofurry-nav-collector/common/util/http.go:153`
-- Status: Open
+- Status: Fixed in v0.6.5
 - Confidence: High
 
 #### Problem
@@ -94,7 +94,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 - Severity: P2
 - Category: Performance / Reliability
 - Location: `gofurry-nav-collector/collector/observation/summary.go:77`, `gofurry-nav-collector/collector/observation/summary.go:85`, `gofurry-nav-collector/collector/observation/dao.go:83`, `gofurry-nav-collector/collector/observation/dao.go:114`
-- Status: Open
+- Status: Fixed in v0.6.5
 - Confidence: High
 
 #### Problem
@@ -140,7 +140,7 @@ ON gfn_collector_observation (site_id, target, protocol, observed_at DESC, id DE
 - Severity: P2
 - Category: Reliability / Safety
 - Location: `gofurry-nav-collector/collector/lightprobe/service/lightProbeService.go:95`, `gofurry-nav-collector/collector/lightprobe/service/lightProbeService.go:105`, `gofurry-nav-collector/collector/lightprobe/service/lightProbeService.go:115`, `gofurry-nav-collector/collector/lightprobe/service/lightProbeService.go:125`, `gofurry-nav-collector/collector/lightprobe/service/lightProbeService.go:135`
-- Status: Open
+- Status: Fixed in v0.6.5
 - Confidence: High
 
 #### Problem
@@ -196,31 +196,31 @@ collector:
 - 手工启动 collector，确认 Redis run state 不出现对应 light probe 立即运行记录。
 - 显式 `run_on_start=true` 时保留当前行为。
 
-### P2-003: 仓库内跟踪的 `conf/server.yaml` 包含实配密码和开启状态，容易造成误部署或敏感信息扩散
+### P2-003: 本地 `conf/server.yaml` 包含实配密码和开启状态，需要安全示例配置避免误部署
 
 - Severity: P2
 - Category: Security / Maintainability
 - Location: `gofurry-nav-collector/conf/server.yaml:14`, `gofurry-nav-collector/conf/server.yaml:21`, `gofurry-nav-collector/conf/server.yaml:43`, `gofurry-nav-collector/conf/server.yaml:70`, `gofurry-nav-collector/conf/server.yaml:77`, `gofurry-nav-collector/conf/server.yaml:102`
-- Status: Open
+- Status: Fixed in v0.6.5
 - Confidence: High
 
 #### Problem
 
-当前仓库内 `conf/server.yaml` 包含测试库 Redis / DB 密码，并且开启了 v2、page_assets、port_check、waf_canary 等探测能力。虽然这是本地测试环境，但该文件被版本控制跟踪，容易被误当成生产默认配置，也会让测试凭据扩散到仓库历史里。
+当前工作区本地 `conf/server.yaml` 包含测试库 Redis / DB 密码，并且开启了 v2、page_assets、port_check、waf_canary 等探测能力。该文件已被 `.gitignore` 忽略，没有被 Git 跟踪；但仓库缺少可提交的安全示例配置，容易让本地实配被复制成部署默认配置。
 
 #### Impact
 
 风险主要有两个：
 
 - 配置复制或部署时误启用低频主动探测，导致生产行为与预期不一致。
-- 测试环境凭据长期留在仓库历史中，增加凭据复用或暴露风险。
+- 如果未来误强制提交本地配置，测试环境凭据可能扩散到仓库历史中。
 
 #### Evidence
 
 `conf/server.yaml` 中存在：
 
-- `db_password: "123456"`
-- `redis_password: "123456"`
+- `db_password: "<测试密码>"`
+- `redis_password: "<测试密码>"`
 - `collector.v2.enabled: true`
 - `page_assets.enabled: true`
 - `port_check.enabled: true`
@@ -229,13 +229,12 @@ collector:
 
 #### Recommendation
 
-将仓库内配置收敛为安全示例配置，真实本地配置移到被 ignore 的 local 文件或继续放在 `/etc/gf-nav-collector/server.yaml`。
+保留真实本地配置为 ignored 文件，新增可提交的安全示例配置。示例配置必须使用占位符密码，并默认关闭所有主动 light probe。
 
 #### Suggested Change
 
 - 新增 `conf/server.example.yaml`，所有密码使用占位符。
-- 将仓库跟踪的 `conf/server.yaml` 改为安全默认：v2 可保留示例，但主动 light probe 默认关闭。
-- `.gitignore` 忽略 `conf/server.local.yaml`、`conf/*.local.yaml`。
+- 保持 `conf/server.yaml` ignored，不纳入 Git。
 - 如果历史凭据有复用风险，轮换测试库密码。
 
 #### Verification
@@ -251,7 +250,7 @@ collector:
 - Severity: P3
 - Category: Security / Reliability / Maintainability
 - Location: `gofurry-nav-collector/common/util/http.go:26`, `gofurry-nav-collector/common/util/http.go:48`, `gofurry-nav-collector/common/util/http.go:153`, `gofurry-nav-collector/common/util/http.go:194`
-- Status: Open
+- Status: Fixed in v0.6.5
 - Confidence: Medium
 
 #### Problem
@@ -292,7 +291,7 @@ collector:
 - Severity: P3
 - Category: Concurrency / Maintainability
 - Location: `gofurry-nav-collector/collector/lightprobe/service/lightProbeService.go:1650`
-- Status: Open
+- Status: Fixed in v0.6.5
 - Confidence: Medium
 
 #### Problem
@@ -327,7 +326,7 @@ collector:
 
 ## Recommended Fix Plan
 
-建议将修复拆入 `v0.6.5`，顺序如下：
+`v0.6.5` 已按以下顺序完成修复：
 
 1. 先升级 Go toolchain 与 `golang.org/x/net`，重新跑 `govulncheck`。
 2. 处理仓库配置安全默认，避免后续测试和生产更新误用。

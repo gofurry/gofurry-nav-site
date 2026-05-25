@@ -131,6 +131,9 @@ func TestLightProbeDefaults(t *testing.T) {
 	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled || cfg.PageAssets.Enabled || cfg.PortCheck.Enabled || cfg.WAFCanary.Enabled {
 		t.Fatal("light probe should be disabled by default")
 	}
+	if cfg.RDAP.RunOnStart || cfg.Robots.RunOnStart || cfg.SecurityTXT.RunOnStart || cfg.PageAssets.RunOnStart || cfg.PortCheck.RunOnStart || cfg.WAFCanary.RunOnStart {
+		t.Fatal("light probe should not run on service start by default")
+	}
 	if cfg.RDAP.Interval() != 168*time.Hour || cfg.Robots.Interval() != 168*time.Hour || cfg.SecurityTXT.Interval() != 168*time.Hour || cfg.PageAssets.Interval() != 168*time.Hour || cfg.PortCheck.Interval() != 168*time.Hour {
 		t.Fatal("light probe interval should default to 168 hours")
 	}
@@ -170,17 +173,20 @@ collector:
         enabled: true
         interval_hours: 24
         timeout_seconds: 3
+        run_on_start: true
       robots:
         enabled: true
         interval_hours: 48
         timeout_seconds: 4
         max_response_bytes: 1234
         max_sitemap_links: 7
+        run_on_start: true
       security_txt:
         enabled: true
         interval_hours: 72
         timeout_seconds: 5
         max_response_bytes: 2345
+        run_on_start: true
       page_assets:
         enabled: true
         interval_hours: 96
@@ -189,6 +195,7 @@ collector:
         max_manifest_bytes: 4567
         allowed_asset_hosts:
           - cdn.example.com
+        run_on_start: true
       port_check:
         enabled: true
         interval_hours: 120
@@ -199,6 +206,7 @@ collector:
           - 80
           - 443
           - 3306
+        run_on_start: true
       waf_canary:
         enabled: true
         interval_hours: 720
@@ -219,6 +227,9 @@ collector:
 	}
 	if cfg.Collector.V2.LightProbe.RDAP.Interval() != 24*time.Hour || cfg.Collector.V2.LightProbe.RDAP.Timeout() != 3*time.Second {
 		t.Fatalf("rdap config not loaded: %+v", cfg.Collector.V2.LightProbe.RDAP)
+	}
+	if !cfg.Collector.V2.LightProbe.RDAP.RunOnStart || !cfg.Collector.V2.LightProbe.Robots.RunOnStart || !cfg.Collector.V2.LightProbe.SecurityTXT.RunOnStart || !cfg.Collector.V2.LightProbe.PageAssets.RunOnStart || !cfg.Collector.V2.LightProbe.PortCheck.RunOnStart {
+		t.Fatalf("light probe run_on_start config not loaded: %+v", cfg.Collector.V2.LightProbe)
 	}
 	if cfg.Collector.V2.LightProbe.Robots.MaxResponseSize() != 1234 || cfg.Collector.V2.LightProbe.Robots.MaxSitemaps() != 7 {
 		t.Fatalf("robots limits not loaded: %+v", cfg.Collector.V2.LightProbe.Robots)
@@ -252,6 +263,39 @@ collector:
 	}
 	if !cfg.Collector.V2.LightProbe.WAFCanary.RunOnStart || cfg.Collector.V2.LightProbe.WAFCanary.MaxTargets() != 12 {
 		t.Fatalf("waf_canary run control config not loaded: %+v", cfg.Collector.V2.LightProbe.WAFCanary)
+	}
+}
+
+func TestV2DerivedDefaultsAndYAMLConfig(t *testing.T) {
+	cfg := V2DerivedConfig{}
+	if !cfg.TrendEnabledOrDefault() || !cfg.ChangeEnabledOrDefault() {
+		t.Fatal("v2 derived outputs should be enabled by default")
+	}
+	if cfg.MinInterval() != 300*time.Second || cfg.QueryTimeout() != 2*time.Second || cfg.TrendRows() != 3000 || cfg.ChangeRows() != 80 {
+		t.Fatalf("unexpected derived defaults: %+v", cfg)
+	}
+
+	var loaded serverConfig
+	err := yaml.Unmarshal([]byte(`
+collector:
+  v2:
+    derived:
+      trend_enabled: false
+      change_enabled: false
+      min_interval_seconds: 60
+      query_timeout_seconds: 3
+      trend_max_rows: 100
+      change_max_rows: 20
+`), &loaded)
+	if err != nil {
+		t.Fatalf("yaml.Unmarshal() error = %v", err)
+	}
+	derived := loaded.Collector.V2.Derived
+	if derived.TrendEnabledOrDefault() || derived.ChangeEnabledOrDefault() {
+		t.Fatal("derived explicit false switches should be loaded")
+	}
+	if derived.MinInterval() != time.Minute || derived.QueryTimeout() != 3*time.Second || derived.TrendRows() != 100 || derived.ChangeRows() != 20 {
+		t.Fatalf("derived limits not loaded: %+v", derived)
 	}
 }
 

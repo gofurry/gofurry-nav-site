@@ -92,52 +92,67 @@ func InitLightProbeOnStart() {
 	cfg := env.GetServerConfig().Collector.V2
 	if cfg.ProtocolEnabled(observation.ProtocolRDAP) {
 		interval := cfg.LightProbe.RDAP.Interval()
-		go RunRDAP()
+		if cfg.LightProbe.RDAP.RunOnStart {
+			go RunRDAP()
+		}
 		cs.AddCronJob(interval, RunRDAP)
 		log.InfoFields(map[string]interface{}{
-			"event":    "light_probe_registered",
-			"interval": interval,
-			"protocol": observation.ProtocolRDAP,
+			"event":        "light_probe_registered",
+			"interval":     interval,
+			"protocol":     observation.ProtocolRDAP,
+			"run_on_start": cfg.LightProbe.RDAP.RunOnStart,
 		}, "RDAP 低频轻探测已注册")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolRobots) {
 		interval := cfg.LightProbe.Robots.Interval()
-		go RunRobots()
+		if cfg.LightProbe.Robots.RunOnStart {
+			go RunRobots()
+		}
 		cs.AddCronJob(interval, RunRobots)
 		log.InfoFields(map[string]interface{}{
-			"event":    "light_probe_registered",
-			"interval": interval,
-			"protocol": observation.ProtocolRobots,
+			"event":        "light_probe_registered",
+			"interval":     interval,
+			"protocol":     observation.ProtocolRobots,
+			"run_on_start": cfg.LightProbe.Robots.RunOnStart,
 		}, "robots.txt 低频轻探测已注册")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolSecurityTXT) {
 		interval := cfg.LightProbe.SecurityTXT.Interval()
-		go RunSecurityTXT()
+		if cfg.LightProbe.SecurityTXT.RunOnStart {
+			go RunSecurityTXT()
+		}
 		cs.AddCronJob(interval, RunSecurityTXT)
 		log.InfoFields(map[string]interface{}{
-			"event":    "light_probe_registered",
-			"interval": interval,
-			"protocol": observation.ProtocolSecurityTXT,
+			"event":        "light_probe_registered",
+			"interval":     interval,
+			"protocol":     observation.ProtocolSecurityTXT,
+			"run_on_start": cfg.LightProbe.SecurityTXT.RunOnStart,
 		}, "security.txt 低频轻探测已注册")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolPageAssets) {
 		interval := cfg.LightProbe.PageAssets.Interval()
-		go RunPageAssets()
+		if cfg.LightProbe.PageAssets.RunOnStart {
+			go RunPageAssets()
+		}
 		cs.AddCronJob(interval, RunPageAssets)
 		log.InfoFields(map[string]interface{}{
-			"event":    "light_probe_registered",
-			"interval": interval,
-			"protocol": observation.ProtocolPageAssets,
+			"event":        "light_probe_registered",
+			"interval":     interval,
+			"protocol":     observation.ProtocolPageAssets,
+			"run_on_start": cfg.LightProbe.PageAssets.RunOnStart,
 		}, "页面资源声明低频轻探测已注册")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolPortCheck) {
 		interval := cfg.LightProbe.PortCheck.Interval()
-		go RunPortCheck()
+		if cfg.LightProbe.PortCheck.RunOnStart {
+			go RunPortCheck()
+		}
 		cs.AddCronJob(interval, RunPortCheck)
 		log.InfoFields(map[string]interface{}{
-			"event":    "light_probe_registered",
-			"interval": interval,
-			"protocol": observation.ProtocolPortCheck,
+			"event":        "light_probe_registered",
+			"interval":     interval,
+			"protocol":     observation.ProtocolPortCheck,
+			"run_on_start": cfg.LightProbe.PortCheck.RunOnStart,
 		}, "端口连通性低频轻探测已注册")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolWAFCanary) {
@@ -1649,10 +1664,13 @@ func rdapServerForTLD(client *http.Client, tld string) (string, error) {
 
 func rdapBootstrapServers(client *http.Client) (map[string]string, error) {
 	rdapBootstrapMu.Lock()
-	defer rdapBootstrapMu.Unlock()
 	if rdapBootstrap.servers != nil && time.Now().Before(rdapBootstrap.expiresAt) {
-		return rdapBootstrap.servers, nil
+		servers := rdapBootstrap.servers
+		rdapBootstrapMu.Unlock()
+		return servers, nil
 	}
+	rdapBootstrapMu.Unlock()
+
 	timeout := client.Timeout
 	if timeout <= 0 {
 		timeout = 10 * time.Second
@@ -1679,10 +1697,18 @@ func rdapBootstrapServers(client *http.Client) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	rdapBootstrapMu.Lock()
+	if rdapBootstrap.servers != nil && time.Now().Before(rdapBootstrap.expiresAt) {
+		cached := rdapBootstrap.servers
+		rdapBootstrapMu.Unlock()
+		return cached, nil
+	}
 	rdapBootstrap = cachedRDAPBootstrap{
 		expiresAt: time.Now().Add(rdapBootstrapCacheTTL),
 		servers:   servers,
 	}
+	rdapBootstrapMu.Unlock()
 	return servers, nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -20,6 +21,11 @@ const (
 	defaultTrendMaxRows  = 3000
 )
 
+var (
+	derivedRunMu sync.Mutex
+	derivedRunAt = map[string]time.Time{}
+)
+
 func TargetTrendKey(siteID int64, target string) string {
 	return fmt.Sprintf("collector:v2:trend:target:%d:%s", siteID, target)
 }
@@ -32,10 +38,16 @@ func UpdateTrendIfEnabled(siteID int64, target string, now time.Time) common.GFE
 	if !cfg.Enabled || !cfg.ObservationDB || !cfg.LatestRedis {
 		return nil
 	}
+	if !cfg.Derived.TrendEnabledOrDefault() {
+		return nil
+	}
+	if !reserveDerivedRun("trend", siteID, target, now, cfg.Derived.MinInterval()) {
+		return nil
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultTrendTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Derived.QueryTimeout())
 	defer cancel()
-	rows, err := GetObservationDao().ListTrendRows(ctx, siteID, target, now.Add(-defaultTrendLookback), defaultTrendMaxRows)
+	rows, err := GetObservationDao().ListTrendRows(ctx, siteID, target, now.Add(-defaultTrendLookback), cfg.Derived.TrendRows())
 	if err != nil {
 		log.WarnFields(map[string]interface{}{
 			"event":   "v2_trend_query_failed",
@@ -64,6 +76,27 @@ func UpdateTrendIfEnabled(siteID int64, target string, now time.Time) common.GFE
 		return err
 	}
 	return nil
+}
+
+func reserveDerivedRun(kind string, siteID int64, target string, now time.Time, minInterval time.Duration) bool {
+	if kind == "" || siteID <= 0 || target == "" || minInterval <= 0 {
+		return true
+	}
+	key := fmt.Sprintf("%s:%d:%s", kind, siteID, target)
+	derivedRunMu.Lock()
+	defer derivedRunMu.Unlock()
+	last, ok := derivedRunAt[key]
+	if ok && now.Sub(last) < minInterval {
+		return false
+	}
+	derivedRunAt[key] = now
+	return true
+}
+
+func resetDerivedRunGateForTest() {
+	derivedRunMu.Lock()
+	defer derivedRunMu.Unlock()
+	derivedRunAt = map[string]time.Time{}
 }
 
 func BuildTargetTrend(siteID int64, target string, rows []ObservationTrendRow, now time.Time) TargetTrendDocument {

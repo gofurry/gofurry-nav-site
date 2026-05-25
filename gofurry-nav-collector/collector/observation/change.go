@@ -33,10 +33,16 @@ func UpdateChangeEventsIfEnabled(siteID int64, target string, now time.Time) com
 	if !cfg.Enabled || !cfg.ObservationDB || !cfg.LatestRedis {
 		return nil
 	}
+	if !cfg.Derived.ChangeEnabledOrDefault() {
+		return nil
+	}
+	if !reserveDerivedRun("change", siteID, target, now, cfg.Derived.MinInterval()) {
+		return nil
+	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultChangeTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Derived.QueryTimeout())
 	defer cancel()
-	rows, err := GetObservationDao().ListChangeRows(ctx, siteID, target, now.Add(-defaultChangeLookback), defaultChangeMaxRows)
+	rows, err := GetObservationDao().ListChangeRows(ctx, siteID, target, now.Add(-defaultChangeLookback), cfg.Derived.ChangeRows())
 	if err != nil {
 		log.WarnFields(map[string]interface{}{
 			"event":   "v2_change_query_failed",

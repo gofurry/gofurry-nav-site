@@ -168,7 +168,7 @@
 
 ### v0.6.5 - 后端 v2 前审计修复
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** 安全 / 稳定性 / 性能 / 配置治理 / 测试
 **目标：** 修复 `docs/code-audit-v0.6.5-20260525.md` 中进入后端 v2 前必须处理的 collector 风险，确保 v2 数据源可以更稳地被后端消费。
 
@@ -181,14 +181,14 @@
 
 #### Tasks
 
-- [ ] 升级 Go toolchain 到 `1.26.3+`，升级 `golang.org/x/net` 到 `v0.55.0+`，重新运行 `govulncheck`。
-- [ ] 新增手动 SQL 脚本，为 `gfn_collector_observation` 补充 `(site_id, target, protocol, observed_at DESC, id DESC)` 并发索引。
-- [ ] 为 trend / change event 派生增加更明确的查询预算、开关或去抖，避免每次 summary 更新都无条件放大历史查询。
-- [ ] 为 RDAP、robots.txt、security.txt、page_assets、port_check 增加统一 `run_on_start` 配置，默认关闭；保留显式开启时的立即运行能力。
-- [ ] 将仓库内 `conf/server.yaml` 收敛为安全示例配置或拆出 `conf/server.example.yaml`，真实本地配置放入 ignored local 文件。
-- [ ] 删除或加固 `common/util/http.go` 中无调用点的遗留 HTTP helper，移除 `InsecureSkipVerify`、无界 `ReadAll` 和无界 HTML parse 风险。
-- [ ] 缩小 RDAP bootstrap 缓存锁范围，避免持锁执行网络 I/O。
-- [ ] 为上述修复补充单元测试和配置加载测试。
+- [x] 升级 Go toolchain 到 `1.26.3+`，升级 `golang.org/x/net` 到 `v0.55.0+`，重新运行 `govulncheck`。
+- [x] 新增手动 SQL 脚本，为 `gfn_collector_observation` 补充 `(site_id, target, protocol, observed_at DESC, id DESC)` 并发索引。
+- [x] 为 trend / change event 派生增加更明确的查询预算、开关和去抖，避免每次 summary 更新都无条件放大历史查询。
+- [x] 为 RDAP、robots.txt、security.txt、page_assets、port_check 增加统一 `run_on_start` 配置，默认关闭；保留显式开启时的立即运行能力。
+- [x] 新增安全 `conf/server.example.yaml`，真实本地 `conf/server.yaml` 保持 ignored，不纳入 Git。
+- [x] 删除 `common/util/http.go` 中无调用点的遗留 HTTP helper，移除 `InsecureSkipVerify`、无界 `ReadAll` 和无界 HTML parse 风险。
+- [x] 缩小 RDAP bootstrap 缓存锁范围，避免持锁执行网络 I/O。
+- [x] 为上述修复补充单元测试和配置加载测试。
 
 #### Acceptance Criteria
 
