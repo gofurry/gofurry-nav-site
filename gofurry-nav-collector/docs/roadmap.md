@@ -281,7 +281,7 @@
 
 ### v0.5.8 - 审计发现修复与轻探测边界加固
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** 安全边界 / 运行可观测性 / WAF canary 可信度 / Redis summary 治理
 **目标：** 修复 v0.5.8 代码审计发现的中低风险问题，让默认关闭的轻探测能力在生产启用时更可控、更可信。
 
@@ -294,14 +294,14 @@
 
 #### Tasks
 
-- [ ] 为 `page_assets` 增加解析后 IP 校验，拒绝 loopback、private、link-local、multicast、unspecified 等地址。
-- [ ] 为 `page_assets` 增加单元测试：同注册域资源解析到 `127.0.0.1` / `10.0.0.1` 时不发起请求，公网地址正常放行。
-- [ ] 为 `waf_canary` 增加 `run_on_start` 配置，默认 `false`；本地测试可显式设为 `true`。
-- [ ] 调整 WAF canary 结果语义：`blocked=true` 即可计入拦截命中，状态码差异单独记录为 `status_code_expected=false` 与 `status_code_unexpected_count`。
-- [ ] 为 WAF canary 增加 `max_targets_per_run`，默认 `0` 表示不限；被截断时记录 `truncated_target_count`。
-- [ ] 在 light probe 加载目标后立即刷新 running run state，并在长任务执行中按目标进度刷新计数。
-- [ ] 为 site summary target Redis set 增加轻量清理：target summary 缺失或 site_id 不匹配时从索引中移除。
-- [ ] 更新 `docs/v2-observation-payload.md`，记录 WAF canary 新字段和 page_assets 私网地址拒绝语义。
+- [x] 为 `page_assets` 增加解析后 IP 校验，拒绝 loopback、private、link-local、multicast、unspecified 等地址。
+- [x] 为 `page_assets` 增加单元测试：同注册域资源解析到 `127.0.0.1` / `10.0.0.1` 时不发起请求，公网地址正常放行。
+- [x] 为 `waf_canary` 增加 `run_on_start` 配置，默认 `false`；本地测试可显式设为 `true`。
+- [x] 调整 WAF canary 结果语义：`blocked=true` 即可计入拦截命中，状态码差异单独记录为 `status_code_expected=false` 与 `status_code_unexpected_count`。
+- [x] 为 WAF canary 增加 `max_targets_per_run`，默认 `0` 表示不限；被截断时记录 `truncated_target_count`。
+- [x] 在 light probe 加载目标后立即刷新 running run state，并在长任务执行中按目标进度刷新计数。
+- [x] 为 site summary target Redis set 增加轻量清理：target summary 缺失或 site_id 不匹配时从索引中移除。
+- [x] 更新 `docs/v2-observation-payload.md`，记录 WAF canary 新字段和 page_assets 私网地址拒绝语义。
 
 #### Acceptance Criteria
 

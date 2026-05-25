@@ -45,4 +45,7 @@ func TestRedisCommandErrorsReturnGFError(t *testing.T) {
 	if _, err := SMembers("test:set"); err == nil {
 		t.Fatal("SMembers() should return GFError when Redis command fails")
 	}
+	if err := SRem("test:set", "value"); err == nil {
+		t.Fatal("SRem() should return GFError when Redis command fails")
+	}
 }

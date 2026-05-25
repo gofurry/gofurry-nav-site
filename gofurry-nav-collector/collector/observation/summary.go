@@ -89,6 +89,7 @@ func UpdateSiteSummary(siteID int64, now time.Time) common.GFError {
 			return getErr
 		}
 		if raw == "" {
+			forgetSummaryTargetByKey(siteID, key)
 			continue
 		}
 		var summary TargetSummaryDocument
@@ -102,6 +103,8 @@ func UpdateSiteSummary(siteID int64, now time.Time) common.GFError {
 		}
 		if summary.SiteID == siteID {
 			summaries = append(summaries, summary)
+		} else {
+			forgetSummaryTargetByKey(siteID, key)
 		}
 	}
 
@@ -114,6 +117,36 @@ func rememberSummaryTarget(siteID int64, target string) common.GFError {
 		return nil
 	}
 	return cs.SAdd(SiteSummaryTargetsKey(siteID), target)
+}
+
+func forgetSummaryTarget(siteID int64, target string) common.GFError {
+	if siteID <= 0 || target == "" {
+		return nil
+	}
+	return cs.SRem(SiteSummaryTargetsKey(siteID), target)
+}
+
+func forgetSummaryTargetByKey(siteID int64, key string) {
+	target := targetFromSummaryKey(siteID, key)
+	if target == "" {
+		return
+	}
+	if err := forgetSummaryTarget(siteID, target); err != nil {
+		log.WarnFields(map[string]interface{}{
+			"event":     "v2_summary_target_index_cleanup_failed",
+			"redis_key": SiteSummaryTargetsKey(siteID),
+			"site_id":   siteID,
+			"target":    target,
+		}, "v2 target summary 索引清理 Redis 失败: "+err.GetMsg())
+	}
+}
+
+func targetFromSummaryKey(siteID int64, key string) string {
+	prefix := TargetSummaryKey(siteID, "")
+	if len(key) <= len(prefix) || key[:len(prefix)] != prefix {
+		return ""
+	}
+	return key[len(prefix):]
 }
 
 func targetSummaryKeysForSite(siteID int64) ([]string, common.GFError) {

@@ -267,6 +267,21 @@ func SMembers(key string) ([]string, common.GFError) {
 	return values, nil
 }
 
+func SRem(key string, members ...string) common.GFError {
+	if len(members) == 0 {
+		return nil
+	}
+	ctx, cancel := commandContext()
+	defer cancel()
+	if err := client.SRem(ctx, key, members).Err(); err != nil {
+		fields := redisFields("srem", key)
+		fields["members"] = len(members)
+		log.ErrorFields(fields, "Redis 集合成员删除失败: "+err.Error())
+		return common.NewServiceError("删除集合缓存失败.")
+	}
+	return nil
+}
+
 func Incr(key string) common.GFError {
 	ctx, cancel := commandContext()
 	defer cancel()

@@ -202,15 +202,21 @@ func TestHTTPClientInvalidProxyReturnsError(t *testing.T) {
 }
 
 func TestBuildPageAssetsPayloadFetchesDeclaredIconAndManifest(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/favicon.ico":
-			w.Header().Set("Content-Type", "image/png")
-			w.Header().Set("Content-Length", "7")
-			_, _ = w.Write([]byte("pngdata"))
-		case "/site.webmanifest":
-			w.Header().Set("Content-Type", "application/manifest+json")
-			_, _ = w.Write([]byte(`{
+	withPageAssetResolver(t, net.ParseIP("93.184.216.34"))
+	withDeclaredAssetFetcher(t, func(_ *http.Client, rawURL string, _ int64) (httpProbeResponse, error) {
+		if strings.HasSuffix(rawURL, "/favicon.ico") {
+			return httpProbeResponse{
+				StatusCode:          http.StatusOK,
+				ContentType:         "image/png",
+				ContentLengthHeader: 7,
+				Body:                []byte("pngdata"),
+			}, nil
+		}
+		if strings.HasSuffix(rawURL, "/site.webmanifest") {
+			return httpProbeResponse{
+				StatusCode:  http.StatusOK,
+				ContentType: "application/manifest+json",
+				Body: []byte(`{
 				"name": "Example App",
 				"short_name": "Example",
 				"theme_color": "#ffffff",
@@ -219,18 +225,17 @@ func TestBuildPageAssetsPayloadFetchesDeclaredIconAndManifest(t *testing.T) {
 				"start_url": "/start",
 				"scope": "/",
 				"icons": [{"src": "/icon.png"}, {"src": "/icon-512.png"}]
-			}`))
-		default:
-			http.NotFound(w, r)
+			}`),
+			}, nil
 		}
-	}))
-	defer server.Close()
+		return httpProbeResponse{}, errors.New("unexpected asset URL")
+	})
 
-	payload := buildPageAssetsPayloadFromHTTPPayload(targetFromTestServer(server.URL), map[string]any{
+	payload := buildPageAssetsPayloadFromHTTPPayload(models.GfnCollectorDomain{SiteID: 1, Name: "example.com", TLS: "1"}, map[string]any{
 		"icon_links": []any{
-			map[string]any{"rel": "icon", "href": server.URL + "/favicon.ico", "type": "image/png", "sizes": "32x32"},
+			map[string]any{"rel": "icon", "href": "https://example.com/favicon.ico", "type": "image/png", "sizes": "32x32"},
 		},
-		"manifest_link": map[string]any{"rel": "manifest", "href": server.URL + "/site.webmanifest", "type": "application/manifest+json"},
+		"manifest_link": map[string]any{"rel": "manifest", "href": "https://example.com/site.webmanifest", "type": "application/manifest+json"},
 	}, testPageAssetsConfig())
 
 	icon := payload["icon"].(map[string]any)
@@ -241,7 +246,7 @@ func TestBuildPageAssetsPayloadFetchesDeclaredIconAndManifest(t *testing.T) {
 	if manifest["exists"] != true || manifest["name"] != "Example App" || manifest["icons_count"] != 2 {
 		t.Fatalf("manifest payload unexpected: %+v", manifest)
 	}
-	if manifest["start_url"] != server.URL+"/start" || manifest["scope"] != server.URL+"/" {
+	if manifest["start_url"] != "https://example.com/start" || manifest["scope"] != "https://example.com/" {
 		t.Fatalf("manifest URL resolution unexpected: %+v", manifest)
 	}
 }
@@ -268,23 +273,62 @@ func TestBuildPageAssetsPayloadAllowsConfiguredCrossSiteHost(t *testing.T) {
 }
 
 func TestBuildPageAssetsPayloadMarksTruncatedAsset(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "image/png")
-		_, _ = w.Write([]byte(strings.Repeat("x", 64)))
-	}))
-	defer server.Close()
+	withPageAssetResolver(t, net.ParseIP("93.184.216.34"))
+	withDeclaredAssetFetcher(t, func(_ *http.Client, _ string, maxBytes int64) (httpProbeResponse, error) {
+		body := []byte(strings.Repeat("x", 64))
+		truncated := int64(len(body)) > maxBytes
+		if truncated {
+			body = body[:maxBytes]
+		}
+		return httpProbeResponse{
+			StatusCode:    http.StatusOK,
+			ContentType:   "image/png",
+			Body:          body,
+			BodyTruncated: truncated,
+		}, nil
+	})
 
 	cfg := testPageAssetsConfig()
 	cfg.MaxIconBytes = 8
-	payload := buildPageAssetsPayloadFromHTTPPayload(targetFromTestServer(server.URL), map[string]any{
+	payload := buildPageAssetsPayloadFromHTTPPayload(models.GfnCollectorDomain{SiteID: 1, Name: "example.com", TLS: "1"}, map[string]any{
 		"icon_links": []any{
-			map[string]any{"rel": "icon", "href": server.URL},
+			map[string]any{"rel": "icon", "href": "https://example.com/favicon.ico"},
 		},
 	}, cfg)
 
 	icon := payload["icon"].(map[string]any)
 	if icon["exists"] != true || icon["body_truncated"] != true || icon["body_read_bytes"] != 8 {
 		t.Fatalf("truncated icon payload unexpected: %+v", icon)
+	}
+}
+
+func TestPageAssetsRejectsPrivateResolvedIP(t *testing.T) {
+	withPageAssetResolver(t, net.ParseIP("10.0.0.1"))
+	called := false
+	withDeclaredAssetFetcher(t, func(_ *http.Client, _ string, _ int64) (httpProbeResponse, error) {
+		called = true
+		return httpProbeResponse{}, nil
+	})
+
+	payload := buildPageAssetsPayloadFromHTTPPayload(models.GfnCollectorDomain{SiteID: 1, Name: "example.com", TLS: "1"}, map[string]any{
+		"icon_links": []any{
+			map[string]any{"rel": "icon", "href": "https://static.example.com/favicon.ico"},
+		},
+	}, testPageAssetsConfig())
+
+	icon := payload["icon"].(map[string]any)
+	if icon["skipped_reason"] != "asset_ip_not_allowed" {
+		t.Fatalf("private resolved IP should be rejected: %+v", icon)
+	}
+	if called {
+		t.Fatal("private resolved IP should not perform asset request")
+	}
+}
+
+func TestPageAssetsRejectsLoopbackLiteral(t *testing.T) {
+	allowed, reason := assetNetworkAllowed("https://127.0.0.1/favicon.ico")
+	if allowed || reason != "asset_ip_not_allowed" {
+		t.Fatalf("loopback literal allowed=%v reason=%q, want asset_ip_not_allowed", allowed, reason)
 	}
 }
 
@@ -472,6 +516,9 @@ func TestProbeWAFCanaryMatchesExpectedBlocks(t *testing.T) {
 	if result.Payload["expected_blocked_count"] != 11 || result.Payload["expected_blocked_matched_count"] != 11 || result.Payload["unexpected_pass_count"] != 0 || result.Payload["network_error_count"] != 0 {
 		t.Fatalf("unexpected WAF canary counts: %+v", result.Payload)
 	}
+	if result.Payload["status_code_unexpected_count"] != 0 {
+		t.Fatalf("unexpected WAF canary status count: %+v", result.Payload)
+	}
 	cases := result.Payload["cases"].([]map[string]any)
 	for _, item := range cases {
 		if _, ok := item["body"]; ok {
@@ -480,6 +527,68 @@ func TestProbeWAFCanaryMatchesExpectedBlocks(t *testing.T) {
 		if _, ok := item["url"]; ok {
 			t.Fatalf("case result should not store url: %+v", item)
 		}
+	}
+}
+
+func TestProbeWAFCanaryBlockedWithDifferentBlockedStatusStillMatches(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lowerPath := strings.ToLower(r.URL.EscapedPath())
+		switch {
+		case r.Method == http.MethodTrace:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		case strings.Contains(strings.ToLower(r.Header.Get("User-Agent")), "sqlmap"):
+			w.WriteHeader(http.StatusForbidden)
+		case len(r.URL.Query()) > 20:
+			w.WriteHeader(http.StatusForbidden)
+		case len(r.RequestURI) > 100 && strings.Contains(r.URL.Path, strings.Repeat("a", 20)):
+			w.WriteHeader(http.StatusRequestURITooLong)
+		case strings.Contains(lowerPath, "%2e%2e") || strings.Contains(strings.ToLower(r.RequestURI), "%2e%2e") || strings.Contains(r.URL.Path, ".."):
+			w.WriteHeader(http.StatusForbidden)
+		case strings.Contains(strings.ToLower(r.URL.Query().Get("id")), "union select"):
+			w.WriteHeader(http.StatusBadRequest)
+		case strings.Contains(strings.ToLower(r.URL.Query().Get("name")), "<script"):
+			w.WriteHeader(http.StatusForbidden)
+		case strings.Contains(r.URL.Query().Get("cmd"), ";"):
+			w.WriteHeader(http.StatusForbidden)
+		case r.Method == http.MethodPost && strings.HasPrefix(r.Header.Get("Content-Type"), "text/plain"):
+			w.WriteHeader(http.StatusUnsupportedMediaType)
+		case r.Method == http.MethodPost && strings.HasPrefix(r.Header.Get("Content-Type"), "application/json"):
+			body, _ := io.ReadAll(r.Body)
+			if string(body) == `{"id":1` {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			if strings.Contains(strings.ToLower(string(body)), "union select") {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		default:
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer server.Close()
+
+	result := probeWAFCanary(targetFromTestServer(server.URL), env.LightProbeWAFCanaryConfig{
+		Enabled:        true,
+		TimeoutSeconds: 1,
+	})
+	if result.Payload["unexpected_pass_count"] != 0 {
+		t.Fatalf("blocked responses should not count as unexpected pass: %+v", result.Payload)
+	}
+	if result.Payload["status_code_unexpected_count"] != 1 {
+		t.Fatalf("status_code_unexpected_count = %v, want 1: %+v", result.Payload["status_code_unexpected_count"], result.Payload)
+	}
+	cases := result.Payload["cases"].([]map[string]any)
+	var sqli map[string]any
+	for _, item := range cases {
+		if item["case_id"] == "sql_injection_keyword" {
+			sqli = item
+			break
+		}
+	}
+	if sqli == nil || sqli["matched_expected"] != true || sqli["status_code_expected"] != false {
+		t.Fatalf("SQLi blocked status mismatch should still match block but mark status unexpected: %+v", sqli)
 	}
 }
 
@@ -524,6 +633,26 @@ func testPageAssetsConfig() env.LightProbePageAssetsConfig {
 		MaxIconBytes:     1024,
 		MaxManifestBytes: 4096,
 	}
+}
+
+func withPageAssetResolver(t *testing.T, ips ...net.IP) {
+	t.Helper()
+	old := lookupAssetIPs
+	lookupAssetIPs = func(string) ([]net.IP, error) {
+		return ips, nil
+	}
+	t.Cleanup(func() {
+		lookupAssetIPs = old
+	})
+}
+
+func withDeclaredAssetFetcher(t *testing.T, fetcher func(*http.Client, string, int64) (httpProbeResponse, error)) {
+	t.Helper()
+	old := fetchDeclaredAsset
+	fetchDeclaredAsset = fetcher
+	t.Cleanup(func() {
+		fetchDeclaredAsset = old
+	})
 }
 
 func restoreRDAPBootstrapForTest(rawURL string) {

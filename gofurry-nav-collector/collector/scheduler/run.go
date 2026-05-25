@@ -241,8 +241,19 @@ func (r *Run) RecordSkipped() {
 	r.skippedCount.Add(1)
 }
 
+func (r *Run) RecordSkippedN(count int) {
+	if count <= 0 {
+		return
+	}
+	r.skippedCount.Add(int64(count))
+}
+
 func (r *Run) RecordRunError() {
 	r.errorCount.Add(1)
+}
+
+func (r *Run) RefreshRunning() {
+	r.writeState(StatusRunning, "")
 }
 
 func (r *Run) Complete(targetCount int) {

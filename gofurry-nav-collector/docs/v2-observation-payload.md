@@ -276,6 +276,7 @@ security.txt 按每个有效采集 target 低频请求 `/.well-known/security.tx
 
 - 只允许 `http` / `https` 资源 URL。
 - 默认只跟随 target 同注册域资源；跨站资源必须显式配置在 `allowed_asset_hosts`。
+- 发起请求前会解析资源 host，解析到 loopback、private、link-local、multicast、unspecified 等地址时跳过，写入 `skipped_reason=asset_ip_not_allowed`；解析失败写入 `asset_dns_resolve_failed`。
 - favicon 只保存元信息和 SHA256，不保存图片内容。
 - manifest 只保存摘要字段和 SHA256，不保存原始 manifest JSON。
 - 没有 HTTP latest、没有声明、资源 host 不允许、Content-Type 不允许、请求失败等场景会写 `exists=false` 和 `skipped_reason`，不影响主采集。
@@ -337,6 +338,10 @@ security.txt 按每个有效采集 target 低频请求 `/.well-known/security.tx
   "expected_blocked_matched_count": 11,
   "unexpected_pass_count": 0,
   "network_error_count": 0,
+  "status_code_unexpected_count": 0,
+  "max_targets_per_run": 0,
+  "truncated_target_count": 0,
+  "target_run_truncated": false,
   "cases": [
     {
       "case_id": "scanner_user_agent",
@@ -345,6 +350,7 @@ security.txt 按每个有效采集 target 低频请求 `/.well-known/security.tx
       "expected_blocked": true,
       "expected_status_codes": [403],
       "status_code": 403,
+      "status_code_expected": true,
       "blocked": true,
       "matched_expected": true,
       "duration_ms": 12,
@@ -356,8 +362,11 @@ security.txt 按每个有效采集 target 低频请求 `/.well-known/security.tx
 ```
 
 - 默认 canary 路径为 `/.well-known/gofurry-waf-canary`，可通过 `canary_path` 覆盖；路径为空、绝对 URL、带 query/fragment 时会安全失败且不发起请求。
+- 默认 `run_on_start=false`，启用后只注册周期任务，不会在服务启动瞬间立即跑全量 canary；本地测试可显式设置 `run_on_start=true`。
+- 可配置 `max_targets_per_run` 限制单轮最多验证的 target 数量，默认 `0` 表示不限；被截断时写入 `truncated_target_count` 和 `target_run_truncated=true`。
 - 每个 target 执行一个 baseline GET 和 11 个基础规则 case：扫描器 UA、参数数量、URI 长度、SQLi 关键词、XSS 标记、命令注入标记、路径穿越标记、非法方法、非法 Content-Type、JSON 解析错误、JSON 危险关键字。
 - 请求带 `GoFurry-Nav-Collector-WAF-Canary/1.0` 类 User-Agent，便于 WAF 日志识别；不会携带 Cookie、Authorization、账号、Token 或真实用户数据。
 - `blocked=true` 只按响应码判断：`400`、`403`、`405`、`414`、`415` 视为拦截类响应；`404` 不视为拦截。
+- `matched_expected` 只表示“是否按预期拦截/放行”；状态码是否等于建议值由 `status_code_expected` 单独表达，差异会计入 `status_code_unexpected_count`，避免把 400/403/405/414/415 之间的拦截状态码差异误判为未拦截。
 - payload 只保存 case_id、分类、状态码、耗时和错误类别，不保存完整 query、body、URI 或测试样本原文。
 - 该能力是已授权站点的低频 WAF 回归验证，不是漏洞扫描、绕过测试、目录枚举或高频压测。

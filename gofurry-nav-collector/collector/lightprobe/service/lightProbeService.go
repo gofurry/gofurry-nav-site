@@ -52,6 +52,10 @@ var (
 	rdapBootstrapURL = rdapBootstrapURLDefault
 	rdapBootstrapMu  sync.Mutex
 	rdapBootstrap    cachedRDAPBootstrap
+
+	lookupAssetIPs      = defaultLookupAssetIPs
+	fetchDeclaredAsset  = probeHTTPGetURL
+	assetResolveTimeout = 2 * time.Second
 )
 
 type cachedRDAPBootstrap struct {
@@ -138,12 +142,15 @@ func InitLightProbeOnStart() {
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolWAFCanary) {
 		interval := cfg.LightProbe.WAFCanary.Interval()
-		go RunWAFCanary()
+		if cfg.LightProbe.WAFCanary.RunOnStart {
+			go RunWAFCanary()
+		}
 		cs.AddCronJob(interval, RunWAFCanary)
 		log.InfoFields(map[string]interface{}{
-			"event":    "light_probe_registered",
-			"interval": interval,
-			"protocol": observation.ProtocolWAFCanary,
+			"event":        "light_probe_registered",
+			"interval":     interval,
+			"protocol":     observation.ProtocolWAFCanary,
+			"run_on_start": cfg.LightProbe.WAFCanary.RunOnStart,
 		}, "WAF canary 低频轻探测已注册")
 	}
 }
@@ -219,6 +226,7 @@ func runLightProbe(protocol string, interval time.Duration, running *atomic.Bool
 	}
 
 	run.SetTargetCount(len(targets))
+	run.RefreshRunning()
 	fields := run.Fields()
 	fields["event"] = "run_start"
 	fields["targets"] = len(targets)
@@ -293,17 +301,33 @@ func runPortCheckTargets(targets []models.GfnCollectorDomain, run *runstate.Run)
 
 func runWAFCanaryTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.WAFCanary
+	truncatedCount := 0
+	maxTargets := cfg.MaxTargets()
+	if maxTargets > 0 && len(targets) > maxTargets {
+		truncatedCount = len(targets) - maxTargets
+		targets = targets[:maxTargets]
+		if run != nil {
+			run.RecordSkippedN(truncatedCount)
+			run.RefreshRunning()
+		}
+	}
 	for _, target := range targets {
 		result := probeWAFCanary(target, cfg)
+		result.Payload["max_targets_per_run"] = maxTargets
+		result.Payload["truncated_target_count"] = truncatedCount
+		result.Payload["target_run_truncated"] = truncatedCount > 0
 		saveLightProbeResult(observation.ProtocolWAFCanary, target, result, run)
 	}
 }
 
 func saveLightProbeResult(protocol string, target models.GfnCollectorDomain, result probeResult, run *runstate.Run) {
-	if result.Status == observation.StatusSuccess {
-		run.RecordSuccess()
-	} else {
-		run.RecordFailure()
+	if run != nil {
+		if result.Status == observation.StatusSuccess {
+			run.RecordSuccess()
+		} else {
+			run.RecordFailure()
+		}
+		run.RefreshRunning()
 	}
 	collectorID, jobID := "", ""
 	if run != nil {
@@ -714,6 +738,7 @@ func executeWAFCanaryCase(client *http.Client, target models.GfnCollectorDomain,
 		"method":                testCase.Method,
 		"expected_blocked":      testCase.ExpectedBlocked,
 		"expected_status_codes": testCase.ExpectedStatusCodes,
+		"status_code_expected":  len(testCase.ExpectedStatusCodes) == 0,
 		"status_code":           0,
 		"blocked":               false,
 		"matched_expected":      false,
@@ -739,9 +764,11 @@ func executeWAFCanaryCase(client *http.Client, target models.GfnCollectorDomain,
 
 	statusCode := resp.StatusCode
 	blocked := wafCanaryBlockedStatus(statusCode)
+	statusCodeExpected := wafCanaryStatusCodeExpected(testCase, statusCode)
 	result["status_code"] = statusCode
 	result["blocked"] = blocked
-	result["matched_expected"] = wafCanaryMatchedExpected(testCase, statusCode, blocked)
+	result["status_code_expected"] = statusCodeExpected
+	result["matched_expected"] = wafCanaryMatchedExpected(testCase, blocked)
 	return result
 }
 
@@ -778,13 +805,14 @@ func wafCanaryBlockedStatus(statusCode int) bool {
 	}
 }
 
-func wafCanaryMatchedExpected(testCase wafCanaryCase, statusCode int, blocked bool) bool {
+func wafCanaryMatchedExpected(testCase wafCanaryCase, blocked bool) bool {
 	if !testCase.ExpectedBlocked {
 		return !blocked
 	}
-	if !blocked {
-		return false
-	}
+	return blocked
+}
+
+func wafCanaryStatusCodeExpected(testCase wafCanaryCase, statusCode int) bool {
 	if len(testCase.ExpectedStatusCodes) == 0 {
 		return true
 	}
@@ -802,6 +830,7 @@ func applyWAFCanaryCounts(payload map[string]any, cases []wafCanaryCase, results
 	matchedBlocked := 0
 	unexpectedPass := 0
 	networkErrors := 0
+	statusUnexpected := 0
 	for idx, result := range results {
 		testCase := cases[idx]
 		if testCase.ExpectedBlocked {
@@ -809,6 +838,7 @@ func applyWAFCanaryCounts(payload map[string]any, cases []wafCanaryCase, results
 		}
 		blocked, _ := result["blocked"].(bool)
 		matched, _ := result["matched_expected"].(bool)
+		statusCodeExpected, _ := result["status_code_expected"].(bool)
 		errorCode, _ := result["error_code"].(string)
 		if blocked {
 			blockedCount++
@@ -822,6 +852,9 @@ func applyWAFCanaryCounts(payload map[string]any, cases []wafCanaryCase, results
 		if errorCode != "" {
 			networkErrors++
 		}
+		if blocked && !statusCodeExpected {
+			statusUnexpected++
+		}
 	}
 	payload["cases_executed"] = len(results)
 	payload["blocked_count"] = blockedCount
@@ -829,6 +862,7 @@ func applyWAFCanaryCounts(payload map[string]any, cases []wafCanaryCase, results
 	payload["expected_blocked_matched_count"] = matchedBlocked
 	payload["unexpected_pass_count"] = unexpectedPass
 	payload["network_error_count"] = networkErrors
+	payload["status_code_unexpected_count"] = statusUnexpected
 }
 
 func emptyWAFCanaryPayload(canaryPath string) map[string]any {
@@ -841,6 +875,7 @@ func emptyWAFCanaryPayload(canaryPath string) map[string]any {
 		"expected_blocked_matched_count": 0,
 		"unexpected_pass_count":          0,
 		"network_error_count":            0,
+		"status_code_unexpected_count":   0,
 		"cases":                          []map[string]any{},
 	}
 }
@@ -1112,6 +1147,10 @@ func probeDeclaredAsset(target models.GfnCollectorDomain, declaration pageAssetD
 		payload["skipped_reason"] = "asset_host_not_allowed"
 		return payload
 	}
+	if allowed, reason := assetNetworkAllowed(declaration.Href); !allowed {
+		payload["skipped_reason"] = reason
+		return payload
+	}
 
 	client, err := httpClientForTarget(timeout, target.Proxy == "1")
 	if err != nil {
@@ -1119,7 +1158,7 @@ func probeDeclaredAsset(target models.GfnCollectorDomain, declaration pageAssetD
 		payload["error_message"] = limitLightText(err.Error())
 		return payload
 	}
-	resp, err := probeHTTPGetURL(client, declaration.Href, maxBytes)
+	resp, err := fetchDeclaredAsset(client, declaration.Href, maxBytes)
 	if err != nil {
 		payload["skipped_reason"] = "asset_request_failed"
 		payload["error_message"] = limitLightText(err.Error())
@@ -1233,6 +1272,61 @@ func assetURLAllowed(target string, rawURL string, allowedHosts []string) bool {
 		}
 	}
 	return sameRegistrableDomain(assetHost, targetHost)
+}
+
+func assetNetworkAllowed(rawURL string) (bool, string) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return false, "asset_host_not_allowed"
+	}
+	host := parsed.Hostname()
+	if host == "" {
+		return false, "asset_host_not_allowed"
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if !isPublicAssetIP(ip) {
+			return false, "asset_ip_not_allowed"
+		}
+		return true, ""
+	}
+	ips, err := lookupAssetIPs(host)
+	if err != nil || len(ips) == 0 {
+		return false, "asset_dns_resolve_failed"
+	}
+	for _, ip := range ips {
+		if !isPublicAssetIP(ip) {
+			return false, "asset_ip_not_allowed"
+		}
+	}
+	return true, ""
+}
+
+func defaultLookupAssetIPs(host string) ([]net.IP, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), assetResolveTimeout)
+	defer cancel()
+	addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	ips := make([]net.IP, 0, len(addrs))
+	for _, addr := range addrs {
+		if addr.IP != nil {
+			ips = append(ips, addr.IP)
+		}
+	}
+	return ips, nil
+}
+
+func isPublicAssetIP(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+	return !ip.IsLoopback() &&
+		!ip.IsPrivate() &&
+		!ip.IsLinkLocalUnicast() &&
+		!ip.IsLinkLocalMulticast() &&
+		!ip.IsMulticast() &&
+		!ip.IsUnspecified()
 }
 
 func sameRegistrableDomain(first string, second string) bool {

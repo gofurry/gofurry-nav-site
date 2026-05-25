@@ -22,6 +22,16 @@ func TestSummaryKeys(t *testing.T) {
 	}
 }
 
+func TestTargetFromSummaryKey(t *testing.T) {
+	key := TargetSummaryKey(123, "www.example.com")
+	if got := targetFromSummaryKey(123, key); got != "www.example.com" {
+		t.Fatalf("targetFromSummaryKey() = %q", got)
+	}
+	if got := targetFromSummaryKey(456, key); got != "" {
+		t.Fatalf("targetFromSummaryKey(site mismatch) = %q, want empty", got)
+	}
+}
+
 func TestBuildTargetSummaryHTTPHealthyPingFailureWarning(t *testing.T) {
 	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
 	docs := map[string]LatestDocument{

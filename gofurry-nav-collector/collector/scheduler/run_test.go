@@ -137,6 +137,24 @@ func TestRunWritesStateAndCounts(t *testing.T) {
 	}
 }
 
+func TestRunRefreshRunningWritesProgress(t *testing.T) {
+	store := newMemoryStore()
+	run := NewRunWithStore("waf_canary", time.Hour, store)
+	run.Start()
+	run.SetTargetCount(3)
+	run.RecordSuccess()
+	run.RecordSkippedN(2)
+	run.RefreshRunning()
+
+	doc := run.Snapshot(StatusRunning, "")
+	if doc.TargetCount != 3 || doc.SuccessCount != 1 || doc.SkippedCount != 2 {
+		t.Fatalf("running snapshot counts wrong: %+v", doc)
+	}
+	if store.values[RunStateLatestKey("waf_canary")] == "" || store.values[RunStateKey("waf_canary", run.JobID)] == "" {
+		t.Fatal("RefreshRunning should write latest and job run state")
+	}
+}
+
 func TestLeaseDisabledDoesNotCallSetNX(t *testing.T) {
 	oldCfg := env.GetServerConfig().Collector.Scheduler
 	env.GetServerConfig().Collector.Scheduler = env.SchedulerConfig{LeaseEnabled: false}

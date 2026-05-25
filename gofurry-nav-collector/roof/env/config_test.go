@@ -137,7 +137,7 @@ func TestLightProbeDefaults(t *testing.T) {
 	if cfg.RDAP.Timeout() != 10*time.Second || cfg.Robots.Timeout() != 10*time.Second || cfg.SecurityTXT.Timeout() != 10*time.Second || cfg.PageAssets.Timeout() != 10*time.Second {
 		t.Fatal("light probe timeout should default to 10 seconds")
 	}
-	if cfg.WAFCanary.Interval() != 720*time.Hour || cfg.WAFCanary.Timeout() != 10*time.Second || cfg.WAFCanary.Path() != "/.well-known/gofurry-waf-canary" || cfg.WAFCanary.UserAgentOrDefault() != "GoFurry-Nav-Collector-WAF-Canary/1.0" {
+	if cfg.WAFCanary.Interval() != 720*time.Hour || cfg.WAFCanary.Timeout() != 10*time.Second || cfg.WAFCanary.Path() != "/.well-known/gofurry-waf-canary" || cfg.WAFCanary.UserAgentOrDefault() != "GoFurry-Nav-Collector-WAF-Canary/1.0" || cfg.WAFCanary.RunOnStart || cfg.WAFCanary.MaxTargets() != 0 {
 		t.Fatal("waf_canary defaults are incorrect")
 	}
 	if got := (LightProbeWAFCanaryConfig{UserAgent: "Custom-Agent"}).UserAgentOrDefault(); got != "Custom-Agent GoFurry-Nav-Collector-WAF-Canary/1.0" {
@@ -205,6 +205,8 @@ collector:
         timeout_seconds: 8
         canary_path: "/waf-canary"
         user_agent: "Custom-WAF-Canary/1.0"
+        run_on_start: true
+        max_targets_per_run: 12
 `), &cfg)
 	if err != nil {
 		t.Fatalf("yaml.Unmarshal() error = %v", err)
@@ -247,6 +249,9 @@ collector:
 	}
 	if cfg.Collector.V2.LightProbe.WAFCanary.Path() != "/waf-canary" || cfg.Collector.V2.LightProbe.WAFCanary.UserAgentOrDefault() != "Custom-WAF-Canary/1.0" {
 		t.Fatalf("waf_canary path/user-agent config not loaded: %+v", cfg.Collector.V2.LightProbe.WAFCanary)
+	}
+	if !cfg.Collector.V2.LightProbe.WAFCanary.RunOnStart || cfg.Collector.V2.LightProbe.WAFCanary.MaxTargets() != 12 {
+		t.Fatalf("waf_canary run control config not loaded: %+v", cfg.Collector.V2.LightProbe.WAFCanary)
 	}
 }
 

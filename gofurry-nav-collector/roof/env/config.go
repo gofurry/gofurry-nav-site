@@ -119,11 +119,13 @@ type LightProbePortCheckConfig struct {
 }
 
 type LightProbeWAFCanaryConfig struct {
-	Enabled        bool   `yaml:"enabled"`
-	IntervalHours  int    `yaml:"interval_hours"`
-	TimeoutSeconds int    `yaml:"timeout_seconds"`
-	CanaryPath     string `yaml:"canary_path"`
-	UserAgent      string `yaml:"user_agent"`
+	Enabled          bool   `yaml:"enabled"`
+	IntervalHours    int    `yaml:"interval_hours"`
+	TimeoutSeconds   int    `yaml:"timeout_seconds"`
+	CanaryPath       string `yaml:"canary_path"`
+	UserAgent        string `yaml:"user_agent"`
+	RunOnStart       bool   `yaml:"run_on_start"`
+	MaxTargetsPerRun int    `yaml:"max_targets_per_run"`
 }
 
 type SchedulerConfig struct {
@@ -482,6 +484,13 @@ func (cfg LightProbeWAFCanaryConfig) UserAgentOrDefault() string {
 		return userAgent + " GoFurry-Nav-Collector-WAF-Canary/1.0"
 	}
 	return userAgent
+}
+
+func (cfg LightProbeWAFCanaryConfig) MaxTargets() int {
+	if cfg.MaxTargetsPerRun < 0 {
+		return 0
+	}
+	return cfg.MaxTargetsPerRun
 }
 
 func hoursOrDefault(value int, def int) time.Duration {
