@@ -209,6 +209,26 @@ type TLSTrend struct {
 	LatestCertObservedAt   *time.Time `json:"latest_cert_observed_at,omitempty"`
 }
 
+type TargetChangeDocument struct {
+	SiteID        int64         `json:"site_id"`
+	Target        string        `json:"target"`
+	Events        []ChangeEvent `json:"events"`
+	GeneratedAt   time.Time     `json:"generated_at"`
+	SchemaVersion int           `json:"schema_version"`
+}
+
+type ChangeEvent struct {
+	EventID       string    `json:"event_id"`
+	Protocol      string    `json:"protocol"`
+	Category      string    `json:"category"`
+	Field         string    `json:"field"`
+	OldValue      any       `json:"old_value,omitempty"`
+	NewValue      any       `json:"new_value,omitempty"`
+	OldObservedAt time.Time `json:"old_observed_at"`
+	NewObservedAt time.Time `json:"new_observed_at"`
+	DetectedAt    time.Time `json:"detected_at"`
+}
+
 type EdgeProviderHint struct {
 	Provider   string                 `json:"provider"`
 	HintType   string                 `json:"hint_type"`

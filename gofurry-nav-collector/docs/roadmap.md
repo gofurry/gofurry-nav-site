@@ -106,7 +106,7 @@
 
 ### v0.6.3 - 变化检测事件
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** 变化检测 / 事件摘要 / 可解释性
 **目标：** 从 latest 与历史 observation 中识别“发生了什么变化”，让站点维护者看到比单次状态更有价值的事件。
 
@@ -118,13 +118,13 @@
 
 #### Tasks
 
-- [ ] HTTP 变化：title、server、x-powered-by、security headers、final URL、status code 明显变化。
-- [ ] TLS 变化：证书 fingerprint、issuer、SAN 数量、not_after 变化。
-- [ ] DNS 变化：A/AAAA、CNAME terminal、MX、NS、SOA serial 变化。
-- [ ] Port check 变化：端口从 closed/timeout 变 open，或 open 变 closed。
-- [ ] RDAP 变化：domain status、expires_at、nameserver 列表变化。
-- [ ] 变化事件只写摘要，不保存外部大文本原文。
-- [ ] 增加去抖策略，避免同一变化在短时间内重复写入。
+- [x] HTTP 变化：title、server、x-powered-by、security headers、final URL、status code 明显变化。
+- [x] TLS 变化：证书 fingerprint、issuer、SAN 数量、not_after 变化。
+- [x] DNS 变化：A/AAAA、CNAME terminal、MX、NS、SOA serial 变化。
+- [x] Port check 变化：端口从 closed/timeout 变 open，或 open 变 closed。
+- [x] RDAP 变化：domain status、expires_at、nameserver 列表变化。
+- [x] 变化事件只写摘要，不保存外部大文本原文。
+- [x] 增加去抖策略，避免同一变化在短时间内重复写入。
 
 #### Acceptance Criteria
 

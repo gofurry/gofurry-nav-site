@@ -82,6 +82,14 @@ func UpdateSummaryIfEnabled(siteID int64, target string) common.GFError {
 			"target":    target,
 		}, "v2 target 趋势派生失败: "+err.GetMsg())
 	}
+	if err := UpdateChangeEventsIfEnabled(siteID, target, now); err != nil {
+		log.WarnFields(map[string]interface{}{
+			"event":     "v2_target_change_update_failed",
+			"redis_key": TargetChangeKey(siteID, target),
+			"site_id":   siteID,
+			"target":    target,
+		}, "v2 target 变化事件派生失败: "+err.GetMsg())
+	}
 	return nil
 }
 

@@ -99,3 +99,35 @@ LIMIT ?`,
 	}
 	return rows, nil
 }
+
+func (dao observationDao) ListChangeRows(ctx context.Context, siteID int64, target string, since time.Time, limit int) ([]ObservationTrendRow, common.GFError) {
+	if siteID <= 0 || target == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = defaultChangeMaxRows
+	}
+	rows := []ObservationTrendRow{}
+	db := dao.Gm.WithContext(ctx).Raw(`
+SELECT protocol, status, observed_at, duration_ms, error_code, payload::text AS payload
+FROM gfn_collector_observation
+WHERE site_id = ?
+  AND target = ?
+  AND observed_at >= ?
+  AND protocol IN (?, ?, ?, ?)
+ORDER BY observed_at DESC, id DESC
+LIMIT ?`,
+		siteID,
+		target,
+		since,
+		ProtocolHTTP,
+		ProtocolDNS,
+		ProtocolPortCheck,
+		ProtocolRDAP,
+		limit,
+	).Scan(&rows)
+	if db.Error != nil {
+		return nil, common.NewDaoError(db.Error.Error())
+	}
+	return rows, nil
+}
