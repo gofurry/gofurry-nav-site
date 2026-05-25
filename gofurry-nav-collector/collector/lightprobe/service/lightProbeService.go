@@ -47,6 +47,7 @@ var (
 	securityTXTRunning atomic.Bool
 	pageAssetsRunning  atomic.Bool
 	portCheckRunning   atomic.Bool
+	wafCanaryRunning   atomic.Bool
 
 	rdapBootstrapURL = rdapBootstrapURLDefault
 	rdapBootstrapMu  sync.Mutex
@@ -135,6 +136,16 @@ func InitLightProbeOnStart() {
 			"protocol": observation.ProtocolPortCheck,
 		}, "端口连通性低频轻探测已注册")
 	}
+	if cfg.ProtocolEnabled(observation.ProtocolWAFCanary) {
+		interval := cfg.LightProbe.WAFCanary.Interval()
+		go RunWAFCanary()
+		cs.AddCronJob(interval, RunWAFCanary)
+		log.InfoFields(map[string]interface{}{
+			"event":    "light_probe_registered",
+			"interval": interval,
+			"protocol": observation.ProtocolWAFCanary,
+		}, "WAF canary 低频轻探测已注册")
+	}
 }
 
 func RunRDAP() {
@@ -155,6 +166,10 @@ func RunPageAssets() {
 
 func RunPortCheck() {
 	runLightProbe(observation.ProtocolPortCheck, env.GetServerConfig().Collector.V2.LightProbe.PortCheck.Interval(), &portCheckRunning, runPortCheckTargets)
+}
+
+func RunWAFCanary() {
+	runLightProbe(observation.ProtocolWAFCanary, env.GetServerConfig().Collector.V2.LightProbe.WAFCanary.Interval(), &wafCanaryRunning, runWAFCanaryTargets)
 }
 
 func runLightProbe(protocol string, interval time.Duration, running *atomic.Bool, executor func([]models.GfnCollectorDomain, *runstate.Run)) {
@@ -273,6 +288,14 @@ func runPortCheckTargets(targets []models.GfnCollectorDomain, run *runstate.Run)
 	for _, target := range targets {
 		result := probePortCheck(target, cfg)
 		saveLightProbeResult(observation.ProtocolPortCheck, target, result, run)
+	}
+}
+
+func runWAFCanaryTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+	cfg := env.GetServerConfig().Collector.V2.LightProbe.WAFCanary
+	for _, target := range targets {
+		result := probeWAFCanary(target, cfg)
+		saveLightProbeResult(observation.ProtocolWAFCanary, target, result, run)
 	}
 }
 
@@ -511,6 +534,329 @@ func probePortCheck(target models.GfnCollectorDomain, cfg env.LightProbePortChec
 		DurationMS: time.Since(start).Milliseconds(),
 		Payload:    payload,
 	}
+}
+
+func probeWAFCanary(target models.GfnCollectorDomain, cfg env.LightProbeWAFCanaryConfig) probeResult {
+	start := time.Now()
+	canaryPath, ok := normalizeWAFCanaryPath(cfg.Path())
+	if !ok {
+		result := failureResult("waf_canary_path_invalid", "WAF canary 路径无效", emptyWAFCanaryPayload(cfg.Path()))
+		result.DurationMS = time.Since(start).Milliseconds()
+		return result
+	}
+
+	client, err := httpClientForTarget(cfg.Timeout(), target.Proxy == "1")
+	if err != nil {
+		result := failureResult("waf_canary_http_client_invalid", err.Error(), emptyWAFCanaryPayload(canaryPath))
+		result.DurationMS = time.Since(start).Milliseconds()
+		return result
+	}
+
+	cases := wafCanaryCases(cfg.UserAgentOrDefault())
+	payload := emptyWAFCanaryPayload(canaryPath)
+	payload["cases_total"] = len(cases)
+	results := make([]map[string]any, 0, len(cases))
+	for _, testCase := range cases {
+		result := executeWAFCanaryCase(client, target, canaryPath, testCase, cfg.Timeout())
+		results = append(results, result)
+	}
+	applyWAFCanaryCounts(payload, cases, results)
+	payload["cases"] = results
+	return probeResult{
+		Status:     observation.StatusSuccess,
+		DurationMS: time.Since(start).Milliseconds(),
+		Payload:    payload,
+	}
+}
+
+type wafCanaryCase struct {
+	ID                  string
+	Category            string
+	Method              string
+	PathSuffix          string
+	Query               url.Values
+	Body                string
+	ContentType         string
+	UserAgent           string
+	ExpectedBlocked     bool
+	ExpectedStatusCodes []int
+}
+
+func wafCanaryCases(userAgent string) []wafCanaryCase {
+	baseUA := strings.TrimSpace(userAgent)
+	if baseUA == "" {
+		baseUA = "GoFurry-Nav-Collector-WAF-Canary/1.0"
+	}
+	cases := []wafCanaryCase{
+		{
+			ID:       "baseline_get",
+			Category: "baseline",
+			Method:   http.MethodGet,
+		},
+		{
+			ID:                  "scanner_user_agent",
+			Category:            "scanner_user_agent",
+			Method:              http.MethodGet,
+			UserAgent:           baseUA + " sqlmap",
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusForbidden},
+		},
+		{
+			ID:                  "too_many_parameters",
+			Category:            "parameter_count",
+			Method:              http.MethodGet,
+			Query:               wafCanaryManyParameters(),
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusForbidden},
+		},
+		{
+			ID:                  "uri_too_long",
+			Category:            "uri_length",
+			Method:              http.MethodGet,
+			PathSuffix:          "/" + strings.Repeat("a", 120),
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusRequestURITooLong},
+		},
+		{
+			ID:       "sql_injection_keyword",
+			Category: "sqli",
+			Method:   http.MethodGet,
+			Query: url.Values{
+				"id": []string{"1 union select 1"},
+			},
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusForbidden},
+		},
+		{
+			ID:       "xss_marker",
+			Category: "xss",
+			Method:   http.MethodGet,
+			Query: url.Values{
+				"name": []string{"<script>alert(1)</script>"},
+			},
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusForbidden},
+		},
+		{
+			ID:       "command_injection_marker",
+			Category: "command_injection",
+			Method:   http.MethodGet,
+			Query: url.Values{
+				"cmd": []string{"ls;whoami"},
+			},
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusForbidden},
+		},
+		{
+			ID:                  "path_traversal_marker",
+			Category:            "path_traversal",
+			Method:              http.MethodGet,
+			PathSuffix:          "/%2e%2e/%2e%2e/windows/system32",
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusForbidden},
+		},
+		{
+			ID:                  "invalid_method",
+			Category:            "invalid_method",
+			Method:              http.MethodTrace,
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusMethodNotAllowed},
+		},
+		{
+			ID:                  "invalid_content_type",
+			Category:            "invalid_content_type",
+			Method:              http.MethodPost,
+			ContentType:         "text/plain",
+			Body:                "test",
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusUnsupportedMediaType},
+		},
+		{
+			ID:                  "json_parse_error",
+			Category:            "json_parse_error",
+			Method:              http.MethodPost,
+			ContentType:         "application/json",
+			Body:                `{"id":1`,
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusBadRequest},
+		},
+		{
+			ID:                  "json_dangerous_keyword",
+			Category:            "json_dangerous_keyword",
+			Method:              http.MethodPost,
+			ContentType:         "application/json",
+			Body:                `{"id":"1 union select 1"}`,
+			ExpectedBlocked:     true,
+			ExpectedStatusCodes: []int{http.StatusForbidden},
+		},
+	}
+	for idx := range cases {
+		if strings.TrimSpace(cases[idx].UserAgent) == "" {
+			cases[idx].UserAgent = baseUA
+		}
+	}
+	return cases
+}
+
+func wafCanaryManyParameters() url.Values {
+	values := url.Values{}
+	for _, key := range []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u"} {
+		values.Set(key, "1")
+	}
+	return values
+}
+
+func executeWAFCanaryCase(client *http.Client, target models.GfnCollectorDomain, canaryPath string, testCase wafCanaryCase, timeout time.Duration) map[string]any {
+	start := time.Now()
+	result := map[string]any{
+		"case_id":               testCase.ID,
+		"category":              testCase.Category,
+		"method":                testCase.Method,
+		"expected_blocked":      testCase.ExpectedBlocked,
+		"expected_status_codes": testCase.ExpectedStatusCodes,
+		"status_code":           0,
+		"blocked":               false,
+		"matched_expected":      false,
+		"duration_ms":           int64(0),
+		"error_code":            "",
+		"error_message":         "",
+	}
+	req, err := buildWAFCanaryRequest(target, canaryPath, testCase, timeout)
+	if err != nil {
+		result["duration_ms"] = time.Since(start).Milliseconds()
+		result["error_code"] = "waf_canary_request_build_failed"
+		result["error_message"] = limitLightText(err.Error())
+		return result
+	}
+	resp, err := client.Do(req)
+	result["duration_ms"] = time.Since(start).Milliseconds()
+	if err != nil {
+		result["error_code"] = "waf_canary_request_failed"
+		result["error_message"] = limitLightText(err.Error())
+		return result
+	}
+	defer resp.Body.Close()
+
+	statusCode := resp.StatusCode
+	blocked := wafCanaryBlockedStatus(statusCode)
+	result["status_code"] = statusCode
+	result["blocked"] = blocked
+	result["matched_expected"] = wafCanaryMatchedExpected(testCase, statusCode, blocked)
+	return result
+}
+
+func buildWAFCanaryRequest(target models.GfnCollectorDomain, canaryPath string, testCase wafCanaryCase, _ time.Duration) (*http.Request, error) {
+	rawURL := targetURL(target, canaryPath+testCase.PathSuffix)
+	if len(testCase.Query) > 0 {
+		rawURL += "?" + testCase.Query.Encode()
+	}
+	var body io.Reader
+	if testCase.Body != "" {
+		body = strings.NewReader(testCase.Body)
+	}
+	req, err := http.NewRequest(testCase.Method, rawURL, body)
+	if err != nil {
+		return nil, err
+	}
+	userAgent := strings.TrimSpace(testCase.UserAgent)
+	if userAgent == "" {
+		userAgent = "GoFurry-Nav-Collector-WAF-Canary/1.0"
+	}
+	req.Header.Set("User-Agent", userAgent)
+	if testCase.ContentType != "" {
+		req.Header.Set("Content-Type", testCase.ContentType)
+	}
+	return req, nil
+}
+
+func wafCanaryBlockedStatus(statusCode int) bool {
+	switch statusCode {
+	case http.StatusBadRequest, http.StatusForbidden, http.StatusMethodNotAllowed, http.StatusRequestURITooLong, http.StatusUnsupportedMediaType:
+		return true
+	default:
+		return false
+	}
+}
+
+func wafCanaryMatchedExpected(testCase wafCanaryCase, statusCode int, blocked bool) bool {
+	if !testCase.ExpectedBlocked {
+		return !blocked
+	}
+	if !blocked {
+		return false
+	}
+	if len(testCase.ExpectedStatusCodes) == 0 {
+		return true
+	}
+	for _, expected := range testCase.ExpectedStatusCodes {
+		if statusCode == expected {
+			return true
+		}
+	}
+	return false
+}
+
+func applyWAFCanaryCounts(payload map[string]any, cases []wafCanaryCase, results []map[string]any) {
+	expectedBlocked := 0
+	blockedCount := 0
+	matchedBlocked := 0
+	unexpectedPass := 0
+	networkErrors := 0
+	for idx, result := range results {
+		testCase := cases[idx]
+		if testCase.ExpectedBlocked {
+			expectedBlocked++
+		}
+		blocked, _ := result["blocked"].(bool)
+		matched, _ := result["matched_expected"].(bool)
+		errorCode, _ := result["error_code"].(string)
+		if blocked {
+			blockedCount++
+		}
+		if testCase.ExpectedBlocked && matched {
+			matchedBlocked++
+		}
+		if testCase.ExpectedBlocked && !blocked && errorCode == "" {
+			unexpectedPass++
+		}
+		if errorCode != "" {
+			networkErrors++
+		}
+	}
+	payload["cases_executed"] = len(results)
+	payload["blocked_count"] = blockedCount
+	payload["expected_blocked_count"] = expectedBlocked
+	payload["expected_blocked_matched_count"] = matchedBlocked
+	payload["unexpected_pass_count"] = unexpectedPass
+	payload["network_error_count"] = networkErrors
+}
+
+func emptyWAFCanaryPayload(canaryPath string) map[string]any {
+	return map[string]any{
+		"canary_path":                    limitLightText(canaryPath),
+		"cases_total":                    0,
+		"cases_executed":                 0,
+		"blocked_count":                  0,
+		"expected_blocked_count":         0,
+		"expected_blocked_matched_count": 0,
+		"unexpected_pass_count":          0,
+		"network_error_count":            0,
+		"cases":                          []map[string]any{},
+	}
+}
+
+func normalizeWAFCanaryPath(path string) (string, bool) {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" || !strings.HasPrefix(trimmed, "/") || strings.HasPrefix(trimmed, "//") {
+		return "", false
+	}
+	if strings.Contains(trimmed, "://") || strings.ContainsAny(trimmed, "?#") {
+		return "", false
+	}
+	if _, err := url.ParseRequestURI(trimmed); err != nil {
+		return "", false
+	}
+	return trimmed, true
 }
 
 type portCheckNormalizeMeta struct {

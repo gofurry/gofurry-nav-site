@@ -76,6 +76,7 @@ type LightProbeConfig struct {
 	SecurityTXT LightProbeSecurityTXTConfig `yaml:"security_txt"`
 	PageAssets  LightProbePageAssetsConfig  `yaml:"page_assets"`
 	PortCheck   LightProbePortCheckConfig   `yaml:"port_check"`
+	WAFCanary   LightProbeWAFCanaryConfig   `yaml:"waf_canary"`
 }
 
 type LightProbeRDAPConfig struct {
@@ -115,6 +116,14 @@ type LightProbePortCheckConfig struct {
 	Concurrency       int   `yaml:"concurrency"`
 	MaxPortsPerTarget int   `yaml:"max_ports_per_target"`
 	Ports             []int `yaml:"ports"`
+}
+
+type LightProbeWAFCanaryConfig struct {
+	Enabled        bool   `yaml:"enabled"`
+	IntervalHours  int    `yaml:"interval_hours"`
+	TimeoutSeconds int    `yaml:"timeout_seconds"`
+	CanaryPath     string `yaml:"canary_path"`
+	UserAgent      string `yaml:"user_agent"`
 }
 
 type SchedulerConfig struct {
@@ -343,6 +352,8 @@ func (cfg CollectorV2Config) ProtocolEnabled(protocol string) bool {
 		return cfg.LightProbe.PageAssets.Enabled
 	case "port_check":
 		return cfg.LightProbe.PortCheck.Enabled
+	case "waf_canary":
+		return cfg.LightProbe.WAFCanary.Enabled
 	default:
 		return false
 	}
@@ -444,6 +455,33 @@ func (cfg LightProbePortCheckConfig) WorkerCount() int {
 
 func (cfg LightProbePortCheckConfig) MaxPorts() int {
 	return intOrDefault(cfg.MaxPortsPerTarget, 24)
+}
+
+func (cfg LightProbeWAFCanaryConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 720)
+}
+
+func (cfg LightProbeWAFCanaryConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbeWAFCanaryConfig) Path() string {
+	path := strings.TrimSpace(cfg.CanaryPath)
+	if path == "" {
+		return "/.well-known/gofurry-waf-canary"
+	}
+	return path
+}
+
+func (cfg LightProbeWAFCanaryConfig) UserAgentOrDefault() string {
+	userAgent := strings.TrimSpace(cfg.UserAgent)
+	if userAgent == "" {
+		return "GoFurry-Nav-Collector-WAF-Canary/1.0"
+	}
+	if !strings.Contains(userAgent, "WAF-Canary") {
+		return userAgent + " GoFurry-Nav-Collector-WAF-Canary/1.0"
+	}
+	return userAgent
 }
 
 func hoursOrDefault(value int, def int) time.Duration {

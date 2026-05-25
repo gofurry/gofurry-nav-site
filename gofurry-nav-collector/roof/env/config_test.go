@@ -76,7 +76,7 @@ func TestProbeBudgetOverrides(t *testing.T) {
 
 func TestCollectorV2DefaultsDisabled(t *testing.T) {
 	cfg := CollectorV2Config{}
-	for _, protocol := range []string{"ping", "http", "dns", "rdap", "robots", "security_txt", "page_assets", "port_check"} {
+	for _, protocol := range []string{"ping", "http", "dns", "rdap", "robots", "security_txt", "page_assets", "port_check", "waf_canary"} {
 		if cfg.ProtocolEnabled(protocol) {
 			t.Fatalf("ProtocolEnabled(%q) should be false by default", protocol)
 		}
@@ -128,7 +128,7 @@ func TestEdgeHintsDefaultsEnabled(t *testing.T) {
 
 func TestLightProbeDefaults(t *testing.T) {
 	cfg := LightProbeConfig{}
-	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled || cfg.PageAssets.Enabled || cfg.PortCheck.Enabled {
+	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled || cfg.PageAssets.Enabled || cfg.PortCheck.Enabled || cfg.WAFCanary.Enabled {
 		t.Fatal("light probe should be disabled by default")
 	}
 	if cfg.RDAP.Interval() != 168*time.Hour || cfg.Robots.Interval() != 168*time.Hour || cfg.SecurityTXT.Interval() != 168*time.Hour || cfg.PageAssets.Interval() != 168*time.Hour || cfg.PortCheck.Interval() != 168*time.Hour {
@@ -136,6 +136,12 @@ func TestLightProbeDefaults(t *testing.T) {
 	}
 	if cfg.RDAP.Timeout() != 10*time.Second || cfg.Robots.Timeout() != 10*time.Second || cfg.SecurityTXT.Timeout() != 10*time.Second || cfg.PageAssets.Timeout() != 10*time.Second {
 		t.Fatal("light probe timeout should default to 10 seconds")
+	}
+	if cfg.WAFCanary.Interval() != 720*time.Hour || cfg.WAFCanary.Timeout() != 10*time.Second || cfg.WAFCanary.Path() != "/.well-known/gofurry-waf-canary" || cfg.WAFCanary.UserAgentOrDefault() != "GoFurry-Nav-Collector-WAF-Canary/1.0" {
+		t.Fatal("waf_canary defaults are incorrect")
+	}
+	if got := (LightProbeWAFCanaryConfig{UserAgent: "Custom-Agent"}).UserAgentOrDefault(); got != "Custom-Agent GoFurry-Nav-Collector-WAF-Canary/1.0" {
+		t.Fatalf("custom waf_canary user-agent = %q", got)
 	}
 	if cfg.PortCheck.Timeout() != 2*time.Second || cfg.PortCheck.WorkerCount() != 8 || cfg.PortCheck.MaxPorts() != 24 {
 		t.Fatal("port_check defaults are incorrect")
@@ -193,11 +199,17 @@ collector:
           - 80
           - 443
           - 3306
+      waf_canary:
+        enabled: true
+        interval_hours: 720
+        timeout_seconds: 8
+        canary_path: "/waf-canary"
+        user_agent: "Custom-WAF-Canary/1.0"
 `), &cfg)
 	if err != nil {
 		t.Fatalf("yaml.Unmarshal() error = %v", err)
 	}
-	if !cfg.Collector.V2.ProtocolEnabled("rdap") || !cfg.Collector.V2.ProtocolEnabled("robots") || !cfg.Collector.V2.ProtocolEnabled("security_txt") || !cfg.Collector.V2.ProtocolEnabled("page_assets") || !cfg.Collector.V2.ProtocolEnabled("port_check") {
+	if !cfg.Collector.V2.ProtocolEnabled("rdap") || !cfg.Collector.V2.ProtocolEnabled("robots") || !cfg.Collector.V2.ProtocolEnabled("security_txt") || !cfg.Collector.V2.ProtocolEnabled("page_assets") || !cfg.Collector.V2.ProtocolEnabled("port_check") || !cfg.Collector.V2.ProtocolEnabled("waf_canary") {
 		t.Fatalf("light probe protocol switches not loaded: %+v", cfg.Collector.V2.LightProbe)
 	}
 	if cfg.Collector.V2.EdgeHints.EnabledOrDefault() {
@@ -229,6 +241,12 @@ collector:
 	}
 	if len(cfg.Collector.V2.LightProbe.PortCheck.Ports) != 3 || cfg.Collector.V2.LightProbe.PortCheck.Ports[2] != 3306 {
 		t.Fatalf("port_check ports not loaded: %+v", cfg.Collector.V2.LightProbe.PortCheck.Ports)
+	}
+	if cfg.Collector.V2.LightProbe.WAFCanary.Interval() != 720*time.Hour || cfg.Collector.V2.LightProbe.WAFCanary.Timeout() != 8*time.Second {
+		t.Fatalf("waf_canary timing config not loaded: %+v", cfg.Collector.V2.LightProbe.WAFCanary)
+	}
+	if cfg.Collector.V2.LightProbe.WAFCanary.Path() != "/waf-canary" || cfg.Collector.V2.LightProbe.WAFCanary.UserAgentOrDefault() != "Custom-WAF-Canary/1.0" {
+		t.Fatalf("waf_canary path/user-agent config not loaded: %+v", cfg.Collector.V2.LightProbe.WAFCanary)
 	}
 }
 

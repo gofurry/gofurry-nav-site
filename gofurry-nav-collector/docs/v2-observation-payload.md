@@ -322,3 +322,42 @@ security.txt 按每个有效采集 target 低频请求 `/.well-known/security.tx
 - `service_hint` 只是静态端口名提示，例如 `3306=mysql`、`5432=postgresql`、`6379=redis`、`9090=prometheus`、`3000=grafana`；它不代表真实服务识别。
 - Prometheus/Grafana 只作为普通端口提示，不接入 Prometheus 生态，不抓取 metrics，不访问 Web 页面。
 - `port_check.enabled=true` 表示维护者已确认当前采集目标处于授权探测范围内；该结果不参与当前健康摘要和站点状态判断。
+
+### WAF Canary
+
+`waf_canary` 是 v0.5.7 新增的低频 WAF 规则无害验证协议。它默认关闭；启用 `collector.v2.light_probe.waf_canary.enabled=true` 即表示维护者确认当前有效采集目标均处于授权验证范围内。默认每 30 天执行一次，不做失败重试，不参与健康摘要。
+
+```json
+{
+  "canary_path": "/.well-known/gofurry-waf-canary",
+  "cases_total": 12,
+  "cases_executed": 12,
+  "blocked_count": 11,
+  "expected_blocked_count": 11,
+  "expected_blocked_matched_count": 11,
+  "unexpected_pass_count": 0,
+  "network_error_count": 0,
+  "cases": [
+    {
+      "case_id": "scanner_user_agent",
+      "category": "scanner_user_agent",
+      "method": "GET",
+      "expected_blocked": true,
+      "expected_status_codes": [403],
+      "status_code": 403,
+      "blocked": true,
+      "matched_expected": true,
+      "duration_ms": 12,
+      "error_code": "",
+      "error_message": ""
+    }
+  ]
+}
+```
+
+- 默认 canary 路径为 `/.well-known/gofurry-waf-canary`，可通过 `canary_path` 覆盖；路径为空、绝对 URL、带 query/fragment 时会安全失败且不发起请求。
+- 每个 target 执行一个 baseline GET 和 11 个基础规则 case：扫描器 UA、参数数量、URI 长度、SQLi 关键词、XSS 标记、命令注入标记、路径穿越标记、非法方法、非法 Content-Type、JSON 解析错误、JSON 危险关键字。
+- 请求带 `GoFurry-Nav-Collector-WAF-Canary/1.0` 类 User-Agent，便于 WAF 日志识别；不会携带 Cookie、Authorization、账号、Token 或真实用户数据。
+- `blocked=true` 只按响应码判断：`400`、`403`、`405`、`414`、`415` 视为拦截类响应；`404` 不视为拦截。
+- payload 只保存 case_id、分类、状态码、耗时和错误类别，不保存完整 query、body、URI 或测试样本原文。
+- 该能力是已授权站点的低频 WAF 回归验证，不是漏洞扫描、绕过测试、目录枚举或高频压测。

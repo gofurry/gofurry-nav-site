@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -370,6 +371,148 @@ func TestServiceHintForPort(t *testing.T) {
 	for port, want := range cases {
 		if got := serviceHintForPort(port); got != want {
 			t.Fatalf("serviceHintForPort(%d) = %q, want %q", port, got, want)
+		}
+	}
+}
+
+func TestWAFCanaryCasesAreStableAndSafe(t *testing.T) {
+	cases := wafCanaryCases("Custom-WAF-Canary/1.0")
+	if len(cases) != 12 {
+		t.Fatalf("wafCanaryCases() len = %d, want 12", len(cases))
+	}
+	if cases[0].ID != "baseline_get" || cases[0].ExpectedBlocked {
+		t.Fatalf("first case should be baseline: %+v", cases[0])
+	}
+	if cases[len(cases)-1].ID != "json_dangerous_keyword" {
+		t.Fatalf("last case = %q, want json_dangerous_keyword", cases[len(cases)-1].ID)
+	}
+	for _, testCase := range cases {
+		if !strings.Contains(testCase.UserAgent, "WAF-Canary") {
+			t.Fatalf("case %s missing canary user-agent: %q", testCase.ID, testCase.UserAgent)
+		}
+	}
+}
+
+func TestBuildWAFCanaryRequestDoesNotCarryCredentials(t *testing.T) {
+	testCase := wafCanaryCases("Custom-WAF-Canary/1.0")[9]
+	req, err := buildWAFCanaryRequest(models.GfnCollectorDomain{SiteID: 1, Name: "example.com", TLS: "1"}, "/.well-known/gofurry-waf-canary", testCase, time.Second)
+	if err != nil {
+		t.Fatalf("buildWAFCanaryRequest() error = %v", err)
+	}
+	if req.Header.Get("Cookie") != "" || req.Header.Get("Authorization") != "" {
+		t.Fatalf("request should not carry credentials: %+v", req.Header)
+	}
+	if req.Header.Get("User-Agent") != "Custom-WAF-Canary/1.0" {
+		t.Fatalf("User-Agent = %q", req.Header.Get("User-Agent"))
+	}
+	if req.Header.Get("Content-Type") != "text/plain" {
+		t.Fatalf("Content-Type = %q, want text/plain", req.Header.Get("Content-Type"))
+	}
+}
+
+func TestProbeWAFCanaryMatchesExpectedBlocks(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Cookie") != "" || r.Header.Get("Authorization") != "" {
+			t.Errorf("WAF canary request should not carry credentials: %+v", r.Header)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if !strings.Contains(r.Header.Get("User-Agent"), "WAF-Canary") {
+			t.Errorf("missing WAF canary user-agent: %q", r.Header.Get("User-Agent"))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		lowerPath := strings.ToLower(r.URL.EscapedPath())
+		switch {
+		case r.Method == http.MethodTrace:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		case strings.Contains(strings.ToLower(r.Header.Get("User-Agent")), "sqlmap"):
+			w.WriteHeader(http.StatusForbidden)
+		case len(r.URL.Query()) > 20:
+			w.WriteHeader(http.StatusForbidden)
+		case len(r.RequestURI) > 100 && strings.Contains(r.URL.Path, strings.Repeat("a", 20)):
+			w.WriteHeader(http.StatusRequestURITooLong)
+		case strings.Contains(lowerPath, "%2e%2e") || strings.Contains(strings.ToLower(r.RequestURI), "%2e%2e") || strings.Contains(r.URL.Path, ".."):
+			w.WriteHeader(http.StatusForbidden)
+		case strings.Contains(strings.ToLower(r.URL.Query().Get("id")), "union select"):
+			w.WriteHeader(http.StatusForbidden)
+		case strings.Contains(strings.ToLower(r.URL.Query().Get("name")), "<script"):
+			w.WriteHeader(http.StatusForbidden)
+		case strings.Contains(r.URL.Query().Get("cmd"), ";"):
+			w.WriteHeader(http.StatusForbidden)
+		case r.Method == http.MethodPost && strings.HasPrefix(r.Header.Get("Content-Type"), "text/plain"):
+			w.WriteHeader(http.StatusUnsupportedMediaType)
+		case r.Method == http.MethodPost && strings.HasPrefix(r.Header.Get("Content-Type"), "application/json"):
+			body, _ := io.ReadAll(r.Body)
+			if string(body) == `{"id":1` {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			if strings.Contains(strings.ToLower(string(body)), "union select") {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		default:
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer server.Close()
+
+	result := probeWAFCanary(targetFromTestServer(server.URL), env.LightProbeWAFCanaryConfig{
+		Enabled:        true,
+		TimeoutSeconds: 1,
+	})
+	if result.Status != "success" {
+		t.Fatalf("probeWAFCanary() status = %q, want success", result.Status)
+	}
+	if result.Payload["cases_total"] != 12 || result.Payload["cases_executed"] != 12 {
+		t.Fatalf("unexpected case counts: %+v", result.Payload)
+	}
+	if result.Payload["expected_blocked_count"] != 11 || result.Payload["expected_blocked_matched_count"] != 11 || result.Payload["unexpected_pass_count"] != 0 || result.Payload["network_error_count"] != 0 {
+		t.Fatalf("unexpected WAF canary counts: %+v", result.Payload)
+	}
+	cases := result.Payload["cases"].([]map[string]any)
+	for _, item := range cases {
+		if _, ok := item["body"]; ok {
+			t.Fatalf("case result should not store body: %+v", item)
+		}
+		if _, ok := item["url"]; ok {
+			t.Fatalf("case result should not store url: %+v", item)
+		}
+	}
+}
+
+func TestProbeWAFCanaryInvalidPathSkipsNetwork(t *testing.T) {
+	hit := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hit = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	target := targetFromTestServer(server.URL)
+	result := probeWAFCanary(target, env.LightProbeWAFCanaryConfig{
+		Enabled:    true,
+		CanaryPath: "https://example.com/bad",
+	})
+	if result.Status != "failure" || result.ErrorCode != "waf_canary_path_invalid" {
+		t.Fatalf("probeWAFCanary() = %+v, want invalid path failure", result)
+	}
+	if hit {
+		t.Fatal("invalid canary path should not perform network request")
+	}
+}
+
+func TestWAFCanaryBlockedStatus(t *testing.T) {
+	for _, statusCode := range []int{http.StatusBadRequest, http.StatusForbidden, http.StatusMethodNotAllowed, http.StatusRequestURITooLong, http.StatusUnsupportedMediaType} {
+		if !wafCanaryBlockedStatus(statusCode) {
+			t.Fatalf("status %d should be blocked", statusCode)
+		}
+	}
+	for _, statusCode := range []int{http.StatusOK, http.StatusFound, http.StatusNotFound} {
+		if wafCanaryBlockedStatus(statusCode) {
+			t.Fatalf("status %d should not be blocked", statusCode)
 		}
 	}
 }

@@ -4,7 +4,7 @@
 
 `gofurry-nav-collector` 既定基础 roadmap 已完成。当前文档不再保留过长历史完成项，只记录后端正式进入 v2 前需要补齐的 collector 能力。
 
-`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段；`v0.5.3` 已完成默认关闭的域名治理低频轻探测；`v0.5.4` 已完成默认关闭的页面资源声明轻探测；`v0.5.5` 已完成默认关闭的 TCP 端口连通性轻探测；`v0.5.6` 已完成 WAF / CDN 被动指纹推断。后续 `v0.5.7` 用于在不影响旧链路的前提下补齐少量明确授权的轻探测能力。
+`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段；`v0.5.3` 已完成默认关闭的域名治理低频轻探测；`v0.5.4` 已完成默认关闭的页面资源声明轻探测；`v0.5.5` 已完成默认关闭的 TCP 端口连通性轻探测；`v0.5.6` 已完成 WAF / CDN 被动指纹推断；`v0.5.7` 已完成默认关闭的低频 WAF canary 无害验证。
 
 ## 迭代原则
 
@@ -243,34 +243,34 @@
 
 ---
 
-### v0.5.7 - 自有站点轻量 WAF 规则无害验证
+### v0.5.7 - 收录站点轻量 WAF 规则无害验证
 
-**状态：** 计划中
-**范围：** 自有站点 / WAF canary / 安全测试 / 默认关闭
-**目标：** 只对 GoFurry 自有站点或明确授权的专用测试目标，验证基础 WAF 规则是否仍能拦截常见无害测试请求；不对导航收录的第三方站点执行。
+**状态：** 已完成
+**范围：** 已授权收录站点 / WAF canary / 安全测试 / 默认关闭
+**目标：** 以低频、旁路、可解释的方式验证基础 WAF 规则是否仍能拦截常见无害测试请求。
 
 #### Focus
 
-- 默认关闭。
-- 只允许自有 allowlist。
-- 建议使用专用 canary 路径。
-- 只验证拦截行为，不做漏洞利用。
+- 默认关闭，启用 `waf_canary.enabled=true` 即表示维护者确认当前有效采集目标均已授权。
+- 默认每 30 天执行一次，启用后每个 target 执行 baseline + 11 个基础规则 case。
+- 默认使用 `/.well-known/gofurry-waf-canary`，可通过 `canary_path` 覆盖。
+- 只验证拦截行为，不做漏洞利用、绕过测试、目录枚举或高频压测。
 
 #### Tasks
 
-- [ ] 增加 `collector.v2.light_probe.waf_canary.enabled=false`，并要求配置 `allowed_hosts` 和 `canary_path`。
-- [ ] WAF 测试请求必须带清晰 User-Agent，例如 `GoFurry-Nav-Collector-WAF-Canary`，便于日志识别。
-- [ ] 测试请求只打到无业务副作用的 canary 路径，不携带账号、Cookie、Token 或真实用户数据。
-- [ ] 按规则类别验证基础拦截：扫描器 UA、JSON 解析错误、参数数量、异常 URI 长度、SQLi 关键词、XSS 标记、命令注入标记、路径穿越标记、非法 HTTP 方法、非法 Content-Type、JSON 危险关键字。
-- [ ] 只记录状态码、是否命中预期、规则类别、耗时和错误类别，不保存完整攻击样本。
-- [ ] 增加严格频率限制，建议每天或手动触发，不做失败重试。
-- [ ] 如果目标 host 不在 allowlist 或 canary_path 为空，任务必须拒绝启动并记录中文错误日志。
-- [ ] 文档化该能力只适合自有 WAF 回归测试，不属于导航站点常规采集能力。
+- [x] 增加 `collector.v2.light_probe.waf_canary.enabled=false`，默认不产生任何 WAF 测试请求。
+- [x] 默认 interval 为 720 小时，timeout 为 10 秒，默认 canary 路径为 `/.well-known/gofurry-waf-canary`。
+- [x] WAF 测试请求带清晰 User-Agent，例如 `GoFurry-Nav-Collector-WAF-Canary/1.0`，便于日志识别。
+- [x] 测试请求不携带账号、Cookie、Token 或真实用户数据。
+- [x] 按规则类别验证基础拦截：扫描器 UA、JSON 解析错误、参数数量、异常 URI 长度、SQLi 关键词、XSS 标记、命令注入标记、路径穿越标记、非法 HTTP 方法、非法 Content-Type、JSON 危险关键字。
+- [x] 只记录状态码、是否命中预期、规则类别、耗时和错误类别，不保存完整 query、body、URI 或测试样本原文。
+- [x] 路径为空、绝对 URL、带 query/fragment 等误配置会安全失败，不发起请求。
+- [x] 文档化该能力只适合已授权目标的低频 WAF 回归验证，不属于漏洞扫描。
 
 #### Acceptance Criteria
 
 - 默认配置下不会发送任何 WAF 测试请求。
-- 不能对非 allowlist host 执行。
+- `waf_canary.enabled=true` 明确表达维护者已确认所有有效采集目标处于授权验证范围内。
 - 测试结果只进入 v2 observation / latest Redis，不影响旧页面和站点健康结论。
 - 所有测试 payload 都保持无害、可解释、可在 WAF 日志中识别。
 - 误配置时安全失败，不发起请求。

@@ -11,6 +11,7 @@ const (
 	ProtocolSecurityTXT = "security_txt"
 	ProtocolPageAssets  = "page_assets"
 	ProtocolPortCheck   = "port_check"
+	ProtocolWAFCanary   = "waf_canary"
 
 	StatusSuccess = "success"
 	StatusFailure = "failure"
