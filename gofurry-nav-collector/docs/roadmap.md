@@ -48,7 +48,7 @@
 
 ### v0.6.1 - 采集目标治理与 canonical target 收口
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** 目标治理 / 域名关系 / 数据一致性
 **目标：** 降低 `example.com`、`www.example.com`、跳转后域名、备用域名之间的展示割裂，为后端 v2 API 提供更清晰的 target 关系。
 
@@ -60,11 +60,11 @@
 
 #### Tasks
 
-- [ ] 在 HTTP v2 payload 或 summary 中补充 `canonical_target_hint`，优先来自 canonical URL、final URL host、HTTP target host 的保守比较。
-- [ ] 为 target summary 增加 `target_relation_hints`，表达 `same_host`、`redirect_to_www`、`redirect_to_apex`、`redirect_to_external` 等低风险关系。
-- [ ] 标记 `final_url` 与采集 target host 不一致的情况，只作为提示，不改变采集目标。
-- [ ] 对同一 site 下多个 target 的 summary 增加重复 host / 重复 final host 检测。
-- [ ] 文档化 target 关系只是治理参考，不自动合并、不自动删除、不改变 admin 管理数据。
+- [x] 在 HTTP v2 payload 或 summary 中补充 `canonical_target_hint`，优先来自 canonical URL、final URL host、HTTP target host 的保守比较。
+- [x] 为 target summary 增加 `target_relation_hints`，表达 `same_host`、`redirect_to_www`、`redirect_to_apex`、`redirect_to_external` 等低风险关系。
+- [x] 标记 `final_url` 与采集 target host 不一致的情况，只作为提示，不改变采集目标。
+- [x] 对同一 site 下多个 target 的 summary 增加重复 host / 重复 final host 检测。
+- [x] 文档化 target 关系只是治理参考，不自动合并、不自动删除、不改变 admin 管理数据。
 
 #### Acceptance Criteria
 

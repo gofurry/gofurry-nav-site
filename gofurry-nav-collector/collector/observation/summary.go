@@ -247,6 +247,7 @@ func BuildTargetSummary(siteID int64, target string, docs map[string]LatestDocum
 	}
 
 	status, reasonCodes, reasonMessages := evaluateTargetHealth(healthByProtocol, now)
+	canonicalTarget, targetRelations := BuildTargetRelationHints(target, docs)
 	var edgeHints []EdgeProviderHint
 	if env.GetServerConfig().Collector.V2.EdgeHints.EnabledOrDefault() {
 		edgeHints = BuildEdgeProviderHints(docs)
@@ -258,6 +259,8 @@ func BuildTargetSummary(siteID int64, target string, docs map[string]LatestDocum
 		ReasonCodes:       reasonCodes,
 		ReasonMessages:    reasonMessages,
 		Protocols:         protocols,
+		CanonicalTarget:   canonicalTarget,
+		TargetRelations:   targetRelations,
 		EdgeProviderHints: edgeHints,
 		ObservedAt:        observedAt,
 		GeneratedAt:       now,
@@ -285,22 +288,26 @@ func BuildSiteSummary(siteID int64, targetSummaries []TargetSummaryDocument, now
 			Status:            summary.Status,
 			ReasonCodes:       summary.ReasonCodes,
 			ReasonMessages:    summary.ReasonMessages,
+			CanonicalTarget:   summary.CanonicalTarget,
+			TargetRelations:   summary.TargetRelations,
 			EdgeProviderHints: summary.EdgeProviderHints,
 			ObservedAt:        summary.ObservedAt,
 		})
 	}
 
 	status, reasonCodes, reasonMessages := evaluateSiteHealth(counts, len(targetSummaries))
+	targetRelations := BuildSiteTargetRelationHints(targetSummaries)
 	return SiteSummaryDocument{
-		SiteID:         siteID,
-		Status:         status,
-		ReasonCodes:    reasonCodes,
-		ReasonMessages: reasonMessages,
-		TargetCount:    len(targetSummaries),
-		StatusCounts:   counts,
-		Targets:        targets,
-		GeneratedAt:    now,
-		SchemaVersion:  schemaVersion,
+		SiteID:          siteID,
+		Status:          status,
+		ReasonCodes:     reasonCodes,
+		ReasonMessages:  reasonMessages,
+		TargetCount:     len(targetSummaries),
+		StatusCounts:    counts,
+		Targets:         targets,
+		TargetRelations: targetRelations,
+		GeneratedAt:     now,
+		SchemaVersion:   schemaVersion,
 	}
 }
 
