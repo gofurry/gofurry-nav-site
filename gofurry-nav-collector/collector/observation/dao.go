@@ -1,6 +1,7 @@
 package observation
 
 import (
+	"context"
 	"strconv"
 	"time"
 
@@ -57,4 +58,44 @@ func (dao observationDao) DeleteByProtocolLimit(protocol string, count string) (
 	}
 
 	return totalDeleted, nil
+}
+
+type ObservationTrendRow struct {
+	Protocol   string
+	Status     string
+	ObservedAt time.Time
+	DurationMS int64
+	ErrorCode  *string
+	Payload    string
+}
+
+func (dao observationDao) ListTrendRows(ctx context.Context, siteID int64, target string, since time.Time, limit int) ([]ObservationTrendRow, common.GFError) {
+	if siteID <= 0 || target == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = defaultTrendMaxRows
+	}
+	rows := []ObservationTrendRow{}
+	db := dao.Gm.WithContext(ctx).Raw(`
+SELECT protocol, status, observed_at, duration_ms, error_code, payload::text AS payload
+FROM gfn_collector_observation
+WHERE site_id = ?
+  AND target = ?
+  AND observed_at >= ?
+  AND protocol IN (?, ?, ?)
+ORDER BY observed_at DESC, id DESC
+LIMIT ?`,
+		siteID,
+		target,
+		since,
+		ProtocolPing,
+		ProtocolHTTP,
+		ProtocolDNS,
+		limit,
+	).Scan(&rows)
+	if db.Error != nil {
+		return nil, common.NewDaoError(db.Error.Error())
+	}
+	return rows, nil
 }

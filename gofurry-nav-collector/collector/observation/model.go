@@ -141,6 +141,74 @@ type SiteTargetRelationHint struct {
 	Targets  []string `json:"targets"`
 }
 
+type TargetTrendDocument struct {
+	SiteID        int64                  `json:"site_id"`
+	Target        string                 `json:"target"`
+	Windows       map[string]TrendWindow `json:"windows"`
+	GeneratedAt   time.Time              `json:"generated_at"`
+	SchemaVersion int                    `json:"schema_version"`
+}
+
+type TrendWindow struct {
+	Since     time.Time                `json:"since"`
+	Until     time.Time                `json:"until"`
+	Protocols map[string]ProtocolTrend `json:"protocols"`
+}
+
+type ProtocolTrend struct {
+	Protocol         string     `json:"protocol"`
+	ObservationCount int        `json:"observation_count"`
+	SuccessCount     int        `json:"success_count"`
+	FailureCount     int        `json:"failure_count"`
+	SuccessRate      *float64   `json:"success_rate"`
+	AvgDurationMS    *float64   `json:"avg_duration_ms,omitempty"`
+	P95DurationMS    *float64   `json:"p95_duration_ms,omitempty"`
+	LastObservedAt   *time.Time `json:"last_observed_at,omitempty"`
+	LastFailureAt    *time.Time `json:"last_failure_at,omitempty"`
+	HTTP             *HTTPTrend `json:"http,omitempty"`
+	Ping             *PingTrend `json:"ping,omitempty"`
+	DNS              *DNSTrend  `json:"dns,omitempty"`
+	TLS              *TLSTrend  `json:"tls,omitempty"`
+}
+
+type HTTPTrend struct {
+	AvgResponseTimeMS *float64   `json:"avg_response_time_ms,omitempty"`
+	P95ResponseTimeMS *float64   `json:"p95_response_time_ms,omitempty"`
+	LatestFailureAt   *time.Time `json:"latest_failure_at,omitempty"`
+}
+
+type PingTrend struct {
+	AvgRTTMS       *float64 `json:"avg_rtt_ms,omitempty"`
+	AvgLossRate    *float64 `json:"avg_loss_rate,omitempty"`
+	AvgJitterMS    *float64 `json:"avg_jitter_ms,omitempty"`
+	LatestLossRate *float64 `json:"latest_loss_rate,omitempty"`
+	LatestAvgRTTMS *float64 `json:"latest_avg_rtt_ms,omitempty"`
+	LatestJitterMS *float64 `json:"latest_jitter_ms,omitempty"`
+}
+
+type DNSTrend struct {
+	SuccessRate     *float64       `json:"success_rate,omitempty"`
+	LatestTTLMin    *float64       `json:"latest_ttl_min,omitempty"`
+	LatestTTLMax    *float64       `json:"latest_ttl_max,omitempty"`
+	LatestTTLAvg    *float64       `json:"latest_ttl_avg,omitempty"`
+	PreviousTTLMin  *float64       `json:"previous_ttl_min,omitempty"`
+	PreviousTTLMax  *float64       `json:"previous_ttl_max,omitempty"`
+	PreviousTTLAvg  *float64       `json:"previous_ttl_avg,omitempty"`
+	RiskFlagCounts  map[string]int `json:"risk_flag_counts,omitempty"`
+	LatestRiskFlags []string       `json:"latest_risk_flags,omitempty"`
+}
+
+type TLSTrend struct {
+	LatestCertDaysLeft     *int       `json:"latest_cert_days_left,omitempty"`
+	PreviousCertDaysLeft   *int       `json:"previous_cert_days_left,omitempty"`
+	CertIssuerChanged      bool       `json:"cert_issuer_changed"`
+	CertFingerprintChanged bool       `json:"cert_fingerprint_changed"`
+	LatestCertIssuer       string     `json:"latest_cert_issuer,omitempty"`
+	LatestCertFingerprint  string     `json:"latest_cert_fingerprint_sha256,omitempty"`
+	LatestCertNotAfter     string     `json:"latest_cert_not_after,omitempty"`
+	LatestCertObservedAt   *time.Time `json:"latest_cert_observed_at,omitempty"`
+}
+
 type EdgeProviderHint struct {
 	Provider   string                 `json:"provider"`
 	HintType   string                 `json:"hint_type"`

@@ -76,7 +76,7 @@
 
 ### v0.6.2 - Observation 历史趋势派生
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** 历史趋势 / 派生数据 / Redis summary
 **目标：** 在不增加采集强度的前提下，从已有 observation 中派生近周期趋势，让站点状态更有时间维度。
 
@@ -88,13 +88,13 @@
 
 #### Tasks
 
-- [ ] 为每个 site + target + protocol 派生近 24 小时 / 7 天的基础趋势摘要。
-- [ ] HTTP 趋势：成功率、平均响应时间、P95 响应时间、最近失败时间。
-- [ ] Ping 趋势：成功率、平均 RTT、丢包率均值、抖动均值。
-- [ ] DNS 趋势：成功率、TTL min/max/avg 变化、risk_flags 出现次数。
-- [ ] TLS 趋势：证书剩余天数变化、证书 issuer / fingerprint 是否变化。
-- [ ] 将趋势结果写入新的 v2 Redis summary key，避免影响当前 target/site summary。
-- [ ] 增加查询预算、超时和 batch 限制，避免 observation 历史查询拖垮数据库。
+- [x] 为每个 site + target + protocol 派生近 24 小时 / 7 天的基础趋势摘要。
+- [x] HTTP 趋势：成功率、平均响应时间、P95 响应时间、最近失败时间。
+- [x] Ping 趋势：成功率、平均 RTT、丢包率均值、抖动均值。
+- [x] DNS 趋势：成功率、TTL min/max/avg 变化、risk_flags 出现次数。
+- [x] TLS 趋势：证书剩余天数变化、证书 issuer / fingerprint 是否变化。
+- [x] 将趋势结果写入新的 v2 Redis summary key，避免影响当前 target/site summary。
+- [x] 增加查询预算、超时和 batch 限制，避免 observation 历史查询拖垮数据库。
 
 #### Acceptance Criteria
 
