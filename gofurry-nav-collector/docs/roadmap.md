@@ -136,7 +136,7 @@
 
 ### v0.6.4 - Collector v2 收口验收
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** 质量验收 / 文档 / 测试 / 生产准备
 **目标：** 在后端正式推进 `/api/v2/nav` 前，对 collector v2 数据面做一次最终验收，确认可以作为稳定数据来源。
 
@@ -149,12 +149,12 @@
 
 #### Tasks
 
-- [ ] 梳理 v2 Redis key 清单：latest、summary、run state、trend、change event。
-- [ ] 补齐关键 builder 的单元测试：summary、trend、change event、reason code 字典。
-- [ ] 增加一份本地/测试环境 smoke test 文档，说明如何验证 collector v2 数据完整性。
-- [ ] 检查生产推荐配置，确保新能力默认关闭或低频，不扩大当前站点压力。
-- [ ] 更新 `docs/v2-observation-payload.md`，标记进入后端 v2 API 前的稳定字段集合。
-- [ ] 明确冻结范围：后端 v2 API 开始后，collector v2 字段只做兼容新增，不做破坏性重命名。
+- [x] 梳理 v2 Redis key 清单：latest、summary、run state、trend、change event。
+- [x] 补齐关键 builder 的单元测试：summary、trend、change event、reason code 字典。
+- [x] 增加一份本地/测试环境 smoke test 文档，说明如何验证 collector v2 数据完整性。
+- [x] 检查生产推荐配置，确保新能力默认关闭或低频，不扩大当前站点压力。
+- [x] 更新 `docs/v2-observation-payload.md`，标记进入后端 v2 API 前的稳定字段集合。
+- [x] 明确冻结范围：后端 v2 API 开始后，collector v2 字段只做兼容新增，不做破坏性重命名。
 
 #### Acceptance Criteria
 

@@ -4,6 +4,28 @@
 
 旧 Redis key、旧日志表和旧前端展示结构仍是兼容路径；新增字段只在 v2 observation/latest Redis 中旁路出现。
 
+## 后端 v2 前稳定边界
+
+截至 collector v0.6.4，以下 v2 数据面进入后端 `/api/v2/nav` 前的稳定消费集合：
+
+- `gfn_collector_observation`：raw observation 历史表，适合详情、历史、排障和后续后端聚合。
+- `collector:v2:latest:{protocol}:{site_id}`：site 级协议最新观测，保留兼容。
+- `collector:v2:latest:{protocol}:{site_id}:{target}`：target 级协议最新观测，后端 v2 优先读取。
+- `collector:v2:summary:target:{site_id}:{target}`：target 健康摘要。
+- `collector:v2:summary:site:{site_id}`：site 聚合健康摘要。
+- `collector:v2:summary:site_targets:{site_id}`：site 下 target summary key 索引。
+- `collector:v2:trend:target:{site_id}:{target}`：target 级 24h / 7d 历史趋势摘要。
+- `collector:v2:change:target:{site_id}:{target}`：target 级低噪声变化事件摘要。
+- `collector:v2:run:{protocol}:latest`：协议最新运行状态。
+- `collector:v2:run:{protocol}:{job_id}`：协议单次运行状态，默认 168 小时 TTL。
+
+冻结规则：
+
+- 后端 v2 开始接入后，以上 key 的含义、核心字段名和 status/reason code 语义不做破坏性重命名。
+- 后续 collector 只能做兼容新增字段；后端应忽略未知字段。
+- light probe、edge hints、trend、change event 都是旁路信息，不直接作为站点上下架、排序或 down 判断依据。
+- 主动 light probe 仍需显式开启；默认配置不应扩大生产目标压力。
+
 ## Summary Status
 
 v2 summary 目前只由 Ping / HTTP / DNS / TLS 相关信号参与健康聚合；RDAP、robots.txt、security.txt、page_assets、port_check、waf_canary 和 edge hints 都是旁路参考，不直接改变健康状态。
