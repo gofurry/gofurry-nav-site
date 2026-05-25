@@ -313,7 +313,7 @@ func evaluateTargetHealth(protocols map[string]protocolHealth, now time.Time) (s
 	reasons := reasonCollector{}
 	httpDoc, hasHTTP := protocols[ProtocolHTTP]
 	if !hasHTTP || httpDoc.stale {
-		reasons.add("http_missing_or_stale", "HTTP 观测缺失或已过期，无法判断访客是否可打开")
+		reasons.addCode("http_missing_or_stale")
 		return StatusUnknown, reasons.codes, reasons.messages
 	}
 
@@ -323,13 +323,13 @@ func evaluateTargetHealth(protocols map[string]protocolHealth, now time.Time) (s
 	dnsStale := protocolMissingOrStale(protocols, ProtocolDNS)
 
 	if !httpSuccess {
-		reasons.add("http_failed", "HTTP 访问失败")
+		reasons.addCode("http_failed")
 		if dnsFailure {
-			reasons.add("dns_failed", "DNS 解析也失败")
+			reasons.addCode("dns_failed")
 			return StatusDown, reasons.codes, reasons.messages
 		}
 		if dnsStale {
-			reasons.add("dns_missing_or_stale", "DNS 观测缺失或已过期")
+			reasons.addCode("dns_missing_or_stale")
 		}
 		return StatusDegraded, reasons.codes, reasons.messages
 	}
@@ -337,21 +337,21 @@ func evaluateTargetHealth(protocols map[string]protocolHealth, now time.Time) (s
 	status := StatusHealthy
 	if dnsFailure {
 		status = worseStatus(status, StatusWarning)
-		reasons.add("dns_failed_but_http_ok", "DNS 失败但 HTTP 当前仍可访问")
+		reasons.addCode("dns_failed_but_http_ok")
 	} else if dnsStale {
 		status = worseStatus(status, StatusWarning)
-		reasons.add("dns_missing_or_stale", "DNS 观测缺失或已过期")
+		reasons.addCode("dns_missing_or_stale")
 	}
 	if pingFailure {
 		status = worseStatus(status, StatusWarning)
-		reasons.add("ping_failed_but_http_ok", "Ping 失败但 HTTP 当前仍可访问")
+		reasons.addCode("ping_failed_but_http_ok")
 	}
 
 	dnsRisks := riskFlagsFromPayload(protocols[ProtocolDNS].doc.Payload)
 	if len(dnsRisks) > 0 {
 		status = worseStatus(status, StatusWarning)
 		for _, risk := range dnsRisks {
-			reasons.add("dns_risk_"+risk, "DNS observation 出现风险信号: "+risk)
+			reasons.addCode(dnsRiskReasonCode(risk))
 		}
 	}
 
@@ -371,23 +371,23 @@ func evaluateTargetHealth(protocols map[string]protocolHealth, now time.Time) (s
 func evaluateSiteHealth(counts map[string]int, targetCount int) (string, []string, []string) {
 	reasons := reasonCollector{}
 	if targetCount == 0 {
-		reasons.add("no_target_summary", "没有可用的采集目标健康摘要")
+		reasons.addCode("no_target_summary")
 		return StatusUnknown, reasons.codes, reasons.messages
 	}
 	if counts[StatusDown] == targetCount {
-		reasons.add("all_targets_down", "所有采集目标都判定为 down")
+		reasons.addCode("all_targets_down")
 		return StatusDown, reasons.codes, reasons.messages
 	}
 	if counts[StatusUnknown] == targetCount {
-		reasons.add("all_targets_unknown", "所有采集目标状态未知")
+		reasons.addCode("all_targets_unknown")
 		return StatusUnknown, reasons.codes, reasons.messages
 	}
 	if counts[StatusDown] > 0 || counts[StatusDegraded] > 0 {
-		reasons.add("some_targets_degraded", "部分采集目标不可用或降级")
+		reasons.addCode("some_targets_degraded")
 		return StatusDegraded, reasons.codes, reasons.messages
 	}
 	if counts[StatusWarning] > 0 || counts[StatusUnknown] > 0 {
-		reasons.add("some_targets_warning", "部分采集目标存在需要关注的观测信号")
+		reasons.addCode("some_targets_warning")
 		return StatusWarning, reasons.codes, reasons.messages
 	}
 	return StatusHealthy, reasons.codes, reasons.messages
@@ -422,10 +422,7 @@ func evaluateTLSSignal(payload any, now time.Time) (string, []string, []string) 
 	category := stringFromMap(payloadMap, "verify_error_category")
 	if hasCertVerified && !certVerified {
 		status = worseStatus(status, StatusDegraded)
-		if category == "" {
-			category = "other"
-		}
-		reasons.add("tls_verify_"+category, "TLS 证书校验未通过: "+category)
+		reasons.addCode(tlsVerifyReasonCode(category))
 	}
 
 	notAfter := stringFromMap(payloadMap, "cert_not_after")
@@ -435,10 +432,10 @@ func evaluateTLSSignal(payload any, now time.Time) (string, []string, []string) 
 			switch {
 			case daysLeft < 0:
 				status = worseStatus(status, StatusDegraded)
-				reasons.add("tls_cert_expired", "TLS 证书已过期")
+				reasons.addCode("tls_cert_expired")
 			case daysLeft <= 30:
 				status = worseStatus(status, StatusWarning)
-				reasons.add("tls_cert_expiring_soon", "TLS 证书将在 30 天内过期")
+				reasons.addCode("tls_cert_expiring_soon")
 			}
 		}
 	}
@@ -558,4 +555,13 @@ func (collector *reasonCollector) add(code string, message string) {
 	if message != "" {
 		collector.messages = append(collector.messages, message)
 	}
+}
+
+func (collector *reasonCollector) addCode(code string) {
+	definition, ok := ReasonDefinitionByCode(code)
+	if !ok {
+		collector.add(code, "")
+		return
+	}
+	collector.add(definition.Code, definition.MessageZH)
 }

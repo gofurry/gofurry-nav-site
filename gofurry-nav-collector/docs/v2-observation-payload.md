@@ -4,6 +4,117 @@
 
 旧 Redis key、旧日志表和旧前端展示结构仍是兼容路径；新增字段只在 v2 observation/latest Redis 中旁路出现。
 
+## Summary Status
+
+v2 summary 目前只由 Ping / HTTP / DNS / TLS 相关信号参与健康聚合；RDAP、robots.txt、security.txt、page_assets、port_check、waf_canary 和 edge hints 都是旁路参考，不直接改变健康状态。
+
+| status | 中文含义 | 使用边界 |
+|---|---|---|
+| `healthy` | 当前主要访问链路健康 | HTTP 可用，且没有参与聚合的 warning/degraded/down 信号。 |
+| `warning` | 需要关注 | HTTP 可用，但 DNS、Ping、TLS 即将过期或 DNS risk_flags 等出现观察信号。 |
+| `degraded` | 降级 | HTTP 失败但尚未满足 down 条件，或 TLS 校验失败等影响访问信任的信号出现。 |
+| `unknown` | 状态未知 | 缺少可用 HTTP 观测、观测过期，或站点没有可聚合 target。 |
+| `down` | 不可用 | HTTP 与 DNS 均失败，或站点下所有 target 均为 down。 |
+
+## Reason Code 字典
+
+`reason_codes` 是稳定英文 key，`reason_messages` 是中文说明。后端 v2 应优先使用 `reason_codes` 做逻辑判断，用本表或后端自己的 i18n 字典做展示文案。`affects_health=true` 表示该 reason 当前参与 summary 状态聚合。
+
+| code | message_zh | severity | scope | affects_health |
+|---|---|---|---|---|
+| `http_missing_or_stale` | HTTP 观测缺失或已过期，无法判断访客是否可打开 | unknown | target | true |
+| `http_failed` | HTTP 访问失败 | degraded | target | true |
+| `dns_failed` | DNS 解析也失败 | down | target | true |
+| `dns_missing_or_stale` | DNS 观测缺失或已过期 | warning | target | true |
+| `dns_failed_but_http_ok` | DNS 失败但 HTTP 当前仍可访问 | warning | target | true |
+| `ping_failed_but_http_ok` | Ping 失败但 HTTP 当前仍可访问 | warning | target | true |
+| `dns_risk_private_ip` | DNS observation 出现风险信号: private_ip | warning | target | true |
+| `dns_risk_low_ttl` | DNS observation 出现风险信号: low_ttl | warning | target | true |
+| `dns_risk_nxdomain_with_answer` | DNS observation 出现风险信号: nxdomain_with_answer | warning | target | true |
+| `dns_risk_ptr_empty` | DNS observation 出现风险信号: ptr_empty | warning | target | true |
+| `dns_risk_other` | DNS observation 出现未知风险信号 | warning | target | true |
+| `tls_verify_expired` | TLS 证书校验未通过: expired | degraded | target | true |
+| `tls_verify_not_yet_valid` | TLS 证书校验未通过: not_yet_valid | degraded | target | true |
+| `tls_verify_hostname_mismatch` | TLS 证书校验未通过: hostname_mismatch | degraded | target | true |
+| `tls_verify_unknown_authority` | TLS 证书校验未通过: unknown_authority | degraded | target | true |
+| `tls_verify_incompatible_usage` | TLS 证书校验未通过: incompatible_usage | degraded | target | true |
+| `tls_verify_other` | TLS 证书校验未通过: other | degraded | target | true |
+| `tls_cert_expired` | TLS 证书已过期 | degraded | target | true |
+| `tls_cert_expiring_soon` | TLS 证书将在 30 天内过期 | warning | target | true |
+| `no_target_summary` | 没有可用的采集目标健康摘要 | unknown | site | true |
+| `all_targets_down` | 所有采集目标都判定为 down | down | site | true |
+| `all_targets_unknown` | 所有采集目标状态未知 | unknown | site | true |
+| `some_targets_degraded` | 部分采集目标不可用或降级 | degraded | site | true |
+| `some_targets_warning` | 部分采集目标存在需要关注的观测信号 | warning | site | true |
+
+## 后端 v2 消费建议
+
+- 站点详情优先读取 `collector:v2:summary:site:{site_id}` 与 `collector:v2:summary:target:{site_id}:{target}`；raw observation 更适合历史详情、排障和趋势计算。
+- 展示逻辑优先依赖 `status` 与 `reason_codes`，不要解析 `reason_messages` 文本做判断。
+- `light_probe` 系列协议和 `edge_provider_hints` 是治理/安全参考信号，不应直接作为站点上下架、排序或 down 判断依据。
+- 后端 v2 对字段应采用兼容读取策略：未知字段忽略，缺失字段使用安全默认值，避免 collector 后续 additive 字段影响接口稳定。
+
+## 字段契约速查
+
+### Summary
+
+| 字段 | 类型 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `site_id` | number | 否 | collector domain/site | 是 |
+| `target` | string | target summary 否 | collector target | 是 |
+| `status` | string | 否 | summary builder | 是 |
+| `reason_codes` | string[] | 否 | reason 字典 | 是 |
+| `reason_messages` | string[] | 否 | reason 字典中文文案 | 否 |
+| `protocols` | object | target summary 否 | Ping / HTTP / DNS latest | 是 |
+| `edge_provider_hints` | object[] | 是 | HTTP / DNS / TLS 被动推断 | 否 |
+
+### Ping
+
+| 字段 | 类型 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `icmp_status` | string | 否 | go-ping 结果 | 否 |
+| `avg_rtt_ms` / `min_rtt_ms` / `max_rtt_ms` / `stddev_rtt_ms` / `jitter_ms` | number | 是 | go-ping 统计 | 否 |
+| `loss_rate` | number | 否 | go-ping 统计 | 否 |
+| `packets_sent` / `packets_recv` / `packets_recv_duplicates` | number | 否 | go-ping 统计 | 否 |
+| `resolved_ip` / `resolved_ips` / `selected_ip` / `ip_family` | string / string[] | 是 | go-ping 解析结果 | 否 |
+| `icmp_blocked_suspected` | bool | 否 | Ping payload builder | 否 |
+
+### HTTP / TLS
+
+| 字段 | 类型 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `status_code` / `response_time_ms` | number | 否 | HTTP GET | HTTP latest status 参与 |
+| `http_protocol` / `remote_addr` / `remote_ip` | string | 是 | HTTP transport | 否 |
+| `dns_lookup_ms` / `tcp_connect_ms` / `tls_handshake_ms` / `ttfb_ms` / `transfer_ms` | number | 是 | httptrace | 否 |
+| `body_read_bytes` / `body_truncated` | number / bool | 否 | HTTP body reader | 否 |
+| `security_headers` / `security_header_summary` | object | 是 | HTTP headers | 否 |
+| `tls_handshake` | string | 否 | TLS connection state | 是 |
+| `cert_verified` / `verify_error_category` | bool / string | 是 | TLS verify | 是 |
+| `cert_not_after` | string | 是 | TLS leaf certificate | 是 |
+| `cert_fingerprint_sha256` / `cert_spki_sha256` | string | 是 | TLS leaf certificate | 否 |
+
+### DNS
+
+| 字段 | 类型 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `risk_flags` | string[] | 是 | DNS payload builder | 是 |
+| `response_summary` | object | 是 | DNS response | 否 |
+| `has_a` / `has_aaaa` / `ipv4_count` / `ipv6_count` | bool / number | 否 | DNS records | 否 |
+| `cname_chain_depth` / `cname_terminal` | number / string | 是 | DNS recursive result | 否 |
+| `name_server_hosts` / `mx_hosts` / `mx_priorities` / `soa` | array / object | 是 | DNS records | 否 |
+| `record_budget_exhausted` | bool | 否 | DNS query budget | 否 |
+
+### Light Probe
+
+| 协议 | 关键字段 | 可空 | 来源 | 参与 summary |
+|---|---|---:|---|---:|
+| `rdap` | `registrable_domain`、`registrar`、`statuses`、`expires_at`、`nameservers` | 是 | RDAP 官方服务 | 否 |
+| `robots` | `exists`、`status_code`、`sitemap_count`、`global_disallow_all` | 否 | `/robots.txt` | 否 |
+| `security_txt` | `exists`、`contact`、`expires`、`policy`、`canonical` | 是 | security.txt | 否 |
+| `page_assets` | `icon`、`manifest`、`sha256`、`body_truncated` | 是 | HTTP latest 声明资源 | 否 |
+| `port_check` | `ports_checked`、`open_count`、`results` | 否 | TCP connect | 否 |
+| `waf_canary` | `cases_total`、`blocked_count`、`unexpected_pass_count`、`cases` | 否 | 授权 WAF canary 请求 | 否 |
+
 ## Summary Edge Provider Hints
 
 `edge_provider_hints` 是 v0.5.6 新增的被动推断字段，出现在 v2 target summary 和 site summary 的 target item 中。它只基于已有 HTTP / DNS / TLS latest payload，不新增任何请求。

@@ -160,6 +160,37 @@ func TestBuildTargetSummaryDNSRiskWarning(t *testing.T) {
 	}
 }
 
+func TestBuildTargetSummaryUnknownDNSRiskFallsBackToOther(t *testing.T) {
+	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
+	docs := map[string]LatestDocument{
+		ProtocolHTTP: latestDoc(ProtocolHTTP, StatusSuccess, now.Add(-time.Minute), nil),
+		ProtocolDNS: latestDoc(ProtocolDNS, StatusSuccess, now.Add(-time.Minute), map[string]any{
+			"risk_flags": []any{"future_risk"},
+		}),
+	}
+
+	summary := BuildTargetSummary(1, "example.com", docs, now)
+	if !contains(summary.ReasonCodes, "dns_risk_other") {
+		t.Fatalf("missing fallback DNS risk reason: %v", summary.ReasonCodes)
+	}
+}
+
+func TestBuildTargetSummaryUnknownTLSVerifyCategoryFallsBackToOther(t *testing.T) {
+	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
+	docs := map[string]LatestDocument{
+		ProtocolHTTP: latestDoc(ProtocolHTTP, StatusSuccess, now.Add(-time.Minute), map[string]any{
+			"tls_handshake":         "collected",
+			"cert_verified":         false,
+			"verify_error_category": "new_tls_error",
+		}),
+	}
+
+	summary := BuildTargetSummary(1, "example.com", docs, now)
+	if !contains(summary.ReasonCodes, "tls_verify_other") {
+		t.Fatalf("missing fallback TLS reason: %v", summary.ReasonCodes)
+	}
+}
+
 func TestBuildSiteSummaryAggregatesTargetsConservatively(t *testing.T) {
 	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
 	summary := BuildSiteSummary(1, []TargetSummaryDocument{
@@ -183,6 +214,91 @@ func TestBuildSiteSummaryAggregatesTargetsConservatively(t *testing.T) {
 	}
 }
 
+func TestReasonDefinitionsAreStableAndComplete(t *testing.T) {
+	definitions := AllReasonDefinitions()
+	if len(definitions) == 0 {
+		t.Fatal("reason definitions should not be empty")
+	}
+	seen := map[string]bool{}
+	for _, definition := range definitions {
+		if definition.Code == "" || definition.MessageZH == "" || definition.DescriptionZH == "" {
+			t.Fatalf("reason definition has empty required field: %+v", definition)
+		}
+		if seen[definition.Code] {
+			t.Fatalf("duplicate reason definition code: %s", definition.Code)
+		}
+		seen[definition.Code] = true
+		if !validReasonSeverity(definition.Severity) {
+			t.Fatalf("invalid reason severity: %+v", definition)
+		}
+		if definition.Scope != ReasonScopeTarget && definition.Scope != ReasonScopeSite {
+			t.Fatalf("invalid reason scope: %+v", definition)
+		}
+		if _, ok := ReasonDefinitionByCode(definition.Code); !ok {
+			t.Fatalf("ReasonDefinitionByCode(%q) missing", definition.Code)
+		}
+	}
+	for _, code := range []string{
+		"http_missing_or_stale",
+		"http_failed",
+		"dns_failed",
+		"dns_missing_or_stale",
+		"dns_failed_but_http_ok",
+		"ping_failed_but_http_ok",
+		"dns_risk_private_ip",
+		"dns_risk_low_ttl",
+		"dns_risk_nxdomain_with_answer",
+		"dns_risk_ptr_empty",
+		"dns_risk_other",
+		"tls_verify_expired",
+		"tls_verify_not_yet_valid",
+		"tls_verify_hostname_mismatch",
+		"tls_verify_unknown_authority",
+		"tls_verify_incompatible_usage",
+		"tls_verify_other",
+		"tls_cert_expired",
+		"tls_cert_expiring_soon",
+		"no_target_summary",
+		"all_targets_down",
+		"all_targets_unknown",
+		"some_targets_degraded",
+		"some_targets_warning",
+	} {
+		if _, ok := ReasonDefinitionByCode(code); !ok {
+			t.Fatalf("expected reason definition %q", code)
+		}
+	}
+}
+
+func TestSummaryReasonCodesHaveDefinitions(t *testing.T) {
+	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
+	targetSummaries := []TargetSummaryDocument{
+		BuildTargetSummary(1, "missing-http.example.com", map[string]LatestDocument{}, now),
+		BuildTargetSummary(1, "http-dns-failed.example.com", map[string]LatestDocument{
+			ProtocolHTTP: latestDoc(ProtocolHTTP, StatusFailure, now.Add(-time.Minute), nil),
+			ProtocolDNS:  latestDoc(ProtocolDNS, StatusFailure, now.Add(-time.Minute), nil),
+		}, now),
+		BuildTargetSummary(1, "warning.example.com", map[string]LatestDocument{
+			ProtocolHTTP: latestDoc(ProtocolHTTP, StatusSuccess, now.Add(-time.Minute), map[string]any{
+				"tls_handshake":         "collected",
+				"cert_verified":         false,
+				"verify_error_category": "unknown_authority",
+				"cert_not_after":        now.Add(15 * 24 * time.Hour).Format(time.RFC3339),
+			}),
+			ProtocolDNS: latestDoc(ProtocolDNS, StatusSuccess, now.Add(-time.Minute), map[string]any{
+				"risk_flags": []any{"ptr_empty"},
+			}),
+			ProtocolPing: latestDoc(ProtocolPing, StatusFailure, now.Add(-time.Minute), nil),
+		}, now),
+	}
+	for _, summary := range targetSummaries {
+		assertReasonCodesDefined(t, summary.ReasonCodes)
+	}
+
+	siteSummary := BuildSiteSummary(1, targetSummaries, now)
+	assertReasonCodesDefined(t, siteSummary.ReasonCodes)
+}
+
 func latestDoc(protocol string, status string, observedAt time.Time, payload any) LatestDocument {
 	if payload == nil {
 		payload = map[string]any{}
@@ -196,6 +312,24 @@ func latestDoc(protocol string, status string, observedAt time.Time, payload any
 		DurationMS:    123,
 		Payload:       payload,
 		SchemaVersion: schemaVersion,
+	}
+}
+
+func validReasonSeverity(value string) bool {
+	switch value {
+	case ReasonSeverityInfo, ReasonSeverityWarning, ReasonSeverityDegraded, ReasonSeverityDown, ReasonSeverityUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+func assertReasonCodesDefined(t *testing.T, codes []string) {
+	t.Helper()
+	for _, code := range codes {
+		if _, ok := ReasonDefinitionByCode(code); !ok {
+			t.Fatalf("reason code %q has no definition", code)
+		}
 	}
 }
 

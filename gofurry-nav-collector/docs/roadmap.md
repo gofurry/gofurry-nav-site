@@ -19,7 +19,7 @@
 
 ### v0.6.0 - v2 数据契约与解释字典收口
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** 数据契约 / reason code / 文档 / 测试
 **目标：** 固化 collector v2 对外可依赖的数据语义，让后端 v2 API 可以稳定消费 observation、latest 和 summary。
 
@@ -31,12 +31,12 @@
 
 #### Tasks
 
-- [ ] 为所有 summary `reason_codes` 建立固定字典，包含中文说明、英文 key、建议严重度、是否影响健康状态。
-- [ ] 为 Ping / HTTP / TLS / DNS / light probe payload 增加 schema 文档表格，标注字段类型、可空性、来源和版本。
-- [ ] 在文档中明确哪些字段是 observation 信号，哪些字段参与 summary 聚合。
-- [ ] 为 summary status 增加统一说明：`healthy`、`warning`、`degraded`、`unknown`、`down`。
-- [ ] 为 reason code builder 增加单元测试，避免后续改动产生拼写漂移。
-- [ ] 给 `docs/v2-observation-payload.md` 增加“后端 v2 消费建议”章节，但不实现后端接口。
+- [x] 为所有 summary `reason_codes` 建立固定字典，包含中英文说明、英文 key、建议严重度、是否影响健康状态。
+- [x] 为 Ping / HTTP / TLS / DNS / light probe payload 增加 schema 文档表格，标注字段类型、可空性、来源和版本。
+- [x] 在文档中明确哪些字段是 observation 信号，哪些字段参与 summary 聚合。
+- [x] 为 summary status 增加统一说明：`healthy`、`warning`、`degraded`、`unknown`、`down`。
+- [x] 为 reason code builder 增加单元测试，避免后续改动产生拼写漂移。
+- [x] 给 `docs/v2-observation-payload.md` 增加“后端 v2 消费建议”章节，但不实现后端接口。
 
 #### Acceptance Criteria
 
