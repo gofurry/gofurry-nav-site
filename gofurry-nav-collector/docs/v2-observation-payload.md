@@ -4,6 +4,39 @@
 
 旧 Redis key、旧日志表和旧前端展示结构仍是兼容路径；新增字段只在 v2 observation/latest Redis 中旁路出现。
 
+## Summary Edge Provider Hints
+
+`edge_provider_hints` 是 v0.5.6 新增的被动推断字段，出现在 v2 target summary 和 site summary 的 target item 中。它只基于已有 HTTP / DNS / TLS latest payload，不新增任何请求。
+
+```json
+{
+  "edge_provider_hints": [
+    {
+      "provider": "cloudflare",
+      "hint_type": "cdn",
+      "confidence": "high",
+      "evidence": [
+        {
+          "source": "http",
+          "field": "headers.cf-ray",
+          "value": "abc-HKG"
+        },
+        {
+          "source": "dns",
+          "field": "A.asn",
+          "value": "AS13335 (Cloudflare, Inc.)"
+        }
+      ]
+    }
+  ]
+}
+```
+
+- `provider` 是保守推断的服务方线索，例如 `cloudflare`、`tencent_cloud`、`aliyun`、`aws_cloudfront`、`fastly`、`vercel`、`netlify`、`github_pages`。
+- `hint_type` 可能为 `cdn`、`waf`、`reverse_proxy`、`object_storage`、`hosting_platform`。
+- `confidence` 可能为 `low`、`medium`、`high`。单一 DNS/TLS 弱证据通常只给 `low`，明确 HTTP header 或多源证据才提高置信度。
+- `evidence` 中的 value 已限长；这些 hints 是 observation 线索，不是事实判定，不参与健康状态计算。
+
 ## Ping
 
 Ping payload 保留旧兼容字段 `delay_ms`、`legacy_delay`、`legacy_loss`、`legacy_status`，并补充同一次 `go-ping` 统计中已经得到的信息。

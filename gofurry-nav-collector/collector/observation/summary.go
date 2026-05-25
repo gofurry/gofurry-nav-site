@@ -214,16 +214,21 @@ func BuildTargetSummary(siteID int64, target string, docs map[string]LatestDocum
 	}
 
 	status, reasonCodes, reasonMessages := evaluateTargetHealth(healthByProtocol, now)
+	var edgeHints []EdgeProviderHint
+	if env.GetServerConfig().Collector.V2.EdgeHints.EnabledOrDefault() {
+		edgeHints = BuildEdgeProviderHints(docs)
+	}
 	return TargetSummaryDocument{
-		SiteID:         siteID,
-		Target:         target,
-		Status:         status,
-		ReasonCodes:    reasonCodes,
-		ReasonMessages: reasonMessages,
-		Protocols:      protocols,
-		ObservedAt:     observedAt,
-		GeneratedAt:    now,
-		SchemaVersion:  schemaVersion,
+		SiteID:            siteID,
+		Target:            target,
+		Status:            status,
+		ReasonCodes:       reasonCodes,
+		ReasonMessages:    reasonMessages,
+		Protocols:         protocols,
+		EdgeProviderHints: edgeHints,
+		ObservedAt:        observedAt,
+		GeneratedAt:       now,
+		SchemaVersion:     schemaVersion,
 	}
 }
 
@@ -243,11 +248,12 @@ func BuildSiteSummary(siteID int64, targetSummaries []TargetSummaryDocument, now
 	for _, summary := range targetSummaries {
 		counts[summary.Status]++
 		targets = append(targets, TargetSummaryItem{
-			Target:         summary.Target,
-			Status:         summary.Status,
-			ReasonCodes:    summary.ReasonCodes,
-			ReasonMessages: summary.ReasonMessages,
-			ObservedAt:     summary.ObservedAt,
+			Target:            summary.Target,
+			Status:            summary.Status,
+			ReasonCodes:       summary.ReasonCodes,
+			ReasonMessages:    summary.ReasonMessages,
+			EdgeProviderHints: summary.EdgeProviderHints,
+			ObservedAt:        summary.ObservedAt,
 		})
 	}
 

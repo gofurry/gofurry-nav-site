@@ -4,7 +4,7 @@
 
 `gofurry-nav-collector` 既定基础 roadmap 已完成。当前文档不再保留过长历史完成项，只记录后端正式进入 v2 前需要补齐的 collector 能力。
 
-`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段；`v0.5.3` 已完成默认关闭的域名治理低频轻探测；`v0.5.4` 已完成默认关闭的页面资源声明轻探测；`v0.5.5` 已完成默认关闭的 TCP 端口连通性轻探测。后续 `v0.5.6` 到 `v0.5.7` 用于在不影响旧链路的前提下补齐少量明确授权的轻探测能力。
+`v0.5.1` 来自 2026-05-25 代码审计，已完成稳定性补丁；`v0.5.2` 已补齐 v2 schema 收口前的低风险字段；`v0.5.3` 已完成默认关闭的域名治理低频轻探测；`v0.5.4` 已完成默认关闭的页面资源声明轻探测；`v0.5.5` 已完成默认关闭的 TCP 端口连通性轻探测；`v0.5.6` 已完成 WAF / CDN 被动指纹推断。后续 `v0.5.7` 用于在不影响旧链路的前提下补齐少量明确授权的轻探测能力。
 
 ## 迭代原则
 
@@ -210,7 +210,7 @@
 
 ### v0.5.6 - WAF / CDN 被动指纹推断
 
-**状态：** 计划中
+**状态：** 已完成
 **范围：** HTTP headers / DNS / TLS / 被动推断
 **目标：** 基于已有采集结果做保守的 WAF/CDN 线索识别，帮助站点理解访问链路，但不把推断包装成确定事实。
 
@@ -222,12 +222,12 @@
 
 #### Tasks
 
-- [ ] 基于已有 HTTP header、DNS CNAME/NS/ASN、TLS issuer/SAN、server hints 建立保守规则。
-- [ ] 输出 `edge_provider_hints`，包含 provider、confidence、evidence，不输出绝对结论。
-- [ ] 区分 CDN、WAF、反代、对象存储、托管平台等不同 hint 类型。
-- [ ] 对 Cloudflare、Tencent Cloud、Aliyun、AWS CloudFront、Fastly、Vercel、Netlify、GitHub Pages 等常见服务做基础规则。
-- [ ] 规则表内置但保持简单，可通过配置禁用。
-- [ ] 增加测试，保证证据不足时返回空 hint 或 low confidence。
+- [x] 基于已有 HTTP header、DNS CNAME/NS/ASN、TLS issuer/SAN、server hints 建立保守规则。
+- [x] 输出 `edge_provider_hints`，包含 provider、hint_type、confidence、evidence，不输出绝对结论。
+- [x] 区分 CDN、WAF、反代、对象存储、托管平台等不同 hint 类型。
+- [x] 对 Cloudflare、Tencent Cloud、Aliyun、AWS CloudFront、Fastly、Vercel、Netlify、GitHub Pages 等常见服务做基础规则。
+- [x] 规则表内置但保持简单，可通过 `collector.v2.edge_hints.enabled=false` 禁用。
+- [x] 增加测试，保证证据不足时返回空 hint 或 low confidence。
 
 #### Acceptance Criteria
 
@@ -235,6 +235,11 @@
 - 不影响现有健康状态和前端主展示。
 - 每个 hint 都能看到 evidence，避免误读。
 - 文档明确“推断不是事实”，需要人工确认。
+
+#### Notes
+
+- 本阶段没有新增 HTTP/DNS/Ping/light probe 请求，只消费已有 v2 latest payload。
+- 字段说明：`docs/v2-observation-payload.md`。
 
 ---
 

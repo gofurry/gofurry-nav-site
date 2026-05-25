@@ -77,15 +77,16 @@ type ProtocolSummary struct {
 }
 
 type TargetSummaryDocument struct {
-	SiteID         int64                      `json:"site_id"`
-	Target         string                     `json:"target"`
-	Status         string                     `json:"status"`
-	ReasonCodes    []string                   `json:"reason_codes"`
-	ReasonMessages []string                   `json:"reason_messages"`
-	Protocols      map[string]ProtocolSummary `json:"protocols"`
-	ObservedAt     time.Time                  `json:"observed_at"`
-	GeneratedAt    time.Time                  `json:"generated_at"`
-	SchemaVersion  int                        `json:"schema_version"`
+	SiteID            int64                      `json:"site_id"`
+	Target            string                     `json:"target"`
+	Status            string                     `json:"status"`
+	ReasonCodes       []string                   `json:"reason_codes"`
+	ReasonMessages    []string                   `json:"reason_messages"`
+	Protocols         map[string]ProtocolSummary `json:"protocols"`
+	EdgeProviderHints []EdgeProviderHint         `json:"edge_provider_hints,omitempty"`
+	ObservedAt        time.Time                  `json:"observed_at"`
+	GeneratedAt       time.Time                  `json:"generated_at"`
+	SchemaVersion     int                        `json:"schema_version"`
 }
 
 type SiteSummaryDocument struct {
@@ -101,9 +102,23 @@ type SiteSummaryDocument struct {
 }
 
 type TargetSummaryItem struct {
-	Target         string    `json:"target"`
-	Status         string    `json:"status"`
-	ReasonCodes    []string  `json:"reason_codes"`
-	ReasonMessages []string  `json:"reason_messages"`
-	ObservedAt     time.Time `json:"observed_at"`
+	Target            string             `json:"target"`
+	Status            string             `json:"status"`
+	ReasonCodes       []string           `json:"reason_codes"`
+	ReasonMessages    []string           `json:"reason_messages"`
+	EdgeProviderHints []EdgeProviderHint `json:"edge_provider_hints,omitempty"`
+	ObservedAt        time.Time          `json:"observed_at"`
+}
+
+type EdgeProviderHint struct {
+	Provider   string                 `json:"provider"`
+	HintType   string                 `json:"hint_type"`
+	Confidence string                 `json:"confidence"`
+	Evidence   []EdgeProviderEvidence `json:"evidence"`
+}
+
+type EdgeProviderEvidence struct {
+	Source string `json:"source"`
+	Field  string `json:"field"`
+	Value  string `json:"value"`
 }

@@ -57,12 +57,17 @@ type CollectorV2Config struct {
 	CompareLog    bool               `yaml:"compare_log"`
 	Protocols     CollectorProtocols `yaml:"protocols"`
 	LightProbe    LightProbeConfig   `yaml:"light_probe"`
+	EdgeHints     EdgeHintsConfig    `yaml:"edge_hints"`
 }
 
 type CollectorProtocols struct {
 	Ping bool `yaml:"ping"`
 	HTTP bool `yaml:"http"`
 	DNS  bool `yaml:"dns"`
+}
+
+type EdgeHintsConfig struct {
+	Enabled *bool `yaml:"enabled"`
 }
 
 type LightProbeConfig struct {
@@ -349,6 +354,13 @@ func (cfg CollectorV2Config) ObservationEnabled(protocol string) bool {
 
 func (cfg CollectorV2Config) LatestRedisEnabled(protocol string) bool {
 	return cfg.LatestRedis && cfg.ProtocolEnabled(protocol)
+}
+
+func (cfg EdgeHintsConfig) EnabledOrDefault() bool {
+	if cfg.Enabled == nil {
+		return true
+	}
+	return *cfg.Enabled
 }
 
 func (cfg SchedulerConfig) RunStateEnabled() bool {

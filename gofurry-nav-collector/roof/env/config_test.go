@@ -114,6 +114,18 @@ func TestCollectorV2ProtocolSwitches(t *testing.T) {
 	}
 }
 
+func TestEdgeHintsDefaultsEnabled(t *testing.T) {
+	cfg := EdgeHintsConfig{}
+	if !cfg.EnabledOrDefault() {
+		t.Fatal("edge_hints should be enabled by default")
+	}
+	disabled := false
+	cfg.Enabled = &disabled
+	if cfg.EnabledOrDefault() {
+		t.Fatal("edge_hints explicit false should disable hints")
+	}
+}
+
 func TestLightProbeDefaults(t *testing.T) {
 	cfg := LightProbeConfig{}
 	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled || cfg.PageAssets.Enabled || cfg.PortCheck.Enabled {
@@ -145,6 +157,8 @@ func TestLightProbeYAMLConfig(t *testing.T) {
 collector:
   v2:
     enabled: true
+    edge_hints:
+      enabled: false
     light_probe:
       rdap:
         enabled: true
@@ -185,6 +199,9 @@ collector:
 	}
 	if !cfg.Collector.V2.ProtocolEnabled("rdap") || !cfg.Collector.V2.ProtocolEnabled("robots") || !cfg.Collector.V2.ProtocolEnabled("security_txt") || !cfg.Collector.V2.ProtocolEnabled("page_assets") || !cfg.Collector.V2.ProtocolEnabled("port_check") {
 		t.Fatalf("light probe protocol switches not loaded: %+v", cfg.Collector.V2.LightProbe)
+	}
+	if cfg.Collector.V2.EdgeHints.EnabledOrDefault() {
+		t.Fatal("edge_hints explicit false should be loaded")
 	}
 	if cfg.Collector.V2.LightProbe.RDAP.Interval() != 24*time.Hour || cfg.Collector.V2.LightProbe.RDAP.Timeout() != 3*time.Second {
 		t.Fatalf("rdap config not loaded: %+v", cfg.Collector.V2.LightProbe.RDAP)
