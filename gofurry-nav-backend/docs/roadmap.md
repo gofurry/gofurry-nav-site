@@ -4,18 +4,17 @@
 
 `gofurry-nav-backend` 当前生产导航接口仍以 `/api/v1/nav/...` 为主。v1 已接入 collector 旧数据面：站点域名列表、Ping latest/history、HTTP latest、DNS latest，并继续服务现有 Nuxt 前端。
 
-collector v2 数据面已经进入可供后端消费的阶段。后端目前只完成了最小 v2 summary 只读接入：
+collector v2 数据面已经进入可供后端消费的阶段。后端目前已完成 v2 summary 只读接入，并补齐 collector summary hints 透传：
 
 ```text
 GET /api/v2/nav/sites/:siteId/summary
 GET /api/v2/nav/sites/:siteId/targets/:target/summary
 ```
 
-这两个接口默认受 `nav_v2.summary_enabled` 控制，读取 `collector:v2:summary:site:{site_id}` 与 `collector:v2:summary:target:{site_id}:{target}`。剩余 v2 信息面尚未完整接入，包括 raw observation、target latest、trend、change、run state、light probe，以及 summary hints。
+这两个接口默认受 `nav_v2.summary_enabled` 控制，读取 `collector:v2:summary:site:{site_id}` 与 `collector:v2:summary:target:{site_id}:{target}`。剩余 v2 信息面尚未完整接入，包括 raw observation、target latest、trend、change、run state、light probe。
 
 已知短板：
 
-- 后端 summary DTO 当前会丢弃 collector 已输出的 `canonical_target_hint`、`target_relation_hints`、`edge_provider_hints`。
 - raw observation 历史表 `gfn_collector_observation` 尚无后端只读 DAO 和查询接口。
 - `collector:v2:latest:*`、`collector:v2:trend:*`、`collector:v2:change:*`、light probe latest 尚未进入详情页后端 read model。
 - v1 详情接口 `getSiteDetail` 仍带浏览量递增副作用，v2 详情页接口应保持只读。
@@ -32,7 +31,7 @@ GET /api/v2/nav/sites/:siteId/targets/:target/summary
 
 ### v0.2.x - Summary 接入补齐
 
-**Status:** In progress
+**Status:** Completed
 **Scope:** API / Documentation / Stability
 **Goal:** 在现有 summary 只读接口基础上补齐 collector 已稳定输出但后端丢弃的字段。
 
@@ -50,9 +49,9 @@ GET /api/v2/nav/sites/:siteId/targets/:target/summary
 - [x] 实现 target summary 只读接口。
 - [x] 增加 Redis 缺失、过期、JSON 解析失败的 summary 服务测试。
 - [x] 在 collector docs 中新增 v1/v2 信息面字段级统计文档。
-- [ ] 在 backend summary DTO 中补齐 target summary 的 `canonical_target_hint`、`target_relation_hints`、`edge_provider_hints`。
-- [ ] 在 backend site summary DTO 中补齐顶层 `target_relation_hints` 与 `targets[]` 内的 hints。
-- [ ] 增加 hints 字段透传测试，确认未知字段不影响旧 summary 响应。
+- [x] 在 backend summary DTO 中补齐 target summary 的 `canonical_target_hint`、`target_relation_hints`、`edge_provider_hints`。
+- [x] 在 backend site summary DTO 中补齐顶层 `target_relation_hints` 与 `targets[]` 内的 hints。
+- [x] 增加 hints 字段透传测试，确认未知字段不影响旧 summary 响应。
 
 #### Acceptance Criteria
 
@@ -172,7 +171,7 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 
 ## Suggested Release Path
 
-- `v0.2.x`：补齐已接入 summary 的字段完整性和文档。
+- `v0.2.x`：已补齐 summary 字段完整性和文档。
 - `v0.3.0`：建立 collector v2 read model 基础。
 - `v0.4.0`：稳定站点详情页 v2 后端接口。
 - `v1.0.0-alpha.1`：冻结 v2 API 候选并准备前端迁移。

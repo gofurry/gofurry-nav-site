@@ -18,11 +18,11 @@ GET /api/v2/nav/sites/:siteId/summary
 GET /api/v2/nav/sites/:siteId/targets/:target/summary
 ```
 
-### 当前缺口
+### v0.2.x 已补齐字段
 
-后端 summary DTO 需要补齐 collector 已输出但当前未暴露的字段：
+后端 summary DTO 已补齐 collector 输出的 summary hints，详情页 v2 后续可以直接读取现有 summary 接口中的这些字段：
 
-| 接口 | 待补字段 |
+| 接口 | 已补字段 |
 |---|---|
 | site summary | 顶层 `target_relation_hints`。 |
 | site summary | `targets[].canonical_target_hint`、`targets[].target_relation_hints`、`targets[].edge_provider_hints`。 |
