@@ -2,6 +2,7 @@ package service
 
 import (
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -68,6 +69,32 @@ func TestReadModelKeysAndProtocols(t *testing.T) {
 	}
 	if !models.IsProtocolAllowed(models.ProtocolWAFCanary) || models.IsProtocolAllowed("ftp") {
 		t.Fatalf("protocol whitelist mismatch")
+	}
+}
+
+func TestGetReadModelServiceConcurrentInitialization(t *testing.T) {
+	previous := readModelSingleton
+	fake := &readModelService{get: mapGetter(nil), observations: &fakeObservationStore{}}
+	readModelSingleton = fake
+	t.Cleanup(func() {
+		readModelSingleton = previous
+	})
+
+	var wg sync.WaitGroup
+	mismatches := make(chan struct{}, 64)
+	for range 64 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if GetReadModelService() != fake {
+				mismatches <- struct{}{}
+			}
+		}()
+	}
+	wg.Wait()
+	close(mismatches)
+	if len(mismatches) > 0 {
+		t.Fatalf("GetReadModelService returned mismatched service %d times", len(mismatches))
 	}
 }
 

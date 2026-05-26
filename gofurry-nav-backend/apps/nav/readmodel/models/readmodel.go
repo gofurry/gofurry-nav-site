@@ -45,18 +45,22 @@ func (*GfnCollectorObservation) TableName() string {
 }
 
 type CollectorEnvelope struct {
-	SiteID        int64           `json:"site_id"`
-	Target        string          `json:"target"`
-	Protocol      string          `json:"protocol"`
-	Status        string          `json:"status"`
-	ObservedAt    time.Time       `json:"observed_at"`
-	DurationMS    int64           `json:"duration_ms"`
-	ErrorCode     string          `json:"error_code,omitempty"`
-	ErrorMessage  string          `json:"error_message,omitempty"`
-	Payload       json.RawMessage `json:"payload"`
-	SchemaVersion int             `json:"schema_version"`
-	CollectorID   string          `json:"collector_id,omitempty"`
-	JobID         string          `json:"job_id,omitempty"`
+	SiteID                  int64           `json:"site_id"`
+	Target                  string          `json:"target"`
+	Protocol                string          `json:"protocol"`
+	Status                  string          `json:"status"`
+	ObservedAt              time.Time       `json:"observed_at"`
+	DurationMS              int64           `json:"duration_ms"`
+	ErrorCode               string          `json:"error_code,omitempty"`
+	ErrorMessage            string          `json:"error_message,omitempty"`
+	Payload                 json.RawMessage `json:"payload"`
+	PayloadBytes            int             `json:"payload_bytes,omitempty"`
+	PayloadTruncated        bool            `json:"payload_truncated,omitempty"`
+	PayloadPreviewMaxBytes  int             `json:"payload_preview_max_bytes,omitempty"`
+	PayloadPreviewAvailable bool            `json:"payload_preview_available,omitempty"`
+	SchemaVersion           int             `json:"schema_version"`
+	CollectorID             string          `json:"collector_id,omitempty"`
+	JobID                   string          `json:"job_id,omitempty"`
 }
 
 type TargetLatestResponse struct {

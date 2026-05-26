@@ -41,12 +41,19 @@ v0.3.0 已提供内部 collector v2 read model，负责读取 raw observation、
 - `GET /api/v2/nav/sites/:siteId/targets/:target/changes`
 - `GET /api/v2/nav/sites/:siteId/targets/:target/light-probes`
 
-当前实现保持只读，不复用 v1 `getSiteDetail` 的浏览量递增副作用；target 归属按站点 domain 表校验，并在可用时补充 site summary 中的 target 索引信息。
+当前实现保持只读，不复用 v1 `getSiteDetail` 的浏览量递增副作用；target 分接口归属只按 active `gfn_collector_domain` 校验，site summary 中额外出现的 target 仅作为 `summary_only=true` 的展示补充，不授权 raw/latest/history 查询。
+
+### v0.4.1 安全与可靠性修复状态
+
+- v2 路由开关已拆分为 `summary_enabled`、`detail_enabled`、`read_model_enabled`，并保留旧 `summary_enabled=true` 默认开启 v2 路由的兼容行为。
+- `targets[]` 已增加 `source`、`registered`、`summary_only`，detail 默认 target 只从 `registered=true` 的 active domain 中选择。
+- latest / observations / detail / light-probes 支持 `payload_mode=preview|full`，默认 `preview`，超过 `nav_v2.raw_payload_preview_bytes` 时返回截断元数据。
+- detail 聚合并发读取 target summary、core latest、light probe、trend、changes；summary 与 core latest 失败返回错误，trend/change/light probe 失败返回 `state=missing` 与 reason。
 
 ### 站点详情聚合
 
 ```text
-GET /api/v2/nav/sites/:siteId/detail?lang=zh&target={target}
+GET /api/v2/nav/sites/:siteId/detail?lang=zh&target={target}&payload_mode=preview
 ```
 
 #### 参数
@@ -56,6 +63,7 @@ GET /api/v2/nav/sites/:siteId/detail?lang=zh&target={target}
 | `siteId` | path | 是 | `gfn_site.id`，必须大于 0。 |
 | `lang` | query | 否 | `zh` / `en`，默认 `zh`。 |
 | `target` | query | 否 | 指定采集目标；为空时优先使用站点下第一个有效 target。 |
+| `payload_mode` | query | 否 | `preview` / `full`，默认 `preview`；影响 `latest_core` 和 `light_probe_state` 的 raw payload 输出。 |
 
 #### 响应字段
 
@@ -110,13 +118,16 @@ GET /api/v2/nav/sites/:siteId/detail?lang=zh&target={target}
 | `prefix` | string or null | `gfn_collector_domain.prefix` |
 | `tls` | string | `gfn_collector_domain.tls` |
 | `proxy` | string | `gfn_collector_domain.proxy` |
+| `source` | string | `domain` 或 `summary`；`summary` 表示仅来自 collector summary index。 |
+| `registered` | boolean | 是否存在 active `gfn_collector_domain`。 |
+| `summary_only` | boolean | 是否仅用于展示补充；为 `true` 时不能用于 target 分接口 raw/latest/history 查询。 |
 | `summary_state` | string | target summary 读取状态：`ready` / `missing` / `stale` |
 | `status` | string | target summary `status`，缺失时为 `unknown` |
 
 ### Target latest
 
 ```text
-GET /api/v2/nav/sites/:siteId/targets/:target/latest
+GET /api/v2/nav/sites/:siteId/targets/:target/latest?payload_mode=preview
 ```
 
 #### 响应字段
@@ -148,6 +159,8 @@ GET /api/v2/nav/sites/:siteId/targets/:target/latest
 | `protocols` | object | key 为协议名，value 为 collector latest envelope。 |
 | `generated_at` | string | 后端响应生成时间。 |
 | `schema_version` | number | 后端响应版本。 |
+| `reason_codes` | string[] | 缺失或旁路失败原因；正常 ready 时通常为空。 |
+| `reason_messages` | string[] | 面向排障的原因说明。 |
 
 每个协议 value 保留以下 envelope：
 
@@ -162,6 +175,9 @@ GET /api/v2/nav/sites/:siteId/targets/:target/latest
 | `error_code` | string | 可空。 |
 | `error_message` | string | 可空。 |
 | `payload` | object | 协议原始 payload。 |
+| `payload_bytes` | number | 原始 payload 字节数；默认 preview 模式下用于判断是否发生截断。 |
+| `payload_truncated` | boolean | 默认 preview 模式下 payload 超过阈值时为 `true`。 |
+| `payload_preview_max_bytes` | number | 本次响应使用的 preview 字节阈值。 |
 | `schema_version` | number | collector schema version。 |
 | `collector_id` | string | 可空。 |
 | `job_id` | string | 可空。 |
@@ -169,7 +185,7 @@ GET /api/v2/nav/sites/:siteId/targets/:target/latest
 ### Target observations
 
 ```text
-GET /api/v2/nav/sites/:siteId/targets/:target/observations?protocol={protocol}&limit={limit}
+GET /api/v2/nav/sites/:siteId/targets/:target/observations?protocol={protocol}&limit={limit}&payload_mode=preview
 ```
 
 #### 参数
@@ -180,6 +196,7 @@ GET /api/v2/nav/sites/:siteId/targets/:target/observations?protocol={protocol}&l
 | `target` | path | 是 | URL path 中需编码。 |
 | `protocol` | query | 是 | 允许 `ping`、`http`、`dns`、`rdap`、`robots`、`security_txt`、`page_assets`、`port_check`、`waf_canary`。 |
 | `limit` | query | 否 | 默认按协议设置；服务端限制最大值，避免大查询。 |
+| `payload_mode` | query | 否 | `preview` / `full`，默认 `preview`；`full` 显式返回完整 raw payload。 |
 
 #### 响应字段
 
@@ -195,7 +212,7 @@ GET /api/v2/nav/sites/:siteId/targets/:target/observations?protocol={protocol}&l
 }
 ```
 
-`items[]` 使用与 latest 相同的 collector envelope，并按 `observed_at desc` 排序。
+`items[]` 使用与 latest 相同的 collector envelope，并按 `observed_at desc` 排序。默认 `preview` 模式下，大 payload 会被替换为截断元数据，完整 payload 需显式传 `payload_mode=full`。
 
 ### Target trend
 

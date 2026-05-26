@@ -3,7 +3,9 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
+	"sync"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/dao"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/models"
@@ -22,9 +24,14 @@ type readModelService struct {
 	observations observationStore
 }
 
-var readModelSingleton = &readModelService{}
+var (
+	readModelSingleton = &readModelService{}
+	readModelMu        sync.Mutex
+)
 
 func GetReadModelService() *readModelService {
+	readModelMu.Lock()
+	defer readModelMu.Unlock()
 	if readModelSingleton.get == nil {
 		readModelSingleton.get = cs.GetString
 	}
@@ -75,7 +82,8 @@ func (svc *readModelService) GetTargetLatest(siteID int64, target string, protoc
 		Protocols: map[string]models.CollectorEnvelope{},
 	}
 	for _, protocol := range protocols {
-		raw, getErr := svc.redisGetter()(TargetLatestKey(protocol, siteID, target))
+		key := TargetLatestKey(protocol, siteID, target)
+		raw, getErr := svc.redisGetter()(key)
 		if getErr != nil {
 			return models.TargetLatestResponse{}, getErr
 		}
@@ -84,6 +92,7 @@ func (svc *readModelService) GetTargetLatest(siteID int64, target string, protoc
 		}
 		envelope, decodeErr := decodeCollectorEnvelope(raw, siteID, target, protocol)
 		if decodeErr != nil {
+			logRedisJSONDecodeFailure(key, siteID, target, protocol, decodeErr)
 			return models.TargetLatestResponse{}, common.NewServiceError("target latest 解析失败")
 		}
 		response.Protocols[protocol] = envelope
@@ -141,7 +150,8 @@ func (svc *readModelService) GetTargetTrend(siteID int64, target string) (models
 	if err != nil {
 		return models.TargetTrendResponse{}, err
 	}
-	raw, getErr := svc.redisGetter()(TargetTrendKey(siteID, target))
+	key := TargetTrendKey(siteID, target)
+	raw, getErr := svc.redisGetter()(key)
 	if getErr != nil {
 		return models.TargetTrendResponse{}, getErr
 	}
@@ -150,6 +160,7 @@ func (svc *readModelService) GetTargetTrend(siteID int64, target string) (models
 	}
 	var response models.TargetTrendResponse
 	if err := json.Unmarshal([]byte(raw), &response); err != nil {
+		logRedisJSONDecodeFailure(key, siteID, target, "trend", err)
 		return models.TargetTrendResponse{}, common.NewServiceError("target trend 解析失败")
 	}
 	response.State = models.SummaryStateReady
@@ -170,7 +181,8 @@ func (svc *readModelService) GetTargetChanges(siteID int64, target string) (mode
 	if err != nil {
 		return models.TargetChangesResponse{}, err
 	}
-	raw, getErr := svc.redisGetter()(TargetChangeKey(siteID, target))
+	key := TargetChangeKey(siteID, target)
+	raw, getErr := svc.redisGetter()(key)
 	if getErr != nil {
 		return models.TargetChangesResponse{}, getErr
 	}
@@ -179,6 +191,7 @@ func (svc *readModelService) GetTargetChanges(siteID int64, target string) (mode
 	}
 	var response models.TargetChangesResponse
 	if err := json.Unmarshal([]byte(raw), &response); err != nil {
+		logRedisJSONDecodeFailure(key, siteID, target, "change", err)
 		return models.TargetChangesResponse{}, common.NewServiceError("target changes 解析失败")
 	}
 	response.State = models.SummaryStateReady
@@ -199,7 +212,8 @@ func (svc *readModelService) GetRunState(protocol string) (models.RunStateRespon
 	if err != nil {
 		return models.RunStateResponse{}, err
 	}
-	raw, getErr := svc.redisGetter()(RunStateLatestKey(protocol))
+	key := RunStateLatestKey(protocol)
+	raw, getErr := svc.redisGetter()(key)
 	if getErr != nil {
 		return models.RunStateResponse{}, getErr
 	}
@@ -208,6 +222,7 @@ func (svc *readModelService) GetRunState(protocol string) (models.RunStateRespon
 	}
 	var response models.RunStateResponse
 	if err := json.Unmarshal([]byte(raw), &response); err != nil {
+		logRedisJSONDecodeFailure(key, 0, "", protocol, err)
 		return models.RunStateResponse{}, common.NewServiceError("run state 解析失败")
 	}
 	response.State = models.SummaryStateReady
@@ -356,4 +371,15 @@ func missingChanges(siteID int64, target string) models.TargetChangesResponse {
 		Target: target,
 		Events: json.RawMessage(`[]`),
 	}
+}
+
+func logRedisJSONDecodeFailure(key string, siteID int64, target string, protocol string, err error) {
+	slog.Warn(
+		"collector v2 redis json parse failed",
+		"redis_key", key,
+		"site_id", siteID,
+		"target", target,
+		"protocol", protocol,
+		"error", err.Error(),
+	)
 }

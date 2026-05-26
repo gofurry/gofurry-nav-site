@@ -107,8 +107,12 @@ type RedisConfig struct {
 }
 
 type NavV2Config struct {
-	SummaryEnabled           bool `yaml:"summary_enabled"`
-	SummaryStaleAfterSeconds int  `yaml:"summary_stale_after_seconds"`
+	Enabled                  *bool `yaml:"enabled"`
+	SummaryEnabled           bool  `yaml:"summary_enabled"`
+	DetailEnabled            *bool `yaml:"detail_enabled"`
+	ReadModelEnabled         *bool `yaml:"read_model_enabled"`
+	SummaryStaleAfterSeconds int   `yaml:"summary_stale_after_seconds"`
+	RawPayloadPreviewBytes   int   `yaml:"raw_payload_preview_bytes"`
 }
 
 func (cfg NavV2Config) SummaryStaleAfter() time.Duration {
@@ -116,6 +120,40 @@ func (cfg NavV2Config) SummaryStaleAfter() time.Duration {
 		return 24 * time.Hour
 	}
 	return time.Duration(cfg.SummaryStaleAfterSeconds) * time.Second
+}
+
+func (cfg NavV2Config) AnyRouteEnabled() bool {
+	return cfg.SummaryRoutesEnabled() || cfg.DetailRoutesEnabled() || cfg.ReadModelRoutesEnabled()
+}
+
+func (cfg NavV2Config) SummaryRoutesEnabled() bool {
+	return cfg.v2RoutesEnabled() && cfg.SummaryEnabled
+}
+
+func (cfg NavV2Config) DetailRoutesEnabled() bool {
+	return cfg.v2RoutesEnabled() && boolConfigValue(cfg.DetailEnabled, cfg.SummaryEnabled)
+}
+
+func (cfg NavV2Config) ReadModelRoutesEnabled() bool {
+	return cfg.v2RoutesEnabled() && boolConfigValue(cfg.ReadModelEnabled, cfg.DetailRoutesEnabled())
+}
+
+func (cfg NavV2Config) RawPayloadPreviewBytesOrDefault() int {
+	if cfg.RawPayloadPreviewBytes <= 0 {
+		return 64 * 1024
+	}
+	return cfg.RawPayloadPreviewBytes
+}
+
+func (cfg NavV2Config) v2RoutesEnabled() bool {
+	return boolConfigValue(cfg.Enabled, cfg.SummaryEnabled)
+}
+
+func boolConfigValue(value *bool, fallback bool) bool {
+	if value == nil {
+		return fallback
+	}
+	return *value
 }
 
 type LogConfig struct {

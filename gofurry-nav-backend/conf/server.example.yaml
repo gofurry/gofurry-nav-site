@@ -31,8 +31,12 @@ redis:
   redis_password: "CHANGE_ME"
 
 nav_v2:
+  enabled: true # v2 路由总开关；未配置时兼容旧 summary_enabled 行为。
   summary_enabled: true # 是否注册 /api/v2/nav summary 只读接口。
+  detail_enabled: true # 是否注册 /api/v2/nav/sites/:siteId/detail 聚合接口。
+  read_model_enabled: true # 是否注册 latest / observations / trend / changes / light-probes 分接口。
   summary_stale_after_seconds: 86400 # summary 超过该时间视为 stale。
+  raw_payload_preview_bytes: 65536 # latest/observations 默认 payload 截断阈值；payload_mode=full 时完整返回。
 
 log:
   log_level: "info" # debug / info / warn / error。

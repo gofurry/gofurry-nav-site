@@ -2,6 +2,8 @@ package service
 
 import (
 	"encoding/json"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -80,7 +82,7 @@ func TestGetSiteDetailAggregatesReadModelAndSummary(t *testing.T) {
 	}
 	svc := newDetailService(store, summaries, readModel, func() time.Time { return now })
 
-	response, err := svc.GetSiteDetail(7, "en", "")
+	response, err := svc.GetSiteDetail(7, "en", "", "")
 	if err != nil {
 		t.Fatalf("GetSiteDetail() error = %v", err)
 	}
@@ -95,6 +97,9 @@ func TestGetSiteDetailAggregatesReadModelAndSummary(t *testing.T) {
 	}
 	if response.Targets[0].SummaryState != summarymodels.SummaryStateReady || response.Targets[0].Status != summarymodels.StatusHealthy {
 		t.Fatalf("first target summary state = %+v", response.Targets[0])
+	}
+	if !response.Targets[0].Registered || response.Targets[0].SummaryOnly || response.Targets[0].Source != "domain" {
+		t.Fatalf("first target source fields = %+v", response.Targets[0])
 	}
 	if response.LatestCore.SchemaVersion != detailmodels.DetailSchemaVersion || response.LightProbeState.SchemaVersion != detailmodels.DetailSchemaVersion {
 		t.Fatalf("latest schema version mismatch: %+v %+v", response.LatestCore, response.LightProbeState)
@@ -135,7 +140,7 @@ func TestGetSiteDetailKeepsMissingSemantics(t *testing.T) {
 	}
 	svc := newDetailService(store, summaries, readModel, time.Now)
 
-	response, err := svc.GetSiteDetail(9, "zh", "")
+	response, err := svc.GetSiteDetail(9, "zh", "", "")
 	if err != nil {
 		t.Fatalf("GetSiteDetail() error = %v", err)
 	}
@@ -164,7 +169,7 @@ func TestGetSiteDetailRejectsTargetOutsideSite(t *testing.T) {
 		},
 	}, &fakeReadModelReader{}, time.Now)
 
-	_, err := svc.GetSiteDetail(1, "zh", "other.example.com")
+	_, err := svc.GetSiteDetail(1, "zh", "other.example.com", "")
 	if err == nil || err.GetMsg() != "target 不属于当前 site" {
 		t.Fatalf("GetSiteDetail() err = %v", err)
 	}
@@ -196,7 +201,7 @@ func TestGetTargetLatestWrapsAllProtocols(t *testing.T) {
 		},
 	}, readModel, func() time.Time { return now })
 
-	response, err := svc.GetTargetLatest(5, "example.com")
+	response, err := svc.GetTargetLatest(5, "example.com", "")
 	if err != nil {
 		t.Fatalf("GetTargetLatest() error = %v", err)
 	}
@@ -235,12 +240,151 @@ func TestListTargetObservationsUsesNormalizedLimit(t *testing.T) {
 		},
 	}, readModel, func() time.Time { return now })
 
-	response, err := svc.ListTargetObservations(8, "example.com", readmodels.ProtocolHTTP, 999)
+	response, err := svc.ListTargetObservations(8, "example.com", readmodels.ProtocolHTTP, 999, "")
 	if err != nil {
 		t.Fatalf("ListTargetObservations() error = %v", err)
 	}
 	if response.GeneratedAt != now || response.Limit != readmodels.MaxObservationLimit {
 		t.Fatalf("observations wrapper mismatch: %+v", response)
+	}
+}
+
+func TestSummaryOnlyTargetIsDisplayOnly(t *testing.T) {
+	svc := newDetailService(&fakeSiteStore{
+		site: navmodels.GfnSite{ID: 5, Name: "site"},
+		targets: []detailmodels.CollectorDomain{
+			{ID: 1, SiteID: 5, Name: "example.com"},
+		},
+	}, &fakeSummaryReader{
+		site: summarymodels.SiteSummaryResponse{
+			State:  summarymodels.SummaryStateReady,
+			SiteID: 5,
+			Status: summarymodels.StatusWarning,
+			Targets: []summarymodels.TargetSummaryItem{
+				{Target: "example.com", Status: summarymodels.StatusHealthy},
+				{Target: "old.example.com", Status: summarymodels.StatusWarning},
+			},
+		},
+		target: summarymodels.TargetSummaryResponse{
+			State:     summarymodels.SummaryStateReady,
+			SiteID:    5,
+			Target:    "example.com",
+			Status:    summarymodels.StatusHealthy,
+			Protocols: map[string]summarymodels.ProtocolSummary{},
+		},
+	}, &fakeReadModelReader{}, time.Now)
+
+	detail, err := svc.GetSiteDetail(5, "zh", "", "")
+	if err != nil {
+		t.Fatalf("GetSiteDetail() error = %v", err)
+	}
+	if detail.SelectedTarget != "example.com" {
+		t.Fatalf("SelectedTarget = %q", detail.SelectedTarget)
+	}
+	if len(detail.Targets) != 2 || !detail.Targets[1].SummaryOnly || detail.Targets[1].Registered {
+		t.Fatalf("targets summary-only flags = %+v", detail.Targets)
+	}
+	if _, err := svc.GetTargetLatest(5, "old.example.com", ""); err == nil || err.GetMsg() != "target 不属于当前 site" {
+		t.Fatalf("GetTargetLatest() err = %v", err)
+	}
+	if _, err := svc.GetSiteDetail(5, "zh", "old.example.com", ""); err == nil || err.GetMsg() != "target 不属于当前 site" {
+		t.Fatalf("GetSiteDetail(summary-only target) err = %v", err)
+	}
+}
+
+func TestGetSiteDetailConvertsSidecarFailuresToMissing(t *testing.T) {
+	svc := newDetailService(&fakeSiteStore{
+		site: navmodels.GfnSite{ID: 6, Name: "site"},
+		targets: []detailmodels.CollectorDomain{
+			{ID: 6, SiteID: 6, Name: "example.com"},
+		},
+	}, &fakeSummaryReader{
+		site: summarymodels.SiteSummaryResponse{
+			State:  summarymodels.SummaryStateReady,
+			SiteID: 6,
+			Status: summarymodels.StatusHealthy,
+		},
+		target: summarymodels.TargetSummaryResponse{
+			State:     summarymodels.SummaryStateReady,
+			SiteID:    6,
+			Target:    "example.com",
+			Status:    summarymodels.StatusHealthy,
+			Protocols: map[string]summarymodels.ProtocolSummary{},
+		},
+	}, &fakeReadModelReader{
+		latest:     readmodels.TargetLatestResponse{State: readmodels.SummaryStateReady, SiteID: 6, Target: "example.com", Protocols: map[string]readmodels.CollectorEnvelope{}},
+		lightErr:   common.NewServiceError("light failed"),
+		trendErr:   common.NewServiceError("trend failed"),
+		changesErr: common.NewServiceError("changes failed"),
+	}, time.Now)
+
+	response, err := svc.GetSiteDetail(6, "zh", "", "")
+	if err != nil {
+		t.Fatalf("GetSiteDetail() error = %v", err)
+	}
+	if response.LightProbeState.State != summarymodels.SummaryStateMissing || response.LightProbeState.ReasonCodes[0] != "light_probe_unavailable" {
+		t.Fatalf("light partial state = %+v", response.LightProbeState)
+	}
+	if response.Derived.Trend.State != summarymodels.SummaryStateMissing || response.Derived.Trend.ReasonCodes[0] != "trend_unavailable" {
+		t.Fatalf("trend partial state = %+v", response.Derived.Trend)
+	}
+	if response.Derived.Changes.State != summarymodels.SummaryStateMissing || response.Derived.Changes.ReasonCodes[0] != "changes_unavailable" {
+		t.Fatalf("changes partial state = %+v", response.Derived.Changes)
+	}
+}
+
+func TestPayloadPreviewAndFullMode(t *testing.T) {
+	largePayload := json.RawMessage(`{"body":"` + strings.Repeat("x", 70*1024) + `"}`)
+	readModel := &fakeReadModelReader{
+		latest: readmodels.TargetLatestResponse{
+			State:  readmodels.SummaryStateReady,
+			SiteID: 8,
+			Target: "example.com",
+			Protocols: map[string]readmodels.CollectorEnvelope{
+				readmodels.ProtocolHTTP: {Protocol: readmodels.ProtocolHTTP, Payload: largePayload},
+			},
+		},
+		observations: readmodels.ObservationsResponse{
+			State:    readmodels.SummaryStateReady,
+			SiteID:   8,
+			Target:   "example.com",
+			Protocol: readmodels.ProtocolHTTP,
+			Limit:    readmodels.MaxObservationLimit,
+			Items: []readmodels.CollectorEnvelope{
+				{Protocol: readmodels.ProtocolHTTP, Payload: largePayload},
+			},
+		},
+	}
+	svc := newDetailService(&fakeSiteStore{
+		site: navmodels.GfnSite{ID: 8, Name: "site"},
+		targets: []detailmodels.CollectorDomain{
+			{ID: 8, SiteID: 8, Name: "example.com"},
+		},
+	}, &fakeSummaryReader{}, readModel, time.Now)
+
+	latest, err := svc.GetTargetLatest(8, "example.com", "")
+	if err != nil {
+		t.Fatalf("GetTargetLatest() error = %v", err)
+	}
+	envelope := latest.Protocols[readmodels.ProtocolHTTP]
+	if !envelope.PayloadTruncated || envelope.PayloadBytes <= 64*1024 {
+		t.Fatalf("expected truncated latest payload: %+v", envelope)
+	}
+
+	full, err := svc.GetTargetLatest(8, "example.com", PayloadModeFull)
+	if err != nil {
+		t.Fatalf("GetTargetLatest(full) error = %v", err)
+	}
+	if full.Protocols[readmodels.ProtocolHTTP].PayloadTruncated || !strings.Contains(string(full.Protocols[readmodels.ProtocolHTTP].Payload), strings.Repeat("x", 128)) {
+		t.Fatalf("expected full latest payload: %+v", full.Protocols[readmodels.ProtocolHTTP])
+	}
+
+	observations, err := svc.ListTargetObservations(8, "example.com", readmodels.ProtocolHTTP, 500, "")
+	if err != nil {
+		t.Fatalf("ListTargetObservations() error = %v", err)
+	}
+	if observations.Limit != readmodels.MaxObservationLimit || !observations.Items[0].PayloadTruncated {
+		t.Fatalf("expected normalized limit and truncated observation: %+v", observations)
 	}
 }
 
@@ -305,9 +449,12 @@ type fakeReadModelReader struct {
 	changes         readmodels.TargetChangesResponse
 	changesErr      common.GFError
 	latestProtocols []string
+	mu              sync.Mutex
 }
 
 func (f *fakeReadModelReader) GetTargetLatest(siteID int64, target string, protocols []string) (readmodels.TargetLatestResponse, common.GFError) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.latestProtocols = append([]string(nil), protocols...)
 	if f.latestErr != nil {
 		return readmodels.TargetLatestResponse{}, f.latestErr

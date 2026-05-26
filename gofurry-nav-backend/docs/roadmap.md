@@ -17,12 +17,11 @@ GET /api/v2/nav/sites/:siteId/targets/:target/changes
 GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 ```
 
-这些接口当前都受 `nav_v2.summary_enabled` 控制。后端内部已建立 collector v2 read model，可以只读消费 raw observation、target latest、trend、change、run state、light probe，并通过 v2 detail 分接口对外暴露。
+这些接口当前支持 `nav_v2.summary_enabled`、`nav_v2.detail_enabled`、`nav_v2.read_model_enabled` 分粒度灰度开关，并保持旧配置兼容：只配置 `summary_enabled=true` 时仍会默认开启 v2 detail 与 read model 分接口。后端内部已建立 collector v2 read model，可以只读消费 raw observation、target latest、trend、change、run state、light probe，并通过 v2 detail 分接口对外暴露。
 
 已知短板：
 
 - v1 详情接口 `getSiteDetail` 仍带浏览量递增副作用，v2 详情页接口应保持只读。
-- `nav_v2.summary_enabled` 当前同时充当 v2 route gate，后续如需更细粒度灰度，可再拆分成独立 detail 开关。
 
 ## 路线策略
 
@@ -147,7 +146,7 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 
 ### v0.4.1 - Nav v2 接口安全与可靠性修复
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Security/Safety / Stability / Performance / Testing
 **Goal:** 根据 v2 新增代码审计结果，修复详情页 v2 后端接口在归属校验、并发初始化、响应体控制和测试覆盖上的硬化缺口。
 
@@ -161,17 +160,17 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 
 #### Tasks
 
-- [ ] 修复 P1-001：target 分接口只以 active `gfn_collector_domain` 作为授权来源，summary-only target 仅用于展示补充，不单独授权 raw/latest/history 查询。
-- [ ] 为 `targets[]` 增加来源与注册状态字段，例如 `source`、`registered`、`summary_only`，并让 detail 默认 target 优先选择 active DB domain。
-- [ ] 修复 P2-001：用 `sync.Once` 或启动期显式初始化替换 v2 detail/readmodel/DAO 的无保护懒加载写入。
-- [ ] 增加 `go test -race ./apps/nav/detail/... ./apps/nav/readmodel/...` 验证路径，并补并发初始化测试。
-- [ ] 修复 P2-002：为 latest / observations 的 raw `payload` 增加默认 preview 或截断策略，并提供显式 full payload 策略。
-- [ ] 为 `observations?limit=500` + 大 payload 场景增加响应体大小和截断测试。
-- [ ] 修复 P2-003：优化 detail 聚合读取路径，支持 Redis latest 批量读取或独立分支并发读取。
-- [ ] 明确 detail partial failure 语义：summary 核心失败返回错误，trend/change/light probe 等旁路失败返回 `state=missing` 与 reason。
-- [ ] 增加 Redis JSON 解析失败结构化日志，记录 `redis_key`、`site_id`、`target`、`protocol` 和错误摘要，但不记录完整 payload。
-- [ ] 拆分 `nav_v2.summary_enabled` 粗粒度 route gate，增加 detail/read model 独立灰度开关并保持旧配置兼容。
-- [ ] 补齐 detail controller table tests，覆盖 6 个 v2 路由的成功、参数错误、service error 和 URL encoded target。
+- [x] 修复 P1-001：target 分接口只以 active `gfn_collector_domain` 作为授权来源，summary-only target 仅用于展示补充，不单独授权 raw/latest/history 查询。
+- [x] 为 `targets[]` 增加来源与注册状态字段：`source`、`registered`、`summary_only`，并让 detail 默认 target 优先选择 active DB domain。
+- [x] 修复 P2-001：用锁保护 v2 detail/readmodel/DAO 的懒加载写入，避免首次并发请求数据竞态。
+- [x] 增加 `go test -race ./apps/nav/detail/... ./apps/nav/readmodel/...` 验证路径，并补并发初始化测试。
+- [x] 修复 P2-002：为 latest / observations 的 raw `payload` 增加默认截断策略，并提供显式 `payload_mode=full` 完整 payload 策略。
+- [x] 为 `observations?limit=500` + 大 payload 场景增加响应体截断测试。
+- [x] 修复 P2-003：优化 detail 聚合读取路径，对 target summary、latest、light probe、trend、changes 独立分支并发读取。
+- [x] 明确 detail partial failure 语义：summary 与 core latest 失败返回错误，trend/change/light probe 等旁路失败返回 `state=missing` 与 reason。
+- [x] 增加 Redis JSON 解析失败结构化日志，记录 `redis_key`、`site_id`、`target`、`protocol` 和错误摘要，但不记录完整 payload。
+- [x] 拆分 `nav_v2.summary_enabled` 粗粒度 route gate，增加 detail/read model 独立灰度开关并保持旧配置兼容。
+- [x] 补齐 detail controller table tests，覆盖 6 个 v2 路由的成功、参数错误、service error 和 URL encoded target。
 
 #### Acceptance Criteria
 
@@ -223,6 +222,6 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 - `v0.2.x`：已补齐 summary 字段完整性和文档。
 - `v0.3.0`：已建立 collector v2 read model 基础。
 - `v0.4.0`：已稳定站点详情页 v2 后端接口。
-- `v0.4.1`：修复 v2 新增接口审计发现的安全、并发、性能与测试硬化项。
+- `v0.4.1`：已修复 v2 新增接口审计发现的安全、并发、性能与测试硬化项。
 - `v1.0.0-alpha.1`：冻结 v2 API 候选并准备前端迁移。
 - `v1.0.0`：前后端完成 v2 迁移并保留明确 v1 回滚策略后再进入稳定版。

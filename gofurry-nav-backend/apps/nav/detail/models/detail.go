@@ -50,6 +50,9 @@ type SiteTarget struct {
 	Prefix       *string `json:"prefix"`
 	TLS          string  `json:"tls"`
 	Proxy        string  `json:"proxy"`
+	Source       string  `json:"source"`
+	Registered   bool    `json:"registered"`
+	SummaryOnly  bool    `json:"summary_only"`
 	SummaryState string  `json:"summary_state"`
 	Status       string  `json:"status"`
 }
@@ -73,41 +76,49 @@ type SiteDetailResponse struct {
 }
 
 type TargetLatestResponse struct {
-	State         string                                  `json:"state"`
-	SiteID        int64                                   `json:"site_id"`
-	Target        string                                  `json:"target"`
-	Protocols     map[string]readmodels.CollectorEnvelope `json:"protocols"`
-	GeneratedAt   time.Time                               `json:"generated_at"`
-	SchemaVersion int                                     `json:"schema_version"`
+	State          string                                  `json:"state"`
+	SiteID         int64                                   `json:"site_id"`
+	Target         string                                  `json:"target"`
+	Protocols      map[string]readmodels.CollectorEnvelope `json:"protocols"`
+	ReasonCodes    []string                                `json:"reason_codes,omitempty"`
+	ReasonMessages []string                                `json:"reason_messages,omitempty"`
+	GeneratedAt    time.Time                               `json:"generated_at"`
+	SchemaVersion  int                                     `json:"schema_version"`
 }
 
 type TargetObservationsResponse struct {
-	State         string                         `json:"state"`
-	SiteID        int64                          `json:"site_id"`
-	Target        string                         `json:"target"`
-	Protocol      string                         `json:"protocol"`
-	Limit         int                            `json:"limit"`
-	Items         []readmodels.CollectorEnvelope `json:"items"`
-	GeneratedAt   time.Time                      `json:"generated_at"`
-	SchemaVersion int                            `json:"schema_version"`
+	State          string                         `json:"state"`
+	SiteID         int64                          `json:"site_id"`
+	Target         string                         `json:"target"`
+	Protocol       string                         `json:"protocol"`
+	Limit          int                            `json:"limit"`
+	Items          []readmodels.CollectorEnvelope `json:"items"`
+	ReasonCodes    []string                       `json:"reason_codes,omitempty"`
+	ReasonMessages []string                       `json:"reason_messages,omitempty"`
+	GeneratedAt    time.Time                      `json:"generated_at"`
+	SchemaVersion  int                            `json:"schema_version"`
 }
 
 type TargetTrendResponse struct {
-	State         string          `json:"state"`
-	SiteID        int64           `json:"site_id"`
-	Target        string          `json:"target"`
-	Windows       json.RawMessage `json:"windows"`
-	GeneratedAt   time.Time       `json:"generated_at"`
-	SchemaVersion int             `json:"schema_version"`
+	State          string          `json:"state"`
+	SiteID         int64           `json:"site_id"`
+	Target         string          `json:"target"`
+	Windows        json.RawMessage `json:"windows"`
+	ReasonCodes    []string        `json:"reason_codes,omitempty"`
+	ReasonMessages []string        `json:"reason_messages,omitempty"`
+	GeneratedAt    time.Time       `json:"generated_at"`
+	SchemaVersion  int             `json:"schema_version"`
 }
 
 type TargetChangesResponse struct {
-	State         string          `json:"state"`
-	SiteID        int64           `json:"site_id"`
-	Target        string          `json:"target"`
-	Events        json.RawMessage `json:"events"`
-	GeneratedAt   time.Time       `json:"generated_at"`
-	SchemaVersion int             `json:"schema_version"`
+	State          string          `json:"state"`
+	SiteID         int64           `json:"site_id"`
+	Target         string          `json:"target"`
+	Events         json.RawMessage `json:"events"`
+	ReasonCodes    []string        `json:"reason_codes,omitempty"`
+	ReasonMessages []string        `json:"reason_messages,omitempty"`
+	GeneratedAt    time.Time       `json:"generated_at"`
+	SchemaVersion  int             `json:"schema_version"`
 }
 
 func prefixValue(value *string) string {

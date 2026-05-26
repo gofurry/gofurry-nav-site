@@ -2,17 +2,23 @@ package dao
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
 	"github.com/gofurry/gofurry-nav-backend/common/abstract"
 )
 
-var newObservationDao = new(observationDao)
+var (
+	newObservationDao = new(observationDao)
+	observationDaoMu  sync.Mutex
+)
 
 type observationDao struct{ abstract.Dao }
 
 func GetObservationDao() *observationDao {
+	observationDaoMu.Lock()
+	defer observationDaoMu.Unlock()
 	if newObservationDao.Gm == nil {
 		newObservationDao.Init()
 	}

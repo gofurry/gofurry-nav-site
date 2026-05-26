@@ -2,7 +2,9 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	detaildao "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/dao"
@@ -13,6 +15,7 @@ import (
 	summarymodels "github.com/gofurry/gofurry-nav-backend/apps/nav/summary/models"
 	summaryservice "github.com/gofurry/gofurry-nav-backend/apps/nav/summary/service"
 	"github.com/gofurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/roof/env"
 )
 
 type siteStore interface {
@@ -40,9 +43,19 @@ type detailService struct {
 	now       func() time.Time
 }
 
-var detailSingleton = &detailService{}
+const (
+	PayloadModePreview = "preview"
+	PayloadModeFull    = "full"
+)
+
+var (
+	detailSingleton = &detailService{}
+	detailMu        sync.Mutex
+)
 
 func GetDetailService() *detailService {
+	detailMu.Lock()
+	defer detailMu.Unlock()
 	if detailSingleton.sites == nil {
 		detailSingleton.sites = detaildao.GetDetailDao()
 	}
@@ -67,7 +80,12 @@ func newDetailService(sites siteStore, summaries summaryReader, readModel readMo
 	}
 }
 
-func (svc *detailService) GetSiteDetail(siteID int64, lang string, target string) (detailmodels.SiteDetailResponse, common.GFError) {
+func (svc *detailService) GetSiteDetail(siteID int64, lang string, target string, payloadMode string) (detailmodels.SiteDetailResponse, common.GFError) {
+	payloadMode, payloadModeErr := normalizePayloadMode(payloadMode)
+	if payloadModeErr != nil {
+		return detailmodels.SiteDetailResponse{}, payloadModeErr
+	}
+
 	site, targets, siteSummary, err := svc.loadSiteContext(siteID)
 	if err != nil {
 		return detailmodels.SiteDetailResponse{}, err
@@ -98,40 +116,70 @@ func (svc *detailService) GetSiteDetail(siteID int64, lang string, target string
 		return response, nil
 	}
 
-	targetSummary, err := svc.summaryService().GetTargetSummary(siteID, selectedTarget)
-	if err != nil {
-		return detailmodels.SiteDetailResponse{}, err
+	var (
+		targetSummary  summarymodels.TargetSummaryResponse
+		targetErr      common.GFError
+		latestCore     readmodels.TargetLatestResponse
+		latestErr      common.GFError
+		lightProbe     readmodels.TargetLatestResponse
+		lightErr       common.GFError
+		trend          readmodels.TargetTrendResponse
+		trendErr       common.GFError
+		changes        readmodels.TargetChangesResponse
+		changesErr     common.GFError
+		aggregationWg  sync.WaitGroup
+		payloadMaxSize = env.GetServerConfig().NavV2.RawPayloadPreviewBytesOrDefault()
+	)
+	aggregationWg.Add(5)
+	go func() {
+		defer aggregationWg.Done()
+		targetSummary, targetErr = svc.summaryService().GetTargetSummary(siteID, selectedTarget)
+	}()
+	go func() {
+		defer aggregationWg.Done()
+		latestCore, latestErr = svc.readModels().GetTargetLatest(siteID, selectedTarget, readmodels.CoreProtocols())
+	}()
+	go func() {
+		defer aggregationWg.Done()
+		lightProbe, lightErr = svc.readModels().GetLightProbeLatest(siteID, selectedTarget)
+	}()
+	go func() {
+		defer aggregationWg.Done()
+		trend, trendErr = svc.readModels().GetTargetTrend(siteID, selectedTarget)
+	}()
+	go func() {
+		defer aggregationWg.Done()
+		changes, changesErr = svc.readModels().GetTargetChanges(siteID, selectedTarget)
+	}()
+	aggregationWg.Wait()
+
+	if targetErr != nil {
+		return detailmodels.SiteDetailResponse{}, targetErr
+	}
+	if latestErr != nil {
+		return detailmodels.SiteDetailResponse{}, latestErr
 	}
 	updateSelectedTargetSummary(targets, selectedTarget, targetSummary)
 
-	latestCore, err := svc.readModels().GetTargetLatest(siteID, selectedTarget, readmodels.CoreProtocols())
-	if err != nil {
-		return detailmodels.SiteDetailResponse{}, err
-	}
-	lightProbeState, err := svc.readModels().GetLightProbeLatest(siteID, selectedTarget)
-	if err != nil {
-		return detailmodels.SiteDetailResponse{}, err
-	}
-	trend, err := svc.readModels().GetTargetTrend(siteID, selectedTarget)
-	if err != nil {
-		return detailmodels.SiteDetailResponse{}, err
-	}
-	changes, err := svc.readModels().GetTargetChanges(siteID, selectedTarget)
-	if err != nil {
-		return detailmodels.SiteDetailResponse{}, err
-	}
-
 	response.TargetSummary = normalizeTargetSummary(targetSummary)
-	response.LatestCore = toLatestResponse(latestCore, response.GeneratedAt)
+	response.LatestCore = toLatestResponse(applyPayloadPolicyToLatest(latestCore, payloadMode, payloadMaxSize), response.GeneratedAt)
 	response.Derived = detailmodels.DerivedState{
-		Trend:   normalizeTrend(trend),
-		Changes: normalizeChanges(changes),
+		Trend:   normalizeTrendWithReason(trend, trendErr, siteID, selectedTarget),
+		Changes: normalizeChangesWithReason(changes, changesErr, siteID, selectedTarget),
 	}
-	response.LightProbeState = toLatestResponse(lightProbeState, response.GeneratedAt)
+	if lightErr != nil {
+		response.LightProbeState = missingLatestWithReason(siteID, selectedTarget, "light_probe_unavailable", lightErr.GetMsg(), response.GeneratedAt)
+	} else {
+		response.LightProbeState = toLatestResponse(applyPayloadPolicyToLatest(lightProbe, payloadMode, payloadMaxSize), response.GeneratedAt)
+	}
 	return response, nil
 }
 
-func (svc *detailService) GetTargetLatest(siteID int64, target string) (detailmodels.TargetLatestResponse, common.GFError) {
+func (svc *detailService) GetTargetLatest(siteID int64, target string, payloadMode string) (detailmodels.TargetLatestResponse, common.GFError) {
+	payloadMode, payloadModeErr := normalizePayloadMode(payloadMode)
+	if payloadModeErr != nil {
+		return detailmodels.TargetLatestResponse{}, payloadModeErr
+	}
 	target, err := svc.ensureSiteTarget(siteID, target)
 	if err != nil {
 		return detailmodels.TargetLatestResponse{}, err
@@ -140,10 +188,15 @@ func (svc *detailService) GetTargetLatest(siteID int64, target string) (detailmo
 	if err != nil {
 		return detailmodels.TargetLatestResponse{}, err
 	}
+	response = applyPayloadPolicyToLatest(response, payloadMode, env.GetServerConfig().NavV2.RawPayloadPreviewBytesOrDefault())
 	return toLatestResponse(response, svc.clock()()), nil
 }
 
-func (svc *detailService) ListTargetObservations(siteID int64, target string, protocol string, limit int) (detailmodels.TargetObservationsResponse, common.GFError) {
+func (svc *detailService) ListTargetObservations(siteID int64, target string, protocol string, limit int, payloadMode string) (detailmodels.TargetObservationsResponse, common.GFError) {
+	payloadMode, payloadModeErr := normalizePayloadMode(payloadMode)
+	if payloadModeErr != nil {
+		return detailmodels.TargetObservationsResponse{}, payloadModeErr
+	}
 	target, err := svc.ensureSiteTarget(siteID, target)
 	if err != nil {
 		return detailmodels.TargetObservationsResponse{}, err
@@ -152,13 +205,14 @@ func (svc *detailService) ListTargetObservations(siteID int64, target string, pr
 	if err != nil {
 		return detailmodels.TargetObservationsResponse{}, err
 	}
+	items := applyPayloadPolicyToItems(response.Items, payloadMode, env.GetServerConfig().NavV2.RawPayloadPreviewBytesOrDefault())
 	return detailmodels.TargetObservationsResponse{
 		State:         response.State,
 		SiteID:        response.SiteID,
 		Target:        response.Target,
 		Protocol:      response.Protocol,
 		Limit:         response.Limit,
-		Items:         response.Items,
+		Items:         items,
 		GeneratedAt:   svc.clock()(),
 		SchemaVersion: detailmodels.DetailSchemaVersion,
 	}, nil
@@ -188,7 +242,11 @@ func (svc *detailService) GetTargetChanges(siteID int64, target string) (detailm
 	return normalizeChanges(response), nil
 }
 
-func (svc *detailService) GetTargetLightProbes(siteID int64, target string) (detailmodels.TargetLatestResponse, common.GFError) {
+func (svc *detailService) GetTargetLightProbes(siteID int64, target string, payloadMode string) (detailmodels.TargetLatestResponse, common.GFError) {
+	payloadMode, payloadModeErr := normalizePayloadMode(payloadMode)
+	if payloadModeErr != nil {
+		return detailmodels.TargetLatestResponse{}, payloadModeErr
+	}
 	target, err := svc.ensureSiteTarget(siteID, target)
 	if err != nil {
 		return detailmodels.TargetLatestResponse{}, err
@@ -197,6 +255,7 @@ func (svc *detailService) GetTargetLightProbes(siteID int64, target string) (det
 	if err != nil {
 		return detailmodels.TargetLatestResponse{}, err
 	}
+	response = applyPayloadPolicyToLatest(response, payloadMode, env.GetServerConfig().NavV2.RawPayloadPreviewBytesOrDefault())
 	return toLatestResponse(response, svc.clock()()), nil
 }
 
@@ -236,14 +295,6 @@ func (svc *detailService) ensureSiteTarget(siteID int64, target string) (string,
 	for _, domain := range domains {
 		if domain.TargetName() == target {
 			return target, nil
-		}
-	}
-	siteSummary, summaryErr := svc.summaryService().GetSiteSummary(siteID)
-	if summaryErr == nil {
-		for _, item := range siteSummary.Targets {
-			if item.Target == target {
-				return target, nil
-			}
 		}
 	}
 	return "", common.NewServiceError("target 不属于当前 site")
@@ -329,6 +380,9 @@ func mergeTargets(domains []detailmodels.CollectorDomain, siteSummary summarymod
 			Prefix:       domain.Prefix,
 			TLS:          domain.TLS,
 			Proxy:        domain.Proxy,
+			Source:       "domain",
+			Registered:   true,
+			SummaryOnly:  false,
 			SummaryState: summarymodels.SummaryStateMissing,
 			Status:       summarymodels.StatusUnknown,
 		})
@@ -340,6 +394,9 @@ func mergeTargets(domains []detailmodels.CollectorDomain, siteSummary summarymod
 			items = append(items, detailmodels.SiteTarget{
 				Target:       targetSummary.Target,
 				Name:         targetSummary.Target,
+				Source:       "summary",
+				Registered:   false,
+				SummaryOnly:  true,
 				SummaryState: siteSummary.State,
 				Status:       normalizeStatus(targetSummary.Status),
 			})
@@ -364,13 +421,15 @@ func updateSelectedTargetSummary(targets []detailmodels.SiteTarget, selectedTarg
 
 func selectTarget(targets []detailmodels.SiteTarget, preferred string) (string, common.GFError) {
 	if preferred == "" {
-		if len(targets) == 0 {
-			return "", nil
+		for _, target := range targets {
+			if target.Registered {
+				return target.Target, nil
+			}
 		}
-		return targets[0].Target, nil
+		return "", nil
 	}
 	for _, target := range targets {
-		if target.Target == preferred {
+		if target.Target == preferred && target.Registered {
 			return preferred, nil
 		}
 	}
@@ -379,12 +438,14 @@ func selectTarget(targets []detailmodels.SiteTarget, preferred string) (string, 
 
 func toLatestResponse(response readmodels.TargetLatestResponse, generatedAt time.Time) detailmodels.TargetLatestResponse {
 	return detailmodels.TargetLatestResponse{
-		State:         normalizeSummaryState(response.State),
-		SiteID:        response.SiteID,
-		Target:        response.Target,
-		Protocols:     response.Protocols,
-		GeneratedAt:   generatedAt,
-		SchemaVersion: detailmodels.DetailSchemaVersion,
+		State:          normalizeSummaryState(response.State),
+		SiteID:         response.SiteID,
+		Target:         response.Target,
+		Protocols:      response.Protocols,
+		ReasonCodes:    nil,
+		ReasonMessages: nil,
+		GeneratedAt:    generatedAt,
+		SchemaVersion:  detailmodels.DetailSchemaVersion,
 	}
 }
 
@@ -405,6 +466,16 @@ func normalizeTrend(response readmodels.TargetTrendResponse) detailmodels.Target
 	}
 }
 
+func normalizeTrendWithReason(response readmodels.TargetTrendResponse, err common.GFError, siteID int64, target string) detailmodels.TargetTrendResponse {
+	if err == nil {
+		return normalizeTrend(response)
+	}
+	result := missingTrend(siteID, target)
+	result.ReasonCodes = []string{"trend_unavailable"}
+	result.ReasonMessages = []string{err.GetMsg()}
+	return result
+}
+
 func normalizeChanges(response readmodels.TargetChangesResponse) detailmodels.TargetChangesResponse {
 	if len(response.Events) == 0 {
 		response.Events = json.RawMessage(`[]`)
@@ -420,6 +491,16 @@ func normalizeChanges(response readmodels.TargetChangesResponse) detailmodels.Ta
 		GeneratedAt:   response.GeneratedAt,
 		SchemaVersion: response.SchemaVersion,
 	}
+}
+
+func normalizeChangesWithReason(response readmodels.TargetChangesResponse, err common.GFError, siteID int64, target string) detailmodels.TargetChangesResponse {
+	if err == nil {
+		return normalizeChanges(response)
+	}
+	result := missingChanges(siteID, target)
+	result.ReasonCodes = []string{"changes_unavailable"}
+	result.ReasonMessages = []string{err.GetMsg()}
+	return result
 }
 
 func normalizeSiteSummary(summary summarymodels.SiteSummaryResponse) summarymodels.SiteSummaryResponse {
@@ -482,6 +563,14 @@ func missingLatest(siteID int64, target string) detailmodels.TargetLatestRespons
 	}
 }
 
+func missingLatestWithReason(siteID int64, target string, code string, message string, generatedAt time.Time) detailmodels.TargetLatestResponse {
+	response := missingLatest(siteID, target)
+	response.ReasonCodes = []string{code}
+	response.ReasonMessages = []string{message}
+	response.GeneratedAt = generatedAt
+	return response
+}
+
 func missingTrend(siteID int64, target string) detailmodels.TargetTrendResponse {
 	return detailmodels.TargetTrendResponse{
 		State:         summarymodels.SummaryStateMissing,
@@ -490,6 +579,58 @@ func missingTrend(siteID int64, target string) detailmodels.TargetTrendResponse 
 		Windows:       json.RawMessage(`{}`),
 		SchemaVersion: detailmodels.DetailSchemaVersion,
 	}
+}
+
+func normalizePayloadMode(mode string) (string, common.GFError) {
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	switch mode {
+	case "", PayloadModePreview:
+		return PayloadModePreview, nil
+	case PayloadModeFull:
+		return PayloadModeFull, nil
+	default:
+		return "", common.NewServiceError("payload_mode 参数非法")
+	}
+}
+
+func applyPayloadPolicyToLatest(response readmodels.TargetLatestResponse, mode string, maxBytes int) readmodels.TargetLatestResponse {
+	if response.Protocols == nil {
+		return response
+	}
+	protocols := make(map[string]readmodels.CollectorEnvelope, len(response.Protocols))
+	for protocol, envelope := range response.Protocols {
+		protocols[protocol] = applyPayloadPolicy(envelope, mode, maxBytes)
+	}
+	response.Protocols = protocols
+	return response
+}
+
+func applyPayloadPolicyToItems(items []readmodels.CollectorEnvelope, mode string, maxBytes int) []readmodels.CollectorEnvelope {
+	if len(items) == 0 {
+		return items
+	}
+	result := make([]readmodels.CollectorEnvelope, 0, len(items))
+	for _, item := range items {
+		result = append(result, applyPayloadPolicy(item, mode, maxBytes))
+	}
+	return result
+}
+
+func applyPayloadPolicy(envelope readmodels.CollectorEnvelope, mode string, maxBytes int) readmodels.CollectorEnvelope {
+	envelope.PayloadBytes = len(envelope.Payload)
+	if mode == PayloadModeFull || maxBytes <= 0 || len(envelope.Payload) <= maxBytes {
+		return envelope
+	}
+
+	envelope.Payload = json.RawMessage(fmt.Sprintf(
+		`{"_payload_truncated":true,"_original_bytes":%d,"_preview_max_bytes":%d}`,
+		len(envelope.Payload),
+		maxBytes,
+	))
+	envelope.PayloadTruncated = true
+	envelope.PayloadPreviewMaxBytes = maxBytes
+	envelope.PayloadPreviewAvailable = false
+	return envelope
 }
 
 func missingChanges(siteID int64, target string) detailmodels.TargetChangesResponse {

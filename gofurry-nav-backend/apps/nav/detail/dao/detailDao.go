@@ -2,6 +2,7 @@ package dao
 
 import (
 	"errors"
+	"sync"
 
 	detailmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/models"
 	navmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
@@ -10,11 +11,16 @@ import (
 	"gorm.io/gorm"
 )
 
-var newDetailDao = new(detailDao)
+var (
+	newDetailDao = new(detailDao)
+	detailDaoMu  sync.Mutex
+)
 
 type detailDao struct{ abstract.Dao }
 
 func GetDetailDao() *detailDao {
+	detailDaoMu.Lock()
+	defer detailDaoMu.Unlock()
 	if newDetailDao.Gm == nil {
 		newDetailDao.Init()
 	}
