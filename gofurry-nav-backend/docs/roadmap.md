@@ -4,19 +4,25 @@
 
 `gofurry-nav-backend` 当前生产导航接口仍以 `/api/v1/nav/...` 为主。v1 已接入 collector 旧数据面：站点域名列表、Ping latest/history、HTTP latest、DNS latest，并继续服务现有 Nuxt 前端。
 
-collector v2 数据面已经进入可供后端消费的阶段。后端目前已完成 v2 summary 只读接入，并补齐 collector summary hints 透传：
+collector v2 数据面已经进入可供后端消费的阶段。后端目前已完成 v2 summary 只读接入、collector summary hints 透传，以及站点详情页 v2 只读后端接口：
 
 ```text
+GET /api/v2/nav/sites/:siteId/detail
 GET /api/v2/nav/sites/:siteId/summary
 GET /api/v2/nav/sites/:siteId/targets/:target/summary
+GET /api/v2/nav/sites/:siteId/targets/:target/latest
+GET /api/v2/nav/sites/:siteId/targets/:target/observations
+GET /api/v2/nav/sites/:siteId/targets/:target/trend
+GET /api/v2/nav/sites/:siteId/targets/:target/changes
+GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 ```
 
-这两个接口默认受 `nav_v2.summary_enabled` 控制，读取 `collector:v2:summary:site:{site_id}` 与 `collector:v2:summary:target:{site_id}:{target}`。后端内部已建立 collector v2 read model，可以只读消费 raw observation、target latest、trend、change、run state、light probe。
+这些接口当前都受 `nav_v2.summary_enabled` 控制。后端内部已建立 collector v2 read model，可以只读消费 raw observation、target latest、trend、change、run state、light probe，并通过 v2 detail 分接口对外暴露。
 
 已知短板：
 
-- collector v2 read model 目前仍是后端内部服务，尚未暴露站点详情页 v2 HTTP 分接口。
 - v1 详情接口 `getSiteDetail` 仍带浏览量递增副作用，v2 详情页接口应保持只读。
+- `nav_v2.summary_enabled` 当前同时充当 v2 route gate，后续如需更细粒度灰度，可再拆分成独立 detail 开关。
 
 ## 路线策略
 
@@ -96,7 +102,7 @@ GET /api/v2/nav/sites/:siteId/targets/:target/summary
 
 ### v0.4.0 - 站点详情页 v2 后端接口稳定化
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** API / User-facing / Documentation
 **Goal:** 提供稳定的站点详情页 v2 后端接口，让前端后续可以一次性迁移到更完整的 collector v2 数据面。
 
@@ -120,15 +126,15 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 
 #### Tasks
 
-- [ ] 新增站点详情 v2 API 设计文档，明确响应结构和字段来源。
-- [ ] 实现 `detail` 只读聚合接口，响应包含 `site`、`targets`、`selected_target`、`site_summary`、`target_summary`、`latest_core`、`derived`、`light_probe_state`、`generated_at`、`schema_version`。
-- [ ] `detail` 不递增浏览量；浏览量写入另行设计独立接口。
-- [ ] 实现 target latest 分接口，返回 `ping`、`http`、`dns` 和已启用 light probe 的 latest。
-- [ ] 实现 target observation 历史分接口，支持 `ping`、`http`、`dns`、`rdap`、`robots`、`security_txt`、`page_assets`、`port_check`、`waf_canary`。
-- [ ] 实现 target trend 和 changes 分接口，缺失时返回空结构或 `state=missing`。
-- [ ] 实现 target light-probes 分接口，明确 light probe 不参与健康状态。
-- [ ] 增加站点不存在、target 不属于站点、summary missing、latest missing、partial failure 的测试。
-- [ ] 更新 Swagger 或补充 Markdown 接口文档。
+- [x] 新增站点详情 v2 API 设计文档，明确响应结构和字段来源。
+- [x] 实现 `detail` 只读聚合接口，响应包含 `site`、`targets`、`selected_target`、`site_summary`、`target_summary`、`latest_core`、`derived`、`light_probe_state`、`generated_at`、`schema_version`。
+- [x] `detail` 不递增浏览量；浏览量写入另行设计独立接口。
+- [x] 实现 target latest 分接口，返回 `ping`、`http`、`dns` 和已启用 light probe 的 latest。
+- [x] 实现 target observation 历史分接口，支持 `ping`、`http`、`dns`、`rdap`、`robots`、`security_txt`、`page_assets`、`port_check`、`waf_canary`。
+- [x] 实现 target trend 和 changes 分接口，缺失时返回空结构或 `state=missing`。
+- [x] 实现 target light-probes 分接口，明确 light probe 不参与健康状态。
+- [x] 增加站点不存在、target 不属于站点、summary missing、latest missing、partial failure 的测试。
+- [x] 更新 Swagger 或补充 Markdown 接口文档。
 
 #### Acceptance Criteria
 
@@ -172,6 +178,6 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 
 - `v0.2.x`：已补齐 summary 字段完整性和文档。
 - `v0.3.0`：已建立 collector v2 read model 基础。
-- `v0.4.0`：稳定站点详情页 v2 后端接口。
+- `v0.4.0`：已稳定站点详情页 v2 后端接口。
 - `v1.0.0-alpha.1`：冻结 v2 API 候选并准备前端迁移。
 - `v1.0.0`：前后端完成 v2 迁移并保留明确 v1 回滚策略后再进入稳定版。

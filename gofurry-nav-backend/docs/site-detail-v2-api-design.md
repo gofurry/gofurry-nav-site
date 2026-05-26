@@ -1,6 +1,6 @@
 # 站点详情页后端 v2 接口设计
 
-本文档规划 `gofurry-nav-backend /api/v2/nav` 的站点详情页后端接口。目标是先稳定后端 v2 只读接口，再考虑前端改造。本轮不修改前端。
+本文档规划并记录 `gofurry-nav-backend /api/v2/nav` 的站点详情页后端接口。后端 v0.4.0 已按本文实现只读 detail 与 target 分接口，前端改造仍留到后续阶段。
 
 ## 设计目标
 
@@ -31,6 +31,17 @@ GET /api/v2/nav/sites/:siteId/targets/:target/summary
 ## 新增接口
 
 v0.3.0 已提供内部 collector v2 read model，负责读取 raw observation、target latest、trend、change、light probe latest 和 run state。下面的公开 HTTP 接口仍属于 v0.4.0 的站点详情页聚合与分接口工作。
+
+### v0.4.0 实现状态
+
+- `GET /api/v2/nav/sites/:siteId/detail`
+- `GET /api/v2/nav/sites/:siteId/targets/:target/latest`
+- `GET /api/v2/nav/sites/:siteId/targets/:target/observations`
+- `GET /api/v2/nav/sites/:siteId/targets/:target/trend`
+- `GET /api/v2/nav/sites/:siteId/targets/:target/changes`
+- `GET /api/v2/nav/sites/:siteId/targets/:target/light-probes`
+
+当前实现保持只读，不复用 v1 `getSiteDetail` 的浏览量递增副作用；target 归属按站点 domain 表校验，并在可用时补充 site summary 中的 target 索引信息。
 
 ### 站点详情聚合
 
