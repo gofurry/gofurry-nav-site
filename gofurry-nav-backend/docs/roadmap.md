@@ -145,6 +145,50 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 
 ---
 
+### v0.4.1 - Nav v2 接口安全与可靠性修复
+
+**Status:** Planned
+**Scope:** Security/Safety / Stability / Performance / Testing
+**Goal:** 根据 v2 新增代码审计结果，修复详情页 v2 后端接口在归属校验、并发初始化、响应体控制和测试覆盖上的硬化缺口。
+
+#### Focus
+
+- target 归属边界
+- v2 singleton / DAO 初始化安全
+- raw payload 响应体控制
+- detail 聚合性能与 partial failure 语义
+- HTTP contract 测试补齐
+
+#### Tasks
+
+- [ ] 修复 P1-001：target 分接口只以 active `gfn_collector_domain` 作为授权来源，summary-only target 仅用于展示补充，不单独授权 raw/latest/history 查询。
+- [ ] 为 `targets[]` 增加来源与注册状态字段，例如 `source`、`registered`、`summary_only`，并让 detail 默认 target 优先选择 active DB domain。
+- [ ] 修复 P2-001：用 `sync.Once` 或启动期显式初始化替换 v2 detail/readmodel/DAO 的无保护懒加载写入。
+- [ ] 增加 `go test -race ./apps/nav/detail/... ./apps/nav/readmodel/...` 验证路径，并补并发初始化测试。
+- [ ] 修复 P2-002：为 latest / observations 的 raw `payload` 增加默认 preview 或截断策略，并提供显式 full payload 策略。
+- [ ] 为 `observations?limit=500` + 大 payload 场景增加响应体大小和截断测试。
+- [ ] 修复 P2-003：优化 detail 聚合读取路径，支持 Redis latest 批量读取或独立分支并发读取。
+- [ ] 明确 detail partial failure 语义：summary 核心失败返回错误，trend/change/light probe 等旁路失败返回 `state=missing` 与 reason。
+- [ ] 增加 Redis JSON 解析失败结构化日志，记录 `redis_key`、`site_id`、`target`、`protocol` 和错误摘要，但不记录完整 payload。
+- [ ] 拆分 `nav_v2.summary_enabled` 粗粒度 route gate，增加 detail/read model 独立灰度开关并保持旧配置兼容。
+- [ ] 补齐 detail controller table tests，覆盖 6 个 v2 路由的成功、参数错误、service error 和 URL encoded target。
+
+#### Acceptance Criteria
+
+- 已删除或不在 active domain 表中的 target 不能通过任何 target 分接口读取 raw/latest/history 数据。
+- `go test -race ./apps/nav/detail/... ./apps/nav/readmodel/...` 通过。
+- 大 payload 不会在默认公开响应中无限制透传，响应会明确标记截断状态。
+- detail 聚合接口在旁路数据缺失或失败时保持清晰、可预测的响应语义。
+- v2 summary 与 detail 可以独立灰度开启或关闭。
+- 新增审计报告中的 P1/P2 项均关闭或有明确剩余风险说明。
+
+#### Notes
+
+- 审计报告：`docs/nav-v2-code-audit.md`。
+- 本阶段只修复 v2 后端接口硬化问题，不启动前端迁移。
+
+---
+
 ### v1.0.0-alpha.1 - Nav v2 API 冻结候选
 
 **Status:** Planned
@@ -179,5 +223,6 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 - `v0.2.x`：已补齐 summary 字段完整性和文档。
 - `v0.3.0`：已建立 collector v2 read model 基础。
 - `v0.4.0`：已稳定站点详情页 v2 后端接口。
+- `v0.4.1`：修复 v2 新增接口审计发现的安全、并发、性能与测试硬化项。
 - `v1.0.0-alpha.1`：冻结 v2 API 候选并准备前端迁移。
 - `v1.0.0`：前后端完成 v2 迁移并保留明确 v1 回滚策略后再进入稳定版。
