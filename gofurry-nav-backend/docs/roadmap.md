@@ -11,12 +11,11 @@ GET /api/v2/nav/sites/:siteId/summary
 GET /api/v2/nav/sites/:siteId/targets/:target/summary
 ```
 
-这两个接口默认受 `nav_v2.summary_enabled` 控制，读取 `collector:v2:summary:site:{site_id}` 与 `collector:v2:summary:target:{site_id}:{target}`。剩余 v2 信息面尚未完整接入，包括 raw observation、target latest、trend、change、run state、light probe。
+这两个接口默认受 `nav_v2.summary_enabled` 控制，读取 `collector:v2:summary:site:{site_id}` 与 `collector:v2:summary:target:{site_id}:{target}`。后端内部已建立 collector v2 read model，可以只读消费 raw observation、target latest、trend、change、run state、light probe。
 
 已知短板：
 
-- raw observation 历史表 `gfn_collector_observation` 尚无后端只读 DAO 和查询接口。
-- `collector:v2:latest:*`、`collector:v2:trend:*`、`collector:v2:change:*`、light probe latest 尚未进入详情页后端 read model。
+- collector v2 read model 目前仍是后端内部服务，尚未暴露站点详情页 v2 HTTP 分接口。
 - v1 详情接口 `getSiteDetail` 仍带浏览量递增副作用，v2 详情页接口应保持只读。
 
 ## 路线策略
@@ -64,7 +63,7 @@ GET /api/v2/nav/sites/:siteId/targets/:target/summary
 
 ### v0.3.0 - Collector v2 Read Model 基础
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** API / Architecture / Testing
 **Goal:** 建立后端读取 collector v2 全量信息面的基础层，为站点详情 v2 聚合接口提供稳定数据来源。
 
@@ -76,15 +75,15 @@ GET /api/v2/nav/sites/:siteId/targets/:target/summary
 
 #### Tasks
 
-- [ ] 新增 `gfn_collector_observation` 只读 DAO，支持按 `site_id`、`target`、`protocol`、`observed_at` 查询。
-- [ ] 新增 target latest 读取服务，优先读 `collector:v2:latest:{protocol}:{site_id}:{target}`。
-- [ ] 新增 raw observation 查询服务，支持协议白名单和 limit 上限。
-- [ ] 新增 trend 读取服务，读取 `collector:v2:trend:target:{site_id}:{target}`。
-- [ ] 新增 change 读取服务，读取 `collector:v2:change:target:{site_id}:{target}`。
-- [ ] 新增 light probe latest 读取服务，覆盖 `rdap`、`robots`、`security_txt`、`page_assets`、`port_check`、`waf_canary`。
-- [ ] 新增 run state 读取设计或诊断接口规划，读取 `collector:v2:run:{protocol}:latest`。
-- [ ] 将 latest 与 raw observation 响应统一到 collector envelope：`site_id`、`target`、`protocol`、`status`、`observed_at`、`duration_ms`、`error_code`、`error_message`、`payload`、`schema_version`、`collector_id`、`job_id`。
-- [ ] 增加 read model 单元测试，覆盖 Redis key 缺失、JSON 解析失败、DB 空结果、非法 protocol、limit 越界。
+- [x] 新增 `gfn_collector_observation` 只读 DAO，支持按 `site_id`、`target`、`protocol`、`observed_at` 查询。
+- [x] 新增 target latest 读取服务，优先读 `collector:v2:latest:{protocol}:{site_id}:{target}`。
+- [x] 新增 raw observation 查询服务，支持协议白名单和 limit 上限。
+- [x] 新增 trend 读取服务，读取 `collector:v2:trend:target:{site_id}:{target}`。
+- [x] 新增 change 读取服务，读取 `collector:v2:change:target:{site_id}:{target}`。
+- [x] 新增 light probe latest 读取服务，覆盖 `rdap`、`robots`、`security_txt`、`page_assets`、`port_check`、`waf_canary`。
+- [x] 新增 run state 读取设计或诊断接口规划，读取 `collector:v2:run:{protocol}:latest`。
+- [x] 将 latest 与 raw observation 响应统一到 collector envelope：`site_id`、`target`、`protocol`、`status`、`observed_at`、`duration_ms`、`error_code`、`error_message`、`payload`、`schema_version`、`collector_id`、`job_id`。
+- [x] 增加 read model 单元测试，覆盖 Redis key 缺失、JSON 解析失败、DB 空结果、非法 protocol、limit 越界。
 
 #### Acceptance Criteria
 
@@ -172,7 +171,7 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 ## Suggested Release Path
 
 - `v0.2.x`：已补齐 summary 字段完整性和文档。
-- `v0.3.0`：建立 collector v2 read model 基础。
+- `v0.3.0`：已建立 collector v2 read model 基础。
 - `v0.4.0`：稳定站点详情页 v2 后端接口。
 - `v1.0.0-alpha.1`：冻结 v2 API 候选并准备前端迁移。
 - `v1.0.0`：前后端完成 v2 迁移并保留明确 v1 回滚策略后再进入稳定版。

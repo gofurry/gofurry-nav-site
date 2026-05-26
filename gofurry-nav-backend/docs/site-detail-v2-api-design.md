@@ -30,6 +30,8 @@ GET /api/v2/nav/sites/:siteId/targets/:target/summary
 
 ## 新增接口
 
+v0.3.0 已提供内部 collector v2 read model，负责读取 raw observation、target latest、trend、change、light probe latest 和 run state。下面的公开 HTTP 接口仍属于 v0.4.0 的站点详情页聚合与分接口工作。
+
 ### 站点详情聚合
 
 ```text
