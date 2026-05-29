@@ -12,6 +12,7 @@ export interface SiteDetailPageData {
   siteHealthSummary: SiteHealthSummary | null
   targetHealthSummary: TargetHealthSummary | null
   targetLatestCore: TargetLatestResponse | null
+  lightProbeState: TargetLatestResponse | null
 }
 
 function extractPrimaryDomain(rawDomain: unknown): string {
@@ -115,10 +116,11 @@ export async function useSiteDetailPage() {
           siteHealthSummary,
           targetHealthSummary: null,
           targetLatestCore: null,
+          lightProbeState: null,
         }
       }
 
-      const [httpRecord, dnsRecord, pingRecord, siteHealthSummary, targetHealthSummary, targetLatestCore] = await Promise.all([
+      const [httpRecord, dnsRecord, pingRecord, siteHealthSummary, targetHealthSummary, targetLatestCore, lightProbeState] = await Promise.all([
         navApi<HttpRecord>('/nav/site/getSiteHttpRecord', {
           query: {
             domain: resolvedDomain,
@@ -147,6 +149,13 @@ export async function useSiteDetailPage() {
               },
             }).catch(() => null)
           : Promise.resolve(null),
+        siteId.value
+          ? navV2Api<TargetLatestResponse>(`/nav/sites/${siteId.value}/targets/${encodeURIComponent(resolvedDomain)}/light-probes`, {
+              query: {
+                payload_mode: 'preview',
+              },
+            }).catch(() => null)
+          : Promise.resolve(null),
       ])
 
       return {
@@ -158,6 +167,7 @@ export async function useSiteDetailPage() {
         siteHealthSummary,
         targetHealthSummary,
         targetLatestCore,
+        lightProbeState,
       }
     },
     {
@@ -171,6 +181,7 @@ export async function useSiteDetailPage() {
         siteHealthSummary: null,
         targetHealthSummary: null,
         targetLatestCore: null,
+        lightProbeState: null,
       }),
     }
   )

@@ -57,6 +57,14 @@
         />
       </div>
 
+      <div class="mx-10 mb-8">
+        <SiteMetadataProbePanel
+          :http-record="sitePageData.siteHttpRecord"
+          :light-probe-state="sitePageData.lightProbeState"
+          :target-latest-core="sitePageData.targetLatestCore"
+        />
+      </div>
+
       <div class="mb-8 mr-4 flex flex-wrap items-center justify-center gap-3 text-orange-800">
         <button
           class="flex items-center justify-center gap-2 rounded-lg bg-orange-300 px-4 py-2 text-sm transition-colors hover:bg-orange-200"
@@ -80,6 +88,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SiteHealthSummaryPanel from '@/components/site/SiteHealthSummaryPanel.vue'
+import SiteMetadataProbePanel from '@/components/site/SiteMetadataProbePanel.vue'
 import SiteObservationTabs from '@/components/site/SiteObservationTabs.vue'
 import SiteOverview from '@/components/site/SiteOverview.vue'
 import SitePerformance from '@/components/site/SitePerformance.vue'
