@@ -77,36 +77,48 @@
 
     <slot name="after-metrics" />
 
-    <!-- 延迟时序图 -->
-    <div class="rounded-xl p-5">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-        <div class="flex items-center mb-2 md:mb-0">
-          <h3 class="font-semibold mr-4">{{ t('site.performance.latencyTrend') }}</h3>
-          <div class="flex gap-2">
+    <div class="rounded-2xl bg-orange-100/45 p-5">
+      <div class="mb-5 grid grid-cols-1 gap-4 xl:grid-cols-[1fr_auto_1fr] xl:items-end">
+        <div class="text-center xl:text-left">
+          <div class="mb-1 text-xs font-medium uppercase tracking-wide text-orange-500">
+            {{ label('PING 延迟观测', 'Ping observation') }}
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900">{{ t('site.performance.latencyTrend') }}</h3>
+        </div>
+
+        <div class="flex justify-center">
+          <div class="inline-flex rounded-xl bg-orange-50 p-1">
             <button
-                v-for="type in ['twenty','sixty','hundred']"
-                :key="type"
-                @click="changeSample(type as 'twenty'|'sixty'|'hundred')"
-                :class="[
-                'px-3 py-1 rounded-lg text-sm',
-                sampleType === type
-                  ? 'bg-orange-200 text-gray-800'
-                  : 'bg-orange-50 text-gray-700 hover:bg-orange-100'
+              v-for="option in sampleOptions"
+              :key="option.value"
+              @click="changeSample(option.value)"
+              :class="[
+                'rounded-lg px-4 py-2 text-sm transition-colors',
+                sampleType === option.value
+                  ? 'bg-orange-200 text-gray-900'
+                  : 'text-gray-600 hover:bg-orange-100'
               ]"
             >
-              {{ type === 'twenty' ? '20次' : type === 'sixty' ? '60次' : '100次' }}
+              {{ option.label }}
             </button>
           </div>
         </div>
 
-        <!-- 平均延迟 / 丢包率 -->
-        <div class="text-xs text-gray-500 md:ml-4">
-          {{ t('site.performance.averageLatency') }}: {{ currentPing?.avgDelay || 'Unknown' }}，
-          {{ t('site.performance.packetLossRate') }}: {{ currentPing?.avgLoss || 'Unknown' }}
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:justify-self-end">
+          <div
+            v-for="item in trendStats"
+            :key="item.label"
+            class="rounded-xl bg-orange-50 px-3 py-2"
+          >
+            <div class="whitespace-nowrap text-[11px] text-gray-500">{{ item.label }}</div>
+            <div class="mt-1 whitespace-nowrap text-sm font-semibold text-gray-800">{{ item.value }}</div>
+          </div>
         </div>
       </div>
 
-      <div class="h-90 w-full" ref="latencyChartRef"></div>
+      <div class="rounded-xl bg-orange-50/70 px-3 pb-4 pt-6">
+        <div class="h-[360px] w-full" ref="latencyChartRef"></div>
+      </div>
     </div>
   </section>
 </template>
@@ -135,6 +147,20 @@ const noText = computed(() => i18n.global.locale.value === 'en' ? 'No' : '否')
 
 // 当前 ping 数据
 const currentPing = computed<PingStats | null>(() => props.pingRecord?.[sampleType.value] || null)
+const sampleOptions = computed(() => [
+  { value: 'twenty' as const, label: label('20次', '20') },
+  { value: 'sixty' as const, label: label('60次', '60') },
+  { value: 'hundred' as const, label: label('100次', '100') },
+])
+const trendStats = computed(() => {
+  const latestPoint = currentPing.value?.DelayModel?.[0]
+  return [
+    { label: t('site.performance.averageLatency'), value: currentPing.value?.avgDelay || '-' },
+    { label: t('site.performance.packetLossRate'), value: currentPing.value?.avgLoss || '-' },
+    { label: label('最新延迟', 'Latest'), value: latestPoint?.delay ? `${latestPoint.delay}ms` : '-' },
+    { label: label('样本数量', 'Samples'), value: String(currentPing.value?.DelayModel?.length ?? 0) },
+  ]
+})
 
 // 核心指标
 const metrics = computed(() => ({
@@ -337,17 +363,23 @@ function updateChart() {
   const times = tooltipData.map(d => (d.time?.split(' ')[1]) || 'Unknown')
 
   chart.value.setOption({
+    color: ['#4f6fed'],
     tooltip: {
       trigger: 'item',
-      axisPointer: { type: 'none' },
+      axisPointer: {
+        type: 'line',
+        lineStyle: { color: '#f59e0b', width: 1, type: 'dashed' }
+      },
       confine: true,
-      backgroundColor: 'rgba(0,0,0,0.75)',
-      borderRadius: 8,
-      padding: [8, 12],
-      textStyle: { color: '#fff', fontSize: 12, lineHeight: 18 },
+      backgroundColor: 'rgba(255, 251, 245, 0.96)',
+      borderColor: 'rgba(251, 146, 60, 0.28)',
+      borderWidth: 1,
+      borderRadius: 10,
+      padding: [10, 12],
+      textStyle: { color: '#374151', fontSize: 12, lineHeight: 18 },
       formatter: (params: any) => {
         const point = params.data
-        if (!point) return '无数据'
+        if (!point) return label('无数据', 'No data')
         return `
         <div style="line-height:1.5">
           <div><strong>`+t('site.performance.time')+`:</strong> ${point.time}</div>
@@ -357,11 +389,26 @@ function updateChart() {
         </div>
       `
       },
-      extraCssText: 'max-width: 220px; white-space: normal;'
+      extraCssText: 'max-width: 240px; white-space: normal; backdrop-filter: blur(10px);'
     },
-    grid: { left: '3%', right: '3%', top: '8%', bottom: '10%', containLabel: true },
-    xAxis: { type: 'category', data: times, axisLabel: { color: '#888', fontSize: 10 } },
-    yAxis: { type: 'value', name: t('site.performance.latency')+' (ms)', axisLabel: { color: '#888' }, splitLine: { lineStyle: { type: 'dashed', color: '#ccc' } } },
+    grid: { left: 48, right: 24, top: 42, bottom: 42, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: times,
+      boundaryGap: false,
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: '#e5d4bd' } },
+      axisLabel: { color: '#8b8178', fontSize: 10, hideOverlap: true }
+    },
+    yAxis: {
+      type: 'value',
+      name: t('site.performance.latency')+' (ms)',
+      nameTextStyle: { color: '#8b8178', fontSize: 11, padding: [0, 0, 14, 0] },
+      axisLabel: { color: '#8b8178' },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { lineStyle: { type: 'dashed', color: 'rgba(148, 163, 184, 0.38)' } }
+    },
     series: [{
       name: t('site.performance.latency'),
       type: 'line',
@@ -369,9 +416,19 @@ function updateChart() {
       smooth: true,
       symbol: 'circle',
       symbolSize: 5,
-      lineStyle: { width: 2 },
-      areaStyle: { opacity: 0.15 },
-      emphasis: { itemStyle: { symbolSize: 8, color: '#f97316' } }
+      showSymbol: true,
+      lineStyle: { width: 2.5, color: '#4f6fed' },
+      itemStyle: { color: '#4f6fed', borderColor: '#fff7ed', borderWidth: 1.5 },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: 'rgba(79, 111, 237, 0.26)' },
+          { offset: 1, color: 'rgba(249, 115, 22, 0.04)' }
+        ])
+      },
+      emphasis: {
+        focus: 'series',
+        itemStyle: { symbolSize: 8, color: '#f97316', borderColor: '#fff7ed', borderWidth: 2 }
+      }
     }]
   })
 
