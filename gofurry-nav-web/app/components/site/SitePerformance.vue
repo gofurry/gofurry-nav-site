@@ -2,56 +2,76 @@
   <section class="">
     <!-- 核心指标 -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <!-- 响应时间 -->
       <div
           class="rounded-xl p-5"
           :class="responseColor"
       >
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-medium text-gray-500"> {{ t('site.performance.responseTime') }} </h3>
+          <h3 class="text-sm font-medium text-gray-500"> {{ performanceText.visitTiming }} </h3>
           <i class="fa fa-clock-o" :class="iconColor(responseColor)"></i>
         </div>
         <p class="text-2xl text-gray-700 font-bold">{{ metrics.responseTime }}</p>
-        <p class="text-xs text-gray-500 mt-1"> {{ t('site.performance.pageLoadTime') }} </p>
+        <p class="text-xs text-gray-500 mt-1"> {{ performanceText.visitTimingHint }} </p>
+        <dl v-if="isV2Mode" class="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
+          <div v-for="item in timingDetails" :key="item.label" class="flex justify-between gap-2">
+            <dt>{{ item.label }}</dt>
+            <dd class="font-medium text-gray-700">{{ item.value }}</dd>
+          </div>
+        </dl>
       </div>
 
-      <!-- HTTP状态码 -->
       <div
           class="rounded-xl p-5"
           :class="statusColor"
       >
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-medium text-gray-500">{{ t('site.performance.httpStatusCode') }}</h3>
+          <h3 class="text-sm font-medium text-gray-500">{{ performanceText.responseStatus }}</h3>
           <i class="fa fa-check-circle" :class="iconColor(statusColor)"></i>
         </div>
-        <p class="text-2xl text-gray-700 font-bold">{{ metrics.statusCode }}</p>
-        <p class="text-xs text-gray-500 mt-1">{{ t('site.performance.accessStatus') }}</p>
+        <p class="text-2xl text-gray-700 font-bold">{{ isV2Mode ? `HTTP ${metrics.statusCode}` : metrics.statusCode }}</p>
+        <p class="text-xs text-gray-500 mt-1">{{ performanceText.responseStatusHint }}</p>
+        <dl v-if="isV2Mode" class="mt-3 space-y-1 text-xs text-gray-500">
+          <div v-for="item in responseDetails" :key="item.label" class="flex justify-between gap-3">
+            <dt>{{ item.label }}</dt>
+            <dd class="truncate font-medium text-gray-700">{{ item.value }}</dd>
+          </div>
+        </dl>
       </div>
 
-      <!-- TLS版本 -->
       <div
           class="rounded-xl p-5"
           :class="tlsColor"
       >
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-medium text-gray-500">{{ t('site.performance.tlsVersion') }}</h3>
+          <h3 class="text-sm font-medium text-gray-500">{{ performanceText.secureTransport }}</h3>
           <i class="fa fa-shield" :class="iconColor(tlsColor)"></i>
         </div>
         <p class="text-2xl text-gray-700 font-bold">{{ metrics.tlsVersion }}</p>
-        <p class="text-xs text-gray-500 mt-1">{{ t('site.performance.securityProtocol') }}</p>
+        <p class="text-xs text-gray-500 mt-1">{{ tlsSubtitle }}</p>
+        <dl v-if="isV2Mode" class="mt-3 space-y-1 text-xs text-gray-500">
+          <div v-for="item in tlsDetails" :key="item.label" class="flex justify-between gap-3">
+            <dt>{{ item.label }}</dt>
+            <dd class="truncate font-medium text-gray-700">{{ item.value }}</dd>
+          </div>
+        </dl>
       </div>
 
-      <!-- 证书有效期 -->
       <div
           class="rounded-xl p-5"
           :class="certColor"
       >
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-medium text-gray-500">{{ t('site.performance.certValidity') }}</h3>
+          <h3 class="text-sm font-medium text-gray-500">{{ performanceText.certStatus }}</h3>
           <i class="fa fa-calendar" :class="iconColor(certColor)"></i>
         </div>
         <p class="text-2xl text-gray-700 font-bold">{{ metrics.certDaysLeft }}</p>
-        <p class="text-xs text-gray-500 mt-1">{{ t('site.performance.certRemainingTime') }}</p>
+        <p class="text-xs text-gray-500 mt-1">{{ performanceText.certStatusHint }}</p>
+        <dl v-if="isV2Mode" class="mt-3 space-y-1 text-xs text-gray-500">
+          <div v-for="item in certDetails" :key="item.label" class="flex justify-between gap-3">
+            <dt>{{ item.label }}</dt>
+            <dd class="truncate font-medium text-gray-700">{{ item.value }}</dd>
+          </div>
+        </dl>
       </div>
     </div>
 
@@ -92,7 +112,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import * as echarts from 'echarts'
-import type { PingRecord, PingStats, HttpRecord } from '@/types/nav'
+import type { PingRecord, PingStats, HttpRecord, TargetLatestResponse } from '@/types/nav'
 import {i18n} from "@/main";
 
 const t = (key: string) => i18n.global.t(key)
@@ -100,23 +120,82 @@ const t = (key: string) => i18n.global.t(key)
 interface Props {
   pingRecord: PingRecord
   httpRecord: HttpRecord
+  targetLatestCore?: TargetLatestResponse | null
+  mode?: 'default' | 'v2'
 }
 
 const props = defineProps<Props>()
 const latencyChartRef = ref<HTMLElement | null>(null)
 const chart = ref<echarts.ECharts | null>(null)
 const sampleType = ref<'twenty' | 'sixty' | 'hundred'>('twenty')
+const isV2Mode = computed(() => props.mode === 'v2')
+const httpPayload = computed(() => asRecord(props.targetLatestCore?.protocols?.http?.payload))
+const yesText = computed(() => i18n.global.locale.value === 'en' ? 'Yes' : '是')
+const noText = computed(() => i18n.global.locale.value === 'en' ? 'No' : '否')
 
 // 当前 ping 数据
 const currentPing = computed<PingStats | null>(() => props.pingRecord?.[sampleType.value] || null)
 
 // 核心指标
 const metrics = computed(() => ({
-  responseTime: props.httpRecord.responseTime,
-  statusCode: props.httpRecord.statusCode,
-  tlsVersion: props.httpRecord.tlsVersion || 'Unknown',
-  certDaysLeft: props.httpRecord.certDaysLeft || '-1天'
+  responseTime: formatMs(firstNumber(httpPayload.value.response_time_ms, parseNumber(props.httpRecord.responseTime))),
+  statusCode: firstNumber(httpPayload.value.status_code, props.httpRecord.statusCode),
+  tlsVersion: firstString(httpPayload.value.tls_version, props.httpRecord.tlsVersion, 'Unknown'),
+  certDaysLeft: formatDays(firstNumber(httpPayload.value.cert_days_left, parseNumber(props.httpRecord.certDaysLeft)))
 }))
+
+const performanceText = computed(() => ({
+  visitTiming: isV2Mode.value ? label('访问耗时', 'Visit Timing') : t('site.performance.responseTime'),
+  visitTimingHint: isV2Mode.value ? label('用户访问视角', 'Visitor perspective') : t('site.performance.pageLoadTime'),
+  responseStatus: isV2Mode.value ? label('响应状态', 'Response Status') : t('site.performance.httpStatusCode'),
+  responseStatusHint: isV2Mode.value ? label('HTTP 与内容协商', 'HTTP and content') : t('site.performance.accessStatus'),
+  secureTransport: isV2Mode.value ? label('安全传输', 'Secure Transport') : t('site.performance.tlsVersion'),
+  certStatus: isV2Mode.value ? label('证书状态', 'Certificate Status') : t('site.performance.certValidity'),
+  certStatusHint: isV2Mode.value ? label('剩余有效期', 'Remaining validity') : t('site.performance.certRemainingTime'),
+}))
+
+const timingDetails = computed(() => [
+  { label: 'DNS', value: formatMs(firstNumber(httpPayload.value.dns_lookup_ms)) },
+  { label: 'TCP', value: formatMs(firstNumber(httpPayload.value.tcp_connect_ms)) },
+  { label: 'TLS', value: formatMs(firstNumber(httpPayload.value.tls_handshake_ms)) },
+  { label: 'TTFB', value: formatMs(firstNumber(httpPayload.value.ttfb_ms)) },
+])
+
+const responseDetails = computed(() => [
+  { label: label('协议', 'Protocol'), value: firstString(httpPayload.value.http_protocol, '-') },
+  { label: label('重定向', 'Redirects'), value: String(firstNumber(httpPayload.value.redirect_count, props.httpRecord.redirects?.length ?? 0)) },
+  { label: label('类型', 'Type'), value: firstString(httpPayload.value.content_type, headerValue('content-type'), '-') },
+  { label: label('压缩', 'Encoding'), value: firstString(httpPayload.value.content_encoding, boolMaybeText(httpPayload.value.compressed), '-') },
+])
+
+const tlsSubtitle = computed(() => {
+  if (!isV2Mode.value) {
+    return t('site.performance.securityProtocol')
+  }
+
+  const verified = httpPayload.value.cert_verified
+  if (verified === true) {
+    return label('证书校验通过', 'Certificate verified')
+  }
+  if (verified === false && firstString(httpPayload.value.verify_error)) {
+    return label('证书校验需关注', 'Certificate needs review')
+  }
+  return label('安全加密协议', 'Secure protocol')
+})
+
+const tlsDetails = computed(() => [
+  { label: label('校验', 'Verified'), value: boolText(httpPayload.value.cert_verified) },
+  { label: label('握手', 'Handshake'), value: firstString(httpPayload.value.tls_handshake, '-') },
+  { label: label('套件', 'Cipher'), value: firstString(httpPayload.value.cipher_suite, '-') },
+  { label: label('签名', 'Signature'), value: firstString(httpPayload.value.cert_signature_algorithm, httpPayload.value.cert_sig_alg, '-') },
+])
+
+const certDetails = computed(() => [
+  { label: label('签发者', 'Issuer'), value: firstString(httpPayload.value.cert_issuer_cn, httpPayload.value.cert_issuer, props.httpRecord.certIssuer, '-') },
+  { label: label('到期', 'Expires'), value: shortDate(firstString(httpPayload.value.cert_not_after, httpPayload.value.cert_expiry, props.httpRecord.certExpiry)) },
+  { label: label('SAN', 'SAN'), value: numberOrDash(firstNumber(httpPayload.value.cert_san_count, props.httpRecord.certDNSNames?.length)) },
+  { label: label('链长', 'Chain'), value: numberOrDash(firstNumber(httpPayload.value.cert_chain_length)) },
+])
 
 // 核心颜色函数
 const getColor = (metric: string, value: any) => {
@@ -153,6 +232,93 @@ const tlsColor = computed(() => getColor('tlsVersion', metrics.value.tlsVersion)
 const certColor = computed(() => getColor('certDaysLeft', metrics.value.certDaysLeft))
 const iconColor = (bgClass: string) =>
     bgClass.includes('green') ? 'text-green-500' : bgClass.includes('yellow') ? 'text-yellow-500' : 'text-red-500'
+
+function asRecord(value: unknown): Record<string, any> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : {}
+}
+
+function firstNumber(...values: unknown[]) {
+  for (const value of values) {
+    const parsed = typeof value === 'number' ? value : parseNumber(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return null
+}
+
+function parseNumber(value: unknown) {
+  if (typeof value === 'number') {
+    return value
+  }
+  if (typeof value !== 'string') {
+    return Number.NaN
+  }
+  const matched = value.match(/-?\d+(\.\d+)?/)
+  return matched ? Number(matched[0]) : Number.NaN
+}
+
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+  return ''
+}
+
+function formatMs(value: number | null) {
+  return value === null ? '-' : `${Math.round(value)}ms`
+}
+
+function formatDays(value: number | null) {
+  if (value === null) {
+    return '-'
+  }
+  return `${Math.round(value)}${label('天', 'd')}`
+}
+
+function numberOrDash(value: number | null) {
+  return value === null ? '-' : String(Math.round(value))
+}
+
+function shortDate(value: string) {
+  if (!value) {
+    return '-'
+  }
+  return value.replace('T', ' ').replace(/\.\d+.*$/, '').slice(0, 10)
+}
+
+function boolText(value: unknown) {
+  if (value === true) {
+    return yesText.value
+  }
+  if (value === false) {
+    return noText.value
+  }
+  return '-'
+}
+
+function boolMaybeText(value: unknown) {
+  if (typeof value === 'boolean') {
+    return boolText(value)
+  }
+  return ''
+}
+
+function label(zh: string, en: string) {
+  return i18n.global.locale.value === 'en' ? en : zh
+}
+
+function headerValue(key: string) {
+  const normalizedKey = key.toLowerCase()
+  for (const [name, values] of Object.entries(props.httpRecord.headers ?? {})) {
+    if (name.toLowerCase() === normalizedKey && values?.length) {
+      return values[0]
+    }
+  }
+  return ''
+}
 
 // 初始化图表
 function initChart() {

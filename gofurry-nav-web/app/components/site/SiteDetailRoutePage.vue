@@ -45,6 +45,8 @@
           v-if="sitePageData.sitePingRecord && sitePageData.siteHttpRecord"
           :ping-record="sitePageData.sitePingRecord"
           :http-record="sitePageData.siteHttpRecord"
+          :target-latest-core="sitePageData.targetLatestCore"
+          :mode="healthSummaryMode"
         />
       </div>
 
