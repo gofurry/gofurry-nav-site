@@ -14,6 +14,7 @@ server:
   gc_percent: 1000 # Go GC 百分比；不熟悉时保持默认。
   network: "tcp" # Fiber 监听网络类型。
   enable_prefork: false # Fiber prefork；单机小服务建议 false。
+  trusted_proxy_cidrs: "loopback" # 可信反代来源；只有这些来源的 X-Forwarded-For / X-Real-IP 会被用于限流和浏览量去重。Docker/Nginx 可追加 10.6.0.0/24。
 
 database:
   db_name: "gfn" # Nav 主业务库。
@@ -29,6 +30,10 @@ database:
 redis:
   redis_addr: "127.0.0.1:6379"
   redis_password: "CHANGE_ME"
+  timeout_seconds: 2 # 每次 Redis 命令超时；Redis 慢或断连时避免公开接口长时间悬挂。
+
+security:
+  jwt_secret: "CHANGE_ME_LONG_RANDOM_SECRET" # JWT 签名密钥；如使用环境变量 GF_NAV_BACKEND_JWT_SECRET，会优先生效。
 
 nav_v2:
   enabled: true # v2 路由总开关；未配置时兼容旧 summary_enabled 行为。
@@ -36,7 +41,9 @@ nav_v2:
   detail_enabled: true # 是否注册 /api/v2/nav/sites/:siteId/detail 聚合接口。
   read_model_enabled: true # 是否注册 latest / observations / trend / changes / light-probes 分接口。
   summary_stale_after_seconds: 86400 # summary 超过该时间视为 stale。
-  raw_payload_preview_bytes: 65536 # latest/observations 默认 payload 截断阈值；payload_mode=full 时完整返回。
+  raw_payload_preview_bytes: 65536 # latest/observations 默认单条 payload 截断阈值。
+  payload_response_max_bytes: 2097152 # 单次响应 payload 总预算；避免 observations limit 较大时返回过大 JSON。
+  full_payload_enabled: false # 是否允许 payload_mode=full 完整返回 raw payload；公开前端建议保持 false，仅内网诊断时临时打开。
 
 log:
   log_level: "info" # debug / info / warn / error。

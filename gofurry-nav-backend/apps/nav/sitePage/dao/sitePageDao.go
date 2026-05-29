@@ -1,6 +1,8 @@
 package dao
 
 import (
+	"sync"
+
 	siteModel "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
@@ -8,14 +10,18 @@ import (
 )
 
 var newSitePageDao = new(sitePageDao)
-
-func init() {
-	newSitePageDao.Init()
-}
+var sitePageDaoMu sync.Mutex
 
 type sitePageDao struct{ abstract.Dao }
 
-func GetSitePageDao() *sitePageDao { return newSitePageDao }
+func GetSitePageDao() *sitePageDao {
+	sitePageDaoMu.Lock()
+	defer sitePageDaoMu.Unlock()
+	if newSitePageDao.Gm == nil {
+		newSitePageDao.Init()
+	}
+	return newSitePageDao
+}
 
 func (dao sitePageDao) GetSiteById(id int64) (record siteModel.GfnSite, err common.GFError) {
 	db := dao.Gm.Table(siteModel.TableNameGfnSite)

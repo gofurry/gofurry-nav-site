@@ -2,9 +2,10 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -30,6 +31,19 @@ var navPageSingleton = new(navPageService)
 func GetNavPageService() *navPageService { return navPageSingleton }
 
 const siteListCacheKey = "site:list:v2"
+
+const (
+	searchSuggestTimeout      = 3 * time.Second
+	searchSuggestMaxBodyBytes = 64 * 1024
+	searchSuggestMaxQueryLen  = 128
+)
+
+var (
+	baiduSuggestEndpoint  = "http://suggestion.baidu.com/su"
+	bingSuggestEndpoint   = "https://api.bing.com/qsonhs.aspx"
+	googleSuggestEndpoint = "http://suggestqueries.google.com/complete/search"
+	biliSuggestEndpoint   = "https://s.search.bilibili.com/main/suggest"
+)
 
 // 获取导航站点信息
 func (svc *navPageService) GetSiteList(lang string) (res []models.SiteVo, err common.GFError) {
@@ -112,18 +126,26 @@ func (svc *navPageService) GetPingList() (res map[string]string, err common.GFEr
 }
 
 func (svc *navPageService) GetBaiduSuggestion(q string) ([]string, common.GFError) {
-	url := fmt.Sprintf("http://suggestion.baidu.com/su?wd=%s&p=3&cb=window.bdsug.sug", q)
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, common.NewServiceError("请求百度搜索建议接口出错: " + err.Error())
+	q = normalizeSuggestionQuery(q)
+	if q == "" {
+		return []string{}, nil
 	}
-	defer resp.Body.Close()
-
-	body, _ := ioutil.ReadAll(resp.Body)
+	reqURL, err := buildSuggestionURL(baiduSuggestEndpoint, map[string]string{
+		"wd": q,
+		"p":  "3",
+		"cb": "window.bdsug.sug",
+	})
+	if err != nil {
+		return []string{}, nil
+	}
+	body, err := fetchSuggestionBody(reqURL, nil)
+	if err != nil {
+		return []string{}, nil
+	}
 
 	// 转 GBK -> UTF-8
 	reader := transform.NewReader(bytes.NewReader(body), simplifiedchinese.GBK.NewDecoder())
-	utf8Body, _ := ioutil.ReadAll(reader)
+	utf8Body, _ := io.ReadAll(io.LimitReader(reader, searchSuggestMaxBodyBytes))
 	strBody := string(utf8Body)
 
 	// 提取 JSON 字符串
@@ -168,14 +190,21 @@ type BingResponse struct {
 }
 
 func (svc *navPageService) GetBingSuggestion(q string) ([]string, common.GFError) {
-	url := fmt.Sprintf("https://api.bing.com/qsonhs.aspx?type=cb&q=%s", q)
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, common.NewServiceError("请求必应搜索建议接口出错: " + err.Error())
+	q = normalizeSuggestionQuery(q)
+	if q == "" {
+		return []string{}, nil
 	}
-	defer resp.Body.Close()
-
-	body, _ := ioutil.ReadAll(resp.Body)
+	reqURL, err := buildSuggestionURL(bingSuggestEndpoint, map[string]string{
+		"type": "cb",
+		"q":    q,
+	})
+	if err != nil {
+		return []string{}, nil
+	}
+	body, err := fetchSuggestionBody(reqURL, nil)
+	if err != nil {
+		return []string{}, nil
+	}
 	strBody := string(body)
 
 	// 固定前缀和固定尾部
@@ -229,21 +258,22 @@ type GoogleXML struct {
 }
 
 func (svc *navPageService) GetGoogleSuggestion(q string) ([]string, common.GFError) {
-	proxyURL, _ := url.Parse(env.GetServerConfig().Proxy.Url)
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyURL(proxyURL),
-		},
+	q = normalizeSuggestionQuery(q)
+	if q == "" {
+		return []string{}, nil
 	}
-
-	url := fmt.Sprintf("http://suggestqueries.google.com/complete/search?output=toolbar&hl=zh&q=%s", q)
-	resp, err := client.Get(url)
+	reqURL, err := buildSuggestionURL(googleSuggestEndpoint, map[string]string{
+		"output": "toolbar",
+		"hl":     "zh",
+		"q":      q,
+	})
 	if err != nil {
-		return nil, common.NewServiceError("请求谷歌搜索建议接口出错: " + err.Error())
+		return []string{}, nil
 	}
-	defer resp.Body.Close()
-
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := fetchSuggestionBody(reqURL, suggestionProxyURL())
+	if err != nil {
+		return []string{}, nil
+	}
 
 	type GoogleXML struct {
 		XMLName             xml.Name `xml:"toplevel"`
@@ -267,20 +297,24 @@ func (svc *navPageService) GetGoogleSuggestion(q string) ([]string, common.GFErr
 }
 
 func (svc *navPageService) GetBiliBiliSuggestion(q string) ([]string, common.GFError) {
+	q = normalizeSuggestionQuery(q)
 	if q == "" {
 		return []string{}, nil
 	}
 
-	url := fmt.Sprintf("https://s.search.bilibili.com/main/suggest?func=suggest&suggest_type=accurate&sub_type=tag&main_ver=v1&term=%s", q)
-	resp, err := http.Get(url)
+	reqURL, err := buildSuggestionURL(biliSuggestEndpoint, map[string]string{
+		"func":         "suggest",
+		"suggest_type": "accurate",
+		"sub_type":     "tag",
+		"main_ver":     "v1",
+		"term":         q,
+	})
 	if err != nil {
-		return nil, common.NewServiceError("请求B站搜索建议接口出错: " + err.Error())
+		return []string{}, nil
 	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := fetchSuggestionBody(reqURL, nil)
 	if err != nil {
-		return nil, common.NewServiceError("读取B站响应出错: " + err.Error())
+		return []string{}, nil
 	}
 
 	// 定义响应结构体
@@ -297,7 +331,7 @@ func (svc *navPageService) GetBiliBiliSuggestion(q string) ([]string, common.GFE
 
 	var result BiliResp
 	if err := sonic.Unmarshal(body, &result); err != nil {
-		return nil, common.NewServiceError("解析B站响应JSON出错: " + err.Error())
+		return []string{}, nil
 	}
 
 	// 只返回 value
@@ -307,6 +341,69 @@ func (svc *navPageService) GetBiliBiliSuggestion(q string) ([]string, common.GFE
 	}
 
 	return suggestions, nil
+}
+
+func normalizeSuggestionQuery(q string) string {
+	q = strings.TrimSpace(q)
+	if len([]rune(q)) <= searchSuggestMaxQueryLen {
+		return q
+	}
+	return string([]rune(q)[:searchSuggestMaxQueryLen])
+}
+
+func buildSuggestionURL(endpoint string, params map[string]string) (string, error) {
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return "", err
+	}
+	values := u.Query()
+	for key, value := range params {
+		values.Set(key, value)
+	}
+	u.RawQuery = values.Encode()
+	return u.String(), nil
+}
+
+func suggestionProxyURL() *url.URL {
+	raw := strings.TrimSpace(env.GetServerConfig().Proxy.Url)
+	if raw == "" {
+		return nil
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return nil
+	}
+	return parsed
+}
+
+func fetchSuggestionBody(reqURL string, proxyURL *url.URL) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), searchSuggestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", common.USER_AGENT)
+	req.Header.Set("Accept-Language", common.ACCEPT_LANGUAGE)
+
+	transport := http.DefaultTransport
+	if proxyURL != nil {
+		transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
+	}
+	client := &http.Client{
+		Timeout:   searchSuggestTimeout,
+		Transport: transport,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+	return io.ReadAll(io.LimitReader(resp.Body, searchSuggestMaxBodyBytes))
 }
 
 func (svc *navPageService) GetSayingService() (res models.SayingModel, err common.GFError) {

@@ -25,6 +25,25 @@ func TestNavV2RouteSwitchesAllowIndependentDisable(t *testing.T) {
 	}
 }
 
+func TestNavV2PayloadDefaults(t *testing.T) {
+	cfg := NavV2Config{}
+	if cfg.FullPayloadEnabled {
+		t.Fatal("full payload should be disabled by default")
+	}
+	if cfg.PayloadResponseMaxBytesOrDefault() != 2*1024*1024 {
+		t.Fatalf("payload response max = %d", cfg.PayloadResponseMaxBytesOrDefault())
+	}
+}
+
+func TestRedisTimeoutDefault(t *testing.T) {
+	if (RedisConfig{}).Timeout().Seconds() != 2 {
+		t.Fatalf("redis timeout = %s", (RedisConfig{}).Timeout())
+	}
+	if (RedisConfig{TimeoutSeconds: 5}).Timeout().Seconds() != 5 {
+		t.Fatalf("configured redis timeout = %s", (RedisConfig{TimeoutSeconds: 5}).Timeout())
+	}
+}
+
 func boolPtr(value bool) *bool {
 	return &value
 }

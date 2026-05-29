@@ -12,6 +12,7 @@ import (
 	readmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/models"
 	summarymodels "github.com/gofurry/gofurry-nav-backend/apps/nav/summary/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/roof/env"
 )
 
 func TestGetSiteDetailAggregatesReadModelAndSummary(t *testing.T) {
@@ -371,9 +372,18 @@ func TestPayloadPreviewAndFullMode(t *testing.T) {
 		t.Fatalf("expected truncated latest payload: %+v", envelope)
 	}
 
+	_, err = svc.GetTargetLatest(8, "example.com", PayloadModeFull)
+	if err == nil || err.GetMsg() != "payload_mode=full 未启用" {
+		t.Fatalf("GetTargetLatest(full disabled) error = %v", err)
+	}
+
+	previousFull := env.GetServerConfig().NavV2.FullPayloadEnabled
+	env.GetServerConfig().NavV2.FullPayloadEnabled = true
+	t.Cleanup(func() { env.GetServerConfig().NavV2.FullPayloadEnabled = previousFull })
+
 	full, err := svc.GetTargetLatest(8, "example.com", PayloadModeFull)
 	if err != nil {
-		t.Fatalf("GetTargetLatest(full) error = %v", err)
+		t.Fatalf("GetTargetLatest(full enabled) error = %v", err)
 	}
 	if full.Protocols[readmodels.ProtocolHTTP].PayloadTruncated || !strings.Contains(string(full.Protocols[readmodels.ProtocolHTTP].Payload), strings.Repeat("x", 128)) {
 		t.Fatalf("expected full latest payload: %+v", full.Protocols[readmodels.ProtocolHTTP])
@@ -385,6 +395,21 @@ func TestPayloadPreviewAndFullMode(t *testing.T) {
 	}
 	if observations.Limit != readmodels.MaxObservationLimit || !observations.Items[0].PayloadTruncated {
 		t.Fatalf("expected normalized limit and truncated observation: %+v", observations)
+	}
+}
+
+func TestPayloadPolicyAppliesTotalBudget(t *testing.T) {
+	payload := json.RawMessage(`{"body":"` + strings.Repeat("x", 1024) + `"}`)
+	items := []readmodels.CollectorEnvelope{
+		{Protocol: readmodels.ProtocolHTTP, Payload: payload},
+		{Protocol: readmodels.ProtocolDNS, Payload: payload},
+	}
+	result := applyPayloadPolicyToItems(items, PayloadModeFull, 512, len(payload)+1)
+	if result[0].PayloadTruncated {
+		t.Fatalf("first payload should fit total budget: %+v", result[0])
+	}
+	if !result[1].PayloadTruncated {
+		t.Fatalf("second payload should be truncated by total budget: %+v", result[1])
 	}
 }
 

@@ -41,7 +41,10 @@ func (svc *sitePageService) touchSiteViewCount(siteID int64, dbCount int64, clie
 
 	dailyKey := fmt.Sprintf("%s%d:%s:%s", siteViewDailyPrefix, siteID, time.Now().Format("2006-01-02"), util.CreateMD5(clientIP))
 	if cs.SetNX(dailyKey, "1", siteViewDailyTTL) {
-		cs.Incr(countKey)
+		if err := cs.Incr(countKey); err != nil {
+			log.Warn(fmt.Sprintf("[site-view-count] incr redis count failed for site %d: %v", siteID, err))
+			return current + 1
+		}
 		if countStr, err := cs.GetString(countKey); err == nil && countStr != "" {
 			if parsed, parseErr := util.String2Int64(countStr); parseErr == nil {
 				current = parsed

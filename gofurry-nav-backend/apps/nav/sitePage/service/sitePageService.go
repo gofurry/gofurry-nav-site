@@ -96,13 +96,15 @@ func (svc *sitePageService) GetSitePingRecordService(domain string) (siteDelayVo
 	}
 	idx := 0
 	var temp models.SiteDelay
-	loss20, delay20, loss60, delay60, loss100, delay100 := 0, 0, 0, 0, 0, 0
+	loss20, delay20, count20 := 0, 0, 0
+	loss60, delay60, count60 := 0, 0, 0
+	loss100, delay100, count100 := 0, 0, 0
 	for _, v := range delayList {
 		idx++
 
 		temp.Status = v.Status
-		temp.Loss, _ = util.String2Int(v.Loss)
-		temp.Delay, _ = util.String2Int(v.Delay[:len(v.Delay)-2])
+		temp.Loss = util.ExtractSuffix2Int(v.Loss, "%")
+		temp.Delay = util.ExtractSuffix2Int(v.Delay, "ms")
 		temp.Time = v.CreateTime
 
 		// 20 次
@@ -110,11 +112,13 @@ func (svc *sitePageService) GetSitePingRecordService(domain string) (siteDelayVo
 			siteDelayVo.Twenty.DelayModel = append(siteDelayVo.Twenty.DelayModel, temp)
 			loss20 += temp.Loss
 			delay20 += temp.Delay
+			count20++
 		}
 		// 60 次抽样 20 次
 		if idx <= 60 {
 			loss60 += temp.Loss
 			delay60 += temp.Delay
+			count60++
 			if idx%3 == 0 {
 				siteDelayVo.Sixty.DelayModel = append(siteDelayVo.Sixty.DelayModel, temp)
 			}
@@ -123,18 +127,26 @@ func (svc *sitePageService) GetSitePingRecordService(domain string) (siteDelayVo
 		if idx <= 100 {
 			loss100 += temp.Loss
 			delay100 += temp.Delay
+			count100++
 			if idx%5 == 0 {
 				siteDelayVo.Hundred.DelayModel = append(siteDelayVo.Hundred.DelayModel, temp)
 			}
 		}
 	}
 
-	siteDelayVo.Twenty.AvgDelay = util.Int642String(int64(delay20/20)) + "ms"
-	siteDelayVo.Twenty.AvgLoss = util.Int642String(int64(loss20/20)) + "%"
-	siteDelayVo.Sixty.AvgDelay = util.Int642String(int64(delay60/60)) + "ms"
-	siteDelayVo.Sixty.AvgLoss = util.Int642String(int64(loss60/60)) + "%"
-	siteDelayVo.Hundred.AvgDelay = util.Int642String(int64(delay100/100)) + "ms"
-	siteDelayVo.Hundred.AvgLoss = util.Int642String(int64(loss100/100)) + "%"
+	siteDelayVo.Twenty.AvgDelay = avgWithUnit(delay20, count20, "ms")
+	siteDelayVo.Twenty.AvgLoss = avgWithUnit(loss20, count20, "%")
+	siteDelayVo.Sixty.AvgDelay = avgWithUnit(delay60, count60, "ms")
+	siteDelayVo.Sixty.AvgLoss = avgWithUnit(loss60, count60, "%")
+	siteDelayVo.Hundred.AvgDelay = avgWithUnit(delay100, count100, "ms")
+	siteDelayVo.Hundred.AvgLoss = avgWithUnit(loss100, count100, "%")
 
 	return
+}
+
+func avgWithUnit(total int, count int, unit string) string {
+	if count <= 0 {
+		return "0" + unit
+	}
+	return util.Int642String(int64(total/count)) + unit
 }

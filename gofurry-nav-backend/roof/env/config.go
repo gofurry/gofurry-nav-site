@@ -28,6 +28,7 @@ type serverConfig struct {
 	Log        LogConfig        `yaml:"log"`
 	Redis      RedisConfig      `yaml:"redis"`
 	NavV2      NavV2Config      `yaml:"nav_v2"`
+	Security   SecurityConfig   `yaml:"security"`
 	Thread     ThreadConfig     `yaml:"thread"`
 	Middleware MiddlewareConfig `yaml:"middleware"`
 	Waf        WafConfig        `yaml:"waf"`
@@ -102,8 +103,16 @@ type ThreadConfig struct {
 }
 
 type RedisConfig struct {
-	RedisAddr     string `yaml:"redis_addr"`
-	RedisPassword string `yaml:"redis_password"`
+	RedisAddr      string `yaml:"redis_addr"`
+	RedisPassword  string `yaml:"redis_password"`
+	TimeoutSeconds int    `yaml:"timeout_seconds"`
+}
+
+func (cfg RedisConfig) Timeout() time.Duration {
+	if cfg.TimeoutSeconds <= 0 {
+		return 2 * time.Second
+	}
+	return time.Duration(cfg.TimeoutSeconds) * time.Second
 }
 
 type NavV2Config struct {
@@ -113,6 +122,8 @@ type NavV2Config struct {
 	ReadModelEnabled         *bool `yaml:"read_model_enabled"`
 	SummaryStaleAfterSeconds int   `yaml:"summary_stale_after_seconds"`
 	RawPayloadPreviewBytes   int   `yaml:"raw_payload_preview_bytes"`
+	FullPayloadEnabled       bool  `yaml:"full_payload_enabled"`
+	PayloadResponseMaxBytes  int   `yaml:"payload_response_max_bytes"`
 }
 
 func (cfg NavV2Config) SummaryStaleAfter() time.Duration {
@@ -143,6 +154,13 @@ func (cfg NavV2Config) RawPayloadPreviewBytesOrDefault() int {
 		return 64 * 1024
 	}
 	return cfg.RawPayloadPreviewBytes
+}
+
+func (cfg NavV2Config) PayloadResponseMaxBytesOrDefault() int {
+	if cfg.PayloadResponseMaxBytes <= 0 {
+		return 2 * 1024 * 1024
+	}
+	return cfg.PayloadResponseMaxBytes
 }
 
 func (cfg NavV2Config) v2RoutesEnabled() bool {
@@ -178,13 +196,18 @@ type DataBaseConfig struct {
 }
 
 type ServerConfig struct {
-	Mode          string `yaml:"mode"`
-	IPAddress     string `yaml:"ip_address"`
-	Port          string `yaml:"port"`
-	MemoryLimit   int    `yaml:"memory_limit"`
-	GCPercent     int    `yaml:"gc_percent"`
-	Network       string `yaml:"network"`
-	EnablePrefork bool   `yaml:"enable_prefork"`
+	Mode              string `yaml:"mode"`
+	IPAddress         string `yaml:"ip_address"`
+	Port              string `yaml:"port"`
+	MemoryLimit       int    `yaml:"memory_limit"`
+	GCPercent         int    `yaml:"gc_percent"`
+	Network           string `yaml:"network"`
+	EnablePrefork     bool   `yaml:"enable_prefork"`
+	TrustedProxyCIDRs string `yaml:"trusted_proxy_cidrs"`
+}
+
+type SecurityConfig struct {
+	JWTSecret string `yaml:"jwt_secret"`
 }
 
 func InitServerConfig(projectName string) {
@@ -198,7 +221,7 @@ func InitConfig(projectName string, fileName string, conf interface{}) {
 	if FileExists(file) {
 		err := loadYaml(file, conf)
 		if err != nil {
-			fmt.Println(err.Error())
+			traceConfig(err.Error())
 		} else {
 			hit = true
 		}
@@ -208,13 +231,13 @@ func InitConfig(projectName string, fileName string, conf interface{}) {
 	if !hit {
 		pwd, err := os.Getwd()
 		if err != nil {
-			fmt.Println("Error loading pwd dir:", err.Error())
+			traceConfig("Error loading pwd dir: " + err.Error())
 		} else {
 			filePath := pwd + "/conf/" + fileName
 			if FileExists(filePath) {
 				err = loadYaml(filePath, conf)
 				if err != nil {
-					fmt.Println("Error loading "+fileName+" file:", err.Error())
+					traceConfig("Error loading " + fileName + " file: " + err.Error())
 				} else {
 					hit = true
 				}
@@ -229,7 +252,7 @@ func InitConfig(projectName string, fileName string, conf interface{}) {
 }
 
 func FileExists(path string) bool {
-	fmt.Println("check filepath:" + path)
+	traceConfig("check filepath:" + path)
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -240,7 +263,7 @@ func FileExists(path string) bool {
 }
 
 func loadYaml(path string, conf interface{}) (err error) {
-	fmt.Println("load config:" + path)
+	traceConfig("load config:" + path)
 	if FileExists(path) {
 		fileBytes, err := os.ReadFile(path)
 		if err != nil {
@@ -249,6 +272,12 @@ func loadYaml(path string, conf interface{}) (err error) {
 		return yaml.Unmarshal(fileBytes, conf)
 	}
 	return errors.New("未找到配置文件" + path)
+}
+
+func traceConfig(message string) {
+	if os.Getenv("GF_NAV_BACKEND_CONFIG_TRACE") == "1" {
+		fmt.Println(message)
+	}
 }
 
 func isRunningGoTest() bool {

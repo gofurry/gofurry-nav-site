@@ -191,7 +191,7 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 
 ### v0.4.2 - 前端接入前安全与可靠性收敛
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Security/Safety / Stability / Performance / Testing
 **Goal:** 在 Nuxt 前端正式迁移到 `/api/v2/nav` 之前，修复本轮 backend 全量审计发现的公开接口、基础设施和 v1 兼容边界问题。
 
@@ -206,20 +206,21 @@ GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
 
 #### Tasks
 
-- [ ] 修复 P1-001：为百度、必应、谷歌、B 站搜索建议接口增加统一 timeout、响应体上限、`q` 长度限制、`url.QueryEscape` 和外部失败降级策略。
-- [ ] 为搜索建议接口补充 `httptest.Server` 测试，覆盖慢响应、超大响应、坏 JSON/XML、超长输入和上游不可用。
-- [ ] 修复 P1-002：默认禁止公开接口使用 `payload_mode=full` 绕过 preview 限制，增加 `nav_v2.full_payload_enabled` 或等价开关。
-- [ ] 为 observations/latest/light-probes 增加单响应 payload 总预算，避免 `limit=500` 返回过大 JSON。
-- [ ] 修复 P2-001：统一客户端 IP 获取逻辑，配置可信代理来源，非可信来源不读取用户可伪造的 `X-Forwarded-For` / `X-Real-IP`。
-- [ ] 让 limiter key、v1 浏览量去重和日志里的客户端 IP 使用同一可信代理 helper。
-- [ ] 修复 P2-002：Redis wrapper 内部统一使用每次命令 timeout context，修正 `HDel` 错误返回，`Incr` 改为可返回错误并让调用方记录失败。
-- [ ] 修复 P2-003：DB 初始化显式检查 `db.engine.DB()` 错误，并改用安全 DSN 构造，日志不得输出密码明文。
-- [ ] 修复 P2-004：v1 Ping 历史接口安全解析 `delay/loss`，脏数据不 panic，平均值按实际参与统计数量计算。
-- [ ] 修复 P3-001：配置路径探测日志默认关闭，仅在 `GF_NAV_BACKEND_CONFIG_TRACE=1` 时输出。
-- [ ] 修复 P3-002：整理 `common/util/http.go`，移除危险默认；通用 HTTP helper 必须有 timeout、响应体上限和默认 TLS 校验。
-- [ ] 修复 P3-003：JWT secret 改为配置或环境变量来源，`ParseToken` 对 nil token 和非法 token 做防御性处理。
-- [ ] 增加或更新 `conf/server.example.yaml` 注释，说明 `nav_v2.full_payload_enabled`、可信代理、Redis timeout、JWT secret 等配置。
-- [ ] 更新审计报告状态或新增修复说明，确认 v0.4.2 中 P1/P2 均已关闭。
+- [x] 修复 P1-001：为百度、必应、谷歌、B 站搜索建议接口增加统一 timeout、响应体上限、`q` 长度限制、`url.QueryEscape` 和外部失败降级策略。
+- [x] 为搜索建议接口补充 `httptest.Server` 测试，覆盖慢响应、超大响应、坏 JSON/XML、超长输入和上游不可用。
+- [x] 修复 P1-002：默认禁止公开接口使用 `payload_mode=full` 绕过 preview 限制，增加 `nav_v2.full_payload_enabled` 或等价开关。
+- [x] 为 observations/latest/light-probes 增加单响应 payload 总预算，避免 `limit=500` 返回过大 JSON。
+- [x] 修复 P2-001：统一客户端 IP 获取逻辑，配置可信代理来源，非可信来源不读取用户可伪造的 `X-Forwarded-For` / `X-Real-IP`。
+- [x] 让 limiter key、v1 浏览量去重和日志里的客户端 IP 使用同一可信代理 helper。
+- [x] 修复 P2-002：Redis wrapper 内部统一使用每次命令 timeout context，修正 `HDel` 错误返回，`Incr` 改为可返回错误并让调用方记录失败。
+- [x] 修复 P2-003：DB 初始化显式检查 `db.engine.DB()` 错误，并改用安全 DSN 构造，日志不得输出密码明文。
+- [x] 修复 P2-004：v1 Ping 历史接口安全解析 `delay/loss`，脏数据不 panic，平均值按实际参与统计数量计算。
+- [x] 修复 P3-001：配置路径探测日志默认关闭，仅在 `GF_NAV_BACKEND_CONFIG_TRACE=1` 时输出。
+- [x] 修复 P3-002：整理 `common/util/http.go`，移除危险默认；通用 HTTP helper 必须有 timeout、响应体上限和默认 TLS 校验。
+- [x] 修复 P3-003：JWT secret 改为配置或环境变量来源，`ParseToken` 对 nil token 和非法 token 做防御性处理。
+- [x] 增加或更新 `conf/server.example.yaml` 注释，说明 `nav_v2.full_payload_enabled`、可信代理、Redis timeout、JWT secret 等配置。
+- [x] 更新审计报告状态或新增修复说明，确认 v0.4.2 中 P1/P2 均已关闭。
+- [x] 将 v1 nav/sitePage DAO 从包级 init 改为懒加载，避免纯单元测试必须连接真实数据库。
 
 #### Acceptance Criteria
 
