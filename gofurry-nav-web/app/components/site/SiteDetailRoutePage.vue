@@ -24,6 +24,8 @@
           :domain-options="domainOptions"
           :domain-route-suffix="domainRouteSuffix"
           :enable-domain-switcher="enableDomainSwitcher"
+          :edge-provider-hints="overviewEdgeProviderHints"
+          :keywords="overviewKeywords"
           :site-id="siteId"
         />
       </div>
@@ -122,6 +124,26 @@ const domainOptions = computed(() => {
   }
 
   return options
+})
+const overviewKeywords = computed(() => {
+  if (!props.enableDomainSwitcher) {
+    return []
+  }
+
+  const rawKeywords = sitePageData.value.siteHttpRecord?.meta?.keywords
+  if (!rawKeywords) {
+    return []
+  }
+
+  return rawKeywords
+    .split(/[,，;；]/)
+    .map(keyword => keyword.trim())
+    .filter(Boolean)
+    .filter((keyword, index, list) => list.indexOf(keyword) === index)
+    .slice(0, 12)
+})
+const overviewEdgeProviderHints = computed(() => {
+  return props.enableDomainSwitcher ? sitePageData.value.targetHealthSummary?.edge_provider_hints ?? [] : []
 })
 
 const seoTitle = computed(() => {

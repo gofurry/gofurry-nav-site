@@ -16,6 +16,13 @@
         <div class="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
             <h1 class="mr-2 text-2xl font-bold">{{ site.name }}</h1>
+            <span
+              v-if="edgeProviderLabel"
+              class="inline-flex items-center rounded-full bg-orange-200/70 px-3 py-1 text-xs font-medium text-orange-800 dark:bg-orange-500/15 dark:text-orange-100"
+              :title="edgeProviderTitle"
+            >
+              {{ edgeProviderLabel }}
+            </span>
             <div class="flex w-auto flex-wrap gap-2">
               <span
                 v-for="(tag, index) in tags"
@@ -45,8 +52,10 @@
           <div class="flex justify-between items-center w-full">
             <div
               class="group/domain relative"
-              @mouseenter="openDomainCard"
-              @mouseleave="scheduleCloseDomainCard"
+              @pointerenter="openDomainCard"
+              @pointerleave="scheduleCloseDomainCard"
+              @focusin="openDomainCard"
+              @focusout="scheduleCloseDomainCard"
             >
               <div class="flex items-center">
                 <span
@@ -62,16 +71,17 @@
 
               <transition name="domain-card">
                 <div
-                  v-if="showDomainCard"
+                  v-show="showDomainCard"
                   class="absolute left-0 top-full z-20 w-[min(22rem,calc(100vw-4rem))] pt-3"
-                  @mouseenter="openDomainCard"
-                  @mouseleave="scheduleCloseDomainCard"
+                  @pointerenter="openDomainCard"
+                  @pointerleave="scheduleCloseDomainCard"
                 >
+                  <div class="absolute left-0 top-0 h-3 w-full" />
                   <div class="rounded-xl bg-orange-100/95 p-3 text-sm text-orange-950 backdrop-blur-md dark:bg-stone-900/95 dark:text-orange-50">
                     <div class="mb-2 px-1 text-xs font-medium text-orange-500 dark:text-orange-300">
                       {{ domainListTitle }}
                     </div>
-                    <div class="flex flex-col gap-1">
+                    <div class="flex max-h-72 flex-col gap-1 overflow-y-auto pr-1 domain-list-scroll">
                       <NuxtLink
                         v-for="domain in switchableDomains"
                         :key="domain"
@@ -111,6 +121,16 @@
         <p class="mb-2 line-clamp-2 text-gray-600 transition-all duration-300 hover:line-clamp-none">
           {{ site.description }}
         </p>
+
+        <div v-if="visibleKeywords.length" class="mt-3 flex flex-wrap gap-2">
+          <span
+            v-for="keyword in visibleKeywords"
+            :key="keyword"
+            class="rounded-full bg-orange-100 px-3 py-1 text-xs text-orange-700 dark:bg-orange-500/15 dark:text-orange-100"
+          >
+            {{ keyword }}
+          </span>
+        </div>
       </div>
     </div>
   </section>
@@ -135,6 +155,12 @@ interface SiteOverviewProps {
   enableDomainSwitcher?: boolean
   domainOptions?: string[]
   domainRouteSuffix?: string
+  edgeProviderHints?: {
+    provider: string
+    hint_type: string
+    confidence: string
+  }[]
+  keywords?: string[]
   siteId?: string | number
 }
 
@@ -191,6 +217,31 @@ const switchableDomains = computed(() => {
 const domainListTitle = computed(() => {
   return i18n.global.locale.value === 'en' ? 'Collected domains' : '采集域名'
 })
+const visibleKeywords = computed(() => {
+  return (props.keywords ?? [])
+    .map(keyword => keyword.trim())
+    .filter(Boolean)
+    .filter((keyword, index, list) => list.indexOf(keyword) === index)
+    .slice(0, 12)
+})
+const edgeProviderLabel = computed(() => {
+  const hint = props.edgeProviderHints?.[0]
+  if (!hint?.provider) {
+    return ''
+  }
+
+  const provider = providerName(hint.provider)
+  const type = hint.hint_type ? hintTypeName(hint.hint_type) : ''
+  const confidence = confidenceName(hint.confidence)
+  const moreCount = Math.max((props.edgeProviderHints?.length ?? 0) - 1, 0)
+  const suffix = moreCount > 0 ? ` +${moreCount}` : ''
+  return [provider, type, confidence].filter(Boolean).join(' · ') + suffix
+})
+const edgeProviderTitle = computed(() => {
+  return props.edgeProviderHints
+    ?.map(hint => [providerName(hint.provider), hintTypeName(hint.hint_type), confidenceName(hint.confidence)].filter(Boolean).join(' · '))
+    .join('\n') ?? ''
+})
 
 function openDomainCard() {
   if (!props.enableDomainSwitcher || switchableDomains.value.length <= 1) {
@@ -212,7 +263,7 @@ function scheduleCloseDomainCard() {
 
   domainCardCloseTimer = setTimeout(() => {
     showDomainCard.value = false
-  }, 180)
+  }, 320)
 }
 
 function domainLink(domain: string) {
@@ -232,6 +283,43 @@ function tagClass(index: number) {
   const colors = ['bg-orange-100 text-orange-800', 'bg-amber-100 text-amber-800']
   return colors[index % colors.length]
 }
+
+function providerName(provider: string) {
+  const names: Record<string, string> = {
+    cloudflare: 'Cloudflare',
+    tencent_cloud: '腾讯云',
+    aliyun: '阿里云',
+    aws_cloudfront: 'CloudFront',
+    fastly: 'Fastly',
+    vercel: 'Vercel',
+    netlify: 'Netlify',
+    github_pages: 'GitHub Pages',
+  }
+
+  return names[provider] ?? provider
+}
+
+function hintTypeName(type: string) {
+  const names: Record<string, string> = {
+    cdn: 'CDN',
+    waf: 'WAF',
+    reverse_proxy: '反代',
+    object_storage: '对象存储',
+    hosting_platform: '托管平台',
+  }
+
+  return names[type] ?? type
+}
+
+function confidenceName(confidence: string) {
+  const names: Record<string, string> = {
+    low: '低置信',
+    medium: '中置信',
+    high: '高置信',
+  }
+
+  return names[confidence] ?? confidence
+}
 </script>
 
 <style scoped>
@@ -244,5 +332,9 @@ function tagClass(index: number) {
 .domain-card-leave-to {
   opacity: 0;
   transform: translateY(-4px);
+}
+
+.domain-list-scroll {
+  scrollbar-width: thin;
 }
 </style>
