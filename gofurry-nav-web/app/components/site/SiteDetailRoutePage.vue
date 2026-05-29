@@ -32,6 +32,9 @@
 
       <div v-if="sitePageData.siteHealthSummary || sitePageData.targetHealthSummary" class="mx-10 mb-8">
         <SiteHealthSummaryPanel
+          :current-target="sitePageData.domain"
+          :mode="healthSummaryMode"
+          :security-headers="securityHeaderItems"
           :site-summary="sitePageData.siteHealthSummary"
           :target-summary="sitePageData.targetHealthSummary"
         />
@@ -103,6 +106,7 @@ const pageRoot = ref<HTMLElement | null>(null)
 const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'Failed to load site data.' : '站点数据加载失败。'))
 const enableDomainSwitcher = computed(() => props.enableDomainSwitcher)
 const domainRouteSuffix = computed(() => props.domainRouteSuffix)
+const healthSummaryMode = computed(() => (props.enableDomainSwitcher ? 'v2' : 'default'))
 const domainOptions = computed(() => {
   const targets = sitePageData.value.siteHealthSummary?.targets ?? []
   const seen = new Set<string>()
@@ -145,6 +149,21 @@ const overviewKeywords = computed(() => {
 const overviewEdgeProviderHints = computed(() => {
   return props.enableDomainSwitcher ? sitePageData.value.targetHealthSummary?.edge_provider_hints ?? [] : []
 })
+const securityHeaderItems = computed(() => {
+  if (!props.enableDomainSwitcher) {
+    return []
+  }
+
+  const headers = normalizeHeaders(sitePageData.value.siteHttpRecord?.headers)
+  return [
+    { label: 'HSTS', ok: hasHeader(headers, 'strict-transport-security') },
+    { label: 'CSP', ok: hasHeader(headers, 'content-security-policy') },
+    { label: 'X-Frame-Options', ok: hasHeader(headers, 'x-frame-options') },
+    { label: 'X-Content-Type-Options', ok: hasHeader(headers, 'x-content-type-options') },
+    { label: 'Referrer-Policy', ok: hasHeader(headers, 'referrer-policy') },
+    { label: 'Permissions-Policy', ok: hasHeader(headers, 'permissions-policy') },
+  ]
+})
 
 const seoTitle = computed(() => {
   const name = sitePageData.value.siteInfo?.name?.trim()
@@ -163,4 +182,18 @@ useSeoMeta({
 })
 
 const generateReport = () => {}
+
+function normalizeHeaders(headers?: Record<string, string[]>) {
+  const normalized: Record<string, string[]> = {}
+
+  for (const [key, value] of Object.entries(headers ?? {})) {
+    normalized[key.toLowerCase()] = Array.isArray(value) ? value : [String(value)]
+  }
+
+  return normalized
+}
+
+function hasHeader(headers: Record<string, string[]>, key: string) {
+  return (headers[key]?.length ?? 0) > 0
+}
 </script>

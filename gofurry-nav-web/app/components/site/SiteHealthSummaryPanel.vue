@@ -4,24 +4,24 @@
       <div>
         <h3 class="font-semibold">{{ t('site.healthSummary.title') }}</h3>
       </div>
-      <span :class="['rounded-full px-3 py-1 text-xs font-semibold', statusClass(displayStatus)]">
+      <span v-if="!isV2Mode" :class="['rounded-full px-3 py-1 text-xs font-semibold', statusClass(displayStatus)]">
         {{ statusText(displayStatus) }}
       </span>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+    <div :class="['grid grid-cols-1 gap-4 text-sm', isV2Mode ? 'lg:grid-cols-3' : 'md:grid-cols-2']">
       <div class="md:flex md:flex-col">
         <h4 class="mb-2 text-sm font-bold text-gray-500">{{ t('site.healthSummary.siteStatus') }}</h4>
         <div class="rounded-lg bg-orange-100 p-3 md:flex-1">
-          <div class="mb-2">
+          <div v-if="!isV2Mode" class="mb-2">
             <span class="font-bold">{{ t('site.healthSummary.state') }}:</span>
             {{ stateText(siteSummary?.state) }}
           </div>
-          <div>
+          <div v-if="!isV2Mode">
             <span class="font-bold">{{ t('site.healthSummary.targetCount') }}:</span>
             {{ siteSummary?.target_count ?? 0 }}
           </div>
-          <div v-if="statusCountEntries.length" class="mt-2 flex flex-wrap gap-2">
+          <div v-if="!isV2Mode && statusCountEntries.length" class="mt-2 flex flex-wrap gap-2">
             <span
               v-for="[status, count] in statusCountEntries"
               :key="status"
@@ -38,7 +38,7 @@
             >
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <span class="break-all font-mono text-xs">{{ target.target }}</span>
-                <span :class="['rounded-full px-2 py-0.5 text-xs font-semibold', statusClass(target.status)]">
+                <span v-if="!isV2Mode" :class="['rounded-full px-2 py-0.5 text-xs font-semibold', statusClass(target.status)]">
                   {{ statusText(target.status) }}
                 </span>
               </div>
@@ -54,7 +54,7 @@
         <h4 class="mb-2 text-sm font-bold text-gray-500">{{ t('site.healthSummary.currentTarget') }}</h4>
         <div class="rounded-lg bg-orange-100 p-3 md:flex-1">
           <div class="break-all font-mono text-xs">{{ targetSummary.target }}</div>
-          <div class="mt-2">
+          <div v-if="!isV2Mode" class="mt-2">
             <span class="font-bold">{{ t('site.healthSummary.status') }}:</span>
             {{ statusText(targetSummary.status) }}
           </div>
@@ -77,6 +77,25 @@
           </div>
         </div>
       </div>
+
+      <div v-if="isV2Mode" class="md:flex md:flex-col">
+        <h4 class="mb-2 text-sm font-bold text-gray-500">{{ securityHeadersTitle }}</h4>
+        <div class="rounded-lg bg-orange-100 p-3 md:flex-1">
+          <div v-if="securityHeaders.length" class="grid grid-cols-1 gap-2">
+            <div
+              v-for="item in securityHeaders"
+              :key="item.label"
+              class="flex items-center justify-between gap-3 rounded-md bg-orange-50 px-3 py-2 text-xs"
+            >
+              <span>{{ item.label }}</span>
+              <span :class="item.ok ? 'text-green-700' : 'text-gray-400'">
+                {{ item.ok ? yesText : noText }}
+              </span>
+            </div>
+          </div>
+          <div v-else class="text-xs text-gray-500">{{ t('site.healthSummary.none') }}</div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -89,14 +108,41 @@ import type { HealthStatus, SiteHealthSummary, TargetHealthSummary } from '~/typ
 const props = defineProps<{
   siteSummary: SiteHealthSummary | null
   targetSummary: TargetHealthSummary | null
+  currentTarget?: string
+  mode?: 'default' | 'v2'
+  securityHeaders?: { label: string; ok: boolean }[]
 }>()
 
 const { t } = useI18n()
 
+const isV2Mode = computed(() => props.mode === 'v2')
 const displayStatus = computed(() => props.targetSummary?.status || props.siteSummary?.status || 'unknown')
 const statusCountEntries = computed(() => Object.entries(props.siteSummary?.status_counts ?? {}).filter(([, count]) => count > 0))
-const targetEntries = computed(() => props.siteSummary?.targets ?? [])
+const targetEntries = computed(() => {
+  const targets = props.siteSummary?.targets ?? []
+  if (!isV2Mode.value) {
+    return targets
+  }
+
+  const currentTarget = props.currentTarget || props.targetSummary?.target
+  const matchedTargets = targets.filter(target => target.target === currentTarget).slice(0, 1)
+  if (matchedTargets.length || !props.targetSummary) {
+    return matchedTargets
+  }
+
+  return [{
+    target: props.targetSummary.target,
+    status: props.targetSummary.status,
+    reason_codes: props.targetSummary.reason_codes,
+    reason_messages: props.targetSummary.reason_messages,
+    observed_at: props.targetSummary.observed_at,
+  }]
+})
 const protocolEntries = computed(() => Object.entries(props.targetSummary?.protocols ?? {}))
+const securityHeaders = computed(() => props.securityHeaders ?? [])
+const securityHeadersTitle = computed(() => (t('common.loading') === 'Loading...' ? 'Security Headers' : '安全响应头'))
+const yesText = computed(() => (t('common.loading') === 'Loading...' ? 'Present' : '已配置'))
+const noText = computed(() => (t('common.loading') === 'Loading...' ? 'Missing' : '未发现'))
 
 function statusText(status: string) {
   return t(`site.healthSummary.statuses.${status || 'unknown'}`)

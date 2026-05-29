@@ -232,14 +232,13 @@ const edgeProviderLabel = computed(() => {
 
   const provider = providerName(hint.provider)
   const type = hint.hint_type ? hintTypeName(hint.hint_type) : ''
-  const confidence = confidenceName(hint.confidence)
   const moreCount = Math.max((props.edgeProviderHints?.length ?? 0) - 1, 0)
   const suffix = moreCount > 0 ? ` +${moreCount}` : ''
-  return [provider, type, confidence].filter(Boolean).join(' · ') + suffix
+  return [provider, type].filter(Boolean).join(' · ') + suffix
 })
 const edgeProviderTitle = computed(() => {
   return props.edgeProviderHints
-    ?.map(hint => [providerName(hint.provider), hintTypeName(hint.hint_type), confidenceName(hint.confidence)].filter(Boolean).join(' · '))
+    ?.map(hint => [providerName(hint.provider), hintTypeName(hint.hint_type)].filter(Boolean).join(' · '))
     .join('\n') ?? ''
 })
 
@@ -311,15 +310,6 @@ function hintTypeName(type: string) {
   return names[type] ?? type
 }
 
-function confidenceName(confidence: string) {
-  const names: Record<string, string> = {
-    low: '低置信',
-    medium: '中置信',
-    high: '高置信',
-  }
-
-  return names[confidence] ?? confidence
-}
 </script>
 
 <style scoped>
