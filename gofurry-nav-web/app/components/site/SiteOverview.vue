@@ -41,18 +41,50 @@
           </div>
         </div>
 
-        <div class="group relative mb-3 flex items-center">
+        <div class="relative mb-3 flex items-center">
           <div class="flex justify-between items-center w-full">
-            <div>
-              <span
-                class="cursor-pointer font-mono text-gray-500 hover:text-orange-400 duration-300"
-                @click="copyToClipboard(site.domain)"
-              >
-                {{ site.domain }}
-              </span>
-              <span class="duration-300 ml-2 text-xs text-gray-400 opacity-0 transition-opacity group-hover:opacity-100">
-                {{ t('common.copy') }}
-              </span>
+            <div
+              class="group/domain relative"
+              @mouseenter="openDomainCard"
+              @mouseleave="scheduleCloseDomainCard"
+            >
+              <div class="flex items-center">
+                <span
+                  class="cursor-pointer font-mono text-gray-500 duration-300 hover:text-orange-400 dark:text-gray-400 dark:hover:text-orange-300"
+                  @click="copyToClipboard(site.domain)"
+                >
+                  {{ site.domain }}
+                </span>
+                <span class="duration-300 ml-2 text-xs text-gray-400 opacity-0 transition-opacity group-hover/domain:opacity-100 dark:text-gray-500">
+                  {{ t('common.copy') }}
+                </span>
+              </div>
+
+              <transition name="domain-card">
+                <div
+                  v-if="showDomainCard"
+                  class="absolute left-0 top-full z-20 w-[min(22rem,calc(100vw-4rem))] pt-3"
+                  @mouseenter="openDomainCard"
+                  @mouseleave="scheduleCloseDomainCard"
+                >
+                  <div class="rounded-xl bg-orange-100/95 p-3 text-sm text-orange-950 backdrop-blur-md dark:bg-stone-900/95 dark:text-orange-50">
+                    <div class="mb-2 px-1 text-xs font-medium text-orange-500 dark:text-orange-300">
+                      {{ domainListTitle }}
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <NuxtLink
+                        v-for="domain in switchableDomains"
+                        :key="domain"
+                        :to="domainLink(domain)"
+                        class="rounded-lg px-3 py-2 font-mono text-xs text-gray-700 transition duration-200 hover:bg-orange-200/70 hover:text-orange-700 dark:text-gray-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-200"
+                        :class="{ 'bg-orange-200/60 text-orange-700 dark:bg-orange-500/20 dark:text-orange-100': domain === site.domain }"
+                      >
+                        {{ domain }}
+                      </NuxtLink>
+                    </div>
+                  </div>
+                </div>
+              </transition>
             </div>
             <div>
               <span
@@ -100,6 +132,10 @@ interface SiteOverviewProps {
     description: string
     viewCount?: number
   }
+  enableDomainSwitcher?: boolean
+  domainOptions?: string[]
+  domainRouteSuffix?: string
+  siteId?: string | number
 }
 
 const props = defineProps<SiteOverviewProps>()
@@ -124,6 +160,67 @@ function copyToClipboard(text: string) {
   setTimeout(() => (copied.value = false), 2000)
 }
 
+const showDomainCard = ref(false)
+let domainCardCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+const switchableDomains = computed(() => {
+  if (!props.enableDomainSwitcher) {
+    return []
+  }
+
+  const seen = new Set<string>()
+  const domains: string[] = []
+
+  for (const domain of props.domainOptions ?? []) {
+    const value = domain.trim()
+    if (!value || seen.has(value)) {
+      continue
+    }
+
+    seen.add(value)
+    domains.push(value)
+  }
+
+  if (props.site.domain && !seen.has(props.site.domain)) {
+    domains.unshift(props.site.domain)
+  }
+
+  return domains
+})
+
+const domainListTitle = computed(() => {
+  return i18n.global.locale.value === 'en' ? 'Collected domains' : '采集域名'
+})
+
+function openDomainCard() {
+  if (!props.enableDomainSwitcher || switchableDomains.value.length <= 1) {
+    return
+  }
+
+  if (domainCardCloseTimer) {
+    clearTimeout(domainCardCloseTimer)
+    domainCardCloseTimer = null
+  }
+
+  showDomainCard.value = true
+}
+
+function scheduleCloseDomainCard() {
+  if (domainCardCloseTimer) {
+    clearTimeout(domainCardCloseTimer)
+  }
+
+  domainCardCloseTimer = setTimeout(() => {
+    showDomainCard.value = false
+  }, 180)
+}
+
+function domainLink(domain: string) {
+  const siteId = props.siteId ? String(props.siteId) : ''
+  const suffix = props.domainRouteSuffix ?? ''
+  return `/site/${encodeURIComponent(siteId)}/${encodeURIComponent(domain)}${suffix}`
+}
+
 const tags = computed(() => {
   const list: string[] = []
   list.push(props.site.nsfw ? t('site.overview.nsfw') : t('site.overview.sfw'))
@@ -136,3 +233,16 @@ function tagClass(index: number) {
   return colors[index % colors.length]
 }
 </script>
+
+<style scoped>
+.domain-card-enter-active,
+.domain-card-leave-active {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.domain-card-enter-from,
+.domain-card-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>

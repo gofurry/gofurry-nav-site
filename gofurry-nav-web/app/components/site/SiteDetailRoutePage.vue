@@ -21,6 +21,10 @@
             description: sitePageData.siteInfo.info || '',
             viewCount: sitePageData.siteInfo.view_count ?? 0,
           }"
+          :domain-options="domainOptions"
+          :domain-route-suffix="domainRouteSuffix"
+          :enable-domain-switcher="enableDomainSwitcher"
+          :site-id="siteId"
         />
       </div>
 
@@ -82,11 +86,43 @@ import SiteOverview from '@/components/site/SiteOverview.vue'
 import SitePerformance from '@/components/site/SitePerformance.vue'
 import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
 
+const props = withDefaults(defineProps<{
+  enableDomainSwitcher?: boolean
+  domainRouteSuffix?: string
+}>(), {
+  enableDomainSwitcher: false,
+  domainRouteSuffix: '',
+})
+
 const { t } = useI18n()
-const { data, pending, error, refresh } = await useSiteDetailPage()
+const { data, pending, error, refresh, siteId } = await useSiteDetailPage()
 const sitePageData = computed(() => data.value!)
 const pageRoot = ref<HTMLElement | null>(null)
 const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'Failed to load site data.' : '站点数据加载失败。'))
+const enableDomainSwitcher = computed(() => props.enableDomainSwitcher)
+const domainRouteSuffix = computed(() => props.domainRouteSuffix)
+const domainOptions = computed(() => {
+  const targets = sitePageData.value.siteHealthSummary?.targets ?? []
+  const seen = new Set<string>()
+  const options: string[] = []
+
+  for (const target of targets) {
+    const value = target.target?.trim()
+    if (!value || seen.has(value)) {
+      continue
+    }
+
+    seen.add(value)
+    options.push(value)
+  }
+
+  const currentDomain = sitePageData.value.domain?.trim()
+  if (currentDomain && !seen.has(currentDomain)) {
+    options.unshift(currentDomain)
+  }
+
+  return options
+})
 
 const seoTitle = computed(() => {
   const name = sitePageData.value.siteInfo?.name?.trim()
