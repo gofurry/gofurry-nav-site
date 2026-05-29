@@ -58,7 +58,7 @@
             <span class="font-bold">{{ t('site.healthSummary.status') }}:</span>
             {{ statusText(targetSummary.status) }}
           </div>
-          <div v-if="protocolEntries.length" :class="[isV2Mode ? 'flex w-full max-w-md flex-wrap justify-center gap-2' : 'mt-2 flex flex-wrap gap-2']">
+          <div v-if="protocolEntries.length" :class="[isV2Mode ? 'grid w-full max-w-3xl grid-cols-1 gap-2 min-[1680px]:grid-cols-3' : 'mt-2 flex flex-wrap gap-2']">
             <div
               v-for="[protocol, protocolSummary] in protocolEntries"
               :key="protocol"
