@@ -34,16 +34,18 @@
           :ping-record="sitePageData.sitePingRecord"
           :http-record="sitePageData.siteHttpRecord"
           :target-latest-core="sitePageData.targetLatestCore"
-        />
-      </div>
-
-      <div v-if="sitePageData.siteHealthSummary || sitePageData.targetHealthSummary" class="mx-10 mb-8">
-        <SiteHealthSummaryPanel
-          :current-target="sitePageData.domain"
-          :security-headers="securityHeaderItems"
-          :site-summary="sitePageData.siteHealthSummary"
-          :target-summary="sitePageData.targetHealthSummary"
-        />
+        >
+          <template v-if="sitePageData.siteHealthSummary || sitePageData.targetHealthSummary" #after-metrics>
+            <div class="mb-8">
+              <SiteHealthSummaryPanel
+                :current-target="sitePageData.domain"
+                :security-headers="securityHeaderItems"
+                :site-summary="sitePageData.siteHealthSummary"
+                :target-summary="sitePageData.targetHealthSummary"
+              />
+            </div>
+          </template>
+        </SitePerformance>
       </div>
 
       <div class="mx-10 mb-8">

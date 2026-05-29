@@ -75,6 +75,8 @@
       </div>
     </div>
 
+    <slot name="after-metrics" />
+
     <!-- 延迟时序图 -->
     <div class="rounded-xl p-5">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
