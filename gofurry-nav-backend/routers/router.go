@@ -20,6 +20,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/pprof"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofurry/gofurry-nav-backend/common"
+	"github.com/gofurry/gofurry-nav-backend/common/util"
 	"github.com/gofurry/gofurry-nav-backend/middleware"
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
 )
@@ -46,7 +47,7 @@ func (router *router) Init() *fiber.App {
 		AppName:      common.COMMON_PROJECT_NAME,
 		ServerHeader: "gofurry-Nav",
 		ErrorHandler: customErrorHandler,
-		TrustProxy:   true,
+		TrustProxy:   false,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		JSONEncoder:  sonic.Marshal,
@@ -72,9 +73,9 @@ func registerRoutes(app *fiber.App) {
 	// v1 正式路由：/api/v1/nav/...
 	navApi(v1.Group("/nav"))
 
-	if env.GetServerConfig().NavV2.SummaryEnabled {
+	if env.GetServerConfig().NavV2.AnyRouteEnabled() {
 		v2 := api.Group("/v2")
-		navV2Api(v2.Group("/nav"))
+		navV2Api(v2.Group("/nav"), env.GetServerConfig().NavV2)
 	}
 }
 
@@ -102,7 +103,7 @@ func registerMiddlewares(app *fiber.App) {
 			Max:        cfg.Middleware.Limiter.MaxRequests,              // 单位时间最大请求数
 			Expiration: cfg.Middleware.Limiter.Expiration * time.Second, // 时间窗口
 			KeyGenerator: func(c fiber.Ctx) string {
-				return c.IP() // 按 IP 限流
+				return util.GetClientIP(c) // 按可信客户端 IP 限流
 			},
 			LimitReached: func(c fiber.Ctx) error {
 				return common.NewResponse(c).ErrorWithCode("请求过于频繁, 请稍后再试", fiber.StatusTooManyRequests)

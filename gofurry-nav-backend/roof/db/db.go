@@ -1,8 +1,9 @@
 package db
 
 import (
-	"fmt"
 	"log/slog"
+	"net"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -34,17 +35,19 @@ func (db *orm) loadDBConfig() {
 		return
 	}
 	var err error
-	var dsn string
 
 	pgsql := env.GetServerConfig().DataBase
-	dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", pgsql.DBHost, pgsql.DBPort, pgsql.DBUsername, pgsql.DBPassword, pgsql.DBName)
-	db.engine, err = gorm.Open(postgres.Open(dsn))
+	db.engine, err = gorm.Open(postgres.Open(buildPostgresDSN(pgsql)))
 	if err != nil {
 		slog.Error("open database error: " + err.Error())
 		os.Exit(1)
 	}
 
-	sqlDB, _ := db.engine.DB()
+	sqlDB, err := db.engine.DB()
+	if err != nil {
+		slog.Error("get database pool error: " + err.Error())
+		os.Exit(1)
+	}
 	sqlDB.SetMaxIdleConns(intOrDefault(pgsql.MaxIdleConns, 100))                 // 设置空闲连接池中连接的最大数量
 	sqlDB.SetMaxOpenConns(intOrDefault(pgsql.MaxOpenConns, 1000))                // 设置打开数据库连接的最大数量
 	sqlDB.SetConnMaxLifetime(secondsOrDefault(pgsql.ConnMaxLifetimeSeconds, 60)) // 设置了可以重新使用连接的最大时间
@@ -93,4 +96,17 @@ func intOrDefault(value int, def int) int {
 
 func secondsOrDefault(value int, def int) time.Duration {
 	return time.Duration(intOrDefault(value, def)) * time.Second
+}
+
+func buildPostgresDSN(pgsql env.DataBaseConfig) string {
+	u := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(pgsql.DBUsername, pgsql.DBPassword),
+		Host:   net.JoinHostPort(pgsql.DBHost, pgsql.DBPort),
+		Path:   pgsql.DBName,
+	}
+	q := u.Query()
+	q.Set("sslmode", "disable")
+	u.RawQuery = q.Encode()
+	return u.String()
 }

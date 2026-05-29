@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -50,6 +51,7 @@ func readSiteSummary(get redisGetter, siteID int64, staleAfter time.Duration, no
 
 	var summary models.SiteSummaryResponse
 	if jsonErr := sonic.UnmarshalString(raw, &summary); jsonErr != nil {
+		logSummaryRedisJSONDecodeFailure(SiteSummaryKey(siteID), siteID, "", jsonErr)
 		return models.SiteSummaryResponse{}, common.NewServiceError("站点健康摘要解析失败")
 	}
 	if summary.SiteID == 0 {
@@ -81,6 +83,7 @@ func readTargetSummary(get redisGetter, siteID int64, target string, staleAfter 
 
 	var summary models.TargetSummaryResponse
 	if jsonErr := sonic.UnmarshalString(raw, &summary); jsonErr != nil {
+		logSummaryRedisJSONDecodeFailure(TargetSummaryKey(siteID, target), siteID, target, jsonErr)
 		return models.TargetSummaryResponse{}, common.NewServiceError("目标健康摘要解析失败")
 	}
 	if summary.SiteID == 0 {
@@ -147,4 +150,15 @@ func emptyStatusCounts() map[string]int {
 		models.StatusUnknown:  0,
 		models.StatusDown:     0,
 	}
+}
+
+func logSummaryRedisJSONDecodeFailure(key string, siteID int64, target string, err error) {
+	slog.Warn(
+		"collector v2 summary redis json parse failed",
+		"redis_key", key,
+		"site_id", siteID,
+		"target", target,
+		"protocol", "",
+		"error", err.Error(),
+	)
 }

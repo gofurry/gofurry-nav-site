@@ -83,7 +83,7 @@
     <main class="archive-workspace">
       <header class="workspace-header">
         <div class="workspace-actions">
-          <NuxtLink class="icon-button home-button" to="/nav" :title="t('archive.actions.backHome')">
+          <NuxtLink class="icon-button home-button" to="/" :title="t('archive.actions.backHome')">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M15 18l-6-6 6-6" />
             </svg>

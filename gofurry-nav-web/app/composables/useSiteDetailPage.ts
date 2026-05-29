@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { DnsItem, DnsRecord, HttpRecord, PingRecord, Site, SiteHealthSummary, SiteInfo, TargetHealthSummary } from '~/types/nav'
+import type { DnsItem, DnsRecord, HttpRecord, PingRecord, Site, SiteHealthSummary, SiteInfo, TargetHealthSummary, TargetLatestResponse } from '~/types/nav'
 import { safeJsonParse } from '~/utils/util'
 
 export interface SiteDetailPageData {
@@ -11,6 +11,8 @@ export interface SiteDetailPageData {
   siteDnsRecord: DnsRecord | null
   siteHealthSummary: SiteHealthSummary | null
   targetHealthSummary: TargetHealthSummary | null
+  targetLatestCore: TargetLatestResponse | null
+  lightProbeState: TargetLatestResponse | null
 }
 
 function extractPrimaryDomain(rawDomain: unknown): string {
@@ -81,7 +83,7 @@ export async function useSiteDetailPage() {
   const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
 
   const asyncData = await useAsyncData<SiteDetailPageData>(
-    () => `site-detail:${route.path}:${siteId.value}:${selectedDomain.value}:${lang.value}`,
+    () => `site-detail:${route.path}:${siteId.value}:${selectedDomain.value}:${lang.value}:v2`,
     async () => {
       const siteInfo = await navApi<SiteInfo>('/nav/site/getSiteDetail', {
         query: {
@@ -113,10 +115,12 @@ export async function useSiteDetailPage() {
           siteDnsRecord: null,
           siteHealthSummary,
           targetHealthSummary: null,
+          targetLatestCore: null,
+          lightProbeState: null,
         }
       }
 
-      const [httpRecord, dnsRecord, pingRecord, siteHealthSummary, targetHealthSummary] = await Promise.all([
+      const [httpRecord, dnsRecord, pingRecord, siteHealthSummary, targetHealthSummary, targetLatestCore, lightProbeState] = await Promise.all([
         navApi<HttpRecord>('/nav/site/getSiteHttpRecord', {
           query: {
             domain: resolvedDomain,
@@ -138,6 +142,20 @@ export async function useSiteDetailPage() {
         siteId.value
           ? navV2Api<TargetHealthSummary>(`/nav/sites/${siteId.value}/targets/${encodeURIComponent(resolvedDomain)}/summary`).catch(() => null)
           : Promise.resolve(null),
+        siteId.value
+          ? navV2Api<TargetLatestResponse>(`/nav/sites/${siteId.value}/targets/${encodeURIComponent(resolvedDomain)}/latest`, {
+              query: {
+                payload_mode: 'preview',
+              },
+            }).catch(() => null)
+          : Promise.resolve(null),
+        siteId.value
+          ? navV2Api<TargetLatestResponse>(`/nav/sites/${siteId.value}/targets/${encodeURIComponent(resolvedDomain)}/light-probes`, {
+              query: {
+                payload_mode: 'preview',
+              },
+            }).catch(() => null)
+          : Promise.resolve(null),
       ])
 
       return {
@@ -148,6 +166,8 @@ export async function useSiteDetailPage() {
         siteDnsRecord: parseDnsRecord(dnsRecord),
         siteHealthSummary,
         targetHealthSummary,
+        targetLatestCore,
+        lightProbeState,
       }
     },
     {
@@ -160,6 +180,8 @@ export async function useSiteDetailPage() {
         siteDnsRecord: null,
         siteHealthSummary: null,
         targetHealthSummary: null,
+        targetLatestCore: null,
+        lightProbeState: null,
       }),
     }
   )

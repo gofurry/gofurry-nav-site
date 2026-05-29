@@ -52,6 +52,11 @@ func CreateMD5(str string) string {
 }
 
 func GetClientIP(c fiber.Ctx) string {
+	remoteIP := strings.TrimSpace(c.IP())
+	if !isTrustedProxyIP(remoteIP, env.GetServerConfig().Server.TrustedProxyCIDRs) {
+		return remoteIP
+	}
+
 	for _, header := range []string{"X-Forwarded-For", "X-Real-IP"} {
 		if value := strings.TrimSpace(c.Get(header)); value != "" {
 			if header == "X-Forwarded-For" {
@@ -59,13 +64,36 @@ func GetClientIP(c fiber.Ctx) string {
 					value = strings.TrimSpace(value[:idx])
 				}
 			}
-			if value != "" {
+			if net.ParseIP(value) != nil {
 				return value
 			}
 		}
 	}
 
-	return strings.TrimSpace(c.IP())
+	return remoteIP
+}
+
+func isTrustedProxyIP(remoteIP string, trustedCIDRs string) bool {
+	ip := net.ParseIP(strings.TrimSpace(remoteIP))
+	if ip == nil {
+		return false
+	}
+	for _, item := range strings.Split(trustedCIDRs, ",") {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if item == "loopback" && ip.IsLoopback() {
+			return true
+		}
+		if _, network, err := net.ParseCIDR(item); err == nil && network.Contains(ip) {
+			return true
+		}
+		if single := net.ParseIP(item); single != nil && single.Equal(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 // 判断是否为数字
@@ -181,20 +209,33 @@ func GenerateRandomCode(length int) string {
 // JWT 密钥
 func Secret() jwt.Keyfunc {
 	return func(token *jwt.Token) (interface{}, error) {
-		return []byte(common.TOKEN_SECRET), nil
+		return []byte(jwtSecret()), nil
 	}
+}
+
+func jwtSecret() string {
+	if value := strings.TrimSpace(os.Getenv("GF_NAV_BACKEND_JWT_SECRET")); value != "" {
+		return value
+	}
+	if value := strings.TrimSpace(env.GetServerConfig().Security.JWTSecret); value != "" {
+		return value
+	}
+	return common.TOKEN_SECRET
 }
 
 // 解密JWT Token
 func ParseToken(authorization string) (*cm.GFClaims, error) {
 	token, err := jwt.ParseWithClaims(authorization, &cm.GFClaims{}, Secret())
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
+	}
+	if token == nil {
+		return nil, errors.New("token is nil")
 	}
 	if claims, ok := token.Claims.(*cm.GFClaims); ok && token.Valid {
 		return claims, nil
 	}
-	return nil, err
+	return nil, errors.New("invalid token")
 }
 
 /*
@@ -217,7 +258,7 @@ func NewToken(userId string, userName string) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(common.TOKEN_SECRET))
+	return token.SignedString([]byte(jwtSecret()))
 }
 
 // 判断是否 IP

@@ -1,6 +1,7 @@
 logs
 docs/*
 !docs/roadmap.md
+!docs/backend-code-audit.md
 conf/*
 !conf/
 !conf/server.example.yaml
