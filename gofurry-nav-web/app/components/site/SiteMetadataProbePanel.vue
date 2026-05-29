@@ -17,7 +17,7 @@
           v-for="probe in lightProbeEntries"
           :key="probe.protocol"
           type="button"
-          class="rounded-xl bg-orange-50/80 p-4 text-left transition-colors hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-300/70"
+          class="group cursor-pointer rounded-xl bg-orange-50/80 p-4 text-left transition-[background-color,box-shadow,color] duration-500 hover:bg-orange-50 hover:ring-2 hover:ring-orange-300/55 focus:outline-none focus:ring-2 focus:ring-orange-300/70"
           @click="selectedProbe = probe"
         >
           <div class="mb-3 flex items-center justify-between gap-2">
@@ -27,6 +27,9 @@
             </span>
           </div>
           <InfoList compact :items="probe.items" :empty-text="label('暂无数据', 'No data')" />
+          <div class="mt-3 text-xs font-semibold text-orange-600 opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-focus-visible:opacity-100">
+            {{ label('点击查看详情', 'Click for details') }}
+          </div>
         </button>
       </div>
       <div v-else class="rounded-xl bg-orange-50/80 p-4 text-sm text-gray-500">{{ label('暂无数据', 'No data') }}</div>
