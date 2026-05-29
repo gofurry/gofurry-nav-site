@@ -7,7 +7,7 @@
         class="mx-auto flex w-full max-w-[1700px] items-center gap-3 px-4 py-2 transition-all duration-300 sm:px-6"
     >
       <NuxtLink
-          to="/nav"
+          to="/"
           class="flex shrink-0 items-center gap-2 px-2 py-1"
           @click.stop="closeMenus"
       >
@@ -225,7 +225,7 @@ const archiveLink = computed<NavLink>(() => (
 ))
 
 const navLinks = computed<NavLink[]>(() => [
-  { label: t('sidebar.nav'), to: '/nav' },
+  { label: t('sidebar.nav'), to: '/' },
   { label: t('sidebar.games'), to: '/games' },
   archiveLink.value,
   { label: langStore.lang === 'zh' ? '深度兽研' : 'DeepFurry', href: 'https://www.deepfurry.com', external: true },

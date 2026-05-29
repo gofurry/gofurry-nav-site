@@ -19,7 +19,7 @@ import { NAV_PAGE_REVEAL_EVENT } from '@/utils/navPageReveal'
 const route = useRoute()
 const navPageRevealed = ref(true)
 const normalizedPath = computed(() => route.path.replace(/^\/(zh|en)(?=\/|$)/, '') || '/')
-const isNavPage = computed(() => normalizedPath.value === '/nav')
+const isNavPage = computed(() => normalizedPath.value === '/')
 const isFullViewportPage = computed(() => normalizedPath.value === '/archive')
 const showNavBar = computed(() => !isFullViewportPage.value)
 const navBarWrapperClass = computed(() => (

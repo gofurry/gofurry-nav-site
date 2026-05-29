@@ -34,7 +34,7 @@
 
             <div class="flex flex-wrap gap-3">
               <NuxtLink
-                  to="/nav"
+                  to="/"
                   class="inline-flex items-center justify-center rounded-xl bg-[var(--about-action-bg)] px-5 py-3 text-sm font-semibold text-[var(--about-action-text)] transition hover:brightness-105"
               >
                 {{ hero.primaryAction }}
