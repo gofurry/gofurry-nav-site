@@ -8,11 +8,11 @@
         <h3 class="text-lg font-semibold text-gray-900">{{ text.title }}</h3>
       </div>
 
-      <div class="flex overflow-x-auto rounded-xl bg-orange-50 p-1">
+      <div class="flex flex-wrap gap-1 rounded-xl bg-orange-50 p-1">
         <button
           v-for="tab in tabs"
           :key="tab.key"
-          class="whitespace-nowrap rounded-lg px-4 py-2 text-sm transition-colors"
+          class="rounded-lg px-4 py-2 text-sm transition-colors"
           :class="activeTab === tab.key ? 'bg-orange-200 text-gray-900' : 'text-gray-600 hover:bg-orange-100'"
           @click="activeTab = tab.key"
         >
@@ -36,15 +36,6 @@
       </div>
 
       <div v-else class="space-y-5">
-        <div v-if="dnsRiskFlags.length" class="flex flex-wrap gap-2">
-          <span
-            v-for="flag in dnsRiskFlags"
-            :key="flag"
-            class="rounded-full bg-yellow-100 px-2.5 py-1 text-xs text-yellow-800"
-          >
-            {{ flag }}
-          </span>
-        </div>
         <MetricGrid :items="dnsMetrics" />
         <div v-if="dnsRecordGroups.length" class="space-y-4">
           <div v-for="group in dnsRecordGroups" :key="group.type">
@@ -91,10 +82,10 @@ const text = computed(() => ({
   none: label('暂无数据', 'No data'),
 }))
 const tabs = computed<{ key: TabKey; label: string }[]>(() => [
-  { key: 'ping', label: label('PING 观测', 'Ping') },
-  { key: 'http', label: label('HTTP 观测', 'HTTP') },
-  { key: 'tls', label: label('TLS 观测', 'TLS') },
-  { key: 'dns', label: label('DNS 观测', 'DNS') },
+  { key: 'ping', label: 'PING' },
+  { key: 'http', label: 'HTTP' },
+  { key: 'tls', label: 'TLS' },
+  { key: 'dns', label: 'DNS' },
 ])
 
 const pingPayload = computed(() => payload('ping'))
@@ -142,7 +133,6 @@ const tlsMetrics = computed<MetricItem[]>(() => [
   { label: label('证书链长度', 'Chain Length'), value: numberValue(httpPayload.value.cert_chain_length) },
 ])
 
-const dnsRiskFlags = computed(() => stringArray(dnsPayload.value.risk_flags))
 const dnsMetrics = computed<MetricItem[]>(() => [
   { label: 'A', value: recordCount('A') },
   { label: 'AAAA', value: recordCount('AAAA') },
