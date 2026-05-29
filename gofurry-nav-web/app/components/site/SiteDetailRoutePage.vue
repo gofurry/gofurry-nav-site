@@ -30,7 +30,10 @@
         />
       </div>
 
-      <div v-if="sitePageData.siteHealthSummary || sitePageData.targetHealthSummary" class="mx-10 mb-8">
+      <div
+        v-if="sitePageData.siteHealthSummary || sitePageData.targetHealthSummary"
+        :class="['mx-10 mb-8', enableDomainSwitcher ? 'order-2' : 'order-1']"
+      >
         <SiteHealthSummaryPanel
           :current-target="sitePageData.domain"
           :mode="healthSummaryMode"
@@ -40,7 +43,7 @@
         />
       </div>
 
-      <div class="mx-10 mb-8">
+      <div :class="['mx-10 mb-8', enableDomainSwitcher ? 'order-1' : 'order-2']">
         <SitePerformance
           v-if="sitePageData.sitePingRecord && sitePageData.siteHttpRecord"
           :ping-record="sitePageData.sitePingRecord"
