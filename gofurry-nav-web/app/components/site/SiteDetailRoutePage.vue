@@ -28,21 +28,21 @@
         />
       </div>
 
-      <div v-if="sitePageData.siteHealthSummary || sitePageData.targetHealthSummary" class="mx-10 mb-8">
-        <SiteHealthSummaryPanel
-          :current-target="sitePageData.domain"
-          :security-headers="securityHeaderItems"
-          :site-summary="sitePageData.siteHealthSummary"
-          :target-summary="sitePageData.targetHealthSummary"
-        />
-      </div>
-
       <div class="mx-10 mb-8">
         <SitePerformance
           v-if="sitePageData.sitePingRecord && sitePageData.siteHttpRecord"
           :ping-record="sitePageData.sitePingRecord"
           :http-record="sitePageData.siteHttpRecord"
           :target-latest-core="sitePageData.targetLatestCore"
+        />
+      </div>
+
+      <div v-if="sitePageData.siteHealthSummary || sitePageData.targetHealthSummary" class="mx-10 mb-8">
+        <SiteHealthSummaryPanel
+          :current-target="sitePageData.domain"
+          :security-headers="securityHeaderItems"
+          :site-summary="sitePageData.siteHealthSummary"
+          :target-summary="sitePageData.targetHealthSummary"
         />
       </div>
 

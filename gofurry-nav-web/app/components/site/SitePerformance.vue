@@ -12,7 +12,7 @@
         </div>
         <p class="text-2xl text-gray-700 font-bold">{{ metrics.responseTime }}</p>
         <p class="text-xs text-gray-500 mt-1"> {{ performanceText.visitTimingHint }} </p>
-        <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
+        <dl class="mt-3 space-y-1 text-xs text-gray-500">
           <div v-for="item in timingDetails" :key="item.label" class="flex justify-between gap-2">
             <dt>{{ item.label }}</dt>
             <dd class="font-medium text-gray-700">{{ item.value }}</dd>
@@ -144,7 +144,7 @@ const metrics = computed(() => ({
 
 const performanceText = computed(() => ({
   visitTiming: label('访问耗时', 'Visit Timing'),
-  visitTimingHint: label('用户访问视角', 'Visitor perspective'),
+  visitTimingHint: label('用户访问', 'Visitor access'),
   responseStatus: label('响应状态', 'Response Status'),
   responseStatusHint: label('HTTP 与内容协商', 'HTTP and content'),
   secureTransport: label('安全传输', 'Secure Transport'),
@@ -169,7 +169,7 @@ const responseDetails = computed(() => [
 const tlsSubtitle = computed(() => {
   const verified = httpPayload.value.cert_verified
   if (verified === true) {
-    return label('证书校验通过', 'Certificate verified')
+    return label('证书校验', 'Certificate verification')
   }
   if (verified === false && firstString(httpPayload.value.verify_error)) {
     return label('证书校验需关注', 'Certificate needs review')
