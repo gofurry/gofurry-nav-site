@@ -49,16 +49,11 @@
       </div>
 
       <div class="mx-10 mb-8">
-        <SiteHttpPanel
-          v-if="sitePageData.siteHttpRecord"
-          :record="sitePageData.siteHttpRecord"
-        />
-      </div>
-
-      <div class="mx-10 mb-8">
-        <SiteDnsPanel
-          v-if="sitePageData.siteDnsRecord"
-          :record="sitePageData.siteDnsRecord"
+        <SiteObservationTabs
+          :dns-record="sitePageData.siteDnsRecord"
+          :http-record="sitePageData.siteHttpRecord"
+          :ping-record="sitePageData.sitePingRecord"
+          :target-latest-core="sitePageData.targetLatestCore"
         />
       </div>
 
@@ -84,9 +79,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import SiteDnsPanel from '@/components/site/SiteDnsPanel.vue'
 import SiteHealthSummaryPanel from '@/components/site/SiteHealthSummaryPanel.vue'
-import SiteHttpPanel from '@/components/site/SiteHttpPanel.vue'
+import SiteObservationTabs from '@/components/site/SiteObservationTabs.vue'
 import SiteOverview from '@/components/site/SiteOverview.vue'
 import SitePerformance from '@/components/site/SitePerformance.vue'
 import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
