@@ -716,14 +716,26 @@ const pageInfoItems = computed<KeyValueItem[]>(() => {
 })
 
 const securityHeaderItems = computed(() => {
-  const summary = asRecord(httpPayload.value.security_header_summary || httpPayload.value.security_headers)
+  const compactSummary = asRecord(httpPayload.value.security_headers)
+  if (Object.keys(compactSummary).length) {
+    return Object.entries({
+      HSTS: compactSummary.strict_transport_security,
+      CSP: compactSummary.content_security_policy,
+      'X-Frame-Options': compactSummary.x_frame_options,
+      'X-Content-Type-Options': compactSummary.x_content_type_options,
+      'Referrer-Policy': compactSummary.referrer_policy,
+      'Permissions-Policy': compactSummary.permissions_policy,
+    }).map(([label, value]) => ({ label, ok: Boolean(value) }))
+  }
+
+  const summary = asRecord(httpPayload.value.security_header_summary)
   return Object.entries({
-    HSTS: summary.strict_transport_security,
-    CSP: summary.content_security_policy,
-    'X-Frame-Options': summary.x_frame_options,
-    'X-Content-Type-Options': summary.x_content_type_options,
-    'Referrer-Policy': summary.referrer_policy,
-    'Permissions-Policy': summary.permissions_policy,
+    HSTS: asRecord(summary.hsts).present,
+    CSP: asRecord(summary.content_security_policy).present,
+    'X-Frame-Options': asRecord(summary.x_frame_options).present,
+    'X-Content-Type-Options': asRecord(summary.x_content_type_options).present,
+    'Referrer-Policy': asRecord(summary.referrer_policy).present,
+    'Permissions-Policy': asRecord(summary.permissions_policy).present,
   }).map(([label, value]) => ({ label, ok: Boolean(value) }))
 })
 

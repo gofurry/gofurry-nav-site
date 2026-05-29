@@ -100,7 +100,9 @@ const props = withDefaults(defineProps<{
 })
 
 const { t } = useI18n()
-const { data, pending, error, refresh, siteId } = await useSiteDetailPage()
+const { data, pending, error, refresh, siteId } = await useSiteDetailPage({
+  includeV2Latest: props.enableDomainSwitcher,
+})
 const sitePageData = computed(() => data.value!)
 const pageRoot = ref<HTMLElement | null>(null)
 const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'Failed to load site data.' : '站点数据加载失败。'))
@@ -154,6 +156,30 @@ const securityHeaderItems = computed(() => {
     return []
   }
 
+  const compactSummary = securityHeadersCompact()
+  if (Object.keys(compactSummary).length) {
+    return [
+      { label: 'HSTS', ok: Boolean(compactSummary.strict_transport_security) },
+      { label: 'CSP', ok: Boolean(compactSummary.content_security_policy) },
+      { label: 'X-Frame-Options', ok: Boolean(compactSummary.x_frame_options) },
+      { label: 'X-Content-Type-Options', ok: Boolean(compactSummary.x_content_type_options) },
+      { label: 'Referrer-Policy', ok: Boolean(compactSummary.referrer_policy) },
+      { label: 'Permissions-Policy', ok: Boolean(compactSummary.permissions_policy) },
+    ]
+  }
+
+  const detailedSummary = securityHeaderSummary()
+  if (Object.keys(detailedSummary).length) {
+    return [
+      { label: 'HSTS', ok: Boolean(asRecord(detailedSummary.hsts).present) },
+      { label: 'CSP', ok: Boolean(asRecord(detailedSummary.content_security_policy).present) },
+      { label: 'X-Frame-Options', ok: Boolean(asRecord(detailedSummary.x_frame_options).present) },
+      { label: 'X-Content-Type-Options', ok: Boolean(asRecord(detailedSummary.x_content_type_options).present) },
+      { label: 'Referrer-Policy', ok: Boolean(asRecord(detailedSummary.referrer_policy).present) },
+      { label: 'Permissions-Policy', ok: Boolean(asRecord(detailedSummary.permissions_policy).present) },
+    ]
+  }
+
   const headers = normalizeHeaders(sitePageData.value.siteHttpRecord?.headers)
   return [
     { label: 'HSTS', ok: hasHeader(headers, 'strict-transport-security') },
@@ -195,5 +221,19 @@ function normalizeHeaders(headers?: Record<string, string[]>) {
 
 function hasHeader(headers: Record<string, string[]>, key: string) {
   return (headers[key]?.length ?? 0) > 0
+}
+
+function asRecord(value: unknown): Record<string, any> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, any> : {}
+}
+
+function securityHeaderSummary() {
+  const httpPayload = asRecord(sitePageData.value.targetLatestCore?.protocols?.http?.payload)
+  return asRecord(httpPayload.security_header_summary)
+}
+
+function securityHeadersCompact() {
+  const httpPayload = asRecord(sitePageData.value.targetLatestCore?.protocols?.http?.payload)
+  return asRecord(httpPayload.security_headers)
 }
 </script>
