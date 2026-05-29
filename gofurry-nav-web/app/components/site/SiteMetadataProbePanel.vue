@@ -17,12 +17,12 @@
           v-for="probe in lightProbeEntries"
           :key="probe.protocol"
           type="button"
-          class="group cursor-pointer rounded-xl bg-orange-50/80 p-4 text-left transition-[background-color,box-shadow,color] duration-500 hover:bg-orange-50 hover:ring-2 hover:ring-orange-300/55 focus:outline-none focus:ring-2 focus:ring-orange-300/70"
+          class="group flex h-full cursor-pointer flex-col items-stretch justify-start rounded-xl bg-orange-50/80 p-4 text-left transition-[background-color,box-shadow,color] duration-500 hover:bg-orange-50 hover:ring-2 hover:ring-orange-300/55 focus:outline-none focus:ring-2 focus:ring-orange-300/70"
           @click="selectedProbe = probe"
         >
-          <div class="mb-3 flex items-center justify-between gap-2">
+          <div class="mb-3 flex w-full items-start justify-between gap-2">
             <span class="text-sm font-semibold text-gray-900">{{ protocolName(probe.protocol) }}</span>
-            <span :class="['rounded-full px-2.5 py-1 text-xs font-semibold', statusClass(probe.status)]">
+            <span :class="['shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold', statusClass(probe.status)]">
               {{ statusText(probe.status) }}
             </span>
           </div>
@@ -183,9 +183,9 @@ const InfoList = defineComponent({
   setup(componentProps) {
     return () => componentProps.items.length
       ? h('div', { class: componentProps.compact ? 'space-y-1.5' : 'space-y-2.5' },
-        componentProps.items.map(item => h('div', { class: 'grid grid-cols-[8rem_minmax(0,1fr)] gap-3 text-sm' }, [
-          h('span', { class: 'font-semibold text-gray-500' }, item.label),
-          h('span', { class: 'break-words font-mono text-gray-800' }, Array.isArray(item.value) ? item.value.join(', ') : item.value),
+        componentProps.items.map(item => h('div', { class: 'grid grid-cols-1 gap-1 text-sm sm:grid-cols-[minmax(8rem,13rem)_minmax(0,1fr)] sm:gap-3' }, [
+          h('span', { class: 'min-w-0 break-words font-semibold text-gray-500' }, item.label),
+          h('span', { class: 'min-w-0 break-words font-mono text-gray-800' }, Array.isArray(item.value) ? item.value.join(', ') : item.value),
         ])))
       : h('div', { class: 'text-sm text-gray-500' }, componentProps.emptyText)
   },
