@@ -2,7 +2,7 @@
   <section class="rounded-2xl bg-orange-100/45 p-5">
     <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div>
-        <div class="mb-1 text-xs font-medium uppercase tracking-wide text-orange-500">
+          <div v-if="text.eyebrow" class="mb-1 text-xs font-medium uppercase tracking-wide text-orange-500">
           {{ text.eyebrow }}
         </div>
         <h3 class="text-lg font-semibold text-gray-900">{{ text.title }}</h3>
@@ -86,12 +86,12 @@ const props = defineProps<{
 
 const activeTab = ref<TabKey>('http')
 const text = computed(() => ({
-  eyebrow: label('V2 observation', 'V2 observation'),
+  eyebrow: '',
   title: label('观测详情', 'Observation details'),
   none: label('暂无数据', 'No data'),
 }))
 const tabs = computed<{ key: TabKey; label: string }[]>(() => [
-  { key: 'ping', label: label('Ping 观测', 'Ping') },
+  { key: 'ping', label: label('PING 观测', 'Ping') },
   { key: 'http', label: label('HTTP 观测', 'HTTP') },
   { key: 'tls', label: label('TLS 观测', 'TLS') },
   { key: 'dns', label: label('DNS 观测', 'DNS') },
@@ -103,53 +103,53 @@ const dnsPayload = computed(() => payload('dns'))
 
 const pingMetrics = computed<MetricItem[]>(() => [
   { label: 'ICMP', value: stringValue(pingPayload.value.icmp_status), accent: true },
-  { label: 'Avg RTT', value: msValue(pingPayload.value.avg_rtt_ms) },
-  { label: 'Min RTT', value: msValue(pingPayload.value.min_rtt_ms) },
-  { label: 'Max RTT', value: msValue(pingPayload.value.max_rtt_ms) },
-  { label: 'Jitter', value: msValue(pingPayload.value.jitter_ms) },
-  { label: 'Loss', value: percentValue(pingPayload.value.loss_rate) },
-  { label: 'Packets', value: packetValue() },
-  { label: 'Resolved IP', value: stringValue(pingPayload.value.resolved_ip) },
+  { label: label('平均 RTT', 'Avg RTT'), value: msValue(pingPayload.value.avg_rtt_ms) },
+  { label: label('最小 RTT', 'Min RTT'), value: msValue(pingPayload.value.min_rtt_ms) },
+  { label: label('最大 RTT', 'Max RTT'), value: msValue(pingPayload.value.max_rtt_ms) },
+  { label: label('抖动', 'Jitter'), value: msValue(pingPayload.value.jitter_ms) },
+  { label: label('丢包率', 'Loss'), value: percentValue(pingPayload.value.loss_rate) },
+  { label: label('数据包', 'Packets'), value: packetValue() },
+  { label: label('解析 IP', 'Resolved IP'), value: stringValue(pingPayload.value.resolved_ip) },
 ])
 
 const httpMetrics = computed<MetricItem[]>(() => [
-  { label: 'Status', value: numberValue(firstValue(httpPayload.value.status_code, props.httpRecord?.statusCode)), accent: true },
-  { label: 'Response', value: msValue(firstValue(httpPayload.value.response_time_ms, parseNumber(props.httpRecord?.responseTime))) },
-  { label: 'DNS Lookup', value: msValue(httpPayload.value.dns_lookup_ms) },
-  { label: 'TCP Connect', value: msValue(httpPayload.value.tcp_connect_ms) },
-  { label: 'TLS Handshake', value: msValue(httpPayload.value.tls_handshake_ms) },
+  { label: label('状态码', 'Status'), value: numberValue(firstValue(httpPayload.value.status_code, props.httpRecord?.statusCode)), accent: true },
+  { label: label('响应耗时', 'Response'), value: msValue(firstValue(httpPayload.value.response_time_ms, parseNumber(props.httpRecord?.responseTime))) },
+  { label: label('DNS 查询', 'DNS Lookup'), value: msValue(httpPayload.value.dns_lookup_ms) },
+  { label: label('TCP 连接', 'TCP Connect'), value: msValue(httpPayload.value.tcp_connect_ms) },
+  { label: label('TLS 握手', 'TLS Handshake'), value: msValue(httpPayload.value.tls_handshake_ms) },
   { label: 'TTFB', value: msValue(httpPayload.value.ttfb_ms) },
-  { label: 'Transfer', value: msValue(httpPayload.value.transfer_ms) },
-  { label: 'Body', value: bytesValue(firstValue(httpPayload.value.body_read_bytes, props.httpRecord?.contentLength)) },
-  { label: 'Protocol', value: stringValue(httpPayload.value.http_protocol) },
-  { label: 'Remote IP', value: stringValue(httpPayload.value.remote_ip) },
+  { label: label('传输耗时', 'Transfer'), value: msValue(httpPayload.value.transfer_ms) },
+  { label: label('响应体', 'Body'), value: bytesValue(firstValue(httpPayload.value.body_read_bytes, props.httpRecord?.contentLength)) },
+  { label: label('HTTP 协议', 'Protocol'), value: stringValue(httpPayload.value.http_protocol) },
+  { label: label('远端 IP', 'Remote IP'), value: stringValue(httpPayload.value.remote_ip) },
   { label: 'Content-Type', value: firstString(httpPayload.value.content_type, headerValue('content-type')) },
-  { label: 'Final URL', value: firstString(httpPayload.value.final_url, props.httpRecord?.url) },
+  { label: label('最终 URL', 'Final URL'), value: firstString(httpPayload.value.final_url, props.httpRecord?.url) },
 ])
 
 const tlsMetrics = computed<MetricItem[]>(() => [
-  { label: 'Collected', value: boolText(httpPayload.value.cert_collected) },
-  { label: 'Verified', value: boolText(httpPayload.value.cert_verified), accent: true },
-  { label: 'Handshake', value: stringValue(httpPayload.value.tls_handshake) },
-  { label: 'Verify Error', value: stringValue(httpPayload.value.verify_error) },
-  { label: 'TLS Version', value: firstString(httpPayload.value.tls_version, props.httpRecord?.tlsVersion) },
-  { label: 'Cipher', value: firstString(httpPayload.value.cipher_suite, props.httpRecord?.cipherSuite) },
-  { label: 'Not Before', value: dateValue(httpPayload.value.cert_not_before) },
-  { label: 'Not After', value: dateValue(firstValue(httpPayload.value.cert_not_after, httpPayload.value.cert_expiry, props.httpRecord?.certExpiry)) },
-  { label: 'Days Left', value: dayValue(firstValue(httpPayload.value.cert_days_left, parseNumber(props.httpRecord?.certDaysLeft))) },
-  { label: 'Issuer', value: firstString(httpPayload.value.cert_issuer_cn, httpPayload.value.cert_issuer, props.httpRecord?.certIssuer) },
-  { label: 'SAN Count', value: numberValue(firstValue(httpPayload.value.cert_san_count, props.httpRecord?.certDNSNames?.length)) },
-  { label: 'Chain Length', value: numberValue(httpPayload.value.cert_chain_length) },
+  { label: label('证书已采集', 'Collected'), value: boolText(httpPayload.value.cert_collected) },
+  { label: label('证书已校验', 'Verified'), value: boolText(httpPayload.value.cert_verified), accent: true },
+  { label: label('握手状态', 'Handshake'), value: stringValue(httpPayload.value.tls_handshake) },
+  { label: label('校验错误', 'Verify Error'), value: stringValue(httpPayload.value.verify_error) },
+  { label: label('TLS 版本', 'TLS Version'), value: firstString(httpPayload.value.tls_version, props.httpRecord?.tlsVersion) },
+  { label: label('密码套件', 'Cipher'), value: firstString(httpPayload.value.cipher_suite, props.httpRecord?.cipherSuite) },
+  { label: label('生效时间', 'Not Before'), value: dateValue(httpPayload.value.cert_not_before) },
+  { label: label('到期时间', 'Not After'), value: dateValue(firstValue(httpPayload.value.cert_not_after, httpPayload.value.cert_expiry, props.httpRecord?.certExpiry)) },
+  { label: label('剩余天数', 'Days Left'), value: dayValue(firstValue(httpPayload.value.cert_days_left, parseNumber(props.httpRecord?.certDaysLeft))) },
+  { label: label('签发者', 'Issuer'), value: firstString(httpPayload.value.cert_issuer_cn, httpPayload.value.cert_issuer, props.httpRecord?.certIssuer) },
+  { label: 'SAN', value: numberValue(firstValue(httpPayload.value.cert_san_count, props.httpRecord?.certDNSNames?.length)) },
+  { label: label('证书链长度', 'Chain Length'), value: numberValue(httpPayload.value.cert_chain_length) },
 ])
 
 const dnsRiskFlags = computed(() => stringArray(dnsPayload.value.risk_flags))
 const dnsMetrics = computed<MetricItem[]>(() => [
   { label: 'A', value: recordCount('A') },
   { label: 'AAAA', value: recordCount('AAAA') },
-  { label: 'CNAME Depth', value: numberValue(dnsPayload.value.cname_chain_depth) },
-  { label: 'CNAME Terminal', value: stringValue(dnsPayload.value.cname_terminal) },
-  { label: 'MX Hosts', value: mxHostsValue() },
-  { label: 'NS Hosts', value: nsHostsValue() },
+  { label: label('CNAME 深度', 'CNAME Depth'), value: numberValue(dnsPayload.value.cname_chain_depth) },
+  { label: label('CNAME 终点', 'CNAME Terminal'), value: stringValue(dnsPayload.value.cname_terminal) },
+  { label: label('MX 主机', 'MX Hosts'), value: mxHostsValue() },
+  { label: label('NS 主机', 'NS Hosts'), value: nsHostsValue() },
 ])
 const dnsRecordGroups = computed(() => {
   const groups: { type: string; records: { key: string; type: string; value: string; ttl: string }[] }[] = []
