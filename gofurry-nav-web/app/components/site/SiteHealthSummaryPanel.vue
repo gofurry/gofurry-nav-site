@@ -1,36 +1,10 @@
 <template>
   <div class="rounded-xl bg-orange-50 p-5">
-    <div v-if="!isV2Mode" class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h3 class="font-semibold">{{ t('site.healthSummary.title') }}</h3>
-      </div>
-      <span :class="['rounded-full px-3 py-1 text-xs font-semibold', statusClass(displayStatus)]">
-        {{ statusText(displayStatus) }}
-      </span>
-    </div>
-
-    <div :class="['grid grid-cols-1 gap-4 text-sm', isV2Mode ? 'lg:grid-cols-3' : 'md:grid-cols-2']">
+    <div class="grid grid-cols-1 gap-4 text-sm lg:grid-cols-3">
       <div class="md:flex md:flex-col">
         <h4 class="mb-2 text-sm font-bold text-gray-500">{{ t('site.healthSummary.siteStatus') }}</h4>
-        <div :class="['rounded-lg bg-orange-100 p-3 md:flex-1', isV2Mode ? 'flex items-stretch' : '']">
-          <div v-if="!isV2Mode" class="mb-2">
-            <span class="font-bold">{{ t('site.healthSummary.state') }}:</span>
-            {{ stateText(siteSummary?.state) }}
-          </div>
-          <div v-if="!isV2Mode">
-            <span class="font-bold">{{ t('site.healthSummary.targetCount') }}:</span>
-            {{ siteSummary?.target_count ?? 0 }}
-          </div>
-          <div v-if="!isV2Mode && statusCountEntries.length" class="mt-2 flex flex-wrap gap-2">
-            <span
-              v-for="[status, count] in statusCountEntries"
-              :key="status"
-              class="rounded-full bg-orange-50 px-2 py-0.5 text-xs"
-            >
-              {{ statusText(status) }} {{ count }}
-            </span>
-          </div>
-          <div v-if="isV2Mode" class="flex w-full flex-col justify-center gap-3">
+        <div class="flex items-stretch rounded-lg bg-orange-100 p-3 md:flex-1">
+          <div class="flex w-full flex-col justify-center gap-3">
             <div class="grid grid-cols-2 gap-2">
               <div
                 v-for="item in siteSummaryHighlights"
@@ -52,42 +26,20 @@
               <div v-else class="text-xs text-gray-500">{{ t('site.healthSummary.none') }}</div>
             </div>
           </div>
-          <div v-else-if="targetEntries.length" class="mt-4 space-y-2">
-            <div
-              v-for="target in targetEntries"
-              :key="target.target"
-              class="rounded-md bg-orange-50 p-2"
-            >
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <span class="break-all font-mono text-xs">{{ target.target }}</span>
-                <span :class="['rounded-full px-2 py-0.5 text-xs font-semibold', statusClass(target.status)]">
-                  {{ statusText(target.status) }}
-                </span>
-              </div>
-              <ul v-if="target.reason_messages?.length || target.reason_codes?.length" class="mt-2 space-y-1 text-xs text-gray-600">
-                <li v-for="reason in targetReasons(target)" :key="`${target.target}:${reason}`">{{ reason }}</li>
-              </ul>
-            </div>
-          </div>
         </div>
       </div>
 
       <div v-if="targetSummary" class="md:flex md:flex-col">
         <h4 class="mb-2 text-sm font-bold text-gray-500">{{ targetSectionTitle }}</h4>
-        <div :class="['rounded-lg bg-orange-100 p-3 md:flex-1', isV2Mode ? 'flex items-stretch' : '']">
-          <div v-if="!isV2Mode" class="break-all font-mono text-xs">{{ targetSummary.target }}</div>
-          <div v-if="!isV2Mode" class="mt-2">
-            <span class="font-bold">{{ t('site.healthSummary.status') }}:</span>
-            {{ statusText(targetSummary.status) }}
-          </div>
+        <div class="flex items-stretch rounded-lg bg-orange-100 p-3 md:flex-1">
           <div
             v-if="protocolEntries.length"
-            :class="[isV2Mode ? 'grid h-full w-full grid-cols-1 grid-rows-3 gap-2 min-[1680px]:grid-cols-3 min-[1680px]:grid-rows-1' : 'mt-2 flex flex-wrap gap-2']"
+            class="grid h-full w-full grid-cols-1 grid-rows-3 gap-2 min-[1680px]:grid-cols-3 min-[1680px]:grid-rows-1"
           >
             <div
               v-for="[protocol, protocolSummary] in protocolEntries"
               :key="protocol"
-              :class="['rounded-md bg-orange-50 p-2 text-xs', isV2Mode ? 'flex min-h-0 flex-col justify-center' : '']"
+              class="flex min-h-0 flex-col justify-center rounded-md bg-orange-50 p-2 text-xs"
             >
               <div class="mb-1 font-semibold">
                 {{ protocol.toUpperCase() }} {{ protocolSummary.stale ? t('site.healthSummary.stale') : statusText(protocolSummary.status) }}
@@ -103,7 +55,7 @@
         </div>
       </div>
 
-      <div v-if="isV2Mode" class="md:flex md:flex-col">
+      <div class="md:flex md:flex-col">
         <h4 class="mb-2 text-sm font-bold text-gray-500">{{ securityHeadersTitle }}</h4>
         <div class="rounded-lg bg-orange-100 p-3 md:flex-1">
           <div v-if="securityHeaders.length" class="grid h-full grid-cols-1 grid-rows-6 gap-2 sm:grid-cols-2 sm:grid-rows-3">
@@ -128,28 +80,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { HealthStatus, SiteHealthSummary, TargetHealthSummary } from '~/types/nav'
+import type { SiteHealthSummary, TargetHealthSummary } from '~/types/nav'
 
 const props = defineProps<{
   siteSummary: SiteHealthSummary | null
   targetSummary: TargetHealthSummary | null
   currentTarget?: string
-  mode?: 'default' | 'v2'
   securityHeaders?: { label: string; ok: boolean }[]
 }>()
 
 const { locale, t } = useI18n()
 
-const isV2Mode = computed(() => props.mode === 'v2')
 const isEnglish = computed(() => locale.value === 'en')
-const displayStatus = computed(() => props.targetSummary?.status || props.siteSummary?.status || 'unknown')
-const statusCountEntries = computed(() => Object.entries(props.siteSummary?.status_counts ?? {}).filter(([, count]) => count > 0))
 const targetEntries = computed(() => {
   const targets = props.siteSummary?.targets ?? []
-  if (!isV2Mode.value) {
-    return targets
-  }
-
   const currentTarget = props.currentTarget || props.targetSummary?.target
   const matchedTargets = targets.filter(target => target.target === currentTarget).slice(0, 1)
   if (matchedTargets.length || !props.targetSummary) {
@@ -173,17 +117,13 @@ const siteSummaryHighlights = computed(() => {
   ]
 })
 const securityHeadersTitle = computed(() => (isEnglish.value ? 'Security Headers' : '安全响应头'))
-const targetSectionTitle = computed(() => (isV2Mode.value ? (isEnglish.value ? 'Current Check' : '当前采集') : t('site.healthSummary.currentTarget')))
-const observedAtText = computed(() => (isV2Mode.value ? (isEnglish.value ? 'Time' : '时间') : t('site.healthSummary.observedAt')))
+const targetSectionTitle = computed(() => (isEnglish.value ? 'Current Check' : '当前采集'))
+const observedAtText = computed(() => (isEnglish.value ? 'Time' : '时间'))
 const yesText = computed(() => (isEnglish.value ? 'Yes' : '是'))
 const noText = computed(() => (isEnglish.value ? 'No' : '否'))
 
 function statusText(status: string) {
   return t(`site.healthSummary.statuses.${status || 'unknown'}`)
-}
-
-function stateText(state?: string) {
-  return t(`site.healthSummary.states.${state || 'missing'}`)
 }
 
 function targetReasons(target: { reason_messages?: string[]; reason_codes?: string[] }) {
@@ -199,23 +139,6 @@ function formatTime(value?: string) {
     return t('site.healthSummary.none')
   }
   return value.replace('T', ' ').replace(/\.\d+.*$/, '')
-}
-
-function statusClass(status: HealthStatus | string) {
-  switch (status) {
-    case 'healthy':
-    case 'success':
-      return 'bg-green-100 text-green-800'
-    case 'warning':
-      return 'bg-yellow-100 text-yellow-800'
-    case 'degraded':
-      return 'bg-orange-200 text-orange-900'
-    case 'down':
-    case 'failure':
-      return 'bg-red-100 text-red-800'
-    default:
-      return 'bg-gray-100 text-gray-700'
-  }
 }
 
 </script>

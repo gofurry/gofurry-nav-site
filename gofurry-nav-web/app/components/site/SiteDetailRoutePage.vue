@@ -22,8 +22,6 @@
             viewCount: sitePageData.siteInfo.view_count ?? 0,
           }"
           :domain-options="domainOptions"
-          :domain-route-suffix="domainRouteSuffix"
-          :enable-domain-switcher="enableDomainSwitcher"
           :edge-provider-hints="overviewEdgeProviderHints"
           :keywords="overviewKeywords"
           :site-id="siteId"
@@ -33,7 +31,6 @@
       <div v-if="sitePageData.siteHealthSummary || sitePageData.targetHealthSummary" class="mx-10 mb-8">
         <SiteHealthSummaryPanel
           :current-target="sitePageData.domain"
-          :mode="healthSummaryMode"
           :security-headers="securityHeaderItems"
           :site-summary="sitePageData.siteHealthSummary"
           :target-summary="sitePageData.targetHealthSummary"
@@ -46,7 +43,6 @@
           :ping-record="sitePageData.sitePingRecord"
           :http-record="sitePageData.siteHttpRecord"
           :target-latest-core="sitePageData.targetLatestCore"
-          :mode="healthSummaryMode"
         />
       </div>
 
@@ -93,24 +89,11 @@ import SiteOverview from '@/components/site/SiteOverview.vue'
 import SitePerformance from '@/components/site/SitePerformance.vue'
 import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
 
-const props = withDefaults(defineProps<{
-  enableDomainSwitcher?: boolean
-  domainRouteSuffix?: string
-}>(), {
-  enableDomainSwitcher: false,
-  domainRouteSuffix: '',
-})
-
 const { t } = useI18n()
-const { data, pending, error, refresh, siteId } = await useSiteDetailPage({
-  includeV2Latest: props.enableDomainSwitcher,
-})
+const { data, pending, error, refresh, siteId } = await useSiteDetailPage()
 const sitePageData = computed(() => data.value!)
 const pageRoot = ref<HTMLElement | null>(null)
 const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'Failed to load site data.' : '站点数据加载失败。'))
-const enableDomainSwitcher = computed(() => props.enableDomainSwitcher)
-const domainRouteSuffix = computed(() => props.domainRouteSuffix)
-const healthSummaryMode = computed(() => (props.enableDomainSwitcher ? 'v2' : 'default'))
 const domainOptions = computed(() => {
   const targets = sitePageData.value.siteHealthSummary?.targets ?? []
   const seen = new Set<string>()
@@ -134,10 +117,6 @@ const domainOptions = computed(() => {
   return options
 })
 const overviewKeywords = computed(() => {
-  if (!props.enableDomainSwitcher) {
-    return []
-  }
-
   const rawKeywords = sitePageData.value.siteHttpRecord?.meta?.keywords
   if (!rawKeywords) {
     return []
@@ -151,13 +130,9 @@ const overviewKeywords = computed(() => {
     .slice(0, 12)
 })
 const overviewEdgeProviderHints = computed(() => {
-  return props.enableDomainSwitcher ? sitePageData.value.targetHealthSummary?.edge_provider_hints ?? [] : []
+  return sitePageData.value.targetHealthSummary?.edge_provider_hints ?? []
 })
 const securityHeaderItems = computed(() => {
-  if (!props.enableDomainSwitcher) {
-    return []
-  }
-
   const compactSummary = securityHeadersCompact()
   if (Object.keys(compactSummary).length) {
     return [

@@ -12,7 +12,7 @@
         </div>
         <p class="text-2xl text-gray-700 font-bold">{{ metrics.responseTime }}</p>
         <p class="text-xs text-gray-500 mt-1"> {{ performanceText.visitTimingHint }} </p>
-        <dl v-if="isV2Mode" class="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
+        <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
           <div v-for="item in timingDetails" :key="item.label" class="flex justify-between gap-2">
             <dt>{{ item.label }}</dt>
             <dd class="font-medium text-gray-700">{{ item.value }}</dd>
@@ -28,9 +28,9 @@
           <h3 class="text-sm font-medium text-gray-500">{{ performanceText.responseStatus }}</h3>
           <i class="fa fa-check-circle" :class="iconColor(statusColor)"></i>
         </div>
-        <p class="text-2xl text-gray-700 font-bold">{{ isV2Mode ? `HTTP ${metrics.statusCode}` : metrics.statusCode }}</p>
+        <p class="text-2xl text-gray-700 font-bold">HTTP {{ metrics.statusCode }}</p>
         <p class="text-xs text-gray-500 mt-1">{{ performanceText.responseStatusHint }}</p>
-        <dl v-if="isV2Mode" class="mt-3 space-y-1 text-xs text-gray-500">
+        <dl class="mt-3 space-y-1 text-xs text-gray-500">
           <div v-for="item in responseDetails" :key="item.label" class="flex justify-between gap-3">
             <dt>{{ item.label }}</dt>
             <dd class="truncate font-medium text-gray-700">{{ item.value }}</dd>
@@ -48,7 +48,7 @@
         </div>
         <p class="text-2xl text-gray-700 font-bold">{{ metrics.tlsVersion }}</p>
         <p class="text-xs text-gray-500 mt-1">{{ tlsSubtitle }}</p>
-        <dl v-if="isV2Mode" class="mt-3 space-y-1 text-xs text-gray-500">
+        <dl class="mt-3 space-y-1 text-xs text-gray-500">
           <div v-for="item in tlsDetails" :key="item.label" class="flex justify-between gap-3">
             <dt>{{ item.label }}</dt>
             <dd class="truncate font-medium text-gray-700">{{ item.value }}</dd>
@@ -66,7 +66,7 @@
         </div>
         <p class="text-2xl text-gray-700 font-bold">{{ metrics.certDaysLeft }}</p>
         <p class="text-xs text-gray-500 mt-1">{{ performanceText.certStatusHint }}</p>
-        <dl v-if="isV2Mode" class="mt-3 space-y-1 text-xs text-gray-500">
+        <dl class="mt-3 space-y-1 text-xs text-gray-500">
           <div v-for="item in certDetails" :key="item.label" class="flex justify-between gap-3">
             <dt>{{ item.label }}</dt>
             <dd class="truncate font-medium text-gray-700">{{ item.value }}</dd>
@@ -121,14 +121,12 @@ interface Props {
   pingRecord: PingRecord
   httpRecord: HttpRecord
   targetLatestCore?: TargetLatestResponse | null
-  mode?: 'default' | 'v2'
 }
 
 const props = defineProps<Props>()
 const latencyChartRef = ref<HTMLElement | null>(null)
 const chart = ref<echarts.ECharts | null>(null)
 const sampleType = ref<'twenty' | 'sixty' | 'hundred'>('twenty')
-const isV2Mode = computed(() => props.mode === 'v2')
 const httpPayload = computed(() => asRecord(props.targetLatestCore?.protocols?.http?.payload))
 const yesText = computed(() => i18n.global.locale.value === 'en' ? 'Yes' : '是')
 const noText = computed(() => i18n.global.locale.value === 'en' ? 'No' : '否')
@@ -145,13 +143,13 @@ const metrics = computed(() => ({
 }))
 
 const performanceText = computed(() => ({
-  visitTiming: isV2Mode.value ? label('访问耗时', 'Visit Timing') : t('site.performance.responseTime'),
-  visitTimingHint: isV2Mode.value ? label('用户访问视角', 'Visitor perspective') : t('site.performance.pageLoadTime'),
-  responseStatus: isV2Mode.value ? label('响应状态', 'Response Status') : t('site.performance.httpStatusCode'),
-  responseStatusHint: isV2Mode.value ? label('HTTP 与内容协商', 'HTTP and content') : t('site.performance.accessStatus'),
-  secureTransport: isV2Mode.value ? label('安全传输', 'Secure Transport') : t('site.performance.tlsVersion'),
-  certStatus: isV2Mode.value ? label('证书状态', 'Certificate Status') : t('site.performance.certValidity'),
-  certStatusHint: isV2Mode.value ? label('剩余有效期', 'Remaining validity') : t('site.performance.certRemainingTime'),
+  visitTiming: label('访问耗时', 'Visit Timing'),
+  visitTimingHint: label('用户访问视角', 'Visitor perspective'),
+  responseStatus: label('响应状态', 'Response Status'),
+  responseStatusHint: label('HTTP 与内容协商', 'HTTP and content'),
+  secureTransport: label('安全传输', 'Secure Transport'),
+  certStatus: label('证书状态', 'Certificate Status'),
+  certStatusHint: label('剩余有效期', 'Remaining validity'),
 }))
 
 const timingDetails = computed(() => [
@@ -169,10 +167,6 @@ const responseDetails = computed(() => [
 ])
 
 const tlsSubtitle = computed(() => {
-  if (!isV2Mode.value) {
-    return t('site.performance.securityProtocol')
-  }
-
   const verified = httpPayload.value.cert_verified
   if (verified === true) {
     return label('证书校验通过', 'Certificate verified')

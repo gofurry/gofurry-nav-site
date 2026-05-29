@@ -152,9 +152,7 @@ interface SiteOverviewProps {
     description: string
     viewCount?: number
   }
-  enableDomainSwitcher?: boolean
   domainOptions?: string[]
-  domainRouteSuffix?: string
   edgeProviderHints?: {
     provider: string
     hint_type: string
@@ -190,10 +188,6 @@ const showDomainCard = ref(false)
 let domainCardCloseTimer: ReturnType<typeof setTimeout> | null = null
 
 const switchableDomains = computed(() => {
-  if (!props.enableDomainSwitcher) {
-    return []
-  }
-
   const seen = new Set<string>()
   const domains: string[] = []
 
@@ -243,7 +237,7 @@ const edgeProviderTitle = computed(() => {
 })
 
 function openDomainCard() {
-  if (!props.enableDomainSwitcher || switchableDomains.value.length <= 1) {
+  if (switchableDomains.value.length <= 1) {
     return
   }
 
@@ -267,8 +261,7 @@ function scheduleCloseDomainCard() {
 
 function domainLink(domain: string) {
   const siteId = props.siteId ? String(props.siteId) : ''
-  const suffix = props.domainRouteSuffix ?? ''
-  return `/site/${encodeURIComponent(siteId)}/${encodeURIComponent(domain)}${suffix}`
+  return `/site/${encodeURIComponent(siteId)}/${encodeURIComponent(domain)}`
 }
 
 const tags = computed(() => {

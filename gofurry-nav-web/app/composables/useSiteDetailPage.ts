@@ -66,7 +66,7 @@ function parseDnsRecord(record: DnsRecord | null): DnsRecord | null {
   return parsedRecord
 }
 
-export async function useSiteDetailPage(options: { includeV2Latest?: boolean } = {}) {
+export async function useSiteDetailPage() {
   const route = useRoute()
   const { locale } = useI18n()
   const navApi = useApi('nav')
@@ -82,7 +82,7 @@ export async function useSiteDetailPage(options: { includeV2Latest?: boolean } =
   const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
 
   const asyncData = await useAsyncData<SiteDetailPageData>(
-    () => `site-detail:${route.path}:${siteId.value}:${selectedDomain.value}:${lang.value}:${options.includeV2Latest ? 'v2-latest' : 'legacy'}`,
+    () => `site-detail:${route.path}:${siteId.value}:${selectedDomain.value}:${lang.value}:v2`,
     async () => {
       const siteInfo = await navApi<SiteInfo>('/nav/site/getSiteDetail', {
         query: {
@@ -140,7 +140,7 @@ export async function useSiteDetailPage(options: { includeV2Latest?: boolean } =
         siteId.value
           ? navV2Api<TargetHealthSummary>(`/nav/sites/${siteId.value}/targets/${encodeURIComponent(resolvedDomain)}/summary`).catch(() => null)
           : Promise.resolve(null),
-        siteId.value && options.includeV2Latest
+        siteId.value
           ? navV2Api<TargetLatestResponse>(`/nav/sites/${siteId.value}/targets/${encodeURIComponent(resolvedDomain)}/latest`, {
               query: {
                 payload_mode: 'preview',
