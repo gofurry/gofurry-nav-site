@@ -49,6 +49,54 @@ func TestListTargetObservationsRejectsBadLimit(t *testing.T) {
 	}
 }
 
+func TestTouchSiteViewRejectsBadSiteID(t *testing.T) {
+	app := fiber.New()
+	app.Post("/sites/:siteId/view", DetailApi.TouchSiteView)
+
+	req := httptest.NewRequest("POST", "/sites/nope/view", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	defer resp.Body.Close()
+
+	body := decodeResultData(t, resp)
+	if body.Code != common.RETURN_FAILED || body.Data != "siteId 参数非法" {
+		t.Fatalf("response = %+v", body)
+	}
+}
+
+func TestTouchSiteViewSuccessAndServiceError(t *testing.T) {
+	app := fiber.New()
+	app.Post("/sites/:siteId/view", DetailApi.TouchSiteView)
+
+	restore := setSiteViewCounterForTest(&fakeSiteViewCounter{viewCount: 1234})
+	req := httptest.NewRequest("POST", "/sites/88/view", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() success error = %v", err)
+	}
+	body := decodeResultData(t, resp)
+	resp.Body.Close()
+	restore()
+	if body.Code != common.RETURN_SUCCESS || !strings.Contains(string(body.RawData), `"view_count":1234`) {
+		t.Fatalf("success response = %+v raw=%s", body, body.RawData)
+	}
+
+	restore = setSiteViewCounterForTest(&fakeSiteViewCounter{err: common.NewServiceError("view failed")})
+	req = httptest.NewRequest("POST", "/sites/88/view", nil)
+	resp, err = app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() failure error = %v", err)
+	}
+	body = decodeResultData(t, resp)
+	resp.Body.Close()
+	restore()
+	if body.Code != common.RETURN_FAILED || body.Data != "view failed" {
+		t.Fatalf("failure response = %+v", body)
+	}
+}
+
 func TestGetTargetLatestSuccess(t *testing.T) {
 	restore := setDetailReaderForTest(&fakeDetailReader{
 		latest: detailmodels.TargetLatestResponse{
@@ -327,6 +375,15 @@ type fakeDetailReader struct {
 	lightErr        common.GFError
 	lastTarget      string
 	lastPayloadMode string
+}
+
+type fakeSiteViewCounter struct {
+	viewCount int64
+	err       common.GFError
+}
+
+func (f *fakeSiteViewCounter) TouchSiteViewCount(siteID int64, clientIP string) (int64, common.GFError) {
+	return f.viewCount, f.err
 }
 
 func (f *fakeDetailReader) GetSiteDetail(siteID int64, lang string, target string, payloadMode string) (detailmodels.SiteDetailResponse, common.GFError) {

@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	detailmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/models"
 	detailservice "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/service"
+	sitepageservice "github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/service"
 	"github.com/gofurry/gofurry-nav-backend/common"
 	"github.com/gofurry/gofurry-nav-backend/common/util"
 )
@@ -20,11 +21,17 @@ type detailReader interface {
 	GetTargetLightProbes(siteID int64, target string, payloadMode string) (detailmodels.TargetLatestResponse, common.GFError)
 }
 
+type siteViewCounter interface {
+	TouchSiteViewCount(siteID int64, clientIP string) (int64, common.GFError)
+}
+
 type detailApi struct{}
 
 var DetailApi *detailApi
 var detailSvc detailReader
 var detailSvcMu sync.RWMutex
+var viewCounter siteViewCounter
+var viewCounterMu sync.RWMutex
 
 func init() {
 	DetailApi = &detailApi{}
@@ -41,6 +48,23 @@ func (api detailApi) GetSiteDetail(c fiber.Ctx) error {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).SuccessWithData(data)
+}
+
+func (api detailApi) TouchSiteView(c fiber.Ctx) error {
+	siteID, parseErr := util.String2Int64(c.Params("siteId"))
+	if parseErr != nil || siteID <= 0 {
+		return common.NewResponse(c).Error("siteId 参数非法")
+	}
+
+	viewCount, err := currentSiteViewCounter().TouchSiteViewCount(siteID, util.GetClientIP(c))
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+
+	return common.NewResponse(c).SuccessWithData(detailmodels.SiteViewResponse{
+		SiteID:    siteID,
+		ViewCount: viewCount,
+	})
 }
 
 func (api detailApi) GetTargetLatest(c fiber.Ctx) error {
@@ -134,6 +158,22 @@ func currentDetailService() detailReader {
 	return detailSvc
 }
 
+func currentSiteViewCounter() siteViewCounter {
+	viewCounterMu.RLock()
+	counter := viewCounter
+	viewCounterMu.RUnlock()
+	if counter != nil {
+		return counter
+	}
+
+	viewCounterMu.Lock()
+	defer viewCounterMu.Unlock()
+	if viewCounter == nil {
+		viewCounter = sitepageservice.GetSitePageService()
+	}
+	return viewCounter
+}
+
 func targetParam(c fiber.Ctx) string {
 	target := c.Params("target")
 	decoded, err := url.PathUnescape(target)
@@ -141,6 +181,18 @@ func targetParam(c fiber.Ctx) string {
 		return target
 	}
 	return decoded
+}
+
+func setSiteViewCounterForTest(counter siteViewCounter) func() {
+	viewCounterMu.Lock()
+	previous := viewCounter
+	viewCounter = counter
+	viewCounterMu.Unlock()
+	return func() {
+		viewCounterMu.Lock()
+		viewCounter = previous
+		viewCounterMu.Unlock()
+	}
 }
 
 func setDetailReaderForTest(reader detailReader) func() {

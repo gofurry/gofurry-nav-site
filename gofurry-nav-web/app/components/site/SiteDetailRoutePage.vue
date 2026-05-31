@@ -73,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SiteHealthSummaryPanel from '@/components/site/SiteHealthSummaryPanel.vue'
 import SiteMetadataProbePanel from '@/components/site/SiteMetadataProbePanel.vue'
@@ -84,6 +84,7 @@ import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
 
 const { t } = useI18n()
 const { data, pending, error, siteId } = await useSiteDetailPage()
+const navV2Api = useApi('navV2')
 const sitePageData = computed(() => data.value!)
 const pageRoot = ref<HTMLElement | null>(null)
 const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'Failed to load site data.' : '站点数据加载失败。'))
@@ -176,6 +177,27 @@ useSeoMeta({
   ogTitle: () => seoTitle.value,
   ogDescription: () => seoDescription.value,
 })
+
+onMounted(() => {
+  watch(siteId, (value) => {
+    void touchSiteView(value)
+  }, { immediate: true })
+})
+
+async function touchSiteView(value: string) {
+  if (!value) {
+    return
+  }
+
+  try {
+    const response = await navV2Api<{ site_id: number; view_count: number }>(`/nav/sites/${value}/view`, { method: 'POST' })
+    if (data.value?.siteInfo && Number.isFinite(response.view_count)) {
+      data.value.siteInfo.view_count = response.view_count
+    }
+  } catch {
+    // 浏览量统计是旁路副作用，失败不影响详情页展示。
+  }
+}
 
 function normalizeHeaders(headers?: Record<string, string[]>) {
   const normalized: Record<string, string[]> = {}

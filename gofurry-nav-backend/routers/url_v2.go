@@ -10,6 +10,7 @@ import (
 func navV2Api(g fiber.Router, cfg env.NavV2Config) {
 	if cfg.DetailRoutesEnabled() {
 		g.Get("/sites/:siteId/detail", detail.DetailApi.GetSiteDetail)
+		g.Post("/sites/:siteId/view", detail.DetailApi.TouchSiteView)
 	}
 	if cfg.SummaryRoutesEnabled() {
 		g.Get("/sites/:siteId/summary", summary.SummaryApi.GetSiteSummary)

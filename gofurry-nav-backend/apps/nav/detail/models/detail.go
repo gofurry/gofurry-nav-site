@@ -43,6 +43,11 @@ type SiteInfo struct {
 	ViewCount int64   `json:"view_count"`
 }
 
+type SiteViewResponse struct {
+	SiteID    int64 `json:"site_id"`
+	ViewCount int64 `json:"view_count"`
+}
+
 type SiteTarget struct {
 	Target       string  `json:"target"`
 	DomainID     int64   `json:"domain_id"`
