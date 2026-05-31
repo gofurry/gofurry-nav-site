@@ -59,21 +59,23 @@
           <div class="min-w-0 flex-1">
             <div class="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div class="min-w-0 flex-1">
-                <div class="flex min-w-0 flex-wrap items-center gap-2.5">
+                <div class="hero-title-row">
                   <h1 class="mr-2 break-words text-xl font-black tracking-normal text-slate-950 md:text-2xl">
                     {{ siteName }}
                   </h1>
-                  <span
-                    v-for="badge in heroBadges"
-                    :key="badge.label"
-                    class="dev-pill"
-                    :class="badge.class"
-                  >
-                    {{ badge.label }}
-                  </span>
+                  <div class="flex flex-wrap items-center gap-2.5">
+                    <span
+                      v-for="badge in heroBadges"
+                      :key="badge.label"
+                      class="dev-pill"
+                      :class="badge.class"
+                    >
+                      {{ badge.label }}
+                    </span>
+                  </div>
                 </div>
 
-                <div class="relative mt-2 w-fit">
+                <div class="relative mt-2 flex w-full flex-wrap items-center gap-x-5 gap-y-2 lg:w-fit">
                   <div
                     class="group/domain relative w-fit"
                     @pointerenter="openDomainCard"
@@ -83,7 +85,7 @@
                   >
                     <button
                       type="button"
-                      class="flex items-center font-mono text-sm font-normal text-slate-500 transition-colors duration-500 hover:text-orange-500"
+                      class="flex items-center font-mono text-sm text-slate-500 transition-colors duration-500 hover:text-orange-500"
                       @click="copyToClipboard(sitePageData.domain)"
                     >
                       <span>{{ sitePageData.domain }}</span>
@@ -128,6 +130,9 @@
                       </div>
                     </transition>
                   </div>
+                  <div class="text-xs text-orange-500 lg:hidden">
+                    {{ label('浏览量', 'Views') }}: {{ sitePageData.siteInfo?.view_count ?? 0 }}
+                  </div>
                 </div>
               </div>
 
@@ -142,17 +147,17 @@
                   <img src="@/assets/svgs/go.svg" alt="" class="h-5 w-5 opacity-90">
                   {{ label('访问网站', 'Visit site') }}
                 </a>
-                <div class="text-xs font-semibold text-orange-500">
+                <div class="hidden text-xs text-orange-500 lg:block">
                   {{ label('浏览量', 'Views') }}: {{ sitePageData.siteInfo?.view_count ?? 0 }}
                 </div>
               </div>
             </div>
 
-            <p class="mt-3 max-w-6xl text-sm leading-7 text-slate-700 md:text-base">
+            <p class="max-w-6xl text-sm leading-7 text-slate-700 md:text-base">
               {{ sitePageData.siteInfo?.info || '-' }}
             </p>
 
-            <div v-if="overviewKeywords.length" class="mt-3 flex flex-wrap gap-2">
+            <div v-if="overviewKeywords.length" class="flex flex-wrap gap-2">
               <span
                 v-for="keyword in overviewKeywords"
                 :key="keyword"
@@ -186,14 +191,85 @@
         </article>
       </section>
 
-      <section class="dev-health-grid">
-        <div class="dev-panel">
-          <SiteHealthSummaryPanel
-            :current-target="sitePageData.domain"
-            :security-headers="securityHeaderItems"
-            :site-summary="sitePageData.siteHealthSummary"
-            :target-summary="sitePageData.targetHealthSummary"
-          />
+      <section class="dev-observation-overview">
+        <div class="overview-strip">
+          <div
+            v-for="item in observationStripItems"
+            :key="item.label"
+            class="overview-stat"
+            :class="item.tone"
+          >
+            <div class="text-[11px] text-slate-500">{{ item.label }}</div>
+            <div class="truncate text-sm font-bold text-slate-900">{{ item.value }}</div>
+          </div>
+        </div>
+
+        <div class="overview-detail-grid">
+          <div class="protocol-rail-panel">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 class="text-lg font-black text-slate-950">{{ label('当前采集', 'Current Checks') }}</h3>
+              </div>
+              <div class="rounded-full bg-orange-100 px-3 py-1 text-xs text-orange-700">
+                {{ protocolAvailabilityText }}
+              </div>
+            </div>
+
+            <div class="protocol-rail">
+              <article
+                v-for="entry in protocolTrackEntries"
+                :key="entry.protocol"
+                class="protocol-node"
+                :class="entry.tone"
+              >
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="protocol-dot" />
+                      <strong class="text-sm text-slate-950">{{ entry.label }}</strong>
+                    </div>
+                    <span class="font-mono text-[11px] text-slate-500">{{ entry.observedAt }}</span>
+                  </div>
+                  <div class="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
+                    <span>{{ label('耗时', 'Time') }}: <b>{{ entry.duration }}</b></span>
+                    <span>{{ label('过期阈值', 'Stale') }}: <b>{{ entry.staleAfter }}</b></span>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div class="signal-note mt-4 px-4 py-3 text-xs text-slate-600">
+              <div class="mb-1 font-semibold text-slate-700">{{ label('观测信号', 'Signals') }}</div>
+              <div v-if="targetRiskMessages.length" class="space-y-1">
+                <div v-for="message in targetRiskMessages" :key="message">{{ message }}</div>
+              </div>
+              <div v-else>{{ label('暂无需要关注的信号', 'No notable signals') }}</div>
+            </div>
+          </div>
+
+          <div class="security-matrix-panel">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 class="text-lg font-black text-slate-950">{{ label('安全响应头', 'Security Headers') }}</h3>
+              </div>
+              <div class="rounded-full bg-orange-100 px-3 py-1 text-xs text-orange-700">
+                {{ securityHeaderRatio }}
+              </div>
+            </div>
+
+            <div class="security-matrix">
+              <div
+                v-for="item in securityHeaderItems"
+                :key="item.label"
+                class="security-header-cell"
+                :class="{ 'is-ok': item.ok }"
+              >
+                <span class="status-dot" />
+                <span class="min-w-0 truncate">{{ item.label }}</span>
+                <span class="ml-auto text-xs">{{ item.ok ? label('是', 'Yes') : label('否', 'No') }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -233,7 +309,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import SiteHealthSummaryPanel from '@/components/site/SiteHealthSummaryPanel.vue'
 import SiteMetadataProbePanel from '@/components/site/SiteMetadataProbePanel.vue'
 import SiteObservationTabs from '@/components/site/SiteObservationTabs.vue'
 import SitePerformance from '@/components/site/SitePerformance.vue'
@@ -348,6 +423,72 @@ const securityHeaderItems = computed(() => {
     { label: 'Permissions-Policy', ok: hasHeader(headers, 'permissions-policy') },
   ]
 })
+const protocolTrackEntries = computed(() => {
+  const protocols = asRecord(sitePageData.value.targetHealthSummary?.protocols)
+  return ['ping', 'http', 'dns']
+    .map((protocol) => {
+      const summary = asRecord(protocols[protocol])
+      if (!Object.keys(summary).length) {
+        return null
+      }
+
+      const stale = Boolean(summary.stale)
+      const status = firstString(summary.status, 'unknown')
+      return {
+        protocol,
+        label: protocol.toUpperCase(),
+        status: stale ? label('已过期', 'Stale') : protocolStatusText(status),
+        duration: formatMs(firstNumber(summary.duration_ms)),
+        observedAt: formatDateTime(firstString(summary.observed_at)),
+        staleAfter: `${firstNumber(summary.stale_after_seconds) ?? '-'}s`,
+        tone: status === 'success' && !stale ? 'is-ok' : status === 'failure' ? 'is-bad' : 'is-warn',
+      }
+    })
+    .filter(Boolean) as Array<{
+      protocol: string
+      label: string
+      status: string
+      duration: string
+      observedAt: string
+      staleAfter: string
+      tone: string
+    }>
+})
+const protocolAvailableCount = computed(() => protocolTrackEntries.value.filter(entry => entry.tone === 'is-ok').length)
+const protocolAvailabilityText = computed(() => `${protocolAvailableCount.value}/${protocolTrackEntries.value.length || 3}`)
+const targetRiskMessages = computed(() => {
+  const summary = sitePageData.value.targetHealthSummary
+  const messages = summary?.reason_messages?.filter(Boolean) ?? []
+  if (messages.length) {
+    return messages
+  }
+
+  return summary?.reason_codes?.filter(Boolean) ?? []
+})
+const securityHeaderOkCount = computed(() => securityHeaderItems.value.filter(item => item.ok).length)
+const securityHeaderRatio = computed(() => `${securityHeaderOkCount.value}/${securityHeaderItems.value.length || 6}`)
+const observationStripItems = computed(() => [
+  {
+    label: label('当前目标', 'Target'),
+    value: sitePageData.value.domain || '-',
+    tone: '',
+  },
+  {
+    label: label('最近观测', 'Observed'),
+    value: formatDateTime(firstString(sitePageData.value.targetHealthSummary?.observed_at)),
+    tone: '',
+  },
+  {
+    label: label('协议可用', 'Protocols'),
+    value: protocolAvailabilityText.value,
+    tone: protocolAvailableCount.value === protocolTrackEntries.value.length ? 'is-ok' : 'is-warn',
+  },
+  {
+    label: label('风险信号', 'Signals'),
+    value: targetRiskMessages.value.length ? `${targetRiskMessages.value.length}${label('项', '')}` : label('无', 'None'),
+    tone: targetRiskMessages.value.length ? 'is-warn' : 'is-ok',
+  },
+])
 const signalCards = computed(() => [
   {
     eyebrow: label('用户访问', 'Visitor access'),
@@ -571,6 +712,23 @@ function shortDate(value: string) {
   return value.replace('T', ' ').replace(/\.\d+.*$/, '').slice(0, 10)
 }
 
+function formatDateTime(value: string) {
+  if (!value) {
+    return '-'
+  }
+  return value.replace('T', ' ').replace(/\.\d+.*$/, '').slice(0, 19)
+}
+
+function protocolStatusText(status: string) {
+  const map: Record<string, string> = {
+    success: label('成功', 'Success'),
+    failure: label('失败', 'Failed'),
+    skipped: label('跳过', 'Skipped'),
+    unknown: label('未知', 'Unknown'),
+  }
+  return map[status] ?? status
+}
+
 function boolText(value: unknown) {
   if (value === true) {
     return label('是', 'Yes')
@@ -696,7 +854,7 @@ function label(zh: string, en: string) {
 
 .dev-hero {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 0.5rem;
   background:
     radial-gradient(circle at 18% 24%, rgba(251, 140, 47, 0.20), transparent 26%),
@@ -707,6 +865,25 @@ function label(zh: string, en: string) {
 
 .logo-shell {
   border-radius: 0.5rem;
+  background: #ffedd5;
+  padding: 0.45rem;
+}
+
+.hero-title-row {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+@media (min-width: 640px) {
+  .hero-title-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+  }
 }
 
 .dev-pill {
@@ -718,12 +895,12 @@ function label(zh: string, en: string) {
 }
 
 .dev-pill-edge {
-  background: rgba(254, 215, 170, 0.70);
+  background: #fdba74;
   color: #9a3412;
 }
 
 .dev-pill-sfw {
-  background: rgba(255, 237, 213, 0.80);
+  background: #fed7aa;
   color: #c2410c;
 }
 
@@ -733,15 +910,15 @@ function label(zh: string, en: string) {
 }
 
 .dev-pill-welfare {
-  background: rgba(254, 243, 199, 0.82);
+  background: #fde68a;
   color: #b45309;
 }
 
 .keyword-chip {
   border-radius: 999px;
-  background: rgb(255, 237, 213);
+  background: #fed7aa;
   padding: 0.25rem 0.75rem;
-  color: #c2410c;
+  color: #9a3412;
   font-size: 0.75rem;
   font-weight: 400;
 }
@@ -856,12 +1033,11 @@ function label(zh: string, en: string) {
   border-left: 4px solid rgba(251, 113, 133, 0.9);
 }
 
-.dev-health-grid,
+.dev-observation-overview,
 .dev-section {
   margin-top: 1.5rem;
 }
 
-.dev-panel,
 .dev-section {
   border-radius: 28px;
   background: rgba(255, 247, 235, 0.72);
@@ -869,7 +1045,147 @@ function label(zh: string, en: string) {
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
 }
 
-.dev-health-grid :deep(.rounded-xl.bg-orange-50),
+.dev-observation-overview {
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(251, 140, 47, 0.10), transparent 36%),
+    rgba(255, 247, 235, 0.70);
+  padding: clamp(1rem, 2vw, 1.5rem);
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
+}
+
+.overview-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (min-width: 900px) {
+  .overview-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.overview-stat {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 232, 196, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.10);
+  padding: 0.72rem 0.82rem;
+}
+
+.overview-stat.is-ok {
+  background: rgba(220, 252, 231, 0.64);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.10);
+}
+
+.overview-stat.is-warn {
+  background: rgba(253, 224, 71, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.12);
+}
+
+.overview-detail-grid {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+@media (min-width: 1180px) {
+  .overview-detail-grid {
+    grid-template-columns: minmax(0, 1.55fr) minmax(22rem, 0.9fr);
+  }
+}
+
+.protocol-rail-panel,
+.security-matrix-panel {
+  border-radius: 0.75rem;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.protocol-rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.65rem;
+}
+
+@media (min-width: 760px) {
+  .protocol-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.protocol-node {
+  position: relative;
+  border-radius: 0.65rem;
+  background: rgba(255, 230, 191, 0.70);
+  padding: 0.85rem;
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.08);
+}
+
+.protocol-dot {
+  height: 0.75rem;
+  width: 0.75rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: #f59e0b;
+}
+
+.protocol-node.is-ok .protocol-dot,
+.security-header-cell.is-ok .status-dot {
+  background: #10b981;
+}
+
+.protocol-node.is-bad .protocol-dot {
+  background: #f43f5e;
+}
+
+.security-matrix {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.6rem;
+}
+
+@media (min-width: 640px) {
+  .security-matrix {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.security-header-cell {
+  display: flex;
+  min-height: 2.6rem;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: 0.55rem;
+  background: rgba(255, 230, 191, 0.68);
+  padding: 0.65rem 0.8rem;
+  font-size: 0.78rem;
+  color: #475569;
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.07);
+}
+
+.signal-note {
+  border-radius: 0.55rem;
+  background: rgba(255, 230, 191, 0.66);
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.07);
+}
+
+.status-dot {
+  height: 0.5rem;
+  width: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
 .dev-section :deep(.rounded-2xl.bg-orange-100\/45),
 .dev-section :deep(.rounded-xl.bg-orange-50\/80),
 .dev-section :deep(.rounded-xl.bg-orange-50\/70),
@@ -886,9 +1202,148 @@ function label(zh: string, en: string) {
 }
 
 .dev-performance :deep(section > .rounded-2xl) {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
   background:
-    radial-gradient(circle at 78% 0%, rgba(79, 111, 237, 0.09), transparent 34%),
-    rgba(255, 247, 235, 0.56);
+    linear-gradient(118deg, rgba(255, 237, 213, 0.55), rgba(255, 250, 242, 0.78) 48%, rgba(239, 246, 255, 0.32)),
+    rgba(255, 247, 235, 0.70);
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
+}
+
+.dev-performance {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.dev-performance :deep(section > .rounded-2xl::before) {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent, rgba(79, 111, 237, 0.08), transparent),
+    repeating-linear-gradient(90deg, rgba(79, 111, 237, 0.055) 0 1px, transparent 1px 76px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 18%, #000 82%, transparent 100%);
+  opacity: 0.5;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .grid:first-child) {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 1rem;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child) {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child > div) {
+  display: none;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child h3) {
+  color: #0f172a;
+  font-size: clamp(1.08rem, 1.4vw, 1.28rem);
+}
+
+.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:nth-child(2)) {
+  align-self: center;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:nth-child(2) > div) {
+  gap: 0.2rem;
+  border-radius: 8px;
+  background: rgba(255, 232, 196, 0.34);
+  box-shadow: none;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .grid:first-child button) {
+  border-radius: 7px;
+  padding: 0.62rem 1rem;
+  font-size: 0.88rem;
+  transition-duration: 500ms;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .grid:first-child button.bg-orange-200) {
+  background: #fdba74;
+  color: #111827;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child) {
+  gap: 0.55rem;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child > div) {
+  min-width: 4.8rem;
+  border-radius: 7px;
+  background: rgba(255, 232, 196, 0.38);
+  box-shadow: none;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .rounded-xl) {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 0;
+  background:
+    linear-gradient(rgba(255, 250, 242, 0.30), rgba(255, 250, 242, 0.30)),
+    repeating-linear-gradient(0deg, transparent 0 39px, rgba(148, 163, 184, 0.13) 40px),
+    repeating-linear-gradient(90deg, transparent 0 71px, rgba(79, 111, 237, 0.08) 72px);
+  box-shadow: none;
+}
+
+.dev-performance :deep(section > .rounded-2xl.bg-orange-100\/45) {
+  padding: clamp(1rem, 1.6vw, 1.25rem);
+}
+
+.dev-performance :deep(section > .rounded-2xl > .rounded-xl.bg-orange-50\/70) {
+  margin-top: 0.2rem;
+  padding: 0.5rem 0 0;
+  background-color: transparent;
+}
+
+.dev-performance :deep(section > .rounded-2xl > .rounded-xl > div) {
+  height: 320px;
+}
+
+@media (max-width: 1023px) {
+  .dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child) {
+    justify-self: center;
+  }
+
+  .dev-performance :deep(section > .rounded-2xl > .rounded-xl > div) {
+    height: 300px;
+  }
+}
+
+@media (max-width: 640px) {
+  .dev-performance :deep(section > .rounded-2xl) {
+    padding: 1rem;
+  }
+
+  .dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child) {
+    text-align: center;
+  }
+
+  .dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-self: stretch;
+  }
+
+  .dev-performance :deep(section > .rounded-2xl > .rounded-xl) {
+    padding-inline: 0.35rem;
+  }
+
+  .dev-performance :deep(section > .rounded-2xl > .rounded-xl > div) {
+    height: 260px;
+  }
 }
 
 @keyframes dash-flow {

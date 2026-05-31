@@ -143,6 +143,8 @@ const props = defineProps<Props>()
 const navV2Api = useApi('navV2')
 const latencyChartRef = ref<HTMLElement | null>(null)
 const chart = ref<echarts.ECharts | null>(null)
+let chartMouseMoveHandler: ((event: any) => void) | null = null
+let chartGlobalOutHandler: (() => void) | null = null
 const sampleType = ref<'twenty' | 'sixty' | 'hundred'>('twenty')
 const v2PingRecord = ref<PingRecord | null>(null)
 const httpPayload = computed(() => asRecord(props.targetLatestCore?.protocols?.http?.payload))
@@ -371,6 +373,7 @@ function updateChart() {
     color: ['#4f6fed'],
     tooltip: {
       trigger: 'item',
+      triggerOn: 'mousemove|click',
       axisPointer: {
         type: 'line',
         lineStyle: { color: '#f59e0b', width: 1, type: 'dashed' }
@@ -383,7 +386,7 @@ function updateChart() {
       padding: [10, 12],
       textStyle: { color: '#374151', fontSize: 12, lineHeight: 18 },
       formatter: (params: any) => {
-        const point = params.data
+        const point = params?.data
         if (!point) return label('无数据', 'No data')
         return `
         <div style="line-height:1.5">
@@ -420,8 +423,9 @@ function updateChart() {
       data: seriesData,
       smooth: true,
       symbol: 'circle',
-      symbolSize: 5,
+      symbolSize: 8,
       showSymbol: true,
+      triggerLineEvent: true,
       lineStyle: { width: 2.5, color: '#4f6fed' },
       itemStyle: { color: '#4f6fed', borderColor: '#fff7ed', borderWidth: 1.5 },
       areaStyle: {
@@ -435,43 +439,49 @@ function updateChart() {
         itemStyle: { symbolSize: 8, color: '#f97316', borderColor: '#fff7ed', borderWidth: 2 }
       }
     }]
-  })
+  }, true)
 
-  // 鼠标事件监听
-  chart.value.getZr().off('mousemove') // 避免重复绑定
-  chart.value.getZr().on('mousemove', (event) => {
-    const pointInPixel: [number, number] = [
-      event.offsetX ?? 0,
-      event.offsetY ?? 0
-    ];
-    let nearestIndex = -1;
-    let minDist = Infinity;
+  bindChartHover(seriesData.length)
+}
 
-    seriesData.forEach((d, i) => {
-      const pixel = chart.value!.convertToPixel({ seriesIndex: 0 }, [i, d.value]);
-      if (!pixel) return;
+function bindChartHover(pointCount: number) {
+  if (!chart.value) {
+    return
+  }
 
-      // 分解像素坐标时增加类型保护
-      if (Array.isArray(pixel) && pixel.length === 2) {
-        const px = Number(pixel[0]) || 0;
-        const py = Number(pixel[1]) || 0;
-        const dist = Math.hypot(px - pointInPixel[0], py - pointInPixel[1]);
+  const currentChart = chart.value
+  const zr = currentChart.getZr()
+  if (chartMouseMoveHandler) {
+    zr.off('mousemove', chartMouseMoveHandler)
+  }
+  if (chartGlobalOutHandler) {
+    zr.off('globalout', chartGlobalOutHandler)
+  }
 
-        if (dist < minDist && dist <= 10) {
-          minDist = dist;
-          nearestIndex = i;
-        }
-      }
-    });
-
-    if (nearestIndex !== -1) {
-      chart.value!.dispatchAction({ type: 'highlight', seriesIndex: 0, dataIndex: nearestIndex });
-      chart.value!.dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex: nearestIndex });
-    } else {
-      chart.value!.dispatchAction({ type: 'downplay', seriesIndex: 0 });
-      chart.value!.dispatchAction({ type: 'hideTip' });
+  chartMouseMoveHandler = (event: any) => {
+    const pixel: [number, number] = [event.offsetX ?? 0, event.offsetY ?? 0]
+    if (!currentChart.containPixel({ gridIndex: 0 }, pixel)) {
+      currentChart.dispatchAction({ type: 'hideTip' })
+      return
     }
-  });
+
+    const dataCoord = currentChart.convertFromPixel({ gridIndex: 0 }, pixel)
+    const rawIndex = Array.isArray(dataCoord) ? Number(dataCoord[0]) : Number.NaN
+    if (!Number.isFinite(rawIndex)) {
+      currentChart.dispatchAction({ type: 'hideTip' })
+      return
+    }
+
+    const dataIndex = Math.max(0, Math.min(pointCount - 1, Math.round(rawIndex)))
+    currentChart.dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex })
+  }
+
+  chartGlobalOutHandler = () => {
+    currentChart.dispatchAction({ type: 'hideTip' })
+  }
+
+  zr.on('mousemove', chartMouseMoveHandler)
+  zr.on('globalout', chartGlobalOutHandler)
 }
 
 
@@ -499,6 +509,17 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  if (chart.value) {
+    const zr = chart.value.getZr()
+    if (chartMouseMoveHandler) {
+      zr.off('mousemove', chartMouseMoveHandler)
+    }
+    if (chartGlobalOutHandler) {
+      zr.off('globalout', chartGlobalOutHandler)
+    }
+  }
+  chartMouseMoveHandler = null
+  chartGlobalOutHandler = null
   if (resizeObserver && latencyChartRef.value) resizeObserver.unobserve(latencyChartRef.value)
   resizeObserver = null
   if (chart.value)  chart.value.dispose()
