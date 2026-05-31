@@ -41,8 +41,8 @@
 
     <main v-else class="relative mx-auto w-full max-w-[1560px] px-5 py-8 sm:px-8 lg:px-10">
       <section class="dev-hero">
-        <div class="relative z-10 flex min-w-0 flex-col gap-6 md:flex-row md:items-start">
-          <div class="shrink-0">
+        <div class="relative z-10 flex min-w-0 flex-col gap-5 md:flex-row md:items-center">
+          <div class="flex shrink-0 justify-center md:self-center">
             <div class="logo-shell">
               <img
                 v-if="sitePageData.siteInfo?.icon"
@@ -57,99 +57,102 @@
           </div>
 
           <div class="min-w-0 flex-1">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div class="flex min-w-0 flex-wrap items-center gap-2.5">
-                <h1 class="mr-2 break-words text-3xl font-black tracking-normal text-slate-950 md:text-4xl">
-                  {{ siteName }}
-                </h1>
-                <span
-                  v-for="badge in heroBadges"
-                  :key="badge.label"
-                  class="dev-pill"
-                  :class="badge.class"
-                >
-                  {{ badge.label }}
-                </span>
-              </div>
-
-              <a
-                v-if="visitUrl"
-                :href="visitUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="visit-button duration-500"
-              >
-                <span class="fa fa-link" aria-hidden="true"></span>
-                {{ label('访问网站', 'Visit site') }}
-              </a>
-            </div>
-
-            <div class="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                class="group/domain relative w-fit"
-                @pointerenter="openDomainCard"
-                @pointerleave="scheduleCloseDomainCard"
-                @focusin="openDomainCard"
-                @focusout="scheduleCloseDomainCard"
-              >
-                <button
-                  type="button"
-                  class="flex items-center font-mono text-sm text-slate-600 transition-colors duration-500 hover:text-orange-500"
-                  @click="copyToClipboard(sitePageData.domain)"
-                >
-                  <span>{{ sitePageData.domain }}</span>
-                  <span class="ml-2 text-xs text-slate-400 opacity-0 transition-opacity duration-500 group-hover/domain:opacity-100">
-                    {{ t('common.copy') }}
+            <div class="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div class="min-w-0 flex-1">
+                <div class="flex min-w-0 flex-wrap items-center gap-2.5">
+                  <h1 class="mr-2 break-words text-xl font-black tracking-normal text-slate-950 md:text-2xl">
+                    {{ siteName }}
+                  </h1>
+                  <span
+                    v-for="badge in heroBadges"
+                    :key="badge.label"
+                    class="dev-pill"
+                    :class="badge.class"
+                  >
+                    {{ badge.label }}
                   </span>
-                </button>
+                </div>
 
-                <transition name="domain-card">
+                <div class="relative mt-2 w-fit">
                   <div
-                    v-show="showDomainCard"
-                    class="absolute left-0 top-full z-30 w-[min(22rem,calc(100vw-3rem))] pt-3"
+                    class="group/domain relative w-fit"
                     @pointerenter="openDomainCard"
                     @pointerleave="scheduleCloseDomainCard"
+                    @focusin="openDomainCard"
+                    @focusout="scheduleCloseDomainCard"
                   >
-                    <div class="absolute left-0 top-0 h-3 w-full" />
-                    <div class="domain-popover">
-                      <div class="mb-2 px-1 text-xs font-semibold text-orange-500">
-                        {{ label('采集域名', 'Collected domains') }}
-                      </div>
-                      <div class="domain-list-scroll flex max-h-72 flex-col gap-1 overflow-y-auto pr-1">
-                        <NuxtLink
-                          v-for="domain in switchableDomains"
-                          :key="domain"
-                          :to="domainLink(domain)"
-                          class="rounded-lg px-3 py-2 font-mono text-xs text-slate-700 transition-colors duration-500 hover:bg-orange-100/80 hover:text-orange-700"
-                          :class="{ 'bg-orange-100/80 text-orange-700': domain === sitePageData.domain }"
-                        >
-                          {{ domain }}
-                        </NuxtLink>
-                      </div>
-                    </div>
-                  </div>
-                </transition>
+                    <button
+                      type="button"
+                      class="flex items-center font-mono text-sm font-normal text-slate-500 transition-colors duration-500 hover:text-orange-500"
+                      @click="copyToClipboard(sitePageData.domain)"
+                    >
+                      <span>{{ sitePageData.domain }}</span>
+                      <span class="ml-2 text-xs text-slate-400 opacity-0 transition-opacity duration-500 group-hover/domain:opacity-100">
+                        {{ t('common.copy') }}
+                      </span>
+                    </button>
 
-                <transition name="fade">
-                  <div
-                    v-if="copied"
-                    class="absolute -top-7 left-0 rounded bg-slate-900 px-2 py-0.5 text-xs text-white"
-                  >
-                    {{ t('common.copied') }}
+                    <transition name="domain-card">
+                      <div
+                        v-show="showDomainCard"
+                        class="absolute left-0 top-full z-30 w-[min(22rem,calc(100vw-3rem))] pt-3"
+                        @pointerenter="openDomainCard"
+                        @pointerleave="scheduleCloseDomainCard"
+                      >
+                        <div class="absolute left-0 top-0 h-3 w-full" />
+                        <div class="domain-popover">
+                          <div class="mb-2 px-1 text-xs font-semibold text-orange-500">
+                            {{ label('采集域名', 'Collected domains') }}
+                          </div>
+                          <div class="domain-list-scroll flex max-h-72 flex-col gap-1 overflow-y-auto pr-1">
+                            <NuxtLink
+                              v-for="domain in switchableDomains"
+                              :key="domain"
+                              :to="domainLink(domain)"
+                              class="rounded-lg px-3 py-2 font-mono text-xs text-slate-700 transition-colors duration-500 hover:bg-orange-100/80 hover:text-orange-700"
+                              :class="{ 'bg-orange-100/80 text-orange-700': domain === sitePageData.domain }"
+                            >
+                              {{ domain }}
+                            </NuxtLink>
+                          </div>
+                        </div>
+                      </div>
+                    </transition>
+
+                    <transition name="fade">
+                      <div
+                        v-if="copied"
+                        class="absolute -top-7 left-0 rounded bg-slate-900 px-2 py-0.5 text-xs text-white"
+                      >
+                        {{ t('common.copied') }}
+                      </div>
+                    </transition>
                   </div>
-                </transition>
+                </div>
               </div>
 
-              <div class="text-xs font-semibold text-orange-600">
-                {{ label('浏览量', 'Views') }}: {{ sitePageData.siteInfo?.view_count ?? 0 }}
+              <div class="hero-actions">
+                <a
+                  v-if="visitUrl"
+                  :href="visitUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="visit-button duration-500"
+                >
+                  <img src="@/assets/svgs/go.svg" alt="" class="h-5 w-5 opacity-90">
+                  {{ label('访问网站', 'Visit site') }}
+                </a>
+                <div class="text-xs font-semibold text-orange-500">
+                  {{ label('浏览量', 'Views') }}: {{ sitePageData.siteInfo?.view_count ?? 0 }}
+                </div>
               </div>
             </div>
 
-            <p class="mt-4 max-w-4xl text-sm leading-7 text-slate-700 md:text-base">
+            <p class="mt-3 max-w-6xl text-sm leading-7 text-slate-700 md:text-base">
               {{ sitePageData.siteInfo?.info || '-' }}
             </p>
 
-            <div v-if="overviewKeywords.length" class="mt-4 flex flex-wrap gap-2">
+            <div v-if="overviewKeywords.length" class="mt-3 flex flex-wrap gap-2">
               <span
                 v-for="keyword in overviewKeywords"
                 :key="keyword"
@@ -698,7 +701,7 @@ function label(zh: string, en: string) {
   background:
     radial-gradient(circle at 18% 24%, rgba(251, 140, 47, 0.20), transparent 26%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(255, 242, 219, 0.62));
-  padding: clamp(1.25rem, 3vw, 2.4rem);
+  padding: clamp(1rem, 2vw, 1.6rem);
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18);
 }
 
@@ -708,38 +711,55 @@ function label(zh: string, en: string) {
 
 .dev-pill {
   border-radius: 999px;
-  padding: 0.35rem 0.75rem;
+  padding: 0.25rem 0.7rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 .dev-pill-edge {
-  background: rgba(254, 215, 170, 0.75);
-  color: #7c2d12;
+  background: rgba(254, 215, 170, 0.70);
+  color: #9a3412;
 }
 
 .dev-pill-sfw {
-  background: rgba(224, 242, 254, 0.82);
-  color: #075985;
+  background: rgba(255, 237, 213, 0.80);
+  color: #c2410c;
 }
 
 .dev-pill-risk {
-  background: rgba(254, 226, 226, 0.82);
-  color: #991b1b;
+  background: rgba(254, 226, 226, 0.80);
+  color: #b91c1c;
 }
 
 .dev-pill-welfare {
-  background: rgba(254, 249, 195, 0.82);
-  color: #854d0e;
+  background: rgba(254, 243, 199, 0.82);
+  color: #b45309;
 }
 
 .keyword-chip {
   border-radius: 999px;
-  background: rgba(255, 247, 237, 0.62);
-  padding: 0.3rem 0.7rem;
+  background: rgb(255, 237, 213);
+  padding: 0.25rem 0.75rem;
   color: #c2410c;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 400;
+}
+
+.hero-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+@media (min-width: 1024px) {
+  .hero-actions {
+    align-items: flex-end;
+    margin-left: auto;
+    padding-left: 2rem;
+  }
 }
 
 .domain-popover {
@@ -779,16 +799,16 @@ function label(zh: string, en: string) {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  border-radius: 18px;
-  background: #111827;
-  padding: 0.85rem 1.1rem;
-  color: #fffaf2;
+  border-radius: 0.5rem;
+  background: rgba(254, 215, 170, 0.62);
+  padding: 0.55rem 1rem;
+  color: #111827;
   font-size: 0.875rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .visit-button:hover {
-  background: #fb8c2f;
+  background: rgba(254, 215, 170, 0.88);
   color: #111827;
 }
 
