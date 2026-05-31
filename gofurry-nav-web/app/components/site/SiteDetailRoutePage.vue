@@ -66,22 +66,6 @@
           :target-observations="sitePageData.targetObservations"
         />
       </div>
-
-      <div class="mb-8 mr-4 flex flex-wrap items-center justify-center gap-3 text-orange-800">
-        <button
-          class="flex items-center justify-center gap-2 rounded-lg bg-orange-300 px-4 py-2 text-sm transition-colors hover:bg-orange-200"
-          @click="generateReport"
-        >
-          {{ t('common.save') }}
-        </button>
-
-        <button
-          class="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm transition-colors hover:bg-orange-100"
-          @click="() => refresh()"
-        >
-          {{ t('common.refresh') }}
-        </button>
-      </div>
     </div>
   </div>
 </template>
@@ -97,7 +81,7 @@ import SitePerformance from '@/components/site/SitePerformance.vue'
 import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
 
 const { t } = useI18n()
-const { data, pending, error, refresh, siteId } = await useSiteDetailPage()
+const { data, pending, error, siteId } = await useSiteDetailPage()
 const sitePageData = computed(() => data.value!)
 const pageRoot = ref<HTMLElement | null>(null)
 const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'Failed to load site data.' : '站点数据加载失败。'))
@@ -190,8 +174,6 @@ useSeoMeta({
   ogTitle: () => seoTitle.value,
   ogDescription: () => seoDescription.value,
 })
-
-const generateReport = () => {}
 
 function normalizeHeaders(headers?: Record<string, string[]>) {
   const normalized: Record<string, string[]> = {}
