@@ -30,9 +30,11 @@
 
       <div class="mx-10 mb-8">
         <SitePerformance
-          v-if="sitePageData.sitePingRecord && sitePageData.siteHttpRecord"
+          v-if="sitePageData.siteHttpRecord"
+          :domain="sitePageData.domain"
           :ping-record="sitePageData.sitePingRecord"
           :http-record="sitePageData.siteHttpRecord"
+          :site-id="siteId"
           :target-latest-core="sitePageData.targetLatestCore"
         >
           <template v-if="sitePageData.siteHealthSummary || sitePageData.targetHealthSummary" #after-metrics>
@@ -61,9 +63,9 @@
         <SiteMetadataProbePanel
           :http-record="sitePageData.siteHttpRecord"
           :light-probe-state="sitePageData.lightProbeState"
-          :target-changes="sitePageData.targetChanges"
+          :site-id="siteId"
+          :target="sitePageData.domain"
           :target-latest-core="sitePageData.targetLatestCore"
-          :target-observations="sitePageData.targetObservations"
         />
       </div>
     </div>

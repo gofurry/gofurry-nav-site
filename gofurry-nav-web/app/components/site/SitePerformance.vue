@@ -126,27 +126,32 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import * as echarts from 'echarts'
-import type { PingRecord, PingStats, HttpRecord, TargetLatestResponse } from '@/types/nav'
+import type { CollectorEnvelope, PingRecord, PingStats, HttpRecord, TargetLatestResponse, TargetObservationsResponse } from '@/types/nav'
 import {i18n} from "@/main";
 
 const t = (key: string) => i18n.global.t(key)
 
 interface Props {
-  pingRecord: PingRecord
+  pingRecord: PingRecord | null
   httpRecord: HttpRecord
   targetLatestCore?: TargetLatestResponse | null
+  siteId?: string | number
+  domain?: string
 }
 
 const props = defineProps<Props>()
+const navV2Api = useApi('navV2')
 const latencyChartRef = ref<HTMLElement | null>(null)
 const chart = ref<echarts.ECharts | null>(null)
 const sampleType = ref<'twenty' | 'sixty' | 'hundred'>('twenty')
+const v2PingRecord = ref<PingRecord | null>(null)
 const httpPayload = computed(() => asRecord(props.targetLatestCore?.protocols?.http?.payload))
 const yesText = computed(() => i18n.global.locale.value === 'en' ? 'Yes' : '是')
 const noText = computed(() => i18n.global.locale.value === 'en' ? 'No' : '否')
 
 // 当前 ping 数据
-const currentPing = computed<PingStats | null>(() => props.pingRecord?.[sampleType.value] || null)
+const effectivePingRecord = computed(() => props.pingRecord || v2PingRecord.value)
+const currentPing = computed<PingStats | null>(() => effectivePingRecord.value?.[sampleType.value] || null)
 const sampleOptions = computed(() => [
   { value: 'twenty' as const, label: label('20次', '20') },
   { value: 'sixty' as const, label: label('60次', '60') },
@@ -490,6 +495,7 @@ onMounted(async () => {
     resizeObserver = new ResizeObserver(() => chart.value?.resize())
     resizeObserver.observe(latencyChartRef.value)
   }
+  void loadV2PingHistory()
 })
 
 onBeforeUnmount(() => {
@@ -500,5 +506,83 @@ onBeforeUnmount(() => {
 
 // 监听 ping 数据变化
 watch(() => props.pingRecord, updateChart, { deep: true })
+watch(() => [props.siteId, props.domain], () => {
+  v2PingRecord.value = null
+  void loadV2PingHistory()
+})
 watch(sampleType, updateChart)
+
+async function loadV2PingHistory() {
+  if (props.pingRecord || !props.siteId || !props.domain) {
+    return
+  }
+
+  try {
+    const response = await navV2Api<TargetObservationsResponse>(`/nav/sites/${props.siteId}/targets/${encodeURIComponent(props.domain)}/observations`, {
+      query: {
+        protocol: 'ping',
+        limit: 100,
+        payload_mode: 'preview',
+      },
+    })
+    v2PingRecord.value = buildPingRecordFromObservations(response.items ?? [])
+    await nextTick()
+    updateChart()
+  } catch {
+    v2PingRecord.value = emptyPingRecord()
+  }
+}
+
+function buildPingRecordFromObservations(items: CollectorEnvelope[]): PingRecord {
+  const points = items.map(toDelayPoint).filter(point => point.delay !== '')
+  return {
+    twenty: buildPingStats(points.slice(0, 20)),
+    sixty: buildPingStats(points.slice(0, 60)),
+    hundred: buildPingStats(points.slice(0, 100)),
+  }
+}
+
+function toDelayPoint(item: CollectorEnvelope) {
+  const payload = asRecord(item.payload)
+  const delay = firstNumber(payload.avg_rtt_ms, payload.delay_ms, item.duration_ms)
+  const loss = firstNumber(payload.loss_rate, payload.legacy_loss)
+  return {
+    status: item.status,
+    time: formatObservedTime(item.observed_at),
+    loss: formatLossNumber(loss),
+    delay: delay === null ? '' : String(Math.round(delay)),
+  }
+}
+
+function buildPingStats(points: { status: string; time: string; loss: string; delay: string }[]): PingStats {
+  const delayValues = points.map(point => parseNumber(point.delay)).filter(Number.isFinite)
+  const lossValues = points.map(point => parseNumber(point.loss)).filter(Number.isFinite)
+  return {
+    DelayModel: points,
+    avgDelay: delayValues.length ? `${Math.round(delayValues.reduce((sum, value) => sum + value, 0) / delayValues.length)}ms` : '-',
+    avgLoss: lossValues.length ? `${Math.round(lossValues.reduce((sum, value) => sum + value, 0) / lossValues.length)}%` : '-',
+  }
+}
+
+function emptyPingRecord(): PingRecord {
+  return {
+    twenty: buildPingStats([]),
+    sixty: buildPingStats([]),
+    hundred: buildPingStats([]),
+  }
+}
+
+function formatObservedTime(value: string) {
+  if (!value) {
+    return ''
+  }
+  return value.replace('T', ' ').replace(/\.\d+.*$/, '')
+}
+
+function formatLossNumber(value: number | null) {
+  if (value === null) {
+    return '0'
+  }
+  return value <= 1 ? String(Math.round(value * 100)) : String(Math.round(value))
+}
 </script>

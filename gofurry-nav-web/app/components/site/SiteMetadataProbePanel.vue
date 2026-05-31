@@ -29,6 +29,7 @@
       </div>
 
       <div v-else-if="activeInfoTab === 'changes'" class="space-y-3">
+        <div v-if="changesLoading" class="rounded-xl bg-orange-50/80 p-4 text-sm text-gray-500">{{ label('变化事件加载中', 'Loading changes') }}</div>
         <div
           v-for="event in changeEvents"
           :key="event.key"
@@ -50,10 +51,11 @@
             </div>
           </div>
         </div>
-        <div v-if="!changeEvents.length" class="rounded-xl bg-orange-50/80 p-4 text-sm text-gray-500">{{ label('暂无变化事件', 'No change events') }}</div>
+        <div v-if="!changesLoading && !changeEvents.length" class="rounded-xl bg-orange-50/80 p-4 text-sm text-gray-500">{{ label('暂无变化事件', 'No change events') }}</div>
       </div>
 
       <div v-else class="space-y-4">
+        <div v-if="observationsLoading" class="rounded-xl bg-orange-50/80 p-4 text-sm text-gray-500">{{ label('观测历史加载中', 'Loading history') }}</div>
         <section
           v-for="history in observationHistories"
           :key="history.protocol"
@@ -194,7 +196,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, ref, type PropType } from 'vue'
+import { computed, defineComponent, h, ref, watch, type PropType } from 'vue'
 import { i18n } from '@/main'
 import type { CollectorEnvelope, HttpRecord, TargetChangesResponse, TargetLatestResponse, TargetObservationsResponse } from '@/types/nav'
 
@@ -217,14 +219,23 @@ const props = defineProps<{
   httpRecord: HttpRecord | null
   targetLatestCore: TargetLatestResponse | null
   lightProbeState: TargetLatestResponse | null
-  targetChanges: TargetChangesResponse | null
-  targetObservations: Record<'ping' | 'http' | 'dns', TargetObservationsResponse | null>
+  siteId: string | number
+  target: string
 }>()
 
+const navV2Api = useApi('navV2')
 const httpPayload = computed(() => asRecord(props.targetLatestCore?.protocols?.http?.payload))
 const httpStatus = computed(() => props.targetLatestCore?.protocols?.http?.status || '')
 const lightProtocols = computed(() => props.lightProbeState?.protocols ?? {})
 const activeInfoTab = ref<InfoTabKey>('metadata')
+const targetChanges = ref<TargetChangesResponse | null>(null)
+const targetObservations = ref<Record<ObservationProtocol, TargetObservationsResponse | null>>({
+  ping: null,
+  http: null,
+  dns: null,
+})
+const changesLoading = ref(false)
+const observationsLoading = ref(false)
 const observationPages = ref<Record<ObservationProtocol, number>>({
   ping: 1,
   http: 1,
@@ -278,7 +289,7 @@ const lightProbeEntries = computed(() => lightProbeOrder
     }
   }))
 const selectedProbeDetailSections = computed(() => selectedProbe.value ? lightProbeDetailSections(selectedProbe.value) : [])
-const changeEvents = computed(() => arrayRecords(props.targetChanges?.events).slice(0, 12).map((raw, index) => ({
+const changeEvents = computed(() => arrayRecords(targetChanges.value?.events).slice(0, 12).map((raw, index) => ({
   key: stringValue(raw.event_id || raw.id || `${raw.protocol || 'event'}:${index}`),
   protocol: protocolLabel(stringValue(raw.protocol)),
   field: stringValue(raw.field || raw.category || raw.change_type),
@@ -288,7 +299,7 @@ const changeEvents = computed(() => arrayRecords(props.targetChanges?.events).sl
 })))
 const observationPageSize = 4
 const observationHistories = computed(() => (['ping', 'http', 'dns'] as ObservationProtocol[]).map((protocol) => {
-  const items = props.targetObservations?.[protocol]?.items ?? []
+  const items = targetObservations.value[protocol]?.items ?? []
   const totalPages = Math.max(1, Math.ceil(items.length / observationPageSize))
   const page = Math.min(Math.max(observationPages.value[protocol] || 1, 1), totalPages)
   const start = (page - 1) * observationPageSize
@@ -301,6 +312,27 @@ const observationHistories = computed(() => (['ping', 'http', 'dns'] as Observat
     totalPages,
   }
 }))
+
+watch(activeInfoTab, (tab) => {
+  if (tab === 'changes') {
+    void loadChanges()
+  }
+  if (tab === 'history') {
+    void loadObservations()
+  }
+})
+
+watch(() => [props.siteId, props.target], () => {
+  targetChanges.value = null
+  targetObservations.value = { ping: null, http: null, dns: null }
+  observationPages.value = { ping: 1, http: 1, dns: 1 }
+  if (activeInfoTab.value === 'changes') {
+    void loadChanges()
+  }
+  if (activeInfoTab.value === 'history') {
+    void loadObservations()
+  }
+})
 
 const InfoList = defineComponent({
   props: {
@@ -558,6 +590,55 @@ function setObservationPage(protocol: ObservationProtocol, page: number) {
   const history = observationHistories.value.find(item => item.protocol === protocol)
   const totalPages = history?.totalPages ?? 1
   observationPages.value[protocol] = Math.min(Math.max(page, 1), totalPages)
+}
+
+async function loadChanges() {
+  if (targetChanges.value || changesLoading.value || !props.siteId || !props.target) {
+    return
+  }
+
+  changesLoading.value = true
+  try {
+    targetChanges.value = await navV2Api<TargetChangesResponse>(targetPath('/changes'))
+  } catch {
+    targetChanges.value = null
+  } finally {
+    changesLoading.value = false
+  }
+}
+
+async function loadObservations() {
+  if (observationsLoading.value || !props.siteId || !props.target) {
+    return
+  }
+  const hasAllProtocols = (['ping', 'http', 'dns'] as ObservationProtocol[]).every(protocol => targetObservations.value[protocol])
+  if (hasAllProtocols) {
+    return
+  }
+
+  observationsLoading.value = true
+  try {
+    const [ping, http, dns] = await Promise.all((['ping', 'http', 'dns'] as ObservationProtocol[]).map(protocol =>
+      navV2Api<TargetObservationsResponse>(targetPath('/observations'), {
+        query: {
+          protocol,
+          limit: 8,
+          payload_mode: 'preview',
+        },
+      }).catch(() => null)
+    ))
+    targetObservations.value = {
+      ping: ping ?? null,
+      http: http ?? null,
+      dns: dns ?? null,
+    }
+  } finally {
+    observationsLoading.value = false
+  }
+}
+
+function targetPath(suffix: string) {
+  return `/nav/sites/${props.siteId}/targets/${encodeURIComponent(props.target)}${suffix}`
 }
 
 function observationSummary(protocol: string, envelope: CollectorEnvelope) {
