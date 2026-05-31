@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { DnsItem, DnsRecord, HttpRecord, PingRecord, Site, SiteHealthSummary, SiteInfo, TargetHealthSummary, TargetLatestResponse } from '~/types/nav'
+import type { DnsItem, DnsRecord, HttpRecord, PingRecord, Site, SiteHealthSummary, SiteInfo, TargetChangesResponse, TargetHealthSummary, TargetLatestResponse, TargetObservationsResponse } from '~/types/nav'
 import { safeJsonParse } from '~/utils/util'
 
 export interface SiteDetailPageData {
@@ -13,6 +13,8 @@ export interface SiteDetailPageData {
   targetHealthSummary: TargetHealthSummary | null
   targetLatestCore: TargetLatestResponse | null
   lightProbeState: TargetLatestResponse | null
+  targetChanges: TargetChangesResponse | null
+  targetObservations: Record<'ping' | 'http' | 'dns', TargetObservationsResponse | null>
 }
 
 function extractPrimaryDomain(rawDomain: unknown): string {
@@ -117,10 +119,32 @@ export async function useSiteDetailPage() {
           targetHealthSummary: null,
           targetLatestCore: null,
           lightProbeState: null,
+          targetChanges: null,
+          targetObservations: {
+            ping: null,
+            http: null,
+            dns: null,
+          },
         }
       }
 
-      const [httpRecord, dnsRecord, pingRecord, siteHealthSummary, targetHealthSummary, targetLatestCore, lightProbeState] = await Promise.all([
+      const targetBase = siteId.value
+        ? `/nav/sites/${siteId.value}/targets/${encodeURIComponent(resolvedDomain)}`
+        : ''
+
+      const [
+        httpRecord,
+        dnsRecord,
+        pingRecord,
+        siteHealthSummary,
+        targetHealthSummary,
+        targetLatestCore,
+        lightProbeState,
+        targetChanges,
+        pingObservations,
+        httpObservations,
+        dnsObservations,
+      ] = await Promise.all([
         navApi<HttpRecord>('/nav/site/getSiteHttpRecord', {
           query: {
             domain: resolvedDomain,
@@ -156,6 +180,36 @@ export async function useSiteDetailPage() {
               },
             }).catch(() => null)
           : Promise.resolve(null),
+        targetBase
+          ? navV2Api<TargetChangesResponse>(`${targetBase}/changes`).catch(() => null)
+          : Promise.resolve(null),
+        targetBase
+          ? navV2Api<TargetObservationsResponse>(`${targetBase}/observations`, {
+              query: {
+                protocol: 'ping',
+                limit: 8,
+                payload_mode: 'preview',
+              },
+            }).catch(() => null)
+          : Promise.resolve(null),
+        targetBase
+          ? navV2Api<TargetObservationsResponse>(`${targetBase}/observations`, {
+              query: {
+                protocol: 'http',
+                limit: 8,
+                payload_mode: 'preview',
+              },
+            }).catch(() => null)
+          : Promise.resolve(null),
+        targetBase
+          ? navV2Api<TargetObservationsResponse>(`${targetBase}/observations`, {
+              query: {
+                protocol: 'dns',
+                limit: 8,
+                payload_mode: 'preview',
+              },
+            }).catch(() => null)
+          : Promise.resolve(null),
       ])
 
       return {
@@ -168,6 +222,12 @@ export async function useSiteDetailPage() {
         targetHealthSummary,
         targetLatestCore,
         lightProbeState,
+        targetChanges,
+        targetObservations: {
+          ping: pingObservations,
+          http: httpObservations,
+          dns: dnsObservations,
+        },
       }
     },
     {
@@ -182,6 +242,12 @@ export async function useSiteDetailPage() {
         targetHealthSummary: null,
         targetLatestCore: null,
         lightProbeState: null,
+        targetChanges: null,
+        targetObservations: {
+          ping: null,
+          http: null,
+          dns: null,
+        },
       }),
     }
   )

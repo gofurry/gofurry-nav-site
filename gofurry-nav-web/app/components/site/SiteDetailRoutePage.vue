@@ -61,7 +61,9 @@
         <SiteMetadataProbePanel
           :http-record="sitePageData.siteHttpRecord"
           :light-probe-state="sitePageData.lightProbeState"
+          :target-changes="sitePageData.targetChanges"
           :target-latest-core="sitePageData.targetLatestCore"
+          :target-observations="sitePageData.targetObservations"
         />
       </div>
 

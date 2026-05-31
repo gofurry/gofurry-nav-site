@@ -1,13 +1,100 @@
 <template>
   <section class="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.05fr]">
     <div class="rounded-2xl bg-orange-100/45 p-5">
-      <div class="mb-4 flex items-center justify-between gap-3">
-        <h3 class="text-lg font-semibold text-gray-900">{{ label('页面元信息', 'Page metadata') }}</h3>
-        <span :class="['rounded-full px-2.5 py-1 text-xs font-semibold', statusClass(httpStatus)]">
-          {{ statusText(httpStatus) }}
-        </span>
+      <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <h3 class="text-lg font-semibold text-gray-900">{{ activeInfoTabTitle }}</h3>
+        <div class="flex w-full gap-1 rounded-xl bg-orange-50/70 p-1 text-sm lg:w-auto">
+          <button
+            v-for="tab in infoTabs"
+            :key="tab.key"
+            type="button"
+            :class="[
+              'flex-1 rounded-lg px-3 py-2 font-medium transition-colors duration-500 lg:flex-none',
+              activeInfoTab === tab.key ? 'bg-orange-200 text-gray-950' : 'text-gray-700 hover:bg-orange-100',
+            ]"
+            @click="activeInfoTab = tab.key"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
       </div>
-      <InfoList :items="pageInfoItems" :empty-text="label('暂无数据', 'No data')" />
+
+      <div v-if="activeInfoTab === 'metadata'">
+        <div class="mb-3 flex justify-end">
+          <span :class="['rounded-full px-2.5 py-1 text-xs font-semibold', statusClass(httpStatus)]">
+            {{ statusText(httpStatus) }}
+          </span>
+        </div>
+        <InfoList :items="pageInfoItems" :empty-text="label('暂无数据', 'No data')" />
+      </div>
+
+      <div v-else-if="activeInfoTab === 'changes'" class="space-y-3">
+        <div
+          v-for="event in changeEvents"
+          :key="event.key"
+          class="rounded-xl bg-orange-50/80 p-4"
+        >
+          <div class="mb-3 flex flex-wrap items-center gap-2">
+            <span class="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-800">{{ event.protocol }}</span>
+            <span class="text-sm font-semibold text-gray-900">{{ event.field }}</span>
+            <span class="ml-auto text-xs text-gray-500">{{ event.detectedAt }}</span>
+          </div>
+          <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <div class="rounded-lg bg-orange-100/45 p-3">
+              <p class="text-xs font-semibold text-gray-500">{{ label('旧值', 'Old value') }}</p>
+              <p class="mt-1 break-words font-mono text-sm text-gray-800">{{ event.oldValue }}</p>
+            </div>
+            <div class="rounded-lg bg-orange-100/45 p-3">
+              <p class="text-xs font-semibold text-gray-500">{{ label('新值', 'New value') }}</p>
+              <p class="mt-1 break-words font-mono text-sm text-gray-800">{{ event.newValue }}</p>
+            </div>
+          </div>
+        </div>
+        <div v-if="!changeEvents.length" class="rounded-xl bg-orange-50/80 p-4 text-sm text-gray-500">{{ label('暂无变化事件', 'No change events') }}</div>
+      </div>
+
+      <div v-else class="space-y-4">
+        <section
+          v-for="history in observationHistories"
+          :key="history.protocol"
+          class="rounded-xl bg-orange-50/80 p-4"
+        >
+          <h4 class="mb-3 text-sm font-semibold text-gray-900">{{ history.title }}</h4>
+          <div v-if="history.items.length" class="overflow-hidden rounded-lg bg-orange-100/35">
+            <div
+              v-for="item in history.visibleItems"
+              :key="`${history.protocol}:${item.observed_at}:${item.duration_ms}`"
+              class="grid gap-2 border-b border-orange-200/60 px-3 py-2 text-sm last:border-b-0 md:grid-cols-[5rem_minmax(0,1fr)_8.5rem] md:items-start"
+            >
+              <span :class="['w-fit self-start rounded-full px-2 py-0.5 text-xs font-semibold', statusClass(item.status)]">
+                {{ statusText(item.status) }}
+              </span>
+              <span class="min-w-0 break-words font-mono text-gray-800">{{ observationSummary(history.protocol, item) }}</span>
+              <span class="font-mono text-xs text-gray-500 md:text-right">{{ formatTime(item.observed_at) }}</span>
+            </div>
+          </div>
+          <div v-else class="rounded-lg bg-orange-100/35 p-3 text-sm text-gray-500">{{ label('暂无历史', 'No history') }}</div>
+          <div v-if="history.totalPages > 1" class="mt-3 flex items-center justify-end gap-2 text-xs">
+            <button
+              type="button"
+              class="rounded-lg bg-orange-50 px-2.5 py-1 text-gray-700 transition-colors duration-500 hover:bg-orange-100 disabled:cursor-not-allowed disabled:text-gray-400"
+              :disabled="history.page <= 1"
+              @click="setObservationPage(history.protocol, history.page - 1)"
+            >
+              {{ label('上一页', 'Prev') }}
+            </button>
+            <span class="font-mono text-gray-500">{{ history.page }}/{{ history.totalPages }}</span>
+            <button
+              type="button"
+              class="rounded-lg bg-orange-50 px-2.5 py-1 text-gray-700 transition-colors duration-500 hover:bg-orange-100 disabled:cursor-not-allowed disabled:text-gray-400"
+              :disabled="history.page >= history.totalPages"
+              @click="setObservationPage(history.protocol, history.page + 1)"
+            >
+              {{ label('下一页', 'Next') }}
+            </button>
+          </div>
+        </section>
+      </div>
     </div>
 
     <div class="rounded-2xl bg-orange-100/45 p-5">
@@ -107,10 +194,12 @@
 <script setup lang="ts">
 import { computed, defineComponent, h, ref, type PropType } from 'vue'
 import { i18n } from '@/main'
-import type { HttpRecord, TargetLatestResponse } from '@/types/nav'
+import type { CollectorEnvelope, HttpRecord, TargetChangesResponse, TargetLatestResponse, TargetObservationsResponse } from '@/types/nav'
 
 type InfoItem = { label: string; value: string | string[] }
 type DetailSection = { title: string; items: InfoItem[] }
+type InfoTabKey = 'metadata' | 'changes' | 'history'
+type ObservationProtocol = 'ping' | 'http' | 'dns'
 type LightProbeEntry = {
   protocol: string
   status: string
@@ -126,12 +215,26 @@ const props = defineProps<{
   httpRecord: HttpRecord | null
   targetLatestCore: TargetLatestResponse | null
   lightProbeState: TargetLatestResponse | null
+  targetChanges: TargetChangesResponse | null
+  targetObservations: Record<'ping' | 'http' | 'dns', TargetObservationsResponse | null>
 }>()
 
 const httpPayload = computed(() => asRecord(props.targetLatestCore?.protocols?.http?.payload))
 const httpStatus = computed(() => props.targetLatestCore?.protocols?.http?.status || '')
 const lightProtocols = computed(() => props.lightProbeState?.protocols ?? {})
+const activeInfoTab = ref<InfoTabKey>('metadata')
+const observationPages = ref<Record<ObservationProtocol, number>>({
+  ping: 1,
+  http: 1,
+  dns: 1,
+})
 const selectedProbe = ref<LightProbeEntry | null>(null)
+const infoTabs = computed<{ key: InfoTabKey; label: string }[]>(() => [
+  { key: 'metadata', label: label('页面元信息', 'Metadata') },
+  { key: 'changes', label: label('变化事件', 'Changes') },
+  { key: 'history', label: label('观测历史', 'History') },
+])
+const activeInfoTabTitle = computed(() => infoTabs.value.find(tab => tab.key === activeInfoTab.value)?.label ?? label('页面元信息', 'Metadata'))
 const pageInfoItems = computed<InfoItem[]>(() => {
   const meta = asRecord(httpPayload.value.meta)
   const openGraph = asRecord(httpPayload.value.open_graph || httpPayload.value.openGraph)
@@ -173,6 +276,29 @@ const lightProbeEntries = computed(() => lightProbeOrder
     }
   }))
 const selectedProbeDetailSections = computed(() => selectedProbe.value ? lightProbeDetailSections(selectedProbe.value) : [])
+const changeEvents = computed(() => arrayRecords(props.targetChanges?.events).slice(0, 12).map((raw, index) => ({
+  key: stringValue(raw.event_id || raw.id || `${raw.protocol || 'event'}:${index}`),
+  protocol: protocolLabel(stringValue(raw.protocol)),
+  field: stringValue(raw.field || raw.category || raw.change_type),
+  oldValue: inlineValue(raw.old_value),
+  newValue: inlineValue(raw.new_value),
+  detectedAt: formatTime(stringValue(raw.detected_at || raw.observed_at || raw.create_time)),
+})))
+const observationPageSize = 4
+const observationHistories = computed(() => (['ping', 'http', 'dns'] as ObservationProtocol[]).map((protocol) => {
+  const items = props.targetObservations?.[protocol]?.items ?? []
+  const totalPages = Math.max(1, Math.ceil(items.length / observationPageSize))
+  const page = Math.min(Math.max(observationPages.value[protocol] || 1, 1), totalPages)
+  const start = (page - 1) * observationPageSize
+  return {
+    protocol,
+    title: protocolLabel(protocol),
+    items,
+    visibleItems: items.slice(start, start + observationPageSize),
+    page,
+    totalPages,
+  }
+}))
 
 const InfoList = defineComponent({
   props: {
@@ -416,6 +542,84 @@ function protocolName(protocol: string) {
   return map[protocol] || protocol
 }
 
+function protocolLabel(protocol: string) {
+  const normalized = protocol.toLowerCase()
+  const map: Record<string, string> = {
+    ping: 'PING',
+    http: 'HTTP',
+    dns: 'DNS',
+  }
+  return map[normalized] || protocolName(protocol).toUpperCase()
+}
+
+function setObservationPage(protocol: ObservationProtocol, page: number) {
+  const history = observationHistories.value.find(item => item.protocol === protocol)
+  const totalPages = history?.totalPages ?? 1
+  observationPages.value[protocol] = Math.min(Math.max(page, 1), totalPages)
+}
+
+function observationSummary(protocol: string, envelope: CollectorEnvelope) {
+  const payload = asRecord(envelope.payload)
+  const normalized = protocol.toLowerCase()
+
+  if (normalized === 'ping') {
+    return compactParts([
+      valueWithLabel(label('平均延迟', 'Avg RTT'), millisValue(payload.avg_rtt_ms || payload.delay_ms)),
+      valueWithLabel(label('丢包', 'Loss'), percentLike(payload.loss_rate || payload.legacy_loss)),
+      valueWithLabel(label('耗时', 'Duration'), formatDuration(envelope.duration_ms)),
+    ])
+  }
+
+  if (normalized === 'http') {
+    return compactParts([
+      valueWithLabel(label('状态码', 'Status'), numberValue(payload.status_code)),
+      valueWithLabel(label('响应', 'Response'), millisValue(payload.response_time_ms || envelope.duration_ms)),
+      valueWithLabel(label('协议', 'Protocol'), stringValue(payload.http_protocol)),
+      valueWithLabel(label('类型', 'Type'), stringValue(payload.content_type)),
+    ])
+  }
+
+  if (normalized === 'dns') {
+    const flags = stringArray(payload.risk_flags)
+    return compactParts([
+      flags.length ? valueWithLabel(label('风险', 'Risk'), flags.join(', ')) : '',
+      valueWithLabel('A', recordCount(payload.A)),
+      valueWithLabel('AAAA', recordCount(payload.AAAA)),
+      valueWithLabel('NS', recordCount(payload.NS)),
+      valueWithLabel(label('耗时', 'Duration'), formatDuration(envelope.duration_ms)),
+    ])
+  }
+
+  return compactParts([
+    valueWithLabel(label('耗时', 'Duration'), formatDuration(envelope.duration_ms)),
+    stringValue(envelope.error_code),
+  ])
+}
+
+function recordCount(value: unknown) {
+  return Array.isArray(value) ? String(value.length) : '-'
+}
+
+function millisValue(value: unknown) {
+  const number = numberFromAny(value)
+  return number > 0 ? `${Math.round(number)}ms` : '-'
+}
+
+function percentLike(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value <= 1 ? `${Math.round(value * 100)}%` : `${value}%`
+  }
+  return stringValue(value)
+}
+
+function valueWithLabel(name: string, value: string) {
+  return value && value !== '-' ? `${name}: ${value}` : ''
+}
+
+function compactParts(parts: string[]) {
+  return parts.filter(Boolean).join(' / ') || '-'
+}
+
 function statusText(status: string) {
   if (status === 'success') return label('成功', 'Success')
   if (status === 'failure') return label('失败', 'Failure')
@@ -540,6 +744,11 @@ function displayValue(value: unknown): string | string[] {
     return numberValue(value)
   }
   return stringValue(value)
+}
+
+function inlineValue(value: unknown) {
+  const displayed = displayValue(value)
+  return Array.isArray(displayed) ? displayed.join(', ') || '-' : displayed
 }
 
 function formatTime(value: string) {
