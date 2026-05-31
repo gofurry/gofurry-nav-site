@@ -59,7 +59,28 @@
           :key="history.protocol"
           class="rounded-xl bg-orange-50/80 p-4"
         >
-          <h4 class="mb-3 text-sm font-semibold text-gray-900">{{ history.title }}</h4>
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h4 class="text-sm font-semibold text-gray-900">{{ history.title }}</h4>
+            <div v-if="history.totalPages > 1" class="flex items-center gap-2 text-xs">
+              <button
+                type="button"
+                class="rounded-lg bg-orange-100/60 px-2.5 py-1 text-gray-700 transition-colors duration-500 hover:bg-orange-200 disabled:cursor-not-allowed disabled:text-gray-400"
+                :disabled="history.page <= 1"
+                @click="setObservationPage(history.protocol, history.page - 1)"
+              >
+                {{ label('上一页', 'Prev') }}
+              </button>
+              <span class="font-mono text-gray-500">{{ history.page }}/{{ history.totalPages }}</span>
+              <button
+                type="button"
+                class="rounded-lg bg-orange-100/60 px-2.5 py-1 text-gray-700 transition-colors duration-500 hover:bg-orange-200 disabled:cursor-not-allowed disabled:text-gray-400"
+                :disabled="history.page >= history.totalPages"
+                @click="setObservationPage(history.protocol, history.page + 1)"
+              >
+                {{ label('下一页', 'Next') }}
+              </button>
+            </div>
+          </div>
           <div v-if="history.items.length" class="overflow-hidden rounded-lg bg-orange-100/35">
             <div
               v-for="item in history.visibleItems"
@@ -74,25 +95,6 @@
             </div>
           </div>
           <div v-else class="rounded-lg bg-orange-100/35 p-3 text-sm text-gray-500">{{ label('暂无历史', 'No history') }}</div>
-          <div v-if="history.totalPages > 1" class="mt-3 flex items-center justify-end gap-2 text-xs">
-            <button
-              type="button"
-              class="rounded-lg bg-orange-50 px-2.5 py-1 text-gray-700 transition-colors duration-500 hover:bg-orange-100 disabled:cursor-not-allowed disabled:text-gray-400"
-              :disabled="history.page <= 1"
-              @click="setObservationPage(history.protocol, history.page - 1)"
-            >
-              {{ label('上一页', 'Prev') }}
-            </button>
-            <span class="font-mono text-gray-500">{{ history.page }}/{{ history.totalPages }}</span>
-            <button
-              type="button"
-              class="rounded-lg bg-orange-50 px-2.5 py-1 text-gray-700 transition-colors duration-500 hover:bg-orange-100 disabled:cursor-not-allowed disabled:text-gray-400"
-              :disabled="history.page >= history.totalPages"
-              @click="setObservationPage(history.protocol, history.page + 1)"
-            >
-              {{ label('下一页', 'Next') }}
-            </button>
-          </div>
         </section>
       </div>
     </div>
