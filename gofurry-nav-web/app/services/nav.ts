@@ -1,11 +1,7 @@
 import type {
-  DnsRecord,
   Group,
-  HttpRecord,
-  PingRecord,
   SayingModel,
   Site,
-  SiteInfo,
   changelogResp
 } from '~/types/nav'
 
@@ -31,22 +27,6 @@ export function getSearchSuggestion(engine: 'baidu' | 'bing' | 'google' | 'bilib
 
 export function getSaying(): Promise<SayingModel> {
   return useApi('nav')('/nav/page/header/getSaying')
-}
-
-export function getSiteDetail(id: string, lang: string): Promise<SiteInfo> {
-  return useApi('nav')('/nav/site/getSiteDetail', { query: { id, lang } })
-}
-
-export function getSitePingRecord(domain: string): Promise<PingRecord> {
-  return useApi('nav')('/nav/site/getSitePingRecord', { query: { domain } })
-}
-
-export function getSiteHttpRecord(domain: string): Promise<HttpRecord> {
-  return useApi('nav')('/nav/site/getSiteHttpRecord', { query: { domain } })
-}
-
-export function getSiteDnsRecord(domain: string): Promise<DnsRecord> {
-  return useApi('nav')('/nav/site/getSiteDnsRecord', { query: { domain } })
 }
 
 export function getImageUrl(type: string): Promise<string> {
