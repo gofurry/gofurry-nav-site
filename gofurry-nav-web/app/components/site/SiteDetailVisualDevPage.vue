@@ -41,67 +41,122 @@
 
     <main v-else class="relative mx-auto w-full max-w-[1560px] px-5 py-8 sm:px-8 lg:px-10">
       <section class="dev-hero">
-        <div class="hero-orbit" aria-hidden="true">
-          <svg viewBox="0 0 220 220">
-            <circle class="orbit-ring orbit-ring-a" cx="110" cy="110" r="80" />
-            <circle class="orbit-ring orbit-ring-b" cx="110" cy="110" r="55" />
-            <path class="orbit-pulse" d="M42 132 C78 52 136 44 178 102 C142 74 94 94 42 132Z" />
-          </svg>
-        </div>
-
-        <div class="relative z-10 flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
-          <div class="flex min-w-0 flex-col gap-5 md:flex-row md:items-center">
+        <div class="relative z-10 flex min-w-0 flex-col gap-6 md:flex-row md:items-start">
+          <div class="shrink-0">
             <div class="logo-shell">
               <img
                 v-if="sitePageData.siteInfo?.icon"
                 :src="logoUrl(sitePageData.siteInfo.icon)"
                 :alt="siteName"
-                class="h-20 w-20 rounded-2xl object-cover"
+                class="h-20 w-20 rounded-lg object-contain"
               >
-              <div v-else class="flex h-20 w-20 items-center justify-center rounded-2xl bg-orange-100 text-2xl font-bold">
+              <div v-else class="flex h-20 w-20 items-center justify-center rounded-lg text-2xl font-bold text-slate-700">
                 GF
-              </div>
-            </div>
-
-            <div class="min-w-0">
-              <div class="mb-3 flex flex-wrap items-center gap-2">
-                <span v-if="primaryEdgeLabel" class="dev-pill dev-pill-strong">{{ primaryEdgeLabel }}</span>
-                <span v-if="sitePageData.siteInfo?.nsfw === '1'" class="dev-pill">NSFW</span>
-                <span v-else class="dev-pill">SFW</span>
-                <span v-if="sitePageData.siteInfo?.welfare === '1'" class="dev-pill">{{ label('公益网站', 'Nonprofit') }}</span>
-              </div>
-              <h1 class="break-words text-3xl font-black tracking-normal text-slate-950 md:text-4xl">
-                {{ siteName }}
-              </h1>
-              <div class="mt-2 font-mono text-sm text-slate-600">{{ sitePageData.domain }}</div>
-              <p class="mt-4 max-w-4xl text-sm leading-7 text-slate-700 md:text-base">
-                {{ sitePageData.siteInfo?.info || '-' }}
-              </p>
-              <div v-if="overviewKeywords.length" class="mt-4 flex flex-wrap gap-2">
-                <span
-                  v-for="keyword in overviewKeywords"
-                  :key="keyword"
-                  class="rounded-full bg-white/62 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200/70"
-                >
-                  {{ keyword }}
-                </span>
               </div>
             </div>
           </div>
 
-          <div class="flex shrink-0 flex-col items-start gap-3 lg:items-end">
-            <a
-              v-if="visitUrl"
-              :href="visitUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="visit-button duration-500"
-            >
-              <span class="fa fa-link" aria-hidden="true"></span>
-              {{ label('访问网站', 'Visit site') }}
-            </a>
-            <div class="text-xs font-semibold text-orange-600">
-              {{ label('浏览量', 'Views') }}: {{ sitePageData.siteInfo?.view_count ?? 0 }}
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div class="flex min-w-0 flex-wrap items-center gap-2.5">
+                <h1 class="mr-2 break-words text-3xl font-black tracking-normal text-slate-950 md:text-4xl">
+                  {{ siteName }}
+                </h1>
+                <span
+                  v-for="badge in heroBadges"
+                  :key="badge.label"
+                  class="dev-pill"
+                  :class="badge.class"
+                >
+                  {{ badge.label }}
+                </span>
+              </div>
+
+              <a
+                v-if="visitUrl"
+                :href="visitUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="visit-button duration-500"
+              >
+                <span class="fa fa-link" aria-hidden="true"></span>
+                {{ label('访问网站', 'Visit site') }}
+              </a>
+            </div>
+
+            <div class="relative mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                class="group/domain relative w-fit"
+                @pointerenter="openDomainCard"
+                @pointerleave="scheduleCloseDomainCard"
+                @focusin="openDomainCard"
+                @focusout="scheduleCloseDomainCard"
+              >
+                <button
+                  type="button"
+                  class="flex items-center font-mono text-sm text-slate-600 transition-colors duration-500 hover:text-orange-500"
+                  @click="copyToClipboard(sitePageData.domain)"
+                >
+                  <span>{{ sitePageData.domain }}</span>
+                  <span class="ml-2 text-xs text-slate-400 opacity-0 transition-opacity duration-500 group-hover/domain:opacity-100">
+                    {{ t('common.copy') }}
+                  </span>
+                </button>
+
+                <transition name="domain-card">
+                  <div
+                    v-show="showDomainCard"
+                    class="absolute left-0 top-full z-30 w-[min(22rem,calc(100vw-3rem))] pt-3"
+                    @pointerenter="openDomainCard"
+                    @pointerleave="scheduleCloseDomainCard"
+                  >
+                    <div class="absolute left-0 top-0 h-3 w-full" />
+                    <div class="domain-popover">
+                      <div class="mb-2 px-1 text-xs font-semibold text-orange-500">
+                        {{ label('采集域名', 'Collected domains') }}
+                      </div>
+                      <div class="domain-list-scroll flex max-h-72 flex-col gap-1 overflow-y-auto pr-1">
+                        <NuxtLink
+                          v-for="domain in switchableDomains"
+                          :key="domain"
+                          :to="domainLink(domain)"
+                          class="rounded-lg px-3 py-2 font-mono text-xs text-slate-700 transition-colors duration-500 hover:bg-orange-100/80 hover:text-orange-700"
+                          :class="{ 'bg-orange-100/80 text-orange-700': domain === sitePageData.domain }"
+                        >
+                          {{ domain }}
+                        </NuxtLink>
+                      </div>
+                    </div>
+                  </div>
+                </transition>
+
+                <transition name="fade">
+                  <div
+                    v-if="copied"
+                    class="absolute -top-7 left-0 rounded bg-slate-900 px-2 py-0.5 text-xs text-white"
+                  >
+                    {{ t('common.copied') }}
+                  </div>
+                </transition>
+              </div>
+
+              <div class="text-xs font-semibold text-orange-600">
+                {{ label('浏览量', 'Views') }}: {{ sitePageData.siteInfo?.view_count ?? 0 }}
+              </div>
+            </div>
+
+            <p class="mt-4 max-w-4xl text-sm leading-7 text-slate-700 md:text-base">
+              {{ sitePageData.siteInfo?.info || '-' }}
+            </p>
+
+            <div v-if="overviewKeywords.length" class="mt-4 flex flex-wrap gap-2">
+              <span
+                v-for="keyword in overviewKeywords"
+                :key="keyword"
+                class="keyword-chip"
+              >
+                {{ keyword }}
+              </span>
             </div>
           </div>
         </div>
@@ -197,6 +252,23 @@ const primaryEdgeLabel = computed(() => {
   }
   return `${providerLabel(hint.provider)} · ${hint.hint_type?.toUpperCase() || 'EDGE'}`
 })
+const heroBadges = computed(() => {
+  const badges: { label: string; class: string }[] = []
+  if (primaryEdgeLabel.value) {
+    badges.push({ label: primaryEdgeLabel.value, class: 'dev-pill-edge' })
+  }
+
+  badges.push({
+    label: sitePageData.value.siteInfo?.nsfw === '1' ? 'NSFW' : 'SFW',
+    class: sitePageData.value.siteInfo?.nsfw === '1' ? 'dev-pill-risk' : 'dev-pill-sfw',
+  })
+
+  if (sitePageData.value.siteInfo?.welfare === '1') {
+    badges.push({ label: label('公益网站', 'Nonprofit'), class: 'dev-pill-welfare' })
+  }
+
+  return badges
+})
 const visitUrl = computed(() => {
   const url = firstString(httpPayload.value.final_url, sitePageData.value.siteHttpRecord?.url)
   if (url) {
@@ -217,6 +289,26 @@ const overviewKeywords = computed(() => {
     .filter(Boolean)
     .filter((keyword, index, list) => list.indexOf(keyword) === index)
     .slice(0, 10)
+})
+const switchableDomains = computed(() => {
+  const seen = new Set<string>()
+  const domains: string[] = []
+  for (const target of sitePageData.value.siteHealthSummary?.targets ?? []) {
+    const value = target.target?.trim()
+    if (!value || seen.has(value)) {
+      continue
+    }
+
+    seen.add(value)
+    domains.push(value)
+  }
+
+  const current = sitePageData.value.domain?.trim()
+  if (current && !seen.has(current)) {
+    domains.unshift(current)
+  }
+
+  return domains
 })
 const securityHeaderItems = computed(() => {
   const compactSummary = securityHeadersCompact()
@@ -309,6 +401,9 @@ const signalCards = computed(() => [
 ])
 const seoTitle = computed(() => `${siteName.value} - GoFurry`)
 const seoDescription = computed(() => (sitePageData.value.siteInfo?.info?.trim() ?? '').slice(0, 160))
+const copied = ref(false)
+const showDomainCard = ref(false)
+let domainCardCloseTimer: ReturnType<typeof setTimeout> | null = null
 
 useSeoMeta({
   title: () => seoTitle.value,
@@ -336,6 +431,47 @@ async function touchSiteView(value: string) {
   } catch {
     // 浏览量统计是旁路副作用，失败不影响详情页展示。
   }
+}
+
+function copyToClipboard(text: string) {
+  if (!text) {
+    return
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    void navigator.clipboard.writeText(text)
+  }
+  copied.value = true
+  setTimeout(() => {
+    copied.value = false
+  }, 1800)
+}
+
+function openDomainCard() {
+  if (switchableDomains.value.length <= 1) {
+    return
+  }
+
+  if (domainCardCloseTimer) {
+    clearTimeout(domainCardCloseTimer)
+    domainCardCloseTimer = null
+  }
+
+  showDomainCard.value = true
+}
+
+function scheduleCloseDomainCard() {
+  if (domainCardCloseTimer) {
+    clearTimeout(domainCardCloseTimer)
+  }
+
+  domainCardCloseTimer = setTimeout(() => {
+    showDomainCard.value = false
+  }, 320)
+}
+
+function domainLink(domain: string) {
+  return `/site/${encodeURIComponent(String(siteId.value))}/${encodeURIComponent(domain)}/dev`
 }
 
 function logoUrl(icon: string) {
@@ -558,70 +694,85 @@ function label(zh: string, en: string) {
 .dev-hero {
   position: relative;
   overflow: hidden;
-  border-radius: 32px;
+  border-radius: 0.5rem;
   background:
-    radial-gradient(circle at 88% 18%, rgba(106, 124, 255, 0.14), transparent 28%),
     radial-gradient(circle at 18% 24%, rgba(251, 140, 47, 0.20), transparent 26%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(255, 242, 219, 0.62));
-  padding: clamp(1.5rem, 4vw, 3.5rem);
+  padding: clamp(1.25rem, 3vw, 2.4rem);
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18);
 }
 
-.hero-orbit {
-  position: absolute;
-  right: max(2rem, 6vw);
-  top: 50%;
-  width: min(28vw, 320px);
-  transform: translateY(-50%);
-  opacity: 0.42;
-}
-
-.hero-orbit svg {
-  width: 100%;
-}
-
-.orbit-ring {
-  fill: none;
-  stroke: rgba(251, 140, 47, 0.42);
-  stroke-width: 1.5;
-  stroke-dasharray: 8 12;
-  transform-origin: 110px 110px;
-  animation: orbit-spin 28s linear infinite;
-}
-
-.orbit-ring-b {
-  stroke: rgba(79, 111, 237, 0.36);
-  animation-duration: 18s;
-  animation-direction: reverse;
-}
-
-.orbit-pulse {
-  fill: rgba(20, 184, 166, 0.16);
-  stroke: rgba(20, 184, 166, 0.26);
-  stroke-width: 1;
-  animation: pulse-fade 5s ease-in-out infinite;
-}
-
 .logo-shell {
-  border-radius: 24px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 219, 170, 0.62));
-  padding: 0.5rem;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.16);
+  border-radius: 0.5rem;
 }
 
 .dev-pill {
   border-radius: 999px;
-  background: rgba(255, 245, 224, 0.78);
   padding: 0.35rem 0.75rem;
-  color: #9a4a08;
   font-size: 0.75rem;
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18);
 }
 
-.dev-pill-strong {
-  background: rgba(255, 224, 183, 0.88);
+.dev-pill-edge {
+  background: rgba(254, 215, 170, 0.75);
   color: #7c2d12;
+}
+
+.dev-pill-sfw {
+  background: rgba(224, 242, 254, 0.82);
+  color: #075985;
+}
+
+.dev-pill-risk {
+  background: rgba(254, 226, 226, 0.82);
+  color: #991b1b;
+}
+
+.dev-pill-welfare {
+  background: rgba(254, 249, 195, 0.82);
+  color: #854d0e;
+}
+
+.keyword-chip {
+  border-radius: 999px;
+  background: rgba(255, 247, 237, 0.62);
+  padding: 0.3rem 0.7rem;
+  color: #c2410c;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.domain-popover {
+  border-radius: 1rem;
+  background: rgba(255, 247, 237, 0.96);
+  padding: 0.75rem;
+  color: #1f2937;
+  backdrop-filter: blur(14px);
+}
+
+.domain-card-enter-active,
+.domain-card-leave-active {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.domain-card-enter-from,
+.domain-card-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 160ms ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.domain-list-scroll {
+  scrollbar-width: thin;
 }
 
 .visit-button {
@@ -723,22 +874,6 @@ function label(zh: string, en: string) {
 @keyframes dash-flow {
   to {
     stroke-dashoffset: -180;
-  }
-}
-
-@keyframes orbit-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes pulse-fade {
-  0%,
-  100% {
-    opacity: 0.52;
-  }
-  50% {
-    opacity: 0.88;
   }
 }
 
