@@ -1,33 +1,24 @@
 <template>
-  <div ref="pageRoot" class="visual-dev-page min-h-full overflow-x-hidden text-slate-900">
+  <div ref="pageRoot" class="site-detail-page min-h-full overflow-x-hidden text-slate-900">
     <div class="visual-sky" aria-hidden="true">
       <svg class="visual-grid" viewBox="0 0 1200 720" preserveAspectRatio="none">
         <defs>
-          <linearGradient id="devLine" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#ff8a3d" stop-opacity="0.18" />
-            <stop offset="52%" stop-color="#6a7cff" stop-opacity="0.16" />
-            <stop offset="100%" stop-color="#15b8a6" stop-opacity="0.12" />
+          <pattern id="quietGrid" width="96" height="96" patternUnits="userSpaceOnUse">
+            <path d="M96 0H0V96" class="grid-line" />
+          </pattern>
+          <pattern id="quietDots" width="192" height="192" patternUnits="userSpaceOnUse">
+            <circle cx="96" cy="96" r="2" class="grid-dot" />
+          </pattern>
+          <linearGradient id="quietDiagonal" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fb8c2f" stop-opacity="0.10" />
+            <stop offset="58%" stop-color="#4f6fed" stop-opacity="0.07" />
+            <stop offset="100%" stop-color="#15b8a6" stop-opacity="0.05" />
           </linearGradient>
-          <radialGradient id="devGlow" cx="45%" cy="28%" r="58%">
-            <stop offset="0%" stop-color="#ffd49a" stop-opacity="0.55" />
-            <stop offset="52%" stop-color="#f7f1e8" stop-opacity="0.28" />
-            <stop offset="100%" stop-color="#f7f1e8" stop-opacity="0" />
-          </radialGradient>
         </defs>
-        <rect width="1200" height="720" fill="url(#devGlow)" />
-        <path class="flow-line flow-line-a" d="M-40 146 C190 62 322 270 520 176 C744 70 816 244 1240 88" />
-        <path class="flow-line flow-line-b" d="M-70 530 C156 406 298 596 498 470 C742 316 918 500 1270 354" />
-        <path class="flow-line flow-line-c" d="M20 340 C210 236 398 382 592 300 C780 220 986 244 1180 182" />
-        <g class="node-field">
-          <circle cx="144" cy="128" r="3.5" />
-          <circle cx="330" cy="258" r="2.5" />
-          <circle cx="536" cy="178" r="3" />
-          <circle cx="784" cy="250" r="2.7" />
-          <circle cx="1018" cy="180" r="3.2" />
-          <circle cx="242" cy="494" r="2.8" />
-          <circle cx="566" cy="462" r="3.2" />
-          <circle cx="902" cy="420" r="2.8" />
-        </g>
+        <rect width="1200" height="720" fill="url(#quietGrid)" />
+        <rect width="1200" height="720" fill="url(#quietDots)" />
+        <path class="quiet-diagonal" d="M-80 610 C250 530 420 660 650 560 C840 478 970 512 1280 398" />
+        <path class="quiet-diagonal is-cool" d="M-120 210 C220 140 360 272 590 202 C810 136 940 190 1270 82" />
       </svg>
     </div>
 
@@ -40,7 +31,7 @@
     </div>
 
     <main v-else class="relative mx-auto w-full max-w-[1560px] px-5 py-8 sm:px-8 lg:px-10">
-      <section class="dev-hero">
+      <section class="detail-hero">
         <div class="relative z-10 flex min-w-0 flex-col gap-5 md:flex-row md:items-center">
           <div class="flex shrink-0 justify-center md:self-center">
             <div class="logo-shell">
@@ -67,7 +58,7 @@
                     <span
                       v-for="badge in heroBadges"
                       :key="badge.label"
-                      class="dev-pill"
+                      class="detail-pill"
                       :class="badge.class"
                     >
                       {{ badge.label }}
@@ -75,7 +66,7 @@
                   </div>
                 </div>
 
-                <div class="relative mt-2 flex w-full flex-wrap items-center gap-x-5 gap-y-2 lg:w-fit">
+                <div class="hero-meta-row">
                   <div
                     class="group/domain relative w-fit"
                     @pointerenter="openDomainCard"
@@ -130,7 +121,7 @@
                       </div>
                     </transition>
                   </div>
-                  <div class="text-xs text-orange-500 lg:hidden">
+                  <div class="hero-mobile-views">
                     {{ label('浏览量', 'Views') }}: {{ sitePageData.siteInfo?.view_count ?? 0 }}
                   </div>
                 </div>
@@ -191,7 +182,7 @@
         </article>
       </section>
 
-      <section class="dev-observation-overview">
+      <section class="detail-observation-overview">
         <div class="overview-strip">
           <div
             v-for="item in observationStripItems"
@@ -230,7 +221,7 @@
                     </div>
                     <span class="font-mono text-[11px] text-slate-500">{{ entry.observedAt }}</span>
                   </div>
-                  <div class="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
+                  <div class="protocol-metrics mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
                     <span>{{ label('耗时', 'Time') }}: <b>{{ entry.duration }}</b></span>
                     <span>{{ label('过期阈值', 'Stale') }}: <b>{{ entry.staleAfter }}</b></span>
                   </div>
@@ -273,7 +264,7 @@
         </div>
       </section>
 
-      <section class="dev-section dev-performance">
+      <section class="detail-section detail-performance">
         <SitePerformance
           v-if="sitePageData.siteHttpRecord"
           :domain="sitePageData.domain"
@@ -284,7 +275,7 @@
         />
       </section>
 
-      <section class="dev-section">
+      <section class="detail-observation-tabs">
         <SiteObservationTabs
           :dns-record="sitePageData.siteDnsRecord"
           :http-record="sitePageData.siteHttpRecord"
@@ -293,7 +284,7 @@
         />
       </section>
 
-      <section class="dev-section">
+      <section class="detail-section">
         <SiteMetadataProbePanel
           :http-record="sitePageData.siteHttpRecord"
           :light-probe-state="sitePageData.lightProbeState"
@@ -333,16 +324,16 @@ const primaryEdgeLabel = computed(() => {
 const heroBadges = computed(() => {
   const badges: { label: string; class: string }[] = []
   if (primaryEdgeLabel.value) {
-    badges.push({ label: primaryEdgeLabel.value, class: 'dev-pill-edge' })
+    badges.push({ label: primaryEdgeLabel.value, class: 'detail-pill-edge' })
   }
 
   badges.push({
     label: sitePageData.value.siteInfo?.nsfw === '1' ? 'NSFW' : 'SFW',
-    class: sitePageData.value.siteInfo?.nsfw === '1' ? 'dev-pill-risk' : 'dev-pill-sfw',
+    class: sitePageData.value.siteInfo?.nsfw === '1' ? 'detail-pill-risk' : 'detail-pill-sfw',
   })
 
   if (sitePageData.value.siteInfo?.welfare === '1') {
-    badges.push({ label: label('公益网站', 'Nonprofit'), class: 'dev-pill-welfare' })
+    badges.push({ label: label('公益网站', 'Nonprofit'), class: 'detail-pill-welfare' })
   }
 
   return badges
@@ -615,7 +606,7 @@ function scheduleCloseDomainCard() {
 }
 
 function domainLink(domain: string) {
-  return `/site/${encodeURIComponent(String(siteId.value))}/${encodeURIComponent(domain)}/dev`
+  return `/site/${encodeURIComponent(String(siteId.value))}/${encodeURIComponent(domain)}`
 }
 
 function logoUrl(icon: string) {
@@ -799,14 +790,19 @@ function label(zh: string, en: string) {
 </script>
 
 <style scoped>
-.visual-dev-page {
+.site-detail-page {
   --surface: rgba(255, 250, 242, 0.76);
   --surface-strong: rgba(255, 244, 226, 0.86);
   --ink-muted: #667085;
   --accent: #fb8c2f;
+  isolation: isolate;
   position: relative;
   background:
     linear-gradient(180deg, rgba(255, 251, 245, 0.96) 0%, rgba(248, 240, 229, 0.96) 52%, rgba(255, 246, 234, 0.98) 100%);
+}
+
+.site-detail-page > main {
+  z-index: 1;
 }
 
 .visual-sky {
@@ -815,44 +811,44 @@ function label(zh: string, en: string) {
   inset: 0;
   z-index: 0;
   overflow: hidden;
+  opacity: 1;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(251, 140, 47, 0.09), transparent 30%),
+    radial-gradient(circle at 82% 18%, rgba(79, 111, 237, 0.07), transparent 28%),
+    repeating-linear-gradient(0deg, transparent 0 95px, rgba(251, 140, 47, 0.055) 96px),
+    repeating-linear-gradient(90deg, transparent 0 95px, rgba(79, 111, 237, 0.045) 96px);
 }
 
 .visual-grid {
   height: 100%;
   width: 100%;
-  opacity: 0.9;
+  opacity: 1;
+  mask-image: linear-gradient(90deg, transparent 0, #000 10%, #000 90%, transparent 100%);
 }
 
-.flow-line {
+.grid-line {
   fill: none;
-  stroke: url(#devLine);
+  stroke: rgba(251, 140, 47, 0.11);
+  stroke-width: 1;
+}
+
+.grid-dot {
+  fill: rgba(251, 140, 47, 0.22);
+}
+
+.quiet-diagonal {
+  fill: none;
+  stroke: url(#quietDiagonal);
   stroke-width: 2;
-  stroke-dasharray: 12 18;
-  animation: dash-flow 16s linear infinite;
+  stroke-dasharray: 14 30;
+  opacity: 0.72;
 }
 
-.flow-line-b {
-  animation-duration: 22s;
-  animation-direction: reverse;
-  opacity: 0.76;
+.quiet-diagonal.is-cool {
+  opacity: 0.56;
 }
 
-.flow-line-c {
-  animation-duration: 18s;
-  opacity: 0.58;
-}
-
-.node-field circle {
-  fill: rgba(251, 140, 47, 0.42);
-  animation: node-breathe 4.8s ease-in-out infinite;
-}
-
-.node-field circle:nth-child(2n) {
-  fill: rgba(79, 111, 237, 0.35);
-  animation-delay: 1.4s;
-}
-
-.dev-hero {
+.detail-hero {
   position: relative;
   overflow: visible;
   border-radius: 0.5rem;
@@ -886,7 +882,7 @@ function label(zh: string, en: string) {
   }
 }
 
-.dev-pill {
+.detail-pill {
   border-radius: 999px;
   padding: 0.25rem 0.7rem;
   font-size: 0.75rem;
@@ -894,22 +890,23 @@ function label(zh: string, en: string) {
   white-space: nowrap;
 }
 
-.dev-pill-edge {
-  background: #fdba74;
+.detail-pill-edge {
+  background: rgba(255, 237, 213, 0.78);
   color: #9a3412;
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.20);
 }
 
-.dev-pill-sfw {
+.detail-pill-sfw {
   background: #fed7aa;
   color: #c2410c;
 }
 
-.dev-pill-risk {
+.detail-pill-risk {
   background: rgba(254, 226, 226, 0.80);
   color: #b91c1c;
 }
 
-.dev-pill-welfare {
+.detail-pill-welfare {
   background: #fde68a;
   color: #b45309;
 }
@@ -921,6 +918,38 @@ function label(zh: string, en: string) {
   color: #9a3412;
   font-size: 0.75rem;
   font-weight: 400;
+}
+
+.hero-meta-row {
+  position: relative;
+  margin-top: 0.5rem;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hero-mobile-views {
+  margin-left: auto;
+  flex: 0 0 auto;
+  color: #ea580c;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .hero-meta-row {
+    width: fit-content;
+    justify-content: flex-start;
+  }
+
+  .hero-mobile-views {
+    display: none;
+  }
 }
 
 .hero-actions {
@@ -1033,19 +1062,25 @@ function label(zh: string, en: string) {
   border-left: 4px solid rgba(251, 113, 133, 0.9);
 }
 
-.dev-observation-overview,
-.dev-section {
+.detail-observation-overview,
+.detail-section,
+.detail-observation-tabs {
   margin-top: 1.5rem;
 }
 
-.dev-section {
-  border-radius: 28px;
-  background: rgba(255, 247, 235, 0.72);
+.detail-section {
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(251, 140, 47, 0.08), transparent 30%),
+    linear-gradient(120deg, rgba(255, 247, 235, 0.80), rgba(255, 250, 242, 0.88)),
+    rgba(255, 247, 235, 0.80);
   padding: clamp(1rem, 2vw, 1.5rem);
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 140, 47, 0.16),
+    0 16px 42px rgba(124, 45, 18, 0.04);
 }
 
-.dev-observation-overview {
+.detail-observation-overview {
   border-radius: 8px;
   background:
     radial-gradient(circle at 10% 0%, rgba(251, 140, 47, 0.10), transparent 36%),
@@ -1147,6 +1182,13 @@ function label(zh: string, en: string) {
   background: #f43f5e;
 }
 
+@media (min-width: 640px) {
+  .protocol-metrics span:last-child {
+    justify-self: end;
+    text-align: right;
+  }
+}
+
 .security-matrix {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -1186,24 +1228,24 @@ function label(zh: string, en: string) {
   background: #cbd5e1;
 }
 
-.dev-section :deep(.rounded-2xl.bg-orange-100\/45),
-.dev-section :deep(.rounded-xl.bg-orange-50\/80),
-.dev-section :deep(.rounded-xl.bg-orange-50\/70),
-.dev-section :deep(.rounded-lg.bg-orange-100),
-.dev-section :deep(.rounded-lg.bg-orange-100\/35),
-.dev-section :deep(.rounded-md.bg-orange-50),
-.dev-section :deep(.rounded-md.bg-orange-100\/45),
-.dev-section :deep(.rounded-xl.bg-orange-100\/45) {
+.detail-section :deep(.rounded-2xl.bg-orange-100\/45),
+.detail-section :deep(.rounded-xl.bg-orange-50\/80),
+.detail-section :deep(.rounded-xl.bg-orange-50\/70),
+.detail-section :deep(.rounded-lg.bg-orange-100),
+.detail-section :deep(.rounded-lg.bg-orange-100\/35),
+.detail-section :deep(.rounded-md.bg-orange-50),
+.detail-section :deep(.rounded-md.bg-orange-100\/45),
+.detail-section :deep(.rounded-xl.bg-orange-100\/45) {
   background-color: rgba(255, 250, 242, 0.70);
 }
 
-.dev-performance :deep(section > .grid:first-child) {
+.detail-performance :deep(section > .grid:first-child) {
   display: none;
 }
 
-.dev-performance :deep(section > .rounded-2xl) {
+.detail-performance :deep(section > .rounded-2xl) {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 8px;
   background:
     linear-gradient(118deg, rgba(255, 237, 213, 0.55), rgba(255, 250, 242, 0.78) 48%, rgba(239, 246, 255, 0.32)),
@@ -1211,13 +1253,13 @@ function label(zh: string, en: string) {
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
 }
 
-.dev-performance {
+.detail-performance {
   background: transparent;
   padding: 0;
   box-shadow: none;
 }
 
-.dev-performance :deep(section > .rounded-2xl::before) {
+.detail-performance :deep(section > .rounded-2xl::before) {
   content: "";
   pointer-events: none;
   position: absolute;
@@ -1229,7 +1271,7 @@ function label(zh: string, en: string) {
   opacity: 0.5;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .grid:first-child) {
+.detail-performance :deep(section > .rounded-2xl > .grid:first-child) {
   position: relative;
   z-index: 1;
   margin-bottom: 1rem;
@@ -1237,60 +1279,60 @@ function label(zh: string, en: string) {
   gap: 0.8rem;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child) {
+.detail-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child) {
   display: flex;
   min-width: 0;
   flex-direction: column;
   justify-content: center;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child > div) {
+.detail-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child > div) {
   display: none;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child h3) {
+.detail-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child h3) {
   color: #0f172a;
   font-size: clamp(1.08rem, 1.4vw, 1.28rem);
 }
 
-.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:nth-child(2)) {
+.detail-performance :deep(section > .rounded-2xl > .grid:first-child > div:nth-child(2)) {
   align-self: center;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:nth-child(2) > div) {
+.detail-performance :deep(section > .rounded-2xl > .grid:first-child > div:nth-child(2) > div) {
   gap: 0.2rem;
   border-radius: 8px;
   background: rgba(255, 232, 196, 0.34);
   box-shadow: none;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .grid:first-child button) {
+.detail-performance :deep(section > .rounded-2xl > .grid:first-child button) {
   border-radius: 7px;
   padding: 0.62rem 1rem;
   font-size: 0.88rem;
   transition-duration: 500ms;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .grid:first-child button.bg-orange-200) {
+.detail-performance :deep(section > .rounded-2xl > .grid:first-child button.bg-orange-200) {
   background: #fdba74;
   color: #111827;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child) {
+.detail-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child) {
   gap: 0.55rem;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child > div) {
+.detail-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child > div) {
   min-width: 4.8rem;
   border-radius: 7px;
   background: rgba(255, 232, 196, 0.38);
   box-shadow: none;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .rounded-xl) {
+.detail-performance :deep(section > .rounded-2xl > .rounded-xl) {
   position: relative;
   z-index: 1;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 0;
   background:
     linear-gradient(rgba(255, 250, 242, 0.30), rgba(255, 250, 242, 0.30)),
@@ -1299,66 +1341,55 @@ function label(zh: string, en: string) {
   box-shadow: none;
 }
 
-.dev-performance :deep(section > .rounded-2xl.bg-orange-100\/45) {
+.detail-performance :deep(section > .rounded-2xl.bg-orange-100\/45) {
   padding: clamp(1rem, 1.6vw, 1.25rem);
 }
 
-.dev-performance :deep(section > .rounded-2xl > .rounded-xl.bg-orange-50\/70) {
+.detail-performance :deep(section > .rounded-2xl > .rounded-xl.bg-orange-50\/70) {
   margin-top: 0.2rem;
-  padding: 0.5rem 0 0;
+  padding: 0.5rem 0.2rem 0.9rem;
   background-color: transparent;
 }
 
-.dev-performance :deep(section > .rounded-2xl > .rounded-xl > div) {
+.detail-performance :deep(section > .rounded-2xl > .rounded-xl > div) {
   height: 320px;
 }
 
 @media (max-width: 1023px) {
-  .dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child) {
+  .detail-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child) {
     justify-self: center;
   }
 
-  .dev-performance :deep(section > .rounded-2xl > .rounded-xl > div) {
+  .detail-performance :deep(section > .rounded-2xl > .rounded-xl > div) {
     height: 300px;
   }
 }
 
 @media (max-width: 640px) {
-  .dev-performance :deep(section > .rounded-2xl) {
+  .detail-performance :deep(section > .rounded-2xl) {
     padding: 1rem;
   }
 
-  .dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child) {
+  .detail-performance :deep(section > .rounded-2xl > .grid:first-child > div:first-child) {
     text-align: center;
   }
 
-  .dev-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child) {
+  .detail-performance :deep(section > .rounded-2xl > .grid:first-child > div:last-child) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-self: stretch;
   }
 
-  .dev-performance :deep(section > .rounded-2xl > .rounded-xl) {
-    padding-inline: 0.35rem;
+  .detail-performance :deep(section > .rounded-2xl > .rounded-xl) {
+    padding: 0.35rem 0.35rem 1.15rem;
   }
 
-  .dev-performance :deep(section > .rounded-2xl > .rounded-xl > div) {
-    height: 260px;
+  .detail-performance :deep(section > .rounded-2xl > .rounded-xl.bg-orange-50\/70) {
+    padding: 0.35rem 0.35rem 1.15rem;
+  }
+
+  .detail-performance :deep(section > .rounded-2xl > .rounded-xl > div) {
+    height: 300px;
   }
 }
 
-@keyframes dash-flow {
-  to {
-    stroke-dashoffset: -180;
-  }
-}
-
-@keyframes node-breathe {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 0.9;
-  }
-}
 </style>

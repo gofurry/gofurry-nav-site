@@ -368,8 +368,10 @@ function updateChart() {
     loss: d.loss || '0'
   }))
   const times = tooltipData.map(d => (d.time?.split(' ')[1]) || 'Unknown')
+  const isNarrowChart = (latencyChartRef.value?.clientWidth ?? 0) < 520
 
   chart.value.setOption({
+    animation: false,
     color: ['#4f6fed'],
     tooltip: {
       trigger: 'item',
@@ -399,7 +401,13 @@ function updateChart() {
       },
       extraCssText: 'max-width: 240px; white-space: normal; backdrop-filter: blur(10px);'
     },
-    grid: { left: 48, right: 24, top: 42, bottom: 42, containLabel: true },
+    grid: {
+      left: isNarrowChart ? 28 : 48,
+      right: isNarrowChart ? 8 : 24,
+      top: isNarrowChart ? 34 : 42,
+      bottom: isNarrowChart ? 60 : 42,
+      containLabel: true,
+    },
     xAxis: {
       type: 'category',
       data: times,

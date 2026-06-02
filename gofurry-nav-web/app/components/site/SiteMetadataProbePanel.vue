@@ -1,17 +1,15 @@
 <template>
-  <section class="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.05fr]">
-    <div class="rounded-2xl bg-orange-100/45 p-5">
-      <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <h3 class="text-lg font-semibold text-gray-900">{{ activeInfoTabTitle }}</h3>
-        <div class="flex w-full gap-1 rounded-xl bg-orange-50/70 p-1 text-sm lg:w-auto">
+  <section class="metadata-probe-shell">
+    <div class="site-info-tabs-panel">
+      <div class="info-tabs-header">
+        <h3 class="info-tabs-title">{{ activeInfoTabTitle }}</h3>
+        <div class="info-tabs-nav">
           <button
             v-for="tab in infoTabs"
             :key="tab.key"
             type="button"
-            :class="[
-              'flex-1 rounded-lg px-3 py-2 font-medium transition-colors duration-500 lg:flex-none',
-              activeInfoTab === tab.key ? 'bg-orange-200 text-gray-950' : 'text-gray-700 hover:bg-orange-100',
-            ]"
+            class="info-tab-button"
+            :class="{ 'is-active': activeInfoTab === tab.key }"
             @click="activeInfoTab = tab.key"
           >
             {{ tab.label }}
@@ -19,63 +17,68 @@
         </div>
       </div>
 
-      <div v-if="activeInfoTab === 'metadata'">
-        <div class="mb-3 flex justify-end">
-          <span :class="['rounded-full px-2.5 py-1 text-xs font-semibold', statusClass(httpStatus)]">
-            {{ statusText(httpStatus) }}
-          </span>
+      <div v-if="activeInfoTab === 'metadata'" class="metadata-panel">
+        <div v-if="pageInfoItems.length" class="metadata-list">
+          <div
+            v-for="item in pageInfoItems"
+            :key="item.label"
+            class="metadata-row"
+          >
+            <div class="metadata-label">{{ item.label }}</div>
+            <div class="metadata-value">{{ Array.isArray(item.value) ? item.value.join(', ') : item.value }}</div>
+          </div>
         </div>
-        <InfoList :items="pageInfoItems" :empty-text="label('暂无数据', 'No data')" />
+        <div v-else class="metadata-empty">{{ label('暂无数据', 'No data') }}</div>
       </div>
 
-      <div v-else-if="activeInfoTab === 'changes'" class="space-y-3">
-        <div v-if="changesLoading" class="rounded-xl bg-orange-50/80 p-4 text-sm text-gray-500">{{ label('变化事件加载中', 'Loading changes') }}</div>
+      <div v-else-if="activeInfoTab === 'changes'" class="info-tab-body changes-panel">
+        <div v-if="changesLoading" class="panel-empty">{{ label('变化事件加载中', 'Loading changes') }}</div>
         <div
           v-for="event in changeEvents"
           :key="event.key"
-          class="rounded-xl bg-orange-50/80 p-4"
+          class="change-event-row"
         >
-          <div class="mb-3 flex flex-wrap items-center gap-2">
-            <span class="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-800">{{ event.protocol }}</span>
-            <span class="text-sm font-semibold text-gray-900">{{ event.field }}</span>
-            <span class="ml-auto text-xs text-gray-500">{{ event.detectedAt }}</span>
+          <div class="change-event-head">
+            <span class="protocol-badge">{{ event.protocol }}</span>
+            <span class="change-field">{{ event.field }}</span>
+            <span class="change-time">{{ event.detectedAt }}</span>
           </div>
-          <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-            <div class="rounded-lg bg-orange-100/45 p-3">
-              <p class="text-xs font-semibold text-gray-500">{{ label('旧值', 'Old value') }}</p>
-              <p class="mt-1 break-words font-mono text-sm text-gray-800">{{ event.oldValue }}</p>
+          <div class="change-value-grid">
+            <div class="change-value-block">
+              <p class="change-value-label">{{ label('旧值', 'Old value') }}</p>
+              <p class="change-value-text">{{ event.oldValue }}</p>
             </div>
-            <div class="rounded-lg bg-orange-100/45 p-3">
-              <p class="text-xs font-semibold text-gray-500">{{ label('新值', 'New value') }}</p>
-              <p class="mt-1 break-words font-mono text-sm text-gray-800">{{ event.newValue }}</p>
+            <div class="change-value-block">
+              <p class="change-value-label">{{ label('新值', 'New value') }}</p>
+              <p class="change-value-text">{{ event.newValue }}</p>
             </div>
           </div>
         </div>
-        <div v-if="!changesLoading && !changeEvents.length" class="rounded-xl bg-orange-50/80 p-4 text-sm text-gray-500">{{ label('暂无变化事件', 'No change events') }}</div>
+        <div v-if="!changesLoading && !changeEvents.length" class="panel-empty">{{ label('暂无变化事件', 'No change events') }}</div>
       </div>
 
-      <div v-else class="space-y-4">
-        <div v-if="observationsLoading" class="rounded-xl bg-orange-50/80 p-4 text-sm text-gray-500">{{ label('观测历史加载中', 'Loading history') }}</div>
+      <div v-else class="info-tab-body history-panel">
+        <div v-if="observationsLoading" class="panel-empty">{{ label('观测历史加载中', 'Loading history') }}</div>
         <section
           v-for="history in observationHistories"
           :key="history.protocol"
-          class="rounded-xl bg-orange-50/80 p-4"
+          class="history-section"
         >
-          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h4 class="text-sm font-semibold text-gray-900">{{ history.title }}</h4>
-            <div v-if="history.totalPages > 1" class="flex items-center gap-2 text-xs">
+          <div class="history-head">
+            <h4 class="history-title">{{ history.title }}</h4>
+            <div v-if="history.totalPages > 1" class="history-pager">
               <button
                 type="button"
-                class="rounded-lg bg-orange-100/60 px-2.5 py-1 text-gray-700 transition-colors duration-500 hover:bg-orange-200 disabled:cursor-not-allowed disabled:text-gray-400"
+                class="history-page-button"
                 :disabled="history.page <= 1"
                 @click="setObservationPage(history.protocol, history.page - 1)"
               >
                 {{ label('上一页', 'Prev') }}
               </button>
-              <span class="font-mono text-gray-500">{{ history.page }}/{{ history.totalPages }}</span>
+              <span class="history-page-count">{{ history.page }}/{{ history.totalPages }}</span>
               <button
                 type="button"
-                class="rounded-lg bg-orange-100/60 px-2.5 py-1 text-gray-700 transition-colors duration-500 hover:bg-orange-200 disabled:cursor-not-allowed disabled:text-gray-400"
+                class="history-page-button"
                 :disabled="history.page >= history.totalPages"
                 @click="setObservationPage(history.protocol, history.page + 1)"
               >
@@ -83,73 +86,86 @@
               </button>
             </div>
           </div>
-          <div v-if="history.items.length" class="overflow-hidden rounded-lg bg-orange-100/35">
+          <div v-if="history.items.length" class="history-list">
             <div
               v-for="item in history.visibleItems"
               :key="`${history.protocol}:${item.observed_at}:${item.duration_ms}`"
-              class="grid gap-2 border-b border-orange-200/60 px-3 py-2 text-sm last:border-b-0 md:grid-cols-[5rem_minmax(0,1fr)_8.5rem] md:items-start"
+              class="history-row"
             >
-              <span :class="['w-fit self-start rounded-full px-2 py-0.5 text-xs font-semibold', statusClass(item.status)]">
-                {{ statusText(item.status) }}
-              </span>
-              <span class="min-w-0 break-words font-mono text-gray-800">{{ observationSummary(history.protocol, item) }}</span>
-              <span class="font-mono text-xs text-gray-500 md:text-right">{{ formatTime(item.observed_at) }}</span>
+              <span
+                :aria-label="statusText(item.status)"
+                :class="['status-dot', statusDotClass(item.status)]"
+                :title="statusText(item.status)"
+              />
+              <span class="history-summary">{{ observationSummary(history.protocol, item) }}</span>
+              <span class="history-time">{{ formatTime(item.observed_at) }}</span>
             </div>
           </div>
-          <div v-else class="rounded-lg bg-orange-100/35 p-3 text-sm text-gray-500">{{ label('暂无历史', 'No history') }}</div>
+          <div v-else class="panel-empty">{{ label('暂无历史', 'No history') }}</div>
         </section>
       </div>
     </div>
 
-    <div class="rounded-2xl bg-orange-100/45 p-5">
-      <h3 class="mb-4 text-lg font-semibold text-gray-900">{{ label('低频轻探测', 'Light probes') }}</h3>
-      <div v-if="lightProbeEntries.length" class="grid grid-cols-1 gap-3 md:grid-cols-2">
+    <div class="light-probe-panel">
+      <div class="light-probe-header">
+        <h3 class="info-tabs-title">{{ label('低频轻探测', 'Light probes') }}</h3>
+      </div>
+      <div v-if="lightProbeEntries.length" class="light-probe-grid">
         <button
           v-for="probe in lightProbeEntries"
           :key="probe.protocol"
           type="button"
-          class="group flex h-full cursor-pointer flex-col items-stretch justify-start rounded-xl bg-orange-50/80 p-4 text-left transition-[background-color,box-shadow,color] duration-500 hover:bg-orange-50 hover:ring-2 hover:ring-orange-300/55 focus:outline-none focus:ring-2 focus:ring-orange-300/70"
+          class="light-probe-card"
           @click="selectedProbe = probe"
         >
-          <div class="mb-3 flex w-full items-start justify-between gap-2">
-            <span class="text-sm font-semibold text-gray-900">{{ protocolName(probe.protocol) }}</span>
-            <span :class="['shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold', statusClass(probe.status)]">
-              {{ statusText(probe.status) }}
-            </span>
+          <div class="light-probe-card-head">
+            <span class="light-probe-card-title">{{ protocolName(probe.protocol) }}</span>
+            <span
+              :aria-label="statusText(probe.status)"
+              :class="['status-dot', statusDotClass(probe.status)]"
+              :title="statusText(probe.status)"
+            />
           </div>
-          <InfoList compact :items="probe.items" :empty-text="label('暂无数据', 'No data')" />
-          <div class="mt-3 text-xs font-semibold text-orange-600 opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-focus-visible:opacity-100">
+          <div v-if="probe.items.length" class="light-probe-facts">
+            <div
+              v-for="item in probe.items"
+              :key="item.label"
+              class="light-probe-fact"
+            >
+              <span class="light-probe-label">{{ item.label }}</span>
+              <span class="light-probe-value">{{ Array.isArray(item.value) ? item.value.join(', ') : item.value }}</span>
+            </div>
+          </div>
+          <div v-else class="light-probe-empty">{{ label('暂无数据', 'No data') }}</div>
+          <div class="light-probe-detail-hint">
             {{ label('点击查看详情', 'Click for details') }}
           </div>
         </button>
       </div>
-      <div v-else class="rounded-xl bg-orange-50/80 p-4 text-sm text-gray-500">{{ label('暂无数据', 'No data') }}</div>
+      <div v-else class="panel-empty">{{ label('暂无数据', 'No data') }}</div>
     </div>
 
     <Teleport to="body">
       <Transition name="probe-modal">
         <div
           v-if="selectedProbe"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
+          class="probe-modal-backdrop"
           @click.self="selectedProbe = null"
         >
           <article
-            class="flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-orange-50 text-gray-900"
+            class="probe-modal-dialog"
             role="dialog"
             aria-modal="true"
           >
-            <header class="flex items-start justify-between gap-4 bg-orange-100/70 px-5 py-4">
+            <header class="probe-modal-header">
               <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-orange-600">{{ label('低频轻探测详情', 'Light probe detail') }}</p>
-                <h3 class="mt-1 text-xl font-semibold">{{ protocolName(selectedProbe.protocol) }}</h3>
+                <p class="probe-modal-eyebrow">{{ label('低频轻探测详情', 'Light probe detail') }}</p>
+                <h3 class="probe-modal-title">{{ protocolName(selectedProbe.protocol) }}</h3>
               </div>
-              <div class="flex items-center gap-3">
-                <span :class="['rounded-full px-2.5 py-1 text-xs font-semibold', statusClass(selectedProbe.status)]">
-                  {{ statusText(selectedProbe.status) }}
-                </span>
+              <div class="probe-modal-actions">
                 <button
                   type="button"
-                  class="rounded-full bg-orange-50 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:bg-orange-200"
+                  class="probe-modal-close"
                   @click="selectedProbe = null"
                 >
                   {{ label('关闭', 'Close') }}
@@ -157,33 +173,33 @@
               </div>
             </header>
 
-            <div class="overflow-y-auto px-5 py-5">
-              <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div class="rounded-xl bg-orange-100/45 p-3">
-                  <p class="text-xs font-semibold text-gray-500">{{ label('观测时间', 'Observed') }}</p>
-                  <p class="mt-1 break-words font-mono text-sm">{{ formatTime(selectedProbe.observedAt) }}</p>
+            <div class="probe-modal-body">
+              <div class="probe-modal-summary-grid">
+                <div class="probe-modal-summary-item">
+                  <p class="probe-modal-summary-label">{{ label('观测时间', 'Observed') }}</p>
+                  <p class="probe-modal-summary-value">{{ formatTime(selectedProbe.observedAt) }}</p>
                 </div>
-                <div class="rounded-xl bg-orange-100/45 p-3">
-                  <p class="text-xs font-semibold text-gray-500">{{ label('耗时', 'Duration') }}</p>
-                  <p class="mt-1 font-mono text-sm">{{ formatDuration(selectedProbe.durationMs) }}</p>
+                <div class="probe-modal-summary-item">
+                  <p class="probe-modal-summary-label">{{ label('耗时', 'Duration') }}</p>
+                  <p class="probe-modal-summary-value">{{ formatDuration(selectedProbe.durationMs) }}</p>
                 </div>
-                <div class="rounded-xl bg-orange-100/45 p-3">
-                  <p class="text-xs font-semibold text-gray-500">{{ label('结果', 'Result') }}</p>
-                  <p class="mt-1 font-mono text-sm">{{ selectedProbe.errorCode || statusText(selectedProbe.status) }}</p>
+                <div class="probe-modal-summary-item">
+                  <p class="probe-modal-summary-label">{{ label('结果', 'Result') }}</p>
+                  <p class="probe-modal-summary-value">{{ selectedProbe.errorCode || statusText(selectedProbe.status) }}</p>
                 </div>
               </div>
 
-              <div v-if="selectedProbe.errorMessage" class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-800">
+              <div v-if="selectedProbe.errorMessage" class="probe-modal-error">
                 {{ selectedProbe.errorMessage }}
               </div>
 
-              <div class="space-y-4">
+              <div class="probe-modal-sections">
                 <section
                   v-for="section in selectedProbeDetailSections"
                   :key="section.title"
-                  class="rounded-xl bg-orange-100/35 p-4"
+                  class="probe-modal-section"
                 >
-                  <h4 class="mb-3 text-sm font-semibold text-gray-900">{{ section.title }}</h4>
+                  <h4 class="probe-modal-section-title">{{ section.title }}</h4>
                   <InfoList :items="section.items" :empty-text="label('暂无数据', 'No data')" />
                 </section>
               </div>
@@ -342,12 +358,12 @@ const InfoList = defineComponent({
   },
   setup(componentProps) {
     return () => componentProps.items.length
-      ? h('div', { class: componentProps.compact ? 'space-y-1.5' : 'space-y-2.5' },
-        componentProps.items.map(item => h('div', { class: 'grid grid-cols-1 gap-1 text-sm sm:grid-cols-[minmax(8rem,13rem)_minmax(0,1fr)] sm:gap-3' }, [
-          h('span', { class: 'min-w-0 break-words font-semibold text-gray-500' }, item.label),
-          h('span', { class: 'min-w-0 break-words font-mono text-gray-800' }, Array.isArray(item.value) ? item.value.join(', ') : item.value),
+      ? h('div', { class: componentProps.compact ? 'modal-info-list is-compact' : 'modal-info-list' },
+        componentProps.items.map(item => h('div', { class: 'modal-info-row' }, [
+          h('span', { class: 'modal-info-label' }, item.label),
+          h('span', { class: 'modal-info-value' }, Array.isArray(item.value) ? item.value.join(', ') : item.value),
         ])))
-      : h('div', { class: 'text-sm text-gray-500' }, componentProps.emptyText)
+      : h('div', { class: 'modal-empty' }, componentProps.emptyText)
   },
 })
 
@@ -716,6 +732,13 @@ function statusClass(status: string) {
   return 'bg-gray-100 text-gray-700'
 }
 
+function statusDotClass(status: string) {
+  if (status === 'success') return 'is-success'
+  if (status === 'failure') return 'is-failure'
+  if (status === 'skipped') return 'is-skipped'
+  return 'is-unknown'
+}
+
 function mapRecordItems(record: Record<string, any>): InfoItem[] {
   return compactItems(Object.entries(record).map(([key, value]) => ({
     label: key,
@@ -859,6 +882,593 @@ function label(zh: string, en: string) {
 </script>
 
 <style scoped>
+.metadata-probe-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1.5rem, 3vw, 2.3rem);
+}
+
+.site-info-tabs-panel {
+  min-width: 0;
+}
+
+.light-probe-panel {
+  min-width: 0;
+}
+
+.light-probe-header {
+  display: flex;
+  align-items: center;
+  min-height: 2.45rem;
+}
+
+.info-tabs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  min-height: 2.45rem;
+}
+
+.info-tabs-title {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.info-tabs-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.info-tab-button {
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 500ms ease, color 500ms ease;
+}
+
+.info-tab-button:hover,
+.info-tab-button.is-active {
+  background: #fdba74;
+  color: #111827;
+}
+
+.metadata-panel {
+  margin-top: 1.15rem;
+}
+
+.metadata-list {
+  display: grid;
+  gap: 0.74rem;
+}
+
+.metadata-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 13rem) minmax(0, 1fr);
+  gap: clamp(1rem, 4vw, 2.4rem);
+  align-items: start;
+  min-width: 0;
+}
+
+.metadata-label {
+  min-width: 0;
+  color: #64748b;
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.metadata-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.metadata-empty {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.info-tab-body {
+  margin-top: 1.25rem;
+}
+
+.panel-empty {
+  border-top: 1px solid rgba(251, 140, 47, 0.12);
+  padding: 0.9rem 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.change-event-row {
+  border-top: 1px solid rgba(251, 140, 47, 0.12);
+  padding: 0.95rem 0;
+}
+
+.change-event-row:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.change-event-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.protocol-badge {
+  border-radius: 999px;
+  background: rgba(255, 237, 213, 0.76);
+  padding: 0.22rem 0.6rem;
+  color: #9a4a12;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.change-field {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.change-time {
+  margin-left: auto;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+}
+
+.change-value-grid {
+  margin-top: 0.8rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem 1.2rem;
+}
+
+.change-value-block {
+  min-width: 0;
+  border-left: 2px solid rgba(251, 140, 47, 0.18);
+  padding-left: 0.75rem;
+}
+
+.change-value-label {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.change-value-text {
+  margin-top: 0.25rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #1f2937;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.history-section {
+  border-top: 1px solid rgba(251, 140, 47, 0.12);
+  padding: 1rem 0;
+}
+
+.history-section:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.history-title {
+  color: #111827;
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.history-pager {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+}
+
+.history-page-button {
+  border-radius: 8px;
+  background: transparent;
+  padding: 0.25rem 0.55rem;
+  color: #475569;
+  transition: background-color 500ms ease, color 500ms ease;
+}
+
+.history-page-button:hover:not(:disabled) {
+  background: rgba(255, 237, 213, 0.72);
+  color: #9a4a12;
+}
+
+.history-page-button:disabled {
+  cursor: not-allowed;
+  color: #cbd5e1;
+}
+
+.history-page-count {
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.history-list {
+  margin-top: 0.7rem;
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr) 8.5rem;
+  gap: 0.75rem;
+  align-items: center;
+  border-bottom: 1px solid rgba(251, 140, 47, 0.10);
+  border-left: 2px solid transparent;
+  padding: 0.6rem 0.75rem 0.6rem 0.65rem;
+  transition: background-color 500ms ease, border-color 500ms ease;
+}
+
+.history-row:hover {
+  background: rgba(255, 237, 213, 0.52);
+  border-left-color: rgba(251, 140, 47, 0.45);
+}
+
+.history-row:last-child {
+  border-bottom: 0;
+}
+
+.history-summary {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #1f2937;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.history-time {
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  text-align: right;
+}
+
+.light-probe-grid {
+  margin-top: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.light-probe-card {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  break-inside: avoid;
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.42);
+  padding: 0.74rem 0.8rem;
+  text-align: left;
+  transition: background-color 500ms ease, box-shadow 500ms ease;
+}
+
+.light-probe-card:hover,
+.light-probe-card:focus-visible {
+  background: rgba(255, 247, 235, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.22), 0 0 0 4px rgba(251, 140, 47, 0.055);
+  outline: none;
+}
+
+.light-probe-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.light-probe-card-title {
+  min-width: 0;
+  color: #111827;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.light-probe-facts {
+  margin-top: 0.62rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.light-probe-fact {
+  display: grid;
+  grid-template-columns: minmax(4.4rem, 0.42fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: start;
+  min-width: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.light-probe-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.light-probe-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.light-probe-empty {
+  margin-top: 0.7rem;
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.light-probe-detail-hint {
+  margin-top: 0.65rem;
+  color: #ea580c;
+  font-size: 0.74rem;
+  font-weight: 800;
+  opacity: 0;
+  transition: opacity 500ms ease;
+}
+
+.light-probe-card:hover .light-probe-detail-hint,
+.light-probe-card:focus-visible .light-probe-detail-hint {
+  opacity: 1;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 0.58rem;
+  height: 0.58rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.status-dot.is-success {
+  background: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+}
+
+.status-dot.is-failure {
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.status-dot.is-skipped {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+}
+
+.status-dot.is-unknown {
+  background: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
+}
+
+.probe-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.46);
+  padding: 1.5rem 1rem;
+  backdrop-filter: blur(6px);
+}
+
+.probe-modal-dialog {
+  display: flex;
+  width: min(100%, 56rem);
+  max-height: 88vh;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(251, 140, 47, 0.08), transparent 30%),
+    linear-gradient(120deg, rgba(255, 247, 235, 0.88), rgba(255, 250, 242, 0.94)),
+    rgba(255, 247, 235, 0.90);
+  color: #111827;
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 140, 47, 0.16),
+    0 24px 70px rgba(15, 23, 42, 0.22);
+}
+
+.probe-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(251, 140, 47, 0.14);
+  padding: 1rem 1.25rem 0.9rem;
+}
+
+.probe-modal-eyebrow {
+  color: #ea580c;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.probe-modal-title {
+  margin-top: 0.18rem;
+  color: #111827;
+  font-size: 1.22rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.probe-modal-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.probe-modal-close {
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.78);
+  padding: 0.42rem 0.72rem;
+  color: #475569;
+  font-size: 0.86rem;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.10);
+  transition: background-color 500ms ease, color 500ms ease, box-shadow 500ms ease;
+}
+
+.probe-modal-close:hover,
+.probe-modal-close:focus-visible {
+  background: #fdba74;
+  color: #111827;
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18), 0 0 0 4px rgba(251, 140, 47, 0.06);
+  outline: none;
+}
+
+.probe-modal-body {
+  overflow-y: auto;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.probe-modal-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.probe-modal-summary-item {
+  min-width: 0;
+  padding: 0.72rem 0;
+}
+
+.probe-modal-summary-label {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.probe-modal-summary-value {
+  margin-top: 0.18rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.probe-modal-error {
+  margin-top: 1rem;
+  border-left: 2px solid rgba(239, 68, 68, 0.34);
+  background: rgba(254, 242, 242, 0.62);
+  padding: 0.72rem 0.85rem;
+  color: #991b1b;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.probe-modal-sections {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.95rem;
+}
+
+.probe-modal-section {
+  min-width: 0;
+  border-top: 1px solid rgba(251, 140, 47, 0.14);
+  padding-top: 0.95rem;
+}
+
+.probe-modal-section:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.probe-modal-section-title {
+  margin-bottom: 0.55rem;
+  color: #111827;
+  font-size: 0.94rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+:deep(.modal-info-list) {
+  display: grid;
+}
+
+:deep(.modal-info-row) {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 12rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  min-width: 0;
+  border-bottom: 1px solid rgba(251, 140, 47, 0.10);
+  border-left: 2px solid transparent;
+  padding: 0.48rem 0.65rem 0.48rem 0.55rem;
+  transition: background-color 500ms ease, border-color 500ms ease;
+}
+
+:deep(.modal-info-row:hover) {
+  background: rgba(255, 237, 213, 0.48);
+  border-left-color: rgba(251, 140, 47, 0.42);
+}
+
+:deep(.modal-info-row:last-child) {
+  border-bottom: 0;
+}
+
+:deep(.modal-info-label) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+:deep(.modal-info-value) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+:deep(.modal-empty) {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
 .probe-modal-enter-active,
 .probe-modal-leave-active {
   transition: opacity 160ms ease;
@@ -877,5 +1487,105 @@ function label(zh: string, en: string) {
 .probe-modal-enter-from article,
 .probe-modal-leave-to article {
   transform: translateY(8px) scale(0.98);
+}
+
+@media (max-width: 640px) {
+  .probe-modal-backdrop {
+    align-items: stretch;
+    padding: 0.75rem;
+  }
+
+  .probe-modal-dialog {
+    max-height: calc(100vh - 1.5rem);
+  }
+
+  .probe-modal-header {
+    align-items: flex-start;
+    padding: 0.95rem 1rem 0.85rem;
+  }
+
+  .probe-modal-body {
+    padding: 0.9rem 1rem 1rem;
+  }
+
+  :deep(.modal-info-row) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.12rem;
+  }
+
+  .info-tabs-header {
+    flex-direction: column;
+  }
+
+  .info-tabs-nav {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .info-tab-button {
+    flex: 1 1 auto;
+  }
+
+  .metadata-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.18rem;
+  }
+
+  .change-time {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .change-value-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .history-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .history-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+  }
+
+  .history-time {
+    text-align: left;
+  }
+}
+
+@media (min-width: 768px) {
+  .probe-modal-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .probe-modal-summary-item {
+    padding: 0.72rem 1rem;
+  }
+
+  .probe-modal-summary-item:first-child {
+    padding-left: 0;
+  }
+
+  .change-value-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .light-probe-grid {
+    display: block;
+    column-count: 2;
+    column-gap: 0.75rem;
+  }
+
+  .light-probe-card {
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .metadata-probe-shell {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  }
 }
 </style>

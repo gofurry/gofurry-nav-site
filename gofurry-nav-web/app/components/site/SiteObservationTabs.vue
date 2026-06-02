@@ -1,19 +1,19 @@
 <template>
-  <section class="rounded-2xl bg-orange-100/45 p-5">
-    <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+  <section class="site-observation-tabs">
+    <div class="observation-header">
       <div>
-          <div v-if="text.eyebrow" class="mb-1 text-xs font-medium uppercase tracking-wide text-orange-500">
+        <div v-if="text.eyebrow" class="observation-eyebrow">
           {{ text.eyebrow }}
         </div>
-        <h3 class="text-lg font-semibold text-gray-900">{{ text.title }}</h3>
+        <h3 class="observation-title">{{ text.title }}</h3>
       </div>
 
-      <div class="flex flex-wrap gap-1 rounded-xl bg-orange-50 p-1">
+      <div class="observation-tabs">
         <button
           v-for="tab in tabs"
           :key="tab.key"
-          class="rounded-lg px-4 py-2 text-sm transition-colors"
-          :class="activeTab === tab.key ? 'bg-orange-200 text-gray-900' : 'text-gray-600 hover:bg-orange-100'"
+          class="observation-tab"
+          :class="{ 'is-active': activeTab === tab.key }"
           @click="activeTab = tab.key"
         >
           {{ tab.label }}
@@ -21,7 +21,7 @@
       </div>
     </div>
 
-    <div class="rounded-xl bg-orange-50/70 p-4">
+    <div class="observation-content">
       <div v-if="activeTab === 'ping'" class="space-y-4">
         <MetricGrid :items="pingMetrics" />
       </div>
@@ -38,13 +38,13 @@
       <div v-else class="space-y-5">
         <MetricGrid :items="dnsMetrics" />
         <div v-if="dnsRecordGroups.length" class="space-y-4">
-          <div v-for="group in dnsRecordGroups" :key="group.type">
-            <h4 class="mb-2 text-sm font-semibold text-gray-500">{{ group.type }}</h4>
-            <div class="overflow-hidden rounded-lg bg-orange-100">
+          <div v-for="group in dnsRecordGroups" :key="group.type" class="dns-record-card">
+            <h4 class="record-heading">{{ group.type }}</h4>
+            <div class="record-list">
               <div
                 v-for="record in group.records"
                 :key="record.key"
-                class="grid grid-cols-[4.5rem_minmax(0,1fr)_4rem] gap-3 border-b border-orange-50 px-3 py-2 text-sm last:border-b-0"
+                class="record-row"
               >
                 <span class="font-semibold text-gray-500">{{ record.type }}</span>
                 <span class="break-all font-mono text-gray-800">{{ record.value }}</span>
@@ -53,7 +53,7 @@
             </div>
           </div>
         </div>
-        <div v-else class="rounded-lg bg-orange-100 p-4 text-sm text-gray-500">{{ text.none }}</div>
+        <div v-else class="empty-state">{{ text.none }}</div>
       </div>
     </div>
   </section>
@@ -65,8 +65,9 @@ import { i18n } from '@/main'
 import type { DnsRecord, HttpRecord, PingRecord, TargetLatestResponse } from '@/types/nav'
 
 type TabKey = 'ping' | 'http' | 'tls' | 'dns'
-type MetricItem = { label: string; value: string; accent?: boolean }
-type InfoItem = { label: string; value: string }
+type ObservationTone = 'good' | 'normal' | 'warn'
+type MetricItem = { label: string; value: string; accent?: boolean; tone?: ObservationTone }
+type InfoItem = { label: string; value: string; tone?: ObservationTone }
 
 const props = defineProps<{
   pingRecord: PingRecord | null
@@ -93,53 +94,53 @@ const httpPayload = computed(() => payload('http'))
 const dnsPayload = computed(() => payload('dns'))
 
 const pingMetrics = computed<MetricItem[]>(() => [
-  { label: 'ICMP', value: stringValue(pingPayload.value.icmp_status), accent: true },
-  { label: label('平均 RTT', 'Avg RTT'), value: msValue(pingPayload.value.avg_rtt_ms) },
-  { label: label('最小 RTT', 'Min RTT'), value: msValue(pingPayload.value.min_rtt_ms) },
-  { label: label('最大 RTT', 'Max RTT'), value: msValue(pingPayload.value.max_rtt_ms) },
-  { label: label('抖动', 'Jitter'), value: msValue(pingPayload.value.jitter_ms) },
-  { label: label('丢包率', 'Loss'), value: percentValue(pingPayload.value.loss_rate) },
-  { label: label('数据包', 'Packets'), value: packetValue() },
-  { label: label('解析 IP', 'Resolved IP'), value: stringValue(pingPayload.value.resolved_ip) },
+  { label: 'ICMP', value: stringValue(pingPayload.value.icmp_status), tone: pingPayload.value.icmp_status === 'reachable' ? 'good' : 'warn' },
+  { label: label('平均 RTT', 'Avg RTT'), value: msValue(pingPayload.value.avg_rtt_ms), tone: latencyTone(pingPayload.value.avg_rtt_ms) },
+  { label: label('最小 RTT', 'Min RTT'), value: msValue(pingPayload.value.min_rtt_ms), tone: latencyTone(pingPayload.value.min_rtt_ms) },
+  { label: label('最大 RTT', 'Max RTT'), value: msValue(pingPayload.value.max_rtt_ms), tone: latencyTone(pingPayload.value.max_rtt_ms) },
+  { label: label('抖动', 'Jitter'), value: msValue(pingPayload.value.jitter_ms), tone: latencyTone(pingPayload.value.jitter_ms, 30, 80) },
+  { label: label('丢包率', 'Loss'), value: percentValue(pingPayload.value.loss_rate), tone: lossTone(pingPayload.value.loss_rate) },
+  { label: label('数据包', 'Packets'), value: packetValue(), tone: 'normal' },
+  { label: label('解析 IP', 'Resolved IP'), value: stringValue(pingPayload.value.resolved_ip), tone: 'normal' },
 ])
 
 const httpMetrics = computed<MetricItem[]>(() => [
-  { label: label('状态码', 'Status'), value: numberValue(firstValue(httpPayload.value.status_code, props.httpRecord?.statusCode)), accent: true },
-  { label: label('响应耗时', 'Response'), value: msValue(firstValue(httpPayload.value.response_time_ms, parseNumber(props.httpRecord?.responseTime))) },
-  { label: label('DNS 查询', 'DNS Lookup'), value: msValue(httpPayload.value.dns_lookup_ms) },
-  { label: label('TCP 连接', 'TCP Connect'), value: msValue(httpPayload.value.tcp_connect_ms) },
-  { label: label('TLS 握手', 'TLS Handshake'), value: msValue(httpPayload.value.tls_handshake_ms) },
-  { label: 'TTFB', value: msValue(httpPayload.value.ttfb_ms) },
-  { label: label('传输耗时', 'Transfer'), value: msValue(httpPayload.value.transfer_ms) },
-  { label: label('响应体', 'Body'), value: bytesValue(firstValue(httpPayload.value.body_read_bytes, props.httpRecord?.contentLength)) },
-  { label: label('HTTP 协议', 'Protocol'), value: stringValue(httpPayload.value.http_protocol) },
-  { label: label('远端 IP', 'Remote IP'), value: stringValue(httpPayload.value.remote_ip) },
-  { label: 'Content-Type', value: firstString(httpPayload.value.content_type, headerValue('content-type')) },
-  { label: label('最终 URL', 'Final URL'), value: firstString(httpPayload.value.final_url, props.httpRecord?.url) },
+  { label: label('状态码', 'Status'), value: numberValue(firstValue(httpPayload.value.status_code, props.httpRecord?.statusCode)), tone: statusTone(firstValue(httpPayload.value.status_code, props.httpRecord?.statusCode)) },
+  { label: label('响应耗时', 'Response'), value: msValue(firstValue(httpPayload.value.response_time_ms, parseNumber(props.httpRecord?.responseTime))), tone: latencyTone(firstValue(httpPayload.value.response_time_ms, parseNumber(props.httpRecord?.responseTime))) },
+  { label: label('DNS 查询', 'DNS Lookup'), value: msValue(httpPayload.value.dns_lookup_ms), tone: latencyTone(httpPayload.value.dns_lookup_ms, 200, 1000) },
+  { label: label('TCP 连接', 'TCP Connect'), value: msValue(httpPayload.value.tcp_connect_ms), tone: latencyTone(httpPayload.value.tcp_connect_ms, 300, 1200) },
+  { label: label('TLS 握手', 'TLS Handshake'), value: msValue(httpPayload.value.tls_handshake_ms), tone: latencyTone(httpPayload.value.tls_handshake_ms, 400, 1500) },
+  { label: 'TTFB', value: msValue(httpPayload.value.ttfb_ms), tone: latencyTone(httpPayload.value.ttfb_ms) },
+  { label: label('传输耗时', 'Transfer'), value: msValue(httpPayload.value.transfer_ms), tone: latencyTone(httpPayload.value.transfer_ms) },
+  { label: label('响应体', 'Body'), value: bytesValue(firstValue(httpPayload.value.body_read_bytes, props.httpRecord?.contentLength)), tone: 'normal' },
+  { label: label('HTTP 协议', 'Protocol'), value: stringValue(httpPayload.value.http_protocol), tone: 'normal' },
+  { label: label('远端 IP', 'Remote IP'), value: stringValue(httpPayload.value.remote_ip), tone: 'normal' },
+  { label: 'Content-Type', value: firstString(httpPayload.value.content_type, headerValue('content-type')), tone: 'good' },
+  { label: label('最终 URL', 'Final URL'), value: firstString(httpPayload.value.final_url, props.httpRecord?.url), tone: 'normal' },
 ])
 
 const tlsMetrics = computed<MetricItem[]>(() => [
-  { label: label('证书已采集', 'Collected'), value: boolText(httpPayload.value.cert_collected) },
-  { label: label('证书已校验', 'Verified'), value: boolText(httpPayload.value.cert_verified), accent: true },
-  { label: label('握手状态', 'Handshake'), value: stringValue(httpPayload.value.tls_handshake) },
-  { label: label('校验错误', 'Verify Error'), value: stringValue(httpPayload.value.verify_error) },
-  { label: label('TLS 版本', 'TLS Version'), value: firstString(httpPayload.value.tls_version, props.httpRecord?.tlsVersion) },
-  { label: label('密码套件', 'Cipher'), value: firstString(httpPayload.value.cipher_suite, props.httpRecord?.cipherSuite) },
-  { label: label('生效时间', 'Not Before'), value: dateValue(httpPayload.value.cert_not_before) },
-  { label: label('到期时间', 'Not After'), value: dateValue(firstValue(httpPayload.value.cert_not_after, httpPayload.value.cert_expiry, props.httpRecord?.certExpiry)) },
-  { label: label('剩余天数', 'Days Left'), value: dayValue(firstValue(httpPayload.value.cert_days_left, parseNumber(props.httpRecord?.certDaysLeft))) },
-  { label: label('签发者', 'Issuer'), value: firstString(httpPayload.value.cert_issuer_cn, httpPayload.value.cert_issuer, props.httpRecord?.certIssuer) },
-  { label: 'SAN', value: numberValue(firstValue(httpPayload.value.cert_san_count, props.httpRecord?.certDNSNames?.length)) },
-  { label: label('证书链长度', 'Chain Length'), value: numberValue(httpPayload.value.cert_chain_length) },
+  { label: label('证书已采集', 'Collected'), value: boolText(httpPayload.value.cert_collected), tone: httpPayload.value.cert_collected === true ? 'good' : 'warn' },
+  { label: label('证书已校验', 'Verified'), value: boolText(httpPayload.value.cert_verified), tone: httpPayload.value.cert_verified === true ? 'good' : 'warn' },
+  { label: label('握手状态', 'Handshake'), value: stringValue(httpPayload.value.tls_handshake), tone: httpPayload.value.tls_handshake === 'collected' ? 'good' : 'normal' },
+  { label: label('校验错误', 'Verify Error'), value: stringValue(httpPayload.value.verify_error), tone: httpPayload.value.verify_error ? 'warn' : 'good' },
+  { label: label('TLS 版本', 'TLS Version'), value: firstString(httpPayload.value.tls_version, props.httpRecord?.tlsVersion), tone: 'good' },
+  { label: label('密码套件', 'Cipher'), value: firstString(httpPayload.value.cipher_suite, props.httpRecord?.cipherSuite), tone: 'normal' },
+  { label: label('生效时间', 'Not Before'), value: dateValue(httpPayload.value.cert_not_before), tone: 'normal' },
+  { label: label('到期时间', 'Not After'), value: dateValue(firstValue(httpPayload.value.cert_not_after, httpPayload.value.cert_expiry, props.httpRecord?.certExpiry)), tone: 'normal' },
+  { label: label('剩余天数', 'Days Left'), value: dayValue(firstValue(httpPayload.value.cert_days_left, parseNumber(props.httpRecord?.certDaysLeft))), tone: certDaysTone(firstValue(httpPayload.value.cert_days_left, parseNumber(props.httpRecord?.certDaysLeft))) },
+  { label: label('签发者', 'Issuer'), value: firstString(httpPayload.value.cert_issuer_cn, httpPayload.value.cert_issuer, props.httpRecord?.certIssuer), tone: 'normal' },
+  { label: 'SAN', value: numberValue(firstValue(httpPayload.value.cert_san_count, props.httpRecord?.certDNSNames?.length)), tone: 'normal' },
+  { label: label('证书链长度', 'Chain Length'), value: numberValue(httpPayload.value.cert_chain_length), tone: 'normal' },
 ])
 
 const dnsMetrics = computed<MetricItem[]>(() => [
-  { label: 'A', value: recordCount('A') },
-  { label: 'AAAA', value: recordCount('AAAA') },
-  { label: label('CNAME 深度', 'CNAME Depth'), value: numberValue(dnsPayload.value.cname_chain_depth) },
-  { label: label('CNAME 终点', 'CNAME Terminal'), value: stringValue(dnsPayload.value.cname_terminal) },
-  { label: label('MX 主机', 'MX Hosts'), value: mxHostsValue() },
-  { label: label('NS 主机', 'NS Hosts'), value: nsHostsValue() },
+  { label: 'A', value: recordCount('A'), tone: recordCount('A') === '0' ? 'warn' : 'normal' },
+  { label: 'AAAA', value: recordCount('AAAA'), tone: 'normal' },
+  { label: label('CNAME 深度', 'CNAME Depth'), value: numberValue(dnsPayload.value.cname_chain_depth), tone: 'good' },
+  { label: label('CNAME 终点', 'CNAME Terminal'), value: stringValue(dnsPayload.value.cname_terminal), tone: 'normal' },
+  { label: label('MX 主机', 'MX Hosts'), value: mxHostsValue(), tone: mxHostsValue() === '-' ? 'warn' : 'normal' },
+  { label: label('NS 主机', 'NS Hosts'), value: nsHostsValue(), tone: nsHostsValue() === '-' ? 'warn' : 'normal' },
 ])
 const dnsRecordGroups = computed(() => {
   const groups: { type: string; records: { key: string; type: string; value: string; ttl: string }[] }[] = []
@@ -165,25 +166,28 @@ const httpHeaderItems = computed<InfoItem[]>(() => {
   const headers = normalizeHeaders(props.httpRecord?.headers)
   const preferred = ['server', 'content-type', 'cache-control', 'vary', 'etag', 'last-modified', 'alt-svc', 'x-powered-by']
   return preferred
-    .map((key) => ({ label: key, value: headers[key]?.join(', ') ?? '' }))
+    .map((key) => ({ label: key, value: headers[key]?.join(', ') ?? '', tone: headerTone(key) }))
     .filter((item) => item.value)
     .slice(0, 8)
 })
+
+const metricToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn']
+const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn']
 
 const MetricGrid = defineComponent({
   props: {
     items: { type: Array as PropType<MetricItem[]>, default: () => [] },
   },
   setup(componentProps) {
-    return () => h('div', { class: 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4' },
-      componentProps.items.map(item => h('div', {
+    return () => h('div', { class: 'metric-grid' },
+      componentProps.items.map((item, index) => h('div', {
         class: [
-          'rounded-lg p-3',
-          item.accent ? 'bg-orange-100' : 'bg-orange-50',
+          'metric-card',
+          `tone-${item.tone ?? metricToneClasses[index % metricToneClasses.length]}`,
         ],
       }, [
-        h('div', { class: 'mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500' }, item.label),
-        h('div', { class: 'break-words text-base font-semibold text-gray-900' }, item.value || '-'),
+        h('div', { class: 'metric-label' }, item.label),
+        h('div', { class: 'metric-value' }, item.value || '-'),
       ]))
     )
   },
@@ -196,12 +200,12 @@ const InfoList = defineComponent({
   },
   setup(componentProps) {
     return () => componentProps.items.length
-      ? h('div', { class: 'grid grid-cols-1 gap-2 lg:grid-cols-2' },
-        componentProps.items.map(item => h('div', { class: 'grid grid-cols-[9rem_minmax(0,1fr)] gap-3 rounded-lg bg-orange-100 px-3 py-2 text-sm' }, [
-          h('span', { class: 'font-semibold text-gray-500' }, item.label),
-          h('span', { class: 'break-words font-mono text-gray-800' }, item.value),
+      ? h('div', { class: 'info-list' },
+        componentProps.items.map((item, index) => h('div', { class: ['info-row', `tone-${item.tone ?? headerToneClasses[index % headerToneClasses.length]}`] }, [
+          h('span', { class: 'info-label' }, item.label),
+          h('span', { class: 'info-value' }, item.value),
         ])))
-      : h('div', { class: 'rounded-lg bg-orange-100 p-4 text-sm text-gray-500' }, componentProps.emptyText)
+      : h('div', { class: 'empty-state' }, componentProps.emptyText)
   },
 })
 
@@ -352,7 +356,581 @@ function headerValue(key: string) {
   return normalizeHeaders(props.httpRecord?.headers)[key.toLowerCase()]?.[0] ?? ''
 }
 
+function latencyTone(value: unknown, normalLimit = 1000, warnLimit = 3000): ObservationTone {
+  const parsed = typeof value === 'number' ? value : parseNumber(value)
+  if (!Number.isFinite(parsed)) {
+    return 'normal'
+  }
+  if (parsed <= normalLimit) {
+    return 'good'
+  }
+  if (parsed <= warnLimit) {
+    return 'normal'
+  }
+  return 'warn'
+}
+
+function lossTone(value: unknown): ObservationTone {
+  const parsed = typeof value === 'number' ? value : parseNumber(value)
+  if (!Number.isFinite(parsed)) {
+    return 'normal'
+  }
+  const normalized = parsed <= 1 ? parsed * 100 : parsed
+  if (normalized <= 0) {
+    return 'good'
+  }
+  if (normalized <= 5) {
+    return 'normal'
+  }
+  return 'warn'
+}
+
+function statusTone(value: unknown): ObservationTone {
+  const parsed = typeof value === 'number' ? value : parseNumber(value)
+  if (!Number.isFinite(parsed)) {
+    return 'normal'
+  }
+  if (parsed >= 200 && parsed < 400) {
+    return 'good'
+  }
+  if (parsed >= 400 && parsed < 500) {
+    return 'normal'
+  }
+  return 'warn'
+}
+
+function certDaysTone(value: unknown): ObservationTone {
+  const parsed = typeof value === 'number' ? value : parseNumber(value)
+  if (!Number.isFinite(parsed)) {
+    return 'normal'
+  }
+  if (parsed > 30) {
+    return 'good'
+  }
+  if (parsed > 7) {
+    return 'normal'
+  }
+  return 'warn'
+}
+
+function headerTone(key: string): ObservationTone {
+  if (key === 'x-powered-by') {
+    return 'warn'
+  }
+  if (['content-type', 'etag', 'last-modified'].includes(key)) {
+    return 'good'
+  }
+  return 'normal'
+}
+
 function label(zh: string, en: string) {
   return i18n.global.locale.value === 'en' ? en : zh
 }
 </script>
+
+<style scoped>
+.site-observation-tabs {
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(251, 140, 47, 0.08), transparent 30%),
+    linear-gradient(120deg, rgba(255, 247, 235, 0.80), rgba(255, 250, 242, 0.88)),
+    rgba(255, 247, 235, 0.80);
+  padding: clamp(1rem, 2vw, 1.5rem);
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 140, 47, 0.16),
+    0 16px 42px rgba(124, 45, 18, 0.04);
+}
+
+.observation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.observation-eyebrow {
+  margin-bottom: 0.25rem;
+  color: #ea580c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.observation-title {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.observation-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.78);
+  padding: 0.25rem;
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.06);
+}
+
+.observation-tab {
+  border-radius: 7px;
+  padding: 0.55rem 0.95rem;
+  color: #475569;
+  font-size: 0.9rem;
+  transition-duration: 500ms;
+}
+
+.observation-tab:hover,
+.observation-tab.is-active {
+  background: #fdba74;
+  color: #111827;
+}
+
+.observation-content {
+  margin-top: 1.1rem;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+@media (min-width: 640px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .metric-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.metric-card {
+  min-width: 0;
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.68);
+  padding: 0.95rem 1rem;
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.10);
+  transition: background-color 500ms ease, box-shadow 500ms ease;
+}
+
+.metric-card:hover {
+  background: rgba(255, 247, 235, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18), 0 0 0 4px rgba(251, 140, 47, 0.05);
+}
+
+.metric-card.is-accent {
+  background: rgba(255, 237, 213, 0.70);
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
+}
+
+.metric-label {
+  margin-bottom: 0.35rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.metric-value {
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.info-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 1rem;
+}
+
+@media (min-width: 1024px) {
+  .info-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.32fr) minmax(0, 1fr);
+  gap: 0.8rem;
+  min-width: 0;
+  border-bottom: 1px solid rgba(251, 140, 47, 0.10);
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  padding: 0.58rem 0.85rem 0.58rem 0.75rem;
+  font-size: 0.9rem;
+  transition: background-color 500ms ease, border-color 500ms ease, color 500ms ease;
+}
+
+.info-row:hover {
+  background: rgba(255, 247, 235, 0.62);
+  border-left-color: rgba(251, 140, 47, 0.28);
+}
+
+.info-row.tone-warm {
+  background: transparent;
+}
+
+.info-row.tone-mint {
+  background: transparent;
+}
+
+.info-row.tone-sky {
+  background: transparent;
+}
+
+.info-row.tone-amber {
+  background: transparent;
+}
+
+.info-label {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.info-value {
+  overflow-wrap: anywhere;
+  color: #1f2937;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.record-heading {
+  margin-bottom: 0.45rem;
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.dns-record-card {
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.50);
+  padding: 0.85rem;
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.09);
+  transition: background-color 500ms ease, box-shadow 500ms ease;
+}
+
+.dns-record-card:hover {
+  background: rgba(255, 247, 235, 0.64);
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.16), 0 0 0 4px rgba(251, 140, 47, 0.045);
+}
+
+.record-list {
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.42);
+}
+
+.record-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) 4rem;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(251, 140, 47, 0.08);
+  padding: 0.55rem 0.85rem;
+  font-size: 0.86rem;
+}
+
+.record-row:last-child {
+  border-bottom: 0;
+}
+
+.empty-state {
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.54);
+  padding: 1rem;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.site-observation-tabs :deep(.metric-card) {
+  min-width: 0;
+  border-radius: 8px;
+  padding: 0.95rem 1rem;
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.10);
+  transition: background-color 500ms ease, box-shadow 500ms ease;
+}
+
+.site-observation-tabs :deep(.metric-grid) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+@media (min-width: 640px) {
+  .site-observation-tabs :deep(.metric-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .site-observation-tabs :deep(.metric-grid) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.site-observation-tabs :deep(.metric-card:hover) {
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.20), 0 0 0 4px rgba(251, 140, 47, 0.055);
+}
+
+.site-observation-tabs :deep(.metric-card.tone-warm) {
+  background: rgba(255, 247, 235, 0.76);
+}
+
+.site-observation-tabs :deep(.metric-card.tone-sky) {
+  background: rgba(239, 246, 255, 0.72);
+}
+
+.site-observation-tabs :deep(.metric-card.tone-mint) {
+  background: rgba(240, 253, 244, 0.72);
+}
+
+.site-observation-tabs :deep(.metric-card.tone-amber) {
+  background: rgba(255, 251, 235, 0.76);
+}
+
+.site-observation-tabs :deep(.metric-card.tone-rose) {
+  background: rgba(255, 241, 242, 0.70);
+}
+
+.site-observation-tabs :deep(.metric-card.tone-violet) {
+  background: rgba(245, 243, 255, 0.68);
+}
+
+.site-observation-tabs :deep(.metric-card.tone-lime) {
+  background: rgba(247, 254, 231, 0.70);
+}
+
+.site-observation-tabs :deep(.metric-card.tone-peach),
+.site-observation-tabs :deep(.metric-card.is-accent) {
+  background: rgba(255, 237, 213, 0.72);
+}
+
+.site-observation-tabs :deep(.metric-label) {
+  margin-bottom: 0.35rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.site-observation-tabs :deep(.metric-value) {
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.site-observation-tabs :deep(.info-list) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0 1rem;
+}
+
+@media (min-width: 1024px) {
+  .site-observation-tabs :deep(.info-list) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.site-observation-tabs :deep(.info-row) {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.32fr) minmax(0, 1fr);
+  gap: 0.8rem;
+  min-width: 0;
+  border-bottom: 1px solid rgba(251, 140, 47, 0.10);
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  padding: 0.58rem 0.85rem 0.58rem 0.75rem;
+  font-size: 0.9rem;
+  transition: background-color 500ms ease, border-color 500ms ease, color 500ms ease;
+}
+
+.site-observation-tabs :deep(.info-row:hover) {
+  background: rgba(255, 247, 235, 0.62);
+  border-left-color: rgba(251, 140, 47, 0.28);
+}
+
+.site-observation-tabs :deep(.info-row.tone-warm) {
+  background: transparent;
+}
+
+.site-observation-tabs :deep(.info-row.tone-mint) {
+  background: transparent;
+}
+
+.site-observation-tabs :deep(.info-row.tone-sky) {
+  background: transparent;
+}
+
+.site-observation-tabs :deep(.info-row.tone-amber) {
+  background: transparent;
+}
+
+.site-observation-tabs :deep(.info-label) {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.site-observation-tabs :deep(.info-value) {
+  overflow-wrap: anywhere;
+  color: #1f2937;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.metric-card.tone-good,
+.site-observation-tabs :deep(.metric-card.tone-good) {
+  background: #e4f7ea;
+  box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.20);
+}
+
+.metric-card.tone-normal,
+.site-observation-tabs :deep(.metric-card.tone-normal) {
+  background: #fff0c7;
+  box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.18);
+}
+
+.metric-card.tone-warn,
+.site-observation-tabs :deep(.metric-card.tone-warn) {
+  background: #ffe5df;
+  box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.16);
+}
+
+.metric-card:hover,
+.site-observation-tabs :deep(.metric-card:hover) {
+  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.30), 0 0 0 4px rgba(251, 140, 47, 0.08);
+}
+
+.metric-card.tone-good:hover,
+.site-observation-tabs :deep(.metric-card.tone-good:hover) {
+  background: #d8f2e1;
+  box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.28), 0 0 0 4px rgba(22, 163, 74, 0.08);
+}
+
+.metric-card.tone-normal:hover,
+.site-observation-tabs :deep(.metric-card.tone-normal:hover) {
+  background: #ffe8ad;
+  box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.26), 0 0 0 4px rgba(217, 119, 6, 0.08);
+}
+
+.metric-card.tone-warn:hover,
+.site-observation-tabs :deep(.metric-card.tone-warn:hover) {
+  background: #ffd9cf;
+  box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.24), 0 0 0 4px rgba(220, 38, 38, 0.07);
+}
+
+.info-row.tone-good,
+.site-observation-tabs :deep(.info-row.tone-good) {
+  background: transparent;
+  box-shadow: none;
+}
+
+.info-row.tone-normal,
+.site-observation-tabs :deep(.info-row.tone-normal) {
+  background: transparent;
+  box-shadow: none;
+}
+
+.info-row.tone-warn,
+.site-observation-tabs :deep(.info-row.tone-warn) {
+  background: transparent;
+  box-shadow: none;
+}
+
+.info-row:hover,
+.site-observation-tabs :deep(.info-row:hover) {
+  background: rgba(255, 237, 213, 0.68);
+  border-left-color: rgba(251, 140, 47, 0.58);
+}
+
+.info-row:hover .info-label,
+.site-observation-tabs :deep(.info-row:hover .info-label) {
+  color: #9a4a12;
+}
+
+.info-row:hover .info-value,
+.site-observation-tabs :deep(.info-row:hover .info-value) {
+  color: #111827;
+}
+
+.dns-record-card {
+  border-top: 1px solid rgba(251, 140, 47, 0.12);
+  border-radius: 0;
+  background: transparent;
+  padding: 0.9rem 0 0;
+  box-shadow: none;
+  transition: none;
+}
+
+.dns-record-card:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.dns-record-card:hover {
+  background: transparent;
+  box-shadow: none;
+}
+
+.record-heading {
+  margin-bottom: 0.45rem;
+  color: #475569;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.record-list {
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+}
+
+.record-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) 4rem;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(251, 140, 47, 0.10);
+  border-left: 2px solid transparent;
+  padding: 0.58rem 0.85rem 0.58rem 0.75rem;
+  font-size: 0.86rem;
+  transition: background-color 500ms ease, border-color 500ms ease;
+}
+
+.record-row:hover {
+  background: rgba(255, 237, 213, 0.68);
+  border-left-color: rgba(251, 140, 47, 0.58);
+}
+
+.record-row:hover span:first-child {
+  color: #9a4a12;
+}
+
+@media (max-width: 640px) {
+  .observation-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .observation-tabs {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .info-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+
+  .site-observation-tabs :deep(.info-row) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+}
+</style>
