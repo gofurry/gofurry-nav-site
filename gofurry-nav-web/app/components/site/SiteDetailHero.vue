@@ -9,7 +9,7 @@
             :alt="siteName"
             class="h-20 w-20 rounded-lg object-contain"
           >
-          <div v-else class="flex h-20 w-20 items-center justify-center rounded-lg text-2xl font-bold text-slate-700">
+          <div v-else class="flex h-20 w-20 items-center justify-center rounded-lg text-2xl font-bold text-slate-700 dark:text-slate-100">
             GF
           </div>
         </div>
@@ -19,7 +19,7 @@
         <div class="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div class="min-w-0 flex-1">
             <div class="hero-title-row">
-              <h1 class="mr-2 break-words text-xl font-black tracking-normal text-slate-950 md:text-2xl">
+              <h1 class="mr-2 break-words text-xl font-black tracking-normal text-slate-950 dark:text-slate-50 md:text-2xl">
                 {{ siteName }}
               </h1>
               <div class="flex flex-wrap items-center gap-2.5">
@@ -44,11 +44,11 @@
               >
                 <button
                   type="button"
-                  class="flex items-center font-mono text-sm text-slate-500 transition-colors duration-500 hover:text-orange-500"
+                  class="flex items-center font-mono text-sm text-slate-500 transition-colors duration-500 hover:text-orange-500 dark:text-slate-400 dark:hover:text-orange-300"
                   @click="copyToClipboard(domain)"
                 >
                   <span>{{ domain }}</span>
-                  <span class="ml-2 text-xs text-slate-400 opacity-0 transition-opacity duration-500 group-hover/domain:opacity-100">
+                  <span class="ml-2 text-xs text-slate-400 opacity-0 transition-opacity duration-500 group-hover/domain:opacity-100 dark:text-slate-500">
                     {{ t('common.copy') }}
                   </span>
                 </button>
@@ -70,8 +70,8 @@
                           v-for="item in switchableDomains"
                           :key="item"
                           :to="domainLink(item)"
-                          class="rounded-lg px-3 py-2 font-mono text-xs text-slate-700 transition-colors duration-500 hover:bg-orange-100/80 hover:text-orange-700"
-                          :class="{ 'bg-orange-100/80 text-orange-700': item === domain }"
+                          class="rounded-lg px-3 py-2 font-mono text-xs text-slate-700 transition-colors duration-500 hover:bg-orange-100/80 hover:text-orange-700 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-100"
+                          :class="{ 'bg-orange-100/80 text-orange-700 dark:bg-orange-500/20 dark:text-orange-100': item === domain }"
                         >
                           {{ item }}
                         </NuxtLink>
@@ -112,7 +112,7 @@
           </div>
         </div>
 
-        <p class="max-w-6xl text-sm leading-7 text-slate-700 md:text-base">
+        <p class="max-w-6xl text-sm leading-7 text-slate-700 dark:text-slate-300 md:text-base">
           {{ info || '-' }}
         </p>
 
@@ -222,10 +222,21 @@ function label(zh: string, en: string) {
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18);
 }
 
+:global(.dark .detail-hero){
+  background:
+    radial-gradient(circle at 18% 24%, rgba(251, 146, 60, 0.15), transparent 28%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(30, 41, 59, 0.66));
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.16);
+}
+
 .logo-shell {
   border-radius: 0.5rem;
   background: #ffedd5;
   padding: 0.45rem;
+}
+
+:global(.dark .logo-shell){
+  background: rgba(30, 41, 59, 0.86);
 }
 
 .hero-title-row {
@@ -250,9 +261,20 @@ function label(zh: string, en: string) {
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.20);
 }
 
+:global(.dark .detail-pill-edge){
+  background: rgba(251, 146, 60, 0.13);
+  color: #fed7aa;
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.24);
+}
+
 .detail-pill-sfw {
   background: #fed7aa;
   color: #c2410c;
+}
+
+:global(.dark .detail-pill-sfw){
+  background: rgba(34, 197, 94, 0.14);
+  color: #bbf7d0;
 }
 
 .detail-pill-risk {
@@ -260,9 +282,19 @@ function label(zh: string, en: string) {
   color: #b91c1c;
 }
 
+:global(.dark .detail-pill-risk){
+  background: rgba(248, 113, 113, 0.14);
+  color: #fecaca;
+}
+
 .detail-pill-welfare {
   background: #fde68a;
   color: #b45309;
+}
+
+:global(.dark .detail-pill-welfare){
+  background: rgba(250, 204, 21, 0.14);
+  color: #fef08a;
 }
 
 .keyword-chip {
@@ -272,6 +304,11 @@ function label(zh: string, en: string) {
   color: #9a3412;
   font-size: 0.75rem;
   font-weight: 400;
+}
+
+:global(.dark .keyword-chip){
+  background: rgba(251, 146, 60, 0.14);
+  color: #fed7aa;
 }
 
 .hero-meta-row {
@@ -295,6 +332,10 @@ function label(zh: string, en: string) {
   white-space: nowrap;
 }
 
+:global(.dark .hero-mobile-views){
+  color: #fdba74;
+}
+
 .hero-actions {
   display: flex;
   flex-shrink: 0;
@@ -309,6 +350,12 @@ function label(zh: string, en: string) {
   padding: 0.75rem;
   color: #1f2937;
   backdrop-filter: blur(14px);
+}
+
+:global(.dark .domain-popover){
+  background: rgba(15, 23, 42, 0.96);
+  color: #e2e8f0;
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.14), 0 16px 44px rgba(0, 0, 0, 0.24);
 }
 
 .domain-card-enter-active,
@@ -351,6 +398,16 @@ function label(zh: string, en: string) {
 .visit-button:hover {
   background: rgba(254, 215, 170, 0.88);
   color: #111827;
+}
+
+:global(.dark .visit-button){
+  background: rgba(251, 146, 60, 0.18);
+  color: #fff7ed;
+}
+
+:global(.dark .visit-button:hover){
+  background: rgba(251, 146, 60, 0.28);
+  color: #ffffff;
 }
 
 @media (min-width: 640px) {

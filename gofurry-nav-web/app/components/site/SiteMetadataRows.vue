@@ -53,6 +53,10 @@ function displayValue(value: string | string[]) {
   line-height: 1.55;
 }
 
+:global(.dark .metadata-label){
+  color: #94a3b8;
+}
+
 .metadata-value {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -62,9 +66,17 @@ function displayValue(value: string | string[]) {
   line-height: 1.55;
 }
 
+:global(.dark .metadata-value){
+  color: #e2e8f0;
+}
+
 .metadata-empty {
   color: #64748b;
   font-size: 0.9rem;
+}
+
+:global(.dark .metadata-empty){
+  color: #94a3b8;
 }
 
 @media (max-width: 640px) {

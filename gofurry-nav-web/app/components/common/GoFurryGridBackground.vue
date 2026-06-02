@@ -64,4 +64,32 @@ withDefaults(defineProps<{
   -webkit-mask-image: repeating-linear-gradient(90deg, #000 0, #000 3px, transparent 3px, transparent 7px);
   mask-image: repeating-linear-gradient(90deg, #000 0, #000 3px, transparent 3px, transparent 7px);
 }
+
+:global(.dark .gofurry-grid-background){
+  background:
+    radial-gradient(circle at 14% 16%, rgba(251, 146, 60, 0.15), transparent 30%),
+    radial-gradient(circle at 82% 10%, rgba(59, 130, 246, 0.12), transparent 30%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.96), rgba(15, 23, 42, 0.98)),
+    #020617;
+}
+
+:global(.dark .gofurry-grid-background::before){
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.12) 0,
+    rgba(148, 163, 184, 0.12) 1px,
+    transparent 1px,
+    transparent 38px
+  );
+}
+
+:global(.dark .gofurry-grid-background::after){
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(148, 163, 184, 0.10) 0,
+    rgba(148, 163, 184, 0.10) 1px,
+    transparent 1px,
+    transparent 38px
+  );
+}
 </style>

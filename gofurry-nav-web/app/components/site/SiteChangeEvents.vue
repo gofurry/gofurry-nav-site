@@ -52,9 +52,18 @@ function label(zh: string, en: string) {
   font-size: 0.9rem;
 }
 
+:global(.dark .panel-empty){
+  border-top-color: rgba(251, 146, 60, 0.16);
+  color: #94a3b8;
+}
+
 .change-event-row {
   border-top: 1px solid rgba(251, 140, 47, 0.12);
   padding: 0.95rem 0;
+}
+
+:global(.dark .change-event-row){
+  border-top-color: rgba(251, 146, 60, 0.16);
 }
 
 .change-event-row:first-of-type {
@@ -78,6 +87,11 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
+:global(.dark .protocol-badge){
+  background: rgba(251, 146, 60, 0.14);
+  color: #fed7aa;
+}
+
 .change-field {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -86,11 +100,19 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
+:global(.dark .change-field){
+  color: #f8fafc;
+}
+
 .change-time {
   margin-left: auto;
   color: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 0.78rem;
+}
+
+:global(.dark .change-time){
+  color: #94a3b8;
 }
 
 .change-value-grid {
@@ -106,10 +128,18 @@ function label(zh: string, en: string) {
   padding-left: 0.75rem;
 }
 
+:global(.dark .change-value-block){
+  border-left-color: rgba(251, 146, 60, 0.24);
+}
+
 .change-value-label {
   color: #64748b;
   font-size: 0.76rem;
   font-weight: 800;
+}
+
+:global(.dark .change-value-label){
+  color: #94a3b8;
 }
 
 .change-value-text {
@@ -120,6 +150,10 @@ function label(zh: string, en: string) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 0.86rem;
   line-height: 1.55;
+}
+
+:global(.dark .change-value-text){
+  color: #e2e8f0;
 }
 
 @media (max-width: 640px) {

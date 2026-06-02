@@ -45,6 +45,13 @@ defineProps<{
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
 }
 
+:global(.dark .performance-panel section > .rounded-2xl){
+  background:
+    linear-gradient(118deg, rgba(30, 41, 59, 0.70), rgba(15, 23, 42, 0.84) 48%, rgba(30, 58, 138, 0.16)),
+    rgba(15, 23, 42, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.14);
+}
+
 .performance-panel :deep(section > .rounded-2xl::before) {
   content: "";
   pointer-events: none;
@@ -55,6 +62,13 @@ defineProps<{
     repeating-linear-gradient(90deg, rgba(79, 111, 237, 0.055) 0 1px, transparent 1px 76px);
   mask-image: linear-gradient(to bottom, transparent 0, #000 18%, #000 82%, transparent 100%);
   opacity: 0.5;
+}
+
+:global(.dark .performance-panel section > .rounded-2xl::before){
+  background:
+    linear-gradient(90deg, transparent, rgba(147, 197, 253, 0.10), transparent),
+    repeating-linear-gradient(90deg, rgba(147, 197, 253, 0.045) 0 1px, transparent 1px 76px);
+  opacity: 0.44;
 }
 
 .performance-panel :deep(section > .rounded-2xl > .grid:first-child) {
@@ -81,6 +95,10 @@ defineProps<{
   font-size: clamp(1.08rem, 1.4vw, 1.28rem);
 }
 
+:global(.dark .performance-panel section > .rounded-2xl > .grid:first-child > div:first-child h3){
+  color: #f8fafc;
+}
+
 .performance-panel :deep(section > .rounded-2xl > .grid:first-child > div:nth-child(2)) {
   align-self: center;
 }
@@ -90,6 +108,10 @@ defineProps<{
   border-radius: 8px;
   background: rgba(255, 232, 196, 0.34);
   box-shadow: none;
+}
+
+:global(.dark .performance-panel section > .rounded-2xl > .grid:first-child > div:nth-child(2) > div) {
+  background: rgba(15, 23, 42, 0.58);
 }
 
 .performance-panel :deep(section > .rounded-2xl > .grid:first-child button) {
@@ -104,6 +126,11 @@ defineProps<{
   color: #111827;
 }
 
+:global(.dark .performance-panel section > .rounded-2xl > .grid:first-child button.bg-orange-200){
+  background: rgba(251, 146, 60, 0.28);
+  color: #fff7ed;
+}
+
 .performance-panel :deep(section > .rounded-2xl > .grid:first-child > div:last-child) {
   gap: 0.55rem;
 }
@@ -113,6 +140,10 @@ defineProps<{
   border-radius: 7px;
   background: rgba(255, 232, 196, 0.38);
   box-shadow: none;
+}
+
+:global(.dark .performance-panel section > .rounded-2xl > .grid:first-child > div:last-child > div){
+  background: rgba(15, 23, 42, 0.58);
 }
 
 .performance-panel :deep(section > .rounded-2xl > .rounded-xl) {
@@ -125,6 +156,13 @@ defineProps<{
     repeating-linear-gradient(0deg, transparent 0 39px, rgba(148, 163, 184, 0.13) 40px),
     repeating-linear-gradient(90deg, transparent 0 71px, rgba(79, 111, 237, 0.08) 72px);
   box-shadow: none;
+}
+
+:global(.dark .performance-panel section > .rounded-2xl > .rounded-xl){
+  background:
+    linear-gradient(rgba(15, 23, 42, 0.24), rgba(15, 23, 42, 0.24)),
+    repeating-linear-gradient(0deg, transparent 0 39px, rgba(148, 163, 184, 0.12) 40px),
+    repeating-linear-gradient(90deg, transparent 0 71px, rgba(147, 197, 253, 0.07) 72px);
 }
 
 .performance-panel :deep(section > .rounded-2xl.bg-orange-100\/45) {

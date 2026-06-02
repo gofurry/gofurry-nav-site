@@ -1,8 +1,8 @@
 <template>
-  <div ref="pageRoot" class="site-detail-page min-h-full overflow-x-hidden text-slate-900">
+  <div ref="pageRoot" class="site-detail-page min-h-full overflow-x-hidden text-slate-900 transition-colors duration-500 dark:text-slate-100">
     <GoFurryGridBackground />
 
-    <div v-if="pending" class="relative flex min-h-[68vh] items-center justify-center text-slate-500">
+    <div v-if="pending" class="relative flex min-h-[68vh] items-center justify-center text-slate-500 dark:text-slate-400">
       {{ t('common.loading') }}
     </div>
 
@@ -528,6 +528,14 @@ function label(zh: string, en: string) {
   z-index: 1;
 }
 
+:global(.dark .site-detail-page){
+  --surface: rgba(15, 23, 42, 0.72);
+  --surface-strong: rgba(30, 41, 59, 0.78);
+  --ink-muted: #94a3b8;
+  background:
+    linear-gradient(180deg, rgba(2, 6, 23, 0.96) 0%, rgba(15, 23, 42, 0.98) 54%, rgba(12, 18, 32, 0.98) 100%);
+}
+
 .detail-section,
 .detail-observation-tabs {
   margin-top: 1.5rem;
@@ -545,6 +553,16 @@ function label(zh: string, en: string) {
     0 16px 42px rgba(124, 45, 18, 0.04);
 }
 
+:global(.dark .detail-section){
+  background:
+    radial-gradient(circle at 8% 0%, rgba(251, 146, 60, 0.12), transparent 30%),
+    linear-gradient(120deg, rgba(15, 23, 42, 0.84), rgba(30, 41, 59, 0.72)),
+    rgba(15, 23, 42, 0.82);
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 146, 60, 0.14),
+    0 18px 52px rgba(0, 0, 0, 0.18);
+}
+
 .detail-section :deep(.rounded-2xl.bg-orange-100\/45),
 .detail-section :deep(.rounded-xl.bg-orange-50\/80),
 .detail-section :deep(.rounded-xl.bg-orange-50\/70),
@@ -554,6 +572,17 @@ function label(zh: string, en: string) {
 .detail-section :deep(.rounded-md.bg-orange-100\/45),
 .detail-section :deep(.rounded-xl.bg-orange-100\/45) {
   background-color: rgba(255, 250, 242, 0.70);
+}
+
+:global(.dark .detail-section .rounded-2xl.bg-orange-100\/45),
+:global(.dark .detail-section .rounded-xl.bg-orange-50\/80),
+:global(.dark .detail-section .rounded-xl.bg-orange-50\/70),
+:global(.dark .detail-section .rounded-lg.bg-orange-100),
+:global(.dark .detail-section .rounded-lg.bg-orange-100\/35),
+:global(.dark .detail-section .rounded-md.bg-orange-50),
+:global(.dark .detail-section .rounded-md.bg-orange-100\/45),
+:global(.dark .detail-section .rounded-xl.bg-orange-100\/45){
+  background-color: rgba(15, 23, 42, 0.68);
 }
 
 </style>

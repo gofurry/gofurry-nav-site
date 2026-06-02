@@ -190,11 +190,20 @@ function label(zh: string, en: string) {
   line-height: 1.35;
 }
 
+:global(.dark .info-tabs-title){
+  color: #f8fafc;
+}
+
 .panel-empty {
   border-top: 1px solid rgba(251, 140, 47, 0.12);
   padding: 0.9rem 0;
   color: #64748b;
   font-size: 0.9rem;
+}
+
+:global(.dark .panel-empty){
+  border-top-color: rgba(251, 146, 60, 0.16);
+  color: #94a3b8;
 }
 
 .light-probe-grid {
@@ -216,11 +225,22 @@ function label(zh: string, en: string) {
   transition: background-color 500ms ease, box-shadow 500ms ease;
 }
 
+:global(.dark .light-probe-card){
+  background: rgba(15, 23, 42, 0.52);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.10);
+}
+
 .light-probe-card:hover,
 .light-probe-card:focus-visible {
   background: rgba(255, 247, 235, 0.72);
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.22), 0 0 0 4px rgba(251, 140, 47, 0.055);
   outline: none;
+}
+
+:global(.dark .light-probe-card:hover),
+:global(.dark .light-probe-card:focus-visible){
+  background: rgba(30, 41, 59, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.22), 0 0 0 4px rgba(251, 146, 60, 0.06);
 }
 
 .light-probe-card-head {
@@ -236,6 +256,10 @@ function label(zh: string, en: string) {
   color: #111827;
   font-size: 0.92rem;
   font-weight: 800;
+}
+
+:global(.dark .light-probe-card-title){
+  color: #f8fafc;
 }
 
 .light-probe-facts {
@@ -261,6 +285,10 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
+:global(.dark .light-probe-label){
+  color: #94a3b8;
+}
+
 .light-probe-value {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -268,10 +296,18 @@ function label(zh: string, en: string) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
+:global(.dark .light-probe-value){
+  color: #e2e8f0;
+}
+
 .light-probe-empty {
   margin-top: 0.7rem;
   color: #64748b;
   font-size: 0.84rem;
+}
+
+:global(.dark .light-probe-empty){
+  color: #94a3b8;
 }
 
 .light-probe-detail-hint {
@@ -329,6 +365,10 @@ function label(zh: string, en: string) {
   backdrop-filter: blur(6px);
 }
 
+:global(.dark .probe-modal-backdrop){
+  background: rgba(2, 6, 23, 0.66);
+}
+
 .probe-modal-dialog {
   display: flex;
   width: min(100%, 56rem);
@@ -346,6 +386,17 @@ function label(zh: string, en: string) {
     0 24px 70px rgba(15, 23, 42, 0.22);
 }
 
+:global(.dark .probe-modal-dialog){
+  background:
+    radial-gradient(circle at 8% 0%, rgba(251, 146, 60, 0.12), transparent 30%),
+    linear-gradient(120deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.92)),
+    rgba(15, 23, 42, 0.94);
+  color: #e2e8f0;
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 146, 60, 0.16),
+    0 24px 70px rgba(0, 0, 0, 0.44);
+}
+
 .probe-modal-header {
   display: flex;
   align-items: center;
@@ -353,6 +404,10 @@ function label(zh: string, en: string) {
   gap: 1rem;
   border-bottom: 1px solid rgba(251, 140, 47, 0.14);
   padding: 1rem 1.25rem 0.9rem;
+}
+
+:global(.dark .probe-modal-header){
+  border-bottom-color: rgba(251, 146, 60, 0.16);
 }
 
 .probe-modal-eyebrow {
@@ -368,6 +423,10 @@ function label(zh: string, en: string) {
   font-size: 1.22rem;
   font-weight: 850;
   line-height: 1.25;
+}
+
+:global(.dark .probe-modal-title){
+  color: #f8fafc;
 }
 
 .probe-modal-actions {
@@ -388,12 +447,25 @@ function label(zh: string, en: string) {
   transition: background-color 500ms ease, color 500ms ease, box-shadow 500ms ease;
 }
 
+:global(.dark .probe-modal-close){
+  background: rgba(15, 23, 42, 0.68);
+  color: #cbd5e1;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
 .probe-modal-close:hover,
 .probe-modal-close:focus-visible {
   background: #fdba74;
   color: #111827;
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18), 0 0 0 4px rgba(251, 140, 47, 0.06);
   outline: none;
+}
+
+:global(.dark .probe-modal-close:hover),
+:global(.dark .probe-modal-close:focus-visible){
+  background: rgba(251, 146, 60, 0.24);
+  color: #fff7ed;
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.20), 0 0 0 4px rgba(251, 146, 60, 0.07);
 }
 
 .probe-modal-body {
@@ -418,6 +490,10 @@ function label(zh: string, en: string) {
   line-height: 1.45;
 }
 
+:global(.dark .probe-modal-summary-label){
+  color: #94a3b8;
+}
+
 .probe-modal-summary-value {
   margin-top: 0.18rem;
   min-width: 0;
@@ -428,6 +504,10 @@ function label(zh: string, en: string) {
   line-height: 1.45;
 }
 
+:global(.dark .probe-modal-summary-value){
+  color: #e2e8f0;
+}
+
 .probe-modal-error {
   margin-top: 1rem;
   border-left: 2px solid rgba(239, 68, 68, 0.34);
@@ -436,6 +516,11 @@ function label(zh: string, en: string) {
   color: #991b1b;
   font-size: 0.88rem;
   line-height: 1.55;
+}
+
+:global(.dark .probe-modal-error){
+  background: rgba(127, 29, 29, 0.28);
+  color: #fecaca;
 }
 
 .probe-modal-sections {
@@ -450,6 +535,10 @@ function label(zh: string, en: string) {
   padding-top: 0.95rem;
 }
 
+:global(.dark .probe-modal-section){
+  border-top-color: rgba(251, 146, 60, 0.16);
+}
+
 .probe-modal-section:first-child {
   border-top: 0;
   padding-top: 0;
@@ -461,6 +550,10 @@ function label(zh: string, en: string) {
   font-size: 0.94rem;
   font-weight: 850;
   line-height: 1.35;
+}
+
+:global(.dark .probe-modal-section-title){
+  color: #f8fafc;
 }
 
 .modal-info-list {
@@ -479,9 +572,18 @@ function label(zh: string, en: string) {
   transition: background-color 500ms ease, border-color 500ms ease;
 }
 
+:global(.dark .modal-info-row){
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+}
+
 .modal-info-row:hover {
   background: rgba(255, 237, 213, 0.48);
   border-left-color: rgba(251, 140, 47, 0.42);
+}
+
+:global(.dark .modal-info-row:hover){
+  background: rgba(251, 146, 60, 0.12);
+  border-left-color: rgba(251, 146, 60, 0.48);
 }
 
 .modal-info-row:last-child {
@@ -497,6 +599,10 @@ function label(zh: string, en: string) {
   line-height: 1.5;
 }
 
+:global(.dark .modal-info-label){
+  color: #94a3b8;
+}
+
 .modal-info-value {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -506,9 +612,17 @@ function label(zh: string, en: string) {
   line-height: 1.5;
 }
 
+:global(.dark .modal-info-value){
+  color: #e2e8f0;
+}
+
 .modal-empty {
   color: #64748b;
   font-size: 0.88rem;
+}
+
+:global(.dark .modal-empty){
+  color: #94a3b8;
 }
 
 .probe-modal-enter-active,

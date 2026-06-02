@@ -46,9 +46,9 @@
                 :key="record.key"
                 class="record-row"
               >
-                <span class="font-semibold text-gray-500">{{ record.type }}</span>
-                <span class="break-all font-mono text-gray-800">{{ record.value }}</span>
-                <span class="text-right text-gray-500">{{ record.ttl }}</span>
+                <span class="font-semibold text-gray-500 dark:text-slate-400">{{ record.type }}</span>
+                <span class="break-all font-mono text-gray-800 dark:text-slate-200">{{ record.value }}</span>
+                <span class="text-right text-gray-500 dark:text-slate-400">{{ record.ttl }}</span>
               </div>
             </div>
           </div>
@@ -405,6 +405,16 @@ function label(zh: string, en: string) {
     0 16px 42px rgba(124, 45, 18, 0.04);
 }
 
+:global(.dark .site-observation-tabs){
+  background:
+    radial-gradient(circle at 8% 0%, rgba(251, 146, 60, 0.12), transparent 30%),
+    linear-gradient(120deg, rgba(15, 23, 42, 0.84), rgba(30, 41, 59, 0.72)),
+    rgba(15, 23, 42, 0.82);
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 146, 60, 0.14),
+    0 18px 52px rgba(0, 0, 0, 0.18);
+}
+
 .observation-header {
   display: flex;
   align-items: center;
@@ -427,6 +437,10 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
+:global(.dark .observation-title){
+  color: #f8fafc;
+}
+
 .observation-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -437,6 +451,11 @@ function label(zh: string, en: string) {
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.06);
 }
 
+:global(.dark .observation-tabs){
+  background: rgba(15, 23, 42, 0.66);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
 .observation-tab {
   border-radius: 7px;
   padding: 0.55rem 0.95rem;
@@ -445,10 +464,20 @@ function label(zh: string, en: string) {
   transition-duration: 500ms;
 }
 
+:global(.dark .observation-tab){
+  color: #cbd5e1;
+}
+
 .observation-tab:hover,
 .observation-tab.is-active {
   background: #fdba74;
   color: #111827;
+}
+
+:global(.dark .observation-tab:hover),
+:global(.dark .observation-tab.is-active){
+  background: rgba(251, 146, 60, 0.26);
+  color: #fff7ed;
 }
 
 .observation-content {
@@ -463,6 +492,11 @@ function label(zh: string, en: string) {
   font-size: 0.875rem;
 }
 
+:global(.dark .empty-state){
+  background: rgba(15, 23, 42, 0.54);
+  color: #94a3b8;
+}
+
 .dns-record-card {
   border-top: 1px solid rgba(251, 140, 47, 0.12);
   border-radius: 0;
@@ -470,6 +504,10 @@ function label(zh: string, en: string) {
   padding: 0.9rem 0 0;
   box-shadow: none;
   transition: none;
+}
+
+:global(.dark .dns-record-card){
+  border-top-color: rgba(251, 146, 60, 0.16);
 }
 
 .dns-record-card:first-child {
@@ -489,6 +527,10 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
+:global(.dark .record-heading){
+  color: #cbd5e1;
+}
+
 .record-list {
   overflow: visible;
   border-radius: 0;
@@ -506,13 +548,26 @@ function label(zh: string, en: string) {
   transition: background-color 500ms ease, border-color 500ms ease;
 }
 
+:global(.dark .record-row){
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+}
+
 .record-row:hover {
   background: rgba(255, 237, 213, 0.68);
   border-left-color: rgba(251, 140, 47, 0.58);
 }
 
+:global(.dark .record-row:hover){
+  background: rgba(251, 146, 60, 0.12);
+  border-left-color: rgba(251, 146, 60, 0.54);
+}
+
 .record-row:hover span:first-child {
   color: #9a4a12;
+}
+
+:global(.dark .record-row:hover span:first-child){
+  color: #fdba74;
 }
 
 @media (max-width: 640px) {

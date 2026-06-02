@@ -94,6 +94,10 @@ const {
   line-height: 1.35;
 }
 
+:global(.dark .info-tabs-title){
+  color: #f8fafc;
+}
+
 .info-tabs-nav {
   display: flex;
   flex-wrap: wrap;
@@ -112,10 +116,20 @@ const {
   transition: background-color 500ms ease, color 500ms ease;
 }
 
+:global(.dark .info-tab-button){
+  color: #cbd5e1;
+}
+
 .info-tab-button:hover,
 .info-tab-button.is-active {
   background: #fdba74;
   color: #111827;
+}
+
+:global(.dark .info-tab-button:hover),
+:global(.dark .info-tab-button.is-active){
+  background: rgba(251, 146, 60, 0.26);
+  color: #fff7ed;
 }
 
 @media (max-width: 640px) {

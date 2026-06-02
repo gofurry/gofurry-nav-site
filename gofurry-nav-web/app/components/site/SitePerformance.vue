@@ -7,15 +7,15 @@
           :class="responseColor"
       >
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-medium text-gray-500"> {{ performanceText.visitTiming }} </h3>
+          <h3 class="text-sm font-medium text-gray-500 dark:text-slate-400"> {{ performanceText.visitTiming }} </h3>
           <i class="fa fa-clock-o" :class="iconColor(responseColor)"></i>
         </div>
-        <p class="text-2xl text-gray-700 font-bold">{{ metrics.responseTime }}</p>
-        <p class="text-xs text-gray-500 mt-1"> {{ performanceText.visitTimingHint }} </p>
-        <dl class="mt-3 space-y-1 text-xs text-gray-500">
+        <p class="text-2xl text-gray-700 font-bold dark:text-slate-100">{{ metrics.responseTime }}</p>
+        <p class="text-xs text-gray-500 mt-1 dark:text-slate-400"> {{ performanceText.visitTimingHint }} </p>
+        <dl class="mt-3 space-y-1 text-xs text-gray-500 dark:text-slate-400">
           <div v-for="item in timingDetails" :key="item.label" class="flex justify-between gap-2">
             <dt>{{ item.label }}</dt>
-            <dd class="font-medium text-gray-700">{{ item.value }}</dd>
+            <dd class="font-medium text-gray-700 dark:text-slate-200">{{ item.value }}</dd>
           </div>
         </dl>
       </div>
@@ -25,15 +25,15 @@
           :class="statusColor"
       >
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-medium text-gray-500">{{ performanceText.responseStatus }}</h3>
+          <h3 class="text-sm font-medium text-gray-500 dark:text-slate-400">{{ performanceText.responseStatus }}</h3>
           <i class="fa fa-check-circle" :class="iconColor(statusColor)"></i>
         </div>
-        <p class="text-2xl text-gray-700 font-bold">HTTP {{ metrics.statusCode }}</p>
-        <p class="text-xs text-gray-500 mt-1">{{ performanceText.responseStatusHint }}</p>
-        <dl class="mt-3 space-y-1 text-xs text-gray-500">
+        <p class="text-2xl text-gray-700 font-bold dark:text-slate-100">HTTP {{ metrics.statusCode }}</p>
+        <p class="text-xs text-gray-500 mt-1 dark:text-slate-400">{{ performanceText.responseStatusHint }}</p>
+        <dl class="mt-3 space-y-1 text-xs text-gray-500 dark:text-slate-400">
           <div v-for="item in responseDetails" :key="item.label" class="flex justify-between gap-3">
             <dt>{{ item.label }}</dt>
-            <dd class="truncate font-medium text-gray-700">{{ item.value }}</dd>
+            <dd class="truncate font-medium text-gray-700 dark:text-slate-200">{{ item.value }}</dd>
           </div>
         </dl>
       </div>
@@ -43,15 +43,15 @@
           :class="tlsColor"
       >
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-medium text-gray-500">{{ performanceText.secureTransport }}</h3>
+          <h3 class="text-sm font-medium text-gray-500 dark:text-slate-400">{{ performanceText.secureTransport }}</h3>
           <i class="fa fa-shield" :class="iconColor(tlsColor)"></i>
         </div>
-        <p class="text-2xl text-gray-700 font-bold">{{ metrics.tlsVersion }}</p>
-        <p class="text-xs text-gray-500 mt-1">{{ tlsSubtitle }}</p>
-        <dl class="mt-3 space-y-1 text-xs text-gray-500">
+        <p class="text-2xl text-gray-700 font-bold dark:text-slate-100">{{ metrics.tlsVersion }}</p>
+        <p class="text-xs text-gray-500 mt-1 dark:text-slate-400">{{ tlsSubtitle }}</p>
+        <dl class="mt-3 space-y-1 text-xs text-gray-500 dark:text-slate-400">
           <div v-for="item in tlsDetails" :key="item.label" class="flex justify-between gap-3">
             <dt>{{ item.label }}</dt>
-            <dd class="truncate font-medium text-gray-700">{{ item.value }}</dd>
+            <dd class="truncate font-medium text-gray-700 dark:text-slate-200">{{ item.value }}</dd>
           </div>
         </dl>
       </div>
@@ -61,15 +61,15 @@
           :class="certColor"
       >
         <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-medium text-gray-500">{{ performanceText.certStatus }}</h3>
+          <h3 class="text-sm font-medium text-gray-500 dark:text-slate-400">{{ performanceText.certStatus }}</h3>
           <i class="fa fa-calendar" :class="iconColor(certColor)"></i>
         </div>
-        <p class="text-2xl text-gray-700 font-bold">{{ metrics.certDaysLeft }}</p>
-        <p class="text-xs text-gray-500 mt-1">{{ performanceText.certStatusHint }}</p>
-        <dl class="mt-3 space-y-1 text-xs text-gray-500">
+        <p class="text-2xl text-gray-700 font-bold dark:text-slate-100">{{ metrics.certDaysLeft }}</p>
+        <p class="text-xs text-gray-500 mt-1 dark:text-slate-400">{{ performanceText.certStatusHint }}</p>
+        <dl class="mt-3 space-y-1 text-xs text-gray-500 dark:text-slate-400">
           <div v-for="item in certDetails" :key="item.label" class="flex justify-between gap-3">
             <dt>{{ item.label }}</dt>
-            <dd class="truncate font-medium text-gray-700">{{ item.value }}</dd>
+            <dd class="truncate font-medium text-gray-700 dark:text-slate-200">{{ item.value }}</dd>
           </div>
         </dl>
       </div>
@@ -77,17 +77,17 @@
 
     <slot name="after-metrics" />
 
-    <div class="rounded-2xl bg-orange-100/45 p-5">
+    <div class="rounded-2xl bg-orange-100/45 p-5 dark:bg-slate-900/70">
       <div class="mb-5 grid grid-cols-1 gap-4 xl:grid-cols-[1fr_auto_1fr] xl:items-end">
         <div class="text-center xl:text-left">
           <div class="mb-1 text-xs font-medium uppercase tracking-wide text-orange-500">
             {{ label('PING 延迟观测', 'Ping observation') }}
           </div>
-          <h3 class="text-lg font-semibold text-gray-900">{{ t('site.performance.latencyTrend') }}</h3>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-slate-50">{{ t('site.performance.latencyTrend') }}</h3>
         </div>
 
         <div class="flex justify-center">
-          <div class="inline-flex rounded-xl bg-orange-50 p-1">
+          <div class="inline-flex rounded-xl bg-orange-50 p-1 dark:bg-slate-950/60">
             <button
               v-for="option in sampleOptions"
               :key="option.value"
@@ -95,8 +95,8 @@
               :class="[
                 'rounded-lg px-4 py-2 text-sm transition-colors',
                 sampleType === option.value
-                  ? 'bg-orange-200 text-gray-900'
-                  : 'text-gray-600 hover:bg-orange-100'
+                  ? 'bg-orange-200 text-gray-900 dark:bg-orange-500/25 dark:text-orange-100'
+                  : 'text-gray-600 hover:bg-orange-100 dark:text-slate-300 dark:hover:bg-slate-800'
               ]"
             >
               {{ option.label }}
@@ -108,15 +108,15 @@
           <div
             v-for="item in trendStats"
             :key="item.label"
-            class="rounded-xl bg-orange-50 px-3 py-2"
+            class="rounded-xl bg-orange-50 px-3 py-2 dark:bg-slate-950/55"
           >
-            <div class="whitespace-nowrap text-[11px] text-gray-500">{{ item.label }}</div>
-            <div class="mt-1 whitespace-nowrap text-sm font-semibold text-gray-800">{{ item.value }}</div>
+            <div class="whitespace-nowrap text-[11px] text-gray-500 dark:text-slate-400">{{ item.label }}</div>
+            <div class="mt-1 whitespace-nowrap text-sm font-semibold text-gray-800 dark:text-slate-100">{{ item.value }}</div>
           </div>
         </div>
       </div>
 
-      <div class="rounded-xl bg-orange-50/70 px-3 pb-4 pt-6">
+      <div class="rounded-xl bg-orange-50/70 px-3 pb-4 pt-6 dark:bg-slate-950/40">
         <div class="h-[360px] w-full" ref="latencyChartRef"></div>
       </div>
     </div>
@@ -126,6 +126,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import { useThemeStore } from '@/stores/theme'
 import type { CollectorEnvelope, PingRecord, PingStats, HttpRecord, TargetLatestResponse, TargetObservationsResponse } from '@/types/nav'
 import {i18n} from "@/main";
 
@@ -141,6 +142,7 @@ interface Props {
 
 const props = defineProps<Props>()
 const navV2Api = useApi('navV2')
+const themeStore = useThemeStore()
 const latencyChartRef = ref<HTMLElement | null>(null)
 const chart = ref<echarts.ECharts | null>(null)
 let chartMouseMoveHandler: ((event: any) => void) | null = null
@@ -148,6 +150,7 @@ let chartGlobalOutHandler: (() => void) | null = null
 const sampleType = ref<'twenty' | 'sixty' | 'hundred'>('twenty')
 const v2PingRecord = ref<PingRecord | null>(null)
 const httpPayload = computed(() => asRecord(props.targetLatestCore?.protocols?.http?.payload))
+const isDarkTheme = computed(() => themeStore.theme === 'dark')
 const yesText = computed(() => i18n.global.locale.value === 'en' ? 'Yes' : '是')
 const noText = computed(() => i18n.global.locale.value === 'en' ? 'No' : '否')
 
@@ -231,25 +234,25 @@ const getColor = (metric: string, value: any) => {
   switch (metric) {
     case 'responseTime': {
       const time = parseInt(value)
-      if (time < 300) return 'border-l-4 border-green-300 bg-green-50'
-      if (time < 800) return 'border-l-4 border-yellow-300 bg-yellow-50'
-      return 'border-l-4 border-red-300 bg-red-50'
+      if (time < 300) return 'border-l-4 border-green-300 bg-green-50 dark:border-green-500/60 dark:bg-green-950/40'
+      if (time < 800) return 'border-l-4 border-yellow-300 bg-yellow-50 dark:border-yellow-500/60 dark:bg-yellow-950/40'
+      return 'border-l-4 border-red-300 bg-red-50 dark:border-red-500/60 dark:bg-red-950/40'
     }
     case 'statusCode': {
-      if (value >= 200 && value < 300) return 'border-l-4 border-green-300 bg-green-50'
-      if (value >= 300 && value < 400) return 'border-l-4 border-yellow-300 bg-yellow-50'
-      return 'border-l-4 border-red-300 bg-red-50'
+      if (value >= 200 && value < 300) return 'border-l-4 border-green-300 bg-green-50 dark:border-green-500/60 dark:bg-green-950/40'
+      if (value >= 300 && value < 400) return 'border-l-4 border-yellow-300 bg-yellow-50 dark:border-yellow-500/60 dark:bg-yellow-950/40'
+      return 'border-l-4 border-red-300 bg-red-50 dark:border-red-500/60 dark:bg-red-950/40'
     }
     case 'tlsVersion': {
-      if (value.includes('1.3')) return 'border-l-4 border-green-300 bg-green-50'
-      if (value.includes('1.2')) return 'border-l-4 border-yellow-300 bg-yellow-50'
-      return 'border-l-4 border-red-300 bg-red-50'
+      if (value.includes('1.3')) return 'border-l-4 border-green-300 bg-green-50 dark:border-green-500/60 dark:bg-green-950/40'
+      if (value.includes('1.2')) return 'border-l-4 border-yellow-300 bg-yellow-50 dark:border-yellow-500/60 dark:bg-yellow-950/40'
+      return 'border-l-4 border-red-300 bg-red-50 dark:border-red-500/60 dark:bg-red-950/40'
     }
     case 'certDaysLeft': {
       const days = parseInt(String(value).replace(/[^0-9]/g, ''), 10) || 0
-      if (days > 90) return 'border-l-4 border-green-300 bg-green-50'
-      if (days > 30) return 'border-l-4 border-yellow-300 bg-yellow-50'
-      return 'border-l-4 border-red-300 bg-red-50'
+      if (days > 90) return 'border-l-4 border-green-300 bg-green-50 dark:border-green-500/60 dark:bg-green-950/40'
+      if (days > 30) return 'border-l-4 border-yellow-300 bg-yellow-50 dark:border-yellow-500/60 dark:bg-yellow-950/40'
+      return 'border-l-4 border-red-300 bg-red-50 dark:border-red-500/60 dark:bg-red-950/40'
     }
   }
   return ''
@@ -360,6 +363,19 @@ function initChart() {
 function updateChart() {
   if (!currentPing.value || !chart.value) return
 
+  const dark = isDarkTheme.value
+  const chartColors = {
+    line: dark ? '#93c5fd' : '#4f6fed',
+    axisLine: dark ? '#334155' : '#e5d4bd',
+    axisLabel: dark ? '#94a3b8' : '#8b8178',
+    splitLine: dark ? 'rgba(148, 163, 184, 0.24)' : 'rgba(148, 163, 184, 0.38)',
+    tooltipBg: dark ? 'rgba(15, 23, 42, 0.96)' : 'rgba(255, 251, 245, 0.96)',
+    tooltipBorder: dark ? 'rgba(251, 146, 60, 0.30)' : 'rgba(251, 146, 60, 0.28)',
+    tooltipText: dark ? '#e2e8f0' : '#374151',
+    symbolBorder: dark ? '#0f172a' : '#fff7ed',
+    areaStart: dark ? 'rgba(147, 197, 253, 0.22)' : 'rgba(79, 111, 237, 0.26)',
+    areaEnd: dark ? 'rgba(251, 146, 60, 0.03)' : 'rgba(249, 115, 22, 0.04)',
+  }
   const tooltipData = [...currentPing.value.DelayModel].reverse()
   const seriesData = tooltipData.map(d => ({
     value: Number(d.delay) || 0,
@@ -372,7 +388,7 @@ function updateChart() {
 
   chart.value.setOption({
     animation: false,
-    color: ['#4f6fed'],
+    color: [chartColors.line],
     tooltip: {
       trigger: 'item',
       triggerOn: 'mousemove|click',
@@ -381,12 +397,12 @@ function updateChart() {
         lineStyle: { color: '#f59e0b', width: 1, type: 'dashed' }
       },
       confine: true,
-      backgroundColor: 'rgba(255, 251, 245, 0.96)',
-      borderColor: 'rgba(251, 146, 60, 0.28)',
+      backgroundColor: chartColors.tooltipBg,
+      borderColor: chartColors.tooltipBorder,
       borderWidth: 1,
       borderRadius: 10,
       padding: [10, 12],
-      textStyle: { color: '#374151', fontSize: 12, lineHeight: 18 },
+      textStyle: { color: chartColors.tooltipText, fontSize: 12, lineHeight: 18 },
       formatter: (params: any) => {
         const point = params?.data
         if (!point) return label('无数据', 'No data')
@@ -413,17 +429,17 @@ function updateChart() {
       data: times,
       boundaryGap: false,
       axisTick: { show: false },
-      axisLine: { lineStyle: { color: '#e5d4bd' } },
-      axisLabel: { color: '#8b8178', fontSize: 10, hideOverlap: true }
+      axisLine: { lineStyle: { color: chartColors.axisLine } },
+      axisLabel: { color: chartColors.axisLabel, fontSize: 10, hideOverlap: true }
     },
     yAxis: {
       type: 'value',
       name: t('site.performance.latency')+' (ms)',
-      nameTextStyle: { color: '#8b8178', fontSize: 11, padding: [0, 0, 14, 0] },
-      axisLabel: { color: '#8b8178' },
+      nameTextStyle: { color: chartColors.axisLabel, fontSize: 11, padding: [0, 0, 14, 0] },
+      axisLabel: { color: chartColors.axisLabel },
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { type: 'dashed', color: 'rgba(148, 163, 184, 0.38)' } }
+      splitLine: { lineStyle: { type: 'dashed', color: chartColors.splitLine } }
     },
     series: [{
       name: t('site.performance.latency'),
@@ -434,17 +450,17 @@ function updateChart() {
       symbolSize: 8,
       showSymbol: true,
       triggerLineEvent: true,
-      lineStyle: { width: 2.5, color: '#4f6fed' },
-      itemStyle: { color: '#4f6fed', borderColor: '#fff7ed', borderWidth: 1.5 },
+      lineStyle: { width: 2.5, color: chartColors.line },
+      itemStyle: { color: chartColors.line, borderColor: chartColors.symbolBorder, borderWidth: 1.5 },
       areaStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(79, 111, 237, 0.26)' },
-          { offset: 1, color: 'rgba(249, 115, 22, 0.04)' }
+          { offset: 0, color: chartColors.areaStart },
+          { offset: 1, color: chartColors.areaEnd }
         ])
       },
       emphasis: {
         focus: 'series',
-        itemStyle: { symbolSize: 8, color: '#f97316', borderColor: '#fff7ed', borderWidth: 2 }
+        itemStyle: { symbolSize: 8, color: '#f97316', borderColor: chartColors.symbolBorder, borderWidth: 2 }
       }
     }]
   }, true)
@@ -540,6 +556,7 @@ watch(() => [props.siteId, props.domain], () => {
   void loadV2PingHistory()
 })
 watch(sampleType, updateChart)
+watch(isDarkTheme, updateChart)
 
 async function loadV2PingHistory() {
   if (props.pingRecord || !props.siteId || !props.domain) {

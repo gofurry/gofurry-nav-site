@@ -7,8 +7,8 @@
         class="overview-stat"
         :class="item.tone"
       >
-        <div class="text-[11px] text-slate-500">{{ item.label }}</div>
-        <div class="truncate text-sm font-bold text-slate-900">{{ item.value }}</div>
+        <div class="text-[11px] text-slate-500 dark:text-slate-400">{{ item.label }}</div>
+        <div class="truncate text-sm font-bold text-slate-900 dark:text-slate-100">{{ item.value }}</div>
       </div>
     </div>
 
@@ -16,9 +16,9 @@
       <div class="protocol-rail-panel">
         <div class="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h3 class="text-lg font-black text-slate-950">{{ label('当前采集', 'Current Checks') }}</h3>
+            <h3 class="text-lg font-black text-slate-950 dark:text-slate-50">{{ label('当前采集', 'Current Checks') }}</h3>
           </div>
-          <div class="rounded-full bg-orange-100 px-3 py-1 text-xs text-orange-700">
+          <div class="rounded-full bg-orange-100 px-3 py-1 text-xs text-orange-700 dark:bg-orange-500/15 dark:text-orange-200">
             {{ protocolAvailabilityText }}
           </div>
         </div>
@@ -34,11 +34,11 @@
               <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <div class="flex items-center gap-2">
                   <span class="protocol-dot" />
-                  <strong class="text-sm text-slate-950">{{ entry.label }}</strong>
+                  <strong class="text-sm text-slate-950 dark:text-slate-100">{{ entry.label }}</strong>
                 </div>
-                <span class="font-mono text-[11px] text-slate-500">{{ entry.observedAt }}</span>
+                <span class="font-mono text-[11px] text-slate-500 dark:text-slate-400">{{ entry.observedAt }}</span>
               </div>
-              <div class="protocol-metrics mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
+              <div class="protocol-metrics mt-2 grid gap-1 text-xs text-slate-600 dark:text-slate-300 sm:grid-cols-2">
                 <span>{{ label('耗时', 'Time') }}: <b>{{ entry.duration }}</b></span>
                 <span>{{ label('过期阈值', 'Stale') }}: <b>{{ entry.staleAfter }}</b></span>
               </div>
@@ -46,8 +46,8 @@
           </article>
         </div>
 
-        <div class="signal-note mt-4 px-4 py-3 text-xs text-slate-600">
-          <div class="mb-1 font-semibold text-slate-700">{{ label('观测信号', 'Signals') }}</div>
+        <div class="signal-note mt-4 px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
+          <div class="mb-1 font-semibold text-slate-700 dark:text-slate-200">{{ label('观测信号', 'Signals') }}</div>
           <div v-if="riskMessages.length" class="space-y-1">
             <div v-for="message in riskMessages" :key="message">{{ message }}</div>
           </div>
@@ -58,9 +58,9 @@
       <div class="security-matrix-panel">
         <div class="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h3 class="text-lg font-black text-slate-950">{{ label('安全响应头', 'Security Headers') }}</h3>
+            <h3 class="text-lg font-black text-slate-950 dark:text-slate-50">{{ label('安全响应头', 'Security Headers') }}</h3>
           </div>
-          <div class="rounded-full bg-orange-100 px-3 py-1 text-xs text-orange-700">
+          <div class="rounded-full bg-orange-100 px-3 py-1 text-xs text-orange-700 dark:bg-orange-500/15 dark:text-orange-200">
             {{ securityHeaderRatio }}
           </div>
         </div>
@@ -111,6 +111,13 @@ function label(zh: string, en: string) {
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
 }
 
+:global(.dark .detail-observation-overview){
+  background:
+    radial-gradient(circle at 10% 0%, rgba(251, 146, 60, 0.12), transparent 36%),
+    rgba(15, 23, 42, 0.76);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.14);
+}
+
 .overview-strip {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -129,14 +136,29 @@ function label(zh: string, en: string) {
   padding: 0.72rem 0.82rem;
 }
 
+:global(.dark .overview-stat){
+  background: rgba(30, 41, 59, 0.74);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
 .overview-stat.is-ok {
   background: rgba(220, 252, 231, 0.64);
   box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.10);
 }
 
+:global(.dark .overview-stat.is-ok){
+  background: rgba(20, 83, 45, 0.26);
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.16);
+}
+
 .overview-stat.is-warn {
   background: rgba(253, 224, 71, 0.34);
   box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.12);
+}
+
+:global(.dark .overview-stat.is-warn){
+  background: rgba(120, 53, 15, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.18);
 }
 
 .overview-detail-grid {
@@ -167,6 +189,11 @@ function label(zh: string, en: string) {
   background: rgba(255, 230, 191, 0.70);
   padding: 0.85rem;
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.08);
+}
+
+:global(.dark .protocol-node){
+  background: rgba(30, 41, 59, 0.70);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.10);
 }
 
 .protocol-dot {
@@ -206,10 +233,21 @@ function label(zh: string, en: string) {
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.07);
 }
 
+:global(.dark .security-header-cell){
+  background: rgba(30, 41, 59, 0.70);
+  color: #cbd5e1;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.10);
+}
+
 .signal-note {
   border-radius: 0.55rem;
   background: rgba(255, 230, 191, 0.66);
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.07);
+}
+
+:global(.dark .signal-note){
+  background: rgba(30, 41, 59, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.10);
 }
 
 .status-dot {

@@ -41,32 +41,68 @@ const metricToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.30), 0 0 0 4px rgba(251, 140, 47, 0.08);
 }
 
+:global(.dark .metric-card){
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
+:global(.dark .metric-card:hover){
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.24), 0 0 0 4px rgba(251, 146, 60, 0.07);
+}
+
 .metric-card.tone-warm {
   background: rgba(255, 247, 235, 0.76);
+}
+
+:global(.dark .metric-card.tone-warm){
+  background: rgba(30, 41, 59, 0.72);
 }
 
 .metric-card.tone-sky {
   background: rgba(239, 246, 255, 0.72);
 }
 
+:global(.dark .metric-card.tone-sky){
+  background: rgba(30, 58, 138, 0.22);
+}
+
 .metric-card.tone-mint {
   background: rgba(240, 253, 244, 0.72);
+}
+
+:global(.dark .metric-card.tone-mint){
+  background: rgba(20, 83, 45, 0.22);
 }
 
 .metric-card.tone-amber {
   background: rgba(255, 251, 235, 0.76);
 }
 
+:global(.dark .metric-card.tone-amber){
+  background: rgba(120, 53, 15, 0.22);
+}
+
 .metric-card.tone-rose {
   background: rgba(255, 241, 242, 0.70);
+}
+
+:global(.dark .metric-card.tone-rose){
+  background: rgba(127, 29, 29, 0.24);
 }
 
 .metric-card.tone-violet {
   background: rgba(245, 243, 255, 0.68);
 }
 
+:global(.dark .metric-card.tone-violet){
+  background: rgba(76, 29, 149, 0.22);
+}
+
 .metric-card.tone-lime {
   background: rgba(247, 254, 231, 0.70);
+}
+
+:global(.dark .metric-card.tone-lime){
+  background: rgba(54, 83, 20, 0.22);
 }
 
 .metric-card.tone-peach,
@@ -74,9 +110,19 @@ const metricToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   background: rgba(255, 237, 213, 0.72);
 }
 
+:global(.dark .metric-card.tone-peach),
+:global(.dark .metric-card.is-accent){
+  background: rgba(251, 146, 60, 0.13);
+}
+
 .metric-card.tone-good {
   background: #e4f7ea;
   box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.20);
+}
+
+:global(.dark .metric-card.tone-good){
+  background: rgba(20, 83, 45, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.16);
 }
 
 .metric-card.tone-normal {
@@ -84,9 +130,19 @@ const metricToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.18);
 }
 
+:global(.dark .metric-card.tone-normal){
+  background: rgba(120, 53, 15, 0.26);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.16);
+}
+
 .metric-card.tone-warn {
   background: #ffe5df;
   box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.16);
+}
+
+:global(.dark .metric-card.tone-warn){
+  background: rgba(127, 29, 29, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.16);
 }
 
 .metric-card.tone-good:hover {
@@ -94,14 +150,29 @@ const metricToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.28), 0 0 0 4px rgba(22, 163, 74, 0.08);
 }
 
+:global(.dark .metric-card.tone-good:hover){
+  background: rgba(22, 101, 52, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.24), 0 0 0 4px rgba(34, 197, 94, 0.08);
+}
+
 .metric-card.tone-normal:hover {
   background: #ffe8ad;
   box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.26), 0 0 0 4px rgba(217, 119, 6, 0.08);
 }
 
+:global(.dark .metric-card.tone-normal:hover){
+  background: rgba(146, 64, 14, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.24), 0 0 0 4px rgba(245, 158, 11, 0.08);
+}
+
 .metric-card.tone-warn:hover {
   background: #ffd9cf;
   box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.24), 0 0 0 4px rgba(220, 38, 38, 0.07);
+}
+
+:global(.dark .metric-card.tone-warn:hover){
+  background: rgba(153, 27, 27, 0.34);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.24), 0 0 0 4px rgba(248, 113, 113, 0.07);
 }
 
 .metric-label {
@@ -113,11 +184,19 @@ const metricToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   text-transform: uppercase;
 }
 
+:global(.dark .metric-label){
+  color: #94a3b8;
+}
+
 .metric-value {
   overflow-wrap: anywhere;
   color: #111827;
   font-size: 1rem;
   font-weight: 800;
+}
+
+:global(.dark .metric-value){
+  color: #f8fafc;
 }
 
 @media (min-width: 640px) {

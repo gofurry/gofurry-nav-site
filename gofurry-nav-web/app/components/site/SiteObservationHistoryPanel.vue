@@ -99,9 +99,18 @@ function label(zh: string, en: string) {
   font-size: 0.9rem;
 }
 
+:global(.dark .panel-empty){
+  border-top-color: rgba(251, 146, 60, 0.16);
+  color: #94a3b8;
+}
+
 .history-section {
   border-top: 1px solid rgba(251, 140, 47, 0.12);
   padding: 1rem 0;
+}
+
+:global(.dark .history-section){
+  border-top-color: rgba(251, 146, 60, 0.16);
 }
 
 .history-section:first-of-type {
@@ -122,6 +131,10 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
+:global(.dark .history-title){
+  color: #f8fafc;
+}
+
 .history-pager {
   display: flex;
   align-items: center;
@@ -137,9 +150,18 @@ function label(zh: string, en: string) {
   transition: background-color 500ms ease, color 500ms ease;
 }
 
+:global(.dark .history-page-button){
+  color: #cbd5e1;
+}
+
 .history-page-button:hover:not(:disabled) {
   background: rgba(255, 237, 213, 0.72);
   color: #9a4a12;
+}
+
+:global(.dark .history-page-button:hover:not(:disabled)){
+  background: rgba(251, 146, 60, 0.14);
+  color: #fdba74;
 }
 
 .history-page-button:disabled {
@@ -147,9 +169,17 @@ function label(zh: string, en: string) {
   color: #cbd5e1;
 }
 
+:global(.dark .history-page-button:disabled){
+  color: #475569;
+}
+
 .history-page-count {
   color: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+:global(.dark .history-page-count){
+  color: #94a3b8;
 }
 
 .history-list {
@@ -167,9 +197,18 @@ function label(zh: string, en: string) {
   transition: background-color 500ms ease, border-color 500ms ease;
 }
 
+:global(.dark .history-row){
+  border-bottom-color: rgba(148, 163, 184, 0.12);
+}
+
 .history-row:hover {
   background: rgba(255, 237, 213, 0.52);
   border-left-color: rgba(251, 140, 47, 0.45);
+}
+
+:global(.dark .history-row:hover){
+  background: rgba(251, 146, 60, 0.12);
+  border-left-color: rgba(251, 146, 60, 0.48);
 }
 
 .history-row:last-child {
@@ -185,12 +224,20 @@ function label(zh: string, en: string) {
   line-height: 1.55;
 }
 
+:global(.dark .history-summary){
+  color: #e2e8f0;
+}
+
 .history-time {
   color: #64748b;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 0.78rem;
   line-height: 1.55;
   text-align: right;
+}
+
+:global(.dark .history-time){
+  color: #94a3b8;
 }
 
 .status-dot {

@@ -6,15 +6,15 @@
       class="signal-card duration-500"
       :class="card.tone"
     >
-      <p class="text-xs font-semibold text-slate-500">{{ card.eyebrow }}</p>
+      <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ card.eyebrow }}</p>
       <div class="mt-2 flex items-end justify-between gap-3">
-        <h2 class="text-3xl font-black text-slate-900">{{ card.value }}</h2>
-        <span class="text-xs font-semibold text-slate-500">{{ card.badge }}</span>
+        <h2 class="text-3xl font-black text-slate-900 dark:text-slate-50">{{ card.value }}</h2>
+        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ card.badge }}</span>
       </div>
       <dl class="mt-5 space-y-2 text-xs">
         <div v-for="item in card.items" :key="item.label" class="flex justify-between gap-4">
-          <dt class="text-slate-500">{{ item.label }}</dt>
-          <dd class="min-w-0 truncate font-mono font-semibold text-slate-800">{{ item.value }}</dd>
+          <dt class="text-slate-500 dark:text-slate-400">{{ item.label }}</dt>
+          <dd class="min-w-0 truncate font-mono font-semibold text-slate-800 dark:text-slate-200">{{ item.value }}</dd>
         </div>
       </dl>
     </article>
@@ -48,6 +48,16 @@ defineProps<{
 .signal-card:hover {
   background: rgba(255, 255, 255, 0.88);
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.28), 0 0 0 6px rgba(251, 140, 47, 0.07);
+}
+
+:global(.dark .signal-card){
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
+:global(.dark .signal-card:hover){
+  background: rgba(30, 41, 59, 0.86);
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.22), 0 0 0 6px rgba(251, 146, 60, 0.07);
 }
 
 .tone-green {
