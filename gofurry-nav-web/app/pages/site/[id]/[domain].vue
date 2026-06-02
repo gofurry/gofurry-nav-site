@@ -1,7 +1,7 @@
 <template>
-  <SiteDetailRoutePage />
+  <SiteDetailPage />
 </template>
 
 <script setup lang="ts">
-import SiteDetailRoutePage from '@/components/site/SiteDetailRoutePage.vue'
+import SiteDetailPage from '@/components/site/SiteDetailPage.vue'
 </script>

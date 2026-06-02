@@ -1,20 +1,26 @@
 package dao
 
 import (
+	"sync"
+
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
 	"github.com/gofurry/gofurry-nav-backend/common/abstract"
 )
 
 var newNavPageDao = new(navPageDao)
-
-func init() {
-	newNavPageDao.Init()
-}
+var navPageDaoMu sync.Mutex
 
 type navPageDao struct{ abstract.Dao }
 
-func GetNavPageDao() *navPageDao { return newNavPageDao }
+func GetNavPageDao() *navPageDao {
+	navPageDaoMu.Lock()
+	defer navPageDaoMu.Unlock()
+	if newNavPageDao.Gm == nil {
+		newNavPageDao.Init()
+	}
+	return newNavPageDao
+}
 
 func (dao *navPageDao) GetSiteList() (res []models.GfnSite, err common.GFError) {
 	db := dao.Gm.Table(models.TableNameGfnSite + " AS s").

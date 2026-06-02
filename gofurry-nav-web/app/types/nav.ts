@@ -57,6 +57,9 @@ export interface TargetHealthSummaryItem {
     status: HealthStatus;
     reason_codes: string[];
     reason_messages: string[];
+    canonical_target_hint?: CanonicalTargetHint | null;
+    target_relation_hints?: TargetRelationHint[];
+    edge_provider_hints?: EdgeProviderHint[];
     observed_at: string;
 }
 
@@ -69,6 +72,7 @@ export interface SiteHealthSummary {
     target_count: number;
     status_counts: Record<string, number>;
     targets: TargetHealthSummaryItem[];
+    target_relation_hints?: SiteTargetRelationHint[];
     generated_at: string;
     schema_version: number;
 }
@@ -81,7 +85,154 @@ export interface TargetHealthSummary {
     reason_codes: string[];
     reason_messages: string[];
     protocols: Record<string, ProtocolHealthSummary>;
+    canonical_target_hint?: CanonicalTargetHint | null;
+    target_relation_hints?: TargetRelationHint[];
+    edge_provider_hints?: EdgeProviderHint[];
     observed_at: string;
+    generated_at: string;
+    schema_version: number;
+}
+
+export interface CanonicalTargetHint {
+    target_host: string;
+    final_host?: string;
+    canonical_host?: string;
+    preferred_host?: string;
+    relation: string;
+    source: string;
+    final_url?: string;
+    canonical_url?: string;
+}
+
+export interface TargetRelationHint {
+    relation: string;
+    source: string;
+    target_host: string;
+    related_host?: string;
+    value?: string;
+}
+
+export interface SiteTargetRelationHint {
+    relation: string;
+    host: string;
+    targets: string[];
+}
+
+export interface EdgeProviderHint {
+    provider: string;
+    hint_type: string;
+    confidence: string;
+    evidence: EdgeProviderEvidence[];
+}
+
+export interface EdgeProviderEvidence {
+    source: string;
+    field: string;
+    value: string;
+}
+
+export interface SiteV2Info {
+    id: number;
+    name: string;
+    info: string;
+    icon: string | null;
+    country: string | null;
+    nsfw: string;
+    welfare: string;
+    view_count: number;
+}
+
+export interface SiteV2Target {
+    target: string;
+    domain_id: number;
+    name: string;
+    prefix?: string | null;
+    tls: string;
+    proxy: string;
+    source: string;
+    registered: boolean;
+    summary_only: boolean;
+    summary_state: string;
+    status: string;
+}
+
+export interface CollectorEnvelope {
+    site_id: number;
+    target: string;
+    protocol: string;
+    status: string;
+    observed_at: string;
+    duration_ms: number;
+    error_code?: string;
+    error_message?: string;
+    payload: unknown;
+    payload_bytes?: number;
+    payload_truncated?: boolean;
+    payload_preview_max_bytes?: number;
+    payload_preview_available?: boolean;
+    schema_version: number;
+    collector_id?: string;
+    job_id?: string;
+}
+
+export interface TargetLatestResponse {
+    state: HealthSummaryState;
+    site_id: number;
+    target: string;
+    protocols: Record<string, CollectorEnvelope>;
+    reason_codes?: string[];
+    reason_messages?: string[];
+    generated_at?: string;
+    schema_version?: number;
+}
+
+export interface TargetObservationsResponse {
+    state: HealthSummaryState;
+    site_id: number;
+    target: string;
+    protocol: string;
+    limit: number;
+    items: CollectorEnvelope[];
+    reason_codes?: string[];
+    reason_messages?: string[];
+    generated_at?: string;
+    schema_version?: number;
+}
+
+export interface TargetTrendResponse {
+    state: HealthSummaryState;
+    site_id: number;
+    target: string;
+    windows: unknown;
+    reason_codes?: string[];
+    reason_messages?: string[];
+    generated_at: string;
+    schema_version: number;
+}
+
+export interface TargetChangesResponse {
+    state: HealthSummaryState;
+    site_id: number;
+    target: string;
+    events: unknown;
+    reason_codes?: string[];
+    reason_messages?: string[];
+    generated_at: string;
+    schema_version: number;
+}
+
+export interface SiteV2DetailResponse {
+    site: SiteV2Info;
+    targets: SiteV2Target[];
+    selected_target: string;
+    site_summary: SiteHealthSummary;
+    target_summary: TargetHealthSummary;
+    latest_core: TargetLatestResponse;
+    derived: {
+        trend: TargetTrendResponse;
+        changes: TargetChangesResponse;
+    };
+    light_probe_state: TargetLatestResponse;
     generated_at: string;
     schema_version: number;
 }

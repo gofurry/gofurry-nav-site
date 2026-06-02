@@ -1,5 +1,5 @@
 <template>
-  <div class="relative flex min-h-screen flex-col bg-gray-50">
+  <div class="relative flex min-h-screen flex-col bg-gray-50 transition-colors duration-500 dark:bg-slate-950">
     <div v-if="showNavBar" :class="navBarWrapperClass">
       <NavBar :nav-overlay-desktop="isNavPage" />
     </div>
@@ -19,7 +19,7 @@ import { NAV_PAGE_REVEAL_EVENT } from '@/utils/navPageReveal'
 const route = useRoute()
 const navPageRevealed = ref(true)
 const normalizedPath = computed(() => route.path.replace(/^\/(zh|en)(?=\/|$)/, '') || '/')
-const isNavPage = computed(() => normalizedPath.value === '/nav')
+const isNavPage = computed(() => normalizedPath.value === '/')
 const isFullViewportPage = computed(() => normalizedPath.value === '/archive')
 const showNavBar = computed(() => !isFullViewportPage.value)
 const navBarWrapperClass = computed(() => (

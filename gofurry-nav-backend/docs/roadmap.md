@@ -2,179 +2,279 @@
 
 ## 当前位置
 
-`gofurry-nav-backend` 当前已经把线上导航业务接口收敛到 `/api/v1/nav/...`。这一层作为生产稳定接口继续服务 Nuxt 前端与现有业务，不在 collector v2 数据面打通前做大规模迁移。
+`gofurry-nav-backend` 当前生产导航接口仍以 `/api/v1/nav/...` 为主。v1 已接入 collector 旧数据面：站点域名列表、Ping latest/history、HTTP latest、DNS latest，并继续服务现有 Nuxt 前端。
 
-下一阶段的重点不是重写前后端接口，而是先配合 `gofurry-nav-collector` 打通 v2 observation 核心能力：collector 旁路写入 observation DB 与 v2 Redis latest，backend 提供默认关闭的只读 v2 观测接口，Nuxt 与 gofurry-admin 暂不切换。
+collector v2 数据面已经进入可供后端消费的阶段。后端目前已完成 v2 summary 只读接入、collector summary hints 透传，以及站点详情页 v2 只读后端接口：
+
+```text
+GET /api/v2/nav/sites/:siteId/detail
+GET /api/v2/nav/sites/:siteId/summary
+GET /api/v2/nav/sites/:siteId/targets/:target/summary
+GET /api/v2/nav/sites/:siteId/targets/:target/latest
+GET /api/v2/nav/sites/:siteId/targets/:target/observations
+GET /api/v2/nav/sites/:siteId/targets/:target/trend
+GET /api/v2/nav/sites/:siteId/targets/:target/changes
+GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
+```
+
+这些接口当前支持 `nav_v2.summary_enabled`、`nav_v2.detail_enabled`、`nav_v2.read_model_enabled` 分粒度灰度开关，并保持旧配置兼容：只配置 `summary_enabled=true` 时仍会默认开启 v2 detail 与 read model 分接口。后端内部已建立 collector v2 read model，可以只读消费 raw observation、target latest、trend、change、run state、light probe，并通过 v2 detail 分接口对外暴露。
+
+已知短板：
+
+- v1 详情接口 `getSiteDetail` 仍带浏览量递增副作用，v2 详情页接口应保持只读。
+- 前端正式接入 v2 前，需要先完成一轮 backend 安全与可靠性硬化，重点收敛公开搜索建议接口、v2 raw payload 输出边界、可信代理 IP、Redis/DB 错误处理和 v1 兼容接口脏数据防护。
 
 ## 路线策略
 
-- 先完成 collector v2 observation 数据面，再考虑站点、分组、搜索、页面素材等业务接口的 v2 化。
-- `/api/v1/nav/...` 保持生产兼容，不因为 v2 observation 改造而改变响应结构。
-- `/api/v2/nav/...` 优先承载更清晰的资源语义，避免继续扩散 `getXxx`、`page/site/list` 这类历史命名。
-- v2 初期只读、默认关闭、可灰度、可回滚，不引入 Prometheus 生态，不做高频探测；健康摘要只展示 collector 已生成的 summary，不在 backend 重新评分。
+- `/api/v1/nav/...` 继续保持生产兼容，不因 v2 接入改变响应结构。
+- `/api/v2/nav/...` 先补齐 collector v2 read model，再稳定站点详情页聚合接口；前端暂不迁移，等后端 v2 接口稳定后再改造。
+- v2 后端只读接入 collector 输出，不触发采集、不重算 collector 健康摘要、不把 light probe 直接纳入上下架或 down 判断。
+- 所有 payload 采用兼容读取策略：未知字段忽略，缺失字段给安全默认值；collector 后续只能兼容新增字段。
+- 详情页 v2 把读详情和写浏览量拆开，避免继续沿用 v1 的读取副作用。
 
-## 版本计划
+## Version Plan
 
-### v0.2.0 - Collector Summary 只读接入
+### v0.2.x - Summary 接入补齐
 
-**状态：** 已完成第一段
-**范围：** API / 架构 / 稳定性
-**目标：** 在不影响 `/api/v1/nav` 生产展示链路的前提下，先提供读取 collector v2 summary 的最小只读接口；raw observation 历史查询继续后置。
+**Status:** Completed
+**Scope:** API / Documentation / Stability
+**Goal:** 在现有 summary 只读接口基础上补齐 collector 已稳定输出但后端丢弃的字段。
 
-#### 重点
+#### Focus
 
-- 第一段只接入 collector v2 summary Redis key。
-- 后端接口默认关闭，仅用于人工验证、灰度观察与后续前端改造准备。
-- Nuxt 只增加默认关闭的灰度展示入口，不替换当前 `/api/v1/nav` 主数据源。
-- 不改 gofurry-admin。
+- site summary 与 target summary 字段完整性
+- summary hints 透传
+- collector v1/v2 信息面对照文档
 
-#### 计划接口
+#### Tasks
 
-```text
-GET /api/v2/nav/sites/:siteId/summary
-GET /api/v2/nav/sites/:siteId/targets/:target/summary
-```
+- [x] 增加 `nav_v2.summary_enabled` 与 `summary_stale_after_seconds` 配置。
+- [x] 注册 `/api/v2/nav` summary 路由组。
+- [x] 实现 site summary 只读接口。
+- [x] 实现 target summary 只读接口。
+- [x] 增加 Redis 缺失、过期、JSON 解析失败的 summary 服务测试。
+- [x] 在 collector docs 中新增 v1/v2 信息面字段级统计文档。
+- [x] 在 backend summary DTO 中补齐 target summary 的 `canonical_target_hint`、`target_relation_hints`、`edge_provider_hints`。
+- [x] 在 backend site summary DTO 中补齐顶层 `target_relation_hints` 与 `targets[]` 内的 hints。
+- [x] 增加 hints 字段透传测试，确认未知字段不影响旧 summary 响应。
 
-raw observation 历史查询后置：
+#### Acceptance Criteria
 
-```text
-GET /api/v2/nav/observations/latest?protocol=ping
-GET /api/v2/nav/observations/latest?protocol=http
-GET /api/v2/nav/observations/latest?protocol=dns
-GET /api/v2/nav/sites/:siteId/observations/latest
-GET /api/v2/nav/sites/:siteId/observations?protocol=ping&limit=288
-GET /api/v2/nav/sites/:siteId/observations?protocol=http&limit=240
-GET /api/v2/nav/sites/:siteId/observations?protocol=dns&limit=60
-```
-
-#### 响应语义
-
-- summary 接口读取 Redis key：`collector:v2:summary:site:{site_id}`、`collector:v2:summary:target:{site_id}:{target}`。
-- summary 可用时返回 `state=ready`。
-- summary 缺失时返回成功响应，`state=missing`、`status=unknown`。
-- summary 过期时返回成功响应，`state=stale`、`status=unknown`。
-- `latest` 返回最新观测结果，不做健康评分。
-- `observations` 返回历史观测序列，按 `observed_at desc` 排序。
-- `protocol` 仅允许 `ping`、`http`、`dns`。
-- `siteId` 使用 collector 与主站稳定共享的站点 ID。
-- 响应包含统一外壳字段：`site_id`、`protocol`、`status`、`observed_at`、`duration_ms`、`error_code`、`error_message`、`payload`、`schema_version`。
-- `payload` 保留协议细节，后端不在这一阶段把协议结果解释成综合状态。
-
-#### 任务
-
-- [x] 在配置中增加 v2 nav summary API 开关，默认关闭。
-- [x] 新增 `/api/v2/nav` 路由组，保持 `api := app.Group("/api")`、`v2 := api.Group("/v2")`、`nav := v2.Group("/nav")` 的结构。
-- [x] 新增站点级 summary 只读接口。
-- [x] 新增采集目标级 summary 只读接口。
-- [x] 增加 `siteId`、`target` 参数校验。
-- [x] 增加 Redis 缺失、summary 过期、JSON 解析失败的服务测试。
-- [ ] 新增 observation 只读 DAO，优先读 observation DB；必要时再考虑 v2 Redis latest。
-- [ ] 新增站点级最新观测接口。
-- [ ] 新增站点级历史观测接口。
-- [ ] 新增协议级全站最新观测接口。
-- [ ] 增加 raw observation 的协议、limit、siteId 参数校验。
-- [ ] 更新 Swagger 或接口文档。
-
-#### 验收标准
-
-- v2 开关关闭时，`/api/v1/nav/...` 行为完全不变。
-- v2 summary 开关开启后，可以读取站点级和目标级健康摘要。
-- v2 接口不写 DB、不写 Redis、不触发 collector 行为。
-- 查询失败时返回清晰错误，不影响 v1 生产接口。
-- Nuxt 灰度开关关闭时展示不变；gofurry-admin 不需要同步改动即可上线。
+- v2 summary 接口能完整保留 collector summary 稳定字段。
+- v2 summary 缺失或过期仍返回成功响应，并清晰标记 `state=missing` 或 `state=stale`。
+- `/api/v1/nav/...` 行为完全不变。
+- 文档能说明 v1/v2 字段差异和后端当前接入缺口。
 
 ---
 
-### v0.3.0 - Nav v2 资源路由规范化
+### v0.3.0 - Collector v2 Read Model 基础
 
-**状态：** 规划中
-**范围：** API / 架构 / 文档
-**目标：** 在 observation 核心链路稳定后，逐步把 nav 业务接口整理为更清晰的 `/api/v2/nav` 资源风格。
+**Status:** Completed
+**Scope:** API / Architecture / Testing
+**Goal:** 建立后端读取 collector v2 全量信息面的基础层，为站点详情 v2 聚合接口提供稳定数据来源。
 
-#### 重点
+#### Focus
 
-- 设计优先，迁移后置。
-- 先保留 `/api/v1/nav`，避免一次性牵动 Nuxt 与 gofurry-admin。
-- v2 使用资源名与查询参数表达业务，不继续使用历史动作式路径。
+- observation DB 查询
+- Redis latest/trend/change/light probe 读取
+- 参数校验与响应外壳统一
 
-#### 建议路由规范
+#### Tasks
 
-站点与分组：
+- [x] 新增 `gfn_collector_observation` 只读 DAO，支持按 `site_id`、`target`、`protocol`、`observed_at` 查询。
+- [x] 新增 target latest 读取服务，优先读 `collector:v2:latest:{protocol}:{site_id}:{target}`。
+- [x] 新增 raw observation 查询服务，支持协议白名单和 limit 上限。
+- [x] 新增 trend 读取服务，读取 `collector:v2:trend:target:{site_id}:{target}`。
+- [x] 新增 change 读取服务，读取 `collector:v2:change:target:{site_id}:{target}`。
+- [x] 新增 light probe latest 读取服务，覆盖 `rdap`、`robots`、`security_txt`、`page_assets`、`port_check`、`waf_canary`。
+- [x] 新增 run state 读取设计或诊断接口规划，读取 `collector:v2:run:{protocol}:latest`。
+- [x] 将 latest 与 raw observation 响应统一到 collector envelope：`site_id`、`target`、`protocol`、`status`、`observed_at`、`duration_ms`、`error_code`、`error_message`、`payload`、`schema_version`、`collector_id`、`job_id`。
+- [x] 增加 read model 单元测试，覆盖 Redis key 缺失、JSON 解析失败、DB 空结果、非法 protocol、limit 越界。
 
-```text
-GET /api/v2/nav/sites
-GET /api/v2/nav/sites/:siteId
-GET /api/v2/nav/groups
-```
+#### Acceptance Criteria
 
-搜索建议：
-
-```text
-GET /api/v2/nav/search/suggestions?provider=baidu&q=关键词
-GET /api/v2/nav/search/suggestions?provider=bing&q=关键词
-GET /api/v2/nav/search/suggestions?provider=google&q=关键词
-GET /api/v2/nav/search/suggestions?provider=bilibili&q=关键词
-```
-
-页面辅助资源：
-
-```text
-GET /api/v2/nav/sayings/random
-GET /api/v2/nav/backgrounds/random?type=standard
-GET /api/v2/nav/backgrounds/random?type=mobile
-GET /api/v2/nav/changelog
-```
-
-站点观测数据继续沿用 v0.2.0 的 observation 路由：
-
-```text
-GET /api/v2/nav/observations/latest
-GET /api/v2/nav/sites/:siteId/observations/latest
-GET /api/v2/nav/sites/:siteId/observations
-```
-
-#### 任务
-
-- [ ] 为 v2 站点列表设计响应结构，明确是否兼容 v1 字段名。
-- [ ] 为 v2 站点详情设计响应结构，明确浏览量增加逻辑是否仍由详情接口触发。
-- [ ] 为 v2 分组接口设计响应结构，明确 `site_ids` 与站点摘要是否分离。
-- [ ] 把搜索建议收敛为统一 provider 参数。
-- [ ] 把随机金句、随机背景、更新公告从 `page/header` 历史命名中拆出。
-- [ ] 规划 Nuxt 迁移顺序，避免前后端不一致。
-- [ ] 规划 gofurry-admin 是否需要消费 v2，避免管理端与前台接口职责混在一起。
-
-#### 验收标准
-
-- v2 路由命名符合资源语义，后续扩展不需要重复 `/nav` 或动作式路径。
-- v1 与 v2 可以并存，生产迁移可灰度、可回滚。
-- Nuxt 切换 v2 前有明确接口对照表。
-- gofurry-admin 的接口边界单独评估，不被 nav 前台 v2 迁移顺手改乱。
+- 后端可以只读消费 collector v2 的核心 raw/latest/derived/light probe 信息面。
+- 查询失败不会影响 v1 接口，也不会触发 collector 行为。
+- 所有 v2 read model 接口和服务都有稳定参数校验和可测试错误路径。
+- payload 不被后端重新解释成健康结论；健康状态仍以 summary 为准。
 
 ---
 
-### v1.0.0-alpha.1 - API 稳定化候选
+### v0.4.0 - 站点详情页 v2 后端接口稳定化
 
-**状态：** 规划中
-**范围：** API / 测试 / 文档 / 发布
-**目标：** 在 v2 observation 与 nav v2 资源接口稳定后，进入正式稳定版前的 API 冻结阶段。
+**Status:** Completed
+**Scope:** API / User-facing / Documentation
+**Goal:** 提供稳定的站点详情页 v2 后端接口，让前端后续可以一次性迁移到更完整的 collector v2 数据面。
 
-#### 重点
+#### Focus
 
-- 冻结 `/api/v2/nav` 核心接口结构。
-- 补齐测试、Swagger、迁移文档。
-- 明确 v1 保留期限与迁移策略。
+- 详情页聚合接口
+- target 级分接口
+- 只读详情语义
+- v1/v2 迁移对照
 
-#### 任务
+#### Planned Routes
 
-- [ ] 完成 v1 到 v2 的接口对照文档。
-- [ ] 补齐 v2 controller/service/dao 的核心测试。
-- [ ] 补齐 Nuxt 切换 v2 的验证清单。
-- [ ] 明确 `/api/v1/nav` 的维护期限。
-- [ ] 更新部署与回滚文档。
+```text
+GET /api/v2/nav/sites/:siteId/detail?lang=zh&target={target}
+GET /api/v2/nav/sites/:siteId/targets/:target/latest
+GET /api/v2/nav/sites/:siteId/targets/:target/observations?protocol={protocol}&limit={limit}
+GET /api/v2/nav/sites/:siteId/targets/:target/trend
+GET /api/v2/nav/sites/:siteId/targets/:target/changes
+GET /api/v2/nav/sites/:siteId/targets/:target/light-probes
+```
 
-#### 验收标准
+#### Tasks
+
+- [x] 新增站点详情 v2 API 设计文档，明确响应结构和字段来源。
+- [x] 实现 `detail` 只读聚合接口，响应包含 `site`、`targets`、`selected_target`、`site_summary`、`target_summary`、`latest_core`、`derived`、`light_probe_state`、`generated_at`、`schema_version`。
+- [x] `detail` 不递增浏览量；浏览量写入另行设计独立接口。
+- [x] 实现 target latest 分接口，返回 `ping`、`http`、`dns` 和已启用 light probe 的 latest。
+- [x] 实现 target observation 历史分接口，支持 `ping`、`http`、`dns`、`rdap`、`robots`、`security_txt`、`page_assets`、`port_check`、`waf_canary`。
+- [x] 实现 target trend 和 changes 分接口，缺失时返回空结构或 `state=missing`。
+- [x] 实现 target light-probes 分接口，明确 light probe 不参与健康状态。
+- [x] 增加站点不存在、target 不属于站点、summary missing、latest missing、partial failure 的测试。
+- [x] 更新 Swagger 或补充 Markdown 接口文档。
+
+#### Acceptance Criteria
+
+- 前端无需调用 v1 Ping/HTTP/DNS 详情接口即可获得详情页所需后端数据。
+- v2 detail 是只读接口，不写 DB、不写 Redis、不改变 view count。
+- target 选择、summary、latest、trend、change、light probe 都有清晰缺失语义。
+- v1 和 v2 可以并存，前端迁移可灰度、可回滚。
+
+---
+
+### v0.4.1 - Nav v2 接口安全与可靠性修复
+
+**Status:** Completed
+**Scope:** Security/Safety / Stability / Performance / Testing
+**Goal:** 根据 v2 新增代码审计结果，修复详情页 v2 后端接口在归属校验、并发初始化、响应体控制和测试覆盖上的硬化缺口。
+
+#### Focus
+
+- target 归属边界
+- v2 singleton / DAO 初始化安全
+- raw payload 响应体控制
+- detail 聚合性能与 partial failure 语义
+- HTTP contract 测试补齐
+
+#### Tasks
+
+- [x] 修复 P1-001：target 分接口只以 active `gfn_collector_domain` 作为授权来源，summary-only target 仅用于展示补充，不单独授权 raw/latest/history 查询。
+- [x] 为 `targets[]` 增加来源与注册状态字段：`source`、`registered`、`summary_only`，并让 detail 默认 target 优先选择 active DB domain。
+- [x] 修复 P2-001：用锁保护 v2 detail/readmodel/DAO 的懒加载写入，避免首次并发请求数据竞态。
+- [x] 增加 `go test -race ./apps/nav/detail/... ./apps/nav/readmodel/...` 验证路径，并补并发初始化测试。
+- [x] 修复 P2-002：为 latest / observations 的 raw `payload` 增加默认截断策略，并提供显式 `payload_mode=full` 完整 payload 策略。
+- [x] 为 `observations?limit=500` + 大 payload 场景增加响应体截断测试。
+- [x] 修复 P2-003：优化 detail 聚合读取路径，对 target summary、latest、light probe、trend、changes 独立分支并发读取。
+- [x] 明确 detail partial failure 语义：summary 与 core latest 失败返回错误，trend/change/light probe 等旁路失败返回 `state=missing` 与 reason。
+- [x] 增加 Redis JSON 解析失败结构化日志，记录 `redis_key`、`site_id`、`target`、`protocol` 和错误摘要，但不记录完整 payload。
+- [x] 拆分 `nav_v2.summary_enabled` 粗粒度 route gate，增加 detail/read model 独立灰度开关并保持旧配置兼容。
+- [x] 补齐 detail controller table tests，覆盖 6 个 v2 路由的成功、参数错误、service error 和 URL encoded target。
+
+#### Acceptance Criteria
+
+- 已删除或不在 active domain 表中的 target 不能通过任何 target 分接口读取 raw/latest/history 数据。
+- `go test -race ./apps/nav/detail/... ./apps/nav/readmodel/...` 通过。
+- 大 payload 不会在默认公开响应中无限制透传，响应会明确标记截断状态。
+- detail 聚合接口在旁路数据缺失或失败时保持清晰、可预测的响应语义。
+- v2 summary 与 detail 可以独立灰度开启或关闭。
+- 新增审计报告中的 P1/P2 项均关闭或有明确剩余风险说明。
+
+#### Notes
+
+- 审计报告：`docs/nav-v2-code-audit.md`。
+- 本阶段只修复 v2 后端接口硬化问题，不启动前端迁移。
+
+---
+
+### v0.4.2 - 前端接入前安全与可靠性收敛
+
+**Status:** Completed
+**Scope:** Security/Safety / Stability / Performance / Testing
+**Goal:** 在 Nuxt 前端正式迁移到 `/api/v2/nav` 之前，修复本轮 backend 全量审计发现的公开接口、基础设施和 v1 兼容边界问题。
+
+#### Focus
+
+- 公开搜索建议接口外部请求预算
+- v2 raw payload 公开输出边界
+- 可信代理 IP 与限流/浏览量去重一致性
+- Redis/DB 基础设施错误处理
+- v1 兼容接口脏数据防护
+- 配置、HTTP 工具和 JWT 工具安全默认
+
+#### Tasks
+
+- [x] 修复 P1-001：为百度、必应、谷歌、B 站搜索建议接口增加统一 timeout、响应体上限、`q` 长度限制、`url.QueryEscape` 和外部失败降级策略。
+- [x] 为搜索建议接口补充 `httptest.Server` 测试，覆盖慢响应、超大响应、坏 JSON/XML、超长输入和上游不可用。
+- [x] 修复 P1-002：默认禁止公开接口使用 `payload_mode=full` 绕过 preview 限制，增加 `nav_v2.full_payload_enabled` 或等价开关。
+- [x] 为 observations/latest/light-probes 增加单响应 payload 总预算，避免 `limit=500` 返回过大 JSON。
+- [x] 修复 P2-001：统一客户端 IP 获取逻辑，配置可信代理来源，非可信来源不读取用户可伪造的 `X-Forwarded-For` / `X-Real-IP`。
+- [x] 让 limiter key、v1 浏览量去重和日志里的客户端 IP 使用同一可信代理 helper。
+- [x] 修复 P2-002：Redis wrapper 内部统一使用每次命令 timeout context，修正 `HDel` 错误返回，`Incr` 改为可返回错误并让调用方记录失败。
+- [x] 修复 P2-003：DB 初始化显式检查 `db.engine.DB()` 错误，并改用安全 DSN 构造，日志不得输出密码明文。
+- [x] 修复 P2-004：v1 Ping 历史接口安全解析 `delay/loss`，脏数据不 panic，平均值按实际参与统计数量计算。
+- [x] 修复 P3-001：配置路径探测日志默认关闭，仅在 `GF_NAV_BACKEND_CONFIG_TRACE=1` 时输出。
+- [x] 修复 P3-002：整理 `common/util/http.go`，移除危险默认；通用 HTTP helper 必须有 timeout、响应体上限和默认 TLS 校验。
+- [x] 修复 P3-003：JWT secret 改为配置或环境变量来源，`ParseToken` 对 nil token 和非法 token 做防御性处理。
+- [x] 增加或更新 `conf/server.example.yaml` 注释，说明 `nav_v2.full_payload_enabled`、可信代理、Redis timeout、JWT secret 等配置。
+- [x] 更新审计报告状态或新增修复说明，确认 v0.4.2 中 P1/P2 均已关闭。
+- [x] 将 v1 nav/sitePage DAO 从包级 init 改为懒加载，避免纯单元测试必须连接真实数据库。
+
+#### Acceptance Criteria
+
+- 外部搜索建议接口在上游慢、坏响应或不可用时快速降级，不拖垮公开请求路径。
+- Nuxt 详情页默认只能消费 preview payload，公开接口不会无限制返回 full raw observation。
+- 伪造代理 IP header 不能绕过限流或浏览量去重。
+- Redis 慢或断连时后端接口有明确 timeout 和错误语义，不出现长时间悬挂。
+- DB 初始化错误被显式处理，特殊字符密码不会破坏 DSN。
+- v1 Ping 历史接口遇到异常旧数据不 panic。
+- `go test ./...`、`go vet ./...`、`go test -race ./apps/nav/detail/... ./apps/nav/readmodel/... ./common/service/...` 通过。
+
+#### Notes
+
+- 审计报告：`docs/backend-code-audit.md`。
+- 本阶段只做前端接入前硬化，不改变 `/api/v1/nav` 响应结构，也不扩展 `/api/v2/nav` 新功能。
+- `payload_mode=full` 如仍需保留，应定位为管理/内网诊断能力，不作为公开前端依赖。
+
+---
+
+### v1.0.0-alpha.1 - Nav v2 API 冻结候选
+
+**Status:** Planned
+**Scope:** API / Testing / Documentation / Release
+**Goal:** 在 collector v2 read model 与站点详情 v2 接口稳定后，冻结 `/api/v2/nav` 核心结构，准备前端迁移。
+
+#### Focus
+
+- API freeze
+- 前端迁移准备
+- 文档与测试补齐
+- v1 保留策略
+
+#### Tasks
+
+- [ ] 完成 `/api/v1/nav` 到 `/api/v2/nav` 的接口对照文档。
+- [ ] 补齐 v2 controller/service/dao 核心测试。
+- [ ] 补齐 Swagger 或 OpenAPI 文档。
+- [ ] 明确 v1 生产接口维护期限和废弃策略。
+- [ ] 制定 Nuxt 前端迁移验证清单。
+- [ ] 制定上线、灰度、回滚步骤。
+
+#### Acceptance Criteria
 
 - v2 接口结构不再频繁变化。
-- 前后端迁移路径清晰。
-- v1 回滚路径仍然存在。
-- 文档足够支撑生产更新。
+- 前端可以按文档迁移，不需要反向阅读 collector 或 backend 内部代码。
+- v1 回滚路径仍存在。
+- v2 API 的缺失、过期、解析失败、权限和参数错误都有稳定响应语义。
+
+## Suggested Release Path
+
+- `v0.2.x`：已补齐 summary 字段完整性和文档。
+- `v0.3.0`：已建立 collector v2 read model 基础。
+- `v0.4.0`：已稳定站点详情页 v2 后端接口。
+- `v0.4.1`：已修复 v2 新增接口审计发现的安全、并发、性能与测试硬化项。
+- `v0.4.2`：前端正式接入 v2 前完成 backend 全量审计发现的公开接口和基础设施硬化。
+- `v1.0.0-alpha.1`：冻结 v2 API 候选并准备前端迁移。
+- `v1.0.0`：前后端完成 v2 迁移并保留明确 v1 回滚策略后再进入稳定版。

@@ -1,5 +1,5 @@
 import { createRequest } from '@/utils/request'
-import type {Site, Group, SiteInfo, HttpRecord, DnsRecord, PingRecord, SayingModel, changelogResp} from '@/types/nav'
+import type {Site, Group, SayingModel, changelogResp} from '@/types/nav'
 
 // 响应拦截器
 const navRequest = createRequest(import.meta.env.VITE_NAV_API_BASE_URL)
@@ -44,23 +44,6 @@ export function getBiliBiliSuggestion(keyword: string): Promise<string[]> {
 // 随机金句
 export function getSaying(): Promise<SayingModel> {
     return navRequest.get('/nav/page/header/getSaying')
-}
-
-// 详情页
-export function getSiteDetail(id: string, lang: string): Promise<SiteInfo> {
-    return navRequest.get('/nav/site/getSiteDetail', { params: { id, lang } })
-}
-
-export function getSitePingRecord(domain: string): Promise<PingRecord> {
-    return navRequest.get('/nav/site/getSitePingRecord', { params: { domain } })
-}
-
-export function getSiteHttpRecord(domain: string): Promise<HttpRecord> {
-    return navRequest.get('/nav/site/getSiteHttpRecord', { params: { domain } })
-}
-
-export function getSiteDnsRecord(domain: string): Promise<DnsRecord> {
-    return navRequest.get('/nav/site/getSiteDnsRecord', { params: { domain } })
 }
 
 export function getImageUrl(type: string): Promise<string> {

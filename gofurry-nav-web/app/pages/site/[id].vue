@@ -1,7 +1,11 @@
 <template>
-  <SiteDetailRoutePage />
+  <NuxtPage v-if="hasChildRoute" />
+  <SiteDetailPage v-else />
 </template>
 
 <script setup lang="ts">
-import SiteDetailRoutePage from '@/components/site/SiteDetailRoutePage.vue'
+import SiteDetailPage from '@/components/site/SiteDetailPage.vue'
+
+const route = useRoute()
+const hasChildRoute = computed(() => route.path.replace(/\/$/, '').split('/').length > 3)
 </script>

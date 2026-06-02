@@ -1,7 +1,7 @@
 <template>
-  <div />
+  <NavHomePage />
 </template>
 
 <script setup lang="ts">
-await navigateTo('/nav', { redirectCode: 302 })
+import NavHomePage from '@/components/nav/NavHomePage.vue'
 </script>

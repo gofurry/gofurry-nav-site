@@ -7,7 +7,6 @@ package util
  */
 
 import (
-	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,9 +19,11 @@ import (
 	"github.com/bytedance/sonic"
 )
 
+const defaultHTTPHelperMaxBodyBytes int64 = 1024 * 1024
+
 func GetByHttp(url string) (string, error) {
-	// 发送 get 请求
-	resp, err := http.Get(url)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "send get failed, err:%v", err)
 		return "", err
@@ -33,7 +34,7 @@ func GetByHttp(url string) (string, error) {
 	fmt.Println(resp.StatusCode, resp.Proto)
 
 	// 读取响应内容
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, defaultHTTPHelperMaxBodyBytes))
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "get resp failed, err:%v", err)
 		return "", err
@@ -50,8 +51,8 @@ func PostByHttp(url, contentType string, params map[string]any) (string, error) 
 		return "", err
 	}
 
-	// 发送 post 请求
-	resp, err := http.Post(url, contentType, strings.NewReader(string(jsonData)))
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Post(url, contentType, strings.NewReader(string(jsonData)))
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "send post failed, err:%v", err)
 		return "", err
@@ -62,7 +63,7 @@ func PostByHttp(url, contentType string, params map[string]any) (string, error) 
 	fmt.Println(resp.StatusCode, resp.Proto)
 
 	// 读取响应内容
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, defaultHTTPHelperMaxBodyBytes))
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "get resp failed, err:%v", err)
 		return "", err
@@ -86,12 +87,8 @@ func GetByHttpWithParams(apiUrl string, headers map[string]string, params map[st
 	}
 
 	// 创建请求
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
 	client := &http.Client{
-		Transport: transport,
-		Timeout:   timeout,
+		Timeout: timeout,
 	}
 	req, err := http.NewRequest("GET", apiUrl, nil)
 	if err != nil {
@@ -114,7 +111,7 @@ func GetByHttpWithParams(apiUrl string, headers map[string]string, params map[st
 	// 响应码和http协议版本
 	fmt.Println(resp.StatusCode, resp.Proto)
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, defaultHTTPHelperMaxBodyBytes))
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "get resp failed, err:%v", err)
 		return "", err
@@ -138,12 +135,8 @@ func GetByHttpWithParamsBackDoc(apiUrl string, headers map[string]string, params
 	}
 
 	// 创建请求
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
 	client := &http.Client{
-		Transport: transport,
-		Timeout:   timeout,
+		Timeout: timeout,
 	}
 	req, err := http.NewRequest("GET", apiUrl, nil)
 	if err != nil {
@@ -166,7 +159,7 @@ func GetByHttpWithParamsBackDoc(apiUrl string, headers map[string]string, params
 	fmt.Println(resp.StatusCode, resp.Proto)
 
 	// 解析 HTML 内容
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	doc, err := goquery.NewDocumentFromReader(io.LimitReader(resp.Body, defaultHTTPHelperMaxBodyBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -189,12 +182,8 @@ func PostByHttpWithParams(apiUrl string, headers map[string]string, params map[s
 	}
 
 	// 创建请求
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
 	client := &http.Client{
-		Transport: transport,
-		Timeout:   timeout,
+		Timeout: timeout,
 	}
 	req, err := http.NewRequest("POST", apiUrl, nil)
 	if err != nil {
@@ -217,7 +206,7 @@ func PostByHttpWithParams(apiUrl string, headers map[string]string, params map[s
 	// 响应码和http协议版本
 	fmt.Println(resp.StatusCode, resp.Proto)
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, defaultHTTPHelperMaxBodyBytes))
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "get resp failed, err:%v", err)
 		return "", err

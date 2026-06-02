@@ -126,7 +126,7 @@ export default defineNuxtConfig({
             image: ogImage,
             potentialAction: {
               '@type': 'SearchAction',
-              target: `${normalizedSiteUrl}/nav?q={search_term_string}`,
+              target: `${normalizedSiteUrl}/?q={search_term_string}`,
               'query-input': 'required name=search_term_string'
             }
           })
@@ -166,7 +166,7 @@ export default defineNuxtConfig({
     }
   },
   routeRules: {
-    '/': { prerender: true },
+    '/': { ssr: true },
     '/about': { prerender: true },
     '/nav': { ssr: true },
     '/sites': { ssr: true },
