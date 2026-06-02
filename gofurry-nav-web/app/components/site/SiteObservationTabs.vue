@@ -23,20 +23,20 @@
 
     <div class="observation-content">
       <div v-if="activeTab === 'ping'" class="space-y-4">
-        <MetricGrid :items="pingMetrics" />
+        <SiteObservationMetricGrid :items="pingMetrics" />
       </div>
 
       <div v-else-if="activeTab === 'http'" class="space-y-5">
-        <MetricGrid :items="httpMetrics" />
-        <InfoList :items="httpHeaderItems" :empty-text="text.none" />
+        <SiteObservationMetricGrid :items="httpMetrics" />
+        <SiteObservationInfoList :items="httpHeaderItems" :empty-text="text.none" />
       </div>
 
       <div v-else-if="activeTab === 'tls'" class="space-y-4">
-        <MetricGrid :items="tlsMetrics" />
+        <SiteObservationMetricGrid :items="tlsMetrics" />
       </div>
 
       <div v-else class="space-y-5">
-        <MetricGrid :items="dnsMetrics" />
+        <SiteObservationMetricGrid :items="dnsMetrics" />
         <div v-if="dnsRecordGroups.length" class="space-y-4">
           <div v-for="group in dnsRecordGroups" :key="group.type" class="dns-record-card">
             <h4 class="record-heading">{{ group.type }}</h4>
@@ -60,14 +60,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h, ref, type PropType } from 'vue'
+import { computed, ref } from 'vue'
 import { i18n } from '@/main'
+import SiteObservationInfoList from '@/components/site/SiteObservationInfoList.vue'
+import SiteObservationMetricGrid from '@/components/site/SiteObservationMetricGrid.vue'
 import type { DnsRecord, HttpRecord, PingRecord, TargetLatestResponse } from '@/types/nav'
+import type { ObservationInfoItem, ObservationMetricItem, ObservationTone } from './detailTypes'
 
 type TabKey = 'ping' | 'http' | 'tls' | 'dns'
-type ObservationTone = 'good' | 'normal' | 'warn'
-type MetricItem = { label: string; value: string; accent?: boolean; tone?: ObservationTone }
-type InfoItem = { label: string; value: string; tone?: ObservationTone }
+type MetricItem = ObservationMetricItem
+type InfoItem = ObservationInfoItem
 
 const props = defineProps<{
   pingRecord: PingRecord | null
@@ -169,44 +171,6 @@ const httpHeaderItems = computed<InfoItem[]>(() => {
     .map((key) => ({ label: key, value: headers[key]?.join(', ') ?? '', tone: headerTone(key) }))
     .filter((item) => item.value)
     .slice(0, 8)
-})
-
-const metricToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn']
-const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn']
-
-const MetricGrid = defineComponent({
-  props: {
-    items: { type: Array as PropType<MetricItem[]>, default: () => [] },
-  },
-  setup(componentProps) {
-    return () => h('div', { class: 'metric-grid' },
-      componentProps.items.map((item, index) => h('div', {
-        class: [
-          'metric-card',
-          `tone-${item.tone ?? metricToneClasses[index % metricToneClasses.length]}`,
-        ],
-      }, [
-        h('div', { class: 'metric-label' }, item.label),
-        h('div', { class: 'metric-value' }, item.value || '-'),
-      ]))
-    )
-  },
-})
-
-const InfoList = defineComponent({
-  props: {
-    items: { type: Array as PropType<InfoItem[]>, default: () => [] },
-    emptyText: { type: String, default: '-' },
-  },
-  setup(componentProps) {
-    return () => componentProps.items.length
-      ? h('div', { class: 'info-list' },
-        componentProps.items.map((item, index) => h('div', { class: ['info-row', `tone-${item.tone ?? headerToneClasses[index % headerToneClasses.length]}`] }, [
-          h('span', { class: 'info-label' }, item.label),
-          h('span', { class: 'info-value' }, item.value),
-        ])))
-      : h('div', { class: 'empty-state' }, componentProps.emptyText)
-  },
 })
 
 function payload(protocol: string) {
@@ -491,372 +455,12 @@ function label(zh: string, en: string) {
   margin-top: 1.1rem;
 }
 
-.metric-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.8rem;
-}
-
-@media (min-width: 640px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1024px) {
-  .metric-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.metric-card {
-  min-width: 0;
-  border-radius: 8px;
-  background: rgba(255, 250, 242, 0.68);
-  padding: 0.95rem 1rem;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.10);
-  transition: background-color 500ms ease, box-shadow 500ms ease;
-}
-
-.metric-card:hover {
-  background: rgba(255, 247, 235, 0.82);
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18), 0 0 0 4px rgba(251, 140, 47, 0.05);
-}
-
-.metric-card.is-accent {
-  background: rgba(255, 237, 213, 0.70);
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
-}
-
-.metric-label {
-  margin-bottom: 0.35rem;
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.metric-value {
-  overflow-wrap: anywhere;
-  color: #111827;
-  font-size: 1rem;
-  font-weight: 800;
-}
-
-.info-list {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0 1rem;
-}
-
-@media (min-width: 1024px) {
-  .info-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.info-row {
-  display: grid;
-  grid-template-columns: minmax(7rem, 0.32fr) minmax(0, 1fr);
-  gap: 0.8rem;
-  min-width: 0;
-  border-bottom: 1px solid rgba(251, 140, 47, 0.10);
-  border-left: 2px solid transparent;
-  border-radius: 0;
-  padding: 0.58rem 0.85rem 0.58rem 0.75rem;
-  font-size: 0.9rem;
-  transition: background-color 500ms ease, border-color 500ms ease, color 500ms ease;
-}
-
-.info-row:hover {
-  background: rgba(255, 247, 235, 0.62);
-  border-left-color: rgba(251, 140, 47, 0.28);
-}
-
-.info-row.tone-warm {
-  background: transparent;
-}
-
-.info-row.tone-mint {
-  background: transparent;
-}
-
-.info-row.tone-sky {
-  background: transparent;
-}
-
-.info-row.tone-amber {
-  background: transparent;
-}
-
-.info-label {
-  color: #64748b;
-  font-weight: 800;
-}
-
-.info-value {
-  overflow-wrap: anywhere;
-  color: #1f2937;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-}
-
-.record-heading {
-  margin-bottom: 0.45rem;
-  color: #64748b;
-  font-size: 0.86rem;
-  font-weight: 800;
-}
-
-.dns-record-card {
-  border-radius: 8px;
-  background: rgba(255, 250, 242, 0.50);
-  padding: 0.85rem;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.09);
-  transition: background-color 500ms ease, box-shadow 500ms ease;
-}
-
-.dns-record-card:hover {
-  background: rgba(255, 247, 235, 0.64);
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.16), 0 0 0 4px rgba(251, 140, 47, 0.045);
-}
-
-.record-list {
-  overflow: hidden;
-  border-radius: 8px;
-  background: rgba(255, 250, 242, 0.42);
-}
-
-.record-row {
-  display: grid;
-  grid-template-columns: 4.5rem minmax(0, 1fr) 4rem;
-  gap: 0.75rem;
-  border-bottom: 1px solid rgba(251, 140, 47, 0.08);
-  padding: 0.55rem 0.85rem;
-  font-size: 0.86rem;
-}
-
-.record-row:last-child {
-  border-bottom: 0;
-}
-
 .empty-state {
   border-radius: 8px;
   background: rgba(255, 250, 242, 0.54);
   padding: 1rem;
   color: #64748b;
   font-size: 0.875rem;
-}
-
-.site-observation-tabs :deep(.metric-card) {
-  min-width: 0;
-  border-radius: 8px;
-  padding: 0.95rem 1rem;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.10);
-  transition: background-color 500ms ease, box-shadow 500ms ease;
-}
-
-.site-observation-tabs :deep(.metric-grid) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.8rem;
-}
-
-@media (min-width: 640px) {
-  .site-observation-tabs :deep(.metric-grid) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1024px) {
-  .site-observation-tabs :deep(.metric-grid) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-.site-observation-tabs :deep(.metric-card:hover) {
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.20), 0 0 0 4px rgba(251, 140, 47, 0.055);
-}
-
-.site-observation-tabs :deep(.metric-card.tone-warm) {
-  background: rgba(255, 247, 235, 0.76);
-}
-
-.site-observation-tabs :deep(.metric-card.tone-sky) {
-  background: rgba(239, 246, 255, 0.72);
-}
-
-.site-observation-tabs :deep(.metric-card.tone-mint) {
-  background: rgba(240, 253, 244, 0.72);
-}
-
-.site-observation-tabs :deep(.metric-card.tone-amber) {
-  background: rgba(255, 251, 235, 0.76);
-}
-
-.site-observation-tabs :deep(.metric-card.tone-rose) {
-  background: rgba(255, 241, 242, 0.70);
-}
-
-.site-observation-tabs :deep(.metric-card.tone-violet) {
-  background: rgba(245, 243, 255, 0.68);
-}
-
-.site-observation-tabs :deep(.metric-card.tone-lime) {
-  background: rgba(247, 254, 231, 0.70);
-}
-
-.site-observation-tabs :deep(.metric-card.tone-peach),
-.site-observation-tabs :deep(.metric-card.is-accent) {
-  background: rgba(255, 237, 213, 0.72);
-}
-
-.site-observation-tabs :deep(.metric-label) {
-  margin-bottom: 0.35rem;
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.site-observation-tabs :deep(.metric-value) {
-  overflow-wrap: anywhere;
-  color: #111827;
-  font-size: 1rem;
-  font-weight: 800;
-}
-
-.site-observation-tabs :deep(.info-list) {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0 1rem;
-}
-
-@media (min-width: 1024px) {
-  .site-observation-tabs :deep(.info-list) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.site-observation-tabs :deep(.info-row) {
-  display: grid;
-  grid-template-columns: minmax(7rem, 0.32fr) minmax(0, 1fr);
-  gap: 0.8rem;
-  min-width: 0;
-  border-bottom: 1px solid rgba(251, 140, 47, 0.10);
-  border-left: 2px solid transparent;
-  border-radius: 0;
-  padding: 0.58rem 0.85rem 0.58rem 0.75rem;
-  font-size: 0.9rem;
-  transition: background-color 500ms ease, border-color 500ms ease, color 500ms ease;
-}
-
-.site-observation-tabs :deep(.info-row:hover) {
-  background: rgba(255, 247, 235, 0.62);
-  border-left-color: rgba(251, 140, 47, 0.28);
-}
-
-.site-observation-tabs :deep(.info-row.tone-warm) {
-  background: transparent;
-}
-
-.site-observation-tabs :deep(.info-row.tone-mint) {
-  background: transparent;
-}
-
-.site-observation-tabs :deep(.info-row.tone-sky) {
-  background: transparent;
-}
-
-.site-observation-tabs :deep(.info-row.tone-amber) {
-  background: transparent;
-}
-
-.site-observation-tabs :deep(.info-label) {
-  color: #64748b;
-  font-weight: 800;
-}
-
-.site-observation-tabs :deep(.info-value) {
-  overflow-wrap: anywhere;
-  color: #1f2937;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-}
-
-.metric-card.tone-good,
-.site-observation-tabs :deep(.metric-card.tone-good) {
-  background: #e4f7ea;
-  box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.20);
-}
-
-.metric-card.tone-normal,
-.site-observation-tabs :deep(.metric-card.tone-normal) {
-  background: #fff0c7;
-  box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.18);
-}
-
-.metric-card.tone-warn,
-.site-observation-tabs :deep(.metric-card.tone-warn) {
-  background: #ffe5df;
-  box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.16);
-}
-
-.metric-card:hover,
-.site-observation-tabs :deep(.metric-card:hover) {
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.30), 0 0 0 4px rgba(251, 140, 47, 0.08);
-}
-
-.metric-card.tone-good:hover,
-.site-observation-tabs :deep(.metric-card.tone-good:hover) {
-  background: #d8f2e1;
-  box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.28), 0 0 0 4px rgba(22, 163, 74, 0.08);
-}
-
-.metric-card.tone-normal:hover,
-.site-observation-tabs :deep(.metric-card.tone-normal:hover) {
-  background: #ffe8ad;
-  box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.26), 0 0 0 4px rgba(217, 119, 6, 0.08);
-}
-
-.metric-card.tone-warn:hover,
-.site-observation-tabs :deep(.metric-card.tone-warn:hover) {
-  background: #ffd9cf;
-  box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.24), 0 0 0 4px rgba(220, 38, 38, 0.07);
-}
-
-.info-row.tone-good,
-.site-observation-tabs :deep(.info-row.tone-good) {
-  background: transparent;
-  box-shadow: none;
-}
-
-.info-row.tone-normal,
-.site-observation-tabs :deep(.info-row.tone-normal) {
-  background: transparent;
-  box-shadow: none;
-}
-
-.info-row.tone-warn,
-.site-observation-tabs :deep(.info-row.tone-warn) {
-  background: transparent;
-  box-shadow: none;
-}
-
-.info-row:hover,
-.site-observation-tabs :deep(.info-row:hover) {
-  background: rgba(255, 237, 213, 0.68);
-  border-left-color: rgba(251, 140, 47, 0.58);
-}
-
-.info-row:hover .info-label,
-.site-observation-tabs :deep(.info-row:hover .info-label) {
-  color: #9a4a12;
-}
-
-.info-row:hover .info-value,
-.site-observation-tabs :deep(.info-row:hover .info-value) {
-  color: #111827;
 }
 
 .dns-record-card {
@@ -921,16 +525,6 @@ function label(zh: string, en: string) {
     width: 100%;
     flex-wrap: nowrap;
     overflow-x: auto;
-  }
-
-  .info-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.25rem;
-  }
-
-  .site-observation-tabs :deep(.info-row) {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.25rem;
   }
 }
 </style>
