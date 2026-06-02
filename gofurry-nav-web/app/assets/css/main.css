@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* 确保 html, body, #app 占满屏幕 */
 html, body, #app {
   margin: 0;

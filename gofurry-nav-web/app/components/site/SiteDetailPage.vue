@@ -1,26 +1,6 @@
 <template>
   <div ref="pageRoot" class="site-detail-page min-h-full overflow-x-hidden text-slate-900">
-    <div class="visual-sky" aria-hidden="true">
-      <svg class="visual-grid" viewBox="0 0 1200 720" preserveAspectRatio="none">
-        <defs>
-          <pattern id="quietGrid" width="96" height="96" patternUnits="userSpaceOnUse">
-            <path d="M96 0H0V96" class="grid-line" />
-          </pattern>
-          <pattern id="quietDots" width="192" height="192" patternUnits="userSpaceOnUse">
-            <circle cx="96" cy="96" r="2" class="grid-dot" />
-          </pattern>
-          <linearGradient id="quietDiagonal" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#fb8c2f" stop-opacity="0.10" />
-            <stop offset="58%" stop-color="#4f6fed" stop-opacity="0.07" />
-            <stop offset="100%" stop-color="#15b8a6" stop-opacity="0.05" />
-          </linearGradient>
-        </defs>
-        <rect width="1200" height="720" fill="url(#quietGrid)" />
-        <rect width="1200" height="720" fill="url(#quietDots)" />
-        <path class="quiet-diagonal" d="M-80 610 C250 530 420 660 650 560 C840 478 970 512 1280 398" />
-        <path class="quiet-diagonal is-cool" d="M-120 210 C220 140 360 272 590 202 C810 136 940 190 1270 82" />
-      </svg>
-    </div>
+    <GoFurryGridBackground />
 
     <div v-if="pending" class="relative flex min-h-[68vh] items-center justify-center text-slate-500">
       {{ t('common.loading') }}
@@ -90,6 +70,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import SiteDetailHero from '@/components/site/SiteDetailHero.vue'
 import SiteMetadataProbePanel from '@/components/site/SiteMetadataProbePanel.vue'
 import SiteObservationOverviewPanel from '@/components/site/SiteObservationOverviewPanel.vue'
@@ -545,49 +526,6 @@ function label(zh: string, en: string) {
 
 .site-detail-page > main {
   z-index: 1;
-}
-
-.visual-sky {
-  pointer-events: none;
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  opacity: 1;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(251, 140, 47, 0.09), transparent 30%),
-    radial-gradient(circle at 82% 18%, rgba(79, 111, 237, 0.07), transparent 28%),
-    repeating-linear-gradient(0deg, transparent 0 95px, rgba(251, 140, 47, 0.055) 96px),
-    repeating-linear-gradient(90deg, transparent 0 95px, rgba(79, 111, 237, 0.045) 96px);
-}
-
-.visual-grid {
-  height: 100%;
-  width: 100%;
-  opacity: 1;
-  mask-image: linear-gradient(90deg, transparent 0, #000 10%, #000 90%, transparent 100%);
-}
-
-.grid-line {
-  fill: none;
-  stroke: rgba(251, 140, 47, 0.11);
-  stroke-width: 1;
-}
-
-.grid-dot {
-  fill: rgba(251, 140, 47, 0.22);
-}
-
-.quiet-diagonal {
-  fill: none;
-  stroke: url(#quietDiagonal);
-  stroke-width: 2;
-  stroke-dasharray: 14 30;
-  opacity: 0.72;
-}
-
-.quiet-diagonal.is-cool {
-  opacity: 0.56;
 }
 
 .detail-section,
