@@ -94,7 +94,7 @@
       </div>
 
       <div :class="metaClass">
-        <div>{{ currentYear }} gofurry {{ t('footer.rights') }}</div>
+        <div>{{ currentYear }} GoFurry {{ t('footer.rights') }}</div>
         <div>{{ t('footer.license') }}</div>
         <a
             href="https://beian.miit.gov.cn/"
