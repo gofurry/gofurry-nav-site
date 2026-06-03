@@ -3,7 +3,6 @@ package routers
 import (
 	"github.com/gofiber/fiber/v3"
 	nav "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/controller"
-	siteCommon "github.com/gofurry/gofurry-nav-backend/apps/system/site/controller"
 )
 
 /*
@@ -26,7 +25,4 @@ func navApi(g fiber.Router) {
 	g.Get("/page/search/bilibili", nav.NavPageApi.GetBiliBiliSearchSuggestion) // 解析B站搜索建议框
 	g.Get("/page/header/getSaying", nav.NavPageApi.GetSaying)                  // 提供随机金句
 	g.Get("/page/header/image/url", nav.NavPageApi.GetImageUrl)                // 获取 CDN 中随机壁纸
-
-	// 站点公共信息
-	g.Get("/site/changelog", siteCommon.SiteApi.GetSiteChangeLog) // 更新公告
 }

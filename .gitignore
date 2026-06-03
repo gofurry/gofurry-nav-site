@@ -68,5 +68,3 @@ gofurry-rag/config/server.yaml
 
 .idea/*
 
-/sql/*
-!/sql/.gitkeep

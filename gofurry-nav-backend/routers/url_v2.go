@@ -5,12 +5,14 @@ import (
 	detail "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/controller"
 	home "github.com/gofurry/gofurry-nav-backend/apps/nav/home/controller"
 	summary "github.com/gofurry/gofurry-nav-backend/apps/nav/summary/controller"
+	updates "github.com/gofurry/gofurry-nav-backend/apps/nav/updates/controller"
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
 )
 
 func navV2Api(g fiber.Router, cfg env.NavV2Config) {
 	g.Get("/home", home.HomeApi.GetHome)
 	g.Get("/home/ping", home.HomeApi.GetHomePing)
+	g.Get("/updates", updates.UpdatesApi.GetUpdates)
 	if cfg.DetailRoutesEnabled() {
 		g.Get("/sites/:siteId/detail", detail.DetailApi.GetSiteDetail)
 		g.Post("/sites/:siteId/view", detail.DetailApi.TouchSiteView)
