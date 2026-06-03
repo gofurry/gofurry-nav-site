@@ -1,9 +1,19 @@
 import type {
   Group,
+  NavHomePingResponse,
+  NavHomeResponse,
   SayingModel,
   Site,
   changelogResp
 } from '~/types/nav'
+
+export function getNavHome(lang: string): Promise<NavHomeResponse> {
+  return useApi('navV2')('/nav/home', { query: { lang } })
+}
+
+export function getNavHomePing(): Promise<NavHomePingResponse> {
+  return useApi('navV2')('/nav/home/ping')
+}
 
 export function getSites(lang: string): Promise<Site[]> {
   return useApi('nav')('/nav/page/site/list', { query: { lang } })

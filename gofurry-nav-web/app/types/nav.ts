@@ -310,6 +310,31 @@ export interface SayingModel {
     content: string;
 }
 
+export interface NavHomeBackgrounds {
+    desktop: string;
+    mobile: string;
+}
+
+export interface NavHomeResponse {
+    schema_version: number;
+    generated_at: string;
+    cache_state: Record<string, string>;
+    reason_messages?: Record<string, string>;
+    sites: Site[];
+    groups: Group[];
+    ping: Record<string, string>;
+    saying: SayingModel | null;
+    backgrounds: NavHomeBackgrounds;
+}
+
+export interface NavHomePingResponse {
+    schema_version: number;
+    generated_at: string;
+    state: string;
+    reason_messages?: string[];
+    ping: Record<string, string>;
+}
+
 export interface changelogResp {
     title: string;
     url: string;
