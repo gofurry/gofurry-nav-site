@@ -335,9 +335,21 @@ export interface NavHomePingResponse {
     ping: Record<string, string>;
 }
 
-export interface changelogResp {
+export type NavUpdatesState = 'ready' | 'empty' | 'error';
+
+export interface NavUpdateNotice {
+    id: number;
     title: string;
-    url: string;
+    body: string;
+    published_at: string;
     create_time: string;
     update_time: string;
+}
+
+export interface NavUpdatesResponse {
+    schema_version: number;
+    generated_at: string;
+    state: NavUpdatesState;
+    reason_messages?: string[];
+    items: NavUpdateNotice[];
 }

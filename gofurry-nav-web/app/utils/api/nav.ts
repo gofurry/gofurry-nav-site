@@ -1,5 +1,5 @@
 import { createRequest } from '@/utils/request'
-import type {Site, Group, SayingModel, changelogResp} from '@/types/nav'
+import type {Site, Group, SayingModel} from '@/types/nav'
 
 // 响应拦截器
 const navRequest = createRequest(import.meta.env.VITE_NAV_API_BASE_URL)
@@ -50,6 +50,3 @@ export function getImageUrl(type: string): Promise<string> {
     return navRequest.get('/nav/page/header/image/url', { params: { type } })
 }
 
-export function getChangeLog(): Promise<changelogResp[]> {
-    return navRequest.get('/nav/site/changelog')
-}

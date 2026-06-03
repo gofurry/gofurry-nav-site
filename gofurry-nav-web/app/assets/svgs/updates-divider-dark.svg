@@ -1,0 +1,73 @@
+<svg width="88" height="20" viewBox="0 0 88 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .divider-path {
+      stroke: rgba(191, 245, 255, 0.92);
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-dasharray: 10 8 18 64;
+      animation: divider-flow 4.4s linear infinite;
+      filter: drop-shadow(0 0 5px rgba(124, 240, 255, 0.18));
+    }
+
+    .divider-dot {
+      fill: rgba(222, 251, 255, 0.98);
+      transform-origin: center;
+    }
+
+    .divider-dot-a {
+      animation: divider-pulse 2.6s ease-in-out infinite;
+    }
+
+    .divider-dot-b {
+      fill: rgba(141, 238, 250, 0.78);
+      animation: divider-drift 3s ease-in-out infinite;
+    }
+
+    @keyframes divider-flow {
+      0% {
+        stroke-dashoffset: 100;
+        opacity: 0.76;
+      }
+      50% {
+        opacity: 1;
+      }
+      100% {
+        stroke-dashoffset: 0;
+        opacity: 0.76;
+      }
+    }
+
+    @keyframes divider-pulse {
+      0%, 100% {
+        transform: scale(0.92);
+        opacity: 0.72;
+      }
+      50% {
+        transform: scale(1.18);
+        opacity: 1;
+      }
+    }
+
+    @keyframes divider-drift {
+      0%, 100% {
+        transform: translateY(0);
+        opacity: 0.42;
+      }
+      50% {
+        transform: translateY(-1.5px);
+        opacity: 0.92;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .divider-path,
+      .divider-dot-a,
+      .divider-dot-b {
+        animation: none;
+      }
+    }
+  </style>
+  <path class="divider-path" d="M4 10H32C37 10 39.5 4 44 4C48.5 4 51 10 56 10H84" pathLength="100"/>
+  <circle class="divider-dot divider-dot-a" cx="44" cy="4" r="1.8"/>
+  <circle class="divider-dot divider-dot-b" cx="44" cy="16" r="1.2"/>
+</svg>

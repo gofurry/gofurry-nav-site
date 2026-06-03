@@ -2,9 +2,9 @@ import type {
   Group,
   NavHomePingResponse,
   NavHomeResponse,
+  NavUpdatesResponse,
   SayingModel,
-  Site,
-  changelogResp
+  Site
 } from '~/types/nav'
 
 export function getNavHome(lang: string): Promise<NavHomeResponse> {
@@ -43,6 +43,6 @@ export function getImageUrl(type: string): Promise<string> {
   return useApi('nav')('/nav/page/header/image/url', { query: { type } })
 }
 
-export function getChangeLog(): Promise<changelogResp[]> {
-  return useApi('nav')('/nav/site/changelog')
+export function getNavUpdates(lang: 'zh' | 'en'): Promise<NavUpdatesResponse> {
+  return useApi('navV2')('/nav/updates', { query: { lang } })
 }
