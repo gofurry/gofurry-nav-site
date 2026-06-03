@@ -58,42 +58,6 @@ func TestRunNowCreatesAndSkipsAndUpdatesDocuments(t *testing.T) {
 	}
 }
 
-func TestRunNowRecordsChangelogRun(t *testing.T) {
-	repo := newFakeRepo()
-	client := &fakeSyncClient{
-		changelogs: []ChangeLog{{Title: "v1", URL: "https://example.com/changelog/v1.md", CreateTime: "2026-05-01", UpdateTime: "2026-05-02"}},
-		markdown: map[string]string{
-			"https://example.com/changelog/v1.md": "# hello",
-		},
-	}
-	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, repo, client, client)
-	if err := manager.RunNow(context.Background(), SourceSiteChangelog, TriggerManual); err != nil {
-		t.Fatal(err)
-	}
-	runs, err := manager.Status(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(runs.Sources) != 5 {
-		t.Fatalf("sources = %+v", runs.Sources)
-	}
-	var found bool
-	for _, item := range runs.Sources {
-		if item.Source == SourceSiteChangelog {
-			found = true
-			if item.CurrentDocumentCount != 1 {
-				t.Fatalf("current document count = %d", item.CurrentDocumentCount)
-			}
-			if item.LastRun == nil || item.LastRun.Status != "success" || item.LastRun.AddedCount != 1 || item.LastRun.SourceTotalCount != 1 {
-				t.Fatalf("last run = %+v", item.LastRun)
-			}
-		}
-	}
-	if !found {
-		t.Fatal("site changelog source missing")
-	}
-}
-
 func TestTriggerRejectsConcurrentRun(t *testing.T) {
 	repo := newFakeRepo()
 	client := &fakeSyncClient{
@@ -116,7 +80,7 @@ func TestTriggerRejectsConcurrentRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	time.Sleep(50 * time.Millisecond)
-	err := manager.Trigger(context.Background(), SourceSiteChangelog, TriggerManual)
+	err := manager.Trigger(context.Background(), SourceGameDetails, TriggerManual)
 	if err == nil {
 		t.Fatal("expected conflict error")
 	}
@@ -125,6 +89,19 @@ func TestTriggerRejectsConcurrentRun(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 	close(client.block)
+}
+
+func TestRunNowRejectsRemovedChangelogSource(t *testing.T) {
+	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, newFakeRepo(), &fakeSyncClient{}, &fakeSyncClient{})
+
+	err := manager.RunNow(context.Background(), "site_changelog", TriggerManual)
+	if err == nil {
+		t.Fatal("expected unsupported source error")
+	}
+	var syncErr interface{ HTTPStatus() int }
+	if !errors.As(err, &syncErr) || syncErr.HTTPStatus() != 400 {
+		t.Fatalf("err = %v", err)
+	}
 }
 
 func TestRunNowSyncsGameSources(t *testing.T) {
@@ -324,8 +301,6 @@ type fakeSyncClient struct {
 	groups       map[string][]NavGroup
 	details      map[string]NavSiteDetail
 	httpRecords  map[string]NavHTTPRecord
-	changelogs   []ChangeLog
-	markdown     map[string]string
 	gameLists    map[string][]GameSummary
 	gameDetails  map[string]GameDetail
 	gameNews     map[string][]GameNews
@@ -350,14 +325,6 @@ func (f *fakeSyncClient) GetSiteDetail(ctx context.Context, id, locale string) (
 
 func (f *fakeSyncClient) GetSiteHTTP(ctx context.Context, domain string) (NavHTTPRecord, error) {
 	return f.httpRecords[domain], nil
-}
-
-func (f *fakeSyncClient) ListChangelogs(ctx context.Context) ([]ChangeLog, error) {
-	return append([]ChangeLog(nil), f.changelogs...), nil
-}
-
-func (f *fakeSyncClient) FetchMarkdown(ctx context.Context, rawURL string) (string, error) {
-	return f.markdown[rawURL], nil
 }
 
 func (f *fakeSyncClient) ListGames(ctx context.Context, locale string) ([]GameSummary, error) {

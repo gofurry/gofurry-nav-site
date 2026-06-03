@@ -354,7 +354,7 @@
                       <span>同步调度</span>
                     </div>
                     <p class="mt-2 text-sm leading-6 text-slate-500">
-                      服务内定时同步站点导航、更新日志、游戏详情、游戏新闻和创作者资料。控制台可以查看最近一次结果，也可以手动触发。
+                      服务内定时同步站点导航、游戏详情、游戏新闻和创作者资料。控制台可以查看最近一次结果，也可以手动触发。
                     </p>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
@@ -645,7 +645,6 @@ type MenuKey = 'overview' | 'documents' | 'sync' | 'ai' | 'search'
 type DocumentTab = 'ingest' | 'list' | 'chunks'
 type SyncSourceKey =
   | 'nav_sites'
-  | 'site_changelog'
   | 'game_details'
   | 'game_news'
   | 'game_creators'
@@ -843,12 +842,6 @@ const syncSourceMeta: Record<
     label: '导航站点',
     badge: 'NAV',
     description: '按中英双语拉取导航站点、分组、详情与可选页面描述，适合回答站点是什么、属于什么分类。',
-    service: 'gofurry-nav-backend',
-  },
-  site_changelog: {
-    label: '更新日志',
-    badge: 'LOG',
-    description: '从站点 changelog 列表抓取 markdown 原文，适合回答 gofurry 最近做了什么、何时更新。',
     service: 'gofurry-nav-backend',
   },
   game_details: {

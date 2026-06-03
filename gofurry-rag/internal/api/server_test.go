@@ -728,7 +728,6 @@ func TestSyncStatusReturnsSources(t *testing.T) {
 		IntervalMinutes: 60,
 		Sources: []contentsync.SourceStatus{
 			{Source: contentsync.SourceNavSites, Service: "gofurry-nav-backend"},
-			{Source: contentsync.SourceSiteChangelog, Service: "gofurry-nav-backend"},
 			{Source: contentsync.SourceGameDetails, Service: "gofurry-game-backend"},
 			{Source: contentsync.SourceGameNews, Service: "gofurry-game-backend"},
 			{Source: contentsync.SourceGameCreators, Service: "gofurry-game-backend"},
@@ -750,7 +749,7 @@ func TestSyncStatusReturnsSources(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		t.Fatal(err)
 	}
-	if result.Code != 1 || len(result.Data.Sources) != 5 {
+	if result.Code != 1 || len(result.Data.Sources) != 4 {
 		t.Fatalf("result = %+v", result)
 	}
 }

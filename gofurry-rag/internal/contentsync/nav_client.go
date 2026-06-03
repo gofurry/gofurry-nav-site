@@ -11,9 +11,8 @@ import (
 )
 
 type HTTPNavClient struct {
-	baseURL              string
-	client               *http.Client
-	allowedMarkdownHosts map[string]struct{}
+	baseURL string
+	client  *http.Client
 }
 
 type apiEnvelope[T any] struct {
@@ -55,22 +54,14 @@ type NavHTTPRecord struct {
 	} `json:"meta"`
 }
 
-type ChangeLog struct {
-	Title      string `json:"title"`
-	URL        string `json:"url"`
-	CreateTime string `json:"create_time"`
-	UpdateTime string `json:"update_time"`
-}
-
-func NewHTTPNavClient(baseURL string, timeout time.Duration, allowedMarkdownHosts []string) *HTTPNavClient {
+func NewHTTPNavClient(baseURL string, timeout time.Duration) *HTTPNavClient {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}
 	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	return &HTTPNavClient{
-		baseURL:              baseURL,
-		client:               &http.Client{Timeout: timeout},
-		allowedMarkdownHosts: buildAllowedMarkdownHosts(baseURL, allowedMarkdownHosts),
+		baseURL: baseURL,
+		client:  &http.Client{Timeout: timeout},
 	}
 }
 
@@ -100,47 +91,6 @@ func (c *HTTPNavClient) GetSiteHTTP(ctx context.Context, domain string) (NavHTTP
 	var data NavHTTPRecord
 	err := c.fetchJSON(ctx, "/nav/site/getSiteHttpRecord", map[string]string{"domain": domain}, &data)
 	return data, err
-}
-
-func (c *HTTPNavClient) ListChangelogs(ctx context.Context) ([]ChangeLog, error) {
-	var data []ChangeLog
-	if err := c.fetchJSON(ctx, "/site/changelog", nil, &data); err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
-func (c *HTTPNavClient) FetchMarkdown(ctx context.Context, rawURL string) (string, error) {
-	target, err := url.Parse(strings.TrimSpace(rawURL))
-	if err != nil {
-		return "", err
-	}
-	if target.Scheme != "http" && target.Scheme != "https" {
-		return "", fmt.Errorf("unsupported markdown url scheme %q", target.Scheme)
-	}
-	host := strings.ToLower(target.Host)
-	if _, ok := c.allowedMarkdownHosts[host]; !ok {
-		return "", fmt.Errorf("markdown url host %q is not allowed", host)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target.String(), nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Accept", "text/markdown,text/plain;q=0.9,*/*;q=0.8")
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("unexpected status %d", resp.StatusCode)
-	}
-	body, err := readLimitedString(resp.Body, maxMarkdownBytes)
-	if err != nil {
-		return "", err
-	}
-	return body, nil
 }
 
 func (c *HTTPNavClient) fetchJSON(ctx context.Context, endpoint string, query map[string]string, target any) error {
@@ -190,26 +140,4 @@ func (c *HTTPNavClient) fetchJSON(ctx context.Context, endpoint string, query ma
 		envelope.Data = []byte("null")
 	}
 	return json.Unmarshal(envelope.Data, target)
-}
-
-func buildAllowedMarkdownHosts(baseURL string, configured []string) map[string]struct{} {
-	result := map[string]struct{}{
-		"raw.githubusercontent.com": {},
-	}
-	if parsed, err := url.Parse(strings.TrimSpace(baseURL)); err == nil && parsed.Host != "" {
-		result[strings.ToLower(parsed.Host)] = struct{}{}
-	}
-	for _, host := range configured {
-		host = strings.ToLower(strings.TrimSpace(host))
-		host = strings.TrimPrefix(host, "http://")
-		host = strings.TrimPrefix(host, "https://")
-		host = strings.TrimRight(host, "/")
-		if idx := strings.IndexByte(host, '/'); idx >= 0 {
-			host = host[:idx]
-		}
-		if host != "" {
-			result[host] = struct{}{}
-		}
-	}
-	return result
 }

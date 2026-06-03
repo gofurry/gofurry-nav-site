@@ -141,4 +141,3 @@ rag:
   sync_timeout_seconds: 30
   sync_nav_base_url: "http://127.0.0.1:9999/api/v1"
   sync_game_base_url: "http://127.0.0.1:9998/api/v1"
-  sync_allowed_markdown_hosts: ["raw.githubusercontent.com"]

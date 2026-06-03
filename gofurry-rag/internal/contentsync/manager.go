@@ -16,14 +16,13 @@ import (
 )
 
 const (
-	SourceAll           = "all"
-	SourceNavSites      = "nav_sites"
-	SourceSiteChangelog = "site_changelog"
-	SourceGameDetails   = "game_details"
-	SourceGameNews      = "game_news"
-	SourceGameCreators  = "game_creators"
-	TriggerManual       = "manual"
-	TriggerAuto         = "auto"
+	SourceAll          = "all"
+	SourceNavSites     = "nav_sites"
+	SourceGameDetails  = "game_details"
+	SourceGameNews     = "game_news"
+	SourceGameCreators = "game_creators"
+	TriggerManual      = "manual"
+	TriggerAuto        = "auto"
 )
 
 type Repository interface {
@@ -39,8 +38,6 @@ type NavClient interface {
 	ListGroups(ctx context.Context, locale string) ([]NavGroup, error)
 	GetSiteDetail(ctx context.Context, id, locale string) (NavSiteDetail, error)
 	GetSiteHTTP(ctx context.Context, domain string) (NavHTTPRecord, error)
-	ListChangelogs(ctx context.Context) ([]ChangeLog, error)
-	FetchMarkdown(ctx context.Context, rawURL string) (string, error)
 }
 
 type GameClient interface {
@@ -92,7 +89,7 @@ func (e syncError) HTTPStatus() int { return e.status }
 
 func NewManager(cfg config.Config, repo Repository, navClient NavClient, gameClient GameClient) *Manager {
 	if navClient == nil {
-		navClient = NewHTTPNavClient(cfg.SyncNavBaseURL, time.Duration(cfg.SyncTimeoutSeconds)*time.Second, cfg.SyncAllowedMarkdownHosts)
+		navClient = NewHTTPNavClient(cfg.SyncNavBaseURL, time.Duration(cfg.SyncTimeoutSeconds)*time.Second)
 	}
 	if gameClient == nil {
 		gameClient = NewHTTPGameClient(cfg.SyncGameBaseURL, time.Duration(cfg.SyncTimeoutSeconds)*time.Second)
@@ -301,7 +298,6 @@ type sourceDefinition struct {
 func sourceDefinitions() []sourceDefinition {
 	return []sourceDefinition{
 		{Source: SourceNavSites, Service: "gofurry-nav-backend", DocumentSource: "nav_site"},
-		{Source: SourceSiteChangelog, Service: "gofurry-nav-backend", DocumentSource: "site_changelog"},
 		{Source: SourceGameDetails, Service: "gofurry-game-backend", DocumentSource: "game_detail"},
 		{Source: SourceGameNews, Service: "gofurry-game-backend", DocumentSource: "game_news"},
 		{Source: SourceGameCreators, Service: "gofurry-game-backend", DocumentSource: "game_creator"},
@@ -312,8 +308,6 @@ func sourceRunner(source string) (func(context.Context, *Manager) (syncCounts, e
 	switch source {
 	case SourceNavSites:
 		return runNavSitesSync, true
-	case SourceSiteChangelog:
-		return runChangeLogSync, true
 	case SourceGameDetails:
 		return runGameDetailsSync, true
 	case SourceGameNews:
@@ -343,10 +337,10 @@ func normalizeSource(source string) (string, error) {
 		source = SourceAll
 	}
 	switch source {
-	case SourceAll, SourceNavSites, SourceSiteChangelog, SourceGameDetails, SourceGameNews, SourceGameCreators:
+	case SourceAll, SourceNavSites, SourceGameDetails, SourceGameNews, SourceGameCreators:
 		return source, nil
 	default:
-		return "", syncError{status: 400, message: "source must be one of nav_sites, site_changelog, game_details, game_news, game_creators, all"}
+		return "", syncError{status: 400, message: "source must be one of nav_sites, game_details, game_news, game_creators, all"}
 	}
 }
 
@@ -405,46 +399,6 @@ func runNavSitesSync(ctx context.Context, m *Manager) (syncCounts, error) {
 			}
 			applySyncAction(&counts, result.Action)
 		}
-	}
-	return counts, errors.Join(errs...)
-}
-
-func runChangeLogSync(ctx context.Context, m *Manager) (syncCounts, error) {
-	var counts syncCounts
-	list, err := m.navClient.ListChangelogs(ctx)
-	if err != nil {
-		return counts, err
-	}
-	var errs []error
-	for _, item := range list {
-		counts.Total++
-		text, err := m.navClient.FetchMarkdown(ctx, item.URL)
-		if err != nil {
-			counts.Failed++
-			errs = append(errs, fmt.Errorf("load changelog %s: %w", item.URL, err))
-			continue
-		}
-		metadata, content, checksum, err := buildChangeLogPayload(item, text)
-		if err != nil {
-			counts.Failed++
-			errs = append(errs, fmt.Errorf("build changelog payload %s: %w", item.URL, err))
-			continue
-		}
-		result, err := m.repo.UpsertSyncedDocument(ctx, db.SyncDocumentParams{
-			Title:      strings.TrimSpace(item.Title),
-			Content:    content,
-			SourceType: "site_changelog",
-			SourceID:   "site-changelog:" + strings.TrimSpace(item.URL),
-			URL:        strings.TrimSpace(item.URL),
-			Checksum:   checksum,
-			Metadata:   metadata,
-		})
-		if err != nil {
-			counts.Failed++
-			errs = append(errs, fmt.Errorf("upsert changelog %s: %w", item.URL, err))
-			continue
-		}
-		applySyncAction(&counts, result.Action)
 	}
 	return counts, errors.Join(errs...)
 }
@@ -519,21 +473,6 @@ func buildNavSitePayload(site NavSite, detail NavSiteDetail, groups []navGroupRe
 	return metadata, content, title, targetURL, checksum, nil
 }
 
-func buildChangeLogPayload(item ChangeLog, markdown string) (json.RawMessage, string, string, error) {
-	metadata, err := json.Marshal(map[string]any{
-		"category":     "changelog",
-		"language":     "multi",
-		"path":         "/updates",
-		"published_at": strings.TrimSpace(item.CreateTime),
-		"updated_at":   strings.TrimSpace(item.UpdateTime),
-	})
-	if err != nil {
-		return nil, "", "", err
-	}
-	content := renderChangeLogContent(item, markdown)
-	return metadata, content, syncChecksum(strings.TrimSpace(item.Title), strings.TrimSpace(item.URL), content, metadata), nil
-}
-
 func renderNavSiteContent(site NavSite, detail NavSiteDetail, groups []navGroupRef, httpRecord NavHTTPRecord, targetURL, locale string) string {
 	groupNames := make([]string, 0, len(groups))
 	for _, group := range groups {
@@ -573,22 +512,6 @@ func renderNavSiteContent(site NavSite, detail NavSiteDetail, groups []navGroupR
 	writeSection(&builder, "页面标题", pageTitle)
 	writeSection(&builder, "页面描述", pageDescription)
 	writeSection(&builder, "访问链接", targetURL)
-	return strings.TrimSpace(builder.String())
-}
-
-func renderChangeLogContent(item ChangeLog, markdown string) string {
-	var builder strings.Builder
-	writeSection(&builder, "标题", item.Title)
-	writeSection(&builder, "创建时间", item.CreateTime)
-	writeSection(&builder, "更新时间", item.UpdateTime)
-	writeSection(&builder, "原始链接", item.URL)
-	body := strings.TrimSpace(markdown)
-	if body != "" {
-		if builder.Len() > 0 {
-			builder.WriteString("\n\n")
-		}
-		builder.WriteString(body)
-	}
 	return strings.TrimSpace(builder.String())
 }
 
