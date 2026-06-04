@@ -107,7 +107,8 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
-import { getBaiduSuggestion, getBingSuggestion, getGoogleSuggestion, getBiliBiliSuggestion } from '@/utils/api/nav'
+import { getSearchSuggestion } from '@/services/nav'
+import type { NavSearchSuggestionEngine } from '@/types/nav'
 import { useI18n } from 'vue-i18n'
 import { useLangStore } from '@/store/langStore'
 import { setNavPageRevealLock } from '@/utils/navPageReveal'
@@ -194,9 +195,13 @@ const platforms = computed<Record<string, Platform[]>>(() => ({
 }))
 
 const selectedPlatform = ref<Platform>({ name: '', type: 'site' })
+let timer: number | null = null
+let suggestionAbortController: AbortController | null = null
+let suggestionRequestId = 0
 
 // 重置默认选中逻辑
 const resetSelection = () => {
+  abortSuggestionRequest()
   initDefaultCategory()
   const defaultPlatform = platforms.value[selectedCategory.value]?.[0]
   selectedPlatform.value = defaultPlatform || { name: '', type: 'site' }
@@ -209,8 +214,7 @@ watch([categories, selectedCategory, platforms], () => {
   resetSelection()
 }, { immediate: true })
 
-let timer: number | null = null
-const debounce = (fn: Function, delay = 300) => (...args: any[]) => {
+const debounce = (fn: Function, delay = 600) => (...args: any[]) => {
   if (timer) clearTimeout(timer)
   timer = window.setTimeout(() => fn(...args), delay)
 }
@@ -232,7 +236,9 @@ const highlightKeyword = (item: string) => {
 
 const fetchSuggestions = async () => {
   const searchLabel = t('searchBox.platformCate.search')
-  if (!keyword.value.trim() || selectedCategory.value !== searchLabel) {
+  const requestKeyword = keyword.value.trim()
+  if (!requestKeyword || selectedCategory.value !== searchLabel || !isSuggestionEngine(selectedPlatform.value.type)) {
+    abortSuggestionRequest()
     suggestions.value = []
     dropdownVisible.value = false
     isLoading.value = false
@@ -241,26 +247,30 @@ const fetchSuggestions = async () => {
 
   dropdownVisible.value = true
   isLoading.value = true
+  abortSuggestionRequest()
+  const controller = new AbortController()
+  const requestId = ++suggestionRequestId
+  suggestionAbortController = controller
 
   try {
-    let data: string[] = []
-    switch (selectedPlatform.value.type) {
-      case 'baidu': data = await getBaiduSuggestion(keyword.value); break
-      case 'bing': data = await getBingSuggestion(keyword.value); break
-      case 'google': data = await getGoogleSuggestion(keyword.value); break
-      case 'bilibili': data = await getBiliBiliSuggestion(keyword.value); break
-      default: data = []
-    }
-    suggestions.value = data
-    if (data.length > 0 && hoveredIndex.value === -1) hoveredIndex.value = 0
+    const response = await getSearchSuggestion(selectedPlatform.value.type, requestKeyword, controller.signal)
+    if (requestId !== suggestionRequestId) return
+    suggestions.value = response.suggestions
+    if (response.suggestions.length > 0 && hoveredIndex.value === -1) hoveredIndex.value = 0
   } catch {
+    if (controller.signal.aborted || requestId !== suggestionRequestId) return
     suggestions.value = []
   } finally {
-    isLoading.value = false
+    if (requestId === suggestionRequestId) {
+      isLoading.value = false
+    }
+    if (suggestionAbortController === controller) {
+      suggestionAbortController = null
+    }
   }
 }
 
-const debouncedFetch = debounce(fetchSuggestions, 300)
+const debouncedFetch = debounce(fetchSuggestions, 600)
 
 const doSearch = () => {
   const kw = encodeURIComponent(keyword.value.trim())
@@ -368,9 +378,20 @@ const handleClickOutside = (e: MouseEvent) => {
 }
 
 const closeSearchSuggestions = () => {
+  abortSuggestionRequest()
   dropdownVisible.value = false
   hoveredIndex.value = -1
   isInputFocused.value = false
+}
+
+function isSuggestionEngine(type: Platform['type']): type is NavSearchSuggestionEngine {
+  return type === 'baidu' || type === 'bing' || type === 'google' || type === 'bilibili'
+}
+
+function abortSuggestionRequest() {
+  suggestionRequestId++
+  suggestionAbortController?.abort()
+  suggestionAbortController = null
 }
 
 watch(
@@ -388,6 +409,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (timer) clearTimeout(timer)
+  abortSuggestionRequest()
   document.removeEventListener('click', handleClickOutside)
   setNavPageRevealLock('search-box', false)
 })

@@ -24,23 +24,6 @@ export function addCount() {
     navRequest.get(`/nav/stat/add/count`)
 }
 
-// 搜索建议
-export function getBaiduSuggestion(keyword: string): Promise<string[]> {
-    return navRequest.get('/nav/page/search/baidu', { params: { q: keyword } })
-}
-
-export function getBingSuggestion(keyword: string): Promise<string[]> {
-    return navRequest.get('/nav/page/search/bing', { params: { q: keyword } })
-}
-
-export function getGoogleSuggestion(keyword: string): Promise<string[]> {
-    return navRequest.get('/nav/page/search/google', { params: { q: keyword } })
-}
-
-export function getBiliBiliSuggestion(keyword: string): Promise<string[]> {
-    return navRequest.get('/nav/page/search/bilibili', { params: { q: keyword } })
-}
-
 // 随机金句
 export function getSaying(): Promise<SayingModel> {
     return navRequest.get('/nav/page/header/getSaying')

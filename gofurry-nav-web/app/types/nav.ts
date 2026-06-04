@@ -353,3 +353,17 @@ export interface NavUpdatesResponse {
     reason_messages?: string[];
     items: NavUpdateNotice[];
 }
+
+export type NavSearchSuggestionEngine = 'baidu' | 'bing' | 'google' | 'bilibili';
+export type NavSearchSuggestionsState = 'ready' | 'empty' | 'error';
+
+export interface NavSearchSuggestionsResponse {
+    schema_version: number;
+    generated_at: string;
+    state: NavSearchSuggestionsState;
+    engine: NavSearchSuggestionEngine | '';
+    query: string;
+    suggestions: string[];
+    cache_state: 'hit' | 'miss';
+    reason_messages?: string[];
+}

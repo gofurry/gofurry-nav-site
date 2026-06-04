@@ -2,6 +2,8 @@ import type {
   Group,
   NavHomePingResponse,
   NavHomeResponse,
+  NavSearchSuggestionEngine,
+  NavSearchSuggestionsResponse,
   NavUpdatesResponse,
   SayingModel,
   Site
@@ -31,8 +33,12 @@ export function addCount(): Promise<unknown> {
   return useApi('nav')('/nav/stat/add/count')
 }
 
-export function getSearchSuggestion(engine: 'baidu' | 'bing' | 'google' | 'bilibili', keyword: string): Promise<string[]> {
-  return useApi('nav')(`/nav/page/search/${engine}`, { query: { q: keyword } })
+export function getSearchSuggestion(
+  engine: NavSearchSuggestionEngine,
+  keyword: string,
+  signal?: AbortSignal
+): Promise<NavSearchSuggestionsResponse> {
+  return useApi('navV2')('/nav/search/suggestions', { query: { engine, q: keyword }, signal })
 }
 
 export function getSaying(): Promise<SayingModel> {
