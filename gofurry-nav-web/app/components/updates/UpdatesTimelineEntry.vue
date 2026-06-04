@@ -249,12 +249,12 @@ const fullDateLabel = computed(() => (
     display: flex;
     align-items: baseline;
     gap: 10px;
-    padding-left: 0;
+    padding-left: 8px;
     padding-right: 0;
   }
 
   .entry-copy {
-    padding-left: 0;
+    padding-left: 8px;
     padding-right: 0;
   }
 
