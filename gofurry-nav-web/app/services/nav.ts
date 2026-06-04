@@ -1,12 +1,10 @@
 import type {
-  Group,
   NavHomePingResponse,
   NavHomeResponse,
   NavSearchSuggestionEngine,
   NavSearchSuggestionsResponse,
   NavUpdatesResponse,
   SayingModel,
-  Site
 } from '~/types/nav'
 
 export function getNavHome(lang: string): Promise<NavHomeResponse> {
@@ -15,22 +13,6 @@ export function getNavHome(lang: string): Promise<NavHomeResponse> {
 
 export function getNavHomePing(): Promise<NavHomePingResponse> {
   return useApi('navV2')('/nav/home/ping')
-}
-
-export function getSites(lang: string): Promise<Site[]> {
-  return useApi('nav')('/nav/page/site/list', { query: { lang } })
-}
-
-export function getGroups(lang: string): Promise<Group[]> {
-  return useApi('nav')('/nav/page/group/list', { query: { lang } })
-}
-
-export function getPing(): Promise<Record<string, string>> {
-  return useApi('nav')('/nav/page/ping/list')
-}
-
-export function addCount(): Promise<unknown> {
-  return useApi('nav')('/nav/stat/add/count')
 }
 
 export function getSearchSuggestion(

@@ -117,7 +117,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SearchBox from './SearchBox.vue'
 import NavQuickAccess from './NavQuickAccess.vue'
-import { getImageUrl } from '@/utils/api/nav'
+import { getImageUrl } from '~/services/nav'
 import { loadRecentSites, RECENT_SITES_EVENT, type RecentSiteItem } from '@/utils/recentSites'
 import {
   addCustomSite,

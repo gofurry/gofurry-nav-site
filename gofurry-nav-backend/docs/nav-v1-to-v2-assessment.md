@@ -295,7 +295,7 @@ GET /api/v2/nav/search/suggestions?engine=bing&q=keyword
 
 ## 阶段 5：前端请求封装统一
 
-状态：未开始
+状态：已完成
 
 ### 目标
 
@@ -309,17 +309,24 @@ GET /api/v2/nav/search/suggestions?engine=bing&q=keyword
 
 ### 任务
 
-- [ ] 将 `NavHeader.vue` 背景图 fallback 改走 `services/nav.ts`。
+- [x] 将 `NavHeader.vue` 背景图 fallback 改走 `services/nav.ts`。
 - [x] 将 `SearchBox.vue` 搜索建议改走 `services/nav.ts`。
-- [ ] 检查 `utils/api/nav.ts` 是否还有真实调用。
-- [ ] 删除无调用的旧封装，或明确标记 legacy。
-- [ ] 保证客户端和 SSR 的 baseURL 都来自 Nuxt runtime config。
+- [x] 保留 `NavTransitionBar.vue` 的金句 fallback 在 `services/nav.ts`。
+- [x] 检查 `utils/api/nav.ts` 已无真实调用。
+- [x] 删除无调用的旧 nav axios 封装。
+- [x] 移除 `services/nav.ts` 中已无调用的 legacy 包装函数。
+- [x] 保证客户端和 SSR 的 baseURL 都来自 Nuxt runtime config。
 
 ### 完成标准
 
-- nav 业务请求只保留一个主封装。
-- `rg "utils/api/nav"` 不再出现新前端业务依赖。
-- v1/v2 baseURL 配置路径清晰。
+- [x] nav 业务请求只保留一个主封装。
+- [x] `rg "utils/api/nav"` 不再出现前端业务依赖。
+- [x] v1/v2 baseURL 配置路径清晰。
+
+验证记录：
+
+- `gofurry-nav-web`：`npm run typecheck` 通过。
+- `gofurry-nav-web`：`npm run build` 通过，仅有既有 Tailwind sourcemap、chunk size、Nitro external dependency、Node deprecation 类 warning。
 
 ## 阶段 6：v1 兼容与清理
 
