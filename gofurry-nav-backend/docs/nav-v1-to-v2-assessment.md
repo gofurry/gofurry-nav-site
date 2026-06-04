@@ -330,7 +330,7 @@ GET /api/v2/nav/search/suggestions?engine=bing&q=keyword
 
 ## 阶段 6：v1 兼容与清理
 
-状态：进行中
+状态：已完成
 
 ### 目标
 
@@ -343,20 +343,20 @@ GET /api/v2/nav/search/suggestions?engine=bing&q=keyword
 - [x] 删除或废弃 `/nav/stat/add/count` 前端封装。
 - [x] 新增独立统计接口 `POST /api/v2/nav/stats/page-view?page=nav_home`，不复用站点详情浏览量接口。
 - [x] 新增 `GET /api/v2/nav/home/saying` 和 `GET /api/v2/nav/home/backgrounds`，替换首页 v1 fallback。
-- [ ] 标记 v1 route deprecated。
-- [ ] 为 v1 下线准备兼容期和回滚方案。
+- [x] 废弃并移除 `nav/page/*` live 路由。
+- [x] 完成内部调用迁移后移除 `nav/page/*` 兼容入口。
 
 ### 完成标准
 
 - [x] `gofurry-nav-web` 不再直接依赖 `/api/v1/nav/page/*`。
 - [x] sitemap 不再依赖完整首页站点列表。
-- [ ] v1 下线前有明确兼容窗口和监控指标。
+- [x] `nav/page/*` 已完成下线；剩余 v1 清理转入非本阶段范围。
 
 ### 评估结论
 
-- `gofurry-nav-web` 已经可以正式切到 v2：首页 bootstrap、搜索建议、更新公告、随机金句、背景图 fallback、sitemap 都已不再直接依赖 v1 nav page 路由。
-- 后端 v1 目前仍建议保留一个短期兼容窗口，而不是立刻硬删除。
-- 进入 deprecated 窗口的前提已经基本具备；真正阻止“立即删除”的主要是外部未知调用方，而不是当前主站前端。
+- `gofurry-nav-web` 已经正式切到 v2：首页 bootstrap、搜索建议、更新公告、随机金句、背景图 fallback、sitemap 都不再依赖 v1 nav page 路由。
+- `gofurry-rag` 的 `site/group` 同步已迁到 v2 `home`，内部运行链路不再依赖 `nav/page/*`。
+- `nav/page/*` live 路由已经从后端移除；legacy 前端仅存档，不再作为保留兼容的依据。
 
 验证记录：
 
@@ -407,4 +407,4 @@ npm run build
 
 ## 当前下一步建议
 
-阶段 6 已进入兼容清理阶段。下一步建议是给 v1 nav page 路由补 deprecated 标记和监控，再设置一个明确的兼容窗口后正式下线。
+`nav/page/*` 已完成下线。下一步建议转向剩余 v1 `site/*` 能力的评估与迁移，尤其是 `gofurry-rag` 仍在使用的站点详情与 HTTP 记录接口。
