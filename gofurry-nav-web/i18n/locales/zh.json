@@ -120,6 +120,8 @@
     },
     "links": {
       "sitemapXml": "站点地图 XML",
+      "llmsTxt": "LLMs.txt",
+      "securityTxt": "Security.txt",
       "api": "API",
       "opsAdmin": "运维后台",
       "bilibili": "哔哩哔哩",

@@ -120,6 +120,8 @@
     },
     "links": {
       "sitemapXml": "Sitemap XML",
+      "llmsTxt": "LLMs.txt",
+      "securityTxt": "Security.txt",
       "api": "API",
       "opsAdmin": "Ops Admin",
       "bilibili": "Bilibili",
