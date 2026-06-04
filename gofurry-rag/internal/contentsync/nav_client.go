@@ -54,6 +54,11 @@ type NavHTTPRecord struct {
 	} `json:"meta"`
 }
 
+type navHomePayload struct {
+	Sites  []NavSite  `json:"sites"`
+	Groups []NavGroup `json:"groups"`
+}
+
 func NewHTTPNavClient(baseURL string, timeout time.Duration) *HTTPNavClient {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
@@ -66,24 +71,24 @@ func NewHTTPNavClient(baseURL string, timeout time.Duration) *HTTPNavClient {
 }
 
 func (c *HTTPNavClient) ListSites(ctx context.Context, locale string) ([]NavSite, error) {
-	var data []NavSite
-	if err := c.fetchJSON(ctx, "/nav/page/site/list", map[string]string{"lang": locale}, &data); err != nil {
+	data, err := c.fetchHome(ctx, locale)
+	if err != nil {
 		return nil, err
 	}
-	return data, nil
+	return data.Sites, nil
 }
 
 func (c *HTTPNavClient) ListGroups(ctx context.Context, locale string) ([]NavGroup, error) {
-	var data []NavGroup
-	if err := c.fetchJSON(ctx, "/nav/page/group/list", map[string]string{"lang": locale}, &data); err != nil {
+	data, err := c.fetchHome(ctx, locale)
+	if err != nil {
 		return nil, err
 	}
-	return data, nil
+	return data.Groups, nil
 }
 
 func (c *HTTPNavClient) GetSiteDetail(ctx context.Context, id, locale string) (NavSiteDetail, error) {
 	var data NavSiteDetail
-	err := c.fetchJSON(ctx, "/nav/site/getSiteDetail", map[string]string{"id": id, "lang": locale}, &data)
+	err := c.fetchJSON(ctx, "/nav/site/getSiteDetail", map[string]string{"id": id, "lang": normalizeNavLocale(locale)}, &data)
 	return data, err
 }
 
@@ -93,14 +98,25 @@ func (c *HTTPNavClient) GetSiteHTTP(ctx context.Context, domain string) (NavHTTP
 	return data, err
 }
 
+func (c *HTTPNavClient) fetchHome(ctx context.Context, locale string) (navHomePayload, error) {
+	var data navHomePayload
+	err := c.fetchJSONWithBase(ctx, c.versionedBaseURL("v2"), "/nav/home", map[string]string{"lang": normalizeNavLocale(locale)}, &data)
+	return data, err
+}
+
 func (c *HTTPNavClient) fetchJSON(ctx context.Context, endpoint string, query map[string]string, target any) error {
+	return c.fetchJSONWithBase(ctx, c.baseURL, endpoint, query, target)
+}
+
+func (c *HTTPNavClient) fetchJSONWithBase(ctx context.Context, baseURL string, endpoint string, query map[string]string, target any) error {
 	if c == nil || c.client == nil {
 		return fmt.Errorf("nav client is not configured")
 	}
-	if c.baseURL == "" {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" {
 		return fmt.Errorf("rag.sync_nav_base_url is not configured")
 	}
-	fullURL := c.baseURL + endpoint
+	fullURL := baseURL + endpoint
 	if len(query) > 0 {
 		values := url.Values{}
 		for key, value := range query {
@@ -140,4 +156,24 @@ func (c *HTTPNavClient) fetchJSON(ctx context.Context, endpoint string, query ma
 		envelope.Data = []byte("null")
 	}
 	return json.Unmarshal(envelope.Data, target)
+}
+
+func (c *HTTPNavClient) versionedBaseURL(version string) string {
+	base := strings.TrimRight(strings.TrimSpace(c.baseURL), "/")
+	switch {
+	case strings.Contains(base, "/api/v1"):
+		return strings.Replace(base, "/api/v1", "/api/"+version, 1)
+	case strings.Contains(base, "/api/v2"):
+		return strings.Replace(base, "/api/v2", "/api/"+version, 1)
+	default:
+		return base + "/api/" + version
+	}
+}
+
+func normalizeNavLocale(locale string) string {
+	locale = strings.ToLower(strings.TrimSpace(locale))
+	if strings.HasPrefix(locale, "en") {
+		return "en"
+	}
+	return "zh"
 }
