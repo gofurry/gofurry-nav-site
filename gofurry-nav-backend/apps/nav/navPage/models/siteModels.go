@@ -30,6 +30,12 @@ type GfnSite struct {
 	Deleted    bool         `gorm:"column:deleted;type:boolean;comment:deleted" json:"deleted"`
 }
 
+type GfnSiteIndex struct {
+	ID         int64        `gorm:"column:id;type:bigint;primaryKey" json:"id"`
+	Domain     string       `gorm:"column:domain" json:"domain"`
+	UpdateTime cm.LocalTime `gorm:"column:update_time;type:int;type:unsigned;not null" json:"update_time"`
+}
+
 const TableNameGfnSiteGroup = "gfn_site_group"
 
 func (*GfnSiteGroup) TableName() string {

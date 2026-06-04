@@ -335,6 +335,28 @@ export interface NavHomePingResponse {
     ping: Record<string, string>;
 }
 
+export interface NavHomeSayingResponse {
+    schema_version: number;
+    generated_at: string;
+    state: string;
+    reason_messages?: string[];
+    saying: SayingModel | null;
+}
+
+export interface NavSiteIndexItem {
+    id: number;
+    domains: string[];
+    updated_at: string | null;
+}
+
+export interface NavSiteIndexResponse {
+    schema_version: number;
+    generated_at: string;
+    state: string;
+    reason_messages?: string[];
+    items: NavSiteIndexItem[];
+}
+
 export type NavUpdatesState = 'ready' | 'empty' | 'error';
 
 export interface NavUpdateNotice {

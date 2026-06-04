@@ -59,6 +59,32 @@ func (dao *navPageDao) GetSiteList() (res []models.GfnSite, err common.GFError) 
 	return
 }
 
+func (dao *navPageDao) GetSiteIndexList() (res []models.GfnSiteIndex, err common.GFError) {
+	db := dao.Gm.Table(models.TableNameGfnSite + " AS s").
+		Select(`
+			s.id,
+			json_build_object('domain', COALESCE(cd.domains, ARRAY[]::text[]))::text AS domain,
+			s.update_time
+		`).
+		Joins(`
+			LEFT JOIN LATERAL (
+				SELECT array_agg(TRIM(COALESCE(prefix, '') || name) ORDER BY id ASC) AS domains
+				FROM ` + models.TableNameGfnCollectorDomain + `
+				WHERE site_id = s.id
+					AND site_id > 0
+					AND deleted IS NOT TRUE
+					AND TRIM(COALESCE(prefix, '') || name) <> ''
+			) cd ON TRUE
+		`).
+		Where("s.deleted IS NOT TRUE")
+	db.Order("s.id ASC")
+	db.Find(&res)
+	if dbErr := db.Error; dbErr != nil {
+		return res, common.NewDaoError(dbErr.Error())
+	}
+	return
+}
+
 func (dao *navPageDao) GetGroupList() (res []models.GfnSiteGroup, err common.GFError) {
 	db := dao.Gm.Table(models.TableNameGfnSiteGroup)
 	db.Order("priority ASC")

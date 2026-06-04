@@ -36,7 +36,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getSaying } from '~/services/nav'
+import { getNavHomeSaying } from '~/services/nav'
 import type { SayingModel } from '~/types/nav'
 
 const props = defineProps<{
@@ -77,7 +77,8 @@ onMounted(async () => {
   timeTimer = window.setInterval(updateTime, 60 * 1000)
 
   if (!saying.value) {
-    saying.value = await getSaying()
+    const response = await getNavHomeSaying()
+    saying.value = response.saying
   }
 })
 

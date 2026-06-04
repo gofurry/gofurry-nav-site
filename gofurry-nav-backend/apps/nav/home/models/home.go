@@ -37,3 +37,19 @@ type HomePingResponse struct {
 	ReasonMessages []string          `json:"reason_messages,omitempty"`
 	Ping           map[string]string `json:"ping"`
 }
+
+type HomeSayingResponse struct {
+	SchemaVersion  int                    `json:"schema_version"`
+	GeneratedAt    time.Time              `json:"generated_at"`
+	State          string                 `json:"state"`
+	ReasonMessages []string               `json:"reason_messages,omitempty"`
+	Saying         *navmodels.SayingModel `json:"saying"`
+}
+
+type HomeBackgroundsResponse struct {
+	SchemaVersion  int             `json:"schema_version"`
+	GeneratedAt    time.Time       `json:"generated_at"`
+	State          string          `json:"state"`
+	ReasonMessages []string        `json:"reason_messages,omitempty"`
+	Backgrounds    HomeBackgrounds `json:"backgrounds"`
+}

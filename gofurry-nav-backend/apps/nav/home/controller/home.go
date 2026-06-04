@@ -23,3 +23,13 @@ func (api homeApi) GetHomePing(c fiber.Ctx) error {
 	data := service.GetHomeService().GetHomePing()
 	return common.NewResponse(c).SuccessWithData(data)
 }
+
+func (api homeApi) GetHomeSaying(c fiber.Ctx) error {
+	data := service.GetHomeService().GetHomeSaying()
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
+func (api homeApi) GetHomeBackgrounds(c fiber.Ctx) error {
+	data := service.GetHomeService().GetHomeBackgrounds()
+	return common.NewResponse(c).SuccessWithData(data)
+}

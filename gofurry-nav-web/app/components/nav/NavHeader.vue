@@ -117,7 +117,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SearchBox from './SearchBox.vue'
 import NavQuickAccess from './NavQuickAccess.vue'
-import { getImageUrl } from '~/services/nav'
+import { getNavHomeBackgrounds } from '~/services/nav'
 import { loadRecentSites, RECENT_SITES_EVENT, type RecentSiteItem } from '@/utils/recentSites'
 import {
   addCustomSite,
@@ -304,10 +304,9 @@ onMounted(async () => {
     }
 
     if (!props.desktopBgUrl && !props.mobileBgUrl) {
-      const [resizedUrl, normalUrl] = await Promise.all([
-        getImageUrl('standard'),
-        getImageUrl('mobile'),
-      ])
+      const backgrounds = await getNavHomeBackgrounds()
+      const resizedUrl = backgrounds.desktop
+      const normalUrl = backgrounds.mobile
 
       fallbackBackgroundUpdater = () => {
         bgImage.value = window.innerWidth >= 768 ? resizedUrl : normalUrl

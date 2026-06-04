@@ -4,8 +4,8 @@ type ApiResult<T> = {
 }
 
 type SiteRecord = {
-  id: string
-  domain: string
+  id: number | string
+  domains: string[]
 }
 
 type GameRecord = {
@@ -32,24 +32,11 @@ function urlEntry(loc: string) {
   return `<url><loc>${escapeXml(loc)}</loc></url>`
 }
 
-function firstDomain(rawDomain: string) {
-  if (!rawDomain) {
+function firstDomain(domains: string[] | undefined) {
+  if (!domains?.length) {
     return ''
   }
-
-  try {
-    const parsed = JSON.parse(rawDomain)
-    if (Array.isArray(parsed?.domain) && typeof parsed.domain[0] === 'string') {
-      return parsed.domain[0]
-    }
-    if (Array.isArray(parsed) && typeof parsed[0] === 'string') {
-      return parsed[0]
-    }
-  } catch {
-    return rawDomain
-  }
-
-  return rawDomain
+  return domains[0] ?? ''
 }
 
 export default defineEventHandler(async (event) => {
@@ -66,9 +53,7 @@ export default defineEventHandler(async (event) => {
   ])
 
   const [sites, games] = await Promise.all([
-    $fetch<ApiResult<SiteRecord[]>>('/api/v1/nav/page/site/list', {
-      query: { lang: 'zh' }
-    }).then((res) => res.code === 1 ? res.data : []).catch(() => []),
+    $fetch<ApiResult<{ items: SiteRecord[] }>>('/api/v2/nav/sites/index').then((res) => res.code === 1 ? res.data.items : []).catch(() => []),
     $fetch<ApiResult<GameListPayload>>('/api/v1/game/info/list', {
       query: { num: '9999', lang: 'zh' }
     }).then((res) => res.code === 1 ? res.data : []).catch(() => [])
@@ -76,7 +61,7 @@ export default defineEventHandler(async (event) => {
 
   for (const site of sites) {
     if (site?.id != null) {
-      const domain = firstDomain(site.domain)
+      const domain = firstDomain(site.domains)
       urls.add(domain
         ? `/site/${encodeURIComponent(String(site.id))}/${encodeURIComponent(domain)}`
         : `/site/${encodeURIComponent(String(site.id))}`)

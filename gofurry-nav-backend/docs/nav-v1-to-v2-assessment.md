@@ -330,7 +330,7 @@ GET /api/v2/nav/search/suggestions?engine=bing&q=keyword
 
 ## 阶段 6：v1 兼容与清理
 
-状态：未开始
+状态：进行中
 
 ### 目标
 
@@ -338,18 +338,30 @@ GET /api/v2/nav/search/suggestions?engine=bing&q=keyword
 
 ### 任务
 
-- [ ] 新增轻量站点索引接口供 sitemap 使用。
-- [ ] `server/routes/sitemap.xml.ts` 改用 v2 站点索引接口。
-- [ ] 删除或废弃 `/nav/stat/add/count` 前端封装。
-- [ ] 如需要全站 PV，重新设计独立统计接口，不复用站点详情浏览量接口。
+- [x] 新增轻量站点索引接口供 sitemap 使用。
+- [x] `server/routes/sitemap.xml.ts` 改用 v2 站点索引接口。
+- [x] 删除或废弃 `/nav/stat/add/count` 前端封装。
+- [x] 新增独立统计接口 `POST /api/v2/nav/stats/page-view?page=nav_home`，不复用站点详情浏览量接口。
+- [x] 新增 `GET /api/v2/nav/home/saying` 和 `GET /api/v2/nav/home/backgrounds`，替换首页 v1 fallback。
 - [ ] 标记 v1 route deprecated。
 - [ ] 为 v1 下线准备兼容期和回滚方案。
 
 ### 完成标准
 
-- `gofurry-nav-web` 不再直接依赖 `/api/v1/nav/page/*`。
-- sitemap 不再依赖完整首页站点列表。
-- v1 下线前有明确兼容窗口和监控指标。
+- [x] `gofurry-nav-web` 不再直接依赖 `/api/v1/nav/page/*`。
+- [x] sitemap 不再依赖完整首页站点列表。
+- [ ] v1 下线前有明确兼容窗口和监控指标。
+
+### 评估结论
+
+- `gofurry-nav-web` 已经可以正式切到 v2：首页 bootstrap、搜索建议、更新公告、随机金句、背景图 fallback、sitemap 都已不再直接依赖 v1 nav page 路由。
+- 后端 v1 目前仍建议保留一个短期兼容窗口，而不是立刻硬删除。
+- 进入 deprecated 窗口的前提已经基本具备；真正阻止“立即删除”的主要是外部未知调用方，而不是当前主站前端。
+
+验证记录：
+
+- `gofurry-nav-backend`：`go test ./...` 通过。
+- `gofurry-nav-web`：`npm run typecheck`、`npm run build` 通过。
 
 ## 推荐接口拆分
 
@@ -358,9 +370,12 @@ GET /api/v2/nav/search/suggestions?engine=bing&q=keyword
 ```txt
 GET /api/v2/nav/home?lang=zh
 GET /api/v2/nav/home/ping
+GET /api/v2/nav/home/saying
+GET /api/v2/nav/home/backgrounds
 GET /api/v2/nav/sites/index?lang=zh
 GET /api/v2/nav/search/suggestions?engine=&q=
 GET /api/v2/nav/updates?lang=zh
+POST /api/v2/nav/stats/page-view?page=nav_home
 ```
 
 其中 `sites/index` 可服务 sitemap，只返回 `id`、`domains`、`updated_at` 等生成 URL 所需字段。
@@ -392,4 +407,4 @@ npm run build
 
 ## 当前下一步建议
 
-阶段 4 已完成。下一步建议进入阶段 5：继续收敛 `services/nav.ts` 与旧 axios 封装，优先处理 `NavHeader.vue` 的背景图 fallback 和剩余 legacy nav 请求。
+阶段 6 已进入兼容清理阶段。下一步建议是给 v1 nav page 路由补 deprecated 标记和监控，再设置一个明确的兼容窗口后正式下线。

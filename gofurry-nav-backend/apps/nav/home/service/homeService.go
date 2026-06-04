@@ -124,6 +124,41 @@ func (svc *homeService) GetHomePing() models.HomePingResponse {
 	return response
 }
 
+func (svc *homeService) GetHomeSaying() models.HomeSayingResponse {
+	response := models.HomeSayingResponse{
+		SchemaVersion: models.HomeSchemaVersion,
+		GeneratedAt:   svc.clock()(),
+		State:         models.HomeStateMissing,
+	}
+
+	saying, err := svc.reader().GetSayingService()
+	if err != nil {
+		response.ReasonMessages = []string{err.GetMsg()}
+		return response
+	}
+	response.State = models.HomeStateReady
+	response.Saying = &saying
+	return response
+}
+
+func (svc *homeService) GetHomeBackgrounds() models.HomeBackgroundsResponse {
+	response := models.HomeBackgroundsResponse{
+		SchemaVersion: models.HomeSchemaVersion,
+		GeneratedAt:   svc.clock()(),
+		State:         models.HomeStateMissing,
+		Backgrounds: models.HomeBackgrounds{
+			Desktop: svc.reader().GetImageUrl("standard"),
+			Mobile:  svc.reader().GetImageUrl("mobile"),
+		},
+	}
+	if response.Backgrounds.Desktop == "" && response.Backgrounds.Mobile == "" {
+		response.ReasonMessages = []string{"背景图不可用"}
+		return response
+	}
+	response.State = models.HomeStateReady
+	return response
+}
+
 func (svc *homeService) reader() navHomeReader {
 	if svc != nil && svc.navPage != nil {
 		return svc.navPage
