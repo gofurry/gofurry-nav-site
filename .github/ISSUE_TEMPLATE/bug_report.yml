@@ -1,0 +1,82 @@
+name: Bug report
+description: Report a reproducible bug in gofurry-nav-site.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please do not include real API keys, access tokens, refresh tokens, cookies, proxy passwords, DSNs, JWTs, or raw URLs containing credentials.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Minimal steps, command, request, page path, or test case that reproduces the issue.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "release version, image tag, or commit SHA"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "local / staging / production, OS, browser, Go or Node version"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - gofurry-nav-backend
+        - gofurry-nav-web
+        - gofurry-admin
+        - gofurry-rag
+        - collector / scheduler / sync
+        - SQL / schema / migration
+        - deployment / configuration
+        - documentation / CI
+        - unsure
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or errors
+      description: Redact secrets before pasting logs, headers, cookies, tokens, DSNs, or URLs.
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed or redacted API keys, access tokens, refresh tokens, cookies, proxy passwords, DSNs, JWTs, and credential-bearing URLs.
+          required: true

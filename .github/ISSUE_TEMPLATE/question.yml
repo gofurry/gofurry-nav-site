@@ -1,0 +1,47 @@
+name: Question
+description: Ask a usage, design, migration, or deployment question.
+title: "question: "
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not paste real credentials, cookies, proxy passwords, DSNs, JWTs, or raw URLs containing secrets.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Include sanitized code snippets, page paths, API paths, config fragments, SQL, or links to relevant docs.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - gofurry-nav-backend
+        - gofurry-nav-web
+        - gofurry-admin
+        - gofurry-rag
+        - search / suggestions / proxy
+        - SQL / schema / migration
+        - deployment / configuration
+        - documentation
+        - other
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed or redacted API keys, access tokens, refresh tokens, cookies, proxy passwords, DSNs, JWTs, and credential-bearing URLs.
+          required: true
