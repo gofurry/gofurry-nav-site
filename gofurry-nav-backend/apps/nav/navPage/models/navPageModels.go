@@ -19,14 +19,15 @@ func (*GfnSaying) TableName() string {
 }
 
 type SiteVo struct {
-	ID      string  `form:"id" json:"id"`
-	Name    string  `form:"name" json:"name"`
-	Domain  string  `form:"domain" json:"domain"`
-	Info    string  `form:"info" json:"info"`
-	Country *string `form:"country" json:"country"`
-	Nsfw    string  `form:"nsfw" json:"nsfw"`
-	Welfare string  `form:"welfare" json:"welfare"`
-	Icon    *string `form:"icon" json:"icon"`
+	ID         string  `form:"id" json:"id"`
+	Name       string  `form:"name" json:"name"`
+	Domain     string  `form:"domain" json:"domain"`
+	Info       string  `form:"info" json:"info"`
+	Country    *string `form:"country" json:"country"`
+	Nsfw       string  `form:"nsfw" json:"nsfw"`
+	Welfare    string  `form:"welfare" json:"welfare"`
+	Icon       *string `form:"icon" json:"icon"`
+	UpdateTime string  `form:"update_time" json:"update_time"`
 }
 
 type GroupVo struct {

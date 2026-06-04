@@ -37,6 +37,9 @@ func TestGetHomeAggregatesNavPageData(t *testing.T) {
 	if len(response.Sites) != 1 || len(response.Groups) != 1 || len(response.Ping) != 1 {
 		t.Fatalf("home data was not aggregated: %#v", response)
 	}
+	if len(response.Groups[0].Sites) != 1 || response.Groups[0].Sites[0].ID != "1" {
+		t.Fatalf("group sites were not expanded: %#v", response.Groups)
+	}
 	if response.Saying == nil || response.Saying.Content != "hello" {
 		t.Fatalf("missing saying: %#v", response.Saying)
 	}
@@ -86,6 +89,25 @@ func TestGetHomePingReportsMissingState(t *testing.T) {
 	}
 	if len(response.Ping) != 0 || len(response.ReasonMessages) != 1 {
 		t.Fatalf("unexpected ping response: %#v", response)
+	}
+}
+
+func TestBuildHomeGroupsPreservesGroupSiteOrder(t *testing.T) {
+	sites := []navmodels.SiteVo{
+		{ID: "1", Name: "A"},
+		{ID: "2", Name: "B"},
+		{ID: "3", Name: "C"},
+	}
+	groups := []navmodels.GroupVo{
+		{ID: "10", Name: "Forums", Priority: 1, Sites: []string{"3", "1", "2", "404"}},
+	}
+
+	result := buildHomeGroups(sites, groups)
+	if len(result) != 1 {
+		t.Fatalf("group count = %d", len(result))
+	}
+	if got := []string{result[0].Sites[0].ID, result[0].Sites[1].ID, result[0].Sites[2].ID}; got[0] != "3" || got[1] != "1" || got[2] != "2" {
+		t.Fatalf("unexpected expanded site order: %#v", result[0].Sites)
 	}
 }
 

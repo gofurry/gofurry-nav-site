@@ -97,6 +97,7 @@ func (dao *navPageDao) GetGroupList() (res []models.GfnSiteGroup, err common.GFE
 
 func (dao *navPageDao) GetGroupMapList() (res []models.GfnSiteGroupMap, err common.GFError) {
 	db := dao.Gm.Table(models.TableNameGfnSiteGroupMap)
+	db.Order("group_id ASC, id ASC, site_id ASC")
 	db.Find(&res)
 	if dbErr := db.Error; dbErr != nil {
 		return res, common.NewDaoError(dbErr.Error())

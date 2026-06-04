@@ -1,6 +1,6 @@
 <template>
   <div class="relative min-h-screen overflow-hidden p-6">
-    <div v-if="loading" class="py-8 text-center text-gray-500">
+    <div v-if="loading" class="py-8 text-center text-gray-500 dark:text-slate-300">
       {{ t('common.loading') }}...
     </div>
 
@@ -16,7 +16,7 @@
         @mouseenter="(event) => onGroupMouseEnter(event, group)"
         @mouseleave="scheduleGroupHide"
       >
-        <h2 class="text-xl font-semibold transition-colors hover:text-amber-600">
+        <h2 class="text-xl font-semibold text-stone-900 transition-colors hover:text-amber-600 dark:text-slate-100 dark:hover:text-sky-300">
           {{ group.name }}
         </h2>
       </div>
@@ -26,8 +26,8 @@
           v-for="site in displaySites(group)"
           :key="`${group.id}-${site.id}`"
           ref="siteRefs"
-          class="flex cursor-pointer gap-3 rounded-xl bg-orange-50 p-4 transition-shadow duration-200"
-          @click="goDomain(domainsMap[site.id] || [], site)"
+          class="flex cursor-pointer gap-3 rounded-xl border border-orange-100/70 bg-orange-50/94 p-4 transition-shadow duration-200 dark:border-white/8 dark:bg-[rgba(18,30,48,0.82)] dark:shadow-[0_10px_24px_rgba(2,6,23,0.18)]"
+          @click="goDomain(domainList(site), site)"
           @mouseenter="(event) => onSiteMouseEnter(event, site)"
           @mouseleave="scheduleSiteHide"
         >
@@ -42,12 +42,12 @@
 
           <div class="flex flex-1 flex-col overflow-hidden">
             <div class="flex items-center gap-1">
-              <h3 class="truncate text-base font-medium">
+              <h3 class="truncate text-base font-medium text-stone-900 dark:text-slate-100">
                 {{ site.name }}
               </h3>
             </div>
 
-            <p class="mt-1 truncate text-xs text-gray-500">
+            <p class="mt-1 truncate text-xs text-gray-500 dark:text-slate-400">
               {{ site.info }}
             </p>
           </div>
@@ -56,7 +56,7 @@
 
       <div v-if="filteredSites(group).length > 30" class="my-4 flex justify-center">
         <button
-          class="rounded-sm bg-orange-100 px-6 text-sm text-orange-700 transition hover:bg-orange-200"
+          class="rounded-sm bg-orange-100 px-6 text-sm text-orange-700 transition hover:bg-orange-200 dark:bg-[rgba(30,41,59,0.82)] dark:text-slate-100 dark:hover:bg-[rgba(51,65,85,0.92)]"
           @click="toggleGroup(group.id)"
         >
           {{ expandedGroups[group.id] ? t('common.collapse') : t('common.expand') }}
@@ -104,14 +104,12 @@ import SitePopover from './SitePopover.vue'
 
 const props = defineProps<{
   initialGroups?: Group[]
-  initialSites?: Site[]
   initialPingData?: Record<string, Delay>
 }>()
 
 const { t } = useI18n()
 
 const groups = ref<Group[]>(props.initialGroups ?? [])
-const sites = ref<Site[]>(props.initialSites ?? [])
 const pingData = ref<Record<string, Delay>>(props.initialPingData ?? {})
 const loading = ref(false)
 const expandedGroups = ref<Record<string, boolean>>({})
@@ -126,34 +124,6 @@ const defaultLogo = 'defaultLogo.svg'
 
 const displayMode = ref<DisplayMode>(readDisplayMode())
 let stopModeSubscription: (() => void) | null = null
-
-const siteById = computed(() => {
-  const map = new Map<string, Site>()
-  sites.value.forEach((site) => {
-    map.set(site.id, site)
-  })
-  return map
-})
-
-const domainsMap = computed(() => {
-  const map: Record<string, string[]> = {}
-
-  sites.value.forEach((site) => {
-    if (Array.isArray(site.domain)) {
-      map[site.id] = site.domain
-      return
-    }
-
-    try {
-      const domainObject = JSON.parse(site.domain)
-      map[site.id] = Array.isArray(domainObject?.domain) ? domainObject.domain : []
-    } catch {
-      map[site.id] = site.domain ? [site.domain] : []
-    }
-  })
-
-  return map
-})
 
 function parsePingData(data: Record<string, string | undefined>) {
   const result: Record<string, Delay> = {}
@@ -185,7 +155,6 @@ async function loadData() {
     const home = await getNavHome(lang)
 
     groups.value = home.groups.sort((a, b) => Number(a.priority) - Number(b.priority))
-    sites.value = home.sites
     parsePingData(home.ping)
   } catch (error) {
     console.error('Failed to load nav content:', error)
@@ -195,9 +164,7 @@ async function loadData() {
 }
 
 function filteredSites(group: Group) {
-  return group.sites
-    .map(siteId => siteById.value.get(siteId))
-    .filter((site): site is Site => !!site && isSiteVisible(site))
+  return group.sites.filter((site): site is Site => !!site && isSiteVisible(site))
 }
 
 function displaySites(group: Group) {
@@ -221,12 +188,39 @@ function joinAssetUrl(prefix: string, path: string) {
   return `${prefix.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
+function withAssetVersion(url: string, version?: string | null) {
+  const normalizedVersion = (version || '').trim()
+  if (!normalizedVersion) {
+    return url
+  }
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}v=${encodeURIComponent(normalizedVersion)}`
+}
+
 function siteLogoSrc(site: Site) {
-  return joinAssetUrl(logoPrefix, site.icon || defaultLogo)
+  const iconPath = site.icon || defaultLogo
+  const assetURL = joinAssetUrl(logoPrefix, iconPath)
+  if (!site.icon) {
+    return assetURL
+  }
+  return withAssetVersion(assetURL, site.update_time)
 }
 
 function siteLogoKey(site: Site) {
-  return `${site.id}:${site.icon || defaultLogo}`
+  return `${site.id}:${site.icon || defaultLogo}:${site.update_time || ''}`
+}
+
+function domainList(site: Site) {
+  if (Array.isArray(site.domain)) {
+    return site.domain
+  }
+
+  try {
+    const domainObject = JSON.parse(site.domain)
+    return Array.isArray(domainObject?.domain) ? domainObject.domain : []
+  } catch {
+    return site.domain ? [site.domain] : []
+  }
 }
 
 function goDomain(domains: string[], site?: Site) {

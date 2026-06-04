@@ -53,7 +53,7 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 		CacheState:     map[string]string{},
 		ReasonMessages: map[string]string{},
 		Sites:          []navmodels.SiteVo{},
-		Groups:         []navmodels.GroupVo{},
+		Groups:         []models.HomeGroup{},
 		Ping:           map[string]string{},
 		Backgrounds:    models.HomeBackgrounds{},
 	}
@@ -71,7 +71,7 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 		response.ReasonMessages["groups"] = err.GetMsg()
 	} else {
 		response.CacheState["groups"] = models.HomeStateReady
-		response.Groups = groups
+		response.Groups = buildHomeGroups(response.Sites, groups)
 	}
 
 	if ping, err := svc.reader().GetPingList(); err != nil {
@@ -178,4 +178,31 @@ func normalizeLang(lang string) string {
 		return "en"
 	}
 	return "zh"
+}
+
+func buildHomeGroups(sites []navmodels.SiteVo, groups []navmodels.GroupVo) []models.HomeGroup {
+	siteMap := make(map[string]navmodels.SiteVo, len(sites))
+	for _, site := range sites {
+		siteMap[site.ID] = site
+	}
+
+	result := make([]models.HomeGroup, 0, len(groups))
+	for _, group := range groups {
+		items := make([]navmodels.SiteVo, 0, len(group.Sites))
+		for _, siteID := range group.Sites {
+			if site, ok := siteMap[siteID]; ok {
+				items = append(items, site)
+			}
+		}
+
+		result = append(result, models.HomeGroup{
+			ID:       group.ID,
+			Name:     group.Name,
+			Info:     group.Info,
+			Priority: group.Priority,
+			Sites:    items,
+		})
+	}
+
+	return result
 }

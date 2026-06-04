@@ -119,9 +119,9 @@
       "about": "About"
     },
     "links": {
-      "sitemapXml": "Sitemap XML",
-      "llmsTxt": "LLMs.txt",
-      "securityTxt": "Security.txt",
+      "sitemapXml": "Sitemap",
+      "llmsTxt": "LLMs",
+      "securityTxt": "Security",
       "api": "API",
       "opsAdmin": "Ops Admin",
       "bilibili": "Bilibili",

@@ -1,20 +1,17 @@
 <template>
   <div :class="pageClass" :style="pageVars">
-    <div class="pointer-events-none absolute inset-0 overflow-hidden">
-      <div class="absolute -left-24 top-8 h-72 w-72 rounded-full bg-[var(--about-orb-a)] blur-3xl"></div>
-      <div class="absolute right-[-8rem] top-24 h-96 w-96 rounded-full bg-[var(--about-orb-b)] blur-3xl"></div>
-      <div class="absolute bottom-16 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-[var(--about-orb-c)] blur-3xl"></div>
-    </div>
+    <GoFurryGridBackground />
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[var(--about-top-veil)]" />
 
     <main class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 md:gap-12 md:px-8 md:py-12">
       <section class="about-hero">
         <div class="relative grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.85fr)] lg:items-end">
           <div class="space-y-6">
             <div class="space-y-4">
-              <p class="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--about-accent)]">
+              <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--about-accent)]">
                 {{ hero.kicker }}
               </p>
-              <h1 class="max-w-4xl text-4xl font-semibold leading-tight md:text-6xl md:leading-[1.02]">
+              <h1 class="max-w-4xl text-4xl font-semibold leading-tight text-[var(--about-heading)] md:text-6xl md:leading-[1.02]">
                 {{ hero.title }}
               </h1>
               <p class="max-w-3xl text-sm leading-7 text-[var(--about-muted)] md:text-base">
@@ -26,7 +23,7 @@
               <span
                   v-for="tag in hero.tags"
                   :key="tag"
-                  class="rounded-lg border border-[var(--about-chip-border)] bg-[var(--about-chip-bg)] px-4 py-2 text-sm text-[var(--about-chip-text)]"
+                  class="rounded-full border border-[var(--about-chip-border)] bg-[var(--about-chip-bg)] px-4 py-2 text-sm text-[var(--about-chip-text)] shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
               >
                 {{ tag }}
               </span>
@@ -35,7 +32,7 @@
             <div class="flex flex-wrap gap-3">
               <NuxtLink
                   to="/"
-                  class="inline-flex items-center justify-center rounded-xl bg-[var(--about-action-bg)] px-5 py-3 text-sm font-semibold text-[var(--about-action-text)] transition hover:brightness-105"
+                  class="inline-flex items-center justify-center rounded-full bg-[var(--about-action-bg)] px-5 py-3 text-sm font-semibold text-[var(--about-action-text)] transition hover:brightness-105"
               >
                 {{ hero.primaryAction }}
               </NuxtLink>
@@ -43,14 +40,14 @@
                   href="https://github.com/gofurry/gofurry-nav-site"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="inline-flex items-center justify-center rounded-xl border border-[var(--about-button-border)] bg-[var(--about-button-bg)] px-5 py-3 text-sm font-semibold text-[var(--about-button-text)] transition hover:bg-[var(--about-button-hover)]"
+                  class="inline-flex items-center justify-center rounded-full border border-[var(--about-button-border)] bg-[var(--about-button-bg)] px-5 py-3 text-sm font-semibold text-[var(--about-button-text)] transition hover:bg-[var(--about-button-hover)]"
               >
                 {{ hero.secondaryAction }}
               </a>
             </div>
           </div>
 
-          <div class="grid gap-3">
+          <div class="grid gap-3 self-stretch">
             <article
                 v-for="item in overview"
                 :key="item.label"
@@ -73,7 +70,7 @@
             :key="feature.title"
             class="about-card group"
         >
-          <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--about-icon-bg)] shadow-sm">
+          <div class="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--about-icon-border)] bg-[var(--about-icon-bg)] shadow-sm">
             <img :src="feature.icon" :alt="feature.title" class="h-6 w-6 opacity-95" />
           </div>
           <h2 class="mt-5 text-xl font-semibold text-[var(--about-heading)]">
@@ -155,6 +152,7 @@
 import { computed, onMounted } from 'vue'
 import { i18n } from '@/main'
 import { useThemeStore } from '@/stores/theme'
+import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import compassIcon from '@/assets/svgs/compass.svg'
 import gamepadIcon from '@/assets/svgs/gamepad.svg'
 import apiIcon from '@/assets/svgs/api.svg'
@@ -169,58 +167,56 @@ onMounted(() => {
 })
 
 const pageClass = computed(() => [
-  'relative flex w-full flex-1 flex-col overflow-hidden transition-colors duration-500',
-  isDark.value ? 'bg-[#070a10] text-slate-100' : 'bg-[#f7efe2] text-slate-950'
+  'relative isolate flex w-full flex-1 flex-col overflow-hidden transition-colors duration-500',
+  isDark.value ? 'bg-[#08101b] text-slate-100' : 'bg-[#f6ebdc] text-slate-950'
 ])
 
 const pageVars = computed(() => isDark.value
   ? {
-      '--about-surface': 'rgba(12, 17, 27, 0.88)',
-      '--about-surface-strong': 'rgba(6, 9, 15, 0.92)',
-      '--about-border': 'rgba(148, 163, 184, 0.16)',
-      '--about-rule': 'rgba(148, 163, 184, 0.18)',
-      '--about-heading': 'rgb(248 250 252)',
-      '--about-muted': 'rgb(148 163 184)',
-      '--about-accent': 'rgb(251 191 36)',
-      '--about-accent-soft': 'rgb(253 230 138)',
-      '--about-chip-bg': 'rgba(255, 255, 255, 0.06)',
-      '--about-chip-border': 'rgba(255, 255, 255, 0.1)',
+      '--about-surface': 'rgba(9, 16, 27, 0.74)',
+      '--about-surface-strong': 'rgba(8, 13, 22, 0.84)',
+      '--about-border': 'rgba(123, 154, 189, 0.2)',
+      '--about-rule': 'rgba(123, 154, 189, 0.18)',
+      '--about-heading': 'rgb(239 246 255)',
+      '--about-muted': 'rgb(179 195 214)',
+      '--about-accent': 'rgb(142 214 255)',
+      '--about-accent-soft': 'rgb(176 227 255)',
+      '--about-chip-bg': 'rgba(255, 255, 255, 0.05)',
+      '--about-chip-border': 'rgba(148, 163, 184, 0.14)',
       '--about-chip-text': 'rgb(226 232 240)',
-      '--about-icon-bg': 'rgba(255, 255, 255, 0.08)',
-      '--about-avatar-ring': 'rgba(255, 255, 255, 0.12)',
+      '--about-icon-bg': 'rgba(255, 255, 255, 0.06)',
+      '--about-icon-border': 'rgba(148, 163, 184, 0.16)',
+      '--about-avatar-ring': 'rgba(148, 163, 184, 0.18)',
       '--about-action-bg': 'rgb(251 191 36)',
       '--about-action-text': 'rgb(15 23 42)',
-      '--about-button-bg': 'rgba(255, 255, 255, 0.06)',
-      '--about-button-border': 'rgba(255, 255, 255, 0.12)',
-      '--about-button-text': 'rgb(248 250 252)',
-      '--about-button-hover': 'rgba(255, 255, 255, 0.1)',
-      '--about-orb-a': 'rgba(251, 191, 36, 0.12)',
-      '--about-orb-b': 'rgba(56, 189, 248, 0.1)',
-      '--about-orb-c': 'rgba(99, 102, 241, 0.08)'
+      '--about-button-bg': 'rgba(255, 255, 255, 0.04)',
+      '--about-button-border': 'rgba(148, 163, 184, 0.14)',
+      '--about-button-text': 'rgb(239 246 255)',
+      '--about-button-hover': 'rgba(255, 255, 255, 0.09)',
+      '--about-top-veil': 'linear-gradient(180deg, rgba(7, 13, 23, 0.46), rgba(7, 13, 23, 0))'
     }
   : {
-      '--about-surface': 'rgba(255, 255, 255, 0.7)',
-      '--about-surface-strong': 'rgba(15, 23, 42, 0.94)',
-      '--about-border': 'rgba(194, 120, 3, 0.18)',
-      '--about-rule': 'rgba(194, 120, 3, 0.2)',
+      '--about-surface': 'rgba(255, 249, 241, 0.72)',
+      '--about-surface-strong': 'rgba(255, 252, 247, 0.88)',
+      '--about-border': 'rgba(168, 112, 46, 0.18)',
+      '--about-rule': 'rgba(168, 112, 46, 0.18)',
       '--about-heading': 'rgb(15 23 42)',
       '--about-muted': 'rgb(71 85 105)',
-      '--about-accent': 'rgb(217 119 6)',
+      '--about-accent': 'rgb(190 112 28)',
       '--about-accent-soft': 'rgb(180 83 9)',
-      '--about-chip-bg': 'rgba(255, 255, 255, 0.66)',
-      '--about-chip-border': 'rgba(251, 146, 60, 0.24)',
+      '--about-chip-bg': 'rgba(255, 255, 255, 0.58)',
+      '--about-chip-border': 'rgba(168, 112, 46, 0.18)',
       '--about-chip-text': 'rgb(51 65 85)',
-      '--about-icon-bg': 'rgba(15, 23, 42, 0.92)',
+      '--about-icon-bg': 'rgba(22, 34, 49, 0.94)',
+      '--about-icon-border': 'rgba(22, 34, 49, 0.12)',
       '--about-avatar-ring': 'rgba(15, 23, 42, 0.12)',
       '--about-action-bg': 'rgb(251 191 36)',
       '--about-action-text': 'rgb(15 23 42)',
-      '--about-button-bg': 'rgba(15, 23, 42, 0.04)',
-      '--about-button-border': 'rgba(15, 23, 42, 0.12)',
+      '--about-button-bg': 'rgba(255, 255, 255, 0.4)',
+      '--about-button-border': 'rgba(15, 23, 42, 0.09)',
       '--about-button-text': 'rgb(15 23 42)',
-      '--about-button-hover': 'rgba(15, 23, 42, 0.07)',
-      '--about-orb-a': 'rgba(251, 146, 60, 0.18)',
-      '--about-orb-b': 'rgba(251, 191, 36, 0.22)',
-      '--about-orb-c': 'rgba(56, 189, 248, 0.12)'
+      '--about-button-hover': 'rgba(255, 255, 255, 0.62)',
+      '--about-top-veil': 'linear-gradient(180deg, rgba(255, 248, 239, 0.54), rgba(255, 248, 239, 0))'
     }
 )
 
@@ -372,20 +368,20 @@ const contact = computed(() => (
 .about-compact {
   border: 1px solid var(--about-border);
   background: var(--about-surface);
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(18px);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(14px);
   transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease, transform 0.3s ease;
 }
 
 .about-hero {
-  border-radius: 18px;
+  border-radius: 24px;
   padding: clamp(1.5rem, 3vw, 3rem);
 }
 
 .about-card,
 .about-panel,
 .about-compact {
-  border-radius: 14px;
+  border-radius: 20px;
 }
 
 .about-card {
@@ -397,7 +393,7 @@ const contact = computed(() => (
 
 .about-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 26px 56px rgba(15, 23, 42, 0.14);
 }
 
 .about-panel {
@@ -405,7 +401,11 @@ const contact = computed(() => (
 }
 
 .about-compact {
-  padding: 1rem;
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.1rem 1.15rem;
 }
 
 .about-link {
@@ -422,5 +422,18 @@ const contact = computed(() => (
 
 .about-link:hover {
   background: var(--about-button-hover);
+}
+
+@media (max-width: 767px) {
+  .about-hero,
+  .about-card,
+  .about-panel,
+  .about-compact {
+    border-radius: 18px;
+  }
+
+  .about-hero {
+    padding: 1.4rem;
+  }
 }
 </style>

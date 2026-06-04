@@ -18,13 +18,21 @@ type HomeBackgrounds struct {
 	Mobile  string `json:"mobile"`
 }
 
+type HomeGroup struct {
+	ID       string             `json:"id"`
+	Name     string             `json:"name"`
+	Info     string             `json:"info"`
+	Priority int64              `json:"priority"`
+	Sites    []navmodels.SiteVo `json:"sites"`
+}
+
 type HomeResponse struct {
 	SchemaVersion  int                    `json:"schema_version"`
 	GeneratedAt    time.Time              `json:"generated_at"`
 	CacheState     map[string]string      `json:"cache_state"`
 	ReasonMessages map[string]string      `json:"reason_messages,omitempty"`
 	Sites          []navmodels.SiteVo     `json:"sites"`
-	Groups         []navmodels.GroupVo    `json:"groups"`
+	Groups         []HomeGroup            `json:"groups"`
 	Ping           map[string]string      `json:"ping"`
 	Saying         *navmodels.SayingModel `json:"saying"`
 	Backgrounds    HomeBackgrounds        `json:"backgrounds"`
