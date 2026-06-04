@@ -263,7 +263,7 @@ GET /api/v2/nav/search/suggestions?engine=bing&q=keyword
 
 ### 后端任务
 
-- [x] 定义 engine 白名单：`baidu`、`bing`、`google`、`bilibili`。
+- [x] 定义 engine 白名单：`baidu`、`bing`、`google`、`bilibili`、`duckduckgo`。
 - [x] 复用现有第三方解析逻辑。
 - [x] 为 `engine + normalized query` 加 Redis 短 TTL 缓存，当前 TTL 为 90 秒。
 - [x] 使用 `singleflight` 合并相同 engine/query 的并发请求。

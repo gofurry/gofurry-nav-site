@@ -138,6 +138,7 @@ const categories = computed(() => [
 ])
 
 const selectedCategory = ref('')
+type VisibleSuggestionEngine = Exclude<NavSearchSuggestionEngine, 'baidu'>
 
 // 初始化默认选中类别
 const initDefaultCategory = () => {
@@ -156,7 +157,7 @@ const isLoading = ref(false)
 
 interface Platform {
   name: string
-  type: 'baidu' | 'bing' | 'google' | 'bilibili' | 'site'
+  type: VisibleSuggestionEngine | 'site'
   url?: string
 }
 
@@ -165,7 +166,7 @@ const platforms = computed<Record<string, Platform[]>>(() => ({
   [t('searchBox.platformCate.search')]: [
     { name: t('searchBox.platformName.bing'), type: 'bing' },
     { name: t('searchBox.platformName.google'), type: 'google' },
-    { name: t('searchBox.platformName.baidu'), type: 'baidu' },
+    { name: t('searchBox.platformName.duckduckgo'), type: 'duckduckgo' },
     { name: t('searchBox.platformName.bilibili'), type: 'bilibili', url: 'https://search.bilibili.com/all?keyword={kw}' },
     { name: t('searchBox.platformName.xiaohongshu'), type: 'site', url: 'https://www.xiaohongshu.com/search_result?keyword={kw}' },
     { name: t('searchBox.platformName.zhihu'), type: 'site', url: 'https://www.zhihu.com/search?type=content&q={kw}' },
@@ -173,6 +174,8 @@ const platforms = computed<Record<string, Platform[]>>(() => ({
     { name: t('searchBox.platformName.twitter'), type: 'site', url: 'https://x.com/search?q={kw}&src=typed_query' },
   ],
   [t('searchBox.platformCate.furry')]: [
+    { name: t('searchBox.platformName.wikifur'), type: 'site', url: `https://${langStore.lang === 'zh' ? 'zh' : 'en'}.wikifur.com/wiki/{kw}` },
+    { name: t('searchBox.platformName.yiffParty'), type: 'site', url: 'https://yiff-party.com/search/?tags={kw}' },
     { name: t('searchBox.platformName.furaffinity'), type: 'site', url: 'https://www.furaffinity.net/search/?q={kw}' },
     { name: t('searchBox.platformName.e621'), type: 'site', url: 'https://e621.net/posts?tags={kw}' },
     { name: t('searchBox.platformName.wilddream'), type: 'site', url: 'https://www.wilddream.net/Art/index/index?keyword={kw}' },
@@ -191,6 +194,7 @@ const platforms = computed<Record<string, Platform[]>>(() => ({
   [t('searchBox.platformCate.games')]: [
     { name: t('searchBox.platformName.itchIo'), type: 'site', url: 'https://itch.io/search?q={kw}' },
     { name: t('searchBox.platformName.steam'), type: 'site', url: 'https://store.steampowered.com/search?term={kw}' },
+    { name: t('searchBox.platformName.epic'), type: 'site', url: 'https://store.epicgames.com/browse?q={kw}' },
   ],
 }))
 
@@ -292,9 +296,9 @@ const doSearch = () => {
 
   if (selectedCategory.value === searchLabel) {
     switch (selectedPlatform.value.type) {
-      case 'baidu': window.open(`https://www.baidu.com/s?wd=${kw}`, '_blank'); break
       case 'bing': window.open(`https://www.bing.com/search?q=${kw}`, '_blank'); break
       case 'google': window.open(`https://www.google.com/search?q=${kw}`, '_blank'); break
+      case 'duckduckgo': window.open(`https://duckduckgo.com/?q=${kw}`, '_blank'); break
       default:
         if (mapping[selectedPlatform.value.name])
           window.open(mapping[selectedPlatform.value.name], '_blank')
@@ -384,8 +388,8 @@ const closeSearchSuggestions = () => {
   isInputFocused.value = false
 }
 
-function isSuggestionEngine(type: Platform['type']): type is NavSearchSuggestionEngine {
-  return type === 'baidu' || type === 'bing' || type === 'google' || type === 'bilibili'
+function isSuggestionEngine(type: Platform['type']): type is VisibleSuggestionEngine {
+  return type === 'bing' || type === 'google' || type === 'bilibili' || type === 'duckduckgo'
 }
 
 function abortSuggestionRequest() {

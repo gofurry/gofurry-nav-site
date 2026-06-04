@@ -48,9 +48,26 @@ func TestSearchSuggestionsFetchesAndCachesSanitizedItems(t *testing.T) {
 	}
 }
 
+func TestSearchSuggestionsSupportsDuckDuckGoEngine(t *testing.T) {
+	cache := newMemorySuggestionCache()
+	provider := &fakeSuggestionProvider{items: []string{"furry", "furry suit"}}
+	svc := newSearchService(provider, cache, fixedSearchNow)
+
+	response := svc.GetSearchSuggestions("duckduckgo", "furry")
+	if response.State != "ready" {
+		t.Fatalf("state = %q", response.State)
+	}
+	if provider.lastEngine != "duckduckgo" {
+		t.Fatalf("provider engine = %q", provider.lastEngine)
+	}
+	if got := strings.Join(response.Suggestions, ","); got != "furry,furry suit" {
+		t.Fatalf("suggestions = %v", response.Suggestions)
+	}
+}
+
 func TestSearchSuggestionsRejectsUnsupportedEngine(t *testing.T) {
 	svc := newSearchService(&fakeSuggestionProvider{}, newMemorySuggestionCache(), fixedSearchNow)
-	response := svc.GetSearchSuggestions("duckduckgo", "furry")
+	response := svc.GetSearchSuggestions("yahoo", "furry")
 	if response.State != "error" {
 		t.Fatalf("state = %q", response.State)
 	}
@@ -116,6 +133,10 @@ func (provider *fakeSuggestionProvider) GetGoogleSuggestion(q string) ([]string,
 
 func (provider *fakeSuggestionProvider) GetBiliBiliSuggestion(q string) ([]string, common.GFError) {
 	return provider.record("bilibili", q)
+}
+
+func (provider *fakeSuggestionProvider) GetDuckDuckGoSuggestion(q string) ([]string, common.GFError) {
+	return provider.record("duckduckgo", q)
 }
 
 func (provider *fakeSuggestionProvider) record(engine string, q string) ([]string, common.GFError) {

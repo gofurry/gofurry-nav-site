@@ -28,6 +28,7 @@ type suggestionProvider interface {
 	GetBingSuggestion(q string) ([]string, common.GFError)
 	GetGoogleSuggestion(q string) ([]string, common.GFError)
 	GetBiliBiliSuggestion(q string) ([]string, common.GFError)
+	GetDuckDuckGoSuggestion(q string) ([]string, common.GFError)
 }
 
 type suggestionCache interface {
@@ -160,6 +161,8 @@ func (svc *searchService) fetchSuggestions(engine string, query string) ([]strin
 		return svc.source().GetGoogleSuggestion(query)
 	case "bilibili":
 		return svc.source().GetBiliBiliSuggestion(query)
+	case "duckduckgo":
+		return svc.source().GetDuckDuckGoSuggestion(query)
 	default:
 		return []string{}, nil
 	}
@@ -193,7 +196,7 @@ type cachedSearchSuggestions struct {
 
 func normalizeSuggestionEngine(engine string) string {
 	switch strings.ToLower(strings.TrimSpace(engine)) {
-	case "baidu", "bing", "google", "bilibili":
+	case "baidu", "bing", "google", "bilibili", "duckduckgo":
 		return strings.ToLower(strings.TrimSpace(engine))
 	default:
 		return ""

@@ -43,6 +43,7 @@ var (
 	bingSuggestEndpoint   = "https://api.bing.com/qsonhs.aspx"
 	googleSuggestEndpoint = "http://suggestqueries.google.com/complete/search"
 	biliSuggestEndpoint   = "https://s.search.bilibili.com/main/suggest"
+	duckSuggestEndpoint   = "https://duckduckgo.com/ac"
 )
 
 // 获取导航站点信息
@@ -340,6 +341,40 @@ func (svc *navPageService) GetBiliBiliSuggestion(q string) ([]string, common.GFE
 		suggestions[i] = item.Value
 	}
 
+	return suggestions, nil
+}
+
+func (svc *navPageService) GetDuckDuckGoSuggestion(q string) ([]string, common.GFError) {
+	q = normalizeSuggestionQuery(q)
+	if q == "" {
+		return []string{}, nil
+	}
+
+	reqURL, err := buildSuggestionURL(duckSuggestEndpoint, map[string]string{
+		"q": q,
+	})
+	if err != nil {
+		return []string{}, nil
+	}
+	body, err := fetchSuggestionBody(reqURL, nil)
+	if err != nil {
+		return []string{}, nil
+	}
+
+	type DuckItem struct {
+		Phrase string `json:"phrase"`
+	}
+	var result []DuckItem
+	if err := sonic.Unmarshal(body, &result); err != nil {
+		return []string{}, nil
+	}
+
+	suggestions := make([]string, 0, len(result))
+	for _, item := range result {
+		if item.Phrase != "" {
+			suggestions = append(suggestions, item.Phrase)
+		}
+	}
 	return suggestions, nil
 }
 

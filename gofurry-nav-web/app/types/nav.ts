@@ -354,7 +354,7 @@ export interface NavUpdatesResponse {
     items: NavUpdateNotice[];
 }
 
-export type NavSearchSuggestionEngine = 'baidu' | 'bing' | 'google' | 'bilibili';
+export type NavSearchSuggestionEngine = 'baidu' | 'bing' | 'google' | 'bilibili' | 'duckduckgo';
 export type NavSearchSuggestionsState = 'ready' | 'empty' | 'error';
 
 export interface NavSearchSuggestionsResponse {

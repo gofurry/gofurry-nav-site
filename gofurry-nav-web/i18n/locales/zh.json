@@ -215,8 +215,11 @@
     },
     "platformName": {
       "baidu": "百度",
+      "duckduckgo": "DuckDuckGo",
       "bing": "必应",
       "google": "谷歌",
+      "wikifur": "WikiFur",
+      "yiffParty": "YiffParty",
       "furaffinity": "FurAffinity",
       "e621": "e621",
       "wilddream": "WildDream",
@@ -233,7 +236,8 @@
       "weibo": "微博",
       "twitter": "推特",
       "itchIo": "itch.io",
-      "steam": "Steam"
+      "steam": "Steam",
+      "epic": "Epic"
     }
   },
   "site": {

@@ -74,3 +74,25 @@ func TestBiliSuggestionParsesResponse(t *testing.T) {
 		t.Fatalf("items = %v", items)
 	}
 }
+
+func TestDuckDuckGoSuggestionParsesResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Query().Get("q"); got != "furry" {
+			t.Fatalf("q = %q", got)
+		}
+		_, _ = w.Write([]byte(`[{"phrase":"furry"},{"phrase":"furry suit"},{"phrase":""}]`))
+	}))
+	defer server.Close()
+
+	previous := duckSuggestEndpoint
+	duckSuggestEndpoint = server.URL
+	t.Cleanup(func() { duckSuggestEndpoint = previous })
+
+	items, err := GetNavPageService().GetDuckDuckGoSuggestion("furry")
+	if err != nil {
+		t.Fatalf("GetDuckDuckGoSuggestion() error = %v", err)
+	}
+	if len(items) != 2 || items[0] != "furry" || items[1] != "furry suit" {
+		t.Fatalf("items = %v", items)
+	}
+}
