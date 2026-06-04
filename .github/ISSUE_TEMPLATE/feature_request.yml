@@ -1,0 +1,59 @@
+name: Feature request
+description: Propose a scoped feature, API, UX, or maintenance improvement.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please keep requests scoped and implementation-oriented. This repository contains multiple services, so concrete impact and ownership notes are especially helpful.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user, maintainer, or operational problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the API shape, page behavior, admin workflow, sync change, or schema update you want.
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - gofurry-nav-backend API
+        - gofurry-nav-web UX
+        - gofurry-admin workflow
+        - gofurry-rag sync / indexing
+        - SQL / schema / migration
+        - deployment / operations
+        - documentation / CI
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility impact
+      description: Does this add a public API, replace a v1 behavior, require a migration, or affect deployed services?
+    validations:
+      required: true
+  - type: textarea
+    id: rollout
+    attributes:
+      label: Rollout and operational considerations
+      description: Note config changes, data backfills, rate limits, background jobs, or deployment ordering if relevant.
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false

@@ -45,11 +45,11 @@ func navRoutes(root fiber.Router) {
 	root.Put("/sayings/:id", navadmin.NavAPI.UpdateSaying)
 	root.Delete("/sayings/:id", navadmin.NavAPI.DeleteSaying)
 
-	root.Get("/log-updates", navadmin.NavAPI.ListLogUpdates)
-	root.Post("/log-updates", navadmin.NavAPI.CreateLogUpdate)
-	root.Get("/log-updates/:id", navadmin.NavAPI.GetLogUpdate)
-	root.Put("/log-updates/:id", navadmin.NavAPI.UpdateLogUpdate)
-	root.Delete("/log-updates/:id", navadmin.NavAPI.DeleteLogUpdate)
+	root.Get("/update-notices", navadmin.NavAPI.ListUpdateNotices)
+	root.Post("/update-notices", navadmin.NavAPI.CreateUpdateNotice)
+	root.Get("/update-notices/:id", navadmin.NavAPI.GetUpdateNotice)
+	root.Put("/update-notices/:id", navadmin.NavAPI.UpdateUpdateNotice)
+	root.Delete("/update-notices/:id", navadmin.NavAPI.DeleteUpdateNotice)
 
 	root.Get("/collector-domains", navadmin.NavAPI.ListCollectorDomains)
 	root.Post("/collector-domains", navadmin.NavAPI.CreateCollectorDomain)

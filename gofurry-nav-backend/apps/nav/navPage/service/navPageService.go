@@ -43,6 +43,7 @@ var (
 	bingSuggestEndpoint   = "https://api.bing.com/qsonhs.aspx"
 	googleSuggestEndpoint = "http://suggestqueries.google.com/complete/search"
 	biliSuggestEndpoint   = "https://s.search.bilibili.com/main/suggest"
+	duckSuggestEndpoint   = "https://duckduckgo.com/ac"
 )
 
 // 获取导航站点信息
@@ -201,7 +202,7 @@ func (svc *navPageService) GetBingSuggestion(q string) ([]string, common.GFError
 	if err != nil {
 		return []string{}, nil
 	}
-	body, err := fetchSuggestionBody(reqURL, nil)
+	body, err := fetchSuggestionBodyWithConfiguredProxy(reqURL)
 	if err != nil {
 		return []string{}, nil
 	}
@@ -270,7 +271,7 @@ func (svc *navPageService) GetGoogleSuggestion(q string) ([]string, common.GFErr
 	if err != nil {
 		return []string{}, nil
 	}
-	body, err := fetchSuggestionBody(reqURL, suggestionProxyURL())
+	body, err := fetchSuggestionBodyWithConfiguredProxy(reqURL)
 	if err != nil {
 		return []string{}, nil
 	}
@@ -343,6 +344,40 @@ func (svc *navPageService) GetBiliBiliSuggestion(q string) ([]string, common.GFE
 	return suggestions, nil
 }
 
+func (svc *navPageService) GetDuckDuckGoSuggestion(q string) ([]string, common.GFError) {
+	q = normalizeSuggestionQuery(q)
+	if q == "" {
+		return []string{}, nil
+	}
+
+	reqURL, err := buildSuggestionURL(duckSuggestEndpoint, map[string]string{
+		"q": q,
+	})
+	if err != nil {
+		return []string{}, nil
+	}
+	body, err := fetchSuggestionBodyWithConfiguredProxy(reqURL)
+	if err != nil {
+		return []string{}, nil
+	}
+
+	type DuckItem struct {
+		Phrase string `json:"phrase"`
+	}
+	var result []DuckItem
+	if err := sonic.Unmarshal(body, &result); err != nil {
+		return []string{}, nil
+	}
+
+	suggestions := make([]string, 0, len(result))
+	for _, item := range result {
+		if item.Phrase != "" {
+			suggestions = append(suggestions, item.Phrase)
+		}
+	}
+	return suggestions, nil
+}
+
 func normalizeSuggestionQuery(q string) string {
 	q = strings.TrimSpace(q)
 	if len([]rune(q)) <= searchSuggestMaxQueryLen {
@@ -374,6 +409,10 @@ func suggestionProxyURL() *url.URL {
 		return nil
 	}
 	return parsed
+}
+
+func fetchSuggestionBodyWithConfiguredProxy(reqURL string) ([]byte, error) {
+	return fetchSuggestionBody(reqURL, suggestionProxyURL())
 }
 
 func fetchSuggestionBody(reqURL string, proxyURL *url.URL) ([]byte, error) {

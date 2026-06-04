@@ -2,6 +2,7 @@ package controller
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/navadmin/models"
@@ -9,6 +10,7 @@ import (
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	pkgmodels "github.com/gofurry/awesome-fiber-template/v3/medium/pkg/models"
 	"gorm.io/gorm"
 )
 
@@ -115,10 +117,10 @@ func (api *navAPI) DeleteSaying(c fiber.Ctx) error {
 	return api.deleteHard(c, &models.Saying{})
 }
 
-func (api *navAPI) ListLogUpdates(c fiber.Ctx) error {
+func (api *navAPI) ListUpdateNotices(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(navDB().Model(&models.LogUpdate{}).Where("deleted IS NOT TRUE").Order("id DESC"), page.Keyword, "title", "url", "CAST(id AS TEXT)")
-	var items []models.LogUpdate
+	base := adminutil.ApplyKeyword(navDB().Model(&models.UpdateNotice{}).Where("deleted IS NOT TRUE").Order("published_at DESC, id DESC"), page.Keyword, "title", "title_en", "body", "body_en", "CAST(id AS TEXT)")
+	var items []models.UpdateNotice
 	total, err := adminutil.Paginate(base, page, &items)
 	if err != nil {
 		return common.NewResponse(c).Error(err)
@@ -126,21 +128,29 @@ func (api *navAPI) ListLogUpdates(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, items))
 }
 
-func (api *navAPI) CreateLogUpdate(c fiber.Ctx) error {
-	var req models.LogUpdatePayload
+func (api *navAPI) CreateUpdateNotice(c fiber.Ctx) error {
+	var req models.UpdateNoticePayload
 	if err := adminutil.DecodeBody(c, &req); err != nil {
 		return common.NewResponse(c).Error(err)
 	}
-	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.URL) == "" {
-		return common.NewResponse(c).Error(common.NewValidationError("title and url are required"))
+	title, titleEn, body, bodyEn, publishedAt, validateErr := normalizeUpdateNoticePayload(req)
+	if validateErr != nil {
+		return common.NewResponse(c).Error(validateErr)
 	}
-	var created models.LogUpdate
+	var created models.UpdateNotice
 	err := navDB().Transaction(func(tx *gorm.DB) error {
 		ids, allocErr := adminutil.AllocateSequentialIDs(tx, created.TableName(), 1)
 		if allocErr != nil {
 			return allocErr
 		}
-		created = models.LogUpdate{ID: ids[0], Title: strings.TrimSpace(req.Title), URL: strings.TrimSpace(req.URL)}
+		created = models.UpdateNotice{
+			ID:          ids[0],
+			Title:       title,
+			TitleEn:     titleEn,
+			Body:        body,
+			BodyEn:      bodyEn,
+			PublishedAt: pkgmodels.LocalTime(publishedAt),
+		}
 		if err := tx.Create(&created).Error; err != nil {
 			return err
 		}
@@ -156,47 +166,51 @@ func (api *navAPI) CreateLogUpdate(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(created)
 }
 
-func (api *navAPI) GetLogUpdate(c fiber.Ctx) error {
-	return api.getOne(c, navDB().Where("deleted IS NOT TRUE"), &models.LogUpdate{})
+func (api *navAPI) GetUpdateNotice(c fiber.Ctx) error {
+	return api.getOne(c, navDB().Where("deleted IS NOT TRUE"), &models.UpdateNotice{})
 }
 
-func (api *navAPI) UpdateLogUpdate(c fiber.Ctx) error {
+func (api *navAPI) UpdateUpdateNotice(c fiber.Ctx) error {
 	id, err := adminutil.ParseIDParam(c)
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
-	var req models.LogUpdatePayload
+	var req models.UpdateNoticePayload
 	if err := adminutil.DecodeBody(c, &req); err != nil {
 		return common.NewResponse(c).Error(err)
 	}
-	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.URL) == "" {
-		return common.NewResponse(c).Error(common.NewValidationError("title and url are required"))
+	title, titleEn, body, bodyEn, publishedAt, validateErr := normalizeUpdateNoticePayload(req)
+	if validateErr != nil {
+		return common.NewResponse(c).Error(validateErr)
 	}
 	txErr := navDB().Transaction(func(tx *gorm.DB) error {
-		before, snapErr := audit.SnapshotByID(tx, (&models.LogUpdate{}).TableName(), id)
+		before, snapErr := audit.SnapshotByID(tx, (&models.UpdateNotice{}).TableName(), id)
 		if snapErr != nil {
 			return snapErr
 		}
-		if err := tx.Model(&models.LogUpdate{}).Where("id = ? AND deleted IS NOT TRUE", id).Updates(map[string]any{
-			"title": strings.TrimSpace(req.Title),
-			"url":   strings.TrimSpace(req.URL),
+		if err := tx.Model(&models.UpdateNotice{}).Where("id = ? AND deleted IS NOT TRUE", id).Updates(map[string]any{
+			"title":        title,
+			"title_en":     titleEn,
+			"body":         body,
+			"body_en":      bodyEn,
+			"published_at": pkgmodels.LocalTime(publishedAt),
 		}).Error; err != nil {
 			return common.NewDaoError(err.Error())
 		}
-		after, snapErr := audit.SnapshotByID(tx, (&models.LogUpdate{}).TableName(), id)
+		after, snapErr := audit.SnapshotByID(tx, (&models.UpdateNotice{}).TableName(), id)
 		if snapErr != nil {
 			return snapErr
 		}
-		return api.auditTx(c, tx, "update", (&models.LogUpdate{}).TableName(), id, before, after)
+		return api.auditTx(c, tx, "update", (&models.UpdateNotice{}).TableName(), id, before, after)
 	})
 	if txErr != nil {
 		return common.NewResponse(c).Error(txErr)
 	}
-	return api.GetLogUpdate(c)
+	return api.GetUpdateNotice(c)
 }
 
-func (api *navAPI) DeleteLogUpdate(c fiber.Ctx) error {
-	return api.deleteSoft(c, &models.LogUpdate{})
+func (api *navAPI) DeleteUpdateNotice(c fiber.Ctx) error {
+	return api.deleteSoft(c, &models.UpdateNotice{})
 }
 
 func (api *navAPI) ListCollectorDomains(c fiber.Ctx) error {
@@ -719,6 +733,32 @@ func validateSitePayload(req models.SitePayload) common.Error {
 		return common.NewValidationError("name and name_en are required")
 	}
 	return nil
+}
+
+func normalizeUpdateNoticePayload(req models.UpdateNoticePayload) (string, string, string, string, time.Time, common.Error) {
+	title := strings.TrimSpace(req.Title)
+	titleEn := strings.TrimSpace(req.TitleEn)
+	body := strings.TrimSpace(req.Body)
+	bodyEn := strings.TrimSpace(req.BodyEn)
+	if title == "" || titleEn == "" || body == "" || bodyEn == "" {
+		return "", "", "", "", time.Time{}, common.NewValidationError("title, title_en, body and body_en are required")
+	}
+	publishedAt, err := parseDateTime(req.PublishedAt)
+	if err != nil {
+		return "", "", "", "", time.Time{}, common.NewValidationError("invalid published_at")
+	}
+	return title, titleEn, body, bodyEn, publishedAt, nil
+}
+
+func parseDateTime(value string) (time.Time, error) {
+	layouts := []string{time.RFC3339, "2006-01-02T15:04", "2006-01-02T15:04:05", "2006-01-02 15:04:05", "2006-01-02 15:04"}
+	value = strings.TrimSpace(value)
+	for _, layout := range layouts {
+		if parsed, err := time.ParseInLocation(layout, value, time.Local); err == nil {
+			return parsed, nil
+		}
+	}
+	return time.Time{}, fiber.ErrBadRequest
 }
 
 func validateCollectorDomainPayload(tx *gorm.DB, req models.CollectorDomainPayload) common.Error {

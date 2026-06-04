@@ -9,7 +9,7 @@ import {
   type H3Event
 } from 'h3'
 
-type ApiService = 'nav' | 'game'
+type ApiService = 'nav' | 'navV2' | 'game'
 
 const hopByHopHeaders = new Set([
   'connection',
@@ -40,7 +40,13 @@ function sanitizeRequestHeaders(headers: Record<string, string | undefined>) {
 
 function resolveTargetBase(event: H3Event, service: ApiService) {
   const config = useRuntimeConfig(event)
-  return service === 'game' ? config.gameApiInternalBase : config.navApiInternalBase
+  if (service === 'game') {
+    return config.gameApiInternalBase
+  }
+  if (service === 'navV2') {
+    return config.navV2ApiInternalBase
+  }
+  return config.navApiInternalBase
 }
 
 export async function proxyApiNamespace(event: H3Event, service: ApiService, namespace: string) {

@@ -107,7 +107,8 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
-import { getBaiduSuggestion, getBingSuggestion, getGoogleSuggestion, getBiliBiliSuggestion } from '@/utils/api/nav'
+import { getSearchSuggestion } from '@/services/nav'
+import type { NavSearchSuggestionEngine } from '@/types/nav'
 import { useI18n } from 'vue-i18n'
 import { useLangStore } from '@/store/langStore'
 import { setNavPageRevealLock } from '@/utils/navPageReveal'
@@ -137,6 +138,7 @@ const categories = computed(() => [
 ])
 
 const selectedCategory = ref('')
+type VisibleSuggestionEngine = Exclude<NavSearchSuggestionEngine, 'baidu'>
 
 // 初始化默认选中类别
 const initDefaultCategory = () => {
@@ -155,7 +157,7 @@ const isLoading = ref(false)
 
 interface Platform {
   name: string
-  type: 'baidu' | 'bing' | 'google' | 'bilibili' | 'site'
+  type: VisibleSuggestionEngine | 'site'
   url?: string
 }
 
@@ -164,7 +166,7 @@ const platforms = computed<Record<string, Platform[]>>(() => ({
   [t('searchBox.platformCate.search')]: [
     { name: t('searchBox.platformName.bing'), type: 'bing' },
     { name: t('searchBox.platformName.google'), type: 'google' },
-    { name: t('searchBox.platformName.baidu'), type: 'baidu' },
+    { name: t('searchBox.platformName.duckduckgo'), type: 'duckduckgo' },
     { name: t('searchBox.platformName.bilibili'), type: 'bilibili', url: 'https://search.bilibili.com/all?keyword={kw}' },
     { name: t('searchBox.platformName.xiaohongshu'), type: 'site', url: 'https://www.xiaohongshu.com/search_result?keyword={kw}' },
     { name: t('searchBox.platformName.zhihu'), type: 'site', url: 'https://www.zhihu.com/search?type=content&q={kw}' },
@@ -172,6 +174,8 @@ const platforms = computed<Record<string, Platform[]>>(() => ({
     { name: t('searchBox.platformName.twitter'), type: 'site', url: 'https://x.com/search?q={kw}&src=typed_query' },
   ],
   [t('searchBox.platformCate.furry')]: [
+    { name: t('searchBox.platformName.wikifur'), type: 'site', url: `https://${langStore.lang === 'zh' ? 'zh' : 'en'}.wikifur.com/wiki/{kw}` },
+    { name: t('searchBox.platformName.yiffParty'), type: 'site', url: 'https://yiff-party.com/search/?tags={kw}' },
     { name: t('searchBox.platformName.furaffinity'), type: 'site', url: 'https://www.furaffinity.net/search/?q={kw}' },
     { name: t('searchBox.platformName.e621'), type: 'site', url: 'https://e621.net/posts?tags={kw}' },
     { name: t('searchBox.platformName.wilddream'), type: 'site', url: 'https://www.wilddream.net/Art/index/index?keyword={kw}' },
@@ -190,13 +194,18 @@ const platforms = computed<Record<string, Platform[]>>(() => ({
   [t('searchBox.platformCate.games')]: [
     { name: t('searchBox.platformName.itchIo'), type: 'site', url: 'https://itch.io/search?q={kw}' },
     { name: t('searchBox.platformName.steam'), type: 'site', url: 'https://store.steampowered.com/search?term={kw}' },
+    { name: t('searchBox.platformName.epic'), type: 'site', url: 'https://store.epicgames.com/browse?q={kw}' },
   ],
 }))
 
 const selectedPlatform = ref<Platform>({ name: '', type: 'site' })
+let timer: number | null = null
+let suggestionAbortController: AbortController | null = null
+let suggestionRequestId = 0
 
 // 重置默认选中逻辑
 const resetSelection = () => {
+  abortSuggestionRequest()
   initDefaultCategory()
   const defaultPlatform = platforms.value[selectedCategory.value]?.[0]
   selectedPlatform.value = defaultPlatform || { name: '', type: 'site' }
@@ -209,8 +218,7 @@ watch([categories, selectedCategory, platforms], () => {
   resetSelection()
 }, { immediate: true })
 
-let timer: number | null = null
-const debounce = (fn: Function, delay = 300) => (...args: any[]) => {
+const debounce = (fn: Function, delay = 600) => (...args: any[]) => {
   if (timer) clearTimeout(timer)
   timer = window.setTimeout(() => fn(...args), delay)
 }
@@ -232,7 +240,9 @@ const highlightKeyword = (item: string) => {
 
 const fetchSuggestions = async () => {
   const searchLabel = t('searchBox.platformCate.search')
-  if (!keyword.value.trim() || selectedCategory.value !== searchLabel) {
+  const requestKeyword = keyword.value.trim()
+  if (!requestKeyword || selectedCategory.value !== searchLabel || !isSuggestionEngine(selectedPlatform.value.type)) {
+    abortSuggestionRequest()
     suggestions.value = []
     dropdownVisible.value = false
     isLoading.value = false
@@ -241,26 +251,30 @@ const fetchSuggestions = async () => {
 
   dropdownVisible.value = true
   isLoading.value = true
+  abortSuggestionRequest()
+  const controller = new AbortController()
+  const requestId = ++suggestionRequestId
+  suggestionAbortController = controller
 
   try {
-    let data: string[] = []
-    switch (selectedPlatform.value.type) {
-      case 'baidu': data = await getBaiduSuggestion(keyword.value); break
-      case 'bing': data = await getBingSuggestion(keyword.value); break
-      case 'google': data = await getGoogleSuggestion(keyword.value); break
-      case 'bilibili': data = await getBiliBiliSuggestion(keyword.value); break
-      default: data = []
-    }
-    suggestions.value = data
-    if (data.length > 0 && hoveredIndex.value === -1) hoveredIndex.value = 0
+    const response = await getSearchSuggestion(selectedPlatform.value.type, requestKeyword, controller.signal)
+    if (requestId !== suggestionRequestId) return
+    suggestions.value = response.suggestions
+    if (response.suggestions.length > 0 && hoveredIndex.value === -1) hoveredIndex.value = 0
   } catch {
+    if (controller.signal.aborted || requestId !== suggestionRequestId) return
     suggestions.value = []
   } finally {
-    isLoading.value = false
+    if (requestId === suggestionRequestId) {
+      isLoading.value = false
+    }
+    if (suggestionAbortController === controller) {
+      suggestionAbortController = null
+    }
   }
 }
 
-const debouncedFetch = debounce(fetchSuggestions, 300)
+const debouncedFetch = debounce(fetchSuggestions, 600)
 
 const doSearch = () => {
   const kw = encodeURIComponent(keyword.value.trim())
@@ -282,9 +296,9 @@ const doSearch = () => {
 
   if (selectedCategory.value === searchLabel) {
     switch (selectedPlatform.value.type) {
-      case 'baidu': window.open(`https://www.baidu.com/s?wd=${kw}`, '_blank'); break
       case 'bing': window.open(`https://www.bing.com/search?q=${kw}`, '_blank'); break
       case 'google': window.open(`https://www.google.com/search?q=${kw}`, '_blank'); break
+      case 'duckduckgo': window.open(`https://duckduckgo.com/?q=${kw}`, '_blank'); break
       default:
         if (mapping[selectedPlatform.value.name])
           window.open(mapping[selectedPlatform.value.name], '_blank')
@@ -368,9 +382,20 @@ const handleClickOutside = (e: MouseEvent) => {
 }
 
 const closeSearchSuggestions = () => {
+  abortSuggestionRequest()
   dropdownVisible.value = false
   hoveredIndex.value = -1
   isInputFocused.value = false
+}
+
+function isSuggestionEngine(type: Platform['type']): type is VisibleSuggestionEngine {
+  return type === 'bing' || type === 'google' || type === 'bilibili' || type === 'duckduckgo'
+}
+
+function abortSuggestionRequest() {
+  suggestionRequestId++
+  suggestionAbortController?.abort()
+  suggestionAbortController = null
 }
 
 watch(
@@ -388,6 +413,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (timer) clearTimeout(timer)
+  abortSuggestionRequest()
   document.removeEventListener('click', handleClickOutside)
   setNavPageRevealLock('search-box', false)
 })

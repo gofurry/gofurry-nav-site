@@ -67,10 +67,9 @@ withDefaults(defineProps<{
 
 :global(.dark .gofurry-grid-background){
   background:
-    radial-gradient(circle at 14% 16%, rgba(251, 146, 60, 0.15), transparent 30%),
-    radial-gradient(circle at 82% 10%, rgba(59, 130, 246, 0.12), transparent 30%),
-    linear-gradient(180deg, rgba(2, 6, 23, 0.96), rgba(15, 23, 42, 0.98)),
-    #020617;
+    radial-gradient(circle at 50% 42%, rgba(45, 212, 191, 0.14), transparent 92%),
+    linear-gradient(180deg, rgba(8, 14, 28, 0.96), rgba(18, 28, 45, 0.985)),
+    #0b1220;
 }
 
 :global(.dark .gofurry-grid-background::before){

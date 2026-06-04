@@ -1,38 +1,43 @@
 import type {
-  Group,
+  NavHomeBackgrounds,
+  NavHomePingResponse,
+  NavHomeResponse,
+  NavHomeSayingResponse,
+  NavSearchSuggestionEngine,
+  NavSearchSuggestionsResponse,
+  NavSiteIndexResponse,
+  NavUpdatesResponse,
   SayingModel,
-  Site,
-  changelogResp
 } from '~/types/nav'
 
-export function getSites(lang: string): Promise<Site[]> {
-  return useApi('nav')('/nav/page/site/list', { query: { lang } })
+export function getNavHome(lang: string): Promise<NavHomeResponse> {
+  return useApi('navV2')('/nav/home', { query: { lang } })
 }
 
-export function getGroups(lang: string): Promise<Group[]> {
-  return useApi('nav')('/nav/page/group/list', { query: { lang } })
+export function getNavHomePing(): Promise<NavHomePingResponse> {
+  return useApi('navV2')('/nav/home/ping')
 }
 
-export function getPing(): Promise<Record<string, string>> {
-  return useApi('nav')('/nav/page/ping/list')
+export function getNavHomeSaying(): Promise<NavHomeSayingResponse> {
+  return useApi('navV2')('/nav/home/saying')
 }
 
-export function addCount(): Promise<unknown> {
-  return useApi('nav')('/nav/stat/add/count')
+export function getNavHomeBackgrounds(): Promise<NavHomeResponse['backgrounds']> {
+  return useApi('navV2')<{ backgrounds: NavHomeBackgrounds }>('/nav/home/backgrounds').then((response) => response.backgrounds)
 }
 
-export function getSearchSuggestion(engine: 'baidu' | 'bing' | 'google' | 'bilibili', keyword: string): Promise<string[]> {
-  return useApi('nav')(`/nav/page/search/${engine}`, { query: { q: keyword } })
+export function getNavSiteIndex(): Promise<NavSiteIndexResponse> {
+  return useApi('navV2')('/nav/sites/index')
 }
 
-export function getSaying(): Promise<SayingModel> {
-  return useApi('nav')('/nav/page/header/getSaying')
+export function getSearchSuggestion(
+  engine: NavSearchSuggestionEngine,
+  keyword: string,
+  signal?: AbortSignal
+): Promise<NavSearchSuggestionsResponse> {
+  return useApi('navV2')('/nav/search/suggestions', { query: { engine, q: keyword }, signal })
 }
 
-export function getImageUrl(type: string): Promise<string> {
-  return useApi('nav')('/nav/page/header/image/url', { query: { type } })
-}
-
-export function getChangeLog(): Promise<changelogResp[]> {
-  return useApi('nav')('/nav/site/changelog')
+export function getNavUpdates(lang: 'zh' | 'en'): Promise<NavUpdatesResponse> {
+  return useApi('navV2')('/nav/updates', { query: { lang } })
 }

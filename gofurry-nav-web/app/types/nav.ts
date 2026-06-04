@@ -310,9 +310,82 @@ export interface SayingModel {
     content: string;
 }
 
-export interface changelogResp {
+export interface NavHomeBackgrounds {
+    desktop: string;
+    mobile: string;
+}
+
+export interface NavHomeResponse {
+    schema_version: number;
+    generated_at: string;
+    cache_state: Record<string, string>;
+    reason_messages?: Record<string, string>;
+    sites: Site[];
+    groups: Group[];
+    ping: Record<string, string>;
+    saying: SayingModel | null;
+    backgrounds: NavHomeBackgrounds;
+}
+
+export interface NavHomePingResponse {
+    schema_version: number;
+    generated_at: string;
+    state: string;
+    reason_messages?: string[];
+    ping: Record<string, string>;
+}
+
+export interface NavHomeSayingResponse {
+    schema_version: number;
+    generated_at: string;
+    state: string;
+    reason_messages?: string[];
+    saying: SayingModel | null;
+}
+
+export interface NavSiteIndexItem {
+    id: number;
+    domains: string[];
+    updated_at: string | null;
+}
+
+export interface NavSiteIndexResponse {
+    schema_version: number;
+    generated_at: string;
+    state: string;
+    reason_messages?: string[];
+    items: NavSiteIndexItem[];
+}
+
+export type NavUpdatesState = 'ready' | 'empty' | 'error';
+
+export interface NavUpdateNotice {
+    id: number;
     title: string;
-    url: string;
+    body: string;
+    published_at: string;
     create_time: string;
     update_time: string;
+}
+
+export interface NavUpdatesResponse {
+    schema_version: number;
+    generated_at: string;
+    state: NavUpdatesState;
+    reason_messages?: string[];
+    items: NavUpdateNotice[];
+}
+
+export type NavSearchSuggestionEngine = 'baidu' | 'bing' | 'google' | 'bilibili' | 'duckduckgo';
+export type NavSearchSuggestionsState = 'ready' | 'empty' | 'error';
+
+export interface NavSearchSuggestionsResponse {
+    schema_version: number;
+    generated_at: string;
+    state: NavSearchSuggestionsState;
+    engine: NavSearchSuggestionEngine | '';
+    query: string;
+    suggestions: string[];
+    cache_state: 'hit' | 'miss';
+    reason_messages?: string[];
 }

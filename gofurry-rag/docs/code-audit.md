@@ -52,21 +52,6 @@ Changes:
 - The public limiter now has a bounded key count.
 - When the limiter is full and no expired keys can be removed, new keys are rejected instead of growing memory indefinitely.
 
-### P2-002: Changelog markdown sync fetches arbitrary URLs and reads bodies without a size limit
-
-Status: Fixed.
-
-Changes:
-
-- Markdown fetches now only allow `http` and `https`.
-- Markdown hosts must match the configured allowlist or the configured nav sync host.
-- `raw.githubusercontent.com` is allowed by default.
-- Markdown response bodies are capped at 2 MiB.
-
-Production note:
-
-If changelog markdown files move to another host, add that host to `rag.sync_allowed_markdown_hosts`.
-
 ### P2-003: Public query validation can do database work before applying the public rate limiter
 
 Status: Fixed.
@@ -129,5 +114,4 @@ Both commands pass.
 - Use production-only secrets and do not deploy the committed local `server.yaml` as-is.
 - Enable secure cookies outside debug mode.
 - Configure trusted proxy settings only for the actual reverse proxy addresses.
-- Confirm `rag.sync_allowed_markdown_hosts` includes every expected changelog markdown host.
 - Keep database backups before the production update.

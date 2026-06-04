@@ -7,6 +7,14 @@ import StringArrayEditor from './StringArrayEditor.vue'
 
 defineProps<{ field: ResourceField; modelValue: unknown }>()
 const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
+
+function dateTimeLocalValue(value: unknown) {
+  const raw = String(value ?? '').trim()
+  if (!raw) return ''
+  const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T')
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/)
+  return match?.[1] ?? ''
+}
 </script>
 
 <template>
@@ -40,7 +48,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
       v-else-if="field.type === 'datetime'"
       type="datetime-local"
       class="w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
-      :value="String(modelValue ?? '')"
+      :value="dateTimeLocalValue(modelValue)"
       @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
     />
 

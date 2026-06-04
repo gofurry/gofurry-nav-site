@@ -16,16 +16,19 @@ type Saying struct {
 
 func (*Saying) TableName() string { return "gfn_saying" }
 
-type LogUpdate struct {
-	ID         int64               `gorm:"column:id;primaryKey" json:"id"`
-	Title      string              `gorm:"column:title;not null" json:"title"`
-	URL        string              `gorm:"column:url;not null" json:"url"`
-	CreateTime pkgmodels.LocalTime `gorm:"column:create_time;autoCreateTime" json:"create_time"`
-	UpdateTime pkgmodels.LocalTime `gorm:"column:update_time;autoUpdateTime" json:"update_time"`
-	Deleted    bool                `gorm:"column:deleted" json:"deleted"`
+type UpdateNotice struct {
+	ID          int64               `gorm:"column:id;primaryKey" json:"id"`
+	Title       string              `gorm:"column:title;not null" json:"title"`
+	TitleEn     string              `gorm:"column:title_en;not null" json:"title_en"`
+	Body        string              `gorm:"column:body;not null" json:"body"`
+	BodyEn      string              `gorm:"column:body_en;not null" json:"body_en"`
+	PublishedAt pkgmodels.LocalTime `gorm:"column:published_at;not null" json:"published_at"`
+	CreateTime  pkgmodels.LocalTime `gorm:"column:create_time;autoCreateTime" json:"create_time"`
+	UpdateTime  pkgmodels.LocalTime `gorm:"column:update_time;autoUpdateTime" json:"update_time"`
+	Deleted     bool                `gorm:"column:deleted" json:"deleted"`
 }
 
-func (*LogUpdate) TableName() string { return "gfn_log_update" }
+func (*UpdateNotice) TableName() string { return "gfn_nav_update_notice" }
 
 type CollectorDomain struct {
 	ID      int64   `gorm:"column:id;primaryKey" json:"id"`
@@ -95,9 +98,12 @@ type SayingPayload struct {
 	Saying string  `json:"saying"`
 }
 
-type LogUpdatePayload struct {
-	Title string `json:"title"`
-	URL   string `json:"url"`
+type UpdateNoticePayload struct {
+	Title       string `json:"title"`
+	TitleEn     string `json:"title_en"`
+	Body        string `json:"body"`
+	BodyEn      string `json:"body_en"`
+	PublishedAt string `json:"published_at"`
 }
 
 type CollectorDomainPayload struct {

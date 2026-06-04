@@ -1,159 +1,350 @@
 <template>
-  <div class="flex min-h-full w-full flex-1 flex-col">
-    <div class="flex h-[5vh] items-center justify-between bg-orange-100 p-4 shadow-sm backdrop-blur-sm">
-      <h2 class="flex items-center gap-2 text-lg font-semibold text-gray-800">
-        <img src="@/assets/svgs/tv-dark.svg" alt="api" class="h-5 w-5" />
-        {{ t('log.changelog') }}
-      </h2>
-    </div>
+  <div class="updates-page" :class="{ 'is-dark-theme': isDarkTheme }">
+    <GoFurryGridBackground />
 
-    <div class="flex min-h-0 flex-1">
-      <aside class="hidden shrink-0 space-y-2 bg-orange-50 p-4 sm:block sm:w-32 md:w-48 lg:w-64">
-        <div
-          v-for="item in list"
-          :key="item.create_time"
-          class="cursor-pointer rounded-lg px-3 py-2 text-sm transition"
-          :class="active?.title === item.title
-            ? 'bg-orange-100 font-medium text-orange-700'
-            : 'text-gray-600 hover:bg-orange-200'"
-          @click="loadMarkdown(item)"
-        >
-          <div class="flex items-center justify-between">
-            <span class="block w-full truncate">{{ item.title }}</span>
-            <span
-              v-if="item === list[0]"
-              class="hidden rounded bg-orange-800 px-1.5 py-0.5 text-[10px] text-orange-50 md:block"
-            >
-              NEW
-            </span>
-          </div>
-          <div class="mt-1 hidden text-xs text-gray-400 lg:block">{{ item.create_time }}</div>
-        </div>
-      </aside>
+    <main class="relative z-[1] mx-auto w-[min(1100px,calc(100%-40px))] py-9 pb-24">
+      <UpdatesSummaryBar
+        :label="copy.summaryAriaLabel"
+        :latest-label="copy.latestLabel"
+        :latest-value="latestDateLabel"
+        :count-label="copy.countLabel"
+        :count-value="items.length"
+        :divider-src="summaryDividerSrc"
+        :dark="isDarkTheme"
+      />
 
-      <main class="flex-1 overflow-auto bg-orange-50 p-6 shadow">
-        <div v-if="pending || loading" class="animate-pulse text-sm text-gray-400">
-          {{ t('common.loading') }}
+      <section class="mx-auto min-w-0 max-w-[920px]" :aria-busy="pending">
+        <div v-if="pending" class="updates-state">
+          <span class="state-line" />
+          <p>{{ copy.loading }}</p>
         </div>
 
-        <div v-else-if="error" class="text-sm text-red-500">
-          {{ loadFailedText }}
+        <div v-else-if="error || responseState === 'error'" class="updates-state is-error">
+          <span class="state-line" />
+          <p>{{ errorMessage }}</p>
         </div>
 
-        <MdPreview
-          v-else
-          class="custom-style"
-          :editor-id="previewId"
-          :model-value="state.text"
-          :preview-theme="state.previewTheme"
-          :code-theme="state.codeTheme"
-        />
-      </main>
-    </div>
+        <div v-else-if="items.length === 0" class="updates-state">
+          <span class="state-line" />
+          <p>{{ copy.empty }}</p>
+        </div>
+
+        <ol v-else class="timeline-feed">
+          <li
+            v-for="(group, groupIndex) in yearGroups"
+            :key="group.year"
+            class="timeline-year-group"
+            :style="{ '--delay': `${Math.min(groupIndex, 10) * 55}ms` }"
+          >
+            <UpdatesTimelineYearGroup
+              :group="group"
+              :expanded="isYearExpanded(group.year)"
+              :visible-items="visibleItemsForYear(group.year, group.items)"
+              :has-more="hasMoreInYear(group.year, group.items)"
+              :latest-id="latestId"
+              :latest-tag="copy.latestTag"
+              :load-more-label="copy.loadMore"
+              :year-summary="formatYearSummary(group.items.length)"
+              :locale-code="localeCode"
+              :unavailable-label="copy.unavailable"
+              :dark="isDarkTheme"
+              @toggle="toggleYear(group.year)"
+              @load-more="loadMoreForYear(group.year)"
+            />
+          </li>
+        </ol>
+      </section>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { MdPreview } from 'md-editor-v3'
-import 'md-editor-v3/lib/preview.css'
-import { getChangeLog } from '~/services/nav'
-import type { changelogResp } from '~/types/nav'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useLangStore } from '@/store/langStore'
+import { useThemeStore } from '@/stores/theme'
+import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
+import updatesDividerUrl from '@/assets/svgs/updates-divider.svg'
+import updatesDividerDarkUrl from '@/assets/svgs/updates-divider-dark.svg'
+import { getNavUpdates } from '~/services/nav'
+import type { NavUpdateNotice, NavUpdatesResponse, NavUpdatesState } from '~/types/nav'
+import {
+  formatUpdatesFullDate,
+  formatUpdatesYear,
+} from '~/utils/updatesDate'
 
-interface UpdatesPageData {
-  list: changelogResp[]
-  active: changelogResp | null
-  markdown: string
+interface YearGroup {
+  year: string
+  items: NavUpdateNotice[]
 }
 
-const { t } = useI18n()
-const previewId = 'preview-only'
+const YEAR_BATCH_SIZE = 6
 
-const state = reactive({
-  text: '',
-  codeTheme: 'github',
-  previewTheme: 'vuepress',
+const emptyUpdatesResponse = (): NavUpdatesResponse => ({
+  schema_version: 1,
+  generated_at: '',
+  state: 'empty',
+  items: [],
 })
 
-const mdCache = new Map<string, string>()
-const active = ref<changelogResp | null>(null)
-const loading = ref(false)
-const loadFailedText = 'Failed to load changelog.'
+const langStore = useLangStore()
+const themeStore = useThemeStore()
+const lang = computed(() => langStore.lang)
+const localeCode = computed(() => (lang.value === 'en' ? 'en-US' : 'zh-CN'))
+const isDarkTheme = computed(() => themeStore.theme === 'dark')
+const summaryDividerSrc = computed(() => (isDarkTheme.value ? updatesDividerDarkUrl : updatesDividerUrl))
 
-async function fetchMarkdown(url: string) {
-  return await $fetch<string>('/api/v1/nav/site/changelog/content', {
-    query: { url },
-    responseType: 'text',
-  })
-}
-
-const { data, pending, error } = await useAsyncData<UpdatesPageData>(
-  'updates-page',
-  async () => {
-    const changelogList = await getChangeLog().catch(() => [])
-    const firstItem = changelogList[0] ?? null
-    const markdown = firstItem ? await fetchMarkdown(firstItem.url).catch(() => '# load fail\nfail to get changelog') : ''
-
+const copy = computed(() => {
+  if (lang.value === 'en') {
     return {
-      list: changelogList,
-      active: firstItem,
-      markdown,
+      summaryAriaLabel: 'Updates summary',
+      latestLabel: 'Latest',
+      countLabel: 'Entries',
+      latestTag: 'Latest',
+      loadMore: 'Load more',
+      loading: 'Loading update notices.',
+      empty: 'No update notices yet.',
+      unavailable: 'Unavailable',
+      errorFallback: 'Update notices are temporarily unavailable.',
+      seoTitle: 'GoFurry Updates',
+      seoDescription: 'Latest product and maintenance updates from GoFurry.',
     }
-  },
+  }
+
+  return {
+    summaryAriaLabel: '更新公告概览',
+    latestLabel: '最新更新',
+    countLabel: '公告数量',
+    latestTag: '最新',
+    loadMore: '加载更多',
+    loading: '正在读取更新公告。',
+    empty: '暂时还没有更新公告。',
+    unavailable: '暂无',
+    errorFallback: '更新公告暂时不可用。',
+    seoTitle: 'GoFurry Updates',
+    seoDescription: 'GoFurry 的最新产品更新与维护记录。',
+  }
+})
+
+const { data, pending, error } = await useAsyncData<NavUpdatesResponse>(
+  () => `updates-v2-page:${lang.value}`,
+  () => getNavUpdates(lang.value),
   {
-    default: () => ({
-      list: [],
-      active: null,
-      markdown: '',
-    }),
+    default: emptyUpdatesResponse,
+    watch: [lang],
   }
 )
 
-const list = ref<changelogResp[]>(data.value?.list ?? [])
-active.value = data.value?.active ?? null
-state.text = data.value?.markdown ?? ''
-if (active.value?.url && state.text) {
-  mdCache.set(active.value.url, state.text)
-}
+const items = computed<NavUpdateNotice[]>(() => data.value?.items ?? [])
+const responseState = computed<NavUpdatesState>(() => data.value?.state ?? 'empty')
+const latest = computed(() => items.value[0] ?? null)
+const latestId = computed<number | null>(() => latest.value?.id ?? null)
+const expandedYears = ref<string[]>([])
+const visibleCounts = ref<Record<string, number>>({})
 
-useSeoMeta({
-  title: () => 'GoFurry Updates',
-  description: () => 'Latest changelog and updates from gofurry.',
-  ogTitle: () => 'GoFurry Updates',
-  ogDescription: () => 'Latest changelog and updates from gofurry.',
+const yearGroups = computed<YearGroup[]>(() => {
+  const groups: YearGroup[] = []
+  let currentGroup: YearGroup | null = null
+
+  items.value.forEach((item) => {
+    const year = formatUpdatesYear(item.published_at)
+    if (!currentGroup || currentGroup.year !== year) {
+      currentGroup = {
+        year,
+        items: [],
+      }
+      groups.push(currentGroup)
+    }
+    currentGroup.items.push(item)
+  })
+
+  return groups
 })
 
-async function loadMarkdown(item: changelogResp) {
-  if (active.value?.url === item.url) {
+const latestDateLabel = computed(() => {
+  if (!latest.value) {
+    return copy.value.unavailable
+  }
+
+  return formatUpdatesFullDate(latest.value.published_at, localeCode.value, copy.value.unavailable)
+})
+
+const errorMessage = computed(() => {
+  const reasons = data.value?.reason_messages?.filter(Boolean) ?? []
+  if (reasons.length > 0) {
+    return reasons.join(' / ')
+  }
+  return copy.value.errorFallback
+})
+
+watch(
+  yearGroups,
+  (groups) => {
+    const nextCounts: Record<string, number> = {}
+    const latestYear = groups[0]?.year ?? ''
+
+    groups.forEach((group) => {
+      const previous = visibleCounts.value[group.year]
+      nextCounts[group.year] = previous
+        ? Math.min(previous, group.items.length)
+        : Math.min(YEAR_BATCH_SIZE, group.items.length)
+    })
+
+    visibleCounts.value = nextCounts
+    expandedYears.value = latestYear ? [latestYear] : []
+  },
+  { immediate: true }
+)
+
+onMounted(() => {
+  themeStore.initTheme()
+})
+
+useSeoMeta({
+  title: () => copy.value.seoTitle,
+  description: () => copy.value.seoDescription,
+  ogTitle: () => copy.value.seoTitle,
+  ogDescription: () => copy.value.seoDescription,
+})
+
+function isYearExpanded(year: string) {
+  return expandedYears.value.includes(year)
+}
+
+function toggleYear(year: string) {
+  if (isYearExpanded(year)) {
+    expandedYears.value = expandedYears.value.filter((item) => item !== year)
     return
   }
 
-  active.value = item
-  loading.value = true
+  expandedYears.value = [...expandedYears.value, year]
+}
 
-  try {
-    if (mdCache.has(item.url)) {
-      state.text = mdCache.get(item.url) || ''
-      return
-    }
+function visibleItemsForYear(year: string, groupItems: NavUpdateNotice[]) {
+  return groupItems.slice(0, visibleCounts.value[year] ?? YEAR_BATCH_SIZE)
+}
 
-    const text = await fetchMarkdown(item.url)
-    mdCache.set(item.url, text)
-    state.text = text
-  } catch (loadError) {
-    console.error(loadError)
-    state.text = '# load fail\nfail to get changelog'
-  } finally {
-    loading.value = false
+function hasMoreInYear(year: string, groupItems: NavUpdateNotice[]) {
+  return (visibleCounts.value[year] ?? YEAR_BATCH_SIZE) < groupItems.length
+}
+
+function loadMoreForYear(year: string) {
+  visibleCounts.value = {
+    ...visibleCounts.value,
+    [year]: (visibleCounts.value[year] ?? YEAR_BATCH_SIZE) + YEAR_BATCH_SIZE,
   }
+}
+
+function formatYearSummary(count: number) {
+  return lang.value === 'en' ? `${count} entries` : `${count} 条`
 }
 </script>
 
 <style scoped>
-.custom-style {
-  max-width: 1240px;
-  margin: 0 auto;
-  background: none;
+.updates-page {
+  position: relative;
+  min-height: 100svh;
+  overflow: clip;
+  color: #201815;
+}
+
+.updates-page.is-dark-theme {
+  color: #e5edf5;
+}
+
+.updates-state {
+  display: grid;
+  min-height: 320px;
+  place-items: center;
+  gap: 18px;
+  color: rgba(32, 24, 21, 0.72);
+  text-align: center;
+}
+
+.updates-state p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.updates-state.is-error {
+  color: #b42347;
+}
+
+.state-line {
+  width: min(240px, 56vw);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(15, 118, 110, 0.72), transparent);
+}
+
+.timeline-feed {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 34px;
+  list-style: none;
+}
+
+.timeline-feed::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 0;
+  left: 8px;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.55), rgba(15, 118, 110, 0.1));
+}
+
+.timeline-year-group {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: feed-enter 520ms ease forwards;
+  animation-delay: var(--delay, 0ms);
+}
+
+.updates-page.is-dark-theme .updates-state {
+  color: rgba(204, 223, 228, 0.76);
+}
+
+.updates-page.is-dark-theme .state-line {
+  background: linear-gradient(90deg, transparent, rgba(154, 248, 251, 0.78), transparent);
+}
+
+.updates-page.is-dark-theme .timeline-feed::before {
+  background: linear-gradient(180deg, rgba(127, 240, 247, 0.62), rgba(127, 240, 247, 0.1));
+}
+
+.updates-page.is-dark-theme .updates-state.is-error {
+  color: #fda4af;
+}
+
+@keyframes feed-enter {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 920px) {
+  main {
+    width: min(100% - 28px, 1100px);
+    padding-top: 30px;
+    padding-bottom: 72px;
+  }
+}
+
+@media (max-width: 720px) {
+  .timeline-feed {
+    padding-left: 26px;
+  }
+
+  .timeline-feed::before {
+    left: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-year-group {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 </style>

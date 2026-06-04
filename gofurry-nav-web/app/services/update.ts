@@ -1,1 +1,1 @@
-export { getChangeLog } from './nav'
+export { getNavUpdates } from './nav'

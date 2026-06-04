@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getGroups, getImageUrl, getPing, getSaying, getSites } from '~/services/nav'
+import { getNavHome } from '~/services/nav'
 import type { Delay, Group, SayingModel, Site } from '~/types/nav'
 import NavHeader from '@/components/nav/NavHeader.vue'
 import NavToolDock from '@/components/nav/NavToolDock.vue'
@@ -87,22 +87,15 @@ const toolDockSites = computed(() => {
 const { data } = await useAsyncData<NavPageData>(
   () => `nav-page:${lang.value}`,
   async () => {
-    const [groups, sites, ping, saying, desktopBgUrl, mobileBgUrl] = await Promise.all([
-      getGroups(lang.value),
-      getSites(lang.value),
-      getPing(),
-      getSaying().catch(() => null),
-      getImageUrl('standard').catch(() => null),
-      getImageUrl('mobile').catch(() => null),
-    ])
+    const home = await getNavHome(lang.value)
 
     return {
-      desktopBgUrl,
-      mobileBgUrl,
-      saying,
-      groups: groups.sort((a, b) => Number(a.priority) - Number(b.priority)),
-      sites,
-      pingData: parsePingData(ping),
+      desktopBgUrl: home.backgrounds.desktop || null,
+      mobileBgUrl: home.backgrounds.mobile || null,
+      saying: home.saying,
+      groups: home.groups.sort((a, b) => Number(a.priority) - Number(b.priority)),
+      sites: home.sites,
+      pingData: parsePingData(home.ping),
     }
   },
   {

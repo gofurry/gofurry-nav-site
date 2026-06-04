@@ -95,7 +95,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLangStore } from '@/store/langStore'
-import { getGroups, getPing, getSites } from '~/services/nav'
+import { getNavHome, getNavHomePing } from '~/services/nav'
 import type { Delay, Group, Site } from '~/types/nav'
 import { recordRecentSite, toExternalUrl } from '@/utils/recentSites'
 import { readDisplayMode, subscribeModeChange, type DisplayMode } from '@/utils/modeStorage'
@@ -182,15 +182,11 @@ async function loadData() {
   loading.value = true
   try {
     const lang = langStore.lang
-    const [nextGroups, nextSites, nextPing] = await Promise.all([
-      getGroups(lang),
-      getSites(lang),
-      getPing(),
-    ])
+    const home = await getNavHome(lang)
 
-    groups.value = nextGroups.sort((a, b) => Number(a.priority) - Number(b.priority))
-    sites.value = nextSites
-    parsePingData(nextPing)
+    groups.value = home.groups.sort((a, b) => Number(a.priority) - Number(b.priority))
+    sites.value = home.sites
+    parsePingData(home.ping)
   } catch (error) {
     console.error('Failed to load nav content:', error)
   } finally {
@@ -404,7 +400,8 @@ onMounted(() => {
 
   pingTimer = setInterval(async () => {
     try {
-      parsePingData(await getPing())
+      const response = await getNavHomePing()
+      parsePingData(response.ping)
     } catch (error) {
       console.error('Failed to refresh ping data:', error)
     }

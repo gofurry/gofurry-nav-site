@@ -4,19 +4,19 @@
     :class="headerClass"
   >
     <div
-        class="mx-auto flex w-full max-w-[1700px] items-center gap-3 px-4 py-2 transition-all duration-300 sm:px-6"
+        class="relative mx-auto flex w-full max-w-[1700px] items-center gap-3 px-4 py-2 transition-all duration-300 sm:px-6"
     >
       <NuxtLink
           to="/"
-          class="flex shrink-0 items-center gap-2 px-2 py-1"
+          class="relative z-10 flex shrink-0 items-center gap-2 px-2 py-1"
           @click.stop="closeMenus"
       >
         <img :src="logo" alt="gofurry logo" class="h-10 w-10" />
         <span class="hidden text-sm font-semibold tracking-wide text-white sm:inline">GoFurry</span>
       </NuxtLink>
 
-      <div class="flex min-w-0 flex-1 items-center justify-center overflow-hidden transition-all duration-300">
-        <nav class="flex min-w-0 items-center justify-center gap-1 transition-all duration-200 opacity-100 md:min-w-max md:max-w-[760px]">
+      <div class="pointer-events-none absolute left-1/2 top-1/2 z-0 flex max-w-[calc(100vw-10rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden transition-all duration-300 sm:max-w-[calc(100vw-14rem)] md:max-w-[760px]">
+        <nav class="pointer-events-auto flex min-w-0 items-center justify-center gap-1 transition-all duration-200 opacity-100 md:min-w-max md:max-w-[760px]">
           <template v-for="(link, index) in navLinks" :key="link.label">
             <a
                 v-if="link.external"
@@ -47,7 +47,7 @@
         </nav>
       </div>
 
-      <div class="ml-auto flex shrink-0 items-center gap-2 transition-all duration-300">
+      <div class="relative z-10 ml-auto flex shrink-0 items-center gap-2 transition-all duration-300">
         <a
             href="https://github.com/gofurry/gofurry-nav-site"
             target="_blank"
