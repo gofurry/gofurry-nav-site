@@ -202,7 +202,7 @@ func (svc *navPageService) GetBingSuggestion(q string) ([]string, common.GFError
 	if err != nil {
 		return []string{}, nil
 	}
-	body, err := fetchSuggestionBody(reqURL, nil)
+	body, err := fetchSuggestionBodyWithConfiguredProxy(reqURL)
 	if err != nil {
 		return []string{}, nil
 	}
@@ -271,7 +271,7 @@ func (svc *navPageService) GetGoogleSuggestion(q string) ([]string, common.GFErr
 	if err != nil {
 		return []string{}, nil
 	}
-	body, err := fetchSuggestionBody(reqURL, suggestionProxyURL())
+	body, err := fetchSuggestionBodyWithConfiguredProxy(reqURL)
 	if err != nil {
 		return []string{}, nil
 	}
@@ -356,7 +356,7 @@ func (svc *navPageService) GetDuckDuckGoSuggestion(q string) ([]string, common.G
 	if err != nil {
 		return []string{}, nil
 	}
-	body, err := fetchSuggestionBody(reqURL, nil)
+	body, err := fetchSuggestionBodyWithConfiguredProxy(reqURL)
 	if err != nil {
 		return []string{}, nil
 	}
@@ -409,6 +409,10 @@ func suggestionProxyURL() *url.URL {
 		return nil
 	}
 	return parsed
+}
+
+func fetchSuggestionBodyWithConfiguredProxy(reqURL string) ([]byte, error) {
+	return fetchSuggestionBody(reqURL, suggestionProxyURL())
 }
 
 func fetchSuggestionBody(reqURL string, proxyURL *url.URL) ([]byte, error) {
