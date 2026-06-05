@@ -1,0 +1,33 @@
+# GoFurry
+
+> GoFurry is a bilingual furry-focused web directory and research site. It includes a navigation homepage for furry sites, a furry games index, an archive section, and an updates timeline.
+
+## Main Pages
+
+- [Home](https://go-furry.com/) - Main furry site navigation homepage.
+- [Games](https://go-furry.com/games) - Furry games index and discovery page.
+- [Archive](https://go-furry.com/archive) - Archive and long-form reference content.
+- [Updates](https://go-furry.com/updates) - Product, content, and maintenance update timeline.
+- [About](https://go-furry.com/about) - Project overview and public contact information.
+
+## Important Content Routes
+
+- [Site Detail](https://go-furry.com/site/1) - Detail page pattern for a listed furry site. Replace the numeric ID with a real site ID.
+- [Target Detail](https://go-furry.com/site/1/example.com) - Detail page pattern for a specific monitored target under a site. Replace both path parameters with real values.
+- [Game Detail](https://go-furry.com/games/1) - Detail page pattern for a game entry. Replace the numeric ID with a real game ID.
+- [Game Search](https://go-furry.com/games/search) - Search interface for game discovery.
+- [Game News](https://go-furry.com/games/news/more) - More game news and updates.
+- [Game Creators](https://go-furry.com/games/creator) - Creator-focused game listing page.
+
+## Site Notes For Language Models
+
+- The site supports both Chinese and English. Prefer the page language currently shown to the user.
+- Navigation entries, game records, and external links are index data; external site availability and metadata may change over time.
+- Prefer canonical public pages over internal API endpoints when citing or summarizing the website.
+- For security disclosure, see [security.txt](https://go-furry.com/.well-known/security.txt).
+
+## Machine-Friendly Discovery
+
+- [robots.txt](https://go-furry.com/robots.txt)
+- [sitemap.xml](https://go-furry.com/sitemap.xml)
+- [security.txt](https://go-furry.com/.well-known/security.txt)

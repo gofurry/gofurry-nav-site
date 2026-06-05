@@ -7,14 +7,32 @@
             <img :src="compassIcon" alt="sitemap" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.sitemap') }}
           </h3>
-          <a
-              :href="sitemapUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="footer-link"
-          >
-            {{ t('footer.links.sitemapXml') }}
-          </a>
+          <div class="flex flex-wrap gap-2">
+            <a
+                :href="sitemapUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer-link"
+            >
+              {{ t('footer.links.sitemapXml') }}
+            </a>
+            <a
+                :href="llmsUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer-link"
+            >
+              {{ t('footer.links.llmsTxt') }}
+            </a>
+            <a
+                :href="securityTxtUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer-link"
+            >
+              {{ t('footer.links.securityTxt') }}
+            </a>
+          </div>
         </section>
 
         <section class="space-y-3">
@@ -127,6 +145,8 @@ const themeStore = useThemeStore()
 
 const currentYear = new Date().getFullYear()
 const sitemapUrl = '/sitemap.xml'
+const llmsUrl = '/llms.txt'
+const securityTxtUrl = '/.well-known/security.txt'
 const isDark = computed(() => themeStore.theme === 'dark')
 const footerClass = computed(() => [
   'border-t transition-colors duration-500',

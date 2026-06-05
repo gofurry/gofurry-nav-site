@@ -128,4 +128,13 @@ onUnmounted(() => {
     inset 0 1px 0 rgba(255, 255, 255, 0.58);
   backdrop-filter: blur(12px);
 }
+
+:global(.dark .group-popover) {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(15, 23, 42, 0.92);
+  color: rgba(226, 232, 240, 0.92);
+  box-shadow:
+    0 18px 42px rgba(2, 6, 23, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
 </style>

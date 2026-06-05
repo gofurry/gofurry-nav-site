@@ -8,22 +8,20 @@
     <main
         v-show="isContentRevealed"
         ref="contentRef"
-        class="relative z-10 flex-1 bg-[#f2e3d0]"
-        :style="{
-        backgroundImage: `url(${bgGrid})`,
-        backgroundRepeat: 'repeat'
-      }"
+        class="relative z-10 flex-1 overflow-hidden"
     >
-      <div class="absolute w-full">
+      <GoFurryGridBackground :fixed="false" palette="nav-content" />
+      <div class="absolute z-30 w-full">
         <NavTransitionBar :initial-saying="navPageData.saying" />
       </div>
-      <div class="h-10"></div>
-      <NavContent
-        :initial-groups="navPageData.groups"
-        :initial-sites="navPageData.sites"
-        :initial-ping-data="navPageData.pingData"
-      />
-      <div class="h-10"></div>
+      <div class="relative z-10">
+        <div class="h-10"></div>
+        <NavContent
+          :initial-groups="navPageData.groups"
+          :initial-ping-data="navPageData.pingData"
+        />
+        <div class="h-10"></div>
+      </div>
     </main>
   </div>
 </template>
@@ -37,7 +35,7 @@ import NavHeader from '@/components/nav/NavHeader.vue'
 import NavToolDock from '@/components/nav/NavToolDock.vue'
 import NavTransitionBar from '@/components/nav/NavTransitionBar.vue'
 import NavContent from '@/components/nav/NavContent.vue'
-import bgGrid from '@/assets/pngs/bg-grid.png'
+import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import { debounce, throttle } from '@/utils/util'
 import { dispatchNavPageReveal, isNavPageRevealLocked } from '@/utils/navPageReveal'
 import { readDisplayMode, subscribeModeChange, type DisplayMode } from '@/utils/modeStorage'
@@ -54,7 +52,7 @@ interface NavPageData {
 const isContentRevealed = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 const { locale } = useI18n()
-const displayMode = ref<DisplayMode>(readDisplayMode())
+const displayMode = ref<DisplayMode>('sfw')
 
 let touchStartY = 0
 let mobileMediaQuery: MediaQueryList | null = null

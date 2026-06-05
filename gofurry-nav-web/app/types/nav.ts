@@ -10,6 +10,7 @@ export interface Site {
     nsfw: string;
     welfare: string;
     icon: string | null;
+    update_time: string;
 }
 
 // 分组结构
@@ -18,7 +19,7 @@ export interface Group {
     name: string;
     info: string;
     priority: number;
-    sites: string[];
+    sites: Site[];
 }
 
 // 延迟结构

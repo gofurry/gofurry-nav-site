@@ -8,6 +8,7 @@ import (
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/navadmin/models"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/adminutil"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
+	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/cache"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	pkgmodels "github.com/gofurry/awesome-fiber-template/v3/medium/pkg/models"
@@ -18,8 +19,33 @@ type navAPI struct{}
 
 var NavAPI = &navAPI{}
 
+const (
+	navSiteListCacheKey     = "site:list:v2"
+	navGroupListCacheKey    = "group:list"
+	navGroupSiteMapCacheKey = "group:site:map"
+)
+
 func navDB() *gorm.DB {
 	return db.Databases.DB(db.Nav)
+}
+
+func invalidateNavCache(keys ...string) {
+	if len(keys) == 0 || !cache.RedisReady() {
+		return
+	}
+	_ = cache.Del(keys...)
+}
+
+func invalidateNavSiteListCache() {
+	invalidateNavCache(navSiteListCacheKey)
+}
+
+func invalidateNavGroupListCache() {
+	invalidateNavCache(navGroupListCacheKey)
+}
+
+func invalidateNavGroupMapCache() {
+	invalidateNavCache(navGroupSiteMapCacheKey)
 }
 
 func (api *navAPI) ListSayings(c fiber.Ctx) error {
@@ -264,6 +290,7 @@ func (api *navAPI) CreateCollectorDomain(c fiber.Ctx) error {
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
+	invalidateNavSiteListCache()
 	return common.NewResponse(c).SuccessWithData(created)
 }
 
@@ -321,11 +348,16 @@ func (api *navAPI) UpdateCollectorDomain(c fiber.Ctx) error {
 	if txErr != nil {
 		return common.NewResponse(c).Error(txErr)
 	}
+	invalidateNavSiteListCache()
 	return api.GetCollectorDomain(c)
 }
 
 func (api *navAPI) DeleteCollectorDomain(c fiber.Ctx) error {
-	return api.deleteSoft(c, &models.CollectorDomain{})
+	if err := api.deleteSoft(c, &models.CollectorDomain{}); err != nil {
+		return err
+	}
+	invalidateNavSiteListCache()
+	return nil
 }
 
 func (api *navAPI) ListSites(c fiber.Ctx) error {
@@ -382,6 +414,7 @@ func (api *navAPI) CreateSite(c fiber.Ctx) error {
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
+	invalidateNavSiteListCache()
 	return common.NewResponse(c).SuccessWithData(siteDTO(created))
 }
 
@@ -435,11 +468,16 @@ func (api *navAPI) UpdateSite(c fiber.Ctx) error {
 	if txErr != nil {
 		return common.NewResponse(c).Error(txErr)
 	}
+	invalidateNavSiteListCache()
 	return api.GetSite(c)
 }
 
 func (api *navAPI) DeleteSite(c fiber.Ctx) error {
-	return api.deleteSoft(c, &models.Site{})
+	if err := api.deleteSoft(c, &models.Site{}); err != nil {
+		return err
+	}
+	invalidateNavSiteListCache()
+	return nil
 }
 
 func (api *navAPI) ListSiteGroups(c fiber.Ctx) error {
@@ -487,6 +525,7 @@ func (api *navAPI) CreateSiteGroup(c fiber.Ctx) error {
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
+	invalidateNavGroupListCache()
 	return common.NewResponse(c).SuccessWithData(created)
 }
 
@@ -529,11 +568,16 @@ func (api *navAPI) UpdateSiteGroup(c fiber.Ctx) error {
 	if txErr != nil {
 		return common.NewResponse(c).Error(txErr)
 	}
+	invalidateNavGroupListCache()
 	return api.GetSiteGroup(c)
 }
 
 func (api *navAPI) DeleteSiteGroup(c fiber.Ctx) error {
-	return api.deleteHard(c, &models.SiteGroup{})
+	if err := api.deleteHard(c, &models.SiteGroup{}); err != nil {
+		return err
+	}
+	invalidateNavCache(navGroupListCacheKey, navGroupSiteMapCacheKey)
+	return nil
 }
 
 func (api *navAPI) ListSiteGroupMaps(c fiber.Ctx) error {
@@ -579,6 +623,7 @@ func (api *navAPI) CreateSiteGroupMap(c fiber.Ctx) error {
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
+	invalidateNavGroupMapCache()
 	return common.NewResponse(c).SuccessWithData(created)
 }
 
@@ -618,11 +663,16 @@ func (api *navAPI) UpdateSiteGroupMap(c fiber.Ctx) error {
 	if txErr != nil {
 		return common.NewResponse(c).Error(txErr)
 	}
+	invalidateNavGroupMapCache()
 	return api.GetSiteGroupMap(c)
 }
 
 func (api *navAPI) DeleteSiteGroupMap(c fiber.Ctx) error {
-	return api.deleteHard(c, &models.SiteGroupMap{})
+	if err := api.deleteHard(c, &models.SiteGroupMap{}); err != nil {
+		return err
+	}
+	invalidateNavGroupMapCache()
+	return nil
 }
 
 func (api *navAPI) BulkReplaceSiteGroupMaps(c fiber.Ctx) error {
@@ -666,6 +716,7 @@ func (api *navAPI) BulkReplaceSiteGroupMaps(c fiber.Ctx) error {
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
+	invalidateNavGroupMapCache()
 	return common.NewResponse(c).Success()
 }
 

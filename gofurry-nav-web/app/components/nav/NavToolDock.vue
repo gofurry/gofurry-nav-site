@@ -29,7 +29,7 @@
               @click="openSite(item)"
             >
               <img
-                :src="`${logoPrefix ? `${logoPrefix}/` : ''}${item.icon || defaultLogo}`"
+                :src="siteLogoSrc(item)"
                 alt=""
               />
               <span>
@@ -171,6 +171,32 @@ function closePanel() {
   keyword.value = ''
 }
 
+function joinAssetUrl(prefix: string, path: string) {
+  if (!prefix) {
+    return path
+  }
+
+  return `${prefix.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+}
+
+function withAssetVersion(url: string, version?: string | null) {
+  const normalizedVersion = (version || '').trim()
+  if (!normalizedVersion) {
+    return url
+  }
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}v=${encodeURIComponent(normalizedVersion)}`
+}
+
+function siteLogoSrc(item: Site) {
+  const iconPath = item.icon || defaultLogo
+  const assetURL = joinAssetUrl(logoPrefix, iconPath)
+  if (!item.icon) {
+    return assetURL
+  }
+  return withAssetVersion(assetURL, item.update_time)
+}
+
 function domainList(item: Site) {
   if (Array.isArray(item.domain)) {
     return item.domain
@@ -243,6 +269,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
     filter 500ms ease;
 }
 
+:global(.dark .nav-tool-button) {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(15, 23, 42, 0.76);
+  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.28);
+  color: #dbe4f0;
+}
+
 .nav-tool-button:hover,
 .nav-tool-button.active {
   border-color: rgba(253, 186, 116, 0.9);
@@ -250,6 +283,14 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   color: #c2410c;
   box-shadow: 0 14px 36px rgba(76, 42, 18, 0.18);
   filter: saturate(1.05);
+}
+
+:global(.dark .nav-tool-button:hover),
+:global(.dark .nav-tool-button.active) {
+  border-color: rgba(125, 211, 252, 0.42);
+  background: rgba(30, 41, 59, 0.92);
+  color: #f8fafc;
+  box-shadow: 0 14px 36px rgba(2, 6, 23, 0.36);
 }
 
 .nav-tool-button svg {
@@ -275,6 +316,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   will-change: opacity, transform;
 }
 
+:global(.dark .nav-tool-panel) {
+  border-color: rgba(255, 255, 255, 0.10);
+  background: rgba(15, 23, 42, 0.88);
+  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.36);
+  color: #e2e8f0;
+}
+
 .nav-tool-search__input {
   display: flex;
   align-items: center;
@@ -294,6 +342,14 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   stroke-width: 2;
 }
 
+:global(.dark .nav-tool-search__input) {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+:global(.dark .nav-tool-search__input svg) {
+  stroke: #cbd5e1;
+}
+
 .nav-tool-search__input input {
   min-width: 0;
   width: 100%;
@@ -302,6 +358,14 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   font-size: 0.82rem;
   outline: none;
   transition: color 500ms ease;
+}
+
+:global(.dark .nav-tool-search__input input) {
+  color: #f8fafc;
+}
+
+:global(.dark .nav-tool-search__input input::placeholder) {
+  color: rgba(148, 163, 184, 0.82);
 }
 
 .nav-tool-results {
@@ -340,6 +404,11 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
+:global(.dark .nav-tool-results button:hover) {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
 .nav-tool-results img {
   width: 2rem;
   height: 2rem;
@@ -347,6 +416,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   border-radius: 0.45rem;
   object-fit: cover;
   background: rgba(255, 237, 213, 0.9);
+}
+
+:global(.dark .nav-tool-results img) {
+  background: rgba(30, 41, 59, 0.9);
 }
 
 .nav-tool-results span {
@@ -371,10 +444,22 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   font-size: 0.68rem;
 }
 
+:global(.dark .nav-tool-results strong) {
+  color: #f8fafc;
+}
+
+:global(.dark .nav-tool-results small) {
+  color: rgba(148, 163, 184, 0.82);
+}
+
 .nav-tool-empty {
   padding: 1.2rem 0.9rem;
   color: rgba(68, 64, 60, 0.68);
   font-size: 0.78rem;
+}
+
+:global(.dark .nav-tool-empty) {
+  color: rgba(148, 163, 184, 0.82);
 }
 
 .nav-tool-panel-transition-enter-active,

@@ -2,16 +2,16 @@
   <div
       v-if="site"
       ref="popoverRef"
-      class="fixed z-9999 w-72 rounded-xl border border-orange-100/85 bg-orange-50/95 p-4 text-sm text-gray-700 shadow-[0_16px_40px_rgba(25,35,38,0.16)] backdrop-blur-md transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform,filter]"
+      class="fixed z-9999 w-72 rounded-xl border border-orange-100/85 bg-orange-50/95 p-4 text-sm text-gray-700 shadow-[0_16px_40px_rgba(25,35,38,0.16)] backdrop-blur-md transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform,filter] dark:border-white/10 dark:bg-[rgba(15,23,42,0.94)] dark:text-slate-200 dark:shadow-[0_16px_40px_rgba(2,6,23,0.42)]"
       :class="popoverClasses"
       :style="popoverStyle"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
   >
-    <h3 class="font-semibold text-base mb-1">
+    <h3 class="font-semibold text-base mb-1 text-stone-900 dark:text-slate-100">
       {{ site.name || '' }}
     </h3>
-    <p class="text-gray-600 mb-3 break-words">
+    <p class="text-gray-600 mb-3 break-words dark:text-slate-400">
       {{ site.info || '' }}
     </p>
 
@@ -19,7 +19,7 @@
       <div
           v-for="domain in domains"
           :key="domain"
-          class="flex items-center justify-between text-xs px-2 py-1 rounded hover:bg-orange-100 cursor-pointer"
+          class="flex items-center justify-between text-xs px-2 py-1 rounded hover:bg-orange-100 cursor-pointer dark:hover:bg-white/8"
           @click.stop="goSite(domain)"
       >
         <div class="flex items-center gap-1 truncate max-w-[60%]">
@@ -29,13 +29,13 @@
           />
           <span class="truncate">{{ domain }}</span>
         </div>
-        <div class="text-gray-500 shrink-0">
+        <div class="text-gray-500 shrink-0 dark:text-slate-400">
           {{ pingData[domain]?.loss || '-' }}% / {{ pingData[domain]?.delay || '-' }}
         </div>
       </div>
     </div>
 
-    <div v-else class="text-gray-400 text-xs text-center mt-2">
+    <div v-else class="text-gray-400 text-xs text-center mt-2 dark:text-slate-500">
       {{ t("site.siteDnsPanel.none") }}
     </div>
   </div>

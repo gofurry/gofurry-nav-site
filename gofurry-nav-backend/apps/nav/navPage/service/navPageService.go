@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -475,12 +476,13 @@ func (svc *navPageService) convertRecords(records []models.GfnSite, lang string)
 	res := make([]models.SiteVo, 0, len(records))
 	for _, v := range records {
 		r := models.SiteVo{
-			ID:      util.Int642String(v.ID),
-			Domain:  v.Domain,
-			Country: v.Country,
-			Nsfw:    v.Nsfw,
-			Welfare: v.Welfare,
-			Icon:    v.Icon,
+			ID:         util.Int642String(v.ID),
+			Domain:     v.Domain,
+			Country:    v.Country,
+			Nsfw:       v.Nsfw,
+			Welfare:    v.Welfare,
+			Icon:       v.Icon,
+			UpdateTime: v.UpdateTime.String(),
 		}
 		if lang == "en" {
 			r.Name = v.NameEn
@@ -499,6 +501,15 @@ func (svc *navPageService) convertGroupRecords(
 	mappingRecords []models.GfnSiteGroupMap,
 	lang string,
 ) (res []models.GroupVo) {
+	sort.SliceStable(mappingRecords, func(i, j int) bool {
+		if mappingRecords[i].GroupID != mappingRecords[j].GroupID {
+			return mappingRecords[i].GroupID < mappingRecords[j].GroupID
+		}
+		if mappingRecords[i].ID != mappingRecords[j].ID {
+			return mappingRecords[i].ID < mappingRecords[j].ID
+		}
+		return mappingRecords[i].SiteID < mappingRecords[j].SiteID
+	})
 
 	idList := make([]int64, 0, len(groupRecords))
 	voMap := make(map[int64]*models.GroupVo, len(groupRecords))
