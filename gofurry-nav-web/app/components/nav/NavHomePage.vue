@@ -52,7 +52,7 @@ interface NavPageData {
 const isContentRevealed = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 const { locale } = useI18n()
-const displayMode = ref<DisplayMode>(readDisplayMode())
+const displayMode = ref<DisplayMode>('sfw')
 
 let touchStartY = 0
 let mobileMediaQuery: MediaQueryList | null = null

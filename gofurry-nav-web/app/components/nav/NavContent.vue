@@ -122,7 +122,7 @@ const langStore = useLangStore()
 const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
 const defaultLogo = 'defaultLogo.svg'
 
-const displayMode = ref<DisplayMode>(readDisplayMode())
+const displayMode = ref<DisplayMode>('sfw')
 let stopModeSubscription: (() => void) | null = null
 
 function parsePingData(data: Record<string, string | undefined>) {
@@ -384,6 +384,7 @@ watch(
 )
 
 onMounted(() => {
+  displayMode.value = readDisplayMode()
   stopModeSubscription = subscribeModeChange(({ displayMode: nextMode }) => {
     displayMode.value = nextMode
   })
