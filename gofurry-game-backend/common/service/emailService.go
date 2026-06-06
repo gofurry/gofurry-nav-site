@@ -78,7 +78,7 @@ func newEmailService() (*EmailService, error) {
 	return &EmailService{
 		dialer:     dialer,
 		sender:     cfg.Email.EmailUser,
-		senderName: "gofurry邮件服务",
+		senderName: "GoFurry 邮件服务",
 	}, nil
 }
 
@@ -113,7 +113,7 @@ func (es *EmailService) SendCode(email string) (string, common.GFError) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		sendErr = es.sendEmailWithRetry(email, "gofurry 邮箱验证码", msg)
+		sendErr = es.sendEmailWithRetry(email, "GoFurry 邮箱验证码", msg)
 	}()
 
 	// 等待发送结果(12秒超时, 避免业务阻塞)
@@ -263,7 +263,7 @@ func (es *EmailService) SendActivationEmail(to, title string, activateLink strin
 	<html>
 	<head>
 		<meta charset="UTF-8">
-		<title>gofurry 激活邮件</title>
+		<title>GoFurry 激活邮件</title>
 		<style>
 			body { font-family: "Microsoft YaHei", "Helvetica Neue", sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
 			.container { background-color: #f9f9f9; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -280,7 +280,7 @@ func (es *EmailService) SendActivationEmail(to, title string, activateLink strin
 	<body>
 		<div class="container">
 			<div class="logo">
-				<span>🐺</span> gofurry
+				<span>🐺</span> GoFurry
 			</div>
 			<div class="greeting">您好！</div>
 			<p>` + text + `</p>
@@ -292,7 +292,7 @@ func (es *EmailService) SendActivationEmail(to, title string, activateLink strin
 				• 如果非您本人操作，请忽略本邮件，账号安全不会受影响
 			</p>
 			<div class="footer">
-				<p>gofurry 邮箱服务 © ` + year + `</p>
+				<p>GoFurry 邮箱服务 © ` + year + `</p>
 			</div>
 		</div>
 	</body>
@@ -310,7 +310,7 @@ func (es *EmailService) SendLotteryEmail(to, title string, code string, text str
 	<html>
 	<head>
 		<meta charset="UTF-8">
-		<title>gofurry 抽奖服务-获奖</title>
+		<title>GoFurry 抽奖服务-获奖</title>
 		<style>
 			body { font-family: "Microsoft YaHei", "Helvetica Neue", sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
 			.container { background-color: #f9f9f9; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -327,7 +327,7 @@ func (es *EmailService) SendLotteryEmail(to, title string, code string, text str
 	<body>
 		<div class="container">
 			<div class="logo">
-				<span>🐺</span> gofurry
+				<span>🐺</span> GoFurry
 			</div>
 			<div class="greeting">您好！</div>
 			<p>` + text + `</p>
@@ -341,7 +341,7 @@ func (es *EmailService) SendLotteryEmail(to, title string, code string, text str
 				如果您未发起此操作, 请忽略本邮件, 您的账号安全不会受到影响。
 			</div>
 			<div class="footer">
-				<p>gofurry 邮箱服务 © ` + year + `</p>
+				<p>GoFurry 邮箱服务 © ` + year + `</p>
 			</div>
 		</div>
 	</body>
@@ -359,7 +359,7 @@ func (es *EmailService) SendPasswordResetEmail(to, resetLink string) common.GFEr
 	<html>
 	<head>
 		<meta charset="UTF-8">
-		<title>gofurry 密码重置</title>
+		<title>GoFurry 密码重置</title>
 		<style>
 			body { font-family: "Microsoft YaHei", "Helvetica Neue", sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
 			.container { background-color: #f9f9f9; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -376,10 +376,10 @@ func (es *EmailService) SendPasswordResetEmail(to, resetLink string) common.GFEr
 	<body>
 		<div class="container">
 			<div class="logo">
-				<span>🐺</span> gofurry
+				<span>🐺</span> GoFurry
 			</div>
 			<div class="greeting">您好！</div>
-			<p>您正在申请重置 gofurry 账号密码，点击下方链接完成重置：</p>
+			<p>您正在申请重置 GoFurry 账号密码，点击下方链接完成重置：</p>
 			<div class="link-box">
 				<a href="` + resetLink + `" class="reset-link">点击重置密码</a>
 			</div>
@@ -388,14 +388,14 @@ func (es *EmailService) SendPasswordResetEmail(to, resetLink string) common.GFEr
 				• 如果非您本人操作，请忽略本邮件，账号安全不会受影响
 			</p>
 			<div class="footer">
-				<p>gofurry 邮箱服务 © ` + year + `</p>
+				<p>GoFurry 邮箱服务 © ` + year + `</p>
 			</div>
 		</div>
 	</body>
 	</html>
 	`
 	// 调用通用发送方法
-	return es.SendEmail(to, nil, nil, "gofurry 密码重置", htmlBody)
+	return es.SendEmail(to, nil, nil, "GoFurry 密码重置", htmlBody)
 }
 
 // SendAccountNoticeEmail 发送账号异常操作提醒
@@ -406,7 +406,7 @@ func (es *EmailService) SendAccountNoticeEmail(to, operation, ip, timeStr string
 	<html>
 	<head>
 		<meta charset="UTF-8">
-		<title>gofurry 账号安全提醒</title>
+		<title>GoFurry 账号安全提醒</title>
 		<style>
 			body { font-family: "Microsoft YaHei", "Helvetica Neue", sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
 			.container { background-color: #f9f9f9; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -422,7 +422,7 @@ func (es *EmailService) SendAccountNoticeEmail(to, operation, ip, timeStr string
 	<body>
 		<div class="container">
 			<div class="logo">
-				<span>🐺</span> gofurry
+				<span>🐺</span> GoFurry
 			</div>
 			<div class="greeting">您好！</div>
 			<p>检测到您的账号有异常操作，详情如下：</p>
@@ -435,14 +435,14 @@ func (es *EmailService) SendAccountNoticeEmail(to, operation, ip, timeStr string
 				如果非您本人操作，请立即修改密码并检查账号安全！
 			</div>
 			<div class="footer">
-				<p>gofurry 邮箱服务 © ` + year + `</p>
+				<p>GoFurry 邮箱服务 © ` + year + `</p>
 			</div>
 		</div>
 	</body>
 	</html>
 	`
 	// 调用通用发送方法
-	return es.SendEmail(to, nil, nil, "gofurry 账号安全提醒", htmlBody)
+	return es.SendEmail(to, nil, nil, "GoFurry 账号安全提醒", htmlBody)
 }
 
 // SendBatchEmail 批量发送邮件（异步）
@@ -527,7 +527,7 @@ func (es *EmailService) buildCodeEmailContent(code string) (string, error) {
 	<html>
 	<head>
 		<meta charset="UTF-8">
-		<title>gofurry 验证码</title>
+		<title>GoFurry 验证码</title>
 		<style>
 			body { font-family: "Microsoft YaHei", "Helvetica Neue", sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
 			.container { background-color: #f9f9f9; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
@@ -544,10 +544,10 @@ func (es *EmailService) buildCodeEmailContent(code string) (string, error) {
 	<body>
 		<div class="container">
 			<div class="logo">
-				<span>🐺</span> gofurry
+				<span>🐺</span> GoFurry
 			</div>
 			<div class="greeting">您好！</div>
-			<p>感谢您使用 gofurry 服务, 您正在进行邮箱验证操作。</p>
+			<p>感谢您使用 GoFurry 服务, 您正在进行邮箱验证操作。</p>
 			<div class="code-box">
 				<p class="code">[ ` + code + ` ]</p>
 			</div>
@@ -559,7 +559,7 @@ func (es *EmailService) buildCodeEmailContent(code string) (string, error) {
 				如果您未发起此操作, 请忽略本邮件, 您的账号安全不会受到影响。
 			</div>
 			<div class="footer">
-				<p>gofurry 邮箱服务 © ` + year + `</p>
+				<p>GoFurry 邮箱服务 © ` + year + `</p>
 			</div>
 		</div>
 	</body>

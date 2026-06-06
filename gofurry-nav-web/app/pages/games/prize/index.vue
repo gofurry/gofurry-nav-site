@@ -1,10 +1,10 @@
 <template>
-  <div class="lottery-page relative min-h-full overflow-hidden bg-[#11100f] text-stone-100">
-    <GoFurryGridBackground palette="nav-content" />
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_74%_18%,rgba(244,170,96,0.16),transparent_30%),linear-gradient(115deg,rgba(17,16,15,0.72)_0%,rgba(17,16,15,0.54)_54%,rgba(17,16,15,0.38)_100%)]" aria-hidden="true" />
+  <div class="lottery-page relative isolate min-h-[calc(100svh-3.5rem)] overflow-hidden bg-[#11100f] text-stone-100">
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
+    <div class="absolute inset-0 z-0 bg-[radial-gradient(circle_at_74%_18%,rgba(244,170,96,0.16),transparent_30%),linear-gradient(115deg,rgba(17,16,15,0.72)_0%,rgba(17,16,15,0.54)_54%,rgba(17,16,15,0.38)_100%)]" aria-hidden="true" />
     <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-200/60 to-transparent" aria-hidden="true" />
 
-    <div class="relative mx-auto flex w-full max-w-6xl flex-col px-5 py-10 sm:px-8 lg:py-14">
+    <div class="relative z-10 mx-auto flex min-h-[calc(100svh-3.5rem)] w-full max-w-6xl flex-col px-5 py-10 sm:px-8 lg:py-14">
       <header class="lottery-hero grid gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
         <div class="max-w-3xl">
           <p class="mb-4 text-xs font-medium uppercase tracking-[0.28em] text-orange-200/70">
@@ -34,7 +34,7 @@
         </div>
       </header>
 
-      <div v-if="loading" class="py-20 text-sm text-stone-400">
+      <div v-if="loading" class="flex flex-1 items-center text-sm text-stone-300">
         {{ t('common.loading') }}
       </div>
 
