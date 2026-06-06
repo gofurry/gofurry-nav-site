@@ -75,20 +75,20 @@
             v-for="i in fullStars"
             :key="'full-' + i"
             :src="starSvg"
-            alt="star"
+            alt=""
             class="h-4 w-4"
           />
           <img
             v-if="hasHalfStar"
             :src="starHalfSvg"
-            alt="half-star"
+            alt=""
             class="h-4 w-4"
           />
           <img
             v-for="i in emptyStars"
             :key="'empty-' + i"
             :src="starSvg"
-            alt="empty-star"
+            alt=""
             class="h-4 w-4 opacity-30"
           />
         </div>

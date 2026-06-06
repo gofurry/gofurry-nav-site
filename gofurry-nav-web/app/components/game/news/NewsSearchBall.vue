@@ -45,7 +45,7 @@
             :src="item.header"
             class="w-9 h-9 rounded object-cover shrink-0
                    bg-orange-100"
-            alt=""
+            :alt="item.name || item.headline"
         />
 
         <div class="flex-1 min-w-0">

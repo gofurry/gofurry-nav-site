@@ -14,7 +14,7 @@
       <img
           :src="item.header"
           class="mb-3 rounded-lg object-cover"
-          alt=""
+          :alt="item.name || item.headline"
       />
 
       <p class="line-clamp-1 text-sm font-semibold text-orange-900">

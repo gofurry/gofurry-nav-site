@@ -11,6 +11,7 @@
         <img
             :src="starFull"
             class="absolute inset-0 w-full h-full opacity-20"
+            alt=""
         />
 
         <!-- 全星 -->
@@ -18,6 +19,7 @@
             v-if="n <= fullStars"
             :src="starFull"
             class="absolute inset-0 w-full h-full"
+            alt=""
         />
 
         <!-- 半星 -->
@@ -25,6 +27,7 @@
             v-else-if="n === fullStars + 1 && hasHalfStar"
             :src="starHalf"
             class="absolute inset-0 w-full h-full"
+            alt=""
         />
       </div>
     </div>

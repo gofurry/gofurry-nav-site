@@ -16,7 +16,7 @@
         <img
             :src="game.cover"
             class="w-full h-32 object-cover rounded-lg mb-2"
-            alt=""
+            :alt="game.name"
         />
 
         <div class="flex justify-between items-center gap-1 font-semibold text-sm">
@@ -55,7 +55,7 @@
           <span class="flex items-center gap-1">
             <img
                 src="@/assets/svgs/star.svg"
-                alt="评分"
+                alt=""
                 class="w-3.5 h-3.5"
             />
             <span>

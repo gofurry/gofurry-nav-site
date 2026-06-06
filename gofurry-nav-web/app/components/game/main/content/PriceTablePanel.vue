@@ -25,7 +25,7 @@
           class="group odd:bg-orange-100/50  hover:bg-orange-200/50 h-16"
       >
         <td class="px-2 hidden sm:table-cell">
-          <img :src="item.header" class="h-full w-full object-cover" />
+          <img :src="item.header" class="h-full w-full object-cover" :alt="item.name" />
         </td>
         <td class="px-2 font-medium truncate">{{ item.name }}</td>
         <td class="text-right px-2 hidden sm:table-cell">

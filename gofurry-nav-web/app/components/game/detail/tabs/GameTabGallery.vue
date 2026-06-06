@@ -18,7 +18,7 @@
       <img
           v-else-if="activeMedia?.type === 'screenshot'"
           :src="activeMedia.src"
-          alt="screenshot"
+          :alt="mediaAlt(activeMedia)"
           class="w-full h-full object-contain bg-gray-100 cursor-pointer"
           @click="openFullscreen = true"
       />
@@ -41,7 +41,7 @@
       >
         <img
             :src="item.thumb"
-            alt="thumb"
+            :alt="mediaAlt(item)"
             class="w-full h-full object-fill transition-transform duration-200 group-hover:scale-105"
         />
 
@@ -64,7 +64,7 @@
     >
       <img
           :src="activeMedia.src"
-          alt="fullscreen"
+          :alt="mediaAlt(activeMedia)"
           class="max-h-full max-w-full object-contain"
       />
       <button
@@ -169,6 +169,15 @@ function initVideo(movie: MoviesModel) {
       videoRef.value?.play().catch(() => {})
     })
   }
+}
+
+function mediaAlt(item: MediaItem) {
+  const id = item.key.replace(/^(movie|shot)-/, '')
+  if (item.type === 'movie') {
+    const movie = props.movies?.find(m => `movie-${m.id}` === item.key)
+    return movie?.name || `Game video ${id}`
+  }
+  return `Game screenshot ${id}`
 }
 
 // 监听切换

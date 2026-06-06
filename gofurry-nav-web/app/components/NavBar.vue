@@ -11,7 +11,7 @@
           class="relative z-10 flex shrink-0 items-center gap-2 px-2 py-1"
           @click.stop="closeMenus"
       >
-        <img :src="logo" alt="gofurry logo" class="h-10 w-10" />
+        <img :src="logo" alt="GoFurry" class="h-10 w-10" />
         <span class="hidden text-sm font-semibold tracking-wide text-white sm:inline">GoFurry</span>
       </NuxtLink>
 
@@ -57,7 +57,7 @@
             title="GitHub"
             @click.stop
         >
-          <img :src="githubIconSrc" class="h-auto w-12 object-contain" alt="GitHub" />
+          <img :src="githubIconSrc" class="h-auto w-12 object-contain" alt="" />
         </a>
 
         <div class="hidden items-center gap-1 xl:flex">
@@ -71,7 +71,7 @@
                 : 'text-gray-200 hover:bg-white/10'"
               @click.stop="switchLang(option.value)"
           >
-            <img :src="option.flag" class="h-4 w-4" alt="language" />
+            <img :src="option.flag" class="h-4 w-4" :alt="option.label" />
           </button>
         </div>
 
@@ -91,7 +91,7 @@
             :aria-label="t('navbar.mode')"
             @click.stop="showModeModal = true"
         >
-          <img :src="gear" class="h-4 w-4" alt="mode" />
+          <img :src="gear" class="h-4 w-4" alt="" />
         </button>
 
         <button
@@ -150,7 +150,7 @@
                 @click="openModeModalFromMobile"
             >
               <span class="flex items-center gap-2">
-                <img :src="gear" class="h-4 w-4" alt="mode" />
+                <img :src="gear" class="h-4 w-4" alt="" />
                 {{ t('navbar.mode') }}
               </span>
               <span class="text-orange-300">{{ mode || '--' }}</span>
@@ -167,7 +167,7 @@
                     : 'bg-white/5 text-gray-300 hover:bg-white/10'"
                   @click="switchLang(option.value)"
               >
-                <img :src="option.flag" class="h-4 w-4" alt="language" />
+                <img :src="option.flag" class="h-4 w-4" :alt="option.label" />
                 <span>{{ option.label }}</span>
               </button>
             </div>

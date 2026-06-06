@@ -37,7 +37,7 @@
           class="search-input h-12 w-full rounded-xl px-4 pr-10 duration-500 focus:outline-none"
       />
       <img src="@/assets/svgs/search.svg"
-           alt="search"
+           :alt="searchActionLabel"
            class="search-icon absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2
              cursor-pointer transition-transform duration-500 hover:scale-110"
            @click="doSearch()"
@@ -115,6 +115,7 @@ import { setNavPageRevealLock } from '@/utils/navPageReveal'
 
 const { t, locale } = useI18n()
 const langStore = useLangStore()
+const searchActionLabel = computed(() => locale.value === 'en' ? 'Search GoFurry resources' : '搜索 GoFurry 资源')
 
 // 同步语言切换
 watch(

@@ -26,6 +26,7 @@
           <img
               :src="pingData[domain]?.status === 'up' ? greenCircle : redCircle"
               class="w-3 h-3"
+              alt=""
           />
           <span class="truncate">{{ domain }}</span>
         </div>

@@ -22,9 +22,9 @@
 
         <!-- 星星评分 -->
         <div class="flex items-center gap-1 mt-1">
-          <img v-for="i in fullStars(r.score)" :key="'full-' + i + index" :src="starSvg" class="w-4 h-4" />
-          <img v-if="hasHalfStar(r.score)" :src="starHalfSvg" class="w-4 h-4" />
-          <img v-for="i in emptyStars(r.score)" :key="'empty-' + i + index" :src="starSvg" class="w-4 h-4 opacity-30" />
+          <img v-for="i in fullStars(r.score)" :key="'full-' + i + index" :src="starSvg" class="w-4 h-4" alt="" />
+          <img v-if="hasHalfStar(r.score)" :src="starHalfSvg" class="w-4 h-4" alt="" />
+          <img v-for="i in emptyStars(r.score)" :key="'empty-' + i + index" :src="starSvg" class="w-4 h-4 opacity-30" alt="" />
           <span class="ml-2 text-gray-500">{{ r.score.toFixed(1) }}</span>
         </div>
 

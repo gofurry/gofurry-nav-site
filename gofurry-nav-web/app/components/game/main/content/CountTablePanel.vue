@@ -40,7 +40,7 @@
           <img
               :src="item.header"
               class="h-full w-full object-cover rounded"
-              alt="cover"
+              :alt="item.name"
           />
         </td>
 
