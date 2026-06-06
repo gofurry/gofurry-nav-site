@@ -12,6 +12,7 @@
     </div>
 
     <div
+        v-if="showQuickAccess"
         class="relative z-10 hidden w-full justify-center md:absolute md:left-1/2 md:top-[248px] md:flex md:w-full md:max-w-[56rem] md:-translate-x-1/2 lg:top-[268px]"
     >
       <NavQuickAccess
@@ -133,6 +134,10 @@ import {
   CUSTOM_NAV_HEADER_BG_EVENT,
   loadRandomCustomNavHeaderBackground,
 } from '@/utils/customNavHeaderBackground'
+import {
+  readShowQuickAccess,
+  subscribeNavHeaderSettingsChange,
+} from '@/utils/navHeaderSettings'
 
 const props = defineProps<{
   desktopBgUrl?: string | null
@@ -143,6 +148,7 @@ const { t } = useI18n()
 const bgImage = ref<string | null>(null)
 const recentSites = ref<RecentSiteItem[]>([])
 const customSites = ref<CustomSiteItem[]>([])
+const showQuickAccess = ref(true)
 const showCustomSitesModal = ref(false)
 const customSiteError = ref('')
 const customSiteForm = ref({
@@ -153,6 +159,7 @@ const draggingCustomSiteId = ref<string | null>(null)
 
 let fallbackBackgroundUpdater: (() => void) | null = null
 let customBgObjectUrl: string | null = null
+let stopNavHeaderSettingsSubscription: (() => void) | null = null
 
 function revokeCustomBackgroundUrl() {
   if (customBgObjectUrl) {
@@ -212,6 +219,10 @@ function syncCustomSites() {
 
 function handleCustomSitesChange() {
   syncCustomSites()
+}
+
+function syncNavHeaderSettings() {
+  showQuickAccess.value = readShowQuickAccess()
 }
 
 function visitRecentSite(site: RecentSiteItem) {
@@ -314,8 +325,12 @@ onMounted(async () => {
     }
 
     await applyBackground()
+    syncNavHeaderSettings()
     syncRecentSites()
     syncCustomSites()
+    stopNavHeaderSettingsSubscription = subscribeNavHeaderSettingsChange(({ showQuickAccess: nextValue }) => {
+      showQuickAccess.value = nextValue
+    })
     window.addEventListener('resize', handleResize)
     window.addEventListener(CUSTOM_NAV_HEADER_BG_EVENT, handleCustomBackgroundChange)
     window.addEventListener(RECENT_SITES_EVENT, handleRecentSitesChange)
@@ -334,6 +349,8 @@ onUnmounted(() => {
   window.removeEventListener(CUSTOM_SITES_EVENT, handleCustomSitesChange)
   window.removeEventListener('storage', handleRecentSitesChange)
   window.removeEventListener('storage', handleCustomSitesChange)
+  stopNavHeaderSettingsSubscription?.()
+  stopNavHeaderSettingsSubscription = null
   revokeCustomBackgroundUrl()
 })
 </script>

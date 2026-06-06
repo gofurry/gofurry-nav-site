@@ -85,6 +85,13 @@
     "mode": "模式",
     "modeSetting": "Mode 设置",
     "modeDesc": "用于控制页面显示模式, 例如: nsfw",
+    "preferences": "页面偏好",
+    "displayMode": "显示模式",
+    "displayModeDesc": "输入 nsfw 可显示完整内容，留空则使用默认安全模式。",
+    "quickAccess": "首屏快捷区",
+    "quickAccessDesc": "控制首页搜索框下方的最近浏览与常用网站区域是否显示。",
+    "quickAccessOn": "显示",
+    "quickAccessOff": "隐藏",
     "showCustomSites": "显示常用网站区域",
     "expandNav": "展开导航栏",
     "customPanelCode": "面板自定义前端代码",
@@ -127,7 +134,9 @@
       "bilibili": "哔哩哔哩",
       "weibo": "微博",
       "github": "GitHub",
-      "twitter": "X（Twitter）"
+      "twitter": "X（Twitter）",
+      "terms": "服务条款",
+      "privacy": "隐私政策"
     },
     "rights": "保留所有权利",
     "license": "本网站内容采用 CC-BY-NC-SA 4.0 授权协议",
@@ -530,7 +539,9 @@
         "success": "报名成功",
         "fail": "报名失败",
         "returnNow": "立即返回",
-        "autoReturnIn": "秒后将自动返回抽奖主页"
+        "autoReturnIn": "秒后将自动返回抽奖主页",
+        "defaultSuccessMessage": "您的抽奖报名已经完成激活，感谢参与。",
+        "defaultFailMessage": "激活链接无效、已过期，或报名信息未能完成验证。"
       },
       "submitModal": {
         "currentParticipants": "当前参与者",
@@ -554,6 +565,8 @@
     "tools": {
       "label": "导航工具入口",
       "search": "搜索站点",
+      "feedback": "反馈",
+      "feedbackShort": "反馈",
       "searchPlaceholder": "搜索站点名称或简介...",
       "noSearchResults": "没有找到匹配站点",
       "ask": "问问导航资料",

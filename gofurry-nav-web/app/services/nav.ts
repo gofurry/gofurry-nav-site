@@ -8,6 +8,7 @@ import type {
   NavSiteIndexResponse,
   NavUpdatesResponse,
   SayingModel,
+  SiteViewResponse,
 } from '~/types/nav'
 
 export function getNavHome(lang: string): Promise<NavHomeResponse> {
@@ -28,6 +29,10 @@ export function getNavHomeBackgrounds(): Promise<NavHomeResponse['backgrounds']>
 
 export function getNavSiteIndex(): Promise<NavSiteIndexResponse> {
   return useApi('navV2')('/nav/sites/index')
+}
+
+export function touchSiteView(siteId: string | number): Promise<SiteViewResponse> {
+  return useApi('navV2')(`/nav/sites/${siteId}/view`, { method: 'POST' })
 }
 
 export function getSearchSuggestion(

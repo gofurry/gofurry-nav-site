@@ -93,6 +93,16 @@ type SiteGroupMap struct {
 
 func (*SiteGroupMap) TableName() string { return "gfn_site_group_map" }
 
+type FeaturedSite struct {
+	ID         int64     `gorm:"column:id;primaryKey" json:"id"`
+	SiteID     int64     `gorm:"column:site_id;not null" json:"site_id"`
+	Weight     int64     `gorm:"column:weight;not null" json:"weight"`
+	CreateTime time.Time `gorm:"column:create_time;autoCreateTime" json:"create_time"`
+	UpdateTime time.Time `gorm:"column:update_time;autoUpdateTime" json:"update_time"`
+}
+
+func (*FeaturedSite) TableName() string { return "gfn_featured_site" }
+
 type SayingPayload struct {
 	Author *string `json:"author"`
 	Saying string  `json:"saying"`
@@ -153,12 +163,26 @@ type SiteGroupMapPayload struct {
 	GroupID int64 `json:"group_id"`
 }
 
+type FeaturedSitePayload struct {
+	SiteID int64 `json:"site_id"`
+	Weight int64 `json:"weight"`
+}
+
 type SiteGroupMapDTO struct {
 	ID         int64     `json:"id"`
 	SiteID     int64     `json:"site_id"`
 	GroupID    int64     `json:"group_id"`
 	SiteName   string    `json:"site_name"`
 	GroupName  string    `json:"group_name"`
+	CreateTime time.Time `json:"create_time"`
+	UpdateTime time.Time `json:"update_time"`
+}
+
+type FeaturedSiteDTO struct {
+	ID         int64     `json:"id"`
+	SiteID     int64     `json:"site_id"`
+	SiteName   string    `json:"site_name"`
+	Weight     int64     `json:"weight"`
 	CreateTime time.Time `json:"create_time"`
 	UpdateTime time.Time `json:"update_time"`
 }

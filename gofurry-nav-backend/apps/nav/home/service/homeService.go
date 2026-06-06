@@ -1,6 +1,8 @@
 package service
 
 import (
+	"math/rand"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -14,6 +16,7 @@ import (
 type navHomeReader interface {
 	GetSiteList(lang string) ([]navmodels.SiteVo, common.GFError)
 	GetGroupList(lang string) ([]navmodels.GroupVo, common.GFError)
+	GetFeaturedSiteList() ([]navmodels.FeaturedSiteVo, common.GFError)
 	GetPingList() (map[string]string, common.GFError)
 	GetSayingService() (navmodels.SayingModel, common.GFError)
 	GetImageUrl(t string) string
@@ -54,8 +57,15 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 		ReasonMessages: map[string]string{},
 		Sites:          []navmodels.SiteVo{},
 		Groups:         []models.HomeGroup{},
-		Ping:           map[string]string{},
-		Backgrounds:    models.HomeBackgrounds{},
+		Spotlight: models.HomeSpotlight{
+			PageSize: 6,
+			Featured: []navmodels.SiteVo{},
+			Popular:  []navmodels.SiteVo{},
+			Latest:   []navmodels.SiteVo{},
+			Random:   []navmodels.SiteVo{},
+		},
+		Ping:        map[string]string{},
+		Backgrounds: models.HomeBackgrounds{},
 	}
 
 	if sites, err := svc.reader().GetSiteList(lang); err != nil {
@@ -72,6 +82,15 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 	} else {
 		response.CacheState["groups"] = models.HomeStateReady
 		response.Groups = buildHomeGroups(response.Sites, groups)
+	}
+
+	if featured, err := svc.reader().GetFeaturedSiteList(); err != nil {
+		response.CacheState["spotlight"] = models.HomeStateMissing
+		response.ReasonMessages["spotlight"] = err.GetMsg()
+		response.Spotlight = buildHomeSpotlight(response.Sites, nil, svc.clock()())
+	} else {
+		response.CacheState["spotlight"] = models.HomeStateReady
+		response.Spotlight = buildHomeSpotlight(response.Sites, featured, svc.clock()())
 	}
 
 	if ping, err := svc.reader().GetPingList(); err != nil {
@@ -205,4 +224,53 @@ func buildHomeGroups(sites []navmodels.SiteVo, groups []navmodels.GroupVo) []mod
 	}
 
 	return result
+}
+
+func buildHomeSpotlight(sites []navmodels.SiteVo, featured []navmodels.FeaturedSiteVo, now time.Time) models.HomeSpotlight {
+	spotlight := models.HomeSpotlight{
+		PageSize: 6,
+		Featured: []navmodels.SiteVo{},
+		Popular:  []navmodels.SiteVo{},
+		Latest:   []navmodels.SiteVo{},
+		Random:   []navmodels.SiteVo{},
+	}
+
+	if len(sites) == 0 {
+		return spotlight
+	}
+
+	siteMap := make(map[string]navmodels.SiteVo, len(sites))
+	for _, site := range sites {
+		siteMap[site.ID] = site
+	}
+
+	for _, item := range featured {
+		if site, ok := siteMap[item.SiteID]; ok {
+			spotlight.Featured = append(spotlight.Featured, site)
+		}
+	}
+
+	spotlight.Popular = append(spotlight.Popular, sites...)
+	sort.SliceStable(spotlight.Popular, func(i, j int) bool {
+		if spotlight.Popular[i].ViewCount != spotlight.Popular[j].ViewCount {
+			return spotlight.Popular[i].ViewCount > spotlight.Popular[j].ViewCount
+		}
+		return spotlight.Popular[i].ID < spotlight.Popular[j].ID
+	})
+
+	spotlight.Latest = append(spotlight.Latest, sites...)
+	sort.SliceStable(spotlight.Latest, func(i, j int) bool {
+		if spotlight.Latest[i].CreateTime != spotlight.Latest[j].CreateTime {
+			return spotlight.Latest[i].CreateTime > spotlight.Latest[j].CreateTime
+		}
+		return spotlight.Latest[i].ID > spotlight.Latest[j].ID
+	})
+
+	spotlight.Random = append(spotlight.Random, sites...)
+	rng := rand.New(rand.NewSource(now.UnixNano()))
+	rng.Shuffle(len(spotlight.Random), func(i, j int) {
+		spotlight.Random[i], spotlight.Random[j] = spotlight.Random[j], spotlight.Random[i]
+	})
+
+	return spotlight
 }

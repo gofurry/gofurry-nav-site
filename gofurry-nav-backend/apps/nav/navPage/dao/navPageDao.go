@@ -105,6 +105,17 @@ func (dao *navPageDao) GetGroupMapList() (res []models.GfnSiteGroupMap, err comm
 	return
 }
 
+func (dao *navPageDao) GetFeaturedSiteList() (res []models.GfnFeaturedSite, err common.GFError) {
+	db := dao.Gm.Table(models.TableNameGfnFeaturedSite + " AS f").
+		Joins("INNER JOIN " + models.TableNameGfnSite + " AS s ON s.id = f.site_id AND s.deleted IS NOT TRUE").
+		Order("f.weight DESC, f.id DESC")
+	db.Find(&res)
+	if dbErr := db.Error; dbErr != nil {
+		return res, common.NewDaoError(dbErr.Error())
+	}
+	return
+}
+
 // 按 id 序返回指定的金句
 func (dao navPageDao) GetSayingByRandom() (*models.GfnSaying, common.GFError) {
 	var res models.GfnSaying

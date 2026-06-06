@@ -18,6 +18,7 @@
         <div class="h-10"></div>
         <NavContent
           :initial-groups="navPageData.groups"
+          :initial-spotlight="navPageData.spotlight"
           :initial-ping-data="navPageData.pingData"
         />
         <div class="h-10"></div>
@@ -30,7 +31,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getNavHome } from '~/services/nav'
-import type { Delay, Group, SayingModel, Site } from '~/types/nav'
+import type { Delay, Group, NavHomeSpotlight, SayingModel, Site } from '~/types/nav'
 import NavHeader from '@/components/nav/NavHeader.vue'
 import NavToolDock from '@/components/nav/NavToolDock.vue'
 import NavTransitionBar from '@/components/nav/NavTransitionBar.vue'
@@ -46,6 +47,7 @@ interface NavPageData {
   saying: SayingModel | null
   groups: Group[]
   sites: Site[]
+  spotlight: NavHomeSpotlight
   pingData: Record<string, Delay>
 }
 
@@ -93,6 +95,7 @@ const { data } = await useAsyncData<NavPageData>(
       saying: home.saying,
       groups: home.groups.sort((a, b) => Number(a.priority) - Number(b.priority)),
       sites: home.sites,
+      spotlight: home.spotlight,
       pingData: parsePingData(home.ping),
     }
   },
@@ -104,6 +107,7 @@ const { data } = await useAsyncData<NavPageData>(
       saying: null,
       groups: [],
       sites: [],
+      spotlight: { page_size: 6, featured: [], popular: [], latest: [], random: [] },
       pingData: {},
     }),
   }

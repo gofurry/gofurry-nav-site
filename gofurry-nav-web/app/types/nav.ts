@@ -10,6 +10,8 @@ export interface Site {
     nsfw: string;
     welfare: string;
     icon: string | null;
+    view_count: number;
+    create_time: string;
     update_time: string;
 }
 
@@ -316,6 +318,14 @@ export interface NavHomeBackgrounds {
     mobile: string;
 }
 
+export interface NavHomeSpotlight {
+    page_size: number;
+    featured: Site[];
+    popular: Site[];
+    latest: Site[];
+    random: Site[];
+}
+
 export interface NavHomeResponse {
     schema_version: number;
     generated_at: string;
@@ -323,9 +333,15 @@ export interface NavHomeResponse {
     reason_messages?: Record<string, string>;
     sites: Site[];
     groups: Group[];
+    spotlight: NavHomeSpotlight;
     ping: Record<string, string>;
     saying: SayingModel | null;
     backgrounds: NavHomeBackgrounds;
+}
+
+export interface SiteViewResponse {
+    site_id: number;
+    view_count: number;
 }
 
 export interface NavHomePingResponse {

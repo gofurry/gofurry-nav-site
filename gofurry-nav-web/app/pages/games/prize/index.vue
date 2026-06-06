@@ -1,13 +1,7 @@
 <template>
   <div class="lottery-page relative min-h-full overflow-hidden bg-[#11100f] text-stone-100">
-    <div class="absolute inset-0 opacity-[0.24]" aria-hidden="true">
-      <img
-        src="https://qcdn.go-furry.com/game/background/steam.jpg"
-        alt=""
-        class="h-full w-full object-cover"
-      />
-    </div>
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_74%_18%,rgba(244,170,96,0.24),transparent_30%),linear-gradient(115deg,rgba(17,16,15,0.96)_0%,rgba(17,16,15,0.86)_54%,rgba(17,16,15,0.64)_100%)]" aria-hidden="true" />
+    <GoFurryGridBackground palette="nav-content" />
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_74%_18%,rgba(244,170,96,0.16),transparent_30%),linear-gradient(115deg,rgba(17,16,15,0.72)_0%,rgba(17,16,15,0.54)_54%,rgba(17,16,15,0.38)_100%)]" aria-hidden="true" />
     <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-200/60 to-transparent" aria-hidden="true" />
 
     <div class="relative mx-auto flex w-full max-w-6xl flex-col px-5 py-10 sm:px-8 lg:py-14">
@@ -127,7 +121,7 @@
             <article
               v-for="item in historyList"
               :key="`${item.name}-${item.end_time}`"
-              class="grid gap-4 px-5 py-5 transition duration-200 hover:bg-white/[0.035] lg:grid-cols-[minmax(0,1fr)_17rem]"
+              class="grid gap-5 px-5 py-5 transition duration-200 hover:bg-white/[0.035] lg:grid-cols-[minmax(0,1fr)_20rem]"
             >
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -142,21 +136,8 @@
                 <p class="mt-2 line-clamp-2 text-sm leading-6 text-stone-400">
                   {{ item.desc }}
                 </p>
-              </div>
 
-              <div class="space-y-3 text-sm text-stone-300">
-                <div class="flex items-center justify-between gap-3">
-                  <span class="text-stone-500">{{ t('game.lottery.home.prize') }}</span>
-                  <span class="min-w-0 truncate text-right">
-                    {{ item.prize.title }} · {{ item.prize.platform }} × {{ item.prize.count }}
-                  </span>
-                </div>
-                <div class="flex items-center justify-between gap-3">
-                  <span class="text-stone-500">{{ t('game.lottery.home.participants') }}</span>
-                  <span>{{ item.count }}</span>
-                </div>
-
-                <div v-if="item.winner.length" class="flex flex-wrap justify-end gap-1.5">
+                <div v-if="item.winner.length" class="mt-5 flex flex-wrap gap-2">
                   <span
                     v-for="winner in item.winner"
                     :key="winner.email"
@@ -166,8 +147,21 @@
                   </span>
                 </div>
 
-                <div v-else class="text-right text-xs text-stone-500">
+                <div v-else class="mt-5 text-xs text-stone-500">
                   {{ t('game.lottery.home.noWinner') }}
+                </div>
+              </div>
+
+              <div class="space-y-3 text-sm text-stone-300">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="shrink-0 whitespace-nowrap text-stone-500">{{ t('game.lottery.home.prize') }}</span>
+                  <span class="min-w-0 truncate text-right">
+                    {{ item.prize.title }} · {{ item.prize.platform }} × {{ item.prize.count }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <span class="shrink-0 whitespace-nowrap text-stone-500">{{ t('game.lottery.home.participants') }}</span>
+                  <span>{{ item.count }}</span>
                 </div>
               </div>
             </article>
@@ -188,6 +182,7 @@
 import { onMounted, ref } from "vue"
 import { getLottery } from "@/utils/api/game"
 import { i18n } from '@/main'
+import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import LotteryJoinModal from "@/components/game/lottery/LotteryJoinModal.vue"
 
 import type {
