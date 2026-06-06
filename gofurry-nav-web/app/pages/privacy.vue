@@ -146,6 +146,25 @@ const content = computed(() => (
         ]
       }
 ))
+
+const pageSeo = computed(() => (
+  isZh.value
+    ? {
+        title: 'GoFurry 隐私政策 - 数据处理、本地偏好与第三方链接说明',
+        description: '阅读 GoFurry 兽人控导航站隐私政策，了解本站无注册登录系统、不主动收集敏感个人信息，以及浏览数据、本地偏好、缓存日志和第三方链接的处理方式。'
+      }
+    : {
+        title: 'GoFurry Privacy Policy - Data handling, local preferences, and third-party links',
+        description: 'Read the GoFurry Navigation privacy policy covering the no-account design, sensitive data boundaries, browsing signals, local preferences, cache logs, and third-party links.'
+      }
+))
+
+useSeoMeta({
+  title: () => pageSeo.value.title,
+  description: () => pageSeo.value.description,
+  ogTitle: () => pageSeo.value.title,
+  ogDescription: () => pageSeo.value.description,
+})
 </script>
 
 <style scoped>

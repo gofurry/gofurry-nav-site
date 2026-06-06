@@ -7,6 +7,7 @@
         backgroundRepeat: 'repeat'
       }"
     >
+      <h1 class="sr-only">{{ gamesPageSeo.heading }}</h1>
       <div class="mx-auto flex w-full max-w-[1700px] gap-4 p-6">
         <section class="w-full xl:w-[75%]">
           <GameInfoPanel
@@ -28,6 +29,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import bgGrid from '@/assets/pngs/bg-grid.png'
 import GameInfoPanel from '@/components/game/main/content/GameInfoPanel.vue'
 import GameToolDock from '@/components/game/main/GameToolDock.vue'
@@ -41,6 +43,20 @@ interface GamesPageData {
   latestNews: LatestNewsRecord | null
   latestReviews: AnonymousReviewModel[]
 }
+
+const { locale } = useI18n()
+const gamesPageSeo = computed(() => locale.value === 'en'
+  ? {
+      heading: 'GoFurry Furry Games',
+      title: 'GoFurry Furry Games - New releases, rankings, discounts, and reviews',
+      description: 'Explore furry and anthro games on GoFurry, including recent releases, newly listed titles, free games, popularity rankings, price signals, update news, and community review activity.'
+    }
+  : {
+      heading: 'GoFurry 兽人游戏资料库',
+      title: 'GoFurry 兽人游戏资料库 - 新作、排行、折扣与评价',
+      description: '在 GoFurry 浏览兽人、拟人与相关题材游戏资料，查看最近发售、最新收录、免费专区、热门排行、价格信号、更新资讯与社区评价动态。'
+    }
+)
 
 const { data } = await useAsyncData<GamesPageData>(
   'games-page',
@@ -70,4 +86,11 @@ const { data } = await useAsyncData<GamesPageData>(
 )
 
 const gamesPageData = computed(() => data.value!)
+
+useSeoMeta({
+  title: () => gamesPageSeo.value.title,
+  description: () => gamesPageSeo.value.description,
+  ogTitle: () => gamesPageSeo.value.title,
+  ogDescription: () => gamesPageSeo.value.description,
+})
 </script>

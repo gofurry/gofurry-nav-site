@@ -65,6 +65,12 @@ const lang = ref(langStore.lang)
 const route = useRoute()
 const router = useRouter()
 
+useHead({
+  meta: [
+    { name: 'robots', content: 'noindex, follow' }
+  ]
+})
+
 type RouteQueryValue = string | null | Array<string | null>
 type LocationQuery = Record<string, RouteQueryValue | undefined>
 type LocationQueryRaw = Record<string, string | string[] | null | undefined>

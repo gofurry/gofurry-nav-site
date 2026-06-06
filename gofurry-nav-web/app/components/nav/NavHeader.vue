@@ -2,6 +2,7 @@
   <header
       class="relative flex h-90 w-full flex-col items-center justify-start overflow-hidden px-4 pt-6 shadow-sm md:h-[100vh] md:px-6 md:pt-0"
   >
+    <h1 class="sr-only">{{ homeHeading }}</h1>
     <div
         v-if="bgImage"
         class="absolute inset-0 bg-cover bg-center transition-all duration-700"
@@ -114,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SearchBox from './SearchBox.vue'
 import NavQuickAccess from './NavQuickAccess.vue'
@@ -144,7 +145,11 @@ const props = defineProps<{
   mobileBgUrl?: string | null
 }>()
 
-const { t } = useI18n()
+const { locale, t } = useI18n()
+const homeHeading = computed(() => locale.value === 'en'
+  ? 'GoFurry Navigation - Discover furry communities, art, fiction, games, tools, and site monitoring'
+  : 'GoFurry 兽人控导航站 - 发现兽人社区、艺术、小说、游戏、工具与站点监测资源'
+)
 const bgImage = ref<string | null>(null)
 const recentSites = ref<RecentSiteItem[]>([])
 const customSites = ref<CustomSiteItem[]>([])

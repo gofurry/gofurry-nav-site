@@ -4,6 +4,7 @@
     <div class="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[var(--about-top-veil)]" />
 
     <main class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 md:px-8 md:py-12">
+      <h1 class="sr-only">{{ pageSeo.heading }}</h1>
       <section class="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
         <article class="about-panel">
           <div class="text-xs uppercase tracking-[0.28em] text-[var(--about-accent)]">
@@ -85,6 +86,26 @@ import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue
 const themeStore = useThemeStore()
 const isZh = computed(() => i18n.global.locale.value === 'zh')
 const isDark = computed(() => themeStore.theme === 'dark')
+const pageSeo = computed(() => (
+  isZh.value
+    ? {
+        heading: '关于 GoFurry 兽人控导航站',
+        title: '关于 GoFurry 兽人控导航站 - 维护者、反馈与收录合作',
+        description: '了解 GoFurry 兽人控导航站的维护者、项目定位、站点收录原则、反馈方式与合作入口。GoFurry 专注兽人文化资源导航和用户视角的站点观测数据。'
+      }
+    : {
+        heading: 'About GoFurry Navigation',
+        title: 'About GoFurry Navigation - Maintainer, feedback, and listing collaboration',
+        description: 'Learn about GoFurry Navigation, its maintainer, project direction, listing feedback channels, and collaboration paths for furry culture resources and user-perspective site observation data.'
+      }
+))
+
+useSeoMeta({
+  title: () => pageSeo.value.title,
+  description: () => pageSeo.value.description,
+  ogTitle: () => pageSeo.value.title,
+  ogDescription: () => pageSeo.value.description,
+})
 
 onMounted(() => {
   themeStore.initTheme()

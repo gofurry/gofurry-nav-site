@@ -78,6 +78,7 @@ import SiteObservationTabs from '@/components/site/SiteObservationTabs.vue'
 import SitePerformancePanel from '@/components/site/SitePerformancePanel.vue'
 import SiteSignalCards from '@/components/site/SiteSignalCards.vue'
 import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
+import { buildSiteDetailSeo } from '~/utils/seo'
 
 const { locale, t } = useI18n()
 const { data, pending, error, siteId } = await useSiteDetailPage()
@@ -309,14 +310,18 @@ const signalCards = computed(() => [
     ],
   },
 ])
-const seoTitle = computed(() => `${siteName.value} - GoFurry`)
-const seoDescription = computed(() => (sitePageData.value.siteInfo?.info?.trim() ?? '').slice(0, 160))
+const seo = computed(() => buildSiteDetailSeo({
+  name: sitePageData.value.siteInfo?.name,
+  description: sitePageData.value.siteInfo?.info,
+  domain: sitePageData.value.domain,
+  locale: locale.value,
+}))
 
 useSeoMeta({
-  title: () => seoTitle.value,
-  description: () => seoDescription.value,
-  ogTitle: () => seoTitle.value,
-  ogDescription: () => seoDescription.value,
+  title: () => seo.value.title,
+  description: () => seo.value.description,
+  ogTitle: () => seo.value.title,
+  ogDescription: () => seo.value.description,
 })
 
 onMounted(() => {

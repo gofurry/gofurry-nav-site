@@ -179,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { getLottery } from "@/utils/api/game"
 import { i18n } from '@/main'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
@@ -191,6 +191,25 @@ import type {
 } from "@/types/game"
 
 const { t } = i18n.global
+const isZh = computed(() => i18n.global.locale.value === 'zh')
+const pageSeo = computed(() => (
+  isZh.value
+    ? {
+        title: 'GoFurry 兽人游戏抽奖 - 活动奖池与获奖记录',
+        description: '查看 GoFurry 兽人游戏抽奖活动、当前可参与奖池、奖品信息、参与人数与历史获奖记录，发现与兽人游戏社区相关的福利动态。'
+      }
+    : {
+        title: 'GoFurry Game Lottery - Active prize pools and winner records',
+        description: 'View GoFurry game lottery events, active prize pools, prize details, participant counts, winner announcements, and community reward activity around furry games.'
+      }
+))
+
+useSeoMeta({
+  title: () => pageSeo.value.title,
+  description: () => pageSeo.value.description,
+  ogTitle: () => pageSeo.value.title,
+  ogDescription: () => pageSeo.value.description,
+})
 
 const loading = ref(true)
 const activeList = ref<LotteryActiveModel[]>([])

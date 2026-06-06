@@ -32,6 +32,7 @@ import GameDetailMain from '@/components/game/detail/GameDetailMain.vue'
 import GameDetailSidebar from '@/components/game/detail/GameDetailSidebar.vue'
 import { getGameBaseInfo, getGameRemark, getRecommendedGame } from '~/services/game'
 import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '~/types/game'
+import { buildGameDetailSeo } from '~/utils/seo'
 
 interface GameDetailPageData {
   gameBaseInfo: GameBaseInfoResponse | null
@@ -40,7 +41,7 @@ interface GameDetailPageData {
 }
 
 const route = useRoute()
-const { locale, t } = useI18n()
+const { locale } = useI18n()
 
 const gameId = computed(() => String(route.params.id ?? ''))
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
@@ -71,21 +72,18 @@ const { data } = await useAsyncData<GameDetailPageData>(
 )
 
 const gameDetailData = computed(() => data.value!)
-const seoTitle = computed(() => {
-  const name = gameDetailData.value.gameBaseInfo?.name?.trim()
-  return name ? `${name} - GoFurry` : `${t('sidebar.games')} - GoFurry`
-})
-const seoDescription = computed(() => {
-  const description = gameDetailData.value.gameBaseInfo?.info?.trim() ?? ''
-  return description.slice(0, 160)
-})
+const seo = computed(() => buildGameDetailSeo({
+  name: gameDetailData.value.gameBaseInfo?.name,
+  description: gameDetailData.value.gameBaseInfo?.info,
+  locale: locale.value,
+}))
 const seoImage = computed(() => gameDetailData.value.gameBaseInfo?.cover || '')
 
 useSeoMeta({
-  title: () => seoTitle.value,
-  description: () => seoDescription.value,
-  ogTitle: () => seoTitle.value,
-  ogDescription: () => seoDescription.value,
+  title: () => seo.value.title,
+  description: () => seo.value.description,
+  ogTitle: () => seo.value.title,
+  ogDescription: () => seo.value.description,
   ogImage: () => seoImage.value,
   twitterCard: 'summary_large_image',
 })

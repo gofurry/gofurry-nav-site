@@ -318,6 +318,12 @@ definePageMeta({
   ssr: false
 })
 
+useHead({
+  meta: [
+    { name: 'robots', content: 'noindex, follow' }
+  ]
+})
+
 type ArchiveCitation = {
   source_type?: string
   title?: string

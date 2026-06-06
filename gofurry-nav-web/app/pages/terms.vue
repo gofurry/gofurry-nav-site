@@ -146,6 +146,25 @@ const content = computed(() => (
         ]
       }
 ))
+
+const pageSeo = computed(() => (
+  isZh.value
+    ? {
+        title: 'GoFurry 服务条款 - 导航收录、外部链接与观测数据说明',
+        description: '阅读 GoFurry 兽人控导航站服务条款，了解导航收录范围、外部链接责任、站点纠错与下架流程、浏览量和用户视角观测数据的使用方式。'
+      }
+    : {
+        title: 'GoFurry Terms of Service - Listings, external links, and observation data',
+        description: 'Read the GoFurry Navigation terms covering listing scope, external links, correction and removal requests, visit signals, observation data, availability, and feedback channels.'
+      }
+))
+
+useSeoMeta({
+  title: () => pageSeo.value.title,
+  description: () => pageSeo.value.description,
+  ogTitle: () => pageSeo.value.title,
+  ogDescription: () => pageSeo.value.description,
+})
 </script>
 
 <style scoped>

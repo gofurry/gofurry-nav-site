@@ -4,9 +4,10 @@
       :style="{
         backgroundImage: `url(${bgGrid})`,
         backgroundRepeat: 'repeat'
-      }"
+    }"
   >
     <div class="p-6 space-y-6">
+      <h1 class="sr-only">{{ newsPageSeo.heading }}</h1>
       <MoreLatestNewsList
           :list="pageList"
       />
@@ -40,6 +41,25 @@ const langStore = useLangStore()
 
 const lang = ref(langStore.lang)
 const list = ref<NewsBaseModel[]>([])
+const newsPageSeo = computed(() => lang.value === 'en'
+  ? {
+      heading: 'GoFurry Furry Game News',
+      title: 'GoFurry Furry Game News - Latest updates from furry and anthro games',
+      description: 'Read the latest furry and anthro game news collected by GoFurry, including update posts, release notes, creator activity, community signals, and related game discovery links.'
+    }
+  : {
+      heading: 'GoFurry 兽人游戏资讯',
+      title: 'GoFurry 兽人游戏资讯 - 兽人和拟人游戏最新动态',
+      description: '查看 GoFurry 收集的兽人、拟人与相关题材游戏资讯，包括更新公告、发布动态、创作者消息、社区信号与相关游戏发现入口。'
+    }
+)
+
+useSeoMeta({
+  title: () => newsPageSeo.value.title,
+  description: () => newsPageSeo.value.description,
+  ogTitle: () => newsPageSeo.value.title,
+  ogDescription: () => newsPageSeo.value.description,
+})
 
 const pageSize = 20
 const totalPages = 5

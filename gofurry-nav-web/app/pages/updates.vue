@@ -3,6 +3,7 @@
     <GoFurryGridBackground />
 
     <main class="relative z-[1] mx-auto w-[min(1100px,calc(100%-40px))] py-9 pb-24">
+      <h1 class="sr-only">{{ copy.pageHeading }}</h1>
       <UpdatesSummaryBar
         :label="copy.summaryAriaLabel"
         :latest-label="copy.latestLabel"
@@ -105,8 +106,9 @@ const copy = computed(() => {
       empty: 'No update notices yet.',
       unavailable: 'Unavailable',
       errorFallback: 'Update notices are temporarily unavailable.',
-      seoTitle: 'GoFurry Updates',
-      seoDescription: 'Latest product and maintenance updates from GoFurry.',
+      pageHeading: 'GoFurry Updates',
+      seoTitle: 'GoFurry Updates - Product, navigation, and monitoring change log',
+      seoDescription: 'Follow GoFurry product updates, navigation changes, site monitoring improvements, maintenance notices, and newly shipped features for the furry resource discovery platform.',
     }
   }
 
@@ -120,8 +122,9 @@ const copy = computed(() => {
     empty: '暂时还没有更新公告。',
     unavailable: '暂无',
     errorFallback: '更新公告暂时不可用。',
-    seoTitle: 'GoFurry Updates',
-    seoDescription: 'GoFurry 的最新产品更新与维护记录。',
+    pageHeading: 'GoFurry 更新公告',
+    seoTitle: 'GoFurry 更新公告 - 产品、导航与站点监测变更记录',
+    seoDescription: '查看 GoFurry 的产品更新、导航收录变化、站点监测能力改进、维护公告与近期上线功能，了解兽人资源发现平台的持续迭代。'
   }
 })
 
