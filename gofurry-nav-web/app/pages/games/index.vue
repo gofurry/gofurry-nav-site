@@ -1,14 +1,11 @@
 <template>
   <div class="flex min-h-full w-full flex-col overflow-clip bg-gray-50">
     <main
-      class="flex-1 bg-[#f2e3d0]"
-      :style="{
-        backgroundImage: `url(${bgGrid})`,
-        backgroundRepeat: 'repeat'
-      }"
+      class="relative isolate flex-1 overflow-hidden"
     >
+      <GoFurryGridBackground :fixed="false" palette="nav-content" />
       <h1 class="sr-only">{{ gamesPageSeo.heading }}</h1>
-      <div class="mx-auto flex w-full max-w-[1700px] gap-4 p-6">
+      <div class="relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 p-6">
         <section class="w-full xl:w-[75%]">
           <GameInfoPanel
             :initial-raw-data="gamesPageData.mainInfo"
@@ -30,7 +27,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import bgGrid from '@/assets/pngs/bg-grid.png'
+import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import GameInfoPanel from '@/components/game/main/content/GameInfoPanel.vue'
 import GameToolDock from '@/components/game/main/GameToolDock.vue'
 import SideBarPanel from '@/components/game/main/sidebar/SideBarPanel.vue'

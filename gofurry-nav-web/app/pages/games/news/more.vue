@@ -1,12 +1,9 @@
 <template>
   <div
-      class="flex flex-col w-full min-h-full bg-[#f2e3d0]"
-      :style="{
-        backgroundImage: `url(${bgGrid})`,
-        backgroundRepeat: 'repeat'
-    }"
+      class="relative isolate flex min-h-full w-full flex-col overflow-hidden"
   >
-    <div class="p-6 space-y-6">
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
+    <div class="relative z-10 p-6 space-y-6">
       <h1 class="sr-only">{{ newsPageSeo.heading }}</h1>
       <MoreLatestNewsList
           :list="pageList"
@@ -34,7 +31,7 @@ import type { NewsBaseModel } from '@/types/game'
 
 import MoreLatestNewsList from '@/components/game/news/MoreLatestNewsList.vue'
 import FixedPagination from '@/components/game/news/FixedPagination.vue'
-import bgGrid from '@/assets/pngs/bg-grid.png'
+import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import NewsSearchBall from "@/components/game/news/NewsSearchBall.vue";
 
 const langStore = useLangStore()

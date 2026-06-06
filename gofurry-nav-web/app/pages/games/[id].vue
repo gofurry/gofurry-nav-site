@@ -1,12 +1,9 @@
 <template>
   <div
-    class="min-h-200 bg-[#f2e3d0]"
-    :style="{
-      backgroundImage: `url(${bgGrid})`,
-      backgroundRepeat: 'repeat'
-    }"
+    class="relative isolate min-h-200 overflow-hidden"
   >
-    <div class="mx-auto flex w-full max-w-[1700px] gap-4 p-6">
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
+    <div class="relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 p-6">
       <section class="w-full xl:w-[75%]">
         <GameDetailMain
           :game="gameDetailData.gameBaseInfo"
@@ -27,7 +24,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import bgGrid from '@/assets/pngs/bg-grid.png'
+import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import GameDetailMain from '@/components/game/detail/GameDetailMain.vue'
 import GameDetailSidebar from '@/components/game/detail/GameDetailSidebar.vue'
 import { getGameBaseInfo, getGameRemark, getRecommendedGame } from '~/services/game'

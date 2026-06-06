@@ -1,13 +1,12 @@
 <template>
   <main
-      class="flex-1 bg-[#f2e3d0]"
-      :style="{
-      backgroundImage: `url(${bgGrid})`,
-      backgroundRepeat: 'repeat'
-    }"
+      class="relative isolate flex-1 overflow-hidden"
   >
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
     <h1 class="sr-only">{{ creatorPageSeo.heading }}</h1>
-    <CreatorGallery />
+    <div class="relative z-10">
+      <CreatorGallery />
+    </div>
   </main>
 </template>
 
@@ -15,7 +14,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CreatorGallery from '@/components/game/creators/CreatorGallery.vue'
-import bgGrid from '@/assets/pngs/bg-grid.png'
+import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 
 const { locale } = useI18n()
 const creatorPageSeo = computed(() => locale.value === 'en'

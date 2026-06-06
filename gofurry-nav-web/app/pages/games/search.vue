@@ -1,12 +1,9 @@
 <template>
   <div
-      class="flex flex-col w-full min-h-full bg-[#f2e3d0]"
-      :style="{
-        backgroundImage: `url(${bgGrid})`,
-        backgroundRepeat: 'repeat'
-      }"
+      class="relative isolate flex min-h-full w-full flex-col overflow-hidden"
   >
-    <div class="p-6 space-y-4">
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
+    <div class="relative z-10 p-6 space-y-4">
 
       <div class="relative flex gap-4 items-center w-full">
         <div class="flex-1">
@@ -54,7 +51,7 @@ import type {
   GameTagRecord,
   SearchPageQueryRequest
 } from '@/types/game'
-import bgGrid from "@/assets/pngs/bg-grid.png";
+import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import { useLangStore } from '@/store/langStore'
 import { i18n } from '@/main'
 
