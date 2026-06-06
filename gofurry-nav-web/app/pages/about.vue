@@ -80,11 +80,12 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { i18n } from '@/main'
+import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@/stores/theme'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 const themeStore = useThemeStore()
-const isZh = computed(() => i18n.global.locale.value === 'zh')
+const { locale } = useI18n()
+const isZh = computed(() => locale.value === 'zh')
 const isDark = computed(() => themeStore.theme === 'dark')
 const pageSeo = computed(() => (
   isZh.value
