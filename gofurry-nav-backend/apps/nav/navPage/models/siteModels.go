@@ -66,3 +66,17 @@ type GfnSiteGroupMap struct {
 	CreateTime time.Time `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:create time" json:"createTime"`
 	UpdateTime time.Time `gorm:"column:update_time;type:int;type:unsigned;not null;autoUpdateTime;comment:update time" json:"updateTime"`
 }
+
+const TableNameGfnFeaturedSite = "gfn_featured_site"
+
+func (*GfnFeaturedSite) TableName() string {
+	return TableNameGfnFeaturedSite
+}
+
+type GfnFeaturedSite struct {
+	ID         int64     `gorm:"column:id;type:bigint;primaryKey;comment:featured site id" json:"id"`
+	SiteID     int64     `gorm:"column:site_id;type:bigint;not null;comment:site id" json:"siteId,string"`
+	Weight     int64     `gorm:"column:weight;type:bigint;not null;default:0;comment:weight" json:"weight"`
+	CreateTime time.Time `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:create time" json:"createTime"`
+	UpdateTime time.Time `gorm:"column:update_time;type:int;type:unsigned;not null;autoUpdateTime;comment:update time" json:"updateTime"`
+}

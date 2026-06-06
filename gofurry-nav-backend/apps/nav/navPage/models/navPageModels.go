@@ -27,6 +27,8 @@ type SiteVo struct {
 	Nsfw       string  `form:"nsfw" json:"nsfw"`
 	Welfare    string  `form:"welfare" json:"welfare"`
 	Icon       *string `form:"icon" json:"icon"`
+	ViewCount  int64   `form:"view_count" json:"view_count"`
+	CreateTime string  `form:"create_time" json:"create_time"`
 	UpdateTime string  `form:"update_time" json:"update_time"`
 }
 
@@ -41,4 +43,10 @@ type GroupVo struct {
 type SayingModel struct {
 	Author  *string `json:"author"`
 	Content string  `json:"content"`
+}
+
+type FeaturedSiteVo struct {
+	ID     string `json:"id"`
+	SiteID string `json:"site_id"`
+	Weight int64  `json:"weight"`
 }

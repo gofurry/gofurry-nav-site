@@ -31,7 +31,11 @@ var navPageSingleton = new(navPageService)
 
 func GetNavPageService() *navPageService { return navPageSingleton }
 
-const siteListCacheKey = "site:list:v2"
+const (
+	siteListCacheKey         = "site:list:v2"
+	featuredSiteCacheKey     = "featured-sites:list"
+	siteViewCountCachePrefix = "site:view:count:"
+)
 
 const (
 	searchSuggestTimeout      = 3 * time.Second
@@ -120,6 +124,31 @@ func (svc *navPageService) GetGroupList(lang string) (res []models.GroupVo, err 
 	}()
 
 	return svc.convertGroupRecords(groupRecords, mappingRecords, lang), nil
+}
+
+func (svc *navPageService) GetFeaturedSiteList() (res []models.FeaturedSiteVo, err common.GFError) {
+	var jsonErr error
+
+	if cacheStr, _ := cs.GetString(featuredSiteCacheKey); cacheStr != "" {
+		var records []models.GfnFeaturedSite
+		if jsonErr = sonic.Unmarshal([]byte(cacheStr), &records); jsonErr == nil {
+			return svc.convertFeaturedSiteRecords(records), nil
+		}
+		log.Warn("GetFeaturedSiteList cache unmarshal error:", jsonErr)
+	}
+
+	records, err := dao.GetNavPageDao().GetFeaturedSiteList()
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		if b, jsonErr := sonic.Marshal(records); jsonErr == nil {
+			cs.Set(featuredSiteCacheKey, string(b))
+		}
+	}()
+
+	return svc.convertFeaturedSiteRecords(records), nil
 }
 
 // 获取导航站点延迟信息
@@ -482,6 +511,8 @@ func (svc *navPageService) convertRecords(records []models.GfnSite, lang string)
 			Nsfw:       v.Nsfw,
 			Welfare:    v.Welfare,
 			Icon:       v.Icon,
+			ViewCount:  currentSiteViewCount(v.ID, v.ViewCount),
+			CreateTime: v.CreateTime.String(),
 			UpdateTime: v.UpdateTime.String(),
 		}
 		if lang == "en" {
@@ -492,6 +523,33 @@ func (svc *navPageService) convertRecords(records []models.GfnSite, lang string)
 			r.Info = v.Info
 		}
 		res = append(res, r)
+	}
+	return res
+}
+
+func currentSiteViewCount(siteID int64, dbCount int64) int64 {
+	if cs.GetRedisService() == nil {
+		return dbCount
+	}
+	countStr, err := cs.GetString(siteViewCountCachePrefix + util.Int642String(siteID))
+	if err != nil || countStr == "" {
+		return dbCount
+	}
+	parsed, parseErr := util.String2Int64(countStr)
+	if parseErr != nil {
+		return dbCount
+	}
+	return parsed
+}
+
+func (svc *navPageService) convertFeaturedSiteRecords(records []models.GfnFeaturedSite) []models.FeaturedSiteVo {
+	res := make([]models.FeaturedSiteVo, 0, len(records))
+	for _, v := range records {
+		res = append(res, models.FeaturedSiteVo{
+			ID:     util.Int642String(v.ID),
+			SiteID: util.Int642String(v.SiteID),
+			Weight: v.Weight,
+		})
 	}
 	return res
 }

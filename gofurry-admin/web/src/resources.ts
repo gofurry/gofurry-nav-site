@@ -112,6 +112,19 @@ export const resources: ResourceConfig[] = [
     },
   },
   {
+    key: 'featured-sites',
+    title: '精选站点',
+    section: 'nav',
+    listEndpoint: '/api/v1/nav/featured-sites',
+    detailEndpoint: '/api/v1/nav/featured-sites',
+    columns: [{ key: 'id', label: 'ID' }, { key: 'site_name', label: '网站' }, { key: 'weight', label: '权重' }],
+    fields: [
+      { key: 'site_id', label: '网站', type: 'remote-select', optionEndpoint: '/api/v1/options/sites' },
+      { key: 'weight', label: '权重', type: 'number' },
+    ],
+    defaults: { site_id: '', weight: 0 },
+  },
+  {
     key: 'games',
     title: '游戏',
     section: 'game',

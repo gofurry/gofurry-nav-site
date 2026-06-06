@@ -13,7 +13,12 @@ import (
 func TestGetHomeAggregatesNavPageData(t *testing.T) {
 	now := time.Date(2026, 6, 3, 12, 0, 0, 0, time.UTC)
 	reader := &fakeHomeReader{
-		sites: []navmodels.SiteVo{{ID: "1", Name: "GoFurry"}},
+		sites: []navmodels.SiteVo{{ID: "1", Name: "GoFurry", ViewCount: 8, CreateTime: "2026-06-01 00:00:00"}},
+		featured: []navmodels.FeaturedSiteVo{{
+			ID:     "1",
+			SiteID: "1",
+			Weight: 10,
+		}},
 		groups: []navmodels.GroupVo{{
 			ID:       "10",
 			Name:     "Community",
@@ -36,6 +41,9 @@ func TestGetHomeAggregatesNavPageData(t *testing.T) {
 	}
 	if len(response.Sites) != 1 || len(response.Groups) != 1 || len(response.Ping) != 1 {
 		t.Fatalf("home data was not aggregated: %#v", response)
+	}
+	if len(response.Spotlight.Featured) != 1 || len(response.Spotlight.Popular) != 1 || response.Spotlight.PageSize != 6 {
+		t.Fatalf("spotlight data was not aggregated: %#v", response.Spotlight)
 	}
 	if len(response.Groups[0].Sites) != 1 || response.Groups[0].Sites[0].ID != "1" {
 		t.Fatalf("group sites were not expanded: %#v", response.Groups)
@@ -111,17 +119,42 @@ func TestBuildHomeGroupsPreservesGroupSiteOrder(t *testing.T) {
 	}
 }
 
+func TestBuildHomeSpotlightOrdersSections(t *testing.T) {
+	sites := []navmodels.SiteVo{
+		{ID: "1", Name: "A", ViewCount: 10, CreateTime: "2026-06-01 00:00:00"},
+		{ID: "2", Name: "B", ViewCount: 30, CreateTime: "2026-06-03 00:00:00"},
+		{ID: "3", Name: "C", ViewCount: 20, CreateTime: "2026-06-02 00:00:00"},
+	}
+	featured := []navmodels.FeaturedSiteVo{
+		{ID: "10", SiteID: "3", Weight: 30},
+		{ID: "11", SiteID: "1", Weight: 10},
+	}
+
+	result := buildHomeSpotlight(sites, featured, time.Unix(1, 0))
+	if got := []string{result.Featured[0].ID, result.Featured[1].ID}; got[0] != "3" || got[1] != "1" {
+		t.Fatalf("unexpected featured order: %#v", result.Featured)
+	}
+	if result.Popular[0].ID != "2" || result.Latest[0].ID != "2" {
+		t.Fatalf("unexpected popular/latest order: %#v %#v", result.Popular, result.Latest)
+	}
+	if len(result.Random) != len(sites) {
+		t.Fatalf("random sites were not included: %#v", result.Random)
+	}
+}
+
 type fakeHomeReader struct {
-	sites      []navmodels.SiteVo
-	siteErr    common.GFError
-	groups     []navmodels.GroupVo
-	groupErr   common.GFError
-	ping       map[string]string
-	pingErr    common.GFError
-	saying     navmodels.SayingModel
-	sayingErr  common.GFError
-	desktopURL string
-	mobileURL  string
+	sites       []navmodels.SiteVo
+	siteErr     common.GFError
+	groups      []navmodels.GroupVo
+	groupErr    common.GFError
+	featured    []navmodels.FeaturedSiteVo
+	featuredErr common.GFError
+	ping        map[string]string
+	pingErr     common.GFError
+	saying      navmodels.SayingModel
+	sayingErr   common.GFError
+	desktopURL  string
+	mobileURL   string
 }
 
 func (f *fakeHomeReader) GetSiteList(lang string) ([]navmodels.SiteVo, common.GFError) {
@@ -139,6 +172,13 @@ func (f *fakeHomeReader) GetGroupList(string) ([]navmodels.GroupVo, common.GFErr
 		return nil, f.groupErr
 	}
 	return f.groups, nil
+}
+
+func (f *fakeHomeReader) GetFeaturedSiteList() ([]navmodels.FeaturedSiteVo, common.GFError) {
+	if f.featuredErr != nil {
+		return nil, f.featuredErr
+	}
+	return f.featured, nil
 }
 
 func (f *fakeHomeReader) GetPingList() (map[string]string, common.GFError) {

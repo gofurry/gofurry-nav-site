@@ -75,6 +75,12 @@ func navRoutes(root fiber.Router) {
 	root.Get("/site-group-maps/:id", navadmin.NavAPI.GetSiteGroupMap)
 	root.Put("/site-group-maps/:id", navadmin.NavAPI.UpdateSiteGroupMap)
 	root.Delete("/site-group-maps/:id", navadmin.NavAPI.DeleteSiteGroupMap)
+
+	root.Get("/featured-sites", navadmin.NavAPI.ListFeaturedSites)
+	root.Post("/featured-sites", navadmin.NavAPI.CreateFeaturedSite)
+	root.Get("/featured-sites/:id", navadmin.NavAPI.GetFeaturedSite)
+	root.Put("/featured-sites/:id", navadmin.NavAPI.UpdateFeaturedSite)
+	root.Delete("/featured-sites/:id", navadmin.NavAPI.DeleteFeaturedSite)
 }
 
 func gameRoutes(root fiber.Router) {

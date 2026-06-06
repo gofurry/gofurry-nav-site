@@ -26,6 +26,14 @@ type HomeGroup struct {
 	Sites    []navmodels.SiteVo `json:"sites"`
 }
 
+type HomeSpotlight struct {
+	PageSize int                `json:"page_size"`
+	Featured []navmodels.SiteVo `json:"featured"`
+	Popular  []navmodels.SiteVo `json:"popular"`
+	Latest   []navmodels.SiteVo `json:"latest"`
+	Random   []navmodels.SiteVo `json:"random"`
+}
+
 type HomeResponse struct {
 	SchemaVersion  int                    `json:"schema_version"`
 	GeneratedAt    time.Time              `json:"generated_at"`
@@ -33,6 +41,7 @@ type HomeResponse struct {
 	ReasonMessages map[string]string      `json:"reason_messages,omitempty"`
 	Sites          []navmodels.SiteVo     `json:"sites"`
 	Groups         []HomeGroup            `json:"groups"`
+	Spotlight      HomeSpotlight          `json:"spotlight"`
 	Ping           map[string]string      `json:"ping"`
 	Saying         *navmodels.SayingModel `json:"saying"`
 	Backgrounds    HomeBackgrounds        `json:"backgrounds"`

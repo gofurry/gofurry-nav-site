@@ -23,6 +23,7 @@ const (
 	navSiteListCacheKey     = "site:list:v2"
 	navGroupListCacheKey    = "group:list"
 	navGroupSiteMapCacheKey = "group:site:map"
+	navFeaturedSiteCacheKey = "featured-sites:list"
 )
 
 func navDB() *gorm.DB {
@@ -46,6 +47,10 @@ func invalidateNavGroupListCache() {
 
 func invalidateNavGroupMapCache() {
 	invalidateNavCache(navGroupSiteMapCacheKey)
+}
+
+func invalidateNavFeaturedSiteCache() {
+	invalidateNavCache(navFeaturedSiteCacheKey)
 }
 
 func (api *navAPI) ListSayings(c fiber.Ctx) error {
@@ -720,6 +725,113 @@ func (api *navAPI) BulkReplaceSiteGroupMaps(c fiber.Ctx) error {
 	return common.NewResponse(c).Success()
 }
 
+func (api *navAPI) ListFeaturedSites(c fiber.Ctx) error {
+	page := adminutil.ParsePageQuery(c)
+	base := navDB().Table("gfn_featured_site AS f").
+		Select("f.id, f.site_id, COALESCE(s.name, '') AS site_name, f.weight, f.create_time, f.update_time").
+		Joins("LEFT JOIN gfn_site s ON s.id = f.site_id").
+		Order("f.weight DESC, f.id DESC")
+	base = adminutil.ApplyKeyword(base, page.Keyword, "CAST(f.id AS TEXT)", "CAST(f.site_id AS TEXT)", "s.name", "s.name_en")
+	var items []models.FeaturedSiteDTO
+	total, err := adminutil.Paginate(base, page, &items)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, items))
+}
+
+func (api *navAPI) CreateFeaturedSite(c fiber.Ctx) error {
+	var req models.FeaturedSitePayload
+	if err := adminutil.DecodeBody(c, &req); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var created models.FeaturedSite
+	err := navDB().Transaction(func(tx *gorm.DB) error {
+		if validateErr := validateFeaturedSitePayload(tx, req, 0); validateErr != nil {
+			return validateErr
+		}
+		ids, allocErr := adminutil.AllocateSequentialIDs(tx, created.TableName(), 1)
+		if allocErr != nil {
+			return allocErr
+		}
+		created = models.FeaturedSite{ID: ids[0], SiteID: req.SiteID, Weight: req.Weight}
+		if err := tx.Create(&created).Error; err != nil {
+			return err
+		}
+		after, snapErr := audit.SnapshotByID(tx, created.TableName(), created.ID)
+		if snapErr != nil {
+			return snapErr
+		}
+		return api.auditTx(c, tx, "create", created.TableName(), created.ID, nil, after)
+	})
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	invalidateNavFeaturedSiteCache()
+	return common.NewResponse(c).SuccessWithData(created)
+}
+
+func (api *navAPI) GetFeaturedSite(c fiber.Ctx) error {
+	id, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var item models.FeaturedSiteDTO
+	dbErr := navDB().Table("gfn_featured_site AS f").
+		Select("f.id, f.site_id, COALESCE(s.name, '') AS site_name, f.weight, f.create_time, f.update_time").
+		Joins("LEFT JOIN gfn_site s ON s.id = f.site_id").
+		Where("f.id = ?", id).
+		Take(&item).Error
+	if dbErr != nil {
+		return common.NewResponse(c).Error(common.NewDaoError(dbErr.Error()))
+	}
+	return common.NewResponse(c).SuccessWithData(item)
+}
+
+func (api *navAPI) UpdateFeaturedSite(c fiber.Ctx) error {
+	id, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var req models.FeaturedSitePayload
+	if err := adminutil.DecodeBody(c, &req); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	txErr := navDB().Transaction(func(tx *gorm.DB) error {
+		if validateErr := validateFeaturedSitePayload(tx, req, id); validateErr != nil {
+			return validateErr
+		}
+		before, snapErr := audit.SnapshotByID(tx, (&models.FeaturedSite{}).TableName(), id)
+		if snapErr != nil {
+			return snapErr
+		}
+		if err := tx.Model(&models.FeaturedSite{}).Where("id = ?", id).Updates(map[string]any{
+			"site_id": req.SiteID,
+			"weight":  req.Weight,
+		}).Error; err != nil {
+			return common.NewDaoError(err.Error())
+		}
+		after, snapErr := audit.SnapshotByID(tx, (&models.FeaturedSite{}).TableName(), id)
+		if snapErr != nil {
+			return snapErr
+		}
+		return api.auditTx(c, tx, "update", (&models.FeaturedSite{}).TableName(), id, before, after)
+	})
+	if txErr != nil {
+		return common.NewResponse(c).Error(txErr)
+	}
+	invalidateNavFeaturedSiteCache()
+	return api.GetFeaturedSite(c)
+}
+
+func (api *navAPI) DeleteFeaturedSite(c fiber.Ctx) error {
+	if err := api.deleteHard(c, &models.FeaturedSite{}); err != nil {
+		return err
+	}
+	invalidateNavFeaturedSiteCache()
+	return nil
+}
+
 func (api *navAPI) deleteHard(c fiber.Ctx, model any) error {
 	id, err := adminutil.ParseIDParam(c)
 	if err != nil {
@@ -832,6 +944,33 @@ func validateCollectorDomainPayload(tx *gorm.DB, req models.CollectorDomainPaylo
 	}
 	if count == 0 {
 		return common.NewValidationError("site_id must reference an existing site")
+	}
+	return nil
+}
+
+func validateFeaturedSitePayload(tx *gorm.DB, req models.FeaturedSitePayload, currentID int64) common.Error {
+	if req.SiteID <= 0 {
+		return common.NewValidationError("site_id is required")
+	}
+
+	var siteCount int64
+	if err := tx.Model(&models.Site{}).Where("id = ? AND deleted IS NOT TRUE", req.SiteID).Count(&siteCount).Error; err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	if siteCount == 0 {
+		return common.NewValidationError("site_id must reference an existing site")
+	}
+
+	query := tx.Model(&models.FeaturedSite{}).Where("site_id = ?", req.SiteID)
+	if currentID > 0 {
+		query = query.Where("id <> ?", currentID)
+	}
+	var existing int64
+	if err := query.Count(&existing).Error; err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	if existing > 0 {
+		return common.NewValidationError("site_id is already featured")
 	}
 	return nil
 }

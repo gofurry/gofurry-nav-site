@@ -4,6 +4,11 @@
       {{ t('common.loading') }}...
     </div>
 
+    <NavSpotlightPanels
+      :spotlight="spotlight"
+      :display-mode="displayMode"
+    />
+
     <div
       v-for="group in groups"
       :key="group.id"
@@ -95,21 +100,24 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLangStore } from '@/store/langStore'
-import { getNavHome, getNavHomePing } from '~/services/nav'
-import type { Delay, Group, Site } from '~/types/nav'
+import { getNavHome, getNavHomePing, touchSiteView } from '~/services/nav'
+import type { Delay, Group, NavHomeSpotlight, Site } from '~/types/nav'
 import { recordRecentSite, toExternalUrl } from '@/utils/recentSites'
 import { readDisplayMode, subscribeModeChange, type DisplayMode } from '@/utils/modeStorage'
 import GroupPopover from './GroupPopover.vue'
+import NavSpotlightPanels from './NavSpotlightPanels.vue'
 import SitePopover from './SitePopover.vue'
 
 const props = defineProps<{
   initialGroups?: Group[]
+  initialSpotlight?: NavHomeSpotlight
   initialPingData?: Record<string, Delay>
 }>()
 
 const { t } = useI18n()
 
 const groups = ref<Group[]>(props.initialGroups ?? [])
+const spotlight = ref<NavHomeSpotlight>(props.initialSpotlight ?? { page_size: 6, featured: [], popular: [], latest: [], random: [] })
 const pingData = ref<Record<string, Delay>>(props.initialPingData ?? {})
 const loading = ref(false)
 const expandedGroups = ref<Record<string, boolean>>({})
@@ -155,6 +163,7 @@ async function loadData() {
     const home = await getNavHome(lang)
 
     groups.value = home.groups.sort((a, b) => Number(a.priority) - Number(b.priority))
+    spotlight.value = home.spotlight
     parsePingData(home.ping)
   } catch (error) {
     console.error('Failed to load nav content:', error)
@@ -235,6 +244,7 @@ function goDomain(domains: string[], site?: Site) {
 
   const targetUrl = toExternalUrl(firstDomain)
   if (site) {
+    void updateSiteViewCount(site)
     recordRecentSite({
       id: site.id,
       name: site.name,
@@ -243,6 +253,17 @@ function goDomain(domains: string[], site?: Site) {
   }
 
   window.open(targetUrl, '_blank')
+}
+
+async function updateSiteViewCount(site: Site) {
+  try {
+    const response = await touchSiteView(site.id)
+    if (Number.isFinite(response.view_count)) {
+      site.view_count = response.view_count
+    }
+  } catch {
+    // 浏览量统计是旁路副作用，失败不影响跳转。
+  }
 }
 
 const activeGroup = ref<Group | null>(null)

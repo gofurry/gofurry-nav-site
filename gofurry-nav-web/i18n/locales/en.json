@@ -85,6 +85,13 @@
     "mode": "Mode",
     "modeSetting": "Mode Settings",
     "modeDesc": "Used to control page display mode, for example: nsfw",
+    "preferences": "Page Preferences",
+    "displayMode": "Display Mode",
+    "displayModeDesc": "Enter nsfw to show full content, or leave empty for the default safe mode.",
+    "quickAccess": "Hero Shortcuts",
+    "quickAccessDesc": "Show or hide the recent visits and custom site shortcuts below the homepage search box.",
+    "quickAccessOn": "Shown",
+    "quickAccessOff": "Hidden",
     "showCustomSites": "Show custom sites section",
     "expandNav": "Expand navigation bar",
     "customPanelHeight": "CustomSitesPanel height",
@@ -127,7 +134,9 @@
       "bilibili": "Bilibili",
       "weibo": "Weibo",
       "github": "GitHub",
-      "twitter": "X (Twitter)"
+      "twitter": "X (Twitter)",
+      "terms": "Terms",
+      "privacy": "Privacy"
     },
     "rights": "All rights reserved",
     "license": "Content licensed under CC-BY-NC-SA 4.0",
@@ -530,7 +539,9 @@
         "success": "Registration Successful",
         "fail": "Registration Failed",
         "returnNow": "Return Now",
-        "autoReturnIn": "seconds until automatic return to lottery page"
+        "autoReturnIn": "seconds until automatic return to lottery page",
+        "defaultSuccessMessage": "Your lottery registration has been activated. Thank you for joining.",
+        "defaultFailMessage": "The activation link is invalid, expired, or the registration could not be verified."
       },
       "submitModal": {
         "currentParticipants": "Current Participants",
@@ -554,6 +565,8 @@
     "tools": {
       "label": "Navigation tools",
       "search": "Search sites",
+      "feedback": "Feedback",
+      "feedbackShort": "Issue",
       "searchPlaceholder": "Search site name or description...",
       "noSearchResults": "No matching sites",
       "ask": "Ask navigation knowledge",

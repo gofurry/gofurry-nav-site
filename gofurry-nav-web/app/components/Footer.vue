@@ -99,14 +99,12 @@
             <NuxtLink to="/updates" class="footer-link">
               {{ t('navHeader.update') }}
             </NuxtLink>
-            <a
-                href="https://www.deepfurry.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="footer-link"
-            >
-              DeepFurry
-            </a>
+            <NuxtLink to="/terms" class="footer-link">
+              {{ t('footer.links.terms') }}
+            </NuxtLink>
+            <NuxtLink to="/privacy" class="footer-link">
+              {{ t('footer.links.privacy') }}
+            </NuxtLink>
           </div>
         </section>
       </div>
