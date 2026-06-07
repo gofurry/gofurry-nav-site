@@ -423,24 +423,6 @@ onBeforeUnmount(() => {
 
 
 <style scoped>
-.search-box-shell::before {
-  content: "";
-  position: absolute;
-  top: -1rem;
-  bottom: -0.9rem;
-  left: 50%;
-  width: min(calc(100% - 2rem), 38rem);
-  z-index: -1;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background:
-    radial-gradient(ellipse 66% 58% at 50% 50%, rgba(15, 23, 42, 0.48), rgba(15, 23, 42, 0.22) 48%, rgba(15, 23, 42, 0.08) 64%, transparent 82%);
-  filter: blur(18px);
-  opacity: 0.86;
-  pointer-events: none;
-  transition: opacity 500ms ease, background 500ms ease;
-}
-
 .search-chip {
   color: rgba(248, 250, 252, 0.92);
   background: rgba(15, 23, 42, 0.5);

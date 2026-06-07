@@ -121,9 +121,12 @@
 
 目标：降低首页初始内存、DOM 和图片加载压力。
 
+状态：已完成。
+
 改进项：
 
 - 将首页内容区从 `v-show` 改为真正的延迟挂载。
+- 移除 `SearchBox` 下方低价值的羽化模糊伪元素，避免首屏常驻 `filter: blur(...)`。
 - 首屏只挂载：
   - `NavHeader`
   - `SearchBox`
@@ -134,9 +137,12 @@
   - `NavSpotlightPanels`
   - `NavTransitionBar`
   - 内容区 `GoFurryGridBackground`
-- `NavToolDock` 可考虑只在内容 reveal 后挂载，或至少延迟到 mounted 后 idle 阶段。
+- `NavToolDock` 只在内容 reveal 后挂载。
 - 首页站点图标增加 `loading="lazy"` 和稳定尺寸。
-- 对站点列表分组做首屏分批渲染，优先显示 spotlight 和前几个分组。
+- `NavContent` 分组块增加 `content-visibility: auto` 和合理的 intrinsic size，降低视窗外布局/绘制成本。
+- `NavContent` 与 `NavSpotlightPanels` 的站点图标增加懒加载、异步解码和稳定尺寸。
+- `NavSpotlightPanels` 保留原有玻璃质感，仅补充视窗外渲染抑制和图片懒加载。
+- 站点列表增加分组级渐进挂载，默认展示前 4 组，滚动接近底部时每批追加 2 组。
 
 验收标准：
 

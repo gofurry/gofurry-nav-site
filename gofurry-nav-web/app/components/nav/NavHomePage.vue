@@ -4,9 +4,9 @@
       :desktop-bg-url="navPageData.desktopBgUrl"
       :mobile-bg-url="navPageData.mobileBgUrl"
     />
-    <NavToolDock :items="toolDockSites" />
+    <NavToolDock v-if="isContentRevealed" :items="toolDockSites" />
     <main
-        v-show="isContentRevealed"
+        v-if="isContentRevealed"
         ref="contentRef"
         class="relative z-10 flex-1 overflow-hidden"
     >
