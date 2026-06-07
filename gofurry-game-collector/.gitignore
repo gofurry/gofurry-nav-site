@@ -2,6 +2,7 @@ logs
 docs/*
 !docs/
 !docs/roadmap.md
+!docs/steam-go-capability-closure.md
 conf/*
 !conf/
 !conf/server.example.yaml

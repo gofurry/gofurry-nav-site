@@ -164,7 +164,7 @@ collector:
 
 ### v2.0.0-alpha.2 - Steam-Go Capability Closure
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Library-first / Maintainability
 **Goal:** 先审计 collector v2 所需 Steam 能力，把复杂 Steam 解析和边界补进 `steam-go`，避免 collector 继续变厚。
 
@@ -178,20 +178,31 @@ collector:
 
 #### Tasks
 
-- [ ] 梳理当前 collector v1 从 Steam 读取的全部字段。
-- [ ] 对照 `steam-go v1.3.2`，列出缺失 typed 字段。
-- [ ] 若 Store appdetails 字段不足，优先在 `steam-go` 补 typed model。
-- [ ] 若 Store events 字段不足，优先在 `steam-go` 补 typed model。
-- [ ] 若内容清洗遇到新 Steam BBCode，优先在 `steam-go/addons/markup` 补能力。
-- [ ] 在 `steam-go` 中保留 raw payload，collector 只读取必要字段。
-- [ ] 为 `steam-go` 新能力补 fixture tests。
+- [x] 梳理当前 collector v1 从 Steam 读取的全部字段。
+- [x] 对照 `steam-go v1.3.2`，列出缺失 typed 字段。
+- [x] 若 Store appdetails 字段不足，优先在 `steam-go` 补 typed model。
+- [x] Store events 字段已满足当前 v2 新闻采集目标，继续保留 raw payload 扩展。
+- [x] 当前 BBCode / HTML 清洗能力已满足 v1 替换目标，后续新规则继续补 `steam-go/addons/markup`。
+- [x] 在 `steam-go` 中保留 raw payload，collector 只读取必要字段。
+- [x] 为 `steam-go` 新能力补 fixture tests。
+
+#### Completed
+
+- [x] 新增 `docs/steam-go-capability-closure.md`，记录 v1 字段读取面和 `steam-go` 覆盖情况。
+- [x] 在 `steam-go` 补齐 appdetails ratings helper：
+  - `StoreRatings`
+  - `StoreRating`
+  - `AppDetailsData.DecodeRatings()`
+  - `AppDetailsData.SteamGermanyRequiredAge()`
+- [x] `steam-go` appdetails fixture / request decode 测试覆盖德国年龄限制。
+- [x] 更新 `steam-go` 英文与中文 Web reference。
 
 #### Acceptance Criteria
 
-- [ ] collector v2 不需要手写 Steam HTTP 请求。
-- [ ] collector v2 不需要新增本地 BBCode parser。
-- [ ] collector v2 mapper 主要消费 `steam-go` typed model。
-- [ ] Steam 上游字段波动优先由 `steam-go` 承接。
+- [x] collector v2 不需要手写 Steam HTTP 请求。
+- [x] collector v2 不需要新增本地 BBCode parser。
+- [x] collector v2 mapper 主要消费 `steam-go` typed model。
+- [x] Steam 上游字段波动优先由 `steam-go` 承接。
 
 ---
 
