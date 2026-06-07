@@ -3,6 +3,7 @@ docs/*
 !docs/
 !docs/roadmap.md
 !docs/steam-go-capability-closure.md
+!docs/game-collector-v2-storage-contract.md
 conf/*
 !conf/
 !conf/server.example.yaml

@@ -96,7 +96,7 @@ v1 当前使用两个来源：
 进入 `v2.0.0-alpha.3`：
 
 - 定义 collector v2 domain model。
-- 设计 PostgreSQL / Redis / MongoDB 的 v2 存储契约。
+- 设计 PostgreSQL / Redis 的 v2 存储契约。
 - 明确 raw snapshot 保存位置。
 - 明确采集运行记录结构。
 - 为后端 v2 和前端 games v2 准备稳定字段清单。

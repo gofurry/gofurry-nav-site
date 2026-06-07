@@ -30,7 +30,7 @@
 - 采集任务调度。
 - 游戏 appid 列表和业务优先级。
 - 将 `steam-go` 返回模型映射为 GoFurry 游戏域模型。
-- 写入 PostgreSQL / Redis / MongoDB。
+- 写入 PostgreSQL / Redis。
 - 采集报告、失败记录、数据完整性检查。
 - 为 backend v2 提供更丰富、可演进的数据契约。
 
@@ -103,8 +103,8 @@ collector/game/v2/
     players/          # 在线人数主采集
   mapper/
     steam/            # steam-go model -> domain model
-    persistence/      # domain model -> DB / Redis / Mongo model
-  repository/         # DB / Redis / Mongo 写入
+    persistence/      # domain model -> PostgreSQL / Redis model
+  repository/         # PostgreSQL / Redis 写入
   runner/             # 统一任务编排、调度、报告
   report/             # 采集结果、错误分类、运行摘要
 ```
@@ -208,34 +208,36 @@ collector:
 
 ### v2.0.0-alpha.3 - Collector V2 Domain Model and Storage Contract
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Domain / Storage / Backend readiness
 **Goal:** 设计 collector v2 自己的游戏域模型和存储契约，为后端 v2 提供更丰富数据，而不是继续受 v1 表结构限制。
 
 #### Focus
 
 - domain model。
-- PostgreSQL / Redis / MongoDB 写入契约。
+- PostgreSQL / Redis 写入契约。
 - raw snapshot。
 - 采集运行记录。
 
 #### Tasks
 
-- [ ] 新增 `collector/game/v2/domain`。
-- [ ] 定义 `GameDetails`、`GamePrice`、`GameMedia`、`GameNews`、`PlayerCount`、`CollectRun`。
-- [ ] 设计 v2 存储迁移方案，明确哪些字段进 PostgreSQL，哪些进 Redis，哪些进 MongoDB。
-- [ ] 为 Store appdetails raw snapshot 设计保存位置。
-- [ ] 为 Store events raw payload 设计保存位置。
-- [ ] 为采集运行记录设计表或集合。
-- [ ] 明确后端 v2 可消费的数据字段。
-- [ ] 写出 schema migration 草案。
+- [x] 新增 `collector/game/v2/domain`。
+- [x] 定义 `GameDetails`、`GamePrice`、`GameMedia`、`GameNews`、`PlayerCount`、`RawSnapshot`。
+- [x] 新增 `collector/game/v2/report`，定义 `CollectRun`、`TaskResult` 和错误分类。
+- [x] 设计 v2 存储迁移方案，明确 PostgreSQL 是事实来源，Redis 是热缓存。
+- [x] 为 Store appdetails raw snapshot 设计 PostgreSQL JSONB 保存位置。
+- [x] 为 Store events raw payload 设计 PostgreSQL JSONB 保存位置。
+- [x] 为采集运行记录设计 PostgreSQL 表。
+- [x] 明确后端 v2 可消费的数据字段。
+- [x] 写出 schema migration 草案。
+- [x] 新增 `docs/game-collector-v2-storage-contract.md`。
 
 #### Acceptance Criteria
 
-- [ ] 后端可以基于 v2 数据契约设计新接口。
-- [ ] collector 不再只围绕旧 `GfgGameRecord` / `GfgGameNews` 做字段搬运。
-- [ ] raw snapshot 不影响普通接口性能。
-- [ ] 采集失败有可查询的结构化记录。
+- [x] 后端可以基于 v2 数据契约设计新接口。
+- [x] collector 不再只围绕旧 `GfgGameRecord` / `GfgGameNews` 做字段搬运。
+- [x] raw snapshot 不影响普通接口性能。
+- [x] 采集失败有可查询的结构化记录。
 
 ---
 
@@ -404,7 +406,7 @@ collector:
 
 1. 本地完成 v2 全链路。
 2. 测试环境用真实 appid 列表跑全量采集。
-3. 检查 DB / Redis / MongoDB 数据完整性。
+3. 检查 PostgreSQL / Redis 数据完整性。
 4. 后端接入 v2 数据契约。
 5. 前端 games v2 使用新接口或新字段。
 6. 生产发布 v2。
@@ -412,11 +414,12 @@ collector:
 
 ## 下一步建议
 
-下一步优先做 `v2.0.0-alpha.2 - Steam-Go Capability Closure`。
+下一步优先做 `v2.0.0-alpha.4 - News Collector V2 Mainline`。
 
 原因：
 
-- 先确认 `steam-go` 能承接所有 Steam 复杂度。
-- collector 后续才能保持薄。
+- alpha.2 已确认 `steam-go` 能承接当前 Steam 复杂度。
+- alpha.3 已明确 PostgreSQL / Redis 存储契约。
+- News v2 改动面适中，最适合先验证 domain、mapper、repository 和内容清洗链路。
 - 这会直接降低 news、players、details 三个任务的实现复杂度。
 - 如果某个字段或清洗规则缺失，应先补 `steam-go`，再写 collector mapper。
