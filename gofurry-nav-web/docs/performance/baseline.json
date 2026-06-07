@@ -1,0 +1,187 @@
+{
+  "generatedAt": "2026-06-07T16:41:49.444Z",
+  "baseUrl": "http://localhost:3000",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "scenarios": [
+    {
+      "id": "home-initial",
+      "label": "首页首屏",
+      "path": "/",
+      "critical": true,
+      "status": 200,
+      "durationMs": 4815,
+      "metrics": {
+        "domNodes": 187,
+        "imagesInDom": 7,
+        "jsRequests": 309,
+        "jsTransferKb": 9356.1,
+        "imageRequests": 26,
+        "imageTransferKb": 752.6,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "jsHeapUsedMb": 17.1,
+        "heavyDependencies": {
+          "md-editor-v3": false,
+          "echarts": false,
+          "hls.js": false
+        },
+        "warnings": []
+      }
+    },
+    {
+      "id": "home-revealed",
+      "label": "首页内容区",
+      "path": "/",
+      "critical": true,
+      "status": 200,
+      "durationMs": 8487,
+      "metrics": {
+        "domNodes": 750,
+        "imagesInDom": 80,
+        "jsRequests": 309,
+        "jsTransferKb": 9356.1,
+        "imageRequests": 58,
+        "imageTransferKb": 750.2,
+        "longTaskCount": 1,
+        "longTaskTotalMs": 62,
+        "jsHeapUsedMb": 19.1,
+        "heavyDependencies": {
+          "md-editor-v3": false,
+          "echarts": false,
+          "hls.js": false
+        },
+        "warnings": []
+      }
+    },
+    {
+      "id": "updates",
+      "label": "更新页",
+      "path": "/updates",
+      "critical": true,
+      "status": 200,
+      "durationMs": 2338,
+      "metrics": {
+        "domNodes": 275,
+        "imagesInDom": 15,
+        "jsRequests": 286,
+        "jsTransferKb": 8792.6,
+        "imageRequests": 19,
+        "imageTransferKb": 184.4,
+        "longTaskCount": 1,
+        "longTaskTotalMs": 62,
+        "jsHeapUsedMb": 16,
+        "heavyDependencies": {
+          "md-editor-v3": false,
+          "echarts": false,
+          "hls.js": false
+        },
+        "warnings": []
+      }
+    },
+    {
+      "id": "about",
+      "label": "关于页",
+      "path": "/about",
+      "critical": true,
+      "status": 200,
+      "durationMs": 3273,
+      "metrics": {
+        "domNodes": 206,
+        "imagesInDom": 15,
+        "jsRequests": 274,
+        "jsTransferKb": 8692.5,
+        "imageRequests": 18,
+        "imageTransferKb": 243,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "jsHeapUsedMb": 15.8,
+        "heavyDependencies": {
+          "md-editor-v3": false,
+          "echarts": false,
+          "hls.js": false
+        },
+        "warnings": []
+      }
+    },
+    {
+      "id": "archive-empty",
+      "label": "知识库空页",
+      "path": "/archive",
+      "critical": true,
+      "status": 200,
+      "durationMs": 11310,
+      "metrics": {
+        "domNodes": 149,
+        "imagesInDom": 0,
+        "jsRequests": 274,
+        "jsTransferKb": 8981.4,
+        "imageRequests": 16,
+        "imageTransferKb": 158.1,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "jsHeapUsedMb": 16.6,
+        "heavyDependencies": {
+          "md-editor-v3": false,
+          "echarts": false,
+          "hls.js": false
+        },
+        "warnings": [
+          "networkidle 等待超时，已按当前页面状态采集"
+        ]
+      }
+    },
+    {
+      "id": "games",
+      "label": "游戏首页",
+      "path": "/games",
+      "critical": true,
+      "status": 200,
+      "durationMs": 7749,
+      "metrics": {
+        "domNodes": 1365,
+        "imagesInDom": 384,
+        "jsRequests": 298,
+        "jsTransferKb": 9069.1,
+        "imageRequests": 88,
+        "imageTransferKb": 2621.2,
+        "longTaskCount": 2,
+        "longTaskTotalMs": 284,
+        "jsHeapUsedMb": 19,
+        "heavyDependencies": {
+          "md-editor-v3": false,
+          "echarts": false,
+          "hls.js": false
+        },
+        "warnings": []
+      }
+    },
+    {
+      "id": "site-detail",
+      "label": "站点详情页",
+      "path": "/sites/1",
+      "critical": false,
+      "status": 200,
+      "durationMs": 2510,
+      "metrics": {
+        "domNodes": 178,
+        "imagesInDom": 14,
+        "jsRequests": 306,
+        "jsTransferKb": 9432.4,
+        "imageRequests": 18,
+        "imageTransferKb": 170.3,
+        "longTaskCount": 1,
+        "longTaskTotalMs": 52,
+        "jsHeapUsedMb": 16.8,
+        "heavyDependencies": {
+          "md-editor-v3": false,
+          "echarts": false,
+          "hls.js": false
+        },
+        "warnings": []
+      }
+    }
+  ]
+}

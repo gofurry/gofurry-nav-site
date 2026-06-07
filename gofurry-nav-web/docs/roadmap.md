@@ -235,31 +235,48 @@
 
 目标：建立前端性能验证方式，避免优化后回退。
 
-建议验证页面：
+状态：已完成。
+
+验证页面：
 
 - `/`
+- `/` reveal 后内容区
 - `/updates`
 - `/about`
 - `/archive`
 - `/games`
 - `/sites/{id}`
 
-建议记录指标：
+已新增：
 
-- 首屏 JS chunk 大小。
+- `npm run perf:measure`：生成中文 Markdown 与 JSON 测量报告。
+- `npm run perf:guard`：按 `docs/performance/budget.json` 执行回归守卫。
+- `npm run perf:trace`：生成 Chrome trace，用于人工分析 paint/composite/long task。
+- `npm run perf:baseline`：刷新当前可接受性能基线。
+- `docs/performance/budget.json`：保守预算阈值。
+- `docs/performance/baseline.json`：当前接受基线。
+- `docs/performance/README.md`：中文使用说明。
+
+记录指标：
+
+- JS 请求数与 JS 传输体积。
 - 初始 DOM 节点数量。
-- 首页首屏图片请求数。
-- 静置 30 秒 CPU/GPU 占用。
-- 页面切换后的内存回收情况。
-- Lighthouse Performance 和 Accessibility。
-- Chrome Performance trace 中的 long task 和 paint/composite 成本。
+- 图片请求数与图片传输体积。
+- Long Task 数量与总耗时。
+- JS Heap。
+- CDP Performance metrics。
+- 首页首屏是否误加载 `md-editor-v3`、`echarts`、`hls.js`。
+- `/archive` 空页是否误加载 `md-editor-v3`。
+- `/games` 首屏是否误加载 `hls.js`。
 
 验收标准：
 
-- 每个优化阶段至少记录一次 before/after。
-- `/archive` 静置 GPU 显著低于当前版本。
-- 首页首屏内存和 DOM 数明显低于当前版本。
-- 轻内容页不再出现与内容量不匹配的 GPU 占用。
+- 本地 3000 端口启动后，性能脚本可完成默认页面测量。
+- 后端接口不可用时，动态详情页进入 warning，不阻断核心页面报告。
+- 首页首屏不得加载 Markdown、ECharts、HLS。
+- `/archive` 空页不得提前加载 Markdown preview。
+- `/games` 首屏不得提前加载 HLS。
+- GPU 占用不做自动硬阈值；用 trace 和人工观察补充判断。
 
 ## 风险点
 

@@ -6,7 +6,11 @@
     "dev": "nuxt dev",
     "build": "nuxt build",
     "preview": "nuxt preview",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "perf:measure": "node scripts/perf/measure.mjs",
+    "perf:guard": "node scripts/perf/guard.mjs",
+    "perf:trace": "node scripts/perf/trace.mjs",
+    "perf:baseline": "node scripts/perf/measure.mjs --baseline"
   },
   "dependencies": {
     "@nuxtjs/i18n": "^10.3.0",
@@ -26,6 +30,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.5.2",
+    "playwright": "^1.60.0",
     "typescript": "~5.8.3",
     "vue-tsc": "^3.0.7"
   }
