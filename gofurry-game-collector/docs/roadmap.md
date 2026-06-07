@@ -332,7 +332,7 @@ collector:
 
 ### v2.0.0-alpha.7 - Steam Store Rate-Limit Experiment
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Stability / Operations / Testing
 **Goal:** 用实验数据校准 Steam Store / official API 风控规则，避免凭感觉扩大 v2 并发。
 
@@ -355,20 +355,36 @@ alpha.6 不扩大默认并发。details v2 仍按每个游戏顺序执行 CN / U
 
 #### Tasks
 
-- [ ] 新增实验性 benchmark / smoke 工具，不进入生产 schedule。
-- [ ] 支持指定 appid 列表、请求间隔、burst、worker 数和 proxy。
-- [ ] 分别测试 appdetails、events、player count。
-- [ ] 记录状态码、错误类型、block detection、耗时、重试次数和 cooldown。
-- [ ] 输出 CSV / JSON 实验报告。
-- [ ] 基于实验结果更新 `collector.v2.steam` 推荐默认值。
-- [ ] 明确生产安全阈值和测试环境阈值。
+- [x] 新增实验性 benchmark / smoke 工具，不进入生产 schedule：`experimental/steam-rate-limit`。
+- [x] 支持指定 appid 列表、请求间隔、burst、worker 数和 proxy。
+- [x] 分别测试 appdetails、events、player count。
+- [x] 记录状态码、错误类型、block detection、耗时、重试次数和 cooldown。
+- [x] 输出 CSV / JSON / 中文 Markdown 实验报告。
+- [x] 基于真实实验结果更新 `collector.v2.steam` 推荐默认值。
+- [x] 明确生产安全阈值和测试环境阈值的判断口径。
 
 #### Acceptance Criteria
 
-- [ ] 能复现实验并得到可比较报告。
-- [ ] 能解释当前默认限流配置是否保守。
-- [ ] 能给出 details / news / players 三类任务的推荐并发和间隔。
-- [ ] 不会在生产采集流程中自动运行实验。
+- [x] 能复现实验并得到可比较报告。
+- [x] 能解释当前默认限流配置是否保守。
+- [x] 能给出 details / news / players 三类任务的阶段性推荐并发和间隔。
+- [x] 不会在生产采集流程中自动运行实验。
+
+#### Implementation
+
+- 工具目录：`experimental/steam-rate-limit`。
+- 默认偏保守：Store `2000ms`、official API `1000ms`、`workers=1`、`burst=1`。
+- 每轮输出：
+  - `report.json`
+  - `results.csv`
+  - `report.zh-CN.md`
+- 出现 `429`、`403`、`5xx`、transport error 或 `block_detected=true` 后，对对应 bucket 进入本地 cooldown。
+- 真实实验结论：
+  - Store appdetails 在 `workers=10`、无本地 interval / cooldown / retry 时，两轮复测均为 `360` 请求中成功 `228`、失败 `132`。
+  - Store `429` 大约从 `220-230` 次请求附近开始，继续请求会快速转为 `403` / block-detected。
+  - 等待约 `5` 分钟后可复测到相近边界，支持 Store 约 `[150,250] requests / 5 minutes / egress identity` 的保守预算。
+  - production 建议 Store appdetails 先按 `1 request / 2 seconds`、`burst=1` 设计，details / news 共用 Store bucket 时继续预留余量。
+  - official API 短时 `players` 未观察到 `429`，但 developer key 每日预算才是生产主约束，例如 `10,000 requests / day`。
 
 ---
 
