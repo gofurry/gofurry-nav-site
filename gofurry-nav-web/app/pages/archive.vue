@@ -317,11 +317,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MdPreview } from 'md-editor-v3'
-import 'md-editor-v3/lib/preview.css'
 import { useLangStore } from '@/store/langStore'
+
+const MdPreview = defineAsyncComponent(async () => {
+  await import('md-editor-v3/lib/preview.css')
+  const module = await import('md-editor-v3')
+  return module.MdPreview
+})
 
 definePageMeta({
   ssr: false

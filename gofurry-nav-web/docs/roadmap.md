@@ -208,11 +208,14 @@
 
 目标：重型库只在用户真正进入对应功能时加载。
 
+状态：已完成。
+
 改进项：
 
 - `/archive` 的 `md-editor-v3` 改为异步组件或仅在存在回答/引用时加载。
 - 站点详情的 `echarts` 改为按需动态 import。
 - 游戏详情图库的 `hls.js` 改为用户点击视频时动态 import。
+- `GameTabGallery` 默认优先展示截图，避免进入图库时自动初始化 HLS。
 - 清理未使用的重型依赖：
   - `@kangc/v-md-editor`
   - `dashjs`

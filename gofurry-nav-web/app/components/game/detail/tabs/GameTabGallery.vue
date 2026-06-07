@@ -34,7 +34,7 @@
       <div
           v-for="item in mediaList"
           :key="item.key"
-          @click="activeKey = item.key"
+          @click="selectMedia(item)"
           :class="['flex-shrink-0 rounded-lg overflow-hidden cursor-pointer border-2',
                  activeKey === item.key ? 'border-orange-500' : 'border-transparent']"
           class="w-32 h-18 relative"
@@ -43,6 +43,8 @@
             :src="item.thumb"
             :alt="mediaAlt(item)"
             class="w-full h-full object-fill transition-transform duration-200 group-hover:scale-105"
+            loading="lazy"
+            decoding="async"
         />
 
         <div
@@ -80,7 +82,6 @@
 
 <script setup lang="ts">
 import {ref, computed, watch, onMounted, onBeforeUnmount, nextTick} from 'vue'
-import Hls from 'hls.js'
 import { i18n } from '@/main'
 
 const { t } = i18n.global
@@ -144,15 +145,37 @@ const activeMedia = computed(() =>
     mediaList.value.find(m => m.key === activeKey.value) ?? null
 )
 const openFullscreen = ref(false)
+const videoRequested = ref(false)
 
 // HLS 播放控制
 const videoRef = ref<HTMLVideoElement | null>(null)
-let hls: Hls | null = null
+let hls: import('hls.js').default | null = null
+let hlsModulePromise: Promise<typeof import('hls.js')> | null = null
+let videoLoadToken = 0
 
-function initVideo(movie: MoviesModel) {
+async function loadHlsModule() {
+  if (!hlsModulePromise) {
+    hlsModulePromise = import('hls.js')
+  }
+  return hlsModulePromise
+}
+
+function stopVideo() {
+  videoLoadToken += 1
+  hls?.destroy()
+  hls = null
+  if (videoRef.value) {
+    videoRef.value.pause()
+    videoRef.value.src = ''
+  }
+}
+
+async function initVideo(movie: MoviesModel) {
   if (isBlocked.value) return
   if (!videoRef.value) return
 
+  const currentToken = videoLoadToken + 1
+  videoLoadToken = currentToken
   hls?.destroy()
   hls = null
   videoRef.value.src = ''
@@ -161,14 +184,20 @@ function initVideo(movie: MoviesModel) {
     videoRef.value.src = movie.hls_h264
     videoRef.value.load()
     videoRef.value.play().catch(() => {})
-  } else if (Hls.isSupported()) {
-    hls = new Hls()
-    hls.loadSource(movie.hls_h264)
-    hls.attachMedia(videoRef.value)
-    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-      videoRef.value?.play().catch(() => {})
-    })
+    return
   }
+
+  const { default: Hls } = await loadHlsModule()
+  if (currentToken !== videoLoadToken || !videoRef.value || !Hls.isSupported()) {
+    return
+  }
+
+  hls = new Hls()
+  hls.loadSource(movie.hls_h264)
+  hls.attachMedia(videoRef.value)
+  hls.on(Hls.Events.MANIFEST_PARSED, () => {
+    videoRef.value?.play().catch(() => {})
+  })
 }
 
 function mediaAlt(item: MediaItem) {
@@ -180,30 +209,28 @@ function mediaAlt(item: MediaItem) {
   return `Game screenshot ${id}`
 }
 
+function selectMedia(item: MediaItem) {
+  videoRequested.value = item.type === 'movie'
+  activeKey.value = item.key
+}
+
 // 监听切换
 watch(
-    [activeMedia, isBlocked],
-    ([media, blocked]) => {
+    [activeMedia, isBlocked, videoRequested],
+    ([media, blocked, requested]) => {
       if (blocked) {
         // 强制停止
-        hls?.destroy()
-        hls = null
-        if (videoRef.value) {
-          videoRef.value.pause()
-          videoRef.value.src = ''
-        }
+        stopVideo()
         return
       }
 
-      if (media?.type === 'movie') {
+      if (media?.type === 'movie' && requested) {
         const movie = props.movies?.find(
             m => `movie-${m.id}` === media.key
         )
-        if (movie) initVideo(movie)
+        if (movie) void initVideo(movie)
       } else {
-        hls?.destroy()
-        hls = null
-        if (videoRef.value) videoRef.value.src = ''
+        stopVideo()
       }
     },
     { immediate: true }
@@ -211,30 +238,28 @@ watch(
 
 watch(isBlocked, blocked => {
   if (!blocked && !activeKey.value && mediaList.value.length > 0) {
-    activeKey.value = mediaList.value[0]?.key ?? ''
+    activeKey.value = preferredInitialMedia.value?.key ?? ''
   }
 })
+
+const preferredInitialMedia = computed(() =>
+    mediaList.value.find(item => item.type === 'screenshot') ?? mediaList.value[0] ?? null
+)
 
 // 初始化
 onMounted(async () => {
   if (isBlocked.value) return
 
-  const firstMedia = mediaList.value?.[0]
+  const firstMedia = preferredInitialMedia.value
   if (!firstMedia) return
 
+  videoRequested.value = false
   activeKey.value = firstMedia.key
   await nextTick()
-
-  if (firstMedia.type === 'movie') {
-    const movie = props.movies?.find(
-        m => `movie-${m.id}` === firstMedia.key
-    )
-    if (movie) initVideo(movie)
-  }
 })
 
 onBeforeUnmount(() => {
-  hls?.destroy()
+  stopVideo()
 })
 </script>
 
