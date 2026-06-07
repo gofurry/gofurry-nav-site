@@ -1,5 +1,7 @@
 logs
-docs
+docs/*
+!docs/
+!docs/roadmap.md
 conf/*
 !conf/
 !conf/server.example.yaml

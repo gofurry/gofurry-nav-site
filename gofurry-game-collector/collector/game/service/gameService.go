@@ -10,6 +10,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-game-collector/collector/game/dao"
 	"github.com/gofurry/gofurry-game-collector/collector/game/models"
+	"github.com/gofurry/gofurry-game-collector/collector/game/v2/steamclient"
 	"github.com/gofurry/gofurry-game-collector/common"
 	ca "github.com/gofurry/gofurry-game-collector/common/abstract"
 	"github.com/gofurry/gofurry-game-collector/common/log"
@@ -36,6 +37,8 @@ var steamAPILimiter, steamStoreLimiter *rate.Limiter
 
 var storeReqCount atomic.Int32
 
+var v2SteamAdapter *steamclient.Adapter
+
 // InitLimiter 初始化限流相关变量
 func InitLimiter() {
 	storeReqCount.Store(0)
@@ -47,6 +50,51 @@ func InitLimiter() {
 	steamAPILimiter = rate.NewLimiter(rate.Every(time.Duration(limiter.SteamApi)*time.Second), 3)
 	// store 接口限流器 Steam风控大概在 [150,250]token / 5 minutes
 	steamStoreLimiter = rate.NewLimiter(rate.Every(time.Duration(limiter.SteamStore)*time.Second), 3)
+
+	InitV2SteamAdapter()
+}
+
+// InitV2SteamAdapter initializes the collector v2 Steam client when explicitly enabled.
+func InitV2SteamAdapter() {
+	v2Cfg := env.GetServerConfig().Collector.V2
+	if !v2Cfg.Enabled {
+		if v2SteamAdapter != nil {
+			v2SteamAdapter.Close()
+			v2SteamAdapter = nil
+		}
+		return
+	}
+
+	adapter, err := steamclient.New(steamclient.Config{
+		Enabled:               v2Cfg.Enabled,
+		DryRun:                v2Cfg.DryRun,
+		Proxy:                 env.GetServerConfig().Collector.Proxy,
+		APIIntervalSeconds:    v2Cfg.Steam.APIIntervalSeconds,
+		StoreIntervalSeconds:  v2Cfg.Steam.StoreIntervalSeconds,
+		Burst:                 v2Cfg.Steam.Burst,
+		MaxWorkers:            v2Cfg.Steam.MaxWorkers,
+		RequestTimeoutSeconds: v2Cfg.Steam.RequestTimeoutSeconds,
+		Retry: steamclient.RetryConfig{
+			MaxAttempts:          v2Cfg.Steam.Retry.MaxAttempts,
+			BaseDelaySeconds:     v2Cfg.Steam.Retry.BaseDelaySeconds,
+			CooldownOn429Seconds: v2Cfg.Steam.Retry.CooldownOn429Seconds,
+		},
+	})
+	if err != nil {
+		log.Error("init game collector v2 steam adapter failed: ", err)
+		return
+	}
+
+	if v2SteamAdapter != nil {
+		v2SteamAdapter.Close()
+	}
+	v2SteamAdapter = adapter
+	log.Info("game collector v2 steam adapter initialized, dry_run=", v2Cfg.DryRun)
+}
+
+// GetV2SteamAdapter returns the initialized collector v2 Steam adapter, if enabled.
+func GetV2SteamAdapter() *steamclient.Adapter {
+	return v2SteamAdapter
 }
 
 // 设置请求头, 明确指定语言为中文

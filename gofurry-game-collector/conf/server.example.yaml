@@ -39,3 +39,20 @@ collector:
   game:
     game_thread: 3 # 游戏采集 worker 数。
     game_player_interval: 24 # 玩家数据采集间隔，单位按当前调度实现解析。
+  v2:
+    enabled: false # v2 总开关；alpha 阶段默认关闭，避免影响 v1 采集路径。
+    dry_run: true # dry-run 只采集和比对，不写入 DB / Redis。
+    steam:
+      api_interval_seconds: 60 # api.steampowered.com 请求间隔。
+      store_interval_seconds: 60 # store.steampowered.com 请求间隔。
+      burst: 3 # token bucket burst，保持保守。
+      max_workers: 3 # v2 runner worker 数；并发不等于请求速率。
+      request_timeout_seconds: 10
+      retry:
+        max_attempts: 2
+        base_delay_seconds: 5
+        cooldown_on_429_seconds: 300 # 429/403/5xx/timeout 后的保守冷却窗口。
+    tasks:
+      news_enabled: false
+      players_enabled: false
+      details_enabled: false

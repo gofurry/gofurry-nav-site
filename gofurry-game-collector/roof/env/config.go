@@ -34,9 +34,10 @@ type MongodbConfig struct {
 }
 
 type CollectorConfig struct {
-	Proxy   string        `yaml:"proxy"`
-	Limiter LimiterConfig `yaml:"limiter"`
-	Game    GameConfig    `yaml:"game"`
+	Proxy   string            `yaml:"proxy"`
+	Limiter LimiterConfig     `yaml:"limiter"`
+	Game    GameConfig        `yaml:"game"`
+	V2      CollectorV2Config `yaml:"v2"`
 }
 
 type LimiterConfig struct {
@@ -47,6 +48,34 @@ type LimiterConfig struct {
 type GameConfig struct {
 	GameThread         int `yaml:"game_thread"`
 	GamePlayerInterval int `yaml:"game_player_interval"`
+}
+
+type CollectorV2Config struct {
+	Enabled bool                   `yaml:"enabled"`
+	DryRun  bool                   `yaml:"dry_run"`
+	Steam   CollectorV2SteamConfig `yaml:"steam"`
+	Tasks   CollectorV2TaskConfig  `yaml:"tasks"`
+}
+
+type CollectorV2SteamConfig struct {
+	APIIntervalSeconds    int                    `yaml:"api_interval_seconds"`
+	StoreIntervalSeconds  int                    `yaml:"store_interval_seconds"`
+	Burst                 int                    `yaml:"burst"`
+	MaxWorkers            int                    `yaml:"max_workers"`
+	RequestTimeoutSeconds int                    `yaml:"request_timeout_seconds"`
+	Retry                 CollectorV2RetryConfig `yaml:"retry"`
+}
+
+type CollectorV2RetryConfig struct {
+	MaxAttempts          int `yaml:"max_attempts"`
+	BaseDelaySeconds     int `yaml:"base_delay_seconds"`
+	CooldownOn429Seconds int `yaml:"cooldown_on_429_seconds"`
+}
+
+type CollectorV2TaskConfig struct {
+	NewsEnabled    bool `yaml:"news_enabled"`
+	PlayersEnabled bool `yaml:"players_enabled"`
+	DetailsEnabled bool `yaml:"details_enabled"`
 }
 
 type ServerConfig struct {
