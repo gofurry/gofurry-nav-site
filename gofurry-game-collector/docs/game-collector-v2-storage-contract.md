@@ -52,6 +52,7 @@ SQL 草案位于：
 
 ```txt
 sql/20260607_game_collector_v2_alpha3.sql
+sql/20260607_game_collector_v2_alpha5.sql
 ```
 
 ### 游戏详情
@@ -202,6 +203,7 @@ https://store.steampowered.com/news/app/{appid}/view/{announcement_gid}
 
 保存在线人数历史和上游状态：
 
+- `run_id`
 - `count`
 - `status`
 - `upstream_status_code`
@@ -210,6 +212,8 @@ https://store.steampowered.com/news/app/{appid}/view/{announcement_gid}
 - `collected_at`
 
 v2 不再把上游失败写成正常 `0`。真实 0 和失败 0 必须通过 `status` 区分。
+
+成功结果会刷新 Redis 当前值；失败结果只写 PostgreSQL，不刷新 Redis 当前值，避免把上游失败展示为正常在线人数。
 
 ### 采集运行记录
 

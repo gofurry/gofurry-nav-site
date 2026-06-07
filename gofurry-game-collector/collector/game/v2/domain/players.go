@@ -4,6 +4,8 @@ import "time"
 
 // PlayerCount stores one current-player collection result.
 type PlayerCount struct {
+	RunID string `json:"run_id"`
+
 	GameID int64  `json:"game_id"`
 	AppID  uint32 `json:"appid"`
 

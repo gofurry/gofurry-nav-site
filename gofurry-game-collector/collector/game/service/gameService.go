@@ -13,6 +13,7 @@ import (
 	v2repo "github.com/gofurry/gofurry-game-collector/collector/game/v2/repository"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/steamclient"
 	v2news "github.com/gofurry/gofurry-game-collector/collector/game/v2/tasks/news"
+	v2players "github.com/gofurry/gofurry-game-collector/collector/game/v2/tasks/players"
 	"github.com/gofurry/gofurry-game-collector/common"
 	ca "github.com/gofurry/gofurry-game-collector/common/abstract"
 	"github.com/gofurry/gofurry-game-collector/common/log"
@@ -184,6 +185,17 @@ func startGamePlayerCollect(gameID models.GameID) func() {
 			}
 		}()
 		defer wg.Done() // 确保线程结束时组数减少
+
+		if isV2PlayersEnabled() {
+			collector := v2players.NewCollector(GetV2SteamAdapter(), v2repo.NewPlayerRepository())
+			result, err := collector.CollectGame(context.Background(), gameID)
+			if err != nil {
+				log.Error("v2 game player collect failed, game_id=", gameID.ID, " appid=", gameID.Appid, " status=", result.Status, " err=", err)
+			} else {
+				log.Info("v2 game player collect finished, game_id=", gameID.ID, " appid=", gameID.Appid, " status=", result.Status, " count collected")
+			}
+			return
+		}
 
 		// 执行采集获取结果
 		playerCount := performGamePlayerCollect(gameID)
@@ -781,6 +793,11 @@ func startGameNewsCollect(gameID models.GameID) func() {
 func isV2NewsEnabled() bool {
 	v2Cfg := env.GetServerConfig().Collector.V2
 	return v2Cfg.Enabled && v2Cfg.Tasks.NewsEnabled
+}
+
+func isV2PlayersEnabled() bool {
+	v2Cfg := env.GetServerConfig().Collector.V2
+	return v2Cfg.Enabled && v2Cfg.Tasks.PlayersEnabled
 }
 
 // 执行游戏更新公告采集

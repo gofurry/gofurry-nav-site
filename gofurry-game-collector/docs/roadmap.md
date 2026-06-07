@@ -277,23 +277,23 @@ collector:
 
 ### v2.0.0-alpha.5 - Player Count Collector V2 Mainline
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Players / Stability
 **Goal:** 用 `steam-go` official API 替代 v1 在线人数采集。
 
 #### Tasks
 
-- [ ] 新增 `collector/game/v2/tasks/players`。
-- [ ] 使用 `steam-go` `GetNumberOfCurrentPlayers`。
-- [ ] 写入 v2 player count 存储。
-- [ ] 保存上游状态、失败原因和采集 run id。
-- [ ] 删除或停用 v1 在线人数 HTTP 拼接逻辑。
+- [x] 新增 `collector/game/v2/tasks/players`。
+- [x] 使用 `steam-go` `GetNumberOfCurrentPlayers`。
+- [x] 写入 v2 player count 存储。
+- [x] 保存上游状态、失败原因和采集 run id。
+- [x] v2 players enabled 时停用 v1 在线人数 HTTP 拼接逻辑。
 
 #### Acceptance Criteria
 
-- [ ] 在线人数采集不再依赖 `util.GetByHttpWithParams`。
-- [ ] 上游失败不会误写正常数据。
-- [ ] 后端可以查询当前值和最近采集状态。
+- [x] 在线人数采集不再依赖 `util.GetByHttpWithParams`。
+- [x] 上游失败不会误写正常数据。
+- [x] 后端可以查询当前值和最近采集状态。
 
 ---
 
@@ -414,12 +414,13 @@ collector:
 
 ## 下一步建议
 
-下一步优先做 `v2.0.0-alpha.5 - Player Count Collector V2 Mainline`。
+下一步优先做 `v2.0.0-alpha.6 - Game Details Collector V2 Mainline`。
 
 原因：
 
 - alpha.2 已确认 `steam-go` 能承接当前 Steam 复杂度。
 - alpha.3 已明确 PostgreSQL / Redis 存储契约。
 - News v2 已验证 domain、mapper、repository 和内容清洗链路。
-- Player count v2 改动面最小，适合继续替换手写 Steam official API 请求。
+- Player count v2 已替换手写 Steam official API 请求。
+- Details v2 是剩余最大采集面，完成后才能进入统一 runner 和 v1 清理。
 - 如果某个字段或清洗规则缺失，应先补 `steam-go`，再写 collector mapper。
