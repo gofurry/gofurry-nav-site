@@ -5,12 +5,13 @@ import (
 	"os"
 	"runtime/debug"
 
+	gameService "github.com/gofurry/gofurry-game-collector/collector/game/service"
 	"github.com/gofurry/gofurry-game-collector/common"
 	"github.com/gofurry/gofurry-game-collector/common/log"
 	cs "github.com/gofurry/gofurry-game-collector/common/service"
 	"github.com/gofurry/gofurry-game-collector/roof/env"
 	"github.com/gofurry/gofurry-game-collector/schedule"
-	"github.com/kardianos/service"
+	kservice "github.com/kardianos/service"
 )
 
 //@title gofurry-game-Collector
@@ -22,13 +23,13 @@ var (
 )
 
 func main() {
-	svcConfig := &service.Config{
+	svcConfig := &kservice.Config{
 		Name:        common.COMMON_PROJECT_NAME,
 		DisplayName: "gf-game-collector",
 		Description: "gf-game-collector",
 	}
 	prg := &goFurry{}
-	s, err := service.New(prg, svcConfig)
+	s, err := kservice.New(prg, svcConfig)
 	if err != nil {
 		log.Error(err)
 	}
@@ -58,6 +59,28 @@ func main() {
 			log.Info("gf-game-collector V1.0.0")
 			return
 		}
+
+		if os.Args[1] == "collect" || os.Args[1] == "full" {
+			runCollectorOnce(func() {
+				gameService.GetGameService().Collect()
+			})
+			return
+		}
+
+		if os.Args[1] == "players" {
+			runCollectorOnce(func() {
+				gameService.GetGameService().CollectCurrentPlayers()
+			})
+			return
+		}
+
+		if os.Args[1] == "all" {
+			runCollectorOnce(func() {
+				gameService.GetGameService().CollectCurrentPlayers()
+				gameService.GetGameService().Collect()
+			})
+			return
+		}
 	}
 
 	// 内存限制和 GC 策略
@@ -73,6 +96,14 @@ func main() {
 	}
 }
 
+func runCollectorOnce(run func()) {
+	debug.SetGCPercent(1000)
+	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
+	InitOnStart()
+	gameService.InitLimiter()
+	run()
+}
+
 func InitOnStart() {
 	// 初始化 redis
 	cs.InitRedisOnStart()
@@ -82,7 +113,7 @@ func InitOnStart() {
 
 type goFurry struct{}
 
-func (gf *goFurry) Start(s service.Service) error {
+func (gf *goFurry) Start(s kservice.Service) error {
 	go gf.run()
 	return nil
 }
@@ -96,6 +127,6 @@ func (gf *goFurry) run() {
 	}()
 }
 
-func (gf *goFurry) Stop(s service.Service) error {
+func (gf *goFurry) Stop(s kservice.Service) error {
 	return nil
 }

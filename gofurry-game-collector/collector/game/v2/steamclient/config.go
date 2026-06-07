@@ -18,13 +18,11 @@ const (
 
 // Config describes the Steam client adapter settings used by collector v2.
 type Config struct {
-	Enabled bool
-	DryRun  bool
-
 	Proxy string
 
-	APIIntervalSeconds    int
-	StoreIntervalSeconds  int
+	APIRequestsPer5Min   int
+	StoreRequestsPer5Min int
+
 	Burst                 int
 	MaxWorkers            int
 	RequestTimeoutSeconds int
@@ -41,9 +39,6 @@ type RetryConfig struct {
 
 // ResolvedConfig is Config after defaults and validation have been applied.
 type ResolvedConfig struct {
-	Enabled bool
-	DryRun  bool
-
 	ProxyURLs []string
 
 	APIInterval    time.Duration
@@ -59,11 +54,11 @@ type ResolvedConfig struct {
 
 // ResolveConfig applies safe defaults and validates one adapter config.
 func ResolveConfig(cfg Config) (ResolvedConfig, error) {
-	if cfg.APIIntervalSeconds < 0 {
-		return ResolvedConfig{}, fmt.Errorf("api interval seconds must not be negative")
+	if cfg.APIRequestsPer5Min < 0 {
+		return ResolvedConfig{}, fmt.Errorf("api requests per 5 minutes must not be negative")
 	}
-	if cfg.StoreIntervalSeconds < 0 {
-		return ResolvedConfig{}, fmt.Errorf("store interval seconds must not be negative")
+	if cfg.StoreRequestsPer5Min < 0 {
+		return ResolvedConfig{}, fmt.Errorf("store requests per 5 minutes must not be negative")
 	}
 	if cfg.Burst < 0 {
 		return ResolvedConfig{}, fmt.Errorf("burst must not be negative")
@@ -83,14 +78,19 @@ func ResolveConfig(cfg Config) (ResolvedConfig, error) {
 	if cfg.Retry.CooldownOn429Seconds < 0 {
 		return ResolvedConfig{}, fmt.Errorf("retry cooldown seconds must not be negative")
 	}
+	resolvedBurst := intOrDefault(cfg.Burst, defaultBurst)
+	if cfg.APIRequestsPer5Min > 0 && cfg.APIRequestsPer5Min <= resolvedBurst {
+		return ResolvedConfig{}, fmt.Errorf("api requests per 5 minutes must be greater than burst")
+	}
+	if cfg.StoreRequestsPer5Min > 0 && cfg.StoreRequestsPer5Min <= resolvedBurst {
+		return ResolvedConfig{}, fmt.Errorf("store requests per 5 minutes must be greater than burst")
+	}
 
 	resolved := ResolvedConfig{
-		Enabled:          cfg.Enabled,
-		DryRun:           cfg.DryRun,
 		ProxyURLs:        splitProxyURLs(cfg.Proxy),
-		APIInterval:      secondsOrDefault(cfg.APIIntervalSeconds, defaultIntervalSeconds),
-		StoreInterval:    secondsOrDefault(cfg.StoreIntervalSeconds, defaultIntervalSeconds),
-		Burst:            intOrDefault(cfg.Burst, defaultBurst),
+		APIInterval:      intervalFromWindowOrDefault(cfg.APIRequestsPer5Min, defaultIntervalSeconds, resolvedBurst),
+		StoreInterval:    intervalFromWindowOrDefault(cfg.StoreRequestsPer5Min, defaultIntervalSeconds, resolvedBurst),
+		Burst:            resolvedBurst,
 		MaxWorkers:       intOrDefault(cfg.MaxWorkers, defaultMaxWorkers),
 		RequestTimeout:   secondsOrDefault(cfg.RequestTimeoutSeconds, defaultRequestTimeoutSeconds),
 		RetryMaxAttempts: intOrDefault(cfg.Retry.MaxAttempts, defaultRetryMaxAttempts),
@@ -105,6 +105,13 @@ func secondsOrDefault(value int, fallback int) time.Duration {
 		value = fallback
 	}
 	return time.Duration(value) * time.Second
+}
+
+func intervalFromWindowOrDefault(requestsPer5Min int, fallbackSeconds int, burst int) time.Duration {
+	if requestsPer5Min > 0 {
+		return (5 * time.Minute) / time.Duration(requestsPer5Min-burst)
+	}
+	return secondsOrDefault(0, fallbackSeconds)
 }
 
 func intOrDefault(value int, fallback int) int {

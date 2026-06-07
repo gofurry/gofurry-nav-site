@@ -58,7 +58,7 @@ type Event struct {
 	CooldownUntil time.Time
 }
 
-// New builds a collector v2 Steam adapter without changing existing v1 behavior.
+// New builds a collector v2 Steam adapter.
 func New(cfg Config) (*Adapter, error) {
 	resolved, err := ResolveConfig(cfg)
 	if err != nil {

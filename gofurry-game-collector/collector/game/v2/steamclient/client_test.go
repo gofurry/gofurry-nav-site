@@ -58,12 +58,34 @@ func TestResolveConfigSplitsProxyURLs(t *testing.T) {
 	}
 }
 
+func TestResolveConfigUsesFiveMinuteBudgets(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := ResolveConfig(Config{
+		APIRequestsPer5Min:   240,
+		StoreRequestsPer5Min: 180,
+		Burst:                1,
+	})
+	if err != nil {
+		t.Fatalf("ResolveConfig returned error: %v", err)
+	}
+
+	if cfg.APIInterval != 5*time.Minute/239 {
+		t.Fatalf("unexpected api interval: %s", cfg.APIInterval)
+	}
+	if cfg.StoreInterval != 5*time.Minute/179 {
+		t.Fatalf("unexpected store interval: %s", cfg.StoreInterval)
+	}
+}
+
 func TestResolveConfigRejectsNegativeValues(t *testing.T) {
 	t.Parallel()
 
 	cases := []Config{
-		{APIIntervalSeconds: -1},
-		{StoreIntervalSeconds: -1},
+		{APIRequestsPer5Min: -1},
+		{StoreRequestsPer5Min: -1},
+		{APIRequestsPer5Min: 1, Burst: 1},
+		{StoreRequestsPer5Min: 1, Burst: 1},
 		{Burst: -1},
 		{MaxWorkers: -1},
 		{RequestTimeoutSeconds: -1},

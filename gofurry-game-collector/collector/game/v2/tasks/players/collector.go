@@ -77,6 +77,7 @@ func (c *Collector) CollectGame(ctx context.Context, game models.GameID) (report
 	}
 
 	item := domain.PlayerCount{
+		RunID:       report.RunIDFromContext(ctx),
 		GameID:      game.ID,
 		AppID:       uint32(game.Appid),
 		Count:       playerCount,
@@ -100,6 +101,7 @@ func (c *Collector) finishFailed(ctx context.Context, result report.TaskResult, 
 
 	if c != nil && c.repo != nil && game.ID > 0 && game.Appid > 0 {
 		_ = c.repo.SavePlayerCount(ctx, domain.PlayerCount{
+			RunID:        report.RunIDFromContext(ctx),
 			GameID:       game.ID,
 			AppID:        uint32(game.Appid),
 			Status:       domain.StatusFailed,

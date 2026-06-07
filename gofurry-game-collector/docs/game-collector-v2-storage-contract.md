@@ -228,6 +228,9 @@ v2 不再把上游失败写成正常 `0`。真实 0 和失败 0 必须通过 `st
 - `success_count`
 - `failed_count`
 - `skipped_count`
+- `partial_count`
+- `task_summary jsonb`
+- `duration_millis`
 - `error_kind`
 - `error_message`
 - `started_at`
@@ -273,29 +276,30 @@ Redis 只作为热数据缓存，不作为事实来源。
 
 Redis 写入失败不应回滚 PostgreSQL 写入，但需要记录在 task result 中。
 
-## Alpha.3 Scope Boundary
+## Stable Scope Boundary
 
-本阶段只完成：
+v2.0.0 stable 已完成：
 
 - domain model。
 - report model。
-- PostgreSQL / Redis 存储契约文档。
-- SQL 草案。
-- roadmap 更新。
+- PostgreSQL / Redis repository。
+- mapper。
+- details / news / players tasks。
+- unified runner。
+- PostgreSQL / Redis 存储契约和 SQL。
+- v1 Steam 手写采集逻辑清理。
+- MongoDB 依赖清理。
 
-本阶段不做：
+当前仍不做：
 
-- 不接真实 DAO。
-- 不改 schedule。
 - 不删除 v1 表。
-- 不删除 v1 MongoDB 相关旧代码。
-- 不实现 mapper。
-- 不实现 repository。
+- 不直接改 backend v1 API。
+- 不直接改 frontend games 页面。
 
 ## 后续阶段
 
-建议 alpha.4 先做 news v2：
+建议后续优先做 backend v2：
 
-- Store events 数据结构最适合验证 domain / repository。
-- 新闻可直接体现 `raw_body / html / plain_text / summary` 的价值。
-- 比详情采集改动面小，比在线人数更能验证 v2 内容质量。
+- 基于 `gofurry-game-backend/docs/game-v2-backend-contract.md` 新增 `/api/v2/game/*`。
+- 后端消费 collector v2 PostgreSQL 表和 Redis key。
+- 前端 games v2 切到稳定数据契约后，再逐步删除后端 v1 动态数据消费路径。

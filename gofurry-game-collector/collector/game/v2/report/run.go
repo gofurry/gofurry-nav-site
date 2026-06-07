@@ -23,6 +23,38 @@ type CollectRun struct {
 	Error *ErrorInfo `json:"error,omitempty"`
 }
 
+// TaskSummary stores aggregate results for one task family inside a run.
+type TaskSummary struct {
+	Task domain.TaskType `json:"task"`
+
+	TotalCount   int `json:"total_count"`
+	SuccessCount int `json:"success_count"`
+	FailedCount  int `json:"failed_count"`
+	SkippedCount int `json:"skipped_count"`
+	PartialCount int `json:"partial_count"`
+
+	DurationMillis int64 `json:"duration_millis"`
+}
+
+// RunSummary summarizes one unified v2 runner execution.
+type RunSummary struct {
+	ID string `json:"id"`
+
+	Status    domain.Status `json:"status"`
+	StartedAt time.Time     `json:"started_at"`
+	EndedAt   time.Time     `json:"ended_at"`
+
+	TotalCount   int `json:"total_count"`
+	SuccessCount int `json:"success_count"`
+	FailedCount  int `json:"failed_count"`
+	SkippedCount int `json:"skipped_count"`
+	PartialCount int `json:"partial_count"`
+
+	TaskSummaries []TaskSummary `json:"task_summaries"`
+	Results       []TaskResult  `json:"results,omitempty"`
+	Error         *ErrorInfo    `json:"error,omitempty"`
+}
+
 // TaskResult summarizes one app-level task result.
 type TaskResult struct {
 	RunID string `json:"run_id"`

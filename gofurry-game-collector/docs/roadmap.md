@@ -6,13 +6,12 @@
 
 这意味着：
 
-- v2 写完并验证完成后再上线。
-- 上线后 v2 成为唯一主线采集路径。
-- v1 采集逻辑只作为开发阶段参考，不作为长期 fallback。
+- v2 已成为唯一主线采集路径。
+- v1 采集逻辑已从 collector 主流程删除。
 - 采集器内部可以采集更多字段、保留更丰富的原始数据和结构化数据，为后端 v2 和前端游戏模块 v2 提供更强可塑性。
 - Steam 复杂度优先沉淀到 `github.com/gofurry/steam-go`，而不是继续留在采集器里。
 
-`dry_run` 的定位需要重新收敛：它可以作为 alpha 阶段的本地调试工具，但不是架构目标，也不应该成为生产长期路径。v2 稳定后应删除、禁用或仅保留为开发命令，不进入主采集流程。
+`dry_run`、任务级 enabled 开关和 v1 fallback 只服务于 alpha/beta 开发期，稳定版不再保留在主采集流程中。
 
 ## 架构边界
 
@@ -116,24 +115,17 @@ v2 配置应围绕主线采集，而不是双栈迁移：
 ```yaml
 collector:
   v2:
-    enabled: true
     steam:
-      api_interval_seconds: 2
-      store_interval_seconds: 6
-      burst: 3
+      api_requests_per_5_minutes: 240
+      store_requests_per_5_minutes: 180
+      burst: 1 # interval 按 requests_per_5_minutes - burst 换算，避免初始令牌突破窗口预算。
       max_workers: 3
       request_timeout_seconds: 10
       retry:
         max_attempts: 2
         base_delay_seconds: 5
         cooldown_on_429_seconds: 300
-    tasks:
-      news_enabled: true
-      players_enabled: true
-      details_enabled: true
 ```
-
-`dry_run` 可以在开发期保留为临时调试字段，但 roadmap 不再把它当成生产能力。
 
 ## Version Plan
 
@@ -156,9 +148,9 @@ collector:
 
 #### Adjustment
 
-- [ ] 后续阶段移除“长期 dry-run / 长期 fallback”思路。
-- [ ] `enabled=false` 只作为开发保护，不作为稳定架构目标。
-- [ ] v2 上线前应完成全量替换，而不是上线后长期并行。
+- [x] 后续阶段移除“长期 dry-run / 长期 fallback”思路。
+- [x] v2 稳定版删除 `enabled=false` 和任务级开关。
+- [x] v2 上线前完成全量替换，而不是上线后长期并行。
 
 ---
 
@@ -373,7 +365,7 @@ alpha.6 不扩大默认并发。details v2 仍按每个游戏顺序执行 CN / U
 #### Implementation
 
 - 工具目录：`experimental/steam-rate-limit`。
-- 默认偏保守：Store `2000ms`、official API `1000ms`、`workers=1`、`burst=1`。
+- 默认偏保守：Store `180 requests / 5 minutes`、official API `240 requests / 5 minutes`、`workers=3`、`burst=1`，interval 按 `budget - burst` 换算。
 - 每轮输出：
   - `report.json`
   - `results.csv`
@@ -383,78 +375,108 @@ alpha.6 不扩大默认并发。details v2 仍按每个游戏顺序执行 CN / U
   - Store appdetails 在 `workers=10`、无本地 interval / cooldown / retry 时，两轮复测均为 `360` 请求中成功 `228`、失败 `132`。
   - Store `429` 大约从 `220-230` 次请求附近开始，继续请求会快速转为 `403` / block-detected。
   - 等待约 `5` 分钟后可复测到相近边界，支持 Store 约 `[150,250] requests / 5 minutes / egress identity` 的保守预算。
-  - production 建议 Store appdetails 先按 `1 request / 2 seconds`、`burst=1` 设计，details / news 共用 Store bucket 时继续预留余量。
+  - production 建议 Store appdetails 先按约 `180 requests / 5 minutes`、`burst=1` 设计，details / news 共用 Store bucket 时继续预留余量。
+  - 同一类接口共享限流器：details / news 共享 Store bucket，players 共享 official API bucket。
   - official API 短时 `players` 未观察到 `429`，但 developer key 每日预算才是生产主约束，例如 `10,000 requests / day`。
 
 ---
 
 ### v2.0.0-beta.1 - Unified V2 Runner
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Operations / Reliability
 **Goal:** 统一 v2 三类任务编排，形成可上线的主线采集器。
 
 #### Tasks
 
-- [ ] 新增 `collector/game/v2/runner`。
-- [ ] 支持按任务类型执行：details / news / players。
-- [ ] 支持全量 appid 列表和手动指定 appid。
-- [ ] 输出 run report：成功数、失败数、耗时、错误分类、cooldown 次数。
-- [ ] 将现有 schedule 切到 v2 runner。
-- [ ] 移除 v1 runner 入口。
+- [x] 新增 `collector/game/v2/runner`。
+- [x] 支持按任务类型执行：details / news / players。
+- [x] 支持传入全量 appid 列表或显式 appid 列表。
+- [x] 输出 run report：成功数、失败数、跳过数、partial 数和按任务汇总。
+- [x] 将现有 details / news / players v2-enabled 路径切到 v2 runner。
+- [x] v2-enabled task 不再进入 v1 单任务入口。
 
 #### Acceptance Criteria
 
-- [ ] v2 runner 是唯一主采集入口。
-- [ ] 生产日志能看到每次采集 run 的完整摘要。
-- [ ] 单个 appid 失败不影响整个批次。
-- [ ] `go test ./...` 通过。
+- [x] v2 runner 是 v2-enabled task 的唯一主采集入口。
+- [x] 生产日志能看到每次采集 run 的完整摘要。
+- [x] 单个 appid 失败不影响整个批次。
+- [x] `go test ./...` 通过。
+
+#### Implementation
+
+- `collector/game/v2/runner` 只做编排，不直接处理 Steam API、mapper 或 DB 写入。
+- `Collect()` 会把 details / news 统一交给 runner。
+- `CollectCurrentPlayers()` 会把 players 统一交给 runner。
+- runner 使用 `collector.v2.steam.max_workers` 控制批量任务并发；Steam 请求速率仍由 shared Store / official API bucket 控制。
+- runner 捕获每个 appid/task 的结果，失败只计入 report，不中断其他 appid。
 
 ---
 
 ### v2.0.0-rc.1 - Backend Contract Preparation
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Backend readiness / API design
 **Goal:** 在 collector v2 上线前，为 backend v2 明确数据消费契约。
 
 #### Tasks
 
-- [ ] 输出 collector v2 数据契约文档。
-- [ ] 标注哪些字段适合进入公开 API。
-- [ ] 标注哪些字段仅用于后台、搜索、推荐或调试。
-- [ ] 准备 backend v2 API 草案。
-- [ ] 准备前端 games 模块 v2 所需字段清单。
+- [x] 输出 collector v2 数据契约文档。
+- [x] 标注哪些字段适合进入公开 API。
+- [x] 标注哪些字段仅用于后台、搜索、推荐或调试。
+- [x] 准备 backend v2 API 草案。
+- [x] 准备前端 games 模块 v2 所需字段清单。
 
 #### Acceptance Criteria
 
-- [ ] backend 不需要理解 Steam 原始 payload 才能使用 v2 数据。
-- [ ] 前端视觉体验改造有稳定数据来源。
-- [ ] 数据字段命名、语言、价格、媒体结构清晰。
+- [x] backend 不需要理解 Steam 原始 payload 才能使用 v2 数据。
+- [x] 前端视觉体验改造有稳定数据来源。
+- [x] 数据字段命名、语言、价格、媒体结构清晰。
+
+#### Implementation
+
+- 后端消费契约位于 `gofurry-game-backend/docs/game-v2-backend-contract.md`。
+- 公开 API 只暴露稳定业务字段，raw payload / raw event / 采集错误 / traffic bucket 等字段仅用于后台、调试、搜索或推荐。
+- backend v2 建议新增 `/api/v2/game/*`，保留 `/api/v1/game/*` 直到前端 games v2 完成切换。
+- 后端 v2 继续复用 `gfg_game` 作为站内主档案入口，动态详情、新闻、价格、媒体、在线人数改为消费 collector v2 表和 Redis key。
+- 在线人数公开展示只读取最近成功结果，上游失败记录只进入后台观测，不覆盖当前在线人数。
 
 ---
 
 ### v2.0.0 - V2 Mainline Stable
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Stable / Cleanup / Maintenance
 **Goal:** v2 成为唯一主线，删除 v1 历史包袱。
 
 #### Tasks
 
-- [ ] 删除 v1 Steam HTTP 拼接采集逻辑。
-- [ ] 删除 collector 内部旧 BBCode parser，改用 `steam-go/addons/markup`。
-- [ ] 删除长期 dry-run / fallback 分支。
-- [ ] 清理旧配置项或标记 deprecated。
-- [ ] 更新 README / docs / deployment notes。
-- [ ] 完成上线前全量采集测试。
+- [x] 删除 v1 Steam HTTP 拼接采集逻辑。
+- [x] 删除 collector 内部旧 BBCode parser，改用 `steam-go/addons/markup`。
+- [x] 删除长期 dry-run / fallback 分支。
+- [x] 清理旧配置项。
+- [x] 更新 docs / deployment notes。
+- [x] 完成上线前编译与单元测试。
 
 #### Acceptance Criteria
 
-- [ ] collector 只保留 v2 主线采集路径。
-- [ ] Steam 复杂度主要位于 `steam-go`。
-- [ ] collector 代码职责收敛为调度、映射、写入和报告。
-- [ ] 后端具备基于 v2 数据继续演进的空间。
+- [x] collector 只保留 v2 主线采集路径。
+- [x] Steam 复杂度主要位于 `steam-go`。
+- [x] collector 代码职责收敛为调度、映射、写入和报告。
+- [x] 后端具备基于 v2 数据继续演进的空间。
+
+#### Implementation
+
+- `collector/game/service/gameService.go` 只保留 v2 runner 主线：details / news / players。
+- 删除旧的 v1 Store appdetails、official players、official/store news 手写采集路径。
+- 删除旧 MongoDB intro DAO、MongoDB service、MongoDB 配置结构和示例配置。
+- 删除 collector 内部 `ParseBBCode`，新闻内容清洗统一由 `steam-go/addons/markup` 负责。
+- 删除 v2 `enabled`、`dry_run`、任务级 enabled 开关和旧秒级限流配置，稳定版默认主线即 v2。
+- 采集 run summary / task result 会写入 `gfg_game_v2_collect_runs` 和 `gfg_game_v2_collect_task_results`，并刷新 `game:v2:collect:last:*` Redis key。
+- `gfg_game_v2_player_counts`、`gfg_game_v2_collect_runs`、`gfg_game_v2_collect_task_results` 已支持可配置保留策略。
+- CLI 支持 `go run . collect` / `go run . players` / `go run . all` 进行一次性验证采集。
+- `go mod tidy` 已移除 MongoDB 等不再需要的依赖。
+- `go test ./...` 通过。
 
 ## 上线策略
 
@@ -468,18 +490,15 @@ alpha.6 不扩大默认并发。details v2 仍按每个游戏顺序执行 CN / U
 4. 后端接入 v2 数据契约。
 5. 前端 games v2 使用新接口或新字段。
 6. 生产发布 v2。
-7. 发布后删除或封存 v1 采集实现。
+7. 发布后观察 v2 采集 run summary、PostgreSQL / Redis 数据完整性和 Steam cooldown 触发情况。
 
 ## 下一步建议
 
-下一步优先做 `v2.0.0-alpha.7 - Steam Store Rate-Limit Experiment`。
+下一步建议进入后端游戏模块 v2 实现。
 
-原因：
+优先顺序：
 
-- alpha.2 已确认 `steam-go` 能承接当前 Steam 复杂度。
-- alpha.3 已明确 PostgreSQL / Redis 存储契约。
-- News v2 已验证 domain、mapper、repository 和内容清洗链路。
-- Player count v2 已替换手写 Steam official API 请求。
-- Details v2 已替换详情采集主线，但它是 Store 请求量最大的任务。
-- 在进入统一 runner 和 v1 清理前，需要用实验确认生产安全限流值。
-- 如果某个字段或清洗规则缺失，应先补 `steam-go`，再写 collector mapper。
+1. 在 `gofurry-game-backend` 新增 `/api/v2/game/*` model / dao / service / controller。
+2. 后端优先消费 collector v2 PostgreSQL 表，Redis 作为热缓存。
+3. 前端 games v2 切到新接口。
+4. 生产观察稳定后，再清理后端 v1 动态数据消费路径。

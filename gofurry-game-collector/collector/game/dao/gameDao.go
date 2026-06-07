@@ -10,7 +10,6 @@ import (
 )
 
 var gameDao = abstract.NewDaoWithDB[models.GfgGame](context.Background(), database.Orm.DB().Table(models.TableNameGfgGame))
-var gameRecordDao = abstract.NewDaoWithDB[models.GfgGameRecord](context.Background(), database.Orm.DB().Table(models.TableNameGfgGameRecord))
 
 // 获取游戏列表
 func GetGameList() ([]models.GameID, common.GFError) {
@@ -19,17 +18,6 @@ func GetGameList() ([]models.GameID, common.GFError) {
 	db.Find(&res)
 	if err := db.Error; err != nil {
 		return nil, common.NewDaoError(err.Error())
-	}
-	return res, nil
-}
-
-// 获取游戏记录
-func GetGameRecordByGameIDAndLang(gameID int64, lang string) (models.GfgGameRecord, common.GFError) {
-	var res models.GfgGameRecord
-	db := gameRecordDao.DB().Table(gameRecordDao.GetTableName()).Where("game_id=? AND lang=?", gameID, lang)
-	db.Take(&res)
-	if err := db.Error; err != nil {
-		return res, common.NewDaoError(err.Error())
 	}
 	return res, nil
 }
