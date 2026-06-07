@@ -155,6 +155,8 @@
 
 目标：降低轻内容页和列表页的常驻背景绘制成本。
 
+状态：已完成。
+
 改进项：
 
 - 为 `GoFurryGridBackground` 增加低成本模式：
@@ -162,6 +164,7 @@
   - 不使用 mask。
   - 不使用 `will-change`。
   - 使用静态图片或简单 linear-gradient。
+- `GoFurryGridBackground profile="light"` 使用组件自身的静态背景层绘制网格，不挂载伪元素 mask。
 - 轻内容页默认使用低成本背景：
   - `/updates`
   - `/about`
