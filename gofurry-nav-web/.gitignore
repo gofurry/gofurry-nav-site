@@ -10,3 +10,5 @@ coverage/
 .env.*
 !.env.example
 !.env.*.example
+docs/performance/reports/*
+!docs/performance/reports/.gitkeep

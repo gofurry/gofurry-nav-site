@@ -30,7 +30,7 @@
             >
               <img
                 :src="siteLogoSrc(item)"
-                alt=""
+                :alt="item.name"
               />
               <span>
                 <strong>{{ item.name }}</strong>

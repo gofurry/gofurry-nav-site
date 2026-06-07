@@ -1,5 +1,7 @@
 logs
-docs
+docs/*
+!docs/
+!docs/*.md
 conf/*
 !conf/
 !conf/server.example.yaml

@@ -39,7 +39,15 @@
               <template v-else>{{ panel.page * pageSize + index + 1 }}</template>
             </span>
             <span class="spotlight-site__logo">
-              <img :src="siteLogoSrc(site)" :alt="site.name" />
+              <img
+                :src="siteLogoSrc(site)"
+                :alt="site.name"
+                width="29"
+                height="29"
+                loading="lazy"
+                decoding="async"
+                fetchpriority="low"
+              />
             </span>
             <span class="spotlight-site__body">
               <strong>{{ site.name }}</strong>
@@ -250,6 +258,13 @@ onUnmounted(() => {
     inset 0 1px 0 rgba(255, 255, 255, 0.65),
     0 16px 42px rgba(124, 45, 18, 0.08);
   backdrop-filter: blur(20px) saturate(1.16);
+}
+
+@supports (content-visibility: auto) {
+  .spotlight-panel {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 18rem;
+  }
 }
 
 .spotlight-panel__header {

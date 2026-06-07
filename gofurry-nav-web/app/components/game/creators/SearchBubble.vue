@@ -12,7 +12,7 @@
         @click="toggle"
     >
       <!-- 搜索 icon -->
-      <img src="@/assets/svgs/search-white.svg" alt="api" class="w-5 h-5" />
+      <img src="@/assets/svgs/search-white.svg" alt="" class="w-5 h-5" />
 
       <!-- 输入框 -->
       <input
@@ -51,7 +51,7 @@
             :src="item.avatar"
             class="w-9 h-9 rounded object-cover shrink-0
                    bg-orange-100"
-            alt=""
+            :alt="item.name"
         />
 
         <!-- 文本信息 -->

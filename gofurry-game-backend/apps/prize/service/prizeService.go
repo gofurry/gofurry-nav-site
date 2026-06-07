@@ -98,10 +98,10 @@ func (s prizeService) PrizeParticipation(req models.PrizeParticipationRequest, c
 	}
 
 	gfsError = cs.GetEmailService().SendActivationEmail(req.Email,
-		"gofurry 抽奖服务 - 参与",
+		"GoFurry 抽奖服务 - 参与",
 		"https://game.go-furry.com/api/v1/game/prize/participation/activation?key="+key+"&id="+util.Int642String(req.ID),
 		"点击此处完成参与",
-		"您正在申请 gofurry 的抽奖服务，点击下方链接完成报名的最后一步: ",
+		"您正在申请 GoFurry 的抽奖服务，点击下方链接完成报名的最后一步: ",
 		"10分钟")
 	if gfsError != nil {
 		cs.Del(emailLockKey, prizeKey)

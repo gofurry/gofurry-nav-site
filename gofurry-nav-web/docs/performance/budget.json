@@ -1,0 +1,89 @@
+{
+  "version": "v2.1.0-rc.1",
+  "notes": "保守预算用于阻止明显性能回退；GPU 占用不做自动硬阈值，使用 trace 辅助人工分析。",
+  "global": {
+    "maxDomNodes": 9000,
+    "maxJsRequests": 340,
+    "maxJsTransferKb": 11000,
+    "maxImageRequests": 160,
+    "maxLongTaskCount": 40,
+    "maxLongTaskTotalMs": 4500,
+    "maxJsHeapUsedMb": 260
+  },
+  "scenarios": {
+    "home-initial": {
+      "maxDomNodes": 2600,
+      "maxJsRequests": 330,
+      "maxJsTransferKb": 10500,
+      "maxImageRequests": 35,
+      "maxLongTaskCount": 18,
+      "maxLongTaskTotalMs": 1800,
+      "maxJsHeapUsedMb": 150,
+      "blockedHeavyDependencies": [
+        "md-editor-v3",
+        "echarts",
+        "hls.js"
+      ]
+    },
+    "home-revealed": {
+      "maxDomNodes": 8500,
+      "maxJsRequests": 330,
+      "maxJsTransferKb": 10500,
+      "maxImageRequests": 130,
+      "maxLongTaskCount": 30,
+      "maxLongTaskTotalMs": 3200,
+      "maxJsHeapUsedMb": 220
+    },
+    "updates": {
+      "maxDomNodes": 4200,
+      "maxJsRequests": 320,
+      "maxJsTransferKb": 10500,
+      "maxImageRequests": 24,
+      "maxLongTaskCount": 20,
+      "maxLongTaskTotalMs": 2000,
+      "maxJsHeapUsedMb": 170
+    },
+    "about": {
+      "maxDomNodes": 3800,
+      "maxJsRequests": 320,
+      "maxJsTransferKb": 10500,
+      "maxImageRequests": 24,
+      "maxLongTaskCount": 20,
+      "maxLongTaskTotalMs": 2000,
+      "maxJsHeapUsedMb": 170
+    },
+    "archive-empty": {
+      "maxDomNodes": 5200,
+      "maxJsRequests": 320,
+      "maxJsTransferKb": 10500,
+      "maxImageRequests": 20,
+      "maxLongTaskCount": 26,
+      "maxLongTaskTotalMs": 2600,
+      "maxJsHeapUsedMb": 210,
+      "blockedHeavyDependencies": [
+        "md-editor-v3"
+      ]
+    },
+    "games": {
+      "maxDomNodes": 8500,
+      "maxJsRequests": 330,
+      "maxJsTransferKb": 10500,
+      "maxImageRequests": 130,
+      "maxLongTaskCount": 30,
+      "maxLongTaskTotalMs": 3400,
+      "maxJsHeapUsedMb": 230,
+      "blockedHeavyDependencies": [
+        "hls.js"
+      ]
+    },
+    "site-detail": {
+      "maxDomNodes": 8500,
+      "maxJsRequests": 340,
+      "maxJsTransferKb": 11000,
+      "maxImageRequests": 90,
+      "maxLongTaskCount": 36,
+      "maxLongTaskTotalMs": 4200,
+      "maxJsHeapUsedMb": 260
+    }
+  }
+}

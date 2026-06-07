@@ -37,7 +37,7 @@
           class="search-input h-12 w-full rounded-xl px-4 pr-10 duration-500 focus:outline-none"
       />
       <img src="@/assets/svgs/search.svg"
-           alt="search"
+           :alt="searchActionLabel"
            class="search-icon absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2
              cursor-pointer transition-transform duration-500 hover:scale-110"
            @click="doSearch()"
@@ -115,6 +115,7 @@ import { setNavPageRevealLock } from '@/utils/navPageReveal'
 
 const { t, locale } = useI18n()
 const langStore = useLangStore()
+const searchActionLabel = computed(() => locale.value === 'en' ? 'Search GoFurry resources' : '搜索 GoFurry 资源')
 
 // 同步语言切换
 watch(
@@ -422,24 +423,6 @@ onBeforeUnmount(() => {
 
 
 <style scoped>
-.search-box-shell::before {
-  content: "";
-  position: absolute;
-  top: -1rem;
-  bottom: -0.9rem;
-  left: 50%;
-  width: min(calc(100% - 2rem), 38rem);
-  z-index: -1;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background:
-    radial-gradient(ellipse 66% 58% at 50% 50%, rgba(15, 23, 42, 0.48), rgba(15, 23, 42, 0.22) 48%, rgba(15, 23, 42, 0.08) 64%, transparent 82%);
-  filter: blur(18px);
-  opacity: 0.86;
-  pointer-events: none;
-  transition: opacity 500ms ease, background 500ms ease;
-}
-
 .search-chip {
   color: rgba(248, 250, 252, 0.92);
   background: rgba(15, 23, 42, 0.5);

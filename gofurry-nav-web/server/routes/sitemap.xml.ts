@@ -32,6 +32,19 @@ function urlEntry(loc: string) {
   return `<url><loc>${escapeXml(loc)}</loc></url>`
 }
 
+function localizedPaths(path: string) {
+  if (path === '/') {
+    return ['/', '/en']
+  }
+  return [path, `/en${path}`]
+}
+
+function addLocalizedUrls(urls: Set<string>, path: string) {
+  for (const localizedPath of localizedPaths(path)) {
+    urls.add(localizedPath)
+  }
+}
+
 function firstDomain(domains: string[] | undefined) {
   if (!domains?.length) {
     return ''
@@ -42,15 +55,21 @@ function firstDomain(domains: string[] | undefined) {
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
   const siteUrl = String(config.public.siteUrl).replace(/\/$/, '')
-  const urls = new Set([
+  const urls = new Set<string>()
+
+  for (const path of [
     '/',
-    '/nav',
     '/games',
     '/updates',
     '/about',
+    '/privacy',
+    '/terms',
     '/games/news/more',
-    '/games/creator'
-  ])
+    '/games/creator',
+    '/games/prize'
+  ]) {
+    addLocalizedUrls(urls, path)
+  }
 
   const [sites, games] = await Promise.all([
     $fetch<ApiResult<{ items: SiteRecord[] }>>('/api/v2/nav/sites/index').then((res) => res.code === 1 ? res.data.items : []).catch(() => []),
@@ -62,7 +81,7 @@ export default defineEventHandler(async (event) => {
   for (const site of sites) {
     if (site?.id != null) {
       const domain = firstDomain(site.domains)
-      urls.add(domain
+      addLocalizedUrls(urls, domain
         ? `/site/${encodeURIComponent(String(site.id))}/${encodeURIComponent(domain)}`
         : `/site/${encodeURIComponent(String(site.id))}`)
     }
@@ -75,7 +94,7 @@ export default defineEventHandler(async (event) => {
   for (const game of gameList) {
     const gameId = game.id ?? game.game_id
     if (gameId != null && gameId !== '') {
-      urls.add(`/games/${String(gameId)}`)
+      addLocalizedUrls(urls, `/games/${encodeURIComponent(String(gameId))}`)
     }
   }
 

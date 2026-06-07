@@ -58,6 +58,12 @@ const { t } = i18n.global
 const route = useRoute()
 const router = useRouter()
 
+useHead({
+  meta: [
+    { name: 'robots', content: 'noindex, follow' }
+  ]
+})
+
 const status = computed(() => String(route.query.status || ''))
 const message = computed(() => String(route.query.msg || ''))
 const isSuccess = computed(() => status.value === 'success')

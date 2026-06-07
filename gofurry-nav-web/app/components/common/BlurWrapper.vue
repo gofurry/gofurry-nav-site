@@ -24,7 +24,7 @@
           class="flex items-center justify-center gap-1 px-5 py-2 text-sm rounded-full bg-orange-900 text-gray-200 hover:bg-orange-800 transition pointer-events-auto"
           @click.stop="emit('unlock')"
       >
-        <img :src="key" class="w-4 h-4" alt="flag" />
+        <img :src="key" class="w-4 h-4" alt="" />
         <span>{{t("common.unlock")}}</span>
       </button>
     </div>

@@ -170,7 +170,11 @@
                       preview-theme="vuepress"
                       code-theme="github"
                     />
-                    <div v-else class="answer-placeholder">
+                    <div
+                      v-else
+                      class="answer-placeholder"
+                      :class="{ 'answer-placeholder--active': message.status === 'streaming' }"
+                    >
                       <span></span>
                       <span></span>
                       <span></span>
@@ -184,7 +188,12 @@
                     <span>{{ t('archive.sections.citations') }}</span>
                     <span>{{ t('archive.citations.count', { count: message.citations.length }) }}</span>
                   </div>
-                  <details v-for="(citation, index) in message.citations" :key="citationKey(citation, index)" class="citation-item">
+                  <details
+                    v-for="(citation, index) in message.citations"
+                    :key="citationKey(citation, index)"
+                    class="citation-item"
+                    @toggle="handleCitationToggle($event, citation, index)"
+                  >
                     <summary>
                       <span class="citation-rank">[{{ index + 1 }}]</span>
                       <span class="citation-head">
@@ -199,14 +208,14 @@
                       </div>
                       <button class="copy-button citation-copy-button" type="button" :disabled="!citationText(citation)" @click="copyText(citationText(citation))">{{ t('archive.actions.copyCitationSnippet') }}</button>
                       <MdPreview
-                        v-if="citationText(citation)"
+                        v-if="citationText(citation) && isCitationOpen(citation, index)"
                         class="citation-markdown"
                         :editor-id="`archive-citation-${message.id}-${index}`"
                         :model-value="citationText(citation)"
                         preview-theme="vuepress"
                         code-theme="github"
                       />
-                      <p v-else class="citation-empty">{{ t('archive.citations.noContent') }}</p>
+                      <p v-else-if="!citationText(citation)" class="citation-empty">{{ t('archive.citations.noContent') }}</p>
                       <a v-if="citation.url" :href="citation.url" target="_blank" rel="noopener noreferrer">{{ t('archive.citations.open') }}</a>
                     </div>
                   </details>
@@ -308,14 +317,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MdPreview } from 'md-editor-v3'
-import 'md-editor-v3/lib/preview.css'
 import { useLangStore } from '@/store/langStore'
+
+const MdPreview = defineAsyncComponent(async () => {
+  await import('md-editor-v3/lib/preview.css')
+  const module = await import('md-editor-v3')
+  return module.MdPreview
+})
 
 definePageMeta({
   ssr: false
+})
+
+useHead({
+  meta: [
+    { name: 'robots', content: 'noindex, follow' }
+  ]
 })
 
 type ArchiveCitation = {
@@ -393,6 +412,7 @@ const maxSessions = 50
 const maxTurnsPerSession = 20
 const defaultContextTurns = 3
 const pageSize = 10
+const streamDeltaFlushMs = 200
 const { t } = useI18n()
 const langStore = useLangStore()
 const route = useRoute()
@@ -410,6 +430,7 @@ const chatLimits = ref<ChatLimits | null>(null)
 const ragInfo = ref<RagInfo | null>(null)
 const ragInfoExpanded = ref(false)
 const streamController = ref<AbortController | null>(null)
+const openCitationKeys = ref<Record<string, boolean>>({})
 const workspaceBodyRef = ref<HTMLElement | null>(null)
 const scrollProgress = ref(0)
 const hasScrollableWorkspace = ref(false)
@@ -700,6 +721,37 @@ async function streamAnswer(sessionId: string, message: ChatMessage) {
   const controller = new AbortController()
   streamController.value = controller
   const context = buildRequestContext(sessionId, message.id)
+  let pendingDelta = ''
+  let deltaFlushTimer: number | null = null
+
+  function clearDeltaFlushTimer() {
+    if (deltaFlushTimer === null) {
+      return
+    }
+    window.clearTimeout(deltaFlushTimer)
+    deltaFlushTimer = null
+  }
+
+  function flushPendingDelta() {
+    clearDeltaFlushTimer()
+    if (!pendingDelta) {
+      return
+    }
+    message.answer += pendingDelta
+    pendingDelta = ''
+    touchMessage(sessionId, message)
+  }
+
+  function scheduleDeltaFlush() {
+    if (deltaFlushTimer !== null) {
+      return
+    }
+    deltaFlushTimer = window.setTimeout(() => {
+      deltaFlushTimer = null
+      flushPendingDelta()
+    }, streamDeltaFlushMs)
+  }
+
   await refreshQueue()
 
   try {
@@ -725,18 +777,23 @@ async function streamAnswer(sessionId: string, message: ChatMessage) {
         touchMessage(sessionId, message)
       },
       onDelta: (text) => {
-        message.answer += text
-        touchMessage(sessionId, message)
+        pendingDelta += text
+        scheduleDeltaFlush()
       },
       onDone: (payload) => {
         if (typeof payload?.answer === 'string') {
+          clearDeltaFlushTimer()
+          pendingDelta = ''
           message.answer = payload.answer
+        } else {
+          flushPendingDelta()
         }
         message.citations = normalizeArchiveCitations(payload?.citations ?? payload?.sources)
         message.status = 'done'
         touchMessage(sessionId, message)
       },
       onError: (errorMessage) => {
+        flushPendingDelta()
         message.status = 'error'
         message.error = errorMessage
         touchMessage(sessionId, message)
@@ -744,19 +801,23 @@ async function streamAnswer(sessionId: string, message: ChatMessage) {
     })
 
     if (message.status === 'streaming') {
+      flushPendingDelta()
       message.status = 'done'
       touchMessage(sessionId, message)
     }
   } catch (error: any) {
     if (error?.name === 'AbortError') {
+      flushPendingDelta()
       message.status = message.answer ? 'done' : 'idle'
       touchMessage(sessionId, message)
       return
     }
+    flushPendingDelta()
     message.status = 'error'
     message.error = userFacingError(error?.message || t('archive.errors.serviceUnavailable'))
     touchMessage(sessionId, message)
   } finally {
+    clearDeltaFlushTimer()
     if (streamController.value === controller) {
       streamController.value = null
     }
@@ -1029,6 +1090,19 @@ function historyNumber(index: number) {
 
 function citationKey(citation: ArchiveCitation, index: number) {
   return `${citation.title ?? citation.url ?? citation.source_type ?? 'citation'}-${citation.chunk_index ?? index}-${index}`
+}
+
+function handleCitationToggle(event: Event, citation: ArchiveCitation, index: number) {
+  const element = event.currentTarget as HTMLDetailsElement | null
+  const key = citationKey(citation, index)
+  openCitationKeys.value = {
+    ...openCitationKeys.value,
+    [key]: Boolean(element?.open)
+  }
+}
+
+function isCitationOpen(citation: ArchiveCitation, index: number) {
+  return Boolean(openCitationKeys.value[citationKey(citation, index)])
 }
 
 function scoreText(score?: number) {
@@ -1534,26 +1608,20 @@ function copyTextFallback(content: string) {
 }
 
 .archive-workspace::before {
-  inset: -24%;
+  inset: 0;
   background:
-    radial-gradient(circle at 18% 22%, rgba(194, 244, 165, 0.24), transparent 26%),
-    radial-gradient(circle at 68% 18%, rgba(108, 206, 177, 0.18), transparent 24%),
-    radial-gradient(circle at 74% 78%, rgba(238, 185, 111, 0.13), transparent 28%);
-  filter: blur(34px);
-  opacity: 0.76;
-  transform: translate3d(-2%, -1%, 0) scale(1.02);
-  animation: archiveGlowDrift 18s ease-in-out infinite alternate;
+    radial-gradient(circle at 18% 22%, rgba(194, 244, 165, 0.12), transparent 32%),
+    radial-gradient(circle at 74% 78%, rgba(238, 185, 111, 0.08), transparent 34%);
+  opacity: 0.72;
 }
 
 .archive-workspace::after {
   inset: 0;
   background:
-    linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.045) 42%, transparent 68%),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0, rgba(255, 255, 255, 0.018) 1px, transparent 1px, transparent 48px),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.014) 0, rgba(255, 255, 255, 0.014) 1px, transparent 1px, transparent 48px);
-  mask-image: radial-gradient(circle at 58% 46%, black, transparent 82%);
-  opacity: 0.58;
-  animation: archiveMistSweep 24s ease-in-out infinite alternate;
+    linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.028) 42%, transparent 68%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.012) 0, rgba(255, 255, 255, 0.012) 1px, transparent 1px, transparent 56px),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.010) 0, rgba(255, 255, 255, 0.010) 1px, transparent 1px, transparent 56px);
+  opacity: 0.46;
 }
 
 .workspace-header {
@@ -1771,7 +1839,6 @@ function copyTextFallback(content: string) {
   border-radius: 999px;
   background: linear-gradient(145deg, rgba(13, 20, 19, 0.88), rgba(25, 36, 33, 0.8));
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
-  backdrop-filter: blur(18px) saturate(140%);
   cursor: pointer;
   padding: 8px;
   transition: transform var(--motion-duration) ease, background var(--motion-duration) ease, border-color var(--motion-duration) ease;
@@ -2192,6 +2259,9 @@ function copyTextFallback(content: string) {
   height: 13px;
   border-radius: 999px;
   background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(185,218,169,0.18), rgba(255,255,255,0.05));
+}
+
+.answer-placeholder--active span {
   animation: shimmer 1.25s ease-in-out infinite;
 }
 
@@ -2442,33 +2512,8 @@ function copyTextFallback(content: string) {
   }
 }
 
-@keyframes archiveGlowDrift {
-  0% {
-    transform: translate3d(-2%, -1%, 0) scale(1.02) rotate(0deg);
-  }
-  50% {
-    transform: translate3d(3%, 2%, 0) scale(1.08) rotate(5deg);
-  }
-  100% {
-    transform: translate3d(-1%, 4%, 0) scale(1.04) rotate(-4deg);
-  }
-}
-
-@keyframes archiveMistSweep {
-  0% {
-    transform: translate3d(-4%, 0, 0);
-    opacity: 0.42;
-  }
-  100% {
-    transform: translate3d(4%, 0, 0);
-    opacity: 0.66;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .archive-workspace::before,
-  .archive-workspace::after,
-  .answer-placeholder span {
+  .answer-placeholder--active span {
     animation: none;
   }
 }

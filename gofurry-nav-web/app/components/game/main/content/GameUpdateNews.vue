@@ -57,7 +57,7 @@
           >
             <img
               :src="news.header"
-              alt="cover"
+              :alt="newsImageAlt(news)"
               class="news-card__cover"
               @mouseenter="onNewsMouseEnter(news, $event)"
               @mouseleave="onNewsMouseLeave"
@@ -176,6 +176,10 @@ function htmlToPlainText(html: string) {
     .replace(/&gt;/gi, '>')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+function newsImageAlt(news: NewsBaseModel) {
+  return htmlToPlainText(news.headline || news.name || t('game.news.title'))
 }
 
 function openUrl(url: string) {

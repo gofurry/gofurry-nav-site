@@ -6,7 +6,7 @@
       >
         <img
           :src="logoSrc"
-          alt="站点LOGO"
+          :alt="site.name"
           class="h-full w-full object-contain"
           @error="onImageError"
         />
@@ -42,7 +42,7 @@
               rel="noopener noreferrer"
               class="inline-flex transform items-center gap-2 rounded-lg bg-orange-200/60 px-4 py-2 text-sm font-semibold hover:bg-orange-200 duration-500"
             >
-              <img src="@/assets/svgs/go.svg" alt="go" class="h-5 w-5 opacity-90" />
+              <img src="@/assets/svgs/go.svg" alt="" class="h-5 w-5 opacity-90" />
               {{ t('site.overview.goto') }}
             </a>
           </div>

@@ -48,3 +48,18 @@ func UpdateGroupListCache() {
 	}
 	log.Debug("[StatTask UpdateGroupListCache] update site group list finished, cost: %v", time.Since(start))
 }
+
+func UpdateFeaturedSiteListCache() {
+	start := time.Now()
+	log.Debug("[StatTask UpdateFeaturedSiteListCache] start...")
+	records, err := navDao.GetNavPageDao().GetFeaturedSiteList()
+	if err != nil {
+		log.Error("[StatTask UpdateFeaturedSiteListCache] GetFeaturedSiteList err:", err)
+		return
+	}
+
+	if b, jsonErr := sonic.Marshal(records); jsonErr == nil {
+		cs.Set("featured-sites:list", string(b))
+	}
+	log.Debug("[StatTask UpdateFeaturedSiteListCache] update featured site list finished, cost: %v", time.Since(start))
+}

@@ -32,7 +32,7 @@
         <img
             :src="creator.avatar"
             class="h-20 w-20 rounded-sm object-cover"
-            alt=""
+            :alt="creator.name"
         />
         <p class="w-full truncate text-center text-sm">
           {{ creator.name }}

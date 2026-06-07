@@ -10,9 +10,9 @@
     />
 
     <div
-      v-for="group in groups"
+      v-for="group in renderedGroups"
       :key="group.id"
-      class="relative"
+      class="nav-group-section relative"
       :class="filteredSites(group).length > 30 ? 'mb-0' : 'mb-10'"
     >
       <div
@@ -26,12 +26,12 @@
         </h2>
       </div>
 
-      <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+      <div class="nav-site-grid mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         <div
           v-for="site in displaySites(group)"
           :key="`${group.id}-${site.id}`"
           ref="siteRefs"
-          class="flex cursor-pointer gap-3 rounded-xl border border-orange-100/70 bg-orange-50/94 p-4 transition-shadow duration-200 dark:border-white/8 dark:bg-[rgba(18,30,48,0.82)] dark:shadow-[0_10px_24px_rgba(2,6,23,0.18)]"
+          class="nav-site-card flex cursor-pointer gap-3 rounded-xl border border-orange-100/70 bg-orange-50/94 p-4 transition-shadow duration-200 dark:border-white/8 dark:bg-[rgba(18,30,48,0.82)] dark:shadow-[0_10px_24px_rgba(2,6,23,0.18)]"
           @click="goDomain(domainList(site), site)"
           @mouseenter="(event) => onSiteMouseEnter(event, site)"
           @mouseleave="scheduleSiteHide"
@@ -42,6 +42,11 @@
               :src="siteLogoSrc(site)"
               class="h-full w-full object-cover"
               :alt="site.name"
+              width="48"
+              height="48"
+              loading="lazy"
+              decoding="async"
+              fetchpriority="low"
             />
           </div>
 
@@ -68,6 +73,13 @@
         </button>
       </div>
     </div>
+
+    <div
+      v-if="hasMoreGroups"
+      ref="groupLoadSentinel"
+      class="group-load-sentinel"
+      aria-hidden="true"
+    ></div>
 
     <Teleport to="body">
       <GroupPopover
@@ -97,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLangStore } from '@/store/langStore'
 import { getNavHome, getNavHomePing, touchSiteView } from '~/services/nav'
@@ -115,15 +127,20 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
+const initialVisibleGroupCount = 4
+const groupRenderBatchSize = 2
+const groupRevealDistance = 900
 
 const groups = ref<Group[]>(props.initialGroups ?? [])
 const spotlight = ref<NavHomeSpotlight>(props.initialSpotlight ?? { page_size: 6, featured: [], popular: [], latest: [], random: [] })
 const pingData = ref<Record<string, Delay>>(props.initialPingData ?? {})
 const loading = ref(false)
 const expandedGroups = ref<Record<string, boolean>>({})
+const visibleGroupCount = ref(initialVisibleGroupCount)
 
 const groupRefs = ref<HTMLElement[]>([])
 const siteRefs = ref<HTMLElement[]>([])
+const groupLoadSentinel = ref<HTMLElement | null>(null)
 
 const langStore = useLangStore()
 
@@ -132,6 +149,10 @@ const defaultLogo = 'defaultLogo.svg'
 
 const displayMode = ref<DisplayMode>('sfw')
 let stopModeSubscription: (() => void) | null = null
+let groupLoadObserver: IntersectionObserver | null = null
+
+const renderedGroups = computed(() => groups.value.slice(0, visibleGroupCount.value))
+const hasMoreGroups = computed(() => visibleGroupCount.value < groups.value.length)
 
 function parsePingData(data: Record<string, string | undefined>) {
   const result: Record<string, Delay> = {}
@@ -163,8 +184,11 @@ async function loadData() {
     const home = await getNavHome(lang)
 
     groups.value = home.groups.sort((a, b) => Number(a.priority) - Number(b.priority))
+    resetVisibleGroups()
     spotlight.value = home.spotlight
     parsePingData(home.ping)
+    await nextTick()
+    maybeRevealMoreGroups()
   } catch (error) {
     console.error('Failed to load nav content:', error)
   } finally {
@@ -187,6 +211,62 @@ function displaySites(group: Group) {
 
 function toggleGroup(groupId: string) {
   expandedGroups.value[groupId] = !expandedGroups.value[groupId]
+}
+
+function resetVisibleGroups() {
+  visibleGroupCount.value = initialVisibleGroupCount
+}
+
+function revealMoreGroups() {
+  if (!hasMoreGroups.value) {
+    return false
+  }
+
+  visibleGroupCount.value = Math.min(groups.value.length, visibleGroupCount.value + groupRenderBatchSize)
+  return true
+}
+
+function isNearGroupLoadBoundary() {
+  const sentinel = groupLoadSentinel.value
+  if (!sentinel) {
+    return false
+  }
+
+  const rect = sentinel.getBoundingClientRect()
+  return rect.top <= window.innerHeight + groupRevealDistance
+}
+
+function maybeRevealMoreGroups() {
+  if (!hasMoreGroups.value || !isNearGroupLoadBoundary()) {
+    return
+  }
+
+  revealMoreGroups()
+  void nextTick(() => {
+    if (hasMoreGroups.value && isNearGroupLoadBoundary()) {
+      maybeRevealMoreGroups()
+    }
+  })
+}
+
+function setupGroupLoadObserver() {
+  groupLoadObserver?.disconnect()
+  groupLoadObserver = null
+
+  if (!groupLoadSentinel.value || typeof IntersectionObserver === 'undefined') {
+    return
+  }
+
+  groupLoadObserver = new IntersectionObserver((entries) => {
+    if (entries.some(entry => entry.isIntersecting)) {
+      maybeRevealMoreGroups()
+    }
+  }, {
+    root: null,
+    rootMargin: `${groupRevealDistance}px 0px`,
+    threshold: 0
+  })
+  groupLoadObserver.observe(groupLoadSentinel.value)
 }
 
 function joinAssetUrl(prefix: string, path: string) {
@@ -391,6 +471,7 @@ function handleScrollOrResize() {
   if (activeSite.value && activeSiteTarget.value && popoverHeight.value > 0) {
     updateSitePopoverPosition()
   }
+  maybeRevealMoreGroups()
 }
 
 let pingTimer: ReturnType<typeof setInterval> | null = null
@@ -404,6 +485,13 @@ watch(
   }
 )
 
+watch(hasMoreGroups, () => {
+  void nextTick(() => {
+    setupGroupLoadObserver()
+    maybeRevealMoreGroups()
+  })
+})
+
 onMounted(() => {
   displayMode.value = readDisplayMode()
   stopModeSubscription = subscribeModeChange(({ displayMode: nextMode }) => {
@@ -413,6 +501,10 @@ onMounted(() => {
   window.addEventListener('scroll', handleScrollOrResize, { passive: true, capture: true })
   document.addEventListener('scroll', handleScrollOrResize, { passive: true, capture: true })
   window.addEventListener('resize', handleScrollOrResize)
+  void nextTick(() => {
+    setupGroupLoadObserver()
+    maybeRevealMoreGroups()
+  })
 
   pingTimer = setInterval(async () => {
     try {
@@ -429,6 +521,7 @@ onUnmounted(() => {
   if (pingTimer) {
     clearInterval(pingTimer)
   }
+  groupLoadObserver?.disconnect()
 
   window.removeEventListener('scroll', handleScrollOrResize, { capture: true })
   document.removeEventListener('scroll', handleScrollOrResize, { capture: true })
@@ -437,3 +530,40 @@ onUnmounted(() => {
   cancelGroupHide()
 })
 </script>
+
+<style scoped>
+@supports (content-visibility: auto) {
+  .nav-group-section {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 640px;
+  }
+}
+
+.nav-site-grid {
+  contain: layout paint style;
+}
+
+.nav-site-card {
+  contain: layout paint style;
+}
+
+.group-load-sentinel {
+  height: 1px;
+}
+
+@media (max-width: 1023px) {
+  @supports (content-visibility: auto) {
+    .nav-group-section {
+      contain-intrinsic-size: auto 960px;
+    }
+  }
+}
+
+@media (max-width: 639px) {
+  @supports (content-visibility: auto) {
+    .nav-group-section {
+      contain-intrinsic-size: auto 1560px;
+    }
+  }
+}
+</style>

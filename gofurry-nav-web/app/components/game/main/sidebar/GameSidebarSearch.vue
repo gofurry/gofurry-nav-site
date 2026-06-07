@@ -5,7 +5,7 @@
       <img
           src="../../../../assets/svgs/search.svg"
           class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-60"
-          alt="search"
+          alt=""
       />
       <input
           v-model="keyword"
@@ -44,7 +44,7 @@
           <img
               :src="item.cover"
               class="w-full h-20 object-cover rounded-md mb-1"
-              alt="game cover"
+              :alt="item.name"
           />
           <p class="text-sm font-semibold truncate">{{ item.name }}</p>
           <p class="text-xs text-gray-500 truncate">{{ item.info }}</p>

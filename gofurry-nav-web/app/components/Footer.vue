@@ -4,7 +4,7 @@
       <div class="space-y-8">
         <section class="space-y-3">
           <h3 :class="sectionTitleClass">
-            <img :src="compassIcon" alt="sitemap" class="h-4 w-4 opacity-80" />
+            <img :src="compassIcon" alt="" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.sitemap') }}
           </h3>
           <div class="flex flex-wrap gap-2">
@@ -37,7 +37,7 @@
 
         <section class="space-y-3">
           <h3 :class="sectionTitleClass">
-            <img :src="apiIcon" alt="open platform" class="h-4 w-4 opacity-80" />
+            <img :src="apiIcon" alt="" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.openPlatform') }}
           </h3>
           <div class="flex gap-2">
@@ -65,7 +65,7 @@
       <div class="space-y-8">
         <section class="space-y-3">
           <h3 :class="sectionTitleClass">
-            <img :src="siteIcon" alt="open platform" class="h-4 w-4 opacity-80" />
+            <img :src="siteIcon" alt="" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.feedback') }}
           </h3>
           <div class="flex items-center gap-4">
@@ -89,7 +89,7 @@
 
         <section class="space-y-3">
           <h3 :class="sectionTitleClass">
-            <img :src="featherIcon" alt="about" class="h-4 w-4 opacity-80" />
+            <img :src="featherIcon" alt="" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.about') }}
           </h3>
           <div class="flex gap-2">

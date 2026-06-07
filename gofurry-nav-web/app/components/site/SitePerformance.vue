@@ -125,7 +125,6 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
-import * as echarts from 'echarts'
 import { useThemeStore } from '@/stores/theme'
 import type { CollectorEnvelope, PingRecord, PingStats, HttpRecord, TargetLatestResponse, TargetObservationsResponse } from '@/types/nav'
 import {i18n} from "@/main";
@@ -144,9 +143,15 @@ const props = defineProps<Props>()
 const navV2Api = useApi('navV2')
 const themeStore = useThemeStore()
 const latencyChartRef = ref<HTMLElement | null>(null)
-const chart = ref<echarts.ECharts | null>(null)
+type EChartsModule = typeof import('echarts')
+type EChartsInstance = import('echarts').ECharts
+
+const chart = ref<EChartsInstance | null>(null)
 let chartMouseMoveHandler: ((event: any) => void) | null = null
 let chartGlobalOutHandler: (() => void) | null = null
+let echartsModulePromise: Promise<EChartsModule> | null = null
+let echartsModule: EChartsModule | null = null
+let isChartActive = false
 const sampleType = ref<'twenty' | 'sixty' | 'hundred'>('twenty')
 const v2PingRecord = ref<PingRecord | null>(null)
 const httpPayload = computed(() => asRecord(props.targetLatestCore?.protocols?.http?.payload))
@@ -353,15 +358,31 @@ function headerValue(key: string) {
 }
 
 // 初始化图表
-function initChart() {
+async function loadECharts() {
+  if (!echartsModulePromise) {
+    echartsModulePromise = import('echarts')
+  }
+  echartsModule = await echartsModulePromise
+  return echartsModule
+}
+
+async function initChart() {
   if (!latencyChartRef.value) return
+  const echarts = await loadECharts()
+  if (!isChartActive || !latencyChartRef.value) return
   if (chart.value) chart.value.dispose()
   chart.value = echarts.init(latencyChartRef.value, undefined, { renderer: 'canvas' })
 }
 
 // 更新图表
-function updateChart() {
-  if (!currentPing.value || !chart.value) return
+async function updateChart() {
+  if (!currentPing.value) return
+  const echarts = await loadECharts()
+  if (!isChartActive) return
+  if (!chart.value) {
+    await initChart()
+  }
+  if (!chart.value) return
 
   const dark = isDarkTheme.value
   const chartColors = {
@@ -512,18 +533,19 @@ function bindChartHover(pointCount: number) {
 // 切换抽样类型
 function changeSample(type: 'twenty' | 'sixty' | 'hundred') {
   sampleType.value = type
-  updateChart()
+  void updateChart()
 }
 
 // ResizeObserver 自动适应尺寸
 let resizeObserver: ResizeObserver | null = null
 
 onMounted(async () => {
+  isChartActive = true
   await nextTick()
-  initChart()
+  await initChart()
   // 执行两次才能正确初始化 TODO: 需要改进
-  changeSample(sampleType.value)
-  changeSample(sampleType.value)
+  void updateChart()
+  void updateChart()
 
   if (latencyChartRef.value) {
     resizeObserver = new ResizeObserver(() => chart.value?.resize())
@@ -533,6 +555,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  isChartActive = false
   if (chart.value) {
     const zr = chart.value.getZr()
     if (chartMouseMoveHandler) {
@@ -550,13 +573,13 @@ onBeforeUnmount(() => {
 })
 
 // 监听 ping 数据变化
-watch(() => props.pingRecord, updateChart, { deep: true })
+watch(() => props.pingRecord, () => void updateChart(), { deep: true })
 watch(() => [props.siteId, props.domain], () => {
   v2PingRecord.value = null
   void loadV2PingHistory()
 })
-watch(sampleType, updateChart)
-watch(isDarkTheme, updateChart)
+watch(sampleType, () => void updateChart())
+watch(isDarkTheme, () => void updateChart())
 
 async function loadV2PingHistory() {
   if (props.pingRecord || !props.siteId || !props.domain) {
@@ -573,7 +596,7 @@ async function loadV2PingHistory() {
     })
     v2PingRecord.value = buildPingRecordFromObservations(response.items ?? [])
     await nextTick()
-    updateChart()
+    void updateChart()
   } catch {
     v2PingRecord.value = emptyPingRecord()
   }

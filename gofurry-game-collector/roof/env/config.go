@@ -20,33 +20,43 @@ type serverConfig struct {
 	Server    ServerConfig    `yaml:"server"`
 	DataBase  DataBaseConfig  `yaml:"data_base"`
 	Redis     RedisConfig     `yaml:"redis"`
-	Mongodb   MongodbConfig   `yaml:"mongodb"`
 	Collector CollectorConfig `yaml:"collector"`
 }
 
-type MongodbConfig struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	AuthDB   string `yaml:"auth_db"`
-	DBName   string `yaml:"db_name"`
-}
-
 type CollectorConfig struct {
-	Proxy   string        `yaml:"proxy"`
-	Limiter LimiterConfig `yaml:"limiter"`
-	Game    GameConfig    `yaml:"game"`
-}
-
-type LimiterConfig struct {
-	SteamApi   int `yaml:"steam_api"`
-	SteamStore int `yaml:"steam_store"`
+	Proxy string            `yaml:"proxy"`
+	Game  GameConfig        `yaml:"game"`
+	V2    CollectorV2Config `yaml:"v2"`
 }
 
 type GameConfig struct {
-	GameThread         int `yaml:"game_thread"`
 	GamePlayerInterval int `yaml:"game_player_interval"`
+}
+
+type CollectorV2Config struct {
+	Steam     CollectorV2SteamConfig     `yaml:"steam"`
+	Retention CollectorV2RetentionConfig `yaml:"retention"`
+}
+
+type CollectorV2SteamConfig struct {
+	APIRequestsPer5Minutes   int                    `yaml:"api_requests_per_5_minutes"`
+	StoreRequestsPer5Minutes int                    `yaml:"store_requests_per_5_minutes"`
+	Burst                    int                    `yaml:"burst"`
+	MaxWorkers               int                    `yaml:"max_workers"`
+	RequestTimeoutSeconds    int                    `yaml:"request_timeout_seconds"`
+	Retry                    CollectorV2RetryConfig `yaml:"retry"`
+}
+
+type CollectorV2RetryConfig struct {
+	MaxAttempts          int `yaml:"max_attempts"`
+	BaseDelaySeconds     int `yaml:"base_delay_seconds"`
+	CooldownOn429Seconds int `yaml:"cooldown_on_429_seconds"`
+}
+
+type CollectorV2RetentionConfig struct {
+	PlayerCountsDays       int `yaml:"player_counts_days"`
+	CollectRunsDays        int `yaml:"collect_runs_days"`
+	CollectTaskResultsDays int `yaml:"collect_task_results_days"`
 }
 
 type ServerConfig struct {

@@ -22,7 +22,7 @@
         <img
           :src="item.cover"
           class="mb-2 h-32 w-full rounded-md object-cover"
-          alt="Game cover"
+          :alt="item.name"
           @click.stop="goGameDetail(item.id)"
         />
 

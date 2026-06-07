@@ -1,6 +1,6 @@
 <template>
   <button
-    v-show="isMounted && isVisible"
+    v-if="shouldRenderDock"
     class="page-scroll-dock"
     :class="{ 'page-scroll-dock--visible': isVisible }"
     :style="{ '--scroll-progress': `${progressLabel}%` }"
@@ -19,6 +19,13 @@ import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const { t } = useI18n()
+const props = withDefaults(defineProps<{
+  scrollerSelector?: string | null
+  minScrollableDistance?: number
+}>(), {
+  scrollerSelector: null,
+  minScrollableDistance: 320,
+})
 
 const scrollProgress = ref(0)
 const scrollTop = ref(0)
@@ -30,9 +37,11 @@ const activeScroller = ref<HTMLElement | null>(null)
 let updateTimer: ReturnType<typeof setTimeout> | null = null
 let resizeObserver: ResizeObserver | null = null
 let observedScroller: HTMLElement | null = null
+let scrollFrame: number | null = null
 
 const progressLabel = computed(() => Math.round(scrollProgress.value))
-const isVisible = computed(() => isDesktopViewport.value && maxScroll.value > 24 && scrollTop.value > 72)
+const shouldRenderDock = computed(() => isMounted.value && isDesktopViewport.value && maxScroll.value > props.minScrollableDistance)
+const isVisible = computed(() => shouldRenderDock.value && scrollTop.value > 72)
 
 function getDocumentScroller() {
   return (document.scrollingElement || document.documentElement || document.body) as HTMLElement | null
@@ -43,26 +52,11 @@ function getElementMaxScroll(element: HTMLElement) {
 }
 
 function resolveActiveScroller() {
-  const documentScroller = getDocumentScroller()
-  const documentMaxScroll = documentScroller ? getElementMaxScroll(documentScroller) : 0
-
-  if (documentMaxScroll > 24) {
-    return documentScroller
+  if (props.scrollerSelector) {
+    return document.querySelector<HTMLElement>(props.scrollerSelector) || getDocumentScroller()
   }
 
-  const candidates = Array.from(document.querySelectorAll<HTMLElement>('body *'))
-    .filter((element) => {
-      const style = window.getComputedStyle(element)
-      const overflowY = style.overflowY
-      return (
-        element.clientHeight > 120
-        && getElementMaxScroll(element) > 24
-        && ['auto', 'scroll', 'overlay'].includes(overflowY)
-      )
-    })
-    .sort((a, b) => getElementMaxScroll(b) - getElementMaxScroll(a))
-
-  return candidates[0] || documentScroller
+  return getDocumentScroller()
 }
 
 function getScrollMetrics() {
@@ -96,14 +90,14 @@ function syncObservedScroller() {
     return
   }
 
-  observedScroller?.removeEventListener('scroll', updateScrollState)
+  observedScroller?.removeEventListener('scroll', scheduleScrollStateUpdate)
   observedScroller = nextScroller
   activeScroller.value = nextScroller
 
   const documentScroller = getDocumentScroller()
   const isDocumentScroller = nextScroller === documentScroller || nextScroller === document.documentElement || nextScroller === document.body
   if (nextScroller && !isDocumentScroller) {
-    nextScroller.addEventListener('scroll', updateScrollState, { passive: true })
+    nextScroller.addEventListener('scroll', scheduleScrollStateUpdate, { passive: true })
   }
 }
 
@@ -130,6 +124,17 @@ function updateScrollState() {
   }
 
   scrollProgress.value = Math.min(100, Math.max(0, (metrics.top / metrics.max) * 100))
+}
+
+function scheduleScrollStateUpdate() {
+  if (!import.meta.client || scrollFrame !== null) {
+    return
+  }
+
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = null
+    updateScrollState()
+  })
 }
 
 function refreshDockState() {
@@ -195,7 +200,7 @@ onMounted(() => {
   })
   resizeObserver.observe(document.documentElement)
   resizeObserver.observe(document.body)
-  window.addEventListener('scroll', updateScrollState, { passive: true })
+  window.addEventListener('scroll', scheduleScrollStateUpdate, { passive: true })
   window.addEventListener('resize', refreshDockState)
   window.addEventListener('load', scheduleRefresh)
 })
@@ -204,13 +209,17 @@ onUnmounted(() => {
   if (updateTimer) {
     clearTimeout(updateTimer)
   }
+  if (scrollFrame !== null) {
+    cancelAnimationFrame(scrollFrame)
+    scrollFrame = null
+  }
 
   resizeObserver?.disconnect()
   resizeObserver = null
-  observedScroller?.removeEventListener('scroll', updateScrollState)
+  observedScroller?.removeEventListener('scroll', scheduleScrollStateUpdate)
   observedScroller = null
 
-  window.removeEventListener('scroll', updateScrollState)
+  window.removeEventListener('scroll', scheduleScrollStateUpdate)
   window.removeEventListener('resize', refreshDockState)
   window.removeEventListener('load', scheduleRefresh)
 })
@@ -249,8 +258,7 @@ onUnmounted(() => {
   position: absolute;
   inset: 4px;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(13, 22, 30, 0.6), rgba(17, 28, 36, 0.46));
-  backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, rgba(13, 22, 30, 0.78), rgba(17, 28, 36, 0.64));
 }
 
 .page-scroll-dock::after {

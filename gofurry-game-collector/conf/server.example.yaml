@@ -1,7 +1,7 @@
 # GoFurry Game Collector 示例配置
 # 使用方式：
 # 1. 复制为 conf/server.yaml（本地）或 /etc/gf-game-collector/server.yaml（生产）。
-# 2. 替换数据库、Redis、MongoDB、代理等真实信息。
+# 2. 替换数据库、Redis、代理等真实信息。
 # 3. server.yaml 可能包含密码和内网地址，不要提交到 Git。
 
 cluster_id: 1 # 集群编号；单实例保持 1 即可。
@@ -23,19 +23,22 @@ redis:
   redis_addr: "127.0.0.1:6379"
   redis_password: "CHANGE_ME"
 
-mongodb:
-  username: "mongo"
-  password: "CHANGE_ME"
-  host: "127.0.0.1"
-  port: "27017"
-  auth_db: "admin"
-  db_name: "gofurry_game"
-
 collector:
   proxy: "" # Steam / 外部页面采集可选代理；为空表示直连。
-  limiter:
-    steam_api: 60 # Steam API 访问限速预算，按当前业务逻辑使用。
-    steam_store: 60 # Steam Store 页面访问限速预算。
   game:
-    game_thread: 3 # 游戏采集 worker 数。
     game_player_interval: 24 # 玩家数据采集间隔，单位按当前调度实现解析。
+  v2:
+    steam:
+      api_requests_per_5_minutes: 240 # official API 共享限流器；按 budget-burst 换算 interval，仍需遵守 developer key 每日预算。
+      store_requests_per_5_minutes: 180 # Store 共享限流器；按 budget-burst 换算 interval，保守低于 appdetails 实验中的 220-230 风控边界。
+      burst: 1 # 同一类接口共享限流器；interval 按 budget-burst 计算，避免初始令牌突破 5 分钟预算。
+      max_workers: 3 # v2 runner worker 数；并发不等于请求速率。
+      request_timeout_seconds: 10
+      retry:
+        max_attempts: 2
+        base_delay_seconds: 5
+        cooldown_on_429_seconds: 300 # 429/403/5xx/timeout 后的保守冷却窗口。
+    retention:
+      player_counts_days: 90 # 在线人数原始小时数据保留 90 天，便于未来趋势图。
+      collect_runs_days: 90 # 批次级观测保留 90 天。
+      collect_task_results_days: 7 # 单游戏任务结果量最大，默认保留 7 天。

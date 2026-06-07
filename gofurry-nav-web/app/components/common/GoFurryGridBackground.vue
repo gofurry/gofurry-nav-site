@@ -2,8 +2,12 @@
   <div
     aria-hidden="true"
     class="gofurry-grid-background"
-    :class="{ 'is-fixed': fixed }"
+    :class="{
+      'is-fixed': fixed && profile === 'full',
+      'is-light': profile === 'light'
+    }"
     :data-palette="palette"
+    :data-profile="profile"
   />
 </template>
 
@@ -11,9 +15,11 @@
 withDefaults(defineProps<{
   fixed?: boolean
   palette?: 'default' | 'nav-content'
+  profile?: 'full' | 'light'
 }>(), {
   fixed: true,
   palette: 'default',
+  profile: 'full',
 })
 </script>
 
@@ -35,6 +41,15 @@ withDefaults(defineProps<{
   position: fixed;
 }
 
+.gofurry-grid-background.is-light {
+  position: absolute;
+  background:
+    repeating-linear-gradient(90deg, rgba(105, 78, 57, 0.16) 0, rgba(105, 78, 57, 0.16) 1px, transparent 1px, transparent 38px),
+    repeating-linear-gradient(0deg, rgba(105, 78, 57, 0.13) 0, rgba(105, 78, 57, 0.13) 1px, transparent 1px, transparent 38px),
+    linear-gradient(180deg, rgba(255, 250, 244, 0.92), rgba(242, 227, 208, 0.96)),
+    #f2e3d0;
+}
+
 .gofurry-grid-background::before,
 .gofurry-grid-background::after {
   content: "";
@@ -42,6 +57,11 @@ withDefaults(defineProps<{
   inset: -1px;
   opacity: 0.88;
   will-change: opacity;
+}
+
+.gofurry-grid-background.is-light::before,
+.gofurry-grid-background.is-light::after {
+  content: none;
 }
 
 .gofurry-grid-background::before {
@@ -75,6 +95,14 @@ withDefaults(defineProps<{
     #0b1220;
 }
 
+:global(.dark .gofurry-grid-background.is-light){
+  background:
+    repeating-linear-gradient(90deg, rgba(148, 163, 184, 0.16) 0, rgba(148, 163, 184, 0.16) 1px, transparent 1px, transparent 38px),
+    repeating-linear-gradient(0deg, rgba(148, 163, 184, 0.14) 0, rgba(148, 163, 184, 0.14) 1px, transparent 1px, transparent 38px),
+    linear-gradient(180deg, rgba(8, 14, 28, 0.96), rgba(18, 28, 45, 0.985)),
+    #0b1220;
+}
+
 :global(.dark .gofurry-grid-background::before){
   background: repeating-linear-gradient(
     90deg,
@@ -99,6 +127,13 @@ withDefaults(defineProps<{
   background: #efe0ca;
 }
 
+.gofurry-grid-background.is-light[data-palette="nav-content"] {
+  background:
+    repeating-linear-gradient(90deg, rgba(95, 69, 49, 0.18) 0, rgba(95, 69, 49, 0.18) 1px, transparent 1px, transparent 38px),
+    repeating-linear-gradient(0deg, rgba(95, 69, 49, 0.15) 0, rgba(95, 69, 49, 0.15) 1px, transparent 1px, transparent 38px),
+    #efe0ca;
+}
+
 .gofurry-grid-background[data-palette="nav-content"]::before {
   background: repeating-linear-gradient(
     90deg,
@@ -121,6 +156,13 @@ withDefaults(defineProps<{
 
 :global(.dark .gofurry-grid-background[data-palette="nav-content"]) {
   background: #18273c;
+}
+
+:global(.dark .gofurry-grid-background.is-light[data-palette="nav-content"]) {
+  background:
+    repeating-linear-gradient(90deg, rgba(148, 163, 184, 0.17) 0, rgba(148, 163, 184, 0.17) 1px, transparent 1px, transparent 38px),
+    repeating-linear-gradient(0deg, rgba(148, 163, 184, 0.15) 0, rgba(148, 163, 184, 0.15) 1px, transparent 1px, transparent 38px),
+    #18273c;
 }
 
 :global(.dark .gofurry-grid-background[data-palette="nav-content"]::before) {

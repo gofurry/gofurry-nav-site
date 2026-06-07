@@ -1,10 +1,10 @@
 <template>
-  <div class="lottery-page relative min-h-full overflow-hidden bg-[#11100f] text-stone-100">
-    <GoFurryGridBackground palette="nav-content" />
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_74%_18%,rgba(244,170,96,0.16),transparent_30%),linear-gradient(115deg,rgba(17,16,15,0.72)_0%,rgba(17,16,15,0.54)_54%,rgba(17,16,15,0.38)_100%)]" aria-hidden="true" />
+  <div class="lottery-page relative isolate min-h-[calc(100svh-3.5rem)] overflow-hidden bg-[#11100f] text-stone-100">
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
+    <div class="absolute inset-0 z-0 bg-[radial-gradient(circle_at_74%_18%,rgba(244,170,96,0.16),transparent_30%),linear-gradient(115deg,rgba(17,16,15,0.72)_0%,rgba(17,16,15,0.54)_54%,rgba(17,16,15,0.38)_100%)]" aria-hidden="true" />
     <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-200/60 to-transparent" aria-hidden="true" />
 
-    <div class="relative mx-auto flex w-full max-w-6xl flex-col px-5 py-10 sm:px-8 lg:py-14">
+    <div class="relative z-10 mx-auto flex min-h-[calc(100svh-3.5rem)] w-full max-w-6xl flex-col px-5 py-10 sm:px-8 lg:py-14">
       <header class="lottery-hero grid gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
         <div class="max-w-3xl">
           <p class="mb-4 text-xs font-medium uppercase tracking-[0.28em] text-orange-200/70">
@@ -34,7 +34,7 @@
         </div>
       </header>
 
-      <div v-if="loading" class="py-20 text-sm text-stone-400">
+      <div v-if="loading" class="flex flex-1 items-center text-sm text-stone-300">
         {{ t('common.loading') }}
       </div>
 
@@ -179,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { getLottery } from "@/utils/api/game"
 import { i18n } from '@/main'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
@@ -191,6 +191,25 @@ import type {
 } from "@/types/game"
 
 const { t } = i18n.global
+const isZh = computed(() => i18n.global.locale.value === 'zh')
+const pageSeo = computed(() => (
+  isZh.value
+    ? {
+        title: 'GoFurry 兽人游戏抽奖 - 活动奖池与获奖记录',
+        description: '查看 GoFurry 兽人游戏抽奖活动、当前可参与奖池、奖品信息、参与人数与历史获奖记录，发现与兽人游戏社区相关的福利动态。'
+      }
+    : {
+        title: 'GoFurry Game Lottery - Active prize pools and winner records',
+        description: 'View GoFurry game lottery events, active prize pools, prize details, participant counts, winner announcements, and community reward activity around furry games.'
+      }
+))
+
+useSeoMeta({
+  title: () => pageSeo.value.title,
+  description: () => pageSeo.value.description,
+  ogTitle: () => pageSeo.value.title,
+  ogDescription: () => pageSeo.value.description,
+})
 
 const loading = ref(true)
 const activeList = ref<LotteryActiveModel[]>([])
