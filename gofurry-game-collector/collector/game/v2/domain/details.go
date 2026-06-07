@@ -131,3 +131,13 @@ type Rating struct {
 	Rating      string `json:"rating"`
 	RequiredAge string `json:"required_age"`
 }
+
+// DetailsCollection is one complete v2 details collection result for an app.
+type DetailsCollection struct {
+	Details      GameDetails            `json:"details"`
+	Localized    []GameLocalizedDetails `json:"localized"`
+	Prices       []GamePrice            `json:"prices"`
+	Media        GameMedia              `json:"media"`
+	Requirements SystemRequirements     `json:"requirements"`
+	Snapshots    []RawSnapshot          `json:"snapshots"`
+}

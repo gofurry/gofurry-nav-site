@@ -299,7 +299,7 @@ collector:
 
 ### v2.0.0-alpha.6 - Game Details Collector V2 Mainline
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Details / Pricing / Media / Rich data
 **Goal:** 重写游戏详情采集，保留更多 Steam 字段，支撑后端和前端 v2。
 
@@ -313,20 +313,62 @@ collector:
 
 #### Tasks
 
-- [ ] 新增 `collector/game/v2/tasks/details`。
-- [ ] 使用 `steam-go` Storefront appdetails。
-- [ ] 采集 CN / HK / US 价格，并设计可扩展地区列表。
-- [ ] 采集 zh / en 详情，并设计可扩展语言列表。
-- [ ] 保存 screenshots、movies、header、capsule、library hero 等媒体数据。
-- [ ] 保存 detailed description、about the game、pc requirements、support info。
-- [ ] 保存 raw appdetails snapshot。
-- [ ] 删除或停用 v1 详情采集路径。
+- [x] 新增 `collector/game/v2/tasks/details`。
+- [x] 使用 `steam-go` Storefront appdetails。
+- [x] 采集 CN / HK / US 价格，并设计可扩展地区列表。
+- [x] 采集 zh / en 详情，并设计可扩展语言列表。
+- [x] 保存 screenshots、movies、header、capsule、background 等媒体数据。
+- [x] 保存 detailed description、about the game、pc requirements、support info。
+- [x] 保存 raw appdetails snapshot。
+- [x] v2 details enabled 时停用 v1 详情采集路径。
 
 #### Acceptance Criteria
 
-- [ ] 详情采集不再依赖手写 `gjson` 大段解析。
-- [ ] 免费、锁区、coming soon、缺价格、缺媒体资源不会导致 panic。
-- [ ] 后端 v2 能拿到更丰富的结构化详情。
+- [x] 详情采集不再依赖手写 `gjson` 大段解析。
+- [x] 免费、锁区、coming soon、缺价格、缺媒体资源不会导致 panic。
+- [x] 后端 v2 能拿到更丰富的结构化详情。
+
+---
+
+### v2.0.0-alpha.7 - Steam Store Rate-Limit Experiment
+
+**Status:** Planned
+**Scope:** Stability / Operations / Testing
+**Goal:** 用实验数据校准 Steam Store / official API 风控规则，避免凭感觉扩大 v2 并发。
+
+#### Focus
+
+- Store appdetails 请求间隔。
+- Store events 请求间隔。
+- official API player count 请求间隔。
+- proxy / no-proxy 场景差异。
+- 429、403、HTML block、timeout 和 5xx 分类。
+
+#### Background
+
+当前 v1 注释中的经验规则来自大量人工尝试，应继续尊重：
+
+- official API 大约 `100 token / 1 minute`。
+- Store 接口大约 `[150, 250] token / 5 minutes`。
+
+alpha.6 不扩大默认并发。details v2 仍按每个游戏顺序执行 CN / US / HK 三个 Store appdetails 请求，并继续走 `steamclient` 的 Store traffic bucket、retry 和 cooldown。
+
+#### Tasks
+
+- [ ] 新增实验性 benchmark / smoke 工具，不进入生产 schedule。
+- [ ] 支持指定 appid 列表、请求间隔、burst、worker 数和 proxy。
+- [ ] 分别测试 appdetails、events、player count。
+- [ ] 记录状态码、错误类型、block detection、耗时、重试次数和 cooldown。
+- [ ] 输出 CSV / JSON 实验报告。
+- [ ] 基于实验结果更新 `collector.v2.steam` 推荐默认值。
+- [ ] 明确生产安全阈值和测试环境阈值。
+
+#### Acceptance Criteria
+
+- [ ] 能复现实验并得到可比较报告。
+- [ ] 能解释当前默认限流配置是否保守。
+- [ ] 能给出 details / news / players 三类任务的推荐并发和间隔。
+- [ ] 不会在生产采集流程中自动运行实验。
 
 ---
 
@@ -414,7 +456,7 @@ collector:
 
 ## 下一步建议
 
-下一步优先做 `v2.0.0-alpha.6 - Game Details Collector V2 Mainline`。
+下一步优先做 `v2.0.0-alpha.7 - Steam Store Rate-Limit Experiment`。
 
 原因：
 
@@ -422,5 +464,6 @@ collector:
 - alpha.3 已明确 PostgreSQL / Redis 存储契约。
 - News v2 已验证 domain、mapper、repository 和内容清洗链路。
 - Player count v2 已替换手写 Steam official API 请求。
-- Details v2 是剩余最大采集面，完成后才能进入统一 runner 和 v1 清理。
+- Details v2 已替换详情采集主线，但它是 Store 请求量最大的任务。
+- 在进入统一 runner 和 v1 清理前，需要用实验确认生产安全限流值。
 - 如果某个字段或清洗规则缺失，应先补 `steam-go`，再写 collector mapper。
