@@ -243,7 +243,7 @@ collector:
 
 ### v2.0.0-alpha.4 - News Collector V2 Mainline
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** News / Content quality
 **Goal:** 用 v2 主线新闻采集替代 v1 新闻采集，不长期保留双实现。
 
@@ -257,21 +257,21 @@ collector:
 
 #### Tasks
 
-- [ ] 新增 `collector/game/v2/tasks/news`。
-- [ ] 使用 `steam-go` `GetAdjacentPartnerEvents` 采集新闻。
-- [ ] 使用 `addons/markup.CleanSteamContent` 输出 sanitized HTML。
-- [ ] 使用 `addons/markup.PlainText` / `Summary` 输出可索引摘要。
-- [ ] 保存 event gid、announcement gid、tags、votes、comment count、forum topic id。
-- [ ] 保存 raw event payload。
-- [ ] 写入 v2 存储契约。
-- [ ] 删除或停用 v1 新闻采集路径。
+- [x] 新增 `collector/game/v2/tasks/news`。
+- [x] 使用 `steam-go` `GetAdjacentPartnerEvents` 采集新闻。
+- [x] 使用 `addons/markup.CleanSteamContent` 输出 sanitized HTML。
+- [x] 使用 `addons/markup.PlainText` / `Summary` 输出可索引摘要。
+- [x] 保存 event gid、announcement gid、tags、votes、comment count、forum topic id。
+- [x] 保存 raw event payload。
+- [x] 写入 v2 存储契约。
+- [x] v2 news enabled 时停用 v1 新闻采集路径。
 
 #### Acceptance Criteria
 
-- [ ] 新闻采集不再依赖 v1 `performGameNewsCollect`。
-- [ ] 新闻内容不再残留常见 Steam BBCode。
-- [ ] 后端可以同时拿到 HTML、plain text、summary 和 raw 扩展数据。
-- [ ] 采集失败不污染已有数据。
+- [x] 新闻采集不再依赖 v1 `performGameNewsCollect`。
+- [x] 新闻内容不再残留常见 Steam BBCode。
+- [x] 后端可以同时拿到 HTML、plain text、summary 和 raw 扩展数据。
+- [x] 采集失败不污染已有数据。
 
 ---
 
@@ -414,12 +414,12 @@ collector:
 
 ## 下一步建议
 
-下一步优先做 `v2.0.0-alpha.4 - News Collector V2 Mainline`。
+下一步优先做 `v2.0.0-alpha.5 - Player Count Collector V2 Mainline`。
 
 原因：
 
 - alpha.2 已确认 `steam-go` 能承接当前 Steam 复杂度。
 - alpha.3 已明确 PostgreSQL / Redis 存储契约。
-- News v2 改动面适中，最适合先验证 domain、mapper、repository 和内容清洗链路。
-- 这会直接降低 news、players、details 三个任务的实现复杂度。
+- News v2 已验证 domain、mapper、repository 和内容清洗链路。
+- Player count v2 改动面最小，适合继续替换手写 Steam official API 请求。
 - 如果某个字段或清洗规则缺失，应先补 `steam-go`，再写 collector mapper。

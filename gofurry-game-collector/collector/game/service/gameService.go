@@ -10,7 +10,9 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-game-collector/collector/game/dao"
 	"github.com/gofurry/gofurry-game-collector/collector/game/models"
+	v2repo "github.com/gofurry/gofurry-game-collector/collector/game/v2/repository"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/steamclient"
+	v2news "github.com/gofurry/gofurry-game-collector/collector/game/v2/tasks/news"
 	"github.com/gofurry/gofurry-game-collector/common"
 	ca "github.com/gofurry/gofurry-game-collector/common/abstract"
 	"github.com/gofurry/gofurry-game-collector/common/log"
@@ -686,6 +688,21 @@ func startGameNewsCollect(gameID models.GameID) func() {
 		}()
 		defer wg.Done() // 确保线程结束时组数减少
 
+		if isV2NewsEnabled() {
+			collector := v2news.NewCollector(GetV2SteamAdapter(), v2repo.NewNewsRepository())
+			result, err := collector.CollectGame(context.Background(), gameID)
+			if err != nil {
+				if result.Status == "partial" {
+					log.Warn("v2 game news collect partial, game_id=", gameID.ID, " appid=", gameID.Appid, " err=", err)
+				} else {
+					log.Error("v2 game news collect failed, game_id=", gameID.ID, " appid=", gameID.Appid, " status=", result.Status, " err=", err)
+				}
+			} else {
+				log.Info("v2 game news collect finished, game_id=", gameID.ID, " appid=", gameID.Appid, " status=", result.Status, " duration_ms=", result.DurationMillis)
+			}
+			return
+		}
+
 		// 执行采集获取结果
 		cnt, cntStr := 10, "10" //采集 cnt 篇更新公告
 		newsResEN, newsResCN := performGameNewsCollect(gameID, cnt, cntStr)
@@ -759,6 +776,11 @@ func startGameNewsCollect(gameID models.GameID) func() {
 		}
 
 	}
+}
+
+func isV2NewsEnabled() bool {
+	v2Cfg := env.GetServerConfig().Collector.V2
+	return v2Cfg.Enabled && v2Cfg.Tasks.NewsEnabled
 }
 
 // 执行游戏更新公告采集

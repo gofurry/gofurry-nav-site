@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -22,10 +23,11 @@ type GameNews struct {
 	Summary   string `json:"summary"`
 	URL       string `json:"url"`
 
-	Tags          []string `json:"tags"`
-	VoteUpCount   int      `json:"vote_up_count"`
-	VoteDownCount int      `json:"vote_down_count"`
-	CommentCount  int      `json:"comment_count"`
+	Tags          []string        `json:"tags"`
+	VoteUpCount   int             `json:"vote_up_count"`
+	VoteDownCount int             `json:"vote_down_count"`
+	CommentCount  int             `json:"comment_count"`
+	RawEvent      json.RawMessage `json:"raw_event"`
 
 	PublishedAt time.Time `json:"published_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
