@@ -18,7 +18,7 @@ type navHomeReader interface {
 	GetGroupList(lang string) ([]navmodels.GroupVo, common.GFError)
 	GetFeaturedSiteList() ([]navmodels.FeaturedSiteVo, common.GFError)
 	GetPingList() (map[string]string, common.GFError)
-	GetSayingService() (navmodels.SayingModel, common.GFError)
+	GetSayingService(lang string) (navmodels.SayingModel, common.GFError)
 	GetImageUrl(t string) string
 }
 
@@ -101,7 +101,7 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 		response.Ping = ping
 	}
 
-	if saying, err := svc.reader().GetSayingService(); err != nil {
+	if saying, err := svc.reader().GetSayingService(lang); err != nil {
 		response.CacheState["saying"] = models.HomeStateMissing
 		response.ReasonMessages["saying"] = err.GetMsg()
 	} else {
@@ -143,14 +143,15 @@ func (svc *homeService) GetHomePing() models.HomePingResponse {
 	return response
 }
 
-func (svc *homeService) GetHomeSaying() models.HomeSayingResponse {
+func (svc *homeService) GetHomeSaying(lang string) models.HomeSayingResponse {
+	lang = normalizeLang(lang)
 	response := models.HomeSayingResponse{
 		SchemaVersion: models.HomeSchemaVersion,
 		GeneratedAt:   svc.clock()(),
 		State:         models.HomeStateMissing,
 	}
 
-	saying, err := svc.reader().GetSayingService()
+	saying, err := svc.reader().GetSayingService(lang)
 	if err != nil {
 		response.ReasonMessages = []string{err.GetMsg()}
 		return response

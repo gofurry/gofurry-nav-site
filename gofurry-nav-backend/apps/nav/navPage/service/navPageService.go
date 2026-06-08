@@ -475,14 +475,23 @@ func fetchSuggestionBody(reqURL string, proxyURL *url.URL) ([]byte, error) {
 	return io.ReadAll(io.LimitReader(resp.Body, searchSuggestMaxBodyBytes))
 }
 
-func (svc *navPageService) GetSayingService() (res models.SayingModel, err common.GFError) {
-	record, err := dao.GetNavPageDao().GetSayingByRandom()
+func (svc *navPageService) GetSayingService(lang string) (res models.SayingModel, err common.GFError) {
+	lang = normalizeLang(lang)
+	record, err := dao.GetNavPageDao().GetSayingByRandom(lang)
 	if err != nil || record == nil {
 		return res, common.NewServiceError(fmt.Sprintf("查询金句记录失败: %v", err))
 	}
 	res.Author = record.Author
 	res.Content = record.Saying
+	res.Language = record.Language
 	return res, nil
+}
+
+func normalizeLang(lang string) string {
+	if strings.EqualFold(strings.TrimSpace(lang), "en") {
+		return "en"
+	}
+	return "zh"
 }
 
 func (svc *navPageService) GetImageUrl(t string) string {

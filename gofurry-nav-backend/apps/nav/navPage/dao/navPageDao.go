@@ -1,11 +1,13 @@
 package dao
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
 	"github.com/gofurry/gofurry-nav-backend/common/abstract"
+	"gorm.io/gorm"
 )
 
 var newNavPageDao = new(navPageDao)
@@ -116,12 +118,17 @@ func (dao *navPageDao) GetFeaturedSiteList() (res []models.GfnFeaturedSite, err 
 	return
 }
 
-// 按 id 序返回指定的金句
-func (dao navPageDao) GetSayingByRandom() (*models.GfnSaying, common.GFError) {
+// 按语言随机返回一条金句。
+func (dao navPageDao) GetSayingByRandom(lang string) (*models.GfnSaying, common.GFError) {
 	var res models.GfnSaying
-	db := dao.Gm.Table("gfn_saying").Order("random()")
+	db := dao.Gm.Table(models.TableNameGfnSaying).
+		Where("language = ?", lang).
+		Order("random()")
 	db.Limit(1).First(&res)
 	if err := db.Error; err != nil {
+		if lang != "zh" && errors.Is(err, gorm.ErrRecordNotFound) {
+			return dao.GetSayingByRandom("zh")
+		}
 		return nil, common.NewDaoError(err.Error())
 	}
 	return &res, nil

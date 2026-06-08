@@ -154,7 +154,7 @@ func (api *navPageApi) GetBiliBiliSearchSuggestion(c fiber.Ctx) error {
 // @Success 200 {object} string
 // @Router /api/v1/nav/page/header/getSaying [Get]
 func (api *navPageApi) GetSaying(c fiber.Ctx) error {
-	saying, err := service.GetNavPageService().GetSayingService()
+	saying, err := service.GetNavPageService().GetSayingService(c.Query("lang", "zh"))
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}

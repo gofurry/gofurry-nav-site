@@ -51,6 +51,9 @@ func TestGetHomeAggregatesNavPageData(t *testing.T) {
 	if response.Saying == nil || response.Saying.Content != "hello" {
 		t.Fatalf("missing saying: %#v", response.Saying)
 	}
+	if reader.sayingLang != "en" {
+		t.Fatalf("saying lang = %q, want en", reader.sayingLang)
+	}
 	if response.Backgrounds.Desktop != "desktop.avif" || response.Backgrounds.Mobile != "mobile.avif" {
 		t.Fatalf("unexpected backgrounds: %#v", response.Backgrounds)
 	}
@@ -153,6 +156,7 @@ type fakeHomeReader struct {
 	pingErr     common.GFError
 	saying      navmodels.SayingModel
 	sayingErr   common.GFError
+	sayingLang  string
 	desktopURL  string
 	mobileURL   string
 }
@@ -191,7 +195,8 @@ func (f *fakeHomeReader) GetPingList() (map[string]string, common.GFError) {
 	return f.ping, nil
 }
 
-func (f *fakeHomeReader) GetSayingService() (navmodels.SayingModel, common.GFError) {
+func (f *fakeHomeReader) GetSayingService(lang string) (navmodels.SayingModel, common.GFError) {
+	f.sayingLang = lang
 	if f.sayingErr != nil {
 		return navmodels.SayingModel{}, f.sayingErr
 	}

@@ -26,6 +26,17 @@ const (
 	navFeaturedSiteCacheKey = "featured-sites:list"
 )
 
+func normalizeSayingLanguage(lang string) (string, error) {
+	normalized := strings.ToLower(strings.TrimSpace(lang))
+	if normalized == "" {
+		return "zh", nil
+	}
+	if normalized != "zh" && normalized != "en" {
+		return "", common.NewValidationError("language must be zh or en")
+	}
+	return normalized, nil
+}
+
 func navDB() *gorm.DB {
 	return db.Databases.DB(db.Nav)
 }
@@ -55,7 +66,7 @@ func invalidateNavFeaturedSiteCache() {
 
 func (api *navAPI) ListSayings(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(navDB().Model(&models.Saying{}).Order("id DESC"), page.Keyword, "author", "saying", "CAST(id AS TEXT)")
+	base := adminutil.ApplyKeyword(navDB().Model(&models.Saying{}).Order("id DESC"), page.Keyword, "author", "language", "saying", "CAST(id AS TEXT)")
 	var items []models.Saying
 	total, err := adminutil.Paginate(base, page, &items)
 	if err != nil {
@@ -73,6 +84,10 @@ func (api *navAPI) CreateSaying(c fiber.Ctx) error {
 	if req.Saying == "" {
 		return common.NewResponse(c).Error(common.NewValidationError("saying is required"))
 	}
+	language, validateErr := normalizeSayingLanguage(req.Language)
+	if validateErr != nil {
+		return common.NewResponse(c).Error(validateErr)
+	}
 
 	var created models.Saying
 	err := navDB().Transaction(func(tx *gorm.DB) error {
@@ -80,7 +95,7 @@ func (api *navAPI) CreateSaying(c fiber.Ctx) error {
 		if allocErr != nil {
 			return allocErr
 		}
-		created = models.Saying{ID: ids[0], Author: req.Author, Saying: req.Saying}
+		created = models.Saying{ID: ids[0], Author: req.Author, Language: language, Saying: req.Saying}
 		if err := tx.Create(&created).Error; err != nil {
 			return err
 		}
@@ -121,14 +136,19 @@ func (api *navAPI) UpdateSaying(c fiber.Ctx) error {
 	if req.Saying == "" {
 		return common.NewResponse(c).Error(common.NewValidationError("saying is required"))
 	}
+	language, validateErr := normalizeSayingLanguage(req.Language)
+	if validateErr != nil {
+		return common.NewResponse(c).Error(validateErr)
+	}
 	txErr := navDB().Transaction(func(tx *gorm.DB) error {
 		before, snapErr := audit.SnapshotByID(tx, (&models.Saying{}).TableName(), id)
 		if snapErr != nil {
 			return snapErr
 		}
 		if err := tx.Model(&models.Saying{}).Where("id = ?", id).Updates(map[string]any{
-			"author": req.Author,
-			"saying": req.Saying,
+			"author":   req.Author,
+			"language": language,
+			"saying":   req.Saying,
 		}).Error; err != nil {
 			return common.NewDaoError(err.Error())
 		}

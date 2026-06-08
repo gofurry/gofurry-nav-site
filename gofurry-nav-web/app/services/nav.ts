@@ -19,8 +19,8 @@ export function getNavHomePing(): Promise<NavHomePingResponse> {
   return useApi('navV2')('/nav/home/ping')
 }
 
-export function getNavHomeSaying(): Promise<NavHomeSayingResponse> {
-  return useApi('navV2')('/nav/home/saying')
+export function getNavHomeSaying(lang: string): Promise<NavHomeSayingResponse> {
+  return useApi('navV2')('/nav/home/saying', { query: { lang } })
 }
 
 export function getNavHomeBackgrounds(): Promise<NavHomeResponse['backgrounds']> {

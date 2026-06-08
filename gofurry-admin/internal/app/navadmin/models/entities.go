@@ -9,6 +9,7 @@ import (
 type Saying struct {
 	ID         int64     `gorm:"column:id;primaryKey" json:"id"`
 	Author     *string   `gorm:"column:author" json:"author"`
+	Language   string    `gorm:"column:language;not null;default:zh" json:"language"`
 	Saying     string    `gorm:"column:saying;not null" json:"saying"`
 	CreateTime time.Time `gorm:"column:create_time;autoCreateTime" json:"create_time"`
 	UpdateTime time.Time `gorm:"column:update_time;autoUpdateTime" json:"update_time"`
@@ -104,8 +105,9 @@ type FeaturedSite struct {
 func (*FeaturedSite) TableName() string { return "gfn_featured_site" }
 
 type SayingPayload struct {
-	Author *string `json:"author"`
-	Saying string  `json:"saying"`
+	Author   *string `json:"author"`
+	Language string  `json:"language"`
+	Saying   string  `json:"saying"`
 }
 
 type UpdateNoticePayload struct {

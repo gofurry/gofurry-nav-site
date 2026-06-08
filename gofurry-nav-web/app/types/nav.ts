@@ -309,8 +309,9 @@ export interface PingStats {
 }
 
 export interface SayingModel {
-    author: string;
+    author: string | null;
     content: string;
+    language: 'zh' | 'en';
 }
 
 export interface NavHomeBackgrounds {

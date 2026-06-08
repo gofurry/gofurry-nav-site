@@ -4,6 +4,10 @@ const bool01 = [
   { label: '是', value: '1' },
   { label: '否', value: '0' },
 ]
+const languageOptions = [
+  { label: '中文', value: 'zh' },
+  { label: 'English', value: 'en' },
+]
 
 const groupKeys = ['official', 'discord', 'twitter', 'youtube', 'telegram', 'bsky', 'afdian', 'qq', 'reddit', 'bilibili', 'weibo', 'tiktok', 'vk', 'facebook', 'twitch', 'instagram', 'xiaohongshu']
 const linkKeys = ['steamdb', 'steambase', 'gamalytic', 'vgi', 'playtracker', 'pcgamingwiki', 'metacritic']
@@ -19,12 +23,13 @@ export const resources: ResourceConfig[] = [
     section: 'nav',
     listEndpoint: '/api/v1/nav/sayings',
     detailEndpoint: '/api/v1/nav/sayings',
-    columns: [{ key: 'id', label: 'ID' }, { key: 'author', label: '作者' }, { key: 'saying', label: '内容' }],
+    columns: [{ key: 'id', label: 'ID' }, { key: 'language', label: '语言' }, { key: 'author', label: '作者' }, { key: 'saying', label: '内容' }],
     fields: [
+      { key: 'language', label: '语言', type: 'select', options: languageOptions },
       { key: 'author', label: '作者', type: 'text' },
       { key: 'saying', label: '内容', type: 'textarea' },
     ],
-    defaults: { author: '', saying: '' },
+    defaults: { language: 'zh', author: '', saying: '' },
   },
   {
     key: 'update-notices',

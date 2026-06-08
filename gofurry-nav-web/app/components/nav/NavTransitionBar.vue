@@ -128,8 +128,22 @@ function syncAuthorPopover() {
   }
 }
 
+function currentLang() {
+  return locale.value === 'en' ? 'en' : 'zh'
+}
+
+async function loadSaying() {
+  const response = await getNavHomeSaying(currentLang())
+  saying.value = response.saying
+}
+
 watch(locale, () => {
   updateTime()
+  void loadSaying()
+})
+
+watch(() => props.initialSaying, (nextSaying) => {
+  saying.value = nextSaying ?? null
 })
 
 onMounted(async () => {
@@ -139,8 +153,7 @@ onMounted(async () => {
   window.addEventListener('resize', syncAuthorPopover)
 
   if (!saying.value) {
-    const response = await getNavHomeSaying()
-    saying.value = response.saying
+    await loadSaying()
   }
 })
 
