@@ -6,7 +6,7 @@
     />
     <NavToolDock v-if="isContentRevealed" :items="toolDockSites" />
     <main
-        v-if="isContentRevealed"
+        v-if="isContentMounted"
         ref="contentRef"
         class="relative z-10 flex-1 overflow-hidden"
     >
@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getNavHome } from '~/services/nav'
 import type { Delay, Group, NavHomeSpotlight, SayingModel, Site } from '~/types/nav'
@@ -51,6 +51,7 @@ interface NavPageData {
   pingData: Record<string, Delay>
 }
 
+const isContentMounted = ref(false)
 const isContentRevealed = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 const { locale } = useI18n()
@@ -59,6 +60,9 @@ const displayMode = ref<DisplayMode>('sfw')
 let touchStartY = 0
 let mobileMediaQuery: MediaQueryList | null = null
 let stopModeSubscription: (() => void) | null = null
+let prewarmTimer: ReturnType<typeof setTimeout> | null = null
+let idlePrewarmId: number | null = null
+let revealInProgress = false
 
 function parsePingData(data: Record<string, string | undefined>) {
   const result: Record<string, Delay> = {}
@@ -115,51 +119,122 @@ const { data } = await useAsyncData<NavPageData>(
 
 const navPageData = computed(() => data.value!)
 
-function revealContent(shouldScroll = true, force = false) {
+function mountContent() {
+  if (isContentMounted.value) {
+    return
+  }
+
+  isContentMounted.value = true
+}
+
+function cancelScheduledPrewarm() {
+  if (prewarmTimer) {
+    clearTimeout(prewarmTimer)
+    prewarmTimer = null
+  }
+
+  if (idlePrewarmId !== null && window.cancelIdleCallback) {
+    window.cancelIdleCallback(idlePrewarmId)
+    idlePrewarmId = null
+  }
+}
+
+function scheduleContentPrewarm() {
+  if (isContentMounted.value || !import.meta.client) {
+    return
+  }
+
+  cancelScheduledPrewarm()
+
+  const prewarm = () => {
+    prewarmTimer = null
+    idlePrewarmId = null
+    mountContent()
+  }
+
+  prewarmTimer = setTimeout(() => {
+    prewarmTimer = null
+    if (isContentMounted.value) {
+      return
+    }
+
+    if (window.requestIdleCallback) {
+      idlePrewarmId = window.requestIdleCallback(prewarm, { timeout: 1400 })
+      return
+    }
+
+    prewarm()
+  }, 700)
+}
+
+function waitForFrames(count = 2) {
+  return new Promise<void>((resolve) => {
+    const step = () => {
+      count -= 1
+      if (count <= 0) {
+        resolve()
+        return
+      }
+      requestAnimationFrame(step)
+    }
+
+    requestAnimationFrame(step)
+  })
+}
+
+async function revealContent(shouldScroll = true, force = false) {
   if (!force && isNavPageRevealLocked()) {
     return
   }
 
-  if (isContentRevealed.value) {
+  if (isContentRevealed.value || revealInProgress) {
     return
   }
 
-  isContentRevealed.value = true
-  dispatchNavPageReveal(true)
+  revealInProgress = true
+  try {
+    cancelScheduledPrewarm()
+    mountContent()
+    await nextTick()
+    await waitForFrames()
 
-  if (!shouldScroll) {
-    return
-  }
+    isContentRevealed.value = true
+    dispatchNavPageReveal(true)
 
-  nextTick(() => {
+    if (!shouldScroll) {
+      return
+    }
+
     contentRef.value?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
     })
-  })
+  } finally {
+    revealInProgress = false
+  }
 }
 
 function syncRevealByViewport() {
   if (window.innerWidth < 768) {
-    revealContent(false, true)
+    void revealContent(false, true)
   }
 }
 
 function handleViewportChange(event: MediaQueryListEvent) {
   if (event.matches) {
-    revealContent(false, true)
+    void revealContent(false, true)
   }
 }
 
 const handleRevealScroll = throttle(() => {
   if (window.scrollY > 24) {
-    revealContent()
+    void revealContent()
   }
 }, 120)
 
 const handleRevealScrollEnd = debounce(() => {
   if (window.scrollY > 24) {
-    revealContent()
+    void revealContent()
   }
 }, 180)
 
@@ -172,7 +247,7 @@ function handleResize() {}
 
 function handleWheel(event: WheelEvent) {
   if (event.deltaY > 8) {
-    revealContent()
+    void revealContent()
   }
 }
 
@@ -183,13 +258,13 @@ function handleTouchStart(event: TouchEvent) {
 function handleTouchMove(event: TouchEvent) {
   const currentY = event.touches[0]?.clientY ?? touchStartY
   if (touchStartY - currentY > 12) {
-    revealContent()
+    void revealContent()
   }
 }
 
 function handleKeydown(event: KeyboardEvent) {
   if (['ArrowDown', 'PageDown', 'Space', 'End'].includes(event.code)) {
-    revealContent()
+    void revealContent()
   }
 }
 
@@ -200,6 +275,7 @@ onMounted(() => {
   stopModeSubscription = subscribeModeChange(({ displayMode: nextMode }) => {
     displayMode.value = nextMode
   })
+  scheduleContentPrewarm()
 
   mobileMediaQuery = window.matchMedia('(max-width: 767px)')
   mobileMediaQuery.addEventListener('change', handleViewportChange)
@@ -213,6 +289,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   dispatchNavPageReveal(true)
+  cancelScheduledPrewarm()
   stopModeSubscription?.()
   mobileMediaQuery?.removeEventListener('change', handleViewportChange)
   window.removeEventListener('scroll', handleScroll)
