@@ -73,10 +73,11 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 ## 总体策略
 
 1. 后端先新增 v2 读模型和 v2 API，不影响现有 v1。
-2. `gofurry-nav-web` 先切游戏首页、详情、新闻到 v2；搜索、推荐、评论、抽奖按风险后置。
-3. `gofurry-admin` 增加 collector v2 观测页，保留原有运营管理。
-4. `gofurry-rag` 切到 v2 sync 接口，优先使用 cleaned/plain text。
-5. 当前端、admin、RAG 都稳定后，再冻结 v1 动态数据路径，逐步清理旧表读取和旧 Redis key。
+2. 路由方式参考 nav 后端 v2：保留现有 `/api/v1/game/*`，新增独立 `/api/v2/game/*` 分组；建议新增 `routers/url_v2.go` 或同等职责文件注册 `gameV2Api(v2.Group("/game"))`，避免在 v1 router 里混入 v2 逻辑。
+3. `gofurry-nav-web` 先切游戏首页、详情、新闻到 v2；搜索、推荐、评论、抽奖按风险后置。
+4. `gofurry-admin` 增加 collector v2 观测页，保留原有运营管理。
+5. `gofurry-rag` 切到 v2 sync 接口，优先使用 cleaned/plain text。
+6. 当前端、admin、RAG 都稳定后，再冻结 v1 动态数据路径，逐步清理旧表读取和旧 Redis key。
 
 ## v2.0.0-alpha.1 - Backend V2 Read Model Foundation
 
@@ -94,9 +95,9 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
   - `gfg_game_v2_player_counts`
   - `gfg_game_v2_collect_runs`
   - `gfg_game_v2_collect_task_results`
-- 新增 v2 DAO，按 `game_id`、`appid`、`lang`、`region` 聚合详情。
+- 新增 v2 DAO，按 `game_id` / `appid` 定位游戏，按 `lang` 聚合详情；`region` 只用于价格选择，不进入详情缓存 key。
 - 明确语言策略：当前只支持 `zh` / `en`，默认 `zh`，非法语言回退 `zh`。
-- 明确价格策略：默认展示 `CN`，中国区锁区或无价格时展示 unavailable，不把 `HK` 作为中国区 fallback。
+- 明确价格策略：默认展示 `CN`；当 `CN` 记录缺失，或记录表现为非免费但无币种、无格式化价格时，视为 unavailable，不把 `HK` 作为中国区 fallback。
 - 明确在线人数策略：公开接口只读取最近一次 `status='success'` 的结果，失败状态进入后台观测。
 - 新增单元测试覆盖 v2 聚合、语言回退、价格 unavailable、在线人数失败不覆盖成功值。
 
@@ -109,6 +110,13 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 ## v2.0.0-alpha.2 - Public Game API V2
 
 目标：提供前端可开始接入的公开 v2 API。
+
+路由方式：
+
+- 保持现有 v1 注册方式不变：`gameApi(v1.Group("/game"))`。
+- 新增 v2 注册入口：`gameV2Api(v2.Group("/game"))`，最终路径为 `/api/v2/game/*`。
+- v2 controller / service / dao 独立命名或独立包边界，避免 v1 controller 继续膨胀。
+- v2 不复用 v1 响应结构硬塞字段；公开响应以 `docs/game-v2-backend-contract.md` 为准。
 
 新增接口：
 
@@ -127,10 +135,14 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 
 缓存策略：
 
-- `game:v2:details:{game_id}:{lang}:{region}`
+- 与 collector v2 当前实现保持一致，优先读取这些已由 collector 刷新的热缓存：
+  - `game:v2:details:{game_id}:{lang}`
+  - `game:v2:prices:{game_id}`
+  - `game:v2:media:{game_id}`
+  - `game:v2:players:{game_id}:current`
 - `game:v2:news:{game_id}:{lang}`
-- `game:v2:news:latest:{lang}`
-- TTL 先使用 6-24 小时，后续根据采集频率调整。
+- collector 当前不会写入全站 latest news 缓存；`/api/v2/game/news/latest` 应由 backend 从 `gfg_game_v2_news` 查询并写入 backend 自己维护的聚合缓存，例如 `game:v2:news:latest:{lang}`。
+- TTL 与 collector 当前实现对齐：详情、价格、媒体、单游戏新闻 7 天；当前在线人数 3 小时；backend 自己维护的 latest news 聚合缓存建议 3 小时或更短。
 
 验收标准：
 
@@ -199,6 +211,7 @@ admin 配合：
 - 能从 admin 判断一次全量采集是否完整。
 - 能定位某个 appid 是详情失败、新闻失败、价格锁区，还是在线人数失败。
 - collect runs 和 task results 的保留策略与 collector 配置一致。
+- 当前 collector task result 不记录 Redis 写入失败；admin 第一版以 PostgreSQL run/task 观测为准，Redis key 仅作为热缓存命中和数据新鲜度辅助信号。后续如需要 Redis 写入诊断，再补 collector 观测字段。
 
 ## v2.0.0-alpha.5 - RAG Sync V2
 
@@ -249,6 +262,7 @@ RAG 配合：
 - 抽奖。
 - 复杂推荐。
 - 创作者运营页。
+- v1 搜索、推荐、标签、评论、抽奖和创作者接口继续服务现有前端，等 games v2 主页面稳定后再评估是否单独迁移。
 
 验证重点：
 
@@ -306,8 +320,8 @@ v1 处理：
 
 - `/api/v1/game/*` 暂时保留，服务旧入口和非动态功能。
 - 冻结旧动态详情、旧新闻、旧在线人数读取路径。
+- v1 搜索、推荐、评论、抽奖、标签、创作者等站内运营和交互接口继续保留，不因 v2 stable 立即删除。
 - 后续单独计划清理 `gfg_game_record`、`gfg_game_news`、`gfg_game_player_count` 的依赖。
-- 评论、抽奖、标签、创作者这些站内运营能力不因为 v2 stable 自动删除。
 
 验收标准：
 
@@ -322,6 +336,7 @@ v1 处理：
 - CN 价格缺失通常代表锁区或无区域价格，不应该把 HK 当作 fallback。
 - 在线人数失败不能覆盖最近一次成功值，也不能简单展示为 0。
 - Redis key 必须统一命名，避免后端和 collector 各写各的。
+- collector 已写入的 key 必须以 `game:v2:details:{game_id}:{lang}`、`game:v2:prices:{game_id}`、`game:v2:media:{game_id}`、`game:v2:news:{game_id}:{lang}`、`game:v2:players:{game_id}:current` 为准；backend 自己新增的聚合 key 需要明确标注所有权。
 - 公开接口不能返回 raw snapshot、上游错误体和过大的 HTML。
 - RAG 同步接口要控制分页和响应体大小，否则未来游戏数增长后会拖慢同步。
 - admin 采集观测接口必须受保护，避免暴露上游风控、失败模式和内部 appid 排查信息。
