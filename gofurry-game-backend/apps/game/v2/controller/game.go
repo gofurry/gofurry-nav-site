@@ -83,6 +83,19 @@ func (api *gameV2Api) GetLatestGameNews(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
+func (api *gameV2Api) GetPanelMain(c fiber.Ctx) error {
+	data, err := newReadModelService().GetPanelMain(context.Background(), v2models.GameV2PanelQuery{
+		Lang:      c.Query("lang", "zh"),
+		Region:    c.Query("region", "CN"),
+		Limit:     parseInt(c.Query("limit", "8")),
+		NewsLimit: parseInt(c.Query("news_limit", "8")),
+	})
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
 func newReadModelService() *v2service.ReadModelService {
 	return v2service.NewReadModelServiceWithReader(v2dao.NewReadModelDAO())
 }

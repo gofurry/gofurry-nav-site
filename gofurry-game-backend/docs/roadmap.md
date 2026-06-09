@@ -16,7 +16,7 @@
 
 ### gofurry-game-backend
 
-当前公开游戏接口仍以 `/api/v1/game/*` 为主，但 `/api/v2/game/list`、`/api/v2/game/info`、`/api/v2/game/news`、`/api/v2/game/news/latest` 已经开放为第一批 public v2 API。v2 已经有独立契约文档 `docs/game-v2-backend-contract.md`，并已完成 read model foundation：新增 v2 table model、PostgreSQL DAO 聚合入口、service 读模型转换、controller 和 router。`panel/main`、`sync/*`、`collect/*` 仍在后续里程碑。
+当前公开游戏接口仍以 `/api/v1/game/*` 为主，但 `/api/v2/game/list`、`/api/v2/game/info`、`/api/v2/game/news`、`/api/v2/game/news/latest`、`/api/v2/game/panel/main` 已经开放为第一批 public v2 API。v2 已经有独立契约文档 `docs/game-v2-backend-contract.md`，并已完成 read model foundation：新增 v2 table model、PostgreSQL DAO 聚合入口、service 读模型转换、controller 和 router。`sync/*`、`collect/*` 仍在后续里程碑。
 
 需要继续复用的站内能力：
 
@@ -148,7 +148,7 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 - 新增 v2 list/news DAO 方法，列表从 `gfg_game` + collector v2 表聚合轻量卡片数据；新闻从 `gfg_game_v2_news` 读取 Store events cleaned 内容，并补充站内游戏名和 header。
 - 新增 v2 service list/news 方法，统一 `zh/en`、`CN`、分页上限和公开新闻字段。
 - 公开接口参数设置保守上限：列表和新闻 `limit` 默认 20，最大 100；非法语言回退 `zh`。
-- 本阶段公开 API 先以 PostgreSQL read model 为主，避免引入不稳定缓存行为；Redis read-through 和聚合缓存放到后续面板/高频接口阶段补齐。
+- 本阶段公开 API 先以 PostgreSQL read model 为主，避免引入不稳定缓存行为；Redis read-through 和聚合缓存放到后续高频接口或缓存专项里补齐。
 
 响应原则：
 
@@ -171,7 +171,7 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 
 当前实现说明：
 
-- alpha.2 已开放公开 API，但暂未做 Redis read-through。原因是当前首要目标是验证 v2 响应合同和 PostgreSQL 回源能力，缓存所有权和聚合 key 会在 `v2.0.0-alpha.3 - Frontend Panel Contract` 及后续高频接口里统一处理。
+- alpha.2 已开放公开 API，但暂未做 Redis read-through。原因是当前首要目标是验证 v2 响应合同和 PostgreSQL 回源能力；缓存所有权和聚合 key 会在后续高频接口或缓存专项里统一处理。
 
 验收标准：
 
@@ -181,11 +181,29 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 
 ## v2.0.0-alpha.3 - Frontend Panel Contract
 
+状态：已完成。
+
 目标：补齐游戏首页和游戏模块 v2 视觉改造需要的聚合数据。
 
 新增或完善接口：
 
 - `GET /api/v2/game/panel/main`
+
+实际完成：
+
+- 新增 `GET /api/v2/game/panel/main`，作为前端游戏首页和 games v2 首屏的聚合入口。
+- 新增 `GameV2PanelReadModel`，一次返回：
+  - `latest_games`
+  - `updated_games`
+  - `top_online`
+  - `free_games`
+  - `highest_discount`
+  - `low_price`
+  - `latest_news`
+- 面板聚合全部基于 v2 read model 和 collector v2 PostgreSQL 表，不读取旧 `game-panel:*` Redis 聚合 key。
+- 价格相关 section 使用请求区域，默认 `CN`；锁区或无格式化价格不会被纳入最高折扣/低价榜单，也不会 fallback 到 `HK`。
+- 面板接口参数保持保守上限：`limit` 和 `news_limit` 默认 8，最大 24。
+- 新增 service 单元测试覆盖面板聚合、语言/地区归一和 limit 上限。
 
 聚合内容：
 
@@ -206,9 +224,9 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 
 验收标准：
 
-- 游戏首页不再依赖旧 Redis 聚合 key。
-- 首页聚合接口一次请求即可满足首屏主要内容。
-- 前端不用为缺失 CN 价格写 HK fallback。
+- 已满足：游戏首页可以使用 v2 面板接口，不再依赖旧 Redis 聚合 key。
+- 已满足：`/api/v2/game/panel/main` 一次请求返回首屏主要 section。
+- 已满足：前端不用为缺失 CN 价格写 HK fallback；价格可用性仍由 v2 read model 判断。
 
 ## v2.0.0-alpha.4 - Admin Collection Observability
 

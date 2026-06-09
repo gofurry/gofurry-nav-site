@@ -239,6 +239,13 @@ type GameV2NewsQuery struct {
 	Offset int
 }
 
+type GameV2PanelQuery struct {
+	Lang      string
+	Region    string
+	Limit     int
+	NewsLimit int
+}
+
 type GameV2DetailRequest struct {
 	GameID    int64
 	AppID     int64
@@ -262,6 +269,16 @@ type GameV2ListItem struct {
 	OnlineCount GameV2OnlineCount `json:"online_count"`
 	Tags        []GameV2Tag       `json:"tags"`
 	UpdatedAt   time.Time         `json:"updated_at"`
+}
+
+type GameV2PanelReadModel struct {
+	LatestGames     []GameV2ListItem `json:"latest_games"`
+	UpdatedGames    []GameV2ListItem `json:"updated_games"`
+	TopOnline       []GameV2ListItem `json:"top_online"`
+	FreeGames       []GameV2ListItem `json:"free_games"`
+	HighestDiscount []GameV2ListItem `json:"highest_discount"`
+	LowPrice        []GameV2ListItem `json:"low_price"`
+	LatestNews      []GameV2NewsItem `json:"latest_news"`
 }
 
 type GameV2DetailReadModel struct {

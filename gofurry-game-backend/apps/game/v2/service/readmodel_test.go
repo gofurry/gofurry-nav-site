@@ -10,9 +10,11 @@ import (
 )
 
 type fakeDetailReader struct {
-	aggregate v2models.GameV2Aggregate
-	query     v2models.GameV2DetailQuery
-	err       common.GFError
+	aggregate  v2models.GameV2Aggregate
+	query      v2models.GameV2DetailQuery
+	listQuery  v2models.GameV2ListQuery
+	panelQuery v2models.GameV2PanelQuery
+	err        common.GFError
 }
 
 func (reader *fakeDetailReader) GetGameDetailAggregate(_ context.Context, query v2models.GameV2DetailQuery) (v2models.GameV2Aggregate, common.GFError) {
@@ -23,7 +25,8 @@ func (reader *fakeDetailReader) GetGameDetailAggregate(_ context.Context, query 
 	return reader.aggregate, nil
 }
 
-func (reader *fakeDetailReader) ListGameAggregates(_ context.Context, _ v2models.GameV2ListQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+func (reader *fakeDetailReader) ListGameAggregates(_ context.Context, query v2models.GameV2ListQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	reader.listQuery = query
 	if reader.err != nil {
 		return nil, reader.err
 	}
@@ -35,6 +38,23 @@ func (reader *fakeDetailReader) GetGameNews(_ context.Context, _ v2models.GameV2
 		return nil, reader.err
 	}
 	return []v2models.GameV2NewsRow{}, nil
+}
+
+func (reader *fakeDetailReader) ListTopOnlineAggregates(_ context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	reader.panelQuery = query
+	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
+}
+
+func (reader *fakeDetailReader) ListFreeGameAggregates(_ context.Context, _ v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
+}
+
+func (reader *fakeDetailReader) ListHighestDiscountAggregates(_ context.Context, _ v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
+}
+
+func (reader *fakeDetailReader) ListLowPriceAggregates(_ context.Context, _ v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
 }
 
 func (reader *fakeDetailReader) GetLatestGameNews(_ context.Context, _ v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError) {
@@ -195,6 +215,79 @@ func TestGetGameDetailDefaultsInvalidLangAndMissingOnlineCount(t *testing.T) {
 	}
 	if res.OnlineCount.Status != onlineUnknown {
 		t.Fatalf("expected missing online count status %s, got %s", onlineUnknown, res.OnlineCount.Status)
+	}
+}
+
+func TestGetPanelMainBuildsAllSections(t *testing.T) {
+	reader := &fakeDetailReader{
+		aggregate: v2models.GameV2Aggregate{
+			Site: v2models.GameV2SiteRecord{
+				ID:     1,
+				AppID:  440,
+				Name:   "军团要塞2",
+				Info:   "中文站内简介",
+				Header: "https://cdn.example/header.jpg",
+			},
+			Details: &v2models.GfgGameV2Details{
+				GameID:     1,
+				AppID:      440,
+				Name:       "Team Fortress 2",
+				Type:       "game",
+				Developers: strPtr(`["Valve"]`),
+				Publishers: strPtr(`["Valve"]`),
+				Platforms:  strPtr(`{"windows":true,"mac":true,"linux":true}`),
+			},
+			Prices: []v2models.GfgGameV2Price{
+				{
+					GameID:         1,
+					AppID:          440,
+					Region:         "CN",
+					IsFree:         true,
+					FinalFormatted: strPtr("Free To Play"),
+				},
+			},
+			Media: []v2models.GfgGameV2Media{
+				{
+					GameID:    1,
+					AppID:     440,
+					MediaType: "capsule",
+					MediaKey:  "capsule",
+					URL:       strPtr("https://cdn.example/capsule.jpg"),
+				},
+			},
+		},
+	}
+
+	svc := NewReadModelServiceWithReader(reader)
+	res, err := svc.GetPanelMain(context.Background(), v2models.GameV2PanelQuery{
+		Lang:      "fr",
+		Region:    "",
+		Limit:     999,
+		NewsLimit: 999,
+	})
+	if err != nil {
+		t.Fatalf("GetPanelMain returned error: %s", err.GetMsg())
+	}
+
+	if reader.panelQuery.Lang != "zh" {
+		t.Fatalf("expected normalized panel lang zh, got %s", reader.panelQuery.Lang)
+	}
+	if reader.panelQuery.Region != "CN" {
+		t.Fatalf("expected normalized panel region CN, got %s", reader.panelQuery.Region)
+	}
+	if reader.panelQuery.Limit != 24 {
+		t.Fatalf("expected panel limit clamp 24, got %d", reader.panelQuery.Limit)
+	}
+	if len(res.LatestGames) != 1 ||
+		len(res.UpdatedGames) != 1 ||
+		len(res.TopOnline) != 1 ||
+		len(res.FreeGames) != 1 ||
+		len(res.HighestDiscount) != 1 ||
+		len(res.LowPrice) != 1 {
+		t.Fatal("expected all panel game sections to contain one item")
+	}
+	if res.LatestGames[0].CapsuleURL != "https://cdn.example/capsule.jpg" {
+		t.Fatalf("expected panel item capsule url, got %s", res.LatestGames[0].CapsuleURL)
 	}
 }
 

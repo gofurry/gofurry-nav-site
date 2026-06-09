@@ -25,6 +25,10 @@ type gameDetailReader interface {
 	ListGameAggregates(ctx context.Context, query v2models.GameV2ListQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	GetLatestGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
+	ListTopOnlineAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
+	ListFreeGameAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
+	ListHighestDiscountAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
+	ListLowPriceAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
 }
 
 type ReadModelService struct {
@@ -112,6 +116,76 @@ func (svc *ReadModelService) GetLatestGameNews(ctx context.Context, query v2mode
 		return nil, err
 	}
 	return buildNewsRows(rows, query.Lang), nil
+}
+
+func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.GameV2PanelQuery) (v2models.GameV2PanelReadModel, common.GFError) {
+	var res v2models.GameV2PanelReadModel
+	if svc == nil || svc.reader == nil {
+		return res, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	query.Lang = normalizeLang(query.Lang)
+	query.Region = normalizeRegion(query.Region)
+	query.Limit = clampLimit(query.Limit, 8, 24)
+	query.NewsLimit = clampLimit(query.NewsLimit, 8, 24)
+
+	latest, err := svc.reader.ListGameAggregates(ctx, v2models.GameV2ListQuery{
+		Lang:   query.Lang,
+		Region: query.Region,
+		Limit:  query.Limit,
+		Sort:   "newest",
+	})
+	if err != nil {
+		return res, err
+	}
+	updated, err := svc.reader.ListGameAggregates(ctx, v2models.GameV2ListQuery{
+		Lang:   query.Lang,
+		Region: query.Region,
+		Limit:  query.Limit,
+		Sort:   "updated",
+	})
+	if err != nil {
+		return res, err
+	}
+	topOnline, err := svc.reader.ListTopOnlineAggregates(ctx, query)
+	if err != nil {
+		return res, err
+	}
+	freeGames, err := svc.reader.ListFreeGameAggregates(ctx, query)
+	if err != nil {
+		return res, err
+	}
+	highestDiscount, err := svc.reader.ListHighestDiscountAggregates(ctx, query)
+	if err != nil {
+		return res, err
+	}
+	lowPrice, err := svc.reader.ListLowPriceAggregates(ctx, query)
+	if err != nil {
+		return res, err
+	}
+	latestNews, err := svc.GetLatestGameNews(ctx, v2models.GameV2NewsQuery{
+		Lang:  query.Lang,
+		Limit: query.NewsLimit,
+	})
+	if err != nil {
+		return res, err
+	}
+
+	res.LatestGames = buildListItems(latest, query.Lang, query.Region)
+	res.UpdatedGames = buildListItems(updated, query.Lang, query.Region)
+	res.TopOnline = buildListItems(topOnline, query.Lang, query.Region)
+	res.FreeGames = buildListItems(freeGames, query.Lang, query.Region)
+	res.HighestDiscount = buildListItems(highestDiscount, query.Lang, query.Region)
+	res.LowPrice = buildListItems(lowPrice, query.Lang, query.Region)
+	res.LatestNews = latestNews
+	return res, nil
+}
+
+func buildListItems(aggregates []v2models.GameV2Aggregate, lang string, region string) []v2models.GameV2ListItem {
+	res := make([]v2models.GameV2ListItem, 0, len(aggregates))
+	for _, aggregate := range aggregates {
+		res = append(res, buildListItem(aggregate, lang, region))
+	}
+	return res
 }
 
 func buildListItem(aggregate v2models.GameV2Aggregate, lang string, region string) v2models.GameV2ListItem {

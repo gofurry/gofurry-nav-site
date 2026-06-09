@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 	"github.com/gofurry/gofurry-game-backend/common"
@@ -115,6 +116,61 @@ func (dao *ReadModelDAO) GetLatestGameNews(ctx context.Context, query v2models.G
 	return rows, nil
 }
 
+func (dao *ReadModelDAO) ListTopOnlineAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	return dao.listPanelAggregatesBySQL(ctx, query, `
+SELECT game_id
+FROM (
+    SELECT DISTINCT ON (game_id) game_id, count, collected_at, id
+    FROM gfg_game_v2_player_counts
+    WHERE status = 'success'
+    ORDER BY game_id, collected_at DESC, id DESC
+) latest
+ORDER BY count DESC, collected_at DESC
+LIMIT ?
+`, query.Limit)
+}
+
+func (dao *ReadModelDAO) ListFreeGameAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	return dao.listPanelAggregatesBySQL(ctx, query, `
+SELECT p.game_id
+FROM gfg_game_v2_prices p
+JOIN gfg_game g ON p.game_id = g.id
+WHERE p.region = ? AND p.is_free = true
+ORDER BY p.updated_at DESC, g.weight ASC, p.game_id ASC
+LIMIT ?
+`, normalizeDAORegion(query.Region), query.Limit)
+}
+
+func (dao *ReadModelDAO) ListHighestDiscountAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	return dao.listPanelAggregatesBySQL(ctx, query, `
+SELECT p.game_id
+FROM gfg_game_v2_prices p
+JOIN gfg_game g ON p.game_id = g.id
+WHERE p.region = ?
+  AND p.is_free = false
+  AND p.discount_percent > 0
+  AND COALESCE(p.currency, '') <> ''
+  AND COALESCE(p.final_formatted, '') <> ''
+ORDER BY p.discount_percent DESC, p.final_amount ASC, g.weight ASC, p.game_id ASC
+LIMIT ?
+`, normalizeDAORegion(query.Region), query.Limit)
+}
+
+func (dao *ReadModelDAO) ListLowPriceAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	return dao.listPanelAggregatesBySQL(ctx, query, `
+SELECT p.game_id
+FROM gfg_game_v2_prices p
+JOIN gfg_game g ON p.game_id = g.id
+WHERE p.region = ?
+  AND p.is_free = false
+  AND p.final_amount > 0
+  AND COALESCE(p.currency, '') <> ''
+  AND COALESCE(p.final_formatted, '') <> ''
+ORDER BY p.final_amount ASC, p.discount_percent DESC, g.weight ASC, p.game_id ASC
+LIMIT ?
+`, normalizeDAORegion(query.Region), query.Limit)
+}
+
 func (dao *ReadModelDAO) loadAggregateExtras(db *gorm.DB, aggregate *v2models.GameV2Aggregate, lang string, newsLimit int) error {
 	gameID := aggregate.Site.ID
 	if details, err := takeOptional[v2models.GfgGameV2Details](db.Table(v2models.TableNameGfgGameV2Details).Where("game_id = ?", gameID)); err != nil {
@@ -168,6 +224,27 @@ func (dao *ReadModelDAO) loadAggregateExtras(db *gorm.DB, aggregate *v2models.Ga
 	}
 
 	return nil
+}
+
+func (dao *ReadModelDAO) listPanelAggregatesBySQL(ctx context.Context, query v2models.GameV2PanelQuery, sql string, args ...any) ([]v2models.GameV2Aggregate, common.GFError) {
+	if dao == nil || dao.db == nil {
+		return nil, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	if query.Lang == "" {
+		query.Lang = "zh"
+	}
+	if query.Limit <= 0 {
+		query.Limit = 8
+	}
+	gameIDs := make([]int64, 0)
+	if err := dao.db.WithContext(ctx).Raw(sql, args...).Scan(&gameIDs).Error; err != nil {
+		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 面板候选失败: %v", err))
+	}
+	aggregates, err := dao.loadAggregatesByGameIDs(dao.db.WithContext(ctx), gameIDs, query.Lang, 0)
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
+	}
+	return aggregates, nil
 }
 
 func (dao *ReadModelDAO) loadSiteRecord(db *gorm.DB, query DetailQuery, dest *v2models.GameV2SiteRecord) error {
@@ -238,6 +315,38 @@ func (dao *ReadModelDAO) loadTags(db *gorm.DB, gameID int64, lang string, dest *
 	return nil
 }
 
+func (dao *ReadModelDAO) loadAggregatesByGameIDs(db *gorm.DB, gameIDs []int64, lang string, newsLimit int) ([]v2models.GameV2Aggregate, error) {
+	if len(gameIDs) == 0 {
+		return []v2models.GameV2Aggregate{}, nil
+	}
+	var sites []v2models.GameV2SiteRecord
+	if err := db.Table(tableNameGfgGame).
+		Select("id, name, name_en, info, info_en, resources, groups, links, appid, header, view_count, weight, create_time, update_time").
+		Where("id IN ?", gameIDs).
+		Find(&sites).Error; err != nil {
+		return nil, fmt.Errorf("查询游戏 v2 面板站内档案失败: %w", err)
+	}
+
+	siteMap := make(map[int64]v2models.GameV2SiteRecord, len(sites))
+	for _, site := range sites {
+		siteMap[site.ID] = site
+	}
+
+	aggregates := make([]v2models.GameV2Aggregate, 0, len(gameIDs))
+	for _, gameID := range gameIDs {
+		site, ok := siteMap[gameID]
+		if !ok {
+			continue
+		}
+		aggregate := v2models.GameV2Aggregate{Site: site}
+		if err := dao.loadAggregateExtras(db, &aggregate, lang, newsLimit); err != nil {
+			return nil, err
+		}
+		aggregates = append(aggregates, aggregate)
+	}
+	return aggregates, nil
+}
+
 func (dao *ReadModelDAO) queryNewsRows(db *gorm.DB, query v2models.GameV2NewsQuery, requireGame bool) ([]v2models.GameV2NewsRow, error) {
 	if query.Lang == "" {
 		query.Lang = "zh"
@@ -286,6 +395,14 @@ func listOrder(sort string) string {
 	default:
 		return "weight ASC, id ASC"
 	}
+}
+
+func normalizeDAORegion(region string) string {
+	region = strings.ToUpper(strings.TrimSpace(region))
+	if region == "" {
+		return "CN"
+	}
+	return region
 }
 
 func takeOptional[T any](db *gorm.DB) (*T, error) {

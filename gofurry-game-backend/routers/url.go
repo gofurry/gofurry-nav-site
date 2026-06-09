@@ -45,6 +45,7 @@ func gameV2Api(g fiber.Router) {
 	g.Get("/info", gamev2.GameV2Api.GetGameInfo)
 	g.Get("/news", gamev2.GameV2Api.GetGameNews)
 	g.Get("/news/latest", gamev2.GameV2Api.GetLatestGameNews)
+	g.Get("/panel/main", gamev2.GameV2Api.GetPanelMain)
 }
 
 func recommendApi(g fiber.Router) {
