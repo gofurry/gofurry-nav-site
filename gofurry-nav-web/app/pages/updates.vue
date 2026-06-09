@@ -1,6 +1,6 @@
 <template>
   <div class="updates-page" :class="{ 'is-dark-theme': isDarkTheme }">
-    <GoFurryGridBackground profile="light" />
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
 
     <main class="relative z-[1] mx-auto w-[min(1100px,calc(100%-40px))] py-9 pb-24">
       <h1 class="sr-only">{{ copy.pageHeading }}</h1>

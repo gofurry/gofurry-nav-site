@@ -1,6 +1,6 @@
 <template>
   <div :class="pageClass" :style="pageVars">
-    <GoFurryGridBackground profile="light" />
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
     <div class="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[var(--about-top-veil)]" />
 
     <main class="relative mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8 sm:px-6 md:px-8 md:py-12">
