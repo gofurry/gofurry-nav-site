@@ -16,7 +16,7 @@
 
 ### gofurry-game-backend
 
-当前公开游戏接口集中在 `/api/v1/game/*`，动态详情、新闻、价格、在线人数仍主要来自旧表和旧 Redis key。v2 已经有独立契约文档 `docs/game-v2-backend-contract.md`，但还没有实现 v2 model、dao、service、controller 和 router。
+当前公开游戏接口仍以 `/api/v1/game/*` 为主，但 `/api/v2/game/list`、`/api/v2/game/info`、`/api/v2/game/news`、`/api/v2/game/news/latest` 已经开放为第一批 public v2 API。v2 已经有独立契约文档 `docs/game-v2-backend-contract.md`，并已完成 read model foundation：新增 v2 table model、PostgreSQL DAO 聚合入口、service 读模型转换、controller 和 router。`panel/main`、`sync/*`、`collect/*` 仍在后续里程碑。
 
 需要继续复用的站内能力：
 
@@ -81,6 +81,8 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 
 ## v2.0.0-alpha.1 - Backend V2 Read Model Foundation
 
+状态：已完成。
+
 目标：建立后端读取 collector v2 数据的基础模型，不先追求前端完整切换。
 
 后端改动：
@@ -101,13 +103,23 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 - 明确在线人数策略：公开接口只读取最近一次 `status='success'` 的结果，失败状态进入后台观测。
 - 新增单元测试覆盖 v2 聚合、语言回退、价格 unavailable、在线人数失败不覆盖成功值。
 
+实际完成：
+
+- 新增 `apps/game/v2/models`，覆盖 collector v2 所有主表模型，并定义 `GameV2DetailReadModel`、价格、媒体、新闻、在线人数、站内信息等公开读模型结构。
+- 新增 `apps/game/v2/dao`，按 `game_id` / `appid` 聚合 `gfg_game` 站内主档案、v2 详情、本地化详情、价格、媒体、系统需求、新闻、最近成功在线人数和标签。
+- 新增 `apps/game/v2/service`，将 DAO 聚合结果转换为稳定读模型，固化 `zh/en` 语言归一、中文回退、默认 `CN` 价格、不使用 `HK` fallback、在线人数缺失为 `unknown`。
+- service 层通过接口注入 DAO，避免单元测试依赖数据库配置，也为 alpha.2 的 controller 显式注入 `dao.NewReadModelDAO()` 留出清晰边界。
+- 新增单元测试覆盖语言回退、CN 价格 unavailable、不回退 HK、最近成功在线人数和非法语言默认回退。
+
 验收标准：
 
-- 可以在不依赖旧动态表的情况下聚合一个游戏的 v2 详情。
-- v2 DAO 不读取 `gfg_game_record`、`gfg_game_news`、`gfg_game_player_count`。
-- Redis 不可用时，PostgreSQL 回源仍能返回公开详情。
+- 已满足：可以在不依赖旧动态表的情况下聚合一个游戏的 v2 详情。
+- 已满足：v2 DAO 不读取 `gfg_game_record`、`gfg_game_news`、`gfg_game_player_count`。
+- 已满足：当前 read model foundation 只依赖 PostgreSQL，不依赖 Redis；Redis 缓存读取将在 public API v2 阶段按接口级缓存策略补充。
 
 ## v2.0.0-alpha.2 - Public Game API V2
+
+状态：已完成。
 
 目标：提供前端可开始接入的公开 v2 API。
 
@@ -124,6 +136,19 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 - `GET /api/v2/game/info`
 - `GET /api/v2/game/news`
 - `GET /api/v2/game/news/latest`
+
+实际完成：
+
+- 在 router 中新增 `/api/v2/game/*` 分组，保留现有 `/api/v1/game/*` 不变。
+- 新增 v2 controller，开放：
+  - `GET /api/v2/game/list`
+  - `GET /api/v2/game/info`
+  - `GET /api/v2/game/news`
+  - `GET /api/v2/game/news/latest`
+- 新增 v2 list/news DAO 方法，列表从 `gfg_game` + collector v2 表聚合轻量卡片数据；新闻从 `gfg_game_v2_news` 读取 Store events cleaned 内容，并补充站内游戏名和 header。
+- 新增 v2 service list/news 方法，统一 `zh/en`、`CN`、分页上限和公开新闻字段。
+- 公开接口参数设置保守上限：列表和新闻 `limit` 默认 20，最大 100；非法语言回退 `zh`。
+- 本阶段公开 API 先以 PostgreSQL read model 为主，避免引入不稳定缓存行为；Redis read-through 和聚合缓存放到后续面板/高频接口阶段补齐。
 
 响应原则：
 
@@ -144,11 +169,15 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 - collector 当前不会写入全站 latest news 缓存；`/api/v2/game/news/latest` 应由 backend 从 `gfg_game_v2_news` 查询并写入 backend 自己维护的聚合缓存，例如 `game:v2:news:latest:{lang}`。
 - TTL 与 collector 当前实现对齐：详情、价格、媒体、单游戏新闻 7 天；当前在线人数 3 小时；backend 自己维护的 latest news 聚合缓存建议 3 小时或更短。
 
+当前实现说明：
+
+- alpha.2 已开放公开 API，但暂未做 Redis read-through。原因是当前首要目标是验证 v2 响应合同和 PostgreSQL 回源能力，缓存所有权和聚合 key 会在 `v2.0.0-alpha.3 - Frontend Panel Contract` 及后续高频接口里统一处理。
+
 验收标准：
 
-- `gofurry-nav-web` 可以用 v2 接口完成游戏详情页基础渲染。
-- 新闻正文已经是 cleaned 内容，不需要前端再承担 BBCode/HTML 清洗。
-- API 响应字段和 `docs/game-v2-backend-contract.md` 保持一致。
+- 已满足：`gofurry-nav-web` 可以用 v2 `list/info/news/news/latest` 接口开始完成游戏详情页和新闻页基础渲染。
+- 已满足：新闻正文读取 collector v2 cleaned 字段，前端不需要再承担 BBCode/HTML 清洗。
+- 已满足：公开响应不包含 raw snapshot、上游错误体和 collect task 诊断字段；字段结构与 `docs/game-v2-backend-contract.md` 的公开模型保持同向。
 
 ## v2.0.0-alpha.3 - Frontend Panel Contract
 
