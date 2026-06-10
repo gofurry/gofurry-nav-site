@@ -14,25 +14,6 @@ func init() {
 	GameApi = &gameApi{}
 }
 
-// @Summary 获取标签列表
-// @Schemes
-// @Description 获取标签列表
-// @Tags Game
-// @Accept json
-// @Produce json
-// @Param lang query string true "语言"
-// @Success 200 {object} []models.TagModelVo
-// @Router /api/v1/game/tag/list [Get]
-func (api *gameApi) GetTagList(c fiber.Ctx) error {
-	lang := c.Query("lang", "zh")
-	data, err := service.GetGameService().GetTagList(lang)
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
 // @Summary 获取游戏的评论
 // @Schemes
 // @Description 获取游戏ID对应的评论

@@ -52,6 +52,38 @@ func (api *gameV2Api) GetGameInfo(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
+func (api *gameV2Api) SearchSimple(c fiber.Ctx) error {
+	req := v2models.GameV2SearchRequest{}
+	if err := c.Bind().Body(&req); err != nil {
+		return common.NewResponse(c).Error("解析请求体失败")
+	}
+	data, err := newReadModelService().SimpleSearch(context.Background(), req)
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
+func (api *gameV2Api) SearchPage(c fiber.Ctx) error {
+	req := v2models.GameV2SearchPageQueryRequest{}
+	if err := c.Bind().Body(&req); err != nil {
+		return common.NewResponse(c).Error("解析请求体失败")
+	}
+	data, err := newReadModelService().SearchPage(context.Background(), req)
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
+func (api *gameV2Api) GetTags(c fiber.Ctx) error {
+	data, err := newReadModelService().ListTags(context.Background(), c.Query("lang", "zh"))
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
 func (api *gameV2Api) GetGameNews(c fiber.Ctx) error {
 	id := parseInt64(c.Query("id", "0"))
 	appid := parseInt64(c.Query("appid", "0"))

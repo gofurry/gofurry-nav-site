@@ -232,6 +232,68 @@ type GameV2ListQuery struct {
 	UpdatedSince time.Time
 }
 
+type GameV2SearchRequest struct {
+	Txt  string `json:"txt"`
+	Lang string `json:"lang"`
+}
+
+type GameV2SearchPageQueryRequest struct {
+	cm.PageReq
+	Content         *string      `json:"content"`
+	PubStartTime    cm.LocalTime `json:"pub_start_time"`
+	PubEndTime      cm.LocalTime `json:"pub_end_time"`
+	UpdateStartTime cm.LocalTime `json:"update_start_time"`
+	UpdateEndTime   cm.LocalTime `json:"update_end_time"`
+	ScoreOrder      bool         `json:"score"`
+	RemarkOrder     bool         `json:"remark_order"`
+	TimeOrder       bool         `json:"time_order"`
+	TagList         []int64      `json:"tag_list"`
+	Lang            string       `json:"lang"`
+}
+
+type GameV2SearchItem struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Info  string `json:"info"`
+	Cover string `json:"cover"`
+}
+
+type GameV2SearchPageItem struct {
+	ID           string       `json:"id"`
+	Name         string       `json:"name"`
+	Info         string       `json:"info"`
+	Cover        string       `json:"cover"`
+	AppID        int64        `json:"appid"`
+	UpdateTime   cm.LocalTime `json:"update_time"`
+	ReleaseDate  string       `json:"release_date"`
+	RemarkCount  int          `json:"remark_count"`
+	AvgScore     float64      `json:"avg_score"`
+	PrimaryTag   string       `json:"primary_tag"`
+	SecondaryTag string       `json:"secondary_tag"`
+}
+
+type GameV2TagRecord struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Prefix    string `json:"prefix"`
+	GameCount int    `json:"game_count"`
+}
+
+type GameV2SearchPageQuery struct {
+	Lang            string
+	Content         string
+	PubStartTime    time.Time
+	PubEndTime      time.Time
+	UpdateStartTime time.Time
+	UpdateEndTime   time.Time
+	ScoreOrder      bool
+	RemarkOrder     bool
+	TimeOrder       bool
+	TagList         []int64
+	PageNum         int
+	PageSize        int
+}
+
 type GameV2NewsQuery struct {
 	GameID       int64
 	AppID        int64

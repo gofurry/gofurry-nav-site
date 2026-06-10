@@ -7,14 +7,18 @@ import (
 
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 	"github.com/gofurry/gofurry-game-backend/common"
+	cm "github.com/gofurry/gofurry-game-backend/common/models"
 )
 
 type fakeDetailReader struct {
-	aggregate  v2models.GameV2Aggregate
-	query      v2models.GameV2DetailQuery
-	listQuery  v2models.GameV2ListQuery
-	panelQuery v2models.GameV2PanelQuery
-	err        common.GFError
+	aggregate   v2models.GameV2Aggregate
+	query       v2models.GameV2DetailQuery
+	listQuery   v2models.GameV2ListQuery
+	searchQuery v2models.GameV2SearchPageQuery
+	panelQuery  v2models.GameV2PanelQuery
+	searchItems []v2models.GameV2SearchPageItem
+	tags        []v2models.GameV2TagRecord
+	err         common.GFError
 }
 
 func (reader *fakeDetailReader) GetGameDetailAggregate(_ context.Context, query v2models.GameV2DetailQuery) (v2models.GameV2Aggregate, common.GFError) {
@@ -31,6 +35,24 @@ func (reader *fakeDetailReader) ListGameAggregates(_ context.Context, query v2mo
 		return nil, reader.err
 	}
 	return []v2models.GameV2Aggregate{reader.aggregate}, nil
+}
+
+func (reader *fakeDetailReader) SearchGames(_ context.Context, query v2models.GameV2SearchPageQuery) (cm.PageResponse, common.GFError) {
+	reader.searchQuery = query
+	if reader.err != nil {
+		return cm.PageResponse{}, reader.err
+	}
+	return cm.PageResponse{
+		Total: int64(len(reader.searchItems)),
+		Data:  reader.searchItems,
+	}, nil
+}
+
+func (reader *fakeDetailReader) ListTags(_ context.Context, _ string) ([]v2models.GameV2TagRecord, common.GFError) {
+	if reader.err != nil {
+		return nil, reader.err
+	}
+	return reader.tags, nil
 }
 
 func (reader *fakeDetailReader) GetGameNews(_ context.Context, _ v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError) {
@@ -257,6 +279,40 @@ func TestGetGameDetailDefaultsInvalidLangAndMissingOnlineCount(t *testing.T) {
 	}
 	if res.OnlineCount.Status != onlineUnknown {
 		t.Fatalf("expected missing online count status %s, got %s", onlineUnknown, res.OnlineCount.Status)
+	}
+}
+
+func TestSimpleSearchNormalizesQuery(t *testing.T) {
+	reader := &fakeDetailReader{
+		searchItems: []v2models.GameV2SearchPageItem{
+			{
+				ID:    "1",
+				Name:  "Team Fortress 2",
+				Info:  "Class-based action",
+				Cover: "https://cdn.example/header.jpg",
+			},
+		},
+	}
+
+	svc := NewReadModelServiceWithReader(reader)
+	res, err := svc.SimpleSearch(context.Background(), v2models.GameV2SearchRequest{
+		Txt:  "  furry game  ",
+		Lang: "en-US",
+	})
+	if err != nil {
+		t.Fatalf("SimpleSearch returned error: %s", err.GetMsg())
+	}
+	if reader.searchQuery.Lang != "en" {
+		t.Fatalf("expected normalized lang en, got %s", reader.searchQuery.Lang)
+	}
+	if reader.searchQuery.Content != "furry game" {
+		t.Fatalf("expected trimmed search content, got %q", reader.searchQuery.Content)
+	}
+	if reader.searchQuery.PageNum != 1 || reader.searchQuery.PageSize != 8 {
+		t.Fatalf("expected simple search page 1 size 8, got page=%d size=%d", reader.searchQuery.PageNum, reader.searchQuery.PageSize)
+	}
+	if len(res) != 1 || res[0].ID != "1" || res[0].Cover == "" {
+		t.Fatalf("expected mapped simple search result, got %#v", res)
 	}
 }
 

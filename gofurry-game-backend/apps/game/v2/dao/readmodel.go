@@ -9,6 +9,7 @@ import (
 
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 	"github.com/gofurry/gofurry-game-backend/common"
+	cm "github.com/gofurry/gofurry-game-backend/common/models"
 	database "github.com/gofurry/gofurry-game-backend/roof/db"
 	"gorm.io/gorm"
 )
@@ -104,6 +105,72 @@ OR EXISTS (SELECT 1 FROM gfg_game_v2_news n WHERE n.game_id = gfg_game.id AND n.
 		aggregates = append(aggregates, aggregate)
 	}
 	return aggregates, nil
+}
+
+func (dao *ReadModelDAO) SearchGames(ctx context.Context, query v2models.GameV2SearchPageQuery) (cm.PageResponse, common.GFError) {
+	res := cm.PageResponse{}
+	if dao == nil || dao.db == nil {
+		return res, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	if query.Lang == "" {
+		query.Lang = "zh"
+	}
+	if query.PageNum <= 0 {
+		query.PageNum = 1
+	}
+	if query.PageSize <= 0 {
+		query.PageSize = 20
+	}
+
+	db := dao.db.WithContext(ctx)
+	q := dao.buildSearchQuery(db, query)
+	if err := q.Count(&res.Total).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("统计游戏 v2 搜索结果失败: %v", err))
+	}
+
+	q = dao.buildSearchQuery(db, query).
+		Select(searchSelectSQL(query.Lang)).
+		Offset((query.PageNum - 1) * query.PageSize).
+		Limit(query.PageSize)
+	q = applySearchSort(q, query)
+
+	items := []v2models.GameV2SearchPageItem{}
+	if err := q.Find(&items).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 搜索结果失败: %v", err))
+	}
+	res.Data = items
+	return res, nil
+}
+
+func (dao *ReadModelDAO) ListTags(ctx context.Context, lang string) ([]v2models.GameV2TagRecord, common.GFError) {
+	if dao == nil || dao.db == nil {
+		return nil, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	countSubQuery := dao.db.WithContext(ctx).
+		Table("gfg_tag_map tm").
+		Select("tm.tag_id, COUNT(DISTINCT tm.game_id) as game_count").
+		Joins("JOIN " + v2models.TableNameGfgGameV2Details + " d ON d.game_id = tm.game_id").
+		Group("tm.tag_id")
+
+	nameField := "COALESCE(NULLIF(gfg_tag.name, ''), gfg_tag.name_en) AS name"
+	if normalizeDAOLang(lang) == "en" {
+		nameField = "COALESCE(NULLIF(gfg_tag.name_en, ''), gfg_tag.name) AS name"
+	}
+
+	rows := []v2models.GameV2TagRecord{}
+	if err := dao.db.WithContext(ctx).Table("gfg_tag").
+		Joins("LEFT JOIN (?) AS tag_count ON gfg_tag.id = tag_count.tag_id", countSubQuery).
+		Select(
+			"CAST(gfg_tag.id AS VARCHAR) AS id",
+			nameField,
+			"CAST(gfg_tag.prefix AS VARCHAR) AS prefix",
+			"COALESCE(tag_count.game_count, 0) AS game_count",
+		).
+		Order("game_count DESC, gfg_tag.id ASC").
+		Find(&rows).Error; err != nil {
+		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 标签失败: %v", err))
+	}
+	return rows, nil
 }
 
 func (dao *ReadModelDAO) GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError) {
@@ -633,6 +700,136 @@ func (dao *ReadModelDAO) queryNewsRows(db *gorm.DB, query v2models.GameV2NewsQue
 	}
 	query.Lang = "zh"
 	return dao.queryNewsRows(db, query, requireGame)
+}
+
+func (dao *ReadModelDAO) buildSearchQuery(db *gorm.DB, query v2models.GameV2SearchPageQuery) *gorm.DB {
+	q := db.Table(tableNameGfgGame+" g").
+		Joins("JOIN "+v2models.TableNameGfgGameV2Details+" d ON d.game_id = g.id").
+		Joins("LEFT JOIN "+v2models.TableNameGfgGameV2LocalizedDetails+" ld ON ld.game_id = g.id AND ld.lang = ?", normalizeDAOLang(query.Lang)).
+		Joins(`LEFT JOIN (
+			SELECT DISTINCT ON (game_id) game_id, url
+			FROM ` + v2models.TableNameGfgGameV2Media + `
+			WHERE media_type IN ('header', 'capsule', 'capsule_v5')
+			ORDER BY game_id,
+				CASE media_type
+					WHEN 'header' THEN 0
+					WHEN 'capsule' THEN 1
+					ELSE 2
+				END,
+				sort_order ASC,
+				id ASC
+		) media ON media.game_id = g.id`).
+		Joins(`LEFT JOIN (
+			SELECT game_id, COUNT(*) AS remark_count, AVG(score) AS avg_score
+			FROM gfg_game_comment
+			GROUP BY game_id
+		) comment_stats ON comment_stats.game_id = g.id`).
+		Joins("LEFT JOIN gfg_tag primary_tag ON g.primary_tag = primary_tag.id").
+		Joins("LEFT JOIN gfg_tag secondary_tag ON g.secondary_tag = secondary_tag.id")
+
+	if query.Content != "" {
+		keyword := "%" + strings.ReplaceAll(query.Content, " ", "%") + "%"
+		q = q.Where(`
+			(
+				g.name ILIKE ?
+				OR g.name_en ILIKE ?
+				OR g.info ILIKE ?
+				OR g.info_en ILIKE ?
+				OR d.name ILIKE ?
+				OR d.developers::TEXT ILIKE ?
+				OR d.publishers::TEXT ILIKE ?
+				OR ld.name ILIKE ?
+				OR ld.short_description ILIKE ?
+				OR EXISTS (
+					SELECT 1
+					FROM gfg_tag_map tm
+					JOIN gfg_tag t ON t.id = tm.tag_id
+					WHERE tm.game_id = g.id
+					  AND (t.name ILIKE ? OR t.name_en ILIKE ?)
+				)
+			)
+		`, keyword, keyword, keyword, keyword, keyword, keyword, keyword, keyword, keyword, keyword, keyword)
+	}
+
+	if !query.UpdateStartTime.IsZero() && !query.UpdateEndTime.IsZero() {
+		q = q.Where(searchUpdatedAtExpr()+" BETWEEN ? AND ?", query.UpdateStartTime, query.UpdateEndTime)
+	}
+
+	if !query.PubStartTime.IsZero() && !query.PubEndTime.IsZero() {
+		q = q.Where(searchReleaseDateExpr()+" BETWEEN ? AND ?", query.PubStartTime, query.PubEndTime)
+	}
+
+	if len(query.TagList) > 0 {
+		tagSubQuery := db.Table("gfg_tag_map").
+			Select("game_id").
+			Where("tag_id IN ?", query.TagList).
+			Group("game_id").
+			Having("COUNT(DISTINCT tag_id) = ?", len(query.TagList))
+		q = q.Where("g.id IN (?)", tagSubQuery)
+	}
+	return q
+}
+
+func searchSelectSQL(lang string) string {
+	nameExpr := "COALESCE(NULLIF(ld.name, ''), NULLIF(g.name, ''), NULLIF(d.name, ''), g.name_en)"
+	infoExpr := "COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en)"
+	primaryTagExpr := "COALESCE(NULLIF(primary_tag.name, ''), primary_tag.name_en, '')"
+	secondaryTagExpr := "COALESCE(NULLIF(secondary_tag.name, ''), secondary_tag.name_en, '')"
+	if normalizeDAOLang(lang) == "en" {
+		nameExpr = "COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name_en, ''), g.name)"
+		infoExpr = "COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info_en, ''), g.info)"
+		primaryTagExpr = "COALESCE(NULLIF(primary_tag.name_en, ''), primary_tag.name, '')"
+		secondaryTagExpr = "COALESCE(NULLIF(secondary_tag.name_en, ''), secondary_tag.name, '')"
+	}
+	return fmt.Sprintf(`
+		CAST(g.id AS VARCHAR) AS id,
+		%s AS name,
+		%s AS info,
+		COALESCE(NULLIF(media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS cover,
+		g.appid AS appid,
+		%s AS update_time,
+		COALESCE(NULLIF(d.release_date_text, ''), NULLIF(g.release_date, '')) AS release_date,
+		COALESCE(comment_stats.remark_count, 0) AS remark_count,
+		COALESCE(comment_stats.avg_score, 0) AS avg_score,
+		%s AS primary_tag,
+		%s AS secondary_tag
+	`, nameExpr, infoExpr, searchUpdatedAtExpr(), primaryTagExpr, secondaryTagExpr)
+}
+
+func applySearchSort(db *gorm.DB, query v2models.GameV2SearchPageQuery) *gorm.DB {
+	orderClauses := []string{}
+	if query.TimeOrder {
+		orderClauses = append(orderClauses, searchUpdatedAtExpr()+" DESC")
+	}
+	if query.RemarkOrder {
+		orderClauses = append(orderClauses, "comment_stats.remark_count DESC NULLS LAST")
+	}
+	if query.ScoreOrder {
+		orderClauses = append(orderClauses, "comment_stats.avg_score DESC NULLS LAST")
+	}
+	orderClauses = append(orderClauses, "g.weight ASC", "g.id ASC")
+	return db.Order(strings.Join(orderClauses, ", "))
+}
+
+func searchUpdatedAtExpr() string {
+	return "GREATEST(g.update_time, COALESCE(d.updated_at, g.update_time), COALESCE(ld.updated_at, g.update_time))"
+}
+
+func searchReleaseDateExpr() string {
+	return `
+		COALESCE(
+			CASE
+				WHEN NULLIF(g.release_date, '') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
+				THEN to_date(REPLACE(g.release_date, '.', '-'), 'YYYY-MM-DD')
+				ELSE NULL
+			END,
+			CASE
+				WHEN NULLIF(d.release_date_text, '') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
+				THEN to_date(REPLACE(d.release_date_text, '.', '-'), 'YYYY-MM-DD')
+				ELSE NULL
+			END
+		)
+	`
 }
 
 func listOrder(sort string) string {

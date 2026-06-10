@@ -25,6 +25,8 @@ const (
 type gameDetailReader interface {
 	GetGameDetailAggregate(ctx context.Context, query v2models.GameV2DetailQuery) (v2models.GameV2Aggregate, common.GFError)
 	ListGameAggregates(ctx context.Context, query v2models.GameV2ListQuery) ([]v2models.GameV2Aggregate, common.GFError)
+	SearchGames(ctx context.Context, query v2models.GameV2SearchPageQuery) (cm.PageResponse, common.GFError)
+	ListTags(ctx context.Context, lang string) ([]v2models.GameV2TagRecord, common.GFError)
 	GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	GetLatestGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	ListTopOnlineAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
@@ -166,6 +168,52 @@ func (svc *ReadModelService) GetSyncGameDetail(ctx context.Context, req v2models
 		PcRequirements:      syncPCRequirements(detail.Requirements.PC),
 		UpdatedAt:           detail.UpdatedAt,
 	}, nil
+}
+
+func (svc *ReadModelService) SimpleSearch(ctx context.Context, req v2models.GameV2SearchRequest) ([]v2models.GameV2SearchItem, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return nil, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	query := normalizeSearchPageQuery(v2models.GameV2SearchPageQueryRequest{
+		PageReq: cm.PageReq{
+			PageNum:  1,
+			PageSize: 8,
+		},
+		Content: stringPtr(req.Txt),
+		Lang:    req.Lang,
+	})
+	page, err := svc.reader.SearchGames(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	items, ok := page.Data.([]v2models.GameV2SearchPageItem)
+	if !ok {
+		return nil, common.NewServiceError("game v2 simple search returned invalid data")
+	}
+	res := make([]v2models.GameV2SearchItem, 0, len(items))
+	for _, item := range items {
+		res = append(res, v2models.GameV2SearchItem{
+			ID:    item.ID,
+			Name:  item.Name,
+			Info:  item.Info,
+			Cover: item.Cover,
+		})
+	}
+	return res, nil
+}
+
+func (svc *ReadModelService) SearchPage(ctx context.Context, req v2models.GameV2SearchPageQueryRequest) (cm.PageResponse, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return cm.PageResponse{}, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	return svc.reader.SearchGames(ctx, normalizeSearchPageQuery(req))
+}
+
+func (svc *ReadModelService) ListTags(ctx context.Context, lang string) ([]v2models.GameV2TagRecord, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return nil, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	return svc.reader.ListTags(ctx, normalizeLang(lang))
 }
 
 func (svc *ReadModelService) GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsItem, common.GFError) {
@@ -537,6 +585,35 @@ func clampLimit(limit int, defaultValue int, maxValue int) int {
 		return maxValue
 	}
 	return limit
+}
+
+func normalizeSearchPageQuery(req v2models.GameV2SearchPageQueryRequest) v2models.GameV2SearchPageQuery {
+	req.InitPageIfAbsent()
+	if req.PageSize > 100 {
+		req.PageSize = 100
+	}
+	content := ""
+	if req.Content != nil {
+		content = strings.TrimSpace(*req.Content)
+	}
+	return v2models.GameV2SearchPageQuery{
+		Lang:            normalizeLang(req.Lang),
+		Content:         content,
+		PubStartTime:    req.PubStartTime.Time(),
+		PubEndTime:      req.PubEndTime.Time(),
+		UpdateStartTime: req.UpdateStartTime.Time(),
+		UpdateEndTime:   req.UpdateEndTime.Time(),
+		ScoreOrder:      req.ScoreOrder,
+		RemarkOrder:     req.RemarkOrder,
+		TimeOrder:       req.TimeOrder,
+		TagList:         append([]int64(nil), req.TagList...),
+		PageNum:         req.PageNum,
+		PageSize:        req.PageSize,
+	}
+}
+
+func stringPtr(value string) *string {
+	return &value
 }
 
 func localizedName(aggregate v2models.GameV2Aggregate, lang string) string {

@@ -7,7 +7,6 @@ import (
 	prize "github.com/gofurry/gofurry-game-backend/apps/prize/controller"
 	recommend "github.com/gofurry/gofurry-game-backend/apps/recommend/controller"
 	review "github.com/gofurry/gofurry-game-backend/apps/review/controller"
-	search "github.com/gofurry/gofurry-game-backend/apps/search/controller"
 )
 
 /*
@@ -19,12 +18,9 @@ import (
 func gameApi(g fiber.Router) {
 	g.Get("/remark", game.GameApi.GetGameRemark) // 获取单条游戏的评论
 
-	g.Get("/tag/list", game.GameApi.GetTagList) // 获取标签列表
-
 	g.Get("/creator", game.GameApi.GetGameCreator) // 获取相关开发者列表
 
 	recommendApi(g.Group("/recommend"))
-	searchApi(g.Group("/search"))
 	reviewApi(g.Group("/review"))
 	prizeApi(g.Group("/prize"))
 }
@@ -32,9 +28,12 @@ func gameApi(g fiber.Router) {
 func gameV2Api(g fiber.Router) {
 	g.Get("/list", gamev2.GameV2Api.GetGameList)
 	g.Get("/info", gamev2.GameV2Api.GetGameInfo)
+	g.Get("/tags", gamev2.GameV2Api.GetTags)
 	g.Get("/news", gamev2.GameV2Api.GetGameNews)
 	g.Get("/news/latest", gamev2.GameV2Api.GetLatestGameNews)
 	g.Get("/panel/main", gamev2.GameV2Api.GetPanelMain)
+	g.Post("/search/simple", gamev2.GameV2Api.SearchSimple)
+	g.Post("/search/page", gamev2.GameV2Api.SearchPage)
 	g.Get("/sync/list", gamev2.GameV2Api.GetSyncGameList)
 	g.Get("/sync/info", gamev2.GameV2Api.GetSyncGameInfo)
 	g.Get("/sync/news", gamev2.GameV2Api.GetSyncGameNews)
@@ -57,11 +56,6 @@ func recommendApi(g fiber.Router) {
 	// 实现重点: 余弦相似度 特征提取-独热编码
 	g.Get("/CBF", recommend.RecommendApi.RecommendByCBF)     // 用 CBF 返回游戏记录
 	g.Get("/random", recommend.RecommendApi.GetRandomGameID) // 返回一个随机的游戏记录 ID
-}
-
-func searchApi(g fiber.Router) {
-	g.Post("/simple", search.SearchApi.SimpleSearch) // 简易搜索
-	g.Post("/page", search.SearchApi.PageSearch)     // 复杂查询
 }
 
 func reviewApi(g fiber.Router) {

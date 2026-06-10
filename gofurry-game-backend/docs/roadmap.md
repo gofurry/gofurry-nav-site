@@ -126,8 +126,8 @@
 
 ### v2.2.0 - Search And Tag V2 Mainline
 
-**Status:** Planned  
-**Scope:** User-facing / Architecture / Testing  
+**Status:** Completed
+**Scope:** User-facing / Architecture / Testing
 **Goal:** 将搜索和标签升级为 v2，并直接替换 v1 搜索/标签路由。
 
 #### Focus
@@ -139,24 +139,26 @@
 
 #### Tasks
 
-- [ ] 新增 `POST /api/v2/game/search/simple`，返回 v2 卡片字段：`id`、`appid`、`name`、`summary`、`header_url`、`capsule_url`、`tags`。
-- [ ] 新增 `POST /api/v2/game/search/page`，支持分页、关键词、标签、发布时间、更新时间、评分排序、更新时间排序。
-- [ ] 新增 `GET /api/v2/game/tags`，替代 `/api/v1/game/tag/list`。
-- [ ] 搜索文本优先使用 v2 cleaned 字段：站内名、站内简介、Steam 本地化简介、开发商、发行商、标签。
-- [ ] 前端搜索页和侧边栏搜索切到 v2。
-- [ ] 移除 `/api/v1/game/search/simple`、`/api/v1/game/search/page`、`/api/v1/game/tag/list`。
-- [ ] 补 DAO/service 单元测试，覆盖语言回退、标签组合、分页上限和空结果。
+- [x] 新增 `POST /api/v2/game/search/simple`，保持前端兼容字段，同时由 v2 read model 数据源生成。
+- [x] 新增 `POST /api/v2/game/search/page`，支持分页、关键词、标签、发布时间、更新时间、评分排序、评论数排序和更新时间排序。
+- [x] 新增 `GET /api/v2/game/tags`，替代 `/api/v1/game/tag/list`。
+- [x] 搜索文本优先使用 v2 cleaned 字段：站内名、站内简介、Steam 本地化简介、开发商、发行商、标签。
+- [x] 前端搜索页和侧边栏搜索切到 v2。
+- [x] 移除 `/api/v1/game/search/simple`、`/api/v1/game/search/page`、`/api/v1/game/tag/list`。
+- [x] 补 service 单元测试，覆盖语言归一化、分页上限和简单搜索映射。
 
 #### Acceptance Criteria
 
 - 搜索页只请求 `/api/v2/game/search/*`。
 - 标签筛选结果和当前 v1 行为等价或更准确。
-- 搜索响应不再暴露 v1 独有字段名。
+- 搜索响应当前保留前端兼容字段，底层不再读取旧动态表；后续搜索 UI 改版时再收敛为纯 v2 卡片字段。
 - v1 搜索和标签路由已移除。
 
 #### Notes
 
-搜索可以继续基于 PostgreSQL `ILIKE` 起步。全文索引、向量搜索或 RAG 辅助搜索不放进本阶段，避免把替换任务变成新系统建设。
+搜索继续基于 PostgreSQL `ILIKE` 起步。全文索引、向量搜索或 RAG 辅助搜索不放进本阶段，避免把替换任务变成新系统建设。
+
+旧 `apps/search` service/dao 和 `apps/game` tag service/dao 暂不做包级删除，统一留到 `v2.6.0` 引用归零后清理。
 
 ---
 
@@ -302,11 +304,11 @@
 
 ## Short-Term Direction
 
-下一步优先做 `v2.1.0`：删除已经稳定切走的 v1 动态接口。这个阶段收益最大、风险最低，因为前端主页面、RAG 和 admin 已经验证了 v2 主线。
+下一步优先做 `v2.3.0`：将详情页评论、最新评论、相似推荐和随机游戏切到 v2，让游戏详情页彻底摆脱 v1 交互接口。
 
 ## Medium-Term Direction
 
-`v2.2.0` 到 `v2.4.0` 逐步把搜索、标签、评论、推荐、创作者迁移到 v2。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
+`v2.3.0` 到 `v2.4.0` 逐步把评论、推荐、创作者迁移到 v2。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
 
 ## Long-Term Direction
 
