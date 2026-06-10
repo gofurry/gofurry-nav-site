@@ -32,9 +32,47 @@ type NavSite struct {
 }
 
 type NavGroup struct {
-	ID    string   `json:"id"`
-	Name  string   `json:"name"`
-	Sites []string `json:"sites"`
+	ID    string        `json:"id"`
+	Name  string        `json:"name"`
+	Sites NavGroupSites `json:"sites"`
+}
+
+type NavGroupSites []string
+
+func (sites *NavGroupSites) UnmarshalJSON(data []byte) error {
+	data = []byte(strings.TrimSpace(string(data)))
+	if len(data) == 0 || string(data) == "null" {
+		*sites = nil
+		return nil
+	}
+	var items []any
+	if err := json.Unmarshal(data, &items); err != nil {
+		return err
+	}
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		if id := navGroupSiteID(item); id != "" {
+			result = append(result, id)
+		}
+	}
+	*sites = result
+	return nil
+}
+
+func navGroupSiteID(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return strings.TrimSpace(typed)
+	case float64:
+		return strings.TrimSpace(fmt.Sprint(typed))
+	case map[string]any:
+		for _, key := range []string{"id", "site_id"} {
+			if id := navGroupSiteID(typed[key]); id != "" {
+				return id
+			}
+		}
+	}
+	return ""
 }
 
 type NavSiteDetail struct {
@@ -43,6 +81,16 @@ type NavSiteDetail struct {
 	Country string `json:"country"`
 	NSFW    string `json:"nsfw"`
 	Welfare string `json:"welfare"`
+}
+
+type navV2SiteDetailPayload struct {
+	Site struct {
+		Name    string  `json:"name"`
+		Info    string  `json:"info"`
+		Country *string `json:"country"`
+		NSFW    string  `json:"nsfw"`
+		Welfare string  `json:"welfare"`
+	} `json:"site"`
 }
 
 type NavHTTPRecord struct {
@@ -87,14 +135,29 @@ func (c *HTTPNavClient) ListGroups(ctx context.Context, locale string) ([]NavGro
 }
 
 func (c *HTTPNavClient) GetSiteDetail(ctx context.Context, id, locale string) (NavSiteDetail, error) {
-	var data NavSiteDetail
-	err := c.fetchJSON(ctx, "/nav/site/getSiteDetail", map[string]string{"id": id, "lang": normalizeNavLocale(locale)}, &data)
-	return data, err
+	var data navV2SiteDetailPayload
+	err := c.fetchJSONWithBase(
+		ctx,
+		c.versionedBaseURL("v2"),
+		"/nav/sites/"+url.PathEscape(strings.TrimSpace(id))+"/detail",
+		map[string]string{"lang": normalizeNavLocale(locale)},
+		&data,
+	)
+	return NavSiteDetail{
+		Name:    data.Site.Name,
+		Info:    data.Site.Info,
+		Country: stringPtrValue(data.Site.Country),
+		NSFW:    data.Site.NSFW,
+		Welfare: data.Site.Welfare,
+	}, err
 }
 
 func (c *HTTPNavClient) GetSiteHTTP(ctx context.Context, domain string) (NavHTTPRecord, error) {
 	var data NavHTTPRecord
 	err := c.fetchJSON(ctx, "/nav/site/getSiteHttpRecord", map[string]string{"domain": domain}, &data)
+	if err != nil && isOptionalLegacyNavHTTPError(err) {
+		return NavHTTPRecord{}, nil
+	}
 	return data, err
 }
 
@@ -176,4 +239,19 @@ func normalizeNavLocale(locale string) string {
 		return "en"
 	}
 	return "zh"
+}
+
+func stringPtrValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func isOptionalLegacyNavHTTPError(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "unexpected status 404") || strings.Contains(message, "链接不存在")
 }

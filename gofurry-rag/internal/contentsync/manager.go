@@ -369,9 +369,8 @@ func runNavSitesSync(ctx context.Context, m *Manager) (syncCounts, error) {
 			counts.Total++
 			detail, err := m.navClient.GetSiteDetail(ctx, site.ID, locale)
 			if err != nil {
-				counts.Failed++
-				errs = append(errs, fmt.Errorf("load site detail %s/%s: %w", site.ID, locale, err))
-				continue
+				slog.Warn("load site detail failed, fallback to nav home site fields", "site_id", site.ID, "locale", locale, "error", err)
+				detail = navSiteDetailFromHome(site)
 			}
 			httpRecord, httpErr := m.navClient.GetSiteHTTP(ctx, site.Domain)
 			if httpErr != nil {
@@ -401,6 +400,16 @@ func runNavSitesSync(ctx context.Context, m *Manager) (syncCounts, error) {
 		}
 	}
 	return counts, errors.Join(errs...)
+}
+
+func navSiteDetailFromHome(site NavSite) NavSiteDetail {
+	return NavSiteDetail{
+		Name:    site.Name,
+		Info:    site.Info,
+		Country: site.Country,
+		NSFW:    site.NSFW,
+		Welfare: site.Welfare,
+	}
 }
 
 func applySyncAction(counts *syncCounts, action string) {

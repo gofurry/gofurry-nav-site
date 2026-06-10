@@ -50,6 +50,66 @@ func TestListSitesUsesV2HomeEndpoint(t *testing.T) {
 	}
 }
 
+func TestListGroupsAcceptsExpandedV2HomeSites(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/nav/home" {
+			t.Fatalf("path = %q", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":1,"data":{"sites":[],"groups":[{"id":"g1","name":"Group","sites":[{"id":"1","name":"Site"},{"site_id":"2"},{"id":3},"4"]}]}}`))
+	}))
+	defer server.Close()
+
+	client := NewHTTPNavClient(server.URL+"/api/v1", time.Second)
+	groups, err := client.ListGroups(context.Background(), "zh-CN")
+	if err != nil {
+		t.Fatalf("ListGroups() error = %v", err)
+	}
+	if len(groups) != 1 {
+		t.Fatalf("groups = %+v", groups)
+	}
+	want := []string{"1", "2", "3", "4"}
+	if strings.Join(groups[0].Sites, ",") != strings.Join(want, ",") {
+		t.Fatalf("group sites = %#v, want %#v", groups[0].Sites, want)
+	}
+}
+
+func TestGetSiteDetailUsesV2Endpoint(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/nav/sites/101/detail" {
+			t.Fatalf("path = %q", r.URL.Path)
+		}
+		if got := r.URL.Query().Get("lang"); got != "zh" {
+			t.Fatalf("lang = %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":1,"data":{"site":{"name":"兽人控游戏索引","info":"简介","country":null,"nsfw":"no","welfare":"no"}}}`))
+	}))
+	defer server.Close()
+
+	client := NewHTTPNavClient(server.URL+"/api/v1", time.Second)
+	detail, err := client.GetSiteDetail(context.Background(), "101", "zh-CN")
+	if err != nil {
+		t.Fatalf("GetSiteDetail() error = %v", err)
+	}
+	if detail.Name != "兽人控游戏索引" || detail.Info != "简介" {
+		t.Fatalf("detail = %+v", detail)
+	}
+}
+
+func TestGetSiteHTTPIgnoresRemovedLegacyEndpoint(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"code":0,"data":"链接不存在"}`))
+	}))
+	defer server.Close()
+
+	client := NewHTTPNavClient(server.URL+"/api/v1", time.Second)
+	if _, err := client.GetSiteHTTP(context.Background(), "example.com"); err != nil {
+		t.Fatalf("GetSiteHTTP() error = %v", err)
+	}
+}
+
 func TestNormalizeNavLocale(t *testing.T) {
 	if got := normalizeNavLocale("en-US"); got != "en" {
 		t.Fatalf("normalize en-US = %q", got)

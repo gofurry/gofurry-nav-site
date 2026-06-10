@@ -58,6 +58,36 @@ func TestRunNowCreatesAndSkipsAndUpdatesDocuments(t *testing.T) {
 	}
 }
 
+func TestRunNowFallbacksWhenNavDetailMissing(t *testing.T) {
+	repo := newFakeRepo()
+	client := &fakeSyncClient{
+		sites: map[string][]NavSite{
+			"zh-CN": {{ID: "101", Name: "站点", Domain: "example.com", Info: "来自首页"}},
+			"en-US": {{ID: "101", Name: "Site", Domain: "example.com", Info: "From home"}},
+		},
+		groups: map[string][]NavGroup{
+			"zh-CN": {{ID: "g1", Name: "社区", Sites: []string{"101"}}},
+			"en-US": {{ID: "g1", Name: "Community", Sites: []string{"101"}}},
+		},
+		detailErrs: map[string]error{
+			"101:zh-CN": errors.New("not found"),
+			"101:en-US": errors.New("not found"),
+		},
+	}
+	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, repo, client, client)
+
+	if err := manager.RunNow(context.Background(), SourceNavSites, TriggerManual); err != nil {
+		t.Fatal(err)
+	}
+	if repo.created != 2 {
+		t.Fatalf("created = %d", repo.created)
+	}
+	run := repo.runs[SourceNavSites]
+	if run.Status != "success" || run.FailedCount != 0 {
+		t.Fatalf("run = %+v", run)
+	}
+}
+
 func TestTriggerRejectsConcurrentRun(t *testing.T) {
 	repo := newFakeRepo()
 	client := &fakeSyncClient{
@@ -300,6 +330,7 @@ type fakeSyncClient struct {
 	sites        map[string][]NavSite
 	groups       map[string][]NavGroup
 	details      map[string]NavSiteDetail
+	detailErrs   map[string]error
 	httpRecords  map[string]NavHTTPRecord
 	gameLists    map[string][]GameSummary
 	gameDetails  map[string]GameDetail
@@ -320,6 +351,9 @@ func (f *fakeSyncClient) ListGroups(ctx context.Context, locale string) ([]NavGr
 }
 
 func (f *fakeSyncClient) GetSiteDetail(ctx context.Context, id, locale string) (NavSiteDetail, error) {
+	if err := f.detailErrs[id+":"+locale]; err != nil {
+		return NavSiteDetail{}, err
+	}
 	return f.details[id+":"+locale], nil
 }
 
