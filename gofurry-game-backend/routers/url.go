@@ -17,17 +17,6 @@ import (
  */
 
 func gameApi(g fiber.Router) {
-	g.Get("/info", game.GameApi.GetGameInfo)                     // 获取单条游戏的基础信息
-	g.Get("/info/list", game.GameApi.GetGameList)                // 获取前 num 条游戏记录
-	g.Get("/info/main", game.GameApi.GetGameMainList)            // 获取首页展示数据
-	g.Get("/panel/main", game.GameApi.GetPanelMainList)          // 获取首页面板数据
-	g.Get("/update/latest", game.GameApi.GetUpdateNews)          // 获取首页更新公告
-	g.Get("/update/latest/more", game.GameApi.GetUpdateNewsMore) // 获取更多首页更新公告
-	g.Get("/sync/list", game.GameApi.GetGameSyncList)            // 获取同步用的全量游戏列表
-	g.Get("/sync/info", game.GameApi.GetGameSyncInfo)            // 获取同步用的游戏详情（不触发浏览量）
-	g.Get("/sync/news", game.GameApi.GetGameSyncNews)            // 获取同步用的全量游戏新闻
-	g.Get("/sync/creators", game.GameApi.GetGameSyncCreators)    // 获取同步用的创作者列表
-
 	g.Get("/remark", game.GameApi.GetGameRemark) // 获取单条游戏的评论
 
 	g.Get("/tag/list", game.GameApi.GetTagList) // 获取标签列表

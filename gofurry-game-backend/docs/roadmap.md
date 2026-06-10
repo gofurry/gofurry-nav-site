@@ -35,7 +35,7 @@
 
 ## Remaining V1 Surface
 
-当前可以开始清理的 v1 动态接口：
+本阶段已经移除的 v1 动态接口：
 
 - `GET /api/v1/game/info`
 - `GET /api/v1/game/info/list`
@@ -87,8 +87,8 @@
 
 ### v2.1.0 - Remove Stable V1 Dynamic Routes
 
-**Status:** Planned  
-**Scope:** Architecture / Stability / Maintenance  
+**Status:** Completed
+**Scope:** Architecture / Stability / Maintenance
 **Goal:** 删除已经稳定切到 v2 的 v1 动态接口，让游戏动态数据只剩一个主线。
 
 #### Focus
@@ -100,13 +100,13 @@
 
 #### Tasks
 
-- [ ] 从 `gameApi` 中移除 `/info`、`/info/list`、`/info/main`、`/panel/main`、`/update/latest`、`/update/latest/more`。
-- [ ] 从 `gameApi` 中移除 `/sync/list`、`/sync/info`、`/sync/news`、`/sync/creators`。
-- [ ] 确认 `gofurry-nav-web` 不再请求上述 v1 路径。
-- [ ] 确认 `gofurry-rag` `sync_game_base_url` 使用 `/api/v2`。
-- [ ] 确认 `gofurry-admin` 采集观测使用 `/api/v2/game/collect/*`。
-- [ ] 删除或标记不可达的旧动态 controller/service/dao 方法。
-- [ ] 更新 Swagger、接口文档和部署说明，明确这些 v1 路径已经移除。
+- [x] 从 `gameApi` 中移除 `/info`、`/info/list`、`/info/main`、`/panel/main`、`/update/latest`、`/update/latest/more`。
+- [x] 从 `gameApi` 中移除 `/sync/list`、`/sync/info`、`/sync/news`、`/sync/creators`。
+- [x] 确认 `gofurry-nav-web` 游戏主线调用已经使用 `/api/v2/game/*`，并清理残留的旧动态接口包装函数。
+- [x] 确认 `gofurry-rag` `sync_game_base_url` 使用 `/api/v2`。
+- [x] 确认 `gofurry-admin` 采集观测通过 admin proxy 调用 `/api/v2/game/collect/*`。
+- [x] 删除旧动态 v1 controller 方法，使这些入口不再被 router 或 Swagger 注释引用。
+- [x] 更新 roadmap，明确这些 v1 动态路径已经移除。
 
 #### Acceptance Criteria
 
@@ -119,6 +119,8 @@
 #### Notes
 
 本阶段不删除 `apps/game` 整个 v1 包，因为评论、标签、创作者等接口仍可能复用其中的站内表模型。只删除已经被 v2 替代的动态读取入口。
+
+旧 service/dao 暂不在本阶段大面积删除，因为部分方法仍被定时任务、缓存刷新或后续迁移阶段间接使用。后续 `v2.6.0` 再做引用归零后的包级清理。
 
 ---
 

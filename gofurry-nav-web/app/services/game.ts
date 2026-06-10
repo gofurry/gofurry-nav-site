@@ -29,7 +29,7 @@ interface GameHomeData {
 }
 
 export function getGameList() {
-  return useApi('game')('/game/info/list')
+  return useApi('gameV2')<GameV2ListItem[]>('/game/list')
 }
 
 export async function getGameHomeData(lang = 'zh'): Promise<GameHomeData> {
