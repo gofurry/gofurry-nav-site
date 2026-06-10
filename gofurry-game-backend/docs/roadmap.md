@@ -58,6 +58,7 @@
 - `GET /api/v1/game/remark`
 - `GET /api/v1/game/tag/list`
 - `GET /api/v1/game/recommend/random`
+- `GET /api/v1/game/recommend/CBF`
 - `POST /api/v1/game/search/simple`
 - `POST /api/v1/game/search/page`
 - `POST /api/v1/game/review/anonymous`
@@ -69,10 +70,6 @@
 - `POST /api/v1/game/prize/participation`
 - `GET /api/v1/game/prize/participation/activation`
 - `GET /api/v1/game/prize/info`
-
-已经有 v2 替代、等待线上验证后删除的 v1 接口：
-
-- `GET /api/v1/game/recommend/CBF`
 
 这些接口不应长期以 v1 形式保留。后续每个阶段完成后，直接让调用方切到 v2，并移除对应 v1 路由。
 
@@ -200,14 +197,14 @@
 
 #### Acceptance Criteria
 
-- 除待清理的 `/api/v1/game/recommend/CBF` 后端路由外，游戏详情页评论读写和相似推荐不再请求 v1。
+- 游戏详情页评论读写不再请求 v1。
 - 评论读写、最新评论和随机游戏均在 `/api/v2/game/*` 下。
 - 评论响应字段保持前端兼容，不需要额外适配层。
 - v1 评论、最新评论和随机游戏路由已移除。
 
 #### Notes
 
-本阶段先完成低风险评论与随机推荐。复杂相似推荐已在 `v2.3.1` 单独设计和实现，旧 `/api/v1/game/recommend/CBF` 只剩验证后的删除工作。
+本阶段先完成低风险评论与随机推荐。复杂相似推荐已在 `v2.3.1` 单独设计和实现，旧 `/api/v1/game/recommend/CBF` 已在 `v2.3.2` 删除。
 
 ---
 
@@ -245,22 +242,34 @@
 
 #### Notes
 
-`/api/v1/game/recommend/CBF` 后端路由暂未在本阶段删除，作为前端稳定验证后的清理项。当前主线已经切到 v2，不再新增兼容层。后续可以增加 admin 手动重算或 collector 定时重算入口，把即时回填降级为纯兜底。
+当前主线已经切到 v2，不再新增兼容层。后续可以增加 admin 手动重算或 collector 定时重算入口，把即时回填降级为纯兜底。
 
 ---
 
 ### v2.3.2 - Remove Legacy CBF Route
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Maintenance / Cleanup
 **Goal:** 当前端详情页相似推荐稳定消费 v2 后，移除 `/api/v1/game/recommend/CBF` 和旧 `apps/recommend` CBF 实现。
 
 #### Tasks
 
-- [ ] 线上确认详情页只请求 `/api/v2/game/recommend/similar`。
-- [ ] 移除 `/api/v1/game/recommend/CBF` 路由。
-- [ ] 删除不再被引用的 `apps/recommend` CBF service/dao/model 代码。
-- [ ] 清理旧 Redis key：`recommend:tag-mapping`、`recommend:tag-ids`。
+- [x] 线上确认详情页只请求 `/api/v2/game/recommend/similar`。
+- [x] 移除 `/api/v1/game/recommend/CBF` 路由。
+- [x] 删除不再被引用的 `apps/recommend` CBF controller、service 和 dao。
+- [x] 删除 CBF 专用 model：`ContentSimilarities`、`GameRecommendVo`、`GameTemp`。
+- [x] 清理旧 Redis key 功能依赖：`recommend:tag-mapping`、`recommend:tag-ids` 不再被代码读取或写入。
+
+#### Acceptance Criteria
+
+- `/api/v1/game/recommend/CBF` 不再注册。
+- 后端不再编译旧 CBF controller/service/dao。
+- 前端详情页继续使用 `/api/v2/game/recommend/similar`。
+- `go test ./...` 通过。
+
+#### Notes
+
+`apps/recommend/models` 暂时保留 `gfg_tag` 与 `gfg_tag_map` 模型，因为旧 `apps/game/dao` 仍引用这些站内标签模型。后续 `v2.6.0` 做包级清理时，再把标签模型迁移到更合适的位置并删除空壳 recommend 包。
 
 ---
 
@@ -366,11 +375,11 @@
 
 ## Short-Term Direction
 
-下一步优先做 `v2.3.2`：线上确认相似推荐详情页已经稳定消费 v2 后，移除 `/api/v1/game/recommend/CBF` 和旧 CBF 包。
+下一步优先做 `v2.4.0`：把创作者公开列表迁移到 v2，并移除 `/api/v1/game/creator`。
 
 ## Medium-Term Direction
 
-`v2.3.2` 到 `v2.4.0` 先清理旧 CBF，再把创作者迁移到 v2。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
+`v2.4.0` 到 `v2.5.0` 继续把创作者和抽奖迁移到 v2。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
 
 ## Long-Term Direction
 

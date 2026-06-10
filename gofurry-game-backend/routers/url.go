@@ -5,7 +5,6 @@ import (
 	game "github.com/gofurry/gofurry-game-backend/apps/game/controller"
 	gamev2 "github.com/gofurry/gofurry-game-backend/apps/game/v2/controller"
 	prize "github.com/gofurry/gofurry-game-backend/apps/prize/controller"
-	recommend "github.com/gofurry/gofurry-game-backend/apps/recommend/controller"
 )
 
 /*
@@ -17,7 +16,6 @@ import (
 func gameApi(g fiber.Router) {
 	g.Get("/creator", game.GameApi.GetGameCreator) // 获取相关开发者列表
 
-	recommendApi(g.Group("/recommend"))
 	prizeApi(g.Group("/prize"))
 }
 
@@ -46,16 +44,6 @@ func gameV2Api(g fiber.Router) {
 	collect.Get("/runs/:run_id", gamev2.GameV2Api.GetCollectRun)
 	collect.Get("/task-results", gamev2.GameV2Api.ListCollectTaskResults)
 	collect.Get("/games/:id/status", gamev2.GameV2Api.GetGameCollectStatus)
-}
-
-func recommendApi(g fiber.Router) {
-	// TODO: 标签表新增一个权重字段
-
-	// 基于内容的推荐（Content-based Filtering）
-	// 优点: 存储小 速度快 无冷启动 无需用户行为数据
-	// 缺点: 需要传入初始物品, 特征值永远为静态, 每次推荐相同
-	// 实现重点: 余弦相似度 特征提取-独热编码
-	g.Get("/CBF", recommend.RecommendApi.RecommendByCBF) // 用 CBF 返回游戏记录
 }
 
 func prizeApi(g fiber.Router) {
