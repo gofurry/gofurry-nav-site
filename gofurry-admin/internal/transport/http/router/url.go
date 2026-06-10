@@ -84,6 +84,12 @@ func navRoutes(root fiber.Router) {
 }
 
 func gameRoutes(root fiber.Router) {
+	root.Get("/collect/status", gameadmin.GameAPI.CollectStatus)
+	root.Get("/collect/runs", gameadmin.GameAPI.CollectRuns)
+	root.Get("/collect/runs/:run_id", gameadmin.GameAPI.CollectRun)
+	root.Get("/collect/task-results", gameadmin.GameAPI.CollectTaskResults)
+	root.Get("/collect/games/:id/status", gameadmin.GameAPI.CollectGameStatus)
+
 	root.Get("/games", gameadmin.GameAPI.ListGames)
 	root.Post("/games", gameadmin.GameAPI.CreateGame)
 	root.Get("/games/:id", gameadmin.GameAPI.GetGame)

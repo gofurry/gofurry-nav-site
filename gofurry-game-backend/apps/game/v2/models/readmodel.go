@@ -246,6 +246,66 @@ type GameV2PanelQuery struct {
 	NewsLimit int
 }
 
+type GameV2CollectRunQuery struct {
+	TaskType string
+	Status   string
+	Limit    int
+	Offset   int
+}
+
+type GameV2CollectTaskResultQuery struct {
+	RunID    string
+	TaskType string
+	Status   string
+	GameID   int64
+	AppID    int64
+	Limit    int
+	Offset   int
+}
+
+type GameV2CollectStatus struct {
+	LatestRun      *GfgGameV2CollectRun             `json:"latest_run"`
+	LatestTaskRuns []GfgGameV2CollectRun            `json:"latest_task_runs"`
+	Summary        []GameV2CollectTaskStatusSummary `json:"summary"`
+	GeneratedAt    time.Time                        `json:"generated_at"`
+}
+
+type GameV2CollectTaskStatusSummary struct {
+	TaskType string `gorm:"column:task_type" json:"task_type"`
+	Status   string `gorm:"column:status" json:"status"`
+	Count    int64  `gorm:"column:count" json:"count"`
+}
+
+type GameV2CollectLocalizedStatus struct {
+	Lang        string    `json:"lang"`
+	Name        string    `json:"name"`
+	CollectedAt time.Time `json:"collected_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type GameV2CollectRegionFreshness struct {
+	Region      string    `json:"region"`
+	Available   bool      `json:"available"`
+	Currency    string    `json:"currency"`
+	FinalAmount int64     `json:"final_amount"`
+	CollectedAt time.Time `json:"collected_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type GameV2CollectGameStatus struct {
+	GameID            int64                          `json:"game_id"`
+	AppID             int64                          `json:"appid"`
+	Name              string                         `json:"name"`
+	DetailsUpdatedAt  *time.Time                     `json:"details_updated_at"`
+	Localized         []GameV2CollectLocalizedStatus `json:"localized"`
+	Prices            []GameV2CollectRegionFreshness `json:"prices"`
+	MediaCount        int64                          `json:"media_count"`
+	NewsCount         int64                          `json:"news_count"`
+	LatestNewsAt      *time.Time                     `json:"latest_news_at"`
+	LatestPlayerCount *GfgGameV2PlayerCount          `json:"latest_player_count"`
+	LatestTaskResults []GfgGameV2CollectTaskResult   `json:"latest_task_results"`
+}
+
 type GameV2DetailRequest struct {
 	GameID    int64
 	AppID     int64

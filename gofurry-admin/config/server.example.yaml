@@ -74,6 +74,13 @@ auth:
   cookie_same_site: "Lax" # Lax / Strict / None。
   csrf_header_required: true
 
+external_services:
+  game_backend:
+    base_url: "http://127.0.0.1:9998" # gofurry-game-backend 内网地址。
+    admin_token: "CHANGE_ME_LONG_RANDOM_ADMIN_TOKEN" # 与 game-backend admin.token 保持一致。
+    admin_token_header: "X-GoFurry-Admin-Token"
+    timeout_seconds: 10
+
 log:
   log_max_size: 100
   log_max_backups: 30

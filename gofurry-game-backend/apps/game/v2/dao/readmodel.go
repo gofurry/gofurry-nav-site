@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 	"github.com/gofurry/gofurry-game-backend/common"
@@ -169,6 +170,200 @@ WHERE p.region = ?
 ORDER BY p.final_amount ASC, p.discount_percent DESC, g.weight ASC, p.game_id ASC
 LIMIT ?
 `, normalizeDAORegion(query.Region), query.Limit)
+}
+
+func (dao *ReadModelDAO) GetCollectStatus(ctx context.Context) (v2models.GameV2CollectStatus, common.GFError) {
+	var res v2models.GameV2CollectStatus
+	if dao == nil || dao.db == nil {
+		return res, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	db := dao.db.WithContext(ctx)
+	latest, err := takeOptional[v2models.GfgGameV2CollectRun](db.Table(v2models.TableNameGfgGameV2CollectRuns).Order("started_at DESC, id DESC"))
+	if err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 最新采集批次失败: %v", err))
+	}
+	res.LatestRun = latest
+
+	if err := db.Raw(`
+SELECT DISTINCT ON (task_type) *
+FROM gfg_game_v2_collect_runs
+ORDER BY task_type, started_at DESC, id DESC
+`).Scan(&res.LatestTaskRuns).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 任务最新批次失败: %v", err))
+	}
+
+	if err := db.Raw(`
+SELECT task_type, status, COUNT(*) AS count
+FROM gfg_game_v2_collect_task_results
+WHERE started_at >= NOW() - INTERVAL '7 days'
+GROUP BY task_type, status
+ORDER BY task_type ASC, status ASC
+`).Scan(&res.Summary).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 任务结果摘要失败: %v", err))
+	}
+	res.GeneratedAt = time.Now()
+	return res, nil
+}
+
+func (dao *ReadModelDAO) ListCollectRuns(ctx context.Context, query v2models.GameV2CollectRunQuery) ([]v2models.GfgGameV2CollectRun, common.GFError) {
+	if dao == nil || dao.db == nil {
+		return nil, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	var rows []v2models.GfgGameV2CollectRun
+	q := dao.db.WithContext(ctx).Table(v2models.TableNameGfgGameV2CollectRuns)
+	if query.TaskType != "" {
+		q = q.Where("task_type = ?", query.TaskType)
+	}
+	if query.Status != "" {
+		q = q.Where("status = ?", query.Status)
+	}
+	if query.Limit <= 0 {
+		query.Limit = 20
+	}
+	if query.Offset < 0 {
+		query.Offset = 0
+	}
+	if err := q.Order("started_at DESC, id DESC").Limit(query.Limit).Offset(query.Offset).Find(&rows).Error; err != nil {
+		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 采集批次失败: %v", err))
+	}
+	return rows, nil
+}
+
+func (dao *ReadModelDAO) GetCollectRun(ctx context.Context, runID string) (*v2models.GfgGameV2CollectRun, common.GFError) {
+	if dao == nil || dao.db == nil {
+		return nil, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	if strings.TrimSpace(runID) == "" {
+		return nil, common.NewDaoError("run_id is required")
+	}
+	row, err := takeOptional[v2models.GfgGameV2CollectRun](dao.db.WithContext(ctx).Table(v2models.TableNameGfgGameV2CollectRuns).Where("id = ?", runID))
+	if err != nil {
+		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 采集批次失败: %v", err))
+	}
+	if row == nil {
+		return nil, common.NewDaoError("collect run not found")
+	}
+	return row, nil
+}
+
+func (dao *ReadModelDAO) ListCollectTaskResults(ctx context.Context, query v2models.GameV2CollectTaskResultQuery) ([]v2models.GfgGameV2CollectTaskResult, common.GFError) {
+	if dao == nil || dao.db == nil {
+		return nil, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	var rows []v2models.GfgGameV2CollectTaskResult
+	q := dao.db.WithContext(ctx).Table(v2models.TableNameGfgGameV2CollectTaskResults)
+	if query.RunID != "" {
+		q = q.Where("run_id = ?", query.RunID)
+	}
+	if query.TaskType != "" {
+		q = q.Where("task_type = ?", query.TaskType)
+	}
+	if query.Status != "" {
+		q = q.Where("status = ?", query.Status)
+	}
+	if query.GameID > 0 {
+		q = q.Where("game_id = ?", query.GameID)
+	}
+	if query.AppID > 0 {
+		q = q.Where("appid = ?", query.AppID)
+	}
+	if query.Limit <= 0 {
+		query.Limit = 50
+	}
+	if query.Offset < 0 {
+		query.Offset = 0
+	}
+	if err := q.Order("started_at DESC, id DESC").Limit(query.Limit).Offset(query.Offset).Find(&rows).Error; err != nil {
+		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 任务结果失败: %v", err))
+	}
+	return rows, nil
+}
+
+func (dao *ReadModelDAO) GetGameCollectStatus(ctx context.Context, gameID int64, appID int64) (v2models.GameV2CollectGameStatus, common.GFError) {
+	var res v2models.GameV2CollectGameStatus
+	if dao == nil || dao.db == nil {
+		return res, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	if gameID <= 0 && appID <= 0 {
+		return res, common.NewDaoError("game_id or appid is required")
+	}
+	db := dao.db.WithContext(ctx)
+	var site v2models.GameV2SiteRecord
+	if err := dao.loadSiteRecord(db, DetailQuery{GameID: gameID, AppID: appID}, &site); err != nil {
+		return res, common.NewDaoError(err.Error())
+	}
+	res.GameID = site.ID
+	res.AppID = site.AppID
+	res.Name = site.Name
+
+	if details, err := takeOptional[v2models.GfgGameV2Details](db.Table(v2models.TableNameGfgGameV2Details).Where("game_id = ?", site.ID)); err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 详情新鲜度失败: %v", err))
+	} else if details != nil {
+		updatedAt := details.UpdatedAt
+		res.DetailsUpdatedAt = &updatedAt
+	}
+
+	var localized []v2models.GfgGameV2LocalizedDetails
+	if err := db.Table(v2models.TableNameGfgGameV2LocalizedDetails).Where("game_id = ?", site.ID).Order("lang ASC").Find(&localized).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 本地化新鲜度失败: %v", err))
+	}
+	res.Localized = make([]v2models.GameV2CollectLocalizedStatus, 0, len(localized))
+	for _, item := range localized {
+		res.Localized = append(res.Localized, v2models.GameV2CollectLocalizedStatus{
+			Lang:        item.Lang,
+			Name:        item.Name,
+			CollectedAt: item.CollectedAt,
+			UpdatedAt:   item.UpdatedAt,
+		})
+	}
+
+	var prices []v2models.GfgGameV2Price
+	if err := db.Table(v2models.TableNameGfgGameV2Prices).Where("game_id = ?", site.ID).Order("region ASC").Find(&prices).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 价格新鲜度失败: %v", err))
+	}
+	res.Prices = make([]v2models.GameV2CollectRegionFreshness, 0, len(prices))
+	for _, price := range prices {
+		available := price.IsFree || (strings.TrimSpace(strPtrValue(price.Currency)) != "" && (price.FinalAmount > 0 || strings.TrimSpace(strPtrValue(price.FinalFormatted)) != ""))
+		res.Prices = append(res.Prices, v2models.GameV2CollectRegionFreshness{
+			Region:      price.Region,
+			Available:   available,
+			Currency:    strPtrValue(price.Currency),
+			FinalAmount: price.FinalAmount,
+			CollectedAt: price.CollectedAt,
+			UpdatedAt:   price.UpdatedAt,
+		})
+	}
+
+	if err := db.Table(v2models.TableNameGfgGameV2Media).Where("game_id = ?", site.ID).Count(&res.MediaCount).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 媒体数量失败: %v", err))
+	}
+	if err := db.Table(v2models.TableNameGfgGameV2News).Where("game_id = ?", site.ID).Count(&res.NewsCount).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 新闻数量失败: %v", err))
+	}
+	type latestNewsAtRow struct {
+		LatestNewsAt *time.Time `gorm:"column:latest_news_at"`
+	}
+	var newsAt latestNewsAtRow
+	if err := db.Table(v2models.TableNameGfgGameV2News).Select("MAX(published_at) AS latest_news_at").Where("game_id = ?", site.ID).Scan(&newsAt).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 最新新闻时间失败: %v", err))
+	}
+	res.LatestNewsAt = newsAt.LatestNewsAt
+
+	if online, err := takeOptional[v2models.GfgGameV2PlayerCount](db.Table(v2models.TableNameGfgGameV2PlayerCounts).Where("game_id = ?", site.ID).Order("collected_at DESC, id DESC")); err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 在线人数新鲜度失败: %v", err))
+	} else {
+		res.LatestPlayerCount = online
+	}
+
+	if err := db.Raw(`
+SELECT DISTINCT ON (task_type) *
+FROM gfg_game_v2_collect_task_results
+WHERE game_id = ?
+ORDER BY task_type, started_at DESC, id DESC
+`, site.ID).Scan(&res.LatestTaskResults).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 游戏最新任务结果失败: %v", err))
+	}
+	return res, nil
 }
 
 func (dao *ReadModelDAO) loadAggregateExtras(db *gorm.DB, aggregate *v2models.GameV2Aggregate, lang string, newsLimit int) error {
@@ -403,6 +598,13 @@ func normalizeDAORegion(region string) string {
 		return "CN"
 	}
 	return region
+}
+
+func strPtrValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 func takeOptional[T any](db *gorm.DB) (*T, error) {

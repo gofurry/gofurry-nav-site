@@ -40,9 +40,21 @@ type serverConfig struct {
 	Middleware        MiddlewareConfig        `mapstructure:"middleware" yaml:"middleware"`
 	Waf               WafConfig               `mapstructure:"waf" yaml:"waf"`
 	Auth              AuthConfig              `mapstructure:"auth" yaml:"auth"`
+	ExternalServices  ExternalServicesConfig  `mapstructure:"external_services" yaml:"external_services"`
 }
 
 type ServerConfigHolder = serverConfig
+
+type ExternalServicesConfig struct {
+	GameBackend BackendServiceConfig `mapstructure:"game_backend" yaml:"game_backend"`
+}
+
+type BackendServiceConfig struct {
+	BaseURL          string `mapstructure:"base_url" yaml:"base_url"`
+	AdminToken       string `mapstructure:"admin_token" yaml:"admin_token"`
+	AdminTokenHeader string `mapstructure:"admin_token_header" yaml:"admin_token_header"`
+	TimeoutSeconds   int    `mapstructure:"timeout_seconds" yaml:"timeout_seconds"`
+}
 
 type BusinessDatabasesConfig struct {
 	Nav  DataBaseConfig `mapstructure:"nav" yaml:"nav"`
@@ -359,6 +371,16 @@ func (cfg *serverConfig) normalize() {
 	}
 	if cfg.Auth.SameSite == "" {
 		cfg.Auth.SameSite = "Lax"
+	}
+
+	if cfg.ExternalServices.GameBackend.BaseURL == "" {
+		cfg.ExternalServices.GameBackend.BaseURL = "http://127.0.0.1:9998"
+	}
+	if cfg.ExternalServices.GameBackend.AdminTokenHeader == "" {
+		cfg.ExternalServices.GameBackend.AdminTokenHeader = "X-GoFurry-Admin-Token"
+	}
+	if cfg.ExternalServices.GameBackend.TimeoutSeconds <= 0 {
+		cfg.ExternalServices.GameBackend.TimeoutSeconds = 10
 	}
 }
 
@@ -697,6 +719,11 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("auth.session_ttl_hours", 720)
 	v.SetDefault("auth.cookie_same_site", "Lax")
 	v.SetDefault("auth.csrf_header_required", true)
+
+	v.SetDefault("external_services.game_backend.base_url", "http://127.0.0.1:9998")
+	v.SetDefault("external_services.game_backend.admin_token", "")
+	v.SetDefault("external_services.game_backend.admin_token_header", "X-GoFurry-Admin-Token")
+	v.SetDefault("external_services.game_backend.timeout_seconds", 10)
 }
 
 func GetServerConfig() *serverConfig {

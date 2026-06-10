@@ -49,6 +49,13 @@ function isActive(path: string) {
           <div class="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--text-muted)]">游戏库</div>
           <div class="space-y-1">
             <RouterLink
+              to="/game/collect"
+              class="block border px-3 py-2 text-sm"
+              :class="isActive('/game/collect') ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-transparent text-[var(--text-muted)] hover:border-[var(--line)] hover:text-[var(--text)]'"
+            >
+              采集观测
+            </RouterLink>
+            <RouterLink
               v-for="item in gameResources"
               :key="item.key"
               :to="`/${item.section}/${item.key}`"

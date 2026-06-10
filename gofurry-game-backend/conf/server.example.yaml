@@ -32,6 +32,10 @@ email:
   email_user: "noreply@example.com"
   email_password: "CHANGE_ME"
 
+admin:
+  token: "CHANGE_ME_LONG_RANDOM_ADMIN_TOKEN" # 与 gofurry-admin 等内部服务协商一致的服务间 token。
+  header: "X-GoFurry-Admin-Token" # 内部服务调用受保护管理接口时携带的 header。
+
 log:
   log_level: "info" # debug / info / warn / error。
   log_mode: "prod" # dev / prod。

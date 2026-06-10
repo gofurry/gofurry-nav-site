@@ -64,6 +64,41 @@ func (reader *fakeDetailReader) GetLatestGameNews(_ context.Context, _ v2models.
 	return []v2models.GameV2NewsRow{}, nil
 }
 
+func (reader *fakeDetailReader) GetCollectStatus(_ context.Context) (v2models.GameV2CollectStatus, common.GFError) {
+	if reader.err != nil {
+		return v2models.GameV2CollectStatus{}, reader.err
+	}
+	return v2models.GameV2CollectStatus{}, nil
+}
+
+func (reader *fakeDetailReader) ListCollectRuns(_ context.Context, _ v2models.GameV2CollectRunQuery) ([]v2models.GfgGameV2CollectRun, common.GFError) {
+	if reader.err != nil {
+		return nil, reader.err
+	}
+	return []v2models.GfgGameV2CollectRun{}, nil
+}
+
+func (reader *fakeDetailReader) GetCollectRun(_ context.Context, _ string) (*v2models.GfgGameV2CollectRun, common.GFError) {
+	if reader.err != nil {
+		return nil, reader.err
+	}
+	return &v2models.GfgGameV2CollectRun{}, nil
+}
+
+func (reader *fakeDetailReader) ListCollectTaskResults(_ context.Context, _ v2models.GameV2CollectTaskResultQuery) ([]v2models.GfgGameV2CollectTaskResult, common.GFError) {
+	if reader.err != nil {
+		return nil, reader.err
+	}
+	return []v2models.GfgGameV2CollectTaskResult{}, nil
+}
+
+func (reader *fakeDetailReader) GetGameCollectStatus(_ context.Context, _ int64, _ int64) (v2models.GameV2CollectGameStatus, common.GFError) {
+	if reader.err != nil {
+		return v2models.GameV2CollectGameStatus{}, reader.err
+	}
+	return v2models.GameV2CollectGameStatus{}, nil
+}
+
 func TestGetGameDetailUsesLocalizedFallback(t *testing.T) {
 	reader := &fakeDetailReader{
 		aggregate: v2models.GameV2Aggregate{

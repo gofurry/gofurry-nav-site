@@ -228,11 +228,11 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 - 已满足：`/api/v2/game/panel/main` 一次请求返回首屏主要 section。
 - 已满足：前端不用为缺失 CN 价格写 HK fallback；价格可用性仍由 v2 read model 判断。
 
-## v2.0.0-alpha.4 - Admin Collection Observability
+## v2.0.0-alpha.4 - Admin Collection Observability（已完成）
 
 目标：让运营和排查能看到 collector v2 是否真的稳定，而不是只靠日志。
 
-新增后端接口：
+已新增 game-backend 受保护接口：
 
 - `GET /api/v2/game/collect/status`
 - `GET /api/v2/game/collect/runs`
@@ -240,25 +240,28 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 - `GET /api/v2/game/collect/task-results`
 - `GET /api/v2/game/collect/games/:id/status`
 
-接口要求：
+已实现内容：
 
-- 必须受后台鉴权保护，不作为公开 API。
-- 支持按 task、status、appid、时间范围过滤。
-- 返回 run 汇总、失败原因、最近成功时间、最近失败时间。
+- 通过配置项 `admin.token` 与 `admin.header` 保护接口；默认 header 为 `X-GoFurry-Admin-Token`，同时兼容 `Authorization: Bearer`。
+- `collect/status` 返回最新批次、每类任务最新批次、近 7 天任务结果状态摘要。
+- `collect/runs` 支持按 `task_type`、`status`、`limit`、`offset` 查询。
+- `collect/task-results` 支持按 `run_id`、`task_type`、`status`、`game_id`、`appid`、`limit`、`offset` 查询。
+- `collect/games/:id/status` 返回单游戏详情、本地化、价格区域、媒体数量、新闻数量、在线人数和各任务最新结果的新鲜度。
 - raw snapshot 不默认返回；如需要调试，应单独做高权限接口并限制响应体大小。
 
-admin 配合：
+已新增 admin 配合：
 
-- `gofurry-admin` 增加“游戏采集状态”资源页。
-- 支持查看最近采集批次、失败 appid、失败类型、单游戏动态数据完整度。
+- `gofurry-admin` 增加 `external_services.game_backend` 配置，通过服务端代理调用 game-backend 受保护接口，admin token 不进入浏览器。
+- `gofurry-admin` 增加“采集观测”页面，支持查看最新批次、任务摘要、批次列表、任务结果和单游戏动态数据完整度。
 - 原有游戏主档案、评论、标签、创作者、抽奖管理继续保留，不和 v2 动态数据混在一个表单里。
 
 验收标准：
 
-- 能从 admin 判断一次全量采集是否完整。
-- 能定位某个 appid 是详情失败、新闻失败、价格锁区，还是在线人数失败。
-- collect runs 和 task results 的保留策略与 collector 配置一致。
+- 已满足：能从 admin 判断一次全量采集是否完整。
+- 已满足：能定位某个 appid 是详情失败、新闻失败、价格锁区，还是在线人数失败。
+- 已满足：collect runs 和 task results 的保留策略与 collector 配置一致。
 - 当前 collector task result 不记录 Redis 写入失败；admin 第一版以 PostgreSQL run/task 观测为准，Redis key 仅作为热缓存命中和数据新鲜度辅助信号。后续如需要 Redis 写入诊断，再补 collector 观测字段。
+- 当前版本暂不提供时间范围过滤；如果后续任务结果量进一步增长，再补 `started_from` / `started_to` 并配合索引评估。
 
 ## v2.0.0-alpha.5 - RAG Sync V2
 

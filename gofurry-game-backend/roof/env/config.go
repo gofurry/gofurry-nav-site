@@ -27,6 +27,12 @@ type serverConfig struct {
 	Middleware MiddlewareConfig `yaml:"middleware"`
 	Waf        WafConfig        `yaml:"waf"`
 	Email      EmailConfig      `yaml:"email"`
+	Admin      AdminConfig      `yaml:"admin"`
+}
+
+type AdminConfig struct {
+	Token  string `yaml:"token"`
+	Header string `yaml:"header"`
 }
 
 // EmailConfig 邮箱服务配置

@@ -29,6 +29,11 @@ type gameDetailReader interface {
 	ListFreeGameAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	ListHighestDiscountAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	ListLowPriceAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
+	GetCollectStatus(ctx context.Context) (v2models.GameV2CollectStatus, common.GFError)
+	ListCollectRuns(ctx context.Context, query v2models.GameV2CollectRunQuery) ([]v2models.GfgGameV2CollectRun, common.GFError)
+	GetCollectRun(ctx context.Context, runID string) (*v2models.GfgGameV2CollectRun, common.GFError)
+	ListCollectTaskResults(ctx context.Context, query v2models.GameV2CollectTaskResultQuery) ([]v2models.GfgGameV2CollectTaskResult, common.GFError)
+	GetGameCollectStatus(ctx context.Context, gameID int64, appID int64) (v2models.GameV2CollectGameStatus, common.GFError)
 }
 
 type ReadModelService struct {
@@ -178,6 +183,63 @@ func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.Ga
 	res.LowPrice = buildListItems(lowPrice, query.Lang, query.Region)
 	res.LatestNews = latestNews
 	return res, nil
+}
+
+func (svc *ReadModelService) GetCollectStatus(ctx context.Context) (v2models.GameV2CollectStatus, common.GFError) {
+	var res v2models.GameV2CollectStatus
+	if svc == nil || svc.reader == nil {
+		return res, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	return svc.reader.GetCollectStatus(ctx)
+}
+
+func (svc *ReadModelService) ListCollectRuns(ctx context.Context, query v2models.GameV2CollectRunQuery) ([]v2models.GfgGameV2CollectRun, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return nil, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	query.TaskType = strings.TrimSpace(query.TaskType)
+	query.Status = strings.TrimSpace(query.Status)
+	query.Limit = clampLimit(query.Limit, 20, 100)
+	if query.Offset < 0 {
+		query.Offset = 0
+	}
+	return svc.reader.ListCollectRuns(ctx, query)
+}
+
+func (svc *ReadModelService) GetCollectRun(ctx context.Context, runID string) (*v2models.GfgGameV2CollectRun, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return nil, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	runID = strings.TrimSpace(runID)
+	if runID == "" {
+		return nil, common.NewServiceError("run_id is required")
+	}
+	return svc.reader.GetCollectRun(ctx, runID)
+}
+
+func (svc *ReadModelService) ListCollectTaskResults(ctx context.Context, query v2models.GameV2CollectTaskResultQuery) ([]v2models.GfgGameV2CollectTaskResult, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return nil, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	query.RunID = strings.TrimSpace(query.RunID)
+	query.TaskType = strings.TrimSpace(query.TaskType)
+	query.Status = strings.TrimSpace(query.Status)
+	query.Limit = clampLimit(query.Limit, 50, 200)
+	if query.Offset < 0 {
+		query.Offset = 0
+	}
+	return svc.reader.ListCollectTaskResults(ctx, query)
+}
+
+func (svc *ReadModelService) GetGameCollectStatus(ctx context.Context, gameID int64, appID int64) (v2models.GameV2CollectGameStatus, common.GFError) {
+	var res v2models.GameV2CollectGameStatus
+	if svc == nil || svc.reader == nil {
+		return res, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	if gameID <= 0 && appID <= 0 {
+		return res, common.NewServiceError("game_id or appid is required")
+	}
+	return svc.reader.GetGameCollectStatus(ctx, gameID, appID)
 }
 
 func buildListItems(aggregates []v2models.GameV2Aggregate, lang string, region string) []v2models.GameV2ListItem {
