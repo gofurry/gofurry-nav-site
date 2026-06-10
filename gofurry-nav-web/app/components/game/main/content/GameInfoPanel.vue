@@ -39,7 +39,7 @@ import GameInfoGroup from '@/components/game/main/content/GameInfoGroup.vue'
 import GameStatsPanels from '@/components/game/main/content/GameStatsPanels.vue'
 import GameUpdateNews from '@/components/game/main/content/GameUpdateNews.vue'
 import { useLangStore } from '@/store/langStore'
-import { getGameMainInfo, getGameMainPanel } from '~/services/game'
+import { getGameHomeData } from '~/services/game'
 import type { BaseGameInfoRecord, GameGroupRecord, GamePanelRecord, LatestNewsRecord } from '~/types/game'
 
 interface GameItem {
@@ -114,13 +114,10 @@ function updateGroups() {
 
 async function loadGameInfoPanel() {
   try {
-    const [nextRawData, nextPanelData] = await Promise.all([
-      rawData.value ? Promise.resolve(rawData.value) : getGameMainInfo(),
-      panelData.value ? Promise.resolve(panelData.value) : getGameMainPanel(),
-    ])
+    const homeData = await getGameHomeData(lang.value)
 
-    rawData.value = nextRawData
-    panelData.value = nextPanelData
+    rawData.value = homeData.mainInfo
+    panelData.value = homeData.panelData
     updateGroups()
   } catch (error) {
     console.error('Failed to load games page content:', error)
@@ -130,7 +127,7 @@ async function loadGameInfoPanel() {
 watch(
   () => langStore.lang,
   () => {
-    updateGroups()
+    loadGameInfoPanel()
   }
 )
 

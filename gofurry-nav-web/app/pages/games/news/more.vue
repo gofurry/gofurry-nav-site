@@ -26,7 +26,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useLangStore } from '@/store/langStore'
-import { getMoreLatestGameNews } from '@/utils/api/game'
+import { getMoreLatestGameNews } from '~/services/game'
 import type { NewsBaseModel } from '@/types/game'
 
 import MoreLatestNewsList from '@/components/game/news/MoreLatestNewsList.vue'

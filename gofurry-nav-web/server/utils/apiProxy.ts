@@ -9,7 +9,7 @@ import {
   type H3Event
 } from 'h3'
 
-type ApiService = 'nav' | 'navV2' | 'game'
+type ApiService = 'nav' | 'navV2' | 'game' | 'gameV2'
 
 const hopByHopHeaders = new Set([
   'connection',
@@ -42,6 +42,9 @@ function resolveTargetBase(event: H3Event, service: ApiService) {
   const config = useRuntimeConfig(event)
   if (service === 'game') {
     return config.gameApiInternalBase
+  }
+  if (service === 'gameV2') {
+    return config.gameV2ApiInternalBase
   }
   if (service === 'navV2') {
     return config.navV2ApiInternalBase

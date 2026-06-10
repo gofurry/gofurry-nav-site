@@ -13,6 +13,12 @@ function resolveBaseURL(service: ApiService) {
       : config.public.gameApiBase
   }
 
+  if (service === 'gameV2') {
+    return import.meta.server
+      ? config.gameV2ApiInternalBase
+      : config.public.gameV2ApiBase
+  }
+
   if (service === 'navV2') {
     return import.meta.server
       ? config.navV2ApiInternalBase

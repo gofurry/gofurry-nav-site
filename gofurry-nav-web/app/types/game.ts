@@ -309,3 +309,158 @@ export interface LotteryReq {
     email: string
     key: string
 }
+
+export interface GameV2Tag {
+    id: string
+    name: string
+    desc: string
+}
+
+export interface GameV2PriceView {
+    region: string
+    available: boolean
+    unavailable_reason?: string
+    is_free: boolean
+    currency: string
+    initial_amount: number
+    final_amount: number
+    discount_percent: number
+    initial_formatted: string
+    final_formatted: string
+    collected_at: string
+    updated_at: string
+}
+
+export interface GameV2OnlineCount {
+    count: number
+    status: string
+    collected_at: string
+}
+
+export interface GameV2ListItem {
+    id: string
+    appid: string
+    name: string
+    summary: string
+    header_url: string
+    capsule_url: string
+    release_date: string
+    developers: string[]
+    publishers: string[]
+    platforms: Record<string, boolean>
+    price: GameV2PriceView
+    online_count: GameV2OnlineCount
+    tags: GameV2Tag[]
+    updated_at: string
+}
+
+export interface GameV2PanelRecord {
+    latest_games: GameV2ListItem[]
+    updated_games: GameV2ListItem[]
+    top_online: GameV2ListItem[]
+    free_games: GameV2ListItem[]
+    highest_discount: GameV2ListItem[]
+    low_price: GameV2ListItem[]
+    latest_news: GameV2NewsItem[]
+}
+
+export interface GameV2Release {
+    coming_soon: boolean
+    date: string
+}
+
+export interface GameV2MediaView {
+    header_url: string
+    capsule_url: string
+    capsule_v5_url: string
+    background_url: string
+    background_raw_url: string
+    screenshots: GameV2Screenshot[]
+    movies: GameV2Movie[]
+}
+
+export interface GameV2Screenshot {
+    id: string
+    url: string
+    thumbnail_url: string
+}
+
+export interface GameV2Movie {
+    id: string
+    name: string
+    url: string
+    thumbnail_url: string
+    extra?: unknown
+}
+
+export interface GameV2RequirementsView {
+    pc: Record<string, string>
+    mac: Record<string, string>
+    linux: Record<string, string>
+}
+
+export interface GameV2SiteInfo {
+    id: string
+    name: string
+    info: string
+    header: string
+    view_count: number
+    resources: KvModel[]
+    groups: KvModel[]
+    links: KvModel[]
+    create_time: string
+    update_time: string
+}
+
+export interface GameV2DetailRecord {
+    id: string
+    appid: string
+    requested_lang: string
+    lang: string
+    name: string
+    summary: string
+    type: string
+    is_free: boolean
+    website: string
+    header_url: string
+    short_description: string
+    detailed_description: string
+    about_the_game: string
+    release: GameV2Release
+    developers: string[]
+    publishers: string[]
+    platforms: Record<string, boolean>
+    supported_languages: string
+    support_info: Record<string, string>
+    prices: GameV2PriceView[]
+    price: GameV2PriceView
+    media: GameV2MediaView
+    requirements: GameV2RequirementsView
+    news: GameV2NewsItem[]
+    online_count: GameV2OnlineCount
+    site: GameV2SiteInfo
+    tags: GameV2Tag[]
+    collected_at: string
+    updated_at: string
+}
+
+export interface GameV2NewsItem {
+    id: string
+    game_id: string
+    appid: string
+    lang: string
+    game_name: string
+    header_url: string
+    event_gid: string
+    headline: string
+    summary: string
+    plain_text: string
+    html: string
+    url: string
+    tags: string[]
+    published_at: string
+    updated_at: string
+    comment_count: number
+    vote_up_count: number
+    vote_down_count: number
+}

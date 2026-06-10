@@ -327,7 +327,7 @@ RAG 配合：
 - 已满足：同步内容不包含 Steam raw payload。
 - 已满足：RAG 仍可通过自身 checksum 跳过未变化文档。
 
-## v2.0.0-beta.1 - Frontend Cutover
+## v2.0.0-beta.1 - Frontend Cutover（已完成）
 
 目标：前端游戏模块主要页面切到 v2，验证真实用户体验。
 
@@ -337,7 +337,7 @@ RAG 配合：
 - 游戏详情页。
 - 游戏新闻列表。
 - 更多新闻页。
-- 搜索结果中展示用字段。
+- sitemap 游戏详情 URL 来源。
 
 暂不强制切换：
 
@@ -357,9 +357,13 @@ RAG 配合：
 
 验收标准：
 
-- `gofurry-nav-web` 游戏首页和详情页默认请求 v2。
-- v1 游戏动态数据路径可以进入冻结状态。
-- 前端 v2 类型和后端 v2 响应字段一致。
+- 已满足：`gofurry-nav-web` 新增独立 `gameV2` runtime config 和 Nuxt proxy，`game` 仍保留给 v1 搜索、评论、推荐、抽奖、标签、创作者等接口。
+- 已满足：游戏首页默认读取 `/api/v2/game/panel/main`，并将 v2 panel 映射到现有首页组件模型。
+- 已满足：游戏详情页默认读取 `/api/v2/game/info`，推荐和评论继续走 v1。
+- 已满足：首页新闻、更多新闻页默认读取 `/api/v2/game/news/latest`。
+- 已满足：sitemap 游戏详情 URL 来源切到 `/api/v2/game/list`。
+- 已满足：前端新增 v2 类型，service 层集中做 v2 -> 当前 UI 模型适配，避免组件层混用 v1/v2 字段。
+- 当前暂缓：搜索结果展示字段仍走 v1 搜索接口；等 v2 搜索/推荐方案确定后单独迁移。
 
 ## v2.0.0-rc.1 - Compatibility Freeze
 

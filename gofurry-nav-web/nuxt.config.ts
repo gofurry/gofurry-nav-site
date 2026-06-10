@@ -44,8 +44,19 @@ function deriveNavV2ApiBase(base: string) {
   return `${base.replace(/\/$/, '')}/api/v2`
 }
 
+function deriveGameV2ApiBase(base: string) {
+  if (base.includes('/api/v1')) {
+    return base.replace('/api/v1', '/api/v2')
+  }
+  return `${base.replace(/\/$/, '')}/api/v2`
+}
+
 const publicNavV2ApiBase = process.env.NUXT_PUBLIC_NAV_V2_API_BASE || deriveNavV2ApiBase(publicNavApiBase)
 const navV2ApiInternalBase = process.env.NAV_V2_API_INTERNAL_BASE || process.env.NUXT_NAV_V2_API_INTERNAL_BASE || deriveNavV2ApiBase(navApiInternalBase)
+const publicGameApiBase = process.env.NUXT_PUBLIC_GAME_API_BASE || '/api/v1'
+const gameApiInternalBase = process.env.GAME_API_INTERNAL_BASE || process.env.NUXT_GAME_API_INTERNAL_BASE || 'http://192.168.153.1:9998/api/v1'
+const publicGameV2ApiBase = process.env.NUXT_PUBLIC_GAME_V2_API_BASE || deriveGameV2ApiBase(publicGameApiBase)
+const gameV2ApiInternalBase = process.env.GAME_V2_API_INTERNAL_BASE || process.env.NUXT_GAME_V2_API_INTERNAL_BASE || deriveGameV2ApiBase(gameApiInternalBase)
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-05-01',
@@ -58,7 +69,7 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()],
     define: {
       'import.meta.env.VITE_NAV_API_BASE_URL': JSON.stringify(process.env.NUXT_PUBLIC_NAV_API_BASE || '/api/v1'),
-      'import.meta.env.VITE_GAME_API_BASE_URL': JSON.stringify(process.env.NUXT_PUBLIC_GAME_API_BASE || '/api/v1'),
+      'import.meta.env.VITE_GAME_API_BASE_URL': JSON.stringify(publicGameApiBase),
       'import.meta.env.VITE_SITE_LOGO_PREFIX_URL': JSON.stringify(process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/'),
       'import.meta.env.VITE_SITE_DEFAULT_LOGO': JSON.stringify(process.env.NUXT_PUBLIC_SITE_DEFAULT_LOGO || 'https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg'),
       'import.meta.env.VITE_GAME_SITE_LOGO_PREFIX_URL': JSON.stringify(process.env.NUXT_PUBLIC_GAME_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/game/icons/'),
@@ -150,13 +161,15 @@ export default defineNuxtConfig({
   runtimeConfig: {
     navApiInternalBase,
     navV2ApiInternalBase,
-    gameApiInternalBase: process.env.GAME_API_INTERNAL_BASE || process.env.NUXT_GAME_API_INTERNAL_BASE || 'http://192.168.153.1:9998/api/v1',
+    gameApiInternalBase,
+    gameV2ApiInternalBase,
     ragApiInternalBase,
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
       navApiBase: publicNavApiBase,
       navV2ApiBase: publicNavV2ApiBase,
-      gameApiBase: process.env.NUXT_PUBLIC_GAME_API_BASE || '/api/v1',
+      gameApiBase: publicGameApiBase,
+      gameV2ApiBase: publicGameV2ApiBase,
       siteLogoPrefixUrl: process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/',
       siteDefaultLogo: process.env.NUXT_PUBLIC_SITE_DEFAULT_LOGO || 'https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg',
       gameSiteLogoPrefixUrl: process.env.NUXT_PUBLIC_GAME_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/game/icons/',

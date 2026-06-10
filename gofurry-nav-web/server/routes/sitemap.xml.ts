@@ -13,11 +13,7 @@ type GameRecord = {
   game_id?: string
 }
 
-type GameListPayload = GameRecord[] | {
-  list?: GameRecord[]
-  data?: GameRecord[]
-  rows?: GameRecord[]
-}
+type GameListPayload = GameRecord[]
 
 function escapeXml(value: string) {
   return value
@@ -73,8 +69,8 @@ export default defineEventHandler(async (event) => {
 
   const [sites, games] = await Promise.all([
     $fetch<ApiResult<{ items: SiteRecord[] }>>('/api/v2/nav/sites/index').then((res) => res.code === 1 ? res.data.items : []).catch(() => []),
-    $fetch<ApiResult<GameListPayload>>('/api/v1/game/info/list', {
-      query: { num: '9999', lang: 'zh' }
+    $fetch<ApiResult<GameListPayload>>('/api/v2/game/list', {
+      query: { limit: '5000', lang: 'zh', region: 'CN' }
     }).then((res) => res.code === 1 ? res.data : []).catch(() => [])
   ])
 
@@ -87,11 +83,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const gameList = Array.isArray(games)
-    ? games
-    : games.list ?? games.data ?? games.rows ?? []
-
-  for (const game of gameList) {
+  for (const game of games) {
     const gameId = game.id ?? game.game_id
     if (gameId != null && gameId !== '') {
       addLocalizedUrls(urls, `/games/${encodeURIComponent(String(gameId))}`)

@@ -31,7 +31,7 @@ import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue
 import GameInfoPanel from '@/components/game/main/content/GameInfoPanel.vue'
 import GameToolDock from '@/components/game/main/GameToolDock.vue'
 import SideBarPanel from '@/components/game/main/sidebar/SideBarPanel.vue'
-import { getGameMainInfo, getGameMainPanel, getLatestGameNews, getLatestReview } from '~/services/game'
+import { getGameHomeData, getLatestReview } from '~/services/game'
 import type { AnonymousReviewModel, GameGroupRecord, GamePanelRecord, LatestNewsRecord } from '~/types/game'
 
 interface GamesPageData {
@@ -42,6 +42,7 @@ interface GamesPageData {
 }
 
 const { locale } = useI18n()
+const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
 const gamesPageSeo = computed(() => locale.value === 'en'
   ? {
       heading: 'GoFurry Furry Games',
@@ -56,23 +57,22 @@ const gamesPageSeo = computed(() => locale.value === 'en'
 )
 
 const { data } = await useAsyncData<GamesPageData>(
-  'games-page',
+  () => `games-page:${lang.value}`,
   async () => {
-    const [mainInfo, panelData, latestNews, latestReviews] = await Promise.all([
-      getGameMainInfo().catch(() => null),
-      getGameMainPanel().catch(() => null),
-      getLatestGameNews().catch(() => null),
+    const [homeData, latestReviews] = await Promise.all([
+      getGameHomeData(lang.value).catch(() => null),
       getLatestReview().catch(() => []),
     ])
 
     return {
-      mainInfo,
-      panelData,
-      latestNews,
+      mainInfo: homeData?.mainInfo ?? null,
+      panelData: homeData?.panelData ?? null,
+      latestNews: homeData?.latestNews ?? null,
       latestReviews,
     }
   },
   {
+    watch: [lang],
     default: () => ({
       mainInfo: null,
       panelData: null,
