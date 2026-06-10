@@ -35,6 +35,10 @@ redis:
 security:
   jwt_secret: "CHANGE_ME_LONG_RANDOM_SECRET" # JWT 签名密钥；如使用环境变量 GF_NAV_BACKEND_JWT_SECRET，会优先生效。
 
+admin:
+  token: "CHANGE_ME_LONG_RANDOM_ADMIN_TOKEN" # 与 gofurry-admin 等内部服务协商一致的服务间 token。
+  header: "X-GoFurry-Admin-Token" # 内部服务调用受保护管理接口时携带的 header。
+
 nav_v2:
   enabled: true # v2 路由总开关；未配置时兼容旧 summary_enabled 行为。
   summary_enabled: true # 是否注册 /api/v2/nav summary 只读接口。

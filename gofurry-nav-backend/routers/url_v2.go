@@ -2,6 +2,7 @@ package routers
 
 import (
 	"github.com/gofiber/fiber/v3"
+	collect "github.com/gofurry/gofurry-nav-backend/apps/nav/collect/controller"
 	detail "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/controller"
 	home "github.com/gofurry/gofurry-nav-backend/apps/nav/home/controller"
 	search "github.com/gofurry/gofurry-nav-backend/apps/nav/search/controller"
@@ -36,4 +37,12 @@ func navV2Api(g fiber.Router, cfg env.NavV2Config) {
 		g.Get("/sites/:siteId/targets/:target/changes", detail.DetailApi.GetTargetChanges)
 		g.Get("/sites/:siteId/targets/:target/light-probes", detail.DetailApi.GetTargetLightProbes)
 	}
+	collectApi(g.Group("/collect", collect.RequireAdminToken()))
+}
+
+func collectApi(g fiber.Router) {
+	g.Get("/status", collect.CollectApi.GetStatus)
+	g.Get("/observations", collect.CollectApi.ListObservations)
+	g.Get("/sites/:siteId/status", collect.CollectApi.GetSiteStatus)
+	g.Get("/sites/:siteId/targets/:target/status", collect.CollectApi.GetTargetStatus)
 }

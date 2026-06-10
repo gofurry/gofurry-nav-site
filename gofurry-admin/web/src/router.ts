@@ -5,6 +5,7 @@ import LoginView from './views/LoginView.vue'
 import ShellView from './views/ShellView.vue'
 import ResourceView from './views/ResourceView.vue'
 import GameCollectView from './views/GameCollectView.vue'
+import NavCollectView from './views/NavCollectView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -16,6 +17,7 @@ const router = createRouter({
       component: ShellView,
       children: [
         { path: '', redirect: '/nav/sayings' },
+        { path: 'nav/collect', component: NavCollectView },
         { path: 'game/collect', component: GameCollectView },
         { path: ':section/:resource', component: ResourceView },
       ],

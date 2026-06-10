@@ -263,7 +263,40 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 - 当前 collector task result 不记录 Redis 写入失败；admin 第一版以 PostgreSQL run/task 观测为准，Redis key 仅作为热缓存命中和数据新鲜度辅助信号。后续如需要 Redis 写入诊断，再补 collector 观测字段。
 - 当前版本暂不提供时间范围过滤；如果后续任务结果量进一步增长，再补 `started_from` / `started_to` 并配合索引评估。
 
-## v2.0.0-alpha.5 - RAG Sync V2
+## v2.0.0-alpha.5 - Nav Collection Observability（已完成）
+
+目标：让 nav 模块也具备和 game 模块一致的 admin 采集观测体验，同时尊重 nav collector 已有的 Redis run state、summary、trend/change 和 PostgreSQL observation 设计。
+
+已新增 nav-backend 受保护接口：
+
+- `GET /api/v2/nav/collect/status`
+- `GET /api/v2/nav/collect/observations`
+- `GET /api/v2/nav/collect/sites/:siteId/status`
+- `GET /api/v2/nav/collect/sites/:siteId/targets/:target/status`
+
+已实现内容：
+
+- 通过配置项 `admin.token` 与 `admin.header` 保护接口；默认 header 为 `X-GoFurry-Admin-Token`，同时兼容 `Authorization: Bearer`。
+- `collect/status` 读取 collector Redis run state，返回 HTTP、DNS、Ping、RDAP、robots、security.txt、page assets、port check、WAF canary 等协议的最新运行状态。
+- `collect/status` 同时返回近 7 天 `gfn_collector_observation` 按 protocol/status 聚合的观测摘要。
+- `collect/observations` 支持按 `site_id`、`target`、`protocol`、`status`、`limit`、`offset` 查询最近 observation；默认只返回摘要字段，不返回 raw payload。
+- `collect/sites/:siteId/status` 复用已有 site summary，展示站点级健康状态和 target 状态。
+- `collect/sites/:siteId/targets/:target/status` 复用已有 target summary、latest、trend、changes，展示单 target 采集与派生状态。
+
+已新增 admin 配合：
+
+- `gofurry-admin` 增加 `external_services.nav_backend` 配置，通过服务端代理调用 nav-backend 受保护接口，admin token 不进入浏览器。
+- `gofurry-admin` 增加“导航采集观测”页面，支持查看协议运行状态、近 7 天 observation 摘要、最近观测和站点/target 排查。
+- 原有导航主档案、站点分组、精选站点、采集域名管理继续保留，不和动态观测数据混在同一个 CRUD 表单里。
+
+验收标准：
+
+- 已满足：admin 可以判断 nav collector 各协议最近一轮是否运行、是否有失败、目标数量是否异常。
+- 已满足：admin 可以按站点、target、协议和状态过滤最近 observation。
+- 已满足：admin 可以从站点/target 维度查看 summary、latest、trend、changes 的可用性。
+- 当前版本不新增 nav collector PostgreSQL run history 表；如果未来需要查询大量历史批次，再评估把 Redis run state 扩展落库。
+
+## v2.0.0-alpha.6 - RAG Sync V2
 
 目标：让 RAG 使用后端 v2 的 cleaned 内容，减少历史字段和 HTML 噪音。
 

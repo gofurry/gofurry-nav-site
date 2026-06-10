@@ -39,6 +39,11 @@ func optionsRoutes(root fiber.Router) {
 }
 
 func navRoutes(root fiber.Router) {
+	root.Get("/collect/status", navadmin.NavAPI.CollectStatus)
+	root.Get("/collect/observations", navadmin.NavAPI.CollectObservations)
+	root.Get("/collect/sites/:site_id/status", navadmin.NavAPI.CollectSiteStatus)
+	root.Get("/collect/sites/:site_id/targets/:target/status", navadmin.NavAPI.CollectTargetStatus)
+
 	root.Get("/sayings", navadmin.NavAPI.ListSayings)
 	root.Post("/sayings", navadmin.NavAPI.CreateSaying)
 	root.Get("/sayings/:id", navadmin.NavAPI.GetSaying)

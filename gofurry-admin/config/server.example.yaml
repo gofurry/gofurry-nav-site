@@ -80,6 +80,11 @@ external_services:
     admin_token: "CHANGE_ME_LONG_RANDOM_ADMIN_TOKEN" # 与 game-backend admin.token 保持一致。
     admin_token_header: "X-GoFurry-Admin-Token"
     timeout_seconds: 10
+  nav_backend:
+    base_url: "http://127.0.0.1:9999" # gofurry-nav-backend 内网地址。
+    admin_token: "CHANGE_ME_LONG_RANDOM_ADMIN_TOKEN" # 与 nav-backend admin.token 保持一致。
+    admin_token_header: "X-GoFurry-Admin-Token"
+    timeout_seconds: 10
 
 log:
   log_max_size: 100

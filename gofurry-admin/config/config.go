@@ -47,6 +47,7 @@ type ServerConfigHolder = serverConfig
 
 type ExternalServicesConfig struct {
 	GameBackend BackendServiceConfig `mapstructure:"game_backend" yaml:"game_backend"`
+	NavBackend  BackendServiceConfig `mapstructure:"nav_backend" yaml:"nav_backend"`
 }
 
 type BackendServiceConfig struct {
@@ -381,6 +382,15 @@ func (cfg *serverConfig) normalize() {
 	}
 	if cfg.ExternalServices.GameBackend.TimeoutSeconds <= 0 {
 		cfg.ExternalServices.GameBackend.TimeoutSeconds = 10
+	}
+	if cfg.ExternalServices.NavBackend.BaseURL == "" {
+		cfg.ExternalServices.NavBackend.BaseURL = "http://127.0.0.1:9999"
+	}
+	if cfg.ExternalServices.NavBackend.AdminTokenHeader == "" {
+		cfg.ExternalServices.NavBackend.AdminTokenHeader = "X-GoFurry-Admin-Token"
+	}
+	if cfg.ExternalServices.NavBackend.TimeoutSeconds <= 0 {
+		cfg.ExternalServices.NavBackend.TimeoutSeconds = 10
 	}
 }
 
@@ -724,6 +734,10 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("external_services.game_backend.admin_token", "")
 	v.SetDefault("external_services.game_backend.admin_token_header", "X-GoFurry-Admin-Token")
 	v.SetDefault("external_services.game_backend.timeout_seconds", 10)
+	v.SetDefault("external_services.nav_backend.base_url", "http://127.0.0.1:9999")
+	v.SetDefault("external_services.nav_backend.admin_token", "")
+	v.SetDefault("external_services.nav_backend.admin_token_header", "X-GoFurry-Admin-Token")
+	v.SetDefault("external_services.nav_backend.timeout_seconds", 10)
 }
 
 func GetServerConfig() *serverConfig {

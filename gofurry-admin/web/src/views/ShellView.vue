@@ -34,6 +34,13 @@ function isActive(path: string) {
           <div class="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--text-muted)]">导航库</div>
           <div class="space-y-1">
             <RouterLink
+              to="/nav/collect"
+              class="block border px-3 py-2 text-sm"
+              :class="isActive('/nav/collect') ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-transparent text-[var(--text-muted)] hover:border-[var(--line)] hover:text-[var(--text)]'"
+            >
+              采集观测
+            </RouterLink>
+            <RouterLink
               v-for="item in navResources"
               :key="item.key"
               :to="`/${item.section}/${item.key}`"

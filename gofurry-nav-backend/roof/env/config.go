@@ -34,6 +34,12 @@ type serverConfig struct {
 	Waf        WafConfig        `yaml:"waf"`
 	Proxy      ProxyConfig      `yaml:"proxy"`
 	Resource   ResourceConfig   `yaml:"resource"`
+	Admin      AdminConfig      `yaml:"admin"`
+}
+
+type AdminConfig struct {
+	Token  string `yaml:"token"`
+	Header string `yaml:"header"`
 }
 
 type ResourceConfig struct {
