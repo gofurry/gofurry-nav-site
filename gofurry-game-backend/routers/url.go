@@ -6,7 +6,6 @@ import (
 	gamev2 "github.com/gofurry/gofurry-game-backend/apps/game/v2/controller"
 	prize "github.com/gofurry/gofurry-game-backend/apps/prize/controller"
 	recommend "github.com/gofurry/gofurry-game-backend/apps/recommend/controller"
-	review "github.com/gofurry/gofurry-game-backend/apps/review/controller"
 )
 
 /*
@@ -16,12 +15,9 @@ import (
  */
 
 func gameApi(g fiber.Router) {
-	g.Get("/remark", game.GameApi.GetGameRemark) // 获取单条游戏的评论
-
 	g.Get("/creator", game.GameApi.GetGameCreator) // 获取相关开发者列表
 
 	recommendApi(g.Group("/recommend"))
-	reviewApi(g.Group("/review"))
 	prizeApi(g.Group("/prize"))
 }
 
@@ -34,6 +30,10 @@ func gameV2Api(g fiber.Router) {
 	g.Get("/panel/main", gamev2.GameV2Api.GetPanelMain)
 	g.Post("/search/simple", gamev2.GameV2Api.SearchSimple)
 	g.Post("/search/page", gamev2.GameV2Api.SearchPage)
+	g.Get("/reviews", gamev2.GameV2Api.GetGameReviews)
+	g.Post("/reviews/anonymous", gamev2.GameV2Api.AddAnonymousReview)
+	g.Get("/reviews/latest", gamev2.GameV2Api.GetLatestReviews)
+	g.Get("/recommend/random", gamev2.GameV2Api.GetRandomGame)
 	g.Get("/sync/list", gamev2.GameV2Api.GetSyncGameList)
 	g.Get("/sync/info", gamev2.GameV2Api.GetSyncGameInfo)
 	g.Get("/sync/news", gamev2.GameV2Api.GetSyncGameNews)
@@ -54,13 +54,7 @@ func recommendApi(g fiber.Router) {
 	// 优点: 存储小 速度快 无冷启动 无需用户行为数据
 	// 缺点: 需要传入初始物品, 特征值永远为静态, 每次推荐相同
 	// 实现重点: 余弦相似度 特征提取-独热编码
-	g.Get("/CBF", recommend.RecommendApi.RecommendByCBF)     // 用 CBF 返回游戏记录
-	g.Get("/random", recommend.RecommendApi.GetRandomGameID) // 返回一个随机的游戏记录 ID
-}
-
-func reviewApi(g fiber.Router) {
-	g.Post("/anonymous", review.ReviewApi.AddAnonymousReview) // 匿名评论
-	g.Get("/latest", review.ReviewApi.GetLatestReviewList)    // 获取最新的评论列表
+	g.Get("/CBF", recommend.RecommendApi.RecommendByCBF) // 用 CBF 返回游戏记录
 }
 
 func prizeApi(g fiber.Router) {

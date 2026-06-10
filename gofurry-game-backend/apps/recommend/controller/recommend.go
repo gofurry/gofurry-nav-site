@@ -14,23 +14,6 @@ func init() {
 	RecommendApi = &recommendApi{}
 }
 
-// @Summary 随机返回一个游戏记录ID
-// @Schemes
-// @Description 随机返回一个游戏记录ID
-// @Tags Recommend
-// @Accept json
-// @Produce json
-// @Success 200 {object} string
-// @Router /api/v1/game/recommend/random [Get]
-func (api *recommendApi) GetRandomGameID(c fiber.Ctx) error {
-	data, err := service.GetRecommendService().GetRandomGameID()
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
 // @Summary CBF 返回游戏记录列表
 // @Schemes
 // @Description CBF 返回游戏记录列表

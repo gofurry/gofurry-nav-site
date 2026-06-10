@@ -173,6 +173,91 @@ func (dao *ReadModelDAO) ListTags(ctx context.Context, lang string) ([]v2models.
 	return rows, nil
 }
 
+func (dao *ReadModelDAO) GetGameReviews(ctx context.Context, gameID int64) (v2models.GameV2ReviewList, common.GFError) {
+	var res v2models.GameV2ReviewList
+	if dao == nil || dao.db == nil {
+		return res, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	db := dao.db.WithContext(ctx)
+	var stats struct {
+		Total    int64
+		AvgScore float64
+	}
+	if err := db.Table("gfg_game_comment").
+		Select("COUNT(*) AS total, COALESCE(AVG(score), 0) AS avg_score").
+		Where("game_id = ?", gameID).
+		Take(&stats).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return res, common.NewDaoError(fmt.Sprintf("统计游戏 v2 评论失败: %v", err))
+	}
+	res.Total = int(stats.Total)
+	res.AvgScore = stats.AvgScore
+	res.Remarks = []v2models.GameV2ReviewItem{}
+	if stats.Total == 0 {
+		return res, nil
+	}
+	if err := db.Table("gfg_game_comment").
+		Select("region, content, score, create_time, ip, name").
+		Where("game_id = ?", gameID).
+		Order("create_time DESC, id DESC").
+		Find(&res.Remarks).Error; err != nil {
+		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 评论失败: %v", err))
+	}
+	return res, nil
+}
+
+func (dao *ReadModelDAO) ListLatestReviews(ctx context.Context, lang string, limit int) ([]v2models.GameV2LatestReview, common.GFError) {
+	if dao == nil || dao.db == nil {
+		return nil, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	if limit <= 0 {
+		limit = 5
+	}
+	nameField := "COALESCE(NULLIF(ld.name, ''), NULLIF(g.name, ''), NULLIF(d.name, ''), g.name_en) AS game_name"
+	if normalizeDAOLang(lang) == "en" {
+		nameField = "COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name_en, ''), g.name) AS game_name"
+	}
+	rows := []v2models.GameV2LatestReview{}
+	if err := dao.db.WithContext(ctx).
+		Table("gfg_game_comment c").
+		Joins("JOIN "+tableNameGfgGame+" g ON c.game_id = g.id").
+		Joins("LEFT JOIN "+v2models.TableNameGfgGameV2Details+" d ON d.game_id = g.id").
+		Joins("LEFT JOIN "+v2models.TableNameGfgGameV2LocalizedDetails+" ld ON ld.game_id = g.id AND ld.lang = ?", normalizeDAOLang(lang)).
+		Select(
+			"c.region",
+			"c.score",
+			"c.content",
+			"c.ip",
+			"c.create_time AS time",
+			"COALESCE(NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS game_cover",
+			nameField,
+		).
+		Order("c.create_time DESC, c.id DESC").
+		Limit(limit).
+		Find(&rows).Error; err != nil {
+		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 最新评论失败: %v", err))
+	}
+	return rows, nil
+}
+
+func (dao *ReadModelDAO) GetRandomGameID(ctx context.Context) (string, common.GFError) {
+	if dao == nil || dao.db == nil {
+		return "", common.NewDaoError("game v2 read model database is not initialized")
+	}
+	var row struct {
+		ID string `gorm:"column:id"`
+	}
+	if err := dao.db.WithContext(ctx).
+		Table(tableNameGfgGame + " g").
+		Select("CAST(g.id AS VARCHAR) AS id").
+		Joins("JOIN " + v2models.TableNameGfgGameV2Details + " d ON d.game_id = g.id").
+		Order("RANDOM()").
+		Limit(1).
+		Take(&row).Error; err != nil {
+		return "", common.NewDaoError(fmt.Sprintf("随机查询游戏 v2 ID 失败: %v", err))
+	}
+	return row.ID, nil
+}
+
 func (dao *ReadModelDAO) GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError) {
 	if dao == nil || dao.db == nil {
 		return nil, common.NewDaoError("game v2 read model database is not initialized")

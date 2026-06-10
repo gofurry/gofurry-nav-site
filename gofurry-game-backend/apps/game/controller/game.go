@@ -14,25 +14,6 @@ func init() {
 	GameApi = &gameApi{}
 }
 
-// @Summary 获取游戏的评论
-// @Schemes
-// @Description 获取游戏ID对应的评论
-// @Tags Game
-// @Accept json
-// @Produce json
-// @Param id query string true "游戏id"
-// @Success 200 {object} []models.GameRemarkVo
-// @Router /api/v1/game/remark [Get]
-func (api *gameApi) GetGameRemark(c fiber.Ctx) error {
-	num := c.Query("id", "0")
-	data, err := service.GetGameService().GetGameRemark(num)
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
 // @Summary 获取游戏创作者列表
 // @Schemes
 // @Description 获取游戏创作者列表

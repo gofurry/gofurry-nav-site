@@ -35,7 +35,7 @@
 
 ## Remaining V1 Surface
 
-本阶段已经移除的 v1 动态接口：
+已经移除的 v1 动态、搜索和低风险交互接口：
 
 - `GET /api/v1/game/info`
 - `GET /api/v1/game/info/list`
@@ -47,18 +47,18 @@
 - `GET /api/v1/game/sync/info`
 - `GET /api/v1/game/sync/news`
 - `GET /api/v1/game/sync/creators`
-
-仍需要升级的 v1 运营和交互接口：
-
 - `GET /api/v1/game/remark`
 - `GET /api/v1/game/tag/list`
-- `GET /api/v1/game/creator`
-- `GET /api/v1/game/recommend/CBF`
 - `GET /api/v1/game/recommend/random`
 - `POST /api/v1/game/search/simple`
 - `POST /api/v1/game/search/page`
 - `POST /api/v1/game/review/anonymous`
 - `GET /api/v1/game/review/latest`
+
+仍需要升级的 v1 运营和交互接口：
+
+- `GET /api/v1/game/creator`
+- `GET /api/v1/game/recommend/CBF`
 - `POST /api/v1/game/prize/participation`
 - `GET /api/v1/game/prize/participation/activation`
 - `GET /api/v1/game/prize/info`
@@ -162,43 +162,65 @@
 
 ---
 
-### v2.3.0 - Review And Recommendation V2 Mainline
+### v2.3.0 - Review And Random Recommendation V2 Mainline
 
-**Status:** Planned  
-**Scope:** User-facing / Stability / Security/Safety  
-**Goal:** 将详情页评论和推荐切到 v2，彻底移除详情页对 v1 的依赖。
+**Status:** Completed
+**Scope:** User-facing / Stability / Security/Safety
+**Goal:** 将详情页评论、最新评论和随机游戏切到 v2，先移除低风险 v1 交互入口。
 
 #### Focus
 
 - 评论读取
 - 匿名评论提交
 - 最新评论
-- 详情页推荐
 - 随机游戏
 
 #### Tasks
 
-- [ ] 新增 `GET /api/v2/game/reviews`，替代 `/api/v1/game/remark`。
-- [ ] 新增 `POST /api/v2/game/reviews/anonymous`，替代 `/api/v1/game/review/anonymous`。
-- [ ] 新增 `GET /api/v2/game/reviews/latest`，替代 `/api/v1/game/review/latest`。
-- [ ] 新增 `GET /api/v2/game/recommend/similar`，替代 `/api/v1/game/recommend/CBF`。
-- [ ] 新增 `GET /api/v2/game/recommend/random`，替代 `/api/v1/game/recommend/random`。
-- [ ] 推荐算法读取 v2 结构化字段和站内标签，避免继续依赖旧静态特征拼装。
-- [ ] 匿名评论保留现有风控：IP、User-Agent、频率限制、输入长度限制。
-- [ ] 前端详情页评论区、推荐栏、随机游戏入口切到 v2。
-- [ ] 移除对应 v1 路由。
-- [ ] 补测试覆盖评论提交校验、评分统计、推荐空结果、随机游戏只返回可公开游戏。
+- [x] 新增 `GET /api/v2/game/reviews`，替代 `/api/v1/game/remark`。
+- [x] 新增 `POST /api/v2/game/reviews/anonymous`，替代 `/api/v1/game/review/anonymous`。
+- [x] 新增 `GET /api/v2/game/reviews/latest`，替代 `/api/v1/game/review/latest`。
+- [x] 新增 `GET /api/v2/game/recommend/random`，替代 `/api/v1/game/recommend/random`。
+- [x] 匿名评论保留现有风控：IP、User-Agent、频率限制、输入长度限制。
+- [x] 前端详情页评论区、最新评论、随机游戏入口切到 v2。
+- [x] 移除对应 v1 路由。
+- [x] 补 service 测试覆盖评论 IP 脱敏和随机 ID 读取边界。
+- [ ] `GET /api/v2/game/recommend/similar` 暂缓，进入 `v2.3.1` 单独讨论和设计。
 
 #### Acceptance Criteria
 
-- 游戏详情页不再请求任何 `/api/v1/game/*`。
-- 评论读写和推荐接口均在 `/api/v2/game/*` 下。
-- 评论和推荐的响应字段稳定，前端不需要 v1 -> v2 适配层。
-- v1 评论和推荐路由已移除。
+- 除暂缓的 `/api/v1/game/recommend/CBF` 外，游戏详情页评论读写不再请求 v1。
+- 评论读写、最新评论和随机游戏均在 `/api/v2/game/*` 下。
+- 评论响应字段保持前端兼容，不需要额外适配层。
+- v1 评论、最新评论和随机游戏路由已移除。
 
 #### Notes
 
-本阶段不要求重做复杂推荐系统。先保证功能替换和数据来源统一，算法升级可以后置。
+本阶段不重做复杂相似推荐系统。`/api/v1/game/recommend/CBF` 暂时保留，等 `v2.3.1` 明确相似度特征、缓存、冷启动、性能预算和前端展示合同后再替换。
+
+---
+
+### v2.3.1 - Similar Recommendation V2 Design
+
+**Status:** Planned
+**Scope:** Architecture / Performance / Recommendation Quality
+**Goal:** 讨论并设计 `GET /api/v2/game/recommend/similar`，再替代 `/api/v1/game/recommend/CBF`。
+
+#### Focus
+
+- v2 相似度特征来源
+- 标签、开发商、发行商、价格、在线人数、新闻活跃度的权重
+- 缓存与预计算策略
+- 冷启动和空结果策略
+- 前端推荐栏合同
+
+#### Tasks
+
+- [ ] 评估继续使用 CBF、改为 v2 加权相似度、或引入离线预计算表。
+- [ ] 明确推荐结果是否只返回公开可访问且已有 v2 details 的游戏。
+- [ ] 设计缓存 key、TTL、刷新时机和降级策略。
+- [ ] 设计响应字段，避免前端继续依赖 v1 `similarity` 以外的旧字段。
+- [ ] 完成后再移除 `/api/v1/game/recommend/CBF`。
 
 ---
 
@@ -304,11 +326,11 @@
 
 ## Short-Term Direction
 
-下一步优先做 `v2.3.0`：将详情页评论、最新评论、相似推荐和随机游戏切到 v2，让游戏详情页彻底摆脱 v1 交互接口。
+下一步优先做 `v2.3.1`：先讨论并设计相似推荐 v2，再替代最复杂的 `/api/v1/game/recommend/CBF`。
 
 ## Medium-Term Direction
 
-`v2.3.0` 到 `v2.4.0` 逐步把评论、推荐、创作者迁移到 v2。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
+`v2.3.1` 到 `v2.4.0` 逐步把相似推荐和创作者迁移到 v2。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
 
 ## Long-Term Direction
 

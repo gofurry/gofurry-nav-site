@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"html"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -27,6 +28,9 @@ type gameDetailReader interface {
 	ListGameAggregates(ctx context.Context, query v2models.GameV2ListQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	SearchGames(ctx context.Context, query v2models.GameV2SearchPageQuery) (cm.PageResponse, common.GFError)
 	ListTags(ctx context.Context, lang string) ([]v2models.GameV2TagRecord, common.GFError)
+	GetGameReviews(ctx context.Context, gameID int64) (v2models.GameV2ReviewList, common.GFError)
+	ListLatestReviews(ctx context.Context, lang string, limit int) ([]v2models.GameV2LatestReview, common.GFError)
+	GetRandomGameID(ctx context.Context) (string, common.GFError)
 	GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	GetLatestGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	ListTopOnlineAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
@@ -214,6 +218,46 @@ func (svc *ReadModelService) ListTags(ctx context.Context, lang string) ([]v2mod
 		return nil, common.NewServiceError("game v2 read model service is not initialized")
 	}
 	return svc.reader.ListTags(ctx, normalizeLang(lang))
+}
+
+func (svc *ReadModelService) GetGameReviews(ctx context.Context, id string) (v2models.GameV2ReviewList, common.GFError) {
+	var res v2models.GameV2ReviewList
+	if svc == nil || svc.reader == nil {
+		return res, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	gameID, parseErr := strconv.ParseInt(strings.TrimSpace(id), 10, 64)
+	if parseErr != nil || gameID <= 0 {
+		return res, common.NewServiceError("Game ID 转换有误")
+	}
+	res, err := svc.reader.GetGameReviews(ctx, gameID)
+	if err != nil {
+		return res, err
+	}
+	for i := range res.Remarks {
+		res.Remarks[i].IP = desensitizeIP(res.Remarks[i].IP)
+	}
+	return res, nil
+}
+
+func (svc *ReadModelService) ListLatestReviews(ctx context.Context, lang string, limit int) ([]v2models.GameV2LatestReview, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return nil, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	rows, err := svc.reader.ListLatestReviews(ctx, normalizeLang(lang), clampLimit(limit, 5, 20))
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		rows[i].IP = desensitizeIP(rows[i].IP)
+	}
+	return rows, nil
+}
+
+func (svc *ReadModelService) GetRandomGameID(ctx context.Context) (string, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return "", common.NewServiceError("game v2 read model service is not initialized")
+	}
+	return svc.reader.GetRandomGameID(ctx)
 }
 
 func (svc *ReadModelService) GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsItem, common.GFError) {
@@ -614,6 +658,45 @@ func normalizeSearchPageQuery(req v2models.GameV2SearchPageQueryRequest) v2model
 
 func stringPtr(value string) *string {
 	return &value
+}
+
+func desensitizeIP(ip string) string {
+	if ip == "" {
+		return ""
+	}
+	ipAddr := net.ParseIP(ip)
+	if ipAddr == nil {
+		return "***"
+	}
+	if ipAddr.To4() != nil {
+		segments := strings.Split(ip, ".")
+		if len(segments) == 4 {
+			return strings.Join(segments[:3], ".") + ".***"
+		}
+		return "***"
+	}
+	if strings.Contains(ip, "::") {
+		parts := strings.Split(ip, "::")
+		if len(parts) == 2 {
+			switch {
+			case parts[1] == "":
+				return parts[0] + "::*"
+			case parts[0] == "":
+				return "::*"
+			default:
+				return parts[0] + "::****"
+			}
+		}
+	}
+	segments := strings.Split(ip, ":")
+	if len(segments) == 0 {
+		return "***"
+	}
+	keepSegCount := len(segments) - 1
+	if keepSegCount < 1 {
+		keepSegCount = 0
+	}
+	return strings.Join(segments[:keepSegCount], ":") + ":****"
 }
 
 func localizedName(aggregate v2models.GameV2Aggregate, lang string) string {

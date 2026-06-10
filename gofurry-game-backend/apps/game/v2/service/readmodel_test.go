@@ -11,14 +11,17 @@ import (
 )
 
 type fakeDetailReader struct {
-	aggregate   v2models.GameV2Aggregate
-	query       v2models.GameV2DetailQuery
-	listQuery   v2models.GameV2ListQuery
-	searchQuery v2models.GameV2SearchPageQuery
-	panelQuery  v2models.GameV2PanelQuery
-	searchItems []v2models.GameV2SearchPageItem
-	tags        []v2models.GameV2TagRecord
-	err         common.GFError
+	aggregate     v2models.GameV2Aggregate
+	query         v2models.GameV2DetailQuery
+	listQuery     v2models.GameV2ListQuery
+	searchQuery   v2models.GameV2SearchPageQuery
+	panelQuery    v2models.GameV2PanelQuery
+	searchItems   []v2models.GameV2SearchPageItem
+	tags          []v2models.GameV2TagRecord
+	reviews       v2models.GameV2ReviewList
+	latestReviews []v2models.GameV2LatestReview
+	randomGameID  string
+	err           common.GFError
 }
 
 func (reader *fakeDetailReader) GetGameDetailAggregate(_ context.Context, query v2models.GameV2DetailQuery) (v2models.GameV2Aggregate, common.GFError) {
@@ -53,6 +56,27 @@ func (reader *fakeDetailReader) ListTags(_ context.Context, _ string) ([]v2model
 		return nil, reader.err
 	}
 	return reader.tags, nil
+}
+
+func (reader *fakeDetailReader) GetGameReviews(_ context.Context, _ int64) (v2models.GameV2ReviewList, common.GFError) {
+	if reader.err != nil {
+		return v2models.GameV2ReviewList{}, reader.err
+	}
+	return reader.reviews, nil
+}
+
+func (reader *fakeDetailReader) ListLatestReviews(_ context.Context, _ string, _ int) ([]v2models.GameV2LatestReview, common.GFError) {
+	if reader.err != nil {
+		return nil, reader.err
+	}
+	return reader.latestReviews, nil
+}
+
+func (reader *fakeDetailReader) GetRandomGameID(_ context.Context) (string, common.GFError) {
+	if reader.err != nil {
+		return "", reader.err
+	}
+	return reader.randomGameID, nil
 }
 
 func (reader *fakeDetailReader) GetGameNews(_ context.Context, _ v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError) {
@@ -313,6 +337,35 @@ func TestSimpleSearchNormalizesQuery(t *testing.T) {
 	}
 	if len(res) != 1 || res[0].ID != "1" || res[0].Cover == "" {
 		t.Fatalf("expected mapped simple search result, got %#v", res)
+	}
+}
+
+func TestGetGameReviewsDesensitizesIP(t *testing.T) {
+	reader := &fakeDetailReader{
+		reviews: v2models.GameV2ReviewList{
+			Total:    1,
+			AvgScore: 4.5,
+			Remarks: []v2models.GameV2ReviewItem{
+				{
+					Region:  "Local",
+					Content: "good",
+					Score:   4.5,
+					IP:      "192.168.1.42",
+				},
+			},
+		},
+	}
+
+	svc := NewReadModelServiceWithReader(reader)
+	res, err := svc.GetGameReviews(context.Background(), "1")
+	if err != nil {
+		t.Fatalf("GetGameReviews returned error: %s", err.GetMsg())
+	}
+	if res.Total != 1 || len(res.Remarks) != 1 {
+		t.Fatalf("expected one review, got %#v", res)
+	}
+	if res.Remarks[0].IP == "192.168.1.42" {
+		t.Fatal("expected review IP to be desensitized")
 	}
 }
 

@@ -71,7 +71,7 @@ export async function getMoreLatestGameNews(lang: string, limit = 100): Promise<
 }
 
 export function getRandomGame(): Promise<string> {
-  return useApi('game')('/game/recommend/random')
+  return useApi('gameV2')('/game/recommend/random')
 }
 
 export function getSearchSimple(lang: string, txt: string): Promise<SearchItemModel[]> {
@@ -79,7 +79,7 @@ export function getSearchSimple(lang: string, txt: string): Promise<SearchItemMo
 }
 
 export function getLatestReview(): Promise<AnonymousReviewModel[]> {
-  return useApi('game')('/game/review/latest')
+  return useApi('gameV2')('/game/reviews/latest')
 }
 
 export function getTagList(lang: string): Promise<GameTagRecord[]> {
@@ -97,7 +97,7 @@ export function getGameBaseInfo(id: string, lang: string): Promise<GameBaseInfoR
 }
 
 export function getGameRemark(id: string): Promise<RemarkResponse> {
-  return useApi('game')('/game/remark', { query: { id } })
+  return useApi('gameV2')('/game/reviews', { query: { id } })
 }
 
 export function getRecommendedGame(id: string, lang: string): Promise<RecommendedModel[]> {
@@ -109,8 +109,8 @@ export function getGameCreator(lang: string): Promise<CreatorResponse[]> {
 }
 
 export function commitComment(query: CommentReq): Promise<ApiResult<string>> {
-  return $fetch('/game/review/anonymous', {
-    baseURL: useRuntimeConfig().public.gameApiBase,
+  return $fetch('/game/reviews/anonymous', {
+    baseURL: useRuntimeConfig().public.gameV2ApiBase,
     credentials: 'include',
     method: 'POST',
     body: query

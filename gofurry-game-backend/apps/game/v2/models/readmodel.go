@@ -294,6 +294,31 @@ type GameV2SearchPageQuery struct {
 	PageSize        int
 }
 
+type GameV2ReviewList struct {
+	Total    int                `json:"total"`
+	AvgScore float64            `json:"avg_score"`
+	Remarks  []GameV2ReviewItem `json:"remarks"`
+}
+
+type GameV2ReviewItem struct {
+	Region     string       `json:"region"`
+	Content    string       `json:"content"`
+	Score      float64      `json:"score"`
+	CreateTime cm.LocalTime `json:"create_time"`
+	IP         string       `json:"ip"`
+	Name       *string      `json:"name"`
+}
+
+type GameV2LatestReview struct {
+	Region    string       `json:"region"`
+	Score     float64      `json:"score"`
+	Content   string       `json:"content"`
+	IP        string       `json:"ip"`
+	Time      cm.LocalTime `json:"time"`
+	GameName  string       `json:"game_name"`
+	GameCover string       `json:"game_cover"`
+}
+
 type GameV2NewsQuery struct {
 	GameID       int64
 	AppID        int64

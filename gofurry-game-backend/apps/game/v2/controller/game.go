@@ -8,6 +8,8 @@ import (
 	v2dao "github.com/gofurry/gofurry-game-backend/apps/game/v2/dao"
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 	v2service "github.com/gofurry/gofurry-game-backend/apps/game/v2/service"
+	reviewmodels "github.com/gofurry/gofurry-game-backend/apps/review/models"
+	reviewservice "github.com/gofurry/gofurry-game-backend/apps/review/service"
 	"github.com/gofurry/gofurry-game-backend/common"
 )
 
@@ -78,6 +80,41 @@ func (api *gameV2Api) SearchPage(c fiber.Ctx) error {
 
 func (api *gameV2Api) GetTags(c fiber.Ctx) error {
 	data, err := newReadModelService().ListTags(context.Background(), c.Query("lang", "zh"))
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
+func (api *gameV2Api) GetGameReviews(c fiber.Ctx) error {
+	data, err := newReadModelService().GetGameReviews(context.Background(), c.Query("id", "0"))
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
+func (api *gameV2Api) AddAnonymousReview(c fiber.Ctx) error {
+	req := reviewmodels.AnonymousReviewRequest{}
+	if err := c.Bind().Body(&req); err != nil {
+		return common.NewResponse(c).Error("解析请求体失败")
+	}
+	if err := reviewservice.GetReviewService().AddAnonymousReview(req, c); err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).Success()
+}
+
+func (api *gameV2Api) GetLatestReviews(c fiber.Ctx) error {
+	data, err := newReadModelService().ListLatestReviews(context.Background(), c.Query("lang", "zh"), parseInt(c.Query("limit", "5")))
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
+func (api *gameV2Api) GetRandomGame(c fiber.Ctx) error {
+	data, err := newReadModelService().GetRandomGameID(context.Background())
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
