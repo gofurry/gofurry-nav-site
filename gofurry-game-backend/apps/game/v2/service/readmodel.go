@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"html"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -34,11 +36,19 @@ type gameDetailReader interface {
 	GetCollectRun(ctx context.Context, runID string) (*v2models.GfgGameV2CollectRun, common.GFError)
 	ListCollectTaskResults(ctx context.Context, query v2models.GameV2CollectTaskResultQuery) ([]v2models.GfgGameV2CollectTaskResult, common.GFError)
 	GetGameCollectStatus(ctx context.Context, gameID int64, appID int64) (v2models.GameV2CollectGameStatus, common.GFError)
+	ListSyncCreators(ctx context.Context, lang string) ([]v2models.GameV2SyncCreatorRow, common.GFError)
 }
 
 type ReadModelService struct {
 	reader gameDetailReader
 }
+
+var (
+	htmlBreakRE = regexp.MustCompile(`(?i)<\s*(br|/p|/div|/li)\s*/?>`)
+	htmlTagRE   = regexp.MustCompile(`<[^>]+>`)
+	spaceRE     = regexp.MustCompile(`[ \t\r\f\v]+`)
+	newlineRE   = regexp.MustCompile(`\n{3,}`)
+)
 
 func NewReadModelServiceWithReader(reader gameDetailReader) *ReadModelService {
 	return &ReadModelService{reader: reader}
@@ -67,6 +77,44 @@ func (svc *ReadModelService) GetGameList(ctx context.Context, query v2models.Gam
 	return res, nil
 }
 
+func (svc *ReadModelService) ListSyncGames(ctx context.Context, query v2models.GameV2SyncListQuery) ([]v2models.GameV2SyncGameSummary, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return nil, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	lang := normalizeLang(query.Lang)
+	region := normalizeRegion(query.Region)
+	limit := clampLimit(query.Limit, 5000, 5000)
+	if query.Offset < 0 {
+		query.Offset = 0
+	}
+	aggregates, err := svc.reader.ListGameAggregates(ctx, v2models.GameV2ListQuery{
+		Lang:         lang,
+		Region:       region,
+		Limit:        limit,
+		Offset:       query.Offset,
+		Sort:         "weight",
+		UpdatedSince: query.UpdatedSince,
+	})
+	if err != nil {
+		return nil, err
+	}
+	res := make([]v2models.GameV2SyncGameSummary, 0, len(aggregates))
+	for _, aggregate := range aggregates {
+		item := buildListItem(aggregate, lang, region)
+		res = append(res, v2models.GameV2SyncGameSummary{
+			ID:          item.ID,
+			AppID:       item.AppID,
+			Name:        item.Name,
+			Info:        cleanSyncText(item.Summary),
+			ReleaseDate: item.ReleaseDate,
+			Developers:  item.Developers,
+			Publishers:  item.Publishers,
+			UpdatedAt:   item.UpdatedAt,
+		})
+	}
+	return res, nil
+}
+
 func (svc *ReadModelService) GetGameDetail(ctx context.Context, req v2models.GameV2DetailRequest) (v2models.GameV2DetailReadModel, common.GFError) {
 	var res v2models.GameV2DetailReadModel
 	if svc == nil || svc.reader == nil {
@@ -89,6 +137,35 @@ func (svc *ReadModelService) GetGameDetail(ctx context.Context, req v2models.Gam
 
 	res = buildDetailReadModel(aggregate, requestedLang, region)
 	return res, nil
+}
+
+func (svc *ReadModelService) GetSyncGameDetail(ctx context.Context, req v2models.GameV2DetailRequest) (v2models.GameV2SyncGameDetail, common.GFError) {
+	var res v2models.GameV2SyncGameDetail
+	req.NewsLimit = 0
+	detail, err := svc.GetGameDetail(ctx, req)
+	if err != nil {
+		return res, err
+	}
+	return v2models.GameV2SyncGameDetail{
+		ID:                  detail.ID,
+		AppID:               detail.AppID,
+		Name:                detail.Name,
+		Info:                cleanSyncText(detail.Summary),
+		Resources:           detail.Site.Resources,
+		Groups:              detail.Site.Groups,
+		ReleaseDate:         detail.Release.Date,
+		Developers:          detail.Developers,
+		Publishers:          detail.Publishers,
+		Links:               detail.Site.Links,
+		Platform:            platformsText(detail.Platforms),
+		Tags:                detail.Tags,
+		SupportedLanguages:  cleanSyncText(detail.SupportedLanguages),
+		Website:             detail.Website,
+		DetailedDescription: cleanSyncText(detail.DetailedDescription),
+		AboutTheGame:        cleanSyncText(detail.AboutTheGame),
+		PcRequirements:      syncPCRequirements(detail.Requirements.PC),
+		UpdatedAt:           detail.UpdatedAt,
+	}, nil
 }
 
 func (svc *ReadModelService) GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsItem, common.GFError) {
@@ -121,6 +198,72 @@ func (svc *ReadModelService) GetLatestGameNews(ctx context.Context, query v2mode
 		return nil, err
 	}
 	return buildNewsRows(rows, query.Lang), nil
+}
+
+func (svc *ReadModelService) ListSyncGameNews(ctx context.Context, query v2models.GameV2SyncNewsQuery) ([]v2models.GameV2SyncNewsItem, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return nil, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	lang := normalizeLang(query.Lang)
+	limit := clampLimit(query.Limit, 5000, 5000)
+	if query.Offset < 0 {
+		query.Offset = 0
+	}
+	rows, err := svc.reader.GetLatestGameNews(ctx, v2models.GameV2NewsQuery{
+		Lang:         lang,
+		Limit:        limit,
+		Offset:       query.Offset,
+		UpdatedSince: query.UpdatedSince,
+	})
+	if err != nil {
+		return nil, err
+	}
+	items := buildNewsRows(rows, lang)
+	res := make([]v2models.GameV2SyncNewsItem, 0, len(items))
+	for _, item := range items {
+		content := firstNonEmptyString(item.PlainText, item.Summary, item.HTML)
+		res = append(res, v2models.GameV2SyncNewsItem{
+			ID:          item.ID,
+			GameID:      item.GameID,
+			AppID:       item.AppID,
+			Name:        item.GameName,
+			PostTime:    formatSyncTime(item.PublishedAt),
+			Headline:    item.Headline,
+			Author:      "",
+			Content:     cleanSyncText(content),
+			URL:         item.URL,
+			Lang:        item.Lang,
+			UpdatedAt:   item.UpdatedAt,
+			PublishedAt: item.PublishedAt,
+		})
+	}
+	return res, nil
+}
+
+func (svc *ReadModelService) ListSyncCreators(ctx context.Context, lang string) ([]v2models.GameV2SyncCreator, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return nil, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	rows, err := svc.reader.ListSyncCreators(ctx, normalizeLang(lang))
+	if err != nil {
+		return nil, err
+	}
+	res := make([]v2models.GameV2SyncCreator, 0, len(rows))
+	for _, row := range rows {
+		res = append(res, v2models.GameV2SyncCreator{
+			ID:         strconv.FormatInt(row.ID, 10),
+			Name:       row.Name,
+			Info:       cleanSyncText(row.Info),
+			URL:        row.URL,
+			Avatar:     row.Avatar,
+			Links:      parseKVList(row.Links),
+			Contact:    parseKVList(row.Contact),
+			Type:       row.Type,
+			CreateTime: row.CreateTime,
+			UpdateTime: row.UpdateTime,
+		})
+	}
+	return res, nil
 }
 
 func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.GameV2PanelQuery) (v2models.GameV2PanelReadModel, common.GFError) {
@@ -636,4 +779,80 @@ func getUpdatedAt(aggregate v2models.GameV2Aggregate) time.Time {
 		updatedAt = aggregate.OnlineCount.CollectedAt
 	}
 	return updatedAt
+}
+
+func platformsText(platforms map[string]bool) string {
+	if len(platforms) == 0 {
+		return ""
+	}
+	order := []string{"windows", "mac", "linux"}
+	res := make([]string, 0, len(platforms))
+	for _, key := range order {
+		if platforms[key] {
+			res = append(res, key)
+		}
+	}
+	for key, enabled := range platforms {
+		if !enabled || containsString(res, key) {
+			continue
+		}
+		res = append(res, key)
+	}
+	return strings.Join(res, ", ")
+}
+
+func syncPCRequirements(values map[string]string) v2models.GameV2SyncPCRequirements {
+	return v2models.GameV2SyncPCRequirements{
+		Minimum:     cleanSyncText(firstNonEmptyString(values["minimum"], values["Minimum"], values["最低配置"])),
+		Recommended: cleanSyncText(firstNonEmptyString(values["recommended"], values["Recommended"], values["推荐配置"])),
+	}
+}
+
+func cleanSyncText(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	value = html.UnescapeString(value)
+	value = htmlBreakRE.ReplaceAllString(value, "\n")
+	value = htmlTagRE.ReplaceAllString(value, " ")
+	value = strings.NewReplacer(
+		"[b]", "", "[/b]", "",
+		"[i]", "", "[/i]", "",
+		"[u]", "", "[/u]", "",
+		"[list]", "", "[/list]", "",
+		"[*]", "\n",
+	).Replace(value)
+	lines := strings.Split(value, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimSpace(spaceRE.ReplaceAllString(line, " "))
+	}
+	value = strings.Join(lines, "\n")
+	value = newlineRE.ReplaceAllString(value, "\n\n")
+	return strings.TrimSpace(value)
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		if value = strings.TrimSpace(value); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
+}
+
+func formatSyncTime(value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+	return value.Format("2006-01-02 15:04:05")
 }

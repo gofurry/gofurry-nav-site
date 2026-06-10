@@ -46,6 +46,10 @@ func gameV2Api(g fiber.Router) {
 	g.Get("/news", gamev2.GameV2Api.GetGameNews)
 	g.Get("/news/latest", gamev2.GameV2Api.GetLatestGameNews)
 	g.Get("/panel/main", gamev2.GameV2Api.GetPanelMain)
+	g.Get("/sync/list", gamev2.GameV2Api.GetSyncGameList)
+	g.Get("/sync/info", gamev2.GameV2Api.GetSyncGameInfo)
+	g.Get("/sync/news", gamev2.GameV2Api.GetSyncGameNews)
+	g.Get("/sync/creators", gamev2.GameV2Api.GetSyncCreators)
 
 	collect := g.Group("/collect", gamev2.RequireAdminToken())
 	collect.Get("/status", gamev2.GameV2Api.GetCollectStatus)

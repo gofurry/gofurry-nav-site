@@ -224,19 +224,21 @@ type GameV2DetailQuery struct {
 }
 
 type GameV2ListQuery struct {
-	Lang   string
-	Region string
-	Limit  int
-	Offset int
-	Sort   string
+	Lang         string
+	Region       string
+	Limit        int
+	Offset       int
+	Sort         string
+	UpdatedSince time.Time
 }
 
 type GameV2NewsQuery struct {
-	GameID int64
-	AppID  int64
-	Lang   string
-	Limit  int
-	Offset int
+	GameID       int64
+	AppID        int64
+	Lang         string
+	Limit        int
+	Offset       int
+	UpdatedSince time.Time
 }
 
 type GameV2PanelQuery struct {
@@ -312,6 +314,99 @@ type GameV2DetailRequest struct {
 	Lang      string
 	Region    string
 	NewsLimit int
+}
+
+type GameV2SyncListQuery struct {
+	Lang         string
+	Region       string
+	Limit        int
+	Offset       int
+	UpdatedSince time.Time
+}
+
+type GameV2SyncNewsQuery struct {
+	Lang         string
+	Limit        int
+	Offset       int
+	UpdatedSince time.Time
+}
+
+type GameV2SyncGameSummary struct {
+	ID          string    `json:"id"`
+	AppID       string    `json:"appid"`
+	Name        string    `json:"name"`
+	Info        string    `json:"info"`
+	ReleaseDate string    `json:"release_date"`
+	Developers  []string  `json:"developers"`
+	Publishers  []string  `json:"publishers"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type GameV2SyncGameDetail struct {
+	ID                  string                   `json:"id"`
+	AppID               string                   `json:"appid"`
+	Name                string                   `json:"name"`
+	Info                string                   `json:"info"`
+	Resources           []cm.KvModel             `json:"resources"`
+	Groups              []cm.KvModel             `json:"groups"`
+	ReleaseDate         string                   `json:"release_date"`
+	Developers          []string                 `json:"developers"`
+	Publishers          []string                 `json:"publishers"`
+	Links               []cm.KvModel             `json:"links"`
+	Platform            string                   `json:"platform"`
+	Tags                []GameV2Tag              `json:"tags"`
+	SupportedLanguages  string                   `json:"supported_languages"`
+	Website             string                   `json:"website"`
+	DetailedDescription string                   `json:"detailed_description"`
+	AboutTheGame        string                   `json:"about_the_game"`
+	PcRequirements      GameV2SyncPCRequirements `json:"pc_requirements"`
+	UpdatedAt           time.Time                `json:"updated_at"`
+}
+
+type GameV2SyncPCRequirements struct {
+	Minimum     string `json:"minimum"`
+	Recommended string `json:"recommended"`
+}
+
+type GameV2SyncNewsItem struct {
+	ID          string    `json:"id"`
+	GameID      string    `json:"game_id"`
+	AppID       string    `json:"appid"`
+	Name        string    `json:"name"`
+	PostTime    string    `json:"post_time"`
+	Headline    string    `json:"headline"`
+	Author      string    `json:"author"`
+	Content     string    `json:"content"`
+	URL         string    `json:"url"`
+	Lang        string    `json:"lang"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	PublishedAt time.Time `json:"published_at"`
+}
+
+type GameV2SyncCreator struct {
+	ID         string       `json:"id"`
+	Name       string       `json:"name"`
+	Info       string       `json:"info"`
+	URL        string       `json:"url"`
+	Avatar     string       `json:"avatar"`
+	Links      []cm.KvModel `json:"links"`
+	Contact    []cm.KvModel `json:"contact"`
+	Type       int64        `json:"type"`
+	CreateTime cm.LocalTime `json:"create_time"`
+	UpdateTime cm.LocalTime `json:"update_time"`
+}
+
+type GameV2SyncCreatorRow struct {
+	ID         int64        `gorm:"column:id"`
+	Name       string       `gorm:"column:name"`
+	Info       string       `gorm:"column:info"`
+	URL        string       `gorm:"column:url"`
+	Avatar     string       `gorm:"column:avatar"`
+	Links      *string      `gorm:"column:links"`
+	Contact    *string      `gorm:"column:contact"`
+	Type       int64        `gorm:"column:type"`
+	CreateTime cm.LocalTime `gorm:"column:create_time"`
+	UpdateTime cm.LocalTime `gorm:"column:update_time"`
 }
 
 type GameV2ListItem struct {

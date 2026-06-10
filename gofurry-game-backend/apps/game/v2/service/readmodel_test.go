@@ -99,6 +99,13 @@ func (reader *fakeDetailReader) GetGameCollectStatus(_ context.Context, _ int64,
 	return v2models.GameV2CollectGameStatus{}, nil
 }
 
+func (reader *fakeDetailReader) ListSyncCreators(_ context.Context, _ string) ([]v2models.GameV2SyncCreatorRow, common.GFError) {
+	if reader.err != nil {
+		return nil, reader.err
+	}
+	return []v2models.GameV2SyncCreatorRow{}, nil
+}
+
 func TestGetGameDetailUsesLocalizedFallback(t *testing.T) {
 	reader := &fakeDetailReader{
 		aggregate: v2models.GameV2Aggregate{

@@ -296,36 +296,36 @@ RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、
 - 已满足：admin 可以从站点/target 维度查看 summary、latest、trend、changes 的可用性。
 - 当前版本不新增 nav collector PostgreSQL run history 表；如果未来需要查询大量历史批次，再评估把 Redis run state 扩展落库。
 
-## v2.0.0-alpha.6 - RAG Sync V2
+## v2.0.0-alpha.6 - RAG Sync V2（已完成）
 
 目标：让 RAG 使用后端 v2 的 cleaned 内容，减少历史字段和 HTML 噪音。
 
-新增或迁移接口：
+已新增接口：
 
 - `GET /api/v2/game/sync/list`
 - `GET /api/v2/game/sync/info`
 - `GET /api/v2/game/sync/news`
 - `GET /api/v2/game/sync/creators`
 
-同步内容要求：
+已实现内容：
 
-- `sync/list` 返回轻量摘要，支持 `lang`、`limit`、`offset` 或 cursor。
+- `sync/list` 返回轻量摘要，支持 `lang`、`region`、`limit`、`offset`、`updated_since`。
 - `sync/info` 返回 cleaned/plain text 字段，包含游戏名、简介、详情、标签、开发商、发行商、平台、站内资源。
-- `sync/news` 返回 Store events 新闻，正文优先 `plain_text`。
-- `sync/creators` 可继续复用站内创作者表，但路径切到 v2。
-- 增加 `updated_since` 能力，方便 RAG 做增量同步。
+- `sync/news` 返回 Store events 新闻，正文优先 `plain_text`，支持 `lang`、`limit`、`offset`、`updated_since`。
+- `sync/creators` 复用站内创作者表，但路径切到 v2，不再依赖 v1 Redis creator 聚合缓存。
+- `gofurry-rag` 示例配置已将 `sync_game_base_url` 切到 `/api/v2`。
 
 RAG 配合：
 
 - `gofurry-rag` 将 `sync_game_base_url` 切到 `/api/v2`。
-- RAG 客户端新增 v2 字段兼容，但保留旧字段解析直到切换完成。
+- RAG 客户端保持旧字段解析即可消费 v2 sync；新增 v2 字段会被兼容忽略。
 - source id 保持稳定，例如 `game:{id}:{lang}`、`game_news:{event_id}:{lang}`。
 
 验收标准：
 
-- RAG 可以同步游戏详情、游戏新闻、创作者三类内容。
-- 同步内容不包含 raw payload。
-- 二次同步能通过 checksum 跳过未变化文档。
+- 已满足：RAG 可以通过 `/api/v2/game/sync/*` 同步游戏详情、游戏新闻、创作者三类内容。
+- 已满足：同步内容不包含 Steam raw payload。
+- 已满足：RAG 仍可通过自身 checksum 跳过未变化文档。
 
 ## v2.0.0-beta.1 - Frontend Cutover
 
