@@ -34,6 +34,7 @@ func gameV2Api(g fiber.Router) {
 	g.Post("/reviews/anonymous", gamev2.GameV2Api.AddAnonymousReview)
 	g.Get("/reviews/latest", gamev2.GameV2Api.GetLatestReviews)
 	g.Get("/recommend/random", gamev2.GameV2Api.GetRandomGame)
+	g.Get("/recommend/similar", gamev2.GameV2Api.GetSimilarRecommendations)
 	g.Get("/sync/list", gamev2.GameV2Api.GetSyncGameList)
 	g.Get("/sync/info", gamev2.GameV2Api.GetSyncGameInfo)
 	g.Get("/sync/news", gamev2.GameV2Api.GetSyncGameNews)

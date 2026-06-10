@@ -15,6 +15,14 @@
 - `GET /api/v2/game/news`
 - `GET /api/v2/game/news/latest`
 - `GET /api/v2/game/panel/main`
+- `GET /api/v2/game/recommend/random`
+- `GET /api/v2/game/recommend/similar`
+- `GET /api/v2/game/reviews`
+- `POST /api/v2/game/reviews/anonymous`
+- `GET /api/v2/game/reviews/latest`
+- `POST /api/v2/game/search/simple`
+- `POST /api/v2/game/search/page`
+- `GET /api/v2/game/tags`
 - `GET /api/v2/game/sync/list`
 - `GET /api/v2/game/sync/info`
 - `GET /api/v2/game/sync/news`
@@ -58,10 +66,13 @@
 仍需要升级的 v1 运营和交互接口：
 
 - `GET /api/v1/game/creator`
-- `GET /api/v1/game/recommend/CBF`
 - `POST /api/v1/game/prize/participation`
 - `GET /api/v1/game/prize/participation/activation`
 - `GET /api/v1/game/prize/info`
+
+已经有 v2 替代、等待线上验证后删除的 v1 接口：
+
+- `GET /api/v1/game/recommend/CBF`
 
 这些接口不应长期以 v1 形式保留。后续每个阶段完成后，直接让调用方切到 v2，并移除对应 v1 路由。
 
@@ -185,42 +196,71 @@
 - [x] 前端详情页评论区、最新评论、随机游戏入口切到 v2。
 - [x] 移除对应 v1 路由。
 - [x] 补 service 测试覆盖评论 IP 脱敏和随机 ID 读取边界。
-- [ ] `GET /api/v2/game/recommend/similar` 暂缓，进入 `v2.3.1` 单独讨论和设计。
+- [x] `GET /api/v2/game/recommend/similar` 已进入 `v2.3.1` 单独完成。
 
 #### Acceptance Criteria
 
-- 除暂缓的 `/api/v1/game/recommend/CBF` 外，游戏详情页评论读写不再请求 v1。
+- 除待清理的 `/api/v1/game/recommend/CBF` 后端路由外，游戏详情页评论读写和相似推荐不再请求 v1。
 - 评论读写、最新评论和随机游戏均在 `/api/v2/game/*` 下。
 - 评论响应字段保持前端兼容，不需要额外适配层。
 - v1 评论、最新评论和随机游戏路由已移除。
 
 #### Notes
 
-本阶段不重做复杂相似推荐系统。`/api/v1/game/recommend/CBF` 暂时保留，等 `v2.3.1` 明确相似度特征、缓存、冷启动、性能预算和前端展示合同后再替换。
+本阶段先完成低风险评论与随机推荐。复杂相似推荐已在 `v2.3.1` 单独设计和实现，旧 `/api/v1/game/recommend/CBF` 只剩验证后的删除工作。
 
 ---
 
 ### v2.3.1 - Similar Recommendation V2 Design
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Architecture / Performance / Recommendation Quality
-**Goal:** 讨论并设计 `GET /api/v2/game/recommend/similar`，再替代 `/api/v1/game/recommend/CBF`。
+**Goal:** 设计并实现 `GET /api/v2/game/recommend/similar`，让详情页相似推荐从 v1 CBF 切到 v2 hybrid read model。
 
 #### Focus
 
 - v2 相似度特征来源
-- 标签、开发商、发行商、价格、在线人数、新闻活跃度的权重
-- 缓存与预计算策略
+- 标签、开发商、发行商、价格、在线人数的权重
+- PostgreSQL 预计算表与开发环境即时回填
 - 冷启动和空结果策略
 - 前端推荐栏合同
 
 #### Tasks
 
-- [ ] 评估继续使用 CBF、改为 v2 加权相似度、或引入离线预计算表。
-- [ ] 明确推荐结果是否只返回公开可访问且已有 v2 details 的游戏。
-- [ ] 设计缓存 key、TTL、刷新时机和降级策略。
-- [ ] 设计响应字段，避免前端继续依赖 v1 `similarity` 以外的旧字段。
-- [ ] 完成后再移除 `/api/v1/game/recommend/CBF`。
+- [x] 选型为 v2 hybrid CBF：标签 Weighted Jaccard + 创作者 + 文本 + 平台 + 价格 + 活跃度。
+- [x] 新增 `gfg_game_v2_recommendations` 预计算表，记录 `score`、`display_score`、`reason_json`、`algorithm_version`。
+- [x] 新增 `GET /api/v2/game/recommend/similar`，只返回已有 v2 details 的游戏。
+- [x] API 优先读取预计算结果；单个游戏缺失时即时计算 top 64 并写回，便于开发环境立即验证。
+- [x] 响应字段改为纯 v2 合同：`score`、`display_score`、`reasons`、`header_url`、`capsule_url`、`tags`、`price`、`online_count`。
+- [x] 前端详情页相似推荐切到 `/api/v2/game/recommend/similar`。
+- [x] 在代码中写入中文算法选型说明、权重设计和后续扩展边界。
+
+#### Acceptance Criteria
+
+- 详情页不再请求 `/api/v1/game/recommend/CBF`。
+- 推荐接口不依赖旧 `apps/recommend` CBF 运行时计算。
+- 新增 SQL migration 可独立执行，不破坏现有 game v2 表。
+- 缺少预计算数据时，接口能为单个源游戏计算并回填。
+- 推荐结果带可解释理由，方便前端展示和后续人工调权。
+
+#### Notes
+
+`/api/v1/game/recommend/CBF` 后端路由暂未在本阶段删除，作为前端稳定验证后的清理项。当前主线已经切到 v2，不再新增兼容层。后续可以增加 admin 手动重算或 collector 定时重算入口，把即时回填降级为纯兜底。
+
+---
+
+### v2.3.2 - Remove Legacy CBF Route
+
+**Status:** Planned
+**Scope:** Maintenance / Cleanup
+**Goal:** 当前端详情页相似推荐稳定消费 v2 后，移除 `/api/v1/game/recommend/CBF` 和旧 `apps/recommend` CBF 实现。
+
+#### Tasks
+
+- [ ] 线上确认详情页只请求 `/api/v2/game/recommend/similar`。
+- [ ] 移除 `/api/v1/game/recommend/CBF` 路由。
+- [ ] 删除不再被引用的 `apps/recommend` CBF service/dao/model 代码。
+- [ ] 清理旧 Redis key：`recommend:tag-mapping`、`recommend:tag-ids`。
 
 ---
 
@@ -326,11 +366,11 @@
 
 ## Short-Term Direction
 
-下一步优先做 `v2.3.1`：先讨论并设计相似推荐 v2，再替代最复杂的 `/api/v1/game/recommend/CBF`。
+下一步优先做 `v2.3.2`：线上确认相似推荐详情页已经稳定消费 v2 后，移除 `/api/v1/game/recommend/CBF` 和旧 CBF 包。
 
 ## Medium-Term Direction
 
-`v2.3.1` 到 `v2.4.0` 逐步把相似推荐和创作者迁移到 v2。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
+`v2.3.2` 到 `v2.4.0` 先清理旧 CBF，再把创作者迁移到 v2。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
 
 ## Long-Term Direction
 

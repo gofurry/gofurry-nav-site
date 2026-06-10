@@ -12,18 +12,20 @@
       >
         <!-- 封面 -->
         <img
-            :src="currentCover[game.appid!]"
+            :src="coverOf(game)"
             class="w-12 h-16 rounded-md object-cover flex-shrink-0"
             :alt="game.name"
-            @error="loadFallbackCover(game.appid!)"
         />
 
         <!-- 游戏信息 -->
         <div class="flex-1 text-sm min-w-0">
           <div class="font-medium text-gray-800 truncate">{{ game.name }}</div>
-          <div class="text-xs text-gray-500 line-clamp-2 break-words">{{ game.info }}</div>
+          <div class="text-xs text-gray-500 line-clamp-2 break-words">{{ game.summary }}</div>
           <div class="text-xs text-orange-600 mt-1">
-            {{ t("game.detail.similarity") }}: {{ formatSimilarity(game.similarity) }}
+            {{ t("game.detail.similarity") }}: {{ formatSimilarity(game.display_score) }}
+          </div>
+          <div v-if="formatReason(game)" class="text-[11px] text-gray-500 truncate">
+            {{ formatReason(game) }}
           </div>
         </div>
       </div>
@@ -57,15 +59,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, reactive } from "vue"
+import { computed, ref, watch } from "vue"
 import type { RecommendedModel } from "@/types/game"
 import { i18n } from '@/main'
 
 const { t } = i18n.global
 const router = useRouter()
-
-const gamePrefix = import.meta.env.VITE_GAME_PREFIX_URL || ''
-const steamPrefix = import.meta.env.VITE_STEAM_COVER_PREFIX_URL || ''
 
 const props = defineProps<{
   recommend: RecommendedModel[] | null
@@ -95,39 +94,15 @@ function formatSimilarity(sim: number) {
   return `${(sim * 100).toFixed(1)}%`
 }
 
-const fallbackLoaded: Record<string, boolean> = {}
-const currentCover = reactive<Record<string, string>>({})
-
-function initCover(appid?: string) {
-  if (!appid) return ''
-  if (!currentCover[appid]) {
-    fallbackLoaded[appid] = false
-    // 默认先用 Steam 官方封面
-    currentCover[appid] = steamPrefix+`${appid}/library_600x900.jpg`
-  }
-  return currentCover[appid]
+function coverOf(game: RecommendedModel) {
+  return game.capsule_url || game.header_url || ''
 }
 
-function loadFallbackCover(appid: string) {
-  if (!fallbackLoaded[appid]) {
-    fallbackLoaded[appid] = true
-    // Steam 封面失败后, 换成自己的 CDN
-    currentCover[appid] = gamePrefix+`${appid}/library_600x900.jpg`
-  } else if (fallbackLoaded[appid] &&
-      currentCover[appid] && currentCover[appid].includes('library_600x900')) {
-    // 如果 CDN library 也失败了, 再用 header.jpg
-    currentCover[appid] = gamePrefix+`${appid}/header.jpg`
-  }
+function formatReason(game: RecommendedModel) {
+  const reason = game.reasons?.[0]
+  if (!reason) return ''
+  return `${reason.label}: ${reason.value}`
 }
-
-// 当 recommendList 改变时初始化封面
-watch(
-    () => recommendList.value.map(g => g.appid),
-    (list) => {
-      list.forEach(appid => initCover(appid))
-    },
-    { immediate: true }
-)
 
 // 跳转
 function goGameDetail(gameId: string) {

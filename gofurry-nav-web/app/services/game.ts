@@ -101,7 +101,9 @@ export function getGameRemark(id: string): Promise<RemarkResponse> {
 }
 
 export function getRecommendedGame(id: string, lang: string): Promise<RecommendedModel[]> {
-  return useApi('game')('/game/recommend/CBF', { query: { id, lang } })
+  return useApi('gameV2')('/game/recommend/similar', {
+    query: { id, lang: normalizeGameLang(lang), region: 'CN', limit: 8 }
+  })
 }
 
 export function getGameCreator(lang: string): Promise<CreatorResponse[]> {

@@ -31,7 +31,9 @@ export function searchGameAdvanced(query: SearchPageQueryRequest, lang: string):
 }
 
 export function getRecommendedGame(id: string, lang: string): Promise<RecommendedModel[]> {
-    return gameRequest.get("/game/recommend/CBF", { params: { id: id, lang: lang } })
+    return useApi('gameV2')('/game/recommend/similar', {
+        query: { id, lang, region: 'CN', limit: 8 }
+    })
 }
 
 export function getGameCreator(lang: string): Promise<CreatorResponse[]> {

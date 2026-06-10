@@ -230,10 +230,27 @@ export interface RemarkModel {
 
 export interface RecommendedModel {
     id: string
-    name: string
-    info: string
-    similarity: number
     appid: string
+    name: string
+    summary: string
+    header_url: string
+    capsule_url: string
+    score: number
+    display_score: number
+    rank: number
+    reasons: RecommendationReason[]
+    algorithm_version: string
+    computed_at: string
+    tags: GameV2Tag[]
+    price: GameV2PriceView
+    online_count: GameV2OnlineCount
+}
+
+export interface RecommendationReason {
+    type: string
+    label: string
+    value: string
+    weight: number
 }
 
 export interface CommentReq {

@@ -121,6 +121,19 @@ func (api *gameV2Api) GetRandomGame(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
+func (api *gameV2Api) GetSimilarRecommendations(c fiber.Ctx) error {
+	data, err := newReadModelService().GetSimilarRecommendations(context.Background(), v2models.GameV2SimilarRecommendationQuery{
+		GameID: parseInt64(c.Query("id", "0")),
+		Lang:   c.Query("lang", "zh"),
+		Region: c.Query("region", "CN"),
+		Limit:  parseInt(c.Query("limit", "8")),
+	})
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
 func (api *gameV2Api) GetGameNews(c fiber.Ctx) error {
 	id := parseInt64(c.Query("id", "0"))
 	appid := parseInt64(c.Query("appid", "0"))

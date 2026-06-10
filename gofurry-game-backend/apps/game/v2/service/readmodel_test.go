@@ -21,6 +21,9 @@ type fakeDetailReader struct {
 	reviews       v2models.GameV2ReviewList
 	latestReviews []v2models.GameV2LatestReview
 	randomGameID  string
+	similarRows   []v2models.GameV2RecommendationRow
+	features      []v2models.GameV2RecommendationFeature
+	savedRecs     []v2models.GfgGameV2Recommendation
 	err           common.GFError
 }
 
@@ -77,6 +80,28 @@ func (reader *fakeDetailReader) GetRandomGameID(_ context.Context) (string, comm
 		return "", reader.err
 	}
 	return reader.randomGameID, nil
+}
+
+func (reader *fakeDetailReader) ListSimilarRecommendations(_ context.Context, _ v2models.GameV2SimilarRecommendationQuery) ([]v2models.GameV2RecommendationRow, common.GFError) {
+	if reader.err != nil {
+		return nil, reader.err
+	}
+	return reader.similarRows, nil
+}
+
+func (reader *fakeDetailReader) SaveSimilarRecommendations(_ context.Context, _ int64, rows []v2models.GfgGameV2Recommendation) common.GFError {
+	if reader.err != nil {
+		return reader.err
+	}
+	reader.savedRecs = rows
+	return nil
+}
+
+func (reader *fakeDetailReader) ListRecommendationFeatures(_ context.Context, _ string, _ string) ([]v2models.GameV2RecommendationFeature, common.GFError) {
+	if reader.err != nil {
+		return nil, reader.err
+	}
+	return reader.features, nil
 }
 
 func (reader *fakeDetailReader) GetGameNews(_ context.Context, _ v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError) {
@@ -439,6 +464,49 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 	}
 	if res.LatestGames[0].CapsuleURL != "https://cdn.example/capsule.jpg" {
 		t.Fatalf("expected panel item capsule url, got %s", res.LatestGames[0].CapsuleURL)
+	}
+}
+
+func TestGetSimilarRecommendationsComputesAndSavesHybridScore(t *testing.T) {
+	tagsA := `[{"id":"1001","name":"RPG","prefix":"1000"},{"id":"2001","name":"Wolf","prefix":"2000"}]`
+	tagsB := `[{"id":"1001","name":"RPG","prefix":"1000"},{"id":"2001","name":"Wolf","prefix":"2000"}]`
+	tagsC := `[{"id":"3001","name":"Windows","prefix":"3000"}]`
+	developersA := `["Studio A"]`
+	developersB := `["Studio A"]`
+	developersC := `["Studio C"]`
+	platforms := `{"windows":true}`
+
+	reader := &fakeDetailReader{
+		features: []v2models.GameV2RecommendationFeature{
+			{GameID: 1, AppID: 1001, Name: "Source", Summary: "furry rpg", Tags: &tagsA, Developers: &developersA, Platforms: &platforms, PrimaryTagID: 1001, PriceRegion: "CN", PriceAvailable: true, FinalAmount: 1000, OnlineCount: 100},
+			{GameID: 2, AppID: 1002, Name: "Strong Match", Summary: "furry rpg", Tags: &tagsB, Developers: &developersB, Platforms: &platforms, PrimaryTagID: 1001, PriceRegion: "CN", PriceAvailable: true, FinalAmount: 1200, OnlineCount: 90},
+			{GameID: 3, AppID: 1003, Name: "Weak Match", Summary: "space puzzle", Tags: &tagsC, Developers: &developersC, Platforms: &platforms, PriceRegion: "CN", PriceAvailable: true, FinalAmount: 8000, OnlineCount: 3},
+		},
+	}
+
+	res, err := NewReadModelServiceWithReader(reader).GetSimilarRecommendations(context.Background(), v2models.GameV2SimilarRecommendationQuery{
+		GameID: 1,
+		Lang:   "zh",
+		Region: "CN",
+		Limit:  2,
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %s", err.GetMsg())
+	}
+	if len(res) == 0 {
+		t.Fatal("expected recommendations")
+	}
+	if res[0].ID != "2" {
+		t.Fatalf("expected strong tag match first, got %s", res[0].ID)
+	}
+	if len(res[0].Reasons) == 0 || res[0].Reasons[0].Type != "tag" {
+		t.Fatalf("expected tag reason first, got %#v", res[0].Reasons)
+	}
+	if len(reader.savedRecs) == 0 {
+		t.Fatal("expected computed recommendations to be saved")
+	}
+	if reader.savedRecs[0].AlgorithmVersion != similarRecommendationAlgorithmVersion {
+		t.Fatalf("expected algorithm version %s, got %s", similarRecommendationAlgorithmVersion, reader.savedRecs[0].AlgorithmVersion)
 	}
 }
 

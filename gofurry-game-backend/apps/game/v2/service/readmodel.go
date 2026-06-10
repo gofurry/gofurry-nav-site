@@ -3,11 +3,14 @@ package service
 import (
 	"context"
 	"html"
+	"math"
 	"net"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/bytedance/sonic"
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
@@ -21,6 +24,9 @@ const (
 	onlineUnknown    = "unknown"
 	priceUnavailable = "region_price_unavailable"
 	priceMissing     = "region_price_missing"
+
+	similarRecommendationAlgorithmVersion = "similar-v2.3.1-hybrid-cbf"
+	similarPrecomputeLimit                = 64
 )
 
 type gameDetailReader interface {
@@ -31,6 +37,9 @@ type gameDetailReader interface {
 	GetGameReviews(ctx context.Context, gameID int64) (v2models.GameV2ReviewList, common.GFError)
 	ListLatestReviews(ctx context.Context, lang string, limit int) ([]v2models.GameV2LatestReview, common.GFError)
 	GetRandomGameID(ctx context.Context) (string, common.GFError)
+	ListSimilarRecommendations(ctx context.Context, query v2models.GameV2SimilarRecommendationQuery) ([]v2models.GameV2RecommendationRow, common.GFError)
+	SaveSimilarRecommendations(ctx context.Context, sourceGameID int64, rows []v2models.GfgGameV2Recommendation) common.GFError
+	ListRecommendationFeatures(ctx context.Context, lang string, region string) ([]v2models.GameV2RecommendationFeature, common.GFError)
 	GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	GetLatestGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	ListTopOnlineAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
@@ -260,6 +269,43 @@ func (svc *ReadModelService) GetRandomGameID(ctx context.Context) (string, commo
 	return svc.reader.GetRandomGameID(ctx)
 }
 
+func (svc *ReadModelService) GetSimilarRecommendations(ctx context.Context, query v2models.GameV2SimilarRecommendationQuery) ([]v2models.GameV2SimilarRecommendation, common.GFError) {
+	if svc == nil || svc.reader == nil {
+		return nil, common.NewServiceError("game v2 read model service is not initialized")
+	}
+	if query.GameID <= 0 {
+		return nil, common.NewServiceError("id 不能为空")
+	}
+	query.Lang = normalizeLang(query.Lang)
+	query.Region = normalizeRegion(query.Region)
+	query.Limit = clampLimit(query.Limit, 8, 20)
+	query.AlgorithmVersion = similarRecommendationAlgorithmVersion
+
+	rows, err := svc.reader.ListSimilarRecommendations(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) > 0 {
+		return buildSimilarRecommendationsFromRows(rows), nil
+	}
+
+	features, err := svc.reader.ListRecommendationFeatures(ctx, query.Lang, query.Region)
+	if err != nil {
+		return nil, err
+	}
+	computed, saveRows, sourceGameID, computeErr := computeSimilarRecommendations(features, query)
+	if computeErr != nil {
+		return nil, computeErr
+	}
+	if err := svc.reader.SaveSimilarRecommendations(ctx, sourceGameID, saveRows); err != nil {
+		return nil, err
+	}
+	if len(computed) > query.Limit {
+		computed = computed[:query.Limit]
+	}
+	return computed, nil
+}
+
 func (svc *ReadModelService) GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsItem, common.GFError) {
 	if svc == nil || svc.reader == nil {
 		return nil, common.NewServiceError("game v2 read model service is not initialized")
@@ -475,6 +521,538 @@ func (svc *ReadModelService) GetGameCollectStatus(ctx context.Context, gameID in
 		return res, common.NewServiceError("game_id or appid is required")
 	}
 	return svc.reader.GetGameCollectStatus(ctx, gameID, appID)
+}
+
+type recommendationFeature struct {
+	row            v2models.GameV2RecommendationFeature
+	tags           []recommendationTag
+	tagWeights     map[string]float64
+	tagNames       map[string]string
+	developers     []string
+	publishers     []string
+	creators       map[string]struct{}
+	platforms      map[string]bool
+	textTokens     map[string]float64
+	priceAvailable bool
+}
+
+type recommendationTag struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Desc   string `json:"desc"`
+	Prefix string `json:"prefix"`
+}
+
+type recommendationScore struct {
+	target       recommendationFeature
+	score        float64
+	displayScore float64
+	reasons      []v2models.GameV2RecommendationReason
+}
+
+/*
+v2.3.1 相似推荐选型说明：
+
+ 1. 这版不继续沿用 v1 的“请求时标签独热编码 + 余弦相似度”作为主实现，因为它把计算放在详情页请求路径上，
+    后续游戏数量增多时容易让详情页性能抖动，也不方便解释“为什么推荐这个游戏”。
+ 2. 这版也暂不引入协同过滤。当前站点没有足够稳定的用户行为矩阵，强行做 CF 会遇到冷启动和噪声问题，
+    对小体量游戏库的收益低于维护成本。
+ 3. 这版先不把 RAG/embedding 作为主推荐算法。向量适合做语义召回，但需要额外索引、重建流程和质量评估。
+    当前阶段的主要目标是移除 v1 包袱、稳定详情页体验，所以先使用可解释、可 SQL 落库、可手动调权的 hybrid CBF。
+
+算法结构：
+  - 标签相似度占 60%。标签是最强业务语义，使用 Weighted Jaccard，而不是纯 one-hot cosine。
+    权重来源优先使用 gfg_tag.prefix 和站内主/次标签，避免继续硬编码“某个 ID 段一定代表某种含义”的历史做法。
+  - 创作者/开发商/发行商占 15%。同工作室或同发行商通常是强相关，但不能压过标签。
+  - 文本相似度占 10%。只用清洗后的名称与简介做轻量 token Jaccard，避免在数据库主链路里引入重分词依赖。
+  - 平台占 7%。平台是过滤和弱偏好信号，不应该让“都支持 Windows”变成过强推荐理由。
+  - 价格占 5%。免费、同价位或同折扣可以作为补充信号，但价格经常变化，所以权重低。
+  - 活跃度占 3%。在线人数接近只作为轻微排序信号，避免热门游戏吞掉所有小众相似项。
+
+结果存储：
+- service 计算 top 64 写入 gfg_game_v2_recommendations，并记录 algorithm_version。
+- API 优先读取预计算结果；开发环境或单个游戏缺失时即时计算一次并回填。
+- 未来如果接入 collector/admin 定时全量重算，只需要调用同一套特征与保存逻辑，接口合同不用变。
+*/
+func computeSimilarRecommendations(features []v2models.GameV2RecommendationFeature, query v2models.GameV2SimilarRecommendationQuery) ([]v2models.GameV2SimilarRecommendation, []v2models.GfgGameV2Recommendation, int64, common.GFError) {
+	normalized := make([]recommendationFeature, 0, len(features))
+	sourceIndex := -1
+	for _, row := range features {
+		feature := normalizeRecommendationFeature(row)
+		normalized = append(normalized, feature)
+		if row.GameID == query.GameID {
+			sourceIndex = len(normalized) - 1
+		}
+	}
+	if sourceIndex < 0 {
+		return nil, nil, 0, common.NewServiceError("目标游戏不存在或缺少 v2 详情")
+	}
+	source := normalized[sourceIndex]
+
+	scored := make([]recommendationScore, 0, len(normalized))
+	for _, target := range normalized {
+		if target.row.GameID == source.row.GameID {
+			continue
+		}
+		score, reasons := scoreRecommendation(source, target, query.Lang)
+		if score <= 0 {
+			continue
+		}
+		scored = append(scored, recommendationScore{
+			target:       target,
+			score:        score,
+			displayScore: displayRecommendationScore(score),
+			reasons:      reasons,
+		})
+	}
+	sort.Slice(scored, func(i, j int) bool {
+		if scored[i].score == scored[j].score {
+			return scored[i].target.row.GameID < scored[j].target.row.GameID
+		}
+		return scored[i].score > scored[j].score
+	})
+
+	precomputeLimit := similarPrecomputeLimit
+	if precomputeLimit < query.Limit {
+		precomputeLimit = query.Limit
+	}
+	if len(scored) > precomputeLimit {
+		scored = scored[:precomputeLimit]
+	}
+
+	now := time.Now()
+	res := make([]v2models.GameV2SimilarRecommendation, 0, len(scored))
+	rows := make([]v2models.GfgGameV2Recommendation, 0, len(scored))
+	for idx, item := range scored {
+		rank := idx + 1
+		reasonJSON, _ := sonic.Marshal(item.reasons)
+		rows = append(rows, v2models.GfgGameV2Recommendation{
+			SourceGameID:     source.row.GameID,
+			TargetGameID:     item.target.row.GameID,
+			Score:            item.score,
+			DisplayScore:     item.displayScore,
+			Rank:             rank,
+			ReasonJSON:       string(reasonJSON),
+			AlgorithmVersion: similarRecommendationAlgorithmVersion,
+			ComputedAt:       now,
+		})
+		res = append(res, buildSimilarRecommendationFromFeature(item.target, item.score, item.displayScore, rank, item.reasons, now))
+	}
+	return res, rows, source.row.GameID, nil
+}
+
+func scoreRecommendation(source recommendationFeature, target recommendationFeature, lang string) (float64, []v2models.GameV2RecommendationReason) {
+	tagScore, sharedTags := weightedJaccard(source.tagWeights, target.tagWeights, source.tagNames)
+	creatorScore, sharedCreators := stringSetJaccard(source.creators, target.creators)
+	textScore, _ := weightedJaccard(source.textTokens, target.textTokens, nil)
+	platformScore, sharedPlatforms := platformJaccard(source.platforms, target.platforms)
+	priceScore, priceReason := priceSimilarity(source, target)
+	activityScore := activitySimilarity(source.row.OnlineCount, target.row.OnlineCount)
+
+	score := tagScore*0.60 + creatorScore*0.15 + textScore*0.10 + platformScore*0.07 + priceScore*0.05 + activityScore*0.03
+	score = clamp01(score)
+
+	reasons := make([]v2models.GameV2RecommendationReason, 0, 4)
+	if tagScore > 0 && len(sharedTags) > 0 {
+		reasons = append(reasons, recommendationReason("tag", reasonLabel(lang, "tag"), strings.Join(limitStrings(sharedTags, 3), ", "), 0.60*tagScore))
+	}
+	if creatorScore > 0 && len(sharedCreators) > 0 {
+		reasons = append(reasons, recommendationReason("creator", reasonLabel(lang, "creator"), strings.Join(limitStrings(sharedCreators, 2), ", "), 0.15*creatorScore))
+	}
+	if platformScore > 0 && len(sharedPlatforms) > 0 {
+		reasons = append(reasons, recommendationReason("platform", reasonLabel(lang, "platform"), strings.Join(limitStrings(sharedPlatforms, 3), ", "), 0.07*platformScore))
+	}
+	if priceScore > 0 && priceReason != "" {
+		reasons = append(reasons, recommendationReason("price", reasonLabel(lang, "price"), priceReason, 0.05*priceScore))
+	}
+	sort.Slice(reasons, func(i, j int) bool {
+		return reasons[i].Weight > reasons[j].Weight
+	})
+	if len(reasons) > 3 {
+		reasons = reasons[:3]
+	}
+	return score, reasons
+}
+
+func normalizeRecommendationFeature(row v2models.GameV2RecommendationFeature) recommendationFeature {
+	tags := decodeJSON[[]recommendationTag](row.Tags, []recommendationTag{})
+	developers := normalizeNameList(decodeJSON[[]string](row.Developers, []string{}))
+	publishers := normalizeNameList(decodeJSON[[]string](row.Publishers, []string{}))
+	platforms := decodeJSON[map[string]bool](row.Platforms, map[string]bool{})
+
+	tagWeights := make(map[string]float64, len(tags))
+	tagNames := make(map[string]string, len(tags))
+	for _, tag := range tags {
+		if tag.ID == "" {
+			continue
+		}
+		tagWeights[tag.ID] = recommendationTagWeight(tag, row.PrimaryTagID, row.SecondaryTagID)
+		tagNames[tag.ID] = tag.Name
+	}
+
+	creators := make(map[string]struct{}, len(developers)+len(publishers))
+	for _, value := range developers {
+		creators[value] = struct{}{}
+	}
+	for _, value := range publishers {
+		creators[value] = struct{}{}
+	}
+
+	textTokens := tokenizeRecommendationText(row.Name + " " + row.Summary)
+	return recommendationFeature{
+		row:            row,
+		tags:           tags,
+		tagWeights:     tagWeights,
+		tagNames:       tagNames,
+		developers:     developers,
+		publishers:     publishers,
+		creators:       creators,
+		platforms:      platforms,
+		textTokens:     textTokens,
+		priceAvailable: row.PriceAvailable,
+	}
+}
+
+func buildSimilarRecommendationsFromRows(rows []v2models.GameV2RecommendationRow) []v2models.GameV2SimilarRecommendation {
+	res := make([]v2models.GameV2SimilarRecommendation, 0, len(rows))
+	for _, row := range rows {
+		reasons := decodeJSON[[]v2models.GameV2RecommendationReason](&row.ReasonJSON, []v2models.GameV2RecommendationReason{})
+		tags := decodeJSON[[]recommendationTag](row.Tags, []recommendationTag{})
+		res = append(res, v2models.GameV2SimilarRecommendation{
+			ID:               strconv.FormatInt(row.TargetGameID, 10),
+			AppID:            strconv.FormatInt(row.AppID, 10),
+			Name:             row.Name,
+			Summary:          row.Summary,
+			HeaderURL:        row.HeaderURL,
+			CapsuleURL:       row.CapsuleURL,
+			Score:            row.Score,
+			DisplayScore:     row.DisplayScore,
+			Rank:             row.Rank,
+			Reasons:          reasons,
+			AlgorithmVersion: row.AlgorithmVersion,
+			ComputedAt:       row.ComputedAt,
+			Tags:             recommendationTagsToView(tags),
+			Price:            recommendationRowPrice(row),
+			OnlineCount:      recommendationRowOnline(row),
+		})
+	}
+	return res
+}
+
+func buildSimilarRecommendationFromFeature(feature recommendationFeature, score float64, displayScore float64, rank int, reasons []v2models.GameV2RecommendationReason, computedAt time.Time) v2models.GameV2SimilarRecommendation {
+	return v2models.GameV2SimilarRecommendation{
+		ID:               strconv.FormatInt(feature.row.GameID, 10),
+		AppID:            strconv.FormatInt(feature.row.AppID, 10),
+		Name:             feature.row.Name,
+		Summary:          feature.row.Summary,
+		HeaderURL:        feature.row.HeaderURL,
+		CapsuleURL:       feature.row.CapsuleURL,
+		Score:            score,
+		DisplayScore:     displayScore,
+		Rank:             rank,
+		Reasons:          reasons,
+		AlgorithmVersion: similarRecommendationAlgorithmVersion,
+		ComputedAt:       computedAt,
+		Tags:             recommendationTagsToView(feature.tags),
+		Price:            recommendationFeaturePrice(feature.row),
+		OnlineCount:      recommendationFeatureOnline(feature.row),
+	}
+}
+
+func recommendationTagWeight(tag recommendationTag, primaryTagID int64, secondaryTagID int64) float64 {
+	id, _ := strconv.ParseInt(tag.ID, 10, 64)
+	switch id {
+	case primaryTagID:
+		return 2.0
+	case secondaryTagID:
+		return 1.5
+	}
+	switch tag.Prefix {
+	case "1000":
+		return 1.2
+	case "2000":
+		return 1.4
+	case "3000":
+		return 0.4
+	case "9000":
+		return 1.3
+	default:
+		return 1.0
+	}
+}
+
+func weightedJaccard(a map[string]float64, b map[string]float64, names map[string]string) (float64, []string) {
+	if len(a) == 0 || len(b) == 0 {
+		return 0, nil
+	}
+	keys := make(map[string]struct{}, len(a)+len(b))
+	for key := range a {
+		keys[key] = struct{}{}
+	}
+	for key := range b {
+		keys[key] = struct{}{}
+	}
+	var intersection float64
+	var union float64
+	shared := make([]string, 0)
+	for key := range keys {
+		av := a[key]
+		bv := b[key]
+		intersection += math.Min(av, bv)
+		union += math.Max(av, bv)
+		if av > 0 && bv > 0 && names != nil {
+			if name := strings.TrimSpace(names[key]); name != "" {
+				shared = append(shared, name)
+			}
+		}
+	}
+	sort.Strings(shared)
+	if union <= 0 {
+		return 0, shared
+	}
+	return clamp01(intersection / union), shared
+}
+
+func stringSetJaccard(a map[string]struct{}, b map[string]struct{}) (float64, []string) {
+	if len(a) == 0 || len(b) == 0 {
+		return 0, nil
+	}
+	intersection := 0
+	union := make(map[string]struct{}, len(a)+len(b))
+	shared := make([]string, 0)
+	for key := range a {
+		union[key] = struct{}{}
+		if _, ok := b[key]; ok {
+			intersection++
+			shared = append(shared, key)
+		}
+	}
+	for key := range b {
+		union[key] = struct{}{}
+	}
+	sort.Strings(shared)
+	return float64(intersection) / float64(len(union)), shared
+}
+
+func platformJaccard(a map[string]bool, b map[string]bool) (float64, []string) {
+	aSet := make(map[string]struct{})
+	bSet := make(map[string]struct{})
+	for key, enabled := range a {
+		if enabled {
+			aSet[strings.ToLower(key)] = struct{}{}
+		}
+	}
+	for key, enabled := range b {
+		if enabled {
+			bSet[strings.ToLower(key)] = struct{}{}
+		}
+	}
+	return stringSetJaccard(aSet, bSet)
+}
+
+func priceSimilarity(source recommendationFeature, target recommendationFeature) (float64, string) {
+	if source.row.IsFree && target.row.IsFree {
+		return 1, "free"
+	}
+	if !source.priceAvailable || !target.priceAvailable {
+		return 0, ""
+	}
+	if source.row.FinalAmount <= 0 || target.row.FinalAmount <= 0 {
+		return 0, ""
+	}
+	minPrice := math.Min(float64(source.row.FinalAmount), float64(target.row.FinalAmount))
+	maxPrice := math.Max(float64(source.row.FinalAmount), float64(target.row.FinalAmount))
+	if maxPrice <= 0 {
+		return 0, ""
+	}
+	return clamp01(minPrice / maxPrice), "similar price"
+}
+
+func activitySimilarity(source int64, target int64) float64 {
+	if source <= 0 || target <= 0 {
+		return 0
+	}
+	diff := math.Abs(math.Log1p(float64(source)) - math.Log1p(float64(target)))
+	return clamp01(1 / (1 + diff))
+}
+
+func displayRecommendationScore(score float64) float64 {
+	return clamp01(0.50 + 0.45*math.Sqrt(clamp01(score)))
+}
+
+func clamp01(value float64) float64 {
+	if value < 0 {
+		return 0
+	}
+	if value > 1 {
+		return 1
+	}
+	return value
+}
+
+func recommendationReason(reasonType string, label string, value string, weight float64) v2models.GameV2RecommendationReason {
+	return v2models.GameV2RecommendationReason{
+		Type:   reasonType,
+		Label:  label,
+		Value:  value,
+		Weight: math.Round(weight*1000) / 1000,
+	}
+}
+
+func reasonLabel(lang string, reasonType string) string {
+	if lang == "en" {
+		switch reasonType {
+		case "tag":
+			return "Shared tags"
+		case "creator":
+			return "Related creators"
+		case "platform":
+			return "Shared platforms"
+		case "price":
+			return "Similar price"
+		}
+	}
+	switch reasonType {
+	case "tag":
+		return "共同标签"
+	case "creator":
+		return "相关创作者"
+	case "platform":
+		return "共同平台"
+	case "price":
+		return "价格相近"
+	default:
+		return "推荐理由"
+	}
+}
+
+func normalizeNameList(values []string) []string {
+	res := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = strings.ToLower(strings.TrimSpace(value))
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		res = append(res, value)
+	}
+	return res
+}
+
+func tokenizeRecommendationText(value string) map[string]float64 {
+	tokens := make(map[string]float64)
+	var builder strings.Builder
+	flush := func() {
+		token := strings.TrimSpace(builder.String())
+		builder.Reset()
+		if len([]rune(token)) >= 2 {
+			tokens[token] = 1
+		}
+	}
+	for _, r := range strings.ToLower(value) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			builder.WriteRune(r)
+			continue
+		}
+		flush()
+	}
+	flush()
+	return tokens
+}
+
+func limitStrings(values []string, limit int) []string {
+	if len(values) <= limit {
+		return values
+	}
+	return values[:limit]
+}
+
+func recommendationTagsToView(tags []recommendationTag) []v2models.GameV2Tag {
+	res := make([]v2models.GameV2Tag, 0, len(tags))
+	for _, tag := range tags {
+		res = append(res, v2models.GameV2Tag{
+			ID:   tag.ID,
+			Name: tag.Name,
+			Desc: tag.Desc,
+		})
+	}
+	return res
+}
+
+func recommendationFeaturePrice(row v2models.GameV2RecommendationFeature) v2models.GameV2PriceView {
+	updatedAt := time.Time{}
+	if row.PriceUpdatedAt != nil {
+		updatedAt = *row.PriceUpdatedAt
+	}
+	view := v2models.GameV2PriceView{
+		Region:           row.PriceRegion,
+		Available:        row.PriceAvailable,
+		IsFree:           row.IsFree,
+		Currency:         row.Currency,
+		InitialAmount:    row.InitialAmount,
+		FinalAmount:      row.FinalAmount,
+		DiscountPercent:  row.DiscountPercent,
+		InitialFormatted: row.InitialFormatted,
+		FinalFormatted:   row.FinalFormatted,
+		UpdatedAt:        updatedAt,
+		CollectedAt:      updatedAt,
+	}
+	if !view.Available {
+		view.UnavailableReason = priceMissing
+	}
+	return view
+}
+
+func recommendationRowPrice(row v2models.GameV2RecommendationRow) v2models.GameV2PriceView {
+	updatedAt := time.Time{}
+	if row.PriceUpdatedAt != nil {
+		updatedAt = *row.PriceUpdatedAt
+	}
+	view := v2models.GameV2PriceView{
+		Region:           row.PriceRegion,
+		Available:        row.PriceAvailable,
+		IsFree:           row.IsFree,
+		Currency:         row.Currency,
+		InitialAmount:    row.InitialAmount,
+		FinalAmount:      row.FinalAmount,
+		DiscountPercent:  row.DiscountPercent,
+		InitialFormatted: row.InitialFormatted,
+		FinalFormatted:   row.FinalFormatted,
+		UpdatedAt:        updatedAt,
+		CollectedAt:      updatedAt,
+	}
+	if !view.Available {
+		view.UnavailableReason = priceMissing
+	}
+	return view
+}
+
+func recommendationFeatureOnline(row v2models.GameV2RecommendationFeature) v2models.GameV2OnlineCount {
+	collectedAt := time.Time{}
+	if row.OnlineCollectedAt != nil {
+		collectedAt = *row.OnlineCollectedAt
+	}
+	status := row.OnlineStatus
+	if status == "" {
+		status = onlineUnknown
+	}
+	return v2models.GameV2OnlineCount{Count: row.OnlineCount, Status: status, CollectedAt: collectedAt}
+}
+
+func recommendationRowOnline(row v2models.GameV2RecommendationRow) v2models.GameV2OnlineCount {
+	collectedAt := time.Time{}
+	if row.OnlineCollectedAt != nil {
+		collectedAt = *row.OnlineCollectedAt
+	}
+	status := row.OnlineStatus
+	if status == "" {
+		status = onlineUnknown
+	}
+	return v2models.GameV2OnlineCount{Count: row.OnlineCountValue, Status: status, CollectedAt: collectedAt}
 }
 
 func buildListItems(aggregates []v2models.GameV2Aggregate, lang string, region string) []v2models.GameV2ListItem {

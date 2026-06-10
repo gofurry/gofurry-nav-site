@@ -12,6 +12,7 @@ import (
 	cm "github.com/gofurry/gofurry-game-backend/common/models"
 	database "github.com/gofurry/gofurry-game-backend/roof/db"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const tableNameGfgGame = "gfg_game"
@@ -256,6 +257,64 @@ func (dao *ReadModelDAO) GetRandomGameID(ctx context.Context) (string, common.GF
 		return "", common.NewDaoError(fmt.Sprintf("随机查询游戏 v2 ID 失败: %v", err))
 	}
 	return row.ID, nil
+}
+
+func (dao *ReadModelDAO) ListSimilarRecommendations(ctx context.Context, query v2models.GameV2SimilarRecommendationQuery) ([]v2models.GameV2RecommendationRow, common.GFError) {
+	if dao == nil || dao.db == nil {
+		return nil, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	if query.GameID <= 0 {
+		return nil, common.NewDaoError("game_id is required")
+	}
+	if query.Limit <= 0 {
+		query.Limit = 8
+	}
+	lang := normalizeDAOLang(query.Lang)
+	region := normalizeDAORegion(query.Region)
+	rows := []v2models.GameV2RecommendationRow{}
+	if err := dao.db.WithContext(ctx).Raw(recommendationRowsSQL(), lang, lang, region, lang, region, query.GameID, query.AlgorithmVersion, query.Limit).Scan(&rows).Error; err != nil {
+		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 相似推荐失败: %v", err))
+	}
+	return rows, nil
+}
+
+func (dao *ReadModelDAO) SaveSimilarRecommendations(ctx context.Context, sourceGameID int64, rows []v2models.GfgGameV2Recommendation) common.GFError {
+	if dao == nil || dao.db == nil {
+		return common.NewDaoError("game v2 read model database is not initialized")
+	}
+	if sourceGameID <= 0 {
+		return common.NewDaoError("source_game_id is required")
+	}
+	if err := dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Table(v2models.TableNameGfgGameV2Recommendations).Where("source_game_id = ?", sourceGameID).Delete(&v2models.GfgGameV2Recommendation{}).Error; err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		return tx.Table(v2models.TableNameGfgGameV2Recommendations).
+			Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "source_game_id"}, {Name: "target_game_id"}},
+				UpdateAll: true,
+			}).
+			Create(&rows).Error
+	}); err != nil {
+		return common.NewDaoError(fmt.Sprintf("保存游戏 v2 相似推荐失败: %v", err))
+	}
+	return nil
+}
+
+func (dao *ReadModelDAO) ListRecommendationFeatures(ctx context.Context, lang string, region string) ([]v2models.GameV2RecommendationFeature, common.GFError) {
+	if dao == nil || dao.db == nil {
+		return nil, common.NewDaoError("game v2 read model database is not initialized")
+	}
+	lang = normalizeDAOLang(lang)
+	region = normalizeDAORegion(region)
+	rows := []v2models.GameV2RecommendationFeature{}
+	if err := dao.db.WithContext(ctx).Raw(recommendationFeaturesSQL(), lang, lang, region, lang, region).Scan(&rows).Error; err != nil {
+		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 推荐特征失败: %v", err))
+	}
+	return rows, nil
 }
 
 func (dao *ReadModelDAO) GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError) {
@@ -963,4 +1022,173 @@ func takeOptional[T any](db *gorm.DB) (*T, error) {
 		return nil, err
 	}
 	return &value, nil
+}
+
+func recommendationRowsSQL() string {
+	return `
+WITH latest_player_count AS (
+    SELECT DISTINCT ON (game_id) game_id, count, status, collected_at
+    FROM gfg_game_v2_player_counts
+    WHERE status = 'success'
+    ORDER BY game_id, collected_at DESC, id DESC
+),
+target_tags AS (
+    SELECT tm.game_id,
+           COALESCE(
+               jsonb_agg(
+                   jsonb_build_object(
+                       'id', t.id::text,
+                       'name', CASE WHEN ? = 'en' THEN COALESCE(NULLIF(t.name_en, ''), t.name) ELSE COALESCE(NULLIF(t.name, ''), t.name_en) END,
+                       'desc', CASE WHEN ? = 'en' THEN COALESCE(NULLIF(t.info_en, ''), t.info) ELSE COALESCE(NULLIF(t.info, ''), t.info_en) END,
+                       'prefix', t.prefix::text
+                   )
+                   ORDER BY t.id ASC
+               ),
+               '[]'::jsonb
+           ) AS tags
+    FROM gfg_tag_map tm
+    JOIN gfg_tag t ON t.id = tm.tag_id
+    GROUP BY tm.game_id
+),
+capsule_media AS (
+    SELECT DISTINCT ON (game_id) game_id, url
+    FROM gfg_game_v2_media
+    WHERE media_type IN ('capsule', 'capsule_v5', 'header')
+    ORDER BY game_id,
+        CASE media_type
+            WHEN 'capsule' THEN 0
+            WHEN 'capsule_v5' THEN 1
+            ELSE 2
+        END,
+        sort_order ASC,
+        id ASC
+)
+SELECT
+    r.source_game_id,
+    r.target_game_id,
+    r.score,
+    r.display_score,
+    r.rank,
+    r.reason_json::text AS reason_json,
+    r.algorithm_version,
+    r.computed_at,
+    g.appid,
+    COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name, ''), g.name_en) AS name,
+    COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en) AS summary,
+    COALESCE(NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS header_url,
+    COALESCE(NULLIF(capsule_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS capsule_url,
+    COALESCE(target_tags.tags, '[]'::jsonb)::text AS tags,
+    COALESCE(p.region, ?) AS price_region,
+    CASE
+        WHEN p.game_id IS NULL THEN false
+        WHEN p.is_free THEN true
+        WHEN COALESCE(p.currency, '') <> '' AND (p.final_amount > 0 OR COALESCE(p.final_formatted, '') <> '') THEN true
+        ELSE false
+    END AS price_available,
+    COALESCE(p.is_free, false) AS is_free,
+    COALESCE(p.currency, '') AS currency,
+    COALESCE(p.initial_amount, 0) AS initial_amount,
+    COALESCE(p.final_amount, 0) AS final_amount,
+    COALESCE(p.discount_percent, 0) AS discount_percent,
+    COALESCE(p.initial_formatted, '') AS initial_formatted,
+    COALESCE(p.final_formatted, '') AS final_formatted,
+    p.updated_at AS price_updated_at,
+    COALESCE(latest_player_count.count, 0) AS online_count,
+    COALESCE(latest_player_count.status, 'unknown') AS online_status,
+    latest_player_count.collected_at AS online_collected_at
+FROM gfg_game_v2_recommendations r
+JOIN gfg_game g ON g.id = r.target_game_id
+JOIN gfg_game_v2_details d ON d.game_id = g.id
+LEFT JOIN gfg_game_v2_localized_details ld ON ld.game_id = g.id AND ld.lang = ?
+LEFT JOIN gfg_game_v2_prices p ON p.game_id = g.id AND p.region = ?
+LEFT JOIN latest_player_count ON latest_player_count.game_id = g.id
+LEFT JOIN target_tags ON target_tags.game_id = g.id
+LEFT JOIN capsule_media ON capsule_media.game_id = g.id
+WHERE r.source_game_id = ?
+  AND r.algorithm_version = ?
+ORDER BY r.rank ASC, r.score DESC, r.target_game_id ASC
+LIMIT ?
+`
+}
+
+func recommendationFeaturesSQL() string {
+	return `
+WITH latest_player_count AS (
+    SELECT DISTINCT ON (game_id) game_id, count, status, collected_at
+    FROM gfg_game_v2_player_counts
+    WHERE status = 'success'
+    ORDER BY game_id, collected_at DESC, id DESC
+),
+target_tags AS (
+    SELECT tm.game_id,
+           COALESCE(
+               jsonb_agg(
+                   jsonb_build_object(
+                       'id', t.id::text,
+                       'name', CASE WHEN ? = 'en' THEN COALESCE(NULLIF(t.name_en, ''), t.name) ELSE COALESCE(NULLIF(t.name, ''), t.name_en) END,
+                       'desc', CASE WHEN ? = 'en' THEN COALESCE(NULLIF(t.info_en, ''), t.info) ELSE COALESCE(NULLIF(t.info, ''), t.info_en) END,
+                       'prefix', t.prefix::text
+                   )
+                   ORDER BY t.id ASC
+               ),
+               '[]'::jsonb
+           ) AS tags
+    FROM gfg_tag_map tm
+    JOIN gfg_tag t ON t.id = tm.tag_id
+    GROUP BY tm.game_id
+),
+capsule_media AS (
+    SELECT DISTINCT ON (game_id) game_id, url
+    FROM gfg_game_v2_media
+    WHERE media_type IN ('capsule', 'capsule_v5', 'header')
+    ORDER BY game_id,
+        CASE media_type
+            WHEN 'capsule' THEN 0
+            WHEN 'capsule_v5' THEN 1
+            ELSE 2
+        END,
+        sort_order ASC,
+        id ASC
+)
+SELECT
+    g.id AS game_id,
+    g.appid,
+    COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name, ''), g.name_en) AS name,
+    COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en) AS summary,
+    COALESCE(NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS header_url,
+    COALESCE(NULLIF(capsule_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS capsule_url,
+    d.developers::text AS developers,
+    d.publishers::text AS publishers,
+    d.platforms::text AS platforms,
+    COALESCE(g.primary_tag, 0) AS primary_tag_id,
+    COALESCE(g.secondary_tag, 0) AS secondary_tag_id,
+    COALESCE(target_tags.tags, '[]'::jsonb)::text AS tags,
+    COALESCE(p.region, ?) AS price_region,
+    CASE
+        WHEN p.game_id IS NULL THEN false
+        WHEN p.is_free THEN true
+        WHEN COALESCE(p.currency, '') <> '' AND (p.final_amount > 0 OR COALESCE(p.final_formatted, '') <> '') THEN true
+        ELSE false
+    END AS price_available,
+    COALESCE(p.is_free, false) AS is_free,
+    COALESCE(p.currency, '') AS currency,
+    COALESCE(p.initial_amount, 0) AS initial_amount,
+    COALESCE(p.final_amount, 0) AS final_amount,
+    COALESCE(p.discount_percent, 0) AS discount_percent,
+    COALESCE(p.initial_formatted, '') AS initial_formatted,
+    COALESCE(p.final_formatted, '') AS final_formatted,
+    p.updated_at AS price_updated_at,
+    COALESCE(latest_player_count.count, 0) AS online_count,
+    COALESCE(latest_player_count.status, 'unknown') AS online_status,
+    latest_player_count.collected_at AS online_collected_at,
+    GREATEST(g.update_time, COALESCE(d.updated_at, g.update_time), COALESCE(ld.updated_at, g.update_time)) AS updated_at
+FROM gfg_game g
+JOIN gfg_game_v2_details d ON d.game_id = g.id
+LEFT JOIN gfg_game_v2_localized_details ld ON ld.game_id = g.id AND ld.lang = ?
+LEFT JOIN gfg_game_v2_prices p ON p.game_id = g.id AND p.region = ?
+LEFT JOIN latest_player_count ON latest_player_count.game_id = g.id
+LEFT JOIN target_tags ON target_tags.game_id = g.id
+LEFT JOIN capsule_media ON capsule_media.game_id = g.id
+ORDER BY g.weight ASC, g.id ASC
+`
 }
