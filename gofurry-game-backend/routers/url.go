@@ -2,7 +2,6 @@ package routers
 
 import (
 	"github.com/gofiber/fiber/v3"
-	game "github.com/gofurry/gofurry-game-backend/apps/game/controller"
 	gamev2 "github.com/gofurry/gofurry-game-backend/apps/game/v2/controller"
 	prize "github.com/gofurry/gofurry-game-backend/apps/prize/controller"
 )
@@ -14,8 +13,6 @@ import (
  */
 
 func gameApi(g fiber.Router) {
-	g.Get("/creator", game.GameApi.GetGameCreator) // 获取相关开发者列表
-
 	prizeApi(g.Group("/prize"))
 }
 
@@ -33,6 +30,7 @@ func gameV2Api(g fiber.Router) {
 	g.Get("/reviews/latest", gamev2.GameV2Api.GetLatestReviews)
 	g.Get("/recommend/random", gamev2.GameV2Api.GetRandomGame)
 	g.Get("/recommend/similar", gamev2.GameV2Api.GetSimilarRecommendations)
+	g.Get("/creators", gamev2.GameV2Api.GetCreators)
 	g.Get("/sync/list", gamev2.GameV2Api.GetSyncGameList)
 	g.Get("/sync/info", gamev2.GameV2Api.GetSyncGameInfo)
 	g.Get("/sync/news", gamev2.GameV2Api.GetSyncGameNews)

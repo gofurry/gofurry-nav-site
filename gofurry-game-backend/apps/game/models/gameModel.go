@@ -243,61 +243,6 @@ type CommentItem struct {
 	Name       *string      `json:"name"`
 }
 
-const TableNameGfgGameCreator = "gfg_game_creator"
-
-// GfgGameCreator mapped from table <gfg_game_creator>
-type GfgGameCreator struct {
-	ID         int64        `gorm:"column:id;type:bigint;primaryKey;comment:相关作者表id" json:"id"`                                          // 相关作者表id
-	Name       string       `gorm:"column:name;type:character varying(100);not null;comment:名称" json:"name"`                             // 名称
-	Info       string       `gorm:"column:info;type:character varying(700);not null;comment:相关描述" json:"info"`                           // 相关描述
-	MainURL    string       `gorm:"column:main_url;type:character varying(255);not null;comment:主链接" json:"mainUrl"`                     // 主链接
-	Links      *string      `gorm:"column:links;type:jsonb;comment:其他链接" json:"links"`                                                   // 其他链接
-	Cover      string       `gorm:"column:cover;type:character varying(255);not null;comment:封面图" json:"cover"`                          // 封面图
-	Contact    *string      `gorm:"column:contact;type:jsonb;comment:联系方式" json:"contact"`                                               // 联系方式
-	CreateTime cm.LocalTime `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:创建时间" json:"createTime"`    // 创建时间
-	UpdateTime cm.LocalTime `gorm:"column:update_time;type:int;type:unsigned;not null;autoUpdateTime;comment:修改时间" json:"updateTime"`    // 修改时间
-	Type       int64        `gorm:"column:type;type:bigint;not null;comment:类型描述 1=Steam鉴赏家 2=博主 3=开发者 4=发行者 5=汉化者 6=内容创作者" json:"type"` // 类型描述 1=Steam鉴赏家 2=博主 3=开发者 4=发行者 5=汉化者 6=内容创作者
-	NameEn     string       `gorm:"column:name_en;type:character varying(100);comment:英文名" json:"nameEn"`                                // 英文名
-	InfoEn     string       `gorm:"column:info_en;type:character varying(700);comment:英文描述" json:"infoEn"`                               // 英文描述
-	Deleted    bool         `gorm:"column:deleted;type:boolean;comment:软删除" json:"deleted"`
-}
-
-// TableName GfgGameCreator's table name
-func (*GfgGameCreator) TableName() string {
-	return TableNameGfgGameCreator
-}
-
-type CreatorVo struct {
-	ID         string       `json:"id"`
-	Name       string       `json:"name"`
-	Info       string       `json:"info"`
-	URL        string       `json:"url"`
-	Avatar     string       `json:"avatar"`
-	Links      []cm.KvModel `json:"links"`
-	Contact    []cm.KvModel `json:"contact"`
-	Type       int64        `json:"type"`
-	CreateTime cm.LocalTime `json:"create_time"`
-	UpdateTime cm.LocalTime `json:"update_time"`
-}
-
-type TempCreator struct {
-	ID         int64        `gorm:"column:id"`
-	Name       string       `gorm:"column:name"`
-	Info       string       `gorm:"column:info"`
-	URL        string       `gorm:"column:url"`
-	Avatar     string       `gorm:"column:avatar"`
-	Links      *string      `gorm:"column:links"`
-	Contact    *string      `gorm:"column:contact"`
-	Type       int64        `gorm:"column:type"`
-	CreateTime cm.LocalTime `gorm:"column:create_time"`
-	UpdateTime cm.LocalTime `gorm:"column:update_time"`
-}
-
-type UpdateCreatorVo struct {
-	CreatorZh []CreatorVo `json:"creator_zh"`
-	CreatorEn []CreatorVo `json:"creator_en"`
-}
-
 // ============================= redis 记录
 type SteamAppPrice struct {
 	Initial          int64  `json:"initial"`

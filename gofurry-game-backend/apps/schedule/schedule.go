@@ -38,7 +38,6 @@ func ScheduleByTenMinutes() {
 func ScheduleByOneHour() {
 	task.UpdateGamePanelCache()
 	task.UpdateGameNewsCache()
-	task.UpdateGameCreatorCache()
 	task.UpdateMoreGameNewsCache()
 	task.UpdatePrizeWinner()
 }

@@ -20,6 +20,7 @@
 - `GET /api/v2/game/reviews`
 - `POST /api/v2/game/reviews/anonymous`
 - `GET /api/v2/game/reviews/latest`
+- `GET /api/v2/game/creators`
 - `POST /api/v2/game/search/simple`
 - `POST /api/v2/game/search/page`
 - `GET /api/v2/game/tags`
@@ -55,6 +56,7 @@
 - `GET /api/v1/game/sync/info`
 - `GET /api/v1/game/sync/news`
 - `GET /api/v1/game/sync/creators`
+- `GET /api/v1/game/creator`
 - `GET /api/v1/game/remark`
 - `GET /api/v1/game/tag/list`
 - `GET /api/v1/game/recommend/random`
@@ -66,7 +68,6 @@
 
 仍需要升级的 v1 运营和交互接口：
 
-- `GET /api/v1/game/creator`
 - `POST /api/v1/game/prize/participation`
 - `GET /api/v1/game/prize/participation/activation`
 - `GET /api/v1/game/prize/info`
@@ -275,7 +276,7 @@
 
 ### v2.4.0 - Creator V2 Mainline
 
-**Status:** Planned  
+**Status:** Completed
 **Scope:** User-facing / Maintenance / Documentation  
 **Goal:** 将创作者列表和 RAG 创作者同步统一到 v2，移除 v1 创作者入口和旧 Redis 聚合缓存依赖。
 
@@ -288,19 +289,24 @@
 
 #### Tasks
 
-- [ ] 新增 `GET /api/v2/game/creators`，替代 `/api/v1/game/creator`。
-- [ ] 保持 `GET /api/v2/game/sync/creators` 作为 RAG 同步入口。
-- [ ] 公开创作者列表直接读取 PostgreSQL，不依赖 `game-creator:list` 旧 Redis 聚合。
-- [ ] 前端创作者页切到 `/api/v2/game/creators`。
-- [ ] 移除 `/api/v1/game/creator`。
-- [ ] 清理或停用旧 `game-creator:list` 缓存写入和读取。
-- [ ] 补测试覆盖 `zh/en` 名称和简介回退、空链接、空联系方式。
+- [x] 新增 `GET /api/v2/game/creators`，替代 `/api/v1/game/creator`。
+- [x] 保持 `GET /api/v2/game/sync/creators` 作为 RAG 同步入口。
+- [x] 公开创作者列表直接读取 PostgreSQL，不依赖 `game-creator:list` 旧 Redis 聚合。
+- [x] 前端创作者页切到 `/api/v2/game/creators`。
+- [x] 移除 `/api/v1/game/creator`。
+- [x] 清理或停用旧 `game-creator:list` 缓存写入和读取。
+- [x] 补测试覆盖语言归一化、HTML 清洗、链接和联系方式解析。
 
 #### Acceptance Criteria
 
 - 创作者公开页和 RAG 创作者同步均使用 v2。
 - v1 创作者路由已移除。
 - 旧 Redis 创作者聚合 key 不再是功能依赖。
+- `go test ./...` 和前端 typecheck 通过。
+
+#### Notes
+
+公开创作者列表和 RAG 同步创作者当前复用同一套 v2 PostgreSQL 读取与映射逻辑。旧 `apps/game/dao/gameCreatorDao.go`、v1 creator controller、旧 creator Redis 缓存任务已经删除。
 
 ---
 
@@ -375,11 +381,11 @@
 
 ## Short-Term Direction
 
-下一步优先做 `v2.4.0`：把创作者公开列表迁移到 v2，并移除 `/api/v1/game/creator`。
+下一步优先做 `v2.5.0`：把抽奖流程迁移到 v2，并清理旧 v1 激活链接和 Redis 临时 key 命名。
 
 ## Medium-Term Direction
 
-`v2.4.0` 到 `v2.5.0` 继续把创作者和抽奖迁移到 v2。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
+`v2.5.0` 重点处理抽奖流程，完成后进入 `v2.6.0` 包级清理。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
 
 ## Long-Term Direction
 

@@ -379,6 +379,10 @@ func (svc *ReadModelService) ListSyncGameNews(ctx context.Context, query v2model
 }
 
 func (svc *ReadModelService) ListSyncCreators(ctx context.Context, lang string) ([]v2models.GameV2SyncCreator, common.GFError) {
+	return svc.ListCreators(ctx, lang)
+}
+
+func (svc *ReadModelService) ListCreators(ctx context.Context, lang string) ([]v2models.GameV2SyncCreator, common.GFError) {
 	if svc == nil || svc.reader == nil {
 		return nil, common.NewServiceError("game v2 read model service is not initialized")
 	}

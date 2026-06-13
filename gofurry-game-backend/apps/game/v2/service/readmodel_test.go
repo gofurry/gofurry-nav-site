@@ -24,6 +24,8 @@ type fakeDetailReader struct {
 	similarRows   []v2models.GameV2RecommendationRow
 	features      []v2models.GameV2RecommendationFeature
 	savedRecs     []v2models.GfgGameV2Recommendation
+	creatorRows   []v2models.GameV2SyncCreatorRow
+	creatorLang   string
 	err           common.GFError
 }
 
@@ -170,11 +172,12 @@ func (reader *fakeDetailReader) GetGameCollectStatus(_ context.Context, _ int64,
 	return v2models.GameV2CollectGameStatus{}, nil
 }
 
-func (reader *fakeDetailReader) ListSyncCreators(_ context.Context, _ string) ([]v2models.GameV2SyncCreatorRow, common.GFError) {
+func (reader *fakeDetailReader) ListSyncCreators(_ context.Context, lang string) ([]v2models.GameV2SyncCreatorRow, common.GFError) {
+	reader.creatorLang = lang
 	if reader.err != nil {
 		return nil, reader.err
 	}
-	return []v2models.GameV2SyncCreatorRow{}, nil
+	return reader.creatorRows, nil
 }
 
 func TestGetGameDetailUsesLocalizedFallback(t *testing.T) {
@@ -464,6 +467,44 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 	}
 	if res.LatestGames[0].CapsuleURL != "https://cdn.example/capsule.jpg" {
 		t.Fatalf("expected panel item capsule url, got %s", res.LatestGames[0].CapsuleURL)
+	}
+}
+
+func TestListCreatorsBuildsPublicCreatorView(t *testing.T) {
+	links := `[{"key":"Steam","value":"https://store.steampowered.com/curator/example"}]`
+	contact := `[{"key":"Email","value":"creator@example.com"}]`
+	reader := &fakeDetailReader{
+		creatorRows: []v2models.GameV2SyncCreatorRow{
+			{
+				ID:         7,
+				Name:       "Creator",
+				Info:       "<p>Creator intro</p>",
+				URL:        "https://example.com",
+				Avatar:     "https://cdn.example/avatar.png",
+				Links:      &links,
+				Contact:    &contact,
+				Type:       3,
+				CreateTime: cm.LocalTime{},
+				UpdateTime: cm.LocalTime{},
+			},
+		},
+	}
+
+	res, err := NewReadModelServiceWithReader(reader).ListCreators(context.Background(), "en-US")
+	if err != nil {
+		t.Fatalf("ListCreators returned error: %s", err.GetMsg())
+	}
+	if reader.creatorLang != "en" {
+		t.Fatalf("expected normalized creator lang en, got %s", reader.creatorLang)
+	}
+	if len(res) != 1 {
+		t.Fatalf("expected one creator, got %#v", res)
+	}
+	if res[0].ID != "7" || res[0].Info != "Creator intro" {
+		t.Fatalf("expected mapped creator, got %#v", res[0])
+	}
+	if len(res[0].Links) != 1 || len(res[0].Contact) != 1 {
+		t.Fatalf("expected parsed links and contact, got %#v", res[0])
 	}
 }
 

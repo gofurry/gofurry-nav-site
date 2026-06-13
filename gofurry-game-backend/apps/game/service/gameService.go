@@ -383,26 +383,6 @@ func (s gameService) GetGameRemark(id string) (res models.GameRemarkVo, err comm
 	return
 }
 
-func (s gameService) GetGameCreator(lang string) (res []models.CreatorVo, err common.GFError) {
-	record, err := cs.GetString("game-creator:list")
-	if err != nil {
-		return res, err
-	}
-	var gameCreatorModel models.UpdateCreatorVo
-	jsonErr := sonic.Unmarshal([]byte(record), &gameCreatorModel)
-	if jsonErr != nil {
-		return res, common.NewServiceError(jsonErr.Error())
-	}
-	switch lang {
-	case "en":
-		res = gameCreatorModel.CreatorEn
-	case "zh":
-		res = gameCreatorModel.CreatorZh
-	}
-
-	return
-}
-
 func (s gameService) GetMoreUpdateNews(lang string) (res []models.UpdateNewsModels, err common.GFError) {
 	jsonStr, err := cs.GetString("game-news:latest-more")
 	if err != nil {

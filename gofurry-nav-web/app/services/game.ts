@@ -107,7 +107,7 @@ export function getRecommendedGame(id: string, lang: string): Promise<Recommende
 }
 
 export function getGameCreator(lang: string): Promise<CreatorResponse[]> {
-  return useApi('game')('/game/creator', { query: { lang } })
+  return useApi('gameV2')('/game/creators', { query: { lang: normalizeGameLang(lang) } })
 }
 
 export function commitComment(query: CommentReq): Promise<ApiResult<string>> {
