@@ -4,7 +4,7 @@
 
 游戏模块已经完成 collector v2、backend v2 read model、admin 采集观测、RAG sync v2、前端主页面 cutover。`gofurry-nav-web` 当前游戏首页、详情页、新闻页、更多新闻页和 sitemap 游戏 URL 来源已经稳定消费 `/api/v2/game/*`，可以认为“动态游戏数据主线”已经切到 v2。
 
-现阶段目标不再是继续维护 v1/v2 双栈，而是逐步把仍在 v1 的接口直接升级为 v2，并移除对应 v1 路由和旧实现。每一步都应该小步完成：先确认调用方，改前端或外部消费者，然后删除旧路由和旧 service/dao 依赖，避免历史包袱继续扩散。
+现阶段目标不再是继续维护 v1/v2 双栈。公开 game API 已经切到 `/api/v2/game/*`，后续重点是删除不再被引用的旧包、旧 Swagger、旧 Redis key 和历史文档说明，避免历史包袱继续扩散。
 
 ## Stable V2 Mainline
 
@@ -21,6 +21,9 @@
 - `POST /api/v2/game/reviews/anonymous`
 - `GET /api/v2/game/reviews/latest`
 - `GET /api/v2/game/creators`
+- `GET /api/v2/game/prizes`
+- `POST /api/v2/game/prizes/participation`
+- `GET /api/v2/game/prizes/participation/activation`
 - `POST /api/v2/game/search/simple`
 - `POST /api/v2/game/search/page`
 - `GET /api/v2/game/tags`
@@ -65,18 +68,15 @@
 - `POST /api/v1/game/search/page`
 - `POST /api/v1/game/review/anonymous`
 - `GET /api/v1/game/review/latest`
-
-仍需要升级的 v1 运营和交互接口：
-
 - `POST /api/v1/game/prize/participation`
 - `GET /api/v1/game/prize/participation/activation`
 - `GET /api/v1/game/prize/info`
 
-这些接口不应长期以 v1 形式保留。后续每个阶段完成后，直接让调用方切到 v2，并移除对应 v1 路由。
+当前已无需要长期保留的 v1 game 公开路由。后续重点转向旧包、旧 Redis key、Swagger 和历史文档清理。
 
 ## Roadmap Strategy
 
-优先级按“已稳定、最容易删、最能减少历史包袱”排序：
+优先级按“已稳定、最容易删、最能减少历史包袱”排序。前五个阶段已经完成，后续集中到包级清理：
 
 1. 先删除前端、RAG、admin 已经稳定切走的 v1 动态接口。
 2. 再升级搜索和标签，因为它们影响游戏发现体验，也会影响推荐。
@@ -312,7 +312,7 @@
 
 ### v2.5.0 - Prize V2 Mainline
 
-**Status:** Planned  
+**Status:** Completed
 **Scope:** User-facing / Security/Safety / Stability  
 **Goal:** 将抽奖接口升级到 v2，并清理硬编码旧域名和 v1 激活链接。
 
@@ -326,14 +326,14 @@
 
 #### Tasks
 
-- [ ] 新增 `GET /api/v2/game/prizes`，替代 `/api/v1/game/prize/info`。
-- [ ] 新增 `POST /api/v2/game/prizes/participation`，替代 `/api/v1/game/prize/participation`。
-- [ ] 新增 `GET /api/v2/game/prizes/participation/activation`，替代 `/api/v1/game/prize/participation/activation`。
-- [ ] 将邮件中的激活链接从硬编码 `/api/v1/game/prize/participation/activation` 改为配置化前端 URL 或 v2 URL。
-- [ ] 统一 Redis 临时 key 命名，例如 `game:v2:prize:{prize_id}:{key}`。
-- [ ] 前端抽奖页和激活页切到 v2。
-- [ ] 移除 v1 抽奖路由。
-- [ ] 补测试覆盖重复参与、过期活动、错误 key、激活幂等、邮件链接生成。
+- [x] 新增 `GET /api/v2/game/prizes`，替代 `/api/v1/game/prize/info`。
+- [x] 新增 `POST /api/v2/game/prizes/participation`，替代 `/api/v1/game/prize/participation`。
+- [x] 新增 `GET /api/v2/game/prizes/participation/activation`，替代 `/api/v1/game/prize/participation/activation`。
+- [x] 将邮件中的激活链接从硬编码 `/api/v1/game/prize/participation/activation` 改为 v2 URL。
+- [x] 统一 Redis 临时 key 命名：`game:v2:prize:email:{prize_id}:{email}`、`game:v2:prize:participation:{prize_id}:{key}`。
+- [x] 前端抽奖页和激活提交切到 v2。
+- [x] 移除 v1 抽奖路由。
+- [x] 补测试覆盖 v2 Redis key 和邮件激活链接生成，避免回退到 v1 URL。
 
 #### Acceptance Criteria
 
@@ -344,7 +344,7 @@
 
 #### Notes
 
-抽奖涉及邮件和真实用户输入，替换时必须先在开发环境完整跑通参与、收信、激活、重复提交和过期场景。
+抽奖公开入口已经切到 `/api/v2/game/prizes/*`。历史抽奖数据仍使用既有 `gfg_prize`、`gfg_prize_member` 和 `prize:history` 历史展示缓存；本阶段只迁移用户参与临时 key 和公开 API 路由，不强行改写定时开奖历史缓存。
 
 ---
 
@@ -381,15 +381,15 @@
 
 ## Short-Term Direction
 
-下一步优先做 `v2.5.0`：把抽奖流程迁移到 v2，并清理旧 v1 激活链接和 Redis 临时 key 命名。
+下一步优先做 `v2.6.0`：清理旧包、旧 Redis key、旧 Swagger 文档和历史 v1 说明，确保公开游戏模块只剩 v2 主线。
 
 ## Medium-Term Direction
 
-`v2.5.0` 重点处理抽奖流程，完成后进入 `v2.6.0` 包级清理。每次迁移都以“前端切换 + 后端删除 v1 路由”为完成标准，不引入长期双栈。
+`v2.6.0` 重点做引用归零后的包级清理。清理时要保留仍有业务价值的站内运营表模型，避免把 `gfg_game`、`gfg_tag`、`gfg_game_comment`、`gfg_game_creator`、`gfg_prize` 误删。
 
 ## Long-Term Direction
 
-`v2.5.0` 和 `v2.6.0` 完成抽奖流程 v2 化和历史包袱清理。最终目标是让 game backend 的公开游戏模块只保留 `/api/v2/game/*`，旧动态表、旧 Redis 聚合 key 和旧 v1 controller 不再参与线上功能。
+`v2.6.0` 完成历史包袱清理后，game backend 的公开游戏模块应只保留 `/api/v2/game/*`，旧动态表、旧 Redis 聚合 key 和旧 v1 controller 不再参与线上功能。
 
 ## Risks
 

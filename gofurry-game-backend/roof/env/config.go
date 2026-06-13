@@ -28,11 +28,16 @@ type serverConfig struct {
 	Waf        WafConfig        `yaml:"waf"`
 	Email      EmailConfig      `yaml:"email"`
 	Admin      AdminConfig      `yaml:"admin"`
+	Prize      PrizeConfig      `yaml:"prize"`
 }
 
 type AdminConfig struct {
 	Token  string `yaml:"token"`
 	Header string `yaml:"header"`
+}
+
+type PrizeConfig struct {
+	ActivationFrontendURL string `yaml:"activation_frontend_url"`
 }
 
 // EmailConfig 邮箱服务配置

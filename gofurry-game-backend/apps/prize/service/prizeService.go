@@ -8,6 +8,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/apps/prize/dao"
+	"github.com/gofurry/gofurry-game-backend/apps/prize/internal/prizekey"
 	"github.com/gofurry/gofurry-game-backend/apps/prize/models"
 	"github.com/gofurry/gofurry-game-backend/common"
 	ca "github.com/gofurry/gofurry-game-backend/common/abstract"
@@ -40,7 +41,7 @@ func (s prizeService) PrizeParticipation(req models.PrizeParticipationRequest, c
 		}
 	}
 
-	emailLockKey := "prize:email:" + util.Int642String(req.ID) + ":" + req.Email
+	emailLockKey := prizekey.EmailLockKey(req.ID, req.Email)
 	data, gfsError := cs.GetString(emailLockKey)
 	if gfsError != nil {
 		return gfsError
@@ -87,7 +88,7 @@ func (s prizeService) PrizeParticipation(req models.PrizeParticipationRequest, c
 		return common.NewServiceError("UUID 生成失败")
 	}
 	key := v7uuid.String()
-	prizeKey := "prize:" + util.Int642String(req.ID) + ":" + key
+	prizeKey := prizekey.ParticipationKey(req.ID, key)
 	if jsonRecord, jsonErr := sonic.Marshal(record); jsonErr == nil {
 		if !cs.SetNX(prizeKey, string(jsonRecord), 10*time.Minute) {
 			return common.NewServiceError("报名失败，请重试")
@@ -99,7 +100,7 @@ func (s prizeService) PrizeParticipation(req models.PrizeParticipationRequest, c
 
 	gfsError = cs.GetEmailService().SendActivationEmail(req.Email,
 		"GoFurry 抽奖服务 - 参与",
-		"https://game.go-furry.com/api/v1/game/prize/participation/activation?key="+key+"&id="+util.Int642String(req.ID),
+		prizekey.ActivationLink(req.ID, key),
 		"点击此处完成参与",
 		"您正在申请 GoFurry 的抽奖服务，点击下方链接完成报名的最后一步: ",
 		"10分钟")
@@ -111,7 +112,7 @@ func (s prizeService) PrizeParticipation(req models.PrizeParticipationRequest, c
 }
 
 func (s prizeService) ActiveParticipation(id string, key string) (prizeRes models.GfgPrize, memberRes models.GfgPrizeMember, gfsError common.GFError) {
-	prizeKey := "prize:" + id + ":" + key
+	prizeKey := prizekey.ParticipationKeyString(id, key)
 	data, gfsError := cs.GetString(prizeKey)
 	if gfsError != nil {
 		return prizeRes, memberRes, common.NewServiceError("缓存查询失败, 请重试")
@@ -160,7 +161,7 @@ func (s prizeService) ActiveParticipation(id string, key string) (prizeRes model
 		return prizeRes, memberRes, common.NewServiceError("激活失败, 请重试")
 	}
 
-	emailLockKey := "prize:email:" + id + ":" + prizeRecord.Email
+	emailLockKey := prizekey.EmailLockKeyString(id, prizeRecord.Email)
 	cs.Del(emailLockKey)
 
 	return prize, memberRecord, nil

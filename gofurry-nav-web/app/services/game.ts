@@ -120,12 +120,12 @@ export function commitComment(query: CommentReq): Promise<ApiResult<string>> {
 }
 
 export function getLottery(): Promise<LotteryResp> {
-  return useApi('game')('/game/prize/info')
+  return useApi('gameV2')('/game/prizes')
 }
 
 export function getLotteryParticipation(query: LotteryReq): Promise<ApiResult<string>> {
-  return $fetch('/game/prize/participation', {
-    baseURL: useRuntimeConfig().public.gameApiBase,
+  return $fetch('/game/prizes/participation', {
+    baseURL: useRuntimeConfig().public.gameV2ApiBase,
     credentials: 'include',
     method: 'POST',
     body: query

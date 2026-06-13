@@ -385,7 +385,7 @@ func performLottery(record pm.GfgPrize) {
 	// 异步发送中奖通知
 	for _, winner := range winners {
 		go func(m pm.GfgPrizeMember) {
-			subject := "gofurry 抽奖服务-获奖"
+			subject := "GoFurry 抽奖服务-获奖"
 			body := "您已中奖，奖品为 [" + prizeRecord.Platform + "] 平台的 [" +
 				prizeRecord.Title + "] 请不要忘记自行兑换~"
 

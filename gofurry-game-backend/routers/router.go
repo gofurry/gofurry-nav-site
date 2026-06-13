@@ -68,11 +68,7 @@ func (router *router) Init() *fiber.App {
 
 func registerRoutes(app *fiber.App) {
 	api := app.Group("/api")
-	v1 := api.Group("/v1")
 	v2 := api.Group("/v2")
-
-	// v1 正式路由：/api/v1/game/...
-	gameApi(v1.Group("/game"))
 
 	// v2 游戏模块路由：/api/v2/game/...
 	gameV2Api(v2.Group("/game"))

@@ -1,4 +1,3 @@
-import { createRequest } from '@/utils/request'
 import type {
     AnonymousReviewModel, CommentReq, CreatorResponse,
     GameTagRecord,
@@ -6,9 +5,6 @@ import type {
     SearchItemModel, SearchPageQueryRequest, SearchPageResponse,
 } from '@/types/game'
 import type { ApiResult } from '@/types/common'
-import axios from "axios";
-
-const gameRequest = createRequest(import.meta.env.VITE_GAME_API_BASE_URL)
 
 export function getRandomGame(): Promise<string> {
     return useApi('gameV2')('/game/recommend/random')
@@ -56,16 +52,16 @@ export function commitComment(
 }
 
 export function getLottery(): Promise<LotteryResp> {
-    return gameRequest.get("/game/prize/info")
+    return useApi('gameV2')('/game/prizes')
 }
 
 export function getLotteryParticipation(
     query: LotteryReq
 ): Promise<ApiResult<string>> {
-    return axios
-        .post(
-            `${import.meta.env.VITE_GAME_API_BASE_URL}/game/prize/participation`,
-            query
-        )
-        .then(res => res.data)
+    return $fetch('/game/prizes/participation', {
+        baseURL: useRuntimeConfig().public.gameV2ApiBase,
+        credentials: 'include',
+        method: 'POST',
+        body: query
+    })
 }

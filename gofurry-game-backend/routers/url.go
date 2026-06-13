@@ -12,10 +12,6 @@ import (
  * @version: v1.0.0
  */
 
-func gameApi(g fiber.Router) {
-	prizeApi(g.Group("/prize"))
-}
-
 func gameV2Api(g fiber.Router) {
 	g.Get("/list", gamev2.GameV2Api.GetGameList)
 	g.Get("/info", gamev2.GameV2Api.GetGameInfo)
@@ -31,6 +27,9 @@ func gameV2Api(g fiber.Router) {
 	g.Get("/recommend/random", gamev2.GameV2Api.GetRandomGame)
 	g.Get("/recommend/similar", gamev2.GameV2Api.GetSimilarRecommendations)
 	g.Get("/creators", gamev2.GameV2Api.GetCreators)
+	g.Get("/prizes", prize.PrizeApi.LotteryInfo)
+	g.Post("/prizes/participation", prize.PrizeApi.PrizeParticipation)
+	g.Get("/prizes/participation/activation", prize.PrizeApi.ActiveParticipation)
 	g.Get("/sync/list", gamev2.GameV2Api.GetSyncGameList)
 	g.Get("/sync/info", gamev2.GameV2Api.GetSyncGameInfo)
 	g.Get("/sync/news", gamev2.GameV2Api.GetSyncGameNews)
@@ -42,11 +41,4 @@ func gameV2Api(g fiber.Router) {
 	collect.Get("/runs/:run_id", gamev2.GameV2Api.GetCollectRun)
 	collect.Get("/task-results", gamev2.GameV2Api.ListCollectTaskResults)
 	collect.Get("/games/:id/status", gamev2.GameV2Api.GetGameCollectStatus)
-}
-
-func prizeApi(g fiber.Router) {
-	g.Post("/participation", prize.PrizeApi.PrizeParticipation)            // 参与抽奖
-	g.Get("/participation/activation", prize.PrizeApi.ActiveParticipation) // 确认参与
-
-	g.Get("/info", prize.PrizeApi.LotteryInfo) // 抽奖页展示数据
 }

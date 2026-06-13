@@ -65,10 +65,16 @@ export async function proxyApiNamespace(event: H3Event, service: ApiService, nam
       query: getQuery(event),
       body,
       headers: sanitizeRequestHeaders(getHeaders(event)),
-      responseType: 'text'
+      responseType: 'text',
+      redirect: 'manual'
     })
 
     setResponseStatus(event, response.status)
+
+    const location = response.headers.get('location')
+    if (location) {
+      setHeader(event, 'location', location)
+    }
 
     const contentType = response.headers.get('content-type')
     if (contentType) {
