@@ -2,17 +2,13 @@
   <div class="space-y-6">
     <!-- 快捷功能 -->
     <div>
-      <h3 class="text-sm font-semibold text-gray-700 mb-2">
+      <h3 class="sidebar-section-title">
         {{ t("game.action.shortcutFunction") }}
       </h3>
 
       <div class="grid grid-cols-2 gap-3">
         <button
-            class="flex items-center justify-center gap-1
-                 bg-orange-100 hover:bg-orange-200/50
-                 text-orange-900
-                 py-2 rounded-lg
-                 transition disabled:opacity-60"
+            class="sidebar-action-button"
             :disabled="loading"
             @click="handleRandomGame"
         >
@@ -20,33 +16,21 @@
         </button>
 
         <button
-            class="flex items-center justify-center gap-1
-                 bg-orange-100 hover:bg-orange-200/50
-                 text-orange-900
-                 py-2 rounded-lg
-                 transition"
-            @click="openInstallModal"
+            class="sidebar-action-button"
+            type="button"
         >
-          {{ t("game.action.oneClickAddToLibrary") }}
+          Steam 专区
         </button>
 
         <button
-            class="flex items-center justify-center gap-1
-                 bg-orange-100 hover:bg-orange-200/50
-                 text-orange-900
-                 py-2 rounded-lg
-                 transition"
+            class="sidebar-action-button"
             @click="router.push('/games/creator')"
         >
           {{ t("game.action.authorList") }}
         </button>
 
         <button
-            class="flex items-center justify-center gap-1
-                 bg-orange-100 hover:bg-orange-200/50
-                 text-orange-900
-                 py-2 rounded-lg
-                 transition"
+            class="sidebar-action-button"
             @click="router.push('/games/news/more')"
         >
           {{ t("game.action.moreNews") }}
@@ -55,99 +39,9 @@
       </div>
     </div>
 
-    <!-- 一键入库弹窗 -->
-    <div
-        v-if="showInstallModal"
-        class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
-    >
-      <div
-          class="relative pointer-events-auto
-               w-[360px]
-               bg-orange-50 backdrop-blur-md
-               rounded-xl shadow-lg p-5 space-y-4"
-      >
-        <button
-            class="absolute top-3 right-3
-                 text-gray-500 hover:text-gray-800 transition"
-            @click="closeInstallModal"
-        >
-          ✕
-        </button>
-
-        <h3 class="text-lg font-semibold text-gray-800 mb-1">
-          {{ t("game.action.steamOneClickAddRun") }}
-        </h3>
-
-        <!-- Install -->
-        <div class="space-y-2">
-          <p class="text-sm text-gray-600">{{ t("game.action.inputAppIDInstallFreeGame") }}</p>
-          <input
-              v-model="steamAppId"
-              type="text"
-              :placeholder="t('game.action.installTip')"
-              class="w-full px-3 py-2 rounded-lg border border-orange-200
-                   focus:outline-none focus:ring-2 focus:ring-orange-300 text-sm"
-          />
-          <button
-              class="w-full py-2 rounded-lg text-sm font-medium
-                   transition bg-orange-200 text-orange-900
-                   hover:bg-orange-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="!steamAppId"
-              @click="handleInstall"
-          >
-            {{ t("game.action.startInstall") }}
-          </button>
-        </div>
-
-        <!-- 热门免费游戏 -->
-        <div class="flex flex-wrap gap-2 py-2 border-y border-orange-200">
-          <span
-              v-for="game in hotGames"
-              :key="game.id"
-              class="px-2 py-1 bg-orange-100 rounded-md text-sm text-orange-900 cursor-pointer hover:bg-orange-200"
-              @click="steamAppId = game.id"
-          >
-            {{ game.name }}
-          </span>
-        </div>
-
-        <!-- Run / Connect -->
-        <div class="space-y-2">
-          <p class="text-sm text-gray-600">{{ t("game.action.inputContentRunConnectServer") }}</p>
-          <input
-              v-model="steamRunId"
-              type="text"
-              :placeholder="t('game.action.runTip')"
-              class="w-full px-3 py-2 rounded-lg border border-orange-200
-                   focus:outline-none focus:ring-2 focus:ring-orange-300 text-sm"
-          />
-          <div class="grid grid-cols-2 gap-2">
-            <button
-                class="py-2 rounded-lg text-sm font-medium
-                     transition bg-orange-200 text-orange-900
-                     hover:bg-orange-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="!steamRunId"
-                @click="handleRun"
-            >
-              {{ t("game.action.runGame") }}
-            </button>
-            <button
-                class="py-2 rounded-lg text-sm font-medium
-                     transition bg-orange-200 text-orange-900
-                     hover:bg-orange-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="!steamRunId"
-                @click="handleConnect"
-            >
-              {{ t("game.action.connectServer") }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- 相关网站 -->
     <div>
-      <h3 class="text-sm font-semibold text-gray-700 mb-2">
+      <h3 class="sidebar-section-title">
         {{ t("game.action.relatedWebsites") }}
       </h3>
 
@@ -157,12 +51,12 @@
 
         <!-- 可展开更多网站 -->
         <transition
-            enter-active-class="transition-all duration-300 ease-out"
-            leave-active-class="transition-all duration-200 ease-in"
-            enter-from-class="opacity-0 max-h-0"
-            enter-to-class="opacity-100 max-h-[2000px]"
-            leave-from-class="opacity-100 max-h-[2000px]"
-            leave-to-class="opacity-0 max-h-0"
+            enter-active-class="sidebar-sites-expand-enter-active"
+            leave-active-class="sidebar-sites-expand-leave-active"
+            enter-from-class="sidebar-sites-expand-enter-from"
+            enter-to-class="sidebar-sites-expand-enter-to"
+            leave-from-class="sidebar-sites-expand-leave-from"
+            leave-to-class="sidebar-sites-expand-leave-to"
         >
           <div v-show="showAllSites" class="flex flex-col gap-2 overflow-hidden">
             <slot name="extra-sites" />
@@ -171,10 +65,7 @@
 
         <!-- 展开 / 收起按钮 -->
         <button
-            class="mx-auto mt-2 p-1 rounded-md
-                 text-xs text-orange-800
-                 hover:bg-orange-200 hover:text-orange-700
-                 transition"
+            class="sidebar-expand-button"
             @click="showAllSites = !showAllSites"
         >
           <span v-if="!showAllSites">{{ t("common.expand") }} ▼</span>
@@ -194,23 +85,7 @@ const { t } = i18n.global;
 const router = useRouter();
 const loading = ref(false);
 
-const showInstallModal = ref(false);
-const steamAppId = ref("");
-const steamRunId = ref("");
 const showAllSites = ref(false);
-
-const hotGames = ref([
-  { name: "家有大猫", id: "570840" },
-  { name: "FarmD", id: "1814630" },
-  { name: "Arctic Wolves", id: "3326280" },
-  { name: "外兽祭", id: "1590570" },
-  { name: "椰城蓝调", id: "2670920" },
-  { name: "Cumdy", id: "2697060" },
-  { name: "The Lar", id: "1084570" },
-  { name: "绿洲计划", id: "1168840" },
-  { name: "Neglected", id: "1300360" },
-  { name: "Illusion", id: "1875610" },
-]);
 
 async function handleRandomGame() {
   if (loading.value) return;
@@ -224,32 +99,126 @@ async function handleRandomGame() {
     loading.value = false;
   }
 }
-
-function openInstallModal() {
-  showInstallModal.value = true;
-}
-
-function closeInstallModal() {
-  showInstallModal.value = false;
-  steamAppId.value = "";
-  steamRunId.value = "";
-}
-
-function handleInstall() {
-  if (!steamAppId.value) return;
-  const appId = steamAppId.value.trim();
-  window.location.href = `steam://install/${appId}`;
-}
-
-function handleRun() {
-  if (!steamRunId.value) return;
-  const id = steamRunId.value.trim();
-  window.location.href = `steam://run/${id}`;
-}
-
-function handleConnect() {
-  if (!steamRunId.value) return;
-  const ip = steamRunId.value.trim();
-  window.location.href = `steam://connect/${ip}`;
-}
 </script>
+
+<style scoped>
+.sidebar-section-title {
+  margin-bottom: 0.55rem;
+  color: rgba(55, 43, 32, 0.82);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.sidebar-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.45rem;
+  border: 1px solid rgba(126, 92, 58, 0.17);
+  border-radius: 0.75rem;
+  background: rgba(255, 250, 242, 0.40);
+  box-shadow: 0 4px 12px rgba(91, 62, 28, 0.035);
+  color: rgba(124, 45, 18, 0.88);
+  font-size: 0.9rem;
+  font-weight: 650;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.sidebar-action-button:hover {
+  border-color: rgba(180, 96, 24, 0.34);
+  background: rgba(255, 239, 213, 0.68);
+  color: rgba(99, 39, 15, 0.96);
+}
+
+.sidebar-action-button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.sidebar-expand-button {
+  margin: 0.55rem auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: rgba(154, 52, 18, 0.78);
+  font-size: 0.8rem;
+  font-weight: 650;
+  transition: color 180ms ease;
+}
+
+.sidebar-expand-button:hover {
+  color: rgba(124, 45, 18, 0.95);
+}
+
+.sidebar-sites-expand-enter-active,
+.sidebar-sites-expand-leave-active {
+  overflow: hidden;
+  transition:
+    max-height 460ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 300ms ease,
+    transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sidebar-sites-expand-enter-from,
+.sidebar-sites-expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-0.35rem);
+}
+
+.sidebar-sites-expand-enter-to,
+.sidebar-sites-expand-leave-from {
+  max-height: 36rem;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+:global(.dark) .sidebar-section-title {
+  color: rgba(226, 232, 240, 0.82);
+}
+
+:global(.dark) .sidebar-action-button {
+  border-color: rgba(226, 232, 240, 0.15);
+  background: rgba(226, 232, 240, 0.065);
+  box-shadow: none;
+  color: rgba(180, 213, 226, 0.70);
+}
+
+:global(.dark) .sidebar-action-button:hover {
+  border-color: rgba(148, 163, 184, 0.36);
+  background: rgba(148, 163, 184, 0.11);
+  color: rgba(226, 232, 240, 0.86);
+}
+
+:global(.dark) .sidebar-expand-button {
+  color: rgba(180, 213, 226, 0.66);
+}
+
+:global(.dark) .sidebar-expand-button:hover {
+  color: rgba(226, 232, 240, 0.84);
+  background: transparent;
+}
+
+:global(.games-page--dark) .sidebar-action-button {
+  border-color: rgba(226, 232, 240, 0.15);
+  background: rgba(226, 232, 240, 0.065);
+  color: rgba(180, 213, 226, 0.70) !important;
+}
+
+:global(.games-page--dark) .sidebar-action-button:hover {
+  border-color: rgba(148, 163, 184, 0.36) !important;
+  background: rgba(148, 163, 184, 0.11) !important;
+  color: rgba(226, 232, 240, 0.86) !important;
+}
+
+:global(.games-page--dark) .sidebar-expand-button {
+  color: rgba(180, 213, 226, 0.66) !important;
+}
+
+:global(.games-page--dark) .sidebar-expand-button:hover {
+  color: rgba(226, 232, 240, 0.84) !important;
+  background: transparent !important;
+}
+</style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="relative">
+  <div class="search-shell relative">
     <!-- 搜索框 -->
     <div class="relative">
       <img
@@ -11,10 +11,7 @@
           v-model="keyword"
           type="text"
           :placeholder="t('game.search.simple')"
-          class="w-full pl-9 pr-3 py-2
-               rounded-lg bg-orange-50
-               text-sm placeholder-gray-400
-               focus:outline-none focus:ring-2 focus:ring-orange-200"
+          class="game-sidebar-search-input w-full rounded-lg border border-[rgba(126,92,58,0.17)] bg-[rgba(255,250,242,0.42)] py-2 pl-9 pr-3 text-sm text-stone-800 shadow-[0_4px_12px_rgba(91,62,28,0.03)] placeholder-stone-400 transition focus:border-[rgba(120,87,56,0.36)] focus:bg-[rgba(255,250,242,0.60)] focus:outline-none focus:ring-1 focus:ring-[rgba(120,87,56,0.10)] dark:border-slate-400/15 dark:bg-slate-950/35 dark:text-slate-100 dark:placeholder-slate-400 dark:shadow-none dark:focus:border-slate-300/40 dark:focus:bg-slate-900/55 dark:focus:ring-slate-300/20"
           @focus="onFocus"
           @blur="onBlur"
       />
@@ -31,23 +28,23 @@
     >
       <div
           v-if="showResults && results.length > 0"
-          class="absolute z-50 mt-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 2xl:grid-cols-5 pointer-events-auto"
+          class="search-results-panel"
           @mouseenter="hovering = true"
           @mouseleave="hovering = false"
       >
         <div
             v-for="item in results"
             :key="item.id"
-            class="cursor-pointer rounded-lg overflow-hidden hover:bg-orange-100 transition p-1"
+            class="search-result-card"
             @click="goToGame(item.id)"
         >
           <img
               :src="item.cover"
-              class="w-full h-20 object-cover rounded-md mb-1"
+              class="search-result-cover"
               :alt="item.name"
           />
-          <p class="text-sm font-semibold truncate">{{ item.name }}</p>
-          <p class="text-xs text-gray-500 truncate">{{ item.info }}</p>
+          <p class="search-result-title">{{ item.name }}</p>
+          <p class="search-result-desc">{{ item.info }}</p>
         </div>
       </div>
     </Transition>
@@ -131,3 +128,121 @@ function onBlur() {
   }, 200);
 }
 </script>
+
+<style scoped>
+.search-results-panel {
+  pointer-events: auto;
+  position: absolute;
+  z-index: 50;
+  margin-top: 0.5rem;
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  border: 1px solid rgba(126, 92, 58, 0.18);
+  border-radius: 0.82rem;
+  background: rgba(255, 250, 242, 0.94);
+  padding: 0.62rem;
+  box-shadow: 0 12px 30px rgba(91, 62, 28, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.search-shell {
+  container: game-search-shell / inline-size;
+}
+
+.game-sidebar-search-input:focus {
+  border-color: rgba(120, 87, 56, 0.36) !important;
+  box-shadow: 0 0 0 1px rgba(120, 87, 56, 0.10) !important;
+}
+
+.search-result-card {
+  min-width: 0;
+  cursor: pointer;
+  overflow: hidden;
+  border: 1px solid rgba(126, 92, 58, 0.10);
+  border-radius: 0.68rem;
+  background: rgba(255, 255, 255, 0.26);
+  padding: 0.42rem;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.search-result-card:hover {
+  border-color: rgba(180, 96, 24, 0.18);
+  background: rgba(255, 244, 228, 0.54);
+}
+
+.search-result-cover {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border-radius: 0.48rem;
+  object-fit: cover;
+}
+
+.search-result-title {
+  margin-top: 0.38rem;
+  overflow: hidden;
+  color: rgba(28, 25, 23, 0.94);
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result-desc {
+  margin-top: 0.18rem;
+  overflow: hidden;
+  color: rgba(87, 83, 78, 0.68);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container game-search-shell (min-width: 20rem) {
+  .search-results-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container game-search-shell (min-width: 34rem) {
+  .search-results-panel {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+:global(.dark) .search-results-panel {
+  border-color: rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.94);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+}
+
+:global(.dark) .game-sidebar-search-input:focus {
+  border-color: rgba(203, 213, 225, 0.38) !important;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.18) !important;
+}
+
+:global(.games-page--dark) .game-sidebar-search-input:focus {
+  border-color: rgba(203, 213, 225, 0.38) !important;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.18) !important;
+}
+
+:global(.dark) .search-result-card {
+  border-color: rgba(148, 163, 184, 0.12);
+  background: rgba(30, 41, 59, 0.42);
+}
+
+:global(.dark) .search-result-card:hover {
+  border-color: rgba(203, 213, 225, 0.36);
+  background: rgba(226, 232, 240, 0.13);
+}
+
+:global(.dark) .search-result-title {
+  color: rgba(248, 250, 252, 0.94);
+}
+
+:global(.dark) .search-result-desc {
+  color: rgba(203, 213, 225, 0.66);
+}
+</style>

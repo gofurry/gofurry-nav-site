@@ -5,6 +5,7 @@ import type {
   GameBaseInfoResponse,
   GameGroupRecord,
   GamePanelRecord,
+  PriceRecord,
   GameV2DetailRecord,
   GameV2ListItem,
   GameV2NewsItem,
@@ -78,8 +79,8 @@ export function getSearchSimple(lang: string, txt: string): Promise<SearchItemMo
   return useApi('gameV2')('/game/search/simple', { method: 'POST', body: { txt, lang } })
 }
 
-export function getLatestReview(): Promise<AnonymousReviewModel[]> {
-  return useApi('gameV2')('/game/reviews/latest')
+export function getLatestReview(limit = 15): Promise<AnonymousReviewModel[]> {
+  return useApi('gameV2')('/game/reviews/latest', { query: { limit } })
 }
 
 export function getTagList(lang: string): Promise<GameTagRecord[]> {
@@ -138,6 +139,8 @@ function getGameV2Panel(lang: string): Promise<GameV2PanelRecord> {
       lang: normalizeGameLang(lang),
       region: 'CN',
       limit: 24,
+      top_online_limit: 60,
+      price_limit: 120,
       news_limit: 12,
     }
   })
@@ -151,38 +154,52 @@ function mapV2PanelToGameGroup(panel: GameV2PanelRecord): GameGroupRecord {
   return {
     latest: panel.latest_games.map(mapV2ListItemToBase),
     recent: panel.updated_games.map(mapV2ListItemToBase),
-    hot: panel.top_online.map(mapV2ListItemToBase),
+    hot: panel.top_online.slice(0, 24).map(mapV2ListItemToBase),
     free: panel.free_games.map(mapV2ListItemToBase),
   }
 }
 
 function mapV2PanelToGamePanel(panel: GameV2PanelRecord): GamePanelRecord {
   const topOnline = panel.top_online.map(mapV2ListItemToTopPlayer)
+  const topPrice = panel.top_price.map(mapV2ListItemToPrice)
+  const highestDiscount = panel.highest_discount.map(mapV2ListItemToPrice)
   const lowPrice = panel.low_price.map(mapV2ListItemToPrice)
 
   return {
     top_count: {
       one: topOnline.slice(0, 15),
-      two: topOnline.slice(0, 30),
-      three: topOnline.slice(0, 45),
-      four: topOnline.slice(0, 60),
+      two: topOnline.slice(15, 30),
+      three: topOnline.slice(30, 45),
+      four: topOnline.slice(45, 60),
     },
-    top_discount_vo: panel.highest_discount.map(mapV2ListItemToPrice),
-    top_price_vo: lowPrice,
+    top_discount_vo: highestDiscount
+      .sort((a, b) => b.discount - a.discount || a.global_price - b.global_price)
+      .slice(0, 15),
+    top_price_vo: topPrice
+      .sort((a, b) => b.global_price - a.global_price || b.discount - a.discount)
+      .slice(0, 15),
     bottom_price: {
-      one: lowPrice.filter((item) => item.china_price > 0 && item.china_price <= 1000),
-      two: lowPrice.filter((item) => item.china_price > 1000 && item.china_price <= 1500),
-      three: lowPrice.filter((item) => item.china_price > 1500 && item.china_price <= 2000),
-      four: lowPrice.filter((item) => item.china_price > 2000 && item.china_price <= 2500),
+      one: buildUsdPriceZone(lowPrice, 10),
+      two: buildUsdPriceZone(lowPrice, 15),
+      three: buildUsdPriceZone(lowPrice, 20),
+      four: buildUsdPriceZone(lowPrice, 25),
     },
   }
+}
+
+function buildUsdPriceZone(items: PriceRecord[], maxDollars: number) {
+  const maxCents = maxDollars * 100
+  return items
+    .filter((item) => item.global_price > 0 && item.global_price <= maxCents)
+    .sort((a, b) => b.global_price - a.global_price || b.discount - a.discount)
+    .slice(0, 15)
 }
 
 function mapV2ListItemToBase(game: GameV2ListItem) {
   return {
     game_id: game.id,
-    avg_score: 0,
-    comment_count: 0,
+    avg_score: game.avg_score ?? 0,
+    comment_count: game.comment_count ?? 0,
     name: game.name,
     name_en: game.name,
     info: game.summary,
@@ -195,6 +212,7 @@ function mapV2ListItemToTopPlayer(game: GameV2ListItem) {
   return {
     id: game.id,
     name: game.name,
+    desc: game.summary,
     count_peak: game.online_count?.count ?? 0,
     count_recent: game.online_count?.count ?? 0,
     collect_time: toUnixSeconds(game.online_count?.collected_at),
@@ -204,14 +222,23 @@ function mapV2ListItemToTopPlayer(game: GameV2ListItem) {
 
 function mapV2ListItemToPrice(game: GameV2ListItem) {
   const price = game.price
+  const globalPrice = selectGlobalPrice(game.prices ?? [], price)
   return {
     id: game.id,
     name: game.name,
-    global_price: 0,
+    desc: game.summary,
+    global_price: globalPrice?.available ? globalPrice.final_amount : 0,
     china_price: price?.available ? price.final_amount : 0,
-    discount: price?.discount_percent ?? 0,
+    discount: globalPrice?.discount_percent ?? price?.discount_percent ?? 0,
     header: bestV2Cover(game),
   }
+}
+
+function selectGlobalPrice(prices: GameV2ListItem['prices'], regionPrice?: GameV2ListItem['price']) {
+  return prices.find(price => price.available && price.region === 'US')
+    || prices.find(price => price.available && price.currency === 'USD')
+    || prices.find(price => price.available && price.region !== 'CN')
+    || regionPrice
 }
 
 function bestV2Cover(game: GameV2ListItem) {

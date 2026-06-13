@@ -44,6 +44,7 @@ type gameDetailReader interface {
 	GetLatestGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	ListTopOnlineAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	ListFreeGameAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
+	ListHighestPriceAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	ListHighestDiscountAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	ListLowPriceAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	GetCollectStatus(ctx context.Context) (v2models.GameV2CollectStatus, common.GFError)
@@ -416,6 +417,8 @@ func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.Ga
 	query.Lang = normalizeLang(query.Lang)
 	query.Region = normalizeRegion(query.Region)
 	query.Limit = clampLimit(query.Limit, 8, 24)
+	query.TopOnlineLimit = clampLimit(query.TopOnlineLimit, 60, 60)
+	query.PriceLimit = clampLimit(query.PriceLimit, 120, 200)
 	query.NewsLimit = clampLimit(query.NewsLimit, 8, 24)
 
 	latest, err := svc.reader.ListGameAggregates(ctx, v2models.GameV2ListQuery{
@@ -436,7 +439,9 @@ func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.Ga
 	if err != nil {
 		return res, err
 	}
-	topOnline, err := svc.reader.ListTopOnlineAggregates(ctx, query)
+	topOnlineQuery := query
+	topOnlineQuery.Limit = query.TopOnlineLimit
+	topOnline, err := svc.reader.ListTopOnlineAggregates(ctx, topOnlineQuery)
 	if err != nil {
 		return res, err
 	}
@@ -444,11 +449,22 @@ func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.Ga
 	if err != nil {
 		return res, err
 	}
-	highestDiscount, err := svc.reader.ListHighestDiscountAggregates(ctx, query)
+	priceQuery := query
+	priceQuery.Region = "US"
+	priceQuery.Limit = query.PriceLimit
+	topPriceQuery := priceQuery
+	topPriceQuery.Limit = 15
+	topPrice, err := svc.reader.ListHighestPriceAggregates(ctx, topPriceQuery)
 	if err != nil {
 		return res, err
 	}
-	lowPrice, err := svc.reader.ListLowPriceAggregates(ctx, query)
+	discountQuery := priceQuery
+	discountQuery.Limit = 15
+	highestDiscount, err := svc.reader.ListHighestDiscountAggregates(ctx, discountQuery)
+	if err != nil {
+		return res, err
+	}
+	lowPrice, err := svc.reader.ListLowPriceAggregates(ctx, priceQuery)
 	if err != nil {
 		return res, err
 	}
@@ -464,6 +480,7 @@ func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.Ga
 	res.UpdatedGames = buildListItems(updated, query.Lang, query.Region)
 	res.TopOnline = buildListItems(topOnline, query.Lang, query.Region)
 	res.FreeGames = buildListItems(freeGames, query.Lang, query.Region)
+	res.TopPrice = buildListItems(topPrice, query.Lang, query.Region)
 	res.HighestDiscount = buildListItems(highestDiscount, query.Lang, query.Region)
 	res.LowPrice = buildListItems(lowPrice, query.Lang, query.Region)
 	res.LatestNews = latestNews
@@ -1070,20 +1087,23 @@ func buildListItems(aggregates []v2models.GameV2Aggregate, lang string, region s
 func buildListItem(aggregate v2models.GameV2Aggregate, lang string, region string) v2models.GameV2ListItem {
 	detail := buildDetailReadModel(aggregate, lang, region)
 	return v2models.GameV2ListItem{
-		ID:          detail.ID,
-		AppID:       detail.AppID,
-		Name:        detail.Name,
-		Summary:     detail.Summary,
-		HeaderURL:   detail.HeaderURL,
-		CapsuleURL:  detail.Media.CapsuleURL,
-		ReleaseDate: detail.Release.Date,
-		Developers:  detail.Developers,
-		Publishers:  detail.Publishers,
-		Platforms:   detail.Platforms,
-		Price:       detail.Price,
-		OnlineCount: detail.OnlineCount,
-		Tags:        detail.Tags,
-		UpdatedAt:   detail.UpdatedAt,
+		ID:           detail.ID,
+		AppID:        detail.AppID,
+		Name:         detail.Name,
+		Summary:      detail.Summary,
+		HeaderURL:    detail.HeaderURL,
+		CapsuleURL:   detail.Media.CapsuleURL,
+		ReleaseDate:  detail.Release.Date,
+		Developers:   detail.Developers,
+		Publishers:   detail.Publishers,
+		Platforms:    detail.Platforms,
+		Prices:       detail.Prices,
+		Price:        detail.Price,
+		OnlineCount:  detail.OnlineCount,
+		Tags:         detail.Tags,
+		AvgScore:     aggregate.ReviewStats.AvgScore,
+		CommentCount: aggregate.ReviewStats.CommentCount,
+		UpdatedAt:    detail.UpdatedAt,
 	}
 }
 

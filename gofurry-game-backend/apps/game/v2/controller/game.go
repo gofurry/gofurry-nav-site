@@ -106,7 +106,7 @@ func (api *gameV2Api) AddAnonymousReview(c fiber.Ctx) error {
 }
 
 func (api *gameV2Api) GetLatestReviews(c fiber.Ctx) error {
-	data, err := newReadModelService().ListLatestReviews(context.Background(), c.Query("lang", "zh"), parseInt(c.Query("limit", "5")))
+	data, err := newReadModelService().ListLatestReviews(context.Background(), c.Query("lang", "zh"), parseInt(c.Query("limit", "15")))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -175,10 +175,12 @@ func (api *gameV2Api) GetLatestGameNews(c fiber.Ctx) error {
 
 func (api *gameV2Api) GetPanelMain(c fiber.Ctx) error {
 	data, err := newReadModelService().GetPanelMain(context.Background(), v2models.GameV2PanelQuery{
-		Lang:      c.Query("lang", "zh"),
-		Region:    c.Query("region", "CN"),
-		Limit:     parseInt(c.Query("limit", "8")),
-		NewsLimit: parseInt(c.Query("news_limit", "8")),
+		Lang:           c.Query("lang", "zh"),
+		Region:         c.Query("region", "CN"),
+		Limit:          parseInt(c.Query("limit", "8")),
+		TopOnlineLimit: parseInt(c.Query("top_online_limit", "60")),
+		PriceLimit:     parseInt(c.Query("price_limit", "120")),
+		NewsLimit:      parseInt(c.Query("news_limit", "8")),
 	})
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())

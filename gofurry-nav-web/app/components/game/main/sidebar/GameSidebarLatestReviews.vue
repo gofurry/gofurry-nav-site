@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-3">
-    <h3 class="mb-1 text-sm font-semibold text-gray-700">
+    <h3 class="mb-1 text-sm font-bold text-stone-700/90">
       {{ titleText }}
     </h3>
 
@@ -15,7 +15,7 @@
     <div
       v-for="(item, index) in reviews"
       :key="index"
-      class="flex items-center gap-3 rounded-xl bg-orange-50 p-3 transition hover:bg-orange-200/50"
+      class="latest-review-item"
     >
       <div class="flex w-[88px] shrink-0 flex-col items-center text-center">
         <img
@@ -24,7 +24,7 @@
           :alt="item.game_name"
         />
         <p
-          class="mt-1 w-full truncate text-xs font-semibold text-gray-800"
+          class="mt-1 w-full truncate text-xs font-semibold text-stone-800"
           :title="item.game_name"
         >
           {{ item.game_name }}
@@ -33,13 +33,13 @@
 
       <div class="flex min-w-0 flex-1 flex-col justify-between">
         <p
-          class="line-clamp-2 text-sm leading-snug text-gray-700"
+          class="line-clamp-2 text-sm leading-snug text-stone-700"
           :title="item.content"
         >
           {{ item.content }}
         </p>
 
-        <div class="mt-2 space-y-0.5 text-xs text-gray-400">
+        <div class="mt-2 space-y-0.5 text-xs text-stone-400">
           <div class="truncate">
             {{ regionLabel }}: {{ item.region }}
           </div>
@@ -109,3 +109,54 @@ onMounted(() => {
   }
 })
 </script>
+
+<style scoped>
+.latest-review-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgba(126, 92, 58, 0.17);
+  border-radius: 0.82rem;
+  background: rgba(255, 250, 242, 0.40);
+  box-shadow: 0 5px 14px rgba(91, 62, 28, 0.035);
+  padding: 0.68rem;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.latest-review-item:hover {
+  border-color: rgba(180, 96, 24, 0.34);
+  background: rgba(255, 239, 213, 0.68);
+}
+
+:global(.dark) h3 {
+  color: rgba(226, 232, 240, 0.86);
+}
+
+:global(.dark) .latest-review-item {
+  border-color: rgba(226, 232, 240, 0.15);
+  background: rgba(226, 232, 240, 0.065);
+  box-shadow: none;
+}
+
+:global(.dark) .latest-review-item:hover {
+  border-color: rgba(148, 163, 184, 0.36);
+  background: rgba(148, 163, 184, 0.11);
+}
+
+:global(.dark) .latest-review-item .text-stone-800 {
+  color: rgba(241, 245, 249, 0.86);
+}
+
+:global(.dark) .latest-review-item .text-stone-700 {
+  color: rgba(203, 213, 225, 0.72);
+}
+
+:global(.dark) .latest-review-item .text-stone-400 {
+  color: rgba(148, 163, 184, 0.78);
+}
+
+:global(.games-page--dark) .latest-review-item:hover {
+  border-color: rgba(148, 163, 184, 0.36) !important;
+  background: rgba(148, 163, 184, 0.11) !important;
+}
+</style>

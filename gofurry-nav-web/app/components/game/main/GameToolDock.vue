@@ -1,42 +1,58 @@
 <template>
-  <div class="fixed right-4 top-24 z-40 hidden items-start gap-2 lg:flex">
-    <RagPromptPanel
-      v-if="activePanel === 'ask'"
-      :title="t('game.tools.askTitle')"
-      :description="t('game.tools.askDescription')"
-      :placeholder="t('game.tools.askPlaceholder')"
-      :submit-label="t('game.tools.askSubmit')"
-      :templates="gamePromptTemplates"
-      @ask="openArchivePrompt"
-    />
+  <div class="game-tool-dock">
+    <Transition name="game-tool-panel-transition" mode="out-in">
+      <RagPromptPanel
+        v-if="activePanel === 'ask'"
+        :title="t('game.tools.askTitle')"
+        :description="t('game.tools.askDescription')"
+        :placeholder="t('game.tools.askPlaceholder')"
+        :submit-label="t('game.tools.askSubmit')"
+        :templates="gamePromptTemplates"
+        @ask="openArchivePrompt"
+      />
+    </Transition>
 
     <nav
-      class="flex flex-col gap-2"
+      class="game-tool-rail"
       :aria-label="t('game.tools.label')"
     >
-      <button
-        v-for="tool in tools"
-        :key="tool.key"
-        type="button"
-        class="group relative grid size-11 place-items-center overflow-hidden rounded-lg border border-white/55 bg-white/70 text-slate-700 shadow-[0_12px_32px_rgba(76,42,18,0.14)] backdrop-blur-xl transition duration-200 hover:border-orange-200 hover:bg-white/[0.88] hover:text-orange-700"
-        :class="{ 'border-orange-200 bg-white/[0.9] text-orange-700': tool.panel && activePanel === tool.panel }"
-        :title="tool.label"
-        :aria-label="tool.label"
-        @click="tool.action"
+      <div class="game-tool-rail__primary">
+        <button
+          v-for="tool in tools"
+          :key="tool.key"
+          type="button"
+          class="game-tool-button"
+          :class="{ active: tool.panel && activePanel === tool.panel }"
+          :title="tool.label"
+          :aria-label="tool.label"
+          @click="tool.action"
+        >
+          <span class="game-tool-icon-stack" aria-hidden="true">
+            <img
+              v-if="tool.image"
+              class="game-tool-icon"
+              :class="{ 'game-tool-icon--cover': tool.cover }"
+              :src="tool.image"
+              alt=""
+              draggable="false"
+            />
+          </span>
+        </button>
+      </div>
+
+      <a
+        class="game-tool-feedback"
+        href="https://github.com/gofurry/gofurry-nav-site/issues"
+        target="_blank"
+        rel="noopener noreferrer"
+        :title="t('nav.tools.feedback')"
+        :aria-label="t('nav.tools.feedback')"
       >
-        <img
-          v-if="tool.image"
-          :src="tool.image"
-          :alt="tool.label"
-          class="size-full object-cover opacity-90 transition duration-200 group-hover:scale-105 group-hover:opacity-100"
-          draggable="false"
-        />
-        <svg v-else viewBox="0 0 24 24" aria-hidden="true" class="size-5 fill-none stroke-current stroke-[1.9]">
-          <path d="M12 3.5 13.7 9l5.3 1.7-5.3 1.7L12 18l-1.7-5.6L5 10.7 10.3 9 12 3.5Z" />
-          <path d="M18 15.5 18.8 18l2.2.8-2.2.7L18 22l-.8-2.5-2.2-.7 2.2-.8.8-2.5Z" />
-        </svg>
-        <span class="sr-only">{{ tool.label }}</span>
-      </button>
+        <span class="game-tool-icon-stack" aria-hidden="true">
+          <img class="game-tool-icon" :src="feedbackIconSrc" alt="" />
+        </span>
+        <span>{{ t('nav.tools.feedbackShort') }}</span>
+      </a>
     </nav>
   </div>
 </template>
@@ -45,6 +61,8 @@
 import { computed, ref } from 'vue'
 import { i18n } from '@/main'
 import RagPromptPanel from '@/components/common/RagPromptPanel.vue'
+import askIconLight from '@/assets/svgs/ai-duotone.svg'
+import feedbackIconLight from '@/assets/svgs/ai-note-alt-1-duotone.svg'
 
 type RagPromptTemplate = {
   id: string
@@ -56,6 +74,7 @@ type RagPromptTemplate = {
 const router = useRouter()
 const { t } = i18n.global
 const activePanel = ref<'ask' | null>(null)
+const feedbackIconSrc = feedbackIconLight
 
 const gamePromptTemplates = computed<RagPromptTemplate[]>(() => [
   {
@@ -83,12 +102,15 @@ const tools = computed(() => [
     key: 'lottery',
     label: t('game.tools.lottery'),
     image: 'https://qcdn.go-furry.com/game/background/steam.jpg',
+    cover: true,
     panel: null,
     action: () => router.push('/games/prize'),
   },
   {
     key: 'ask',
     label: t('game.tools.ask'),
+    image: askIconLight,
+    cover: false,
     panel: 'ask' as const,
     action: () => {
       activePanel.value = activePanel.value === 'ask' ? null : 'ask'
@@ -107,3 +129,153 @@ function openArchivePrompt(prompt: string) {
   })
 }
 </script>
+
+<style scoped>
+.game-tool-dock {
+  position: fixed;
+  top: 6rem;
+  right: 1rem;
+  bottom: 5.6rem;
+  z-index: 40;
+  display: none;
+  align-items: flex-start;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+@media (min-width: 1024px) {
+  .game-tool-dock {
+    display: flex;
+  }
+}
+
+.game-tool-rail {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.game-tool-rail__primary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: auto;
+}
+
+.game-tool-button,
+.game-tool-feedback {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 12px 32px rgba(76, 42, 18, 0.14);
+  color: #334155;
+  backdrop-filter: blur(18px);
+  transition:
+    background 500ms ease,
+    border-color 500ms ease,
+    color 500ms ease,
+    box-shadow 500ms ease,
+    filter 500ms ease;
+}
+
+.game-tool-button {
+  position: relative;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  overflow: hidden;
+}
+
+.game-tool-button:hover,
+.game-tool-button.active,
+.game-tool-feedback:hover {
+  border-color: rgba(253, 186, 116, 0.9);
+  background: rgba(255, 255, 255, 0.9);
+  color: #c2410c;
+  box-shadow: 0 14px 36px rgba(76, 42, 18, 0.18);
+  filter: saturate(1.05);
+}
+
+.game-tool-icon-stack {
+  display: grid;
+  width: 1.55rem;
+  height: 1.55rem;
+  place-items: center;
+}
+
+.game-tool-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.game-tool-icon--cover {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.48rem;
+  object-fit: cover;
+}
+
+.game-tool-button:has(.game-tool-icon--cover) .game-tool-icon-stack {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.game-tool-feedback {
+  display: grid;
+  width: 2.75rem;
+  min-height: 4.3rem;
+  place-items: center;
+  gap: 0.26rem;
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1;
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.game-tool-feedback > span:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0 0.12rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-tool-panel-transition-enter-active,
+.game-tool-panel-transition-leave-active {
+  transition:
+    opacity 500ms ease,
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 500ms ease;
+}
+
+.game-tool-panel-transition-enter-from,
+.game-tool-panel-transition-leave-to {
+  opacity: 0;
+  transform: translateX(10px) scale(0.975);
+  filter: blur(6px);
+}
+
+:global(.dark) .game-tool-button,
+:global(.dark) .game-tool-feedback {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.68);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  color: rgba(226, 232, 240, 0.88);
+}
+
+:global(.dark) .game-tool-button:hover,
+:global(.dark) .game-tool-button.active,
+:global(.dark) .game-tool-feedback:hover {
+  border-color: rgba(251, 146, 60, 0.44);
+  background: rgba(30, 41, 59, 0.86);
+  color: rgba(254, 215, 170, 0.96);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+}
+</style>

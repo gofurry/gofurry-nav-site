@@ -1,18 +1,18 @@
 <template>
-  <div class="space-y-2">
+  <div class="space-y-4">
 
     <!-- Tab -->
-    <div class="flex flex-col md:flex-row items-center justify-between">
+    <div class="flex flex-col items-center justify-between gap-3 md:flex-row">
 
       <!-- 类型切换 -->
-      <div class="inline-flex rounded-xl bg-orange-100 p-1">
+      <div class="inline-flex items-center gap-5 border-b border-orange-200/45 dark:border-slate-400/15">
         <div
             v-for="item in panelTypes"
             :key="item.key"
-            class="px-4 py-2 rounded-lg text-sm transition"
+            class="stats-type-tab relative cursor-pointer px-1 pb-2 text-sm font-semibold transition"
             :class="activeType === item.key
-              ? 'bg-orange-50 font-bold text-orange-800'
-              : 'text-orange-500 hover:bg-orange-200'"
+              ? 'stats-type-tab--active text-orange-800 after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-orange-700/70 dark:text-slate-200 dark:after:bg-slate-300/55'
+              : 'stats-type-tab--idle text-orange-500/80 hover:text-orange-700 dark:text-slate-400 dark:hover:text-slate-200'"
             @click="switchType(item.key)"
         >
           {{ item.label }}
@@ -20,14 +20,14 @@
       </div>
 
       <!-- 组内切换 -->
-      <div class="inline-flex rounded-xl bg-orange-100 p-1">
+      <div class="inline-flex items-center gap-2">
         <div
-            v-for="(_, idx) in (activeType === 'count' ? countGroups : priceGroups)"
+            v-for="(_, idx) in (activeType === 'count' ? visibleCountGroups : priceGroups)"
             :key="idx"
-            class="px-4 py-2 rounded-lg text-sm transition"
+            class="stats-page-tab grid h-7 min-w-7 cursor-pointer place-items-center rounded-full px-2 text-sm font-semibold transition"
             :class="activeGroup === idx
-              ? 'bg-orange-50 font-bold text-orange-800'
-              : 'text-orange-500 hover:bg-orange-200/50'"
+              ? 'stats-page-tab--active bg-white/58 text-orange-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.62)] dark:bg-slate-800/70 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+              : 'stats-page-tab--idle text-orange-500/80 hover:bg-white/28 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-slate-800/45 dark:hover:text-slate-200'"
             @click="activeGroup = idx"
         >
           {{ idx + 1 }}
@@ -42,13 +42,12 @@
       <!-- 在线人数 -->
       <CountTablePanel
           v-if="activeType === 'count'"
-          v-for="panel in countGroups[activeGroup]"
+          v-for="panel in visibleCountGroups[activeGroup]"
           :key="panel.key"
           :title="panel.title"
           :desc="panel.desc"
           :list="panel.list"
-          :expanded="groupExpanded"
-          @toggle="groupExpanded = !groupExpanded"
+          :rank-start="panel.rankStart"
       />
 
       <!-- 价格 -->
@@ -59,8 +58,6 @@
           :title="panel.title"
           :desc="panel.desc"
           :list="panel.list"
-          :expanded="groupExpanded"
-          @toggle="groupExpanded = !groupExpanded"
       />
     </div>
 
@@ -96,7 +93,6 @@ const panelTypes = [
 
 const activeType = ref<PanelType>('count')
 const activeGroup = ref(0)
-const groupExpanded = ref(false)
 
 function switchType(type: PanelType) {
   activeType.value = type
@@ -111,24 +107,28 @@ const countPanels = computed(() => [
     title: t('game.panel.playerCountTop15'),
     desc: t('game.panel.playerCountDesc1'),
     list: props.topCountList.one,
+    rankStart: 1,
   },
   {
     key: 'count2',
     title: t('game.panel.playerCountTop30'),
     desc: t('game.panel.playerCountDesc2'),
     list: props.topCountList.two,
+    rankStart: 16,
   },
   {
     key: 'count3',
     title: t('game.panel.playerCountTop45'),
     desc: t('game.panel.playerCountDesc3'),
     list: props.topCountList.three,
+    rankStart: 31,
   },
   {
     key: 'count4',
     title: t('game.panel.playerCountTop60'),
     desc: t('game.panel.playerCountDesc4'),
     list: props.topCountList.four,
+    rankStart: 46,
   },
 ])
 
@@ -183,10 +183,40 @@ function buildGroups<T>(list: T[]) {
   return groups
 }
 
-const countGroups = computed(() => buildGroups(countPanels.value))
 const priceGroups = computed(() => buildGroups(pricePanels.value))
+const visibleCountGroups = computed(() => buildGroups(countPanels.value.filter(panel => panel.list.length > 0)))
 
-watch([activeGroup, activeType], () => {
-  groupExpanded.value = false
+watch([activeType, visibleCountGroups, priceGroups], () => {
+  const groupLength = activeType.value === 'count'
+    ? visibleCountGroups.value.length
+    : priceGroups.value.length
+  if (activeGroup.value >= groupLength) {
+    activeGroup.value = Math.max(0, groupLength - 1)
+  }
 })
 </script>
+
+<style scoped>
+:global(.games-page--dark) .stats-type-tab--active {
+  color: rgba(203, 213, 225, 0.82) !important;
+}
+
+:global(.games-page--dark) .stats-type-tab--active::after {
+  background: rgba(148, 163, 184, 0.54) !important;
+}
+
+:global(.games-page--dark) .stats-type-tab--idle,
+:global(.games-page--dark) .stats-page-tab--idle {
+  color: rgba(203, 213, 225, 0.54) !important;
+}
+
+:global(.games-page--dark) .stats-type-tab--idle:hover,
+:global(.games-page--dark) .stats-page-tab--idle:hover {
+  color: rgba(226, 232, 240, 0.74) !important;
+}
+
+:global(.games-page--dark) .stats-page-tab--active {
+  background: rgba(30, 41, 59, 0.52) !important;
+  color: rgba(203, 213, 225, 0.82) !important;
+}
+</style>

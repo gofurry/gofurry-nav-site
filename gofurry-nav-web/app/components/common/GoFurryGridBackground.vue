@@ -14,7 +14,7 @@
 <script setup lang="ts">
 withDefaults(defineProps<{
   fixed?: boolean
-  palette?: 'default' | 'nav-content'
+  palette?: 'default' | 'nav-content' | 'games'
   profile?: 'full' | 'light'
 }>(), {
   fixed: true,
@@ -127,6 +127,13 @@ withDefaults(defineProps<{
   background: #efe0ca;
 }
 
+.gofurry-grid-background[data-palette="games"] {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(255, 246, 229, 0.34), transparent 26%),
+    radial-gradient(circle at 86% 20%, rgba(225, 198, 154, 0.20), transparent 30%),
+    #efe0ca;
+}
+
 .gofurry-grid-background.is-light[data-palette="nav-content"] {
   background:
     repeating-linear-gradient(90deg, rgba(95, 69, 49, 0.18) 0, rgba(95, 69, 49, 0.18) 1px, transparent 1px, transparent 38px),
@@ -144,6 +151,16 @@ withDefaults(defineProps<{
   );
 }
 
+.gofurry-grid-background[data-palette="games"]::before {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(95, 69, 49, 0.32) 0,
+    rgba(95, 69, 49, 0.32) 1px,
+    transparent 1px,
+    transparent 38px
+  );
+}
+
 .gofurry-grid-background[data-palette="nav-content"]::after {
   background: repeating-linear-gradient(
     0deg,
@@ -154,8 +171,26 @@ withDefaults(defineProps<{
   );
 }
 
+.gofurry-grid-background[data-palette="games"]::after {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(95, 69, 49, 0.28) 0,
+    rgba(95, 69, 49, 0.28) 1px,
+    transparent 1px,
+    transparent 38px
+  );
+}
+
 :global(.dark .gofurry-grid-background[data-palette="nav-content"]) {
   background: #18273c;
+}
+
+:global(.dark .gofurry-grid-background[data-palette="games"]) {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(20, 184, 166, 0.10), transparent 26%),
+    radial-gradient(circle at 86% 20%, rgba(245, 158, 11, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(8, 15, 28, 0.98), rgba(14, 27, 46, 0.99)),
+    #0b1728;
 }
 
 :global(.dark .gofurry-grid-background.is-light[data-palette="nav-content"]) {
@@ -175,11 +210,31 @@ withDefaults(defineProps<{
   );
 }
 
+:global(.dark .gofurry-grid-background[data-palette="games"]::before) {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(125, 211, 252, 0.16) 0,
+    rgba(125, 211, 252, 0.16) 1px,
+    transparent 1px,
+    transparent 38px
+  );
+}
+
 :global(.dark .gofurry-grid-background[data-palette="nav-content"]::after) {
   background: repeating-linear-gradient(
     0deg,
     rgba(148, 163, 184, 0.28) 0,
     rgba(148, 163, 184, 0.28) 1px,
+    transparent 1px,
+    transparent 38px
+  );
+}
+
+:global(.dark .gofurry-grid-background[data-palette="games"]::after) {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(251, 191, 36, 0.11) 0,
+    rgba(251, 191, 36, 0.11) 1px,
     transparent 1px,
     transparent 38px
   );

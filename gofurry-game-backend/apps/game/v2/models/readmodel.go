@@ -228,6 +228,12 @@ type GameV2Aggregate struct {
 	News         []GfgGameV2News
 	OnlineCount  *GfgGameV2PlayerCount
 	Tags         []GameV2Tag
+	ReviewStats  GameV2ReviewStats
+}
+
+type GameV2ReviewStats struct {
+	AvgScore     float64 `gorm:"column:avg_score" json:"avg_score"`
+	CommentCount int64   `gorm:"column:comment_count" json:"comment_count"`
 }
 
 type GameV2DetailQuery struct {
@@ -428,10 +434,12 @@ type GameV2NewsQuery struct {
 }
 
 type GameV2PanelQuery struct {
-	Lang      string
-	Region    string
-	Limit     int
-	NewsLimit int
+	Lang           string
+	Region         string
+	Limit          int
+	TopOnlineLimit int
+	PriceLimit     int
+	NewsLimit      int
 }
 
 type GameV2CollectRunQuery struct {
@@ -596,20 +604,23 @@ type GameV2SyncCreatorRow struct {
 }
 
 type GameV2ListItem struct {
-	ID          string            `json:"id"`
-	AppID       string            `json:"appid"`
-	Name        string            `json:"name"`
-	Summary     string            `json:"summary"`
-	HeaderURL   string            `json:"header_url"`
-	CapsuleURL  string            `json:"capsule_url"`
-	ReleaseDate string            `json:"release_date"`
-	Developers  []string          `json:"developers"`
-	Publishers  []string          `json:"publishers"`
-	Platforms   map[string]bool   `json:"platforms"`
-	Price       GameV2PriceView   `json:"price"`
-	OnlineCount GameV2OnlineCount `json:"online_count"`
-	Tags        []GameV2Tag       `json:"tags"`
-	UpdatedAt   time.Time         `json:"updated_at"`
+	ID           string            `json:"id"`
+	AppID        string            `json:"appid"`
+	Name         string            `json:"name"`
+	Summary      string            `json:"summary"`
+	HeaderURL    string            `json:"header_url"`
+	CapsuleURL   string            `json:"capsule_url"`
+	ReleaseDate  string            `json:"release_date"`
+	Developers   []string          `json:"developers"`
+	Publishers   []string          `json:"publishers"`
+	Platforms    map[string]bool   `json:"platforms"`
+	Prices       []GameV2PriceView `json:"prices"`
+	Price        GameV2PriceView   `json:"price"`
+	OnlineCount  GameV2OnlineCount `json:"online_count"`
+	Tags         []GameV2Tag       `json:"tags"`
+	AvgScore     float64           `json:"avg_score"`
+	CommentCount int64             `json:"comment_count"`
+	UpdatedAt    time.Time         `json:"updated_at"`
 }
 
 type GameV2PanelReadModel struct {
@@ -617,6 +628,7 @@ type GameV2PanelReadModel struct {
 	UpdatedGames    []GameV2ListItem `json:"updated_games"`
 	TopOnline       []GameV2ListItem `json:"top_online"`
 	FreeGames       []GameV2ListItem `json:"free_games"`
+	TopPrice        []GameV2ListItem `json:"top_price"`
 	HighestDiscount []GameV2ListItem `json:"highest_discount"`
 	LowPrice        []GameV2ListItem `json:"low_price"`
 	LatestNews      []GameV2NewsItem `json:"latest_news"`

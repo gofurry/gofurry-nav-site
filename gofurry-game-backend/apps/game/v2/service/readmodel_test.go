@@ -11,22 +11,26 @@ import (
 )
 
 type fakeDetailReader struct {
-	aggregate     v2models.GameV2Aggregate
-	query         v2models.GameV2DetailQuery
-	listQuery     v2models.GameV2ListQuery
-	searchQuery   v2models.GameV2SearchPageQuery
-	panelQuery    v2models.GameV2PanelQuery
-	searchItems   []v2models.GameV2SearchPageItem
-	tags          []v2models.GameV2TagRecord
-	reviews       v2models.GameV2ReviewList
-	latestReviews []v2models.GameV2LatestReview
-	randomGameID  string
-	similarRows   []v2models.GameV2RecommendationRow
-	features      []v2models.GameV2RecommendationFeature
-	savedRecs     []v2models.GfgGameV2Recommendation
-	creatorRows   []v2models.GameV2SyncCreatorRow
-	creatorLang   string
-	err           common.GFError
+	aggregate      v2models.GameV2Aggregate
+	query          v2models.GameV2DetailQuery
+	listQuery      v2models.GameV2ListQuery
+	searchQuery    v2models.GameV2SearchPageQuery
+	panelQuery     v2models.GameV2PanelQuery
+	topOnlineQuery v2models.GameV2PanelQuery
+	topPriceQuery  v2models.GameV2PanelQuery
+	discountQuery  v2models.GameV2PanelQuery
+	lowPriceQuery  v2models.GameV2PanelQuery
+	searchItems    []v2models.GameV2SearchPageItem
+	tags           []v2models.GameV2TagRecord
+	reviews        v2models.GameV2ReviewList
+	latestReviews  []v2models.GameV2LatestReview
+	randomGameID   string
+	similarRows    []v2models.GameV2RecommendationRow
+	features       []v2models.GameV2RecommendationFeature
+	savedRecs      []v2models.GfgGameV2Recommendation
+	creatorRows    []v2models.GameV2SyncCreatorRow
+	creatorLang    string
+	err            common.GFError
 }
 
 func (reader *fakeDetailReader) GetGameDetailAggregate(_ context.Context, query v2models.GameV2DetailQuery) (v2models.GameV2Aggregate, common.GFError) {
@@ -114,19 +118,27 @@ func (reader *fakeDetailReader) GetGameNews(_ context.Context, _ v2models.GameV2
 }
 
 func (reader *fakeDetailReader) ListTopOnlineAggregates(_ context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	reader.topOnlineQuery = query
+	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
+}
+
+func (reader *fakeDetailReader) ListFreeGameAggregates(_ context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
 	reader.panelQuery = query
 	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
 }
 
-func (reader *fakeDetailReader) ListFreeGameAggregates(_ context.Context, _ v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+func (reader *fakeDetailReader) ListHighestPriceAggregates(_ context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	reader.topPriceQuery = query
 	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
 }
 
-func (reader *fakeDetailReader) ListHighestDiscountAggregates(_ context.Context, _ v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+func (reader *fakeDetailReader) ListHighestDiscountAggregates(_ context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	reader.discountQuery = query
 	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
 }
 
-func (reader *fakeDetailReader) ListLowPriceAggregates(_ context.Context, _ v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+func (reader *fakeDetailReader) ListLowPriceAggregates(_ context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	reader.lowPriceQuery = query
 	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
 }
 
@@ -434,6 +446,10 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 					URL:       strPtr("https://cdn.example/capsule.jpg"),
 				},
 			},
+			ReviewStats: v2models.GameV2ReviewStats{
+				AvgScore:     4.2,
+				CommentCount: 7,
+			},
 		},
 	}
 
@@ -457,16 +473,32 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 	if reader.panelQuery.Limit != 24 {
 		t.Fatalf("expected panel limit clamp 24, got %d", reader.panelQuery.Limit)
 	}
+	if reader.topOnlineQuery.Limit != 60 {
+		t.Fatalf("expected top online limit clamp 60, got %d", reader.topOnlineQuery.Limit)
+	}
+	if reader.topPriceQuery.Region != "US" || reader.topPriceQuery.Limit != 15 {
+		t.Fatalf("expected top price to use US limit 15, got region=%s limit=%d", reader.topPriceQuery.Region, reader.topPriceQuery.Limit)
+	}
+	if reader.discountQuery.Region != "US" || reader.discountQuery.Limit != 15 {
+		t.Fatalf("expected discount to use US limit 15, got region=%s limit=%d", reader.discountQuery.Region, reader.discountQuery.Limit)
+	}
+	if reader.lowPriceQuery.Region != "US" || reader.lowPriceQuery.Limit != 120 {
+		t.Fatalf("expected low price to use US limit 120, got region=%s limit=%d", reader.lowPriceQuery.Region, reader.lowPriceQuery.Limit)
+	}
 	if len(res.LatestGames) != 1 ||
 		len(res.UpdatedGames) != 1 ||
 		len(res.TopOnline) != 1 ||
 		len(res.FreeGames) != 1 ||
+		len(res.TopPrice) != 1 ||
 		len(res.HighestDiscount) != 1 ||
 		len(res.LowPrice) != 1 {
 		t.Fatal("expected all panel game sections to contain one item")
 	}
 	if res.LatestGames[0].CapsuleURL != "https://cdn.example/capsule.jpg" {
 		t.Fatalf("expected panel item capsule url, got %s", res.LatestGames[0].CapsuleURL)
+	}
+	if res.LatestGames[0].AvgScore != 4.2 || res.LatestGames[0].CommentCount != 7 {
+		t.Fatalf("expected panel item review stats, got avg_score=%v comment_count=%d", res.LatestGames[0].AvgScore, res.LatestGames[0].CommentCount)
 	}
 }
 

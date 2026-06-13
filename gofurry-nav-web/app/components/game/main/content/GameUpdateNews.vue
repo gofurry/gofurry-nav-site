@@ -1,13 +1,13 @@
 <template>
-  <div class="mb-8 overflow-hidden rounded-2xl border border-white/35 bg-orange-50/92 p-5 shadow-[0_20px_50px_rgba(120,68,20,0.08)] backdrop-blur-md">
+  <div class="game-news-panel mb-8">
     <div class="mb-4 flex items-center justify-between gap-4">
       <div class="min-w-0">
         <h2 class="text-lg font-bold text-orange-950">{{ t('game.news.title') }}</h2>
         <div class="hidden text-sm text-orange-900/55 sm:block">{{ t('game.news.desc') }}</div>
       </div>
 
-      <div v-if="showControls" class="flex items-center gap-2">
-        <span class="hidden text-xs font-medium text-orange-900/45 sm:block">
+      <div v-if="showControls" class="news-pager">
+        <span class="hidden text-xs font-semibold text-stone-500/80 sm:block">
           {{ activeIndex + 1 }}/{{ newsList.length }}
         </span>
         <button
@@ -59,17 +59,15 @@
               :src="news.header"
               :alt="newsImageAlt(news)"
               class="news-card__cover"
-              @mouseenter="onNewsMouseEnter(news, $event)"
-              @mouseleave="onNewsMouseLeave"
             />
 
             <div class="news-card__body">
-              <h3 class="news-card__title">{{ htmlToPlainText(news.headline) }}</h3>
-
-              <div class="mt-2 flex items-center justify-between gap-3 text-xs text-orange-900/45">
+              <div class="news-card__meta">
                 <span>{{ formatTime(news.post_time) }}</span>
-                <span class="truncate text-right">{{ news.author }}</span>
+                <span v-if="news.name" class="truncate">{{ news.name }}</span>
               </div>
+
+              <h3 class="news-card__title">{{ htmlToPlainText(news.headline) }}</h3>
 
               <p class="news-card__summary">
                 {{ htmlToPlainText(news.content) }}
@@ -85,28 +83,6 @@
         </div>
       </div>
     </div>
-
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="opacity-0 scale-95"
-        enter-to-class="opacity-100 scale-100"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="opacity-100 scale-100"
-        leave-to-class="opacity-0 scale-95"
-      >
-        <div
-          v-if="hoverNews"
-          data-game-update-popover
-          class="fixed max-h-[60vh] w-80 overflow-x-hidden overflow-y-auto rounded-lg bg-orange-100 p-4 text-sm text-gray-800 shadow-lg backdrop-blur-md"
-          :style="{ left: `${hoverLeft}px`, top: `${hoverTop}px` }"
-          @mouseenter="onDetailMouseEnter"
-          @mouseleave="onDetailMouseLeave"
-        >
-          <div v-html="hoverNews.content"></div>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
@@ -132,15 +108,6 @@ const trackRef = ref<HTMLElement | null>(null)
 const cardRefs = ref<Record<number, HTMLElement>>({})
 const activeIndex = ref(0)
 const trackOffset = ref(0)
-
-const hoverNews = ref<NewsBaseModel | null>(null)
-const hoveringDetail = ref(false)
-const hideTimer: { timer: number | null } = { timer: null }
-
-const hoverTop = ref(0)
-const hoverLeft = ref(0)
-const HOVER_WIDTH = 320
-const HOVER_GAP = 12
 
 const showControls = computed(() => newsList.value.length > 1)
 const canMovePrev = computed(() => activeIndex.value > 0)
@@ -244,68 +211,6 @@ function moveByStep(direction: -1 | 1) {
   trackOffset.value = getTargetOffset(nextIndex)
 }
 
-function onNewsMouseEnter(news: NewsBaseModel, event: MouseEvent) {
-  if (hideTimer.timer) {
-    clearTimeout(hideTimer.timer)
-    hideTimer.timer = null
-  }
-
-  hoverNews.value = news
-  hoveringDetail.value = false
-
-  nextTick(() => {
-    const img = event.currentTarget as HTMLElement
-    const rect = img.getBoundingClientRect()
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
-    const popoverEl = document.querySelector('[data-game-update-popover]') as HTMLElement | null
-    const popoverHeight = popoverEl?.offsetHeight ?? 220
-
-    let left = rect.left + rect.width / 2 - HOVER_WIDTH / 2
-    let top = rect.bottom + HOVER_GAP
-
-    if (left < HOVER_GAP) {
-      left = HOVER_GAP
-    }
-
-    if (left + HOVER_WIDTH > viewportWidth - HOVER_GAP) {
-      left = viewportWidth - HOVER_WIDTH - HOVER_GAP
-    }
-
-    if (top + popoverHeight > viewportHeight - HOVER_GAP) {
-      top = rect.top - popoverHeight - HOVER_GAP
-    }
-
-    if (top < HOVER_GAP) {
-      top = HOVER_GAP
-    }
-
-    hoverLeft.value = left
-    hoverTop.value = top
-  })
-}
-
-function onNewsMouseLeave() {
-  hideTimer.timer = window.setTimeout(() => {
-    if (!hoveringDetail.value) {
-      hoverNews.value = null
-    }
-  }, 200)
-}
-
-function onDetailMouseEnter() {
-  hoveringDetail.value = true
-  if (hideTimer.timer) {
-    clearTimeout(hideTimer.timer)
-    hideTimer.timer = null
-  }
-}
-
-function onDetailMouseLeave() {
-  hoveringDetail.value = false
-  hoverNews.value = null
-}
-
 function applyNewsRecord(record: LatestNewsRecord) {
   cardRefs.value = {}
   newsList.value = lang.value === 'en' ? record.news_en : record.news_zh
@@ -368,14 +273,25 @@ watch(
   overflow: hidden;
 }
 
+.game-news-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(126, 92, 58, 0.16);
+  border-radius: 1.05rem;
+  padding: 1.1rem;
+  background: rgba(255, 250, 242, 0.20);
+  box-shadow: none;
+  backdrop-filter: blur(1px);
+}
+
 .news-viewport {
   overflow: hidden;
-  padding: 0.1rem 0 0.35rem;
+  padding: 0.1rem 0 0.2rem;
 }
 
 .news-track {
   display: flex;
-  gap: 1rem;
+  gap: 0.9rem;
   will-change: transform;
   transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -386,73 +302,85 @@ watch(
   flex-shrink: 0;
   cursor: pointer;
   overflow: hidden;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  background:
-    linear-gradient(180deg, rgba(255, 251, 245, 0.95), rgba(254, 239, 217, 0.92));
-  box-shadow:
-    0 14px 28px rgba(128, 77, 24, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+  border-radius: 0.78rem;
+  border: 1px solid rgba(126, 92, 58, 0.12);
+  background: rgba(255, 250, 242, 0.22);
+  box-shadow: none;
+  backdrop-filter: blur(1px);
   transition: background-color 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .news-card:hover {
-  border-color: rgba(255, 255, 255, 0.52);
-  background:
-    linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(252, 236, 214, 0.96));
-  box-shadow:
-    0 20px 34px rgba(128, 77, 24, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border-color: rgba(180, 96, 24, 0.18);
+  background: rgba(255, 244, 228, 0.38);
 }
 
 .news-card__cover {
   aspect-ratio: 16 / 9;
   width: 100%;
+  max-height: 9.8rem;
   object-fit: cover;
 }
 
 .news-card__body {
-  padding: 0.95rem 0.95rem 1rem;
+  padding: 0.82rem 0.9rem 0.95rem;
+}
+
+.news-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: rgba(120, 83, 53, 0.58);
+  font-size: 0.72rem;
+  line-height: 1.2;
 }
 
 .news-card__title {
   display: -webkit-box;
-  min-height: 2.8rem;
+  min-height: 2.55rem;
   overflow: hidden;
-  color: rgba(89, 45, 10, 0.96);
-  font-weight: 700;
+  margin-top: 0.45rem;
+  color: rgba(71, 42, 20, 0.92);
+  font-weight: 750;
+  line-height: 1.32;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
 .news-card__summary {
   display: -webkit-box;
-  margin-top: 0.7rem;
-  min-height: 4rem;
+  margin-top: 0.55rem;
+  min-height: 3.65rem;
   overflow: hidden;
-  color: rgba(87, 56, 28, 0.78);
-  font-size: 0.925rem;
+  color: rgba(87, 56, 28, 0.68);
+  font-size: 0.875rem;
   line-height: 1.45;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
 
+.news-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .news-nav-button {
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border: 1px solid rgba(180, 96, 24, 0.16);
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
   border-radius: 999px;
-  background: rgba(255, 250, 244, 0.8);
-  color: rgba(139, 72, 16, 0.88);
-  backdrop-filter: blur(10px);
+  background: transparent;
+  color: rgba(154, 52, 18, 0.72);
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, opacity 180ms ease;
 }
 
 .news-nav-button:hover {
-  background: rgba(255, 245, 233, 0.95);
-  border-color: rgba(180, 96, 24, 0.24);
+  background: rgba(251, 146, 60, 0.10);
+  color: rgba(124, 45, 18, 0.88);
 }
 
 .news-nav-button--disabled {
@@ -476,25 +404,25 @@ watch(
 
 .news-edge--left {
   left: -0.25rem;
-  background: linear-gradient(90deg, rgba(252, 243, 231, 0.92), rgba(252, 243, 231, 0));
+  background: linear-gradient(90deg, rgba(255, 250, 242, 0.42), rgba(255, 250, 242, 0));
 }
 
 .news-edge--right {
   right: -0.25rem;
-  background: linear-gradient(270deg, rgba(252, 243, 231, 0.92), rgba(252, 243, 231, 0));
+  background: linear-gradient(270deg, rgba(255, 250, 242, 0.42), rgba(255, 250, 242, 0));
 }
 
 .news-progress-track {
-  height: 0.25rem;
+  height: 0.12rem;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(181, 101, 37, 0.12);
+  background: rgba(126, 92, 58, 0.10);
 }
 
 .news-progress-fill {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.9), rgba(251, 191, 36, 0.96));
+  background: rgba(180, 83, 9, 0.42);
   transition: width 220ms ease;
 }
 
@@ -506,7 +434,87 @@ watch(
 
 @media (min-width: 1024px) {
   .news-card {
-    width: 21rem;
+    width: 20.5rem;
   }
+}
+
+:global(.dark) .game-news-panel {
+  border-color: rgba(226, 232, 240, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(226, 232, 240, 0.024)),
+    rgba(226, 232, 240, 0.03);
+}
+
+:global(.dark) .game-news-panel h2 {
+  color: rgba(241, 245, 249, 0.88);
+}
+
+:global(.dark) .game-news-panel .text-orange-900\/55,
+:global(.dark) .game-news-panel .text-stone-500\/80 {
+  color: rgba(203, 213, 225, 0.62);
+}
+
+:global(.dark) .news-card {
+  border-color: rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.34);
+}
+
+:global(.dark) .news-card:hover {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(30, 41, 59, 0.52);
+}
+
+:global(.dark) .news-card__meta {
+  color: rgba(203, 213, 225, 0.58);
+}
+
+:global(.dark) .news-card__title {
+  color: rgba(226, 232, 240, 0.86);
+}
+
+:global(.dark) .news-card__summary {
+  color: rgba(203, 213, 225, 0.66);
+}
+
+:global(.dark) .news-nav-button {
+  color: rgba(180, 213, 226, 0.62);
+}
+
+:global(.dark) .news-nav-button:hover {
+  background: rgba(148, 163, 184, 0.10);
+  color: rgba(226, 232, 240, 0.80);
+}
+
+:global(.games-page--dark) .news-nav-button {
+  color: rgba(180, 213, 226, 0.62) !important;
+}
+
+:global(.games-page--dark) .news-nav-button:hover {
+  background: rgba(148, 163, 184, 0.10) !important;
+  color: rgba(226, 232, 240, 0.80) !important;
+}
+
+:global(.dark) .news-edge--left {
+  background: linear-gradient(90deg, rgba(10, 21, 36, 0.58), rgba(10, 21, 36, 0));
+}
+
+:global(.dark) .news-edge--right {
+  background: linear-gradient(270deg, rgba(10, 21, 36, 0.58), rgba(10, 21, 36, 0));
+}
+
+:global(.dark) .news-progress-track {
+  background: rgba(148, 163, 184, 0.13);
+}
+
+:global(.dark) .news-progress-fill {
+  background: rgba(148, 163, 184, 0.46);
+}
+
+:global(.games-page--dark) .news-progress-track {
+  background: rgba(148, 163, 184, 0.13);
+}
+
+:global(.games-page--dark) .news-progress-fill {
+  background: rgba(148, 163, 184, 0.46) !important;
 }
 </style>

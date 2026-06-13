@@ -35,6 +35,7 @@ export interface TopCountVo {
 export interface TopPlayerCountRecord {
     id: string
     name: string
+    desc: string
     count_peak: number
     count_recent: number
     collect_time: number
@@ -51,6 +52,7 @@ export interface BottomPriceVo {
 export interface PriceRecord {
     id: string
     name: string
+    desc: string
     global_price: number
     china_price: number
     discount: number
@@ -365,9 +367,12 @@ export interface GameV2ListItem {
     developers: string[]
     publishers: string[]
     platforms: Record<string, boolean>
+    prices: GameV2PriceView[]
     price: GameV2PriceView
     online_count: GameV2OnlineCount
     tags: GameV2Tag[]
+    avg_score: number
+    comment_count: number
     updated_at: string
 }
 
@@ -376,6 +381,7 @@ export interface GameV2PanelRecord {
     updated_games: GameV2ListItem[]
     top_online: GameV2ListItem[]
     free_games: GameV2ListItem[]
+    top_price: GameV2ListItem[]
     highest_discount: GameV2ListItem[]
     low_price: GameV2ListItem[]
     latest_news: GameV2NewsItem[]

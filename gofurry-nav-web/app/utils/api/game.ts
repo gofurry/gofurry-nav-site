@@ -14,8 +14,8 @@ export function getSearchSimple(lang: string, txt: string): Promise<SearchItemMo
     return useApi('gameV2')('/game/search/simple', { method: 'POST', body: { txt, lang } })
 }
 
-export function getLatestReview(): Promise<AnonymousReviewModel[]> {
-    return useApi('gameV2')('/game/reviews/latest')
+export function getLatestReview(limit = 15): Promise<AnonymousReviewModel[]> {
+    return useApi('gameV2')('/game/reviews/latest', { query: { limit } })
 }
 
 export function getTagList(lang: string): Promise<GameTagRecord[]> {

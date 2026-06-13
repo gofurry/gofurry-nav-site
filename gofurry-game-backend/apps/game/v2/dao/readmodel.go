@@ -364,6 +364,21 @@ LIMIT ?
 `, normalizeDAORegion(query.Region), query.Limit)
 }
 
+func (dao *ReadModelDAO) ListHighestPriceAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	return dao.listPanelAggregatesBySQL(ctx, query, `
+SELECT p.game_id
+FROM gfg_game_v2_prices p
+JOIN gfg_game g ON p.game_id = g.id
+WHERE p.region = ?
+  AND p.is_free = false
+  AND p.final_amount > 0
+  AND COALESCE(p.currency, '') <> ''
+  AND COALESCE(p.final_formatted, '') <> ''
+ORDER BY p.final_amount DESC, p.discount_percent DESC, g.weight ASC, p.game_id ASC
+LIMIT ?
+`, normalizeDAORegion(query.Region), query.Limit)
+}
+
 func (dao *ReadModelDAO) ListHighestDiscountAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
 	return dao.listPanelAggregatesBySQL(ctx, query, `
 SELECT p.game_id
@@ -380,18 +395,69 @@ LIMIT ?
 }
 
 func (dao *ReadModelDAO) ListLowPriceAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	region := normalizeDAORegion(query.Region)
 	return dao.listPanelAggregatesBySQL(ctx, query, `
-SELECT p.game_id
-FROM gfg_game_v2_prices p
-JOIN gfg_game g ON p.game_id = g.id
-WHERE p.region = ?
-  AND p.is_free = false
-  AND p.final_amount > 0
-  AND COALESCE(p.currency, '') <> ''
-  AND COALESCE(p.final_formatted, '') <> ''
-ORDER BY p.final_amount ASC, p.discount_percent DESC, g.weight ASC, p.game_id ASC
-LIMIT ?
-`, normalizeDAORegion(query.Region), query.Limit)
+SELECT game_id
+FROM (
+    (
+        SELECT p.game_id, p.final_amount, p.discount_percent, g.weight
+        FROM gfg_game_v2_prices p
+        JOIN gfg_game g ON p.game_id = g.id
+        WHERE p.region = ?
+          AND p.is_free = false
+          AND p.final_amount > 0
+          AND p.final_amount <= 1000
+          AND COALESCE(p.currency, '') <> ''
+          AND COALESCE(p.final_formatted, '') <> ''
+        ORDER BY p.final_amount DESC, p.discount_percent DESC, g.weight ASC, p.game_id ASC
+        LIMIT 15
+    )
+    UNION ALL
+    (
+        SELECT p.game_id, p.final_amount, p.discount_percent, g.weight
+        FROM gfg_game_v2_prices p
+        JOIN gfg_game g ON p.game_id = g.id
+        WHERE p.region = ?
+          AND p.is_free = false
+          AND p.final_amount > 0
+          AND p.final_amount <= 1500
+          AND COALESCE(p.currency, '') <> ''
+          AND COALESCE(p.final_formatted, '') <> ''
+        ORDER BY p.final_amount DESC, p.discount_percent DESC, g.weight ASC, p.game_id ASC
+        LIMIT 15
+    )
+    UNION ALL
+    (
+        SELECT p.game_id, p.final_amount, p.discount_percent, g.weight
+        FROM gfg_game_v2_prices p
+        JOIN gfg_game g ON p.game_id = g.id
+        WHERE p.region = ?
+          AND p.is_free = false
+          AND p.final_amount > 0
+          AND p.final_amount <= 2000
+          AND COALESCE(p.currency, '') <> ''
+          AND COALESCE(p.final_formatted, '') <> ''
+        ORDER BY p.final_amount DESC, p.discount_percent DESC, g.weight ASC, p.game_id ASC
+        LIMIT 15
+    )
+    UNION ALL
+    (
+        SELECT p.game_id, p.final_amount, p.discount_percent, g.weight
+        FROM gfg_game_v2_prices p
+        JOIN gfg_game g ON p.game_id = g.id
+        WHERE p.region = ?
+          AND p.is_free = false
+          AND p.final_amount > 0
+          AND p.final_amount <= 2500
+          AND COALESCE(p.currency, '') <> ''
+          AND COALESCE(p.final_formatted, '') <> ''
+        ORDER BY p.final_amount DESC, p.discount_percent DESC, g.weight ASC, p.game_id ASC
+        LIMIT 15
+    )
+) bucketed
+GROUP BY game_id
+ORDER BY MAX(final_amount) DESC, MAX(discount_percent) DESC, MIN(weight) ASC, game_id ASC
+`, region, region, region, region)
 }
 
 func (dao *ReadModelDAO) GetCollectStatus(ctx context.Context) (v2models.GameV2CollectStatus, common.GFError) {
@@ -676,6 +742,13 @@ func (dao *ReadModelDAO) loadAggregateExtras(db *gorm.DB, aggregate *v2models.Ga
 		return fmt.Errorf("查询游戏 v2 在线人数失败: %v", err)
 	} else {
 		aggregate.OnlineCount = online
+	}
+
+	if err := db.Table("gfg_game_comment").
+		Select("COALESCE(AVG(score), 0) AS avg_score, COUNT(*) AS comment_count").
+		Where("game_id = ?", gameID).
+		Scan(&aggregate.ReviewStats).Error; err != nil {
+		return fmt.Errorf("查询游戏 v2 评论统计失败: %v", err)
 	}
 
 	if err := dao.loadTags(db, gameID, lang, &aggregate.Tags); err != nil {
