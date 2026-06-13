@@ -129,7 +129,7 @@
 
 本阶段不删除 `apps/game` 整个 v1 包，因为评论、标签、创作者等接口仍可能复用其中的站内表模型。只删除已经被 v2 替代的动态读取入口。
 
-旧 service/dao 暂不在本阶段大面积删除，因为部分方法仍被定时任务、缓存刷新或后续迁移阶段间接使用。后续 `v2.6.0` 再做引用归零后的包级清理。
+旧 service/dao 已在 `v2.6.0` 引用归零后完成包级清理，动态数据公开读取只保留 v2 read model。
 
 ---
 
@@ -167,7 +167,7 @@
 
 搜索继续基于 PostgreSQL `ILIKE` 起步。全文索引、向量搜索或 RAG 辅助搜索不放进本阶段，避免把替换任务变成新系统建设。
 
-旧 `apps/search` service/dao 和 `apps/game` tag service/dao 暂不做包级删除，统一留到 `v2.6.0` 引用归零后清理。
+旧 `apps/search` service/dao 已在 `v2.6.0` 删除，搜索和标签主线只保留 v2 read model 实现。
 
 ---
 
@@ -270,7 +270,7 @@
 
 #### Notes
 
-`apps/recommend/models` 暂时保留 `gfg_tag` 与 `gfg_tag_map` 模型，因为旧 `apps/game/dao` 仍引用这些站内标签模型。后续 `v2.6.0` 做包级清理时，再把标签模型迁移到更合适的位置并删除空壳 recommend 包。
+`apps/recommend` 空壳包已在 `v2.6.0` 删除。标签读取由 v2 read model 直接访问站内 `gfg_tag` 与 `gfg_tag_map` 表，不再依赖旧 recommend 包模型。
 
 ---
 
@@ -350,7 +350,7 @@
 
 ### v2.6.0 - Legacy Package And Data Cleanup
 
-**Status:** Planned  
+**Status:** Completed
 **Scope:** Architecture / Maintenance / Documentation  
 **Goal:** 在所有调用方完成 v2 后，删除 v1 历史包袱和旧动态数据依赖。
 
@@ -363,14 +363,14 @@
 
 #### Tasks
 
-- [ ] 删除不再被引用的 `apps/game/controller` 动态方法。
-- [ ] 删除不再被引用的 `apps/game/service` 动态读取逻辑。
-- [ ] 删除不再被引用的旧 DAO 方法。
-- [ ] 保留或迁移仍有价值的站内表 model，避免误删 `gfg_game`、`gfg_tag`、`gfg_game_comment`、`gfg_game_creator`、`gfg_prize`。
-- [ ] 移除旧 Redis key 依赖：`game-info:*`、`game-panel:*`、`game-update:*`、`game-creator:list` 等。
-- [ ] 标记旧动态表为归档数据，不再从公开接口读取。
-- [ ] 更新 Swagger，删除 v1 game API 文档。
-- [ ] 更新部署和运维文档，说明 v2 collector 数据是唯一动态事实来源。
+- [x] 删除不再被引用的 `apps/game/controller` 动态方法。
+- [x] 删除不再被引用的 `apps/game/service` 动态读取逻辑。
+- [x] 删除不再被引用的旧 DAO 方法。
+- [x] 保留仍有价值的站内表 model，避免误删 `gfg_game`、`gfg_game_comment`、`gfg_game_creator`、`gfg_prize`。
+- [x] 移除旧 Redis key 功能依赖：`game-info:*`、`game-panel:*`、`game-update:*`、`game-creator:list` 等。
+- [x] 标记旧动态表为归档数据，不再从公开接口读取。
+- [x] 更新 Swagger 注释，删除 v1 game API 文档来源。
+- [x] 更新文档，说明 v2 collector 数据是唯一动态事实来源。
 
 #### Acceptance Criteria
 
@@ -381,20 +381,20 @@
 
 ## Short-Term Direction
 
-下一步优先做 `v2.6.0`：清理旧包、旧 Redis key、旧 Swagger 文档和历史 v1 说明，确保公开游戏模块只剩 v2 主线。
+下一步优先保持 v2 主线稳定：补充抽奖开奖观测、推荐预计算运维入口、以及前端 games v2 视觉与交互增强。后续新增能力默认直接落在 `/api/v2/game/*`，不再恢复 v1 兼容层。
 
 ## Medium-Term Direction
 
-`v2.6.0` 重点做引用归零后的包级清理。清理时要保留仍有业务价值的站内运营表模型，避免把 `gfg_game`、`gfg_tag`、`gfg_game_comment`、`gfg_game_creator`、`gfg_prize` 误删。
+中期重点是增强 v2 运维体验：抽奖开奖可观测与手动触发、推荐结果重算入口、采集状态与前端展示联动。仍有业务价值的站内运营表继续保留。
 
 ## Long-Term Direction
 
-`v2.6.0` 完成历史包袱清理后，game backend 的公开游戏模块应只保留 `/api/v2/game/*`，旧动态表、旧 Redis 聚合 key 和旧 v1 controller 不再参与线上功能。
+长期目标是保持 game backend 的公开游戏模块只通过 `/api/v2/game/*` 演进。旧动态表、旧 Redis 聚合 key 和旧 v1 controller 不再参与线上功能，后续如需大改应作为新的 v3 设计而不是恢复双栈。
 
 ## Risks
 
 - 搜索和推荐升级时，v2 cleaned text 与旧站内简介可能存在排序差异，需要接受合理差异。
 - 抽奖涉及邮件和 Redis 临时 key，不能只做路由重命名，必须验证完整用户流程。
-- 删除 v1 路由前，需要确认生产前端、admin、RAG 配置都已经更新。
-- 旧 Swagger 或文档如果不清理，会误导后续维护。
+- admin 仍有自己的 `/api/v1/game/*` 资源管理代理路径；它们属于 admin 后台资源 API，不是 game backend 公开 v1 动态接口。
 - 清理旧动态表读取时不要误删站内运营表，它们仍然是 v2 的一部分。
+- 后续如果删除数据库旧动态表，需要单独做数据归档和 migration 评估，不能和代码清理混在一起。
