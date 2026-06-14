@@ -34,6 +34,18 @@ const legacyDarkSelectors = [
 ]
 const legacyDarkClassNames = legacyDarkSelectors.map((selector) => selector.replace(/^\./, ''))
 const migratedTailwindDebtPaths = new Set([
+  'app/pages/games/[id].vue',
+  'app/components/common/LinkTag.vue',
+  'app/components/common/SiteIconList.vue',
+  'app/components/game/detail/GameDetailHeader.vue',
+  'app/components/game/detail/GameDetailMain.vue',
+  'app/components/game/detail/GameSidebarLinks.vue',
+  'app/components/game/detail/GameSidebarSimilar.vue',
+  'app/components/game/detail/tabs/GameTabComment.vue',
+  'app/components/game/detail/tabs/GameTabDetail.vue',
+  'app/components/game/detail/tabs/GameTabGallery.vue',
+  'app/components/game/detail/tabs/GameTabIntro.vue',
+  'app/components/game/detail/tabs/GameTabNews.vue',
   'app/pages/games/prize/index.vue',
   'app/pages/games/prize/activation.vue',
   'app/components/game/lottery/LotteryJoinModal.vue'
@@ -73,6 +85,15 @@ const visualScenarios = [
     rootSelector: '.games-page',
     requiredSelectors: ['.games-page', '.game-info-shell', '.game-sidebar-shell'],
     optionalDataSelectors: ['.game-card']
+  }),
+  ...makePageScenarios({
+    id: 'game-detail',
+    label: '游戏详情页',
+    path: '/games/1',
+    locale: 'zh-CN',
+    rootSelector: '.game-detail-page',
+    requiredSelectors: ['.games-page', '.game-detail-page', '.game-detail-hero', '.game-detail-tabs'],
+    optionalDataSelectors: ['.game-detail-sidebar-card', '.game-detail-tag', '.game-detail-similar-item']
   }),
   ...makePageScenarios({
     id: 'lottery',
@@ -319,9 +340,9 @@ function renderMarkdownReport(report) {
     '## 检查项',
     '',
     '- `html.dark` 与截图主题一致。',
-    '- `/`、`/en`、`/games`、`/games/prize`、`/games/search`、`/en/games/search`、`/about`、`/updates`、`/archive` 和法律页移动端的关键容器存在。',
+    '- `/`、`/en`、`/games`、`/games/1`、`/games/prize`、`/games/search`、`/en/games/search`、`/about`、`/updates`、`/archive` 和法律页移动端的关键容器存在。',
     '- 不再出现 `games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`、`about-page--dark`、`legal-page--dark`、`updates-page--dark`、`archive-page--dark`、`lottery-page--dark` 等旧暗色入口。',
-    '- 源码静态扫描不允许新增旧暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 或已迁移抽奖页的复杂颜色类。',
+    '- 源码静态扫描不允许新增旧暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 或已迁移游戏详情/抽奖页的复杂颜色类。',
     '- 桌面与移动端不出现明显横向溢出。',
     '- 数据卡片为空只记为 warning，方便在本地后端无数据时继续保留截图。'
   )
@@ -392,7 +413,7 @@ async function collectSourceDebtFailures() {
     if (migratedTailwindDebtPaths.has(sourcePath)) {
       const match = content.match(migratedTailwindDebtPattern)
       if (match?.index !== undefined) {
-        pushSourceFailure(failures, sourcePath, lineNumberForIndex(content, match.index), `已迁移抽奖页仍包含复杂颜色类 ${match[0]}`)
+        pushSourceFailure(failures, sourcePath, lineNumberForIndex(content, match.index), `已迁移游戏详情/抽奖页仍包含复杂颜色类 ${match[0]}`)
       }
     }
   }

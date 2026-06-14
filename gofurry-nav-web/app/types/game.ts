@@ -178,6 +178,18 @@ export interface MoviesModel {
     dash_av1: string
     dash_h264: string
     hls_h264: string
+    mp4_url?: string
+    webm_url?: string
+}
+
+export interface GameV2MovieExtra {
+    dash_av1_url?: string
+    dash_h264_url?: string
+    hls_h264_url?: string
+    mp4_480_url?: string
+    mp4_max_url?: string
+    webm_480_url?: string
+    webm_max_url?: string
 }
 
 export interface ScreenshotsModel {
@@ -400,7 +412,7 @@ export interface GameV2Movie {
     name: string
     url: string
     thumbnail_url: string
-    extra?: unknown
+    extra?: GameV2MovieExtra | Record<string, unknown>
 }
 
 export interface GameV2RequirementsView {

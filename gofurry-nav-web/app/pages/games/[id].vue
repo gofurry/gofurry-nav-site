@@ -1,9 +1,9 @@
 <template>
   <div
-    class="relative isolate min-h-200 overflow-hidden"
+    class="games-page game-detail-page relative isolate min-h-full w-full overflow-hidden"
   >
-    <GoFurryGridBackground :fixed="false" palette="nav-content" />
-    <div class="relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 p-6">
+    <GoFurryGridBackground :fixed="false" palette="games" />
+    <div class="game-detail-layout relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 p-6">
       <section class="w-full xl:w-[75%]">
         <GameDetailMain
           :game="gameDetailData.gameBaseInfo"
@@ -29,6 +29,7 @@ import GameDetailMain from '@/components/game/detail/GameDetailMain.vue'
 import GameDetailSidebar from '@/components/game/detail/GameDetailSidebar.vue'
 import { getGameBaseInfo, getGameRemark, getRecommendedGame } from '~/services/game'
 import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '~/types/game'
+import { steamLibraryCoverUrl } from '~/utils/gameAssets'
 import { buildGameDetailSeo } from '~/utils/seo'
 
 interface GameDetailPageData {
@@ -74,7 +75,7 @@ const seo = computed(() => buildGameDetailSeo({
   description: gameDetailData.value.gameBaseInfo?.info,
   locale: locale.value,
 }))
-const seoImage = computed(() => gameDetailData.value.gameBaseInfo?.cover || '')
+const seoImage = computed(() => steamLibraryCoverUrl(gameDetailData.value.gameBaseInfo?.appid))
 
 useSeoMeta({
   title: () => seo.value.title,

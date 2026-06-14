@@ -1,35 +1,35 @@
 <template>
-  <div class="space-y-6 text-sm text-gray-700">
+  <div class="game-detail-info space-y-6 text-sm">
 
     <!-- 基本信息 -->
     <section class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
       <div class="flex gap-2">
-        <span class="text-gray-500 w-28 shrink-0">{{t("game.detail.infoCollectedTime")}}:</span>
+        <span class="game-detail-info-label w-28 shrink-0">{{t("game.detail.infoCollectedTime")}}:</span>
         <span>{{ game?.create_time || t("game.panel.none") }}</span>
       </div>
 
       <div class="flex gap-2">
-        <span class="text-gray-500 w-28 shrink-0">{{t("game.detail.infoUpdatedTime")}}:</span>
+        <span class="game-detail-info-label w-28 shrink-0">{{t("game.detail.infoUpdatedTime")}}:</span>
         <span>{{ game?.update_time || t("game.panel.none") }}</span>
       </div>
 
       <div class="flex gap-2">
-        <span class="text-gray-500 w-28 shrink-0">{{t("game.detail.releaseDate")}}:</span>
+        <span class="game-detail-info-label w-28 shrink-0">{{t("game.detail.releaseDate")}}:</span>
         <span>{{ game?.release_date || t("game.panel.none") }}</span>
       </div>
 
       <div class="flex gap-2">
-        <span class="text-gray-500 w-28 shrink-0">{{t("game.detail.supportedPlatforms")}}:</span>
+        <span class="game-detail-info-label w-28 shrink-0">{{t("game.detail.supportedPlatforms")}}:</span>
         <span>{{ game?.platform || t("game.panel.none") }}</span>
       </div>
 
       <div class="flex gap-2">
-        <span class="text-gray-500 w-28 shrink-0">{{t("game.detail.supportedLanguages")}}:</span>
+        <span class="game-detail-info-label w-28 shrink-0">{{t("game.detail.supportedLanguages")}}:</span>
         <span>{{ game?.supported_languages || t("game.panel.none") }}</span>
       </div>
 
       <div class="flex gap-2">
-        <span class="text-gray-500 w-28 shrink-0">{{t("game.detail.ageRestriction")}}:</span>
+        <span class="game-detail-info-label w-28 shrink-0">{{t("game.detail.ageRestriction")}}:</span>
         <span>{{ game?.required_age || t("game.panel.none") }}</span>
       </div>
     </section>
@@ -37,32 +37,32 @@
     <!-- 开发商 / 发行商 -->
     <section class="space-y-3">
       <div>
-        <h4 class="font-bold text-gray-800 mb-1">{{t("game.detail.developer")}}</h4>
+        <h4 class="game-detail-subtitle mb-1 font-bold">{{t("game.detail.developer")}}</h4>
         <div class="flex flex-wrap gap-2">
           <span
               v-for="(d, i) in game?.developers || []"
               :key="i"
-              class="px-2 py-0.5 text-xs rounded bg-orange-100 text-orange-700"
+              class="game-detail-chip px-2 py-0.5 text-xs"
           >
             {{ d }}
           </span>
-          <span v-if="!game?.developers?.length" class="text-gray-400 text-sm">
+          <span v-if="!game?.developers?.length" class="game-detail-empty text-sm">
             {{t("game.panel.none")}}
           </span>
         </div>
       </div>
 
       <div>
-        <h4 class="font-bold text-gray-800 mb-1">{{t("game.detail.publisher")}}</h4>
+        <h4 class="game-detail-subtitle mb-1 font-bold">{{t("game.detail.publisher")}}</h4>
         <div class="flex flex-wrap gap-2">
           <span
               v-for="(p, i) in game?.publishers || []"
               :key="i"
-              class="px-2 py-0.5 text-xs rounded bg-orange-100 text-orange-700"
+              class="game-detail-chip px-2 py-0.5 text-xs"
           >
             {{ p }}
           </span>
-          <span v-if="!game?.publishers?.length" class="text-gray-400 text-sm">
+          <span v-if="!game?.publishers?.length" class="game-detail-empty text-sm">
             {{t("game.panel.none")}}
           </span>
         </div>
@@ -71,12 +71,12 @@
 
     <!-- 价格 -->
     <section v-if="game?.price_list?.length" class="space-y-2">
-      <h4 class="font-bold text-gray-800">{{t("game.detail.priceInfo")}}</h4>
+      <h4 class="game-detail-subtitle font-bold">{{t("game.detail.priceInfo")}}</h4>
       <div class="flex gap-x-1 sm:grid-cols-3 gap-2">
         <div
             v-for="(p, i) in game.price_list"
             :key="i"
-            class="flex justify-center items-center px-3 py-1 rounded-lg bg-orange-100 text-orange-700"
+            class="game-detail-price-chip flex items-center justify-center px-3 py-1"
         >
           <span class="font-medium">
             <strong>{{ countryMap[p.country] || p.country }}</strong>
@@ -88,8 +88,8 @@
 
     <!-- 官网 -->
     <section v-if="game?.website" class="space-y-1">
-      <h4 class="font-bold text-gray-800">{{t("game.detail.officialWebsite")}}</h4>
-      <div class="text-orange-500 hover:text-orange-400 hover:underline break-all">
+      <h4 class="game-detail-subtitle font-bold">{{t("game.detail.officialWebsite")}}</h4>
+      <div class="game-detail-link break-all">
         <a
             :href="game.website"
             target="_blank"
@@ -102,17 +102,17 @@
 
     <!-- PC 配置 -->
     <section v-if="game?.pc_requirements" class="space-y-4">
-      <h4 class="font-bold text-gray-800">{{t("game.detail.pcRequirements")}}</h4>
+      <h4 class="game-detail-subtitle font-bold">{{t("game.detail.pcRequirements")}}</h4>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-orange-50 rounded-xl p-4">
+        <div class="game-detail-requirement-card p-4">
           <div
               v-html="game.pc_requirements.minimum || t('game.panel.none')"
               class="leading-relaxed"
           />
         </div>
 
-        <div class="bg-orange-50 rounded-xl p-4">
+        <div class="game-detail-requirement-card p-4">
           <div
               v-html="game.pc_requirements.recommended || t('game.panel.none')"
               class="leading-relaxed"

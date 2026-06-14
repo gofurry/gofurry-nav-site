@@ -1,15 +1,15 @@
 <template>
-  <div class="space-y-4 text-sm text-gray-700">
+  <div class="game-detail-comments space-y-4 text-sm">
 
     <!-- 评论列表 -->
     <div v-if="visibleRemarks.length">
       <div
           v-for="(r, index) in visibleRemarks"
           :key="index"
-          class="space-y-1 pb-3 mt-1"
+          class="game-detail-comment mt-1 space-y-1 pb-3"
       >
         <!-- 顶部信息 -->
-        <div class="flex flex-col text-gray-500 text-xs">
+        <div class="game-detail-comment-meta flex flex-col text-xs">
           <div class="flex justify-between">
             <span><strong>{{t("game.detail.commenter")}}:</strong> {{ r.name }}</span>
             <span><strong>{{t("game.detail.region")}}:</strong> {{ r.region }}</span>
@@ -25,16 +25,16 @@
           <img v-for="i in fullStars(r.score)" :key="'full-' + i + index" :src="starSvg" class="w-4 h-4" alt="" />
           <img v-if="hasHalfStar(r.score)" :src="starHalfSvg" class="w-4 h-4" alt="" />
           <img v-for="i in emptyStars(r.score)" :key="'empty-' + i + index" :src="starSvg" class="w-4 h-4 opacity-30" alt="" />
-          <span class="ml-2 text-gray-500">{{ r.score.toFixed(1) }}</span>
+          <span class="game-detail-comment-score ml-2">{{ r.score.toFixed(1) }}</span>
         </div>
 
         <!-- 评论内容 -->
-        <div class="text-gray-800 mt-1">{{ r.content }}</div>
+        <div class="game-detail-comment-body mt-1">{{ r.content }}</div>
 
         <!-- 分割线 -->
         <div
             v-if="index !== visibleRemarks.length - 1"
-            class="w-full my-3 border-t border-dashed border-orange-200/70"
+            class="game-detail-divider my-3 w-full"
         ></div>
       </div>
 
@@ -43,16 +43,16 @@
         <button
             v-if="visibleCount < allRemarks.length"
             @click="loadMore"
-            class="px-4 py-1 rounded bg-orange-100 text-orange-700 hover:bg-orange-200 transition"
+            class="game-detail-load-more px-4 py-1"
         >
           {{t("common.loadMore")}}
         </button>
-        <span v-else class="text-gray-400 text-sm">{{t("game.detail.allCommentsLoaded")}}</span>
+        <span v-else class="game-detail-empty text-sm">{{t("game.detail.allCommentsLoaded")}}</span>
       </div>
     </div>
 
     <!-- 无评论 -->
-    <div v-else class="text-center text-gray-400 py-6">
+    <div v-else class="game-detail-empty py-6 text-center">
       {{t("game.panel.none")}}
     </div>
   </div>

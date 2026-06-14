@@ -1,9 +1,9 @@
 <template>
-  <div class="relative">
+  <div class="blur-wrapper relative">
 
     <!-- 内容区域 -->
     <div
-        class="max-h-[960px] overflow-y-auto transition"
+        class="blur-wrapper__content transition"
         :class="enable ? 'blur-xl select-none' : ''"
         :style="enable ? 'pointer-events: none;' : ''"
     >
@@ -15,13 +15,13 @@
         v-if="enable"
         class="absolute inset-0 flex flex-col items-center justify-center gap-4"
     >
-      <div class="bg-black/60 text-gray-200 text-sm px-4 py-2 rounded-xl backdrop-blur">
+      <div class="blur-wrapper__notice text-sm px-4 py-2">
         {{ tip }}
       </div>
 
       <!-- 点击解锁 -->
       <button
-          class="flex items-center justify-center gap-1 px-5 py-2 text-sm rounded-full bg-orange-900 text-gray-200 hover:bg-orange-800 transition pointer-events-auto"
+          class="blur-wrapper__unlock flex items-center justify-center gap-1 px-5 py-2 text-sm transition pointer-events-auto"
           @click.stop="emit('unlock')"
       >
         <img :src="key" class="w-4 h-4" alt="" />

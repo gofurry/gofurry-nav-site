@@ -1,5 +1,5 @@
 <template>
-  <section class="space-y-4">
+  <section class="game-detail-main space-y-4">
 
     <!-- 顶部信息 -->
     <GameDetailHeader
@@ -8,20 +8,20 @@
     />
 
     <!-- Tabs -->
-    <div class="bg-orange-50 rounded-2xl shadow">
+    <div class="game-detail-tabs">
 
       <!-- Tab Header -->
-      <div class="flex border-b border-orange-100 overflow-x-auto scrollbar-hide">
+      <div class="game-detail-tab-list flex overflow-x-auto scrollbar-hide">
         <div
             v-for="tab in tabs"
             :key="tab.key"
             @click="activeTab = tab.key"
-            class="flex-shrink-0"
+            class="game-detail-tab flex-shrink-0"
             :class="[
               'px-4 py-3 text-sm cursor-pointer select-none whitespace-nowrap',
               activeTab === tab.key
-                ? 'text-orange-500 border-b-2 border-orange-400'
-                : 'text-gray-500 hover:text-orange-400'
+                ? 'game-detail-tab--active'
+                : 'game-detail-tab--idle'
             ]"
         >
           {{ tab.label }}
@@ -29,7 +29,7 @@
       </div>
 
       <!-- Tab Content -->
-      <div class="p-5 text-sm text-gray-700">
+      <div class="game-detail-tab-panel p-5 text-sm">
 
         <!-- Intro -->
         <BlurWrapper

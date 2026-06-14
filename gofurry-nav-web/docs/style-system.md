@@ -101,6 +101,7 @@ Token 分三层：
 | --- | --- | --- | --- |
 | 游戏首页 | `app/pages/games/index.vue` | `pages/games.less` | 页面背景、卡片、新闻、榜单、侧栏搜索和工具按钮走 `.games-page` token。 |
 | 游戏首页卡片 | `GameInfoGroup.vue`、`GameStatsPanels.vue`、`GameSidebarSearch.vue`、`GameToolDock.vue` | `pages/games.less` | Tailwind 保留布局与尺寸，复杂 hover、边框、阴影和文字层级由 Less 管理。 |
+| 游戏详情页 | `app/pages/games/[id].vue`、`components/game/detail/*` | `pages/games.less` | 根类为 `.games-page.game-detail-page`，详情 hero、tabs、侧栏、评论、新闻和 gallery 走 `.game-detail-*` 语义类。 |
 | 游戏搜索页 | `app/pages/games/search.vue` | `pages/games-search.less` | 根类为 `.games-search-page`，复用 `.games-page` 基础但搜索页 token 独立。 |
 | 搜索结果 | `GameSearchResult.vue` | `pages/games-search.less` | 结果卡片使用 `.search-page-card`，数据为空时仍保留网格容器便于截图守卫。 |
 | 搜索筛选 | `GameSearchFilter.vue` | `pages/games-search.less` | 筛选面板、chip、日期选择器重写都收敛在搜索页入口。 |
@@ -138,7 +139,7 @@ Token 分三层：
 | `components/site/SiteDetailPage.vue` | `:deep(...)` | 站点详情页需要包裹子面板生成的 Tailwind 表面，当前只能通过父级边界局部覆盖。 | 保留登记，禁止扩散到其他页面。 |
 | `components/site/SitePerformancePanel.vue` | `:deep(...)` | 性能面板包装共享 `SitePerformance` 子组件，局部覆盖用于约束子组件布局和材质。 | 保留登记，禁止扩散到其他页面。 |
 
-`visual:guard` 会在截图前扫描源码：新增废弃暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 或已迁移抽奖页复杂颜色类都会使守卫失败。
+`visual:guard` 会在截图前扫描源码：新增废弃暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 或已迁移游戏详情/抽奖页复杂颜色类都会使守卫失败。
 
 ## 视觉回归范围
 
@@ -147,6 +148,7 @@ Token 分三层：
 - `/`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/en`：英文亮色、英文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/games`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
+- `/games/1`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/games/prize`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/games/prize/activation?status=success`：中文亮色、中文暗色、移动 `390x844`。
 - `/games/search`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。

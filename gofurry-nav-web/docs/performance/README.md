@@ -79,6 +79,7 @@ npm run visual:guard -- --base-url http://localhost:3001
 脚本会对以下组合截图并生成 manifest：
 
 - `/games` 中文亮色、中文暗色，桌面 `1440x900` 与移动 `390x844`
+- `/games/1` 中文亮色、中文暗色，桌面 `1440x900` 与移动 `390x844`
 - `/games/prize` 中文亮色、中文暗色，桌面 `1440x900` 与移动 `390x844`
 - `/games/prize/activation?status=success` 中文亮色、中文暗色，移动 `390x844`
 - `/` 首页导航中文亮色、中文暗色，桌面 `1440x900` 与移动 `390x844`
@@ -93,9 +94,9 @@ npm run visual:guard -- --base-url http://localhost:3001
 视觉守卫会做这些硬检查：
 
 - 截图主题必须与 `html.dark` 状态一致。
-- 页面关键容器必须存在，例如 `.nav-home-page`、`.nav-header`、`.games-page`、`.lottery-page`、`.games-search-page`、`.search-result-grid`、`.gf-pagination`、`.gf-static-page`、`.updates-summary-shell`、`.archive-page`。
+- 页面关键容器必须存在，例如 `.nav-home-page`、`.nav-header`、`.games-page`、`.game-detail-page`、`.lottery-page`、`.games-search-page`、`.search-result-grid`、`.gf-pagination`、`.gf-static-page`、`.updates-summary-shell`、`.archive-page`。
 - 不允许出现旧暗色入口：`games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`、`about-page--dark`、`legal-page--dark`、`updates-page--dark`、`archive-page--dark`、`lottery-page--dark`。
-- 截图前会做源码静态扫描，拦截旧暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 和已迁移抽奖页复杂颜色类。
+- 截图前会做源码静态扫描，拦截旧暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 和已迁移游戏详情/抽奖页复杂颜色类。
 - 桌面和移动端不能出现明显横向溢出。
 
 本地后端没有游戏数据时，`.game-card` 或 `.search-page-card` 为空只会记录 warning，不会阻断截图产出。
@@ -106,6 +107,7 @@ npm run visual:guard -- --base-url http://localhost:3001
 
 - `/`、`/en`：首页导航 header、搜索框、内容 reveal、站点卡片和 spotlight 在亮暗色下层级一致。
 - `/games`：亮色与暗色背景、信息面板、侧栏搜索、游戏卡片 hover 状态一致。
+- `/games/1`：详情 hero、tabs、侧栏、评论、新闻和 gallery 与游戏首页/搜索页的亮暗色层级一致。
 - `/games/prize`：抽奖空态、奖池卡片、历史列表、激活反馈和提交弹窗材质由 lottery 页面 token 控制。
 - `/games/search`：筛选面板、结果卡片、分页和日期选择器在亮暗色下层级清晰。
 - `/en/games/search`：英文文案不挤压卡片、按钮、分页和筛选 chip。

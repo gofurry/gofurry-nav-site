@@ -7,6 +7,7 @@ import type {
   PriceRecord,
   GameV2DetailRecord,
   GameV2ListItem,
+  GameV2Movie,
   GameV2NewsItem,
   GameV2PanelRecord,
   GameTagRecord,
@@ -20,6 +21,7 @@ import type {
   SearchPageQueryRequest,
   SearchPageResponse
 } from '~/types/game'
+import { steamLibraryCoverUrl } from '~/utils/gameAssets'
 import type { ApiResult } from '~/types/api'
 
 interface GameHomeData {
@@ -253,7 +255,7 @@ function mapV2Detail(detail: GameV2DetailRecord): GameBaseInfoResponse {
     developers: detail.developers ?? [],
     publishers: detail.publishers ?? [],
     appid: Number(detail.appid || 0),
-    cover: detail.media?.header_url || detail.header_url || detail.site?.header || '',
+    cover: steamLibraryCoverUrl(detail.appid),
     platform: platformsToText(detail.platforms),
     price_list: (detail.prices ?? []).map((price) => ({
       country: price.region,
@@ -275,14 +277,7 @@ function mapV2Detail(detail: GameV2DetailRecord): GameBaseInfoResponse {
       path_thumbnail: item.thumbnail_url,
       path_full: item.url,
     })),
-    movies: (detail.media?.movies ?? []).map((item) => ({
-      id: Number(item.id || 0),
-      name: item.name,
-      thumbnail: item.thumbnail_url,
-      dash_av1: '',
-      dash_h264: item.url,
-      hls_h264: item.url,
-    })),
+    movies: (detail.media?.movies ?? []).map(mapV2Movie),
     pc_requirements: {
       id: Number(detail.id || 0),
       minimum: detail.requirements?.pc?.minimum ?? '',
@@ -302,6 +297,34 @@ function mapV2DetailNews(news: GameV2NewsItem) {
     author: '',
     url: news.url,
   }
+}
+
+function mapV2Movie(movie: GameV2Movie) {
+  const extra = asRecord(movie.extra)
+  const dashH264 = stringField(extra, 'dash_h264_url') || movie.url || ''
+  const hlsH264 = stringField(extra, 'hls_h264_url')
+  const mp4Url = stringField(extra, 'mp4_max_url') || stringField(extra, 'mp4_480_url')
+  const webmUrl = stringField(extra, 'webm_max_url') || stringField(extra, 'webm_480_url')
+
+  return {
+    id: Number(movie.id || 0),
+    name: movie.name,
+    thumbnail: movie.thumbnail_url,
+    dash_av1: stringField(extra, 'dash_av1_url'),
+    dash_h264: dashH264,
+    hls_h264: hlsH264,
+    mp4_url: mp4Url,
+    webm_url: webmUrl,
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? value as Record<string, unknown> : {}
+}
+
+function stringField(record: Record<string, unknown>, key: string) {
+  const value = record[key]
+  return typeof value === 'string' ? value : ''
 }
 
 function mapV2News(news: GameV2NewsItem): NewsBaseModel {

@@ -1,13 +1,13 @@
 <template>
-  <div class="bg-orange-50 rounded-2xl p-4 shadow">
-    <h3 class="font-semibold mb-3">{{ t("game.detail.similarGames") }}</h3>
+  <div class="game-detail-sidebar-card p-4">
+    <h3 class="game-detail-sidebar-title mb-3 font-semibold">{{ t("game.detail.similarGames") }}</h3>
 
     <!-- 游戏列表 -->
     <div class="space-y-3">
       <div
           v-for="game in pagedGames"
           :key="game.id"
-          class="flex gap-3 p-2 rounded-lg hover:bg-orange-200/50 cursor-pointer"
+          class="game-detail-similar-item flex cursor-pointer gap-3 p-2"
           @click="goGameDetail(game.id)"
       >
         <!-- 封面 -->
@@ -15,23 +15,24 @@
             :src="coverOf(game)"
             class="w-12 h-16 rounded-md object-cover flex-shrink-0"
             :alt="game.name"
+            @error="loadFallbackCover($event, game.appid)"
         />
 
         <!-- 游戏信息 -->
-        <div class="flex-1 text-sm min-w-0">
-          <div class="font-medium text-gray-800 truncate">{{ game.name }}</div>
-          <div class="text-xs text-gray-500 line-clamp-2 break-words">{{ game.summary }}</div>
-          <div class="text-xs text-orange-600 mt-1">
+        <div class="min-w-0 flex-1 text-sm">
+          <div class="game-detail-similar-title truncate font-medium">{{ game.name }}</div>
+          <div class="game-detail-similar-summary line-clamp-2 break-words text-xs">{{ game.summary }}</div>
+          <div class="game-detail-similar-score mt-1 text-xs">
             {{ t("game.detail.similarity") }}: {{ formatSimilarity(game.display_score) }}
           </div>
-          <div v-if="formatReason(game)" class="text-[11px] text-gray-500 truncate">
+          <div v-if="formatReason(game)" class="game-detail-similar-reason truncate text-[11px]">
             {{ formatReason(game) }}
           </div>
         </div>
       </div>
 
       <!-- 没有数据 -->
-      <div v-if="!recommendList.length" class="text-gray-400 text-sm text-center py-4">
+      <div v-if="!recommendList.length" class="game-detail-empty py-4 text-center text-sm">
         {{ t("game.panel.none") }}
       </div>
     </div>
@@ -46,10 +47,10 @@
           :key="page"
           @click="currentPage = page"
           :class="[
-          'px-3 py-1 rounded-md text-sm font-medium',
+          'game-detail-page-button px-3 py-1 text-sm font-medium',
           currentPage === page
-            ? 'bg-orange-400 text-white'
-            : 'text-gray-700 hover:bg-orange-200/50'
+            ? 'game-detail-page-button--active'
+            : 'game-detail-page-button--idle'
         ]"
       >
         {{ page }}
@@ -62,6 +63,7 @@
 import { computed, ref, watch } from "vue"
 import type { RecommendedModel } from "@/types/game"
 import { i18n } from '@/main'
+import { cdnLibraryCoverUrl, steamLibraryCoverUrl } from '@/utils/gameAssets'
 
 const { t } = i18n.global
 const router = useRouter()
@@ -95,7 +97,26 @@ function formatSimilarity(sim: number) {
 }
 
 function coverOf(game: RecommendedModel) {
-  return game.capsule_url || game.header_url || ''
+  return steamLibraryCoverUrl(game.appid)
+}
+
+function loadFallbackCover(event: Event, appid: string) {
+  const image = event.currentTarget as HTMLImageElement | null
+  if (!image) return
+
+  if (image.dataset.coverFallback === 'cdn') {
+    image.style.visibility = 'hidden'
+    return
+  }
+
+  const fallback = cdnLibraryCoverUrl(appid)
+  if (!fallback) {
+    image.style.visibility = 'hidden'
+    return
+  }
+
+  image.dataset.coverFallback = 'cdn'
+  image.src = fallback
 }
 
 function formatReason(game: RecommendedModel) {

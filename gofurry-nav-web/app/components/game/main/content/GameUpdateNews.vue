@@ -157,8 +157,12 @@ function newsKey(news: NewsBaseModel, index: number) {
   return `${news.id}:${news.post_time}:${news.url}:${index}`
 }
 
+function isHtmlElement(element: unknown): element is HTMLElement {
+  return typeof HTMLElement !== 'undefined' && element instanceof HTMLElement
+}
+
 function setCardRef(element: Element | ComponentPublicInstance | null, index: number) {
-  if (element instanceof HTMLElement) {
+  if (isHtmlElement(element)) {
     cardRefs.value[index] = element
     return
   }
@@ -169,7 +173,7 @@ function setCardRef(element: Element | ComponentPublicInstance | null, index: nu
 function getOrderedCards() {
   return newsList.value
     .map((_, index) => cardRefs.value[index])
-    .filter((card): card is HTMLElement => card instanceof HTMLElement)
+    .filter(isHtmlElement)
 }
 
 function getTargetOffset(targetIndex: number) {
