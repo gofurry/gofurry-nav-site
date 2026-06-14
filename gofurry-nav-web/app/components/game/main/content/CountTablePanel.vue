@@ -1,22 +1,22 @@
 <template>
-  <section class="game-stats-card p-5">
+  <section class="game-stats-card">
     <header class="relative z-[1]">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
-          <h2 class="text-lg font-bold text-gray-950">
+          <h2 class="game-stats-card__title text-lg font-bold">
             {{ title }}
           </h2>
-          <span class="rounded-full border border-orange-300/30 bg-orange-50/50 px-2 py-0.5 text-xs font-bold text-orange-800/80">
+          <span class="game-stats-card__badge px-2 py-0.5 text-xs font-bold">
             {{ rankRange }}
           </span>
         </div>
-        <p v-if="desc" class="mt-1 truncate text-sm text-gray-500">
+        <p v-if="desc" class="game-stats-card__desc mt-1 truncate text-sm">
           {{ desc }}
         </p>
       </div>
     </header>
 
-    <div v-if="topItem" class="relative z-[1] mt-3 rounded-xl border border-white/35 bg-white/22 px-3 py-2">
+    <div v-if="topItem" class="game-stats-feature relative z-[1] mt-3 rounded-xl px-3 py-2">
       <div class="flex min-w-0 items-center gap-3">
         <img
           :src="topItem.header"
@@ -24,24 +24,24 @@
           :alt="topItem.name"
         />
         <div class="min-w-0">
-          <div class="truncate text-sm font-bold text-gray-950">
+          <div class="game-stats-feature__title truncate text-sm font-bold">
             #{{ rankStart }} {{ topItem.name }}
           </div>
-          <div class="mt-0.5 line-clamp-1 text-xs text-gray-500">
+          <div class="game-stats-feature__desc mt-0.5 line-clamp-1 text-xs">
             {{ topItem.desc }}
           </div>
-          <div class="mt-0.5 text-xs text-gray-500">
+          <div class="game-stats-feature__meta mt-0.5 text-xs">
             {{ t('game.panel.onlinePeak') }} {{ formatNumber(topItem.count_peak) }} · {{ formatTime(topItem.collect_time) }}
           </div>
         </div>
-        <div class="shrink-0 text-right text-sm font-bold text-gray-950">
+        <div class="game-stats-feature__value shrink-0 text-right text-sm font-bold">
           {{ formatNumber(topItem.count_recent) }}
         </div>
       </div>
     </div>
 
-    <div class="relative z-[1] mt-4 overflow-hidden rounded-xl border border-white/35">
-      <div class="grid grid-cols-[2rem_minmax(0,1fr)_5.2rem] items-center gap-2 px-2 py-2 text-xs font-bold text-gray-500 sm:grid-cols-[2.2rem_minmax(0,1fr)_5.4rem_5.4rem_3.4rem]">
+    <div class="game-stats-table relative z-[1] mt-4 overflow-hidden rounded-xl">
+      <div class="game-stats-table-head grid grid-cols-[2rem_minmax(0,1fr)_5.2rem] items-center gap-2 px-2 py-2 text-xs font-bold sm:grid-cols-[2.2rem_minmax(0,1fr)_5.4rem_5.4rem_3.4rem]">
         <span class="text-center">#</span>
         <span class="text-left">{{ t('common.game') }}</span>
         <span class="text-right">{{ t('game.panel.recentOnline') }}</span>
@@ -53,13 +53,13 @@
         <article
           v-for="(item, index) in listToShow"
           :key="item.id"
-          class="game-stats-row grid min-h-[3.55rem] grid-cols-[2rem_minmax(0,1fr)_5.2rem] items-center gap-2 border-t border-white/35 px-2 py-2 transition hover:bg-orange-200/45 sm:grid-cols-[2.2rem_minmax(0,1fr)_5.4rem_5.4rem_3.4rem]"
+          class="game-stats-row grid min-h-[3.55rem] grid-cols-[2rem_minmax(0,1fr)_5.2rem] items-center gap-2 px-2 py-2 sm:grid-cols-[2.2rem_minmax(0,1fr)_5.4rem_5.4rem_3.4rem]"
           :class="index % 2 === 0 ? 'stats-row--warm' : 'stats-row--clear'"
           :style="{ '--activity': `${activityPercent(item)}%` }"
         >
           <div
-            class="grid h-7 w-7 place-items-center rounded-full bg-white/45 text-xs font-extrabold text-stone-600"
-            :class="{ 'bg-orange-100/70 text-orange-800': rankStart + index <= 3 }"
+            class="game-stats-rank grid h-7 w-7 place-items-center rounded-full text-xs font-extrabold"
+            :class="{ 'game-stats-rank--top': rankStart + index <= 3 }"
           >
             {{ rankStart + index }}
           </div>
@@ -71,24 +71,24 @@
               :alt="item.name"
             />
             <div class="min-w-0">
-              <div class="truncate text-sm font-bold text-gray-950">
+              <div class="game-stats-row__title truncate text-sm font-bold">
                 {{ item.name }}
               </div>
-              <div class="mt-0.5 text-xs text-gray-500 sm:hidden">
+              <div class="game-stats-row__meta mt-0.5 text-xs sm:hidden">
                 {{ formatTime(item.collect_time) }}
               </div>
             </div>
           </div>
 
-          <div class="text-right text-sm font-bold text-gray-950">
+          <div class="game-stats-row__value text-right text-sm font-bold">
             {{ formatNumber(item.count_recent) }}
           </div>
 
-          <div class="hidden text-right text-sm font-semibold text-gray-700 sm:block">
+          <div class="game-stats-row__value game-stats-row__value--secondary hidden text-right text-sm font-semibold sm:block">
             {{ formatNumber(item.count_peak) }}
           </div>
 
-          <div class="hidden text-right text-xs text-gray-500 sm:block">
+          <div class="game-stats-row__muted hidden text-right text-xs sm:block">
             {{ formatTime(item.collect_time) }}
           </div>
         </article>
@@ -147,133 +147,3 @@ function formatTime(value: number) {
   return `${hh}:${mm}`
 }
 </script>
-
-<style scoped>
-.game-stats-card {
-  container: game-stats-card / inline-size;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(126, 92, 58, 0.16);
-  border-radius: 1.05rem;
-  padding: 1.1rem;
-  background: rgba(255, 250, 242, 0.20);
-  box-shadow: none;
-  backdrop-filter: blur(1px);
-}
-
-.game-stats-card::before {
-  content: none;
-}
-
-.stats-feature-cover,
-.stats-row-cover {
-  display: none;
-}
-
-@container game-stats-card (min-width: 380px) {
-  .stats-feature-cover {
-    display: block;
-  }
-}
-
-@container game-stats-card (min-width: 380px) {
-  .stats-row-cover {
-    display: block;
-  }
-}
-
-.game-stats-row {
-  isolation: isolate;
-  position: relative;
-  overflow: hidden;
-}
-
-.game-stats-row::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  z-index: -1;
-  width: var(--activity);
-  background: linear-gradient(90deg, rgba(251, 146, 60, 0.14), rgba(251, 146, 60, 0.02));
-}
-
-.stats-row--warm {
-  background: rgba(255, 237, 213, 0.30);
-}
-
-.stats-row--clear {
-  background: rgba(255, 255, 255, 0.22);
-}
-
-:global(.dark) .game-stats-card {
-  border-color: rgba(226, 232, 240, 0.12);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(226, 232, 240, 0.024)),
-    rgba(226, 232, 240, 0.03);
-}
-
-:global(.dark) .game-stats-card h2,
-:global(.dark) .game-stats-row .text-gray-950 {
-  color: rgba(241, 245, 249, 0.88);
-}
-
-:global(.dark) .game-stats-card p,
-:global(.dark) .game-stats-row .text-gray-500 {
-  color: rgba(203, 213, 225, 0.62);
-}
-
-:global(.dark) .game-stats-card header span {
-  border-color: rgba(148, 163, 184, 0.20);
-  background: rgba(148, 163, 184, 0.08);
-  color: rgba(203, 213, 225, 0.76);
-}
-
-:global(.dark) .game-stats-card .border-white\/35 {
-  border-color: rgba(148, 163, 184, 0.13);
-}
-
-:global(.dark) .game-stats-row::before {
-  background: linear-gradient(90deg, rgba(148, 163, 184, 0.20), rgba(100, 116, 139, 0.04));
-}
-
-:global(.dark) .stats-row--warm {
-  background: rgba(30, 41, 59, 0.24);
-}
-
-:global(.dark) .stats-row--clear {
-  background: rgba(15, 23, 42, 0.18);
-}
-
-:global(.dark) .game-stats-row:hover {
-  background: rgba(51, 65, 85, 0.30) !important;
-}
-
-:global(.dark) .game-stats-row .bg-white\/45 {
-  background: rgba(255, 255, 255, 0.10);
-  color: rgba(226, 232, 240, 0.88);
-}
-
-:global(.dark) .game-stats-row .bg-orange-100\/70 {
-  background: rgba(148, 163, 184, 0.18) !important;
-  color: rgba(226, 232, 240, 0.86) !important;
-}
-
-:global(.dark) .game-stats-row .text-gray-700 {
-  color: rgba(226, 232, 240, 0.78);
-}
-
-:global(.games-page--dark) .game-stats-row::before {
-  background: linear-gradient(90deg, rgba(148, 163, 184, 0.22), rgba(100, 116, 139, 0.045)) !important;
-}
-
-:global(.games-page--dark) .game-stats-card header span {
-  border-color: rgba(148, 163, 184, 0.20) !important;
-  background: rgba(148, 163, 184, 0.08) !important;
-  color: rgba(203, 213, 225, 0.76) !important;
-}
-
-:global(.games-page--dark) .game-stats-row .bg-orange-100\/70 {
-  background: rgba(148, 163, 184, 0.18) !important;
-  color: rgba(226, 232, 240, 0.86) !important;
-}
-</style>

@@ -1,7 +1,7 @@
 <template>
   <div class="mb-8 p-5">
     <div class="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h3 class="text-2xl font-bold text-gray-800">
+      <h3 class="game-group-title text-2xl font-bold">
         {{ group.title }}
       </h3>
 
@@ -67,7 +67,7 @@
               />
 
               <button
-                class="review-float-button review-float-button--light"
+                class="review-float-button"
                 type="button"
                 :aria-label="`${item.name} review`"
                 @click.stop="openReview(item)"
@@ -85,11 +85,11 @@
               </button>
             </div>
 
-            <p class="line-clamp-1 text-sm font-semibold text-gray-900">
+            <p class="game-card__title line-clamp-1 text-sm font-semibold">
               {{ item.name }}
             </p>
 
-            <p class="mt-1 h-[2rem] overflow-hidden text-xs text-gray-600">
+            <p class="game-card__desc mt-1 h-[2rem] overflow-hidden text-xs">
               {{ item.desc }}
             </p>
 
@@ -176,64 +176,6 @@ function openReview(item: GameItem) {
 </script>
 
 <style scoped>
-.game-card {
-  position: relative;
-  cursor: pointer;
-  border-radius: 0.75rem;
-  padding: 0.5rem;
-  transition: background-color 220ms ease;
-}
-
-.game-card:hover,
-.game-card:focus-within {
-  background: rgba(251, 146, 60, 0.16);
-}
-
-.review-float-button {
-  position: absolute;
-  right: 0.55rem;
-  top: 0.55rem;
-  display: grid;
-  width: 2.15rem;
-  height: 2.15rem;
-  place-items: center;
-  border-radius: 999px;
-  opacity: 0;
-  transform: translateY(0.25rem) scale(0.96);
-  transition: opacity 220ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, color 180ms ease;
-}
-
-.game-card:hover .review-float-button,
-.game-card:focus-within .review-float-button {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.review-float-button--light {
-  border: 1px solid rgba(255, 255, 255, 0.48);
-  background: rgba(255, 250, 242, 0.84);
-  color: rgba(124, 45, 18, 0.92);
-  box-shadow: 0 8px 22px rgba(45, 28, 12, 0.14);
-  backdrop-filter: blur(8px);
-}
-
-.review-float-button--light:hover {
-  background: rgba(255, 244, 228, 0.96);
-  color: rgba(99, 39, 15, 1);
-}
-
-.review-float-button--dark {
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(28, 25, 23, 0.72);
-  color: rgba(255, 247, 237, 0.94);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.20);
-  backdrop-filter: blur(8px);
-}
-
-.review-float-button--dark:hover {
-  background: rgba(28, 25, 23, 0.86);
-}
-
 .game-group-page-shell {
   position: relative;
   overflow: hidden;
@@ -254,10 +196,6 @@ function openReview(item: GameItem) {
   position: absolute;
   inset: 0;
   width: 100%;
-}
-
-.game-card--spacer {
-  background: transparent;
 }
 
 .game-page-next-enter-active,
@@ -315,155 +253,4 @@ function openReview(item: GameItem) {
   }
 }
 
-.game-group-pager {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.48rem;
-}
-
-.game-group-pager button {
-  display: grid;
-  width: 1.65rem;
-  height: 1.65rem;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: rgba(154, 52, 18, 0.74);
-  font-size: 1.1rem;
-  line-height: 1;
-  transition:
-    background 500ms ease,
-    color 500ms ease;
-}
-
-.game-group-pager button:hover {
-  background: rgba(154, 52, 18, 0.12);
-  color: rgba(124, 45, 18, 0.98);
-}
-
-.game-group-pager span {
-  min-width: 2.25rem;
-  color: rgba(87, 83, 78, 0.70);
-  font-size: 0.76rem;
-  font-weight: 650;
-  text-align: center;
-}
-
-.game-group-more {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 0.24rem;
-  border-bottom: 1px solid rgba(154, 52, 18, 0.24);
-  color: rgba(124, 45, 18, 0.88);
-  font-size: 0.9rem;
-  font-weight: 650;
-  line-height: 1.5;
-  white-space: nowrap;
-  transition:
-    border-color 220ms ease,
-    color 220ms ease;
-}
-
-.game-group-more:hover {
-  border-color: rgba(154, 52, 18, 0.70);
-  color: rgba(124, 45, 18, 1);
-}
-
-:global(.dark) h3 {
-  color: rgba(241, 245, 249, 0.88);
-}
-
-:global(.dark) .game-card:hover,
-:global(.dark) .game-card:focus-within {
-  background: rgba(148, 163, 184, 0.08);
-}
-
-:global(.dark) .game-card p:first-of-type {
-  color: rgba(241, 245, 249, 0.88);
-}
-
-:global(.dark) .game-card p:nth-of-type(2) {
-  color: rgba(203, 213, 225, 0.66);
-}
-
-:global(.games-page--dark) .game-card:hover,
-:global(.games-page--dark) .game-card:focus-within {
-  background: rgba(148, 163, 184, 0.09);
-}
-
-:global(.games-page--dark) .game-card p:first-of-type {
-  color: rgba(248, 250, 252, 0.96);
-}
-
-:global(.games-page--dark) .game-card p:nth-of-type(2) {
-  color: rgba(226, 232, 240, 0.76);
-}
-
-:global(.dark) .game-group-pager button {
-  color: rgba(180, 213, 226, 0.62);
-}
-
-:global(.dark) .game-group-pager button:hover {
-  background: rgba(148, 163, 184, 0.10);
-  color: rgba(226, 232, 240, 0.80);
-}
-
-:global(.dark) .game-group-pager span {
-  color: rgba(203, 213, 225, 0.68);
-}
-
-:global(.dark) .game-group-more {
-  border-color: rgba(148, 163, 184, 0.22);
-  color: rgba(180, 213, 226, 0.68);
-}
-
-:global(.dark) .game-group-more:hover {
-  border-color: rgba(148, 163, 184, 0.42);
-  color: rgba(226, 232, 240, 0.84);
-}
-
-:global(.games-page--dark) .game-group-pager button {
-  color: rgba(180, 213, 226, 0.62) !important;
-}
-
-:global(.games-page--dark) .game-group-pager button:hover {
-  background: rgba(148, 163, 184, 0.12) !important;
-  color: rgba(226, 232, 240, 0.80) !important;
-}
-
-:global(.games-page--dark) .game-group-more {
-  border-color: rgba(148, 163, 184, 0.22) !important;
-  color: rgba(180, 213, 226, 0.68) !important;
-}
-
-:global(.games-page--dark) .game-group-more:hover {
-  border-color: rgba(148, 163, 184, 0.42) !important;
-  color: rgba(226, 232, 240, 0.84) !important;
-}
-
-:global(.dark) .review-float-button--light {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(15, 23, 42, 0.76);
-  color: rgba(226, 232, 240, 0.86);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
-}
-
-:global(.dark) .review-float-button--light:hover {
-  background: rgba(30, 41, 59, 0.92);
-  color: rgba(241, 245, 249, 0.94);
-}
-
-:global(.games-page--dark) .review-float-button--light {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(15, 23, 42, 0.76);
-  color: rgba(226, 232, 240, 0.88);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
-}
-
-:global(.games-page--dark) .review-float-button--light:hover {
-  background: rgba(30, 41, 59, 0.92);
-  color: rgba(248, 250, 252, 0.96);
-}
 </style>

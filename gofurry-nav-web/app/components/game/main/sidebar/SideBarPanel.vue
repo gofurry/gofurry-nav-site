@@ -69,21 +69,3 @@ const icons = {
   xiaoheihe: `${LOGO_PREFIX}xiaoheihe.png`,
 }
 </script>
-
-<style scoped>
-.game-sidebar-shell {
-  border: 1px solid rgba(126, 92, 58, 0.20);
-  border-radius: 1.15rem;
-  background: rgba(255, 250, 242, 0.28);
-  box-shadow: 0 10px 26px rgba(91, 62, 28, 0.035);
-  backdrop-filter: blur(1px);
-}
-
-:global(.dark) .game-sidebar-shell {
-  border-color: rgba(226, 232, 240, 0.18);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(226, 232, 240, 0.045)),
-    rgba(226, 232, 240, 0.055);
-  box-shadow: none;
-}
-</style>

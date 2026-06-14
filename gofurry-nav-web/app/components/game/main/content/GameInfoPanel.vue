@@ -145,20 +145,3 @@ function handleMore(group: GameGroupViewModel) {
   console.log('show more:', group.title)
 }
 </script>
-
-<style scoped>
-.game-info-shell {
-  border: 1px solid rgba(126, 92, 58, 0.16);
-  border-radius: 1.15rem;
-  background: rgba(255, 250, 242, 0.22);
-  box-shadow: none;
-  backdrop-filter: blur(1px);
-}
-
-:global(.dark) .game-info-shell {
-  border-color: rgba(226, 232, 240, 0.18);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(226, 232, 240, 0.045)),
-    rgba(226, 232, 240, 0.055);
-}
-</style>

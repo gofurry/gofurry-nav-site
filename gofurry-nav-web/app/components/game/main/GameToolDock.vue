@@ -168,18 +168,7 @@ function openArchivePrompt(prompt: string) {
 
 .game-tool-button,
 .game-tool-feedback {
-  border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 0.65rem;
-  background: rgba(255, 255, 255, 0.7);
-  box-shadow: 0 12px 32px rgba(76, 42, 18, 0.14);
-  color: #334155;
-  backdrop-filter: blur(18px);
-  transition:
-    background 500ms ease,
-    border-color 500ms ease,
-    color 500ms ease,
-    box-shadow 500ms ease,
-    filter 500ms ease;
 }
 
 .game-tool-button {
@@ -189,16 +178,6 @@ function openArchivePrompt(prompt: string) {
   height: 2.75rem;
   place-items: center;
   overflow: hidden;
-}
-
-.game-tool-button:hover,
-.game-tool-button.active,
-.game-tool-feedback:hover {
-  border-color: rgba(253, 186, 116, 0.9);
-  background: rgba(255, 255, 255, 0.9);
-  color: #c2410c;
-  box-shadow: 0 14px 36px rgba(76, 42, 18, 0.18);
-  filter: saturate(1.05);
 }
 
 .game-tool-icon-stack {
@@ -260,22 +239,5 @@ function openArchivePrompt(prompt: string) {
   opacity: 0;
   transform: translateX(10px) scale(0.975);
   filter: blur(6px);
-}
-
-:global(.dark) .game-tool-button,
-:global(.dark) .game-tool-feedback {
-  border-color: rgba(148, 163, 184, 0.18);
-  background: rgba(15, 23, 42, 0.68);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
-  color: rgba(226, 232, 240, 0.88);
-}
-
-:global(.dark) .game-tool-button:hover,
-:global(.dark) .game-tool-button.active,
-:global(.dark) .game-tool-feedback:hover {
-  border-color: rgba(251, 146, 60, 0.44);
-  background: rgba(30, 41, 59, 0.86);
-  color: rgba(254, 215, 170, 0.96);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
 }
 </style>

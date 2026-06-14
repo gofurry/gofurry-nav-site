@@ -1,5 +1,5 @@
 <template>
-  <div class="search-shell relative" :class="{ 'search-shell--dark': isDarkTheme }">
+  <div class="search-shell relative">
     <!-- 搜索框 -->
     <div class="relative">
       <img
@@ -11,7 +11,7 @@
           v-model="keyword"
           type="text"
           :placeholder="t('game.search.simple')"
-          class="game-sidebar-search-input w-full rounded-lg border border-[rgba(126,92,58,0.17)] bg-[rgba(255,250,242,0.42)] py-2 pl-9 pr-3 text-sm text-stone-800 shadow-[0_4px_12px_rgba(91,62,28,0.03)] placeholder-stone-400 transition focus:border-[rgba(120,87,56,0.36)] focus:bg-[rgba(255,250,242,0.60)] focus:outline-none focus:ring-1 focus:ring-[rgba(120,87,56,0.10)] dark:border-slate-400/15 dark:bg-slate-950/35 dark:text-slate-100 dark:placeholder-slate-400 dark:shadow-none dark:focus:border-slate-300/40 dark:focus:bg-slate-900/55 dark:focus:ring-slate-300/20"
+          class="game-sidebar-search-input w-full rounded-lg py-2 pl-9 pr-3 text-sm transition focus:outline-none"
           @focus="onFocus"
           @blur="onBlur"
       />
@@ -52,21 +52,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import { getSearchSimple } from "@/utils/api/game";
 import type { SearchItemModel } from "@/types/game";
 import { useLangStore } from "@/store/langStore";
 import { i18n } from '@/main'
-import { useThemeStore } from '@/stores/theme'
 
 const { t } = i18n.global
 
 const router = useRouter();
 const localePath = useLocalePath()
 const langStore = useLangStore();
-const themeStore = useThemeStore();
 const lang = ref(langStore.lang);
-const isDarkTheme = computed(() => themeStore.theme === 'dark')
 
 const keyword = ref("");
 const results = ref<SearchItemModel[]>([]);
@@ -155,8 +152,20 @@ function onBlur() {
   container: game-search-shell / inline-size;
 }
 
+.game-sidebar-search-input {
+  border: 1px solid rgba(126, 92, 58, 0.17);
+  background: rgba(255, 250, 242, 0.42);
+  color: rgba(28, 25, 23, 0.94);
+  box-shadow: 0 4px 12px rgba(91, 62, 28, 0.03);
+}
+
+.game-sidebar-search-input::placeholder {
+  color: rgba(120, 113, 108, 0.72);
+}
+
 .game-sidebar-search-input:focus {
   border-color: rgba(120, 87, 56, 0.36) !important;
+  background: rgba(255, 250, 242, 0.60);
   box-shadow: 0 0 0 1px rgba(120, 87, 56, 0.10) !important;
 }
 
@@ -216,48 +225,45 @@ function onBlur() {
   }
 }
 
-:global(.dark) .search-results-panel,
-:global(.games-search-page.games-page--dark) .search-results-panel,
-.search-shell--dark .search-results-panel {
+:global(.dark) .search-results-panel {
   border-color: rgba(148, 163, 184, 0.16);
   background: rgba(15, 23, 42, 0.96);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
 }
 
+:global(.dark) .game-sidebar-search-input {
+  border-color: rgba(148, 163, 184, 0.15);
+  background: rgba(15, 23, 42, 0.35);
+  color: rgba(241, 245, 249, 0.94);
+  box-shadow: none;
+}
+
+:global(.dark) .game-sidebar-search-input::placeholder {
+  color: rgba(148, 163, 184, 0.84);
+}
+
 :global(.dark) .game-sidebar-search-input:focus {
   border-color: rgba(203, 213, 225, 0.38) !important;
+  background: rgba(30, 41, 59, 0.55);
   box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.18) !important;
 }
 
-:global(.games-page--dark) .game-sidebar-search-input:focus {
-  border-color: rgba(203, 213, 225, 0.38) !important;
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.18) !important;
-}
-
-:global(.dark) .search-result-card,
-:global(.games-search-page.games-page--dark) .search-result-card,
-.search-shell--dark .search-result-card {
+:global(.dark) .search-result-card {
   border-color: rgba(148, 163, 184, 0.20);
   background: rgba(30, 41, 59, 0.58);
 }
 
-:global(.dark) .search-result-card:hover,
-:global(.games-search-page.games-page--dark) .search-result-card:hover,
-.search-shell--dark .search-result-card:hover {
+:global(.dark) .search-result-card:hover {
   border-color: rgba(203, 213, 225, 0.46);
   background: rgba(51, 65, 85, 0.72);
 }
 
-:global(.dark) .search-result-title,
-:global(.games-search-page.games-page--dark) .search-result-title,
-.search-shell--dark .search-result-title {
+:global(.dark) .search-result-title {
   color: rgba(248, 250, 252, 0.98);
   text-shadow: none;
 }
 
-:global(.dark) .search-result-desc,
-:global(.games-search-page.games-page--dark) .search-result-desc,
-.search-shell--dark .search-result-desc {
+:global(.dark) .search-result-desc {
   color: rgba(226, 232, 240, 0.78);
   font-weight: 500;
   text-shadow: none;

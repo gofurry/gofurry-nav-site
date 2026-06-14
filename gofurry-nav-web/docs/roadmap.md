@@ -162,11 +162,11 @@ html.dark {
 
 ### v2.2.0-alpha.2 - Games Style Token Migration
 
-- [ ] 优先迁移 `/games` 页面。
-- [ ] 将游戏卡片、信息面板、右侧栏、数据面板、更新情报、分页、按钮、评分迁移到 Less 语义类。
-- [ ] Tailwind 仅保留布局和响应式。
-- [ ] 清理 games 页内重复的颜色、字重、hover、暗色 class。
-- [ ] 统一 games 页亮暗色只走 `html.dark` token。
+- [x] 优先迁移 `/games` 页面。
+- [x] 将游戏卡片、信息面板、右侧栏、数据面板、更新情报、分页、按钮、评分迁移到 Less 语义类。
+- [x] Tailwind 仅保留布局和响应式。
+- [x] 清理 games 页内重复的颜色、字重、hover、暗色 class。
+- [x] 统一 games 页亮暗色只走 `html.dark` token。
 
 验收标准：
 

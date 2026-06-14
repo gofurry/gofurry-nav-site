@@ -1,14 +1,14 @@
 <template>
   <div class="space-y-3">
-    <h3 class="mb-1 text-sm font-bold text-stone-700/90">
+    <h3 class="sidebar-section-title mb-1 text-sm font-bold">
       {{ titleText }}
     </h3>
 
-    <div v-if="loading" class="py-4 text-center text-xs text-gray-400">
+    <div v-if="loading" class="latest-review-state py-4 text-center text-xs">
       {{ loadingText }}
     </div>
 
-    <div v-else-if="reviews.length === 0" class="py-4 text-center text-xs text-gray-400">
+    <div v-else-if="reviews.length === 0" class="latest-review-state py-4 text-center text-xs">
       {{ emptyText }}
     </div>
 
@@ -24,7 +24,7 @@
           :alt="item.game_name"
         />
         <p
-          class="mt-1 w-full truncate text-xs font-semibold text-stone-800"
+          class="latest-review-item__title mt-1 w-full truncate text-xs font-semibold"
           :title="item.game_name"
         >
           {{ item.game_name }}
@@ -33,13 +33,13 @@
 
       <div class="flex min-w-0 flex-1 flex-col justify-between">
         <p
-          class="line-clamp-2 text-sm leading-snug text-stone-700"
+          class="latest-review-item__body line-clamp-2 text-sm leading-snug"
           :title="item.content"
         >
           {{ item.content }}
         </p>
 
-        <div class="mt-2 space-y-0.5 text-xs text-stone-400">
+        <div class="latest-review-item__meta mt-2 space-y-0.5 text-xs">
           <div class="truncate">
             {{ regionLabel }}: {{ item.region }}
           </div>
@@ -109,54 +109,3 @@ onMounted(() => {
   }
 })
 </script>
-
-<style scoped>
-.latest-review-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  border: 1px solid rgba(126, 92, 58, 0.17);
-  border-radius: 0.82rem;
-  background: rgba(255, 250, 242, 0.40);
-  box-shadow: 0 5px 14px rgba(91, 62, 28, 0.035);
-  padding: 0.68rem;
-  transition: background-color 180ms ease, border-color 180ms ease;
-}
-
-.latest-review-item:hover {
-  border-color: rgba(180, 96, 24, 0.34);
-  background: rgba(255, 239, 213, 0.68);
-}
-
-:global(.dark) h3 {
-  color: rgba(226, 232, 240, 0.86);
-}
-
-:global(.dark) .latest-review-item {
-  border-color: rgba(226, 232, 240, 0.15);
-  background: rgba(226, 232, 240, 0.065);
-  box-shadow: none;
-}
-
-:global(.dark) .latest-review-item:hover {
-  border-color: rgba(148, 163, 184, 0.36);
-  background: rgba(148, 163, 184, 0.11);
-}
-
-:global(.dark) .latest-review-item .text-stone-800 {
-  color: rgba(241, 245, 249, 0.86);
-}
-
-:global(.dark) .latest-review-item .text-stone-700 {
-  color: rgba(203, 213, 225, 0.72);
-}
-
-:global(.dark) .latest-review-item .text-stone-400 {
-  color: rgba(148, 163, 184, 0.78);
-}
-
-:global(.games-page--dark) .latest-review-item:hover {
-  border-color: rgba(148, 163, 184, 0.36) !important;
-  background: rgba(148, 163, 184, 0.11) !important;
-}
-</style>

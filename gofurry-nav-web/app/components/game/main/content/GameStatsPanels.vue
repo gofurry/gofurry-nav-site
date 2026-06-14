@@ -5,14 +5,14 @@
     <div class="flex flex-col items-center justify-between gap-3 md:flex-row">
 
       <!-- 类型切换 -->
-      <div class="inline-flex items-center gap-5 border-b border-orange-200/45 dark:border-slate-400/15">
+      <div class="stats-type-tabs inline-flex items-center gap-5">
         <div
             v-for="item in panelTypes"
             :key="item.key"
-            class="stats-type-tab relative cursor-pointer px-1 pb-2 text-sm font-semibold transition"
+            class="stats-type-tab relative cursor-pointer px-1 pb-2 text-sm font-semibold"
             :class="activeType === item.key
-              ? 'stats-type-tab--active text-orange-800 after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-orange-700/70 dark:text-slate-200 dark:after:bg-slate-300/55'
-              : 'stats-type-tab--idle text-orange-500/80 hover:text-orange-700 dark:text-slate-400 dark:hover:text-slate-200'"
+              ? 'stats-type-tab--active'
+              : 'stats-type-tab--idle'"
             @click="switchType(item.key)"
         >
           {{ item.label }}
@@ -24,10 +24,10 @@
         <div
             v-for="(_, idx) in (activeType === 'count' ? visibleCountGroups : priceGroups)"
             :key="idx"
-            class="stats-page-tab grid h-7 min-w-7 cursor-pointer place-items-center rounded-full px-2 text-sm font-semibold transition"
+            class="stats-page-tab grid h-7 min-w-7 cursor-pointer place-items-center rounded-full px-2 text-sm font-semibold"
             :class="activeGroup === idx
-              ? 'stats-page-tab--active bg-white/58 text-orange-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.62)] dark:bg-slate-800/70 dark:text-slate-200 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-              : 'stats-page-tab--idle text-orange-500/80 hover:bg-white/28 hover:text-orange-700 dark:text-slate-400 dark:hover:bg-slate-800/45 dark:hover:text-slate-200'"
+              ? 'stats-page-tab--active'
+              : 'stats-page-tab--idle'"
             @click="activeGroup = idx"
         >
           {{ idx + 1 }}
@@ -195,28 +195,3 @@ watch([activeType, visibleCountGroups, priceGroups], () => {
   }
 })
 </script>
-
-<style scoped>
-:global(.games-page--dark) .stats-type-tab--active {
-  color: rgba(203, 213, 225, 0.82) !important;
-}
-
-:global(.games-page--dark) .stats-type-tab--active::after {
-  background: rgba(148, 163, 184, 0.54) !important;
-}
-
-:global(.games-page--dark) .stats-type-tab--idle,
-:global(.games-page--dark) .stats-page-tab--idle {
-  color: rgba(203, 213, 225, 0.54) !important;
-}
-
-:global(.games-page--dark) .stats-type-tab--idle:hover,
-:global(.games-page--dark) .stats-page-tab--idle:hover {
-  color: rgba(226, 232, 240, 0.74) !important;
-}
-
-:global(.games-page--dark) .stats-page-tab--active {
-  background: rgba(30, 41, 59, 0.52) !important;
-  color: rgba(203, 213, 225, 0.82) !important;
-}
-</style>
