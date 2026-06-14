@@ -99,11 +99,12 @@ Token 分三层：
 | 搜索结果 | `GameSearchResult.vue` | `pages/games-search.less` | 结果卡片使用 `.search-page-card`，数据为空时仍保留网格容器便于截图守卫。 |
 | 搜索筛选 | `GameSearchFilter.vue` | `pages/games-search.less` | 筛选面板、chip、日期选择器重写都收敛在搜索页入口。 |
 | 分页 | `GamePagination.vue` | `components/pagination.less`、`pages/games-search.less` | 通用分页外观走 `.gf-pagination`，搜索页密度和 active 细节走页面类。 |
-| 导航 | `NavBar.vue`、`NavSpotlightPanels.vue` | `components/nav.less`、`components/shell.less` | active、按钮、移动面板使用 `gf-nav` token，不再依赖页面级 dark class。 |
+| 全站导航 | `NavBar.vue` | `components/nav.less`、`components/shell.less` | active、按钮、移动面板使用 `gf-nav` token，不再依赖页面级 dark class。 |
 | 页脚 | `Footer.vue` | `components/footer.less` | 链接、分组标题和 meta 文字由 `gf-footer` token 控制。 |
 | 模态与输入 | `ModeSettingModal.vue`、`NsfwConfirmModal.vue` | `components/modal.less`、`components/input.less`、`components/button.less`、`components/chip.less` | 模态框材质、输入框、按钮和 toggle 统一为 `gf-*` 组件类。 |
 | 评分 | `RatingStar.vue` | `components/rating.less` | 星级和评分文字走 `.gf-rating`，不再由页面局部覆盖修暗色。 |
 | 静态页与更新页 | `about.vue`、`terms.vue`、`privacy.vue`、`updates.vue` | `pages/static.less`、`pages/updates.less` | 页面 token 通过 `html.dark` 切换，正文卡片和时间线不再写重复 dark 入口。 |
+| 首页导航 | `NavHomePage.vue`、`NavHeader.vue`、`SearchBox.vue`、`NavQuickAccess.vue`、`NavContent.vue`、`SitePopover.vue`、`GroupPopover.vue`、`NavToolDock.vue`、`NavSpotlightPanels.vue` | `pages/nav.less` | 首页根类为 `.nav-home-page`，搜索、快捷入口、内容区、站点卡片、popover、工具栏和 spotlight 复杂视觉统一由页面 token 与 `html.dark` 控制。 |
 
 ## 迁移检查项
 
@@ -119,8 +120,10 @@ Token 分三层：
 
 ## 视觉回归范围
 
-rc.1 固定检查范围：
+当前固定检查范围：
 
+- `/`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
+- `/en`：英文亮色、英文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/games`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/games/search`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/en/games/search`：英文亮色、英文暗色、桌面 `1440x900`、移动 `390x844`。

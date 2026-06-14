@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-screen w-full flex-col bg-gray-50">
+  <div class="nav-home-page flex w-full flex-col">
     <NavHeader
       :desktop-bg-url="navPageData.desktopBgUrl"
       :mobile-bg-url="navPageData.mobileBgUrl"
@@ -8,7 +8,7 @@
     <main
         v-if="isContentMounted"
         ref="contentRef"
-        class="relative z-10 flex-1 overflow-hidden"
+        class="nav-content-shell relative z-10 flex-1 overflow-hidden"
     >
       <GoFurryGridBackground :fixed="false" palette="nav-content" />
       <div class="absolute z-30 w-full">

@@ -111,30 +111,3 @@ onUnmounted(() => {
   }
 })
 </script>
-
-<style scoped>
-.group-popover {
-  z-index: 95;
-  width: 16rem;
-  border-radius: 0.875rem;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: rgba(255, 247, 237, 0.94);
-  padding: 0.75rem 0.85rem;
-  color: rgba(86, 47, 14, 0.86);
-  font-size: 0.875rem;
-  line-height: 1.5;
-  box-shadow:
-    0 18px 42px rgba(87, 48, 10, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.58);
-  backdrop-filter: blur(12px);
-}
-
-:global(.dark .group-popover) {
-  border-color: rgba(255, 255, 255, 0.10);
-  background: rgba(15, 23, 42, 0.92);
-  color: rgba(226, 232, 240, 0.92);
-  box-shadow:
-    0 18px 42px rgba(2, 6, 23, 0.42),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-</style>

@@ -1,6 +1,6 @@
 # GoFurry Nav Web 性能测量与回归守卫
 
-这套脚本用于 `v2.2.0-rc.1 - Visual Regression And Documentation`。目标是让前端性能与样式迁移有可重复的本地验证方式，防止首页、知识库页、游戏页和游戏搜索页重新误加载重型依赖，也为亮暗色截图检查留下固定入口。
+这套脚本用于样式系统迁移回归。目标是让前端性能与样式迁移有可重复的本地验证方式，防止首页、知识库页、游戏页和游戏搜索页重新误加载重型依赖，也为亮暗色截图检查留下固定入口。
 
 ## 使用方式
 
@@ -77,13 +77,15 @@ npm run visual:guard -- --base-url http://localhost:3001
 脚本会对以下组合截图并生成 manifest：
 
 - `/games` 中文亮色、中文暗色，桌面 `1440x900` 与移动 `390x844`
+- `/` 首页导航中文亮色、中文暗色，桌面 `1440x900` 与移动 `390x844`
+- `/en` 首页导航英文亮色、英文暗色，桌面 `1440x900` 与移动 `390x844`
 - `/games/search` 中文亮色、中文暗色，桌面 `1440x900` 与移动 `390x844`
 - `/en/games/search` 英文亮色、英文暗色，桌面 `1440x900` 与移动 `390x844`
 
 视觉守卫会做这些硬检查：
 
 - 截图主题必须与 `html.dark` 状态一致。
-- 页面关键容器必须存在，例如 `.games-page`、`.games-search-page`、`.search-result-grid`、`.gf-pagination`。
+- 页面关键容器必须存在，例如 `.nav-home-page`、`.nav-header`、`.games-page`、`.games-search-page`、`.search-result-grid`、`.gf-pagination`。
 - 不允许出现旧暗色入口：`games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`。
 - 桌面和移动端不能出现明显横向溢出。
 
@@ -93,6 +95,7 @@ npm run visual:guard -- --base-url http://localhost:3001
 
 `visual:guard` 负责生成基线截图和硬断言，最终发布前仍建议快速目视：
 
+- `/`、`/en`：首页导航 header、搜索框、内容 reveal、站点卡片和 spotlight 在亮暗色下层级一致。
 - `/games`：亮色与暗色背景、信息面板、侧栏搜索、游戏卡片 hover 状态一致。
 - `/games/search`：筛选面板、结果卡片、分页和日期选择器在亮暗色下层级清晰。
 - `/en/games/search`：英文文案不挤压卡片、按钮、分页和筛选 chip。

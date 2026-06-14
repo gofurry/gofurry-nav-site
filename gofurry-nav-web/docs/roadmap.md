@@ -25,7 +25,7 @@
 
 ### v2.2.1 - Home And Navigation Migration
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** User-facing / Architecture / Maintainability
 **Goal:** 将首页导航相关复杂视觉迁移到 Less 主线，避免首页继续作为 Tailwind、scoped CSS 和 global 覆盖的混合区。
 
@@ -38,11 +38,11 @@
 
 #### Tasks
 
-- [ ] 迁移首页导航模块中的复杂颜色、边框、阴影、hover 和 active 状态。
-- [ ] 为 `NavContent`、`SearchBox`、`NavHeader`、`NavQuickAccess`、`SitePopover`、`GroupPopover` 等模块建立稳定语义类。
-- [ ] 将导航相关页面视觉收敛到 `components/nav.less`、`components/shell.less` 或新的 `pages/nav.less`。
-- [ ] 清理导航模块中可替换的复杂 `dark:`、`:global(.dark ...)` 和重复 scoped 覆盖。
-- [ ] 扩展视觉截图守卫覆盖首页导航亮暗色、中文/英文、桌面/移动端。
+- [x] 迁移首页导航模块中的复杂颜色、边框、阴影、hover 和 active 状态。
+- [x] 为 `NavContent`、`SearchBox`、`NavHeader`、`NavQuickAccess`、`SitePopover`、`GroupPopover` 等模块建立稳定语义类。
+- [x] 将导航相关页面视觉收敛到 `pages/nav.less`。
+- [x] 清理导航模块中可替换的复杂 `dark:`、`:global(.dark ...)` 和重复 scoped 覆盖。
+- [x] 扩展视觉截图守卫覆盖首页导航亮暗色、中文/英文、桌面/移动端。
 
 #### Acceptance Criteria
 

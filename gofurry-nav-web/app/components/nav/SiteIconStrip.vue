@@ -1,11 +1,11 @@
 <template>
-  <div v-if="visibleSites.length" class="flex items-center gap-2 overflow-x-auto overflow-y-hidden">
+  <div v-if="visibleSites.length" class="site-icon-strip flex items-center gap-2 overflow-x-auto overflow-y-hidden">
     <div v-for="item in visibleSites" :key="item.id" class="shrink-0">
       <a
           :href="toExternalUrl(item.url)"
           target="_blank"
           rel="noopener noreferrer"
-          class="group flex h-10 w-10 items-center justify-center rounded-xl bg-black/20 duration-500 backdrop-blur-sm hover:bg-slate-100/30"
+          class="site-icon-strip__link flex h-10 w-10 items-center justify-center"
           :title="item.name"
           @click="handleVisit(item)"
       >
@@ -13,13 +13,13 @@
             v-if="!failedIcons[item.id]"
             :src="`https://favicon.im/${toExternalUrl(item.url)}?larger=true`"
             :alt="item.name"
-            class="h-6 w-6 rounded-md object-cover "
+            class="site-icon-strip__image"
             loading="lazy"
             @error="markIconFailed(item.id)"
         />
         <div
             v-else
-            class="flex h-6 w-6 items-center justify-center rounded-md bg-slate-900/85 text-xs font-semibold text-white"
+            class="site-icon-strip__fallback"
         >
           {{ item.name.slice(0, 1).toUpperCase() }}
         </div>

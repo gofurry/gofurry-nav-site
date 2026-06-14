@@ -1,6 +1,6 @@
 <template>
-  <div class="relative min-h-screen overflow-hidden p-6">
-    <div v-if="loading" class="py-8 text-center text-gray-500 dark:text-slate-300">
+  <div class="nav-content">
+    <div v-if="loading" class="nav-content-loading">
       {{ t('common.loading') }}...
     </div>
 
@@ -21,7 +21,7 @@
         @mouseenter="(event) => onGroupMouseEnter(event, group)"
         @mouseleave="scheduleGroupHide"
       >
-        <h2 class="text-xl font-semibold text-stone-900 transition-colors hover:text-amber-600 dark:text-slate-100 dark:hover:text-sky-300">
+        <h2 class="nav-group-title">
           {{ group.name }}
         </h2>
       </div>
@@ -31,12 +31,12 @@
           v-for="site in displaySites(group)"
           :key="`${group.id}-${site.id}`"
           ref="siteRefs"
-          class="nav-site-card flex cursor-pointer gap-3 rounded-xl border border-orange-100/70 bg-orange-50/94 p-4 transition-shadow duration-200 dark:border-white/8 dark:bg-[rgba(18,30,48,0.82)] dark:shadow-[0_10px_24px_rgba(2,6,23,0.18)]"
+          class="nav-site-card"
           @click="goDomain(domainList(site), site)"
           @mouseenter="(event) => onSiteMouseEnter(event, site)"
           @mouseleave="scheduleSiteHide"
         >
-          <div class="h-12 w-12 flex-shrink-0 overflow-hidden rounded">
+          <div class="nav-site-card__logo">
             <img
               :key="siteLogoKey(site)"
               :src="siteLogoSrc(site)"
@@ -52,12 +52,12 @@
 
           <div class="flex flex-1 flex-col overflow-hidden">
             <div class="flex items-center gap-1">
-              <h3 class="truncate text-base font-medium text-stone-900 dark:text-slate-100">
+              <h3 class="nav-site-card__title truncate text-base font-medium">
                 {{ site.name }}
               </h3>
             </div>
 
-            <p class="mt-1 truncate text-xs text-gray-500 dark:text-slate-400">
+            <p class="nav-site-card__desc mt-1 truncate text-xs">
               {{ site.info }}
             </p>
           </div>
@@ -66,7 +66,7 @@
 
       <div v-if="filteredSites(group).length > 30" class="my-4 flex justify-center">
         <button
-          class="rounded-sm bg-orange-100 px-6 text-sm text-orange-700 transition hover:bg-orange-200 dark:bg-[rgba(30,41,59,0.82)] dark:text-slate-100 dark:hover:bg-[rgba(51,65,85,0.92)]"
+          class="nav-group-toggle"
           @click="toggleGroup(group.id)"
         >
           {{ expandedGroups[group.id] ? t('common.collapse') : t('common.expand') }}
@@ -442,36 +442,3 @@ onUnmounted(() => {
   cancelGroupHide()
 })
 </script>
-
-<style scoped>
-@supports (content-visibility: auto) {
-  .nav-group-section {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 640px;
-  }
-}
-
-.nav-site-grid {
-  contain: layout paint style;
-}
-
-.nav-site-card {
-  contain: layout paint style;
-}
-
-@media (max-width: 1023px) {
-  @supports (content-visibility: auto) {
-    .nav-group-section {
-      contain-intrinsic-size: auto 960px;
-    }
-  }
-}
-
-@media (max-width: 639px) {
-  @supports (content-visibility: auto) {
-    .nav-group-section {
-      contain-intrinsic-size: auto 1560px;
-    }
-  }
-}
-</style>

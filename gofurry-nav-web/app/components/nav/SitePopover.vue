@@ -2,27 +2,27 @@
   <div
       v-if="site"
       ref="popoverRef"
-      class="fixed z-9999 w-72 rounded-xl border border-orange-100/85 bg-orange-50/95 p-4 text-sm text-gray-700 shadow-[0_16px_40px_rgba(25,35,38,0.16)] backdrop-blur-md transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform,filter] dark:border-white/10 dark:bg-[rgba(15,23,42,0.94)] dark:text-slate-200 dark:shadow-[0_16px_40px_rgba(2,6,23,0.42)]"
+      class="site-popover"
       :class="popoverClasses"
       :style="popoverStyle"
       @mouseenter="onMouseEnter"
       @mouseleave="onMouseLeave"
   >
-    <h3 class="font-semibold text-base mb-1 text-stone-900 dark:text-slate-100">
+    <h3 class="site-popover__title">
       {{ site.name || '' }}
     </h3>
-    <p class="text-gray-600 mb-3 break-words dark:text-slate-400">
+    <p class="site-popover__desc">
       {{ site.info || '' }}
     </p>
 
-    <div v-if="domains.length" class="space-y-1 max-h-44 overflow-y-auto">
+    <div v-if="domains.length" class="site-popover__domains space-y-1">
       <div
           v-for="domain in domains"
           :key="domain"
-          class="flex items-center justify-between text-xs px-2 py-1 rounded hover:bg-orange-100 cursor-pointer dark:hover:bg-white/8"
+          class="site-popover__domain"
           @click.stop="goSite(domain)"
       >
-        <div class="flex items-center gap-1 truncate max-w-[60%]">
+        <div class="site-popover__domain-name">
           <img
               :src="pingData[domain]?.status === 'up' ? greenCircle : redCircle"
               class="w-3 h-3"
@@ -30,13 +30,13 @@
           />
           <span class="truncate">{{ domain }}</span>
         </div>
-        <div class="text-gray-500 shrink-0 dark:text-slate-400">
+        <div class="site-popover__domain-metrics">
           {{ pingData[domain]?.loss || '-' }}% / {{ pingData[domain]?.delay || '-' }}
         </div>
       </div>
     </div>
 
-    <div v-else class="text-gray-400 text-xs text-center mt-2 dark:text-slate-500">
+    <div v-else class="site-popover__empty">
       {{ t("site.siteDnsPanel.none") }}
     </div>
   </div>
@@ -82,11 +82,11 @@ const popoverStyle = ref<Record<string, string>>({
 const isReady = computed(() => props.visible && !!site.value && !!props.position)
 const popoverClasses = computed(() => {
   const hiddenTransform = props.placement === 'bottom'
-    ? 'translate-y-2 scale-[0.988] blur-[1.5px]'
-    : '-translate-y-2 scale-[0.988] blur-[1.5px]'
+    ? 'site-popover--hidden-bottom'
+    : 'site-popover--hidden-top'
   return isReady.value
-    ? 'pointer-events-auto opacity-100 translate-y-0 scale-100 blur-0'
-    : `pointer-events-none opacity-0 ${hiddenTransform}`
+    ? 'site-popover--visible'
+    : hiddenTransform
 })
 
 // 计算域名列表

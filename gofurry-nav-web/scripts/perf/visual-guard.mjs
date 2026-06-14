@@ -25,6 +25,26 @@ const legacyDarkSelectors = [
 
 const visualScenarios = [
   ...makePageScenarios({
+    id: 'nav-home',
+    label: '首页导航',
+    path: '/',
+    locale: 'zh-CN',
+    rootSelector: '.nav-home-page',
+    requiredSelectors: ['.nav-home-page', '.nav-header', '.search-box-shell'],
+    optionalDataSelectors: ['.nav-content', '.nav-site-card', '.spotlight-panel'],
+    action: 'reveal-home-nav'
+  }),
+  ...makePageScenarios({
+    id: 'nav-home-en',
+    label: '首页导航英文',
+    path: '/en',
+    locale: 'en-US',
+    rootSelector: '.nav-home-page',
+    requiredSelectors: ['.nav-home-page', '.nav-header', '.search-box-shell'],
+    optionalDataSelectors: ['.nav-content', '.nav-site-card', '.spotlight-panel'],
+    action: 'reveal-home-nav'
+  }),
+  ...makePageScenarios({
     id: 'games',
     label: '游戏首页',
     path: '/games',
@@ -117,7 +137,7 @@ function renderMarkdownReport(report) {
     '## 检查项',
     '',
     '- `html.dark` 与截图主题一致。',
-    '- `/games`、`/games/search`、`/en/games/search` 的关键容器存在。',
+    '- `/`、`/en`、`/games`、`/games/search`、`/en/games/search` 的关键容器存在。',
     '- 不再出现 `games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark` 等旧暗色入口。',
     '- 桌面与移动端不出现明显横向溢出。',
     '- 数据卡片为空只记为 warning，方便在本地后端无数据时继续保留截图。'
@@ -209,6 +229,16 @@ function evaluateSnapshot(snapshot, scenario) {
   return { failures, warnings }
 }
 
+async function performScenarioAction(page, scenario) {
+  if (scenario.action !== 'reveal-home-nav') {
+    return
+  }
+
+  await page.mouse.wheel(0, 1100)
+  await page.waitForSelector('.nav-content', { timeout: 5000 }).catch(() => {})
+  await page.waitForTimeout(1800)
+}
+
 async function runScenario(browser, scenario) {
   const context = await browser.newContext({
     viewport: scenario.viewport,
@@ -247,6 +277,7 @@ async function runScenario(browser, scenario) {
     await page.waitForLoadState('networkidle', { timeout: 10000 })
       .catch(() => warnings.push({ message: 'networkidle 等待超时，已按当前页面状态截图' }))
     await page.waitForTimeout(1200)
+    await performScenarioAction(page, scenario)
     snapshot = await inspectPage(page, scenario)
     await page.screenshot({ path: screenshotPath, fullPage: true })
   } catch (error) {
