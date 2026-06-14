@@ -81,11 +81,14 @@ npm run visual:guard -- --base-url http://localhost:3001
 - `/en` 首页导航英文亮色、英文暗色，桌面 `1440x900` 与移动 `390x844`
 - `/games/search` 中文亮色、中文暗色，桌面 `1440x900` 与移动 `390x844`
 - `/en/games/search` 英文亮色、英文暗色，桌面 `1440x900` 与移动 `390x844`
+- `/about`、`/en/about` 亮色、暗色，桌面 `1440x900` 与移动 `390x844`
+- `/updates`、`/en/updates` 亮色、暗色，桌面 `1440x900` 与移动 `390x844`
+- `/terms`、`/privacy`、`/en/terms`、`/en/privacy` 亮色、暗色，移动 `390x844`
 
 视觉守卫会做这些硬检查：
 
 - 截图主题必须与 `html.dark` 状态一致。
-- 页面关键容器必须存在，例如 `.nav-home-page`、`.nav-header`、`.games-page`、`.games-search-page`、`.search-result-grid`、`.gf-pagination`。
+- 页面关键容器必须存在，例如 `.nav-home-page`、`.nav-header`、`.games-page`、`.games-search-page`、`.search-result-grid`、`.gf-pagination`、`.gf-static-page`、`.updates-summary-shell`。
 - 不允许出现旧暗色入口：`games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`。
 - 桌面和移动端不能出现明显横向溢出。
 
@@ -99,6 +102,8 @@ npm run visual:guard -- --base-url http://localhost:3001
 - `/games`：亮色与暗色背景、信息面板、侧栏搜索、游戏卡片 hover 状态一致。
 - `/games/search`：筛选面板、结果卡片、分页和日期选择器在亮暗色下层级清晰。
 - `/en/games/search`：英文文案不挤压卡片、按钮、分页和筛选 chip。
+- `/about`、`/updates`：静态面板、summary、状态文案和时间线在亮暗色下层级稳定。
+- `/terms`、`/privacy`：移动端长文案不造成横向溢出。
 - 移动端：无横向滚动，卡片为单列或自然堆叠，固定/浮动按钮不遮挡主要内容。
 
 ## 刷新基线

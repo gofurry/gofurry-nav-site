@@ -53,7 +53,7 @@
 
 ### v2.2.2 - Static Pages And Updates Finalization
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** User-facing / Documentation / Maintainability
 **Goal:** 完成 about、terms、privacy、updates 的样式收口，让静态内容页和更新页也遵守同一 token 与语义类规则。
 
@@ -66,11 +66,11 @@
 
 #### Tasks
 
-- [ ] 清理静态页中重复的 page vars 和局部面板样式。
-- [ ] 确认 `about`、`terms`、`privacy` 页面只通过 `html.dark` 和页面 token 切换主题。
-- [ ] 收敛 `updates` 页面及其子组件的局部颜色、边框、阴影和 hover 状态。
-- [ ] 将可复用静态页结构沉淀为 `gf-static-page` 语义规则，页面专属差异留在 `pages/static.less`。
-- [ ] 扩展视觉截图守卫覆盖 `/about`、`/updates` 和法律页移动端。
+- [x] 清理静态页中重复的 page vars 和局部面板样式。
+- [x] 确认 `about`、`terms`、`privacy` 页面只通过 `html.dark` 和页面 token 切换主题。
+- [x] 收敛 `updates` 页面及其子组件的局部颜色、边框、阴影和 hover 状态。
+- [x] 将可复用静态页结构沉淀为 `gf-static-page` 语义规则，页面专属差异留在 `pages/static.less`。
+- [x] 扩展视觉截图守卫覆盖 `/about`、`/updates` 和法律页移动端。
 
 #### Acceptance Criteria
 

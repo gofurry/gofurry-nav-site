@@ -103,7 +103,7 @@ Token 分三层：
 | 页脚 | `Footer.vue` | `components/footer.less` | 链接、分组标题和 meta 文字由 `gf-footer` token 控制。 |
 | 模态与输入 | `ModeSettingModal.vue`、`NsfwConfirmModal.vue` | `components/modal.less`、`components/input.less`、`components/button.less`、`components/chip.less` | 模态框材质、输入框、按钮和 toggle 统一为 `gf-*` 组件类。 |
 | 评分 | `RatingStar.vue` | `components/rating.less` | 星级和评分文字走 `.gf-rating`，不再由页面局部覆盖修暗色。 |
-| 静态页与更新页 | `about.vue`、`terms.vue`、`privacy.vue`、`updates.vue` | `pages/static.less`、`pages/updates.less` | 页面 token 通过 `html.dark` 切换，正文卡片和时间线不再写重复 dark 入口。 |
+| 静态页与更新页 | `about.vue`、`terms.vue`、`privacy.vue`、`updates.vue`、`components/updates/*` | `pages/static.less`、`pages/updates.less` | `.gf-static-page` 承接静态页共享结构，updates summary、状态、年份分组和时间线条目全部由页面 Less token 控制。 |
 | 首页导航 | `NavHomePage.vue`、`NavHeader.vue`、`SearchBox.vue`、`NavQuickAccess.vue`、`NavContent.vue`、`SitePopover.vue`、`GroupPopover.vue`、`NavToolDock.vue`、`NavSpotlightPanels.vue` | `pages/nav.less` | 首页根类为 `.nav-home-page`，搜索、快捷入口、内容区、站点卡片、popover、工具栏和 spotlight 复杂视觉统一由页面 token 与 `html.dark` 控制。 |
 
 ## 迁移检查项
@@ -127,6 +127,9 @@ Token 分三层：
 - `/games`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/games/search`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/en/games/search`：英文亮色、英文暗色、桌面 `1440x900`、移动 `390x844`。
+- `/about`、`/en/about`：亮色、暗色、桌面 `1440x900`、移动 `390x844`。
+- `/updates`、`/en/updates`：亮色、暗色、桌面 `1440x900`、移动 `390x844`。
+- `/terms`、`/privacy`、`/en/terms`、`/en/privacy`：亮色、暗色、移动 `390x844`。
 
 自动截图入口：
 

@@ -20,7 +20,10 @@ const legacyDarkSelectors = [
   '.games-page--dark',
   '.search-results--dark',
   '.is-dark-theme',
-  '.spotlight-panels--dark'
+  '.spotlight-panels--dark',
+  '.about-page--dark',
+  '.legal-page--dark',
+  '.updates-page--dark'
 ]
 
 const visualScenarios = [
@@ -70,6 +73,86 @@ const visualScenarios = [
     rootSelector: '.games-search-page',
     requiredSelectors: ['.games-search-page', '.search-result-grid', '.gf-pagination'],
     optionalDataSelectors: ['.search-page-card']
+  }),
+  ...makePageScenarios({
+    id: 'about',
+    label: '关于页',
+    path: '/about',
+    locale: 'zh-CN',
+    rootSelector: '.about-page',
+    requiredSelectors: ['.gf-static-page', '.about-page', '.about-panel', '.about-link'],
+    optionalDataSelectors: [],
+    expectActiveNav: false
+  }),
+  ...makePageScenarios({
+    id: 'about-en',
+    label: '关于页英文',
+    path: '/en/about',
+    locale: 'en-US',
+    rootSelector: '.about-page',
+    requiredSelectors: ['.gf-static-page', '.about-page', '.about-panel', '.about-link'],
+    optionalDataSelectors: [],
+    expectActiveNav: false
+  }),
+  ...makePageScenarios({
+    id: 'updates',
+    label: '更新公告',
+    path: '/updates',
+    locale: 'zh-CN',
+    rootSelector: '.updates-page',
+    requiredSelectors: ['.updates-page', '.updates-summary-shell', '.updates-timeline-section'],
+    optionalDataSelectors: ['.updates-entry'],
+    expectActiveNav: false
+  }),
+  ...makePageScenarios({
+    id: 'updates-en',
+    label: '更新公告英文',
+    path: '/en/updates',
+    locale: 'en-US',
+    rootSelector: '.updates-page',
+    requiredSelectors: ['.updates-page', '.updates-summary-shell', '.updates-timeline-section'],
+    optionalDataSelectors: ['.updates-entry'],
+    expectActiveNav: false
+  }),
+  ...makeMobilePageScenarios({
+    id: 'terms',
+    label: '服务条款移动端',
+    path: '/terms',
+    locale: 'zh-CN',
+    rootSelector: '.legal-page',
+    requiredSelectors: ['.gf-static-page', '.legal-page', '.legal-panel', '.gf-static-section-list'],
+    optionalDataSelectors: [],
+    expectActiveNav: false
+  }),
+  ...makeMobilePageScenarios({
+    id: 'terms-en',
+    label: '服务条款英文移动端',
+    path: '/en/terms',
+    locale: 'en-US',
+    rootSelector: '.legal-page',
+    requiredSelectors: ['.gf-static-page', '.legal-page', '.legal-panel', '.gf-static-section-list'],
+    optionalDataSelectors: [],
+    expectActiveNav: false
+  }),
+  ...makeMobilePageScenarios({
+    id: 'privacy',
+    label: '隐私政策移动端',
+    path: '/privacy',
+    locale: 'zh-CN',
+    rootSelector: '.legal-page',
+    requiredSelectors: ['.gf-static-page', '.legal-page', '.legal-panel', '.gf-static-section-list'],
+    optionalDataSelectors: [],
+    expectActiveNav: false
+  }),
+  ...makeMobilePageScenarios({
+    id: 'privacy-en',
+    label: '隐私政策英文移动端',
+    path: '/en/privacy',
+    locale: 'en-US',
+    rootSelector: '.legal-page',
+    requiredSelectors: ['.gf-static-page', '.legal-page', '.legal-panel', '.gf-static-section-list'],
+    optionalDataSelectors: [],
+    expectActiveNav: false
   })
 ]
 
@@ -87,6 +170,23 @@ function makePageScenarios(config) {
       theme: 'dark',
       viewport: desktop
     },
+    {
+      ...config,
+      id: `${config.id}-light-mobile`,
+      theme: 'light',
+      viewport: mobile
+    },
+    {
+      ...config,
+      id: `${config.id}-dark-mobile`,
+      theme: 'dark',
+      viewport: mobile
+    }
+  ]
+}
+
+function makeMobilePageScenarios(config) {
+  return [
     {
       ...config,
       id: `${config.id}-light-mobile`,
@@ -137,8 +237,8 @@ function renderMarkdownReport(report) {
     '## 检查项',
     '',
     '- `html.dark` 与截图主题一致。',
-    '- `/`、`/en`、`/games`、`/games/search`、`/en/games/search` 的关键容器存在。',
-    '- 不再出现 `games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark` 等旧暗色入口。',
+    '- `/`、`/en`、`/games`、`/games/search`、`/en/games/search`、`/about`、`/updates` 和法律页移动端的关键容器存在。',
+    '- 不再出现 `games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`、`about-page--dark`、`legal-page--dark`、`updates-page--dark` 等旧暗色入口。',
     '- 桌面与移动端不出现明显横向溢出。',
     '- 数据卡片为空只记为 warning，方便在本地后端无数据时继续保留截图。'
   )
@@ -212,7 +312,7 @@ function evaluateSnapshot(snapshot, scenario) {
     pushFailure(`页面横向溢出 ${Math.round(snapshot.horizontalOverflow)}px`)
   }
 
-  if (snapshot.activeNavCount < 1) {
+  if (scenario.expectActiveNav !== false && snapshot.activeNavCount < 1) {
     pushWarning('未检测到导航 active 状态')
   }
 
