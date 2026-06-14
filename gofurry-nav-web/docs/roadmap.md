@@ -81,7 +81,7 @@
 
 ### v2.2.3 - Archive Style Isolation
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Architecture / User-facing / Maintainability
 **Goal:** 单独整理 `/archive` 样式系统，在复用全站 token 的同时保留它作为复杂应用界面的页面隔离层。
 
@@ -95,11 +95,11 @@
 
 #### Tasks
 
-- [ ] 新增或整理 `app/assets/styles/pages/archive.less`。
-- [ ] 将 `/archive` 页面核心视觉从长 scoped CSS 中迁移到页面 Less 入口。
-- [ ] 清理 markdown preview、citation、session sidebar 中可替换的 `:deep(...)` 和 global 覆盖。
-- [ ] 保留 archive 作为独立应用界面的页面层，但复用 `--gf-*` 全站 token。
-- [ ] 为 archive 的空态、对话态、引用态和错误态补充视觉截图守卫。
+- [x] 新增或整理 `app/assets/styles/pages/archive.less`。
+- [x] 将 `/archive` 页面核心视觉从长 scoped CSS 中迁移到页面 Less 入口。
+- [x] 清理 markdown preview、citation、session sidebar 中可替换的 `:deep(...)` 和 global 覆盖。
+- [x] 保留 archive 作为独立应用界面的页面层，但复用 `--gf-*` 全站 token。
+- [x] 为 archive 的空态、对话态、引用态和错误态补充视觉截图守卫。
 
 #### Acceptance Criteria
 

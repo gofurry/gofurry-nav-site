@@ -54,7 +54,7 @@ Token 分三层：
 
 - 全站 token：`--gf-*`，定义基础背景、文字、边框、阴影、品牌色和状态色。
 - 公共组件 token：`--gf-button-*`、`--gf-card-*`、`--gf-modal-*` 等，只服务对应 `gf-*` 类。
-- 页面 token：`--games-*`、`--games-search-*`、`--updates-*`、`--about-*`、`--legal-*` 等，只在对应页面根类下声明。
+- 页面 token：`--games-*`、`--games-search-*`、`--updates-*`、`--archive-*`、`--about-*`、`--legal-*` 等，只在对应页面根类下声明。
 
 公共组件 token 可以引用全站 token；页面 token 可以引用全站 token 和少量公共组件 token。公共 `gf-*` 类不能引用页面 token。
 
@@ -84,6 +84,7 @@ Token 分三层：
 .search-page-card {}
 .game-search-filter-panel {}
 .updates-page {}
+.archive-page {}
 .gf-static-page {}
 ```
 
@@ -105,6 +106,7 @@ Token 分三层：
 | 评分 | `RatingStar.vue` | `components/rating.less` | 星级和评分文字走 `.gf-rating`，不再由页面局部覆盖修暗色。 |
 | 静态页与更新页 | `about.vue`、`terms.vue`、`privacy.vue`、`updates.vue`、`components/updates/*` | `pages/static.less`、`pages/updates.less` | `.gf-static-page` 承接静态页共享结构，updates summary、状态、年份分组和时间线条目全部由页面 Less token 控制。 |
 | 首页导航 | `NavHomePage.vue`、`NavHeader.vue`、`SearchBox.vue`、`NavQuickAccess.vue`、`NavContent.vue`、`SitePopover.vue`、`GroupPopover.vue`、`NavToolDock.vue`、`NavSpotlightPanels.vue` | `pages/nav.less` | 首页根类为 `.nav-home-page`，搜索、快捷入口、内容区、站点卡片、popover、工具栏和 spotlight 复杂视觉统一由页面 token 与 `html.dark` 控制。 |
+| 知识库归档页 | `app/pages/archive.vue` | `pages/archive.less` | 根类为 `.archive-page`，session sidebar、message list、Markdown preview、citation、输入区和弹窗全部限制在页面 Less 边界内。 |
 
 ## 迁移检查项
 
@@ -129,6 +131,7 @@ Token 分三层：
 - `/en/games/search`：英文亮色、英文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/about`、`/en/about`：亮色、暗色、桌面 `1440x900`、移动 `390x844`。
 - `/updates`、`/en/updates`：亮色、暗色、桌面 `1440x900`、移动 `390x844`。
+- `/archive`：空态、说明弹窗、种子会话/引用/错误态，亮色、暗色、桌面 `1440x900`、移动 `390x844`。
 - `/terms`、`/privacy`、`/en/terms`、`/en/privacy`：亮色、暗色、移动 `390x844`。
 
 自动截图入口：
