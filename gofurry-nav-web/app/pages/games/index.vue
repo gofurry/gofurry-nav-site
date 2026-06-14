@@ -7,7 +7,16 @@
       class="relative isolate flex-1 overflow-hidden"
     >
       <GoFurryGridBackground :fixed="false" palette="games" />
-      <FallingLeavesCanvas class="z-[1]" mode="viewport" :leaf-count="42" />
+      <FallingLeavesCanvas
+        v-if="ambientReady"
+        :key="isDarkTheme ? 'dark-leaves' : 'light-leaves'"
+        class="z-[1]"
+        mode="viewport"
+        :palette="isDarkTheme ? 'bright' : 'warm'"
+        :leaf-count="28"
+        :mobile-leaf-count="16"
+        :fps="24"
+      />
       <h1 class="sr-only">{{ gamesPageSeo.heading }}</h1>
       <div class="relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 p-6">
         <section class="w-full xl:w-[75%]">
@@ -29,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FallingLeavesCanvas from '@/components/common/FallingLeavesCanvas.vue'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
@@ -51,6 +60,7 @@ const { locale } = useI18n()
 const themeStore = useThemeStore()
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
 const isDarkTheme = computed(() => themeStore.theme === 'dark')
+const ambientReady = ref(false)
 const gamesPageSeo = computed(() => locale.value === 'en'
   ? {
       heading: 'GoFurry Furry Games',
@@ -101,6 +111,7 @@ useSeoMeta({
 
 onMounted(() => {
   themeStore.initTheme()
+  ambientReady.value = true
 })
 </script>
 
