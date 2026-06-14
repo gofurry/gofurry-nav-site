@@ -45,7 +45,7 @@ defineProps<{
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
 }
 
-:global(.dark .performance-panel section > .rounded-2xl){
+:global(html.dark .performance-panel section > .rounded-2xl){
   background:
     linear-gradient(118deg, rgba(30, 41, 59, 0.70), rgba(15, 23, 42, 0.84) 48%, rgba(30, 58, 138, 0.16)),
     rgba(15, 23, 42, 0.82);
@@ -64,7 +64,7 @@ defineProps<{
   opacity: 0.5;
 }
 
-:global(.dark .performance-panel section > .rounded-2xl::before){
+:global(html.dark .performance-panel section > .rounded-2xl::before){
   background:
     linear-gradient(90deg, transparent, rgba(147, 197, 253, 0.10), transparent),
     repeating-linear-gradient(90deg, rgba(147, 197, 253, 0.045) 0 1px, transparent 1px 76px);
@@ -95,7 +95,7 @@ defineProps<{
   font-size: clamp(1.08rem, 1.4vw, 1.28rem);
 }
 
-:global(.dark .performance-panel section > .rounded-2xl > .grid:first-child > div:first-child h3){
+:global(html.dark .performance-panel section > .rounded-2xl > .grid:first-child > div:first-child h3){
   color: #f8fafc;
 }
 
@@ -110,7 +110,7 @@ defineProps<{
   box-shadow: none;
 }
 
-:global(.dark .performance-panel section > .rounded-2xl > .grid:first-child > div:nth-child(2) > div) {
+:global(html.dark .performance-panel section > .rounded-2xl > .grid:first-child > div:nth-child(2) > div) {
   background: rgba(15, 23, 42, 0.58);
 }
 
@@ -126,7 +126,7 @@ defineProps<{
   color: #111827;
 }
 
-:global(.dark .performance-panel section > .rounded-2xl > .grid:first-child button.bg-orange-200){
+:global(html.dark .performance-panel section > .rounded-2xl > .grid:first-child button.bg-orange-200){
   background: rgba(251, 146, 60, 0.28);
   color: #fff7ed;
 }
@@ -142,7 +142,7 @@ defineProps<{
   box-shadow: none;
 }
 
-:global(.dark .performance-panel section > .rounded-2xl > .grid:first-child > div:last-child > div){
+:global(html.dark .performance-panel section > .rounded-2xl > .grid:first-child > div:last-child > div){
   background: rgba(15, 23, 42, 0.58);
 }
 
@@ -158,7 +158,7 @@ defineProps<{
   box-shadow: none;
 }
 
-:global(.dark .performance-panel section > .rounded-2xl > .rounded-xl){
+:global(html.dark .performance-panel section > .rounded-2xl > .rounded-xl){
   background:
     linear-gradient(rgba(15, 23, 42, 0.24), rgba(15, 23, 42, 0.24)),
     repeating-linear-gradient(0deg, transparent 0 39px, rgba(148, 163, 184, 0.12) 40px),

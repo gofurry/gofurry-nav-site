@@ -83,6 +83,7 @@ Token 分三层：
 .games-search-page {}
 .search-page-card {}
 .game-search-filter-panel {}
+.lottery-page {}
 .updates-page {}
 .archive-page {}
 .gf-static-page {}
@@ -99,6 +100,7 @@ Token 分三层：
 | 游戏搜索页 | `app/pages/games/search.vue` | `pages/games-search.less` | 根类为 `.games-search-page`，复用 `.games-page` 基础但搜索页 token 独立。 |
 | 搜索结果 | `GameSearchResult.vue` | `pages/games-search.less` | 结果卡片使用 `.search-page-card`，数据为空时仍保留网格容器便于截图守卫。 |
 | 搜索筛选 | `GameSearchFilter.vue` | `pages/games-search.less` | 筛选面板、chip、日期选择器重写都收敛在搜索页入口。 |
+| 游戏抽奖 | `games/prize/index.vue`、`games/prize/activation.vue`、`LotteryJoinModal.vue` | `pages/lottery.less` | 抽奖页、激活页和提交弹窗使用 `.lottery-page`、`.lottery-activation-page`、`.lottery-modal` 页面 token，模板只保留布局和尺寸类。 |
 | 分页 | `GamePagination.vue` | `components/pagination.less`、`pages/games-search.less` | 通用分页外观走 `.gf-pagination`，搜索页密度和 active 细节走页面类。 |
 | 全站导航 | `NavBar.vue` | `components/nav.less`、`components/shell.less` | active、按钮、移动面板使用 `gf-nav` token，不再依赖页面级 dark class。 |
 | 页脚 | `Footer.vue` | `components/footer.less` | 链接、分组标题和 meta 文字由 `gf-footer` token 控制。 |
@@ -120,6 +122,20 @@ Token 分三层：
 6. 页面专属样式是否只落在对应 `pages/*.less`，公共组件样式是否只落在 `components/*.less`。
 7. 固定格式 UI，如分页、卡片网格、按钮和筛选 chip，是否有稳定尺寸或响应式约束，避免内容变化造成布局跳动。
 
+## 保留例外
+
+迁移后仍允许少量 `:global(...)` 和 `:deep(...)`，但必须有明确边界：
+
+| 文件 | 保留项 | 原因 | 后续处理 |
+| --- | --- | --- | --- |
+| `components/common/GoFurryGridBackground.vue` | `:global(html.dark ...)` | 通用背景组件需要跟随全站 `html.dark`，并通过组件根类限制影响范围。 | 保留。 |
+| `components/common/RagPromptPanel.vue` | `:global(html.dark ...)` | RAG 提示面板是跨页面轻量组件，暗色入口已统一为 `html.dark`。 | 保留。 |
+| `components/site/*` | `:global(html.dark ...)` | 站点详情观测面板仍处于独立页面迁移之外，本阶段先统一暗色入口，不再保留 `.dark` 简写。 | 后续若迁移站点详情页，再沉淀到页面 Less。 |
+| `components/site/SiteDetailPage.vue` | `:deep(...)` | 站点详情页需要包裹子面板生成的 Tailwind 表面，当前只能通过父级边界局部覆盖。 | 保留登记，禁止扩散到其他页面。 |
+| `components/site/SitePerformancePanel.vue` | `:deep(...)` | 性能面板包装共享 `SitePerformance` 子组件，局部覆盖用于约束子组件布局和材质。 | 保留登记，禁止扩散到其他页面。 |
+
+`visual:guard` 会在截图前扫描源码：新增废弃暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 或已迁移抽奖页复杂颜色类都会使守卫失败。
+
 ## 视觉回归范围
 
 当前固定检查范围：
@@ -127,6 +143,8 @@ Token 分三层：
 - `/`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/en`：英文亮色、英文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/games`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
+- `/games/prize`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
+- `/games/prize/activation?status=success`：中文亮色、中文暗色、移动 `390x844`。
 - `/games/search`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/en/games/search`：英文亮色、英文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/about`、`/en/about`：亮色、暗色、桌面 `1440x900`、移动 `390x844`。

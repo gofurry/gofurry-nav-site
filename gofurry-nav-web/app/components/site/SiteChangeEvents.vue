@@ -52,7 +52,7 @@ function label(zh: string, en: string) {
   font-size: 0.9rem;
 }
 
-:global(.dark .panel-empty){
+:global(html.dark .panel-empty){
   border-top-color: rgba(251, 146, 60, 0.16);
   color: #94a3b8;
 }
@@ -62,7 +62,7 @@ function label(zh: string, en: string) {
   padding: 0.95rem 0;
 }
 
-:global(.dark .change-event-row){
+:global(html.dark .change-event-row){
   border-top-color: rgba(251, 146, 60, 0.16);
 }
 
@@ -87,7 +87,7 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
-:global(.dark .protocol-badge){
+:global(html.dark .protocol-badge){
   background: rgba(251, 146, 60, 0.14);
   color: #fed7aa;
 }
@@ -100,7 +100,7 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
-:global(.dark .change-field){
+:global(html.dark .change-field){
   color: #f8fafc;
 }
 
@@ -111,7 +111,7 @@ function label(zh: string, en: string) {
   font-size: 0.78rem;
 }
 
-:global(.dark .change-time){
+:global(html.dark .change-time){
   color: #94a3b8;
 }
 
@@ -128,7 +128,7 @@ function label(zh: string, en: string) {
   padding-left: 0.75rem;
 }
 
-:global(.dark .change-value-block){
+:global(html.dark .change-value-block){
   border-left-color: rgba(251, 146, 60, 0.24);
 }
 
@@ -138,7 +138,7 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
-:global(.dark .change-value-label){
+:global(html.dark .change-value-label){
   color: #94a3b8;
 }
 
@@ -152,7 +152,7 @@ function label(zh: string, en: string) {
   line-height: 1.55;
 }
 
-:global(.dark .change-value-text){
+:global(html.dark .change-value-text){
   color: #e2e8f0;
 }
 

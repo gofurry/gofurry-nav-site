@@ -53,7 +53,7 @@ function displayValue(value: string | string[]) {
   line-height: 1.55;
 }
 
-:global(.dark .metadata-label){
+:global(html.dark .metadata-label){
   color: #94a3b8;
 }
 
@@ -66,7 +66,7 @@ function displayValue(value: string | string[]) {
   line-height: 1.55;
 }
 
-:global(.dark .metadata-value){
+:global(html.dark .metadata-value){
   color: #e2e8f0;
 }
 
@@ -75,7 +75,7 @@ function displayValue(value: string | string[]) {
   font-size: 0.9rem;
 }
 
-:global(.dark .metadata-empty){
+:global(html.dark .metadata-empty){
   color: #94a3b8;
 }
 

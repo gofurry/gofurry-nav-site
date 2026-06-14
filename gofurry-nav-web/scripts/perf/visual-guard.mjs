@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import {
   launchPerfBrowser,
   normalizeBaseUrl,
   parseArgs,
   reportsDir,
+  rootDir,
   toAbsoluteUrl
 } from './shared.mjs'
 
@@ -16,6 +17,8 @@ const outputDir = path.join(reportsDir, outputName)
 
 const desktop = { width: 1440, height: 900 }
 const mobile = { width: 390, height: 844 }
+const sourceScanRoot = path.join(rootDir, 'app')
+const sourceScanExtensions = new Set(['.vue', '.ts', '.less'])
 const legacyDarkSelectors = [
   '.games-page--dark',
   '.search-results--dark',
@@ -24,8 +27,22 @@ const legacyDarkSelectors = [
   '.about-page--dark',
   '.legal-page--dark',
   '.updates-page--dark',
-  '.archive-page--dark'
+  '.archive-page--dark',
+  '.nav-home-page--dark',
+  '.gf-static-page--dark',
+  '.lottery-page--dark'
 ]
+const legacyDarkClassNames = legacyDarkSelectors.map((selector) => selector.replace(/^\./, ''))
+const migratedTailwindDebtPaths = new Set([
+  'app/pages/games/prize/index.vue',
+  'app/pages/games/prize/activation.vue',
+  'app/components/game/lottery/LotteryJoinModal.vue'
+])
+const retainedDeepSelectorAllowlist = new Map([
+  ['app/components/site/SiteDetailPage.vue', 'Site detail renders nested card surfaces from child panels until the detail page receives its own Less migration.'],
+  ['app/components/site/SitePerformancePanel.vue', 'Performance panel wraps the shared SitePerformance child component and keeps targeted child overrides local to that wrapper.']
+])
+const migratedTailwindDebtPattern = /\b(?:dark:|(?:bg|border)-\[[^\]]+\]|(?:bg|text|border)-(?:black|white|slate|stone|gray|zinc|neutral|red|orange|amber|yellow|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-[^\s"'`<>]+)?|(?:bg|border)-transparent|shadow-\[[^\]]+\]|ring-(?:black|white|slate|stone|gray|red|orange|amber|yellow|green|emerald|sky|blue|violet|rose|[0-9]))/
 
 const visualScenarios = [
   ...makePageScenarios({
@@ -56,6 +73,26 @@ const visualScenarios = [
     rootSelector: '.games-page',
     requiredSelectors: ['.games-page', '.game-info-shell', '.game-sidebar-shell'],
     optionalDataSelectors: ['.game-card']
+  }),
+  ...makePageScenarios({
+    id: 'lottery',
+    label: '游戏抽奖页',
+    path: '/games/prize',
+    locale: 'zh-CN',
+    rootSelector: '.lottery-page',
+    requiredSelectors: ['.lottery-page', '.lottery-hero', '.lottery-section'],
+    optionalDataSelectors: ['.lottery-pool', '.lottery-history__row'],
+    expectActiveNav: false
+  }),
+  ...makeMobilePageScenarios({
+    id: 'lottery-activation',
+    label: '游戏抽奖激活移动端',
+    path: '/games/prize/activation?status=success',
+    locale: 'zh-CN',
+    rootSelector: '.lottery-activation-page',
+    requiredSelectors: ['.lottery-activation-page', '.activation-card', '.activation-status', '.activation-card__link'],
+    optionalDataSelectors: [],
+    expectActiveNav: false
   }),
   ...makePageScenarios({
     id: 'games-search',
@@ -282,13 +319,85 @@ function renderMarkdownReport(report) {
     '## 检查项',
     '',
     '- `html.dark` 与截图主题一致。',
-    '- `/`、`/en`、`/games`、`/games/search`、`/en/games/search`、`/about`、`/updates`、`/archive` 和法律页移动端的关键容器存在。',
-    '- 不再出现 `games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`、`about-page--dark`、`legal-page--dark`、`updates-page--dark`、`archive-page--dark` 等旧暗色入口。',
+    '- `/`、`/en`、`/games`、`/games/prize`、`/games/search`、`/en/games/search`、`/about`、`/updates`、`/archive` 和法律页移动端的关键容器存在。',
+    '- 不再出现 `games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`、`about-page--dark`、`legal-page--dark`、`updates-page--dark`、`archive-page--dark`、`lottery-page--dark` 等旧暗色入口。',
+    '- 源码静态扫描不允许新增旧暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 或已迁移抽奖页的复杂颜色类。',
     '- 桌面与移动端不出现明显横向溢出。',
     '- 数据卡片为空只记为 warning，方便在本地后端无数据时继续保留截图。'
   )
 
   return `${lines.join('\n')}\n`
+}
+
+async function listSourceFiles(dir) {
+  const entries = await readdir(dir, { withFileTypes: true })
+  const files = []
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      files.push(...await listSourceFiles(fullPath))
+      continue
+    }
+
+    if (entry.isFile() && sourceScanExtensions.has(path.extname(entry.name))) {
+      files.push(fullPath)
+    }
+  }
+
+  return files
+}
+
+function toSourcePath(filePath) {
+  return path.relative(rootDir, filePath).replace(/\\/g, '/')
+}
+
+function lineNumberForIndex(content, index) {
+  return content.slice(0, index).split(/\r?\n/).length
+}
+
+function pushSourceFailure(failures, filePath, line, message) {
+  failures.push({
+    file: filePath,
+    line,
+    message
+  })
+}
+
+async function collectSourceDebtFailures() {
+  const failures = []
+  const files = await listSourceFiles(sourceScanRoot)
+
+  for (const file of files) {
+    const sourcePath = toSourcePath(file)
+    const content = await readFile(file, 'utf8')
+
+    for (const className of legacyDarkClassNames) {
+      const index = content.indexOf(className)
+      if (index >= 0) {
+        pushSourceFailure(failures, sourcePath, lineNumberForIndex(content, index), `检测到废弃暗色入口 ${className}`)
+      }
+    }
+
+    for (const match of content.matchAll(/:global\(\.dark\b/g)) {
+      pushSourceFailure(failures, sourcePath, lineNumberForIndex(content, match.index || 0), '请使用 :global(html.dark ...) 或迁移到 Less token')
+    }
+
+    for (const match of content.matchAll(/:deep\(/g)) {
+      if (!retainedDeepSelectorAllowlist.has(sourcePath)) {
+        pushSourceFailure(failures, sourcePath, lineNumberForIndex(content, match.index || 0), '未登记的 :deep(...) 覆盖')
+      }
+    }
+
+    if (migratedTailwindDebtPaths.has(sourcePath)) {
+      const match = content.match(migratedTailwindDebtPattern)
+      if (match?.index !== undefined) {
+        pushSourceFailure(failures, sourcePath, lineNumberForIndex(content, match.index), `已迁移抽奖页仍包含复杂颜色类 ${match[0]}`)
+      }
+    }
+  }
+
+  return failures
 }
 
 async function inspectPage(page, scenario) {
@@ -538,6 +647,15 @@ async function runScenario(browser, scenario) {
     failures: evaluated.failures,
     warnings: [...warnings, ...evaluated.warnings]
   }
+}
+
+const sourceDebtFailures = await collectSourceDebtFailures()
+if (sourceDebtFailures.length) {
+  console.error(`[visual] 源码样式债守卫失败 ${sourceDebtFailures.length} 项：`)
+  for (const failure of sourceDebtFailures) {
+    console.error(`  - ${failure.file}:${failure.line} ${failure.message}`)
+  }
+  process.exit(1)
 }
 
 await mkdir(outputDir, { recursive: true })

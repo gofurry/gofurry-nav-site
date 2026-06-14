@@ -405,7 +405,7 @@ function label(zh: string, en: string) {
     0 16px 42px rgba(124, 45, 18, 0.04);
 }
 
-:global(.dark .site-observation-tabs){
+:global(html.dark .site-observation-tabs){
   background:
     radial-gradient(circle at 8% 0%, rgba(251, 146, 60, 0.12), transparent 30%),
     linear-gradient(120deg, rgba(15, 23, 42, 0.84), rgba(30, 41, 59, 0.72)),
@@ -437,7 +437,7 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
-:global(.dark .observation-title){
+:global(html.dark .observation-title){
   color: #f8fafc;
 }
 
@@ -451,7 +451,7 @@ function label(zh: string, en: string) {
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.06);
 }
 
-:global(.dark .observation-tabs){
+:global(html.dark .observation-tabs){
   background: rgba(15, 23, 42, 0.66);
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
 }
@@ -464,7 +464,7 @@ function label(zh: string, en: string) {
   transition-duration: 500ms;
 }
 
-:global(.dark .observation-tab){
+:global(html.dark .observation-tab){
   color: #cbd5e1;
 }
 
@@ -474,8 +474,8 @@ function label(zh: string, en: string) {
   color: #111827;
 }
 
-:global(.dark .observation-tab:hover),
-:global(.dark .observation-tab.is-active){
+:global(html.dark .observation-tab:hover),
+:global(html.dark .observation-tab.is-active){
   background: rgba(251, 146, 60, 0.26);
   color: #fff7ed;
 }
@@ -492,7 +492,7 @@ function label(zh: string, en: string) {
   font-size: 0.875rem;
 }
 
-:global(.dark .empty-state){
+:global(html.dark .empty-state){
   background: rgba(15, 23, 42, 0.54);
   color: #94a3b8;
 }
@@ -506,7 +506,7 @@ function label(zh: string, en: string) {
   transition: none;
 }
 
-:global(.dark .dns-record-card){
+:global(html.dark .dns-record-card){
   border-top-color: rgba(251, 146, 60, 0.16);
 }
 
@@ -527,7 +527,7 @@ function label(zh: string, en: string) {
   font-weight: 800;
 }
 
-:global(.dark .record-heading){
+:global(html.dark .record-heading){
   color: #cbd5e1;
 }
 
@@ -548,7 +548,7 @@ function label(zh: string, en: string) {
   transition: background-color 500ms ease, border-color 500ms ease;
 }
 
-:global(.dark .record-row){
+:global(html.dark .record-row){
   border-bottom-color: rgba(148, 163, 184, 0.12);
 }
 
@@ -557,7 +557,7 @@ function label(zh: string, en: string) {
   border-left-color: rgba(251, 140, 47, 0.58);
 }
 
-:global(.dark .record-row:hover){
+:global(html.dark .record-row:hover){
   background: rgba(251, 146, 60, 0.12);
   border-left-color: rgba(251, 146, 60, 0.54);
 }
@@ -566,7 +566,7 @@ function label(zh: string, en: string) {
   color: #9a4a12;
 }
 
-:global(.dark .record-row:hover span:first-child){
+:global(html.dark .record-row:hover span:first-child){
   color: #fdba74;
 }
 

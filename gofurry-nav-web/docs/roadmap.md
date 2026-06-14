@@ -110,7 +110,7 @@
 
 ### v2.2.4 - Legacy Selector Debt Cleanup
 
-**Status:** Planned
+**Status:** Completed
 **Scope:** Maintainability / Testing / Architecture
 **Goal:** 清理迁移过程中遗留的选择器债务，确保全站样式主线没有隐藏的旧入口和高优先级补丁。
 
@@ -124,11 +124,11 @@
 
 #### Tasks
 
-- [ ] 扫描并清理 app 目录中剩余可替换的页面级 `--dark` class。
-- [ ] 扫描并清理可迁移到 Less 语义类的复杂 `dark:`、`bg-*`、`text-*`、`border-*` 组合。
-- [ ] 审核 `app/assets/styles/index.less` 导入顺序，确保 token、mixin、components、pages 分层稳定。
-- [ ] 更新 `docs/style-system.md` 的迁移清单，记录最终保留的例外项和原因。
-- [ ] 扩展 `visual:guard` 的旧入口扫描列表，避免已删除模式回流。
+- [x] 扫描并清理 app 目录中剩余可替换的页面级 `--dark` class。
+- [x] 扫描并清理可迁移到 Less 语义类的复杂 `dark:`、`bg-*`、`text-*`、`border-*` 组合。
+- [x] 审核 `app/assets/styles/index.less` 导入顺序，确保 token、mixin、components、pages 分层稳定。
+- [x] 更新 `docs/style-system.md` 的迁移清单，记录最终保留的例外项和原因。
+- [x] 扩展 `visual:guard` 的旧入口扫描列表，避免已删除模式回流。
 
 #### Acceptance Criteria
 
