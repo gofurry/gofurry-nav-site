@@ -2,7 +2,11 @@
 
 `gofurry-nav-web` 的样式主线采用 Less + Tailwind v4 分层方案。Tailwind 保留为布局工具，Less 承担主题 token、语义组件、复杂视觉、状态、暗色入口和局部第三方组件重写。
 
-本规范的目标是减少同一视觉状态被 Tailwind、scoped CSS、`:global(...)` 和页面级暗色类同时控制的情况，让后续迁移有固定的入口、命名和验收方式。
+本规范的目标是减少同一视觉状态被 Tailwind、scoped CSS、`:global(...)` 和页面级暗色类同时控制的情况，让后续维护有固定的入口、命名和验收方式。
+
+## 迁移完成状态
+
+`v2.2.x` 样式系统迁移已经完成。新增页面或组件不再进入“后续迁移”队列，而是必须直接遵守本文的 Less + Tailwind 分层规则、`html.dark` 暗色入口和视觉/性能守卫。
 
 ## 样式入口
 
@@ -110,9 +114,9 @@ Token 分三层：
 | 首页导航 | `NavHomePage.vue`、`NavHeader.vue`、`SearchBox.vue`、`NavQuickAccess.vue`、`NavContent.vue`、`SitePopover.vue`、`GroupPopover.vue`、`NavToolDock.vue`、`NavSpotlightPanels.vue` | `pages/nav.less` | 首页根类为 `.nav-home-page`，搜索、快捷入口、内容区、站点卡片、popover、工具栏和 spotlight 复杂视觉统一由页面 token 与 `html.dark` 控制。 |
 | 知识库归档页 | `app/pages/archive.vue` | `pages/archive.less` | 根类为 `.archive-page`，session sidebar、message list、Markdown preview、citation、输入区和弹窗全部限制在页面 Less 边界内。 |
 
-## 迁移检查项
+## 维护检查项
 
-迁移组件时按以下顺序检查：
+新增或调整组件样式时按以下顺序检查：
 
 1. Tailwind 是否只保留布局、间距、响应式和简单显示控制。
 2. 颜色、边框、阴影、hover、active、focus 是否来自 Less token 或语义类。
@@ -162,7 +166,7 @@ npm run visual:guard -- --base-url http://localhost:3000
 
 ## 阶段性验证
 
-每次完成一个迁移阶段后运行：
+每次完成页面视觉、主题入口或公共组件样式调整后运行：
 
 ```powershell
 npm run typecheck
