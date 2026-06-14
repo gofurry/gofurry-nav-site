@@ -233,11 +233,13 @@ onMounted(() => {
 }
 
 :global(.games-page.games-page--dark .rating-star__score) {
-  color: rgba(226, 232, 240, 0.92);
+  color: rgba(241, 245, 249, 0.94);
+  font-weight: 750;
 }
 
 :global(.games-page.games-page--dark .rating-star__count) {
-  color: rgba(203, 213, 225, 0.82);
+  color: rgba(226, 232, 240, 0.84);
+  font-weight: 650;
 }
 
 :global(.games-page.games-page--dark .rating-star__empty) {

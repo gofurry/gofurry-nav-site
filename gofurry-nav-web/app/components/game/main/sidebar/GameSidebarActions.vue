@@ -68,6 +68,7 @@ import { i18n } from "@/main";
 
 const { t } = i18n.global;
 const router = useRouter();
+const localePath = useLocalePath();
 const loading = ref(false);
 
 const showAllSites = ref(false);
@@ -77,7 +78,7 @@ async function handleRandomGame() {
   try {
     loading.value = true;
     const gameId = await getRandomGame();
-    if (gameId) router.push(`/games/${gameId}`);
+    if (gameId) router.push(localePath(`/games/${gameId}`));
   } catch (err) {
     console.error("获取随机游戏失败", err);
   } finally {

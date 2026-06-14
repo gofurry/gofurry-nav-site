@@ -25,7 +25,7 @@
         </div>
 
         <NuxtLink
-          to="/games/search"
+          :to="localePath('/games/search')"
           class="game-group-more"
         >
           <span>{{ t('common.showMore') }}</span>
@@ -117,6 +117,7 @@ import GameReviewDialog from '@/components/game/common/GameReviewDialog.vue'
 
 const { t } = useI18n()
 const router = useRouter()
+const localePath = useLocalePath()
 
 interface GameItem {
   id: string
@@ -141,7 +142,7 @@ defineEmits<{
 }>()
 
 function goGameDetail(id: string) {
-  router.push(`/games/${id}`)
+  router.push(localePath(`/games/${id}`))
 }
 
 const PAGE_SIZE = 8
@@ -387,6 +388,19 @@ function openReview(item: GameItem) {
   color: rgba(203, 213, 225, 0.66);
 }
 
+:global(.games-page--dark) .game-card:hover,
+:global(.games-page--dark) .game-card:focus-within {
+  background: rgba(148, 163, 184, 0.09);
+}
+
+:global(.games-page--dark) .game-card p:first-of-type {
+  color: rgba(248, 250, 252, 0.96);
+}
+
+:global(.games-page--dark) .game-card p:nth-of-type(2) {
+  color: rgba(226, 232, 240, 0.76);
+}
+
 :global(.dark) .game-group-pager button {
   color: rgba(180, 213, 226, 0.62);
 }
@@ -439,5 +453,17 @@ function openReview(item: GameItem) {
 :global(.dark) .review-float-button--light:hover {
   background: rgba(30, 41, 59, 0.92);
   color: rgba(241, 245, 249, 0.94);
+}
+
+:global(.games-page--dark) .review-float-button--light {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(15, 23, 42, 0.76);
+  color: rgba(226, 232, 240, 0.88);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+}
+
+:global(.games-page--dark) .review-float-button--light:hover {
+  background: rgba(30, 41, 59, 0.92);
+  color: rgba(248, 250, 252, 0.96);
 }
 </style>

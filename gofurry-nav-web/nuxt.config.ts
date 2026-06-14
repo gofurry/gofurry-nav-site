@@ -64,7 +64,7 @@ export default defineNuxtConfig({
     appManifest: false
   },
   modules: ['@pinia/nuxt', '@nuxtjs/i18n'],
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css', '~/assets/styles/index.less'],
   vite: {
     plugins: [tailwindcss()],
     define: {

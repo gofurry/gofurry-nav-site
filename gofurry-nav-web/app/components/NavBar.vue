@@ -7,7 +7,7 @@
         class="relative mx-auto flex w-full max-w-[1700px] items-center gap-3 px-4 py-2 transition-all duration-300 sm:px-6"
     >
       <NuxtLink
-          to="/"
+          :to="localePath('/')"
           class="relative z-10 flex shrink-0 items-center gap-2 px-2 py-1"
           @click.stop="closeMenus"
       >
@@ -202,6 +202,9 @@ import { readMode, subscribeModeChange, writeMode } from '@/utils/modeStorage'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
+const localePath = useLocalePath()
+const switchLocalePath = useSwitchLocalePath()
 const langStore = useLangStore()
 const themeStore = useThemeStore()
 const props = defineProps<{
@@ -216,17 +219,18 @@ let stopModeSubscription: (() => void) | null = null
 type NavLink = {
   label: string
   to?: string
+  activePath?: string
   href?: string
   external?: boolean
 }
 
 const archiveLink = computed<NavLink>(() => (
-  { label: t('sidebar.archive'), to: '/archive' }
+  { label: t('sidebar.archive'), to: localePath('/archive'), activePath: '/archive' }
 ))
 
 const navLinks = computed<NavLink[]>(() => [
-  { label: t('sidebar.nav'), to: '/' },
-  { label: t('sidebar.games'), to: '/games' },
+  { label: t('sidebar.nav'), to: localePath('/'), activePath: '/' },
+  { label: t('sidebar.games'), to: localePath('/games'), activePath: '/games' },
   archiveLink.value,
   { label: langStore.lang === 'zh' ? '深度兽研' : 'DeepFurry', href: 'https://www.deepfurry.com', external: true },
 ])
@@ -259,8 +263,21 @@ const mobileMenuClass = computed(() => (
     : 'border border-white/10 bg-[rgba(18,24,37,0.96)]'
 ))
 
-const isActive = (link: NavLink) =>
-    Boolean(link.to && (route.path === link.to || route.path.startsWith(`${link.to}/`)))
+const normalizeRoutePath = (path: string) =>
+    path.replace(/^\/(zh|en)(?=\/|$)/, '') || '/'
+
+const isActive = (link: NavLink) => {
+  if (!link.to) return false
+
+  const currentPath = normalizeRoutePath(route.path)
+  const activePath = link.activePath || normalizeRoutePath(link.to)
+
+  if (activePath === '/') {
+    return currentPath === '/'
+  }
+
+  return currentPath === activePath || currentPath.startsWith(`${activePath}/`)
+}
 
 onMounted(() => {
   mode.value = readMode()
@@ -290,6 +307,10 @@ function saveMode(value: string) {
 
 function switchLang(lang: 'zh' | 'en') {
   langStore.setLang(lang)
+  const nextPath = switchLocalePath(lang)
+  if (nextPath && nextPath !== route.fullPath) {
+    router.push(nextPath)
+  }
   mobileMenuOpen.value = false
 }
 

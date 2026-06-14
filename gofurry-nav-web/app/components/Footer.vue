@@ -93,16 +93,16 @@
             {{ t('footer.sections.about') }}
           </h3>
           <div class="flex gap-2">
-            <NuxtLink to="/about" class="footer-link">
+            <NuxtLink :to="localePath('/about')" class="footer-link">
               {{ t('sidebar.about') }}
             </NuxtLink>
-            <NuxtLink to="/updates" class="footer-link">
+            <NuxtLink :to="localePath('/updates')" class="footer-link">
               {{ t('navHeader.update') }}
             </NuxtLink>
-            <NuxtLink to="/terms" class="footer-link">
+            <NuxtLink :to="localePath('/terms')" class="footer-link">
               {{ t('footer.links.terms') }}
             </NuxtLink>
-            <NuxtLink to="/privacy" class="footer-link">
+            <NuxtLink :to="localePath('/privacy')" class="footer-link">
               {{ t('footer.links.privacy') }}
             </NuxtLink>
           </div>
@@ -140,6 +140,7 @@ import twitterIcon from '@/assets/icons/twitter.svg'
 
 const { t } = useI18n()
 const themeStore = useThemeStore()
+const localePath = useLocalePath()
 
 const currentYear = new Date().getFullYear()
 const sitemapUrl = '/sitemap.xml'
@@ -167,7 +168,7 @@ const metaClass = computed(() => [
 const openPlatformApiLink = computed(() => (
   import.meta.env.PROD
     ? { external: true, href: 'https://open.go-furry.com' }
-    : { external: false, to: '/updates' }
+    : { external: false, to: localePath('/updates') }
 ))
 
 const feedbackLinks = [

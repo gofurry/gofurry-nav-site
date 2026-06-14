@@ -94,14 +94,15 @@ function starFillPercent(index: number) {
 }
 
 .rating-star__score {
-  color: #334155;
+  color: #1f2937;
   font-size: 0.84rem;
-  font-weight: 650;
+  font-weight: 750;
 }
 
 .rating-star__count {
-  color: rgba(71, 85, 105, 0.68);
+  color: rgba(51, 65, 85, 0.78);
   font-size: 0.72rem;
+  font-weight: 650;
 }
 
 :global(.dark) .rating-star__empty {
@@ -115,10 +116,10 @@ function starFillPercent(index: number) {
 }
 
 :global(.dark) .rating-star__score {
-  color: rgba(226, 232, 240, 0.92);
+  color: rgba(241, 245, 249, 0.94);
 }
 
 :global(.dark) .rating-star__count {
-  color: rgba(203, 213, 225, 0.82);
+  color: rgba(226, 232, 240, 0.84);
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="search-shell relative">
+  <div class="search-shell relative" :class="{ 'search-shell--dark': isDarkTheme }">
     <!-- 搜索框 -->
     <div class="relative">
       <img
@@ -52,17 +52,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { getSearchSimple } from "@/utils/api/game";
 import type { SearchItemModel } from "@/types/game";
 import { useLangStore } from "@/store/langStore";
 import { i18n } from '@/main'
+import { useThemeStore } from '@/stores/theme'
 
 const { t } = i18n.global
 
 const router = useRouter();
+const localePath = useLocalePath()
 const langStore = useLangStore();
+const themeStore = useThemeStore();
 const lang = ref(langStore.lang);
+const isDarkTheme = computed(() => themeStore.theme === 'dark')
 
 const keyword = ref("");
 const results = ref<SearchItemModel[]>([]);
@@ -108,7 +112,7 @@ async function fetchResults(val: string) {
 
 // 点击跳转
 function goToGame(id: string) {
-  router.push(`/games/${id}`);
+  router.push(localePath(`/games/${id}`));
   keyword.value = "";
   results.value = [];
   showResults.value = false;
@@ -173,7 +177,7 @@ function onBlur() {
 }
 
 .search-result-cover {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 460 / 215;
   width: 100%;
   border-radius: 0.48rem;
   object-fit: cover;
@@ -212,10 +216,12 @@ function onBlur() {
   }
 }
 
-:global(.dark) .search-results-panel {
+:global(.dark) .search-results-panel,
+:global(.games-search-page.games-page--dark) .search-results-panel,
+.search-shell--dark .search-results-panel {
   border-color: rgba(148, 163, 184, 0.16);
-  background: rgba(15, 23, 42, 0.94);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
 }
 
 :global(.dark) .game-sidebar-search-input:focus {
@@ -228,21 +234,32 @@ function onBlur() {
   box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.18) !important;
 }
 
-:global(.dark) .search-result-card {
-  border-color: rgba(148, 163, 184, 0.12);
-  background: rgba(30, 41, 59, 0.42);
+:global(.dark) .search-result-card,
+:global(.games-search-page.games-page--dark) .search-result-card,
+.search-shell--dark .search-result-card {
+  border-color: rgba(148, 163, 184, 0.20);
+  background: rgba(30, 41, 59, 0.58);
 }
 
-:global(.dark) .search-result-card:hover {
-  border-color: rgba(203, 213, 225, 0.36);
-  background: rgba(226, 232, 240, 0.13);
+:global(.dark) .search-result-card:hover,
+:global(.games-search-page.games-page--dark) .search-result-card:hover,
+.search-shell--dark .search-result-card:hover {
+  border-color: rgba(203, 213, 225, 0.46);
+  background: rgba(51, 65, 85, 0.72);
 }
 
-:global(.dark) .search-result-title {
-  color: rgba(248, 250, 252, 0.94);
+:global(.dark) .search-result-title,
+:global(.games-search-page.games-page--dark) .search-result-title,
+.search-shell--dark .search-result-title {
+  color: rgba(248, 250, 252, 0.98);
+  text-shadow: none;
 }
 
-:global(.dark) .search-result-desc {
-  color: rgba(203, 213, 225, 0.66);
+:global(.dark) .search-result-desc,
+:global(.games-search-page.games-page--dark) .search-result-desc,
+.search-shell--dark .search-result-desc {
+  color: rgba(226, 232, 240, 0.78);
+  font-weight: 500;
+  text-shadow: none;
 }
 </style>

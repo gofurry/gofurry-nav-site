@@ -5,9 +5,9 @@
   >
     <GoFurryGridBackground :fixed="false" palette="games" />
     <h1 class="sr-only">{{ searchPageSeo.heading }}</h1>
-    <div class="relative z-10 mx-auto flex w-full max-w-[1700px] flex-1 flex-col gap-5 p-6">
+    <div class="relative z-10 mx-auto flex w-full max-w-[1720px] flex-1 flex-col gap-5 p-6">
 
-      <div class="search-toolbar relative flex w-full items-center gap-3 rounded-[1.1rem] border p-3 backdrop-blur-[3px]">
+      <div class="search-toolbar relative flex w-full items-center gap-3">
         <div class="flex-1">
           <GameSidebarSearch />
         </div>
@@ -21,12 +21,13 @@
         </button>
       </div>
 
-      <section class="search-result-shell rounded-[1.25rem] border p-4 backdrop-blur-[3px] sm:p-5">
+      <section class="search-result-shell">
         <GameSearchResult
             :game-list="gameList"
             :current-page="query.pageNum"
             :total-pages="totalPages"
             :total="total"
+            :dark="isDarkTheme"
             @page-change="onPageChange"
         />
       </section>
@@ -321,14 +322,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.search-toolbar,
-.search-result-shell {
-  border-color: rgba(126, 92, 58, 0.14);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 250, 242, 0.08)),
-    rgba(255, 250, 242, 0.26);
-}
-
 .search-filter-button {
   display: inline-flex;
   min-height: 2.5rem;
@@ -353,14 +346,6 @@ onMounted(async () => {
 :global(.games-search-page.games-page--dark) {
   background: #07111f;
   color: rgba(226, 232, 240, 0.88);
-}
-
-:global(.games-search-page.games-page--dark .search-toolbar),
-:global(.games-search-page.games-page--dark .search-result-shell) {
-  border-color: rgba(226, 232, 240, 0.15);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(226, 232, 240, 0.032)),
-    rgba(226, 232, 240, 0.046);
 }
 
 :global(.games-search-page.games-page--dark .search-filter-button) {

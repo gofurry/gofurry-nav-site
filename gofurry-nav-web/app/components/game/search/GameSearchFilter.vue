@@ -2,12 +2,13 @@
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 px-4">
     <div
         class="game-search-filter-panel w-full max-w-2xl overflow-hidden rounded-2xl p-6 shadow"
+        :class="{ 'game-search-filter-panel--dark': isDarkTheme }"
     >
       <div class="space-y-2 overflow-y-auto scrollbar-hide max-h-[calc(80vh-3rem)]">
 
         <!-- 标题 & 操作 -->
         <div class="flex items-center justify-between">
-          <h2 class="text-lg font-bold">{{ t("game.search.advancedFilter") }}</h2>
+          <h2 class="game-search-filter-title">{{ t("game.search.advancedFilter") }}</h2>
           <div class="flex gap-2">
             <div
                 class="game-search-filter-action game-search-filter-action--ghost"
@@ -27,14 +28,14 @@
         <!-- 关键词 & 页大小 -->
         <div class="flex gap-4 items-center w-full">
           <div class="grid grid-cols-1 w-[75%]">
-            <label class="text-xs text-gray-500">{{ t("common.keyword") }}</label>
+            <label class="game-search-filter-label">{{ t("common.keyword") }}</label>
             <input
                 v-model="props.query.content"
                 class="game-search-filter-input ml-1 mt-1 w-full rounded-lg px-3 py-2 focus:outline-none"
             />
           </div>
           <div class="grid grid-cols-1 w-[18%]">
-            <label class="text-xs text-gray-500">{{ t("common.pageSize") }}</label>
+            <label class="game-search-filter-label">{{ t("common.pageSize") }}</label>
             <input
                 v-model.number="props.query.pageSize"
                 min="1"
@@ -45,45 +46,53 @@
 
         <!-- 发布时间 -->
         <div>
-          <label class="text-xs text-gray-500">{{ t("game.search.publishTime") }}</label>
+          <label class="game-search-filter-label">{{ t("game.search.publishTime") }}</label>
           <div class="flex gap-2 mt-1">
             <VueDatePicker
                 v-model="publishStart"
                 :enable-time-picker="true"
                 format="yyyy-MM-dd HH:mm:ss"
-                class="dp-custom-theme w-1/2"
+                :dark="isDarkTheme"
+                :teleport="false"
+                class="game-date-picker dp-custom-theme w-1/2"
             />
             <VueDatePicker
                 v-model="publishEnd"
                 :enable-time-picker="true"
                 format="yyyy-MM-dd HH:mm:ss"
-                class="dp-custom-theme w-1/2"
+                :dark="isDarkTheme"
+                :teleport="false"
+                class="game-date-picker dp-custom-theme w-1/2"
             />
           </div>
         </div>
 
         <!-- 更新时间 -->
         <div>
-          <label class="text-xs text-gray-500">{{ t("game.search.updateTime") }}</label>
+          <label class="game-search-filter-label">{{ t("game.search.updateTime") }}</label>
           <div class="flex gap-2 mt-1">
             <VueDatePicker
                 v-model="updateStart"
                 :enable-time-picker="true"
                 format="yyyy-MM-dd HH:mm:ss"
-                class="dp-custom-theme w-1/2"
+                :dark="isDarkTheme"
+                :teleport="false"
+                class="game-date-picker dp-custom-theme w-1/2"
             />
             <VueDatePicker
                 v-model="updateEnd"
                 :enable-time-picker="true"
                 format="yyyy-MM-dd HH:mm:ss"
-                class="dp-custom-theme w-1/2"
+                :dark="isDarkTheme"
+                :teleport="false"
+                class="game-date-picker dp-custom-theme w-1/2"
             />
           </div>
         </div>
 
         <!-- 排序 -->
         <div>
-          <label class="text-xs text-gray-500">{{ t("common.sort") }}</label>
+          <label class="game-search-filter-label">{{ t("common.sort") }}</label>
           <div class="flex flex-wrap gap-2">
             <span
                 v-for="item in sortOptions"
@@ -103,10 +112,10 @@
 
         <!-- 标签 -->
         <div>
-          <label class="text-xs text-gray-500">{{ t("common.tag") }}</label>
+          <label class="game-search-filter-label">{{ t("common.tag") }}</label>
           <div class="mt-2 space-y-2">
             <div v-for="group in categoryGroups" :key="group.id">
-              <div class="mb-1 text-sm font-semibold text-stone-700 dark:text-slate-200/80">
+              <div class="game-search-filter-group-title">
                 {{ group.name }}
               </div>
               <div class="flex flex-wrap gap-2">
@@ -126,7 +135,7 @@
               </div>
               <div
                   v-if="group.children.length > group.limit"
-                  class="mt-1 cursor-pointer select-none text-xs text-stone-600 transition hover:text-stone-900 dark:text-slate-300/64 dark:hover:text-slate-100/88"
+                  class="game-search-filter-expand"
                   @click="group.expanded = !group.expanded"
               >
                 {{ group.expanded ? t("common.collapse") : t("common.expand") }}
@@ -141,14 +150,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
+import { computed, ref, reactive, watch, onMounted } from 'vue'
 import type { GameTagRecord, SearchPageQueryRequest } from '@/types/game'
 import { formatLocalDateTime } from '@/utils/util'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import { i18n } from '@/main'
+import { useThemeStore } from '@/stores/theme'
 
 const { t } = i18n.global
+const themeStore = useThemeStore()
+const isDarkTheme = computed(() => themeStore.theme === 'dark')
 
 const props = defineProps<{
   tagGroups: GameTagRecord[]
@@ -290,6 +302,14 @@ const onSearch = () => {
   border: 1px solid rgba(126, 92, 58, 0.16);
   background: rgba(255, 250, 242, 0.94);
   color: rgba(45, 35, 28, 0.92);
+  backdrop-filter: blur(18px);
+}
+
+.game-search-filter-panel--dark {
+  border-color: rgba(226, 232, 240, 0.18);
+  background: rgba(15, 23, 42, 0.92);
+  color: rgba(226, 232, 240, 0.90);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
 }
 
 .game-search-filter-action {
@@ -298,6 +318,14 @@ const onSearch = () => {
   padding: 0.38rem 0.75rem;
   font-size: 0.86rem;
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.game-search-filter-title {
+  color: rgba(45, 35, 28, 0.94);
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.25;
 }
 
 .game-search-filter-action--ghost:hover {
@@ -311,6 +339,37 @@ const onSearch = () => {
 
 .game-search-filter-action--primary:hover {
   background: rgba(99, 39, 15, 0.96);
+}
+
+.game-search-filter-label {
+  display: inline-flex;
+  color: rgba(87, 83, 78, 0.72);
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.game-search-filter-group-title {
+  margin-bottom: 0.25rem;
+  color: rgba(45, 35, 28, 0.86);
+  font-size: 0.88rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.game-search-filter-expand {
+  margin-top: 0.25rem;
+  display: inline-flex;
+  cursor: pointer;
+  user-select: none;
+  color: rgba(87, 83, 78, 0.70);
+  font-size: 0.75rem;
+  font-weight: 650;
+  transition: color 180ms ease;
+}
+
+.game-search-filter-expand:hover {
+  color: rgba(45, 35, 28, 0.92);
 }
 
 .game-search-filter-input {
@@ -330,6 +389,7 @@ const onSearch = () => {
   border: 1px solid transparent;
   padding: 0.26rem 0.62rem;
   font-size: 0.76rem;
+  font-weight: 550;
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
@@ -348,6 +408,7 @@ const onSearch = () => {
   border-color: rgba(126, 92, 58, 0.20);
   background: rgba(124, 45, 18, 0.86);
   color: rgba(255, 250, 242, 0.96);
+  font-weight: 550;
 }
 
 ::v-deep(.dp-custom-theme) {
@@ -380,10 +441,184 @@ const onSearch = () => {
   --dp-range-between-border-color: var(--dp-hover-color);
 }
 
+:deep(.game-date-picker .dp__input_wrap) {
+  border-radius: 0.78rem;
+}
+
+:deep(.game-date-picker .dp__input) {
+  min-height: 2.35rem;
+  border-radius: 0.78rem;
+  border-color: rgba(126, 92, 58, 0.16);
+  background: rgba(255, 247, 236, 0.78);
+  color: rgba(45, 35, 28, 0.90);
+  font-size: 0.86rem;
+  font-weight: 650;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+:deep(.game-date-picker .dp__input:focus),
+:deep(.game-date-picker.dp__main:focus-within .dp__input) {
+  border-color: rgba(120, 87, 56, 0.36);
+  box-shadow: 0 0 0 2px rgba(120, 87, 56, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.70);
+}
+
+:deep(.game-date-picker .dp__input_icon),
+:deep(.game-date-picker .dp__clear_icon) {
+  color: rgba(87, 43, 20, 0.76);
+}
+
+:deep(.game-date-picker .dp__menu) {
+  overflow: hidden;
+  border: 1px solid rgba(126, 92, 58, 0.18);
+  border-radius: 1rem;
+  background: rgba(255, 250, 242, 0.98);
+  box-shadow: 0 18px 42px rgba(91, 62, 28, 0.16);
+}
+
+:deep(.game-date-picker .dp__calendar_header) {
+  color: rgba(45, 35, 28, 0.82);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+:deep(.game-date-picker .dp__month_year_select) {
+  border-radius: 0.65rem;
+  color: rgba(45, 35, 28, 0.94);
+  font-weight: 800;
+}
+
+:deep(.game-date-picker .dp__month_year_select:hover),
+:deep(.game-date-picker .dp__inner_nav:hover) {
+  background: rgba(255, 224, 186, 0.58);
+}
+
+:deep(.game-date-picker .dp__cell_inner) {
+  border-radius: 0.62rem;
+  color: rgba(45, 35, 28, 0.88);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+:deep(.game-date-picker .dp__cell_inner:hover) {
+  background: rgba(255, 224, 186, 0.62);
+}
+
+:deep(.game-date-picker .dp__cell_offset) {
+  color: rgba(120, 113, 108, 0.44);
+}
+
+:deep(.game-date-picker .dp__today) {
+  border-color: rgba(120, 87, 56, 0.30);
+}
+
+:deep(.game-date-picker .dp__active_date) {
+  background: rgba(124, 45, 18, 0.88);
+  color: rgba(255, 250, 242, 0.98);
+}
+
+:deep(.game-date-picker .dp__time_display),
+:deep(.game-date-picker .dp__time_input) {
+  color: rgba(45, 35, 28, 0.88);
+  font-weight: 700;
+}
+
+:deep(.game-date-picker .dp__action_row) {
+  border-top: 1px solid rgba(126, 92, 58, 0.12);
+  padding: 0.55rem 0.75rem;
+}
+
+:deep(.game-date-picker .dp__selection_preview) {
+  color: rgba(87, 83, 78, 0.72);
+  font-size: 0.78rem;
+}
+
+:deep(.game-date-picker .dp__action_button) {
+  border-radius: 0.62rem;
+  font-weight: 750;
+}
+
+:deep(.game-date-picker .dp__action_cancel) {
+  border-color: rgba(126, 92, 58, 0.18);
+  color: rgba(87, 43, 20, 0.82);
+}
+
+:deep(.game-date-picker .dp__action_select) {
+  background: rgba(124, 45, 18, 0.88);
+  color: rgba(255, 250, 242, 0.98);
+}
+
 :global(.games-search-page.games-page--dark) .game-search-filter-panel {
   border-color: rgba(226, 232, 240, 0.16);
-  background: rgba(30, 41, 59, 0.96);
+  background: rgba(15, 23, 42, 0.92);
   color: rgba(226, 232, 240, 0.88);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-title,
+.game-search-filter-panel--dark .game-search-filter-title {
+  color: rgba(248, 250, 252, 0.96);
+}
+
+.game-search-filter-panel--dark .game-search-filter-label {
+  color: rgba(203, 213, 225, 0.76);
+}
+
+.game-search-filter-panel--dark .game-search-filter-group-title {
+  color: rgba(241, 245, 249, 0.92);
+}
+
+.game-search-filter-panel--dark .game-search-filter-expand {
+  color: rgba(190, 208, 222, 0.76);
+}
+
+.game-search-filter-panel--dark .game-search-filter-expand:hover {
+  color: rgba(248, 250, 252, 0.94);
+}
+
+.game-search-filter-panel--dark .game-search-filter-input {
+  border-color: rgba(226, 232, 240, 0.16);
+  background: rgba(15, 23, 42, 0.48);
+  color: rgba(226, 232, 240, 0.90);
+}
+
+.game-search-filter-panel--dark .game-search-filter-input:focus {
+  border-color: rgba(203, 213, 225, 0.38);
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.18);
+}
+
+.game-search-filter-panel--dark .game-search-filter-chip--idle {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(226, 232, 240, 0.06);
+  color: rgba(203, 213, 225, 0.80);
+  font-weight: 550;
+}
+
+.game-search-filter-panel--dark .game-search-filter-chip--idle:hover {
+  border-color: rgba(203, 213, 225, 0.34);
+  background: rgba(226, 232, 240, 0.12);
+  color: rgba(241, 245, 249, 0.92);
+}
+
+.game-search-filter-panel--dark .game-search-filter-chip--active {
+  border-color: rgba(203, 213, 225, 0.26);
+  background: rgba(203, 213, 225, 0.18);
+  color: rgba(248, 250, 252, 0.94);
+  font-weight: 550;
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-label {
+  color: rgba(203, 213, 225, 0.72);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-group-title {
+  color: rgba(241, 245, 249, 0.90);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-expand {
+  color: rgba(190, 208, 222, 0.72);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-expand:hover {
+  color: rgba(241, 245, 249, 0.94);
 }
 
 :global(.games-search-page.games-page--dark) .game-search-filter-action--ghost:hover {
@@ -414,6 +649,7 @@ const onSearch = () => {
   border-color: rgba(226, 232, 240, 0.14);
   background: rgba(226, 232, 240, 0.055);
   color: rgba(190, 208, 222, 0.76);
+  font-weight: 550;
 }
 
 :global(.games-search-page.games-page--dark) .game-search-filter-chip--idle:hover {
@@ -426,6 +662,7 @@ const onSearch = () => {
   border-color: rgba(203, 213, 225, 0.24);
   background: rgba(203, 213, 225, 0.18);
   color: rgba(241, 245, 249, 0.92);
+  font-weight: 550;
 }
 
 :global(.games-search-page.games-page--dark) ::v-deep(.dp-custom-theme) {
@@ -450,5 +687,99 @@ const onSearch = () => {
   --dp-tooltip-color: rgb(30, 41, 59);
   --dp-disabled-color-text: rgba(148, 163, 184, 0.56);
   --dp-highlight-color: rgba(203, 213, 225, 0.14);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__input),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__input) {
+  border-color: rgba(226, 232, 240, 0.16);
+  background: rgba(15, 23, 42, 0.48);
+  color: rgba(241, 245, 249, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__input:focus),
+.game-search-filter-panel--dark :deep(.game-date-picker.dp__main:focus-within .dp__input),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__input:focus),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker.dp__main:focus-within .dp__input) {
+  border-color: rgba(203, 213, 225, 0.40);
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__input_icon),
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__clear_icon),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__input_icon),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__clear_icon) {
+  color: rgba(203, 213, 225, 0.80);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__menu),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__menu) {
+  border-color: rgba(226, 232, 240, 0.16);
+  background: rgba(15, 23, 42, 0.98);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.36);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__calendar_header),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__calendar_header) {
+  color: rgba(203, 213, 225, 0.78);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__month_year_select),
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__cell_inner),
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__time_display),
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__time_input),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__month_year_select),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__cell_inner),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__time_display),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__time_input) {
+  color: rgba(226, 232, 240, 0.90);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__month_year_select:hover),
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__inner_nav:hover),
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__cell_inner:hover),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__month_year_select:hover),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__inner_nav:hover),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__cell_inner:hover) {
+  background: rgba(226, 232, 240, 0.11);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__cell_offset),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__cell_offset) {
+  color: rgba(148, 163, 184, 0.48);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__today),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__today) {
+  border-color: rgba(203, 213, 225, 0.34);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__active_date),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__active_date) {
+  background: rgba(203, 213, 225, 0.22);
+  color: rgba(248, 250, 252, 0.96);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__action_row),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__action_row) {
+  border-top-color: rgba(226, 232, 240, 0.12);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__selection_preview),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__selection_preview) {
+  color: rgba(203, 213, 225, 0.72);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__action_cancel),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__action_cancel) {
+  border-color: rgba(226, 232, 240, 0.16);
+  background: transparent;
+  color: rgba(203, 213, 225, 0.84);
+}
+
+.game-search-filter-panel--dark :deep(.game-date-picker .dp__action_select),
+:global(.games-search-page.games-page--dark) :deep(.game-date-picker .dp__action_select) {
+  background: rgba(203, 213, 225, 0.20);
+  color: rgba(248, 250, 252, 0.96);
 }
 </style>

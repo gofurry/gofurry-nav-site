@@ -1,297 +1,259 @@
-# GoFurry Nav Web Performance Roadmap
+# GoFurry Nav Web 样式系统统一路线图
 
-## 当前结论
+## 背景
 
-当前前端性能问题不是单个线上故障，而是多个“常驻型成本”叠加：
+`gofurry-nav-web` 当前前端样式的主要问题不是 Tailwind 本身，也不是 Vue SFC scoped CSS 本身，而是样式职责边界长期不清晰：
 
-- 首页首屏下方内容虽然被隐藏，但已经挂载、水合和加载资源。
-- 多个轻内容页使用同一个高成本 fixed grid 背景。
-- 知识库页 `/archive` 有全屏 blur + 无限动画，GPU 压力明显。
-- 全局滚动按钮在多数页面常驻，并会扫描页面滚动容器。
-- 部分重型库同步进入页面，例如 Markdown preview、ECharts、HLS。
+- Tailwind 原子类、组件 scoped CSS、`:global(.dark ...)`、`:global(.games-page--dark ...)`、`:deep(...)` 同时参与同一批元素的视觉控制。
+- 明暗色入口存在重复：全局 `.dark` 与页面级 `games-page--dark` 并存。
+- 颜色、字重、hover、active、玻璃质感、边框和阴影缺少统一 token。
+- games / games-search 这类复杂页面在持续打磨过程中积累了大量局部覆盖，后续维护成本上升。
+- 局部样式常出现“已经修改但实际没生效”的情况，主要由 scoped、global、深度选择器和 Tailwind class 优先级交织造成。
 
-优先处理目标：
+本次路线图目标是通过 Less + Tailwind 的职责分层，逐步清理样式历史包袱，提高亮暗色一致性和后续迭代可维护性。
 
-1. 降低 `/archive` 的持续 GPU 占用。
-2. 降低首页初始内存、DOM 和图片资源压力。
-3. 降低轻内容页的基础 GPU 成本。
-4. 推动重型组件按需加载，避免影响无关页面。
+## 技术方向
 
-## 诊断摘要
+采用 **Less + Tailwind v4** 的混合方案，但明确职责边界：
 
-### 首页
+- **Tailwind**：只负责布局、间距、尺寸、响应式、简单显示控制。
+- **Less**：负责主题 token、语义组件、复杂视觉、hover、active、暗色、玻璃质感和页面级视觉系统。
 
-首页的主要问题是内容延迟显示，但没有延迟挂载。
+不要迁移到 UnoCSS；不要全站一次性重写为纯 Less；不要继续扩大 Tailwind 与 scoped CSS 的无边界混用。
 
-`NavHomePage.vue` 当前使用 `v-show="isContentRevealed"` 控制内容区显示。`v-show` 只切换 CSS 显示状态，不会阻止子组件初始化。因此用户刚进入首页时，以下内容已经参与渲染和水合：
+## 样式分层规则
 
-- `NavContent`
-- `NavSpotlightPanels`
-- 全量站点分组和站点卡片
-- 大量站点图标
-- 站点 hover popover 相关状态
-- 首页 ping 定时刷新
-- `NavToolDock`
-- 内容区 grid 背景
+### Tailwind 可以继续负责
 
-这能解释首页比内容较少页面更容易出现高内存占用。
+- `flex` / `grid` / `gap`
+- `px` / `py` / `m` / `p`
+- `w` / `h` / `max-w` / `min-h`
+- `hidden` / `block` / `inline-flex`
+- `sm:` / `md:` / `lg:` / `xl:` / `2xl:`
+- `sr-only` / `truncate` / `line-clamp`
 
-### 全局和通用背景
+### Less 应该负责
 
-`GoFurryGridBackground.vue` 没有持续动画，但默认是 fixed 背景，并使用：
+- 页面背景色、面板色、文字色、弱文字色
+- 明暗色主题
+- hover / active / disabled / focus 状态
+- 卡片、按钮、tag、输入框、分页、模态框、数据面板
+- 玻璃质感、边框、阴影、遮罩、动画
+- 第三方组件局部重写，例如 date picker、markdown preview
 
-- 多层 `radial-gradient`
-- 两层 `repeating-linear-gradient`
-- `mask-image`
-- 伪元素
-- `will-change: opacity`
+### 禁止继续扩大的模式
 
-这类 CSS 在大屏上容易形成常驻合成层。它被用于 `/updates`、`/about`、`/terms`、`/privacy`、站点详情、游戏页等页面，所以即便页面内容很少，也会有固定 GPU 成本。
+- 在模板里继续堆复杂颜色组合：
+  - `bg-orange-50/70 dark:bg-slate-800/70 text-orange-900 dark:text-slate-100`
+- 同一组件同时依赖 `dark:`、`:global(.dark ...)`、`:global(.games-page--dark ...)` 控制同一视觉状态。
+- 为了解决一个局部颜色问题继续追加更高优先级的 global 覆盖。
+- 把页面专属视觉塞进公共组件 Less。
 
-### 知识库页
+## 建议目录结构
 
-`/archive` 是当前最明确的 GPU 热点。
+```txt
+app/assets/css/main.css
+app/assets/styles/
+  index.less
+  tokens.less
+  mixins.less
+  components/
+    button.less
+    card.less
+    chip.less
+    input.less
+    modal.less
+    pagination.less
+    rating.less
+  pages/
+    games.less
+    games-search.less
+    nav.less
+    archive.less
+```
 
-页面包含：
+`main.css` 暂时保留 Tailwind v4 入口和 reset。Less 入口通过 `nuxt.config.ts` 的 `css` 数组接入。
 
-- 大面积 `filter: blur(34px)`
-- `archiveGlowDrift` 无限动画
-- `archiveMistSweep` 无限动画
-- `backdrop-filter`
-- `conic-gradient` 滚动进度按钮
-- Markdown preview 渲染
-- SSE 流式回答期间的频繁状态更新
-- 每 8 秒队列状态轮询
+## 主题 token 方向
 
-这能解释知识库页截图里 GPU 占用明显偏高。这里的核心问题不是内容多少，而是全屏动画背景和 blur 的持续合成压力。
+统一使用 CSS variables，让 Less 负责声明和组织，组件只消费变量。
 
-### 全局滚动按钮
+基础 token 示例：
 
-`PageScrollDock` 在除 `/archive` 外的页面全局挂载。
+```less
+:root {
+  --gf-bg-page: #f6ebdc;
+  --gf-bg-grid-line: rgba(126, 92, 58, 0.18);
+  --gf-surface: rgba(255, 250, 242, 0.72);
+  --gf-surface-strong: rgba(255, 250, 242, 0.88);
+  --gf-surface-hover: rgba(255, 239, 213, 0.72);
+  --gf-border: rgba(126, 92, 58, 0.16);
+  --gf-text-main: rgba(28, 25, 23, 0.94);
+  --gf-text-muted: rgba(87, 83, 78, 0.72);
+  --gf-text-soft: rgba(120, 113, 108, 0.58);
+  --gf-accent: rgba(124, 45, 18, 0.86);
+}
 
-它会：
+html.dark {
+  --gf-bg-page: #07111f;
+  --gf-bg-grid-line: rgba(56, 189, 248, 0.16);
+  --gf-surface: rgba(226, 232, 240, 0.08);
+  --gf-surface-strong: rgba(226, 232, 240, 0.14);
+  --gf-surface-hover: rgba(226, 232, 240, 0.16);
+  --gf-border: rgba(226, 232, 240, 0.18);
+  --gf-text-main: rgba(248, 250, 252, 0.94);
+  --gf-text-muted: rgba(203, 213, 225, 0.76);
+  --gf-text-soft: rgba(148, 163, 184, 0.66);
+  --gf-accent: rgba(203, 213, 225, 0.82);
+}
+```
 
-- 使用 `ResizeObserver` 观察 `documentElement` 和 `body`
-- 在页面中扫描 `body *` 查找可滚动容器
-- 监听 window scroll/resize/load
-- 使用 `conic-gradient` 和 `backdrop-filter`
+## 语义类方向
 
-它不是最大问题，但会让所有页面都有额外基础成本，尤其是轻内容页面。
+公共组件类示例：
 
-### 重型依赖
+```less
+.gf-card {}
+.gf-card--interactive {}
+.gf-panel {}
+.gf-button {}
+.gf-button--ghost {}
+.gf-button--primary {}
+.gf-chip {}
+.gf-chip--active {}
+.gf-input {}
+.gf-pagination {}
+.gf-rating {}
+```
 
-当前依赖中存在多个重型库：
+页面专属类示例：
 
-- `md-editor-v3`
-- `@kangc/v-md-editor`
-- `echarts`
-- `hls.js`
-- `dashjs`
-- `html2canvas`
-- `dom-to-image-more`
+```less
+.games-page {}
+.games-shell {}
+.games-panel {}
+.games-game-card {}
+.games-stats-card {}
+.games-search-page {}
+.games-search-card {}
+.games-filter-panel {}
+```
 
-其中 `/archive` 同步引入 `md-editor-v3`，站点详情性能图同步引入 `echarts`，游戏详情图库同步引入 `hls.js`。这些库应该尽量限定在真正需要的交互路径中。
+公共类只表达通用交互和材质；页面类表达当前页面的布局、密度和特殊视觉。
 
-## v2.1.0-alpha.1 - Archive GPU Baseline
+## 版本计划
 
-目标：优先压低知识库页 `/archive` 的持续 GPU 占用。
+### v2.2.0-alpha.1 - Less Foundation And Tokens
 
-状态：已完成。
-
-改进项：
-
-- 移除或默认关闭 `/archive` 的全屏无限动画背景。
-- 将 `archiveGlowDrift`、`archiveMistSweep` 改为静态背景或低成本 CSS。
-- 去掉大面积 `filter: blur(34px)`，改用静态渐变或低透明度背景。
-- 为 `/archive` 增加 motion profile：
-  - normal：保留少量过渡。
-  - reduced：无背景动画、无 shimmer。
-- 对 `answer-placeholder` 的 shimmer 做限制，只在真实等待回答时启用。
-- 对 SSE 流式回答做增量缓冲，避免每个 token 都触发回答区重渲染。
-- 引用区 Markdown 预览改为展开引用时再挂载，减少长回答页面的初始渲染成本。
-- 去掉 `/archive` 常驻滚动圆环的 `backdrop-filter`。
-
-验收标准：
-
-- `/archive` 空会话页面静置时 GPU 占用显著下降。
-- 关闭动画后页面视觉仍保持知识库页的深色沉浸感。
-- 流式回答时不因每个 token 触发过多 Markdown 重渲染。
-
-## v2.1.0-alpha.2 - Home Initial Render Split
-
-目标：降低首页初始内存、DOM 和图片加载压力。
-
-状态：已完成。
-
-改进项：
-
-- 将首页内容区从 `v-show` 改为真正的延迟挂载。
-- 移除 `SearchBox` 下方低价值的羽化模糊伪元素，避免首屏常驻 `filter: blur(...)`。
-- 首屏只挂载：
-  - `NavHeader`
-  - `SearchBox`
-  - 必要的首屏背景
-  - 必要的首屏导航按钮
-- 用户滚动、触摸、键盘触发 reveal 后，再挂载：
-  - `NavContent`
-  - `NavSpotlightPanels`
-  - `NavTransitionBar`
-  - 内容区 `GoFurryGridBackground`
-- `NavToolDock` 只在内容 reveal 后挂载。
-- 首页站点图标增加 `loading="lazy"` 和稳定尺寸。
-- `NavContent` 分组块增加 `content-visibility: auto` 和合理的 intrinsic size，降低视窗外布局/绘制成本。
-- `NavContent` 与 `NavSpotlightPanels` 的站点图标增加懒加载、异步解码和稳定尺寸。
-- `NavSpotlightPanels` 保留原有玻璃质感，仅补充视窗外渲染抑制和图片懒加载。
-- 站点列表增加分组级渐进挂载，默认展示前 4 组，滚动接近底部时每批追加 2 组。
-
-验收标准：
-
-- 首页首屏打开时 DOM 节点数明显下降。
-- 首页首屏内存低于当前版本。
-- reveal 后内容完整，不影响站点浏览体验。
-- 移动端仍然自动 reveal 内容。
-
-## v2.1.0-alpha.3 - Lightweight Background System
-
-目标：降低轻内容页和列表页的常驻背景绘制成本。
-
-状态：已完成。
-
-改进项：
-
-- 为 `GoFurryGridBackground` 增加低成本模式：
-  - 不使用 fixed。
-  - 不使用 mask。
-  - 不使用 `will-change`。
-  - 使用静态图片或简单 linear-gradient。
-- `GoFurryGridBackground profile="light"` 使用组件自身的静态背景层绘制网格，不挂载伪元素 mask。
-- 轻内容页默认使用低成本背景：
-  - `/updates`
-  - `/about`
-  - `/terms`
-  - `/privacy`
-- 复杂页面再按需使用完整 grid 背景：
-  - 首页内容区
-  - 游戏模块
-  - 站点详情页
-- 对 `backdrop-filter` 做收敛，避免多个 fixed/floating 元素叠加。
+- [x] 安装 Less 依赖并确认 Nuxt / Vite 能正常编译 Less。
+- [x] 新增 `app/assets/styles/index.less`。
+- [x] 新增 `tokens.less`，建立亮暗色 CSS variables。
+- [x] 新增 `mixins.less`，封装常见 surface、focus ring、hover、motion mixin。
+- [x] 在 `nuxt.config.ts` 中接入 Less 入口。
+- [x] 保留 Tailwind v4，不改 Tailwind 入口。
+- [x] 文档化 Tailwind / Less 职责边界。
 
 验收标准：
 
-- `/updates` 静置 GPU 占用下降。
-- 轻内容页的视觉风格仍与 GoFurry 保持一致。
-- 背景组件有明确的性能档位，而不是所有页面统一使用最高成本版本。
+- `npm run typecheck` 通过。
+- `npm run build` 通过。
+- 页面视觉不应发生明显变化。
+- 新 token 可在任意组件中被消费。
 
-## v2.1.0-alpha.4 - Global Widget Cost Control
+### v2.2.0-alpha.2 - Games Style Token Migration
 
-目标：降低全局小组件对所有页面的基础影响。
-
-状态：已完成。
-
-改进项：
-
-- `PageScrollDock` 不再默认扫描 `body *`。
-- 优先只监听 document scroll。
-- 需要页面内部滚动容器时，由页面显式声明或传入选择器。
-- 仅当页面高度超过阈值后再挂载滚动按钮。
-- 去掉滚动按钮里的 `backdrop-filter` 或提供低成本样式。
-- 避免在 resize 时频繁触发全量滚动容器解析。
-- 滚动进度更新使用 `requestAnimationFrame` 合并，降低滚动中的状态更新频率。
+- [ ] 优先迁移 `/games` 页面。
+- [ ] 将游戏卡片、信息面板、右侧栏、数据面板、更新情报、分页、按钮、评分迁移到 Less 语义类。
+- [ ] Tailwind 仅保留布局和响应式。
+- [ ] 清理 games 页内重复的颜色、字重、hover、暗色 class。
+- [ ] 统一 games 页亮暗色只走 `html.dark` token。
 
 验收标准：
 
-- 内容很少的页面不挂载滚动按钮。
-- 长页面滚动进度仍可用。
-- 不再因为全局组件让所有页面都有额外 DOM 扫描成本。
+- `/games` 亮色视觉保持当前稳定效果。
+- `/games` 暗色文字、评分、hover、数据面板、右侧栏不再出现局部失效。
+- 不继续增加新的 `:global(.games-page--dark ...)` 覆盖。
 
-## v2.1.0-beta.1 - Heavy Dependency Lazy Loading
+### v2.2.0-alpha.3 - Games Search Style Token Migration
 
-目标：重型库只在用户真正进入对应功能时加载。
-
-状态：已完成。
-
-改进项：
-
-- `/archive` 的 `md-editor-v3` 改为异步组件或仅在存在回答/引用时加载。
-- 站点详情的 `echarts` 改为按需动态 import。
-- 游戏详情图库的 `hls.js` 改为用户点击视频时动态 import。
-- `GameTabGallery` 默认优先展示截图，避免进入图库时自动初始化 HLS。
-- 清理未使用的重型依赖：
-  - `@kangc/v-md-editor`
-  - `dashjs`
-  - `html2canvas`
-  - `dom-to-image-more`
-  - `file-saver`
-- 检查 chunk 拆分，避免首页或普通页面被重型库污染。
+- [ ] 迁移 `/games/search` 页面。
+- [ ] 将搜索卡片、筛选按钮、筛选弹窗、tag、时间选择器、分页、点评按钮迁移到 Less 语义类。
+- [ ] 清理 `GameSearchResult.vue` 和 `GameSearchFilter.vue` 中的复杂 scoped CSS。
+- [ ] 保留 Tailwind grid 和响应式列数。
+- [ ] 统一英文 tag 截断、标题优先级和亮暗色字重。
 
 验收标准：
 
-- 首页 chunk 不包含 Markdown、ECharts、HLS。
-- `/archive` 空页面不加载 Markdown preview 库。
-- 游戏详情进入图片 tab 不自动初始化 HLS。
-- 依赖清理不影响已有功能。
+- 大屏一行 5 个游戏卡片，中屏 4 个，小屏 2 个或 1 个。
+- 英文长标题优先省略，tag 不被挤碎。
+- 亮暗色卡片字重和文字层级一致。
+- 筛选弹窗暗色标题、tag、输入框、时间选择器全部走同一 token。
 
-## v2.1.0-rc.1 - Measurement And Regression Guard
+### v2.2.0-beta.1 - Shared Component Classes
 
-目标：建立前端性能验证方式，避免优化后回退。
-
-状态：已完成。
-
-验证页面：
-
-- `/`
-- `/` reveal 后内容区
-- `/updates`
-- `/about`
-- `/archive`
-- `/games`
-- `/sites/{id}`
-
-已新增：
-
-- `npm run perf:measure`：生成中文 Markdown 与 JSON 测量报告。
-- `npm run perf:guard`：按 `docs/performance/budget.json` 执行回归守卫。
-- `npm run perf:trace`：生成 Chrome trace，用于人工分析 paint/composite/long task。
-- `npm run perf:baseline`：刷新当前可接受性能基线。
-- `docs/performance/budget.json`：保守预算阈值。
-- `docs/performance/baseline.json`：当前接受基线。
-- `docs/performance/README.md`：中文使用说明。
-
-记录指标：
-
-- JS 请求数与 JS 传输体积。
-- 初始 DOM 节点数量。
-- 图片请求数与图片传输体积。
-- Long Task 数量与总耗时。
-- JS Heap。
-- CDP Performance metrics。
-- 首页首屏是否误加载 `md-editor-v3`、`echarts`、`hls.js`。
-- `/archive` 空页是否误加载 `md-editor-v3`。
-- `/games` 首屏是否误加载 `hls.js`。
+- [ ] 抽取通用 `.gf-button`、`.gf-card`、`.gf-chip`、`.gf-input`、`.gf-pagination`、`.gf-rating`。
+- [ ] 迁移 NavBar、Footer、通用 Modal、RatingStar。
+- [ ] 收敛导航 active / hover / 语言 / 明暗色按钮样式。
+- [ ] 避免公共组件继续依赖页面级暗色类。
 
 验收标准：
 
-- 本地 3000 端口启动后，性能脚本可完成默认页面测量。
-- 后端接口不可用时，动态详情页进入 warning，不阻断核心页面报告。
-- 首页首屏不得加载 Markdown、ECharts、HLS。
-- `/archive` 空页不得提前加载 Markdown preview。
-- `/games` 首屏不得提前加载 HLS。
-- GPU 占用不做自动硬阈值；用 trace 和人工观察补充判断。
+- NavBar 中英文路径 active 状态正常。
+- Footer 亮暗色一致。
+- RatingStar 在亮暗色下评分文字清晰，不再靠局部覆盖修。
 
-## 风险点
+### v2.2.0-beta.2 - Dark Mode Entrypoint Cleanup
 
-- 首页延迟挂载可能影响 SSR 内容完整度，需要确认 SEO 需要的内容是否仍可被服务端输出。
-- 背景降级可能影响视觉一致性，需要用统一的低成本设计替代，而不是简单删除。
-- Markdown preview 异步加载可能影响首条回答出现速度，需要 loading 状态兜底。
-- HLS 动态加载需要处理用户首次点击视频时的等待状态。
-- `PageScrollDock` 改为页面显式声明后，部分内部滚动页可能需要补配置。
+- [ ] 全站统一暗色入口为 `html.dark`。
+- [ ] 逐步移除 `games-page--dark`、`search-results--dark` 等重复暗色状态。
+- [ ] 清理可替换的 `dark:` 复杂颜色类。
+- [ ] 保留必要的 Tailwind `dark:` 仅用于极轻量布局或显示差异。
 
-## 推荐执行顺序
+验收标准：
 
-1. 先处理 `/archive` 背景动画和 blur。
-2. 再处理首页 `v-show` 导致的提前挂载。
-3. 然后改造 `GoFurryGridBackground` 的低成本模式。
-4. 再收敛 `PageScrollDock`。
-5. 最后做重型依赖懒加载和依赖清理。
+- 切换主题后所有页面使用同一暗色 token。
+- 不再出现同一组件亮暗色字重明显不一致的问题。
+- 新增组件不需要写页面级 dark 覆盖。
 
-这个顺序能先解决截图里最明显的 GPU 问题，再逐步处理首页内存和全站基础成本。
+### v2.2.0-rc.1 - Visual Regression And Documentation
+
+- [ ] 更新性能与视觉回归脚本覆盖 `/games`、`/games/search`。
+- [ ] 增加亮色与暗色截图检查说明。
+- [ ] 补充 `docs/style-system.md`，记录样式分层、命名、token、迁移规则。
+- [ ] 整理迁移前后重点组件列表。
+
+验收标准：
+
+- `npm run typecheck` 通过。
+- `npm run build` 通过。
+- `npm run perf:guard` 不因样式迁移出现明显回退。
+- 手工检查 `/games`、`/games/search` 亮暗色、英文/中文、桌面/移动端。
+
+### v2.2.0 - Style System Mainline
+
+- [ ] Less + Tailwind 分层成为主线规范。
+- [ ] games 与 games-search 完成样式主线迁移。
+- [ ] 新增样式必须优先使用 token 和语义类。
+- [ ] 保留 Tailwind 作为布局工具，不再作为复杂视觉主线。
+
+## 后续计划
+
+### v2.3.0 - Nav And Static Pages Migration
+
+- [ ] 迁移首页导航模块。
+- [ ] 迁移 about / terms / privacy / updates。
+- [ ] 清理静态页中重复的 page vars 和局部面板样式。
+
+### v2.4.0 - Archive Style Isolation
+
+- [ ] 单独整理 `/archive` 样式系统。
+- [ ] 由于 archive 更像完整应用界面，应保留独立页面层，但复用全站 token。
+- [ ] 清理 markdown preview、citation、session sidebar 的深度选择器。
+
+## 维护规则
+
+- 新增视觉样式优先写 Less 语义类。
+- 新增复杂颜色必须先进入 token。
+- 不允许为了局部修复继续追加高优先级 global 覆盖。
+- 每次迁移一个页面或一组组件，不做全站大爆炸重写。
+- 每阶段完成后运行 `npm run typecheck` 和必要页面手工检查；构建按阶段或用户要求执行。
