@@ -1,5 +1,5 @@
 <template>
-  <div :class="pageClass" :style="pageVars">
+  <div class="gf-static-page legal-page relative isolate flex w-full flex-1 flex-col overflow-hidden transition-colors duration-500">
     <GoFurryGridBackground :fixed="false" palette="nav-content" />
     <div class="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[var(--legal-top-veil)]" />
 
@@ -38,46 +38,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { i18n } from '@/main'
-import { useThemeStore } from '@/stores/theme'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 
-const themeStore = useThemeStore()
 const isZh = computed(() => i18n.global.locale.value === 'zh')
-const isDark = computed(() => themeStore.theme === 'dark')
-
-onMounted(() => {
-  themeStore.initTheme()
-})
-
-const pageClass = computed(() => [
-  'relative isolate flex w-full flex-1 flex-col overflow-hidden transition-colors duration-500',
-  isDark.value ? 'bg-[#08101b] text-slate-100' : 'bg-[#f6ebdc] text-slate-950'
-])
-
-const pageVars = computed(() => isDark.value
-  ? {
-      '--legal-surface': 'rgba(9, 16, 27, 0.74)',
-      '--legal-border': 'rgba(123, 154, 189, 0.2)',
-      '--legal-rule': 'rgba(123, 154, 189, 0.16)',
-      '--legal-heading': 'rgb(239 246 255)',
-      '--legal-muted': 'rgb(179 195 214)',
-      '--legal-subtle': 'rgb(100 116 139)',
-      '--legal-accent': 'rgb(142 214 255)',
-      '--legal-top-veil': 'linear-gradient(180deg, rgba(7, 13, 23, 0.46), rgba(7, 13, 23, 0))'
-    }
-  : {
-      '--legal-surface': 'rgba(255, 249, 241, 0.76)',
-      '--legal-border': 'rgba(168, 112, 46, 0.18)',
-      '--legal-rule': 'rgba(168, 112, 46, 0.16)',
-      '--legal-heading': 'rgb(15 23 42)',
-      '--legal-muted': 'rgb(71 85 105)',
-      '--legal-subtle': 'rgb(100 116 139)',
-      '--legal-accent': 'rgb(190 112 28)',
-      '--legal-top-veil': 'linear-gradient(180deg, rgba(255, 248, 239, 0.54), rgba(255, 248, 239, 0))'
-    }
-)
 
 const content = computed(() => (
   isZh.value

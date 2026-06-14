@@ -1,12 +1,11 @@
 <template>
   <section class="flex justify-center py-[18px] pb-[30px]" :aria-label="label">
     <div
-      class="inline-flex items-center justify-center gap-[22px] border-b px-6 py-3 backdrop-blur-[10px]"
-      :class="wrapperClass"
+      class="updates-summary-shell inline-flex items-center justify-center gap-[22px] border-b px-6 py-3 backdrop-blur-[10px]"
     >
       <div class="inline-flex items-baseline gap-3">
-        <span class="text-[0.76rem] uppercase" :class="labelClass">{{ latestLabel }}</span>
-        <strong class="break-words text-[clamp(1rem,1.8vw,1.12rem)] font-[780] leading-[1.5]" :class="valueClass">
+        <span class="updates-summary-label text-[0.76rem] uppercase">{{ latestLabel }}</span>
+        <strong class="updates-summary-value break-words text-[clamp(1rem,1.8vw,1.12rem)] font-[780] leading-[1.5]">
           {{ latestValue }}
         </strong>
       </div>
@@ -16,8 +15,8 @@
       </span>
 
       <div class="inline-flex items-baseline gap-3">
-        <span class="text-[0.76rem] uppercase" :class="labelClass">{{ countLabel }}</span>
-        <strong class="break-words text-[clamp(1rem,1.8vw,1.12rem)] font-[780] leading-[1.5]" :class="valueClass">
+        <span class="updates-summary-label text-[0.76rem] uppercase">{{ countLabel }}</span>
+        <strong class="updates-summary-value break-words text-[clamp(1rem,1.8vw,1.12rem)] font-[780] leading-[1.5]">
           {{ countValue }}
         </strong>
       </div>
@@ -26,34 +25,31 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-
-const props = defineProps<{
+defineProps<{
   label: string
   latestLabel: string
   latestValue: string
   countLabel: string
   countValue: number
   dividerSrc: string
-  dark: boolean
 }>()
-
-const wrapperClass = computed(() => (
-  props.dark
-    ? 'border-[#97e0ec2e] bg-[rgba(6,20,29,0.22)] shadow-[inset_0_-1px_0_rgba(171,234,243,0.08),0_10px_30px_rgba(0,0,0,0.12)]'
-    : 'border-[rgba(62,50,41,0.12)] bg-transparent'
-))
-
-const labelClass = computed(() => (
-  props.dark ? 'text-[rgba(174,205,212,0.68)]' : 'text-[rgba(32,24,21,0.54)]'
-))
-
-const valueClass = computed(() => (
-  props.dark ? 'text-[rgba(226,238,242,0.84)]' : 'text-[rgba(31,23,19,0.8)]'
-))
 </script>
 
 <style scoped>
+.updates-summary-shell {
+  border-color: var(--updates-summary-border);
+  background: var(--updates-summary-bg);
+  box-shadow: var(--updates-summary-shadow);
+}
+
+.updates-summary-label {
+  color: var(--updates-summary-label);
+}
+
+.updates-summary-value {
+  color: var(--updates-summary-value);
+}
+
 @media (max-width: 720px) {
   section > div {
     display: grid;

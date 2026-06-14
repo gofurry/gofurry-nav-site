@@ -1,0 +1,39 @@
+.gf-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gf-border);
+  border-radius: 999px;
+  background: var(--gf-surface);
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1;
+  padding: 0.28rem 0.62rem;
+  white-space: nowrap;
+  transition:
+    background-color var(--gf-motion-fast) ease,
+    border-color var(--gf-motion-fast) ease,
+    color var(--gf-motion-fast) ease;
+}
+
+.gf-chip--muted {
+  background: color-mix(in srgb, var(--gf-surface) 66%, transparent);
+  color: var(--gf-text-soft);
+}
+
+.gf-chip--active {
+  border-color: var(--gf-accent-fill);
+  background: var(--gf-accent-fill);
+  color: var(--gf-accent-contrast);
+}
+
+.gf-chip--interactive {
+  cursor: pointer;
+}
+
+.gf-chip--interactive:hover {
+  border-color: var(--gf-border-strong);
+  background: var(--gf-surface-hover);
+  color: var(--gf-text-main);
+}

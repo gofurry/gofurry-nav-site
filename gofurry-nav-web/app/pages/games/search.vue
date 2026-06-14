@@ -1,7 +1,6 @@
 <template>
   <div
-      class="games-search-page games-page relative isolate flex min-h-full w-full flex-col overflow-hidden bg-gray-50 transition-colors duration-500 dark:bg-[#07111f]"
-      :class="{ 'games-page--dark': isDarkTheme }"
+      class="games-search-page games-page relative isolate flex min-h-full w-full flex-col overflow-hidden"
   >
     <GoFurryGridBackground :fixed="false" palette="games" />
     <h1 class="sr-only">{{ searchPageSeo.heading }}</h1>
@@ -27,7 +26,6 @@
             :current-page="query.pageNum"
             :total-pages="totalPages"
             :total="total"
-            :dark="isDarkTheme"
             @page-change="onPageChange"
         />
       </section>
@@ -67,7 +65,6 @@ const { locale } = useI18n()
 const langStore = useLangStore()
 const themeStore = useThemeStore()
 const lang = ref(langStore.lang)
-const isDarkTheme = computed(() => themeStore.theme === 'dark')
 const route = useRoute()
 const router = useRouter()
 const searchPageSeo = computed(() => locale.value === 'en'
@@ -320,43 +317,3 @@ onMounted(async () => {
   await fetchData()
 })
 </script>
-
-<style scoped>
-.search-filter-button {
-  display: inline-flex;
-  min-height: 2.5rem;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(126, 92, 58, 0.18);
-  border-radius: 0.78rem;
-  background: rgba(255, 250, 242, 0.42);
-  padding: 0 1rem;
-  color: rgba(124, 45, 18, 0.86);
-  font-size: 0.9rem;
-  font-weight: 650;
-  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
-}
-
-.search-filter-button:hover {
-  border-color: rgba(180, 96, 24, 0.36);
-  background: rgba(255, 239, 213, 0.72);
-  color: rgba(99, 39, 15, 0.96);
-}
-
-:global(.games-search-page.games-page--dark) {
-  background: #07111f;
-  color: rgba(226, 232, 240, 0.88);
-}
-
-:global(.games-search-page.games-page--dark .search-filter-button) {
-  border-color: rgba(226, 232, 240, 0.15);
-  background: rgba(226, 232, 240, 0.065);
-  color: rgba(190, 208, 222, 0.74);
-}
-
-:global(.games-search-page.games-page--dark .search-filter-button:hover) {
-  border-color: rgba(203, 213, 225, 0.38);
-  background: rgba(226, 232, 240, 0.13);
-  color: rgba(226, 232, 240, 0.90);
-}
-</style>

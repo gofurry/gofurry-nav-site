@@ -31,8 +31,6 @@
   --games-shadow-soft: 0 4px 12px rgba(91, 62, 28, 0.03);
   --games-shadow-sidebar: 0 10px 26px rgba(91, 62, 28, 0.035);
   --games-shadow-popover: 0 12px 30px rgba(91, 62, 28, 0.08);
-  --games-rating-empty: rgba(154, 52, 18, 0.18);
-  --games-rating-fill: #f59e0b;
   --games-deal: #ef4444;
 
   background: var(--games-page-bg);
@@ -77,7 +75,6 @@ html.dark .games-page {
   --games-shadow-soft: none;
   --games-shadow-sidebar: none;
   --games-shadow-popover: 0 14px 34px rgba(0, 0, 0, 0.28);
-  --games-rating-empty: rgba(148, 163, 184, 0.30);
   --games-deal: #f87171;
 
   color: rgba(226, 232, 240, 0.88);
@@ -805,28 +802,4 @@ html.dark .games-page .search-shell .search-result-card:hover {
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.games-page .rating-star__empty {
-  color: var(--games-rating-empty);
-  -webkit-text-stroke: 0.6px var(--games-rating-empty);
-}
-
-html.dark .games-page .rating-star__empty {
-  -webkit-text-stroke: 0;
-}
-
-.games-page .rating-star__fill {
-  color: var(--games-rating-fill);
-  text-shadow: none;
-}
-
-.games-page .rating-star__score {
-  color: var(--games-text-title);
-  font-weight: 750;
-}
-
-.games-page .rating-star__count {
-  color: var(--games-text-muted);
-  font-weight: 650;
 }

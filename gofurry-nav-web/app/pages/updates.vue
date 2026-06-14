@@ -1,5 +1,5 @@
 <template>
-  <div class="updates-page" :class="{ 'is-dark-theme': isDarkTheme }">
+  <div class="updates-page">
     <GoFurryGridBackground :fixed="false" palette="nav-content" />
 
     <main class="relative z-[1] mx-auto w-[min(1100px,calc(100%-40px))] py-9 pb-24">
@@ -11,7 +11,6 @@
         :count-label="copy.countLabel"
         :count-value="items.length"
         :divider-src="summaryDividerSrc"
-        :dark="isDarkTheme"
       />
 
       <section class="mx-auto min-w-0 max-w-[920px]" :aria-busy="pending">
@@ -48,7 +47,6 @@
               :year-summary="formatYearSummary(group.items.length)"
               :locale-code="localeCode"
               :unavailable-label="copy.unavailable"
-              :dark="isDarkTheme"
               @toggle="toggleYear(group.year)"
               @load-more="loadMoreForYear(group.year)"
             />
@@ -247,11 +245,7 @@ function formatYearSummary(count: number) {
   position: relative;
   min-height: 100svh;
   overflow: clip;
-  color: #201815;
-}
-
-.updates-page.is-dark-theme {
-  color: #e5edf5;
+  color: var(--updates-text-main);
 }
 
 .updates-state {
@@ -259,7 +253,7 @@ function formatYearSummary(count: number) {
   min-height: 320px;
   place-items: center;
   gap: 18px;
-  color: rgba(32, 24, 21, 0.72);
+  color: var(--updates-state-text);
   text-align: center;
 }
 
@@ -269,13 +263,13 @@ function formatYearSummary(count: number) {
 }
 
 .updates-state.is-error {
-  color: #b42347;
+  color: var(--updates-state-error);
 }
 
 .state-line {
   width: min(240px, 56vw);
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(15, 118, 110, 0.72), transparent);
+  background: var(--updates-state-line);
 }
 
 .timeline-feed {
@@ -292,7 +286,7 @@ function formatYearSummary(count: number) {
   bottom: 0;
   left: 8px;
   width: 1px;
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.55), rgba(15, 118, 110, 0.1));
+  background: var(--updates-feed-line);
 }
 
 .timeline-year-group {
@@ -300,22 +294,6 @@ function formatYearSummary(count: number) {
   transform: translateY(14px);
   animation: feed-enter 520ms ease forwards;
   animation-delay: var(--delay, 0ms);
-}
-
-.updates-page.is-dark-theme .updates-state {
-  color: rgba(204, 223, 228, 0.76);
-}
-
-.updates-page.is-dark-theme .state-line {
-  background: linear-gradient(90deg, transparent, rgba(154, 248, 251, 0.78), transparent);
-}
-
-.updates-page.is-dark-theme .timeline-feed::before {
-  background: linear-gradient(180deg, rgba(127, 240, 247, 0.62), rgba(127, 240, 247, 0.1));
-}
-
-.updates-page.is-dark-theme .updates-state.is-error {
-  color: #fda4af;
 }
 
 @keyframes feed-enter {

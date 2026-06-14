@@ -1,5 +1,5 @@
 <template>
-  <div class="updates-year-group" :class="{ 'is-dark-theme': dark }">
+  <div class="updates-year-group">
     <button
       type="button"
       class="year-divider year-toggle"
@@ -23,7 +23,6 @@
           :latest-tag="latestTag"
           :locale-code="localeCode"
           :unavailable-label="unavailableLabel"
-          :dark="dark"
         />
       </li>
 
@@ -58,7 +57,6 @@ defineProps<{
   yearSummary: string
   localeCode: string
   unavailableLabel: string
-  dark: boolean
 }>()
 </script>
 
@@ -84,18 +82,18 @@ defineProps<{
   left: -34px;
   width: 18px;
   height: 1px;
-  background: rgba(15, 118, 110, 0.5);
+  background: var(--updates-year-line);
 }
 
 .year-divider-text {
-  color: rgba(32, 24, 21, 0.42);
+  color: var(--updates-year-text);
   font-size: 0.76rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
 .year-divider-meta {
-  color: rgba(32, 24, 21, 0.36);
+  color: var(--updates-year-meta);
   font-size: 0.78rem;
 }
 
@@ -121,7 +119,7 @@ defineProps<{
   top: 50%;
   width: 6px;
   height: 1px;
-  background: rgba(32, 24, 21, 0.42);
+  background: var(--updates-year-chevron);
   transition: transform 180ms ease;
 }
 
@@ -154,12 +152,13 @@ defineProps<{
 }
 
 .year-load-more {
-  border: 1px solid rgba(15, 118, 110, 0.18);
-  background: rgba(255, 251, 247, 0.5);
+  border: 1px solid var(--updates-year-load-border);
+  background: var(--updates-year-load-bg);
   padding: 0.58rem 0.9rem;
-  color: #0f766e;
+  color: var(--updates-year-load-text);
   font-size: 0.82rem;
   font-weight: 700;
+  box-shadow: var(--updates-year-load-shadow);
   transition:
     border-color 180ms ease,
     background-color 180ms ease,
@@ -168,45 +167,10 @@ defineProps<{
 
 .year-load-more:hover,
 .year-load-more:focus-visible {
-  border-color: rgba(15, 118, 110, 0.34);
-  background: rgba(255, 251, 247, 0.82);
+  border-color: var(--updates-year-load-border-hover);
+  background: var(--updates-year-load-bg-hover);
+  color: var(--updates-year-load-text-hover);
   transform: translateY(-1px);
-}
-
-.updates-year-group.is-dark-theme .year-divider-text,
-.updates-year-group.is-dark-theme .year-divider-meta {
-  color: rgba(174, 205, 212, 0.68);
-}
-
-.updates-year-group.is-dark-theme .year-divider-text {
-  color: rgba(210, 231, 236, 0.8);
-}
-
-.updates-year-group.is-dark-theme .year-divider-meta {
-  color: rgba(166, 199, 206, 0.64);
-}
-
-.updates-year-group.is-dark-theme .year-divider::before {
-  background: rgba(127, 240, 247, 0.56);
-}
-
-.updates-year-group.is-dark-theme .year-divider-chevron::before,
-.updates-year-group.is-dark-theme .year-divider-chevron::after {
-  background: rgba(224, 248, 252, 0.86);
-}
-
-.updates-year-group.is-dark-theme .year-load-more {
-  border-color: rgba(154, 248, 251, 0.28);
-  background: rgba(7, 24, 34, 0.74);
-  color: rgba(223, 239, 243, 0.82);
-  box-shadow: inset 0 0 0 1px rgba(247, 254, 255, 0.04);
-}
-
-.updates-year-group.is-dark-theme .year-load-more:hover,
-.updates-year-group.is-dark-theme .year-load-more:focus-visible {
-  border-color: rgba(154, 248, 251, 0.44);
-  background: rgba(10, 31, 44, 0.9);
-  color: rgba(232, 245, 248, 0.9);
 }
 
 @media (max-width: 720px) {

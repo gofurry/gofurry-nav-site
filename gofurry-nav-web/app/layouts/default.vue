@@ -1,5 +1,5 @@
 <template>
-  <div class="relative flex min-h-screen flex-col bg-gray-50 transition-colors duration-500 dark:bg-slate-950">
+  <div class="gf-app-shell relative flex min-h-screen flex-col transition-colors duration-500">
     <div v-if="showNavBar" :class="navBarWrapperClass">
       <NavBar :nav-overlay-desktop="isNavPage" />
     </div>

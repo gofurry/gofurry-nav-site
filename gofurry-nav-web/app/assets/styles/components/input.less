@@ -1,0 +1,25 @@
+.gf-input {
+  width: 100%;
+  border: 1px solid var(--gf-border);
+  border-radius: var(--gf-radius-sm);
+  background: var(--gf-input-bg);
+  color: var(--gf-text-main);
+  font-size: 0.86rem;
+  padding: 0.72rem 0.85rem;
+  outline: none;
+  transition:
+    background-color var(--gf-motion-fast) ease,
+    border-color var(--gf-motion-fast) ease,
+    box-shadow var(--gf-motion-fast) ease,
+    color var(--gf-motion-fast) ease;
+}
+
+.gf-input::placeholder {
+  color: var(--gf-text-soft);
+}
+
+.gf-input:focus {
+  border-color: var(--gf-border-strong);
+  background: var(--gf-input-bg-focus);
+  box-shadow: 0 0 0 3px var(--gf-focus-ring);
+}

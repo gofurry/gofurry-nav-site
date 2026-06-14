@@ -78,7 +78,7 @@ function ask(prompt: string) {
   will-change: opacity, transform;
 }
 
-:global(.dark .rag-prompt-panel) {
+:global(html.dark .rag-prompt-panel) {
   border-color: rgba(255, 255, 255, 0.10);
   background: rgba(15, 23, 42, 0.9);
   box-shadow: 0 18px 44px rgba(2, 6, 23, 0.38);
@@ -90,7 +90,7 @@ function ask(prompt: string) {
   border-bottom: 1px solid rgba(120, 113, 108, 0.16);
 }
 
-:global(.dark .rag-prompt-panel__header) {
+:global(html.dark .rag-prompt-panel__header) {
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -101,7 +101,7 @@ function ask(prompt: string) {
   color: #292524;
 }
 
-:global(.dark .rag-prompt-panel__header p) {
+:global(html.dark .rag-prompt-panel__header p) {
   color: #f8fafc;
 }
 
@@ -113,7 +113,7 @@ function ask(prompt: string) {
   color: rgba(68, 64, 60, 0.72);
 }
 
-:global(.dark .rag-prompt-panel__header span) {
+:global(html.dark .rag-prompt-panel__header span) {
   color: rgba(148, 163, 184, 0.82);
 }
 
@@ -140,7 +140,7 @@ function ask(prompt: string) {
     color 500ms ease;
 }
 
-:global(.dark .rag-prompt-panel__templates button) {
+:global(html.dark .rag-prompt-panel__templates button) {
   background: rgba(30, 41, 59, 0.78);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   color: #e2e8f0;
@@ -154,7 +154,7 @@ function ask(prompt: string) {
   color: #9a3412;
 }
 
-:global(.dark .rag-prompt-panel__templates button:hover) {
+:global(html.dark .rag-prompt-panel__templates button:hover) {
   background: rgba(51, 65, 85, 0.92);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
@@ -178,7 +178,7 @@ function ask(prompt: string) {
   color: rgba(68, 64, 60, 0.62);
 }
 
-:global(.dark .rag-prompt-panel__templates small) {
+:global(html.dark .rag-prompt-panel__templates small) {
   color: rgba(148, 163, 184, 0.82);
 }
 
@@ -189,7 +189,7 @@ function ask(prompt: string) {
   border-top: 1px solid rgba(120, 113, 108, 0.14);
 }
 
-:global(.dark .rag-prompt-panel__custom) {
+:global(html.dark .rag-prompt-panel__custom) {
   border-top-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -208,13 +208,13 @@ function ask(prompt: string) {
     box-shadow 500ms ease;
 }
 
-:global(.dark .rag-prompt-panel__custom input) {
+:global(html.dark .rag-prompt-panel__custom input) {
   border-color: rgba(255, 255, 255, 0.10);
   background: rgba(15, 23, 42, 0.72);
   color: #f8fafc;
 }
 
-:global(.dark .rag-prompt-panel__custom input::placeholder) {
+:global(html.dark .rag-prompt-panel__custom input::placeholder) {
   color: rgba(148, 163, 184, 0.76);
 }
 
@@ -224,7 +224,7 @@ function ask(prompt: string) {
   box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.16);
 }
 
-:global(.dark .rag-prompt-panel__custom input:focus) {
+:global(html.dark .rag-prompt-panel__custom input:focus) {
   background: rgba(15, 23, 42, 0.92);
   border-color: rgba(125, 211, 252, 0.42);
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
@@ -244,7 +244,7 @@ function ask(prompt: string) {
     box-shadow 500ms ease;
 }
 
-:global(.dark .rag-prompt-panel__custom button) {
+:global(html.dark .rag-prompt-panel__custom button) {
   background: #334155;
   color: #f8fafc;
 }
@@ -254,7 +254,7 @@ function ask(prompt: string) {
   box-shadow: 0 8px 20px rgba(41, 37, 36, 0.16);
 }
 
-:global(.dark .rag-prompt-panel__custom button:not(:disabled):hover) {
+:global(html.dark .rag-prompt-panel__custom button:not(:disabled):hover) {
   background: #475569;
   box-shadow: 0 8px 20px rgba(2, 6, 23, 0.24);
 }

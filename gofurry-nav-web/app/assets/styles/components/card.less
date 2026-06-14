@@ -1,0 +1,23 @@
+.gf-card {
+  .gf-surface(var(--gf-surface), var(--gf-border), var(--gf-shadow-soft));
+  border-radius: var(--gf-radius-md);
+  color: var(--gf-text-main);
+}
+
+.gf-card--strong {
+  background: var(--gf-surface-strong);
+}
+
+.gf-card--flat {
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.gf-card--interactive {
+  .gf-hover-surface();
+  cursor: pointer;
+}
+
+.gf-card--compact {
+  padding: 0.9rem;
+}

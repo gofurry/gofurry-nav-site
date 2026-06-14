@@ -56,6 +56,13 @@ export const scenarios = [
     blockedHeavyDependencies: ['hls.js']
   },
   {
+    id: 'games-search',
+    label: '游戏搜索页',
+    path: '/games/search',
+    critical: true,
+    blockedHeavyDependencies: ['hls.js']
+  },
+  {
     id: 'site-detail',
     label: '站点详情页',
     path: defaultSitePath,

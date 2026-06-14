@@ -140,64 +140,28 @@ function onBlur() {
   width: 100%;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
-  border: 1px solid rgba(126, 92, 58, 0.18);
-  border-radius: 0.82rem;
-  background: rgba(255, 250, 242, 0.94);
-  padding: 0.62rem;
-  box-shadow: 0 12px 30px rgba(91, 62, 28, 0.08);
-  backdrop-filter: blur(8px);
 }
 
 .search-shell {
   container: game-search-shell / inline-size;
 }
 
-.game-sidebar-search-input {
-  border: 1px solid rgba(126, 92, 58, 0.17);
-  background: rgba(255, 250, 242, 0.42);
-  color: rgba(28, 25, 23, 0.94);
-  box-shadow: 0 4px 12px rgba(91, 62, 28, 0.03);
-}
-
-.game-sidebar-search-input::placeholder {
-  color: rgba(120, 113, 108, 0.72);
-}
-
-.game-sidebar-search-input:focus {
-  border-color: rgba(120, 87, 56, 0.36) !important;
-  background: rgba(255, 250, 242, 0.60);
-  box-shadow: 0 0 0 1px rgba(120, 87, 56, 0.10) !important;
-}
-
 .search-result-card {
   min-width: 0;
   cursor: pointer;
   overflow: hidden;
-  border: 1px solid rgba(126, 92, 58, 0.10);
-  border-radius: 0.68rem;
-  background: rgba(255, 255, 255, 0.26);
-  padding: 0.42rem;
-  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
-}
-
-.search-result-card:hover {
-  border-color: rgba(180, 96, 24, 0.18);
-  background: rgba(255, 244, 228, 0.54);
 }
 
 .search-result-cover {
   aspect-ratio: 460 / 215;
   width: 100%;
-  border-radius: 0.48rem;
   object-fit: cover;
 }
 
 .search-result-title {
   margin-top: 0.38rem;
   overflow: hidden;
-  color: rgba(28, 25, 23, 0.94);
   font-size: 0.82rem;
-  font-weight: 750;
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -206,7 +170,6 @@ function onBlur() {
 .search-result-desc {
   margin-top: 0.18rem;
   overflow: hidden;
-  color: rgba(87, 83, 78, 0.68);
   font-size: 0.72rem;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -225,47 +188,4 @@ function onBlur() {
   }
 }
 
-:global(.dark) .search-results-panel {
-  border-color: rgba(148, 163, 184, 0.16);
-  background: rgba(15, 23, 42, 0.96);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
-}
-
-:global(.dark) .game-sidebar-search-input {
-  border-color: rgba(148, 163, 184, 0.15);
-  background: rgba(15, 23, 42, 0.35);
-  color: rgba(241, 245, 249, 0.94);
-  box-shadow: none;
-}
-
-:global(.dark) .game-sidebar-search-input::placeholder {
-  color: rgba(148, 163, 184, 0.84);
-}
-
-:global(.dark) .game-sidebar-search-input:focus {
-  border-color: rgba(203, 213, 225, 0.38) !important;
-  background: rgba(30, 41, 59, 0.55);
-  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.18) !important;
-}
-
-:global(.dark) .search-result-card {
-  border-color: rgba(148, 163, 184, 0.20);
-  background: rgba(30, 41, 59, 0.58);
-}
-
-:global(.dark) .search-result-card:hover {
-  border-color: rgba(203, 213, 225, 0.46);
-  background: rgba(51, 65, 85, 0.72);
-}
-
-:global(.dark) .search-result-title {
-  color: rgba(248, 250, 252, 0.98);
-  text-shadow: none;
-}
-
-:global(.dark) .search-result-desc {
-  color: rgba(226, 232, 240, 0.78);
-  font-weight: 500;
-  text-shadow: none;
-}
 </style>

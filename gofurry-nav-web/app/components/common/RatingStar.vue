@@ -1,5 +1,5 @@
 <template>
-  <div class="rating-star" :aria-label="`${scoreLabel} (${count})`">
+  <div class="gf-rating rating-star" :aria-label="`${scoreLabel} (${count})`">
     <div class="rating-star__icons" aria-hidden="true">
       <span
         v-for="n in 5"
@@ -48,78 +48,3 @@ function starFillPercent(index: number) {
   return remaining * 100
 }
 </script>
-
-<style scoped>
-.rating-star {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.rating-star__icons {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.05rem;
-}
-
-.rating-star__item {
-  position: relative;
-  display: inline-grid;
-  width: 1.05rem;
-  height: 1.05rem;
-  place-items: center;
-  font-size: 1.05rem;
-  line-height: 1;
-}
-
-.rating-star__empty,
-.rating-star__fill {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-  line-height: 1.05rem;
-}
-
-.rating-star__empty {
-  color: rgba(154, 52, 18, 0.18);
-  -webkit-text-stroke: 0.6px rgba(154, 52, 18, 0.18);
-}
-
-.rating-star__fill {
-  color: #f59e0b;
-  text-shadow: none;
-  white-space: nowrap;
-}
-
-.rating-star__score {
-  color: #1f2937;
-  font-size: 0.84rem;
-  font-weight: 750;
-}
-
-.rating-star__count {
-  color: rgba(51, 65, 85, 0.78);
-  font-size: 0.72rem;
-  font-weight: 650;
-}
-
-:global(.dark) .rating-star__empty {
-  color: rgba(148, 163, 184, 0.30);
-  -webkit-text-stroke: 0;
-}
-
-:global(.dark) .rating-star__fill {
-  color: #f59e0b;
-  text-shadow: none;
-}
-
-:global(.dark) .rating-star__score {
-  color: rgba(241, 245, 249, 0.94);
-}
-
-:global(.dark) .rating-star__count {
-  color: rgba(226, 232, 240, 0.84);
-}
-</style>

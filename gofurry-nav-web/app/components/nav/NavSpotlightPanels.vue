@@ -2,7 +2,6 @@
   <section
     v-if="hasAnySpotlight"
     class="mb-4"
-    :class="{ 'spotlight-panels--dark': isDarkTheme }"
   >
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       <article
@@ -68,7 +67,6 @@ import type { NavHomeSpotlight, Site } from '~/types/nav'
 import { touchSiteView } from '~/services/nav'
 import { loadRecentSites, recordRecentSite, RECENT_SITES_EVENT, toExternalUrl } from '@/utils/recentSites'
 import type { DisplayMode } from '@/utils/modeStorage'
-import { useThemeStore } from '@/stores/theme'
 
 type PanelKey = 'featured' | 'popular' | 'latest' | 'random'
 
@@ -79,8 +77,6 @@ const props = defineProps<{
 
 const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
 const defaultLogo = 'defaultLogo.svg'
-const themeStore = useThemeStore()
-const isDarkTheme = computed(() => themeStore.theme === 'dark')
 const pages = ref<Record<PanelKey, number>>({
   featured: 0,
   popular: 0,
@@ -414,7 +410,7 @@ onUnmounted(() => {
   font-size: 0.8rem;
 }
 
-:global(.dark) .spotlight-panel {
+:global(html.dark .spotlight-panel) {
   border-color: rgba(148, 163, 184, 0.38);
   background:
     linear-gradient(180deg, rgba(15, 23, 42, 0.30), rgba(15, 23, 42, 0.14)),
@@ -422,49 +418,49 @@ onUnmounted(() => {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 42px rgba(2, 6, 23, 0.16);
 }
 
-:global(.dark) .spotlight-panel__header {
+:global(html.dark .spotlight-panel__header) {
   border-bottom-color: rgba(148, 163, 184, 0.22);
 }
 
-:global(.dark) .spotlight-panel__header h2,
-:global(.dark) .spotlight-site__body strong {
+:global(html.dark .spotlight-panel__header h2),
+:global(html.dark .spotlight-site__body strong) {
   color: #f8fafc;
 }
 
-:global(.dark) .spotlight-site__rank,
-:global(.dark) .spotlight-site__body small,
-:global(.dark) .spotlight-panel__empty {
+:global(html.dark .spotlight-site__rank),
+:global(html.dark .spotlight-site__body small),
+:global(html.dark .spotlight-panel__empty) {
   color: rgba(203, 213, 225, 0.72);
 }
 
-.spotlight-panels--dark .spotlight-site__rank--visited {
+:global(html.dark .spotlight-site__rank--visited) {
   color: #fb923c;
 }
 
-.spotlight-panels--dark .spotlight-site__rank--visited svg {
+:global(html.dark .spotlight-site__rank--visited svg) {
   filter: drop-shadow(0 0 3px rgba(251, 146, 60, 0.34));
 }
 
-:global(.dark) .spotlight-site:hover {
+:global(html.dark .spotlight-site:hover) {
   background: rgba(148, 163, 184, 0.14);
   border-color: rgba(148, 163, 184, 0.28);
 }
 
-:global(.dark) .spotlight-panel__pager button {
+:global(html.dark .spotlight-panel__pager button) {
   border-color: rgba(148, 163, 184, 0.22);
   background: rgba(15, 23, 42, 0.24);
   color: #e2e8f0;
 }
 
-:global(.dark) .spotlight-panel__pager span {
+:global(html.dark .spotlight-panel__pager span) {
   color: rgba(203, 213, 225, 0.72);
 }
 
-:global(.dark) .spotlight-site__logo {
+:global(html.dark .spotlight-site__logo) {
   background: rgba(15, 23, 42, 0.72);
 }
 
-:global(.dark) .spotlight-site {
+:global(html.dark .spotlight-site) {
   border-color: rgba(148, 163, 184, 0.16);
   background: rgba(15, 23, 42, 0.16);
 }
