@@ -1,10 +1,7 @@
 <template>
-  <div class="fixed inset-0 bg-black/10 z-50 flex items-center justify-center">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 px-4">
     <div
-        class="bg-orange-50 rounded-2xl shadow
-             w-[70vw] sm:w-[70vw] md:w-[70vw]
-             max-w-2xl p-6
-             max-h-[80vh] overflow-hidden"
+        class="game-search-filter-panel w-full max-w-2xl overflow-hidden rounded-2xl p-6 shadow"
     >
       <div class="space-y-2 overflow-y-auto scrollbar-hide max-h-[calc(80vh-3rem)]">
 
@@ -13,13 +10,13 @@
           <h2 class="text-lg font-bold">{{ t("game.search.advancedFilter") }}</h2>
           <div class="flex gap-2">
             <div
-                class="px-3 py-1.5 rounded-lg text-sm cursor-pointer hover:bg-orange-100"
+                class="game-search-filter-action game-search-filter-action--ghost"
                 @click="emit('close')"
             >
               {{ t("common.cancel") }}
             </div>
             <div
-                class="px-3 py-1.5 rounded-lg text-sm bg-orange-400 text-white cursor-pointer hover:bg-orange-300"
+                class="game-search-filter-action game-search-filter-action--primary"
                 @click="onSearch"
             >
               {{ t("common.query") }}
@@ -33,7 +30,7 @@
             <label class="text-xs text-gray-500">{{ t("common.keyword") }}</label>
             <input
                 v-model="props.query.content"
-                class="ml-1 w-full mt-1 px-3 py-2 focus:outline-none rounded-lg bg-orange-100 focus:ring-2 focus:ring-orange-200"
+                class="game-search-filter-input ml-1 mt-1 w-full rounded-lg px-3 py-2 focus:outline-none"
             />
           </div>
           <div class="grid grid-cols-1 w-[18%]">
@@ -41,7 +38,7 @@
             <input
                 v-model.number="props.query.pageSize"
                 min="1"
-                class="w-full mt-1 px-3 py-2 rounded-lg focus:outline-none bg-orange-100 focus:ring-2 focus:ring-orange-200"
+                class="game-search-filter-input mt-1 w-full rounded-lg px-3 py-2 focus:outline-none"
             />
           </div>
         </div>
@@ -93,10 +90,10 @@
                 :key="item.key"
                 @click="toggleSort(item.key)"
                 :class="[
-                'px-2 py-1 text-xs rounded-md cursor-pointer',
+                'game-search-filter-chip',
                 item.selected
-                  ? 'bg-orange-400 text-white'
-                  : 'bg-orange-100 hover:bg-orange-200'
+                  ? 'game-search-filter-chip--active'
+                  : 'game-search-filter-chip--idle'
               ]"
             >
               {{ t(item.label) }}
@@ -109,7 +106,7 @@
           <label class="text-xs text-gray-500">{{ t("common.tag") }}</label>
           <div class="mt-2 space-y-2">
             <div v-for="group in categoryGroups" :key="group.id">
-              <div class="text-gray-700 font-semibold text-sm mb-1">
+              <div class="mb-1 text-sm font-semibold text-stone-700 dark:text-slate-200/80">
                 {{ group.name }}
               </div>
               <div class="flex flex-wrap gap-2">
@@ -118,10 +115,10 @@
                     :key="tag.id"
                     @click="toggleTag(tag)"
                     :class="[
-                    'px-2 py-1 text-xs rounded-md cursor-pointer',
+                    'game-search-filter-chip',
                     tag.selected
-                      ? 'bg-orange-400 text-white'
-                      : 'bg-orange-100 hover:bg-orange-200'
+                      ? 'game-search-filter-chip--active'
+                      : 'game-search-filter-chip--idle'
                   ]"
                 >
                   {{ tag.name }} {{ tag.game_count }}
@@ -129,7 +126,7 @@
               </div>
               <div
                   v-if="group.children.length > group.limit"
-                  class="text-xs text-orange-500 cursor-pointer mt-1 select-none"
+                  class="mt-1 cursor-pointer select-none text-xs text-stone-600 transition hover:text-stone-900 dark:text-slate-300/64 dark:hover:text-slate-100/88"
                   @click="group.expanded = !group.expanded"
               >
                 {{ group.expanded ? t("common.collapse") : t("common.expand") }}
@@ -288,5 +285,170 @@ const onSearch = () => {
   display: none;
 }
 
-::v-deep(.dp-custom-theme) { --dp-background-color: #fff7ed; --dp-text-color: #374151; --dp-hover-color: #fed7aa; --dp-hover-text-color: #374151; --dp-hover-icon-color: #d97706; --dp-primary-color: #fb923c; --dp-primary-disabled-color: #fcd29f; --dp-primary-text-color: #fff; --dp-secondary-color: #fdba74; --dp-border-color: #fdba74; --dp-menu-border-color: #fdba74; --dp-border-color-hover: #fb923c; --dp-border-color-focus: #fb923c; --dp-disabled-color: #fef3ed; --dp-scroll-bar-background: #fff7ed; --dp-scroll-bar-color: #fdba74; --dp-success-color: #16a34a; --dp-success-color-disabled: #a3d9b1; --dp-icon-color: #b45309; --dp-danger-color: #dc2626; --dp-marker-color: #fb923c; --dp-tooltip-color: #fef3ed; --dp-disabled-color-text: #9ca3af; --dp-highlight-color: rgba(251, 146, 60, 0.2); --dp-range-between-dates-background-color: var(--dp-hover-color); --dp-range-between-dates-text-color: var(--dp-hover-text-color); --dp-range-between-border-color: var(--dp-hover-color); }
+.game-search-filter-panel {
+  max-height: 80vh;
+  border: 1px solid rgba(126, 92, 58, 0.16);
+  background: rgba(255, 250, 242, 0.94);
+  color: rgba(45, 35, 28, 0.92);
+}
+
+.game-search-filter-action {
+  cursor: pointer;
+  border-radius: 0.65rem;
+  padding: 0.38rem 0.75rem;
+  font-size: 0.86rem;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.game-search-filter-action--ghost:hover {
+  background: rgba(255, 239, 213, 0.72);
+}
+
+.game-search-filter-action--primary {
+  background: rgba(124, 45, 18, 0.86);
+  color: rgba(255, 250, 242, 0.96);
+}
+
+.game-search-filter-action--primary:hover {
+  background: rgba(99, 39, 15, 0.96);
+}
+
+.game-search-filter-input {
+  border: 1px solid rgba(126, 92, 58, 0.12);
+  background: rgba(255, 239, 213, 0.56);
+  color: rgba(45, 35, 28, 0.92);
+}
+
+.game-search-filter-input:focus {
+  border-color: rgba(120, 87, 56, 0.32);
+  box-shadow: 0 0 0 2px rgba(120, 87, 56, 0.10);
+}
+
+.game-search-filter-chip {
+  cursor: pointer;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0.26rem 0.62rem;
+  font-size: 0.76rem;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.game-search-filter-chip--idle {
+  border-color: rgba(126, 92, 58, 0.12);
+  background: rgba(255, 239, 213, 0.48);
+  color: rgba(87, 43, 20, 0.82);
+}
+
+.game-search-filter-chip--idle:hover {
+  border-color: rgba(180, 96, 24, 0.30);
+  background: rgba(255, 224, 186, 0.72);
+}
+
+.game-search-filter-chip--active {
+  border-color: rgba(126, 92, 58, 0.20);
+  background: rgba(124, 45, 18, 0.86);
+  color: rgba(255, 250, 242, 0.96);
+}
+
+::v-deep(.dp-custom-theme) {
+  --dp-background-color: rgba(255, 250, 242, 0.96);
+  --dp-text-color: #3f3428;
+  --dp-hover-color: rgba(255, 224, 186, 0.82);
+  --dp-hover-text-color: #3f3428;
+  --dp-hover-icon-color: #785738;
+  --dp-primary-color: #7c2d12;
+  --dp-primary-disabled-color: rgba(124, 45, 18, 0.34);
+  --dp-primary-text-color: #fffaf2;
+  --dp-secondary-color: rgba(126, 92, 58, 0.34);
+  --dp-border-color: rgba(126, 92, 58, 0.18);
+  --dp-menu-border-color: rgba(126, 92, 58, 0.18);
+  --dp-border-color-hover: rgba(120, 87, 56, 0.36);
+  --dp-border-color-focus: rgba(120, 87, 56, 0.36);
+  --dp-disabled-color: rgba(255, 239, 213, 0.48);
+  --dp-scroll-bar-background: rgba(255, 250, 242, 0.96);
+  --dp-scroll-bar-color: rgba(126, 92, 58, 0.30);
+  --dp-success-color: #16a34a;
+  --dp-success-color-disabled: #a3d9b1;
+  --dp-icon-color: rgba(87, 43, 20, 0.82);
+  --dp-danger-color: #dc2626;
+  --dp-marker-color: #7c2d12;
+  --dp-tooltip-color: #fffaf2;
+  --dp-disabled-color-text: #9ca3af;
+  --dp-highlight-color: rgba(124, 45, 18, 0.12);
+  --dp-range-between-dates-background-color: var(--dp-hover-color);
+  --dp-range-between-dates-text-color: var(--dp-hover-text-color);
+  --dp-range-between-border-color: var(--dp-hover-color);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-panel {
+  border-color: rgba(226, 232, 240, 0.16);
+  background: rgba(30, 41, 59, 0.96);
+  color: rgba(226, 232, 240, 0.88);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-action--ghost:hover {
+  background: rgba(226, 232, 240, 0.10);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-action--primary {
+  background: rgba(203, 213, 225, 0.18);
+  color: rgba(241, 245, 249, 0.92);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-action--primary:hover {
+  background: rgba(203, 213, 225, 0.26);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-input {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(15, 23, 42, 0.42);
+  color: rgba(226, 232, 240, 0.88);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-input:focus {
+  border-color: rgba(203, 213, 225, 0.36);
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.18);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-chip--idle {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(226, 232, 240, 0.055);
+  color: rgba(190, 208, 222, 0.76);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-chip--idle:hover {
+  border-color: rgba(203, 213, 225, 0.34);
+  background: rgba(226, 232, 240, 0.12);
+  color: rgba(226, 232, 240, 0.88);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-filter-chip--active {
+  border-color: rgba(203, 213, 225, 0.24);
+  background: rgba(203, 213, 225, 0.18);
+  color: rgba(241, 245, 249, 0.92);
+}
+
+:global(.games-search-page.games-page--dark) ::v-deep(.dp-custom-theme) {
+  --dp-background-color: rgb(30, 41, 59);
+  --dp-text-color: rgba(226, 232, 240, 0.88);
+  --dp-hover-color: rgba(226, 232, 240, 0.10);
+  --dp-hover-text-color: rgba(241, 245, 249, 0.92);
+  --dp-hover-icon-color: rgba(203, 213, 225, 0.78);
+  --dp-primary-color: rgba(203, 213, 225, 0.24);
+  --dp-primary-disabled-color: rgba(203, 213, 225, 0.10);
+  --dp-primary-text-color: rgba(241, 245, 249, 0.92);
+  --dp-secondary-color: rgba(148, 163, 184, 0.24);
+  --dp-border-color: rgba(226, 232, 240, 0.14);
+  --dp-menu-border-color: rgba(226, 232, 240, 0.14);
+  --dp-border-color-hover: rgba(203, 213, 225, 0.34);
+  --dp-border-color-focus: rgba(203, 213, 225, 0.34);
+  --dp-disabled-color: rgba(15, 23, 42, 0.42);
+  --dp-scroll-bar-background: rgb(30, 41, 59);
+  --dp-scroll-bar-color: rgba(148, 163, 184, 0.40);
+  --dp-icon-color: rgba(203, 213, 225, 0.78);
+  --dp-marker-color: rgba(203, 213, 225, 0.70);
+  --dp-tooltip-color: rgb(30, 41, 59);
+  --dp-disabled-color-text: rgba(148, 163, 184, 0.56);
+  --dp-highlight-color: rgba(203, 213, 225, 0.14);
+}
 </style>

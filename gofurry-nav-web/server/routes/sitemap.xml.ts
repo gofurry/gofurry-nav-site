@@ -60,8 +60,6 @@ export default defineEventHandler(async (event) => {
     '/about',
     '/privacy',
     '/terms',
-    '/games/news/more',
-    '/games/creator',
     '/games/prize'
   ]) {
     addLocalizedUrls(urls, path)

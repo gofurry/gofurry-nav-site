@@ -55,14 +55,6 @@ func (api *gameV2Api) GetSyncGameNews(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetSyncCreators(c fiber.Ctx) error {
-	data, err := newReadModelService().ListSyncCreators(context.Background(), c.Query("lang", "zh"))
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
 func parseUpdatedSince(value string) time.Time {
 	value = strings.TrimSpace(value)
 	if value == "" {

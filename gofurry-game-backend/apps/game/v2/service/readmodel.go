@@ -52,7 +52,6 @@ type gameDetailReader interface {
 	GetCollectRun(ctx context.Context, runID string) (*v2models.GfgGameV2CollectRun, common.GFError)
 	ListCollectTaskResults(ctx context.Context, query v2models.GameV2CollectTaskResultQuery) ([]v2models.GfgGameV2CollectTaskResult, common.GFError)
 	GetGameCollectStatus(ctx context.Context, gameID int64, appID int64) (v2models.GameV2CollectGameStatus, common.GFError)
-	ListSyncCreators(ctx context.Context, lang string) ([]v2models.GameV2SyncCreatorRow, common.GFError)
 }
 
 type ReadModelService struct {
@@ -374,36 +373,6 @@ func (svc *ReadModelService) ListSyncGameNews(ctx context.Context, query v2model
 			Lang:        item.Lang,
 			UpdatedAt:   item.UpdatedAt,
 			PublishedAt: item.PublishedAt,
-		})
-	}
-	return res, nil
-}
-
-func (svc *ReadModelService) ListSyncCreators(ctx context.Context, lang string) ([]v2models.GameV2SyncCreator, common.GFError) {
-	return svc.ListCreators(ctx, lang)
-}
-
-func (svc *ReadModelService) ListCreators(ctx context.Context, lang string) ([]v2models.GameV2SyncCreator, common.GFError) {
-	if svc == nil || svc.reader == nil {
-		return nil, common.NewServiceError("game v2 read model service is not initialized")
-	}
-	rows, err := svc.reader.ListSyncCreators(ctx, normalizeLang(lang))
-	if err != nil {
-		return nil, err
-	}
-	res := make([]v2models.GameV2SyncCreator, 0, len(rows))
-	for _, row := range rows {
-		res = append(res, v2models.GameV2SyncCreator{
-			ID:         strconv.FormatInt(row.ID, 10),
-			Name:       row.Name,
-			Info:       cleanSyncText(row.Info),
-			URL:        row.URL,
-			Avatar:     row.Avatar,
-			Links:      parseKVList(row.Links),
-			Contact:    parseKVList(row.Contact),
-			Type:       row.Type,
-			CreateTime: row.CreateTime,
-			UpdateTime: row.UpdateTime,
 		})
 	}
 	return res, nil

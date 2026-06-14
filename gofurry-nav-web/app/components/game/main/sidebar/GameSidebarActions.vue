@@ -21,21 +21,6 @@
         >
           Steam 专区
         </button>
-
-        <button
-            class="sidebar-action-button"
-            @click="router.push('/games/creator')"
-        >
-          {{ t("game.action.authorList") }}
-        </button>
-
-        <button
-            class="sidebar-action-button"
-            @click="router.push('/games/news/more')"
-        >
-          {{ t("game.action.moreNews") }}
-        </button>
-
       </div>
     </div>
 

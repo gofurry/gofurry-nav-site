@@ -2,7 +2,7 @@
 
 ## Current Position
 
-游戏模块已经完成 collector v2、backend v2 read model、admin 采集观测、RAG sync v2、前端主页面 cutover。`gofurry-nav-web` 当前游戏首页、详情页、新闻页、更多新闻页和 sitemap 游戏 URL 来源已经稳定消费 `/api/v2/game/*`，可以认为“动态游戏数据主线”已经切到 v2。
+游戏模块已经完成 collector v2、backend v2 read model、admin 采集观测、RAG sync v2、前端主页面 cutover。`gofurry-nav-web` 当前游戏首页、详情页和 sitemap 游戏 URL 来源已经稳定消费 `/api/v2/game/*`，可以认为“动态游戏数据主线”已经切到 v2。
 
 现阶段目标不再是继续维护 v1/v2 双栈。公开 game API 已经切到 `/api/v2/game/*`，后续重点是删除不再被引用的旧包、旧 Swagger、旧 Redis key 和历史文档说明，避免历史包袱继续扩散。
 
@@ -20,7 +20,6 @@
 - `GET /api/v2/game/reviews`
 - `POST /api/v2/game/reviews/anonymous`
 - `GET /api/v2/game/reviews/latest`
-- `GET /api/v2/game/creators`
 - `GET /api/v2/game/prizes`
 - `POST /api/v2/game/prizes/participation`
 - `GET /api/v2/game/prizes/participation/activation`
@@ -30,7 +29,6 @@
 - `GET /api/v2/game/sync/list`
 - `GET /api/v2/game/sync/info`
 - `GET /api/v2/game/sync/news`
-- `GET /api/v2/game/sync/creators`
 - `GET /api/v2/game/collect/status`
 - `GET /api/v2/game/collect/runs`
 - `GET /api/v2/game/collect/runs/:run_id`
@@ -274,39 +272,38 @@
 
 ---
 
-### v2.4.0 - Creator V2 Mainline
+### v2.4.0 - Creator Decommission
 
 **Status:** Completed
-**Scope:** User-facing / Maintenance / Documentation  
-**Goal:** 将创作者列表和 RAG 创作者同步统一到 v2，移除 v1 创作者入口和旧 Redis 聚合缓存依赖。
+**Scope:** User-facing / Admin / RAG / Documentation  
+**Goal:** 创作者名录被判断为伪需求后，从前端、后端、admin 和 RAG 同步源中下线，避免继续维护低价值的独立数据链路。
 
 #### Focus
 
-- 创作者公开列表
-- 创作者双语字段
-- RAG sync creators 一致性
-- 旧缓存 key 清理
+- 前端 `/games/creator` 页面和快捷入口下线
+- 后端公开 creator API 和 RAG creator sync API 下线
+- admin 创作者 CRUD 下线
+- `gfg_game_creator` 表转入待归档状态
 
 #### Tasks
 
-- [x] 新增 `GET /api/v2/game/creators`，替代 `/api/v1/game/creator`。
-- [x] 保持 `GET /api/v2/game/sync/creators` 作为 RAG 同步入口。
-- [x] 公开创作者列表直接读取 PostgreSQL，不依赖 `game-creator:list` 旧 Redis 聚合。
-- [x] 前端创作者页切到 `/api/v2/game/creators`。
-- [x] 移除 `/api/v1/game/creator`。
-- [x] 清理或停用旧 `game-creator:list` 缓存写入和读取。
-- [x] 补测试覆盖语言归一化、HTML 清洗、链接和联系方式解析。
+- [x] 移除前端 `/games/creator` 页面、creator 专用组件、快捷入口、sitemap 和 llms.txt 引用。
+- [x] 移除 `GET /api/v2/game/creators`。
+- [x] 移除 `GET /api/v2/game/sync/creators`。
+- [x] 移除 admin `/api/v1/game/creators` CRUD 和资源配置。
+- [x] 移除 RAG `game_creators` 同步源、客户端请求和控制台展示。
+- [x] 提供 `gfg_game_creator` 安全改名归档 SQL，生产确认后再 drop。
 
 #### Acceptance Criteria
 
-- 创作者公开页和 RAG 创作者同步均使用 v2。
-- v1 创作者路由已移除。
-- 旧 Redis 创作者聚合 key 不再是功能依赖。
-- `go test ./...` 和前端 typecheck 通过。
+- `/games/creator` 不再进入前端路由、sitemap 和 llms.txt。
+- game backend 不再注册 creator 公开接口和 creator sync 接口。
+- admin 不再展示创作者管理资源。
+- RAG `all` 同步只包含 nav sites、game details、game news。
 
 #### Notes
 
-公开创作者列表和 RAG 同步创作者当前复用同一套 v2 PostgreSQL 读取与映射逻辑。旧 `apps/game/dao/gameCreatorDao.go`、v1 creator controller、旧 creator Redis 缓存任务已经删除。
+创作者信息仍可通过游戏详情中的 developers / publishers 等字段间接进入推荐和详情表达；独立 creator 资料库不再作为产品能力维护。
 
 ---
 
@@ -366,7 +363,7 @@
 - [x] 删除不再被引用的 `apps/game/controller` 动态方法。
 - [x] 删除不再被引用的 `apps/game/service` 动态读取逻辑。
 - [x] 删除不再被引用的旧 DAO 方法。
-- [x] 保留仍有价值的站内表 model，避免误删 `gfg_game`、`gfg_game_comment`、`gfg_game_creator`、`gfg_prize`。
+- [x] 保留仍有价值的站内表 model，避免误删 `gfg_game`、`gfg_game_comment`、`gfg_prize`。
 - [x] 移除旧 Redis key 功能依赖：`game-info:*`、`game-panel:*`、`game-update:*`、`game-creator:list` 等。
 - [x] 标记旧动态表为归档数据，不再从公开接口读取。
 - [x] 更新 Swagger 注释，删除 v1 game API 文档来源。

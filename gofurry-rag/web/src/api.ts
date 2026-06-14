@@ -78,7 +78,7 @@ export function syncStatus() {
 }
 
 export function runSync(
-  source: 'nav_sites' | 'game_details' | 'game_news' | 'game_creators' | 'all',
+  source: 'nav_sites' | 'game_details' | 'game_news' | 'all',
 ) {
   return request<{ accepted: boolean; source: string }>('/api/v1/admin/sync/run', {
     method: 'POST',

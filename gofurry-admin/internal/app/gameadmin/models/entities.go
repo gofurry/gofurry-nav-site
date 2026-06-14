@@ -88,52 +88,6 @@ type GameCommentPayload struct {
 	Name    string  `json:"name"`
 }
 
-type GameCreator struct {
-	ID         int64               `gorm:"column:id;primaryKey" json:"id"`
-	Name       string              `gorm:"column:name;not null" json:"name"`
-	Info       string              `gorm:"column:info;not null" json:"info"`
-	MainURL    string              `gorm:"column:main_url;not null" json:"main_url"`
-	Links      *string             `gorm:"column:links" json:"-"`
-	Cover      string              `gorm:"column:cover;not null" json:"cover"`
-	Contact    *string             `gorm:"column:contact" json:"-"`
-	CreateTime pkgmodels.LocalTime `gorm:"column:create_time;autoCreateTime" json:"create_time"`
-	UpdateTime pkgmodels.LocalTime `gorm:"column:update_time;autoUpdateTime" json:"update_time"`
-	Type       int64               `gorm:"column:type;not null" json:"type"`
-	NameEn     string              `gorm:"column:name_en" json:"name_en"`
-	InfoEn     string              `gorm:"column:info_en" json:"info_en"`
-	Deleted    bool                `gorm:"column:deleted" json:"deleted"`
-}
-
-func (*GameCreator) TableName() string { return "gfg_game_creator" }
-
-type GameCreatorDTO struct {
-	ID         int64               `json:"id"`
-	Name       string              `json:"name"`
-	Info       string              `json:"info"`
-	MainURL    string              `json:"main_url"`
-	Links      []pkgmodels.KvModel `json:"links"`
-	Cover      string              `json:"cover"`
-	Contact    []pkgmodels.KvModel `json:"contact"`
-	CreateTime pkgmodels.LocalTime `json:"create_time"`
-	UpdateTime pkgmodels.LocalTime `json:"update_time"`
-	Type       int64               `json:"type"`
-	NameEn     string              `json:"name_en"`
-	InfoEn     string              `json:"info_en"`
-	Deleted    bool                `json:"deleted"`
-}
-
-type GameCreatorPayload struct {
-	Name    string              `json:"name"`
-	Info    string              `json:"info"`
-	MainURL string              `json:"main_url"`
-	Links   []pkgmodels.KvModel `json:"links"`
-	Cover   string              `json:"cover"`
-	Contact []pkgmodels.KvModel `json:"contact"`
-	Type    int64               `json:"type"`
-	NameEn  string              `json:"name_en"`
-	InfoEn  string              `json:"info_en"`
-}
-
 type Prize struct {
 	ID         int64               `gorm:"column:id;primaryKey" json:"id"`
 	Title      string              `gorm:"column:title;not null" json:"title"`

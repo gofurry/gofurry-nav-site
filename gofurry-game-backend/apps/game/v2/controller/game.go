@@ -134,14 +134,6 @@ func (api *gameV2Api) GetSimilarRecommendations(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetCreators(c fiber.Ctx) error {
-	data, err := newReadModelService().ListCreators(context.Background(), c.Query("lang", "zh"))
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
 func (api *gameV2Api) GetGameNews(c fiber.Ctx) error {
 	id := parseInt64(c.Query("id", "0"))
 	appid := parseInt64(c.Query("appid", "0"))

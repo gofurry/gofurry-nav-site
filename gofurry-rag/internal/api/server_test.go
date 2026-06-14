@@ -730,7 +730,6 @@ func TestSyncStatusReturnsSources(t *testing.T) {
 			{Source: contentsync.SourceNavSites, Service: "gofurry-nav-backend"},
 			{Source: contentsync.SourceGameDetails, Service: "gofurry-game-backend"},
 			{Source: contentsync.SourceGameNews, Service: "gofurry-game-backend"},
-			{Source: contentsync.SourceGameCreators, Service: "gofurry-game-backend"},
 		},
 	}
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/sync/status", nil)
@@ -749,7 +748,7 @@ func TestSyncStatusReturnsSources(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		t.Fatal(err)
 	}
-	if result.Code != 1 || len(result.Data.Sources) != 4 {
+	if result.Code != 1 || len(result.Data.Sources) != 3 {
 		t.Fatalf("result = %+v", result)
 	}
 }

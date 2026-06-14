@@ -654,48 +654,6 @@ ORDER BY task_type, started_at DESC, id DESC
 	return res, nil
 }
 
-func (dao *ReadModelDAO) ListSyncCreators(ctx context.Context, lang string) ([]v2models.GameV2SyncCreatorRow, common.GFError) {
-	if dao == nil || dao.db == nil {
-		return nil, common.NewDaoError("game v2 read model database is not initialized")
-	}
-	var selectFields string
-	switch normalizeDAOLang(lang) {
-	case "en":
-		selectFields = `
-id,
-COALESCE(NULLIF(name_en, ''), name) AS name,
-COALESCE(NULLIF(info_en, ''), info) AS info,
-main_url AS url,
-cover AS avatar,
-links,
-contact,
-type,
-create_time,
-update_time`
-	default:
-		selectFields = `
-id,
-name,
-info,
-main_url AS url,
-cover AS avatar,
-links,
-contact,
-type,
-create_time,
-update_time`
-	}
-	rows := []v2models.GameV2SyncCreatorRow{}
-	if err := dao.db.WithContext(ctx).Table("gfg_game_creator").
-		Select(selectFields).
-		Where("deleted IS NOT TRUE").
-		Order("id ASC").
-		Find(&rows).Error; err != nil {
-		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 创作者同步列表失败: %v", err))
-	}
-	return rows, nil
-}
-
 func (dao *ReadModelDAO) loadAggregateExtras(db *gorm.DB, aggregate *v2models.GameV2Aggregate, lang string, newsLimit int) error {
 	gameID := aggregate.Site.ID
 	if details, err := takeOptional[v2models.GfgGameV2Details](db.Table(v2models.TableNameGfgGameV2Details).Where("game_id = ?", gameID)); err != nil {

@@ -393,7 +393,6 @@
       "shortcutFunction": "Shortcut Functions",
       "dailyGame": "Daily Game",
       "oneClickAddToLibrary": "Add to Library",
-      "authorList": "Creator Menu",
       "steamOneClickAddRun": "Add to Steam Library & Run",
       "inputAppIDInstallFreeGame": "Enter AppID to install the corresponding free game or app with one click",
       "startInstall": "Start Installation",
@@ -402,8 +401,7 @@
       "connectServer": "Connect to Server",
       "relatedWebsites": "Related Websites",
       "installTip": "Steam AppID, for example 386180",
-      "runTip": "AppID or IP:Port",
-      "moreNews": "More News"
+      "runTip": "AppID or IP:Port"
     },
     "site": {
       "steam": "The world's largest PC game platform",
@@ -485,22 +483,12 @@
       "commitFail": "Submission failed. Please try again.",
       "onlineNow": "Online Now"
     },
-    "creator": {
-      "curator": "Curator",
-      "blogger": "Blogger",
-      "developer": "Developer",
-      "publisher": "Publisher",
-      "translator": "Translator",
-      "contentCreator": "Content Creator",
-      "contact": "Contact",
-      "link": "Links"
-    },
     "tools": {
       "label": "Game tools",
       "lottery": "Lottery",
       "ask": "Ask game knowledge",
       "askTitle": "Ask Game Knowledge",
-      "askDescription": "Answers from indexed gofurry game details, news, and creator profiles.",
+      "askDescription": "Answers from indexed gofurry game details and news.",
       "askPlaceholder": "Ask about games",
       "askSubmit": "Ask",
       "prompts": {

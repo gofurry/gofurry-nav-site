@@ -393,7 +393,6 @@
       "shortcutFunction": "快捷功能",
       "dailyGame": "每日一游",
       "oneClickAddToLibrary": "一键入库",
-      "authorList": "作者名录",
       "steamOneClickAddRun": "Steam 一键入库 & 运行",
       "inputAppIDInstallFreeGame": "输入AppID, 一键安装对应免费游戏或应用",
       "startInstall": "启动安装",
@@ -402,8 +401,7 @@
       "connectServer": "连接服务器",
       "relatedWebsites": "相关网站",
       "installTip": "Steam AppID, 例如 386180",
-      "runTip": "AppID 或 IP:Port",
-      "moreNews": "更新情报"
+      "runTip": "AppID 或 IP:Port"
     },
     "site": {
       "steam": "全球最大的 PC 游戏发行与游玩平台",
@@ -485,22 +483,12 @@
       "commitFail": "网络异常, 提交失败",
       "onlineNow": "当前在线"
     },
-    "creator": {
-      "curator": "鉴赏家",
-      "blogger": "博主",
-      "developer": "开发者",
-      "publisher": "发行者",
-      "translator": "汉化者",
-      "contentCreator": "内容创作者",
-      "contact": "联系方式",
-      "link": "相关链接"
-    },
     "tools": {
       "label": "游戏工具入口",
       "lottery": "去抽奖",
       "ask": "问问兽游资料",
       "askTitle": "问问兽游资料",
-      "askDescription": "基于 gofurry 已入库的游戏详情、新闻和创作者资料回答。",
+      "askDescription": "基于 gofurry 已入库的游戏详情和新闻回答。",
       "askPlaceholder": "输入你想了解的游戏问题",
       "askSubmit": "提问",
       "prompts": {

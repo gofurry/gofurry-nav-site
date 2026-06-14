@@ -577,32 +577,6 @@ type GameV2SyncNewsItem struct {
 	PublishedAt time.Time `json:"published_at"`
 }
 
-type GameV2SyncCreator struct {
-	ID         string       `json:"id"`
-	Name       string       `json:"name"`
-	Info       string       `json:"info"`
-	URL        string       `json:"url"`
-	Avatar     string       `json:"avatar"`
-	Links      []cm.KvModel `json:"links"`
-	Contact    []cm.KvModel `json:"contact"`
-	Type       int64        `json:"type"`
-	CreateTime cm.LocalTime `json:"create_time"`
-	UpdateTime cm.LocalTime `json:"update_time"`
-}
-
-type GameV2SyncCreatorRow struct {
-	ID         int64        `gorm:"column:id"`
-	Name       string       `gorm:"column:name"`
-	Info       string       `gorm:"column:info"`
-	URL        string       `gorm:"column:url"`
-	Avatar     string       `gorm:"column:avatar"`
-	Links      *string      `gorm:"column:links"`
-	Contact    *string      `gorm:"column:contact"`
-	Type       int64        `gorm:"column:type"`
-	CreateTime cm.LocalTime `gorm:"column:create_time"`
-	UpdateTime cm.LocalTime `gorm:"column:update_time"`
-}
-
 type GameV2ListItem struct {
 	ID           string            `json:"id"`
 	AppID        string            `json:"appid"`

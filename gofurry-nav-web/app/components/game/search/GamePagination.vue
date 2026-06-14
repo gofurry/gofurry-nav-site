@@ -1,14 +1,14 @@
 <template>
-  <div class="flex justify-center items-center gap-2 select-none">
+  <div class="game-search-pagination flex items-center justify-center gap-2 select-none">
 
     <!-- 页码 -->
     <template v-for="(item, idx) in displayPages" :key="idx">
       <span
           v-if="item.type === 'page'"
-          class="px-3 py-1 rounded-md text-sm cursor-pointer transition"
+          class="game-search-page-button"
           :class="item.page === currentPage
-          ? 'bg-orange-400 text-white'
-          : 'bg-orange-50 hover:bg-orange-200'"
+          ? 'game-search-page-button--active'
+          : 'game-search-page-button--idle'"
           @click="changePage(item.page!)"
       >
         {{ item.page }}
@@ -16,15 +16,14 @@
 
       <span
           v-else
-          class="px-3 py-1 rounded-md text-sm
-               bg-orange-50 text-gray-500 cursor-pointer"
+          class="game-search-page-button game-search-page-button--idle"
           @click="openJump"
       >
         ...
       </span>
     </template>
 
-    <span class="ml-2 text-xs text-gray-500">
+    <span class="ml-2 text-xs text-stone-500/80 dark:text-slate-300/60">
       {{ t("common.total") }} {{ total }} {{ t("common.record") }}
     </span>
 
@@ -34,23 +33,23 @@
         class="fixed inset-0 bg-black/20 z-50
              flex items-center justify-center"
     >
-      <div class="bg-orange-50 rounded-lg p-4 w-64 space-y-3">
+      <div class="game-search-jump-dialog w-64 space-y-3 rounded-lg p-4">
         <div class="text-sm font-semibold">{{ t("game.search.jumpPage") }}</div>
 
         <input
             v-model.number="jumpPage"
             :min="1"
             :max="totalPages"
-            class="w-full px-2 py-1 rounded-md text-sm bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-200"
+            class="game-search-jump-input w-full rounded-md px-2 py-1 text-sm focus:outline-none"
         />
 
         <div class="flex justify-end gap-2">
-          <button class="px-3 py-1 rounded text-sm cursor-pointer hover:bg-orange-100"
+          <button class="game-search-jump-action game-search-jump-action--ghost"
                   @click="showJump = false">
             {{ t("common.cancel") }}
           </button>
           <button
-              class="px-3 py-1 rounded text-sm bg-orange-400 text-white cursor-pointer hover:bg-orange-300"
+              class="game-search-jump-action game-search-jump-action--primary"
               @click="confirmJump"
           >
             {{ t("common.confirm") }}
@@ -121,3 +120,116 @@ const confirmJump = () => {
   }
 }
 </script>
+
+<style scoped>
+.game-search-page-button {
+  min-width: 2rem;
+  border-radius: 999px;
+  padding: 0.28rem 0.72rem;
+  cursor: pointer;
+  text-align: center;
+  font-size: 0.84rem;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.game-search-page-button--idle {
+  border: 1px solid rgba(126, 92, 58, 0.12);
+  background: rgba(255, 250, 242, 0.40);
+  color: rgba(124, 45, 18, 0.74);
+}
+
+.game-search-page-button--idle:hover {
+  border-color: rgba(180, 96, 24, 0.32);
+  background: rgba(255, 239, 213, 0.68);
+  color: rgba(99, 39, 15, 0.96);
+}
+
+.game-search-page-button--active {
+  border: 1px solid rgba(126, 92, 58, 0.18);
+  background: rgba(255, 250, 242, 0.78);
+  color: rgba(124, 45, 18, 0.96);
+  font-weight: 750;
+}
+
+.game-search-jump-dialog {
+  border: 1px solid rgba(126, 92, 58, 0.14);
+  background: rgba(255, 250, 242, 0.94);
+  color: rgba(45, 35, 28, 0.92);
+}
+
+.game-search-jump-input {
+  background: rgba(255, 239, 213, 0.72);
+  color: rgba(45, 35, 28, 0.92);
+}
+
+.game-search-jump-input:focus {
+  box-shadow: 0 0 0 2px rgba(120, 87, 56, 0.12);
+}
+
+.game-search-jump-action {
+  cursor: pointer;
+  border-radius: 0.48rem;
+  padding: 0.28rem 0.72rem;
+  font-size: 0.85rem;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.game-search-jump-action--ghost:hover {
+  background: rgba(255, 239, 213, 0.72);
+}
+
+.game-search-jump-action--primary {
+  background: rgba(124, 45, 18, 0.86);
+  color: rgba(255, 250, 242, 0.96);
+}
+
+.game-search-jump-action--primary:hover {
+  background: rgba(99, 39, 15, 0.96);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-page-button--idle {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(226, 232, 240, 0.055);
+  color: rgba(190, 208, 222, 0.70);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-page-button--idle:hover {
+  border-color: rgba(203, 213, 225, 0.36);
+  background: rgba(226, 232, 240, 0.12);
+  color: rgba(226, 232, 240, 0.88);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-page-button--active {
+  border-color: rgba(203, 213, 225, 0.18);
+  background: rgba(226, 232, 240, 0.13);
+  color: rgba(226, 232, 240, 0.88);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-jump-dialog {
+  border-color: rgba(226, 232, 240, 0.14);
+  background: rgba(30, 41, 59, 0.96);
+  color: rgba(226, 232, 240, 0.88);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-jump-input {
+  background: rgba(15, 23, 42, 0.50);
+  color: rgba(226, 232, 240, 0.88);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-jump-input:focus {
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.20);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-jump-action--ghost:hover {
+  background: rgba(226, 232, 240, 0.10);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-jump-action--primary {
+  background: rgba(203, 213, 225, 0.18);
+  color: rgba(241, 245, 249, 0.92);
+}
+
+:global(.games-search-page.games-page--dark) .game-search-jump-action--primary:hover {
+  background: rgba(203, 213, 225, 0.26);
+}
+</style>

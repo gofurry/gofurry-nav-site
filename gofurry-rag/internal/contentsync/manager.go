@@ -16,13 +16,12 @@ import (
 )
 
 const (
-	SourceAll          = "all"
-	SourceNavSites     = "nav_sites"
-	SourceGameDetails  = "game_details"
-	SourceGameNews     = "game_news"
-	SourceGameCreators = "game_creators"
-	TriggerManual      = "manual"
-	TriggerAuto        = "auto"
+	SourceAll         = "all"
+	SourceNavSites    = "nav_sites"
+	SourceGameDetails = "game_details"
+	SourceGameNews    = "game_news"
+	TriggerManual     = "manual"
+	TriggerAuto       = "auto"
 )
 
 type Repository interface {
@@ -44,7 +43,6 @@ type GameClient interface {
 	ListGames(ctx context.Context, locale string) ([]GameSummary, error)
 	GetGameInfo(ctx context.Context, id, locale string) (GameDetail, error)
 	ListGameNews(ctx context.Context, locale string) ([]GameNews, error)
-	ListCreators(ctx context.Context, locale string) ([]GameCreator, error)
 }
 
 type Manager struct {
@@ -300,7 +298,6 @@ func sourceDefinitions() []sourceDefinition {
 		{Source: SourceNavSites, Service: "gofurry-nav-backend", DocumentSource: "nav_site"},
 		{Source: SourceGameDetails, Service: "gofurry-game-backend", DocumentSource: "game_detail"},
 		{Source: SourceGameNews, Service: "gofurry-game-backend", DocumentSource: "game_news"},
-		{Source: SourceGameCreators, Service: "gofurry-game-backend", DocumentSource: "game_creator"},
 	}
 }
 
@@ -312,8 +309,6 @@ func sourceRunner(source string) (func(context.Context, *Manager) (syncCounts, e
 		return runGameDetailsSync, true
 	case SourceGameNews:
 		return runGameNewsSync, true
-	case SourceGameCreators:
-		return runGameCreatorsSync, true
 	default:
 		return nil, false
 	}
@@ -337,10 +332,10 @@ func normalizeSource(source string) (string, error) {
 		source = SourceAll
 	}
 	switch source {
-	case SourceAll, SourceNavSites, SourceGameDetails, SourceGameNews, SourceGameCreators:
+	case SourceAll, SourceNavSites, SourceGameDetails, SourceGameNews:
 		return source, nil
 	default:
-		return "", syncError{status: 400, message: "source must be one of nav_sites, game_details, game_news, game_creators, all"}
+		return "", syncError{status: 400, message: "source must be one of nav_sites, game_details, game_news, all"}
 	}
 }
 

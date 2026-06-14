@@ -173,10 +173,6 @@ func TestRunNowSyncsGameSources(t *testing.T) {
 			"zh": {{Name: "星火", Headline: "更新 1", PostTime: "2026-05-01", Author: "福狼", Content: "中文内容", URL: "https://example.com/news/1"}},
 			"en": {{Name: "Spark", Headline: "Update 1", PostTime: "2026-05-01", Author: "Furry", Content: "English content", URL: ""}},
 		},
-		gameCreators: map[string][]GameCreator{
-			"zh": {{ID: "3", Name: "创作者", Info: "中文简介", URL: "https://example.com/creator/3", Type: 1, Links: []GameKV{{Key: "X", Value: "https://x.com/creator"}}}},
-			"en": {{ID: "3", Name: "Creator", Info: "English intro", URL: "https://example.com/creator/3", Type: 1}},
-		},
 	}
 	manager := NewManager(config.Config{SyncTimeoutSeconds: 30}, repo, client, client)
 
@@ -186,17 +182,14 @@ func TestRunNowSyncsGameSources(t *testing.T) {
 	if err := manager.RunNow(context.Background(), SourceGameNews, TriggerManual); err != nil {
 		t.Fatal(err)
 	}
-	if err := manager.RunNow(context.Background(), SourceGameCreators, TriggerManual); err != nil {
-		t.Fatal(err)
-	}
-	if repo.created != 6 {
+	if repo.created != 4 {
 		t.Fatalf("created = %d", repo.created)
 	}
 
 	if err := manager.RunNow(context.Background(), SourceAll, TriggerManual); err != nil {
 		t.Fatal(err)
 	}
-	if repo.skipped < 6 {
+	if repo.skipped < 4 {
 		t.Fatalf("expected game documents to skip on second sync, skipped = %d", repo.skipped)
 	}
 
@@ -327,16 +320,15 @@ func (r *fakeRepo) CountDocumentsBySourceType(ctx context.Context) (map[string]i
 }
 
 type fakeSyncClient struct {
-	sites        map[string][]NavSite
-	groups       map[string][]NavGroup
-	details      map[string]NavSiteDetail
-	detailErrs   map[string]error
-	httpRecords  map[string]NavHTTPRecord
-	gameLists    map[string][]GameSummary
-	gameDetails  map[string]GameDetail
-	gameNews     map[string][]GameNews
-	gameCreators map[string][]GameCreator
-	block        chan struct{}
+	sites       map[string][]NavSite
+	groups      map[string][]NavGroup
+	details     map[string]NavSiteDetail
+	detailErrs  map[string]error
+	httpRecords map[string]NavHTTPRecord
+	gameLists   map[string][]GameSummary
+	gameDetails map[string]GameDetail
+	gameNews    map[string][]GameNews
+	block       chan struct{}
 }
 
 func (f *fakeSyncClient) ListSites(ctx context.Context, locale string) ([]NavSite, error) {
@@ -371,8 +363,4 @@ func (f *fakeSyncClient) GetGameInfo(ctx context.Context, id, locale string) (Ga
 
 func (f *fakeSyncClient) ListGameNews(ctx context.Context, locale string) ([]GameNews, error) {
 	return append([]GameNews(nil), f.gameNews[locale]...), nil
-}
-
-func (f *fakeSyncClient) ListCreators(ctx context.Context, locale string) ([]GameCreator, error) {
-	return append([]GameCreator(nil), f.gameCreators[locale]...), nil
 }

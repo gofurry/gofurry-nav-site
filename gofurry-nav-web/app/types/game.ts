@@ -262,19 +262,6 @@ export interface CommentReq {
     score: number
 }
 
-export interface CreatorResponse {
-    id: string
-    name: string
-    info: string
-    url: string
-    avatar: string
-    links: KvModel[]
-    contact: KvModel[]
-    type: number
-    create_time: string
-    update_time: string
-}
-
 // 抽奖
 
 export interface LotteryResp {

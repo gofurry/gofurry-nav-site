@@ -16,8 +16,6 @@
 - [Target Detail](https://go-furry.com/site/1/example.com) - Detail page pattern for a specific monitored target under a site. Replace both path parameters with real values.
 - [Game Detail](https://go-furry.com/games/1) - Detail page pattern for a game entry. Replace the numeric ID with a real game ID.
 - [Game Search](https://go-furry.com/games/search) - Search interface for game discovery.
-- [Game News](https://go-furry.com/games/news/more) - More game news and updates.
-- [Game Creators](https://go-furry.com/games/creator) - Creator-focused game listing page.
 
 ## Site Notes For Language Models
 

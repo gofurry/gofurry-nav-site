@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/gofurry/gofurry-rag/internal/db"
@@ -95,44 +94,6 @@ func runGameNewsSync(ctx context.Context, m *Manager) (syncCounts, error) {
 	return counts, joinSyncErrors(errs)
 }
 
-func runGameCreatorsSync(ctx context.Context, m *Manager) (syncCounts, error) {
-	locales := []string{"zh", "en"}
-	var counts syncCounts
-	var errs []error
-	for _, locale := range locales {
-		items, err := m.gameClient.ListCreators(ctx, locale)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("load %s game creators: %w", locale, err))
-			continue
-		}
-		for _, item := range items {
-			counts.Total++
-			metadata, content, title, targetURL, checksum, err := buildGameCreatorPayload(item, locale)
-			if err != nil {
-				counts.Failed++
-				errs = append(errs, fmt.Errorf("build creator payload %s/%s: %w", item.ID, locale, err))
-				continue
-			}
-			result, err := m.repo.UpsertSyncedDocument(ctx, db.SyncDocumentParams{
-				Title:      title,
-				Content:    content,
-				SourceType: "game_creator",
-				SourceID:   fmt.Sprintf("game-creator:%s:%s", strings.TrimSpace(item.ID), locale),
-				URL:        targetURL,
-				Checksum:   checksum,
-				Metadata:   metadata,
-			})
-			if err != nil {
-				counts.Failed++
-				errs = append(errs, fmt.Errorf("upsert creator %s/%s: %w", item.ID, locale, err))
-				continue
-			}
-			applySyncAction(&counts, result.Action)
-		}
-	}
-	return counts, joinSyncErrors(errs)
-}
-
 func buildGameDetailPayload(summary GameSummary, detail GameDetail, locale string) (json.RawMessage, string, string, string, string, error) {
 	groupNames := kvValues(detail.Groups)
 	tagNames := tagNames(detail.Tags)
@@ -184,24 +145,6 @@ func buildGameNewsPayload(item GameNews, locale string) (json.RawMessage, string
 	sourceID := fmt.Sprintf("game-news:%s:%s", locale, md5Hex(identity))
 	checksum := syncChecksum(title, targetURL, content, metadata)
 	return metadata, content, title, targetURL, sourceID, checksum, nil
-}
-
-func buildGameCreatorPayload(item GameCreator, locale string) (json.RawMessage, string, string, string, string, error) {
-	title := strings.TrimSpace(item.Name)
-	targetURL := firstNonEmpty(item.URL, firstKVValue(item.Links))
-	metadata, err := json.Marshal(map[string]any{
-		"category":   "creator",
-		"language":   locale,
-		"creator_id": strings.TrimSpace(item.ID),
-		"type":       item.Type,
-		"url":        strings.TrimSpace(item.URL),
-	})
-	if err != nil {
-		return nil, "", "", "", "", err
-	}
-	content := renderGameCreatorContent(item, locale)
-	checksum := syncChecksum(title, targetURL, content, metadata)
-	return metadata, content, title, targetURL, checksum, nil
 }
 
 func renderGameDetailContent(summary GameSummary, detail GameDetail, locale string) string {
@@ -274,30 +217,6 @@ func renderGameNewsContent(item GameNews, locale string) string {
 		}
 		builder.WriteString(body)
 	}
-	return strings.TrimSpace(builder.String())
-}
-
-func renderGameCreatorContent(item GameCreator, locale string) string {
-	links := joinMultiline(item.Links)
-	contacts := joinMultiline(item.Contact)
-	kind := strconv.FormatInt(item.Type, 10)
-
-	var builder strings.Builder
-	if locale == "en" {
-		writeSection(&builder, "Name", item.Name)
-		writeSection(&builder, "Profile", item.Info)
-		writeSection(&builder, "Type", kind)
-		writeSection(&builder, "Website", item.URL)
-		writeSection(&builder, "Links", links)
-		writeSection(&builder, "Contact", contacts)
-		return strings.TrimSpace(builder.String())
-	}
-	writeSection(&builder, "名称", item.Name)
-	writeSection(&builder, "简介", item.Info)
-	writeSection(&builder, "类型", kind)
-	writeSection(&builder, "主页", item.URL)
-	writeSection(&builder, "社交链接", links)
-	writeSection(&builder, "联系方式", contacts)
 	return strings.TrimSpace(builder.String())
 }
 

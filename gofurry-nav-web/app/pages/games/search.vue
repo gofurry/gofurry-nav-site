@@ -1,32 +1,35 @@
 <template>
   <div
-      class="relative isolate flex min-h-full w-full flex-col overflow-hidden"
+      class="games-search-page games-page relative isolate flex min-h-full w-full flex-col overflow-hidden bg-gray-50 transition-colors duration-500 dark:bg-[#07111f]"
+      :class="{ 'games-page--dark': isDarkTheme }"
   >
-    <GoFurryGridBackground :fixed="false" palette="nav-content" />
-    <div class="relative z-10 p-6 space-y-4">
+    <GoFurryGridBackground :fixed="false" palette="games" />
+    <h1 class="sr-only">{{ searchPageSeo.heading }}</h1>
+    <div class="relative z-10 mx-auto flex w-full max-w-[1700px] flex-1 flex-col gap-5 p-6">
 
-      <div class="relative flex gap-4 items-center w-full">
+      <div class="search-toolbar relative flex w-full items-center gap-3 rounded-[1.1rem] border p-3 backdrop-blur-[3px]">
         <div class="flex-1">
           <GameSidebarSearch />
         </div>
 
-        <div
-            class="shrink-0 px-4 py-2 rounded-lg cursor-pointer
-           text-orange-900 bg-orange-50
-           hover:bg-orange-200 transition"
+        <button
+            class="search-filter-button shrink-0"
+            type="button"
             @click="showFilter = true"
         >
           {{t("game.search.advancedFilter")}}
-        </div>
+        </button>
       </div>
 
-      <GameSearchResult
-          :game-list="gameList"
-          :current-page="query.pageNum"
-          :total-pages="totalPages"
-          :total="total"
-          @page-change="onPageChange"
-      />
+      <section class="search-result-shell rounded-[1.25rem] border p-4 backdrop-blur-[3px] sm:p-5">
+        <GameSearchResult
+            :game-list="gameList"
+            :current-page="query.pageNum"
+            :total-pages="totalPages"
+            :total="total"
+            @page-change="onPageChange"
+        />
+      </section>
 
       <GameSearchFilter
           v-if="showFilter"
@@ -40,7 +43,8 @@
 </template>
 
 <script setup lang="ts">
-import { watch, ref, reactive, onMounted } from 'vue'
+import { watch, ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import GameSidebarSearch from '@/components/game/main/sidebar/GameSidebarSearch.vue'
 import GameSearchFilter from '@/components/game/search/GameSearchFilter.vue'
 import GameSearchResult from '@/components/game/search/GameSearchResult.vue'
@@ -53,19 +57,42 @@ import type {
 } from '@/types/game'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import { useLangStore } from '@/store/langStore'
+import { useThemeStore } from '@/stores/theme'
 import { i18n } from '@/main'
 
 const { t } = i18n.global
+const { locale } = useI18n()
 
 const langStore = useLangStore()
+const themeStore = useThemeStore()
 const lang = ref(langStore.lang)
+const isDarkTheme = computed(() => themeStore.theme === 'dark')
 const route = useRoute()
 const router = useRouter()
+const searchPageSeo = computed(() => locale.value === 'en'
+  ? {
+      heading: 'GoFurry Game Search',
+      title: 'GoFurry Game Search - Find furry and anthro games',
+      description: 'Search GoFurry game records by keyword, tag, score, release time, update time, and community review signals.'
+    }
+  : {
+      heading: 'GoFurry 兽游搜索',
+      title: 'GoFurry 兽游搜索 - 搜索兽人和拟人题材游戏',
+      description: '按关键词、标签、评分、发布时间、更新时间和社区评价信号搜索 GoFurry 已收录的兽游资料。'
+    }
+)
 
 useHead({
   meta: [
     { name: 'robots', content: 'noindex, follow' }
   ]
+})
+
+useSeoMeta({
+  title: () => searchPageSeo.value.title,
+  description: () => searchPageSeo.value.description,
+  ogTitle: () => searchPageSeo.value.title,
+  ogDescription: () => searchPageSeo.value.description,
 })
 
 type RouteQueryValue = string | null | Array<string | null>
@@ -285,9 +312,66 @@ watch(
 )
 
 onMounted(async () => {
+  themeStore.initTheme()
   applyRouteQuery(route.query)
   await loadTags()
   initialized.value = true
   await fetchData()
 })
 </script>
+
+<style scoped>
+.search-toolbar,
+.search-result-shell {
+  border-color: rgba(126, 92, 58, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 250, 242, 0.08)),
+    rgba(255, 250, 242, 0.26);
+}
+
+.search-filter-button {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(126, 92, 58, 0.18);
+  border-radius: 0.78rem;
+  background: rgba(255, 250, 242, 0.42);
+  padding: 0 1rem;
+  color: rgba(124, 45, 18, 0.86);
+  font-size: 0.9rem;
+  font-weight: 650;
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.search-filter-button:hover {
+  border-color: rgba(180, 96, 24, 0.36);
+  background: rgba(255, 239, 213, 0.72);
+  color: rgba(99, 39, 15, 0.96);
+}
+
+:global(.games-search-page.games-page--dark) {
+  background: #07111f;
+  color: rgba(226, 232, 240, 0.88);
+}
+
+:global(.games-search-page.games-page--dark .search-toolbar),
+:global(.games-search-page.games-page--dark .search-result-shell) {
+  border-color: rgba(226, 232, 240, 0.15);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(226, 232, 240, 0.032)),
+    rgba(226, 232, 240, 0.046);
+}
+
+:global(.games-search-page.games-page--dark .search-filter-button) {
+  border-color: rgba(226, 232, 240, 0.15);
+  background: rgba(226, 232, 240, 0.065);
+  color: rgba(190, 208, 222, 0.74);
+}
+
+:global(.games-search-page.games-page--dark .search-filter-button:hover) {
+  border-color: rgba(203, 213, 225, 0.38);
+  background: rgba(226, 232, 240, 0.13);
+  color: rgba(226, 232, 240, 0.90);
+}
+</style>

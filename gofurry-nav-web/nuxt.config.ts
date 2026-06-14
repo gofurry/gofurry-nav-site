@@ -188,7 +188,6 @@ export default defineNuxtConfig({
     '/games': { ssr: true },
     '/games/**': { ssr: true },
     '/updates': { ssr: true },
-    '/games/news/more': { ssr: true },
     '/games/search': { ssr: false },
     '/games/prize/**': { ssr: false },
     '/archive': { ssr: false },

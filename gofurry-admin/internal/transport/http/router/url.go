@@ -107,12 +107,6 @@ func gameRoutes(root fiber.Router) {
 	root.Put("/comments/:id", gameadmin.GameAPI.UpdateComment)
 	root.Delete("/comments/:id", gameadmin.GameAPI.DeleteComment)
 
-	root.Get("/creators", gameadmin.GameAPI.ListCreators)
-	root.Post("/creators", gameadmin.GameAPI.CreateCreator)
-	root.Get("/creators/:id", gameadmin.GameAPI.GetCreator)
-	root.Put("/creators/:id", gameadmin.GameAPI.UpdateCreator)
-	root.Delete("/creators/:id", gameadmin.GameAPI.DeleteCreator)
-
 	root.Get("/prizes", gameadmin.GameAPI.ListPrizes)
 	root.Post("/prizes", gameadmin.GameAPI.CreatePrize)
 	root.Get("/prizes/:id", gameadmin.GameAPI.GetPrize)

@@ -1,5 +1,5 @@
 import type {
-    AnonymousReviewModel, CommentReq, CreatorResponse,
+    AnonymousReviewModel, CommentReq,
     GameTagRecord,
     LotteryReq, LotteryResp, RecommendedModel,
     SearchItemModel, SearchPageQueryRequest, SearchPageResponse,
@@ -30,10 +30,6 @@ export function getRecommendedGame(id: string, lang: string): Promise<Recommende
     return useApi('gameV2')('/game/recommend/similar', {
         query: { id, lang, region: 'CN', limit: 8 }
     })
-}
-
-export function getGameCreator(lang: string): Promise<CreatorResponse[]> {
-    return useApi('gameV2')('/game/creators', { query: { lang } })
 }
 
 // export function commitComment(query: CommentReq): Promise<ApiResult<string>> {

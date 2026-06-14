@@ -68,17 +68,6 @@ type GameNews struct {
 	URL      string `json:"url"`
 }
 
-type GameCreator struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`
-	Info    string   `json:"info"`
-	URL     string   `json:"url"`
-	Avatar  string   `json:"avatar"`
-	Links   []GameKV `json:"links"`
-	Contact []GameKV `json:"contact"`
-	Type    int64    `json:"type"`
-}
-
 func NewHTTPGameClient(baseURL string, timeout time.Duration) *HTTPGameClient {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
@@ -106,14 +95,6 @@ func (c *HTTPGameClient) GetGameInfo(ctx context.Context, id, locale string) (Ga
 func (c *HTTPGameClient) ListGameNews(ctx context.Context, locale string) ([]GameNews, error) {
 	var data []GameNews
 	if err := c.fetchJSON(ctx, "/game/sync/news", map[string]string{"lang": locale}, &data); err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
-func (c *HTTPGameClient) ListCreators(ctx context.Context, locale string) ([]GameCreator, error) {
-	var data []GameCreator
-	if err := c.fetchJSON(ctx, "/game/sync/creators", map[string]string{"lang": locale}, &data); err != nil {
 		return nil, err
 	}
 	return data, nil
