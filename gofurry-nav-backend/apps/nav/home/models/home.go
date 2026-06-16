@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	HomeSchemaVersion = 2
+	HomeSchemaVersion = 3
 
 	HomeStateReady   = "ready"
 	HomeStateMissing = "missing"
@@ -19,11 +19,14 @@ type HomeBackgrounds struct {
 }
 
 type HomeGroup struct {
-	ID       string             `json:"id"`
-	Name     string             `json:"name"`
-	Info     string             `json:"info"`
-	Priority int64              `json:"priority"`
-	Sites    []navmodels.SiteVo `json:"sites"`
+	ID         string             `json:"id"`
+	Name       string             `json:"name"`
+	Info       string             `json:"info"`
+	Priority   int64              `json:"priority"`
+	SiteCount  int                `json:"site_count"`
+	HasMore    bool               `json:"has_more"`
+	DetailPath string             `json:"detail_path"`
+	Sites      []navmodels.SiteVo `json:"sites"`
 }
 
 type HomeSpotlight struct {
@@ -39,7 +42,7 @@ type HomeResponse struct {
 	GeneratedAt    time.Time              `json:"generated_at"`
 	CacheState     map[string]string      `json:"cache_state"`
 	ReasonMessages map[string]string      `json:"reason_messages,omitempty"`
-	Sites          []navmodels.SiteVo     `json:"sites"`
+	Sites          []navmodels.SiteVo     `json:"sites,omitempty"`
 	Groups         []HomeGroup            `json:"groups"`
 	Spotlight      HomeSpotlight          `json:"spotlight"`
 	Ping           map[string]string      `json:"ping"`

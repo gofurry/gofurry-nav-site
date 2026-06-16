@@ -15,7 +15,7 @@ func init() {
 }
 
 func (api homeApi) GetHome(c fiber.Ctx) error {
-	data := service.GetHomeService().GetHome(c.Query("lang", "zh"))
+	data := service.GetCachedHome(c.Query("lang", "zh"))
 	return common.NewResponse(c).SuccessWithData(data)
 }
 

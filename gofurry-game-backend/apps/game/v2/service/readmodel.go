@@ -29,7 +29,7 @@ const (
 
 	similarRecommendationAlgorithmVersion = "similar-v2.3.1-hybrid-cbf"
 	similarPrecomputeLimit                = 64
-	gameHomeCacheTTL                      = 10 * time.Minute
+	gameHomeCacheTTL                      = 0
 )
 
 type gameDetailReader interface {

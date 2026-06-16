@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/gofurry/gofurry-nav-backend/apps/nav/cachekeys"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/dao"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
@@ -31,11 +32,7 @@ var navPageSingleton = new(navPageService)
 
 func GetNavPageService() *navPageService { return navPageSingleton }
 
-const (
-	siteListCacheKey         = "site:list:v2"
-	featuredSiteCacheKey     = "featured-sites:list"
-	siteViewCountCachePrefix = "site:view:count:"
-)
+const siteViewCountCachePrefix = "site:view:count:"
 
 const (
 	searchSuggestTimeout      = 3 * time.Second
@@ -56,7 +53,7 @@ func (svc *navPageService) GetSiteList(lang string) (res []models.SiteVo, err co
 	var jsonErr error
 
 	// 先从缓存读取
-	if cacheStr, _ := cs.GetString(siteListCacheKey); cacheStr != "" {
+	if cacheStr, _ := cs.GetString(cachekeys.SiteListV2); cacheStr != "" {
 		var records []models.GfnSite
 		if jsonErr = sonic.Unmarshal([]byte(cacheStr), &records); jsonErr == nil {
 			return svc.convertRecords(records, lang), nil
@@ -73,7 +70,7 @@ func (svc *navPageService) GetSiteList(lang string) (res []models.SiteVo, err co
 	// 更新缓存
 	go func() {
 		if b, jsonErr := sonic.Marshal(records); jsonErr == nil {
-			cs.Set(siteListCacheKey, string(b))
+			cs.Set(cachekeys.SiteListV2, string(b))
 		}
 	}()
 
@@ -89,8 +86,8 @@ func (svc *navPageService) GetGroupList(lang string) (res []models.GroupVo, err 
 	)
 
 	// 读缓存
-	groupCache, _ := cs.GetString("group:list")
-	mapCache, _ := cs.GetString("group:site:map")
+	groupCache, _ := cs.GetString(cachekeys.GroupList)
+	mapCache, _ := cs.GetString(cachekeys.GroupSiteMap)
 
 	var err1, err2 error
 	if groupCache != "" && mapCache != "" {
@@ -116,10 +113,10 @@ func (svc *navPageService) GetGroupList(lang string) (res []models.GroupVo, err 
 	// 异步回填缓存
 	go func() {
 		if b, err := sonic.Marshal(groupRecords); err == nil {
-			cs.Set("group:list", string(b))
+			cs.Set(cachekeys.GroupList, string(b))
 		}
 		if b, err := sonic.Marshal(mappingRecords); err == nil {
-			cs.Set("group:site:map", string(b))
+			cs.Set(cachekeys.GroupSiteMap, string(b))
 		}
 	}()
 
@@ -129,7 +126,7 @@ func (svc *navPageService) GetGroupList(lang string) (res []models.GroupVo, err 
 func (svc *navPageService) GetFeaturedSiteList() (res []models.FeaturedSiteVo, err common.GFError) {
 	var jsonErr error
 
-	if cacheStr, _ := cs.GetString(featuredSiteCacheKey); cacheStr != "" {
+	if cacheStr, _ := cs.GetString(cachekeys.FeaturedSiteList); cacheStr != "" {
 		var records []models.GfnFeaturedSite
 		if jsonErr = sonic.Unmarshal([]byte(cacheStr), &records); jsonErr == nil {
 			return svc.convertFeaturedSiteRecords(records), nil
@@ -144,7 +141,7 @@ func (svc *navPageService) GetFeaturedSiteList() (res []models.FeaturedSiteVo, e
 
 	go func() {
 		if b, jsonErr := sonic.Marshal(records); jsonErr == nil {
-			cs.Set(featuredSiteCacheKey, string(b))
+			cs.Set(cachekeys.FeaturedSiteList, string(b))
 		}
 	}()
 
@@ -520,6 +517,7 @@ func (svc *navPageService) convertRecords(records []models.GfnSite, lang string)
 			Nsfw:       v.Nsfw,
 			Welfare:    v.Welfare,
 			Icon:       v.Icon,
+			Weight:     v.Weight,
 			ViewCount:  currentSiteViewCount(v.ID, v.ViewCount),
 			CreateTime: v.CreateTime.String(),
 			UpdateTime: v.UpdateTime.String(),

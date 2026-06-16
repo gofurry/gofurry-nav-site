@@ -98,6 +98,8 @@ import { useI18n } from 'vue-i18n'
 import type { Site } from '@/types/nav'
 import { recordRecentSite, toExternalUrl } from '@/utils/recentSites'
 import { useThemeStore } from '@/stores/theme'
+import { getNavSiteDirectory } from '~/services/nav'
+import { readDisplayMode, subscribeModeChange, type DisplayMode } from '@/utils/modeStorage'
 import RagPromptPanel from '@/components/common/RagPromptPanel.vue'
 import askIconDark from '@/assets/svgs/ai-duotone-dark.svg'
 import askIconLight from '@/assets/svgs/ai-duotone.svg'
@@ -113,12 +115,8 @@ type RagPromptTemplate = {
   prompt: string
 }
 
-const props = defineProps<{
-  items: Site[]
-}>()
-
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const themeStore = useThemeStore()
 const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
 const defaultLogo = 'defaultLogo.svg'
@@ -127,6 +125,10 @@ const activePanel = ref<'search' | 'ask' | null>(null)
 const keyword = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const isDarkTheme = computed(() => themeStore.theme === 'dark')
+const displayMode = ref<DisplayMode>('sfw')
+const directoryItems = ref<Site[]>([])
+const directoryLoaded = ref(false)
+let stopModeSubscription: (() => void) | null = null
 const askIconSrc = computed(() => isDarkTheme.value ? askIconDark : askIconLight)
 const feedbackIconSrc = computed(() => isDarkTheme.value ? feedbackIconDark : feedbackIconLight)
 const searchIconSrc = computed(() => isDarkTheme.value ? searchIconDark : searchIconLight)
@@ -136,7 +138,8 @@ const results = computed(() => {
   if (!query) {
     return []
   }
-  return props.items
+  return directoryItems.value
+    .filter(item => displayMode.value === 'nsfw' || String(item.nsfw) !== '1')
     .filter(item => item.name?.toLowerCase().includes(query) || item.info?.toLowerCase().includes(query))
     .slice(0, 8)
 })
@@ -188,13 +191,39 @@ watch(activePanel, async (panel) => {
     return
   }
 
+  await ensureDirectoryLoaded()
   await nextTick()
   searchInputRef.value?.focus()
 })
 
+watch(
+  () => locale.value,
+  async () => {
+    directoryLoaded.value = false
+    directoryItems.value = []
+    if (activePanel.value === 'search') {
+      await ensureDirectoryLoaded()
+    }
+  }
+)
+
 function closePanel() {
   activePanel.value = null
   keyword.value = ''
+}
+
+async function ensureDirectoryLoaded() {
+  if (directoryLoaded.value) {
+    return
+  }
+
+  try {
+    directoryItems.value = await getNavSiteDirectory(locale.value === 'en' ? 'en' : 'zh')
+    directoryLoaded.value = true
+  } catch (error) {
+    console.error('Failed to load site directory:', error)
+    directoryItems.value = []
+  }
 }
 
 function joinAssetUrl(prefix: string, path: string) {
@@ -269,6 +298,16 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', handleKeydown))
-onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
+onMounted(() => {
+  displayMode.value = readDisplayMode()
+  stopModeSubscription = subscribeModeChange(({ displayMode: nextMode }) => {
+    displayMode.value = nextMode
+  })
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  stopModeSubscription?.()
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>

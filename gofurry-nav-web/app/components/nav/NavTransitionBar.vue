@@ -1,35 +1,37 @@
 <template>
   <div class="nav-transition-bar">
-    <div class="nav-transition-bar__inner mx-auto">
-      <div class="nav-transition-bar__time">
-        {{ formattedDateTime }}
-      </div>
+    <div class="nav-transition-bar__inner">
+      <div class="nav-transition-bar__content mx-auto w-full max-w-[2080px] px-4 sm:px-6 xl:px-8">
+        <div class="nav-transition-bar__time">
+          {{ formattedDateTime }}
+        </div>
 
-      <div class="nav-transition-bar__weather">
-        <div class="nav-transition-bar__weather-spacer"></div>
-        <iframe
-          allowtransparency="true"
-          src="https://i.tianqi.com/index.php?c=code&id=73&icon=1&num=3&color=d1d5dc"
-        ></iframe>
-      </div>
+        <div class="nav-transition-bar__weather">
+          <div class="nav-transition-bar__weather-spacer"></div>
+          <iframe
+            allowtransparency="true"
+            src="https://i.tianqi.com/index.php?c=code&id=73&icon=1&num=3&color=d1d5dc"
+          ></iframe>
+        </div>
 
-      <div v-if="saying" class="nav-transition-bar__quote-shell">
-        <div class="nav-transition-bar__quote-wrap">
-          <div
-            ref="quoteTriggerRef"
-            class="nav-transition-bar__quote"
-            tabindex="0"
-            @mouseenter="showAuthorPopover"
-            @mouseleave="hideAuthorPopover"
-            @focus="showAuthorPopover"
-            @blur="hideAuthorPopover"
-          >
-            {{ quoteDisplay }}
+        <div v-if="saying" class="nav-transition-bar__quote-shell">
+          <div class="nav-transition-bar__quote-wrap">
+            <div
+              ref="quoteTriggerRef"
+              class="nav-transition-bar__quote"
+              tabindex="0"
+              @mouseenter="showAuthorPopover"
+              @mouseleave="hideAuthorPopover"
+              @focus="showAuthorPopover"
+              @blur="hideAuthorPopover"
+            >
+              {{ quoteDisplay }}
+            </div>
           </div>
         </div>
-      </div>
-      <div v-else>
-        {{ locale === 'zh' ? '你的恩情狼不会忘记' : 'The pack remembers your kindness.' }}
+        <div v-else>
+          {{ locale === 'zh' ? '你的恩情狼不会忘记' : 'The pack remembers your kindness.' }}
+        </div>
       </div>
     </div>
   </div>

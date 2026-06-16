@@ -23,6 +23,7 @@ type GfnSite struct {
 	Country    *string   `gorm:"column:country;type:character varying(20);comment:站点所属国家" json:"country"`                                     // 站点所属国家
 	Nsfw       string    `gorm:"column:nsfw;type:character varying(4);not null;default:''::character varying;comment:是否NSFW 1 0" json:"nsfw"` // 是否NSFW 1 0
 	Welfare    string    `gorm:"column:welfare;type:character varying(4);not null;comment:是否公益项目 1 0" json:"welfare"`                         // 是否公益项目 1 0
+	Weight     int64     `gorm:"column:weight;type:bigint;not null;default:0;comment:权重" json:"weight"`                                        // 权重
 	Icon       *string   `gorm:"column:icon;type:character varying(255);comment:站点图标" json:"icon"`                                            // 站点图标
 	Deleted    *bool     `gorm:"column:deleted;type:boolean;comment:软删除" json:"deleted"`                                                      // 软删除
 }

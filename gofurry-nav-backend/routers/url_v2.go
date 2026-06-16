@@ -5,7 +5,10 @@ import (
 	collect "github.com/gofurry/gofurry-nav-backend/apps/nav/collect/controller"
 	detail "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/controller"
 	home "github.com/gofurry/gofurry-nav-backend/apps/nav/home/controller"
+	navpage "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/controller"
 	search "github.com/gofurry/gofurry-nav-backend/apps/nav/search/controller"
+	sitedirectory "github.com/gofurry/gofurry-nav-backend/apps/nav/sitedirectory/controller"
+	sitegroup "github.com/gofurry/gofurry-nav-backend/apps/nav/sitegroup/controller"
 	siteindex "github.com/gofurry/gofurry-nav-backend/apps/nav/siteindex/controller"
 	stats "github.com/gofurry/gofurry-nav-backend/apps/nav/stats/controller"
 	summary "github.com/gofurry/gofurry-nav-backend/apps/nav/summary/controller"
@@ -21,6 +24,10 @@ func navV2Api(g fiber.Router, cfg env.NavV2Config) {
 	g.Get("/updates", updates.UpdatesApi.GetUpdates)
 	g.Get("/search/suggestions", search.SearchApi.GetSearchSuggestions)
 	g.Get("/sites/index", siteindex.SiteIndexApi.GetSiteIndex)
+	g.Get("/sites/directory", sitedirectory.SiteDirectoryApi.GetSiteDirectory)
+	g.Get("/site-groups/:groupId/sites", sitegroup.SiteGroupApi.GetSiteGroupPage)
+	g.Get("/sync/sites", navpage.NavPageApi.GetSyncSites)
+	g.Get("/sync/site-groups", navpage.NavPageApi.GetSyncSiteGroups)
 	g.Post("/stats/page-view", stats.StatsApi.TouchPageView)
 	if cfg.DetailRoutesEnabled() {
 		g.Get("/sites/:siteId/detail", detail.DetailApi.GetSiteDetail)

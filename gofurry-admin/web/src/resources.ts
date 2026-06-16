@@ -69,7 +69,7 @@ export const resources: ResourceConfig[] = [
     section: 'nav',
     listEndpoint: '/api/v1/nav/sites',
     detailEndpoint: '/api/v1/nav/sites',
-    columns: [{ key: 'id', label: 'ID' }, { key: 'name', label: '名称' }],
+    columns: [{ key: 'id', label: 'ID' }, { key: 'name', label: '名称' }, { key: 'weight', label: '权重' }],
     fields: [
       { key: 'name', label: '中文名', type: 'text' },
       { key: 'name_en', label: '英文名', type: 'text' },
@@ -78,9 +78,10 @@ export const resources: ResourceConfig[] = [
       { key: 'country', label: '国家', type: 'text' },
       { key: 'nsfw', label: 'NSFW', type: 'select', options: bool01 },
       { key: 'welfare', label: '公益', type: 'select', options: bool01 },
+      { key: 'weight', label: '权重', type: 'number' },
       { key: 'icon', label: '图标', type: 'text' },
     ],
-    defaults: { name: '', name_en: '', info: '', info_en: '', country: '', nsfw: '0', welfare: '0', icon: '' },
+    defaults: { name: '', name_en: '', info: '', info_en: '', country: '', nsfw: '0', welfare: '0', weight: 0, icon: '' },
   },
   {
     key: 'site-groups',

@@ -188,6 +188,7 @@ export default defineNuxtConfig({
     '/sites': { ssr: true },
     '/sites/**': { ssr: true },
     '/site/**': { ssr: true },
+    '/site-groups/**': { ssr: true },
     '/games': { ssr: true },
     '/games/**': { ssr: true },
     '/updates': { ssr: true },

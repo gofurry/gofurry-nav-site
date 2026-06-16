@@ -27,16 +27,16 @@ func TestFetchJSONCapsErrorBody(t *testing.T) {
 	}
 }
 
-func TestListSitesUsesV2HomeEndpoint(t *testing.T) {
+func TestListSitesUsesV2SyncEndpoint(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v2/nav/home" {
+		if r.URL.Path != "/api/v2/nav/sync/sites" {
 			t.Fatalf("path = %q", r.URL.Path)
 		}
 		if got := r.URL.Query().Get("lang"); got != "en" {
 			t.Fatalf("lang = %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"code":1,"data":{"sites":[{"id":"1","name":"Site","domain":"example.com","info":"Info","country":"","nsfw":"0","welfare":"0"}],"groups":[]}}`))
+		_, _ = w.Write([]byte(`{"code":1,"data":[{"id":"1","name":"Site","domain":"example.com","info":"Info","country":"","nsfw":"0","welfare":"0"}]}`))
 	}))
 	defer server.Close()
 
@@ -50,13 +50,13 @@ func TestListSitesUsesV2HomeEndpoint(t *testing.T) {
 	}
 }
 
-func TestListGroupsAcceptsExpandedV2HomeSites(t *testing.T) {
+func TestListGroupsUsesDedicatedSyncEndpoint(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v2/nav/home" {
+		if r.URL.Path != "/api/v2/nav/sync/site-groups" {
 			t.Fatalf("path = %q", r.URL.Path)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"code":1,"data":{"sites":[],"groups":[{"id":"g1","name":"Group","sites":[{"id":"1","name":"Site"},{"site_id":"2"},{"id":3},"4"]}]}}`))
+		_, _ = w.Write([]byte(`{"code":1,"data":[{"id":"g1","name":"Group","sites":[{"id":"1","name":"Site"},{"site_id":"2"},{"id":3},"4"]}]}`))
 	}))
 	defer server.Close()
 

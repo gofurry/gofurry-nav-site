@@ -24,6 +24,9 @@ const (
 	navGroupListCacheKey    = "group:list"
 	navGroupSiteMapCacheKey = "group:site:map"
 	navFeaturedSiteCacheKey = "featured-sites:list"
+	navHomeCachePrefix      = "nav:home:v3:"
+	navSiteDirectoryPrefix  = "nav:site-directory:v1:"
+	navSiteGroupCachePrefix = "nav:site-group:v1:"
 )
 
 func normalizeSayingLanguage(lang string) (string, error) {
@@ -50,18 +53,26 @@ func invalidateNavCache(keys ...string) {
 
 func invalidateNavSiteListCache() {
 	invalidateNavCache(navSiteListCacheKey)
+	_ = cache.DelByPrefix(navHomeCachePrefix)
+	_ = cache.DelByPrefix(navSiteDirectoryPrefix)
+	_ = cache.DelByPrefix(navSiteGroupCachePrefix)
 }
 
 func invalidateNavGroupListCache() {
 	invalidateNavCache(navGroupListCacheKey)
+	_ = cache.DelByPrefix(navHomeCachePrefix)
+	_ = cache.DelByPrefix(navSiteGroupCachePrefix)
 }
 
 func invalidateNavGroupMapCache() {
 	invalidateNavCache(navGroupSiteMapCacheKey)
+	_ = cache.DelByPrefix(navHomeCachePrefix)
+	_ = cache.DelByPrefix(navSiteGroupCachePrefix)
 }
 
 func invalidateNavFeaturedSiteCache() {
 	invalidateNavCache(navFeaturedSiteCacheKey)
+	_ = cache.DelByPrefix(navHomeCachePrefix)
 }
 
 func (api *navAPI) ListSayings(c fiber.Ctx) error {
@@ -387,7 +398,7 @@ func (api *navAPI) DeleteCollectorDomain(c fiber.Ctx) error {
 
 func (api *navAPI) ListSites(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(navDB().Model(&models.Site{}).Where("deleted IS NOT TRUE").Order("id DESC"), page.Keyword, "name", "name_en", "info", "info_en", "CAST(id AS TEXT)")
+	base := adminutil.ApplyKeyword(navDB().Model(&models.Site{}).Where("deleted IS NOT TRUE").Order("weight DESC, update_time DESC, id DESC"), page.Keyword, "name", "name_en", "info", "info_en", "CAST(id AS TEXT)")
 	var items []models.Site
 	total, err := adminutil.Paginate(base, page, &items)
 	if err != nil {
@@ -425,6 +436,7 @@ func (api *navAPI) CreateSite(c fiber.Ctx) error {
 			Country: req.Country,
 			Nsfw:    strings.TrimSpace(req.Nsfw),
 			Welfare: strings.TrimSpace(req.Welfare),
+			Weight:  req.Weight,
 			Icon:    req.Icon,
 		}
 		if err := tx.Create(&created).Error; err != nil {
@@ -480,6 +492,7 @@ func (api *navAPI) UpdateSite(c fiber.Ctx) error {
 			"country": req.Country,
 			"nsfw":    strings.TrimSpace(req.Nsfw),
 			"welfare": strings.TrimSpace(req.Welfare),
+			"weight":  req.Weight,
 			"icon":    req.Icon,
 		}).Error; err != nil {
 			return common.NewDaoError(err.Error())
@@ -1018,6 +1031,7 @@ func siteDTO(item models.Site) models.SiteDTO {
 		Country:    item.Country,
 		Nsfw:       item.Nsfw,
 		Welfare:    item.Welfare,
+		Weight:     item.Weight,
 		Icon:       item.Icon,
 		Deleted:    item.Deleted,
 	}

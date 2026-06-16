@@ -30,4 +30,5 @@ func Schedule() {
 	task.UpdateSiteListCache()
 	task.UpdateGroupListCache()
 	task.UpdateFeaturedSiteListCache()
+	task.UpdateDerivedNavCaches()
 }

@@ -21,6 +21,9 @@ export interface Group {
     name: string;
     info: string;
     priority: number;
+    site_count?: number;
+    has_more?: boolean;
+    detail_path?: string;
     sites: Site[];
 }
 
@@ -332,12 +335,34 @@ export interface NavHomeResponse {
     generated_at: string;
     cache_state: Record<string, string>;
     reason_messages?: Record<string, string>;
-    sites: Site[];
+    sites?: Site[];
     groups: Group[];
     spotlight: NavHomeSpotlight;
     ping: Record<string, string>;
     saying: SayingModel | null;
     backgrounds: NavHomeBackgrounds;
+}
+
+export type NavSiteGroupState = 'ready' | 'missing';
+
+export interface NavSiteGroupPageResponse {
+    schema_version: number;
+    generated_at: string;
+    state: NavSiteGroupState;
+    reason_messages?: string[];
+    group?: {
+        id: string;
+        name: string;
+        info: string;
+        priority: number;
+        site_count: number;
+        detail_path: string;
+    } | null;
+    page: number;
+    page_size: number;
+    total: number;
+    has_more: boolean;
+    items: Site[];
 }
 
 export interface SiteViewResponse {

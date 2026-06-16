@@ -8,6 +8,10 @@ type SiteRecord = {
   domains: string[]
 }
 
+type SiteGroupRecord = {
+  id: number | string
+}
+
 type GameRecord = {
   id?: string
   game_id?: string
@@ -65,8 +69,11 @@ export default defineEventHandler(async (event) => {
     addLocalizedUrls(urls, path)
   }
 
-  const [sites, games] = await Promise.all([
+  const [sites, siteGroups, games] = await Promise.all([
     $fetch<ApiResult<{ items: SiteRecord[] }>>('/api/v2/nav/sites/index').then((res) => res.code === 1 ? res.data.items : []).catch(() => []),
+    $fetch<ApiResult<SiteGroupRecord[]>>('/api/v2/nav/sync/site-groups', {
+      query: { lang: 'zh' }
+    }).then((res) => res.code === 1 ? res.data : []).catch(() => []),
     $fetch<ApiResult<GameListPayload>>('/api/v2/game/list', {
       query: { limit: '5000', lang: 'zh', region: 'CN' }
     }).then((res) => res.code === 1 ? res.data : []).catch(() => [])
@@ -78,6 +85,12 @@ export default defineEventHandler(async (event) => {
       addLocalizedUrls(urls, domain
         ? `/site/${encodeURIComponent(String(site.id))}/${encodeURIComponent(domain)}`
         : `/site/${encodeURIComponent(String(site.id))}`)
+    }
+  }
+
+  for (const group of siteGroups) {
+    if (group?.id != null && group.id !== '') {
+      addLocalizedUrls(urls, `/site-groups/${encodeURIComponent(String(group.id))}`)
     }
   }
 

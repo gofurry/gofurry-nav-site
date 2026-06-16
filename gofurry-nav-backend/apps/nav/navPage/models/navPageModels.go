@@ -28,6 +28,7 @@ type SiteVo struct {
 	Nsfw       string  `form:"nsfw" json:"nsfw"`
 	Welfare    string  `form:"welfare" json:"welfare"`
 	Icon       *string `form:"icon" json:"icon"`
+	Weight     int64   `form:"weight" json:"weight,omitempty"`
 	ViewCount  int64   `form:"view_count" json:"view_count"`
 	CreateTime string  `form:"create_time" json:"create_time"`
 	UpdateTime string  `form:"update_time" json:"update_time"`

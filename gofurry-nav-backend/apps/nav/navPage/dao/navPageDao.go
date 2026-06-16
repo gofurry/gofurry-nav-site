@@ -38,6 +38,7 @@ func (dao *navPageDao) GetSiteList() (res []models.GfnSite, err common.GFError) 
 			s.country,
 			s.nsfw,
 			s.welfare,
+			s.weight,
 			s.view_count,
 			s.icon,
 			s.deleted
@@ -53,7 +54,7 @@ func (dao *navPageDao) GetSiteList() (res []models.GfnSite, err common.GFError) 
 			) cd ON TRUE
 		`).
 		Where("s.deleted IS NOT TRUE")
-	db.Order("s.id ASC")
+	db.Order("s.weight DESC, s.update_time DESC, s.id DESC")
 	db.Find(&res)
 	if dbErr := db.Error; dbErr != nil {
 		return res, common.NewDaoError(dbErr.Error())

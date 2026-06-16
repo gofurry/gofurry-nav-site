@@ -102,11 +102,6 @@ type NavHTTPRecord struct {
 	} `json:"meta"`
 }
 
-type navHomePayload struct {
-	Sites  []NavSite  `json:"sites"`
-	Groups []NavGroup `json:"groups"`
-}
-
 func NewHTTPNavClient(baseURL string, timeout time.Duration) *HTTPNavClient {
 	if timeout <= 0 {
 		timeout = 30 * time.Second
@@ -119,19 +114,15 @@ func NewHTTPNavClient(baseURL string, timeout time.Duration) *HTTPNavClient {
 }
 
 func (c *HTTPNavClient) ListSites(ctx context.Context, locale string) ([]NavSite, error) {
-	data, err := c.fetchHome(ctx, locale)
-	if err != nil {
-		return nil, err
-	}
-	return data.Sites, nil
+	var data []NavSite
+	err := c.fetchJSONWithBase(ctx, c.versionedBaseURL("v2"), "/nav/sync/sites", map[string]string{"lang": normalizeNavLocale(locale)}, &data)
+	return data, err
 }
 
 func (c *HTTPNavClient) ListGroups(ctx context.Context, locale string) ([]NavGroup, error) {
-	data, err := c.fetchHome(ctx, locale)
-	if err != nil {
-		return nil, err
-	}
-	return data.Groups, nil
+	var data []NavGroup
+	err := c.fetchJSONWithBase(ctx, c.versionedBaseURL("v2"), "/nav/sync/site-groups", map[string]string{"lang": normalizeNavLocale(locale)}, &data)
+	return data, err
 }
 
 func (c *HTTPNavClient) GetSiteDetail(ctx context.Context, id, locale string) (NavSiteDetail, error) {
@@ -158,12 +149,6 @@ func (c *HTTPNavClient) GetSiteHTTP(ctx context.Context, domain string) (NavHTTP
 	if err != nil && isOptionalLegacyNavHTTPError(err) {
 		return NavHTTPRecord{}, nil
 	}
-	return data, err
-}
-
-func (c *HTTPNavClient) fetchHome(ctx context.Context, locale string) (navHomePayload, error) {
-	var data navHomePayload
-	err := c.fetchJSONWithBase(ctx, c.versionedBaseURL("v2"), "/nav/home", map[string]string{"lang": normalizeNavLocale(locale)}, &data)
 	return data, err
 }
 

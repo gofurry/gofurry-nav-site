@@ -65,6 +65,7 @@ type Site struct {
 	Country    *string             `gorm:"column:country" json:"country"`
 	Nsfw       string              `gorm:"column:nsfw" json:"nsfw"`
 	Welfare    string              `gorm:"column:welfare" json:"welfare"`
+	Weight     int64               `gorm:"column:weight;not null;default:0" json:"weight"`
 	Icon       *string             `gorm:"column:icon" json:"icon"`
 	Deleted    bool                `gorm:"column:deleted" json:"deleted"`
 }
@@ -134,6 +135,7 @@ type SitePayload struct {
 	Country *string `json:"country"`
 	Nsfw    string  `json:"nsfw"`
 	Welfare string  `json:"welfare"`
+	Weight  int64   `json:"weight"`
 	Icon    *string `json:"icon"`
 }
 
@@ -148,6 +150,7 @@ type SiteDTO struct {
 	Country    *string             `json:"country"`
 	Nsfw       string              `json:"nsfw"`
 	Welfare    string              `json:"welfare"`
+	Weight     int64               `json:"weight"`
 	Icon       *string             `json:"icon"`
 	Deleted    bool                `json:"deleted"`
 }
