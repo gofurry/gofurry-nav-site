@@ -52,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { onBeforeUnmount, ref, watch } from "vue";
 import { getSearchSimple } from "@/utils/api/game";
 import type { SearchItemModel } from "@/types/game";
 import { useLangStore } from "@/store/langStore";
@@ -72,6 +72,11 @@ const hovering = ref(false);
 
 let timer: number | null = null;
 let blurTimer: number | null = null;
+let searchController: AbortController | null = null;
+let searchRequestToken = 0;
+
+const isAbortError = (error: unknown) =>
+  error instanceof Error && error.name === 'AbortError'
 
 // 监听语言变化
 watch(
@@ -87,6 +92,7 @@ watch(keyword, (val) => {
   if (timer) clearTimeout(timer);
 
   if (!val.trim()) {
+    searchController?.abort();
     results.value = [];
     showResults.value = false;
     return;
@@ -98,11 +104,22 @@ watch(keyword, (val) => {
 });
 
 async function fetchResults(val: string) {
+  searchController?.abort();
+  const controller = new AbortController();
+  const currentToken = ++searchRequestToken;
+  searchController = controller;
+
   try {
-    const res = await getSearchSimple(lang.value, val);
+    const res = await getSearchSimple(lang.value, val, { signal: controller.signal });
+    if (currentToken !== searchRequestToken) {
+      return;
+    }
     results.value = res;
     showResults.value = res.length > 0;
   } catch (e) {
+    if (isAbortError(e)) {
+      return;
+    }
     console.error("搜索失败", e);
   }
 }
@@ -128,6 +145,12 @@ function onBlur() {
     if (!hovering.value) showResults.value = false;
   }, 200);
 }
+
+onBeforeUnmount(() => {
+  if (timer) clearTimeout(timer);
+  if (blurTimer) clearTimeout(blurTimer);
+  searchController?.abort();
+});
 </script>
 
 <style scoped>

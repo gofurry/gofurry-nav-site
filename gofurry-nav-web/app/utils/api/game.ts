@@ -5,25 +5,36 @@ import type {
     SearchItemModel, SearchPageQueryRequest, SearchPageResponse,
 } from '@/types/game'
 import type { ApiResult } from '@/types/common'
+import type { NitroFetchOptions } from 'nitropack'
+
+type ApiRequestOptions = NitroFetchOptions<string>
 
 export function getRandomGame(): Promise<string> {
     return useApi('gameV2')('/game/recommend/random')
 }
 
-export function getSearchSimple(lang: string, txt: string): Promise<SearchItemModel[]> {
-    return useApi('gameV2')('/game/search/simple', { method: 'POST', body: { txt, lang } })
+export function getSearchSimple(
+    lang: string,
+    txt: string,
+    options: ApiRequestOptions = {}
+): Promise<SearchItemModel[]> {
+    return useApi('gameV2')('/game/search/simple', { method: 'POST', body: { txt, lang }, ...options })
 }
 
 export function getLatestReview(limit = 15): Promise<AnonymousReviewModel[]> {
     return useApi('gameV2')('/game/reviews/latest', { query: { limit } })
 }
 
-export function getTagList(lang: string): Promise<GameTagRecord[]> {
-    return useApi('gameV2')('/game/tags', { query: { lang } })
+export function getTagList(lang: string, options: ApiRequestOptions = {}): Promise<GameTagRecord[]> {
+    return useApi('gameV2')('/game/tags', { query: { lang }, ...options })
 }
 
-export function searchGameAdvanced(query: SearchPageQueryRequest, lang: string): Promise<SearchPageResponse> {
-    return useApi('gameV2')('/game/search/page', { method: 'POST', body: { ...query, lang } })
+export function searchGameAdvanced(
+    query: SearchPageQueryRequest,
+    lang: string,
+    options: ApiRequestOptions = {}
+): Promise<SearchPageResponse> {
+    return useApi('gameV2')('/game/search/page', { method: 'POST', body: { ...query, lang }, ...options })
 }
 
 export function getRecommendedGame(id: string, lang: string): Promise<RecommendedModel[]> {

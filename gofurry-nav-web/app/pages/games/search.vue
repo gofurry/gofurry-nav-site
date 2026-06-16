@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch, ref, reactive, onMounted, computed } from 'vue'
+import { watch, ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import GameSidebarSearch from '@/components/game/main/sidebar/GameSidebarSearch.vue'
 import GameSearchFilter from '@/components/game/search/GameSearchFilter.vue'
@@ -121,6 +121,10 @@ const createDefaultQuery = (): SearchPageQueryRequest => ({
 const query = reactive<SearchPageQueryRequest>(createDefaultQuery())
 
 const tagGroups = ref<GameTagRecord[]>([])
+let tagRequestController: AbortController | null = null
+let searchRequestController: AbortController | null = null
+let tagRequestToken = 0
+let searchRequestToken = 0
 
 const getQueryValue = (value: LocationQuery[string] | undefined) => {
   if (Array.isArray(value)) {
@@ -244,18 +248,54 @@ const normalizeRouteQuery = (routeQuery: LocationQuery | LocationQueryRaw) => {
   return JSON.stringify(normalized)
 }
 
+const isAbortError = (error: unknown) =>
+  error instanceof Error && error.name === 'AbortError'
+
 const loadTags = async () => {
-  tagGroups.value = await getTagList(lang.value)
+  tagRequestController?.abort()
+  const controller = new AbortController()
+  const currentToken = ++tagRequestToken
+  tagRequestController = controller
+
+  try {
+    const result = await getTagList(lang.value, { signal: controller.signal })
+    if (currentToken !== tagRequestToken) {
+      return
+    }
+    tagGroups.value = result
+  } catch (error) {
+    if (isAbortError(error)) {
+      return
+    }
+    throw error
+  }
 }
 
 const fetchData = async () => {
-  const res = await searchGameAdvanced(query, lang.value)
-  gameList.value = res.list ?? []
-  total.value = res.total ?? 0
-  totalPages.value = Math.max(
-      1,
-      Math.ceil(total.value / query.pageSize)
-  )
+  searchRequestController?.abort()
+  const controller = new AbortController()
+  const currentToken = ++searchRequestToken
+  const pageSize = query.pageSize
+  searchRequestController = controller
+
+  try {
+    const res = await searchGameAdvanced(query, lang.value, { signal: controller.signal })
+    if (currentToken !== searchRequestToken) {
+      return
+    }
+
+    gameList.value = res.list ?? []
+    total.value = res.total ?? 0
+    totalPages.value = Math.max(
+        1,
+        Math.ceil(total.value / pageSize)
+    )
+  } catch (error) {
+    if (isAbortError(error)) {
+      return
+    }
+    throw error
+  }
 }
 
 const syncRouteWithQuery = async () => {
@@ -287,8 +327,7 @@ watch(
     () => langStore.lang,
     async (val) => {
       lang.value = val
-      await loadTags()
-      await fetchData()
+      await Promise.all([loadTags(), fetchData()])
     }
 )
 
@@ -312,8 +351,12 @@ watch(
 onMounted(async () => {
   themeStore.initTheme()
   applyRouteQuery(route.query)
-  await loadTags()
+  await Promise.all([loadTags(), fetchData()])
   initialized.value = true
-  await fetchData()
+})
+
+onBeforeUnmount(() => {
+  tagRequestController?.abort()
+  searchRequestController?.abort()
 })
 </script>
