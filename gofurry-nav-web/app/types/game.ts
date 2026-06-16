@@ -386,6 +386,17 @@ export interface GameV2PanelRecord {
     latest_news: GameV2NewsItem[]
 }
 
+export interface GameHomeApiNewsRecord {
+    news_zh: GameV2NewsItem[]
+    news_en: GameV2NewsItem[]
+}
+
+export interface GameHomeApiResponse {
+    panel: GameV2PanelRecord
+    latest_news: GameHomeApiNewsRecord
+    latest_reviews: AnonymousReviewModel[]
+}
+
 export interface GameV2Release {
     coming_soon: boolean
     date: string

@@ -11,6 +11,7 @@ import type {
   GameV2NewsItem,
   GameV2PanelRecord,
   GameTagRecord,
+  GameHomeApiResponse,
   LatestNewsRecord,
   LotteryReq,
   LotteryResp,
@@ -24,10 +25,11 @@ import type {
 import { steamLibraryCoverUrl } from '~/utils/gameAssets'
 import type { ApiResult } from '~/types/api'
 
-interface GameHomeData {
+export interface GameHomeData {
   mainInfo: GameGroupRecord
   panelData: GamePanelRecord
   latestNews: LatestNewsRecord
+  latestReviews: AnonymousReviewModel[]
 }
 
 export function getGameList() {
@@ -35,14 +37,21 @@ export function getGameList() {
 }
 
 export async function getGameHomeData(lang = 'zh'): Promise<GameHomeData> {
-  const [panel, newsPair] = await Promise.all([
-    getGameV2Panel(lang),
-    getLatestGameNews(),
-  ])
+  const payload = await useApi('gameV2')<GameHomeApiResponse>('/game/home', {
+    query: {
+      lang: normalizeGameLang(lang),
+      region: 'CN',
+    }
+  })
+
   return {
-    mainInfo: mapV2PanelToGameGroup(panel),
-    panelData: mapV2PanelToGamePanel(panel),
-    latestNews: newsPair,
+    mainInfo: mapV2PanelToGameGroup(payload.panel),
+    panelData: mapV2PanelToGamePanel(payload.panel),
+    latestNews: {
+      news_zh: payload.latest_news.news_zh.map(mapV2News),
+      news_en: payload.latest_news.news_en.map(mapV2News),
+    },
+    latestReviews: payload.latest_reviews,
   }
 }
 

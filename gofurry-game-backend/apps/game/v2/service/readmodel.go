@@ -15,7 +15,9 @@ import (
 	"github.com/bytedance/sonic"
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/log"
 	cm "github.com/gofurry/gofurry-game-backend/common/models"
+	cs "github.com/gofurry/gofurry-game-backend/common/service"
 )
 
 const (
@@ -27,6 +29,7 @@ const (
 
 	similarRecommendationAlgorithmVersion = "similar-v2.3.1-hybrid-cbf"
 	similarPrecomputeLimit                = 64
+	gameHomeCacheTTL                      = 10 * time.Minute
 )
 
 type gameDetailReader interface {
@@ -262,6 +265,43 @@ func (svc *ReadModelService) ListLatestReviews(ctx context.Context, lang string,
 	return rows, nil
 }
 
+func (svc *ReadModelService) GetHome(ctx context.Context, lang string, region string) (v2models.GameV2HomeReadModel, common.GFError) {
+	var res v2models.GameV2HomeReadModel
+	if svc == nil || svc.reader == nil {
+		return res, common.NewServiceError("game v2 read model service is not initialized")
+	}
+
+	lang = normalizeLang(lang)
+	region = normalizeRegion(region)
+	cacheKey := gameHomeCacheKey(lang, region)
+
+	cached, hit := loadGameHomeCache(cacheKey)
+	if hit {
+		return cached, nil
+	}
+
+	log.Warn("首页缓存未命中", "cache_key", cacheKey)
+	return res, common.NewServiceError("game home cache is not ready")
+}
+
+func (svc *ReadModelService) RefreshHomeCache(ctx context.Context, lang string, region string) (v2models.GameV2HomeReadModel, common.GFError) {
+	var res v2models.GameV2HomeReadModel
+	if svc == nil || svc.reader == nil {
+		return res, common.NewServiceError("game v2 read model service is not initialized")
+	}
+
+	lang = normalizeLang(lang)
+	region = normalizeRegion(region)
+
+	res, err := svc.buildHome(ctx, lang, region)
+	if err != nil {
+		return res, err
+	}
+
+	saveGameHomeCache(gameHomeCacheKey(lang, region), res)
+	return res, nil
+}
+
 func (svc *ReadModelService) GetRandomGameID(ctx context.Context) (string, common.GFError) {
 	if svc == nil || svc.reader == nil {
 		return "", common.NewServiceError("game v2 read model service is not initialized")
@@ -453,6 +493,52 @@ func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.Ga
 	res.HighestDiscount = buildListItems(highestDiscount, query.Lang, query.Region)
 	res.LowPrice = buildListItems(lowPrice, query.Lang, query.Region)
 	res.LatestNews = latestNews
+	return res, nil
+}
+
+func (svc *ReadModelService) buildHome(ctx context.Context, lang string, region string) (v2models.GameV2HomeReadModel, common.GFError) {
+	var res v2models.GameV2HomeReadModel
+
+	panel, err := svc.GetPanelMain(ctx, v2models.GameV2PanelQuery{
+		Lang:           lang,
+		Region:         region,
+		Limit:          24,
+		TopOnlineLimit: 60,
+		PriceLimit:     120,
+		NewsLimit:      12,
+	})
+	if err != nil {
+		return res, err
+	}
+
+	otherLang := "en"
+	if lang == "en" {
+		otherLang = "zh"
+	}
+
+	otherLangNews, err := svc.GetLatestGameNews(ctx, v2models.GameV2NewsQuery{
+		Lang:  otherLang,
+		Limit: 12,
+	})
+	if err != nil {
+		return res, err
+	}
+
+	latestReviews, err := svc.ListLatestReviews(ctx, lang, 15)
+	if err != nil {
+		return res, err
+	}
+
+	res.Panel = panel
+	res.LatestReviews = latestReviews
+	if lang == "en" {
+		res.LatestNews.NewsEn = panel.LatestNews
+		res.LatestNews.NewsZh = otherLangNews
+	} else {
+		res.LatestNews.NewsZh = panel.LatestNews
+		res.LatestNews.NewsEn = otherLangNews
+	}
+
 	return res, nil
 }
 
@@ -1586,4 +1672,36 @@ func formatSyncTime(value time.Time) string {
 		return ""
 	}
 	return value.Format("2006-01-02 15:04:05")
+}
+
+func gameHomeCacheKey(lang string, region string) string {
+	return "game:v2:home:" + lang + ":" + region
+}
+
+func loadGameHomeCache(key string) (v2models.GameV2HomeReadModel, bool) {
+	var res v2models.GameV2HomeReadModel
+	data, err := cs.GetString(key)
+	if err != nil {
+		log.Error("读取首页缓存失败:", err)
+		return res, false
+	}
+	if strings.TrimSpace(data) == "" {
+		return res, false
+	}
+	if jsonErr := sonic.Unmarshal([]byte(data), &res); jsonErr != nil {
+		log.Error("解析首页缓存失败:", jsonErr)
+		return res, false
+	}
+	return res, true
+}
+
+func saveGameHomeCache(key string, payload v2models.GameV2HomeReadModel) {
+	data, err := sonic.Marshal(payload)
+	if err != nil {
+		log.Error("序列化首页缓存失败:", err)
+		return
+	}
+	if setErr := cs.SetExpire(key, data, gameHomeCacheTTL); setErr != nil {
+		log.Error("写入首页缓存失败:", setErr)
+	}
 }

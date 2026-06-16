@@ -4,11 +4,7 @@
       {{ titleText }}
     </h3>
 
-    <div v-if="loading" class="latest-review-state py-4 text-center text-xs">
-      {{ loadingText }}
-    </div>
-
-    <div v-else-if="reviews.length === 0" class="latest-review-state py-4 text-center text-xs">
+    <div v-if="reviews.length === 0" class="latest-review-state py-4 text-center text-xs">
       {{ emptyText }}
     </div>
 
@@ -57,9 +53,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getLatestReview } from '~/services/game'
 import type { AnonymousReviewModel } from '~/types/game'
 
 const props = defineProps<{
@@ -67,12 +62,10 @@ const props = defineProps<{
 }>()
 
 const { locale } = useI18n()
-const reviews = ref<AnonymousReviewModel[]>(props.initialReviews ?? [])
-const loading = ref(false)
+const reviews = computed(() => props.initialReviews ?? [])
 
 const isEnglish = computed(() => locale.value === 'en')
 const titleText = computed(() => (isEnglish.value ? 'Latest Reviews' : '最新评论'))
-const loadingText = computed(() => (isEnglish.value ? 'Loading...' : '加载中...'))
 const emptyText = computed(() => (isEnglish.value ? 'No reviews yet' : '暂无评论'))
 const regionLabel = computed(() => (isEnglish.value ? 'Region' : '评论地区'))
 
@@ -90,22 +83,4 @@ function formatTimeAgo(time: string): string {
   const days = Math.floor(hours / 24)
   return `${days} days ago`
 }
-
-async function fetchLatestReviews() {
-  try {
-    loading.value = true
-    reviews.value = await getLatestReview()
-  } catch (error) {
-    console.error('Failed to load latest reviews:', error)
-    reviews.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(() => {
-  if (!reviews.value.length) {
-    fetchLatestReviews()
-  }
-})
 </script>

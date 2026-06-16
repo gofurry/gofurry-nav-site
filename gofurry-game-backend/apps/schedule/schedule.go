@@ -21,8 +21,10 @@ func InitScheduleOnStart() {
 	go ScheduleByOneHour()
 	go ScheduleByHalfDay()
 	go task.UpdateGameViewCountCache()
+	task.RefreshGameHomeCache()
 
 	cs.AddCronJob(1*time.Hour, ScheduleByOneHour)
+	cs.AddCronJob(10*time.Minute, task.RefreshGameHomeCache)
 	cs.AddCronJob(12*time.Hour, ScheduleByHalfDay)
 	cs.AddCronJob(24*time.Hour, task.UpdateGameViewCountCache)
 

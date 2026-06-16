@@ -45,15 +45,7 @@ import GameInfoPanel from '@/components/game/main/content/GameInfoPanel.vue'
 import GameToolDock from '@/components/game/main/GameToolDock.vue'
 import SideBarPanel from '@/components/game/main/sidebar/SideBarPanel.vue'
 import { useThemeStore } from '@/stores/theme'
-import { getGameHomeData, getLatestReview } from '~/services/game'
-import type { AnonymousReviewModel, GameGroupRecord, GamePanelRecord, LatestNewsRecord } from '~/types/game'
-
-interface GamesPageData {
-  mainInfo: GameGroupRecord | null
-  panelData: GamePanelRecord | null
-  latestNews: LatestNewsRecord | null
-  latestReviews: AnonymousReviewModel[]
-}
+import { getGameHomeData, type GameHomeData } from '~/services/game'
 
 const { locale } = useI18n()
 const themeStore = useThemeStore()
@@ -73,33 +65,23 @@ const gamesPageSeo = computed(() => locale.value === 'en'
     }
 )
 
-const { data } = await useAsyncData<GamesPageData>(
+const { data } = await useAsyncData<GameHomeData | null>(
   () => `games-page:${lang.value}`,
   async () => {
-    const [homeData, latestReviews] = await Promise.all([
-      getGameHomeData(lang.value).catch(() => null),
-      getLatestReview().catch(() => []),
-    ])
-
-    return {
-      mainInfo: homeData?.mainInfo ?? null,
-      panelData: homeData?.panelData ?? null,
-      latestNews: homeData?.latestNews ?? null,
-      latestReviews,
-    }
+    return getGameHomeData(lang.value).catch(() => null)
   },
   {
     watch: [lang],
-    default: () => ({
-      mainInfo: null,
-      panelData: null,
-      latestNews: null,
-      latestReviews: [],
-    }),
+    default: () => null,
   }
 )
 
-const gamesPageData = computed(() => data.value!)
+const gamesPageData = computed<GameHomeData>(() => data.value ?? {
+  mainInfo: nullGameGroups(),
+  panelData: nullGamePanel(),
+  latestNews: { news_zh: [], news_en: [] },
+  latestReviews: [],
+})
 
 useSeoMeta({
   title: () => gamesPageSeo.value.title,
@@ -112,4 +94,22 @@ onMounted(() => {
   themeStore.initTheme()
   ambientReady.value = true
 })
+
+function nullGameGroups() {
+  return {
+    latest: [],
+    recent: [],
+    hot: [],
+    free: [],
+  }
+}
+
+function nullGamePanel() {
+  return {
+    top_count: { one: [], two: [], three: [], four: [] },
+    top_discount_vo: [],
+    top_price_vo: [],
+    bottom_price: { one: [], two: [], three: [], four: [] },
+  }
+}
 </script>

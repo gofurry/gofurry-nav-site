@@ -91,7 +91,6 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLangStore } from '@/store/langStore'
-import { getLatestGameNews } from '~/services/game'
 import type { LatestNewsRecord, NewsBaseModel } from '~/types/game'
 
 const props = defineProps<{
@@ -215,33 +214,19 @@ function moveByStep(direction: -1 | 1) {
   trackOffset.value = getTargetOffset(nextIndex)
 }
 
-function applyNewsRecord(record: LatestNewsRecord) {
+function applyNewsRecord(record: LatestNewsRecord | null) {
   cardRefs.value = {}
-  newsList.value = lang.value === 'en' ? record.news_en : record.news_zh
+  newsList.value = record
+    ? (lang.value === 'en' ? record.news_en : record.news_zh)
+    : []
   activeIndex.value = 0
   nextTick(() => {
     updateTrackOffset()
   })
 }
 
-async function loadNews() {
-  try {
-    const record = props.initialNewsRecord ?? await getLatestGameNews()
-    applyNewsRecord(record)
-  } catch (error) {
-    console.error('Failed to load latest game news:', error)
-    newsList.value = []
-  }
-}
-
-if (props.initialNewsRecord) {
-  applyNewsRecord(props.initialNewsRecord)
-}
-
 onMounted(() => {
-  if (!newsList.value.length) {
-    loadNews()
-  } else {
+  if (newsList.value.length) {
     nextTick(() => {
       updateTrackOffset()
     })
@@ -255,16 +240,11 @@ onUnmounted(() => {
 })
 
 watch(
-  () => langStore.lang,
-  (newLang) => {
-    lang.value = newLang
-
-    if (props.initialNewsRecord) {
-      applyNewsRecord(props.initialNewsRecord)
-      return
-    }
-
-    loadNews()
-  }
+  [() => props.initialNewsRecord, () => langStore.lang],
+  ([record, nextLang]) => {
+    lang.value = nextLang as 'zh' | 'en'
+    applyNewsRecord((record as LatestNewsRecord | null | undefined) ?? null)
+  },
+  { immediate: true }
 )
 </script>

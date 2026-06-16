@@ -608,6 +608,17 @@ type GameV2PanelReadModel struct {
 	LatestNews      []GameV2NewsItem `json:"latest_news"`
 }
 
+type GameV2HomeNewsRecord struct {
+	NewsZh []GameV2NewsItem `json:"news_zh"`
+	NewsEn []GameV2NewsItem `json:"news_en"`
+}
+
+type GameV2HomeReadModel struct {
+	Panel         GameV2PanelReadModel `json:"panel"`
+	LatestNews    GameV2HomeNewsRecord `json:"latest_news"`
+	LatestReviews []GameV2LatestReview `json:"latest_reviews"`
+}
+
 type GameV2DetailReadModel struct {
 	ID                  string                      `json:"id"`
 	AppID               string                      `json:"appid"`

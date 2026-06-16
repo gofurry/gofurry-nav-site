@@ -180,6 +180,14 @@ func (api *gameV2Api) GetPanelMain(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
+func (api *gameV2Api) GetHome(c fiber.Ctx) error {
+	data, err := newReadModelService().GetHome(context.Background(), c.Query("lang", "zh"), c.Query("region", "CN"))
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
 func newReadModelService() *v2service.ReadModelService {
 	return v2service.NewReadModelServiceWithReader(v2dao.NewReadModelDAO())
 }
