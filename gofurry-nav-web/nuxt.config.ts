@@ -36,6 +36,8 @@ const ragApiInternalBase = process.env.RAG_API_INTERNAL_BASE
   || (process.env.NODE_ENV === 'production' ? 'http://10.6.0.11:9997' : 'http://192.168.153.1:9997')
 const publicNavApiBase = process.env.NUXT_PUBLIC_NAV_API_BASE || '/api/v1'
 const navApiInternalBase = process.env.NAV_API_INTERNAL_BASE || process.env.NUXT_NAV_API_INTERNAL_BASE || 'http://192.168.153.1:9999/api/v1'
+const publicNavMonitorUrl = process.env.NUXT_PUBLIC_NAV_MONITOR_URL
+  || (process.env.NODE_ENV === 'production' ? 'https://nav.go-furry.com/monitor' : 'http://192.168.153.1:9999/monitor')
 
 function deriveNavV2ApiBase(base: string) {
   if (base.includes('/api/v1')) {
@@ -168,6 +170,7 @@ export default defineNuxtConfig({
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
       navApiBase: publicNavApiBase,
       navV2ApiBase: publicNavV2ApiBase,
+      navMonitorUrl: publicNavMonitorUrl,
       gameApiBase: publicGameApiBase,
       gameV2ApiBase: publicGameV2ApiBase,
       siteLogoPrefixUrl: process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/',

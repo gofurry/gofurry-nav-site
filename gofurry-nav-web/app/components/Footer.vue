@@ -41,15 +41,14 @@
             {{ t('footer.sections.openPlatform') }}
           </h3>
           <div class="flex gap-2">
-            <component
-                :is="openPlatformApiLink.external ? 'a' : 'NuxtLink'"
-                v-bind="openPlatformApiLink.external
-                  ? { href: openPlatformApiLink.href, target: '_blank', rel: 'noopener noreferrer' }
-                  : { to: openPlatformApiLink.to }"
+            <a
+                :href="navMonitorUrl"
+                target="_blank"
+                rel="noopener noreferrer"
                 class="gf-footer__link"
             >
               {{ t('footer.links.api') }}
-            </component>
+            </a>
             <a
                 href="https://op.go-furry.com"
                 target="_blank"
@@ -144,11 +143,8 @@ const currentYear = new Date().getFullYear()
 const sitemapUrl = '/sitemap.xml'
 const llmsUrl = '/llms.txt'
 const securityTxtUrl = '/.well-known/security.txt'
-const openPlatformApiLink = computed(() => (
-  import.meta.env.PROD
-    ? { external: true, href: 'https://open.go-furry.com' }
-    : { external: false, to: localePath('/updates') }
-))
+const config = useRuntimeConfig()
+const navMonitorUrl = computed(() => config.public.navMonitorUrl)
 
 const feedbackLinks = [
   {
