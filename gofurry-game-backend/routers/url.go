@@ -20,6 +20,7 @@ func gameV2Api(g fiber.Router) {
 	g.Get("/news/latest", gamev2.GameV2Api.GetLatestGameNews)
 	g.Get("/home", gamev2.GameV2Api.GetHome)
 	g.Get("/panel/main", gamev2.GameV2Api.GetPanelMain)
+	g.Post("/games/:id/view", gamev2.GameV2Api.TouchGameView)
 	g.Post("/search/simple", gamev2.GameV2Api.SearchSimple)
 	g.Post("/search/page", gamev2.GameV2Api.SearchPage)
 	g.Get("/reviews", gamev2.GameV2Api.GetGameReviews)

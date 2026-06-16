@@ -1,20 +1,27 @@
 <template>
   <div class="game-detail-prose space-y-6">
 
-    <!-- 详细描述 -->
-    <section v-if="game?.detailed_description">
+    <section v-if="game?.detailed_description" class="space-y-2">
+      <h4 class="game-detail-subtitle font-bold">{{ t('game.detail.detailedIntroduction') }}</h4>
       <div
-          class="max-w-none"
-          v-html="game.detailed_description"
+        class="max-w-none"
+        v-html="game.detailed_description"
       />
     </section>
 
-    <!-- 无内容占位 -->
+    <section v-if="game?.about_the_game" class="space-y-2">
+      <h4 class="game-detail-subtitle font-bold">{{ t('game.detail.aboutGame') }}</h4>
+      <div
+        class="max-w-none"
+        v-html="game.about_the_game"
+      />
+    </section>
+
     <div
-        v-if="!game?.detailed_description && !game?.about_the_game"
-        class="game-detail-empty text-sm"
+      v-if="!game?.detailed_description && !game?.about_the_game"
+      class="game-detail-empty text-sm"
     >
-      {{t("game.panel.none")}}
+      {{ t("game.panel.none") }}
     </div>
 
   </div>

@@ -174,11 +174,21 @@ func (dao *ReadModelDAO) ListTags(ctx context.Context, lang string) ([]v2models.
 	return rows, nil
 }
 
-func (dao *ReadModelDAO) GetGameReviews(ctx context.Context, gameID int64) (v2models.GameV2ReviewList, common.GFError) {
+func (dao *ReadModelDAO) GetGameReviews(ctx context.Context, query v2models.GameV2ReviewQuery) (v2models.GameV2ReviewList, common.GFError) {
 	var res v2models.GameV2ReviewList
 	if dao == nil || dao.db == nil {
 		return res, common.NewDaoError("game v2 read model database is not initialized")
 	}
+	if query.GameID <= 0 {
+		return res, common.NewDaoError("game_id is required")
+	}
+	if query.PageNum <= 0 {
+		query.PageNum = 1
+	}
+	if query.PageSize <= 0 {
+		query.PageSize = 5
+	}
+
 	db := dao.db.WithContext(ctx)
 	var stats struct {
 		Total    int64
@@ -186,20 +196,24 @@ func (dao *ReadModelDAO) GetGameReviews(ctx context.Context, gameID int64) (v2mo
 	}
 	if err := db.Table("gfg_game_comment").
 		Select("COUNT(*) AS total, COALESCE(AVG(score), 0) AS avg_score").
-		Where("game_id = ?", gameID).
+		Where("game_id = ?", query.GameID).
 		Take(&stats).Error; err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return res, common.NewDaoError(fmt.Sprintf("统计游戏 v2 评论失败: %v", err))
 	}
 	res.Total = int(stats.Total)
 	res.AvgScore = stats.AvgScore
+	res.PageNum = query.PageNum
+	res.PageSize = query.PageSize
 	res.Remarks = []v2models.GameV2ReviewItem{}
 	if stats.Total == 0 {
 		return res, nil
 	}
 	if err := db.Table("gfg_game_comment").
 		Select("region, content, score, create_time, ip, name").
-		Where("game_id = ?", gameID).
+		Where("game_id = ?", query.GameID).
 		Order("create_time DESC, id DESC").
+		Offset((query.PageNum - 1) * query.PageSize).
+		Limit(query.PageSize).
 		Find(&res.Remarks).Error; err != nil {
 		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 评论失败: %v", err))
 	}
@@ -752,20 +766,85 @@ func (dao *ReadModelDAO) loadSiteRecord(db *gorm.DB, query DetailQuery, dest *v2
 }
 
 func (dao *ReadModelDAO) loadLocalized(db *gorm.DB, gameID int64, lang string) (*v2models.GfgGameV2LocalizedDetails, error) {
-	localized, err := takeOptional[v2models.GfgGameV2LocalizedDetails](db.Table(v2models.TableNameGfgGameV2LocalizedDetails).
-		Where("game_id = ? AND lang = ?", gameID, lang))
+	requestedLang := normalizeDAOLang(lang)
+	localized, err := dao.takeLocalizedDetail(db, gameID, requestedLang)
 	if err != nil {
 		return nil, fmt.Errorf("查询游戏 v2 本地化详情失败: %w", err)
 	}
-	if localized != nil || lang == "zh" {
+
+	fallbackLang := localizedFallbackLang(requestedLang)
+	if fallbackLang == "" {
 		return localized, nil
 	}
-	fallback, err := takeOptional[v2models.GfgGameV2LocalizedDetails](db.Table(v2models.TableNameGfgGameV2LocalizedDetails).
-		Where("game_id = ? AND lang = ?", gameID, "zh"))
+
+	fallback, err := dao.takeLocalizedDetail(db, gameID, fallbackLang)
 	if err != nil {
-		return nil, fmt.Errorf("查询游戏 v2 中文回退详情失败: %w", err)
+		return nil, fmt.Errorf("查询游戏 v2 回退详情失败: %w", err)
 	}
-	return fallback, nil
+
+	return mergeLocalizedDetails(localized, fallback), nil
+}
+
+func (dao *ReadModelDAO) takeLocalizedDetail(db *gorm.DB, gameID int64, lang string) (*v2models.GfgGameV2LocalizedDetails, error) {
+	return takeOptional[v2models.GfgGameV2LocalizedDetails](db.Table(v2models.TableNameGfgGameV2LocalizedDetails).
+		Where("game_id = ? AND lang = ?", gameID, lang))
+}
+
+func localizedFallbackLang(lang string) string {
+	switch normalizeDAOLang(lang) {
+	case "en":
+		return "zh"
+	default:
+		return "en"
+	}
+}
+
+func mergeLocalizedDetails(primary *v2models.GfgGameV2LocalizedDetails, fallback *v2models.GfgGameV2LocalizedDetails) *v2models.GfgGameV2LocalizedDetails {
+	if primary == nil {
+		return fallback
+	}
+	if fallback == nil {
+		return primary
+	}
+
+	merged := *primary
+	if strings.TrimSpace(merged.Name) == "" {
+		merged.Name = fallback.Name
+	}
+	if merged.GameID == 0 {
+		merged.GameID = fallback.GameID
+	}
+	if merged.AppID == 0 {
+		merged.AppID = fallback.AppID
+	}
+	if strings.TrimSpace(merged.Lang) == "" {
+		merged.Lang = fallback.Lang
+	}
+	if merged.CollectedAt.IsZero() {
+		merged.CollectedAt = fallback.CollectedAt
+	}
+	if merged.UpdatedAt.IsZero() {
+		merged.UpdatedAt = fallback.UpdatedAt
+	}
+
+	merged.ShortDescription = chooseLocalizedText(primary.ShortDescription, fallback.ShortDescription)
+	merged.DetailedDescription = chooseLocalizedText(primary.DetailedDescription, fallback.DetailedDescription)
+	merged.AboutTheGame = chooseLocalizedText(primary.AboutTheGame, fallback.AboutTheGame)
+
+	return &merged
+}
+
+func chooseLocalizedText(primary *string, fallback *string) *string {
+	if strings.TrimSpace(strPtrValue(primary)) != "" {
+		return primary
+	}
+	if strings.TrimSpace(strPtrValue(fallback)) != "" {
+		return fallback
+	}
+	if primary != nil {
+		return primary
+	}
+	return fallback
 }
 
 func (dao *ReadModelDAO) loadNews(db *gorm.DB, gameID int64, lang string, limit int, dest *[]v2models.GfgGameV2News) error {
@@ -809,32 +888,298 @@ func (dao *ReadModelDAO) loadAggregatesByGameIDs(db *gorm.DB, gameIDs []int64, l
 	if len(gameIDs) == 0 {
 		return []v2models.GameV2Aggregate{}, nil
 	}
+	uniqueGameIDs := uniqueInt64s(gameIDs)
+
 	var sites []v2models.GameV2SiteRecord
 	if err := db.Table(tableNameGfgGame).
 		Select("id, name, name_en, info, info_en, resources, groups, links, appid, header, view_count, weight, create_time, update_time").
-		Where("id IN ?", gameIDs).
+		Where("id IN ?", uniqueGameIDs).
 		Find(&sites).Error; err != nil {
 		return nil, fmt.Errorf("查询游戏 v2 面板站内档案失败: %w", err)
 	}
 
-	siteMap := make(map[int64]v2models.GameV2SiteRecord, len(sites))
+	aggregateMap := make(map[int64]*v2models.GameV2Aggregate, len(sites))
 	for _, site := range sites {
-		siteMap[site.ID] = site
+		siteCopy := site
+		aggregateMap[site.ID] = &v2models.GameV2Aggregate{Site: siteCopy}
+	}
+
+	if err := dao.loadAggregateExtrasBatch(db, aggregateMap, uniqueGameIDs, lang); err != nil {
+		return nil, err
+	}
+
+	if newsLimit > 0 {
+		for _, gameID := range uniqueGameIDs {
+			aggregate := aggregateMap[gameID]
+			if aggregate == nil {
+				continue
+			}
+			if err := dao.loadNews(db, gameID, lang, newsLimit, &aggregate.News); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	aggregates := make([]v2models.GameV2Aggregate, 0, len(gameIDs))
 	for _, gameID := range gameIDs {
-		site, ok := siteMap[gameID]
-		if !ok {
+		aggregate := aggregateMap[gameID]
+		if aggregate == nil {
 			continue
 		}
-		aggregate := v2models.GameV2Aggregate{Site: site}
-		if err := dao.loadAggregateExtras(db, &aggregate, lang, newsLimit); err != nil {
-			return nil, err
-		}
-		aggregates = append(aggregates, aggregate)
+		aggregates = append(aggregates, *aggregate)
 	}
 	return aggregates, nil
+}
+
+func (dao *ReadModelDAO) loadAggregateExtrasBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64, lang string) error {
+	if len(gameIDs) == 0 || len(aggregateMap) == 0 {
+		return nil
+	}
+
+	if err := dao.loadDetailsBatch(db, aggregateMap, gameIDs); err != nil {
+		return err
+	}
+	if err := dao.loadLocalizedBatch(db, aggregateMap, gameIDs, lang); err != nil {
+		return err
+	}
+	if err := dao.loadPricesBatch(db, aggregateMap, gameIDs); err != nil {
+		return err
+	}
+	if err := dao.loadMediaBatch(db, aggregateMap, gameIDs); err != nil {
+		return err
+	}
+	if err := dao.loadRequirementsBatch(db, aggregateMap, gameIDs); err != nil {
+		return err
+	}
+	if err := dao.loadOnlineCountBatch(db, aggregateMap, gameIDs); err != nil {
+		return err
+	}
+	if err := dao.loadReviewStatsBatch(db, aggregateMap, gameIDs); err != nil {
+		return err
+	}
+	if err := dao.loadTagsBatch(db, aggregateMap, gameIDs, lang); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (dao *ReadModelDAO) loadDetailsBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64) error {
+	rows := make([]v2models.GfgGameV2Details, 0, len(gameIDs))
+	if err := db.Table(v2models.TableNameGfgGameV2Details).
+		Where("game_id IN ?", gameIDs).
+		Find(&rows).Error; err != nil {
+		return fmt.Errorf("批量查询游戏 v2 详情失败: %w", err)
+	}
+
+	for i := range rows {
+		row := rows[i]
+		aggregate := aggregateMap[row.GameID]
+		if aggregate == nil {
+			continue
+		}
+		aggregate.Details = &rows[i]
+	}
+	return nil
+}
+
+func (dao *ReadModelDAO) loadLocalizedBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64, lang string) error {
+	requestedLang := normalizeDAOLang(lang)
+	fallbackLang := localizedFallbackLang(requestedLang)
+	langs := []string{requestedLang}
+	if fallbackLang != "" && fallbackLang != requestedLang {
+		langs = append(langs, fallbackLang)
+	}
+
+	rows := make([]v2models.GfgGameV2LocalizedDetails, 0, len(gameIDs))
+	if err := db.Table(v2models.TableNameGfgGameV2LocalizedDetails).
+		Where("game_id IN ? AND lang IN ?", gameIDs, langs).
+		Find(&rows).Error; err != nil {
+		return fmt.Errorf("批量查询游戏 v2 本地化详情失败: %w", err)
+	}
+
+	primaryRows := make(map[int64]*v2models.GfgGameV2LocalizedDetails, len(rows))
+	fallbackRows := make(map[int64]*v2models.GfgGameV2LocalizedDetails, len(rows))
+	for i := range rows {
+		row := &rows[i]
+		switch normalizeDAOLang(row.Lang) {
+		case requestedLang:
+			primaryRows[row.GameID] = row
+		case fallbackLang:
+			fallbackRows[row.GameID] = row
+		}
+	}
+
+	for _, gameID := range gameIDs {
+		aggregate := aggregateMap[gameID]
+		if aggregate == nil {
+			continue
+		}
+		aggregate.Localized = mergeLocalizedDetails(primaryRows[gameID], fallbackRows[gameID])
+	}
+	return nil
+}
+
+func (dao *ReadModelDAO) loadPricesBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64) error {
+	rows := make([]v2models.GfgGameV2Price, 0)
+	if err := db.Table(v2models.TableNameGfgGameV2Prices).
+		Where("game_id IN ?", gameIDs).
+		Order("game_id ASC, region ASC").
+		Find(&rows).Error; err != nil {
+		return fmt.Errorf("批量查询游戏 v2 价格失败: %w", err)
+	}
+
+	for _, row := range rows {
+		aggregate := aggregateMap[row.GameID]
+		if aggregate == nil {
+			continue
+		}
+		aggregate.Prices = append(aggregate.Prices, row)
+	}
+	return nil
+}
+
+func (dao *ReadModelDAO) loadMediaBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64) error {
+	rows := make([]v2models.GfgGameV2Media, 0)
+	if err := db.Table(v2models.TableNameGfgGameV2Media).
+		Where("game_id IN ?", gameIDs).
+		Order("game_id ASC, media_type ASC, sort_order ASC, id ASC").
+		Find(&rows).Error; err != nil {
+		return fmt.Errorf("批量查询游戏 v2 媒体失败: %w", err)
+	}
+
+	for _, row := range rows {
+		aggregate := aggregateMap[row.GameID]
+		if aggregate == nil {
+			continue
+		}
+		aggregate.Media = append(aggregate.Media, row)
+	}
+	return nil
+}
+
+func (dao *ReadModelDAO) loadRequirementsBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64) error {
+	rows := make([]v2models.GfgGameV2Requirements, 0, len(gameIDs))
+	if err := db.Table(v2models.TableNameGfgGameV2Requirements).
+		Where("game_id IN ?", gameIDs).
+		Find(&rows).Error; err != nil {
+		return fmt.Errorf("批量查询游戏 v2 配置需求失败: %w", err)
+	}
+
+	for i := range rows {
+		row := rows[i]
+		aggregate := aggregateMap[row.GameID]
+		if aggregate == nil {
+			continue
+		}
+		aggregate.Requirements = &rows[i]
+	}
+	return nil
+}
+
+func (dao *ReadModelDAO) loadOnlineCountBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64) error {
+	rows := make([]v2models.GfgGameV2PlayerCount, 0, len(gameIDs))
+	if err := db.Raw(`
+SELECT DISTINCT ON (game_id) *
+FROM `+v2models.TableNameGfgGameV2PlayerCounts+`
+WHERE game_id IN ? AND status = 'success'
+ORDER BY game_id, collected_at DESC, id DESC
+`, gameIDs).Scan(&rows).Error; err != nil {
+		return fmt.Errorf("批量查询游戏 v2 在线人数失败: %w", err)
+	}
+
+	for i := range rows {
+		row := rows[i]
+		aggregate := aggregateMap[row.GameID]
+		if aggregate == nil {
+			continue
+		}
+		aggregate.OnlineCount = &rows[i]
+	}
+	return nil
+}
+
+func (dao *ReadModelDAO) loadReviewStatsBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64) error {
+	type reviewStatsRow struct {
+		GameID       int64   `gorm:"column:game_id"`
+		AvgScore     float64 `gorm:"column:avg_score"`
+		CommentCount int64   `gorm:"column:comment_count"`
+	}
+
+	rows := make([]reviewStatsRow, 0, len(gameIDs))
+	if err := db.Table("gfg_game_comment").
+		Select("game_id, COALESCE(AVG(score), 0) AS avg_score, COUNT(*) AS comment_count").
+		Where("game_id IN ?", gameIDs).
+		Group("game_id").
+		Find(&rows).Error; err != nil {
+		return fmt.Errorf("批量查询游戏 v2 评论统计失败: %w", err)
+	}
+
+	for _, row := range rows {
+		aggregate := aggregateMap[row.GameID]
+		if aggregate == nil {
+			continue
+		}
+		aggregate.ReviewStats = v2models.GameV2ReviewStats{
+			AvgScore:     row.AvgScore,
+			CommentCount: row.CommentCount,
+		}
+	}
+	return nil
+}
+
+func (dao *ReadModelDAO) loadTagsBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64, lang string) error {
+	type tagRow struct {
+		GameID int64  `gorm:"column:game_id"`
+		ID     string `gorm:"column:id"`
+		Name   string `gorm:"column:name"`
+		Desc   string `gorm:"column:desc"`
+	}
+
+	selectSQL := "tm.game_id, t.id::varchar as id, t.name as name, t.info as desc"
+	if normalizeDAOLang(lang) == "en" {
+		selectSQL = "tm.game_id, t.id::varchar as id, t.name_en as name, t.info_en as desc"
+	}
+
+	rows := make([]tagRow, 0)
+	if err := db.Table("gfg_tag_map tm").
+		Select(selectSQL).
+		Joins("JOIN gfg_tag t ON tm.tag_id = t.id").
+		Where("tm.game_id IN ?", gameIDs).
+		Order("tm.game_id ASC, t.id ASC").
+		Find(&rows).Error; err != nil {
+		return fmt.Errorf("批量查询游戏 v2 标签失败: %w", err)
+	}
+
+	for _, row := range rows {
+		aggregate := aggregateMap[row.GameID]
+		if aggregate == nil {
+			continue
+		}
+		aggregate.Tags = append(aggregate.Tags, v2models.GameV2Tag{
+			ID:   row.ID,
+			Name: row.Name,
+			Desc: row.Desc,
+		})
+	}
+	return nil
+}
+
+func uniqueInt64s(values []int64) []int64 {
+	if len(values) == 0 {
+		return nil
+	}
+
+	res := make([]int64, 0, len(values))
+	seen := make(map[int64]struct{}, len(values))
+	for _, value := range values {
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		res = append(res, value)
+	}
+	return res
 }
 
 func (dao *ReadModelDAO) queryNewsRows(db *gorm.DB, query v2models.GameV2NewsQuery, requireGame bool) ([]v2models.GameV2NewsRow, error) {

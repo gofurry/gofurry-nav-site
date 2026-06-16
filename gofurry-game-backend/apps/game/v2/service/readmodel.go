@@ -37,7 +37,7 @@ type gameDetailReader interface {
 	ListGameAggregates(ctx context.Context, query v2models.GameV2ListQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	SearchGames(ctx context.Context, query v2models.GameV2SearchPageQuery) (cm.PageResponse, common.GFError)
 	ListTags(ctx context.Context, lang string) ([]v2models.GameV2TagRecord, common.GFError)
-	GetGameReviews(ctx context.Context, gameID int64) (v2models.GameV2ReviewList, common.GFError)
+	GetGameReviews(ctx context.Context, query v2models.GameV2ReviewQuery) (v2models.GameV2ReviewList, common.GFError)
 	ListLatestReviews(ctx context.Context, lang string, limit int) ([]v2models.GameV2LatestReview, common.GFError)
 	GetRandomGameID(ctx context.Context) (string, common.GFError)
 	ListSimilarRecommendations(ctx context.Context, query v2models.GameV2SimilarRecommendationQuery) ([]v2models.GameV2RecommendationRow, common.GFError)
@@ -154,6 +154,7 @@ func (svc *ReadModelService) GetGameDetail(ctx context.Context, req v2models.Gam
 	}
 
 	res = buildDetailReadModel(aggregate, requestedLang, region)
+	res.Site.ViewCount = loadGameCurrentViewCount(aggregate.Site.ID, res.Site.ViewCount)
 	return res, nil
 }
 
@@ -232,7 +233,7 @@ func (svc *ReadModelService) ListTags(ctx context.Context, lang string) ([]v2mod
 	return svc.reader.ListTags(ctx, normalizeLang(lang))
 }
 
-func (svc *ReadModelService) GetGameReviews(ctx context.Context, id string) (v2models.GameV2ReviewList, common.GFError) {
+func (svc *ReadModelService) GetGameReviews(ctx context.Context, id string, pageNum int, pageSize int) (v2models.GameV2ReviewList, common.GFError) {
 	var res v2models.GameV2ReviewList
 	if svc == nil || svc.reader == nil {
 		return res, common.NewServiceError("game v2 read model service is not initialized")
@@ -241,7 +242,13 @@ func (svc *ReadModelService) GetGameReviews(ctx context.Context, id string) (v2m
 	if parseErr != nil || gameID <= 0 {
 		return res, common.NewServiceError("Game ID 转换有误")
 	}
-	res, err := svc.reader.GetGameReviews(ctx, gameID)
+	pageNum = clampLimit(pageNum, 1, 1000000)
+	pageSize = clampLimit(pageSize, 5, 50)
+	res, err := svc.reader.GetGameReviews(ctx, v2models.GameV2ReviewQuery{
+		GameID:   gameID,
+		PageNum:  pageNum,
+		PageSize: pageSize,
+	})
 	if err != nil {
 		return res, err
 	}

@@ -65,7 +65,7 @@ func (reader *fakeDetailReader) ListTags(_ context.Context, _ string) ([]v2model
 	return reader.tags, nil
 }
 
-func (reader *fakeDetailReader) GetGameReviews(_ context.Context, _ int64) (v2models.GameV2ReviewList, common.GFError) {
+func (reader *fakeDetailReader) GetGameReviews(_ context.Context, _ v2models.GameV2ReviewQuery) (v2models.GameV2ReviewList, common.GFError) {
 	if reader.err != nil {
 		return v2models.GameV2ReviewList{}, reader.err
 	}
@@ -387,7 +387,7 @@ func TestGetGameReviewsDesensitizesIP(t *testing.T) {
 	}
 
 	svc := NewReadModelServiceWithReader(reader)
-	res, err := svc.GetGameReviews(context.Background(), "1")
+	res, err := svc.GetGameReviews(context.Background(), "1", 1, 5)
 	if err != nil {
 		t.Fatalf("GetGameReviews returned error: %s", err.GetMsg())
 	}

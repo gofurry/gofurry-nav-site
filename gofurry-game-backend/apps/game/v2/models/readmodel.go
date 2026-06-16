@@ -317,7 +317,15 @@ type GameV2SearchPageQuery struct {
 type GameV2ReviewList struct {
 	Total    int                `json:"total"`
 	AvgScore float64            `json:"avg_score"`
+	PageNum  int                `json:"page_num"`
+	PageSize int                `json:"page_size"`
 	Remarks  []GameV2ReviewItem `json:"remarks"`
+}
+
+type GameV2ReviewQuery struct {
+	GameID   int64
+	PageNum  int
+	PageSize int
 }
 
 type GameV2ReviewItem struct {
@@ -752,4 +760,9 @@ type GameV2SiteInfo struct {
 type GameV2ReadModelExtraPayload struct {
 	ContentDescriptors any `json:"content_descriptors,omitempty"`
 	Ratings            any `json:"ratings,omitempty"`
+}
+
+type GameV2ViewTouchResponse struct {
+	GameID    int64 `json:"game_id"`
+	ViewCount int64 `json:"view_count"`
 }

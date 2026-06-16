@@ -8,6 +8,8 @@
         <GameDetailMain
           :game="gameDetailData.gameBaseInfo"
           :remark="gameDetailData.remarkInfo"
+          :recommend="gameDetailData.recommendedGame"
+          :game-id="gameId"
         />
       </section>
 
@@ -22,12 +24,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import GameDetailMain from '@/components/game/detail/GameDetailMain.vue'
 import GameDetailSidebar from '@/components/game/detail/GameDetailSidebar.vue'
-import { getGameBaseInfo, getGameRemark, getRecommendedGame } from '~/services/game'
+import { getGameBaseInfo, getGameRemark, getRecommendedGame, touchGameView } from '~/services/game'
 import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '~/types/game'
 import { steamLibraryCoverUrl } from '~/utils/gameAssets'
 import { buildGameDetailSeo } from '~/utils/seo'
@@ -40,6 +42,8 @@ interface GameDetailPageData {
 
 const route = useRoute()
 const { locale } = useI18n()
+const touchedGameIds = new Set<string>()
+const touchingGameIds = new Set<string>()
 
 const gameId = computed(() => String(route.params.id ?? ''))
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
@@ -49,7 +53,7 @@ const { data } = await useAsyncData<GameDetailPageData>(
   async () => {
     const [gameBaseInfo, remarkInfo, recommendedGame] = await Promise.all([
       getGameBaseInfo(gameId.value, lang.value).catch(() => null),
-      getGameRemark(gameId.value).catch(() => null),
+      getGameRemark(gameId.value, 1, 5).catch(() => null),
       getRecommendedGame(gameId.value, lang.value).catch(() => null),
     ])
 
@@ -85,4 +89,34 @@ useSeoMeta({
   ogImage: () => seoImage.value,
   twitterCard: 'summary_large_image',
 })
+
+onMounted(() => {
+  watch(
+    [gameId, () => data.value?.gameBaseInfo?.appid],
+    ([id, appid]) => {
+      if (!id || !appid || touchedGameIds.has(id) || touchingGameIds.has(id)) {
+        return
+      }
+      void touchCurrentGameView(id)
+    },
+    { immediate: true }
+  )
+})
+
+async function touchCurrentGameView(id: string) {
+  touchingGameIds.add(id)
+
+  try {
+    const response = await touchGameView(id)
+    touchedGameIds.add(id)
+
+    if (gameId.value === id && data.value?.gameBaseInfo && Number.isFinite(response.view_count)) {
+      data.value.gameBaseInfo.view_count = response.view_count
+    }
+  } catch {
+    // 浏览量统计是旁路副作用，失败不影响详情页主内容展示。
+  } finally {
+    touchingGameIds.delete(id)
+  }
+}
 </script>

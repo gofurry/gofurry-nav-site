@@ -12,6 +12,7 @@ import type {
   GameV2PanelRecord,
   GameTagRecord,
   GameHomeApiResponse,
+  GameViewTouchResponse,
   LatestNewsRecord,
   LotteryReq,
   LotteryResp,
@@ -107,13 +108,19 @@ export function getGameBaseInfo(id: string, lang: string): Promise<GameBaseInfoR
   }).then(mapV2Detail)
 }
 
-export function getGameRemark(id: string): Promise<RemarkResponse> {
-  return useApi('gameV2')('/game/reviews', { query: { id } })
+export function getGameRemark(id: string, page = 1, limit = 5): Promise<RemarkResponse> {
+  return useApi('gameV2')('/game/reviews', { query: { id, page, limit } })
 }
 
 export function getRecommendedGame(id: string, lang: string): Promise<RecommendedModel[]> {
   return useApi('gameV2')('/game/recommend/similar', {
     query: { id, lang: normalizeGameLang(lang), region: 'CN', limit: 8 }
+  })
+}
+
+export function touchGameView(id: string): Promise<GameViewTouchResponse> {
+  return useApi('gameV2')(`/game/games/${id}/view`, {
+    method: 'POST'
   })
 }
 
@@ -252,9 +259,30 @@ function bestV2Cover(game: GameV2ListItem) {
 }
 
 function mapV2Detail(detail: GameV2DetailRecord): GameBaseInfoResponse {
+  const requirements = {
+    pc: {
+      id: Number(detail.id || 0),
+      minimum: detail.requirements?.pc?.minimum ?? '',
+      recommended: detail.requirements?.pc?.recommended ?? '',
+    },
+    mac: {
+      id: Number(detail.id || 0),
+      minimum: detail.requirements?.mac?.minimum ?? '',
+      recommended: detail.requirements?.mac?.recommended ?? '',
+    },
+    linux: {
+      id: Number(detail.id || 0),
+      minimum: detail.requirements?.linux?.minimum ?? '',
+      recommended: detail.requirements?.linux?.recommended ?? '',
+    },
+  }
+
   return {
     name: detail.name,
     info: detail.summary || detail.short_description,
+    type: detail.type ?? '',
+    is_free: Boolean(detail.is_free),
+    short_description: detail.short_description || detail.summary || '',
     create_time: detail.site?.create_time || detail.collected_at || '',
     update_time: detail.site?.update_time || detail.updated_at || '',
     resources: detail.site?.resources ?? [],
@@ -281,17 +309,17 @@ function mapV2Detail(detail: GameV2DetailRecord): GameBaseInfoResponse {
       url: detail.support_info?.url ?? '',
       email: detail.support_info?.email ?? '',
     },
+    support_info: detail.support_info ?? {},
     screenshots: (detail.media?.screenshots ?? []).map((item) => ({
       id: Number(item.id || 0),
       path_thumbnail: item.thumbnail_url,
       path_full: item.url,
     })),
     movies: (detail.media?.movies ?? []).map(mapV2Movie),
-    pc_requirements: {
-      id: Number(detail.id || 0),
-      minimum: detail.requirements?.pc?.minimum ?? '',
-      recommended: detail.requirements?.pc?.recommended ?? '',
-    },
+    requirements,
+    pc_requirements: requirements.pc,
+    content_descriptors: detail.extra?.content_descriptors ?? null,
+    ratings: detail.extra?.ratings ?? null,
     online_count: detail.online_count?.count ?? 0,
     count_collect_time: detail.online_count?.collected_at ?? '',
     view_count: detail.site?.view_count ?? 0,

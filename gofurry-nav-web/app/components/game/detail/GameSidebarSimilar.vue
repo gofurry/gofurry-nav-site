@@ -67,6 +67,7 @@ import { cdnLibraryCoverUrl, steamLibraryCoverUrl } from '@/utils/gameAssets'
 
 const { t } = i18n.global
 const router = useRouter()
+const localePath = useLocalePath()
 
 const props = defineProps<{
   recommend: RecommendedModel[] | null
@@ -127,7 +128,7 @@ function formatReason(game: RecommendedModel) {
 
 // 跳转
 function goGameDetail(gameId: string) {
-  router.push(`/games/${gameId}`)
+  router.push(localePath(`/games/${gameId}`))
 }
 
 watch(

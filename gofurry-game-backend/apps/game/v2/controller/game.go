@@ -11,6 +11,7 @@ import (
 	reviewmodels "github.com/gofurry/gofurry-game-backend/apps/review/models"
 	reviewservice "github.com/gofurry/gofurry-game-backend/apps/review/service"
 	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/util"
 )
 
 type gameV2Api struct{}
@@ -54,6 +55,28 @@ func (api *gameV2Api) GetGameInfo(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
+func (api *gameV2Api) TouchGameView(c fiber.Ctx) error {
+	gameID := parseInt64(c.Params("id", "0"))
+	if gameID <= 0 {
+		return common.NewResponse(c).Error("id 不能为空")
+	}
+
+	clientIP := util.GetClientIP(c)
+	if clientIP == "" {
+		clientIP = c.IP()
+	}
+
+	viewCount, err := newGameViewService().TouchGameViewCount(gameID, clientIP)
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+
+	return common.NewResponse(c).SuccessWithData(v2models.GameV2ViewTouchResponse{
+		GameID:    gameID,
+		ViewCount: viewCount,
+	})
+}
+
 func (api *gameV2Api) SearchSimple(c fiber.Ctx) error {
 	req := v2models.GameV2SearchRequest{}
 	if err := c.Bind().Body(&req); err != nil {
@@ -87,7 +110,12 @@ func (api *gameV2Api) GetTags(c fiber.Ctx) error {
 }
 
 func (api *gameV2Api) GetGameReviews(c fiber.Ctx) error {
-	data, err := newReadModelService().GetGameReviews(context.Background(), c.Query("id", "0"))
+	data, err := newReadModelService().GetGameReviews(
+		context.Background(),
+		c.Query("id", "0"),
+		parseInt(c.Query("page", "1")),
+		parseInt(c.Query("limit", "5")),
+	)
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -190,6 +218,10 @@ func (api *gameV2Api) GetHome(c fiber.Ctx) error {
 
 func newReadModelService() *v2service.ReadModelService {
 	return v2service.NewReadModelServiceWithReader(v2dao.NewReadModelDAO())
+}
+
+func newGameViewService() *v2service.GameViewService {
+	return v2service.GetGameViewService()
 }
 
 func parseInt(value string) int {

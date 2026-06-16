@@ -1,5 +1,5 @@
 <template>
-  <div class="search-shell relative">
+  <div ref="searchShellRef" class="search-shell relative">
     <!-- 搜索框 -->
     <div class="relative">
       <img
@@ -29,6 +29,7 @@
       <div
           v-if="showResults && results.length > 0"
           class="search-results-panel"
+          :style="{ gridTemplateColumns: `repeat(${resultColumnCount}, minmax(0, 1fr))` }"
           @mouseenter="hovering = true"
           @mouseleave="hovering = false"
       >
@@ -52,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { getSearchSimple } from "@/utils/api/game";
 import type { SearchItemModel } from "@/types/game";
 import { useLangStore } from "@/store/langStore";
@@ -69,11 +70,14 @@ const keyword = ref("");
 const results = ref<SearchItemModel[]>([]);
 const showResults = ref(false);
 const hovering = ref(false);
+const searchShellRef = ref<HTMLElement | null>(null)
+const resultColumnCount = ref(2)
 
 let timer: number | null = null;
 let blurTimer: number | null = null;
 let searchController: AbortController | null = null;
 let searchRequestToken = 0;
+let resizeObserver: ResizeObserver | null = null;
 
 const isAbortError = (error: unknown) =>
   error instanceof Error && error.name === 'AbortError'
@@ -146,10 +150,43 @@ function onBlur() {
   }, 200);
 }
 
+function syncResultColumns(width: number) {
+  if (width >= 880) {
+    resultColumnCount.value = 4
+    return
+  }
+
+  if (width >= 620) {
+    resultColumnCount.value = 3
+    return
+  }
+
+  resultColumnCount.value = 2
+}
+
+onMounted(() => {
+  if (!searchShellRef.value) {
+    return
+  }
+
+  syncResultColumns(searchShellRef.value.clientWidth)
+
+  resizeObserver = new ResizeObserver((entries) => {
+    const entry = entries[0]
+    if (!entry) {
+      return
+    }
+    syncResultColumns(entry.contentRect.width)
+  })
+
+  resizeObserver.observe(searchShellRef.value)
+})
+
 onBeforeUnmount(() => {
   if (timer) clearTimeout(timer);
   if (blurTimer) clearTimeout(blurTimer);
   searchController?.abort();
+  resizeObserver?.disconnect();
 });
 </script>
 
@@ -161,12 +198,7 @@ onBeforeUnmount(() => {
   margin-top: 0.5rem;
   display: grid;
   width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
-}
-
-.search-shell {
-  container: game-search-shell / inline-size;
 }
 
 .search-result-card {
@@ -198,17 +230,4 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-@container game-search-shell (min-width: 20rem) {
-  .search-results-panel {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@container game-search-shell (min-width: 34rem) {
-  .search-results-panel {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-}
-
 </style>

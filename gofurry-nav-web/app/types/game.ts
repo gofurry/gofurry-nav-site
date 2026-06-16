@@ -137,6 +137,9 @@ export interface SearchPageResponse {
 export interface GameBaseInfoResponse {
     name: string
     info: string
+    type: string
+    is_free: boolean
+    short_description: string
     create_time: string
     update_time: string
     resources: KvModel[]
@@ -157,12 +160,22 @@ export interface GameBaseInfoResponse {
     detailed_description: string
     about_the_game: string
     support: SupportModel
+    support_info: Record<string, string>
     screenshots: ScreenshotsModel[]
     movies: MoviesModel[]
+    requirements: GameRequirementsGroupModel
     pc_requirements: RequirementsModel
+    content_descriptors: unknown
+    ratings: unknown
     online_count: number
     count_collect_time: string
     view_count: number
+}
+
+export interface GameRequirementsGroupModel {
+    pc: RequirementsModel
+    mac: RequirementsModel
+    linux: RequirementsModel
 }
 
 export interface RequirementsModel {
@@ -230,6 +243,8 @@ export interface TagModel {
 export interface RemarkResponse {
     total: number
     avg_score: number
+    page_num: number
+    page_size: number
     remarks: RemarkModel[]
 }
 
@@ -397,6 +412,11 @@ export interface GameHomeApiResponse {
     latest_reviews: AnonymousReviewModel[]
 }
 
+export interface GameViewTouchResponse {
+    game_id: number
+    view_count: number
+}
+
 export interface GameV2Release {
     coming_soon: boolean
     date: string
@@ -430,6 +450,11 @@ export interface GameV2RequirementsView {
     pc: Record<string, string>
     mac: Record<string, string>
     linux: Record<string, string>
+}
+
+export interface GameV2DetailExtraPayload {
+    content_descriptors?: unknown
+    ratings?: unknown
 }
 
 export interface GameV2SiteInfo {
@@ -475,6 +500,7 @@ export interface GameV2DetailRecord {
     tags: GameV2Tag[]
     collected_at: string
     updated_at: string
+    extra?: GameV2DetailExtraPayload
 }
 
 export interface GameV2NewsItem {
