@@ -1239,7 +1239,11 @@ func (dao *ReadModelDAO) queryNewsRows(db *gorm.DB, query v2models.GameV2NewsQue
 	if !query.UpdatedSince.IsZero() {
 		q = q.Where("n.updated_at >= ?", query.UpdatedSince)
 	}
-	if err := q.Order("n.published_at DESC NULLS LAST, n.collected_at DESC, n.id DESC").
+	orderBy := "n.published_at DESC NULLS LAST, n.collected_at DESC, n.id DESC"
+	if !requireGame {
+		orderBy = "g.create_time DESC, g.id DESC, n.published_at DESC NULLS LAST, n.collected_at DESC, n.id DESC"
+	}
+	if err := q.Order(orderBy).
 		Limit(query.Limit).
 		Offset(query.Offset).
 		Find(&rows).Error; err != nil {
