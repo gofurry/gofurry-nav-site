@@ -1,0 +1,134 @@
+.gf-nav {
+  --gf-nav-bg: rgba(10, 16, 28, 0.88);
+  --gf-nav-bg-overlay: rgba(18, 24, 37, 0.70);
+  --gf-nav-border: rgba(255, 255, 255, 0.15);
+  --gf-nav-border-overlay: rgba(255, 255, 255, 0.10);
+  --gf-nav-text: rgba(243, 244, 246, 0.96);
+  --gf-nav-text-muted: rgba(229, 231, 235, 0.84);
+  --gf-nav-active-bg: rgba(255, 255, 255, 0.20);
+  --gf-nav-hover-bg: rgba(255, 255, 255, 0.10);
+  --gf-nav-control-bg: rgba(255, 255, 255, 0.08);
+  --gf-nav-control-border: rgba(255, 255, 255, 0.10);
+  --gf-nav-control-hover-bg: rgba(255, 255, 255, 0.14);
+  --gf-nav-shadow: 0 10px 28px rgba(15, 23, 42, 0.28);
+
+  border-bottom: 1px solid var(--gf-nav-border);
+  background: var(--gf-nav-bg);
+  color: var(--gf-nav-text);
+  box-shadow: var(--gf-nav-shadow);
+}
+
+html.dark .gf-nav {
+  --gf-nav-bg: rgba(5, 7, 13, 0.94);
+  --gf-nav-bg-overlay: rgba(5, 7, 13, 0.76);
+  --gf-nav-border: rgba(255, 255, 255, 0.08);
+  --gf-nav-border-overlay: rgba(255, 255, 255, 0.06);
+  --gf-nav-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 768px) {
+  .gf-nav--overlay {
+    border-bottom-color: var(--gf-nav-border-overlay);
+    background: var(--gf-nav-bg-overlay);
+  }
+}
+
+.gf-nav__brand-text,
+.gf-nav__link,
+.gf-nav__mobile-link,
+.gf-nav__mobile-action {
+  color: var(--gf-nav-text);
+}
+
+.gf-nav__link {
+  transition:
+    background-color var(--gf-motion-fast) ease,
+    color var(--gf-motion-fast) ease;
+}
+
+.gf-nav__link--idle {
+  color: var(--gf-nav-text);
+}
+
+.gf-nav__link--idle:hover,
+.gf-nav__link--active {
+  background: var(--gf-nav-active-bg);
+  color: #ffffff;
+}
+
+.gf-nav__link--idle:hover {
+  background: var(--gf-nav-hover-bg);
+}
+
+.gf-nav__github-link,
+.gf-nav__icon-button,
+.gf-nav__mobile-toggle,
+.gf-nav__mobile-action,
+.gf-nav__mobile-language,
+.gf-nav__mobile-link {
+  transition:
+    background-color var(--gf-motion-fast) ease,
+    border-color var(--gf-motion-fast) ease,
+    color var(--gf-motion-fast) ease;
+}
+
+.gf-nav__github-link:hover,
+.gf-nav__icon-button:hover,
+.gf-nav__mobile-toggle:hover {
+  background: var(--gf-nav-control-hover-bg);
+}
+
+.gf-nav__icon-button {
+  color: var(--gf-nav-text-muted);
+}
+
+.gf-nav__icon-button--active {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.gf-nav__mode-button,
+.gf-nav__mobile-toggle {
+  border: 1px solid var(--gf-nav-control-border);
+  background: var(--gf-nav-control-bg);
+  color: #ffffff;
+}
+
+.gf-nav__settings-icon {
+  filter: brightness(0) saturate(100%) invert(98%) sepia(4%) saturate(734%) hue-rotate(180deg) brightness(102%) contrast(97%);
+}
+
+.gf-nav__mobile-panel {
+  border: 1px solid var(--gf-nav-control-border);
+  background: rgba(18, 24, 37, 0.96);
+  color: var(--gf-nav-text);
+  box-shadow: 0 24px 52px rgba(2, 6, 23, 0.30);
+}
+
+html.dark .gf-nav__mobile-panel {
+  background: rgba(5, 7, 13, 0.97);
+}
+
+.gf-nav__mobile-link,
+.gf-nav__mobile-action,
+.gf-nav__mobile-language {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(209, 213, 219, 0.94);
+}
+
+.gf-nav__mobile-link:hover,
+.gf-nav__mobile-action:hover,
+.gf-nav__mobile-language:hover {
+  background: var(--gf-nav-hover-bg);
+  color: #ffffff;
+}
+
+.gf-nav__mobile-link--active,
+.gf-nav__mobile-language--active {
+  background: var(--gf-nav-active-bg);
+  color: #ffffff;
+}
+
+.gf-nav__mobile-action-value {
+  color: #fdba74;
+}

@@ -1,6 +1,6 @@
 {
-  "version": "v2.1.0-rc.1",
-  "notes": "保守预算用于阻止明显性能回退；GPU 占用不做自动硬阈值，使用 trace 辅助人工分析。",
+  "version": "v2.2.5",
+  "notes": "保守预算用于阻止样式系统维护造成明显性能回退；GPU 占用不做自动硬阈值，使用 trace 和 visual guard 辅助人工分析。",
   "global": {
     "maxDomNodes": 9000,
     "maxJsRequests": 340,
@@ -52,7 +52,7 @@
       "maxLongTaskTotalMs": 2000,
       "maxJsHeapUsedMb": 170
     },
-    "archive-empty": {
+    "steam-zone": {
       "maxDomNodes": 5200,
       "maxJsRequests": 320,
       "maxJsTransferKb": 10500,
@@ -65,6 +65,18 @@
       ]
     },
     "games": {
+      "maxDomNodes": 8500,
+      "maxJsRequests": 330,
+      "maxJsTransferKb": 10500,
+      "maxImageRequests": 130,
+      "maxLongTaskCount": 30,
+      "maxLongTaskTotalMs": 3400,
+      "maxJsHeapUsedMb": 230,
+      "blockedHeavyDependencies": [
+        "hls.js"
+      ]
+    },
+    "games-search": {
       "maxDomNodes": 8500,
       "maxJsRequests": 330,
       "maxJsTransferKb": 10500,

@@ -35,6 +35,7 @@ export interface TopCountVo {
 export interface TopPlayerCountRecord {
     id: string
     name: string
+    desc: string
     count_peak: number
     count_recent: number
     collect_time: number
@@ -51,6 +52,7 @@ export interface BottomPriceVo {
 export interface PriceRecord {
     id: string
     name: string
+    desc: string
     global_price: number
     china_price: number
     discount: number
@@ -135,6 +137,9 @@ export interface SearchPageResponse {
 export interface GameBaseInfoResponse {
     name: string
     info: string
+    type: string
+    is_free: boolean
+    short_description: string
     create_time: string
     update_time: string
     resources: KvModel[]
@@ -155,12 +160,23 @@ export interface GameBaseInfoResponse {
     detailed_description: string
     about_the_game: string
     support: SupportModel
+    support_info: Record<string, string>
     screenshots: ScreenshotsModel[]
     movies: MoviesModel[]
+    requirements: GameRequirementsGroupModel
     pc_requirements: RequirementsModel
+    content_descriptors: unknown
+    ratings: unknown
+    media: GameV2MediaView
     online_count: number
     count_collect_time: string
     view_count: number
+}
+
+export interface GameRequirementsGroupModel {
+    pc: RequirementsModel
+    mac: RequirementsModel
+    linux: RequirementsModel
 }
 
 export interface RequirementsModel {
@@ -176,6 +192,18 @@ export interface MoviesModel {
     dash_av1: string
     dash_h264: string
     hls_h264: string
+    mp4_url?: string
+    webm_url?: string
+}
+
+export interface GameV2MovieExtra {
+    dash_av1_url?: string
+    dash_h264_url?: string
+    hls_h264_url?: string
+    mp4_480_url?: string
+    mp4_max_url?: string
+    webm_480_url?: string
+    webm_max_url?: string
 }
 
 export interface ScreenshotsModel {
@@ -216,6 +244,8 @@ export interface TagModel {
 export interface RemarkResponse {
     total: number
     avg_score: number
+    page_num: number
+    page_size: number
     remarks: RemarkModel[]
 }
 
@@ -230,10 +260,29 @@ export interface RemarkModel {
 
 export interface RecommendedModel {
     id: string
-    name: string
-    info: string
-    similarity: number
     appid: string
+    name: string
+    summary: string
+    header_url: string
+    capsule_url: string
+    library_cover_url: string
+    library_cover_2x_url: string
+    score: number
+    display_score: number
+    rank: number
+    reasons: RecommendationReason[]
+    algorithm_version: string
+    computed_at: string
+    tags: GameV2Tag[]
+    price: GameV2PriceView
+    online_count: GameV2OnlineCount
+}
+
+export interface RecommendationReason {
+    type: string
+    label: string
+    value: string
+    weight: number
 }
 
 export interface CommentReq {
@@ -241,19 +290,6 @@ export interface CommentReq {
     name: string
     content: string
     score: number
-}
-
-export interface CreatorResponse {
-    id: string
-    name: string
-    info: string
-    url: string
-    avatar: string
-    links: KvModel[]
-    contact: KvModel[]
-    type: number
-    create_time: string
-    update_time: string
 }
 
 // 抽奖
@@ -308,4 +344,214 @@ export interface LotteryReq {
     name: string
     email: string
     key: string
+}
+
+export interface GameV2Tag {
+    id: string
+    name: string
+    desc: string
+}
+
+export interface GameV2PriceView {
+    region: string
+    available: boolean
+    unavailable_reason?: string
+    is_free: boolean
+    currency: string
+    initial_amount: number
+    final_amount: number
+    discount_percent: number
+    initial_formatted: string
+    final_formatted: string
+    collected_at: string
+    updated_at: string
+}
+
+export interface GameV2OnlineCount {
+    count: number
+    status: string
+    collected_at: string
+}
+
+export interface GameV2ListItem {
+    id: string
+    appid: string
+    name: string
+    summary: string
+    header_url: string
+    capsule_url: string
+    release_date: string
+    developers: string[]
+    publishers: string[]
+    platforms: Record<string, boolean>
+    prices: GameV2PriceView[]
+    price: GameV2PriceView
+    online_count: GameV2OnlineCount
+    tags: GameV2Tag[]
+    avg_score: number
+    comment_count: number
+    updated_at: string
+}
+
+export interface GameV2PanelRecord {
+    latest_games: GameV2ListItem[]
+    updated_games: GameV2ListItem[]
+    top_online: GameV2ListItem[]
+    free_games: GameV2ListItem[]
+    top_price: GameV2ListItem[]
+    highest_discount: GameV2ListItem[]
+    low_price: GameV2ListItem[]
+    latest_news: GameV2NewsItem[]
+}
+
+export interface GameHomeApiNewsRecord {
+    news_zh: GameV2NewsItem[]
+    news_en: GameV2NewsItem[]
+}
+
+export interface GameHomeApiResponse {
+    panel: GameV2PanelRecord
+    latest_news: GameHomeApiNewsRecord
+    latest_reviews: AnonymousReviewModel[]
+}
+
+export interface GameViewTouchResponse {
+    game_id: number
+    view_count: number
+}
+
+export interface GameV2Release {
+    coming_soon: boolean
+    date: string
+}
+
+export interface GameV2MediaView {
+    header_url: string
+    capsule_url: string
+    capsule_v5_url: string
+    capsule_small_url: string
+    capsule_main_url: string
+    library_cover_url: string
+    library_cover_2x_url: string
+    library_hero_url: string
+    library_logo_url: string
+    library_logo_2x_url: string
+    background_url: string
+    background_raw_url: string
+    screenshots: GameV2Screenshot[]
+    movies: GameV2Movie[]
+    assets: GameV2AssetView[]
+}
+
+export interface GameV2AssetView {
+    type: string
+    family: string
+    source: string
+    lang: string
+    key: string
+    title: string
+    url: string
+    thumbnail_url: string
+    format: string
+    exists?: boolean
+    status_code: number
+    content_type: string
+    content_length: number
+    extra?: Record<string, unknown> | unknown
+    sort_order: number
+    checked_at?: string
+    collected_at: string
+    updated_at: string
+}
+
+export interface GameV2Screenshot {
+    id: string
+    url: string
+    thumbnail_url: string
+}
+
+export interface GameV2Movie {
+    id: string
+    name: string
+    url: string
+    thumbnail_url: string
+    extra?: GameV2MovieExtra | Record<string, unknown>
+}
+
+export interface GameV2RequirementsView {
+    pc: Record<string, string>
+    mac: Record<string, string>
+    linux: Record<string, string>
+}
+
+export interface GameV2DetailExtraPayload {
+    content_descriptors?: unknown
+    ratings?: unknown
+}
+
+export interface GameV2SiteInfo {
+    id: string
+    name: string
+    info: string
+    header: string
+    view_count: number
+    resources: KvModel[]
+    groups: KvModel[]
+    links: KvModel[]
+    create_time: string
+    update_time: string
+}
+
+export interface GameV2DetailRecord {
+    id: string
+    appid: string
+    requested_lang: string
+    lang: string
+    name: string
+    summary: string
+    type: string
+    is_free: boolean
+    website: string
+    header_url: string
+    short_description: string
+    detailed_description: string
+    about_the_game: string
+    release: GameV2Release
+    developers: string[]
+    publishers: string[]
+    platforms: Record<string, boolean>
+    supported_languages: string
+    support_info: Record<string, string>
+    prices: GameV2PriceView[]
+    price: GameV2PriceView
+    media: GameV2MediaView
+    requirements: GameV2RequirementsView
+    news: GameV2NewsItem[]
+    online_count: GameV2OnlineCount
+    site: GameV2SiteInfo
+    tags: GameV2Tag[]
+    collected_at: string
+    updated_at: string
+    extra?: GameV2DetailExtraPayload
+}
+
+export interface GameV2NewsItem {
+    id: string
+    game_id: string
+    appid: string
+    lang: string
+    game_name: string
+    header_url: string
+    event_gid: string
+    headline: string
+    summary: string
+    plain_text: string
+    html: string
+    url: string
+    tags: string[]
+    published_at: string
+    updated_at: string
+    comment_count: number
+    vote_up_count: number
+    vote_down_count: number
 }

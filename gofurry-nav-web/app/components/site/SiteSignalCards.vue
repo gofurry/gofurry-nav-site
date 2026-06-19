@@ -50,12 +50,12 @@ defineProps<{
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.28), 0 0 0 6px rgba(251, 140, 47, 0.07);
 }
 
-:global(.dark .signal-card){
+:global(html.dark .signal-card){
   background: var(--surface);
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
 }
 
-:global(.dark .signal-card:hover){
+:global(html.dark .signal-card:hover){
   background: rgba(30, 41, 59, 0.86);
   box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.22), 0 0 0 6px rgba(251, 146, 60, 0.07);
 }

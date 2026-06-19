@@ -1,5 +1,5 @@
 <template>
-  <div class="relative">
+  <div ref="searchShellRef" class="search-shell relative">
     <!-- 搜索框 -->
     <div class="relative">
       <img
@@ -11,10 +11,7 @@
           v-model="keyword"
           type="text"
           :placeholder="t('game.search.simple')"
-          class="w-full pl-9 pr-3 py-2
-               rounded-lg bg-orange-50
-               text-sm placeholder-gray-400
-               focus:outline-none focus:ring-2 focus:ring-orange-200"
+          class="game-sidebar-search-input w-full rounded-lg py-2 pl-9 pr-3 text-sm transition focus:outline-none"
           @focus="onFocus"
           @blur="onBlur"
       />
@@ -31,23 +28,24 @@
     >
       <div
           v-if="showResults && results.length > 0"
-          class="absolute z-50 mt-2 bg-white/90 backdrop-blur-md rounded-lg shadow-lg p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 2xl:grid-cols-5 pointer-events-auto"
+          class="search-results-panel"
+          :style="{ gridTemplateColumns: `repeat(${resultColumnCount}, minmax(0, 1fr))` }"
           @mouseenter="hovering = true"
           @mouseleave="hovering = false"
       >
         <div
             v-for="item in results"
             :key="item.id"
-            class="cursor-pointer rounded-lg overflow-hidden hover:bg-orange-100 transition p-1"
+            class="search-result-card"
             @click="goToGame(item.id)"
         >
           <img
               :src="item.cover"
-              class="w-full h-20 object-cover rounded-md mb-1"
+              class="search-result-cover"
               :alt="item.name"
           />
-          <p class="text-sm font-semibold truncate">{{ item.name }}</p>
-          <p class="text-xs text-gray-500 truncate">{{ item.info }}</p>
+          <p class="search-result-title">{{ item.name }}</p>
+          <p class="search-result-desc">{{ item.info }}</p>
         </div>
       </div>
     </Transition>
@@ -55,31 +53,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { getSearchSimple } from "@/utils/api/game";
 import type { SearchItemModel } from "@/types/game";
-import { useLangStore } from "@/store/langStore";
-import { i18n } from '@/main'
+import { useI18n } from 'vue-i18n'
 
-const { t } = i18n.global
+const { t, locale } = useI18n()
 
 const router = useRouter();
-const langStore = useLangStore();
-const lang = ref(langStore.lang);
+const localePath = useLocalePath()
+const lang = computed<'zh' | 'en'>(() => locale.value === 'en' ? 'en' : 'zh')
 
 const keyword = ref("");
 const results = ref<SearchItemModel[]>([]);
 const showResults = ref(false);
 const hovering = ref(false);
+const searchShellRef = ref<HTMLElement | null>(null)
+const resultColumnCount = ref(2)
 
 let timer: number | null = null;
 let blurTimer: number | null = null;
+let searchController: AbortController | null = null;
+let searchRequestToken = 0;
+let resizeObserver: ResizeObserver | null = null;
+
+const isAbortError = (error: unknown) =>
+  error instanceof Error && error.name === 'AbortError'
 
 // 监听语言变化
 watch(
-    () => langStore.lang,
-    (val) => {
-      lang.value = val;
+    lang,
+    () => {
       if (keyword.value.trim()) fetchResults(keyword.value);
     }
 );
@@ -89,6 +93,7 @@ watch(keyword, (val) => {
   if (timer) clearTimeout(timer);
 
   if (!val.trim()) {
+    searchController?.abort();
     results.value = [];
     showResults.value = false;
     return;
@@ -100,18 +105,29 @@ watch(keyword, (val) => {
 });
 
 async function fetchResults(val: string) {
+  searchController?.abort();
+  const controller = new AbortController();
+  const currentToken = ++searchRequestToken;
+  searchController = controller;
+
   try {
-    const res = await getSearchSimple(lang.value, val);
+    const res = await getSearchSimple(lang.value, val, { signal: controller.signal });
+    if (currentToken !== searchRequestToken) {
+      return;
+    }
     results.value = res;
     showResults.value = res.length > 0;
   } catch (e) {
+    if (isAbortError(e)) {
+      return;
+    }
     console.error("搜索失败", e);
   }
 }
 
 // 点击跳转
 function goToGame(id: string) {
-  router.push(`/games/${id}`);
+  router.push(localePath(`/games/${id}`));
   keyword.value = "";
   results.value = [];
   showResults.value = false;
@@ -130,4 +146,85 @@ function onBlur() {
     if (!hovering.value) showResults.value = false;
   }, 200);
 }
+
+function syncResultColumns(width: number) {
+  if (width >= 880) {
+    resultColumnCount.value = 4
+    return
+  }
+
+  if (width >= 620) {
+    resultColumnCount.value = 3
+    return
+  }
+
+  resultColumnCount.value = 2
+}
+
+onMounted(() => {
+  if (!searchShellRef.value) {
+    return
+  }
+
+  syncResultColumns(searchShellRef.value.clientWidth)
+
+  resizeObserver = new ResizeObserver((entries) => {
+    const entry = entries[0]
+    if (!entry) {
+      return
+    }
+    syncResultColumns(entry.contentRect.width)
+  })
+
+  resizeObserver.observe(searchShellRef.value)
+})
+
+onBeforeUnmount(() => {
+  if (timer) clearTimeout(timer);
+  if (blurTimer) clearTimeout(blurTimer);
+  searchController?.abort();
+  resizeObserver?.disconnect();
+});
 </script>
+
+<style scoped>
+.search-results-panel {
+  pointer-events: auto;
+  position: absolute;
+  z-index: 50;
+  margin-top: 0.5rem;
+  display: grid;
+  width: 100%;
+  gap: 0.55rem;
+}
+
+.search-result-card {
+  min-width: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.search-result-cover {
+  aspect-ratio: 460 / 215;
+  width: 100%;
+  object-fit: cover;
+}
+
+.search-result-title {
+  margin-top: 0.38rem;
+  overflow: hidden;
+  font-size: 0.82rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-result-desc {
+  margin-top: 0.18rem;
+  overflow: hidden;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

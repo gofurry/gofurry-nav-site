@@ -1,36 +1,37 @@
 <template>
-  <div class="relative z-30">
-    <div class="mx-auto flex items-center gap-4 border-t-4 border-black/30 bg-[rgba(18,24,37,0.55)] px-4 py-2 text-sm text-gray-100 shadow-lg ring-1 ring-white/10 dark:bg-[rgba(20,28,41,0.84)] dark:ring-white/10 md:gap-6 md:px-6">
-      <div class="flex items-center justify-between text-sm font-semibold text-gray-300">
-        {{ formattedDateTime }}
-      </div>
+  <div class="nav-transition-bar">
+    <div class="nav-transition-bar__inner">
+      <div class="nav-transition-bar__content mx-auto w-full max-w-[2080px] px-4 sm:px-6 xl:px-8">
+        <div class="nav-transition-bar__time">
+          {{ formattedDateTime }}
+        </div>
 
-      <div class="flex flex-col">
-        <div class="h-1 w-full textgray"></div>
-        <iframe
-          class="h-8 w-[230px]"
-          allowtransparency="true"
-          src="https://i.tianqi.com/index.php?c=code&id=73&icon=1&num=3&color=d1d5dc"
-        ></iframe>
-      </div>
+        <div class="nav-transition-bar__weather">
+          <div class="nav-transition-bar__weather-spacer"></div>
+          <iframe
+            allowtransparency="true"
+            src="https://i.tianqi.com/index.php?c=code&id=73&icon=1&num=3&color=d1d5dc"
+          ></iframe>
+        </div>
 
-      <div v-if="saying" class="hidden min-w-0 flex-1 sm:block">
-        <div class="relative flex justify-end">
-          <div
-            ref="quoteTriggerRef"
-            class="max-w-[min(100%,52rem)] text-right"
-            tabindex="0"
-            @mouseenter="showAuthorPopover"
-            @mouseleave="hideAuthorPopover"
-            @focus="showAuthorPopover"
-            @blur="hideAuthorPopover"
-          >
-            {{ quoteDisplay }}
+        <div v-if="saying" class="nav-transition-bar__quote-shell">
+          <div class="nav-transition-bar__quote-wrap">
+            <div
+              ref="quoteTriggerRef"
+              class="nav-transition-bar__quote"
+              tabindex="0"
+              @mouseenter="showAuthorPopover"
+              @mouseleave="hideAuthorPopover"
+              @focus="showAuthorPopover"
+              @blur="hideAuthorPopover"
+            >
+              {{ quoteDisplay }}
+            </div>
           </div>
         </div>
-      </div>
-      <div v-else>
-        {{ locale === 'zh' ? '你的恩情狼不会忘记' : 'The pack remembers your kindness.' }}
+        <div v-else>
+          {{ locale === 'zh' ? '你的恩情狼不会忘记' : 'The pack remembers your kindness.' }}
+        </div>
       </div>
     </div>
   </div>
@@ -38,7 +39,7 @@
   <Teleport to="body">
     <div
       v-if="authorPopoverVisible"
-      class="pointer-events-none fixed z-[120] whitespace-nowrap rounded-full border border-stone-200/85 bg-white/94 px-3 py-1.5 text-xs font-medium text-stone-700 shadow-[0_12px_28px_rgba(120,83,42,0.16)] ring-1 ring-stone-950/5 backdrop-blur-md dark:border-white/10 dark:bg-[rgba(12,18,31,0.94)] dark:text-slate-100 dark:shadow-[0_12px_28px_rgba(2,6,23,0.42)] dark:ring-white/10"
+      class="nav-transition-bar__author"
       :style="authorPopoverStyle"
     >
       {{ quoteAuthor }}
@@ -128,8 +129,22 @@ function syncAuthorPopover() {
   }
 }
 
+function currentLang() {
+  return locale.value === 'en' ? 'en' : 'zh'
+}
+
+async function loadSaying() {
+  const response = await getNavHomeSaying(currentLang())
+  saying.value = response.saying
+}
+
 watch(locale, () => {
   updateTime()
+  void loadSaying()
+})
+
+watch(() => props.initialSaying, (nextSaying) => {
+  saying.value = nextSaying ?? null
 })
 
 onMounted(async () => {
@@ -139,8 +154,7 @@ onMounted(async () => {
   window.addEventListener('resize', syncAuthorPopover)
 
   if (!saying.value) {
-    const response = await getNavHomeSaying()
-    saying.value = response.saying
+    await loadSaying()
   }
 })
 
@@ -155,6 +169,3 @@ onUnmounted(() => {
   window.removeEventListener('resize', syncAuthorPopover)
 })
 </script>
-
-<style scoped>
-</style>

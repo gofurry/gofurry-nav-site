@@ -4,6 +4,10 @@ const bool01 = [
   { label: '是', value: '1' },
   { label: '否', value: '0' },
 ]
+const languageOptions = [
+  { label: '中文', value: 'zh' },
+  { label: 'English', value: 'en' },
+]
 
 const groupKeys = ['official', 'discord', 'twitter', 'youtube', 'telegram', 'bsky', 'afdian', 'qq', 'reddit', 'bilibili', 'weibo', 'tiktok', 'vk', 'facebook', 'twitch', 'instagram', 'xiaohongshu']
 const linkKeys = ['steamdb', 'steambase', 'gamalytic', 'vgi', 'playtracker', 'pcgamingwiki', 'metacritic']
@@ -19,12 +23,13 @@ export const resources: ResourceConfig[] = [
     section: 'nav',
     listEndpoint: '/api/v1/nav/sayings',
     detailEndpoint: '/api/v1/nav/sayings',
-    columns: [{ key: 'id', label: 'ID' }, { key: 'author', label: '作者' }, { key: 'saying', label: '内容' }],
+    columns: [{ key: 'id', label: 'ID' }, { key: 'language', label: '语言' }, { key: 'author', label: '作者' }, { key: 'saying', label: '内容' }],
     fields: [
+      { key: 'language', label: '语言', type: 'select', options: languageOptions },
       { key: 'author', label: '作者', type: 'text' },
       { key: 'saying', label: '内容', type: 'textarea' },
     ],
-    defaults: { author: '', saying: '' },
+    defaults: { language: 'zh', author: '', saying: '' },
   },
   {
     key: 'update-notices',
@@ -64,7 +69,7 @@ export const resources: ResourceConfig[] = [
     section: 'nav',
     listEndpoint: '/api/v1/nav/sites',
     detailEndpoint: '/api/v1/nav/sites',
-    columns: [{ key: 'id', label: 'ID' }, { key: 'name', label: '名称' }],
+    columns: [{ key: 'id', label: 'ID' }, { key: 'name', label: '名称' }, { key: 'weight', label: '权重' }],
     fields: [
       { key: 'name', label: '中文名', type: 'text' },
       { key: 'name_en', label: '英文名', type: 'text' },
@@ -73,9 +78,10 @@ export const resources: ResourceConfig[] = [
       { key: 'country', label: '国家', type: 'text' },
       { key: 'nsfw', label: 'NSFW', type: 'select', options: bool01 },
       { key: 'welfare', label: '公益', type: 'select', options: bool01 },
+      { key: 'weight', label: '权重', type: 'number' },
       { key: 'icon', label: '图标', type: 'text' },
     ],
-    defaults: { name: '', name_en: '', info: '', info_en: '', country: '', nsfw: '0', welfare: '0', icon: '' },
+    defaults: { name: '', name_en: '', info: '', info_en: '', country: '', nsfw: '0', welfare: '0', weight: 0, icon: '' },
   },
   {
     key: 'site-groups',
@@ -166,26 +172,6 @@ export const resources: ResourceConfig[] = [
       { key: 'content', label: '内容', type: 'textarea' },
     ],
     defaults: { game_id: '', region: '', name: '', ip: '', score: 0, content: '' },
-  },
-  {
-    key: 'creators',
-    title: '相关作者',
-    section: 'game',
-    listEndpoint: '/api/v1/game/creators',
-    detailEndpoint: '/api/v1/game/creators',
-    columns: [{ key: 'id', label: 'ID' }, { key: 'name', label: '名称' }, { key: 'type', label: '类型' }],
-    fields: [
-      { key: 'name', label: '中文名', type: 'text' },
-      { key: 'name_en', label: '英文名', type: 'text' },
-      { key: 'info', label: '中文简介', type: 'textarea' },
-      { key: 'info_en', label: '英文简介', type: 'textarea' },
-      { key: 'main_url', label: '主链接', type: 'text' },
-      { key: 'cover', label: '封面', type: 'text' },
-      { key: 'type', label: '类型', type: 'number' },
-      { key: 'links', label: '链接', type: 'kv-array' },
-      { key: 'contact', label: '联系方式', type: 'kv-array' },
-    ],
-    defaults: { name: '', name_en: '', info: '', info_en: '', main_url: '', cover: '', type: 1, links: [{ key: '', value: '' }], contact: [{ key: '', value: '' }] },
   },
   {
     key: 'prizes',

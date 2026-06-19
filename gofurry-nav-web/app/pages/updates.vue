@@ -1,8 +1,8 @@
 <template>
-  <div class="updates-page" :class="{ 'is-dark-theme': isDarkTheme }">
-    <GoFurryGridBackground profile="light" />
+  <div class="updates-page">
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
 
-    <main class="relative z-[1] mx-auto w-[min(1100px,calc(100%-40px))] py-9 pb-24">
+    <main class="updates-main">
       <h1 class="sr-only">{{ copy.pageHeading }}</h1>
       <UpdatesSummaryBar
         :label="copy.summaryAriaLabel"
@@ -11,22 +11,21 @@
         :count-label="copy.countLabel"
         :count-value="items.length"
         :divider-src="summaryDividerSrc"
-        :dark="isDarkTheme"
       />
 
-      <section class="mx-auto min-w-0 max-w-[920px]" :aria-busy="pending">
+      <section class="updates-timeline-section" :aria-busy="pending">
         <div v-if="pending" class="updates-state">
-          <span class="state-line" />
+          <span class="updates-state-line" />
           <p>{{ copy.loading }}</p>
         </div>
 
         <div v-else-if="error || responseState === 'error'" class="updates-state is-error">
-          <span class="state-line" />
+          <span class="updates-state-line" />
           <p>{{ errorMessage }}</p>
         </div>
 
         <div v-else-if="items.length === 0" class="updates-state">
-          <span class="state-line" />
+          <span class="updates-state-line" />
           <p>{{ copy.empty }}</p>
         </div>
 
@@ -48,7 +47,6 @@
               :year-summary="formatYearSummary(group.items.length)"
               :locale-code="localeCode"
               :unavailable-label="copy.unavailable"
-              :dark="isDarkTheme"
               @toggle="toggleYear(group.year)"
               @load-more="loadMoreForYear(group.year)"
             />
@@ -241,113 +239,3 @@ function formatYearSummary(count: number) {
   return lang.value === 'en' ? `${count} entries` : `${count} 条`
 }
 </script>
-
-<style scoped>
-.updates-page {
-  position: relative;
-  min-height: 100svh;
-  overflow: clip;
-  color: #201815;
-}
-
-.updates-page.is-dark-theme {
-  color: #e5edf5;
-}
-
-.updates-state {
-  display: grid;
-  min-height: 320px;
-  place-items: center;
-  gap: 18px;
-  color: rgba(32, 24, 21, 0.72);
-  text-align: center;
-}
-
-.updates-state p {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.updates-state.is-error {
-  color: #b42347;
-}
-
-.state-line {
-  width: min(240px, 56vw);
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(15, 118, 110, 0.72), transparent);
-}
-
-.timeline-feed {
-  position: relative;
-  margin: 0;
-  padding: 0 0 0 34px;
-  list-style: none;
-}
-
-.timeline-feed::before {
-  content: "";
-  position: absolute;
-  top: 10px;
-  bottom: 0;
-  left: 8px;
-  width: 1px;
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.55), rgba(15, 118, 110, 0.1));
-}
-
-.timeline-year-group {
-  opacity: 0;
-  transform: translateY(14px);
-  animation: feed-enter 520ms ease forwards;
-  animation-delay: var(--delay, 0ms);
-}
-
-.updates-page.is-dark-theme .updates-state {
-  color: rgba(204, 223, 228, 0.76);
-}
-
-.updates-page.is-dark-theme .state-line {
-  background: linear-gradient(90deg, transparent, rgba(154, 248, 251, 0.78), transparent);
-}
-
-.updates-page.is-dark-theme .timeline-feed::before {
-  background: linear-gradient(180deg, rgba(127, 240, 247, 0.62), rgba(127, 240, 247, 0.1));
-}
-
-.updates-page.is-dark-theme .updates-state.is-error {
-  color: #fda4af;
-}
-
-@keyframes feed-enter {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 920px) {
-  main {
-    width: min(100% - 28px, 1100px);
-    padding-top: 30px;
-    padding-bottom: 72px;
-  }
-}
-
-@media (max-width: 720px) {
-  .timeline-feed {
-    padding-left: 26px;
-  }
-
-  .timeline-feed::before {
-    left: 4px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .timeline-year-group {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-</style>

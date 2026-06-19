@@ -7,7 +7,6 @@
 - [ ] `gofurry-nav-backend`
 - [ ] `gofurry-nav-web`
 - [ ] `gofurry-admin`
-- [ ] `gofurry-rag`
 - [ ] Collector / scheduler / sync
 - [ ] SQL / migration
 - [ ] Documentation
@@ -30,8 +29,6 @@ Notes:
 - [ ] `cd gofurry-nav-web && npm run build`
 - [ ] `cd gofurry-admin && go test ./...`
 - [ ] `cd gofurry-admin/web && npm run build`
-- [ ] `cd gofurry-rag && go test ./...`
-- [ ] `cd gofurry-rag/web && npm run build`
 - [ ] Not run, explained below
 
 Notes:

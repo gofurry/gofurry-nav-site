@@ -45,6 +45,7 @@ var (
 	rdapRunning        atomic.Bool
 	robotsRunning      atomic.Bool
 	securityTXTRunning atomic.Bool
+	llmsTXTRunning     atomic.Bool
 	pageAssetsRunning  atomic.Bool
 	portCheckRunning   atomic.Bool
 	wafCanaryRunning   atomic.Bool
@@ -129,6 +130,19 @@ func InitLightProbeOnStart() {
 			"run_on_start": cfg.LightProbe.SecurityTXT.RunOnStart,
 		}, "security.txt 低频轻探测已注册")
 	}
+	if cfg.ProtocolEnabled(observation.ProtocolLLMSTXT) {
+		interval := cfg.LightProbe.LLMSTXT.Interval()
+		if cfg.LightProbe.LLMSTXT.RunOnStart {
+			go RunLLMSTXT()
+		}
+		cs.AddCronJob(interval, RunLLMSTXT)
+		log.InfoFields(map[string]interface{}{
+			"event":        "light_probe_registered",
+			"interval":     interval,
+			"protocol":     observation.ProtocolLLMSTXT,
+			"run_on_start": cfg.LightProbe.LLMSTXT.RunOnStart,
+		}, "llms.txt 低频轻探测已注册")
+	}
 	if cfg.ProtocolEnabled(observation.ProtocolPageAssets) {
 		interval := cfg.LightProbe.PageAssets.Interval()
 		if cfg.LightProbe.PageAssets.RunOnStart {
@@ -180,6 +194,10 @@ func RunRobots() {
 
 func RunSecurityTXT() {
 	runLightProbe(observation.ProtocolSecurityTXT, env.GetServerConfig().Collector.V2.LightProbe.SecurityTXT.Interval(), &securityTXTRunning, runSecurityTXTTargets)
+}
+
+func RunLLMSTXT() {
+	runLightProbe(observation.ProtocolLLMSTXT, env.GetServerConfig().Collector.V2.LightProbe.LLMSTXT.Interval(), &llmsTXTRunning, runLLMSTXTTargets)
 }
 
 func RunPageAssets() {
@@ -295,6 +313,14 @@ func runSecurityTXTTargets(targets []models.GfnCollectorDomain, run *runstate.Ru
 	for _, target := range targets {
 		result := probeSecurityTXT(target, cfg.Timeout(), cfg.MaxResponseSize())
 		saveLightProbeResult(observation.ProtocolSecurityTXT, target, result, run)
+	}
+}
+
+func runLLMSTXTTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+	cfg := env.GetServerConfig().Collector.V2.LightProbe.LLMSTXT
+	for _, target := range targets {
+		result := probeLLMSTXT(target, cfg.Timeout(), cfg.MaxResponseSize())
+		saveLightProbeResult(observation.ProtocolLLMSTXT, target, result, run)
 	}
 }
 
@@ -487,6 +513,32 @@ func probeSecurityTXT(target models.GfnCollectorDomain, timeout time.Duration, m
 	payload["status_code"] = resp.StatusCode
 	payload["content_type"] = limitLightText(resp.ContentType)
 	payload["body_truncated"] = resp.BodyTruncated
+	return probeResult{
+		Status:     observation.StatusSuccess,
+		DurationMS: resp.DurationMS,
+		Payload:    payload,
+	}
+}
+
+func probeLLMSTXT(target models.GfnCollectorDomain, timeout time.Duration, maxBytes int64) probeResult {
+	resp, err := probeHTTPGet(target, "/llms.txt", timeout, maxBytes)
+	if err != nil {
+		return failureResult("llms_txt_request_failed", err.Error(), map[string]any{
+			"exists": false,
+			"path":   "/llms.txt",
+		})
+	}
+	payload := parseLLMSTXTPayload(resp.Body)
+	payload["exists"] = resp.StatusCode >= 200 && resp.StatusCode < 300
+	payload["path"] = "/llms.txt"
+	payload["status_code"] = resp.StatusCode
+	payload["content_type"] = limitLightText(resp.ContentType)
+	payload["content_length_header"] = resp.ContentLengthHeader
+	payload["body_read_bytes"] = len(resp.Body)
+	payload["body_truncated"] = resp.BodyTruncated
+	if payload["exists"] == true {
+		payload["sha256"] = sha256Hex(resp.Body)
+	}
 	return probeResult{
 		Status:     observation.StatusSuccess,
 		DurationMS: resp.DurationMS,
@@ -1587,6 +1639,72 @@ func parseSecurityTXTPayload(body []byte) map[string]any {
 		"preferred_languages": preferredLanguages,
 		"canonical":           canonicals,
 	}
+}
+
+func parseLLMSTXTPayload(body []byte) map[string]any {
+	title := ""
+	headings := []string{}
+	headingCount := 0
+	links := []string{}
+	linkCount := 0
+	optionalSectionPresent := false
+
+	scanner := bufio.NewScanner(bytes.NewReader(body))
+	scanner.Buffer(make([]byte, 1024), 128*1024)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "#") {
+			heading := strings.TrimSpace(strings.TrimLeft(line, "#"))
+			if heading != "" {
+				headingCount++
+				if title == "" && strings.HasPrefix(line, "# ") {
+					title = limitLightText(heading)
+				}
+				headings = appendLimitedLightItem(headings, heading)
+				if strings.Contains(strings.ToLower(heading), "optional") {
+					optionalSectionPresent = true
+				}
+			}
+		}
+		for _, link := range markdownLinksFromLine(line) {
+			linkCount++
+			links = appendLimitedLightItem(links, link)
+		}
+	}
+
+	return map[string]any{
+		"title":                    title,
+		"heading_count":            headingCount,
+		"headings":                 headings,
+		"link_count":               linkCount,
+		"links":                    links,
+		"optional_section_present": optionalSectionPresent,
+	}
+}
+
+func markdownLinksFromLine(line string) []string {
+	links := []string{}
+	remaining := line
+	for {
+		closeBracket := strings.Index(remaining, "](")
+		if closeBracket < 0 {
+			break
+		}
+		afterOpen := remaining[closeBracket+2:]
+		closeParen := strings.Index(afterOpen, ")")
+		if closeParen < 0 {
+			break
+		}
+		link := strings.TrimSpace(afterOpen[:closeParen])
+		if link != "" {
+			links = append(links, limitLightURL(link))
+		}
+		remaining = afterOpen[closeParen+1:]
+	}
+	return links
 }
 
 func parseLightProbeLine(line string) (string, string, bool) {

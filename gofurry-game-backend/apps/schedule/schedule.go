@@ -18,28 +18,20 @@ func InitScheduleOnStart() {
 
 	log.Info("[Schedule] init start")
 
-	go ScheduleByTenMinutes()
 	go ScheduleByOneHour()
 	go ScheduleByHalfDay()
 	go task.UpdateGameViewCountCache()
+	task.RefreshGameHomeCache()
 
-	cs.AddCronJob(10*time.Minute, ScheduleByTenMinutes)
 	cs.AddCronJob(1*time.Hour, ScheduleByOneHour)
+	cs.AddCronJob(1*time.Hour, task.RefreshGameHomeCache)
 	cs.AddCronJob(12*time.Hour, ScheduleByHalfDay)
 	cs.AddCronJob(24*time.Hour, task.UpdateGameViewCountCache)
 
 	log.Info("[Schedule] init done")
 }
 
-func ScheduleByTenMinutes() {
-	task.UpdateMainInfoCache()
-}
-
 func ScheduleByOneHour() {
-	task.UpdateGamePanelCache()
-	task.UpdateGameNewsCache()
-	task.UpdateGameCreatorCache()
-	task.UpdateMoreGameNewsCache()
 	task.UpdatePrizeWinner()
 }
 

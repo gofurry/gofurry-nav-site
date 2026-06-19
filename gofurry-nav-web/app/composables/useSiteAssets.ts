@@ -6,7 +6,6 @@ export const useSiteAssets = () => {
     siteDefaultLogo: config.public.siteDefaultLogo,
     gameSiteLogoPrefixUrl: config.public.gameSiteLogoPrefixUrl,
     gamePrefixUrl: config.public.gamePrefixUrl,
-    steamAppPrefixUrl: config.public.steamAppPrefixUrl,
-    steamCoverPrefixUrl: config.public.steamCoverPrefixUrl
+    steamAppPrefixUrl: config.public.steamAppPrefixUrl
   }
 }

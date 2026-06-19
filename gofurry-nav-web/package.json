@@ -10,7 +10,8 @@
     "perf:measure": "node scripts/perf/measure.mjs",
     "perf:guard": "node scripts/perf/guard.mjs",
     "perf:trace": "node scripts/perf/trace.mjs",
-    "perf:baseline": "node scripts/perf/measure.mjs --baseline"
+    "perf:baseline": "node scripts/perf/measure.mjs --baseline",
+    "visual:guard": "node scripts/perf/visual-guard.mjs"
   },
   "dependencies": {
     "@nuxtjs/i18n": "^10.3.0",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.5.2",
+    "less": "^4.6.6",
     "playwright": "^1.60.0",
     "typescript": "~5.8.3",
     "vue-tsc": "^3.0.7"

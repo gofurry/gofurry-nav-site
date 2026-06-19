@@ -1,8 +1,8 @@
 <template>
-  <div class="space-y-6">
+  <div class="game-detail-gallery space-y-6">
 
     <!-- 主展示区 -->
-    <div class="w-full rounded-xl overflow-hidden bg-black shadow-md relative aspect-video">
+    <div class="game-detail-media-stage relative aspect-video w-full overflow-hidden">
       <!-- 视频 -->
       <video
           v-if="activeMedia?.type === 'movie'"
@@ -10,48 +10,69 @@
           controls
           :muted="isBlocked"
           :autoplay="false"
-          preload="none"
-          class="w-full h-full object-contain bg-black"
+          :poster="activeMedia.thumb"
+          preload="metadata"
+          playsinline
+          class="game-detail-video h-full w-full object-contain"
+          @loadeddata="markVideoReady"
+          @canplay="markVideoReady"
+          @playing="markVideoReady"
+          @error="markVideoError"
       />
+      <div
+          v-if="showVideoPlaceholder"
+          class="game-detail-video-loading pointer-events-none absolute inset-0 flex items-center justify-center"
+          aria-hidden="true"
+      >
+        <img
+            v-if="activeMedia?.thumb"
+            :src="activeMedia.thumb"
+            :alt="mediaAlt(activeMedia)"
+            class="game-detail-video-loading__poster absolute inset-0 h-full w-full object-cover"
+        />
+        <div class="game-detail-video-loading__scrim absolute inset-0"></div>
+        <div class="game-detail-video-loading__spinner relative"></div>
+      </div>
 
       <!-- 图片 -->
       <img
           v-else-if="activeMedia?.type === 'screenshot'"
           :src="activeMedia.src"
           :alt="mediaAlt(activeMedia)"
-          class="w-full h-full object-contain bg-gray-100 cursor-pointer"
+          class="game-detail-media-image h-full w-full cursor-pointer object-contain"
           @click="openFullscreen = true"
       />
 
       <!-- 无内容 -->
-      <div v-else class="w-full h-full flex items-center justify-center text-gray-500">
+      <div v-else class="game-detail-empty flex h-full w-full items-center justify-center">
         {{t("game.panel.none")}}
       </div>
     </div>
 
     <!-- 缩略图轮播 -->
-    <div class="flex gap-2 overflow-x-auto py-2">
+    <div class="game-detail-thumb-grid flex flex-wrap gap-2 py-2">
       <div
           v-for="item in mediaList"
           :key="item.key"
           @click="selectMedia(item)"
-          :class="['flex-shrink-0 rounded-lg overflow-hidden cursor-pointer border-2',
-                 activeKey === item.key ? 'border-orange-500' : 'border-transparent']"
-          class="w-32 h-18 relative"
+          :class="[
+            'game-detail-thumb relative h-18 w-32 flex-shrink-0 cursor-pointer overflow-hidden',
+            activeKey === item.key ? 'game-detail-thumb--active' : 'game-detail-thumb--idle'
+          ]"
       >
         <img
             :src="item.thumb"
             :alt="mediaAlt(item)"
-            class="w-full h-full object-fill transition-transform duration-200 group-hover:scale-105"
+            class="h-full w-full object-fill transition-transform duration-200"
             loading="lazy"
             decoding="async"
         />
 
         <div
             v-if="item.type === 'movie'"
-            class="absolute inset-0 flex items-center justify-center bg-black/20"
+            class="game-detail-play-overlay absolute inset-0 flex items-center justify-center"
         >
-          <svg viewBox="0 0 24 24" class="w-6 h-6 fill-white">
+          <svg viewBox="0 0 24 24" class="game-detail-play-icon h-6 w-6">
             <path d="M8 5v14l11-7z" />
           </svg>
         </div>
@@ -61,7 +82,7 @@
     <!-- 图片全屏弹窗 -->
     <div
         v-if="openFullscreen && activeMedia?.type === 'screenshot'"
-        class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+        class="game-detail-lightbox fixed inset-0 z-50 flex items-center justify-center p-4"
         @click.self="openFullscreen = false"
     >
       <img
@@ -70,7 +91,7 @@
           class="max-h-full max-w-full object-contain"
       />
       <button
-          class="absolute top-4 right-4 text-white text-2xl"
+          class="game-detail-lightbox__close absolute right-4 top-4 text-2xl"
           @click="openFullscreen = false"
       >
         ×
@@ -90,7 +111,10 @@ export interface MoviesModel {
   id: number
   name: string
   thumbnail: string
+  dash_h264?: string
   hls_h264: string
+  mp4_url?: string
+  webm_url?: string
 }
 
 export interface ScreenshotsModel {
@@ -122,7 +146,7 @@ const mediaList = computed<MediaItem[]>(() => {
     list.push({
       key: `movie-${m.id}`,
       type: 'movie',
-      src: m.hls_h264,
+      src: playableMovieSource(m),
       thumb: m.thumbnail
     })
   })
@@ -145,7 +169,11 @@ const activeMedia = computed(() =>
     mediaList.value.find(m => m.key === activeKey.value) ?? null
 )
 const openFullscreen = ref(false)
-const videoRequested = ref(false)
+const videoReady = ref(false)
+const videoLoadError = ref(false)
+const showVideoPlaceholder = computed(() =>
+    activeMedia.value?.type === 'movie' && !videoReady.value && !videoLoadError.value
+)
 
 // HLS 播放控制
 const videoRef = ref<HTMLVideoElement | null>(null)
@@ -162,11 +190,14 @@ async function loadHlsModule() {
 
 function stopVideo() {
   videoLoadToken += 1
+  resetVideoState()
   hls?.destroy()
   hls = null
   if (videoRef.value) {
     videoRef.value.pause()
+    videoRef.value.removeAttribute('src')
     videoRef.value.src = ''
+    videoRef.value.load()
   }
 }
 
@@ -174,30 +205,86 @@ async function initVideo(movie: MoviesModel) {
   if (isBlocked.value) return
   if (!videoRef.value) return
 
+  const source = playableMovieSource(movie)
+  resetVideoState()
+  if (!source) {
+    markVideoError()
+    return
+  }
+
   const currentToken = videoLoadToken + 1
   videoLoadToken = currentToken
   hls?.destroy()
   hls = null
+  videoRef.value.removeAttribute('src')
   videoRef.value.src = ''
 
-  if (videoRef.value.canPlayType('application/vnd.apple.mpegurl')) {
-    videoRef.value.src = movie.hls_h264
+  const isHlsSource = /\.m3u8(?:$|\?)/i.test(source)
+
+  if (!isHlsSource) {
+    videoRef.value.src = source
     videoRef.value.load()
-    videoRef.value.play().catch(() => {})
+    if (videoRef.value.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      markVideoReady()
+    }
     return
   }
 
   const { default: Hls } = await loadHlsModule()
-  if (currentToken !== videoLoadToken || !videoRef.value || !Hls.isSupported()) {
+  if (currentToken !== videoLoadToken || !videoRef.value) {
     return
   }
 
-  hls = new Hls()
-  hls.loadSource(movie.hls_h264)
-  hls.attachMedia(videoRef.value)
-  hls.on(Hls.Events.MANIFEST_PARSED, () => {
-    videoRef.value?.play().catch(() => {})
-  })
+  if (Hls.isSupported()) {
+    hls = new Hls()
+    hls.attachMedia(videoRef.value)
+    hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+      if (currentToken === videoLoadToken) {
+        hls?.loadSource(source)
+      }
+    })
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      videoRef.value?.play().catch(() => {})
+    })
+    hls.on(Hls.Events.ERROR, (_, data) => {
+      if (data.fatal) {
+        hls?.destroy()
+        hls = null
+        markVideoError()
+      }
+    })
+    return
+  }
+
+  if (videoRef.value.canPlayType('application/vnd.apple.mpegurl')) {
+    videoRef.value.src = source
+    videoRef.value.load()
+    if (videoRef.value.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      markVideoReady()
+    }
+    return
+  }
+
+  markVideoError()
+}
+
+function playableMovieSource(movie: MoviesModel) {
+  return movie.hls_h264 || movie.mp4_url || movie.webm_url || ''
+}
+
+function resetVideoState() {
+  videoReady.value = false
+  videoLoadError.value = false
+}
+
+function markVideoReady() {
+  videoReady.value = true
+  videoLoadError.value = false
+}
+
+function markVideoError() {
+  videoReady.value = false
+  videoLoadError.value = true
 }
 
 function mediaAlt(item: MediaItem) {
@@ -210,30 +297,34 @@ function mediaAlt(item: MediaItem) {
 }
 
 function selectMedia(item: MediaItem) {
-  videoRequested.value = item.type === 'movie'
   activeKey.value = item.key
 }
 
 // 监听切换
 watch(
-    [activeMedia, isBlocked, videoRequested],
-    ([media, blocked, requested]) => {
+    [activeMedia, isBlocked],
+    async ([media, blocked]) => {
       if (blocked) {
         // 强制停止
         stopVideo()
         return
       }
 
-      if (media?.type === 'movie' && requested) {
+      if (media?.type === 'movie') {
         const movie = props.movies?.find(
             m => `movie-${m.id}` === media.key
         )
-        if (movie) void initVideo(movie)
+        if (movie) {
+          await nextTick()
+          if (activeMedia.value?.key === media.key) {
+            void initVideo(movie)
+          }
+        }
       } else {
         stopVideo()
       }
     },
-    { immediate: true }
+    { immediate: true, flush: 'post' }
 )
 
 watch(isBlocked, blocked => {
@@ -253,7 +344,6 @@ onMounted(async () => {
   const firstMedia = preferredInitialMedia.value
   if (!firstMedia) return
 
-  videoRequested.value = false
   activeKey.value = firstMedia.key
   await nextTick()
 })
@@ -262,23 +352,3 @@ onBeforeUnmount(() => {
   stopVideo()
 })
 </script>
-
-<style scoped>
-::-webkit-scrollbar {
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(249, 115, 22, 0.4);
-  border-radius: 4px;
-  backdrop-filter: blur(4px);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(249, 115, 22, 0.7);
-}
-</style>

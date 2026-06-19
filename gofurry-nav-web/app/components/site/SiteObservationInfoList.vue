@@ -44,7 +44,7 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   transition: background-color 500ms ease, border-color 500ms ease, color 500ms ease;
 }
 
-:global(.dark .info-row){
+:global(html.dark .info-row){
   border-bottom-color: rgba(148, 163, 184, 0.12);
 }
 
@@ -53,7 +53,7 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   border-left-color: rgba(251, 140, 47, 0.58);
 }
 
-:global(.dark .info-row:hover){
+:global(html.dark .info-row:hover){
   background: rgba(251, 146, 60, 0.12);
   border-left-color: rgba(251, 146, 60, 0.54);
 }
@@ -74,7 +74,7 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   font-weight: 800;
 }
 
-:global(.dark .info-label){
+:global(html.dark .info-label){
   color: #94a3b8;
 }
 
@@ -82,7 +82,7 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   color: #9a4a12;
 }
 
-:global(.dark .info-row:hover .info-label){
+:global(html.dark .info-row:hover .info-label){
   color: #fdba74;
 }
 
@@ -92,7 +92,7 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
-:global(.dark .info-value){
+:global(html.dark .info-value){
   color: #e2e8f0;
 }
 
@@ -100,7 +100,7 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   color: #111827;
 }
 
-:global(.dark .info-row:hover .info-value){
+:global(html.dark .info-row:hover .info-value){
   color: #f8fafc;
 }
 
@@ -112,7 +112,7 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   font-size: 0.875rem;
 }
 
-:global(.dark .empty-state){
+:global(html.dark .empty-state){
   background: rgba(15, 23, 42, 0.54);
   color: #94a3b8;
 }

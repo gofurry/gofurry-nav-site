@@ -75,6 +75,7 @@ type LightProbeConfig struct {
 	RDAP        LightProbeRDAPConfig        `yaml:"rdap"`
 	Robots      LightProbeRobotsConfig      `yaml:"robots"`
 	SecurityTXT LightProbeSecurityTXTConfig `yaml:"security_txt"`
+	LLMSTXT     LightProbeLLMSTXTConfig     `yaml:"llms_txt"`
 	PageAssets  LightProbePageAssetsConfig  `yaml:"page_assets"`
 	PortCheck   LightProbePortCheckConfig   `yaml:"port_check"`
 	WAFCanary   LightProbeWAFCanaryConfig   `yaml:"waf_canary"`
@@ -97,6 +98,14 @@ type LightProbeRobotsConfig struct {
 }
 
 type LightProbeSecurityTXTConfig struct {
+	Enabled          bool `yaml:"enabled"`
+	IntervalHours    int  `yaml:"interval_hours"`
+	TimeoutSeconds   int  `yaml:"timeout_seconds"`
+	MaxResponseBytes int  `yaml:"max_response_bytes"`
+	RunOnStart       bool `yaml:"run_on_start"`
+}
+
+type LightProbeLLMSTXTConfig struct {
 	Enabled          bool `yaml:"enabled"`
 	IntervalHours    int  `yaml:"interval_hours"`
 	TimeoutSeconds   int  `yaml:"timeout_seconds"`
@@ -365,6 +374,8 @@ func (cfg CollectorV2Config) ProtocolEnabled(protocol string) bool {
 		return cfg.LightProbe.Robots.Enabled
 	case "security_txt":
 		return cfg.LightProbe.SecurityTXT.Enabled
+	case "llms_txt":
+		return cfg.LightProbe.LLMSTXT.Enabled
 	case "page_assets":
 		return cfg.LightProbe.PageAssets.Enabled
 	case "port_check":
@@ -439,6 +450,18 @@ func (cfg LightProbeSecurityTXTConfig) Timeout() time.Duration {
 }
 
 func (cfg LightProbeSecurityTXTConfig) MaxResponseSize() int64 {
+	return int64(intOrDefault(cfg.MaxResponseBytes, 64*1024))
+}
+
+func (cfg LightProbeLLMSTXTConfig) Interval() time.Duration {
+	return hoursOrDefault(cfg.IntervalHours, 168)
+}
+
+func (cfg LightProbeLLMSTXTConfig) Timeout() time.Duration {
+	return secondsOrDefault(cfg.TimeoutSeconds, 10)
+}
+
+func (cfg LightProbeLLMSTXTConfig) MaxResponseSize() int64 {
 	return int64(intOrDefault(cfg.MaxResponseBytes, 64*1024))
 }
 

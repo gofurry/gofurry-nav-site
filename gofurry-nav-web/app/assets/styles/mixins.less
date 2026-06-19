@@ -1,0 +1,39 @@
+.gf-surface(
+  @background: var(--gf-surface),
+  @border: var(--gf-border),
+  @shadow: var(--gf-shadow-soft)
+) {
+  background: @background;
+  border: 1px solid @border;
+  box-shadow: @shadow;
+  backdrop-filter: blur(var(--gf-blur-surface));
+}
+
+.gf-focus-ring(@color: var(--gf-focus-ring)) {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px @color;
+}
+
+.gf-interactive-motion() {
+  transition:
+    background-color var(--gf-motion-fast) ease,
+    border-color var(--gf-motion-fast) ease,
+    box-shadow var(--gf-motion-fast) ease,
+    color var(--gf-motion-fast) ease,
+    transform var(--gf-motion-fast) ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.gf-hover-surface(@background: var(--gf-surface-hover)) {
+  .gf-interactive-motion();
+
+  &:hover {
+    background: @background;
+    border-color: var(--gf-border-strong);
+    box-shadow: var(--gf-shadow-hover);
+  }
+}

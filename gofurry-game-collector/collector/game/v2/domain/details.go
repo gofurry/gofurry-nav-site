@@ -73,6 +73,32 @@ type GameMedia struct {
 	CollectedAt time.Time `json:"collected_at"`
 }
 
+// GameMediaAsset is the unified Steam media/static asset contract.
+type GameMediaAsset struct {
+	GameID int64  `json:"game_id"`
+	AppID  uint32 `json:"appid"`
+
+	AssetType    string `json:"asset_type"`
+	AssetFamily  string `json:"asset_family"`
+	Source       string `json:"source"`
+	Language     string `json:"language"`
+	MediaKey     string `json:"media_key"`
+	Title        string `json:"title"`
+	URL          string `json:"url"`
+	ThumbnailURL string `json:"thumbnail_url"`
+	Format       string `json:"format"`
+
+	Exists        *bool  `json:"exists"`
+	StatusCode    int    `json:"status_code"`
+	ContentType   string `json:"content_type"`
+	ContentLength int64  `json:"content_length"`
+	Extra         any    `json:"extra"`
+	SortOrder     int    `json:"sort_order"`
+
+	CheckedAt   *time.Time `json:"checked_at"`
+	CollectedAt time.Time  `json:"collected_at"`
+}
+
 // Screenshot stores one Steam screenshot asset pair.
 type Screenshot struct {
 	ID           int    `json:"id"`
@@ -138,6 +164,7 @@ type DetailsCollection struct {
 	Localized    []GameLocalizedDetails `json:"localized"`
 	Prices       []GamePrice            `json:"prices"`
 	Media        GameMedia              `json:"media"`
+	Assets       []GameMediaAsset       `json:"assets"`
 	Requirements SystemRequirements     `json:"requirements"`
 	Snapshots    []RawSnapshot          `json:"snapshots"`
 }

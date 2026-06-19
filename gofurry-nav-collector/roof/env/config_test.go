@@ -76,7 +76,7 @@ func TestProbeBudgetOverrides(t *testing.T) {
 
 func TestCollectorV2DefaultsDisabled(t *testing.T) {
 	cfg := CollectorV2Config{}
-	for _, protocol := range []string{"ping", "http", "dns", "rdap", "robots", "security_txt", "page_assets", "port_check", "waf_canary"} {
+	for _, protocol := range []string{"ping", "http", "dns", "rdap", "robots", "security_txt", "llms_txt", "page_assets", "port_check", "waf_canary"} {
 		if cfg.ProtocolEnabled(protocol) {
 			t.Fatalf("ProtocolEnabled(%q) should be false by default", protocol)
 		}
@@ -128,16 +128,16 @@ func TestEdgeHintsDefaultsEnabled(t *testing.T) {
 
 func TestLightProbeDefaults(t *testing.T) {
 	cfg := LightProbeConfig{}
-	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled || cfg.PageAssets.Enabled || cfg.PortCheck.Enabled || cfg.WAFCanary.Enabled {
+	if cfg.RDAP.Enabled || cfg.Robots.Enabled || cfg.SecurityTXT.Enabled || cfg.LLMSTXT.Enabled || cfg.PageAssets.Enabled || cfg.PortCheck.Enabled || cfg.WAFCanary.Enabled {
 		t.Fatal("light probe should be disabled by default")
 	}
-	if cfg.RDAP.RunOnStart || cfg.Robots.RunOnStart || cfg.SecurityTXT.RunOnStart || cfg.PageAssets.RunOnStart || cfg.PortCheck.RunOnStart || cfg.WAFCanary.RunOnStart {
+	if cfg.RDAP.RunOnStart || cfg.Robots.RunOnStart || cfg.SecurityTXT.RunOnStart || cfg.LLMSTXT.RunOnStart || cfg.PageAssets.RunOnStart || cfg.PortCheck.RunOnStart || cfg.WAFCanary.RunOnStart {
 		t.Fatal("light probe should not run on service start by default")
 	}
-	if cfg.RDAP.Interval() != 168*time.Hour || cfg.Robots.Interval() != 168*time.Hour || cfg.SecurityTXT.Interval() != 168*time.Hour || cfg.PageAssets.Interval() != 168*time.Hour || cfg.PortCheck.Interval() != 168*time.Hour {
+	if cfg.RDAP.Interval() != 168*time.Hour || cfg.Robots.Interval() != 168*time.Hour || cfg.SecurityTXT.Interval() != 168*time.Hour || cfg.LLMSTXT.Interval() != 168*time.Hour || cfg.PageAssets.Interval() != 168*time.Hour || cfg.PortCheck.Interval() != 168*time.Hour {
 		t.Fatal("light probe interval should default to 168 hours")
 	}
-	if cfg.RDAP.Timeout() != 10*time.Second || cfg.Robots.Timeout() != 10*time.Second || cfg.SecurityTXT.Timeout() != 10*time.Second || cfg.PageAssets.Timeout() != 10*time.Second {
+	if cfg.RDAP.Timeout() != 10*time.Second || cfg.Robots.Timeout() != 10*time.Second || cfg.SecurityTXT.Timeout() != 10*time.Second || cfg.LLMSTXT.Timeout() != 10*time.Second || cfg.PageAssets.Timeout() != 10*time.Second {
 		t.Fatal("light probe timeout should default to 10 seconds")
 	}
 	if cfg.WAFCanary.Interval() != 720*time.Hour || cfg.WAFCanary.Timeout() != 10*time.Second || cfg.WAFCanary.Path() != "/.well-known/gofurry-waf-canary" || cfg.WAFCanary.UserAgentOrDefault() != "GoFurry-Nav-Collector-WAF-Canary/1.0" || cfg.WAFCanary.RunOnStart || cfg.WAFCanary.MaxTargets() != 0 {
@@ -149,7 +149,7 @@ func TestLightProbeDefaults(t *testing.T) {
 	if cfg.PortCheck.Timeout() != 2*time.Second || cfg.PortCheck.WorkerCount() != 8 || cfg.PortCheck.MaxPorts() != 24 {
 		t.Fatal("port_check defaults are incorrect")
 	}
-	if cfg.Robots.MaxResponseSize() != 64*1024 || cfg.SecurityTXT.MaxResponseSize() != 64*1024 {
+	if cfg.Robots.MaxResponseSize() != 64*1024 || cfg.SecurityTXT.MaxResponseSize() != 64*1024 || cfg.LLMSTXT.MaxResponseSize() != 64*1024 {
 		t.Fatal("light probe max response size should default to 64KiB")
 	}
 	if cfg.PageAssets.MaxIconSize() != 256*1024 || cfg.PageAssets.MaxManifestSize() != 64*1024 {
@@ -187,6 +187,12 @@ collector:
         timeout_seconds: 5
         max_response_bytes: 2345
         run_on_start: true
+      llms_txt:
+        enabled: true
+        interval_hours: 84
+        timeout_seconds: 6
+        max_response_bytes: 3456
+        run_on_start: true
       page_assets:
         enabled: true
         interval_hours: 96
@@ -219,7 +225,7 @@ collector:
 	if err != nil {
 		t.Fatalf("yaml.Unmarshal() error = %v", err)
 	}
-	if !cfg.Collector.V2.ProtocolEnabled("rdap") || !cfg.Collector.V2.ProtocolEnabled("robots") || !cfg.Collector.V2.ProtocolEnabled("security_txt") || !cfg.Collector.V2.ProtocolEnabled("page_assets") || !cfg.Collector.V2.ProtocolEnabled("port_check") || !cfg.Collector.V2.ProtocolEnabled("waf_canary") {
+	if !cfg.Collector.V2.ProtocolEnabled("rdap") || !cfg.Collector.V2.ProtocolEnabled("robots") || !cfg.Collector.V2.ProtocolEnabled("security_txt") || !cfg.Collector.V2.ProtocolEnabled("llms_txt") || !cfg.Collector.V2.ProtocolEnabled("page_assets") || !cfg.Collector.V2.ProtocolEnabled("port_check") || !cfg.Collector.V2.ProtocolEnabled("waf_canary") {
 		t.Fatalf("light probe protocol switches not loaded: %+v", cfg.Collector.V2.LightProbe)
 	}
 	if cfg.Collector.V2.EdgeHints.EnabledOrDefault() {
@@ -228,7 +234,7 @@ collector:
 	if cfg.Collector.V2.LightProbe.RDAP.Interval() != 24*time.Hour || cfg.Collector.V2.LightProbe.RDAP.Timeout() != 3*time.Second {
 		t.Fatalf("rdap config not loaded: %+v", cfg.Collector.V2.LightProbe.RDAP)
 	}
-	if !cfg.Collector.V2.LightProbe.RDAP.RunOnStart || !cfg.Collector.V2.LightProbe.Robots.RunOnStart || !cfg.Collector.V2.LightProbe.SecurityTXT.RunOnStart || !cfg.Collector.V2.LightProbe.PageAssets.RunOnStart || !cfg.Collector.V2.LightProbe.PortCheck.RunOnStart {
+	if !cfg.Collector.V2.LightProbe.RDAP.RunOnStart || !cfg.Collector.V2.LightProbe.Robots.RunOnStart || !cfg.Collector.V2.LightProbe.SecurityTXT.RunOnStart || !cfg.Collector.V2.LightProbe.LLMSTXT.RunOnStart || !cfg.Collector.V2.LightProbe.PageAssets.RunOnStart || !cfg.Collector.V2.LightProbe.PortCheck.RunOnStart {
 		t.Fatalf("light probe run_on_start config not loaded: %+v", cfg.Collector.V2.LightProbe)
 	}
 	if cfg.Collector.V2.LightProbe.Robots.MaxResponseSize() != 1234 || cfg.Collector.V2.LightProbe.Robots.MaxSitemaps() != 7 {
@@ -236,6 +242,9 @@ collector:
 	}
 	if cfg.Collector.V2.LightProbe.SecurityTXT.MaxResponseSize() != 2345 {
 		t.Fatalf("security_txt limits not loaded: %+v", cfg.Collector.V2.LightProbe.SecurityTXT)
+	}
+	if cfg.Collector.V2.LightProbe.LLMSTXT.Interval() != 84*time.Hour || cfg.Collector.V2.LightProbe.LLMSTXT.Timeout() != 6*time.Second || cfg.Collector.V2.LightProbe.LLMSTXT.MaxResponseSize() != 3456 {
+		t.Fatalf("llms_txt config not loaded: %+v", cfg.Collector.V2.LightProbe.LLMSTXT)
 	}
 	if cfg.Collector.V2.LightProbe.PageAssets.Interval() != 96*time.Hour || cfg.Collector.V2.LightProbe.PageAssets.Timeout() != 6*time.Second {
 		t.Fatalf("page_assets timing config not loaded: %+v", cfg.Collector.V2.LightProbe.PageAssets)

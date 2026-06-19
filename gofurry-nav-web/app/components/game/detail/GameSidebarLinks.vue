@@ -1,17 +1,17 @@
 <template>
-  <div class="bg-orange-50 rounded-2xl p-4 shadow text-sm space-y-3">
+  <div class="game-detail-sidebar-card space-y-3 p-4 text-sm">
     <div class="flex justify-between gap-x-2">
       <!-- Steam -->
       <button
           v-if="game?.appid"
           @click="goSteam"
-          class="w-full py-2 rounded-lg bg-orange-400 text-white hover:bg-orange-400/70 transition"
+          class="game-detail-action game-detail-action--primary w-full py-2"
       >
         {{t("game.detail.goToSteamPage")}}
       </button>
       <!-- 点评按钮 -->
       <button
-          class="w-full py-2 rounded-lg bg-orange-200 text-orange-800 hover:bg-orange-300/80 transition"
+          class="game-detail-action game-detail-action--secondary w-full py-2"
           @click="showComment = true"
       >
         {{ t("game.detail.goComment") }}
@@ -21,8 +21,8 @@
 
     <!-- 资源 -->
     <div v-if="game?.resources?.length">
-      <h3 class="font-semibold mb-2">{{t("game.detail.resources")}}</h3>
-      <div class="flex flex-wrap gap-2 text-orange-700">
+      <h3 class="game-detail-sidebar-title mb-2 font-semibold">{{t("game.detail.resources")}}</h3>
+      <div class="flex flex-wrap gap-2">
         <LinkTag
             v-for="(item, i) in game.resources"
             :key="item.key + i"
@@ -33,13 +33,13 @@
 
     <!-- 社群 -->
     <div v-if="safeGroups.length">
-      <h3 class="font-semibold mb-2">{{t("game.detail.community")}}</h3>
+      <h3 class="game-detail-sidebar-title mb-2 font-semibold">{{t("game.detail.community")}}</h3>
       <SiteIconList :items="safeGroups" />
     </div>
 
     <!-- 相关链接 -->
     <div v-if="safeLinks.length">
-      <h3 class="font-semibold mb-2">{{t("game.detail.relatedLinks")}}</h3>
+      <h3 class="game-detail-sidebar-title mb-2 font-semibold">{{t("game.detail.relatedLinks")}}</h3>
       <SiteIconList :items="safeLinks" />
     </div>
   </div>

@@ -25,6 +25,7 @@ type GfnSite struct {
 	Country    *string      `gorm:"column:country;type:character varying(20);comment:country" json:"country"`
 	Nsfw       string       `gorm:"column:nsfw;type:character varying(4);default:''::character varying;comment:nsfw" json:"nsfw"`
 	Welfare    string       `gorm:"column:welfare;type:character varying(4);comment:welfare" json:"welfare"`
+	Weight     int64        `gorm:"column:weight;type:bigint;not null;default:0;comment:weight" json:"weight"`
 	ViewCount  int64        `gorm:"column:view_count;type:bigint;not null;default:0;comment:view count" json:"view_count"`
 	Icon       *string      `gorm:"column:icon;type:character varying(255);comment:icon" json:"icon"`
 	Deleted    bool         `gorm:"column:deleted;type:boolean;comment:deleted" json:"deleted"`

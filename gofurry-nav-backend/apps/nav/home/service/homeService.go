@@ -3,22 +3,28 @@ package service
 import (
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/bytedance/sonic"
+	"github.com/gofurry/gofurry-nav-backend/apps/nav/cachekeys"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/home/models"
 	navmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	navservice "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/service"
 	"github.com/gofurry/gofurry-nav-backend/common"
+	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 )
+
+const homeGroupPreviewLimit = 8
 
 type navHomeReader interface {
 	GetSiteList(lang string) ([]navmodels.SiteVo, common.GFError)
 	GetGroupList(lang string) ([]navmodels.GroupVo, common.GFError)
 	GetFeaturedSiteList() ([]navmodels.FeaturedSiteVo, common.GFError)
 	GetPingList() (map[string]string, common.GFError)
-	GetSayingService() (navmodels.SayingModel, common.GFError)
+	GetSayingService(lang string) (navmodels.SayingModel, common.GFError)
 	GetImageUrl(t string) string
 }
 
@@ -55,7 +61,6 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 		GeneratedAt:    svc.clock()(),
 		CacheState:     map[string]string{},
 		ReasonMessages: map[string]string{},
-		Sites:          []navmodels.SiteVo{},
 		Groups:         []models.HomeGroup{},
 		Spotlight: models.HomeSpotlight{
 			PageSize: 6,
@@ -68,12 +73,13 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 		Backgrounds: models.HomeBackgrounds{},
 	}
 
-	if sites, err := svc.reader().GetSiteList(lang); err != nil {
+	var sites []navmodels.SiteVo
+	if siteList, err := svc.reader().GetSiteList(lang); err != nil {
 		response.CacheState["sites"] = models.HomeStateMissing
 		response.ReasonMessages["sites"] = err.GetMsg()
 	} else {
 		response.CacheState["sites"] = models.HomeStateReady
-		response.Sites = sites
+		sites = siteList
 	}
 
 	if groups, err := svc.reader().GetGroupList(lang); err != nil {
@@ -81,16 +87,25 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 		response.ReasonMessages["groups"] = err.GetMsg()
 	} else {
 		response.CacheState["groups"] = models.HomeStateReady
-		response.Groups = buildHomeGroups(response.Sites, groups)
+		if len(sites) > 0 {
+			response.Groups = buildHomeGroups(sites, groups)
+		}
 	}
 
 	if featured, err := svc.reader().GetFeaturedSiteList(); err != nil {
 		response.CacheState["spotlight"] = models.HomeStateMissing
 		response.ReasonMessages["spotlight"] = err.GetMsg()
-		response.Spotlight = buildHomeSpotlight(response.Sites, nil, svc.clock()())
+		if len(sites) > 0 {
+			response.Spotlight = buildHomeSpotlight(sites, nil, svc.clock()())
+		}
 	} else {
-		response.CacheState["spotlight"] = models.HomeStateReady
-		response.Spotlight = buildHomeSpotlight(response.Sites, featured, svc.clock()())
+		if len(sites) > 0 {
+			response.CacheState["spotlight"] = models.HomeStateReady
+			response.Spotlight = buildHomeSpotlight(sites, featured, svc.clock()())
+		} else {
+			response.CacheState["spotlight"] = models.HomeStateMissing
+			response.ReasonMessages["spotlight"] = "站点列表不可用"
+		}
 	}
 
 	if ping, err := svc.reader().GetPingList(); err != nil {
@@ -101,7 +116,7 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 		response.Ping = ping
 	}
 
-	if saying, err := svc.reader().GetSayingService(); err != nil {
+	if saying, err := svc.reader().GetSayingService(lang); err != nil {
 		response.CacheState["saying"] = models.HomeStateMissing
 		response.ReasonMessages["saying"] = err.GetMsg()
 	} else {
@@ -143,14 +158,15 @@ func (svc *homeService) GetHomePing() models.HomePingResponse {
 	return response
 }
 
-func (svc *homeService) GetHomeSaying() models.HomeSayingResponse {
+func (svc *homeService) GetHomeSaying(lang string) models.HomeSayingResponse {
+	lang = normalizeLang(lang)
 	response := models.HomeSayingResponse{
 		SchemaVersion: models.HomeSchemaVersion,
 		GeneratedAt:   svc.clock()(),
 		State:         models.HomeStateMissing,
 	}
 
-	saying, err := svc.reader().GetSayingService()
+	saying, err := svc.reader().GetSayingService(lang)
 	if err != nil {
 		response.ReasonMessages = []string{err.GetMsg()}
 		return response
@@ -200,6 +216,10 @@ func normalizeLang(lang string) string {
 }
 
 func buildHomeGroups(sites []navmodels.SiteVo, groups []navmodels.GroupVo) []models.HomeGroup {
+	return BuildHomeGroupsForCache(sites, groups)
+}
+
+func BuildHomeGroupsForCache(sites []navmodels.SiteVo, groups []navmodels.GroupVo) []models.HomeGroup {
 	siteMap := make(map[string]navmodels.SiteVo, len(sites))
 	for _, site := range sites {
 		siteMap[site.ID] = site
@@ -213,13 +233,21 @@ func buildHomeGroups(sites []navmodels.SiteVo, groups []navmodels.GroupVo) []mod
 				items = append(items, site)
 			}
 		}
+		SortSitesForCache(items)
+		siteCount := len(items)
+		if siteCount > homeGroupPreviewLimit {
+			items = items[:homeGroupPreviewLimit]
+		}
 
 		result = append(result, models.HomeGroup{
-			ID:       group.ID,
-			Name:     group.Name,
-			Info:     group.Info,
-			Priority: group.Priority,
-			Sites:    items,
+			ID:         group.ID,
+			Name:       group.Name,
+			Info:       group.Info,
+			Priority:   group.Priority,
+			SiteCount:  siteCount,
+			HasMore:    siteCount > len(items),
+			DetailPath: "/site-groups/" + group.ID,
+			Sites:      items,
 		})
 	}
 
@@ -273,4 +301,65 @@ func buildHomeSpotlight(sites []navmodels.SiteVo, featured []navmodels.FeaturedS
 	})
 
 	return spotlight
+}
+
+func sortSitesByWeight(items []navmodels.SiteVo) {
+	SortSitesForCache(items)
+}
+
+func SortSitesForCache(items []navmodels.SiteVo) {
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Weight != items[j].Weight {
+			return items[i].Weight > items[j].Weight
+		}
+		if items[i].UpdateTime != items[j].UpdateTime {
+			return items[i].UpdateTime > items[j].UpdateTime
+		}
+		leftID, _ := strconv.ParseInt(items[i].ID, 10, 64)
+		rightID, _ := strconv.ParseInt(items[j].ID, 10, 64)
+		return leftID > rightID
+	})
+}
+
+func GetCachedHome(lang string) models.HomeResponse {
+	lang = normalizeLang(lang)
+	response := models.HomeResponse{
+		SchemaVersion:  models.HomeSchemaVersion,
+		GeneratedAt:    time.Now(),
+		CacheState:     map[string]string{"home": models.HomeStateMissing},
+		ReasonMessages: map[string]string{"home": "首页缓存未命中"},
+		Groups:         []models.HomeGroup{},
+		Spotlight: models.HomeSpotlight{
+			PageSize: 6,
+			Featured: []navmodels.SiteVo{},
+			Popular:  []navmodels.SiteVo{},
+			Latest:   []navmodels.SiteVo{},
+			Random:   []navmodels.SiteVo{},
+		},
+		Ping:        map[string]string{},
+		Backgrounds: models.HomeBackgrounds{},
+	}
+
+	raw, err := cs.GetString(cachekeys.Home(lang))
+	if err != nil || raw == "" {
+		if err != nil {
+			response.ReasonMessages["home"] = err.GetMsg()
+		}
+		return response
+	}
+
+	if unmarshalErr := sonic.Unmarshal([]byte(raw), &response); unmarshalErr != nil {
+		response.ReasonMessages["home"] = "首页缓存反序列化失败"
+		response.CacheState["home"] = models.HomeStateMissing
+		return response
+	}
+
+	if response.CacheState == nil {
+		response.CacheState = map[string]string{}
+	}
+	response.CacheState["home"] = models.HomeStateReady
+	if len(response.ReasonMessages) == 0 {
+		response.ReasonMessages = nil
+	}
+	return response
 }

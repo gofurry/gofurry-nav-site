@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="zh-CN" data-lang="zh" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#efe0ca">
+  <title>GoFurry 正在维护中</title>
+  <script>
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem('gf-maintenance-theme');
+        var theme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        var savedLang = localStorage.getItem('gf-maintenance-lang');
+        var lang = savedLang || (/^en/i.test(navigator.language || '') ? 'en' : 'zh');
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.lang = lang;
+        document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#07111f' : '#efe0ca');
+      } catch (error) {
+        document.documentElement.dataset.theme = 'light';
+        document.documentElement.dataset.lang = 'zh';
+      }
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #efe0ca;
+      --grid: rgba(95, 69, 49, 0.16);
+      --grid-soft: rgba(95, 69, 49, 0.11);
+      --panel: rgba(255, 250, 242, 0.96);
+      --panel-warm: rgba(255, 237, 213, 0.72);
+      --text: #1c1917;
+      --muted: rgba(87, 83, 78, 0.76);
+      --accent: #7c2d12;
+      --accent-soft: rgba(249, 115, 22, 0.14);
+      --border: rgba(126, 92, 58, 0.18);
+      --border-strong: rgba(126, 92, 58, 0.28);
+      --shadow: rgba(91, 62, 28, 0.16);
+      --control-bg: rgba(255, 250, 242, 0.74);
+      --control-hover: rgba(255, 237, 213, 0.92);
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #07111f;
+      --grid: rgba(148, 163, 184, 0.15);
+      --grid-soft: rgba(148, 163, 184, 0.10);
+      --panel: rgba(17, 24, 39, 0.94);
+      --panel-warm: rgba(30, 41, 59, 0.82);
+      --text: rgba(248, 250, 252, 0.94);
+      --muted: rgba(203, 213, 225, 0.76);
+      --accent: #fed7aa;
+      --accent-soft: rgba(251, 146, 60, 0.12);
+      --border: rgba(226, 232, 240, 0.15);
+      --border-strong: rgba(226, 232, 240, 0.24);
+      --shadow: rgba(2, 6, 23, 0.42);
+      --control-bg: rgba(15, 23, 42, 0.62);
+      --control-hover: rgba(30, 41, 59, 0.92);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 16% 12%, rgba(255, 247, 237, 0.64), transparent 28%),
+        radial-gradient(circle at 82% 10%, rgba(251, 146, 60, 0.10), transparent 26%),
+        repeating-linear-gradient(90deg, var(--grid) 0, var(--grid) 1px, transparent 1px, transparent 40px),
+        repeating-linear-gradient(0deg, var(--grid-soft) 0, var(--grid-soft) 1px, transparent 1px, transparent 40px),
+        var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+      letter-spacing: 0.025em;
+      padding: 32px 18px;
+      transition:
+        background-color 260ms ease,
+        color 260ms ease;
+    }
+
+    html[data-theme="dark"] body {
+      background:
+        radial-gradient(circle at 18% 12%, rgba(20, 184, 166, 0.09), transparent 28%),
+        radial-gradient(circle at 82% 10%, rgba(251, 146, 60, 0.08), transparent 26%),
+        repeating-linear-gradient(90deg, var(--grid) 0, var(--grid) 1px, transparent 1px, transparent 40px),
+        repeating-linear-gradient(0deg, var(--grid-soft) 0, var(--grid-soft) 1px, transparent 1px, transparent 40px),
+        var(--bg);
+    }
+
+    main {
+      position: relative;
+      width: min(100%, 760px);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      background:
+        linear-gradient(145deg, var(--panel), var(--panel-warm)),
+        var(--panel);
+      box-shadow: 0 28px 80px var(--shadow);
+      isolation: isolate;
+      padding: clamp(30px, 6vw, 58px);
+      transition:
+        background-color 260ms ease,
+        border-color 260ms ease,
+        box-shadow 260ms ease;
+    }
+
+    main::before {
+      content: "";
+      position: absolute;
+      inset: auto 12% -28% 12%;
+      z-index: -1;
+      height: 42%;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(249, 115, 22, 0.16), transparent 68%);
+      filter: blur(18px);
+      opacity: 0.86;
+    }
+
+    html[data-theme="dark"] main::before {
+      opacity: 0.28;
+    }
+
+    .toolbar {
+      position: absolute;
+      top: 22px;
+      right: 22px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .control-button {
+      min-width: 68px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--control-bg);
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 750;
+      letter-spacing: 0.035em;
+      line-height: 1;
+      padding: 10px 13px;
+      transition:
+        background-color 180ms ease,
+        border-color 180ms ease,
+        color 180ms ease;
+    }
+
+    .control-button:hover {
+      border-color: var(--border-strong);
+      background: var(--control-hover);
+    }
+
+    .control-button:focus-visible {
+      outline: 3px solid rgba(249, 115, 22, 0.28);
+      outline-offset: 3px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      margin-bottom: 32px;
+      padding-right: 170px;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 23px;
+      font-weight: 850;
+      letter-spacing: 0.005em;
+      line-height: 1.2;
+    }
+
+    .brand-subtitle {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 850;
+      letter-spacing: 0.20em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 680px;
+      margin: 14px 0 0;
+      font-size: clamp(34px, 5.4vw, 52px);
+      font-weight: 900;
+      letter-spacing: 0.045em;
+      line-height: 1.16;
+      text-wrap: balance;
+    }
+
+    html[data-lang="en"] h1 {
+      max-width: 720px;
+      font-size: clamp(34px, 5vw, 50px);
+      letter-spacing: -0.025em;
+      line-height: 1.08;
+    }
+
+    .lead {
+      max-width: 610px;
+      margin: 22px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+      letter-spacing: 0.035em;
+      line-height: 2;
+      text-wrap: pretty;
+    }
+
+    html[data-lang="en"] .lead {
+      letter-spacing: 0.012em;
+      line-height: 1.8;
+    }
+
+    .progress {
+      position: relative;
+      height: 7px;
+      margin-top: 38px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(126, 92, 58, 0.14);
+    }
+
+    html[data-theme="dark"] .progress {
+      background: rgba(226, 232, 240, 0.13);
+    }
+
+    .progress span {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 36%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #7c2d12, #fb923c, #7c2d12);
+      animation: loading 2.8s ease-in-out infinite;
+    }
+
+    html[data-theme="dark"] .progress span {
+      background: linear-gradient(90deg, #fed7aa, #fb923c, #fed7aa);
+    }
+
+    footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.025em;
+      line-height: 1.8;
+    }
+
+    code {
+      border-radius: 999px;
+      background: rgba(124, 45, 18, 0.08);
+      color: var(--accent);
+      padding: 3px 8px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 12px;
+      letter-spacing: 0;
+    }
+
+    html[data-theme="dark"] code {
+      background: rgba(251, 146, 60, 0.12);
+    }
+
+    @keyframes loading {
+      0% {
+        transform: translateX(-80%);
+      }
+      50% {
+        transform: translateX(110%);
+      }
+      100% {
+        transform: translateX(-80%);
+      }
+    }
+
+    @media (max-width: 620px) {
+      body {
+        padding: 18px 12px;
+      }
+
+      main {
+        border-radius: 24px;
+        padding: 84px 24px 30px;
+      }
+
+      .toolbar {
+        top: 20px;
+        right: 20px;
+        left: 20px;
+        justify-content: flex-end;
+      }
+
+      .brand {
+        align-items: flex-start;
+        margin-bottom: 30px;
+        padding-right: 0;
+      }
+
+      h1 {
+        font-size: clamp(32px, 11vw, 42px);
+      }
+
+      html[data-lang="en"] h1 {
+        font-size: clamp(30px, 10vw, 40px);
+      }
+
+      .lead {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="toolbar" aria-label="Display controls">
+      <button class="control-button" type="button" data-action="language" aria-label="Switch language">EN</button>
+      <button class="control-button" type="button" data-action="theme" aria-label="Switch color mode">深色</button>
+    </div>
+
+    <div class="brand" aria-label="GoFurry">
+      <div>
+        <p class="brand-title">GoFurry</p>
+        <p class="brand-subtitle" data-i18n="brandSubtitle">兽人控导航站 / Furry Navigation</p>
+      </div>
+    </div>
+
+    <p class="eyebrow" data-i18n="eyebrow">Scheduled Maintenance</p>
+    <h1 data-i18n="headline">网站正在维护中</h1>
+    <p class="lead" data-i18n="lead">我们正在对 GoFurry 做一次短暂停机维护，请稍后刷新页面再试。</p>
+
+    <div class="progress" aria-hidden="true"><span></span></div>
+
+    <footer>
+      <span><span data-i18n="httpStatus">HTTP status:</span> <code>503 Service Unavailable</code></span>
+      <span data-i18n="retry">请稍后刷新页面</span>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var copy = {
+        zh: {
+          title: 'GoFurry 正在维护中',
+          brandSubtitle: '兽人控导航站 / Furry Navigation',
+          eyebrow: 'Scheduled Maintenance',
+          headline: '网站正在维护中',
+          lead: '我们正在对 GoFurry 做一次短暂停机维护，请稍后刷新页面再试。',
+          httpStatus: 'HTTP status:',
+          retry: '请稍后刷新页面',
+          languageButton: 'EN',
+          themeToDark: '深色',
+          themeToLight: '浅色'
+        },
+        en: {
+          title: 'GoFurry is under maintenance',
+          brandSubtitle: 'Furry Navigation',
+          eyebrow: 'Scheduled Maintenance',
+          headline: 'Maintenance in progress',
+          lead: 'We are performing brief maintenance on GoFurry. Please refresh the page later.',
+          httpStatus: 'HTTP status:',
+          retry: 'Please refresh the page later.',
+          languageButton: '中文',
+          themeToDark: 'Dark',
+          themeToLight: 'Light'
+        }
+      };
+
+      var root = document.documentElement;
+      var languageButton = document.querySelector('[data-action="language"]');
+      var themeButton = document.querySelector('[data-action="theme"]');
+      var themeMeta = document.querySelector('meta[name="theme-color"]');
+
+      function currentLang() {
+        return root.dataset.lang === 'en' ? 'en' : 'zh';
+      }
+
+      function currentTheme() {
+        return root.dataset.theme === 'dark' ? 'dark' : 'light';
+      }
+
+      function applyLang(lang) {
+        var pack = copy[lang] || copy.zh;
+        root.dataset.lang = lang;
+        root.lang = lang === 'en' ? 'en' : 'zh-CN';
+        document.title = pack.title;
+        document.querySelectorAll('[data-i18n]').forEach(function (node) {
+          var key = node.getAttribute('data-i18n');
+          if (key && pack[key]) {
+            node.textContent = pack[key];
+          }
+        });
+        languageButton.textContent = pack.languageButton;
+        languageButton.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : '切换为英文');
+        applyTheme(currentTheme(), false);
+        try {
+          localStorage.setItem('gf-maintenance-lang', lang);
+        } catch (error) {}
+      }
+
+      function applyTheme(theme, persist) {
+        var lang = currentLang();
+        var pack = copy[lang] || copy.zh;
+        root.dataset.theme = theme;
+        themeMeta.setAttribute('content', theme === 'dark' ? '#07111f' : '#efe0ca');
+        themeButton.textContent = theme === 'dark' ? pack.themeToLight : pack.themeToDark;
+        themeButton.setAttribute('aria-label', lang === 'en' ? 'Switch color mode' : '切换亮暗色');
+        if (persist) {
+          try {
+            localStorage.setItem('gf-maintenance-theme', theme);
+          } catch (error) {}
+        }
+      }
+
+      languageButton.addEventListener('click', function () {
+        applyLang(currentLang() === 'en' ? 'zh' : 'en');
+      });
+
+      themeButton.addEventListener('click', function () {
+        applyTheme(currentTheme() === 'dark' ? 'light' : 'dark', true);
+      });
+
+      applyLang(currentLang());
+      applyTheme(currentTheme(), false);
+    })();
+  </script>
+</body>
+</html>

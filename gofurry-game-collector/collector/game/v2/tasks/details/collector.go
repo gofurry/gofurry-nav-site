@@ -11,6 +11,7 @@ import (
 	"time"
 
 	steam "github.com/gofurry/steam-go"
+	"github.com/gofurry/steam-go/addons/assets"
 	"github.com/gofurry/steam-go/web/storefront"
 
 	"github.com/gofurry/gofurry-game-collector/collector/game/models"
@@ -127,6 +128,7 @@ func (c *Collector) CollectGame(ctx context.Context, game models.GameID) (report
 			}
 			collection.Details = details
 			collection.Media = c.mapper.ToMedia(game.ID, uint32(game.Appid), data, collectedAt)
+			collection.Assets = append(collection.Assets, c.mapper.ToStorefrontAssets(game.ID, uint32(game.Appid), data, collectedAt)...)
 			collection.Requirements = c.mapper.ToRequirements(game.ID, uint32(game.Appid), data, collectedAt)
 			haveBase = true
 		}
@@ -139,6 +141,8 @@ func (c *Collector) CollectGame(ctx context.Context, game models.GameID) (report
 		return c.finishFailed(result, report.ErrorUpstream, "no successful appdetails payload")
 	}
 
+	collection.Assets = append(collection.Assets, c.collectStoreBrowseAssets(ctx, game)...)
+
 	if err := c.repo.SaveDetails(ctx, collection); err != nil {
 		return c.finishFailed(result, report.ErrorStorage, err.Error())
 	}
@@ -150,6 +154,46 @@ func (c *Collector) CollectGame(ctx context.Context, game models.GameID) (report
 	result.EndedAt = time.Now()
 	result.DurationMillis = result.EndedAt.Sub(startedAt).Milliseconds()
 	return result, firstErr
+}
+
+func (c *Collector) collectStoreBrowseAssets(ctx context.Context, game models.GameID) []domain.GameMediaAsset {
+	collectedAt := time.Now()
+	appID := uint32(game.Appid)
+	out := make([]domain.GameMediaAsset, 0)
+
+	for _, plan := range c.requests {
+		if !plan.localized {
+			continue
+		}
+		items, err := c.fetchStoreBrowseAssets(ctx, appID, plan)
+		if err != nil {
+			continue
+		}
+		out = append(out, c.mapper.ToStoreBrowseAssets(game.ID, appID, plan.lang, items, collectedAt)...)
+	}
+
+	return out
+}
+
+func (c *Collector) fetchStoreBrowseAssets(ctx context.Context, appID uint32, plan requestPlan) ([]assets.URLItem, error) {
+	var items []assets.URLItem
+	err := c.adapter.Run(ctx, steamclient.BucketStore, func(runCtx context.Context, sdk *steam.Client) error {
+		if sdk == nil || sdk.API == nil || sdk.API.StoreBrowseService == nil {
+			return fmt.Errorf("steam store browse service is nil")
+		}
+		fetched, err := assets.FetchStoreItemAssetURLs(runCtx, sdk.API.StoreBrowseService, assets.StoreItemAssetOptions{
+			CountryCode: string(plan.region),
+			Language:    plan.steamLang,
+			Kinds:       assets.StoreItemAssetKinds(),
+			StripQuery:  true,
+		}, appID)
+		if err != nil {
+			return fmt.Errorf("fetch store browse assets appid=%d region=%s lang=%s: %w", appID, plan.region, plan.lang, err)
+		}
+		items = fetched
+		return nil
+	})
+	return items, err
 }
 
 func (c *Collector) fetchAppDetails(ctx context.Context, appID uint32, plan requestPlan) (storefront.AppDetailsData, []byte, error) {

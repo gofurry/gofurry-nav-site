@@ -94,7 +94,7 @@ const {
   line-height: 1.35;
 }
 
-:global(.dark .info-tabs-title){
+:global(html.dark .info-tabs-title){
   color: #f8fafc;
 }
 
@@ -116,7 +116,7 @@ const {
   transition: background-color 500ms ease, color 500ms ease;
 }
 
-:global(.dark .info-tab-button){
+:global(html.dark .info-tab-button){
   color: #cbd5e1;
 }
 
@@ -126,8 +126,8 @@ const {
   color: #111827;
 }
 
-:global(.dark .info-tab-button:hover),
-:global(.dark .info-tab-button.is-active){
+:global(html.dark .info-tab-button:hover),
+:global(html.dark .info-tab-button.is-active){
   background: rgba(251, 146, 60, 0.26);
   color: #fff7ed;
 }

@@ -1,56 +1,48 @@
 <template>
-  <div class="flex justify-center items-center gap-2 select-none">
+  <div class="gf-pagination game-search-pagination flex items-center justify-center gap-2 select-none">
 
     <!-- 页码 -->
-    <template v-for="(item, idx) in displayPages" :key="idx">
+    <div class="game-search-pagination-pages">
       <span
-          v-if="item.type === 'page'"
-          class="px-3 py-1 rounded-md text-sm cursor-pointer transition"
-          :class="item.page === currentPage
-          ? 'bg-orange-400 text-white'
-          : 'bg-orange-50 hover:bg-orange-200'"
-          @click="changePage(item.page!)"
+          v-for="(item, idx) in displayPages"
+          :key="item.type === 'page' ? `page-${item.page}` : `ellipsis-${idx}`"
+          class="gf-pagination__button game-search-page-button"
+          :class="item.type === 'page' && item.page === currentPage
+            ? 'gf-pagination__button--active game-search-page-button--active'
+            : 'game-search-page-button--idle'"
+          @click="item.type === 'page' ? changePage(item.page!) : openJump()"
       >
-        {{ item.page }}
+        {{ item.type === 'page' ? item.page : '...' }}
       </span>
+    </div>
 
-      <span
-          v-else
-          class="px-3 py-1 rounded-md text-sm
-               bg-orange-50 text-gray-500 cursor-pointer"
-          @click="openJump"
-      >
-        ...
-      </span>
-    </template>
-
-    <span class="ml-2 text-xs text-gray-500">
+    <span class="gf-pagination__total game-search-pagination-total ml-2">
       {{ t("common.total") }} {{ total }} {{ t("common.record") }}
     </span>
 
     <!-- 跳页 -->
     <div
         v-if="showJump"
-        class="fixed inset-0 bg-black/20 z-50
+        class="game-search-jump-overlay fixed inset-0 z-50
              flex items-center justify-center"
     >
-      <div class="bg-orange-50 rounded-lg p-4 w-64 space-y-3">
-        <div class="text-sm font-semibold">{{ t("game.search.jumpPage") }}</div>
+      <div class="game-search-jump-dialog w-64 space-y-3 p-4">
+        <div class="game-search-jump-title text-sm font-semibold">{{ t("game.search.jumpPage") }}</div>
 
         <input
             v-model.number="jumpPage"
             :min="1"
             :max="totalPages"
-            class="w-full px-2 py-1 rounded-md text-sm bg-orange-100 focus:outline-none focus:ring-2 focus:ring-orange-200"
+            class="game-search-jump-input w-full px-2 py-1 text-sm focus:outline-none"
         />
 
         <div class="flex justify-end gap-2">
-          <button class="px-3 py-1 rounded text-sm cursor-pointer hover:bg-orange-100"
+          <button class="game-search-jump-action game-search-jump-action--ghost"
                   @click="showJump = false">
             {{ t("common.cancel") }}
           </button>
           <button
-              class="px-3 py-1 rounded text-sm bg-orange-400 text-white cursor-pointer hover:bg-orange-300"
+              class="game-search-jump-action game-search-jump-action--primary"
               @click="confirmJump"
           >
             {{ t("common.confirm") }}

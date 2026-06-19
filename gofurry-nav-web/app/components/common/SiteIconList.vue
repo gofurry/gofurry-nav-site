@@ -1,18 +1,17 @@
 <template>
-  <div class="flex flex-wrap gap-2">
+  <div class="site-icon-list flex flex-wrap gap-2">
     <a
         v-for="(item, i) in items"
         :key="item.key + i"
         :href="item.value"
         target="_blank"
         rel="noopener noreferrer"
-        class="w-8 h-8 flex items-center justify-center
-             rounded-lg bg-orange-100 hover:bg-orange-200 transition"
+        class="site-icon-link flex h-8 w-8 items-center justify-center"
         :title="item.key"
     >
       <img
           :src="getIconUrl(item.key)"
-          class="w-5 h-5 object-contain"
+          class="site-icon-image h-5 w-5 object-contain"
           :alt="item.key"
       />
     </a>

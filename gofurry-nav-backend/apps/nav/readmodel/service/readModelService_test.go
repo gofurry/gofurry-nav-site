@@ -64,10 +64,10 @@ func TestReadModelKeysAndProtocols(t *testing.T) {
 	if got := RunStateLatestKey(models.ProtocolDNS); got != "collector:v2:run:dns:latest" {
 		t.Fatalf("RunStateLatestKey() = %q", got)
 	}
-	if len(models.CoreProtocols()) != 3 || len(models.LightProbeProtocols()) != 6 || len(models.AllProtocols()) != 9 {
+	if len(models.CoreProtocols()) != 3 || len(models.LightProbeProtocols()) != 7 || len(models.AllProtocols()) != 10 {
 		t.Fatalf("unexpected protocol groups: core=%v light=%v all=%v", models.CoreProtocols(), models.LightProbeProtocols(), models.AllProtocols())
 	}
-	if !models.IsProtocolAllowed(models.ProtocolWAFCanary) || models.IsProtocolAllowed("ftp") {
+	if !models.IsProtocolAllowed(models.ProtocolWAFCanary) || !models.IsProtocolAllowed(models.ProtocolLLMSTXT) || models.IsProtocolAllowed("ftp") {
 		t.Fatalf("protocol whitelist mismatch")
 	}
 }

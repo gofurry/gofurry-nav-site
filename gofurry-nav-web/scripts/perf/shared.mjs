@@ -42,9 +42,9 @@ export const scenarios = [
     critical: true
   },
   {
-    id: 'archive-empty',
-    label: '知识库空页',
-    path: '/archive',
+    id: 'steam-zone',
+    label: '兽游专区',
+    path: '/steam',
     critical: true,
     blockedHeavyDependencies: ['md-editor-v3']
   },
@@ -52,6 +52,13 @@ export const scenarios = [
     id: 'games',
     label: '游戏首页',
     path: '/games',
+    critical: true,
+    blockedHeavyDependencies: ['hls.js']
+  },
+  {
+    id: 'games-search',
+    label: '游戏搜索页',
+    path: '/games/search',
     critical: true,
     blockedHeavyDependencies: ['hls.js']
   },

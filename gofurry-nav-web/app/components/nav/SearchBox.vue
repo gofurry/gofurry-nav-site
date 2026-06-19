@@ -34,12 +34,11 @@
           @focus="handleInputFocus"
           @blur="handleInputBlur"
           placeholder="搜索站点或内容..."
-          class="search-input h-12 w-full rounded-xl px-4 pr-10 duration-500 focus:outline-none"
+          class="search-input h-12 w-full px-4 pr-10"
       />
       <img src="@/assets/svgs/search.svg"
            :alt="searchActionLabel"
-           class="search-icon absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2
-             cursor-pointer transition-transform duration-500 hover:scale-110"
+           class="search-icon"
            @click="doSearch()"
       />
 
@@ -47,21 +46,19 @@
       <ul
           ref="dropdownRef"
           v-if="(keyword.trim() && dropdownVisible) || isLoading"
-          class="search-suggestion-list absolute left-0 top-[calc(100%+0.5rem)] z-[999] w-full max-h-60 overflow-y-auto overscroll-contain rounded-2xl border border-white/12 bg-slate-950/72
-            origin-top-left backdrop-blur-2xl shadow-2xl shadow-slate-950/35 ring-1 ring-white/8 transition-all duration-500
-            animate-fadeIn"
+          class="search-suggestion-list search-suggestion-list--entering absolute left-0 top-[calc(100%+0.5rem)] z-[999] max-h-60 w-full origin-top-left overflow-y-auto overscroll-contain"
           @wheel.stop
           @touchmove.stop
       >
         <!-- 标题 -->
-        <li class="border-b border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300/90">
+        <li class="search-suggestion-header px-4 py-2 text-xs">
           <template v-if="isLoading">{{ t('common.loading') }}</template>
           <template v-else>{{ t('searchBox.searchSuggest') }} ({{ suggestions.length }})</template>
         </li>
 
         <!-- 加载状态 -->
-        <li v-if="isLoading" class="px-4 py-6 text-center text-slate-300/80">
-          <div class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-cyan-300"></div>
+        <li v-if="isLoading" class="search-suggestion-loading px-4 py-6 text-center">
+          <div class="search-suggestion-spinner"></div>
         </li>
 
         <!-- 建议项 -->
@@ -72,7 +69,7 @@
               @click="selectSuggestion(index)"
               @mouseenter="hoveredIndex = index"
               @mouseleave="hoveredIndex = -1"
-              class="search-suggestion-item cursor-pointer px-4 py-3 text-sm font-medium text-slate-100/90"
+              class="search-suggestion-item cursor-pointer px-4 py-3 text-sm font-medium"
               :class="hoveredIndex === index ? 'search-suggestion-item-active' : ''"
           >
             <!-- 关键词高亮 -->
@@ -80,7 +77,7 @@
           </li>
         </template>
 
-        <li v-else-if="keyword.trim()" class="px-4 py-3 text-center text-slate-300/75">
+        <li v-else-if="keyword.trim()" class="search-suggestion-empty px-4 py-3 text-center">
           {{ t('searchBox.noSuggest') }}
         </li>
       </ul>
@@ -110,24 +107,11 @@ import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
 import { getSearchSuggestion } from '@/services/nav'
 import type { NavSearchSuggestionEngine } from '@/types/nav'
 import { useI18n } from 'vue-i18n'
-import { useLangStore } from '@/store/langStore'
 import { setNavPageRevealLock } from '@/utils/navPageReveal'
 
 const { t, locale } = useI18n()
-const langStore = useLangStore()
-const searchActionLabel = computed(() => locale.value === 'en' ? 'Search GoFurry resources' : '搜索 GoFurry 资源')
-
-// 同步语言切换
-watch(
-    () => langStore.lang,
-    async (newLang) => {
-      locale.value = newLang
-      await nextTick()
-      // 切换语言后重新设置默认选中项
-      resetSelection()
-    },
-    { immediate: true }
-)
+const currentLang = computed(() => locale.value === 'en' ? 'en' : 'zh')
+const searchActionLabel = computed(() => currentLang.value === 'en' ? 'Search GoFurry resources' : '搜索 GoFurry 资源')
 
 // 搜索类别
 const categories = computed(() => [
@@ -175,7 +159,7 @@ const platforms = computed<Record<string, Platform[]>>(() => ({
     { name: t('searchBox.platformName.twitter'), type: 'site', url: 'https://x.com/search?q={kw}&src=typed_query' },
   ],
   [t('searchBox.platformCate.furry')]: [
-    { name: t('searchBox.platformName.wikifur'), type: 'site', url: `https://${langStore.lang === 'zh' ? 'zh' : 'en'}.wikifur.com/wiki/{kw}` },
+    { name: t('searchBox.platformName.wikifur'), type: 'site', url: `https://${currentLang.value}.wikifur.com/wiki/{kw}` },
     { name: t('searchBox.platformName.yiffParty'), type: 'site', url: 'https://yiff-party.com/search/?tags={kw}' },
     { name: t('searchBox.platformName.furaffinity'), type: 'site', url: 'https://www.furaffinity.net/search/?q={kw}' },
     { name: t('searchBox.platformName.e621'), type: 'site', url: 'https://e621.net/posts?tags={kw}' },
@@ -235,7 +219,7 @@ const highlightKeyword = (item: string) => {
   const escapedKeyword = keyword.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return item.replace(
       new RegExp(`(${escapedKeyword})`, 'gi'),
-      '<span class="text-orange-500 font-bold">$1</span>'
+      '<span class="search-highlight">$1</span>'
   )
 }
 
@@ -419,123 +403,3 @@ onBeforeUnmount(() => {
   setNavPageRevealLock('search-box', false)
 })
 </script>
-
-
-
-<style scoped>
-.search-chip {
-  color: rgba(248, 250, 252, 0.92);
-  background: rgba(15, 23, 42, 0.5);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 8px 24px rgba(2, 6, 23, 0.14);
-  backdrop-filter: blur(14px) saturate(1.12);
-  -webkit-backdrop-filter: blur(14px) saturate(1.12);
-  transition:
-    background 500ms ease,
-    box-shadow 500ms ease,
-    color 500ms ease;
-}
-
-.search-chip:hover {
-  color: rgba(255, 255, 255, 0.98);
-  background: rgba(15, 23, 42, 0.68);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 10px 28px rgba(2, 6, 23, 0.18);
-}
-
-.search-chip-active {
-  color: rgba(15, 23, 42, 0.94);
-  background: rgba(255, 248, 241, 0.92);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
-    0 12px 30px rgba(2, 6, 23, 0.2);
-}
-
-.search-chip-active:hover {
-  color: rgba(15, 23, 42, 0.96);
-  background: rgba(255, 255, 255, 0.96);
-}
-
-.search-input {
-  color: rgba(15, 23, 42, 0.94);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 12px 36px rgba(2, 6, 23, 0.22),
-    0 0 0 1px rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(18px) saturate(1.08);
-  -webkit-backdrop-filter: blur(18px) saturate(1.08);
-  transition:
-    background 500ms ease,
-    box-shadow 500ms ease,
-    color 500ms ease;
-}
-
-.search-input::placeholder {
-  color: rgba(71, 85, 105, 0.72);
-}
-
-.search-input:focus {
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 16px 42px rgba(2, 6, 23, 0.26),
-    0 0 0 1px rgba(255, 255, 255, 0.34),
-    0 0 0 4px rgba(15, 23, 42, 0.2);
-}
-
-.search-icon {
-  opacity: 0.72;
-  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.42));
-}
-
-.search-suggestion-list {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.search-suggestion-list::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-
-.search-suggestion-item {
-  transition:
-    background 500ms ease,
-    color 500ms ease;
-}
-
-.search-suggestion-item:hover,
-.search-suggestion-item-active {
-  color: rgba(255, 255, 255, 0.98);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* 淡入动画 */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-.animate-fadeIn {
-  animation: fadeIn 0.5s ease-out forwards;
-}
-
-/* 加载动画 */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-</style>

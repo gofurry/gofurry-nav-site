@@ -1,70 +1,46 @@
-import { createRequest } from '@/utils/request'
 import type {
-    AnonymousReviewModel, CommentReq, CreatorResponse, GameBaseInfoResponse,
-    GameGroupRecord,
-    GamePanelRecord, GameTagRecord, LatestNewsRecord,
-    LotteryReq, LotteryResp, NewsBaseModel, RecommendedModel, RemarkResponse,
+    AnonymousReviewModel, CommentReq,
+    GameTagRecord,
+    LotteryReq, LotteryResp, RecommendedModel,
     SearchItemModel, SearchPageQueryRequest, SearchPageResponse,
 } from '@/types/game'
 import type { ApiResult } from '@/types/common'
-import axios from "axios";
+import type { NitroFetchOptions } from 'nitropack'
 
-const gameRequest = createRequest(import.meta.env.VITE_GAME_API_BASE_URL)
-
-export function getGameList() {
-    return gameRequest.get("/game/list")
-}
-
-export function getGameMainInfo(): Promise<GameGroupRecord> {
-    return gameRequest.get(`/game/info/main`)
-}
-
-export function getGameMainPanel(): Promise<GamePanelRecord> {
-    return gameRequest.get("/game/panel/main")
-}
-
-export function getLatestGameNews(): Promise<LatestNewsRecord> {
-    return gameRequest.get("/game/update/latest")
-}
-
-export function getMoreLatestGameNews(lang :string): Promise<NewsBaseModel[]> {
-    return gameRequest.get("/game/update/latest/more", { params: { lang: lang } })
-}
+type ApiRequestOptions = NitroFetchOptions<string>
 
 export function getRandomGame(): Promise<string> {
-    return gameRequest.get("/game/recommend/random")
+    return useApi('gameV2')('/game/recommend/random')
 }
 
-export function getSearchSimple(lang: string, txt: string): Promise<SearchItemModel[]> {
-    return gameRequest.post("/game/search/simple", { txt, lang });
+export function getSearchSimple(
+    lang: string,
+    txt: string,
+    options: ApiRequestOptions = {}
+): Promise<SearchItemModel[]> {
+    return useApi('gameV2')('/game/search/simple', { method: 'POST', body: { txt, lang }, ...options })
 }
 
-export function getLatestReview(): Promise<AnonymousReviewModel[]> {
-    return gameRequest.get("/game/review/latest")
+export function getLatestReview(limit = 15): Promise<AnonymousReviewModel[]> {
+    return useApi('gameV2')('/game/reviews/latest', { query: { limit } })
 }
 
-export function getTagList(lang: string): Promise<GameTagRecord[]> {
-    return gameRequest.get("/game/tag/list", { params: { lang: lang } })
+export function getTagList(lang: string, options: ApiRequestOptions = {}): Promise<GameTagRecord[]> {
+    return useApi('gameV2')('/game/tags', { query: { lang }, ...options })
 }
 
-export function searchGameAdvanced(query: SearchPageQueryRequest, lang: string): Promise<SearchPageResponse> {
-    return gameRequest.post("/game/search/page", {...query,lang})
-}
-
-export function getGameBaseInfo(id: string, lang: string): Promise<GameBaseInfoResponse> {
-    return gameRequest.get("/game/info", { params: { id: id, lang: lang } })
-}
-
-export function getGameRemark(id: string): Promise<RemarkResponse> {
-    return gameRequest.get("/game/remark", { params: { id: id } })
+export function searchGameAdvanced(
+    query: SearchPageQueryRequest,
+    lang: string,
+    options: ApiRequestOptions = {}
+): Promise<SearchPageResponse> {
+    return useApi('gameV2')('/game/search/page', { method: 'POST', body: { ...query, lang }, ...options })
 }
 
 export function getRecommendedGame(id: string, lang: string): Promise<RecommendedModel[]> {
-    return gameRequest.get("/game/recommend/CBF", { params: { id: id, lang: lang } })
-}
-
-export function getGameCreator(lang: string): Promise<CreatorResponse[]> {
-    return gameRequest.get("/game/creator", { params: { lang: lang } })
+    return useApi('gameV2')('/game/recommend/similar', {
+        query: { id, lang, region: 'CN', limit: 8 }
+    })
 }
 
 // export function commitComment(query: CommentReq): Promise<ApiResult<string>> {
@@ -74,25 +50,25 @@ export function getGameCreator(lang: string): Promise<CreatorResponse[]> {
 export function commitComment(
     query: CommentReq
 ): Promise<ApiResult<string>> {
-    return axios
-        .post(
-            `${import.meta.env.VITE_GAME_API_BASE_URL}/game/review/anonymous`,
-            query
-        )
-        .then(res => res.data)
+    return $fetch('/game/reviews/anonymous', {
+        baseURL: useRuntimeConfig().public.gameV2ApiBase,
+        credentials: 'include',
+        method: 'POST',
+        body: query
+    })
 }
 
 export function getLottery(): Promise<LotteryResp> {
-    return gameRequest.get("/game/prize/info")
+    return useApi('gameV2')('/game/prizes')
 }
 
 export function getLotteryParticipation(
     query: LotteryReq
 ): Promise<ApiResult<string>> {
-    return axios
-        .post(
-            `${import.meta.env.VITE_GAME_API_BASE_URL}/game/prize/participation`,
-            query
-        )
-        .then(res => res.data)
+    return $fetch('/game/prizes/participation', {
+        baseURL: useRuntimeConfig().public.gameV2ApiBase,
+        credentials: 'include',
+        method: 'POST',
+        body: query
+    })
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"strconv"
 	"testing"
 	"time"
 
@@ -39,7 +40,7 @@ func TestGetHomeAggregatesNavPageData(t *testing.T) {
 	if !response.GeneratedAt.Equal(now) {
 		t.Fatalf("unexpected generated_at: %v", response.GeneratedAt)
 	}
-	if len(response.Sites) != 1 || len(response.Groups) != 1 || len(response.Ping) != 1 {
+	if len(response.Groups) != 1 || len(response.Ping) != 1 {
 		t.Fatalf("home data was not aggregated: %#v", response)
 	}
 	if len(response.Spotlight.Featured) != 1 || len(response.Spotlight.Popular) != 1 || response.Spotlight.PageSize != 6 {
@@ -48,8 +49,14 @@ func TestGetHomeAggregatesNavPageData(t *testing.T) {
 	if len(response.Groups[0].Sites) != 1 || response.Groups[0].Sites[0].ID != "1" {
 		t.Fatalf("group sites were not expanded: %#v", response.Groups)
 	}
+	if response.Sites != nil {
+		t.Fatalf("home response should not carry full sites payload: %#v", response.Sites)
+	}
 	if response.Saying == nil || response.Saying.Content != "hello" {
 		t.Fatalf("missing saying: %#v", response.Saying)
+	}
+	if reader.sayingLang != "en" {
+		t.Fatalf("saying lang = %q, want en", reader.sayingLang)
 	}
 	if response.Backgrounds.Desktop != "desktop.avif" || response.Backgrounds.Mobile != "mobile.avif" {
 		t.Fatalf("unexpected backgrounds: %#v", response.Backgrounds)
@@ -73,9 +80,6 @@ func TestGetHomeKeepsPartialDataWhenOptionalBlockFails(t *testing.T) {
 
 	response := newHomeService(reader, time.Now).GetHome("bad-lang")
 
-	if len(response.Sites) != 1 {
-		t.Fatalf("expected sites to stay available: %#v", response.Sites)
-	}
 	if response.CacheState["sites"] != models.HomeStateReady {
 		t.Fatalf("expected sites ready, got %q", response.CacheState["sites"])
 	}
@@ -100,11 +104,11 @@ func TestGetHomePingReportsMissingState(t *testing.T) {
 	}
 }
 
-func TestBuildHomeGroupsPreservesGroupSiteOrder(t *testing.T) {
+func TestBuildHomeGroupsOrdersSitesByWeightThenUpdateTime(t *testing.T) {
 	sites := []navmodels.SiteVo{
-		{ID: "1", Name: "A"},
-		{ID: "2", Name: "B"},
-		{ID: "3", Name: "C"},
+		{ID: "1", Name: "A", Weight: 10, UpdateTime: "2026-06-01 00:00:00"},
+		{ID: "2", Name: "B", Weight: 20, UpdateTime: "2026-06-02 00:00:00"},
+		{ID: "3", Name: "C", Weight: 20, UpdateTime: "2026-06-03 00:00:00"},
 	}
 	groups := []navmodels.GroupVo{
 		{ID: "10", Name: "Forums", Priority: 1, Sites: []string{"3", "1", "2", "404"}},
@@ -114,8 +118,32 @@ func TestBuildHomeGroupsPreservesGroupSiteOrder(t *testing.T) {
 	if len(result) != 1 {
 		t.Fatalf("group count = %d", len(result))
 	}
-	if got := []string{result[0].Sites[0].ID, result[0].Sites[1].ID, result[0].Sites[2].ID}; got[0] != "3" || got[1] != "1" || got[2] != "2" {
+	if got := []string{result[0].Sites[0].ID, result[0].Sites[1].ID, result[0].Sites[2].ID}; got[0] != "3" || got[1] != "2" || got[2] != "1" {
 		t.Fatalf("unexpected expanded site order: %#v", result[0].Sites)
+	}
+	if result[0].SiteCount != 3 || result[0].DetailPath != "/site-groups/10" {
+		t.Fatalf("unexpected group metadata: %#v", result[0])
+	}
+}
+
+func TestBuildHomeGroupsLimitsPreviewToEight(t *testing.T) {
+	sites := make([]navmodels.SiteVo, 0, 10)
+	siteIDs := make([]string, 0, 10)
+	for i := 1; i <= 10; i++ {
+		id := strconv.Itoa(i)
+		sites = append(sites, navmodels.SiteVo{ID: id, Name: "Site " + id})
+		siteIDs = append(siteIDs, id)
+	}
+
+	result := buildHomeGroups(sites, []navmodels.GroupVo{{ID: "10", Name: "Forums", Sites: siteIDs}})
+	if len(result) != 1 {
+		t.Fatalf("group count = %d", len(result))
+	}
+	if len(result[0].Sites) != 8 {
+		t.Fatalf("preview site count = %d, want 8", len(result[0].Sites))
+	}
+	if result[0].SiteCount != 10 || !result[0].HasMore {
+		t.Fatalf("unexpected group metadata: %#v", result[0])
 	}
 }
 
@@ -153,6 +181,7 @@ type fakeHomeReader struct {
 	pingErr     common.GFError
 	saying      navmodels.SayingModel
 	sayingErr   common.GFError
+	sayingLang  string
 	desktopURL  string
 	mobileURL   string
 }
@@ -191,7 +220,8 @@ func (f *fakeHomeReader) GetPingList() (map[string]string, common.GFError) {
 	return f.ping, nil
 }
 
-func (f *fakeHomeReader) GetSayingService() (navmodels.SayingModel, common.GFError) {
+func (f *fakeHomeReader) GetSayingService(lang string) (navmodels.SayingModel, common.GFError) {
+	f.sayingLang = lang
 	if f.sayingErr != nil {
 		return navmodels.SayingModel{}, f.sayingErr
 	}

@@ -1,13 +1,16 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/gameadmin/models"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/adminutil"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
@@ -15,12 +18,24 @@ import (
 	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
 	pkgmodels "github.com/gofurry/awesome-fiber-template/v3/medium/pkg/models"
 	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/util"
+	steam "github.com/gofurry/steam-go"
+	steamassets "github.com/gofurry/steam-go/addons/assets"
 	"gorm.io/gorm"
 )
 
 type gameAPI struct{}
 
 var GameAPI = &gameAPI{}
+
+type steamGameAssetDTO struct {
+	AppID    int64               `json:"appid"`
+	Kind     string              `json:"kind"`
+	URL      string              `json:"url"`
+	Digest   string              `json:"digest,omitempty"`
+	Filename string              `json:"filename,omitempty"`
+	Source   string              `json:"source,omitempty"`
+	Assets   []steamGameAssetDTO `json:"assets,omitempty"`
+}
 
 func gameDB() *gorm.DB {
 	return db.Databases.DB(db.Game)
@@ -71,7 +86,7 @@ func (api *gameAPI) CreateGame(c fiber.Ctx) error {
 			Publishers:   adminutil.MustJSON(normalizeStringArray(req.Publishers)),
 			Appid:        req.Appid,
 			Header:       strings.TrimSpace(req.Header),
-			Links:        adminutil.ToJSONStringPtr(normalizeKV(req.Links)),
+			Links:        adminutil.ToJSONStringPtr(normalizeGameLinks(req.Appid, req.Links)),
 			Weight:       req.Weight,
 			PrimaryTag:   req.PrimaryTag,
 			SecondaryTag: req.SecondaryTag,
@@ -135,7 +150,7 @@ func (api *gameAPI) UpdateGame(c fiber.Ctx) error {
 			"publishers":    adminutil.MustJSON(normalizeStringArray(req.Publishers)),
 			"appid":         req.Appid,
 			"header":        strings.TrimSpace(req.Header),
-			"links":         adminutil.MustJSON(normalizeKV(req.Links)),
+			"links":         adminutil.MustJSON(normalizeGameLinks(req.Appid, req.Links)),
 			"weight":        req.Weight,
 			"primary_tag":   req.PrimaryTag,
 			"secondary_tag": req.SecondaryTag,
@@ -156,6 +171,100 @@ func (api *gameAPI) UpdateGame(c fiber.Ctx) error {
 
 func (api *gameAPI) DeleteGame(c fiber.Ctx) error {
 	return api.deleteHard(c, &models.Game{})
+}
+
+func (api *gameAPI) ResolveSteamGameAsset(c fiber.Ctx) error {
+	appid, err := strconv.ParseInt(strings.TrimSpace(c.Query("appid", "")), 10, 64)
+	if err != nil || appid <= 0 {
+		return common.NewResponse(c).Error(common.NewValidationError("appid must be a positive integer"))
+	}
+
+	kinds := steamAssetKinds(c.Query("kind", "header"))
+	cfg := env.GetServerConfig().ExternalServices.Steam
+	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	proxySelector, err := steamProxySelector(cfg.Proxy)
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewServiceError(fmt.Sprintf("invalid steam proxy config: %v", err)))
+	}
+
+	client, err := steam.NewClient(
+		steam.WithTimeout(timeout),
+		steam.WithRateLimit(cfg.RateLimit),
+		steam.WithProxySelector(proxySelector),
+	)
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewServiceError(fmt.Sprintf("create steam client failed: %v", err)))
+	}
+	defer client.Close()
+
+	items, err := steamassets.FetchStoreItemAssetURLs(ctx, client.API.StoreBrowseService, steamassets.StoreItemAssetOptions{
+		CountryCode: "CN",
+		Language:    "schinese",
+		Kinds:       kinds,
+		StripQuery:  true,
+	}, uint32(appid))
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewServiceError(fmt.Sprintf("fetch steam asset failed: %v", err)))
+	}
+	if len(items) == 0 {
+		return common.NewResponse(c).Error(common.NewServiceError("steam asset not found"))
+	}
+
+	assets := make([]steamGameAssetDTO, 0, len(items))
+	for _, item := range items {
+		if strings.TrimSpace(item.URL) == "" {
+			continue
+		}
+		assets = append(assets, steamGameAssetDTO{
+			AppID:    int64(item.AppID),
+			Kind:     string(item.Kind),
+			URL:      item.URL,
+			Digest:   item.Digest,
+			Filename: item.Filename,
+			Source:   item.Source,
+		})
+	}
+	if len(assets) == 0 {
+		return common.NewResponse(c).Error(common.NewServiceError("steam asset url is empty"))
+	}
+
+	result := assets[0]
+	result.Assets = assets
+	return common.NewResponse(c).SuccessWithData(result)
+}
+
+func steamProxySelector(raw string) (steam.ProxySelector, error) {
+	proxies := splitSteamProxyURLs(raw)
+	if len(proxies) == 0 {
+		return nil, nil
+	}
+	if len(proxies) == 1 {
+		return steam.NewStaticProxySelector(proxies[0])
+	}
+	return steam.NewHealthCheckedRoundRobinProxySelector(
+		steam.ProxyHealthConfig{
+			FailureThreshold: 2,
+			Cooldown:         5 * time.Minute,
+		},
+		proxies...,
+	)
+}
+
+func splitSteamProxyURLs(raw string) []string {
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == ';' || r == '\n' || r == '\r' || r == '\t'
+	})
+	proxies := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			proxies = append(proxies, part)
+		}
+	}
+	return proxies
 }
 
 func (api *gameAPI) ListComments(c fiber.Ctx) error {
@@ -247,120 +356,6 @@ func (api *gameAPI) UpdateComment(c fiber.Ctx) error {
 
 func (api *gameAPI) DeleteComment(c fiber.Ctx) error {
 	return api.deleteHard(c, &models.GameComment{})
-}
-
-func (api *gameAPI) ListCreators(c fiber.Ctx) error {
-	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(gameDB().Model(&models.GameCreator{}).Where("deleted IS NOT TRUE").Order("id DESC"), page.Keyword, "name", "name_en", "info", "info_en", "CAST(id AS TEXT)")
-	var rows []models.GameCreator
-	total, err := adminutil.Paginate(base, page, &rows)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	list := make([]models.GameCreatorDTO, 0, len(rows))
-	for _, row := range rows {
-		list = append(list, creatorDTO(row))
-	}
-	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, list))
-}
-
-func (api *gameAPI) CreateCreator(c fiber.Ctx) error {
-	var req models.GameCreatorPayload
-	if err := adminutil.DecodeBody(c, &req); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.MainURL) == "" {
-		return common.NewResponse(c).Error(common.NewValidationError("name and main_url are required"))
-	}
-	var created models.GameCreator
-	err := gameDB().Transaction(func(tx *gorm.DB) error {
-		ids, allocErr := adminutil.AllocateSequentialIDs(tx, created.TableName(), 1)
-		if allocErr != nil {
-			return allocErr
-		}
-		created = models.GameCreator{
-			ID:      ids[0],
-			Name:    strings.TrimSpace(req.Name),
-			Info:    strings.TrimSpace(req.Info),
-			MainURL: strings.TrimSpace(req.MainURL),
-			Links:   adminutil.ToJSONStringPtr(normalizeKV(req.Links)),
-			Cover:   strings.TrimSpace(req.Cover),
-			Contact: adminutil.ToJSONStringPtr(normalizeKV(req.Contact)),
-			Type:    req.Type,
-			NameEn:  strings.TrimSpace(req.NameEn),
-			InfoEn:  strings.TrimSpace(req.InfoEn),
-		}
-		if err := tx.Create(&created).Error; err != nil {
-			return err
-		}
-		after, snapErr := audit.SnapshotByID(tx, created.TableName(), created.ID)
-		if snapErr != nil {
-			return snapErr
-		}
-		return api.auditTx(c, tx, "create", created.TableName(), created.ID, nil, after)
-	})
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	return common.NewResponse(c).SuccessWithData(creatorDTO(created))
-}
-
-func (api *gameAPI) GetCreator(c fiber.Ctx) error {
-	id, err := adminutil.ParseIDParam(c)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	var row models.GameCreator
-	if err := gameDB().Where("deleted IS NOT TRUE").First(&row, "id = ?", id).Error; err != nil {
-		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
-	}
-	return common.NewResponse(c).SuccessWithData(creatorDTO(row))
-}
-
-func (api *gameAPI) UpdateCreator(c fiber.Ctx) error {
-	id, err := adminutil.ParseIDParam(c)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	var req models.GameCreatorPayload
-	if err := adminutil.DecodeBody(c, &req); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.MainURL) == "" {
-		return common.NewResponse(c).Error(common.NewValidationError("name and main_url are required"))
-	}
-	txErr := gameDB().Transaction(func(tx *gorm.DB) error {
-		before, snapErr := audit.SnapshotByID(tx, (&models.GameCreator{}).TableName(), id)
-		if snapErr != nil {
-			return snapErr
-		}
-		if err := tx.Model(&models.GameCreator{}).Where("id = ? AND deleted IS NOT TRUE", id).Updates(map[string]any{
-			"name":     strings.TrimSpace(req.Name),
-			"info":     strings.TrimSpace(req.Info),
-			"main_url": strings.TrimSpace(req.MainURL),
-			"links":    adminutil.MustJSON(normalizeKV(req.Links)),
-			"cover":    strings.TrimSpace(req.Cover),
-			"contact":  adminutil.MustJSON(normalizeKV(req.Contact)),
-			"type":     req.Type,
-			"name_en":  strings.TrimSpace(req.NameEn),
-			"info_en":  strings.TrimSpace(req.InfoEn),
-		}).Error; err != nil {
-			return common.NewDaoError(err.Error())
-		}
-		after, snapErr := audit.SnapshotByID(tx, (&models.GameCreator{}).TableName(), id)
-		if snapErr != nil {
-			return snapErr
-		}
-		return api.auditTx(c, tx, "update", (&models.GameCreator{}).TableName(), id, before, after)
-	})
-	if txErr != nil {
-		return common.NewResponse(c).Error(txErr)
-	}
-	return api.GetCreator(c)
-}
-
-func (api *gameAPI) DeleteCreator(c fiber.Ctx) error {
-	return api.deleteSoft(c, &models.GameCreator{})
 }
 
 func (api *gameAPI) ListPrizes(c fiber.Ctx) error {
@@ -806,24 +801,6 @@ func gameDTO(row models.Game) models.GameDTO {
 	}
 }
 
-func creatorDTO(row models.GameCreator) models.GameCreatorDTO {
-	return models.GameCreatorDTO{
-		ID:         row.ID,
-		Name:       row.Name,
-		Info:       row.Info,
-		MainURL:    row.MainURL,
-		Links:      adminutil.ParseKVArray(row.Links),
-		Cover:      row.Cover,
-		Contact:    adminutil.ParseKVArray(row.Contact),
-		CreateTime: row.CreateTime,
-		UpdateTime: row.UpdateTime,
-		Type:       row.Type,
-		NameEn:     row.NameEn,
-		InfoEn:     row.InfoEn,
-		Deleted:    row.Deleted,
-	}
-}
-
 func prizeDTO(row models.Prize) models.PrizeDTO {
 	var prize models.PrizeBody
 	_ = json.Unmarshal([]byte(strings.TrimSpace(row.Prize)), &prize)
@@ -868,6 +845,75 @@ func normalizeKV(items []pkgmodels.KvModel) []pkgmodels.KvModel {
 		result = append(result, pkgmodels.KvModel{Key: key, Value: value})
 	}
 	return result
+}
+
+func normalizeGameLinks(appid int64, items []pkgmodels.KvModel) []pkgmodels.KvModel {
+	result := normalizeKV(items)
+	if appid <= 0 {
+		return result
+	}
+
+	defaults := []pkgmodels.KvModel{
+		{Key: "steamdb", Value: fmt.Sprintf("https://steamdb.info/app/%d/", appid)},
+		{Key: "gamalytic", Value: fmt.Sprintf("https://gamalytic.com/game/%d", appid)},
+	}
+	indexByKey := make(map[string]int, len(result))
+	for index, item := range result {
+		key := strings.ToLower(strings.TrimSpace(item.Key))
+		if key == "" {
+			continue
+		}
+		if _, exists := indexByKey[key]; !exists {
+			indexByKey[key] = index
+		}
+	}
+
+	for _, item := range defaults {
+		if index, exists := indexByKey[item.Key]; exists {
+			if strings.TrimSpace(result[index].Value) == "" {
+				result[index].Key = item.Key
+				result[index].Value = item.Value
+			}
+			continue
+		}
+		result = append(result, item)
+	}
+	return result
+}
+
+func steamAssetKinds(kind string) []steamassets.Kind {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "library", "library_cover", "library_capsule":
+		return []steamassets.Kind{
+			steamassets.KindLibraryCapsule,
+			steamassets.KindLibraryCapsule2x,
+		}
+	case "capsule", "capsule_main":
+		return []steamassets.Kind{
+			steamassets.KindCapsuleMain,
+			steamassets.KindCapsuleMain2x,
+			steamassets.KindHeroCapsule,
+		}
+	case "hero", "library_hero":
+		return []steamassets.Kind{
+			steamassets.KindLibraryHero,
+			steamassets.KindLibraryHero2x,
+			steamassets.KindHeroCapsule,
+			steamassets.KindHeroCapsule2x,
+		}
+	case "header_2x":
+		return []steamassets.Kind{
+			steamassets.KindHeader2x,
+			steamassets.KindHeader,
+		}
+	case "header":
+		fallthrough
+	default:
+		return []steamassets.Kind{
+			steamassets.KindHeader,
+			steamassets.KindHeader2x,
+		}
+	}
 }
 
 func normalizePrizeBody(body models.PrizeBody) models.PrizeBody {

@@ -1,5 +1,5 @@
 <template>
-  <div class="mb-8 rounded-2xl bg-white/50 p-5 shadow backdrop-blur-md">
+  <div class="game-info-shell mb-8 p-5">
     <GameInfoGroup
       v-if="firstGroup"
       :key="firstGroup.title"
@@ -34,12 +34,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import GameInfoGroup from '@/components/game/main/content/GameInfoGroup.vue'
 import GameStatsPanels from '@/components/game/main/content/GameStatsPanels.vue'
 import GameUpdateNews from '@/components/game/main/content/GameUpdateNews.vue'
-import { useLangStore } from '@/store/langStore'
-import { getGameMainInfo, getGameMainPanel } from '~/services/game'
 import type { BaseGameInfoRecord, GameGroupRecord, GamePanelRecord, LatestNewsRecord } from '~/types/game'
 
 interface GameItem {
@@ -62,16 +61,9 @@ const props = defineProps<{
   initialNewsRecord?: LatestNewsRecord | null
 }>()
 
-const langStore = useLangStore()
-const lang = computed(() => langStore.lang)
-
-const rawData = ref<GameGroupRecord | null>(props.initialRawData ?? null)
-const panelData = ref<GamePanelRecord | null>(props.initialPanelData ?? null)
-const groups = ref<GameGroupViewModel[]>([])
-
-const firstGroup = computed(() => groups.value[0] || null)
-const middleGroups = computed(() => groups.value.slice(1, groups.value.length - 1))
-const lastGroup = computed(() => (groups.value.length > 1 ? groups.value[groups.value.length - 1] : null))
+const { locale } = useI18n()
+const lang = computed(() => locale.value === 'en' ? 'en' : 'zh')
+const panelData = computed(() => props.initialPanelData ?? null)
 
 function mapGames(list: BaseGameInfoRecord[], currentLang: string): GameItem[] {
   return list.map((game) => ({
@@ -84,65 +76,37 @@ function mapGames(list: BaseGameInfoRecord[], currentLang: string): GameItem[] {
   }))
 }
 
-function updateGroups() {
-  if (!rawData.value) {
-    groups.value = []
-    return
+const groups = computed<GameGroupViewModel[]>(() => {
+  const rawData = props.initialRawData
+  if (!rawData) {
+    return []
   }
 
   const currentLang = lang.value
 
-  groups.value = [
+  return [
     {
       title: currentLang === 'en' ? 'Latest Release' : '最近发售',
-      games: mapGames(rawData.value.latest, currentLang),
+      games: mapGames(rawData.latest, currentLang),
     },
     {
       title: currentLang === 'en' ? 'Recently Added' : '最近收录',
-      games: mapGames(rawData.value.recent, currentLang),
+      games: mapGames(rawData.recent, currentLang),
     },
     {
       title: currentLang === 'en' ? 'Free to Play' : '免费专区',
-      games: mapGames(rawData.value.free, currentLang),
+      games: mapGames(rawData.free, currentLang),
     },
     {
       title: currentLang === 'en' ? 'Hot Ranking' : '热门排行',
-      games: mapGames(rawData.value.hot, currentLang),
+      games: mapGames(rawData.hot, currentLang),
     },
   ]
-}
-
-async function loadGameInfoPanel() {
-  try {
-    const [nextRawData, nextPanelData] = await Promise.all([
-      rawData.value ? Promise.resolve(rawData.value) : getGameMainInfo(),
-      panelData.value ? Promise.resolve(panelData.value) : getGameMainPanel(),
-    ])
-
-    rawData.value = nextRawData
-    panelData.value = nextPanelData
-    updateGroups()
-  } catch (error) {
-    console.error('Failed to load games page content:', error)
-  }
-}
-
-watch(
-  () => langStore.lang,
-  () => {
-    updateGroups()
-  }
-)
-
-if (rawData.value) {
-  updateGroups()
-}
-
-onMounted(() => {
-  if (!rawData.value || !panelData.value) {
-    loadGameInfoPanel()
-  }
 })
+
+const firstGroup = computed(() => groups.value[0] || null)
+const middleGroups = computed(() => groups.value.slice(1, groups.value.length - 1))
+const lastGroup = computed(() => (groups.value.length > 1 ? groups.value[groups.value.length - 1] : null))
 
 function handleMore(group: GameGroupViewModel) {
   console.log('show more:', group.title)

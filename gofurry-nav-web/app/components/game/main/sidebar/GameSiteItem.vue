@@ -2,15 +2,13 @@
   <a
       :href="href"
       target="_blank"
-      class="flex items-center justify-between gap-3
-           px-3 py-2 rounded-lg
-           bg-orange-50 hover:bg-orange-200/50 transition"
+      class="game-site-item"
   >
     <div class="flex items-center gap-2 min-w-0">
       <img :src="icon" class="w-5 h-5 rounded" :alt="title" />
-      <span class="font-medium text-gray-800 truncate">{{ title }}</span>
+      <span class="game-site-item__title truncate font-medium">{{ title }}</span>
     </div>
-    <span class="text-xs text-gray-500 truncate">{{ subtitleText }}</span>
+    <span class="game-site-item__subtitle truncate text-xs">{{ subtitleText }}</span>
   </a>
 </template>
 

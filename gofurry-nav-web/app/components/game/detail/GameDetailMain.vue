@@ -1,5 +1,5 @@
 <template>
-  <section class="space-y-4">
+  <section class="game-detail-main space-y-4">
 
     <!-- 顶部信息 -->
     <GameDetailHeader
@@ -8,20 +8,21 @@
     />
 
     <!-- Tabs -->
-    <div class="bg-orange-50 rounded-2xl shadow">
+    <div class="game-detail-tabs">
 
       <!-- Tab Header -->
-      <div class="flex border-b border-orange-100 overflow-x-auto scrollbar-hide">
+      <div class="game-detail-tab-list flex overflow-x-auto scrollbar-hide">
         <div
             v-for="tab in tabs"
             :key="tab.key"
             @click="activeTab = tab.key"
-            class="flex-shrink-0"
+            class="game-detail-tab flex-shrink-0"
             :class="[
               'px-4 py-3 text-sm cursor-pointer select-none whitespace-nowrap',
+              tab.mobileOnly ? 'xl:hidden' : '',
               activeTab === tab.key
-                ? 'text-orange-500 border-b-2 border-orange-400'
-                : 'text-gray-500 hover:text-orange-400'
+                ? 'game-detail-tab--active'
+                : 'game-detail-tab--idle'
             ]"
         >
           {{ tab.label }}
@@ -29,7 +30,7 @@
       </div>
 
       <!-- Tab Content -->
-      <div class="p-5 text-sm text-gray-700">
+      <div class="game-detail-tab-panel p-5 text-sm">
 
         <!-- Intro -->
         <BlurWrapper
@@ -58,8 +59,16 @@
         <!-- Comment -->
         <GameTabComment
             v-else-if="activeTab === 'comment'"
+            :game-id="gameId"
             :remark="remark"
         />
+
+        <div
+            v-else-if="activeTab === 'similar' && !isDesktop"
+            class="xl:hidden"
+        >
+          <GameSidebarSimilar :recommend="recommend" />
+        </div>
 
         <!-- News -->
         <BlurWrapper
@@ -89,8 +98,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import type { GameBaseInfoResponse, RemarkResponse } from '@/types/game'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '@/types/game'
 
 import GameDetailHeader from '@/components/game/detail/GameDetailHeader.vue'
 import GameTabIntro from '@/components/game/detail/tabs/GameTabIntro.vue'
@@ -98,6 +107,7 @@ import GameTabGallery from '@/components/game/detail/tabs/GameTabGallery.vue'
 import GameTabComment from '@/components/game/detail/tabs/GameTabComment.vue'
 import GameTabNews from '@/components/game/detail/tabs/GameTabNews.vue'
 import GameTabDetail from '@/components/game/detail/tabs/GameTabDetail.vue'
+import GameSidebarSimilar from '@/components/game/detail/GameSidebarSimilar.vue'
 import NsfwConfirmModal from '@/components/common/NsfwConfirmModal.vue'
 import BlurWrapper from '@/components/common/BlurWrapper.vue'
 
@@ -109,20 +119,34 @@ const { t } = i18n.global
 const showNsfwModal = ref(false)
 const mode = ref(readMode())
 let stopModeSubscription: (() => void) | null = null
+let desktopMediaQuery: MediaQueryList | null = null
+let stopDesktopListener: (() => void) | null = null
+const isDesktop = ref(false)
 
 const props = defineProps<{
   game: GameBaseInfoResponse | null
   remark: RemarkResponse | null
+  recommend: RecommendedModel[] | null
+  gameId: string
 }>()
 
+const hasSimilarRecommend = computed(() => (props.recommend?.length ?? 0) > 0)
+
+interface DetailTabItem {
+  key: 'intro' | 'gallery' | 'comment' | 'news' | 'similar' | 'detail'
+  label: string
+  mobileOnly?: boolean
+}
+
 // Tabs 配置
-const tabs = computed(() => ([
+const tabs = computed<DetailTabItem[]>(() => ([
   { key: 'intro', label: t('game.detail.introduction') },
   { key: 'gallery', label: t('game.detail.gallery') },
   { key: 'comment', label: t('game.detail.comments') + `(${props.remark?.total ?? 0})` },
   { key: 'news', label: t('game.detail.news') },
+  ...(hasSimilarRecommend.value ? [{ key: 'similar', label: t('game.detail.similarGames'), mobileOnly: true } satisfies DetailTabItem] : []),
   { key: 'detail', label: t('game.detail.details') }
-] as const))
+]))
 
 type TabKey = typeof tabs.value[number]['key']
 const activeTab = ref<TabKey>('intro')
@@ -160,9 +184,28 @@ onMounted(() => {
   stopModeSubscription = subscribeModeChange(({ mode: nextMode }) => {
     mode.value = nextMode
   })
+
+  desktopMediaQuery = window.matchMedia('(min-width: 1280px)')
+  const applyDesktopState = () => {
+    isDesktop.value = desktopMediaQuery?.matches ?? false
+  }
+  applyDesktopState()
+
+  const handler = () => {
+    applyDesktopState()
+  }
+  desktopMediaQuery.addEventListener('change', handler)
+  stopDesktopListener = () => desktopMediaQuery?.removeEventListener('change', handler)
 })
 
 onUnmounted(() => {
   stopModeSubscription?.()
+  stopDesktopListener?.()
+})
+
+watch([isDesktop, activeTab], ([desktop, tabKey]) => {
+  if (desktop && tabKey === 'similar') {
+    activeTab.value = 'intro'
+  }
 })
 </script>

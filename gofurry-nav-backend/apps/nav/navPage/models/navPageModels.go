@@ -8,6 +8,7 @@ const TableNameGfnSaying = "gfn_saying"
 type GfnSaying struct {
 	ID         int64     `gorm:"column:id;type:bigint;primaryKey;comment:金句表ID" json:"id"`                                         // 金句表ID
 	Author     *string   `gorm:"column:author;type:character varying(255);comment:金句提供者" json:"author"`                            // 金句提供者
+	Language   string    `gorm:"column:language;type:character varying(8);not null;default:zh;comment:语言" json:"language"`         // 语言
 	Saying     string    `gorm:"column:saying;type:character varying(255);not null;comment:金句" json:"saying"`                      // 金句
 	CreateTime time.Time `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:创建时间" json:"createTime"` // 创建时间
 	UpdateTime time.Time `gorm:"column:update_time;type:int;type:unsigned;not null;autoUpdateTime;comment:修改时间" json:"updateTime"` // 修改时间
@@ -27,6 +28,7 @@ type SiteVo struct {
 	Nsfw       string  `form:"nsfw" json:"nsfw"`
 	Welfare    string  `form:"welfare" json:"welfare"`
 	Icon       *string `form:"icon" json:"icon"`
+	Weight     int64   `form:"weight" json:"weight,omitempty"`
 	ViewCount  int64   `form:"view_count" json:"view_count"`
 	CreateTime string  `form:"create_time" json:"create_time"`
 	UpdateTime string  `form:"update_time" json:"update_time"`
@@ -41,8 +43,9 @@ type GroupVo struct {
 }
 
 type SayingModel struct {
-	Author  *string `json:"author"`
-	Content string  `json:"content"`
+	Author   *string `json:"author"`
+	Content  string  `json:"content"`
+	Language string  `json:"language"`
 }
 
 type FeaturedSiteVo struct {

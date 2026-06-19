@@ -1,33 +1,33 @@
 <template>
-  <div :class="pageClass" :style="pageVars">
-    <GoFurryGridBackground profile="light" />
-    <div class="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[var(--legal-top-veil)]" />
+  <div class="gf-static-page legal-page relative isolate flex w-full flex-1 flex-col overflow-hidden transition-colors duration-500">
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
+    <div class="gf-static-page__top-veil" />
 
-    <main class="relative mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 py-8 sm:px-6 md:px-8 md:py-12">
+    <main class="gf-static-page__main gf-static-page__main--legal">
       <article class="legal-panel">
-        <div class="text-xs uppercase tracking-[0.28em] text-[var(--legal-accent)]">
+        <div class="gf-static-kicker">
           {{ content.kicker }}
         </div>
-        <h1 class="mt-4 text-3xl font-semibold leading-tight text-[var(--legal-heading)] md:text-5xl">
+        <h1 class="gf-static-title">
           {{ content.title }}
         </h1>
-        <p class="mt-5 max-w-3xl text-sm leading-7 text-[var(--legal-muted)] md:text-base">
+        <p class="gf-static-summary">
           {{ content.summary }}
         </p>
-        <div class="mt-6 text-xs text-[var(--legal-subtle)]">
+        <div class="gf-static-updated">
           {{ content.updated }}
         </div>
 
-        <div class="mt-8 divide-y divide-[var(--legal-rule)]">
+        <div class="gf-static-section-list">
           <section
             v-for="section in content.sections"
             :key="section.title"
-            class="py-6 first:pt-0 last:pb-0"
+            class="gf-static-section"
         >
-          <h2 class="text-xl font-semibold text-[var(--legal-heading)]">
+          <h2 class="gf-static-section-title">
             {{ section.title }}
           </h2>
-          <p class="mt-3 text-sm leading-7 text-[var(--legal-muted)]">
+          <p class="gf-static-section-body">
             {{ section.body }}
           </p>
           </section>
@@ -38,46 +38,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { i18n } from '@/main'
-import { useThemeStore } from '@/stores/theme'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 
-const themeStore = useThemeStore()
-const isZh = computed(() => i18n.global.locale.value === 'zh')
-const isDark = computed(() => themeStore.theme === 'dark')
-
-onMounted(() => {
-  themeStore.initTheme()
-})
-
-const pageClass = computed(() => [
-  'relative isolate flex w-full flex-1 flex-col overflow-hidden transition-colors duration-500',
-  isDark.value ? 'bg-[#08101b] text-slate-100' : 'bg-[#f6ebdc] text-slate-950'
-])
-
-const pageVars = computed(() => isDark.value
-  ? {
-      '--legal-surface': 'rgba(9, 16, 27, 0.74)',
-      '--legal-border': 'rgba(123, 154, 189, 0.2)',
-      '--legal-rule': 'rgba(123, 154, 189, 0.16)',
-      '--legal-heading': 'rgb(239 246 255)',
-      '--legal-muted': 'rgb(179 195 214)',
-      '--legal-subtle': 'rgb(100 116 139)',
-      '--legal-accent': 'rgb(142 214 255)',
-      '--legal-top-veil': 'linear-gradient(180deg, rgba(7, 13, 23, 0.46), rgba(7, 13, 23, 0))'
-    }
-  : {
-      '--legal-surface': 'rgba(255, 249, 241, 0.76)',
-      '--legal-border': 'rgba(168, 112, 46, 0.18)',
-      '--legal-rule': 'rgba(168, 112, 46, 0.16)',
-      '--legal-heading': 'rgb(15 23 42)',
-      '--legal-muted': 'rgb(71 85 105)',
-      '--legal-subtle': 'rgb(100 116 139)',
-      '--legal-accent': 'rgb(190 112 28)',
-      '--legal-top-veil': 'linear-gradient(180deg, rgba(255, 248, 239, 0.54), rgba(255, 248, 239, 0))'
-    }
-)
+const { locale } = useI18n()
+const isZh = computed(() => locale.value === 'zh')
 
 const content = computed(() => (
   isZh.value
@@ -166,21 +132,3 @@ useSeoMeta({
   ogDescription: () => pageSeo.value.description,
 })
 </script>
-
-<style scoped>
-.legal-panel {
-  border: 1px solid var(--legal-border);
-  border-radius: 20px;
-  background: var(--legal-surface);
-  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.1);
-  padding: clamp(1.8rem, 3vw, 3rem);
-  backdrop-filter: blur(14px);
-  transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
-}
-
-@media (max-width: 767px) {
-  .legal-panel {
-    border-radius: 18px;
-  }
-}
-</style>

@@ -163,6 +163,7 @@ interface SiteOverviewProps {
 }
 
 const props = defineProps<SiteOverviewProps>()
+const localePath = useLocalePath()
 
 const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
 const defaultLogo = 'defaultLogo.svg'
@@ -261,7 +262,7 @@ function scheduleCloseDomainCard() {
 
 function domainLink(domain: string) {
   const siteId = props.siteId ? String(props.siteId) : ''
-  return `/site/${encodeURIComponent(siteId)}/${encodeURIComponent(domain)}`
+  return localePath(`/site/${encodeURIComponent(siteId)}/${encodeURIComponent(domain)}`)
 }
 
 const tags = computed(() => {

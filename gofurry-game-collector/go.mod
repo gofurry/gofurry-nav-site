@@ -6,7 +6,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.12.0
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/bytedance/sonic v1.15.0
-	github.com/gofurry/steam-go v1.3.2
+	github.com/gofurry/steam-go v1.3.7
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/kardianos/service v1.2.4
 	github.com/redis/go-redis/v9 v9.18.0

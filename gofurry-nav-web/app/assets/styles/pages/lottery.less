@@ -1,0 +1,318 @@
+/* Game lottery styles are globally imported and scoped by lottery root classes. */
+
+.lottery-page,
+.lottery-activation-page,
+.lottery-modal {
+  --lottery-bg: #11100f;
+  --lottery-text: rgba(245, 245, 244, 0.96);
+  --lottery-text-strong: #ffffff;
+  --lottery-text-muted: rgba(214, 211, 209, 0.76);
+  --lottery-text-soft: rgba(168, 162, 158, 0.72);
+  --lottery-accent: rgba(254, 215, 170, 0.88);
+  --lottery-accent-strong: rgba(251, 146, 60, 0.92);
+  --lottery-accent-soft: rgba(251, 146, 60, 0.14);
+  --lottery-success: #86efac;
+  --lottery-danger: #fca5a5;
+  --lottery-surface: rgba(255, 255, 255, 0.055);
+  --lottery-surface-strong: rgba(0, 0, 0, 0.24);
+  --lottery-surface-hover: rgba(255, 255, 255, 0.08);
+  --lottery-border: rgba(255, 255, 255, 0.10);
+  --lottery-border-strong: rgba(254, 215, 170, 0.40);
+  --lottery-shadow: 0 18px 60px rgba(0, 0, 0, 0.18);
+  --lottery-modal-overlay: rgba(0, 0, 0, 0.70);
+  --lottery-modal-bg: rgba(21, 20, 18, 0.92);
+  --lottery-focus-ring: var(--gf-focus-ring);
+
+  background: var(--lottery-bg);
+  color: var(--lottery-text);
+}
+
+html.dark .lottery-page,
+html.dark .lottery-activation-page,
+html.dark .lottery-modal {
+  --lottery-bg: #0b0f16;
+  --lottery-surface: rgba(226, 232, 240, 0.07);
+  --lottery-surface-strong: rgba(2, 6, 23, 0.36);
+  --lottery-surface-hover: rgba(226, 232, 240, 0.10);
+  --lottery-border: rgba(226, 232, 240, 0.14);
+  --lottery-border-strong: rgba(186, 230, 253, 0.38);
+  --lottery-accent: rgba(186, 230, 253, 0.88);
+  --lottery-accent-strong: rgba(56, 189, 248, 0.78);
+  --lottery-accent-soft: rgba(56, 189, 248, 0.13);
+  --lottery-modal-bg: rgba(14, 20, 28, 0.94);
+}
+
+.lottery-page__wash {
+  background:
+    radial-gradient(circle at 74% 18%, rgba(244, 170, 96, 0.16), transparent 30%),
+    linear-gradient(115deg, rgba(17, 16, 15, 0.72) 0%, rgba(17, 16, 15, 0.54) 54%, rgba(17, 16, 15, 0.38) 100%);
+}
+
+.lottery-activation-page__wash {
+  background:
+    radial-gradient(circle at 50% 25%, rgba(244, 170, 96, 0.10), transparent 32%),
+    linear-gradient(180deg, rgba(8, 14, 28, 0.52), rgba(8, 14, 28, 0.62));
+}
+
+.lottery-page__top-line,
+.lottery-modal__top-line {
+  background: linear-gradient(90deg, transparent, var(--lottery-accent), transparent);
+}
+
+.lottery-hero,
+.lottery-pool {
+  animation: lotteryEnter var(--gf-motion-base) ease-out both;
+}
+
+.lottery-hero {
+  animation-duration: 520ms;
+}
+
+.lottery-page__eyebrow,
+.lottery-pool__action,
+.lottery-winner,
+.lottery-modal__chip {
+  color: var(--lottery-accent);
+}
+
+.lottery-page__title,
+.lottery-summary__value,
+.lottery-pool__title,
+.lottery-history__title,
+.lottery-modal__title {
+  color: var(--lottery-text-strong);
+}
+
+.lottery-page__subtitle,
+.lottery-page__loading,
+.lottery-section__title,
+.lottery-pool__desc,
+.lottery-meta,
+.lottery-modal__desc,
+.lottery-modal__summary,
+.lottery-modal__section-title,
+.activation-card__message,
+.activation-card__countdown {
+  color: var(--lottery-text-muted);
+}
+
+.lottery-summary,
+.lottery-empty,
+.lottery-history,
+.lottery-pool,
+.lottery-modal__summary,
+.activation-card__countdown {
+  border: 1px solid var(--lottery-border);
+  background: var(--lottery-surface);
+}
+
+.lottery-summary {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.lottery-summary__item,
+.lottery-modal__stat {
+  background: var(--lottery-surface-strong);
+}
+
+.lottery-summary__label,
+.lottery-section__count,
+.lottery-meta__label,
+.lottery-progress__time,
+.lottery-history__deadline,
+.lottery-history__desc,
+.lottery-history__empty,
+.lottery-modal__label,
+.lottery-modal__empty {
+  color: var(--lottery-text-soft);
+}
+
+.lottery-section__divider {
+  background: linear-gradient(90deg, var(--lottery-border), transparent);
+}
+
+.lottery-pool {
+  box-shadow: var(--lottery-shadow);
+}
+
+.lottery-pool:hover,
+.lottery-pool:focus-visible {
+  border-color: var(--lottery-border-strong);
+  background: var(--lottery-surface-hover);
+  outline: none;
+}
+
+.lottery-pool:focus-visible,
+.lottery-modal__input:focus,
+.lottery-modal__button:focus-visible,
+.activation-card__link:focus-visible {
+  box-shadow: 0 0 0 3px var(--lottery-focus-ring);
+}
+
+.lottery-pool__action,
+.lottery-winner,
+.lottery-modal__chip {
+  border: 1px solid color-mix(in srgb, var(--lottery-accent) 28%, transparent);
+  background: var(--lottery-accent-soft);
+}
+
+.lottery-meta__value {
+  color: var(--lottery-text);
+}
+
+.lottery-progress {
+  background: var(--lottery-border);
+}
+
+.lottery-progress__bar {
+  background: linear-gradient(90deg, var(--lottery-accent), var(--lottery-accent-strong));
+}
+
+.lottery-history {
+  border-color: var(--lottery-border);
+  background: var(--lottery-surface-strong);
+}
+
+.lottery-history__row + .lottery-history__row {
+  border-top: 1px solid var(--lottery-border);
+}
+
+.lottery-history__row:hover {
+  background: color-mix(in srgb, var(--lottery-surface-hover) 70%, transparent);
+}
+
+.lottery-modal {
+  background: var(--lottery-modal-overlay);
+}
+
+.lottery-modal__dialog {
+  border: 1px solid var(--lottery-border);
+  background: var(--lottery-modal-bg);
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.45);
+  color: var(--lottery-text);
+}
+
+.lottery-modal__close,
+.lottery-modal__load-more,
+.lottery-modal__button--secondary {
+  border: 1px solid var(--lottery-border);
+  color: var(--lottery-text-muted);
+}
+
+.lottery-modal__close:hover,
+.lottery-modal__load-more:hover,
+.lottery-modal__button--secondary:hover {
+  border-color: var(--lottery-border-strong);
+  background: var(--lottery-surface-hover);
+  color: var(--lottery-text-strong);
+}
+
+.lottery-modal__input {
+  border: 1px solid var(--lottery-border);
+  background: var(--lottery-surface-strong);
+  color: var(--lottery-text);
+}
+
+.lottery-modal__input::placeholder {
+  color: var(--lottery-text-soft);
+}
+
+.lottery-modal__input:focus {
+  border-color: var(--lottery-border-strong);
+}
+
+.lottery-modal__message--error {
+  color: var(--lottery-danger);
+}
+
+.lottery-modal__message--success {
+  color: var(--lottery-success);
+}
+
+.lottery-modal__button--primary,
+.activation-card__link {
+  background: var(--lottery-accent);
+  color: #11100f;
+}
+
+.lottery-modal__button--primary:hover,
+.activation-card__link:hover {
+  background: color-mix(in srgb, var(--lottery-accent) 86%, #ffffff);
+}
+
+.activation-card {
+  border: 1px solid var(--lottery-border);
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
+    rgba(15, 23, 42, 0.62);
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.34);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  backdrop-filter: blur(18px) saturate(1.12);
+}
+
+.activation-card__eyebrow {
+  color: var(--lottery-accent);
+}
+
+.activation-card__title--success {
+  color: var(--lottery-success);
+}
+
+.activation-card__title--fail {
+  color: var(--lottery-accent);
+}
+
+.activation-card__countdown span {
+  color: var(--lottery-text);
+}
+
+.activation-status {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 999px;
+  margin-bottom: 1.25rem;
+}
+
+.activation-status svg {
+  width: 1.55rem;
+  height: 1.55rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.activation-status--success {
+  border: 1px solid rgba(74, 222, 128, 0.34);
+  background: rgba(34, 197, 94, 0.16);
+  color: var(--lottery-success);
+}
+
+.activation-status--fail {
+  border: 1px solid rgba(251, 146, 60, 0.34);
+  background: rgba(251, 146, 60, 0.16);
+  color: #fdba74;
+}
+
+@keyframes lotteryEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lottery-hero,
+  .lottery-pool {
+    animation: none;
+  }
+}

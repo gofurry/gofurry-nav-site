@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-[900px] rounded-2xl bg-white/50 p-6 shadow backdrop-blur-md">
+  <div class="game-sidebar-shell min-h-[900px] p-6">
     <div class="mb-2">
       <GameSidebarSearch />
     </div>

@@ -24,7 +24,21 @@ const (
 	navGroupListCacheKey    = "group:list"
 	navGroupSiteMapCacheKey = "group:site:map"
 	navFeaturedSiteCacheKey = "featured-sites:list"
+	navHomeCachePrefix      = "nav:home:v3:"
+	navSiteDirectoryPrefix  = "nav:site-directory:v1:"
+	navSiteGroupCachePrefix = "nav:site-group:v1:"
 )
+
+func normalizeSayingLanguage(lang string) (string, error) {
+	normalized := strings.ToLower(strings.TrimSpace(lang))
+	if normalized == "" {
+		return "zh", nil
+	}
+	if normalized != "zh" && normalized != "en" {
+		return "", common.NewValidationError("language must be zh or en")
+	}
+	return normalized, nil
+}
 
 func navDB() *gorm.DB {
 	return db.Databases.DB(db.Nav)
@@ -39,23 +53,31 @@ func invalidateNavCache(keys ...string) {
 
 func invalidateNavSiteListCache() {
 	invalidateNavCache(navSiteListCacheKey)
+	_ = cache.DelByPrefix(navHomeCachePrefix)
+	_ = cache.DelByPrefix(navSiteDirectoryPrefix)
+	_ = cache.DelByPrefix(navSiteGroupCachePrefix)
 }
 
 func invalidateNavGroupListCache() {
 	invalidateNavCache(navGroupListCacheKey)
+	_ = cache.DelByPrefix(navHomeCachePrefix)
+	_ = cache.DelByPrefix(navSiteGroupCachePrefix)
 }
 
 func invalidateNavGroupMapCache() {
 	invalidateNavCache(navGroupSiteMapCacheKey)
+	_ = cache.DelByPrefix(navHomeCachePrefix)
+	_ = cache.DelByPrefix(navSiteGroupCachePrefix)
 }
 
 func invalidateNavFeaturedSiteCache() {
 	invalidateNavCache(navFeaturedSiteCacheKey)
+	_ = cache.DelByPrefix(navHomeCachePrefix)
 }
 
 func (api *navAPI) ListSayings(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(navDB().Model(&models.Saying{}).Order("id DESC"), page.Keyword, "author", "saying", "CAST(id AS TEXT)")
+	base := adminutil.ApplyKeyword(navDB().Model(&models.Saying{}).Order("id DESC"), page.Keyword, "author", "language", "saying", "CAST(id AS TEXT)")
 	var items []models.Saying
 	total, err := adminutil.Paginate(base, page, &items)
 	if err != nil {
@@ -73,6 +95,10 @@ func (api *navAPI) CreateSaying(c fiber.Ctx) error {
 	if req.Saying == "" {
 		return common.NewResponse(c).Error(common.NewValidationError("saying is required"))
 	}
+	language, validateErr := normalizeSayingLanguage(req.Language)
+	if validateErr != nil {
+		return common.NewResponse(c).Error(validateErr)
+	}
 
 	var created models.Saying
 	err := navDB().Transaction(func(tx *gorm.DB) error {
@@ -80,7 +106,7 @@ func (api *navAPI) CreateSaying(c fiber.Ctx) error {
 		if allocErr != nil {
 			return allocErr
 		}
-		created = models.Saying{ID: ids[0], Author: req.Author, Saying: req.Saying}
+		created = models.Saying{ID: ids[0], Author: req.Author, Language: language, Saying: req.Saying}
 		if err := tx.Create(&created).Error; err != nil {
 			return err
 		}
@@ -121,14 +147,19 @@ func (api *navAPI) UpdateSaying(c fiber.Ctx) error {
 	if req.Saying == "" {
 		return common.NewResponse(c).Error(common.NewValidationError("saying is required"))
 	}
+	language, validateErr := normalizeSayingLanguage(req.Language)
+	if validateErr != nil {
+		return common.NewResponse(c).Error(validateErr)
+	}
 	txErr := navDB().Transaction(func(tx *gorm.DB) error {
 		before, snapErr := audit.SnapshotByID(tx, (&models.Saying{}).TableName(), id)
 		if snapErr != nil {
 			return snapErr
 		}
 		if err := tx.Model(&models.Saying{}).Where("id = ?", id).Updates(map[string]any{
-			"author": req.Author,
-			"saying": req.Saying,
+			"author":   req.Author,
+			"language": language,
+			"saying":   req.Saying,
 		}).Error; err != nil {
 			return common.NewDaoError(err.Error())
 		}
@@ -367,7 +398,7 @@ func (api *navAPI) DeleteCollectorDomain(c fiber.Ctx) error {
 
 func (api *navAPI) ListSites(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(navDB().Model(&models.Site{}).Where("deleted IS NOT TRUE").Order("id DESC"), page.Keyword, "name", "name_en", "info", "info_en", "CAST(id AS TEXT)")
+	base := adminutil.ApplyKeyword(navDB().Model(&models.Site{}).Where("deleted IS NOT TRUE").Order("weight DESC, update_time DESC, id DESC"), page.Keyword, "name", "name_en", "info", "info_en", "CAST(id AS TEXT)")
 	var items []models.Site
 	total, err := adminutil.Paginate(base, page, &items)
 	if err != nil {
@@ -405,6 +436,7 @@ func (api *navAPI) CreateSite(c fiber.Ctx) error {
 			Country: req.Country,
 			Nsfw:    strings.TrimSpace(req.Nsfw),
 			Welfare: strings.TrimSpace(req.Welfare),
+			Weight:  req.Weight,
 			Icon:    req.Icon,
 		}
 		if err := tx.Create(&created).Error; err != nil {
@@ -460,6 +492,7 @@ func (api *navAPI) UpdateSite(c fiber.Ctx) error {
 			"country": req.Country,
 			"nsfw":    strings.TrimSpace(req.Nsfw),
 			"welfare": strings.TrimSpace(req.Welfare),
+			"weight":  req.Weight,
 			"icon":    req.Icon,
 		}).Error; err != nil {
 			return common.NewDaoError(err.Error())
@@ -998,6 +1031,7 @@ func siteDTO(item models.Site) models.SiteDTO {
 		Country:    item.Country,
 		Nsfw:       item.Nsfw,
 		Welfare:    item.Welfare,
+		Weight:     item.Weight,
 		Icon:       item.Icon,
 		Deleted:    item.Deleted,
 	}

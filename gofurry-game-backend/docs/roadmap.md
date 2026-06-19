@@ -1,337 +1,390 @@
-# GoFurry Game Backend V2 Roadmap
+# GoFurry Game Backend Roadmap
 
-## 当前结论
+## Current Position
 
-游戏采集器 v2 已经进入主线，后端下一步应该围绕 collector v2 的 PostgreSQL 结构化数据建立新的读模型和 API 合同。后端 v2 不应该重新理解 Steam raw payload，也不应该继续把 v1 的 `gfg_game_record`、`gfg_game_news`、`gfg_game_player_count` 作为动态游戏数据主来源。
+游戏模块已经完成 collector v2、backend v2 read model、admin 采集观测和前端主页面 cutover。`gofurry-nav-web` 当前游戏首页、详情页和 sitemap 游戏 URL 来源已经稳定消费 `/api/v2/game/*`，可以认为“动态游戏数据主线”已经切到 v2。
 
-本轮后端迭代目标：
+现阶段目标不再是继续维护 v1/v2 双栈。公开 game API 已经切到 `/api/v2/game/*`，后续重点是删除不再被引用的旧包、旧 Swagger、旧 Redis key 和历史文档说明，避免历史包袱继续扩散。
 
-- 使用 collector v2 写入的 PostgreSQL 表作为事实来源。
-- Redis 只作为热缓存和高频聚合缓存，未命中时回源 PostgreSQL。
-- 保留 `gfg_game`、评论、标签、创作者、抽奖等站内运营表。
-- 新增 `/api/v2/game/*`，让 `gofurry-nav-web`、`gofurry-admin`、`gofurry-rag` 有明确迁移目标。
-- 在前端、admin、RAG 全部切换完成前，不删除 `/api/v1/game/*`。
+## Stable V2 Mainline
 
-## 现状边界
-
-### gofurry-game-backend
-
-当前公开游戏接口集中在 `/api/v1/game/*`，动态详情、新闻、价格、在线人数仍主要来自旧表和旧 Redis key。v2 已经有独立契约文档 `docs/game-v2-backend-contract.md`，但还没有实现 v2 model、dao、service、controller 和 router。
-
-需要继续复用的站内能力：
-
-- `gfg_game`：站内游戏主档案、权重、资源、社群、链接入口。
-- `gfg_tag`、`gfg_tag_map`：标签和分类。
-- `gfg_game_comment`：评论和评分。
-- `gfg_game_creator`：创作者资料。
-- `gfg_game_prize`：抽奖活动。
-- 推荐、搜索、评论、抽奖等非 Steam 动态采集能力。
-
-### gofurry-nav-web
-
-前端当前仍通过 `NUXT_PUBLIC_GAME_API_BASE` 指向 `/api/v1`，游戏服务调用包括：
-
-- `/game/info/main`
-- `/game/panel/main`
-- `/game/update/latest`
-- `/game/update/latest/more`
-- `/game/search/simple`
-- `/game/search/page`
-- `/game/info`
-- `/game/recommend/*`
-- `/game/review/*`
-- `/game/tag/list`
-- `/game/creator`
-- `/game/prize/*`
-
-后端 v2 首先要覆盖游戏首页、列表、详情、新闻、聚合面板这些“Steam 动态数据”页面。搜索、推荐、评论、抽奖、创作者可以先继续走 v1 或后续单独迁移，避免一次性改动面过大。
-
-### gofurry-admin
-
-admin 当前直接管理旧游戏运营表，包括游戏主档案、评论、创作者、抽奖、标签、标签映射。它已经连接游戏 PostgreSQL，不需要 MongoDB。
-
-后端 v2 对 admin 的价值主要是新增采集观测和诊断能力：
-
-- 最近采集批次。
-- 单游戏采集结果。
-- 当前动态详情是否完整。
-- 新闻、价格、媒体、在线人数最近更新时间。
-- 失败 appid、失败原因、重试建议。
-
-admin 不应该直接暴露 Steam raw snapshot 给普通运营页面；raw snapshot 只适合受保护的调试页或临时排查。
-
-### gofurry-rag
-
-RAG 当前已经按 `/game/sync/list`、`/game/sync/info`、`/game/sync/news`、`/game/sync/creators` 拉取游戏知识。v2 后端要提供兼容 RAG 的稳定同步接口，但内容应变得更干净：
-
-- 使用 cleaned/plain text 作为主要同步内容。
-- 不默认返回 raw payload。
-- 新闻统一走 Store events。
-- 支持 `zh` / `en`。
-- 支持分页或 `updated_since`，避免未来全量同步压力过大。
-
-## 总体策略
-
-1. 后端先新增 v2 读模型和 v2 API，不影响现有 v1。
-2. `gofurry-nav-web` 先切游戏首页、详情、新闻到 v2；搜索、推荐、评论、抽奖按风险后置。
-3. `gofurry-admin` 增加 collector v2 观测页，保留原有运营管理。
-4. `gofurry-rag` 切到 v2 sync 接口，优先使用 cleaned/plain text。
-5. 当前端、admin、RAG 都稳定后，再冻结 v1 动态数据路径，逐步清理旧表读取和旧 Redis key。
-
-## v2.0.0-alpha.1 - Backend V2 Read Model Foundation
-
-目标：建立后端读取 collector v2 数据的基础模型，不先追求前端完整切换。
-
-后端改动：
-
-- 新增 v2 table model，覆盖：
-  - `gfg_game_v2_details`
-  - `gfg_game_v2_localized_details`
-  - `gfg_game_v2_prices`
-  - `gfg_game_v2_media`
-  - `gfg_game_v2_requirements`
-  - `gfg_game_v2_news`
-  - `gfg_game_v2_player_counts`
-  - `gfg_game_v2_collect_runs`
-  - `gfg_game_v2_collect_task_results`
-- 新增 v2 DAO，按 `game_id`、`appid`、`lang`、`region` 聚合详情。
-- 明确语言策略：当前只支持 `zh` / `en`，默认 `zh`，非法语言回退 `zh`。
-- 明确价格策略：默认展示 `CN`，中国区锁区或无价格时展示 unavailable，不把 `HK` 作为中国区 fallback。
-- 明确在线人数策略：公开接口只读取最近一次 `status='success'` 的结果，失败状态进入后台观测。
-- 新增单元测试覆盖 v2 聚合、语言回退、价格 unavailable、在线人数失败不覆盖成功值。
-
-验收标准：
-
-- 可以在不依赖旧动态表的情况下聚合一个游戏的 v2 详情。
-- v2 DAO 不读取 `gfg_game_record`、`gfg_game_news`、`gfg_game_player_count`。
-- Redis 不可用时，PostgreSQL 回源仍能返回公开详情。
-
-## v2.0.0-alpha.2 - Public Game API V2
-
-目标：提供前端可开始接入的公开 v2 API。
-
-新增接口：
+以下接口已经是主线，应继续保留并作为公开合同维护：
 
 - `GET /api/v2/game/list`
 - `GET /api/v2/game/info`
 - `GET /api/v2/game/news`
 - `GET /api/v2/game/news/latest`
-
-响应原则：
-
-- 列表接口返回轻量 `GameV2ListItem`。
-- 详情接口返回稳定 `GameV2Detail`。
-- 新闻接口返回 `GameV2NewsItem`，包含 `summary`、`plain_text`、必要时包含安全的 `html`。
-- raw snapshot、上游错误、payload hash 不进入公开响应。
-- 所有列表接口限制 `limit` 上限，防止前端误请求拖垮后端。
-
-缓存策略：
-
-- `game:v2:details:{game_id}:{lang}:{region}`
-- `game:v2:news:{game_id}:{lang}`
-- `game:v2:news:latest:{lang}`
-- TTL 先使用 6-24 小时，后续根据采集频率调整。
-
-验收标准：
-
-- `gofurry-nav-web` 可以用 v2 接口完成游戏详情页基础渲染。
-- 新闻正文已经是 cleaned 内容，不需要前端再承担 BBCode/HTML 清洗。
-- API 响应字段和 `docs/game-v2-backend-contract.md` 保持一致。
-
-## v2.0.0-alpha.3 - Frontend Panel Contract
-
-目标：补齐游戏首页和游戏模块 v2 视觉改造需要的聚合数据。
-
-新增或完善接口：
-
 - `GET /api/v2/game/panel/main`
-
-聚合内容：
-
-- 最新入库或近期更新游戏。
-- 热门在线人数排行。
-- 免费游戏。
-- 最高折扣。
-- 低价分组。
-- 最新新闻。
-- 首页视觉资源：header、capsule、background、screenshots 中适合卡片展示的字段。
-
-前端配合：
-
-- `gofurry-nav-web` 新增 v2 service/types，不复用旧 v1 类型硬塞字段。
-- 游戏首页可以先使用 v2 panel，详情页随后切换。
-- 环境变量可新增 v2 base，例如 `NUXT_PUBLIC_GAME_V2_API_BASE`，稳定后再替换默认 `NUXT_PUBLIC_GAME_API_BASE`。
-- 前端图片 alt 使用游戏名、新闻标题、站点名；纯装饰图保持 `alt=""`。
-
-验收标准：
-
-- 游戏首页不再依赖旧 Redis 聚合 key。
-- 首页聚合接口一次请求即可满足首屏主要内容。
-- 前端不用为缺失 CN 价格写 HK fallback。
-
-## v2.0.0-alpha.4 - Admin Collection Observability
-
-目标：让运营和排查能看到 collector v2 是否真的稳定，而不是只靠日志。
-
-新增后端接口：
-
+- `GET /api/v2/game/recommend/random`
+- `GET /api/v2/game/recommend/similar`
+- `GET /api/v2/game/reviews`
+- `POST /api/v2/game/reviews/anonymous`
+- `GET /api/v2/game/reviews/latest`
+- `GET /api/v2/game/prizes`
+- `POST /api/v2/game/prizes/participation`
+- `GET /api/v2/game/prizes/participation/activation`
+- `POST /api/v2/game/search/simple`
+- `POST /api/v2/game/search/page`
+- `GET /api/v2/game/tags`
 - `GET /api/v2/game/collect/status`
 - `GET /api/v2/game/collect/runs`
 - `GET /api/v2/game/collect/runs/:run_id`
 - `GET /api/v2/game/collect/task-results`
 - `GET /api/v2/game/collect/games/:id/status`
 
-接口要求：
+这些接口不应该再依赖旧动态表：
 
-- 必须受后台鉴权保护，不作为公开 API。
-- 支持按 task、status、appid、时间范围过滤。
-- 返回 run 汇总、失败原因、最近成功时间、最近失败时间。
-- raw snapshot 不默认返回；如需要调试，应单独做高权限接口并限制响应体大小。
+- `gfg_game_record`
+- `gfg_game_news`
+- `gfg_game_player_count`
 
-admin 配合：
+动态详情、新闻、价格、媒体、在线人数、采集状态都以 collector v2 PostgreSQL 表为事实来源。
 
-- `gofurry-admin` 增加“游戏采集状态”资源页。
-- 支持查看最近采集批次、失败 appid、失败类型、单游戏动态数据完整度。
-- 原有游戏主档案、评论、标签、创作者、抽奖管理继续保留，不和 v2 动态数据混在一个表单里。
+## Remaining V1 Surface
 
-验收标准：
+已经移除的 v1 动态、搜索和低风险交互接口：
 
-- 能从 admin 判断一次全量采集是否完整。
-- 能定位某个 appid 是详情失败、新闻失败、价格锁区，还是在线人数失败。
-- collect runs 和 task results 的保留策略与 collector 配置一致。
+- `GET /api/v1/game/info`
+- `GET /api/v1/game/info/list`
+- `GET /api/v1/game/info/main`
+- `GET /api/v1/game/panel/main`
+- `GET /api/v1/game/update/latest`
+- `GET /api/v1/game/update/latest/more`
+- `GET /api/v1/game/sync/list`
+- `GET /api/v1/game/sync/info`
+- `GET /api/v1/game/sync/news`
+- `GET /api/v1/game/sync/creators`
+- `GET /api/v1/game/creator`
+- `GET /api/v1/game/remark`
+- `GET /api/v1/game/tag/list`
+- `GET /api/v1/game/recommend/random`
+- `GET /api/v1/game/recommend/CBF`
+- `POST /api/v1/game/search/simple`
+- `POST /api/v1/game/search/page`
+- `POST /api/v1/game/review/anonymous`
+- `GET /api/v1/game/review/latest`
+- `POST /api/v1/game/prize/participation`
+- `GET /api/v1/game/prize/participation/activation`
+- `GET /api/v1/game/prize/info`
 
-## v2.0.0-alpha.5 - RAG Sync V2
+当前已无需要长期保留的 v1 game 公开路由。后续重点转向旧包、旧 Redis key、Swagger 和历史文档清理。
 
-目标：让 RAG 使用后端 v2 的 cleaned 内容，减少历史字段和 HTML 噪音。
+## Roadmap Strategy
 
-新增或迁移接口：
+优先级按“已稳定、最容易删、最能减少历史包袱”排序。前五个阶段已经完成，后续集中到包级清理：
 
-- `GET /api/v2/game/sync/list`
-- `GET /api/v2/game/sync/info`
-- `GET /api/v2/game/sync/news`
-- `GET /api/v2/game/sync/creators`
+1. 先删除前端和 admin 已经稳定切走的 v1 动态接口。
+2. 再升级搜索和标签，因为它们影响游戏发现体验，也会影响推荐。
+3. 然后升级评论和推荐，保证详情页交互可以完全摆脱 v1。
+4. 再升级创作者和抽奖，这两块更多是运营能力，风险可控但需要注意邮件、Redis 临时 key 和外链。
+5. 最后清理旧包、旧 Redis key、旧 Swagger 文档和旧动态表读取路径。
 
-同步内容要求：
+每个阶段必须满足：
 
-- `sync/list` 返回轻量摘要，支持 `lang`、`limit`、`offset` 或 cursor。
-- `sync/info` 返回 cleaned/plain text 字段，包含游戏名、简介、详情、标签、开发商、发行商、平台、站内资源。
-- `sync/news` 返回 Store events 新闻，正文优先 `plain_text`。
-- `sync/creators` 可继续复用站内创作者表，但路径切到 v2。
-- 增加 `updated_since` 能力，方便 RAG 做增量同步。
+- 不新增长期兼容路由。
+- 不把 v2 service 反向依赖 v1 controller。
+- 不让公开响应返回 raw snapshot、上游错误体或过大的 HTML。
+- 不把 HK 当作 CN 价格 fallback。
+- 不让在线人数失败覆盖最近一次成功结果。
 
-RAG 配合：
+## Version Plan
 
-- `gofurry-rag` 将 `sync_game_base_url` 切到 `/api/v2`。
-- RAG 客户端新增 v2 字段兼容，但保留旧字段解析直到切换完成。
-- source id 保持稳定，例如 `game:{id}:{lang}`、`game_news:{event_id}:{lang}`。
+### v2.1.0 - Remove Stable V1 Dynamic Routes
 
-验收标准：
+**Status:** Completed
+**Scope:** Architecture / Stability / Maintenance
+**Goal:** 删除已经稳定切到 v2 的 v1 动态接口，让游戏动态数据只剩一个主线。
 
-- RAG 可以同步游戏详情、游戏新闻、创作者三类内容。
-- 同步内容不包含 raw payload。
-- 二次同步能通过 checksum 跳过未变化文档。
+#### Focus
 
-## v2.0.0-beta.1 - Frontend Cutover
+- v1 动态路由移除
+- 旧动态 service/dao 依赖收缩
+- 前端/admin 调用确认
+- 生产回滚边界说明
 
-目标：前端游戏模块主要页面切到 v2，验证真实用户体验。
+#### Tasks
 
-切换范围：
+- [x] 从 `gameApi` 中移除 `/info`、`/info/list`、`/info/main`、`/panel/main`、`/update/latest`、`/update/latest/more`。
+- [x] 从 `gameApi` 中移除 `/sync/list`、`/sync/info`、`/sync/news`、`/sync/creators`。
+- [x] 确认 `gofurry-nav-web` 游戏主线调用已经使用 `/api/v2/game/*`，并清理残留的旧动态接口包装函数。
+- [x] 确认 `gofurry-admin` 采集观测通过 admin proxy 调用 `/api/v2/game/collect/*`。
+- [x] 删除旧动态 v1 controller 方法，使这些入口不再被 router 或 Swagger 注释引用。
+- [x] 更新 roadmap，明确这些 v1 动态路径已经移除。
 
-- 游戏首页。
-- 游戏详情页。
-- 游戏新闻列表。
-- 更多新闻页。
-- 搜索结果中展示用字段。
+#### Acceptance Criteria
 
-暂不强制切换：
+- 上述 v1 动态路径返回 404 或不再注册。
+- `/api/v2/game/*` 主线接口测试通过。
+- `gofurry-nav-web` 游戏首页、详情页、新闻页可正常访问。
+- admin 游戏采集观测正常。
 
-- 评论提交。
-- 抽奖。
-- 复杂推荐。
-- 创作者运营页。
+#### Notes
 
-验证重点：
+本阶段不删除 `apps/game` 整个 v1 包，因为评论、标签、创作者等接口仍可能复用其中的站内表模型。只删除已经被 v2 替代的动态读取入口。
 
-- SSR 下接口可用且不会因单个游戏异常导致页面 500。
-- 图片字段足够支撑 games v2 视觉改造。
-- CN 锁区价格显示为 unavailable 或无价格，不展示 HK 替代。
-- 新闻和详情正文不会出现 BBCode 残留。
-- v1/v2 数据差异有明确解释，不把差异当作线上故障。
+旧 service/dao 已在 `v2.6.0` 引用归零后完成包级清理，动态数据公开读取只保留 v2 read model。
 
-验收标准：
+---
 
-- `gofurry-nav-web` 游戏首页和详情页默认请求 v2。
-- v1 游戏动态数据路径可以进入冻结状态。
-- 前端 v2 类型和后端 v2 响应字段一致。
+### v2.2.0 - Search And Tag V2 Mainline
 
-## v2.0.0-rc.1 - Compatibility Freeze
+**Status:** Completed
+**Scope:** User-facing / Architecture / Testing
+**Goal:** 将搜索和标签升级为 v2，并直接替换 v1 搜索/标签路由。
 
-目标：冻结 v2 API 合同，为 stable 做最后确认。
+#### Focus
 
-后端工作：
+- 简易搜索
+- 高级搜索
+- 标签列表
+- v2 read model 与站内运营表融合
 
-- 补齐 Swagger 或接口文档。
-- 固定响应字段名，避免 stable 前继续变动。
-- 补齐 DAO/service/controller 单元测试。
-- 加入公开接口 smoke test。
-- 明确 v1 动态路径 deprecation note。
+#### Tasks
 
-跨项目确认：
+- [x] 新增 `POST /api/v2/game/search/simple`，保持前端兼容字段，同时由 v2 read model 数据源生成。
+- [x] 新增 `POST /api/v2/game/search/page`，支持分页、关键词、标签、发布时间、更新时间、评分排序、评论数排序和更新时间排序。
+- [x] 新增 `GET /api/v2/game/tags`，替代 `/api/v1/game/tag/list`。
+- [x] 搜索文本优先使用 v2 cleaned 字段：站内名、站内简介、Steam 本地化简介、开发商、发行商、标签。
+- [x] 前端搜索页和侧边栏搜索切到 v2。
+- [x] 移除 `/api/v1/game/search/simple`、`/api/v1/game/search/page`、`/api/v1/game/tag/list`。
+- [x] 补 service 单元测试，覆盖语言归一化、分页上限和简单搜索映射。
 
-- `gofurry-nav-web` 已完成主要游戏页面 v2 切换。
-- `gofurry-admin` 已能查看 collector v2 采集状态。
-- `gofurry-rag` 已切到 v2 sync，并完成至少一次全量同步和一次增量同步。
+#### Acceptance Criteria
 
-验收标准：
+- 搜索页只请求 `/api/v2/game/search/*`。
+- 标签筛选结果和当前 v1 行为等价或更准确。
+- 搜索响应当前保留前端兼容字段，底层不再读取旧动态表；后续搜索 UI 改版时再收敛为纯 v2 卡片字段。
+- v1 搜索和标签路由已移除。
 
-- collector v2 全量采集后，backend v2、frontend、admin、RAG 都能消费同一套数据。
-- v1 动态表不再是公开游戏页面的主要数据源。
-- stable 前没有必须修改数据库结构的阻塞项。
+#### Notes
 
-## v2.0.0 - Backend V2 Mainline Stable
+搜索继续基于 PostgreSQL `ILIKE` 起步。全文索引或向量搜索不放进本阶段，避免把替换任务变成新系统建设。
 
-目标：后端游戏模块 v2 成为主线。
+旧 `apps/search` service/dao 已在 `v2.6.0` 删除，搜索和标签主线只保留 v2 read model 实现。
 
-稳定范围：
+---
 
-- `/api/v2/game/list`
-- `/api/v2/game/info`
-- `/api/v2/game/news`
-- `/api/v2/game/news/latest`
-- `/api/v2/game/panel/main`
-- `/api/v2/game/sync/*`
-- `/api/v2/game/collect/*`
+### v2.3.0 - Review And Random Recommendation V2 Mainline
 
-v1 处理：
+**Status:** Completed
+**Scope:** User-facing / Stability / Security/Safety
+**Goal:** 将详情页评论、最新评论和随机游戏切到 v2，先移除低风险 v1 交互入口。
 
-- `/api/v1/game/*` 暂时保留，服务旧入口和非动态功能。
-- 冻结旧动态详情、旧新闻、旧在线人数读取路径。
-- 后续单独计划清理 `gfg_game_record`、`gfg_game_news`、`gfg_game_player_count` 的依赖。
-- 评论、抽奖、标签、创作者这些站内运营能力不因为 v2 stable 自动删除。
+#### Focus
 
-验收标准：
+- 评论读取
+- 匿名评论提交
+- 最新评论
+- 随机游戏
 
-- 新游戏动态内容全部来自 collector v2 数据表。
-- 前端主要游戏页面不依赖旧动态表。
-- admin 能观测采集状态。
-- RAG 能稳定同步 v2 cleaned 内容。
+#### Tasks
 
-## 风险与约束
+- [x] 新增 `GET /api/v2/game/reviews`，替代 `/api/v1/game/remark`。
+- [x] 新增 `POST /api/v2/game/reviews/anonymous`，替代 `/api/v1/game/review/anonymous`。
+- [x] 新增 `GET /api/v2/game/reviews/latest`，替代 `/api/v1/game/review/latest`。
+- [x] 新增 `GET /api/v2/game/recommend/random`，替代 `/api/v1/game/recommend/random`。
+- [x] 匿名评论保留现有风控：IP、User-Agent、频率限制、输入长度限制。
+- [x] 前端详情页评论区、最新评论、随机游戏入口切到 v2。
+- [x] 移除对应 v1 路由。
+- [x] 补 service 测试覆盖评论 IP 脱敏和随机 ID 读取边界。
+- [x] `GET /api/v2/game/recommend/similar` 已进入 `v2.3.1` 单独完成。
 
-- v2 和 v1 并行期间最容易出现字段来源混用，service 层需要明确 `game/v2` 聚合边界。
-- CN 价格缺失通常代表锁区或无区域价格，不应该把 HK 当作 fallback。
-- 在线人数失败不能覆盖最近一次成功值，也不能简单展示为 0。
-- Redis key 必须统一命名，避免后端和 collector 各写各的。
-- 公开接口不能返回 raw snapshot、上游错误体和过大的 HTML。
-- RAG 同步接口要控制分页和响应体大小，否则未来游戏数增长后会拖慢同步。
-- admin 采集观测接口必须受保护，避免暴露上游风控、失败模式和内部 appid 排查信息。
+#### Acceptance Criteria
 
-## 后续清理方向
+- 游戏详情页评论读写不再请求 v1。
+- 评论读写、最新评论和随机游戏均在 `/api/v2/game/*` 下。
+- 评论响应字段保持前端兼容，不需要额外适配层。
+- v1 评论、最新评论和随机游戏路由已移除。
 
-v2 stable 后再评估以下清理，不放进第一阶段：
+#### Notes
 
-- 删除或归档旧动态表读取逻辑。
-- 搜索和推荐从 v1 字段迁移到 v2 cleaned text 与结构化标签。
-- 为 player counts 做 90 天趋势图接口。
-- 为价格历史做趋势图或低价区比较，但新增地区前要先评估全量采集耗时。
-- 为 admin 增加受保护的单游戏重采集触发能力。
+本阶段先完成低风险评论与随机推荐。复杂相似推荐已在 `v2.3.1` 单独设计和实现，旧 `/api/v1/game/recommend/CBF` 已在 `v2.3.2` 删除。
+
+---
+
+### v2.3.1 - Similar Recommendation V2 Design
+
+**Status:** Completed
+**Scope:** Architecture / Performance / Recommendation Quality
+**Goal:** 设计并实现 `GET /api/v2/game/recommend/similar`，让详情页相似推荐从 v1 CBF 切到 v2 hybrid read model。
+
+#### Focus
+
+- v2 相似度特征来源
+- 标签、开发商、发行商、价格、在线人数的权重
+- PostgreSQL 预计算表与开发环境即时回填
+- 冷启动和空结果策略
+- 前端推荐栏合同
+
+#### Tasks
+
+- [x] 选型为 v2 hybrid CBF：标签 Weighted Jaccard + 创作者 + 文本 + 平台 + 价格 + 活跃度。
+- [x] 新增 `gfg_game_v2_recommendations` 预计算表，记录 `score`、`display_score`、`reason_json`、`algorithm_version`。
+- [x] 新增 `GET /api/v2/game/recommend/similar`，只返回已有 v2 details 的游戏。
+- [x] API 优先读取预计算结果；单个游戏缺失时即时计算 top 64 并写回，便于开发环境立即验证。
+- [x] 响应字段改为纯 v2 合同：`score`、`display_score`、`reasons`、`header_url`、`capsule_url`、`tags`、`price`、`online_count`。
+- [x] 前端详情页相似推荐切到 `/api/v2/game/recommend/similar`。
+- [x] 在代码中写入中文算法选型说明、权重设计和后续扩展边界。
+
+#### Acceptance Criteria
+
+- 详情页不再请求 `/api/v1/game/recommend/CBF`。
+- 推荐接口不依赖旧 `apps/recommend` CBF 运行时计算。
+- 新增 SQL migration 可独立执行，不破坏现有 game v2 表。
+- 缺少预计算数据时，接口能为单个源游戏计算并回填。
+- 推荐结果带可解释理由，方便前端展示和后续人工调权。
+
+#### Notes
+
+当前主线已经切到 v2，不再新增兼容层。后续可以增加 admin 手动重算或 collector 定时重算入口，把即时回填降级为纯兜底。
+
+---
+
+### v2.3.2 - Remove Legacy CBF Route
+
+**Status:** Completed
+**Scope:** Maintenance / Cleanup
+**Goal:** 当前端详情页相似推荐稳定消费 v2 后，移除 `/api/v1/game/recommend/CBF` 和旧 `apps/recommend` CBF 实现。
+
+#### Tasks
+
+- [x] 线上确认详情页只请求 `/api/v2/game/recommend/similar`。
+- [x] 移除 `/api/v1/game/recommend/CBF` 路由。
+- [x] 删除不再被引用的 `apps/recommend` CBF controller、service 和 dao。
+- [x] 删除 CBF 专用 model：`ContentSimilarities`、`GameRecommendVo`、`GameTemp`。
+- [x] 清理旧 Redis key 功能依赖：`recommend:tag-mapping`、`recommend:tag-ids` 不再被代码读取或写入。
+
+#### Acceptance Criteria
+
+- `/api/v1/game/recommend/CBF` 不再注册。
+- 后端不再编译旧 CBF controller/service/dao。
+- 前端详情页继续使用 `/api/v2/game/recommend/similar`。
+- `go test ./...` 通过。
+
+#### Notes
+
+`apps/recommend` 空壳包已在 `v2.6.0` 删除。标签读取由 v2 read model 直接访问站内 `gfg_tag` 与 `gfg_tag_map` 表，不再依赖旧 recommend 包模型。
+
+---
+
+### v2.4.0 - Creator Decommission
+
+**Status:** Completed
+**Scope:** User-facing / Admin / Documentation
+**Goal:** 创作者名录被判断为伪需求后，从前端、后端和 admin 中下线，避免继续维护低价值的独立数据链路。
+
+#### Focus
+
+- 前端 `/games/creator` 页面和快捷入口下线
+- 后端公开 creator API 下线
+- admin 创作者 CRUD 下线
+- `gfg_game_creator` 表转入待归档状态
+
+#### Tasks
+
+- [x] 移除前端 `/games/creator` 页面、creator 专用组件、快捷入口、sitemap 和 llms.txt 引用。
+- [x] 移除 `GET /api/v2/game/creators`。
+- [x] 移除 `GET /api/v2/game/sync/creators`。
+- [x] 移除 admin `/api/v1/game/creators` CRUD 和资源配置。
+- [x] 提供 `gfg_game_creator` 安全改名归档 SQL，生产确认后再 drop。
+
+#### Acceptance Criteria
+
+- `/games/creator` 不再进入前端路由、sitemap 和 llms.txt。
+- game backend 不再注册 creator 公开接口和 creator sync 接口。
+- admin 不再展示创作者管理资源。
+
+#### Notes
+
+创作者信息仍可通过游戏详情中的 developers / publishers 等字段间接进入推荐和详情表达；独立 creator 资料库不再作为产品能力维护。
+
+---
+
+### v2.5.0 - Prize V2 Mainline
+
+**Status:** Completed
+**Scope:** User-facing / Security/Safety / Stability  
+**Goal:** 将抽奖接口升级到 v2，并清理硬编码旧域名和 v1 激活链接。
+
+#### Focus
+
+- 抽奖信息读取
+- 抽奖参与
+- 邮件激活
+- Redis 临时参与 key
+- 安全和滥用控制
+
+#### Tasks
+
+- [x] 新增 `GET /api/v2/game/prizes`，替代 `/api/v1/game/prize/info`。
+- [x] 新增 `POST /api/v2/game/prizes/participation`，替代 `/api/v1/game/prize/participation`。
+- [x] 新增 `GET /api/v2/game/prizes/participation/activation`，替代 `/api/v1/game/prize/participation/activation`。
+- [x] 将邮件中的激活链接从硬编码 `/api/v1/game/prize/participation/activation` 改为 v2 URL。
+- [x] 统一 Redis 临时 key 命名：`game:v2:prize:email:{prize_id}:{email}`、`game:v2:prize:participation:{prize_id}:{key}`。
+- [x] 前端抽奖页和激活提交切到 v2。
+- [x] 移除 v1 抽奖路由。
+- [x] 补测试覆盖 v2 Redis key 和邮件激活链接生成，避免回退到 v1 URL。
+
+#### Acceptance Criteria
+
+- 抽奖完整流程只使用 `/api/v2/game/prizes/*`。
+- 邮件和前端跳转不再包含 v1 API URL。
+- Redis 临时 key 有明确 TTL 和命名空间。
+- v1 抽奖路由已移除。
+
+#### Notes
+
+抽奖公开入口已经切到 `/api/v2/game/prizes/*`。历史抽奖数据仍使用既有 `gfg_prize`、`gfg_prize_member` 和 `prize:history` 历史展示缓存；本阶段只迁移用户参与临时 key 和公开 API 路由，不强行改写定时开奖历史缓存。
+
+---
+
+### v2.6.0 - Legacy Package And Data Cleanup
+
+**Status:** Completed
+**Scope:** Architecture / Maintenance / Documentation  
+**Goal:** 在所有调用方完成 v2 后，删除 v1 历史包袱和旧动态数据依赖。
+
+#### Focus
+
+- v1 package 清理
+- 旧 Redis key 清理
+- 旧动态表读取移除
+- 文档和 Swagger 收敛
+
+#### Tasks
+
+- [x] 删除不再被引用的 `apps/game/controller` 动态方法。
+- [x] 删除不再被引用的 `apps/game/service` 动态读取逻辑。
+- [x] 删除不再被引用的旧 DAO 方法。
+- [x] 保留仍有价值的站内表 model，避免误删 `gfg_game`、`gfg_game_comment`、`gfg_prize`。
+- [x] 移除旧 Redis key 功能依赖：`game-info:*`、`game-panel:*`、`game-update:*`、`game-creator:list` 等。
+- [x] 标记旧动态表为归档数据，不再从公开接口读取。
+- [x] 更新 Swagger 注释，删除 v1 game API 文档来源。
+- [x] 更新文档，说明 v2 collector 数据是唯一动态事实来源。
+
+#### Acceptance Criteria
+
+- `routers/url.go` 不再注册 `/api/v1/game/*`。
+- `rg "/api/v1/game"` 只在历史说明或迁移文档中出现。
+- 公开游戏页面和 admin 均通过 v2 消费数据。
+- `go test ./...` 通过。
+
+## Short-Term Direction
+
+下一步优先保持 v2 主线稳定：补充抽奖开奖观测、推荐预计算运维入口、以及前端 games v2 视觉与交互增强。后续新增能力默认直接落在 `/api/v2/game/*`，不再恢复 v1 兼容层。
+
+## Medium-Term Direction
+
+中期重点是增强 v2 运维体验：抽奖开奖可观测与手动触发、推荐结果重算入口、采集状态与前端展示联动。仍有业务价值的站内运营表继续保留。
+
+## Long-Term Direction
+
+长期目标是保持 game backend 的公开游戏模块只通过 `/api/v2/game/*` 演进。旧动态表、旧 Redis 聚合 key 和旧 v1 controller 不再参与线上功能，后续如需大改应作为新的 v3 设计而不是恢复双栈。
+
+## Risks
+
+- 搜索和推荐升级时，v2 cleaned text 与旧站内简介可能存在排序差异，需要接受合理差异。
+- 抽奖涉及邮件和 Redis 临时 key，不能只做路由重命名，必须验证完整用户流程。
+- admin 仍有自己的 `/api/v1/game/*` 资源管理代理路径；它们属于 admin 后台资源 API，不是 game backend 公开 v1 动态接口。
+- 清理旧动态表读取时不要误删站内运营表，它们仍然是 v2 的一部分。
+- 后续如果删除数据库旧动态表，需要单独做数据归档和 migration 评估，不能和代码清理混在一起。

@@ -1,18 +1,18 @@
 <template>
-  <div class="space-y-2">
+  <div class="space-y-4">
 
     <!-- Tab -->
-    <div class="flex flex-col md:flex-row items-center justify-between">
+    <div class="flex flex-col items-center justify-between gap-3 md:flex-row">
 
       <!-- 类型切换 -->
-      <div class="inline-flex rounded-xl bg-orange-100 p-1">
+      <div class="stats-type-tabs inline-flex items-center gap-5">
         <div
             v-for="item in panelTypes"
             :key="item.key"
-            class="px-4 py-2 rounded-lg text-sm transition"
+            class="stats-type-tab relative cursor-pointer px-1 pb-2 text-sm font-semibold"
             :class="activeType === item.key
-              ? 'bg-orange-50 font-bold text-orange-800'
-              : 'text-orange-500 hover:bg-orange-200'"
+              ? 'stats-type-tab--active'
+              : 'stats-type-tab--idle'"
             @click="switchType(item.key)"
         >
           {{ item.label }}
@@ -20,14 +20,14 @@
       </div>
 
       <!-- 组内切换 -->
-      <div class="inline-flex rounded-xl bg-orange-100 p-1">
+      <div class="inline-flex items-center gap-2">
         <div
-            v-for="(_, idx) in (activeType === 'count' ? countGroups : priceGroups)"
+            v-for="(_, idx) in (activeType === 'count' ? visibleCountGroups : priceGroups)"
             :key="idx"
-            class="px-4 py-2 rounded-lg text-sm transition"
+            class="stats-page-tab grid h-7 min-w-7 cursor-pointer place-items-center rounded-full px-2 text-sm font-semibold"
             :class="activeGroup === idx
-              ? 'bg-orange-50 font-bold text-orange-800'
-              : 'text-orange-500 hover:bg-orange-200/50'"
+              ? 'stats-page-tab--active'
+              : 'stats-page-tab--idle'"
             @click="activeGroup = idx"
         >
           {{ idx + 1 }}
@@ -37,31 +37,68 @@
     </div>
 
     <!-- 面板内容 -->
-    <div class="grid lg:grid-cols-2 gap-6">
+    <div class="game-stats-page-shell">
+      <div class="game-stats-page-viewport">
+        <div
+            v-if="activeType === 'count'"
+            class="game-stats-page-track"
+            :style="{ transform: `translate3d(-${activeGroup * 100}%, 0, 0)` }"
+        >
+          <div
+              v-for="(group, groupIndex) in visibleCountGroups"
+              :key="`count-${groupIndex}`"
+              class="game-stats-page-slide"
+              :aria-hidden="groupIndex !== activeGroup"
+          >
+            <div class="game-stats-page-grid">
+              <CountTablePanel
+                  v-for="panel in group"
+                  :key="panel.key"
+                  :title="panel.title"
+                  :desc="panel.desc"
+                  :list="panel.list"
+                  :rank-start="panel.rankStart"
+              />
 
-      <!-- 在线人数 -->
-      <CountTablePanel
-          v-if="activeType === 'count'"
-          v-for="panel in countGroups[activeGroup]"
-          :key="panel.key"
-          :title="panel.title"
-          :desc="panel.desc"
-          :list="panel.list"
-          :expanded="groupExpanded"
-          @toggle="groupExpanded = !groupExpanded"
-      />
+              <section
+                  v-for="index in placeholderCount(group)"
+                  :key="`placeholder-${groupIndex}-${index}`"
+                  class="game-stats-card game-stats-card--placeholder"
+                  aria-hidden="true"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+            v-else
+            class="game-stats-page-track"
+            :style="{ transform: `translate3d(-${activeGroup * 100}%, 0, 0)` }"
+        >
+          <div
+              v-for="(group, groupIndex) in priceGroups"
+              :key="`price-${groupIndex}`"
+              class="game-stats-page-slide"
+              :aria-hidden="groupIndex !== activeGroup"
+          >
+            <div class="game-stats-page-grid">
+              <PriceTablePanel
+                  v-for="panel in group"
+                  :key="panel.key"
+                  :title="panel.title"
+                  :desc="panel.desc"
+                  :list="panel.list"
+              />
 
-      <!-- 价格 -->
-      <PriceTablePanel
-          v-if="activeType === 'price'"
-          v-for="panel in priceGroups[activeGroup]"
-          :key="panel.key"
-          :title="panel.title"
-          :desc="panel.desc"
-          :list="panel.list"
-          :expanded="groupExpanded"
-          @toggle="groupExpanded = !groupExpanded"
-      />
+              <section
+                  v-for="index in placeholderCount(group)"
+                  :key="`placeholder-${groupIndex}-${index}`"
+                  class="game-stats-card game-stats-card--placeholder"
+                  aria-hidden="true"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -96,7 +133,6 @@ const panelTypes = [
 
 const activeType = ref<PanelType>('count')
 const activeGroup = ref(0)
-const groupExpanded = ref(false)
 
 function switchType(type: PanelType) {
   activeType.value = type
@@ -111,24 +147,28 @@ const countPanels = computed(() => [
     title: t('game.panel.playerCountTop15'),
     desc: t('game.panel.playerCountDesc1'),
     list: props.topCountList.one,
+    rankStart: 1,
   },
   {
     key: 'count2',
     title: t('game.panel.playerCountTop30'),
     desc: t('game.panel.playerCountDesc2'),
     list: props.topCountList.two,
+    rankStart: 16,
   },
   {
     key: 'count3',
     title: t('game.panel.playerCountTop45'),
     desc: t('game.panel.playerCountDesc3'),
     list: props.topCountList.three,
+    rankStart: 31,
   },
   {
     key: 'count4',
     title: t('game.panel.playerCountTop60'),
     desc: t('game.panel.playerCountDesc4'),
     list: props.topCountList.four,
+    rankStart: 46,
   },
 ])
 
@@ -183,10 +223,19 @@ function buildGroups<T>(list: T[]) {
   return groups
 }
 
-const countGroups = computed(() => buildGroups(countPanels.value))
 const priceGroups = computed(() => buildGroups(pricePanels.value))
+const visibleCountGroups = computed(() => buildGroups(countPanels.value.filter(panel => panel.list.length > 0)))
 
-watch([activeGroup, activeType], () => {
-  groupExpanded.value = false
+function placeholderCount(group: unknown[]) {
+  return Math.max(0, 2 - group.length)
+}
+
+watch([activeType, visibleCountGroups, priceGroups], () => {
+  const groupLength = activeType.value === 'count'
+    ? visibleCountGroups.value.length
+    : priceGroups.value.length
+  if (activeGroup.value >= groupLength) {
+    activeGroup.value = Math.max(0, groupLength - 1)
+  }
 })
 </script>

@@ -151,6 +151,7 @@ const props = defineProps<{
 
 const copied = ref(false)
 const showDomainCard = ref(false)
+const localePath = useLocalePath()
 let domainCardCloseTimer: ReturnType<typeof setTimeout> | null = null
 
 function copyToClipboard(text: string) {
@@ -191,7 +192,7 @@ function scheduleCloseDomainCard() {
 }
 
 function domainLink(domain: string) {
-  return `/site/${encodeURIComponent(String(props.siteId))}/${encodeURIComponent(domain)}`
+  return localePath(`/site/${encodeURIComponent(String(props.siteId))}/${encodeURIComponent(domain)}`)
 }
 
 function logoUrl(icon: string) {
@@ -222,7 +223,7 @@ function label(zh: string, en: string) {
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18);
 }
 
-:global(.dark .detail-hero){
+:global(html.dark .detail-hero){
   background:
     radial-gradient(circle at 18% 24%, rgba(251, 146, 60, 0.15), transparent 28%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(30, 41, 59, 0.66));
@@ -235,7 +236,7 @@ function label(zh: string, en: string) {
   padding: 0.45rem;
 }
 
-:global(.dark .logo-shell){
+:global(html.dark .logo-shell){
   background: rgba(30, 41, 59, 0.86);
 }
 
@@ -261,7 +262,7 @@ function label(zh: string, en: string) {
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.20);
 }
 
-:global(.dark .detail-pill-edge){
+:global(html.dark .detail-pill-edge){
   background: rgba(251, 146, 60, 0.13);
   color: #fed7aa;
   box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.24);
@@ -272,7 +273,7 @@ function label(zh: string, en: string) {
   color: #c2410c;
 }
 
-:global(.dark .detail-pill-sfw){
+:global(html.dark .detail-pill-sfw){
   background: rgba(34, 197, 94, 0.14);
   color: #bbf7d0;
 }
@@ -282,7 +283,7 @@ function label(zh: string, en: string) {
   color: #b91c1c;
 }
 
-:global(.dark .detail-pill-risk){
+:global(html.dark .detail-pill-risk){
   background: rgba(248, 113, 113, 0.14);
   color: #fecaca;
 }
@@ -292,7 +293,7 @@ function label(zh: string, en: string) {
   color: #b45309;
 }
 
-:global(.dark .detail-pill-welfare){
+:global(html.dark .detail-pill-welfare){
   background: rgba(250, 204, 21, 0.14);
   color: #fef08a;
 }
@@ -306,7 +307,7 @@ function label(zh: string, en: string) {
   font-weight: 400;
 }
 
-:global(.dark .keyword-chip){
+:global(html.dark .keyword-chip){
   background: rgba(251, 146, 60, 0.14);
   color: #fed7aa;
 }
@@ -332,7 +333,7 @@ function label(zh: string, en: string) {
   white-space: nowrap;
 }
 
-:global(.dark .hero-mobile-views){
+:global(html.dark .hero-mobile-views){
   color: #fdba74;
 }
 
@@ -352,7 +353,7 @@ function label(zh: string, en: string) {
   backdrop-filter: blur(14px);
 }
 
-:global(.dark .domain-popover){
+:global(html.dark .domain-popover){
   background: rgba(15, 23, 42, 0.96);
   color: #e2e8f0;
   box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.14), 0 16px 44px rgba(0, 0, 0, 0.24);
@@ -400,12 +401,12 @@ function label(zh: string, en: string) {
   color: #111827;
 }
 
-:global(.dark .visit-button){
+:global(html.dark .visit-button){
   background: rgba(251, 146, 60, 0.18);
   color: #fff7ed;
 }
 
-:global(.dark .visit-button:hover){
+:global(html.dark .visit-button:hover){
   background: rgba(251, 146, 60, 0.28);
   color: #ffffff;
 }

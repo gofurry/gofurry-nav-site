@@ -1,0 +1,78 @@
+.gf-footer-shell {
+  --gf-footer-bg: #172033;
+  --gf-footer-bg-deep: #101827;
+}
+
+html.dark .gf-footer-shell {
+  --gf-footer-bg: #05070d;
+  --gf-footer-bg-deep: #03050a;
+}
+
+.gf-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    linear-gradient(180deg, var(--gf-footer-bg), var(--gf-footer-bg-deep)),
+    var(--gf-footer-bg);
+  color: rgb(211, 222, 238);
+  transition:
+    background-color 500ms ease,
+    border-color 500ms ease,
+    color 500ms ease;
+}
+
+html.dark .gf-footer {
+  border-top-color: rgba(255, 255, 255, 0.05);
+  background:
+    linear-gradient(180deg, var(--gf-footer-bg), var(--gf-footer-bg-deep)),
+    var(--gf-footer-bg);
+  color: rgb(148, 163, 184);
+}
+
+.gf-footer__section-title {
+  color: rgb(100, 116, 139);
+  letter-spacing: 0.24em;
+  transition: color 500ms ease;
+}
+
+html.dark .gf-footer__section-title {
+  color: rgb(71, 85, 105);
+}
+
+.gf-footer__link,
+.gf-footer__meta-link {
+  color: rgb(203, 213, 225);
+  transition: color var(--gf-motion-fast) ease;
+}
+
+html.dark .gf-footer__link,
+html.dark .gf-footer__meta-link {
+  color: rgb(148, 163, 184);
+}
+
+.gf-footer__link:hover,
+.gf-footer__meta-link:hover {
+  color: #ffffff;
+}
+
+.gf-footer__social-icon {
+  cursor: pointer;
+  opacity: 0.9;
+  transition:
+    opacity var(--gf-motion-fast) ease,
+    transform var(--gf-motion-fast) ease,
+    filter var(--gf-motion-fast) ease;
+}
+
+.gf-footer__social-icon:hover {
+  opacity: 1;
+  transform: scale(1.25);
+}
+
+.gf-footer__meta {
+  color: rgb(148, 163, 184);
+  transition: color 500ms ease;
+}
+
+html.dark .gf-footer__meta {
+  color: rgb(100, 116, 139);
+}

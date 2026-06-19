@@ -1,23 +1,30 @@
 <template>
-  <div class="flex flex-col gap-5 rounded-2xl bg-orange-50 p-5 shadow sm:flex-row">
+  <div class="game-detail-hero flex flex-col gap-5 p-5 sm:flex-row">
     <div class="shrink-0 flex justify-center sm:justify-start">
       <img
+        v-if="currentCover"
         :src="currentCover"
-        class="h-[240px] w-[180px] rounded-xl object-cover"
+        class="game-detail-cover h-[240px] w-[180px] object-cover"
         :alt="game?.name || 'cover'"
         @error="loadNextCover"
       />
+      <div
+        v-else
+        class="game-detail-cover game-detail-cover--empty flex h-[240px] w-[180px] items-center justify-center text-sm"
+      >
+        {{ t('game.panel.none') }}
+      </div>
     </div>
 
     <div class="min-w-0 flex-1 flex flex-col gap-3">
       <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <h1 class="break-words text-2xl font-bold text-gray-800">
+        <h1 class="game-detail-title break-words text-2xl font-bold">
           {{ game?.name || t('game.panel.none') }}
         </h1>
 
         <div class="flex items-center gap-2 shrink-0">
           <span
-            class="flex shrink-0 items-center gap-1 text-xs text-orange-500"
+            class="game-detail-metric flex shrink-0 items-center gap-1 text-xs"
           >
             <strong>{{ t('common.visits') }}: </strong>
             <div>{{ (game?.view_count ?? 0).toLocaleString() }}</div>
@@ -25,7 +32,7 @@
 
           <span
             v-if="game?.online_count"
-            class="flex shrink-0 items-center gap-1 text-xs text-orange-500"
+            class="game-detail-metric flex shrink-0 items-center gap-1 text-xs"
           >
             <span class="whitespace-nowrap">
               <strong>{{ t('game.detail.onlineNow') }}: </strong>
@@ -34,7 +41,7 @@
 
             <span
               v-if="game.count_collect_time"
-              class="whitespace-nowrap text-[11px] text-gray-400"
+              class="game-detail-time whitespace-nowrap text-[11px]"
             >
               &nbsp;&nbsp;{{ formatTime(game.count_collect_time) }}
             </span>
@@ -46,14 +53,14 @@
         <span
           v-for="tag in displayTags"
           :key="tag.id"
-          class="relative cursor-default rounded-md bg-orange-100 px-2 py-0.5 text-xs text-orange-700"
+          class="game-detail-tag relative cursor-default px-2 py-0.5 text-xs"
         >
           <span class="relative group">
             {{ tag.name }}
 
             <div
               v-if="tag.desc"
-              class="absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white opacity-0 transition group-hover:opacity-100 pointer-events-none"
+              class="game-detail-tag-tip pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap px-2 py-1 text-xs opacity-0 transition group-hover:opacity-100"
             >
               {{ tag.desc }}
             </div>
@@ -62,7 +69,7 @@
 
         <span
           v-if="tags.length > 8"
-          class="cursor-pointer rounded-md bg-orange-200 px-2 py-0.5 text-xs text-orange-700 hover:bg-orange-300"
+          class="game-detail-tag game-detail-tag--more cursor-pointer px-2 py-0.5 text-xs"
           @click="expanded = !expanded"
         >
           {{ expanded ? t('common.collapse') : t('common.expand') }}
@@ -93,23 +100,23 @@
           />
         </div>
 
-        <span class="font-bold text-orange-500">{{ avgScore.toFixed(1) }}</span>
-        <span class="text-sm text-gray-500">
+        <span class="game-detail-score font-bold">{{ avgScore.toFixed(1) }}</span>
+        <span class="game-detail-score-meta text-sm">
           ( {{ remark?.total ?? 0 }} {{ t('game.detail.commentCountSuffix') }} )
         </span>
       </div>
 
-      <p class="break-words text-sm leading-relaxed text-gray-700 line-clamp-3">
+      <p class="game-detail-summary break-words text-sm leading-relaxed line-clamp-3">
         {{ game?.info || t('game.panel.none') }}
       </p>
 
       <div class="mt-auto flex items-center gap-3">
-        <span class="text-sm text-gray-500">{{ t('game.detail.share') }}:</span>
+        <span class="game-detail-share-label text-sm">{{ t('game.detail.share') }}:</span>
 
         <button
           v-for="item in shareList"
           :key="item.name"
-          class="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 transition hover:bg-orange-200"
+          class="game-detail-share-button flex h-8 w-8 items-center justify-center"
           @click="share(item.type)"
           :title="item.name"
         >
@@ -134,9 +141,6 @@ import { i18n } from '@/main'
 
 const { t } = i18n.global
 
-const gamePrefix = import.meta.env.VITE_GAME_PREFIX_URL || ''
-const steamPrefix = import.meta.env.VITE_STEAM_COVER_PREFIX_URL || ''
-
 const props = defineProps<{
   game: GameBaseInfoResponse | null
   remark: RemarkResponse | null
@@ -151,23 +155,22 @@ const shareList = [
 ]
 
 const coverUrls = computed(() => {
-  const appid = props.game?.appid
-  if (!appid) return []
-  return [
-    steamPrefix + `${appid}/library_600x900.jpg`,
-    gamePrefix + `${appid}/library_600x900.jpg`,
-    gamePrefix + `${appid}/header.jpg`,
-  ]
+  const urls = [props.game?.cover].filter(Boolean) as string[]
+  return [...new Set(urls)]
 })
-
 const currentCoverIndex = ref(0)
-const currentCover = ref(coverUrls.value[0])
+const coverFailed = ref(false)
+const currentCover = computed(() =>
+  coverFailed.value ? '' : coverUrls.value[currentCoverIndex.value] || ''
+)
 
 function loadNextCover() {
   if (currentCoverIndex.value < coverUrls.value.length - 1) {
-    currentCoverIndex.value++
-    currentCover.value = coverUrls.value[currentCoverIndex.value]
+    currentCoverIndex.value += 1
+    return
   }
+
+  coverFailed.value = true
 }
 
 const tags = computed(() => props.game?.tags ?? [])
@@ -211,22 +214,13 @@ watch(
   () => props.game?.appid,
   () => {
     currentCoverIndex.value = 0
-    currentCover.value = coverUrls.value[0]
+    coverFailed.value = false
   }
 )
+
 </script>
 
 <style scoped>
-.share-icon {
-  filter:
-    invert(42%)
-    sepia(96%)
-    saturate(1150%)
-    hue-rotate(3deg)
-    brightness(90%)
-    contrast(95%);
-}
-
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;

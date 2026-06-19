@@ -533,7 +533,7 @@ function label(zh: string, en: string) {
   z-index: 1;
 }
 
-:global(.dark .site-detail-page){
+:global(html.dark .site-detail-page){
   --surface: rgba(15, 23, 42, 0.72);
   --surface-strong: rgba(30, 41, 59, 0.78);
   --ink-muted: #94a3b8;
@@ -558,7 +558,7 @@ function label(zh: string, en: string) {
     0 16px 42px rgba(124, 45, 18, 0.04);
 }
 
-:global(.dark .detail-section){
+:global(html.dark .detail-section){
   background:
     radial-gradient(circle at 8% 0%, rgba(251, 146, 60, 0.12), transparent 30%),
     linear-gradient(120deg, rgba(15, 23, 42, 0.84), rgba(30, 41, 59, 0.72)),
@@ -579,14 +579,14 @@ function label(zh: string, en: string) {
   background-color: rgba(255, 250, 242, 0.70);
 }
 
-:global(.dark .detail-section .rounded-2xl.bg-orange-100\/45),
-:global(.dark .detail-section .rounded-xl.bg-orange-50\/80),
-:global(.dark .detail-section .rounded-xl.bg-orange-50\/70),
-:global(.dark .detail-section .rounded-lg.bg-orange-100),
-:global(.dark .detail-section .rounded-lg.bg-orange-100\/35),
-:global(.dark .detail-section .rounded-md.bg-orange-50),
-:global(.dark .detail-section .rounded-md.bg-orange-100\/45),
-:global(.dark .detail-section .rounded-xl.bg-orange-100\/45){
+:global(html.dark .detail-section .rounded-2xl.bg-orange-100\/45),
+:global(html.dark .detail-section .rounded-xl.bg-orange-50\/80),
+:global(html.dark .detail-section .rounded-xl.bg-orange-50\/70),
+:global(html.dark .detail-section .rounded-lg.bg-orange-100),
+:global(html.dark .detail-section .rounded-lg.bg-orange-100\/35),
+:global(html.dark .detail-section .rounded-md.bg-orange-50),
+:global(html.dark .detail-section .rounded-md.bg-orange-100\/45),
+:global(html.dark .detail-section .rounded-xl.bg-orange-100\/45){
   background-color: rgba(15, 23, 42, 0.68);
 }
 

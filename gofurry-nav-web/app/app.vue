@@ -2,7 +2,7 @@
   <NuxtLayout>
     <NuxtPage />
   </NuxtLayout>
-  <ClientOnly v-if="showGlobalScrollDock">
+  <ClientOnly>
     <PageScrollDock />
   </ClientOnly>
 </template>
@@ -10,10 +10,7 @@
 <script setup lang="ts">
 import PageScrollDock from '~/components/common/PageScrollDock.vue'
 
-const route = useRoute()
 const { locale } = useI18n()
-const normalizedPath = computed(() => route.path.replace(/^\/(zh|en)(?=\/|$)/, '') || '/')
-const showGlobalScrollDock = computed(() => normalizedPath.value !== '/archive')
 const defaultSeo = computed(() => {
   if (locale.value === 'en') {
     return {

@@ -30,7 +30,6 @@ body:
         - gofurry-nav-backend API
         - gofurry-nav-web UX
         - gofurry-admin workflow
-        - gofurry-rag sync / indexing
         - SQL / schema / migration
         - deployment / operations
         - documentation / CI

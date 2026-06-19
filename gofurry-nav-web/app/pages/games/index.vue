@@ -1,9 +1,21 @@
 <template>
-  <div class="flex min-h-full w-full flex-col overflow-clip bg-gray-50">
+  <div
+    class="games-page flex min-h-full w-full flex-col overflow-clip"
+  >
     <main
       class="relative isolate flex-1 overflow-hidden"
     >
-      <GoFurryGridBackground :fixed="false" palette="nav-content" />
+      <GoFurryGridBackground :fixed="false" palette="games" />
+      <FallingLeavesCanvas
+        v-if="ambientReady"
+        :key="isDarkTheme ? 'dark-leaves' : 'light-leaves'"
+        class="z-[1]"
+        mode="viewport"
+        :palette="isDarkTheme ? 'bright' : 'warm'"
+        :leaf-count="28"
+        :mobile-leaf-count="16"
+        :fps="24"
+      />
       <h1 class="sr-only">{{ gamesPageSeo.heading }}</h1>
       <div class="relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 p-6">
         <section class="w-full xl:w-[75%]">
@@ -25,23 +37,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import FallingLeavesCanvas from '@/components/common/FallingLeavesCanvas.vue'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import GameInfoPanel from '@/components/game/main/content/GameInfoPanel.vue'
 import GameToolDock from '@/components/game/main/GameToolDock.vue'
 import SideBarPanel from '@/components/game/main/sidebar/SideBarPanel.vue'
-import { getGameMainInfo, getGameMainPanel, getLatestGameNews, getLatestReview } from '~/services/game'
-import type { AnonymousReviewModel, GameGroupRecord, GamePanelRecord, LatestNewsRecord } from '~/types/game'
-
-interface GamesPageData {
-  mainInfo: GameGroupRecord | null
-  panelData: GamePanelRecord | null
-  latestNews: LatestNewsRecord | null
-  latestReviews: AnonymousReviewModel[]
-}
+import { useThemeStore } from '@/stores/theme'
+import { getGameHomeData, type GameHomeData } from '~/services/game'
 
 const { locale } = useI18n()
+const themeStore = useThemeStore()
+const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
+const isDarkTheme = computed(() => themeStore.theme === 'dark')
+const ambientReady = ref(false)
 const gamesPageSeo = computed(() => locale.value === 'en'
   ? {
       heading: 'GoFurry Furry Games',
@@ -55,34 +65,23 @@ const gamesPageSeo = computed(() => locale.value === 'en'
     }
 )
 
-const { data } = await useAsyncData<GamesPageData>(
-  'games-page',
+const { data } = await useAsyncData<GameHomeData | null>(
+  () => `games-page:${lang.value}`,
   async () => {
-    const [mainInfo, panelData, latestNews, latestReviews] = await Promise.all([
-      getGameMainInfo().catch(() => null),
-      getGameMainPanel().catch(() => null),
-      getLatestGameNews().catch(() => null),
-      getLatestReview().catch(() => []),
-    ])
-
-    return {
-      mainInfo,
-      panelData,
-      latestNews,
-      latestReviews,
-    }
+    return getGameHomeData(lang.value).catch(() => null)
   },
   {
-    default: () => ({
-      mainInfo: null,
-      panelData: null,
-      latestNews: null,
-      latestReviews: [],
-    }),
+    watch: [lang],
+    default: () => null,
   }
 )
 
-const gamesPageData = computed(() => data.value!)
+const gamesPageData = computed<GameHomeData>(() => data.value ?? {
+  mainInfo: nullGameGroups(),
+  panelData: nullGamePanel(),
+  latestNews: { news_zh: [], news_en: [] },
+  latestReviews: [],
+})
 
 useSeoMeta({
   title: () => gamesPageSeo.value.title,
@@ -90,4 +89,27 @@ useSeoMeta({
   ogTitle: () => gamesPageSeo.value.title,
   ogDescription: () => gamesPageSeo.value.description,
 })
+
+onMounted(() => {
+  themeStore.initTheme()
+  ambientReady.value = true
+})
+
+function nullGameGroups() {
+  return {
+    latest: [],
+    recent: [],
+    hot: [],
+    free: [],
+  }
+}
+
+function nullGamePanel() {
+  return {
+    top_count: { one: [], two: [], three: [], four: [] },
+    top_discount_vo: [],
+    top_price_vo: [],
+    bottom_price: { one: [], two: [], three: [], four: [] },
+  }
+}
 </script>

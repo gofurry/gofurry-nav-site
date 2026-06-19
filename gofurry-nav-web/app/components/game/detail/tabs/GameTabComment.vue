@@ -1,104 +1,121 @@
 <template>
-  <div class="space-y-4 text-sm text-gray-700">
+  <div class="game-detail-comments space-y-4 text-sm">
 
-    <!-- 评论列表 -->
-    <div v-if="visibleRemarks.length">
+    <div v-if="remarks.length">
       <div
-          v-for="(r, index) in visibleRemarks"
-          :key="index"
-          class="space-y-1 pb-3 mt-1"
+        v-for="(remark, index) in remarks"
+        :key="`${remark.create_time}-${remark.ip}-${index}`"
+        class="game-detail-comment mt-1 space-y-1 pb-3"
       >
-        <!-- 顶部信息 -->
-        <div class="flex flex-col text-gray-500 text-xs">
+        <div class="game-detail-comment-meta flex flex-col text-xs">
           <div class="flex justify-between">
-            <span><strong>{{t("game.detail.commenter")}}:</strong> {{ r.name }}</span>
-            <span><strong>{{t("game.detail.region")}}:</strong> {{ r.region }}</span>
+            <span><strong>{{ t("game.detail.commenter") }}:</strong> {{ remark.name }}</span>
+            <span><strong>{{ t("game.detail.region") }}:</strong> {{ remark.region }}</span>
           </div>
           <div class="flex justify-between">
-            <span><strong>IP:</strong> {{ r.ip }}</span>
-            <span><strong>{{t("game.detail.time")}}:</strong> {{ r.create_time }}</span>
+            <span><strong>IP:</strong> {{ remark.ip }}</span>
+            <span><strong>{{ t("game.detail.time") }}:</strong> {{ remark.create_time }}</span>
           </div>
         </div>
 
-        <!-- 星星评分 -->
-        <div class="flex items-center gap-1 mt-1">
-          <img v-for="i in fullStars(r.score)" :key="'full-' + i + index" :src="starSvg" class="w-4 h-4" alt="" />
-          <img v-if="hasHalfStar(r.score)" :src="starHalfSvg" class="w-4 h-4" alt="" />
-          <img v-for="i in emptyStars(r.score)" :key="'empty-' + i + index" :src="starSvg" class="w-4 h-4 opacity-30" alt="" />
-          <span class="ml-2 text-gray-500">{{ r.score.toFixed(1) }}</span>
+        <div class="mt-1 flex items-center gap-1">
+          <img v-for="i in fullStars(remark.score)" :key="`full-${i}-${index}`" :src="starSvg" class="h-4 w-4" alt="" />
+          <img v-if="hasHalfStar(remark.score)" :src="starHalfSvg" class="h-4 w-4" alt="" />
+          <img v-for="i in emptyStars(remark.score)" :key="`empty-${i}-${index}`" :src="starSvg" class="h-4 w-4 opacity-30" alt="" />
+          <span class="game-detail-comment-score ml-2">{{ remark.score.toFixed(1) }}</span>
         </div>
 
-        <!-- 评论内容 -->
-        <div class="text-gray-800 mt-1">{{ r.content }}</div>
+        <div class="game-detail-comment-body mt-1">{{ remark.content }}</div>
 
-        <!-- 分割线 -->
         <div
-            v-if="index !== visibleRemarks.length - 1"
-            class="w-full my-3 border-t border-dashed border-orange-200/70"
-        ></div>
+          v-if="index !== remarks.length - 1"
+          class="game-detail-divider my-3 w-full"
+        />
       </div>
 
-      <!-- 加载更多按钮 -->
-      <div class="text-center mt-3">
+      <div class="mt-3 text-center">
         <button
-            v-if="visibleCount < allRemarks.length"
-            @click="loadMore"
-            class="px-4 py-1 rounded bg-orange-100 text-orange-700 hover:bg-orange-200 transition"
+          v-if="hasMore"
+          :disabled="isLoading"
+          @click="loadMore"
+          class="game-detail-load-more px-4 py-1 disabled:opacity-60"
         >
-          {{t("common.loadMore")}}
+          {{ isLoading ? t("common.loading") : t("common.loadMore") }}
         </button>
-        <span v-else class="text-gray-400 text-sm">{{t("game.detail.allCommentsLoaded")}}</span>
+        <span v-else class="game-detail-empty text-sm">{{ t("game.detail.allCommentsLoaded") }}</span>
       </div>
     </div>
 
-    <!-- 无评论 -->
-    <div v-else class="text-center text-gray-400 py-6">
-      {{t("game.panel.none")}}
+    <div v-else class="game-detail-empty py-6 text-center">
+      {{ isLoading ? t("common.loading") : t("game.panel.none") }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { RemarkResponse } from '@/types/game'
+import { computed, ref, watch } from 'vue'
+import type { RemarkModel, RemarkResponse } from '@/types/game'
+import { getGameRemark } from '~/services/game'
 import { i18n } from '@/main'
+
+import starSvg from '@/assets/svgs/star.svg'
+import starHalfSvg from '@/assets/svgs/star-half-alt.svg'
 
 const { t } = i18n.global
 
 const props = defineProps<{
+  gameId: string
   remark: RemarkResponse | null
 }>()
 
-import { ref, computed, watch } from 'vue'
+const PAGE_SIZE = 5
 
-// 星星资源
-import starSvg from '@/assets/svgs/star.svg'
-import starHalfSvg from '@/assets/svgs/star-half-alt.svg'
+const remarks = ref<RemarkModel[]>([])
+const total = ref(0)
+const currentPage = ref(1)
+const isLoading = ref(false)
 
-// 星星计算函数
+const hasMore = computed(() => remarks.value.length < total.value)
+
 const fullStars = (score: number) => Math.floor(score)
-const hasHalfStar = (score: number) => {
-  const decimal = score - Math.floor(score)
-  return decimal >= 0.45
-}
+const hasHalfStar = (score: number) => score - Math.floor(score) >= 0.45
 const emptyStars = (score: number) => 5 - fullStars(score) - (hasHalfStar(score) ? 1 : 0)
 
-// 分页加载
-const PAGE_SIZE = 5
-const visibleCount = ref(PAGE_SIZE)
-
-// 所有评论
-const allRemarks = computed(() => props.remark?.remarks ?? [])
-
-// 当前可见评论
-const visibleRemarks = computed(() => allRemarks.value.slice(0, visibleCount.value))
-
-// 点击加载更多
-function loadMore() {
-  visibleCount.value = Math.min(visibleCount.value + PAGE_SIZE, allRemarks.value.length)
+function resetRemarks() {
+  remarks.value = props.remark?.remarks ? [...props.remark.remarks] : []
+  total.value = props.remark?.total ?? 0
+  currentPage.value = remarks.value.length > 0 ? 1 : 0
 }
 
-// 评论发生变化, 重置分页
-watch(allRemarks, () => {
-  visibleCount.value = PAGE_SIZE
-})
+async function loadMore() {
+  if (!props.gameId || isLoading.value || !hasMore.value) {
+    return
+  }
+
+  isLoading.value = true
+  const requestGameId = props.gameId
+  try {
+    const nextPage = currentPage.value + 1
+    const response = await getGameRemark(requestGameId, nextPage, PAGE_SIZE)
+    if (props.gameId !== requestGameId) {
+      return
+    }
+
+    remarks.value = [...remarks.value, ...(response.remarks ?? [])]
+    total.value = response.total ?? total.value
+    currentPage.value = response.page_num || nextPage
+  } catch {
+    // 评论分页是增强体验的旁路请求，失败时保留已加载内容。
+  } finally {
+    isLoading.value = false
+  }
+}
+
+watch(
+  () => [props.gameId, props.remark] as const,
+  () => {
+    resetRemarks()
+  },
+  { immediate: true }
+)
 </script>

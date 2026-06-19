@@ -1,19 +1,19 @@
 <template>
   <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-md"
+      class="lottery-modal fixed inset-0 z-50 flex items-center justify-center px-4 py-6 backdrop-blur-md"
   >
     <div
-        class="relative max-h-[calc(100vh-3rem)] w-full max-w-2xl overflow-y-auto rounded-xl border border-white/10 bg-[rgba(21,20,18,0.92)] p-5 text-stone-100 shadow-[0_24px_90px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-xl sm:p-6"
+        class="lottery-modal__dialog relative max-h-[calc(100vh-3rem)] w-full max-w-2xl overflow-y-auto rounded-xl p-5 backdrop-blur-xl sm:p-6"
     >
-      <div class="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-orange-200/60 to-transparent" aria-hidden="true" />
+      <div class="lottery-modal__top-line absolute inset-x-6 top-0 h-px" aria-hidden="true" />
 
       <div class="mb-4 flex items-start justify-between gap-4">
-        <h3 class="text-xl font-semibold leading-7 text-white">
+        <h3 class="lottery-modal__title text-xl font-semibold leading-7">
           {{ lottery.lottery.title }}
         </h3>
         <button
             type="button"
-            class="grid size-8 shrink-0 place-items-center rounded-lg border border-white/10 text-stone-400 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+            class="lottery-modal__close grid size-8 shrink-0 place-items-center rounded-lg transition"
             :aria-label="t('common.cancel')"
             @click="emit('close')"
         >
@@ -21,13 +21,13 @@
         </button>
       </div>
 
-      <p class="mb-5 text-sm leading-6 text-stone-300">
+      <p class="lottery-modal__desc mb-5 text-sm leading-6">
         {{ lottery.lottery.desc }}
       </p>
 
-      <div class="mb-5 grid gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-4 text-sm text-stone-300">
+      <div class="lottery-modal__summary mb-5 grid gap-3 rounded-lg p-4 text-sm">
         <div class="flex items-center justify-between gap-4">
-          <div class="text-stone-500">{{ t('game.lottery.home.prize') }}</div>
+          <div class="lottery-modal__label">{{ t('game.lottery.home.prize') }}</div>
           <div>
             {{ lottery.lottery.prize.title }}
             ({{ lottery.lottery.prize.platform }})
@@ -35,15 +35,15 @@
         </div>
 
         <div class="grid grid-cols-2 gap-3">
-          <div class="rounded-lg bg-black/20 px-3 py-2">
-            <div class="text-[11px] text-stone-500">{{ t('game.lottery.home.prizeQuantity') }}</div>
+          <div class="lottery-modal__stat rounded-lg px-3 py-2">
+            <div class="lottery-modal__label text-[11px]">{{ t('game.lottery.home.prizeQuantity') }}</div>
             <div>
               {{ lottery.lottery.prize.count }}
             </div>
           </div>
 
-          <div class="rounded-lg bg-black/20 px-3 py-2">
-            <div class="text-[11px] text-stone-500">{{ t('game.lottery.home.participants') }}</div>
+          <div class="lottery-modal__stat rounded-lg px-3 py-2">
+            <div class="lottery-modal__label text-[11px]">{{ t('game.lottery.home.participants') }}</div>
             <div>
               {{ lottery.count }}
             </div>
@@ -52,13 +52,13 @@
       </div>
 
       <div class="mb-4">
-        <div class="mb-2 text-sm font-medium text-stone-300">
+        <div class="lottery-modal__section-title mb-2 text-sm font-medium">
           {{ t('game.lottery.submitModal.currentParticipants') }}
         </div>
 
         <div
             v-if="!lottery.member.length"
-            class="text-sm text-stone-500"
+            class="lottery-modal__empty text-sm"
         >
           {{ t('game.lottery.submitModal.noParticipants') }}
         </div>
@@ -70,7 +70,7 @@
           <span
               v-for="m in visibleMembers"
               :key="m.email"
-              class="rounded-full border border-orange-200/16 bg-orange-200/10 px-3 py-1 text-xs text-orange-100/90"
+              class="lottery-modal__chip rounded-full px-3 py-1 text-xs"
           >
             {{ m.name }} - {{ m.email }}
           </span>
@@ -80,7 +80,7 @@
           <button
               type="button"
               @click="loadMore"
-              class="rounded-lg border border-white/10 bg-white/[0.06] px-2.5 py-1 text-xs text-stone-300 transition hover:bg-white/[0.1]"
+              class="lottery-modal__load-more rounded-lg px-2.5 py-1 text-xs transition"
           >
             {{ t('common.loadMore') }}
           </button>
@@ -88,7 +88,7 @@
 
         <div
             v-else-if="lottery.member.length > 5"
-            class="mt-2 text-xs text-stone-500"
+            class="lottery-modal__empty mt-2 text-xs"
         >
           {{ t('game.lottery.submitModal.allLoaded') }}
         </div>
@@ -98,30 +98,30 @@
         <input
             v-model="keyInput"
             :placeholder="t('game.lottery.submitModal.enterLotteryKey')"
-            class="w-full rounded-lg border border-white/10 bg-black/[0.24] px-3 py-2.5 text-sm text-stone-100 outline-none transition placeholder:text-stone-600 focus:border-orange-200/50"
+            class="lottery-modal__input w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
         />
 
         <input
             v-model="nameInput"
             :placeholder="t('game.lottery.submitModal.enterName')"
-            class="w-full rounded-lg border border-white/10 bg-black/[0.24] px-3 py-2.5 text-sm text-stone-100 outline-none transition placeholder:text-stone-600 focus:border-orange-200/50"
+            class="lottery-modal__input w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
         />
 
         <input
             v-model="emailInput"
             :placeholder="t('game.lottery.submitModal.enterEmail')"
-            class="w-full rounded-lg border border-white/10 bg-black/[0.24] px-3 py-2.5 text-sm text-stone-100 outline-none transition placeholder:text-stone-600 focus:border-orange-200/50"
+            class="lottery-modal__input w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
         />
 
-        <div v-if="emailError" class="text-xs text-red-300">
+        <div v-if="emailError" class="lottery-modal__message lottery-modal__message--error text-xs">
           {{ emailError }}
         </div>
 
-        <div v-if="submitError" class="text-xs text-red-300">
+        <div v-if="submitError" class="lottery-modal__message lottery-modal__message--error text-xs">
           {{ submitError }}
         </div>
 
-        <div v-if="successMsg" class="text-xs text-emerald-300">
+        <div v-if="successMsg" class="lottery-modal__message lottery-modal__message--success text-xs">
           {{ successMsg }}
         </div>
       </div>
@@ -129,7 +129,7 @@
       <div class="mt-6 flex justify-end gap-3">
         <button
             @click="emit('close')"
-            class="rounded-lg border border-white/10 px-4 py-2 text-sm text-stone-300 transition hover:bg-white/[0.08] hover:text-white"
+            class="lottery-modal__button lottery-modal__button--secondary rounded-lg px-4 py-2 text-sm transition"
         >
           {{ t('common.cancel') }}
         </button>
@@ -137,7 +137,7 @@
         <button
             @click="submit"
             :disabled="loading"
-            class="rounded-lg bg-orange-200 px-4 py-2 text-sm font-medium text-stone-950 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
+            class="lottery-modal__button lottery-modal__button--primary rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50"
         >
           {{ loading ? t("common.commiting") : t("common.commit") }}
         </button>

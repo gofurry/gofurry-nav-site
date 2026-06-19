@@ -15,6 +15,7 @@ const (
 	ProtocolRDAP        = "rdap"
 	ProtocolRobots      = "robots"
 	ProtocolSecurityTXT = "security_txt"
+	ProtocolLLMSTXT     = "llms_txt"
 	ProtocolPageAssets  = "page_assets"
 	ProtocolPortCheck   = "port_check"
 	ProtocolWAFCanary   = "waf_canary"
@@ -123,6 +124,7 @@ func LightProbeProtocols() []string {
 		ProtocolRDAP,
 		ProtocolRobots,
 		ProtocolSecurityTXT,
+		ProtocolLLMSTXT,
 		ProtocolPageAssets,
 		ProtocolPortCheck,
 		ProtocolWAFCanary,

@@ -7,6 +7,7 @@ package routers
  */
 
 import (
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -15,6 +16,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/contrib/v3/swagger"
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/pprof"
@@ -23,6 +25,7 @@ import (
 	"github.com/gofurry/gofurry-nav-backend/common/util"
 	"github.com/gofurry/gofurry-nav-backend/middleware"
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
+	"github.com/gofurry/monitor"
 )
 
 var Router *router
@@ -85,6 +88,17 @@ func registerMiddlewares(app *fiber.App) {
 	// 恢复 panic
 	app.Use(recover.New(recover.Config{
 		EnableStackTrace: cfg.Server.Mode == "debug", // 仅调试模式打印堆栈
+	}))
+
+	app.Use(adaptor.HTTPMiddleware(func(next http.Handler) http.Handler {
+		return monitor.New(next, monitor.Config{
+			Path:            "/monitor",
+			Title:           "GoFurry Nav Monitor",
+			Description:     "GoFurry navigation backend single-service monitor.",
+			DefaultLanguage: "zh-CN",
+			DefaultTheme:    "dark",
+			Refresh:         5 * time.Second,
+		})
 	}))
 
 	// 跨域中间件

@@ -5,9 +5,11 @@ import type {
   NavHomeSayingResponse,
   NavSearchSuggestionEngine,
   NavSearchSuggestionsResponse,
+  NavSiteGroupPageResponse,
   NavSiteIndexResponse,
   NavUpdatesResponse,
   SayingModel,
+  Site,
   SiteViewResponse,
 } from '~/types/nav'
 
@@ -19,8 +21,8 @@ export function getNavHomePing(): Promise<NavHomePingResponse> {
   return useApi('navV2')('/nav/home/ping')
 }
 
-export function getNavHomeSaying(): Promise<NavHomeSayingResponse> {
-  return useApi('navV2')('/nav/home/saying')
+export function getNavHomeSaying(lang: string): Promise<NavHomeSayingResponse> {
+  return useApi('navV2')('/nav/home/saying', { query: { lang } })
 }
 
 export function getNavHomeBackgrounds(): Promise<NavHomeResponse['backgrounds']> {
@@ -29,6 +31,14 @@ export function getNavHomeBackgrounds(): Promise<NavHomeResponse['backgrounds']>
 
 export function getNavSiteIndex(): Promise<NavSiteIndexResponse> {
   return useApi('navV2')('/nav/sites/index')
+}
+
+export function getNavSiteDirectory(lang: string): Promise<Site[]> {
+  return useApi('navV2')('/nav/sites/directory', { query: { lang } })
+}
+
+export function getNavSiteGroupPage(siteGroupId: string, lang: string, page = 1, pageSize = 24): Promise<NavSiteGroupPageResponse> {
+  return useApi('navV2')(`/nav/site-groups/${siteGroupId}/sites`, { query: { lang, page, page_size: pageSize } })
 }
 
 export function touchSiteView(siteId: string | number): Promise<SiteViewResponse> {

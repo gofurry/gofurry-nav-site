@@ -1,62 +1,50 @@
 <template>
-  <div class="flex items-center gap-1">
-    <!-- 五颗星 -->
-    <div class="flex items-center">
-      <div
-          v-for="n in 5"
-          :key="n"
-          class="relative w-5 h-5"
+  <div class="gf-rating rating-star" :aria-label="`${scoreLabel} (${count})`">
+    <div class="rating-star__icons" aria-hidden="true">
+      <span
+        v-for="n in 5"
+        :key="n"
+        class="rating-star__item"
       >
-        <!-- 灰色空星 -->
-        <img
-            :src="starFull"
-            class="absolute inset-0 w-full h-full opacity-20"
-            alt=""
-        />
-
-        <!-- 全星 -->
-        <img
-            v-if="n <= fullStars"
-            :src="starFull"
-            class="absolute inset-0 w-full h-full"
-            alt=""
-        />
-
-        <!-- 半星 -->
-        <img
-            v-else-if="n === fullStars + 1 && hasHalfStar"
-            :src="starHalf"
-            class="absolute inset-0 w-full h-full"
-            alt=""
-        />
-      </div>
+        <span class="rating-star__empty">★</span>
+        <span
+          class="rating-star__fill"
+          :style="{ width: `${starFillPercent(n)}%` }"
+        >
+          ★
+        </span>
+      </span>
     </div>
 
-    <!-- 评分数 -->
-    <span class="text-sm font-medium text-gray-700 ml-1">
-      {{ score.toFixed(1) }}
+    <span class="rating-star__score">
+      {{ scoreLabel }}
     </span>
 
-    <!-- 评价条数 -->
-    <span class="text-xs text-gray-500 ml-1">
+    <span class="rating-star__count">
       ({{ count }})
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
-import starFull from "@/assets/svgs/star.svg";
-import starHalf from "@/assets/svgs/star-half-alt.svg";
+import { computed } from 'vue'
 
 const props = defineProps<{
-  score: number; // 0.0 - 5.0
-  count: number; // 评分条数
-}>();
+  score: number
+  count: number
+}>()
 
-const fullStars = Math.floor(props.score);
-const hasHalfStar = props.score - fullStars >= 0.5;
+const normalizedScore = computed(() => Math.min(5, Math.max(0, Number(props.score) || 0)))
+const scoreLabel = computed(() => normalizedScore.value.toFixed(1))
+
+function starFillPercent(index: number) {
+  const remaining = normalizedScore.value - (index - 1)
+  if (remaining >= 1) {
+    return 100
+  }
+  if (remaining <= 0) {
+    return 0
+  }
+  return remaining * 100
+}
 </script>
-
-<style scoped>
-/* 你可根据需求自定义大小 */
-</style>

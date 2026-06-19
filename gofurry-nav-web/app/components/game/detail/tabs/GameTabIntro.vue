@@ -1,42 +1,27 @@
 <template>
-  <div class="space-y-6">
+  <div class="game-detail-prose space-y-6">
 
-    <!-- 详细描述 -->
-    <section v-if="game?.detailed_description">
-<!--      <h3 class="text-base font-semibold text-gray-800 mb-2">-->
-<!--        {{t("game.detail.detailedIntroduction")}}-->
-<!--      </h3>-->
-
+    <section v-if="game?.detailed_description" class="space-y-2">
+      <h4 class="game-detail-subtitle font-bold">{{ t('game.detail.detailedIntroduction') }}</h4>
       <div
-          class="prose prose-sm max-w-none
-               prose-img:rounded-lg
-               prose-a:text-orange-500
-               prose-strong:text-gray-800"
-          v-html="game.detailed_description"
+        class="max-w-none"
+        v-html="game.detailed_description"
       />
     </section>
 
-    <!-- 游戏介绍 -->
-<!--    <section v-if="game?.about_the_game">-->
-<!--      <h3 class="text-base font-semibold text-gray-800 mb-2">-->
-<!--        {{t("game.detail.aboutGame")}}-->
-<!--      </h3>-->
+    <section v-if="game?.about_the_game" class="space-y-2">
+      <h4 class="game-detail-subtitle font-bold">{{ t('game.detail.aboutGame') }}</h4>
+      <div
+        class="max-w-none"
+        v-html="game.about_the_game"
+      />
+    </section>
 
-<!--      <div-->
-<!--          class="prose prose-sm max-w-none-->
-<!--               prose-img:rounded-lg-->
-<!--               prose-a:text-orange-500-->
-<!--               prose-strong:text-gray-800"-->
-<!--          v-html="game.about_the_game"-->
-<!--      />-->
-<!--    </section>-->
-
-    <!-- 无内容占位 -->
     <div
-        v-if="!game?.detailed_description && !game?.about_the_game"
-        class="text-sm text-gray-500"
+      v-if="!game?.detailed_description && !game?.about_the_game"
+      class="game-detail-empty text-sm"
     >
-      {{t("game.panel.none")}}
+      {{ t("game.panel.none") }}
     </div>
 
   </div>

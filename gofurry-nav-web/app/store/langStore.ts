@@ -1,33 +1,42 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { Ref } from 'vue'
+
+type SupportedLang = 'zh' | 'en'
+
+const normalizeLang = (value: unknown): SupportedLang => value === 'en' ? 'en' : 'zh'
 
 export const useLangStore = defineStore('lang', () => {
     const { locale, setLocale } = useI18n()
-    const lang: Ref<'zh' | 'en'> = ref(locale.value === 'en' ? 'en' : 'zh')
+    const localeLang = computed<SupportedLang>(() => normalizeLang(locale.value))
+    const lang: Ref<SupportedLang> = ref(localeLang.value)
 
-    if (import.meta.client) {
-        const savedLang = localStorage.getItem('lang') as 'zh' | 'en' | null
-        if (savedLang === 'zh' || savedLang === 'en') {
-            lang.value = savedLang
-            setLocale(savedLang)
+    function persistLang(value: SupportedLang) {
+        if (import.meta.client) {
+            localStorage.setItem('lang', value)
         }
     }
 
-    function setLang(newLang: 'zh' | 'en') {
-        lang.value = newLang
-        setLocale(newLang)
-        if (import.meta.client) {
-            localStorage.setItem('lang', newLang)
+    function setLang(newLang: SupportedLang) {
+        if (lang.value !== newLang) {
+            lang.value = newLang
+        }
+
+        persistLang(newLang)
+
+        if (localeLang.value !== newLang) {
+            setLocale(newLang)
         }
     }
 
-    watch(lang, (newLang) => {
-        setLocale(newLang)
-        if (import.meta.client) {
-            localStorage.setItem('lang', newLang)
-        }
-    })
+    watch(
+        localeLang,
+        (newLang) => {
+            lang.value = newLang
+            persistLang(newLang)
+        },
+        { immediate: true }
+    )
 
     return { lang, setLang }
 })

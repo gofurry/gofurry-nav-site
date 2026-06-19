@@ -5,8 +5,8 @@
 **/build/
 **/dist/
 **/coverage/
-!gofurry-rag/internal/web/dist/
-!gofurry-rag/internal/web/dist/**
+!legacy/gofurry-rag/internal/web/dist/
+!legacy/gofurry-rag/internal/web/dist/**
 !ops/gofurry-ops-center/internal/web/dist/
 !ops/gofurry-ops-center/internal/web/dist/**
 
@@ -56,7 +56,7 @@ Thumbs.db
 **/configs/*.local.yaml
 **/configs/*.prod.yaml
 **/configs/*.secret.yaml
-gofurry-rag/config/server.yaml
+legacy/gofurry-rag/config/server.yaml
 
 # Certificates and private keys
 **/*.key

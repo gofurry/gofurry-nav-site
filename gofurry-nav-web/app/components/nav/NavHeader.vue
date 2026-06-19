@@ -1,20 +1,20 @@
 <template>
   <header
-      class="relative flex h-90 w-full flex-col items-center justify-start overflow-hidden px-4 pt-6 shadow-sm md:h-[100vh] md:px-6 md:pt-0"
+      class="nav-header"
   >
     <h1 class="sr-only">{{ homeHeading }}</h1>
     <div
         v-if="bgImage"
-        class="absolute inset-0 bg-cover bg-center transition-all duration-700"
+        class="nav-header__background"
         :style="{ backgroundImage: `url(${bgImage})` }"
     ></div>
-    <div class="relative z-30 flex w-full justify-center md:absolute md:left-1/2 md:top-[76px] md:w-full md:max-w-[56rem] md:-translate-x-1/2 lg:top-[88px]">
+    <div class="nav-header__search">
       <SearchBox />
     </div>
 
     <div
         v-if="showQuickAccess"
-        class="relative z-10 hidden w-full justify-center md:absolute md:left-1/2 md:top-[248px] md:flex md:w-full md:max-w-[56rem] md:-translate-x-1/2 lg:top-[268px]"
+        class="nav-header__quick-access"
     >
       <NavQuickAccess
         :recent-sites="recentSites"
@@ -25,19 +25,19 @@
       />
     </div>
 
-    <div class="pointer-events-none absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-2 text-white/85 md:flex md:flex-col">
-      <span class="text-xs font-medium uppercase tracking-[0.28em]">
+    <div class="nav-header__scroll-hint">
+      <span class="nav-header__scroll-label">
         {{ t('navHeader.scrollHint') }}
       </span>
-      <div class="flex h-6 w-4 items-start justify-center rounded-full border border-white/35 bg-black/10 p-1 backdrop-blur-sm">
-        <span class="h-2 w-2 animate-bounce rounded-full bg-white/90"></span>
+      <div class="nav-header__scroll-frame">
+        <span class="nav-header__scroll-dot"></span>
       </div>
     </div>
 
     <transition name="quick-modal">
       <div
         v-if="showCustomSitesModal"
-        class="fixed inset-0 z-60 hidden items-center justify-center bg-slate-950/52 px-4 backdrop-blur-sm md:flex"
+        class="quick-modal-backdrop"
         @click.self="closeCustomSitesModal"
       >
         <div class="quick-modal-panel">
@@ -359,212 +359,3 @@ onUnmounted(() => {
   revokeCustomBackgroundUrl()
 })
 </script>
-
-<style scoped>
-header {
-  transition: background 0.4s ease-in-out;
-}
-
-.quick-modal-panel {
-  display: flex;
-  max-height: min(36rem, calc(100vh - 4rem));
-  width: min(100%, 36rem);
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1rem;
-  background: rgba(12, 17, 21, 0.84);
-  box-shadow: 0 24px 60px rgba(7, 12, 16, 0.28);
-  backdrop-filter: blur(22px);
-}
-
-.quick-modal-header,
-.quick-modal-form,
-.quick-modal-list {
-  padding-inline: 1rem;
-}
-
-.quick-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding-top: 1rem;
-}
-
-.quick-modal-title {
-  color: rgba(255, 248, 241, 0.96);
-  font-size: 0.96rem;
-  font-weight: 650;
-}
-
-.quick-modal-desc {
-  color: rgba(233, 241, 246, 0.68);
-  font-size: 0.76rem;
-  line-height: 1.3;
-  margin-top: 0.2rem;
-}
-
-.quick-modal-close {
-  display: grid;
-  place-items: center;
-  width: 1.8rem;
-  height: 1.8rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  color: rgba(255, 248, 241, 0.88);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.quick-modal-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
-  gap: 0.55rem;
-  align-items: center;
-  padding-top: 0.85rem;
-}
-
-.quick-modal-inline-field {
-  min-width: 0;
-}
-
-.quick-modal-inline-field input {
-  width: 100%;
-  height: 2.45rem;
-  padding-inline: 0.8rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.8rem;
-  color: rgba(255, 248, 241, 0.96);
-  background: rgba(255, 255, 255, 0.045);
-  outline: none;
-}
-
-.quick-modal-inline-field input:focus {
-  border-color: rgba(151, 226, 255, 0.34);
-}
-
-.quick-modal-inline-action {
-  display: flex;
-}
-
-.quick-modal-error {
-  color: rgba(255, 173, 173, 0.94);
-  font-size: 0.76rem;
-  padding: 0.55rem 1rem 0;
-}
-
-.quick-modal-primary,
-.quick-modal-delete {
-  border-radius: 0.8rem;
-  font-size: 0.82rem;
-  transition: background 180ms ease, border-color 180ms ease, opacity 180ms ease;
-}
-
-.quick-modal-primary {
-  height: 2.45rem;
-  padding-inline: 0.95rem;
-}
-
-.quick-modal-primary {
-  border: 1px solid rgba(151, 226, 255, 0.18);
-  color: rgba(8, 15, 18, 0.94);
-  background: rgba(151, 226, 255, 0.9);
-}
-
-.quick-modal-primary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.quick-modal-list {
-  padding-top: 0.85rem;
-  padding-bottom: 1rem;
-  overflow: auto;
-}
-
-.quick-modal-items {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.quick-modal-item {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  min-height: 3rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: 0.85rem;
-  background: rgba(255, 255, 255, 0.045);
-  cursor: grab;
-}
-
-.quick-modal-item-dragging {
-  opacity: 0.48;
-}
-
-.quick-modal-grip {
-  display: grid;
-  gap: 0.18rem;
-  flex-shrink: 0;
-}
-
-.quick-modal-grip span {
-  width: 0.22rem;
-  height: 0.22rem;
-  border-radius: 999px;
-  background: rgba(255, 248, 241, 0.42);
-  box-shadow: 0 0.38rem 0 rgba(255, 248, 241, 0.42);
-}
-
-.quick-modal-item-name {
-  color: rgba(255, 248, 241, 0.96);
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.quick-modal-item-url {
-  margin-top: 0.12rem;
-  color: rgba(233, 241, 246, 0.62);
-  font-size: 0.72rem;
-  word-break: break-all;
-}
-
-.quick-modal-delete {
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  width: 1.55rem;
-  height: 1.55rem;
-  border: 0;
-  border-radius: 999px;
-  color: rgba(255, 235, 235, 0.96);
-  background: rgba(242, 78, 78, 0.95);
-}
-
-.quick-modal-empty {
-  color: rgba(233, 241, 246, 0.62);
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-
-.quick-modal-enter-active,
-.quick-modal-leave-active {
-  transition: opacity 180ms ease;
-}
-
-.quick-modal-enter-active .quick-modal-panel,
-.quick-modal-leave-active .quick-modal-panel {
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
-}
-
-.quick-modal-enter-from,
-.quick-modal-leave-to {
-  opacity: 0;
-}
-
-.quick-modal-enter-from .quick-modal-panel,
-.quick-modal-leave-to .quick-modal-panel {
-  opacity: 0;
-  transform: translateY(8px) scale(0.985);
-}
-</style>

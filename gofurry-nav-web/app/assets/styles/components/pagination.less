@@ -1,0 +1,36 @@
+.gf-pagination {
+  color: var(--gf-text-muted);
+}
+
+.gf-pagination__button {
+  min-width: 2rem;
+  border: 1px solid var(--gf-border);
+  border-radius: 999px;
+  background: var(--gf-surface);
+  color: var(--gf-text-muted);
+  cursor: pointer;
+  font-size: 0.84rem;
+  text-align: center;
+  transition:
+    background-color var(--gf-motion-fast) ease,
+    border-color var(--gf-motion-fast) ease,
+    color var(--gf-motion-fast) ease;
+}
+
+.gf-pagination__button:hover {
+  border-color: var(--gf-border-strong);
+  background: var(--gf-surface-hover);
+  color: var(--gf-text-main);
+}
+
+.gf-pagination__button--active {
+  border-color: var(--gf-border-strong);
+  background: var(--gf-surface-strong);
+  color: var(--gf-text-main);
+  font-weight: 750;
+}
+
+.gf-pagination__total {
+  color: var(--gf-text-soft);
+  font-size: 0.75rem;
+}

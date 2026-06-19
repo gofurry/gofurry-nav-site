@@ -3,8 +3,7 @@
       :href="item.value"
       target="_blank"
       rel="noopener noreferrer"
-      class="px-3 py-1 rounded-lg bg-orange-100 text-orange-700
-           hover:bg-orange-200 transition text-sm"
+      class="link-tag px-3 py-1 text-sm"
   >
     {{ item.key }}
   </a>

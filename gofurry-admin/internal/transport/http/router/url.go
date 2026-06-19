@@ -39,6 +39,11 @@ func optionsRoutes(root fiber.Router) {
 }
 
 func navRoutes(root fiber.Router) {
+	root.Get("/collect/status", navadmin.NavAPI.CollectStatus)
+	root.Get("/collect/observations", navadmin.NavAPI.CollectObservations)
+	root.Get("/collect/sites/:site_id/status", navadmin.NavAPI.CollectSiteStatus)
+	root.Get("/collect/sites/:site_id/targets/:target/status", navadmin.NavAPI.CollectTargetStatus)
+
 	root.Get("/sayings", navadmin.NavAPI.ListSayings)
 	root.Post("/sayings", navadmin.NavAPI.CreateSaying)
 	root.Get("/sayings/:id", navadmin.NavAPI.GetSaying)
@@ -84,8 +89,15 @@ func navRoutes(root fiber.Router) {
 }
 
 func gameRoutes(root fiber.Router) {
+	root.Get("/collect/status", gameadmin.GameAPI.CollectStatus)
+	root.Get("/collect/runs", gameadmin.GameAPI.CollectRuns)
+	root.Get("/collect/runs/:run_id", gameadmin.GameAPI.CollectRun)
+	root.Get("/collect/task-results", gameadmin.GameAPI.CollectTaskResults)
+	root.Get("/collect/games/:id/status", gameadmin.GameAPI.CollectGameStatus)
+
 	root.Get("/games", gameadmin.GameAPI.ListGames)
 	root.Post("/games", gameadmin.GameAPI.CreateGame)
+	root.Get("/games/steam-asset", gameadmin.GameAPI.ResolveSteamGameAsset)
 	root.Get("/games/:id", gameadmin.GameAPI.GetGame)
 	root.Put("/games/:id", gameadmin.GameAPI.UpdateGame)
 	root.Delete("/games/:id", gameadmin.GameAPI.DeleteGame)
@@ -95,12 +107,6 @@ func gameRoutes(root fiber.Router) {
 	root.Get("/comments/:id", gameadmin.GameAPI.GetComment)
 	root.Put("/comments/:id", gameadmin.GameAPI.UpdateComment)
 	root.Delete("/comments/:id", gameadmin.GameAPI.DeleteComment)
-
-	root.Get("/creators", gameadmin.GameAPI.ListCreators)
-	root.Post("/creators", gameadmin.GameAPI.CreateCreator)
-	root.Get("/creators/:id", gameadmin.GameAPI.GetCreator)
-	root.Put("/creators/:id", gameadmin.GameAPI.UpdateCreator)
-	root.Delete("/creators/:id", gameadmin.GameAPI.DeleteCreator)
 
 	root.Get("/prizes", gameadmin.GameAPI.ListPrizes)
 	root.Post("/prizes", gameadmin.GameAPI.CreatePrize)

@@ -1,9 +1,9 @@
 <template>
-  <footer :class="footerClass" :style="footerStyle">
+  <footer class="gf-footer">
     <div class="mx-auto grid w-full max-w-[1700px] gap-10 px-4 py-10 sm:px-6 md:grid-cols-3">
       <div class="space-y-8">
         <section class="space-y-3">
-          <h3 :class="sectionTitleClass">
+          <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
             <img :src="compassIcon" alt="" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.sitemap') }}
           </h3>
@@ -12,7 +12,7 @@
                 :href="sitemapUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="footer-link"
+                class="gf-footer__link"
             >
               {{ t('footer.links.sitemapXml') }}
             </a>
@@ -20,7 +20,7 @@
                 :href="llmsUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="footer-link"
+                class="gf-footer__link"
             >
               {{ t('footer.links.llmsTxt') }}
             </a>
@@ -28,7 +28,7 @@
                 :href="securityTxtUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="footer-link"
+                class="gf-footer__link"
             >
               {{ t('footer.links.securityTxt') }}
             </a>
@@ -36,25 +36,24 @@
         </section>
 
         <section class="space-y-3">
-          <h3 :class="sectionTitleClass">
+          <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
             <img :src="apiIcon" alt="" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.openPlatform') }}
           </h3>
           <div class="flex gap-2">
-            <component
-                :is="openPlatformApiLink.external ? 'a' : 'NuxtLink'"
-                v-bind="openPlatformApiLink.external
-                  ? { href: openPlatformApiLink.href, target: '_blank', rel: 'noopener noreferrer' }
-                  : { to: openPlatformApiLink.to }"
-                class="footer-link"
+            <a
+                :href="navMonitorUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="gf-footer__link"
             >
               {{ t('footer.links.api') }}
-            </component>
+            </a>
             <a
                 href="https://op.go-furry.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="footer-link"
+                class="gf-footer__link"
             >
               {{ t('footer.links.opsAdmin') }}
             </a>
@@ -64,7 +63,7 @@
 
       <div class="space-y-8">
         <section class="space-y-3">
-          <h3 :class="sectionTitleClass">
+          <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
             <img :src="siteIcon" alt="" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.feedback') }}
           </h3>
@@ -80,7 +79,7 @@
               <img
                   :src="item.icon"
                   :alt="t(item.labelKey)"
-                  class="h-6 w-6 cursor-pointer opacity-90 transition-transform hover:scale-125 hover:opacity-100"
+                  class="gf-footer__social-icon h-6 w-6"
                   :class="item.hoverClass"
               />
             </a>
@@ -88,35 +87,35 @@
         </section>
 
         <section class="space-y-3">
-          <h3 :class="sectionTitleClass">
+          <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
             <img :src="featherIcon" alt="" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.about') }}
           </h3>
           <div class="flex gap-2">
-            <NuxtLink to="/about" class="footer-link">
+            <NuxtLink :to="localePath('/about')" class="gf-footer__link">
               {{ t('sidebar.about') }}
             </NuxtLink>
-            <NuxtLink to="/updates" class="footer-link">
+            <NuxtLink :to="localePath('/updates')" class="gf-footer__link">
               {{ t('navHeader.update') }}
             </NuxtLink>
-            <NuxtLink to="/terms" class="footer-link">
+            <NuxtLink :to="localePath('/terms')" class="gf-footer__link">
               {{ t('footer.links.terms') }}
             </NuxtLink>
-            <NuxtLink to="/privacy" class="footer-link">
+            <NuxtLink :to="localePath('/privacy')" class="gf-footer__link">
               {{ t('footer.links.privacy') }}
             </NuxtLink>
           </div>
         </section>
       </div>
 
-      <div :class="metaClass">
+      <div class="gf-footer__meta flex flex-col justify-end gap-3 text-sm transition-colors duration-500">
         <div>{{ currentYear }} GoFurry {{ t('footer.rights') }}</div>
         <div>{{ t('footer.license') }}</div>
         <a
             href="https://beian.miit.gov.cn/"
             target="_blank"
             rel="noopener noreferrer"
-            class="transition-colors hover:text-white"
+            class="gf-footer__meta-link transition-colors"
         >
           {{ t('footer.icp') }}
         </a>
@@ -128,7 +127,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useThemeStore } from '@/stores/theme'
 import siteIcon from '@/assets/svgs/site.svg'
 import apiIcon from '@/assets/svgs/api.svg'
 import compassIcon from '@/assets/svgs/compass.svg'
@@ -139,36 +137,14 @@ import githubIcon from '@/assets/icons/github.svg'
 import twitterIcon from '@/assets/icons/twitter.svg'
 
 const { t } = useI18n()
-const themeStore = useThemeStore()
+const localePath = useLocalePath()
 
 const currentYear = new Date().getFullYear()
 const sitemapUrl = '/sitemap.xml'
 const llmsUrl = '/llms.txt'
 const securityTxtUrl = '/.well-known/security.txt'
-const isDark = computed(() => themeStore.theme === 'dark')
-const footerClass = computed(() => [
-  'border-t transition-colors duration-500',
-  isDark.value
-    ? 'border-white/5 bg-[#05070d] text-slate-400'
-    : 'border-slate-700/40 bg-slate-800 text-slate-300'
-])
-const footerStyle = computed(() => ({
-  '--footer-link-color': isDark.value ? 'rgb(148 163 184)' : 'rgb(203 213 225)',
-  '--footer-link-hover-color': 'rgb(255 255 255)'
-}))
-const sectionTitleClass = computed(() => [
-  'flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] transition-colors duration-500',
-  isDark.value ? 'text-slate-600' : 'text-slate-500'
-])
-const metaClass = computed(() => [
-  'flex flex-col justify-end gap-3 text-sm transition-colors duration-500',
-  isDark.value ? 'text-slate-500' : 'text-slate-400'
-])
-const openPlatformApiLink = computed(() => (
-  import.meta.env.PROD
-    ? { external: true, href: 'https://open.go-furry.com' }
-    : { external: false, to: '/updates' }
-))
+const config = useRuntimeConfig()
+const navMonitorUrl = computed(() => config.public.navMonitorUrl)
 
 const feedbackLinks = [
   {
@@ -201,14 +177,3 @@ const feedbackLinks = [
   },
 ]
 </script>
-
-<style scoped>
-.footer-link {
-  color: var(--footer-link-color);
-  transition: color 0.2s ease;
-}
-
-.footer-link:hover {
-  color: var(--footer-link-hover-color);
-}
-</style>

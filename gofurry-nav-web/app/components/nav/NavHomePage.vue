@@ -1,37 +1,39 @@
 <template>
-  <div class="flex min-h-screen w-full flex-col bg-gray-50">
+  <div class="nav-home-page flex w-full flex-col">
     <NavHeader
       :desktop-bg-url="navPageData.desktopBgUrl"
       :mobile-bg-url="navPageData.mobileBgUrl"
     />
-    <NavToolDock v-if="isContentRevealed" :items="toolDockSites" />
+    <NavToolDock v-if="isContentRevealed" />
     <main
-        v-if="isContentRevealed"
+        v-if="isContentMounted"
         ref="contentRef"
-        class="relative z-10 flex-1 overflow-hidden"
+        class="nav-content-shell relative z-10 flex-1 overflow-hidden"
     >
       <GoFurryGridBackground :fixed="false" palette="nav-content" />
       <div class="absolute z-30 w-full">
         <NavTransitionBar :initial-saying="navPageData.saying" />
       </div>
       <div class="relative z-10">
-        <div class="h-10"></div>
-        <NavContent
-          :initial-groups="navPageData.groups"
-          :initial-spotlight="navPageData.spotlight"
-          :initial-ping-data="navPageData.pingData"
-        />
-        <div class="h-10"></div>
+        <div class="mx-auto w-full max-w-[2080px] px-4 sm:px-6 xl:px-8">
+          <div class="h-10"></div>
+          <NavContent
+            :initial-groups="navPageData.groups"
+            :initial-spotlight="navPageData.spotlight"
+            :initial-ping-data="navPageData.pingData"
+          />
+          <div class="h-10"></div>
+        </div>
       </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getNavHome } from '~/services/nav'
-import type { Delay, Group, NavHomeSpotlight, SayingModel, Site } from '~/types/nav'
+import type { Delay, Group, NavHomeSpotlight, SayingModel } from '~/types/nav'
 import NavHeader from '@/components/nav/NavHeader.vue'
 import NavToolDock from '@/components/nav/NavToolDock.vue'
 import NavTransitionBar from '@/components/nav/NavTransitionBar.vue'
@@ -39,26 +41,26 @@ import NavContent from '@/components/nav/NavContent.vue'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import { debounce, throttle } from '@/utils/util'
 import { dispatchNavPageReveal, isNavPageRevealLocked } from '@/utils/navPageReveal'
-import { readDisplayMode, subscribeModeChange, type DisplayMode } from '@/utils/modeStorage'
 
 interface NavPageData {
   desktopBgUrl: string | null
   mobileBgUrl: string | null
   saying: SayingModel | null
   groups: Group[]
-  sites: Site[]
   spotlight: NavHomeSpotlight
   pingData: Record<string, Delay>
 }
 
+const isContentMounted = ref(false)
 const isContentRevealed = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 const { locale } = useI18n()
-const displayMode = ref<DisplayMode>('sfw')
 
 let touchStartY = 0
 let mobileMediaQuery: MediaQueryList | null = null
-let stopModeSubscription: (() => void) | null = null
+let prewarmTimer: ReturnType<typeof setTimeout> | null = null
+let idlePrewarmId: number | null = null
+let revealInProgress = false
 
 function parsePingData(data: Record<string, string | undefined>) {
   const result: Record<string, Delay> = {}
@@ -80,10 +82,6 @@ function parsePingData(data: Record<string, string | undefined>) {
 }
 
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
-const toolDockSites = computed(() => {
-  return navPageData.value.sites.filter(site => displayMode.value === 'nsfw' || String(site.nsfw) !== '1')
-})
-
 const { data } = await useAsyncData<NavPageData>(
   () => `nav-page:${lang.value}`,
   async () => {
@@ -94,7 +92,6 @@ const { data } = await useAsyncData<NavPageData>(
       mobileBgUrl: home.backgrounds.mobile || null,
       saying: home.saying,
       groups: home.groups.sort((a, b) => Number(a.priority) - Number(b.priority)),
-      sites: home.sites,
       spotlight: home.spotlight,
       pingData: parsePingData(home.ping),
     }
@@ -106,7 +103,6 @@ const { data } = await useAsyncData<NavPageData>(
       mobileBgUrl: null,
       saying: null,
       groups: [],
-      sites: [],
       spotlight: { page_size: 6, featured: [], popular: [], latest: [], random: [] },
       pingData: {},
     }),
@@ -115,51 +111,122 @@ const { data } = await useAsyncData<NavPageData>(
 
 const navPageData = computed(() => data.value!)
 
-function revealContent(shouldScroll = true, force = false) {
+function mountContent() {
+  if (isContentMounted.value) {
+    return
+  }
+
+  isContentMounted.value = true
+}
+
+function cancelScheduledPrewarm() {
+  if (prewarmTimer) {
+    clearTimeout(prewarmTimer)
+    prewarmTimer = null
+  }
+
+  if (idlePrewarmId !== null && window.cancelIdleCallback) {
+    window.cancelIdleCallback(idlePrewarmId)
+    idlePrewarmId = null
+  }
+}
+
+function scheduleContentPrewarm() {
+  if (isContentMounted.value || !import.meta.client) {
+    return
+  }
+
+  cancelScheduledPrewarm()
+
+  const prewarm = () => {
+    prewarmTimer = null
+    idlePrewarmId = null
+    mountContent()
+  }
+
+  prewarmTimer = setTimeout(() => {
+    prewarmTimer = null
+    if (isContentMounted.value) {
+      return
+    }
+
+    if (window.requestIdleCallback) {
+      idlePrewarmId = window.requestIdleCallback(prewarm, { timeout: 1400 })
+      return
+    }
+
+    prewarm()
+  }, 700)
+}
+
+function waitForFrames(count = 2) {
+  return new Promise<void>((resolve) => {
+    const step = () => {
+      count -= 1
+      if (count <= 0) {
+        resolve()
+        return
+      }
+      requestAnimationFrame(step)
+    }
+
+    requestAnimationFrame(step)
+  })
+}
+
+async function revealContent(shouldScroll = true, force = false) {
   if (!force && isNavPageRevealLocked()) {
     return
   }
 
-  if (isContentRevealed.value) {
+  if (isContentRevealed.value || revealInProgress) {
     return
   }
 
-  isContentRevealed.value = true
-  dispatchNavPageReveal(true)
+  revealInProgress = true
+  try {
+    cancelScheduledPrewarm()
+    mountContent()
+    await nextTick()
+    await waitForFrames()
 
-  if (!shouldScroll) {
-    return
-  }
+    isContentRevealed.value = true
+    dispatchNavPageReveal(true)
 
-  nextTick(() => {
+    if (!shouldScroll) {
+      return
+    }
+
     contentRef.value?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
     })
-  })
+  } finally {
+    revealInProgress = false
+  }
 }
 
 function syncRevealByViewport() {
   if (window.innerWidth < 768) {
-    revealContent(false, true)
+    void revealContent(false, true)
   }
 }
 
 function handleViewportChange(event: MediaQueryListEvent) {
   if (event.matches) {
-    revealContent(false, true)
+    void revealContent(false, true)
   }
 }
 
 const handleRevealScroll = throttle(() => {
   if (window.scrollY > 24) {
-    revealContent()
+    void revealContent()
   }
 }, 120)
 
 const handleRevealScrollEnd = debounce(() => {
   if (window.scrollY > 24) {
-    revealContent()
+    void revealContent()
   }
 }, 180)
 
@@ -172,7 +239,7 @@ function handleResize() {}
 
 function handleWheel(event: WheelEvent) {
   if (event.deltaY > 8) {
-    revealContent()
+    void revealContent()
   }
 }
 
@@ -183,23 +250,20 @@ function handleTouchStart(event: TouchEvent) {
 function handleTouchMove(event: TouchEvent) {
   const currentY = event.touches[0]?.clientY ?? touchStartY
   if (touchStartY - currentY > 12) {
-    revealContent()
+    void revealContent()
   }
 }
 
 function handleKeydown(event: KeyboardEvent) {
   if (['ArrowDown', 'PageDown', 'Space', 'End'].includes(event.code)) {
-    revealContent()
+    void revealContent()
   }
 }
 
 onMounted(() => {
   dispatchNavPageReveal(false)
   syncRevealByViewport()
-  displayMode.value = readDisplayMode()
-  stopModeSubscription = subscribeModeChange(({ displayMode: nextMode }) => {
-    displayMode.value = nextMode
-  })
+  scheduleContentPrewarm()
 
   mobileMediaQuery = window.matchMedia('(max-width: 767px)')
   mobileMediaQuery.addEventListener('change', handleViewportChange)
@@ -213,7 +277,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   dispatchNavPageReveal(true)
-  stopModeSubscription?.()
+  cancelScheduledPrewarm()
   mobileMediaQuery?.removeEventListener('change', handleViewportChange)
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('resize', handleResize)

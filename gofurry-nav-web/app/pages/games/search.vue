@@ -1,32 +1,37 @@
 <template>
   <div
-      class="relative isolate flex min-h-full w-full flex-col overflow-hidden"
+      class="games-search-page games-page relative isolate flex min-h-full w-full flex-col overflow-hidden"
   >
-    <GoFurryGridBackground :fixed="false" palette="nav-content" />
-    <div class="relative z-10 p-6 space-y-4">
+    <GoFurryGridBackground :fixed="false" palette="games" />
+    <h1 class="sr-only">{{ searchPageSeo.heading }}</h1>
+    <div class="relative z-10 mx-auto flex w-full max-w-[1720px] flex-1 flex-col gap-5 p-6">
 
-      <div class="relative flex gap-4 items-center w-full">
+      <div class="search-toolbar relative flex w-full items-center gap-3">
         <div class="flex-1">
           <GameSidebarSearch />
         </div>
 
-        <div
-            class="shrink-0 px-4 py-2 rounded-lg cursor-pointer
-           text-orange-900 bg-orange-50
-           hover:bg-orange-200 transition"
+        <button
+            class="search-filter-button shrink-0"
+            type="button"
             @click="showFilter = true"
         >
           {{t("game.search.advancedFilter")}}
-        </div>
+        </button>
       </div>
 
-      <GameSearchResult
-          :game-list="gameList"
-          :current-page="query.pageNum"
-          :total-pages="totalPages"
-          :total="total"
-          @page-change="onPageChange"
-      />
+      <section class="search-result-shell">
+        <GameSearchResult
+            :game-list="gameList"
+            :current-page="query.pageNum"
+            :page-size="query.pageSize"
+            :page-direction="pageDirection"
+            :total-pages="totalPages"
+            :total="total"
+            :loading="isSearching"
+            @page-change="onPageChange"
+        />
+      </section>
 
       <GameSearchFilter
           v-if="showFilter"
@@ -40,7 +45,8 @@
 </template>
 
 <script setup lang="ts">
-import { watch, ref, reactive, onMounted } from 'vue'
+import { watch, ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import GameSidebarSearch from '@/components/game/main/sidebar/GameSidebarSearch.vue'
 import GameSearchFilter from '@/components/game/search/GameSearchFilter.vue'
 import GameSearchResult from '@/components/game/search/GameSearchResult.vue'
@@ -52,20 +58,40 @@ import type {
   SearchPageQueryRequest
 } from '@/types/game'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
-import { useLangStore } from '@/store/langStore'
+import { useThemeStore } from '@/stores/theme'
 import { i18n } from '@/main'
 
 const { t } = i18n.global
+const { locale } = useI18n()
 
-const langStore = useLangStore()
-const lang = ref(langStore.lang)
+const themeStore = useThemeStore()
+const lang = computed<'zh' | 'en'>(() => locale.value === 'en' ? 'en' : 'zh')
 const route = useRoute()
 const router = useRouter()
+const searchPageSeo = computed(() => locale.value === 'en'
+  ? {
+      heading: 'GoFurry Game Search',
+      title: 'GoFurry Game Search - Find furry and anthro games',
+      description: 'Search GoFurry game records by keyword, tag, score, release time, update time, and community review signals.'
+    }
+  : {
+      heading: 'GoFurry 兽游搜索',
+      title: 'GoFurry 兽游搜索 - 搜索兽人和拟人题材游戏',
+      description: '按关键词、标签、评分、发布时间、更新时间和社区评价信号搜索 GoFurry 已收录的兽游资料。'
+    }
+)
 
 useHead({
   meta: [
     { name: 'robots', content: 'noindex, follow' }
   ]
+})
+
+useSeoMeta({
+  title: () => searchPageSeo.value.title,
+  description: () => searchPageSeo.value.description,
+  ogTitle: () => searchPageSeo.value.title,
+  ogDescription: () => searchPageSeo.value.description,
 })
 
 type RouteQueryValue = string | null | Array<string | null>
@@ -78,6 +104,8 @@ const initialized = ref(false)
 const gameList = ref<SearchPageResponseItem[]>([])
 const total = ref(0)
 const totalPages = ref(1)
+const isSearching = ref(false)
+const pageDirection = ref<1 | -1>(1)
 
 const createDefaultQuery = (): SearchPageQueryRequest => ({
   pageNum: 1,
@@ -96,6 +124,10 @@ const createDefaultQuery = (): SearchPageQueryRequest => ({
 const query = reactive<SearchPageQueryRequest>(createDefaultQuery())
 
 const tagGroups = ref<GameTagRecord[]>([])
+let tagRequestController: AbortController | null = null
+let searchRequestController: AbortController | null = null
+let tagRequestToken = 0
+let searchRequestToken = 0
 
 const getQueryValue = (value: LocationQuery[string] | undefined) => {
   if (Array.isArray(value)) {
@@ -219,18 +251,59 @@ const normalizeRouteQuery = (routeQuery: LocationQuery | LocationQueryRaw) => {
   return JSON.stringify(normalized)
 }
 
+const isAbortError = (error: unknown) =>
+  error instanceof Error && error.name === 'AbortError'
+
 const loadTags = async () => {
-  tagGroups.value = await getTagList(lang.value)
+  tagRequestController?.abort()
+  const controller = new AbortController()
+  const currentToken = ++tagRequestToken
+  tagRequestController = controller
+
+  try {
+    const result = await getTagList(lang.value, { signal: controller.signal })
+    if (currentToken !== tagRequestToken) {
+      return
+    }
+    tagGroups.value = result
+  } catch (error) {
+    if (isAbortError(error)) {
+      return
+    }
+    throw error
+  }
 }
 
 const fetchData = async () => {
-  const res = await searchGameAdvanced(query, lang.value)
-  gameList.value = res.list ?? []
-  total.value = res.total ?? 0
-  totalPages.value = Math.max(
-      1,
-      Math.ceil(total.value / query.pageSize)
-  )
+  searchRequestController?.abort()
+  const controller = new AbortController()
+  const currentToken = ++searchRequestToken
+  const pageSize = query.pageSize
+  searchRequestController = controller
+  isSearching.value = true
+
+  try {
+    const res = await searchGameAdvanced(query, lang.value, { signal: controller.signal })
+    if (currentToken !== searchRequestToken) {
+      return
+    }
+
+    gameList.value = res.list ?? []
+    total.value = res.total ?? 0
+    totalPages.value = Math.max(
+        1,
+        Math.ceil(total.value / pageSize)
+    )
+  } catch (error) {
+    if (isAbortError(error)) {
+      return
+    }
+    throw error
+  } finally {
+    if (currentToken === searchRequestToken) {
+      isSearching.value = false
+    }
+  }
 }
 
 const syncRouteWithQuery = async () => {
@@ -248,22 +321,22 @@ const syncRouteWithQuery = async () => {
 }
 
 const onPageChange = async (page: number) => {
+  pageDirection.value = page > query.pageNum ? 1 : -1
   query.pageNum = page
   await syncRouteWithQuery()
 }
 
 const onSearch = async () => {
+  pageDirection.value = 1
   query.pageNum = 1
   showFilter.value = false
   await syncRouteWithQuery()
 }
 
 watch(
-    () => langStore.lang,
-    async (val) => {
-      lang.value = val
-      await loadTags()
-      await fetchData()
+    lang,
+    async () => {
+      await Promise.all([loadTags(), fetchData()])
     }
 )
 
@@ -279,15 +352,21 @@ watch(
     }
 
     applyRouteQuery(nextQuery)
+    pageDirection.value = query.pageNum > parsePositiveNumber(previousQuery?.pageNum, 1) ? 1 : -1
     await fetchData()
   },
   { deep: true }
 )
 
 onMounted(async () => {
+  themeStore.initTheme()
   applyRouteQuery(route.query)
-  await loadTags()
+  await Promise.all([loadTags(), fetchData()])
   initialized.value = true
-  await fetchData()
+})
+
+onBeforeUnmount(() => {
+  tagRequestController?.abort()
+  searchRequestController?.abort()
 })
 </script>
