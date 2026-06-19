@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofurry/gofurry-game-backend/apps/game/dao"
 	gameModels "github.com/gofurry/gofurry-game-backend/apps/game/models"
 	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofurry/gofurry-game-backend/common/log"
 	cs "github.com/gofurry/gofurry-game-backend/common/service"
 	"github.com/gofurry/gofurry-game-backend/common/util"
+	database "github.com/gofurry/gofurry-game-backend/roof/db"
 	"gorm.io/gorm"
 )
 
@@ -107,7 +107,7 @@ func loadGameViewCountFromDB(gameID int64) (int64, common.GFError) {
 		ViewCount int64 `gorm:"column:view_count"`
 	}
 
-	err := dao.GetGameDao().Gm.Table(gameModels.TableNameGfgGame).
+	err := database.Orm.DB().Table(gameModels.TableNameGfgGame).
 		Select("view_count").
 		Where("id = ?", gameID).
 		Take(&row).Error

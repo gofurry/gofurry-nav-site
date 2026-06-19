@@ -153,11 +153,8 @@ func InitConfig(projectName string, fileName string, conf interface{}) {
 	}
 
 	if !hit && isGoTestBinary() {
-		for _, file := range localConfigCandidates(testExampleConfigName(fileName)) {
-			if tryLoadConfig(file, conf) {
-				hit = true
-				break
-			}
+		if applyTestConfigDefaults(conf) {
+			return
 		}
 	}
 
@@ -192,18 +189,31 @@ func localConfigCandidates(fileName string) []string {
 	return files
 }
 
-func testExampleConfigName(fileName string) string {
-	ext := filepath.Ext(fileName)
-	name := strings.TrimSuffix(fileName, ext)
-	if ext == "" {
-		return name + ".example"
-	}
-	return name + ".example" + ext
-}
-
 func isGoTestBinary() bool {
 	name := filepath.Base(os.Args[0])
 	return strings.HasSuffix(name, ".test") || strings.HasSuffix(name, ".test.exe")
+}
+
+func applyTestConfigDefaults(conf interface{}) bool {
+	cfg, ok := conf.(*serverConfig)
+	if !ok {
+		return false
+	}
+
+	*cfg = serverConfig{
+		ClusterId: 1,
+		Server: ServerConfig{
+			Mode:        "test",
+			MemoryLimit: 1,
+			GCPercent:   1000,
+			Network:     "tcp",
+		},
+		Thread: ThreadConfig{
+			EventPublishThread: 1,
+		},
+	}
+
+	return true
 }
 
 func tryLoadConfig(file string, conf interface{}) bool {
