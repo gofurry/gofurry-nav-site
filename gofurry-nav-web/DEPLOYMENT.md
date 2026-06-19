@@ -28,6 +28,7 @@ with a reverse proxy to the Nuxt container:
 
 ```nginx
 location / {
+    proxy_intercept_errors off;
     proxy_pass http://127.0.0.1:3000;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
@@ -39,7 +40,24 @@ location / {
 }
 ```
 
+If the global nginx config keeps `proxy_intercept_errors on`, the frontend locations must set `proxy_intercept_errors off`. Nuxt owns the frontend 404 page through `app/error.vue`; letting nginx intercept upstream 404 responses will replace the app page with nginx's fallback 404.
+
+The repository also includes `../ops/nginx/gofurry-nav-web.locations.conf`, which can be copied into the `go-furry.com` server block.
+
 Keep the existing `nav.go-furry.com` and `game.go-furry.com` API server blocks unchanged.
+
+## Maintenance page
+
+For planned downtime, switch nginx to the dedicated maintenance config instead of letting requests fail against stopped services:
+
+```bash
+cp /usr/local/nginx/conf/nginx.conf /usr/local/nginx/conf/nginx.conf.bak.$(date +%Y%m%d%H%M%S)
+cp /home/gofurry/gfs/gofurry-repo/gofurry-nav-site/ops/nginx/nginx.maintenance.conf /usr/local/nginx/conf/nginx.conf
+/usr/local/nginx/sbin/nginx -t
+/usr/local/nginx/sbin/nginx -s reload
+```
+
+The maintenance config serves `../unavailable/index.html` as a self-contained native HTML/CSS/JS page and returns HTTP `503 Service Unavailable` with `Retry-After`.
 
 ## Environment variables
 

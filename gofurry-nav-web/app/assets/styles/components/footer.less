@@ -1,7 +1,19 @@
+.gf-footer-shell {
+  --gf-footer-bg: #172033;
+  --gf-footer-bg-deep: #101827;
+}
+
+html.dark .gf-footer-shell {
+  --gf-footer-bg: #05070d;
+  --gf-footer-bg-deep: #03050a;
+}
+
 .gf-footer {
-  border-top: 1px solid rgba(51, 65, 85, 0.40);
-  background: #1e293b;
-  color: rgb(203, 213, 225);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background:
+    linear-gradient(180deg, var(--gf-footer-bg), var(--gf-footer-bg-deep)),
+    var(--gf-footer-bg);
+  color: rgb(211, 222, 238);
   transition:
     background-color 500ms ease,
     border-color 500ms ease,
@@ -10,7 +22,9 @@
 
 html.dark .gf-footer {
   border-top-color: rgba(255, 255, 255, 0.05);
-  background: #05070d;
+  background:
+    linear-gradient(180deg, var(--gf-footer-bg), var(--gf-footer-bg-deep)),
+    var(--gf-footer-bg);
   color: rgb(148, 163, 184);
 }
 

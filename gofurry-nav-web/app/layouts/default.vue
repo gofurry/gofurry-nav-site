@@ -5,8 +5,7 @@
     </div>
     <main class="relative flex min-w-0 flex-1 flex-col">
       <slot />
-      <div v-if="showFooter" class="relative mt-auto">
-        <div class="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 -translate-y-1/2 bg-black/30"></div>
+      <div v-if="showFooter" class="gf-footer-shell relative mt-auto">
         <Footer />
       </div>
     </main>
