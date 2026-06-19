@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gofurry/gofurry-game-backend/common"
@@ -144,30 +145,18 @@ func InitServerConfig(projectName string) {
 func InitConfig(projectName string, fileName string, conf interface{}) {
 	hit := false
 
-	file := "/etc/" + projectName + "/" + fileName
-	if FileExists(file) {
-		err := loadYaml(file, conf)
-		if err != nil {
-			fmt.Println(err.Error())
-		} else {
+	for _, file := range configCandidates(projectName, fileName) {
+		if tryLoadConfig(file, conf) {
 			hit = true
+			break
 		}
 	}
 
-	//默认启动本地路径下conf.env
-	if !hit {
-		pwd, err := os.Getwd()
-		if err != nil {
-			fmt.Println("Error loading pwd dir:", err.Error())
-		} else {
-			filePath := pwd + "/conf/" + fileName
-			if FileExists(filePath) {
-				err = loadYaml(filePath, conf)
-				if err != nil {
-					fmt.Println("Error loading "+fileName+" file:", err.Error())
-				} else {
-					hit = true
-				}
+	if !hit && isGoTestBinary() {
+		for _, file := range localConfigCandidates(testExampleConfigName(fileName)) {
+			if tryLoadConfig(file, conf) {
+				hit = true
+				break
 			}
 		}
 	}
@@ -176,6 +165,59 @@ func InitConfig(projectName string, fileName string, conf interface{}) {
 		fmt.Println("can not find any " + fileName + " file")
 		panic("can not find any " + fileName + " file")
 	}
+}
+
+func configCandidates(projectName string, fileName string) []string {
+	files := []string{"/etc/" + projectName + "/" + fileName}
+	files = append(files, localConfigCandidates(fileName)...)
+	return files
+}
+
+func localConfigCandidates(fileName string) []string {
+	pwd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error loading pwd dir:", err.Error())
+		return nil
+	}
+
+	var files []string
+	for dir := pwd; ; dir = filepath.Dir(dir) {
+		files = append(files, filepath.Join(dir, "conf", fileName))
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+	}
+
+	return files
+}
+
+func testExampleConfigName(fileName string) string {
+	ext := filepath.Ext(fileName)
+	name := strings.TrimSuffix(fileName, ext)
+	if ext == "" {
+		return name + ".example"
+	}
+	return name + ".example" + ext
+}
+
+func isGoTestBinary() bool {
+	name := filepath.Base(os.Args[0])
+	return strings.HasSuffix(name, ".test") || strings.HasSuffix(name, ".test.exe")
+}
+
+func tryLoadConfig(file string, conf interface{}) bool {
+	if !FileExists(file) {
+		return false
+	}
+
+	err := loadYaml(file, conf)
+	if err != nil {
+		fmt.Println(err.Error())
+		return false
+	}
+
+	return true
 }
 
 func FileExists(path string) bool {
