@@ -1239,11 +1239,7 @@ func (dao *ReadModelDAO) queryNewsRows(db *gorm.DB, query v2models.GameV2NewsQue
 	if !query.UpdatedSince.IsZero() {
 		q = q.Where("n.updated_at >= ?", query.UpdatedSince)
 	}
-	orderBy := "n.published_at DESC NULLS LAST, n.collected_at DESC, n.id DESC"
-	if !requireGame {
-		orderBy = "g.create_time DESC, g.id DESC, n.published_at DESC NULLS LAST, n.collected_at DESC, n.id DESC"
-	}
-	if err := q.Order(orderBy).
+	if err := q.Order("n.published_at DESC NULLS LAST, n.collected_at DESC, n.id DESC").
 		Limit(query.Limit).
 		Offset(query.Offset).
 		Find(&rows).Error; err != nil {
@@ -1355,7 +1351,7 @@ func searchSelectSQL(lang string) string {
 func applySearchSort(db *gorm.DB, query v2models.GameV2SearchPageQuery) *gorm.DB {
 	orderClauses := []string{}
 	if query.TimeOrder {
-		orderClauses = append(orderClauses, searchUpdatedAtExpr()+" DESC")
+		orderClauses = append(orderClauses, "g.create_time DESC")
 	}
 	if query.RemarkOrder {
 		orderClauses = append(orderClauses, "comment_stats.remark_count DESC NULLS LAST")
@@ -1363,7 +1359,11 @@ func applySearchSort(db *gorm.DB, query v2models.GameV2SearchPageQuery) *gorm.DB
 	if query.ScoreOrder {
 		orderClauses = append(orderClauses, "comment_stats.avg_score DESC NULLS LAST")
 	}
-	orderClauses = append(orderClauses, "g.weight ASC", "g.id ASC")
+	if query.TimeOrder {
+		orderClauses = append(orderClauses, "g.weight DESC", "g.id ASC")
+	} else {
+		orderClauses = append(orderClauses, "g.weight ASC", "g.id ASC")
+	}
 	return db.Order(strings.Join(orderClauses, ", "))
 }
 
