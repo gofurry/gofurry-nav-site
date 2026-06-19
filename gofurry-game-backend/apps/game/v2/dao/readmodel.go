@@ -89,9 +89,10 @@ OR EXISTS (SELECT 1 FROM gfg_game_v2_details d WHERE d.game_id = gfg_game.id AND
 OR EXISTS (SELECT 1 FROM gfg_game_v2_localized_details ld WHERE ld.game_id = gfg_game.id AND ld.updated_at >= ?)
 OR EXISTS (SELECT 1 FROM gfg_game_v2_prices p WHERE p.game_id = gfg_game.id AND p.updated_at >= ?)
 OR EXISTS (SELECT 1 FROM gfg_game_v2_media m WHERE m.game_id = gfg_game.id AND m.updated_at >= ?)
+OR EXISTS (SELECT 1 FROM gfg_game_v2_assets a WHERE a.game_id = gfg_game.id AND a.updated_at >= ?)
 OR EXISTS (SELECT 1 FROM gfg_game_v2_requirements r WHERE r.game_id = gfg_game.id AND r.updated_at >= ?)
 OR EXISTS (SELECT 1 FROM gfg_game_v2_news n WHERE n.game_id = gfg_game.id AND n.updated_at >= ?)
-`, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince)
+`, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince)
 	}
 	if err := q.Find(&sites).Error; err != nil {
 		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 列表失败: %v", err))
@@ -696,6 +697,13 @@ func (dao *ReadModelDAO) loadAggregateExtras(db *gorm.DB, aggregate *v2models.Ga
 		return fmt.Errorf("查询游戏 v2 媒体失败: %v", err)
 	}
 
+	if err := db.Table(v2models.TableNameGfgGameV2Assets).
+		Where("game_id = ?", gameID).
+		Order("asset_family ASC, sort_order ASC, id ASC").
+		Find(&aggregate.Assets).Error; err != nil {
+		return fmt.Errorf("查询游戏 v2 统一媒体资产失败: %v", err)
+	}
+
 	if requirements, err := takeOptional[v2models.GfgGameV2Requirements](db.Table(v2models.TableNameGfgGameV2Requirements).Where("game_id = ?", gameID)); err != nil {
 		return fmt.Errorf("查询游戏 v2 配置需求失败: %v", err)
 	} else {
@@ -948,6 +956,9 @@ func (dao *ReadModelDAO) loadAggregateExtrasBatch(db *gorm.DB, aggregateMap map[
 	if err := dao.loadMediaBatch(db, aggregateMap, gameIDs); err != nil {
 		return err
 	}
+	if err := dao.loadAssetsBatch(db, aggregateMap, gameIDs); err != nil {
+		return err
+	}
 	if err := dao.loadRequirementsBatch(db, aggregateMap, gameIDs); err != nil {
 		return err
 	}
@@ -1054,6 +1065,25 @@ func (dao *ReadModelDAO) loadMediaBatch(db *gorm.DB, aggregateMap map[int64]*v2m
 			continue
 		}
 		aggregate.Media = append(aggregate.Media, row)
+	}
+	return nil
+}
+
+func (dao *ReadModelDAO) loadAssetsBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64) error {
+	rows := make([]v2models.GfgGameV2Asset, 0)
+	if err := db.Table(v2models.TableNameGfgGameV2Assets).
+		Where("game_id IN ?", gameIDs).
+		Order("game_id ASC, asset_family ASC, sort_order ASC, id ASC").
+		Find(&rows).Error; err != nil {
+		return fmt.Errorf("批量查询游戏 v2 统一媒体资产失败: %w", err)
+	}
+
+	for _, row := range rows {
+		aggregate := aggregateMap[row.GameID]
+		if aggregate == nil {
+			continue
+		}
+		aggregate.Assets = append(aggregate.Assets, row)
 	}
 	return nil
 }
@@ -1228,17 +1258,19 @@ func (dao *ReadModelDAO) buildSearchQuery(db *gorm.DB, query v2models.GameV2Sear
 		Joins("LEFT JOIN "+v2models.TableNameGfgGameV2LocalizedDetails+" ld ON ld.game_id = g.id AND ld.lang = ?", normalizeDAOLang(query.Lang)).
 		Joins(`LEFT JOIN (
 			SELECT DISTINCT ON (game_id) game_id, url
-			FROM ` + v2models.TableNameGfgGameV2Media + `
-			WHERE media_type IN ('header', 'capsule', 'capsule_v5')
+			FROM ` + v2models.TableNameGfgGameV2Assets + `
+			WHERE exists IS DISTINCT FROM false
+			  AND source = 'store_browse'
+			  AND asset_type IN ('header_2x', 'header')
 			ORDER BY game_id,
-				CASE media_type
-					WHEN 'header' THEN 0
-					WHEN 'capsule' THEN 1
+				CASE asset_type
+					WHEN 'header_2x' THEN 0
+					WHEN 'header' THEN 1
 					ELSE 2
 				END,
 				sort_order ASC,
 				id ASC
-		) media ON media.game_id = g.id`).
+		) asset_media ON asset_media.game_id = g.id`).
 		Joins(`LEFT JOIN (
 			SELECT game_id, COUNT(*) AS remark_count, AVG(score) AS avg_score
 			FROM gfg_game_comment
@@ -1305,7 +1337,7 @@ func searchSelectSQL(lang string) string {
 		CAST(g.id AS VARCHAR) AS id,
 		%s AS name,
 		%s AS info,
-		COALESCE(NULLIF(media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS cover,
+		COALESCE(NULLIF(asset_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS cover,
 		g.appid AS appid,
 		%s AS update_time,
 		COALESCE(NULLIF(d.release_date_text, ''), NULLIF(g.release_date, '')) AS release_date,
@@ -1426,18 +1458,63 @@ target_tags AS (
     JOIN gfg_tag t ON t.id = tm.tag_id
     GROUP BY tm.game_id
 ),
+header_media AS (
+    SELECT DISTINCT ON (game_id) game_id, url
+    FROM (
+        SELECT game_id, url,
+               CASE asset_type
+                   WHEN 'header_2x' THEN 0
+                   WHEN 'header' THEN 1
+                   ELSE 2
+               END AS priority,
+               sort_order,
+               id
+        FROM gfg_game_v2_assets
+        WHERE exists IS DISTINCT FROM false
+          AND source = 'store_browse'
+          AND asset_type IN ('header_2x', 'header')
+    ) candidates
+    WHERE COALESCE(url, '') <> ''
+    ORDER BY game_id, priority ASC, sort_order ASC, id ASC
+),
 capsule_media AS (
     SELECT DISTINCT ON (game_id) game_id, url
-    FROM gfg_game_v2_media
-    WHERE media_type IN ('capsule', 'capsule_v5', 'header')
-    ORDER BY game_id,
-        CASE media_type
-            WHEN 'capsule' THEN 0
-            WHEN 'capsule_v5' THEN 1
-            ELSE 2
-        END,
-        sort_order ASC,
-        id ASC
+    FROM (
+        SELECT game_id, url,
+               CASE asset_type
+                   WHEN 'capsule_main_2x' THEN 0
+                   WHEN 'capsule_main' THEN 1
+                   WHEN 'hero_capsule_2x' THEN 2
+                   WHEN 'hero_capsule' THEN 3
+                   ELSE 4
+               END AS priority,
+               sort_order,
+               id
+        FROM gfg_game_v2_assets
+        WHERE exists IS DISTINCT FROM false
+          AND source = 'store_browse'
+          AND asset_type IN ('capsule_main_2x', 'capsule_main', 'hero_capsule_2x', 'hero_capsule')
+    ) candidates
+    WHERE COALESCE(url, '') <> ''
+    ORDER BY game_id, priority ASC, sort_order ASC, id ASC
+),
+library_cover_media AS (
+    SELECT DISTINCT ON (game_id) game_id, url
+    FROM gfg_game_v2_assets
+    WHERE exists IS DISTINCT FROM false
+      AND source = 'store_browse'
+      AND asset_type = 'library_capsule'
+      AND COALESCE(url, '') <> ''
+    ORDER BY game_id, sort_order ASC, id ASC
+),
+library_cover_2x_media AS (
+    SELECT DISTINCT ON (game_id) game_id, url
+    FROM gfg_game_v2_assets
+    WHERE exists IS DISTINCT FROM false
+      AND source = 'store_browse'
+      AND asset_type = 'library_capsule_2x'
+      AND COALESCE(url, '') <> ''
+    ORDER BY game_id, sort_order ASC, id ASC
 )
 SELECT
     r.source_game_id,
@@ -1451,8 +1528,10 @@ SELECT
     g.appid,
     COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name, ''), g.name_en) AS name,
     COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en) AS summary,
-    COALESCE(NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS header_url,
-    COALESCE(NULLIF(capsule_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS capsule_url,
+    COALESCE(NULLIF(header_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS header_url,
+    COALESCE(NULLIF(capsule_media.url, ''), '') AS capsule_url,
+    COALESCE(NULLIF(library_cover_media.url, ''), '') AS library_cover_url,
+    COALESCE(NULLIF(library_cover_2x_media.url, ''), '') AS library_cover_2x_url,
     COALESCE(target_tags.tags, '[]'::jsonb)::text AS tags,
     COALESCE(p.region, ?) AS price_region,
     CASE
@@ -1479,7 +1558,10 @@ LEFT JOIN gfg_game_v2_localized_details ld ON ld.game_id = g.id AND ld.lang = ?
 LEFT JOIN gfg_game_v2_prices p ON p.game_id = g.id AND p.region = ?
 LEFT JOIN latest_player_count ON latest_player_count.game_id = g.id
 LEFT JOIN target_tags ON target_tags.game_id = g.id
+LEFT JOIN header_media ON header_media.game_id = g.id
 LEFT JOIN capsule_media ON capsule_media.game_id = g.id
+LEFT JOIN library_cover_media ON library_cover_media.game_id = g.id
+LEFT JOIN library_cover_2x_media ON library_cover_2x_media.game_id = g.id
 WHERE r.source_game_id = ?
   AND r.algorithm_version = ?
 ORDER BY r.rank ASC, r.score DESC, r.target_game_id ASC
@@ -1513,26 +1595,73 @@ target_tags AS (
     JOIN gfg_tag t ON t.id = tm.tag_id
     GROUP BY tm.game_id
 ),
+header_media AS (
+    SELECT DISTINCT ON (game_id) game_id, url
+    FROM (
+        SELECT game_id, url,
+               CASE asset_type
+                   WHEN 'header_2x' THEN 0
+                   WHEN 'header' THEN 1
+                   ELSE 2
+               END AS priority,
+               sort_order,
+               id
+        FROM gfg_game_v2_assets
+        WHERE exists IS DISTINCT FROM false
+          AND source = 'store_browse'
+          AND asset_type IN ('header_2x', 'header')
+    ) candidates
+    WHERE COALESCE(url, '') <> ''
+    ORDER BY game_id, priority ASC, sort_order ASC, id ASC
+),
 capsule_media AS (
     SELECT DISTINCT ON (game_id) game_id, url
-    FROM gfg_game_v2_media
-    WHERE media_type IN ('capsule', 'capsule_v5', 'header')
-    ORDER BY game_id,
-        CASE media_type
-            WHEN 'capsule' THEN 0
-            WHEN 'capsule_v5' THEN 1
-            ELSE 2
-        END,
-        sort_order ASC,
-        id ASC
+    FROM (
+        SELECT game_id, url,
+               CASE asset_type
+                   WHEN 'capsule_main_2x' THEN 0
+                   WHEN 'capsule_main' THEN 1
+                   WHEN 'hero_capsule_2x' THEN 2
+                   WHEN 'hero_capsule' THEN 3
+                   ELSE 4
+               END AS priority,
+               sort_order,
+               id
+        FROM gfg_game_v2_assets
+        WHERE exists IS DISTINCT FROM false
+          AND source = 'store_browse'
+          AND asset_type IN ('capsule_main_2x', 'capsule_main', 'hero_capsule_2x', 'hero_capsule')
+    ) candidates
+    WHERE COALESCE(url, '') <> ''
+    ORDER BY game_id, priority ASC, sort_order ASC, id ASC
+),
+library_cover_media AS (
+    SELECT DISTINCT ON (game_id) game_id, url
+    FROM gfg_game_v2_assets
+    WHERE exists IS DISTINCT FROM false
+      AND source = 'store_browse'
+      AND asset_type = 'library_capsule'
+      AND COALESCE(url, '') <> ''
+    ORDER BY game_id, sort_order ASC, id ASC
+),
+library_cover_2x_media AS (
+    SELECT DISTINCT ON (game_id) game_id, url
+    FROM gfg_game_v2_assets
+    WHERE exists IS DISTINCT FROM false
+      AND source = 'store_browse'
+      AND asset_type = 'library_capsule_2x'
+      AND COALESCE(url, '') <> ''
+    ORDER BY game_id, sort_order ASC, id ASC
 )
 SELECT
     g.id AS game_id,
     g.appid,
     COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name, ''), g.name_en) AS name,
     COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en) AS summary,
-    COALESCE(NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS header_url,
-    COALESCE(NULLIF(capsule_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, '')) AS capsule_url,
+    COALESCE(NULLIF(header_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS header_url,
+    COALESCE(NULLIF(capsule_media.url, ''), '') AS capsule_url,
+    COALESCE(NULLIF(library_cover_media.url, ''), '') AS library_cover_url,
+    COALESCE(NULLIF(library_cover_2x_media.url, ''), '') AS library_cover_2x_url,
     d.developers::text AS developers,
     d.publishers::text AS publishers,
     d.platforms::text AS platforms,
@@ -1564,7 +1693,10 @@ LEFT JOIN gfg_game_v2_localized_details ld ON ld.game_id = g.id AND ld.lang = ?
 LEFT JOIN gfg_game_v2_prices p ON p.game_id = g.id AND p.region = ?
 LEFT JOIN latest_player_count ON latest_player_count.game_id = g.id
 LEFT JOIN target_tags ON target_tags.game_id = g.id
+LEFT JOIN header_media ON header_media.game_id = g.id
 LEFT JOIN capsule_media ON capsule_media.game_id = g.id
+LEFT JOIN library_cover_media ON library_cover_media.game_id = g.id
+LEFT JOIN library_cover_2x_media ON library_cover_2x_media.game_id = g.id
 ORDER BY g.weight ASC, g.id ASC
 `
 }

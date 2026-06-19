@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -191,6 +192,65 @@ func TestParseSecurityTXTPayloadLimitsFields(t *testing.T) {
 	}
 	if len(policies) != 1 || len([]rune(policies[0])) != lightProbeMaxTextLength {
 		t.Fatalf("policy not limited: %#v", policies)
+	}
+}
+
+func TestParseLLMSTXTPayloadExtractsStructureWithoutBody(t *testing.T) {
+	payload := parseLLMSTXTPayload([]byte(`# Example Docs
+
+> This body should not be stored.
+
+## Guides
+- [API](https://example.com/api)
+- [Docs](https://example.com/docs)
+
+## Optional
+- [Extra](https://example.com/extra)
+`))
+
+	if payload["title"] != "Example Docs" || payload["heading_count"] != 3 || payload["link_count"] != 3 || payload["optional_section_present"] != true {
+		t.Fatalf("unexpected llms payload: %+v", payload)
+	}
+	links, _ := payload["links"].([]string)
+	if len(links) != 3 || links[0] != "https://example.com/api" {
+		t.Fatalf("unexpected llms links: %#v", links)
+	}
+	if strings.Contains(fmt.Sprint(payload), "This body should not be stored") {
+		t.Fatalf("llms payload should not store raw body: %+v", payload)
+	}
+}
+
+func TestProbeLLMSTXTNotFoundIsSuccessWithExistsFalse(t *testing.T) {
+	server := httptest.NewServer(http.NotFoundHandler())
+	defer server.Close()
+
+	target := targetFromTestServer(server.URL)
+	result := probeLLMSTXT(target, time.Second, 1024)
+	if result.Status != "success" {
+		t.Fatalf("probeLLMSTXT() status = %q, want success", result.Status)
+	}
+	if result.Payload["exists"] != false || result.Payload["status_code"] != http.StatusNotFound || result.Payload["path"] != "/llms.txt" {
+		t.Fatalf("unexpected llms payload: %+v", result.Payload)
+	}
+}
+
+func TestProbeLLMSTXTSuccessAddsHashAndSummary(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/llms.txt" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte("# Example\n\n## Docs\n[Home](https://example.com)\n"))
+	}))
+	defer server.Close()
+
+	result := probeLLMSTXT(targetFromTestServer(server.URL), time.Second, 4096)
+	if result.Status != "success" || result.Payload["exists"] != true || result.Payload["sha256"] == "" {
+		t.Fatalf("probeLLMSTXT() = %+v, want success with hash", result)
+	}
+	if result.Payload["title"] != "Example" || result.Payload["link_count"] != 1 {
+		t.Fatalf("unexpected llms summary: %+v", result.Payload)
 	}
 }
 

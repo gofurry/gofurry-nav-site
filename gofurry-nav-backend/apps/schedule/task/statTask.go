@@ -19,6 +19,11 @@ func UpdateSiteListCache() {
 	records, err := navDao.GetNavPageDao().GetSiteList() // 所有站点记录
 	if err != nil {
 		log.Error("[StatTask UpdateSiteListCache] GetSiteList err:", err)
+		return
+	}
+	if len(records) == 0 {
+		log.Warn("[StatTask UpdateSiteListCache] skip empty site list cache write")
+		return
 	}
 
 	if b, jsonErr := sonic.Marshal(records); jsonErr == nil {
@@ -35,10 +40,18 @@ func UpdateGroupListCache() {
 		log.Error("[StatTask UpdateGroupListCache] GetGroupList err:", err)
 		return
 	}
+	if len(groupRecords) == 0 {
+		log.Warn("[StatTask UpdateGroupListCache] skip empty group list cache write")
+		return
+	}
 
 	mappingRecords, err := navDao.GetNavPageDao().GetGroupMapList()
 	if err != nil {
 		log.Error("[StatTask UpdateGroupListCache] GetGroupMapList err:", err)
+		return
+	}
+	if len(mappingRecords) == 0 {
+		log.Warn("[StatTask UpdateGroupListCache] skip empty group map cache write")
 		return
 	}
 
@@ -76,6 +89,10 @@ func UpdateDerivedNavCaches() {
 			log.Error("[StatTask UpdateDerivedNavCaches] GetSiteList err:", err)
 			continue
 		}
+		if len(sites) == 0 {
+			log.Warn("[StatTask UpdateDerivedNavCaches] skip derived cache write: empty site list, lang=", lang)
+			continue
+		}
 
 		if b, jsonErr := sonic.Marshal(sites); jsonErr == nil {
 			cs.Set(cachekeys.SiteDirectory(lang), string(b))
@@ -86,8 +103,16 @@ func UpdateDerivedNavCaches() {
 			log.Error("[StatTask UpdateDerivedNavCaches] GetGroupList err:", err)
 			continue
 		}
+		if len(groups) == 0 {
+			log.Warn("[StatTask UpdateDerivedNavCaches] skip derived cache write: empty group list, lang=", lang)
+			continue
+		}
 
 		homePayload := homeService.GetHomeService().GetHome(lang)
+		if len(homePayload.Groups) == 0 {
+			log.Warn("[StatTask UpdateDerivedNavCaches] skip home cache write: empty home groups, lang=", lang)
+			continue
+		}
 		homePayload.Sites = nil
 		if b, jsonErr := sonic.Marshal(homePayload); jsonErr == nil {
 			cs.Set(cachekeys.Home(lang), string(b))

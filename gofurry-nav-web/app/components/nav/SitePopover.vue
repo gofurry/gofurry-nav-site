@@ -52,6 +52,7 @@ import { siteDetailPath } from '@/utils/siteRoutes'
 
 const { t } = i18n.global
 const router = useRouter()
+const localePath = useLocalePath()
 
 // Props定义
 const props = defineProps<{
@@ -117,7 +118,7 @@ function sendPopoverHeight() {
 // 跳转站点详情
 function goSite(domain: string) {
   if (!site.value) return
-  router.push(siteDetailPath(site.value.id, domain))
+  router.push(localePath(siteDetailPath(site.value.id, domain)))
 }
 
 // 事件处理

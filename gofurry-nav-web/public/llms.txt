@@ -1,12 +1,12 @@
 # GoFurry
 
-> GoFurry is a bilingual furry-focused web directory and research site. It includes a navigation homepage for furry sites, a furry games index, an archive section, and an updates timeline.
+> GoFurry is a bilingual furry-focused web directory and research site. It includes a navigation homepage for furry sites, a furry games index, a Steam-focused furry games zone, and an updates timeline.
 
 ## Main Pages
 
 - [Home](https://go-furry.com/) - Main furry site navigation homepage.
 - [Games](https://go-furry.com/games) - Furry games index and discovery page.
-- [Archive](https://go-furry.com/archive) - Archive and long-form reference content.
+- [Steam Zone](https://go-furry.com/steam) - Steam-focused furry games topic entry.
 - [Updates](https://go-furry.com/updates) - Product, content, and maintenance update timeline.
 - [About](https://go-furry.com/about) - Project overview and public contact information.
 

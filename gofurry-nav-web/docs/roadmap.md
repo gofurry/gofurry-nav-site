@@ -12,7 +12,7 @@
 - **Less**：负责主题 token、语义组件、复杂视觉、hover、active、暗色、玻璃质感、页面级视觉系统和第三方组件局部重写。
 - **暗色入口**：统一使用 `html.dark`。
 - **公共类**：使用 `gf-` 前缀，例如 `.gf-button`、`.gf-card`、`.gf-input`、`.gf-pagination`。
-- **页面类**：使用页面语义前缀，例如 `.nav-home-page`、`.games-page`、`.games-search-page`、`.lottery-page`、`.archive-page`、`.updates-page`。
+- **页面类**：使用页面语义前缀，例如 `.nav-home-page`、`.games-page`、`.games-search-page`、`.lottery-page`、`.steam-zone-page`、`.updates-page`。
 
 禁止继续扩大以下模式：
 
@@ -29,7 +29,7 @@
 
 ### Completed Checks
 
-- [x] 确认 games、games-search、home/nav、static、updates、archive 全部完成 Less + Tailwind 分层迁移。
+- [x] 确认 games、games-search、home/nav、static、updates 全部完成 Less + Tailwind 分层迁移。
 - [x] 确认新增样式必须优先使用 token 和语义类，规则沉淀到 `docs/style-system.md`。
 - [x] 确认视觉截图和性能报告只作为本地临时产物，`docs/performance/reports/` 不提交截图产物。
 - [x] 确认 `docs/performance/budget.json` 对迁移后的页面保持保守预算，并更新到 `v2.2.5`。
@@ -53,7 +53,6 @@
 - 游戏抽奖：`pages/lottery.less`
 - 静态页面：`pages/static.less`
 - 更新公告：`pages/updates.less`
-- 知识库归档：`pages/archive.less`
 - 公共组件：`components/button.less`、`card.less`、`chip.less`、`footer.less`、`input.less`、`modal.less`、`nav.less`、`pagination.less`、`rating.less`、`shell.less`
 
 ## 后续增量维护规则

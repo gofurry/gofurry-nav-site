@@ -52,24 +52,6 @@ func (api *navPageApi) GetGroupList(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *navPageApi) GetSyncSites(c fiber.Ctx) error {
-	lang := c.Query("lang", "zh")
-	data, err := service.GetNavPageService().GetSiteList(lang)
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
-func (api *navPageApi) GetSyncSiteGroups(c fiber.Ctx) error {
-	lang := c.Query("lang", "zh")
-	data, err := service.GetNavPageService().GetGroupList(lang)
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
 // @Summary 获取所有导航站点延迟信息
 // @Schemes
 // @Description 获取所有导航站点延迟信息

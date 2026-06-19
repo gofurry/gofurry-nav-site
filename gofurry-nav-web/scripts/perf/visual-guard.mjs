@@ -27,7 +27,6 @@ const legacyDarkSelectors = [
   '.about-page--dark',
   '.legal-page--dark',
   '.updates-page--dark',
-  '.archive-page--dark',
   '.nav-home-page--dark',
   '.gf-static-page--dark',
   '.lottery-page--dark'
@@ -154,6 +153,16 @@ const visualScenarios = [
     expectActiveNav: false
   }),
   ...makePageScenarios({
+    id: 'steam-zone',
+    label: '兽游专区',
+    path: '/steam',
+    locale: 'zh-CN',
+    rootSelector: '.steam-zone-page',
+    requiredSelectors: ['.games-page', '.steam-zone-page', '.steam-zone-panel', '.steam-zone-card'],
+    optionalDataSelectors: [],
+    expectActiveNav: false
+  }),
+  ...makePageScenarios({
     id: 'updates',
     label: '更新公告',
     path: '/updates',
@@ -171,50 +180,6 @@ const visualScenarios = [
     rootSelector: '.updates-page',
     requiredSelectors: ['.updates-page', '.updates-summary-shell', '.updates-timeline-section'],
     optionalDataSelectors: ['.updates-entry'],
-    expectActiveNav: false
-  }),
-  ...makePageScenarios({
-    id: 'archive-empty',
-    label: '知识库空态',
-    path: '/archive',
-    locale: 'zh-CN',
-    rootSelector: '.archive-page',
-    requiredSelectors: ['.archive-page', '.archive-sidebar', '.archive-workspace', '.empty-conversation', '.ask-bar'],
-    optionalDataSelectors: [],
-    expectActiveNav: false
-  }),
-  ...makePageScenarios({
-    id: 'archive-guide',
-    label: '知识库说明弹窗',
-    path: '/archive',
-    locale: 'zh-CN',
-    rootSelector: '.archive-page',
-    requiredSelectors: ['.archive-page', '.archive-sidebar', '.archive-workspace', '.guide-panel', '.ask-bar'],
-    optionalDataSelectors: [],
-    action: 'open-archive-guide',
-    expectActiveNav: false
-  }),
-  ...makePageScenarios({
-    id: 'archive-session',
-    label: '知识库会话与引用',
-    path: '/archive',
-    locale: 'zh-CN',
-    rootSelector: '.archive-page',
-    requiredSelectors: [
-      '.archive-page',
-      '.history-row',
-      '.conversation-list',
-      '.conversation',
-      '.answer-markdown',
-      '.citations-block',
-      '.citation-item',
-      '.citation-markdown',
-      '.error-message',
-      '.ask-bar'
-    ],
-    optionalDataSelectors: [],
-    action: 'open-archive-seeded-session',
-    seedArchiveSessions: true,
     expectActiveNav: false
   }),
   ...makeMobilePageScenarios({
@@ -340,8 +305,8 @@ function renderMarkdownReport(report) {
     '## 检查项',
     '',
     '- `html.dark` 与截图主题一致。',
-    '- `/`、`/en`、`/games`、`/games/1`、`/games/prize`、`/games/search`、`/en/games/search`、`/about`、`/updates`、`/archive` 和法律页移动端的关键容器存在。',
-    '- 不再出现 `games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`、`about-page--dark`、`legal-page--dark`、`updates-page--dark`、`archive-page--dark`、`lottery-page--dark` 等旧暗色入口。',
+    '- `/`、`/en`、`/games`、`/games/1`、`/games/prize`、`/games/search`、`/en/games/search`、`/steam`、`/about`、`/updates` 和法律页移动端的关键容器存在。',
+    '- 不再出现 `games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`、`about-page--dark`、`legal-page--dark`、`updates-page--dark`、`lottery-page--dark` 等旧暗色入口。',
     '- 源码静态扫描不允许新增旧暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 或已迁移游戏详情/抽奖页的复杂颜色类。',
     '- 桌面与移动端不出现明显横向溢出。',
     '- 数据卡片为空只记为 warning，方便在本地后端无数据时继续保留截图。'
@@ -512,86 +477,6 @@ async function performScenarioAction(page, scenario) {
     return
   }
 
-  if (scenario.action === 'open-archive-guide') {
-    await page.click('.doc-button')
-    await page.waitForSelector('.guide-panel', { timeout: 5000 }).catch(() => {})
-    await page.waitForTimeout(600)
-    return
-  }
-
-  if (scenario.action === 'open-archive-seeded-session') {
-    await page.waitForSelector('.history-item', { timeout: 5000 }).catch(() => {})
-    await page.click('.history-item').catch(() => {})
-    await page.waitForSelector('.conversation', { timeout: 5000 }).catch(() => {})
-    await page.click('.citation-item summary').catch(() => {})
-    await page.waitForSelector('.citation-markdown', { timeout: 8000 }).catch(() => {})
-    await page.waitForTimeout(900)
-  }
-}
-
-function makeArchiveSeedSessions() {
-  const now = Date.UTC(2026, 5, 14, 4, 0, 0)
-  return [
-    {
-      id: 'visual-archive-session',
-      title: 'Archive style guard conversation',
-      createdAt: now,
-      updatedAt: now + 2000,
-      messages: [
-        {
-          id: 'visual-archive-answer',
-          question: '如何检查 archive 样式迁移边界？',
-          answer: [
-            '## 样式隔离检查',
-            '',
-            '- 根节点使用 `.archive-page` 承载页面 token。',
-            '- Markdown 预览只在 archive 页面内改写。',
-            '- session sidebar、citation 和输入区保持独立视觉。',
-            '',
-            '| 区域 | 状态 |',
-            '| --- | --- |',
-            '| citation | 已隔离 |',
-            '| markdown | 已收口 |',
-            '',
-            '> 引用预览需要保持可读，并且不能污染其他页面。',
-            '',
-            '`html.dark` 是唯一暗色入口。'
-          ].join('\n'),
-          citations: [
-            {
-              source_type: 'docs',
-              title: 'Style system roadmap',
-              url: 'https://example.com/archive-style',
-              chunk_index: 3,
-              score: 0.94,
-              snippet: [
-                '### 引用片段',
-                '',
-                'Archive citation markdown **只在页面内** 覆盖。',
-                '',
-                '```css',
-                '.archive-page .citation-markdown {}',
-                '```'
-              ].join('\n')
-            }
-          ],
-          createdAt: now,
-          updatedAt: now + 1000,
-          status: 'done'
-        },
-        {
-          id: 'visual-archive-error',
-          question: '接口失败时用户还能看到什么？',
-          answer: '',
-          citations: [],
-          createdAt: now + 1000,
-          updatedAt: now + 2000,
-          status: 'error',
-          error: '本地 RAG 接口不可用，已保留问题和错误提示。'
-        }
-      ]
-    }
-  ]
 }
 
 async function runScenario(browser, scenario) {
@@ -601,22 +486,15 @@ async function runScenario(browser, scenario) {
     reducedMotion: 'reduce',
     locale: scenario.locale
   })
-  await context.addInitScript(({ theme, archiveSessions }) => {
+  await context.addInitScript(({ theme }) => {
     try {
       localStorage.setItem('theme', theme)
-      if (archiveSessions) {
-        localStorage.setItem('gofurry.archive.chat.sessions.v1', JSON.stringify(archiveSessions))
-        localStorage.removeItem('gofurry.archive.chat.records.v1')
-      } else {
-        localStorage.removeItem('gofurry.archive.chat.sessions.v1')
-      }
     } catch {
       // Ignore storage access errors on transient browser origins.
     }
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, {
-    theme: scenario.theme,
-    archiveSessions: scenario.seedArchiveSessions ? makeArchiveSeedSessions() : null
+    theme: scenario.theme
   })
 
   const page = await context.newPage()

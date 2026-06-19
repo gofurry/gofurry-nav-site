@@ -58,6 +58,9 @@ func (r *DetailsRepository) SaveDetails(ctx context.Context, data domain.Details
 		if err := replaceMedia(ctx, tx, data.Media); err != nil {
 			return err
 		}
+		if err := replaceAssets(ctx, tx, data.Details.GameID, data.Assets); err != nil {
+			return err
+		}
 		if err := upsertRequirements(ctx, tx, data.Requirements); err != nil {
 			return err
 		}
@@ -204,6 +207,62 @@ func replaceMedia(ctx context.Context, tx *gorm.DB, media domain.GameMedia) erro
 	return nil
 }
 
+func replaceAssets(ctx context.Context, tx *gorm.DB, gameID int64, assets []domain.GameMediaAsset) error {
+	if err := tx.WithContext(ctx).Exec("DELETE FROM gfg_game_v2_assets WHERE game_id = ?", gameID).Error; err != nil {
+		return err
+	}
+	for _, item := range assets {
+		if err := insertAsset(ctx, tx, item); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertAsset(ctx context.Context, tx *gorm.DB, item domain.GameMediaAsset) error {
+	if item.GameID <= 0 || item.AppID == 0 || item.AssetType == "" || item.URL == "" {
+		return nil
+	}
+	if item.Extra == nil {
+		item.Extra = map[string]any{}
+	}
+	extra, err := marshalJSON(item.Extra)
+	if err != nil {
+		return fmt.Errorf("marshal asset extra: %w", err)
+	}
+	return tx.WithContext(ctx).Exec(`
+INSERT INTO gfg_game_v2_assets (
+    game_id, appid, asset_type, asset_family, source, lang, media_key, title,
+    url, thumbnail_url, format, exists, status_code, content_type, content_length,
+    extra, sort_order, checked_at, collected_at, updated_at
+) VALUES (
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, now()
+)
+ON CONFLICT (game_id, asset_type, lang, media_key)
+DO UPDATE SET
+    appid = EXCLUDED.appid,
+    asset_family = EXCLUDED.asset_family,
+    source = EXCLUDED.source,
+    title = EXCLUDED.title,
+    url = EXCLUDED.url,
+    thumbnail_url = EXCLUDED.thumbnail_url,
+    format = EXCLUDED.format,
+    exists = EXCLUDED.exists,
+    status_code = EXCLUDED.status_code,
+    content_type = EXCLUDED.content_type,
+    content_length = EXCLUDED.content_length,
+    extra = EXCLUDED.extra,
+    sort_order = EXCLUDED.sort_order,
+    checked_at = EXCLUDED.checked_at,
+    collected_at = EXCLUDED.collected_at,
+    updated_at = now()
+`,
+		item.GameID, item.AppID, item.AssetType, item.AssetFamily, item.Source, item.Language, item.MediaKey, item.Title,
+		item.URL, item.ThumbnailURL, item.Format, item.Exists, item.StatusCode, item.ContentType, item.ContentLength,
+		string(extra), item.SortOrder, nullableTimePtr(item.CheckedAt), item.CollectedAt,
+	).Error
+}
+
 type mediaItem struct {
 	typ          string
 	key          string
@@ -336,12 +395,14 @@ func (r *DetailsRepository) refreshCache(data domain.DetailsCollection) {
 			Localized    domain.GameLocalizedDetails `json:"localized"`
 			Prices       []domain.GamePrice          `json:"prices"`
 			Media        domain.GameMedia            `json:"media"`
+			Assets       []domain.GameMediaAsset     `json:"assets"`
 			Requirements domain.SystemRequirements   `json:"requirements"`
 		}{
 			Details:      data.Details,
 			Localized:    localized,
 			Prices:       data.Prices,
 			Media:        data.Media,
+			Assets:       data.Assets,
 			Requirements: data.Requirements,
 		})
 		if err == nil {
@@ -353,6 +414,9 @@ func (r *DetailsRepository) refreshCache(data domain.DetailsCollection) {
 	}
 	if payload, err := marshalJSON(data.Media); err == nil {
 		_ = cs.SetExpire(mediaCacheKey(data.Details.GameID), string(payload), r.cacheTTL)
+	}
+	if payload, err := marshalJSON(data.Assets); err == nil {
+		_ = cs.SetExpire(assetsCacheKey(data.Details.GameID), string(payload), r.cacheTTL)
 	}
 }
 
@@ -368,7 +432,18 @@ func mediaCacheKey(gameID int64) string {
 	return fmt.Sprintf("game:v2:media:%d", gameID)
 }
 
+func assetsCacheKey(gameID int64) string {
+	return fmt.Sprintf("game:v2:assets:%d", gameID)
+}
+
 func hashPayload(payload []byte) string {
 	sum := sha256.Sum256(payload)
 	return hex.EncodeToString(sum[:])
+}
+
+func nullableTimePtr(value *time.Time) any {
+	if value == nil || value.IsZero() {
+		return nil
+	}
+	return *value
 }

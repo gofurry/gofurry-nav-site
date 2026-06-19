@@ -25,9 +25,8 @@ func navV2Api(g fiber.Router, cfg env.NavV2Config) {
 	g.Get("/search/suggestions", search.SearchApi.GetSearchSuggestions)
 	g.Get("/sites/index", siteindex.SiteIndexApi.GetSiteIndex)
 	g.Get("/sites/directory", sitedirectory.SiteDirectoryApi.GetSiteDirectory)
+	g.Get("/site-groups", navpage.NavPageApi.GetGroupList)
 	g.Get("/site-groups/:groupId/sites", sitegroup.SiteGroupApi.GetSiteGroupPage)
-	g.Get("/sync/sites", navpage.NavPageApi.GetSyncSites)
-	g.Get("/sync/site-groups", navpage.NavPageApi.GetSyncSiteGroups)
 	g.Post("/stats/page-view", stats.StatsApi.TouchPageView)
 	if cfg.DetailRoutesEnabled() {
 		g.Get("/sites/:siteId/detail", detail.DetailApi.GetSiteDetail)

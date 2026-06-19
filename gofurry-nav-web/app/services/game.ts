@@ -6,6 +6,7 @@ import type {
   GamePanelRecord,
   PriceRecord,
   GameV2DetailRecord,
+  GameV2AssetView,
   GameV2ListItem,
   GameV2Movie,
   GameV2NewsItem,
@@ -23,7 +24,6 @@ import type {
   SearchPageQueryRequest,
   SearchPageResponse
 } from '~/types/game'
-import { steamLibraryCoverUrl } from '~/utils/gameAssets'
 import type { ApiResult } from '~/types/api'
 
 export interface GameHomeData {
@@ -255,7 +255,7 @@ function selectGlobalPrice(prices: GameV2ListItem['prices'], regionPrice?: GameV
 }
 
 function bestV2Cover(game: GameV2ListItem) {
-  return game.header_url || game.capsule_url || ''
+  return game.header_url || ''
 }
 
 function mapV2Detail(detail: GameV2DetailRecord): GameBaseInfoResponse {
@@ -292,7 +292,7 @@ function mapV2Detail(detail: GameV2DetailRecord): GameBaseInfoResponse {
     developers: detail.developers ?? [],
     publishers: detail.publishers ?? [],
     appid: Number(detail.appid || 0),
-    cover: steamLibraryCoverUrl(detail.appid),
+    cover: bestV2DetailCover(detail),
     platform: platformsToText(detail.platforms),
     price_list: (detail.prices ?? []).map((price) => ({
       country: price.region,
@@ -320,10 +320,40 @@ function mapV2Detail(detail: GameV2DetailRecord): GameBaseInfoResponse {
     pc_requirements: requirements.pc,
     content_descriptors: detail.extra?.content_descriptors ?? null,
     ratings: detail.extra?.ratings ?? null,
+    media: detail.media,
     online_count: detail.online_count?.count ?? 0,
     count_collect_time: detail.online_count?.collected_at ?? '',
     view_count: detail.site?.view_count ?? 0,
   }
+}
+
+function bestV2DetailCover(detail: GameV2DetailRecord) {
+  return detail.media?.library_cover_2x_url
+    || detail.media?.library_cover_url
+    || firstStoreBrowseAssetURL(detail.media?.assets, [
+    'library_capsule_2x',
+    'library_capsule',
+  ])
+}
+
+function firstStoreBrowseAssetURL(assets: GameV2AssetView[] | undefined, preferredTypes: string[]) {
+  if (!assets?.length) {
+    return ''
+  }
+
+  for (const type of preferredTypes) {
+    const asset = assets.find((item) =>
+      item.type === type
+      && item.source === 'store_browse'
+      && item.exists !== false
+      && Boolean(item.url)
+    )
+    if (asset?.url) {
+      return asset.url
+    }
+  }
+
+  return ''
 }
 
 function mapV2DetailNews(news: GameV2NewsItem) {

@@ -2,7 +2,7 @@
 
 ## Current Position
 
-游戏模块已经完成 collector v2、backend v2 read model、admin 采集观测、RAG sync v2、前端主页面 cutover。`gofurry-nav-web` 当前游戏首页、详情页和 sitemap 游戏 URL 来源已经稳定消费 `/api/v2/game/*`，可以认为“动态游戏数据主线”已经切到 v2。
+游戏模块已经完成 collector v2、backend v2 read model、admin 采集观测和前端主页面 cutover。`gofurry-nav-web` 当前游戏首页、详情页和 sitemap 游戏 URL 来源已经稳定消费 `/api/v2/game/*`，可以认为“动态游戏数据主线”已经切到 v2。
 
 现阶段目标不再是继续维护 v1/v2 双栈。公开 game API 已经切到 `/api/v2/game/*`，后续重点是删除不再被引用的旧包、旧 Swagger、旧 Redis key 和历史文档说明，避免历史包袱继续扩散。
 
@@ -26,9 +26,6 @@
 - `POST /api/v2/game/search/simple`
 - `POST /api/v2/game/search/page`
 - `GET /api/v2/game/tags`
-- `GET /api/v2/game/sync/list`
-- `GET /api/v2/game/sync/info`
-- `GET /api/v2/game/sync/news`
 - `GET /api/v2/game/collect/status`
 - `GET /api/v2/game/collect/runs`
 - `GET /api/v2/game/collect/runs/:run_id`
@@ -76,7 +73,7 @@
 
 优先级按“已稳定、最容易删、最能减少历史包袱”排序。前五个阶段已经完成，后续集中到包级清理：
 
-1. 先删除前端、RAG、admin 已经稳定切走的 v1 动态接口。
+1. 先删除前端和 admin 已经稳定切走的 v1 动态接口。
 2. 再升级搜索和标签，因为它们影响游戏发现体验，也会影响推荐。
 3. 然后升级评论和推荐，保证详情页交互可以完全摆脱 v1。
 4. 再升级创作者和抽奖，这两块更多是运营能力，风险可控但需要注意邮件、Redis 临时 key 和外链。
@@ -102,7 +99,7 @@
 
 - v1 动态路由移除
 - 旧动态 service/dao 依赖收缩
-- 前端/RAG/admin 调用确认
+- 前端/admin 调用确认
 - 生产回滚边界说明
 
 #### Tasks
@@ -110,7 +107,6 @@
 - [x] 从 `gameApi` 中移除 `/info`、`/info/list`、`/info/main`、`/panel/main`、`/update/latest`、`/update/latest/more`。
 - [x] 从 `gameApi` 中移除 `/sync/list`、`/sync/info`、`/sync/news`、`/sync/creators`。
 - [x] 确认 `gofurry-nav-web` 游戏主线调用已经使用 `/api/v2/game/*`，并清理残留的旧动态接口包装函数。
-- [x] 确认 `gofurry-rag` `sync_game_base_url` 使用 `/api/v2`。
 - [x] 确认 `gofurry-admin` 采集观测通过 admin proxy 调用 `/api/v2/game/collect/*`。
 - [x] 删除旧动态 v1 controller 方法，使这些入口不再被 router 或 Swagger 注释引用。
 - [x] 更新 roadmap，明确这些 v1 动态路径已经移除。
@@ -120,7 +116,6 @@
 - 上述 v1 动态路径返回 404 或不再注册。
 - `/api/v2/game/*` 主线接口测试通过。
 - `gofurry-nav-web` 游戏首页、详情页、新闻页可正常访问。
-- RAG 游戏详情、新闻、创作者同步正常。
 - admin 游戏采集观测正常。
 
 #### Notes
@@ -163,7 +158,7 @@
 
 #### Notes
 
-搜索继续基于 PostgreSQL `ILIKE` 起步。全文索引、向量搜索或 RAG 辅助搜索不放进本阶段，避免把替换任务变成新系统建设。
+搜索继续基于 PostgreSQL `ILIKE` 起步。全文索引或向量搜索不放进本阶段，避免把替换任务变成新系统建设。
 
 旧 `apps/search` service/dao 已在 `v2.6.0` 删除，搜索和标签主线只保留 v2 read model 实现。
 
@@ -275,13 +270,13 @@
 ### v2.4.0 - Creator Decommission
 
 **Status:** Completed
-**Scope:** User-facing / Admin / RAG / Documentation  
-**Goal:** 创作者名录被判断为伪需求后，从前端、后端、admin 和 RAG 同步源中下线，避免继续维护低价值的独立数据链路。
+**Scope:** User-facing / Admin / Documentation
+**Goal:** 创作者名录被判断为伪需求后，从前端、后端和 admin 中下线，避免继续维护低价值的独立数据链路。
 
 #### Focus
 
 - 前端 `/games/creator` 页面和快捷入口下线
-- 后端公开 creator API 和 RAG creator sync API 下线
+- 后端公开 creator API 下线
 - admin 创作者 CRUD 下线
 - `gfg_game_creator` 表转入待归档状态
 
@@ -291,7 +286,6 @@
 - [x] 移除 `GET /api/v2/game/creators`。
 - [x] 移除 `GET /api/v2/game/sync/creators`。
 - [x] 移除 admin `/api/v1/game/creators` CRUD 和资源配置。
-- [x] 移除 RAG `game_creators` 同步源、客户端请求和控制台展示。
 - [x] 提供 `gfg_game_creator` 安全改名归档 SQL，生产确认后再 drop。
 
 #### Acceptance Criteria
@@ -299,7 +293,6 @@
 - `/games/creator` 不再进入前端路由、sitemap 和 llms.txt。
 - game backend 不再注册 creator 公开接口和 creator sync 接口。
 - admin 不再展示创作者管理资源。
-- RAG `all` 同步只包含 nav sites、game details、game news。
 
 #### Notes
 
@@ -373,7 +366,7 @@
 
 - `routers/url.go` 不再注册 `/api/v1/game/*`。
 - `rg "/api/v1/game"` 只在历史说明或迁移文档中出现。
-- 公开游戏页面、RAG、admin 均通过 v2 消费数据。
+- 公开游戏页面和 admin 均通过 v2 消费数据。
 - `go test ./...` 通过。
 
 ## Short-Term Direction

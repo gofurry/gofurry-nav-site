@@ -15,7 +15,7 @@
           </div>
 
           <button type="button" class="nav-group-toggle self-start sm:self-auto" @click="goHome">
-            {{ t('archive.actions.backHome') }}
+            {{ t('siteGroup.backHome') }}
           </button>
         </div>
 

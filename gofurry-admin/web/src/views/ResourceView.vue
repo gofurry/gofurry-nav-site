@@ -9,6 +9,7 @@ import type { ResourceConfig } from '../types'
 
 const route = useRoute()
 const config = computed<ResourceConfig | undefined>(() => findResource(String(route.params.section), String(route.params.resource)))
+const isGameEditor = computed(() => config.value?.section === 'game' && config.value?.key === 'games')
 
 const keyword = ref('')
 const pageNum = ref(1)
@@ -21,6 +22,7 @@ const deletingId = ref<string | null>(null)
 const editingId = ref<string | null>(null)
 const form = reactive<Record<string, unknown>>({})
 const message = ref('')
+const resolvingSteamAsset = ref(false)
 
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value))
@@ -122,7 +124,89 @@ function normalizePayload() {
       setOnTarget(payload as Record<string, unknown>, field.key, value === '' || value == null ? 0 : Number(value))
     }
   }
+  if (isGameEditor.value) {
+    applyGameSteamDefaults(payload as Record<string, unknown>)
+  }
   return payload
+}
+
+type KVItem = { key: string; value: string }
+type SteamAssetResponse = {
+  appid: number
+  kind: string
+  url: string
+  digest?: string
+  filename?: string
+  source?: string
+}
+
+function currentGameAppid(target: Record<string, unknown> = form) {
+  const value = target.appid
+  const appid = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(appid) && appid > 0 ? Math.trunc(appid) : 0
+}
+
+function defaultGameLinks(appid: number): KVItem[] {
+  return [
+    { key: 'steamdb', value: `https://steamdb.info/app/${appid}/` },
+    { key: 'gamalytic', value: `https://gamalytic.com/game/${appid}` },
+  ]
+}
+
+function asKVArray(value: unknown): KVItem[] {
+  return Array.isArray(value)
+    ? value.map((item) => {
+        const row = item && typeof item === 'object' ? item as Record<string, unknown> : {}
+        return {
+          key: String(row.key ?? '').trim(),
+          value: String(row.value ?? '').trim(),
+        }
+      })
+    : []
+}
+
+function applyGameSteamDefaults(target: Record<string, unknown>) {
+  const appid = currentGameAppid(target)
+  if (!appid) return false
+
+  const links = asKVArray(target.links)
+  for (const item of defaultGameLinks(appid)) {
+    const existing = links.find((link) => link.key.toLowerCase() === item.key)
+    if (existing) {
+      if (!existing.value) existing.value = item.value
+      continue
+    }
+    links.push(item)
+  }
+  target.links = links
+  return true
+}
+
+function syncGameSteamLinks() {
+  if (!applyGameSteamDefaults(form)) {
+    message.value = '请先填写 Steam AppID'
+    return
+  }
+  message.value = '已补全 SteamDB / Gamalytic 链接'
+}
+
+async function fillGameHeaderFromSteam() {
+  const appid = currentGameAppid()
+  if (!appid) {
+    message.value = '请先填写 Steam AppID'
+    return
+  }
+
+  resolvingSteamAsset.value = true
+  try {
+    const asset = await getJSON<SteamAssetResponse>(`/api/v1/game/games/steam-asset?appid=${appid}&kind=header`)
+    form.header = asset.url
+    message.value = `已填入 Steam 官方封面：${asset.kind}`
+  } catch (error) {
+    message.value = error instanceof Error ? error.message : '获取 Steam 官方封面失败'
+  } finally {
+    resolvingSteamAsset.value = false
+  }
 }
 
 function getFromTarget(target: Record<string, unknown>, path: string) {
@@ -166,7 +250,7 @@ onMounted(async () => {
 
     <BulkReplacePanel v-if="config.bulkReplace" :config="config" @saved="loadList" />
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_560px]">
       <section class="space-y-4 border border-[var(--line)] bg-[var(--panel)]/70 p-4">
         <div class="flex flex-col gap-3 md:flex-row">
           <input v-model="keyword" class="w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" placeholder="搜索关键字" />
@@ -215,13 +299,41 @@ onMounted(async () => {
           <div class="text-xs text-[var(--text-muted)]">{{ loading ? '列表刷新中…' : '' }}</div>
         </div>
 
-        <FieldEditor
+        <template
           v-for="field in config.fields"
           :key="field.key"
-          :field="field"
-          :model-value="getField(field.key)"
-          @update:model-value="setField(field.key, $event)"
-        />
+        >
+          <FieldEditor
+            :field="field"
+            :model-value="getField(field.key)"
+            @update:model-value="setField(field.key, $event)"
+          />
+
+          <div
+            v-if="isGameEditor && field.key === 'header'"
+            class="flex flex-wrap items-center gap-2 border border-[var(--line)] bg-black/20 p-3"
+          >
+            <button
+              class="border border-[var(--line)] px-3 py-1.5 text-xs disabled:opacity-50"
+              type="button"
+              :disabled="resolvingSteamAsset"
+              @click="fillGameHeaderFromSteam"
+            >
+              {{ resolvingSteamAsset ? '获取中…' : '填入官方封面' }}
+            </button>
+            <span class="text-xs text-[var(--text-muted)]">通过 Steam StoreBrowse 解析带 hash 的官方资源地址。</span>
+          </div>
+
+          <div
+            v-if="isGameEditor && field.key === 'links'"
+            class="flex flex-wrap items-center gap-2 border border-[var(--line)] bg-black/20 p-3"
+          >
+            <button class="border border-[var(--line)] px-3 py-1.5 text-xs" type="button" @click="syncGameSteamLinks">
+              补全 Steam 链接
+            </button>
+            <span class="text-xs text-[var(--text-muted)]">自动补 SteamDB 与 Gamalytic 默认链接。</span>
+          </div>
+        </template>
 
         <div class="flex items-center gap-3">
           <button class="border border-[var(--accent)] bg-[var(--accent)]/10 px-4 py-2 text-sm" @click="submit">{{ saving ? '保存中…' : editingId ? '保存修改' : '创建记录' }}</button>

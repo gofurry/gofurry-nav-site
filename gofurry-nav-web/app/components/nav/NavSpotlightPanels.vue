@@ -13,9 +13,9 @@
         <header class="spotlight-panel__header">
           <h2>{{ panel.title }}</h2>
           <div v-if="panel.totalPages > 1" class="spotlight-panel__pager">
-            <button type="button" :aria-label="`${panel.title} 上一页`" @click="changePage(panel.key, -1)">‹</button>
+            <button type="button" :aria-label="`${panel.title} ${label('上一页', 'previous page')}`" @click="changePage(panel.key, -1)">‹</button>
             <span>{{ panel.page + 1 }}/{{ panel.totalPages }}</span>
-            <button type="button" :aria-label="`${panel.title} 下一页`" @click="changePage(panel.key, 1)">›</button>
+            <button type="button" :aria-label="`${panel.title} ${label('下一页', 'next page')}`" @click="changePage(panel.key, 1)">›</button>
           </div>
         </header>
 
@@ -30,7 +30,7 @@
             <span
               class="spotlight-site__rank"
               :class="{ 'spotlight-site__rank--visited': visitedSiteIds.has(site.id) }"
-              :aria-label="visitedSiteIds.has(site.id) ? '已浏览' : undefined"
+              :aria-label="visitedSiteIds.has(site.id) ? label('已浏览', 'Visited') : undefined"
             >
               <svg v-if="visitedSiteIds.has(site.id)" viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M3 8.3 6.4 11.2 13 4.6" />
@@ -54,7 +54,7 @@
             </span>
           </button>
 
-          <div v-if="!panel.items.length" class="spotlight-panel__empty">暂无站点</div>
+          <div v-if="!panel.items.length" class="spotlight-panel__empty">{{ label('暂无站点', 'No sites') }}</div>
         </div>
       </article>
     </div>
@@ -63,6 +63,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { NavHomeSpotlight, Site } from '~/types/nav'
 import { touchSiteView } from '~/services/nav'
 import { loadRecentSites, recordRecentSite, RECENT_SITES_EVENT, toExternalUrl } from '@/utils/recentSites'
@@ -77,6 +78,8 @@ const props = defineProps<{
 
 const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
 const defaultLogo = 'defaultLogo.svg'
+const { locale } = useI18n()
+const isEnglish = computed(() => locale.value === 'en')
 const pages = ref<Record<PanelKey, number>>({
   featured: 0,
   popular: 0,
@@ -87,22 +90,22 @@ const visitedSiteIds = ref<Set<string>>(new Set())
 const spotlightPageSize = 6
 const pageSize = computed(() => spotlightPageSize)
 
-const panelConfigs: Array<{
+const panelConfigs = computed<Array<{
   key: PanelKey
   title: string
   visibilityClass: string
-}> = [
-  { key: 'featured', title: '精选站点', visibilityClass: '' },
-  { key: 'popular', title: '热门站点', visibilityClass: 'hidden sm:block' },
-  { key: 'latest', title: '最新收录', visibilityClass: 'hidden lg:block' },
-  { key: 'random', title: '随机站点', visibilityClass: 'hidden xl:block' },
-]
+}>>(() => [
+  { key: 'featured', title: label('精选站点', 'Featured'), visibilityClass: '' },
+  { key: 'popular', title: label('热门站点', 'Popular'), visibilityClass: 'hidden sm:block' },
+  { key: 'latest', title: label('最新收录', 'Latest'), visibilityClass: 'hidden lg:block' },
+  { key: 'random', title: label('随机站点', 'Random'), visibilityClass: 'hidden xl:block' },
+])
 
 const hasAnySpotlight = computed(() => {
-  return panelConfigs.some(panel => visibleSites(props.spotlight?.[panel.key] ?? []).length > 0)
+  return panelConfigs.value.some(panel => visibleSites(props.spotlight?.[panel.key] ?? []).length > 0)
 })
 
-const visiblePanels = computed(() => panelConfigs.map((config) => {
+const visiblePanels = computed(() => panelConfigs.value.map((config) => {
   const list = visibleSites(props.spotlight?.[config.key] ?? [])
   const totalPages = Math.max(1, Math.ceil(list.length / pageSize.value))
   const page = Math.min(pages.value[config.key], totalPages - 1)
@@ -200,7 +203,7 @@ async function updateSiteViewCount(site: Site) {
 
 function metaText(key: PanelKey, site: Site) {
   if (key === 'popular') {
-    return `${formatNumber(site.view_count)} 次浏览`
+    return `${formatNumber(site.view_count)} ${label('次浏览', 'views')}`
   }
   if (key === 'latest') {
     return formatDate(site.create_time)
@@ -213,14 +216,18 @@ function formatNumber(value: unknown) {
   if (!Number.isFinite(num)) {
     return '0'
   }
-  return num.toLocaleString('zh-CN')
+  return num.toLocaleString(isEnglish.value ? 'en-US' : 'zh-CN')
 }
 
 function formatDate(value?: string | null) {
   if (!value) {
-    return '最近收录'
+    return label('最近收录', 'Recently added')
   }
   return value.slice(0, 10)
+}
+
+function label(zh: string, en: string) {
+  return isEnglish.value ? en : zh
 }
 
 function syncVisitedSites() {

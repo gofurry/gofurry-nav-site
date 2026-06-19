@@ -2,26 +2,19 @@
   <div class="gf-pagination game-search-pagination flex items-center justify-center gap-2 select-none">
 
     <!-- 页码 -->
-    <template v-for="(item, idx) in displayPages" :key="idx">
+    <div class="game-search-pagination-pages">
       <span
-          v-if="item.type === 'page'"
+          v-for="(item, idx) in displayPages"
+          :key="item.type === 'page' ? `page-${item.page}` : `ellipsis-${idx}`"
           class="gf-pagination__button game-search-page-button"
-          :class="item.page === currentPage
-          ? 'gf-pagination__button--active game-search-page-button--active'
-          : 'game-search-page-button--idle'"
-          @click="changePage(item.page!)"
+          :class="item.type === 'page' && item.page === currentPage
+            ? 'gf-pagination__button--active game-search-page-button--active'
+            : 'game-search-page-button--idle'"
+          @click="item.type === 'page' ? changePage(item.page!) : openJump()"
       >
-        {{ item.page }}
+        {{ item.type === 'page' ? item.page : '...' }}
       </span>
-
-      <span
-          v-else
-          class="gf-pagination__button game-search-page-button game-search-page-button--idle"
-          @click="openJump"
-      >
-        ...
-      </span>
-    </template>
+    </div>
 
     <span class="gf-pagination__total game-search-pagination-total ml-2">
       {{ t("common.total") }} {{ total }} {{ t("common.record") }}

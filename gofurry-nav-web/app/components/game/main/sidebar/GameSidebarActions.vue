@@ -18,8 +18,9 @@
         <button
             class="sidebar-action-button"
             type="button"
+            @click="goSteamZone"
         >
-          Steam 专区
+          {{ t("game.action.steamZone") }}
         </button>
       </div>
     </div>
@@ -84,5 +85,9 @@ async function handleRandomGame() {
   } finally {
     loading.value = false;
   }
+}
+
+function goSteamZone() {
+  router.push(localePath('/steam'));
 }
 </script>

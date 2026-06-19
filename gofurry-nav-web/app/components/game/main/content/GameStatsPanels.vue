@@ -37,28 +37,68 @@
     </div>
 
     <!-- 面板内容 -->
-    <div class="grid lg:grid-cols-2 gap-6">
+    <div class="game-stats-page-shell">
+      <div class="game-stats-page-viewport">
+        <div
+            v-if="activeType === 'count'"
+            class="game-stats-page-track"
+            :style="{ transform: `translate3d(-${activeGroup * 100}%, 0, 0)` }"
+        >
+          <div
+              v-for="(group, groupIndex) in visibleCountGroups"
+              :key="`count-${groupIndex}`"
+              class="game-stats-page-slide"
+              :aria-hidden="groupIndex !== activeGroup"
+          >
+            <div class="game-stats-page-grid">
+              <CountTablePanel
+                  v-for="panel in group"
+                  :key="panel.key"
+                  :title="panel.title"
+                  :desc="panel.desc"
+                  :list="panel.list"
+                  :rank-start="panel.rankStart"
+              />
 
-      <!-- 在线人数 -->
-      <CountTablePanel
-          v-if="activeType === 'count'"
-          v-for="panel in visibleCountGroups[activeGroup]"
-          :key="panel.key"
-          :title="panel.title"
-          :desc="panel.desc"
-          :list="panel.list"
-          :rank-start="panel.rankStart"
-      />
+              <section
+                  v-for="index in placeholderCount(group)"
+                  :key="`placeholder-${groupIndex}-${index}`"
+                  class="game-stats-card game-stats-card--placeholder"
+                  aria-hidden="true"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+            v-else
+            class="game-stats-page-track"
+            :style="{ transform: `translate3d(-${activeGroup * 100}%, 0, 0)` }"
+        >
+          <div
+              v-for="(group, groupIndex) in priceGroups"
+              :key="`price-${groupIndex}`"
+              class="game-stats-page-slide"
+              :aria-hidden="groupIndex !== activeGroup"
+          >
+            <div class="game-stats-page-grid">
+              <PriceTablePanel
+                  v-for="panel in group"
+                  :key="panel.key"
+                  :title="panel.title"
+                  :desc="panel.desc"
+                  :list="panel.list"
+              />
 
-      <!-- 价格 -->
-      <PriceTablePanel
-          v-if="activeType === 'price'"
-          v-for="panel in priceGroups[activeGroup]"
-          :key="panel.key"
-          :title="panel.title"
-          :desc="panel.desc"
-          :list="panel.list"
-      />
+              <section
+                  v-for="index in placeholderCount(group)"
+                  :key="`placeholder-${groupIndex}-${index}`"
+                  class="game-stats-card game-stats-card--placeholder"
+                  aria-hidden="true"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -185,6 +225,10 @@ function buildGroups<T>(list: T[]) {
 
 const priceGroups = computed(() => buildGroups(pricePanels.value))
 const visibleCountGroups = computed(() => buildGroups(countPanels.value.filter(panel => panel.list.length > 0)))
+
+function placeholderCount(group: unknown[]) {
+  return Math.max(0, 2 - group.length)
+}
 
 watch([activeType, visibleCountGroups, priceGroups], () => {
   const groupLength = activeType.value === 'count'

@@ -2,10 +2,8 @@ package service
 
 import (
 	"context"
-	"html"
 	"math"
 	"net"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -61,13 +59,6 @@ type ReadModelService struct {
 	reader gameDetailReader
 }
 
-var (
-	htmlBreakRE = regexp.MustCompile(`(?i)<\s*(br|/p|/div|/li)\s*/?>`)
-	htmlTagRE   = regexp.MustCompile(`<[^>]+>`)
-	spaceRE     = regexp.MustCompile(`[ \t\r\f\v]+`)
-	newlineRE   = regexp.MustCompile(`\n{3,}`)
-)
-
 func NewReadModelServiceWithReader(reader gameDetailReader) *ReadModelService {
 	return &ReadModelService{reader: reader}
 }
@@ -95,44 +86,6 @@ func (svc *ReadModelService) GetGameList(ctx context.Context, query v2models.Gam
 	return res, nil
 }
 
-func (svc *ReadModelService) ListSyncGames(ctx context.Context, query v2models.GameV2SyncListQuery) ([]v2models.GameV2SyncGameSummary, common.GFError) {
-	if svc == nil || svc.reader == nil {
-		return nil, common.NewServiceError("game v2 read model service is not initialized")
-	}
-	lang := normalizeLang(query.Lang)
-	region := normalizeRegion(query.Region)
-	limit := clampLimit(query.Limit, 5000, 5000)
-	if query.Offset < 0 {
-		query.Offset = 0
-	}
-	aggregates, err := svc.reader.ListGameAggregates(ctx, v2models.GameV2ListQuery{
-		Lang:         lang,
-		Region:       region,
-		Limit:        limit,
-		Offset:       query.Offset,
-		Sort:         "weight",
-		UpdatedSince: query.UpdatedSince,
-	})
-	if err != nil {
-		return nil, err
-	}
-	res := make([]v2models.GameV2SyncGameSummary, 0, len(aggregates))
-	for _, aggregate := range aggregates {
-		item := buildListItem(aggregate, lang, region)
-		res = append(res, v2models.GameV2SyncGameSummary{
-			ID:          item.ID,
-			AppID:       item.AppID,
-			Name:        item.Name,
-			Info:        cleanSyncText(item.Summary),
-			ReleaseDate: item.ReleaseDate,
-			Developers:  item.Developers,
-			Publishers:  item.Publishers,
-			UpdatedAt:   item.UpdatedAt,
-		})
-	}
-	return res, nil
-}
-
 func (svc *ReadModelService) GetGameDetail(ctx context.Context, req v2models.GameV2DetailRequest) (v2models.GameV2DetailReadModel, common.GFError) {
 	var res v2models.GameV2DetailReadModel
 	if svc == nil || svc.reader == nil {
@@ -156,35 +109,6 @@ func (svc *ReadModelService) GetGameDetail(ctx context.Context, req v2models.Gam
 	res = buildDetailReadModel(aggregate, requestedLang, region)
 	res.Site.ViewCount = loadGameCurrentViewCount(aggregate.Site.ID, res.Site.ViewCount)
 	return res, nil
-}
-
-func (svc *ReadModelService) GetSyncGameDetail(ctx context.Context, req v2models.GameV2DetailRequest) (v2models.GameV2SyncGameDetail, common.GFError) {
-	var res v2models.GameV2SyncGameDetail
-	req.NewsLimit = 0
-	detail, err := svc.GetGameDetail(ctx, req)
-	if err != nil {
-		return res, err
-	}
-	return v2models.GameV2SyncGameDetail{
-		ID:                  detail.ID,
-		AppID:               detail.AppID,
-		Name:                detail.Name,
-		Info:                cleanSyncText(detail.Summary),
-		Resources:           detail.Site.Resources,
-		Groups:              detail.Site.Groups,
-		ReleaseDate:         detail.Release.Date,
-		Developers:          detail.Developers,
-		Publishers:          detail.Publishers,
-		Links:               detail.Site.Links,
-		Platform:            platformsText(detail.Platforms),
-		Tags:                detail.Tags,
-		SupportedLanguages:  cleanSyncText(detail.SupportedLanguages),
-		Website:             detail.Website,
-		DetailedDescription: cleanSyncText(detail.DetailedDescription),
-		AboutTheGame:        cleanSyncText(detail.AboutTheGame),
-		PcRequirements:      syncPCRequirements(detail.Requirements.PC),
-		UpdatedAt:           detail.UpdatedAt,
-	}, nil
 }
 
 func (svc *ReadModelService) SimpleSearch(ctx context.Context, req v2models.GameV2SearchRequest) ([]v2models.GameV2SearchItem, common.GFError) {
@@ -383,46 +307,6 @@ func (svc *ReadModelService) GetLatestGameNews(ctx context.Context, query v2mode
 		return nil, err
 	}
 	return buildNewsRows(rows, query.Lang), nil
-}
-
-func (svc *ReadModelService) ListSyncGameNews(ctx context.Context, query v2models.GameV2SyncNewsQuery) ([]v2models.GameV2SyncNewsItem, common.GFError) {
-	if svc == nil || svc.reader == nil {
-		return nil, common.NewServiceError("game v2 read model service is not initialized")
-	}
-	lang := normalizeLang(query.Lang)
-	limit := clampLimit(query.Limit, 5000, 5000)
-	if query.Offset < 0 {
-		query.Offset = 0
-	}
-	rows, err := svc.reader.GetLatestGameNews(ctx, v2models.GameV2NewsQuery{
-		Lang:         lang,
-		Limit:        limit,
-		Offset:       query.Offset,
-		UpdatedSince: query.UpdatedSince,
-	})
-	if err != nil {
-		return nil, err
-	}
-	items := buildNewsRows(rows, lang)
-	res := make([]v2models.GameV2SyncNewsItem, 0, len(items))
-	for _, item := range items {
-		content := firstNonEmptyString(item.PlainText, item.Summary, item.HTML)
-		res = append(res, v2models.GameV2SyncNewsItem{
-			ID:          item.ID,
-			GameID:      item.GameID,
-			AppID:       item.AppID,
-			Name:        item.GameName,
-			PostTime:    formatSyncTime(item.PublishedAt),
-			Headline:    item.Headline,
-			Author:      "",
-			Content:     cleanSyncText(content),
-			URL:         item.URL,
-			Lang:        item.Lang,
-			UpdatedAt:   item.UpdatedAt,
-			PublishedAt: item.PublishedAt,
-		})
-	}
-	return res, nil
 }
 
 func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.GameV2PanelQuery) (v2models.GameV2PanelReadModel, common.GFError) {
@@ -640,7 +524,7 @@ v2.3.1 相似推荐选型说明：
     后续游戏数量增多时容易让详情页性能抖动，也不方便解释“为什么推荐这个游戏”。
  2. 这版也暂不引入协同过滤。当前站点没有足够稳定的用户行为矩阵，强行做 CF 会遇到冷启动和噪声问题，
     对小体量游戏库的收益低于维护成本。
- 3. 这版先不把 RAG/embedding 作为主推荐算法。向量适合做语义召回，但需要额外索引、重建流程和质量评估。
+ 3. 这版先不把 embedding/vector search 作为主推荐算法。向量适合做语义召回，但需要额外索引、重建流程和质量评估。
     当前阶段的主要目标是移除 v1 包袱、稳定详情页体验，所以先使用可解释、可 SQL 落库、可手动调权的 hybrid CBF。
 
 算法结构：
@@ -802,21 +686,23 @@ func buildSimilarRecommendationsFromRows(rows []v2models.GameV2RecommendationRow
 		reasons := decodeJSON[[]v2models.GameV2RecommendationReason](&row.ReasonJSON, []v2models.GameV2RecommendationReason{})
 		tags := decodeJSON[[]recommendationTag](row.Tags, []recommendationTag{})
 		res = append(res, v2models.GameV2SimilarRecommendation{
-			ID:               strconv.FormatInt(row.TargetGameID, 10),
-			AppID:            strconv.FormatInt(row.AppID, 10),
-			Name:             row.Name,
-			Summary:          row.Summary,
-			HeaderURL:        row.HeaderURL,
-			CapsuleURL:       row.CapsuleURL,
-			Score:            row.Score,
-			DisplayScore:     row.DisplayScore,
-			Rank:             row.Rank,
-			Reasons:          reasons,
-			AlgorithmVersion: row.AlgorithmVersion,
-			ComputedAt:       row.ComputedAt,
-			Tags:             recommendationTagsToView(tags),
-			Price:            recommendationRowPrice(row),
-			OnlineCount:      recommendationRowOnline(row),
+			ID:                strconv.FormatInt(row.TargetGameID, 10),
+			AppID:             strconv.FormatInt(row.AppID, 10),
+			Name:              row.Name,
+			Summary:           row.Summary,
+			HeaderURL:         row.HeaderURL,
+			CapsuleURL:        row.CapsuleURL,
+			LibraryCoverURL:   row.LibraryCoverURL,
+			LibraryCover2xURL: row.LibraryCover2xURL,
+			Score:             row.Score,
+			DisplayScore:      row.DisplayScore,
+			Rank:              row.Rank,
+			Reasons:           reasons,
+			AlgorithmVersion:  row.AlgorithmVersion,
+			ComputedAt:        row.ComputedAt,
+			Tags:              recommendationTagsToView(tags),
+			Price:             recommendationRowPrice(row),
+			OnlineCount:       recommendationRowOnline(row),
 		})
 	}
 	return res
@@ -824,21 +710,23 @@ func buildSimilarRecommendationsFromRows(rows []v2models.GameV2RecommendationRow
 
 func buildSimilarRecommendationFromFeature(feature recommendationFeature, score float64, displayScore float64, rank int, reasons []v2models.GameV2RecommendationReason, computedAt time.Time) v2models.GameV2SimilarRecommendation {
 	return v2models.GameV2SimilarRecommendation{
-		ID:               strconv.FormatInt(feature.row.GameID, 10),
-		AppID:            strconv.FormatInt(feature.row.AppID, 10),
-		Name:             feature.row.Name,
-		Summary:          feature.row.Summary,
-		HeaderURL:        feature.row.HeaderURL,
-		CapsuleURL:       feature.row.CapsuleURL,
-		Score:            score,
-		DisplayScore:     displayScore,
-		Rank:             rank,
-		Reasons:          reasons,
-		AlgorithmVersion: similarRecommendationAlgorithmVersion,
-		ComputedAt:       computedAt,
-		Tags:             recommendationTagsToView(feature.tags),
-		Price:            recommendationFeaturePrice(feature.row),
-		OnlineCount:      recommendationFeatureOnline(feature.row),
+		ID:                strconv.FormatInt(feature.row.GameID, 10),
+		AppID:             strconv.FormatInt(feature.row.AppID, 10),
+		Name:              feature.row.Name,
+		Summary:           feature.row.Summary,
+		HeaderURL:         feature.row.HeaderURL,
+		CapsuleURL:        feature.row.CapsuleURL,
+		LibraryCoverURL:   feature.row.LibraryCoverURL,
+		LibraryCover2xURL: feature.row.LibraryCover2xURL,
+		Score:             score,
+		DisplayScore:      displayScore,
+		Rank:              rank,
+		Reasons:           reasons,
+		AlgorithmVersion:  similarRecommendationAlgorithmVersion,
+		ComputedAt:        computedAt,
+		Tags:              recommendationTagsToView(feature.tags),
+		Price:             recommendationFeaturePrice(feature.row),
+		OnlineCount:       recommendationFeatureOnline(feature.row),
 	}
 }
 
@@ -1199,7 +1087,7 @@ func buildDetailReadModel(aggregate v2models.GameV2Aggregate, requestedLang stri
 		HeaderURL:     headerURL,
 		Prices:        buildPrices(aggregate.Prices),
 		Price:         selectPrice(aggregate.Prices, region),
-		Media:         buildMedia(aggregate.Media),
+		Media:         buildMedia(aggregate.Media, aggregate.Assets, lang),
 		Requirements:  buildRequirements(aggregate.Requirements),
 		News:          buildNews(aggregate.News),
 		OnlineCount:   buildOnlineCount(aggregate.OnlineCount),
@@ -1435,10 +1323,11 @@ func isUnavailableRegionalPrice(price v2models.GfgGameV2Price) bool {
 		strings.TrimSpace(strValue(price.FinalFormatted)) == ""
 }
 
-func buildMedia(items []v2models.GfgGameV2Media) v2models.GameV2MediaView {
+func buildMedia(items []v2models.GfgGameV2Media, assets []v2models.GfgGameV2Asset, lang string) v2models.GameV2MediaView {
 	res := v2models.GameV2MediaView{
 		Screenshots: []v2models.GameV2Screenshot{},
 		Movies:      []v2models.GameV2Movie{},
+		Assets:      buildAssetViews(assets),
 	}
 	for _, item := range items {
 		switch item.MediaType {
@@ -1468,7 +1357,97 @@ func buildMedia(items []v2models.GfgGameV2Media) v2models.GameV2MediaView {
 			})
 		}
 	}
+
+	if url := firstAssetURL(assets, lang, "header_2x", "header"); url != "" {
+		res.HeaderURL = url
+	}
+	if url := firstAssetURL(assets, lang, "capsule_main_2x", "capsule_main", "hero_capsule_2x", "hero_capsule"); url != "" {
+		res.CapsuleURL = url
+	}
+	if url := firstAssetURL(assets, lang, "hero_capsule_2x", "hero_capsule", "capsule_main_2x", "capsule_main"); url != "" {
+		res.CapsuleV5URL = url
+	}
+	res.CapsuleSmallURL = firstAssetURL(assets, lang, "capsule_small_2x", "capsule_small")
+	res.CapsuleMainURL = firstAssetURL(assets, lang, "capsule_main_2x", "capsule_main")
+	res.LibraryCoverURL = firstAssetURL(assets, lang, "library_capsule")
+	res.LibraryCover2xURL = firstAssetURL(assets, lang, "library_capsule_2x")
+	res.LibraryHeroURL = firstAssetURL(assets, lang, "library_hero_2x", "library_hero")
+	res.LibraryLogoURL = firstAssetURL(assets, lang, "library_logo")
+	res.LibraryLogo2xURL = firstAssetURL(assets, lang, "library_logo_2x")
+	if url := firstAssetURL(assets, lang, "page_background"); url != "" {
+		res.BackgroundURL = url
+	}
+	if url := firstAssetURL(assets, lang, "page_background_raw"); url != "" {
+		res.BackgroundRawURL = url
+	}
 	return res
+}
+
+func buildAssetViews(items []v2models.GfgGameV2Asset) []v2models.GameV2AssetView {
+	res := make([]v2models.GameV2AssetView, 0, len(items))
+	for _, item := range items {
+		if strings.TrimSpace(item.URL) == "" {
+			continue
+		}
+		res = append(res, v2models.GameV2AssetView{
+			Type:          item.AssetType,
+			Family:        item.AssetFamily,
+			Source:        item.Source,
+			Lang:          item.Lang,
+			Key:           item.MediaKey,
+			Title:         item.Title,
+			URL:           item.URL,
+			ThumbnailURL:  item.ThumbnailURL,
+			Format:        item.Format,
+			Exists:        item.Exists,
+			StatusCode:    item.StatusCode,
+			ContentType:   item.ContentType,
+			ContentLength: item.ContentLength,
+			Extra:         decodeAny(item.Extra),
+			SortOrder:     item.SortOrder,
+			CheckedAt:     item.CheckedAt,
+			CollectedAt:   item.CollectedAt,
+			UpdatedAt:     item.UpdatedAt,
+		})
+	}
+	return res
+}
+
+func firstAssetURL(items []v2models.GfgGameV2Asset, lang string, assetTypes ...string) string {
+	langs := assetLangFallbacks(lang)
+	for _, assetType := range assetTypes {
+		for _, candidateLang := range langs {
+			if url := findAssetURL(items, assetType, candidateLang); url != "" {
+				return url
+			}
+		}
+	}
+	return ""
+}
+
+func assetLangFallbacks(lang string) []string {
+	lang = normalizeLang(lang)
+	langs := []string{lang}
+	switch lang {
+	case "zh":
+		langs = append(langs, "en")
+	case "en":
+		langs = append(langs, "zh")
+	}
+	return append(langs, "")
+}
+
+func findAssetURL(items []v2models.GfgGameV2Asset, assetType string, lang string) string {
+	for _, item := range items {
+		if item.AssetType != assetType || item.Lang != lang || strings.TrimSpace(item.URL) == "" {
+			continue
+		}
+		if item.Exists != nil && !*item.Exists {
+			continue
+		}
+		return item.URL
+	}
+	return ""
 }
 
 func buildRequirements(requirements *v2models.GfgGameV2Requirements) v2models.GameV2RequirementsView {
@@ -1603,82 +1582,6 @@ func getUpdatedAt(aggregate v2models.GameV2Aggregate) time.Time {
 		updatedAt = aggregate.OnlineCount.CollectedAt
 	}
 	return updatedAt
-}
-
-func platformsText(platforms map[string]bool) string {
-	if len(platforms) == 0 {
-		return ""
-	}
-	order := []string{"windows", "mac", "linux"}
-	res := make([]string, 0, len(platforms))
-	for _, key := range order {
-		if platforms[key] {
-			res = append(res, key)
-		}
-	}
-	for key, enabled := range platforms {
-		if !enabled || containsString(res, key) {
-			continue
-		}
-		res = append(res, key)
-	}
-	return strings.Join(res, ", ")
-}
-
-func syncPCRequirements(values map[string]string) v2models.GameV2SyncPCRequirements {
-	return v2models.GameV2SyncPCRequirements{
-		Minimum:     cleanSyncText(firstNonEmptyString(values["minimum"], values["Minimum"], values["最低配置"])),
-		Recommended: cleanSyncText(firstNonEmptyString(values["recommended"], values["Recommended"], values["推荐配置"])),
-	}
-}
-
-func cleanSyncText(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return ""
-	}
-	value = html.UnescapeString(value)
-	value = htmlBreakRE.ReplaceAllString(value, "\n")
-	value = htmlTagRE.ReplaceAllString(value, " ")
-	value = strings.NewReplacer(
-		"[b]", "", "[/b]", "",
-		"[i]", "", "[/i]", "",
-		"[u]", "", "[/u]", "",
-		"[list]", "", "[/list]", "",
-		"[*]", "\n",
-	).Replace(value)
-	lines := strings.Split(value, "\n")
-	for i, line := range lines {
-		lines[i] = strings.TrimSpace(spaceRE.ReplaceAllString(line, " "))
-	}
-	value = strings.Join(lines, "\n")
-	value = newlineRE.ReplaceAllString(value, "\n\n")
-	return strings.TrimSpace(value)
-}
-
-func firstNonEmptyString(values ...string) string {
-	for _, value := range values {
-		if value = strings.TrimSpace(value); value != "" {
-			return value
-		}
-	}
-	return ""
-}
-
-func containsString(values []string, target string) bool {
-	for _, value := range values {
-		if value == target {
-			return true
-		}
-	}
-	return false
-}
-
-func formatSyncTime(value time.Time) string {
-	if value.IsZero() {
-		return ""
-	}
-	return value.Format("2006-01-02 15:04:05")
 }
 
 func gameHomeCacheKey(lang string, region string) string {

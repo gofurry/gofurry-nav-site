@@ -70,7 +70,7 @@ export function useSiteMetadataProbePanel(props: SiteMetadataProbePanelProps) {
     ])
   })
 
-  const lightProbeOrder = ['rdap', 'robots', 'security_txt', 'page_assets', 'port_check', 'waf_canary']
+  const lightProbeOrder = ['rdap', 'robots', 'security_txt', 'llms_txt', 'page_assets', 'port_check', 'waf_canary']
   const lightProbeEntries = computed(() => lightProbeOrder
     .flatMap((protocol) => {
       const envelope = lightProtocols.value[protocol]
@@ -231,6 +231,13 @@ function lightProbeItems(protocol: string, rawPayload: unknown): InfoItem[] {
         { label: 'Contact', value: stringArray(payload.contact).slice(0, 2) },
         { label: 'Expires', value: stringValue(payload.expires) },
       ])
+    case 'llms_txt':
+      return compactItems([
+        { label: 'Exists', value: boolText(payload.exists) },
+        { label: 'Title', value: stringValue(payload.title) },
+        { label: 'Headings', value: numberValue(payload.heading_count) },
+        { label: 'Links', value: numberValue(payload.link_count) },
+      ])
     case 'page_assets': {
       const icon = asRecord(payload.icon)
       const manifest = asRecord(payload.manifest)
@@ -319,6 +326,33 @@ function lightProbeDetailSections(probe: LightProbeEntry): DetailSection[] {
             { label: 'Canonical', value: stringValue(payload.canonical) },
             { label: '响应截断', value: boolText(payload.body_truncated) },
           ]),
+        },
+      ])
+    case 'llms_txt':
+      return compactSections([
+        {
+          title: 'llms.txt',
+          items: compactItems([
+            { label: label('存在', 'Exists'), value: boolText(payload.exists) },
+            { label: label('路径', 'Path'), value: stringValue(payload.path) },
+            { label: label('状态码', 'Status'), value: numberValue(payload.status_code) },
+            { label: 'Content-Type', value: stringValue(payload.content_type) },
+            { label: label('标题', 'Title'), value: stringValue(payload.title) },
+            { label: label('章节数', 'Headings'), value: numberValue(payload.heading_count) },
+            { label: label('链接数', 'Links'), value: numberValue(payload.link_count) },
+            { label: 'Optional', value: boolText(payload.optional_section_present) },
+            { label: label('读取字节', 'Bytes read'), value: bytesText(payload.body_read_bytes) },
+            { label: label('响应截断', 'Truncated'), value: boolText(payload.body_truncated) },
+            { label: 'SHA256', value: stringValue(payload.sha256) },
+          ]),
+        },
+        {
+          title: label('章节', 'Headings'),
+          items: stringArray(payload.headings).map((value, index) => ({ label: `#${index + 1}`, value })),
+        },
+        {
+          title: label('链接样例', 'Link samples'),
+          items: stringArray(payload.links).map((value, index) => ({ label: `#${index + 1}`, value })),
         },
       ])
     case 'page_assets': {
@@ -462,6 +496,7 @@ function protocolName(protocol: string) {
     rdap: 'RDAP',
     robots: 'robots.txt',
     security_txt: 'security.txt',
+    llms_txt: 'llms.txt',
     page_assets: 'Page assets',
     port_check: 'Port check',
     waf_canary: 'WAF canary',

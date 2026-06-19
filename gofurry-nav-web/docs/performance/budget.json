@@ -52,7 +52,7 @@
       "maxLongTaskTotalMs": 2000,
       "maxJsHeapUsedMb": 170
     },
-    "archive-empty": {
+    "steam-zone": {
       "maxDomNodes": 5200,
       "maxJsRequests": 320,
       "maxJsTransferKb": 10500,

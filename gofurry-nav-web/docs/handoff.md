@@ -43,7 +43,6 @@ git status --short
 - 游戏抽奖：`pages/lottery.less`
 - 静态页面：`pages/static.less`
 - 更新公告：`pages/updates.less`
-- 知识库归档：`pages/archive.less`
 - 公共组件：button、card、chip、footer、input、modal、nav、pagination、rating、shell
 
 ## 维护约束

@@ -116,7 +116,7 @@
     "survey": "兽圈调研",
     "about": "关于本站",
     "join": "加入我们",
-    "archive": "兽圈档案"
+    "steamZone": "兽游专区"
   },
   "footer": {
     "sections": {
@@ -392,6 +392,7 @@
     "action": {
       "shortcutFunction": "快捷功能",
       "dailyGame": "每日一游",
+      "steamZone": "Steam 专区",
       "oneClickAddToLibrary": "一键入库",
       "steamOneClickAddRun": "Steam 一键入库 & 运行",
       "inputAppIDInstallFreeGame": "输入AppID, 一键安装对应免费游戏或应用",
@@ -497,29 +498,7 @@
     },
     "tools": {
       "label": "游戏工具入口",
-      "lottery": "去抽奖",
-      "ask": "问问兽游资料",
-      "askTitle": "问问兽游资料",
-      "askDescription": "基于 gofurry 已入库的游戏详情和新闻回答。",
-      "askPlaceholder": "输入你想了解的游戏问题",
-      "askSubmit": "提问",
-      "prompts": {
-        "recent": {
-          "title": "兽游推荐",
-          "description": "按偏好找合适作品",
-          "prompt": "请基于 gofurry 已入库的游戏详情，推荐几款值得尝试的兽游，说明推荐理由、平台或标签，并给出引用来源。"
-        },
-        "similar": {
-          "title": "最近更新",
-          "description": "查看近期动态",
-          "prompt": "请基于 gofurry 已入库的游戏新闻和游戏详情，帮我总结最近有哪些兽游更新值得关注，并给出引用来源。"
-        },
-        "beginner": {
-          "title": "相似作品",
-          "description": "按题材或氛围延伸",
-          "prompt": "我想找几款相似的兽游作品，请基于 gofurry 游戏资料推荐，并说明每款游戏的特点、平台和引用来源。"
-        }
-      }
+      "lottery": "去抽奖"
     },
     "lottery": {
       "home": {
@@ -568,126 +547,30 @@
       "feedback": "反馈",
       "feedbackShort": "反馈",
       "searchPlaceholder": "搜索站点名称或简介...",
-      "noSearchResults": "没有找到匹配站点",
-      "ask": "问问导航资料",
-      "askTitle": "问问导航资料",
-      "askDescription": "基于 gofurry 导航站点、分组和简介帮你找方向。",
-      "askPlaceholder": "输入你想找的网站或类别",
-      "askSubmit": "提问",
-      "prompts": {
-        "discover": {
-          "title": "找兽人游戏网站",
-          "description": "发现游戏资料与社区",
-          "prompt": "请基于 gofurry 导航资料，帮我推荐几个适合发现兽人游戏、兽游资讯或相关社区的网站，并说明各自适合什么用途和引用来源。"
-        },
-        "publish": {
-          "title": "找兽人小说网站",
-          "description": "查找阅读与发布入口",
-          "prompt": "请基于 gofurry 导航资料，帮我推荐几个适合阅读、发布或发现兽人小说的网站，并说明它们的差异和引用来源。"
-        },
-        "alternative": {
-          "title": "找兽人艺术社区",
-          "description": "寻找创作与交流空间",
-          "prompt": "请基于 gofurry 导航资料，帮我推荐几个适合浏览兽人艺术、关注创作者或参与艺术社区的网站，并说明各自特点和引用来源。"
-        }
-      }
+      "noSearchResults": "没有找到匹配站点"
     }
   },
-  "archive": {
-    "actions": {
-      "toggleSidebar": "折叠菜单",
-      "newChat": "新对话",
-      "backHome": "返回首页",
-      "backToTop": "返回顶部",
-      "openGuide": "查看使用文档",
-      "closeGuide": "关闭使用文档",
-      "copy": "复制",
-      "clearSearch": "清空搜索",
-      "copyCitationSnippet": "复制片段",
-      "copyWithSources": "复制回答+引用",
-      "deleteSession": "删除会话",
-      "cancel": "取消",
-      "confirmDelete": "确认删除",
-      "stop": "停止",
-      "send": "发送"
-    },
-    "searchPlaceholder": "搜索会话",
-    "untitledQuestion": "未命名会话",
-    "noMatchedQuestions": "暂无匹配的会话",
-    "session": {
-      "meta": "{count} 轮 · {time}"
-    },
-    "deleteSession": {
-      "eyebrow": "删除会话",
-      "title": "确认删除这个会话？",
-      "description": "“{title}”会从当前浏览器本地历史中删除，此操作不能撤销。"
-    },
-    "askPlaceholder": "问问 gofurry 知识库...",
-    "pagination": {
-      "prev": "上一页",
-      "next": "下一页"
-    },
-    "empty": {
-      "eyebrow": "兽圈档案",
-      "title": "向 gofurry 知识库提问",
-      "description": "输入一个具体问题，系统会从已整理的资料中寻找依据，并把回答和引用片段一起返回。"
-    },
-    "sections": {
-      "question": "问题",
-      "answer": "回答",
-      "citations": "引用"
-    },
-    "status": {
-      "streaming": "生成中",
-      "requestFailed": "请求失败"
-    },
-    "citations": {
-      "count": "{count} 条",
-      "chunk": "Chunk {index}",
-      "untitled": "引用 {index}",
-      "noContent": "该引用没有返回原文片段。",
-      "open": "打开来源"
-    },
-    "copy": {
-      "sourcesHeading": "参考来源"
-    },
-    "queue": {
-      "unknown": "队列未知",
-      "status": "推理 {active}/{max} · 排队 {queued}"
-    },
-    "rag": {
-      "kicker": "透明信息",
-      "title": "当前 RAG 配置",
-      "expand": "展开 RAG 信息",
-      "collapse": "折叠 RAG 信息",
-      "summary": "文档 {documents} · Chunks {chunks} · 记忆 {memory} 轮",
-      "summaryEmpty": "正在等待 RAG 状态",
-      "embeddingModel": "Embedding 模型",
-      "answerModel": "对话模型",
-      "documentTotal": "总文档数",
-      "chunkTotal": "总 Chunks"
-    },
-    "scroll": {
-      "progress": "已阅读 {percent}%"
-    },
-    "errors": {
-      "requestFailedWithStatus": "请求失败：{status}",
-      "serviceUnavailable": "问答服务暂时不可用",
-      "serviceReturnedError": "问答服务返回错误",
-      "questionTooLong": "问题太长了，公开问答最多支持 {limit} 个字符。",
-      "rateLimited": "请求太频繁了，请稍等 {seconds} 秒后再试。",
-      "invalidRequest": "问题格式或参数不符合公开问答限制。"
-    },
-    "guide": {
-      "eyebrow": "使用说明",
-      "title": "gofurry RAG 使用文档",
-      "description": "这里会根据 gofurry 已入库资料进行检索和回答。回答会优先基于引用片段，不适合作为事实之外的自由聊天工具。",
-      "usageTitle": "使用方式",
-      "usageDesc": "输入问题后系统会先检索知识库，再流式生成答案。会话只保存在当前浏览器本地，最多保留 50 个会话，每个会话最多 20 轮。",
-      "boundaryTitle": "知识边界",
-      "boundaryDesc": "如果知识库没有覆盖相关内容，回答可能会提示资料不足。引用里的原文片段是判断答案依据的主要材料。",
-      "noticeTitle": "用户须知",
-      "noticeDesc": "请不要提交隐私、账号、密钥等敏感信息。页面没有用户系统，换浏览器或清理本地数据后历史记录会消失。"
+  "siteGroup": {
+    "backHome": "返回首页"
+  },
+  "steamZone": {
+    "eyebrow": "Steam 兽游情报",
+    "title": "兽游专区",
+    "description": "这里会承接 Steam 兽游专题、官方静态资源、榜单和专题化入口。当前先作为新专区入口上线，后续逐步补齐内容能力。",
+    "backToGames": "返回游戏页",
+    "cards": {
+      "discovery": {
+        "title": "作品发现",
+        "description": "围绕 Steam 兽游数据沉淀更稳定的专题入口。"
+      },
+      "assets": {
+        "title": "官方资源",
+        "description": "后续优先展示来自 Steam 官方资源表的封面、横幅和媒体资产。"
+      },
+      "community": {
+        "title": "社群关联",
+        "description": "把游戏、创作者、社区和相关站点更自然地组织在一起。"
+      }
     }
   }
 }

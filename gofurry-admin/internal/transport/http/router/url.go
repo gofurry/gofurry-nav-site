@@ -97,6 +97,7 @@ func gameRoutes(root fiber.Router) {
 
 	root.Get("/games", gameadmin.GameAPI.ListGames)
 	root.Post("/games", gameadmin.GameAPI.CreateGame)
+	root.Get("/games/steam-asset", gameadmin.GameAPI.ResolveSteamGameAsset)
 	root.Get("/games/:id", gameadmin.GameAPI.GetGame)
 	root.Put("/games/:id", gameadmin.GameAPI.UpdateGame)
 	root.Delete("/games/:id", gameadmin.GameAPI.DeleteGame)

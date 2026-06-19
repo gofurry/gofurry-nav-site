@@ -94,6 +94,12 @@ collector:
         timeout_seconds: 10 # 单个 security.txt 请求超时。
         max_response_bytes: 65536 # 最多读取 64KiB，不保存全文。
         run_on_start: false # 首次补数据可临时 true，完成后改回 false。
+      llms_txt:
+        enabled: false # 读取 /llms.txt，提取标题、章节数、链接数等 AI/SEO 可发现性摘要，不保存全文。
+        interval_hours: 168 # 默认 7 天一次。
+        timeout_seconds: 10 # 单个 llms.txt 请求超时。
+        max_response_bytes: 65536 # 最多读取 64KiB，仅保存结构摘要和 hash。
+        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
       page_assets:
         enabled: false # 基于 HTTP latest 里的 HTML 声明，低频拉取最多 1 个 favicon 和 1 个 manifest。
         interval_hours: 168 # 默认 7 天一次。

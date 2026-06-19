@@ -24,8 +24,11 @@
         <GameSearchResult
             :game-list="gameList"
             :current-page="query.pageNum"
+            :page-size="query.pageSize"
+            :page-direction="pageDirection"
             :total-pages="totalPages"
             :total="total"
+            :loading="isSearching"
             @page-change="onPageChange"
         />
       </section>
@@ -55,16 +58,14 @@ import type {
   SearchPageQueryRequest
 } from '@/types/game'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
-import { useLangStore } from '@/store/langStore'
 import { useThemeStore } from '@/stores/theme'
 import { i18n } from '@/main'
 
 const { t } = i18n.global
 const { locale } = useI18n()
 
-const langStore = useLangStore()
 const themeStore = useThemeStore()
-const lang = ref(langStore.lang)
+const lang = computed<'zh' | 'en'>(() => locale.value === 'en' ? 'en' : 'zh')
 const route = useRoute()
 const router = useRouter()
 const searchPageSeo = computed(() => locale.value === 'en'
@@ -103,6 +104,8 @@ const initialized = ref(false)
 const gameList = ref<SearchPageResponseItem[]>([])
 const total = ref(0)
 const totalPages = ref(1)
+const isSearching = ref(false)
+const pageDirection = ref<1 | -1>(1)
 
 const createDefaultQuery = (): SearchPageQueryRequest => ({
   pageNum: 1,
@@ -277,6 +280,7 @@ const fetchData = async () => {
   const currentToken = ++searchRequestToken
   const pageSize = query.pageSize
   searchRequestController = controller
+  isSearching.value = true
 
   try {
     const res = await searchGameAdvanced(query, lang.value, { signal: controller.signal })
@@ -295,6 +299,10 @@ const fetchData = async () => {
       return
     }
     throw error
+  } finally {
+    if (currentToken === searchRequestToken) {
+      isSearching.value = false
+    }
   }
 }
 
@@ -313,20 +321,21 @@ const syncRouteWithQuery = async () => {
 }
 
 const onPageChange = async (page: number) => {
+  pageDirection.value = page > query.pageNum ? 1 : -1
   query.pageNum = page
   await syncRouteWithQuery()
 }
 
 const onSearch = async () => {
+  pageDirection.value = 1
   query.pageNum = 1
   showFilter.value = false
   await syncRouteWithQuery()
 }
 
 watch(
-    () => langStore.lang,
-    async (val) => {
-      lang.value = val
+    lang,
+    async () => {
       await Promise.all([loadTags(), fetchData()])
     }
 )
@@ -343,6 +352,7 @@ watch(
     }
 
     applyRouteQuery(nextQuery)
+    pageDirection.value = query.pageNum > parsePositiveNumber(previousQuery?.pageNum, 1) ? 1 : -1
     await fetchData()
   },
   { deep: true }

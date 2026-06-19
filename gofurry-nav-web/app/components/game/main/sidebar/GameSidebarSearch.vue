@@ -53,18 +53,16 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { getSearchSimple } from "@/utils/api/game";
 import type { SearchItemModel } from "@/types/game";
-import { useLangStore } from "@/store/langStore";
-import { i18n } from '@/main'
+import { useI18n } from 'vue-i18n'
 
-const { t } = i18n.global
+const { t, locale } = useI18n()
 
 const router = useRouter();
 const localePath = useLocalePath()
-const langStore = useLangStore();
-const lang = ref(langStore.lang);
+const lang = computed<'zh' | 'en'>(() => locale.value === 'en' ? 'en' : 'zh')
 
 const keyword = ref("");
 const results = ref<SearchItemModel[]>([]);
@@ -84,9 +82,8 @@ const isAbortError = (error: unknown) =>
 
 // 监听语言变化
 watch(
-    () => langStore.lang,
-    (val) => {
-      lang.value = val;
+    lang,
+    () => {
       if (keyword.value.trim()) fetchResults(keyword.value);
     }
 );

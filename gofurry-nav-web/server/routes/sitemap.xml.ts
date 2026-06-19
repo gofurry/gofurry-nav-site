@@ -60,6 +60,7 @@ export default defineEventHandler(async (event) => {
   for (const path of [
     '/',
     '/games',
+    '/steam',
     '/updates',
     '/about',
     '/privacy',
@@ -71,7 +72,7 @@ export default defineEventHandler(async (event) => {
 
   const [sites, siteGroups, games] = await Promise.all([
     $fetch<ApiResult<{ items: SiteRecord[] }>>('/api/v2/nav/sites/index').then((res) => res.code === 1 ? res.data.items : []).catch(() => []),
-    $fetch<ApiResult<SiteGroupRecord[]>>('/api/v2/nav/sync/site-groups', {
+    $fetch<ApiResult<SiteGroupRecord[]>>('/api/v2/nav/site-groups', {
       query: { lang: 'zh' }
     }).then((res) => res.code === 1 ? res.data : []).catch(() => []),
     $fetch<ApiResult<GameListPayload>>('/api/v2/game/list', {

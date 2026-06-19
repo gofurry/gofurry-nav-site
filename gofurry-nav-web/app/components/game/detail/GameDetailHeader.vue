@@ -130,7 +130,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { GameBaseInfoResponse, RemarkResponse } from '@/types/game'
-import { gameLibraryCoverSources } from '@/utils/gameAssets'
 
 import starSvg from '@/assets/svgs/star.svg'
 import starHalfSvg from '@/assets/svgs/star-half-alt.svg'
@@ -155,7 +154,10 @@ const shareList = [
   { name: '微博', type: 'weibo', icon: weiboIcon },
 ]
 
-const coverUrls = computed(() => gameLibraryCoverSources(props.game?.appid))
+const coverUrls = computed(() => {
+  const urls = [props.game?.cover].filter(Boolean) as string[]
+  return [...new Set(urls)]
+})
 const currentCoverIndex = ref(0)
 const coverFailed = ref(false)
 const currentCover = computed(() =>

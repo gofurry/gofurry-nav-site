@@ -31,7 +31,6 @@ import GameDetailMain from '@/components/game/detail/GameDetailMain.vue'
 import GameDetailSidebar from '@/components/game/detail/GameDetailSidebar.vue'
 import { getGameBaseInfo, getGameRemark, getRecommendedGame, touchGameView } from '~/services/game'
 import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '~/types/game'
-import { steamLibraryCoverUrl } from '~/utils/gameAssets'
 import { buildGameDetailSeo } from '~/utils/seo'
 
 interface GameDetailPageData {
@@ -79,7 +78,7 @@ const seo = computed(() => buildGameDetailSeo({
   description: gameDetailData.value.gameBaseInfo?.info,
   locale: locale.value,
 }))
-const seoImage = computed(() => steamLibraryCoverUrl(gameDetailData.value.gameBaseInfo?.appid))
+const seoImage = computed(() => gameDetailData.value.gameBaseInfo?.cover || undefined)
 
 useSeoMeta({
   title: () => seo.value.title,

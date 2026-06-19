@@ -39,6 +39,11 @@
         </div>
       </div>
     </div>
+    <div
+      v-else
+      class="game-stats-feature game-stats-feature--placeholder relative z-[1] mt-3 rounded-xl px-3 py-2"
+      aria-hidden="true"
+    />
 
     <div class="game-stats-table relative z-[1] mt-4 overflow-hidden rounded-xl">
       <div class="game-stats-table-head grid grid-cols-[2rem_minmax(0,1fr)_5.2rem] items-center gap-2 px-2 py-2 text-xs font-bold sm:grid-cols-[2.2rem_minmax(0,1fr)_5.4rem_5.4rem_3.4rem]">
@@ -92,6 +97,13 @@
             {{ formatTime(item.collect_time) }}
           </div>
         </article>
+        <article
+          v-for="index in placeholderRows"
+          :key="`placeholder-${index}`"
+          class="game-stats-row game-stats-row--placeholder grid min-h-[3.55rem] grid-cols-[2rem_minmax(0,1fr)_5.2rem] items-center gap-2 px-2 py-2 sm:grid-cols-[2.2rem_minmax(0,1fr)_5.4rem_5.4rem_3.4rem]"
+          :class="(listToShow.length + index - 1) % 2 === 0 ? 'stats-row--warm' : 'stats-row--clear'"
+          aria-hidden="true"
+        />
       </div>
     </div>
   </section>
@@ -114,6 +126,8 @@ const props = withDefaults(defineProps<{
 })
 
 const listToShow = computed(() => props.list.slice(0, 15))
+
+const placeholderRows = computed(() => Math.max(0, 15 - listToShow.value.length))
 
 const topItem = computed(() => props.list[0] || null)
 

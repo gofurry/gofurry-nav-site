@@ -27,6 +27,8 @@ github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/r
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f/go.mod h1:cuUVRXasLTGF7a8hSLbxyZXjz+1KgoB3wDUb6vlszIc=
 github.com/gofurry/steam-go v1.3.2 h1:SxtPWtdk3ji54hIBT6Diwom55laGCifpq/9KXEN4QjE=
 github.com/gofurry/steam-go v1.3.2/go.mod h1:HgAV2Gt1efb3xa9ctri7pQpBkXpyzDFaL68k1is/mWU=
+github.com/gofurry/steam-go v1.3.7 h1:aDW2sVnBnCbHqtRN83snOpM/6R/hn6w1N+vN/iD/4fo=
+github.com/gofurry/steam-go v1.3.7/go.mod h1:FW2CNaCS6XiYjXGJhbHc/YCZyfDZU/G+eFb0oNWf5Jc=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/gorilla/css v1.0.1 h1:ntNaBIghp6JmvWnxbZKANoLyuXTPZ4cAMlo6RyhlbO8=
 github.com/gorilla/css v1.0.1/go.mod h1:BvnYkspnSzMmwRK+b8/xgNPLiIuNZr6vbZBTPQ2A3b0=

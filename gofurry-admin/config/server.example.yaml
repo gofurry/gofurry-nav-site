@@ -85,6 +85,10 @@ external_services:
     admin_token: "CHANGE_ME_LONG_RANDOM_ADMIN_TOKEN" # 与 nav-backend admin.token 保持一致。
     admin_token_header: "X-GoFurry-Admin-Token"
     timeout_seconds: 10
+  steam:
+    proxy: "" # Steam StoreBrowse 请求代理；国内网络建议填写，例如 "http://127.0.0.1:7897"。
+    timeout_seconds: 15
+    rate_limit: 2
 
 log:
   log_max_size: 100

@@ -167,6 +167,7 @@ export interface GameBaseInfoResponse {
     pc_requirements: RequirementsModel
     content_descriptors: unknown
     ratings: unknown
+    media: GameV2MediaView
     online_count: number
     count_collect_time: string
     view_count: number
@@ -264,6 +265,8 @@ export interface RecommendedModel {
     summary: string
     header_url: string
     capsule_url: string
+    library_cover_url: string
+    library_cover_2x_url: string
     score: number
     display_score: number
     rank: number
@@ -426,10 +429,39 @@ export interface GameV2MediaView {
     header_url: string
     capsule_url: string
     capsule_v5_url: string
+    capsule_small_url: string
+    capsule_main_url: string
+    library_cover_url: string
+    library_cover_2x_url: string
+    library_hero_url: string
+    library_logo_url: string
+    library_logo_2x_url: string
     background_url: string
     background_raw_url: string
     screenshots: GameV2Screenshot[]
     movies: GameV2Movie[]
+    assets: GameV2AssetView[]
+}
+
+export interface GameV2AssetView {
+    type: string
+    family: string
+    source: string
+    lang: string
+    key: string
+    title: string
+    url: string
+    thumbnail_url: string
+    format: string
+    exists?: boolean
+    status_code: number
+    content_type: string
+    content_length: number
+    extra?: Record<string, unknown> | unknown
+    sort_order: number
+    checked_at?: string
+    collected_at: string
+    updated_at: string
 }
 
 export interface GameV2Screenshot {

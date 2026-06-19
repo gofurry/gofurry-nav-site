@@ -11,6 +11,7 @@ const (
 	TableNameGfgGameV2LocalizedDetails   = "gfg_game_v2_localized_details"
 	TableNameGfgGameV2Prices             = "gfg_game_v2_prices"
 	TableNameGfgGameV2Media              = "gfg_game_v2_media"
+	TableNameGfgGameV2Assets             = "gfg_game_v2_assets"
 	TableNameGfgGameV2Requirements       = "gfg_game_v2_requirements"
 	TableNameGfgGameV2News               = "gfg_game_v2_news"
 	TableNameGfgGameV2PlayerCounts       = "gfg_game_v2_player_counts"
@@ -90,6 +91,32 @@ type GfgGameV2Media struct {
 }
 
 func (*GfgGameV2Media) TableName() string { return TableNameGfgGameV2Media }
+
+type GfgGameV2Asset struct {
+	ID            int64      `gorm:"column:id;primaryKey" json:"id"`
+	GameID        int64      `gorm:"column:game_id" json:"game_id"`
+	AppID         int64      `gorm:"column:appid" json:"appid"`
+	AssetType     string     `gorm:"column:asset_type" json:"asset_type"`
+	AssetFamily   string     `gorm:"column:asset_family" json:"asset_family"`
+	Source        string     `gorm:"column:source" json:"source"`
+	Lang          string     `gorm:"column:lang" json:"lang"`
+	MediaKey      string     `gorm:"column:media_key" json:"media_key"`
+	Title         string     `gorm:"column:title" json:"title"`
+	URL           string     `gorm:"column:url" json:"url"`
+	ThumbnailURL  string     `gorm:"column:thumbnail_url" json:"thumbnail_url"`
+	Format        string     `gorm:"column:format" json:"format"`
+	Exists        *bool      `gorm:"column:exists" json:"exists"`
+	StatusCode    int        `gorm:"column:status_code" json:"status_code"`
+	ContentType   string     `gorm:"column:content_type" json:"content_type"`
+	ContentLength int64      `gorm:"column:content_length" json:"content_length"`
+	Extra         *string    `gorm:"column:extra" json:"extra"`
+	SortOrder     int        `gorm:"column:sort_order" json:"sort_order"`
+	CheckedAt     *time.Time `gorm:"column:checked_at" json:"checked_at"`
+	CollectedAt   time.Time  `gorm:"column:collected_at" json:"collected_at"`
+	UpdatedAt     time.Time  `gorm:"column:updated_at" json:"updated_at"`
+}
+
+func (*GfgGameV2Asset) TableName() string { return TableNameGfgGameV2Assets }
 
 type GfgGameV2Requirements struct {
 	GameID      int64     `gorm:"column:game_id;primaryKey" json:"game_id"`
@@ -224,6 +251,7 @@ type GameV2Aggregate struct {
 	Localized    *GfgGameV2LocalizedDetails
 	Prices       []GfgGameV2Price
 	Media        []GfgGameV2Media
+	Assets       []GfgGameV2Asset
 	Requirements *GfgGameV2Requirements
 	News         []GfgGameV2News
 	OnlineCount  *GfgGameV2PlayerCount
@@ -353,21 +381,23 @@ type GameV2RecommendationReason struct {
 }
 
 type GameV2SimilarRecommendation struct {
-	ID               string                       `json:"id"`
-	AppID            string                       `json:"appid"`
-	Name             string                       `json:"name"`
-	Summary          string                       `json:"summary"`
-	HeaderURL        string                       `json:"header_url"`
-	CapsuleURL       string                       `json:"capsule_url"`
-	Score            float64                      `json:"score"`
-	DisplayScore     float64                      `json:"display_score"`
-	Rank             int                          `json:"rank"`
-	Reasons          []GameV2RecommendationReason `json:"reasons"`
-	AlgorithmVersion string                       `json:"algorithm_version"`
-	ComputedAt       time.Time                    `json:"computed_at"`
-	Tags             []GameV2Tag                  `json:"tags"`
-	Price            GameV2PriceView              `json:"price"`
-	OnlineCount      GameV2OnlineCount            `json:"online_count"`
+	ID                string                       `json:"id"`
+	AppID             string                       `json:"appid"`
+	Name              string                       `json:"name"`
+	Summary           string                       `json:"summary"`
+	HeaderURL         string                       `json:"header_url"`
+	CapsuleURL        string                       `json:"capsule_url"`
+	LibraryCoverURL   string                       `json:"library_cover_url"`
+	LibraryCover2xURL string                       `json:"library_cover_2x_url"`
+	Score             float64                      `json:"score"`
+	DisplayScore      float64                      `json:"display_score"`
+	Rank              int                          `json:"rank"`
+	Reasons           []GameV2RecommendationReason `json:"reasons"`
+	AlgorithmVersion  string                       `json:"algorithm_version"`
+	ComputedAt        time.Time                    `json:"computed_at"`
+	Tags              []GameV2Tag                  `json:"tags"`
+	Price             GameV2PriceView              `json:"price"`
+	OnlineCount       GameV2OnlineCount            `json:"online_count"`
 }
 
 type GameV2RecommendationFeature struct {
@@ -377,6 +407,8 @@ type GameV2RecommendationFeature struct {
 	Summary           string     `gorm:"column:summary"`
 	HeaderURL         string     `gorm:"column:header_url"`
 	CapsuleURL        string     `gorm:"column:capsule_url"`
+	LibraryCoverURL   string     `gorm:"column:library_cover_url"`
+	LibraryCover2xURL string     `gorm:"column:library_cover_2x_url"`
 	Developers        *string    `gorm:"column:developers"`
 	Publishers        *string    `gorm:"column:publishers"`
 	Platforms         *string    `gorm:"column:platforms"`
@@ -406,6 +438,8 @@ type GameV2RecommendationRow struct {
 	Summary           string     `gorm:"column:summary"`
 	HeaderURL         string     `gorm:"column:header_url"`
 	CapsuleURL        string     `gorm:"column:capsule_url"`
+	LibraryCoverURL   string     `gorm:"column:library_cover_url"`
+	LibraryCover2xURL string     `gorm:"column:library_cover_2x_url"`
 	Tags              *string    `gorm:"column:tags"`
 	PriceRegion       string     `gorm:"column:price_region"`
 	PriceAvailable    bool       `gorm:"column:price_available"`
@@ -518,73 +552,6 @@ type GameV2DetailRequest struct {
 	NewsLimit int
 }
 
-type GameV2SyncListQuery struct {
-	Lang         string
-	Region       string
-	Limit        int
-	Offset       int
-	UpdatedSince time.Time
-}
-
-type GameV2SyncNewsQuery struct {
-	Lang         string
-	Limit        int
-	Offset       int
-	UpdatedSince time.Time
-}
-
-type GameV2SyncGameSummary struct {
-	ID          string    `json:"id"`
-	AppID       string    `json:"appid"`
-	Name        string    `json:"name"`
-	Info        string    `json:"info"`
-	ReleaseDate string    `json:"release_date"`
-	Developers  []string  `json:"developers"`
-	Publishers  []string  `json:"publishers"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-type GameV2SyncGameDetail struct {
-	ID                  string                   `json:"id"`
-	AppID               string                   `json:"appid"`
-	Name                string                   `json:"name"`
-	Info                string                   `json:"info"`
-	Resources           []cm.KvModel             `json:"resources"`
-	Groups              []cm.KvModel             `json:"groups"`
-	ReleaseDate         string                   `json:"release_date"`
-	Developers          []string                 `json:"developers"`
-	Publishers          []string                 `json:"publishers"`
-	Links               []cm.KvModel             `json:"links"`
-	Platform            string                   `json:"platform"`
-	Tags                []GameV2Tag              `json:"tags"`
-	SupportedLanguages  string                   `json:"supported_languages"`
-	Website             string                   `json:"website"`
-	DetailedDescription string                   `json:"detailed_description"`
-	AboutTheGame        string                   `json:"about_the_game"`
-	PcRequirements      GameV2SyncPCRequirements `json:"pc_requirements"`
-	UpdatedAt           time.Time                `json:"updated_at"`
-}
-
-type GameV2SyncPCRequirements struct {
-	Minimum     string `json:"minimum"`
-	Recommended string `json:"recommended"`
-}
-
-type GameV2SyncNewsItem struct {
-	ID          string    `json:"id"`
-	GameID      string    `json:"game_id"`
-	AppID       string    `json:"appid"`
-	Name        string    `json:"name"`
-	PostTime    string    `json:"post_time"`
-	Headline    string    `json:"headline"`
-	Author      string    `json:"author"`
-	Content     string    `json:"content"`
-	URL         string    `json:"url"`
-	Lang        string    `json:"lang"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	PublishedAt time.Time `json:"published_at"`
-}
-
 type GameV2ListItem struct {
 	ID           string            `json:"id"`
 	AppID        string            `json:"appid"`
@@ -681,13 +648,42 @@ type GameV2PriceView struct {
 }
 
 type GameV2MediaView struct {
-	HeaderURL        string             `json:"header_url"`
-	CapsuleURL       string             `json:"capsule_url"`
-	CapsuleV5URL     string             `json:"capsule_v5_url"`
-	BackgroundURL    string             `json:"background_url"`
-	BackgroundRawURL string             `json:"background_raw_url"`
-	Screenshots      []GameV2Screenshot `json:"screenshots"`
-	Movies           []GameV2Movie      `json:"movies"`
+	HeaderURL         string             `json:"header_url"`
+	CapsuleURL        string             `json:"capsule_url"`
+	CapsuleV5URL      string             `json:"capsule_v5_url"`
+	CapsuleSmallURL   string             `json:"capsule_small_url"`
+	CapsuleMainURL    string             `json:"capsule_main_url"`
+	LibraryCoverURL   string             `json:"library_cover_url"`
+	LibraryCover2xURL string             `json:"library_cover_2x_url"`
+	LibraryHeroURL    string             `json:"library_hero_url"`
+	LibraryLogoURL    string             `json:"library_logo_url"`
+	LibraryLogo2xURL  string             `json:"library_logo_2x_url"`
+	BackgroundURL     string             `json:"background_url"`
+	BackgroundRawURL  string             `json:"background_raw_url"`
+	Screenshots       []GameV2Screenshot `json:"screenshots"`
+	Movies            []GameV2Movie      `json:"movies"`
+	Assets            []GameV2AssetView  `json:"assets"`
+}
+
+type GameV2AssetView struct {
+	Type          string     `json:"type"`
+	Family        string     `json:"family"`
+	Source        string     `json:"source"`
+	Lang          string     `json:"lang"`
+	Key           string     `json:"key"`
+	Title         string     `json:"title"`
+	URL           string     `json:"url"`
+	ThumbnailURL  string     `json:"thumbnail_url"`
+	Format        string     `json:"format"`
+	Exists        *bool      `json:"exists,omitempty"`
+	StatusCode    int        `json:"status_code,omitempty"`
+	ContentType   string     `json:"content_type,omitempty"`
+	ContentLength int64      `json:"content_length,omitempty"`
+	Extra         any        `json:"extra,omitempty"`
+	SortOrder     int        `json:"sort_order"`
+	CheckedAt     *time.Time `json:"checked_at,omitempty"`
+	CollectedAt   time.Time  `json:"collected_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 type GameV2Screenshot struct {

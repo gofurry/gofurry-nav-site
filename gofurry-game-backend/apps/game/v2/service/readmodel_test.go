@@ -504,7 +504,7 @@ func TestGetSimilarRecommendationsComputesAndSavesHybridScore(t *testing.T) {
 	reader := &fakeDetailReader{
 		features: []v2models.GameV2RecommendationFeature{
 			{GameID: 1, AppID: 1001, Name: "Source", Summary: "furry rpg", Tags: &tagsA, Developers: &developersA, Platforms: &platforms, PrimaryTagID: 1001, PriceRegion: "CN", PriceAvailable: true, FinalAmount: 1000, OnlineCount: 100},
-			{GameID: 2, AppID: 1002, Name: "Strong Match", Summary: "furry rpg", Tags: &tagsB, Developers: &developersB, Platforms: &platforms, PrimaryTagID: 1001, PriceRegion: "CN", PriceAvailable: true, FinalAmount: 1200, OnlineCount: 90},
+			{GameID: 2, AppID: 1002, Name: "Strong Match", Summary: "furry rpg", Tags: &tagsB, Developers: &developersB, Platforms: &platforms, PrimaryTagID: 1001, LibraryCoverURL: "library.jpg", LibraryCover2xURL: "library_2x.jpg", PriceRegion: "CN", PriceAvailable: true, FinalAmount: 1200, OnlineCount: 90},
 			{GameID: 3, AppID: 1003, Name: "Weak Match", Summary: "space puzzle", Tags: &tagsC, Developers: &developersC, Platforms: &platforms, PriceRegion: "CN", PriceAvailable: true, FinalAmount: 8000, OnlineCount: 3},
 		},
 	}
@@ -523,6 +523,9 @@ func TestGetSimilarRecommendationsComputesAndSavesHybridScore(t *testing.T) {
 	}
 	if res[0].ID != "2" {
 		t.Fatalf("expected strong tag match first, got %s", res[0].ID)
+	}
+	if res[0].LibraryCoverURL != "library.jpg" || res[0].LibraryCover2xURL != "library_2x.jpg" {
+		t.Fatalf("expected library covers to be carried through, got %#v", res[0])
 	}
 	if len(res[0].Reasons) == 0 || res[0].Reasons[0].Type != "tag" {
 		t.Fatalf("expected tag reason first, got %#v", res[0].Reasons)

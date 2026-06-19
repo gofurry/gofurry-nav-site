@@ -1,6 +1,6 @@
 # GoFurry Nav Web 性能测量与回归守卫
 
-这套脚本用于样式系统维护回归。目标是让前端性能与样式调整有可重复的本地验证方式，防止首页、知识库页、游戏页和游戏搜索页重新误加载重型依赖，也为亮暗色截图检查留下固定入口。
+这套脚本用于样式系统维护回归。目标是让前端性能与样式调整有可重复的本地验证方式，防止首页、兽游专区、游戏页和游戏搜索页重新误加载重型依赖，也为亮暗色截图检查留下固定入口。
 
 ## 使用方式
 
@@ -16,7 +16,7 @@ npm run dev
 npm run perf:measure -- --base-url http://localhost:3000
 ```
 
-正式回归守卫建议使用构建后的 preview，避免开发模式 chunk 让 `/archive` 等客户端页面产生不稳定的 JS 请求数：
+正式回归守卫建议使用构建后的 preview，避免开发模式 chunk 让客户端页面产生不稳定的 JS 请求数：
 
 ```bash
 npm run build
@@ -31,7 +31,7 @@ npm run visual:guard -- --base-url http://localhost:3001
 - `/` 首页内容区 reveal 后
 - `/updates`
 - `/about`
-- `/archive`
+- `/steam`
 - `/games`
 - `/games/search`
 - `/sites/1`
@@ -62,7 +62,7 @@ npm run perf:guard -- --base-url http://localhost:3001
 - Long Task 数量和总耗时
 - JS Heap
 - 首页首屏是否误加载 `md-editor-v3`、`echarts`、`hls.js`
-- `/archive` 空页是否误加载 `md-editor-v3`
+- `/steam` 是否误加载 `md-editor-v3`
 - `/games` 首屏是否误加载 `hls.js`
 - `/games/search` 是否误加载 `hls.js`
 
@@ -88,14 +88,14 @@ npm run visual:guard -- --base-url http://localhost:3001
 - `/en/games/search` 英文亮色、英文暗色，桌面 `1440x900` 与移动 `390x844`
 - `/about`、`/en/about` 亮色、暗色，桌面 `1440x900` 与移动 `390x844`
 - `/updates`、`/en/updates` 亮色、暗色，桌面 `1440x900` 与移动 `390x844`
-- `/archive` 空态、说明弹窗、种子会话/引用/错误态，亮色、暗色，桌面 `1440x900` 与移动 `390x844`
+- `/steam` 兽游专区，亮色、暗色，桌面 `1440x900` 与移动 `390x844`
 - `/terms`、`/privacy`、`/en/terms`、`/en/privacy` 亮色、暗色，移动 `390x844`
 
 视觉守卫会做这些硬检查：
 
 - 截图主题必须与 `html.dark` 状态一致。
-- 页面关键容器必须存在，例如 `.nav-home-page`、`.nav-header`、`.games-page`、`.game-detail-page`、`.lottery-page`、`.games-search-page`、`.search-result-grid`、`.gf-pagination`、`.gf-static-page`、`.updates-summary-shell`、`.archive-page`。
-- 不允许出现旧暗色入口：`games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`、`about-page--dark`、`legal-page--dark`、`updates-page--dark`、`archive-page--dark`、`lottery-page--dark`。
+- 页面关键容器必须存在，例如 `.nav-home-page`、`.nav-header`、`.games-page`、`.game-detail-page`、`.lottery-page`、`.games-search-page`、`.search-result-grid`、`.gf-pagination`、`.gf-static-page`、`.updates-summary-shell`、`.steam-zone-page`。
+- 不允许出现旧暗色入口：`games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`、`about-page--dark`、`legal-page--dark`、`updates-page--dark`、`lottery-page--dark`。
 - 截图前会做源码静态扫描，拦截旧暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 和已迁移游戏详情/抽奖页复杂颜色类。
 - 桌面和移动端不能出现明显横向溢出。
 
@@ -112,7 +112,7 @@ npm run visual:guard -- --base-url http://localhost:3001
 - `/games/search`：筛选面板、结果卡片、分页和日期选择器在亮暗色下层级清晰。
 - `/en/games/search`：英文文案不挤压卡片、按钮、分页和筛选 chip。
 - `/about`、`/updates`：静态面板、summary、状态文案和时间线在亮暗色下层级稳定。
-- `/archive`：空态、说明弹窗、历史会话、Markdown 答案、citation 展开和错误提示在亮暗色下保持可读。
+- `/steam`：专区标题、说明、功能卡片和返回游戏页入口在亮暗色下保持可读。
 - `/terms`、`/privacy`：移动端长文案不造成横向溢出。
 - 移动端：无横向滚动，卡片为单列或自然堆叠，固定/浮动按钮不遮挡主要内容。
 
@@ -131,7 +131,7 @@ npm run perf:baseline -- --base-url http://localhost:3000
 如果任务管理器里仍然看到 GPU 占用异常，可以生成 Chrome trace：
 
 ```bash
-npm run perf:trace -- --base-url http://localhost:3000 --path /archive --wait 8000
+npm run perf:trace -- --base-url http://localhost:3000 --path /steam --wait 8000
 ```
 
 首页需要 reveal 后观察时：

@@ -9,7 +9,6 @@ on:
       - 'gofurry-nav-backend/**'
       - 'gofurry-nav-collector/**'
       - 'gofurry-nav-frontend/**'
-      - 'gofurry-rag/**'
       - 'ops/gofurry-ops-agent/**'
       - 'ops/gofurry-ops-center/**'
       - '.github/workflows/checks.yml'
@@ -21,7 +20,6 @@ on:
       - 'gofurry-nav-backend/**'
       - 'gofurry-nav-collector/**'
       - 'gofurry-nav-frontend/**'
-      - 'gofurry-rag/**'
       - 'ops/gofurry-ops-agent/**'
       - 'ops/gofurry-ops-center/**'
       - '.github/workflows/checks.yml'
@@ -36,7 +34,6 @@ jobs:
       gofurry_nav_backend: ${{ steps.detect.outputs.gofurry_nav_backend }}
       gofurry_nav_collector: ${{ steps.detect.outputs.gofurry_nav_collector }}
       gofurry_nav_frontend: ${{ steps.detect.outputs.gofurry_nav_frontend }}
-      gofurry_rag: ${{ steps.detect.outputs.gofurry_rag }}
       gofurry_ops_agent: ${{ steps.detect.outputs.gofurry_ops_agent }}
       gofurry_ops_center: ${{ steps.detect.outputs.gofurry_ops_center }}
     steps:
@@ -81,7 +78,6 @@ jobs:
           set_output "gofurry_nav_backend" '^gofurry-nav-backend/'
           set_output "gofurry_nav_collector" '^gofurry-nav-collector/'
           set_output "gofurry_nav_frontend" '^gofurry-nav-frontend/'
-          set_output "gofurry_rag" '^gofurry-rag/'
           set_output "gofurry_ops_agent" '^ops/gofurry-ops-agent/'
           set_output "gofurry_ops_center" '^ops/gofurry-ops-center/'
 
@@ -124,47 +120,6 @@ jobs:
 
       - name: Go test
         working-directory: gofurry-admin
-        run: go test ./...
-
-  gofurry-rag:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.gofurry_rag == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: gofurry-rag/go.mod
-          cache-dependency-path: gofurry-rag/go.sum
-
-      - name: Check gofmt
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd gofurry-rag
-          files="$(gofmt -l .)"
-          if [[ -n "${files}" ]]; then
-            echo "${files}"
-            exit 1
-          fi
-
-      - name: Build rag console
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd gofurry-rag/web
-          npm ci
-          npm run build
-
-      - name: Go vet
-        working-directory: gofurry-rag
-        run: go vet ./...
-
-      - name: Go test
-        working-directory: gofurry-rag
         run: go test ./...
 
   gofurry-ops-agent:

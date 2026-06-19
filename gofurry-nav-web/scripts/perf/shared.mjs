@@ -42,9 +42,9 @@ export const scenarios = [
     critical: true
   },
   {
-    id: 'archive-empty',
-    label: '知识库空页',
-    path: '/archive',
+    id: 'steam-zone',
+    label: '兽游专区',
+    path: '/steam',
     critical: true,
     blockedHeavyDependencies: ['md-editor-v3']
   },

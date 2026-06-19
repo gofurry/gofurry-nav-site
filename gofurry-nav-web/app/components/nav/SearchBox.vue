@@ -107,24 +107,11 @@ import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
 import { getSearchSuggestion } from '@/services/nav'
 import type { NavSearchSuggestionEngine } from '@/types/nav'
 import { useI18n } from 'vue-i18n'
-import { useLangStore } from '@/store/langStore'
 import { setNavPageRevealLock } from '@/utils/navPageReveal'
 
 const { t, locale } = useI18n()
-const langStore = useLangStore()
-const searchActionLabel = computed(() => locale.value === 'en' ? 'Search GoFurry resources' : '搜索 GoFurry 资源')
-
-// 同步语言切换
-watch(
-    () => langStore.lang,
-    async (newLang) => {
-      locale.value = newLang
-      await nextTick()
-      // 切换语言后重新设置默认选中项
-      resetSelection()
-    },
-    { immediate: true }
-)
+const currentLang = computed(() => locale.value === 'en' ? 'en' : 'zh')
+const searchActionLabel = computed(() => currentLang.value === 'en' ? 'Search GoFurry resources' : '搜索 GoFurry 资源')
 
 // 搜索类别
 const categories = computed(() => [
@@ -172,7 +159,7 @@ const platforms = computed<Record<string, Platform[]>>(() => ({
     { name: t('searchBox.platformName.twitter'), type: 'site', url: 'https://x.com/search?q={kw}&src=typed_query' },
   ],
   [t('searchBox.platformCate.furry')]: [
-    { name: t('searchBox.platformName.wikifur'), type: 'site', url: `https://${langStore.lang === 'zh' ? 'zh' : 'en'}.wikifur.com/wiki/{kw}` },
+    { name: t('searchBox.platformName.wikifur'), type: 'site', url: `https://${currentLang.value}.wikifur.com/wiki/{kw}` },
     { name: t('searchBox.platformName.yiffParty'), type: 'site', url: 'https://yiff-party.com/search/?tags={kw}' },
     { name: t('searchBox.platformName.furaffinity'), type: 'site', url: 'https://www.furaffinity.net/search/?q={kw}' },
     { name: t('searchBox.platformName.e621'), type: 'site', url: 'https://e621.net/posts?tags={kw}' },

@@ -58,7 +58,7 @@ Token 分三层：
 
 - 全站 token：`--gf-*`，定义基础背景、文字、边框、阴影、品牌色和状态色。
 - 公共组件 token：`--gf-button-*`、`--gf-card-*`、`--gf-modal-*` 等，只服务对应 `gf-*` 类。
-- 页面 token：`--games-*`、`--games-search-*`、`--updates-*`、`--archive-*`、`--about-*`、`--legal-*` 等，只在对应页面根类下声明。
+- 页面 token：`--games-*`、`--games-search-*`、`--updates-*`、`--about-*`、`--legal-*` 等，只在对应页面根类下声明。
 
 公共组件 token 可以引用全站 token；页面 token 可以引用全站 token 和少量公共组件 token。公共 `gf-*` 类不能引用页面 token。
 
@@ -89,7 +89,7 @@ Token 分三层：
 .game-search-filter-panel {}
 .lottery-page {}
 .updates-page {}
-.archive-page {}
+.steam-zone-page {}
 .gf-static-page {}
 ```
 
@@ -113,7 +113,6 @@ Token 分三层：
 | 评分 | `RatingStar.vue` | `components/rating.less` | 星级和评分文字走 `.gf-rating`，不再由页面局部覆盖修暗色。 |
 | 静态页与更新页 | `about.vue`、`terms.vue`、`privacy.vue`、`updates.vue`、`components/updates/*` | `pages/static.less`、`pages/updates.less` | `.gf-static-page` 承接静态页共享结构，updates summary、状态、年份分组和时间线条目全部由页面 Less token 控制。 |
 | 首页导航 | `NavHomePage.vue`、`NavHeader.vue`、`SearchBox.vue`、`NavQuickAccess.vue`、`NavContent.vue`、`SitePopover.vue`、`GroupPopover.vue`、`NavToolDock.vue`、`NavSpotlightPanels.vue` | `pages/nav.less` | 首页根类为 `.nav-home-page`，搜索、快捷入口、内容区、站点卡片、popover、工具栏和 spotlight 复杂视觉统一由页面 token 与 `html.dark` 控制。 |
-| 知识库归档页 | `app/pages/archive.vue` | `pages/archive.less` | 根类为 `.archive-page`，session sidebar、message list、Markdown preview、citation、输入区和弹窗全部限制在页面 Less 边界内。 |
 
 ## 维护检查项
 
@@ -134,7 +133,6 @@ Token 分三层：
 | 文件 | 保留项 | 原因 | 后续处理 |
 | --- | --- | --- | --- |
 | `components/common/GoFurryGridBackground.vue` | `:global(html.dark ...)` | 通用背景组件需要跟随全站 `html.dark`，并通过组件根类限制影响范围。 | 保留。 |
-| `components/common/RagPromptPanel.vue` | `:global(html.dark ...)` | RAG 提示面板是跨页面轻量组件，暗色入口已统一为 `html.dark`。 | 保留。 |
 | `components/site/*` | `:global(html.dark ...)` | 站点详情观测面板仍处于独立页面迁移之外，本阶段先统一暗色入口，不再保留 `.dark` 简写。 | 后续若迁移站点详情页，再沉淀到页面 Less。 |
 | `components/site/SiteDetailPage.vue` | `:deep(...)` | 站点详情页需要包裹子面板生成的 Tailwind 表面，当前只能通过父级边界局部覆盖。 | 保留登记，禁止扩散到其他页面。 |
 | `components/site/SitePerformancePanel.vue` | `:deep(...)` | 性能面板包装共享 `SitePerformance` 子组件，局部覆盖用于约束子组件布局和材质。 | 保留登记，禁止扩散到其他页面。 |
@@ -155,7 +153,7 @@ Token 分三层：
 - `/en/games/search`：英文亮色、英文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/about`、`/en/about`：亮色、暗色、桌面 `1440x900`、移动 `390x844`。
 - `/updates`、`/en/updates`：亮色、暗色、桌面 `1440x900`、移动 `390x844`。
-- `/archive`：空态、说明弹窗、种子会话/引用/错误态，亮色、暗色、桌面 `1440x900`、移动 `390x844`。
+- `/steam`：兽游专区，亮色、暗色、桌面 `1440x900`、移动 `390x844`。
 - `/terms`、`/privacy`、`/en/terms`、`/en/privacy`：亮色、暗色、移动 `390x844`。
 
 自动截图入口：

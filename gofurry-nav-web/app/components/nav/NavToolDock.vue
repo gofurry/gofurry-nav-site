@@ -45,16 +45,6 @@
         </Transition>
       </section>
 
-      <RagPromptPanel
-        v-else-if="activePanel === 'ask'"
-        key="ask"
-        :title="t('nav.tools.askTitle')"
-        :description="t('nav.tools.askDescription')"
-        :placeholder="t('nav.tools.askPlaceholder')"
-        :submit-label="t('nav.tools.askSubmit')"
-        :templates="navPromptTemplates"
-        @ask="openArchivePrompt"
-      />
     </Transition>
 
     <nav class="nav-tool-rail" :aria-label="t('nav.tools.label')">
@@ -100,28 +90,17 @@ import { recordRecentSite, toExternalUrl } from '@/utils/recentSites'
 import { useThemeStore } from '@/stores/theme'
 import { getNavSiteDirectory } from '~/services/nav'
 import { readDisplayMode, subscribeModeChange, type DisplayMode } from '@/utils/modeStorage'
-import RagPromptPanel from '@/components/common/RagPromptPanel.vue'
-import askIconDark from '@/assets/svgs/ai-duotone-dark.svg'
-import askIconLight from '@/assets/svgs/ai-duotone.svg'
 import feedbackIconDark from '@/assets/svgs/ai-note-alt-1-duotone-dark.svg'
 import feedbackIconLight from '@/assets/svgs/ai-note-alt-1-duotone.svg'
 import searchIconDark from '@/assets/svgs/search-white.svg'
 import searchIconLight from '@/assets/svgs/search.svg'
 
-type RagPromptTemplate = {
-  id: string
-  title: string
-  description: string
-  prompt: string
-}
-
-const router = useRouter()
 const { t, locale } = useI18n()
 const themeStore = useThemeStore()
 const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
 const defaultLogo = 'defaultLogo.svg'
 
-const activePanel = ref<'search' | 'ask' | null>(null)
+const activePanel = ref<'search' | null>(null)
 const keyword = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const isDarkTheme = computed(() => themeStore.theme === 'dark')
@@ -129,7 +108,6 @@ const displayMode = ref<DisplayMode>('sfw')
 const directoryItems = ref<Site[]>([])
 const directoryLoaded = ref(false)
 let stopModeSubscription: (() => void) | null = null
-const askIconSrc = computed(() => isDarkTheme.value ? askIconDark : askIconLight)
 const feedbackIconSrc = computed(() => isDarkTheme.value ? feedbackIconDark : feedbackIconLight)
 const searchIconSrc = computed(() => isDarkTheme.value ? searchIconDark : searchIconLight)
 
@@ -144,27 +122,6 @@ const results = computed(() => {
     .slice(0, 8)
 })
 
-const navPromptTemplates = computed<RagPromptTemplate[]>(() => [
-  {
-    id: 'discover',
-    title: t('nav.tools.prompts.discover.title'),
-    description: t('nav.tools.prompts.discover.description'),
-    prompt: t('nav.tools.prompts.discover.prompt'),
-  },
-  {
-    id: 'publish',
-    title: t('nav.tools.prompts.publish.title'),
-    description: t('nav.tools.prompts.publish.description'),
-    prompt: t('nav.tools.prompts.publish.prompt'),
-  },
-  {
-    id: 'alternative',
-    title: t('nav.tools.prompts.alternative.title'),
-    description: t('nav.tools.prompts.alternative.description'),
-    prompt: t('nav.tools.prompts.alternative.prompt'),
-  },
-])
-
 const tools = computed(() => [
   {
     key: 'search',
@@ -174,16 +131,7 @@ const tools = computed(() => [
     action: () => {
       activePanel.value = activePanel.value === 'search' ? null : 'search'
     },
-  },
-  {
-    key: 'ask',
-    label: t('nav.tools.ask'),
-    panel: 'ask' as const,
-    icon: askIconSrc.value,
-    action: () => {
-      activePanel.value = activePanel.value === 'ask' ? null : 'ask'
-    },
-  },
+  }
 ])
 
 watch(activePanel, async (panel) => {
@@ -279,17 +227,6 @@ function openSite(item: Site) {
   })
   window.open(url, '_blank')
   closePanel()
-}
-
-function openArchivePrompt(prompt: string) {
-  closePanel()
-  router.push({
-    path: '/archive',
-    query: {
-      q: prompt,
-      scene: 'nav',
-    },
-  })
 }
 
 function handleKeydown(event: KeyboardEvent) {

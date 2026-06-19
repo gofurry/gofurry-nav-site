@@ -66,7 +66,7 @@
               :key="option.value"
               type="button"
               class="gf-nav__icon-button flex h-8 w-8 items-center justify-center rounded-lg"
-              :class="langStore.lang === option.value
+              :class="currentLang === option.value
                 ? 'gf-nav__icon-button--active'
                 : ''"
               @click.stop="switchLang(option.value)"
@@ -91,7 +91,7 @@
             :aria-label="t('navbar.mode')"
             @click.stop="showModeModal = true"
         >
-          <img :src="gear" class="h-4 w-4" alt="" />
+          <img :src="gear" class="gf-nav__settings-icon h-4 w-4" alt="" />
         </button>
 
         <button
@@ -149,7 +149,7 @@
                 @click="openModeModalFromMobile"
             >
               <span class="flex items-center gap-2">
-                <img :src="gear" class="h-4 w-4" alt="" />
+                <img :src="gear" class="gf-nav__settings-icon h-4 w-4" alt="" />
                 {{ t('navbar.mode') }}
               </span>
               <span class="gf-nav__mobile-action-value">{{ mode || '--' }}</span>
@@ -161,7 +161,7 @@
                   :key="option.value"
                   type="button"
                   class="gf-nav__mobile-language flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm"
-                  :class="langStore.lang === option.value
+                  :class="currentLang === option.value
                     ? 'gf-nav__mobile-language--active'
                     : ''"
                   @click="switchLang(option.value)"
@@ -192,14 +192,14 @@ import { useI18n } from 'vue-i18n'
 import cnFlag from '@/assets/flags/cn.svg'
 import usFlag from '@/assets/flags/us.svg'
 import logo from '@/assets/svgs/logo-mini.svg'
-import gear from '@/assets/svgs/gear.svg'
+import gear from '@/assets/svgs/mobile-settings.svg'
 import githubLightIcon from '@/assets/svgs/logo-github-light.svg'
 import moonIcon from '@/assets/svgs/moon-light.svg'
 import sunIcon from '@/assets/svgs/sun.svg'
 import ModeSettingModal from '@/components/common/ModeSettingModal.vue'
 import { readMode, subscribeModeChange, writeMode } from '@/utils/modeStorage'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const localePath = useLocalePath()
@@ -214,6 +214,7 @@ const showModeModal = ref(false)
 const mobileMenuOpen = ref(false)
 const mode = ref('')
 let stopModeSubscription: (() => void) | null = null
+const currentLang = computed<'zh' | 'en'>(() => locale.value === 'en' ? 'en' : 'zh')
 
 type NavLink = {
   label: string
@@ -223,15 +224,15 @@ type NavLink = {
   external?: boolean
 }
 
-const archiveLink = computed<NavLink>(() => (
-  { label: t('sidebar.archive'), to: localePath('/archive'), activePath: '/archive' }
+const steamZoneLink = computed<NavLink>(() => (
+  { label: t('sidebar.steamZone'), to: localePath('/steam'), activePath: '/steam' }
 ))
 
 const navLinks = computed<NavLink[]>(() => [
   { label: t('sidebar.nav'), to: localePath('/'), activePath: '/' },
   { label: t('sidebar.games'), to: localePath('/games'), activePath: '/games' },
-  archiveLink.value,
-  { label: langStore.lang === 'zh' ? '深度兽研' : 'DeepFurry', href: 'https://www.deepfurry.com', external: true },
+  steamZoneLink.value,
+  { label: currentLang.value === 'zh' ? '深度兽研' : 'DeepFurry', href: 'https://www.deepfurry.com', external: true },
 ])
 
 const languageOptions = [
@@ -241,7 +242,7 @@ const languageOptions = [
 const themeIconSrc = computed(() => themeStore.theme === 'light' ? sunIcon : moonIcon)
 const githubIconSrc = githubLightIcon
 const themeToggleLabel = computed(() => (
-  langStore.lang === 'zh' ? '切换明暗主题图标' : 'Toggle theme icon'
+  currentLang.value === 'zh' ? '切换明暗主题图标' : 'Toggle theme icon'
 ))
 
 const normalizeRoutePath = (path: string) =>

@@ -151,6 +151,7 @@ const props = defineProps<{
 
 const copied = ref(false)
 const showDomainCard = ref(false)
+const localePath = useLocalePath()
 let domainCardCloseTimer: ReturnType<typeof setTimeout> | null = null
 
 function copyToClipboard(text: string) {
@@ -191,7 +192,7 @@ function scheduleCloseDomainCard() {
 }
 
 function domainLink(domain: string) {
-  return `/site/${encodeURIComponent(String(props.siteId))}/${encodeURIComponent(domain)}`
+  return localePath(`/site/${encodeURIComponent(String(props.siteId))}/${encodeURIComponent(domain)}`)
 }
 
 function logoUrl(icon: string) {

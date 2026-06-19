@@ -135,6 +135,7 @@ function protocolName(protocol: string) {
     rdap: 'RDAP',
     robots: 'robots.txt',
     security_txt: 'security.txt',
+    llms_txt: 'llms.txt',
     page_assets: 'Page assets',
     port_check: 'Port check',
     waf_canary: 'WAF canary',

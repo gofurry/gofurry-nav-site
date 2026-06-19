@@ -179,9 +179,45 @@
       </div>
     </section>
 
-    <section v-if="ratingItems.length" class="space-y-3">
+    <section v-if="ratingCards.length || ratingItems.length" class="space-y-3">
       <h4 class="game-detail-subtitle font-bold">{{ t("game.detail.ratings") }}</h4>
-      <div class="space-y-2">
+      <div v-if="ratingCards.length" class="game-detail-rating-grid">
+        <article
+          v-for="card in ratingCards"
+          :key="card.key"
+          class="game-detail-rating-card"
+        >
+          <div class="game-detail-rating-card__header">
+            <span>{{ ratingText.board }}</span>
+            <strong>{{ card.board || ratingText.unknownBoard }}</strong>
+          </div>
+
+          <div class="game-detail-rating-card__body">
+            <div v-if="card.rating" class="game-detail-rating-metric">
+              <span>{{ ratingText.rating }}</span>
+              <strong>{{ card.rating }}</strong>
+            </div>
+
+            <div v-if="card.requiredAge" class="game-detail-rating-metric">
+              <span>{{ ratingText.requiredAge }}</span>
+              <strong>{{ card.requiredAge }}</strong>
+            </div>
+          </div>
+
+          <div v-if="card.extra.length" class="game-detail-rating-extra">
+            <div
+              v-for="extra in card.extra"
+              :key="extra.key"
+              class="game-detail-rating-extra__item"
+            >
+              <span>{{ extra.label }}</span>
+              <strong>{{ extra.value }}</strong>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div v-else class="space-y-2">
         <div
           v-for="item in ratingItems"
           :key="item.key"
@@ -231,6 +267,14 @@ interface FlatMetaItem {
   value: string
 }
 
+interface RatingCard {
+  key: string
+  board: string
+  rating: string
+  requiredAge: string
+  extra: FlatMetaItem[]
+}
+
 const countryMap = computed<Record<string, string>>(() => ({
   US: t("game.detail.globalRegion"),
   CN: t("game.detail.chinaRegion"),
@@ -260,7 +304,26 @@ const requirementSections = computed<RequirementSection[]>(() => {
 
 const contentDescriptorItems = computed(() => flattenExtraValue(props.game?.content_descriptors))
 
-const ratingItems = computed(() => flattenExtraValue(props.game?.ratings))
+const ratingCards = computed(() => buildRatingCards(props.game?.ratings))
+
+const ratingItems = computed(() => ratingCards.value.length ? [] : flattenExtraValue(props.game?.ratings))
+
+const ratingText = computed(() => {
+  const isEnglish = getLocaleCode().startsWith('en')
+  return isEnglish
+    ? {
+        board: 'Board',
+        rating: 'Rating',
+        requiredAge: 'Required age',
+        unknownBoard: 'Unknown board',
+      }
+    : {
+        board: '分级机构',
+        rating: '评级',
+        requiredAge: '年龄要求',
+        unknownBoard: '未知机构',
+      }
+})
 
 function hasRequirementContent(requirement?: RequirementsModel | null) {
   return Boolean(requirement && (requirement.minimum || requirement.recommended))
@@ -334,6 +397,83 @@ function flattenExtraValue(value: unknown, prefix = ''): FlatMetaItem[] {
   return []
 }
 
+function buildRatingCards(value: unknown): RatingCard[] {
+  return collectRatingRecords(value).map((record, index) => {
+    const board = formatRatingBoard(pickRecordText(record, ['board', 'rating_board', 'agency', 'organization']))
+    const rating = pickRecordText(record, ['rating', 'rating_value', 'ratingValue'])
+    const requiredAge = pickRecordText(record, ['required_age', 'requiredAge', 'age', 'age_rating', 'ageRating'])
+    const extra = Object.entries(record).flatMap(([key, item]) => {
+      if (isRatingKnownKey(key)) {
+        return []
+      }
+
+      return flattenExtraValue(item, key)
+    })
+
+    return {
+      key: `${index}:${board}:${rating}:${requiredAge}`,
+      board,
+      rating,
+      requiredAge,
+      extra,
+    }
+  })
+}
+
+function collectRatingRecords(value: unknown): Record<string, unknown>[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectRatingRecords(item))
+  }
+
+  if (!isRecord(value)) {
+    return []
+  }
+
+  if (isRatingRecord(value)) {
+    return [value]
+  }
+
+  return Object.values(value).flatMap((item) => collectRatingRecords(item))
+}
+
+function isRatingRecord(record: Record<string, unknown>) {
+  return Boolean(
+    pickRecordText(record, ['board', 'rating_board', 'agency', 'organization']) ||
+    pickRecordText(record, ['rating', 'rating_value', 'ratingValue']) ||
+    pickRecordText(record, ['required_age', 'requiredAge', 'age', 'age_rating', 'ageRating'])
+  )
+}
+
+function pickRecordText(record: Record<string, unknown>, keys: string[]) {
+  const normalizedKeys = new Set(keys.map(normalizeMetaKey))
+  for (const [key, value] of Object.entries(record)) {
+    if (!normalizedKeys.has(normalizeMetaKey(key))) {
+      continue
+    }
+
+    const text = primitiveToText(value)
+    if (text) {
+      return text
+    }
+  }
+
+  return ''
+}
+
+function isRatingKnownKey(key: string) {
+  return new Set([
+    'board',
+    'ratingboard',
+    'agency',
+    'organization',
+    'rating',
+    'ratingvalue',
+    'requiredage',
+    'age',
+    'agerating',
+  ]).has(normalizeMetaKey(key))
+}
+
 function primitiveToText(value: unknown) {
   switch (typeof value) {
     case 'string':
@@ -367,6 +507,19 @@ function formatSupportLabel(key: string) {
   }
 }
 
+function formatRatingBoard(value: string) {
+  const normalized = value.trim()
+  if (!normalized) {
+    return ''
+  }
+
+  if (/^[a-z0-9]{2,5}$/i.test(normalized)) {
+    return normalized.toUpperCase()
+  }
+
+  return formatType(normalized)
+}
+
 function formatMetaLabel(path: string) {
   if (!path) {
     return ''
@@ -388,6 +541,23 @@ function formatMetaLabel(path: string) {
 
 function isHttpUrl(value: string) {
   return /^https?:\/\//i.test(value)
+}
+
+function normalizeMetaKey(key: string) {
+  return key.replace(/[^a-z0-9]/gi, '').toLowerCase()
+}
+
+function getLocaleCode() {
+  const locale = i18n.global.locale as unknown
+  if (typeof locale === 'string') {
+    return locale
+  }
+
+  if (isRecord(locale) && typeof locale.value === 'string') {
+    return locale.value
+  }
+
+  return ''
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

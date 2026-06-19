@@ -30,7 +30,6 @@ body:
         - gofurry-nav-backend
         - gofurry-nav-web
         - gofurry-admin
-        - gofurry-rag
         - search / suggestions / proxy
         - SQL / schema / migration
         - deployment / configuration
