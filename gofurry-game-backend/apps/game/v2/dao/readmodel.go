@@ -290,7 +290,7 @@ func (dao *ReadModelDAO) ListSimilarRecommendations(ctx context.Context, query v
 	lang := normalizeDAOLang(query.Lang)
 	region := normalizeDAORegion(query.Region)
 	rows := []v2models.GameV2RecommendationRow{}
-	if err := dao.db.WithContext(ctx).Raw(recommendationRowsSQL(), lang, lang, region, lang, region, query.GameID, query.AlgorithmVersion, query.Limit).Scan(&rows).Error; err != nil {
+	if err := dao.db.WithContext(ctx).Raw(recommendationRowsSQL(), lang, lang, lang, lang, region, lang, region, query.GameID, query.AlgorithmVersion, query.Limit).Scan(&rows).Error; err != nil {
 		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 相似推荐失败: %v", err))
 	}
 	return rows, nil
@@ -329,7 +329,7 @@ func (dao *ReadModelDAO) ListRecommendationFeatures(ctx context.Context, lang st
 	lang = normalizeDAOLang(lang)
 	region = normalizeDAORegion(region)
 	rows := []v2models.GameV2RecommendationFeature{}
-	if err := dao.db.WithContext(ctx).Raw(recommendationFeaturesSQL(), lang, lang, region, lang, region).Scan(&rows).Error; err != nil {
+	if err := dao.db.WithContext(ctx).Raw(recommendationFeaturesSQL(), lang, lang, lang, lang, region, lang, region).Scan(&rows).Error; err != nil {
 		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 推荐特征失败: %v", err))
 	}
 	return rows, nil
@@ -1335,13 +1335,13 @@ func (dao *ReadModelDAO) buildSearchQuery(db *gorm.DB, query v2models.GameV2Sear
 }
 
 func searchSelectSQL(lang string) string {
-	nameExpr := "COALESCE(NULLIF(ld.name, ''), NULLIF(g.name, ''), NULLIF(d.name, ''), g.name_en)"
-	infoExpr := "COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en)"
+	nameExpr := "COALESCE(NULLIF(g.name, ''), NULLIF(g.name_en, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))"
+	infoExpr := "COALESCE(NULLIF(g.info, ''), NULLIF(g.info_en, ''), NULLIF(ld.short_description, ''))"
 	primaryTagExpr := "COALESCE(NULLIF(primary_tag.name, ''), primary_tag.name_en, '')"
 	secondaryTagExpr := "COALESCE(NULLIF(secondary_tag.name, ''), secondary_tag.name_en, '')"
 	if normalizeDAOLang(lang) == "en" {
-		nameExpr = "COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name_en, ''), g.name)"
-		infoExpr = "COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info_en, ''), g.info)"
+		nameExpr = "COALESCE(NULLIF(g.name_en, ''), NULLIF(g.name, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))"
+		infoExpr = "COALESCE(NULLIF(g.info_en, ''), NULLIF(g.info, ''), NULLIF(ld.short_description, ''))"
 		primaryTagExpr = "COALESCE(NULLIF(primary_tag.name_en, ''), primary_tag.name, '')"
 		secondaryTagExpr = "COALESCE(NULLIF(secondary_tag.name_en, ''), secondary_tag.name, '')"
 	}
@@ -1561,8 +1561,14 @@ SELECT
     r.algorithm_version,
     r.computed_at,
     g.appid,
-    COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name, ''), g.name_en) AS name,
-    COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en) AS summary,
+    CASE WHEN ? = 'en'
+        THEN COALESCE(NULLIF(g.name_en, ''), NULLIF(g.name, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))
+        ELSE COALESCE(NULLIF(g.name, ''), NULLIF(g.name_en, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))
+    END AS name,
+    CASE WHEN ? = 'en'
+        THEN COALESCE(NULLIF(g.info_en, ''), NULLIF(g.info, ''), NULLIF(ld.short_description, ''))
+        ELSE COALESCE(NULLIF(g.info, ''), NULLIF(g.info_en, ''), NULLIF(ld.short_description, ''))
+    END AS summary,
     COALESCE(NULLIF(header_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS header_url,
     COALESCE(NULLIF(capsule_media.url, ''), '') AS capsule_url,
     COALESCE(NULLIF(library_cover_media.url, ''), '') AS library_cover_url,
@@ -1691,8 +1697,14 @@ library_cover_2x_media AS (
 SELECT
     g.id AS game_id,
     g.appid,
-    COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name, ''), g.name_en) AS name,
-    COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en) AS summary,
+    CASE WHEN ? = 'en'
+        THEN COALESCE(NULLIF(g.name_en, ''), NULLIF(g.name, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))
+        ELSE COALESCE(NULLIF(g.name, ''), NULLIF(g.name_en, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))
+    END AS name,
+    CASE WHEN ? = 'en'
+        THEN COALESCE(NULLIF(g.info_en, ''), NULLIF(g.info, ''), NULLIF(ld.short_description, ''))
+        ELSE COALESCE(NULLIF(g.info, ''), NULLIF(g.info_en, ''), NULLIF(ld.short_description, ''))
+    END AS summary,
     COALESCE(NULLIF(header_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS header_url,
     COALESCE(NULLIF(capsule_media.url, ''), '') AS capsule_url,
     COALESCE(NULLIF(library_cover_media.url, ''), '') AS library_cover_url,

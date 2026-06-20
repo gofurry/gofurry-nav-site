@@ -1046,7 +1046,11 @@ func buildListItem(aggregate v2models.GameV2Aggregate, lang string, region strin
 		ID:           detail.ID,
 		AppID:        detail.AppID,
 		Name:         detail.Name,
+		NameZh:       siteNameForLang(aggregate.Site, "zh"),
+		NameEn:       siteNameForLang(aggregate.Site, "en"),
 		Summary:      detail.Summary,
+		SummaryZh:    siteInfoForLang(aggregate.Site, "zh"),
+		SummaryEn:    siteInfoForLang(aggregate.Site, "en"),
 		HeaderURL:    detail.HeaderURL,
 		CapsuleURL:   detail.Media.CapsuleURL,
 		ReleaseDate:  detail.Release.Date,
@@ -1064,36 +1068,29 @@ func buildListItem(aggregate v2models.GameV2Aggregate, lang string, region strin
 }
 
 func buildDetailReadModel(aggregate v2models.GameV2Aggregate, requestedLang string, region string) v2models.GameV2DetailReadModel {
-	lang := requestedLang
+	localizedLang := requestedLang
 	if aggregate.Localized != nil && aggregate.Localized.Lang != "" {
-		lang = aggregate.Localized.Lang
+		localizedLang = aggregate.Localized.Lang
 	}
 
-	name := localizedName(aggregate, lang)
-	summary := localizedSummary(aggregate, lang)
+	displayLang := requestedLang
+	name := localizedName(aggregate, displayLang)
+	summary := localizedSummary(aggregate, displayLang)
 	headerURL := aggregate.Site.Header
-	siteName := aggregate.Site.Name
-	siteInfo := aggregate.Site.Info
-	if lang == "en" {
-		if aggregate.Site.NameEn != "" {
-			siteName = aggregate.Site.NameEn
-		}
-		if aggregate.Site.InfoEn != "" {
-			siteInfo = aggregate.Site.InfoEn
-		}
-	}
+	siteName := siteNameForLang(aggregate.Site, displayLang)
+	siteInfo := siteInfoForLang(aggregate.Site, displayLang)
 
 	res := v2models.GameV2DetailReadModel{
 		ID:            strconv.FormatInt(aggregate.Site.ID, 10),
 		AppID:         strconv.FormatInt(aggregate.Site.AppID, 10),
 		RequestedLang: requestedLang,
-		Lang:          lang,
+		Lang:          localizedLang,
 		Name:          name,
 		Summary:       summary,
 		HeaderURL:     headerURL,
 		Prices:        buildPrices(aggregate.Prices),
 		Price:         selectPrice(aggregate.Prices, region),
-		Media:         buildMedia(aggregate.Media, aggregate.Assets, lang),
+		Media:         buildMedia(aggregate.Media, aggregate.Assets, localizedLang),
 		Requirements:  buildRequirements(aggregate.Requirements),
 		News:          buildNews(aggregate.News),
 		OnlineCount:   buildOnlineCount(aggregate.OnlineCount),
@@ -1136,9 +1133,6 @@ func buildDetailReadModel(aggregate v2models.GameV2Aggregate, requestedLang stri
 		res.ShortDescription = strValue(aggregate.Localized.ShortDescription)
 		res.DetailedDescription = strValue(aggregate.Localized.DetailedDescription)
 		res.AboutTheGame = strValue(aggregate.Localized.AboutTheGame)
-		if res.ShortDescription != "" {
-			res.Summary = res.ShortDescription
-		}
 	}
 
 	if res.Media.HeaderURL != "" {
@@ -1258,26 +1252,49 @@ func desensitizeIP(ip string) string {
 }
 
 func localizedName(aggregate v2models.GameV2Aggregate, lang string) string {
-	if aggregate.Localized != nil && aggregate.Localized.Name != "" {
+	if name := siteNameForLang(aggregate.Site, lang); name != "" {
+		return name
+	}
+	if aggregate.Localized != nil && strings.TrimSpace(aggregate.Localized.Name) != "" {
 		return aggregate.Localized.Name
 	}
-	if aggregate.Details != nil && aggregate.Details.Name != "" {
+	if aggregate.Details != nil && strings.TrimSpace(aggregate.Details.Name) != "" {
 		return aggregate.Details.Name
 	}
-	if lang == "en" && aggregate.Site.NameEn != "" {
-		return aggregate.Site.NameEn
-	}
-	return aggregate.Site.Name
+	return ""
 }
 
 func localizedSummary(aggregate v2models.GameV2Aggregate, lang string) string {
-	if aggregate.Localized != nil && strValue(aggregate.Localized.ShortDescription) != "" {
+	if summary := siteInfoForLang(aggregate.Site, lang); summary != "" {
+		return summary
+	}
+	if aggregate.Localized != nil && strings.TrimSpace(strValue(aggregate.Localized.ShortDescription)) != "" {
 		return strValue(aggregate.Localized.ShortDescription)
 	}
-	if lang == "en" && aggregate.Site.InfoEn != "" {
-		return aggregate.Site.InfoEn
+	return ""
+}
+
+func siteNameForLang(site v2models.GameV2SiteRecord, lang string) string {
+	if normalizeLang(lang) == "en" {
+		return firstNonEmpty(site.NameEn, site.Name)
 	}
-	return aggregate.Site.Info
+	return firstNonEmpty(site.Name, site.NameEn)
+}
+
+func siteInfoForLang(site v2models.GameV2SiteRecord, lang string) string {
+	if normalizeLang(lang) == "en" {
+		return firstNonEmpty(site.InfoEn, site.Info)
+	}
+	return firstNonEmpty(site.Info, site.InfoEn)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func buildPrices(prices []v2models.GfgGameV2Price) []v2models.GameV2PriceView {

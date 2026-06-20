@@ -556,7 +556,11 @@ type GameV2ListItem struct {
 	ID           string            `json:"id"`
 	AppID        string            `json:"appid"`
 	Name         string            `json:"name"`
+	NameZh       string            `json:"name_zh"`
+	NameEn       string            `json:"name_en"`
 	Summary      string            `json:"summary"`
+	SummaryZh    string            `json:"summary_zh"`
+	SummaryEn    string            `json:"summary_en"`
 	HeaderURL    string            `json:"header_url"`
 	CapsuleURL   string            `json:"capsule_url"`
 	ReleaseDate  string            `json:"release_date"`

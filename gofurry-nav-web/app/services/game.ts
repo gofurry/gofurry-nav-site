@@ -213,10 +213,10 @@ function mapV2ListItemToBase(game: GameV2ListItem) {
     game_id: game.id,
     avg_score: game.avg_score ?? 0,
     comment_count: game.comment_count ?? 0,
-    name: game.name,
-    name_en: game.name,
-    info: game.summary,
-    info_en: game.summary,
+    name: game.name_zh || game.name,
+    name_en: game.name_en || game.name,
+    info: game.summary_zh || game.summary,
+    info_en: game.summary_en || game.summary,
     header: bestV2Cover(game),
   }
 }

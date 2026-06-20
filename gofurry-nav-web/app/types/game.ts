@@ -377,7 +377,11 @@ export interface GameV2ListItem {
     id: string
     appid: string
     name: string
+    name_zh?: string
+    name_en?: string
     summary: string
+    summary_zh?: string
+    summary_en?: string
     header_url: string
     capsule_url: string
     release_date: string
