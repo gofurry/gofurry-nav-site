@@ -24,9 +24,6 @@ const (
 	navGroupListCacheKey    = "group:list"
 	navGroupSiteMapCacheKey = "group:site:map"
 	navFeaturedSiteCacheKey = "featured-sites:list"
-	navHomeCachePrefix      = "nav:home:v3:"
-	navSiteDirectoryPrefix  = "nav:site-directory:v1:"
-	navSiteGroupCachePrefix = "nav:site-group:v1:"
 )
 
 func normalizeSayingLanguage(lang string) (string, error) {
@@ -51,28 +48,21 @@ func invalidateNavCache(keys ...string) {
 	_ = cache.Del(keys...)
 }
 
+// Public nav pages are cache-only; keep derived hot caches stale until the nav backend scheduled refresh rewrites them.
 func invalidateNavSiteListCache() {
 	invalidateNavCache(navSiteListCacheKey)
-	_ = cache.DelByPrefix(navHomeCachePrefix)
-	_ = cache.DelByPrefix(navSiteDirectoryPrefix)
-	_ = cache.DelByPrefix(navSiteGroupCachePrefix)
 }
 
 func invalidateNavGroupListCache() {
 	invalidateNavCache(navGroupListCacheKey)
-	_ = cache.DelByPrefix(navHomeCachePrefix)
-	_ = cache.DelByPrefix(navSiteGroupCachePrefix)
 }
 
 func invalidateNavGroupMapCache() {
 	invalidateNavCache(navGroupSiteMapCacheKey)
-	_ = cache.DelByPrefix(navHomeCachePrefix)
-	_ = cache.DelByPrefix(navSiteGroupCachePrefix)
 }
 
 func invalidateNavFeaturedSiteCache() {
 	invalidateNavCache(navFeaturedSiteCacheKey)
-	_ = cache.DelByPrefix(navHomeCachePrefix)
 }
 
 func (api *navAPI) ListSayings(c fiber.Ctx) error {
