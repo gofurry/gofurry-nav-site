@@ -398,7 +398,7 @@ func (api *navAPI) DeleteCollectorDomain(c fiber.Ctx) error {
 
 func (api *navAPI) ListSites(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(navDB().Model(&models.Site{}).Where("deleted IS NOT TRUE").Order("weight DESC, update_time DESC, id DESC"), page.Keyword, "name", "name_en", "info", "info_en", "CAST(id AS TEXT)")
+	base := adminutil.ApplyKeyword(navDB().Model(&models.Site{}).Where("deleted IS NOT TRUE").Order("update_time DESC, id DESC"), page.Keyword, "name", "name_en", "info", "info_en", "CAST(id AS TEXT)")
 	var items []models.Site
 	total, err := adminutil.Paginate(base, page, &items)
 	if err != nil {
@@ -436,7 +436,6 @@ func (api *navAPI) CreateSite(c fiber.Ctx) error {
 			Country: req.Country,
 			Nsfw:    strings.TrimSpace(req.Nsfw),
 			Welfare: strings.TrimSpace(req.Welfare),
-			Weight:  req.Weight,
 			Icon:    req.Icon,
 		}
 		if err := tx.Create(&created).Error; err != nil {
@@ -492,7 +491,6 @@ func (api *navAPI) UpdateSite(c fiber.Ctx) error {
 			"country": req.Country,
 			"nsfw":    strings.TrimSpace(req.Nsfw),
 			"welfare": strings.TrimSpace(req.Welfare),
-			"weight":  req.Weight,
 			"icon":    req.Icon,
 		}).Error; err != nil {
 			return common.NewDaoError(err.Error())
@@ -621,10 +619,10 @@ func (api *navAPI) DeleteSiteGroup(c fiber.Ctx) error {
 func (api *navAPI) ListSiteGroupMaps(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
 	base := navDB().Table("gfn_site_group_map AS m").
-		Select("m.id, m.site_id, m.group_id, m.create_time, m.update_time, s.name AS site_name, g.name AS group_name").
+		Select("m.id, m.site_id, m.group_id, m.weight, m.create_time, m.update_time, s.name AS site_name, g.name AS group_name").
 		Joins("LEFT JOIN gfn_site s ON s.id = m.site_id").
 		Joins("LEFT JOIN gfn_site_group g ON g.id = m.group_id").
-		Order("m.id DESC")
+		Order("m.group_id ASC, m.weight DESC, m.update_time DESC, m.id DESC")
 	base = adminutil.ApplyKeyword(base, page.Keyword, "CAST(m.id AS TEXT)", "CAST(m.site_id AS TEXT)", "CAST(m.group_id AS TEXT)", "s.name", "g.name")
 	var items []models.SiteGroupMapDTO
 	total, err := adminutil.Paginate(base, page, &items)
@@ -648,7 +646,7 @@ func (api *navAPI) CreateSiteGroupMap(c fiber.Ctx) error {
 		if allocErr != nil {
 			return allocErr
 		}
-		created = models.SiteGroupMap{ID: ids[0], SiteID: req.SiteID, GroupID: req.GroupID}
+		created = models.SiteGroupMap{ID: ids[0], SiteID: req.SiteID, GroupID: req.GroupID, Weight: req.Weight}
 		if err := tx.Create(&created).Error; err != nil {
 			return err
 		}
@@ -689,6 +687,7 @@ func (api *navAPI) UpdateSiteGroupMap(c fiber.Ctx) error {
 		if err := tx.Model(&models.SiteGroupMap{}).Where("id = ?", id).Updates(map[string]any{
 			"site_id":  req.SiteID,
 			"group_id": req.GroupID,
+			"weight":   req.Weight,
 		}).Error; err != nil {
 			return common.NewDaoError(err.Error())
 		}
@@ -728,6 +727,14 @@ func (api *navAPI) BulkReplaceSiteGroupMaps(c fiber.Ctx) error {
 		if snapErr != nil {
 			return snapErr
 		}
+		var existingRows []models.SiteGroupMap
+		if err := tx.Where("site_id = ?", req.OwnerID).Find(&existingRows).Error; err != nil {
+			return common.NewDaoError(err.Error())
+		}
+		existingWeights := make(map[int64]int64, len(existingRows))
+		for _, row := range existingRows {
+			existingWeights[row.GroupID] = row.Weight
+		}
 		if err := tx.Where("site_id = ?", req.OwnerID).Delete(&models.SiteGroupMap{}).Error; err != nil {
 			return common.NewDaoError(err.Error())
 		}
@@ -740,7 +747,7 @@ func (api *navAPI) BulkReplaceSiteGroupMaps(c fiber.Ctx) error {
 		}
 		rows := make([]models.SiteGroupMap, 0, len(req.IDs))
 		for idx, groupID := range req.IDs {
-			rows = append(rows, models.SiteGroupMap{ID: ids[idx], SiteID: req.OwnerID, GroupID: groupID})
+			rows = append(rows, models.SiteGroupMap{ID: ids[idx], SiteID: req.OwnerID, GroupID: groupID, Weight: existingWeights[groupID]})
 		}
 		if err := tx.Create(&rows).Error; err != nil {
 			return err
@@ -1031,7 +1038,6 @@ func siteDTO(item models.Site) models.SiteDTO {
 		Country:    item.Country,
 		Nsfw:       item.Nsfw,
 		Welfare:    item.Welfare,
-		Weight:     item.Weight,
 		Icon:       item.Icon,
 		Deleted:    item.Deleted,
 	}

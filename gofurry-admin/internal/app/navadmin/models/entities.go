@@ -65,7 +65,6 @@ type Site struct {
 	Country    *string             `gorm:"column:country" json:"country"`
 	Nsfw       string              `gorm:"column:nsfw" json:"nsfw"`
 	Welfare    string              `gorm:"column:welfare" json:"welfare"`
-	Weight     int64               `gorm:"column:weight;not null;default:0" json:"weight"`
 	Icon       *string             `gorm:"column:icon" json:"icon"`
 	Deleted    bool                `gorm:"column:deleted" json:"deleted"`
 }
@@ -89,6 +88,7 @@ type SiteGroupMap struct {
 	ID         int64     `gorm:"column:id;primaryKey" json:"id"`
 	SiteID     int64     `gorm:"column:site_id;not null" json:"site_id"`
 	GroupID    int64     `gorm:"column:group_id;not null" json:"group_id"`
+	Weight     int64     `gorm:"column:weight;not null;default:0" json:"weight"`
 	CreateTime time.Time `gorm:"column:create_time;autoCreateTime" json:"create_time"`
 	UpdateTime time.Time `gorm:"column:update_time;autoUpdateTime" json:"update_time"`
 }
@@ -135,7 +135,6 @@ type SitePayload struct {
 	Country *string `json:"country"`
 	Nsfw    string  `json:"nsfw"`
 	Welfare string  `json:"welfare"`
-	Weight  int64   `json:"weight"`
 	Icon    *string `json:"icon"`
 }
 
@@ -150,7 +149,6 @@ type SiteDTO struct {
 	Country    *string             `json:"country"`
 	Nsfw       string              `json:"nsfw"`
 	Welfare    string              `json:"welfare"`
-	Weight     int64               `json:"weight"`
 	Icon       *string             `json:"icon"`
 	Deleted    bool                `json:"deleted"`
 }
@@ -166,6 +164,7 @@ type SiteGroupPayload struct {
 type SiteGroupMapPayload struct {
 	SiteID  int64 `json:"site_id"`
 	GroupID int64 `json:"group_id"`
+	Weight  int64 `json:"weight"`
 }
 
 type FeaturedSitePayload struct {
@@ -179,6 +178,7 @@ type SiteGroupMapDTO struct {
 	GroupID    int64     `json:"group_id"`
 	SiteName   string    `json:"site_name"`
 	GroupName  string    `json:"group_name"`
+	Weight     int64     `json:"weight"`
 	CreateTime time.Time `json:"create_time"`
 	UpdateTime time.Time `json:"update_time"`
 }

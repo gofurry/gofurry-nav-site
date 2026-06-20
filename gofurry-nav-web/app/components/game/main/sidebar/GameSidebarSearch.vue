@@ -4,7 +4,7 @@
     <div class="relative">
       <img
           src="../../../../assets/svgs/search.svg"
-          class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-60"
+          class="game-sidebar-search-icon absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-60"
           alt=""
       />
       <input
@@ -196,6 +196,10 @@ onBeforeUnmount(() => {
   display: grid;
   width: 100%;
   gap: 0.55rem;
+}
+
+:global(html.dark .game-sidebar-search-icon) {
+  filter: brightness(0) invert(1);
 }
 
 .search-result-card {

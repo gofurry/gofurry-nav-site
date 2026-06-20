@@ -517,7 +517,6 @@ func (svc *navPageService) convertRecords(records []models.GfnSite, lang string)
 			Nsfw:       v.Nsfw,
 			Welfare:    v.Welfare,
 			Icon:       v.Icon,
-			Weight:     v.Weight,
 			ViewCount:  currentSiteViewCount(v.ID, v.ViewCount),
 			CreateTime: v.CreateTime.String(),
 			UpdateTime: v.UpdateTime.String(),
@@ -570,8 +569,14 @@ func (svc *navPageService) convertGroupRecords(
 		if mappingRecords[i].GroupID != mappingRecords[j].GroupID {
 			return mappingRecords[i].GroupID < mappingRecords[j].GroupID
 		}
+		if mappingRecords[i].Weight != mappingRecords[j].Weight {
+			return mappingRecords[i].Weight > mappingRecords[j].Weight
+		}
+		if !mappingRecords[i].UpdateTime.Equal(mappingRecords[j].UpdateTime) {
+			return mappingRecords[i].UpdateTime.After(mappingRecords[j].UpdateTime)
+		}
 		if mappingRecords[i].ID != mappingRecords[j].ID {
-			return mappingRecords[i].ID < mappingRecords[j].ID
+			return mappingRecords[i].ID > mappingRecords[j].ID
 		}
 		return mappingRecords[i].SiteID < mappingRecords[j].SiteID
 	})
@@ -582,9 +587,10 @@ func (svc *navPageService) convertGroupRecords(
 	// 初始化分组
 	for _, v := range groupRecords {
 		vo := &models.GroupVo{
-			ID:       util.Int642String(v.ID),
-			Priority: v.Priority,
-			Sites:    []string{},
+			ID:          util.Int642String(v.ID),
+			Priority:    v.Priority,
+			Sites:       []string{},
+			SiteWeights: map[string]int64{},
 		}
 
 		switch lang {
@@ -603,7 +609,9 @@ func (svc *navPageService) convertGroupRecords(
 	// 绑定站点
 	for _, v := range mappingRecords {
 		if vo, ok := voMap[v.GroupID]; ok {
-			vo.Sites = append(vo.Sites, util.Int642String(v.SiteID))
+			siteID := util.Int642String(v.SiteID)
+			vo.Sites = append(vo.Sites, siteID)
+			vo.SiteWeights[siteID] = v.Weight
 		}
 	}
 

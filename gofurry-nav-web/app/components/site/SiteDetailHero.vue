@@ -103,7 +103,7 @@
               rel="noopener noreferrer"
               class="visit-button duration-500"
             >
-              <img src="@/assets/svgs/go.svg" alt="" class="h-5 w-5 opacity-90">
+              <img src="@/assets/svgs/go.svg" alt="" class="visit-button-icon h-5 w-5 opacity-90">
               {{ label('访问网站', 'Visit site') }}
             </a>
             <div class="hidden text-xs text-orange-500 lg:block">
@@ -409,6 +409,10 @@ function label(zh: string, en: string) {
 :global(html.dark .visit-button:hover){
   background: rgba(251, 146, 60, 0.28);
   color: #ffffff;
+}
+
+:global(html.dark .visit-button-icon){
+  filter: brightness(0) invert(1);
 }
 
 @media (min-width: 640px) {

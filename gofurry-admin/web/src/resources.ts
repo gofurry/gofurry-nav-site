@@ -69,7 +69,7 @@ export const resources: ResourceConfig[] = [
     section: 'nav',
     listEndpoint: '/api/v1/nav/sites',
     detailEndpoint: '/api/v1/nav/sites',
-    columns: [{ key: 'id', label: 'ID' }, { key: 'name', label: '名称' }, { key: 'weight', label: '权重' }],
+    columns: [{ key: 'id', label: 'ID' }, { key: 'name', label: '名称' }, { key: 'update_time', label: '更新时间' }],
     fields: [
       { key: 'name', label: '中文名', type: 'text' },
       { key: 'name_en', label: '英文名', type: 'text' },
@@ -78,10 +78,9 @@ export const resources: ResourceConfig[] = [
       { key: 'country', label: '国家', type: 'text' },
       { key: 'nsfw', label: 'NSFW', type: 'select', options: bool01 },
       { key: 'welfare', label: '公益', type: 'select', options: bool01 },
-      { key: 'weight', label: '权重', type: 'number' },
       { key: 'icon', label: '图标', type: 'text' },
     ],
-    defaults: { name: '', name_en: '', info: '', info_en: '', country: '', nsfw: '0', welfare: '0', weight: 0, icon: '' },
+    defaults: { name: '', name_en: '', info: '', info_en: '', country: '', nsfw: '0', welfare: '0', icon: '' },
   },
   {
     key: 'site-groups',
@@ -105,12 +104,13 @@ export const resources: ResourceConfig[] = [
     section: 'nav',
     listEndpoint: '/api/v1/nav/site-group-maps',
     detailEndpoint: '/api/v1/nav/site-group-maps',
-    columns: [{ key: 'id', label: 'ID' }, { key: 'site_name', label: '网站' }, { key: 'group_name', label: '分组' }],
+    columns: [{ key: 'id', label: 'ID' }, { key: 'site_name', label: '网站' }, { key: 'group_name', label: '分组' }, { key: 'weight', label: '分组内权重' }],
     fields: [
       { key: 'site_id', label: '网站', type: 'remote-select', optionEndpoint: '/api/v1/options/sites' },
       { key: 'group_id', label: '分组', type: 'remote-select', optionEndpoint: '/api/v1/options/site-groups' },
+      { key: 'weight', label: '分组内权重', type: 'number' },
     ],
-    defaults: { site_id: '', group_id: '' },
+    defaults: { site_id: '', group_id: '', weight: 0 },
     bulkReplace: {
       endpoint: '/api/v1/nav/site-group-maps/bulk-replace',
       ownerField: { key: 'owner_id', label: '网站', type: 'remote-select', optionEndpoint: '/api/v1/options/sites' },

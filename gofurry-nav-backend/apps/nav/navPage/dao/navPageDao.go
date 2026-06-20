@@ -38,7 +38,6 @@ func (dao *navPageDao) GetSiteList() (res []models.GfnSite, err common.GFError) 
 			s.country,
 			s.nsfw,
 			s.welfare,
-			s.weight,
 			s.view_count,
 			s.icon,
 			s.deleted
@@ -54,7 +53,7 @@ func (dao *navPageDao) GetSiteList() (res []models.GfnSite, err common.GFError) 
 			) cd ON TRUE
 		`).
 		Where("s.deleted IS NOT TRUE")
-	db.Order("s.weight DESC, s.update_time DESC, s.id DESC")
+	db.Order("s.update_time DESC, s.id DESC")
 	db.Find(&res)
 	if dbErr := db.Error; dbErr != nil {
 		return res, common.NewDaoError(dbErr.Error())
@@ -100,7 +99,7 @@ func (dao *navPageDao) GetGroupList() (res []models.GfnSiteGroup, err common.GFE
 
 func (dao *navPageDao) GetGroupMapList() (res []models.GfnSiteGroupMap, err common.GFError) {
 	db := dao.Gm.Table(models.TableNameGfnSiteGroupMap)
-	db.Order("group_id ASC, id ASC, site_id ASC")
+	db.Order("group_id ASC, weight DESC, update_time DESC, id DESC, site_id ASC")
 	db.Find(&res)
 	if dbErr := db.Error; dbErr != nil {
 		return res, common.NewDaoError(dbErr.Error())

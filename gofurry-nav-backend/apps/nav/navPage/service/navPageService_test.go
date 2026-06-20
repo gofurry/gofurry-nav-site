@@ -102,15 +102,15 @@ func TestDuckDuckGoSuggestionParsesResponse(t *testing.T) {
 	}
 }
 
-func TestConvertGroupRecordsOrdersMappingsDeterministically(t *testing.T) {
+func TestConvertGroupRecordsOrdersMappingsByGroupWeight(t *testing.T) {
 	svc := &navPageService{}
 	groups := []models.GfnSiteGroup{
 		{ID: 10, Name: "论坛社区", NameEn: "Forums", Info: "论坛", InfoEn: "Forums", Priority: 1},
 	}
 	mappings := []models.GfnSiteGroupMap{
-		{ID: 9, GroupID: 10, SiteID: 300},
-		{ID: 3, GroupID: 10, SiteID: 100},
-		{ID: 5, GroupID: 10, SiteID: 200},
+		{ID: 9, GroupID: 10, SiteID: 300, Weight: 10},
+		{ID: 3, GroupID: 10, SiteID: 100, Weight: 20},
+		{ID: 5, GroupID: 10, SiteID: 200, Weight: 20},
 	}
 
 	result := svc.convertGroupRecords(groups, mappings, "zh")
@@ -118,9 +118,12 @@ func TestConvertGroupRecordsOrdersMappingsDeterministically(t *testing.T) {
 		t.Fatalf("group count = %d", len(result))
 	}
 
-	want := []string{"100", "200", "300"}
+	want := []string{"200", "100", "300"}
 	if !reflect.DeepEqual(result[0].Sites, want) {
 		t.Fatalf("sites order = %v, want %v", result[0].Sites, want)
+	}
+	if result[0].SiteWeights["200"] != 20 || result[0].SiteWeights["300"] != 10 {
+		t.Fatalf("site weights were not carried: %#v", result[0].SiteWeights)
 	}
 }
 
