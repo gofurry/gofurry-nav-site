@@ -167,7 +167,7 @@ function mapV2PanelToGameGroup(panel: GameV2PanelRecord): GameGroupRecord {
   return {
     latest: panel.latest_games.map(mapV2ListItemToBase),
     recent: panel.updated_games.map(mapV2ListItemToBase),
-    hot: panel.top_online.slice(0, 24).map(mapV2ListItemToBase),
+    hot: (panel.popular_games ?? panel.top_online).slice(0, 24).map(mapV2ListItemToBase),
     free: panel.free_games.map(mapV2ListItemToBase),
   }
 }

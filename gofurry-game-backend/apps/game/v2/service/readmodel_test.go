@@ -14,9 +14,11 @@ type fakeDetailReader struct {
 	aggregate      v2models.GameV2Aggregate
 	query          v2models.GameV2DetailQuery
 	listQuery      v2models.GameV2ListQuery
+	listQueries    []v2models.GameV2ListQuery
 	searchQuery    v2models.GameV2SearchPageQuery
 	panelQuery     v2models.GameV2PanelQuery
 	topOnlineQuery v2models.GameV2PanelQuery
+	popularQuery   v2models.GameV2PanelQuery
 	topPriceQuery  v2models.GameV2PanelQuery
 	discountQuery  v2models.GameV2PanelQuery
 	lowPriceQuery  v2models.GameV2PanelQuery
@@ -41,6 +43,7 @@ func (reader *fakeDetailReader) GetGameDetailAggregate(_ context.Context, query 
 
 func (reader *fakeDetailReader) ListGameAggregates(_ context.Context, query v2models.GameV2ListQuery) ([]v2models.GameV2Aggregate, common.GFError) {
 	reader.listQuery = query
+	reader.listQueries = append(reader.listQueries, query)
 	if reader.err != nil {
 		return nil, reader.err
 	}
@@ -117,6 +120,11 @@ func (reader *fakeDetailReader) GetGameNews(_ context.Context, _ v2models.GameV2
 
 func (reader *fakeDetailReader) ListTopOnlineAggregates(_ context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
 	reader.topOnlineQuery = query
+	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
+}
+
+func (reader *fakeDetailReader) ListPopularGameAggregates(_ context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	reader.popularQuery = query
 	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
 }
 
@@ -466,6 +474,9 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 	if reader.topOnlineQuery.Limit != 60 {
 		t.Fatalf("expected top online limit clamp 60, got %d", reader.topOnlineQuery.Limit)
 	}
+	if reader.popularQuery.Limit != 24 {
+		t.Fatalf("expected popular games limit clamp 24, got %d", reader.popularQuery.Limit)
+	}
 	if reader.topPriceQuery.Region != "US" || reader.topPriceQuery.Limit != 15 {
 		t.Fatalf("expected top price to use US limit 15, got region=%s limit=%d", reader.topPriceQuery.Region, reader.topPriceQuery.Limit)
 	}
@@ -478,11 +489,15 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 	if len(res.LatestGames) != 1 ||
 		len(res.UpdatedGames) != 1 ||
 		len(res.TopOnline) != 1 ||
+		len(res.PopularGames) != 1 ||
 		len(res.FreeGames) != 1 ||
 		len(res.TopPrice) != 1 ||
 		len(res.HighestDiscount) != 1 ||
 		len(res.LowPrice) != 1 {
 		t.Fatal("expected all panel game sections to contain one item")
+	}
+	if len(reader.listQueries) < 2 || reader.listQueries[0].Sort != "release_date" || reader.listQueries[1].Sort != "newest" {
+		t.Fatalf("expected latest sort release_date and updated sort newest, got %+v", reader.listQueries)
 	}
 	if res.LatestGames[0].CapsuleURL != "https://cdn.example/capsule.jpg" {
 		t.Fatalf("expected panel item capsule url, got %s", res.LatestGames[0].CapsuleURL)

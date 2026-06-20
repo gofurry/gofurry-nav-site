@@ -397,6 +397,7 @@ export interface GameV2PanelRecord {
     latest_games: GameV2ListItem[]
     updated_games: GameV2ListItem[]
     top_online: GameV2ListItem[]
+    popular_games?: GameV2ListItem[]
     free_games: GameV2ListItem[]
     top_price: GameV2ListItem[]
     highest_discount: GameV2ListItem[]

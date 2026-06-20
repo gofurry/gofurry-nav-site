@@ -44,6 +44,7 @@ type gameDetailReader interface {
 	GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	GetLatestGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	ListTopOnlineAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
+	ListPopularGameAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	ListFreeGameAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	ListHighestPriceAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
 	ListHighestDiscountAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError)
@@ -325,7 +326,7 @@ func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.Ga
 		Lang:   query.Lang,
 		Region: query.Region,
 		Limit:  query.Limit,
-		Sort:   "newest",
+		Sort:   "release_date",
 	})
 	if err != nil {
 		return res, err
@@ -334,7 +335,7 @@ func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.Ga
 		Lang:   query.Lang,
 		Region: query.Region,
 		Limit:  query.Limit,
-		Sort:   "updated",
+		Sort:   "newest",
 	})
 	if err != nil {
 		return res, err
@@ -342,6 +343,10 @@ func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.Ga
 	topOnlineQuery := query
 	topOnlineQuery.Limit = query.TopOnlineLimit
 	topOnline, err := svc.reader.ListTopOnlineAggregates(ctx, topOnlineQuery)
+	if err != nil {
+		return res, err
+	}
+	popularGames, err := svc.reader.ListPopularGameAggregates(ctx, query)
 	if err != nil {
 		return res, err
 	}
@@ -379,6 +384,7 @@ func (svc *ReadModelService) GetPanelMain(ctx context.Context, query v2models.Ga
 	res.LatestGames = buildListItems(latest, query.Lang, query.Region)
 	res.UpdatedGames = buildListItems(updated, query.Lang, query.Region)
 	res.TopOnline = buildListItems(topOnline, query.Lang, query.Region)
+	res.PopularGames = buildListItems(popularGames, query.Lang, query.Region)
 	res.FreeGames = buildListItems(freeGames, query.Lang, query.Region)
 	res.TopPrice = buildListItems(topPrice, query.Lang, query.Region)
 	res.HighestDiscount = buildListItems(highestDiscount, query.Lang, query.Region)
