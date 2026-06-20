@@ -230,10 +230,11 @@ func BuildHomeGroupsForCache(sites []navmodels.SiteVo, groups []navmodels.GroupV
 		items := make([]navmodels.SiteVo, 0, len(group.Sites))
 		for _, siteID := range group.Sites {
 			if site, ok := siteMap[siteID]; ok {
+				site = applyGroupWeight(site, group, siteID)
 				items = append(items, site)
 			}
 		}
-		SortSitesForCache(items)
+		SortGroupSitesForCache(items)
 		siteCount := len(items)
 		if siteCount > homeGroupPreviewLimit {
 			items = items[:homeGroupPreviewLimit]
@@ -303,14 +304,14 @@ func buildHomeSpotlight(sites []navmodels.SiteVo, featured []navmodels.FeaturedS
 	return spotlight
 }
 
-func sortSitesByWeight(items []navmodels.SiteVo) {
-	SortSitesForCache(items)
+func SortSitesForCache(items []navmodels.SiteVo) {
+	SortGroupSitesForCache(items)
 }
 
-func SortSitesForCache(items []navmodels.SiteVo) {
+func SortGroupSitesForCache(items []navmodels.SiteVo) {
 	sort.SliceStable(items, func(i, j int) bool {
-		if items[i].Weight != items[j].Weight {
-			return items[i].Weight > items[j].Weight
+		if items[i].GroupWeight != items[j].GroupWeight {
+			return items[i].GroupWeight > items[j].GroupWeight
 		}
 		if items[i].UpdateTime != items[j].UpdateTime {
 			return items[i].UpdateTime > items[j].UpdateTime
@@ -319,6 +320,13 @@ func SortSitesForCache(items []navmodels.SiteVo) {
 		rightID, _ := strconv.ParseInt(items[j].ID, 10, 64)
 		return leftID > rightID
 	})
+}
+
+func applyGroupWeight(site navmodels.SiteVo, group navmodels.GroupVo, siteID string) navmodels.SiteVo {
+	if group.SiteWeights != nil {
+		site.GroupWeight = group.SiteWeights[siteID]
+	}
+	return site
 }
 
 func GetCachedHome(lang string) models.HomeResponse {

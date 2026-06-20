@@ -94,10 +94,13 @@ func BuildAllSiteGroupCaches(sites []navmodels.SiteVo, groups []navmodels.GroupV
 		items := make([]navmodels.SiteVo, 0, len(group.Sites))
 		for _, siteID := range group.Sites {
 			if site, ok := siteMap[siteID]; ok {
+				if group.SiteWeights != nil {
+					site.GroupWeight = group.SiteWeights[siteID]
+				}
 				items = append(items, site)
 			}
 		}
-		homeService.SortSitesForCache(items)
+		homeService.SortGroupSitesForCache(items)
 		result[group.ID] = BuildCachedSiteGroupPayload(previews, group.ID, items)
 	}
 	return result

@@ -14,9 +14,11 @@ type fakeDetailReader struct {
 	aggregate      v2models.GameV2Aggregate
 	query          v2models.GameV2DetailQuery
 	listQuery      v2models.GameV2ListQuery
+	listQueries    []v2models.GameV2ListQuery
 	searchQuery    v2models.GameV2SearchPageQuery
 	panelQuery     v2models.GameV2PanelQuery
 	topOnlineQuery v2models.GameV2PanelQuery
+	popularQuery   v2models.GameV2PanelQuery
 	topPriceQuery  v2models.GameV2PanelQuery
 	discountQuery  v2models.GameV2PanelQuery
 	lowPriceQuery  v2models.GameV2PanelQuery
@@ -41,6 +43,7 @@ func (reader *fakeDetailReader) GetGameDetailAggregate(_ context.Context, query 
 
 func (reader *fakeDetailReader) ListGameAggregates(_ context.Context, query v2models.GameV2ListQuery) ([]v2models.GameV2Aggregate, common.GFError) {
 	reader.listQuery = query
+	reader.listQueries = append(reader.listQueries, query)
 	if reader.err != nil {
 		return nil, reader.err
 	}
@@ -117,6 +120,11 @@ func (reader *fakeDetailReader) GetGameNews(_ context.Context, _ v2models.GameV2
 
 func (reader *fakeDetailReader) ListTopOnlineAggregates(_ context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
 	reader.topOnlineQuery = query
+	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
+}
+
+func (reader *fakeDetailReader) ListPopularGameAggregates(_ context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	reader.popularQuery = query
 	return reader.ListGameAggregates(context.Background(), v2models.GameV2ListQuery{})
 }
 
@@ -224,11 +232,14 @@ func TestGetGameDetailUsesLocalizedFallback(t *testing.T) {
 	if res.Lang != "zh" {
 		t.Fatalf("expected fallback lang zh, got %s", res.Lang)
 	}
-	if res.Name != "军团要塞2" {
-		t.Fatalf("expected zh localized name, got %s", res.Name)
+	if res.Name != "Team Fortress 2" {
+		t.Fatalf("expected english site name, got %s", res.Name)
 	}
-	if res.Summary != "中文采集简介" {
-		t.Fatalf("expected zh localized summary, got %s", res.Summary)
+	if res.Summary != "English site summary" {
+		t.Fatalf("expected english site summary, got %s", res.Summary)
+	}
+	if res.ShortDescription != "中文采集简介" {
+		t.Fatalf("expected localized short description to stay available, got %s", res.ShortDescription)
 	}
 }
 
@@ -406,7 +417,9 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 				ID:     1,
 				AppID:  440,
 				Name:   "军团要塞2",
+				NameEn: "Team Fortress 2",
 				Info:   "中文站内简介",
+				InfoEn: "English site summary",
 				Header: "https://cdn.example/header.jpg",
 			},
 			Details: &v2models.GfgGameV2Details{
@@ -466,6 +479,9 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 	if reader.topOnlineQuery.Limit != 60 {
 		t.Fatalf("expected top online limit clamp 60, got %d", reader.topOnlineQuery.Limit)
 	}
+	if reader.popularQuery.Limit != 24 {
+		t.Fatalf("expected popular games limit clamp 24, got %d", reader.popularQuery.Limit)
+	}
 	if reader.topPriceQuery.Region != "US" || reader.topPriceQuery.Limit != 15 {
 		t.Fatalf("expected top price to use US limit 15, got region=%s limit=%d", reader.topPriceQuery.Region, reader.topPriceQuery.Limit)
 	}
@@ -478,17 +494,27 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 	if len(res.LatestGames) != 1 ||
 		len(res.UpdatedGames) != 1 ||
 		len(res.TopOnline) != 1 ||
+		len(res.PopularGames) != 1 ||
 		len(res.FreeGames) != 1 ||
 		len(res.TopPrice) != 1 ||
 		len(res.HighestDiscount) != 1 ||
 		len(res.LowPrice) != 1 {
 		t.Fatal("expected all panel game sections to contain one item")
 	}
+	if len(reader.listQueries) < 2 || reader.listQueries[0].Sort != "release_date" || reader.listQueries[1].Sort != "newest" {
+		t.Fatalf("expected latest sort release_date and updated sort newest, got %+v", reader.listQueries)
+	}
 	if res.LatestGames[0].CapsuleURL != "https://cdn.example/capsule.jpg" {
 		t.Fatalf("expected panel item capsule url, got %s", res.LatestGames[0].CapsuleURL)
 	}
 	if res.LatestGames[0].AvgScore != 4.2 || res.LatestGames[0].CommentCount != 7 {
 		t.Fatalf("expected panel item review stats, got avg_score=%v comment_count=%d", res.LatestGames[0].AvgScore, res.LatestGames[0].CommentCount)
+	}
+	if res.LatestGames[0].NameZh != "军团要塞2" || res.LatestGames[0].NameEn != "Team Fortress 2" {
+		t.Fatalf("expected panel item bilingual names from site table, got zh=%s en=%s", res.LatestGames[0].NameZh, res.LatestGames[0].NameEn)
+	}
+	if res.LatestGames[0].SummaryZh != "中文站内简介" || res.LatestGames[0].SummaryEn != "English site summary" {
+		t.Fatalf("expected panel item bilingual summaries from site table, got zh=%s en=%s", res.LatestGames[0].SummaryZh, res.LatestGames[0].SummaryEn)
 	}
 }
 

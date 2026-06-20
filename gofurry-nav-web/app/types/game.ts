@@ -377,7 +377,11 @@ export interface GameV2ListItem {
     id: string
     appid: string
     name: string
+    name_zh?: string
+    name_en?: string
     summary: string
+    summary_zh?: string
+    summary_en?: string
     header_url: string
     capsule_url: string
     release_date: string
@@ -397,6 +401,7 @@ export interface GameV2PanelRecord {
     latest_games: GameV2ListItem[]
     updated_games: GameV2ListItem[]
     top_online: GameV2ListItem[]
+    popular_games?: GameV2ListItem[]
     free_games: GameV2ListItem[]
     top_price: GameV2ListItem[]
     highest_discount: GameV2ListItem[]

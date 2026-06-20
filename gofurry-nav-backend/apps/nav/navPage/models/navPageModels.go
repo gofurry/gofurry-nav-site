@@ -20,26 +20,27 @@ func (*GfnSaying) TableName() string {
 }
 
 type SiteVo struct {
-	ID         string  `form:"id" json:"id"`
-	Name       string  `form:"name" json:"name"`
-	Domain     string  `form:"domain" json:"domain"`
-	Info       string  `form:"info" json:"info"`
-	Country    *string `form:"country" json:"country"`
-	Nsfw       string  `form:"nsfw" json:"nsfw"`
-	Welfare    string  `form:"welfare" json:"welfare"`
-	Icon       *string `form:"icon" json:"icon"`
-	Weight     int64   `form:"weight" json:"weight,omitempty"`
-	ViewCount  int64   `form:"view_count" json:"view_count"`
-	CreateTime string  `form:"create_time" json:"create_time"`
-	UpdateTime string  `form:"update_time" json:"update_time"`
+	ID          string  `form:"id" json:"id"`
+	Name        string  `form:"name" json:"name"`
+	Domain      string  `form:"domain" json:"domain"`
+	Info        string  `form:"info" json:"info"`
+	Country     *string `form:"country" json:"country"`
+	Nsfw        string  `form:"nsfw" json:"nsfw"`
+	Welfare     string  `form:"welfare" json:"welfare"`
+	Icon        *string `form:"icon" json:"icon"`
+	GroupWeight int64   `form:"-" json:"-"`
+	ViewCount   int64   `form:"view_count" json:"view_count"`
+	CreateTime  string  `form:"create_time" json:"create_time"`
+	UpdateTime  string  `form:"update_time" json:"update_time"`
 }
 
 type GroupVo struct {
-	ID       string   `form:"id" json:"id"`
-	Name     string   `form:"name" json:"name"`
-	Info     string   `form:"info" json:"info"`
-	Priority int64    `form:"priority" json:"priority"`
-	Sites    []string `form:"sites" json:"sites"`
+	ID          string           `form:"id" json:"id"`
+	Name        string           `form:"name" json:"name"`
+	Info        string           `form:"info" json:"info"`
+	Priority    int64            `form:"priority" json:"priority"`
+	Sites       []string         `form:"sites" json:"sites"`
+	SiteWeights map[string]int64 `form:"-" json:"-"`
 }
 
 type SayingModel struct {

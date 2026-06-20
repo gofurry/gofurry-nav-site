@@ -104,14 +104,24 @@ func TestGetHomePingReportsMissingState(t *testing.T) {
 	}
 }
 
-func TestBuildHomeGroupsOrdersSitesByWeightThenUpdateTime(t *testing.T) {
+func TestBuildHomeGroupsOrdersSitesByGroupWeightThenUpdateTime(t *testing.T) {
 	sites := []navmodels.SiteVo{
-		{ID: "1", Name: "A", Weight: 10, UpdateTime: "2026-06-01 00:00:00"},
-		{ID: "2", Name: "B", Weight: 20, UpdateTime: "2026-06-02 00:00:00"},
-		{ID: "3", Name: "C", Weight: 20, UpdateTime: "2026-06-03 00:00:00"},
+		{ID: "1", Name: "A", UpdateTime: "2026-06-01 00:00:00"},
+		{ID: "2", Name: "B", UpdateTime: "2026-06-02 00:00:00"},
+		{ID: "3", Name: "C", UpdateTime: "2026-06-03 00:00:00"},
 	}
 	groups := []navmodels.GroupVo{
-		{ID: "10", Name: "Forums", Priority: 1, Sites: []string{"3", "1", "2", "404"}},
+		{
+			ID:       "10",
+			Name:     "Forums",
+			Priority: 1,
+			Sites:    []string{"3", "1", "2", "404"},
+			SiteWeights: map[string]int64{
+				"1": 10,
+				"2": 20,
+				"3": 20,
+			},
+		},
 	}
 
 	result := buildHomeGroups(sites, groups)

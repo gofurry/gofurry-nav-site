@@ -77,21 +77,24 @@ func (dao *ReadModelDAO) ListGameAggregates(ctx context.Context, query v2models.
 
 	var sites []v2models.GameV2SiteRecord
 	db := dao.db.WithContext(ctx)
-	q := db.Table(tableNameGfgGame).
-		Select("id, name, name_en, info, info_en, resources, groups, links, appid, header, view_count, weight, create_time, update_time").
+	q := db.Table(tableNameGfgGame + " AS g").
+		Select("g.id, g.name, g.name_en, g.info, g.info_en, g.resources, g.groups, g.links, g.appid, g.header, g.view_count, g.weight, g.create_time, g.update_time").
 		Order(listOrder(query.Sort)).
 		Limit(query.Limit).
 		Offset(query.Offset)
+	if query.Sort == "release_date" {
+		q = q.Joins("LEFT JOIN " + v2models.TableNameGfgGameV2Details + " d ON d.game_id = g.id")
+	}
 	if !query.UpdatedSince.IsZero() {
 		q = q.Where(`
-update_time >= ?
-OR EXISTS (SELECT 1 FROM gfg_game_v2_details d WHERE d.game_id = gfg_game.id AND d.updated_at >= ?)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_localized_details ld WHERE ld.game_id = gfg_game.id AND ld.updated_at >= ?)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_prices p WHERE p.game_id = gfg_game.id AND p.updated_at >= ?)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_media m WHERE m.game_id = gfg_game.id AND m.updated_at >= ?)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_assets a WHERE a.game_id = gfg_game.id AND a.updated_at >= ?)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_requirements r WHERE r.game_id = gfg_game.id AND r.updated_at >= ?)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_news n WHERE n.game_id = gfg_game.id AND n.updated_at >= ?)
+g.update_time >= ?
+OR EXISTS (SELECT 1 FROM gfg_game_v2_details d WHERE d.game_id = g.id AND d.updated_at >= ?)
+OR EXISTS (SELECT 1 FROM gfg_game_v2_localized_details ld WHERE ld.game_id = g.id AND ld.updated_at >= ?)
+OR EXISTS (SELECT 1 FROM gfg_game_v2_prices p WHERE p.game_id = g.id AND p.updated_at >= ?)
+OR EXISTS (SELECT 1 FROM gfg_game_v2_media m WHERE m.game_id = g.id AND m.updated_at >= ?)
+OR EXISTS (SELECT 1 FROM gfg_game_v2_assets a WHERE a.game_id = g.id AND a.updated_at >= ?)
+OR EXISTS (SELECT 1 FROM gfg_game_v2_requirements r WHERE r.game_id = g.id AND r.updated_at >= ?)
+OR EXISTS (SELECT 1 FROM gfg_game_v2_news n WHERE n.game_id = g.id AND n.updated_at >= ?)
 `, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince, query.UpdatedSince)
 	}
 	if err := q.Find(&sites).Error; err != nil {
@@ -287,7 +290,7 @@ func (dao *ReadModelDAO) ListSimilarRecommendations(ctx context.Context, query v
 	lang := normalizeDAOLang(query.Lang)
 	region := normalizeDAORegion(query.Region)
 	rows := []v2models.GameV2RecommendationRow{}
-	if err := dao.db.WithContext(ctx).Raw(recommendationRowsSQL(), lang, lang, region, lang, region, query.GameID, query.AlgorithmVersion, query.Limit).Scan(&rows).Error; err != nil {
+	if err := dao.db.WithContext(ctx).Raw(recommendationRowsSQL(), lang, lang, lang, lang, region, lang, region, query.GameID, query.AlgorithmVersion, query.Limit).Scan(&rows).Error; err != nil {
 		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 相似推荐失败: %v", err))
 	}
 	return rows, nil
@@ -326,7 +329,7 @@ func (dao *ReadModelDAO) ListRecommendationFeatures(ctx context.Context, lang st
 	lang = normalizeDAOLang(lang)
 	region = normalizeDAORegion(region)
 	rows := []v2models.GameV2RecommendationFeature{}
-	if err := dao.db.WithContext(ctx).Raw(recommendationFeaturesSQL(), lang, lang, region, lang, region).Scan(&rows).Error; err != nil {
+	if err := dao.db.WithContext(ctx).Raw(recommendationFeaturesSQL(), lang, lang, lang, lang, region, lang, region).Scan(&rows).Error; err != nil {
 		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 推荐特征失败: %v", err))
 	}
 	return rows, nil
@@ -374,9 +377,18 @@ SELECT p.game_id
 FROM gfg_game_v2_prices p
 JOIN gfg_game g ON p.game_id = g.id
 WHERE p.region = ? AND p.is_free = true
-ORDER BY p.updated_at DESC, g.weight ASC, p.game_id ASC
+ORDER BY random(), p.game_id ASC
 LIMIT ?
 `, normalizeDAORegion(query.Region), query.Limit)
+}
+
+func (dao *ReadModelDAO) ListPopularGameAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
+	return dao.listPanelAggregatesBySQL(ctx, query, `
+SELECT id
+FROM gfg_game
+ORDER BY view_count DESC, update_time DESC, id DESC
+LIMIT ?
+`, query.Limit)
 }
 
 func (dao *ReadModelDAO) ListHighestPriceAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
@@ -1323,13 +1335,13 @@ func (dao *ReadModelDAO) buildSearchQuery(db *gorm.DB, query v2models.GameV2Sear
 }
 
 func searchSelectSQL(lang string) string {
-	nameExpr := "COALESCE(NULLIF(ld.name, ''), NULLIF(g.name, ''), NULLIF(d.name, ''), g.name_en)"
-	infoExpr := "COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en)"
+	nameExpr := "COALESCE(NULLIF(g.name, ''), NULLIF(g.name_en, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))"
+	infoExpr := "COALESCE(NULLIF(g.info, ''), NULLIF(g.info_en, ''), NULLIF(ld.short_description, ''))"
 	primaryTagExpr := "COALESCE(NULLIF(primary_tag.name, ''), primary_tag.name_en, '')"
 	secondaryTagExpr := "COALESCE(NULLIF(secondary_tag.name, ''), secondary_tag.name_en, '')"
 	if normalizeDAOLang(lang) == "en" {
-		nameExpr = "COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name_en, ''), g.name)"
-		infoExpr = "COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info_en, ''), g.info)"
+		nameExpr = "COALESCE(NULLIF(g.name_en, ''), NULLIF(g.name, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))"
+		infoExpr = "COALESCE(NULLIF(g.info_en, ''), NULLIF(g.info, ''), NULLIF(ld.short_description, ''))"
 		primaryTagExpr = "COALESCE(NULLIF(primary_tag.name_en, ''), primary_tag.name, '')"
 		secondaryTagExpr = "COALESCE(NULLIF(secondary_tag.name_en, ''), secondary_tag.name, '')"
 	}
@@ -1375,13 +1387,13 @@ func searchReleaseDateExpr() string {
 	return `
 		COALESCE(
 			CASE
-				WHEN NULLIF(g.release_date, '') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
-				THEN to_date(REPLACE(g.release_date, '.', '-'), 'YYYY-MM-DD')
+				WHEN regexp_replace(COALESCE(g.release_date, ''), '[[:space:]]+', '', 'g') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
+				THEN to_date(REPLACE(regexp_replace(COALESCE(g.release_date, ''), '[[:space:]]+', '', 'g'), '.', '-'), 'YYYY-MM-DD')
 				ELSE NULL
 			END,
 			CASE
-				WHEN NULLIF(d.release_date_text, '') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
-				THEN to_date(REPLACE(d.release_date_text, '.', '-'), 'YYYY-MM-DD')
+				WHEN regexp_replace(COALESCE(d.release_date_text, ''), '[[:space:]]+', '', 'g') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
+				THEN to_date(REPLACE(regexp_replace(COALESCE(d.release_date_text, ''), '[[:space:]]+', '', 'g'), '.', '-'), 'YYYY-MM-DD')
 				ELSE NULL
 			END
 		)
@@ -1390,15 +1402,34 @@ func searchReleaseDateExpr() string {
 
 func listOrder(sort string) string {
 	switch sort {
+	case "release_date":
+		return releaseDateOrderExpr() + " DESC NULLS LAST, g.id DESC"
 	case "newest":
-		return "create_time DESC, id DESC"
+		return "g.create_time DESC, g.id DESC"
 	case "updated":
-		return "update_time DESC, id DESC"
+		return "g.update_time DESC, g.id DESC"
 	case "weight":
 		fallthrough
 	default:
-		return "weight ASC, id ASC"
+		return "g.weight ASC, g.id ASC"
 	}
+}
+
+func releaseDateOrderExpr() string {
+	return `
+		COALESCE(
+			CASE
+				WHEN regexp_replace(COALESCE(g.release_date, ''), '[[:space:]]+', '', 'g') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
+				THEN to_date(REPLACE(regexp_replace(COALESCE(g.release_date, ''), '[[:space:]]+', '', 'g'), '.', '-'), 'YYYY-MM-DD')
+				ELSE NULL
+			END,
+			CASE
+				WHEN regexp_replace(COALESCE(d.release_date_text, ''), '[[:space:]]+', '', 'g') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
+				THEN to_date(REPLACE(regexp_replace(COALESCE(d.release_date_text, ''), '[[:space:]]+', '', 'g'), '.', '-'), 'YYYY-MM-DD')
+				ELSE NULL
+			END
+		)
+	`
 }
 
 func normalizeDAORegion(region string) string {
@@ -1530,8 +1561,14 @@ SELECT
     r.algorithm_version,
     r.computed_at,
     g.appid,
-    COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name, ''), g.name_en) AS name,
-    COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en) AS summary,
+    CASE WHEN ? = 'en'
+        THEN COALESCE(NULLIF(g.name_en, ''), NULLIF(g.name, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))
+        ELSE COALESCE(NULLIF(g.name, ''), NULLIF(g.name_en, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))
+    END AS name,
+    CASE WHEN ? = 'en'
+        THEN COALESCE(NULLIF(g.info_en, ''), NULLIF(g.info, ''), NULLIF(ld.short_description, ''))
+        ELSE COALESCE(NULLIF(g.info, ''), NULLIF(g.info_en, ''), NULLIF(ld.short_description, ''))
+    END AS summary,
     COALESCE(NULLIF(header_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS header_url,
     COALESCE(NULLIF(capsule_media.url, ''), '') AS capsule_url,
     COALESCE(NULLIF(library_cover_media.url, ''), '') AS library_cover_url,
@@ -1660,8 +1697,14 @@ library_cover_2x_media AS (
 SELECT
     g.id AS game_id,
     g.appid,
-    COALESCE(NULLIF(ld.name, ''), NULLIF(d.name, ''), NULLIF(g.name, ''), g.name_en) AS name,
-    COALESCE(NULLIF(ld.short_description, ''), NULLIF(g.info, ''), g.info_en) AS summary,
+    CASE WHEN ? = 'en'
+        THEN COALESCE(NULLIF(g.name_en, ''), NULLIF(g.name, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))
+        ELSE COALESCE(NULLIF(g.name, ''), NULLIF(g.name_en, ''), NULLIF(ld.name, ''), NULLIF(d.name, ''))
+    END AS name,
+    CASE WHEN ? = 'en'
+        THEN COALESCE(NULLIF(g.info_en, ''), NULLIF(g.info, ''), NULLIF(ld.short_description, ''))
+        ELSE COALESCE(NULLIF(g.info, ''), NULLIF(g.info_en, ''), NULLIF(ld.short_description, ''))
+    END AS summary,
     COALESCE(NULLIF(header_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS header_url,
     COALESCE(NULLIF(capsule_media.url, ''), '') AS capsule_url,
     COALESCE(NULLIF(library_cover_media.url, ''), '') AS library_cover_url,

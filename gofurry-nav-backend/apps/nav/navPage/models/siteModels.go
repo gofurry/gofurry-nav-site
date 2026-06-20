@@ -25,7 +25,6 @@ type GfnSite struct {
 	Country    *string      `gorm:"column:country;type:character varying(20);comment:country" json:"country"`
 	Nsfw       string       `gorm:"column:nsfw;type:character varying(4);default:''::character varying;comment:nsfw" json:"nsfw"`
 	Welfare    string       `gorm:"column:welfare;type:character varying(4);comment:welfare" json:"welfare"`
-	Weight     int64        `gorm:"column:weight;type:bigint;not null;default:0;comment:weight" json:"weight"`
 	ViewCount  int64        `gorm:"column:view_count;type:bigint;not null;default:0;comment:view count" json:"view_count"`
 	Icon       *string      `gorm:"column:icon;type:character varying(255);comment:icon" json:"icon"`
 	Deleted    bool         `gorm:"column:deleted;type:boolean;comment:deleted" json:"deleted"`
@@ -64,6 +63,7 @@ type GfnSiteGroupMap struct {
 	ID         int64     `gorm:"column:id;type:bigint;primaryKey;comment:group map id" json:"id"`
 	SiteID     int64     `gorm:"column:site_id;type:bigint;not null;comment:site id" json:"siteId,string"`
 	GroupID    int64     `gorm:"column:group_id;type:bigint;not null;comment:group id" json:"groupId,string"`
+	Weight     int64     `gorm:"column:weight;type:bigint;not null;default:0;comment:group weight" json:"weight"`
 	CreateTime time.Time `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:create time" json:"createTime"`
 	UpdateTime time.Time `gorm:"column:update_time;type:int;type:unsigned;not null;autoUpdateTime;comment:update time" json:"updateTime"`
 }
