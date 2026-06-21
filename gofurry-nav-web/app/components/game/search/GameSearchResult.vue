@@ -59,7 +59,7 @@
                     @click="goDetail(game.id)"
                 >
                   <div class="relative mb-2">
-                    <img
+                    <SteamAssetImage
                         :src="game.cover"
                         class="search-page-cover"
                         :alt="game.name"
@@ -177,6 +177,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import GamePagination from '@/components/game/search/GamePagination.vue'
 import GameReviewDialog from '@/components/game/common/GameReviewDialog.vue'
+import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import type { SearchPageResponseItem } from '@/types/game'
 import { i18n } from '@/main'
 

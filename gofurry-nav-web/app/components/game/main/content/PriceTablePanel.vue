@@ -18,7 +18,7 @@
 
     <div v-if="topItem" class="game-stats-feature relative z-[1] mt-3 rounded-xl px-3 py-2">
       <div class="flex min-w-0 items-center gap-3">
-        <img
+        <SteamAssetImage
           :src="topItem.header"
           class="stats-feature-cover h-12 w-24 shrink-0 rounded-lg object-cover"
           :alt="topItem.name"
@@ -70,7 +70,7 @@
           </div>
 
           <div class="flex min-w-0 items-center gap-3">
-            <img
+            <SteamAssetImage
               :src="item.header"
               class="stats-row-cover h-11 w-20 rounded-md object-cover"
               :alt="item.name"
@@ -115,6 +115,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PriceRecord } from '@/types/game'
+import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import { i18n } from '@/main'
 
 const { t } = i18n.global

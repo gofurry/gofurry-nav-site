@@ -1,7 +1,7 @@
 <template>
   <div class="game-detail-hero flex flex-col gap-5 p-5 sm:flex-row">
     <div class="shrink-0 flex justify-center sm:justify-start">
-      <img
+      <SteamAssetImage
         v-if="currentCover"
         :src="currentCover"
         class="game-detail-cover h-[240px] w-[180px] object-cover"
@@ -133,6 +133,7 @@ import type { GameBaseInfoResponse, RemarkResponse } from '@/types/game'
 
 import starSvg from '@/assets/svgs/star.svg'
 import starHalfSvg from '@/assets/svgs/star-half-alt.svg'
+import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 
 import telegramIcon from '@/assets/icons/telegram.svg'
 import twitterIcon from '@/assets/icons/twitter.svg'

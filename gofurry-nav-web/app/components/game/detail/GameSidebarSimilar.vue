@@ -48,7 +48,7 @@
               @click="goGameDetail(game.id)"
           >
             <!-- 封面 -->
-            <img
+            <SteamAssetImage
                 v-if="coverOf(game)"
                 :src="coverOf(game)"
                 class="w-12 h-16 rounded-md object-cover flex-shrink-0"
@@ -120,6 +120,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue"
 import type { RecommendedModel } from "@/types/game"
+import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import { i18n } from '@/main'
 
 const { t } = i18n.global

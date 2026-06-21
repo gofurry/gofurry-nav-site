@@ -456,6 +456,43 @@ html.dark .nav-home-page {
     0 0 0 4px rgba(15, 23, 42, 0.20);
 }
 
+@media (max-width: 639px) {
+  .search-category-row {
+    margin-bottom: 0.5rem;
+  }
+
+  .search-platform-row {
+    margin-top: 0.5rem;
+  }
+
+  .search-category-row .search-chip,
+  .search-platform-row .search-chip {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  }
+
+  .search-category-row .search-chip-active,
+  .search-platform-row .search-chip-active {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  }
+
+  .search-input {
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.82),
+      0 0 0 1px rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(12px) saturate(1.04);
+    -webkit-backdrop-filter: blur(12px) saturate(1.04);
+  }
+
+  .search-input:focus {
+    background: rgba(255, 255, 255, 0.90);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.88),
+      0 0 0 1px rgba(255, 255, 255, 0.38),
+      0 0 0 3px rgba(15, 23, 42, 0.12);
+  }
+}
+
 .search-icon {
   position: absolute;
   top: 50%;
@@ -474,6 +511,12 @@ html.dark .nav-home-page {
 .search-icon:hover {
   opacity: 0.96;
   transform: translateY(-50%) scale(1.1);
+}
+
+@media (max-width: 639px) {
+  .search-icon {
+    filter: none;
+  }
 }
 
 .search-suggestion-list {
@@ -1105,6 +1148,12 @@ html.dark .group-popover {
 .nav-transition-bar__weather {
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 639px) {
+  .nav-transition-bar__weather {
+    display: none;
+  }
 }
 
 .nav-transition-bar__weather-spacer {

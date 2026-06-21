@@ -55,7 +55,7 @@
             class="news-card"
             @click="openUrl(news.url)"
           >
-            <img
+            <SteamAssetImage
               :src="news.header"
               :alt="newsImageAlt(news)"
               class="news-card__cover"
@@ -91,6 +91,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLangStore } from '@/store/langStore'
+import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import type { LatestNewsRecord, NewsBaseModel } from '~/types/game'
 
 const props = defineProps<{
