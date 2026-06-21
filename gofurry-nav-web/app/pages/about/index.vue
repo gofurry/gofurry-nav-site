@@ -45,6 +45,12 @@
             >
               {{ teamSection.issueAction }}
             </a>
+            <NuxtLink
+                :to="localePath('/about/faolan')"
+                class="about-panel-action about-panel-action--resume"
+            >
+              {{ teamSection.resumeAction }}
+            </NuxtLink>
           </div>
         </article>
 
@@ -83,6 +89,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 const { locale } = useI18n()
+const localePath = useLocalePath()
 const isZh = computed(() => locale.value === 'zh')
 const pageSeo = computed(() => (
   isZh.value
@@ -112,10 +119,11 @@ const teamSection = computed(() => (
         desc: '兽人控导航站站长，Golang 软件工程师。兽人控导航站是一个开放的兽圈站点观测平台，主要提供站点的导航与用户视角的网络观测数据，无用户系统、不中转、不收集任何用户的敏感信息。目前项目处于小规模的持续迭代中，如有任何疑问欢迎前往Github提交Issue，十分感谢您的贡献。',
         issueLink: 'https://github.com/gofurry/gofurry-nav-site/issues',
         issueAction: '提交您的建议',
+        resumeAction: '查看简历',
         member: {
           name: '福狼',
           role: '开发者 / 维护者',
-          avatar: 'https://qcdn.go-furry.com/game/creator/100/avatar.jpg',
+          avatar: 'https://qcdn.go-furry.com/nav/about/faolan.jpg',
           link: 'https://github.com/gofurry',
           action: '前往个人主页',
         },
@@ -125,10 +133,11 @@ const teamSection = computed(() => (
         desc: 'Site owner of GoFurry Navigation and Golang software engineer. GoFurry Navigation is an open furry-site observability platform focused on navigation and user-perspective web observation data, with no user system, no traffic proxying, and no collection of sensitive user information.',
         issueLink: 'https://github.com/gofurry/gofurry-nav-site/issues',
         issueAction: 'Submit Suggestion',
+        resumeAction: 'View Resume',
         member: {
           name: 'Faolan',
           role: 'Developer / Maintainer',
-          avatar: 'https://qcdn.go-furry.com/game/creator/100/avatar.jpg',
+          avatar: 'https://qcdn.go-furry.com/nav/about/faolan.jpg',
           link: 'https://github.com/gofurry',
           action: 'Open project page',
         },

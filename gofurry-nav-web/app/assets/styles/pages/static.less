@@ -165,6 +165,12 @@
   color: var(--about-action-text);
 }
 
+.about-panel-action--resume {
+  border-color: var(--about-resume-border);
+  background: var(--about-resume-bg);
+  color: var(--about-resume-text);
+}
+
 .about-panel-action:hover {
   background: var(--about-button-hover);
   transform: translateY(-1px);
@@ -173,6 +179,11 @@
 .about-panel-action--accent:hover {
   border-color: var(--about-action-border-hover);
   background: var(--about-action-hover);
+}
+
+.about-panel-action--resume:hover {
+  border-color: var(--about-resume-border-hover);
+  background: var(--about-resume-hover);
 }
 
 .about-links {
@@ -269,6 +280,217 @@
   overflow-wrap: anywhere;
 }
 
+.gf-static-page__main--resume {
+  max-width: 76rem;
+  gap: 1rem;
+}
+
+.resume-back-link {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--about-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    color 200ms ease,
+    transform 200ms ease;
+}
+
+.resume-back-link:hover {
+  color: var(--about-heading);
+  transform: translateX(-2px);
+}
+
+.resume-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1rem, 2vw, 1.4rem);
+  position: relative;
+  overflow: hidden;
+}
+
+.resume-hero::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: -40% auto auto 48%;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--about-resume-glow), transparent 68%);
+  opacity: 0.72;
+}
+
+.resume-hero__content {
+  position: relative;
+  z-index: 1;
+}
+
+.resume-avatar {
+  position: relative;
+  z-index: 1;
+  width: clamp(4.25rem, 9vw, 5.75rem);
+  height: clamp(4.25rem, 9vw, 5.75rem);
+  border-radius: 1rem;
+  object-fit: cover;
+  box-shadow: 0 0 0 2px var(--about-avatar-ring);
+}
+
+.resume-identity-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.resume-name {
+  margin: 0;
+  color: var(--about-heading);
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.resume-role-years {
+  flex-shrink: 0;
+  color: var(--about-accent);
+  font-size: 0.86rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.resume-summary {
+  margin: 0.55rem 0 0;
+  color: var(--about-muted);
+  font-size: 0.9rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.resume-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.resume-main-flow {
+  display: grid;
+  gap: 1rem;
+}
+
+.resume-section,
+.resume-facts-panel {
+  padding: clamp(1.4rem, 2vw, 1.85rem);
+}
+
+.resume-section-heading {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.resume-section-title {
+  margin: 0;
+  color: var(--about-heading);
+  font-size: 1.35rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.resume-fact-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1.25rem 0 0;
+}
+
+.resume-fact {
+  display: grid;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--about-rule);
+  padding-bottom: 0.75rem;
+}
+
+.resume-fact:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.resume-fact dt {
+  color: var(--about-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.resume-fact dd {
+  margin: 0;
+  color: var(--about-heading);
+  font-size: 0.95rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.resume-timeline,
+.resume-project-list {
+  display: grid;
+  gap: 0.85rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.resume-timeline-item,
+.resume-project-item {
+  position: relative;
+  border-left: 2px solid var(--about-resume-line);
+  color: var(--about-heading);
+  padding: 0.2rem 0 0.2rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.6;
+}
+
+.resume-timeline-item::before,
+.resume-project-item::before {
+  content: "";
+  position: absolute;
+  top: 0.72rem;
+  left: -0.42rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: var(--about-accent);
+  box-shadow: 0 0 0 4px var(--about-resume-dot-ring);
+}
+
+.resume-project-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.resume-project-item em {
+  border: 1px solid var(--about-chip-border);
+  border-radius: 999px;
+  background: var(--about-chip-bg);
+  color: var(--about-chip-text);
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.resume-links {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
 @media (min-width: 640px) {
   .gf-static-page__main {
     padding-inline: 1.5rem;
@@ -293,6 +515,16 @@
   .gf-static-page__grid--about {
     grid-template-columns: 0.95fr 1.05fr;
   }
+
+  .resume-layout {
+    grid-template-columns: minmax(16rem, 0.62fr) minmax(0, 1.38fr);
+    align-items: start;
+  }
+
+  .resume-facts-panel {
+    position: sticky;
+    top: 6rem;
+  }
 }
 
 @media (max-width: 767px) {
@@ -303,6 +535,15 @@
 }
 
 @media (max-width: 520px) {
+  .about-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .about-panel-action {
+    width: 100%;
+  }
+
   .about-link {
     align-items: flex-start;
     flex-direction: column;
@@ -332,6 +573,14 @@
   --about-action-text: rgb(15 23 42);
   --about-action-border: rgba(251, 146, 60, 0.28);
   --about-action-border-hover: rgba(251, 146, 60, 0.42);
+  --about-resume-bg: rgba(15, 23, 42, 0.08);
+  --about-resume-hover: rgba(15, 23, 42, 0.12);
+  --about-resume-text: rgb(15 23 42);
+  --about-resume-border: rgba(15, 23, 42, 0.16);
+  --about-resume-border-hover: rgba(15, 23, 42, 0.24);
+  --about-resume-glow: rgba(251, 146, 60, 0.2);
+  --about-resume-line: rgba(180, 83, 9, 0.24);
+  --about-resume-dot-ring: rgba(251, 146, 60, 0.16);
   --about-button-bg: rgba(255, 255, 255, 0.4);
   --about-button-border: rgba(15, 23, 42, 0.09);
   --about-button-text: rgb(15 23 42);
@@ -360,6 +609,14 @@ html.dark .about-page {
   --about-action-text: rgb(255 237 213);
   --about-action-border: rgba(251, 146, 60, 0.34);
   --about-action-border-hover: rgba(251, 146, 60, 0.48);
+  --about-resume-bg: rgba(142, 214, 255, 0.1);
+  --about-resume-hover: rgba(142, 214, 255, 0.16);
+  --about-resume-text: rgb(239 246 255);
+  --about-resume-border: rgba(142, 214, 255, 0.22);
+  --about-resume-border-hover: rgba(142, 214, 255, 0.34);
+  --about-resume-glow: rgba(56, 189, 248, 0.18);
+  --about-resume-line: rgba(142, 214, 255, 0.28);
+  --about-resume-dot-ring: rgba(142, 214, 255, 0.14);
   --about-button-bg: rgba(255, 255, 255, 0.04);
   --about-button-border: rgba(148, 163, 184, 0.14);
   --about-button-text: rgb(239 246 255);
