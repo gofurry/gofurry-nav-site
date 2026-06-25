@@ -1213,9 +1213,15 @@ html.dark .nav-transition-bar__author {
 }
 
 .nav-tool-dock {
+  --nav-tool-edge-gap: 0.35rem;
+  --nav-tool-rail-width: 2.75rem;
+
   position: fixed;
   top: 6rem;
-  right: 1rem;
+  right: max(
+    var(--nav-tool-edge-gap),
+    calc((100vw - 2080px) / 2 - var(--nav-tool-rail-width) - var(--nav-tool-edge-gap))
+  );
   bottom: 5.6rem;
   z-index: 40;
   display: none;
