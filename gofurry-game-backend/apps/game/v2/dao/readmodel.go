@@ -1276,8 +1276,8 @@ func (dao *ReadModelDAO) buildSearchQuery(db *gorm.DB, query v2models.GameV2Sear
 			  AND asset_type IN ('header_2x', 'header')
 			ORDER BY game_id,
 				CASE asset_type
-					WHEN 'header_2x' THEN 0
-					WHEN 'header' THEN 1
+					WHEN 'header' THEN 0
+					WHEN 'header_2x' THEN 1
 					ELSE 2
 				END,
 				sort_order ASC,
@@ -1498,8 +1498,8 @@ header_media AS (
     FROM (
         SELECT game_id, url,
                CASE asset_type
-                   WHEN 'header_2x' THEN 0
-                   WHEN 'header' THEN 1
+                   WHEN 'header' THEN 0
+                   WHEN 'header_2x' THEN 1
                    ELSE 2
                END AS priority,
                sort_order,
@@ -1517,10 +1517,10 @@ capsule_media AS (
     FROM (
         SELECT game_id, url,
                CASE asset_type
-                   WHEN 'capsule_main_2x' THEN 0
-                   WHEN 'capsule_main' THEN 1
-                   WHEN 'hero_capsule_2x' THEN 2
-                   WHEN 'hero_capsule' THEN 3
+                   WHEN 'capsule_main' THEN 0
+                   WHEN 'hero_capsule' THEN 1
+                   WHEN 'capsule_main_2x' THEN 2
+                   WHEN 'hero_capsule_2x' THEN 3
                    ELSE 4
                END AS priority,
                sort_order,
@@ -1572,7 +1572,7 @@ SELECT
     COALESCE(NULLIF(header_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS header_url,
     COALESCE(NULLIF(capsule_media.url, ''), '') AS capsule_url,
     COALESCE(NULLIF(library_cover_media.url, ''), '') AS library_cover_url,
-    COALESCE(NULLIF(library_cover_2x_media.url, ''), '') AS library_cover_2x_url,
+    COALESCE(NULLIF(library_cover_media.url, ''), NULLIF(library_cover_2x_media.url, ''), '') AS library_cover_2x_url,
     COALESCE(target_tags.tags, '[]'::jsonb)::text AS tags,
     COALESCE(p.region, ?) AS price_region,
     CASE
@@ -1641,8 +1641,8 @@ header_media AS (
     FROM (
         SELECT game_id, url,
                CASE asset_type
-                   WHEN 'header_2x' THEN 0
-                   WHEN 'header' THEN 1
+                   WHEN 'header' THEN 0
+                   WHEN 'header_2x' THEN 1
                    ELSE 2
                END AS priority,
                sort_order,
@@ -1660,10 +1660,10 @@ capsule_media AS (
     FROM (
         SELECT game_id, url,
                CASE asset_type
-                   WHEN 'capsule_main_2x' THEN 0
-                   WHEN 'capsule_main' THEN 1
-                   WHEN 'hero_capsule_2x' THEN 2
-                   WHEN 'hero_capsule' THEN 3
+                   WHEN 'capsule_main' THEN 0
+                   WHEN 'hero_capsule' THEN 1
+                   WHEN 'capsule_main_2x' THEN 2
+                   WHEN 'hero_capsule_2x' THEN 3
                    ELSE 4
                END AS priority,
                sort_order,
@@ -1708,7 +1708,7 @@ SELECT
     COALESCE(NULLIF(header_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS header_url,
     COALESCE(NULLIF(capsule_media.url, ''), '') AS capsule_url,
     COALESCE(NULLIF(library_cover_media.url, ''), '') AS library_cover_url,
-    COALESCE(NULLIF(library_cover_2x_media.url, ''), '') AS library_cover_2x_url,
+    COALESCE(NULLIF(library_cover_media.url, ''), NULLIF(library_cover_2x_media.url, ''), '') AS library_cover_2x_url,
     d.developers::text AS developers,
     d.publishers::text AS publishers,
     d.platforms::text AS platforms,

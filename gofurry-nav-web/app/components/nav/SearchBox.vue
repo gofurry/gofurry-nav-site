@@ -4,7 +4,7 @@
       class="search-box-shell relative isolate z-30 mt-2 flex w-full flex-col items-center md:mt-0"
   >
     <!-- 搜索类别 -->
-    <div class="mb-3 w-full max-w-[620px] px-3 py-2.5">
+    <div class="search-category-row mb-3 w-full max-w-[620px] px-3 py-2.5">
       <div class="flex flex-wrap justify-center gap-2 sm:gap-3">
         <div
             v-for="item in categories"
@@ -84,7 +84,7 @@
     </div>
 
     <!-- 搜索平台 -->
-    <div class="mt-1 w-full max-w-[620px] px-3 py-2.5">
+    <div class="search-platform-row mt-1 w-full max-w-[620px] px-3 py-2.5">
       <div class="grid grid-cols-2 justify-center gap-2 md:flex md:flex-wrap md:gap-2">
         <div
             v-for="platform in platforms[selectedCategory]"

@@ -14,7 +14,7 @@
       class="latest-review-item"
     >
       <div class="flex w-[88px] shrink-0 flex-col items-center text-center">
-        <img
+        <SteamAssetImage
           :src="item.game_cover"
           class="h-[52px] w-full rounded-md object-cover"
           :alt="item.game_name"
@@ -55,6 +55,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import type { AnonymousReviewModel } from '~/types/game'
 
 const props = defineProps<{

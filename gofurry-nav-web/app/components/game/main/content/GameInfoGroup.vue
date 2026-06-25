@@ -59,7 +59,7 @@
             class="game-card group"
           >
             <div class="relative">
-              <img
+              <SteamAssetImage
                 :src="item.cover"
                 class="mb-2 h-32 w-full rounded-md object-cover"
                 :alt="item.name"
@@ -113,6 +113,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import RatingStar from '@/components/common/RatingStar.vue'
+import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import GameReviewDialog from '@/components/game/common/GameReviewDialog.vue'
 
 const { t } = useI18n()

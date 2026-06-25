@@ -3,11 +3,13 @@
     <NuxtPage />
   </NuxtLayout>
   <ClientOnly>
+    <GlobalBackButton />
     <PageScrollDock />
   </ClientOnly>
 </template>
 
 <script setup lang="ts">
+import GlobalBackButton from '~/components/common/GlobalBackButton.vue'
 import PageScrollDock from '~/components/common/PageScrollDock.vue'
 
 const { locale } = useI18n()

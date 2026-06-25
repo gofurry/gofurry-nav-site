@@ -55,7 +55,7 @@
             class="news-card"
             @click="openUrl(news.url)"
           >
-            <img
+            <SteamAssetImage
               :src="news.header"
               :alt="newsImageAlt(news)"
               class="news-card__cover"
@@ -90,16 +90,15 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useLangStore } from '@/store/langStore'
+import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import type { LatestNewsRecord, NewsBaseModel } from '~/types/game'
 
 const props = defineProps<{
   initialNewsRecord?: LatestNewsRecord | null
 }>()
 
-const { t } = useI18n()
-const langStore = useLangStore()
-const lang = ref(langStore.lang)
+const { t, locale } = useI18n()
+const lang = computed<'zh' | 'en'>(() => locale.value === 'en' ? 'en' : 'zh')
 
 const newsList = ref<NewsBaseModel[]>([])
 const viewportRef = ref<HTMLElement | null>(null)
@@ -240,9 +239,8 @@ onUnmounted(() => {
 })
 
 watch(
-  [() => props.initialNewsRecord, () => langStore.lang],
-  ([record, nextLang]) => {
-    lang.value = nextLang as 'zh' | 'en'
+  [() => props.initialNewsRecord, lang],
+  ([record]) => {
     applyNewsRecord((record as LatestNewsRecord | null | undefined) ?? null)
   },
   { immediate: true }

@@ -186,7 +186,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useLangStore } from '@/store/langStore'
 import { useThemeStore } from '@/stores/theme'
 import { useI18n } from 'vue-i18n'
 import cnFlag from '@/assets/flags/cn.svg'
@@ -204,7 +203,6 @@ const route = useRoute()
 const router = useRouter()
 const localePath = useLocalePath()
 const switchLocalePath = useSwitchLocalePath()
-const langStore = useLangStore()
 const themeStore = useThemeStore()
 defineProps<{
   navOverlayDesktop?: boolean
@@ -287,11 +285,10 @@ function saveMode(value: string) {
   writeMode(trimmed)
 }
 
-function switchLang(lang: 'zh' | 'en') {
-  langStore.setLang(lang)
+async function switchLang(lang: 'zh' | 'en') {
   const nextPath = switchLocalePath(lang)
   if (nextPath && nextPath !== route.fullPath) {
-    router.push(nextPath)
+    await router.push(nextPath)
   }
   mobileMenuOpen.value = false
 }

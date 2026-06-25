@@ -328,11 +328,11 @@ function mapV2Detail(detail: GameV2DetailRecord): GameBaseInfoResponse {
 }
 
 function bestV2DetailCover(detail: GameV2DetailRecord) {
-  return detail.media?.library_cover_2x_url
-    || detail.media?.library_cover_url
+  return detail.media?.library_cover_url
+    || detail.media?.library_cover_2x_url
     || firstStoreBrowseAssetURL(detail.media?.assets, [
-    'library_capsule_2x',
     'library_capsule',
+    'library_capsule_2x',
   ])
 }
 

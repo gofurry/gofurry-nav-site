@@ -39,7 +39,7 @@
             class="search-result-card"
             @click="goToGame(item.id)"
         >
-          <img
+          <SteamAssetImage
               :src="item.cover"
               class="search-result-cover"
               :alt="item.name"
@@ -56,6 +56,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { getSearchSimple } from "@/utils/api/game";
 import type { SearchItemModel } from "@/types/game";
+import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t, locale } = useI18n()

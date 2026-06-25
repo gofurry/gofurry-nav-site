@@ -46,6 +46,7 @@
     "times": "次",
     "result": "结果",
     "refresh": "刷新",
+    "back": "返回上一页",
     "visits": "浏览量",
     "scrollStep": "向上回退 25%",
     "scrollProgress": "当前位置 {percent}%",

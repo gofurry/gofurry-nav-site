@@ -59,7 +59,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useLangStore } from '@/store/langStore'
+import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@/stores/theme'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import updatesDividerUrl from '@/assets/svgs/updates-divider.svg'
@@ -85,9 +85,9 @@ const emptyUpdatesResponse = (): NavUpdatesResponse => ({
   items: [],
 })
 
-const langStore = useLangStore()
+const { locale } = useI18n()
 const themeStore = useThemeStore()
-const lang = computed(() => langStore.lang)
+const lang = computed<'zh' | 'en'>(() => locale.value === 'en' ? 'en' : 'zh')
 const localeCode = computed(() => (lang.value === 'en' ? 'en-US' : 'zh-CN'))
 const isDarkTheme = computed(() => themeStore.theme === 'dark')
 const summaryDividerSrc = computed(() => (isDarkTheme.value ? updatesDividerDarkUrl : updatesDividerUrl))

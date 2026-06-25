@@ -10,7 +10,7 @@
           controls
           :muted="isBlocked"
           :autoplay="false"
-          :poster="activeMedia.thumb"
+          :poster="steamAssetUrl(activeMedia.thumb)"
           preload="metadata"
           playsinline
           class="game-detail-video h-full w-full object-contain"
@@ -24,7 +24,7 @@
           class="game-detail-video-loading pointer-events-none absolute inset-0 flex items-center justify-center"
           aria-hidden="true"
       >
-        <img
+        <SteamAssetImage
             v-if="activeMedia?.thumb"
             :src="activeMedia.thumb"
             :alt="mediaAlt(activeMedia)"
@@ -35,7 +35,7 @@
       </div>
 
       <!-- 图片 -->
-      <img
+      <SteamAssetImage
           v-else-if="activeMedia?.type === 'screenshot'"
           :src="activeMedia.src"
           :alt="mediaAlt(activeMedia)"
@@ -60,7 +60,7 @@
             activeKey === item.key ? 'game-detail-thumb--active' : 'game-detail-thumb--idle'
           ]"
       >
-        <img
+        <SteamAssetImage
             :src="item.thumb"
             :alt="mediaAlt(item)"
             class="h-full w-full object-fill transition-transform duration-200"
@@ -85,7 +85,7 @@
         class="game-detail-lightbox fixed inset-0 z-50 flex items-center justify-center p-4"
         @click.self="openFullscreen = false"
     >
-      <img
+      <SteamAssetImage
           :src="activeMedia.src"
           :alt="mediaAlt(activeMedia)"
           class="max-h-full max-w-full object-contain"
@@ -104,8 +104,10 @@
 <script setup lang="ts">
 import {ref, computed, watch, onMounted, onBeforeUnmount, nextTick} from 'vue'
 import { i18n } from '@/main'
+import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
+import { preferredSteamSharedAssetUrl } from '@/utils/steamAssets'
 
-const { t } = i18n.global
+const { t, locale } = i18n.global
 
 export interface MoviesModel {
   id: number
@@ -205,7 +207,7 @@ async function initVideo(movie: MoviesModel) {
   if (isBlocked.value) return
   if (!videoRef.value) return
 
-  const source = playableMovieSource(movie)
+  const source = steamAssetUrl(playableMovieSource(movie))
   resetVideoState()
   if (!source) {
     markVideoError()
@@ -270,6 +272,10 @@ async function initVideo(movie: MoviesModel) {
 
 function playableMovieSource(movie: MoviesModel) {
   return movie.hls_h264 || movie.mp4_url || movie.webm_url || ''
+}
+
+function steamAssetUrl(url?: string | null) {
+  return preferredSteamSharedAssetUrl(url, locale.value) || url || ''
 }
 
 function resetVideoState() {

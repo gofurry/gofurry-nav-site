@@ -46,6 +46,7 @@
     "times": "Times",
     "result": "result",
     "refresh": "Refresh",
+    "back": "Back",
     "visits": "Visits",
     "scrollStep": "Move up 25%",
     "scrollProgress": "Position {percent}%",
