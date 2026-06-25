@@ -550,8 +550,8 @@ func TestGetSimilarRecommendationsComputesAndSavesHybridScore(t *testing.T) {
 	if res[0].ID != "2" {
 		t.Fatalf("expected strong tag match first, got %s", res[0].ID)
 	}
-	if res[0].LibraryCoverURL != "library.jpg" || res[0].LibraryCover2xURL != "library_2x.jpg" {
-		t.Fatalf("expected library covers to be carried through, got %#v", res[0])
+	if res[0].LibraryCoverURL != "library.jpg" || res[0].LibraryCover2xURL != "library.jpg" {
+		t.Fatalf("expected library covers to prefer 1x assets, got %#v", res[0])
 	}
 	if len(res[0].Reasons) == 0 || res[0].Reasons[0].Type != "tag" {
 		t.Fatalf("expected tag reason first, got %#v", res[0].Reasons)
@@ -561,6 +561,19 @@ func TestGetSimilarRecommendationsComputesAndSavesHybridScore(t *testing.T) {
 	}
 	if reader.savedRecs[0].AlgorithmVersion != similarRecommendationAlgorithmVersion {
 		t.Fatalf("expected algorithm version %s, got %s", similarRecommendationAlgorithmVersion, reader.savedRecs[0].AlgorithmVersion)
+	}
+}
+
+func TestNormalizeSteamShared1xAssetURL(t *testing.T) {
+	got := normalizeSteamShared1xAssetURL("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/header_2x.jpg?t=1")
+	want := "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/header.jpg?t=1"
+	if got != want {
+		t.Fatalf("expected 1x steam asset url, got %s", got)
+	}
+
+	nonSteam := "https://cdn.example.com/store_item_assets/steam/apps/730/header_2x.jpg"
+	if got := normalizeSteamShared1xAssetURL(nonSteam); got != nonSteam {
+		t.Fatalf("expected non-steam url untouched, got %s", got)
 	}
 }
 

@@ -252,7 +252,7 @@ function formatSimilarity(sim: number) {
 }
 
 function coverOf(game: RecommendedModel) {
-  return game.library_cover_2x_url || game.library_cover_url || ''
+  return game.library_cover_url || game.library_cover_2x_url || ''
 }
 
 function hideBrokenCover(event: Event) {
