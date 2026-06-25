@@ -32,6 +32,11 @@ var Router *router
 
 type router struct{}
 
+var (
+	navMonitorOnce    sync.Once
+	navMonitorHandler http.Handler
+)
+
 func NewRouter() *router {
 	return &router{}
 }
@@ -85,20 +90,11 @@ func registerRoutes(app *fiber.App) {
 // registerMiddlewares 注册中间件
 func registerMiddlewares(app *fiber.App) {
 	cfg := env.GetServerConfig()
+	registerMonitor(app)
+
 	// 恢复 panic
 	app.Use(recover.New(recover.Config{
 		EnableStackTrace: cfg.Server.Mode == "debug", // 仅调试模式打印堆栈
-	}))
-
-	app.Use(adaptor.HTTPMiddleware(func(next http.Handler) http.Handler {
-		return monitor.New(next, monitor.Config{
-			Path:            "/monitor",
-			Title:           "GoFurry Nav Monitor",
-			Description:     "GoFurry navigation backend single-service monitor.",
-			DefaultLanguage: "zh-CN",
-			DefaultTheme:    "dark",
-			Refresh:         5 * time.Second,
-		})
 	}))
 
 	// 跨域中间件
@@ -151,6 +147,25 @@ func registerMiddlewares(app *fiber.App) {
 		}
 	}
 
+}
+
+func registerMonitor(app *fiber.App) {
+	handler := getNavMonitorHandler()
+	app.All("/monitor", adaptor.HTTPHandler(handler))
+}
+
+func getNavMonitorHandler() http.Handler {
+	navMonitorOnce.Do(func() {
+		navMonitorHandler = monitor.NewMonitor(http.NotFoundHandler(), monitor.Config{
+			Path:            "/monitor",
+			Title:           "GoFurry Nav Monitor",
+			Description:     "GoFurry navigation backend single-service monitor.",
+			DefaultLanguage: "zh-CN",
+			DefaultTheme:    "dark",
+			Refresh:         5 * time.Second,
+		})
+	})
+	return navMonitorHandler
 }
 
 // customErrorHandler 自定义错误处理

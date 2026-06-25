@@ -12,7 +12,7 @@ require (
 	github.com/gofiber/contrib/v3/coraza v0.1.2
 	github.com/gofiber/contrib/v3/swagger v1.0.0-rc.1
 	github.com/gofiber/fiber/v3 v3.3.0
-	github.com/gofurry/monitor v1.0.0
+	github.com/gofurry/monitor v1.0.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/kardianos/service v1.2.4
