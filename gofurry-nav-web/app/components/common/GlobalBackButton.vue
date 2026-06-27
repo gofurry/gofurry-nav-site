@@ -36,7 +36,7 @@ const shouldRender = computed(() => (
   isMounted.value
   && normalizedPath.value !== '/'
   && normalizedPath.value !== '/games'
-  && !normalizedPath.value.startsWith('/steam')
+  && !normalizedPath.value.startsWith('/workshop')
 ))
 const isVisible = computed(() => shouldRender.value && !isScrollingDown.value)
 

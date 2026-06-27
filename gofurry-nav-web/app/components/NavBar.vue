@@ -222,14 +222,14 @@ type NavLink = {
   external?: boolean
 }
 
-const steamZoneLink = computed<NavLink>(() => (
-  { label: t('sidebar.steamZone'), to: localePath('/steam'), activePath: '/steam' }
+const workshopLink = computed<NavLink>(() => (
+  { label: t('sidebar.workshop'), to: localePath('/workshop'), activePath: '/workshop' }
 ))
 
 const navLinks = computed<NavLink[]>(() => [
   { label: t('sidebar.nav'), to: localePath('/'), activePath: '/' },
   { label: t('sidebar.games'), to: localePath('/games'), activePath: '/games' },
-  steamZoneLink.value,
+  workshopLink.value,
   { label: currentLang.value === 'zh' ? '深度兽研' : 'DeepFurry', href: 'https://www.deepfurry.com', external: true },
 ])
 

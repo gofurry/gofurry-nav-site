@@ -117,7 +117,7 @@
     "survey": "兽圈调研",
     "about": "关于本站",
     "join": "加入我们",
-    "steamZone": "兽游工坊"
+    "workshop": "兽游工坊"
   },
   "footer": {
     "sections": {
@@ -393,7 +393,7 @@
     "action": {
       "shortcutFunction": "快捷功能",
       "dailyGame": "每日一游",
-      "steamZone": "兽游工坊",
+      "workshop": "兽游工坊",
       "oneClickAddToLibrary": "一键入库",
       "steamOneClickAddRun": "Steam 一键入库 & 运行",
       "inputAppIDInstallFreeGame": "输入AppID, 一键安装对应免费游戏或应用",
@@ -554,12 +554,18 @@
   "siteGroup": {
     "backHome": "返回首页"
   },
-  "steamZone": {
+  "workshop": {
     "eyebrow": "Steam 兽游情报",
     "title": "兽游工坊",
     "description": "这里会承接 Steam 兽游专题、官方静态资源、榜单和专题化入口。当前先作为新专区入口上线，后续逐步补齐内容能力。",
     "backToGames": "返回游戏页",
     "searchGames": "搜索兽游",
+    "tabs": {
+      "all": "全部",
+      "discussion": "讨论",
+      "developer": "开发者",
+      "tools": "工具"
+    },
     "cards": {
       "discovery": {
         "title": "作品发现",

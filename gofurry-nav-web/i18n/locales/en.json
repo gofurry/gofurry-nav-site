@@ -117,7 +117,7 @@
     "survey": "DeepFurry",
     "about": "About Us",
     "join": "Join Us",
-    "steamZone": "Workshop"
+    "workshop": "Workshop"
   },
   "footer": {
     "sections": {
@@ -393,7 +393,7 @@
     "action": {
       "shortcutFunction": "Shortcut Functions",
       "dailyGame": "Daily Game",
-      "steamZone": "Workshop",
+      "workshop": "Workshop",
       "oneClickAddToLibrary": "Add to Library",
       "steamOneClickAddRun": "Add to Steam Library & Run",
       "inputAppIDInstallFreeGame": "Enter AppID to install the corresponding free game or app with one click",
@@ -554,12 +554,18 @@
   "siteGroup": {
     "backHome": "Back Home"
   },
-  "steamZone": {
+  "workshop": {
     "eyebrow": "Steam furry games",
     "title": "Workshop",
     "description": "This page will host Steam-focused furry game topics, official assets, rankings, and curated entry points. It is now online as the new zone shell, with content capabilities to follow.",
     "backToGames": "Back to Games",
     "searchGames": "Search Page",
+    "tabs": {
+      "all": "All",
+      "discussion": "Discussion",
+      "developer": "Developers",
+      "tools": "Tools"
+    },
     "cards": {
       "discovery": {
         "title": "Game Discovery",
