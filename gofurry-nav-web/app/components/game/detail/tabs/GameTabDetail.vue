@@ -29,7 +29,7 @@
 
       <div class="flex gap-2">
         <span class="game-detail-info-label w-28 shrink-0">{{ t("game.detail.ageRestriction") }}:</span>
-        <span>{{ game?.required_age || t("game.panel.none") }}</span>
+        <span>{{ formattedRequiredAge || t("game.panel.none") }}</span>
       </div>
 
       <div class="flex gap-2">
@@ -285,6 +285,8 @@ const formattedPlatform = computed(() => (props.game?.platform ?? '').split(',')
 
 const formattedType = computed(() => formatType(props.game?.type ?? ''))
 
+const formattedRequiredAge = computed(() => formatRequiredAge(props.game?.required_age ?? ''))
+
 const priceList = computed(() => (props.game?.price_list ?? []).filter((item) => item.price))
 
 const supportEntries = computed(() => buildSupportEntries(props.game?.support_info ?? {}))
@@ -401,7 +403,7 @@ function buildRatingCards(value: unknown): RatingCard[] {
   return collectRatingRecords(value).map((record, index) => {
     const board = formatRatingBoard(pickRecordText(record, ['board', 'rating_board', 'agency', 'organization']))
     const rating = pickRecordText(record, ['rating', 'rating_value', 'ratingValue'])
-    const requiredAge = pickRecordText(record, ['required_age', 'requiredAge', 'age', 'age_rating', 'ageRating'])
+    const requiredAge = formatRequiredAge(pickRecordText(record, ['required_age', 'requiredAge', 'age', 'age_rating', 'ageRating']))
     const extra = Object.entries(record).flatMap(([key, item]) => {
       if (isRatingKnownKey(key)) {
         return []
@@ -518,6 +520,20 @@ function formatRatingBoard(value: string) {
   }
 
   return formatType(normalized)
+}
+
+function formatRequiredAge(value: string) {
+  const normalized = value.trim()
+  if (!normalized) {
+    return ''
+  }
+
+  const numericAge = Number(normalized)
+  if (Number.isFinite(numericAge) && numericAge >= 2147483647) {
+    return ''
+  }
+
+  return normalized
 }
 
 function formatMetaLabel(path: string) {

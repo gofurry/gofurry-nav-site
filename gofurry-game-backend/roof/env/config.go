@@ -18,6 +18,8 @@ func init() {
 
 var configuration = new(serverConfig)
 
+const defaultOnlinePeakCacheDays = 30
+
 type serverConfig struct {
 	ClusterId  int              `yaml:"cluster_id"`
 	Server     ServerConfig     `yaml:"server"`
@@ -30,6 +32,11 @@ type serverConfig struct {
 	Email      EmailConfig      `yaml:"email"`
 	Admin      AdminConfig      `yaml:"admin"`
 	Prize      PrizeConfig      `yaml:"prize"`
+	Game       GameConfig       `yaml:"game"`
+}
+
+type GameConfig struct {
+	OnlinePeakCacheDays int `yaml:"online_peak_cache_days"`
 }
 
 type AdminConfig struct {
@@ -211,9 +218,19 @@ func applyTestConfigDefaults(conf interface{}) bool {
 		Thread: ThreadConfig{
 			EventPublishThread: 1,
 		},
+		Game: GameConfig{
+			OnlinePeakCacheDays: defaultOnlinePeakCacheDays,
+		},
 	}
 
 	return true
+}
+
+func (cfg *serverConfig) OnlinePeakCacheDays() int {
+	if cfg == nil || cfg.Game.OnlinePeakCacheDays <= 0 {
+		return defaultOnlinePeakCacheDays
+	}
+	return cfg.Game.OnlinePeakCacheDays
 }
 
 func tryLoadConfig(file string, conf interface{}) bool {
