@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	corazalite "github.com/GoFurry/coraza-fiber-lite"
 	swagger "github.com/gofiber/contrib/v3/swaggerui"
 	"github.com/gofiber/fiber/v3"
 	fibercompress "github.com/gofiber/fiber/v3/middleware/compress"
@@ -278,7 +277,7 @@ func registerMiddlewares(app *fiber.App) {
 	}
 
 	if cfg.Waf.Enabled {
-		app.Use(corazalite.CorazaMiddleware())
+		app.Use(corazaMiddleware(cfg.Waf))
 	}
 
 	if cfg.Middleware.CSRF.Enabled {
