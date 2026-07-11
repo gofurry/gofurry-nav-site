@@ -12,12 +12,12 @@
       <section class="resume-hero about-panel">
         <img
             :src="avatarUrl"
-            alt="Faolan"
+            alt="Faolan Grey"
             class="resume-avatar"
         />
         <div class="resume-hero__content">
           <div class="resume-identity-row">
-            <h1 class="resume-name">Faolan</h1>
+            <h1 class="resume-name">Faolan Grey</h1>
             <span class="resume-role-years">{{ copy.roleYears }}</span>
           </div>
           <p class="resume-summary">{{ copy.summary }}</p>
@@ -139,7 +139,7 @@ const copy = computed(() => (
 const facts = computed(() => (
   isZh.value
     ? [
-        { label: '姓名', value: 'Faolan' },
+        { label: '姓名', value: 'Faolan Grey' },
         { label: '性别', value: '男' },
         { label: '年龄', value: '24' },
         { label: '联系方式', value: '2660621624@qq.com' },
@@ -147,7 +147,7 @@ const facts = computed(() => (
         { label: '学校', value: '成都信息工程大学 - 本科 - 机器人工程' },
       ]
     : [
-        { label: 'Name', value: 'Faolan' },
+        { label: 'Name', value: 'Faolan Grey' },
         { label: 'Gender', value: 'Male' },
         { label: 'Age', value: '24' },
         { label: 'Contact', value: '2660621624@qq.com' },
@@ -188,9 +188,9 @@ const projects = computed(() => (
 
 const openSourceLinks = [
   {
-    label: 'GoFiber Coraza',
-    value: 'gofiber/contrib v3/coraza',
-    href: 'https://github.com/gofiber/contrib/tree/main/v3/coraza',
+    label: 'GoFiber Coraza / Uptime',
+    value: 'gofiber/contrib',
+    href: 'https://github.com/gofiber/contrib',
   },
   {
     label: 'steam-go',
@@ -202,12 +202,12 @@ const openSourceLinks = [
 const pageSeo = computed(() => (
   isZh.value
     ? {
-        title: 'Faolan 简历 - GoFurry 兽人控导航站',
-        description: 'Faolan 的软件工程师简历，包含教育背景、在职经历、项目经历、开源项目与个人博客。'
+        title: 'Faolan Grey 简历 - GoFurry 兽人控导航站',
+        description: 'Faolan Grey 的软件工程师简历，包含教育背景、在职经历、项目经历、开源项目与个人博客。'
       }
     : {
-        title: 'Faolan Resume - GoFurry Navigation',
-        description: 'Resume of Faolan, including education, work experience, project experience, open-source projects, and personal blog.'
+        title: 'Faolan Grey Resume - GoFurry Navigation',
+        description: 'Resume of Faolan Grey, including education, work experience, project experience, open-source projects, and personal blog.'
       }
 ))
 

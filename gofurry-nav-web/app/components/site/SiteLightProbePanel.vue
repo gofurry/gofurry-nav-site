@@ -357,7 +357,7 @@ function label(zh: string, en: string) {
 .probe-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 120;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -377,25 +377,16 @@ function label(zh: string, en: string) {
   flex-direction: column;
   overflow: hidden;
   border-radius: 8px;
-  background:
-    radial-gradient(circle at 8% 0%, rgba(251, 140, 47, 0.08), transparent 30%),
-    linear-gradient(120deg, rgba(255, 247, 235, 0.88), rgba(255, 250, 242, 0.94)),
-    rgba(255, 247, 235, 0.90);
+  background: rgba(255, 250, 242, 0.94);
   color: #111827;
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 140, 47, 0.16),
-    0 24px 70px rgba(15, 23, 42, 0.22);
+  box-shadow: none;
+  backdrop-filter: blur(22px);
 }
 
 :global(html.dark .probe-modal-dialog){
-  background:
-    radial-gradient(circle at 8% 0%, rgba(251, 146, 60, 0.12), transparent 30%),
-    linear-gradient(120deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.92)),
-    rgba(15, 23, 42, 0.94);
+  background: rgba(15, 23, 42, 0.94);
   color: #e2e8f0;
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 146, 60, 0.16),
-    0 24px 70px rgba(0, 0, 0, 0.44);
+  box-shadow: none;
 }
 
 .probe-modal-header {
@@ -403,26 +394,30 @@ function label(zh: string, en: string) {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid rgba(251, 140, 47, 0.14);
-  padding: 1rem 1.25rem 0.9rem;
+  border-bottom: 2px solid rgba(180, 145, 108, 0.30);
+  padding: 1.1rem 1.3rem 0.75rem;
 }
 
 :global(html.dark .probe-modal-header){
-  border-bottom-color: rgba(251, 146, 60, 0.16);
+  border-bottom-color: rgba(71, 85, 105, 0.72);
 }
 
 .probe-modal-eyebrow {
-  color: #ea580c;
+  color: #64748b;
   font-size: 0.76rem;
   font-weight: 800;
   line-height: 1.35;
 }
 
+:global(html.dark .probe-modal-eyebrow){
+  color: #94a3b8;
+}
+
 .probe-modal-title {
   margin-top: 0.18rem;
   color: #111827;
-  font-size: 1.22rem;
-  font-weight: 850;
+  font-size: 1.12rem;
+  font-weight: 800;
   line-height: 1.25;
 }
 
@@ -439,49 +434,53 @@ function label(zh: string, en: string) {
 
 .probe-modal-close {
   border-radius: 8px;
-  background: rgba(255, 250, 242, 0.78);
-  padding: 0.42rem 0.72rem;
+  background: transparent;
+  padding: 0.48rem 0.7rem;
   color: #475569;
   font-size: 0.86rem;
   font-weight: 700;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.10);
-  transition: background-color 500ms ease, color 500ms ease, box-shadow 500ms ease;
+  box-shadow: none;
+  transition: background-color 500ms ease, color 500ms ease;
 }
 
 :global(html.dark .probe-modal-close){
-  background: rgba(15, 23, 42, 0.68);
+  background: transparent;
   color: #cbd5e1;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+  box-shadow: none;
 }
 
 .probe-modal-close:hover,
 .probe-modal-close:focus-visible {
-  background: #fdba74;
+  background: rgba(148, 163, 184, 0.14);
   color: #111827;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18), 0 0 0 4px rgba(251, 140, 47, 0.06);
+  box-shadow: none;
   outline: none;
 }
 
 :global(html.dark .probe-modal-close:hover),
 :global(html.dark .probe-modal-close:focus-visible){
-  background: rgba(251, 146, 60, 0.24);
-  color: #fff7ed;
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.20), 0 0 0 4px rgba(251, 146, 60, 0.07);
+  background: rgba(51, 65, 85, 0.62);
+  color: #f8fafc;
+  box-shadow: none;
 }
 
 .probe-modal-body {
   overflow-y: auto;
-  padding: 1rem 1.25rem 1.25rem;
+  padding: 0.8rem 1.3rem 1.2rem;
 }
 
 .probe-modal-summary-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  gap: 0.65rem;
 }
 
 .probe-modal-summary-item {
   min-width: 0;
-  padding: 0.72rem 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.55rem 0;
+  box-shadow: none;
 }
 
 .probe-modal-summary-label {
@@ -510,39 +509,38 @@ function label(zh: string, en: string) {
 }
 
 .probe-modal-error {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
   border-left: 2px solid rgba(239, 68, 68, 0.34);
-  background: rgba(254, 242, 242, 0.62);
-  padding: 0.72rem 0.85rem;
+  background: transparent;
+  padding: 0.25rem 0 0.25rem 0.75rem;
   color: #991b1b;
   font-size: 0.88rem;
   line-height: 1.55;
 }
 
 :global(html.dark .probe-modal-error){
-  background: rgba(127, 29, 29, 0.28);
+  background: transparent;
   color: #fecaca;
 }
 
 .probe-modal-sections {
-  margin-top: 1rem;
+  margin-top: 0.85rem;
   display: grid;
-  gap: 0.95rem;
+  gap: 0;
 }
 
 .probe-modal-section {
   min-width: 0;
-  border-top: 1px solid rgba(251, 140, 47, 0.14);
-  padding-top: 0.95rem;
+  border-top: 1px dashed rgba(180, 145, 108, 0.28);
+  padding: 0.85rem 0;
 }
 
 :global(html.dark .probe-modal-section){
-  border-top-color: rgba(251, 146, 60, 0.16);
+  border-top-color: rgba(71, 85, 105, 0.72);
 }
 
 .probe-modal-section:first-child {
-  border-top: 0;
-  padding-top: 0;
+  border-top: 1px dashed rgba(180, 145, 108, 0.28);
 }
 
 .probe-modal-section-title {
@@ -567,8 +565,10 @@ function label(zh: string, en: string) {
   gap: 1rem;
   align-items: start;
   min-width: 0;
-  border-bottom: 1px solid rgba(251, 140, 47, 0.10);
+  border-bottom: 1px solid rgba(180, 145, 108, 0.16);
   border-left: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
   padding: 0.48rem 0.65rem 0.48rem 0.55rem;
   transition: background-color 500ms ease, border-color 500ms ease;
 }
@@ -578,12 +578,12 @@ function label(zh: string, en: string) {
 }
 
 .modal-info-row:hover {
-  background: rgba(255, 237, 213, 0.48);
+  background: rgba(255, 250, 242, 0.46);
   border-left-color: rgba(251, 140, 47, 0.42);
 }
 
 :global(html.dark .modal-info-row:hover){
-  background: rgba(251, 146, 60, 0.12);
+  background: rgba(30, 41, 59, 0.62);
   border-left-color: rgba(251, 146, 60, 0.48);
 }
 

@@ -45,6 +45,11 @@ function label(zh: string, en: string) {
   margin-top: 1.25rem;
 }
 
+.changes-panel {
+  display: grid;
+  gap: 0.28rem;
+}
+
 .panel-empty {
   border-top: 1px solid rgba(251, 140, 47, 0.12);
   padding: 0.9rem 0;
@@ -59,16 +64,18 @@ function label(zh: string, en: string) {
 
 .change-event-row {
   border-top: 1px solid rgba(251, 140, 47, 0.12);
-  padding: 0.95rem 0;
+  border-radius: 0.55rem;
+  background: rgba(255, 250, 242, 0.42);
+  padding: 0.95rem 1rem;
 }
 
 :global(html.dark .change-event-row){
   border-top-color: rgba(251, 146, 60, 0.16);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .change-event-row:first-of-type {
   border-top: 0;
-  padding-top: 0;
 }
 
 .change-event-head {

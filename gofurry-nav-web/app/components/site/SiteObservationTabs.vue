@@ -394,25 +394,15 @@ function label(zh: string, en: string) {
 
 <style scoped>
 .site-observation-tabs {
-  border-radius: 8px;
-  background:
-    radial-gradient(circle at 8% 0%, rgba(251, 140, 47, 0.08), transparent 30%),
-    linear-gradient(120deg, rgba(255, 247, 235, 0.80), rgba(255, 250, 242, 0.88)),
-    rgba(255, 247, 235, 0.80);
-  padding: clamp(1rem, 2vw, 1.5rem);
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 140, 47, 0.16),
-    0 16px 42px rgba(124, 45, 18, 0.04);
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
 }
 
 :global(html.dark .site-observation-tabs){
-  background:
-    radial-gradient(circle at 8% 0%, rgba(251, 146, 60, 0.12), transparent 30%),
-    linear-gradient(120deg, rgba(15, 23, 42, 0.84), rgba(30, 41, 59, 0.72)),
-    rgba(15, 23, 42, 0.82);
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 146, 60, 0.14),
-    0 18px 52px rgba(0, 0, 0, 0.18);
+  background: transparent;
+  box-shadow: none;
 }
 
 .observation-header {
@@ -444,24 +434,43 @@ function label(zh: string, en: string) {
 .observation-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  border-radius: 8px;
-  background: rgba(255, 250, 242, 0.78);
-  padding: 0.25rem;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.06);
+  gap: 0.95rem;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
 }
 
 :global(html.dark .observation-tabs){
-  background: rgba(15, 23, 42, 0.66);
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+  background: transparent;
+  box-shadow: none;
 }
 
 .observation-tab {
-  border-radius: 7px;
-  padding: 0.55rem 0.95rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0;
+  padding: 0.28rem 0 0.34rem;
   color: #475569;
   font-size: 0.9rem;
-  transition-duration: 500ms;
+  font-weight: 700;
+  line-height: 1.15;
+  transition: color 500ms ease;
+}
+
+.observation-tab::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(251, 140, 47, 0.72);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: opacity 500ms ease, transform 500ms ease;
 }
 
 :global(html.dark .observation-tab){
@@ -470,14 +479,22 @@ function label(zh: string, en: string) {
 
 .observation-tab:hover,
 .observation-tab.is-active {
-  background: #fdba74;
-  color: #111827;
+  color: #8a3c13;
 }
 
 :global(html.dark .observation-tab:hover),
 :global(html.dark .observation-tab.is-active){
-  background: rgba(251, 146, 60, 0.26);
-  color: #fff7ed;
+  color: #fed7aa;
+}
+
+.observation-tab:hover::after,
+.observation-tab.is-active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+:global(html.dark .observation-tab::after){
+  background: rgba(251, 146, 60, 0.70);
 }
 
 .observation-content {
@@ -532,6 +549,8 @@ function label(zh: string, en: string) {
 }
 
 .record-list {
+  display: grid;
+  gap: 0.22rem;
   overflow: visible;
   border-radius: 0;
   background: transparent;
@@ -543,6 +562,8 @@ function label(zh: string, en: string) {
   gap: 0.75rem;
   border-bottom: 1px solid rgba(251, 140, 47, 0.10);
   border-left: 2px solid transparent;
+  border-radius: 0.42rem;
+  background: rgba(255, 250, 242, 0.42);
   padding: 0.58rem 0.85rem 0.58rem 0.75rem;
   font-size: 0.86rem;
   transition: background-color 500ms ease, border-color 500ms ease;
@@ -550,6 +571,7 @@ function label(zh: string, en: string) {
 
 :global(html.dark .record-row){
   border-bottom-color: rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .record-row:hover {

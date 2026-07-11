@@ -103,19 +103,15 @@ function label(zh: string, en: string) {
 <style scoped>
 .detail-observation-overview {
   margin-top: 1.5rem;
-  border-radius: 8px;
-  background:
-    radial-gradient(circle at 10% 0%, rgba(251, 140, 47, 0.10), transparent 36%),
-    rgba(255, 247, 235, 0.70);
-  padding: clamp(1rem, 2vw, 1.5rem);
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.12);
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
 }
 
 :global(html.dark .detail-observation-overview){
-  background:
-    radial-gradient(circle at 10% 0%, rgba(251, 146, 60, 0.12), transparent 36%),
-    rgba(15, 23, 42, 0.76);
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.14);
+  background: transparent;
+  box-shadow: none;
 }
 
 .overview-strip {
@@ -131,34 +127,42 @@ function label(zh: string, en: string) {
   justify-content: space-between;
   gap: 0.75rem;
   border-radius: 0.55rem;
-  background: rgba(255, 232, 196, 0.72);
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.10);
+  background: rgba(255, 250, 242, 0.42);
+  box-shadow: none;
   padding: 0.72rem 0.82rem;
 }
 
 :global(html.dark .overview-stat){
-  background: rgba(30, 41, 59, 0.74);
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.52);
+  box-shadow: none;
+}
+
+:global(html.dark .overview-stat > div:first-child){
+  color: #cbd5e1;
+}
+
+:global(html.dark .overview-stat > div:last-child){
+  color: #f8fafc;
 }
 
 .overview-stat.is-ok {
-  background: rgba(220, 252, 231, 0.64);
-  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.10);
+  background: rgba(255, 250, 242, 0.42);
+  box-shadow: none;
 }
 
 :global(html.dark .overview-stat.is-ok){
-  background: rgba(20, 83, 45, 0.26);
-  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.16);
+  background: rgba(15, 23, 42, 0.52);
+  box-shadow: none;
 }
 
 .overview-stat.is-warn {
-  background: rgba(253, 224, 71, 0.34);
-  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.12);
+  background: rgba(255, 250, 242, 0.42);
+  box-shadow: none;
 }
 
 :global(html.dark .overview-stat.is-warn){
-  background: rgba(120, 53, 15, 0.28);
-  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.18);
+  background: rgba(15, 23, 42, 0.52);
+  box-shadow: none;
 }
 
 .overview-detail-grid {
@@ -186,14 +190,18 @@ function label(zh: string, en: string) {
 .protocol-node {
   position: relative;
   border-radius: 0.65rem;
-  background: rgba(255, 230, 191, 0.70);
+  background: rgba(255, 250, 242, 0.42);
   padding: 0.85rem;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.08);
+  box-shadow: none;
 }
 
 :global(html.dark .protocol-node){
-  background: rgba(30, 41, 59, 0.70);
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.10);
+  background: rgba(15, 23, 42, 0.52);
+  box-shadow: none;
+}
+
+:global(html.dark .protocol-node .protocol-metrics){
+  color: #dbe4f0;
 }
 
 .protocol-dot {
@@ -226,28 +234,28 @@ function label(zh: string, en: string) {
   align-items: center;
   gap: 0.55rem;
   border-radius: 0.55rem;
-  background: rgba(255, 230, 191, 0.68);
+  background: rgba(255, 250, 242, 0.42);
   padding: 0.65rem 0.8rem;
   color: #475569;
   font-size: 0.78rem;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.07);
+  box-shadow: none;
 }
 
 :global(html.dark .security-header-cell){
-  background: rgba(30, 41, 59, 0.70);
-  color: #cbd5e1;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.10);
+  background: rgba(15, 23, 42, 0.52);
+  color: #e2e8f0;
+  box-shadow: none;
 }
 
 .signal-note {
   border-radius: 0.55rem;
-  background: rgba(255, 230, 191, 0.66);
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.07);
+  background: rgba(255, 250, 242, 0.42);
+  box-shadow: none;
 }
 
 :global(html.dark .signal-note){
-  background: rgba(30, 41, 59, 0.62);
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.10);
+  background: rgba(15, 23, 42, 0.52);
+  box-shadow: none;
 }
 
 .status-dot {

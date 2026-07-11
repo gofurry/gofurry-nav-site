@@ -32,6 +32,7 @@ const metricToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
 .metric-card {
   min-width: 0;
   border-radius: 8px;
+  background: rgba(255, 250, 242, 0.42);
   padding: 0.95rem 1rem;
   box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.10);
   transition: background-color 500ms ease, box-shadow 500ms ease;
@@ -42,6 +43,7 @@ const metricToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
 }
 
 :global(html.dark .metric-card){
+  background: rgba(15, 23, 42, 0.52);
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
 }
 
@@ -50,98 +52,98 @@ const metricToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
 }
 
 .metric-card.tone-warm {
-  background: rgba(255, 247, 235, 0.76);
+  background: rgba(255, 250, 242, 0.42);
 }
 
 :global(html.dark .metric-card.tone-warm){
-  background: rgba(30, 41, 59, 0.72);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .metric-card.tone-sky {
-  background: rgba(239, 246, 255, 0.72);
+  background: rgba(255, 250, 242, 0.42);
 }
 
 :global(html.dark .metric-card.tone-sky){
-  background: rgba(30, 58, 138, 0.22);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .metric-card.tone-mint {
-  background: rgba(240, 253, 244, 0.72);
+  background: rgba(255, 250, 242, 0.42);
 }
 
 :global(html.dark .metric-card.tone-mint){
-  background: rgba(20, 83, 45, 0.22);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .metric-card.tone-amber {
-  background: rgba(255, 251, 235, 0.76);
+  background: rgba(255, 250, 242, 0.42);
 }
 
 :global(html.dark .metric-card.tone-amber){
-  background: rgba(120, 53, 15, 0.22);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .metric-card.tone-rose {
-  background: rgba(255, 241, 242, 0.70);
+  background: rgba(255, 250, 242, 0.42);
 }
 
 :global(html.dark .metric-card.tone-rose){
-  background: rgba(127, 29, 29, 0.24);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .metric-card.tone-violet {
-  background: rgba(245, 243, 255, 0.68);
+  background: rgba(255, 250, 242, 0.42);
 }
 
 :global(html.dark .metric-card.tone-violet){
-  background: rgba(76, 29, 149, 0.22);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .metric-card.tone-lime {
-  background: rgba(247, 254, 231, 0.70);
+  background: rgba(255, 250, 242, 0.42);
 }
 
 :global(html.dark .metric-card.tone-lime){
-  background: rgba(54, 83, 20, 0.22);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .metric-card.tone-peach,
 .metric-card.is-accent {
-  background: rgba(255, 237, 213, 0.72);
+  background: rgba(255, 250, 242, 0.42);
 }
 
 :global(html.dark .metric-card.tone-peach),
 :global(html.dark .metric-card.is-accent){
-  background: rgba(251, 146, 60, 0.13);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .metric-card.tone-good {
-  background: #e4f7ea;
+  background: rgba(255, 250, 242, 0.42);
   box-shadow: inset 0 0 0 1px rgba(22, 163, 74, 0.20);
 }
 
 :global(html.dark .metric-card.tone-good){
-  background: rgba(20, 83, 45, 0.28);
+  background: rgba(15, 23, 42, 0.52);
   box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.16);
 }
 
 .metric-card.tone-normal {
-  background: #fff0c7;
+  background: rgba(255, 250, 242, 0.42);
   box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.18);
 }
 
 :global(html.dark .metric-card.tone-normal){
-  background: rgba(120, 53, 15, 0.26);
+  background: rgba(15, 23, 42, 0.52);
   box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.16);
 }
 
 .metric-card.tone-warn {
-  background: #ffe5df;
+  background: rgba(255, 250, 242, 0.42);
   box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.16);
 }
 
 :global(html.dark .metric-card.tone-warn){
-  background: rgba(127, 29, 29, 0.28);
+  background: rgba(15, 23, 42, 0.52);
   box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.16);
 }
 

@@ -1,6 +1,6 @@
 <template>
   <div class="games-page game-detail-page relative isolate min-h-screen overflow-hidden">
-    <GoFurryGridBackground :fixed="false" palette="games" />
+    <GoFurryGridBackground :fixed="false" palette="nav-content" />
 
     <main class="site-group-content relative z-10 mx-auto w-full max-w-[1880px] px-4 pb-16 pt-6 sm:px-6 lg:pt-8 xl:px-8">
       <header class="site-group-header mb-6">
