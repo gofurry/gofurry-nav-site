@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { listJSON } from '../api'
+import { listAllJSON } from '../api'
 import type { OptionItem } from '../types'
 
 const props = defineProps<{ endpoint: string; modelValue: string[] }>()
@@ -31,26 +31,14 @@ async function loadAll() {
   loading.value = true
   error.value = ''
   try {
-    const pageSize = 500
-    let pageNum = 1
-    let total = 0
     const merged = new Map<string, OptionItem>()
+    const result = await listAllJSON<OptionItem>(props.endpoint)
 
-    while (pageNum === 1 || merged.size < total) {
-      const result = await listJSON<OptionItem>(props.endpoint, pageNum, pageSize, '')
-      total = result.total
-
-      for (const item of result.list) {
-        merged.set(String(item.id), {
-          ...item,
-          id: String(item.id),
-        })
-      }
-
-      if (result.list.length < pageSize) {
-        break
-      }
-      pageNum += 1
+    for (const item of result.list) {
+      merged.set(String(item.id), {
+        ...item,
+        id: String(item.id),
+      })
     }
 
     options.value = Array.from(merged.values())
