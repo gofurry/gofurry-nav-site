@@ -12,9 +12,11 @@
    🐺⭐
 </P>
 
-gofurry 是一个面向兽圈文化内容发现与整理的开源多服务仓库，包含公开站点前台、导航与游戏数据接口、采集服务、运营后台以及运维周边能力模块。
+gofurry 是 GoFurry 站点体系的开源多服务仓库，面向兽圈文化内容发现、站点导航、兽游资料整理与用户视角的站点观测。
 
-线上主站当前已迁移到 Nuxt 4 前台，重点提升公开页面的 SEO、首屏可见性与公开资料索引体验；原 Vue 前台保留为迁移参考，不再作为新的生产前台入口。
+当前已上线的公开站点是 `https://go-furry.com`，定位为中国站。`https://gofurry.com` 是预留的国际站域名，已经注册，暂未上线。
+
+线上主站当前使用 Nuxt 4 前台，重点提升公开页面的 SEO、首屏可见性、站点观测展示与兽游资料索引体验；原 Vue 前台保留为历史参考，不再作为新的生产前台入口。
 
 ```text
                   ░██████             ░██████████                                        
@@ -30,37 +32,44 @@ gofurry 是一个面向兽圈文化内容发现与整理的开源多服务仓库
 
 ## 项目定位
 
-- 公开网站：`https://go-furry.com`
-- 面向对象：希望了解、部署、维护或参与 gofurry 的开发者与维护者
-- 仓库形态：按服务拆分的 monorepo，而不是单一可执行项目
+- 中国站：`https://go-furry.com`，当前生产站点
+- 国际站：`https://gofurry.com`，域名已注册，暂未上线
+- 面向用户：希望查找兽圈网站、兽游资料、站点可用性与公开观测信息的访问者
+- 面向开发者：希望了解、部署、维护或参与 GoFurry 的开发者与维护者
+- 仓库形态：按服务拆分的 monorepo，不是单一可执行项目
+- 产品边界：不提供用户账号系统，不代理用户访问，不收集用户敏感信息
 
 ## 仓库结构
 
-- `gofurry-nav-web`：Nuxt 4 前台，当前生产环境公开站点入口
-- `gofurry-nav-backend`：导航站后端 API
-- `gofurry-nav-collector`：导航数据采集服务，collector v2 数据面已完成，提供 observation、latest、summary、trend、change event 与低频旁路探测结果
-- `gofurry-game-backend`：兽游相关后端 API
-- `gofurry-game-collector`：兽游数据采集服务
-- `gofurry-admin`：运营后台，包含嵌入式前端
-- `gofurry-intl`：国际化相关服务与前端实验目录
-- `ops`：轻量运维探针与监控中心，包含 `gofurry-ops-agent`、`gofurry-ops-center`、审计模板与路线图
-- `legacy`：已下线归档模块，包含旧版 Vue 前台与原 RAG 服务，仅保留历史参考
+- `gofurry-nav-web`：Nuxt 4 前台，当前生产公开站点入口
+- `gofurry-nav-backend`：导航站后端 API，提供导航、站点详情、搜索建议、更新公告与监控端点
+- `gofurry-nav-collector`：导航数据采集服务，提供 observation、latest、summary、trend、change event 与低频旁路探测结果
+- `gofurry-game-backend`：兽游相关后端 API，承载游戏列表、详情、搜索、价格与在线人数等数据能力
+- `gofurry-game-collector`：兽游数据采集服务，负责 Steam 游戏资料、价格、在线人数与补充数据采集
+- `gofurry-admin`：运营后台，包含嵌入式前端、标签选项、采集触发、WAF 与管理接口
+- `gofurry-intl`：国际化相关服务与前端实验目录，保留给国际站方向演进
+- `ops`：当前保留 Nginx、审计与路线图资料，不再承载生产中的 ops agent / center 服务
+- `legacy`：已下线归档模块，包含旧 Vue 前台、原 RAG 服务、旧 ops agent / center，仅保留历史参考
+- `third-party`：随仓库维护的第三方/自研依赖副本，例如 `monitor` 与 `steam-go`
+- `rules`：Coraza / CRS 规则相关内容
 - `sql`：数据库相关脚本与结构文件
 - `experimental`：实验性代码，不参与正式发布
 - `tools`：辅助脚本与本地工具
 
 ## 技术栈
 
-- Go
-- Fiber
-- PostgreSQL
-- Redis
+- Go / Fiber
+- PostgreSQL / Redis
 - Nuxt 4 / Vue 3
-- Tailwind CSS
+- Tailwind CSS / Less
+- ECharts
+- Coraza WAF
+- GoFurry monitor middleware
+- steam-go
 
 ## 快速开始
 
-仓库内各服务独立开发、独立运行。下面是当前最常见的几个入口。
+仓库内各服务独立开发、独立运行。下面是当前最常用的入口。
 
 前台开发：
 
@@ -77,39 +86,36 @@ cd gofurry-nav-backend
 go run .
 ```
 
-Ops 本地体验：
+常见后端入口：
 
 ```bash
-cd ops/gofurry-ops-center
-go run ./cmd/center check-config --config ./configs/center.example.yaml
+cd gofurry-game-backend
+go run .
 
-cd ../gofurry-ops-agent
-go run ./cmd/agent --config ./configs/agent.example.yaml check-config
+cd ../gofurry-game-collector
+go run .
+
+cd ../gofurry-admin
+go run .
 ```
 
-如果你要构建根级打包产物，可使用：
+如果你要构建根级 Go 服务产物，可按目标调用：
 
 ```bat
-build.bat all
+build.bat gofurry-nav-backend
+build.bat gofurry-nav-collector
+build.bat gofurry-game-backend
+build.bat gofurry-game-collector
+build.bat gofurry-admin
 ```
 
-当前支持的目标包括：
-
-- `gofurry-nav-backend`
-- `gofurry-nav-collector`
-- `gofurry-game-backend`
-- `gofurry-game-collector`
-- `gofurry-admin`
-- `gofurry-ops-agent`
-- `gofurry-ops-center`
-
-这个脚本会把构建产物输出到根级 `build/` 目录。Nuxt 前台的生产部署则使用 `gofurry-nav-web` 目录内的 Docker 化流程。
+这个脚本会把构建产物输出到根级 `build/` 目录。Nuxt 前台的生产部署使用 `gofurry-nav-web` 目录内的部署流程。
 
 ## 生产部署
 
-当前仓库内主要有两类部署路径。
+当前仓库内主要有两类生产部署路径。
 
-Nuxt 前台使用独立 Docker 部署路径，相关说明见：
+Nuxt 前台使用独立部署路径，相关说明见：
 
 - [gofurry-nav-web/DEPLOYMENT.md](./gofurry-nav-web/DEPLOYMENT.md)
 - [gofurry-nav-web/update.sh](./gofurry-nav-web/update.sh)
@@ -121,27 +127,21 @@ cd gofurry-nav-web
 ./update.sh
 ```
 
-Go 服务延续各自目录内的二进制 / install 路线。`legacy/` 下的归档模块不参与默认构建和生产部署。
-
-Ops Agent / Center 提供轻量 systemd、Docker Compose 与 Nginx 示例，适合用独立 PostgreSQL schema 或独立数据库部署：
-
-- [ops/gofurry-ops-agent/README.md](./ops/gofurry-ops-agent/README.md)
-- [ops/gofurry-ops-center/README.md](./ops/gofurry-ops-center/README.md)
-- [ops/roadmap.md](./ops/roadmap.md)
+Go 服务延续各自目录内的二进制 / systemd / install 路线。`legacy/` 下的归档模块不参与默认构建和生产部署。
 
 ## 当前状态
 
-- 主站前台已迁移到 Nuxt 4，并已在生产环境使用
-- `gofurry-nav-backend` 的公开主链路已切换到 `/api/v2/nav`，旧 `nav/page/*` live 路由已从当前运行链路移除
+- 中国站 `go-furry.com` 已上线并使用 Nuxt 4 前台
+- 国际站 `gofurry.com` 已注册域名，暂未上线
+- 前台正在进行去卡片化视觉改造，重点覆盖游戏页、游戏搜索页、站点详情页、首页导航面板与个人简历页
+- `/steam` 相关页面已调整为“兽游工坊”方向，后续承载兽游工坊与 Steam 相关入口
+- `gofurry-nav-backend` 公开主链路使用 `/api/v2/nav`，并接入自研 monitor 中间件展示请求状态
 - `gofurry-nav-collector` 已完成 v2 数据面收口，提供 summary、latest、observations、trend、change event 与低频旁路探测结果
-- 原 `archive` 自由问答页和站内 RAG 能力已下线，前台入口调整为 `/steam` 兽游专区
-- `ops/gofurry-ops-agent` 与 `ops/gofurry-ops-center` 已形成轻量监控闭环，覆盖节点采集、服务健康、告警状态、Peer 摘要、同步/部署事件和嵌入式控制台
-- `ops/code-audit.md` 保持为下一次 Go 代码审计模板，`ops/roadmap.md` 记录 Ops 后续演进方向
-- 更新公告页已重构为结构化双语时间线，后端数据来自 `gfn_nav_update_notice`，不再依赖 CDN markdown
-- 搜索建议已统一到 v2 suggestions 接口，并带有缓存、并发合并、代理支持和基础速率限制
+- `gofurry-game-backend` 与 `gofurry-game-collector` 继续承担兽游资料、价格、在线人数与采集队列能力
+- `gofurry-admin` 已切到 GoFiber 官方 contrib Coraza 中间件，标签选择接口支持全量请求与展示
+- `gofurry-ops-agent` 与 `gofurry-ops-center` 已移入 `legacy/`，当前网站使用自研可观测性中间件路线
 - `robots.txt`、`sitemap.xml`、`llms.txt` 与 `/.well-known/security.txt` 已作为公开站点元信息入口提供
-- 旧 Vue 前台与原 RAG 服务已归档到 `legacy/`
-- 根级 `build.bat` 已覆盖核心 Go 服务、管理后台与 Ops Agent / Center 二进制产物
+- 旧 Vue 前台、原 RAG 服务和旧 Ops 服务均已归档到 `legacy/`
 
 ## 贡献说明
 
