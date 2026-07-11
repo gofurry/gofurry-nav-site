@@ -28,7 +28,7 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
 .info-list {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 0 1rem;
+  gap: 0.22rem 1rem;
 }
 
 .info-row {
@@ -38,7 +38,8 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
   min-width: 0;
   border-bottom: 1px solid rgba(251, 140, 47, 0.10);
   border-left: 2px solid transparent;
-  border-radius: 0;
+  border-radius: 0.42rem;
+  background: rgba(255, 250, 242, 0.42);
   padding: 0.58rem 0.85rem 0.58rem 0.75rem;
   font-size: 0.9rem;
   transition: background-color 500ms ease, border-color 500ms ease, color 500ms ease;
@@ -46,6 +47,7 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
 
 :global(html.dark .info-row){
   border-bottom-color: rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .info-row:hover {
@@ -65,7 +67,6 @@ const headerToneClasses: ObservationTone[] = ['normal', 'good', 'normal', 'warn'
 .info-row.tone-mint,
 .info-row.tone-sky,
 .info-row.tone-amber {
-  background: transparent;
   box-shadow: none;
 }
 

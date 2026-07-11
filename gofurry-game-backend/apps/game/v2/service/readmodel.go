@@ -31,6 +31,13 @@ const (
 	gameHomeCacheTTL                      = 0
 )
 
+type onlinePeakCachePayload struct {
+	GameID      int64     `json:"game_id"`
+	PeakCount   int64     `json:"peak_count"`
+	WindowDays  int       `json:"window_days"`
+	RefreshedAt time.Time `json:"refreshed_at"`
+}
+
 var steamSharedAssetHosts = map[string]struct{}{
 	"shared.steamstatic.com":             {},
 	"shared.akamai.steamstatic.com":      {},
@@ -1097,7 +1104,7 @@ func recommendationFeatureOnline(row v2models.GameV2RecommendationFeature) v2mod
 	if status == "" {
 		status = onlineUnknown
 	}
-	return v2models.GameV2OnlineCount{Count: row.OnlineCount, Status: status, CollectedAt: collectedAt}
+	return v2models.GameV2OnlineCount{Count: row.OnlineCount, PeakCount: row.OnlineCount, Status: status, CollectedAt: collectedAt}
 }
 
 func recommendationRowOnline(row v2models.GameV2RecommendationRow) v2models.GameV2OnlineCount {
@@ -1109,7 +1116,7 @@ func recommendationRowOnline(row v2models.GameV2RecommendationRow) v2models.Game
 	if status == "" {
 		status = onlineUnknown
 	}
-	return v2models.GameV2OnlineCount{Count: row.OnlineCountValue, Status: status, CollectedAt: collectedAt}
+	return v2models.GameV2OnlineCount{Count: row.OnlineCountValue, PeakCount: row.OnlineCountValue, Status: status, CollectedAt: collectedAt}
 }
 
 func buildListItems(aggregates []v2models.GameV2Aggregate, lang string, region string) []v2models.GameV2ListItem {
@@ -1615,11 +1622,46 @@ func buildOnlineCount(online *v2models.GfgGameV2PlayerCount) v2models.GameV2Onli
 	if online == nil {
 		return v2models.GameV2OnlineCount{Status: onlineUnknown}
 	}
+	peakCount := normalizedPeakCount(online.Count, online.PeakCount)
+	saveOnlinePeakCache(online, peakCount)
 	return v2models.GameV2OnlineCount{
 		Count:       online.Count,
+		PeakCount:   peakCount,
 		Status:      online.Status,
 		CollectedAt: online.CollectedAt,
 	}
+}
+
+func normalizedPeakCount(currentCount int64, peakCount int64) int64 {
+	if peakCount < currentCount {
+		return currentCount
+	}
+	return peakCount
+}
+
+func saveOnlinePeakCache(online *v2models.GfgGameV2PlayerCount, peakCount int64) {
+	if online == nil || online.GameID <= 0 || peakCount <= 0 || cs.GetRedisService() == nil {
+		return
+	}
+
+	payload := onlinePeakCachePayload{
+		GameID:      online.GameID,
+		PeakCount:   peakCount,
+		WindowDays:  online.PeakWindowDays,
+		RefreshedAt: time.Now(),
+	}
+	data, err := sonic.Marshal(payload)
+	if err != nil {
+		log.Error("序列化在线峰值缓存失败:", err)
+		return
+	}
+	if setErr := cs.SetExpire(onlinePeakCacheKey(online.GameID), data, 0); setErr != nil {
+		log.Error("写入在线峰值缓存失败:", setErr)
+	}
+}
+
+func onlinePeakCacheKey(gameID int64) string {
+	return "game:v2:players:" + strconv.FormatInt(gameID, 10) + ":peak"
 }
 
 func parseKVList(raw *string) []cm.KvModel {

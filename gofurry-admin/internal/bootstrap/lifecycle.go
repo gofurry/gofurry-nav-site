@@ -7,7 +7,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	corazalite "github.com/GoFurry/coraza-fiber-lite"
 	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
 	authmodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/models"
 	auditmodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
@@ -46,12 +45,6 @@ func Start() error {
 	cleanupOnError := func(cause error) error {
 		started.Store(false)
 		return errors.Join(cause, shutdownComponents(cfg))
-	}
-
-	if cfg.Waf.Enabled {
-		if err := initWAF(cfg); err != nil {
-			return cleanupOnError(err)
-		}
 	}
 
 	if err := db.InitDatabasesOnStart(databaseModels()...); err != nil {
@@ -108,22 +101,6 @@ func initLogger(cfg *env.ServerConfigHolder) error {
 	if err := log.InitLogger(logCfg); err != nil {
 		return fmt.Errorf("logger init failed: %w", err)
 	}
-	return nil
-}
-
-func initWAF(cfg *env.ServerConfigHolder) (err error) {
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			err = fmt.Errorf("waf init panic: %v", recovered)
-		}
-	}()
-
-	corazalite.InitGlobalWAFWithCfg(corazalite.CorazaCfg{
-		DirectivesFile:     cfg.Waf.ConfPath,
-		RequestBodyAccess:  true,
-		ResponseBodyAccess: false,
-	})
-	corazalite.InitWAFBlockMessage("Request blocked by CorazaWAF")
 	return nil
 }
 

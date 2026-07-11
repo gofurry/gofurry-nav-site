@@ -1,7 +1,7 @@
 <template>
   <div class="sticky top-6">
     <GameSidebarLinks :game="game" />
-    <div class="mt-4">
+    <div class="mt-2">
       <GameSidebarSimilar :recommend="recommend" />
     </div>
   </div>

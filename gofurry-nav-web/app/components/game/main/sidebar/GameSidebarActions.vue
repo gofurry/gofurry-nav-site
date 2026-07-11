@@ -18,9 +18,9 @@
         <button
             class="sidebar-action-button"
             type="button"
-            @click="goSteamZone"
+            @click="goWorkshop"
         >
-          {{ t("game.action.steamZone") }}
+          {{ t("game.action.workshop") }}
         </button>
       </div>
     </div>
@@ -87,7 +87,7 @@ async function handleRandomGame() {
   }
 }
 
-function goSteamZone() {
-  router.push(localePath('/steam'));
+function goWorkshop() {
+  router.push(localePath('/workshop'));
 }
 </script>

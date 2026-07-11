@@ -8,6 +8,8 @@
   --games-search-surface-soft: rgba(255, 250, 242, 0.30);
   --games-search-surface-hover: rgba(255, 239, 213, 0.70);
   --games-search-input-bg: rgba(255, 247, 236, 0.78);
+  --games-search-filter-field-bg: rgba(246, 214, 177, 0.58);
+  --games-search-filter-field-focus-bg: rgba(240, 199, 154, 0.70);
   --games-search-chip-bg: rgba(255, 239, 213, 0.48);
   --games-search-chip-hover-bg: rgba(255, 224, 186, 0.72);
   --games-search-text-main: rgba(28, 25, 23, 0.96);
@@ -44,6 +46,8 @@ html.dark .games-search-page {
   --games-search-surface-soft: rgba(15, 23, 42, 0.42);
   --games-search-surface-hover: rgba(226, 232, 240, 0.12);
   --games-search-input-bg: rgba(15, 23, 42, 0.48);
+  --games-search-filter-field-bg: rgba(30, 41, 59, 0.82);
+  --games-search-filter-field-focus-bg: rgba(51, 65, 85, 0.76);
   --games-search-chip-bg: rgba(226, 232, 240, 0.055);
   --games-search-chip-hover-bg: rgba(226, 232, 240, 0.12);
   --games-search-text-main: rgba(248, 250, 252, 0.96);
@@ -73,7 +77,7 @@ html.dark .games-search-page {
   min-height: 2.5rem;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--games-search-border);
+  border: 1px solid transparent;
   border-radius: 0.78rem;
   background: var(--games-search-surface);
   padding: 0 1rem;
@@ -85,7 +89,7 @@ html.dark .games-search-page {
 }
 
 .games-search-page .search-filter-button:hover {
-  border-color: var(--games-search-border-hover);
+  border-color: transparent;
   background: var(--games-search-surface-hover);
   color: var(--games-search-accent-strong);
 }
@@ -145,7 +149,7 @@ html.dark .games-search-page {
 
 .games-search-page .search-page-card {
   overflow: hidden;
-  border: 1px solid var(--games-search-border);
+  border: 1px solid transparent;
   border-radius: 0.92rem;
   background: var(--games-search-surface);
   padding: 0.72rem;
@@ -153,7 +157,7 @@ html.dark .games-search-page {
 }
 
 .games-search-page .search-page-card:hover {
-  border-color: var(--games-search-border-hover);
+  border-color: transparent;
   background: var(--games-search-surface-hover);
 }
 
@@ -247,14 +251,29 @@ html.dark .games-search-page .search-review-button {
   font-weight: 650;
 }
 
+html.dark .games-search-page .search-page-steam-icon {
+  filter: brightness(0) invert(1);
+}
+
 .games-search-page .game-search-page-button {
+  position: relative;
   min-width: 2rem;
-  border-radius: 999px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
   padding: 0.28rem 0.72rem;
   cursor: pointer;
   text-align: center;
   font-size: 0.84rem;
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.games-search-page .gf-pagination__button,
+.games-search-page .gf-pagination__button:hover,
+.games-search-page .gf-pagination__button--active {
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
 }
 
 .games-search-page .game-search-pagination-pages {
@@ -266,22 +285,33 @@ html.dark .games-search-page .search-review-button {
 }
 
 .games-search-page .game-search-page-button--idle {
-  border: 1px solid var(--games-search-border);
-  background: color-mix(in srgb, var(--games-search-surface) 86%, transparent);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--games-search-accent);
 }
 
 .games-search-page .game-search-page-button--idle:hover {
-  border-color: var(--games-search-border-hover);
-  background: var(--games-search-surface-hover);
+  border-color: transparent;
+  background: transparent;
   color: var(--games-search-accent-strong);
 }
 
 .games-search-page .game-search-page-button--active {
-  border: 1px solid var(--games-search-border-strong);
-  background: color-mix(in srgb, var(--games-search-surface-strong) 82%, transparent);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--games-search-accent-strong);
   font-weight: 750;
+}
+
+.games-search-page .game-search-page-button--active::after {
+  content: "";
+  position: absolute;
+  right: 0.55rem;
+  bottom: 0.08rem;
+  left: 0.55rem;
+  height: 0.12rem;
+  border-radius: 999px;
+  background: currentColor;
 }
 
 .games-search-page .game-search-pagination-total {
@@ -308,15 +338,17 @@ html.dark .games-search-page .search-review-button {
 
 .games-search-page .game-search-jump-input,
 .games-search-page .game-search-filter-input {
-  border: 1px solid var(--games-search-border);
+  border: 1px solid transparent;
   background: var(--games-search-input-bg);
   color: var(--games-search-text-title);
+  box-shadow: none;
 }
 
 .games-search-page .game-search-jump-input:focus,
 .games-search-page .game-search-filter-input:focus {
   border-color: var(--games-search-border-hover);
-  box-shadow: 0 0 0 2px var(--games-search-focus-ring);
+  outline: none;
+  box-shadow: none;
 }
 
 .games-search-page .game-search-jump-action,
@@ -353,7 +385,7 @@ html.dark .games-search-page .search-review-button {
 
 .games-search-page .game-search-filter-panel {
   max-height: 80vh;
-  border: 1px solid var(--games-search-border);
+  border: 1px solid transparent;
   border-radius: 1rem;
   background: var(--games-search-surface-strong);
   color: var(--games-search-text-title);
@@ -404,10 +436,22 @@ html.dark .games-search-page .search-review-button {
   border-radius: 0.65rem;
 }
 
+.games-search-page .game-search-filter-panel .game-search-filter-input {
+  background: var(--games-search-filter-field-bg);
+}
+
+.games-search-page .game-search-filter-panel .game-search-filter-input:focus {
+  border-color: var(--games-search-border-hover) !important;
+  background: var(--games-search-filter-field-focus-bg);
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .games-search-page .game-search-filter-chip {
+  position: relative;
   cursor: pointer;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 0.62rem;
   padding: 0.26rem 0.62rem;
   font-size: 0.76rem;
   font-weight: 550;
@@ -415,22 +459,27 @@ html.dark .games-search-page .search-review-button {
 }
 
 .games-search-page .game-search-filter-chip--idle {
-  border-color: var(--games-search-border);
+  border-color: transparent;
   background: var(--games-search-chip-bg);
   color: var(--games-search-accent);
 }
 
 .games-search-page .game-search-filter-chip--idle:hover {
-  border-color: var(--games-search-border-hover);
+  border-color: transparent;
   background: var(--games-search-chip-hover-bg);
   color: var(--games-search-accent-strong);
 }
 
 .games-search-page .game-search-filter-chip--active {
-  border-color: var(--games-search-border-strong);
+  border-color: transparent;
   background: var(--games-search-accent-fill);
   color: var(--games-search-accent-text);
   font-weight: 550;
+}
+
+.games-search-page .game-search-filter-chip--active::after {
+  display: none;
+  content: "";
 }
 
 .games-search-page .dp-custom-theme {
@@ -443,10 +492,10 @@ html.dark .games-search-page .search-review-button {
   --dp-primary-disabled-color: color-mix(in srgb, var(--games-search-accent-fill) 34%, transparent);
   --dp-primary-text-color: var(--games-search-accent-text);
   --dp-secondary-color: color-mix(in srgb, var(--games-search-border-strong) 78%, transparent);
-  --dp-border-color: var(--games-search-border);
-  --dp-menu-border-color: var(--games-search-border);
-  --dp-border-color-hover: var(--games-search-border-hover);
-  --dp-border-color-focus: var(--games-search-border-hover);
+  --dp-border-color: transparent;
+  --dp-menu-border-color: transparent;
+  --dp-border-color-hover: transparent;
+  --dp-border-color-focus: transparent;
   --dp-disabled-color: var(--games-search-chip-bg);
   --dp-scroll-bar-background: var(--games-search-surface-strong);
   --dp-scroll-bar-color: color-mix(in srgb, var(--games-search-border-hover) 84%, transparent);
@@ -469,28 +518,49 @@ html.dark .games-search-page .search-review-button {
 
 .games-search-page .game-date-picker .dp__input {
   min-height: 2.35rem;
-  border-color: var(--games-search-border);
+  border-color: transparent;
   border-radius: 0.78rem;
   background: var(--games-search-input-bg);
   color: var(--games-search-text-title);
   font-size: 0.86rem;
   font-weight: 650;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  box-shadow: none;
 }
 
 html.dark .games-search-page .game-date-picker .dp__input {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: none;
 }
 
 .games-search-page .game-date-picker .dp__input:focus,
 .games-search-page .game-date-picker.dp__main:focus-within .dp__input {
   border-color: var(--games-search-border-hover);
-  box-shadow: 0 0 0 2px var(--games-search-focus-ring), inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  outline: none;
+  box-shadow: none;
 }
 
 html.dark .games-search-page .game-date-picker .dp__input:focus,
 html.dark .games-search-page .game-date-picker.dp__main:focus-within .dp__input {
-  box-shadow: 0 0 0 2px var(--games-search-focus-ring), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-shadow: none;
+}
+
+.games-search-page .game-search-filter-panel .game-date-picker .dp__input {
+  background: var(--games-search-filter-field-bg);
+}
+
+.games-search-page .game-search-filter-panel .game-date-picker .dp__input:focus,
+.games-search-page .game-search-filter-panel .game-date-picker.dp__main:focus-within .dp__input {
+  border-color: var(--games-search-border-hover) !important;
+  background: var(--games-search-filter-field-focus-bg);
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.games-search-page .game-search-filter-panel .game-date-picker,
+.games-search-page .game-search-filter-panel .game-date-picker .dp__input_wrap,
+.games-search-page .game-search-filter-panel .game-date-picker .dp__input_wrap:focus,
+.games-search-page .game-search-filter-panel .game-date-picker .dp__input_wrap:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .games-search-page .game-date-picker .dp__input_icon,
@@ -500,7 +570,7 @@ html.dark .games-search-page .game-date-picker.dp__main:focus-within .dp__input 
 
 .games-search-page .game-date-picker .dp__menu {
   overflow: hidden;
-  border: 1px solid var(--games-search-border);
+  border: 1px solid transparent;
   border-radius: 1rem;
   background: var(--games-search-surface-strong);
   box-shadow: var(--games-search-shadow-popover);
@@ -546,6 +616,7 @@ html.dark .games-search-page .game-date-picker.dp__main:focus-within .dp__input 
 
 .games-search-page .game-date-picker .dp__time_display,
 .games-search-page .game-date-picker .dp__time_input {
+  border-color: transparent;
   color: var(--games-search-text-title);
   font-weight: 700;
 }

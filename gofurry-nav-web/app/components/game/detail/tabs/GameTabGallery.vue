@@ -1,5 +1,5 @@
 <template>
-  <div class="game-detail-gallery space-y-6">
+  <div class="game-detail-gallery space-y-3">
 
     <!-- 主展示区 -->
     <div class="game-detail-media-stage relative aspect-video w-full overflow-hidden">
@@ -50,7 +50,7 @@
     </div>
 
     <!-- 缩略图轮播 -->
-    <div class="game-detail-thumb-grid flex flex-wrap gap-2 py-2">
+    <div class="game-detail-thumb-grid flex gap-2 overflow-x-auto overflow-y-hidden py-2">
       <div
           v-for="item in mediaList"
           :key="item.key"
@@ -63,7 +63,7 @@
         <SteamAssetImage
             :src="item.thumb"
             :alt="mediaAlt(item)"
-            class="h-full w-full object-fill transition-transform duration-200"
+            class="h-full w-full object-cover transition-transform duration-200"
             loading="lazy"
             decoding="async"
         />

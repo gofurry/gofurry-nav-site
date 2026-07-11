@@ -226,7 +226,7 @@ function mapV2ListItemToTopPlayer(game: GameV2ListItem) {
     id: game.id,
     name: game.name,
     desc: game.summary,
-    count_peak: game.online_count?.count ?? 0,
+    count_peak: game.online_count?.peak_count ?? game.online_count?.count ?? 0,
     count_recent: game.online_count?.count ?? 0,
     collect_time: toUnixSeconds(game.online_count?.collected_at),
     header: bestV2Cover(game),

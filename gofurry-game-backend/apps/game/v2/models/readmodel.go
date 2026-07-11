@@ -167,6 +167,8 @@ type GfgGameV2PlayerCount struct {
 	ErrorKind          string    `gorm:"column:error_kind" json:"error_kind"`
 	ErrorMessage       string    `gorm:"column:error_message" json:"error_message"`
 	CollectedAt        time.Time `gorm:"column:collected_at" json:"collected_at"`
+	PeakCount          int64     `gorm:"-" json:"peak_count"`
+	PeakWindowDays     int       `gorm:"-" json:"peak_window_days"`
 }
 
 func (*GfgGameV2PlayerCount) TableName() string { return TableNameGfgGameV2PlayerCounts }
@@ -741,6 +743,7 @@ type GameV2NewsRow struct {
 
 type GameV2OnlineCount struct {
 	Count       int64     `json:"count"`
+	PeakCount   int64     `json:"peak_count"`
 	Status      string    `json:"status"`
 	CollectedAt time.Time `json:"collected_at"`
 }

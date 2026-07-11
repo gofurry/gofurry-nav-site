@@ -4,20 +4,32 @@
         v-if="show"
         class="gf-modal-backdrop fixed inset-0 z-[120] flex items-center justify-center px-3 py-4 sm:px-4"
     >
-      <div class="gf-modal">
+      <div class="gf-modal gf-preferences-modal">
         <div class="gf-modal__header">
-          <p class="gf-modal__eyebrow">{{ t("navbar.preferences") }}</p>
           <h2 class="gf-modal__title">
-            {{ t("navbar.modeSetting") }}
+            {{ t("navbar.preferences") }}
           </h2>
 
-          <p class="gf-modal__desc">
-            {{ t("navbar.modeDesc") }}
-          </p>
+          <div class="gf-modal__header-actions">
+            <button
+                type="button"
+                class="gf-button gf-button--ghost"
+                @click="emit('cancel')"
+            >
+              {{ t("common.cancel") }}
+            </button>
+            <button
+                type="button"
+                class="gf-button gf-button--primary"
+                @click="save"
+            >
+              {{ t("common.save") }}
+            </button>
+          </div>
         </div>
 
         <div class="gf-modal__body">
-          <section class="gf-card gf-card--flat gf-modal__section">
+          <section class="gf-modal__section">
             <div class="gf-modal__copy">
               <label class="gf-modal__label" for="mode-setting-input">
                 {{ t("navbar.displayMode") }}
@@ -33,7 +45,7 @@
             />
           </section>
 
-          <section class="gf-card gf-card--flat gf-modal__section gf-modal__section--inline">
+          <section class="gf-modal__section gf-modal__section--inline">
             <div class="gf-modal__copy">
               <label class="gf-modal__label" for="quick-access-toggle">
                 {{ t("navbar.quickAccess") }}
@@ -46,14 +58,14 @@
                 class="gf-modal__toggle"
                 :class="{ 'gf-modal__toggle--on': showQuickAccessLocal }"
                 :aria-pressed="showQuickAccessLocal"
+                :aria-label="t('navbar.quickAccess')"
                 @click="showQuickAccessLocal = !showQuickAccessLocal"
             >
               <span></span>
-              <em>{{ showQuickAccessLocal ? t('navbar.quickAccessOn') : t('navbar.quickAccessOff') }}</em>
             </button>
           </section>
 
-          <section class="gf-card gf-card--flat gf-modal__section">
+          <section class="gf-modal__section">
             <div class="gf-modal__section-heading">
               <div class="gf-modal__copy">
                 <label class="gf-modal__label">
@@ -96,21 +108,6 @@
             </p>
           </section>
 
-        </div>
-
-        <div class="gf-modal__footer">
-          <button
-              class="gf-button gf-button--ghost"
-              @click="emit('cancel')"
-          >
-            {{ t("common.cancel") }}
-          </button>
-          <button
-              class="gf-button gf-button--primary"
-              @click="save"
-          >
-            {{ t("common.save") }}
-          </button>
         </div>
       </div>
     </div>

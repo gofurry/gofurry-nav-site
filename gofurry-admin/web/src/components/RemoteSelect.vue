@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { listJSON } from '../api'
+import { listAllJSON, listJSON } from '../api'
 import type { OptionItem } from '../types'
 
 const props = defineProps<{ endpoint: string; modelValue: string }>()
@@ -11,11 +11,14 @@ const loading = ref(false)
 const options = ref<OptionItem[]>([])
 
 const normalizedValue = computed(() => props.modelValue ?? '')
+const shouldLoadAllOptions = computed(() => props.endpoint.endsWith('/options/tags'))
 
 async function load() {
   loading.value = true
   try {
-    const result = await listJSON<OptionItem>(props.endpoint, 1, 50, keyword.value)
+    const result = shouldLoadAllOptions.value
+      ? await listAllJSON<OptionItem>(props.endpoint, keyword.value)
+      : await listJSON<OptionItem>(props.endpoint, 1, 50, keyword.value)
     options.value = result.list
   } finally {
     loading.value = false
@@ -23,6 +26,7 @@ async function load() {
 }
 
 onMounted(load)
+watch(() => props.endpoint, load)
 watch(keyword, load)
 </script>
 

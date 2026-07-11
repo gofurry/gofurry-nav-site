@@ -166,11 +166,13 @@ function label(zh: string, en: string) {
 
 .history-page-button:disabled {
   cursor: not-allowed;
-  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.18);
+  color: #64748b;
 }
 
 :global(html.dark .history-page-button:disabled){
-  color: #475569;
+  background: rgba(51, 65, 85, 0.66);
+  color: #94a3b8;
 }
 
 .history-page-count {
@@ -184,6 +186,8 @@ function label(zh: string, en: string) {
 
 .history-list {
   margin-top: 0.7rem;
+  display: grid;
+  gap: 0.22rem;
 }
 
 .history-row {
@@ -193,12 +197,15 @@ function label(zh: string, en: string) {
   align-items: center;
   border-bottom: 1px solid rgba(251, 140, 47, 0.10);
   border-left: 2px solid transparent;
+  border-radius: 0.42rem;
+  background: rgba(255, 250, 242, 0.42);
   padding: 0.6rem 0.75rem 0.6rem 0.65rem;
   transition: background-color 500ms ease, border-color 500ms ease;
 }
 
 :global(html.dark .history-row){
   border-bottom-color: rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .history-row:hover {

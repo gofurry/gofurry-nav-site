@@ -86,6 +86,20 @@ type WafConfig struct {
 	ConfPath []string `mapstructure:"conf_path" yaml:"conf_path"`
 }
 
+func (cfg WafConfig) ResolveDirectivesFiles() []string {
+	files := make([]string, 0, len(cfg.ConfPath))
+	for _, file := range cfg.ConfPath {
+		file = strings.TrimSpace(file)
+		if file != "" {
+			files = append(files, file)
+		}
+	}
+	if len(files) == 0 {
+		return []string{"./config/coraza.conf"}
+	}
+	return files
+}
+
 type MiddlewareConfig struct {
 	Swagger         SwaggerConfig         `mapstructure:"swagger" yaml:"swagger"`
 	Cors            CorsConfig            `mapstructure:"cors" yaml:"cors"`

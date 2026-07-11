@@ -11,6 +11,7 @@ import (
 	"github.com/gofurry/gofurry-game-backend/common"
 	cm "github.com/gofurry/gofurry-game-backend/common/models"
 	database "github.com/gofurry/gofurry-game-backend/roof/db"
+	"github.com/gofurry/gofurry-game-backend/roof/env"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -733,6 +734,11 @@ func (dao *ReadModelDAO) loadAggregateExtras(db *gorm.DB, aggregate *v2models.Ga
 		Order("collected_at DESC, id DESC")); err != nil {
 		return fmt.Errorf("查询游戏 v2 在线人数失败: %v", err)
 	} else {
+		if online != nil {
+			if err := dao.loadOnlinePeakForRow(db, online); err != nil {
+				return err
+			}
+		}
 		aggregate.OnlineCount = online
 	}
 
@@ -1130,8 +1136,15 @@ ORDER BY game_id, collected_at DESC, id DESC
 		return fmt.Errorf("批量查询游戏 v2 在线人数失败: %w", err)
 	}
 
+	peakCounts, peakWindowDays, err := dao.queryOnlinePeakCounts(db, gameIDs)
+	if err != nil {
+		return err
+	}
+
 	for i := range rows {
 		row := rows[i]
+		applyOnlinePeak(&row, peakCounts, peakWindowDays)
+		rows[i] = row
 		aggregate := aggregateMap[row.GameID]
 		if aggregate == nil {
 			continue
@@ -1139,6 +1152,58 @@ ORDER BY game_id, collected_at DESC, id DESC
 		aggregate.OnlineCount = &rows[i]
 	}
 	return nil
+}
+
+func (dao *ReadModelDAO) loadOnlinePeakForRow(db *gorm.DB, row *v2models.GfgGameV2PlayerCount) error {
+	if row == nil {
+		return nil
+	}
+	peakCounts, peakWindowDays, err := dao.queryOnlinePeakCounts(db, []int64{row.GameID})
+	if err != nil {
+		return err
+	}
+	applyOnlinePeak(row, peakCounts, peakWindowDays)
+	return nil
+}
+
+func (dao *ReadModelDAO) queryOnlinePeakCounts(db *gorm.DB, gameIDs []int64) (map[int64]int64, int, error) {
+	peakWindowDays := env.GetServerConfig().OnlinePeakCacheDays()
+	res := make(map[int64]int64, len(gameIDs))
+	if len(gameIDs) == 0 {
+		return res, peakWindowDays, nil
+	}
+
+	type peakRow struct {
+		GameID    int64 `gorm:"column:game_id"`
+		PeakCount int64 `gorm:"column:peak_count"`
+	}
+
+	cutoff := time.Now().AddDate(0, 0, -peakWindowDays)
+	rows := make([]peakRow, 0, len(gameIDs))
+	if err := db.Raw(`
+SELECT game_id, COALESCE(MAX(count), 0) AS peak_count
+FROM `+v2models.TableNameGfgGameV2PlayerCounts+`
+WHERE game_id IN ? AND status = 'success' AND collected_at >= ?
+GROUP BY game_id
+`, gameIDs, cutoff).Scan(&rows).Error; err != nil {
+		return nil, peakWindowDays, fmt.Errorf("批量查询游戏 v2 在线峰值失败: %w", err)
+	}
+
+	for _, row := range rows {
+		res[row.GameID] = row.PeakCount
+	}
+	return res, peakWindowDays, nil
+}
+
+func applyOnlinePeak(row *v2models.GfgGameV2PlayerCount, peakCounts map[int64]int64, peakWindowDays int) {
+	if row == nil {
+		return
+	}
+	row.PeakWindowDays = peakWindowDays
+	row.PeakCount = peakCounts[row.GameID]
+	if row.PeakCount < row.Count {
+		row.PeakCount = row.Count
+	}
 }
 
 func (dao *ReadModelDAO) loadReviewStatsBatch(db *gorm.DB, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64) error {

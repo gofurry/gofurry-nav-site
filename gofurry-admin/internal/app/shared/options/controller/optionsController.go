@@ -62,13 +62,12 @@ func (api *optionsAPI) TagOptions(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
 	base := adminutil.ApplyKeyword(db.Databases.DB(db.Game).Model(&gamemodels.Tag{}).Order("id DESC"), page.Keyword, "name", "name_en", "CAST(id AS TEXT)")
 	var rows []gamemodels.Tag
-	total, err := adminutil.Paginate(base, page, &rows)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
+	if err := base.Find(&rows).Error; err != nil {
+		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
 	}
 	list := make([]adminutil.OptionItem, 0, len(rows))
 	for _, row := range rows {
 		list = append(list, adminutil.OptionItem{ID: row.ID, Label: row.Name, Extra: row.NameEn})
 	}
-	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, list))
+	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(int64(len(list)), list))
 }

@@ -135,7 +135,7 @@ const teamSection = computed(() => (
         issueAction: 'Submit Suggestion',
         resumeAction: 'View Resume',
         member: {
-          name: 'Faolan',
+          name: 'Faolan Grey',
           role: 'Developer / Maintainer',
           avatar: 'https://qcdn.go-furry.com/nav/about/faolan.jpg',
           link: 'https://github.com/gofurry',

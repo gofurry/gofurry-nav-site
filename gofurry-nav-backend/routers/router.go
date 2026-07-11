@@ -33,8 +33,8 @@ var Router *router
 type router struct{}
 
 var (
-	navMonitorOnce    sync.Once
-	navMonitorHandler http.Handler
+	navMonitorOnce sync.Once
+	navMonitor     *monitor.Monitor
 )
 
 func NewRouter() *router {
@@ -150,13 +150,18 @@ func registerMiddlewares(app *fiber.App) {
 }
 
 func registerMonitor(app *fiber.App) {
-	handler := getNavMonitorHandler()
-	app.All("/monitor", adaptor.HTTPHandler(handler))
+	mon := getNavMonitor()
+	app.All("/monitor", adaptor.HTTPHandler(mon))
+	app.Use(navMonitorMiddleware(mon))
+	app.Hooks().OnPostShutdown(func(_ error) error {
+		mon.Stop()
+		return nil
+	})
 }
 
-func getNavMonitorHandler() http.Handler {
+func getNavMonitor() *monitor.Monitor {
 	navMonitorOnce.Do(func() {
-		navMonitorHandler = monitor.NewMonitor(http.NotFoundHandler(), monitor.Config{
+		navMonitor = monitor.NewMonitor(http.NotFoundHandler(), monitor.Config{
 			Path:            "/monitor",
 			Title:           "GoFurry Nav Monitor",
 			Description:     "GoFurry navigation backend single-service monitor.",
@@ -165,7 +170,32 @@ func getNavMonitorHandler() http.Handler {
 			Refresh:         5 * time.Second,
 		})
 	})
-	return navMonitorHandler
+	return navMonitor
+}
+
+func navMonitorMiddleware(mon *monitor.Monitor) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		if c.Path() == "/monitor" {
+			return c.Next()
+		}
+
+		started := time.Now()
+		mon.RequestStarted()
+		err := c.Next()
+
+		status := c.Response().StatusCode()
+		if err != nil {
+			status = fiber.StatusInternalServerError
+			if fiberErr, ok := err.(*fiber.Error); ok {
+				status = fiberErr.Code
+			}
+		}
+		if status < 100 {
+			status = fiber.StatusOK
+		}
+		mon.RequestFinished(status, time.Since(started))
+		return err
+	}
 }
 
 // customErrorHandler 自定义错误处理

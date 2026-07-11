@@ -23,7 +23,7 @@
       <!-- 作者 & 发布时间 -->
       <div class="game-detail-news-meta mb-1 flex justify-between text-xs">
         <span>{{t("game.detail.author")}}: {{ item.author }}</span>
-        <span>{{t("game.detail.time")}}: {{ item.post_time }}</span>
+        <span>{{t("game.detail.time")}}: {{ formatNewsTime(item.post_time) }}</span>
       </div>
 
       <!-- 新闻内容 -->
@@ -78,5 +78,29 @@ const displayedNews = computed(() => news.slice(0, displayedCount.value))
 
 function loadMore() {
   displayedCount.value = Math.min(displayedCount.value + pageSize, news.length)
+}
+
+function formatNewsTime(value?: string) {
+  const raw = String(value || '').trim()
+  if (!raw) {
+    return ''
+  }
+
+  const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/)
+  if (isoMatch) {
+    return `${isoMatch[1]} ${isoMatch[2]}`
+  }
+
+  const date = new Date(raw)
+  if (Number.isNaN(date.getTime())) {
+    return raw
+  }
+
+  const pad = (num: number) => String(num).padStart(2, '0')
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join('-') + ` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 </script>

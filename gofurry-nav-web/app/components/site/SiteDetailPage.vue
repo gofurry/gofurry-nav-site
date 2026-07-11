@@ -1,6 +1,6 @@
 <template>
   <div ref="pageRoot" class="site-detail-page min-h-full overflow-x-hidden text-slate-900 transition-colors duration-500 dark:text-slate-100">
-    <GoFurryGridBackground />
+    <GoFurryGridBackground palette="nav-content" />
 
     <div v-if="pending" class="relative flex min-h-[68vh] items-center justify-center text-slate-500 dark:text-slate-400">
       {{ t('common.loading') }}
@@ -547,25 +547,15 @@ function label(zh: string, en: string) {
 }
 
 .detail-section {
-  border-radius: 8px;
-  background:
-    radial-gradient(circle at 8% 0%, rgba(251, 140, 47, 0.08), transparent 30%),
-    linear-gradient(120deg, rgba(255, 247, 235, 0.80), rgba(255, 250, 242, 0.88)),
-    rgba(255, 247, 235, 0.80);
-  padding: clamp(1rem, 2vw, 1.5rem);
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 140, 47, 0.16),
-    0 16px 42px rgba(124, 45, 18, 0.04);
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
 }
 
 :global(html.dark .detail-section){
-  background:
-    radial-gradient(circle at 8% 0%, rgba(251, 146, 60, 0.12), transparent 30%),
-    linear-gradient(120deg, rgba(15, 23, 42, 0.84), rgba(30, 41, 59, 0.72)),
-    rgba(15, 23, 42, 0.82);
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 146, 60, 0.14),
-    0 18px 52px rgba(0, 0, 0, 0.18);
+  background: transparent;
+  box-shadow: none;
 }
 
 .detail-section :deep(.rounded-2xl.bg-orange-100\/45),

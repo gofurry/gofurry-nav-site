@@ -369,6 +369,7 @@ export interface GameV2PriceView {
 
 export interface GameV2OnlineCount {
     count: number
+    peak_count?: number
     status: string
     collected_at: string
 }

@@ -21,9 +21,31 @@
   width: min(90vw, 26rem);
 }
 
+.gf-preferences-modal {
+  border-color: transparent;
+  border-radius: var(--gf-radius-md);
+  box-shadow: none;
+}
+
 .gf-modal__header {
   border-bottom: 1px solid var(--gf-modal-divider);
   padding: 1.35rem 1.45rem 1rem;
+}
+
+.gf-preferences-modal .gf-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 2px solid color-mix(in srgb, var(--gf-modal-divider) 78%, var(--gf-border-strong));
+  padding: 1.1rem 1.3rem 0.75rem;
+}
+
+.gf-modal__header-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .gf-modal__eyebrow {
@@ -58,6 +80,11 @@
   padding: 1rem 1.45rem;
 }
 
+.gf-preferences-modal .gf-modal__body {
+  gap: 0.65rem;
+  padding: 0.8rem 1.3rem 1.2rem;
+}
+
 .gf-modal__section {
   display: grid;
   gap: 0.85rem;
@@ -65,6 +92,20 @@
   border-radius: var(--gf-radius-md);
   background: var(--gf-surface);
   padding: 1rem;
+}
+
+.gf-preferences-modal .gf-modal__section {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.55rem 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.gf-preferences-modal .gf-modal__section + .gf-modal__section {
+  border-top: 1px dashed color-mix(in srgb, var(--gf-modal-divider) 86%, var(--gf-border-strong));
+  padding-top: 0.85rem;
 }
 
 .gf-modal__section--inline {
@@ -89,6 +130,99 @@
   color: var(--gf-text-main);
   font-size: 0.86rem;
   font-weight: 700;
+}
+
+.gf-preferences-modal .gf-input {
+  border-color: color-mix(in srgb, var(--gf-border) 74%, var(--gf-border-strong));
+  background: color-mix(in srgb, var(--gf-input-bg) 72%, var(--gf-surface-hover));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+.gf-preferences-modal .gf-input:focus {
+  border-color: var(--gf-border-strong);
+  background: var(--gf-input-bg-focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gf-focus-ring) 52%, transparent);
+}
+
+html.dark .gf-preferences-modal .gf-input {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(30, 41, 59, 0.74);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+html.dark .gf-preferences-modal .gf-input:focus {
+  border-color: rgba(125, 211, 252, 0.58);
+  background: rgba(30, 41, 59, 0.92);
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.12);
+}
+
+.gf-preferences-modal .gf-button--surface,
+.gf-preferences-modal .gf-button--surface:hover,
+.gf-preferences-modal .gf-chip {
+  border-color: transparent;
+}
+
+.gf-preferences-modal .gf-button,
+.gf-preferences-modal .gf-button:hover {
+  border-color: transparent;
+  transform: none;
+}
+
+.gf-preferences-modal .gf-modal__toggle {
+  display: inline-flex;
+  width: 3.25rem;
+  min-width: 3.25rem;
+  height: 1.72rem;
+  align-items: center;
+  border-color: transparent;
+  background: rgba(148, 163, 184, 0.20);
+  padding: 0.18rem;
+  box-shadow: none;
+}
+
+.gf-preferences-modal .gf-modal__toggle span {
+  width: 1.36rem;
+  height: 1.36rem;
+  background: color-mix(in srgb, var(--gf-text-soft) 78%, #ffffff);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+  transition:
+    background-color var(--gf-motion-fast) ease,
+    transform var(--gf-motion-fast) ease;
+}
+
+.gf-preferences-modal .gf-modal__toggle em {
+  display: none;
+}
+
+.gf-preferences-modal .gf-modal__toggle--on {
+  border-color: transparent;
+  background: var(--gf-accent-soft);
+}
+
+.gf-preferences-modal .gf-modal__toggle--on span {
+  background: var(--gf-accent-fill);
+  transform: translateX(1.52rem);
+}
+
+html.dark .gf-preferences-modal .gf-modal__toggle {
+  border-color: transparent;
+  background: rgba(51, 65, 85, 0.72);
+  box-shadow: none;
+}
+
+html.dark .gf-preferences-modal .gf-modal__toggle span {
+  background: rgba(203, 213, 225, 0.82);
+  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.30);
+}
+
+html.dark .gf-preferences-modal .gf-modal__toggle--on {
+  background: rgba(56, 189, 248, 0.22);
+  box-shadow: none;
+}
+
+html.dark .gf-preferences-modal .gf-modal__toggle--on span {
+  background: #7dd3fc;
+  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.32);
 }
 
 .gf-modal__actions {
@@ -193,6 +327,19 @@ html.dark .gf-modal__toggle--on span {
 }
 
 @media (max-width: 640px) {
+  .gf-preferences-modal .gf-modal__header {
+    align-items: flex-start;
+  }
+
+  .gf-modal__header-actions {
+    gap: 0.35rem;
+  }
+
+  .gf-preferences-modal .gf-modal__header-actions .gf-button {
+    min-height: 2.1rem;
+    padding: 0.48rem 0.65rem;
+  }
+
   .gf-modal__section--inline {
     grid-template-columns: 1fr;
   }

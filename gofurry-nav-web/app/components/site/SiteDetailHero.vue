@@ -36,11 +36,7 @@
 
             <div class="hero-meta-row">
               <div
-                class="group/domain relative w-fit"
-                @pointerenter="openDomainCard"
-                @pointerleave="scheduleCloseDomainCard"
-                @focusin="openDomainCard"
-                @focusout="scheduleCloseDomainCard"
+                class="domain-hover-zone group/domain"
               >
                 <button
                   type="button"
@@ -53,32 +49,27 @@
                   </span>
                 </button>
 
-                <transition name="domain-card">
-                  <div
-                    v-show="showDomainCard"
-                    class="absolute left-0 top-full z-30 w-[min(22rem,calc(100vw-3rem))] pt-3"
-                    @pointerenter="openDomainCard"
-                    @pointerleave="scheduleCloseDomainCard"
-                  >
-                    <div class="absolute left-0 top-0 h-3 w-full" />
-                    <div class="domain-popover">
-                      <div class="mb-2 px-1 text-xs font-semibold text-orange-500">
-                        {{ label('采集域名', 'Collected domains') }}
-                      </div>
-                      <div class="domain-list-scroll flex max-h-72 flex-col gap-1 overflow-y-auto pr-1">
-                        <NuxtLink
-                          v-for="item in switchableDomains"
-                          :key="item"
-                          :to="domainLink(item)"
-                          class="rounded-lg px-3 py-2 font-mono text-xs text-slate-700 transition-colors duration-500 hover:bg-orange-100/80 hover:text-orange-700 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-100"
-                          :class="{ 'bg-orange-100/80 text-orange-700 dark:bg-orange-500/20 dark:text-orange-100': item === domain }"
-                        >
-                          {{ item }}
-                        </NuxtLink>
-                      </div>
+                <div
+                  v-if="switchableDomains.length > 1"
+                  class="domain-popover-shell"
+                >
+                  <div class="domain-popover">
+                    <div class="mb-2 px-1 text-xs font-semibold text-orange-500">
+                      {{ label('采集域名', 'Collected domains') }}
+                    </div>
+                    <div class="domain-list-scroll flex max-h-72 flex-col gap-1 overflow-y-auto pr-1">
+                      <NuxtLink
+                        v-for="item in switchableDomains"
+                        :key="item"
+                        :to="domainLink(item)"
+                        class="rounded-lg px-3 py-2 font-mono text-xs text-slate-700 transition-colors duration-500 hover:bg-orange-100/80 hover:text-orange-700 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-100"
+                        :class="{ 'bg-orange-100/80 text-orange-700 dark:bg-orange-500/20 dark:text-orange-100': item === domain }"
+                      >
+                        {{ item }}
+                      </NuxtLink>
                     </div>
                   </div>
-                </transition>
+                </div>
 
                 <transition name="fade">
                   <div
@@ -150,9 +141,7 @@ const props = defineProps<{
 }>()
 
 const copied = ref(false)
-const showDomainCard = ref(false)
 const localePath = useLocalePath()
-let domainCardCloseTimer: ReturnType<typeof setTimeout> | null = null
 
 function copyToClipboard(text: string) {
   if (!text) {
@@ -166,29 +155,6 @@ function copyToClipboard(text: string) {
   setTimeout(() => {
     copied.value = false
   }, 1800)
-}
-
-function openDomainCard() {
-  if (props.switchableDomains.length <= 1) {
-    return
-  }
-
-  if (domainCardCloseTimer) {
-    clearTimeout(domainCardCloseTimer)
-    domainCardCloseTimer = null
-  }
-
-  showDomainCard.value = true
-}
-
-function scheduleCloseDomainCard() {
-  if (domainCardCloseTimer) {
-    clearTimeout(domainCardCloseTimer)
-  }
-
-  domainCardCloseTimer = setTimeout(() => {
-    showDomainCard.value = false
-  }, 320)
 }
 
 function domainLink(domain: string) {
@@ -220,14 +186,14 @@ function label(zh: string, en: string) {
     radial-gradient(circle at 18% 24%, rgba(251, 140, 47, 0.20), transparent 26%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(255, 242, 219, 0.62));
   padding: clamp(1rem, 2vw, 1.6rem);
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.18);
+  box-shadow: none;
 }
 
 :global(html.dark .detail-hero){
   background:
     radial-gradient(circle at 18% 24%, rgba(251, 146, 60, 0.15), transparent 28%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(30, 41, 59, 0.66));
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.16);
+  box-shadow: none;
 }
 
 .logo-shell {
@@ -259,13 +225,13 @@ function label(zh: string, en: string) {
 .detail-pill-edge {
   background: rgba(255, 237, 213, 0.78);
   color: #9a3412;
-  box-shadow: inset 0 0 0 1px rgba(251, 140, 47, 0.20);
+  box-shadow: none;
 }
 
 :global(html.dark .detail-pill-edge){
   background: rgba(251, 146, 60, 0.13);
   color: #fed7aa;
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.24);
+  box-shadow: none;
 }
 
 .detail-pill-sfw {
@@ -337,6 +303,14 @@ function label(zh: string, en: string) {
   color: #fdba74;
 }
 
+.domain-hover-zone {
+  position: relative;
+  display: inline-flex;
+  width: fit-content;
+  padding-bottom: 0.7rem;
+  margin-bottom: -0.7rem;
+}
+
 .hero-actions {
   display: flex;
   flex-shrink: 0;
@@ -345,29 +319,41 @@ function label(zh: string, en: string) {
   gap: 0.6rem;
 }
 
+.domain-popover-shell {
+  position: absolute;
+  left: 0;
+  top: calc(100% - 0.15rem);
+  z-index: 30;
+  width: min(22rem, calc(100vw - 3rem));
+  padding-top: 0.15rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease;
+  visibility: hidden;
+}
+
+.domain-hover-zone:hover .domain-popover-shell,
+.domain-hover-zone:focus-within .domain-popover-shell {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  visibility: visible;
+}
+
 .domain-popover {
   border-radius: 1rem;
   background: rgba(255, 247, 237, 0.96);
   padding: 0.75rem;
   color: #1f2937;
   backdrop-filter: blur(14px);
+  box-shadow: none;
 }
 
 :global(html.dark .domain-popover){
   background: rgba(15, 23, 42, 0.96);
   color: #e2e8f0;
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.14), 0 16px 44px rgba(0, 0, 0, 0.24);
-}
-
-.domain-card-enter-active,
-.domain-card-leave-active {
-  transition: opacity 180ms ease, transform 180ms ease;
-}
-
-.domain-card-enter-from,
-.domain-card-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
+  box-shadow: none;
 }
 
 .fade-enter-active,

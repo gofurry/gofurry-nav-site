@@ -69,3 +69,23 @@ export async function listJSON<T>(path: string, pageNum: number, pageSize: numbe
   }
   return getJSON<PageResult<T>>(`${path}?${params.toString()}`)
 }
+
+export async function listAllJSON<T>(path: string, keyword = '', pageSize = 200) {
+  let pageNum = 1
+  let total = 0
+  const list: T[] = []
+
+  while (pageNum === 1 || list.length < total) {
+    const result = await listJSON<T>(path, pageNum, pageSize, keyword)
+    total = result.total
+
+    if (result.list.length === 0) {
+      break
+    }
+
+    list.push(...result.list)
+    pageNum += 1
+  }
+
+  return { total, list }
+}

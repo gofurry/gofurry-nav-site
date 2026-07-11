@@ -301,6 +301,7 @@ func TestGetGameDetailUsesLatestSuccessfulOnlineCount(t *testing.T) {
 				AppID:       730,
 				Status:      "success",
 				Count:       123456,
+				PeakCount:   150000,
 				CollectedAt: collectedAt,
 			},
 		},
@@ -317,6 +318,9 @@ func TestGetGameDetailUsesLatestSuccessfulOnlineCount(t *testing.T) {
 	}
 	if res.OnlineCount.Count != 123456 {
 		t.Fatalf("expected online count 123456, got %d", res.OnlineCount.Count)
+	}
+	if res.OnlineCount.PeakCount != 150000 {
+		t.Fatalf("expected online peak count 150000, got %d", res.OnlineCount.PeakCount)
 	}
 	if !res.OnlineCount.CollectedAt.Equal(collectedAt) {
 		t.Fatalf("expected collected_at %s, got %s", collectedAt, res.OnlineCount.CollectedAt)

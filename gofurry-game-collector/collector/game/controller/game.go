@@ -80,11 +80,14 @@ func ScheduleByOneMin() {
 		((todayCollected != "1" && now.After(threeAM)) || manualCmd == "1")
 
 	if !needCollect {
+		SchedulePendingGameCollection()
 		return // 不满足采集条件
 	}
 
 	// 标记开始采集
-	collectFlag.Store(true)
+	if !collectFlag.CompareAndSwap(false, true) {
+		return
+	}
 	// 定义结束时的清理逻辑
 	defer func() {
 		// 无论成功失败都重置采集状态
