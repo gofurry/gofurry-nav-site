@@ -150,6 +150,16 @@ func (s gameService) CollectCurrentPlayers() {
 	log.Info("CollectCurrentPlayers v2 采集结束")
 }
 
+func (s gameService) CollectSingleGame(game models.GameID) (report.RunSummary, error) {
+	ctx := context.Background()
+	log.Info("SingleGame Collect v2 采集开始, game_id=", game.ID, " appid=", game.Appid)
+	summary, runErr := runV2Tasks(ctx, []models.GameID{game}, []domain.TaskType{domain.TaskDetails, domain.TaskNews, domain.TaskPlayers})
+	logV2RunSummary("SingleGame Collect v2", summary, runErr)
+	persistV2RunSummary(ctx, "SingleGame Collect v2", summary)
+	log.Info("SingleGame Collect v2 采集结束, game_id=", game.ID, " appid=", game.Appid)
+	return summary, runErr
+}
+
 func addAllGameToList() (gameList []models.GameID, err common.GFError) {
 	gameList, err = dao.GetGameList()
 	if err != nil {

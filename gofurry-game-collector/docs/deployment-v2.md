@@ -70,6 +70,22 @@ go run . players # 只跑当前在线人数采集
 go run . all     # 先跑 players，再跑 details/news
 ```
 
+## Admin 新增游戏后的单游戏采集
+
+`gofurry-admin` 创建游戏成功后会向 Redis 集合写入单游戏采集请求：
+
+```txt
+game:v2:collect:pending
+```
+
+集合成员格式为 `{game_id}:{appid}`。采集器的 1 分钟调度会在非全量采集时扫描该集合，对单游戏任务加锁后执行 details / news / players 三类 v2 采集。锁 key 为：
+
+```txt
+game:v2:collect:inflight:{game_id}
+```
+
+任务执行完成后会从 pending 集合移除；若采集进程异常退出，pending 成员会保留，锁过期后会自动重试。
+
 观测表验证：
 
 ```sql

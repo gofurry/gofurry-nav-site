@@ -103,6 +103,7 @@ func (api *gameAPI) CreateGame(c fiber.Ctx) error {
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
+	enqueueCreatedGameCollect(created)
 	return common.NewResponse(c).SuccessWithData(gameDTO(created))
 }
 
