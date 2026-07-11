@@ -16,7 +16,14 @@
       </div>
     </header>
 
-    <div v-if="topItem" class="game-stats-feature relative z-[1] mt-3 rounded-xl px-3 py-2">
+    <div
+      v-if="topItem"
+      class="game-stats-feature relative z-[1] mt-3 grid min-h-[3.9rem] grid-cols-[2rem_minmax(0,1fr)_5.2rem] items-center gap-2 py-1 sm:grid-cols-[2.2rem_minmax(0,1fr)_5.4rem_5.4rem_3.4rem]"
+    >
+      <div class="game-stats-rank game-stats-rank--top grid h-7 w-7 place-items-center rounded-full text-xs font-extrabold">
+        {{ rankStart }}
+      </div>
+
       <div class="flex min-w-0 items-center gap-3">
         <SteamAssetImage
           :src="topItem.header"
@@ -25,7 +32,7 @@
         />
         <div class="min-w-0">
           <div class="game-stats-feature__title truncate text-sm font-bold">
-            #{{ rankStart }} {{ topItem.name }}
+            {{ topItem.name }}
           </div>
           <div class="game-stats-feature__desc mt-0.5 line-clamp-1 text-xs">
             {{ topItem.desc }}
@@ -34,14 +41,23 @@
             {{ t('game.panel.onlinePeak') }} {{ formatNumber(topItem.count_peak) }} · {{ formatTime(topItem.collect_time) }}
           </div>
         </div>
-        <div class="game-stats-feature__value shrink-0 text-right text-sm font-bold">
-          {{ formatNumber(topItem.count_recent) }}
-        </div>
+      </div>
+
+      <div class="game-stats-feature__value text-right text-sm font-bold">
+        {{ formatNumber(topItem.count_recent) }}
+      </div>
+
+      <div class="game-stats-row__value game-stats-row__value--secondary hidden text-right text-sm font-semibold sm:block">
+        {{ formatNumber(topItem.count_peak) }}
+      </div>
+
+      <div class="game-stats-row__muted hidden text-right text-xs sm:block">
+        {{ formatTime(topItem.collect_time) }}
       </div>
     </div>
     <div
       v-else
-      class="game-stats-feature game-stats-feature--placeholder relative z-[1] mt-3 rounded-xl px-3 py-2"
+      class="game-stats-feature game-stats-feature--placeholder relative z-[1] mt-3"
       aria-hidden="true"
     />
 

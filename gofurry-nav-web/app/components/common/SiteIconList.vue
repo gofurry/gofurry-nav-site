@@ -11,7 +11,10 @@
     >
       <img
           :src="getIconUrl(item.key)"
-          class="site-icon-image h-5 w-5 object-contain"
+          :class="[
+            'site-icon-image h-5 w-5 object-contain',
+            { 'site-icon-image--official': normalizeIconKey(item.key) === 'official' }
+          ]"
           :alt="item.key"
       />
     </a>
@@ -65,7 +68,10 @@ const ICON_MAP: Record<string, string> = {
 
 const BASE_URL = import.meta.env.VITE_GAME_SITE_LOGO_PREFIX_URL || ''
 
+const normalizeIconKey = (key: string) => key.trim().toLowerCase()
+
 const getIconUrl = (key: string) => {
-  return ICON_MAP[key] ? BASE_URL + ICON_MAP[key] : ''
+  const iconKey = normalizeIconKey(key)
+  return ICON_MAP[iconKey] ? BASE_URL + ICON_MAP[iconKey] : ''
 }
 </script>

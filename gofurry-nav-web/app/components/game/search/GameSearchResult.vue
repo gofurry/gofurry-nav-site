@@ -107,7 +107,7 @@
                       <img
                           src="@/assets/icons/steam.svg"
                           alt="Steam"
-                          class="w-4 h-4 opacity-70 hover:opacity-100 transition"
+                          class="search-page-steam-icon w-4 h-4 opacity-70 hover:opacity-100 transition"
                       />
                     </a>
                   </div>
