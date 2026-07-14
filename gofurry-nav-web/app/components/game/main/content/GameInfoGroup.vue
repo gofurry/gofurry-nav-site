@@ -1,5 +1,5 @@
 <template>
-  <div class="mb-8 p-5">
+  <div class="game-info-group">
     <div class="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h3 class="game-group-title text-2xl font-bold">
         {{ group.title }}
@@ -239,12 +239,6 @@ function openReview(item: GameItem) {
 @media (min-width: 640px) {
   .game-group-page-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 768px) {
-  .game-group-page-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

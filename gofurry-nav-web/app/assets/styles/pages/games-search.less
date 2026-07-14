@@ -512,6 +512,16 @@ html.dark .games-search-page .search-page-steam-icon {
   --dp-range-between-border-color: var(--dp-hover-color);
 }
 
+.games-search-page .game-search-date-range {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.games-search-page .game-search-date-range .game-date-picker {
+  width: 100%;
+}
+
 .games-search-page .game-date-picker .dp__input_wrap {
   border-radius: 0.78rem;
 }
@@ -644,4 +654,10 @@ html.dark .games-search-page .game-date-picker.dp__main:focus-within .dp__input 
 .games-search-page .game-date-picker .dp__action_select {
   background: var(--games-search-accent-fill);
   color: var(--games-search-accent-text);
+}
+
+@media (min-width: 640px) {
+  .games-search-page .game-search-date-range {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

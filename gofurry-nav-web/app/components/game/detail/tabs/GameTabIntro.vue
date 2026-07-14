@@ -1,7 +1,7 @@
 <template>
   <div class="game-detail-prose space-y-6">
 
-    <section v-if="game?.about_the_game" class="space-y-2">
+    <section v-if="game?.about_the_game" class="game-detail-content-card game-detail-intro-card space-y-2">
       <div
         class="max-w-none"
         v-html="game.about_the_game"
@@ -10,7 +10,7 @@
 
     <div
       v-if="!game?.about_the_game"
-      class="game-detail-empty text-sm"
+      class="game-detail-content-card game-detail-empty text-sm"
     >
       {{ t("game.panel.none") }}
     </div>

@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4">
+  <div class="game-stats-section space-y-4">
 
     <!-- Tab -->
     <div class="flex flex-col items-center justify-between gap-3 md:flex-row">

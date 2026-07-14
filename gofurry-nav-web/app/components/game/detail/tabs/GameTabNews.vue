@@ -2,7 +2,7 @@
   <div class="game-detail-news space-y-6 text-sm">
 
     <!-- 新闻列表 -->
-    <div v-for="(item, index) in displayedNews" :key="index" class="game-detail-news-item space-y-2 pb-4">
+    <div v-for="(item, index) in displayedNews" :key="index" class="game-detail-news-item space-y-2 p-4">
       <!-- 标题 & 原文链接 -->
       <div class="flex items-start justify-between gap-4">
         <h3 class="game-detail-news-title flex-1 break-words text-lg font-bold">
