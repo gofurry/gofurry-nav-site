@@ -1331,7 +1331,7 @@ func (dao *ReadModelDAO) queryNewsRows(db *gorm.DB, query v2models.GameV2NewsQue
 
 func (dao *ReadModelDAO) buildSearchQuery(db *gorm.DB, query v2models.GameV2SearchPageQuery) *gorm.DB {
 	q := db.Table(tableNameGfgGame+" g").
-		Joins("JOIN "+v2models.TableNameGfgGameV2Details+" d ON d.game_id = g.id").
+		Joins("LEFT JOIN "+v2models.TableNameGfgGameV2Details+" d ON d.game_id = g.id").
 		Joins("LEFT JOIN "+v2models.TableNameGfgGameV2LocalizedDetails+" ld ON ld.game_id = g.id AND ld.lang = ?", normalizeDAOLang(query.Lang)).
 		Joins(`LEFT JOIN (
 			SELECT DISTINCT ON (game_id) game_id, url

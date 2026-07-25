@@ -41,7 +41,7 @@
           :key="index"
           class="game-card game-card--spacer"
         >
-          <div class="mb-2 h-32 w-full rounded-md"></div>
+          <div class="game-card__media"></div>
           <p class="h-[1.25rem]"></p>
           <p class="mt-1 h-[2rem]"></p>
           <div class="mt-2 h-[1.25rem]"></div>
@@ -58,10 +58,10 @@
             :key="item.id"
             class="game-card group"
           >
-            <div class="relative">
+            <div class="game-card__media">
               <SteamAssetImage
                 :src="item.cover"
-                class="mb-2 h-32 w-full rounded-md object-cover"
+                class="block h-full w-full object-cover"
                 :alt="item.name"
                 @click.stop="goGameDetail(item.id)"
               />

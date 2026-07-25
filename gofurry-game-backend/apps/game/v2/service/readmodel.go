@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -46,6 +47,8 @@ var steamSharedAssetHosts = map[string]struct{}{
 	"shared.st.dl.eccdnx.com":            {},
 	"shared.cdn.steamchina.queniuam.com": {},
 }
+
+var gameHomeCacheRefreshMu sync.Mutex
 
 type gameDetailReader interface {
 	GetGameDetailAggregate(ctx context.Context, query v2models.GameV2DetailQuery) (v2models.GameV2Aggregate, common.GFError)
@@ -229,8 +232,15 @@ func (svc *ReadModelService) GetHome(ctx context.Context, lang string, region st
 		return cached, nil
 	}
 
-	log.Warn("首页缓存未命中", "cache_key", cacheKey)
-	return res, common.NewServiceError("game home cache is not ready")
+	gameHomeCacheRefreshMu.Lock()
+	defer gameHomeCacheRefreshMu.Unlock()
+
+	if cached, hit = loadGameHomeCache(cacheKey); hit {
+		return cached, nil
+	}
+
+	log.Warn("首页缓存未命中，开始同步重建", "cache_key", cacheKey)
+	return svc.RefreshHomeCache(ctx, lang, region)
 }
 
 func (svc *ReadModelService) RefreshHomeCache(ctx context.Context, lang string, region string) (v2models.GameV2HomeReadModel, common.GFError) {

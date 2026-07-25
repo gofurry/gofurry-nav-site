@@ -9,6 +9,8 @@ import (
 
 	"github.com/gofurry/gofurry-game-collector/collector/game/models"
 	"github.com/gofurry/gofurry-game-collector/collector/game/service"
+	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
+	"github.com/gofurry/gofurry-game-collector/collector/game/v2/report"
 	"github.com/gofurry/gofurry-game-collector/common/log"
 	cs "github.com/gofurry/gofurry-game-collector/common/service"
 )
@@ -18,6 +20,8 @@ const (
 	pendingGameCollectLockKeyPrefix = "game:v2:collect:inflight:"
 	pendingGameCollectScanCount     = int64(5)
 	pendingGameCollectLockTTL       = 30 * time.Minute
+	gameHomeCacheZHKey              = "game:v2:home:zh:CN"
+	gameHomeCacheENKey              = "game:v2:home:en:CN"
 )
 
 func SchedulePendingGameCollection() {
@@ -81,11 +85,11 @@ func processPendingGameCollect(member string, game models.GameID) bool {
 	completed := false
 	defer func() {
 		collectFlag.Store(false)
-		releasePendingGameCollectLock(lockKey)
 		if r := recover(); r != nil {
 			log.Error("单游戏采集任务异常，保留队列等待重试, game_id=", game.ID, " appid=", game.Appid, " err=", r)
 		}
 		if completed {
+			releasePendingGameCollectLock(lockKey)
 			removePendingGameCollectMember(member)
 		}
 	}()
@@ -94,11 +98,34 @@ func processPendingGameCollect(member string, game models.GameID) bool {
 	summary, err := service.GetGameService().CollectSingleGame(game)
 	if err != nil {
 		log.Error("单游戏采集任务执行失败, game_id=", game.ID, " appid=", game.Appid, " run_id=", summary.ID, " err=", err)
-	} else {
-		log.Info("单游戏采集任务执行完成, game_id=", game.ID, " appid=", game.Appid, " run_id=", summary.ID, " status=", summary.Status)
+		return true
 	}
-	completed = true
+
+	completed = pendingGameDetailsCollected(summary)
+	if !completed {
+		log.Error("单游戏详情采集未完成，保留队列等待重试, game_id=", game.ID, " appid=", game.Appid, " run_id=", summary.ID, " status=", summary.Status)
+		return true
+	}
+
+	invalidateGameHomeCache()
+	log.Info("单游戏采集任务执行完成, game_id=", game.ID, " appid=", game.Appid, " run_id=", summary.ID, " status=", summary.Status)
 	return true
+}
+
+func pendingGameDetailsCollected(summary report.RunSummary) bool {
+	for _, result := range summary.Results {
+		if result.Task != domain.TaskDetails {
+			continue
+		}
+		return result.Status == domain.StatusSuccess || result.Status == domain.StatusPartial
+	}
+	return false
+}
+
+func invalidateGameHomeCache() {
+	if err := cs.Del(gameHomeCacheZHKey, gameHomeCacheENKey); err != nil {
+		log.Error("失效游戏首页缓存失败: ", err)
+	}
 }
 
 func acquirePendingGameCollectLock(lockKey string, member string) bool {
