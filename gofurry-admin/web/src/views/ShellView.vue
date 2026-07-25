@@ -1,15 +1,46 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, type Component } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
+import {
+  Activity,
+  Bell,
+  Boxes,
+  ChevronLeft,
+  ChevronRight,
+  Database,
+  Gamepad2,
+  Globe2,
+  Layers3,
+  LogOut,
+  MessageSquareText,
+  Quote,
+  Tags,
+} from 'lucide-vue-next'
 import { resources } from '../resources'
 import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const collapsed = ref(false)
 
 const navResources = computed(() => resources.filter((item) => item.section === 'nav'))
 const gameResources = computed(() => resources.filter((item) => item.section === 'game'))
+
+const resourceIcons: Record<string, Component> = {
+  sayings: Quote,
+  'update-notices': Bell,
+  'collector-domains': Globe2,
+  sites: Database,
+  'site-groups': Layers3,
+  'site-group-maps': Boxes,
+  'featured-sites': Globe2,
+  games: Gamepad2,
+  comments: MessageSquareText,
+  prizes: Boxes,
+  tags: Tags,
+  'tag-maps': Layers3,
+}
 
 async function logout() {
   await auth.logout()
@@ -19,70 +50,96 @@ async function logout() {
 function isActive(path: string) {
   return route.path === path
 }
+
+function iconFor(key: string) {
+  return resourceIcons[key] ?? Database
+}
 </script>
 
 <template>
-  <div class="min-h-screen md:grid md:grid-cols-[260px_1fr]">
-    <aside class="border-b border-[var(--line)] bg-[var(--bg-muted)]/80 p-5 md:min-h-screen md:border-b-0 md:border-r">
-      <div class="mb-8">
-        <div class="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">gofurry</div>
-        <div class="mt-2 text-2xl font-semibold">Admin</div>
+  <div class="admin-shell" :class="{ 'admin-shell--collapsed': collapsed }">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar__brand">
+        <div class="admin-sidebar__identity">
+          <div class="admin-sidebar__brand-copy">
+            <div class="admin-sidebar__eyebrow">gofurry</div>
+            <div class="admin-sidebar__title">Admin</div>
+          </div>
+        </div>
+        <button
+          class="icon-button admin-sidebar__toggle"
+          type="button"
+          :title="collapsed ? '展开菜单' : '收起菜单'"
+          :aria-label="collapsed ? '展开菜单' : '收起菜单'"
+          @click="collapsed = !collapsed"
+        >
+          <ChevronRight v-if="collapsed" :size="18" />
+          <ChevronLeft v-else :size="18" />
+        </button>
       </div>
 
-      <div class="space-y-6">
-        <section>
-          <div class="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--text-muted)]">导航库</div>
-          <div class="space-y-1">
+      <nav class="admin-nav" aria-label="管理菜单">
+        <section class="admin-nav__section">
+          <div class="admin-nav__section-title">导航库</div>
+          <div class="admin-nav__items">
             <RouterLink
               to="/nav/collect"
-              class="block border px-3 py-2 text-sm"
-              :class="isActive('/nav/collect') ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-transparent text-[var(--text-muted)] hover:border-[var(--line)] hover:text-[var(--text)]'"
+              class="admin-nav__link"
+              :class="{ 'admin-nav__link--active': isActive('/nav/collect') }"
+              title="采集观测"
             >
-              采集观测
+              <Activity :size="18" />
+              <span>采集观测</span>
             </RouterLink>
             <RouterLink
               v-for="item in navResources"
               :key="item.key"
               :to="`/${item.section}/${item.key}`"
-              class="block border px-3 py-2 text-sm"
-              :class="isActive(`/${item.section}/${item.key}`) ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-transparent text-[var(--text-muted)] hover:border-[var(--line)] hover:text-[var(--text)]'"
+              class="admin-nav__link"
+              :class="{ 'admin-nav__link--active': isActive(`/${item.section}/${item.key}`) }"
+              :title="item.title"
             >
-              {{ item.title }}
+              <component :is="iconFor(item.key)" :size="18" />
+              <span>{{ item.title }}</span>
             </RouterLink>
           </div>
         </section>
 
-        <section>
-          <div class="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--text-muted)]">游戏库</div>
-          <div class="space-y-1">
+        <section class="admin-nav__section">
+          <div class="admin-nav__section-title">游戏库</div>
+          <div class="admin-nav__items">
             <RouterLink
               to="/game/collect"
-              class="block border px-3 py-2 text-sm"
-              :class="isActive('/game/collect') ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-transparent text-[var(--text-muted)] hover:border-[var(--line)] hover:text-[var(--text)]'"
+              class="admin-nav__link"
+              :class="{ 'admin-nav__link--active': isActive('/game/collect') }"
+              title="采集观测"
             >
-              采集观测
+              <Activity :size="18" />
+              <span>采集观测</span>
             </RouterLink>
             <RouterLink
               v-for="item in gameResources"
               :key="item.key"
               :to="`/${item.section}/${item.key}`"
-              class="block border px-3 py-2 text-sm"
-              :class="isActive(`/${item.section}/${item.key}`) ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-transparent text-[var(--text-muted)] hover:border-[var(--line)] hover:text-[var(--text)]'"
+              class="admin-nav__link"
+              :class="{ 'admin-nav__link--active': isActive(`/${item.section}/${item.key}`) }"
+              :title="item.title"
             >
-              {{ item.title }}
+              <component :is="iconFor(item.key)" :size="18" />
+              <span>{{ item.title }}</span>
             </RouterLink>
           </div>
         </section>
+      </nav>
 
-        <section>
-          <div class="mb-2 text-xs uppercase tracking-[0.25em] text-[var(--text-muted)]">系统</div>
-          <button class="w-full border border-[var(--line)] px-3 py-2 text-left text-sm text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--text)]" @click="logout">登出</button>
-        </section>
-      </div>
+      <button class="admin-nav__link admin-sidebar__logout" type="button" title="登出" @click="logout">
+        <LogOut :size="18" />
+        <span>登出</span>
+      </button>
     </aside>
 
-    <section class="p-4 md:p-6">
+    <main class="admin-workspace">
       <RouterView />
-    </section>
+    </main>
   </div>
 </template>

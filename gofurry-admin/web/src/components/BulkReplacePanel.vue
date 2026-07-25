@@ -31,7 +31,7 @@ async function submit() {
 </script>
 
 <template>
-  <div v-if="config.bulkReplace" class="space-y-4 border border-[var(--line)] bg-[var(--panel)]/70 p-4">
+  <section v-if="config.bulkReplace" class="workspace-section space-y-4">
     <div>
       <div class="text-sm font-semibold">批量替换映射</div>
       <div class="mt-1 text-xs text-[var(--text-muted)]">适合一次维护一个网站或一个游戏的整组映射。</div>
@@ -39,8 +39,8 @@ async function submit() {
     <FieldEditor :field="config.bulkReplace.ownerField" :model-value="state.owner_id" @update:model-value="state.owner_id = String($event ?? '')" />
     <FieldEditor :field="config.bulkReplace.targetField" :model-value="state.ids" @update:model-value="state.ids = ($event as string[]) ?? []" />
     <div class="flex items-center gap-3">
-      <button type="button" class="border border-[var(--accent)] bg-[var(--accent)]/10 px-4 py-2 text-sm" @click="submit">{{ saving ? '保存中…' : '保存映射' }}</button>
+      <button type="button" class="ui-button ui-button--primary px-4 py-2 text-sm" @click="submit">{{ saving ? '保存中…' : '保存映射' }}</button>
       <span class="text-xs text-[var(--text-muted)]">{{ message }}</span>
     </div>
-  </div>
+  </section>
 </template>

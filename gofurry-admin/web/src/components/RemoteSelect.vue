@@ -34,11 +34,11 @@ watch(keyword, load)
   <div class="space-y-2">
     <input
       v-model="keyword"
-      class="w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+      class="ui-control w-full px-3 py-2 text-sm"
       placeholder="搜索可选项"
     />
     <select
-      class="w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+      class="ui-control w-full px-3 py-2 text-sm"
       :value="normalizedValue"
       @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
     >

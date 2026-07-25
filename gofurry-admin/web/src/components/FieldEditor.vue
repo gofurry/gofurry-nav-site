@@ -23,7 +23,7 @@ function dateTimeLocalValue(value: unknown) {
 
     <input
       v-if="field.type === 'text'"
-      class="w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+      class="ui-control w-full px-3 py-2 text-sm"
       :placeholder="field.placeholder"
       :value="String(modelValue ?? '')"
       @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
@@ -31,7 +31,7 @@ function dateTimeLocalValue(value: unknown) {
 
     <textarea
       v-else-if="field.type === 'textarea'"
-      class="min-h-28 w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+      class="ui-control min-h-28 w-full px-3 py-2 text-sm"
       :value="String(modelValue ?? '')"
       @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
     />
@@ -39,7 +39,7 @@ function dateTimeLocalValue(value: unknown) {
     <input
       v-else-if="field.type === 'number'"
       type="number"
-      class="w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+      class="ui-control w-full px-3 py-2 text-sm"
       :value="Number(modelValue ?? 0)"
       @input="emit('update:modelValue', Number(($event.target as HTMLInputElement).value))"
     />
@@ -47,12 +47,12 @@ function dateTimeLocalValue(value: unknown) {
     <input
       v-else-if="field.type === 'datetime'"
       type="datetime-local"
-      class="w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+      class="ui-control w-full px-3 py-2 text-sm"
       :value="dateTimeLocalValue(modelValue)"
       @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
     />
 
-    <label v-else-if="field.type === 'bool'" class="flex items-center gap-3 border border-[var(--line)] bg-black/20 px-3 py-2 text-sm">
+    <label v-else-if="field.type === 'bool'" class="ui-control flex items-center gap-3 px-3 py-2 text-sm">
       <input
         type="checkbox"
         :checked="Boolean(modelValue)"
@@ -63,7 +63,7 @@ function dateTimeLocalValue(value: unknown) {
 
     <select
       v-else-if="field.type === 'select'"
-      class="w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+      class="ui-control w-full px-3 py-2 text-sm"
       :value="String(modelValue ?? '')"
       @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
     >

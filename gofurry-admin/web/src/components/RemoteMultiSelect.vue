@@ -85,28 +85,28 @@ watch(() => props.endpoint, loadAll)
     <div class="flex flex-col gap-3 md:flex-row md:items-center">
       <input
         v-model="keyword"
-        class="w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        class="ui-control w-full px-3 py-2 text-sm"
         placeholder="搜索可选项"
       />
       <div class="flex shrink-0 items-center gap-2 text-xs">
-        <button type="button" class="border border-[var(--line)] px-3 py-2" @click="selectVisible">勾选当前结果</button>
-        <button type="button" class="border border-[var(--line)] px-3 py-2" @click="clearVisible">取消当前结果</button>
+        <button type="button" class="ui-button px-3 py-2" @click="selectVisible">勾选当前结果</button>
+        <button type="button" class="ui-button px-3 py-2" @click="clearVisible">取消当前结果</button>
       </div>
     </div>
 
     <div class="flex items-center justify-between text-xs text-[var(--text-muted)]">
       <span>{{ loading ? '正在加载全部可选项...' : `已加载 ${options.length} 项，已选 ${normalizedValue.length} 项` }}</span>
-      <button type="button" class="border border-[var(--line)] px-2 py-1" @click="loadAll">刷新</button>
+      <button type="button" class="ui-button ui-button--quiet px-2 py-1" @click="loadAll">刷新</button>
     </div>
 
     <div v-if="error" class="text-xs text-[var(--danger)]">{{ error }}</div>
 
-    <div class="max-h-80 overflow-auto border border-[var(--line)] bg-black/10 p-3">
+    <div class="data-surface max-h-80 overflow-y-auto overscroll-contain p-3">
       <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         <label
           v-for="item in filteredOptions"
           :key="item.id"
-          class="flex items-start gap-2 border border-[var(--line)]/70 bg-black/20 px-3 py-2 text-sm"
+          class="summary-cell flex items-start gap-2 px-3 py-2 text-sm"
         >
           <input
             type="checkbox"
