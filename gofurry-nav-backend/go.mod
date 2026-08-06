@@ -11,7 +11,9 @@ require (
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/gofiber/contrib/v3/coraza v0.2.1
 	github.com/gofiber/contrib/v3/swagger v1.0.0-rc.1
+	github.com/gofiber/contrib/v3/uptime v0.0.1
 	github.com/gofiber/fiber/v3 v3.4.0
+	github.com/gofiber/storage/redis/v3 v3.5.1
 	github.com/gofurry/monitor v1.1.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.10.0
@@ -41,7 +43,7 @@ require (
 	github.com/cloudwego/base64x v0.1.7 // indirect
 	github.com/corazawaf/coraza/v3 v3.7.0 // indirect
 	github.com/corazawaf/libinjection-go v0.3.2 // indirect
-	github.com/ebitengine/purego v0.10.1 // indirect
+	github.com/ebitengine/purego v0.10.2 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/go-json-experiment/json v0.0.0-20260623181947-01eb4420fa68 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
@@ -76,7 +78,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/kaptinlin/jsonpointer v0.4.27 // indirect
 	github.com/kaptinlin/jsonschema v0.9.3 // indirect
-	github.com/klauspost/compress v1.19.0 // indirect
+	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260627054121-477a66015f15 // indirect

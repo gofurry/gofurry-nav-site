@@ -27,6 +27,16 @@ func InitRedisOnStart() {
 	connect()
 }
 
+func CloseRedis() error {
+	if client == nil {
+		return nil
+	}
+
+	err := client.Close()
+	client = nil
+	return err
+}
+
 func connect() {
 	connCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
