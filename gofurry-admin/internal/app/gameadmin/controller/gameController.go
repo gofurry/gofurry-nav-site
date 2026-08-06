@@ -20,6 +20,7 @@ import (
 	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/util"
 	steam "github.com/gofurry/steam-go"
 	steamassets "github.com/gofurry/steam-go/addons/assets"
+	"github.com/gofurry/steam-go/web/storefront"
 	"gorm.io/gorm"
 )
 
@@ -35,6 +36,20 @@ type steamGameAssetDTO struct {
 	Filename string              `json:"filename,omitempty"`
 	Source   string              `json:"source,omitempty"`
 	Assets   []steamGameAssetDTO `json:"assets,omitempty"`
+}
+
+type steamGamePrefillDTO struct {
+	AppID       int64               `json:"appid"`
+	Name        string              `json:"name"`
+	NameEn      string              `json:"name_en"`
+	Info        string              `json:"info"`
+	InfoEn      string              `json:"info_en"`
+	Groups      []pkgmodels.KvModel `json:"groups"`
+	ReleaseDate string              `json:"release_date"`
+	Developers  []string            `json:"developers"`
+	Publishers  []string            `json:"publishers"`
+	Header      string              `json:"header"`
+	Links       []pkgmodels.KvModel `json:"links"`
 }
 
 func gameDB() *gorm.DB {
@@ -181,25 +196,14 @@ func (api *gameAPI) ResolveSteamGameAsset(c fiber.Ctx) error {
 	}
 
 	kinds := steamAssetKinds(c.Query("kind", "header"))
-	cfg := env.GetServerConfig().ExternalServices.Steam
-	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	proxySelector, err := steamProxySelector(cfg.Proxy)
-	if err != nil {
-		return common.NewResponse(c).Error(common.NewServiceError(fmt.Sprintf("invalid steam proxy config: %v", err)))
-	}
-
-	client, err := steam.NewClient(
-		steam.WithTimeout(timeout),
-		steam.WithRateLimit(cfg.RateLimit),
-		steam.WithProxySelector(proxySelector),
-	)
+	client, timeout, err := newAdminSteamClient()
 	if err != nil {
 		return common.NewResponse(c).Error(common.NewServiceError(fmt.Sprintf("create steam client failed: %v", err)))
 	}
 	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
 	items, err := steamassets.FetchStoreItemAssetURLs(ctx, client.API.StoreBrowseService, steamassets.StoreItemAssetOptions{
 		CountryCode: "CN",
@@ -235,6 +239,153 @@ func (api *gameAPI) ResolveSteamGameAsset(c fiber.Ctx) error {
 	result := assets[0]
 	result.Assets = assets
 	return common.NewResponse(c).SuccessWithData(result)
+}
+
+func (api *gameAPI) ResolveSteamGamePrefill(c fiber.Ctx) error {
+	appid, err := strconv.ParseInt(strings.TrimSpace(c.Query("appid", "")), 10, 64)
+	if err != nil || appid <= 0 {
+		return common.NewResponse(c).Error(common.NewValidationError("appid must be a positive integer"))
+	}
+
+	client, timeout, err := newAdminSteamClient()
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewServiceError(fmt.Sprintf("create steam client failed: %v", err)))
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	zhData, err := fetchSteamAppDetails(ctx, client, appid, "schinese")
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewServiceError(fmt.Sprintf("fetch schinese steam app details failed: %v", err)))
+	}
+	enData, err := fetchSteamAppDetails(ctx, client, appid, "english")
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewServiceError(fmt.Sprintf("fetch english steam app details failed: %v", err)))
+	}
+
+	header := strings.TrimSpace(zhData.HeaderImage)
+	if header == "" {
+		header = strings.TrimSpace(enData.HeaderImage)
+	}
+	items, assetErr := steamassets.FetchStoreItemAssetURLs(ctx, client.API.StoreBrowseService, steamassets.StoreItemAssetOptions{
+		CountryCode: "CN",
+		Language:    "schinese",
+		Kinds:       steamAssetKinds("header"),
+		StripQuery:  true,
+	}, uint32(appid))
+	if assetErr == nil {
+		for _, item := range items {
+			if value := strings.TrimSpace(item.URL); value != "" {
+				header = value
+				break
+			}
+		}
+	}
+
+	return common.NewResponse(c).SuccessWithData(steamGamePrefill(appid, zhData, enData, header))
+}
+
+func fetchSteamAppDetails(ctx context.Context, client *steam.Client, appid int64, language string) (storefront.AppDetailsData, error) {
+	envelope, err := client.Web.Storefront.GetAppDetails(ctx, uint32(appid), &storefront.GetAppDetailsOptions{
+		CountryCode: "CN",
+		Language:    language,
+	})
+	if err != nil {
+		return storefront.AppDetailsData{}, err
+	}
+
+	result, ok := envelope[strconv.FormatInt(appid, 10)]
+	if !ok || !result.Success {
+		return storefront.AppDetailsData{}, errors.New("steam app details not found")
+	}
+	return result.Data, nil
+}
+
+func steamGamePrefill(appid int64, zhData, enData storefront.AppDetailsData, header string) steamGamePrefillDTO {
+	groups := make([]pkgmodels.KvModel, 0, 1)
+	website := strings.TrimSpace(zhData.Website)
+	if website == "" {
+		website = strings.TrimSpace(enData.Website)
+	}
+	if website != "" {
+		groups = append(groups, pkgmodels.KvModel{Key: "official", Value: website})
+	}
+
+	releaseDate := ""
+	if zhData.ReleaseDate != nil {
+		releaseDate = normalizeSteamReleaseDate(zhData.ReleaseDate.Date)
+	}
+	if releaseDate == "" && enData.ReleaseDate != nil {
+		releaseDate = normalizeSteamReleaseDate(enData.ReleaseDate.Date)
+	}
+
+	developers := normalizeStringArray(zhData.Developers)
+	if len(developers) == 0 {
+		developers = normalizeStringArray(enData.Developers)
+	}
+	publishers := normalizeStringArray(zhData.Publishers)
+	if len(publishers) == 0 {
+		publishers = normalizeStringArray(enData.Publishers)
+	}
+
+	return steamGamePrefillDTO{
+		AppID:       appid,
+		Name:        strings.TrimSpace(zhData.Name),
+		NameEn:      strings.TrimSpace(enData.Name),
+		Info:        strings.TrimSpace(zhData.ShortDescription),
+		InfoEn:      strings.TrimSpace(enData.ShortDescription),
+		Groups:      groups,
+		ReleaseDate: releaseDate,
+		Developers:  developers,
+		Publishers:  publishers,
+		Header:      strings.TrimSpace(header),
+		Links:       normalizeGameLinks(appid, nil),
+	}
+}
+
+func normalizeSteamReleaseDate(raw string) string {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return ""
+	}
+
+	compact := strings.Join(strings.Fields(value), "")
+	var year, month, day int
+	if _, err := fmt.Sscanf(compact, "%d年%d月%d日", &year, &month, &day); err == nil {
+		parsed := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+		if parsed.Year() == year && int(parsed.Month()) == month && parsed.Day() == day {
+			return parsed.Format("2006.01.02")
+		}
+	}
+
+	for _, layout := range []string{"2 Jan, 2006", "Jan 2, 2006", "2006-01-02", "2006.01.02"} {
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return parsed.Format("2006.01.02")
+		}
+	}
+
+	return value
+}
+
+func newAdminSteamClient() (*steam.Client, time.Duration, error) {
+	cfg := env.GetServerConfig().ExternalServices.Steam
+	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
+	proxySelector, err := steamProxySelector(cfg.Proxy)
+	if err != nil {
+		return nil, 0, fmt.Errorf("invalid steam proxy config: %w", err)
+	}
+
+	client, err := steam.NewClient(
+		steam.WithTimeout(timeout),
+		steam.WithRateLimit(cfg.RateLimit),
+		steam.WithProxySelector(proxySelector),
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	return client, timeout, nil
 }
 
 func steamProxySelector(raw string) (steam.ProxySelector, error) {

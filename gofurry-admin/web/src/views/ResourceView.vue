@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import {
   ChevronLeft,
   ChevronRight,
+  CloudDownload,
   Pencil,
   Plus,
   RotateCcw,
@@ -33,7 +34,7 @@ const editingId = ref<string | null>(null)
 const editorOpen = ref(false)
 const form = reactive<Record<string, unknown>>({})
 const message = ref('')
-const resolvingSteamAsset = ref(false)
+const prefillingSteam = ref(false)
 
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value))
@@ -127,6 +128,7 @@ async function removeItem(id: string) {
 }
 
 function isWideField(field: ResourceField) {
+  if (isGameEditor.value && (field.key === 'appid' || field.key === 'weight')) return true
   return ['textarea', 'string-array', 'kv-array', 'remote-multi'].includes(field.type)
 }
 
@@ -157,13 +159,18 @@ function normalizePayload() {
 }
 
 type KVItem = { key: string; value: string }
-type SteamAssetResponse = {
+type SteamPrefillResponse = {
   appid: number
-  kind: string
-  url: string
-  digest?: string
-  filename?: string
-  source?: string
+  name: string
+  name_en: string
+  info: string
+  info_en: string
+  groups: KVItem[]
+  release_date: string
+  developers: string[]
+  publishers: string[]
+  header: string
+  links: KVItem[]
 }
 
 function currentGameAppid(target: Record<string, unknown> = form) {
@@ -191,6 +198,23 @@ function asKVArray(value: unknown): KVItem[] {
     : []
 }
 
+function mergeKVArray(current: unknown, incoming: KVItem[]) {
+  const result = asKVArray(current)
+  for (const item of incoming) {
+    const key = item.key.trim()
+    const value = item.value.trim()
+    if (!key || !value) continue
+
+    const existing = result.find((row) => row.key.toLowerCase() === key.toLowerCase())
+    if (existing) {
+      if (!existing.value) existing.value = value
+      continue
+    }
+    result.push({ key, value })
+  }
+  return result
+}
+
 function applyGameSteamDefaults(target: Record<string, unknown>) {
   const appid = currentGameAppid(target)
   if (!appid) return false
@@ -208,30 +232,64 @@ function applyGameSteamDefaults(target: Record<string, unknown>) {
   return true
 }
 
-function syncGameSteamLinks() {
-  if (!applyGameSteamDefaults(form)) {
-    message.value = '请先填写 Steam AppID'
-    return
-  }
-  message.value = '已补全 SteamDB / Gamalytic 链接'
-}
-
-async function fillGameHeaderFromSteam() {
+async function prefillGameFromSteam() {
   const appid = currentGameAppid()
   if (!appid) {
     message.value = '请先填写 Steam AppID'
     return
   }
 
-  resolvingSteamAsset.value = true
+  prefillingSteam.value = true
+  message.value = ''
   try {
-    const asset = await getJSON<SteamAssetResponse>(`/api/v1/game/games/steam-asset?appid=${appid}&kind=header`)
-    form.header = asset.url
-    message.value = `已填入 Steam 官方封面：${asset.kind}`
+    const metadata = await getJSON<SteamPrefillResponse>(`/api/v1/game/games/steam-prefill?appid=${appid}`)
+    const filled: string[] = []
+
+    if (metadata.name) {
+      form.name = metadata.name
+      filled.push('中文名')
+    }
+    if (metadata.name_en) {
+      form.name_en = metadata.name_en
+      filled.push('英文名')
+    }
+    if (metadata.info) {
+      form.info = metadata.info
+      filled.push('中文简介')
+    }
+    if (metadata.info_en) {
+      form.info_en = metadata.info_en
+      filled.push('英文简介')
+    }
+    if (metadata.groups?.length) {
+      form.groups = mergeKVArray(form.groups, metadata.groups)
+      filled.push('社群')
+    }
+    if (metadata.release_date) {
+      form.release_date = metadata.release_date
+      filled.push('发行日')
+    }
+    if (metadata.developers?.length) {
+      form.developers = [...metadata.developers]
+      filled.push('开发者')
+    }
+    if (metadata.publishers?.length) {
+      form.publishers = [...metadata.publishers]
+      filled.push('发行商')
+    }
+    if (metadata.header) {
+      form.header = metadata.header
+      filled.push('封面')
+    }
+    form.links = mergeKVArray(form.links, metadata.links ?? [])
+    applyGameSteamDefaults(form)
+    filled.push('Steam 链接')
+
+    message.value = `已从 Steam 填入：${Array.from(new Set(filled)).join('、')}`
   } catch (error) {
-    message.value = error instanceof Error ? error.message : '获取 Steam 官方封面失败'
+    message.value = error instanceof Error ? error.message : 'Steam 信息获取失败'
   } finally {
-    resolvingSteamAsset.value = false
+    prefillingSteam.value = false
   }
 }
 
@@ -393,36 +451,21 @@ onMounted(async () => {
                 @update:model-value="setField(field.key, $event)"
               />
             </div>
-
-            <div
-              v-if="isGameEditor && field.key === 'header'"
-              class="inline-panel resource-editor__field--wide flex flex-wrap items-center gap-2"
-            >
-              <button
-                class="ui-button px-3 py-1.5 text-xs"
-                type="button"
-                :disabled="resolvingSteamAsset"
-                @click="fillGameHeaderFromSteam"
-              >
-                {{ resolvingSteamAsset ? '获取中…' : '填入官方封面' }}
-              </button>
-              <span class="text-xs text-[var(--text-muted)]">通过 Steam StoreBrowse 解析带 hash 的官方资源地址。</span>
-            </div>
-
-            <div
-              v-if="isGameEditor && field.key === 'links'"
-              class="inline-panel resource-editor__field--wide flex flex-wrap items-center gap-2"
-            >
-              <button class="ui-button px-3 py-1.5 text-xs" type="button" @click="syncGameSteamLinks">
-                补全 Steam 链接
-              </button>
-              <span class="text-xs text-[var(--text-muted)]">自动补 SteamDB 与 Gamalytic 默认链接。</span>
-            </div>
           </template>
         </div>
 
         <footer class="resource-editor__footer">
           <div class="min-w-0 flex-1 text-xs text-[var(--text-muted)]">{{ message }}</div>
+          <button
+            v-if="isGameEditor"
+            class="ui-button flex items-center gap-2 px-3 py-2 text-sm"
+            type="button"
+            :disabled="prefillingSteam"
+            @click="prefillGameFromSteam"
+          >
+            <CloudDownload :size="16" />
+            {{ prefillingSteam ? '获取中' : 'Steam 填入' }}
+          </button>
           <button class="ui-button flex items-center gap-2 px-3 py-2 text-sm" type="button" @click="resetForm">
             <RotateCcw :size="16" />
             重置
