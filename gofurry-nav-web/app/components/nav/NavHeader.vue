@@ -174,20 +174,21 @@ function revokeCustomBackgroundUrl() {
 }
 
 async function applyBackground() {
-  revokeCustomBackgroundUrl()
-
   try {
     const customBackground = await loadRandomCustomNavHeaderBackground()
     if (customBackground) {
+      revokeCustomBackgroundUrl()
       bgImage.value = customBackground
       customBgObjectUrl = customBackground
-      return
+      return true
     }
   } catch (error) {
     console.error('Load custom nav header background err:', error)
   }
 
+  revokeCustomBackgroundUrl()
   fallbackBackgroundUpdater?.()
+  return false
 }
 
 function handleCustomBackgroundChange() {
@@ -319,7 +320,9 @@ onMounted(async () => {
         : (props.mobileBgUrl ?? props.desktopBgUrl ?? null)
     }
 
-    if (!props.desktopBgUrl && !props.mobileBgUrl) {
+    const customBackgroundLoaded = await applyBackground()
+
+    if (!customBackgroundLoaded && !props.desktopBgUrl && !props.mobileBgUrl) {
       const backgrounds = await getNavHomeBackgrounds()
       const resizedUrl = backgrounds.desktop
       const normalUrl = backgrounds.mobile
@@ -327,9 +330,9 @@ onMounted(async () => {
       fallbackBackgroundUpdater = () => {
         bgImage.value = window.innerWidth >= 768 ? resizedUrl : normalUrl
       }
+      fallbackBackgroundUpdater()
     }
 
-    await applyBackground()
     syncNavHeaderSettings()
     syncRecentSites()
     syncCustomSites()

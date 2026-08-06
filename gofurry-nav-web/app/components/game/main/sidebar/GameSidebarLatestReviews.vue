@@ -13,14 +13,16 @@
       :key="index"
       class="latest-review-item"
     >
-      <div class="flex w-[88px] shrink-0 flex-col items-center text-center">
-        <SteamAssetImage
-          :src="item.game_cover"
-          class="h-[52px] w-full rounded-md object-cover"
-          :alt="item.game_name"
-        />
+      <div class="latest-review-item__identity">
+        <div class="latest-review-item__media">
+          <SteamAssetImage
+            :src="item.game_cover"
+            class="block h-full w-full object-cover"
+            :alt="item.game_name"
+          />
+        </div>
         <p
-          class="latest-review-item__title mt-1 w-full truncate text-xs font-semibold"
+          class="latest-review-item__title w-full truncate text-xs font-semibold"
           :title="item.game_name"
         >
           {{ item.game_name }}

@@ -1,11 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import {
+  ChevronLeft,
+  ChevronRight,
+  CloudDownload,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-vue-next'
 import { getJSON, listJSON, sendJSON } from '../api'
 import BulkReplacePanel from '../components/BulkReplacePanel.vue'
 import FieldEditor from '../components/FieldEditor.vue'
 import { findResource } from '../resources'
-import type { ResourceConfig } from '../types'
+import type { ResourceConfig, ResourceField } from '../types'
 
 const route = useRoute()
 const config = computed<ResourceConfig | undefined>(() => findResource(String(route.params.section), String(route.params.resource)))
@@ -20,9 +31,10 @@ const loading = ref(false)
 const saving = ref(false)
 const deletingId = ref<string | null>(null)
 const editingId = ref<string | null>(null)
+const editorOpen = ref(false)
 const form = reactive<Record<string, unknown>>({})
 const message = ref('')
-const resolvingSteamAsset = ref(false)
+const prefillingSteam = ref(false)
 
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value))
@@ -58,6 +70,7 @@ async function startCreate() {
   editingId.value = null
   message.value = ''
   resetForm()
+  editorOpen.value = true
 }
 
 async function startEdit(id: string) {
@@ -67,6 +80,13 @@ async function startEdit(id: string) {
   editingId.value = id
   resetForm()
   Object.assign(form, data)
+  editorOpen.value = true
+}
+
+function closeEditor() {
+  editorOpen.value = false
+  editingId.value = null
+  message.value = ''
 }
 
 async function submit() {
@@ -99,9 +119,17 @@ async function removeItem(id: string) {
   try {
     await sendJSON(`${config.value.detailEndpoint}/${id}`, 'DELETE')
     await loadList()
+    if (editingId.value === id) {
+      closeEditor()
+    }
   } finally {
     deletingId.value = null
   }
+}
+
+function isWideField(field: ResourceField) {
+  if (isGameEditor.value && (field.key === 'appid' || field.key === 'weight')) return true
+  return ['textarea', 'string-array', 'kv-array', 'remote-multi'].includes(field.type)
 }
 
 function formatCell(value: unknown) {
@@ -131,13 +159,18 @@ function normalizePayload() {
 }
 
 type KVItem = { key: string; value: string }
-type SteamAssetResponse = {
+type SteamPrefillResponse = {
   appid: number
-  kind: string
-  url: string
-  digest?: string
-  filename?: string
-  source?: string
+  name: string
+  name_en: string
+  info: string
+  info_en: string
+  groups: KVItem[]
+  release_date: string
+  developers: string[]
+  publishers: string[]
+  header: string
+  links: KVItem[]
 }
 
 function currentGameAppid(target: Record<string, unknown> = form) {
@@ -165,6 +198,23 @@ function asKVArray(value: unknown): KVItem[] {
     : []
 }
 
+function mergeKVArray(current: unknown, incoming: KVItem[]) {
+  const result = asKVArray(current)
+  for (const item of incoming) {
+    const key = item.key.trim()
+    const value = item.value.trim()
+    if (!key || !value) continue
+
+    const existing = result.find((row) => row.key.toLowerCase() === key.toLowerCase())
+    if (existing) {
+      if (!existing.value) existing.value = value
+      continue
+    }
+    result.push({ key, value })
+  }
+  return result
+}
+
 function applyGameSteamDefaults(target: Record<string, unknown>) {
   const appid = currentGameAppid(target)
   if (!appid) return false
@@ -182,30 +232,64 @@ function applyGameSteamDefaults(target: Record<string, unknown>) {
   return true
 }
 
-function syncGameSteamLinks() {
-  if (!applyGameSteamDefaults(form)) {
-    message.value = '请先填写 Steam AppID'
-    return
-  }
-  message.value = '已补全 SteamDB / Gamalytic 链接'
-}
-
-async function fillGameHeaderFromSteam() {
+async function prefillGameFromSteam() {
   const appid = currentGameAppid()
   if (!appid) {
     message.value = '请先填写 Steam AppID'
     return
   }
 
-  resolvingSteamAsset.value = true
+  prefillingSteam.value = true
+  message.value = ''
   try {
-    const asset = await getJSON<SteamAssetResponse>(`/api/v1/game/games/steam-asset?appid=${appid}&kind=header`)
-    form.header = asset.url
-    message.value = `已填入 Steam 官方封面：${asset.kind}`
+    const metadata = await getJSON<SteamPrefillResponse>(`/api/v1/game/games/steam-prefill?appid=${appid}`)
+    const filled: string[] = []
+
+    if (metadata.name) {
+      form.name = metadata.name
+      filled.push('中文名')
+    }
+    if (metadata.name_en) {
+      form.name_en = metadata.name_en
+      filled.push('英文名')
+    }
+    if (metadata.info) {
+      form.info = metadata.info
+      filled.push('中文简介')
+    }
+    if (metadata.info_en) {
+      form.info_en = metadata.info_en
+      filled.push('英文简介')
+    }
+    if (metadata.groups?.length) {
+      form.groups = mergeKVArray(form.groups, metadata.groups)
+      filled.push('社群')
+    }
+    if (metadata.release_date) {
+      form.release_date = metadata.release_date
+      filled.push('发行日')
+    }
+    if (metadata.developers?.length) {
+      form.developers = [...metadata.developers]
+      filled.push('开发者')
+    }
+    if (metadata.publishers?.length) {
+      form.publishers = [...metadata.publishers]
+      filled.push('发行商')
+    }
+    if (metadata.header) {
+      form.header = metadata.header
+      filled.push('封面')
+    }
+    form.links = mergeKVArray(form.links, metadata.links ?? [])
+    applyGameSteamDefaults(form)
+    filled.push('Steam 链接')
+
+    message.value = `已从 Steam 填入：${Array.from(new Set(filled)).join('、')}`
   } catch (error) {
-    message.value = error instanceof Error ? error.message : '获取 Steam 官方封面失败'
+    message.value = error instanceof Error ? error.message : 'Steam 信息获取失败'
   } finally {
-    resolvingSteamAsset.value = false
+    prefillingSteam.value = false
   }
 }
 
@@ -231,6 +315,8 @@ function setOnTarget(target: Record<string, unknown>, path: string, value: unkno
 watch(() => route.fullPath, async () => {
   pageNum.value = 1
   keyword.value = ''
+  editorOpen.value = false
+  editingId.value = null
   resetForm()
   await loadList()
 })
@@ -242,105 +328,153 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="config" class="space-y-6">
-    <div class="border border-[var(--line)] bg-[var(--panel)]/70 p-4">
-      <div class="text-xs uppercase tracking-[0.3em] text-[var(--accent)]">{{ config.section === 'nav' ? '导航库' : '游戏库' }}</div>
-      <h1 class="mt-2 text-3xl font-semibold">{{ config.title }}</h1>
-    </div>
+  <div v-if="config" class="resource-page">
+    <header class="resource-command-bar">
+      <div class="resource-command-bar__title">
+        <h1>{{ config.title }}</h1>
+        <span>{{ total }} 条</span>
+        <span v-if="loading" class="text-[var(--accent)]">刷新中</span>
+      </div>
+
+      <div class="resource-command-bar__actions">
+        <label class="resource-search">
+          <Search :size="17" aria-hidden="true" />
+          <input
+            v-model="keyword"
+            placeholder="搜索关键字"
+            @keyup.enter="loadList"
+          />
+        </label>
+        <button class="ui-button px-4 py-2 text-sm" type="button" @click="loadList">
+          查询
+        </button>
+        <button class="ui-button ui-button--primary flex items-center gap-2 px-4 py-2 text-sm" type="button" @click="startCreate">
+          <Plus :size="17" />
+          新建
+        </button>
+      </div>
+    </header>
 
     <BulkReplacePanel v-if="config.bulkReplace" :config="config" @saved="loadList" />
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_560px]">
-      <section class="space-y-4 border border-[var(--line)] bg-[var(--panel)]/70 p-4">
-        <div class="flex flex-col gap-3 md:flex-row">
-          <input v-model="keyword" class="w-full border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" placeholder="搜索关键字" />
-          <button class="border border-[var(--line)] px-4 py-2 text-sm" @click="loadList">查询</button>
-          <button class="border border-[var(--accent)] bg-[var(--accent)]/10 px-4 py-2 text-sm" @click="startCreate">新建</button>
-        </div>
-
-        <div class="overflow-auto border border-[var(--line)]">
-          <table class="min-w-full border-collapse text-sm">
-            <thead class="bg-black/20 text-left text-[var(--text-muted)]">
-              <tr>
-                <th v-for="column in config.columns" :key="column.key" class="border-b border-[var(--line)] px-3 py-3">{{ column.label }}</th>
-                <th class="border-b border-[var(--line)] px-3 py-3">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in items" :key="String(item.id)" class="odd:bg-white/[0.02]">
-                <td v-for="column in config.columns" :key="column.key" class="border-b border-[var(--line)] px-3 py-3 align-top">{{ formatCell(item[column.key]) }}</td>
-                <td class="border-b border-[var(--line)] px-3 py-3">
-                  <div class="flex gap-2">
-                    <button class="border border-[var(--line)] px-3 py-1" @click="startEdit(String(item.id))">编辑</button>
-                    <button class="border border-[var(--danger)] px-3 py-1 text-[var(--danger)]" @click="removeItem(String(item.id))">{{ deletingId === String(item.id) ? '删除中…' : '删除' }}</button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="flex items-center justify-between text-sm text-[var(--text-muted)]">
-          <div>共 {{ total }} 条</div>
-          <div class="flex items-center gap-2">
-            <button class="border border-[var(--line)] px-3 py-1" :disabled="pageNum <= 1" @click="pageNum -= 1; loadList()">上一页</button>
-            <span>第 {{ pageNum }} 页</span>
-            <button class="border border-[var(--line)] px-3 py-1" :disabled="items.length < pageSize" @click="pageNum += 1; loadList()">下一页</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="space-y-4 border border-[var(--line)] bg-[var(--panel)]/70 p-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-sm font-semibold">{{ editingId ? `编辑 #${editingId}` : '新建记录' }}</div>
-            <div class="text-xs text-[var(--text-muted)]">右侧直接编辑并提交。</div>
-          </div>
-          <div class="text-xs text-[var(--text-muted)]">{{ loading ? '列表刷新中…' : '' }}</div>
-        </div>
-
-        <template
-          v-for="field in config.fields"
-          :key="field.key"
-        >
-          <FieldEditor
-            :field="field"
-            :model-value="getField(field.key)"
-            @update:model-value="setField(field.key, $event)"
-          />
-
-          <div
-            v-if="isGameEditor && field.key === 'header'"
-            class="flex flex-wrap items-center gap-2 border border-[var(--line)] bg-black/20 p-3"
-          >
-            <button
-              class="border border-[var(--line)] px-3 py-1.5 text-xs disabled:opacity-50"
-              type="button"
-              :disabled="resolvingSteamAsset"
-              @click="fillGameHeaderFromSteam"
+    <section class="resource-table-section">
+      <div class="data-surface resource-table-scroll">
+        <table class="resource-table">
+          <thead>
+            <tr>
+              <th v-for="column in config.columns" :key="column.key">{{ column.label }}</th>
+              <th class="resource-table__actions-heading">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="item in items"
+              :key="String(item.id)"
+              :class="{ 'resource-table__row--active': editingId === String(item.id) && editorOpen }"
             >
-              {{ resolvingSteamAsset ? '获取中…' : '填入官方封面' }}
-            </button>
-            <span class="text-xs text-[var(--text-muted)]">通过 Steam StoreBrowse 解析带 hash 的官方资源地址。</span>
-          </div>
+              <td v-for="column in config.columns" :key="column.key">{{ formatCell(item[column.key]) }}</td>
+              <td class="resource-table__actions">
+                <button
+                  class="table-action"
+                  type="button"
+                  title="编辑"
+                  aria-label="编辑"
+                  @click="startEdit(String(item.id))"
+                >
+                  <Pencil :size="16" />
+                </button>
+                <button
+                  class="table-action table-action--danger"
+                  type="button"
+                  title="删除"
+                  aria-label="删除"
+                  :disabled="deletingId === String(item.id)"
+                  @click="removeItem(String(item.id))"
+                >
+                  <Trash2 :size="16" />
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
-          <div
-            v-if="isGameEditor && field.key === 'links'"
-            class="flex flex-wrap items-center gap-2 border border-[var(--line)] bg-black/20 p-3"
-          >
-            <button class="border border-[var(--line)] px-3 py-1.5 text-xs" type="button" @click="syncGameSteamLinks">
-              补全 Steam 链接
-            </button>
-            <span class="text-xs text-[var(--text-muted)]">自动补 SteamDB 与 Gamalytic 默认链接。</span>
-          </div>
-        </template>
-
-        <div class="flex items-center gap-3">
-          <button class="border border-[var(--accent)] bg-[var(--accent)]/10 px-4 py-2 text-sm" @click="submit">{{ saving ? '保存中…' : editingId ? '保存修改' : '创建记录' }}</button>
-          <button class="border border-[var(--line)] px-4 py-2 text-sm" @click="resetForm">重置表单</button>
+        <div v-if="!loading && items.length === 0" class="resource-empty">
+          没有匹配的数据
         </div>
-        <div v-if="message" class="text-sm text-[var(--text-muted)]">{{ message }}</div>
-      </section>
-    </div>
+      </div>
+
+      <footer class="resource-pagination">
+        <span>第 {{ pageNum }} 页</span>
+        <div class="flex items-center gap-1">
+          <button
+            class="table-action"
+            type="button"
+            title="上一页"
+            aria-label="上一页"
+            :disabled="pageNum <= 1"
+            @click="pageNum -= 1; loadList()"
+          >
+            <ChevronLeft :size="18" />
+          </button>
+          <button
+            class="table-action"
+            type="button"
+            title="下一页"
+            aria-label="下一页"
+            :disabled="items.length < pageSize"
+            @click="pageNum += 1; loadList()"
+          >
+            <ChevronRight :size="18" />
+          </button>
+        </div>
+      </footer>
+    </section>
+
+    <Teleport to="body">
+      <aside v-if="editorOpen" class="resource-editor" :aria-label="editingId ? `编辑 #${editingId}` : '新建记录'">
+        <header class="resource-editor__header">
+          <div>
+            <div class="resource-editor__eyebrow">{{ config.title }}</div>
+            <h2>{{ editingId ? `编辑 #${editingId}` : '新建记录' }}</h2>
+          </div>
+          <button class="icon-button" type="button" title="关闭编辑器" aria-label="关闭编辑器" @click="closeEditor">
+            <X :size="20" />
+          </button>
+        </header>
+
+        <div class="resource-editor__body">
+          <template v-for="field in config.fields" :key="field.key">
+            <div :class="{ 'resource-editor__field--wide': isWideField(field) }">
+              <FieldEditor
+                :field="field"
+                :model-value="getField(field.key)"
+                @update:model-value="setField(field.key, $event)"
+              />
+            </div>
+          </template>
+        </div>
+
+        <footer class="resource-editor__footer">
+          <div class="min-w-0 flex-1 text-xs text-[var(--text-muted)]">{{ message }}</div>
+          <button
+            v-if="isGameEditor"
+            class="ui-button flex items-center gap-2 px-3 py-2 text-sm"
+            type="button"
+            :disabled="prefillingSteam"
+            @click="prefillGameFromSteam"
+          >
+            <CloudDownload :size="16" />
+            {{ prefillingSteam ? '获取中' : 'Steam 填入' }}
+          </button>
+          <button class="ui-button flex items-center gap-2 px-3 py-2 text-sm" type="button" @click="resetForm">
+            <RotateCcw :size="16" />
+            重置
+          </button>
+          <button class="ui-button ui-button--primary px-4 py-2 text-sm" type="button" :disabled="saving" @click="submit">
+            {{ saving ? '保存中' : editingId ? '保存修改' : '创建记录' }}
+          </button>
+        </footer>
+      </aside>
+    </Teleport>
   </div>
 </template>

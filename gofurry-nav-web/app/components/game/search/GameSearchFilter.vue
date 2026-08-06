@@ -46,20 +46,20 @@
         <!-- 发布时间 -->
         <div>
           <label class="game-search-filter-label">{{ t("game.search.publishTime") }}</label>
-          <div class="flex gap-2 mt-1">
+          <div class="game-search-date-range mt-1">
             <VueDatePicker
                 v-model="publishStart"
                 :enable-time-picker="true"
                 format="yyyy-MM-dd HH:mm:ss"
                 :teleport="false"
-                class="game-date-picker dp-custom-theme w-1/2"
+                class="game-date-picker dp-custom-theme"
             />
             <VueDatePicker
                 v-model="publishEnd"
                 :enable-time-picker="true"
                 format="yyyy-MM-dd HH:mm:ss"
                 :teleport="false"
-                class="game-date-picker dp-custom-theme w-1/2"
+                class="game-date-picker dp-custom-theme"
             />
           </div>
         </div>
@@ -67,20 +67,20 @@
         <!-- 更新时间 -->
         <div>
           <label class="game-search-filter-label">{{ t("game.search.updateTime") }}</label>
-          <div class="flex gap-2 mt-1">
+          <div class="game-search-date-range mt-1">
             <VueDatePicker
                 v-model="updateStart"
                 :enable-time-picker="true"
                 format="yyyy-MM-dd HH:mm:ss"
                 :teleport="false"
-                class="game-date-picker dp-custom-theme w-1/2"
+                class="game-date-picker dp-custom-theme"
             />
             <VueDatePicker
                 v-model="updateEnd"
                 :enable-time-picker="true"
                 format="yyyy-MM-dd HH:mm:ss"
                 :teleport="false"
-                class="game-date-picker dp-custom-theme w-1/2"
+                class="game-date-picker dp-custom-theme"
             />
           </div>
         </div>

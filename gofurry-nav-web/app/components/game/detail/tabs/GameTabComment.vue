@@ -1,11 +1,11 @@
 <template>
   <div class="game-detail-comments space-y-4 text-sm">
 
-    <div v-if="remarks.length">
+    <div v-if="remarks.length" class="space-y-3">
       <div
         v-for="(remark, index) in remarks"
         :key="`${remark.create_time}-${remark.ip}-${index}`"
-        class="game-detail-comment mt-1 space-y-1 pb-3"
+        class="game-detail-comment mt-1 space-y-1 p-4"
       >
         <div class="game-detail-comment-meta flex flex-col text-xs">
           <div class="flex justify-between">

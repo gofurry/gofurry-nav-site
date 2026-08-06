@@ -52,12 +52,13 @@
                 {{ t('game.detail.score') }} (0.0 ~ 5.0)
               </span>
               <input
-                v-model.number="form.score"
-                type="number"
-                min="0"
-                max="5"
-                step="0.1"
-                class="review-field"
+                v-model.trim="form.score"
+                type="text"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="0.0"
+                class="review-field review-score-field"
+                @blur="normalizeScore"
               />
             </label>
 
@@ -104,7 +105,7 @@ const emit = defineEmits<{
 const form = reactive({
   name: '',
   content: '',
-  score: 0,
+  score: '0',
 })
 
 const errorMsg = ref('')
@@ -122,9 +123,32 @@ watch(
     successMsg.value = ''
     form.name = ''
     form.content = ''
-    form.score = 0
+    form.score = '0'
   }
 )
+
+function parseScore() {
+  const raw = form.score.trim().replace(',', '.')
+  if (!/^\d+(?:\.\d+)?$/.test(raw)) {
+    return null
+  }
+
+  const score = Number(raw)
+  if (!Number.isFinite(score)) {
+    return null
+  }
+
+  return score
+}
+
+function normalizeScore() {
+  const score = parseScore()
+  if (score === null || score < 0 || score > 5) {
+    return
+  }
+
+  form.score = String(Math.round(score * 10) / 10)
+}
 
 function validate() {
   errorMsg.value = ''
@@ -139,7 +163,8 @@ function validate() {
     return false
   }
 
-  if (form.score < 0 || form.score > 5) {
+  const score = parseScore()
+  if (score === null || score < 0 || score > 5) {
     errorMsg.value = t('game.detail.scoreTip')
     return false
   }
@@ -152,6 +177,12 @@ async function submit() {
     return
   }
 
+  const score = parseScore()
+  if (score === null) {
+    errorMsg.value = t('game.detail.scoreTip')
+    return
+  }
+
   submitting.value = true
   errorMsg.value = ''
   successMsg.value = ''
@@ -161,7 +192,7 @@ async function submit() {
       id: props.gameId,
       name: form.name,
       content: form.content,
-      score: form.score,
+      score,
     })
 
     if (res.code === 1) {

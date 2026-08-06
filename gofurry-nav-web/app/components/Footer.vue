@@ -40,7 +40,15 @@
             <img :src="apiIcon" alt="" class="h-4 w-4 opacity-80" />
             {{ t('footer.sections.openPlatform') }}
           </h3>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
+            <a
+                :href="navUptimeUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="gf-footer__link"
+            >
+              {{ t('footer.links.uptime') }}
+            </a>
             <a
                 :href="navMonitorUrl"
                 target="_blank"
@@ -144,6 +152,7 @@ const sitemapUrl = '/sitemap.xml'
 const llmsUrl = '/llms.txt'
 const securityTxtUrl = '/.well-known/security.txt'
 const config = useRuntimeConfig()
+const navUptimeUrl = computed(() => config.public.navUptimeUrl)
 const navMonitorUrl = computed(() => config.public.navMonitorUrl)
 
 const feedbackLinks = [

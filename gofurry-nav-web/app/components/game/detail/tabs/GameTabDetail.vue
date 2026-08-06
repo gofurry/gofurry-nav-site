@@ -1,7 +1,7 @@
 <template>
   <div class="game-detail-info space-y-6 text-sm">
 
-    <section class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+    <section class="game-detail-info-summary grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
       <div class="flex gap-2">
         <span class="game-detail-info-label w-28 shrink-0">{{ t("game.detail.infoCollectedTime") }}:</span>
         <span>{{ game?.create_time || t("game.panel.none") }}</span>

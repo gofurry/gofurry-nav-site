@@ -130,6 +130,7 @@
       "sitemapXml": "Sitemap",
       "llmsTxt": "LLMs",
       "securityTxt": "Security",
+      "uptime": "Service Status",
       "api": "Site Monitor",
       "opsAdmin": "Ops Admin",
       "bilibili": "Bilibili",

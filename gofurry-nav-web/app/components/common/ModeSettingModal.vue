@@ -202,13 +202,14 @@ function clearCustomBgDirectory() {
 
 const save = async () => {
   localMode.value = localMode.value.trim().slice(0, 32)
-  writeShowQuickAccess(showQuickAccessLocal.value)
-  emit('save', localMode.value)
 
   if (shouldClearCustomBg) {
     await clearCustomNavHeaderBackgroundDirectory()
   } else if (pendingCustomBgSelection) {
     await saveCustomNavHeaderBackgroundDirectory(pendingCustomBgSelection)
   }
+
+  writeShowQuickAccess(showQuickAccessLocal.value)
+  emit('save', localMode.value)
 }
 </script>

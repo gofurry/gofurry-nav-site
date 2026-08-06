@@ -169,42 +169,41 @@ onMounted(refresh)
 
 <template>
   <main class="space-y-5">
-    <header class="flex flex-col gap-3 border-b border-[var(--line)] pb-4 md:flex-row md:items-end md:justify-between">
+    <header class="page-header flex-col md:flex-row">
       <div>
-        <div class="text-xs uppercase tracking-[0.25em] text-[var(--accent)]">Nav V2</div>
-        <h1 class="mt-2 text-2xl font-semibold">导航采集观测</h1>
+        <h1 class="text-2xl font-semibold">导航采集观测</h1>
         <p class="mt-1 text-sm text-[var(--text-muted)]">查看 nav 采集器协议运行状态、站点健康摘要和最近观测。</p>
       </div>
-      <button class="border border-[var(--accent)] px-4 py-2 text-sm text-[var(--accent)] disabled:opacity-50" :disabled="loading" @click="refresh">
+      <button class="ui-button ui-button--primary px-4 py-2 text-sm" :disabled="loading" @click="refresh">
         {{ loading ? '刷新中' : '刷新' }}
       </button>
     </header>
 
-    <div v-if="error" class="border border-[var(--danger)] bg-[var(--danger)]/10 px-4 py-3 text-sm text-[var(--danger)]">
+    <div v-if="error" class="status-alert px-4 py-3 text-sm text-[var(--danger)]">
       {{ error }}
     </div>
 
-    <section class="grid gap-4 md:grid-cols-4">
-      <div class="border border-[var(--line)] bg-[var(--panel)] p-4">
+    <section class="status-rail grid grid-cols-2 md:grid-cols-4">
+      <div class="status-rail__item">
         <div class="text-xs text-[var(--text-muted)]">协议数</div>
         <div class="mt-2 text-lg font-semibold">{{ status?.latest_runs?.length || 0 }}</div>
       </div>
-      <div class="border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div class="status-rail__item">
         <div class="text-xs text-[var(--text-muted)]">最近目标</div>
         <div class="mt-2 text-lg font-semibold">{{ status?.latest_runs?.reduce((sum, item) => sum + (item.target_count || 0), 0) || 0 }}</div>
       </div>
-      <div class="border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div class="status-rail__item">
         <div class="text-xs text-[var(--text-muted)]">成功率</div>
         <div class="mt-2 text-lg font-semibold">{{ successRate }}</div>
       </div>
-      <div class="border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div class="status-rail__item">
         <div class="text-xs text-[var(--text-muted)]">生成时间</div>
         <div class="mt-2 text-sm font-semibold">{{ formatTime(status?.generated_at) }}</div>
       </div>
     </section>
 
     <section class="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-      <div class="border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div class="workspace-section">
         <h2 class="text-lg font-semibold">协议最新运行</h2>
         <div class="mt-3 overflow-x-auto">
           <table class="w-full min-w-[760px] text-left text-sm">
@@ -236,10 +235,10 @@ onMounted(refresh)
         </div>
       </div>
 
-      <div class="border border-[var(--line)] bg-[var(--panel)] p-4">
+      <div class="workspace-section">
         <h2 class="text-lg font-semibold">近 7 天观测摘要</h2>
         <div class="mt-3 grid gap-2 sm:grid-cols-2">
-          <div v-for="item in status?.summary || []" :key="`${item.protocol}-${item.status}`" class="border border-[var(--line)] bg-[var(--panel-strong)] px-3 py-2">
+          <div v-for="item in status?.summary || []" :key="`${item.protocol}-${item.status}`" class="summary-cell">
             <div class="font-mono text-xs">{{ item.protocol }}</div>
             <div class="mt-1 flex items-center justify-between text-sm">
               <span :class="statusClass(item.status)">{{ item.status }}</span>
@@ -250,22 +249,22 @@ onMounted(refresh)
       </div>
     </section>
 
-    <section class="border border-[var(--line)] bg-[var(--panel)] p-4">
+    <section class="workspace-section">
       <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <h2 class="text-lg font-semibold">最近观测</h2>
         <div class="flex flex-wrap gap-2">
-          <input v-model="siteIDFilter" class="border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm" placeholder="site_id" />
-          <input v-model="targetFilter" class="border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm" placeholder="target" />
-          <input v-model="protocolFilter" class="border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm" placeholder="protocol" />
-          <select v-model="statusFilter" class="border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm">
+          <input v-model="siteIDFilter" class="ui-control px-3 py-2 text-sm" placeholder="site_id" />
+          <input v-model="targetFilter" class="ui-control px-3 py-2 text-sm" placeholder="target" />
+          <input v-model="protocolFilter" class="ui-control px-3 py-2 text-sm" placeholder="protocol" />
+          <select v-model="statusFilter" class="ui-control px-3 py-2 text-sm">
             <option value="">全部状态</option>
             <option value="success">success</option>
             <option value="failure">failure</option>
           </select>
-          <button class="border border-[var(--line-strong)] px-3 py-2 text-sm" @click="refresh">筛选</button>
+          <button class="ui-button px-3 py-2 text-sm" @click="refresh">筛选</button>
         </div>
       </div>
-      <div class="mt-3 overflow-x-auto">
+      <div class="data-surface mt-3 overflow-x-auto px-3">
         <table class="w-full min-w-[960px] text-left text-sm">
           <thead class="text-xs uppercase text-[var(--text-muted)]">
             <tr>
@@ -295,42 +294,42 @@ onMounted(refresh)
       </div>
     </section>
 
-    <section class="border border-[var(--line)] bg-[var(--panel)] p-4">
+    <section class="workspace-section">
       <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <h2 class="text-lg font-semibold">站点/目标排查</h2>
         <div class="flex flex-wrap gap-2">
-          <input v-model="siteID" class="border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm" placeholder="site id" />
-          <input v-model="target" class="border border-[var(--line)] bg-[var(--bg)] px-3 py-2 text-sm" placeholder="target" />
-          <button class="border border-[var(--line-strong)] px-3 py-2 text-sm" @click="loadSiteStatus">查站点</button>
-          <button class="border border-[var(--line-strong)] px-3 py-2 text-sm" @click="loadTargetStatus">查目标</button>
+          <input v-model="siteID" class="ui-control px-3 py-2 text-sm" placeholder="site id" />
+          <input v-model="target" class="ui-control px-3 py-2 text-sm" placeholder="target" />
+          <button class="ui-button px-3 py-2 text-sm" @click="loadSiteStatus">查站点</button>
+          <button class="ui-button px-3 py-2 text-sm" @click="loadTargetStatus">查目标</button>
         </div>
       </div>
 
       <div class="mt-4 grid gap-4 lg:grid-cols-2">
-        <div v-if="siteStatus" class="border border-[var(--line)] bg-[var(--panel-strong)] p-3 text-sm">
+        <div v-if="siteStatus" class="detail-block text-sm">
           <div class="flex items-center justify-between">
             <div class="text-lg font-semibold">Site {{ siteStatus.site_id }}</div>
             <div :class="statusClass(siteStatus.summary.status)">{{ siteStatus.summary.status }}</div>
           </div>
           <div class="mt-2 text-[var(--text-muted)]">targets {{ siteStatus.summary.target_count }} / state {{ siteStatus.summary.state }}</div>
           <div class="mt-3 flex flex-wrap gap-2">
-            <span v-for="targetItem in siteStatus.targets" :key="targetItem.target" class="border border-[var(--line)] px-2 py-1" :class="statusClass(targetItem.status)">
+            <span v-for="targetItem in siteStatus.targets" :key="targetItem.target" class="bg-[var(--control)] px-2 py-1" :class="statusClass(targetItem.status)">
               {{ targetItem.target }} · {{ targetItem.status }}
             </span>
           </div>
         </div>
 
-        <div v-if="targetStatus" class="border border-[var(--line)] bg-[var(--panel-strong)] p-3 text-sm">
+        <div v-if="targetStatus" class="detail-block text-sm">
           <div class="flex items-center justify-between">
             <div class="max-w-[70%] truncate text-lg font-semibold">{{ targetStatus.target }}</div>
             <div :class="statusClass(targetStatus.summary.status)">{{ targetStatus.summary.status }}</div>
           </div>
           <div class="mt-3 grid gap-2 sm:grid-cols-2">
-            <div v-for="[protocol, item] in protocolEntries(targetStatus.latest_core)" :key="`core-${protocol}`" class="border border-[var(--line)] px-2 py-1">
+            <div v-for="[protocol, item] in protocolEntries(targetStatus.latest_core)" :key="`core-${protocol}`" class="summary-cell">
               <div class="font-mono text-xs">{{ protocol }}</div>
               <div :class="statusClass(item.status)">{{ item.status }} · {{ formatDuration(item.duration_ms) }}</div>
             </div>
-            <div v-for="[protocol, item] in protocolEntries(targetStatus.latest_light)" :key="`light-${protocol}`" class="border border-[var(--line)] px-2 py-1">
+            <div v-for="[protocol, item] in protocolEntries(targetStatus.latest_light)" :key="`light-${protocol}`" class="summary-cell">
               <div class="font-mono text-xs">{{ protocol }}</div>
               <div :class="statusClass(item.status)">{{ item.status }} · {{ formatDuration(item.duration_ms) }}</div>
             </div>

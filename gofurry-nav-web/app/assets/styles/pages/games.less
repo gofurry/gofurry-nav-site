@@ -184,21 +184,59 @@ html.dark .games-page {
   color: var(--games-text-soft);
 }
 
+.games-page .game-info-group {
+  margin-bottom: 1.15rem;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.games-page .game-stats-section {
+  margin-bottom: 1.15rem;
+}
+
 .games-page .game-card {
   position: relative;
   cursor: pointer;
+  border: 1px solid transparent;
   border-radius: 0.75rem;
+  background: var(--games-item-bg);
   padding: 0.5rem;
-  transition: background-color 220ms ease;
+  box-shadow: var(--games-shadow-soft);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .games-page .game-card:hover,
 .games-page .game-card:focus-within {
-  background: var(--games-card-hover-bg);
+  border-color: transparent;
+  background: var(--games-item-hover-bg);
+  box-shadow: var(--games-item-hover-shadow);
+}
+
+.games-page .game-card__media {
+  position: relative;
+  width: 100%;
+  height: 8rem;
+  flex: none;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--games-item-hover-bg) 76%, transparent);
+}
+
+.games-page .game-card__media > img,
+.games-page .latest-review-item__media > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .games-page .game-card--spacer {
+  border-color: transparent;
   background: transparent;
+  box-shadow: none;
 }
 
 .games-page .review-float-button {
@@ -410,8 +448,18 @@ html.dark .games-page .stats-page-tab--idle:hover {
 }
 
 .games-page .game-stats-feature {
-  border: 0;
-  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.78rem;
+  background: var(--games-item-bg);
+  padding-right: 0.68rem;
+  padding-left: 0.68rem;
+  box-shadow: var(--games-shadow-soft);
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.games-page .game-stats-feature:hover {
+  background: var(--games-item-hover-bg);
+  box-shadow: var(--games-item-hover-shadow);
 }
 
 .games-page .game-stats-card--placeholder,
@@ -426,6 +474,8 @@ html.dark .games-page .stats-page-tab--idle:hover {
 }
 
 .games-page .game-stats-feature--placeholder {
+  background: transparent;
+  box-shadow: none;
   min-height: 4rem;
 }
 
@@ -545,15 +595,16 @@ html.dark .games-page .game-stats-rank--top {
   overflow: hidden;
   border: 1px solid transparent;
   border-radius: 0.78rem;
-  background: var(--games-item-bg-soft);
-  box-shadow: none;
+  background: var(--games-item-bg);
+  box-shadow: var(--games-shadow-soft);
   backdrop-filter: blur(1px);
   transition: background-color 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
 .games-page .news-card:hover {
   border-color: transparent;
-  background: color-mix(in srgb, var(--games-item-hover-bg) 56%, transparent);
+  background: var(--games-item-hover-bg);
+  box-shadow: var(--games-item-hover-shadow);
 }
 
 .games-page .news-card__cover {
@@ -897,10 +948,29 @@ html.dark .games-page .news-edge--right {
 
 .games-page .latest-review-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
   border-radius: 0.82rem;
   padding: 0.68rem;
+}
+
+.games-page .latest-review-item__identity {
+  display: flex;
+  width: 5.5rem;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.games-page .latest-review-item__media {
+  width: 100%;
+  height: 3.25rem;
+  flex: none;
+  overflow: hidden;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--games-item-hover-bg) 76%, transparent);
 }
 
 .games-page.game-detail-page {
@@ -1138,7 +1208,26 @@ html.dark .games-page .share-icon {
 }
 
 .games-page .game-detail-tab-list {
-  border-bottom: 1px solid color-mix(in srgb, var(--games-detail-border) 72%, transparent);
+  position: relative;
+  border-bottom: 0;
+}
+
+.games-page .game-detail-tab-list::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 0.13rem;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--games-detail-border-strong) 34%, transparent) 18%,
+    color-mix(in srgb, var(--games-detail-border-strong) 78%, transparent) 50%,
+    color-mix(in srgb, var(--games-detail-border-strong) 34%, transparent) 82%,
+    transparent 100%
+  );
+  pointer-events: none;
+  content: "";
 }
 
 .games-page .game-detail-tab {
@@ -1156,7 +1245,7 @@ html.dark .games-page .share-icon {
 .games-page .game-detail-tab--active::after {
   position: absolute;
   right: 1rem;
-  bottom: -1px;
+  bottom: 0;
   left: 1rem;
   height: 0.13rem;
   border-radius: 999px;
@@ -1277,6 +1366,8 @@ html.dark .games-page .site-icon-image--official {
   overflow: hidden;
   border: 1px solid transparent;
   border-radius: 0.72rem;
+  background: var(--games-detail-surface);
+  box-shadow: var(--games-shadow-soft);
   transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
 
@@ -1284,6 +1375,11 @@ html.dark .games-page .site-icon-image--official {
   border-color: transparent;
   background: var(--games-detail-surface-hover);
   box-shadow: var(--games-item-hover-shadow);
+}
+
+.games-page .game-detail-similar-item--placeholder {
+  background: transparent;
+  box-shadow: none;
 }
 
 .games-page .game-detail-page-button {
@@ -1302,6 +1398,37 @@ html.dark .games-page .site-icon-image--official {
 
 .games-page .game-detail-info {
   color: var(--games-text-muted);
+}
+
+.games-page .game-detail-content-card,
+.games-page .game-detail-comment,
+.games-page .game-detail-news-item {
+  border: 1px solid transparent;
+  border-radius: 0.72rem;
+  background: var(--games-detail-surface);
+  box-shadow: var(--games-shadow-soft);
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.games-page .game-detail-content-card {
+  padding: 1rem;
+}
+
+.games-page .game-detail-intro-card {
+  overflow: hidden;
+}
+
+.games-page .game-detail-comment:hover,
+.games-page .game-detail-news-item:hover {
+  background: var(--games-detail-surface-hover);
+  box-shadow: var(--games-item-hover-shadow);
+}
+
+.games-page .game-detail-info-summary .game-detail-info-label {
+  color: var(--games-text-title);
+  font-weight: 760;
 }
 
 .games-page .game-detail-info > section {
@@ -1415,16 +1542,6 @@ html.dark .games-page .site-icon-image--official {
 
 .games-page .game-detail-link a:hover {
   color: var(--games-accent-strong);
-}
-
-.games-page .game-detail-comment {
-  border-radius: 0;
-  transition: background-color 180ms ease;
-}
-
-.games-page .game-detail-comment:hover,
-.games-page .game-detail-news-item:hover {
-  background: color-mix(in srgb, var(--games-detail-surface-hover) 24%, transparent);
 }
 
 .games-page .game-detail-divider {

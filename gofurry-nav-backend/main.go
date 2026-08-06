@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"log/slog"
 	"os"
-	"os/signal"
 	"runtime/debug"
-	"syscall"
+	"sync"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-nav-backend/apps/schedule"
@@ -23,10 +23,6 @@ import (
 //@title gofurry-Nav-Backend
 //@version v1.0.0
 //@description gofurry-Nav-Backend
-
-var (
-	errChan = make(chan error)
-)
 
 func main() {
 	dir, _ := os.Getwd()
@@ -117,7 +113,10 @@ gf-nav V1.0.0
 	}
 }
 
-type goFurry struct{}
+type goFurry struct {
+	mu  sync.Mutex
+	app *fiber.App
+}
 
 func InitOnStart() {
 	cfg := env.GetServerConfig()
@@ -163,42 +162,37 @@ func InitOnStart() {
 }
 
 func (gf *goFurry) Start(s service.Service) error {
-	go gf.run()
+	app := routers.Router.Init()
+	gf.mu.Lock()
+	gf.app = app
+	gf.mu.Unlock()
+
+	go gf.run(app)
 	return nil
 }
 
-func (gf *goFurry) run() {
-	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-		errChan <- fmt.Errorf("%s", <-c)
-	}()
-	// 启动 web
-	go func() {
-
-		app := routers.Router.Init()
-		addr := env.GetServerConfig().Server.IPAddress + ":" + env.GetServerConfig().Server.Port
-		//pem := env.GetServerConfig().Key.TlsPem
-		//key := env.GetServerConfig().Key.TlsKey
-		//if err := app.ListenTLS(addr, pem, key); err != nil {
-		//	fmt.Println(err)
-		//	errChan <- err
-		//}
-		if err := app.Listen(addr, fiber.ListenConfig{
-			ListenerNetwork:   env.GetServerConfig().Server.Network,
-			EnablePrefork:     env.GetServerConfig().Server.EnablePrefork,
-			EnablePrintRoutes: env.GetServerConfig().Server.Mode == "debug",
-		}); err != nil {
-			fmt.Println(err)
-			errChan <- err
-		}
-	}()
-	if err := <-errChan; err != nil {
-		slog.Error(err.Error())
+func (gf *goFurry) run(app *fiber.App) {
+	addr := env.GetServerConfig().Server.IPAddress + ":" + env.GetServerConfig().Server.Port
+	if err := app.Listen(addr, fiber.ListenConfig{
+		ListenerNetwork:   env.GetServerConfig().Server.Network,
+		EnablePrefork:     env.GetServerConfig().Server.EnablePrefork,
+		EnablePrintRoutes: env.GetServerConfig().Server.Mode == "debug",
+	}); err != nil {
+		slog.Error("web server stopped", "error", err)
 	}
 }
 
 func (gf *goFurry) Stop(s service.Service) error {
+	gf.mu.Lock()
+	app := gf.app
+	gf.app = nil
+	gf.mu.Unlock()
+
+	var shutdownErr error
+	if app != nil {
+		shutdownErr = app.ShutdownWithTimeout(10 * time.Second)
+	}
 	db.Orm.Close() // 关闭数据库连接池
-	return nil
+	redisErr := cs.CloseRedis()
+	return errors.Join(shutdownErr, redisErr)
 }

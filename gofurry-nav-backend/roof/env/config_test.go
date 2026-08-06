@@ -44,6 +44,20 @@ func TestRedisTimeoutDefault(t *testing.T) {
 	}
 }
 
+func TestServerExampleIncludesCentralizedUptimeServices(t *testing.T) {
+	var cfg serverConfig
+	if err := loadYaml("../../conf/server.example.yaml", &cfg); err != nil {
+		t.Fatalf("load example config: %v", err)
+	}
+
+	if !cfg.Uptime.Enabled {
+		t.Fatalf("unexpected nav uptime config: %+v", cfg.Uptime)
+	}
+	if len(cfg.Uptime.Endpoints) != 2 || cfg.Uptime.Endpoints[0].ID != "nav-backend" || cfg.Uptime.Endpoints[1].ID != "game-backend" {
+		t.Fatalf("unexpected uptime endpoints: %+v", cfg.Uptime.Endpoints)
+	}
+}
+
 func boolPtr(value bool) *bool {
 	return &value
 }

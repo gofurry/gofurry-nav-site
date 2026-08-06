@@ -61,6 +61,7 @@ func (router *router) Init() *fiber.App {
 		JSONEncoder:  sonic.Marshal,
 		JSONDecoder:  sonic.Unmarshal,
 	})
+	registerHealthChecks(app)
 
 	// 注册全局中间件
 	registerMiddlewares(app)
@@ -106,6 +107,9 @@ func registerMiddlewares(app *fiber.App) {
 		ExposeHeaders:    []string{"Content-Length"},
 		MaxAge:           86400, // 预检请求缓存 24 小时
 	}))
+
+	// 统一记录并展示 Nav、Game 及后续服务的可用性。
+	registerUptime(app)
 
 	// 请求限流
 	if cfg.Middleware.Limiter.IsOn {

@@ -1,5 +1,5 @@
 <template>
-  <div class="mb-8 p-5">
+  <div class="game-info-group">
     <div class="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
       <h3 class="game-group-title text-2xl font-bold">
         {{ group.title }}
@@ -41,7 +41,7 @@
           :key="index"
           class="game-card game-card--spacer"
         >
-          <div class="mb-2 h-32 w-full rounded-md"></div>
+          <div class="game-card__media"></div>
           <p class="h-[1.25rem]"></p>
           <p class="mt-1 h-[2rem]"></p>
           <div class="mt-2 h-[1.25rem]"></div>
@@ -58,10 +58,10 @@
             :key="item.id"
             class="game-card group"
           >
-            <div class="relative">
+            <div class="game-card__media">
               <SteamAssetImage
                 :src="item.cover"
-                class="mb-2 h-32 w-full rounded-md object-cover"
+                class="block h-full w-full object-cover"
                 :alt="item.name"
                 @click.stop="goGameDetail(item.id)"
               />
@@ -239,12 +239,6 @@ function openReview(item: GameItem) {
 @media (min-width: 640px) {
   .game-group-page-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 768px) {
-  .game-group-page-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

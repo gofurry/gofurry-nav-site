@@ -32,6 +32,7 @@ const CUSTOM_NAV_HEADER_BG_META_KEY = 'customNavHeaderBgFolderName'
 const DB_NAME = 'gofurry-custom-nav-header-bg'
 const STORE_NAME = 'directoryHandles'
 const STORE_KEY = 'nav-header-bg'
+const CACHE_KEY = 'nav-header-bg-cache'
 
 const imageExtensionPattern = /\.(avif|bmp|gif|jpeg|jpg|png|svg|webp)$/i
 
@@ -108,6 +109,10 @@ async function saveDirectoryHandle(handle: FileSystemDirectoryHandleLike) {
   await withStore('readwrite', store => store.put(handle, STORE_KEY))
 }
 
+async function saveCachedBackground(file: File) {
+  await withStore('readwrite', store => store.put(file, CACHE_KEY))
+}
+
 async function loadDirectoryHandle() {
   return (await withStore<FileSystemDirectoryHandleLike | undefined>(
     'readonly',
@@ -115,9 +120,21 @@ async function loadDirectoryHandle() {
   )) ?? null
 }
 
-async function deleteDirectoryHandle() {
-  await withStore('readwrite', store => {
+async function loadCachedBackground() {
+  return (await withStore<Blob | undefined>(
+    'readonly',
+    store => store.get(CACHE_KEY)
+  )) ?? null
+}
+
+async function deleteCachedBackground() {
+  await withStore('readwrite', store => store.delete(CACHE_KEY))
+}
+
+async function deleteSavedBackground() {
+  await withStore('readwrite', (store) => {
     store.delete(STORE_KEY)
+    store.delete(CACHE_KEY)
   })
 }
 
@@ -183,36 +200,47 @@ export async function saveCustomNavHeaderBackgroundDirectory(
   selection: CustomNavHeaderBackgroundSelection
 ) {
   await saveDirectoryHandle(selection.handle)
+  await deleteCachedBackground()
+
+  try {
+    const files = await collectImageFiles(selection.handle)
+    const randomFile = files[Math.floor(Math.random() * files.length)]
+    if (randomFile) {
+      await saveCachedBackground(randomFile)
+    }
+  } catch (error) {
+    console.error('Cache custom nav header background err:', error)
+  }
+
   localStorage.setItem(CUSTOM_NAV_HEADER_BG_META_KEY, selection.folderName)
   dispatchCustomNavHeaderBackgroundChange()
 }
 
 export async function clearCustomNavHeaderBackgroundDirectory() {
-  await deleteDirectoryHandle()
+  await deleteSavedBackground()
   localStorage.removeItem(CUSTOM_NAV_HEADER_BG_META_KEY)
   dispatchCustomNavHeaderBackgroundChange()
 }
 
 export async function loadRandomCustomNavHeaderBackground() {
-  if (!supportsCustomNavHeaderBackground()) {
+  if (typeof window === 'undefined' || !('indexedDB' in window)) {
     return null
   }
 
   const handle = await loadDirectoryHandle()
-  if (!handle) {
-    return null
+  if (handle && await ensureReadPermission(handle)) {
+    try {
+      const files = await collectImageFiles(handle)
+      const randomFile = files[Math.floor(Math.random() * files.length)]
+      if (randomFile) {
+        await saveCachedBackground(randomFile)
+        return URL.createObjectURL(randomFile)
+      }
+    } catch (error) {
+      console.error('Read custom nav header background directory err:', error)
+    }
   }
 
-  const hasPermission = await ensureReadPermission(handle)
-  if (!hasPermission) {
-    return null
-  }
-
-  const files = await collectImageFiles(handle)
-  if (files.length === 0) {
-    return null
-  }
-
-  const randomFile = files[Math.floor(Math.random() * files.length)]
-  return randomFile ? URL.createObjectURL(randomFile) : null
+  const cachedBackground = await loadCachedBackground()
+  return cachedBackground ? URL.createObjectURL(cachedBackground) : null
 }

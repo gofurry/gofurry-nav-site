@@ -25,19 +25,19 @@ function removeRow(index: number) {
   <div class="space-y-2">
     <div v-for="(item, index) in modelValue" :key="index" class="grid gap-2 md:grid-cols-[180px_1fr_auto]">
       <input
-        class="border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        class="ui-control px-3 py-2 text-sm"
         :value="item.key"
         placeholder="key"
         @input="patch(index, 'key', ($event.target as HTMLInputElement).value)"
       />
       <input
-        class="border border-[var(--line)] bg-black/20 px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+        class="ui-control px-3 py-2 text-sm"
         :value="item.value"
         placeholder="value"
         @input="patch(index, 'value', ($event.target as HTMLInputElement).value)"
       />
-      <button type="button" class="border border-[var(--line)] px-3 text-sm text-[var(--text-muted)]" @click="removeRow(index)">删</button>
+      <button type="button" class="ui-button ui-button--quiet px-3 text-sm" @click="removeRow(index)">删</button>
     </div>
-    <button type="button" class="border border-[var(--line-strong)] px-3 py-2 text-sm" @click="addRow">添加一项</button>
+    <button type="button" class="ui-button px-3 py-2 text-sm" @click="addRow">添加一项</button>
   </div>
 </template>
