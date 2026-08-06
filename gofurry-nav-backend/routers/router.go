@@ -61,6 +61,7 @@ func (router *router) Init() *fiber.App {
 		JSONEncoder:  sonic.Marshal,
 		JSONDecoder:  sonic.Unmarshal,
 	})
+	registerHealthChecks(app)
 
 	// 注册全局中间件
 	registerMiddlewares(app)

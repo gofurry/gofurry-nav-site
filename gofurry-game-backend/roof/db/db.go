@@ -1,6 +1,8 @@
 package db
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -55,4 +57,16 @@ func (db *orm) loadDBConfig() {
 func (db *orm) DB() *gorm.DB {
 	once.Do(initOrm)
 	return db.engine
+}
+
+func (db *orm) Ping(ctx context.Context) error {
+	if db.engine == nil {
+		return errors.New("database is not initialized")
+	}
+
+	sqlDB, err := db.engine.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.PingContext(ctx)
 }
