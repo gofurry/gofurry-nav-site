@@ -124,6 +124,8 @@ func gameRoutes(root fiber.Router) {
 	root.Get("/tag-maps", gameadmin.GameAPI.ListTagMaps)
 	root.Post("/tag-maps", gameadmin.GameAPI.CreateTagMap)
 	root.Put("/tag-maps/bulk-replace", gameadmin.GameAPI.BulkReplaceTagMaps)
+	root.Get("/tag-maps/by-tag/:id", gameadmin.GameAPI.ListTagMapGameIDs)
+	root.Put("/tag-maps/bulk-replace-by-tag", gameadmin.GameAPI.BulkReplaceTagGameMaps)
 	root.Get("/tag-maps/:id", gameadmin.GameAPI.GetTagMap)
 	root.Put("/tag-maps/:id", gameadmin.GameAPI.UpdateTagMap)
 	root.Delete("/tag-maps/:id", gameadmin.GameAPI.DeleteTagMap)

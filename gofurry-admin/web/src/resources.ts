@@ -224,8 +224,18 @@ export const resources: ResourceConfig[] = [
     defaults: { game_id: '', tag_id: '' },
     bulkReplace: {
       endpoint: '/api/v1/game/tag-maps/bulk-replace',
+      title: '按游戏维护标签',
+      description: '选择一个游戏，一次保存它关联的多个标签。',
       ownerField: { key: 'owner_id', label: '游戏', type: 'remote-select', optionEndpoint: '/api/v1/options/games' },
       targetField: { key: 'ids', label: '标签集合', type: 'remote-multi', optionEndpoint: '/api/v1/options/tags' },
+    },
+    additionalBulkReplace: {
+      endpoint: '/api/v1/game/tag-maps/bulk-replace-by-tag',
+      selectionEndpoint: '/api/v1/game/tag-maps/by-tag/{ownerId}',
+      title: '补标签',
+      description: '选择一个标签，再搜索、添加或移除所有需要关联的游戏。',
+      ownerField: { key: 'owner_id', label: '标签', type: 'remote-select', optionEndpoint: '/api/v1/options/tags' },
+      targetField: { key: 'ids', label: '游戏集合', type: 'remote-multi', optionEndpoint: '/api/v1/options/games' },
     },
   },
 ]

@@ -355,7 +355,8 @@ onMounted(async () => {
       </div>
     </header>
 
-    <BulkReplacePanel v-if="config.bulkReplace" :config="config" @saved="loadList" />
+    <BulkReplacePanel v-if="config.bulkReplace" :config="config.bulkReplace" @saved="loadList" />
+    <BulkReplacePanel v-if="config.additionalBulkReplace" :config="config.additionalBulkReplace" @saved="loadList" />
 
     <section class="resource-table-section">
       <div class="data-surface resource-table-scroll">

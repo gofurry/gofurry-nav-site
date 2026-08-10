@@ -606,13 +606,15 @@ func (api *navAPI) DeleteSiteGroup(c fiber.Ctx) error {
 	return nil
 }
 
+const siteGroupMapListOrder = "m.id DESC"
+
 func (api *navAPI) ListSiteGroupMaps(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
 	base := navDB().Table("gfn_site_group_map AS m").
 		Select("m.id, m.site_id, m.group_id, m.weight, m.create_time, m.update_time, s.name AS site_name, g.name AS group_name").
 		Joins("LEFT JOIN gfn_site s ON s.id = m.site_id").
 		Joins("LEFT JOIN gfn_site_group g ON g.id = m.group_id").
-		Order("m.group_id ASC, m.weight DESC, m.update_time DESC, m.id DESC")
+		Order(siteGroupMapListOrder)
 	base = adminutil.ApplyKeyword(base, page.Keyword, "CAST(m.id AS TEXT)", "CAST(m.site_id AS TEXT)", "CAST(m.group_id AS TEXT)", "s.name", "g.name")
 	var items []models.SiteGroupMapDTO
 	total, err := adminutil.Paginate(base, page, &items)

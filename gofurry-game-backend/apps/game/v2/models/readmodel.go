@@ -313,7 +313,7 @@ type GameV2SearchPageItem struct {
 	Name         string       `json:"name"`
 	Info         string       `json:"info"`
 	Cover        string       `json:"cover"`
-	AppID        int64        `json:"appid"`
+	AppID        int64        `gorm:"column:appid" json:"appid"`
 	UpdateTime   cm.LocalTime `json:"update_time"`
 	ReleaseDate  string       `json:"release_date"`
 	RemarkCount  int          `json:"remark_count"`

@@ -51,6 +51,15 @@ export type ResourceField = {
   optionEndpoint?: string
 }
 
+export type BulkReplaceConfig = {
+  endpoint: string
+  selectionEndpoint?: string
+  title?: string
+  description?: string
+  ownerField: ResourceField
+  targetField: ResourceField
+}
+
 export type ResourceConfig = {
   key: string
   title: string
@@ -60,9 +69,6 @@ export type ResourceConfig = {
   columns: Array<{ key: string; label: string }>
   fields: ResourceField[]
   defaults: Record<string, unknown>
-  bulkReplace?: {
-    endpoint: string
-    ownerField: ResourceField
-    targetField: ResourceField
-  }
+  bulkReplace?: BulkReplaceConfig
+  additionalBulkReplace?: BulkReplaceConfig
 }

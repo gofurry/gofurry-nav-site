@@ -180,6 +180,7 @@ function openReview(item: GameItem) {
 .game-group-page-shell {
   position: relative;
   overflow: hidden;
+  padding-bottom: 0.75rem;
 }
 
 .game-group-page-grid {

@@ -843,6 +843,87 @@ func (api *gameAPI) BulkReplaceTagMaps(c fiber.Ctx) error {
 	return common.NewResponse(c).Success()
 }
 
+func (api *gameAPI) ListTagMapGameIDs(c fiber.Ctx) error {
+	tagID, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+
+	gameIDs := []int64{}
+	if dbErr := gameDB().Model(&models.TagMap{}).
+		Where("tag_id = ?", tagID).
+		Order("id ASC").
+		Pluck("game_id", &gameIDs).Error; dbErr != nil {
+		return common.NewResponse(c).Error(common.NewDaoError(dbErr.Error()))
+	}
+	return common.NewResponse(c).SuccessWithData(gameIDs)
+}
+
+func (api *gameAPI) BulkReplaceTagGameMaps(c fiber.Ctx) error {
+	var req adminutil.BulkReplaceRequest
+	if err := adminutil.DecodeBody(c, &req); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	if req.OwnerID <= 0 {
+		return common.NewResponse(c).Error(common.NewValidationError("owner_id is required"))
+	}
+	req.IDs = uniqueInt64s(req.IDs)
+
+	err := gameDB().Transaction(func(tx *gorm.DB) error {
+		before, snapErr := audit.SnapshotRows(tx, (&models.TagMap{}).TableName(), "tag_id = ?", "id ASC", req.OwnerID)
+		if snapErr != nil {
+			return snapErr
+		}
+
+		var existingRows []models.TagMap
+		if findErr := tx.Where("tag_id = ?", req.OwnerID).Find(&existingRows).Error; findErr != nil {
+			return common.NewDaoError(findErr.Error())
+		}
+		existingGameIDs := make(map[int64]struct{}, len(existingRows))
+		for _, row := range existingRows {
+			existingGameIDs[row.GameID] = struct{}{}
+		}
+
+		deleteQuery := tx.Where("tag_id = ?", req.OwnerID)
+		if len(req.IDs) > 0 {
+			deleteQuery = deleteQuery.Where("game_id NOT IN ?", req.IDs)
+		}
+		if deleteErr := deleteQuery.Delete(&models.TagMap{}).Error; deleteErr != nil {
+			return common.NewDaoError(deleteErr.Error())
+		}
+
+		missingGameIDs := make([]int64, 0, len(req.IDs))
+		for _, gameID := range req.IDs {
+			if _, exists := existingGameIDs[gameID]; !exists {
+				missingGameIDs = append(missingGameIDs, gameID)
+			}
+		}
+		if len(missingGameIDs) > 0 {
+			ids, allocErr := adminutil.AllocateSequentialIDs(tx, (&models.TagMap{}).TableName(), len(missingGameIDs))
+			if allocErr != nil {
+				return allocErr
+			}
+			rows := make([]models.TagMap, 0, len(missingGameIDs))
+			for idx, gameID := range missingGameIDs {
+				rows = append(rows, models.TagMap{ID: ids[idx], GameID: gameID, TagID: req.OwnerID})
+			}
+			if createErr := tx.Create(&rows).Error; createErr != nil {
+				return createErr
+			}
+		}
+
+		after, snapErr := audit.SnapshotRows(tx, (&models.TagMap{}).TableName(), "tag_id = ?", "id ASC", req.OwnerID)
+		if snapErr != nil {
+			return snapErr
+		}
+		return api.auditTx(c, tx, "bulk_replace_by_tag", (&models.TagMap{}).TableName(), req.OwnerID, before, after)
+	})
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	return common.NewResponse(c).Success()
+}
+
 func (api *gameAPI) deleteHard(c fiber.Ctx, model any) error {
 	id, err := adminutil.ParseIDParam(c)
 	if err != nil {

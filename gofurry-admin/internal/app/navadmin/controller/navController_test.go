@@ -17,3 +17,11 @@ func TestValidateSitePayloadDoesNotRequireLegacyDomains(t *testing.T) {
 		t.Fatalf("validateSitePayload() error = %v", err)
 	}
 }
+
+func TestSiteGroupMapListOrderNewestFirst(t *testing.T) {
+	t.Parallel()
+
+	if siteGroupMapListOrder != "m.id DESC" {
+		t.Fatalf("site group map order = %q, want newest ID first", siteGroupMapListOrder)
+	}
+}
