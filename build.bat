@@ -19,11 +19,13 @@ if /I "%TARGET%"=="nav-collector" goto build_nav_collector
 if /I "%TARGET%"=="game-backend" goto build_game_backend
 if /I "%TARGET%"=="game-collector" goto build_game_collector
 if /I "%TARGET%"=="admin" goto build_admin
+if /I "%TARGET%"=="uptime" goto build_uptime
 if /I "%TARGET%"=="gofurry-nav-backend" goto build_nav_backend
 if /I "%TARGET%"=="gofurry-nav-collector" goto build_nav_collector
 if /I "%TARGET%"=="gofurry-game-backend" goto build_game_backend
 if /I "%TARGET%"=="gofurry-game-collector" goto build_game_collector
 if /I "%TARGET%"=="gofurry-admin" goto build_admin
+if /I "%TARGET%"=="gf-uptime" goto build_uptime
 
 echo Unknown target: %TARGET%
 echo Supported targets:
@@ -33,6 +35,7 @@ echo   nav-collector
 echo   game-backend
 echo   game-collector
 echo   admin
+echo   uptime
 exit /b 1
 
 :build_all
@@ -41,6 +44,7 @@ call "%~f0" nav-collector || exit /b 1
 call "%~f0" game-backend || exit /b 1
 call "%~f0" game-collector || exit /b 1
 call "%~f0" admin || exit /b 1
+call "%~f0" uptime || exit /b 1
 echo Build completed. Artifacts are in "%BUILD_ROOT%".
 exit /b 0
 
@@ -96,6 +100,21 @@ set "OUTPUT_BIN=%OUTPUT_DIR%\gf-game-collector"
 if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
 mkdir "%OUTPUT_DIR%" || exit /b 1
 pushd "%ROOT%\apps\cn\game-collector" || exit /b 1
+go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" .
+if errorlevel 1 (
+    popd
+    exit /b 1
+)
+popd
+exit /b 0
+
+:build_uptime
+echo [BUILD] gf-uptime
+set "OUTPUT_DIR=%BUILD_ROOT%\gf-uptime"
+set "OUTPUT_BIN=%OUTPUT_DIR%\gf-uptime"
+if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
+mkdir "%OUTPUT_DIR%" || exit /b 1
+pushd "%ROOT%\apps\cn\uptime" || exit /b 1
 go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" .
 if errorlevel 1 (
     popd

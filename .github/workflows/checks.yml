@@ -14,6 +14,7 @@ on:
       - 'docs/**'
       - 'ops/**'
       - '.github/workflows/checks.yml'
+      - '.github/workflows/security.yml'
   pull_request:
     paths:
       - 'apps/cn/**'
@@ -27,6 +28,7 @@ on:
       - 'docs/**'
       - 'ops/**'
       - '.github/workflows/checks.yml'
+      - '.github/workflows/security.yml'
 
 permissions:
   contents: read
@@ -81,7 +83,7 @@ jobs:
             fi
           }
 
-          shared='^(sqlc\.yaml$|tools/|\.github/workflows/checks\.yml$)'
+          shared='^(sqlc\.yaml$|tools/|\.github/workflows/(checks|security)\.yml$)'
           modules='[]'
           add_module() {
             modules="$(printf '%s' "${modules}" | jq -c --arg module "$1" '. + [$module]')"
@@ -91,6 +93,7 @@ jobs:
           if affected "^apps/cn/nav-collector/|^db/nav/|${shared}"; then add_module apps/cn/nav-collector; fi
           if affected "^apps/cn/nav-backend/|^db/nav/|${shared}"; then add_module apps/cn/nav-backend; fi
           if affected "^apps/cn/admin/|^db/(admin|game|nav)/|${shared}"; then add_module apps/cn/admin; fi
+          if affected "^apps/cn/uptime/|${shared}"; then add_module apps/cn/uptime; fi
           echo "modules=${modules}" >> "${GITHUB_OUTPUT}"
           if [[ "${modules}" == "[]" ]]; then
             echo "has_modules=false" >> "${GITHUB_OUTPUT}"
@@ -98,13 +101,13 @@ jobs:
             echo "has_modules=true" >> "${GITHUB_OUTPUT}"
           fi
 
-          set_bool policy '^(apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector)/|db/|tools/|sqlc\.yaml$|AGENTS\.md$|\.agents/|contracts/|\.github/workflows/checks\.yml$)'
+          set_bool policy '^(apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector|uptime)/|db/|tools/|sqlc\.yaml$|AGENTS\.md$|\.agents/|contracts/|\.github/workflows/(checks|security)\.yml$)'
           set_bool foundation '^(db/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$|apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector)/internal/db/.*/queries/)'
           set_bool nav_web '^(apps/cn/nav-web/|\.github/workflows/checks\.yml$)'
           set_bool game_integration '^(apps/cn/(admin|game-backend|game-collector)/|db/game/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
           set_bool nav_integration '^(apps/cn/(admin|nav-backend|nav-collector)/|db/nav/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
           set_bool admin_integration '^(apps/cn/admin/|db/(admin|game|nav)/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
-          set_bool vulnerability '^(apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector)/go\.(mod|sum)$|tools/go\.(mod|sum)$|\.github/workflows/checks\.yml$)'
+          set_bool vulnerability '^(apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector|uptime)/go\.(mod|sum)$|tools/go\.(mod|sum)$|\.github/workflows/(checks|security)\.yml$)'
 
   production-go:
     needs: detect-changes
@@ -147,6 +150,9 @@ jobs:
       - name: Go test
         working-directory: ${{ matrix.module }}
         run: go test ./...
+      - name: Go build
+        working-directory: ${{ matrix.module }}
+        run: go build ./...
 
   nav-web:
     needs: detect-changes
@@ -196,7 +202,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for module in admin game-backend game-collector nav-backend nav-collector; do
+          for module in admin game-backend game-collector nav-backend nav-collector uptime; do
             echo "govulncheck apps/cn/${module}"
             go tool govulncheck -C "../apps/cn/${module}" ./...
           done

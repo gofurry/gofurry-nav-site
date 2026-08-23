@@ -17,12 +17,12 @@ jobs:
         with:
           go-version-file: tools/go.mod
           cache-dependency-path: tools/go.sum
-      - name: Scan five active Go applications
+      - name: Scan six active Go applications
         working-directory: tools
         shell: bash
         run: |
           set -euo pipefail
-          for module in admin game-backend game-collector nav-backend nav-collector; do
+          for module in admin game-backend game-collector nav-backend nav-collector uptime; do
             echo "govulncheck apps/cn/${module}"
             go tool govulncheck -C "../apps/cn/${module}" ./...
           done
