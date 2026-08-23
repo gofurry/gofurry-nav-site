@@ -156,19 +156,19 @@ func renderUnit(spec unitSpec) ([]byte, error) {
 	if !filepath.IsAbs(spec.WorkingDirectory) || !filepath.IsAbs(spec.Executable) || !filepath.IsAbs(spec.ConfigFile) {
 		return nil, errors.New("working directory, executable, and config file must be absolute")
 	}
-	description, err := quoteUnitValue(spec.Description)
+	description, err := unitDirectiveValue(spec.Description)
 	if err != nil {
 		return nil, fmt.Errorf("escape description: %w", err)
 	}
-	workingDirectory, err := quoteUnitValue(spec.WorkingDirectory)
+	workingDirectory, err := unitDirectiveValue(spec.WorkingDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("escape working directory: %w", err)
 	}
-	executable, err := quoteUnitValue(spec.Executable)
+	executable, err := quoteCommandArgument(spec.Executable)
 	if err != nil {
 		return nil, fmt.Errorf("escape executable: %w", err)
 	}
-	configFile, err := quoteUnitValue(spec.ConfigFile)
+	configFile, err := quoteCommandArgument(spec.ConfigFile)
 	if err != nil {
 		return nil, fmt.Errorf("escape config file: %w", err)
 	}
@@ -193,7 +193,29 @@ WantedBy=multi-user.target
 	return []byte(unit), nil
 }
 
-func quoteUnitValue(value string) (string, error) {
+func unitDirectiveValue(value string) (string, error) {
+	if strings.TrimSpace(value) == "" {
+		return "", errors.New("value must not be empty")
+	}
+	var escaped strings.Builder
+	escaped.Grow(len(value))
+	for _, r := range value {
+		switch r {
+		case '\x00', '\n', '\r':
+			return "", errors.New("value contains a forbidden control character")
+		case '%':
+			escaped.WriteString("%%")
+		default:
+			if (r < 0x20 && r != '\t') || r == 0x7f {
+				return "", errors.New("value contains a forbidden control character")
+			}
+			escaped.WriteRune(r)
+		}
+	}
+	return escaped.String(), nil
+}
+
+func quoteCommandArgument(value string) (string, error) {
 	if strings.TrimSpace(value) == "" {
 		return "", errors.New("value must not be empty")
 	}

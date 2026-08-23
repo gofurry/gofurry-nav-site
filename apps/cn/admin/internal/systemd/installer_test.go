@@ -25,13 +25,13 @@ func TestRenderUnitEscapesDeploymentValues(t *testing.T) {
 		t.Fatalf("renderUnit() error = %v", err)
 	}
 	unit := string(content)
-	quotedWorkingDirectory, _ := quoteUnitValue(workingDirectory)
-	quotedExecutable, _ := quoteUnitValue(executable)
-	quotedConfigFile, _ := quoteUnitValue(configFile)
+	directiveWorkingDirectory, _ := unitDirectiveValue(workingDirectory)
+	quotedExecutable, _ := quoteCommandArgument(executable)
+	quotedConfigFile, _ := quoteCommandArgument(configFile)
 	for _, expected := range []string{
-		`Description="GoFurry \"Nav\" 100%%"`,
+		`Description=GoFurry "Nav" 100%%`,
 		`User=deploy-user`,
-		`WorkingDirectory=` + quotedWorkingDirectory,
+		`WorkingDirectory=` + directiveWorkingDirectory,
 		`ExecStart=` + quotedExecutable + ` serve --config ` + quotedConfigFile,
 		`Restart=on-failure`,
 	} {
@@ -41,6 +41,23 @@ func TestRenderUnitEscapesDeploymentValues(t *testing.T) {
 	}
 	if strings.Contains(unit, "ExecStart=/bin/sh") || strings.Contains(unit, "--now") {
 		t.Fatalf("unit must execute the binary directly and must not start it during install:\n%s", unit)
+	}
+	if strings.Contains(unit, `WorkingDirectory="`) {
+		t.Fatalf("WorkingDirectory must not use ExecStart-style argument quoting:\n%s", unit)
+	}
+}
+
+func TestUnitDirectiveValueDoesNotQuoteAbsolutePath(t *testing.T) {
+	value := `/home/gofurry/gfs/backend/gf admin/"100%"`
+	got, err := unitDirectiveValue(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `/home/gofurry/gfs/backend/gf admin/"100%%"`; got != want {
+		t.Fatalf("unitDirectiveValue() = %q, want %q", got, want)
+	}
+	if strings.HasPrefix(got, `"`) && strings.HasSuffix(got, `"`) {
+		t.Fatalf("unit directive value was incorrectly wrapped in quotes: %q", got)
 	}
 }
 

@@ -53,7 +53,7 @@ Generated units use `Type=simple` and execute:
 <absolute-binary> serve --config <absolute-config>
 ~~~
 
-with the resolved user/current directory, `Restart=on-failure`, `RestartSec=5`, and `LimitNOFILE=65535`. Whitespace, quotes, backslashes, tabs, and systemd `%` specifiers are escaped without shell command construction.
+with the resolved user/current directory, `Restart=on-failure`, `RestartSec=5`, and `LimitNOFILE=65535`. `ExecStart` arguments use systemd command-line quoting, while scalar directives such as `WorkingDirectory` are emitted without surrounding quotes; systemd `%` specifiers are escaped in both forms. No shell command is constructed.
 
 ## Review and manual start
 
