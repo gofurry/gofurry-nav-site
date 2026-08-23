@@ -2,12 +2,13 @@ package db
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
+	log "github.com/gofurry/gofurry-game-collector/common/log"
 	"github.com/gofurry/gofurry-game-collector/roof/env"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"log"
-	"sync"
-	"time"
 )
 
 /*

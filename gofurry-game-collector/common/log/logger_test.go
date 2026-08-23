@@ -16,7 +16,7 @@ func TestProductionLoggerUsesRotatingJSONFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = InitLogger(&Config{Mode: "dev"}) })
-	InfoFields(map[string]interface{}{"protocol": "nav"}, "collector ready")
+	InfoFields(map[string]interface{}{"protocol": "game"}, "collector ready")
 	if err := Sync(); err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestProductionLoggerUsesRotatingJSONFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(data), `"msg":"collector ready"`) || !strings.Contains(string(data), `"protocol":"nav"`) {
+	if !strings.Contains(string(data), `"msg":"collector ready"`) || !strings.Contains(string(data), `"protocol":"game"`) {
 		t.Fatalf("unexpected structured log: %s", data)
 	}
 }
@@ -36,8 +36,8 @@ func TestLoggerFormatterHumanReadableLine(t *testing.T) {
 		Message: "Ping 采集运行完成",
 	}
 	fields := map[string]interface{}{
-		sFunctionEvent: "gf-nav-collector",
-		sFunctionName:  "github.com/gofurry/gofurry-nav-collector/collector/ping/service.Ping",
+		sFunctionEvent: "gf-game-collector",
+		sFunctionName:  "github.com/gofurry/gofurry-game-collector/collector/ping/service.Ping",
 		sFunctionLine:  123,
 		"duration":     2 * time.Second,
 		"protocol":     "ping",
@@ -47,7 +47,7 @@ func TestLoggerFormatterHumanReadableLine(t *testing.T) {
 	got := string(formatLine(entry, fields))
 
 	for _, want := range []string{
-		"2026-05-23 20:30:15.123 INFO  [gf-nav-collector] Ping 采集运行完成",
+		"2026-05-23 20:30:15.123 INFO  [gf-game-collector] Ping 采集运行完成",
 		"caller=service.Ping:123",
 		"duration=2s",
 		"protocol=ping",
@@ -85,7 +85,7 @@ func TestLoggerFormatterQuotesHumanTextFields(t *testing.T) {
 
 func TestZapFieldsRoundTripToHumanLine(t *testing.T) {
 	fields := encodeFields(toZapFields(map[string]interface{}{
-		sFunctionEvent: "gf-nav-collector",
+		sFunctionEvent: "gf-game-collector",
 		"duration":     3 * time.Second,
 		"protocol":     "dns",
 	}))

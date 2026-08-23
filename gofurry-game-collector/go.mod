@@ -11,10 +11,11 @@ require (
 	github.com/kardianos/service v1.2.4
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/rfyiamcool/go-timewheel v1.1.0
-	github.com/sirupsen/logrus v1.9.4
 	github.com/yuin/goldmark v1.8.2
+	go.uber.org/zap v1.28.0
 	golang.org/x/time v0.15.0
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
 )
@@ -38,6 +39,7 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/arch v0.25.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect

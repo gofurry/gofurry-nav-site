@@ -3,13 +3,13 @@ package db
 import (
 	"net"
 	"net/url"
+	"sync"
+	"time"
 
+	log "github.com/gofurry/gofurry-nav-collector/common/log"
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"log"
-	"sync"
-	"time"
 )
 
 /*

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/common"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -26,7 +26,20 @@ type serverConfig struct {
 	Server    ServerConfig    `yaml:"server"`
 	DataBase  DataBaseConfig  `yaml:"data_base"`
 	Redis     RedisConfig     `yaml:"redis"`
+	Log       LogConfig       `yaml:"log"`
 	Collector CollectorConfig `yaml:"collector"`
+}
+
+type LogConfig struct {
+	LogLevel         string `yaml:"log_level"`
+	LogMode          string `yaml:"log_mode"`
+	LogPath          string `yaml:"log_path"`
+	LogMaxSize       int    `yaml:"log_max_size"`
+	LogMaxBackups    int    `yaml:"log_max_backups"`
+	LogMaxAge        int    `yaml:"log_max_age"`
+	LogCompress      bool   `yaml:"log_compress"`
+	LogRotationCount int    `yaml:"log_rotation_count"`
+	LogChokeLength   int    `yaml:"log_choke_length"`
 }
 
 type CollectorConfig struct {

@@ -2,7 +2,9 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"runtime/debug"
+	"strings"
 
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
@@ -11,10 +13,6 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/schedule"
 	"github.com/kardianos/service"
 )
-
-//@title gofurry-Collector
-//@version v1.0.0
-//@description Collector for gofurry Nav Page
 
 var (
 	errChan = make(chan error)
@@ -73,6 +71,7 @@ func main() {
 }
 
 func InitOnStart() {
+	initLogger()
 	// 初始化 redis
 	cs.InitRedisOnStart()
 	// 初始化时间调度
@@ -100,5 +99,36 @@ func (gf *goFurry) run() {
 
 func (gf *goFurry) Stop(s service.Service) error {
 	schedule.StopSchedule()
-	return nil
+	return log.Sync()
+}
+
+func initLogger() {
+	cfg := env.GetServerConfig()
+	logCfg := &log.Config{
+		Level:      cfg.Log.LogLevel,
+		Mode:       cfg.Log.LogMode,
+		FilePath:   cfg.Log.LogPath,
+		MaxSize:    cfg.Log.LogMaxSize,
+		MaxBackups: cfg.Log.LogMaxBackups,
+		MaxAge:     cfg.Log.LogMaxAge,
+		Compress:   cfg.Log.LogCompress,
+	}
+	if cfg.Server.Mode == "debug" {
+		logCfg.Level = "debug"
+		logCfg.Mode = "dev"
+	} else if logCfg.Mode == "" {
+		logCfg.Mode = "prod"
+	}
+	if logCfg.FilePath == "" {
+		logCfg.FilePath = "./logs/gf-nav-collector.log"
+	} else if filepath.Ext(logCfg.FilePath) == "" || strings.HasSuffix(logCfg.FilePath, "/") || strings.HasSuffix(logCfg.FilePath, "\\") {
+		logCfg.FilePath = filepath.Join(logCfg.FilePath, "gf-nav-collector.log")
+	}
+	if logCfg.MaxBackups == 0 {
+		logCfg.MaxBackups = cfg.Log.LogRotationCount
+	}
+	if err := log.InitLogger(logCfg); err != nil {
+		log.Error("日志初始化失败: ", err)
+		os.Exit(1)
+	}
 }

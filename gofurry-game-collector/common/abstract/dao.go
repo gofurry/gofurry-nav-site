@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/gofurry/gofurry-game-collector/common"
+	log "github.com/gofurry/gofurry-game-collector/common/log"
 	"github.com/gofurry/gofurry-game-collector/common/models"
 	database "github.com/gofurry/gofurry-game-collector/roof/db"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -68,7 +68,7 @@ func (dao *Dao[T]) DB() *gorm.DB {
 func (dao *Dao[T]) Add(record *T) common.GFError {
 	if record == nil {
 		err := errors.New("新增记录不能为空")
-		slog.Error("[DAO Add] 参数错误", "error", err)
+		log.ErrorKV("[DAO Add] 参数错误", "error", err)
 		return common.NewDaoError(err.Error())
 	}
 
@@ -84,7 +84,7 @@ func (dao *Dao[T]) Add(record *T) common.GFError {
 			errMsg = fmt.Sprintf("新增记录失败 [表:%s]: %v", tableName, err)
 		}
 
-		slog.Error("[DAO Add] 新增失败",
+		log.ErrorKV("[DAO Add] 新增失败",
 			"table", tableName,
 			"error", err,
 			"pg_code", getPgErrorCode(err),
@@ -92,7 +92,7 @@ func (dao *Dao[T]) Add(record *T) common.GFError {
 		return common.NewDaoError(errMsg)
 	}
 
-	slog.Info("[DAO Add] 新增成功",
+	log.InfoKV("[DAO Add] 新增成功",
 		"table", tableName,
 		"rows_affected", result.RowsAffected,
 	)
@@ -103,12 +103,12 @@ func (dao *Dao[T]) Add(record *T) common.GFError {
 func (dao *Dao[T]) UpdateById(id int64, record *T, omitFields ...string) (int64, common.GFError) {
 	if id <= 0 {
 		err := errors.New("ID 必须大于 0")
-		slog.Error("[DAO UpdateById] 参数错误", "error", err, "id", id)
+		log.ErrorKV("[DAO UpdateById] 参数错误", "error", err, "id", id)
 		return 0, common.NewDaoError(err.Error())
 	}
 	if record == nil {
 		err := errors.New("更新记录不能为空")
-		slog.Error("[DAO UpdateById] 参数错误", "error", err)
+		log.ErrorKV("[DAO UpdateById] 参数错误", "error", err)
 		return 0, common.NewDaoError(err.Error())
 	}
 
@@ -127,7 +127,7 @@ func (dao *Dao[T]) UpdateById(id int64, record *T, omitFields ...string) (int64,
 			errMsg = fmt.Sprintf("更新记录失败 [表:%s, ID:%d]: %v", tableName, id, err)
 		}
 
-		slog.Error("[DAO UpdateById] 更新失败",
+		log.ErrorKV("[DAO UpdateById] 更新失败",
 			"table", tableName,
 			"id", id,
 			"error", err,
@@ -136,7 +136,7 @@ func (dao *Dao[T]) UpdateById(id int64, record *T, omitFields ...string) (int64,
 		return 0, common.NewDaoError(errMsg)
 	}
 
-	slog.Info("[DAO UpdateById] 更新成功",
+	log.InfoKV("[DAO UpdateById] 更新成功",
 		"table", tableName,
 		"id", id,
 		"rows_affected", result.RowsAffected,
@@ -148,7 +148,7 @@ func (dao *Dao[T]) UpdateById(id int64, record *T, omitFields ...string) (int64,
 func (dao *Dao[T]) UpdateByIdSelective(id int64, record *T, omitFields ...string) (int64, common.GFError) {
 	if id <= 0 || record == nil {
 		err := errors.New("参数错误：ID 必须大于 0 且记录不能为空")
-		slog.Error("[DAO UpdateByIdSelective] 参数错误", "error", err, "id", id)
+		log.ErrorKV("[DAO UpdateByIdSelective] 参数错误", "error", err, "id", id)
 		return 0, common.NewDaoError(err.Error())
 	}
 
@@ -166,7 +166,7 @@ func (dao *Dao[T]) UpdateByIdSelective(id int64, record *T, omitFields ...string
 			errMsg = fmt.Sprintf("全量更新失败 [表:%s, ID:%d]: %v", tableName, id, err)
 		}
 
-		slog.Error("[DAO UpdateByIdSelective] 更新失败",
+		log.ErrorKV("[DAO UpdateByIdSelective] 更新失败",
 			"table", tableName,
 			"id", id,
 			"error", err,
@@ -181,7 +181,7 @@ func (dao *Dao[T]) UpdateByIdSelective(id int64, record *T, omitFields ...string
 func (dao *Dao[T]) DeleteById(id int64) (int64, common.GFError) {
 	if id <= 0 {
 		err := errors.New("ID 必须大于 0")
-		slog.Error("[DAO DeleteById] 参数错误", "error", err, "id", id)
+		log.ErrorKV("[DAO DeleteById] 参数错误", "error", err, "id", id)
 		return 0, common.NewDaoError(err.Error())
 	}
 
@@ -190,7 +190,7 @@ func (dao *Dao[T]) DeleteById(id int64) (int64, common.GFError) {
 
 	if err := result.Error; err != nil {
 		errMsg := fmt.Sprintf("删除记录失败 [表:%s, ID:%d]: %v", tableName, id, err)
-		slog.Error("[DAO DeleteById] 删除失败",
+		log.ErrorKV("[DAO DeleteById] 删除失败",
 			"table", tableName,
 			"id", id,
 			"error", err,
@@ -198,7 +198,7 @@ func (dao *Dao[T]) DeleteById(id int64) (int64, common.GFError) {
 		return 0, common.NewDaoError(errMsg)
 	}
 
-	slog.Info("[DAO DeleteById] 删除成功",
+	log.InfoKV("[DAO DeleteById] 删除成功",
 		"table", tableName,
 		"id", id,
 		"rows_affected", result.RowsAffected,
@@ -210,7 +210,7 @@ func (dao *Dao[T]) DeleteById(id int64) (int64, common.GFError) {
 func (dao *Dao[T]) DeleteByIds(idList []int64) (int64, common.GFError) {
 	if len(idList) == 0 {
 		err := errors.New("ID 列表不能为空")
-		slog.Error("[DAO DeleteByIds] 参数错误", "error", err)
+		log.ErrorKV("[DAO DeleteByIds] 参数错误", "error", err)
 		return 0, common.NewDaoError(err.Error())
 	}
 
@@ -218,7 +218,7 @@ func (dao *Dao[T]) DeleteByIds(idList []int64) (int64, common.GFError) {
 	for _, id := range idList {
 		if id <= 0 {
 			err := fmt.Errorf("无效 ID: %d", id)
-			slog.Error("[DAO DeleteByIds] 参数错误", "error", err)
+			log.ErrorKV("[DAO DeleteByIds] 参数错误", "error", err)
 			return 0, common.NewDaoError(err.Error())
 		}
 	}
@@ -228,7 +228,7 @@ func (dao *Dao[T]) DeleteByIds(idList []int64) (int64, common.GFError) {
 
 	if err := result.Error; err != nil {
 		errMsg := fmt.Sprintf("批量删除失败 [表:%s]: %v", tableName, err)
-		slog.Error("[DAO DeleteByIds] 删除失败",
+		log.ErrorKV("[DAO DeleteByIds] 删除失败",
 			"table", tableName,
 			"id_list", idList,
 			"error", err,
@@ -236,7 +236,7 @@ func (dao *Dao[T]) DeleteByIds(idList []int64) (int64, common.GFError) {
 		return 0, common.NewDaoError(errMsg)
 	}
 
-	slog.Info("[DAO DeleteByIds] 批量删除成功",
+	log.InfoKV("[DAO DeleteByIds] 批量删除成功",
 		"table", tableName,
 		"id_count", len(idList),
 		"rows_affected", result.RowsAffected,
@@ -248,7 +248,7 @@ func (dao *Dao[T]) DeleteByIds(idList []int64) (int64, common.GFError) {
 func (dao *Dao[T]) GetById(id int64) (*T, common.GFError) {
 	if id <= 0 {
 		err := errors.New("ID 必须大于 0")
-		slog.Error("[DAO GetById] 参数错误", "error", err, "id", id)
+		log.ErrorKV("[DAO GetById] 参数错误", "error", err, "id", id)
 		return nil, common.NewDaoError(err.Error())
 	}
 
@@ -259,7 +259,7 @@ func (dao *Dao[T]) GetById(id int64) (*T, common.GFError) {
 	if err := result.Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			errMsg := fmt.Sprintf("记录不存在 [表:%s, ID:%d]", tableName, id)
-			slog.Warn("[DAO GetById] 记录不存在",
+			log.WarnKV("[DAO GetById] 记录不存在",
 				"table", tableName,
 				"id", id,
 			)
@@ -267,7 +267,7 @@ func (dao *Dao[T]) GetById(id int64) (*T, common.GFError) {
 		}
 
 		errMsg := fmt.Sprintf("查询记录失败 [表:%s, ID:%d]: %v", tableName, id, err)
-		slog.Error("[DAO GetById] 查询失败",
+		log.ErrorKV("[DAO GetById] 查询失败",
 			"table", tableName,
 			"id", id,
 			"error", err,
@@ -291,7 +291,7 @@ func (dao *Dao[T]) Count(conditions ...interface{}) (int64, common.GFError) {
 	result := db.Count(&count)
 	if err := result.Error; err != nil {
 		errMsg := fmt.Sprintf("统计数量失败 [表:%s]: %v", tableName, err)
-		slog.Error("[DAO Count] 统计失败",
+		log.ErrorKV("[DAO Count] 统计失败",
 			"table", tableName,
 			"conditions", conditions,
 			"error", err,
@@ -299,7 +299,7 @@ func (dao *Dao[T]) Count(conditions ...interface{}) (int64, common.GFError) {
 		return 0, common.NewDaoError(errMsg)
 	}
 
-	slog.Debug("[DAO Count] 统计成功",
+	log.DebugKV("[DAO Count] 统计成功",
 		"table", tableName,
 		"conditions", conditions,
 		"count", count,
@@ -340,7 +340,7 @@ func (dao *Dao[T]) PageQuery(page, pageSize int, conditions ...interface{}) ([]T
 	result := db.Offset(offset).Limit(pageSize).Find(&list)
 	if err := result.Error; err != nil {
 		errMsg := fmt.Sprintf("分页查询失败 [表:%s]: %v", tableName, err)
-		slog.Error("[DAO PageQuery] 查询失败",
+		log.ErrorKV("[DAO PageQuery] 查询失败",
 			"table", tableName,
 			"page", page,
 			"page_size", pageSize,
@@ -373,7 +373,7 @@ func (dao *Dao[T]) PageQueryFormatted(pageReq *models.PageReq, conditions ...int
 	countResult := db.Count(&total)
 	if countResult.Error != nil {
 		errMsg := fmt.Sprintf("分页查询-统计总数失败 [表:%s]: %v", tableName, countResult.Error)
-		slog.Error("[DAO PageQuery] 统计总数失败",
+		log.ErrorKV("[DAO PageQuery] 统计总数失败",
 			"table", tableName,
 			"page_num", pageReq.PageNum,
 			"page_size", pageReq.PageSize,
@@ -400,7 +400,7 @@ func (dao *Dao[T]) PageQueryFormatted(pageReq *models.PageReq, conditions ...int
 
 	if queryResult.Error != nil {
 		errMsg := fmt.Sprintf("分页查询-获取数据失败 [表:%s]: %v", tableName, queryResult.Error)
-		slog.Error("[DAO PageQuery] 获取数据失败",
+		log.ErrorKV("[DAO PageQuery] 获取数据失败",
 			"table", tableName,
 			"error", queryResult.Error,
 		)
@@ -455,7 +455,7 @@ func (dao *Dao[T]) GetTableName() string {
 func (dao *Dao[T]) BeginTx() (*Dao[T], common.GFError) {
 	tx := dao.db.Begin()
 	if tx.Error != nil {
-		slog.Error("[DAO BeginTx] 开启事务失败", "error", tx.Error)
+		log.ErrorKV("[DAO BeginTx] 开启事务失败", "error", tx.Error)
 		return nil, common.NewDaoError("开启事务失败: " + tx.Error.Error())
 	}
 	return NewDaoWithDB[T](dao.ctx, tx), nil
@@ -464,7 +464,7 @@ func (dao *Dao[T]) BeginTx() (*Dao[T], common.GFError) {
 // CommitTx 提交事务
 func (dao *Dao[T]) CommitTx() common.GFError {
 	if err := dao.db.Commit().Error; err != nil {
-		slog.Error("[DAO CommitTx] 提交事务失败", "error", err)
+		log.ErrorKV("[DAO CommitTx] 提交事务失败", "error", err)
 		return common.NewDaoError("提交事务失败: " + err.Error())
 	}
 	return nil
@@ -473,7 +473,7 @@ func (dao *Dao[T]) CommitTx() common.GFError {
 // RollbackTx 回滚事务
 func (dao *Dao[T]) RollbackTx() common.GFError {
 	if err := dao.db.Rollback().Error; err != nil {
-		slog.Error("[DAO RollbackTx] 回滚事务失败", "error", err)
+		log.ErrorKV("[DAO RollbackTx] 回滚事务失败", "error", err)
 		return common.NewDaoError("回滚事务失败: " + err.Error())
 	}
 	return nil
@@ -483,7 +483,7 @@ func (dao *Dao[T]) RollbackTx() common.GFError {
 func (dao *Dao[T]) SoftDeleteById(id int64) (int64, common.GFError) {
 	if id <= 0 {
 		err := errors.New("ID 必须大于 0")
-		slog.Error("[DAO SoftDeleteById] 参数错误", "error", err, "id", id)
+		log.ErrorKV("[DAO SoftDeleteById] 参数错误", "error", err, "id", id)
 		return 0, common.NewDaoError(err.Error())
 	}
 
@@ -492,7 +492,7 @@ func (dao *Dao[T]) SoftDeleteById(id int64) (int64, common.GFError) {
 
 	if err := result.Error; err != nil {
 		errMsg := fmt.Sprintf("软删除失败 [表:%s, ID:%d]: %v", tableName, id, err)
-		slog.Error("[DAO SoftDeleteById] 软删除失败",
+		log.ErrorKV("[DAO SoftDeleteById] 软删除失败",
 			"table", tableName,
 			"id", id,
 			"error", err,

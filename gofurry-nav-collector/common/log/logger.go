@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
@@ -21,21 +22,94 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 const sFunctionName = "caller"
 const sFunctionLine = "line"
 const sFunctionEvent = "component"
 
-var logger = newLogger()
+type Config struct {
+	Level      string
+	Mode       string
+	FilePath   string
+	MaxSize    int
+	MaxBackups int
+	MaxAge     int
+	Compress   bool
+}
 
-func newLogger() *zap.Logger {
+var (
+	logger           = newDevelopmentLogger(zapcore.InfoLevel)
+	loggerUsesStdout = true
+	loggerCloser     *lumberjack.Logger
+)
+
+func newDevelopmentLogger(level zapcore.Level) *zap.Logger {
 	core := &humanCore{
-		enabler: zapcore.InfoLevel,
+		enabler: level,
 		ws:      zapcore.AddSync(os.Stdout),
 		mu:      &sync.Mutex{},
 	}
 	return zap.New(core)
+}
+
+func InitLogger(cfg *Config) error {
+	if loggerCloser != nil {
+		_ = loggerCloser.Close()
+		loggerCloser = nil
+	}
+	if cfg == nil {
+		cfg = &Config{}
+	}
+	level := zapcore.InfoLevel
+	if cfg.Level != "" {
+		if err := level.UnmarshalText([]byte(cfg.Level)); err != nil {
+			return fmt.Errorf("parse log level: %w", err)
+		}
+	}
+	if cfg.Mode != "prod" {
+		logger = newDevelopmentLogger(level)
+		loggerUsesStdout = true
+		return nil
+	}
+	if cfg.FilePath == "" {
+		return fmt.Errorf("production log path is required")
+	}
+	if err := os.MkdirAll(filepath.Dir(cfg.FilePath), 0o755); err != nil {
+		return fmt.Errorf("create log directory: %w", err)
+	}
+	if cfg.MaxSize <= 0 {
+		cfg.MaxSize = 100
+	}
+	if cfg.MaxBackups <= 0 {
+		cfg.MaxBackups = 10
+	}
+	if cfg.MaxAge <= 0 {
+		cfg.MaxAge = 30
+	}
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	rotator := &lumberjack.Logger{
+		Filename:   cfg.FilePath,
+		MaxSize:    cfg.MaxSize,
+		MaxBackups: cfg.MaxBackups,
+		MaxAge:     cfg.MaxAge,
+		Compress:   cfg.Compress,
+		LocalTime:  true,
+	}
+	writer := zapcore.AddSync(rotator)
+	logger = zap.New(zapcore.NewCore(zapcore.NewJSONEncoder(encoderConfig), writer, level))
+	loggerUsesStdout = false
+	loggerCloser = rotator
+	return nil
+}
+
+func Sync() error {
+	if logger == nil || loggerUsesStdout {
+		return nil
+	}
+	return logger.Sync()
 }
 
 type humanCore struct {
@@ -151,6 +225,32 @@ func ErrorFields(fields map[string]interface{}, msg interface{}) {
 	logWithFields(zapcore.ErrorLevel, fields, msg, 2)
 }
 
+func DebugKV(msg string, keysAndValues ...interface{}) {
+	logWithFields(zapcore.DebugLevel, kvFields(keysAndValues), msg, 2)
+}
+func InfoKV(msg string, keysAndValues ...interface{}) {
+	logWithFields(zapcore.InfoLevel, kvFields(keysAndValues), msg, 2)
+}
+func WarnKV(msg string, keysAndValues ...interface{}) {
+	logWithFields(zapcore.WarnLevel, kvFields(keysAndValues), msg, 2)
+}
+func ErrorKV(msg string, keysAndValues ...interface{}) {
+	logWithFields(zapcore.ErrorLevel, kvFields(keysAndValues), msg, 2)
+}
+
+func kvFields(keysAndValues []interface{}) map[string]interface{} {
+	fields := make(map[string]interface{}, (len(keysAndValues)+1)/2)
+	for i := 0; i < len(keysAndValues); i += 2 {
+		key := fmt.Sprint(keysAndValues[i])
+		if i+1 < len(keysAndValues) {
+			fields[key] = keysAndValues[i+1]
+		} else {
+			fields[key] = nil
+		}
+	}
+	return fields
+}
+
 func logWithFields(level zapcore.Level, fields map[string]interface{}, msg interface{}, callerDepth int) {
 	line, functionName := callerInfo(callerDepth)
 	logFields := callerFields(functionName, line, "")
@@ -181,6 +281,11 @@ func Warn(msg ...interface{}) {
 func Info(msg ...interface{}) {
 	line, functionName := callerInfo(1)
 	write(zapcore.InfoLevel, fmt.Sprint(msg...), callerFields(functionName, line, ""))
+}
+
+func Fatal(msg ...interface{}) {
+	line, functionName := callerInfo(1)
+	logger.Fatal(fmt.Sprint(msg...), toZapFields(callerFields(functionName, line, ""))...)
 }
 
 func write(level zapcore.Level, msg string, fields map[string]interface{}) {

@@ -23,6 +23,15 @@ redis:
   redis_addr: "127.0.0.1:6379"
   redis_password: "CHANGE_ME"
 
+log:
+  log_level: "info"
+  log_mode: "prod"
+  log_path: "./logs/gf-game-collector.log"
+  log_max_size: 100
+  log_max_backups: 10
+  log_max_age: 30
+  log_compress: true
+
 collector:
   proxy: "" # Steam / 外部页面采集可选代理；为空表示直连。
   game:

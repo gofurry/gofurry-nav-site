@@ -16,7 +16,8 @@ require (
 	github.com/sourcegraph/conc v0.3.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/net v0.55.0
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
 )

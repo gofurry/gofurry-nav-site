@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime/debug"
+	"strings"
 
 	gameService "github.com/gofurry/gofurry-game-collector/collector/game/service"
 	"github.com/gofurry/gofurry-game-collector/common"
@@ -13,10 +15,6 @@ import (
 	"github.com/gofurry/gofurry-game-collector/schedule"
 	kservice "github.com/kardianos/service"
 )
-
-//@title gofurry-game-Collector
-//@version v1.0.0
-//@description Collector for gofurry Game Page
 
 var (
 	errChan = make(chan error)
@@ -100,11 +98,13 @@ func runCollectorOnce(run func()) {
 	debug.SetGCPercent(1000)
 	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
 	InitOnStart()
+	defer func() { _ = log.Sync() }()
 	gameService.InitLimiter()
 	run()
 }
 
 func InitOnStart() {
+	initLogger()
 	// 初始化 redis
 	cs.InitRedisOnStart()
 	// 初始化时间调度
@@ -128,5 +128,36 @@ func (gf *goFurry) run() {
 }
 
 func (gf *goFurry) Stop(s kservice.Service) error {
-	return nil
+	return log.Sync()
+}
+
+func initLogger() {
+	cfg := env.GetServerConfig()
+	logCfg := &log.Config{
+		Level:      cfg.Log.LogLevel,
+		Mode:       cfg.Log.LogMode,
+		FilePath:   cfg.Log.LogPath,
+		MaxSize:    cfg.Log.LogMaxSize,
+		MaxBackups: cfg.Log.LogMaxBackups,
+		MaxAge:     cfg.Log.LogMaxAge,
+		Compress:   cfg.Log.LogCompress,
+	}
+	if cfg.Server.Mode == "debug" {
+		logCfg.Level = "debug"
+		logCfg.Mode = "dev"
+	} else if logCfg.Mode == "" {
+		logCfg.Mode = "prod"
+	}
+	if logCfg.FilePath == "" {
+		logCfg.FilePath = "./logs/gf-game-collector.log"
+	} else if filepath.Ext(logCfg.FilePath) == "" || strings.HasSuffix(logCfg.FilePath, "/") || strings.HasSuffix(logCfg.FilePath, "\\") {
+		logCfg.FilePath = filepath.Join(logCfg.FilePath, "gf-game-collector.log")
+	}
+	if logCfg.MaxBackups == 0 {
+		logCfg.MaxBackups = cfg.Log.LogRotationCount
+	}
+	if err := log.InitLogger(logCfg); err != nil {
+		log.Error("日志初始化失败: ", err)
+		os.Exit(1)
+	}
 }

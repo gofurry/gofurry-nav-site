@@ -22,10 +22,13 @@ redis:
   redis_password: "CHANGE_ME"
 
 log:
-  log_rotation_count: 10
-  log_path: "./logs"
   log_level: "info"
-  log_choke_length: 1000
+  log_mode: "prod"
+  log_path: "./logs/gf-nav-collector.log"
+  log_max_size: 100
+  log_max_backups: 10
+  log_max_age: 30
+  log_compress: true
 
 collector:
   proxy: "" # HTTP 采集可选代理；为空表示直连。只影响需要代理的采集目标，不影响 Redis/DB。
