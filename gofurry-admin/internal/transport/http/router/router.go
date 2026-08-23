@@ -4,13 +4,10 @@ import (
 	"errors"
 	"io"
 	"io/fs"
-	"log/slog"
-	"os"
 	"path"
 	"strings"
 	"time"
 
-	swagger "github.com/gofiber/contrib/v3/swaggerui"
 	"github.com/gofiber/fiber/v3"
 	fibercompress "github.com/gofiber/fiber/v3/middleware/compress"
 	"github.com/gofiber/fiber/v3/middleware/cors"
@@ -23,11 +20,11 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/pprof"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/bootstrap"
-	applog "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/logging"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/transport/http/webui"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	env "github.com/gofurry/gofurry-admin/config"
+	"github.com/gofurry/gofurry-admin/internal/bootstrap"
+	applog "github.com/gofurry/gofurry-admin/internal/infra/logging"
+	"github.com/gofurry/gofurry-admin/internal/transport/http/webui"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 )
 
 type Builder struct{}
@@ -310,19 +307,6 @@ func registerMiddlewares(app *fiber.App) {
 
 	if cfg.Server.Mode == "debug" {
 		app.Use(pprof.New())
-
-		if cfg.Middleware.Swagger.Enabled {
-			if _, err := os.Stat(cfg.Middleware.Swagger.FilePath); os.IsNotExist(err) {
-				slog.Warn("swagger file does not exist, skip swagger middleware", "file", cfg.Middleware.Swagger.FilePath)
-			} else {
-				app.Use(swagger.New(swagger.Config{
-					BasePath: cfg.Middleware.Swagger.BasePath,
-					FilePath: cfg.Middleware.Swagger.FilePath,
-					Path:     cfg.Middleware.Swagger.Path,
-					Title:    cfg.Middleware.Swagger.Title,
-				}))
-			}
-		}
 	}
 }
 

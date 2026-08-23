@@ -13,7 +13,7 @@
 - Service install and uninstall support through `kardianos/service`
 - Reusable helper packages such as `pkg/httpkit` and `pkg/abstract`
 - Official Fiber middleware baseline:
-  request ID, access log, timeout, health probes, security headers, compression, ETag, rate limiting, pprof, Swagger, CSRF, and WAF
+  request ID, access log, timeout, health probes, security headers, compression, ETag, rate limiting, pprof, CSRF, and WAF
 - Optional embedded UI support, disabled by default
 
 ## Project Positioning
@@ -79,7 +79,6 @@ User CRUD demo:
 Optional endpoints:
 
 - `GET /csrf/token` when CSRF is enabled
-- `GET /swagger` when Swagger is enabled in debug mode
 - `GET /debug/pprof/...` in debug mode
 
 ## CRUD Demo
@@ -177,7 +176,6 @@ Enabled by default:
 Disabled by default but available:
 
 - CSRF
-- Swagger
 - Redis
 - WAF
 - Embedded UI

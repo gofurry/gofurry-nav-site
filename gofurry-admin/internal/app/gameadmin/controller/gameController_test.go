@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/gameadmin/models"
+	"github.com/gofurry/gofurry-admin/internal/app/gameadmin/models"
 	"github.com/gofurry/steam-go/web/storefront"
 )
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/spf13/viper"
 )
 
@@ -101,7 +101,6 @@ func (cfg WafConfig) ResolveDirectivesFiles() []string {
 }
 
 type MiddlewareConfig struct {
-	Swagger         SwaggerConfig         `mapstructure:"swagger" yaml:"swagger"`
 	Cors            CorsConfig            `mapstructure:"cors" yaml:"cors"`
 	RequestID       RequestIDConfig       `mapstructure:"request_id" yaml:"request_id"`
 	AccessLog       AccessLogConfig       `mapstructure:"access_log" yaml:"access_log"`
@@ -188,14 +187,6 @@ type CorsConfig struct {
 	AllowOrigins []string `mapstructure:"allow_origins" yaml:"allow_origins"`
 }
 
-type SwaggerConfig struct {
-	Enabled  bool   `mapstructure:"enabled" yaml:"enabled"`
-	FilePath string `mapstructure:"file_path" yaml:"file_path"`
-	BasePath string `mapstructure:"base_path" yaml:"base_path"`
-	Path     string `mapstructure:"path" yaml:"path"`
-	Title    string `mapstructure:"title" yaml:"title"`
-}
-
 type RedisConfig struct {
 	Enabled       bool   `mapstructure:"enabled" yaml:"enabled"`
 	RedisUsername string `mapstructure:"redis_username" yaml:"redis_username"`
@@ -215,19 +206,15 @@ type LogConfig struct {
 }
 
 type DataBaseConfig struct {
-	Enabled     bool                 `mapstructure:"enabled" yaml:"enabled"`
-	AutoMigrate bool                 `mapstructure:"auto_migrate" yaml:"auto_migrate"`
-	DBType      string               `mapstructure:"db_type" yaml:"db_type"`
-	SQLite      SQLiteDataBaseConfig `mapstructure:"sqlite" yaml:"sqlite"`
-	Postgres    SQLDataBaseConfig    `mapstructure:"postgres" yaml:"postgres"`
-	MySQL       SQLDataBaseConfig    `mapstructure:"mysql" yaml:"mysql"`
-	DSN         string               `mapstructure:"dsn" yaml:"dsn"`
-	DBName      string               `mapstructure:"db_name" yaml:"db_name"`
-	DBHost      string               `mapstructure:"db_host" yaml:"db_host"`
-	DBPort      string               `mapstructure:"db_port" yaml:"db_port"`
-	DBUser      string               `mapstructure:"db_username" yaml:"db_username"`
-	DBPass      string               `mapstructure:"db_password" yaml:"db_password"`
-	SQLPath     string               `mapstructure:"sqlite_path" yaml:"sqlite_path"`
+	Enabled  bool              `mapstructure:"enabled" yaml:"enabled"`
+	DBType   string            `mapstructure:"db_type" yaml:"db_type"`
+	Postgres SQLDataBaseConfig `mapstructure:"postgres" yaml:"postgres"`
+	DSN      string            `mapstructure:"dsn" yaml:"dsn"`
+	DBName   string            `mapstructure:"db_name" yaml:"db_name"`
+	DBHost   string            `mapstructure:"db_host" yaml:"db_host"`
+	DBPort   string            `mapstructure:"db_port" yaml:"db_port"`
+	DBUser   string            `mapstructure:"db_username" yaml:"db_username"`
+	DBPass   string            `mapstructure:"db_password" yaml:"db_password"`
 }
 
 type SQLDataBaseConfig struct {
@@ -237,11 +224,6 @@ type SQLDataBaseConfig struct {
 	DBPort string `mapstructure:"db_port" yaml:"db_port"`
 	DBUser string `mapstructure:"db_username" yaml:"db_username"`
 	DBPass string `mapstructure:"db_password" yaml:"db_password"`
-}
-
-type SQLiteDataBaseConfig struct {
-	DSN  string `mapstructure:"dsn" yaml:"dsn"`
-	Path string `mapstructure:"path" yaml:"path"`
 }
 
 type ServerConfig struct {
@@ -317,19 +299,12 @@ func (cfg *serverConfig) normalize() {
 	cfg.Server.IsFullStack = true
 
 	cfg.DataBase.normalize("gfa")
-	cfg.DataBase.AutoMigrate = true
 	cfg.BusinessDatabases.Nav.normalize("gfn")
 	cfg.BusinessDatabases.Nav.DBType = "postgres"
 	cfg.BusinessDatabases.Nav.Enabled = true
-	cfg.BusinessDatabases.Nav.AutoMigrate = false
 	cfg.BusinessDatabases.Game.normalize("gfg")
 	cfg.BusinessDatabases.Game.DBType = "postgres"
 	cfg.BusinessDatabases.Game.Enabled = true
-	cfg.BusinessDatabases.Game.AutoMigrate = false
-
-	if cfg.Middleware.Swagger.Title == "" {
-		cfg.Middleware.Swagger.Title = cfg.Server.AppName
-	}
 	if cfg.Middleware.RequestID.Header == "" {
 		cfg.Middleware.RequestID.Header = "X-Request-ID"
 	}
@@ -467,10 +442,6 @@ func (cfg *DataBaseConfig) normalize(defaultDBName string) {
 
 	cfg.applyLegacyConfig()
 
-	if cfg.SQLite.Path == "" {
-		cfg.SQLite.Path = "./data/app.db"
-	}
-
 	normalizeSQLDefaults(&cfg.Postgres, SQLDataBaseConfig{
 		DBHost: "127.0.0.1",
 		DBPort: "5432",
@@ -478,55 +449,22 @@ func (cfg *DataBaseConfig) normalize(defaultDBName string) {
 		DBUser: "postgres",
 		DBPass: "123456",
 	})
-	normalizeSQLDefaults(&cfg.MySQL, SQLDataBaseConfig{
-		DBHost: "127.0.0.1",
-		DBPort: "3306",
-		DBName: defaultDBName,
-		DBUser: "root",
-		DBPass: "123456",
-	})
 }
 
 func (cfg *DataBaseConfig) validate(prefix string) error {
 	switch cfg.DBType {
-	case "postgres", "postgresql", "mysql", "sqlite":
+	case "postgres", "postgresql":
 	default:
-		return fmt.Errorf("%s.db_type %q is not supported", prefix, cfg.DBType)
+		return fmt.Errorf("%s.db_type %q is not supported; admin is PostgreSQL-only", prefix, cfg.DBType)
 	}
-	switch cfg.DBType {
-	case "sqlite":
-		if strings.TrimSpace(cfg.SQLite.DSN) == "" && strings.TrimSpace(cfg.SQLite.Path) == "" {
-			return fmt.Errorf("%s.sqlite.path or %s.sqlite.dsn is required", prefix, prefix)
-		}
-	case "mysql":
-		if strings.TrimSpace(cfg.MySQL.DSN) == "" && strings.TrimSpace(cfg.MySQL.DBName) == "" {
-			return fmt.Errorf("%s.mysql db config is required", prefix)
-		}
-	default:
-		if strings.TrimSpace(cfg.Postgres.DSN) == "" && strings.TrimSpace(cfg.Postgres.DBName) == "" {
-			return fmt.Errorf("%s.postgres db config is required", prefix)
-		}
+	if strings.TrimSpace(cfg.Postgres.DSN) == "" && strings.TrimSpace(cfg.Postgres.DBName) == "" {
+		return fmt.Errorf("%s.postgres db config is required", prefix)
 	}
 	return nil
 }
 
 func (cfg *DataBaseConfig) applyLegacyConfig() {
-	switch cfg.DBType {
-	case "sqlite":
-		if cfg.SQLite.DSN == "" {
-			cfg.SQLite.DSN = strings.TrimSpace(cfg.DSN)
-		}
-		if cfg.SQLite.Path == "" {
-			cfg.SQLite.Path = strings.TrimSpace(cfg.SQLPath)
-		}
-		if cfg.SQLite.Path == "" {
-			cfg.SQLite.Path = strings.TrimSpace(cfg.DBName)
-		}
-	case "mysql":
-		applyLegacySQLConfig(&cfg.MySQL, cfg)
-	default:
-		applyLegacySQLConfig(&cfg.Postgres, cfg)
-	}
+	applyLegacySQLConfig(&cfg.Postgres, cfg)
 }
 
 func applyLegacySQLConfig(target *SQLDataBaseConfig, legacy *DataBaseConfig) {

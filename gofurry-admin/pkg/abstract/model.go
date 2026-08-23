@@ -1,6 +1,6 @@
 package abstract
 
-import "github.com/gofurry/awesome-fiber-template/v3/medium/pkg/util"
+import "github.com/gofurry/gofurry-admin/pkg/util"
 
 type Model interface {
 	GetId() int64

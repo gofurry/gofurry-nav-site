@@ -6,13 +6,13 @@
 
 ## 这个版本包含什么
 
-- 默认 SQLite 开箱即用
+- 仅支持 PostgreSQL，schema 由 Goose 管理
 - 内置完整的 `user` CRUD 示例
 - 保留 DB、Redis、logging、WAF、graceful shutdown
 - 保留 `kardianos/service` 的 `install` / `uninstall`
 - 保留 `pkg/httpkit`、`pkg/abstract`
 - 保留较完整的 Fiber 中间件基线：request ID、access log、recover、CORS、timeout、health probes、security headers、compression、ETag、rate limiting
-- 按需启用 CSRF、Swagger、WAF、pprof、embedded UI
+- 按需启用 CSRF、WAF、pprof、embedded UI
 
 ## 适用场景
 
@@ -54,7 +54,6 @@ go run . uninstall
 按需开启：
 
 - `GET /csrf/token`
-- `GET /swagger`
 - `GET /debug/pprof/...`
 
 ## 业务组织方式

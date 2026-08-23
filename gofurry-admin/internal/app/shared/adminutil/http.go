@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 )
 
 type PageQuery struct {

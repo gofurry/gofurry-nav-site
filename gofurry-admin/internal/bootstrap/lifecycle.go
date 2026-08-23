@@ -3,30 +3,20 @@ package bootstrap
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync"
 	"sync/atomic"
 
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
-	authmodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/models"
-	auditmodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
-	cache "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/cache"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
-	log "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/logging"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	env "github.com/gofurry/gofurry-admin/config"
+	cache "github.com/gofurry/gofurry-admin/internal/infra/cache"
+	"github.com/gofurry/gofurry-admin/internal/infra/db"
+	log "github.com/gofurry/gofurry-admin/internal/infra/logging"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 )
 
 var (
 	lifecycleMu sync.Mutex
 	started     atomic.Bool
 )
-
-func databaseModels() []any {
-	return []any{
-		&authmodels.AdminAccount{},
-		&auditmodels.AdminAuditLog{},
-	}
-}
 
 func Start() error {
 	lifecycleMu.Lock()
@@ -47,7 +37,7 @@ func Start() error {
 		return errors.Join(cause, shutdownComponents(cfg))
 	}
 
-	if err := db.InitDatabasesOnStart(databaseModels()...); err != nil {
+	if err := db.InitDatabasesOnStart(); err != nil {
 		return cleanupOnError(fmt.Errorf("database init failed: %w", err))
 	}
 
@@ -58,7 +48,7 @@ func Start() error {
 	}
 
 	started.Store(true)
-	slog.Info("application bootstrap completed")
+	log.InfoKV("application bootstrap completed")
 	return nil
 }
 

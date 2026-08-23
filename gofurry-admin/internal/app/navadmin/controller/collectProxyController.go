@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	env "github.com/gofurry/gofurry-admin/config"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 )
 
 const defaultNavBackendAdminHeader = "X-GoFurry-Admin-Token"

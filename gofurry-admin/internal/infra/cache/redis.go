@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
-	log "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/logging"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	env "github.com/gofurry/gofurry-admin/config"
+	log "github.com/gofurry/gofurry-admin/internal/infra/logging"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/redis/go-redis/v9"
 )
 

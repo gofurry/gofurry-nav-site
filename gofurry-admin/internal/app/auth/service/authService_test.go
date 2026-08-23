@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/GoFurry/easyhash"
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
+	env "github.com/gofurry/gofurry-admin/config"
 )
 
 func TestCreatePasswordHashUsesConfiguredIterations(t *testing.T) {

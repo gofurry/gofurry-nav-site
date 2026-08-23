@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -15,8 +15,8 @@ import (
 
 // Shared logger instances.
 var (
-	GlobalLogger *zap.Logger
-	SugarLogger  *zap.SugaredLogger
+	GlobalLogger = zap.NewNop()
+	SugarLogger  = GlobalLogger.Sugar()
 )
 
 // Config controls logger behavior.
@@ -220,6 +220,11 @@ func Warn(args ...interface{}) {
 func Error(args ...interface{}) {
 	SugarLogger.Error(args...)
 }
+
+func DebugKV(msg string, keysAndValues ...interface{}) { SugarLogger.Debugw(msg, keysAndValues...) }
+func InfoKV(msg string, keysAndValues ...interface{})  { SugarLogger.Infow(msg, keysAndValues...) }
+func WarnKV(msg string, keysAndValues ...interface{})  { SugarLogger.Warnw(msg, keysAndValues...) }
+func ErrorKV(msg string, keysAndValues ...interface{}) { SugarLogger.Errorw(msg, keysAndValues...) }
 
 func Fatal(args ...interface{}) {
 	SugarLogger.Fatal(args...)

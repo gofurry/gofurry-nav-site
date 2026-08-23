@@ -2,15 +2,15 @@ package cmd
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
-	authservice "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/service"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/bootstrap"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	env "github.com/gofurry/gofurry-admin/config"
+	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
+	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
+	"github.com/gofurry/gofurry-admin/internal/bootstrap"
+	applog "github.com/gofurry/gofurry-admin/internal/infra/logging"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -76,15 +76,15 @@ func newInstallCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			svc, err := newService()
 			if err != nil {
-				slog.Error("service install failed", "error", err)
+				applog.ErrorKV("service install failed", "error", err)
 				return
 			}
 
 			if err = svc.Install(); err != nil {
-				slog.Error("service install failed", "error", err)
+				applog.ErrorKV("service install failed", "error", err)
 				return
 			}
-			slog.Info("service installed")
+			applog.InfoKV("service installed")
 		},
 	}
 }
@@ -99,15 +99,15 @@ func newUninstallCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			svc, err := newService()
 			if err != nil {
-				slog.Error("service uninstall failed", "error", err)
+				applog.ErrorKV("service uninstall failed", "error", err)
 				return
 			}
 
 			if err = svc.Uninstall(); err != nil {
-				slog.Error("service uninstall failed", "error", err)
+				applog.ErrorKV("service uninstall failed", "error", err)
 				return
 			}
-			slog.Info("service uninstalled")
+			applog.InfoKV("service uninstalled")
 		},
 	}
 }
@@ -136,7 +136,7 @@ func newResetPasswordCmd() *cobra.Command {
 			if err := authservice.GetAuthService().ResetPassword(password, audit.SystemMeta("cli/reset-password")); err != nil {
 				return err
 			}
-			slog.Info("admin password reset successfully")
+			applog.InfoKV("admin password reset successfully")
 			return nil
 		},
 	}
@@ -155,7 +155,7 @@ func newVersionCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := env.GetServerConfig()
 			_, appName := appIdentity()
-			slog.Info(appName + " " + cfg.Server.AppVersion)
+			applog.InfoKV(appName + " " + cfg.Server.AppVersion)
 		},
 	}
 }

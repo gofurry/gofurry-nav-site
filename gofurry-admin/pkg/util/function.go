@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/snowflake"
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
+	env "github.com/gofurry/gofurry-admin/config"
 )
 
 // Snowflake node state derived from the configured cluster id.

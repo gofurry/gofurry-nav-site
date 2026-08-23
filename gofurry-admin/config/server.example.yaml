@@ -21,8 +21,7 @@ server:
 
 database:
   enabled: true
-  auto_migrate: true # Admin 自身表可自动迁移；生产大改前仍建议备份。
-  db_type: "postgres" # postgres / mysql / sqlite。
+  db_type: "postgres" # Admin 仅支持 PostgreSQL；schema 只由 Goose 管理。
   postgres:
     dsn: "" # 优先使用完整 DSN；为空时使用下面拆分字段。
     db_name: "gfa"
@@ -34,7 +33,6 @@ database:
 business_databases:
   nav:
     enabled: true
-    auto_migrate: false # 业务库不由 Admin 自动迁移。
     db_type: "postgres"
     postgres:
       dsn: ""
@@ -45,7 +43,6 @@ business_databases:
       db_port: "5432"
   game:
     enabled: true
-    auto_migrate: false # 业务库不由 Admin 自动迁移。
     db_type: "postgres"
     postgres:
       dsn: ""
@@ -125,12 +122,6 @@ middleware:
   compression:
     enabled: true
     level: "default"
-  swagger:
-    enabled: false # 生产建议关闭。
-    file_path: "./docs/swagger.json"
-    base_path: "/"
-    path: "/swagger"
-    title: "gofurry-admin"
   cors:
     allow_origins: ["http://127.0.0.1:5173", "http://127.0.0.1:8888"]
   limiter:

@@ -1,7 +1,7 @@
 package models
 
 import (
-	pkgmodels "github.com/gofurry/awesome-fiber-template/v3/medium/pkg/models"
+	pkgmodels "github.com/gofurry/gofurry-admin/pkg/models"
 )
 
 type Game struct {

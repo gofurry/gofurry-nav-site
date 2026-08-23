@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
-	database "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/models"
+	database "github.com/gofurry/gofurry-admin/internal/infra/db"
+	applog "github.com/gofurry/gofurry-admin/internal/infra/logging"
+	"github.com/gofurry/gofurry-admin/pkg/common"
+	"github.com/gofurry/gofurry-admin/pkg/models"
 	"gorm.io/gorm"
 )
 
@@ -246,6 +246,6 @@ func (dao *Dao[T]) SoftDeleteById(id int64) (int64, common.Error) {
 }
 
 func wrapDAOError(message string, err error) common.Error {
-	slog.Error(message, "error", err)
+	applog.ErrorKV(message, "error", err)
 	return common.NewDaoError(fmt.Sprintf("%s: %v", message, err))
 }

@@ -4,12 +4,12 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/models"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/service"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/adminutil"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/audit"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	env "github.com/gofurry/gofurry-admin/config"
+	"github.com/gofurry/gofurry-admin/internal/app/auth/models"
+	"github.com/gofurry/gofurry-admin/internal/app/auth/service"
+	"github.com/gofurry/gofurry-admin/internal/app/shared/adminutil"
+	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 )
 
 type authAPI struct{}

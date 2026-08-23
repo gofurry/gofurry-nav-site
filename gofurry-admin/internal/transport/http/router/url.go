@@ -2,11 +2,11 @@ package router
 
 import (
 	"github.com/gofiber/fiber/v3"
-	auth "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/controller"
-	authmw "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/middleware"
-	gameadmin "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/gameadmin/controller"
-	navadmin "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/navadmin/controller"
-	options "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/options/controller"
+	auth "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
+	authmw "github.com/gofurry/gofurry-admin/internal/app/auth/middleware"
+	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
+	navadmin "github.com/gofurry/gofurry-admin/internal/app/navadmin/controller"
+	options "github.com/gofurry/gofurry-admin/internal/app/shared/options/controller"
 )
 
 func api(root fiber.Router) {

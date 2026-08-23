@@ -5,16 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log/slog"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/glebarez/sqlite"
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
-	"gorm.io/driver/mysql"
+	env "github.com/gofurry/gofurry-admin/config"
+	applog "github.com/gofurry/gofurry-admin/internal/infra/logging"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -42,19 +38,12 @@ type manager struct {
 
 var Databases = &manager{}
 
-func InitDatabasesOnStart(models ...any) error {
+func InitDatabasesOnStart() error {
 	if err := Databases.init(); err != nil {
 		return err
 	}
 
-	admin := Databases.dbs[Admin]
-	if admin != nil && admin.enabled && admin.config.AutoMigrate {
-		if err := Databases.AutoMigrate(Admin, models...); err != nil {
-			return fmt.Errorf("auto migrate admin database failed: %w", err)
-		}
-	}
-
-	slog.Info("database services initialized")
+	applog.InfoKV("database services initialized")
 	return nil
 }
 
@@ -135,14 +124,6 @@ func (m *manager) ReadyAll() bool {
 	return true
 }
 
-func (m *manager) AutoMigrate(name Name, models ...any) error {
-	engine := m.DB(name)
-	if engine == nil {
-		return fmt.Errorf("database %s is not initialized", name)
-	}
-	return engine.AutoMigrate(models...)
-}
-
 func (m *manager) Close() {
 	for _, conn := range m.dbs {
 		if conn == nil || conn.engine == nil {
@@ -181,7 +162,7 @@ func (c *connection) load(name Name) error {
 
 	c.engine = engine
 	c.driver = driver
-	slog.Info("database connected", "name", string(name), "driver", driver)
+	applog.InfoKV("database connected", "name", string(name), "driver", driver)
 	return nil
 }
 
@@ -190,16 +171,8 @@ func buildDialector(cfg env.DataBaseConfig) (gorm.Dialector, string, error) {
 	switch driver {
 	case "", "postgres", "postgresql":
 		return postgres.Open(buildPostgresDSN(cfg.Postgres)), "postgres", nil
-	case "mysql":
-		return mysql.Open(buildMySQLDSN(cfg.MySQL)), "mysql", nil
-	case "sqlite":
-		dsn, err := buildSQLiteDSN(cfg.SQLite)
-		if err != nil {
-			return nil, "", err
-		}
-		return sqlite.Open(dsn), "sqlite", nil
 	default:
-		return nil, "", fmt.Errorf("unsupported database type: %s", cfg.DBType)
+		return nil, "", fmt.Errorf("unsupported database type %q: admin is PostgreSQL-only", cfg.DBType)
 	}
 }
 
@@ -218,55 +191,9 @@ func buildPostgresDSN(cfg env.SQLDataBaseConfig) string {
 	)
 }
 
-func buildMySQLDSN(cfg env.SQLDataBaseConfig) string {
-	if strings.TrimSpace(cfg.DSN) != "" {
-		return cfg.DSN
-	}
-
-	return fmt.Sprintf(
-		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		cfg.DBUser,
-		cfg.DBPass,
-		cfg.DBHost,
-		cfg.DBPort,
-		cfg.DBName,
-	)
-}
-
-func buildSQLiteDSN(cfg env.SQLiteDataBaseConfig) (string, error) {
-	dsn := strings.TrimSpace(cfg.DSN)
-	if dsn == "" {
-		dsn = strings.TrimSpace(cfg.Path)
-	}
-	if dsn == "" {
-		dsn = "./data/app.db"
-	}
-
-	if dsn == ":memory:" || strings.HasPrefix(dsn, "file:") {
-		return dsn, nil
-	}
-
-	dir := filepath.Dir(dsn)
-	if dir != "" && dir != "." {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return "", fmt.Errorf("create sqlite directory failed: %w", err)
-		}
-	}
-
-	return dsn, nil
-}
-
-func configurePool(sqlDB *sql.DB, driver string) {
-	switch driver {
-	case "sqlite":
-		sqlDB.SetMaxIdleConns(1)
-		sqlDB.SetMaxOpenConns(1)
-		sqlDB.SetConnMaxLifetime(0)
-		sqlDB.SetConnMaxIdleTime(0)
-	default:
-		sqlDB.SetMaxIdleConns(20)
-		sqlDB.SetMaxOpenConns(100)
-		sqlDB.SetConnMaxLifetime(10 * time.Minute)
-		sqlDB.SetConnMaxIdleTime(5 * time.Minute)
-	}
+func configurePool(sqlDB *sql.DB, _ string) {
+	sqlDB.SetMaxIdleConns(20)
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(10 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(5 * time.Minute)
 }

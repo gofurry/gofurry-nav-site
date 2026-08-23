@@ -3,7 +3,7 @@ package controller
 import (
 	"testing"
 
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/navadmin/models"
+	"github.com/gofurry/gofurry-admin/internal/app/navadmin/models"
 )
 
 func TestValidateSitePayloadDoesNotRequireLegacyDomains(t *testing.T) {

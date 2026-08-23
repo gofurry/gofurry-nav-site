@@ -2,11 +2,11 @@ package controller
 
 import (
 	"github.com/gofiber/fiber/v3"
-	gamemodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/gameadmin/models"
-	navmodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/navadmin/models"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/shared/adminutil"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	gamemodels "github.com/gofurry/gofurry-admin/internal/app/gameadmin/models"
+	navmodels "github.com/gofurry/gofurry-admin/internal/app/navadmin/models"
+	"github.com/gofurry/gofurry-admin/internal/app/shared/adminutil"
+	"github.com/gofurry/gofurry-admin/internal/infra/db"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 )
 
 type optionsAPI struct{}

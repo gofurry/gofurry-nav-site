@@ -1,6 +1,6 @@
 package main
 
-import "github.com/gofurry/awesome-fiber-template/v3/medium/cmd"
+import "github.com/gofurry/gofurry-admin/cmd"
 
 func main() {
 	cmd.Execute()

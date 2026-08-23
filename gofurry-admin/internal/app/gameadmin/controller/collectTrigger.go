@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/gameadmin/models"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/cache"
-	log "github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/logging"
+	"github.com/gofurry/gofurry-admin/internal/app/gameadmin/models"
+	"github.com/gofurry/gofurry-admin/internal/infra/cache"
+	log "github.com/gofurry/gofurry-admin/internal/infra/logging"
 )
 
 const gameCollectPendingSetKey = "game:v2:collect:pending"

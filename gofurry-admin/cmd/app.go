@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime/debug"
@@ -15,10 +14,11 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	env "github.com/gofurry/awesome-fiber-template/v3/medium/config"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/bootstrap"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/transport/http/router"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	env "github.com/gofurry/gofurry-admin/config"
+	"github.com/gofurry/gofurry-admin/internal/bootstrap"
+	applog "github.com/gofurry/gofurry-admin/internal/infra/logging"
+	"github.com/gofurry/gofurry-admin/internal/transport/http/router"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/kardianos/service"
 	"github.com/spf13/viper"
 )
@@ -147,9 +147,9 @@ func (a *app) run() {
 		if a.stopping.Load() {
 			return
 		}
-		slog.Error("fiber app exited unexpectedly", "error", err)
+		applog.ErrorKV("fiber app exited unexpectedly", "error", err)
 		if shutdownErr := a.shutdown(); shutdownErr != nil {
-			slog.Error("application shutdown failed", "error", shutdownErr)
+			applog.ErrorKV("application shutdown failed", "error", shutdownErr)
 		}
 		os.Exit(1)
 	}

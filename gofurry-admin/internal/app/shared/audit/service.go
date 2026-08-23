@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	authmodels "github.com/gofurry/awesome-fiber-template/v3/medium/internal/app/auth/models"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/internal/infra/db"
-	"github.com/gofurry/awesome-fiber-template/v3/medium/pkg/common"
+	authmodels "github.com/gofurry/gofurry-admin/internal/app/auth/models"
+	"github.com/gofurry/gofurry-admin/internal/infra/db"
+	"github.com/gofurry/gofurry-admin/pkg/common"
 	"gorm.io/gorm"
 )
 
