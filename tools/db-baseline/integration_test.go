@@ -53,7 +53,8 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	update := os.Getenv("GOFURRY_UPDATE_SCHEMA_SNAPSHOTS") == "1"
+	updateFinal := os.Getenv("GOFURRY_UPDATE_SCHEMA_SNAPSHOTS") == "1"
+	updateBaseline := os.Getenv("GOFURRY_UPDATE_BASELINE_SNAPSHOTS") == "1"
 	tests := []struct {
 		label      string
 		owner      string
@@ -72,6 +73,17 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 			defer freshDB.Close()
 
 			migrationDir := filepath.Join(repositoryRoot, "db", test.owner, "migrations")
+			if updateBaseline {
+				if err := goose.UpToContext(ctx, freshDB, migrationDir, expectedBaselineVersion); err != nil {
+					t.Fatalf("goose baseline on empty %s database: %v", test.label, err)
+				}
+				actual, err := schema.Inspect(ctx, freshDB)
+				if err != nil {
+					t.Fatalf("inspect baseline %s schema: %v", test.label, err)
+				}
+				writeExpectedSnapshot(t, repositoryRoot, test.label, actual)
+				return
+			}
 			if err := goose.UpContext(ctx, freshDB, migrationDir); err != nil {
 				t.Fatalf("goose up on empty %s database: %v", test.label, err)
 			}
@@ -79,11 +91,11 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 			if err != nil {
 				t.Fatalf("inspect fresh %s schema: %v", test.label, err)
 			}
-			if update {
-				writeExpectedSnapshot(t, repositoryRoot, test.label, actual)
+			if updateFinal {
+				writeFinalExpectedSnapshot(t, repositoryRoot, test.label, actual)
 				return
 			}
-			expected, err := loadExpected(test.label)
+			expected, err := loadFinalExpected(repositoryRoot, test.label)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -91,21 +103,35 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 				t.Fatalf("fresh %s schema drift: %s", test.label, difference)
 			}
 
-			if _, err := freshDB.ExecContext(ctx, `drop table public.goose_db_version`); err != nil {
+			adoptName := temporaryDatabaseName(test.label, "adopt")
+			createDatabase(t, ctx, adminDB, adoptName)
+			defer dropDatabase(t, adminDB, adoptName)
+			adoptDB := openDatabase(t, adminDSN, adoptName)
+			defer adoptDB.Close()
+			if err := goose.UpToContext(ctx, adoptDB, migrationDir, expectedBaselineVersion); err != nil {
+				t.Fatalf("prepare exact pre-Goose %s fixture: %v", test.label, err)
+			}
+			if test.label == "gfg" || test.label == "gfn" {
+				seedAndBackupDeprecatedTables(t, ctx, adoptDB, test.label)
+			}
+			if _, err := adoptDB.ExecContext(ctx, `drop table public.goose_db_version`); err != nil {
 				t.Fatalf("prepare exact pre-Goose fixture: %v", err)
 			}
-			if err := adopt(ctx, freshDB, adoptOptions{DatabaseLabel: test.label, BaselineVersion: expectedBaselineVersion}); err != nil {
+			if err := adopt(ctx, adoptDB, adoptOptions{DatabaseLabel: test.label, BaselineVersion: expectedBaselineVersion}); err != nil {
 				t.Fatalf("adopt exact %s schema: %v", test.label, err)
 			}
-			version, err := goose.GetDBVersionContext(ctx, freshDB)
+			version, err := goose.GetDBVersionContext(ctx, adoptDB)
 			if err != nil {
 				t.Fatalf("read adopted %s version: %v", test.label, err)
 			}
 			if version != expectedBaselineVersion {
 				t.Fatalf("adopted version = %d, want %d", version, expectedBaselineVersion)
 			}
-			if err := goose.UpContext(ctx, freshDB, migrationDir); err != nil {
+			if err := goose.UpContext(ctx, adoptDB, migrationDir); err != nil {
 				t.Fatalf("normal goose up after %s adoption: %v", test.label, err)
+			}
+			if test.label == "gfg" || test.label == "gfn" {
+				assertDeprecatedCleanupAndBackup(t, ctx, adoptDB, test.label)
 			}
 
 			driftName := temporaryDatabaseName(test.label, "drift")
@@ -113,7 +139,7 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 			defer dropDatabase(t, adminDB, driftName)
 			driftDB := openDatabase(t, adminDSN, driftName)
 			defer driftDB.Close()
-			if err := goose.UpContext(ctx, driftDB, migrationDir); err != nil {
+			if err := goose.UpToContext(ctx, driftDB, migrationDir, expectedBaselineVersion); err != nil {
 				t.Fatalf("prepare drift %s fixture: %v", test.label, err)
 			}
 			if _, err := driftDB.ExecContext(ctx, `drop table public.goose_db_version`); err != nil {
@@ -218,14 +244,106 @@ func quoteIdentifier(value string) string {
 }
 
 func writeExpectedSnapshot(t *testing.T, repositoryRoot, label string, snapshot schema.Snapshot) {
+	writeSnapshot(t, filepath.Join(repositoryRoot, "tools", "db-baseline", "expected", label+".json"), snapshot)
+}
+
+func writeFinalExpectedSnapshot(t *testing.T, repositoryRoot, label string, snapshot schema.Snapshot) {
+	path := filepath.Join(repositoryRoot, "tools", "db-baseline", "expected-final", label+".json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeSnapshot(t, path, snapshot)
+}
+
+func writeSnapshot(t *testing.T, path string, snapshot schema.Snapshot) {
 	t.Helper()
 	data, err := schema.Marshal(snapshot)
 	if err != nil {
 		t.Fatal(err)
 	}
 	data = append(data, '\n')
-	path := filepath.Join(repositoryRoot, "tools", "db-baseline", "expected", label+".json")
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func loadFinalExpected(repositoryRoot, label string) (schema.Snapshot, error) {
+	data, err := os.ReadFile(filepath.Join(repositoryRoot, "tools", "db-baseline", "expected-final", label+".json"))
+	if err != nil {
+		return schema.Snapshot{}, err
+	}
+	return schema.Unmarshal(data)
+}
+
+func seedAndBackupDeprecatedTables(t *testing.T, ctx context.Context, db *sql.DB, label string) {
+	t.Helper()
+	statements := map[string]string{
+		"gfg": `
+INSERT INTO public.gfg_game_creator_deprecated_20260614
+  (id,name,info,main_url,links,cover,contact,create_time,update_time,type,name_en,info_en,deleted)
+VALUES (1,'creator','info','https://example.test','[]','cover','[]',NOW(),NOW(),1,'creator','info',false);
+INSERT INTO public.gfg_game_record
+  (id,game_id,language,release_date,platform,developer,publisher,info,cover,lang,price_list,initial,final,discount)
+VALUES (1,1,'zh','2026.08.23','windows','dev','pub','info','cover','zh','[]',100,50,50);
+INSERT INTO public.gfg_game_news
+  (id,game_id,headline,content,"index",post_time,create_time,author,url,total,lang)
+VALUES (1,1,'headline','content',1,NOW(),NOW(),'author','https://example.test',1,'zh');
+INSERT INTO public.gfg_game_player_count (id,game_id,count,create_time) VALUES (1,1,10,NOW());
+CREATE SCHEMA foundation_cleanup_backup;
+CREATE TABLE foundation_cleanup_backup.gfg_game_creator_deprecated_20260614 AS TABLE public.gfg_game_creator_deprecated_20260614 WITH DATA;
+CREATE TABLE foundation_cleanup_backup.gfg_game_record AS TABLE public.gfg_game_record WITH DATA;
+CREATE TABLE foundation_cleanup_backup.gfg_game_news AS TABLE public.gfg_game_news WITH DATA;
+CREATE TABLE foundation_cleanup_backup.gfg_game_player_count AS TABLE public.gfg_game_player_count WITH DATA;`,
+		"gfn": `
+INSERT INTO public.gfn_log_update (id,title,url,create_time,update_time,deleted)
+VALUES (1,'legacy','https://example.test',NOW(),NOW(),false);
+CREATE SCHEMA foundation_cleanup_backup;
+CREATE TABLE foundation_cleanup_backup.gfn_log_update AS TABLE public.gfn_log_update WITH DATA;`,
+	}
+	if _, err := db.ExecContext(ctx, statements[label]); err != nil {
+		t.Fatalf("seed and simulate %s deprecated-table backup: %v", label, err)
+	}
+	counts := deprecatedTableCounts(t, ctx, db, label, "public")
+	t.Logf("%s deprecated row counts before cleanup: %v", label, counts)
+}
+
+func assertDeprecatedCleanupAndBackup(t *testing.T, ctx context.Context, db *sql.DB, label string) {
+	t.Helper()
+	tables := deprecatedTables(label)
+	for _, table := range tables {
+		var exists bool
+		if err := db.QueryRowContext(ctx, `SELECT to_regclass($1) IS NOT NULL`, "public."+table).Scan(&exists); err != nil {
+			t.Fatal(err)
+		}
+		if exists {
+			t.Fatalf("deprecated table public.%s still exists", table)
+		}
+	}
+	counts := deprecatedTableCounts(t, ctx, db, label, "foundation_cleanup_backup")
+	for table, count := range counts {
+		if count != 1 {
+			t.Fatalf("backup %s.%s row count=%d, want 1", "foundation_cleanup_backup", table, count)
+		}
+	}
+}
+
+func deprecatedTableCounts(t *testing.T, ctx context.Context, db *sql.DB, label, schemaName string) map[string]int64 {
+	t.Helper()
+	counts := make(map[string]int64)
+	for _, table := range deprecatedTables(label) {
+		query := `SELECT COUNT(*) FROM ` + quoteIdentifier(schemaName) + `.` + quoteIdentifier(table)
+		var count int64
+		if err := db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		counts[table] = count
+	}
+	return counts
+}
+
+func deprecatedTables(label string) []string {
+	if label == "gfg" {
+		return []string{"gfg_game_creator_deprecated_20260614", "gfg_game_record", "gfg_game_news", "gfg_game_player_count"}
+	}
+	return []string{"gfn_log_update"}
 }

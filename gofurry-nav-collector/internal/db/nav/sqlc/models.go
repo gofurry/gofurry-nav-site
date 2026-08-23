@@ -105,22 +105,6 @@ type GfnFeaturedSite struct {
 	UpdateTime pgtype.Timestamp `json:"update_time"`
 }
 
-// 更新公告表
-type GfnLogUpdate struct {
-	// 更新公告表id
-	ID int64 `json:"id"`
-	// 更新公告标题
-	Title string `json:"title"`
-	// 更新公告文档地址
-	Url string `json:"url"`
-	// 创建时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 更新时间
-	UpdateTime pgtype.Timestamp `json:"update_time"`
-	// 软删除
-	Deleted bool `json:"deleted"`
-}
-
 type GfnNavUpdateNotice struct {
 	ID          int64            `json:"id"`
 	Title       string           `json:"title"`
