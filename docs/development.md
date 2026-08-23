@@ -84,7 +84,7 @@ Run vulnerability scans for each active module using the pinned tool:
 
 ~~~bash
 cd tools
-go tool govulncheck ../apps/cn/nav-backend/...
+go tool govulncheck -C ../apps/cn/nav-backend ./...
 ~~~
 
 Database integration checks require explicitly configured, isolated development databases. Never point them at production.
