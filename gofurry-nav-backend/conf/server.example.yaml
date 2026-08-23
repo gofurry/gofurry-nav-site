@@ -22,10 +22,14 @@ database:
   db_password: "CHANGE_ME"
   db_host: "127.0.0.1"
   db_port: "5432"
-  max_open_conns: 20 # 最大打开连接数；未配置时使用代码默认。
-  max_idle_conns: 5 # 最大空闲连接数。
-  conn_max_lifetime_seconds: 300 # 连接最大生命周期。
-  conn_max_idle_time_seconds: 60 # 空闲连接最大保留时间。
+  max_conns: 12
+  min_conns: 0
+  max_conn_lifetime_seconds: 1800
+  max_conn_lifetime_jitter_seconds: 300
+  max_conn_idle_time_seconds: 300
+  health_check_period_seconds: 60
+  connect_timeout_seconds: 5
+  ping_timeout_seconds: 3
 
 redis:
   redis_addr: "127.0.0.1:6379"

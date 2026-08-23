@@ -25,7 +25,10 @@ type siteViewCounter interface {
 	TouchSiteViewCount(siteID int64, clientIP string) (int64, common.GFError)
 }
 
-type detailApi struct{}
+type detailApi struct {
+	reader  detailReader
+	counter siteViewCounter
+}
 
 var DetailApi *detailApi
 var detailSvc detailReader
@@ -37,13 +40,31 @@ func init() {
 	DetailApi = &detailApi{}
 }
 
+func New(reader detailReader, counter siteViewCounter) *detailApi {
+	return &detailApi{reader: reader, counter: counter}
+}
+
+func (api detailApi) service() detailReader {
+	if api.reader != nil {
+		return api.reader
+	}
+	return currentDetailService()
+}
+
+func (api detailApi) siteViews() siteViewCounter {
+	if api.counter != nil {
+		return api.counter
+	}
+	return currentSiteViewCounter()
+}
+
 func (api detailApi) GetSiteDetail(c fiber.Ctx) error {
 	siteID, parseErr := util.String2Int64(c.Params("siteId"))
 	if parseErr != nil || siteID <= 0 {
 		return common.NewResponse(c).Error("siteId 参数非法")
 	}
 
-	data, err := currentDetailService().GetSiteDetail(siteID, c.Query("lang", "zh"), c.Query("target"), c.Query("payload_mode"))
+	data, err := api.service().GetSiteDetail(siteID, c.Query("lang", "zh"), c.Query("target"), c.Query("payload_mode"))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -56,7 +77,7 @@ func (api detailApi) TouchSiteView(c fiber.Ctx) error {
 		return common.NewResponse(c).Error("siteId 参数非法")
 	}
 
-	viewCount, err := currentSiteViewCounter().TouchSiteViewCount(siteID, util.GetClientIP(c))
+	viewCount, err := api.siteViews().TouchSiteViewCount(siteID, util.GetClientIP(c))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -73,7 +94,7 @@ func (api detailApi) GetTargetLatest(c fiber.Ctx) error {
 		return common.NewResponse(c).Error("siteId 参数非法")
 	}
 
-	data, err := currentDetailService().GetTargetLatest(siteID, targetParam(c), c.Query("payload_mode"))
+	data, err := api.service().GetTargetLatest(siteID, targetParam(c), c.Query("payload_mode"))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -96,7 +117,7 @@ func (api detailApi) ListTargetObservations(c fiber.Ctx) error {
 		limit = parsedLimit
 	}
 
-	data, err := currentDetailService().ListTargetObservations(siteID, targetParam(c), c.Query("protocol"), limit, c.Query("payload_mode"))
+	data, err := api.service().ListTargetObservations(siteID, targetParam(c), c.Query("protocol"), limit, c.Query("payload_mode"))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -109,7 +130,7 @@ func (api detailApi) GetTargetTrend(c fiber.Ctx) error {
 		return common.NewResponse(c).Error("siteId 参数非法")
 	}
 
-	data, err := currentDetailService().GetTargetTrend(siteID, targetParam(c))
+	data, err := api.service().GetTargetTrend(siteID, targetParam(c))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -122,7 +143,7 @@ func (api detailApi) GetTargetChanges(c fiber.Ctx) error {
 		return common.NewResponse(c).Error("siteId 参数非法")
 	}
 
-	data, err := currentDetailService().GetTargetChanges(siteID, targetParam(c))
+	data, err := api.service().GetTargetChanges(siteID, targetParam(c))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -135,7 +156,7 @@ func (api detailApi) GetTargetLightProbes(c fiber.Ctx) error {
 		return common.NewResponse(c).Error("siteId 参数非法")
 	}
 
-	data, err := currentDetailService().GetTargetLightProbes(siteID, targetParam(c), c.Query("payload_mode"))
+	data, err := api.service().GetTargetLightProbes(siteID, targetParam(c), c.Query("payload_mode"))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}

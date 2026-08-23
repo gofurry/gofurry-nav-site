@@ -24,6 +24,7 @@ import (
 	"github.com/gofurry/gofurry-nav-backend/middleware"
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
 	"github.com/gofurry/monitor"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var Router *router
@@ -45,7 +46,7 @@ func init() {
 
 var once = sync.Once{}
 
-func (router *router) Init() *fiber.App {
+func (router *router) Init(pool *pgxpool.Pool, dependencies NavDependencies) *fiber.App {
 	once.Do(func() {
 	})
 
@@ -59,18 +60,18 @@ func (router *router) Init() *fiber.App {
 		JSONEncoder:  sonic.Marshal,
 		JSONDecoder:  sonic.Unmarshal,
 	})
-	registerHealthChecks(app)
+	registerHealthChecks(app, pool)
 
 	// 注册全局中间件
 	registerMiddlewares(app)
 
 	// 路由分组
-	registerRoutes(app)
+	registerRoutes(app, dependencies)
 
 	return app
 }
 
-func registerRoutes(app *fiber.App) {
+func registerRoutes(app *fiber.App, dependencies NavDependencies) {
 	api := app.Group("/api")
 	v1 := api.Group("/v1")
 
@@ -79,7 +80,7 @@ func registerRoutes(app *fiber.App) {
 
 	if env.GetServerConfig().NavV2.AnyRouteEnabled() {
 		v2 := api.Group("/v2")
-		navV2Api(v2.Group("/nav"), env.GetServerConfig().NavV2)
+		navV2Api(v2.Group("/nav"), env.GetServerConfig().NavV2, dependencies)
 	}
 }
 

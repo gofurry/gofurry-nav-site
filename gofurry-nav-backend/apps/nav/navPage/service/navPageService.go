@@ -15,7 +15,6 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/cachekeys"
-	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/dao"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
 	"github.com/gofurry/gofurry-nav-backend/common/log"
@@ -26,11 +25,24 @@ import (
 	"golang.org/x/text/transform"
 )
 
-type navPageService struct{}
+type navPageStore interface {
+	GetSiteList() ([]models.GfnSite, common.GFError)
+	GetSiteIndexList() ([]models.GfnSiteIndex, common.GFError)
+	GetGroupList() ([]models.GfnSiteGroup, common.GFError)
+	GetGroupMapList() ([]models.GfnSiteGroupMap, common.GFError)
+	GetFeaturedSiteList() ([]models.GfnFeaturedSite, common.GFError)
+	GetSayingByRandom(lang string) (*models.GfnSaying, common.GFError)
+}
+
+type navPageService struct {
+	store navPageStore
+}
 
 var navPageSingleton = new(navPageService)
 
 func GetNavPageService() *navPageService { return navPageSingleton }
+
+func New(store navPageStore) *navPageService { return &navPageService{store: store} }
 
 const siteViewCountCachePrefix = "site:view:count:"
 
@@ -62,7 +74,7 @@ func (svc *navPageService) GetSiteList(lang string) (res []models.SiteVo, err co
 	}
 
 	// 缓存不存在或反序列化失败再从 DB 查询
-	records, err := dao.GetNavPageDao().GetSiteList()
+	records, err := svc.store.GetSiteList()
 	if err != nil {
 		return nil, err
 	}
@@ -101,11 +113,11 @@ func (svc *navPageService) GetGroupList(lang string) (res []models.GroupVo, err 
 	}
 
 	// 缓存失效查 DB
-	groupRecords, err = dao.GetNavPageDao().GetGroupList()
+	groupRecords, err = svc.store.GetGroupList()
 	if err != nil {
 		return nil, err
 	}
-	mappingRecords, err = dao.GetNavPageDao().GetGroupMapList()
+	mappingRecords, err = svc.store.GetGroupMapList()
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +146,7 @@ func (svc *navPageService) GetFeaturedSiteList() (res []models.FeaturedSiteVo, e
 		log.Warn("GetFeaturedSiteList cache unmarshal error:", jsonErr)
 	}
 
-	records, err := dao.GetNavPageDao().GetFeaturedSiteList()
+	records, err := svc.store.GetFeaturedSiteList()
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +486,7 @@ func fetchSuggestionBody(reqURL string, proxyURL *url.URL) ([]byte, error) {
 
 func (svc *navPageService) GetSayingService(lang string) (res models.SayingModel, err common.GFError) {
 	lang = normalizeLang(lang)
-	record, err := dao.GetNavPageDao().GetSayingByRandom(lang)
+	record, err := svc.store.GetSayingByRandom(lang)
 	if err != nil || record == nil {
 		return res, common.NewServiceError(fmt.Sprintf("查询金句记录失败: %v", err))
 	}

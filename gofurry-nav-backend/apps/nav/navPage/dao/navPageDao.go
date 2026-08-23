@@ -1,135 +1,106 @@
 package dao
 
 import (
-	"errors"
-	"sync"
+	"context"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
-	"github.com/gofurry/gofurry-nav-backend/common/abstract"
-	"gorm.io/gorm"
+	cm "github.com/gofurry/gofurry-nav-backend/common/models"
+	navsqlc "github.com/gofurry/gofurry-nav-backend/internal/db/nav/sqlc"
 )
 
-var newNavPageDao = new(navPageDao)
-var navPageDaoMu sync.Mutex
-
-type navPageDao struct{ abstract.Dao }
-
-func GetNavPageDao() *navPageDao {
-	navPageDaoMu.Lock()
-	defer navPageDaoMu.Unlock()
-	if newNavPageDao.Gm == nil {
-		newNavPageDao.Init()
-	}
-	return newNavPageDao
+type NavPageDAO struct {
+	queries *navsqlc.Queries
 }
 
-func (dao *navPageDao) GetSiteList() (res []models.GfnSite, err common.GFError) {
-	db := dao.Gm.Table(models.TableNameGfnSite + " AS s").
-		Select(`
-			s.id,
-			s.name,
-			s.name_en,
-			json_build_object('domain', COALESCE(cd.domains, ARRAY[]::text[]))::text AS domain,
-			s.info,
-			s.info_en,
-			s.create_time,
-			s.update_time,
-			s.country,
-			s.nsfw,
-			s.welfare,
-			s.view_count,
-			s.icon,
-			s.deleted
-		`).
-		Joins(`
-			LEFT JOIN LATERAL (
-				SELECT array_agg(TRIM(COALESCE(prefix, '') || name) ORDER BY id ASC) AS domains
-				FROM ` + models.TableNameGfnCollectorDomain + `
-				WHERE site_id = s.id
-					AND site_id > 0
-					AND deleted IS NOT TRUE
-					AND TRIM(COALESCE(prefix, '') || name) <> ''
-			) cd ON TRUE
-		`).
-		Where("s.deleted IS NOT TRUE")
-	db.Order("s.update_time DESC, s.id DESC")
-	db.Find(&res)
-	if dbErr := db.Error; dbErr != nil {
-		return res, common.NewDaoError(dbErr.Error())
-	}
-	return
+func New(queries *navsqlc.Queries) *NavPageDAO {
+	return &NavPageDAO{queries: queries}
 }
 
-func (dao *navPageDao) GetSiteIndexList() (res []models.GfnSiteIndex, err common.GFError) {
-	db := dao.Gm.Table(models.TableNameGfnSite + " AS s").
-		Select(`
-			s.id,
-			json_build_object('domain', COALESCE(cd.domains, ARRAY[]::text[]))::text AS domain,
-			s.update_time
-		`).
-		Joins(`
-			LEFT JOIN LATERAL (
-				SELECT array_agg(TRIM(COALESCE(prefix, '') || name) ORDER BY id ASC) AS domains
-				FROM ` + models.TableNameGfnCollectorDomain + `
-				WHERE site_id = s.id
-					AND site_id > 0
-					AND deleted IS NOT TRUE
-					AND TRIM(COALESCE(prefix, '') || name) <> ''
-			) cd ON TRUE
-		`).
-		Where("s.deleted IS NOT TRUE")
-	db.Order("s.id ASC")
-	db.Find(&res)
-	if dbErr := db.Error; dbErr != nil {
-		return res, common.NewDaoError(dbErr.Error())
-	}
-	return
-}
-
-func (dao *navPageDao) GetGroupList() (res []models.GfnSiteGroup, err common.GFError) {
-	db := dao.Gm.Table(models.TableNameGfnSiteGroup)
-	db.Order("priority ASC")
-	db.Find(&res)
-	if dbErr := db.Error; dbErr != nil {
-		return res, common.NewDaoError(dbErr.Error())
-	}
-	return
-}
-
-func (dao *navPageDao) GetGroupMapList() (res []models.GfnSiteGroupMap, err common.GFError) {
-	db := dao.Gm.Table(models.TableNameGfnSiteGroupMap)
-	db.Order("group_id ASC, weight DESC, update_time DESC, id DESC, site_id ASC")
-	db.Find(&res)
-	if dbErr := db.Error; dbErr != nil {
-		return res, common.NewDaoError(dbErr.Error())
-	}
-	return
-}
-
-func (dao *navPageDao) GetFeaturedSiteList() (res []models.GfnFeaturedSite, err common.GFError) {
-	db := dao.Gm.Table(models.TableNameGfnFeaturedSite + " AS f").
-		Joins("INNER JOIN " + models.TableNameGfnSite + " AS s ON s.id = f.site_id AND s.deleted IS NOT TRUE").
-		Order("f.weight DESC, f.id DESC")
-	db.Find(&res)
-	if dbErr := db.Error; dbErr != nil {
-		return res, common.NewDaoError(dbErr.Error())
-	}
-	return
-}
-
-// 按语言随机返回一条金句。
-func (dao navPageDao) GetSayingByRandom(lang string) (*models.GfnSaying, common.GFError) {
-	var res models.GfnSaying
-	db := dao.Gm.Table(models.TableNameGfnSaying).
-		Where("language = ?", lang).
-		Order("random()")
-	db.Limit(1).First(&res)
-	if err := db.Error; err != nil {
-		if lang != "zh" && errors.Is(err, gorm.ErrRecordNotFound) {
-			return dao.GetSayingByRandom("zh")
-		}
+func (dao *NavPageDAO) GetSiteList() ([]models.GfnSite, common.GFError) {
+	rows, err := dao.queries.ListPublicSites(context.Background())
+	if err != nil {
 		return nil, common.NewDaoError(err.Error())
 	}
-	return &res, nil
+	result := make([]models.GfnSite, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.GfnSite{
+			ID: row.ID, Name: row.Name, NameEn: row.NameEn, Domain: row.Domain,
+			Info: row.Info, InfoEn: row.InfoEn,
+			CreateTime: cm.LocalTime(row.CreateTime.Time), UpdateTime: cm.LocalTime(row.UpdateTime.Time),
+			Country: row.Country, Nsfw: row.Nsfw, Welfare: row.Welfare,
+			ViewCount: row.ViewCount, Icon: row.Icon, Deleted: row.Deleted,
+		})
+	}
+	return result, nil
+}
+
+func (dao *NavPageDAO) GetSiteIndexList() ([]models.GfnSiteIndex, common.GFError) {
+	rows, err := dao.queries.ListPublicSiteIndex(context.Background())
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
+	}
+	result := make([]models.GfnSiteIndex, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.GfnSiteIndex{
+			ID: row.ID, Domain: row.Domain, UpdateTime: cm.LocalTime(row.UpdateTime.Time),
+		})
+	}
+	return result, nil
+}
+
+func (dao *NavPageDAO) GetGroupList() ([]models.GfnSiteGroup, common.GFError) {
+	rows, err := dao.queries.ListSiteGroups(context.Background())
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
+	}
+	result := make([]models.GfnSiteGroup, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.GfnSiteGroup{
+			ID: row.ID, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn,
+			Priority: row.Priority, CreateTime: row.CreateTime.Time, UpdateTime: row.UpdateTime.Time,
+		})
+	}
+	return result, nil
+}
+
+func (dao *NavPageDAO) GetGroupMapList() ([]models.GfnSiteGroupMap, common.GFError) {
+	rows, err := dao.queries.ListSiteGroupMappings(context.Background())
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
+	}
+	result := make([]models.GfnSiteGroupMap, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.GfnSiteGroupMap{
+			ID: row.ID, SiteID: row.SiteID, GroupID: row.GroupID, Weight: row.Weight,
+			CreateTime: row.CreateTime.Time, UpdateTime: row.UpdateTime.Time,
+		})
+	}
+	return result, nil
+}
+
+func (dao *NavPageDAO) GetFeaturedSiteList() ([]models.GfnFeaturedSite, common.GFError) {
+	rows, err := dao.queries.ListFeaturedSites(context.Background())
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
+	}
+	result := make([]models.GfnFeaturedSite, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.GfnFeaturedSite{
+			ID: row.ID, SiteID: row.SiteID, Weight: row.Weight,
+			CreateTime: row.CreateTime.Time, UpdateTime: row.UpdateTime.Time,
+		})
+	}
+	return result, nil
+}
+
+func (dao *NavPageDAO) GetSayingByRandom(lang string) (*models.GfnSaying, common.GFError) {
+	row, err := dao.queries.GetRandomSaying(context.Background(), lang)
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
+	}
+	return &models.GfnSaying{
+		ID: row.ID, Author: row.Author, Language: row.Language, Saying: row.Saying,
+		CreateTime: row.CreateTime.Time, UpdateTime: row.UpdateTime.Time,
+	}, nil
 }

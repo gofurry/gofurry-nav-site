@@ -1,45 +1,38 @@
 package dao
 
 import (
+	"context"
 	"strings"
-	"sync"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
-	"github.com/gofurry/gofurry-nav-backend/common/abstract"
+	navsqlc "github.com/gofurry/gofurry-nav-backend/internal/db/nav/sqlc"
 )
 
-var (
-	newObservationDao = new(observationDao)
-	observationDaoMu  sync.Mutex
-)
-
-type observationDao struct{ abstract.Dao }
-
-func GetObservationDao() *observationDao {
-	observationDaoMu.Lock()
-	defer observationDaoMu.Unlock()
-	if newObservationDao.Gm == nil {
-		newObservationDao.Init()
-	}
-	return newObservationDao
+type ObservationDAO struct {
+	queries *navsqlc.Queries
 }
 
-func (dao observationDao) ListObservations(siteID int64, target string, protocol string, limit int) ([]models.GfnCollectorObservation, common.GFError) {
-	target = strings.TrimSpace(target)
-	protocol = strings.TrimSpace(protocol)
-	limit = models.NormalizeObservationLimit(limit)
-	records := []models.GfnCollectorObservation{}
+func New(queries *navsqlc.Queries) *ObservationDAO {
+	return &ObservationDAO{queries: queries}
+}
 
-	db := dao.Gm.Table(models.TableNameGfnCollectorObservation).
-		Where("site_id = ?", siteID).
-		Where("target = ?", target).
-		Where("protocol = ?", protocol).
-		Order("observed_at DESC, id DESC").
-		Limit(limit).
-		Find(&records)
-	if db.Error != nil {
-		return nil, common.NewDaoError(db.Error.Error())
+func (dao *ObservationDAO) ListObservations(siteID int64, target string, protocol string, limit int) ([]models.GfnCollectorObservation, common.GFError) {
+	rows, err := dao.queries.ListTargetObservations(context.Background(), navsqlc.ListTargetObservationsParams{
+		SiteID: siteID, Target: strings.TrimSpace(target), Protocol: strings.TrimSpace(protocol),
+		RowLimit: int32(models.NormalizeObservationLimit(limit)),
+	})
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
 	}
-	return records, nil
+	result := make([]models.GfnCollectorObservation, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.GfnCollectorObservation{
+			ID: row.ID, SiteID: row.SiteID, Target: row.Target, Protocol: row.Protocol,
+			Status: row.Status, ObservedAt: row.ObservedAt.Time, DurationMS: row.DurationMs,
+			ErrorCode: row.ErrorCode, ErrorMessage: row.ErrorMessage, Payload: string(row.Payload),
+			SchemaVersion: int(row.SchemaVersion), CreateTime: row.CreateTime.Time,
+		})
+	}
+	return result, nil
 }

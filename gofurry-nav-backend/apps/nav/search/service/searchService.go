@@ -90,6 +90,10 @@ func newSearchService(provider suggestionProvider, cache suggestionCache, now fu
 	return &searchService{provider: provider, cache: cache, now: now}
 }
 
+func New(provider suggestionProvider) *searchService {
+	return newSearchService(provider, redisSuggestionCache{}, time.Now)
+}
+
 func (svc *searchService) GetSearchSuggestions(engine string, query string) models.SearchSuggestionsResponse {
 	engine = normalizeSuggestionEngine(engine)
 	query = normalizeSuggestionQuery(query)

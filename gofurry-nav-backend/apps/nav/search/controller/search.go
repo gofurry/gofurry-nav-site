@@ -11,12 +11,19 @@ import (
 	"github.com/gofurry/gofurry-nav-backend/common/util"
 )
 
-type searchApi struct{}
+type searchApi struct {
+	reader  suggestionsReader
+	limiter suggestionsLimiter
+}
 
 var SearchApi *searchApi
 
 func init() {
 	SearchApi = &searchApi{}
+}
+
+func New(reader suggestionsReader, limiter suggestionsLimiter) *searchApi {
+	return &searchApi{reader: reader, limiter: limiter}
 }
 
 type suggestionsReader interface {
@@ -35,7 +42,11 @@ var (
 )
 
 func (api searchApi) GetSearchSuggestions(c fiber.Ctx) error {
-	allowed, retryAfter := currentSuggestionsLimiter().Allow(util.GetClientIP(c))
+	limiter := api.limiter
+	if limiter == nil {
+		limiter = currentSuggestionsLimiter()
+	}
+	allowed, retryAfter := limiter.Allow(util.GetClientIP(c))
 	if !allowed {
 		if retryAfter > 0 {
 			c.Set("Retry-After", strconv.FormatInt(retryAfter, 10))
@@ -43,7 +54,11 @@ func (api searchApi) GetSearchSuggestions(c fiber.Ctx) error {
 		return common.NewResponse(c).ErrorWithCode("搜索建议请求过于频繁，请稍后再试", fiber.StatusTooManyRequests)
 	}
 
-	data := currentSuggestionsReader().GetSearchSuggestions(c.Query("engine"), c.Query("q"))
+	reader := api.reader
+	if reader == nil {
+		reader = currentSuggestionsReader()
+	}
+	data := reader.GetSearchSuggestions(c.Query("engine"), c.Query("q"))
 	return common.NewResponse(c).SuccessWithData(data)
 }
 

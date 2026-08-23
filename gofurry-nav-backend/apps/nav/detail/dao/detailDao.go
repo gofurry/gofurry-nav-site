@@ -1,56 +1,59 @@
 package dao
 
 import (
+	"context"
 	"errors"
-	"sync"
 
 	detailmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/models"
 	navmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
-	"github.com/gofurry/gofurry-nav-backend/common/abstract"
-	"gorm.io/gorm"
+	cm "github.com/gofurry/gofurry-nav-backend/common/models"
+	navsqlc "github.com/gofurry/gofurry-nav-backend/internal/db/nav/sqlc"
+	"github.com/jackc/pgx/v5"
 )
 
-var (
-	newDetailDao = new(detailDao)
-	detailDaoMu  sync.Mutex
-)
-
-type detailDao struct{ abstract.Dao }
-
-func GetDetailDao() *detailDao {
-	detailDaoMu.Lock()
-	defer detailDaoMu.Unlock()
-	if newDetailDao.Gm == nil {
-		newDetailDao.Init()
-	}
-	return newDetailDao
+type DetailDAO struct {
+	queries *navsqlc.Queries
 }
 
-func (dao detailDao) GetSiteByID(siteID int64) (navmodels.GfnSite, common.GFError) {
-	record := navmodels.GfnSite{}
-	db := dao.Gm.Table(navmodels.TableNameGfnSite).
-		Where("id = ?", siteID).
-		Where("deleted IS NOT TRUE").
-		Take(&record)
-	if db.Error != nil {
-		if errors.Is(db.Error, gorm.ErrRecordNotFound) {
-			return record, common.NewDaoError("404")
-		}
-		return record, common.NewDaoError(db.Error.Error())
-	}
-	return record, nil
+func New(queries *navsqlc.Queries) *DetailDAO {
+	return &DetailDAO{queries: queries}
 }
 
-func (dao detailDao) ListCollectorDomains(siteID int64) ([]detailmodels.CollectorDomain, common.GFError) {
-	records := []detailmodels.CollectorDomain{}
-	db := dao.Gm.Table(detailmodels.TableNameGfnCollectorDomain).
-		Where("site_id = ?", siteID).
-		Where("deleted IS NOT TRUE").
-		Order("id ASC").
-		Find(&records)
-	if db.Error != nil {
-		return nil, common.NewDaoError(db.Error.Error())
+func (dao *DetailDAO) GetSiteByID(siteID int64) (navmodels.GfnSite, common.GFError) {
+	row, err := dao.queries.GetPublicSiteByID(context.Background(), siteID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return navmodels.GfnSite{}, common.NewDaoError("404")
 	}
-	return records, nil
+	if err != nil {
+		return navmodels.GfnSite{}, common.NewDaoError(err.Error())
+	}
+	return navmodels.GfnSite{
+		ID: row.ID, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn,
+		CreateTime: cm.LocalTime(row.CreateTime.Time), UpdateTime: cm.LocalTime(row.UpdateTime.Time),
+		Country: row.Country, Nsfw: row.Nsfw, Welfare: row.Welfare,
+		Icon: row.Icon, Deleted: row.Deleted, ViewCount: row.ViewCount,
+	}, nil
+}
+
+func (dao *DetailDAO) ListCollectorDomains(siteID int64) ([]detailmodels.CollectorDomain, common.GFError) {
+	rows, err := dao.queries.ListPublicCollectorDomains(context.Background(), &siteID)
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
+	}
+	result := make([]detailmodels.CollectorDomain, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, detailmodels.CollectorDomain{
+			ID: row.ID, SiteID: pointerValue(row.SiteID), Name: row.Name, Proxy: row.Proxy,
+			Prefix: row.Prefix, TLS: row.Tls, Deleted: row.Deleted,
+		})
+	}
+	return result, nil
+}
+
+func pointerValue(value *int64) int64 {
+	if value == nil {
+		return 0
+	}
+	return *value
 }

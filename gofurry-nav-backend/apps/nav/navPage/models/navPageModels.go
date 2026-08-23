@@ -6,12 +6,12 @@ const TableNameGfnSaying = "gfn_saying"
 
 // GfnSaying mapped from table <gfn_saying>
 type GfnSaying struct {
-	ID         int64     `gorm:"column:id;type:bigint;primaryKey;comment:金句表ID" json:"id"`                                         // 金句表ID
-	Author     *string   `gorm:"column:author;type:character varying(255);comment:金句提供者" json:"author"`                            // 金句提供者
-	Language   string    `gorm:"column:language;type:character varying(8);not null;default:zh;comment:语言" json:"language"`         // 语言
-	Saying     string    `gorm:"column:saying;type:character varying(255);not null;comment:金句" json:"saying"`                      // 金句
-	CreateTime time.Time `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:创建时间" json:"createTime"` // 创建时间
-	UpdateTime time.Time `gorm:"column:update_time;type:int;type:unsigned;not null;autoUpdateTime;comment:修改时间" json:"updateTime"` // 修改时间
+	ID         int64     `json:"id"`         // 金句表ID
+	Author     *string   `json:"author"`     // 金句提供者
+	Language   string    `json:"language"`   // 语言
+	Saying     string    `json:"saying"`     // 金句
+	CreateTime time.Time `json:"createTime"` // 创建时间
+	UpdateTime time.Time `json:"updateTime"` // 修改时间
 }
 
 // TableName GfnSaying's table name

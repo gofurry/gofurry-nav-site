@@ -1,13 +1,13 @@
 package service
 
 import (
+	"context"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/updates/models"
-	database "github.com/gofurry/gofurry-nav-backend/roof/db"
-	"gorm.io/gorm"
+	navsqlc "github.com/gofurry/gofurry-nav-backend/internal/db/nav/sqlc"
 )
 
 const defaultUpdatesLimit = 100
@@ -16,25 +16,31 @@ type updateNoticeStore interface {
 	ListUpdateNotices(limit int) ([]models.UpdateNotice, error)
 }
 
-type gormUpdateNoticeStore struct {
-	db *gorm.DB
+type sqlcUpdateNoticeStore struct {
+	queries *navsqlc.Queries
 }
 
-func newGormUpdateNoticeStore() *gormUpdateNoticeStore {
-	return &gormUpdateNoticeStore{db: database.Orm.DB()}
+func newSQLCUpdateNoticeStore(queries *navsqlc.Queries) *sqlcUpdateNoticeStore {
+	return &sqlcUpdateNoticeStore{queries: queries}
 }
 
-func (store *gormUpdateNoticeStore) ListUpdateNotices(limit int) ([]models.UpdateNotice, error) {
+func (store *sqlcUpdateNoticeStore) ListUpdateNotices(limit int) ([]models.UpdateNotice, error) {
 	if limit <= 0 {
 		limit = defaultUpdatesLimit
 	}
-	var notices []models.UpdateNotice
-	err := store.db.Model(&models.UpdateNotice{}).
-		Where("deleted IS NOT TRUE").
-		Order("published_at DESC, id DESC").
-		Limit(limit).
-		Find(&notices).Error
-	return notices, err
+	rows, err := store.queries.ListPublicUpdateNotices(context.Background(), int32(limit))
+	if err != nil {
+		return nil, err
+	}
+	notices := make([]models.UpdateNotice, 0, len(rows))
+	for _, row := range rows {
+		notices = append(notices, models.UpdateNotice{
+			ID: row.ID, Title: row.Title, TitleEn: row.TitleEn, Body: row.Body, BodyEn: row.BodyEn,
+			PublishedAt: row.PublishedAt.Time, CreateTime: row.CreateTime.Time,
+			UpdateTime: row.UpdateTime.Time, Deleted: row.Deleted,
+		})
+	}
+	return notices, nil
 }
 
 type updatesService struct {
@@ -50,9 +56,6 @@ var (
 func GetUpdatesService() *updatesService {
 	updatesMu.Lock()
 	defer updatesMu.Unlock()
-	if updatesSingleton.store == nil {
-		updatesSingleton.store = newGormUpdateNoticeStore()
-	}
 	if updatesSingleton.now == nil {
 		updatesSingleton.now = time.Now
 	}
@@ -61,6 +64,10 @@ func GetUpdatesService() *updatesService {
 
 func newUpdatesService(store updateNoticeStore, now func() time.Time) *updatesService {
 	return &updatesService{store: store, now: now}
+}
+
+func New(queries *navsqlc.Queries) *updatesService {
+	return newUpdatesService(newSQLCUpdateNoticeStore(queries), time.Now)
 }
 
 func (svc *updatesService) GetUpdates(lang string) models.UpdatesResponse {
@@ -100,10 +107,7 @@ func (svc *updatesService) GetUpdates(lang string) models.UpdatesResponse {
 }
 
 func (svc *updatesService) source() updateNoticeStore {
-	if svc != nil && svc.store != nil {
-		return svc.store
-	}
-	return newGormUpdateNoticeStore()
+	return svc.store
 }
 
 func (svc *updatesService) clock() func() time.Time {

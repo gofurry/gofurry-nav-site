@@ -4,10 +4,8 @@ import (
 	"strings"
 	"time"
 
-	collectdao "github.com/gofurry/gofurry-nav-backend/apps/nav/collect/dao"
 	collectmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/collect/models"
 	readmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/models"
-	readservice "github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/service"
 	summaryservice "github.com/gofurry/gofurry-nav-backend/apps/nav/summary/service"
 	"github.com/gofurry/gofurry-nav-backend/common"
 )
@@ -34,6 +32,10 @@ type collectService struct {
 var collectSingleton = &collectService{}
 
 func GetCollectService() *collectService { return collectSingleton }
+
+func New(store collectStore, read runStateReader) *collectService {
+	return &collectService{store: store, read: read, now: time.Now}
+}
 
 func (svc *collectService) GetStatus() (collectmodels.CollectStatus, common.GFError) {
 	runs := make([]readmodels.RunStateResponse, 0, len(readmodels.AllProtocols()))
@@ -122,17 +124,11 @@ func (svc *collectService) GetTargetStatus(siteID int64, target string) (collect
 }
 
 func (svc *collectService) storeDAO() collectStore {
-	if svc != nil && svc.store != nil {
-		return svc.store
-	}
-	return collectdao.GetCollectDao()
+	return svc.store
 }
 
 func (svc *collectService) readModels() runStateReader {
-	if svc != nil && svc.read != nil {
-		return svc.read
-	}
-	return readservice.GetReadModelService()
+	return svc.read
 }
 
 func (svc *collectService) clock() func() time.Time {

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	navdao "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/dao"
 	navmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/siteindex/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
@@ -29,9 +28,6 @@ var (
 func GetSiteIndexService() *siteIndexService {
 	siteIndexMu.Lock()
 	defer siteIndexMu.Unlock()
-	if siteIndexSingleton.store == nil {
-		siteIndexSingleton.store = navdao.GetNavPageDao()
-	}
 	if siteIndexSingleton.now == nil {
 		siteIndexSingleton.now = time.Now
 	}
@@ -40,6 +36,10 @@ func GetSiteIndexService() *siteIndexService {
 
 func newSiteIndexService(store siteIndexStore, now func() time.Time) *siteIndexService {
 	return &siteIndexService{store: store, now: now}
+}
+
+func New(store siteIndexStore) *siteIndexService {
+	return newSiteIndexService(store, time.Now)
 }
 
 func (svc *siteIndexService) GetSiteIndex() models.SiteIndexResponse {
@@ -73,10 +73,7 @@ func (svc *siteIndexService) GetSiteIndex() models.SiteIndexResponse {
 }
 
 func (svc *siteIndexService) source() siteIndexStore {
-	if svc != nil && svc.store != nil {
-		return svc.store
-	}
-	return navdao.GetNavPageDao()
+	return svc.store
 }
 
 func (svc *siteIndexService) clock() func() time.Time {

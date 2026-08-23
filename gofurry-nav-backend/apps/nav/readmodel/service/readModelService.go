@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/dao"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
 	log "github.com/gofurry/gofurry-nav-backend/common/log"
@@ -35,14 +34,15 @@ func GetReadModelService() *readModelService {
 	if readModelSingleton.get == nil {
 		readModelSingleton.get = cs.GetString
 	}
-	if readModelSingleton.observations == nil {
-		readModelSingleton.observations = dao.GetObservationDao()
-	}
 	return readModelSingleton
 }
 
 func newReadModelService(get redisGetter, observations observationStore) *readModelService {
 	return &readModelService{get: get, observations: observations}
+}
+
+func New(observations observationStore) *readModelService {
+	return newReadModelService(cs.GetString, observations)
 }
 
 func LatestKey(protocol string, siteID int64) string {
@@ -240,10 +240,7 @@ func (svc *readModelService) redisGetter() redisGetter {
 }
 
 func (svc *readModelService) observationStore() observationStore {
-	if svc != nil && svc.observations != nil {
-		return svc.observations
-	}
-	return dao.GetObservationDao()
+	return svc.observations
 }
 
 func validateSiteTarget(siteID int64, target string) (string, common.GFError) {

@@ -14,9 +14,9 @@ type CollectStatus struct {
 }
 
 type ObservationStatusSummary struct {
-	Protocol string `gorm:"column:protocol" json:"protocol"`
-	Status   string `gorm:"column:status" json:"status"`
-	Count    int64  `gorm:"column:count" json:"count"`
+	Protocol string `json:"protocol"`
+	Status   string `json:"status"`
+	Count    int64  `json:"count"`
 }
 
 type ObservationQuery struct {
@@ -29,17 +29,17 @@ type ObservationQuery struct {
 }
 
 type ObservationItem struct {
-	ID           int64     `gorm:"column:id" json:"id"`
-	SiteID       int64     `gorm:"column:site_id" json:"site_id"`
-	Target       string    `gorm:"column:target" json:"target"`
-	Protocol     string    `gorm:"column:protocol" json:"protocol"`
-	Status       string    `gorm:"column:status" json:"status"`
-	ObservedAt   time.Time `gorm:"column:observed_at" json:"observed_at"`
-	DurationMS   int64     `gorm:"column:duration_ms" json:"duration_ms"`
-	ErrorCode    *string   `gorm:"column:error_code" json:"error_code,omitempty"`
-	ErrorMessage *string   `gorm:"column:error_message" json:"error_message,omitempty"`
-	CollectorID  string    `gorm:"column:collector_id" json:"collector_id,omitempty"`
-	JobID        string    `gorm:"column:job_id" json:"job_id,omitempty"`
+	ID           int64     `json:"id"`
+	SiteID       int64     `json:"site_id"`
+	Target       string    `json:"target"`
+	Protocol     string    `json:"protocol"`
+	Status       string    `json:"status"`
+	ObservedAt   time.Time `json:"observed_at"`
+	DurationMS   int64     `json:"duration_ms"`
+	ErrorCode    *string   `json:"error_code,omitempty"`
+	ErrorMessage *string   `json:"error_message,omitempty"`
+	CollectorID  string    `json:"collector_id,omitempty"`
+	JobID        string    `json:"job_id,omitempty"`
 }
 
 type SiteCollectStatus struct {

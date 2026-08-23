@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	detaildao "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/dao"
 	detailmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/models"
 	navmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	readmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/models"
@@ -56,9 +55,6 @@ var (
 func GetDetailService() *detailService {
 	detailMu.Lock()
 	defer detailMu.Unlock()
-	if detailSingleton.sites == nil {
-		detailSingleton.sites = detaildao.GetDetailDao()
-	}
 	if detailSingleton.summaries == nil {
 		detailSingleton.summaries = summaryservice.GetSummaryService()
 	}
@@ -78,6 +74,10 @@ func newDetailService(sites siteStore, summaries summaryReader, readModel readMo
 		readModel: readModel,
 		now:       now,
 	}
+}
+
+func New(sites siteStore, summaries summaryReader, readModel readModelReader) *detailService {
+	return newDetailService(sites, summaries, readModel, time.Now)
 }
 
 func (svc *detailService) GetSiteDetail(siteID int64, lang string, target string, payloadMode string) (detailmodels.SiteDetailResponse, common.GFError) {
@@ -320,10 +320,7 @@ func (svc *detailService) loadSite(siteID int64) (navmodels.GfnSite, common.GFEr
 }
 
 func (svc *detailService) siteStore() siteStore {
-	if svc != nil && svc.sites != nil {
-		return svc.sites
-	}
-	return detaildao.GetDetailDao()
+	return svc.sites
 }
 
 func (svc *detailService) summaryService() summaryReader {

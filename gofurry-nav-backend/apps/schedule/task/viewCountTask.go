@@ -3,8 +3,7 @@ package task
 import (
 	"strings"
 
-	navModels "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
-	navDao "github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/dao"
+	"github.com/gofurry/gofurry-nav-backend/common"
 	"github.com/gofurry/gofurry-nav-backend/common/log"
 	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 	"github.com/gofurry/gofurry-nav-backend/common/util"
@@ -12,7 +11,11 @@ import (
 
 const siteViewCountPrefix = "site:view:count:"
 
-func UpdateSiteViewCountCache() {
+type SiteViewStore interface {
+	UpdateViewCount(siteID int64, viewCount int64) common.GFError
+}
+
+func UpdateSiteViewCountCache(store SiteViewStore) {
 	keys, err := cs.FindByPrefix(siteViewCountPrefix)
 	if err != nil {
 		log.Error("[UpdateSiteViewCountCache] find redis keys err:", err)
@@ -36,7 +39,7 @@ func UpdateSiteViewCountCache() {
 			continue
 		}
 
-		if dbErr := navDao.GetSitePageDao().Gm.Table(navModels.TableNameGfnSite).Where("id = ?", siteID).Update("view_count", viewCount).Error; dbErr != nil {
+		if dbErr := store.UpdateViewCount(siteID, viewCount); dbErr != nil {
 			log.Error("[UpdateSiteViewCountCache] update site view count err:", dbErr)
 		}
 	}

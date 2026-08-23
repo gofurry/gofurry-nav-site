@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
 	"runtime/debug"
@@ -12,10 +13,11 @@ import (
 	"github.com/gofurry/gofurry-nav-backend/common"
 	gfLog "github.com/gofurry/gofurry-nav-backend/common/log"
 	cs "github.com/gofurry/gofurry-nav-backend/common/service"
+	"github.com/gofurry/gofurry-nav-backend/internal/infra/postgres"
 	"github.com/gofurry/gofurry-nav-backend/middleware"
-	"github.com/gofurry/gofurry-nav-backend/roof/db"
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
 	"github.com/gofurry/gofurry-nav-backend/routers"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kardianos/service"
 )
 
@@ -100,7 +102,10 @@ gf-nav V1.0.0
 	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
 
 	// 初始化系统服务
-	InitOnStart()
+	if err := prg.InitOnStart(); err != nil {
+		gfLog.ErrorKV("initialize service", "error", err)
+		return
+	}
 	// 启动系统
 	err = s.Run()
 	if err != nil {
@@ -109,11 +114,13 @@ gf-nav V1.0.0
 }
 
 type goFurry struct {
-	mu  sync.Mutex
-	app *fiber.App
+	mu           sync.Mutex
+	app          *fiber.App
+	pool         *pgxpool.Pool
+	dependencies applicationDependencies
 }
 
-func InitOnStart() {
+func (gf *goFurry) InitOnStart() error {
 	cfg := env.GetServerConfig()
 	// 初始化自定义日志
 	logCfg := &gfLog.Config{
@@ -139,8 +146,7 @@ func InitOnStart() {
 	// 初始化自定义日志
 	err := gfLog.InitLogger(logCfg)
 	if err != nil {
-		gfLog.ErrorKV(err.Error())
-		os.Exit(1)
+		return err
 	}
 
 	// 初始化 Coraza 中间件
@@ -151,13 +157,23 @@ func InitOnStart() {
 	cs.InitRedisOnStart()
 	// 初始化时间调度
 	cs.InitTimeWheelOnStart()
+	if err := gf.initPostgres(); err != nil {
+		return err
+	}
+	gf.dependencies = newApplicationDependencies(gf.pool)
 
 	// 初始化定时任务
-	schedule.InitScheduleOnStart()
+	schedule.InitScheduleOnStart(
+		gf.dependencies.navStore,
+		gf.dependencies.navReader,
+		gf.dependencies.home,
+		gf.dependencies.views,
+	)
+	return nil
 }
 
 func (gf *goFurry) Start(s service.Service) error {
-	app := routers.Router.Init()
+	app := routers.Router.Init(gf.pool, gf.dependencies.routes)
 	gf.mu.Lock()
 	gf.app = app
 	gf.mu.Unlock()
@@ -187,7 +203,42 @@ func (gf *goFurry) Stop(s service.Service) error {
 	if app != nil {
 		shutdownErr = app.ShutdownWithTimeout(10 * time.Second)
 	}
-	db.Orm.Close() // 关闭数据库连接池
+	if gf.pool != nil {
+		gf.pool.Close()
+		gf.pool = nil
+	}
 	redisErr := cs.CloseRedis()
-	return errors.Join(shutdownErr, redisErr)
+	return errors.Join(shutdownErr, redisErr, gfLog.Sync())
+}
+
+func (gf *goFurry) initPostgres() error {
+	dbConfig := env.GetServerConfig().DataBase
+	ctx, cancel := context.WithTimeout(context.Background(), durationOrDefault(
+		dbConfig.ConnectTimeoutSeconds+dbConfig.PingTimeoutSeconds, 8*time.Second))
+	defer cancel()
+	pool, err := postgres.Open(ctx, postgres.Config{
+		ConnectionString:      dbConfig.ConnectionString(),
+		MaxConns:              dbConfig.MaxConns,
+		MinConns:              dbConfig.MinConns,
+		MaxConnLifetime:       seconds(dbConfig.MaxConnLifetimeSeconds),
+		MaxConnLifetimeJitter: seconds(dbConfig.MaxConnLifetimeJitterSeconds),
+		MaxConnIdleTime:       seconds(dbConfig.MaxConnIdleTimeSeconds),
+		HealthCheckPeriod:     seconds(dbConfig.HealthCheckPeriodSeconds),
+		ConnectTimeout:        seconds(dbConfig.ConnectTimeoutSeconds),
+		PingTimeout:           seconds(dbConfig.PingTimeoutSeconds),
+	}, "gofurry-nav-backend")
+	if err != nil {
+		return err
+	}
+	gf.pool = pool
+	return nil
+}
+
+func seconds(value int) time.Duration { return time.Duration(value) * time.Second }
+
+func durationOrDefault(totalSeconds int, fallback time.Duration) time.Duration {
+	if totalSeconds <= 0 {
+		return fallback
+	}
+	return time.Duration(totalSeconds) * time.Second
 }

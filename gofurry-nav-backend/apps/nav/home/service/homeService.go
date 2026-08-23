@@ -54,6 +54,10 @@ func newHomeService(navPage navHomeReader, now func() time.Time) *homeService {
 	return &homeService{navPage: navPage, now: now}
 }
 
+func New(navPage navHomeReader) *homeService {
+	return newHomeService(navPage, time.Now)
+}
+
 func (svc *homeService) GetHome(lang string) models.HomeResponse {
 	lang = normalizeLang(lang)
 	response := models.HomeResponse{

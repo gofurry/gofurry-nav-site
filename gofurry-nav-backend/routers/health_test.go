@@ -11,7 +11,7 @@ import (
 
 func TestHealthEndpoints(t *testing.T) {
 	app := fiber.New()
-	registerHealthChecks(app)
+	registerHealthChecks(app, nil)
 
 	liveness, err := app.Test(httptest.NewRequest(http.MethodGet, healthcheck.LivenessEndpoint, http.NoBody))
 	if err != nil {

@@ -1,32 +1,41 @@
 package dao
 
 import (
-	"sync"
+	"context"
 
-	siteModel "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
+	sitemodel "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
-	"github.com/gofurry/gofurry-nav-backend/common/abstract"
+	cm "github.com/gofurry/gofurry-nav-backend/common/models"
+	navsqlc "github.com/gofurry/gofurry-nav-backend/internal/db/nav/sqlc"
 )
 
-var newSitePageDao = new(sitePageDao)
-var sitePageDaoMu sync.Mutex
-
-type sitePageDao struct{ abstract.Dao }
-
-func GetSitePageDao() *sitePageDao {
-	sitePageDaoMu.Lock()
-	defer sitePageDaoMu.Unlock()
-	if newSitePageDao.Gm == nil {
-		newSitePageDao.Init()
-	}
-	return newSitePageDao
+type SitePageDAO struct {
+	queries *navsqlc.Queries
 }
 
-func (dao sitePageDao) GetSiteById(id int64) (record siteModel.GfnSite, err common.GFError) {
-	db := dao.Gm.Table(siteModel.TableNameGfnSite)
-	db.Where("id = ?", id).Take(&record)
-	if dbErr := db.Error; dbErr != nil {
-		return record, common.NewDaoError(dbErr.Error())
+func New(queries *navsqlc.Queries) *SitePageDAO {
+	return &SitePageDAO{queries: queries}
+}
+
+func (dao *SitePageDAO) GetSiteById(id int64) (sitemodel.GfnSite, common.GFError) {
+	row, err := dao.queries.GetSiteByID(context.Background(), id)
+	if err != nil {
+		return sitemodel.GfnSite{}, common.NewDaoError(err.Error())
 	}
-	return
+	return sitemodel.GfnSite{
+		ID: row.ID, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn,
+		CreateTime: cm.LocalTime(row.CreateTime.Time), UpdateTime: cm.LocalTime(row.UpdateTime.Time),
+		Country: row.Country, Nsfw: row.Nsfw, Welfare: row.Welfare,
+		Icon: row.Icon, Deleted: row.Deleted, ViewCount: row.ViewCount,
+	}, nil
+}
+
+func (dao *SitePageDAO) UpdateViewCount(siteID int64, viewCount int64) common.GFError {
+	err := dao.queries.UpdateSiteViewCount(context.Background(), navsqlc.UpdateSiteViewCountParams{
+		SiteID: siteID, ViewCount: viewCount,
+	})
+	if err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	return nil
 }

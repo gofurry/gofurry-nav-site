@@ -13,7 +13,7 @@ type siteIndexReader interface {
 	GetSiteIndex() models.SiteIndexResponse
 }
 
-type siteIndexApi struct{}
+type siteIndexApi struct{ reader siteIndexReader }
 
 var SiteIndexApi *siteIndexApi
 
@@ -26,8 +26,14 @@ func init() {
 	SiteIndexApi = &siteIndexApi{}
 }
 
+func New(reader siteIndexReader) *siteIndexApi { return &siteIndexApi{reader: reader} }
+
 func (api siteIndexApi) GetSiteIndex(c fiber.Ctx) error {
-	return common.NewResponse(c).SuccessWithData(currentSiteIndexReader().GetSiteIndex())
+	reader := api.reader
+	if reader == nil {
+		reader = currentSiteIndexReader()
+	}
+	return common.NewResponse(c).SuccessWithData(reader.GetSiteIndex())
 }
 
 func currentSiteIndexReader() siteIndexReader {
