@@ -82,39 +82,68 @@ type GfnCollectorLogPing struct {
 	CreateTime pgtype.Timestamp `json:"create_time"`
 }
 
+// 采集观测表
 type GfnCollectorObservation struct {
-	ID            int64              `json:"id"`
-	SiteID        int64              `json:"site_id"`
-	Target        string             `json:"target"`
-	Protocol      string             `json:"protocol"`
-	Status        string             `json:"status"`
-	ObservedAt    pgtype.Timestamptz `json:"observed_at"`
-	DurationMs    *int64             `json:"duration_ms"`
-	ErrorCode     *string            `json:"error_code"`
-	ErrorMessage  *string            `json:"error_message"`
-	Payload       []byte             `json:"payload"`
-	SchemaVersion int32              `json:"schema_version"`
-	CreateTime    pgtype.Timestamptz `json:"create_time"`
+	// 采集观测表id
+	ID int64 `json:"id"`
+	// 站点id
+	SiteID int64 `json:"site_id"`
+	// 站点域名
+	Target string `json:"target"`
+	// 采集协议
+	Protocol string `json:"protocol"`
+	// 采集状态
+	Status string `json:"status"`
+	// 观测时间
+	ObservedAt pgtype.Timestamptz `json:"observed_at"`
+	// 观测时长
+	DurationMs *int64 `json:"duration_ms"`
+	// 错误码
+	ErrorCode *string `json:"error_code"`
+	// 错误信息
+	ErrorMessage *string `json:"error_message"`
+	// 观测数据结果
+	Payload []byte `json:"payload"`
+	// schema 版本
+	SchemaVersion int32 `json:"schema_version"`
+	// 创建时间
+	CreateTime pgtype.Timestamptz `json:"create_time"`
 }
 
+// 精选站点表
 type GfnFeaturedSite struct {
-	ID         int64            `json:"id"`
-	SiteID     int64            `json:"site_id"`
-	Weight     int64            `json:"weight"`
+	// 精选站点表id
+	ID int64 `json:"id"`
+	// 站点id
+	SiteID int64 `json:"site_id"`
+	// 权重
+	Weight int64 `json:"weight"`
+	// 创建时间
 	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 更新时间
 	UpdateTime pgtype.Timestamp `json:"update_time"`
 }
 
+// 站点更新公告表
 type GfnNavUpdateNotice struct {
-	ID          int64            `json:"id"`
-	Title       string           `json:"title"`
-	TitleEn     string           `json:"title_en"`
-	Body        string           `json:"body"`
-	BodyEn      string           `json:"body_en"`
+	// 站点更新公告表id
+	ID int64 `json:"id"`
+	// 更新公告标题
+	Title string `json:"title"`
+	// 更新公告标题 - 英文
+	TitleEn string `json:"title_en"`
+	// 更新公告内容
+	Body string `json:"body"`
+	// 更新公告内容 - 英文
+	BodyEn string `json:"body_en"`
+	// 发布时间
 	PublishedAt pgtype.Timestamp `json:"published_at"`
-	CreateTime  pgtype.Timestamp `json:"create_time"`
-	UpdateTime  pgtype.Timestamp `json:"update_time"`
-	Deleted     bool             `json:"deleted"`
+	// 创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 更新时间
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+	// 软删除
+	Deleted bool `json:"deleted"`
 }
 
 // 金句表
@@ -157,7 +186,8 @@ type GfnSite struct {
 	// 站点图标
 	Icon *string `json:"icon"`
 	// 软删除
-	Deleted   bool  `json:"deleted"`
+	Deleted bool `json:"deleted"`
+	// 浏览量
 	ViewCount int64 `json:"view_count"`
 }
 

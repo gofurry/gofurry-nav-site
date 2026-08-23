@@ -403,81 +403,94 @@
     },
     {
       "name": "gfn_collector_observation",
+      "comment": "采集观测表",
       "columns": [
         {
           "name": "id",
           "data_type": "bigint",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "采集观测表id"
         },
         {
           "name": "site_id",
           "data_type": "bigint",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "站点id"
         },
         {
           "name": "target",
           "data_type": "character varying(255)",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "站点域名"
         },
         {
           "name": "protocol",
           "data_type": "character varying(16)",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "采集协议"
         },
         {
           "name": "status",
           "data_type": "character varying(32)",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "采集状态"
         },
         {
           "name": "observed_at",
           "data_type": "timestamp with time zone",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "观测时间"
         },
         {
           "name": "duration_ms",
           "data_type": "bigint",
           "not_null": false,
-          "has_default": false
+          "has_default": false,
+          "comment": "观测时长"
         },
         {
           "name": "error_code",
           "data_type": "character varying(64)",
           "not_null": false,
-          "has_default": false
+          "has_default": false,
+          "comment": "错误码"
         },
         {
           "name": "error_message",
           "data_type": "text",
           "not_null": false,
-          "has_default": false
+          "has_default": false,
+          "comment": "错误信息"
         },
         {
           "name": "payload",
           "data_type": "jsonb",
           "not_null": true,
           "has_default": true,
-          "default": "'{}'::jsonb"
+          "default": "'{}'::jsonb",
+          "comment": "观测数据结果"
         },
         {
           "name": "schema_version",
           "data_type": "integer",
           "not_null": true,
           "has_default": true,
-          "default": "1"
+          "default": "1",
+          "comment": "schema 版本"
         },
         {
           "name": "create_time",
           "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
-          "default": "now()"
+          "default": "now()",
+          "comment": "创建时间"
         }
       ],
       "constraints": [
@@ -544,39 +557,45 @@
     },
     {
       "name": "gfn_featured_site",
+      "comment": "精选站点表",
       "columns": [
         {
           "name": "id",
           "data_type": "bigint",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "精选站点表id"
         },
         {
           "name": "site_id",
           "data_type": "bigint",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "站点id"
         },
         {
           "name": "weight",
           "data_type": "bigint",
           "not_null": true,
           "has_default": true,
-          "default": "0"
+          "default": "0",
+          "comment": "权重"
         },
         {
           "name": "create_time",
           "data_type": "timestamp without time zone",
           "not_null": true,
           "has_default": true,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "创建时间"
         },
         {
           "name": "update_time",
           "data_type": "timestamp without time zone",
           "not_null": true,
           "has_default": true,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "更新时间"
         }
       ],
       "constraints": [
@@ -619,63 +638,73 @@
     },
     {
       "name": "gfn_nav_update_notice",
+      "comment": "站点更新公告表",
       "columns": [
         {
           "name": "id",
           "data_type": "bigint",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "站点更新公告表id"
         },
         {
           "name": "title",
           "data_type": "character varying(120)",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "更新公告标题"
         },
         {
           "name": "title_en",
           "data_type": "character varying(120)",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "更新公告标题 - 英文"
         },
         {
           "name": "body",
           "data_type": "text",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "更新公告内容"
         },
         {
           "name": "body_en",
           "data_type": "text",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "更新公告内容 - 英文"
         },
         {
           "name": "published_at",
           "data_type": "timestamp(0) without time zone",
           "not_null": true,
-          "has_default": false
+          "has_default": false,
+          "comment": "发布时间"
         },
         {
           "name": "create_time",
           "data_type": "timestamp(0) without time zone",
           "not_null": true,
           "has_default": true,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "创建时间"
         },
         {
           "name": "update_time",
           "data_type": "timestamp(0) without time zone",
           "not_null": true,
           "has_default": true,
-          "default": "CURRENT_TIMESTAMP"
+          "default": "CURRENT_TIMESTAMP",
+          "comment": "更新时间"
         },
         {
           "name": "deleted",
           "data_type": "boolean",
           "not_null": true,
           "has_default": true,
-          "default": "false"
+          "default": "false",
+          "comment": "软删除"
         }
       ],
       "constraints": [
@@ -927,7 +956,8 @@
           "data_type": "bigint",
           "not_null": true,
           "has_default": true,
-          "default": "0"
+          "default": "0",
+          "comment": "浏览量"
         }
       ],
       "constraints": [

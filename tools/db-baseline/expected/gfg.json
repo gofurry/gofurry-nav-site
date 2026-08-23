@@ -15,7 +15,9 @@
       "minimum": 1,
       "maximum": 9223372036854775807,
       "cache": 1,
-      "cycle": false
+      "cycle": false,
+      "owned_table": "gfg_game_v2_assets",
+      "owned_column": "id"
     },
     {
       "name": "gfg_game_v2_collect_task_results_id_seq",
@@ -25,7 +27,9 @@
       "minimum": 1,
       "maximum": 9223372036854775807,
       "cache": 1,
-      "cycle": false
+      "cycle": false,
+      "owned_table": "gfg_game_v2_collect_task_results",
+      "owned_column": "id"
     },
     {
       "name": "gfg_game_v2_detail_snapshots_id_seq",
@@ -35,7 +39,9 @@
       "minimum": 1,
       "maximum": 9223372036854775807,
       "cache": 1,
-      "cycle": false
+      "cycle": false,
+      "owned_table": "gfg_game_v2_detail_snapshots",
+      "owned_column": "id"
     },
     {
       "name": "gfg_game_v2_media_id_seq",
@@ -45,7 +51,9 @@
       "minimum": 1,
       "maximum": 9223372036854775807,
       "cache": 1,
-      "cycle": false
+      "cycle": false,
+      "owned_table": "gfg_game_v2_media",
+      "owned_column": "id"
     },
     {
       "name": "gfg_game_v2_news_id_seq",
@@ -55,7 +63,9 @@
       "minimum": 1,
       "maximum": 9223372036854775807,
       "cache": 1,
-      "cycle": false
+      "cycle": false,
+      "owned_table": "gfg_game_v2_news",
+      "owned_column": "id"
     },
     {
       "name": "gfg_game_v2_player_counts_id_seq",
@@ -65,7 +75,9 @@
       "minimum": 1,
       "maximum": 9223372036854775807,
       "cache": 1,
-      "cycle": false
+      "cycle": false,
+      "owned_table": "gfg_game_v2_player_counts",
+      "owned_column": "id"
     }
   ],
   "tables": [
@@ -530,52 +542,52 @@
       ],
       "constraints": [
         {
-          "name": "gfg_game_creator_deprecated_20260614_cover_not_null",
+          "name": "gfg_game_creator_cover_not_null",
           "definition": "NOT NULL cover"
         },
         {
-          "name": "gfg_game_creator_deprecated_20260614_create_time_not_null",
+          "name": "gfg_game_creator_create_time_not_null",
           "definition": "NOT NULL create_time"
         },
         {
-          "name": "gfg_game_creator_deprecated_20260614_deleted_not_null",
+          "name": "gfg_game_creator_deleted_not_null",
           "definition": "NOT NULL deleted"
         },
         {
-          "name": "gfg_game_creator_deprecated_20260614_id_not_null",
+          "name": "gfg_game_creator_id_not_null",
           "definition": "NOT NULL id"
         },
         {
-          "name": "gfg_game_creator_deprecated_20260614_info_en_not_null",
+          "name": "gfg_game_creator_info_en_not_null",
           "definition": "NOT NULL info_en"
         },
         {
-          "name": "gfg_game_creator_deprecated_20260614_info_not_null",
+          "name": "gfg_game_creator_info_not_null",
           "definition": "NOT NULL info"
         },
         {
-          "name": "gfg_game_creator_deprecated_20260614_main_url_not_null",
+          "name": "gfg_game_creator_main_url_not_null",
           "definition": "NOT NULL main_url"
         },
         {
-          "name": "gfg_game_creator_deprecated_20260614_name_en_not_null",
+          "name": "gfg_game_creator_name_en_not_null",
           "definition": "NOT NULL name_en"
         },
         {
-          "name": "gfg_game_creator_deprecated_20260614_name_not_null",
+          "name": "gfg_game_creator_name_not_null",
           "definition": "NOT NULL name"
-        },
-        {
-          "name": "gfg_game_creator_deprecated_20260614_type_not_null",
-          "definition": "NOT NULL type"
-        },
-        {
-          "name": "gfg_game_creator_deprecated_20260614_update_time_not_null",
-          "definition": "NOT NULL update_time"
         },
         {
           "name": "gfg_game_creator_pkey",
           "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_game_creator_type_not_null",
+          "definition": "NOT NULL type"
+        },
+        {
+          "name": "gfg_game_creator_update_time_not_null",
+          "definition": "NOT NULL update_time"
         }
       ],
       "indexes": [
@@ -1101,20 +1113,20 @@
         },
         {
           "name": "checked_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": false,
           "has_default": false
         },
         {
           "name": "collected_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
         },
         {
           "name": "updated_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
@@ -1287,14 +1299,14 @@
         },
         {
           "name": "started_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
         },
         {
           "name": "ended_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": false,
           "has_default": false
         },
@@ -1474,14 +1486,14 @@
         },
         {
           "name": "started_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
         },
         {
           "name": "ended_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": false,
           "has_default": false
         }
@@ -1620,7 +1632,7 @@
         },
         {
           "name": "collected_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
@@ -1802,14 +1814,14 @@
         },
         {
           "name": "collected_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
         },
         {
           "name": "updated_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
@@ -1955,14 +1967,14 @@
         },
         {
           "name": "collected_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
         },
         {
           "name": "updated_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
@@ -2090,14 +2102,14 @@
         },
         {
           "name": "collected_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
         },
         {
           "name": "updated_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
@@ -2297,19 +2309,19 @@
         },
         {
           "name": "published_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": false,
           "has_default": false
         },
         {
           "name": "updated_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": false,
           "has_default": false
         },
         {
           "name": "collected_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
@@ -2468,7 +2480,7 @@
         },
         {
           "name": "collected_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
@@ -2615,14 +2627,14 @@
         },
         {
           "name": "collected_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
         },
         {
           "name": "updated_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
@@ -2746,7 +2758,7 @@
         },
         {
           "name": "computed_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
@@ -2840,14 +2852,14 @@
         },
         {
           "name": "collected_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"
         },
         {
           "name": "updated_at",
-          "data_type": "timestamp(6) with time zone",
+          "data_type": "timestamp with time zone",
           "not_null": true,
           "has_default": true,
           "default": "now()"

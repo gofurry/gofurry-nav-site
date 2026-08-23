@@ -86,19 +86,19 @@ CREATE TABLE public."gfg_game_comment" (
 );
 
 CREATE TABLE public."gfg_game_creator_deprecated_20260614" (
-    "id" bigint NOT NULL,
-    "name" character varying(100) NOT NULL,
-    "info" character varying(700) NOT NULL,
-    "main_url" character varying(255) NOT NULL,
+    "id" bigint CONSTRAINT "gfg_game_creator_id_not_null" NOT NULL,
+    "name" character varying(100) CONSTRAINT "gfg_game_creator_name_not_null" NOT NULL,
+    "info" character varying(700) CONSTRAINT "gfg_game_creator_info_not_null" NOT NULL,
+    "main_url" character varying(255) CONSTRAINT "gfg_game_creator_main_url_not_null" NOT NULL,
     "links" jsonb,
-    "cover" character varying(255) NOT NULL,
+    "cover" character varying(255) CONSTRAINT "gfg_game_creator_cover_not_null" NOT NULL,
     "contact" jsonb,
-    "create_time" timestamp(0) without time zone NOT NULL,
-    "update_time" timestamp(0) without time zone NOT NULL,
-    "type" bigint NOT NULL,
-    "name_en" character varying(100) NOT NULL,
-    "info_en" character varying(700) NOT NULL,
-    "deleted" boolean NOT NULL
+    "create_time" timestamp(0) without time zone CONSTRAINT "gfg_game_creator_create_time_not_null" NOT NULL,
+    "update_time" timestamp(0) without time zone CONSTRAINT "gfg_game_creator_update_time_not_null" NOT NULL,
+    "type" bigint CONSTRAINT "gfg_game_creator_type_not_null" NOT NULL,
+    "name_en" character varying(100) CONSTRAINT "gfg_game_creator_name_en_not_null" NOT NULL,
+    "info_en" character varying(700) CONSTRAINT "gfg_game_creator_info_en_not_null" NOT NULL,
+    "deleted" boolean CONSTRAINT "gfg_game_creator_deleted_not_null" NOT NULL
 );
 
 CREATE TABLE public."gfg_game_news" (
@@ -158,9 +158,9 @@ CREATE TABLE public."gfg_game_v2_assets" (
     "content_length" bigint DEFAULT 0 NOT NULL,
     "extra" jsonb DEFAULT '{}'::jsonb NOT NULL,
     "sort_order" integer DEFAULT 0 NOT NULL,
-    "checked_at" timestamp(6) with time zone,
-    "collected_at" timestamp(6) with time zone DEFAULT now() NOT NULL,
-    "updated_at" timestamp(6) with time zone DEFAULT now() NOT NULL
+    "checked_at" timestamp with time zone,
+    "collected_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public."gfg_game_v2_collect_runs" (
@@ -173,8 +173,8 @@ CREATE TABLE public."gfg_game_v2_collect_runs" (
     "skipped_count" integer DEFAULT 0 NOT NULL,
     "error_kind" text DEFAULT ''::text NOT NULL,
     "error_message" text DEFAULT ''::text NOT NULL,
-    "started_at" timestamp(6) with time zone DEFAULT now() NOT NULL,
-    "ended_at" timestamp(6) with time zone,
+    "started_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "ended_at" timestamp with time zone,
     "partial_count" integer DEFAULT 0 NOT NULL,
     "task_summary" jsonb DEFAULT '[]'::jsonb NOT NULL,
     "duration_millis" bigint DEFAULT 0 NOT NULL
@@ -193,8 +193,8 @@ CREATE TABLE public."gfg_game_v2_collect_task_results" (
     "duration_millis" bigint DEFAULT 0 NOT NULL,
     "error_kind" text DEFAULT ''::text NOT NULL,
     "error_message" text DEFAULT ''::text NOT NULL,
-    "started_at" timestamp(6) with time zone DEFAULT now() NOT NULL,
-    "ended_at" timestamp(6) with time zone
+    "started_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "ended_at" timestamp with time zone
 );
 
 CREATE TABLE public."gfg_game_v2_detail_snapshots" (
@@ -206,7 +206,7 @@ CREATE TABLE public."gfg_game_v2_detail_snapshots" (
     "source" text DEFAULT 'steam'::text NOT NULL,
     "payload_hash" text DEFAULT ''::text NOT NULL,
     "raw_payload" jsonb NOT NULL,
-    "collected_at" timestamp(6) with time zone DEFAULT now() NOT NULL
+    "collected_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public."gfg_game_v2_details" (
@@ -227,8 +227,8 @@ CREATE TABLE public."gfg_game_v2_details" (
     "support_info" jsonb DEFAULT '{}'::jsonb NOT NULL,
     "content_descriptors" jsonb DEFAULT '{}'::jsonb NOT NULL,
     "ratings" jsonb DEFAULT '[]'::jsonb NOT NULL,
-    "collected_at" timestamp(6) with time zone DEFAULT now() NOT NULL,
-    "updated_at" timestamp(6) with time zone DEFAULT now() NOT NULL
+    "collected_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public."gfg_game_v2_localized_details" (
@@ -239,8 +239,8 @@ CREATE TABLE public."gfg_game_v2_localized_details" (
     "short_description" text DEFAULT ''::text NOT NULL,
     "detailed_description" text DEFAULT ''::text NOT NULL,
     "about_the_game" text DEFAULT ''::text NOT NULL,
-    "collected_at" timestamp(6) with time zone DEFAULT now() NOT NULL,
-    "updated_at" timestamp(6) with time zone DEFAULT now() NOT NULL
+    "collected_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public."gfg_game_v2_media" (
@@ -254,8 +254,8 @@ CREATE TABLE public."gfg_game_v2_media" (
     "thumbnail_url" text DEFAULT ''::text NOT NULL,
     "extra" jsonb DEFAULT '{}'::jsonb NOT NULL,
     "sort_order" integer DEFAULT 0 NOT NULL,
-    "collected_at" timestamp(6) with time zone DEFAULT now() NOT NULL,
-    "updated_at" timestamp(6) with time zone DEFAULT now() NOT NULL
+    "collected_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public."gfg_game_v2_news" (
@@ -277,9 +277,9 @@ CREATE TABLE public."gfg_game_v2_news" (
     "vote_down_count" integer DEFAULT 0 NOT NULL,
     "comment_count" integer DEFAULT 0 NOT NULL,
     "raw_event" jsonb DEFAULT '{}'::jsonb NOT NULL,
-    "published_at" timestamp(6) with time zone,
-    "updated_at" timestamp(6) with time zone,
-    "collected_at" timestamp(6) with time zone DEFAULT now() NOT NULL
+    "published_at" timestamp with time zone,
+    "updated_at" timestamp with time zone,
+    "collected_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public."gfg_game_v2_player_counts" (
@@ -291,7 +291,7 @@ CREATE TABLE public."gfg_game_v2_player_counts" (
     "upstream_status_code" integer DEFAULT 0 NOT NULL,
     "error_kind" text DEFAULT ''::text NOT NULL,
     "error_message" text DEFAULT ''::text NOT NULL,
-    "collected_at" timestamp(6) with time zone DEFAULT now() NOT NULL,
+    "collected_at" timestamp with time zone DEFAULT now() NOT NULL,
     "run_id" text DEFAULT ''::text NOT NULL
 );
 
@@ -306,8 +306,8 @@ CREATE TABLE public."gfg_game_v2_prices" (
     "discount_percent" bigint DEFAULT 0 NOT NULL,
     "initial_formatted" text DEFAULT ''::text NOT NULL,
     "final_formatted" text DEFAULT ''::text NOT NULL,
-    "collected_at" timestamp(6) with time zone DEFAULT now() NOT NULL,
-    "updated_at" timestamp(6) with time zone DEFAULT now() NOT NULL
+    "collected_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public."gfg_game_v2_recommendations" (
@@ -318,7 +318,7 @@ CREATE TABLE public."gfg_game_v2_recommendations" (
     "rank" integer DEFAULT 0 NOT NULL,
     "reason_json" jsonb DEFAULT '[]'::jsonb NOT NULL,
     "algorithm_version" text DEFAULT ''::text NOT NULL,
-    "computed_at" timestamp(6) with time zone DEFAULT now() NOT NULL
+    "computed_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public."gfg_game_v2_requirements" (
@@ -327,8 +327,8 @@ CREATE TABLE public."gfg_game_v2_requirements" (
     "pc" jsonb DEFAULT '{}'::jsonb NOT NULL,
     "mac" jsonb DEFAULT '{}'::jsonb NOT NULL,
     "linux" jsonb DEFAULT '{}'::jsonb NOT NULL,
-    "collected_at" timestamp(6) with time zone DEFAULT now() NOT NULL,
-    "updated_at" timestamp(6) with time zone DEFAULT now() NOT NULL
+    "collected_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public."gfg_prize" (
@@ -374,6 +374,13 @@ CREATE TABLE public."gfg_tag_map" (
     "update_time" timestamp(0) without time zone NOT NULL
 );
 
+
+ALTER SEQUENCE public."gfg_game_v2_assets_id_seq" OWNED BY public."gfg_game_v2_assets"."id";
+ALTER SEQUENCE public."gfg_game_v2_collect_task_results_id_seq" OWNED BY public."gfg_game_v2_collect_task_results"."id";
+ALTER SEQUENCE public."gfg_game_v2_detail_snapshots_id_seq" OWNED BY public."gfg_game_v2_detail_snapshots"."id";
+ALTER SEQUENCE public."gfg_game_v2_media_id_seq" OWNED BY public."gfg_game_v2_media"."id";
+ALTER SEQUENCE public."gfg_game_v2_news_id_seq" OWNED BY public."gfg_game_v2_news"."id";
+ALTER SEQUENCE public."gfg_game_v2_player_counts_id_seq" OWNED BY public."gfg_game_v2_player_counts"."id";
 
 ALTER TABLE ONLY public."gfg_game" ADD CONSTRAINT "gfg_game_pkey" PRIMARY KEY (id);
 ALTER TABLE ONLY public."gfg_game_comment" ADD CONSTRAINT "gfg_game_comment_pkey" PRIMARY KEY (id);
