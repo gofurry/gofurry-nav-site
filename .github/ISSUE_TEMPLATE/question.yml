@@ -1,5 +1,5 @@
 name: Question
-description: Ask a usage, design, migration, or deployment question.
+description: Ask a usage, design, database, or deployment question.
 title: "question: "
 labels:
   - question
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please do not paste real credentials, cookies, proxy passwords, DSNs, JWTs, or raw URLs containing secrets.
+        Please remove credentials, private data, and credential-bearing URLs before submitting.
   - type: textarea
     id: question
     attributes:
@@ -19,22 +19,23 @@ body:
     id: context
     attributes:
       label: Context
-      description: Include sanitized code snippets, page paths, API paths, config fragments, SQL, or links to relevant docs.
-    validations:
-      required: false
+      description: Include sanitized commands, paths, configuration fragments, errors, or links to relevant documentation.
   - type: dropdown
     id: area
     attributes:
       label: Area
       options:
-        - apps/cn/nav-backend
-        - apps/cn/nav-web
-        - apps/cn/admin
-        - search / suggestions / proxy
-        - SQL / schema / migration
-        - deployment / configuration
-        - documentation
-        - other
+        - Nav Web
+        - Nav Backend
+        - Nav Collector
+        - Game Backend
+        - Game Collector
+        - Admin
+        - Uptime / Availability
+        - Database / Migration
+        - CI / Tooling / Ops
+        - Documentation
+        - Cross-service
     validations:
       required: true
   - type: checkboxes
@@ -42,5 +43,5 @@ body:
     attributes:
       label: Safety check
       options:
-        - label: I removed or redacted API keys, access tokens, refresh tokens, cookies, proxy passwords, DSNs, JWTs, and credential-bearing URLs.
+        - label: I removed or redacted credentials, private data, and credential-bearing URLs.
           required: true

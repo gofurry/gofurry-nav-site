@@ -1,57 +1,56 @@
 ## Summary
 
-- 
+-
 
 ## Scope
 
-- [ ] `apps/cn/nav-backend`
-- [ ] `apps/cn/nav-web`
-- [ ] `apps/cn/admin`
-- [ ] Collector / scheduler / sync
-- [ ] SQL / migration
+- [ ] Nav Web
+- [ ] Nav Backend
+- [ ] Nav Collector
+- [ ] Game Backend
+- [ ] Game Collector
+- [ ] Admin
+- [ ] Uptime / Availability
+- [ ] Database / Migration
+- [ ] CI / Tooling / Ops
 - [ ] Documentation
-- [ ] CI / deployment
+- [ ] Cross-service
 
 ## Compatibility
 
-- [ ] No public API change
-- [ ] Compatible public API addition
-- [ ] v1 to v2 migration or deprecation
-- [ ] Behavior change documented below
-- [ ] Potential breaking change documented below
+- [ ] Public API, Redis, database ownership, and Collector behavior are unchanged
+- [ ] Compatible behavior is added and documented
+- [ ] An intentional behavior change is explained below
 
 Notes:
 
 ## Validation
 
-- [ ] `cd apps/cn/nav-backend && go test ./...`
-- [ ] `cd apps/cn/nav-web && npm run typecheck`
-- [ ] `cd apps/cn/nav-web && npm run build`
-- [ ] `cd apps/cn/admin && go test ./...`
-- [ ] `cd apps/cn/admin/web && npm run build`
-- [ ] Not run, explained below
+- [ ] Affected Go tests passed
+- [ ] Frontend typecheck/build passed when applicable
+- [ ] sqlc/Goose checks passed when applicable
+- [ ] Integration tests passed when applicable
+- [ ] Repository policy passed
+- [ ] Not fully verified — explained below
 
 Notes:
 
-## Data and Rollout
+## Data and Operations
 
 - [ ] No schema or data change
-- [ ] SQL or migration included
-- [ ] Config change required
-- [ ] Deployment order matters
-- [ ] Background jobs / sync behavior affected
+- [ ] Schema/data changes use Goose and include recovery evidence
+- [ ] No configuration or deployment change
+- [ ] Configuration or deployment impact is explained below
 
 Notes:
 
 ## Security and Secrets
 
-- [ ] No real API keys, access tokens, refresh tokens, cookies, proxy passwords, DSNs, JWTs, or credential-bearing URLs are included.
-- [ ] New logs, examples, diagnostics, and screenshots avoid exposing secrets or private data.
-- [ ] External requests, search suggestions, sync jobs, or crawlers were reviewed for abuse and rate-limit risk where relevant.
+- [ ] No credentials, private data, or credential-bearing URLs are included
+- [ ] External inputs, logs, and rate limits were reviewed when applicable
 
 ## Documentation
 
-- [ ] Docs updated
-- [ ] Roadmap / assessment / migration notes updated
-- [ ] Admin or operator workflow documented
-- [ ] Documentation not needed
+- [ ] Contracts or accepted ADRs were updated when a durable boundary changed
+- [ ] User, developer, or operator documentation was updated when applicable
+- [ ] Documentation is not needed

@@ -1,5 +1,5 @@
 name: Feature request
-description: Propose a scoped feature, API, UX, or maintenance improvement.
+description: Propose a scoped product or engineering improvement.
 title: "feat: "
 labels:
   - enhancement
@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please keep requests scoped and implementation-oriented. This repository contains multiple services, so concrete impact and ownership notes are especially helpful.
+        Keep the request scoped and describe the owning application or cross-service boundary.
   - type: textarea
     id: problem
     attributes:
@@ -18,41 +18,41 @@ body:
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed solution
-      description: Describe the API shape, page behavior, admin workflow, sync change, or schema update you want.
+      label: Proposed outcome
+      description: Describe the behavior or engineering outcome rather than prescribing unrelated refactors.
     validations:
       required: true
   - type: dropdown
-    id: scope
+    id: area
     attributes:
-      label: Scope
+      label: Area
       options:
-        - apps/cn/nav-backend API
-        - apps/cn/nav-web UX
-        - apps/cn/admin workflow
-        - SQL / schema / migration
-        - deployment / operations
-        - documentation / CI
-        - other
+        - Nav Web
+        - Nav Backend
+        - Nav Collector
+        - Game Backend
+        - Game Collector
+        - Admin
+        - Uptime / Availability
+        - Database / Migration
+        - CI / Tooling / Ops
+        - Documentation
+        - Cross-service
     validations:
       required: true
   - type: textarea
     id: compatibility
     attributes:
       label: Compatibility impact
-      description: Does this add a public API, replace a v1 behavior, require a migration, or affect deployed services?
+      description: Note any effect on public API, Redis, database ownership, Collector behavior, or deployment.
     validations:
       required: true
   - type: textarea
-    id: rollout
+    id: operations
     attributes:
-      label: Rollout and operational considerations
-      description: Note config changes, data backfills, rate limits, background jobs, or deployment ordering if relevant.
-    validations:
-      required: false
+      label: Operational considerations
+      description: Note configuration, data, rate-limit, monitoring, or deployment-order requirements.
   - type: textarea
     id: alternatives
     attributes:
       label: Alternatives considered
-    validations:
-      required: false

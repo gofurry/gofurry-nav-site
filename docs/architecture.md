@@ -14,7 +14,7 @@ Production code is limited to six Go services plus one Nuxt frontend under `apps
 | `uptime` | Independent public availability history and status UI | local Bbolt file only |
 | `nav-web` | Production Nuxt frontend | Nav and Game APIs |
 
-`apps/intl` contains placeholders only. It has no build, CI, deployment, database, or runtime ownership in this release.
+`apps/intl` contains placeholders only. It has no build, CI, deployment, database, or runtime ownership.
 
 ## Database ownership
 

@@ -79,21 +79,3 @@ sudo ./gf-nav uninstall
 Uninstall stops the unit if active, disables it if enabled, removes only `/etc/systemd/system/gf-nav.service`, reloads systemd, and resets failed state where applicable. Repeating it for an already stopped, disabled, or absent unit is safe.
 
 It never deletes the binary, configuration, logs, working directory, PostgreSQL state, Redis state, the uptime Bbolt file, or other application data.
-
-## Migration from kardianos-generated units
-
-Migrate one service at a time:
-
-1. Record `systemctl status <name>` and save `systemctl cat <name>` to an operator-controlled backup.
-2. Save the current binary and config; record the current runtime user and working directory.
-3. Deploy the new binary to its final path, but do not start it.
-4. Stop and disable the old registration: `sudo systemctl stop <name>` then `sudo systemctl disable <name>`.
-5. Remove only the old `/etc/systemd/system/<name>.service` and run `sudo systemctl daemon-reload`. Confirm no old process remains.
-6. As the intended runtime account, `cd` to the intended working directory and invoke the new binary through sudo:
-   `sudo ./<binary> install --config /absolute/path/server.yaml`.
-7. Do not use `--force` unless the old unit was deliberately stopped, backed up, and the remaining file was reviewed.
-8. Review the new unit and optionally run `systemd-analyze verify`.
-9. Start manually with `sudo systemctl start <name>`.
-10. Verify status, logs, readiness, application smoke tests, and collector activity before moving to the next service.
-
-For rollback, stop the new unit, uninstall its registration, restore the saved old binary/unit, run `daemon-reload`, enable it, and start it. This systemd migration does not require or perform database migration.

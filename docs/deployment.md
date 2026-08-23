@@ -17,9 +17,9 @@ Admin's embedded web UI is built before its binary. `apps/cn/nav-web` has a sepa
 
 `legacy`, `experimental`, `third-party`, and `apps/intl` are not production build targets.
 
-## Go service release flow
+## Go service deployment
 
-Treat binary rollout and schema rollout as separate operator actions:
+Treat binary deployment and schema migration as separate operator actions:
 
 1. Build and verify release artifacts.
 2. Back up the current binary, configuration, and systemd unit.
@@ -32,20 +32,15 @@ Treat binary rollout and schema rollout as separate operator actions:
 
 Applications never run Goose during startup. Do not run a migration merely because a binary changed: first verify that the release actually includes a new migration.
 
-This availability completion adds no business DDL and requires no database migration of its own.
-
-## Availability rollout
+## Availability operation
 
 Prefer running `gf-uptime` on a small host outside the business host's failure domain. It can run on the same host when necessary, but its runtime must still use only its local Bbolt file.
 
-1. Copy `apps/cn/uptime/conf/server.example.yaml`, keep the five endpoint IDs stable, choose a durable absolute `storage.path`, and make the storage/log directories writable by the install-time runtime user.
-2. Deploy `gf-uptime`, run `install --config /etc/gf-uptime/server.yaml`, review the generated unit, start it manually, and reverse proxy `status.go-furry.com` to its local listener. Redirect `/` to `/uptime` if the public hostname should open the UI at its root.
-3. Add the optional loopback/private `health` block to each collector config, deploy the collector binaries, reinstall units with `--force` only after review, and restart them one at a time. One-shot Game commands remain listener-free.
-4. Before deploying Nav Backend, remove its old `uptime` block and obsolete `waf.crs_root` key. Keep `waf.directives_files` when custom Coraza rules are required.
-5. Set Nav Web `NUXT_PUBLIC_UPTIME_URL=https://status.go-furry.com`, redeploy it, and verify public `/healthz`.
-6. Verify the status UI and all five monitored endpoints. Configure an external HTTP monitor for `https://status.go-furry.com/readyz`.
-
-No Goose command is part of these six steps.
+- Keep endpoint IDs stable and store the Bbolt file at a durable absolute path writable by the service user.
+- Expose the status UI through Nginx while keeping the application listener local to its host.
+- Bind Collector health listeners only to loopback or private addresses; one-shot Game commands remain listener-free.
+- Set Nav Web `NUXT_PUBLIC_UPTIME_URL` to the independent public status origin.
+- Use an external HTTP monitor for the public `gf-uptime` readiness endpoint.
 
 On the status host, the relevant Nginx locations are intentionally small:
 
@@ -65,9 +60,9 @@ location / {
 
 Terminate TLS using the host's existing certificate workflow. If uptime runs on a separate host, replace collector/backend loopback endpoint URLs with reachable private or HTTPS health URLs; never expose collector listeners publicly merely to make status polling work.
 
-## Compatibility boundaries
+## Deployment boundaries
 
-A deployment of this cleanup must preserve:
+Routine deployments must preserve:
 
 - public API behavior, including existing Nav V1 availability;
 - Redis key names, TTLs, and cache semantics;

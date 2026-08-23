@@ -2,6 +2,26 @@
 
 Run commands from the named module unless stated otherwise.
 
+## Task lifecycle
+
+### Before editing
+
+- Define the requested scope and explicit exclusions.
+- Inspect the current implementation, tests, configuration, contracts, and accepted ADRs before proposing changes.
+- Identify the owning source of truth and report any conflict that cannot be resolved from repository evidence.
+
+### During editing
+
+- Keep changes within scope and avoid unrelated refactors.
+- Modify the owning source of truth rather than documenting around stale behavior.
+- Preserve public behavior and operational contracts unless the task explicitly changes them.
+
+### Before finishing
+
+- Run validation appropriate to every affected area.
+- Inspect the final diff for scope, generated artifacts, and secrets.
+- Report what was changed, what passed, and anything not verified or still unresolved.
+
 ## Active Go checks
 
 For each of `apps/cn/game-collector`, `apps/cn/game-backend`, `apps/cn/nav-collector`, `apps/cn/nav-backend`, `apps/cn/admin`, and `apps/cn/uptime`:
@@ -39,7 +59,7 @@ go run ./check-sqlc
 go run ./check-production-policy
 ~~~
 
-Fresh PostgreSQL, exact baseline adoption, drift rejection, cleanup upgrade, seeded row-count, and backup-copy checks:
+Fresh PostgreSQL, schema adoption, drift rejection, upgrade, seeded row-count, and backup-copy checks:
 
 ~~~text
 GOFURRY_TEST_POSTGRES_ADMIN_URL='postgres://.../postgres' go test ./db-baseline -run TestPostgresFreshAndBaselineAdoption -count=1 -v
