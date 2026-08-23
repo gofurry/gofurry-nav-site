@@ -45,19 +45,8 @@ CREATE TABLE public."gfa_admin_audit_log" (
 ALTER SEQUENCE public."gfa_admin_account_id_seq" OWNED BY public."gfa_admin_account"."id";
 ALTER SEQUENCE public."gfa_admin_audit_log_id_seq" OWNED BY public."gfa_admin_audit_log"."id";
 
-ALTER TABLE ONLY public."gfa_admin_account" ADD CONSTRAINT "gfa_admin_account_created_at_not_null" NOT NULL created_at;
-ALTER TABLE ONLY public."gfa_admin_account" ADD CONSTRAINT "gfa_admin_account_id_not_null" NOT NULL id;
-ALTER TABLE ONLY public."gfa_admin_account" ADD CONSTRAINT "gfa_admin_account_password_hash_not_null" NOT NULL password_hash;
 ALTER TABLE ONLY public."gfa_admin_account" ADD CONSTRAINT "gfa_admin_account_pkey" PRIMARY KEY (id);
-ALTER TABLE ONLY public."gfa_admin_account" ADD CONSTRAINT "gfa_admin_account_session_version_not_null" NOT NULL session_version;
-ALTER TABLE ONLY public."gfa_admin_account" ADD CONSTRAINT "gfa_admin_account_updated_at_not_null" NOT NULL updated_at;
-ALTER TABLE ONLY public."gfa_admin_audit_log" ADD CONSTRAINT "gfa_admin_audit_log_action_not_null" NOT NULL action;
-ALTER TABLE ONLY public."gfa_admin_audit_log" ADD CONSTRAINT "gfa_admin_audit_log_created_at_not_null" NOT NULL created_at;
-ALTER TABLE ONLY public."gfa_admin_audit_log" ADD CONSTRAINT "gfa_admin_audit_log_id_not_null" NOT NULL id;
-ALTER TABLE ONLY public."gfa_admin_audit_log" ADD CONSTRAINT "gfa_admin_audit_log_operator_not_null" NOT NULL operator;
 ALTER TABLE ONLY public."gfa_admin_audit_log" ADD CONSTRAINT "gfa_admin_audit_log_pkey" PRIMARY KEY (id);
-ALTER TABLE ONLY public."gfa_admin_audit_log" ADD CONSTRAINT "gfa_admin_audit_log_resource_not_null" NOT NULL resource;
-ALTER TABLE ONLY public."gfa_admin_audit_log" ADD CONSTRAINT "gfa_admin_audit_log_session_version_not_null" NOT NULL session_version;
 
 
 

@@ -1,0 +1,86 @@
+version: "2"
+
+sql:
+  - engine: "postgresql"
+    schema: "db/game/migrations"
+    queries: "gofurry-game-collector/internal/db/game/queries"
+    gen:
+      go:
+        package: "gamesqlc"
+        out: "gofurry-game-collector/internal/db/game/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+
+  - engine: "postgresql"
+    schema: "db/game/migrations"
+    queries: "gofurry-game-backend/internal/db/game/queries"
+    gen:
+      go:
+        package: "gamesqlc"
+        out: "gofurry-game-backend/internal/db/game/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+
+  - engine: "postgresql"
+    schema: "db/game/migrations"
+    queries: "gofurry-admin/internal/db/game/queries"
+    gen:
+      go:
+        package: "gamesqlc"
+        out: "gofurry-admin/internal/db/game/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+
+  - engine: "postgresql"
+    schema: "db/nav/migrations"
+    queries: "gofurry-nav-collector/internal/db/nav/queries"
+    gen:
+      go:
+        package: "navsqlc"
+        out: "gofurry-nav-collector/internal/db/nav/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+
+  - engine: "postgresql"
+    schema: "db/nav/migrations"
+    queries: "gofurry-nav-backend/internal/db/nav/queries"
+    gen:
+      go:
+        package: "navsqlc"
+        out: "gofurry-nav-backend/internal/db/nav/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+
+  - engine: "postgresql"
+    schema: "db/nav/migrations"
+    queries: "gofurry-admin/internal/db/nav/queries"
+    gen:
+      go:
+        package: "navsqlc"
+        out: "gofurry-admin/internal/db/nav/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+
+  - engine: "postgresql"
+    schema: "db/admin/migrations"
+    queries: "gofurry-admin/internal/db/admin/queries"
+    gen:
+      go:
+        package: "adminsqlc"
+        out: "gofurry-admin/internal/db/admin/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true

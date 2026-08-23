@@ -73,6 +73,13 @@ func BaselineSQL(database string, version int64, snapshot Snapshot) string {
 
 	for _, table := range snapshot.Tables {
 		for _, constraint := range table.Constraints {
+			// PostgreSQL 18 exposes column NOT NULL attributes as named
+			// constraints. The column clause recreates those canonical
+			// constraints; repeating the PG18-only ALTER form is redundant and
+			// is not yet understood by sqlc's PostgreSQL parser.
+			if strings.HasPrefix(constraint.Definition, "NOT NULL ") {
+				continue
+			}
 			fmt.Fprintf(&out, "ALTER TABLE ONLY public.%s ADD CONSTRAINT %s %s;\n", ident(table.Name), ident(constraint.Name), constraint.Definition)
 		}
 	}
