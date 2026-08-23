@@ -53,6 +53,11 @@ var ptrSem = make(chan struct{}, PTRWorkers) // ptrSem 用于限制 PTR 查询�
 var resolver = env.GetServerConfig().Collector.Dns.Resolver
 var geoDBs *GeoDBSet
 
+type Runner struct {
+	persistence  *dao.DNSDAO
+	observations *observation.ObservationDAO
+}
+
 type dnsResponseSummary struct {
 	Rcode              string  `json:"rcode"`
 	Authoritative      bool    `json:"authoritative"`
@@ -166,7 +171,8 @@ func currentGeoDBs() *GeoDBSet {
 // ============== DNS解析 - 初始化部分 ==============
 
 // 初始化
-func InitDNSOnStart() {
+func InitDNSOnStart(persistence *dao.DNSDAO, observations *observation.ObservationDAO) {
+	runner := &Runner{persistence: persistence, observations: observations}
 	defer func() {
 		if err := recover(); err != nil {
 			log.ErrorFields(map[string]interface{}{
@@ -187,11 +193,11 @@ func InitDNSOnStart() {
 	geoDBs = InitGeoDB(env.GetServerConfig().Collector.Dns.Geolite2Path)
 
 	//初始化后执行一次 ParseDNS
-	go ParseDNS()
-	go Delete()
+	go runner.ParseDNS()
+	go runner.Delete()
 	// 定时任务执行 ParseDNS
-	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval)*time.Hour, ParseDNS)
-	cs.AddCronJob(72*time.Hour, Delete)
+	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval)*time.Hour, runner.ParseDNS)
+	cs.AddCronJob(72*time.Hour, runner.Delete)
 
 	log.InfoFields(map[string]interface{}{
 		"event":    "module_init_complete",
@@ -200,7 +206,7 @@ func InitDNSOnStart() {
 }
 
 // 每天清理一次日志表
-func Delete() {
+func (runner *Runner) Delete() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.ErrorFields(map[string]interface{}{
@@ -219,7 +225,7 @@ func Delete() {
 	}, "DNS 历史日志保留清理开始")
 
 	// 每个域名仅保留 500 条 DNS 记录
-	count, deleteErr := dao.GetDNSDao().DeleteByNum(keepCount)
+	count, deleteErr := runner.persistence.DeleteByNum(keepCount)
 	if deleteErr != nil {
 		log.ErrorFields(map[string]interface{}{
 			"deleted":    count,
@@ -238,7 +244,7 @@ func Delete() {
 		}, "DNS 历史日志保留清理完成")
 	}
 	if env.GetServerConfig().Collector.V2.ProtocolEnabled(observation.ProtocolDNS) {
-		v2Count, v2DeleteErr := observation.DeleteByProtocolLimit(observation.ProtocolDNS, keepCount)
+		v2Count, v2DeleteErr := observation.DeleteByProtocolLimit(runner.observations, observation.ProtocolDNS, keepCount)
 		if v2DeleteErr != nil {
 			log.ErrorFields(map[string]interface{}{
 				"deleted":    v2Count,
@@ -262,7 +268,7 @@ func Delete() {
 // ============== DNS解析 - 执行部分 ==============
 
 // 执行 ParseDNS
-func ParseDNS() {
+func (runner *Runner) ParseDNS() {
 	interval := time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval) * time.Hour
 	run := runstate.NewRun(observation.ProtocolDNS, interval)
 	defer func() {
@@ -308,7 +314,7 @@ func ParseDNS() {
 	fields["workers"] = env.GetServerConfig().Collector.Dns.DnsThread
 	log.InfoFields(fields, "DNS 采集运行开始")
 
-	requestList, err := dao.GetDNSDao().GetList()
+	requestList, err := runner.persistence.GetList()
 	if err != nil {
 		run.Fail("load_targets", 0)
 		fields := run.Fields()
@@ -341,7 +347,7 @@ func ParseDNS() {
 	dnsThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
 	// 遍历站点列表, 每个站点开一个线程执行采集
 	for _, v := range requestList {
-		dnsThread.Go(getDNSResult(v, run))
+		dnsThread.Go(runner.getDNSResult(v, run))
 	}
 	// 等待所有采集和解析执行完毕
 	dnsThread.Wait()
@@ -356,7 +362,7 @@ func ParseDNS() {
 	log.InfoFields(fields, "DNS 采集运行完成")
 }
 
-func getDNSResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
+func (runner *Runner) getDNSResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
 	return func() {
 		defer func() {
 			if err := recover(); err != nil {
@@ -453,7 +459,7 @@ func getDNSResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
 		}
 
 		// 存数据库
-		daoErr := dao.GetDNSDao().Add(&newRecord)
+		daoErr := runner.persistence.Add(&newRecord)
 		if daoErr != nil {
 			log.ErrorFields(map[string]interface{}{
 				"event":    "db_write_failed",
@@ -471,7 +477,7 @@ func getDNSResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
 			collectorID = run.CollectorID
 			jobID = run.JobID
 		}
-		saveErr := observation.SaveIfEnabled(observation.Input{
+		saveErr := observation.SaveIfEnabled(runner.observations, observation.Input{
 			SiteID:      site.SiteID,
 			Target:      siteName,
 			Protocol:    observation.ProtocolDNS,

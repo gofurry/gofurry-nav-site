@@ -64,6 +64,11 @@ type cachedRDAPBootstrap struct {
 	servers   map[string]string
 }
 
+type Runner struct {
+	persistence  *dao.LightProbeDAO
+	observations *observation.ObservationDAO
+}
+
 type probeResult struct {
 	Status       string
 	DurationMS   int64
@@ -89,14 +94,15 @@ type pageAssetDeclaration struct {
 }
 
 // InitLightProbeOnStart 注册默认关闭的 v2 低频轻探测任务。
-func InitLightProbeOnStart() {
+func InitLightProbeOnStart(persistence *dao.LightProbeDAO, observations *observation.ObservationDAO) {
+	runner := &Runner{persistence: persistence, observations: observations}
 	cfg := env.GetServerConfig().Collector.V2
 	if cfg.ProtocolEnabled(observation.ProtocolRDAP) {
 		interval := cfg.LightProbe.RDAP.Interval()
 		if cfg.LightProbe.RDAP.RunOnStart {
-			go RunRDAP()
+			go runner.RunRDAP()
 		}
-		cs.AddCronJob(interval, RunRDAP)
+		cs.AddCronJob(interval, runner.RunRDAP)
 		log.InfoFields(map[string]interface{}{
 			"event":        "light_probe_registered",
 			"interval":     interval,
@@ -107,9 +113,9 @@ func InitLightProbeOnStart() {
 	if cfg.ProtocolEnabled(observation.ProtocolRobots) {
 		interval := cfg.LightProbe.Robots.Interval()
 		if cfg.LightProbe.Robots.RunOnStart {
-			go RunRobots()
+			go runner.RunRobots()
 		}
-		cs.AddCronJob(interval, RunRobots)
+		cs.AddCronJob(interval, runner.RunRobots)
 		log.InfoFields(map[string]interface{}{
 			"event":        "light_probe_registered",
 			"interval":     interval,
@@ -120,9 +126,9 @@ func InitLightProbeOnStart() {
 	if cfg.ProtocolEnabled(observation.ProtocolSecurityTXT) {
 		interval := cfg.LightProbe.SecurityTXT.Interval()
 		if cfg.LightProbe.SecurityTXT.RunOnStart {
-			go RunSecurityTXT()
+			go runner.RunSecurityTXT()
 		}
-		cs.AddCronJob(interval, RunSecurityTXT)
+		cs.AddCronJob(interval, runner.RunSecurityTXT)
 		log.InfoFields(map[string]interface{}{
 			"event":        "light_probe_registered",
 			"interval":     interval,
@@ -133,9 +139,9 @@ func InitLightProbeOnStart() {
 	if cfg.ProtocolEnabled(observation.ProtocolLLMSTXT) {
 		interval := cfg.LightProbe.LLMSTXT.Interval()
 		if cfg.LightProbe.LLMSTXT.RunOnStart {
-			go RunLLMSTXT()
+			go runner.RunLLMSTXT()
 		}
-		cs.AddCronJob(interval, RunLLMSTXT)
+		cs.AddCronJob(interval, runner.RunLLMSTXT)
 		log.InfoFields(map[string]interface{}{
 			"event":        "light_probe_registered",
 			"interval":     interval,
@@ -146,9 +152,9 @@ func InitLightProbeOnStart() {
 	if cfg.ProtocolEnabled(observation.ProtocolPageAssets) {
 		interval := cfg.LightProbe.PageAssets.Interval()
 		if cfg.LightProbe.PageAssets.RunOnStart {
-			go RunPageAssets()
+			go runner.RunPageAssets()
 		}
-		cs.AddCronJob(interval, RunPageAssets)
+		cs.AddCronJob(interval, runner.RunPageAssets)
 		log.InfoFields(map[string]interface{}{
 			"event":        "light_probe_registered",
 			"interval":     interval,
@@ -159,9 +165,9 @@ func InitLightProbeOnStart() {
 	if cfg.ProtocolEnabled(observation.ProtocolPortCheck) {
 		interval := cfg.LightProbe.PortCheck.Interval()
 		if cfg.LightProbe.PortCheck.RunOnStart {
-			go RunPortCheck()
+			go runner.RunPortCheck()
 		}
-		cs.AddCronJob(interval, RunPortCheck)
+		cs.AddCronJob(interval, runner.RunPortCheck)
 		log.InfoFields(map[string]interface{}{
 			"event":        "light_probe_registered",
 			"interval":     interval,
@@ -172,9 +178,9 @@ func InitLightProbeOnStart() {
 	if cfg.ProtocolEnabled(observation.ProtocolWAFCanary) {
 		interval := cfg.LightProbe.WAFCanary.Interval()
 		if cfg.LightProbe.WAFCanary.RunOnStart {
-			go RunWAFCanary()
+			go runner.RunWAFCanary()
 		}
-		cs.AddCronJob(interval, RunWAFCanary)
+		cs.AddCronJob(interval, runner.RunWAFCanary)
 		log.InfoFields(map[string]interface{}{
 			"event":        "light_probe_registered",
 			"interval":     interval,
@@ -184,35 +190,35 @@ func InitLightProbeOnStart() {
 	}
 }
 
-func RunRDAP() {
-	runLightProbe(observation.ProtocolRDAP, env.GetServerConfig().Collector.V2.LightProbe.RDAP.Interval(), &rdapRunning, runRDAPTargets)
+func (runner *Runner) RunRDAP() {
+	runner.runLightProbe(observation.ProtocolRDAP, env.GetServerConfig().Collector.V2.LightProbe.RDAP.Interval(), &rdapRunning, runner.runRDAPTargets)
 }
 
-func RunRobots() {
-	runLightProbe(observation.ProtocolRobots, env.GetServerConfig().Collector.V2.LightProbe.Robots.Interval(), &robotsRunning, runRobotsTargets)
+func (runner *Runner) RunRobots() {
+	runner.runLightProbe(observation.ProtocolRobots, env.GetServerConfig().Collector.V2.LightProbe.Robots.Interval(), &robotsRunning, runner.runRobotsTargets)
 }
 
-func RunSecurityTXT() {
-	runLightProbe(observation.ProtocolSecurityTXT, env.GetServerConfig().Collector.V2.LightProbe.SecurityTXT.Interval(), &securityTXTRunning, runSecurityTXTTargets)
+func (runner *Runner) RunSecurityTXT() {
+	runner.runLightProbe(observation.ProtocolSecurityTXT, env.GetServerConfig().Collector.V2.LightProbe.SecurityTXT.Interval(), &securityTXTRunning, runner.runSecurityTXTTargets)
 }
 
-func RunLLMSTXT() {
-	runLightProbe(observation.ProtocolLLMSTXT, env.GetServerConfig().Collector.V2.LightProbe.LLMSTXT.Interval(), &llmsTXTRunning, runLLMSTXTTargets)
+func (runner *Runner) RunLLMSTXT() {
+	runner.runLightProbe(observation.ProtocolLLMSTXT, env.GetServerConfig().Collector.V2.LightProbe.LLMSTXT.Interval(), &llmsTXTRunning, runner.runLLMSTXTTargets)
 }
 
-func RunPageAssets() {
-	runLightProbe(observation.ProtocolPageAssets, env.GetServerConfig().Collector.V2.LightProbe.PageAssets.Interval(), &pageAssetsRunning, runPageAssetsTargets)
+func (runner *Runner) RunPageAssets() {
+	runner.runLightProbe(observation.ProtocolPageAssets, env.GetServerConfig().Collector.V2.LightProbe.PageAssets.Interval(), &pageAssetsRunning, runner.runPageAssetsTargets)
 }
 
-func RunPortCheck() {
-	runLightProbe(observation.ProtocolPortCheck, env.GetServerConfig().Collector.V2.LightProbe.PortCheck.Interval(), &portCheckRunning, runPortCheckTargets)
+func (runner *Runner) RunPortCheck() {
+	runner.runLightProbe(observation.ProtocolPortCheck, env.GetServerConfig().Collector.V2.LightProbe.PortCheck.Interval(), &portCheckRunning, runner.runPortCheckTargets)
 }
 
-func RunWAFCanary() {
-	runLightProbe(observation.ProtocolWAFCanary, env.GetServerConfig().Collector.V2.LightProbe.WAFCanary.Interval(), &wafCanaryRunning, runWAFCanaryTargets)
+func (runner *Runner) RunWAFCanary() {
+	runner.runLightProbe(observation.ProtocolWAFCanary, env.GetServerConfig().Collector.V2.LightProbe.WAFCanary.Interval(), &wafCanaryRunning, runner.runWAFCanaryTargets)
 }
 
-func runLightProbe(protocol string, interval time.Duration, running *atomic.Bool, executor func([]models.GfnCollectorDomain, *runstate.Run)) {
+func (runner *Runner) runLightProbe(protocol string, interval time.Duration, running *atomic.Bool, executor func([]models.GfnCollectorDomain, *runstate.Run)) {
 	if !env.GetServerConfig().Collector.V2.ProtocolEnabled(protocol) {
 		return
 	}
@@ -239,7 +245,7 @@ func runLightProbe(protocol string, interval time.Duration, running *atomic.Bool
 	run.Start()
 
 	start := time.Now()
-	targets, err := dao.GetLightProbeDao().GetList()
+	targets, err := runner.persistence.GetList()
 	if err != nil {
 		run.Fail("load_targets", 0)
 		fields := run.Fields()
@@ -276,7 +282,7 @@ func runLightProbe(protocol string, interval time.Duration, running *atomic.Bool
 	log.InfoFields(fields, "低频轻探测运行完成")
 }
 
-func runRDAPTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+func (runner *Runner) runRDAPTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.RDAP
 	client := rdapHTTPClient(cfg.Timeout())
 	results := map[string]probeResult{}
@@ -288,7 +294,7 @@ func runRDAPTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 				"rdap_server":        "",
 				"raw_truncated":      false,
 			})
-			saveLightProbeResult(observation.ProtocolRDAP, target, result, run)
+			runner.saveLightProbeResult(observation.ProtocolRDAP, target, result, run)
 			continue
 		}
 		result, ok := results[domain]
@@ -296,51 +302,51 @@ func runRDAPTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 			result = probeRDAP(client, domain)
 			results[domain] = result
 		}
-		saveLightProbeResult(observation.ProtocolRDAP, target, result, run)
+		runner.saveLightProbeResult(observation.ProtocolRDAP, target, result, run)
 	}
 }
 
-func runRobotsTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+func (runner *Runner) runRobotsTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.Robots
 	for _, target := range targets {
 		result := probeRobots(target, cfg.Timeout(), cfg.MaxResponseSize(), cfg.MaxSitemaps())
-		saveLightProbeResult(observation.ProtocolRobots, target, result, run)
+		runner.saveLightProbeResult(observation.ProtocolRobots, target, result, run)
 	}
 }
 
-func runSecurityTXTTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+func (runner *Runner) runSecurityTXTTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.SecurityTXT
 	for _, target := range targets {
 		result := probeSecurityTXT(target, cfg.Timeout(), cfg.MaxResponseSize())
-		saveLightProbeResult(observation.ProtocolSecurityTXT, target, result, run)
+		runner.saveLightProbeResult(observation.ProtocolSecurityTXT, target, result, run)
 	}
 }
 
-func runLLMSTXTTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+func (runner *Runner) runLLMSTXTTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.LLMSTXT
 	for _, target := range targets {
 		result := probeLLMSTXT(target, cfg.Timeout(), cfg.MaxResponseSize())
-		saveLightProbeResult(observation.ProtocolLLMSTXT, target, result, run)
+		runner.saveLightProbeResult(observation.ProtocolLLMSTXT, target, result, run)
 	}
 }
 
-func runPageAssetsTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+func (runner *Runner) runPageAssetsTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.PageAssets
 	for _, target := range targets {
 		result := probePageAssets(target, cfg)
-		saveLightProbeResult(observation.ProtocolPageAssets, target, result, run)
+		runner.saveLightProbeResult(observation.ProtocolPageAssets, target, result, run)
 	}
 }
 
-func runPortCheckTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+func (runner *Runner) runPortCheckTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.PortCheck
 	for _, target := range targets {
 		result := probePortCheck(target, cfg)
-		saveLightProbeResult(observation.ProtocolPortCheck, target, result, run)
+		runner.saveLightProbeResult(observation.ProtocolPortCheck, target, result, run)
 	}
 }
 
-func runWAFCanaryTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
+func (runner *Runner) runWAFCanaryTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.WAFCanary
 	truncatedCount := 0
 	maxTargets := cfg.MaxTargets()
@@ -357,11 +363,11 @@ func runWAFCanaryTargets(targets []models.GfnCollectorDomain, run *runstate.Run)
 		result.Payload["max_targets_per_run"] = maxTargets
 		result.Payload["truncated_target_count"] = truncatedCount
 		result.Payload["target_run_truncated"] = truncatedCount > 0
-		saveLightProbeResult(observation.ProtocolWAFCanary, target, result, run)
+		runner.saveLightProbeResult(observation.ProtocolWAFCanary, target, result, run)
 	}
 }
 
-func saveLightProbeResult(protocol string, target models.GfnCollectorDomain, result probeResult, run *runstate.Run) {
+func (runner *Runner) saveLightProbeResult(protocol string, target models.GfnCollectorDomain, result probeResult, run *runstate.Run) {
 	if run != nil {
 		if result.Status == observation.StatusSuccess {
 			run.RecordSuccess()
@@ -375,7 +381,7 @@ func saveLightProbeResult(protocol string, target models.GfnCollectorDomain, res
 		collectorID = run.CollectorID
 		jobID = run.JobID
 	}
-	if err := observation.SaveIfEnabled(observation.Input{
+	if err := observation.SaveIfEnabled(runner.observations, observation.Input{
 		SiteID:       target.SiteID,
 		Target:       target.TargetName(),
 		Protocol:     protocol,

@@ -1,11 +1,45 @@
 package env
 
 import (
+	"net/url"
+	"os"
 	"testing"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
+
+func TestExampleConfigDecodesDatabasePool(t *testing.T) {
+	data, err := os.ReadFile("../../conf/server.example.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg serverConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.DataBase.DBName != "gfn" || cfg.DataBase.MaxConns != 6 || cfg.DataBase.ConnectTimeoutSeconds != 5 || cfg.DataBase.PingTimeoutSeconds != 3 {
+		t.Fatalf("database pool config not decoded: %+v", cfg.DataBase)
+	}
+}
+
+func TestDatabaseConnectionStringEscapesCredentials(t *testing.T) {
+	cfg := DataBaseConfig{DBName: "gfn", DBUsername: "user@name", DBPassword: "p@ss:/word", DBHost: "localhost", DBPort: "5432"}
+	parsed, err := url.Parse(cfg.ConnectionString())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.User.Username() != cfg.DBUsername {
+		t.Fatalf("username = %q, want %q", parsed.User.Username(), cfg.DBUsername)
+	}
+	password, ok := parsed.User.Password()
+	if !ok || password != cfg.DBPassword {
+		t.Fatal("password was not URL escaped and recovered")
+	}
+	if parsed.Path != "/gfn" || parsed.Query().Get("sslmode") != "prefer" {
+		t.Fatalf("connection string fields changed: %s", parsed.Redacted())
+	}
+}
 
 func TestProbeBudgetDefaults(t *testing.T) {
 	cfg := ProbeBudgetConfig{}

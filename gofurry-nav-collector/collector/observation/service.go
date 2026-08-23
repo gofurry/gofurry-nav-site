@@ -21,7 +21,7 @@ func LatestKey(protocol string, siteID int64) string {
 	return fmt.Sprintf("collector:v2:latest:%s:%d", protocol, siteID)
 }
 
-func SaveIfEnabled(input Input) common.GFError {
+func SaveIfEnabled(dao *ObservationDAO, input Input) common.GFError {
 	cfg := env.GetServerConfig().Collector.V2
 	if !cfg.ProtocolEnabled(input.Protocol) {
 		return nil
@@ -85,7 +85,7 @@ func SaveIfEnabled(input Input) common.GFError {
 		if input.ErrorMessage != "" {
 			record.ErrorMessage = &input.ErrorMessage
 		}
-		if err := GetObservationDao().AddObservation(&record); err != nil {
+		if err := dao.AddObservation(&record); err != nil {
 			log.ErrorFields(map[string]interface{}{
 				"event":    "v2_observation_db_write_failed",
 				"protocol": input.Protocol,
@@ -150,7 +150,7 @@ func SaveIfEnabled(input Input) common.GFError {
 				firstErr = err
 			}
 		}
-		if summaryErr := UpdateSummaryIfEnabled(input.SiteID, input.Target); summaryErr != nil && firstErr == nil {
+		if summaryErr := UpdateSummaryIfEnabled(dao, input.SiteID, input.Target); summaryErr != nil && firstErr == nil {
 			firstErr = summaryErr
 		}
 	}
@@ -206,6 +206,6 @@ func marshalPayload(payload any) ([]byte, error) {
 	return payloadBytes, nil
 }
 
-func DeleteByProtocolLimit(protocol string, count string) (int64, common.GFError) {
-	return GetObservationDao().DeleteByProtocolLimit(protocol, count)
+func DeleteByProtocolLimit(dao *ObservationDAO, protocol string, count string) (int64, common.GFError) {
+	return dao.DeleteByProtocolLimit(protocol, count)
 }

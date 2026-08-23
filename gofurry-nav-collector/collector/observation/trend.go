@@ -30,7 +30,7 @@ func TargetTrendKey(siteID int64, target string) string {
 	return fmt.Sprintf("collector:v2:trend:target:%d:%s", siteID, target)
 }
 
-func UpdateTrendIfEnabled(siteID int64, target string, now time.Time) common.GFError {
+func UpdateTrendIfEnabled(dao *ObservationDAO, siteID int64, target string, now time.Time) common.GFError {
 	if siteID <= 0 || target == "" {
 		return nil
 	}
@@ -47,7 +47,7 @@ func UpdateTrendIfEnabled(siteID int64, target string, now time.Time) common.GFE
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Derived.QueryTimeout())
 	defer cancel()
-	rows, err := GetObservationDao().ListTrendRows(ctx, siteID, target, now.Add(-defaultTrendLookback), cfg.Derived.TrendRows())
+	rows, err := dao.ListTrendRows(ctx, siteID, target, now.Add(-defaultTrendLookback), cfg.Derived.TrendRows())
 	if err != nil {
 		log.WarnFields(map[string]interface{}{
 			"event":   "v2_trend_query_failed",

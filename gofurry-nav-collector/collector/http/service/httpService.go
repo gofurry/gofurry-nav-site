@@ -37,6 +37,11 @@ import (
 
 var requestRunning atomic.Bool
 
+type Runner struct {
+	persistence  *dao.HTTPDAO
+	observations *observation.ObservationDAO
+}
+
 const (
 	maxHTTPPayloadURLLength         = 2048
 	maxHTTPPayloadContentTypeLength = 256
@@ -59,7 +64,8 @@ const (
 // ============== HTTP模块 - 初始化部分 ==============
 
 // 初始化
-func InitHTTPOnStart() {
+func InitHTTPOnStart(persistence *dao.HTTPDAO, observations *observation.ObservationDAO) {
+	runner := &Runner{persistence: persistence, observations: observations}
 	defer func() {
 		if err := recover(); err != nil {
 			log.ErrorFields(map[string]interface{}{
@@ -77,11 +83,11 @@ func InitHTTPOnStart() {
 	}, "HTTP 采集模块初始化开始")
 
 	//初始化后执行一次 Request
-	go Request()
-	go Delete()
+	go runner.Request()
+	go runner.Delete()
 	// 定时任务执行 Request
-	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Request.RequestInterval)*time.Hour, Request)
-	cs.AddCronJob(48*time.Hour, Delete)
+	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Request.RequestInterval)*time.Hour, runner.Request)
+	cs.AddCronJob(48*time.Hour, runner.Delete)
 
 	log.InfoFields(map[string]interface{}{
 		"event":    "module_init_complete",
@@ -90,7 +96,7 @@ func InitHTTPOnStart() {
 }
 
 // 每天清理一次日志表
-func Delete() {
+func (runner *Runner) Delete() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.ErrorFields(map[string]interface{}{
@@ -109,7 +115,7 @@ func Delete() {
 	}, "HTTP 历史日志保留清理开始")
 
 	// 每个域名仅保留 1500 条 request 记录
-	count, deleteErr := dao.GetHTTPDao().DeleteByNum(keepCount)
+	count, deleteErr := runner.persistence.DeleteByNum(keepCount)
 	if deleteErr != nil {
 		log.ErrorFields(map[string]interface{}{
 			"deleted":    count,
@@ -128,7 +134,7 @@ func Delete() {
 		}, "HTTP 历史日志保留清理完成")
 	}
 	if env.GetServerConfig().Collector.V2.ProtocolEnabled(observation.ProtocolHTTP) {
-		v2Count, v2DeleteErr := observation.DeleteByProtocolLimit(observation.ProtocolHTTP, keepCount)
+		v2Count, v2DeleteErr := observation.DeleteByProtocolLimit(runner.observations, observation.ProtocolHTTP, keepCount)
 		if v2DeleteErr != nil {
 			log.ErrorFields(map[string]interface{}{
 				"deleted":    v2Count,
@@ -152,7 +158,7 @@ func Delete() {
 // ============== HTTP模块 - 执行部分 ==============
 
 // 执行 Request
-func Request() {
+func (runner *Runner) Request() {
 	interval := time.Duration(env.GetServerConfig().Collector.Request.RequestInterval) * time.Hour
 	run := runstate.NewRun(observation.ProtocolHTTP, interval)
 	defer func() {
@@ -194,7 +200,7 @@ func Request() {
 	fields["redirects"] = env.GetServerConfig().Collector.ProbeBudget.MaxHTTPRedirects()
 	log.InfoFields(fields, "HTTP 采集运行开始")
 
-	requestList, err := dao.GetHTTPDao().GetList()
+	requestList, err := runner.persistence.GetList()
 	if err != nil {
 		run.Fail("load_targets", 0)
 		fields := run.Fields()
@@ -225,7 +231,7 @@ func Request() {
 	requestThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Request.RequestThread)
 	// 遍历站点列表, 每个站点开一个线程执行 request
 	for _, v := range requestList {
-		requestThread.Go(getRequestResult(v, run))
+		requestThread.Go(runner.getRequestResult(v, run))
 	}
 	// 等待所有采集和解析执行完毕
 	requestThread.Wait()
@@ -243,7 +249,7 @@ func Request() {
 // ============== HTTP模块 - 存储部分 ==============
 
 // 解析 Request 采集结果
-func getRequestResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
+func (runner *Runner) getRequestResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
 	return func() {
 		defer func() {
 			if err := recover(); err != nil {
@@ -345,7 +351,7 @@ func getRequestResult(site models.GfnCollectorDomain, run *runstate.Run) func() 
 		}
 
 		// 存数据库
-		err := dao.GetHTTPDao().Add(&httpSaveRecord)
+		err := runner.persistence.Add(&httpSaveRecord)
 		if err != nil {
 			log.ErrorFields(map[string]interface{}{
 				"event":    "db_write_failed",
@@ -360,7 +366,7 @@ func getRequestResult(site models.GfnCollectorDomain, run *runstate.Run) func() 
 			collectorID = run.CollectorID
 			jobID = run.JobID
 		}
-		saveErr := observation.SaveIfEnabled(observation.Input{
+		saveErr := observation.SaveIfEnabled(runner.observations, observation.Input{
 			SiteID:       site.SiteID,
 			Target:       siteName,
 			Protocol:     observation.ProtocolHTTP,

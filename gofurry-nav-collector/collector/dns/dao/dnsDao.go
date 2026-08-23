@@ -1,52 +1,67 @@
 package dao
 
 import (
+	"context"
 	"strconv"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/models"
 	"github.com/gofurry/gofurry-nav-collector/common"
-	"github.com/gofurry/gofurry-nav-collector/common/abstract"
 	"github.com/gofurry/gofurry-nav-collector/common/retention"
+	navsqlc "github.com/gofurry/gofurry-nav-collector/internal/db/nav/sqlc"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var newDNSDao = new(dnsDao)
-
-func init() {
-	newDNSDao.Init()
+type DNSDAO struct {
+	pool    *pgxpool.Pool
+	queries *navsqlc.Queries
 }
 
-type dnsDao struct{ abstract.Dao }
+func New(pool *pgxpool.Pool) *DNSDAO {
+	return &DNSDAO{pool: pool, queries: navsqlc.New(pool)}
+}
 
-func GetDNSDao() *dnsDao { return newDNSDao }
-
-func (dao dnsDao) GetList() ([]models.GfnCollectorDomain, common.GFError) {
-	var res []models.GfnCollectorDomain
-	db := dao.Gm.Table(models.TableNameGfnCollectorDomain + " AS cd").
-		Select("cd.*").
-		Joins("JOIN " + models.TableNameGfnSite + " AS s ON s.id = cd.site_id").
-		Where("cd.deleted IS NOT TRUE AND cd.site_id > 0 AND s.deleted IS NOT TRUE").
-		Order("cd.site_id ASC, cd.id ASC")
-	db.Find(&res)
-	if err := db.Error; err != nil {
+func (dao *DNSDAO) GetList() ([]models.GfnCollectorDomain, common.GFError) {
+	rows, err := dao.queries.ListCollectorDomains(context.Background())
+	if err != nil {
 		return nil, common.NewDaoError(err.Error())
 	}
-	return res, nil
+	result := make([]models.GfnCollectorDomain, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.GfnCollectorDomain{ID: row.ID, SiteID: row.SiteID, Name: row.Name, Proxy: row.Proxy, Prefix: row.Prefix, TLS: row.Tls, Deleted: row.Deleted})
+	}
+	return result, nil
 }
 
-// 保留 count 条request历史记录
-func (dao dnsDao) DeleteByNum(count string) (int64, common.GFError) {
-	// 转换保留条数为整数
+func (dao *DNSDAO) Add(record *models.GfnCollectorLogDn) common.GFError {
+	err := dao.queries.InsertDNSLog(context.Background(), navsqlc.InsertDNSLogParams{
+		ID: record.ID, Name: record.Name, A: bytes(record.A), Aaaa: bytes(record.Aaaa),
+		Mx: bytes(record.Mx), Ns: bytes(record.Ns), Soa: bytes(record.Soa),
+		Txt: bytes(record.Txt), Caa: bytes(record.Caa), Cname: bytes(record.Cname),
+		Status: record.Status, CreateTime: pgtype.Timestamp{Time: record.CreateTime, Valid: !record.CreateTime.IsZero()},
+	})
+	if err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	return nil
+}
+
+func (dao *DNSDAO) DeleteByNum(count string) (int64, common.GFError) {
 	keepCount, err := strconv.Atoi(count)
 	if err != nil {
 		return 0, common.NewDaoError("count 格式错误: " + err.Error())
 	}
-
-	db := dao.Gm.Table(models.TableNameGfnCollectorLogDn)
-	totalDeleted, deleteErr := retention.DeleteByNameLimit(db, models.TableNameGfnCollectorLogDn, keepCount, retention.DefaultBatchSize, 2*time.Minute, time.Second)
-	if deleteErr != nil {
-		return totalDeleted, common.NewDaoError("DNS日志分批删除失败: " + deleteErr.Error())
+	deleted, err := retention.DeleteDNSByNameLimit(dao.pool, keepCount, retention.DefaultBatchSize, 2*time.Minute, time.Second)
+	if err != nil {
+		return deleted, common.NewDaoError("DNS日志分批删除失败: " + err.Error())
 	}
+	return deleted, nil
+}
 
-	return totalDeleted, nil
+func bytes(value *string) []byte {
+	if value == nil {
+		return nil
+	}
+	return []byte(*value)
 }

@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
+	"github.com/gofurry/gofurry-nav-collector/internal/infra/postgres"
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"github.com/gofurry/gofurry-nav-collector/schedule"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kardianos/service"
 )
 
@@ -61,7 +65,10 @@ func main() {
 	debug.SetGCPercent(1000)
 	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
 
-	InitOnStart()
+	if err := prg.InitOnStart(); err != nil {
+		log.Error("服务初始化失败: ", err)
+		return
+	}
 
 	// 启动系统
 	err = s.Run()
@@ -70,15 +77,18 @@ func main() {
 	}
 }
 
-func InitOnStart() {
+func (gf *goFurry) InitOnStart() error {
 	initLogger()
 	// 初始化 redis
 	cs.InitRedisOnStart()
 	// 初始化时间调度
 	cs.InitTimeWheelOnStart()
+	return gf.initPostgres()
 }
 
-type goFurry struct{}
+type goFurry struct {
+	pool *pgxpool.Pool
+}
 
 func (gf *goFurry) Start(s service.Service) error {
 	go gf.run()
@@ -93,13 +103,51 @@ func (gf *goFurry) run() {
 			"service": common.COMMON_PROJECT_NAME,
 			"version": env.GetServerConfig().Server.AppVersion,
 		}, "采集器服务已启动")
-		schedule.InitSchedule()
+		schedule.InitSchedule(gf.pool)
 	}()
 }
 
 func (gf *goFurry) Stop(s service.Service) error {
 	schedule.StopSchedule()
+	if gf.pool != nil {
+		gf.pool.Close()
+		gf.pool = nil
+	}
 	return log.Sync()
+}
+
+func (gf *goFurry) initPostgres() error {
+	dbConfig := env.GetServerConfig().DataBase
+	ctx, cancel := context.WithTimeout(context.Background(), durationOrDefault(
+		dbConfig.ConnectTimeoutSeconds+dbConfig.PingTimeoutSeconds, 8*time.Second))
+	defer cancel()
+	pool, err := postgres.Open(ctx, postgres.Config{
+		ConnectionString:      dbConfig.ConnectionString(),
+		MaxConns:              dbConfig.MaxConns,
+		MinConns:              dbConfig.MinConns,
+		MaxConnLifetime:       seconds(dbConfig.MaxConnLifetimeSeconds),
+		MaxConnLifetimeJitter: seconds(dbConfig.MaxConnLifetimeJitterSeconds),
+		MaxConnIdleTime:       seconds(dbConfig.MaxConnIdleTimeSeconds),
+		HealthCheckPeriod:     seconds(dbConfig.HealthCheckPeriodSeconds),
+		ConnectTimeout:        seconds(dbConfig.ConnectTimeoutSeconds),
+		PingTimeout:           seconds(dbConfig.PingTimeoutSeconds),
+	}, "gofurry-nav-collector")
+	if err != nil {
+		return err
+	}
+	gf.pool = pool
+	return nil
+}
+
+func seconds(value int) time.Duration {
+	return time.Duration(value) * time.Second
+}
+
+func durationOrDefault(totalSeconds int, fallback time.Duration) time.Duration {
+	if totalSeconds <= 0 {
+		return fallback
+	}
+	return time.Duration(totalSeconds) * time.Second
 }
 
 func initLogger() {

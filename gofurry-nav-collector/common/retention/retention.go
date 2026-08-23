@@ -2,144 +2,85 @@ package retention
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
-	"gorm.io/gorm"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const DefaultBatchSize = 500
 
-var allowedRetentionTables = map[string]struct{}{
-	"gfn_collector_log_ping":    {},
-	"gfn_collector_log_http":    {},
-	"gfn_collector_log_dns":     {},
-	"gfn_collector_observation": {},
-}
-
-func BuildDeleteSQL(tableName string) (string, error) {
-	if !isAllowedRetentionTable(tableName) {
-		return "", errors.New("retention 表名不在允许列表: " + tableName)
-	}
-	return fmt.Sprintf(`
-WITH doomed AS (
-	SELECT id
-	FROM (
-		SELECT
-			id,
-			ROW_NUMBER() OVER (
-				PARTITION BY name
-				ORDER BY create_time DESC, id DESC
-			) AS rn
-		FROM %s
-	) ranked
-	WHERE ranked.rn > ?
-	ORDER BY id
-	LIMIT ?
+// These four fixed statements are a local direct-pgx exception. sqlc 1.31
+// cannot resolve the window-column alias in a ranked CTE used by DELETE, while
+// PostgreSQL executes the statements correctly. No table identifier is dynamic
+// and every runtime value is parameterized.
+const (
+	deletePingSQL = `WITH doomed AS (
+SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY create_time DESC,id DESC) rn
+FROM gfn_collector_log_ping) ranked WHERE rn>$1 ORDER BY id LIMIT $2)
+DELETE FROM gfn_collector_log_ping target USING doomed WHERE target.id=doomed.id`
+	deleteHTTPSQL = `WITH doomed AS (
+SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY create_time DESC,id DESC) rn
+FROM gfn_collector_log_http) ranked WHERE rn>$1 ORDER BY id LIMIT $2)
+DELETE FROM gfn_collector_log_http target USING doomed WHERE target.id=doomed.id`
+	deleteDNSSQL = `WITH doomed AS (
+SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY create_time DESC,id DESC) rn
+FROM gfn_collector_log_dns) ranked WHERE rn>$1 ORDER BY id LIMIT $2)
+DELETE FROM gfn_collector_log_dns target USING doomed WHERE target.id=doomed.id`
+	deleteObservationSQL = `WITH doomed AS (
+SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY site_id,protocol ORDER BY observed_at DESC,id DESC) rn
+FROM gfn_collector_observation WHERE protocol=$1) ranked WHERE rn>$2 ORDER BY id LIMIT $3)
+DELETE FROM gfn_collector_observation target USING doomed WHERE target.id=doomed.id`
 )
-DELETE FROM %s target
-USING doomed
-WHERE target.id = doomed.id;`, tableName, tableName), nil
+
+func DeletePingByNameLimit(pool *pgxpool.Pool, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
+	return deleteBatches(batchSize, batchTimeout, pause, func(ctx context.Context, batchSize int) (int64, error) {
+		tag, err := pool.Exec(ctx, deletePingSQL, keepCount, batchSize)
+		return tag.RowsAffected(), err
+	})
 }
 
-func BuildObservationDeleteSQL(tableName string) (string, error) {
-	if !isAllowedRetentionTable(tableName) {
-		return "", errors.New("retention 表名不在允许列表: " + tableName)
-	}
-	return fmt.Sprintf(`
-WITH doomed AS (
-	SELECT id
-	FROM (
-		SELECT
-			id,
-			ROW_NUMBER() OVER (
-				PARTITION BY site_id, protocol
-				ORDER BY observed_at DESC, id DESC
-			) AS rn
-		FROM %s
-		WHERE protocol = ?
-	) ranked
-	WHERE ranked.rn > ?
-	ORDER BY id
-	LIMIT ?
-)
-DELETE FROM %s target
-USING doomed
-WHERE target.id = doomed.id;`, tableName, tableName), nil
+func DeleteHTTPByNameLimit(pool *pgxpool.Pool, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
+	return deleteBatches(batchSize, batchTimeout, pause, func(ctx context.Context, batchSize int) (int64, error) {
+		tag, err := pool.Exec(ctx, deleteHTTPSQL, keepCount, batchSize)
+		return tag.RowsAffected(), err
+	})
 }
 
-func isAllowedRetentionTable(tableName string) bool {
-	_, ok := allowedRetentionTables[tableName]
-	return ok
+func DeleteDNSByNameLimit(pool *pgxpool.Pool, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
+	return deleteBatches(batchSize, batchTimeout, pause, func(ctx context.Context, batchSize int) (int64, error) {
+		tag, err := pool.Exec(ctx, deleteDNSSQL, keepCount, batchSize)
+		return tag.RowsAffected(), err
+	})
 }
 
-func DeleteByNameLimit(db *gorm.DB, tableName string, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
+func DeleteObservationByProtocolLimit(pool *pgxpool.Pool, protocol string, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
+	return deleteBatches(batchSize, batchTimeout, pause, func(ctx context.Context, batchSize int) (int64, error) {
+		tag, err := pool.Exec(ctx, deleteObservationSQL, protocol, keepCount, batchSize)
+		return tag.RowsAffected(), err
+	})
+}
+
+func deleteBatches(batchSize int, batchTimeout time.Duration, pause time.Duration, deleteBatch func(context.Context, int) (int64, error)) (int64, error) {
 	if batchSize <= 0 {
 		batchSize = DefaultBatchSize
 	}
 	if batchTimeout <= 0 {
 		batchTimeout = 2 * time.Minute
 	}
-
-	var totalDeleted int64
-	sql, err := BuildDeleteSQL(tableName)
-	if err != nil {
-		return 0, err
-	}
+	var total int64
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), batchTimeout)
-		result := db.WithContext(ctx).Exec(sql, keepCount, batchSize)
+		deleted, err := deleteBatch(ctx, batchSize)
 		cancel()
-
-		if result.Error != nil {
-			return totalDeleted, result.Error
+		total += deleted
+		if err != nil {
+			return total, err
 		}
-
-		deleted := result.RowsAffected
-		totalDeleted += deleted
 		if deleted < int64(batchSize) {
-			break
+			return total, nil
 		}
 		if pause > 0 {
 			time.Sleep(pause)
 		}
 	}
-
-	return totalDeleted, nil
-}
-
-func DeleteObservationByProtocolLimit(db *gorm.DB, tableName string, protocol string, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
-	if batchSize <= 0 {
-		batchSize = DefaultBatchSize
-	}
-	if batchTimeout <= 0 {
-		batchTimeout = 2 * time.Minute
-	}
-
-	var totalDeleted int64
-	sql, err := BuildObservationDeleteSQL(tableName)
-	if err != nil {
-		return 0, err
-	}
-	for {
-		ctx, cancel := context.WithTimeout(context.Background(), batchTimeout)
-		result := db.WithContext(ctx).Exec(sql, protocol, keepCount, batchSize)
-		cancel()
-
-		if result.Error != nil {
-			return totalDeleted, result.Error
-		}
-
-		deleted := result.RowsAffected
-		totalDeleted += deleted
-		if deleted < int64(batchSize) {
-			break
-		}
-		if pause > 0 {
-			time.Sleep(pause)
-		}
-	}
-
-	return totalDeleted, nil
 }

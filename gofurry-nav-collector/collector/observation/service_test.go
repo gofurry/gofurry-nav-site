@@ -70,7 +70,7 @@ func TestSaveIfEnabledRejectsOversizedPayloadBeforeWriting(t *testing.T) {
 		env.GetServerConfig().Collector.V2 = oldV2
 	})
 
-	err := SaveIfEnabled(Input{
+	err := SaveIfEnabled(nil, Input{
 		SiteID:   1,
 		Target:   "example.com",
 		Protocol: ProtocolPing,

@@ -6,58 +6,45 @@ import (
 	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/common"
-	"github.com/gofurry/gofurry-nav-collector/common/abstract"
 	"github.com/gofurry/gofurry-nav-collector/common/retention"
+	navsqlc "github.com/gofurry/gofurry-nav-collector/internal/db/nav/sqlc"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var newObservationDao = new(observationDao)
-
-func init() {
-	newObservationDao.Init()
+type ObservationDAO struct {
+	pool    *pgxpool.Pool
+	queries *navsqlc.Queries
 }
 
-type observationDao struct{ abstract.Dao }
+func NewDAO(pool *pgxpool.Pool) *ObservationDAO {
+	return &ObservationDAO{pool: pool, queries: navsqlc.New(pool)}
+}
 
-func GetObservationDao() *observationDao { return newObservationDao }
-
-func (dao observationDao) AddObservation(record *GfnCollectorObservation) common.GFError {
-	db := dao.Gm.Exec(`
-INSERT INTO gfn_collector_observation (
-	id, site_id, target, protocol, status, observed_at, duration_ms,
-	error_code, error_message, payload, schema_version, create_time
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?)`,
-		record.ID,
-		record.SiteID,
-		record.Target,
-		record.Protocol,
-		record.Status,
-		record.ObservedAt,
-		record.DurationMS,
-		record.ErrorCode,
-		record.ErrorMessage,
-		record.Payload,
-		record.SchemaVersion,
-		record.CreateTime,
-	)
-	if err := db.Error; err != nil {
+func (dao *ObservationDAO) AddObservation(record *GfnCollectorObservation) common.GFError {
+	duration := record.DurationMS
+	err := dao.queries.InsertObservation(context.Background(), navsqlc.InsertObservationParams{
+		ID: record.ID, SiteID: record.SiteID, Target: record.Target, Protocol: record.Protocol,
+		Status: record.Status, ObservedAt: timestamptz(record.ObservedAt), DurationMs: &duration,
+		ErrorCode: record.ErrorCode, ErrorMessage: record.ErrorMessage, Payload: []byte(record.Payload),
+		SchemaVersion: int32(record.SchemaVersion), CreateTime: timestamptz(record.CreateTime),
+	})
+	if err != nil {
 		return common.NewDaoError(err.Error())
 	}
 	return nil
 }
 
-func (dao observationDao) DeleteByProtocolLimit(protocol string, count string) (int64, common.GFError) {
+func (dao *ObservationDAO) DeleteByProtocolLimit(protocol string, count string) (int64, common.GFError) {
 	keepCount, err := strconv.Atoi(count)
 	if err != nil {
 		return 0, common.NewDaoError("count 格式错误: " + err.Error())
 	}
-
-	db := dao.Gm.Table(TableNameGfnCollectorObservation)
-	totalDeleted, deleteErr := retention.DeleteObservationByProtocolLimit(db, TableNameGfnCollectorObservation, protocol, keepCount, retention.DefaultBatchSize, 2*time.Minute, time.Second)
-	if deleteErr != nil {
-		return totalDeleted, common.NewDaoError("v2 observation 分批删除失败: " + deleteErr.Error())
+	deleted, err := retention.DeleteObservationByProtocolLimit(dao.pool, protocol, keepCount, retention.DefaultBatchSize, 2*time.Minute, time.Second)
+	if err != nil {
+		return deleted, common.NewDaoError("v2 observation 分批删除失败: " + err.Error())
 	}
-
-	return totalDeleted, nil
+	return deleted, nil
 }
 
 type ObservationTrendRow struct {
@@ -69,65 +56,48 @@ type ObservationTrendRow struct {
 	Payload    string
 }
 
-func (dao observationDao) ListTrendRows(ctx context.Context, siteID int64, target string, since time.Time, limit int) ([]ObservationTrendRow, common.GFError) {
+func (dao *ObservationDAO) ListTrendRows(ctx context.Context, siteID int64, target string, since time.Time, limit int) ([]ObservationTrendRow, common.GFError) {
 	if siteID <= 0 || target == "" {
 		return nil, nil
 	}
 	if limit <= 0 {
 		limit = defaultTrendMaxRows
 	}
-	rows := []ObservationTrendRow{}
-	db := dao.Gm.WithContext(ctx).Raw(`
-SELECT protocol, status, observed_at, duration_ms, error_code, payload::text AS payload
-FROM gfn_collector_observation
-WHERE site_id = ?
-  AND target = ?
-  AND observed_at >= ?
-  AND protocol IN (?, ?, ?)
-ORDER BY observed_at DESC, id DESC
-LIMIT ?`,
-		siteID,
-		target,
-		since,
-		ProtocolPing,
-		ProtocolHTTP,
-		ProtocolDNS,
-		limit,
-	).Scan(&rows)
-	if db.Error != nil {
-		return nil, common.NewDaoError(db.Error.Error())
+	rows, err := dao.queries.ListObservationTrendRows(ctx, navsqlc.ListObservationTrendRowsParams{
+		SiteID: siteID, Target: target, Since: timestamptz(since), LimitCount: int32(limit),
+	})
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
 	}
-	return rows, nil
+	result := make([]ObservationTrendRow, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, ObservationTrendRow{Protocol: row.Protocol, Status: row.Status,
+			ObservedAt: row.ObservedAt.Time, DurationMS: row.DurationMs, ErrorCode: row.ErrorCode, Payload: row.Payload})
+	}
+	return result, nil
 }
 
-func (dao observationDao) ListChangeRows(ctx context.Context, siteID int64, target string, since time.Time, limit int) ([]ObservationTrendRow, common.GFError) {
+func (dao *ObservationDAO) ListChangeRows(ctx context.Context, siteID int64, target string, since time.Time, limit int) ([]ObservationTrendRow, common.GFError) {
 	if siteID <= 0 || target == "" {
 		return nil, nil
 	}
 	if limit <= 0 {
 		limit = defaultChangeMaxRows
 	}
-	rows := []ObservationTrendRow{}
-	db := dao.Gm.WithContext(ctx).Raw(`
-SELECT protocol, status, observed_at, duration_ms, error_code, payload::text AS payload
-FROM gfn_collector_observation
-WHERE site_id = ?
-  AND target = ?
-  AND observed_at >= ?
-  AND protocol IN (?, ?, ?, ?)
-ORDER BY observed_at DESC, id DESC
-LIMIT ?`,
-		siteID,
-		target,
-		since,
-		ProtocolHTTP,
-		ProtocolDNS,
-		ProtocolPortCheck,
-		ProtocolRDAP,
-		limit,
-	).Scan(&rows)
-	if db.Error != nil {
-		return nil, common.NewDaoError(db.Error.Error())
+	rows, err := dao.queries.ListObservationChangeRows(ctx, navsqlc.ListObservationChangeRowsParams{
+		SiteID: siteID, Target: target, Since: timestamptz(since), LimitCount: int32(limit),
+	})
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
 	}
-	return rows, nil
+	result := make([]ObservationTrendRow, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, ObservationTrendRow{Protocol: row.Protocol, Status: row.Status,
+			ObservedAt: row.ObservedAt.Time, DurationMS: row.DurationMs, ErrorCode: row.ErrorCode, Payload: row.Payload})
+	}
+	return result, nil
+}
+
+func timestamptz(value time.Time) pgtype.Timestamptz {
+	return pgtype.Timestamptz{Time: value, Valid: !value.IsZero()}
 }

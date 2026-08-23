@@ -24,10 +24,16 @@ import (
 
 var pingRunning atomic.Bool
 
+type Runner struct {
+	persistence  *dao.PingDAO
+	observations *observation.ObservationDAO
+}
+
 // ============== Ping模块 - 初始化部分 ==============
 
 // 初始化
-func InitPingOnStart() {
+func InitPingOnStart(persistence *dao.PingDAO, observations *observation.ObservationDAO) {
+	runner := &Runner{persistence: persistence, observations: observations}
 	defer func() {
 		if err := recover(); err != nil {
 			log.ErrorFields(map[string]interface{}{
@@ -45,11 +51,11 @@ func InitPingOnStart() {
 	}, "Ping 采集模块初始化开始")
 
 	//初始化后执行一次 Ping
-	go Ping()
-	go Delete()
+	go runner.Ping()
+	go runner.Delete()
 	// 定时任务执行 Ping
-	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Ping.PingInterval)*time.Second, Ping)
-	cs.AddCronJob(24*time.Hour, Delete)
+	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Ping.PingInterval)*time.Second, runner.Ping)
+	cs.AddCronJob(24*time.Hour, runner.Delete)
 
 	log.InfoFields(map[string]interface{}{
 		"event":    "module_init_complete",
@@ -58,7 +64,7 @@ func InitPingOnStart() {
 }
 
 // 每天清理一次日志表
-func Delete() {
+func (runner *Runner) Delete() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.ErrorFields(map[string]interface{}{
@@ -77,7 +83,7 @@ func Delete() {
 	}, "Ping 历史日志保留清理开始")
 
 	// 每个域名仅保留 5000 条 ping 记录
-	count, deleteErr := dao.GetPingDao().DeleteByNum(keepCount)
+	count, deleteErr := runner.persistence.DeleteByNum(keepCount)
 	if deleteErr != nil {
 		log.ErrorFields(map[string]interface{}{
 			"deleted":    count,
@@ -96,7 +102,7 @@ func Delete() {
 		}, "Ping 历史日志保留清理完成")
 	}
 	if env.GetServerConfig().Collector.V2.ProtocolEnabled(observation.ProtocolPing) {
-		v2Count, v2DeleteErr := observation.DeleteByProtocolLimit(observation.ProtocolPing, keepCount)
+		v2Count, v2DeleteErr := observation.DeleteByProtocolLimit(runner.observations, observation.ProtocolPing, keepCount)
 		if v2DeleteErr != nil {
 			log.ErrorFields(map[string]interface{}{
 				"deleted":    v2Count,
@@ -118,9 +124,9 @@ func Delete() {
 }
 
 // 添加数据库全部采集域名到 redis
-func addAllIpToPing() (map[string]int64, common.GFError) {
+func (runner *Runner) addAllIpToPing() (map[string]int64, common.GFError) {
 	// 查记录
-	domainRecords, err := dao.GetPingDao().GetList()
+	domainRecords, err := runner.persistence.GetList()
 	if err != nil {
 		log.Error(fmt.Sprintf("查询 Ping 目标失败: %v", err.GetMsg()))
 		return nil, common.NewServiceError(fmt.Sprintf("查询 Ping 目标失败: %v", err))
@@ -174,7 +180,7 @@ func collectorDomainTarget(record models2.GfnCollectorDomain) string {
 // ============== Ping解析 - 执行部分 ==============
 
 // 检测是否在线
-func Ping() {
+func (runner *Runner) Ping() {
 	interval := time.Duration(env.GetServerConfig().Collector.Ping.PingInterval) * time.Second
 	run := runstate.NewRun(observation.ProtocolPing, interval)
 	defer func() {
@@ -217,7 +223,7 @@ func Ping() {
 	log.InfoFields(fields, "Ping 采集运行开始")
 
 	// 查询数据库所有 IP 存 redis 每次采集都请求记录 热更新
-	siteIDByDomain, err := addAllIpToPing()
+	siteIDByDomain, err := runner.addAllIpToPing()
 	if err != nil {
 		run.Fail("load_targets_to_redis", 0)
 		fields := run.Fields()
@@ -301,7 +307,7 @@ func Ping() {
 	// 遍历 IP 列表, 每个 IP 开一个线程执行 Ping
 	for _, v := range pingList {
 		target := models2.PingTarget{SiteID: siteIDByDomain[v], Domain: v}
-		pingThread.Go(getPingResult(target, nowData, &pingRWLock, run))
+		pingThread.Go(runner.getPingResult(target, nowData, &pingRWLock, run))
 	}
 	// 等待所有 Ping 执行完毕
 	pingThread.Wait()
@@ -422,7 +428,7 @@ func performPing(ip string) (pingModel models2.PingModel) {
 }
 
 // 解析 ping 采集结果
-func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock *sync.Mutex, run *runstate.Run) func() {
+func (runner *Runner) getPingResult(target models2.PingTarget, data map[string]string, pingRWLock *sync.Mutex, run *runstate.Run) func() {
 	return func() {
 		ip := target.Domain
 		defer func() {
@@ -485,7 +491,7 @@ func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock
 		pingRWLock.Unlock()
 
 		// 存数据库
-		if daoErr := dao.GetPingDao().Add(pindSaveRecord); daoErr != nil {
+		if daoErr := runner.persistence.Add(pindSaveRecord); daoErr != nil {
 			log.ErrorFields(map[string]interface{}{
 				"event":    "db_write_failed",
 				"protocol": "ping",
@@ -500,7 +506,7 @@ func getPingResult(target models2.PingTarget, data map[string]string, pingRWLock
 			collectorID = run.CollectorID
 			jobID = run.JobID
 		}
-		saveErr := observation.SaveIfEnabled(observation.Input{
+		saveErr := observation.SaveIfEnabled(runner.observations, observation.Input{
 			SiteID:       target.SiteID,
 			Target:       ip,
 			Protocol:     observation.ProtocolPing,

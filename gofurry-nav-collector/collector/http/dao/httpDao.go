@@ -1,52 +1,59 @@
 package dao
 
 import (
+	"context"
 	"strconv"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/collector/http/models"
 	"github.com/gofurry/gofurry-nav-collector/common"
-	"github.com/gofurry/gofurry-nav-collector/common/abstract"
 	"github.com/gofurry/gofurry-nav-collector/common/retention"
+	navsqlc "github.com/gofurry/gofurry-nav-collector/internal/db/nav/sqlc"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var newHTTPDao = new(httpDao)
-
-func init() {
-	newHTTPDao.Init()
+type HTTPDAO struct {
+	pool    *pgxpool.Pool
+	queries *navsqlc.Queries
 }
 
-type httpDao struct{ abstract.Dao }
+func New(pool *pgxpool.Pool) *HTTPDAO {
+	return &HTTPDAO{pool: pool, queries: navsqlc.New(pool)}
+}
 
-func GetHTTPDao() *httpDao { return newHTTPDao }
-
-func (dao httpDao) GetList() ([]models.GfnCollectorDomain, common.GFError) {
-	var res []models.GfnCollectorDomain
-	db := dao.Gm.Table(models.TableNameGfnCollectorDomain + " AS cd").
-		Select("cd.*").
-		Joins("JOIN " + models.TableNameGfnSite + " AS s ON s.id = cd.site_id").
-		Where("cd.deleted IS NOT TRUE AND cd.site_id > 0 AND s.deleted IS NOT TRUE").
-		Order("cd.site_id ASC, cd.id ASC")
-	db.Find(&res)
-	if err := db.Error; err != nil {
+func (dao *HTTPDAO) GetList() ([]models.GfnCollectorDomain, common.GFError) {
+	rows, err := dao.queries.ListCollectorDomains(context.Background())
+	if err != nil {
 		return nil, common.NewDaoError(err.Error())
 	}
-	return res, nil
+	result := make([]models.GfnCollectorDomain, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.GfnCollectorDomain{ID: row.ID, SiteID: row.SiteID, Name: row.Name, Proxy: row.Proxy, Prefix: row.Prefix, TLS: row.Tls, Deleted: row.Deleted})
+	}
+	return result, nil
 }
 
-// 保留 count 条request历史记录
-func (dao httpDao) DeleteByNum(count string) (int64, common.GFError) {
-	// 转换保留条数为整数
+func (dao *HTTPDAO) Add(record *models.GfnCollectorLogHTTP) common.GFError {
+	t := time.Time(record.CreateTime)
+	err := dao.queries.InsertHTTPLog(context.Background(), navsqlc.InsertHTTPLogParams{
+		ID: record.ID, Name: record.Name, Info: []byte(record.Info), Status: record.Status,
+		CreateTime: pgtype.Timestamp{Time: t, Valid: !t.IsZero()},
+	})
+	if err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	return nil
+}
+
+func (dao *HTTPDAO) DeleteByNum(count string) (int64, common.GFError) {
 	keepCount, err := strconv.Atoi(count)
 	if err != nil {
 		return 0, common.NewDaoError("count 格式错误: " + err.Error())
 	}
-
-	db := dao.Gm.Table(models.TableNameGfnCollectorLogHTTP)
-	totalDeleted, deleteErr := retention.DeleteByNameLimit(db, models.TableNameGfnCollectorLogHTTP, keepCount, retention.DefaultBatchSize, 2*time.Minute, time.Second)
-	if deleteErr != nil {
-		return totalDeleted, common.NewDaoError("HTTP日志分批删除失败: " + deleteErr.Error())
+	deleted, err := retention.DeleteHTTPByNameLimit(dao.pool, keepCount, retention.DefaultBatchSize, 2*time.Minute, time.Second)
+	if err != nil {
+		return deleted, common.NewDaoError("HTTP日志分批删除失败: " + err.Error())
 	}
-
-	return totalDeleted, nil
+	return deleted, nil
 }

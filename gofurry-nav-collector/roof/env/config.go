@@ -3,6 +3,7 @@ package env
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -204,15 +205,28 @@ type ServerConfig struct {
 }
 
 type DataBaseConfig struct {
-	DBName                 string `yaml:"db_name"`
-	DBUsername             string `yaml:"db_username"`
-	DBPassword             string `yaml:"db_password"`
-	DBHost                 string `yaml:"db_host"`
-	DBPort                 string `yaml:"db_port"`
-	MaxOpenConns           int    `yaml:"max_open_conns"`
-	MaxIdleConns           int    `yaml:"max_idle_conns"`
-	ConnMaxLifetimeSeconds int    `yaml:"conn_max_lifetime_seconds"`
-	ConnMaxIdleTimeSeconds int    `yaml:"conn_max_idle_time_seconds"`
+	DBName                       string `yaml:"db_name"`
+	DBUsername                   string `yaml:"db_username"`
+	DBPassword                   string `yaml:"db_password"`
+	DBHost                       string `yaml:"db_host"`
+	DBPort                       string `yaml:"db_port"`
+	MaxConns                     int32  `yaml:"max_conns"`
+	MinConns                     int32  `yaml:"min_conns"`
+	MaxConnLifetimeSeconds       int    `yaml:"max_conn_lifetime_seconds"`
+	MaxConnLifetimeJitterSeconds int    `yaml:"max_conn_lifetime_jitter_seconds"`
+	MaxConnIdleTimeSeconds       int    `yaml:"max_conn_idle_time_seconds"`
+	HealthCheckPeriodSeconds     int    `yaml:"health_check_period_seconds"`
+	ConnectTimeoutSeconds        int    `yaml:"connect_timeout_seconds"`
+	PingTimeoutSeconds           int    `yaml:"ping_timeout_seconds"`
+}
+
+func (cfg DataBaseConfig) ConnectionString() string {
+	u := &url.URL{Scheme: "postgres", Host: cfg.DBHost + ":" + cfg.DBPort, Path: cfg.DBName}
+	u.User = url.UserPassword(cfg.DBUsername, cfg.DBPassword)
+	query := u.Query()
+	query.Set("sslmode", "prefer")
+	u.RawQuery = query.Encode()
+	return u.String()
 }
 
 type RedisConfig struct {

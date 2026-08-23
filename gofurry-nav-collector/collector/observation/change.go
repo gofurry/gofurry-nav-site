@@ -25,7 +25,7 @@ func TargetChangeKey(siteID int64, target string) string {
 	return fmt.Sprintf("collector:v2:change:target:%d:%s", siteID, target)
 }
 
-func UpdateChangeEventsIfEnabled(siteID int64, target string, now time.Time) common.GFError {
+func UpdateChangeEventsIfEnabled(dao *ObservationDAO, siteID int64, target string, now time.Time) common.GFError {
 	if siteID <= 0 || target == "" {
 		return nil
 	}
@@ -42,7 +42,7 @@ func UpdateChangeEventsIfEnabled(siteID int64, target string, now time.Time) com
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Derived.QueryTimeout())
 	defer cancel()
-	rows, err := GetObservationDao().ListChangeRows(ctx, siteID, target, now.Add(-defaultChangeLookback), cfg.Derived.ChangeRows())
+	rows, err := dao.ListChangeRows(ctx, siteID, target, now.Add(-defaultChangeLookback), cfg.Derived.ChangeRows())
 	if err != nil {
 		log.WarnFields(map[string]interface{}{
 			"event":   "v2_change_query_failed",

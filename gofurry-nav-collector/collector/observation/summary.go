@@ -36,7 +36,7 @@ func SiteSummaryKey(siteID int64) string {
 	return fmt.Sprintf("collector:v2:summary:site:%d", siteID)
 }
 
-func UpdateSummaryIfEnabled(siteID int64, target string) common.GFError {
+func UpdateSummaryIfEnabled(dao *ObservationDAO, siteID int64, target string) common.GFError {
 	if siteID <= 0 || target == "" {
 		return nil
 	}
@@ -74,7 +74,7 @@ func UpdateSummaryIfEnabled(siteID int64, target string) common.GFError {
 		}, "v2 site summary Redis 写入失败: "+err.GetMsg())
 		return err
 	}
-	if err := UpdateTrendIfEnabled(siteID, target, now); err != nil {
+	if err := UpdateTrendIfEnabled(dao, siteID, target, now); err != nil {
 		log.WarnFields(map[string]interface{}{
 			"event":     "v2_target_trend_update_failed",
 			"redis_key": TargetTrendKey(siteID, target),
@@ -82,7 +82,7 @@ func UpdateSummaryIfEnabled(siteID int64, target string) common.GFError {
 			"target":    target,
 		}, "v2 target 趋势派生失败: "+err.GetMsg())
 	}
-	if err := UpdateChangeEventsIfEnabled(siteID, target, now); err != nil {
+	if err := UpdateChangeEventsIfEnabled(dao, siteID, target, now); err != nil {
 		log.WarnFields(map[string]interface{}{
 			"event":     "v2_target_change_update_failed",
 			"redis_key": TargetChangeKey(siteID, target),
