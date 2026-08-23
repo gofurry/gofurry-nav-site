@@ -19,13 +19,15 @@ import (
 	"github.com/google/uuid"
 )
 
-type prizeService struct{}
+type PrizeService struct {
+	dao *dao.PrizeDAO
+}
 
-var prizeSingleton = new(prizeService)
+func New(prizeDAO *dao.PrizeDAO) *PrizeService {
+	return &PrizeService{dao: prizeDAO}
+}
 
-func GetPrizeService() *prizeService { return prizeSingleton }
-
-func (s prizeService) PrizeParticipation(req models.PrizeParticipationRequest, c fiber.Ctx) common.GFError {
+func (s *PrizeService) PrizeParticipation(req models.PrizeParticipationRequest, c fiber.Ctx) common.GFError {
 	// 入参校验
 	reqErr := ca.ValidateServiceApi.Validate(req)
 	if reqErr != nil {
@@ -49,7 +51,7 @@ func (s prizeService) PrizeParticipation(req models.PrizeParticipationRequest, c
 		return common.NewServiceError("请不要频繁请求邮箱服务")
 	}
 	var prizeRecord models.GfgPrize
-	gfsError = dao.GetPrizeDao().GetById(req.ID, &prizeRecord)
+	gfsError = s.dao.GetById(req.ID, &prizeRecord)
 	if gfsError != nil {
 		return common.NewServiceError("抽奖活动不存在")
 	}
@@ -68,7 +70,7 @@ func (s prizeService) PrizeParticipation(req models.PrizeParticipationRequest, c
 		return common.NewServiceError("密钥错误")
 	}
 
-	_, gfsError = dao.GetPrizeDao().GetMemberById(req.ID, req.Email)
+	_, gfsError = s.dao.GetMemberById(req.ID, req.Email)
 	if gfsError == nil {
 		return common.NewServiceError("您的邮箱已参与了此活动，请勿重复申请")
 	} else if gfsError.GetMsg() != common.RETURN_RECORD_NOT_FOUND {
@@ -111,7 +113,7 @@ func (s prizeService) PrizeParticipation(req models.PrizeParticipationRequest, c
 	return gfsError
 }
 
-func (s prizeService) ActiveParticipation(id string, key string) (prizeRes models.GfgPrize, memberRes models.GfgPrizeMember, gfsError common.GFError) {
+func (s *PrizeService) ActiveParticipation(id string, key string) (prizeRes models.GfgPrize, memberRes models.GfgPrizeMember, gfsError common.GFError) {
 	prizeKey := prizekey.ParticipationKeyString(id, key)
 	data, gfsError := cs.GetString(prizeKey)
 	if gfsError != nil {
@@ -131,7 +133,7 @@ func (s prizeService) ActiveParticipation(id string, key string) (prizeRes model
 	if err != nil {
 		return prizeRes, memberRes, common.NewServiceError("参数错误")
 	}
-	gfsError = dao.GetPrizeDao().GetById(strId, &prize)
+	gfsError = s.dao.GetById(strId, &prize)
 	if gfsError != nil {
 		return prizeRes, memberRes, common.NewServiceError("激活链接已失效, 请重试")
 	}
@@ -156,7 +158,7 @@ func (s prizeService) ActiveParticipation(id string, key string) (prizeRes model
 		IsWinner:   false,
 		CreateTime: cm.LocalTime(time.Now()),
 	}
-	gfsError = dao.GetPrizeDao().Add(&memberRecord)
+	gfsError = s.dao.Add(&memberRecord)
 	if gfsError != nil {
 		return prizeRes, memberRes, common.NewServiceError("激活失败, 请重试")
 	}
@@ -167,7 +169,7 @@ func (s prizeService) ActiveParticipation(id string, key string) (prizeRes model
 	return prize, memberRecord, nil
 }
 
-func (s prizeService) LotteryInfo() (res models.LotteryResp, err common.GFError) {
+func (s *PrizeService) LotteryInfo() (res models.LotteryResp, err common.GFError) {
 	// 往期
 	data, err := cs.GetString("prize:history")
 	if err != nil {
@@ -179,13 +181,13 @@ func (s prizeService) LotteryInfo() (res models.LotteryResp, err common.GFError)
 	}
 
 	// 本期
-	active, err := dao.GetPrizeDao().GetLotteryActive()
+	active, err := s.dao.GetLotteryActive()
 	if err != nil {
 		return
 	}
 
 	for idx := range active {
-		members, err := dao.GetPrizeDao().GetMembers(active[idx].ID)
+		members, err := s.dao.GetMembers(active[idx].ID)
 		if err != nil {
 			log.Error("GetMembers err:", err.GetMsg())
 		}

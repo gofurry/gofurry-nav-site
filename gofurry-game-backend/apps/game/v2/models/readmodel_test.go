@@ -1,24 +1,18 @@
 package models
 
 import (
-	"sync"
+	"reflect"
 	"testing"
-
-	"gorm.io/gorm/schema"
 )
 
 func TestSearchPageItemAppIDColumn(t *testing.T) {
 	t.Parallel()
 
-	parsed, err := schema.Parse(&GameV2SearchPageItem{}, &sync.Map{}, schema.NamingStrategy{})
-	if err != nil {
-		t.Fatalf("parse search page item schema: %v", err)
-	}
-	field := parsed.LookUpField("AppID")
-	if field == nil {
+	field, ok := reflect.TypeOf(GameV2SearchPageItem{}).FieldByName("AppID")
+	if !ok {
 		t.Fatal("AppID field is missing")
 	}
-	if field.DBName != "appid" {
-		t.Fatalf("AppID column = %q, want appid", field.DBName)
+	if column := field.Tag.Get("db"); column != "appid" {
+		t.Fatalf("AppID column = %q, want appid", column)
 	}
 }

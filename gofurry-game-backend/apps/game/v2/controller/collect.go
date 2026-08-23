@@ -8,16 +8,16 @@ import (
 	"github.com/gofurry/gofurry-game-backend/common"
 )
 
-func (api *gameV2Api) GetCollectStatus(c fiber.Ctx) error {
-	data, err := newReadModelService().GetCollectStatus(context.Background())
+func (api *GameV2API) GetCollectStatus(c fiber.Ctx) error {
+	data, err := api.newReadModelService().GetCollectStatus(context.Background())
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) ListCollectRuns(c fiber.Ctx) error {
-	data, err := newReadModelService().ListCollectRuns(context.Background(), v2models.GameV2CollectRunQuery{
+func (api *GameV2API) ListCollectRuns(c fiber.Ctx) error {
+	data, err := api.newReadModelService().ListCollectRuns(context.Background(), v2models.GameV2CollectRunQuery{
 		TaskType: c.Query("task_type", ""),
 		Status:   c.Query("status", ""),
 		Limit:    parseInt(c.Query("limit", "20")),
@@ -29,16 +29,16 @@ func (api *gameV2Api) ListCollectRuns(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetCollectRun(c fiber.Ctx) error {
-	data, err := newReadModelService().GetCollectRun(context.Background(), c.Params("run_id"))
+func (api *GameV2API) GetCollectRun(c fiber.Ctx) error {
+	data, err := api.newReadModelService().GetCollectRun(context.Background(), c.Params("run_id"))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) ListCollectTaskResults(c fiber.Ctx) error {
-	data, err := newReadModelService().ListCollectTaskResults(context.Background(), v2models.GameV2CollectTaskResultQuery{
+func (api *GameV2API) ListCollectTaskResults(c fiber.Ctx) error {
+	data, err := api.newReadModelService().ListCollectTaskResults(context.Background(), v2models.GameV2CollectTaskResultQuery{
 		RunID:    c.Query("run_id", ""),
 		TaskType: c.Query("task_type", ""),
 		Status:   c.Query("status", ""),
@@ -53,10 +53,10 @@ func (api *gameV2Api) ListCollectTaskResults(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetGameCollectStatus(c fiber.Ctx) error {
+func (api *GameV2API) GetGameCollectStatus(c fiber.Ctx) error {
 	id := parseInt64(c.Params("id"))
 	appid := parseInt64(c.Query("appid", "0"))
-	data, err := newReadModelService().GetGameCollectStatus(context.Background(), id, appid)
+	data, err := api.newReadModelService().GetGameCollectStatus(context.Background(), id, appid)
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}

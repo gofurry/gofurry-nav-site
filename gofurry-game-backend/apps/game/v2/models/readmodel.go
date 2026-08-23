@@ -20,231 +20,233 @@ const (
 	TableNameGfgGameV2Recommendations    = "gfg_game_v2_recommendations"
 )
 
+// The db tags are consumed by pgx's explicit row collectors. These are API/domain
+// models; generated sqlc models remain inside internal/db/game/sqlc.
 type GfgGameV2Details struct {
-	GameID             int64     `gorm:"column:game_id;primaryKey" json:"game_id"`
-	AppID              int64     `gorm:"column:appid" json:"appid"`
-	Source             string    `gorm:"column:source" json:"source"`
-	Type               string    `gorm:"column:type" json:"type"`
-	Name               string    `gorm:"column:name" json:"name"`
-	IsFree             bool      `gorm:"column:is_free" json:"is_free"`
-	Website            *string   `gorm:"column:website" json:"website"`
-	HeaderURL          *string   `gorm:"column:header_url" json:"header_url"`
-	Developers         *string   `gorm:"column:developers" json:"developers"`
-	Publishers         *string   `gorm:"column:publishers" json:"publishers"`
-	ReleaseComingSoon  bool      `gorm:"column:release_coming_soon" json:"release_coming_soon"`
-	ReleaseDateText    *string   `gorm:"column:release_date_text" json:"release_date_text"`
-	Platforms          *string   `gorm:"column:platforms" json:"platforms"`
-	SupportedLanguages *string   `gorm:"column:supported_languages" json:"supported_languages"`
-	SupportInfo        *string   `gorm:"column:support_info" json:"support_info"`
-	ContentDescriptors *string   `gorm:"column:content_descriptors" json:"content_descriptors"`
-	Ratings            *string   `gorm:"column:ratings" json:"ratings"`
-	CollectedAt        time.Time `gorm:"column:collected_at" json:"collected_at"`
-	UpdatedAt          time.Time `gorm:"column:updated_at" json:"updated_at"`
+	GameID             int64     `db:"game_id" json:"game_id"`
+	AppID              int64     `db:"appid" json:"appid"`
+	Source             string    `db:"source" json:"source"`
+	Type               string    `db:"type" json:"type"`
+	Name               string    `db:"name" json:"name"`
+	IsFree             bool      `db:"is_free" json:"is_free"`
+	Website            *string   `db:"website" json:"website"`
+	HeaderURL          *string   `db:"header_url" json:"header_url"`
+	Developers         *string   `db:"developers" json:"developers"`
+	Publishers         *string   `db:"publishers" json:"publishers"`
+	ReleaseComingSoon  bool      `db:"release_coming_soon" json:"release_coming_soon"`
+	ReleaseDateText    *string   `db:"release_date_text" json:"release_date_text"`
+	Platforms          *string   `db:"platforms" json:"platforms"`
+	SupportedLanguages *string   `db:"supported_languages" json:"supported_languages"`
+	SupportInfo        *string   `db:"support_info" json:"support_info"`
+	ContentDescriptors *string   `db:"content_descriptors" json:"content_descriptors"`
+	Ratings            *string   `db:"ratings" json:"ratings"`
+	CollectedAt        time.Time `db:"collected_at" json:"collected_at"`
+	UpdatedAt          time.Time `db:"updated_at" json:"updated_at"`
 }
 
 func (*GfgGameV2Details) TableName() string { return TableNameGfgGameV2Details }
 
 type GfgGameV2LocalizedDetails struct {
-	GameID              int64     `gorm:"column:game_id;primaryKey" json:"game_id"`
-	AppID               int64     `gorm:"column:appid" json:"appid"`
-	Lang                string    `gorm:"column:lang;primaryKey" json:"lang"`
-	Name                string    `gorm:"column:name" json:"name"`
-	ShortDescription    *string   `gorm:"column:short_description" json:"short_description"`
-	DetailedDescription *string   `gorm:"column:detailed_description" json:"detailed_description"`
-	AboutTheGame        *string   `gorm:"column:about_the_game" json:"about_the_game"`
-	CollectedAt         time.Time `gorm:"column:collected_at" json:"collected_at"`
-	UpdatedAt           time.Time `gorm:"column:updated_at" json:"updated_at"`
+	GameID              int64     `db:"game_id" json:"game_id"`
+	AppID               int64     `db:"appid" json:"appid"`
+	Lang                string    `db:"lang" json:"lang"`
+	Name                string    `db:"name" json:"name"`
+	ShortDescription    *string   `db:"short_description" json:"short_description"`
+	DetailedDescription *string   `db:"detailed_description" json:"detailed_description"`
+	AboutTheGame        *string   `db:"about_the_game" json:"about_the_game"`
+	CollectedAt         time.Time `db:"collected_at" json:"collected_at"`
+	UpdatedAt           time.Time `db:"updated_at" json:"updated_at"`
 }
 
 func (*GfgGameV2LocalizedDetails) TableName() string { return TableNameGfgGameV2LocalizedDetails }
 
 type GfgGameV2Price struct {
-	GameID           int64     `gorm:"column:game_id;primaryKey" json:"game_id"`
-	AppID            int64     `gorm:"column:appid" json:"appid"`
-	Region           string    `gorm:"column:region;primaryKey" json:"region"`
-	IsFree           bool      `gorm:"column:is_free" json:"is_free"`
-	Currency         *string   `gorm:"column:currency" json:"currency"`
-	InitialAmount    int64     `gorm:"column:initial_amount" json:"initial_amount"`
-	FinalAmount      int64     `gorm:"column:final_amount" json:"final_amount"`
-	DiscountPercent  int64     `gorm:"column:discount_percent" json:"discount_percent"`
-	InitialFormatted *string   `gorm:"column:initial_formatted" json:"initial_formatted"`
-	FinalFormatted   *string   `gorm:"column:final_formatted" json:"final_formatted"`
-	CollectedAt      time.Time `gorm:"column:collected_at" json:"collected_at"`
-	UpdatedAt        time.Time `gorm:"column:updated_at" json:"updated_at"`
+	GameID           int64     `db:"game_id" json:"game_id"`
+	AppID            int64     `db:"appid" json:"appid"`
+	Region           string    `db:"region" json:"region"`
+	IsFree           bool      `db:"is_free" json:"is_free"`
+	Currency         *string   `db:"currency" json:"currency"`
+	InitialAmount    int64     `db:"initial_amount" json:"initial_amount"`
+	FinalAmount      int64     `db:"final_amount" json:"final_amount"`
+	DiscountPercent  int64     `db:"discount_percent" json:"discount_percent"`
+	InitialFormatted *string   `db:"initial_formatted" json:"initial_formatted"`
+	FinalFormatted   *string   `db:"final_formatted" json:"final_formatted"`
+	CollectedAt      time.Time `db:"collected_at" json:"collected_at"`
+	UpdatedAt        time.Time `db:"updated_at" json:"updated_at"`
 }
 
 func (*GfgGameV2Price) TableName() string { return TableNameGfgGameV2Prices }
 
 type GfgGameV2Media struct {
-	ID           int64     `gorm:"column:id;primaryKey" json:"id"`
-	GameID       int64     `gorm:"column:game_id" json:"game_id"`
-	AppID        int64     `gorm:"column:appid" json:"appid"`
-	MediaType    string    `gorm:"column:media_type" json:"media_type"`
-	MediaKey     string    `gorm:"column:media_key" json:"media_key"`
-	Title        *string   `gorm:"column:title" json:"title"`
-	URL          *string   `gorm:"column:url" json:"url"`
-	ThumbnailURL *string   `gorm:"column:thumbnail_url" json:"thumbnail_url"`
-	Extra        *string   `gorm:"column:extra" json:"extra"`
-	SortOrder    int       `gorm:"column:sort_order" json:"sort_order"`
-	CollectedAt  time.Time `gorm:"column:collected_at" json:"collected_at"`
-	UpdatedAt    time.Time `gorm:"column:updated_at" json:"updated_at"`
+	ID           int64     `db:"id" json:"id"`
+	GameID       int64     `db:"game_id" json:"game_id"`
+	AppID        int64     `db:"appid" json:"appid"`
+	MediaType    string    `db:"media_type" json:"media_type"`
+	MediaKey     string    `db:"media_key" json:"media_key"`
+	Title        *string   `db:"title" json:"title"`
+	URL          *string   `db:"url" json:"url"`
+	ThumbnailURL *string   `db:"thumbnail_url" json:"thumbnail_url"`
+	Extra        *string   `db:"extra" json:"extra"`
+	SortOrder    int       `db:"sort_order" json:"sort_order"`
+	CollectedAt  time.Time `db:"collected_at" json:"collected_at"`
+	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
 }
 
 func (*GfgGameV2Media) TableName() string { return TableNameGfgGameV2Media }
 
 type GfgGameV2Asset struct {
-	ID            int64      `gorm:"column:id;primaryKey" json:"id"`
-	GameID        int64      `gorm:"column:game_id" json:"game_id"`
-	AppID         int64      `gorm:"column:appid" json:"appid"`
-	AssetType     string     `gorm:"column:asset_type" json:"asset_type"`
-	AssetFamily   string     `gorm:"column:asset_family" json:"asset_family"`
-	Source        string     `gorm:"column:source" json:"source"`
-	Lang          string     `gorm:"column:lang" json:"lang"`
-	MediaKey      string     `gorm:"column:media_key" json:"media_key"`
-	Title         string     `gorm:"column:title" json:"title"`
-	URL           string     `gorm:"column:url" json:"url"`
-	ThumbnailURL  string     `gorm:"column:thumbnail_url" json:"thumbnail_url"`
-	Format        string     `gorm:"column:format" json:"format"`
-	Exists        *bool      `gorm:"column:exists" json:"exists"`
-	StatusCode    int        `gorm:"column:status_code" json:"status_code"`
-	ContentType   string     `gorm:"column:content_type" json:"content_type"`
-	ContentLength int64      `gorm:"column:content_length" json:"content_length"`
-	Extra         *string    `gorm:"column:extra" json:"extra"`
-	SortOrder     int        `gorm:"column:sort_order" json:"sort_order"`
-	CheckedAt     *time.Time `gorm:"column:checked_at" json:"checked_at"`
-	CollectedAt   time.Time  `gorm:"column:collected_at" json:"collected_at"`
-	UpdatedAt     time.Time  `gorm:"column:updated_at" json:"updated_at"`
+	ID            int64      `db:"id" json:"id"`
+	GameID        int64      `db:"game_id" json:"game_id"`
+	AppID         int64      `db:"appid" json:"appid"`
+	AssetType     string     `db:"asset_type" json:"asset_type"`
+	AssetFamily   string     `db:"asset_family" json:"asset_family"`
+	Source        string     `db:"source" json:"source"`
+	Lang          string     `db:"lang" json:"lang"`
+	MediaKey      string     `db:"media_key" json:"media_key"`
+	Title         string     `db:"title" json:"title"`
+	URL           string     `db:"url" json:"url"`
+	ThumbnailURL  string     `db:"thumbnail_url" json:"thumbnail_url"`
+	Format        string     `db:"format" json:"format"`
+	Exists        *bool      `db:"exists" json:"exists"`
+	StatusCode    int        `db:"status_code" json:"status_code"`
+	ContentType   string     `db:"content_type" json:"content_type"`
+	ContentLength int64      `db:"content_length" json:"content_length"`
+	Extra         *string    `db:"extra" json:"extra"`
+	SortOrder     int        `db:"sort_order" json:"sort_order"`
+	CheckedAt     *time.Time `db:"checked_at" json:"checked_at"`
+	CollectedAt   time.Time  `db:"collected_at" json:"collected_at"`
+	UpdatedAt     time.Time  `db:"updated_at" json:"updated_at"`
 }
 
 func (*GfgGameV2Asset) TableName() string { return TableNameGfgGameV2Assets }
 
 type GfgGameV2Requirements struct {
-	GameID      int64     `gorm:"column:game_id;primaryKey" json:"game_id"`
-	AppID       int64     `gorm:"column:appid" json:"appid"`
-	PC          *string   `gorm:"column:pc" json:"pc"`
-	Mac         *string   `gorm:"column:mac" json:"mac"`
-	Linux       *string   `gorm:"column:linux" json:"linux"`
-	CollectedAt time.Time `gorm:"column:collected_at" json:"collected_at"`
-	UpdatedAt   time.Time `gorm:"column:updated_at" json:"updated_at"`
+	GameID      int64     `db:"game_id" json:"game_id"`
+	AppID       int64     `db:"appid" json:"appid"`
+	PC          *string   `db:"pc" json:"pc"`
+	Mac         *string   `db:"mac" json:"mac"`
+	Linux       *string   `db:"linux" json:"linux"`
+	CollectedAt time.Time `db:"collected_at" json:"collected_at"`
+	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }
 
 func (*GfgGameV2Requirements) TableName() string { return TableNameGfgGameV2Requirements }
 
 type GfgGameV2News struct {
-	ID              int64     `gorm:"column:id;primaryKey" json:"id"`
-	GameID          int64     `gorm:"column:game_id" json:"game_id"`
-	AppID           int64     `gorm:"column:appid" json:"appid"`
-	Lang            string    `gorm:"column:lang" json:"lang"`
-	EventGID        string    `gorm:"column:event_gid" json:"event_gid"`
-	AnnouncementGID *string   `gorm:"column:announcement_gid" json:"announcement_gid"`
-	ForumTopicID    *string   `gorm:"column:forum_topic_id" json:"forum_topic_id"`
-	Headline        string    `gorm:"column:headline" json:"headline"`
-	RawBody         *string   `gorm:"column:raw_body" json:"raw_body"`
-	HTML            *string   `gorm:"column:html" json:"html"`
-	PlainText       *string   `gorm:"column:plain_text" json:"plain_text"`
-	Summary         *string   `gorm:"column:summary" json:"summary"`
-	URL             *string   `gorm:"column:url" json:"url"`
-	Tags            *string   `gorm:"column:tags" json:"tags"`
-	VoteUpCount     int64     `gorm:"column:vote_up_count" json:"vote_up_count"`
-	VoteDownCount   int64     `gorm:"column:vote_down_count" json:"vote_down_count"`
-	CommentCount    int64     `gorm:"column:comment_count" json:"comment_count"`
-	RawEvent        *string   `gorm:"column:raw_event" json:"raw_event"`
-	PublishedAt     time.Time `gorm:"column:published_at" json:"published_at"`
-	UpdatedAt       time.Time `gorm:"column:updated_at" json:"updated_at"`
-	CollectedAt     time.Time `gorm:"column:collected_at" json:"collected_at"`
+	ID              int64     `db:"id" json:"id"`
+	GameID          int64     `db:"game_id" json:"game_id"`
+	AppID           int64     `db:"appid" json:"appid"`
+	Lang            string    `db:"lang" json:"lang"`
+	EventGID        string    `db:"event_gid" json:"event_gid"`
+	AnnouncementGID *string   `db:"announcement_gid" json:"announcement_gid"`
+	ForumTopicID    *string   `db:"forum_topic_id" json:"forum_topic_id"`
+	Headline        string    `db:"headline" json:"headline"`
+	RawBody         *string   `db:"raw_body" json:"raw_body"`
+	HTML            *string   `db:"html" json:"html"`
+	PlainText       *string   `db:"plain_text" json:"plain_text"`
+	Summary         *string   `db:"summary" json:"summary"`
+	URL             *string   `db:"url" json:"url"`
+	Tags            *string   `db:"tags" json:"tags"`
+	VoteUpCount     int64     `db:"vote_up_count" json:"vote_up_count"`
+	VoteDownCount   int64     `db:"vote_down_count" json:"vote_down_count"`
+	CommentCount    int64     `db:"comment_count" json:"comment_count"`
+	RawEvent        *string   `db:"raw_event" json:"raw_event"`
+	PublishedAt     time.Time `db:"published_at" json:"published_at"`
+	UpdatedAt       time.Time `db:"updated_at" json:"updated_at"`
+	CollectedAt     time.Time `db:"collected_at" json:"collected_at"`
 }
 
 func (*GfgGameV2News) TableName() string { return TableNameGfgGameV2News }
 
 type GfgGameV2PlayerCount struct {
-	ID                 int64     `gorm:"column:id;primaryKey" json:"id"`
-	RunID              string    `gorm:"column:run_id" json:"run_id"`
-	GameID             int64     `gorm:"column:game_id" json:"game_id"`
-	AppID              int64     `gorm:"column:appid" json:"appid"`
-	Count              int64     `gorm:"column:count" json:"count"`
-	Status             string    `gorm:"column:status" json:"status"`
-	UpstreamStatusCode int       `gorm:"column:upstream_status_code" json:"upstream_status_code"`
-	ErrorKind          string    `gorm:"column:error_kind" json:"error_kind"`
-	ErrorMessage       string    `gorm:"column:error_message" json:"error_message"`
-	CollectedAt        time.Time `gorm:"column:collected_at" json:"collected_at"`
-	PeakCount          int64     `gorm:"-" json:"peak_count"`
-	PeakWindowDays     int       `gorm:"-" json:"peak_window_days"`
+	ID                 int64     `db:"id" json:"id"`
+	RunID              string    `db:"run_id" json:"run_id"`
+	GameID             int64     `db:"game_id" json:"game_id"`
+	AppID              int64     `db:"appid" json:"appid"`
+	Count              int64     `db:"count" json:"count"`
+	Status             string    `db:"status" json:"status"`
+	UpstreamStatusCode int       `db:"upstream_status_code" json:"upstream_status_code"`
+	ErrorKind          string    `db:"error_kind" json:"error_kind"`
+	ErrorMessage       string    `db:"error_message" json:"error_message"`
+	CollectedAt        time.Time `db:"collected_at" json:"collected_at"`
+	PeakCount          int64     `db:"-" json:"peak_count"`
+	PeakWindowDays     int       `db:"-" json:"peak_window_days"`
 }
 
 func (*GfgGameV2PlayerCount) TableName() string { return TableNameGfgGameV2PlayerCounts }
 
 type GfgGameV2CollectRun struct {
-	ID             string     `gorm:"column:id;primaryKey" json:"id"`
-	TaskType       string     `gorm:"column:task_type" json:"task_type"`
-	Status         string     `gorm:"column:status" json:"status"`
-	TotalCount     int64      `gorm:"column:total_count" json:"total_count"`
-	SuccessCount   int64      `gorm:"column:success_count" json:"success_count"`
-	FailedCount    int64      `gorm:"column:failed_count" json:"failed_count"`
-	SkippedCount   int64      `gorm:"column:skipped_count" json:"skipped_count"`
-	PartialCount   int64      `gorm:"column:partial_count" json:"partial_count"`
-	TaskSummary    string     `gorm:"column:task_summary" json:"task_summary"`
-	DurationMillis int64      `gorm:"column:duration_millis" json:"duration_millis"`
-	ErrorKind      string     `gorm:"column:error_kind" json:"error_kind"`
-	ErrorMessage   string     `gorm:"column:error_message" json:"error_message"`
-	StartedAt      time.Time  `gorm:"column:started_at" json:"started_at"`
-	EndedAt        *time.Time `gorm:"column:ended_at" json:"ended_at"`
+	ID             string     `db:"id" json:"id"`
+	TaskType       string     `db:"task_type" json:"task_type"`
+	Status         string     `db:"status" json:"status"`
+	TotalCount     int64      `db:"total_count" json:"total_count"`
+	SuccessCount   int64      `db:"success_count" json:"success_count"`
+	FailedCount    int64      `db:"failed_count" json:"failed_count"`
+	SkippedCount   int64      `db:"skipped_count" json:"skipped_count"`
+	PartialCount   int64      `db:"partial_count" json:"partial_count"`
+	TaskSummary    string     `db:"task_summary" json:"task_summary"`
+	DurationMillis int64      `db:"duration_millis" json:"duration_millis"`
+	ErrorKind      string     `db:"error_kind" json:"error_kind"`
+	ErrorMessage   string     `db:"error_message" json:"error_message"`
+	StartedAt      time.Time  `db:"started_at" json:"started_at"`
+	EndedAt        *time.Time `db:"ended_at" json:"ended_at"`
 }
 
 func (*GfgGameV2CollectRun) TableName() string { return TableNameGfgGameV2CollectRuns }
 
 type GfgGameV2CollectTaskResult struct {
-	ID                 int64      `gorm:"column:id;primaryKey" json:"id"`
-	RunID              string     `gorm:"column:run_id" json:"run_id"`
-	TaskType           string     `gorm:"column:task_type" json:"task_type"`
-	Status             string     `gorm:"column:status" json:"status"`
-	GameID             int64      `gorm:"column:game_id" json:"game_id"`
-	AppID              int64      `gorm:"column:appid" json:"appid"`
-	UpstreamStatusCode int        `gorm:"column:upstream_status_code" json:"upstream_status_code"`
-	TrafficBucket      string     `gorm:"column:traffic_bucket" json:"traffic_bucket"`
-	RetryCount         int        `gorm:"column:retry_count" json:"retry_count"`
-	DurationMillis     int64      `gorm:"column:duration_millis" json:"duration_millis"`
-	ErrorKind          string     `gorm:"column:error_kind" json:"error_kind"`
-	ErrorMessage       string     `gorm:"column:error_message" json:"error_message"`
-	StartedAt          time.Time  `gorm:"column:started_at" json:"started_at"`
-	EndedAt            *time.Time `gorm:"column:ended_at" json:"ended_at"`
+	ID                 int64      `db:"id" json:"id"`
+	RunID              string     `db:"run_id" json:"run_id"`
+	TaskType           string     `db:"task_type" json:"task_type"`
+	Status             string     `db:"status" json:"status"`
+	GameID             int64      `db:"game_id" json:"game_id"`
+	AppID              int64      `db:"appid" json:"appid"`
+	UpstreamStatusCode int        `db:"upstream_status_code" json:"upstream_status_code"`
+	TrafficBucket      string     `db:"traffic_bucket" json:"traffic_bucket"`
+	RetryCount         int        `db:"retry_count" json:"retry_count"`
+	DurationMillis     int64      `db:"duration_millis" json:"duration_millis"`
+	ErrorKind          string     `db:"error_kind" json:"error_kind"`
+	ErrorMessage       string     `db:"error_message" json:"error_message"`
+	StartedAt          time.Time  `db:"started_at" json:"started_at"`
+	EndedAt            *time.Time `db:"ended_at" json:"ended_at"`
 }
 
 func (*GfgGameV2CollectTaskResult) TableName() string { return TableNameGfgGameV2CollectTaskResults }
 
 type GfgGameV2Recommendation struct {
-	SourceGameID     int64     `gorm:"column:source_game_id;primaryKey" json:"source_game_id"`
-	TargetGameID     int64     `gorm:"column:target_game_id;primaryKey" json:"target_game_id"`
-	Score            float64   `gorm:"column:score" json:"score"`
-	DisplayScore     float64   `gorm:"column:display_score" json:"display_score"`
-	Rank             int       `gorm:"column:rank" json:"rank"`
-	ReasonJSON       string    `gorm:"column:reason_json" json:"reason_json"`
-	AlgorithmVersion string    `gorm:"column:algorithm_version" json:"algorithm_version"`
-	ComputedAt       time.Time `gorm:"column:computed_at" json:"computed_at"`
+	SourceGameID     int64     `db:"source_game_id" json:"source_game_id"`
+	TargetGameID     int64     `db:"target_game_id" json:"target_game_id"`
+	Score            float64   `db:"score" json:"score"`
+	DisplayScore     float64   `db:"display_score" json:"display_score"`
+	Rank             int       `db:"rank" json:"rank"`
+	ReasonJSON       string    `db:"reason_json" json:"reason_json"`
+	AlgorithmVersion string    `db:"algorithm_version" json:"algorithm_version"`
+	ComputedAt       time.Time `db:"computed_at" json:"computed_at"`
 }
 
 func (*GfgGameV2Recommendation) TableName() string { return TableNameGfgGameV2Recommendations }
 
 type GameV2SiteRecord struct {
-	ID         int64        `gorm:"column:id" json:"id"`
-	Name       string       `gorm:"column:name" json:"name"`
-	NameEn     string       `gorm:"column:name_en" json:"name_en"`
-	Info       string       `gorm:"column:info" json:"info"`
-	InfoEn     string       `gorm:"column:info_en" json:"info_en"`
-	Resources  *string      `gorm:"column:resources" json:"resources"`
-	Groups     *string      `gorm:"column:groups" json:"groups"`
-	Links      *string      `gorm:"column:links" json:"links"`
-	AppID      int64        `gorm:"column:appid" json:"appid"`
-	Header     string       `gorm:"column:header" json:"header"`
-	ViewCount  int64        `gorm:"column:view_count" json:"view_count"`
-	Weight     int64        `gorm:"column:weight" json:"weight"`
-	CreateTime cm.LocalTime `gorm:"column:create_time" json:"create_time"`
-	UpdateTime cm.LocalTime `gorm:"column:update_time" json:"update_time"`
+	ID         int64        `db:"id" json:"id"`
+	Name       string       `db:"name" json:"name"`
+	NameEn     string       `db:"name_en" json:"name_en"`
+	Info       string       `db:"info" json:"info"`
+	InfoEn     string       `db:"info_en" json:"info_en"`
+	Resources  *string      `db:"resources" json:"resources"`
+	Groups     *string      `db:"groups" json:"groups"`
+	Links      *string      `db:"links" json:"links"`
+	AppID      int64        `db:"appid" json:"appid"`
+	Header     string       `db:"header" json:"header"`
+	ViewCount  int64        `db:"view_count" json:"view_count"`
+	Weight     int64        `db:"weight" json:"weight"`
+	CreateTime cm.LocalTime `db:"create_time" json:"create_time"`
+	UpdateTime cm.LocalTime `db:"update_time" json:"update_time"`
 }
 
 type GameV2Tag struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Desc string `json:"desc"`
+	ID   string `db:"id" json:"id"`
+	Name string `db:"name" json:"name"`
+	Desc string `db:"desc" json:"desc"`
 }
 
 type GameV2Aggregate struct {
@@ -262,8 +264,8 @@ type GameV2Aggregate struct {
 }
 
 type GameV2ReviewStats struct {
-	AvgScore     float64 `gorm:"column:avg_score" json:"avg_score"`
-	CommentCount int64   `gorm:"column:comment_count" json:"comment_count"`
+	AvgScore     float64 `db:"avg_score" json:"avg_score"`
+	CommentCount int64   `db:"comment_count" json:"comment_count"`
 }
 
 type GameV2DetailQuery struct {
@@ -309,24 +311,24 @@ type GameV2SearchItem struct {
 }
 
 type GameV2SearchPageItem struct {
-	ID           string       `json:"id"`
-	Name         string       `json:"name"`
-	Info         string       `json:"info"`
-	Cover        string       `json:"cover"`
-	AppID        int64        `gorm:"column:appid" json:"appid"`
-	UpdateTime   cm.LocalTime `json:"update_time"`
-	ReleaseDate  string       `json:"release_date"`
-	RemarkCount  int          `json:"remark_count"`
-	AvgScore     float64      `json:"avg_score"`
-	PrimaryTag   string       `json:"primary_tag"`
-	SecondaryTag string       `json:"secondary_tag"`
+	ID           string       `db:"id" json:"id"`
+	Name         string       `db:"name" json:"name"`
+	Info         string       `db:"info" json:"info"`
+	Cover        string       `db:"cover" json:"cover"`
+	AppID        int64        `db:"appid" json:"appid"`
+	UpdateTime   cm.LocalTime `db:"update_time" json:"update_time"`
+	ReleaseDate  string       `db:"release_date" json:"release_date"`
+	RemarkCount  int          `db:"remark_count" json:"remark_count"`
+	AvgScore     float64      `db:"avg_score" json:"avg_score"`
+	PrimaryTag   string       `db:"primary_tag" json:"primary_tag"`
+	SecondaryTag string       `db:"secondary_tag" json:"secondary_tag"`
 }
 
 type GameV2TagRecord struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Prefix    string `json:"prefix"`
-	GameCount int    `json:"game_count"`
+	ID        string `db:"id" json:"id"`
+	Name      string `db:"name" json:"name"`
+	Prefix    string `db:"prefix" json:"prefix"`
+	GameCount int    `db:"game_count" json:"game_count"`
 }
 
 type GameV2SearchPageQuery struct {
@@ -359,12 +361,12 @@ type GameV2ReviewQuery struct {
 }
 
 type GameV2ReviewItem struct {
-	Region     string       `json:"region"`
-	Content    string       `json:"content"`
-	Score      float64      `json:"score"`
-	CreateTime cm.LocalTime `json:"create_time"`
-	IP         string       `json:"ip"`
-	Name       *string      `json:"name"`
+	Region     string       `db:"region" json:"region"`
+	Content    string       `db:"content" json:"content"`
+	Score      float64      `db:"score" json:"score"`
+	CreateTime cm.LocalTime `db:"create_time" json:"create_time"`
+	IP         string       `db:"ip" json:"ip"`
+	Name       *string      `db:"name" json:"name"`
 }
 
 type GameV2SimilarRecommendationQuery struct {
@@ -403,69 +405,69 @@ type GameV2SimilarRecommendation struct {
 }
 
 type GameV2RecommendationFeature struct {
-	GameID            int64      `gorm:"column:game_id"`
-	AppID             int64      `gorm:"column:appid"`
-	Name              string     `gorm:"column:name"`
-	Summary           string     `gorm:"column:summary"`
-	HeaderURL         string     `gorm:"column:header_url"`
-	CapsuleURL        string     `gorm:"column:capsule_url"`
-	LibraryCoverURL   string     `gorm:"column:library_cover_url"`
-	LibraryCover2xURL string     `gorm:"column:library_cover_2x_url"`
-	Developers        *string    `gorm:"column:developers"`
-	Publishers        *string    `gorm:"column:publishers"`
-	Platforms         *string    `gorm:"column:platforms"`
-	PrimaryTagID      int64      `gorm:"column:primary_tag_id"`
-	SecondaryTagID    int64      `gorm:"column:secondary_tag_id"`
-	Tags              *string    `gorm:"column:tags"`
-	PriceRegion       string     `gorm:"column:price_region"`
-	PriceAvailable    bool       `gorm:"column:price_available"`
-	IsFree            bool       `gorm:"column:is_free"`
-	Currency          string     `gorm:"column:currency"`
-	InitialAmount     int64      `gorm:"column:initial_amount"`
-	FinalAmount       int64      `gorm:"column:final_amount"`
-	DiscountPercent   int64      `gorm:"column:discount_percent"`
-	InitialFormatted  string     `gorm:"column:initial_formatted"`
-	FinalFormatted    string     `gorm:"column:final_formatted"`
-	PriceUpdatedAt    *time.Time `gorm:"column:price_updated_at"`
-	OnlineCount       int64      `gorm:"column:online_count"`
-	OnlineStatus      string     `gorm:"column:online_status"`
-	OnlineCollectedAt *time.Time `gorm:"column:online_collected_at"`
-	UpdatedAt         time.Time  `gorm:"column:updated_at"`
+	GameID            int64      `db:"game_id"`
+	AppID             int64      `db:"appid"`
+	Name              string     `db:"name"`
+	Summary           string     `db:"summary"`
+	HeaderURL         string     `db:"header_url"`
+	CapsuleURL        string     `db:"capsule_url"`
+	LibraryCoverURL   string     `db:"library_cover_url"`
+	LibraryCover2xURL string     `db:"library_cover_2x_url"`
+	Developers        *string    `db:"developers"`
+	Publishers        *string    `db:"publishers"`
+	Platforms         *string    `db:"platforms"`
+	PrimaryTagID      int64      `db:"primary_tag_id"`
+	SecondaryTagID    int64      `db:"secondary_tag_id"`
+	Tags              *string    `db:"tags"`
+	PriceRegion       string     `db:"price_region"`
+	PriceAvailable    bool       `db:"price_available"`
+	IsFree            bool       `db:"is_free"`
+	Currency          string     `db:"currency"`
+	InitialAmount     int64      `db:"initial_amount"`
+	FinalAmount       int64      `db:"final_amount"`
+	DiscountPercent   int64      `db:"discount_percent"`
+	InitialFormatted  string     `db:"initial_formatted"`
+	FinalFormatted    string     `db:"final_formatted"`
+	PriceUpdatedAt    *time.Time `db:"price_updated_at"`
+	OnlineCount       int64      `db:"online_count"`
+	OnlineStatus      string     `db:"online_status"`
+	OnlineCollectedAt *time.Time `db:"online_collected_at"`
+	UpdatedAt         time.Time  `db:"updated_at"`
 }
 
 type GameV2RecommendationRow struct {
 	GfgGameV2Recommendation
-	AppID             int64      `gorm:"column:appid"`
-	Name              string     `gorm:"column:name"`
-	Summary           string     `gorm:"column:summary"`
-	HeaderURL         string     `gorm:"column:header_url"`
-	CapsuleURL        string     `gorm:"column:capsule_url"`
-	LibraryCoverURL   string     `gorm:"column:library_cover_url"`
-	LibraryCover2xURL string     `gorm:"column:library_cover_2x_url"`
-	Tags              *string    `gorm:"column:tags"`
-	PriceRegion       string     `gorm:"column:price_region"`
-	PriceAvailable    bool       `gorm:"column:price_available"`
-	IsFree            bool       `gorm:"column:is_free"`
-	Currency          string     `gorm:"column:currency"`
-	InitialAmount     int64      `gorm:"column:initial_amount"`
-	FinalAmount       int64      `gorm:"column:final_amount"`
-	DiscountPercent   int64      `gorm:"column:discount_percent"`
-	InitialFormatted  string     `gorm:"column:initial_formatted"`
-	FinalFormatted    string     `gorm:"column:final_formatted"`
-	PriceUpdatedAt    *time.Time `gorm:"column:price_updated_at"`
-	OnlineCountValue  int64      `gorm:"column:online_count"`
-	OnlineStatus      string     `gorm:"column:online_status"`
-	OnlineCollectedAt *time.Time `gorm:"column:online_collected_at"`
+	AppID             int64      `db:"appid"`
+	Name              string     `db:"name"`
+	Summary           string     `db:"summary"`
+	HeaderURL         string     `db:"header_url"`
+	CapsuleURL        string     `db:"capsule_url"`
+	LibraryCoverURL   string     `db:"library_cover_url"`
+	LibraryCover2xURL string     `db:"library_cover_2x_url"`
+	Tags              *string    `db:"tags"`
+	PriceRegion       string     `db:"price_region"`
+	PriceAvailable    bool       `db:"price_available"`
+	IsFree            bool       `db:"is_free"`
+	Currency          string     `db:"currency"`
+	InitialAmount     int64      `db:"initial_amount"`
+	FinalAmount       int64      `db:"final_amount"`
+	DiscountPercent   int64      `db:"discount_percent"`
+	InitialFormatted  string     `db:"initial_formatted"`
+	FinalFormatted    string     `db:"final_formatted"`
+	PriceUpdatedAt    *time.Time `db:"price_updated_at"`
+	OnlineCountValue  int64      `db:"online_count"`
+	OnlineStatus      string     `db:"online_status"`
+	OnlineCollectedAt *time.Time `db:"online_collected_at"`
 }
 
 type GameV2LatestReview struct {
-	Region    string       `json:"region"`
-	Score     float64      `json:"score"`
-	Content   string       `json:"content"`
-	IP        string       `json:"ip"`
-	Time      cm.LocalTime `json:"time"`
-	GameName  string       `json:"game_name"`
-	GameCover string       `json:"game_cover"`
+	Region    string       `db:"region" json:"region"`
+	Score     float64      `db:"score" json:"score"`
+	Content   string       `db:"content" json:"content"`
+	IP        string       `db:"ip" json:"ip"`
+	Time      cm.LocalTime `db:"time" json:"time"`
+	GameName  string       `db:"game_name" json:"game_name"`
+	GameCover string       `db:"game_cover" json:"game_cover"`
 }
 
 type GameV2NewsQuery struct {
@@ -511,9 +513,9 @@ type GameV2CollectStatus struct {
 }
 
 type GameV2CollectTaskStatusSummary struct {
-	TaskType string `gorm:"column:task_type" json:"task_type"`
-	Status   string `gorm:"column:status" json:"status"`
-	Count    int64  `gorm:"column:count" json:"count"`
+	TaskType string `db:"task_type" json:"task_type"`
+	Status   string `db:"status" json:"status"`
+	Count    int64  `db:"count" json:"count"`
 }
 
 type GameV2CollectLocalizedStatus struct {
@@ -736,9 +738,9 @@ type GameV2NewsItem struct {
 
 type GameV2NewsRow struct {
 	GfgGameV2News
-	GameName   string `gorm:"column:game_name" json:"game_name"`
-	GameNameEn string `gorm:"column:game_name_en" json:"game_name_en"`
-	HeaderURL  string `gorm:"column:header_url" json:"header_url"`
+	GameName   string `db:"game_name" json:"game_name"`
+	GameNameEn string `db:"game_name_en" json:"game_name_en"`
+	HeaderURL  string `db:"header_url" json:"header_url"`
 }
 
 type GameV2OnlineCount struct {

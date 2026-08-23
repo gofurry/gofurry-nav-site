@@ -1,18 +1,19 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	gameModels "github.com/gofurry/gofurry-game-backend/apps/game/models"
 	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofurry/gofurry-game-backend/common/log"
 	cs "github.com/gofurry/gofurry-game-backend/common/service"
 	"github.com/gofurry/gofurry-game-backend/common/util"
-	database "github.com/gofurry/gofurry-game-backend/roof/db"
-	"gorm.io/gorm"
+	gamesqlc "github.com/gofurry/gofurry-game-backend/internal/db/game/sqlc"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -21,12 +22,15 @@ const (
 	gameViewDailyTTL    = 48 * time.Hour
 )
 
-type GameViewService struct{}
+type GameViewService struct {
+	queries *gamesqlc.Queries
+}
 
-var gameViewSvc = &GameViewService{}
-
-func GetGameViewService() *GameViewService {
-	return gameViewSvc
+func NewGameViewService(pool *pgxpool.Pool) *GameViewService {
+	if pool == nil {
+		return &GameViewService{}
+	}
+	return &GameViewService{queries: gamesqlc.New(pool)}
 }
 
 func (svc *GameViewService) TouchGameViewCount(gameID int64, clientIP string) (int64, common.GFError) {
@@ -34,7 +38,7 @@ func (svc *GameViewService) TouchGameViewCount(gameID int64, clientIP string) (i
 		return 0, common.NewServiceError("id 不能为空")
 	}
 
-	dbCount, err := loadGameViewCountFromDB(gameID)
+	dbCount, err := svc.loadGameViewCountFromDB(gameID)
 	if err != nil {
 		return 0, err
 	}
@@ -102,22 +106,26 @@ func parseRedisInt64(key string) (int64, bool) {
 	return parsed, true
 }
 
-func loadGameViewCountFromDB(gameID int64) (int64, common.GFError) {
-	var row struct {
-		ViewCount int64 `gorm:"column:view_count"`
+func (svc *GameViewService) loadGameViewCountFromDB(gameID int64) (int64, common.GFError) {
+	if svc == nil || svc.queries == nil {
+		return 0, common.NewServiceError("查询游戏浏览量失败")
 	}
-
-	err := database.Orm.DB().Table(gameModels.TableNameGfgGame).
-		Select("view_count").
-		Where("id = ?", gameID).
-		Take(&row).Error
+	viewCount, err := svc.queries.GetGameViewCount(context.Background(), gameID)
 	switch {
-	case errors.Is(err, gorm.ErrRecordNotFound):
+	case errors.Is(err, pgx.ErrNoRows):
 		return 0, common.NewServiceError("game not found")
 	case err != nil:
 		log.Error("[game-view-count] load database view count failed:", err)
 		return 0, common.NewServiceError("查询游戏浏览量失败")
 	default:
-		return row.ViewCount, nil
+		return viewCount, nil
 	}
+}
+
+func (svc *GameViewService) PersistViewCount(gameID int64, viewCount int64) error {
+	if svc == nil || svc.queries == nil {
+		return errors.New("game view persistence is not initialized")
+	}
+	_, err := svc.queries.UpdateGameViewCount(context.Background(), gamesqlc.UpdateGameViewCountParams{ID: gameID, ViewCount: viewCount})
+	return err
 }

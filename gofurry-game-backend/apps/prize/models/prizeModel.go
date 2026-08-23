@@ -8,15 +8,15 @@ const TableNameGfgPrize = "gfg_prize"
 
 // GfgPrize mapped from table <gfg_prize>
 type GfgPrize struct {
-	ID         int64        `gorm:"column:id;type:bigint;primaryKey;comment:抽奖活动表id" json:"id"`                                       // 抽奖活动表id
-	Title      string       `gorm:"column:title;type:character varying(100);not null;comment:标题" json:"title"`                        // 标题
-	Desc       string       `gorm:"column:desc;type:text;not null;comment:描述" json:"desc"`                                            // 描述
-	Prize      string       `gorm:"column:prize;type:jsonb;not null;comment:奖品" json:"prize"`                                         // 奖品
-	Key        string       `gorm:"column:key;type:character varying(255);not null;comment:参与密钥" json:"key"`                          // 参与密钥
-	StartTime  cm.LocalTime `gorm:"column:start_time;type:timestamp(0) without time zone;not null;comment:开始时间" json:"startTime"`     // 开始时间
-	EndTime    cm.LocalTime `gorm:"column:end_time;type:timestamp(0) without time zone;not null;comment:结束时间" json:"endTime"`         // 结束时间
-	CreateTime cm.LocalTime `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:创建时间" json:"createTime"` // 创建时间
-	Status     bool         `gorm:"column:status;type:boolean;not null;comment:状态" json:"status"`                                     // 状态
+	ID         int64        `db:"id" json:"id"`                  // 抽奖活动表id
+	Title      string       `db:"title" json:"title"`            // 标题
+	Desc       string       `db:"desc" json:"desc"`              // 描述
+	Prize      string       `db:"prize" json:"prize"`            // 奖品
+	Key        string       `db:"key" json:"key"`                // 参与密钥
+	StartTime  cm.LocalTime `db:"start_time" json:"startTime"`   // 开始时间
+	EndTime    cm.LocalTime `db:"end_time" json:"endTime"`       // 结束时间
+	CreateTime cm.LocalTime `db:"create_time" json:"createTime"` // 创建时间
+	Status     bool         `db:"status" json:"status"`          // 状态
 }
 
 // TableName GfgPrize's table name
@@ -28,15 +28,15 @@ const TableNameGfgPrizeMember = "gfg_prize_member"
 
 // GfgPrizeMember mapped from table <gfg_prize_member>
 type GfgPrizeMember struct {
-	ID         int64        `gorm:"column:id;type:bigint;primaryKey;comment:抽奖活动参与表id" json:"id"`                                     // 抽奖活动参与表id
-	PrizeID    int64        `gorm:"column:prize_id;type:bigint;not null;comment:抽奖活动id" json:"prizeId,string"`                        // 抽奖活动id
-	Name       string       `gorm:"column:name;type:character varying(50);not null;comment:参与者名称" json:"name"`                        // 参与者名称
-	Email      string       `gorm:"column:email;type:character varying(255);not null;comment:参与者邮箱" json:"email"`                     // 参与者邮箱
-	IP         string       `gorm:"column:ip;type:character varying(50);not null;comment:参与者ip" json:"ip"`                            // 参与者ip
-	Agent      string       `gorm:"column:agent;type:character varying(700);not null;comment:User-Agent" json:"agent"`                // User-Agent
-	IsWinner   bool         `gorm:"column:is_winner;type:boolean;not null;comment:是否获奖" json:"isWinner"`                              // 是否获奖
-	PrizeKey   *string      `gorm:"column:prize_key;type:character varying(255);comment:获奖key" json:"prizeKey"`                       // 获奖key
-	CreateTime cm.LocalTime `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:创建时间" json:"createTime"` // 创建时间
+	ID         int64        `db:"id" json:"id"`                   // 抽奖活动参与表id
+	PrizeID    int64        `db:"prize_id" json:"prizeId,string"` // 抽奖活动id
+	Name       string       `db:"name" json:"name"`               // 参与者名称
+	Email      string       `db:"email" json:"email"`             // 参与者邮箱
+	IP         string       `db:"ip" json:"ip"`                   // 参与者ip
+	Agent      string       `db:"agent" json:"agent"`             // User-Agent
+	IsWinner   bool         `db:"is_winner" json:"isWinner"`      // 是否获奖
+	PrizeKey   *string      `db:"prize_key" json:"prizeKey"`      // 获奖key
+	CreateTime cm.LocalTime `db:"create_time" json:"createTime"`  // 创建时间
 }
 
 // TableName GfgPrizeMember's table name

@@ -11,12 +11,12 @@ import (
 	"github.com/gofurry/gofurry-game-backend/roof/env"
 )
 
-type prizeApi struct{}
+type PrizeAPI struct {
+	service *service.PrizeService
+}
 
-var PrizeApi *prizeApi
-
-func init() {
-	PrizeApi = &prizeApi{}
+func New(prizeService *service.PrizeService) *PrizeAPI {
+	return &PrizeAPI{service: prizeService}
 }
 
 const defaultPrizeActivationFrontendURL = "https://go-furry.com/games/prize/activation"
@@ -65,12 +65,12 @@ func prizeActivationMessage(p models.GfgPrize, m models.GfgPrizeMember, err comm
 
 // @Schemes
 // @Description 参与抽奖
-func (api *prizeApi) PrizeParticipation(c fiber.Ctx) error {
+func (api *PrizeAPI) PrizeParticipation(c fiber.Ctx) error {
 	req := models.PrizeParticipationRequest{}
 	if err := c.Bind().Body(&req); err != nil {
 		return common.NewResponse(c).Error("解析请求体失败")
 	}
-	err := service.GetPrizeService().PrizeParticipation(req, c)
+	err := api.service.PrizeParticipation(req, c)
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -80,10 +80,10 @@ func (api *prizeApi) PrizeParticipation(c fiber.Ctx) error {
 
 // @Schemes
 // @Description 激活抽奖申请
-func (api *prizeApi) ActiveParticipation(c fiber.Ctx) error {
+func (api *PrizeAPI) ActiveParticipation(c fiber.Ctx) error {
 	id := c.Query("id")
 	key := c.Query("key")
-	p, m, err := service.GetPrizeService().ActiveParticipation(id, key)
+	p, m, err := api.service.ActiveParticipation(id, key)
 
 	if err != nil {
 		return c.Redirect().Status(fiber.StatusFound).To(prizeActivationRedirectURL("fail", prizeActivationMessage(p, m, err)))
@@ -93,8 +93,8 @@ func (api *prizeApi) ActiveParticipation(c fiber.Ctx) error {
 
 // @Schemes
 // @Description 抽奖详情
-func (api *prizeApi) LotteryInfo(c fiber.Ctx) error {
-	data, err := service.GetPrizeService().LotteryInfo()
+func (api *PrizeAPI) LotteryInfo(c fiber.Ctx) error {
+	data, err := api.service.LotteryInfo()
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}

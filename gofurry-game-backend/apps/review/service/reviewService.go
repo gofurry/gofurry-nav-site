@@ -18,14 +18,16 @@ import (
 	"github.com/gofurry/gofurry-game-backend/common/util"
 )
 
-type reviewService struct{}
+type ReviewService struct {
+	dao *dao.ReviewDAO
+}
 
-var reviewSingleton = new(reviewService)
+func New(reviewDAO *dao.ReviewDAO) *ReviewService {
+	return &ReviewService{dao: reviewDAO}
+}
 
-func GetReviewService() *reviewService { return reviewSingleton }
-
-func (s reviewService) GetLatestReviewList(lang string) (res []models.AnonymousReviewResponse, err common.GFError) {
-	res, err = dao.GetReviewDao().GetListByLimit(5, lang)
+func (s *ReviewService) GetLatestReviewList(lang string) (res []models.AnonymousReviewResponse, err common.GFError) {
+	res, err = s.dao.GetListByLimit(5, lang)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -38,7 +40,7 @@ func (s reviewService) GetLatestReviewList(lang string) (res []models.AnonymousR
 	return
 }
 
-func (s reviewService) AddAnonymousReview(req models.AnonymousReviewRequest, c fiber.Ctx) common.GFError {
+func (s *ReviewService) AddAnonymousReview(req models.AnonymousReviewRequest, c fiber.Ctx) common.GFError {
 	if req.ID == "" || req.Content == "" || strings.TrimSpace(req.Name) == "" {
 		return common.NewServiceError("入参不能为空")
 	}
@@ -60,7 +62,7 @@ func (s reviewService) AddAnonymousReview(req models.AnonymousReviewRequest, c f
 	}
 
 	// 检验记录是否存在
-	_, err := dao.GetReviewDao().GetReviewByIPAndName(req.ID, parsedIP.String(), req.Name)
+	_, err := s.dao.GetReviewByIPAndName(req.ID, parsedIP.String(), req.Name)
 	if err != nil {
 		if err.GetMsg() != common.RETURN_RECORD_NOT_FOUND {
 			log.Error(err)
@@ -100,7 +102,7 @@ func (s reviewService) AddAnonymousReview(req models.AnonymousReviewRequest, c f
 		Name:       req.Name,
 	}
 
-	return dao.GetReviewDao().Add(&newRecord)
+	return s.dao.Add(&newRecord)
 }
 
 type baiduResp struct {

@@ -13,10 +13,10 @@ import (
 	"github.com/gofurry/gofurry-game-backend/common/util"
 )
 
-func UpdatePrizeWinner() {
+func UpdatePrizeWinner(prizeDAO *pd.PrizeDAO) {
 	log.Info("StatTask UpdatePrizeWinner 开始...")
 
-	prizeList, err := pd.GetPrizeDao().GetActivePrizeList()
+	prizeList, err := prizeDAO.GetActivePrizeList()
 	if err != nil {
 		if err.GetMsg() != common.RETURN_RECORD_NOT_FOUND {
 			log.Error("GetUpdateMoreNews err:", err)
@@ -28,20 +28,20 @@ func UpdatePrizeWinner() {
 	for _, v := range prizeList {
 		if now.After(time.Time(v.EndTime).UTC()) {
 			newRecord := v
-			performLottery(newRecord)
+			performLottery(prizeDAO, newRecord)
 		}
 	}
 
 	// 缓存往期抽奖记录
-	cachePrizeWinner()
+	cachePrizeWinner(prizeDAO)
 
 	log.Info("StatTask UpdatePrizeWinner 结束...")
 }
 
-func performLottery(record pm.GfgPrize) {
+func performLottery(prizeDAO *pd.PrizeDAO, record pm.GfgPrize) {
 
 	// 获取参与者
-	members, err := pd.GetPrizeDao().GetMembers(record.ID)
+	members, err := prizeDAO.GetMembers(record.ID)
 	if err != nil {
 		log.Error("GetMembers err:", err)
 		return
@@ -81,7 +81,7 @@ func performLottery(record pm.GfgPrize) {
 
 	// 更新数据库
 	for _, winner := range winners {
-		_, err = pd.GetPrizeDao().Update(winner.ID, winner)
+		_, err = prizeDAO.Update(winner.ID, winner)
 		if err != nil {
 			log.Error("UpdateWinner err:", err)
 			continue
@@ -105,7 +105,7 @@ func performLottery(record pm.GfgPrize) {
 	retry := 0
 	for retry < 3 {
 		retry++
-		_, err = pd.GetPrizeDao().Save(record.ID, record) // 全量更新, GORM的updates隐式忽略false的字段
+		_, err = prizeDAO.Save(record.ID, record) // 全量更新，必须持久化 false 状态。
 		if err != nil {
 			log.Error("UpdatePrizeStatus err:", err)
 		} else {
@@ -114,10 +114,10 @@ func performLottery(record pm.GfgPrize) {
 	}
 }
 
-func cachePrizeWinner() {
+func cachePrizeWinner(prizeDAO *pd.PrizeDAO) {
 	log.Info("StatTask CachePrizeWinner 开始...")
 
-	records, err := pd.GetPrizeDao().GetLotteryHistory()
+	records, err := prizeDAO.GetLotteryHistory()
 	if err != nil {
 		log.Error("GetLotteryHistory err:", err)
 		return
@@ -143,7 +143,7 @@ func cachePrizeWinner() {
 		prizeDisplay.Platform = prizeModels.Platform
 
 		// 查询中奖者
-		winners, wErr := pd.GetPrizeDao().GetWinners(v.ID)
+		winners, wErr := prizeDAO.GetWinners(v.ID)
 		if wErr != nil {
 			log.Error("GetWinners err:", wErr)
 			continue
@@ -158,7 +158,7 @@ func cachePrizeWinner() {
 		}
 
 		// 查询参与人数
-		count, cErr := pd.GetPrizeDao().GetMemberCount(v.ID)
+		count, cErr := prizeDAO.GetMemberCount(v.ID)
 		if cErr != nil {
 			log.Error("GetMemberCount err:", cErr)
 			continue

@@ -8,14 +8,14 @@ const TableNameGfgGameComment = "gfg_game_comment"
 
 // GfgGameComment mapped from table <gfg_game_comment>
 type GfgGameComment struct {
-	ID         int64        `gorm:"column:id;type:bigint;primaryKey;comment:评论表ID" json:"id"`                                         // 评论表ID
-	Region     string       `gorm:"column:region;type:character varying(50);not null;comment:地区" json:"region"`                       // 地区
-	Content    string       `gorm:"column:content;type:text;not null;comment:评论" json:"content"`                                      // 评论
-	Score      float64      `gorm:"column:score;type:double precision;not null;comment:评分" json:"score"`                              // 评分
-	CreateTime cm.LocalTime `gorm:"column:create_time;type:int;type:unsigned;not null;autoCreateTime;comment:创建时间" json:"createTime"` // 创建时间
-	GameID     int64        `gorm:"column:game_id;type:bigint;not null;comment:游戏表ID" json:"gameId,string"`                           // 游戏表ID
-	IP         string       `gorm:"column:ip;type:character varying(50);not null;comment:ip" json:"ip"`                               // ip
-	Name       string       `gorm:"column:name;type:character varying(50);comment:评论人名称" json:"name"`                                 // 评论人名
+	ID         int64        `db:"id" json:"id"`                  // 评论表ID
+	Region     string       `db:"region" json:"region"`          // 地区
+	Content    string       `db:"content" json:"content"`        // 评论
+	Score      float64      `db:"score" json:"score"`            // 评分
+	CreateTime cm.LocalTime `db:"create_time" json:"createTime"` // 创建时间
+	GameID     int64        `db:"game_id" json:"gameId,string"`  // 游戏表ID
+	IP         string       `db:"ip" json:"ip"`                  // ip
+	Name       string       `db:"name" json:"name"`              // 评论人名
 }
 
 // TableName GfgGameComment's table name
@@ -24,14 +24,14 @@ func (*GfgGameComment) TableName() string {
 }
 
 type AvgScoreResult struct {
-	GameID       string  `gorm:"column:game_id" json:"game_id"`
-	AvgScore     float64 `gorm:"column:avg_score" json:"avg_score"`
-	CommentCount int64   `gorm:"column:comment_count" json:"comment_count"`
-	Name         string  `gorm:"column:name" json:"name"`
-	NameEn       string  `gorm:"column:name_en" json:"name_en"`
-	Info         string  `gorm:"column:info" json:"info"`
-	InfoEn       string  `gorm:"column:info_en" json:"info_en"`
-	Header       string  `gorm:"column:header" json:"header"`
+	GameID       string  `db:"game_id" json:"game_id"`
+	AvgScore     float64 `db:"avg_score" json:"avg_score"`
+	CommentCount int64   `db:"comment_count" json:"comment_count"`
+	Name         string  `db:"name" json:"name"`
+	NameEn       string  `db:"name_en" json:"name_en"`
+	Info         string  `db:"info" json:"info"`
+	InfoEn       string  `db:"info_en" json:"info_en"`
+	Header       string  `db:"header" json:"header"`
 }
 
 type AnonymousReviewRequest struct {

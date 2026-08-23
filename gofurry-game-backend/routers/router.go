@@ -8,7 +8,6 @@ package routers
 
 import (
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -17,9 +16,12 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/pprof"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	gamev2 "github.com/gofurry/gofurry-game-backend/apps/game/v2/controller"
+	prize "github.com/gofurry/gofurry-game-backend/apps/prize/controller"
 	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofurry/gofurry-game-backend/middleware"
 	"github.com/gofurry/gofurry-game-backend/roof/env"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var Router *router
@@ -34,12 +36,7 @@ func init() {
 	Router = NewRouter()
 }
 
-var once = sync.Once{}
-
-func (router *router) Init() *fiber.App {
-	once.Do(func() {
-	})
-
+func (router *router) Init(pool *pgxpool.Pool, gameAPI *gamev2.GameV2API, prizeAPI *prize.PrizeAPI) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName:      common.COMMON_PROJECT_NAME,
 		ServerHeader: "gofurry-Game",
@@ -50,23 +47,23 @@ func (router *router) Init() *fiber.App {
 		JSONEncoder:  sonic.Marshal,
 		JSONDecoder:  sonic.Unmarshal,
 	})
-	registerHealthChecks(app)
+	registerHealthChecks(app, pool)
 
 	// 注册全局中间件
 	registerMiddlewares(app)
 
 	// 路由分组
-	registerRoutes(app)
+	registerRoutes(app, gameAPI, prizeAPI)
 
 	return app
 }
 
-func registerRoutes(app *fiber.App) {
+func registerRoutes(app *fiber.App, gameAPI *gamev2.GameV2API, prizeAPI *prize.PrizeAPI) {
 	api := app.Group("/api")
 	v2 := api.Group("/v2")
 
 	// v2 游戏模块路由：/api/v2/game/...
-	gameV2Api(v2.Group("/game"))
+	gameV2Api(v2.Group("/game"), gameAPI, prizeAPI)
 }
 
 // registerMiddlewares 注册中间件

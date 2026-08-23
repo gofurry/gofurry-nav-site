@@ -14,16 +14,18 @@ import (
 	"github.com/gofurry/gofurry-game-backend/common/util"
 )
 
-type gameV2Api struct{}
-
-var GameV2Api *gameV2Api
-
-func init() {
-	GameV2Api = &gameV2Api{}
+type GameV2API struct {
+	readModelDAO  *v2dao.ReadModelDAO
+	viewService   *v2service.GameViewService
+	reviewService *reviewservice.ReviewService
 }
 
-func (api *gameV2Api) GetGameList(c fiber.Ctx) error {
-	data, err := newReadModelService().GetGameList(context.Background(), v2models.GameV2ListQuery{
+func New(readModelDAO *v2dao.ReadModelDAO, viewService *v2service.GameViewService, reviewService *reviewservice.ReviewService) *GameV2API {
+	return &GameV2API{readModelDAO: readModelDAO, viewService: viewService, reviewService: reviewService}
+}
+
+func (api *GameV2API) GetGameList(c fiber.Ctx) error {
+	data, err := api.newReadModelService().GetGameList(context.Background(), v2models.GameV2ListQuery{
 		Lang:   c.Query("lang", "zh"),
 		Region: c.Query("region", "CN"),
 		Limit:  parseInt(c.Query("limit", "20")),
@@ -36,13 +38,13 @@ func (api *gameV2Api) GetGameList(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetGameInfo(c fiber.Ctx) error {
+func (api *GameV2API) GetGameInfo(c fiber.Ctx) error {
 	id := parseInt64(c.Query("id", "0"))
 	appid := parseInt64(c.Query("appid", "0"))
 	if id <= 0 && appid <= 0 {
 		return common.NewResponse(c).Error("id 或 appid 不能为空")
 	}
-	data, err := newReadModelService().GetGameDetail(context.Background(), v2models.GameV2DetailRequest{
+	data, err := api.newReadModelService().GetGameDetail(context.Background(), v2models.GameV2DetailRequest{
 		GameID:    id,
 		AppID:     appid,
 		Lang:      c.Query("lang", "zh"),
@@ -55,7 +57,7 @@ func (api *gameV2Api) GetGameInfo(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) TouchGameView(c fiber.Ctx) error {
+func (api *GameV2API) TouchGameView(c fiber.Ctx) error {
 	gameID := parseInt64(c.Params("id", "0"))
 	if gameID <= 0 {
 		return common.NewResponse(c).Error("id 不能为空")
@@ -66,7 +68,7 @@ func (api *gameV2Api) TouchGameView(c fiber.Ctx) error {
 		clientIP = c.IP()
 	}
 
-	viewCount, err := newGameViewService().TouchGameViewCount(gameID, clientIP)
+	viewCount, err := api.newGameViewService().TouchGameViewCount(gameID, clientIP)
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -77,40 +79,40 @@ func (api *gameV2Api) TouchGameView(c fiber.Ctx) error {
 	})
 }
 
-func (api *gameV2Api) SearchSimple(c fiber.Ctx) error {
+func (api *GameV2API) SearchSimple(c fiber.Ctx) error {
 	req := v2models.GameV2SearchRequest{}
 	if err := c.Bind().Body(&req); err != nil {
 		return common.NewResponse(c).Error("解析请求体失败")
 	}
-	data, err := newReadModelService().SimpleSearch(context.Background(), req)
+	data, err := api.newReadModelService().SimpleSearch(context.Background(), req)
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) SearchPage(c fiber.Ctx) error {
+func (api *GameV2API) SearchPage(c fiber.Ctx) error {
 	req := v2models.GameV2SearchPageQueryRequest{}
 	if err := c.Bind().Body(&req); err != nil {
 		return common.NewResponse(c).Error("解析请求体失败")
 	}
-	data, err := newReadModelService().SearchPage(context.Background(), req)
+	data, err := api.newReadModelService().SearchPage(context.Background(), req)
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetTags(c fiber.Ctx) error {
-	data, err := newReadModelService().ListTags(context.Background(), c.Query("lang", "zh"))
+func (api *GameV2API) GetTags(c fiber.Ctx) error {
+	data, err := api.newReadModelService().ListTags(context.Background(), c.Query("lang", "zh"))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetGameReviews(c fiber.Ctx) error {
-	data, err := newReadModelService().GetGameReviews(
+func (api *GameV2API) GetGameReviews(c fiber.Ctx) error {
+	data, err := api.newReadModelService().GetGameReviews(
 		context.Background(),
 		c.Query("id", "0"),
 		parseInt(c.Query("page", "1")),
@@ -122,35 +124,35 @@ func (api *gameV2Api) GetGameReviews(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) AddAnonymousReview(c fiber.Ctx) error {
+func (api *GameV2API) AddAnonymousReview(c fiber.Ctx) error {
 	req := reviewmodels.AnonymousReviewRequest{}
 	if err := c.Bind().Body(&req); err != nil {
 		return common.NewResponse(c).Error("解析请求体失败")
 	}
-	if err := reviewservice.GetReviewService().AddAnonymousReview(req, c); err != nil {
+	if err := api.reviewService.AddAnonymousReview(req, c); err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).Success()
 }
 
-func (api *gameV2Api) GetLatestReviews(c fiber.Ctx) error {
-	data, err := newReadModelService().ListLatestReviews(context.Background(), c.Query("lang", "zh"), parseInt(c.Query("limit", "15")))
+func (api *GameV2API) GetLatestReviews(c fiber.Ctx) error {
+	data, err := api.newReadModelService().ListLatestReviews(context.Background(), c.Query("lang", "zh"), parseInt(c.Query("limit", "15")))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetRandomGame(c fiber.Ctx) error {
-	data, err := newReadModelService().GetRandomGameID(context.Background())
+func (api *GameV2API) GetRandomGame(c fiber.Ctx) error {
+	data, err := api.newReadModelService().GetRandomGameID(context.Background())
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetSimilarRecommendations(c fiber.Ctx) error {
-	data, err := newReadModelService().GetSimilarRecommendations(context.Background(), v2models.GameV2SimilarRecommendationQuery{
+func (api *GameV2API) GetSimilarRecommendations(c fiber.Ctx) error {
+	data, err := api.newReadModelService().GetSimilarRecommendations(context.Background(), v2models.GameV2SimilarRecommendationQuery{
 		GameID: parseInt64(c.Query("id", "0")),
 		Lang:   c.Query("lang", "zh"),
 		Region: c.Query("region", "CN"),
@@ -162,13 +164,13 @@ func (api *gameV2Api) GetSimilarRecommendations(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetGameNews(c fiber.Ctx) error {
+func (api *GameV2API) GetGameNews(c fiber.Ctx) error {
 	id := parseInt64(c.Query("id", "0"))
 	appid := parseInt64(c.Query("appid", "0"))
 	if id <= 0 && appid <= 0 {
 		return common.NewResponse(c).Error("id 或 appid 不能为空")
 	}
-	data, err := newReadModelService().GetGameNews(context.Background(), v2models.GameV2NewsQuery{
+	data, err := api.newReadModelService().GetGameNews(context.Background(), v2models.GameV2NewsQuery{
 		GameID: id,
 		AppID:  appid,
 		Lang:   c.Query("lang", "zh"),
@@ -181,8 +183,8 @@ func (api *gameV2Api) GetGameNews(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetLatestGameNews(c fiber.Ctx) error {
-	data, err := newReadModelService().GetLatestGameNews(context.Background(), v2models.GameV2NewsQuery{
+func (api *GameV2API) GetLatestGameNews(c fiber.Ctx) error {
+	data, err := api.newReadModelService().GetLatestGameNews(context.Background(), v2models.GameV2NewsQuery{
 		Lang:   c.Query("lang", "zh"),
 		Limit:  parseInt(c.Query("limit", "20")),
 		Offset: parseInt(c.Query("offset", "0")),
@@ -193,8 +195,8 @@ func (api *gameV2Api) GetLatestGameNews(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetPanelMain(c fiber.Ctx) error {
-	data, err := newReadModelService().GetPanelMain(context.Background(), v2models.GameV2PanelQuery{
+func (api *GameV2API) GetPanelMain(c fiber.Ctx) error {
+	data, err := api.newReadModelService().GetPanelMain(context.Background(), v2models.GameV2PanelQuery{
 		Lang:           c.Query("lang", "zh"),
 		Region:         c.Query("region", "CN"),
 		Limit:          parseInt(c.Query("limit", "8")),
@@ -208,20 +210,20 @@ func (api *gameV2Api) GetPanelMain(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *gameV2Api) GetHome(c fiber.Ctx) error {
-	data, err := newReadModelService().GetHome(context.Background(), c.Query("lang", "zh"), c.Query("region", "CN"))
+func (api *GameV2API) GetHome(c fiber.Ctx) error {
+	data, err := api.newReadModelService().GetHome(context.Background(), c.Query("lang", "zh"), c.Query("region", "CN"))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func newReadModelService() *v2service.ReadModelService {
-	return v2service.NewReadModelServiceWithReader(v2dao.NewReadModelDAO())
+func (api *GameV2API) newReadModelService() *v2service.ReadModelService {
+	return v2service.NewReadModelServiceWithReader(api.readModelDAO)
 }
 
-func newGameViewService() *v2service.GameViewService {
-	return v2service.GetGameViewService()
+func (api *GameV2API) newGameViewService() *v2service.GameViewService {
+	return api.viewService
 }
 
 func parseInt(value string) int {

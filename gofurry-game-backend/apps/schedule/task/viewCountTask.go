@@ -3,8 +3,7 @@ package task
 import (
 	"strings"
 
-	"github.com/gofurry/gofurry-game-backend/apps/game/dao"
-	gameModels "github.com/gofurry/gofurry-game-backend/apps/game/models"
+	v2service "github.com/gofurry/gofurry-game-backend/apps/game/v2/service"
 	"github.com/gofurry/gofurry-game-backend/common/log"
 	cs "github.com/gofurry/gofurry-game-backend/common/service"
 	"github.com/gofurry/gofurry-game-backend/common/util"
@@ -12,7 +11,7 @@ import (
 
 const gameViewCountPrefix = "game:view:count:"
 
-func UpdateGameViewCountCache() {
+func UpdateGameViewCountCache(viewService *v2service.GameViewService) {
 	keys, err := cs.FindByPrefix(gameViewCountPrefix)
 	if err != nil {
 		log.Error("[UpdateGameViewCountCache] find redis keys err:", err)
@@ -36,7 +35,7 @@ func UpdateGameViewCountCache() {
 			continue
 		}
 
-		if dbErr := dao.GetGameDao().Gm.Table(gameModels.TableNameGfgGame).Where("id = ?", gameID).Update("view_count", viewCount).Error; dbErr != nil {
+		if dbErr := viewService.PersistViewCount(gameID, viewCount); dbErr != nil {
 			log.Error("[UpdateGameViewCountCache] update game view count err:", dbErr)
 		}
 	}

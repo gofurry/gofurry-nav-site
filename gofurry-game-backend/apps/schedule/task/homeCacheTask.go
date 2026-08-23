@@ -10,10 +10,10 @@ import (
 
 var gameHomeCacheLangs = []string{"zh", "en"}
 
-func RefreshGameHomeCache() {
+func RefreshGameHomeCache(readDAO *v2dao.ReadModelDAO) {
 	log.Info("[RefreshGameHomeCache] start")
 
-	svc := v2service.NewReadModelServiceWithReader(v2dao.NewReadModelDAO())
+	svc := v2service.NewReadModelServiceWithReader(readDAO)
 	ctx := context.Background()
 
 	for _, lang := range gameHomeCacheLangs {
