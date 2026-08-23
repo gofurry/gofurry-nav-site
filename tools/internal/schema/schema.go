@@ -307,6 +307,7 @@ func loadConstraints(ctx context.Context, db Queryer, table *Table) error {
 		if err := rows.Scan(&item.Name, &item.Definition, &item.Comment); err != nil {
 			return fmt.Errorf("scan constraint for %s: %w", table.Name, err)
 		}
+		item.Definition = normalizeConstraintDefinition(table.Name, item.Name, item.Definition)
 		table.Constraints = append(table.Constraints, item)
 	}
 	return rows.Err()
@@ -385,7 +386,37 @@ func loadFunctions(ctx context.Context, db Queryer, snapshot *Snapshot) error {
 		if err := rows.Scan(&item.Identity, &item.Definition, &item.Comment); err != nil {
 			return fmt.Errorf("scan function: %w", err)
 		}
+		item.Definition = normalizeFunctionDefinition(item.Identity, item.Definition)
 		snapshot.Functions = append(snapshot.Functions, item)
 	}
 	return rows.Err()
+}
+
+func normalizeConstraintDefinition(tableName, constraintName, definition string) string {
+	// This constraint was created before the production cluster reached
+	// PostgreSQL 18. PostgreSQL preserves its legacy expression tree across an
+	// upgrade, but pg_dump followed by a PG18 restore pushes the same varchar[]
+	// to text[] cast down to each array element. Accept only these two known,
+	// semantically identical catalog renderings and store the PG18 form.
+	if tableName == "gfn_saying" && constraintName == "chk_gfn_saying_language" {
+		const legacy = "CHECK (language::text = ANY (ARRAY['zh'::character varying, 'en'::character varying]::text[]))"
+		const postgres18 = "CHECK (language::text = ANY (ARRAY['zh'::character varying::text, 'en'::character varying::text]))"
+		if definition == legacy {
+			return postgres18
+		}
+	}
+	return definition
+}
+
+func normalizeFunctionDefinition(identity, definition string) string {
+	// The production definition of this function was installed with CRLF source
+	// lines. Line endings outside SQL string literals do not alter this function's
+	// behavior, and its body contains no multiline string literal. Canonicalizing
+	// this one audited definition makes a pg_dump restore independent of transport
+	// line endings without weakening comparison for other functions.
+	if identity == "gfg_game_v2_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer)" {
+		definition = strings.ReplaceAll(definition, "\r\n", "\n")
+		definition = strings.ReplaceAll(definition, "\r", "\n")
+	}
+	return definition
 }

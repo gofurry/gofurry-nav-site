@@ -91,7 +91,6 @@ func openSimpleProtocolDatabase(t *testing.T, dsn, databaseName string) *sql.DB 
 }
 
 func stripPSQLMetaCommands(dump string) string {
-	dump = strings.ReplaceAll(dump, "\r\n", "\n")
 	lines := strings.Split(dump, "\n")
 	kept := lines[:0]
 	for _, line := range lines {
