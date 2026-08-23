@@ -47,6 +47,7 @@ gofurry 是 GoFurry 站点体系的开源多服务仓库，面向兽圈文化内
 - `apps/cn/game-backend`：兽游相关后端 API，承载游戏列表、详情、搜索、价格与在线人数等数据能力
 - `apps/cn/game-collector`：兽游数据采集服务，负责 Steam 游戏资料、价格、在线人数与补充数据采集
 - `apps/cn/admin`：运营后台，包含嵌入式前端、标签选项、采集触发、WAF 与管理接口
+- `apps/cn/uptime`：独立极简状态服务，使用 Fiber uptime 与本地 Bbolt，不依赖业务 PostgreSQL/Redis
 - `apps/intl`：国际站服务和前端占位目录，当前不参与生产构建
 - `db`：`gfg`、`gfn`、`gfa` 的 Goose migration source of truth
 - `docs`：跨服务架构、开发与部署说明
@@ -102,9 +103,12 @@ go run . serve --config conf/server.yaml
 
 cd ../admin
 go run . serve --config config/server.yaml
+
+cd ../uptime
+go run . serve --config conf/server.yaml
 ```
 
-五个 Go 程序的根命令只显示帮助，不会隐式启动；运行服务必须使用显式的 `serve --config`。示例配置只用于复制，真实密码和密钥不要提交。
+六个 Go 程序的根命令只显示帮助，不会隐式启动；运行服务必须使用显式的 `serve --config`。示例配置只用于复制，真实密码和密钥不要提交。
 
 如果你要构建根级 Go 服务产物，可按目标调用：
 
@@ -114,6 +118,7 @@ build.bat nav-collector
 build.bat game-backend
 build.bat game-collector
 build.bat admin
+build.bat uptime
 ```
 
 这个脚本会把构建产物输出到根级 `build/` 目录。Nuxt 前台的生产部署使用 `apps/cn/nav-web` 目录内的独立流程。
@@ -135,7 +140,7 @@ cd apps/cn/nav-web
 ./update.sh
 ```
 
-五个 Go 服务使用二进制内置的 Linux/systemd 安装命令。安装必须从最终部署目录执行，并指定真实配置：
+六个 Go 服务使用二进制内置的 Linux/systemd 安装命令。安装必须从最终部署目录执行，并指定真实配置：
 
 ```bash
 sudo ./gf-nav install --config /etc/gf-nav/server.yaml
@@ -155,6 +160,8 @@ sudo systemctl start gf-nav
 - `gofurry-nav-collector` 已完成 v2 数据面收口，提供 summary、latest、observations、trend、change event 与低频旁路探测结果
 - `gofurry-game-backend` 与 `gofurry-game-collector` 继续承担兽游资料、价格、在线人数与采集队列能力
 - `gofurry-admin` 已切到 GoFiber 官方 contrib Coraza 中间件，标签选择接口支持全量请求与展示
+- `gf-uptime` 已从 Nav Backend 独立出来，使用本地 Bbolt 保存可用性历史；公开状态页默认使用 `https://status.go-furry.com`
+- Nav Web 提供 `/healthz`，两个 Collector 可按内网配置启用 `/livez` 与 `/readyz`
 - `gofurry-ops-agent` 与 `gofurry-ops-center` 已移入 `legacy/`，当前网站使用自研可观测性中间件路线
 - `robots.txt`、`sitemap.xml`、`llms.txt` 与 `/.well-known/security.txt` 已作为公开站点元信息入口提供
 - 旧 Vue 前台、原 RAG 服务和旧 Ops 服务均已归档到 `legacy/`

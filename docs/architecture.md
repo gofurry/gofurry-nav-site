@@ -2,7 +2,7 @@
 
 ## Active topology
 
-Production code is limited to six China-site applications under `apps/cn`:
+Production code is limited to six Go services plus one Nuxt frontend under `apps/cn`:
 
 | Application | Responsibility | Stateful dependencies |
 |---|---|---|
@@ -11,6 +11,7 @@ Production code is limited to six China-site applications under `apps/cn`:
 | `game-backend` | Game HTTP API | `gfg` PostgreSQL, existing Redis keys |
 | `game-collector` | Steam/game collection and operator one-shot commands | `gfg` PostgreSQL, existing Redis keys |
 | `admin` | Embedded Admin UI and management API | explicit `gfa`, `gfn`, and `gfg` PostgreSQL pools plus Redis |
+| `uptime` | Independent public availability history and status UI | local Bbolt file only |
 | `nav-web` | Production Nuxt frontend | Nav and Game APIs |
 
 `apps/intl` contains placeholders only. It has no build, CI, deployment, database, or runtime ownership in this release.
@@ -22,6 +23,16 @@ The root directories `db/game`, `db/nav`, and `db/admin` own the `gfg`, `gfn`, a
 Normal business SQL is declared in service-local sqlc query files and generated from the root `sqlc.yaml` contract. Generated sqlc code is committed and is never edited manually. Production PostgreSQL access uses pgx/v5 and pgxpool.
 
 Admin writes business data through explicit `gfn` or `gfg` pools and records authentication/audit state in `gfa`. No distributed transaction across the three databases is implied.
+
+`uptime` does not own a schema and is deliberately absent from Goose and sqlc. Fiber uptime history is stored in its local Bbolt file; it does not depend on business PostgreSQL or Redis.
+
+## Availability boundaries
+
+- Nav Web exposes dependency-free `GET /healthz`.
+- Nav/Game Backend and Admin retain their existing health endpoints.
+- Nav/Game Collector expose optional internal `net/http` `/livez` and `/readyz` listeners only during scheduled `serve`.
+- Collector readiness covers only local PostgreSQL, required Redis, scheduler initialization, and shutdown state.
+- `uptime` owns the public status UI and should preferably run outside the business host's failure domain. A cloud HTTP monitor should probe the status service itself.
 
 ## Process lifecycle
 

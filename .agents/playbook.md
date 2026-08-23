@@ -4,7 +4,7 @@ Run commands from the named module unless stated otherwise.
 
 ## Active Go checks
 
-For each of `apps/cn/game-collector`, `apps/cn/game-backend`, `apps/cn/nav-collector`, `apps/cn/nav-backend`, and `apps/cn/admin`:
+For each of `apps/cn/game-collector`, `apps/cn/game-backend`, `apps/cn/nav-collector`, `apps/cn/nav-backend`, `apps/cn/admin`, and `apps/cn/uptime`:
 
 ~~~text
 gofmt -w .
@@ -58,5 +58,7 @@ GOFURRY_ADMIN_INTEGRATION_CONFIG=/path/server.yaml go test ./internal/bootstrap 
 Run these only against explicitly isolated development PostgreSQL. Never use production credentials.
 
 Run the pinned vulnerability scanner from `tools` for every active module. CI performs the same active-only matrix on dependency changes and on a schedule.
+
+Availability smoke checks include Nav Web `/healthz`, backend/Admin readiness, both enabled collector readiness listeners, and the standalone uptime service `/livez`, `/readyz`, and `/uptime`. Uptime does not participate in sqlc, Goose, or PostgreSQL integration jobs.
 
 The CI dependency matrix remains: `db/game` runs both Game services and Admin; `db/nav` runs both Nav services and Admin; `db/admin` runs Admin; sqlc/tools changes run all SQL consumers. Archive and experiment trees are never production CI inputs.

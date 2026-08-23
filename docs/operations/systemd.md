@@ -1,6 +1,6 @@
 # Linux/systemd lifecycle
 
-The five active Go binaries generate their deployment-specific unit at install time. There are no canonical static production `.service` files in this repository.
+The six active Go binaries generate their deployment-specific unit at install time. There are no canonical static production `.service` files in this repository.
 
 ## Service names
 
@@ -11,6 +11,7 @@ The five active Go binaries generate their deployment-specific unit at install t
 | `gf-game` | `gf-game.service` |
 | `gf-game-collector` | `gf-game-collector.service` |
 | `gofurry-admin` | `gofurry-admin.service` |
+| `gf-uptime` | `gf-uptime.service` |
 
 ## Install contract
 
@@ -77,7 +78,7 @@ sudo ./gf-nav uninstall
 
 Uninstall stops the unit if active, disables it if enabled, removes only `/etc/systemd/system/gf-nav.service`, reloads systemd, and resets failed state where applicable. Repeating it for an already stopped, disabled, or absent unit is safe.
 
-It never deletes the binary, configuration, logs, working directory, PostgreSQL state, Redis state, or other application data.
+It never deletes the binary, configuration, logs, working directory, PostgreSQL state, Redis state, the uptime Bbolt file, or other application data.
 
 ## Migration from kardianos-generated units
 

@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Go 1.26.7 for all five active Go modules and `tools`
+- Go 1.26.7 for all six active Go modules and `tools`
 - Node.js 24 and npm for `apps/cn/nav-web` and `apps/cn/admin/web`
 - development PostgreSQL and Redis matching the selected app configuration
 - sqlc and govulncheck through the pinned Go tools in `tools/go.mod`
@@ -20,6 +20,7 @@ Every runtime command requires an explicit YAML file:
 | Game Backend | `apps/cn/game-backend/conf/server.example.yaml` |
 | Game Collector | `apps/cn/game-collector/conf/server.example.yaml` |
 | Admin | `apps/cn/admin/config/server.example.yaml` |
+| Uptime | `apps/cn/uptime/conf/server.example.yaml` |
 
 Copy the example to an ignored local file, replace placeholders, and never commit credentials.
 
@@ -48,7 +49,7 @@ go run . all --config conf/server.yaml
 
 ## Normal validation
 
-For each of `game-collector`, `game-backend`, `nav-collector`, `nav-backend`, and `admin` under `apps/cn`:
+For each of `game-collector`, `game-backend`, `nav-collector`, `nav-backend`, `admin`, and `uptime` under `apps/cn`:
 
 ~~~bash
 gofmt -w .
@@ -88,3 +89,5 @@ go tool govulncheck -C ../apps/cn/nav-backend ./...
 ~~~
 
 Database integration checks require explicitly configured, isolated development databases. Never point them at production.
+
+The standalone uptime service has no PostgreSQL integration suite. Its tests use temporary Bbolt files. Collector health listeners are disabled when `health` is omitted; example configs bind them to loopback addresses.

@@ -68,6 +68,7 @@ Required values:
 - `NUXT_PUBLIC_SITE_URL=https://go-furry.com`
 - `NUXT_PUBLIC_NAV_API_BASE=https://nav.go-furry.com/api/v1`
 - `NUXT_PUBLIC_GAME_API_BASE=https://game.go-furry.com/api/v1`
+- `NUXT_PUBLIC_UPTIME_URL=https://status.go-furry.com`
 - `NAV_API_INTERNAL_BASE=http://10.6.0.11:9999/api/v1`
 - `GAME_API_INTERNAL_BASE=http://10.6.0.11:9998/api/v1`
 
@@ -76,5 +77,7 @@ The CDN and logo URLs stay pointed at the existing `qcdn.go-furry.com` assets.
 ## Notes
 
 - `robots.txt` and `sitemap.xml` are served from Nuxt `server/routes`.
+- `GET /healthz` returns a dependency-free HTTP 200 response for CDN/Nginx/Nuxt reachability checks.
+- The Footer status link uses the independent status service; it no longer points at Nav Backend.
 - Deploy the Go nav/game backends and the Nuxt frontend together during a maintenance window. The public nav/game APIs now live under `/api/v1`, and the old non-versioned API aliases are intentionally removed.
 - The old Vue frontend can stay in the repository as a legacy reference, but it is no longer the production entrypoint.

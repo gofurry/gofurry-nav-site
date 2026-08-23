@@ -42,6 +42,7 @@ The production public site has now moved to a Nuxt 4 frontend to improve SEO, fi
 - `apps/cn/game-backend`: game-related API service
 - `apps/cn/game-collector`: game-related data collector
 - `apps/cn/admin`: operations backend with embedded frontend
+- `apps/cn/uptime`: independent Fiber/Bbolt status service with no business PostgreSQL or Redis dependency
 - `apps/intl`: placeholders for the future international site; not a production build target
 - `db`: Goose migrations for the `gfg`, `gfn`, and `gfa` databases
 - `docs`: cross-service architecture, development, deployment, and operations documentation
@@ -81,7 +82,7 @@ cp conf/server.example.yaml conf/server.yaml
 go run . serve --config conf/server.yaml
 ```
 
-All five Go root commands display help and never start implicitly. Runtime commands require an explicit configuration file.
+All six Go root commands display help and never start implicitly. Runtime commands require an explicit configuration file.
 
 If you need root-level packaging artifacts, use:
 
@@ -96,6 +97,7 @@ Current targets include:
 - `game-backend`
 - `game-collector`
 - `admin`
+- `uptime`
 
 That script writes release artifacts into the root `build/` directory. The Nuxt frontend keeps its own Docker-based production deployment flow under `apps/cn/nav-web`.
 
@@ -116,7 +118,7 @@ cd apps/cn/nav-web
 ./update.sh
 ```
 
-The five Go binaries include a Linux/systemd installer. Run it from the final deployment directory with the real configuration:
+The six Go binaries include a Linux/systemd installer. Run it from the final deployment directory with the real configuration:
 
 ```bash
 sudo ./gf-nav install --config /etc/gf-nav/server.yaml
@@ -136,8 +138,9 @@ See the [systemd operator runbook](./docs/operations/systemd.md) for migration a
 - The updates page has been rebuilt as a structured bilingual timeline backed by `gfn_nav_update_notice`, without relying on CDN-hosted markdown
 - Search suggestions are now unified behind the v2 suggestions API with cache, singleflight deduplication, proxy support, and baseline rate limiting
 - `robots.txt`, `sitemap.xml`, `llms.txt`, and `/.well-known/security.txt` are available as public site metadata entrypoints
+- `gf-uptime` now owns the independent status page with local Bbolt history; Nav Web exposes `/healthz`, and both collectors support optional internal health listeners
 - The old Vue frontend and former RAG service are archived under `legacy/`
-- The root `build.bat` builds only the five active Go applications
+- The root `build.bat` builds only the six active Go applications
 
 ## Contributing
 
