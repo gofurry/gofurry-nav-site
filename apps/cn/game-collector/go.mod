@@ -1,13 +1,13 @@
 module github.com/gofurry/gofurry-game-collector
 
-go 1.26.0
+go 1.26.7
 
 require (
 	github.com/PuerkitoBio/goquery v1.12.0
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/bytedance/sonic v1.15.0
 	github.com/gofurry/steam-go v1.3.7
-	github.com/jackc/pgx/v5 v5.9.1
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/kardianos/service v1.2.4
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/rfyiamcool/go-timewheel v1.1.0
@@ -38,7 +38,7 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/arch v0.25.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 )

@@ -1,6 +1,6 @@
 module github.com/gofurry/gofurry-admin
 
-go 1.26.4
+go 1.26.7
 
 require (
 	github.com/GoFurry/easyhash v1.0.0

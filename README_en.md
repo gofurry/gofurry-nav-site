@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white" alt="Go Version">&nbsp&nbsp
+  <img src="https://img.shields.io/badge/Go-1.26.7-00ADD8?logo=go&logoColor=white" alt="Go Version">&nbsp&nbsp
   <img src="https://img.shields.io/github/license/gofurry/gofurry-nav-site" alt="License">&nbsp&nbsp
   <img src="https://img.shields.io/badge/weekend-project-8B5CF6?style=flat" alt="Weekend Project">&nbsp&nbsp
   <img src="https://img.shields.io/badge/made%20with-%E2%9D%A4-E11D48?style=flat&color=orange" alt="Made with Love">

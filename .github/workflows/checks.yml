@@ -47,6 +47,7 @@ jobs:
       game_integration: ${{ steps.detect.outputs.game_integration }}
       nav_integration: ${{ steps.detect.outputs.nav_integration }}
       admin_integration: ${{ steps.detect.outputs.admin_integration }}
+      vulnerability: ${{ steps.detect.outputs.vulnerability }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -103,6 +104,7 @@ jobs:
           set_bool game_integration '^(apps/cn/(admin|game-backend|game-collector)/|db/game/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
           set_bool nav_integration '^(apps/cn/(admin|nav-backend|nav-collector)/|db/nav/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
           set_bool admin_integration '^(apps/cn/admin/|db/(admin|game|nav)/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
+          set_bool vulnerability '^(apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector)/go\.(mod|sum)$|tools/go\.(mod|sum)$|\.github/workflows/checks\.yml$)'
 
   production-go:
     needs: detect-changes
@@ -178,6 +180,26 @@ jobs:
           cache-dependency-path: tools/go.sum
       - working-directory: tools
         run: go run ./check-production-policy
+
+  active-vulnerability:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.vulnerability == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/go.mod
+          cache-dependency-path: tools/go.sum
+      - name: Scan active Go applications
+        working-directory: tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          for module in admin game-backend game-collector nav-backend nav-collector; do
+            echo "govulncheck apps/cn/${module}"
+            go tool govulncheck -C "../apps/cn/${module}" ./...
+          done
 
   foundation:
     needs: detect-changes

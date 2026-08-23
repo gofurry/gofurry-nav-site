@@ -22,9 +22,28 @@ func TestEngineeringFoundationWorkflowParses(t *testing.T) {
 	if !ok {
 		t.Fatal("checks workflow has no jobs mapping")
 	}
-	for _, name := range []string{"detect-changes", "production-go", "nav-web", "repository-policy", "foundation", "postgres-integration"} {
+	for _, name := range []string{"detect-changes", "production-go", "nav-web", "repository-policy", "active-vulnerability", "foundation", "postgres-integration"} {
 		if _, ok := jobs[name]; !ok {
 			t.Fatalf("checks workflow is missing %s", name)
 		}
+	}
+}
+
+func TestSecurityWorkflowParses(t *testing.T) {
+	path := filepath.Join("..", "..", ".github", "workflows", "security.yml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow map[string]any
+	if err := yaml.Unmarshal(data, &workflow); err != nil {
+		t.Fatalf("parse security workflow: %v", err)
+	}
+	jobs, ok := workflow["jobs"].(map[string]any)
+	if !ok {
+		t.Fatal("security workflow has no jobs mapping")
+	}
+	if _, ok := jobs["govulncheck"]; !ok {
+		t.Fatal("security workflow is missing govulncheck")
 	}
 }
