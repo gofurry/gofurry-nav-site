@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gofurry/gofurry-game-collector/internal/health"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
@@ -68,6 +69,9 @@ func (cfg *serverConfig) validate() error {
 	if cfg.Redis.RedisAddr == "" {
 		return errors.New("redis.redis_addr is required")
 	}
+	if err := health.ValidateConfig(cfg.Health); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -77,6 +81,7 @@ type serverConfig struct {
 	DataBase  DataBaseConfig  `yaml:"data_base"`
 	Redis     RedisConfig     `yaml:"redis"`
 	Log       LogConfig       `yaml:"log"`
+	Health    health.Config   `yaml:"health"`
 	Collector CollectorConfig `yaml:"collector"`
 }
 

@@ -26,6 +26,9 @@ func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
 	if cfg.DataBase.MaxConns != 6 || cfg.DataBase.ConnectTimeoutSeconds != 5 || cfg.DataBase.PingTimeoutSeconds != 3 {
 		t.Fatalf("PostgreSQL pool config fields were not decoded: %+v", cfg.DataBase)
 	}
+	if !cfg.Health.Enabled || cfg.Health.ListenAddr != "127.0.0.1:19092" {
+		t.Fatalf("health config was not decoded: %+v", cfg.Health)
+	}
 }
 
 func TestDatabaseConnectionStringEscapesCredentials(t *testing.T) {

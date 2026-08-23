@@ -12,6 +12,11 @@ server:
   models: "debug" # 当前代码读取的字段名是 models；建议保持该键名。
   memory_limit: 1
 
+# Optional internal-only health listener. Omit this block to keep it disabled.
+health:
+  enabled: true
+  listen_addr: "127.0.0.1:19092"
+
 data_base:
   db_name: "gfg" # Game 主业务库。
   db_username: "postgres"

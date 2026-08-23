@@ -21,6 +21,9 @@ func TestExampleConfigDecodesDatabasePool(t *testing.T) {
 	if cfg.DataBase.DBName != "gfn" || cfg.DataBase.MaxConns != 6 || cfg.DataBase.ConnectTimeoutSeconds != 5 || cfg.DataBase.PingTimeoutSeconds != 3 {
 		t.Fatalf("database pool config not decoded: %+v", cfg.DataBase)
 	}
+	if !cfg.Health.Enabled || cfg.Health.ListenAddr != "127.0.0.1:19091" {
+		t.Fatalf("health config not decoded: %+v", cfg.Health)
+	}
 }
 
 func TestDatabaseConnectionStringEscapesCredentials(t *testing.T) {

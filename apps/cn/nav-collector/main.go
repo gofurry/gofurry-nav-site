@@ -13,6 +13,7 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
+	internalhealth "github.com/gofurry/gofurry-nav-collector/internal/health"
 	"github.com/gofurry/gofurry-nav-collector/internal/infra/postgres"
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"github.com/gofurry/gofurry-nav-collector/schedule"
@@ -36,6 +37,7 @@ func (gf *goFurry) InitOnStart() error {
 
 type goFurry struct {
 	pool     *pgxpool.Pool
+	health   *internalhealth.Server
 	stopOnce sync.Once
 }
 
@@ -45,18 +47,38 @@ func (gf *goFurry) Serve(ctx context.Context) error {
 	if err := gf.InitOnStart(); err != nil {
 		return err
 	}
+	healthServer, err := internalhealth.New(env.GetServerConfig().Health, gf.readinessCheck)
+	if err != nil {
+		return errors.Join(err, gf.Shutdown())
+	}
+	gf.health = healthServer
 	log.InfoFields(map[string]interface{}{
 		"service": common.COMMON_PROJECT_NAME,
 		"version": env.GetServerConfig().Server.AppVersion,
 	}, "采集器服务已启动")
-	schedule.InitSchedule(gf.pool)
-	<-ctx.Done()
-	return gf.Shutdown()
+	if schedule.InitSchedule(gf.pool) {
+		gf.health.MarkReady()
+	}
+	if err = gf.health.Start(); err != nil {
+		return errors.Join(err, gf.Shutdown())
+	}
+	select {
+	case <-ctx.Done():
+		return gf.Shutdown()
+	case err = <-gf.health.Errors():
+		return errors.Join(err, gf.Shutdown())
+	}
 }
 
 func (gf *goFurry) Shutdown() error {
 	var shutdownErr error
 	gf.stopOnce.Do(func() {
+		if gf.health != nil {
+			gf.health.MarkNotReady()
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			shutdownErr = errors.Join(shutdownErr, gf.health.Shutdown(ctx))
+			cancel()
+		}
 		schedule.StopSchedule()
 		cs.Stop()
 		shutdownErr = errors.Join(shutdownErr, cs.CloseRedis())
@@ -67,6 +89,23 @@ func (gf *goFurry) Shutdown() error {
 		shutdownErr = errors.Join(shutdownErr, log.Sync())
 	})
 	return shutdownErr
+}
+
+func (gf *goFurry) readinessCheck(ctx context.Context) error {
+	if gf.pool == nil {
+		return errors.New("PostgreSQL pool is not initialized")
+	}
+	if err := gf.pool.Ping(ctx); err != nil {
+		return fmt.Errorf("PostgreSQL readiness check: %w", err)
+	}
+	redisClient := cs.GetRedisService()
+	if redisClient == nil {
+		return errors.New("Redis client is not initialized")
+	}
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		return fmt.Errorf("Redis readiness check: %w", err)
+	}
+	return nil
 }
 
 func (gf *goFurry) initPostgres() error {

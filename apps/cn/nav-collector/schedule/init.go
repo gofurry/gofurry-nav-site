@@ -16,9 +16,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func InitSchedule(pool *pgxpool.Pool) {
+func InitSchedule(pool *pgxpool.Pool) (initialized bool) {
 	defer func() {
 		if err := recover(); err != nil {
+			initialized = false
 			log.ErrorFields(map[string]interface{}{
 				"component": "scheduler",
 				"event":     "init_recovered",
@@ -41,6 +42,7 @@ func InitSchedule(pool *pgxpool.Pool) {
 		"duration":  time.Since(start),
 		"event":     "init_complete",
 	}, "采集调度初始化完成")
+	return true
 }
 
 func StopSchedule() {

@@ -6,6 +6,11 @@ server:
   mode: "debug"
   memory_limit: 1
 
+# Optional internal-only health listener. Omit this block to keep it disabled.
+health:
+  enabled: true
+  listen_addr: "127.0.0.1:19091"
+
 data_base:
   db_name: "gfn"
   db_username: "postgres"
