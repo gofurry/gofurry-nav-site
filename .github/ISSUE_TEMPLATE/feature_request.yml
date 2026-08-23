@@ -1,58 +1,20 @@
-name: Feature request
-description: Propose a scoped product or engineering improvement.
-title: "feat: "
-labels:
-  - enhancement
+name: Feature Request
+description: Suggest an idea or improvement
+
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Keep the request scoped and describe the owning application or cross-service boundary.
-  - type: textarea
-    id: problem
-    attributes:
-      label: Problem
-      description: What user, maintainer, or operational problem should this solve?
-    validations:
-      required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed outcome
-      description: Describe the behavior or engineering outcome rather than prescribing unrelated refactors.
+      label: What would you like to see?
+      description: Describe the feature, improvement, or idea.
+      placeholder: Share your idea...
     validations:
       required: true
-  - type: dropdown
-    id: area
+
+  - type: textarea
+    id: motivation
     attributes:
-      label: Area
-      options:
-        - Nav Web
-        - Nav Backend
-        - Nav Collector
-        - Game Backend
-        - Game Collector
-        - Admin
-        - Uptime / Availability
-        - Database / Migration
-        - CI / Tooling / Ops
-        - Documentation
-        - Cross-service
+      label: Why is this useful?
+      description: Optional. Tell us what problem this would solve or why it would be helpful.
     validations:
-      required: true
-  - type: textarea
-    id: compatibility
-    attributes:
-      label: Compatibility impact
-      description: Note any effect on public API, Redis, database ownership, Collector behavior, or deployment.
-    validations:
-      required: true
-  - type: textarea
-    id: operations
-    attributes:
-      label: Operational considerations
-      description: Note configuration, data, rate-limit, monitoring, or deployment-order requirements.
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives considered
+      required: false
