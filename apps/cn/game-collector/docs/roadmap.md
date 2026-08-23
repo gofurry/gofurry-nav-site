@@ -474,7 +474,7 @@ alpha.6 不扩大默认并发。details v2 仍按每个游戏顺序执行 CN / U
 - 删除 v2 `enabled`、`dry_run`、任务级 enabled 开关和旧秒级限流配置，稳定版默认主线即 v2。
 - 采集 run summary / task result 会写入 `gfg_game_v2_collect_runs` 和 `gfg_game_v2_collect_task_results`，并刷新 `game:v2:collect:last:*` Redis key。
 - `gfg_game_v2_player_counts`、`gfg_game_v2_collect_runs`、`gfg_game_v2_collect_task_results` 已支持可配置保留策略。
-- CLI 支持 `go run . collect` / `go run . players` / `go run . all` 进行一次性验证采集。
+- CLI 支持带显式配置的 `go run . collect --config conf/server.yaml` / `players` / `all` 进行一次性验证采集。
 - `go mod tidy` 已移除 MongoDB 等不再需要的依赖。
 - `go test ./...` 通过。
 

@@ -8,6 +8,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func repositoryRootForTest(t *testing.T) string {
+	t.Helper()
+	root, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
 func TestEngineeringFoundationWorkflowParses(t *testing.T) {
 	path := filepath.Join("..", "..", ".github", "workflows", "checks.yml")
 	data, err := os.ReadFile(path)
@@ -45,5 +54,25 @@ func TestSecurityWorkflowParses(t *testing.T) {
 	}
 	if _, ok := jobs["govulncheck"]; !ok {
 		t.Fatal("security workflow is missing govulncheck")
+	}
+}
+
+func TestProductionToolingExcludesArchiveAndPlaceholderTrees(t *testing.T) {
+	findings, err := checkProductionTooling(repositoryRootForTest(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("production tooling contains archive paths: %+v", findings)
+	}
+}
+
+func TestActiveModulesUseRequiredGoVersion(t *testing.T) {
+	findings, err := checkGoVersions(repositoryRootForTest(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("active modules do not use Go 1.26.7: %+v", findings)
 	}
 }

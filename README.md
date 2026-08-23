@@ -83,21 +83,28 @@ Go 服务开发：
 
 ```bash
 cd apps/cn/nav-backend
-go run .
+cp conf/server.example.yaml conf/server.yaml
+# 修改本地配置后：
+go run . serve --config conf/server.yaml
 ```
 
 常见后端入口：
 
 ```bash
 cd apps/cn/game-backend
-go run .
+go run . serve --config conf/server.yaml
 
 cd ../game-collector
-go run .
+go run . serve --config conf/server.yaml
+
+cd ../nav-collector
+go run . serve --config conf/server.yaml
 
 cd ../admin
-go run .
+go run . serve --config config/server.yaml
 ```
+
+五个 Go 程序的根命令只显示帮助，不会隐式启动；运行服务必须使用显式的 `serve --config`。示例配置只用于复制，真实密码和密钥不要提交。
 
 如果你要构建根级 Go 服务产物，可按目标调用：
 
@@ -128,7 +135,15 @@ cd apps/cn/nav-web
 ./update.sh
 ```
 
-Go 服务延续各自目录内的二进制 / systemd / install 路线。`legacy/` 下的归档模块不参与默认构建和生产部署。
+五个 Go 服务使用二进制内置的 Linux/systemd 安装命令。安装必须从最终部署目录执行，并指定真实配置：
+
+```bash
+sudo ./gf-nav install --config /etc/gf-nav/server.yaml
+# install 只 enable，不会启动；审核 unit 后手动启动：
+sudo systemctl start gf-nav
+```
+
+完整迁移和卸载顺序见 [systemd 运维说明](./docs/operations/systemd.md)。数据库迁移与二进制部署相互独立，应用启动时不会执行 Goose；本次 V3 前仓库/运行时整理本身没有新增业务 DDL，不需要额外数据库迁移。`legacy/` 下的归档模块不参与默认构建和生产部署。
 
 ## 当前状态
 

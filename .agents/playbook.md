@@ -2,49 +2,61 @@
 
 Run commands from the named module unless stated otherwise.
 
-## Normal checks
+## Active Go checks
 
 For each of `apps/cn/game-collector`, `apps/cn/game-backend`, `apps/cn/nav-collector`, `apps/cn/nav-backend`, and `apps/cn/admin`:
 
-```text
+~~~text
 gofmt -w .
 go vet ./...
 go test ./...
 go build ./...
-```
+go run . --help
+go run . serve --help
+go run . install --help
+go run . uninstall --help
+go run . version
+~~~
+
+Do not run `install` or `uninstall` against a real host as a routine test. Unit rendering and non-Linux behavior are covered in `internal/systemd` tests.
 
 Frontend checks:
 
-```text
+~~~text
 cd apps/cn/admin/web && npm ci && npm run build
 cd apps/cn/nav-web && npm ci && npm run typecheck && npm run build
-```
+~~~
 
-## Database contract checks
+## Repository and database checks
 
 From `tools`:
 
-```text
+~~~text
+go test ./...
 go tool sqlc vet -f ../sqlc.yaml
 go tool sqlc generate -f ../sqlc.yaml
 go run ./check-sqlc
 go run ./check-production-policy
-```
+~~~
 
 Fresh PostgreSQL, exact baseline adoption, drift rejection, cleanup upgrade, seeded row-count, and backup-copy checks:
 
-```text
+~~~text
 GOFURRY_TEST_POSTGRES_ADMIN_URL='postgres://.../postgres' go test ./db-baseline -run TestPostgresFreshAndBaselineAdoption -count=1 -v
-```
+~~~
 
-Local per-service integrations use an isolated development PostgreSQL config path:
+Local per-service integrations use isolated development configs:
 
-```text
+~~~text
 GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/game/v2/repository -run TestPostgresRepositorySemantics -count=1
 GOFURRY_GAME_BACKEND_INTEGRATION_CONFIG=/path/config.yaml go test ./apps/game/v2/dao -run TestPostgresReadModelSemantics -count=1
 GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/observation -run TestPostgresCollectorPersistenceSemantics -count=1
 GOFURRY_NAV_BACKEND_INTEGRATION_CONFIG=/path/config.yaml go test ./apps/nav/navPage/dao -run TestPostgresNavBackendPersistenceSemantics -count=1
 GOFURRY_ADMIN_INTEGRATION_CONFIG=/path/server.yaml go test ./internal/bootstrap -run TestAdminThreeDatabasePersistence -count=1
-```
+~~~
 
-CI dependency matrix: `db/game` runs Game DB plus both Game services and Admin; `db/nav` runs Nav DB plus both Nav services and Admin; `db/admin` runs Admin DB and Admin; `sqlc.yaml`/`tools` run all SQL consumers; an `apps/cn` service path runs its Go and relevant PostgreSQL integration checks; Admin also builds its web UI; `apps/cn/nav-web` typechecks and builds. Archive and experiment trees are not part of production CI.
+Run these only against explicitly isolated development PostgreSQL. Never use production credentials.
+
+Run the pinned vulnerability scanner from `tools` for every active module. CI performs the same active-only matrix on dependency changes and on a schedule.
+
+The CI dependency matrix remains: `db/game` runs both Game services and Admin; `db/nav` runs both Nav services and Admin; `db/admin` runs Admin; sqlc/tools changes run all SQL consumers. Archive and experiment trees are never production CI inputs.

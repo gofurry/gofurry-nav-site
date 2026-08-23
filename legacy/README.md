@@ -1,14 +1,11 @@
-# Legacy Modules
+# Legacy modules — archive only
 
-This directory contains modules that have been removed from the active gofurry runtime path.
+This directory contains decommissioned historical modules:
 
-## Archived Modules
+- `gofurry-rag`: former standalone RAG service and console;
+- `gofurry-nav-frontend-legacy`: former Vue public frontend;
+- `gofurry-ops-agent` and `gofurry-ops-center`: former operations services.
 
-- `gofurry-rag`: Former standalone RAG service and console. The public Q&A page, Nuxt proxy routes, and default build/deploy wiring have been removed from the active stack.
-- `gofurry-nav-frontend-legacy`: Former Vue frontend kept as a migration reference.
+No active production application, build target, CI job, vulnerability scan, deployment tool, documentation example, or dependency may depend on `legacy/**`.
 
-## Maintenance Rules
-
-- Do not include these modules in the root `build.bat all` target or the default CI matrix.
-- Do not add new production dependencies from active services to this directory.
-- If a legacy module must be inspected or revived, treat it as a separate migration task and document the new ownership before wiring it back into active services.
+The repository does not modernize, test, package, or deploy these modules by default. Do not update their Go versions or dependencies as part of active-stack maintenance. Inspection is allowed, but revival requires a separate migration that establishes current ownership, security review, tests, and explicit production wiring.

@@ -76,8 +76,12 @@ Go service development:
 
 ```bash
 cd apps/cn/nav-backend
-go run .
+cp conf/server.example.yaml conf/server.yaml
+# Edit the ignored local configuration, then:
+go run . serve --config conf/server.yaml
 ```
+
+All five Go root commands display help and never start implicitly. Runtime commands require an explicit configuration file.
 
 If you need root-level packaging artifacts, use:
 
@@ -112,12 +116,20 @@ cd apps/cn/nav-web
 ./update.sh
 ```
 
-Go services keep their own binary / install workflows. Modules under `legacy/` are not part of the default build or production deployment path.
+The five Go binaries include a Linux/systemd installer. Run it from the final deployment directory with the real configuration:
+
+```bash
+sudo ./gf-nav install --config /etc/gf-nav/server.yaml
+# Installation enables but does not start the unit. Review it, then start manually:
+sudo systemctl start gf-nav
+```
+
+See the [systemd operator runbook](./docs/operations/systemd.md) for migration and uninstall order. Database migration is separate from binary rollout and applications never run Goose at startup. This pre-V3 repository/runtime cleanup adds no business DDL and needs no database migration of its own. Modules under `legacy/` are not part of the default build or production deployment path.
 
 ## Current Status
 
 - The public site frontend has been migrated to Nuxt 4 and is already running in production
-- `gofurry-nav-backend` now serves the main public flow through `/api/v2/nav`, and the old `nav/page/*` live routes are no longer part of the active runtime path
+- `gofurry-nav-backend` serves the main public flow through `/api/v2/nav`; this engineering cleanup does not force removal of existing Nav V1 behavior
 - `gofurry-nav-collector` has completed its v2 data-plane work and now provides summary, latest, observations, trend, change-event, and low-frequency side-channel probe outputs
 - The former `archive` free-form Q&A page and site-facing RAG integration have been decommissioned; the frontend entry is now the `/steam` Steam Zone
 - Former Ops Agent / Center code is archive-only under `legacy/` and is excluded from active build, CI, and deployment tooling

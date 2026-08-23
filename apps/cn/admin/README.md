@@ -1,252 +1,63 @@
-# Fiber v3 Medium Template
+# GoFurry Admin
 
-[Chinese](./README_zh.md)
+[中文](README_zh.md)
 
-`medium` is the balanced HTTP service edition of this scaffold. It keeps the practical runtime baseline from `heavy`, but removes platform-oriented runtime complexity so day-to-day API development stays straightforward.
+GoFurry Admin is the active operations application for the China-site stack. It embeds its Vue frontend and uses PostgreSQL only: `gfa` for Admin authentication/audit state plus explicit `gfn` and `gfg` pools for Nav and Game operations. Redis supports existing runtime behavior.
 
-## What This Template Includes
+Schema is owned exclusively by the root Goose migrations. Admin does not create or migrate tables during startup.
 
-- SQLite-first demo experience with no external database required
-- Complete `user` CRUD example
-- Plain Go-style business structure under `internal/app`
-- Lifecycle bootstrap for DB, Redis, logging, WAF, and graceful shutdown
-- Service install and uninstall support through `kardianos/service`
-- Reusable helper packages such as `pkg/httpkit` and `pkg/abstract`
-- Official Fiber middleware baseline:
-  request ID, access log, timeout, health probes, security headers, compression, ETag, rate limiting, pprof, CSRF, and WAF
-- Optional embedded UI support, disabled by default
+## Development
 
-## Project Positioning
+Requirements: Go 1.26.7, Node.js/npm, PostgreSQL, and Redis.
 
-This is the current `medium` version.
+~~~bash
+cd web
+npm ci
+npm run build
+cd ..
 
-- Compared with `heavy`, it removes extra platform runtime burden.
-- Compared with `light`, it still keeps Redis, WAF, service install/uninstall, and embedded UI support ready to use.
-- Compared with the old over-assembled style, it keeps business code plain: `controller`, `dao`, `service`, and `models`, with routes registered directly in `url.go`.
+cp config/server.example.yaml config/server.yaml
+# Edit the ignored local config before running.
+go run . serve --config config/server.yaml
+~~~
 
-If you want a backend template that is still production-oriented but avoids platform-style over-design, this is the intended direction.
+Other commands:
 
-## Quick Start
-
-Default config file:
-
-```bash
-./config/server.yaml
-```
-
-Start the service:
-
-```bash
-go run . serve
-```
-
-On first startup the template will automatically:
-
-- create `./data/app.db`
-- auto-migrate registered models when `database.auto_migrate` is enabled
-- expose the built-in user demo endpoints
-
-Show the current version:
-
-```bash
+~~~bash
+go run . --help
 go run . version
-```
+go run . reset-password --config config/server.yaml --password '<new-password>'
+~~~
 
-Install or uninstall the service through the service manager integration:
+The root command only displays help. `serve` runs in the foreground and shuts down Fiber, Redis, all PostgreSQL pools, and logging on SIGINT/SIGTERM.
 
-```bash
-go run . install
-go run . uninstall
-```
+## Production build and systemd
 
-## Default Endpoints
+The root `build.bat admin` target builds the web UI and Linux binary. Install only from the final deployed binary and intended working directory:
 
-Health and runtime endpoints:
+~~~bash
+cd /srv/gofurry/gofurry-admin
+sudo ./gofurry-admin install --config /etc/gofurry-admin/server.yaml
+sudo systemctl cat gofurry-admin
+sudo systemctl start gofurry-admin
+~~~
 
-- `GET /healthz`
-- `GET /livez`
-- `GET /readyz`
-- `GET /startupz`
+Install enables `gofurry-admin.service` but never starts it. It selects `SUDO_USER` as the runtime user and refuses to replace an existing unit unless `--force` is explicit.
 
-User CRUD demo:
+~~~bash
+sudo ./gofurry-admin uninstall
+~~~
 
-- `GET /api/v1/user/`
-- `POST /api/v1/user/`
-- `GET /api/v1/user/:id`
-- `PUT /api/v1/user/:id`
-- `DELETE /api/v1/user/:id`
+Uninstall removes only systemd registration; it does not delete the binary, config, logs, database, Redis data, or working directory. See [the shared systemd runbook](../../../docs/operations/systemd.md).
 
-Optional endpoints:
+## Validation
 
-- `GET /csrf/token` when CSRF is enabled
-- `GET /debug/pprof/...` in debug mode
-
-## CRUD Demo
-
-Create a user:
-
-```bash
-curl -X POST http://127.0.0.1:9999/api/v1/user/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Alice",
-    "email": "alice@example.com",
-    "age": 24,
-    "status": "active"
-  }'
-```
-
-List users:
-
-```bash
-curl "http://127.0.0.1:9999/api/v1/user/?page_num=1&page_size=10&keyword=alice"
-```
-
-Update a user:
-
-```bash
-curl -X PUT http://127.0.0.1:9999/api/v1/user/1 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Alice Updated",
-    "email": "alice.updated@example.com",
-    "age": 25,
-    "status": "active"
-  }'
-```
-
-Delete a user:
-
-```bash
-curl -X DELETE http://127.0.0.1:9999/api/v1/user/1
-```
-
-## Business Structure
-
-The business layer stays intentionally plain:
-
-- business code lives under `internal/app/<domain>`
-- keep `controller`, `dao`, `service`, and `models` as normal packages
-- route registration stays in `internal/transport/http/router/url.go`
-- bootstrap registers runtime data such as database models directly
-
-Current references:
-
-- `internal/app/user/controller`
-- `internal/app/user/dao`
-- `internal/app/user/service`
-- `internal/app/user/models`
-- `internal/transport/http/router/url.go`
-- `internal/bootstrap/lifecycle.go`
-
-To add a new business domain:
-
-1. Create `internal/app/<domain>`.
-2. Add `controller`, `dao`, `service`, and `models` packages as needed.
-3. Register that domain's routes in `internal/transport/http/router/url.go`.
-4. Register its database models directly in `internal/bootstrap/lifecycle.go` if needed.
-
-## Auto Migration
-
-This template keeps `database.auto_migrate` because it is useful for the SQLite out-of-the-box experience.
-
-That is the only schema bootstrap behavior kept in this `medium` version.
-
-- no explicit migration command
-- no migration directory requirement
-- no migration tracking table
-
-If you later need stricter schema management, that can be added in another variant without making the default workflow heavier.
-
-## Middleware Baseline
-
-Enabled by default:
-
-- Request ID
-- Access log
-- Recover
-- CORS
-- Security headers
-- Compression
-- ETag
-- Rate limiter
-- Health probes
-- Route-level timeout
-
-Disabled by default but available:
-
-- CSRF
-- Redis
-- WAF
-- Embedded UI
-
-Debug-only tooling:
-
-- `pprof`
-
-## Configuration Overview
-
-Main config file:
-
-```bash
-./config/server.yaml
-```
-
-Important sections:
-
-- `server`
-- `database`
-- `redis`
-- `log`
-- `middleware`
-- `waf`
-
-The `redis` section supports address, username, password, database index, and pool size.
-
-The default config is intentionally runnable with only Go installed.
-
-## Directory Layout
-
-- `cmd`: CLI commands such as `serve`, `install`, `uninstall`, and `version`
-- `config`: configuration files
-- `internal/app`: business domains
-- `internal/bootstrap`: lifecycle and health probes
-- `internal/infra`: DB, logging, and cache infrastructure
-- `internal/transport`: HTTP router and embedded UI
-- `pkg`: shared abstractions and utilities
-
-`pkg/httpkit` and `pkg/abstract` are intentionally kept in `medium` as reusable building blocks, even though the default demo module does not depend on them directly.
-
-## Testing
-
-Run the centralized test suites from `v3/test`:
-
-```bash
-cd ../test
+~~~bash
+go vet ./...
 go test ./...
-```
+go build ./...
 
-Current integration coverage includes:
-
-- service bootstrap with SQLite
-- automatic database creation
-- automatic table creation through `auto_migrate`
-- health probes
-- request ID and security headers
-- ETag and compression behavior
-- end-to-end user CRUD flow
-
-## Known Tradeoffs
-
-- Route registration is intentionally centralized in `internal/transport/http/router/url.go`.
-- Runtime model registration is still centralized in `internal/bootstrap/lifecycle.go`.
-- Request ID is already present in access logs, but business logs are not yet automatically enriched with request context.
-
-## Template Checklist
-
-Before turning this into your own service:
-
-- replace the module path in `go.mod`
-- update app identity in `config/server.yaml`
-- remove the demo user domain if you no longer need it
-- add your own business domains under `internal/app`
+cd web
+npm ci
+npm run build
+~~~

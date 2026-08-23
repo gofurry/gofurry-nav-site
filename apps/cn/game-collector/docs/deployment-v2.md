@@ -65,9 +65,9 @@ v2 不删除旧 v1 表。旧表可以等 backend / frontend 完成 v2 切换并�
 一次性运行命令：
 
 ```powershell
-go run . collect # 只跑 details/news 全量采集
-go run . players # 只跑当前在线人数采集
-go run . all     # 先跑 players，再跑 details/news
+go run . collect --config conf/server.yaml # 只跑 details/news 全量采集
+go run . players --config conf/server.yaml # 只跑当前在线人数采集
+go run . all --config conf/server.yaml     # 先跑 players，再跑 details/news
 ```
 
 ## Admin 新增游戏后的单游戏采集

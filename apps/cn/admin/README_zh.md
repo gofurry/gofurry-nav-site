@@ -1,94 +1,63 @@
-﻿# Fiber v3 Medium Template
+# GoFurry Admin
 
-[English](./README.md)
+[English](README.md)
 
-`medium` 是偏均衡的 HTTP 服务模板。它保留了 Redis、WAF、service 安装卸载、embedded UI 和较完整的中间件支持，但去掉了更偏平台化的运行时复杂度。
+GoFurry Admin 是中国站 active 运维后台。前端以 Vue 构建后嵌入 Go 二进制；后端只支持 PostgreSQL：`gfa` 保存后台认证/审计状态，`gfn` 与 `gfg` 使用显式连接池操作 Nav 和 Game 业务数据，Redis 保持现有运行语义。
 
-## 这个版本包含什么
+数据库 schema 只由仓库根目录的 Goose migrations 管理，Admin 启动时不会建表或执行迁移。
 
-- 仅支持 PostgreSQL，schema 由 Goose 管理
-- 内置完整的 `user` CRUD 示例
-- 保留 DB、Redis、logging、WAF、graceful shutdown
-- 保留 `kardianos/service` 的 `install` / `uninstall`
-- 保留 `pkg/httpkit`、`pkg/abstract`
-- 保留较完整的 Fiber 中间件基线：request ID、access log、recover、CORS、timeout、health probes、security headers、compression、ETag、rate limiting
-- 按需启用 CSRF、WAF、pprof、embedded UI
+## 本地开发
 
-## 适用场景
+需要 Go 1.26.7、Node.js/npm、PostgreSQL 和 Redis。
 
-- 希望模板更偏真实业务服务
-- 不想引入额外的平台运行时负担
-- 想要完整中间件和部分增强能力，但业务层仍保持简单
+~~~bash
+cd web
+npm ci
+npm run build
+cd ..
 
-## 快速开始
+cp config/server.example.yaml config/server.yaml
+# 修改被 Git 忽略的本地配置后再启动。
+go run . serve --config config/server.yaml
+~~~
 
-```bash
-go run . serve
-```
+其他命令：
 
-查看版本：
-
-```bash
+~~~bash
+go run . --help
 go run . version
-```
+go run . reset-password --config config/server.yaml --password '<新密码>'
+~~~
 
-安装或卸载服务：
+根命令只显示帮助。`serve` 在前台运行，收到 SIGINT/SIGTERM 后会关闭 Fiber、Redis、三个 PostgreSQL 连接池和日志。
 
-```bash
-go run . install
-go run . uninstall
-```
+## 生产构建与 systemd
 
-## 默认端点
+根目录 `build.bat admin` 会先构建前端，再构建 Linux 二进制。必须使用最终部署位置的二进制，并从预期工作目录执行安装：
 
-- `GET /healthz`
-- `GET /livez`
-- `GET /readyz`
-- `GET /startupz`
-- `GET /api/v1/user/`
-- `POST /api/v1/user/`
-- `GET /api/v1/user/:id`
-- `PUT /api/v1/user/:id`
-- `DELETE /api/v1/user/:id`
+~~~bash
+cd /srv/gofurry/gofurry-admin
+sudo ./gofurry-admin install --config /etc/gofurry-admin/server.yaml
+sudo systemctl cat gofurry-admin
+sudo systemctl start gofurry-admin
+~~~
 
-按需开启：
+安装只写入并 enable `gofurry-admin.service`，不会启动服务。运行用户取 `SUDO_USER`；已有 unit 默认拒绝覆盖，只有显式 `--force` 才会替换。
 
-- `GET /csrf/token`
-- `GET /debug/pprof/...`
+~~~bash
+sudo ./gofurry-admin uninstall
+~~~
 
-## 业务组织方式
+卸载只删除 systemd 注册，不删除二进制、配置、日志、数据库、Redis 数据或工作目录。完整步骤见[统一 systemd 运维说明](../../../docs/operations/systemd.md)。
 
-- 业务代码位于 `internal/app/<domain>`
-- 正常使用 `controller`、`dao`、`service`、`models`
-- 路由统一注册在 `internal/transport/http/router/url.go`
-- 数据模型注册集中在 `internal/bootstrap/lifecycle.go`
+## 验证
 
-## 配置概览
+~~~bash
+go vet ./...
+go test ./...
+go build ./...
 
-主配置文件：
-
-```bash
-./config/server.yaml
-```
-
-重点配置块：
-
-- `server`
-- `database`
-- `redis`
-- `log`
-- `middleware`
-- `waf`
-
-## 取舍说明
-
-- 比 `heavy` 更轻，但仍然偏工程化
-- 比 `light` 保留更多运行时能力和增强中间件
-- 适合作为大多数 HTTP 服务的均衡模板
-
-## 使用前检查
-
-- 替换 `go.mod` 模块路径
-- 修改 `config/server.yaml` 里的应用标识
-- 如果不需要 demo，删除内置 `user` 示例
-- 在 `internal/app` 下添加自己的业务域
+cd web
+npm ci
+npm run build
+~~~
