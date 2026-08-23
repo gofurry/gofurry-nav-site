@@ -42,7 +42,7 @@ location / {
 
 If the global nginx config keeps `proxy_intercept_errors on`, the frontend locations must set `proxy_intercept_errors off`. Nuxt owns the frontend 404 page through `app/error.vue`; letting nginx intercept upstream 404 responses will replace the app page with nginx's fallback 404.
 
-The repository also includes `../ops/nginx/gofurry-nav-web.locations.conf`, which can be copied into the `go-furry.com` server block.
+The repository also includes `../../../ops/nginx/gofurry-nav-web.locations.conf`, which can be copied into the `go-furry.com` server block.
 
 Keep the existing `nav.go-furry.com` and `game.go-furry.com` API server blocks unchanged.
 
@@ -57,7 +57,7 @@ cp /home/gofurry/gfs/gofurry-repo/gofurry-nav-site/ops/nginx/nginx.maintenance.c
 /usr/local/nginx/sbin/nginx -s reload
 ```
 
-The maintenance config serves `../unavailable/index.html` as a self-contained native HTML/CSS/JS page and returns HTTP `503 Service Unavailable` with `Retry-After`.
+The maintenance config serves `../../../ops/nginx/static/unavailable/index.html` as a self-contained native HTML/CSS/JS page and returns HTTP `503 Service Unavailable` with `Retry-After`.
 
 ## Environment variables
 

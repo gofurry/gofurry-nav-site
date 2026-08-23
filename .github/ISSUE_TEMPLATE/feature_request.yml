@@ -27,9 +27,9 @@ body:
     attributes:
       label: Scope
       options:
-        - gofurry-nav-backend API
-        - gofurry-nav-web UX
-        - gofurry-admin workflow
+        - apps/cn/nav-backend API
+        - apps/cn/nav-web UX
+        - apps/cn/admin workflow
         - SQL / schema / migration
         - deployment / operations
         - documentation / CI

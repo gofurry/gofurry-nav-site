@@ -36,16 +36,18 @@ The production public site has now moved to a Nuxt 4 frontend to improve SEO, fi
 
 ## Repository Layout
 
-- `gofurry-nav-web`: Nuxt 4 frontend, now used by the production public site
-- `gofurry-nav-backend`: navigation API service
-- `gofurry-nav-collector`: navigation data collector; the collector v2 data plane is complete and now provides observation, latest, summary, trend, change event, and low-frequency side-channel probe results
-- `gofurry-game-backend`: game-related API service
-- `gofurry-game-collector`: game-related data collector
-- `gofurry-admin`: operations backend with embedded frontend
-- `gofurry-intl`: internationalization-related service and frontend experiments
-- `ops`: lightweight operations probes and monitoring center, including `gofurry-ops-agent`, `gofurry-ops-center`, the audit template, and the roadmap
+- `apps/cn/nav-web`: Nuxt 4 frontend used by the production public site
+- `apps/cn/nav-backend`: navigation API service
+- `apps/cn/nav-collector`: navigation data collector
+- `apps/cn/game-backend`: game-related API service
+- `apps/cn/game-collector`: game-related data collector
+- `apps/cn/admin`: operations backend with embedded frontend
+- `apps/intl`: placeholders for the future international site; not a production build target
+- `db`: Goose migrations for the `gfg`, `gfn`, and `gfa` databases
+- `docs`: cross-service architecture, development, deployment, and operations documentation
+- `ops`: Nginx, maintenance-page, and WAF deployment assets
 - `legacy`: decommissioned modules, including the old Vue frontend and former RAG service, kept only for historical reference
-- `sql`: database scripts and schema-related files
+- `third-party`: maintained dependency source mirrors, outside production CI
 - `experimental`: experimental code not included in normal release packaging
 - `tools`: helper scripts and local tools
 
@@ -65,7 +67,7 @@ Services in this repository are developed and run independently. These are the m
 Frontend development:
 
 ```bash
-cd gofurry-nav-web
+cd apps/cn/nav-web
 npm install
 npm run dev
 ```
@@ -73,18 +75,8 @@ npm run dev
 Go service development:
 
 ```bash
-cd gofurry-nav-backend
+cd apps/cn/nav-backend
 go run .
-```
-
-Ops local checks:
-
-```bash
-cd ops/gofurry-ops-center
-go run ./cmd/center check-config --config ./configs/center.example.yaml
-
-cd ../gofurry-ops-agent
-go run ./cmd/agent --config ./configs/agent.example.yaml check-config
 ```
 
 If you need root-level packaging artifacts, use:
@@ -95,15 +87,13 @@ build.bat all
 
 Current targets include:
 
-- `gofurry-nav-backend`
-- `gofurry-nav-collector`
-- `gofurry-game-backend`
-- `gofurry-game-collector`
-- `gofurry-admin`
-- `gofurry-ops-agent`
-- `gofurry-ops-center`
+- `nav-backend`
+- `nav-collector`
+- `game-backend`
+- `game-collector`
+- `admin`
 
-That script writes traditional release artifacts into the root `build/` directory. The Nuxt frontend still uses its own Docker-based production deployment flow from `gofurry-nav-web`.
+That script writes release artifacts into the root `build/` directory. The Nuxt frontend keeps its own Docker-based production deployment flow under `apps/cn/nav-web`.
 
 ## Production Deployment
 
@@ -111,23 +101,18 @@ There are now two main deployment paths in this repository.
 
 The Nuxt frontend ships with its own Docker deployment path. See:
 
-- [gofurry-nav-web/DEPLOYMENT.md](./gofurry-nav-web/DEPLOYMENT.md)
-- [gofurry-nav-web/update.sh](./gofurry-nav-web/update.sh)
+- [apps/cn/nav-web/DEPLOYMENT.md](./apps/cn/nav-web/DEPLOYMENT.md)
+- [apps/cn/nav-web/update.sh](./apps/cn/nav-web/update.sh)
+- [Cross-service deployment overview](./docs/deployment.md)
 
 Typical production update flow:
 
 ```bash
-cd gofurry-nav-web
+cd apps/cn/nav-web
 ./update.sh
 ```
 
 Go services keep their own binary / install workflows. Modules under `legacy/` are not part of the default build or production deployment path.
-
-Ops Agent / Center include lightweight systemd, Docker Compose, and Nginx examples, and are intended to run with a dedicated PostgreSQL schema or database:
-
-- [ops/gofurry-ops-agent/README.md](./ops/gofurry-ops-agent/README.md)
-- [ops/gofurry-ops-center/README.md](./ops/gofurry-ops-center/README.md)
-- [ops/roadmap.md](./ops/roadmap.md)
 
 ## Current Status
 
@@ -135,13 +120,12 @@ Ops Agent / Center include lightweight systemd, Docker Compose, and Nginx exampl
 - `gofurry-nav-backend` now serves the main public flow through `/api/v2/nav`, and the old `nav/page/*` live routes are no longer part of the active runtime path
 - `gofurry-nav-collector` has completed its v2 data-plane work and now provides summary, latest, observations, trend, change-event, and low-frequency side-channel probe outputs
 - The former `archive` free-form Q&A page and site-facing RAG integration have been decommissioned; the frontend entry is now the `/steam` Steam Zone
-- `ops/gofurry-ops-agent` and `ops/gofurry-ops-center` now provide a lightweight monitoring loop for node samples, service health, alert state, peer summaries, sync/deploy events, and the embedded console
-- `ops/code-audit.md` is kept as the next Go code audit template, and `ops/roadmap.md` records the future Ops evolution path
+- Former Ops Agent / Center code is archive-only under `legacy/` and is excluded from active build, CI, and deployment tooling
 - The updates page has been rebuilt as a structured bilingual timeline backed by `gfn_nav_update_notice`, without relying on CDN-hosted markdown
 - Search suggestions are now unified behind the v2 suggestions API with cache, singleflight deduplication, proxy support, and baseline rate limiting
 - `robots.txt`, `sitemap.xml`, `llms.txt`, and `/.well-known/security.txt` are available as public site metadata entrypoints
 - The old Vue frontend and former RAG service are archived under `legacy/`
-- The root `build.bat` now covers the main Go services, admin backend, and Ops Agent / Center build artifacts
+- The root `build.bat` builds only the five active Go applications
 
 ## Contributing
 

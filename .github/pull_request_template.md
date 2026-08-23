@@ -4,9 +4,9 @@
 
 ## Scope
 
-- [ ] `gofurry-nav-backend`
-- [ ] `gofurry-nav-web`
-- [ ] `gofurry-admin`
+- [ ] `apps/cn/nav-backend`
+- [ ] `apps/cn/nav-web`
+- [ ] `apps/cn/admin`
 - [ ] Collector / scheduler / sync
 - [ ] SQL / migration
 - [ ] Documentation
@@ -24,11 +24,11 @@ Notes:
 
 ## Validation
 
-- [ ] `cd gofurry-nav-backend && go test ./...`
-- [ ] `cd gofurry-nav-web && npm run typecheck`
-- [ ] `cd gofurry-nav-web && npm run build`
-- [ ] `cd gofurry-admin && go test ./...`
-- [ ] `cd gofurry-admin/web && npm run build`
+- [ ] `cd apps/cn/nav-backend && go test ./...`
+- [ ] `cd apps/cn/nav-web && npm run typecheck`
+- [ ] `cd apps/cn/nav-web && npm run build`
+- [ ] `cd apps/cn/admin && go test ./...`
+- [ ] `cd apps/cn/admin/web && npm run build`
 - [ ] Not run, explained below
 
 Notes:

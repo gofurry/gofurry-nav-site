@@ -46,9 +46,13 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	}
 	var cfg struct {
 		Database integrationDatabaseConfig `yaml:"database"`
+		DataBase integrationDatabaseConfig `yaml:"data_base"`
 	}
 	if err := yaml.Unmarshal(content, &cfg); err != nil {
 		t.Fatal(err)
+	}
+	if cfg.Database.Host == "" {
+		cfg.Database = cfg.DataBase
 	}
 	baseDSN := integrationDSN(cfg.Database)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
@@ -318,13 +322,30 @@ func quoteIntegrationIdentifier(value string) string {
 
 func applyGameBaseline(t *testing.T, dsn string) {
 	t.Helper()
-	repositoryRoot, err := filepath.Abs(filepath.Join("..", "..", "..", "..", ".."))
-	if err != nil {
-		t.Fatal(err)
-	}
+	repositoryRoot := integrationRepositoryRoot(t)
 	command := exec.Command("go", "tool", "goose", "-dir", filepath.Join(repositoryRoot, "db", "game", "migrations"), "postgres", dsn, "up")
 	command.Dir = filepath.Join(repositoryRoot, "tools")
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("apply Game baseline: %v\n%s", err, output)
+	}
+}
+
+func integrationRepositoryRoot(t *testing.T) string {
+	t.Helper()
+	current, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(current, "sqlc.yaml")); err == nil {
+			if _, err := os.Stat(filepath.Join(current, "tools", "go.mod")); err == nil {
+				return current
+			}
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			t.Fatal("repository root containing sqlc.yaml and tools/go.mod not found")
+		}
+		current = parent
 	}
 }

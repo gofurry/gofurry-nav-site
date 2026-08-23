@@ -435,7 +435,7 @@ alpha.6 不扩大默认并发。details v2 仍按每个游戏顺序执行 CN / U
 
 #### Implementation
 
-- 后端消费契约位于 `gofurry-game-backend/docs/game-v2-backend-contract.md`。
+- 后端消费契约位于 `apps/cn/game-backend/docs/game-v2-backend-contract.md`。
 - 公开 API 只暴露稳定业务字段，raw payload / raw event / 采集错误 / traffic bucket 等字段仅用于后台、调试、搜索或推荐。
 - backend v2 建议新增 `/api/v2/game/*`，保留 `/api/v1/game/*` 直到前端 games v2 完成切换。
 - 后端 v2 继续复用 `gfg_game` 作为站内主档案入口，动态详情、新闻、价格、媒体、在线人数改为消费 collector v2 表和 Redis key。

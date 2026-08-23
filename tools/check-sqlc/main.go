@@ -25,13 +25,13 @@ func main() {
 	check(generate.Run())
 
 	generated := []string{
-		"gofurry-game-collector/internal/db/game/sqlc",
-		"gofurry-game-backend/internal/db/game/sqlc",
-		"gofurry-nav-collector/internal/db/nav/sqlc",
-		"gofurry-nav-backend/internal/db/nav/sqlc",
-		"gofurry-admin/internal/db/game/sqlc",
-		"gofurry-admin/internal/db/nav/sqlc",
-		"gofurry-admin/internal/db/admin/sqlc",
+		"apps/cn/game-collector/internal/db/game/sqlc",
+		"apps/cn/game-backend/internal/db/game/sqlc",
+		"apps/cn/nav-collector/internal/db/nav/sqlc",
+		"apps/cn/nav-backend/internal/db/nav/sqlc",
+		"apps/cn/admin/internal/db/game/sqlc",
+		"apps/cn/admin/internal/db/nav/sqlc",
+		"apps/cn/admin/internal/db/admin/sqlc",
 	}
 	args := append([]string{"status", "--porcelain", "--"}, generated...)
 	status := exec.Command("git", args...)

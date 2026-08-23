@@ -26,7 +26,7 @@
 
 ### 已完成范围
 
-后端 v2 路由定义位置：`gofurry-nav-backend/routers/url_v2.go`
+后端 v2 路由定义位置：`apps/cn/nav-backend/routers/url_v2.go`
 
 | 路由 | 状态 | 用途 |
 |---|---|---|
@@ -77,7 +77,7 @@
 
 ### 剩余 v1 路由
 
-后端 v1 路由定义位置：`gofurry-nav-backend/routers/url.go`
+后端 v1 路由定义位置：`apps/cn/nav-backend/routers/url.go`
 
 | 路由 | 当前用途 | 迁移建议 | 状态 |
 |---|---|---|---|
@@ -91,7 +91,7 @@
 
 ### 前端 v1 使用点
 
-主要位置：`gofurry-nav-web`
+主要位置：`apps/cn/nav-web`
 
 | 前端位置 | 使用接口 | 问题 | 状态 |
 |---|---|---|---|
@@ -385,7 +385,7 @@ POST /api/v2/nav/stats/page-view?page=nav_home
 后端：
 
 ```bash
-cd gofurry-nav-backend
+cd apps/cn/nav-backend
 go test ./...
 go test -race ./apps/nav/...
 ```
@@ -393,7 +393,7 @@ go test -race ./apps/nav/...
 前端：
 
 ```bash
-cd gofurry-nav-web
+cd apps/cn/nav-web
 npm run typecheck
 npm run build
 ```

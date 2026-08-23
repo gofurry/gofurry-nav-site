@@ -14,34 +14,33 @@ set "CGO_ENABLED=0"
 if not exist "%BUILD_ROOT%" mkdir "%BUILD_ROOT%"
 
 if /I "%TARGET%"=="all" goto build_all
+if /I "%TARGET%"=="nav-backend" goto build_nav_backend
+if /I "%TARGET%"=="nav-collector" goto build_nav_collector
+if /I "%TARGET%"=="game-backend" goto build_game_backend
+if /I "%TARGET%"=="game-collector" goto build_game_collector
+if /I "%TARGET%"=="admin" goto build_admin
 if /I "%TARGET%"=="gofurry-nav-backend" goto build_nav_backend
 if /I "%TARGET%"=="gofurry-nav-collector" goto build_nav_collector
 if /I "%TARGET%"=="gofurry-game-backend" goto build_game_backend
 if /I "%TARGET%"=="gofurry-game-collector" goto build_game_collector
 if /I "%TARGET%"=="gofurry-admin" goto build_admin
-if /I "%TARGET%"=="gofurry-ops-agent" goto build_ops_agent
-if /I "%TARGET%"=="gofurry-ops-center" goto build_ops_center
 
 echo Unknown target: %TARGET%
 echo Supported targets:
 echo   all
-echo   gofurry-nav-backend
-echo   gofurry-nav-collector
-echo   gofurry-game-backend
-echo   gofurry-game-collector
-echo   gofurry-admin
-echo   gofurry-ops-agent
-echo   gofurry-ops-center
+echo   nav-backend
+echo   nav-collector
+echo   game-backend
+echo   game-collector
+echo   admin
 exit /b 1
 
 :build_all
-call "%~f0" gofurry-nav-backend || exit /b 1
-call "%~f0" gofurry-nav-collector || exit /b 1
-call "%~f0" gofurry-game-backend || exit /b 1
-call "%~f0" gofurry-game-collector || exit /b 1
-call "%~f0" gofurry-admin || exit /b 1
-call "%~f0" gofurry-ops-agent || exit /b 1
-call "%~f0" gofurry-ops-center || exit /b 1
+call "%~f0" nav-backend || exit /b 1
+call "%~f0" nav-collector || exit /b 1
+call "%~f0" game-backend || exit /b 1
+call "%~f0" game-collector || exit /b 1
+call "%~f0" admin || exit /b 1
 echo Build completed. Artifacts are in "%BUILD_ROOT%".
 exit /b 0
 
@@ -51,7 +50,7 @@ set "OUTPUT_DIR=%BUILD_ROOT%\gf-nav"
 set "OUTPUT_BIN=%OUTPUT_DIR%\gf-nav"
 if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
 mkdir "%OUTPUT_DIR%" || exit /b 1
-pushd "%ROOT%\gofurry-nav-backend" || exit /b 1
+pushd "%ROOT%\apps\cn\nav-backend" || exit /b 1
 go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" .
 if errorlevel 1 (
     popd
@@ -66,7 +65,7 @@ set "OUTPUT_DIR=%BUILD_ROOT%\gf-nav-collector"
 set "OUTPUT_BIN=%OUTPUT_DIR%\gf-nav-collector"
 if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
 mkdir "%OUTPUT_DIR%" || exit /b 1
-pushd "%ROOT%\gofurry-nav-collector" || exit /b 1
+pushd "%ROOT%\apps\cn\nav-collector" || exit /b 1
 go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" .
 if errorlevel 1 (
     popd
@@ -81,7 +80,7 @@ set "OUTPUT_DIR=%BUILD_ROOT%\gf-game"
 set "OUTPUT_BIN=%OUTPUT_DIR%\gf-game"
 if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
 mkdir "%OUTPUT_DIR%" || exit /b 1
-pushd "%ROOT%\gofurry-game-backend" || exit /b 1
+pushd "%ROOT%\apps\cn\game-backend" || exit /b 1
 go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" .
 if errorlevel 1 (
     popd
@@ -96,7 +95,7 @@ set "OUTPUT_DIR=%BUILD_ROOT%\gf-game-collector"
 set "OUTPUT_BIN=%OUTPUT_DIR%\gf-game-collector"
 if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
 mkdir "%OUTPUT_DIR%" || exit /b 1
-pushd "%ROOT%\gofurry-game-collector" || exit /b 1
+pushd "%ROOT%\apps\cn\game-collector" || exit /b 1
 go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" .
 if errorlevel 1 (
     popd
@@ -106,45 +105,8 @@ popd
 exit /b 0
 
 :build_admin
-echo [BUILD] gofurry-admin binary
-set "OUTPUT_DIR=%BUILD_ROOT%\gofurry-admin"
-set "OUTPUT_BIN=%OUTPUT_DIR%\gofurry-admin"
-if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
-mkdir "%OUTPUT_DIR%" || exit /b 1
-pushd "%ROOT%\gofurry-admin" || exit /b 1
-go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" .
-if errorlevel 1 (
-    popd
-    exit /b 1
-)
-popd
-if not exist "%ROOT%\gofurry-admin\internal\transport\http\webui\dist" (
-    echo Source directory not found: "%ROOT%\gofurry-admin\internal\transport\http\webui\dist"
-    exit /b 1
-)
-mkdir "%BUILD_ROOT%\gofurry-admin\dist" || exit /b 1
-xcopy "%ROOT%\gofurry-admin\internal\transport\http\webui\dist\*" "%BUILD_ROOT%\gofurry-admin\dist\" /E /I /Y >nul
-if errorlevel 1 exit /b 1
-exit /b 0
-
-:build_ops_agent
-echo [BUILD] gofurry-ops-agent
-set "OUTPUT_DIR=%BUILD_ROOT%\gofurry-ops-agent"
-set "OUTPUT_BIN=%OUTPUT_DIR%\gofurry-ops-agent"
-if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
-mkdir "%OUTPUT_DIR%" || exit /b 1
-pushd "%ROOT%\ops\gofurry-ops-agent" || exit /b 1
-go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" ./cmd/agent
-if errorlevel 1 (
-    popd
-    exit /b 1
-)
-popd
-exit /b 0
-
-:build_ops_center
-echo [BUILD] gofurry-ops-center console
-pushd "%ROOT%\ops\gofurry-ops-center\web" || exit /b 1
+echo [BUILD] gofurry-admin web
+pushd "%ROOT%\apps\cn\admin\web" || exit /b 1
 if not exist "node_modules" (
     call npm ci
     if errorlevel 1 (
@@ -159,16 +121,23 @@ if errorlevel 1 (
 )
 popd
 
-echo [BUILD] gofurry-ops-center binary
-set "OUTPUT_DIR=%BUILD_ROOT%\gofurry-ops-center"
-set "OUTPUT_BIN=%OUTPUT_DIR%\gofurry-ops-center"
+echo [BUILD] gofurry-admin binary
+set "OUTPUT_DIR=%BUILD_ROOT%\gofurry-admin"
+set "OUTPUT_BIN=%OUTPUT_DIR%\gofurry-admin"
 if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
 mkdir "%OUTPUT_DIR%" || exit /b 1
-pushd "%ROOT%\ops\gofurry-ops-center" || exit /b 1
-go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" ./cmd/center
+pushd "%ROOT%\apps\cn\admin" || exit /b 1
+go build -trimpath -ldflags="-s -w" -o "%OUTPUT_BIN%" .
 if errorlevel 1 (
     popd
     exit /b 1
 )
 popd
+if not exist "%ROOT%\apps\cn\admin\internal\transport\http\webui\dist" (
+    echo Source directory not found: "%ROOT%\apps\cn\admin\internal\transport\http\webui\dist"
+    exit /b 1
+)
+mkdir "%BUILD_ROOT%\gofurry-admin\dist" || exit /b 1
+xcopy "%ROOT%\apps\cn\admin\internal\transport\http\webui\dist\*" "%BUILD_ROOT%\gofurry-admin\dist\" /E /I /Y >nul
+if errorlevel 1 exit /b 1
 exit /b 0

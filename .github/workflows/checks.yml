@@ -3,33 +3,29 @@ name: engineering-foundation
 on:
   push:
     paths:
-      - 'gofurry-admin/**'
-      - 'gofurry-game-backend/**'
-      - 'gofurry-game-collector/**'
-      - 'gofurry-nav-backend/**'
-      - 'gofurry-nav-collector/**'
-      - 'gofurry-nav-web/**'
+      - 'apps/cn/**'
       - 'db/**'
       - 'tools/**'
       - 'sqlc.yaml'
       - 'AGENTS.md'
       - '.agents/**'
       - 'contracts/**'
+      - 'build.bat'
+      - 'docs/**'
+      - 'ops/**'
       - '.github/workflows/checks.yml'
   pull_request:
     paths:
-      - 'gofurry-admin/**'
-      - 'gofurry-game-backend/**'
-      - 'gofurry-game-collector/**'
-      - 'gofurry-nav-backend/**'
-      - 'gofurry-nav-collector/**'
-      - 'gofurry-nav-web/**'
+      - 'apps/cn/**'
       - 'db/**'
       - 'tools/**'
       - 'sqlc.yaml'
       - 'AGENTS.md'
       - '.agents/**'
       - 'contracts/**'
+      - 'build.bat'
+      - 'docs/**'
+      - 'ops/**'
       - '.github/workflows/checks.yml'
 
 permissions:
@@ -89,11 +85,11 @@ jobs:
           add_module() {
             modules="$(printf '%s' "${modules}" | jq -c --arg module "$1" '. + [$module]')"
           }
-          if affected "^gofurry-game-collector/|^db/game/|${shared}"; then add_module gofurry-game-collector; fi
-          if affected "^gofurry-game-backend/|^db/game/|${shared}"; then add_module gofurry-game-backend; fi
-          if affected "^gofurry-nav-collector/|^db/nav/|${shared}"; then add_module gofurry-nav-collector; fi
-          if affected "^gofurry-nav-backend/|^db/nav/|${shared}"; then add_module gofurry-nav-backend; fi
-          if affected "^gofurry-admin/|^db/(admin|game|nav)/|${shared}"; then add_module gofurry-admin; fi
+          if affected "^apps/cn/game-collector/|^db/game/|${shared}"; then add_module apps/cn/game-collector; fi
+          if affected "^apps/cn/game-backend/|^db/game/|${shared}"; then add_module apps/cn/game-backend; fi
+          if affected "^apps/cn/nav-collector/|^db/nav/|${shared}"; then add_module apps/cn/nav-collector; fi
+          if affected "^apps/cn/nav-backend/|^db/nav/|${shared}"; then add_module apps/cn/nav-backend; fi
+          if affected "^apps/cn/admin/|^db/(admin|game|nav)/|${shared}"; then add_module apps/cn/admin; fi
           echo "modules=${modules}" >> "${GITHUB_OUTPUT}"
           if [[ "${modules}" == "[]" ]]; then
             echo "has_modules=false" >> "${GITHUB_OUTPUT}"
@@ -101,12 +97,12 @@ jobs:
             echo "has_modules=true" >> "${GITHUB_OUTPUT}"
           fi
 
-          set_bool policy '^(gofurry-(admin|game-backend|game-collector|nav-backend|nav-collector)/|db/|tools/|sqlc\.yaml$|AGENTS\.md$|\.agents/|contracts/|\.github/workflows/checks\.yml$)'
-          set_bool foundation '^(db/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$|gofurry-(admin|game-backend|game-collector|nav-backend|nav-collector)/internal/db/.*/queries/)'
-          set_bool nav_web '^(gofurry-nav-web/|\.github/workflows/checks\.yml$)'
-          set_bool game_integration '^(gofurry-(admin|game-backend|game-collector)/|db/game/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
-          set_bool nav_integration '^(gofurry-(admin|nav-backend|nav-collector)/|db/nav/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
-          set_bool admin_integration '^(gofurry-admin/|db/(admin|game|nav)/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
+          set_bool policy '^(apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector)/|db/|tools/|sqlc\.yaml$|AGENTS\.md$|\.agents/|contracts/|\.github/workflows/checks\.yml$)'
+          set_bool foundation '^(db/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$|apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector)/internal/db/.*/queries/)'
+          set_bool nav_web '^(apps/cn/nav-web/|\.github/workflows/checks\.yml$)'
+          set_bool game_integration '^(apps/cn/(admin|game-backend|game-collector)/|db/game/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
+          set_bool nav_integration '^(apps/cn/(admin|nav-backend|nav-collector)/|db/nav/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
+          set_bool admin_integration '^(apps/cn/admin/|db/(admin|game|nav)/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
 
   production-go:
     needs: detect-changes
@@ -122,6 +118,18 @@ jobs:
         with:
           go-version-file: ${{ matrix.module }}/go.mod
           cache-dependency-path: ${{ matrix.module }}/go.sum
+      - uses: actions/setup-node@v6
+        if: matrix.module == 'apps/cn/admin'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/cn/admin/web/package-lock.json
+      - name: Build Admin web
+        if: matrix.module == 'apps/cn/admin'
+        working-directory: apps/cn/admin/web
+        run: |
+          npm ci
+          npm run build
       - name: Check gofmt
         working-directory: ${{ matrix.module }}
         shell: bash
@@ -137,18 +145,6 @@ jobs:
       - name: Go test
         working-directory: ${{ matrix.module }}
         run: go test ./...
-      - uses: actions/setup-node@v6
-        if: matrix.module == 'gofurry-admin'
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: gofurry-admin/web/package-lock.json
-      - name: Build Admin web
-        if: matrix.module == 'gofurry-admin'
-        working-directory: gofurry-admin/web
-        run: |
-          npm ci
-          npm run build
 
   nav-web:
     needs: detect-changes
@@ -160,14 +156,14 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: gofurry-nav-web/package-lock.json
-      - working-directory: gofurry-nav-web
+          cache-dependency-path: apps/cn/nav-web/package-lock.json
+      - working-directory: apps/cn/nav-web
         run: npm ci
       - name: Typecheck
-        working-directory: gofurry-nav-web
+        working-directory: apps/cn/nav-web
         run: npm run typecheck
       - name: Build
-        working-directory: gofurry-nav-web
+        working-directory: apps/cn/nav-web
         run: npm run build
 
   repository-policy:
@@ -214,7 +210,12 @@ jobs:
         run: |
           go tool sqlc vet -f ../sqlc.yaml
           go tool sqlc generate -f ../sqlc.yaml
-          git diff --exit-code -- +            ../gofurry-admin/internal/db +            ../gofurry-game-backend/internal/db +            ../gofurry-game-collector/internal/db +            ../gofurry-nav-backend/internal/db +            ../gofurry-nav-collector/internal/db
+          git diff --exit-code -- \
+            ../apps/cn/admin/internal/db \
+            ../apps/cn/game-backend/internal/db \
+            ../apps/cn/game-collector/internal/db \
+            ../apps/cn/nav-backend/internal/db \
+            ../apps/cn/nav-collector/internal/db
           go run ./check-sqlc
       - name: Goose fresh, adoption, drift and cleanup checks
         working-directory: tools
@@ -291,31 +292,31 @@ jobs:
           YAML
       - name: Game Collector integration
         if: needs.detect-changes.outputs.game_integration == 'true'
-        working-directory: gofurry-game-collector
+        working-directory: apps/cn/game-collector
         env:
           GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
         run: go test ./collector/game/v2/repository -run TestPostgresRepositorySemantics -count=1 -v
       - name: Game Backend integration
         if: needs.detect-changes.outputs.game_integration == 'true'
-        working-directory: gofurry-game-backend
+        working-directory: apps/cn/game-backend
         env:
           GOFURRY_GAME_BACKEND_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
         run: go test ./apps/game/v2/dao -run TestPostgresReadModelSemantics -count=1 -v
       - name: Nav Collector integration
         if: needs.detect-changes.outputs.nav_integration == 'true'
-        working-directory: gofurry-nav-collector
+        working-directory: apps/cn/nav-collector
         env:
           GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
         run: go test ./collector/observation -run TestPostgresCollectorPersistenceSemantics -count=1 -v
       - name: Nav Backend integration
         if: needs.detect-changes.outputs.nav_integration == 'true'
-        working-directory: gofurry-nav-backend
+        working-directory: apps/cn/nav-backend
         env:
           GOFURRY_NAV_BACKEND_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
         run: go test ./apps/nav/navPage/dao -run TestPostgresNavBackendPersistenceSemantics -count=1 -v
       - name: Admin three-database integration
         if: needs.detect-changes.outputs.admin_integration == 'true'
-        working-directory: gofurry-admin
+        working-directory: apps/cn/admin
         env:
           GOFURRY_ADMIN_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
         run: go test ./internal/bootstrap -run TestAdminThreeDatabasePersistence -count=1 -v

@@ -1,5 +1,7 @@
 # Runtime architecture
 
+Active production applications live under `apps/cn`. The two `apps/intl` directories are placeholders only, and `legacy`, `experimental`, and `third-party` are excluded from the active runtime/build graph.
+
 | Runtime | PostgreSQL | Other state |
 |---|---|---|
 | Game Collector | `gfg` | existing Redis keys; refresh only after DB commit |

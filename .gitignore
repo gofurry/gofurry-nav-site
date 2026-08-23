@@ -7,8 +7,6 @@
 **/coverage/
 !legacy/gofurry-rag/internal/web/dist/
 !legacy/gofurry-rag/internal/web/dist/**
-!ops/gofurry-ops-center/internal/web/dist/
-!ops/gofurry-ops-center/internal/web/dist/**
 
 # Runtime files
 **/logs/

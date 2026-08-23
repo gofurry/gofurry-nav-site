@@ -63,7 +63,7 @@ git status --short
 常规样式维护完成后运行：
 
 ```powershell
-cd gofurry-nav-web
+cd apps/cn/nav-web
 npm run typecheck
 npm run build
 ```

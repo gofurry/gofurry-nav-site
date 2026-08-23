@@ -300,6 +300,6 @@ v2.0.0 stable 已完成：
 
 建议后续优先做 backend v2：
 
-- 基于 `gofurry-game-backend/docs/game-v2-backend-contract.md` 新增 `/api/v2/game/*`。
+- 基于 `apps/cn/game-backend/docs/game-v2-backend-contract.md` 新增 `/api/v2/game/*`。
 - 后端消费 collector v2 PostgreSQL 表和 Redis key。
 - 前端 games v2 切到稳定数据契约后，再逐步删除后端 v1 动态数据消费路径。

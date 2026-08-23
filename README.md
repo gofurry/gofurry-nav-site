@@ -41,18 +41,18 @@ gofurry 是 GoFurry 站点体系的开源多服务仓库，面向兽圈文化内
 
 ## 仓库结构
 
-- `gofurry-nav-web`：Nuxt 4 前台，当前生产公开站点入口
-- `gofurry-nav-backend`：导航站后端 API，提供导航、站点详情、搜索建议、更新公告与监控端点
-- `gofurry-nav-collector`：导航数据采集服务，提供 observation、latest、summary、trend、change event 与低频旁路探测结果
-- `gofurry-game-backend`：兽游相关后端 API，承载游戏列表、详情、搜索、价格与在线人数等数据能力
-- `gofurry-game-collector`：兽游数据采集服务，负责 Steam 游戏资料、价格、在线人数与补充数据采集
-- `gofurry-admin`：运营后台，包含嵌入式前端、标签选项、采集触发、WAF 与管理接口
-- `gofurry-intl`：国际化相关服务与前端实验目录，保留给国际站方向演进
-- `ops`：当前保留 Nginx、审计与路线图资料，不再承载生产中的 ops agent / center 服务
+- `apps/cn/nav-web`：Nuxt 4 前台，当前生产公开站点入口
+- `apps/cn/nav-backend`：导航站后端 API，提供导航、站点详情、搜索建议、更新公告与监控端点
+- `apps/cn/nav-collector`：导航数据采集服务，提供 observation、latest、summary、trend、change event 与低频旁路探测结果
+- `apps/cn/game-backend`：兽游相关后端 API，承载游戏列表、详情、搜索、价格与在线人数等数据能力
+- `apps/cn/game-collector`：兽游数据采集服务，负责 Steam 游戏资料、价格、在线人数与补充数据采集
+- `apps/cn/admin`：运营后台，包含嵌入式前端、标签选项、采集触发、WAF 与管理接口
+- `apps/intl`：国际站服务和前端占位目录，当前不参与生产构建
+- `db`：`gfg`、`gfn`、`gfa` 的 Goose migration source of truth
+- `docs`：跨服务架构、开发与部署说明
+- `ops`：Nginx、维护页和 WAF 等运维资产
 - `legacy`：已下线归档模块，包含旧 Vue 前台、原 RAG 服务、旧 ops agent / center，仅保留历史参考
 - `third-party`：随仓库维护的第三方/自研依赖副本，例如 `monitor` 与 `steam-go`
-- `rules`：Coraza / CRS 规则相关内容
-- `sql`：数据库相关脚本与结构文件
 - `experimental`：实验性代码，不参与正式发布
 - `tools`：辅助脚本与本地工具
 
@@ -74,7 +74,7 @@ gofurry 是 GoFurry 站点体系的开源多服务仓库，面向兽圈文化内
 前台开发：
 
 ```bash
-cd gofurry-nav-web
+cd apps/cn/nav-web
 npm install
 npm run dev
 ```
@@ -82,34 +82,34 @@ npm run dev
 Go 服务开发：
 
 ```bash
-cd gofurry-nav-backend
+cd apps/cn/nav-backend
 go run .
 ```
 
 常见后端入口：
 
 ```bash
-cd gofurry-game-backend
+cd apps/cn/game-backend
 go run .
 
-cd ../gofurry-game-collector
+cd ../game-collector
 go run .
 
-cd ../gofurry-admin
+cd ../admin
 go run .
 ```
 
 如果你要构建根级 Go 服务产物，可按目标调用：
 
 ```bat
-build.bat gofurry-nav-backend
-build.bat gofurry-nav-collector
-build.bat gofurry-game-backend
-build.bat gofurry-game-collector
-build.bat gofurry-admin
+build.bat nav-backend
+build.bat nav-collector
+build.bat game-backend
+build.bat game-collector
+build.bat admin
 ```
 
-这个脚本会把构建产物输出到根级 `build/` 目录。Nuxt 前台的生产部署使用 `gofurry-nav-web` 目录内的部署流程。
+这个脚本会把构建产物输出到根级 `build/` 目录。Nuxt 前台的生产部署使用 `apps/cn/nav-web` 目录内的独立流程。
 
 ## 生产部署
 
@@ -117,13 +117,14 @@ build.bat gofurry-admin
 
 Nuxt 前台使用独立部署路径，相关说明见：
 
-- [gofurry-nav-web/DEPLOYMENT.md](./gofurry-nav-web/DEPLOYMENT.md)
-- [gofurry-nav-web/update.sh](./gofurry-nav-web/update.sh)
+- [apps/cn/nav-web/DEPLOYMENT.md](./apps/cn/nav-web/DEPLOYMENT.md)
+- [apps/cn/nav-web/update.sh](./apps/cn/nav-web/update.sh)
+- [跨服务部署说明](./docs/deployment.md)
 
 当前生产更新的常用方式：
 
 ```bash
-cd gofurry-nav-web
+cd apps/cn/nav-web
 ./update.sh
 ```
 

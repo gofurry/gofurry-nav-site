@@ -12,11 +12,11 @@ import (
 )
 
 var productionModules = []string{
-	"gofurry-admin",
-	"gofurry-game-backend",
-	"gofurry-game-collector",
-	"gofurry-nav-backend",
-	"gofurry-nav-collector",
+	"apps/cn/admin",
+	"apps/cn/game-backend",
+	"apps/cn/game-collector",
+	"apps/cn/nav-backend",
+	"apps/cn/nav-collector",
 }
 
 var forbidden = []struct {
@@ -29,6 +29,8 @@ var forbidden = []struct {
 	{"pkg/errors", regexp.MustCompile(`github\.com/pkg/errors`)},
 	{"YAML v2", regexp.MustCompile(`gopkg\.in/yaml\.v2`)},
 	{"Swagger/swag", regexp.MustCompile(`github\.com/swaggo/`)},
+	{"legacy dependency", regexp.MustCompile(`\blegacy/`)},
+	{"experimental dependency", regexp.MustCompile(`\bexperimental/`)},
 }
 
 var adminDatabaseDrivers = []struct {
@@ -76,7 +78,7 @@ func main() {
 						findings = append(findings, finding{relative, rule.name, fmt.Sprintf("%d", number+1)})
 					}
 				}
-				if module == "gofurry-admin" && name == "go.mod" {
+				if module == "apps/cn/admin" && name == "go.mod" {
 					for _, rule := range adminDatabaseDrivers {
 						if rule.pattern.MatchString(line) {
 							findings = append(findings, finding{relative, "Admin " + rule.name + " database dependency", fmt.Sprintf("%d", number+1)})

@@ -27,9 +27,9 @@ body:
     attributes:
       label: Area
       options:
-        - gofurry-nav-backend
-        - gofurry-nav-web
-        - gofurry-admin
+        - apps/cn/nav-backend
+        - apps/cn/nav-web
+        - apps/cn/admin
         - search / suggestions / proxy
         - SQL / schema / migration
         - deployment / configuration
