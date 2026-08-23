@@ -35,3 +35,14 @@ func TestDatabaseConfigPreservesLegacyPostgresFields(t *testing.T) {
 		t.Fatalf("legacy PostgreSQL fields were not preserved: %+v", cfg.Postgres)
 	}
 }
+
+func TestExplicitViperConfigDoesNotEnableAutomaticEnv(t *testing.T) {
+	t.Setenv("APP_SERVER_PORT", "1")
+	var cfg serverConfig
+	if err := InitConfig("gofurry-admin", "server.yaml", "server.example.yaml", &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Server.Port != "10099" {
+		t.Fatalf("server port = %q, want file value", cfg.Server.Port)
+	}
+}

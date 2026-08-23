@@ -45,3 +45,15 @@ func TestDatabaseConnectionStringEscapesCredentials(t *testing.T) {
 		t.Fatalf("connection string fields changed: %s", parsed.Redacted())
 	}
 }
+
+func TestExplicitViperConfigDoesNotEnableAutomaticEnv(t *testing.T) {
+	previous := configuration
+	t.Cleanup(func() { configuration = previous })
+	t.Setenv("APP_SERVER_PORT", "1")
+	if err := LoadServerConfig("../../conf/server.example.yaml"); err != nil {
+		t.Fatal(err)
+	}
+	if configuration.Server.Port != "9998" {
+		t.Fatalf("server port = %q, want file value", configuration.Server.Port)
+	}
+}

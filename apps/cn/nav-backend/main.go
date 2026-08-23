@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"os"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -18,99 +17,10 @@ import (
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
 	"github.com/gofurry/gofurry-nav-backend/routers"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/kardianos/service"
 )
 
 func main() {
-	dir, _ := os.Getwd()
-
-	svcConfig := &service.Config{
-		Name:        common.COMMON_PROJECT_NAME,
-		DisplayName: "gf-nav",
-		Description: "gf-nav",
-		Option: service.KeyValue{
-			"SystemdScript": `[Unit]
-Description=gf-nav
-After=network.target
-Requires=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=` + dir + `/
-ExecStart=` + dir + `/gf-nav
-Restart=always
-RestartSec=30
-LogOutput=true
-LogDirectory=/var/log/gf-nav
-LimitNOFILE=65535
-
-[Install]
-WantedBy=multi-user.target`,
-		},
-	}
-	prg := &goFurry{}
-	s, err := service.New(prg, svcConfig)
-	if err != nil {
-		gfLog.ErrorKV(err.Error())
-	}
-
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "install":
-			err = s.Install()
-			if err != nil {
-				gfLog.ErrorKV("service install failed", "error", err)
-			} else {
-				gfLog.InfoKV(`┏┓  ┏┓
-┃┓┏┓┣ ┓┏┏┓┏┓┓┏
-┗┛┗┛┻ ┗┻┛ ┛ ┗┫
-             ┛
-服务安装成功.
-				`)
-			}
-			return
-		case "uninstall":
-			err = s.Uninstall()
-			if err != nil {
-				gfLog.ErrorKV("service uninstall failed", "error", err)
-			} else {
-				gfLog.InfoKV(`┏┓  ┏┓
-┃┓┏┓┣ ┓┏┏┓┏┓┓┏
-┗┛┗┛┻ ┗┻┛ ┛ ┗┫
-             ┛
-服务卸载成功.
-				`)
-			}
-			return
-		case "version":
-			gfLog.InfoKV(`┏┓  ┏┓
-┃┓┏┓┣ ┓┏┏┓┏┓┓┏
-┗┛┗┛┻ ┗┻┛ ┛ ┗┫
-             ┛
-gf-nav V1.0.0
-				`)
-			return
-		case "help":
-			gfLog.InfoKV(common.COMMON_PROJECT_HELP)
-			return
-		}
-		return
-	}
-
-	// 内存限制和 GC 策略
-	debug.SetGCPercent(env.GetServerConfig().Server.GCPercent)
-	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
-
-	// 初始化系统服务
-	if err := prg.InitOnStart(); err != nil {
-		gfLog.ErrorKV("initialize service", "error", err)
-		return
-	}
-	// 启动系统
-	err = s.Run()
-	if err != nil {
-		gfLog.ErrorKV(err.Error())
-	}
+	executeCLI()
 }
 
 type goFurry struct {
@@ -118,6 +28,7 @@ type goFurry struct {
 	app          *fiber.App
 	pool         *pgxpool.Pool
 	dependencies applicationDependencies
+	stopOnce     sync.Once
 }
 
 func (gf *goFurry) InitOnStart() error {
@@ -172,43 +83,59 @@ func (gf *goFurry) InitOnStart() error {
 	return nil
 }
 
-func (gf *goFurry) Start(s service.Service) error {
+func (gf *goFurry) Serve(ctx context.Context) error {
+	cfg := env.GetServerConfig()
+	debug.SetGCPercent(cfg.Server.GCPercent)
+	debug.SetMemoryLimit(int64(cfg.Server.MemoryLimit << 30))
+	if err := gf.InitOnStart(); err != nil {
+		return err
+	}
+
 	app := routers.Router.Init(gf.pool, gf.dependencies.routes)
 	gf.mu.Lock()
 	gf.app = app
 	gf.mu.Unlock()
 
-	go gf.run(app)
-	return nil
-}
+	listenErr := make(chan error, 1)
+	go func() {
+		addr := cfg.Server.IPAddress + ":" + cfg.Server.Port
+		listenErr <- app.Listen(addr, fiber.ListenConfig{
+			ListenerNetwork:   cfg.Server.Network,
+			EnablePrefork:     cfg.Server.EnablePrefork,
+			EnablePrintRoutes: cfg.Server.Mode == "debug",
+		})
+	}()
 
-func (gf *goFurry) run(app *fiber.App) {
-	addr := env.GetServerConfig().Server.IPAddress + ":" + env.GetServerConfig().Server.Port
-	if err := app.Listen(addr, fiber.ListenConfig{
-		ListenerNetwork:   env.GetServerConfig().Server.Network,
-		EnablePrefork:     env.GetServerConfig().Server.EnablePrefork,
-		EnablePrintRoutes: env.GetServerConfig().Server.Mode == "debug",
-	}); err != nil {
-		gfLog.ErrorKV("web server stopped", "error", err)
+	select {
+	case <-ctx.Done():
+		return gf.Shutdown()
+	case err := <-listenErr:
+		if err == nil {
+			err = errors.New("web server stopped unexpectedly")
+		}
+		return errors.Join(err, gf.Shutdown())
 	}
 }
 
-func (gf *goFurry) Stop(s service.Service) error {
-	gf.mu.Lock()
-	app := gf.app
-	gf.app = nil
-	gf.mu.Unlock()
-
+func (gf *goFurry) Shutdown() error {
 	var shutdownErr error
-	if app != nil {
-		shutdownErr = app.ShutdownWithTimeout(10 * time.Second)
-	}
-	if gf.pool != nil {
-		gf.pool.Close()
-		gf.pool = nil
-	}
-	redisErr := cs.CloseRedis()
-	return errors.Join(shutdownErr, redisErr, gfLog.Sync())
+	gf.stopOnce.Do(func() {
+		gf.mu.Lock()
+		app := gf.app
+		gf.app = nil
+		gf.mu.Unlock()
+		if app != nil {
+			shutdownErr = errors.Join(shutdownErr, app.ShutdownWithTimeout(10*time.Second))
+		}
+		cs.Stop()
+		shutdownErr = errors.Join(shutdownErr, cs.CloseRedis())
+		if gf.pool != nil {
+			gf.pool.Close()
+			gf.pool = nil
+		}
+		shutdownErr = errors.Join(shutdownErr, gfLog.Sync())
+	})
+	return shutdownErr
 }
 
 func (gf *goFurry) initPostgres() error {

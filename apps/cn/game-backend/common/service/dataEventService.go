@@ -2,11 +2,12 @@ package service
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofurry/gofurry-game-backend/common/log"
 	"github.com/gofurry/gofurry-game-backend/roof/env"
 	"github.com/sourcegraph/conc/pool"
-	"sync"
 )
 
 // 事件总线
@@ -30,8 +31,23 @@ type EventBus struct {
 	rwm         sync.RWMutex
 }
 
-// 发送线程池
-var threadPool = pool.New().WithMaxGoroutines(env.GetServerConfig().Thread.EventPublishThread)
+var (
+	threadPool   *pool.Pool
+	threadPoolMu sync.Mutex
+)
+
+func publisherPool() *pool.Pool {
+	threadPoolMu.Lock()
+	defer threadPoolMu.Unlock()
+	if threadPool == nil {
+		maxGoroutines := env.GetServerConfig().Thread.EventPublishThread
+		if maxGoroutines <= 0 {
+			maxGoroutines = 1
+		}
+		threadPool = pool.New().WithMaxGoroutines(maxGoroutines)
+	}
+	return threadPool
+}
 
 func (eb *EventBus) PublishGlobalMsg(data any) {
 	eb.Publish(common.GLOBAL_MSG, data)
@@ -51,7 +67,7 @@ func (eb *EventBus) Publish(topic string, data any) {
 	defer eb.rwm.Unlock()
 	if chs, found := eb.Subscribers[topic]; found {
 		channels := append(DataChannelSlice{}, chs...)
-		threadPool.Go(func() {
+		publisherPool().Go(func() {
 			func(data EventData, dataChannelSlices DataChannelSlice) {
 				defer func() {
 					if e := recover(); e != nil {

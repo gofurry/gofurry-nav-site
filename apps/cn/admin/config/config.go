@@ -575,15 +575,12 @@ func InitConfig(projectName, fileName, configFile string, conf interface{}) erro
 	}
 
 	applyDefaults(v)
-	v.SetEnvPrefix("APP")
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
 		return fmt.Errorf("can not find any %s file: %w", fileName, err)
 	}
 
-	if err := v.Unmarshal(conf); err != nil {
+	if err := v.UnmarshalExact(conf); err != nil {
 		return fmt.Errorf("unmarshal config failed: %w", err)
 	}
 

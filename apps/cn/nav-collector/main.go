@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
-	"os"
+	"errors"
+	"fmt"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/common"
@@ -15,70 +17,16 @@ import (
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 	"github.com/gofurry/gofurry-nav-collector/schedule"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/kardianos/service"
-)
-
-var (
-	errChan = make(chan error)
 )
 
 func main() {
-	svcConfig := &service.Config{
-		Name:        common.COMMON_PROJECT_NAME,
-		DisplayName: "gf-nav-collector",
-		Description: "gf-nav-collector",
-	}
-	prg := &goFurry{}
-	s, err := service.New(prg, svcConfig)
-	if err != nil {
-		log.Error(err)
-	}
-
-	if len(os.Args) > 1 {
-		if os.Args[1] == "install" {
-			err = s.Install()
-			if err != nil {
-				log.Error("服务安装失败: ", err)
-			} else {
-				log.Info("服务安装成功.")
-			}
-			return
-		}
-
-		if os.Args[1] == "uninstall" {
-			err = s.Uninstall()
-			if err != nil {
-				log.Error("服务卸载失败: ", err)
-			} else {
-				log.Info("服务卸载成功.")
-			}
-			return
-		}
-
-		if os.Args[1] == "version" {
-			log.Info("gf-nav-collector V1.0.0")
-			return
-		}
-	}
-
-	// 内存限制和 GC 策略
-	debug.SetGCPercent(1000)
-	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
-
-	if err := prg.InitOnStart(); err != nil {
-		log.Error("服务初始化失败: ", err)
-		return
-	}
-
-	// 启动系统
-	err = s.Run()
-	if err != nil {
-		log.Error(err)
-	}
+	executeCLI()
 }
 
 func (gf *goFurry) InitOnStart() error {
-	initLogger()
+	if err := initLogger(); err != nil {
+		return err
+	}
 	// 初始化 redis
 	cs.InitRedisOnStart()
 	// 初始化时间调度
@@ -87,33 +35,38 @@ func (gf *goFurry) InitOnStart() error {
 }
 
 type goFurry struct {
-	pool *pgxpool.Pool
+	pool     *pgxpool.Pool
+	stopOnce sync.Once
 }
 
-func (gf *goFurry) Start(s service.Service) error {
-	go gf.run()
-	return nil
-}
-
-func (gf *goFurry) run() {
-	// 启动 collector
-	go func() {
-		// 初始化 collector
-		log.InfoFields(map[string]interface{}{
-			"service": common.COMMON_PROJECT_NAME,
-			"version": env.GetServerConfig().Server.AppVersion,
-		}, "采集器服务已启动")
-		schedule.InitSchedule(gf.pool)
-	}()
-}
-
-func (gf *goFurry) Stop(s service.Service) error {
-	schedule.StopSchedule()
-	if gf.pool != nil {
-		gf.pool.Close()
-		gf.pool = nil
+func (gf *goFurry) Serve(ctx context.Context) error {
+	debug.SetGCPercent(1000)
+	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
+	if err := gf.InitOnStart(); err != nil {
+		return err
 	}
-	return log.Sync()
+	log.InfoFields(map[string]interface{}{
+		"service": common.COMMON_PROJECT_NAME,
+		"version": env.GetServerConfig().Server.AppVersion,
+	}, "采集器服务已启动")
+	schedule.InitSchedule(gf.pool)
+	<-ctx.Done()
+	return gf.Shutdown()
+}
+
+func (gf *goFurry) Shutdown() error {
+	var shutdownErr error
+	gf.stopOnce.Do(func() {
+		schedule.StopSchedule()
+		cs.Stop()
+		shutdownErr = errors.Join(shutdownErr, cs.CloseRedis())
+		if gf.pool != nil {
+			gf.pool.Close()
+			gf.pool = nil
+		}
+		shutdownErr = errors.Join(shutdownErr, log.Sync())
+	})
+	return shutdownErr
 }
 
 func (gf *goFurry) initPostgres() error {
@@ -150,7 +103,7 @@ func durationOrDefault(totalSeconds int, fallback time.Duration) time.Duration {
 	return time.Duration(totalSeconds) * time.Second
 }
 
-func initLogger() {
+func initLogger() error {
 	cfg := env.GetServerConfig()
 	logCfg := &log.Config{
 		Level:      cfg.Log.LogLevel,
@@ -176,7 +129,7 @@ func initLogger() {
 		logCfg.MaxBackups = cfg.Log.LogRotationCount
 	}
 	if err := log.InitLogger(logCfg); err != nil {
-		log.Error("日志初始化失败: ", err)
-		os.Exit(1)
+		return fmt.Errorf("initialize logger: %w", err)
 	}
+	return nil
 }

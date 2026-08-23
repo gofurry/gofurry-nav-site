@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	env "github.com/gofurry/gofurry-admin/config"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
@@ -11,8 +13,11 @@ import (
 	applog "github.com/gofurry/gofurry-admin/internal/infra/logging"
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
+
+type cliOptions struct {
+	configFile string
+}
 
 func Execute() {
 	rootCmd := newRootCmd()
@@ -24,6 +29,7 @@ func Execute() {
 }
 
 func newRootCmd() *cobra.Command {
+	options := new(cliOptions)
 	rootCmd := &cobra.Command{
 		Use:           common.COMMON_PROJECT_NAME,
 		Short:         "gofurry admin service",
@@ -34,46 +40,50 @@ func newRootCmd() *cobra.Command {
 		},
 	}
 
-	rootCmd.PersistentFlags().String("config", "", "path to server config file")
-	_ = viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
+	rootCmd.PersistentFlags().StringVar(&options.configFile, "config", "", "path to server config file")
 
 	rootCmd.AddCommand(
-		newServeCmd(),
-		newInstallCmd(),
-		newUninstallCmd(),
-		newResetPasswordCmd(),
+		newServeCmd(options),
+		newInstallCmd(options),
+		newUninstallCmd(options),
+		newResetPasswordCmd(options),
 		newVersionCmd(),
 	)
 	return rootCmd
 }
 
-func initConfig() error {
-	env.ConfigureServerConfig(common.COMMON_PROJECT_NAME, "server.yaml", viper.GetString("config"))
+func initConfig(configFile string) error {
+	if strings.TrimSpace(configFile) == "" {
+		return fmt.Errorf("--config is required")
+	}
+	env.ConfigureServerConfig(common.COMMON_PROJECT_NAME, "server.yaml", configFile)
 	return env.InitServerConfig(common.COMMON_PROJECT_NAME)
 }
 
-func newServeCmd() *cobra.Command {
+func newServeCmd(options *cliOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "serve",
 		Short: "Start the web service",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
+			return initConfig(options.configFile)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runService()
+			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+			return runService(ctx)
 		},
 	}
 }
 
-func newInstallCmd() *cobra.Command {
+func newInstallCmd(options *cliOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "install",
 		Short: "Install service to systemd",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
+			return initConfig(options.configFile)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			svc, err := newService()
+			svc, err := newService(options.configFile)
 			if err != nil {
 				applog.ErrorKV("service install failed", "error", err)
 				return
@@ -88,15 +98,15 @@ func newInstallCmd() *cobra.Command {
 	}
 }
 
-func newUninstallCmd() *cobra.Command {
+func newUninstallCmd(options *cliOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "uninstall",
 		Short: "Uninstall service from systemd",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
+			return initConfig(options.configFile)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			svc, err := newService()
+			svc, err := newService(options.configFile)
 			if err != nil {
 				applog.ErrorKV("service uninstall failed", "error", err)
 				return
@@ -111,14 +121,14 @@ func newUninstallCmd() *cobra.Command {
 	}
 }
 
-func newResetPasswordCmd() *cobra.Command {
+func newResetPasswordCmd(options *cliOptions) *cobra.Command {
 	var password string
 
 	cmd := &cobra.Command{
 		Use:   "reset-password",
 		Short: "Reset the single admin password",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if err := initConfig(); err != nil {
+			if err := initConfig(options.configFile); err != nil {
 				return err
 			}
 			if strings.TrimSpace(password) == "" {
@@ -149,13 +159,8 @@ func newVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Show service version",
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
-		},
 		Run: func(cmd *cobra.Command, args []string) {
-			cfg := env.GetServerConfig()
-			_, appName := appIdentity()
-			applog.InfoKV(appName + " " + cfg.Server.AppVersion)
+			fmt.Println("gofurry-admin v1.0.0")
 		},
 	}
 }

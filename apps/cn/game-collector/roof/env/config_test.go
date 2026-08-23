@@ -43,3 +43,15 @@ func TestDatabaseConnectionStringEscapesCredentials(t *testing.T) {
 		t.Fatal("connection string password did not round trip")
 	}
 }
+
+func TestExplicitViperConfigDoesNotEnableAutomaticEnv(t *testing.T) {
+	previous := configuration
+	t.Cleanup(func() { configuration = previous })
+	t.Setenv("APP_SERVER_MEMORY_LIMIT", "99")
+	if err := LoadServerConfig("../../conf/server.example.yaml"); err != nil {
+		t.Fatal(err)
+	}
+	if configuration.Server.MemoryLimit != 1 {
+		t.Fatalf("memory limit = %d, want file value", configuration.Server.MemoryLimit)
+	}
+}

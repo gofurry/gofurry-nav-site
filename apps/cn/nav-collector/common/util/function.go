@@ -9,16 +9,23 @@ package util
 import (
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/bwmarrin/snowflake"
 	"github.com/gofurry/gofurry-nav-collector/roof/env"
 )
 
-var clusterId, _ = snowflake.NewNode(int64(env.GetServerConfig().ClusterId))
+var (
+	clusterIDOnce sync.Once
+	clusterIDNode *snowflake.Node
+)
 
 // 雪花算法生成新 ID
 func GenerateId() int64 {
-	id := clusterId.Generate()
+	clusterIDOnce.Do(func() {
+		clusterIDNode, _ = snowflake.NewNode(int64(env.GetServerConfig().ClusterId))
+	})
+	id := clusterIDNode.Generate()
 	return id.Int64()
 }
 

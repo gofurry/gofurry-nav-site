@@ -83,3 +83,15 @@ func TestServerExampleIncludesCentralizedUptimeServices(t *testing.T) {
 func boolPtr(value bool) *bool {
 	return &value
 }
+
+func TestExplicitViperConfigDoesNotEnableAutomaticEnv(t *testing.T) {
+	previous := configuration
+	t.Cleanup(func() { configuration = previous })
+	t.Setenv("APP_SERVER_PORT", "1")
+	if err := LoadServerConfig("../../conf/server.example.yaml"); err != nil {
+		t.Fatal(err)
+	}
+	if configuration.Server.Port != "9999" {
+		t.Fatalf("server port = %q, want file value", configuration.Server.Port)
+	}
+}

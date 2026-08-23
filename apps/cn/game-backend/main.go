@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
-	"os/signal"
 	"runtime/debug"
-	"syscall"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -27,106 +26,16 @@ import (
 	"github.com/gofurry/gofurry-game-backend/roof/env"
 	"github.com/gofurry/gofurry-game-backend/routers"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/kardianos/service"
-)
-
-var (
-	errChan = make(chan error)
 )
 
 func main() {
-	dir, _ := os.Getwd()
-
-	svcConfig := &service.Config{
-		Name:        common.COMMON_PROJECT_NAME,
-		DisplayName: "gf-game",
-		Description: "gf-game",
-		Option: service.KeyValue{
-			"SystemdScript": `[Unit]
-Description=gf-game
-After=network.target
-Requires=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=` + dir + `/
-ExecStart=` + dir + `/gf-game
-Restart=always
-RestartSec=30
-LogOutput=true
-LogDirectory=/var/log/gf-game
-LimitNOFILE=65535
-
-[Install]
-WantedBy=multi-user.target`,
-		},
-	}
-	prg := &goFurry{}
-	s, err := service.New(prg, svcConfig)
-	if err != nil {
-		gfLog.ErrorKV(err.Error())
-	}
-
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "install":
-			err = s.Install()
-			if err != nil {
-				gfLog.ErrorKV("service install failed", "error", err)
-			} else {
-				gfLog.InfoKV(`┏┓  ┏┓
-┃┓┏┓┣ ┓┏┏┓┏┓┓┏
-┗┛┗┛┻ ┗┻┛ ┛ ┗┫
-             ┛
-服务安装成功.
-				`)
-			}
-			return
-		case "uninstall":
-			err = s.Uninstall()
-			if err != nil {
-				gfLog.ErrorKV("service uninstall failed", "error", err)
-			} else {
-				gfLog.InfoKV(`┏┓  ┏┓
-┃┓┏┓┣ ┓┏┏┓┏┓┓┏
-┗┛┗┛┻ ┗┻┛ ┛ ┗┫
-             ┛
-服务卸载成功.
-				`)
-			}
-			return
-		case "version":
-			gfLog.InfoKV(`┏┓  ┏┓
-┃┓┏┓┣ ┓┏┏┓┏┓┓┏
-┗┛┗┛┻ ┗┻┛ ┛ ┗┫
-             ┛
-gf-game V1.0.0
-				`)
-			return
-		case "help":
-			gfLog.InfoKV(common.COMMON_PROJECT_HELP)
-			return
-		}
-		return
-	}
-
-	// 内存限制和 GC 策略
-	debug.SetGCPercent(env.GetServerConfig().Server.GCPercent)
-	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
-
-	// 初始化系统服务
-	if err := prg.InitOnStart(); err != nil {
-		gfLog.ErrorKV("initialize service", "error", err)
-		return
-	}
-	// 启动系统
-	err = s.Run()
-	if err != nil {
-		gfLog.ErrorKV(err.Error())
-	}
+	executeCLI()
 }
 
 type goFurry struct {
+	mu       sync.Mutex
+	app      *fiber.App
+	stopOnce sync.Once
 	pool     *pgxpool.Pool
 	readDAO  *v2dao.ReadModelDAO
 	viewSvc  *v2service.GameViewService
@@ -186,49 +95,59 @@ func (gf *goFurry) InitOnStart() error {
 	return nil
 }
 
-func (gf *goFurry) Start(s service.Service) error {
-	go gf.run()
-	return nil
-}
+func (gf *goFurry) Serve(ctx context.Context) error {
+	cfg := env.GetServerConfig()
+	debug.SetGCPercent(cfg.Server.GCPercent)
+	debug.SetMemoryLimit(int64(cfg.Server.MemoryLimit << 30))
+	if err := gf.InitOnStart(); err != nil {
+		return fmt.Errorf("initialize service: %w", err)
+	}
 
-func (gf *goFurry) run() {
+	app := routers.Router.Init(gf.pool, gf.gameAPI, gf.prizeAPI)
+	gf.mu.Lock()
+	gf.app = app
+	gf.mu.Unlock()
+
+	listenErr := make(chan error, 1)
 	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
-		errChan <- fmt.Errorf("%s", <-c)
+		addr := cfg.Server.IPAddress + ":" + cfg.Server.Port
+		listenErr <- app.Listen(addr, fiber.ListenConfig{
+			ListenerNetwork:   cfg.Server.Network,
+			EnablePrefork:     cfg.Server.EnablePrefork,
+			EnablePrintRoutes: cfg.Server.Mode == "debug",
+		})
 	}()
-	// 启动 web
-	go func() {
-		app := routers.Router.Init(gf.pool, gf.gameAPI, gf.prizeAPI)
 
-		addr := env.GetServerConfig().Server.IPAddress + ":" + env.GetServerConfig().Server.Port
-		// nginx 完成 https 就不使用 TLS
-		//pem := env.GetServerConfig().Key.TlsPem
-		//key := env.GetServerConfig().Key.TlsKey
-		//if err := app.ListenTLS(addr, pem, key); err != nil {
-		//	fmt.Println(err)
-		//	errChan <- err
-		//}
-		if err := app.Listen(addr, fiber.ListenConfig{
-			ListenerNetwork:   env.GetServerConfig().Server.Network,
-			EnablePrefork:     env.GetServerConfig().Server.EnablePrefork,
-			EnablePrintRoutes: env.GetServerConfig().Server.Mode == "debug",
-		}); err != nil {
-			fmt.Println(err)
-			errChan <- err
+	select {
+	case <-ctx.Done():
+		return gf.Shutdown()
+	case err := <-listenErr:
+		if err == nil {
+			err = errors.New("web server stopped unexpectedly")
 		}
-	}()
-	if err := <-errChan; err != nil {
-		gfLog.ErrorKV(err.Error())
+		return errors.Join(err, gf.Shutdown())
 	}
 }
 
-func (gf *goFurry) Stop(s service.Service) error {
-	if gf.pool != nil {
-		gf.pool.Close()
-		gf.pool = nil
-	}
-	return gfLog.Sync()
+func (gf *goFurry) Shutdown() error {
+	var shutdownErr error
+	gf.stopOnce.Do(func() {
+		gf.mu.Lock()
+		app := gf.app
+		gf.app = nil
+		gf.mu.Unlock()
+		if app != nil {
+			shutdownErr = errors.Join(shutdownErr, app.ShutdownWithTimeout(10*time.Second))
+		}
+		cs.Stop()
+		shutdownErr = errors.Join(shutdownErr, cs.CloseRedis())
+		if gf.pool != nil {
+			gf.pool.Close()
+			gf.pool = nil
+		}
+		shutdownErr = errors.Join(shutdownErr, gfLog.Sync())
+	})
+	return shutdownErr
 }
 
 func (gf *goFurry) initPostgres() error {

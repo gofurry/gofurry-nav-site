@@ -50,7 +50,7 @@ var geoCache sync.Map                        // geoCache 缓存 IP 的 GeoIP/ASN
 var ptrCache sync.Map                        // ptrCache 缓存 IP 的反向 PTR 查询结果
 var ptrSem = make(chan struct{}, PTRWorkers) // ptrSem 用于限制 PTR 查询并发
 
-var resolver = env.GetServerConfig().Collector.Dns.Resolver
+var resolver string
 var geoDBs *GeoDBSet
 
 type Runner struct {
@@ -173,6 +173,7 @@ func currentGeoDBs() *GeoDBSet {
 // 初始化
 func InitDNSOnStart(persistence *dao.DNSDAO, observations *observation.ObservationDAO) {
 	runner := &Runner{persistence: persistence, observations: observations}
+	resolver = env.GetServerConfig().Collector.Dns.Resolver
 	defer func() {
 		if err := recover(); err != nil {
 			log.ErrorFields(map[string]interface{}{

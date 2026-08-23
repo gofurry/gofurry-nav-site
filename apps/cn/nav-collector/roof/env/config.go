@@ -1,6 +1,7 @@
 package env
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/url"
@@ -9,18 +10,67 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofurry/gofurry-nav-collector/common"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
 
-func init() {
-	if isRunningGoTest() && os.Getenv("GF_NAV_COLLECTOR_LOAD_CONFIG_IN_TEST") != "1" {
-		return
+var configuration = new(serverConfig)
+
+func LoadServerConfig(configFile string) error {
+	cfg, err := readServerConfig(configFile)
+	if err != nil {
+		return err
 	}
-	InitServerConfig(common.COMMON_PROJECT_NAME)
+	configuration = cfg
+	return nil
 }
 
-var configuration = new(serverConfig)
+func ValidateServerConfigFile(configFile string) error {
+	_, err := readServerConfig(configFile)
+	return err
+}
+
+func readServerConfig(configFile string) (*serverConfig, error) {
+	configFile = strings.TrimSpace(configFile)
+	if configFile == "" {
+		return nil, errors.New("--config is required")
+	}
+	v := viper.New()
+	v.SetConfigFile(configFile)
+	if err := v.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("read config %q: %w", configFile, err)
+	}
+	data, err := yaml.Marshal(v.AllSettings())
+	if err != nil {
+		return nil, fmt.Errorf("normalize config %q: %w", configFile, err)
+	}
+	cfg := new(serverConfig)
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(cfg); err != nil {
+		return nil, fmt.Errorf("decode config %q: %w", configFile, err)
+	}
+	if err := cfg.validate(); err != nil {
+		return nil, fmt.Errorf("validate config %q: %w", configFile, err)
+	}
+	return cfg, nil
+}
+
+func (cfg *serverConfig) validate() error {
+	if cfg.ClusterId < 0 || cfg.ClusterId > 1023 {
+		return errors.New("cluster_id must be between 0 and 1023")
+	}
+	if cfg.Server.MemoryLimit <= 0 {
+		return errors.New("server.memory_limit must be positive")
+	}
+	if cfg.DataBase.DBName == "" || cfg.DataBase.DBUsername == "" || cfg.DataBase.DBHost == "" || cfg.DataBase.DBPort == "" {
+		return errors.New("data_base name, username, host, and port are required")
+	}
+	if cfg.Redis.RedisAddr == "" {
+		return errors.New("redis.redis_addr is required")
+	}
+	return nil
+}
 
 type serverConfig struct {
 	ClusterId int             `yaml:"cluster_id"`

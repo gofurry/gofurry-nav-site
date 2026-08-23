@@ -19,6 +19,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"errors"
@@ -30,7 +31,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var clusterId, _ = snowflake.NewNode(int64(env.GetServerConfig().ClusterId))
+var (
+	clusterIDOnce sync.Once
+	clusterIDNode *snowflake.Node
+)
 
 var letters = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d",
 	"e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v",
@@ -40,7 +44,10 @@ var letters = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b
 
 // 雪花算法生成新 ID
 func GenerateId() int64 {
-	id := clusterId.Generate()
+	clusterIDOnce.Do(func() {
+		clusterIDNode, _ = snowflake.NewNode(int64(env.GetServerConfig().ClusterId))
+	})
+	id := clusterIDNode.Generate()
 	return id.Int64()
 }
 

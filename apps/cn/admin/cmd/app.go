@@ -16,34 +16,31 @@ import (
 	"github.com/gofiber/fiber/v3"
 	env "github.com/gofurry/gofurry-admin/config"
 	"github.com/gofurry/gofurry-admin/internal/bootstrap"
-	applog "github.com/gofurry/gofurry-admin/internal/infra/logging"
 	"github.com/gofurry/gofurry-admin/internal/transport/http/router"
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/kardianos/service"
-	"github.com/spf13/viper"
 )
 
-func runService() error {
+func runService(ctx context.Context) error {
 	cfg := env.GetServerConfig()
-	svc, err := newService()
-	if err != nil {
-		return err
-	}
-
 	debug.SetGCPercent(cfg.Server.GCPercent)
 	debug.SetMemoryLimit(int64(cfg.Server.MemoryLimit << 30))
 
-	return svc.Run()
+	application := newApp()
+	if err := application.start(); err != nil {
+		return err
+	}
+	return application.wait(ctx)
 }
 
-func newService() (service.Service, error) {
+func newService(configFile string) (service.Service, error) {
 	exePath, err := os.Executable()
 	if err != nil {
 		return nil, fmt.Errorf("resolve executable path failed: %w", err)
 	}
 
 	appID, appName := appIdentity()
-	args := buildServiceArguments(viper.GetString("config"))
+	args := buildServiceArguments(configFile)
 	svcConfig := &service.Config{
 		Name:             appID,
 		DisplayName:      appName,
@@ -119,6 +116,7 @@ type app struct {
 	runtime      *bootstrap.Runtime
 	shutdownOnce sync.Once
 	stopping     atomic.Bool
+	listenErr    chan error
 }
 
 func newApp() *app {
@@ -126,6 +124,10 @@ func newApp() *app {
 }
 
 func (a *app) Start(s service.Service) error {
+	return a.start()
+}
+
+func (a *app) start() error {
 	runtime, err := bootstrap.Start()
 	if err != nil {
 		return err
@@ -133,6 +135,7 @@ func (a *app) Start(s service.Service) error {
 	a.runtime = runtime
 
 	a.fiberApp = router.New(runtime).Init()
+	a.listenErr = make(chan error, 1)
 	go a.run()
 	return nil
 }
@@ -148,13 +151,24 @@ func (a *app) run() {
 		EnablePrintRoutes: cfg.Server.Mode == "debug",
 	}); err != nil {
 		if a.stopping.Load() {
+			a.listenErr <- nil
 			return
 		}
-		applog.ErrorKV("fiber app exited unexpectedly", "error", err)
-		if shutdownErr := a.shutdown(); shutdownErr != nil {
-			applog.ErrorKV("application shutdown failed", "error", shutdownErr)
+		a.listenErr <- err
+		return
+	}
+	a.listenErr <- nil
+}
+
+func (a *app) wait(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return a.shutdown()
+	case err := <-a.listenErr:
+		if err == nil {
+			err = errors.New("fiber app stopped unexpectedly")
 		}
-		os.Exit(1)
+		return errors.Join(err, a.shutdown())
 	}
 }
 

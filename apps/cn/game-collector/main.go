@@ -2,145 +2,68 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	gameService "github.com/gofurry/gofurry-game-collector/collector/game/service"
-	"github.com/gofurry/gofurry-game-collector/common"
 	"github.com/gofurry/gofurry-game-collector/common/log"
 	cs "github.com/gofurry/gofurry-game-collector/common/service"
 	"github.com/gofurry/gofurry-game-collector/internal/infra/postgres"
 	"github.com/gofurry/gofurry-game-collector/roof/env"
 	"github.com/gofurry/gofurry-game-collector/schedule"
 	"github.com/jackc/pgx/v5/pgxpool"
-	kservice "github.com/kardianos/service"
-)
-
-var (
-	errChan = make(chan error)
 )
 
 func main() {
-	svcConfig := &kservice.Config{
-		Name:        common.COMMON_PROJECT_NAME,
-		DisplayName: "gf-game-collector",
-		Description: "gf-game-collector",
-	}
-	prg := &goFurry{}
-	s, err := kservice.New(prg, svcConfig)
-	if err != nil {
-		log.Error(err)
-	}
-
-	if len(os.Args) > 1 {
-		if os.Args[1] == "install" {
-			err = s.Install()
-			if err != nil {
-				log.Error("服务安装失败: ", err)
-			} else {
-				log.Info("服务安装成功.")
-			}
-			return
-		}
-
-		if os.Args[1] == "uninstall" {
-			err = s.Uninstall()
-			if err != nil {
-				log.Error("服务卸载失败: ", err)
-			} else {
-				log.Info("服务卸载成功.")
-			}
-			return
-		}
-
-		if os.Args[1] == "version" {
-			log.Info("gf-game-collector V1.0.0")
-			return
-		}
-
-		if os.Args[1] == "collect" || os.Args[1] == "full" {
-			prg.runCollectorOnce(func() {
-				gameService.GetGameService().Collect()
-			})
-			return
-		}
-
-		if os.Args[1] == "players" {
-			prg.runCollectorOnce(func() {
-				gameService.GetGameService().CollectCurrentPlayers()
-			})
-			return
-		}
-
-		if os.Args[1] == "all" {
-			prg.runCollectorOnce(func() {
-				gameService.GetGameService().CollectCurrentPlayers()
-				gameService.GetGameService().Collect()
-			})
-			return
-		}
-	}
-
-	// 内存限制和 GC 策略
-	debug.SetGCPercent(1000)
-	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
-
-	prg.InitOnStart()
-
-	// 启动系统
-	err = s.Run()
-	if err != nil {
-		log.Error(err)
-	}
+	executeCLI()
 }
 
-func (gf *goFurry) runCollectorOnce(run func()) {
+func (gf *goFurry) RunCollectorOnce(run func()) (err error) {
 	debug.SetGCPercent(1000)
 	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
-	gf.InitOnStart()
-	defer gf.closePostgres()
-	defer func() { _ = log.Sync() }()
+	if err := gf.InitOnStart(); err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, gf.Shutdown()) }()
 	gameService.InitLimiter()
 	run()
+	return nil
 }
 
-func (gf *goFurry) InitOnStart() {
-	initLogger()
+func (gf *goFurry) InitOnStart() error {
+	if err := initLogger(); err != nil {
+		return err
+	}
 	// 初始化 redis
 	cs.InitRedisOnStart()
 	// 初始化时间调度
 	cs.InitTimeWheelOnStart()
-	gf.initPostgres()
+	return gf.initPostgres()
 }
 
 type goFurry struct {
-	pool *pgxpool.Pool
+	pool     *pgxpool.Pool
+	stopOnce sync.Once
 }
 
-func (gf *goFurry) Start(s kservice.Service) error {
-	go gf.run()
-	return nil
+func (gf *goFurry) Serve(ctx context.Context) error {
+	debug.SetGCPercent(1000)
+	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
+	if err := gf.InitOnStart(); err != nil {
+		return err
+	}
+	fmt.Println("gf-game-collector已启动...")
+	schedule.InitSchedule()
+	<-ctx.Done()
+	return gf.Shutdown()
 }
 
-func (gf *goFurry) run() {
-	// 启动 collector
-	go func() {
-		// 初始化 collector
-		fmt.Println("gf-game-collector已启动...")
-		schedule.InitSchedule()
-	}()
-}
-
-func (gf *goFurry) Stop(s kservice.Service) error {
-	gf.closePostgres()
-	return log.Sync()
-}
-
-func (gf *goFurry) initPostgres() {
+func (gf *goFurry) initPostgres() error {
 	dbConfig := env.GetServerConfig().DataBase
 	ctx, cancel := context.WithTimeout(context.Background(), durationOrDefault(dbConfig.ConnectTimeoutSeconds+dbConfig.PingTimeoutSeconds, 8*time.Second))
 	defer cancel()
@@ -156,18 +79,26 @@ func (gf *goFurry) initPostgres() {
 		PingTimeout:           seconds(dbConfig.PingTimeoutSeconds),
 	}, "gofurry-game-collector")
 	if err != nil {
-		log.Fatal("open PostgreSQL pool: ", err)
+		return fmt.Errorf("open PostgreSQL pool: %w", err)
 	}
 	gf.pool = pool
 	gameService.InitPersistence(pool)
+	return nil
 }
 
-func (gf *goFurry) closePostgres() {
-	if gf.pool != nil {
-		gf.pool.Close()
-		gf.pool = nil
-		gameService.InitPersistence(nil)
-	}
+func (gf *goFurry) Shutdown() error {
+	var shutdownErr error
+	gf.stopOnce.Do(func() {
+		cs.Stop()
+		shutdownErr = errors.Join(shutdownErr, cs.CloseRedis())
+		if gf.pool != nil {
+			gf.pool.Close()
+			gf.pool = nil
+			gameService.InitPersistence(nil)
+		}
+		shutdownErr = errors.Join(shutdownErr, log.Sync())
+	})
+	return shutdownErr
 }
 
 func seconds(value int) time.Duration {
@@ -181,7 +112,7 @@ func durationOrDefault(totalSeconds int, fallback time.Duration) time.Duration {
 	return time.Duration(totalSeconds) * time.Second
 }
 
-func initLogger() {
+func initLogger() error {
 	cfg := env.GetServerConfig()
 	logCfg := &log.Config{
 		Level:      cfg.Log.LogLevel,
@@ -207,7 +138,7 @@ func initLogger() {
 		logCfg.MaxBackups = cfg.Log.LogRotationCount
 	}
 	if err := log.InitLogger(logCfg); err != nil {
-		log.Error("日志初始化失败: ", err)
-		os.Exit(1)
+		return fmt.Errorf("initialize logger: %w", err)
 	}
+	return nil
 }
