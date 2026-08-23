@@ -1,0 +1,214 @@
+{
+  "format_version": 1,
+  "extensions": null,
+  "sequences": [
+    {
+      "name": "gfa_admin_account_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfa_admin_account",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfa_admin_audit_log_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfa_admin_audit_log",
+      "owned_column": "id"
+    }
+  ],
+  "tables": [
+    {
+      "name": "gfa_admin_account",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "nextval('gfa_admin_account_id_seq'::regclass)"
+        },
+        {
+          "name": "password_hash",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "session_version",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "password_updated_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfa_admin_account_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfa_admin_account_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfa_admin_account_password_hash_not_null",
+          "definition": "NOT NULL password_hash"
+        },
+        {
+          "name": "gfa_admin_account_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfa_admin_account_session_version_not_null",
+          "definition": "NOT NULL session_version"
+        },
+        {
+          "name": "gfa_admin_account_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": null,
+      "triggers": null
+    },
+    {
+      "name": "gfa_admin_audit_log",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "nextval('gfa_admin_audit_log_id_seq'::regclass)"
+        },
+        {
+          "name": "action",
+          "data_type": "character varying(64)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "resource",
+          "data_type": "character varying(128)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "target_id",
+          "data_type": "character varying(128)",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "operator",
+          "data_type": "character varying(64)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "session_version",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "request_id",
+          "data_type": "character varying(128)",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ip_address",
+          "data_type": "character varying(64)",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "user_agent",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "before_data",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "after_data",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfa_admin_audit_log_action_not_null",
+          "definition": "NOT NULL action"
+        },
+        {
+          "name": "gfa_admin_audit_log_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfa_admin_audit_log_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfa_admin_audit_log_operator_not_null",
+          "definition": "NOT NULL operator"
+        },
+        {
+          "name": "gfa_admin_audit_log_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfa_admin_audit_log_resource_not_null",
+          "definition": "NOT NULL resource"
+        },
+        {
+          "name": "gfa_admin_audit_log_session_version_not_null",
+          "definition": "NOT NULL session_version"
+        }
+      ],
+      "indexes": null,
+      "triggers": null
+    }
+  ],
+  "functions": null
+}
