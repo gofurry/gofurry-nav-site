@@ -1,4 +1,4 @@
-name: checks
+name: engineering-foundation
 
 on:
   push:
@@ -8,9 +8,13 @@ on:
       - 'gofurry-game-collector/**'
       - 'gofurry-nav-backend/**'
       - 'gofurry-nav-collector/**'
-      - 'gofurry-nav-frontend/**'
-      - 'ops/gofurry-ops-agent/**'
-      - 'ops/gofurry-ops-center/**'
+      - 'gofurry-nav-web/**'
+      - 'db/**'
+      - 'tools/**'
+      - 'sqlc.yaml'
+      - 'AGENTS.md'
+      - '.agents/**'
+      - 'contracts/**'
       - '.github/workflows/checks.yml'
   pull_request:
     paths:
@@ -19,335 +23,298 @@ on:
       - 'gofurry-game-collector/**'
       - 'gofurry-nav-backend/**'
       - 'gofurry-nav-collector/**'
-      - 'gofurry-nav-frontend/**'
-      - 'ops/gofurry-ops-agent/**'
-      - 'ops/gofurry-ops-center/**'
+      - 'gofurry-nav-web/**'
+      - 'db/**'
+      - 'tools/**'
+      - 'sqlc.yaml'
+      - 'AGENTS.md'
+      - '.agents/**'
+      - 'contracts/**'
       - '.github/workflows/checks.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: engineering-foundation-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      gofurry_admin: ${{ steps.detect.outputs.gofurry_admin }}
-      gofurry_game_backend: ${{ steps.detect.outputs.gofurry_game_backend }}
-      gofurry_game_collector: ${{ steps.detect.outputs.gofurry_game_collector }}
-      gofurry_nav_backend: ${{ steps.detect.outputs.gofurry_nav_backend }}
-      gofurry_nav_collector: ${{ steps.detect.outputs.gofurry_nav_collector }}
-      gofurry_nav_frontend: ${{ steps.detect.outputs.gofurry_nav_frontend }}
-      gofurry_ops_agent: ${{ steps.detect.outputs.gofurry_ops_agent }}
-      gofurry_ops_center: ${{ steps.detect.outputs.gofurry_ops_center }}
+      modules: ${{ steps.detect.outputs.modules }}
+      has_modules: ${{ steps.detect.outputs.has_modules }}
+      policy: ${{ steps.detect.outputs.policy }}
+      foundation: ${{ steps.detect.outputs.foundation }}
+      nav_web: ${{ steps.detect.outputs.nav_web }}
+      game_integration: ${{ steps.detect.outputs.game_integration }}
+      nav_integration: ${{ steps.detect.outputs.nav_integration }}
+      admin_integration: ${{ steps.detect.outputs.admin_integration }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Detect changed services
+      - name: Build dependency matrix
         id: detect
         shell: bash
         run: |
           set -euo pipefail
-
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             base_sha="${{ github.event.pull_request.base.sha }}"
           else
             base_sha="${{ github.event.before }}"
           fi
-
           if [[ -z "${base_sha}" || "${base_sha}" == "0000000000000000000000000000000000000000" ]]; then
             changed_files="$(git ls-files)"
           else
             changed_files="$(git diff --name-only "${base_sha}" "${{ github.sha }}")"
           fi
-
           printf '%s\n' "${changed_files}"
 
-          set_output() {
-            local name="$1"
-            local pattern="$2"
-            if printf '%s\n' "${changed_files}" | grep -Eq "${pattern}"; then
-              echo "${name}=true" >> "${GITHUB_OUTPUT}"
+          affected() {
+            printf '%s\n' "${changed_files}" | grep -Eq "$1"
+          }
+          set_bool() {
+            if affected "$2"; then
+              echo "$1=true" >> "${GITHUB_OUTPUT}"
             else
-              echo "${name}=false" >> "${GITHUB_OUTPUT}"
+              echo "$1=false" >> "${GITHUB_OUTPUT}"
             fi
           }
 
-          set_output "gofurry_admin" '^gofurry-admin/'
-          set_output "gofurry_game_backend" '^gofurry-game-backend/'
-          set_output "gofurry_game_collector" '^gofurry-game-collector/'
-          set_output "gofurry_nav_backend" '^gofurry-nav-backend/'
-          set_output "gofurry_nav_collector" '^gofurry-nav-collector/'
-          set_output "gofurry_nav_frontend" '^gofurry-nav-frontend/'
-          set_output "gofurry_ops_agent" '^ops/gofurry-ops-agent/'
-          set_output "gofurry_ops_center" '^ops/gofurry-ops-center/'
-
-  gofurry-admin:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.gofurry_admin == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: gofurry-admin/go.mod
-          cache-dependency-path: gofurry-admin/go.sum
-
-      - name: Check gofmt
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd gofurry-admin
-          files="$(gofmt -l .)"
-          if [[ -n "${files}" ]]; then
-            echo "${files}"
-            exit 1
+          shared='^(sqlc\.yaml$|tools/|\.github/workflows/checks\.yml$)'
+          modules='[]'
+          add_module() {
+            modules="$(printf '%s' "${modules}" | jq -c --arg module "$1" '. + [$module]')"
+          }
+          if affected "^gofurry-game-collector/|^db/game/|${shared}"; then add_module gofurry-game-collector; fi
+          if affected "^gofurry-game-backend/|^db/game/|${shared}"; then add_module gofurry-game-backend; fi
+          if affected "^gofurry-nav-collector/|^db/nav/|${shared}"; then add_module gofurry-nav-collector; fi
+          if affected "^gofurry-nav-backend/|^db/nav/|${shared}"; then add_module gofurry-nav-backend; fi
+          if affected "^gofurry-admin/|^db/(admin|game|nav)/|${shared}"; then add_module gofurry-admin; fi
+          echo "modules=${modules}" >> "${GITHUB_OUTPUT}"
+          if [[ "${modules}" == "[]" ]]; then
+            echo "has_modules=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "has_modules=true" >> "${GITHUB_OUTPUT}"
           fi
 
-      - name: Build admin web
+          set_bool policy '^(gofurry-(admin|game-backend|game-collector|nav-backend|nav-collector)/|db/|tools/|sqlc\.yaml$|AGENTS\.md$|\.agents/|contracts/|\.github/workflows/checks\.yml$)'
+          set_bool foundation '^(db/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$|gofurry-(admin|game-backend|game-collector|nav-backend|nav-collector)/internal/db/.*/queries/)'
+          set_bool nav_web '^(gofurry-nav-web/|\.github/workflows/checks\.yml$)'
+          set_bool game_integration '^(gofurry-(admin|game-backend|game-collector)/|db/game/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
+          set_bool nav_integration '^(gofurry-(admin|nav-backend|nav-collector)/|db/nav/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
+          set_bool admin_integration '^(gofurry-admin/|db/(admin|game|nav)/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
+
+  production-go:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_modules == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJSON(needs.detect-changes.outputs.modules) }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+      - name: Check gofmt
+        working-directory: ${{ matrix.module }}
         shell: bash
         run: |
-          set -euo pipefail
-          cd gofurry-admin/web
+          files="$(gofmt -l .)"
+          if [[ -n "${files}" ]]; then
+            printf '%s\n' "${files}"
+            exit 1
+          fi
+      - name: Go vet
+        working-directory: ${{ matrix.module }}
+        run: go vet ./...
+      - name: Go test
+        working-directory: ${{ matrix.module }}
+        run: go test ./...
+      - uses: actions/setup-node@v6
+        if: matrix.module == 'gofurry-admin'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: gofurry-admin/web/package-lock.json
+      - name: Build Admin web
+        if: matrix.module == 'gofurry-admin'
+        working-directory: gofurry-admin/web
+        run: |
           npm ci
           npm run build
 
-      - name: Go vet
-        working-directory: gofurry-admin
-        run: go vet ./...
-
-      - name: Go test
-        working-directory: gofurry-admin
-        run: go test ./...
-
-  gofurry-ops-agent:
+  nav-web:
     needs: detect-changes
-    if: needs.detect-changes.outputs.gofurry_ops_agent == 'true'
+    if: needs.detect-changes.outputs.nav_web == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          go-version-file: ops/gofurry-ops-agent/go.mod
-          cache-dependency-path: ops/gofurry-ops-agent/go.sum
+          node-version: 24
+          cache: npm
+          cache-dependency-path: gofurry-nav-web/package-lock.json
+      - working-directory: gofurry-nav-web
+        run: npm ci
+      - name: Typecheck
+        working-directory: gofurry-nav-web
+        run: npm run typecheck
+      - name: Build
+        working-directory: gofurry-nav-web
+        run: npm run build
 
-      - name: Check gofmt
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd ops/gofurry-ops-agent
-          files="$(gofmt -l .)"
-          if [[ -n "${files}" ]]; then
-            echo "${files}"
-            exit 1
-          fi
-
-      - name: Go vet
-        working-directory: ops/gofurry-ops-agent
-        run: go vet ./...
-
-      - name: Go test
-        working-directory: ops/gofurry-ops-agent
-        run: go test ./...
-
-      - name: Go build
-        working-directory: ops/gofurry-ops-agent
-        run: go build -trimpath -ldflags="-s -w" -o /tmp/gofurry-ops-agent ./cmd/agent
-
-  gofurry-ops-center:
+  repository-policy:
     needs: detect-changes
-    if: needs.detect-changes.outputs.gofurry_ops_center == 'true'
+    if: needs.detect-changes.outputs.policy == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
-          go-version-file: ops/gofurry-ops-center/go.mod
-          cache-dependency-path: ops/gofurry-ops-center/go.sum
+          go-version-file: tools/go.mod
+          cache-dependency-path: tools/go.sum
+      - working-directory: tools
+        run: go run ./check-production-policy
 
-      - name: Check gofmt
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd ops/gofurry-ops-center
-          files="$(gofmt -l .)"
-          if [[ -n "${files}" ]]; then
-            echo "${files}"
-            exit 1
-          fi
-
-      - name: Build center console
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd ops/gofurry-ops-center/web
-          npm ci
-          npm run build
-
-      - name: Go vet
-        working-directory: ops/gofurry-ops-center
-        run: go vet ./...
-
-      - name: Go test
-        working-directory: ops/gofurry-ops-center
-        run: go test ./...
-
-      - name: Go build
-        working-directory: ops/gofurry-ops-center
-        run: go build -trimpath -ldflags="-s -w" -o /tmp/gofurry-ops-center ./cmd/center
-
-  gofurry-nav-backend:
+  foundation:
     needs: detect-changes
-    if: needs.detect-changes.outputs.gofurry_nav_backend == 'true'
+    if: needs.detect-changes.outputs.foundation == 'true'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: foundation
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GOFURRY_TEST_POSTGRES_ADMIN_URL: postgres://postgres:foundation@127.0.0.1:5432/postgres?sslmode=disable
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
-          go-version-file: gofurry-nav-backend/go.mod
-          cache-dependency-path: gofurry-nav-backend/go.sum
-
-      - name: Check gofmt
-        shell: bash
+          go-version-file: tools/go.mod
+          cache-dependency-path: tools/go.sum
+      - name: sqlc vet and generate
+        working-directory: tools
         run: |
-          set -euo pipefail
-          cd gofurry-nav-backend
-          files="$(gofmt -l .)"
-          if [[ -n "${files}" ]]; then
-            echo "${files}"
-            exit 1
-          fi
+          go tool sqlc vet -f ../sqlc.yaml
+          go tool sqlc generate -f ../sqlc.yaml
+          git diff --exit-code -- +            ../gofurry-admin/internal/db +            ../gofurry-game-backend/internal/db +            ../gofurry-game-collector/internal/db +            ../gofurry-nav-backend/internal/db +            ../gofurry-nav-collector/internal/db
+          go run ./check-sqlc
+      - name: Goose fresh, adoption, drift and cleanup checks
+        working-directory: tools
+        run: go test ./db-baseline -run TestPostgresFreshAndBaselineAdoption -count=1 -v
 
-      - name: Go vet
-        working-directory: gofurry-nav-backend
-        run: go vet ./...
-
-      - name: Go test
-        working-directory: gofurry-nav-backend
-        run: go test ./...
-
-  gofurry-nav-collector:
+  postgres-integration:
     needs: detect-changes
-    if: needs.detect-changes.outputs.gofurry_nav_collector == 'true'
+    if: needs.detect-changes.outputs.game_integration == 'true' || needs.detect-changes.outputs.nav_integration == 'true' || needs.detect-changes.outputs.admin_integration == 'true'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: foundation
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
-          go-version-file: gofurry-nav-collector/go.mod
-          cache-dependency-path: gofurry-nav-collector/go.sum
-
-      - name: Check gofmt
+          go-version-file: tools/go.mod
+          cache-dependency-path: tools/go.sum
+      - name: Write isolated CI database configuration
         shell: bash
         run: |
-          set -euo pipefail
-          cd gofurry-nav-collector
-          files="$(gofmt -l .)"
-          if [[ -n "${files}" ]]; then
-            echo "${files}"
-            exit 1
-          fi
-
-      - name: Go vet
-        working-directory: gofurry-nav-collector
-        run: go vet ./...
-
-      - name: Go test
-        working-directory: gofurry-nav-collector
-        run: go test ./...
-
-  gofurry-game-backend:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.gofurry_game_backend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: gofurry-game-backend/go.mod
-          cache-dependency-path: gofurry-game-backend/go.sum
-
-      - name: Check gofmt
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd gofurry-game-backend
-          files="$(gofmt -l .)"
-          if [[ -n "${files}" ]]; then
-            echo "${files}"
-            exit 1
-          fi
-
-      - name: Go vet
-        working-directory: gofurry-game-backend
-        run: go vet ./...
-
-      - name: Go test
-        working-directory: gofurry-game-backend
-        run: go test ./...
-
-  gofurry-game-collector:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.gofurry_game_collector == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: gofurry-game-collector/go.mod
-          cache-dependency-path: gofurry-game-collector/go.sum
-
-      - name: Check gofmt
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd gofurry-game-collector
-          files="$(gofmt -l .)"
-          if [[ -n "${files}" ]]; then
-            echo "${files}"
-            exit 1
-          fi
-
-      - name: Go vet
+          cat > /tmp/gofurry-integration.yaml <<'YAML'
+          data_base:
+            db_name: postgres
+            db_username: postgres
+            db_password: foundation
+            db_host: 127.0.0.1
+            db_port: "5432"
+          database:
+            enabled: true
+            db_type: postgres
+            db_name: postgres
+            db_username: postgres
+            db_password: foundation
+            db_host: 127.0.0.1
+            db_port: "5432"
+            postgres:
+              db_name: postgres
+              db_username: postgres
+              db_password: foundation
+              db_host: 127.0.0.1
+              db_port: "5432"
+          business_databases:
+            nav:
+              enabled: true
+              db_type: postgres
+              postgres:
+                db_name: postgres
+                db_username: postgres
+                db_password: foundation
+                db_host: 127.0.0.1
+                db_port: "5432"
+            game:
+              enabled: true
+              db_type: postgres
+              postgres:
+                db_name: postgres
+                db_username: postgres
+                db_password: foundation
+                db_host: 127.0.0.1
+                db_port: "5432"
+          redis:
+            enabled: false
+          YAML
+      - name: Game Collector integration
+        if: needs.detect-changes.outputs.game_integration == 'true'
         working-directory: gofurry-game-collector
-        run: go vet ./...
-
-      - name: Go test
-        working-directory: gofurry-game-collector
-        run: go test ./...
-
-  gofurry-nav-frontend:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.gofurry_nav_frontend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Build frontend
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd gofurry-nav-frontend
-          npm ci
-          npm run build
+        env:
+          GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
+        run: go test ./collector/game/v2/repository -run TestPostgresRepositorySemantics -count=1 -v
+      - name: Game Backend integration
+        if: needs.detect-changes.outputs.game_integration == 'true'
+        working-directory: gofurry-game-backend
+        env:
+          GOFURRY_GAME_BACKEND_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
+        run: go test ./apps/game/v2/dao -run TestPostgresReadModelSemantics -count=1 -v
+      - name: Nav Collector integration
+        if: needs.detect-changes.outputs.nav_integration == 'true'
+        working-directory: gofurry-nav-collector
+        env:
+          GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
+        run: go test ./collector/observation -run TestPostgresCollectorPersistenceSemantics -count=1 -v
+      - name: Nav Backend integration
+        if: needs.detect-changes.outputs.nav_integration == 'true'
+        working-directory: gofurry-nav-backend
+        env:
+          GOFURRY_NAV_BACKEND_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
+        run: go test ./apps/nav/navPage/dao -run TestPostgresNavBackendPersistenceSemantics -count=1 -v
+      - name: Admin three-database integration
+        if: needs.detect-changes.outputs.admin_integration == 'true'
+        working-directory: gofurry-admin
+        env:
+          GOFURRY_ADMIN_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
+        run: go test ./internal/bootstrap -run TestAdminThreeDatabasePersistence -count=1 -v
