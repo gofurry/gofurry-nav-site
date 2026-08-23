@@ -1,0 +1,75 @@
+# GoFurry independent uptime service example.
+# Copy to an ignored local file or /etc/gf-uptime/server.yaml.
+
+server:
+  mode: "prod"
+  ip_address: "127.0.0.1"
+  port: "9980"
+  network: "tcp"
+  app_version: "1.0.0"
+
+log:
+  log_level: "info"
+  log_mode: "prod"
+  log_path: "./logs/gf-uptime.log"
+  log_max_size: 100
+  log_max_backups: 10
+  log_max_age: 7
+
+storage:
+  path: "./data/uptime.db"
+
+uptime:
+  sample_interval_seconds: 30
+  retention_days: 90
+  days_to_show: 30
+  timezone: "Asia/Shanghai"
+
+  ui:
+    path: "/uptime"
+    title: "GoFurry 服务状态"
+    description: "GoFurry 服务可用性"
+    footer: "GoFurry"
+    green_threshold: 0.999
+    yellow_threshold: 0.99
+
+  endpoints:
+    - id: "nav-web"
+      name: "GoFurry Web"
+      url: "https://go-furry.com/healthz"
+      method: "GET"
+      expected_status_codes: [200]
+      interval_seconds: 30
+      timeout_seconds: 5
+
+    - id: "nav-backend"
+      name: "Nav Backend"
+      url: "http://127.0.0.1:9999/readyz"
+      method: "GET"
+      expected_status_codes: [200]
+      interval_seconds: 30
+      timeout_seconds: 5
+
+    - id: "game-backend"
+      name: "Game Backend"
+      url: "http://127.0.0.1:9998/readyz"
+      method: "GET"
+      expected_status_codes: [200]
+      interval_seconds: 30
+      timeout_seconds: 5
+
+    - id: "nav-collector"
+      name: "Nav Collector"
+      url: "http://127.0.0.1:19091/readyz"
+      method: "GET"
+      expected_status_codes: [200]
+      interval_seconds: 30
+      timeout_seconds: 5
+
+    - id: "game-collector"
+      name: "Game Collector"
+      url: "http://127.0.0.1:19092/readyz"
+      method: "GET"
+      expected_status_codes: [200]
+      interval_seconds: 30
+      timeout_seconds: 5
