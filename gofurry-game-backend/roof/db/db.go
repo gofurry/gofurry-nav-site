@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
+	log "github.com/gofurry/gofurry-game-backend/common/log"
 	"github.com/gofurry/gofurry-game-backend/roof/env"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

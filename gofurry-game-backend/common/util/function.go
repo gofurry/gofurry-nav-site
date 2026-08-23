@@ -16,7 +16,6 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"log"
 	mr "math/rand"
 	"net"
 	"os"
@@ -24,13 +23,14 @@ import (
 	"strings"
 	"time"
 
+	"errors"
 	"github.com/bwmarrin/snowflake"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/common"
+	log "github.com/gofurry/gofurry-game-backend/common/log"
 	cm "github.com/gofurry/gofurry-game-backend/common/models"
 	"github.com/gofurry/gofurry-game-backend/roof/env"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/pkg/errors"
 )
 
 var clusterId, _ = snowflake.NewNode(int64(env.GetServerConfig().ClusterId))
@@ -395,7 +395,7 @@ func CryptoRandInt(n int) int {
 	var b [8]byte
 	_, err := rand.Read(b[:])
 	if err != nil {
-		log.Println("crypto/rand 失败:", err)
+		log.Error("crypto/rand 失败:", err)
 		return 0
 	}
 	return int(binary.BigEndian.Uint64(b[:]) % uint64(n))

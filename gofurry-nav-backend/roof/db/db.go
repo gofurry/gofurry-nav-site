@@ -3,13 +3,13 @@ package db
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net"
 	"net/url"
 	"os"
 	"sync"
 	"time"
 
+	log "github.com/gofurry/gofurry-nav-backend/common/log"
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -41,13 +41,13 @@ func (db *orm) loadDBConfig() {
 	pgsql := env.GetServerConfig().DataBase
 	db.engine, err = gorm.Open(postgres.Open(buildPostgresDSN(pgsql)))
 	if err != nil {
-		slog.Error("open database error: " + err.Error())
+		log.ErrorKV("open database error: " + err.Error())
 		os.Exit(1)
 	}
 
 	sqlDB, err := db.engine.DB()
 	if err != nil {
-		slog.Error("get database pool error: " + err.Error())
+		log.ErrorKV("get database pool error: " + err.Error())
 		os.Exit(1)
 	}
 	sqlDB.SetMaxIdleConns(intOrDefault(pgsql.MaxIdleConns, 100))                 // 设置空闲连接池中连接的最大数量
@@ -57,7 +57,7 @@ func (db *orm) loadDBConfig() {
 
 	err = sqlDB.Ping()
 	if err != nil {
-		slog.Error(err.Error())
+		log.ErrorKV(err.Error())
 		os.Exit(1)
 	}
 }
@@ -88,17 +88,17 @@ func (db *orm) Close() {
 
 	sqlDB, err := db.engine.DB()
 	if err != nil {
-		slog.Error("failed to get SQL DB instance", "error", err)
+		log.ErrorKV("failed to get SQL DB instance", "error", err)
 		return
 	}
 
 	if err = sqlDB.Close(); err != nil {
-		slog.Error("failed to close database connection pool", "error", err)
+		log.ErrorKV("failed to close database connection pool", "error", err)
 		return
 	}
 
 	db.engine = nil
-	slog.Info("数据库连接池已关闭")
+	log.InfoKV("数据库连接池已关闭")
 }
 
 func intOrDefault(value int, def int) int {

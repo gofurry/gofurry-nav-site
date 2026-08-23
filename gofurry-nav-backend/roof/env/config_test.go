@@ -1,6 +1,28 @@
 package env
 
-import "testing"
+import (
+	"os"
+	"testing"
+
+	"gopkg.in/yaml.v3"
+)
+
+func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
+	data, err := os.ReadFile("../../conf/server.example.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg serverConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("yaml.Unmarshal() error = %v", err)
+	}
+	if cfg.Server.Mode != "debug" || cfg.Server.Port != "9999" || cfg.DataBase.DBName != "gfn" {
+		t.Fatalf("example config fields changed semantics: %+v", cfg)
+	}
+	if cfg.Middleware.Cors.AllowOrigins == "" || !cfg.Middleware.Limiter.IsOn {
+		t.Fatalf("middleware config fields were not decoded: %+v", cfg.Middleware)
+	}
+}
 
 func TestNavV2RouteSwitchesKeepSummaryEnabledCompatibility(t *testing.T) {
 	cfg := NavV2Config{SummaryEnabled: true}

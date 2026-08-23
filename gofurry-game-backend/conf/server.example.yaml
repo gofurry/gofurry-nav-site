@@ -54,12 +54,6 @@ thread:
   event_publish_thread: 10 # 事件发布 worker 数。
 
 middleware:
-  swagger:
-    is_on: false # 生产建议关闭。
-    file_path: "./docs/swagger.json"
-    base_path: "/"
-    path: "/swagger"
-    title: "GoFurry Game API"
   cors:
     allow_origins: "https://go-furry.com,http://localhost:3000" # 逗号分隔的前端来源。
   limiter:

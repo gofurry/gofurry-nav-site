@@ -7,13 +7,11 @@ package routers
  */
 
 import (
-	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/gofiber/contrib/v3/swagger"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
@@ -60,10 +58,6 @@ func (router *router) Init() *fiber.App {
 	// 路由分组
 	registerRoutes(app)
 
-	app.Get("/api/swagger/doc.json", func(c fiber.Ctx) error {
-		return c.SendFile("./docs/swagger.json")
-	})
-
 	return app
 }
 
@@ -96,8 +90,8 @@ func registerMiddlewares(app *fiber.App) {
 	// 请求限流
 	if cfg.Middleware.Limiter.IsOn {
 		app.Use(limiter.New(limiter.Config{
-			Max:        cfg.Middleware.Limiter.MaxRequests,              // 单位时间最大请求数
-			Expiration: cfg.Middleware.Limiter.Expiration * time.Second, // 时间窗口
+			Max:        cfg.Middleware.Limiter.MaxRequests,                             // 单位时间最大请求数
+			Expiration: time.Duration(cfg.Middleware.Limiter.Expiration) * time.Second, // 时间窗口
 			KeyGenerator: func(c fiber.Ctx) string {
 				return c.IP() // 按 IP 限流
 			},
@@ -116,21 +110,6 @@ func registerMiddlewares(app *fiber.App) {
 	if cfg.Server.Mode == "debug" {
 		// pprof 性能分析
 		app.Use(pprof.New())
-
-		// Swagger 文档
-		if cfg.Middleware.Swagger.IsOn {
-			// 校验 Swagger 文件是否存在
-			if _, err := os.Stat(cfg.Middleware.Swagger.FilePath); os.IsNotExist(err) {
-				panic("Swagger 文件不存在: " + cfg.Middleware.Swagger.FilePath)
-			}
-			swaggerCfg := swagger.Config{
-				BasePath: cfg.Middleware.Swagger.BasePath,
-				FilePath: cfg.Middleware.Swagger.FilePath,
-				Path:     cfg.Middleware.Swagger.Path,
-				Title:    cfg.Middleware.Swagger.Title,
-			}
-			app.Use(swagger.New(swaggerCfg))
-		}
 	}
 
 }

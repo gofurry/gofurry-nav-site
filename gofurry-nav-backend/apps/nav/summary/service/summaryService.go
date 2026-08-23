@@ -2,13 +2,13 @@ package service
 
 import (
 	"fmt"
-	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/summary/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
+	log "github.com/gofurry/gofurry-nav-backend/common/log"
 	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
 )
@@ -153,7 +153,7 @@ func emptyStatusCounts() map[string]int {
 }
 
 func logSummaryRedisJSONDecodeFailure(key string, siteID int64, target string, err error) {
-	slog.Warn(
+	log.WarnKV(
 		"collector v2 summary redis json parse failed",
 		"redis_key", key,
 		"site_id", siteID,

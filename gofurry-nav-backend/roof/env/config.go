@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gofurry/gofurry-nav-backend/common"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -81,28 +81,19 @@ func (cfg WafConfig) ResolveDirectivesFiles() []string {
 }
 
 type MiddlewareConfig struct {
-	Swagger SwaggerConfig `yaml:"swagger"`
 	Cors    CorsConfig    `yaml:"cors"`
 	Limiter LimiterConfig `yaml:"limiter"`
 }
 
 // LimiterConfig 限流器配置
 type LimiterConfig struct {
-	IsOn        bool          `yaml:"is_on"`
-	MaxRequests int           `yaml:"max_requests"`
-	Expiration  time.Duration `yaml:"expiration"`
+	IsOn        bool `yaml:"is_on"`
+	MaxRequests int  `yaml:"max_requests"`
+	Expiration  int  `yaml:"expiration"`
 }
 
 type CorsConfig struct {
 	AllowOrigins string `yaml:"allow_origins"`
-}
-
-type SwaggerConfig struct {
-	IsOn     bool   `yaml:"is_on"`
-	FilePath string `yaml:"file_path"`
-	BasePath string `yaml:"base_path"`
-	Path     string `yaml:"path"`
-	Title    string `yaml:"title"`
 }
 
 type ThreadConfig struct {

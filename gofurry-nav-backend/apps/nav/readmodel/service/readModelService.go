@@ -3,13 +3,13 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"strings"
 	"sync"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/dao"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/models"
 	"github.com/gofurry/gofurry-nav-backend/common"
+	log "github.com/gofurry/gofurry-nav-backend/common/log"
 	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 )
 
@@ -374,7 +374,7 @@ func missingChanges(siteID int64, target string) models.TargetChangesResponse {
 }
 
 func logRedisJSONDecodeFailure(key string, siteID int64, target string, protocol string, err error) {
-	slog.Warn(
+	log.WarnKV(
 		"collector v2 redis json parse failed",
 		"redis_key", key,
 		"site_id", siteID,

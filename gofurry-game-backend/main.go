@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -18,10 +17,6 @@ import (
 	"github.com/gofurry/gofurry-game-backend/routers"
 	"github.com/kardianos/service"
 )
-
-//@title gofurry-Game-Backend
-//@version v1.0.0
-//@description gofurry-Game-Backend
 
 var (
 	errChan = make(chan error)
@@ -57,7 +52,7 @@ WantedBy=multi-user.target`,
 	prg := &goFurry{}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
-		slog.Error(err.Error())
+		gfLog.ErrorKV(err.Error())
 	}
 
 	if len(os.Args) > 1 {
@@ -65,9 +60,9 @@ WantedBy=multi-user.target`,
 		case "install":
 			err = s.Install()
 			if err != nil {
-				slog.Error("service install failed", "error", err)
+				gfLog.ErrorKV("service install failed", "error", err)
 			} else {
-				slog.Info(`┏┓  ┏┓
+				gfLog.InfoKV(`┏┓  ┏┓
 ┃┓┏┓┣ ┓┏┏┓┏┓┓┏
 ┗┛┗┛┻ ┗┻┛ ┛ ┗┫
              ┛
@@ -78,9 +73,9 @@ WantedBy=multi-user.target`,
 		case "uninstall":
 			err = s.Uninstall()
 			if err != nil {
-				slog.Error("service uninstall failed", "error", err)
+				gfLog.ErrorKV("service uninstall failed", "error", err)
 			} else {
-				slog.Info(`┏┓  ┏┓
+				gfLog.InfoKV(`┏┓  ┏┓
 ┃┓┏┓┣ ┓┏┏┓┏┓┓┏
 ┗┛┗┛┻ ┗┻┛ ┛ ┗┫
              ┛
@@ -89,7 +84,7 @@ WantedBy=multi-user.target`,
 			}
 			return
 		case "version":
-			slog.Info(`┏┓  ┏┓
+			gfLog.InfoKV(`┏┓  ┏┓
 ┃┓┏┓┣ ┓┏┏┓┏┓┓┏
 ┗┛┗┛┻ ┗┻┛ ┛ ┗┫
              ┛
@@ -97,7 +92,7 @@ gf-game V1.0.0
 				`)
 			return
 		case "help":
-			slog.Info(common.COMMON_PROJECT_HELP)
+			gfLog.InfoKV(common.COMMON_PROJECT_HELP)
 			return
 		}
 		return
@@ -112,7 +107,7 @@ gf-game V1.0.0
 	// 启动系统
 	err = s.Run()
 	if err != nil {
-		slog.Error(err.Error())
+		gfLog.ErrorKV(err.Error())
 	}
 }
 
@@ -144,7 +139,7 @@ func InitOnStart() {
 	// 初始化自定义日志
 	err := gfLog.InitLogger(logCfg)
 	if err != nil {
-		slog.Error(err.Error())
+		gfLog.ErrorKV(err.Error())
 		os.Exit(1)
 	}
 
@@ -194,7 +189,7 @@ func (gf *goFurry) run() {
 		}
 	}()
 	if err := <-errChan; err != nil {
-		slog.Error(err.Error())
+		gfLog.ErrorKV(err.Error())
 	}
 }
 

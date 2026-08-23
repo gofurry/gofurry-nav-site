@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"log/slog"
 	"os"
 	"runtime/debug"
 	"sync"
@@ -19,10 +18,6 @@ import (
 	"github.com/gofurry/gofurry-nav-backend/routers"
 	"github.com/kardianos/service"
 )
-
-//@title gofurry-Nav-Backend
-//@version v1.0.0
-//@description gofurry-Nav-Backend
 
 func main() {
 	dir, _ := os.Getwd()
@@ -54,7 +49,7 @@ WantedBy=multi-user.target`,
 	prg := &goFurry{}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
-		slog.Error(err.Error())
+		gfLog.ErrorKV(err.Error())
 	}
 
 	if len(os.Args) > 1 {
@@ -62,9 +57,9 @@ WantedBy=multi-user.target`,
 		case "install":
 			err = s.Install()
 			if err != nil {
-				slog.Error("service install failed", "error", err)
+				gfLog.ErrorKV("service install failed", "error", err)
 			} else {
-				slog.Info(`┏┓  ┏┓
+				gfLog.InfoKV(`┏┓  ┏┓
 ┃┓┏┓┣ ┓┏┏┓┏┓┓┏
 ┗┛┗┛┻ ┗┻┛ ┛ ┗┫
              ┛
@@ -75,9 +70,9 @@ WantedBy=multi-user.target`,
 		case "uninstall":
 			err = s.Uninstall()
 			if err != nil {
-				slog.Error("service uninstall failed", "error", err)
+				gfLog.ErrorKV("service uninstall failed", "error", err)
 			} else {
-				slog.Info(`┏┓  ┏┓
+				gfLog.InfoKV(`┏┓  ┏┓
 ┃┓┏┓┣ ┓┏┏┓┏┓┓┏
 ┗┛┗┛┻ ┗┻┛ ┛ ┗┫
              ┛
@@ -86,7 +81,7 @@ WantedBy=multi-user.target`,
 			}
 			return
 		case "version":
-			slog.Info(`┏┓  ┏┓
+			gfLog.InfoKV(`┏┓  ┏┓
 ┃┓┏┓┣ ┓┏┏┓┏┓┓┏
 ┗┛┗┛┻ ┗┻┛ ┛ ┗┫
              ┛
@@ -94,7 +89,7 @@ gf-nav V1.0.0
 				`)
 			return
 		case "help":
-			slog.Info(common.COMMON_PROJECT_HELP)
+			gfLog.InfoKV(common.COMMON_PROJECT_HELP)
 			return
 		}
 		return
@@ -109,7 +104,7 @@ gf-nav V1.0.0
 	// 启动系统
 	err = s.Run()
 	if err != nil {
-		slog.Error(err.Error())
+		gfLog.ErrorKV(err.Error())
 	}
 }
 
@@ -144,7 +139,7 @@ func InitOnStart() {
 	// 初始化自定义日志
 	err := gfLog.InitLogger(logCfg)
 	if err != nil {
-		slog.Error(err.Error())
+		gfLog.ErrorKV(err.Error())
 		os.Exit(1)
 	}
 
@@ -178,7 +173,7 @@ func (gf *goFurry) run(app *fiber.App) {
 		EnablePrefork:     env.GetServerConfig().Server.EnablePrefork,
 		EnablePrintRoutes: env.GetServerConfig().Server.Mode == "debug",
 	}); err != nil {
-		slog.Error("web server stopped", "error", err)
+		gfLog.ErrorKV("web server stopped", "error", err)
 	}
 }
 

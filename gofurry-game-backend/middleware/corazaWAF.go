@@ -1,13 +1,13 @@
 package middleware
 
 import (
-	"log/slog"
 	"net/http"
 	"sync"
 
 	fibercoraza "github.com/gofiber/contrib/v3/coraza"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/common"
+	log "github.com/gofurry/gofurry-game-backend/common/log"
 	"github.com/gofurry/gofurry-game-backend/roof/env"
 )
 
@@ -25,7 +25,7 @@ func InitGlobalWAF(cfg env.WafConfig) {
 		corazaCfg := buildCorazaConfig(cfg)
 		if _, err := fibercoraza.NewEngine(corazaCfg); err != nil {
 			globalWAFErr = err
-			slog.Error("[CorazaWAF] init failed", "error", err, "directives_files", corazaCfg.DirectivesFile)
+			log.ErrorKV("[CorazaWAF] init failed", "error", err, "directives_files", corazaCfg.DirectivesFile)
 			return
 		}
 
@@ -36,12 +36,12 @@ func InitGlobalWAF(cfg env.WafConfig) {
 func CorazaMiddleware() fiber.Handler {
 	return func(c fiber.Ctx) error {
 		if globalWAFErr != nil {
-			slog.Error("[CorazaWAF] unavailable", "error", globalWAFErr)
+			log.ErrorKV("[CorazaWAF] unavailable", "error", globalWAFErr)
 			return common.NewResponse(c).ErrorWithCode("WAF initialization failed", http.StatusInternalServerError)
 		}
 
 		if globalWAF == nil {
-			slog.Error("[CorazaWAF] handler not initialized", "waf_enabled", globalWAFConf.WafSwitch)
+			log.ErrorKV("[CorazaWAF] handler not initialized", "waf_enabled", globalWAFConf.WafSwitch)
 			return common.NewResponse(c).ErrorWithCode("WAF is not initialized", http.StatusInternalServerError)
 		}
 
@@ -62,7 +62,7 @@ func buildCorazaConfig(cfg env.WafConfig) fibercoraza.Config {
 		return common.NewResponse(c).ErrorWithCode("您的请求存在安全风险，已被系统拦截。", status)
 	}
 	corazaCfg.ErrorHandler = func(c fiber.Ctx, failure fibercoraza.MiddlewareError) error {
-		slog.Error("[CorazaWAF] request processing failed", "error", failure.Err, "code", failure.Code)
+		log.ErrorKV("[CorazaWAF] request processing failed", "error", failure.Err, "code", failure.Code)
 		status := failure.StatusCode
 		if status < http.StatusBadRequest {
 			status = http.StatusInternalServerError

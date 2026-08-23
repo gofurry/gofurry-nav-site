@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log/slog"
 	"regexp"
 	"strconv"
 	"sync"
@@ -86,25 +85,25 @@ func newEmailService() (*EmailService, error) {
 func (es *EmailService) SendCode(email string) (string, common.GFError) {
 	// 参数校验
 	if email == "" {
-		slog.Warn("[EmailService] 发送验证码失败", "reason", "邮箱为空")
+		log.WarnKV("[EmailService] 发送验证码失败", "reason", "邮箱为空")
 		return "", common.NewServiceError("邮箱地址不能为空")
 	}
 	if !es.IsEmailValid(email) {
-		slog.Warn("[EmailService] 发送验证码失败", "reason", "邮箱格式错误", "email", email)
+		log.WarnKV("[EmailService] 发送验证码失败", "reason", "邮箱格式错误", "email", email)
 		return "", common.NewServiceError("邮箱格式不正确")
 	}
 
 	// 生成验证码
 	code := util.GenerateRandomCode(common.EMAIL_CODE_LENGTH)
 	if code == "" {
-		slog.Error("[EmailService] 生成验证码失败", "email", email)
+		log.ErrorKV("[EmailService] 生成验证码失败", "email", email)
 		return "", common.NewServiceError("验证码生成失败, 请重试")
 	}
 
 	// 构建邮件内容
 	msg, err := es.buildCodeEmailContent(code)
 	if err != nil {
-		slog.Error("[EmailService] 构建邮件内容失败", "email", email, "error", err)
+		log.ErrorKV("[EmailService] 构建邮件内容失败", "email", email, "error", err)
 		return "", common.NewServiceError("邮件内容构建失败")
 	}
 
@@ -120,17 +119,17 @@ func (es *EmailService) SendCode(email string) (string, common.GFError) {
 	select {
 	case <-done:
 	case <-time.After(12 * time.Second):
-		slog.Warn("[EmailService] 邮件发送超时", "email", email)
+		log.WarnKV("[EmailService] 邮件发送超时", "email", email)
 		return "", common.NewServiceError("邮件发送超时, 请稍后查看邮箱")
 	}
 
 	// 处理发送结果
 	if sendErr != nil {
-		slog.Error("[EmailService] 邮件发送失败", "email", email, "error", sendErr)
+		log.ErrorKV("[EmailService] 邮件发送失败", "email", email, "error", sendErr)
 		return "", common.NewServiceError("邮件发送失败, 请稍后重试")
 	}
 
-	slog.Info("[EmailService] 验证码发送成功", "email", email, "code_length", len(code))
+	log.InfoKV("[EmailService] 验证码发送成功", "email", email, "code_length", len(code))
 	return code, nil
 }
 
@@ -138,15 +137,15 @@ func (es *EmailService) SendCode(email string) (string, common.GFError) {
 func (es *EmailService) SendEmail(to string, cc []string, bcc []string, subject, htmlBody string) common.GFError {
 	// 参数校验
 	if to == "" {
-		slog.Warn("[EmailService] 发送邮件失败", "reason", "收件人邮箱为空")
+		log.WarnKV("[EmailService] 发送邮件失败", "reason", "收件人邮箱为空")
 		return common.NewServiceError("收件人邮箱不能为空")
 	}
 	if !es.IsEmailValid(to) {
-		slog.Warn("[EmailService] 发送邮件失败", "reason", "收件人邮箱格式错误", "email", to)
+		log.WarnKV("[EmailService] 发送邮件失败", "reason", "收件人邮箱格式错误", "email", to)
 		return common.NewServiceError("收件人邮箱格式不正确")
 	}
 	if subject == "" {
-		slog.Warn("[EmailService] 发送邮件失败", "reason", "邮件标题为空", "to", to)
+		log.WarnKV("[EmailService] 发送邮件失败", "reason", "邮件标题为空", "to", to)
 		return common.NewServiceError("邮件标题不能为空")
 	}
 
@@ -179,16 +178,16 @@ func (es *EmailService) SendEmail(to string, cc []string, bcc []string, subject,
 	select {
 	case <-done:
 	case <-time.After(12 * time.Second):
-		slog.Warn("[EmailService] 邮件发送超时", "to", to, "subject", subject)
+		log.WarnKV("[EmailService] 邮件发送超时", "to", to, "subject", subject)
 		return common.NewServiceError("邮件发送超时, 请稍后查看邮箱")
 	}
 
 	if sendErr != nil {
-		slog.Error("[EmailService] 邮件发送失败", "to", to, "subject", subject, "error", sendErr)
+		log.ErrorKV("[EmailService] 邮件发送失败", "to", to, "subject", subject, "error", sendErr)
 		return common.NewServiceError("邮件发送失败, 请稍后重试")
 	}
 
-	slog.Info("[EmailService] 邮件发送成功", "to", to, "subject", subject)
+	log.InfoKV("[EmailService] 邮件发送成功", "to", to, "subject", subject)
 	return nil
 }
 
@@ -196,11 +195,11 @@ func (es *EmailService) SendEmail(to string, cc []string, bcc []string, subject,
 func (es *EmailService) SendEmailWithAttachment(to, subject, htmlBody string, attachments map[string]string) common.GFError {
 	// 参数校验
 	if to == "" || !es.IsEmailValid(to) {
-		slog.Warn("[EmailService] 带附件邮件发送失败", "reason", "收件人邮箱错误", "email", to)
+		log.WarnKV("[EmailService] 带附件邮件发送失败", "reason", "收件人邮箱错误", "email", to)
 		return common.NewServiceError("收件人邮箱格式不正确")
 	}
 	if len(attachments) == 0 {
-		slog.Warn("[EmailService] 带附件邮件发送失败", "reason", "附件列表为空", "to", to)
+		log.WarnKV("[EmailService] 带附件邮件发送失败", "reason", "附件列表为空", "to", to)
 		return common.NewServiceError("附件列表不能为空")
 	}
 
@@ -242,16 +241,16 @@ func (es *EmailService) SendEmailWithAttachment(to, subject, htmlBody string, at
 	select {
 	case <-done:
 	case <-time.After(15 * time.Second):
-		slog.Warn("[EmailService] 带附件邮件发送超时", "to", to)
+		log.WarnKV("[EmailService] 带附件邮件发送超时", "to", to)
 		return common.NewServiceError("带附件邮件发送超时")
 	}
 
 	if sendErr != nil {
-		slog.Error("[EmailService] 带附件邮件发送失败", "to", to, "error", sendErr)
+		log.ErrorKV("[EmailService] 带附件邮件发送失败", "to", to, "error", sendErr)
 		return common.NewServiceError("带附件邮件发送失败")
 	}
 
-	slog.Info("[EmailService] 带附件邮件发送成功", "to", to, "attachment_count", len(attachments))
+	log.InfoKV("[EmailService] 带附件邮件发送成功", "to", to, "attachment_count", len(attachments))
 	return nil
 }
 
@@ -448,7 +447,7 @@ func (es *EmailService) SendAccountNoticeEmail(to, operation, ip, timeStr string
 // SendBatchEmail 批量发送邮件（异步）
 func (es *EmailService) SendBatchEmail(toList []string, subject, htmlBody string) common.GFError {
 	if len(toList) == 0 {
-		slog.Warn("[EmailService] 批量邮件发送失败", "reason", "收件人列表为空")
+		log.WarnKV("[EmailService] 批量邮件发送失败", "reason", "收件人列表为空")
 		return common.NewServiceError("收件人列表不能为空")
 	}
 
@@ -475,7 +474,7 @@ func (es *EmailService) SendBatchEmail(toList []string, subject, htmlBody string
 		}
 
 		// 记录批量发送结果
-		slog.Info("[EmailService] 批量邮件发送完成",
+		log.InfoKV("[EmailService] 批量邮件发送完成",
 			"total", len(toList),
 			"success", successCount,
 			"fail", failCount,

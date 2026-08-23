@@ -21,8 +21,8 @@ import (
 
 // 全局日志实例
 var (
-	GlobalLogger *zap.Logger
-	SugarLogger  *zap.SugaredLogger
+	GlobalLogger = zap.NewNop()
+	SugarLogger  = GlobalLogger.Sugar()
 )
 
 // Config 日志配置结构体
@@ -244,6 +244,11 @@ func Warn(args ...interface{}) {
 func Error(args ...interface{}) {
 	SugarLogger.Error(args...)
 }
+
+func DebugKV(msg string, keysAndValues ...interface{}) { SugarLogger.Debugw(msg, keysAndValues...) }
+func InfoKV(msg string, keysAndValues ...interface{})  { SugarLogger.Infow(msg, keysAndValues...) }
+func WarnKV(msg string, keysAndValues ...interface{})  { SugarLogger.Warnw(msg, keysAndValues...) }
+func ErrorKV(msg string, keysAndValues ...interface{}) { SugarLogger.Errorw(msg, keysAndValues...) }
 
 func Fatal(args ...interface{}) {
 	SugarLogger.Fatal(args...)

@@ -21,13 +21,13 @@ import (
 	"strings"
 	"time"
 
+	"errors"
 	"github.com/bwmarrin/snowflake"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-nav-backend/common"
 	cm "github.com/gofurry/gofurry-nav-backend/common/models"
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/pkg/errors"
 )
 
 var clusterId, _ = snowflake.NewNode(int64(env.GetServerConfig().ClusterId))
