@@ -6,6 +6,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v2.4.0 - 2026-08-23
+
 ### Added
 
 - Add audited Goose baselines and versioned migrations for the `gfg`, `gfn`, and `gfa` PostgreSQL databases, with fresh-database, adoption, drift, upgrade, cleanup, and integration verification.
@@ -62,7 +64,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 These entries summarize notable project history before repository-level changelog tracking was introduced.
 
-## 2026-08-06 - Centralized health and uptime
+## v2.3.1 - 2026-08-06
 
 ### Added
 
@@ -79,7 +81,7 @@ These entries summarize notable project history before repository-level changelo
 
 - Resolve Game ingestion, listing, frontend, and related Admin regressions before the August production merge.
 
-## 2026-07-11 - Workshop, observability, and UI consolidation
+## v2.3.0 - 2026-07-11
 
 ### Added
 
@@ -104,7 +106,7 @@ These entries summarize notable project history before repository-level changelo
 
 - Continue frontend navigation, theme, image, and locale refinements around the stabilized monitor integration.
 
-## 2026-06-20 - Nav/Game V2 consolidation
+## v2.2.0 - 2026-06-20
 
 ### Added
 
@@ -139,7 +141,7 @@ These entries summarize notable project history before repository-level changelo
 - Reduce expensive frontend rendering work, lazy-load heavier dependencies, and split initial home rendering.
 - Continue the visual migration toward the newer grid/Less-based frontend style system.
 
-## 2026-06-06 - Nav V2 public experience
+## v2.0.0 - 2026-06-06
 
 ### Added
 
