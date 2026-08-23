@@ -45,6 +45,21 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 	if err := adminDB.PingContext(ctx); err != nil {
 		t.Fatalf("connect to development PostgreSQL: %v", err)
 	}
+	var serverVersion string
+	var serverVersionNumber int
+	if err := adminDB.QueryRowContext(ctx, `SHOW server_version`).Scan(&serverVersion); err != nil {
+		t.Fatal(err)
+	}
+	if err := adminDB.QueryRowContext(ctx, `SHOW server_version_num`).Scan(&serverVersionNumber); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("PostgreSQL server version: %s", serverVersion)
+	if required := strings.TrimSpace(os.Getenv("GOFURRY_REQUIRE_POSTGRES_MAJOR")); required != "" {
+		actualMajor := serverVersionNumber / 10000
+		if fmt.Sprint(actualMajor) != required {
+			t.Fatalf("PostgreSQL major version=%d, want %s", actualMajor, required)
+		}
+	}
 	if err := goose.SetDialect("postgres"); err != nil {
 		t.Fatal(err)
 	}
