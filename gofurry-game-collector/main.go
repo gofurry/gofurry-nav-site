@@ -1,18 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	gameService "github.com/gofurry/gofurry-game-collector/collector/game/service"
 	"github.com/gofurry/gofurry-game-collector/common"
 	"github.com/gofurry/gofurry-game-collector/common/log"
 	cs "github.com/gofurry/gofurry-game-collector/common/service"
+	"github.com/gofurry/gofurry-game-collector/internal/infra/postgres"
 	"github.com/gofurry/gofurry-game-collector/roof/env"
 	"github.com/gofurry/gofurry-game-collector/schedule"
+	"github.com/jackc/pgx/v5/pgxpool"
 	kservice "github.com/kardianos/service"
 )
 
@@ -59,21 +63,21 @@ func main() {
 		}
 
 		if os.Args[1] == "collect" || os.Args[1] == "full" {
-			runCollectorOnce(func() {
+			prg.runCollectorOnce(func() {
 				gameService.GetGameService().Collect()
 			})
 			return
 		}
 
 		if os.Args[1] == "players" {
-			runCollectorOnce(func() {
+			prg.runCollectorOnce(func() {
 				gameService.GetGameService().CollectCurrentPlayers()
 			})
 			return
 		}
 
 		if os.Args[1] == "all" {
-			runCollectorOnce(func() {
+			prg.runCollectorOnce(func() {
 				gameService.GetGameService().CollectCurrentPlayers()
 				gameService.GetGameService().Collect()
 			})
@@ -85,7 +89,7 @@ func main() {
 	debug.SetGCPercent(1000)
 	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
 
-	InitOnStart()
+	prg.InitOnStart()
 
 	// 启动系统
 	err = s.Run()
@@ -94,24 +98,28 @@ func main() {
 	}
 }
 
-func runCollectorOnce(run func()) {
+func (gf *goFurry) runCollectorOnce(run func()) {
 	debug.SetGCPercent(1000)
 	debug.SetMemoryLimit(int64(env.GetServerConfig().Server.MemoryLimit << 30))
-	InitOnStart()
+	gf.InitOnStart()
+	defer gf.closePostgres()
 	defer func() { _ = log.Sync() }()
 	gameService.InitLimiter()
 	run()
 }
 
-func InitOnStart() {
+func (gf *goFurry) InitOnStart() {
 	initLogger()
 	// 初始化 redis
 	cs.InitRedisOnStart()
 	// 初始化时间调度
 	cs.InitTimeWheelOnStart()
+	gf.initPostgres()
 }
 
-type goFurry struct{}
+type goFurry struct {
+	pool *pgxpool.Pool
+}
 
 func (gf *goFurry) Start(s kservice.Service) error {
 	go gf.run()
@@ -128,7 +136,49 @@ func (gf *goFurry) run() {
 }
 
 func (gf *goFurry) Stop(s kservice.Service) error {
+	gf.closePostgres()
 	return log.Sync()
+}
+
+func (gf *goFurry) initPostgres() {
+	dbConfig := env.GetServerConfig().DataBase
+	ctx, cancel := context.WithTimeout(context.Background(), durationOrDefault(dbConfig.ConnectTimeoutSeconds+dbConfig.PingTimeoutSeconds, 8*time.Second))
+	defer cancel()
+	pool, err := postgres.Open(ctx, postgres.Config{
+		ConnectionString:      dbConfig.ConnectionString(),
+		MaxConns:              dbConfig.MaxConns,
+		MinConns:              dbConfig.MinConns,
+		MaxConnLifetime:       seconds(dbConfig.MaxConnLifetimeSeconds),
+		MaxConnLifetimeJitter: seconds(dbConfig.MaxConnLifetimeJitterSeconds),
+		MaxConnIdleTime:       seconds(dbConfig.MaxConnIdleTimeSeconds),
+		HealthCheckPeriod:     seconds(dbConfig.HealthCheckPeriodSeconds),
+		ConnectTimeout:        seconds(dbConfig.ConnectTimeoutSeconds),
+		PingTimeout:           seconds(dbConfig.PingTimeoutSeconds),
+	}, "gofurry-game-collector")
+	if err != nil {
+		log.Fatal("open PostgreSQL pool: ", err)
+	}
+	gf.pool = pool
+	gameService.InitPersistence(pool)
+}
+
+func (gf *goFurry) closePostgres() {
+	if gf.pool != nil {
+		gf.pool.Close()
+		gf.pool = nil
+		gameService.InitPersistence(nil)
+	}
+}
+
+func seconds(value int) time.Duration {
+	return time.Duration(value) * time.Second
+}
+
+func durationOrDefault(totalSeconds int, fallback time.Duration) time.Duration {
+	if totalSeconds <= 0 {
+		return fallback
+	}
+	return time.Duration(totalSeconds) * time.Second
 }
 
 func initLogger() {

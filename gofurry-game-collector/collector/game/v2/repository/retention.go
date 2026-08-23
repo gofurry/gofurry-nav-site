@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	database "github.com/gofurry/gofurry-game-collector/roof/db"
-	"gorm.io/gorm"
+	gamesqlc "github.com/gofurry/gofurry-game-collector/internal/db/game/sqlc"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -24,22 +24,17 @@ type RetentionConfig struct {
 
 // RetentionRepository prunes v2 append-only tables.
 type RetentionRepository struct {
-	db *gorm.DB
+	pool *pgxpool.Pool
 }
 
-// NewRetentionRepository creates a repository backed by the global PostgreSQL handle.
-func NewRetentionRepository() *RetentionRepository {
-	return NewRetentionRepositoryWithDB(database.Orm.DB())
-}
-
-// NewRetentionRepositoryWithDB creates a repository with an explicit PostgreSQL handle.
-func NewRetentionRepositoryWithDB(db *gorm.DB) *RetentionRepository {
-	return &RetentionRepository{db: db}
+// NewRetentionRepository creates a repository with an explicit PostgreSQL pool.
+func NewRetentionRepository(pool *pgxpool.Pool) *RetentionRepository {
+	return &RetentionRepository{pool: pool}
 }
 
 // Prune deletes records older than the configured retention windows.
 func (r *RetentionRepository) Prune(ctx context.Context, cfg RetentionConfig) error {
-	if r == nil || r.db == nil {
+	if r == nil || r.pool == nil {
 		return fmt.Errorf("retention repository database is nil")
 	}
 	if ctx == nil {
@@ -47,23 +42,26 @@ func (r *RetentionRepository) Prune(ctx context.Context, cfg RetentionConfig) er
 	}
 	cfg = normalizeRetentionConfig(cfg)
 
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := pruneOlderThan(ctx, tx, "gfg_game_v2_collect_task_results", "started_at", cfg.CollectTaskResultsDays); err != nil {
-			return err
-		}
-		if err := pruneOlderThan(ctx, tx, "gfg_game_v2_collect_runs", "started_at", cfg.CollectRunsDays); err != nil {
-			return err
-		}
-		if err := pruneOlderThan(ctx, tx, "gfg_game_v2_player_counts", "collected_at", cfg.PlayerCountsDays); err != nil {
-			return err
-		}
-		return nil
-	})
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	queries := gamesqlc.New(tx)
+	if _, err := queries.DeleteTaskResultsOlderThan(ctx, timestamptz(retentionCutoff(cfg.CollectTaskResultsDays))); err != nil {
+		return err
+	}
+	if _, err := queries.DeleteCollectRunsOlderThan(ctx, timestamptz(retentionCutoff(cfg.CollectRunsDays))); err != nil {
+		return err
+	}
+	if _, err := queries.DeletePlayerCountsOlderThan(ctx, timestamptz(retentionCutoff(cfg.PlayerCountsDays))); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
-func pruneOlderThan(ctx context.Context, tx *gorm.DB, table string, column string, days int) error {
-	cutoff := time.Now().Add(-time.Duration(days) * 24 * time.Hour)
-	return tx.WithContext(ctx).Exec(fmt.Sprintf("DELETE FROM %s WHERE %s < ?", table, column), cutoff).Error
+func retentionCutoff(days int) time.Time {
+	return time.Now().Add(-time.Duration(days) * 24 * time.Hour)
 }
 
 func normalizeRetentionConfig(cfg RetentionConfig) RetentionConfig {

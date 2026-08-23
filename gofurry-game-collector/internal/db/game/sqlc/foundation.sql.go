@@ -7,7 +7,72 @@ package gamesqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const deleteAssetsByGame = `-- name: DeleteAssetsByGame :exec
+DELETE FROM gfg_game_v2_assets WHERE game_id = $1
+`
+
+func (q *Queries) DeleteAssetsByGame(ctx context.Context, gameID int64) error {
+	_, err := q.db.Exec(ctx, deleteAssetsByGame, gameID)
+	return err
+}
+
+const deleteCollectRunsOlderThan = `-- name: DeleteCollectRunsOlderThan :execrows
+DELETE FROM gfg_game_v2_collect_runs WHERE started_at < $1
+`
+
+func (q *Queries) DeleteCollectRunsOlderThan(ctx context.Context, cutoff pgtype.Timestamptz) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteCollectRunsOlderThan, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteMediaByGame = `-- name: DeleteMediaByGame :exec
+DELETE FROM gfg_game_v2_media WHERE game_id = $1
+`
+
+func (q *Queries) DeleteMediaByGame(ctx context.Context, gameID int64) error {
+	_, err := q.db.Exec(ctx, deleteMediaByGame, gameID)
+	return err
+}
+
+const deletePlayerCountsOlderThan = `-- name: DeletePlayerCountsOlderThan :execrows
+DELETE FROM gfg_game_v2_player_counts WHERE collected_at < $1
+`
+
+func (q *Queries) DeletePlayerCountsOlderThan(ctx context.Context, cutoff pgtype.Timestamptz) (int64, error) {
+	result, err := q.db.Exec(ctx, deletePlayerCountsOlderThan, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteTaskResultsByRun = `-- name: DeleteTaskResultsByRun :exec
+DELETE FROM gfg_game_v2_collect_task_results WHERE run_id = $1
+`
+
+func (q *Queries) DeleteTaskResultsByRun(ctx context.Context, runID string) error {
+	_, err := q.db.Exec(ctx, deleteTaskResultsByRun, runID)
+	return err
+}
+
+const deleteTaskResultsOlderThan = `-- name: DeleteTaskResultsOlderThan :execrows
+DELETE FROM gfg_game_v2_collect_task_results WHERE started_at < $1
+`
+
+func (q *Queries) DeleteTaskResultsOlderThan(ctx context.Context, cutoff pgtype.Timestamptz) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteTaskResultsOlderThan, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
 
 const foundationPing = `-- name: FoundationPing :one
 SELECT 1::bigint AS value
@@ -18,4 +83,662 @@ func (q *Queries) FoundationPing(ctx context.Context) (int64, error) {
 	var value int64
 	err := row.Scan(&value)
 	return value, err
+}
+
+const insertDetailSnapshot = `-- name: InsertDetailSnapshot :exec
+INSERT INTO gfg_game_v2_detail_snapshots (
+    game_id, appid, lang, region, source, payload_hash, raw_payload, collected_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7::jsonb,
+    $8
+)
+`
+
+type InsertDetailSnapshotParams struct {
+	GameID      int64              `json:"game_id"`
+	Appid       int64              `json:"appid"`
+	Lang        string             `json:"lang"`
+	Region      string             `json:"region"`
+	Source      string             `json:"source"`
+	PayloadHash string             `json:"payload_hash"`
+	RawPayload  []byte             `json:"raw_payload"`
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
+}
+
+func (q *Queries) InsertDetailSnapshot(ctx context.Context, arg InsertDetailSnapshotParams) error {
+	_, err := q.db.Exec(ctx, insertDetailSnapshot,
+		arg.GameID,
+		arg.Appid,
+		arg.Lang,
+		arg.Region,
+		arg.Source,
+		arg.PayloadHash,
+		arg.RawPayload,
+		arg.CollectedAt,
+	)
+	return err
+}
+
+const insertPlayerCount = `-- name: InsertPlayerCount :exec
+INSERT INTO gfg_game_v2_player_counts (
+    run_id, game_id, appid, count, status, upstream_status_code,
+    error_kind, error_message, collected_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7,
+    $8, $9
+)
+`
+
+type InsertPlayerCountParams struct {
+	RunID              string             `json:"run_id"`
+	GameID             int64              `json:"game_id"`
+	Appid              int64              `json:"appid"`
+	Count              int64              `json:"count"`
+	Status             string             `json:"status"`
+	UpstreamStatusCode int32              `json:"upstream_status_code"`
+	ErrorKind          string             `json:"error_kind"`
+	ErrorMessage       string             `json:"error_message"`
+	CollectedAt        pgtype.Timestamptz `json:"collected_at"`
+}
+
+func (q *Queries) InsertPlayerCount(ctx context.Context, arg InsertPlayerCountParams) error {
+	_, err := q.db.Exec(ctx, insertPlayerCount,
+		arg.RunID,
+		arg.GameID,
+		arg.Appid,
+		arg.Count,
+		arg.Status,
+		arg.UpstreamStatusCode,
+		arg.ErrorKind,
+		arg.ErrorMessage,
+		arg.CollectedAt,
+	)
+	return err
+}
+
+const insertTaskResult = `-- name: InsertTaskResult :exec
+INSERT INTO gfg_game_v2_collect_task_results (
+    run_id, task_type, status, game_id, appid, upstream_status_code,
+    traffic_bucket, retry_count, duration_millis, error_kind, error_message,
+    started_at, ended_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7,
+    $8, $9, $10,
+    $11, $12, $13
+)
+`
+
+type InsertTaskResultParams struct {
+	RunID              string             `json:"run_id"`
+	TaskType           string             `json:"task_type"`
+	Status             string             `json:"status"`
+	GameID             int64              `json:"game_id"`
+	Appid              int64              `json:"appid"`
+	UpstreamStatusCode int32              `json:"upstream_status_code"`
+	TrafficBucket      string             `json:"traffic_bucket"`
+	RetryCount         int32              `json:"retry_count"`
+	DurationMillis     int64              `json:"duration_millis"`
+	ErrorKind          string             `json:"error_kind"`
+	ErrorMessage       string             `json:"error_message"`
+	StartedAt          pgtype.Timestamptz `json:"started_at"`
+	EndedAt            pgtype.Timestamptz `json:"ended_at"`
+}
+
+func (q *Queries) InsertTaskResult(ctx context.Context, arg InsertTaskResultParams) error {
+	_, err := q.db.Exec(ctx, insertTaskResult,
+		arg.RunID,
+		arg.TaskType,
+		arg.Status,
+		arg.GameID,
+		arg.Appid,
+		arg.UpstreamStatusCode,
+		arg.TrafficBucket,
+		arg.RetryCount,
+		arg.DurationMillis,
+		arg.ErrorKind,
+		arg.ErrorMessage,
+		arg.StartedAt,
+		arg.EndedAt,
+	)
+	return err
+}
+
+const listGameTargets = `-- name: ListGameTargets :many
+SELECT id, appid
+FROM gfg_game
+`
+
+type ListGameTargetsRow struct {
+	ID    int64 `json:"id"`
+	Appid int64 `json:"appid"`
+}
+
+func (q *Queries) ListGameTargets(ctx context.Context) ([]ListGameTargetsRow, error) {
+	rows, err := q.db.Query(ctx, listGameTargets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGameTargetsRow{}
+	for rows.Next() {
+		var i ListGameTargetsRow
+		if err := rows.Scan(&i.ID, &i.Appid); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const pruneDetailSnapshots = `-- name: PruneDetailSnapshots :one
+SELECT gfg_game_v2_prune_detail_snapshots(
+    $1, $2, $3, 5
+)::integer
+`
+
+type PruneDetailSnapshotsParams struct {
+	Appid  int64  `json:"appid"`
+	Lang   string `json:"lang"`
+	Region string `json:"region"`
+}
+
+func (q *Queries) PruneDetailSnapshots(ctx context.Context, arg PruneDetailSnapshotsParams) (int32, error) {
+	row := q.db.QueryRow(ctx, pruneDetailSnapshots, arg.Appid, arg.Lang, arg.Region)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const upsertAsset = `-- name: UpsertAsset :exec
+INSERT INTO gfg_game_v2_assets (
+    game_id, appid, asset_type, asset_family, source, lang, media_key, title,
+    url, thumbnail_url, format, exists, status_code, content_type, content_length,
+    extra, sort_order, checked_at, collected_at, updated_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7, $8,
+    $9, $10, $11, $12,
+    $13, $14, $15,
+    $16::jsonb, $17, $18,
+    $19, now()
+)
+ON CONFLICT (game_id, asset_type, lang, media_key) DO UPDATE SET
+    appid = EXCLUDED.appid,
+    asset_family = EXCLUDED.asset_family,
+    source = EXCLUDED.source,
+    title = EXCLUDED.title,
+    url = EXCLUDED.url,
+    thumbnail_url = EXCLUDED.thumbnail_url,
+    format = EXCLUDED.format,
+    exists = EXCLUDED.exists,
+    status_code = EXCLUDED.status_code,
+    content_type = EXCLUDED.content_type,
+    content_length = EXCLUDED.content_length,
+    extra = EXCLUDED.extra,
+    sort_order = EXCLUDED.sort_order,
+    checked_at = EXCLUDED.checked_at,
+    collected_at = EXCLUDED.collected_at,
+    updated_at = now()
+`
+
+type UpsertAssetParams struct {
+	GameID        int64              `json:"game_id"`
+	Appid         int64              `json:"appid"`
+	AssetType     string             `json:"asset_type"`
+	AssetFamily   string             `json:"asset_family"`
+	Source        string             `json:"source"`
+	Lang          string             `json:"lang"`
+	MediaKey      string             `json:"media_key"`
+	Title         string             `json:"title"`
+	Url           string             `json:"url"`
+	ThumbnailUrl  string             `json:"thumbnail_url"`
+	Format        string             `json:"format"`
+	Exists        *bool              `json:"exists"`
+	StatusCode    int32              `json:"status_code"`
+	ContentType   string             `json:"content_type"`
+	ContentLength int64              `json:"content_length"`
+	Extra         []byte             `json:"extra"`
+	SortOrder     int32              `json:"sort_order"`
+	CheckedAt     pgtype.Timestamptz `json:"checked_at"`
+	CollectedAt   pgtype.Timestamptz `json:"collected_at"`
+}
+
+func (q *Queries) UpsertAsset(ctx context.Context, arg UpsertAssetParams) error {
+	_, err := q.db.Exec(ctx, upsertAsset,
+		arg.GameID,
+		arg.Appid,
+		arg.AssetType,
+		arg.AssetFamily,
+		arg.Source,
+		arg.Lang,
+		arg.MediaKey,
+		arg.Title,
+		arg.Url,
+		arg.ThumbnailUrl,
+		arg.Format,
+		arg.Exists,
+		arg.StatusCode,
+		arg.ContentType,
+		arg.ContentLength,
+		arg.Extra,
+		arg.SortOrder,
+		arg.CheckedAt,
+		arg.CollectedAt,
+	)
+	return err
+}
+
+const upsertCollectRun = `-- name: UpsertCollectRun :exec
+INSERT INTO gfg_game_v2_collect_runs (
+    id, task_type, status, total_count, success_count, failed_count,
+    skipped_count, partial_count, task_summary, duration_millis,
+    error_kind, error_message, started_at, ended_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7,
+    $8, $9::jsonb,
+    $10, $11, $12,
+    $13, $14
+)
+ON CONFLICT (id) DO UPDATE SET
+    task_type = EXCLUDED.task_type,
+    status = EXCLUDED.status,
+    total_count = EXCLUDED.total_count,
+    success_count = EXCLUDED.success_count,
+    failed_count = EXCLUDED.failed_count,
+    skipped_count = EXCLUDED.skipped_count,
+    partial_count = EXCLUDED.partial_count,
+    task_summary = EXCLUDED.task_summary,
+    duration_millis = EXCLUDED.duration_millis,
+    error_kind = EXCLUDED.error_kind,
+    error_message = EXCLUDED.error_message,
+    started_at = EXCLUDED.started_at,
+    ended_at = EXCLUDED.ended_at
+`
+
+type UpsertCollectRunParams struct {
+	ID             string             `json:"id"`
+	TaskType       string             `json:"task_type"`
+	Status         string             `json:"status"`
+	TotalCount     int32              `json:"total_count"`
+	SuccessCount   int32              `json:"success_count"`
+	FailedCount    int32              `json:"failed_count"`
+	SkippedCount   int32              `json:"skipped_count"`
+	PartialCount   int32              `json:"partial_count"`
+	TaskSummary    []byte             `json:"task_summary"`
+	DurationMillis int64              `json:"duration_millis"`
+	ErrorKind      string             `json:"error_kind"`
+	ErrorMessage   string             `json:"error_message"`
+	StartedAt      pgtype.Timestamptz `json:"started_at"`
+	EndedAt        pgtype.Timestamptz `json:"ended_at"`
+}
+
+func (q *Queries) UpsertCollectRun(ctx context.Context, arg UpsertCollectRunParams) error {
+	_, err := q.db.Exec(ctx, upsertCollectRun,
+		arg.ID,
+		arg.TaskType,
+		arg.Status,
+		arg.TotalCount,
+		arg.SuccessCount,
+		arg.FailedCount,
+		arg.SkippedCount,
+		arg.PartialCount,
+		arg.TaskSummary,
+		arg.DurationMillis,
+		arg.ErrorKind,
+		arg.ErrorMessage,
+		arg.StartedAt,
+		arg.EndedAt,
+	)
+	return err
+}
+
+const upsertDetails = `-- name: UpsertDetails :exec
+INSERT INTO gfg_game_v2_details (
+    game_id, appid, source, type, name, is_free, website, header_url,
+    developers, publishers, release_coming_soon, release_date_text,
+    platforms, supported_languages, support_info, content_descriptors, ratings,
+    collected_at, updated_at
+) VALUES (
+    $1, $2, 'steam', $3, $4,
+    $5, $6, $7,
+    $8::jsonb, $9::jsonb,
+    $10, $11,
+    $12::jsonb, $13,
+    $14::jsonb, $15::jsonb,
+    $16::jsonb, $17, now()
+)
+ON CONFLICT (game_id) DO UPDATE SET
+    appid = EXCLUDED.appid,
+    source = EXCLUDED.source,
+    type = EXCLUDED.type,
+    name = EXCLUDED.name,
+    is_free = EXCLUDED.is_free,
+    website = EXCLUDED.website,
+    header_url = EXCLUDED.header_url,
+    developers = EXCLUDED.developers,
+    publishers = EXCLUDED.publishers,
+    release_coming_soon = EXCLUDED.release_coming_soon,
+    release_date_text = EXCLUDED.release_date_text,
+    platforms = EXCLUDED.platforms,
+    supported_languages = EXCLUDED.supported_languages,
+    support_info = EXCLUDED.support_info,
+    content_descriptors = EXCLUDED.content_descriptors,
+    ratings = EXCLUDED.ratings,
+    collected_at = EXCLUDED.collected_at,
+    updated_at = now()
+`
+
+type UpsertDetailsParams struct {
+	GameID             int64              `json:"game_id"`
+	Appid              int64              `json:"appid"`
+	Type               string             `json:"type"`
+	Name               string             `json:"name"`
+	IsFree             bool               `json:"is_free"`
+	Website            string             `json:"website"`
+	HeaderUrl          string             `json:"header_url"`
+	Developers         []byte             `json:"developers"`
+	Publishers         []byte             `json:"publishers"`
+	ReleaseComingSoon  bool               `json:"release_coming_soon"`
+	ReleaseDateText    string             `json:"release_date_text"`
+	Platforms          []byte             `json:"platforms"`
+	SupportedLanguages string             `json:"supported_languages"`
+	SupportInfo        []byte             `json:"support_info"`
+	ContentDescriptors []byte             `json:"content_descriptors"`
+	Ratings            []byte             `json:"ratings"`
+	CollectedAt        pgtype.Timestamptz `json:"collected_at"`
+}
+
+func (q *Queries) UpsertDetails(ctx context.Context, arg UpsertDetailsParams) error {
+	_, err := q.db.Exec(ctx, upsertDetails,
+		arg.GameID,
+		arg.Appid,
+		arg.Type,
+		arg.Name,
+		arg.IsFree,
+		arg.Website,
+		arg.HeaderUrl,
+		arg.Developers,
+		arg.Publishers,
+		arg.ReleaseComingSoon,
+		arg.ReleaseDateText,
+		arg.Platforms,
+		arg.SupportedLanguages,
+		arg.SupportInfo,
+		arg.ContentDescriptors,
+		arg.Ratings,
+		arg.CollectedAt,
+	)
+	return err
+}
+
+const upsertLocalizedDetails = `-- name: UpsertLocalizedDetails :exec
+INSERT INTO gfg_game_v2_localized_details (
+    game_id, appid, lang, name, short_description, detailed_description,
+    about_the_game, collected_at, updated_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6,
+    $7, $8, now()
+)
+ON CONFLICT (game_id, lang) DO UPDATE SET
+    appid = EXCLUDED.appid,
+    name = EXCLUDED.name,
+    short_description = EXCLUDED.short_description,
+    detailed_description = EXCLUDED.detailed_description,
+    about_the_game = EXCLUDED.about_the_game,
+    collected_at = EXCLUDED.collected_at,
+    updated_at = now()
+`
+
+type UpsertLocalizedDetailsParams struct {
+	GameID              int64              `json:"game_id"`
+	Appid               int64              `json:"appid"`
+	Lang                string             `json:"lang"`
+	Name                string             `json:"name"`
+	ShortDescription    string             `json:"short_description"`
+	DetailedDescription string             `json:"detailed_description"`
+	AboutTheGame        string             `json:"about_the_game"`
+	CollectedAt         pgtype.Timestamptz `json:"collected_at"`
+}
+
+func (q *Queries) UpsertLocalizedDetails(ctx context.Context, arg UpsertLocalizedDetailsParams) error {
+	_, err := q.db.Exec(ctx, upsertLocalizedDetails,
+		arg.GameID,
+		arg.Appid,
+		arg.Lang,
+		arg.Name,
+		arg.ShortDescription,
+		arg.DetailedDescription,
+		arg.AboutTheGame,
+		arg.CollectedAt,
+	)
+	return err
+}
+
+const upsertMedia = `-- name: UpsertMedia :exec
+INSERT INTO gfg_game_v2_media (
+    game_id, appid, media_type, media_key, title, url, thumbnail_url, extra,
+    sort_order, collected_at, updated_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7, $8::jsonb,
+    $9, $10, now()
+)
+ON CONFLICT (game_id, media_type, media_key) DO UPDATE SET
+    appid = EXCLUDED.appid,
+    title = EXCLUDED.title,
+    url = EXCLUDED.url,
+    thumbnail_url = EXCLUDED.thumbnail_url,
+    extra = EXCLUDED.extra,
+    sort_order = EXCLUDED.sort_order,
+    collected_at = EXCLUDED.collected_at,
+    updated_at = now()
+`
+
+type UpsertMediaParams struct {
+	GameID       int64              `json:"game_id"`
+	Appid        int64              `json:"appid"`
+	MediaType    string             `json:"media_type"`
+	MediaKey     string             `json:"media_key"`
+	Title        string             `json:"title"`
+	Url          string             `json:"url"`
+	ThumbnailUrl string             `json:"thumbnail_url"`
+	Extra        []byte             `json:"extra"`
+	SortOrder    int32              `json:"sort_order"`
+	CollectedAt  pgtype.Timestamptz `json:"collected_at"`
+}
+
+func (q *Queries) UpsertMedia(ctx context.Context, arg UpsertMediaParams) error {
+	_, err := q.db.Exec(ctx, upsertMedia,
+		arg.GameID,
+		arg.Appid,
+		arg.MediaType,
+		arg.MediaKey,
+		arg.Title,
+		arg.Url,
+		arg.ThumbnailUrl,
+		arg.Extra,
+		arg.SortOrder,
+		arg.CollectedAt,
+	)
+	return err
+}
+
+const upsertNews = `-- name: UpsertNews :exec
+INSERT INTO gfg_game_v2_news (
+    game_id, appid, lang, event_gid, announcement_gid, forum_topic_id,
+    headline, raw_body, html, plain_text, summary, url, tags, vote_up_count,
+    vote_down_count, comment_count, raw_event, published_at, updated_at, collected_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7,
+    $8, $9, $10, $11,
+    $12, $13::jsonb, $14,
+    $15, $16, $17::jsonb,
+    $18, $19, $20
+)
+ON CONFLICT (appid, lang, event_gid, announcement_gid) DO UPDATE SET
+    game_id = EXCLUDED.game_id,
+    forum_topic_id = EXCLUDED.forum_topic_id,
+    headline = EXCLUDED.headline,
+    raw_body = EXCLUDED.raw_body,
+    html = EXCLUDED.html,
+    plain_text = EXCLUDED.plain_text,
+    summary = EXCLUDED.summary,
+    url = EXCLUDED.url,
+    tags = EXCLUDED.tags,
+    vote_up_count = EXCLUDED.vote_up_count,
+    vote_down_count = EXCLUDED.vote_down_count,
+    comment_count = EXCLUDED.comment_count,
+    raw_event = EXCLUDED.raw_event,
+    published_at = EXCLUDED.published_at,
+    updated_at = EXCLUDED.updated_at,
+    collected_at = EXCLUDED.collected_at
+`
+
+type UpsertNewsParams struct {
+	GameID          int64              `json:"game_id"`
+	Appid           int64              `json:"appid"`
+	Lang            string             `json:"lang"`
+	EventGid        string             `json:"event_gid"`
+	AnnouncementGid string             `json:"announcement_gid"`
+	ForumTopicID    string             `json:"forum_topic_id"`
+	Headline        string             `json:"headline"`
+	RawBody         string             `json:"raw_body"`
+	Html            string             `json:"html"`
+	PlainText       string             `json:"plain_text"`
+	Summary         string             `json:"summary"`
+	Url             string             `json:"url"`
+	Tags            []byte             `json:"tags"`
+	VoteUpCount     int32              `json:"vote_up_count"`
+	VoteDownCount   int32              `json:"vote_down_count"`
+	CommentCount    int32              `json:"comment_count"`
+	RawEvent        []byte             `json:"raw_event"`
+	PublishedAt     pgtype.Timestamptz `json:"published_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	CollectedAt     pgtype.Timestamptz `json:"collected_at"`
+}
+
+func (q *Queries) UpsertNews(ctx context.Context, arg UpsertNewsParams) error {
+	_, err := q.db.Exec(ctx, upsertNews,
+		arg.GameID,
+		arg.Appid,
+		arg.Lang,
+		arg.EventGid,
+		arg.AnnouncementGid,
+		arg.ForumTopicID,
+		arg.Headline,
+		arg.RawBody,
+		arg.Html,
+		arg.PlainText,
+		arg.Summary,
+		arg.Url,
+		arg.Tags,
+		arg.VoteUpCount,
+		arg.VoteDownCount,
+		arg.CommentCount,
+		arg.RawEvent,
+		arg.PublishedAt,
+		arg.UpdatedAt,
+		arg.CollectedAt,
+	)
+	return err
+}
+
+const upsertPrice = `-- name: UpsertPrice :exec
+INSERT INTO gfg_game_v2_prices (
+    game_id, appid, region, is_free, currency, initial_amount, final_amount,
+    discount_percent, initial_formatted, final_formatted, collected_at, updated_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7,
+    $8, $9,
+    $10, $11, now()
+)
+ON CONFLICT (game_id, region) DO UPDATE SET
+    appid = EXCLUDED.appid,
+    is_free = EXCLUDED.is_free,
+    currency = EXCLUDED.currency,
+    initial_amount = EXCLUDED.initial_amount,
+    final_amount = EXCLUDED.final_amount,
+    discount_percent = EXCLUDED.discount_percent,
+    initial_formatted = EXCLUDED.initial_formatted,
+    final_formatted = EXCLUDED.final_formatted,
+    collected_at = EXCLUDED.collected_at,
+    updated_at = now()
+`
+
+type UpsertPriceParams struct {
+	GameID           int64              `json:"game_id"`
+	Appid            int64              `json:"appid"`
+	Region           string             `json:"region"`
+	IsFree           bool               `json:"is_free"`
+	Currency         string             `json:"currency"`
+	InitialAmount    int64              `json:"initial_amount"`
+	FinalAmount      int64              `json:"final_amount"`
+	DiscountPercent  int64              `json:"discount_percent"`
+	InitialFormatted string             `json:"initial_formatted"`
+	FinalFormatted   string             `json:"final_formatted"`
+	CollectedAt      pgtype.Timestamptz `json:"collected_at"`
+}
+
+func (q *Queries) UpsertPrice(ctx context.Context, arg UpsertPriceParams) error {
+	_, err := q.db.Exec(ctx, upsertPrice,
+		arg.GameID,
+		arg.Appid,
+		arg.Region,
+		arg.IsFree,
+		arg.Currency,
+		arg.InitialAmount,
+		arg.FinalAmount,
+		arg.DiscountPercent,
+		arg.InitialFormatted,
+		arg.FinalFormatted,
+		arg.CollectedAt,
+	)
+	return err
+}
+
+const upsertRequirements = `-- name: UpsertRequirements :exec
+INSERT INTO gfg_game_v2_requirements (
+    game_id, appid, pc, mac, linux, collected_at, updated_at
+) VALUES (
+    $1, $2, $3::jsonb,
+    $4::jsonb, $5::jsonb, $6, now()
+)
+ON CONFLICT (game_id) DO UPDATE SET
+    appid = EXCLUDED.appid,
+    pc = EXCLUDED.pc,
+    mac = EXCLUDED.mac,
+    linux = EXCLUDED.linux,
+    collected_at = EXCLUDED.collected_at,
+    updated_at = now()
+`
+
+type UpsertRequirementsParams struct {
+	GameID      int64              `json:"game_id"`
+	Appid       int64              `json:"appid"`
+	Pc          []byte             `json:"pc"`
+	Mac         []byte             `json:"mac"`
+	Linux       []byte             `json:"linux"`
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
+}
+
+func (q *Queries) UpsertRequirements(ctx context.Context, arg UpsertRequirementsParams) error {
+	_, err := q.db.Exec(ctx, upsertRequirements,
+		arg.GameID,
+		arg.Appid,
+		arg.Pc,
+		arg.Mac,
+		arg.Linux,
+		arg.CollectedAt,
+	)
+	return err
 }

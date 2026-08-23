@@ -18,6 +18,14 @@ data_base:
   db_password: "CHANGE_ME"
   db_host: "127.0.0.1"
   db_port: "5432"
+  max_conns: 6
+  min_conns: 0
+  max_conn_lifetime_seconds: 1800
+  max_conn_lifetime_jitter_seconds: 300
+  max_conn_idle_time_seconds: 300
+  health_check_period_seconds: 60
+  connect_timeout_seconds: 5
+  ping_timeout_seconds: 3
 
 redis:
   redis_addr: "127.0.0.1:6379"

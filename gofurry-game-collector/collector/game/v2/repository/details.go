@@ -10,70 +10,69 @@ import (
 
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
 	cs "github.com/gofurry/gofurry-game-collector/common/service"
-	database "github.com/gofurry/gofurry-game-collector/roof/db"
-	"gorm.io/gorm"
+	gamesqlc "github.com/gofurry/gofurry-game-collector/internal/db/game/sqlc"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const defaultDetailsCacheTTL = 7 * 24 * time.Hour
 
 // DetailsRepository writes v2 game details into PostgreSQL and Redis.
 type DetailsRepository struct {
-	db       *gorm.DB
+	pool     *pgxpool.Pool
 	cacheTTL time.Duration
 }
 
-// NewDetailsRepository creates a repository backed by the global PostgreSQL handle.
-func NewDetailsRepository() *DetailsRepository {
-	return NewDetailsRepositoryWithDB(database.Orm.DB())
-}
-
-// NewDetailsRepositoryWithDB creates a repository with an explicit PostgreSQL handle.
-func NewDetailsRepositoryWithDB(db *gorm.DB) *DetailsRepository {
-	return &DetailsRepository{db: db, cacheTTL: defaultDetailsCacheTTL}
+// NewDetailsRepository creates a repository with an explicit PostgreSQL pool.
+func NewDetailsRepository(pool *pgxpool.Pool) *DetailsRepository {
+	return &DetailsRepository{pool: pool, cacheTTL: defaultDetailsCacheTTL}
 }
 
 // SaveDetails upserts one complete v2 details collection.
 func (r *DetailsRepository) SaveDetails(ctx context.Context, data domain.DetailsCollection) error {
-	if r == nil || r.db == nil {
+	if r == nil || r.pool == nil {
 		return fmt.Errorf("details repository database is nil")
 	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
 
-	if err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := upsertDetails(ctx, tx, data.Details); err != nil {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	queries := gamesqlc.New(tx)
+	if err := upsertDetails(ctx, queries, data.Details); err != nil {
+		return err
+	}
+	for _, item := range data.Localized {
+		if err := upsertLocalizedDetails(ctx, queries, item); err != nil {
 			return err
 		}
-		for _, item := range data.Localized {
-			if err := upsertLocalizedDetails(ctx, tx, item); err != nil {
-				return err
-			}
-		}
-		for _, item := range data.Prices {
-			if err := upsertPrice(ctx, tx, item); err != nil {
-				return err
-			}
-		}
-		if err := replaceMedia(ctx, tx, data.Media); err != nil {
+	}
+	for _, item := range data.Prices {
+		if err := upsertPrice(ctx, queries, item); err != nil {
 			return err
 		}
-		if err := replaceAssets(ctx, tx, data.Details.GameID, data.Assets); err != nil {
+	}
+	if err := replaceMedia(ctx, queries, data.Media); err != nil {
+		return err
+	}
+	if err := replaceAssets(ctx, queries, data.Details.GameID, data.Assets); err != nil {
+		return err
+	}
+	if err := upsertRequirements(ctx, queries, data.Requirements); err != nil {
+		return err
+	}
+	for _, snapshot := range data.Snapshots {
+		if err := insertSnapshot(ctx, queries, snapshot); err != nil {
 			return err
 		}
-		if err := upsertRequirements(ctx, tx, data.Requirements); err != nil {
+		if err := pruneSnapshots(ctx, queries, snapshot.AppID, snapshot.Language, snapshot.Region); err != nil {
 			return err
 		}
-		for _, snapshot := range data.Snapshots {
-			if err := insertSnapshot(ctx, tx, snapshot); err != nil {
-				return err
-			}
-			if err := pruneSnapshots(ctx, tx, snapshot.AppID, snapshot.Language, snapshot.Region); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
 
@@ -81,7 +80,7 @@ func (r *DetailsRepository) SaveDetails(ctx context.Context, data domain.Details
 	return nil
 }
 
-func upsertDetails(ctx context.Context, tx *gorm.DB, item domain.GameDetails) error {
+func upsertDetails(ctx context.Context, queries *gamesqlc.Queries, item domain.GameDetails) error {
 	developers, err := marshalJSON(item.Developers)
 	if err != nil {
 		return fmt.Errorf("marshal developers: %w", err)
@@ -107,92 +106,58 @@ func upsertDetails(ctx context.Context, tx *gorm.DB, item domain.GameDetails) er
 		return fmt.Errorf("marshal ratings: %w", err)
 	}
 
-	return tx.WithContext(ctx).Exec(`
-INSERT INTO gfg_game_v2_details (
-    game_id, appid, source, type, name, is_free, website, header_url,
-    developers, publishers, release_coming_soon, release_date_text,
-    platforms, supported_languages, support_info, content_descriptors, ratings,
-    collected_at, updated_at
-) VALUES (
-    ?, ?, 'steam', ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?::jsonb, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?, now()
-)
-ON CONFLICT (game_id)
-DO UPDATE SET
-    appid = EXCLUDED.appid,
-    source = EXCLUDED.source,
-    type = EXCLUDED.type,
-    name = EXCLUDED.name,
-    is_free = EXCLUDED.is_free,
-    website = EXCLUDED.website,
-    header_url = EXCLUDED.header_url,
-    developers = EXCLUDED.developers,
-    publishers = EXCLUDED.publishers,
-    release_coming_soon = EXCLUDED.release_coming_soon,
-    release_date_text = EXCLUDED.release_date_text,
-    platforms = EXCLUDED.platforms,
-    supported_languages = EXCLUDED.supported_languages,
-    support_info = EXCLUDED.support_info,
-    content_descriptors = EXCLUDED.content_descriptors,
-    ratings = EXCLUDED.ratings,
-    collected_at = EXCLUDED.collected_at,
-    updated_at = now()
-`,
-		item.GameID, item.AppID, item.Type, item.Name, item.IsFree, item.Website, item.HeaderURL,
-		string(developers), string(publishers), item.Release.ComingSoon, item.Release.DateText,
-		string(platforms), item.SupportedLanguages, string(supportInfo), string(contentDescriptors), string(ratings),
-		item.CollectedAt,
-	).Error
+	return queries.UpsertDetails(ctx, gamesqlc.UpsertDetailsParams{
+		GameID:             item.GameID,
+		Appid:              int64(item.AppID),
+		Type:               item.Type,
+		Name:               item.Name,
+		IsFree:             item.IsFree,
+		Website:            item.Website,
+		HeaderUrl:          item.HeaderURL,
+		Developers:         developers,
+		Publishers:         publishers,
+		ReleaseComingSoon:  item.Release.ComingSoon,
+		ReleaseDateText:    item.Release.DateText,
+		Platforms:          platforms,
+		SupportedLanguages: item.SupportedLanguages,
+		SupportInfo:        supportInfo,
+		ContentDescriptors: contentDescriptors,
+		Ratings:            ratings,
+		CollectedAt:        timestamptz(item.CollectedAt),
+	})
 }
 
-func upsertLocalizedDetails(ctx context.Context, tx *gorm.DB, item domain.GameLocalizedDetails) error {
-	return tx.WithContext(ctx).Exec(`
-INSERT INTO gfg_game_v2_localized_details (
-    game_id, appid, lang, name, short_description, detailed_description, about_the_game, collected_at, updated_at
-) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, now()
-)
-ON CONFLICT (game_id, lang)
-DO UPDATE SET
-    appid = EXCLUDED.appid,
-    name = EXCLUDED.name,
-    short_description = EXCLUDED.short_description,
-    detailed_description = EXCLUDED.detailed_description,
-    about_the_game = EXCLUDED.about_the_game,
-    collected_at = EXCLUDED.collected_at,
-    updated_at = now()
-`,
-		item.GameID, item.AppID, string(item.Language), item.Name, item.ShortDescription, item.DetailedDescription, item.AboutTheGame, item.CollectedAt,
-	).Error
+func upsertLocalizedDetails(ctx context.Context, queries *gamesqlc.Queries, item domain.GameLocalizedDetails) error {
+	return queries.UpsertLocalizedDetails(ctx, gamesqlc.UpsertLocalizedDetailsParams{
+		GameID:              item.GameID,
+		Appid:               int64(item.AppID),
+		Lang:                string(item.Language),
+		Name:                item.Name,
+		ShortDescription:    item.ShortDescription,
+		DetailedDescription: item.DetailedDescription,
+		AboutTheGame:        item.AboutTheGame,
+		CollectedAt:         timestamptz(item.CollectedAt),
+	})
 }
 
-func upsertPrice(ctx context.Context, tx *gorm.DB, item domain.GamePrice) error {
-	return tx.WithContext(ctx).Exec(`
-INSERT INTO gfg_game_v2_prices (
-    game_id, appid, region, is_free, currency, initial_amount, final_amount,
-    discount_percent, initial_formatted, final_formatted, collected_at, updated_at
-) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now()
-)
-ON CONFLICT (game_id, region)
-DO UPDATE SET
-    appid = EXCLUDED.appid,
-    is_free = EXCLUDED.is_free,
-    currency = EXCLUDED.currency,
-    initial_amount = EXCLUDED.initial_amount,
-    final_amount = EXCLUDED.final_amount,
-    discount_percent = EXCLUDED.discount_percent,
-    initial_formatted = EXCLUDED.initial_formatted,
-    final_formatted = EXCLUDED.final_formatted,
-    collected_at = EXCLUDED.collected_at,
-    updated_at = now()
-`,
-		item.GameID, item.AppID, string(item.Region), item.IsFree, item.Currency, item.Initial, item.Final,
-		item.DiscountPercent, item.InitialFormatted, item.FinalFormatted, item.CollectedAt,
-	).Error
+func upsertPrice(ctx context.Context, queries *gamesqlc.Queries, item domain.GamePrice) error {
+	return queries.UpsertPrice(ctx, gamesqlc.UpsertPriceParams{
+		GameID:           item.GameID,
+		Appid:            int64(item.AppID),
+		Region:           string(item.Region),
+		IsFree:           item.IsFree,
+		Currency:         item.Currency,
+		InitialAmount:    item.Initial,
+		FinalAmount:      item.Final,
+		DiscountPercent:  item.DiscountPercent,
+		InitialFormatted: item.InitialFormatted,
+		FinalFormatted:   item.FinalFormatted,
+		CollectedAt:      timestamptz(item.CollectedAt),
+	})
 }
 
-func replaceMedia(ctx context.Context, tx *gorm.DB, media domain.GameMedia) error {
-	if err := tx.WithContext(ctx).Exec("DELETE FROM gfg_game_v2_media WHERE game_id = ?", media.GameID).Error; err != nil {
+func replaceMedia(ctx context.Context, queries *gamesqlc.Queries, media domain.GameMedia) error {
+	if err := queries.DeleteMediaByGame(ctx, media.GameID); err != nil {
 		return err
 	}
 	items, err := mediaItems(media)
@@ -200,26 +165,26 @@ func replaceMedia(ctx context.Context, tx *gorm.DB, media domain.GameMedia) erro
 		return err
 	}
 	for _, item := range items {
-		if err := insertMedia(ctx, tx, media, item); err != nil {
+		if err := insertMedia(ctx, queries, media, item); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func replaceAssets(ctx context.Context, tx *gorm.DB, gameID int64, assets []domain.GameMediaAsset) error {
-	if err := tx.WithContext(ctx).Exec("DELETE FROM gfg_game_v2_assets WHERE game_id = ?", gameID).Error; err != nil {
+func replaceAssets(ctx context.Context, queries *gamesqlc.Queries, gameID int64, assets []domain.GameMediaAsset) error {
+	if err := queries.DeleteAssetsByGame(ctx, gameID); err != nil {
 		return err
 	}
 	for _, item := range assets {
-		if err := insertAsset(ctx, tx, item); err != nil {
+		if err := insertAsset(ctx, queries, item); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func insertAsset(ctx context.Context, tx *gorm.DB, item domain.GameMediaAsset) error {
+func insertAsset(ctx context.Context, queries *gamesqlc.Queries, item domain.GameMediaAsset) error {
 	if item.GameID <= 0 || item.AppID == 0 || item.AssetType == "" || item.URL == "" {
 		return nil
 	}
@@ -230,37 +195,27 @@ func insertAsset(ctx context.Context, tx *gorm.DB, item domain.GameMediaAsset) e
 	if err != nil {
 		return fmt.Errorf("marshal asset extra: %w", err)
 	}
-	return tx.WithContext(ctx).Exec(`
-INSERT INTO gfg_game_v2_assets (
-    game_id, appid, asset_type, asset_family, source, lang, media_key, title,
-    url, thumbnail_url, format, exists, status_code, content_type, content_length,
-    extra, sort_order, checked_at, collected_at, updated_at
-) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, now()
-)
-ON CONFLICT (game_id, asset_type, lang, media_key)
-DO UPDATE SET
-    appid = EXCLUDED.appid,
-    asset_family = EXCLUDED.asset_family,
-    source = EXCLUDED.source,
-    title = EXCLUDED.title,
-    url = EXCLUDED.url,
-    thumbnail_url = EXCLUDED.thumbnail_url,
-    format = EXCLUDED.format,
-    exists = EXCLUDED.exists,
-    status_code = EXCLUDED.status_code,
-    content_type = EXCLUDED.content_type,
-    content_length = EXCLUDED.content_length,
-    extra = EXCLUDED.extra,
-    sort_order = EXCLUDED.sort_order,
-    checked_at = EXCLUDED.checked_at,
-    collected_at = EXCLUDED.collected_at,
-    updated_at = now()
-`,
-		item.GameID, item.AppID, item.AssetType, item.AssetFamily, item.Source, item.Language, item.MediaKey, item.Title,
-		item.URL, item.ThumbnailURL, item.Format, item.Exists, item.StatusCode, item.ContentType, item.ContentLength,
-		string(extra), item.SortOrder, nullableTimePtr(item.CheckedAt), item.CollectedAt,
-	).Error
+	return queries.UpsertAsset(ctx, gamesqlc.UpsertAssetParams{
+		GameID:        item.GameID,
+		Appid:         int64(item.AppID),
+		AssetType:     item.AssetType,
+		AssetFamily:   item.AssetFamily,
+		Source:        item.Source,
+		Lang:          item.Language,
+		MediaKey:      item.MediaKey,
+		Title:         item.Title,
+		Url:           item.URL,
+		ThumbnailUrl:  item.ThumbnailURL,
+		Format:        item.Format,
+		Exists:        item.Exists,
+		StatusCode:    int32(item.StatusCode),
+		ContentType:   item.ContentType,
+		ContentLength: item.ContentLength,
+		Extra:         extra,
+		SortOrder:     int32(item.SortOrder),
+		CheckedAt:     nullableTimestamptz(item.CheckedAt),
+		CollectedAt:   timestamptz(item.CollectedAt),
+	})
 }
 
 type mediaItem struct {
@@ -304,7 +259,7 @@ func mediaItems(media domain.GameMedia) ([]mediaItem, error) {
 	return items, nil
 }
 
-func insertMedia(ctx context.Context, tx *gorm.DB, media domain.GameMedia, item mediaItem) error {
+func insertMedia(ctx context.Context, queries *gamesqlc.Queries, media domain.GameMedia, item mediaItem) error {
 	if item.url == "" && item.thumbnailURL == "" {
 		return nil
 	}
@@ -312,28 +267,21 @@ func insertMedia(ctx context.Context, tx *gorm.DB, media domain.GameMedia, item 
 	if err != nil {
 		return fmt.Errorf("marshal media extra: %w", err)
 	}
-	return tx.WithContext(ctx).Exec(`
-INSERT INTO gfg_game_v2_media (
-    game_id, appid, media_type, media_key, title, url, thumbnail_url, extra, sort_order, collected_at, updated_at
-) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, now()
-)
-ON CONFLICT (game_id, media_type, media_key)
-DO UPDATE SET
-    appid = EXCLUDED.appid,
-    title = EXCLUDED.title,
-    url = EXCLUDED.url,
-    thumbnail_url = EXCLUDED.thumbnail_url,
-    extra = EXCLUDED.extra,
-    sort_order = EXCLUDED.sort_order,
-    collected_at = EXCLUDED.collected_at,
-    updated_at = now()
-`,
-		media.GameID, media.AppID, item.typ, item.key, item.title, item.url, item.thumbnailURL, string(extra), item.sortOrder, media.CollectedAt,
-	).Error
+	return queries.UpsertMedia(ctx, gamesqlc.UpsertMediaParams{
+		GameID:       media.GameID,
+		Appid:        int64(media.AppID),
+		MediaType:    item.typ,
+		MediaKey:     item.key,
+		Title:        item.title,
+		Url:          item.url,
+		ThumbnailUrl: item.thumbnailURL,
+		Extra:        extra,
+		SortOrder:    int32(item.sortOrder),
+		CollectedAt:  timestamptz(media.CollectedAt),
+	})
 }
 
-func upsertRequirements(ctx context.Context, tx *gorm.DB, item domain.SystemRequirements) error {
+func upsertRequirements(ctx context.Context, queries *gamesqlc.Queries, item domain.SystemRequirements) error {
 	pc, err := marshalJSON(item.PC)
 	if err != nil {
 		return fmt.Errorf("marshal pc requirements: %w", err)
@@ -346,43 +294,36 @@ func upsertRequirements(ctx context.Context, tx *gorm.DB, item domain.SystemRequ
 	if err != nil {
 		return fmt.Errorf("marshal linux requirements: %w", err)
 	}
-	return tx.WithContext(ctx).Exec(`
-INSERT INTO gfg_game_v2_requirements (
-    game_id, appid, pc, mac, linux, collected_at, updated_at
-) VALUES (
-    ?, ?, ?::jsonb, ?::jsonb, ?::jsonb, ?, now()
-)
-ON CONFLICT (game_id)
-DO UPDATE SET
-    appid = EXCLUDED.appid,
-    pc = EXCLUDED.pc,
-    mac = EXCLUDED.mac,
-    linux = EXCLUDED.linux,
-    collected_at = EXCLUDED.collected_at,
-    updated_at = now()
-`,
-		item.GameID, item.AppID, string(pc), string(mac), string(linux), item.CollectedAt,
-	).Error
+	return queries.UpsertRequirements(ctx, gamesqlc.UpsertRequirementsParams{
+		GameID:      item.GameID,
+		Appid:       int64(item.AppID),
+		Pc:          pc,
+		Mac:         mac,
+		Linux:       linux,
+		CollectedAt: timestamptz(item.CollectedAt),
+	})
 }
 
-func insertSnapshot(ctx context.Context, tx *gorm.DB, item domain.RawSnapshot) error {
+func insertSnapshot(ctx context.Context, queries *gamesqlc.Queries, item domain.RawSnapshot) error {
 	payloadHash := item.PayloadHash
 	if payloadHash == "" {
 		payloadHash = hashPayload(item.RawPayload)
 	}
-	return tx.WithContext(ctx).Exec(`
-INSERT INTO gfg_game_v2_detail_snapshots (
-    game_id, appid, lang, region, source, payload_hash, raw_payload, collected_at
-) VALUES (
-    ?, ?, ?, ?, ?, ?, ?::jsonb, ?
-)
-`,
-		item.GameID, item.AppID, string(item.Language), string(item.Region), string(item.Source), payloadHash, string(item.RawPayload), item.CollectedAt,
-	).Error
+	return queries.InsertDetailSnapshot(ctx, gamesqlc.InsertDetailSnapshotParams{
+		GameID:      item.GameID,
+		Appid:       int64(item.AppID),
+		Lang:        string(item.Language),
+		Region:      string(item.Region),
+		Source:      string(item.Source),
+		PayloadHash: payloadHash,
+		RawPayload:  item.RawPayload,
+		CollectedAt: timestamptz(item.CollectedAt),
+	})
 }
 
-func pruneSnapshots(ctx context.Context, tx *gorm.DB, appID uint32, lang domain.Language, region domain.Region) error {
-	return tx.WithContext(ctx).Exec("SELECT gfg_game_v2_prune_detail_snapshots(?, ?, ?, 5)", appID, string(lang), string(region)).Error
+func pruneSnapshots(ctx context.Context, queries *gamesqlc.Queries, appID uint32, lang domain.Language, region domain.Region) error {
+	_, err := queries.PruneDetailSnapshots(ctx, gamesqlc.PruneDetailSnapshotsParams{Appid: int64(appID), Lang: string(lang), Region: string(region)})
+	return err
 }
 
 func (r *DetailsRepository) refreshCache(data domain.DetailsCollection) {
@@ -439,11 +380,4 @@ func assetsCacheKey(gameID int64) string {
 func hashPayload(payload []byte) string {
 	sum := sha256.Sum256(payload)
 	return hex.EncodeToString(sum[:])
-}
-
-func nullableTimePtr(value *time.Time) any {
-	if value == nil || value.IsZero() {
-		return nil
-	}
-	return *value
 }

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 
-	"github.com/gofurry/gofurry-game-collector/collector/game/dao"
 	"github.com/gofurry/gofurry-game-collector/collector/game/models"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/report"
@@ -15,14 +14,29 @@ import (
 	v2players "github.com/gofurry/gofurry-game-collector/collector/game/v2/tasks/players"
 	"github.com/gofurry/gofurry-game-collector/common"
 	"github.com/gofurry/gofurry-game-collector/common/log"
+	gamesqlc "github.com/gofurry/gofurry-game-collector/internal/db/game/sqlc"
 	"github.com/gofurry/gofurry-game-collector/roof/env"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type gameService struct{}
+type gameService struct {
+	pool    *pgxpool.Pool
+	queries *gamesqlc.Queries
+}
 
 var gameSingleton = new(gameService)
 
 func GetGameService() *gameService { return gameSingleton }
+
+// InitPersistence injects the process-owned PostgreSQL pool during bootstrap.
+func InitPersistence(pool *pgxpool.Pool) {
+	gameSingleton.pool = pool
+	if pool == nil {
+		gameSingleton.queries = nil
+		return
+	}
+	gameSingleton.queries = gamesqlc.New(pool)
+}
 
 var v2SteamAdapter *steamclient.Adapter
 
@@ -64,24 +78,24 @@ func GetV2SteamAdapter() *steamclient.Adapter {
 	return v2SteamAdapter
 }
 
-func runV2Tasks(ctx context.Context, gameList []models.GameID, tasks []domain.TaskType) (report.RunSummary, error) {
+func (s *gameService) runV2Tasks(ctx context.Context, gameList []models.GameID, tasks []domain.TaskType) (report.RunSummary, error) {
 	bindings := make([]v2runner.TaskBinding, 0, len(tasks))
 	for _, task := range tasks {
 		switch task {
 		case domain.TaskDetails:
 			bindings = append(bindings, v2runner.TaskBinding{
 				Task:      domain.TaskDetails,
-				Collector: v2details.NewCollector(GetV2SteamAdapter(), v2repo.NewDetailsRepository()),
+				Collector: v2details.NewCollector(GetV2SteamAdapter(), v2repo.NewDetailsRepository(s.pool)),
 			})
 		case domain.TaskNews:
 			bindings = append(bindings, v2runner.TaskBinding{
 				Task:      domain.TaskNews,
-				Collector: v2news.NewCollector(GetV2SteamAdapter(), v2repo.NewNewsRepository()),
+				Collector: v2news.NewCollector(GetV2SteamAdapter(), v2repo.NewNewsRepository(s.pool)),
 			})
 		case domain.TaskPlayers:
 			bindings = append(bindings, v2runner.TaskBinding{
 				Task:      domain.TaskPlayers,
-				Collector: v2players.NewCollector(GetV2SteamAdapter(), v2repo.NewPlayerRepository()),
+				Collector: v2players.NewCollector(GetV2SteamAdapter(), v2repo.NewPlayerRepository(s.pool)),
 			})
 		}
 	}
@@ -102,16 +116,16 @@ func logV2RunSummary(prefix string, summary report.RunSummary, err error) {
 	}
 }
 
-func persistV2RunSummary(ctx context.Context, prefix string, summary report.RunSummary) {
+func (s *gameService) persistV2RunSummary(ctx context.Context, prefix string, summary report.RunSummary) {
 	if summary.ID == "" {
 		return
 	}
-	if err := v2repo.NewRunRepository().SaveRunSummary(ctx, summary); err != nil {
+	if err := v2repo.NewRunRepository(s.pool).SaveRunSummary(ctx, summary); err != nil {
 		log.Error(prefix, " observation persist failed, run_id=", summary.ID, " err=", err)
 		return
 	}
 	retention := env.GetServerConfig().Collector.V2.Retention
-	if err := v2repo.NewRetentionRepository().Prune(ctx, v2repo.RetentionConfig{
+	if err := v2repo.NewRetentionRepository(s.pool).Prune(ctx, v2repo.RetentionConfig{
 		PlayerCountsDays:       retention.PlayerCountsDays,
 		CollectRunsDays:        retention.CollectRunsDays,
 		CollectTaskResultsDays: retention.CollectTaskResultsDays,
@@ -123,47 +137,54 @@ func persistV2RunSummary(ctx context.Context, prefix string, summary report.RunS
 // Collect runs the stable v2 details and news collectors.
 func (s gameService) Collect() {
 	ctx := context.Background()
-	gameList, err := addAllGameToList()
+	gameList, err := s.addAllGameToList(ctx)
 	if err != nil {
 		log.Error("receive InitGameCollection recover: ", err)
 	}
 
 	log.Info("Game Collect v2 采集开始")
-	summary, runErr := runV2Tasks(ctx, gameList, []domain.TaskType{domain.TaskDetails, domain.TaskNews})
+	summary, runErr := s.runV2Tasks(ctx, gameList, []domain.TaskType{domain.TaskDetails, domain.TaskNews})
 	logV2RunSummary("Game Collect v2", summary, runErr)
-	persistV2RunSummary(ctx, "Game Collect v2", summary)
+	s.persistV2RunSummary(ctx, "Game Collect v2", summary)
 	log.Info("Game Collect v2 采集结束")
 }
 
 // CollectCurrentPlayers runs the stable v2 current-player collector.
 func (s gameService) CollectCurrentPlayers() {
 	ctx := context.Background()
-	gameList, err := addAllGameToList()
+	gameList, err := s.addAllGameToList(ctx)
 	if err != nil {
 		log.Error("receive InitGameCollection recover: ", err)
 	}
 
 	log.Info("CollectCurrentPlayers v2 采集开始")
-	summary, runErr := runV2Tasks(ctx, gameList, []domain.TaskType{domain.TaskPlayers})
+	summary, runErr := s.runV2Tasks(ctx, gameList, []domain.TaskType{domain.TaskPlayers})
 	logV2RunSummary("CollectCurrentPlayers v2", summary, runErr)
-	persistV2RunSummary(ctx, "CollectCurrentPlayers v2", summary)
+	s.persistV2RunSummary(ctx, "CollectCurrentPlayers v2", summary)
 	log.Info("CollectCurrentPlayers v2 采集结束")
 }
 
 func (s gameService) CollectSingleGame(game models.GameID) (report.RunSummary, error) {
 	ctx := context.Background()
 	log.Info("SingleGame Collect v2 采集开始, game_id=", game.ID, " appid=", game.Appid)
-	summary, runErr := runV2Tasks(ctx, []models.GameID{game}, []domain.TaskType{domain.TaskDetails, domain.TaskNews, domain.TaskPlayers})
+	summary, runErr := s.runV2Tasks(ctx, []models.GameID{game}, []domain.TaskType{domain.TaskDetails, domain.TaskNews, domain.TaskPlayers})
 	logV2RunSummary("SingleGame Collect v2", summary, runErr)
-	persistV2RunSummary(ctx, "SingleGame Collect v2", summary)
+	s.persistV2RunSummary(ctx, "SingleGame Collect v2", summary)
 	log.Info("SingleGame Collect v2 采集结束, game_id=", game.ID, " appid=", game.Appid)
 	return summary, runErr
 }
 
-func addAllGameToList() (gameList []models.GameID, err common.GFError) {
-	gameList, err = dao.GetGameList()
-	if err != nil {
-		log.Error("receive addAllGameToList recover: ", err)
+func (s *gameService) addAllGameToList(ctx context.Context) ([]models.GameID, common.GFError) {
+	if s == nil || s.queries == nil {
+		return nil, common.NewDaoError("game persistence is not initialized")
 	}
-	return
+	rows, err := s.queries.ListGameTargets(ctx)
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
+	}
+	games := make([]models.GameID, 0, len(rows))
+	for _, row := range rows {
+		games = append(games, models.GameID{ID: row.ID, Appid: row.Appid})
+	}
+	return games, nil
 }

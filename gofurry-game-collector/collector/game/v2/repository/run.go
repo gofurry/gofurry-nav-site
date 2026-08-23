@@ -9,31 +9,26 @@ import (
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/report"
 	cs "github.com/gofurry/gofurry-game-collector/common/service"
-	database "github.com/gofurry/gofurry-game-collector/roof/db"
-	"gorm.io/gorm"
+	gamesqlc "github.com/gofurry/gofurry-game-collector/internal/db/game/sqlc"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const defaultRunSummaryCacheTTL = 7 * 24 * time.Hour
 
 // RunRepository writes v2 runner observation records.
 type RunRepository struct {
-	db       *gorm.DB
+	pool     *pgxpool.Pool
 	cacheTTL time.Duration
 }
 
-// NewRunRepository creates a repository backed by the global PostgreSQL handle.
-func NewRunRepository() *RunRepository {
-	return NewRunRepositoryWithDB(database.Orm.DB())
-}
-
-// NewRunRepositoryWithDB creates a repository with an explicit PostgreSQL handle.
-func NewRunRepositoryWithDB(db *gorm.DB) *RunRepository {
-	return &RunRepository{db: db, cacheTTL: defaultRunSummaryCacheTTL}
+// NewRunRepository creates a repository with an explicit PostgreSQL pool.
+func NewRunRepository(pool *pgxpool.Pool) *RunRepository {
+	return &RunRepository{pool: pool, cacheTTL: defaultRunSummaryCacheTTL}
 }
 
 // SaveRunSummary persists one unified runner summary and refreshes lightweight Redis status keys.
 func (r *RunRepository) SaveRunSummary(ctx context.Context, summary report.RunSummary) error {
-	if r == nil || r.db == nil {
+	if r == nil || r.pool == nil {
 		return fmt.Errorf("run repository database is nil")
 	}
 	if summary.ID == "" {
@@ -43,20 +38,24 @@ func (r *RunRepository) SaveRunSummary(ctx context.Context, summary report.RunSu
 		ctx = context.Background()
 	}
 
-	if err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := upsertRunSummary(ctx, tx, summary); err != nil {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	queries := gamesqlc.New(tx)
+	if err := upsertRunSummary(ctx, queries, summary); err != nil {
+		return err
+	}
+	if err := queries.DeleteTaskResultsByRun(ctx, summary.ID); err != nil {
+		return err
+	}
+	for _, result := range summary.Results {
+		if err := insertTaskResult(ctx, queries, result); err != nil {
 			return err
 		}
-		if err := tx.WithContext(ctx).Exec("DELETE FROM gfg_game_v2_collect_task_results WHERE run_id = ?", summary.ID).Error; err != nil {
-			return err
-		}
-		for _, result := range summary.Results {
-			if err := insertTaskResult(ctx, tx, result); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
 
@@ -64,99 +63,47 @@ func (r *RunRepository) SaveRunSummary(ctx context.Context, summary report.RunSu
 	return nil
 }
 
-func upsertRunSummary(ctx context.Context, tx *gorm.DB, summary report.RunSummary) error {
+func upsertRunSummary(ctx context.Context, queries *gamesqlc.Queries, summary report.RunSummary) error {
 	taskSummary, err := marshalJSON(summary.TaskSummaries)
 	if err != nil {
 		return fmt.Errorf("marshal task summary: %w", err)
 	}
 	errorKind, errorMessage := errorFields(summary.Error)
-	return tx.WithContext(ctx).Exec(`
-INSERT INTO gfg_game_v2_collect_runs (
-    id,
-    task_type,
-    status,
-    total_count,
-    success_count,
-    failed_count,
-    skipped_count,
-    partial_count,
-    task_summary,
-    duration_millis,
-    error_kind,
-    error_message,
-    started_at,
-    ended_at
-) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?
-)
-ON CONFLICT (id)
-DO UPDATE SET
-    task_type = EXCLUDED.task_type,
-    status = EXCLUDED.status,
-    total_count = EXCLUDED.total_count,
-    success_count = EXCLUDED.success_count,
-    failed_count = EXCLUDED.failed_count,
-    skipped_count = EXCLUDED.skipped_count,
-    partial_count = EXCLUDED.partial_count,
-    task_summary = EXCLUDED.task_summary,
-    duration_millis = EXCLUDED.duration_millis,
-    error_kind = EXCLUDED.error_kind,
-    error_message = EXCLUDED.error_message,
-    started_at = EXCLUDED.started_at,
-    ended_at = EXCLUDED.ended_at
-`,
-		summary.ID,
-		runTaskType(summary),
-		string(summary.Status),
-		summary.TotalCount,
-		summary.SuccessCount,
-		summary.FailedCount,
-		summary.SkippedCount,
-		summary.PartialCount,
-		string(taskSummary),
-		runDurationMillis(summary),
-		errorKind,
-		errorMessage,
-		summary.StartedAt,
-		nullableTime(summary.EndedAt),
-	).Error
+	return queries.UpsertCollectRun(ctx, gamesqlc.UpsertCollectRunParams{
+		ID:             summary.ID,
+		TaskType:       runTaskType(summary),
+		Status:         string(summary.Status),
+		TotalCount:     int32(summary.TotalCount),
+		SuccessCount:   int32(summary.SuccessCount),
+		FailedCount:    int32(summary.FailedCount),
+		SkippedCount:   int32(summary.SkippedCount),
+		PartialCount:   int32(summary.PartialCount),
+		TaskSummary:    taskSummary,
+		DurationMillis: runDurationMillis(summary),
+		ErrorKind:      errorKind,
+		ErrorMessage:   errorMessage,
+		StartedAt:      timestamptz(summary.StartedAt),
+		EndedAt:        timestamptz(summary.EndedAt),
+	})
 }
 
-func insertTaskResult(ctx context.Context, tx *gorm.DB, result report.TaskResult) error {
+func insertTaskResult(ctx context.Context, queries *gamesqlc.Queries, result report.TaskResult) error {
 	errorKind, errorMessage := errorFields(result.Error)
-	return tx.WithContext(ctx).Exec(`
-INSERT INTO gfg_game_v2_collect_task_results (
-    run_id,
-    task_type,
-    status,
-    game_id,
-    appid,
-    upstream_status_code,
-    traffic_bucket,
-    retry_count,
-    duration_millis,
-    error_kind,
-    error_message,
-    started_at,
-    ended_at
-) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-)
-`,
-		result.RunID,
-		string(result.Task),
-		string(result.Status),
-		result.GameID,
-		result.AppID,
-		result.UpstreamStatusCode,
-		result.TrafficBucket,
-		result.RetryCount,
-		result.DurationMillis,
-		errorKind,
-		errorMessage,
-		result.StartedAt,
-		nullableTime(result.EndedAt),
-	).Error
+	return queries.InsertTaskResult(ctx, gamesqlc.InsertTaskResultParams{
+		RunID:              result.RunID,
+		TaskType:           string(result.Task),
+		Status:             string(result.Status),
+		GameID:             result.GameID,
+		Appid:              int64(result.AppID),
+		UpstreamStatusCode: int32(result.UpstreamStatusCode),
+		TrafficBucket:      result.TrafficBucket,
+		RetryCount:         int32(result.RetryCount),
+		DurationMillis:     result.DurationMillis,
+		ErrorKind:          errorKind,
+		ErrorMessage:       errorMessage,
+		StartedAt:          timestamptz(result.StartedAt),
+		EndedAt:            timestamptz(result.EndedAt),
+	})
 }
 
 func (r *RunRepository) refreshRunCache(summary report.RunSummary) {
