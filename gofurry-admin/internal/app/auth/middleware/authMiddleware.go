@@ -9,10 +9,10 @@ import (
 	"github.com/gofurry/gofurry-admin/pkg/common"
 )
 
-func Required() fiber.Handler {
+func Required(authService *service.AuthService) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		token := strings.TrimSpace(c.Cookies(env.GetServerConfig().Auth.CookieName))
-		claims, err := service.GetAuthService().ParseAndValidateToken(token)
+		claims, err := authService.ParseAndValidateToken(token)
 		if err != nil {
 			return common.NewResponse(c).ErrorWithCode(err, err.GetHTTPStatus())
 		}

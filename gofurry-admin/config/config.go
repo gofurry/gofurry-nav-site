@@ -3,6 +3,7 @@ package env
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -218,12 +219,32 @@ type DataBaseConfig struct {
 }
 
 type SQLDataBaseConfig struct {
-	DSN    string `mapstructure:"dsn" yaml:"dsn"`
-	DBName string `mapstructure:"db_name" yaml:"db_name"`
-	DBHost string `mapstructure:"db_host" yaml:"db_host"`
-	DBPort string `mapstructure:"db_port" yaml:"db_port"`
-	DBUser string `mapstructure:"db_username" yaml:"db_username"`
-	DBPass string `mapstructure:"db_password" yaml:"db_password"`
+	DSN                          string `mapstructure:"dsn" yaml:"dsn"`
+	DBName                       string `mapstructure:"db_name" yaml:"db_name"`
+	DBHost                       string `mapstructure:"db_host" yaml:"db_host"`
+	DBPort                       string `mapstructure:"db_port" yaml:"db_port"`
+	DBUser                       string `mapstructure:"db_username" yaml:"db_username"`
+	DBPass                       string `mapstructure:"db_password" yaml:"db_password"`
+	MaxConns                     int32  `mapstructure:"max_conns" yaml:"max_conns"`
+	MinConns                     int32  `mapstructure:"min_conns" yaml:"min_conns"`
+	MaxConnLifetimeSeconds       int    `mapstructure:"max_conn_lifetime_seconds" yaml:"max_conn_lifetime_seconds"`
+	MaxConnLifetimeJitterSeconds int    `mapstructure:"max_conn_lifetime_jitter_seconds" yaml:"max_conn_lifetime_jitter_seconds"`
+	MaxConnIdleTimeSeconds       int    `mapstructure:"max_conn_idle_time_seconds" yaml:"max_conn_idle_time_seconds"`
+	HealthCheckPeriodSeconds     int    `mapstructure:"health_check_period_seconds" yaml:"health_check_period_seconds"`
+	ConnectTimeoutSeconds        int    `mapstructure:"connect_timeout_seconds" yaml:"connect_timeout_seconds"`
+	PingTimeoutSeconds           int    `mapstructure:"ping_timeout_seconds" yaml:"ping_timeout_seconds"`
+}
+
+func (cfg SQLDataBaseConfig) ConnectionString() string {
+	if strings.TrimSpace(cfg.DSN) != "" {
+		return strings.TrimSpace(cfg.DSN)
+	}
+	u := &url.URL{Scheme: "postgres", Host: cfg.DBHost + ":" + cfg.DBPort, Path: cfg.DBName}
+	u.User = url.UserPassword(cfg.DBUser, cfg.DBPass)
+	query := u.Query()
+	query.Set("sslmode", "prefer")
+	u.RawQuery = query.Encode()
+	return u.String()
 }
 
 type ServerConfig struct {
@@ -601,7 +622,6 @@ func applyDefaults(v *viper.Viper) {
 	v.SetDefault("server.is_full_stack", true)
 
 	v.SetDefault("database.enabled", true)
-	v.SetDefault("database.auto_migrate", true)
 	v.SetDefault("database.db_type", "postgres")
 	v.SetDefault("database.postgres.db_name", "gfa")
 	v.SetDefault("database.postgres.db_host", "127.0.0.1")

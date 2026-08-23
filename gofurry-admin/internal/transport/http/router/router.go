@@ -27,10 +27,10 @@ import (
 	"github.com/gofurry/gofurry-admin/pkg/common"
 )
 
-type Builder struct{}
+type Builder struct{ runtime *bootstrap.Runtime }
 
-func New() *Builder {
-	return &Builder{}
+func New(runtime *bootstrap.Runtime) *Builder {
+	return &Builder{runtime: runtime}
 }
 
 func (builder *Builder) Init() *fiber.App {
@@ -50,10 +50,10 @@ func (builder *Builder) Init() *fiber.App {
 	})
 
 	registerMiddlewares(app)
-	registerHealthRoutes(app, appName)
+	registerHealthRoutes(app, appName, builder.runtime)
 	registerCSRFTokenRoute(app)
 
-	api(wrapTimeoutRouter(app.Group("/api"), cfg.Middleware.Timeout))
+	api(wrapTimeoutRouter(app.Group("/api"), cfg.Middleware.Timeout), builder.runtime)
 
 	if cfg.Server.IsFullStack {
 		attachEmbeddedUI(app)
@@ -105,29 +105,29 @@ func attachEmbeddedUI(app *fiber.App) {
 	})
 }
 
-func registerHealthRoutes(app *fiber.App, appName string) {
+func registerHealthRoutes(app *fiber.App, appName string, runtime *bootstrap.Runtime) {
 	cfg := env.GetServerConfig()
 	if cfg.Middleware.Health.Enabled {
 		app.Get(healthcheck.LivenessEndpoint, healthcheck.New(healthcheck.Config{
 			Probe: func(c fiber.Ctx) bool {
-				return bootstrap.Live()
+				return runtime.Live()
 			},
 		}))
 		app.Get(healthcheck.ReadinessEndpoint, healthcheck.New(healthcheck.Config{
 			Probe: func(c fiber.Ctx) bool {
-				return bootstrap.Ready()
+				return runtime.Ready()
 			},
 		}))
 		app.Get(healthcheck.StartupEndpoint, healthcheck.New(healthcheck.Config{
 			Probe: func(c fiber.Ctx) bool {
-				return bootstrap.Started()
+				return runtime.Started()
 			},
 		}))
 	}
 
 	if cfg.Middleware.Health.IncludeLegacy {
 		app.Get("/healthz", func(c fiber.Ctx) error {
-			ready := bootstrap.Ready()
+			ready := runtime.Ready()
 			statusCode := fiber.StatusOK
 			status := "ok"
 			if !ready {
@@ -141,9 +141,9 @@ func registerHealthRoutes(app *fiber.App, appName string) {
 					"name":    appName,
 					"version": cfg.Server.AppVersion,
 					"status":  status,
-					"live":    bootstrap.Live(),
+					"live":    runtime.Live(),
 					"ready":   ready,
-					"startup": bootstrap.Started(),
+					"startup": runtime.Started(),
 				},
 			})
 		})

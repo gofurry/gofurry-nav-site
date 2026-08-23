@@ -2,24 +2,31 @@ package controller
 
 import (
 	"github.com/gofiber/fiber/v3"
-	gamemodels "github.com/gofurry/gofurry-admin/internal/app/gameadmin/models"
-	navmodels "github.com/gofurry/gofurry-admin/internal/app/navadmin/models"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/adminutil"
-	"github.com/gofurry/gofurry-admin/internal/infra/db"
+	gamesqlc "github.com/gofurry/gofurry-admin/internal/db/game/sqlc"
+	navsqlc "github.com/gofurry/gofurry-admin/internal/db/nav/sqlc"
 	"github.com/gofurry/gofurry-admin/pkg/common"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type optionsAPI struct{}
+type OptionsAPI struct {
+	nav  *navsqlc.Queries
+	game *gamesqlc.Queries
+}
 
-var OptionsAPI = &optionsAPI{}
+func New(navPool, gamePool *pgxpool.Pool) *OptionsAPI {
+	return &OptionsAPI{nav: navsqlc.New(navPool), game: gamesqlc.New(gamePool)}
+}
 
-func (api *optionsAPI) SiteOptions(c fiber.Ctx) error {
+func (api *OptionsAPI) SiteOptions(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(db.Databases.DB(db.Nav).Model(&navmodels.Site{}).Where("deleted IS NOT TRUE").Order("id DESC"), page.Keyword, "name", "name_en", "CAST(id AS TEXT)")
-	var rows []navmodels.Site
-	total, err := adminutil.Paginate(base, page, &rows)
+	total, err := api.nav.CountSiteOptions(c.Context(), page.Keyword)
 	if err != nil {
-		return common.NewResponse(c).Error(err)
+		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
+	}
+	rows, err := api.nav.ListSiteOptions(c.Context(), navsqlc.ListSiteOptionsParams{Keyword: page.Keyword, RowOffset: int32((page.PageNum - 1) * page.PageSize), RowLimit: int32(page.PageSize)})
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
 	}
 	list := make([]adminutil.OptionItem, 0, len(rows))
 	for _, row := range rows {
@@ -28,13 +35,15 @@ func (api *optionsAPI) SiteOptions(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, list))
 }
 
-func (api *optionsAPI) SiteGroupOptions(c fiber.Ctx) error {
+func (api *OptionsAPI) SiteGroupOptions(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(db.Databases.DB(db.Nav).Model(&navmodels.SiteGroup{}).Order("priority DESC, id DESC"), page.Keyword, "name", "name_en", "CAST(id AS TEXT)")
-	var rows []navmodels.SiteGroup
-	total, err := adminutil.Paginate(base, page, &rows)
+	total, err := api.nav.CountSiteGroupOptions(c.Context(), page.Keyword)
 	if err != nil {
-		return common.NewResponse(c).Error(err)
+		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
+	}
+	rows, err := api.nav.ListSiteGroupOptions(c.Context(), navsqlc.ListSiteGroupOptionsParams{Keyword: page.Keyword, RowOffset: int32((page.PageNum - 1) * page.PageSize), RowLimit: int32(page.PageSize)})
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
 	}
 	list := make([]adminutil.OptionItem, 0, len(rows))
 	for _, row := range rows {
@@ -43,13 +52,15 @@ func (api *optionsAPI) SiteGroupOptions(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, list))
 }
 
-func (api *optionsAPI) GameOptions(c fiber.Ctx) error {
+func (api *OptionsAPI) GameOptions(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(db.Databases.DB(db.Game).Model(&gamemodels.Game{}).Order("id DESC"), page.Keyword, "name", "name_en", "CAST(id AS TEXT)")
-	var rows []gamemodels.Game
-	total, err := adminutil.Paginate(base, page, &rows)
+	total, err := api.game.CountGameOptions(c.Context(), page.Keyword)
 	if err != nil {
-		return common.NewResponse(c).Error(err)
+		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
+	}
+	rows, err := api.game.ListGameOptions(c.Context(), gamesqlc.ListGameOptionsParams{Keyword: page.Keyword, RowOffset: int32((page.PageNum - 1) * page.PageSize), RowLimit: int32(page.PageSize)})
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
 	}
 	list := make([]adminutil.OptionItem, 0, len(rows))
 	for _, row := range rows {
@@ -58,11 +69,10 @@ func (api *optionsAPI) GameOptions(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, list))
 }
 
-func (api *optionsAPI) TagOptions(c fiber.Ctx) error {
+func (api *OptionsAPI) TagOptions(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
-	base := adminutil.ApplyKeyword(db.Databases.DB(db.Game).Model(&gamemodels.Tag{}).Order("id DESC"), page.Keyword, "name", "name_en", "CAST(id AS TEXT)")
-	var rows []gamemodels.Tag
-	if err := base.Find(&rows).Error; err != nil {
+	rows, err := api.game.ListTagOptions(c.Context(), page.Keyword)
+	if err != nil {
 		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
 	}
 	list := make([]adminutil.OptionItem, 0, len(rows))

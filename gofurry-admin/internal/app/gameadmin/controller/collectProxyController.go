@@ -21,11 +21,11 @@ type gameBackendEnvelope struct {
 	Data json.RawMessage `json:"data"`
 }
 
-func (api *gameAPI) CollectStatus(c fiber.Ctx) error {
+func (api *GameAPI) CollectStatus(c fiber.Ctx) error {
 	return api.proxyGameBackend(c, "/api/v2/game/collect/status", nil)
 }
 
-func (api *gameAPI) CollectRuns(c fiber.Ctx) error {
+func (api *GameAPI) CollectRuns(c fiber.Ctx) error {
 	params := url.Values{}
 	copyQueryParam(c, params, "task_type")
 	copyQueryParam(c, params, "status")
@@ -34,7 +34,7 @@ func (api *gameAPI) CollectRuns(c fiber.Ctx) error {
 	return api.proxyGameBackend(c, "/api/v2/game/collect/runs", params)
 }
 
-func (api *gameAPI) CollectRun(c fiber.Ctx) error {
+func (api *GameAPI) CollectRun(c fiber.Ctx) error {
 	runID := strings.TrimSpace(c.Params("run_id"))
 	if runID == "" {
 		return common.NewResponse(c).Error(common.NewValidationError("run_id is required"))
@@ -42,7 +42,7 @@ func (api *gameAPI) CollectRun(c fiber.Ctx) error {
 	return api.proxyGameBackend(c, "/api/v2/game/collect/runs/"+url.PathEscape(runID), nil)
 }
 
-func (api *gameAPI) CollectTaskResults(c fiber.Ctx) error {
+func (api *GameAPI) CollectTaskResults(c fiber.Ctx) error {
 	params := url.Values{}
 	copyQueryParam(c, params, "run_id")
 	copyQueryParam(c, params, "task_type")
@@ -54,7 +54,7 @@ func (api *gameAPI) CollectTaskResults(c fiber.Ctx) error {
 	return api.proxyGameBackend(c, "/api/v2/game/collect/task-results", params)
 }
 
-func (api *gameAPI) CollectGameStatus(c fiber.Ctx) error {
+func (api *GameAPI) CollectGameStatus(c fiber.Ctx) error {
 	gameID := strings.TrimSpace(c.Params("id"))
 	if gameID == "" {
 		return common.NewResponse(c).Error(common.NewValidationError("game id is required"))
@@ -64,7 +64,7 @@ func (api *gameAPI) CollectGameStatus(c fiber.Ctx) error {
 	return api.proxyGameBackend(c, "/api/v2/game/collect/games/"+url.PathEscape(gameID)+"/status", params)
 }
 
-func (api *gameAPI) proxyGameBackend(c fiber.Ctx, path string, params url.Values) error {
+func (api *GameAPI) proxyGameBackend(c fiber.Ctx, path string, params url.Values) error {
 	cfg := env.GetServerConfig().ExternalServices.GameBackend
 	baseURL := strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
 	if baseURL == "" {

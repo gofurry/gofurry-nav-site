@@ -11,7 +11,7 @@ import (
 func TestCreatePasswordHashUsesConfiguredIterations(t *testing.T) {
 	t.Parallel()
 
-	hash, err := GetAuthService().createPasswordHash("abc123")
+	hash, err := (&AuthService{}).createPasswordHash("abc123")
 	if err != nil {
 		t.Fatalf("createPasswordHash returned error: %v", err)
 	}

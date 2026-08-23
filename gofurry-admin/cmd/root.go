@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	env "github.com/gofurry/gofurry-admin/config"
-	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
 	"github.com/gofurry/gofurry-admin/internal/bootstrap"
 	applog "github.com/gofurry/gofurry-admin/internal/infra/logging"
@@ -128,12 +127,13 @@ func newResetPasswordCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := bootstrap.Start(); err != nil {
+			runtime, err := bootstrap.Start()
+			if err != nil {
 				return err
 			}
-			defer func() { _ = bootstrap.Shutdown() }()
+			defer func() { _ = runtime.Shutdown() }()
 
-			if err := authservice.GetAuthService().ResetPassword(password, audit.SystemMeta("cli/reset-password")); err != nil {
+			if err := runtime.AuthService.ResetPassword(password, audit.SystemMeta("cli/reset-password")); err != nil {
 				return err
 			}
 			applog.InfoKV("admin password reset successfully")

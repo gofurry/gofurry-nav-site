@@ -1,31 +1,25 @@
 package bootstrap
 
 import (
+	"context"
+	"time"
+
 	env "github.com/gofurry/gofurry-admin/config"
 	cache "github.com/gofurry/gofurry-admin/internal/infra/cache"
-	"github.com/gofurry/gofurry-admin/internal/infra/db"
 )
 
-func Live() bool {
-	return true
-}
+func (runtime *Runtime) Live() bool { return true }
 
-func Started() bool {
-	return started.Load()
-}
+func (runtime *Runtime) Started() bool { return runtime != nil && runtime.started.Load() }
 
-func Ready() bool {
-	if !Started() {
+func (runtime *Runtime) Ready() bool {
+	if !runtime.Started() {
 		return false
 	}
-
-	cfg := env.GetServerConfig()
-	if cfg.DataBase.Enabled && !db.Databases.ReadyAll() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if !runtime.Pools.Ready(ctx) {
 		return false
 	}
-	if cfg.Redis.Enabled && !cache.RedisReady() {
-		return false
-	}
-
-	return true
+	return !env.GetServerConfig().Redis.Enabled || cache.RedisReady()
 }

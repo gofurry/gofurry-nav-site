@@ -2,131 +2,130 @@ package router
 
 import (
 	"github.com/gofiber/fiber/v3"
-	auth "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
 	authmw "github.com/gofurry/gofurry-admin/internal/app/auth/middleware"
-	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
-	navadmin "github.com/gofurry/gofurry-admin/internal/app/navadmin/controller"
-	options "github.com/gofurry/gofurry-admin/internal/app/shared/options/controller"
+	"github.com/gofurry/gofurry-admin/internal/bootstrap"
 )
 
-func api(root fiber.Router) {
-	v1(root.Group("/v1"))
+func api(root fiber.Router, runtime *bootstrap.Runtime) {
+	v1(root.Group("/v1"), runtime)
 }
 
-func v1(root fiber.Router) {
-	authRoutes(root.Group("/auth"))
+func v1(root fiber.Router, runtime *bootstrap.Runtime) {
+	authRoutes(root.Group("/auth"), runtime)
 
 	protected := root.Group("")
-	protected.Use(authmw.Required())
-	optionsRoutes(protected.Group("/options"))
-	navRoutes(protected.Group("/nav"))
-	gameRoutes(protected.Group("/game"))
+	protected.Use(authmw.Required(runtime.AuthService))
+	optionsRoutes(protected.Group("/options"), runtime)
+	navRoutes(protected.Group("/nav"), runtime)
+	gameRoutes(protected.Group("/game"), runtime)
 }
 
-func authRoutes(root fiber.Router) {
-	root.Get("/state", auth.AuthAPI.State)
-	root.Post("/bootstrap", auth.AuthAPI.Bootstrap)
-	root.Post("/login", auth.AuthAPI.Login)
-	root.Post("/logout", auth.AuthAPI.Logout)
-	root.Get("/me", authmw.Required(), auth.AuthAPI.Me)
+func authRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	root.Get("/state", runtime.AuthAPI.State)
+	root.Post("/bootstrap", runtime.AuthAPI.Bootstrap)
+	root.Post("/login", runtime.AuthAPI.Login)
+	root.Post("/logout", runtime.AuthAPI.Logout)
+	root.Get("/me", authmw.Required(runtime.AuthService), runtime.AuthAPI.Me)
 }
 
-func optionsRoutes(root fiber.Router) {
-	root.Get("/sites", options.OptionsAPI.SiteOptions)
-	root.Get("/site-groups", options.OptionsAPI.SiteGroupOptions)
-	root.Get("/games", options.OptionsAPI.GameOptions)
-	root.Get("/tags", options.OptionsAPI.TagOptions)
+func optionsRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	root.Get("/sites", runtime.OptionsAPI.SiteOptions)
+	root.Get("/site-groups", runtime.OptionsAPI.SiteGroupOptions)
+	root.Get("/games", runtime.OptionsAPI.GameOptions)
+	root.Get("/tags", runtime.OptionsAPI.TagOptions)
 }
 
-func navRoutes(root fiber.Router) {
-	root.Get("/collect/status", navadmin.NavAPI.CollectStatus)
-	root.Get("/collect/observations", navadmin.NavAPI.CollectObservations)
-	root.Get("/collect/sites/:site_id/status", navadmin.NavAPI.CollectSiteStatus)
-	root.Get("/collect/sites/:site_id/targets/:target/status", navadmin.NavAPI.CollectTargetStatus)
+func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	api := runtime.NavAPI
+	root.Get("/collect/status", api.CollectStatus)
+	root.Get("/collect/observations", api.CollectObservations)
+	root.Get("/collect/sites/:site_id/status", api.CollectSiteStatus)
+	root.Get("/collect/sites/:site_id/targets/:target/status", api.CollectTargetStatus)
 
-	root.Get("/sayings", navadmin.NavAPI.ListSayings)
-	root.Post("/sayings", navadmin.NavAPI.CreateSaying)
-	root.Get("/sayings/:id", navadmin.NavAPI.GetSaying)
-	root.Put("/sayings/:id", navadmin.NavAPI.UpdateSaying)
-	root.Delete("/sayings/:id", navadmin.NavAPI.DeleteSaying)
+	root.Get("/sayings", api.ListSayings)
+	root.Post("/sayings", api.CreateSaying)
+	root.Get("/sayings/:id", api.GetSaying)
+	root.Put("/sayings/:id", api.UpdateSaying)
+	root.Delete("/sayings/:id", api.DeleteSaying)
 
-	root.Get("/update-notices", navadmin.NavAPI.ListUpdateNotices)
-	root.Post("/update-notices", navadmin.NavAPI.CreateUpdateNotice)
-	root.Get("/update-notices/:id", navadmin.NavAPI.GetUpdateNotice)
-	root.Put("/update-notices/:id", navadmin.NavAPI.UpdateUpdateNotice)
-	root.Delete("/update-notices/:id", navadmin.NavAPI.DeleteUpdateNotice)
+	root.Get("/update-notices", api.ListUpdateNotices)
+	root.Post("/update-notices", api.CreateUpdateNotice)
+	root.Get("/update-notices/:id", api.GetUpdateNotice)
+	root.Put("/update-notices/:id", api.UpdateUpdateNotice)
+	root.Delete("/update-notices/:id", api.DeleteUpdateNotice)
 
-	root.Get("/collector-domains", navadmin.NavAPI.ListCollectorDomains)
-	root.Post("/collector-domains", navadmin.NavAPI.CreateCollectorDomain)
-	root.Get("/collector-domains/:id", navadmin.NavAPI.GetCollectorDomain)
-	root.Put("/collector-domains/:id", navadmin.NavAPI.UpdateCollectorDomain)
-	root.Delete("/collector-domains/:id", navadmin.NavAPI.DeleteCollectorDomain)
+	root.Get("/collector-domains", api.ListCollectorDomains)
+	root.Post("/collector-domains", api.CreateCollectorDomain)
+	root.Get("/collector-domains/:id", api.GetCollectorDomain)
+	root.Put("/collector-domains/:id", api.UpdateCollectorDomain)
+	root.Delete("/collector-domains/:id", api.DeleteCollectorDomain)
 
-	root.Get("/sites", navadmin.NavAPI.ListSites)
-	root.Post("/sites", navadmin.NavAPI.CreateSite)
-	root.Get("/sites/:id", navadmin.NavAPI.GetSite)
-	root.Put("/sites/:id", navadmin.NavAPI.UpdateSite)
-	root.Delete("/sites/:id", navadmin.NavAPI.DeleteSite)
+	root.Get("/sites", api.ListSites)
+	root.Post("/sites", api.CreateSite)
+	root.Get("/sites/:id", api.GetSite)
+	root.Put("/sites/:id", api.UpdateSite)
+	root.Delete("/sites/:id", api.DeleteSite)
 
-	root.Get("/site-groups", navadmin.NavAPI.ListSiteGroups)
-	root.Post("/site-groups", navadmin.NavAPI.CreateSiteGroup)
-	root.Get("/site-groups/:id", navadmin.NavAPI.GetSiteGroup)
-	root.Put("/site-groups/:id", navadmin.NavAPI.UpdateSiteGroup)
-	root.Delete("/site-groups/:id", navadmin.NavAPI.DeleteSiteGroup)
+	root.Get("/site-groups", api.ListSiteGroups)
+	root.Post("/site-groups", api.CreateSiteGroup)
+	root.Get("/site-groups/:id", api.GetSiteGroup)
+	root.Put("/site-groups/:id", api.UpdateSiteGroup)
+	root.Delete("/site-groups/:id", api.DeleteSiteGroup)
 
-	root.Get("/site-group-maps", navadmin.NavAPI.ListSiteGroupMaps)
-	root.Post("/site-group-maps", navadmin.NavAPI.CreateSiteGroupMap)
-	root.Put("/site-group-maps/bulk-replace", navadmin.NavAPI.BulkReplaceSiteGroupMaps)
-	root.Get("/site-group-maps/:id", navadmin.NavAPI.GetSiteGroupMap)
-	root.Put("/site-group-maps/:id", navadmin.NavAPI.UpdateSiteGroupMap)
-	root.Delete("/site-group-maps/:id", navadmin.NavAPI.DeleteSiteGroupMap)
+	root.Get("/site-group-maps", api.ListSiteGroupMaps)
+	root.Post("/site-group-maps", api.CreateSiteGroupMap)
+	root.Put("/site-group-maps/bulk-replace", api.BulkReplaceSiteGroupMaps)
+	root.Get("/site-group-maps/:id", api.GetSiteGroupMap)
+	root.Put("/site-group-maps/:id", api.UpdateSiteGroupMap)
+	root.Delete("/site-group-maps/:id", api.DeleteSiteGroupMap)
 
-	root.Get("/featured-sites", navadmin.NavAPI.ListFeaturedSites)
-	root.Post("/featured-sites", navadmin.NavAPI.CreateFeaturedSite)
-	root.Get("/featured-sites/:id", navadmin.NavAPI.GetFeaturedSite)
-	root.Put("/featured-sites/:id", navadmin.NavAPI.UpdateFeaturedSite)
-	root.Delete("/featured-sites/:id", navadmin.NavAPI.DeleteFeaturedSite)
+	root.Get("/featured-sites", api.ListFeaturedSites)
+	root.Post("/featured-sites", api.CreateFeaturedSite)
+	root.Get("/featured-sites/:id", api.GetFeaturedSite)
+	root.Put("/featured-sites/:id", api.UpdateFeaturedSite)
+	root.Delete("/featured-sites/:id", api.DeleteFeaturedSite)
 }
 
-func gameRoutes(root fiber.Router) {
-	root.Get("/collect/status", gameadmin.GameAPI.CollectStatus)
-	root.Get("/collect/runs", gameadmin.GameAPI.CollectRuns)
-	root.Get("/collect/runs/:run_id", gameadmin.GameAPI.CollectRun)
-	root.Get("/collect/task-results", gameadmin.GameAPI.CollectTaskResults)
-	root.Get("/collect/games/:id/status", gameadmin.GameAPI.CollectGameStatus)
+func gameRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	api := runtime.GameAPI
+	root.Get("/collect/status", api.CollectStatus)
+	root.Get("/collect/runs", api.CollectRuns)
+	root.Get("/collect/runs/:run_id", api.CollectRun)
+	root.Get("/collect/task-results", api.CollectTaskResults)
+	root.Get("/collect/games/:id/status", api.CollectGameStatus)
 
-	root.Get("/games", gameadmin.GameAPI.ListGames)
-	root.Post("/games", gameadmin.GameAPI.CreateGame)
-	root.Get("/games/steam-asset", gameadmin.GameAPI.ResolveSteamGameAsset)
-	root.Get("/games/steam-prefill", gameadmin.GameAPI.ResolveSteamGamePrefill)
-	root.Get("/games/:id", gameadmin.GameAPI.GetGame)
-	root.Put("/games/:id", gameadmin.GameAPI.UpdateGame)
-	root.Delete("/games/:id", gameadmin.GameAPI.DeleteGame)
+	root.Get("/games", api.ListGames)
+	root.Post("/games", api.CreateGame)
+	root.Get("/games/steam-asset", api.ResolveSteamGameAsset)
+	root.Get("/games/steam-prefill", api.ResolveSteamGamePrefill)
+	root.Get("/games/:id", api.GetGame)
+	root.Put("/games/:id", api.UpdateGame)
+	root.Delete("/games/:id", api.DeleteGame)
 
-	root.Get("/comments", gameadmin.GameAPI.ListComments)
-	root.Post("/comments", gameadmin.GameAPI.CreateComment)
-	root.Get("/comments/:id", gameadmin.GameAPI.GetComment)
-	root.Put("/comments/:id", gameadmin.GameAPI.UpdateComment)
-	root.Delete("/comments/:id", gameadmin.GameAPI.DeleteComment)
+	root.Get("/comments", api.ListComments)
+	root.Post("/comments", api.CreateComment)
+	root.Get("/comments/:id", api.GetComment)
+	root.Put("/comments/:id", api.UpdateComment)
+	root.Delete("/comments/:id", api.DeleteComment)
 
-	root.Get("/prizes", gameadmin.GameAPI.ListPrizes)
-	root.Post("/prizes", gameadmin.GameAPI.CreatePrize)
-	root.Get("/prizes/:id", gameadmin.GameAPI.GetPrize)
-	root.Put("/prizes/:id", gameadmin.GameAPI.UpdatePrize)
-	root.Delete("/prizes/:id", gameadmin.GameAPI.DeletePrize)
+	root.Get("/prizes", api.ListPrizes)
+	root.Post("/prizes", api.CreatePrize)
+	root.Get("/prizes/:id", api.GetPrize)
+	root.Put("/prizes/:id", api.UpdatePrize)
+	root.Delete("/prizes/:id", api.DeletePrize)
 
-	root.Get("/tags", gameadmin.GameAPI.ListTags)
-	root.Post("/tags", gameadmin.GameAPI.CreateTag)
-	root.Get("/tags/:id", gameadmin.GameAPI.GetTag)
-	root.Put("/tags/:id", gameadmin.GameAPI.UpdateTag)
-	root.Delete("/tags/:id", gameadmin.GameAPI.DeleteTag)
+	root.Get("/tags", api.ListTags)
+	root.Post("/tags", api.CreateTag)
+	root.Get("/tags/:id", api.GetTag)
+	root.Put("/tags/:id", api.UpdateTag)
+	root.Delete("/tags/:id", api.DeleteTag)
 
-	root.Get("/tag-maps", gameadmin.GameAPI.ListTagMaps)
-	root.Post("/tag-maps", gameadmin.GameAPI.CreateTagMap)
-	root.Put("/tag-maps/bulk-replace", gameadmin.GameAPI.BulkReplaceTagMaps)
-	root.Get("/tag-maps/by-tag/:id", gameadmin.GameAPI.ListTagMapGameIDs)
-	root.Put("/tag-maps/bulk-replace-by-tag", gameadmin.GameAPI.BulkReplaceTagGameMaps)
-	root.Get("/tag-maps/:id", gameadmin.GameAPI.GetTagMap)
-	root.Put("/tag-maps/:id", gameadmin.GameAPI.UpdateTagMap)
-	root.Delete("/tag-maps/:id", gameadmin.GameAPI.DeleteTagMap)
+	root.Get("/tag-maps", api.ListTagMaps)
+	root.Post("/tag-maps", api.CreateTagMap)
+	root.Put("/tag-maps/bulk-replace", api.BulkReplaceTagMaps)
+	root.Get("/tag-maps/by-tag/:id", api.ListTagMapGameIDs)
+	root.Put("/tag-maps/bulk-replace-by-tag", api.BulkReplaceTagGameMaps)
+	root.Get("/tag-maps/:id", api.GetTagMap)
+	root.Put("/tag-maps/:id", api.UpdateTagMap)
+	root.Delete("/tag-maps/:id", api.DeleteTagMap)
 }

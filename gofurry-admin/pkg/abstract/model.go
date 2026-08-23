@@ -8,12 +8,12 @@ type Model interface {
 }
 
 type IdModel struct {
-	ID int64 `gorm:"primaryKey;column:id" json:"id,string"`
+	ID int64 `json:"id,string"`
 }
 
 type DefaultModel struct {
 	IdModel
-	Name string `gorm:"column:name;not null" json:"name"`
+	Name string `json:"name"`
 }
 
 func (dm *DefaultModel) GetId() int64   { return dm.ID }

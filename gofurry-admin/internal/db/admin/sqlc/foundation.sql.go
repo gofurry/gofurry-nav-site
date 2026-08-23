@@ -7,7 +7,20 @@ package adminsqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const countAdminAccounts = `-- name: CountAdminAccounts :one
+SELECT COUNT(*)::bigint FROM gfa_admin_account
+`
+
+func (q *Queries) CountAdminAccounts(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminAccounts)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
 
 const foundationPing = `-- name: FoundationPing :one
 SELECT 1::bigint AS value
@@ -18,4 +31,121 @@ func (q *Queries) FoundationPing(ctx context.Context) (int64, error) {
 	var value int64
 	err := row.Scan(&value)
 	return value, err
+}
+
+const getAdminAccount = `-- name: GetAdminAccount :one
+SELECT id, password_hash, session_version, created_at, updated_at, password_updated_at
+FROM gfa_admin_account
+WHERE id = 1
+`
+
+func (q *Queries) GetAdminAccount(ctx context.Context) (GfaAdminAccount, error) {
+	row := q.db.QueryRow(ctx, getAdminAccount)
+	var i GfaAdminAccount
+	err := row.Scan(
+		&i.ID,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
+}
+
+const insertAdminAccount = `-- name: InsertAdminAccount :one
+INSERT INTO gfa_admin_account
+    (id, password_hash, session_version, created_at, updated_at, password_updated_at)
+VALUES
+    (1, $1, $2, NOW()::timestamp(0), NOW()::timestamp(0), $3)
+RETURNING id, password_hash, session_version, created_at, updated_at, password_updated_at
+`
+
+type InsertAdminAccountParams struct {
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) InsertAdminAccount(ctx context.Context, arg InsertAdminAccountParams) (GfaAdminAccount, error) {
+	row := q.db.QueryRow(ctx, insertAdminAccount, arg.PasswordHash, arg.SessionVersion, arg.PasswordUpdatedAt)
+	var i GfaAdminAccount
+	err := row.Scan(
+		&i.ID,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
+}
+
+const insertAdminAuditLog = `-- name: InsertAdminAuditLog :exec
+INSERT INTO gfa_admin_audit_log
+    (action, resource, target_id, operator, session_version, request_id, ip_address,
+     user_agent, before_data, after_data, created_at)
+VALUES
+    ($1, $2, $3, $4,
+     $5, $6, $7,
+     $8, $9, $10, NOW()::timestamp(0))
+`
+
+type InsertAdminAuditLogParams struct {
+	Action         string  `json:"action"`
+	Resource       string  `json:"resource"`
+	TargetID       *string `json:"target_id"`
+	Operator       string  `json:"operator"`
+	SessionVersion int64   `json:"session_version"`
+	RequestID      *string `json:"request_id"`
+	IpAddress      *string `json:"ip_address"`
+	UserAgent      *string `json:"user_agent"`
+	BeforeData     *string `json:"before_data"`
+	AfterData      *string `json:"after_data"`
+}
+
+func (q *Queries) InsertAdminAuditLog(ctx context.Context, arg InsertAdminAuditLogParams) error {
+	_, err := q.db.Exec(ctx, insertAdminAuditLog,
+		arg.Action,
+		arg.Resource,
+		arg.TargetID,
+		arg.Operator,
+		arg.SessionVersion,
+		arg.RequestID,
+		arg.IpAddress,
+		arg.UserAgent,
+		arg.BeforeData,
+		arg.AfterData,
+	)
+	return err
+}
+
+const updateAdminAccountPassword = `-- name: UpdateAdminAccountPassword :one
+UPDATE gfa_admin_account
+SET password_hash = $1,
+    session_version = $2,
+    updated_at = NOW()::timestamp(0),
+    password_updated_at = $3
+WHERE id = 1
+RETURNING id, password_hash, session_version, created_at, updated_at, password_updated_at
+`
+
+type UpdateAdminAccountPasswordParams struct {
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) UpdateAdminAccountPassword(ctx context.Context, arg UpdateAdminAccountPasswordParams) (GfaAdminAccount, error) {
+	row := q.db.QueryRow(ctx, updateAdminAccountPassword, arg.PasswordHash, arg.SessionVersion, arg.PasswordUpdatedAt)
+	var i GfaAdminAccount
+	err := row.Scan(
+		&i.ID,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
 }

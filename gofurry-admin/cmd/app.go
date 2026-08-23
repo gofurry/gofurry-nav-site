@@ -116,6 +116,7 @@ func appIdentity() (string, string) {
 
 type app struct {
 	fiberApp     *fiber.App
+	runtime      *bootstrap.Runtime
 	shutdownOnce sync.Once
 	stopping     atomic.Bool
 }
@@ -125,11 +126,13 @@ func newApp() *app {
 }
 
 func (a *app) Start(s service.Service) error {
-	if err := bootstrap.Start(); err != nil {
+	runtime, err := bootstrap.Start()
+	if err != nil {
 		return err
 	}
+	a.runtime = runtime
 
-	a.fiberApp = router.New().Init()
+	a.fiberApp = router.New(runtime).Init()
 	go a.run()
 	return nil
 }
@@ -174,7 +177,7 @@ func (a *app) shutdown() error {
 			}
 		}
 
-		if err := bootstrap.Shutdown(); err != nil {
+		if err := a.runtime.Shutdown(); err != nil {
 			shutdownErr = errors.Join(shutdownErr, err)
 		}
 	})

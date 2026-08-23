@@ -5,24 +5,24 @@ import (
 )
 
 type Game struct {
-	ID           int64               `gorm:"column:id;primaryKey" json:"id"`
-	Name         string              `gorm:"column:name;not null" json:"name"`
-	NameEn       string              `gorm:"column:name_en;not null" json:"name_en"`
-	Info         string              `gorm:"column:info;not null" json:"info"`
-	InfoEn       string              `gorm:"column:info_en;not null" json:"info_en"`
-	CreateTime   pkgmodels.LocalTime `gorm:"column:create_time;autoCreateTime" json:"create_time"`
-	UpdateTime   pkgmodels.LocalTime `gorm:"column:update_time;autoUpdateTime" json:"update_time"`
-	Resources    *string             `gorm:"column:resources" json:"-"`
-	Groups       *string             `gorm:"column:groups" json:"-"`
-	ReleaseDate  string              `gorm:"column:release_date;not null" json:"release_date"`
-	Developers   string              `gorm:"column:developers;not null" json:"-"`
-	Publishers   string              `gorm:"column:publishers;not null" json:"-"`
-	Appid        int64               `gorm:"column:appid;not null" json:"appid"`
-	Header       string              `gorm:"column:header;not null" json:"header"`
-	Links        *string             `gorm:"column:links" json:"-"`
-	Weight       int64               `gorm:"column:weight;not null" json:"weight"`
-	PrimaryTag   int64               `gorm:"column:primary_tag;not null" json:"primary_tag"`
-	SecondaryTag int64               `gorm:"column:secondary_tag;not null" json:"secondary_tag"`
+	ID           int64               `json:"id"`
+	Name         string              `json:"name"`
+	NameEn       string              `json:"name_en"`
+	Info         string              `json:"info"`
+	InfoEn       string              `json:"info_en"`
+	CreateTime   pkgmodels.LocalTime `json:"create_time"`
+	UpdateTime   pkgmodels.LocalTime `json:"update_time"`
+	Resources    *string             `json:"-"`
+	Groups       *string             `json:"-"`
+	ReleaseDate  string              `json:"release_date"`
+	Developers   string              `json:"-"`
+	Publishers   string              `json:"-"`
+	Appid        int64               `json:"appid"`
+	Header       string              `json:"header"`
+	Links        *string             `json:"-"`
+	Weight       int64               `json:"weight"`
+	PrimaryTag   int64               `json:"primary_tag"`
+	SecondaryTag int64               `json:"secondary_tag"`
 }
 
 func (*Game) TableName() string { return "gfg_game" }
@@ -67,14 +67,14 @@ type GamePayload struct {
 }
 
 type GameComment struct {
-	ID         int64               `gorm:"column:id;primaryKey" json:"id"`
-	Region     string              `gorm:"column:region;not null" json:"region"`
-	Content    string              `gorm:"column:content;not null" json:"content"`
-	Score      float64             `gorm:"column:score;not null" json:"score"`
-	CreateTime pkgmodels.LocalTime `gorm:"column:create_time;autoCreateTime" json:"create_time"`
-	GameID     int64               `gorm:"column:game_id;not null" json:"game_id"`
-	IP         string              `gorm:"column:ip;not null" json:"ip"`
-	Name       string              `gorm:"column:name" json:"name"`
+	ID         int64               `json:"id"`
+	Region     string              `json:"region"`
+	Content    string              `json:"content"`
+	Score      float64             `json:"score"`
+	CreateTime pkgmodels.LocalTime `json:"create_time"`
+	GameID     int64               `json:"game_id"`
+	IP         string              `json:"ip"`
+	Name       string              `json:"name"`
 }
 
 func (*GameComment) TableName() string { return "gfg_game_comment" }
@@ -89,15 +89,15 @@ type GameCommentPayload struct {
 }
 
 type Prize struct {
-	ID         int64               `gorm:"column:id;primaryKey" json:"id"`
-	Title      string              `gorm:"column:title;not null" json:"title"`
-	Desc       string              `gorm:"column:desc;not null" json:"desc"`
-	Prize      string              `gorm:"column:prize;not null" json:"-"`
-	Key        string              `gorm:"column:key;not null" json:"key"`
-	StartTime  pkgmodels.LocalTime `gorm:"column:start_time;not null" json:"start_time"`
-	EndTime    pkgmodels.LocalTime `gorm:"column:end_time;not null" json:"end_time"`
-	CreateTime pkgmodels.LocalTime `gorm:"column:create_time;autoCreateTime" json:"create_time"`
-	Status     bool                `gorm:"column:status;not null" json:"status"`
+	ID         int64               `json:"id"`
+	Title      string              `json:"title"`
+	Desc       string              `json:"desc"`
+	Prize      string              `json:"-"`
+	Key        string              `json:"key"`
+	StartTime  pkgmodels.LocalTime `json:"start_time"`
+	EndTime    pkgmodels.LocalTime `json:"end_time"`
+	CreateTime pkgmodels.LocalTime `json:"create_time"`
+	Status     bool                `json:"status"`
 }
 
 func (*Prize) TableName() string { return "gfg_prize" }
@@ -131,14 +131,14 @@ type PrizePayload struct {
 }
 
 type Tag struct {
-	ID         int64               `gorm:"column:id;primaryKey" json:"id"`
-	Name       string              `gorm:"column:name;not null" json:"name"`
-	NameEn     string              `gorm:"column:name_en;not null" json:"name_en"`
-	Info       string              `gorm:"column:info;not null" json:"info"`
-	InfoEn     string              `gorm:"column:info_en;not null" json:"info_en"`
-	Prefix     int64               `gorm:"column:prefix;not null" json:"prefix"`
-	CreateTime pkgmodels.LocalTime `gorm:"column:create_time;autoCreateTime" json:"create_time"`
-	UpdateTime pkgmodels.LocalTime `gorm:"column:update_time;autoUpdateTime" json:"update_time"`
+	ID         int64               `json:"id"`
+	Name       string              `json:"name"`
+	NameEn     string              `json:"name_en"`
+	Info       string              `json:"info"`
+	InfoEn     string              `json:"info_en"`
+	Prefix     int64               `json:"prefix"`
+	CreateTime pkgmodels.LocalTime `json:"create_time"`
+	UpdateTime pkgmodels.LocalTime `json:"update_time"`
 }
 
 func (*Tag) TableName() string { return "gfg_tag" }
@@ -153,11 +153,11 @@ type TagPayload struct {
 }
 
 type TagMap struct {
-	ID         int64               `gorm:"column:id;primaryKey" json:"id"`
-	GameID     int64               `gorm:"column:game_id;not null" json:"game_id"`
-	TagID      int64               `gorm:"column:tag_id;not null" json:"tag_id"`
-	CreateTime pkgmodels.LocalTime `gorm:"column:create_time;autoCreateTime" json:"create_time"`
-	UpdateTime pkgmodels.LocalTime `gorm:"column:update_time;autoUpdateTime" json:"update_time"`
+	ID         int64               `json:"id"`
+	GameID     int64               `json:"game_id"`
+	TagID      int64               `json:"tag_id"`
+	CreateTime pkgmodels.LocalTime `json:"create_time"`
+	UpdateTime pkgmodels.LocalTime `json:"update_time"`
 }
 
 func (*TagMap) TableName() string { return "gfg_tag_map" }

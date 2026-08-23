@@ -1,113 +1,108 @@
 package bootstrap
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	env "github.com/gofurry/gofurry-admin/config"
+	authcontroller "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
+	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
+	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
+	navadmin "github.com/gofurry/gofurry-admin/internal/app/navadmin/controller"
+	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
+	options "github.com/gofurry/gofurry-admin/internal/app/shared/options/controller"
 	cache "github.com/gofurry/gofurry-admin/internal/infra/cache"
 	"github.com/gofurry/gofurry-admin/internal/infra/db"
 	log "github.com/gofurry/gofurry-admin/internal/infra/logging"
 	"github.com/gofurry/gofurry-admin/pkg/common"
 )
 
-var (
-	lifecycleMu sync.Mutex
-	started     atomic.Bool
-)
+type Runtime struct {
+	Pools       *db.Pools
+	Audit       *audit.Logger
+	AuthService *authservice.AuthService
+	AuthAPI     *authcontroller.AuthAPI
+	NavAPI      *navadmin.NavAPI
+	GameAPI     *gameadmin.GameAPI
+	OptionsAPI  *options.OptionsAPI
 
-func Start() error {
-	lifecycleMu.Lock()
-	defer lifecycleMu.Unlock()
+	started      atomic.Bool
+	shutdownOnce sync.Once
+}
 
-	if started.Load() {
-		return nil
-	}
-
+func Start() (*Runtime, error) {
 	cfg := env.GetServerConfig()
-
 	if err := initLogger(cfg); err != nil {
-		return err
+		return nil, err
 	}
 
-	cleanupOnError := func(cause error) error {
-		started.Store(false)
-		return errors.Join(cause, shutdownComponents(cfg))
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pools, err := db.Open(ctx, cfg)
+	if err != nil {
+		_ = log.Sync()
+		return nil, fmt.Errorf("database init failed: %w", err)
 	}
-
-	if err := db.InitDatabasesOnStart(); err != nil {
-		return cleanupOnError(fmt.Errorf("database init failed: %w", err))
+	cleanupOnError := func(cause error) (*Runtime, error) {
+		pools.Close()
+		return nil, errors.Join(cause, log.Sync())
 	}
-
+	if err := db.Validate(pools); err != nil {
+		return cleanupOnError(err)
+	}
 	if cfg.Redis.Enabled {
 		if err := cache.InitRedisOnStart(); err != nil {
 			return cleanupOnError(fmt.Errorf("redis init failed: %w", err))
 		}
 	}
 
-	started.Store(true)
+	auditLogger := audit.New(pools.Admin)
+	auth := authservice.New(pools.Admin, auditLogger)
+	runtime := &Runtime{
+		Pools: pools, Audit: auditLogger, AuthService: auth,
+		AuthAPI: authcontroller.New(auth, auditLogger), NavAPI: navadmin.New(pools.Nav, auditLogger),
+		GameAPI: gameadmin.New(pools.Game, auditLogger), OptionsAPI: options.New(pools.Nav, pools.Game),
+	}
+	runtime.started.Store(true)
 	log.InfoKV("application bootstrap completed")
-	return nil
+	return runtime, nil
 }
 
-func Shutdown() error {
-	lifecycleMu.Lock()
-	defer lifecycleMu.Unlock()
-
-	if !started.Load() {
+func (runtime *Runtime) Shutdown() error {
+	if runtime == nil {
 		return nil
 	}
-
-	cfg := env.GetServerConfig()
-	err := shutdownComponents(cfg)
-	started.Store(false)
-	return err
+	var shutdownErr error
+	runtime.shutdownOnce.Do(func() {
+		runtime.started.Store(false)
+		if env.GetServerConfig().Redis.Enabled {
+			if err := cache.Close(); err != nil {
+				shutdownErr = errors.Join(shutdownErr, fmt.Errorf("redis shutdown failed: %w", err))
+			}
+		}
+		runtime.Pools.Close()
+		if err := log.Sync(); err != nil {
+			shutdownErr = errors.Join(shutdownErr, fmt.Errorf("logger sync failed: %w", err))
+		}
+	})
+	return shutdownErr
 }
 
 func initLogger(cfg *env.ServerConfigHolder) error {
-	logCfg := &log.Config{
-		ShowLine:   true,
-		TimeFormat: common.TIME_FORMAT_DATE,
-	}
-
+	logCfg := &log.Config{ShowLine: true, TimeFormat: common.TIME_FORMAT_DATE}
 	if cfg.Server.Mode == "debug" {
-		logCfg.Level = "debug"
-		logCfg.Mode = "dev"
-		logCfg.EncodeJson = false
+		logCfg.Level, logCfg.Mode, logCfg.EncodeJson = "debug", "dev", false
 	} else {
-		logCfg.Level = cfg.Log.LogLevel
-		logCfg.Mode = cfg.Log.LogMode
-		logCfg.FilePath = cfg.Log.LogPath
-		logCfg.MaxSize = cfg.Log.LogMaxSize
-		logCfg.MaxBackups = cfg.Log.LogMaxBackups
-		logCfg.MaxAge = cfg.Log.LogMaxAge
-		logCfg.Compress = true
-		logCfg.EncodeJson = true
-		logCfg.TimeFormat = common.TIME_FORMAT_LOG
+		logCfg.Level, logCfg.Mode, logCfg.FilePath = cfg.Log.LogLevel, cfg.Log.LogMode, cfg.Log.LogPath
+		logCfg.MaxSize, logCfg.MaxBackups, logCfg.MaxAge = cfg.Log.LogMaxSize, cfg.Log.LogMaxBackups, cfg.Log.LogMaxAge
+		logCfg.Compress, logCfg.EncodeJson, logCfg.TimeFormat = true, true, common.TIME_FORMAT_LOG
 	}
-
 	if err := log.InitLogger(logCfg); err != nil {
 		return fmt.Errorf("logger init failed: %w", err)
 	}
 	return nil
-}
-
-func shutdownComponents(cfg *env.ServerConfigHolder) error {
-	var shutdownErr error
-
-	if cfg.Redis.Enabled {
-		if err := cache.Close(); err != nil {
-			shutdownErr = errors.Join(shutdownErr, fmt.Errorf("redis shutdown failed: %w", err))
-		}
-	}
-
-	db.Databases.Close()
-
-	if err := log.Sync(); err != nil {
-		shutdownErr = errors.Join(shutdownErr, fmt.Errorf("logger sync failed: %w", err))
-	}
-
-	return shutdownErr
 }

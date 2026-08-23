@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,97 +13,91 @@ import (
 	env "github.com/gofurry/gofurry-admin/config"
 	"github.com/gofurry/gofurry-admin/internal/app/auth/models"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
-	"github.com/gofurry/gofurry-admin/internal/infra/db"
+	adminsqlc "github.com/gofurry/gofurry-admin/internal/db/admin/sqlc"
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/golang-jwt/jwt/v5"
-	"gorm.io/gorm"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const ClaimsContextKey = "auth_claims"
 
-type authService struct{}
-
-var authSingleton = new(authService)
-
-func GetAuthService() *authService {
-	return authSingleton
+type AuthService struct {
+	pool  *pgxpool.Pool
+	q     *adminsqlc.Queries
+	audit *audit.Logger
 }
 
-func (s *authService) IsInitialized() (bool, common.Error) {
-	_, err := s.getAccount()
+func New(pool *pgxpool.Pool, auditLogger *audit.Logger) *AuthService {
+	return &AuthService{pool: pool, q: adminsqlc.New(pool), audit: auditLogger}
+}
+
+func (s *AuthService) IsInitialized() (bool, common.Error) {
+	_, err := s.getAccount(context.Background())
 	switch {
 	case err == nil:
 		return true, nil
-	case errors.Is(err, gorm.ErrRecordNotFound):
+	case errors.Is(err, pgx.ErrNoRows):
 		return false, nil
 	default:
-		return false, common.NewDaoError(err.Error())
+		return false, daoError(err)
 	}
 }
 
-func (s *authService) Bootstrap(password string, meta audit.Meta) common.Error {
+func (s *AuthService) Bootstrap(password string, meta audit.Meta) common.Error {
 	password = strings.TrimSpace(password)
 	if password == "" {
 		return common.NewValidationError("password must not be empty")
 	}
-
-	engine, err := adminDB()
+	ctx := context.Background()
+	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return daoError(err)
 	}
-
-	if err := engine.Transaction(func(tx *gorm.DB) error {
-		var count int64
-		if err := tx.Model(&models.AdminAccount{}).Count(&count).Error; err != nil {
-			return common.NewDaoError(err.Error())
-		}
-		if count > 0 {
-			return common.NewError(common.RETURN_FAILED, http.StatusConflict, "admin password has already been initialized")
-		}
-
-		hash, hashErr := s.createPasswordHash(password)
-		if hashErr != nil {
-			return hashErr
-		}
-
-		now := time.Now()
-		account := &models.AdminAccount{
-			ID:                1,
-			PasswordHash:      hash,
-			SessionVersion:    1,
-			PasswordUpdatedAt: &now,
-		}
-		if err := tx.Create(account).Error; err != nil {
-			return common.NewDaoError(err.Error())
-		}
-		if err := audit.LogTx(tx, meta, "bootstrap", account.TableName(), account.ID, nil, map[string]any{
-			"id":                  account.ID,
-			"session_version":     account.SessionVersion,
-			"password_updated_at": account.PasswordUpdatedAt,
-		}); err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
-		return asCommonError(err)
+	defer tx.Rollback(ctx)
+	queries := s.q.WithTx(tx)
+	count, err := queries.CountAdminAccounts(ctx)
+	if err != nil {
+		return daoError(err)
+	}
+	if count > 0 {
+		return common.NewError(common.RETURN_FAILED, http.StatusConflict, "admin password has already been initialized")
+	}
+	hash, hashErr := s.createPasswordHash(password)
+	if hashErr != nil {
+		return hashErr
+	}
+	now := time.Now()
+	account, err := queries.InsertAdminAccount(ctx, adminsqlc.InsertAdminAccountParams{
+		PasswordHash: hash, SessionVersion: 1, PasswordUpdatedAt: timestamp(now),
+	})
+	if err != nil {
+		return daoError(err)
+	}
+	if auditErr := s.audit.LogTx(ctx, tx, meta, "bootstrap", "gfa_admin_account", account.ID, nil, map[string]any{
+		"id": account.ID, "session_version": account.SessionVersion, "password_updated_at": now,
+	}); auditErr != nil {
+		return auditErr
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return daoError(err)
 	}
 	return nil
 }
 
-func (s *authService) Login(password string) (string, *models.AdminClaims, common.Error) {
+func (s *AuthService) Login(password string) (string, *models.AdminClaims, common.Error) {
 	password = strings.TrimSpace(password)
 	if password == "" {
 		return "", nil, common.NewValidationError("password must not be empty")
 	}
-
-	account, err := s.getAccount()
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", nil, common.NewError(common.RETURN_FAILED, http.StatusBadRequest, "admin password has not been initialized")
-		}
-		return "", nil, common.NewDaoError(err.Error())
+	account, err := s.getAccount(context.Background())
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil, common.NewError(common.RETURN_FAILED, http.StatusBadRequest, "admin password has not been initialized")
 	}
-
+	if err != nil {
+		return "", nil, daoError(err)
+	}
 	ok, verifyErr := easyhash.VerifyPBKDF2(password, account.PasswordHash)
 	if verifyErr != nil {
 		return "", nil, common.NewServiceError("password verification failed")
@@ -110,83 +105,58 @@ func (s *authService) Login(password string) (string, *models.AdminClaims, commo
 	if !ok {
 		return "", nil, common.NewError(common.RETURN_FAILED, http.StatusUnauthorized, "invalid password")
 	}
-
 	claims, token, tokenErr := s.buildToken(account.SessionVersion)
-	if tokenErr != nil {
-		return "", nil, tokenErr
-	}
-	return token, claims, nil
+	return token, claims, tokenErr
 }
 
-func (s *authService) ResetPassword(password string, meta audit.Meta) common.Error {
+func (s *AuthService) ResetPassword(password string, meta audit.Meta) common.Error {
 	password = strings.TrimSpace(password)
 	if password == "" {
 		return common.NewValidationError("password must not be empty")
 	}
-
-	engine, err := adminDB()
-	if err != nil {
-		return err
+	hash, hashErr := s.createPasswordHash(password)
+	if hashErr != nil {
+		return hashErr
 	}
-
-	if err := engine.Transaction(func(tx *gorm.DB) error {
-		hash, hashErr := s.createPasswordHash(password)
-		if hashErr != nil {
-			return hashErr
-		}
-
-		now := time.Now()
-		var account models.AdminAccount
-		var before map[string]any
-		err := tx.First(&account, "id = ?", 1).Error
-		switch {
-		case err == nil:
-			before = map[string]any{
-				"id":                  account.ID,
-				"session_version":     account.SessionVersion,
-				"password_updated_at": account.PasswordUpdatedAt,
-			}
-			account.PasswordHash = hash
-			account.SessionVersion++
-			account.PasswordUpdatedAt = &now
-			if err := tx.Save(&account).Error; err != nil {
-				return common.NewDaoError(err.Error())
-			}
-		case errors.Is(err, gorm.ErrRecordNotFound):
-			account = models.AdminAccount{
-				ID:                1,
-				PasswordHash:      hash,
-				SessionVersion:    1,
-				PasswordUpdatedAt: &now,
-			}
-			if err := tx.Create(&account).Error; err != nil {
-				return common.NewDaoError(err.Error())
-			}
-		default:
-			return common.NewDaoError(err.Error())
-		}
-
-		if err := audit.LogTx(tx, meta, "reset_password", account.TableName(), account.ID, before, map[string]any{
-			"id":                  account.ID,
-			"session_version":     account.SessionVersion,
-			"password_updated_at": account.PasswordUpdatedAt,
-		}); err != nil {
-			return err
-		}
-
-		return nil
-	}); err != nil {
-		return asCommonError(err)
+	ctx := context.Background()
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return daoError(err)
+	}
+	defer tx.Rollback(ctx)
+	queries := s.q.WithTx(tx)
+	now := time.Now()
+	account, err := queries.GetAdminAccount(ctx)
+	var before any
+	if err == nil {
+		before = map[string]any{"id": account.ID, "session_version": account.SessionVersion, "password_updated_at": nullableTime(account.PasswordUpdatedAt)}
+		account, err = queries.UpdateAdminAccountPassword(ctx, adminsqlc.UpdateAdminAccountPasswordParams{
+			PasswordHash: hash, SessionVersion: account.SessionVersion + 1, PasswordUpdatedAt: timestamp(now),
+		})
+	} else if errors.Is(err, pgx.ErrNoRows) {
+		account, err = queries.InsertAdminAccount(ctx, adminsqlc.InsertAdminAccountParams{
+			PasswordHash: hash, SessionVersion: 1, PasswordUpdatedAt: timestamp(now),
+		})
+	}
+	if err != nil {
+		return daoError(err)
+	}
+	if auditErr := s.audit.LogTx(ctx, tx, meta, "reset_password", "gfa_admin_account", account.ID, before, map[string]any{
+		"id": account.ID, "session_version": account.SessionVersion, "password_updated_at": now,
+	}); auditErr != nil {
+		return auditErr
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return daoError(err)
 	}
 	return nil
 }
 
-func (s *authService) ParseAndValidateToken(tokenValue string) (*models.AdminClaims, common.Error) {
+func (s *AuthService) ParseAndValidateToken(tokenValue string) (*models.AdminClaims, common.Error) {
 	tokenValue = strings.TrimSpace(tokenValue)
 	if tokenValue == "" {
 		return nil, common.NewError(common.RETURN_FAILED, http.StatusUnauthorized, "not logged in")
 	}
-
 	cfg := env.GetServerConfig().Auth
 	token, err := jwt.ParseWithClaims(tokenValue, &models.AdminClaims{}, func(token *jwt.Token) (any, error) {
 		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
@@ -197,78 +167,48 @@ func (s *authService) ParseAndValidateToken(tokenValue string) (*models.AdminCla
 	if err != nil {
 		return nil, common.NewError(common.RETURN_FAILED, http.StatusUnauthorized, "login state is invalid")
 	}
-
 	claims, ok := token.Claims.(*models.AdminClaims)
 	if !ok || !token.Valid {
 		return nil, common.NewError(common.RETURN_FAILED, http.StatusUnauthorized, "login state is invalid")
 	}
-
-	account, accountErr := s.getAccount()
+	account, accountErr := s.getAccount(context.Background())
+	if errors.Is(accountErr, pgx.ErrNoRows) {
+		return nil, common.NewError(common.RETURN_FAILED, http.StatusUnauthorized, "admin password has not been initialized")
+	}
 	if accountErr != nil {
-		if errors.Is(accountErr, gorm.ErrRecordNotFound) {
-			return nil, common.NewError(common.RETURN_FAILED, http.StatusUnauthorized, "admin password has not been initialized")
-		}
-		return nil, common.NewDaoError(accountErr.Error())
+		return nil, daoError(accountErr)
 	}
 	if claims.SessionVersion != account.SessionVersion {
 		return nil, common.NewError(common.RETURN_FAILED, http.StatusUnauthorized, "login state has expired")
 	}
-
 	return claims, nil
 }
 
-func (s *authService) BuildAuthCookie(token string) *fiber.Cookie {
+func (s *AuthService) BuildAuthCookie(token string) *fiber.Cookie {
 	cfg := env.GetServerConfig().Auth
-	return &fiber.Cookie{
-		Name:     cfg.CookieName,
-		Value:    token,
-		Path:     "/",
-		Domain:   cfg.CookieDomain,
-		SameSite: cfg.SameSite,
-		MaxAge:   cfg.CookieMaxAgeSecs,
-		Secure:   cfg.CookieSecure,
-		HTTPOnly: true,
-	}
+	return &fiber.Cookie{Name: cfg.CookieName, Value: token, Path: "/", Domain: cfg.CookieDomain, SameSite: cfg.SameSite, MaxAge: cfg.CookieMaxAgeSecs, Secure: cfg.CookieSecure, HTTPOnly: true}
 }
 
-func (s *authService) BuildLogoutCookie() *fiber.Cookie {
+func (s *AuthService) BuildLogoutCookie() *fiber.Cookie {
 	cfg := env.GetServerConfig().Auth
-	return &fiber.Cookie{
-		Name:     cfg.CookieName,
-		Value:    "",
-		Path:     "/",
-		Domain:   cfg.CookieDomain,
-		SameSite: cfg.SameSite,
-		MaxAge:   -1,
-		Secure:   cfg.CookieSecure,
-		HTTPOnly: true,
-		Expires:  time.Unix(0, 0),
-	}
+	return &fiber.Cookie{Name: cfg.CookieName, Value: "", Path: "/", Domain: cfg.CookieDomain, SameSite: cfg.SameSite, MaxAge: -1, Secure: cfg.CookieSecure, HTTPOnly: true, Expires: time.Unix(0, 0)}
 }
 
-func (s *authService) buildToken(sessionVersion int64) (*models.AdminClaims, string, common.Error) {
+func (s *AuthService) buildToken(sessionVersion int64) (*models.AdminClaims, string, common.Error) {
 	cfg := env.GetServerConfig().Auth
 	now := time.Now()
-	claims := &models.AdminClaims{
-		SessionVersion: sessionVersion,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    env.GetServerConfig().Server.AppID,
-			Subject:   "admin",
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(cfg.SessionTTLHours) * time.Hour)),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(cfg.JWTSecret))
+	claims := &models.AdminClaims{SessionVersion: sessionVersion, RegisteredClaims: jwt.RegisteredClaims{
+		Issuer: env.GetServerConfig().Server.AppID, Subject: "admin", IssuedAt: jwt.NewNumericDate(now),
+		NotBefore: jwt.NewNumericDate(now), ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(cfg.SessionTTLHours) * time.Hour)),
+	}}
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(cfg.JWTSecret))
 	if err != nil {
 		return nil, "", common.NewServiceError("failed to generate login token")
 	}
 	return claims, signed, nil
 }
 
-func (s *authService) createPasswordHash(password string) (string, common.Error) {
+func (s *AuthService) createPasswordHash(password string) (string, common.Error) {
 	cfg := easyhash.DefaultPBKDF2()
 	cfg.PBKDF2Iterations = env.GetServerConfig().Auth.PBKDF2Iterations
 	hash, err := easyhash.CreatePBKDF2(cfg, password)
@@ -278,31 +218,28 @@ func (s *authService) createPasswordHash(password string) (string, common.Error)
 	return hash, nil
 }
 
-func (s *authService) getAccount() (*models.AdminAccount, error) {
-	engine, err := adminDB()
+func (s *AuthService) getAccount(ctx context.Context) (*models.AdminAccount, error) {
+	row, err := s.q.GetAdminAccount(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	var account models.AdminAccount
-	if err := engine.First(&account, "id = ?", 1).Error; err != nil {
-		return nil, err
-	}
-	return &account, nil
+	return &models.AdminAccount{ID: row.ID, PasswordHash: row.PasswordHash, SessionVersion: row.SessionVersion,
+		CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time, PasswordUpdatedAt: nullableTime(row.PasswordUpdatedAt)}, nil
 }
 
-func adminDB() (*gorm.DB, common.Error) {
-	engine := db.Databases.DB(db.Admin)
-	if engine == nil {
-		return nil, common.NewDaoError("admin database is not initialized")
-	}
-	return engine, nil
+func timestamp(value time.Time) pgtype.Timestamp {
+	return pgtype.Timestamp{Time: value, Valid: !value.IsZero()}
 }
 
-func asCommonError(err error) common.Error {
-	if err == nil {
+func nullableTime(value pgtype.Timestamp) *time.Time {
+	if !value.Valid {
 		return nil
 	}
+	result := value.Time
+	return &result
+}
+
+func daoError(err error) common.Error {
 	if appErr, ok := err.(common.Error); ok {
 		return appErr
 	}

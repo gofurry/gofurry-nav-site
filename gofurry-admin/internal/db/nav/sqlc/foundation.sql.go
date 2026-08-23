@@ -7,7 +7,214 @@ package navsqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const countActiveSiteByID = `-- name: CountActiveSiteByID :one
+SELECT COUNT(*)::bigint FROM gfn_site WHERE id=$1 AND deleted IS NOT TRUE
+`
+
+func (q *Queries) CountActiveSiteByID(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countActiveSiteByID, id)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countCollectorDomains = `-- name: CountCollectorDomains :one
+SELECT COUNT(*)::bigint FROM gfn_collector_domain cd LEFT JOIN gfn_site s ON s.id=cd.site_id
+WHERE cd.deleted IS NOT TRUE AND ($1::text='' OR cd.name ILIKE '%'||$1||'%'
+ OR cd.proxy ILIKE '%'||$1||'%' OR cd.tls ILIKE '%'||$1||'%'
+ OR COALESCE(s.name,'') ILIKE '%'||$1||'%' OR COALESCE(s.name_en,'') ILIKE '%'||$1||'%'
+ OR cd.id::text ILIKE '%'||$1||'%' OR cd.site_id::text ILIKE '%'||$1||'%')
+`
+
+func (q *Queries) CountCollectorDomains(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countCollectorDomains, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countFeaturedSiteBySite = `-- name: CountFeaturedSiteBySite :one
+SELECT COUNT(*)::bigint FROM gfn_featured_site WHERE site_id=$1 AND id<>$2
+`
+
+type CountFeaturedSiteBySiteParams struct {
+	SiteID    int64 `json:"site_id"`
+	ExcludeID int64 `json:"exclude_id"`
+}
+
+func (q *Queries) CountFeaturedSiteBySite(ctx context.Context, arg CountFeaturedSiteBySiteParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countFeaturedSiteBySite, arg.SiteID, arg.ExcludeID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countFeaturedSites = `-- name: CountFeaturedSites :one
+SELECT COUNT(*)::bigint FROM gfn_featured_site f LEFT JOIN gfn_site s ON s.id=f.site_id
+WHERE $1::text='' OR f.id::text ILIKE '%'||$1||'%' OR f.site_id::text ILIKE '%'||$1||'%'
+ OR COALESCE(s.name,'') ILIKE '%'||$1||'%' OR COALESCE(s.name_en,'') ILIKE '%'||$1||'%'
+`
+
+func (q *Queries) CountFeaturedSites(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countFeaturedSites, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countSayings = `-- name: CountSayings :one
+SELECT COUNT(*)::bigint FROM gfn_saying
+WHERE $1::text = ''
+   OR COALESCE(author, '') ILIKE '%' || $1 || '%'
+   OR language ILIKE '%' || $1 || '%'
+   OR saying ILIKE '%' || $1 || '%'
+   OR id::text ILIKE '%' || $1 || '%'
+`
+
+func (q *Queries) CountSayings(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countSayings, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countSiteGroupMaps = `-- name: CountSiteGroupMaps :one
+SELECT COUNT(*)::bigint FROM gfn_site_group_map m LEFT JOIN gfn_site s ON s.id=m.site_id LEFT JOIN gfn_site_group g ON g.id=m.group_id
+WHERE $1::text='' OR m.id::text ILIKE '%'||$1||'%' OR m.site_id::text ILIKE '%'||$1||'%'
+ OR m.group_id::text ILIKE '%'||$1||'%' OR COALESCE(s.name,'') ILIKE '%'||$1||'%' OR COALESCE(g.name,'') ILIKE '%'||$1||'%'
+`
+
+func (q *Queries) CountSiteGroupMaps(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countSiteGroupMaps, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countSiteGroupOptions = `-- name: CountSiteGroupOptions :one
+SELECT COUNT(*)::bigint FROM gfn_site_group WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
+`
+
+func (q *Queries) CountSiteGroupOptions(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countSiteGroupOptions, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countSiteGroups = `-- name: CountSiteGroups :one
+SELECT COUNT(*)::bigint FROM gfn_site_group WHERE $1::text='' OR name ILIKE '%'||$1||'%'
+ OR name_en ILIKE '%'||$1||'%' OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%'
+ OR id::text ILIKE '%'||$1||'%'
+`
+
+func (q *Queries) CountSiteGroups(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countSiteGroups, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countSiteOptions = `-- name: CountSiteOptions :one
+SELECT COUNT(*)::bigint FROM gfn_site WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%')
+`
+
+func (q *Queries) CountSiteOptions(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countSiteOptions, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countSites = `-- name: CountSites :one
+SELECT COUNT(*)::bigint FROM gfn_site WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%'
+ OR name_en ILIKE '%'||$1||'%' OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%'
+ OR id::text ILIKE '%'||$1||'%')
+`
+
+func (q *Queries) CountSites(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countSites, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countUpdateNotices = `-- name: CountUpdateNotices :one
+SELECT COUNT(*)::bigint FROM gfn_nav_update_notice WHERE deleted IS NOT TRUE AND (
+    $1::text = '' OR title ILIKE '%'||$1||'%' OR title_en ILIKE '%'||$1||'%'
+    OR body ILIKE '%'||$1||'%' OR body_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%')
+`
+
+func (q *Queries) CountUpdateNotices(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countUpdateNotices, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const deleteFeaturedSite = `-- name: DeleteFeaturedSite :execrows
+DELETE FROM gfn_featured_site WHERE id=$1
+`
+
+func (q *Queries) DeleteFeaturedSite(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteFeaturedSite, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteSaying = `-- name: DeleteSaying :execrows
+DELETE FROM gfn_saying WHERE id=$1
+`
+
+func (q *Queries) DeleteSaying(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteSaying, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteSiteGroup = `-- name: DeleteSiteGroup :execrows
+DELETE FROM gfn_site_group WHERE id=$1
+`
+
+func (q *Queries) DeleteSiteGroup(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteSiteGroup, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteSiteGroupMap = `-- name: DeleteSiteGroupMap :execrows
+DELETE FROM gfn_site_group_map WHERE id=$1
+`
+
+func (q *Queries) DeleteSiteGroupMap(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteSiteGroupMap, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteSiteGroupMapsBySite = `-- name: DeleteSiteGroupMapsBySite :execrows
+DELETE FROM gfn_site_group_map WHERE site_id=$1
+`
+
+func (q *Queries) DeleteSiteGroupMapsBySite(ctx context.Context, siteID int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteSiteGroupMapsBySite, siteID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
 
 const foundationPing = `-- name: FoundationPing :one
 SELECT 1::bigint AS value
@@ -18,4 +225,1340 @@ func (q *Queries) FoundationPing(ctx context.Context) (int64, error) {
 	var value int64
 	err := row.Scan(&value)
 	return value, err
+}
+
+const getCollectorDomain = `-- name: GetCollectorDomain :one
+SELECT cd.id,cd.site_id,COALESCE(s.name,'')::text AS site_name,cd.name,cd.proxy,cd.prefix,cd.tls,cd.deleted
+FROM gfn_collector_domain cd LEFT JOIN gfn_site s ON s.id=cd.site_id WHERE cd.id=$1 AND cd.deleted IS NOT TRUE
+`
+
+type GetCollectorDomainRow struct {
+	ID       int64   `json:"id"`
+	SiteID   *int64  `json:"site_id"`
+	SiteName string  `json:"site_name"`
+	Name     string  `json:"name"`
+	Proxy    string  `json:"proxy"`
+	Prefix   *string `json:"prefix"`
+	Tls      string  `json:"tls"`
+	Deleted  bool    `json:"deleted"`
+}
+
+func (q *Queries) GetCollectorDomain(ctx context.Context, id int64) (GetCollectorDomainRow, error) {
+	row := q.db.QueryRow(ctx, getCollectorDomain, id)
+	var i GetCollectorDomainRow
+	err := row.Scan(
+		&i.ID,
+		&i.SiteID,
+		&i.SiteName,
+		&i.Name,
+		&i.Proxy,
+		&i.Prefix,
+		&i.Tls,
+		&i.Deleted,
+	)
+	return i, err
+}
+
+const getCollectorDomainAny = `-- name: GetCollectorDomainAny :one
+SELECT id,name,proxy,prefix,tls,site_id,deleted FROM gfn_collector_domain WHERE id=$1
+`
+
+func (q *Queries) GetCollectorDomainAny(ctx context.Context, id int64) (GfnCollectorDomain, error) {
+	row := q.db.QueryRow(ctx, getCollectorDomainAny, id)
+	var i GfnCollectorDomain
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Proxy,
+		&i.Prefix,
+		&i.Tls,
+		&i.SiteID,
+		&i.Deleted,
+	)
+	return i, err
+}
+
+const getFeaturedSite = `-- name: GetFeaturedSite :one
+SELECT f.id,f.site_id,COALESCE(s.name,'')::text AS site_name,f.weight,f.create_time,f.update_time FROM gfn_featured_site f LEFT JOIN gfn_site s ON s.id=f.site_id WHERE f.id=$1
+`
+
+type GetFeaturedSiteRow struct {
+	ID         int64            `json:"id"`
+	SiteID     int64            `json:"site_id"`
+	SiteName   string           `json:"site_name"`
+	Weight     int64            `json:"weight"`
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+}
+
+func (q *Queries) GetFeaturedSite(ctx context.Context, id int64) (GetFeaturedSiteRow, error) {
+	row := q.db.QueryRow(ctx, getFeaturedSite, id)
+	var i GetFeaturedSiteRow
+	err := row.Scan(
+		&i.ID,
+		&i.SiteID,
+		&i.SiteName,
+		&i.Weight,
+		&i.CreateTime,
+		&i.UpdateTime,
+	)
+	return i, err
+}
+
+const getFeaturedSiteAny = `-- name: GetFeaturedSiteAny :one
+SELECT id,site_id,weight,create_time,update_time FROM gfn_featured_site WHERE id=$1
+`
+
+func (q *Queries) GetFeaturedSiteAny(ctx context.Context, id int64) (GfnFeaturedSite, error) {
+	row := q.db.QueryRow(ctx, getFeaturedSiteAny, id)
+	var i GfnFeaturedSite
+	err := row.Scan(
+		&i.ID,
+		&i.SiteID,
+		&i.Weight,
+		&i.CreateTime,
+		&i.UpdateTime,
+	)
+	return i, err
+}
+
+const getSaying = `-- name: GetSaying :one
+SELECT id, author, saying, create_time, update_time, language FROM gfn_saying WHERE id = $1
+`
+
+func (q *Queries) GetSaying(ctx context.Context, id int64) (GfnSaying, error) {
+	row := q.db.QueryRow(ctx, getSaying, id)
+	var i GfnSaying
+	err := row.Scan(
+		&i.ID,
+		&i.Author,
+		&i.Saying,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Language,
+	)
+	return i, err
+}
+
+const getSite = `-- name: GetSite :one
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count FROM gfn_site
+WHERE id=$1 AND deleted IS NOT TRUE
+`
+
+func (q *Queries) GetSite(ctx context.Context, id int64) (GfnSite, error) {
+	row := q.db.QueryRow(ctx, getSite, id)
+	var i GfnSite
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameEn,
+		&i.Info,
+		&i.InfoEn,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Country,
+		&i.Nsfw,
+		&i.Welfare,
+		&i.Icon,
+		&i.Deleted,
+		&i.ViewCount,
+	)
+	return i, err
+}
+
+const getSiteAny = `-- name: GetSiteAny :one
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count FROM gfn_site WHERE id=$1
+`
+
+func (q *Queries) GetSiteAny(ctx context.Context, id int64) (GfnSite, error) {
+	row := q.db.QueryRow(ctx, getSiteAny, id)
+	var i GfnSite
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameEn,
+		&i.Info,
+		&i.InfoEn,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Country,
+		&i.Nsfw,
+		&i.Welfare,
+		&i.Icon,
+		&i.Deleted,
+		&i.ViewCount,
+	)
+	return i, err
+}
+
+const getSiteGroup = `-- name: GetSiteGroup :one
+SELECT id,name,name_en,info,info_en,priority,create_time,update_time FROM gfn_site_group WHERE id=$1
+`
+
+func (q *Queries) GetSiteGroup(ctx context.Context, id int64) (GfnSiteGroup, error) {
+	row := q.db.QueryRow(ctx, getSiteGroup, id)
+	var i GfnSiteGroup
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameEn,
+		&i.Info,
+		&i.InfoEn,
+		&i.Priority,
+		&i.CreateTime,
+		&i.UpdateTime,
+	)
+	return i, err
+}
+
+const getSiteGroupMap = `-- name: GetSiteGroupMap :one
+SELECT id,site_id,group_id,create_time,update_time,weight FROM gfn_site_group_map WHERE id=$1
+`
+
+func (q *Queries) GetSiteGroupMap(ctx context.Context, id int64) (GfnSiteGroupMap, error) {
+	row := q.db.QueryRow(ctx, getSiteGroupMap, id)
+	var i GfnSiteGroupMap
+	err := row.Scan(
+		&i.ID,
+		&i.SiteID,
+		&i.GroupID,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Weight,
+	)
+	return i, err
+}
+
+const getUpdateNotice = `-- name: GetUpdateNotice :one
+SELECT id,title,title_en,body,body_en,published_at,create_time,update_time,deleted FROM gfn_nav_update_notice
+WHERE id=$1 AND deleted IS NOT TRUE
+`
+
+func (q *Queries) GetUpdateNotice(ctx context.Context, id int64) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, getUpdateNotice, id)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+	)
+	return i, err
+}
+
+const getUpdateNoticeAny = `-- name: GetUpdateNoticeAny :one
+SELECT id,title,title_en,body,body_en,published_at,create_time,update_time,deleted FROM gfn_nav_update_notice WHERE id=$1
+`
+
+func (q *Queries) GetUpdateNoticeAny(ctx context.Context, id int64) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, getUpdateNoticeAny, id)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+	)
+	return i, err
+}
+
+const insertCollectorDomain = `-- name: InsertCollectorDomain :one
+INSERT INTO gfn_collector_domain (id,name,proxy,prefix,tls,site_id,deleted)
+VALUES ($1,$2,$3,$4,$5,$6,false)
+RETURNING id,name,proxy,prefix,tls,site_id,deleted
+`
+
+type InsertCollectorDomainParams struct {
+	ID     int64   `json:"id"`
+	Name   string  `json:"name"`
+	Proxy  string  `json:"proxy"`
+	Prefix *string `json:"prefix"`
+	Tls    string  `json:"tls"`
+	SiteID *int64  `json:"site_id"`
+}
+
+func (q *Queries) InsertCollectorDomain(ctx context.Context, arg InsertCollectorDomainParams) (GfnCollectorDomain, error) {
+	row := q.db.QueryRow(ctx, insertCollectorDomain,
+		arg.ID,
+		arg.Name,
+		arg.Proxy,
+		arg.Prefix,
+		arg.Tls,
+		arg.SiteID,
+	)
+	var i GfnCollectorDomain
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Proxy,
+		&i.Prefix,
+		&i.Tls,
+		&i.SiteID,
+		&i.Deleted,
+	)
+	return i, err
+}
+
+const insertFeaturedSite = `-- name: InsertFeaturedSite :one
+INSERT INTO gfn_featured_site (id,site_id,weight,create_time,update_time)
+VALUES ($1,$2,$3,NOW()::timestamp(0),NOW()::timestamp(0))
+RETURNING id,site_id,weight,create_time,update_time
+`
+
+type InsertFeaturedSiteParams struct {
+	ID     int64 `json:"id"`
+	SiteID int64 `json:"site_id"`
+	Weight int64 `json:"weight"`
+}
+
+func (q *Queries) InsertFeaturedSite(ctx context.Context, arg InsertFeaturedSiteParams) (GfnFeaturedSite, error) {
+	row := q.db.QueryRow(ctx, insertFeaturedSite, arg.ID, arg.SiteID, arg.Weight)
+	var i GfnFeaturedSite
+	err := row.Scan(
+		&i.ID,
+		&i.SiteID,
+		&i.Weight,
+		&i.CreateTime,
+		&i.UpdateTime,
+	)
+	return i, err
+}
+
+const insertSaying = `-- name: InsertSaying :one
+INSERT INTO gfn_saying (id, author, saying, create_time, update_time, language)
+VALUES ($1, $2, $3, NOW()::timestamp(0), NOW()::timestamp(0), $4)
+RETURNING id, author, saying, create_time, update_time, language
+`
+
+type InsertSayingParams struct {
+	ID       int64   `json:"id"`
+	Author   *string `json:"author"`
+	Saying   string  `json:"saying"`
+	Language string  `json:"language"`
+}
+
+func (q *Queries) InsertSaying(ctx context.Context, arg InsertSayingParams) (GfnSaying, error) {
+	row := q.db.QueryRow(ctx, insertSaying,
+		arg.ID,
+		arg.Author,
+		arg.Saying,
+		arg.Language,
+	)
+	var i GfnSaying
+	err := row.Scan(
+		&i.ID,
+		&i.Author,
+		&i.Saying,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Language,
+	)
+	return i, err
+}
+
+const insertSite = `-- name: InsertSite :one
+INSERT INTO gfn_site (id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count)
+VALUES ($1,$2,$3,$4,$5,NOW()::timestamp(0),NOW()::timestamp(0),$6,$7,$8,$9,false,0)
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count
+`
+
+type InsertSiteParams struct {
+	ID      int64   `json:"id"`
+	Name    string  `json:"name"`
+	NameEn  string  `json:"name_en"`
+	Info    string  `json:"info"`
+	InfoEn  string  `json:"info_en"`
+	Country *string `json:"country"`
+	Nsfw    string  `json:"nsfw"`
+	Welfare string  `json:"welfare"`
+	Icon    *string `json:"icon"`
+}
+
+func (q *Queries) InsertSite(ctx context.Context, arg InsertSiteParams) (GfnSite, error) {
+	row := q.db.QueryRow(ctx, insertSite,
+		arg.ID,
+		arg.Name,
+		arg.NameEn,
+		arg.Info,
+		arg.InfoEn,
+		arg.Country,
+		arg.Nsfw,
+		arg.Welfare,
+		arg.Icon,
+	)
+	var i GfnSite
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameEn,
+		&i.Info,
+		&i.InfoEn,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Country,
+		&i.Nsfw,
+		&i.Welfare,
+		&i.Icon,
+		&i.Deleted,
+		&i.ViewCount,
+	)
+	return i, err
+}
+
+const insertSiteGroup = `-- name: InsertSiteGroup :one
+INSERT INTO gfn_site_group (id,name,name_en,info,info_en,priority,create_time,update_time)
+VALUES ($1,$2,$3,$4,$5,$6,NOW()::timestamp(0),NOW()::timestamp(0))
+RETURNING id,name,name_en,info,info_en,priority,create_time,update_time
+`
+
+type InsertSiteGroupParams struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	NameEn   string `json:"name_en"`
+	Info     string `json:"info"`
+	InfoEn   string `json:"info_en"`
+	Priority int64  `json:"priority"`
+}
+
+func (q *Queries) InsertSiteGroup(ctx context.Context, arg InsertSiteGroupParams) (GfnSiteGroup, error) {
+	row := q.db.QueryRow(ctx, insertSiteGroup,
+		arg.ID,
+		arg.Name,
+		arg.NameEn,
+		arg.Info,
+		arg.InfoEn,
+		arg.Priority,
+	)
+	var i GfnSiteGroup
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameEn,
+		&i.Info,
+		&i.InfoEn,
+		&i.Priority,
+		&i.CreateTime,
+		&i.UpdateTime,
+	)
+	return i, err
+}
+
+const insertSiteGroupMap = `-- name: InsertSiteGroupMap :one
+INSERT INTO gfn_site_group_map (id,site_id,group_id,create_time,update_time,weight)
+VALUES ($1,$2,$3,NOW()::timestamp(0),NOW()::timestamp(0),$4)
+RETURNING id,site_id,group_id,create_time,update_time,weight
+`
+
+type InsertSiteGroupMapParams struct {
+	ID      int64 `json:"id"`
+	SiteID  int64 `json:"site_id"`
+	GroupID int64 `json:"group_id"`
+	Weight  int64 `json:"weight"`
+}
+
+func (q *Queries) InsertSiteGroupMap(ctx context.Context, arg InsertSiteGroupMapParams) (GfnSiteGroupMap, error) {
+	row := q.db.QueryRow(ctx, insertSiteGroupMap,
+		arg.ID,
+		arg.SiteID,
+		arg.GroupID,
+		arg.Weight,
+	)
+	var i GfnSiteGroupMap
+	err := row.Scan(
+		&i.ID,
+		&i.SiteID,
+		&i.GroupID,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Weight,
+	)
+	return i, err
+}
+
+const insertUpdateNotice = `-- name: InsertUpdateNotice :one
+INSERT INTO gfn_nav_update_notice (id,title,title_en,body,body_en,published_at,create_time,update_time,deleted)
+VALUES ($1,$2,$3,$4,$5,$6,NOW()::timestamp(0),NOW()::timestamp(0),false)
+RETURNING id,title,title_en,body,body_en,published_at,create_time,update_time,deleted
+`
+
+type InsertUpdateNoticeParams struct {
+	ID          int64            `json:"id"`
+	Title       string           `json:"title"`
+	TitleEn     string           `json:"title_en"`
+	Body        string           `json:"body"`
+	BodyEn      string           `json:"body_en"`
+	PublishedAt pgtype.Timestamp `json:"published_at"`
+}
+
+func (q *Queries) InsertUpdateNotice(ctx context.Context, arg InsertUpdateNoticeParams) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, insertUpdateNotice,
+		arg.ID,
+		arg.Title,
+		arg.TitleEn,
+		arg.Body,
+		arg.BodyEn,
+		arg.PublishedAt,
+	)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+	)
+	return i, err
+}
+
+const listCollectorDomains = `-- name: ListCollectorDomains :many
+SELECT cd.id,cd.site_id,COALESCE(s.name,'')::text AS site_name,cd.name,cd.proxy,cd.prefix,cd.tls,cd.deleted
+FROM gfn_collector_domain cd LEFT JOIN gfn_site s ON s.id=cd.site_id
+WHERE cd.deleted IS NOT TRUE AND ($1::text='' OR cd.name ILIKE '%'||$1||'%'
+ OR cd.proxy ILIKE '%'||$1||'%' OR cd.tls ILIKE '%'||$1||'%'
+ OR COALESCE(s.name,'') ILIKE '%'||$1||'%' OR COALESCE(s.name_en,'') ILIKE '%'||$1||'%'
+ OR cd.id::text ILIKE '%'||$1||'%' OR cd.site_id::text ILIKE '%'||$1||'%')
+ORDER BY cd.id DESC LIMIT $3 OFFSET $2
+`
+
+type ListCollectorDomainsParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+type ListCollectorDomainsRow struct {
+	ID       int64   `json:"id"`
+	SiteID   *int64  `json:"site_id"`
+	SiteName string  `json:"site_name"`
+	Name     string  `json:"name"`
+	Proxy    string  `json:"proxy"`
+	Prefix   *string `json:"prefix"`
+	Tls      string  `json:"tls"`
+	Deleted  bool    `json:"deleted"`
+}
+
+func (q *Queries) ListCollectorDomains(ctx context.Context, arg ListCollectorDomainsParams) ([]ListCollectorDomainsRow, error) {
+	rows, err := q.db.Query(ctx, listCollectorDomains, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCollectorDomainsRow{}
+	for rows.Next() {
+		var i ListCollectorDomainsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SiteID,
+			&i.SiteName,
+			&i.Name,
+			&i.Proxy,
+			&i.Prefix,
+			&i.Tls,
+			&i.Deleted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFeaturedSites = `-- name: ListFeaturedSites :many
+SELECT f.id,f.site_id,COALESCE(s.name,'')::text AS site_name,f.weight,f.create_time,f.update_time FROM gfn_featured_site f LEFT JOIN gfn_site s ON s.id=f.site_id
+WHERE $1::text='' OR f.id::text ILIKE '%'||$1||'%' OR f.site_id::text ILIKE '%'||$1||'%'
+ OR COALESCE(s.name,'') ILIKE '%'||$1||'%' OR COALESCE(s.name_en,'') ILIKE '%'||$1||'%'
+ORDER BY f.weight DESC,f.id DESC LIMIT $3 OFFSET $2
+`
+
+type ListFeaturedSitesParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+type ListFeaturedSitesRow struct {
+	ID         int64            `json:"id"`
+	SiteID     int64            `json:"site_id"`
+	SiteName   string           `json:"site_name"`
+	Weight     int64            `json:"weight"`
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+}
+
+func (q *Queries) ListFeaturedSites(ctx context.Context, arg ListFeaturedSitesParams) ([]ListFeaturedSitesRow, error) {
+	rows, err := q.db.Query(ctx, listFeaturedSites, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListFeaturedSitesRow{}
+	for rows.Next() {
+		var i ListFeaturedSitesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SiteID,
+			&i.SiteName,
+			&i.Weight,
+			&i.CreateTime,
+			&i.UpdateTime,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSayings = `-- name: ListSayings :many
+SELECT id, author, saying, create_time, update_time, language FROM gfn_saying
+WHERE $1::text = ''
+   OR COALESCE(author, '') ILIKE '%' || $1 || '%'
+   OR language ILIKE '%' || $1 || '%'
+   OR saying ILIKE '%' || $1 || '%'
+   OR id::text ILIKE '%' || $1 || '%'
+ORDER BY id DESC LIMIT $3 OFFSET $2
+`
+
+type ListSayingsParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+func (q *Queries) ListSayings(ctx context.Context, arg ListSayingsParams) ([]GfnSaying, error) {
+	rows, err := q.db.Query(ctx, listSayings, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GfnSaying{}
+	for rows.Next() {
+		var i GfnSaying
+		if err := rows.Scan(
+			&i.ID,
+			&i.Author,
+			&i.Saying,
+			&i.CreateTime,
+			&i.UpdateTime,
+			&i.Language,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSiteGroupMaps = `-- name: ListSiteGroupMaps :many
+SELECT m.id,m.site_id,m.group_id,COALESCE(s.name,'')::text AS site_name,COALESCE(g.name,'')::text AS group_name,m.weight,m.create_time,m.update_time
+FROM gfn_site_group_map m LEFT JOIN gfn_site s ON s.id=m.site_id LEFT JOIN gfn_site_group g ON g.id=m.group_id
+WHERE $1::text='' OR m.id::text ILIKE '%'||$1||'%' OR m.site_id::text ILIKE '%'||$1||'%'
+ OR m.group_id::text ILIKE '%'||$1||'%' OR COALESCE(s.name,'') ILIKE '%'||$1||'%' OR COALESCE(g.name,'') ILIKE '%'||$1||'%'
+ORDER BY m.id DESC LIMIT $3 OFFSET $2
+`
+
+type ListSiteGroupMapsParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+type ListSiteGroupMapsRow struct {
+	ID         int64            `json:"id"`
+	SiteID     int64            `json:"site_id"`
+	GroupID    int64            `json:"group_id"`
+	SiteName   string           `json:"site_name"`
+	GroupName  string           `json:"group_name"`
+	Weight     int64            `json:"weight"`
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+}
+
+func (q *Queries) ListSiteGroupMaps(ctx context.Context, arg ListSiteGroupMapsParams) ([]ListSiteGroupMapsRow, error) {
+	rows, err := q.db.Query(ctx, listSiteGroupMaps, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSiteGroupMapsRow{}
+	for rows.Next() {
+		var i ListSiteGroupMapsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SiteID,
+			&i.GroupID,
+			&i.SiteName,
+			&i.GroupName,
+			&i.Weight,
+			&i.CreateTime,
+			&i.UpdateTime,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSiteGroupMapsBySite = `-- name: ListSiteGroupMapsBySite :many
+SELECT id,site_id,group_id,create_time,update_time,weight FROM gfn_site_group_map WHERE site_id=$1 ORDER BY id ASC
+`
+
+func (q *Queries) ListSiteGroupMapsBySite(ctx context.Context, siteID int64) ([]GfnSiteGroupMap, error) {
+	rows, err := q.db.Query(ctx, listSiteGroupMapsBySite, siteID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GfnSiteGroupMap{}
+	for rows.Next() {
+		var i GfnSiteGroupMap
+		if err := rows.Scan(
+			&i.ID,
+			&i.SiteID,
+			&i.GroupID,
+			&i.CreateTime,
+			&i.UpdateTime,
+			&i.Weight,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSiteGroupOptions = `-- name: ListSiteGroupOptions :many
+SELECT id,name,name_en FROM gfn_site_group WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
+ORDER BY priority DESC,id DESC LIMIT $3 OFFSET $2
+`
+
+type ListSiteGroupOptionsParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+type ListSiteGroupOptionsRow struct {
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	NameEn string `json:"name_en"`
+}
+
+func (q *Queries) ListSiteGroupOptions(ctx context.Context, arg ListSiteGroupOptionsParams) ([]ListSiteGroupOptionsRow, error) {
+	rows, err := q.db.Query(ctx, listSiteGroupOptions, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSiteGroupOptionsRow{}
+	for rows.Next() {
+		var i ListSiteGroupOptionsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.NameEn); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSiteGroups = `-- name: ListSiteGroups :many
+SELECT id,name,name_en,info,info_en,priority,create_time,update_time FROM gfn_site_group
+WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%'
+ OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
+ORDER BY priority DESC,id DESC LIMIT $3 OFFSET $2
+`
+
+type ListSiteGroupsParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+func (q *Queries) ListSiteGroups(ctx context.Context, arg ListSiteGroupsParams) ([]GfnSiteGroup, error) {
+	rows, err := q.db.Query(ctx, listSiteGroups, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GfnSiteGroup{}
+	for rows.Next() {
+		var i GfnSiteGroup
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NameEn,
+			&i.Info,
+			&i.InfoEn,
+			&i.Priority,
+			&i.CreateTime,
+			&i.UpdateTime,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSiteOptions = `-- name: ListSiteOptions :many
+SELECT id,name,name_en FROM gfn_site WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%')
+ORDER BY id DESC LIMIT $3 OFFSET $2
+`
+
+type ListSiteOptionsParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+type ListSiteOptionsRow struct {
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	NameEn string `json:"name_en"`
+}
+
+func (q *Queries) ListSiteOptions(ctx context.Context, arg ListSiteOptionsParams) ([]ListSiteOptionsRow, error) {
+	rows, err := q.db.Query(ctx, listSiteOptions, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSiteOptionsRow{}
+	for rows.Next() {
+		var i ListSiteOptionsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.NameEn); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSites = `-- name: ListSites :many
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count FROM gfn_site
+WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%'
+ OR name_en ILIKE '%'||$1||'%' OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%'
+ OR id::text ILIKE '%'||$1||'%') ORDER BY update_time DESC,id DESC LIMIT $3 OFFSET $2
+`
+
+type ListSitesParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+func (q *Queries) ListSites(ctx context.Context, arg ListSitesParams) ([]GfnSite, error) {
+	rows, err := q.db.Query(ctx, listSites, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GfnSite{}
+	for rows.Next() {
+		var i GfnSite
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NameEn,
+			&i.Info,
+			&i.InfoEn,
+			&i.CreateTime,
+			&i.UpdateTime,
+			&i.Country,
+			&i.Nsfw,
+			&i.Welfare,
+			&i.Icon,
+			&i.Deleted,
+			&i.ViewCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUpdateNotices = `-- name: ListUpdateNotices :many
+SELECT id,title,title_en,body,body_en,published_at,create_time,update_time,deleted FROM gfn_nav_update_notice
+WHERE deleted IS NOT TRUE AND (
+    $1::text = '' OR title ILIKE '%'||$1||'%' OR title_en ILIKE '%'||$1||'%'
+    OR body ILIKE '%'||$1||'%' OR body_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%')
+ORDER BY published_at DESC,id DESC LIMIT $3 OFFSET $2
+`
+
+type ListUpdateNoticesParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+func (q *Queries) ListUpdateNotices(ctx context.Context, arg ListUpdateNoticesParams) ([]GfnNavUpdateNotice, error) {
+	rows, err := q.db.Query(ctx, listUpdateNotices, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GfnNavUpdateNotice{}
+	for rows.Next() {
+		var i GfnNavUpdateNotice
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.TitleEn,
+			&i.Body,
+			&i.BodyEn,
+			&i.PublishedAt,
+			&i.CreateTime,
+			&i.UpdateTime,
+			&i.Deleted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const nextCollectorDomainID = `-- name: NextCollectorDomainID :one
+WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_collector_domain')::bigint))
+SELECT (COALESCE(MAX(id), 0) + 1)::bigint FROM gfn_collector_domain CROSS JOIN lock_row
+`
+
+func (q *Queries) NextCollectorDomainID(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, nextCollectorDomainID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const nextFeaturedSiteID = `-- name: NextFeaturedSiteID :one
+WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_featured_site')::bigint))
+SELECT (COALESCE(MAX(id), 0) + 1)::bigint FROM gfn_featured_site CROSS JOIN lock_row
+`
+
+func (q *Queries) NextFeaturedSiteID(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, nextFeaturedSiteID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const nextSayingID = `-- name: NextSayingID :one
+WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_saying')::bigint))
+SELECT (COALESCE(MAX(id), 0) + 1)::bigint FROM gfn_saying CROSS JOIN lock_row
+`
+
+func (q *Queries) NextSayingID(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, nextSayingID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const nextSiteGroupID = `-- name: NextSiteGroupID :one
+WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_site_group')::bigint))
+SELECT (COALESCE(MAX(id), 0) + 1)::bigint FROM gfn_site_group CROSS JOIN lock_row
+`
+
+func (q *Queries) NextSiteGroupID(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, nextSiteGroupID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const nextSiteGroupMapID = `-- name: NextSiteGroupMapID :one
+WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_site_group_map')::bigint))
+SELECT (COALESCE(MAX(id), 0) + 1)::bigint FROM gfn_site_group_map CROSS JOIN lock_row
+`
+
+func (q *Queries) NextSiteGroupMapID(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, nextSiteGroupMapID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const nextSiteID = `-- name: NextSiteID :one
+WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_site')::bigint))
+SELECT (COALESCE(MAX(id), 0) + 1)::bigint FROM gfn_site CROSS JOIN lock_row
+`
+
+func (q *Queries) NextSiteID(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, nextSiteID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const nextUpdateNoticeID = `-- name: NextUpdateNoticeID :one
+WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_nav_update_notice')::bigint))
+SELECT (COALESCE(MAX(id), 0) + 1)::bigint FROM gfn_nav_update_notice CROSS JOIN lock_row
+`
+
+func (q *Queries) NextUpdateNoticeID(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, nextUpdateNoticeID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const softDeleteCollectorDomain = `-- name: SoftDeleteCollectorDomain :one
+UPDATE gfn_collector_domain SET deleted=true WHERE id=$1 RETURNING id,name,proxy,prefix,tls,site_id,deleted
+`
+
+func (q *Queries) SoftDeleteCollectorDomain(ctx context.Context, id int64) (GfnCollectorDomain, error) {
+	row := q.db.QueryRow(ctx, softDeleteCollectorDomain, id)
+	var i GfnCollectorDomain
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Proxy,
+		&i.Prefix,
+		&i.Tls,
+		&i.SiteID,
+		&i.Deleted,
+	)
+	return i, err
+}
+
+const softDeleteSite = `-- name: SoftDeleteSite :one
+UPDATE gfn_site SET deleted=true,update_time=NOW()::timestamp(0) WHERE id=$1
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count
+`
+
+func (q *Queries) SoftDeleteSite(ctx context.Context, id int64) (GfnSite, error) {
+	row := q.db.QueryRow(ctx, softDeleteSite, id)
+	var i GfnSite
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameEn,
+		&i.Info,
+		&i.InfoEn,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Country,
+		&i.Nsfw,
+		&i.Welfare,
+		&i.Icon,
+		&i.Deleted,
+		&i.ViewCount,
+	)
+	return i, err
+}
+
+const softDeleteUpdateNotice = `-- name: SoftDeleteUpdateNotice :one
+UPDATE gfn_nav_update_notice SET deleted=true,update_time=NOW()::timestamp(0) WHERE id=$1
+RETURNING id,title,title_en,body,body_en,published_at,create_time,update_time,deleted
+`
+
+func (q *Queries) SoftDeleteUpdateNotice(ctx context.Context, id int64) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, softDeleteUpdateNotice, id)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+	)
+	return i, err
+}
+
+const updateCollectorDomain = `-- name: UpdateCollectorDomain :one
+UPDATE gfn_collector_domain SET name=$1,proxy=$2,prefix=$3,tls=$4,site_id=$5
+WHERE id=$6 AND deleted IS NOT TRUE RETURNING id,name,proxy,prefix,tls,site_id,deleted
+`
+
+type UpdateCollectorDomainParams struct {
+	Name   string  `json:"name"`
+	Proxy  string  `json:"proxy"`
+	Prefix *string `json:"prefix"`
+	Tls    string  `json:"tls"`
+	SiteID *int64  `json:"site_id"`
+	ID     int64   `json:"id"`
+}
+
+func (q *Queries) UpdateCollectorDomain(ctx context.Context, arg UpdateCollectorDomainParams) (GfnCollectorDomain, error) {
+	row := q.db.QueryRow(ctx, updateCollectorDomain,
+		arg.Name,
+		arg.Proxy,
+		arg.Prefix,
+		arg.Tls,
+		arg.SiteID,
+		arg.ID,
+	)
+	var i GfnCollectorDomain
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Proxy,
+		&i.Prefix,
+		&i.Tls,
+		&i.SiteID,
+		&i.Deleted,
+	)
+	return i, err
+}
+
+const updateFeaturedSite = `-- name: UpdateFeaturedSite :one
+UPDATE gfn_featured_site SET site_id=$1,weight=$2,update_time=NOW()::timestamp(0)
+WHERE id=$3 RETURNING id,site_id,weight,create_time,update_time
+`
+
+type UpdateFeaturedSiteParams struct {
+	SiteID int64 `json:"site_id"`
+	Weight int64 `json:"weight"`
+	ID     int64 `json:"id"`
+}
+
+func (q *Queries) UpdateFeaturedSite(ctx context.Context, arg UpdateFeaturedSiteParams) (GfnFeaturedSite, error) {
+	row := q.db.QueryRow(ctx, updateFeaturedSite, arg.SiteID, arg.Weight, arg.ID)
+	var i GfnFeaturedSite
+	err := row.Scan(
+		&i.ID,
+		&i.SiteID,
+		&i.Weight,
+		&i.CreateTime,
+		&i.UpdateTime,
+	)
+	return i, err
+}
+
+const updateSaying = `-- name: UpdateSaying :one
+UPDATE gfn_saying SET author=$1, saying=$2, language=$3, update_time=NOW()::timestamp(0)
+WHERE id=$4
+RETURNING id, author, saying, create_time, update_time, language
+`
+
+type UpdateSayingParams struct {
+	Author   *string `json:"author"`
+	Saying   string  `json:"saying"`
+	Language string  `json:"language"`
+	ID       int64   `json:"id"`
+}
+
+func (q *Queries) UpdateSaying(ctx context.Context, arg UpdateSayingParams) (GfnSaying, error) {
+	row := q.db.QueryRow(ctx, updateSaying,
+		arg.Author,
+		arg.Saying,
+		arg.Language,
+		arg.ID,
+	)
+	var i GfnSaying
+	err := row.Scan(
+		&i.ID,
+		&i.Author,
+		&i.Saying,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Language,
+	)
+	return i, err
+}
+
+const updateSite = `-- name: UpdateSite :one
+UPDATE gfn_site SET name=$1,name_en=$2,info=$3,info_en=$4,country=$5,nsfw=$6,welfare=$7,icon=$8,update_time=NOW()::timestamp(0)
+WHERE id=$9 AND deleted IS NOT TRUE
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count
+`
+
+type UpdateSiteParams struct {
+	Name    string  `json:"name"`
+	NameEn  string  `json:"name_en"`
+	Info    string  `json:"info"`
+	InfoEn  string  `json:"info_en"`
+	Country *string `json:"country"`
+	Nsfw    string  `json:"nsfw"`
+	Welfare string  `json:"welfare"`
+	Icon    *string `json:"icon"`
+	ID      int64   `json:"id"`
+}
+
+func (q *Queries) UpdateSite(ctx context.Context, arg UpdateSiteParams) (GfnSite, error) {
+	row := q.db.QueryRow(ctx, updateSite,
+		arg.Name,
+		arg.NameEn,
+		arg.Info,
+		arg.InfoEn,
+		arg.Country,
+		arg.Nsfw,
+		arg.Welfare,
+		arg.Icon,
+		arg.ID,
+	)
+	var i GfnSite
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameEn,
+		&i.Info,
+		&i.InfoEn,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Country,
+		&i.Nsfw,
+		&i.Welfare,
+		&i.Icon,
+		&i.Deleted,
+		&i.ViewCount,
+	)
+	return i, err
+}
+
+const updateSiteGroup = `-- name: UpdateSiteGroup :one
+UPDATE gfn_site_group SET name=$1,name_en=$2,info=$3,info_en=$4,priority=$5,update_time=NOW()::timestamp(0)
+WHERE id=$6 RETURNING id,name,name_en,info,info_en,priority,create_time,update_time
+`
+
+type UpdateSiteGroupParams struct {
+	Name     string `json:"name"`
+	NameEn   string `json:"name_en"`
+	Info     string `json:"info"`
+	InfoEn   string `json:"info_en"`
+	Priority int64  `json:"priority"`
+	ID       int64  `json:"id"`
+}
+
+func (q *Queries) UpdateSiteGroup(ctx context.Context, arg UpdateSiteGroupParams) (GfnSiteGroup, error) {
+	row := q.db.QueryRow(ctx, updateSiteGroup,
+		arg.Name,
+		arg.NameEn,
+		arg.Info,
+		arg.InfoEn,
+		arg.Priority,
+		arg.ID,
+	)
+	var i GfnSiteGroup
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameEn,
+		&i.Info,
+		&i.InfoEn,
+		&i.Priority,
+		&i.CreateTime,
+		&i.UpdateTime,
+	)
+	return i, err
+}
+
+const updateSiteGroupMap = `-- name: UpdateSiteGroupMap :one
+UPDATE gfn_site_group_map SET site_id=$1,group_id=$2,weight=$3,update_time=NOW()::timestamp(0)
+WHERE id=$4 RETURNING id,site_id,group_id,create_time,update_time,weight
+`
+
+type UpdateSiteGroupMapParams struct {
+	SiteID  int64 `json:"site_id"`
+	GroupID int64 `json:"group_id"`
+	Weight  int64 `json:"weight"`
+	ID      int64 `json:"id"`
+}
+
+func (q *Queries) UpdateSiteGroupMap(ctx context.Context, arg UpdateSiteGroupMapParams) (GfnSiteGroupMap, error) {
+	row := q.db.QueryRow(ctx, updateSiteGroupMap,
+		arg.SiteID,
+		arg.GroupID,
+		arg.Weight,
+		arg.ID,
+	)
+	var i GfnSiteGroupMap
+	err := row.Scan(
+		&i.ID,
+		&i.SiteID,
+		&i.GroupID,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Weight,
+	)
+	return i, err
+}
+
+const updateUpdateNotice = `-- name: UpdateUpdateNotice :one
+UPDATE gfn_nav_update_notice SET title=$1,title_en=$2,body=$3,body_en=$4,published_at=$5,update_time=NOW()::timestamp(0)
+WHERE id=$6 AND deleted IS NOT TRUE
+RETURNING id,title,title_en,body,body_en,published_at,create_time,update_time,deleted
+`
+
+type UpdateUpdateNoticeParams struct {
+	Title       string           `json:"title"`
+	TitleEn     string           `json:"title_en"`
+	Body        string           `json:"body"`
+	BodyEn      string           `json:"body_en"`
+	PublishedAt pgtype.Timestamp `json:"published_at"`
+	ID          int64            `json:"id"`
+}
+
+func (q *Queries) UpdateUpdateNotice(ctx context.Context, arg UpdateUpdateNoticeParams) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, updateUpdateNotice,
+		arg.Title,
+		arg.TitleEn,
+		arg.Body,
+		arg.BodyEn,
+		arg.PublishedAt,
+		arg.ID,
+	)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+	)
+	return i, err
 }
