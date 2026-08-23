@@ -13,7 +13,6 @@ require (
 	github.com/gofurry/steam-go v1.3.8
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/kardianos/service v1.3.0
 	github.com/redis/go-redis/v9 v9.21.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0

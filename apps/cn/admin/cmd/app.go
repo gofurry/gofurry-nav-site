@@ -4,11 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"runtime/debug"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,8 +13,6 @@ import (
 	env "github.com/gofurry/gofurry-admin/config"
 	"github.com/gofurry/gofurry-admin/internal/bootstrap"
 	"github.com/gofurry/gofurry-admin/internal/transport/http/router"
-	"github.com/gofurry/gofurry-admin/pkg/common"
-	"github.com/kardianos/service"
 )
 
 func runService(ctx context.Context) error {
@@ -33,84 +27,6 @@ func runService(ctx context.Context) error {
 	return application.wait(ctx)
 }
 
-func newService(configFile string) (service.Service, error) {
-	exePath, err := os.Executable()
-	if err != nil {
-		return nil, fmt.Errorf("resolve executable path failed: %w", err)
-	}
-
-	appID, appName := appIdentity()
-	args := buildServiceArguments(configFile)
-	svcConfig := &service.Config{
-		Name:             appID,
-		DisplayName:      appName,
-		Description:      appName,
-		Executable:       exePath,
-		Arguments:        args,
-		WorkingDirectory: filepath.Dir(exePath),
-		Option: service.KeyValue{
-			"SystemdScript": buildSystemdScript(appID, appName, exePath, args),
-		},
-	}
-
-	return service.New(newApp(), svcConfig)
-}
-
-func buildSystemdScript(appID, appName, exePath string, args []string) string {
-	command := buildSystemdCommand(exePath, args)
-	return `[Unit]
-Description=` + appName + `
-After=network.target
-Requires=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=` + filepath.Dir(exePath) + `
-ExecStart=` + command + `
-Restart=always
-RestartSec=30
-LogOutput=true
-LogDirectory=/var/log/` + appID + `
-LimitNOFILE=65535
-
-[Install]
-WantedBy=multi-user.target`
-}
-
-func buildSystemdCommand(executable string, args []string) string {
-	parts := make([]string, 0, len(args)+1)
-	parts = append(parts, strconv.Quote(executable))
-	for _, arg := range args {
-		parts = append(parts, strconv.Quote(arg))
-	}
-	return strings.Join(parts, " ")
-}
-
-func buildServiceArguments(configPath string) []string {
-	args := []string{"serve"}
-	if configPath = strings.TrimSpace(configPath); configPath != "" {
-		if absPath, err := filepath.Abs(configPath); err == nil {
-			configPath = absPath
-		}
-		args = append(args, "--config", configPath)
-	}
-	return args
-}
-
-func appIdentity() (string, string) {
-	cfg := env.GetServerConfig()
-	appID := cfg.Server.AppID
-	if appID == "" {
-		appID = common.COMMON_PROJECT_NAME
-	}
-
-	appName := cfg.Server.AppName
-	if appName == "" {
-		appName = appID
-	}
-	return appID, appName
-}
-
 type app struct {
 	fiberApp     *fiber.App
 	runtime      *bootstrap.Runtime
@@ -121,10 +37,6 @@ type app struct {
 
 func newApp() *app {
 	return &app{}
-}
-
-func (a *app) Start(s service.Service) error {
-	return a.start()
 }
 
 func (a *app) start() error {
@@ -170,10 +82,6 @@ func (a *app) wait(ctx context.Context) error {
 		}
 		return errors.Join(err, a.shutdown())
 	}
-}
-
-func (a *app) Stop(s service.Service) error {
-	return a.shutdown()
 }
 
 func (a *app) shutdown() error {

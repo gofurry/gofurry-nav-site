@@ -38,6 +38,8 @@ func newRootCommand() *cobra.Command {
 	root.PersistentFlags().StringVar(&options.configFile, "config", "", "path to the YAML configuration file")
 	root.AddCommand(
 		newCollectorServeCommand(options),
+		newInstallCommand(options),
+		newUninstallCommand(),
 		newCollectorOnceCommand(options, "collect", []string{"full"}, gameService.GetGameService().Collect),
 		newCollectorOnceCommand(options, "players", nil, gameService.GetGameService().CollectCurrentPlayers),
 		newCollectorOnceCommand(options, "all", nil, func() {

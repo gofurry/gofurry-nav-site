@@ -11,6 +11,7 @@ import (
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
 	"github.com/gofurry/gofurry-admin/internal/bootstrap"
 	applog "github.com/gofurry/gofurry-admin/internal/infra/logging"
+	systemdinstaller "github.com/gofurry/gofurry-admin/internal/systemd"
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +46,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(
 		newServeCmd(options),
 		newInstallCmd(options),
-		newUninstallCmd(options),
+		newUninstallCmd(),
 		newResetPasswordCmd(options),
 		newVersionCmd(),
 	)
@@ -76,47 +77,43 @@ func newServeCmd(options *cliOptions) *cobra.Command {
 }
 
 func newInstallCmd(options *cliOptions) *cobra.Command {
-	return &cobra.Command{
+	var force bool
+	command := &cobra.Command{
 		Use:   "install",
-		Short: "Install service to systemd",
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		Short: "Install and enable the systemd unit without starting it",
+		Args:  cobra.NoArgs,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return initConfig(options.configFile)
 		},
-		Run: func(cmd *cobra.Command, args []string) {
-			svc, err := newService(options.configFile)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			unitPath, err := systemdinstaller.Install(cmd.Context(), systemdinstaller.InstallRequest{
+				ServiceName: common.COMMON_PROJECT_NAME,
+				Description: "GoFurry admin service",
+				ConfigFile:  options.configFile,
+				Force:       force,
+			})
 			if err != nil {
-				applog.ErrorKV("service install failed", "error", err)
-				return
+				return err
 			}
-
-			if err = svc.Install(); err != nil {
-				applog.ErrorKV("service install failed", "error", err)
-				return
-			}
-			applog.InfoKV("service installed")
+			fmt.Fprintf(cmd.OutOrStdout(), "Installed: %s\nEnabled:   yes\nStarted:   no\n\nStart manually with:\n  sudo systemctl start %s\n", unitPath, common.COMMON_PROJECT_NAME)
+			return nil
 		},
 	}
+	command.Flags().BoolVar(&force, "force", false, "replace an existing systemd unit after validation")
+	return command
 }
 
-func newUninstallCmd(options *cliOptions) *cobra.Command {
+func newUninstallCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "uninstall",
-		Short: "Uninstall service from systemd",
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig(options.configFile)
-		},
-		Run: func(cmd *cobra.Command, args []string) {
-			svc, err := newService(options.configFile)
-			if err != nil {
-				applog.ErrorKV("service uninstall failed", "error", err)
-				return
+		Short: "Stop, disable, and remove the systemd unit",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if err := systemdinstaller.Uninstall(cmd.Context(), common.COMMON_PROJECT_NAME); err != nil {
+				return err
 			}
-
-			if err = svc.Uninstall(); err != nil {
-				applog.ErrorKV("service uninstall failed", "error", err)
-				return
-			}
-			applog.InfoKV("service uninstalled")
+			fmt.Fprintf(cmd.OutOrStdout(), "Uninstalled: %s.service\nApplication files and data were not removed.\n", common.COMMON_PROJECT_NAME)
+			return nil
 		},
 	}
 }

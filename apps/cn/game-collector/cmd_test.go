@@ -15,7 +15,7 @@ func TestRootCommandShowsHelpAndKeepsManualCommands(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"serve", "collect", "players", "all", "version"} {
+	for _, name := range []string{"serve", "install", "uninstall", "collect", "players", "all", "version"} {
 		if !strings.Contains(output.String(), name) {
 			t.Fatalf("root help is missing %q: %s", name, output.String())
 		}
@@ -23,6 +23,18 @@ func TestRootCommandShowsHelpAndKeepsManualCommands(t *testing.T) {
 	collect, _, err := cmd.Find([]string{"full"})
 	if err != nil || collect.Name() != "collect" {
 		t.Fatalf("full alias did not resolve to collect: cmd=%v err=%v", collect, err)
+	}
+}
+
+func TestInstallRequiresExplicitConfigAndExposesForce(t *testing.T) {
+	cmd := newRootCommand()
+	install, _, err := cmd.Find([]string{"install"})
+	if err != nil || install.Flags().Lookup("force") == nil {
+		t.Fatalf("install --force is unavailable: command=%v err=%v", install, err)
+	}
+	cmd.SetArgs([]string{"install"})
+	if err = cmd.Execute(); err == nil || !strings.Contains(err.Error(), "--config is required") {
+		t.Fatalf("install error = %v", err)
 	}
 }
 
