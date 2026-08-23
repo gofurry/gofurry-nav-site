@@ -42,7 +42,7 @@
           </h3>
           <div class="flex flex-wrap gap-2">
             <a
-                :href="navUptimeUrl"
+                :href="uptimeUrl"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="gf-footer__link"
@@ -152,7 +152,7 @@ const sitemapUrl = '/sitemap.xml'
 const llmsUrl = '/llms.txt'
 const securityTxtUrl = '/.well-known/security.txt'
 const config = useRuntimeConfig()
-const navUptimeUrl = computed(() => config.public.navUptimeUrl)
+const uptimeUrl = computed(() => config.public.uptimeUrl)
 const navMonitorUrl = computed(() => config.public.navMonitorUrl)
 
 const feedbackLinks = [
