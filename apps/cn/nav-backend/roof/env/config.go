@@ -81,7 +81,6 @@ type serverConfig struct {
 	DataBase   DataBaseConfig   `yaml:"database"`
 	Log        LogConfig        `yaml:"log"`
 	Redis      RedisConfig      `yaml:"redis"`
-	Uptime     UptimeConfig     `yaml:"uptime"`
 	NavV2      NavV2Config      `yaml:"nav_v2"`
 	Security   SecurityConfig   `yaml:"security"`
 	Thread     ThreadConfig     `yaml:"thread"`
@@ -108,7 +107,6 @@ type ProxyConfig struct {
 
 type WafConfig struct {
 	ConfPath        string   `yaml:"conf_path"`
-	CRSRoot         string   `yaml:"crs_root"`
 	DirectivesFiles []string `yaml:"directives_files"`
 	WafSwitch       bool     `yaml:"waf_switch"`
 }
@@ -123,15 +121,7 @@ func (cfg WafConfig) ResolveDirectivesFiles() []string {
 		baseFile = "./conf/coraza.conf"
 	}
 
-	files := []string{baseFile}
-	if cfg.CRSRoot != "" {
-		files = append(files,
-			filepath.Join(cfg.CRSRoot, "crs-setup.conf.example"),
-			filepath.Join(cfg.CRSRoot, "rules", "*.conf"),
-		)
-	}
-
-	return files
+	return []string{baseFile}
 }
 
 type MiddlewareConfig struct {
@@ -158,41 +148,6 @@ type RedisConfig struct {
 	RedisAddr      string `yaml:"redis_addr"`
 	RedisPassword  string `yaml:"redis_password"`
 	TimeoutSeconds int    `yaml:"timeout_seconds"`
-}
-
-type UptimeConfig struct {
-	Enabled               bool                   `yaml:"enabled"`
-	ServiceID             string                 `yaml:"service_id"`
-	ServiceName           string                 `yaml:"service_name"`
-	ServiceDescription    string                 `yaml:"service_description"`
-	SampleIntervalSeconds int                    `yaml:"sample_interval_seconds"`
-	RetentionDays         int                    `yaml:"retention_days"`
-	DaysToShow            int                    `yaml:"days_to_show"`
-	Timezone              string                 `yaml:"timezone"`
-	StorageKeyPrefix      string                 `yaml:"storage_key_prefix"`
-	UI                    UptimeUIConfig         `yaml:"ui"`
-	Endpoints             []UptimeEndpointConfig `yaml:"endpoints"`
-}
-
-type UptimeUIConfig struct {
-	Path            string  `yaml:"path"`
-	Title           string  `yaml:"title"`
-	Description     string  `yaml:"description"`
-	Footer          string  `yaml:"footer"`
-	GreenThreshold  float64 `yaml:"green_threshold"`
-	YellowThreshold float64 `yaml:"yellow_threshold"`
-}
-
-type UptimeEndpointConfig struct {
-	ID                  string            `yaml:"id"`
-	Name                string            `yaml:"name"`
-	Description         string            `yaml:"description"`
-	URL                 string            `yaml:"url"`
-	Method              string            `yaml:"method"`
-	Headers             map[string]string `yaml:"headers"`
-	ExpectedStatusCodes []int             `yaml:"expected_status_codes"`
-	IntervalSeconds     int               `yaml:"interval_seconds"`
-	TimeoutSeconds      int               `yaml:"timeout_seconds"`
 }
 
 func (cfg RedisConfig) Timeout() time.Duration {

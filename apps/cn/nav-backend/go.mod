@@ -10,9 +10,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/gofiber/contrib/v3/coraza v0.2.3
-	github.com/gofiber/contrib/v3/uptime v0.1.0
 	github.com/gofiber/fiber/v3 v3.5.0
-	github.com/gofiber/storage/redis/v3 v3.5.2
 	github.com/gofurry/monitor v1.2.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.10.0
@@ -70,6 +68,7 @@ require (
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/stretchr/testify v1.12.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tidwall/gjson v1.19.0 // indirect
 	github.com/tidwall/match v1.2.0 // indirect

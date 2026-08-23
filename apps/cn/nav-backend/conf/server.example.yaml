@@ -36,41 +36,6 @@ redis:
   redis_password: "CHANGE_ME"
   timeout_seconds: 2 # 每次 Redis 命令超时；Redis 慢或断连时避免公开接口长时间悬挂。
 
-# 统一在线状态页：由 Nav 主动请求各服务的 readiness 接口。
-uptime:
-  enabled: true
-  sample_interval_seconds: 30
-  retention_days: 90
-  days_to_show: 30
-  timezone: "Asia/Shanghai"
-  storage_key_prefix: "gofurry:uptime" # 多环境共用 Redis 时应分别使用 gofurry:prod:uptime、gofurry:dev:uptime。
-  ui:
-    path: "/uptime"
-    title: "GoFurry 服务状态"
-    description: "GoFurry 后端服务可用性"
-    footer: "GoFurry"
-    green_threshold: 0.999
-    yellow_threshold: 0.99
-  endpoints:
-    - id: "nav-backend" # 稳定 ID 不要随意改名，否则旧记录会保留为离线服务。
-      name: "导航服务"
-      description: "GoFurry 导航 API"
-      url: "http://127.0.0.1:9999/readyz"
-      method: "GET"
-      headers: {}
-      expected_status_codes: [200]
-      interval_seconds: 30
-      timeout_seconds: 5
-    - id: "game-backend"
-      name: "游戏服务"
-      description: "GoFurry 游戏 API"
-      url: "http://127.0.0.1:9998/readyz" # 使用生产机上 Nav 可直接访问的地址。
-      method: "GET"
-      headers: {}
-      expected_status_codes: [200]
-      interval_seconds: 30
-      timeout_seconds: 5
-
 security:
   jwt_secret: "CHANGE_ME_LONG_RANDOM_SECRET" # JWT 签名密钥；如使用环境变量 GF_NAV_BACKEND_JWT_SECRET，会优先生效。
 
@@ -110,8 +75,7 @@ middleware:
 waf:
   waf_switch: false # 是否启用 Coraza WAF；开启前先确认规则和误伤。
   conf_path: "./conf/coraza.conf"
-  crs_root: "" # 可选 OWASP CRS 根目录。
-  directives_files: [] # 可显式列出规则文件，留空时使用 conf_path / crs_root 推导。
+  directives_files: [] # 可显式列出规则文件；留空时只使用 conf_path。
 
 proxy:
   url: "" # 后端主动访问外部资源时的代理；为空表示直连。

@@ -66,17 +66,24 @@ func TestRedisTimeoutDefault(t *testing.T) {
 	}
 }
 
-func TestServerExampleIncludesCentralizedUptimeServices(t *testing.T) {
-	var cfg serverConfig
-	if err := loadYaml("../../conf/server.example.yaml", &cfg); err != nil {
-		t.Fatalf("load example config: %v", err)
+func TestWafDirectivesFilesPreserveExplicitRules(t *testing.T) {
+	explicit := []string{"./conf/coraza.conf", "./conf/custom-rules.conf"}
+	resolved := (WafConfig{DirectivesFiles: explicit}).ResolveDirectivesFiles()
+	if len(resolved) != 2 || resolved[0] != explicit[0] || resolved[1] != explicit[1] {
+		t.Fatalf("resolved directives = %#v, want %#v", resolved, explicit)
 	}
+	resolved[0] = "changed"
+	if explicit[0] == "changed" {
+		t.Fatal("ResolveDirectivesFiles returned the caller's mutable slice")
+	}
+}
 
-	if !cfg.Uptime.Enabled {
-		t.Fatalf("unexpected nav uptime config: %+v", cfg.Uptime)
+func TestWafDirectivesFilesDefaultToConfPath(t *testing.T) {
+	if files := (WafConfig{}).ResolveDirectivesFiles(); len(files) != 1 || files[0] != "./conf/coraza.conf" {
+		t.Fatalf("default directives = %#v", files)
 	}
-	if len(cfg.Uptime.Endpoints) != 2 || cfg.Uptime.Endpoints[0].ID != "nav-backend" || cfg.Uptime.Endpoints[1].ID != "game-backend" {
-		t.Fatalf("unexpected uptime endpoints: %+v", cfg.Uptime.Endpoints)
+	if files := (WafConfig{ConfPath: "./conf/site.conf"}).ResolveDirectivesFiles(); len(files) != 1 || files[0] != "./conf/site.conf" {
+		t.Fatalf("configured directives = %#v", files)
 	}
 }
 

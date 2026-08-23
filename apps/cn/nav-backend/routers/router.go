@@ -104,9 +104,6 @@ func registerMiddlewares(app *fiber.App) {
 		MaxAge:           86400, // 预检请求缓存 24 小时
 	}))
 
-	// 统一记录并展示 Nav、Game 及后续服务的可用性。
-	registerUptime(app)
-
 	// 请求限流
 	if cfg.Middleware.Limiter.IsOn {
 		app.Use(limiter.New(limiter.Config{
