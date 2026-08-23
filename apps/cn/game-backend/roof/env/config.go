@@ -88,7 +88,6 @@ type serverConfig struct {
 	DataBase   DataBaseConfig   `yaml:"database"`
 	Log        LogConfig        `yaml:"log"`
 	Redis      RedisConfig      `yaml:"redis"`
-	Thread     ThreadConfig     `yaml:"thread"`
 	Middleware MiddlewareConfig `yaml:"middleware"`
 	Waf        WafConfig        `yaml:"waf"`
 	Email      EmailConfig      `yaml:"email"`
@@ -160,10 +159,6 @@ type LimiterConfig struct {
 
 type CorsConfig struct {
 	AllowOrigins string `yaml:"allow_origins"`
-}
-
-type ThreadConfig struct {
-	EventPublishThread int `yaml:"event_publish_thread"`
 }
 
 type RedisConfig struct {
@@ -284,9 +279,6 @@ func applyTestConfigDefaults(conf interface{}) bool {
 			MemoryLimit: 1,
 			GCPercent:   1000,
 			Network:     "tcp",
-		},
-		Thread: ThreadConfig{
-			EventPublishThread: 1,
 		},
 		Game: GameConfig{
 			OnlinePeakCacheDays: defaultOnlinePeakCacheDays,

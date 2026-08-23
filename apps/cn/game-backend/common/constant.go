@@ -56,12 +56,3 @@ const (
 	ACCEPT_LANGUAGE = "zh-CN,zh;q=0.9,en;q=0.8"
 	APPLICATION     = "application/json"
 )
-
-// 事件
-const (
-	GLOBAL_MSG          = "GLOBAL_MSG"          // 全局事件
-	COMMON_MSG          = "COMMON_MSG"          // 通用事件
-	EVENT_STATUS_REPORT = "EVENT_STATUS_REPORT" // 状态上报事件
-	EVENT_HEARTBEAT     = "EVENT_HEARTBEAT"     // 心跳事件
-	EVENT_PING          = "EVENT_PING"          // Ping事件
-)

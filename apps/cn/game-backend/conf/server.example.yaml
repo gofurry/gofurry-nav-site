@@ -58,9 +58,6 @@ log:
   log_max_backups: 30
   log_max_age: 7
 
-thread:
-  event_publish_thread: 10 # 事件发布 worker 数。
-
 middleware:
   cors:
     allow_origins: "https://go-furry.com,http://localhost:3000" # 逗号分隔的前端来源。
