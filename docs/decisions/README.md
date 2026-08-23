@@ -1,0 +1,10 @@
+# Architecture decisions
+
+Accepted Architecture Decision Records define durable choices that affect more than one active application or repository boundary.
+
+- [0001: Active monorepo boundaries](0001-active-monorepo-boundaries.md)
+- [0002: PostgreSQL engineering foundation](0002-postgresql-engineering-foundation.md)
+- [0003: CLI and systemd lifecycle](0003-cli-and-systemd-lifecycle.md)
+- [0004: Standalone availability observer](0004-standalone-availability-observer.md)
+
+New decisions should be short, use the same section structure, and supersede rather than rewrite an accepted record when the decision changes.

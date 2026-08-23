@@ -11,14 +11,14 @@ error_page 404 /404.html;
 location = /404.html { internal; }
 ```
 
-Nuxt now provides `gofurry-nav-web/app/error.vue`, so unknown frontend routes render the GoFurry `Page Not Found` page while preserving the HTTP 404 status.
+Nuxt now provides `apps/cn/nav-web/app/error.vue`, so unknown frontend routes render the GoFurry `Page Not Found` page while preserving the HTTP 404 status.
 
 ## Maintenance Mode
 
 `ops/nginx/nginx.maintenance.conf` is a full nginx config for planned downtime. It serves the static page at:
 
 ```text
-/home/gofurry/gfs/gofurry-repo/gofurry-nav-site/unavailable/index.html
+/home/gofurry/gfs/gofurry-repo/gofurry-nav-site/ops/nginx/static/unavailable/index.html
 ```
 
 Suggested switch flow on the server:
