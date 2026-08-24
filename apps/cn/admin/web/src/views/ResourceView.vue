@@ -166,7 +166,6 @@ type SteamPrefillResponse = {
   info: string
   info_en: string
   groups: KVItem[]
-  release_date: string
   developers: string[]
   publishers: string[]
   header: string
@@ -264,10 +263,6 @@ async function prefillGameFromSteam() {
     if (metadata.groups?.length) {
       form.groups = mergeKVArray(form.groups, metadata.groups)
       filled.push('社群')
-    }
-    if (metadata.release_date) {
-      form.release_date = metadata.release_date
-      filled.push('发行日')
     }
     if (metadata.developers?.length) {
       form.developers = [...metadata.developers]

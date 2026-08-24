@@ -24,3 +24,17 @@ func TestCollectGameRejectsMissingAdapter(t *testing.T) {
 		t.Fatalf("unexpected status: %s", result.Status)
 	}
 }
+
+func TestRequestPlanKeepsCNBaseAndUSCanonicalAuthority(t *testing.T) {
+	t.Parallel()
+	collector := NewCollector(nil, recordingRepository{})
+	if len(collector.requests) != 3 || collector.requests[0].region != domain.RegionCN || !collector.requests[0].preferAsBase || collector.requests[0].canonical {
+		t.Fatalf("unexpected CN base plan: %+v", collector.requests)
+	}
+	if collector.requests[1].region != domain.RegionUS || collector.requests[1].lang != domain.StoreLocaleEN || !collector.requests[1].canonical {
+		t.Fatalf("unexpected US canonical plan: %+v", collector.requests)
+	}
+	if collector.requests[2].canonical {
+		t.Fatalf("HK fallback must not be canonical: %+v", collector.requests[2])
+	}
+}

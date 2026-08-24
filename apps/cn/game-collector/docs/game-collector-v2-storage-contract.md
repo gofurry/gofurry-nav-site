@@ -4,6 +4,16 @@
 
 游戏采集器 v2 使用全新的 v2 存储契约，不再复用 v1 的 `gfg_game_record`、`gfg_game_news`、`gfg_game_player_count` 作为主线写入目标。
 
+V3-P0.1 在现有 V2 pipeline 内增加 canonical Game domain，不复制 collector 版本：
+
+- `gfg_game_release_state`：US/English Storefront 当前 normalized release observation。
+- `gfg_game_first_available`：第一次正式可购买或可玩（包括 Early Access）的 write-once 日期/区间。
+- `gfg_game_release_history`：只记录 normalized semantic state change。
+- `gfg_game_languages`：US/English `supported_languages` 的有序 normalized set。
+- `StoreLocale` 只表示采集 payload locale，不表示游戏支持语言。
+
+US 请求失败、release field 缺失、或 languages observation 为空/不可解析时保留已有 canonical 数据。`SaveDetails` 先锁定 `gfg_game` 父行并核对 AppID；全部 raw/current/canonical/snapshot 写入仍在同一事务，提交后才刷新原有 Redis cache，且不新增 canonical Redis key。
+
 当前存储边界：
 
 - PostgreSQL：结构化详情、新闻、在线人数、采集运行记录、raw snapshot。
@@ -48,12 +58,23 @@ collector/game/v2/report/
 
 ## PostgreSQL Contract
 
-SQL 草案位于：
+Schema 与 SQL 的 source of truth：
 
 ```txt
-sql/20260607_game_collector_v2_alpha3.sql
-sql/20260607_game_collector_v2_alpha5.sql
+db/game/migrations/
+apps/cn/game-collector/internal/db/game/queries/
 ```
+
+历史 app-local SQL 草案不再拥有生产 Schema。
+
+### First Available 回填
+
+```text
+gf-game-collector backfill-first-available --config <file> --dry-run
+gf-game-collector backfill-first-available --config <file>
+```
+
+回填只接受安全可计算的 legacy manual day/month/quarter/year，拒绝未来日期，只在存在非 upcoming V2 current details 时写入 `legacy_manual`、`inferred=false` facts。
 
 ### 游戏详情
 
@@ -290,16 +311,12 @@ v2.0.0 stable 已完成：
 - v1 Steam 手写采集逻辑清理。
 - MongoDB 依赖清理。
 
-当前仍不做：
+V3-P0.1 仍不做：
 
-- 不删除 v1 表。
-- 不直接改 backend v1 API。
-- 不直接改 frontend games 页面。
+- 不创建 `/api/v3` 或 `collector/game/v3`。
+- 不实现 `game_daily`、player/price daily facts、Analytics Metric 或通用 Change Intelligence。
+- 不删除 legacy compatibility column，也不新增手工 First Available override UI。
 
-## 后续阶段
+## 当前消费边界
 
-建议后续优先做 backend v2：
-
-- 基于 `apps/cn/game-backend/docs/game-v2-backend-contract.md` 新增 `/api/v2/game/*`。
-- 后端消费 collector v2 PostgreSQL 表和 Redis key。
-- 前端 games v2 切到稳定数据契约后，再逐步删除后端 v1 动态数据消费路径。
+Game Backend 与 Nav Web 已消费现有 `/api/v2/game/*`。P0.1 只在该 route contract 内增加 structured fields；Redis key 与 Collector scheduling semantics 保持不变。

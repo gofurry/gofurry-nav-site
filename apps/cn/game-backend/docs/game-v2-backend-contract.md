@@ -31,6 +31,11 @@ collector v2 已定义的 PostgreSQL 表：
 | `gfg_game_v2_collect_runs` | 后台采集批次观测 |
 | `gfg_game_v2_collect_task_results` | 后台单游戏采集结果观测 |
 | `gfg_game_v2_detail_snapshots` | 调试和回放，不进入公开 API |
+| `gfg_game_release_state` | 当前 normalized US/English Steam release state |
+| `gfg_game_first_available` | write-once 首次正式可购买/可玩日期或区间 |
+| `gfg_game_languages` | normalized language capabilities |
+
+`gfg_game_release_history` 在 P0.1 只保存，不公开 API。`gfg_game.release_date`、`gfg_game_v2_details.release_date_text` 和 `supported_languages` 仅保留兼容/调试价值；业务排序、过滤和新 UI 不解析这些字符串。
 
 建议 Redis key：
 
@@ -54,8 +59,8 @@ Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读�
 
 - 游戏身份：`game_id`、`appid`、`name`、`type`、`is_free`。
 - 多语言文案：`lang`、`short_description`、`detailed_description`、`about_the_game`。
-- 发行信息：`release_coming_soon`、`release_date_text`、`developers`、`publishers`。
-- 平台信息：`platforms`、`supported_languages`、`website`、`support_info`。
+- 发行信息：structured `release`、`first_available`、`developers`、`publishers`；旧 `release.coming_soon/date` 暂时兼容。
+- 平台信息：`platforms`、structured `languages`、`website`、`support_info`；旧 `supported_languages` 暂时兼容。
 - 价格信息：`region`、`currency`、`initial_amount`、`final_amount`、`discount_percent`、`initial_formatted`、`final_formatted`。
 - 媒体信息：`header_url`、`capsule_url`、`background_url`、`screenshots`、`movies`。
 - 新闻信息：`headline`、`summary`、`plain_text`、`html`、`url`、`published_at`、`tags`。
@@ -94,7 +99,7 @@ Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读�
 - `discount_percent`
 - `final_amount`
 - `player_count`
-- `release_date_text`
+- `first_available`
 
 搜索索引建议使用 `plain_text` 和 cleaned text，不使用 `html`。
 
@@ -153,8 +158,29 @@ Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读�
   "about_the_game": "",
   "release": {
     "coming_soon": false,
-    "date": "Oct 10, 2007"
+    "date": "Oct 10, 2007",
+    "availability": "available",
+    "precision": "day",
+    "exact_date": "2007-10-10",
+    "year": 2007,
+    "month": 10,
+    "quarter": null,
+    "window_start": "2007-10-10",
+    "window_end": "2007-10-10",
+    "raw_text": "Oct 10, 2007"
   },
+  "first_available": {
+    "precision": "day",
+    "exact_date": "2007-10-10",
+    "year": 2007,
+    "month": 10,
+    "quarter": null,
+    "window_start": "2007-10-10",
+    "window_end": "2007-10-10",
+    "source": "legacy_manual",
+    "inferred": false
+  },
+  "languages": [],
   "developers": ["Valve"],
   "publishers": ["Valve"],
   "website": "https://...",
@@ -275,6 +301,8 @@ Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读�
 8. 从 `gfg_game_v2_player_counts` 获取最近一条 `status='success'` 的在线人数，并按后端 `game.online_peak_cache_days` 配置窗口计算 `peak_count`。
 9. 从站内标签、评论、浏览量表补齐站内增强数据。
 
+列表批量读取 `release_state` 与 `first_available`，不为 languages 增加 N+1。Latest Games 只包含存在 First Available 的游戏并按 `window_end DESC, game_id DESC` 排序；发行区间搜索使用 `[window_start, window_end]` overlap。
+
 新闻列表建议用 `published_at DESC NULLS LAST, collected_at DESC` 排序。
 
 在线人数公开展示只读取最近成功结果。失败结果可进入后台采集状态，但不能覆盖前端当前在线人数。
@@ -307,6 +335,7 @@ Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读�
 - `header_url`
 - `capsule_url`
 - `release_date`
+- `first_available`
 - `developers`
 - `publishers`
 - `platforms`
@@ -320,7 +349,8 @@ Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读�
 - `detailed_description`
 - `about_the_game`
 - `website`
-- `supported_languages`
+- `languages`
+- compatibility-only `supported_languages`
 - `support_info`
 - `prices`
 - `media.screenshots`
@@ -340,13 +370,9 @@ Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读�
 - 免费游戏。
 - 近期更新或近期入库。
 
-## 与 v1 的替换顺序
+## 当前切换状态
 
-建议后端分三步替换：
-
-1. 新增 v2 model / dao / service / controller / router，不影响 v1。
-2. 前端 games v2 只调用 `/api/v2/game/*`。
-3. 前端稳定后，删除或冻结 v1 动态数据消费路径。
+Game 前端已调用 `/api/v2/game/*`。V3-P0.1 原地演进 V2 model/dao/service/controller，不新增 `/api/v3`，也不复制版本包。兼容 raw 字段暂时返回用于 rollback/debug，但 Nav Web 主展示只消费 canonical typed fields。
 
 优先替换：
 
@@ -370,19 +396,6 @@ Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读�
 - raw snapshot 不能进入公开响应，避免响应体过大和泄露调试细节。
 - `lang` 当前只支持 `zh` / `en`，后续扩展语言时不要新增硬编码分支。
 
-## rc.1 交付边界
+## V3-P0.1 交付边界
 
-本阶段完成：
-
-- backend v2 消费契约。
-- 公开字段和后台字段分层。
-- v2 API 草案。
-- 前端 games v2 字段清单。
-- v1 到 v2 的替换顺序。
-
-本阶段不做：
-
-- 不修改后端路由。
-- 不新增后端 DAO。
-- 不改前端。
-- 不删除 v1。
+本阶段完成 canonical Release/Languages read model、First Available list/search semantics、structured API 和 Nav Web cutover。Release History 只保存不公开；daily facts、Analytics Metric、通用 Change Intelligence 和 `/api/v3` 留在后续里程碑。

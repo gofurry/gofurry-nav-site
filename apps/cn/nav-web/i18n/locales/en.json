@@ -463,6 +463,7 @@
       "infoCollectedTime": "Info collected time",
       "infoUpdatedTime": "Info updated time",
       "releaseDate": "Release Date",
+      "plannedRelease": "Planned Release",
       "supportedPlatforms": "Supported Platforms",
       "supportedLanguages": "Supported Languages",
       "ageRestriction": "Age Restriction",

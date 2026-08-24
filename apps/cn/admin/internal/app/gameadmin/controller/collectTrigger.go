@@ -12,7 +12,7 @@ import (
 
 const gameCollectPendingSetKey = "game:v2:collect:pending"
 
-func enqueueCreatedGameCollect(game models.Game) {
+func enqueueGameCollect(game models.Game) {
 	if game.ID <= 0 || game.Appid <= 0 {
 		return
 	}

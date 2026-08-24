@@ -23,7 +23,7 @@ func NewNewsMapper() NewsMapper {
 }
 
 // FromPartnerEvent maps one Store event into one v2 news item.
-func (m NewsMapper) FromPartnerEvent(gameID int64, appID uint32, lang domain.Language, event storefront.PartnerEvent) (domain.GameNews, error) {
+func (m NewsMapper) FromPartnerEvent(gameID int64, appID uint32, lang domain.StoreLocale, event storefront.PartnerEvent) (domain.GameNews, error) {
 	body := event.AnnouncementBody
 	rawBody := body.Body
 

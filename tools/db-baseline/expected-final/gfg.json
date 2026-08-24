@@ -8,6 +8,30 @@
   ],
   "sequences": [
     {
+      "name": "gfg_game_languages_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_game_languages",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfg_game_release_history_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_game_release_history",
+      "owned_column": "id"
+    },
+    {
       "name": "gfg_game_v2_assets_id_seq",
       "data_type": "bigint",
       "start": 1,
@@ -152,8 +176,9 @@
           "name": "release_date",
           "data_type": "character varying(255)",
           "not_null": true,
-          "has_default": false,
-          "comment": "发行日期"
+          "has_default": true,
+          "default": "''::character varying",
+          "comment": "Deprecated legacy manual release string; retained temporarily for migration audit and rollback only."
         },
         {
           "name": "developers",
@@ -440,6 +465,742 @@
         {
           "name": "idx_gfg_game_comment_game_id_create_time",
           "definition": "CREATE INDEX idx_gfg_game_comment_game_id_create_time ON public.gfg_game_comment USING btree (game_id, create_time DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_first_available",
+      "comment": "Write-once canonical date or range when a game first became formally purchasable or playable.",
+      "columns": [
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "precision",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "exact_date",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_year",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "release_month",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_quarter",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "window_start",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "window_end",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "inferred",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_raw",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "source_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "normalizer_version",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "established_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_first_available_established_at_not_null",
+          "definition": "NOT NULL established_at"
+        },
+        {
+          "name": "gfg_game_first_available_game_id_fkey",
+          "definition": "FOREIGN KEY (game_id) REFERENCES gfg_game(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_game_first_available_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_first_available_inferred_not_null",
+          "definition": "NOT NULL inferred"
+        },
+        {
+          "name": "gfg_game_first_available_normalizer_version_not_null",
+          "definition": "NOT NULL normalizer_version"
+        },
+        {
+          "name": "gfg_game_first_available_pkey",
+          "definition": "PRIMARY KEY (game_id)"
+        },
+        {
+          "name": "gfg_game_first_available_precision_check",
+          "definition": "CHECK (\"precision\" = ANY (ARRAY['day'::text, 'month'::text, 'quarter'::text, 'year'::text]))"
+        },
+        {
+          "name": "gfg_game_first_available_precision_not_null",
+          "definition": "NOT NULL \"precision\""
+        },
+        {
+          "name": "gfg_game_first_available_release_year_not_null",
+          "definition": "NOT NULL release_year"
+        },
+        {
+          "name": "gfg_game_first_available_shape_check",
+          "definition": "CHECK (\"precision\" = 'day'::text AND exact_date IS NOT NULL AND release_month \u003e= 1 AND release_month \u003c= 12 AND release_quarter IS NULL AND window_start = exact_date AND window_end = exact_date AND EXTRACT(year FROM exact_date)::integer = release_year AND EXTRACT(month FROM exact_date)::integer = release_month OR \"precision\" = 'month'::text AND exact_date IS NULL AND release_month \u003e= 1 AND release_month \u003c= 12 AND release_quarter IS NULL OR \"precision\" = 'quarter'::text AND exact_date IS NULL AND release_month IS NULL AND release_quarter \u003e= 1 AND release_quarter \u003c= 4 OR \"precision\" = 'year'::text AND exact_date IS NULL AND release_month IS NULL AND release_quarter IS NULL)"
+        },
+        {
+          "name": "gfg_game_first_available_source_check",
+          "definition": "CHECK (source = ANY (ARRAY['legacy_manual'::text, 'observed_transition'::text, 'steam_backfill'::text]))"
+        },
+        {
+          "name": "gfg_game_first_available_source_inferred_check",
+          "definition": "CHECK (source = 'steam_backfill'::text AND inferred IS TRUE OR (source = ANY (ARRAY['legacy_manual'::text, 'observed_transition'::text])) AND inferred IS FALSE)"
+        },
+        {
+          "name": "gfg_game_first_available_source_not_null",
+          "definition": "NOT NULL source"
+        },
+        {
+          "name": "gfg_game_first_available_source_raw_not_null",
+          "definition": "NOT NULL source_raw"
+        },
+        {
+          "name": "gfg_game_first_available_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfg_game_first_available_window_check",
+          "definition": "CHECK (window_start \u003c= window_end)"
+        },
+        {
+          "name": "gfg_game_first_available_window_end_not_null",
+          "definition": "NOT NULL window_end"
+        },
+        {
+          "name": "gfg_game_first_available_window_start_not_null",
+          "definition": "NOT NULL window_start"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_first_available_latest",
+          "definition": "CREATE INDEX idx_gfg_game_first_available_latest ON public.gfg_game_first_available USING btree (window_end DESC, game_id DESC)"
+        },
+        {
+          "name": "idx_gfg_game_first_available_window_start",
+          "definition": "CREATE INDEX idx_gfg_game_first_available_window_start ON public.gfg_game_first_available USING btree (window_start)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_languages",
+      "comment": "Canonical game language support normalized from the US/English Storefront response.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "language_code",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "steam_name",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "steam_api_code",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "steam_web_code",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tier",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "interface_supported",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "subtitles_supported",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "full_audio_supported",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "sort_order",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_region",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_locale",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "normalizer_version",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_languages_game_id_fkey",
+          "definition": "FOREIGN KEY (game_id) REFERENCES gfg_game(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_game_languages_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_languages_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_game_languages_normalizer_version_not_null",
+          "definition": "NOT NULL normalizer_version"
+        },
+        {
+          "name": "gfg_game_languages_observed_at_not_null",
+          "definition": "NOT NULL observed_at"
+        },
+        {
+          "name": "gfg_game_languages_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_game_languages_sort_order_not_null",
+          "definition": "NOT NULL sort_order"
+        },
+        {
+          "name": "gfg_game_languages_source_locale_not_null",
+          "definition": "NOT NULL source_locale"
+        },
+        {
+          "name": "gfg_game_languages_source_not_null",
+          "definition": "NOT NULL source"
+        },
+        {
+          "name": "gfg_game_languages_source_region_not_null",
+          "definition": "NOT NULL source_region"
+        },
+        {
+          "name": "gfg_game_languages_steam_name_not_null",
+          "definition": "NOT NULL steam_name"
+        },
+        {
+          "name": "gfg_game_languages_tier_check",
+          "definition": "CHECK (tier = ANY (ARRAY['platform'::text, 'game_only'::text, 'unknown'::text]))"
+        },
+        {
+          "name": "gfg_game_languages_tier_not_null",
+          "definition": "NOT NULL tier"
+        },
+        {
+          "name": "gfg_game_languages_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_languages_code",
+          "definition": "CREATE INDEX idx_gfg_game_languages_code ON public.gfg_game_languages USING btree (language_code, game_id) WHERE (language_code IS NOT NULL)"
+        },
+        {
+          "name": "idx_gfg_game_languages_order",
+          "definition": "CREATE INDEX idx_gfg_game_languages_order ON public.gfg_game_languages USING btree (game_id, sort_order, id)"
+        },
+        {
+          "name": "uq_gfg_game_languages_known",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_game_languages_known ON public.gfg_game_languages USING btree (game_id, language_code) WHERE (language_code IS NOT NULL)"
+        },
+        {
+          "name": "uq_gfg_game_languages_unknown",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_game_languages_unknown ON public.gfg_game_languages USING btree (game_id, lower(steam_name)) WHERE (language_code IS NULL)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_release_history",
+      "comment": "Semantic snapshots of canonical release-state changes; raw-text-only changes do not append rows.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "availability",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "precision",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "exact_date",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_year",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_month",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_quarter",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "window_start",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "window_end",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "raw_text",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "source",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_region",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_locale",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "normalizer_version",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "recorded_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_release_history_availability_check",
+          "definition": "CHECK (availability = ANY (ARRAY['upcoming'::text, 'available'::text, 'unknown'::text]))"
+        },
+        {
+          "name": "gfg_game_release_history_availability_not_null",
+          "definition": "NOT NULL availability"
+        },
+        {
+          "name": "gfg_game_release_history_game_id_fkey",
+          "definition": "FOREIGN KEY (game_id) REFERENCES gfg_game(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_game_release_history_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_release_history_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_game_release_history_normalizer_version_not_null",
+          "definition": "NOT NULL normalizer_version"
+        },
+        {
+          "name": "gfg_game_release_history_observed_at_not_null",
+          "definition": "NOT NULL observed_at"
+        },
+        {
+          "name": "gfg_game_release_history_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_game_release_history_precision_check",
+          "definition": "CHECK (\"precision\" = ANY (ARRAY['day'::text, 'month'::text, 'quarter'::text, 'year'::text, 'tba'::text, 'none'::text, 'unknown'::text]))"
+        },
+        {
+          "name": "gfg_game_release_history_precision_not_null",
+          "definition": "NOT NULL \"precision\""
+        },
+        {
+          "name": "gfg_game_release_history_raw_text_not_null",
+          "definition": "NOT NULL raw_text"
+        },
+        {
+          "name": "gfg_game_release_history_recorded_at_not_null",
+          "definition": "NOT NULL recorded_at"
+        },
+        {
+          "name": "gfg_game_release_history_shape_check",
+          "definition": "CHECK (\"precision\" = 'day'::text AND exact_date IS NOT NULL AND release_year IS NOT NULL AND release_month \u003e= 1 AND release_month \u003c= 12 AND release_quarter IS NULL AND window_start = exact_date AND window_end = exact_date AND EXTRACT(year FROM exact_date)::integer = release_year AND EXTRACT(month FROM exact_date)::integer = release_month OR \"precision\" = 'month'::text AND exact_date IS NULL AND release_year IS NOT NULL AND release_month \u003e= 1 AND release_month \u003c= 12 AND release_quarter IS NULL AND window_start IS NOT NULL AND window_end IS NOT NULL OR \"precision\" = 'quarter'::text AND exact_date IS NULL AND release_year IS NOT NULL AND release_month IS NULL AND release_quarter \u003e= 1 AND release_quarter \u003c= 4 AND window_start IS NOT NULL AND window_end IS NOT NULL OR \"precision\" = 'year'::text AND exact_date IS NULL AND release_year IS NOT NULL AND release_month IS NULL AND release_quarter IS NULL AND window_start IS NOT NULL AND window_end IS NOT NULL OR (\"precision\" = ANY (ARRAY['tba'::text, 'none'::text, 'unknown'::text])) AND exact_date IS NULL AND release_year IS NULL AND release_month IS NULL AND release_quarter IS NULL AND window_start IS NULL AND window_end IS NULL)"
+        },
+        {
+          "name": "gfg_game_release_history_source_locale_not_null",
+          "definition": "NOT NULL source_locale"
+        },
+        {
+          "name": "gfg_game_release_history_source_not_null",
+          "definition": "NOT NULL source"
+        },
+        {
+          "name": "gfg_game_release_history_source_region_not_null",
+          "definition": "NOT NULL source_region"
+        },
+        {
+          "name": "gfg_game_release_history_window_check",
+          "definition": "CHECK (window_start IS NULL OR window_end IS NULL OR window_start \u003c= window_end)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_release_history_game_observed",
+          "definition": "CREATE INDEX idx_gfg_game_release_history_game_observed ON public.gfg_game_release_history USING btree (game_id, observed_at DESC, id DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_release_state",
+      "comment": "Current canonical Steam release state normalized from the US/English Storefront response.",
+      "columns": [
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "availability",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "precision",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "exact_date",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_year",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_month",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_quarter",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "window_start",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "window_end",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "raw_text",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "source",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_region",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_locale",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "normalizer_version",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_release_state_availability_check",
+          "definition": "CHECK (availability = ANY (ARRAY['upcoming'::text, 'available'::text, 'unknown'::text]))"
+        },
+        {
+          "name": "gfg_game_release_state_availability_not_null",
+          "definition": "NOT NULL availability"
+        },
+        {
+          "name": "gfg_game_release_state_game_id_fkey",
+          "definition": "FOREIGN KEY (game_id) REFERENCES gfg_game(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_game_release_state_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_release_state_normalizer_version_not_null",
+          "definition": "NOT NULL normalizer_version"
+        },
+        {
+          "name": "gfg_game_release_state_observed_at_not_null",
+          "definition": "NOT NULL observed_at"
+        },
+        {
+          "name": "gfg_game_release_state_pkey",
+          "definition": "PRIMARY KEY (game_id)"
+        },
+        {
+          "name": "gfg_game_release_state_precision_check",
+          "definition": "CHECK (\"precision\" = ANY (ARRAY['day'::text, 'month'::text, 'quarter'::text, 'year'::text, 'tba'::text, 'none'::text, 'unknown'::text]))"
+        },
+        {
+          "name": "gfg_game_release_state_precision_not_null",
+          "definition": "NOT NULL \"precision\""
+        },
+        {
+          "name": "gfg_game_release_state_raw_text_not_null",
+          "definition": "NOT NULL raw_text"
+        },
+        {
+          "name": "gfg_game_release_state_shape_check",
+          "definition": "CHECK (\"precision\" = 'day'::text AND exact_date IS NOT NULL AND release_year IS NOT NULL AND release_month \u003e= 1 AND release_month \u003c= 12 AND release_quarter IS NULL AND window_start = exact_date AND window_end = exact_date AND EXTRACT(year FROM exact_date)::integer = release_year AND EXTRACT(month FROM exact_date)::integer = release_month OR \"precision\" = 'month'::text AND exact_date IS NULL AND release_year IS NOT NULL AND release_month \u003e= 1 AND release_month \u003c= 12 AND release_quarter IS NULL AND window_start IS NOT NULL AND window_end IS NOT NULL OR \"precision\" = 'quarter'::text AND exact_date IS NULL AND release_year IS NOT NULL AND release_month IS NULL AND release_quarter \u003e= 1 AND release_quarter \u003c= 4 AND window_start IS NOT NULL AND window_end IS NOT NULL OR \"precision\" = 'year'::text AND exact_date IS NULL AND release_year IS NOT NULL AND release_month IS NULL AND release_quarter IS NULL AND window_start IS NOT NULL AND window_end IS NOT NULL OR (\"precision\" = ANY (ARRAY['tba'::text, 'none'::text, 'unknown'::text])) AND exact_date IS NULL AND release_year IS NULL AND release_month IS NULL AND release_quarter IS NULL AND window_start IS NULL AND window_end IS NULL)"
+        },
+        {
+          "name": "gfg_game_release_state_source_locale_not_null",
+          "definition": "NOT NULL source_locale"
+        },
+        {
+          "name": "gfg_game_release_state_source_not_null",
+          "definition": "NOT NULL source"
+        },
+        {
+          "name": "gfg_game_release_state_source_region_not_null",
+          "definition": "NOT NULL source_region"
+        },
+        {
+          "name": "gfg_game_release_state_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfg_game_release_state_window_check",
+          "definition": "CHECK (window_start IS NULL OR window_end IS NULL OR window_start \u003c= window_end)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_release_state_availability_window",
+          "definition": "CREATE INDEX idx_gfg_game_release_state_availability_window ON public.gfg_game_release_state USING btree (availability, window_start)"
         }
       ],
       "triggers": null

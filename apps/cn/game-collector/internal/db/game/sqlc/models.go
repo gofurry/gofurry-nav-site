@@ -28,7 +28,7 @@ type GfgGame struct {
 	Resources []byte `json:"resources"`
 	// 游戏相关社群
 	Groups []byte `json:"groups"`
-	// 发行日期
+	// Deprecated legacy manual release string; retained temporarily for migration audit and rollback only.
 	ReleaseDate string `json:"release_date"`
 	// 开发商
 	Developers []byte `json:"developers"`
@@ -67,6 +67,87 @@ type GfgGameComment struct {
 	Ip string `json:"ip"`
 	// 评论人名称
 	Name string `json:"name"`
+}
+
+// Write-once canonical date or range when a game first became formally purchasable or playable.
+type GfgGameFirstAvailable struct {
+	GameID            int64              `json:"game_id"`
+	Precision         string             `json:"precision"`
+	ExactDate         pgtype.Date        `json:"exact_date"`
+	ReleaseYear       int32              `json:"release_year"`
+	ReleaseMonth      *int32             `json:"release_month"`
+	ReleaseQuarter    *int32             `json:"release_quarter"`
+	WindowStart       pgtype.Date        `json:"window_start"`
+	WindowEnd         pgtype.Date        `json:"window_end"`
+	Source            string             `json:"source"`
+	Inferred          bool               `json:"inferred"`
+	SourceRaw         string             `json:"source_raw"`
+	SourceObservedAt  pgtype.Timestamptz `json:"source_observed_at"`
+	NormalizerVersion string             `json:"normalizer_version"`
+	EstablishedAt     pgtype.Timestamptz `json:"established_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Canonical game language support normalized from the US/English Storefront response.
+type GfgGameLanguage struct {
+	ID                 int64              `json:"id"`
+	GameID             int64              `json:"game_id"`
+	LanguageCode       *string            `json:"language_code"`
+	SteamName          string             `json:"steam_name"`
+	SteamApiCode       *string            `json:"steam_api_code"`
+	SteamWebCode       *string            `json:"steam_web_code"`
+	Tier               string             `json:"tier"`
+	InterfaceSupported *bool              `json:"interface_supported"`
+	SubtitlesSupported *bool              `json:"subtitles_supported"`
+	FullAudioSupported *bool              `json:"full_audio_supported"`
+	SortOrder          int32              `json:"sort_order"`
+	Source             string             `json:"source"`
+	SourceRegion       string             `json:"source_region"`
+	SourceLocale       string             `json:"source_locale"`
+	NormalizerVersion  string             `json:"normalizer_version"`
+	ObservedAt         pgtype.Timestamptz `json:"observed_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Semantic snapshots of canonical release-state changes; raw-text-only changes do not append rows.
+type GfgGameReleaseHistory struct {
+	ID                int64              `json:"id"`
+	GameID            int64              `json:"game_id"`
+	Availability      string             `json:"availability"`
+	Precision         string             `json:"precision"`
+	ExactDate         pgtype.Date        `json:"exact_date"`
+	ReleaseYear       *int32             `json:"release_year"`
+	ReleaseMonth      *int32             `json:"release_month"`
+	ReleaseQuarter    *int32             `json:"release_quarter"`
+	WindowStart       pgtype.Date        `json:"window_start"`
+	WindowEnd         pgtype.Date        `json:"window_end"`
+	RawText           string             `json:"raw_text"`
+	Source            string             `json:"source"`
+	SourceRegion      string             `json:"source_region"`
+	SourceLocale      string             `json:"source_locale"`
+	NormalizerVersion string             `json:"normalizer_version"`
+	ObservedAt        pgtype.Timestamptz `json:"observed_at"`
+	RecordedAt        pgtype.Timestamptz `json:"recorded_at"`
+}
+
+// Current canonical Steam release state normalized from the US/English Storefront response.
+type GfgGameReleaseState struct {
+	GameID            int64              `json:"game_id"`
+	Availability      string             `json:"availability"`
+	Precision         string             `json:"precision"`
+	ExactDate         pgtype.Date        `json:"exact_date"`
+	ReleaseYear       *int32             `json:"release_year"`
+	ReleaseMonth      *int32             `json:"release_month"`
+	ReleaseQuarter    *int32             `json:"release_quarter"`
+	WindowStart       pgtype.Date        `json:"window_start"`
+	WindowEnd         pgtype.Date        `json:"window_end"`
+	RawText           string             `json:"raw_text"`
+	Source            string             `json:"source"`
+	SourceRegion      string             `json:"source_region"`
+	SourceLocale      string             `json:"source_locale"`
+	NormalizerVersion string             `json:"normalizer_version"`
+	ObservedAt        pgtype.Timestamptz `json:"observed_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GfgGameV2Asset struct {

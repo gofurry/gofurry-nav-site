@@ -127,6 +127,7 @@ export interface SearchPageResponseItem {
     appid: number
     primary_tag: string
     secondary_tag: string
+    first_available: GameV2FirstAvailable | null
 }
 
 export interface SearchPageResponse {
@@ -155,6 +156,9 @@ export interface GameBaseInfoResponse {
     news: NewsModel[]
     tags: TagModel[]
     supported_languages: string
+    release: GameV2Release
+    first_available: GameV2FirstAvailable | null
+    languages: GameV2Language[]
     required_age: string
     website: string
     detailed_description: string
@@ -386,6 +390,7 @@ export interface GameV2ListItem {
     header_url: string
     capsule_url: string
     release_date: string
+    first_available: GameV2FirstAvailable | null
     developers: string[]
     publishers: string[]
     platforms: Record<string, boolean>
@@ -429,6 +434,41 @@ export interface GameViewTouchResponse {
 export interface GameV2Release {
     coming_soon: boolean
     date: string
+    availability: 'upcoming' | 'available' | 'unknown'
+    precision: GameReleasePrecision
+    exact_date: string | null
+    year: number | null
+    month: number | null
+    quarter: number | null
+    window_start: string | null
+    window_end: string | null
+    raw_text: string
+    observed_at: string | null
+}
+
+export type GameReleasePrecision = 'day' | 'month' | 'quarter' | 'year' | 'tba' | 'none' | 'unknown'
+
+export interface GameV2FirstAvailable {
+    precision: Exclude<GameReleasePrecision, 'tba' | 'none' | 'unknown'>
+    exact_date: string | null
+    year: number
+    month: number | null
+    quarter: number | null
+    window_start: string
+    window_end: string
+    source: 'legacy_manual' | 'observed_transition' | 'steam_backfill'
+    inferred: boolean
+}
+
+export interface GameV2Language {
+    code: string | null
+    steam_name: string
+    steam_api_code: string | null
+    steam_web_code: string | null
+    tier: 'platform' | 'game_only' | 'unknown'
+    interface_supported: boolean | null
+    subtitles_supported: boolean | null
+    full_audio_supported: boolean | null
 }
 
 export interface GameV2MediaView {
@@ -527,6 +567,8 @@ export interface GameV2DetailRecord {
     publishers: string[]
     platforms: Record<string, boolean>
     supported_languages: string
+    first_available: GameV2FirstAvailable | null
+    languages: GameV2Language[]
     support_info: Record<string, string>
     prices: GameV2PriceView[]
     price: GameV2PriceView

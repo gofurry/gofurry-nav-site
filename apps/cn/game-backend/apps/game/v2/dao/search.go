@@ -12,6 +12,7 @@ import (
 
 const searchJoins = `
 LEFT JOIN gfg_game_v2_details d ON d.game_id = g.id
+LEFT JOIN gfg_game_first_available fa ON fa.game_id = g.id
 LEFT JOIN gfg_game_v2_localized_details ld ON ld.game_id = g.id AND ld.lang = $1
 LEFT JOIN (
     SELECT DISTINCT ON (game_id) game_id, url
@@ -55,6 +56,7 @@ func (dao *ReadModelDAO) SearchGames(ctx context.Context, query v2models.GameV2S
 	if err != nil {
 		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 搜索结果失败: %v", err))
 	}
+	attachSearchFirstAvailable(items)
 	res.Data = items
 	return res, nil
 }
@@ -78,7 +80,7 @@ WHERE tm.game_id=g.id AND (t.name ILIKE `+p+` OR t.name_en ILIKE `+p+`)))`)
 	}
 	if !query.PubStartTime.IsZero() && !query.PubEndTime.IsZero() {
 		args = append(args, query.PubStartTime, query.PubEndTime)
-		clauses = append(clauses, fmt.Sprintf("%s BETWEEN $%d AND $%d", searchReleaseDateExpr(), len(args)-1, len(args)))
+		clauses = append(clauses, fmt.Sprintf("fa.window_start <= $%d::date AND fa.window_end >= $%d::date", len(args), len(args)-1))
 	}
 	if len(query.TagList) > 0 {
 		args = append(args, query.TagList, len(query.TagList))
@@ -102,10 +104,14 @@ func searchSelectSQL(lang string) string {
 	return fmt.Sprintf(`g.id::text AS id, %s AS name, %s AS info,
 COALESCE(NULLIF(asset_media.url, ''), NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS cover,
 g.appid, %s AS update_time,
-COALESCE(NULLIF(d.release_date_text, ''), NULLIF(g.release_date, ''), '') AS release_date,
+COALESCE(NULLIF(d.release_date_text, ''), '') AS release_date,
 COALESCE(comment_stats.remark_count, 0)::integer AS remark_count,
 COALESCE(comment_stats.avg_score, 0)::double precision AS avg_score,
-%s AS primary_tag, %s AS secondary_tag`,
+%s AS primary_tag, %s AS secondary_tag,
+fa.precision AS fa_precision, fa.exact_date AS fa_exact_date,
+fa.release_year AS fa_release_year, fa.release_month AS fa_release_month,
+fa.release_quarter AS fa_release_quarter, fa.window_start AS fa_window_start,
+fa.window_end AS fa_window_end, fa.source AS fa_source, fa.inferred AS fa_inferred`,
 		nameExpr, infoExpr, searchUpdatedAtExpr(), primaryTagExpr, secondaryTagExpr)
 }
 
@@ -130,12 +136,4 @@ func searchOrder(query v2models.GameV2SearchPageQuery) string {
 
 func searchUpdatedAtExpr() string {
 	return "GREATEST(g.update_time, COALESCE(d.updated_at, g.update_time), COALESCE(ld.updated_at, g.update_time))"
-}
-
-func searchReleaseDateExpr() string {
-	return `COALESCE(
-CASE WHEN regexp_replace(COALESCE(g.release_date, ''), '[[:space:]]+', '', 'g') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
-THEN to_date(REPLACE(regexp_replace(COALESCE(g.release_date, ''), '[[:space:]]+', '', 'g'), '.', '-'), 'YYYY-MM-DD') END,
-CASE WHEN regexp_replace(COALESCE(d.release_date_text, ''), '[[:space:]]+', '', 'g') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
-THEN to_date(REPLACE(regexp_replace(COALESCE(d.release_date_text, ''), '[[:space:]]+', '', 'g'), '.', '-'), 'YYYY-MM-DD') END)`
 }

@@ -31,6 +31,9 @@ func (dao *ReadModelDAO) loadSiteRecord(ctx context.Context, query DetailQuery) 
 
 func (dao *ReadModelDAO) loadAggregateExtras(ctx context.Context, aggregate *v2models.GameV2Aggregate, lang string, newsLimit int) error {
 	gameID := aggregate.Site.ID
+	if err := dao.loadCanonicalGameDomain(ctx, aggregate); err != nil {
+		return err
+	}
 	details, err := queryOptional[v2models.GfgGameV2Details](ctx, dao.pool,
 		"SELECT "+detailsColumns+" FROM gfg_game_v2_details WHERE game_id = $1", gameID)
 	if err != nil {
@@ -247,6 +250,9 @@ func (dao *ReadModelDAO) loadAggregatesByGameIDs(ctx context.Context, gameIDs []
 }
 
 func (dao *ReadModelDAO) loadAggregateExtrasBatch(ctx context.Context, aggregateMap map[int64]*v2models.GameV2Aggregate, gameIDs []int64, lang string) error {
+	if err := dao.loadCanonicalGameDomainBatch(ctx, aggregateMap, gameIDs); err != nil {
+		return err
+	}
 	details, err := queryMany[v2models.GfgGameV2Details](ctx, dao.pool,
 		"SELECT "+detailsColumns+" FROM gfg_game_v2_details WHERE game_id = ANY($1::bigint[])", gameIDs)
 	if err != nil {

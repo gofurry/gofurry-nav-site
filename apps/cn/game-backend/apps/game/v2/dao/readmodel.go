@@ -8,6 +8,7 @@ import (
 
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 	"github.com/gofurry/gofurry-game-backend/common"
+	gamesqlc "github.com/gofurry/gofurry-game-backend/internal/db/game/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -76,10 +77,11 @@ type DetailQuery = v2models.GameV2DetailQuery
 // bootstrap and constructor-injected here.
 type ReadModelDAO struct {
 	pool *pgxpool.Pool
+	q    *gamesqlc.Queries
 }
 
 func NewReadModelDAO(pool *pgxpool.Pool) *ReadModelDAO {
-	return &ReadModelDAO{pool: pool}
+	return &ReadModelDAO{pool: pool, q: gamesqlc.New(pool)}
 }
 
 func (dao *ReadModelDAO) ready() error {
@@ -159,7 +161,7 @@ func (dao *ReadModelDAO) ListGameAggregates(ctx context.Context, query v2models.
 
 	join := ""
 	if query.Sort == "release_date" {
-		join = " LEFT JOIN gfg_game_v2_details d ON d.game_id = g.id"
+		join = " JOIN gfg_game_first_available fa ON fa.game_id = g.id"
 	}
 	args := []any{}
 	where := ""
@@ -383,7 +385,7 @@ func strPtrValue(value *string) string {
 func listOrder(sort string) string {
 	switch sort {
 	case "release_date":
-		return releaseDateOrderExpr() + " DESC NULLS LAST, g.id DESC"
+		return "fa.window_end DESC, g.id DESC"
 	case "newest":
 		return "g.create_time DESC, g.id DESC"
 	case "updated":
@@ -391,12 +393,4 @@ func listOrder(sort string) string {
 	default:
 		return "g.weight ASC, g.id ASC"
 	}
-}
-
-func releaseDateOrderExpr() string {
-	return `COALESCE(
-CASE WHEN regexp_replace(COALESCE(g.release_date, ''), '[[:space:]]+', '', 'g') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
-THEN to_date(REPLACE(regexp_replace(COALESCE(g.release_date, ''), '[[:space:]]+', '', 'g'), '.', '-'), 'YYYY-MM-DD') END,
-CASE WHEN regexp_replace(COALESCE(d.release_date_text, ''), '[[:space:]]+', '', 'g') ~ '^[0-9]{4}[.-][0-9]{2}[.-][0-9]{2}$'
-THEN to_date(REPLACE(regexp_replace(COALESCE(d.release_date_text, ''), '[[:space:]]+', '', 'g'), '.', '-'), 'YYYY-MM-DD') END)`
 }

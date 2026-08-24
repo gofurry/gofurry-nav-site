@@ -13,8 +13,8 @@
       </div>
 
       <div class="flex gap-2">
-        <span class="game-detail-info-label w-28 shrink-0">{{ t("game.detail.releaseDate") }}:</span>
-        <span>{{ game?.release_date || t("game.panel.none") }}</span>
+        <span class="game-detail-info-label w-28 shrink-0">{{ releaseDisplay.kind === 'planned' ? t("game.detail.plannedRelease") : t("game.detail.releaseDate") }}:</span>
+        <span>{{ releaseDisplay.value }}</span>
       </div>
 
       <div class="flex gap-2">
@@ -24,7 +24,7 @@
 
       <div class="flex gap-2">
         <span class="game-detail-info-label w-28 shrink-0">{{ t("game.detail.supportedLanguages") }}:</span>
-        <span>{{ game?.supported_languages || t("game.panel.none") }}</span>
+        <span>{{ formattedLanguages || t("game.panel.none") }}</span>
       </div>
 
       <div class="flex gap-2">
@@ -240,6 +240,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { GameBaseInfoResponse, RequirementsModel } from '@/types/game'
+import { formatGameLanguages, resolveGameReleaseDisplay } from '@/utils/gameDomain'
 import { i18n } from '@/main'
 
 const { t } = i18n.global
@@ -286,6 +287,12 @@ const formattedPlatform = computed(() => (props.game?.platform ?? '').split(',')
 const formattedType = computed(() => formatType(props.game?.type ?? ''))
 
 const formattedRequiredAge = computed(() => formatRequiredAge(props.game?.required_age ?? ''))
+
+const domainLocale = computed(() => getLocaleCode().startsWith('en') ? 'en' : 'zh')
+
+const releaseDisplay = computed(() => resolveGameReleaseDisplay(props.game?.release, props.game?.first_available, domainLocale.value))
+
+const formattedLanguages = computed(() => formatGameLanguages(props.game?.languages ?? [], domainLocale.value))
 
 const priceList = computed(() => (props.game?.price_list ?? []).filter((item) => item.price))
 

@@ -117,7 +117,7 @@ func (r *NewsRepository) refreshCache(items []domain.GameNews) {
 	}
 }
 
-func newsCacheKey(gameID int64, lang domain.Language) string {
+func newsCacheKey(gameID int64, lang domain.StoreLocale) string {
 	return fmt.Sprintf("game:v2:news:%d:%s", gameID, lang)
 }
 

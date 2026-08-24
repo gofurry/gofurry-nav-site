@@ -62,14 +62,14 @@ func (store *gameStore) listGames(ctx context.Context, page adminutil.PageQuery)
 	}
 	items := make([]models.Game, 0, len(rows))
 	for _, row := range rows {
-		items = append(items, gameModel(row))
+		items = append(items, listGameModel(row))
 	}
 	return total, items, nil
 }
 
 func (store *gameStore) getGame(ctx context.Context, id int64) (models.Game, common.Error) {
 	row, err := store.q.GetGame(ctx, id)
-	return gameModel(row), gameDAOError(err)
+	return getGameModel(row), gameDAOError(err)
 }
 
 func (store *gameStore) createGame(ctx context.Context, meta audit.Meta, req gamesqlc.InsertGameParams) (models.Game, common.Error) {
@@ -84,24 +84,37 @@ func (store *gameStore) createGame(ctx context.Context, meta audit.Meta, req gam
 		}
 		req.ID = id
 		row, err := q.InsertGame(ctx, req)
-		result = gameModel(row)
+		result = insertGameModel(row)
 		return id, nil, row, err
 	})
 	return result, err
 }
 
-func (store *gameStore) updateGame(ctx context.Context, meta audit.Meta, req gamesqlc.UpdateGameParams) common.Error {
-	return store.mutate(ctx, meta, "update", "gfg_game", func(q *gamesqlc.Queries) (int64, any, any, error) {
-		if err := ensureUniqueGameAppIDQuery(ctx, q, req.Appid, req.ID); err != nil {
-			return req.ID, nil, nil, err
-		}
-		before, err := q.GetGame(ctx, req.ID)
+func (store *gameStore) updateGame(ctx context.Context, meta audit.Meta, req gamesqlc.UpdateGameParams) (models.Game, bool, common.Error) {
+	var result models.Game
+	var appIDChanged bool
+	err := store.mutate(ctx, meta, "update", "gfg_game", func(q *gamesqlc.Queries) (int64, any, any, error) {
+		before, err := q.LockGameForUpdate(ctx, req.ID)
 		if err != nil {
 			return req.ID, nil, nil, err
 		}
+		if err := ensureUniqueGameAppIDQuery(ctx, q, req.Appid, req.ID); err != nil {
+			return req.ID, before, nil, err
+		}
 		after, err := q.UpdateGame(ctx, req)
-		return req.ID, before, after, err
+		if err != nil {
+			return req.ID, before, nil, err
+		}
+		appIDChanged = before.Appid != after.Appid
+		if appIDChanged {
+			if err := q.ResetSteamDerivedGameState(ctx, req.ID); err != nil {
+				return req.ID, before, after, err
+			}
+		}
+		result = updateGameModel(after)
+		return req.ID, before, after, nil
 	})
+	return result, appIDChanged, err
 }
 
 func (store *gameStore) deleteGame(ctx context.Context, meta audit.Meta, id int64) common.Error {
@@ -424,11 +437,34 @@ func bytesPointer(value []byte) *string {
 	return &text
 }
 
-func gameModel(row gamesqlc.GfgGame) models.Game {
+type gameFields struct {
+	ID, Appid, Weight, PrimaryTag, SecondaryTag      int64
+	Name, NameEn, Info, InfoEn, Header               string
+	CreateTime, UpdateTime                           pgtype.Timestamp
+	Resources, Groups, Developers, Publishers, Links []byte
+}
+
+func gameModelFromFields(row gameFields) models.Game {
 	return models.Game{ID: row.ID, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn,
 		CreateTime: localTime(row.CreateTime), UpdateTime: localTime(row.UpdateTime), Resources: bytesPointer(row.Resources), Groups: bytesPointer(row.Groups),
-		ReleaseDate: row.ReleaseDate, Developers: string(row.Developers), Publishers: string(row.Publishers), Appid: row.Appid, Header: row.Header,
+		Developers: string(row.Developers), Publishers: string(row.Publishers), Appid: row.Appid, Header: row.Header,
 		Links: bytesPointer(row.Links), Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag}
+}
+
+func listGameModel(row gamesqlc.ListGamesRow) models.Game {
+	return gameModelFromFields(gameFields{ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
+}
+
+func getGameModel(row gamesqlc.GetGameRow) models.Game {
+	return gameModelFromFields(gameFields{ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
+}
+
+func insertGameModel(row gamesqlc.InsertGameRow) models.Game {
+	return gameModelFromFields(gameFields{ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
+}
+
+func updateGameModel(row gamesqlc.UpdateGameRow) models.Game {
+	return gameModelFromFields(gameFields{ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
 }
 
 func commentModel(row gamesqlc.GfgGameComment) models.GameComment {

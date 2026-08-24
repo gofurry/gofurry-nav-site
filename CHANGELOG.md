@@ -6,6 +6,18 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+### Added
+
+- Add unversioned canonical Game release-state, first-available, release-history, and language tables with Goose/sqlc contracts.
+- Add the `backfill-first-available` Collector command with dry-run reporting and write-once legacy-manual migration.
+- Add structured release, first-available, and language fields to the existing `/api/v2/game/*` responses and canonical formatting in Nav Web.
+
+### Changed
+
+- Normalize canonical release and language facts only from the US/English Steam response while preserving non-authoritative observations.
+- Make Latest Games and release-range search use First Available calendar windows instead of legacy release strings.
+- Stop Admin and Backend runtime reads/writes of `gfg_game.release_date`; AppID changes now reset Steam-derived state transactionally and re-enqueue collection after commit.
+
 ## v2.4.0 - 2026-08-23
 
 ### Added
