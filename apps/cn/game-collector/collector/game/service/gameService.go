@@ -164,10 +164,14 @@ func (s gameService) CollectCurrentPlayers() {
 	log.Info("CollectCurrentPlayers v2 采集结束")
 }
 
+func singleGameTaskTypes() []domain.TaskType {
+	return []domain.TaskType{domain.TaskDetails, domain.TaskNews}
+}
+
 func (s gameService) CollectSingleGame(game models.GameID) (report.RunSummary, error) {
 	ctx := context.Background()
 	log.Info("SingleGame Collect v2 采集开始, game_id=", game.ID, " appid=", game.Appid)
-	summary, runErr := s.runV2Tasks(ctx, []models.GameID{game}, []domain.TaskType{domain.TaskDetails, domain.TaskNews, domain.TaskPlayers})
+	summary, runErr := s.runV2Tasks(ctx, []models.GameID{game}, singleGameTaskTypes())
 	logV2RunSummary("SingleGame Collect v2", summary, runErr)
 	s.persistV2RunSummary(ctx, "SingleGame Collect v2", summary)
 	log.Info("SingleGame Collect v2 采集结束, game_id=", game.ID, " appid=", game.Appid)

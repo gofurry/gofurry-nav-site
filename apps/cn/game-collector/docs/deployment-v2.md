@@ -80,7 +80,7 @@ go run . all --config conf/server.yaml     # 先跑 players，再跑 details/new
 game:v2:collect:pending
 ```
 
-集合成员格式为 `{game_id}:{appid}`。启动时与每次 1 分钟调度都会先扫描该集合；存在 pending 时立即跳过 startup players 和每日/手工全量，对单游戏任务加锁后执行 details / news / players 三类 v2 采集。单游戏队列清空后，后续 tick 才恢复较低优先级的全量调度。锁 key 为：
+集合成员格式为 `{game_id}:{appid}`。启动时与每次 1 分钟调度都会先扫描该集合；存在 pending 时立即跳过 startup players 和每日/手工全量，对单游戏任务加锁后执行 details / news 两类 v2 采集。players 仍由独立的低优先级小时任务采集，不会因未发售游戏的 players 请求失败或冷却阻塞新增游戏 onboarding。单游戏队列清空后，后续 tick 才恢复较低优先级的全量调度。锁 key 为：
 
 ```txt
 game:v2:collect:inflight:{game_id}
