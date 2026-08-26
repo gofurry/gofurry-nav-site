@@ -104,7 +104,14 @@ type CollectorConfig struct {
 }
 
 type GameConfig struct {
-	GamePlayerInterval int `yaml:"game_player_interval"`
+	GamePlayerInterval      int   `yaml:"game_player_interval"`
+	CollectPlayersOnStartup *bool `yaml:"collect_players_on_startup"`
+}
+
+// PlayersOnStartupEnabled preserves the historical startup collection unless
+// an operator explicitly disables it in typed configuration.
+func (cfg GameConfig) PlayersOnStartupEnabled() bool {
+	return cfg.CollectPlayersOnStartup == nil || *cfg.CollectPlayersOnStartup
 }
 
 type CollectorV2Config struct {

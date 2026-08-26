@@ -23,11 +23,32 @@ func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
 	if cfg.Collector.V2.Steam.MaxWorkers <= 0 || cfg.Collector.V2.Retention.PlayerCountsDays <= 0 {
 		t.Fatalf("collector v2 config fields were not decoded: %+v", cfg.Collector.V2)
 	}
+	if !cfg.Collector.Game.PlayersOnStartupEnabled() || cfg.Collector.Game.CollectPlayersOnStartup == nil {
+		t.Fatalf("startup players config was not decoded: %+v", cfg.Collector.Game)
+	}
 	if cfg.DataBase.MaxConns != 6 || cfg.DataBase.ConnectTimeoutSeconds != 5 || cfg.DataBase.PingTimeoutSeconds != 3 {
 		t.Fatalf("PostgreSQL pool config fields were not decoded: %+v", cfg.DataBase)
 	}
 	if !cfg.Health.Enabled || cfg.Health.ListenAddr != "127.0.0.1:19092" {
 		t.Fatalf("health config was not decoded: %+v", cfg.Health)
+	}
+}
+
+func TestPlayersOnStartupDefaultsToEnabledAndCanBeDisabled(t *testing.T) {
+	var omitted serverConfig
+	if err := yaml.Unmarshal([]byte("collector:\n  game:\n    game_player_interval: 24\n"), &omitted); err != nil {
+		t.Fatal(err)
+	}
+	if !omitted.Collector.Game.PlayersOnStartupEnabled() {
+		t.Fatal("omitted startup players setting must preserve enabled behavior")
+	}
+
+	var disabled serverConfig
+	if err := yaml.Unmarshal([]byte("collector:\n  game:\n    collect_players_on_startup: false\n"), &disabled); err != nil {
+		t.Fatal(err)
+	}
+	if disabled.Collector.Game.PlayersOnStartupEnabled() {
+		t.Fatal("explicit false must disable startup players collection")
 	}
 }
 

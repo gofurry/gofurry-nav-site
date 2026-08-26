@@ -10,6 +10,7 @@ v2.0.0 stable 后，游戏采集器默认只保留 v2 主线，不再提供 v1 f
 collector:
   proxy: ""
   game:
+    collect_players_on_startup: true
     game_player_interval: 24
   v2:
     steam:
@@ -34,6 +35,7 @@ collector:
 - `store_requests_per_5_minutes` 用于 Store 共享限流器，details / news 共用。
 - interval 由 `budget - burst` 计算，避免初始令牌突破 5 分钟预算。
 - `max_workers` 控制 runner 并发，不等于 Steam 请求速率。
+- `collect_players_on_startup` 控制无 pending 时是否在进程启动后立即执行一次全量 players；省略时为 `true`。
 - MongoDB 已从 collector v2 主线移除。
 - `retention.player_counts_days` 默认建议 90 天，便于未来做在线人数趋势图。
 - `retention.collect_runs_days` 默认建议 90 天。
@@ -78,7 +80,7 @@ go run . all --config conf/server.yaml     # 先跑 players，再跑 details/new
 game:v2:collect:pending
 ```
 
-集合成员格式为 `{game_id}:{appid}`。采集器的 1 分钟调度会在非全量采集时扫描该集合，对单游戏任务加锁后执行 details / news / players 三类 v2 采集。锁 key 为：
+集合成员格式为 `{game_id}:{appid}`。启动时与每次 1 分钟调度都会先扫描该集合；存在 pending 时立即跳过 startup players 和每日/手工全量，对单游戏任务加锁后执行 details / news / players 三类 v2 采集。单游戏队列清空后，后续 tick 才恢复较低优先级的全量调度。锁 key 为：
 
 ```txt
 game:v2:collect:inflight:{game_id}

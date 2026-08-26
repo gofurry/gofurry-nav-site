@@ -33,8 +33,13 @@ func (api *gameApi) InitGameCollection() {
 	// 初始化限流器
 	service.InitLimiter()
 
-	//初始化后执行一次 Ping
-	go service.GetGameService().CollectCurrentPlayers()
+	// Pending single-game work has startup priority. Only collect all players on
+	// startup when no pending request exists and configuration allows it.
+	go runStartupCollection(
+		SchedulePendingGameCollection,
+		env.GetServerConfig().Collector.Game.PlayersOnStartupEnabled(),
+		service.GetGameService().CollectCurrentPlayers,
+	)
 
 	// 指令感知(1分钟)
 	cs.AddCronJob(1*time.Minute, ScheduleByOneMin)
@@ -47,6 +52,12 @@ func (api *gameApi) InitGameCollection() {
 
 // 1分钟任务表
 func ScheduleByOneMin() {
+	// A running full or pending collection owns the shared collector slot. When
+	// idle, pending single-game work always runs before daily/manual full work.
+	if SchedulePendingGameCollection() {
+		return
+	}
+
 	// 转换为北京时间
 	now := time.Now().In(time.FixedZone("CST", 8*3600))
 	year, month, day := now.Date()
@@ -80,8 +91,13 @@ func ScheduleByOneMin() {
 		((todayCollected != "1" && now.After(threeAM)) || manualCmd == "1")
 
 	if !needCollect {
-		SchedulePendingGameCollection()
 		return // 不满足采集条件
+	}
+
+	// Close the window in which Admin may enqueue after the first scan but
+	// before the daily collection acquires the shared slot.
+	if SchedulePendingGameCollection() {
+		return
 	}
 
 	// 标记开始采集
@@ -111,4 +127,13 @@ func ScheduleByOneMin() {
 	// 执行采集任务
 	log.Info("开始执行游戏数据采集任务")
 	service.GetGameService().Collect()
+}
+
+func runStartupCollection(processPending func() bool, collectPlayers bool, collectPlayersNow func()) {
+	if processPending != nil && processPending() {
+		return
+	}
+	if collectPlayers && collectPlayersNow != nil {
+		collectPlayersNow()
+	}
 }
