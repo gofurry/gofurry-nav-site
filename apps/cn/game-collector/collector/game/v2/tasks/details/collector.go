@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	steam "github.com/gofurry/steam-go"
@@ -37,10 +38,11 @@ type Collector struct {
 
 type requestPlan struct {
 	region       domain.Region
-	lang         domain.Language
+	lang         domain.StoreLocale
 	steamLang    string
 	localized    bool
 	preferAsBase bool
+	canonical    bool
 }
 
 // NewCollector creates one v2 details collector.
@@ -50,9 +52,9 @@ func NewCollector(adapter *steamclient.Adapter, repo Repository) *Collector {
 		repo:    repo,
 		mapper:  steammapper.NewDetailsMapper(),
 		requests: []requestPlan{
-			{region: domain.RegionCN, lang: domain.LanguageZH, steamLang: "schinese", localized: true, preferAsBase: true},
-			{region: domain.RegionUS, lang: domain.LanguageEN, steamLang: "english", localized: true},
-			{region: domain.RegionHK, lang: domain.LanguageEN, steamLang: "english"},
+			{region: domain.RegionCN, lang: domain.StoreLocaleZH, steamLang: "schinese", localized: true, preferAsBase: true},
+			{region: domain.RegionUS, lang: domain.StoreLocaleEN, steamLang: "english", localized: true, canonical: true},
+			{region: domain.RegionHK, lang: domain.StoreLocaleEN, steamLang: "english"},
 		},
 	}
 }
@@ -82,7 +84,7 @@ func (c *Collector) CollectGame(ctx context.Context, game models.GameID) (report
 	}
 
 	collection := domain.DetailsCollection{}
-	localizedSeen := make(map[domain.Language]struct{})
+	localizedSeen := make(map[domain.StoreLocale]struct{})
 	var firstErr error
 	var haveBase bool
 
@@ -110,6 +112,20 @@ func (c *Collector) CollectGame(ctx context.Context, game models.GameID) (report
 		}
 
 		collection.Prices = append(collection.Prices, c.mapper.ToPrice(game.ID, uint32(game.Appid), plan.region, data, collectedAt))
+
+		if plan.canonical {
+			if data.ReleaseDate != nil {
+				release := c.mapper.ToCanonicalRelease(game.ID, data.ReleaseDate, collectedAt)
+				collection.CanonicalRelease = &release
+			}
+			if strings.TrimSpace(data.SupportedLanguages) != "" {
+				parsed := storefront.ParseSupportedLanguages(data.SupportedLanguages)
+				if len(parsed) > 0 {
+					languages := c.mapper.ToCanonicalLanguages(parsed, collectedAt)
+					collection.CanonicalLanguages = &languages
+				}
+			}
+		}
 
 		if plan.localized {
 			if _, exists := localizedSeen[plan.lang]; !exists {

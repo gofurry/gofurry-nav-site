@@ -1140,27 +1140,28 @@ func buildListItems(aggregates []v2models.GameV2Aggregate, lang string, region s
 func buildListItem(aggregate v2models.GameV2Aggregate, lang string, region string) v2models.GameV2ListItem {
 	detail := buildDetailReadModel(aggregate, lang, region)
 	return v2models.GameV2ListItem{
-		ID:           detail.ID,
-		AppID:        detail.AppID,
-		Name:         detail.Name,
-		NameZh:       siteNameForLang(aggregate.Site, "zh"),
-		NameEn:       siteNameForLang(aggregate.Site, "en"),
-		Summary:      detail.Summary,
-		SummaryZh:    siteInfoForLang(aggregate.Site, "zh"),
-		SummaryEn:    siteInfoForLang(aggregate.Site, "en"),
-		HeaderURL:    detail.HeaderURL,
-		CapsuleURL:   detail.Media.CapsuleURL,
-		ReleaseDate:  detail.Release.Date,
-		Developers:   detail.Developers,
-		Publishers:   detail.Publishers,
-		Platforms:    detail.Platforms,
-		Prices:       detail.Prices,
-		Price:        detail.Price,
-		OnlineCount:  detail.OnlineCount,
-		Tags:         detail.Tags,
-		AvgScore:     aggregate.ReviewStats.AvgScore,
-		CommentCount: aggregate.ReviewStats.CommentCount,
-		UpdatedAt:    detail.UpdatedAt,
+		ID:             detail.ID,
+		AppID:          detail.AppID,
+		Name:           detail.Name,
+		NameZh:         siteNameForLang(aggregate.Site, "zh"),
+		NameEn:         siteNameForLang(aggregate.Site, "en"),
+		Summary:        detail.Summary,
+		SummaryZh:      siteInfoForLang(aggregate.Site, "zh"),
+		SummaryEn:      siteInfoForLang(aggregate.Site, "en"),
+		HeaderURL:      detail.HeaderURL,
+		CapsuleURL:     detail.Media.CapsuleURL,
+		ReleaseDate:    detail.Release.Date,
+		FirstAvailable: detail.FirstAvailable,
+		Developers:     detail.Developers,
+		Publishers:     detail.Publishers,
+		Platforms:      detail.Platforms,
+		Prices:         detail.Prices,
+		Price:          detail.Price,
+		OnlineCount:    detail.OnlineCount,
+		Tags:           detail.Tags,
+		AvgScore:       aggregate.ReviewStats.AvgScore,
+		CommentCount:   aggregate.ReviewStats.CommentCount,
+		UpdatedAt:      detail.UpdatedAt,
 	}
 }
 
@@ -1178,20 +1179,23 @@ func buildDetailReadModel(aggregate v2models.GameV2Aggregate, requestedLang stri
 	siteInfo := siteInfoForLang(aggregate.Site, displayLang)
 
 	res := v2models.GameV2DetailReadModel{
-		ID:            strconv.FormatInt(aggregate.Site.ID, 10),
-		AppID:         strconv.FormatInt(aggregate.Site.AppID, 10),
-		RequestedLang: requestedLang,
-		Lang:          localizedLang,
-		Name:          name,
-		Summary:       summary,
-		HeaderURL:     headerURL,
-		Prices:        buildPrices(aggregate.Prices),
-		Price:         selectPrice(aggregate.Prices, region),
-		Media:         buildMedia(aggregate.Media, aggregate.Assets, localizedLang),
-		Requirements:  buildRequirements(aggregate.Requirements),
-		News:          buildNews(aggregate.News),
-		OnlineCount:   buildOnlineCount(aggregate.OnlineCount),
-		Tags:          append([]v2models.GameV2Tag(nil), aggregate.Tags...),
+		ID:             strconv.FormatInt(aggregate.Site.ID, 10),
+		AppID:          strconv.FormatInt(aggregate.Site.AppID, 10),
+		RequestedLang:  requestedLang,
+		Lang:           localizedLang,
+		Name:           name,
+		Summary:        summary,
+		HeaderURL:      headerURL,
+		Release:        buildReleaseView(aggregate.ReleaseState),
+		FirstAvailable: aggregate.FirstAvailable,
+		Languages:      append([]v2models.GameV2Language{}, aggregate.Languages...),
+		Prices:         buildPrices(aggregate.Prices),
+		Price:          selectPrice(aggregate.Prices, region),
+		Media:          buildMedia(aggregate.Media, aggregate.Assets, localizedLang),
+		Requirements:   buildRequirements(aggregate.Requirements),
+		News:           buildNews(aggregate.News),
+		OnlineCount:    buildOnlineCount(aggregate.OnlineCount),
+		Tags:           append([]v2models.GameV2Tag(nil), aggregate.Tags...),
 		Site: v2models.GameV2SiteInfo{
 			ID:         strconv.FormatInt(aggregate.Site.ID, 10),
 			Name:       siteName,
@@ -1215,7 +1219,8 @@ func buildDetailReadModel(aggregate v2models.GameV2Aggregate, requestedLang stri
 		if strValue(details.HeaderURL) != "" {
 			res.HeaderURL = normalizeSteamShared1xAssetURL(strValue(details.HeaderURL))
 		}
-		res.Release = v2models.GameV2Release{ComingSoon: details.ReleaseComingSoon, Date: strValue(details.ReleaseDateText)}
+		res.Release.ComingSoon = details.ReleaseComingSoon
+		res.Release.Date = strValue(details.ReleaseDateText)
 		res.Developers = decodeJSON[[]string](details.Developers, []string{})
 		res.Publishers = decodeJSON[[]string](details.Publishers, []string{})
 		res.Platforms = decodeJSON[map[string]bool](details.Platforms, map[string]bool{})
@@ -1242,6 +1247,24 @@ func buildDetailReadModel(aggregate v2models.GameV2Aggregate, requestedLang stri
 		res.Summary = siteInfo
 	}
 	return res
+}
+
+func buildReleaseView(state *v2models.GameV2ReleaseState) v2models.GameV2Release {
+	if state == nil {
+		return v2models.GameV2Release{Availability: "unknown", Precision: "unknown"}
+	}
+	return v2models.GameV2Release{
+		Availability: state.Availability,
+		Precision:    state.Precision,
+		ExactDate:    state.ExactDate,
+		Year:         state.Year,
+		Month:        state.Month,
+		Quarter:      state.Quarter,
+		WindowStart:  state.WindowStart,
+		WindowEnd:    state.WindowEnd,
+		RawText:      state.RawText,
+		ObservedAt:   state.ObservedAt,
+	}
 }
 
 func normalizeLang(lang string) string {
@@ -1290,18 +1313,32 @@ func normalizeSearchPageQuery(req v2models.GameV2SearchPageQueryRequest) v2model
 		content = strings.TrimSpace(*req.Content)
 	}
 	return v2models.GameV2SearchPageQuery{
-		Lang:            normalizeLang(req.Lang),
-		Content:         content,
-		PubStartTime:    req.PubStartTime.Time(),
-		PubEndTime:      req.PubEndTime.Time(),
-		UpdateStartTime: req.UpdateStartTime.Time(),
-		UpdateEndTime:   req.UpdateEndTime.Time(),
-		ScoreOrder:      req.ScoreOrder,
-		RemarkOrder:     req.RemarkOrder,
-		TimeOrder:       req.TimeOrder,
-		TagList:         append([]int64(nil), req.TagList...),
-		PageNum:         req.PageNum,
-		PageSize:        req.PageSize,
+		Lang:             normalizeLang(req.Lang),
+		Content:          content,
+		Availability:     normalizeSearchAvailability(req.Availability),
+		PubStartTime:     req.PubStartTime.Time(),
+		PubEndTime:       req.PubEndTime.Time(),
+		PlannedStartTime: req.PlannedStartTime.Time(),
+		PlannedEndTime:   req.PlannedEndTime.Time(),
+		UpdateStartTime:  req.UpdateStartTime.Time(),
+		UpdateEndTime:    req.UpdateEndTime.Time(),
+		ScoreOrder:       req.ScoreOrder,
+		RemarkOrder:      req.RemarkOrder,
+		TimeOrder:        req.TimeOrder,
+		TagList:          append([]int64(nil), req.TagList...),
+		PageNum:          req.PageNum,
+		PageSize:         req.PageSize,
+	}
+}
+
+func normalizeSearchAvailability(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "available":
+		return "available"
+	case "upcoming":
+		return "upcoming"
+	default:
+		return ""
 	}
 }
 
@@ -1709,6 +1746,12 @@ func strValue(value *string) string {
 
 func getUpdatedAt(aggregate v2models.GameV2Aggregate) time.Time {
 	var updatedAt time.Time
+	if aggregate.ReleaseState != nil && aggregate.ReleaseState.UpdatedAt.After(updatedAt) {
+		updatedAt = aggregate.ReleaseState.UpdatedAt
+	}
+	if aggregate.FirstAvailable != nil && aggregate.FirstAvailable.UpdatedAt.After(updatedAt) {
+		updatedAt = aggregate.FirstAvailable.UpdatedAt
+	}
 	if aggregate.Details != nil && aggregate.Details.UpdatedAt.After(updatedAt) {
 		updatedAt = aggregate.Details.UpdatedAt
 	}

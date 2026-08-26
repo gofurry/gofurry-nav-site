@@ -24,14 +24,17 @@ const (
 	gameHomeCacheENKey              = "game:v2:home:en:CN"
 )
 
-func SchedulePendingGameCollection() {
+// SchedulePendingGameCollection returns true when lower-priority scheduled work
+// must yield because a collection is active, pending work exists, or the queue
+// cannot be inspected safely.
+func SchedulePendingGameCollection() bool {
 	if collectFlag.Load() {
-		return
+		return true
 	}
 
 	client := cs.GetRedisService()
 	if client == nil {
-		return
+		return true
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -40,11 +43,15 @@ func SchedulePendingGameCollection() {
 	members, _, err := client.SScan(ctx, pendingGameCollectSetKey, 0, "", pendingGameCollectScanCount).Result()
 	if err != nil {
 		log.Error("扫描单游戏采集队列失败: ", err)
-		return
+		return true
 	}
 	if len(members) == 0 {
-		return
+		return false
 	}
+	if !collectFlag.CompareAndSwap(false, true) {
+		return true
+	}
+	defer collectFlag.Store(false)
 
 	for _, member := range members {
 		game, ok := parsePendingGameCollectMember(member)
@@ -53,10 +60,9 @@ func SchedulePendingGameCollection() {
 			log.Warn("移除非法单游戏采集队列成员: ", member)
 			continue
 		}
-		if !processPendingGameCollect(member, game) {
-			return
-		}
+		processPendingGameCollect(member, game)
 	}
+	return true
 }
 
 func parsePendingGameCollectMember(member string) (models.GameID, bool) {
@@ -72,19 +78,14 @@ func parsePendingGameCollectMember(member string) (models.GameID, bool) {
 	return models.GameID{ID: gameID, Appid: appID}, true
 }
 
-func processPendingGameCollect(member string, game models.GameID) bool {
+func processPendingGameCollect(member string, game models.GameID) {
 	lockKey := fmt.Sprintf("%s%d", pendingGameCollectLockKeyPrefix, game.ID)
 	if !acquirePendingGameCollectLock(lockKey, member) {
-		return true
-	}
-	if !collectFlag.CompareAndSwap(false, true) {
-		releasePendingGameCollectLock(lockKey)
-		return false
+		return
 	}
 
 	completed := false
 	defer func() {
-		collectFlag.Store(false)
 		if r := recover(); r != nil {
 			log.Error("单游戏采集任务异常，保留队列等待重试, game_id=", game.ID, " appid=", game.Appid, " err=", r)
 		}
@@ -98,18 +99,17 @@ func processPendingGameCollect(member string, game models.GameID) bool {
 	summary, err := service.GetGameService().CollectSingleGame(game)
 	if err != nil {
 		log.Error("单游戏采集任务执行失败, game_id=", game.ID, " appid=", game.Appid, " run_id=", summary.ID, " err=", err)
-		return true
+		return
 	}
 
 	completed = pendingGameDetailsCollected(summary)
 	if !completed {
 		log.Error("单游戏详情采集未完成，保留队列等待重试, game_id=", game.ID, " appid=", game.Appid, " run_id=", summary.ID, " status=", summary.Status)
-		return true
+		return
 	}
 
 	invalidateGameHomeCache()
 	log.Info("单游戏采集任务执行完成, game_id=", game.ID, " appid=", game.Appid, " run_id=", summary.ID, " status=", summary.Status)
-	return true
 }
 
 func pendingGameDetailsCollected(summary report.RunSummary) bool {

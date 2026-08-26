@@ -15,22 +15,22 @@ type GameDetails struct {
 
 	Developers []string        `json:"developers"`
 	Publishers []string        `json:"publishers"`
-	Release    ReleaseDate     `json:"release"`
+	ReleaseRaw RawReleaseDate  `json:"release"`
 	Platforms  PlatformSupport `json:"platforms"`
 
-	SupportedLanguages string             `json:"supported_languages"`
-	SupportInfo        SupportInfo        `json:"support_info"`
-	ContentDescriptors ContentDescriptors `json:"content_descriptors"`
-	Ratings            []Rating           `json:"ratings"`
+	SupportedLanguagesRaw string             `json:"supported_languages"`
+	SupportInfo           SupportInfo        `json:"support_info"`
+	ContentDescriptors    ContentDescriptors `json:"content_descriptors"`
+	Ratings               []Rating           `json:"ratings"`
 
 	CollectedAt time.Time `json:"collected_at"`
 }
 
 // GameLocalizedDetails stores language-specific copy and rich text.
 type GameLocalizedDetails struct {
-	GameID   int64    `json:"game_id"`
-	AppID    uint32   `json:"appid"`
-	Language Language `json:"language"`
+	GameID   int64       `json:"game_id"`
+	AppID    uint32      `json:"appid"`
+	Language StoreLocale `json:"language"`
 
 	Name                string `json:"name"`
 	ShortDescription    string `json:"short_description"`
@@ -167,4 +167,10 @@ type DetailsCollection struct {
 	Assets       []GameMediaAsset       `json:"assets"`
 	Requirements SystemRequirements     `json:"requirements"`
 	Snapshots    []RawSnapshot          `json:"snapshots"`
+
+	// CanonicalRelease and CanonicalLanguages are nil when this collection has
+	// no authoritative US/English observation. Repositories must preserve the
+	// previous canonical value/set in that case.
+	CanonicalRelease   *GameReleaseState `json:"canonical_release,omitempty"`
+	CanonicalLanguages *GameLanguages    `json:"canonical_languages,omitempty"`
 }

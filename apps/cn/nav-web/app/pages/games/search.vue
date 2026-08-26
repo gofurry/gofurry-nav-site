@@ -51,8 +51,8 @@ import GameSidebarSearch from '@/components/game/main/sidebar/GameSidebarSearch.
 import GameSearchFilter from '@/components/game/search/GameSearchFilter.vue'
 import GameSearchResult from '@/components/game/search/GameSearchResult.vue'
 import { searchGameAdvanced, getTagList } from '@/utils/api/game'
-import { nowLocalDateTime } from '@/utils/util'
 import type {
+  GameSearchAvailability,
   SearchPageResponseItem,
   GameTagRecord,
   SearchPageQueryRequest
@@ -111,10 +111,7 @@ const createDefaultQuery = (): SearchPageQueryRequest => ({
   pageNum: 1,
   pageSize: 20,
   content: '',
-  pub_start_time: '2000-01-01 00:00:00',
-  pub_end_time: nowLocalDateTime(),
-  update_start_time: '2000-01-01 00:00:00',
-  update_end_time: nowLocalDateTime(),
+  availability: 'available',
   score: false,
   remark_order: false,
   time_order: true,
@@ -149,6 +146,14 @@ const parseBoolean = (value: LocationQuery[string] | undefined, fallback: boolea
   return fallback
 }
 
+const parseAvailability = (value: LocationQuery[string] | undefined): GameSearchAvailability =>
+  getQueryValue(value) === 'upcoming' ? 'upcoming' : 'available'
+
+const parseOptionalDateTime = (value: LocationQuery[string] | undefined) => {
+  const resolved = getQueryValue(value).trim()
+  return resolved || undefined
+}
+
 const parseTagList = (value: LocationQuery[string] | undefined) => {
   const resolved = getQueryValue(value)
   if (!resolved) {
@@ -163,15 +168,19 @@ const parseTagList = (value: LocationQuery[string] | undefined) => {
 
 const applyRouteQuery = (routeQuery: LocationQuery) => {
   const defaults = createDefaultQuery()
+  const availability = parseAvailability(routeQuery.availability)
 
   Object.assign(query, defaults, {
     pageNum: parsePositiveNumber(routeQuery.pageNum, defaults.pageNum),
     pageSize: parsePositiveNumber(routeQuery.pageSize, defaults.pageSize),
     content: getQueryValue(routeQuery.content),
-    pub_start_time: getQueryValue(routeQuery.pubStartTime) || defaults.pub_start_time,
-    pub_end_time: getQueryValue(routeQuery.pubEndTime) || defaults.pub_end_time,
-    update_start_time: getQueryValue(routeQuery.updateStartTime) || defaults.update_start_time,
-    update_end_time: getQueryValue(routeQuery.updateEndTime) || defaults.update_end_time,
+    availability,
+    pub_start_time: availability === 'available' ? parseOptionalDateTime(routeQuery.pubStartTime) : undefined,
+    pub_end_time: availability === 'available' ? parseOptionalDateTime(routeQuery.pubEndTime) : undefined,
+    planned_start_time: availability === 'upcoming' ? parseOptionalDateTime(routeQuery.plannedStartTime) : undefined,
+    planned_end_time: availability === 'upcoming' ? parseOptionalDateTime(routeQuery.plannedEndTime) : undefined,
+    update_start_time: parseOptionalDateTime(routeQuery.updateStartTime),
+    update_end_time: parseOptionalDateTime(routeQuery.updateEndTime),
     score: parseBoolean(routeQuery.score, defaults.score ?? false),
     remark_order: parseBoolean(routeQuery.remarkOrder, defaults.remark_order ?? false),
     time_order: parseBoolean(routeQuery.timeOrder, defaults.time_order ?? true),
@@ -195,19 +204,31 @@ const buildRouteQuery = (): LocationQueryRaw => {
     nextQuery.content = query.content.trim()
   }
 
-  if (query.pub_start_time && query.pub_start_time !== defaults.pub_start_time) {
+  if (query.availability !== defaults.availability) {
+    nextQuery.availability = query.availability
+  }
+
+  if (query.pub_start_time) {
     nextQuery.pubStartTime = query.pub_start_time
   }
 
-  if (query.pub_end_time && query.pub_end_time !== defaults.pub_end_time) {
+  if (query.pub_end_time) {
     nextQuery.pubEndTime = query.pub_end_time
   }
 
-  if (query.update_start_time && query.update_start_time !== defaults.update_start_time) {
+  if (query.planned_start_time) {
+    nextQuery.plannedStartTime = query.planned_start_time
+  }
+
+  if (query.planned_end_time) {
+    nextQuery.plannedEndTime = query.planned_end_time
+  }
+
+  if (query.update_start_time) {
     nextQuery.updateStartTime = query.update_start_time
   }
 
-  if (query.update_end_time && query.update_end_time !== defaults.update_end_time) {
+  if (query.update_end_time) {
     nextQuery.updateEndTime = query.update_end_time
   }
 

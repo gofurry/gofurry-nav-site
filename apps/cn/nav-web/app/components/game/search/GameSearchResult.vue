@@ -65,6 +65,10 @@
                         :alt="game.name"
                     />
 
+                    <div class="search-release-badge">
+                      {{ releaseText(game) }}
+                    </div>
+
                     <button
                         class="search-review-button"
                         type="button"
@@ -179,6 +183,7 @@ import GamePagination from '@/components/game/search/GamePagination.vue'
 import GameReviewDialog from '@/components/game/common/GameReviewDialog.vue'
 import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import type { SearchPageResponseItem } from '@/types/game'
+import { resolveGameReleaseDisplay } from '@/utils/gameDomain'
 import { i18n } from '@/main'
 
 const { t } = i18n.global
@@ -195,6 +200,22 @@ const goDetail = (id: number | string) => {
 
 const openReview = (game: SearchPageResponseItem) => {
   reviewGame.value = game
+}
+
+const domainLocale = computed<'zh' | 'en'>(() => {
+  const locale = i18n.global.locale as unknown
+  const value = typeof locale === 'string'
+    ? locale
+    : locale && typeof locale === 'object' && 'value' in locale && typeof locale.value === 'string'
+      ? locale.value
+      : ''
+  return value.startsWith('en') ? 'en' : 'zh'
+})
+
+const releaseText = (game: SearchPageResponseItem) => {
+  const display = resolveGameReleaseDisplay(game.release, game.first_available, domainLocale.value)
+  const label = display.kind === 'planned' ? t('game.detail.plannedRelease') : t('game.detail.releaseDate')
+  return `${label} · ${display.value}`
 }
 
 const props = defineProps<{

@@ -48,6 +48,7 @@ log:
 collector:
   proxy: "" # Steam / 外部页面采集可选代理；为空表示直连。
   game:
+    collect_players_on_startup: true # 无 pending 时是否在进程启动后立即采集一次全部在线人数；省略时保持 true。
     game_player_interval: 24 # 玩家数据采集间隔，单位按当前调度实现解析。
   v2:
     steam:

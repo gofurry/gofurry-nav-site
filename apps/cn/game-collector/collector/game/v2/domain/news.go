@@ -8,9 +8,9 @@ import (
 
 // GameNews is the collector v2 canonical Steam event news contract.
 type GameNews struct {
-	GameID   int64    `json:"game_id"`
-	AppID    uint32   `json:"appid"`
-	Language Language `json:"language"`
+	GameID   int64       `json:"game_id"`
+	AppID    uint32      `json:"appid"`
+	Language StoreLocale `json:"language"`
 
 	EventGID        string `json:"event_gid"`
 	AnnouncementGID string `json:"announcement_gid"`

@@ -19,7 +19,7 @@ const (
 
 // ToStoreBrowseAssets maps official StoreBrowse asset URLs into the unified asset model.
 // Newer apps often use hashed paths, while older apps can still return legacy direct paths.
-func (m DetailsMapper) ToStoreBrowseAssets(gameID int64, appID uint32, lang domain.Language, items []assets.URLItem, collectedAt time.Time) []domain.GameMediaAsset {
+func (m DetailsMapper) ToStoreBrowseAssets(gameID int64, appID uint32, lang domain.StoreLocale, items []assets.URLItem, collectedAt time.Time) []domain.GameMediaAsset {
 	return m.urlItemsToAssets(gameID, appID, string(lang), assetSourceSteamStoreBrowse, items, collectedAt)
 }
 

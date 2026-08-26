@@ -45,9 +45,6 @@ func TestSteamGamePrefillMapsRequestedFields(t *testing.T) {
 		Website:          " https://www.l4d.com ",
 		Developers:       []string{"Valve", "Valve"},
 		Publishers:       []string{"Valve"},
-		ReleaseDate: &storefront.StoreReleaseDate{
-			Date: "2009 年 11 月 16 日",
-		},
 	}, storefront.AppDetailsData{
 		Name:             "Left 4 Dead 2",
 		ShortDescription: " English description ",
@@ -62,9 +59,6 @@ func TestSteamGamePrefillMapsRequestedFields(t *testing.T) {
 	if len(dto.Groups) != 1 || dto.Groups[0].Key != "official" || dto.Groups[0].Value != "https://www.l4d.com" {
 		t.Fatalf("unexpected groups: %#v", dto.Groups)
 	}
-	if dto.ReleaseDate != "2009.11.16" {
-		t.Fatalf("unexpected release date: %q", dto.ReleaseDate)
-	}
 	if !reflect.DeepEqual(dto.Developers, []string{"Valve"}) || !reflect.DeepEqual(dto.Publishers, []string{"Valve"}) {
 		t.Fatalf("unexpected companies: developers=%#v publishers=%#v", dto.Developers, dto.Publishers)
 	}
@@ -73,22 +67,5 @@ func TestSteamGamePrefillMapsRequestedFields(t *testing.T) {
 	}
 	if len(dto.Links) != 2 || dto.Links[0].Key != "steamdb" || dto.Links[1].Key != "gamalytic" {
 		t.Fatalf("unexpected links: %#v", dto.Links)
-	}
-}
-
-func TestNormalizeSteamReleaseDate(t *testing.T) {
-	t.Parallel()
-
-	tests := map[string]string{
-		"2009 年 11 月 16 日": "2009.11.16",
-		"16 Nov, 2009":     "2009.11.16",
-		"2009-11-16":       "2009.11.16",
-		"即将推出":             "即将推出",
-		"":                 "",
-	}
-	for input, want := range tests {
-		if got := normalizeSteamReleaseDate(input); got != want {
-			t.Errorf("normalizeSteamReleaseDate(%q) = %q, want %q", input, got, want)
-		}
 	}
 }

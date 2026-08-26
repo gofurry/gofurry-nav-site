@@ -32,8 +32,8 @@ github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S
 github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/go-viper/mapstructure/v2 v2.4.0 h1:EBsztssimR/CONLSZZ04E8qAkxNYq4Qp9LvH92wZUgs=
 github.com/go-viper/mapstructure/v2 v2.4.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
-github.com/gofurry/steam-go v1.3.7 h1:aDW2sVnBnCbHqtRN83snOpM/6R/hn6w1N+vN/iD/4fo=
-github.com/gofurry/steam-go v1.3.7/go.mod h1:FW2CNaCS6XiYjXGJhbHc/YCZyfDZU/G+eFb0oNWf5Jc=
+github.com/gofurry/steam-go v1.3.9 h1:2luPRrzvX9I9vA2bJgvEj/i8eByn86Jlgnd/S3D6wQ4=
+github.com/gofurry/steam-go v1.3.9/go.mod h1:FW2CNaCS6XiYjXGJhbHc/YCZyfDZU/G+eFb0oNWf5Jc=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/gorilla/css v1.0.1 h1:ntNaBIghp6JmvWnxbZKANoLyuXTPZ4cAMlo6RyhlbO8=

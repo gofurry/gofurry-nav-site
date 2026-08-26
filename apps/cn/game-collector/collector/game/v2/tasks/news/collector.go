@@ -34,7 +34,7 @@ type Collector struct {
 }
 
 type languageQuery struct {
-	lang         domain.Language
+	lang         domain.StoreLocale
 	languageList string
 }
 
@@ -46,8 +46,8 @@ func NewCollector(adapter *steamclient.Adapter, repo Repository) *Collector {
 		mapper:  steammapper.NewNewsMapper(),
 		count:   defaultNewsCount,
 		languages: []languageQuery{
-			{lang: domain.LanguageZH, languageList: "6_0"},
-			{lang: domain.LanguageEN, languageList: "0"},
+			{lang: domain.StoreLocaleZH, languageList: "6_0"},
+			{lang: domain.StoreLocaleEN, languageList: "0"},
 		},
 	}
 }

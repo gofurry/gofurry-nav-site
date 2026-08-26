@@ -14,7 +14,6 @@ type Game struct {
 	UpdateTime   pkgmodels.LocalTime `json:"update_time"`
 	Resources    *string             `json:"-"`
 	Groups       *string             `json:"-"`
-	ReleaseDate  string              `json:"release_date"`
 	Developers   string              `json:"-"`
 	Publishers   string              `json:"-"`
 	Appid        int64               `json:"appid"`
@@ -37,7 +36,6 @@ type GameDTO struct {
 	UpdateTime   pkgmodels.LocalTime `json:"update_time"`
 	Resources    []pkgmodels.KvModel `json:"resources"`
 	Groups       []pkgmodels.KvModel `json:"groups"`
-	ReleaseDate  string              `json:"release_date"`
 	Developers   []string            `json:"developers"`
 	Publishers   []string            `json:"publishers"`
 	Appid        int64               `json:"appid"`
@@ -55,7 +53,6 @@ type GamePayload struct {
 	InfoEn       string              `json:"info_en"`
 	Resources    []pkgmodels.KvModel `json:"resources"`
 	Groups       []pkgmodels.KvModel `json:"groups"`
-	ReleaseDate  string              `json:"release_date"`
 	Developers   []string            `json:"developers"`
 	Publishers   []string            `json:"publishers"`
 	Appid        int64               `json:"appid"`

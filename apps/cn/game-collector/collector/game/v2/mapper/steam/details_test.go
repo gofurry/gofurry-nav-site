@@ -54,3 +54,56 @@ func TestDetailsMapperMapsHighValueFields(t *testing.T) {
 		t.Fatalf("unexpected requirements: %#v", requirements)
 	}
 }
+
+func TestDetailsMapperMapsCanonicalReleaseAndLanguages(t *testing.T) {
+	t.Parallel()
+
+	mapper := NewDetailsMapper()
+	observedAt := time.Date(2026, 8, 24, 10, 0, 0, 0, time.UTC)
+	release := mapper.ToCanonicalRelease(10, &storefront.StoreReleaseDate{ComingSoon: true, Date: "Q3 2026"}, observedAt)
+	if release.Availability != domain.ReleaseUpcoming || release.Precision != domain.ReleasePrecisionQuarter || release.Year == nil || *release.Year != 2026 || release.Quarter == nil || *release.Quarter != 3 {
+		t.Fatalf("unexpected canonical release: %#v", release)
+	}
+	if release.WindowStart == nil || release.WindowStart.Format(time.DateOnly) != "2026-07-01" || release.WindowEnd == nil || release.WindowEnd.Format(time.DateOnly) != "2026-09-30" {
+		t.Fatalf("unexpected canonical release window: %#v", release)
+	}
+
+	parsed := storefront.ParseSupportedLanguages(`English<strong>*</strong>, Klingon<br><strong>*</strong>languages with full audio support`)
+	languages := mapper.ToCanonicalLanguages(parsed, observedAt)
+	if len(languages.Items) != 2 || languages.Items[0].Code == nil || *languages.Items[0].Code != "en" || languages.Items[0].FullAudioSupported == nil || !*languages.Items[0].FullAudioSupported {
+		t.Fatalf("unexpected known language: %#v", languages.Items)
+	}
+	if languages.Items[1].Code != nil || languages.Items[1].SteamName != "Klingon" {
+		t.Fatalf("unknown language was not preserved: %#v", languages.Items[1])
+	}
+}
+
+func TestDetailsMapperCanonicalReleasePrecisions(t *testing.T) {
+	t.Parallel()
+	mapper := NewDetailsMapper()
+	for name, test := range map[string]struct {
+		value     storefront.StoreReleaseDate
+		precision domain.ReleasePrecision
+		raw       string
+	}{
+		"day":     {storefront.StoreReleaseDate{Date: "24 Aug, 2026"}, domain.ReleasePrecisionDay, "24 Aug, 2026"},
+		"month":   {storefront.StoreReleaseDate{ComingSoon: true, Date: "August 2026"}, domain.ReleasePrecisionMonth, "August 2026"},
+		"quarter": {storefront.StoreReleaseDate{ComingSoon: true, Date: "Q3 2026"}, domain.ReleasePrecisionQuarter, "Q3 2026"},
+		"year":    {storefront.StoreReleaseDate{ComingSoon: true, Date: "2026"}, domain.ReleasePrecisionYear, "2026"},
+		"tba":     {storefront.StoreReleaseDate{ComingSoon: true, Date: "Coming Soon"}, domain.ReleasePrecisionTBA, "Coming Soon"},
+		"none":    {storefront.StoreReleaseDate{}, domain.ReleasePrecisionNone, ""},
+		"unknown": {storefront.StoreReleaseDate{ComingSoon: true, Date: "Fall 2026"}, domain.ReleasePrecisionUnknown, "Fall 2026"},
+	} {
+		name, test := name, test
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := mapper.ToCanonicalRelease(1, &test.value, time.Now())
+			if got.Precision != test.precision || got.RawText != test.raw || got.SourceRegion != domain.RegionUS || got.SourceLocale != domain.StoreLocaleEN || got.Normalizer != "steam-go/v1.3.9" {
+				t.Fatalf("unexpected canonical release: %#v", got)
+			}
+			if test.precision == domain.ReleasePrecisionUnknown && (got.WindowStart != nil || got.Year != nil) {
+				t.Fatalf("unknown release carried fabricated calendar fields: %#v", got)
+			}
+		})
+	}
+}

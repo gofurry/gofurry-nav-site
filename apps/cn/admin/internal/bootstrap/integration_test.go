@@ -108,12 +108,36 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 		t.Fatal("Nav delete did not preserve soft-delete behavior")
 	}
 
-	gamePayload := `{"name":"Game","name_en":"Game EN","info":"Info","info_en":"Info EN","resources":[],"groups":[],"release_date":"2026.08.23","developers":[],"publishers":[],"appid":424242,"header":"","links":[],"weight":5,"primary_tag":0,"secondary_tag":0}`
+	gamePayload := `{"name":"Game","name_en":"Game EN","info":"Info","info_en":"Info EN","resources":[],"groups":[],"developers":[],"publishers":[],"appid":424242,"header":"","links":[],"weight":5,"primary_tag":0,"secondary_tag":0}`
 	game := requestJSON(t, app, http.MethodPost, "/game/games", gamePayload, cookie, http.StatusOK)
 	gameID := responseID(t, game)
 	requestJSON(t, app, http.MethodPost, "/game/games", gamePayload, cookie, http.StatusBadRequest)
-	updatedGamePayload := `{"name":"Game Updated","name_en":"Game EN","info":"Info","info_en":"Info EN","resources":[],"groups":[],"release_date":"2026.08.23","developers":[],"publishers":[],"appid":424242,"header":"","links":[],"weight":0,"primary_tag":0,"secondary_tag":0}`
+	for _, statement := range []string{
+		`INSERT INTO gfg_game_v2_details (game_id,appid,collected_at) VALUES ($1,424242,now())`,
+		`INSERT INTO gfg_game_release_state (game_id,availability,precision,source,source_region,source_locale,normalizer_version,observed_at) VALUES ($1,'unknown','none','steam','US','en','steam-go/v1.3.9',now())`,
+		`INSERT INTO gfg_game_release_history (game_id,availability,precision,source,source_region,source_locale,normalizer_version,observed_at) VALUES ($1,'unknown','none','steam','US','en','steam-go/v1.3.9',now())`,
+		`INSERT INTO gfg_game_first_available (game_id,precision,exact_date,release_year,release_month,window_start,window_end,source,inferred,normalizer_version) VALUES ($1,'day','2020-01-02',2020,1,'2020-01-02','2020-01-02','legacy_manual',false,'gofurry-legacy-release/v1')`,
+		`INSERT INTO gfg_game_languages (game_id,language_code,steam_name,tier,sort_order,source,source_region,source_locale,normalizer_version,observed_at) VALUES ($1,'en','English','platform',0,'steam','US','en','steam-go/v1.3.9',now())`,
+	} {
+		if _, err := gamePool.Exec(ctx, statement, gameID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	updatedGamePayload := `{"name":"Game Updated","name_en":"Game EN","info":"Info","info_en":"Info EN","resources":[],"groups":[],"developers":[],"publishers":[],"appid":424242,"header":"","links":[],"weight":0,"primary_tag":0,"secondary_tag":0}`
 	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/game/games/%d", gameID), updatedGamePayload, cookie, http.StatusOK)
+	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_release_state WHERE game_id=$1`, gameID); count != 1 {
+		t.Fatalf("unchanged AppID unexpectedly reset canonical state, count=%d", count)
+	}
+	changedAppIDPayload := `{"name":"Game Updated","name_en":"Game EN","info":"Info","info_en":"Info EN","resources":[],"groups":[],"developers":[],"publishers":[],"appid":424243,"header":"","links":[],"weight":0,"primary_tag":0,"secondary_tag":0}`
+	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/game/games/%d", gameID), changedAppIDPayload, cookie, http.StatusOK)
+	if count := queryInt64(t, ctx, gamePool, `SELECT
+  (SELECT COUNT(*) FROM gfg_game_v2_details WHERE game_id=$1) +
+  (SELECT COUNT(*) FROM gfg_game_release_state WHERE game_id=$1) +
+  (SELECT COUNT(*) FROM gfg_game_release_history WHERE game_id=$1) +
+  (SELECT COUNT(*) FROM gfg_game_first_available WHERE game_id=$1) +
+  (SELECT COUNT(*) FROM gfg_game_languages WHERE game_id=$1)`, gameID); count != 0 {
+		t.Fatalf("changed AppID left %d Steam-derived rows", count)
+	}
 	requestJSON(t, app, http.MethodGet, fmt.Sprintf("/game/games/%d", gameID), "", cookie, http.StatusOK)
 
 	prize := requestJSON(t, app, http.MethodPost, "/game/prizes", `{"title":"Prize","desc":"Desc","prize":{"keys":[],"title":"Reward","platform":"Steam"},"key":"join","start_time":"2026-08-23 10:00:00","end_time":"2026-08-24 10:00:00","status":true}`, cookie, http.StatusOK)

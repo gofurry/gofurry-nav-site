@@ -30,7 +30,7 @@ func TestDetailsMapperKeepsOfficialStoreBrowseAssetURLs(t *testing.T) {
 		},
 	}
 
-	got := NewDetailsMapper().ToStoreBrowseAssets(10, 550, domain.LanguageEN, items, now)
+	got := NewDetailsMapper().ToStoreBrowseAssets(10, 550, domain.StoreLocaleEN, items, now)
 	if len(got) != 2 {
 		t.Fatalf("asset count = %d, want 2: %#v", len(got), got)
 	}

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofurry/gofurry-game-collector/collector/game/v2/backfill"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/report"
 	gamesqlc "github.com/gofurry/gofurry-game-collector/internal/db/game/sqlc"
@@ -84,7 +86,7 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 
 	detailsRepository := NewDetailsRepository(pool)
 	invalid := detailsFixture(now, []domain.RawSnapshot{{
-		GameID: 91001, AppID: 92001, Language: domain.Language("zh-CN"),
+		GameID: 91001, AppID: 92001, Language: domain.StoreLocale("zh-CN"),
 		Region: domain.Region("CN"), Source: domain.Source("steam"), RawPayload: []byte("{"), CollectedAt: now,
 	}})
 	if err := detailsRepository.SaveDetails(ctx, invalid); err == nil {
@@ -95,20 +97,67 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 	snapshots := make([]domain.RawSnapshot, 6)
 	for i := range snapshots {
 		snapshots[i] = domain.RawSnapshot{
-			GameID: 91001, AppID: 92001, Language: domain.Language("zh-CN"),
+			GameID: 91001, AppID: 92001, Language: domain.StoreLocale("zh-CN"),
 			Region: domain.Region("CN"), Source: domain.Source("steam"),
 			RawPayload: []byte(fmt.Sprintf(`{"sequence":%d}`, i)), CollectedAt: now.Add(time.Duration(i) * time.Second),
 		}
 	}
-	if err := detailsRepository.SaveDetails(ctx, detailsFixture(now, snapshots)); err != nil {
+	initial := detailsFixture(now, snapshots)
+	initial.CanonicalRelease = releaseFixture(now, domain.ReleaseUpcoming, domain.ReleasePrecisionMonth, "September 2026", time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC))
+	initial.CanonicalLanguages = languageFixture(now, "en", "English")
+	if err := detailsRepository.SaveDetails(ctx, initial); err != nil {
 		t.Fatalf("save details: %v", err)
 	}
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_detail_snapshots where game_id=$1`, 5, int64(91001))
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_media where game_id=$1`, 1, int64(91001))
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_assets where game_id=$1`, 1, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_state where game_id=$1 and availability='upcoming'`, 1, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_history where game_id=$1`, 1, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_first_available where game_id=$1`, 0, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_languages where game_id=$1`, 1, int64(91001))
+
+	// A raw-text-only observation updates current provenance but not semantic history.
+	rawOnly := detailsFixture(now.Add(time.Minute), nil)
+	rawOnly.CanonicalRelease = releaseFixture(now.Add(time.Minute), domain.ReleaseUpcoming, domain.ReleasePrecisionMonth, "Sep 2026", time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC))
+	rawOnly.CanonicalLanguages = languageFixture(now.Add(time.Minute), "zh-Hans", "Simplified Chinese")
+	if err := detailsRepository.SaveDetails(ctx, rawOnly); err != nil {
+		t.Fatalf("save semantic-equivalent details: %v", err)
+	}
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_history where game_id=$1`, 1, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_languages where game_id=$1 and language_code='zh-Hans'`, 1, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_languages where game_id=$1 and language_code='en'`, 0, int64(91001))
+
+	// A non-authoritative collection preserves both canonical release and languages.
+	if err := detailsRepository.SaveDetails(ctx, detailsFixture(now.Add(2*time.Minute), nil)); err != nil {
+		t.Fatalf("save non-authoritative details: %v", err)
+	}
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_history where game_id=$1`, 1, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_languages where game_id=$1 and language_code='zh-Hans'`, 1, int64(91001))
+
+	// The observed upcoming -> available transition establishes a non-inferred fact.
+	releasedDate := time.Date(2026, time.August, 24, 0, 0, 0, 0, time.UTC)
+	released := detailsFixture(now.Add(3*time.Minute), nil)
+	released.CanonicalRelease = releaseFixture(now.Add(3*time.Minute), domain.ReleaseAvailable, domain.ReleasePrecisionDay, "24 Aug, 2026", releasedDate, releasedDate)
+	released.CanonicalRelease.ExactDate = &releasedDate
+	if err := detailsRepository.SaveDetails(ctx, released); err != nil {
+		t.Fatalf("save available details: %v", err)
+	}
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_history where game_id=$1`, 2, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_first_available where game_id=$1 and source='observed_transition' and inferred=false and exact_date='2026-08-24'`, 1, int64(91001))
+
+	// Later observations can change current state/history but never rewrite First Available.
+	laterDate := time.Date(2026, time.August, 25, 0, 0, 0, 0, time.UTC)
+	later := detailsFixture(now.Add(4*time.Minute), nil)
+	later.CanonicalRelease = releaseFixture(now.Add(4*time.Minute), domain.ReleaseAvailable, domain.ReleasePrecisionDay, "25 Aug, 2026", laterDate, laterDate)
+	later.CanonicalRelease.ExactDate = &laterDate
+	if err := detailsRepository.SaveDetails(ctx, later); err != nil {
+		t.Fatalf("save later available details: %v", err)
+	}
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_history where game_id=$1`, 3, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_first_available where game_id=$1 and exact_date='2026-08-24'`, 1, int64(91001))
 
 	news := domain.GameNews{
-		GameID: 91001, AppID: 92001, Language: domain.Language("zh-CN"), EventGID: "event-1",
+		GameID: 91001, AppID: 92001, Language: domain.StoreLocale("zh-CN"), EventGID: "event-1",
 		AnnouncementGID: "announcement-1", Headline: "headline", CollectedAt: now,
 	}
 	newsRepository := NewNewsRepository(pool)
@@ -146,18 +195,110 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_player_counts where run_id=$1`, 0, "old")
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_collect_runs where id=$1`, 0, "old")
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_collect_runs where id=$1`, 1, "current")
+
+	if _, err := pool.Exec(ctx, `update gfg_game set appid=92002 where id=91001`); err != nil {
+		t.Fatal(err)
+	}
+	if err := detailsRepository.SaveDetails(ctx, detailsFixture(now.Add(5*time.Minute), nil)); !errors.Is(err, ErrStaleCollection) {
+		t.Fatalf("expected stale collection error, got %v", err)
+	}
+
+	seedAdditionalGameTarget(t, ctx, pool, 91003, 92003, now, "")
+	directDate := time.Date(2020, time.January, 2, 0, 0, 0, 0, time.UTC)
+	direct := minimalDetailsFixture(91003, 92003, now)
+	direct.CanonicalRelease = releaseFixtureForGame(91003, now, domain.ReleaseAvailable, domain.ReleasePrecisionDay, "2 Jan, 2020", directDate, directDate)
+	direct.CanonicalRelease.ExactDate = &directDate
+	if err := detailsRepository.SaveDetails(ctx, direct); err != nil {
+		t.Fatalf("save first observed available details: %v", err)
+	}
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_first_available where game_id=$1 and source='steam_backfill' and inferred=true`, 1, int64(91003))
+
+	seedAdditionalGameTarget(t, ctx, pool, 91004, 92004, now, "")
+	unknown := minimalDetailsFixture(91004, 92004, now)
+	unknown.CanonicalRelease = &domain.GameReleaseState{GameID: 91004, Availability: domain.ReleaseAvailable, Precision: domain.ReleasePrecisionUnknown, RawText: "Fall 2020", Source: domain.SourceSteam, SourceRegion: domain.RegionUS, SourceLocale: domain.StoreLocaleEN, Normalizer: "steam-go/v1.3.9", ObservedAt: now}
+	if err := detailsRepository.SaveDetails(ctx, unknown); err != nil {
+		t.Fatalf("save unknown precision details: %v", err)
+	}
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_first_available where game_id=$1`, 0, int64(91004))
+
+	seedAdditionalGameTarget(t, ctx, pool, 91005, 92005, now, "")
+	rollback := minimalDetailsFixture(91005, 92005, now)
+	rollback.CanonicalRelease = releaseFixtureForGame(91005, now, domain.ReleaseAvailable, domain.ReleasePrecisionDay, "2 Jan, 2020", directDate, directDate)
+	rollback.CanonicalRelease.ExactDate = &directDate
+	rollback.Snapshots = []domain.RawSnapshot{{GameID: 91005, AppID: 92005, Language: domain.StoreLocaleEN, Region: domain.RegionUS, Source: domain.SourceSteam, RawPayload: []byte("{"), CollectedAt: now}}
+	if err := detailsRepository.SaveDetails(ctx, rollback); err == nil {
+		t.Fatal("expected invalid snapshot to roll back canonical writes")
+	}
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_state where game_id=$1`, 0, int64(91005))
+
+	seedAdditionalGameTarget(t, ctx, pool, 91002, 93002, now, "2020.01.02")
+	if _, err := pool.Exec(ctx, `insert into gfg_game_v2_details (game_id,appid,release_coming_soon,collected_at) values (91002,93002,false,$1)`, now); err != nil {
+		t.Fatal(err)
+	}
+	seedAdditionalGameTarget(t, ctx, pool, 91006, 93006, now, "2020")
+	seedAdditionalGameTarget(t, ctx, pool, 91007, 93007, now, "2020")
+	seedAdditionalGameTarget(t, ctx, pool, 91008, 93008, now, "Spring 2020")
+	seedAdditionalGameTarget(t, ctx, pool, 91009, 93009, now, "2999-01-01")
+	for _, candidate := range []struct {
+		gameID, appID int64
+		comingSoon    bool
+	}{{91007, 93007, true}, {91008, 93008, false}, {91009, 93009, false}} {
+		if _, err := pool.Exec(ctx, `insert into gfg_game_v2_details (game_id,appid,release_coming_soon,collected_at) values ($1,$2,$3,$4)`, candidate.gameID, candidate.appID, candidate.comingSoon, now); err != nil {
+			t.Fatal(err)
+		}
+	}
+	drySummary, err := backfill.New(pool).Run(ctx, true)
+	if err != nil || drySummary.Scanned != 5 || drySummary.Eligible != 1 || drySummary.Inserted != 0 || drySummary.SkippedNoCurrentState != 1 || drySummary.SkippedUpcoming != 1 || drySummary.SkippedInvalid != 1 || drySummary.SkippedFuture != 1 {
+		t.Fatalf("unexpected dry-run summary: %+v err=%v", drySummary, err)
+	}
+	actualSummary, err := backfill.New(pool).Run(ctx, false)
+	if err != nil || actualSummary.Inserted != 1 {
+		t.Fatalf("unexpected backfill summary: %+v err=%v", actualSummary, err)
+	}
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_first_available where game_id=$1 and source='legacy_manual' and inferred=false and normalizer_version='gofurry-legacy-release/v1'`, 1, int64(91002))
 }
 
 func detailsFixture(now time.Time, snapshots []domain.RawSnapshot) domain.DetailsCollection {
 	return domain.DetailsCollection{
 		Details:      domain.GameDetails{GameID: 91001, AppID: 92001, Type: "game", Name: "test", CollectedAt: now},
-		Localized:    []domain.GameLocalizedDetails{{GameID: 91001, AppID: 92001, Language: domain.Language("zh-CN"), Name: "test", CollectedAt: now}},
+		Localized:    []domain.GameLocalizedDetails{{GameID: 91001, AppID: 92001, Language: domain.StoreLocale("zh-CN"), Name: "test", CollectedAt: now}},
 		Prices:       []domain.GamePrice{{GameID: 91001, AppID: 92001, Region: domain.Region("CN"), Currency: "CNY", CollectedAt: now}},
 		Media:        domain.GameMedia{GameID: 91001, AppID: 92001, HeaderURL: "https://example.test/header.jpg", CollectedAt: now},
 		Assets:       []domain.GameMediaAsset{{GameID: 91001, AppID: 92001, AssetType: "header", AssetFamily: "store", Source: "steam", MediaKey: "header", URL: "https://example.test/header.jpg", CollectedAt: now}},
 		Requirements: domain.SystemRequirements{GameID: 91001, AppID: 92001, CollectedAt: now},
 		Snapshots:    snapshots,
 	}
+}
+
+func releaseFixture(observedAt time.Time, availability domain.ReleaseAvailability, precision domain.ReleasePrecision, raw string, start, end time.Time) *domain.GameReleaseState {
+	return releaseFixtureForGame(91001, observedAt, availability, precision, raw, start, end)
+}
+
+func releaseFixtureForGame(gameID int64, observedAt time.Time, availability domain.ReleaseAvailability, precision domain.ReleasePrecision, raw string, start, end time.Time) *domain.GameReleaseState {
+	year := start.Year()
+	month := int(start.Month())
+	return &domain.GameReleaseState{
+		GameID: gameID, Availability: availability, Precision: precision,
+		Year: &year, Month: &month, WindowStart: &start, WindowEnd: &end,
+		RawText: raw, Source: domain.SourceSteam, SourceRegion: domain.RegionUS,
+		SourceLocale: domain.StoreLocaleEN, Normalizer: "steam-go/v1.3.9", ObservedAt: observedAt,
+	}
+}
+
+func minimalDetailsFixture(gameID int64, appID uint32, now time.Time) domain.DetailsCollection {
+	return domain.DetailsCollection{
+		Details:      domain.GameDetails{GameID: gameID, AppID: appID, Type: "game", Name: "test", CollectedAt: now},
+		Media:        domain.GameMedia{GameID: gameID, AppID: appID, CollectedAt: now},
+		Requirements: domain.SystemRequirements{GameID: gameID, AppID: appID, CollectedAt: now},
+	}
+}
+
+func languageFixture(observedAt time.Time, code, name string) *domain.GameLanguages {
+	return &domain.GameLanguages{Items: []domain.GameLanguage{{
+		Code: &code, SteamName: name, Tier: "platform", SortOrder: 0,
+		Source: domain.SourceSteam, SourceRegion: domain.RegionUS, SourceLocale: domain.StoreLocaleEN,
+		Normalizer: "steam-go/v1.3.9", ObservedAt: observedAt,
+	}}}
 }
 
 func runFixture(id string, startedAt time.Time) report.RunSummary {
@@ -176,6 +317,17 @@ func seedGameTarget(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now t
 id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,
 developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
 ) values ($1,'test','test','test','test',$2,$2,null,null,'', '[]'::jsonb,'[]'::jsonb,$3,'',null,0,0,0,0)`, int64(91001), now, int64(92001))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func seedAdditionalGameTarget(t *testing.T, ctx context.Context, pool *pgxpool.Pool, gameID, appID int64, now time.Time, releaseDate string) {
+	t.Helper()
+	_, err := pool.Exec(ctx, `insert into gfg_game (
+id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,
+developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
+) values ($1,'test','test','test','test',$3,$3,null,null,$4,'[]'::jsonb,'[]'::jsonb,$2,'',null,0,0,0,0)`, gameID, appID, now, releaseDate)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -250,17 +250,20 @@ type GameV2Tag struct {
 }
 
 type GameV2Aggregate struct {
-	Site         GameV2SiteRecord
-	Details      *GfgGameV2Details
-	Localized    *GfgGameV2LocalizedDetails
-	Prices       []GfgGameV2Price
-	Media        []GfgGameV2Media
-	Assets       []GfgGameV2Asset
-	Requirements *GfgGameV2Requirements
-	News         []GfgGameV2News
-	OnlineCount  *GfgGameV2PlayerCount
-	Tags         []GameV2Tag
-	ReviewStats  GameV2ReviewStats
+	Site           GameV2SiteRecord
+	Details        *GfgGameV2Details
+	Localized      *GfgGameV2LocalizedDetails
+	Prices         []GfgGameV2Price
+	Media          []GfgGameV2Media
+	Assets         []GfgGameV2Asset
+	Requirements   *GfgGameV2Requirements
+	News           []GfgGameV2News
+	OnlineCount    *GfgGameV2PlayerCount
+	Tags           []GameV2Tag
+	ReviewStats    GameV2ReviewStats
+	ReleaseState   *GameV2ReleaseState
+	FirstAvailable *GameV2FirstAvailable
+	Languages      []GameV2Language
 }
 
 type GameV2ReviewStats struct {
@@ -291,16 +294,19 @@ type GameV2SearchRequest struct {
 
 type GameV2SearchPageQueryRequest struct {
 	cm.PageReq
-	Content         *string      `json:"content"`
-	PubStartTime    cm.LocalTime `json:"pub_start_time"`
-	PubEndTime      cm.LocalTime `json:"pub_end_time"`
-	UpdateStartTime cm.LocalTime `json:"update_start_time"`
-	UpdateEndTime   cm.LocalTime `json:"update_end_time"`
-	ScoreOrder      bool         `json:"score"`
-	RemarkOrder     bool         `json:"remark_order"`
-	TimeOrder       bool         `json:"time_order"`
-	TagList         []int64      `json:"tag_list"`
-	Lang            string       `json:"lang"`
+	Content          *string      `json:"content"`
+	Availability     string       `json:"availability"`
+	PubStartTime     cm.LocalTime `json:"pub_start_time"`
+	PubEndTime       cm.LocalTime `json:"pub_end_time"`
+	PlannedStartTime cm.LocalTime `json:"planned_start_time"`
+	PlannedEndTime   cm.LocalTime `json:"planned_end_time"`
+	UpdateStartTime  cm.LocalTime `json:"update_start_time"`
+	UpdateEndTime    cm.LocalTime `json:"update_end_time"`
+	ScoreOrder       bool         `json:"score"`
+	RemarkOrder      bool         `json:"remark_order"`
+	TimeOrder        bool         `json:"time_order"`
+	TagList          []int64      `json:"tag_list"`
+	Lang             string       `json:"lang"`
 }
 
 type GameV2SearchItem struct {
@@ -311,17 +317,38 @@ type GameV2SearchItem struct {
 }
 
 type GameV2SearchPageItem struct {
-	ID           string       `db:"id" json:"id"`
-	Name         string       `db:"name" json:"name"`
-	Info         string       `db:"info" json:"info"`
-	Cover        string       `db:"cover" json:"cover"`
-	AppID        int64        `db:"appid" json:"appid"`
-	UpdateTime   cm.LocalTime `db:"update_time" json:"update_time"`
-	ReleaseDate  string       `db:"release_date" json:"release_date"`
-	RemarkCount  int          `db:"remark_count" json:"remark_count"`
-	AvgScore     float64      `db:"avg_score" json:"avg_score"`
-	PrimaryTag   string       `db:"primary_tag" json:"primary_tag"`
-	SecondaryTag string       `db:"secondary_tag" json:"secondary_tag"`
+	ID               string                `db:"id" json:"id"`
+	Name             string                `db:"name" json:"name"`
+	Info             string                `db:"info" json:"info"`
+	Cover            string                `db:"cover" json:"cover"`
+	AppID            int64                 `db:"appid" json:"appid"`
+	UpdateTime       cm.LocalTime          `db:"update_time" json:"update_time"`
+	ReleaseDate      string                `db:"release_date" json:"release_date"`
+	RemarkCount      int                   `db:"remark_count" json:"remark_count"`
+	AvgScore         float64               `db:"avg_score" json:"avg_score"`
+	PrimaryTag       string                `db:"primary_tag" json:"primary_tag"`
+	SecondaryTag     string                `db:"secondary_tag" json:"secondary_tag"`
+	Release          *GameV2ReleaseState   `db:"-" json:"release"`
+	FirstAvailable   *GameV2FirstAvailable `db:"-" json:"first_available"`
+	RSAvailability   *string               `db:"rs_availability" json:"-"`
+	RSPrecision      *string               `db:"rs_precision" json:"-"`
+	RSExactDate      *time.Time            `db:"rs_exact_date" json:"-"`
+	RSReleaseYear    *int32                `db:"rs_release_year" json:"-"`
+	RSReleaseMonth   *int32                `db:"rs_release_month" json:"-"`
+	RSReleaseQuarter *int32                `db:"rs_release_quarter" json:"-"`
+	RSWindowStart    *time.Time            `db:"rs_window_start" json:"-"`
+	RSWindowEnd      *time.Time            `db:"rs_window_end" json:"-"`
+	RSRawText        *string               `db:"rs_raw_text" json:"-"`
+	RSObservedAt     *time.Time            `db:"rs_observed_at" json:"-"`
+	FAPrecision      *string               `db:"fa_precision" json:"-"`
+	FAExactDate      *time.Time            `db:"fa_exact_date" json:"-"`
+	FAReleaseYear    *int32                `db:"fa_release_year" json:"-"`
+	FAReleaseMonth   *int32                `db:"fa_release_month" json:"-"`
+	FAReleaseQuarter *int32                `db:"fa_release_quarter" json:"-"`
+	FAWindowStart    *time.Time            `db:"fa_window_start" json:"-"`
+	FAWindowEnd      *time.Time            `db:"fa_window_end" json:"-"`
+	FASource         *string               `db:"fa_source" json:"-"`
+	FAInferred       *bool                 `db:"fa_inferred" json:"-"`
 }
 
 type GameV2TagRecord struct {
@@ -332,18 +359,21 @@ type GameV2TagRecord struct {
 }
 
 type GameV2SearchPageQuery struct {
-	Lang            string
-	Content         string
-	PubStartTime    time.Time
-	PubEndTime      time.Time
-	UpdateStartTime time.Time
-	UpdateEndTime   time.Time
-	ScoreOrder      bool
-	RemarkOrder     bool
-	TimeOrder       bool
-	TagList         []int64
-	PageNum         int
-	PageSize        int
+	Lang             string
+	Content          string
+	Availability     string
+	PubStartTime     time.Time
+	PubEndTime       time.Time
+	PlannedStartTime time.Time
+	PlannedEndTime   time.Time
+	UpdateStartTime  time.Time
+	UpdateEndTime    time.Time
+	ScoreOrder       bool
+	RemarkOrder      bool
+	TimeOrder        bool
+	TagList          []int64
+	PageNum          int
+	PageSize         int
 }
 
 type GameV2ReviewList struct {
@@ -557,27 +587,28 @@ type GameV2DetailRequest struct {
 }
 
 type GameV2ListItem struct {
-	ID           string            `json:"id"`
-	AppID        string            `json:"appid"`
-	Name         string            `json:"name"`
-	NameZh       string            `json:"name_zh"`
-	NameEn       string            `json:"name_en"`
-	Summary      string            `json:"summary"`
-	SummaryZh    string            `json:"summary_zh"`
-	SummaryEn    string            `json:"summary_en"`
-	HeaderURL    string            `json:"header_url"`
-	CapsuleURL   string            `json:"capsule_url"`
-	ReleaseDate  string            `json:"release_date"`
-	Developers   []string          `json:"developers"`
-	Publishers   []string          `json:"publishers"`
-	Platforms    map[string]bool   `json:"platforms"`
-	Prices       []GameV2PriceView `json:"prices"`
-	Price        GameV2PriceView   `json:"price"`
-	OnlineCount  GameV2OnlineCount `json:"online_count"`
-	Tags         []GameV2Tag       `json:"tags"`
-	AvgScore     float64           `json:"avg_score"`
-	CommentCount int64             `json:"comment_count"`
-	UpdatedAt    time.Time         `json:"updated_at"`
+	ID             string                `json:"id"`
+	AppID          string                `json:"appid"`
+	Name           string                `json:"name"`
+	NameZh         string                `json:"name_zh"`
+	NameEn         string                `json:"name_en"`
+	Summary        string                `json:"summary"`
+	SummaryZh      string                `json:"summary_zh"`
+	SummaryEn      string                `json:"summary_en"`
+	HeaderURL      string                `json:"header_url"`
+	CapsuleURL     string                `json:"capsule_url"`
+	ReleaseDate    string                `json:"release_date"`
+	FirstAvailable *GameV2FirstAvailable `json:"first_available"`
+	Developers     []string              `json:"developers"`
+	Publishers     []string              `json:"publishers"`
+	Platforms      map[string]bool       `json:"platforms"`
+	Prices         []GameV2PriceView     `json:"prices"`
+	Price          GameV2PriceView       `json:"price"`
+	OnlineCount    GameV2OnlineCount     `json:"online_count"`
+	Tags           []GameV2Tag           `json:"tags"`
+	AvgScore       float64               `json:"avg_score"`
+	CommentCount   int64                 `json:"comment_count"`
+	UpdatedAt      time.Time             `json:"updated_at"`
 }
 
 type GameV2PanelReadModel struct {
@@ -622,6 +653,8 @@ type GameV2DetailReadModel struct {
 	Publishers          []string                    `json:"publishers"`
 	Platforms           map[string]bool             `json:"platforms"`
 	SupportedLanguages  string                      `json:"supported_languages"`
+	FirstAvailable      *GameV2FirstAvailable       `json:"first_available"`
+	Languages           []GameV2Language            `json:"languages"`
 	SupportInfo         map[string]string           `json:"support_info"`
 	Prices              []GameV2PriceView           `json:"prices"`
 	Price               GameV2PriceView             `json:"price"`
@@ -637,8 +670,59 @@ type GameV2DetailReadModel struct {
 }
 
 type GameV2Release struct {
-	ComingSoon bool   `json:"coming_soon"`
-	Date       string `json:"date"`
+	ComingSoon   bool       `json:"coming_soon"`
+	Date         string     `json:"date"`
+	Availability string     `json:"availability"`
+	Precision    string     `json:"precision"`
+	ExactDate    *string    `json:"exact_date"`
+	Year         *int32     `json:"year"`
+	Month        *int32     `json:"month"`
+	Quarter      *int32     `json:"quarter"`
+	WindowStart  *string    `json:"window_start"`
+	WindowEnd    *string    `json:"window_end"`
+	RawText      string     `json:"raw_text"`
+	ObservedAt   *time.Time `json:"observed_at"`
+}
+
+// GameV2ReleaseState is the normalized current US/English Steam observation.
+type GameV2ReleaseState struct {
+	Availability string     `json:"availability"`
+	Precision    string     `json:"precision"`
+	ExactDate    *string    `json:"exact_date"`
+	Year         *int32     `json:"year"`
+	Month        *int32     `json:"month"`
+	Quarter      *int32     `json:"quarter"`
+	WindowStart  *string    `json:"window_start"`
+	WindowEnd    *string    `json:"window_end"`
+	RawText      string     `json:"raw_text"`
+	ObservedAt   *time.Time `json:"observed_at"`
+	UpdatedAt    time.Time  `json:"-"`
+}
+
+// GameV2FirstAvailable is the write-once canonical first purchasable/playable window.
+type GameV2FirstAvailable struct {
+	Precision   string    `json:"precision"`
+	ExactDate   *string   `json:"exact_date"`
+	Year        int32     `json:"year"`
+	Month       *int32    `json:"month"`
+	Quarter     *int32    `json:"quarter"`
+	WindowStart string    `json:"window_start"`
+	WindowEnd   string    `json:"window_end"`
+	Source      string    `json:"source"`
+	Inferred    bool      `json:"inferred"`
+	UpdatedAt   time.Time `json:"-"`
+}
+
+// GameV2Language is one normalized canonical language capability.
+type GameV2Language struct {
+	Code               *string `json:"code"`
+	SteamName          string  `json:"steam_name"`
+	SteamAPICode       *string `json:"steam_api_code"`
+	SteamWebCode       *string `json:"steam_web_code"`
+	Tier               string  `json:"tier"`
+	InterfaceSupported *bool   `json:"interface_supported"`
+	SubtitlesSupported *bool   `json:"subtitles_supported"`
+	FullAudioSupported *bool   `json:"full_audio_supported"`
 }
 
 type GameV2PriceView struct {

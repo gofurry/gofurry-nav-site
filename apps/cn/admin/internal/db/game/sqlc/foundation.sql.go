@@ -211,12 +211,33 @@ func (q *Queries) FoundationPing(ctx context.Context) (int64, error) {
 }
 
 const getGame = `-- name: GetGame :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game WHERE id=$1
+SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game WHERE id=$1
 `
 
-func (q *Queries) GetGame(ctx context.Context, id int64) (GfgGame, error) {
+type GetGameRow struct {
+	ID           int64            `json:"id"`
+	Name         string           `json:"name"`
+	NameEn       string           `json:"name_en"`
+	Info         string           `json:"info"`
+	InfoEn       string           `json:"info_en"`
+	CreateTime   pgtype.Timestamp `json:"create_time"`
+	UpdateTime   pgtype.Timestamp `json:"update_time"`
+	Resources    []byte           `json:"resources"`
+	Groups       []byte           `json:"groups"`
+	Developers   []byte           `json:"developers"`
+	Publishers   []byte           `json:"publishers"`
+	Appid        int64            `json:"appid"`
+	Header       string           `json:"header"`
+	Links        []byte           `json:"links"`
+	Weight       int64            `json:"weight"`
+	PrimaryTag   int64            `json:"primary_tag"`
+	SecondaryTag int64            `json:"secondary_tag"`
+	ViewCount    int64            `json:"view_count"`
+}
+
+func (q *Queries) GetGame(ctx context.Context, id int64) (GetGameRow, error) {
 	row := q.db.QueryRow(ctx, getGame, id)
-	var i GfgGame
+	var i GetGameRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -227,7 +248,6 @@ func (q *Queries) GetGame(ctx context.Context, id int64) (GfgGame, error) {
 		&i.UpdateTime,
 		&i.Resources,
 		&i.Groups,
-		&i.ReleaseDate,
 		&i.Developers,
 		&i.Publishers,
 		&i.Appid,
@@ -320,9 +340,9 @@ func (q *Queries) GetTagMap(ctx context.Context, id int64) (GfgTagMap, error) {
 }
 
 const insertGame = `-- name: InsertGame :one
-INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count)
-VALUES ($1,$2,$3,$4,$5,NOW()::timestamp(0),NOW()::timestamp(0),$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,0)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
+INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count)
+VALUES ($1,$2,$3,$4,$5,NOW()::timestamp(0),NOW()::timestamp(0),$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,0)
+RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
 `
 
 type InsertGameParams struct {
@@ -333,7 +353,6 @@ type InsertGameParams struct {
 	InfoEn       string `json:"info_en"`
 	Resources    []byte `json:"resources"`
 	Groups       []byte `json:"groups"`
-	ReleaseDate  string `json:"release_date"`
 	Developers   []byte `json:"developers"`
 	Publishers   []byte `json:"publishers"`
 	Appid        int64  `json:"appid"`
@@ -344,7 +363,28 @@ type InsertGameParams struct {
 	SecondaryTag int64  `json:"secondary_tag"`
 }
 
-func (q *Queries) InsertGame(ctx context.Context, arg InsertGameParams) (GfgGame, error) {
+type InsertGameRow struct {
+	ID           int64            `json:"id"`
+	Name         string           `json:"name"`
+	NameEn       string           `json:"name_en"`
+	Info         string           `json:"info"`
+	InfoEn       string           `json:"info_en"`
+	CreateTime   pgtype.Timestamp `json:"create_time"`
+	UpdateTime   pgtype.Timestamp `json:"update_time"`
+	Resources    []byte           `json:"resources"`
+	Groups       []byte           `json:"groups"`
+	Developers   []byte           `json:"developers"`
+	Publishers   []byte           `json:"publishers"`
+	Appid        int64            `json:"appid"`
+	Header       string           `json:"header"`
+	Links        []byte           `json:"links"`
+	Weight       int64            `json:"weight"`
+	PrimaryTag   int64            `json:"primary_tag"`
+	SecondaryTag int64            `json:"secondary_tag"`
+	ViewCount    int64            `json:"view_count"`
+}
+
+func (q *Queries) InsertGame(ctx context.Context, arg InsertGameParams) (InsertGameRow, error) {
 	row := q.db.QueryRow(ctx, insertGame,
 		arg.ID,
 		arg.Name,
@@ -353,7 +393,6 @@ func (q *Queries) InsertGame(ctx context.Context, arg InsertGameParams) (GfgGame
 		arg.InfoEn,
 		arg.Resources,
 		arg.Groups,
-		arg.ReleaseDate,
 		arg.Developers,
 		arg.Publishers,
 		arg.Appid,
@@ -363,7 +402,7 @@ func (q *Queries) InsertGame(ctx context.Context, arg InsertGameParams) (GfgGame
 		arg.PrimaryTag,
 		arg.SecondaryTag,
 	)
-	var i GfgGame
+	var i InsertGameRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -374,7 +413,6 @@ func (q *Queries) InsertGame(ctx context.Context, arg InsertGameParams) (GfgGame
 		&i.UpdateTime,
 		&i.Resources,
 		&i.Groups,
-		&i.ReleaseDate,
 		&i.Developers,
 		&i.Publishers,
 		&i.Appid,
@@ -638,7 +676,7 @@ func (q *Queries) ListGameOptions(ctx context.Context, arg ListGameOptionsParams
 }
 
 const listGames = `-- name: ListGames :many
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game
+SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game
 WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%'
  OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
 ORDER BY id DESC LIMIT $3 OFFSET $2
@@ -650,15 +688,36 @@ type ListGamesParams struct {
 	RowLimit  int32  `json:"row_limit"`
 }
 
-func (q *Queries) ListGames(ctx context.Context, arg ListGamesParams) ([]GfgGame, error) {
+type ListGamesRow struct {
+	ID           int64            `json:"id"`
+	Name         string           `json:"name"`
+	NameEn       string           `json:"name_en"`
+	Info         string           `json:"info"`
+	InfoEn       string           `json:"info_en"`
+	CreateTime   pgtype.Timestamp `json:"create_time"`
+	UpdateTime   pgtype.Timestamp `json:"update_time"`
+	Resources    []byte           `json:"resources"`
+	Groups       []byte           `json:"groups"`
+	Developers   []byte           `json:"developers"`
+	Publishers   []byte           `json:"publishers"`
+	Appid        int64            `json:"appid"`
+	Header       string           `json:"header"`
+	Links        []byte           `json:"links"`
+	Weight       int64            `json:"weight"`
+	PrimaryTag   int64            `json:"primary_tag"`
+	SecondaryTag int64            `json:"secondary_tag"`
+	ViewCount    int64            `json:"view_count"`
+}
+
+func (q *Queries) ListGames(ctx context.Context, arg ListGamesParams) ([]ListGamesRow, error) {
 	rows, err := q.db.Query(ctx, listGames, arg.Keyword, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []GfgGame{}
+	items := []ListGamesRow{}
 	for rows.Next() {
-		var i GfgGame
+		var i ListGamesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -669,7 +728,6 @@ func (q *Queries) ListGames(ctx context.Context, arg ListGamesParams) ([]GfgGame
 			&i.UpdateTime,
 			&i.Resources,
 			&i.Groups,
-			&i.ReleaseDate,
 			&i.Developers,
 			&i.Publishers,
 			&i.Appid,
@@ -954,9 +1012,9 @@ func (q *Queries) NextTagMapID(ctx context.Context) (int64, error) {
 }
 
 const updateGame = `-- name: UpdateGame :one
-UPDATE gfg_game SET name=$1,name_en=$2,info=$3,info_en=$4,resources=$5,groups=$6,release_date=$7,developers=$8,publishers=$9,appid=$10,header=$11,links=$12,weight=$13,primary_tag=$14,secondary_tag=$15,update_time=NOW()::timestamp(0)
-WHERE id=$16
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
+UPDATE gfg_game SET name=$1,name_en=$2,info=$3,info_en=$4,resources=$5,groups=$6,developers=$7,publishers=$8,appid=$9,header=$10,links=$11,weight=$12,primary_tag=$13,secondary_tag=$14,update_time=NOW()::timestamp(0)
+WHERE id=$15
+RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
 `
 
 type UpdateGameParams struct {
@@ -966,7 +1024,6 @@ type UpdateGameParams struct {
 	InfoEn       string `json:"info_en"`
 	Resources    []byte `json:"resources"`
 	Groups       []byte `json:"groups"`
-	ReleaseDate  string `json:"release_date"`
 	Developers   []byte `json:"developers"`
 	Publishers   []byte `json:"publishers"`
 	Appid        int64  `json:"appid"`
@@ -978,7 +1035,28 @@ type UpdateGameParams struct {
 	ID           int64  `json:"id"`
 }
 
-func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (GfgGame, error) {
+type UpdateGameRow struct {
+	ID           int64            `json:"id"`
+	Name         string           `json:"name"`
+	NameEn       string           `json:"name_en"`
+	Info         string           `json:"info"`
+	InfoEn       string           `json:"info_en"`
+	CreateTime   pgtype.Timestamp `json:"create_time"`
+	UpdateTime   pgtype.Timestamp `json:"update_time"`
+	Resources    []byte           `json:"resources"`
+	Groups       []byte           `json:"groups"`
+	Developers   []byte           `json:"developers"`
+	Publishers   []byte           `json:"publishers"`
+	Appid        int64            `json:"appid"`
+	Header       string           `json:"header"`
+	Links        []byte           `json:"links"`
+	Weight       int64            `json:"weight"`
+	PrimaryTag   int64            `json:"primary_tag"`
+	SecondaryTag int64            `json:"secondary_tag"`
+	ViewCount    int64            `json:"view_count"`
+}
+
+func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (UpdateGameRow, error) {
 	row := q.db.QueryRow(ctx, updateGame,
 		arg.Name,
 		arg.NameEn,
@@ -986,7 +1064,6 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (GfgGame
 		arg.InfoEn,
 		arg.Resources,
 		arg.Groups,
-		arg.ReleaseDate,
 		arg.Developers,
 		arg.Publishers,
 		arg.Appid,
@@ -997,7 +1074,7 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (GfgGame
 		arg.SecondaryTag,
 		arg.ID,
 	)
-	var i GfgGame
+	var i UpdateGameRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -1008,7 +1085,6 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (GfgGame
 		&i.UpdateTime,
 		&i.Resources,
 		&i.Groups,
-		&i.ReleaseDate,
 		&i.Developers,
 		&i.Publishers,
 		&i.Appid,

@@ -85,6 +85,12 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	if detail.Site.ID != 91001 || detail.Localized == nil || detail.Localized.Name != "English Game" || len(detail.Prices) != 1 || len(detail.Tags) != 1 {
 		t.Fatalf("unexpected detail aggregate: %+v", detail)
 	}
+	if detail.ReleaseState == nil || detail.ReleaseState.Availability != "available" || detail.ReleaseState.ExactDate == nil || *detail.ReleaseState.ExactDate != "2026-08-01" {
+		t.Fatalf("unexpected structured release state: %+v", detail.ReleaseState)
+	}
+	if detail.FirstAvailable == nil || detail.FirstAvailable.Precision != "month" || detail.FirstAvailable.ExactDate != nil || detail.FirstAvailable.WindowStart != "2026-08-01" || detail.FirstAvailable.WindowEnd != "2026-08-31" || len(detail.Languages) != 2 || detail.Languages[1].Code != nil || detail.Languages[1].SteamName != "Klingon" {
+		t.Fatalf("unexpected canonical domain aggregate: first=%+v languages=%+v", detail.FirstAvailable, detail.Languages)
+	}
 	if _, gfErr = readDAO.GetGameDetailAggregate(ctx, v2models.GameV2DetailQuery{GameID: 999999}); gfErr == nil {
 		t.Fatal("missing detail should preserve not-found error behavior")
 	}
@@ -93,6 +99,14 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	if gfErr != nil || len(list) != 1 || list[0].Site.ID != 91001 {
 		t.Fatalf("list: rows=%+v err=%v", list, gfErr)
 	}
+	newestGames, gfErr := readDAO.ListGameAggregates(ctx, v2models.GameV2ListQuery{Lang: "zh", Limit: 10, Sort: "newest"})
+	if gfErr != nil || len(newestGames) != 2 || newestGames[0].Site.ID != 91002 || newestGames[0].ReleaseState == nil || newestGames[0].ReleaseState.Availability != "upcoming" {
+		t.Fatalf("recently collected must include upcoming games: rows=%+v err=%v", newestGames, gfErr)
+	}
+	latestGames, gfErr := readDAO.ListGameAggregates(ctx, v2models.GameV2ListQuery{Lang: "zh", Limit: 10, Sort: "release_date"})
+	if gfErr != nil || len(latestGames) != 1 || latestGames[0].Site.ID != 91001 || latestGames[0].FirstAvailable == nil {
+		t.Fatalf("canonical latest games: rows=%+v err=%v", latestGames, gfErr)
+	}
 	page, gfErr := readDAO.SearchGames(ctx, v2models.GameV2SearchPageQuery{Lang: "en", Content: "English", PageNum: 1, PageSize: 1})
 	if gfErr != nil || page.Total != 1 {
 		t.Fatalf("search: page=%+v err=%v", page, gfErr)
@@ -100,6 +114,29 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	items, ok := page.Data.([]v2models.GameV2SearchPageItem)
 	if !ok || len(items) != 1 || items[0].AppID != 92001 || items[0].Name != "English Game" {
 		t.Fatalf("unexpected search items: %#v", page.Data)
+	}
+	if items[0].Release == nil || items[0].Release.Availability != "available" || items[0].FirstAvailable == nil || items[0].FirstAvailable.Precision != "month" || items[0].FirstAvailable.ExactDate != nil || items[0].FirstAvailable.WindowEnd != "2026-08-31" {
+		t.Fatalf("search item missing structured first available: %#v", items[0])
+	}
+	upcomingPage, gfErr := readDAO.SearchGames(ctx, v2models.GameV2SearchPageQuery{
+		Lang: "en", Content: "Second", Availability: "upcoming", TimeOrder: true,
+		PlannedStartTime: time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC),
+		PlannedEndTime:   time.Date(2026, 11, 30, 23, 59, 59, 0, time.UTC),
+		PageNum:          1, PageSize: 10,
+	})
+	if gfErr != nil || upcomingPage.Total != 1 {
+		t.Fatalf("upcoming planned-window search: page=%+v err=%v", upcomingPage, gfErr)
+	}
+	upcomingItems := upcomingPage.Data.([]v2models.GameV2SearchPageItem)
+	if len(upcomingItems) != 1 || upcomingItems[0].ID != "91002" || upcomingItems[0].Release == nil || upcomingItems[0].Release.Precision != "quarter" || upcomingItems[0].FirstAvailable != nil {
+		t.Fatalf("unexpected upcoming search items: %#v", upcomingItems)
+	}
+	intervalPage, gfErr := readDAO.SearchGames(ctx, v2models.GameV2SearchPageQuery{
+		Lang: "zh", PubStartTime: time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC),
+		PubEndTime: time.Date(2026, 8, 15, 23, 59, 59, 0, time.UTC), PageNum: 1, PageSize: 10,
+	})
+	if gfErr != nil || intervalPage.Total != 1 || intervalPage.Data.([]v2models.GameV2SearchPageItem)[0].ID != "91001" {
+		t.Fatalf("canonical first-available interval search: page=%+v err=%v", intervalPage, gfErr)
 	}
 	tagPage, gfErr := readDAO.SearchGames(ctx, v2models.GameV2SearchPageQuery{Lang: "zh", TagList: []int64{1}, PageNum: 2, PageSize: 1})
 	if gfErr != nil || tagPage.Total != 2 || len(tagPage.Data.([]v2models.GameV2SearchPageItem)) != 1 {
@@ -239,6 +276,14 @@ func seedReadModel(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now ti
 		`INSERT INTO gfg_game_v2_player_counts (run_id,game_id,appid,count,status,collected_at) VALUES ('run-1',91001,92001,42,'success',$1)`,
 		`INSERT INTO gfg_game_v2_collect_runs (id,task_type,status,total_count,success_count,task_summary,started_at,ended_at) VALUES ('run-1','details','success',1,1,'[]',$1,$1)`,
 		`INSERT INTO gfg_game_v2_collect_task_results (run_id,task_type,status,game_id,appid,started_at,ended_at) VALUES ('run-1','details','success',91001,92001,$1,$1)`,
+		`INSERT INTO gfg_game_release_state (game_id,availability,precision,exact_date,release_year,release_month,release_quarter,window_start,window_end,raw_text,source,source_region,source_locale,normalizer_version,observed_at) VALUES
+(91001,'available','day','2026-08-01',2026,8,NULL,'2026-08-01','2026-08-01','1 Aug, 2026','steam','US','en','steam-go/v1.3.9',$1),
+(91002,'upcoming','quarter',NULL,2026,NULL,4,'2026-10-01','2026-12-31','Q4 2026','steam','US','en','steam-go/v1.3.9',$1)`,
+		`INSERT INTO gfg_game_first_available (game_id,precision,exact_date,release_year,release_month,window_start,window_end,source,inferred,source_raw,source_observed_at,normalizer_version) VALUES
+(91001,'month',NULL,2026,8,'2026-08-01','2026-08-31','legacy_manual',false,'August 2026',$1,'gofurry-legacy-release/v1')`,
+		`INSERT INTO gfg_game_languages (game_id,language_code,steam_name,steam_api_code,steam_web_code,tier,full_audio_supported,sort_order,source,source_region,source_locale,normalizer_version,observed_at) VALUES
+(91001,'en','English','english','en','platform',true,0,'steam','US','en','steam-go/v1.3.9',$1),
+(91001,NULL,'Klingon',NULL,NULL,'unknown',NULL,1,'steam','US','en','steam-go/v1.3.9',$1)`,
 		`INSERT INTO gfg_prize (id,title,"desc",prize,"key",start_time,end_time,create_time,status) VALUES (93001,'Prize','Description','{"title":"Prize","platform":"Steam","keys":["key"]}','secret',$1,$2,$1,true)`,
 	}
 	for i, statement := range statements {
@@ -246,7 +291,7 @@ func seedReadModel(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now ti
 		switch i {
 		case 8:
 			args = append(args, now.Add(-time.Hour))
-		case 13:
+		case 16:
 			args = append(args, now.Add(24*time.Hour))
 		}
 		if _, err := pool.Exec(ctx, statement, args...); err != nil {

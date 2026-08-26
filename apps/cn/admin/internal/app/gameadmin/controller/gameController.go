@@ -41,17 +41,16 @@ type steamGameAssetDTO struct {
 }
 
 type steamGamePrefillDTO struct {
-	AppID       int64               `json:"appid"`
-	Name        string              `json:"name"`
-	NameEn      string              `json:"name_en"`
-	Info        string              `json:"info"`
-	InfoEn      string              `json:"info_en"`
-	Groups      []pkgmodels.KvModel `json:"groups"`
-	ReleaseDate string              `json:"release_date"`
-	Developers  []string            `json:"developers"`
-	Publishers  []string            `json:"publishers"`
-	Header      string              `json:"header"`
-	Links       []pkgmodels.KvModel `json:"links"`
+	AppID      int64               `json:"appid"`
+	Name       string              `json:"name"`
+	NameEn     string              `json:"name_en"`
+	Info       string              `json:"info"`
+	InfoEn     string              `json:"info_en"`
+	Groups     []pkgmodels.KvModel `json:"groups"`
+	Developers []string            `json:"developers"`
+	Publishers []string            `json:"publishers"`
+	Header     string              `json:"header"`
+	Links      []pkgmodels.KvModel `json:"links"`
 }
 
 func (api *GameAPI) ListGames(c fiber.Ctx) error {
@@ -79,7 +78,7 @@ func (api *GameAPI) CreateGame(c fiber.Ctx) error {
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
-	enqueueCreatedGameCollect(created)
+	enqueueGameCollect(created)
 	return common.NewResponse(c).SuccessWithData(gameDTO(created))
 }
 
@@ -109,9 +108,12 @@ func (api *GameAPI) UpdateGame(c fiber.Ctx) error {
 	}
 	params := gameUpdateParams(req)
 	params.ID = id
-	txErr := api.store.updateGame(c.Context(), audit.MetaFromFiber(c), params)
+	updated, appIDChanged, txErr := api.store.updateGame(c.Context(), audit.MetaFromFiber(c), params)
 	if txErr != nil {
 		return common.NewResponse(c).Error(txErr)
+	}
+	if appIDChanged {
+		enqueueGameCollect(updated)
 	}
 	return api.GetGame(c)
 }
@@ -251,14 +253,6 @@ func steamGamePrefill(appid int64, zhData, enData storefront.AppDetailsData, hea
 		groups = append(groups, pkgmodels.KvModel{Key: "official", Value: website})
 	}
 
-	releaseDate := ""
-	if zhData.ReleaseDate != nil {
-		releaseDate = normalizeSteamReleaseDate(zhData.ReleaseDate.Date)
-	}
-	if releaseDate == "" && enData.ReleaseDate != nil {
-		releaseDate = normalizeSteamReleaseDate(enData.ReleaseDate.Date)
-	}
-
 	developers := normalizeStringArray(zhData.Developers)
 	if len(developers) == 0 {
 		developers = normalizeStringArray(enData.Developers)
@@ -269,42 +263,17 @@ func steamGamePrefill(appid int64, zhData, enData storefront.AppDetailsData, hea
 	}
 
 	return steamGamePrefillDTO{
-		AppID:       appid,
-		Name:        strings.TrimSpace(zhData.Name),
-		NameEn:      strings.TrimSpace(enData.Name),
-		Info:        strings.TrimSpace(zhData.ShortDescription),
-		InfoEn:      strings.TrimSpace(enData.ShortDescription),
-		Groups:      groups,
-		ReleaseDate: releaseDate,
-		Developers:  developers,
-		Publishers:  publishers,
-		Header:      strings.TrimSpace(header),
-		Links:       normalizeGameLinks(appid, nil),
+		AppID:      appid,
+		Name:       strings.TrimSpace(zhData.Name),
+		NameEn:     strings.TrimSpace(enData.Name),
+		Info:       strings.TrimSpace(zhData.ShortDescription),
+		InfoEn:     strings.TrimSpace(enData.ShortDescription),
+		Groups:     groups,
+		Developers: developers,
+		Publishers: publishers,
+		Header:     strings.TrimSpace(header),
+		Links:      normalizeGameLinks(appid, nil),
 	}
-}
-
-func normalizeSteamReleaseDate(raw string) string {
-	value := strings.TrimSpace(raw)
-	if value == "" {
-		return ""
-	}
-
-	compact := strings.Join(strings.Fields(value), "")
-	var year, month, day int
-	if _, err := fmt.Sscanf(compact, "%d年%d月%d日", &year, &month, &day); err == nil {
-		parsed := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
-		if parsed.Year() == year && int(parsed.Month()) == month && parsed.Day() == day {
-			return parsed.Format("2006.01.02")
-		}
-	}
-
-	for _, layout := range []string{"2 Jan, 2006", "Jan 2, 2006", "2006-01-02", "2006.01.02"} {
-		if parsed, err := time.Parse(layout, value); err == nil {
-			return parsed.Format("2006.01.02")
-		}
-	}
-
-	return value
 }
 
 func newAdminSteamClient() (*steam.Client, time.Duration, error) {
@@ -710,7 +679,7 @@ func gameInsertParams(req models.GamePayload) gamesqlc.InsertGameParams {
 	return gamesqlc.InsertGameParams{
 		Name: strings.TrimSpace(req.Name), NameEn: strings.TrimSpace(req.NameEn), Info: strings.TrimSpace(req.Info), InfoEn: strings.TrimSpace(req.InfoEn),
 		Resources: []byte(adminutil.MustJSON(normalizeKV(req.Resources))), Groups: []byte(adminutil.MustJSON(normalizeKV(req.Groups))),
-		ReleaseDate: strings.TrimSpace(req.ReleaseDate), Developers: []byte(adminutil.MustJSON(normalizeStringArray(req.Developers))),
+		Developers: []byte(adminutil.MustJSON(normalizeStringArray(req.Developers))),
 		Publishers: []byte(adminutil.MustJSON(normalizeStringArray(req.Publishers))), Appid: req.Appid, Header: strings.TrimSpace(req.Header),
 		Links: []byte(adminutil.MustJSON(normalizeGameLinks(req.Appid, req.Links))), Weight: req.Weight, PrimaryTag: req.PrimaryTag, SecondaryTag: req.SecondaryTag,
 	}
@@ -720,7 +689,7 @@ func gameUpdateParams(req models.GamePayload) gamesqlc.UpdateGameParams {
 	insert := gameInsertParams(req)
 	return gamesqlc.UpdateGameParams{
 		Name: insert.Name, NameEn: insert.NameEn, Info: insert.Info, InfoEn: insert.InfoEn, Resources: insert.Resources, Groups: insert.Groups,
-		ReleaseDate: insert.ReleaseDate, Developers: insert.Developers, Publishers: insert.Publishers, Appid: insert.Appid, Header: insert.Header,
+		Developers: insert.Developers, Publishers: insert.Publishers, Appid: insert.Appid, Header: insert.Header,
 		Links: insert.Links, Weight: insert.Weight, PrimaryTag: insert.PrimaryTag, SecondaryTag: insert.SecondaryTag,
 	}
 }
@@ -736,7 +705,6 @@ func gameDTO(row models.Game) models.GameDTO {
 		UpdateTime:   row.UpdateTime,
 		Resources:    adminutil.ParseKVArray(row.Resources),
 		Groups:       adminutil.ParseKVArray(row.Groups),
-		ReleaseDate:  row.ReleaseDate,
 		Developers:   adminutil.ParseStringArray(row.Developers),
 		Publishers:   adminutil.ParseStringArray(row.Publishers),
 		Appid:        row.Appid,

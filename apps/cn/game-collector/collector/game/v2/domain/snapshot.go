@@ -21,9 +21,9 @@ type RawSnapshot struct {
 	AppID  uint32       `json:"appid"`
 	Kind   SnapshotKind `json:"kind"`
 
-	Language Language `json:"language"`
-	Region   Region   `json:"region"`
-	Source   Source   `json:"source"`
+	Language StoreLocale `json:"language"`
+	Region   Region      `json:"region"`
+	Source   Source      `json:"source"`
 
 	PayloadHash string          `json:"payload_hash"`
 	RawPayload  json.RawMessage `json:"raw_payload"`

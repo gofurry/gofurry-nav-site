@@ -243,6 +243,32 @@ func TestGetGameDetailUsesLocalizedFallback(t *testing.T) {
 	}
 }
 
+func TestGetGameDetailExposesCanonicalDomainAlongsideCompatibilityFields(t *testing.T) {
+	exact := "2020-01-02"
+	year := int32(2020)
+	month := int32(1)
+	observed := time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC)
+	code := "en"
+	reader := &fakeDetailReader{aggregate: v2models.GameV2Aggregate{
+		Site:           v2models.GameV2SiteRecord{ID: 1, AppID: 440, Name: "Game"},
+		Details:        &v2models.GfgGameV2Details{GameID: 1, AppID: 440, ReleaseComingSoon: false, ReleaseDateText: strPtr("legacy raw")},
+		ReleaseState:   &v2models.GameV2ReleaseState{Availability: "available", Precision: "day", ExactDate: &exact, Year: &year, Month: &month, WindowStart: &exact, WindowEnd: &exact, RawText: "2 Jan, 2020", ObservedAt: &observed},
+		FirstAvailable: &v2models.GameV2FirstAvailable{Precision: "day", ExactDate: &exact, Year: year, Month: &month, WindowStart: exact, WindowEnd: exact, Source: "legacy_manual"},
+		Languages:      []v2models.GameV2Language{{Code: &code, SteamName: "English", Tier: "platform"}},
+	}}
+
+	res, err := NewReadModelServiceWithReader(reader).GetGameDetail(context.Background(), v2models.GameV2DetailRequest{GameID: 1, Lang: "en"})
+	if err != nil {
+		t.Fatalf("GetGameDetail returned error: %s", err.GetMsg())
+	}
+	if res.Release.Date != "legacy raw" || res.Release.ExactDate == nil || *res.Release.ExactDate != exact || res.Release.Availability != "available" {
+		t.Fatalf("unexpected structured/compatibility release: %+v", res.Release)
+	}
+	if res.FirstAvailable == nil || res.FirstAvailable.Source != "legacy_manual" || len(res.Languages) != 1 || res.Languages[0].Code == nil {
+		t.Fatalf("unexpected canonical detail facts: first=%+v languages=%+v", res.FirstAvailable, res.Languages)
+	}
+}
+
 func TestGetGameDetailMarksCNPriceUnavailableWithoutHKFallback(t *testing.T) {
 	reader := &fakeDetailReader{
 		aggregate: v2models.GameV2Aggregate{
@@ -330,7 +356,8 @@ func TestGetGameDetailUsesLatestSuccessfulOnlineCount(t *testing.T) {
 func TestGetGameDetailDefaultsInvalidLangAndMissingOnlineCount(t *testing.T) {
 	reader := &fakeDetailReader{
 		aggregate: v2models.GameV2Aggregate{
-			Site: v2models.GameV2SiteRecord{ID: 1, AppID: 440, Name: "军团要塞2"},
+			Site:    v2models.GameV2SiteRecord{ID: 1, AppID: 440, Name: "军团要塞2"},
+			Details: &v2models.GfgGameV2Details{GameID: 1, AppID: 440, ReleaseDateText: strPtr("legacy date")},
 		},
 	}
 
@@ -348,6 +375,12 @@ func TestGetGameDetailDefaultsInvalidLangAndMissingOnlineCount(t *testing.T) {
 	}
 	if res.OnlineCount.Status != onlineUnknown {
 		t.Fatalf("expected missing online count status %s, got %s", onlineUnknown, res.OnlineCount.Status)
+	}
+	if res.Release.Date != "legacy date" || res.Release.Availability != "unknown" || res.Release.Precision != "unknown" || res.Release.ExactDate != nil {
+		t.Fatalf("canonical-missing release must stay unknown without parsing compatibility text: %+v", res.Release)
+	}
+	if res.Languages == nil {
+		t.Fatal("structured languages must serialize as an empty array, not null")
 	}
 }
 
@@ -382,6 +415,32 @@ func TestSimpleSearchNormalizesQuery(t *testing.T) {
 	}
 	if len(res) != 1 || res[0].ID != "1" || res[0].Cover == "" {
 		t.Fatalf("expected mapped simple search result, got %#v", res)
+	}
+}
+
+func TestSearchPageNormalizesReleaseFilters(t *testing.T) {
+	reader := &fakeDetailReader{}
+	svc := NewReadModelServiceWithReader(reader)
+	plannedStart := time.Date(2026, time.September, 1, 0, 0, 0, 0, time.Local)
+	plannedEnd := time.Date(2026, time.December, 31, 23, 59, 59, 0, time.Local)
+
+	_, err := svc.SearchPage(context.Background(), v2models.GameV2SearchPageQueryRequest{
+		Availability:     "  UPCOMING ",
+		PlannedStartTime: cm.LocalTime(plannedStart),
+		PlannedEndTime:   cm.LocalTime(plannedEnd),
+		TimeOrder:        true,
+	})
+	if err != nil {
+		t.Fatalf("SearchPage returned error: %s", err.GetMsg())
+	}
+	if reader.searchQuery.Availability != "upcoming" {
+		t.Fatalf("availability = %q, want upcoming", reader.searchQuery.Availability)
+	}
+	if !reader.searchQuery.PlannedStartTime.Equal(plannedStart) || !reader.searchQuery.PlannedEndTime.Equal(plannedEnd) {
+		t.Fatalf("planned range = %s..%s", reader.searchQuery.PlannedStartTime, reader.searchQuery.PlannedEndTime)
+	}
+	if !reader.searchQuery.TimeOrder {
+		t.Fatal("planned release ordering should remain enabled")
 	}
 }
 

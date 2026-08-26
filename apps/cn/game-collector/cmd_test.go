@@ -15,7 +15,7 @@ func TestRootCommandShowsHelpAndKeepsManualCommands(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"serve", "install", "uninstall", "collect", "players", "all", "version"} {
+	for _, name := range []string{"serve", "install", "uninstall", "collect", "players", "all", "backfill-first-available", "version"} {
 		if !strings.Contains(output.String(), name) {
 			t.Fatalf("root help is missing %q: %s", name, output.String())
 		}

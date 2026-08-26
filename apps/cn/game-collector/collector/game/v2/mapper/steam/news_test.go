@@ -30,7 +30,7 @@ func TestNewsMapperFromPartnerEventCleansContentAndBuildsFallbackURL(t *testing.
 		Raw: json.RawMessage(`{"gid":"event-1"}`),
 	}
 
-	got, err := NewNewsMapper().FromPartnerEvent(100, 550, domain.LanguageEN, event)
+	got, err := NewNewsMapper().FromPartnerEvent(100, 550, domain.StoreLocaleEN, event)
 	if err != nil {
 		t.Fatalf("FromPartnerEvent returned error: %v", err)
 	}

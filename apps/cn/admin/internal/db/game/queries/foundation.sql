@@ -11,26 +11,26 @@ SELECT COUNT(*)::bigint FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name I
  OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';
 
 -- name: ListGames :many
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game
+SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game
 WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%'
  OR info ILIKE '%'||sqlc.arg(keyword)||'%' OR info_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
 ORDER BY id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: GetGame :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game WHERE id=sqlc.arg(id);
+SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game WHERE id=sqlc.arg(id);
 
 -- name: FindGameByAppIDExcluding :one
 SELECT id,name,appid FROM gfg_game WHERE appid=sqlc.arg(appid) AND id<>sqlc.arg(exclude_id) LIMIT 1;
 
 -- name: InsertGame :one
-INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count)
-VALUES (sqlc.arg(id),sqlc.arg(name),sqlc.arg(name_en),sqlc.arg(info),sqlc.arg(info_en),NOW()::timestamp(0),NOW()::timestamp(0),sqlc.arg(resources),sqlc.arg(groups),sqlc.arg(release_date),sqlc.arg(developers),sqlc.arg(publishers),sqlc.arg(appid),sqlc.arg(header),sqlc.arg(links),sqlc.arg(weight),sqlc.arg(primary_tag),sqlc.arg(secondary_tag),0)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count;
+INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count)
+VALUES (sqlc.arg(id),sqlc.arg(name),sqlc.arg(name_en),sqlc.arg(info),sqlc.arg(info_en),NOW()::timestamp(0),NOW()::timestamp(0),sqlc.arg(resources),sqlc.arg(groups),sqlc.arg(developers),sqlc.arg(publishers),sqlc.arg(appid),sqlc.arg(header),sqlc.arg(links),sqlc.arg(weight),sqlc.arg(primary_tag),sqlc.arg(secondary_tag),0)
+RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count;
 
 -- name: UpdateGame :one
-UPDATE gfg_game SET name=sqlc.arg(name),name_en=sqlc.arg(name_en),info=sqlc.arg(info),info_en=sqlc.arg(info_en),resources=sqlc.arg(resources),groups=sqlc.arg(groups),release_date=sqlc.arg(release_date),developers=sqlc.arg(developers),publishers=sqlc.arg(publishers),appid=sqlc.arg(appid),header=sqlc.arg(header),links=sqlc.arg(links),weight=sqlc.arg(weight),primary_tag=sqlc.arg(primary_tag),secondary_tag=sqlc.arg(secondary_tag),update_time=NOW()::timestamp(0)
+UPDATE gfg_game SET name=sqlc.arg(name),name_en=sqlc.arg(name_en),info=sqlc.arg(info),info_en=sqlc.arg(info_en),resources=sqlc.arg(resources),groups=sqlc.arg(groups),developers=sqlc.arg(developers),publishers=sqlc.arg(publishers),appid=sqlc.arg(appid),header=sqlc.arg(header),links=sqlc.arg(links),weight=sqlc.arg(weight),primary_tag=sqlc.arg(primary_tag),secondary_tag=sqlc.arg(secondary_tag),update_time=NOW()::timestamp(0)
 WHERE id=sqlc.arg(id)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count;
+RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count;
 
 -- name: DeleteGame :execrows
 DELETE FROM gfg_game WHERE id=sqlc.arg(id);

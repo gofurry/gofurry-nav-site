@@ -9,6 +9,8 @@ import (
 	"github.com/gofurry/steam-go/web/storefront"
 )
 
+const steamNormalizerVersion = "steam-go/v1.3.9"
+
 // DetailsMapper converts steam-go Store appdetails into collector v2 domain models.
 type DetailsMapper struct{}
 
@@ -24,27 +26,27 @@ func (m DetailsMapper) ToDetails(gameID int64, appID uint32, data storefront.App
 		return domain.GameDetails{}, err
 	}
 	return domain.GameDetails{
-		GameID:             gameID,
-		AppID:              appID,
-		Type:               data.Type,
-		Name:               data.Name,
-		IsFree:             data.IsFree,
-		Website:            data.Website,
-		HeaderURL:          data.HeaderImage,
-		Developers:         append([]string(nil), data.Developers...),
-		Publishers:         append([]string(nil), data.Publishers...),
-		Release:            mapReleaseDate(data.ReleaseDate),
-		Platforms:          mapPlatforms(data.Platforms),
-		SupportedLanguages: data.SupportedLanguages,
-		SupportInfo:        mapSupportInfo(data.SupportInfo),
-		ContentDescriptors: mapContentDescriptors(data.ContentDescriptors),
-		Ratings:            ratings,
-		CollectedAt:        collectedAt,
+		GameID:                gameID,
+		AppID:                 appID,
+		Type:                  data.Type,
+		Name:                  data.Name,
+		IsFree:                data.IsFree,
+		Website:               data.Website,
+		HeaderURL:             data.HeaderImage,
+		Developers:            append([]string(nil), data.Developers...),
+		Publishers:            append([]string(nil), data.Publishers...),
+		ReleaseRaw:            mapReleaseDate(data.ReleaseDate),
+		Platforms:             mapPlatforms(data.Platforms),
+		SupportedLanguagesRaw: data.SupportedLanguages,
+		SupportInfo:           mapSupportInfo(data.SupportInfo),
+		ContentDescriptors:    mapContentDescriptors(data.ContentDescriptors),
+		Ratings:               ratings,
+		CollectedAt:           collectedAt,
 	}, nil
 }
 
 // ToLocalized maps language-specific copy.
-func (m DetailsMapper) ToLocalized(gameID int64, appID uint32, lang domain.Language, data storefront.AppDetailsData, collectedAt time.Time) domain.GameLocalizedDetails {
+func (m DetailsMapper) ToLocalized(gameID int64, appID uint32, lang domain.StoreLocale, data storefront.AppDetailsData, collectedAt time.Time) domain.GameLocalizedDetails {
 	return domain.GameLocalizedDetails{
 		GameID:              gameID,
 		AppID:               appID,
@@ -55,6 +57,61 @@ func (m DetailsMapper) ToLocalized(gameID int64, appID uint32, lang domain.Langu
 		AboutTheGame:        data.AboutTheGame,
 		CollectedAt:         collectedAt,
 	}
+}
+
+// ToCanonicalRelease maps one authoritative US/English release observation.
+// Callers must only invoke it for a non-nil Storefront release_date field.
+func (m DetailsMapper) ToCanonicalRelease(gameID int64, value *storefront.StoreReleaseDate, observedAt time.Time) domain.GameReleaseState {
+	normalized := storefront.NormalizeReleaseDate(value)
+	availability := domain.ReleaseAvailable
+	if normalized.ComingSoon {
+		availability = domain.ReleaseUpcoming
+	}
+	return domain.GameReleaseState{
+		GameID:       gameID,
+		Availability: availability,
+		Precision:    domain.ReleasePrecision(normalized.Precision),
+		ExactDate:    cloneDate(normalized.ExactDate),
+		Year:         positiveInt(normalized.Year),
+		Month:        positiveInt(normalized.Month),
+		Quarter:      positiveInt(normalized.Quarter),
+		WindowStart:  cloneDate(normalized.RangeStart),
+		WindowEnd:    cloneDate(normalized.RangeEnd),
+		RawText:      normalized.RawText,
+		Source:       domain.SourceSteam,
+		SourceRegion: domain.RegionUS,
+		SourceLocale: domain.StoreLocaleEN,
+		Normalizer:   steamNormalizerVersion,
+		ObservedAt:   observedAt,
+	}
+}
+
+// ToCanonicalLanguages maps the ordered language set parsed by steam-go.
+func (m DetailsMapper) ToCanonicalLanguages(value []storefront.LanguageSupport, observedAt time.Time) domain.GameLanguages {
+	items := make([]domain.GameLanguage, 0, len(value))
+	for index, support := range value {
+		var code *string
+		if support.Known {
+			code = nonEmptyString(support.Code)
+		}
+		items = append(items, domain.GameLanguage{
+			Code:               code,
+			SteamName:          support.SteamName,
+			SteamAPICode:       nonEmptyString(support.SteamAPICode),
+			SteamWebCode:       nonEmptyString(support.SteamWebCode),
+			Tier:               string(support.Tier),
+			InterfaceSupported: support.Interface,
+			SubtitlesSupported: support.Subtitles,
+			FullAudioSupported: support.FullAudio,
+			SortOrder:          index,
+			Source:             domain.SourceSteam,
+			SourceRegion:       domain.RegionUS,
+			SourceLocale:       domain.StoreLocaleEN,
+			Normalizer:         steamNormalizerVersion,
+			ObservedAt:         observedAt,
+		})
+	}
+	return domain.GameLanguages{Items: items}
 }
 
 // ToPrice maps regional price data.
@@ -135,11 +192,33 @@ func (m DetailsMapper) ToRequirements(gameID int64, appID uint32, data storefron
 	}
 }
 
-func mapReleaseDate(value *storefront.StoreReleaseDate) domain.ReleaseDate {
+func mapReleaseDate(value *storefront.StoreReleaseDate) domain.RawReleaseDate {
 	if value == nil {
-		return domain.ReleaseDate{}
+		return domain.RawReleaseDate{}
 	}
-	return domain.ReleaseDate{ComingSoon: value.ComingSoon, DateText: value.Date}
+	return domain.RawReleaseDate{ComingSoon: value.ComingSoon, DateText: value.Date}
+}
+
+func cloneDate(value *time.Time) *time.Time {
+	if value == nil {
+		return nil
+	}
+	date := time.Date(value.Year(), value.Month(), value.Day(), 0, 0, 0, 0, time.UTC)
+	return &date
+}
+
+func positiveInt(value int) *int {
+	if value <= 0 {
+		return nil
+	}
+	return &value
+}
+
+func nonEmptyString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }
 
 func mapPlatforms(value storefront.StorePlatforms) domain.PlatformSupport {

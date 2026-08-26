@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -11,10 +12,14 @@ import (
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
 	cs "github.com/gofurry/gofurry-game-collector/common/service"
 	gamesqlc "github.com/gofurry/gofurry-game-collector/internal/db/game/sqlc"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const defaultDetailsCacheTTL = 7 * 24 * time.Hour
+
+// ErrStaleCollection means the parent game's AppID changed after Steam data was fetched.
+var ErrStaleCollection = errors.New("stale Steam details collection")
 
 // DetailsRepository writes v2 game details into PostgreSQL and Redis.
 type DetailsRepository struct {
@@ -42,6 +47,16 @@ func (r *DetailsRepository) SaveDetails(ctx context.Context, data domain.Details
 	}
 	defer tx.Rollback(ctx)
 	queries := gamesqlc.New(tx)
+	target, err := queries.LockGameTarget(ctx, data.Details.GameID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("%w: game_id=%d no longer exists", ErrStaleCollection, data.Details.GameID)
+		}
+		return fmt.Errorf("lock game target: %w", err)
+	}
+	if target.Appid != int64(data.Details.AppID) {
+		return fmt.Errorf("%w: game_id=%d collected_appid=%d current_appid=%d", ErrStaleCollection, data.Details.GameID, data.Details.AppID, target.Appid)
+	}
 	if err := upsertDetails(ctx, queries, data.Details); err != nil {
 		return err
 	}
@@ -63,6 +78,16 @@ func (r *DetailsRepository) SaveDetails(ctx context.Context, data domain.Details
 	}
 	if err := upsertRequirements(ctx, queries, data.Requirements); err != nil {
 		return err
+	}
+	if data.CanonicalRelease != nil {
+		if err := saveCanonicalRelease(ctx, queries, *data.CanonicalRelease); err != nil {
+			return err
+		}
+	}
+	if data.CanonicalLanguages != nil {
+		if err := replaceCanonicalLanguages(ctx, queries, data.Details.GameID, data.CanonicalLanguages.Items); err != nil {
+			return err
+		}
 	}
 	for _, snapshot := range data.Snapshots {
 		if err := insertSnapshot(ctx, queries, snapshot); err != nil {
@@ -116,10 +141,10 @@ func upsertDetails(ctx context.Context, queries *gamesqlc.Queries, item domain.G
 		HeaderUrl:          item.HeaderURL,
 		Developers:         developers,
 		Publishers:         publishers,
-		ReleaseComingSoon:  item.Release.ComingSoon,
-		ReleaseDateText:    item.Release.DateText,
+		ReleaseComingSoon:  item.ReleaseRaw.ComingSoon,
+		ReleaseDateText:    item.ReleaseRaw.DateText,
 		Platforms:          platforms,
-		SupportedLanguages: item.SupportedLanguages,
+		SupportedLanguages: item.SupportedLanguagesRaw,
 		SupportInfo:        supportInfo,
 		ContentDescriptors: contentDescriptors,
 		Ratings:            ratings,
@@ -321,7 +346,7 @@ func insertSnapshot(ctx context.Context, queries *gamesqlc.Queries, item domain.
 	})
 }
 
-func pruneSnapshots(ctx context.Context, queries *gamesqlc.Queries, appID uint32, lang domain.Language, region domain.Region) error {
+func pruneSnapshots(ctx context.Context, queries *gamesqlc.Queries, appID uint32, lang domain.StoreLocale, region domain.Region) error {
 	_, err := queries.PruneDetailSnapshots(ctx, gamesqlc.PruneDetailSnapshotsParams{Appid: int64(appID), Lang: string(lang), Region: string(region)})
 	return err
 }
@@ -361,7 +386,7 @@ func (r *DetailsRepository) refreshCache(data domain.DetailsCollection) {
 	}
 }
 
-func detailsCacheKey(gameID int64, lang domain.Language) string {
+func detailsCacheKey(gameID int64, lang domain.StoreLocale) string {
 	return fmt.Sprintf("game:v2:details:%d:%s", gameID, lang)
 }
 
