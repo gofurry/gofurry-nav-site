@@ -13,6 +13,7 @@ import (
 const searchJoins = `
 LEFT JOIN gfg_game_v2_details d ON d.game_id = g.id
 LEFT JOIN gfg_game_first_available fa ON fa.game_id = g.id
+LEFT JOIN gfg_game_release_state rs ON rs.game_id = g.id
 LEFT JOIN gfg_game_v2_localized_details ld ON ld.game_id = g.id AND ld.lang = $1
 LEFT JOIN (
     SELECT DISTINCT ON (game_id) game_id, url
@@ -56,7 +57,7 @@ func (dao *ReadModelDAO) SearchGames(ctx context.Context, query v2models.GameV2S
 	if err != nil {
 		return res, common.NewDaoError(fmt.Sprintf("查询游戏 v2 搜索结果失败: %v", err))
 	}
-	attachSearchFirstAvailable(items)
+	attachSearchCanonicalDomain(items)
 	res.Data = items
 	return res, nil
 }
@@ -74,13 +75,21 @@ OR ld.name ILIKE `+p+` OR ld.short_description ILIKE `+p+`
 OR EXISTS (SELECT 1 FROM gfg_tag_map tm JOIN gfg_tag t ON t.id=tm.tag_id
 WHERE tm.game_id=g.id AND (t.name ILIKE `+p+` OR t.name_en ILIKE `+p+`)))`)
 	}
+	if query.Availability != "" {
+		args = append(args, query.Availability)
+		clauses = append(clauses, fmt.Sprintf("rs.availability = $%d", len(args)))
+	}
 	if !query.UpdateStartTime.IsZero() && !query.UpdateEndTime.IsZero() {
 		args = append(args, query.UpdateStartTime, query.UpdateEndTime)
 		clauses = append(clauses, fmt.Sprintf("%s BETWEEN $%d AND $%d", searchUpdatedAtExpr(), len(args)-1, len(args)))
 	}
-	if !query.PubStartTime.IsZero() && !query.PubEndTime.IsZero() {
+	if query.Availability != "upcoming" && !query.PubStartTime.IsZero() && !query.PubEndTime.IsZero() {
 		args = append(args, query.PubStartTime, query.PubEndTime)
 		clauses = append(clauses, fmt.Sprintf("fa.window_start <= $%d::date AND fa.window_end >= $%d::date", len(args), len(args)-1))
+	}
+	if query.Availability == "upcoming" && !query.PlannedStartTime.IsZero() && !query.PlannedEndTime.IsZero() {
+		args = append(args, query.PlannedStartTime, query.PlannedEndTime)
+		clauses = append(clauses, fmt.Sprintf("rs.window_start <= $%d::date AND rs.window_end >= $%d::date", len(args), len(args)-1))
 	}
 	if len(query.TagList) > 0 {
 		args = append(args, query.TagList, len(query.TagList))
@@ -111,14 +120,28 @@ COALESCE(comment_stats.avg_score, 0)::double precision AS avg_score,
 fa.precision AS fa_precision, fa.exact_date AS fa_exact_date,
 fa.release_year AS fa_release_year, fa.release_month AS fa_release_month,
 fa.release_quarter AS fa_release_quarter, fa.window_start AS fa_window_start,
-fa.window_end AS fa_window_end, fa.source AS fa_source, fa.inferred AS fa_inferred`,
+fa.window_end AS fa_window_end, fa.source AS fa_source, fa.inferred AS fa_inferred,
+rs.availability AS rs_availability, rs.precision AS rs_precision,
+rs.exact_date AS rs_exact_date, rs.release_year AS rs_release_year,
+rs.release_month AS rs_release_month, rs.release_quarter AS rs_release_quarter,
+rs.window_start AS rs_window_start, rs.window_end AS rs_window_end,
+rs.raw_text AS rs_raw_text, rs.observed_at AS rs_observed_at`,
 		nameExpr, infoExpr, searchUpdatedAtExpr(), primaryTagExpr, secondaryTagExpr)
 }
 
 func searchOrder(query v2models.GameV2SearchPageQuery) string {
 	orders := []string{}
 	if query.TimeOrder {
-		orders = append(orders, "g.create_time DESC")
+		if query.Availability == "upcoming" {
+			orders = append(orders,
+				"CASE WHEN rs.window_end >= CURRENT_DATE THEN 0 WHEN rs.window_end IS NOT NULL THEN 1 ELSE 2 END ASC",
+				"rs.window_end ASC NULLS LAST",
+				"rs.window_start ASC NULLS LAST",
+				"CASE rs.precision WHEN 'day' THEN 1 WHEN 'month' THEN 2 WHEN 'quarter' THEN 3 WHEN 'year' THEN 4 WHEN 'tba' THEN 5 ELSE 6 END ASC",
+			)
+		} else {
+			orders = append(orders, "g.create_time DESC")
+		}
 	}
 	if query.RemarkOrder {
 		orders = append(orders, "comment_stats.remark_count DESC NULLS LAST")

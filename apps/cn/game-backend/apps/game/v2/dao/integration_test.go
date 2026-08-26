@@ -99,6 +99,10 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	if gfErr != nil || len(list) != 1 || list[0].Site.ID != 91001 {
 		t.Fatalf("list: rows=%+v err=%v", list, gfErr)
 	}
+	newestGames, gfErr := readDAO.ListGameAggregates(ctx, v2models.GameV2ListQuery{Lang: "zh", Limit: 10, Sort: "newest"})
+	if gfErr != nil || len(newestGames) != 2 || newestGames[0].Site.ID != 91002 || newestGames[0].ReleaseState == nil || newestGames[0].ReleaseState.Availability != "upcoming" {
+		t.Fatalf("recently collected must include upcoming games: rows=%+v err=%v", newestGames, gfErr)
+	}
 	latestGames, gfErr := readDAO.ListGameAggregates(ctx, v2models.GameV2ListQuery{Lang: "zh", Limit: 10, Sort: "release_date"})
 	if gfErr != nil || len(latestGames) != 1 || latestGames[0].Site.ID != 91001 || latestGames[0].FirstAvailable == nil {
 		t.Fatalf("canonical latest games: rows=%+v err=%v", latestGames, gfErr)
@@ -111,8 +115,21 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	if !ok || len(items) != 1 || items[0].AppID != 92001 || items[0].Name != "English Game" {
 		t.Fatalf("unexpected search items: %#v", page.Data)
 	}
-	if items[0].FirstAvailable == nil || items[0].FirstAvailable.Precision != "month" || items[0].FirstAvailable.ExactDate != nil || items[0].FirstAvailable.WindowEnd != "2026-08-31" {
+	if items[0].Release == nil || items[0].Release.Availability != "available" || items[0].FirstAvailable == nil || items[0].FirstAvailable.Precision != "month" || items[0].FirstAvailable.ExactDate != nil || items[0].FirstAvailable.WindowEnd != "2026-08-31" {
 		t.Fatalf("search item missing structured first available: %#v", items[0])
+	}
+	upcomingPage, gfErr := readDAO.SearchGames(ctx, v2models.GameV2SearchPageQuery{
+		Lang: "en", Content: "Second", Availability: "upcoming", TimeOrder: true,
+		PlannedStartTime: time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC),
+		PlannedEndTime:   time.Date(2026, 11, 30, 23, 59, 59, 0, time.UTC),
+		PageNum:          1, PageSize: 10,
+	})
+	if gfErr != nil || upcomingPage.Total != 1 {
+		t.Fatalf("upcoming planned-window search: page=%+v err=%v", upcomingPage, gfErr)
+	}
+	upcomingItems := upcomingPage.Data.([]v2models.GameV2SearchPageItem)
+	if len(upcomingItems) != 1 || upcomingItems[0].ID != "91002" || upcomingItems[0].Release == nil || upcomingItems[0].Release.Precision != "quarter" || upcomingItems[0].FirstAvailable != nil {
+		t.Fatalf("unexpected upcoming search items: %#v", upcomingItems)
 	}
 	intervalPage, gfErr := readDAO.SearchGames(ctx, v2models.GameV2SearchPageQuery{
 		Lang: "zh", PubStartTime: time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC),

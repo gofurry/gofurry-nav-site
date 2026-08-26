@@ -418,6 +418,32 @@ func TestSimpleSearchNormalizesQuery(t *testing.T) {
 	}
 }
 
+func TestSearchPageNormalizesReleaseFilters(t *testing.T) {
+	reader := &fakeDetailReader{}
+	svc := NewReadModelServiceWithReader(reader)
+	plannedStart := time.Date(2026, time.September, 1, 0, 0, 0, 0, time.Local)
+	plannedEnd := time.Date(2026, time.December, 31, 23, 59, 59, 0, time.Local)
+
+	_, err := svc.SearchPage(context.Background(), v2models.GameV2SearchPageQueryRequest{
+		Availability:     "  UPCOMING ",
+		PlannedStartTime: cm.LocalTime(plannedStart),
+		PlannedEndTime:   cm.LocalTime(plannedEnd),
+		TimeOrder:        true,
+	})
+	if err != nil {
+		t.Fatalf("SearchPage returned error: %s", err.GetMsg())
+	}
+	if reader.searchQuery.Availability != "upcoming" {
+		t.Fatalf("availability = %q, want upcoming", reader.searchQuery.Availability)
+	}
+	if !reader.searchQuery.PlannedStartTime.Equal(plannedStart) || !reader.searchQuery.PlannedEndTime.Equal(plannedEnd) {
+		t.Fatalf("planned range = %s..%s", reader.searchQuery.PlannedStartTime, reader.searchQuery.PlannedEndTime)
+	}
+	if !reader.searchQuery.TimeOrder {
+		t.Fatal("planned release ordering should remain enabled")
+	}
+}
+
 func TestGetGameReviewsDesensitizesIP(t *testing.T) {
 	reader := &fakeDetailReader{
 		reviews: v2models.GameV2ReviewList{

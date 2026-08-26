@@ -301,7 +301,9 @@ Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读�
 8. 从 `gfg_game_v2_player_counts` 获取最近一条 `status='success'` 的在线人数，并按后端 `game.online_peak_cache_days` 配置窗口计算 `peak_count`。
 9. 从站内标签、评论、浏览量表补齐站内增强数据。
 
-列表批量读取 `release_state` 与 `first_available`，不为 languages 增加 N+1。Latest Games 只包含存在 First Available 的游戏并按 `window_end DESC, game_id DESC` 排序；发行区间搜索使用 `[window_start, window_end]` overlap。
+列表批量读取 `release_state` 与 `first_available`，不为 languages 增加 N+1。Latest Games 只包含存在 First Available 的游戏并按 `window_end DESC, game_id DESC` 排序；Recently Collected 只按 `gfg_game.create_time DESC, game_id DESC` 排序，不因 `available`、`upcoming` 或 `unknown` 改变收录资格。
+
+高级搜索接受可选 `availability=available|upcoming`。省略时保持兼容，不增加状态过滤；Nav Web 默认明确发送 `available`。`pub_start_time/pub_end_time` 始终表示 First Available `[window_start, window_end]` overlap，`planned_start_time/planned_end_time` 只在 `availability=upcoming` 时表示 Current Release State planned window overlap，两组字段不得互换语义。Upcoming 默认按有效未来 `window_end ASC`、`window_start ASC`、precision 排序，过期 observation 随后，TBA 最后。搜索响应同时提供轻量 `release` 与 `first_available`。
 
 新闻列表建议用 `published_at DESC NULLS LAST, collected_at DESC` 排序。
 

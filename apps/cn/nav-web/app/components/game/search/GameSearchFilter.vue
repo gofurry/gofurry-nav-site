@@ -43,9 +43,32 @@
           </div>
         </div>
 
-        <!-- 发布时间 -->
+        <!-- 发行状态 -->
         <div>
-          <label class="game-search-filter-label">{{ t("game.search.publishTime") }}</label>
+          <label class="game-search-filter-label">{{ t("game.search.releaseStatus") }}</label>
+          <div class="mt-2 flex flex-wrap gap-2" role="radiogroup" :aria-label="t('game.search.releaseStatus')">
+            <button
+                v-for="item in availabilityOptions"
+                :key="item.value"
+                type="button"
+                role="radio"
+                :aria-checked="props.query.availability === item.value"
+                @click="setAvailability(item.value)"
+                :class="[
+                  'game-search-filter-chip',
+                  props.query.availability === item.value
+                    ? 'game-search-filter-chip--active'
+                    : 'game-search-filter-chip--idle'
+                ]"
+            >
+              {{ t(item.label) }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 首次可用时间 -->
+        <div v-if="props.query.availability === 'available'">
+          <label class="game-search-filter-label">{{ t("game.search.firstAvailableTime") }}</label>
           <div class="game-search-date-range mt-1">
             <VueDatePicker
                 v-model="publishStart"
@@ -56,6 +79,27 @@
             />
             <VueDatePicker
                 v-model="publishEnd"
+                :enable-time-picker="true"
+                format="yyyy-MM-dd HH:mm:ss"
+                :teleport="false"
+                class="game-date-picker dp-custom-theme"
+            />
+          </div>
+        </div>
+
+        <!-- 预计发售时间 -->
+        <div v-else>
+          <label class="game-search-filter-label">{{ t("game.search.plannedReleaseTime") }}</label>
+          <div class="game-search-date-range mt-1">
+            <VueDatePicker
+                v-model="plannedStart"
+                :enable-time-picker="true"
+                format="yyyy-MM-dd HH:mm:ss"
+                :teleport="false"
+                class="game-date-picker dp-custom-theme"
+            />
+            <VueDatePicker
+                v-model="plannedEnd"
                 :enable-time-picker="true"
                 format="yyyy-MM-dd HH:mm:ss"
                 :teleport="false"
@@ -100,7 +144,7 @@
                   : 'game-search-filter-chip--idle'
               ]"
             >
-              {{ t(item.label) }}
+              {{ t(item.key === 'latestInfo' && props.query.availability === 'upcoming' ? 'game.search.plannedReleaseOrder' : item.label) }}
             </span>
           </div>
         </div>
@@ -146,7 +190,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted } from 'vue'
-import type { GameTagRecord, SearchPageQueryRequest } from '@/types/game'
+import type { GameSearchAvailability, GameTagRecord, SearchPageQueryRequest } from '@/types/game'
 import { formatLocalDateTime } from '@/utils/util'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
@@ -165,26 +209,34 @@ const emit = defineEmits<{
 }>()
 
 // =============== 时间 ===============
-const publishStart = ref<Date>(
-    props.query.pub_start_time
-        ? new Date(props.query.pub_start_time.replace(' ', 'T'))
-        : new Date(2000, 0, 1)
-)
-const publishEnd = ref<Date>(
-    props.query.pub_end_time
-        ? new Date(props.query.pub_end_time.replace(' ', 'T'))
-        : new Date()
-)
-const updateStart = ref<Date>(
-    props.query.update_start_time
-        ? new Date(props.query.update_start_time.replace(' ', 'T'))
-        : new Date(2000, 0, 1)
-)
-const updateEnd = ref<Date>(
-    props.query.update_end_time
-        ? new Date(props.query.update_end_time.replace(' ', 'T'))
-        : new Date()
-)
+const parseOptionalDate = (value?: string) => value ? new Date(value.replace(' ', 'T')) : null
+
+const publishStart = ref<Date | null>(parseOptionalDate(props.query.pub_start_time))
+const publishEnd = ref<Date | null>(parseOptionalDate(props.query.pub_end_time))
+const plannedStart = ref<Date | null>(parseOptionalDate(props.query.planned_start_time))
+const plannedEnd = ref<Date | null>(parseOptionalDate(props.query.planned_end_time))
+const updateStart = ref<Date | null>(parseOptionalDate(props.query.update_start_time))
+const updateEnd = ref<Date | null>(parseOptionalDate(props.query.update_end_time))
+
+const availabilityOptions: Array<{ value: GameSearchAvailability, label: string }> = [
+  { value: 'available', label: 'game.search.released' },
+  { value: 'upcoming', label: 'game.search.upcoming' },
+]
+
+const setAvailability = (availability: GameSearchAvailability) => {
+  props.query.availability = availability
+  if (availability === 'available') {
+    plannedStart.value = null
+    plannedEnd.value = null
+    props.query.planned_start_time = undefined
+    props.query.planned_end_time = undefined
+    return
+  }
+  publishStart.value = null
+  publishEnd.value = null
+  props.query.pub_start_time = undefined
+  props.query.pub_end_time = undefined
+}
 
 // =============== 排序 ===============
 const sortOptions = reactive([
@@ -265,14 +317,21 @@ watch(() => props.tagGroups, buildCategoryGroups, { deep: true })
 
 const formatDateTime = formatLocalDateTime
 
+const formatOptionalDateTime = (value: Date | null) => value ? formatDateTime(value) : undefined
+
 watch([publishStart, publishEnd], () => {
-  props.query.pub_start_time = formatDateTime(publishStart.value)
-  props.query.pub_end_time = formatDateTime(publishEnd.value)
+  props.query.pub_start_time = formatOptionalDateTime(publishStart.value)
+  props.query.pub_end_time = formatOptionalDateTime(publishEnd.value)
+})
+
+watch([plannedStart, plannedEnd], () => {
+  props.query.planned_start_time = formatOptionalDateTime(plannedStart.value)
+  props.query.planned_end_time = formatOptionalDateTime(plannedEnd.value)
 })
 
 watch([updateStart, updateEnd], () => {
-  props.query.update_start_time = formatDateTime(updateStart.value)
-  props.query.update_end_time = formatDateTime(updateEnd.value)
+  props.query.update_start_time = formatOptionalDateTime(updateStart.value)
+  props.query.update_end_time = formatOptionalDateTime(updateEnd.value)
 })
 
 const onSearch = () => {

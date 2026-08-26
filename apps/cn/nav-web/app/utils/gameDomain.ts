@@ -1,4 +1,4 @@
-import type { GameReleasePrecision, GameV2FirstAvailable, GameV2Language, GameV2Release } from '~/types/game'
+import type { GameReleasePrecision, GameV2FirstAvailable, GameV2Language, GameV2ReleaseState } from '~/types/game'
 
 export type GameDisplayLocale = 'zh' | 'en'
 
@@ -45,7 +45,7 @@ export function formatGameCalendar(value: GameCalendarValue, locale: GameDisplay
 }
 
 export function resolveGameReleaseDisplay(
-  release: GameV2Release | null | undefined,
+  release: GameV2ReleaseState | null | undefined,
   firstAvailable: GameV2FirstAvailable | null | undefined,
   locale: GameDisplayLocale,
 ): GameReleaseDisplay {

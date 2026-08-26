@@ -104,8 +104,11 @@ export interface SearchPageQueryRequest {
     pageNum: number
     pageSize: number
     content?: string
+    availability?: GameSearchAvailability
     pub_start_time?: string // 格式: "2025-12-29 22:56:00"
     pub_end_time?: string
+    planned_start_time?: string
+    planned_end_time?: string
     update_start_time?: string
     update_end_time?: string
     score?: boolean
@@ -127,8 +130,11 @@ export interface SearchPageResponseItem {
     appid: number
     primary_tag: string
     secondary_tag: string
+    release: GameV2ReleaseState | null
     first_available: GameV2FirstAvailable | null
 }
+
+export type GameSearchAvailability = 'available' | 'upcoming'
 
 export interface SearchPageResponse {
     total: number
@@ -445,6 +451,8 @@ export interface GameV2Release {
     raw_text: string
     observed_at: string | null
 }
+
+export type GameV2ReleaseState = Omit<GameV2Release, 'coming_soon' | 'date'>
 
 export type GameReleasePrecision = 'day' | 'month' | 'quarter' | 'year' | 'tba' | 'none' | 'unknown'
 

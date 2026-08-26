@@ -16,6 +16,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 - Normalize canonical release and language facts only from the US/English Steam response while preserving non-authoritative observations.
 - Make Latest Games and release-range search use First Available calendar windows instead of legacy release strings.
+- Keep Recently Collected independent of release status, and add mutually exclusive released/upcoming search with canonical planned-release range filtering and ordering.
 - Stop Admin and Backend runtime reads/writes of `gfg_game.release_date`; AppID changes now reset Steam-derived state transactionally and re-enqueue collection after commit.
 
 ## v2.4.0 - 2026-08-23

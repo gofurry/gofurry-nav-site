@@ -294,16 +294,19 @@ type GameV2SearchRequest struct {
 
 type GameV2SearchPageQueryRequest struct {
 	cm.PageReq
-	Content         *string      `json:"content"`
-	PubStartTime    cm.LocalTime `json:"pub_start_time"`
-	PubEndTime      cm.LocalTime `json:"pub_end_time"`
-	UpdateStartTime cm.LocalTime `json:"update_start_time"`
-	UpdateEndTime   cm.LocalTime `json:"update_end_time"`
-	ScoreOrder      bool         `json:"score"`
-	RemarkOrder     bool         `json:"remark_order"`
-	TimeOrder       bool         `json:"time_order"`
-	TagList         []int64      `json:"tag_list"`
-	Lang            string       `json:"lang"`
+	Content          *string      `json:"content"`
+	Availability     string       `json:"availability"`
+	PubStartTime     cm.LocalTime `json:"pub_start_time"`
+	PubEndTime       cm.LocalTime `json:"pub_end_time"`
+	PlannedStartTime cm.LocalTime `json:"planned_start_time"`
+	PlannedEndTime   cm.LocalTime `json:"planned_end_time"`
+	UpdateStartTime  cm.LocalTime `json:"update_start_time"`
+	UpdateEndTime    cm.LocalTime `json:"update_end_time"`
+	ScoreOrder       bool         `json:"score"`
+	RemarkOrder      bool         `json:"remark_order"`
+	TimeOrder        bool         `json:"time_order"`
+	TagList          []int64      `json:"tag_list"`
+	Lang             string       `json:"lang"`
 }
 
 type GameV2SearchItem struct {
@@ -325,7 +328,18 @@ type GameV2SearchPageItem struct {
 	AvgScore         float64               `db:"avg_score" json:"avg_score"`
 	PrimaryTag       string                `db:"primary_tag" json:"primary_tag"`
 	SecondaryTag     string                `db:"secondary_tag" json:"secondary_tag"`
+	Release          *GameV2ReleaseState   `db:"-" json:"release"`
 	FirstAvailable   *GameV2FirstAvailable `db:"-" json:"first_available"`
+	RSAvailability   *string               `db:"rs_availability" json:"-"`
+	RSPrecision      *string               `db:"rs_precision" json:"-"`
+	RSExactDate      *time.Time            `db:"rs_exact_date" json:"-"`
+	RSReleaseYear    *int32                `db:"rs_release_year" json:"-"`
+	RSReleaseMonth   *int32                `db:"rs_release_month" json:"-"`
+	RSReleaseQuarter *int32                `db:"rs_release_quarter" json:"-"`
+	RSWindowStart    *time.Time            `db:"rs_window_start" json:"-"`
+	RSWindowEnd      *time.Time            `db:"rs_window_end" json:"-"`
+	RSRawText        *string               `db:"rs_raw_text" json:"-"`
+	RSObservedAt     *time.Time            `db:"rs_observed_at" json:"-"`
 	FAPrecision      *string               `db:"fa_precision" json:"-"`
 	FAExactDate      *time.Time            `db:"fa_exact_date" json:"-"`
 	FAReleaseYear    *int32                `db:"fa_release_year" json:"-"`
@@ -345,18 +359,21 @@ type GameV2TagRecord struct {
 }
 
 type GameV2SearchPageQuery struct {
-	Lang            string
-	Content         string
-	PubStartTime    time.Time
-	PubEndTime      time.Time
-	UpdateStartTime time.Time
-	UpdateEndTime   time.Time
-	ScoreOrder      bool
-	RemarkOrder     bool
-	TimeOrder       bool
-	TagList         []int64
-	PageNum         int
-	PageSize        int
+	Lang             string
+	Content          string
+	Availability     string
+	PubStartTime     time.Time
+	PubEndTime       time.Time
+	PlannedStartTime time.Time
+	PlannedEndTime   time.Time
+	UpdateStartTime  time.Time
+	UpdateEndTime    time.Time
+	ScoreOrder       bool
+	RemarkOrder      bool
+	TimeOrder        bool
+	TagList          []int64
+	PageNum          int
+	PageSize         int
 }
 
 type GameV2ReviewList struct {

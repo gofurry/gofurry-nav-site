@@ -105,9 +105,23 @@ func languageView(row gamesqlc.GfgGameLanguage) v2models.GameV2Language {
 	}
 }
 
-func attachSearchFirstAvailable(items []v2models.GameV2SearchPageItem) {
+func attachSearchCanonicalDomain(items []v2models.GameV2SearchPageItem) {
 	for index := range items {
 		item := &items[index]
+		if item.RSAvailability != nil && item.RSPrecision != nil {
+			item.Release = &v2models.GameV2ReleaseState{
+				Availability: *item.RSAvailability,
+				Precision:    *item.RSPrecision,
+				ExactDate:    calendarTime(item.RSExactDate),
+				Year:         item.RSReleaseYear,
+				Month:        item.RSReleaseMonth,
+				Quarter:      item.RSReleaseQuarter,
+				WindowStart:  calendarTime(item.RSWindowStart),
+				WindowEnd:    calendarTime(item.RSWindowEnd),
+				RawText:      stringPointerValue(item.RSRawText),
+				ObservedAt:   item.RSObservedAt,
+			}
+		}
 		if item.FAPrecision == nil || item.FAReleaseYear == nil || item.FAWindowStart == nil || item.FAWindowEnd == nil || item.FASource == nil || item.FAInferred == nil {
 			continue
 		}
@@ -123,6 +137,13 @@ func attachSearchFirstAvailable(items []v2models.GameV2SearchPageItem) {
 			Inferred:    *item.FAInferred,
 		}
 	}
+}
+
+func stringPointerValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 func calendarDate(value pgtype.Date) *string {

@@ -1313,18 +1313,32 @@ func normalizeSearchPageQuery(req v2models.GameV2SearchPageQueryRequest) v2model
 		content = strings.TrimSpace(*req.Content)
 	}
 	return v2models.GameV2SearchPageQuery{
-		Lang:            normalizeLang(req.Lang),
-		Content:         content,
-		PubStartTime:    req.PubStartTime.Time(),
-		PubEndTime:      req.PubEndTime.Time(),
-		UpdateStartTime: req.UpdateStartTime.Time(),
-		UpdateEndTime:   req.UpdateEndTime.Time(),
-		ScoreOrder:      req.ScoreOrder,
-		RemarkOrder:     req.RemarkOrder,
-		TimeOrder:       req.TimeOrder,
-		TagList:         append([]int64(nil), req.TagList...),
-		PageNum:         req.PageNum,
-		PageSize:        req.PageSize,
+		Lang:             normalizeLang(req.Lang),
+		Content:          content,
+		Availability:     normalizeSearchAvailability(req.Availability),
+		PubStartTime:     req.PubStartTime.Time(),
+		PubEndTime:       req.PubEndTime.Time(),
+		PlannedStartTime: req.PlannedStartTime.Time(),
+		PlannedEndTime:   req.PlannedEndTime.Time(),
+		UpdateStartTime:  req.UpdateStartTime.Time(),
+		UpdateEndTime:    req.UpdateEndTime.Time(),
+		ScoreOrder:       req.ScoreOrder,
+		RemarkOrder:      req.RemarkOrder,
+		TimeOrder:        req.TimeOrder,
+		TagList:          append([]int64(nil), req.TagList...),
+		PageNum:          req.PageNum,
+		PageSize:         req.PageSize,
+	}
+}
+
+func normalizeSearchAvailability(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "available":
+		return "available"
+	case "upcoming":
+		return "upcoming"
+	default:
+		return ""
 	}
 }
 
