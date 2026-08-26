@@ -65,6 +65,10 @@
                         :alt="game.name"
                     />
 
+                    <div class="search-release-badge">
+                      {{ releaseText(game) }}
+                    </div>
+
                     <button
                         class="search-review-button"
                         type="button"
@@ -115,10 +119,6 @@
                   <p class="search-page-desc">
                     {{ game.info }}
                   </p>
-
-                  <div class="search-page-release">
-                    {{ releaseText(game) }}
-                  </div>
 
                   <div class="search-page-meta">
                     <span class="search-page-score">
@@ -559,17 +559,6 @@ onBeforeUnmount(() => {
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-}
-
-.search-page-release {
-  margin-top: 0.35rem;
-  overflow: hidden;
-  color: var(--games-search-accent);
-  font-size: 0.75rem;
-  font-weight: 650;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .search-page-meta {
