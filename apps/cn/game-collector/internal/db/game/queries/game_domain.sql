@@ -105,6 +105,6 @@ SELECT g.id AS game_id,
        COALESCE(d.release_coming_soon, false)::boolean AS release_coming_soon,
        d.collected_at AS source_observed_at
 FROM gfg_game g
-LEFT JOIN gfg_game_v2_details d ON d.game_id = g.id
+LEFT JOIN gfg_game_details d ON d.game_id = g.id
 WHERE btrim(g.release_date) <> ''
 ORDER BY g.id;

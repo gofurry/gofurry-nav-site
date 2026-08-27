@@ -11,6 +11,8 @@ import (
 	env "github.com/gofurry/gofurry-admin/config"
 	authcontroller "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
 	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
+	collectioncontroller "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/controller"
+	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
 	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
 	navadmin "github.com/gofurry/gofurry-admin/internal/app/navadmin/controller"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
@@ -22,13 +24,14 @@ import (
 )
 
 type Runtime struct {
-	Pools       *db.Pools
-	Audit       *audit.Logger
-	AuthService *authservice.AuthService
-	AuthAPI     *authcontroller.AuthAPI
-	NavAPI      *navadmin.NavAPI
-	GameAPI     *gameadmin.GameAPI
-	OptionsAPI  *options.OptionsAPI
+	Pools         *db.Pools
+	Audit         *audit.Logger
+	AuthService   *authservice.AuthService
+	AuthAPI       *authcontroller.AuthAPI
+	NavAPI        *navadmin.NavAPI
+	GameAPI       *gameadmin.GameAPI
+	OptionsAPI    *options.OptionsAPI
+	CollectionAPI *collectioncontroller.API
 
 	started      atomic.Bool
 	shutdownOnce sync.Once
@@ -66,6 +69,7 @@ func Start() (*Runtime, error) {
 		Pools: pools, Audit: auditLogger, AuthService: auth,
 		AuthAPI: authcontroller.New(auth, auditLogger), NavAPI: navadmin.New(pools.Nav, auditLogger),
 		GameAPI: gameadmin.New(pools.Game, auditLogger), OptionsAPI: options.New(pools.Nav, pools.Game),
+		CollectionAPI: collectioncontroller.New(collectionservice.New(pools.Game, pools.Nav, auditLogger)),
 	}
 	runtime.started.Store(true)
 	log.InfoKV("application bootstrap completed")

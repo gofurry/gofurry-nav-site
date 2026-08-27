@@ -35,7 +35,7 @@ func (dao *ReadModelDAO) loadAggregateExtras(ctx context.Context, aggregate *v2m
 		return err
 	}
 	details, err := queryOptional[v2models.GfgGameV2Details](ctx, dao.pool,
-		"SELECT "+detailsColumns+" FROM gfg_game_v2_details WHERE game_id = $1", gameID)
+		"SELECT "+detailsColumns+" FROM gfg_game_details WHERE game_id = $1", gameID)
 	if err != nil {
 		return fmt.Errorf("查询游戏 v2 详情失败: %w", err)
 	}
@@ -48,19 +48,19 @@ func (dao *ReadModelDAO) loadAggregateExtras(ctx context.Context, aggregate *v2m
 	aggregate.Localized = localized
 
 	if aggregate.Prices, err = queryMany[v2models.GfgGameV2Price](ctx, dao.pool,
-		"SELECT "+priceColumns+" FROM gfg_game_v2_prices WHERE game_id = $1 ORDER BY region ASC", gameID); err != nil {
+		"SELECT "+priceColumns+" FROM gfg_game_prices WHERE game_id = $1 ORDER BY region ASC", gameID); err != nil {
 		return fmt.Errorf("查询游戏 v2 价格失败: %w", err)
 	}
 	if aggregate.Media, err = queryMany[v2models.GfgGameV2Media](ctx, dao.pool,
-		"SELECT "+mediaColumns+" FROM gfg_game_v2_media WHERE game_id = $1 ORDER BY media_type, sort_order, id", gameID); err != nil {
+		"SELECT "+mediaColumns+" FROM gfg_game_media WHERE game_id = $1 ORDER BY media_type, sort_order, id", gameID); err != nil {
 		return fmt.Errorf("查询游戏 v2 媒体失败: %w", err)
 	}
 	if aggregate.Assets, err = queryMany[v2models.GfgGameV2Asset](ctx, dao.pool,
-		"SELECT "+assetColumns+" FROM gfg_game_v2_assets WHERE game_id = $1 ORDER BY asset_family, sort_order, id", gameID); err != nil {
+		"SELECT "+assetColumns+" FROM gfg_game_assets WHERE game_id = $1 ORDER BY asset_family, sort_order, id", gameID); err != nil {
 		return fmt.Errorf("查询游戏 v2 统一媒体资产失败: %w", err)
 	}
 	aggregate.Requirements, err = queryOptional[v2models.GfgGameV2Requirements](ctx, dao.pool,
-		"SELECT "+requirementsColumns+" FROM gfg_game_v2_requirements WHERE game_id = $1", gameID)
+		"SELECT "+requirementsColumns+" FROM gfg_game_requirements WHERE game_id = $1", gameID)
 	if err != nil {
 		return fmt.Errorf("查询游戏 v2 配置需求失败: %w", err)
 	}
@@ -71,7 +71,7 @@ func (dao *ReadModelDAO) loadAggregateExtras(ctx context.Context, aggregate *v2m
 		}
 	}
 	aggregate.OnlineCount, err = queryOptional[v2models.GfgGameV2PlayerCount](ctx, dao.pool,
-		"SELECT "+playerCountColumns+" FROM gfg_game_v2_player_counts WHERE game_id = $1 AND status = 'success' ORDER BY collected_at DESC, id DESC LIMIT 1", gameID)
+		"SELECT "+playerCountColumns+" FROM gfg_game_player_counts WHERE game_id = $1 AND status = 'success' ORDER BY collected_at DESC, id DESC LIMIT 1", gameID)
 	if err != nil {
 		return fmt.Errorf("查询游戏 v2 在线人数失败: %w", err)
 	}
@@ -95,7 +95,7 @@ FROM gfg_game_comment WHERE game_id = $1`, gameID).
 func (dao *ReadModelDAO) loadLocalized(ctx context.Context, gameID int64, lang string) (*v2models.GfgGameV2LocalizedDetails, error) {
 	requestedLang := normalizeDAOLang(lang)
 	primary, err := queryOptional[v2models.GfgGameV2LocalizedDetails](ctx, dao.pool,
-		"SELECT "+localizedColumns+" FROM gfg_game_v2_localized_details WHERE game_id = $1 AND lang = $2", gameID, requestedLang)
+		"SELECT "+localizedColumns+" FROM gfg_game_localized_details WHERE game_id = $1 AND lang = $2", gameID, requestedLang)
 	if err != nil {
 		return nil, fmt.Errorf("查询游戏 v2 本地化详情失败: %w", err)
 	}
@@ -104,7 +104,7 @@ func (dao *ReadModelDAO) loadLocalized(ctx context.Context, gameID int64, lang s
 		return primary, nil
 	}
 	fallback, err := queryOptional[v2models.GfgGameV2LocalizedDetails](ctx, dao.pool,
-		"SELECT "+localizedColumns+" FROM gfg_game_v2_localized_details WHERE game_id = $1 AND lang = $2", gameID, fallbackLang)
+		"SELECT "+localizedColumns+" FROM gfg_game_localized_details WHERE game_id = $1 AND lang = $2", gameID, fallbackLang)
 	if err != nil {
 		return nil, fmt.Errorf("查询游戏 v2 回退详情失败: %w", err)
 	}
@@ -166,7 +166,7 @@ func chooseLocalizedText(primary *string, fallback *string) *string {
 func (dao *ReadModelDAO) loadNews(ctx context.Context, gameID int64, lang string, limit int) ([]v2models.GfgGameV2News, error) {
 	lang = normalizeDAOLang(lang)
 	rows, err := queryMany[v2models.GfgGameV2News](ctx, dao.pool,
-		"SELECT "+newsColumns+" FROM gfg_game_v2_news WHERE game_id = $1 AND lang = $2 ORDER BY published_at DESC NULLS LAST, id DESC LIMIT $3",
+		"SELECT "+newsColumns+" FROM gfg_game_news WHERE game_id = $1 AND lang = $2 ORDER BY published_at DESC NULLS LAST, id DESC LIMIT $3",
 		gameID, lang, limit)
 	if err != nil {
 		return nil, fmt.Errorf("查询游戏 v2 新闻失败: %w", err)
@@ -175,7 +175,7 @@ func (dao *ReadModelDAO) loadNews(ctx context.Context, gameID int64, lang string
 		return rows, nil
 	}
 	rows, err = queryMany[v2models.GfgGameV2News](ctx, dao.pool,
-		"SELECT "+newsColumns+" FROM gfg_game_v2_news WHERE game_id = $1 AND lang = 'zh' ORDER BY published_at DESC NULLS LAST, id DESC LIMIT $2",
+		"SELECT "+newsColumns+" FROM gfg_game_news WHERE game_id = $1 AND lang = 'zh' ORDER BY published_at DESC NULLS LAST, id DESC LIMIT $2",
 		gameID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("查询游戏 v2 中文回退新闻失败: %w", err)
@@ -254,7 +254,7 @@ func (dao *ReadModelDAO) loadAggregateExtrasBatch(ctx context.Context, aggregate
 		return err
 	}
 	details, err := queryMany[v2models.GfgGameV2Details](ctx, dao.pool,
-		"SELECT "+detailsColumns+" FROM gfg_game_v2_details WHERE game_id = ANY($1::bigint[])", gameIDs)
+		"SELECT "+detailsColumns+" FROM gfg_game_details WHERE game_id = ANY($1::bigint[])", gameIDs)
 	if err != nil {
 		return fmt.Errorf("批量查询游戏 v2 详情失败: %w", err)
 	}
@@ -265,7 +265,7 @@ func (dao *ReadModelDAO) loadAggregateExtrasBatch(ctx context.Context, aggregate
 	requested := normalizeDAOLang(lang)
 	fallback := localizedFallbackLang(requested)
 	localized, err := queryMany[v2models.GfgGameV2LocalizedDetails](ctx, dao.pool,
-		"SELECT "+localizedColumns+" FROM gfg_game_v2_localized_details WHERE game_id = ANY($1::bigint[]) AND lang = ANY($2::text[])", gameIDs, []string{requested, fallback})
+		"SELECT "+localizedColumns+" FROM gfg_game_localized_details WHERE game_id = ANY($1::bigint[]) AND lang = ANY($2::text[])", gameIDs, []string{requested, fallback})
 	if err != nil {
 		return fmt.Errorf("批量查询游戏 v2 本地化详情失败: %w", err)
 	}
@@ -283,7 +283,7 @@ func (dao *ReadModelDAO) loadAggregateExtrasBatch(ctx context.Context, aggregate
 	}
 
 	prices, err := queryMany[v2models.GfgGameV2Price](ctx, dao.pool,
-		"SELECT "+priceColumns+" FROM gfg_game_v2_prices WHERE game_id = ANY($1::bigint[]) ORDER BY game_id, region", gameIDs)
+		"SELECT "+priceColumns+" FROM gfg_game_prices WHERE game_id = ANY($1::bigint[]) ORDER BY game_id, region", gameIDs)
 	if err != nil {
 		return fmt.Errorf("批量查询游戏 v2 价格失败: %w", err)
 	}
@@ -292,7 +292,7 @@ func (dao *ReadModelDAO) loadAggregateExtrasBatch(ctx context.Context, aggregate
 	}
 
 	media, err := queryMany[v2models.GfgGameV2Media](ctx, dao.pool,
-		"SELECT "+mediaColumns+" FROM gfg_game_v2_media WHERE game_id = ANY($1::bigint[]) ORDER BY game_id, media_type, sort_order, id", gameIDs)
+		"SELECT "+mediaColumns+" FROM gfg_game_media WHERE game_id = ANY($1::bigint[]) ORDER BY game_id, media_type, sort_order, id", gameIDs)
 	if err != nil {
 		return fmt.Errorf("批量查询游戏 v2 媒体失败: %w", err)
 	}
@@ -301,7 +301,7 @@ func (dao *ReadModelDAO) loadAggregateExtrasBatch(ctx context.Context, aggregate
 	}
 
 	assets, err := queryMany[v2models.GfgGameV2Asset](ctx, dao.pool,
-		"SELECT "+assetColumns+" FROM gfg_game_v2_assets WHERE game_id = ANY($1::bigint[]) ORDER BY game_id, asset_family, sort_order, id", gameIDs)
+		"SELECT "+assetColumns+" FROM gfg_game_assets WHERE game_id = ANY($1::bigint[]) ORDER BY game_id, asset_family, sort_order, id", gameIDs)
 	if err != nil {
 		return fmt.Errorf("批量查询游戏 v2 统一媒体资产失败: %w", err)
 	}
@@ -310,7 +310,7 @@ func (dao *ReadModelDAO) loadAggregateExtrasBatch(ctx context.Context, aggregate
 	}
 
 	requirements, err := queryMany[v2models.GfgGameV2Requirements](ctx, dao.pool,
-		"SELECT "+requirementsColumns+" FROM gfg_game_v2_requirements WHERE game_id = ANY($1::bigint[])", gameIDs)
+		"SELECT "+requirementsColumns+" FROM gfg_game_requirements WHERE game_id = ANY($1::bigint[])", gameIDs)
 	if err != nil {
 		return fmt.Errorf("批量查询游戏 v2 配置需求失败: %w", err)
 	}
@@ -319,8 +319,8 @@ func (dao *ReadModelDAO) loadAggregateExtrasBatch(ctx context.Context, aggregate
 	}
 
 	players, err := queryMany[v2models.GfgGameV2PlayerCount](ctx, dao.pool,
-		"SELECT "+playerCountColumns+` FROM gfg_game_v2_player_counts
-WHERE id IN (SELECT DISTINCT ON (game_id) id FROM gfg_game_v2_player_counts
+		"SELECT "+playerCountColumns+` FROM gfg_game_player_counts
+WHERE id IN (SELECT DISTINCT ON (game_id) id FROM gfg_game_player_counts
 WHERE game_id = ANY($1::bigint[]) AND status = 'success' ORDER BY game_id, collected_at DESC, id DESC)`, gameIDs)
 	if err != nil {
 		return fmt.Errorf("批量查询游戏 v2 在线人数失败: %w", err)
@@ -391,7 +391,7 @@ func (dao *ReadModelDAO) queryOnlinePeakCounts(ctx context.Context, gameIDs []in
 		PeakCount int64 `db:"peak_count"`
 	}
 	rows, err := queryMany[peakRow](ctx, dao.pool, `SELECT game_id,
-COALESCE(MAX(count), 0)::bigint AS peak_count FROM gfg_game_v2_player_counts
+COALESCE(MAX(count), 0)::bigint AS peak_count FROM gfg_game_player_counts
 WHERE game_id = ANY($1::bigint[]) AND status = 'success' AND collected_at >= $2
 GROUP BY game_id`, gameIDs, time.Now().AddDate(0, 0, -window))
 	if err != nil {
@@ -476,7 +476,7 @@ func (dao *ReadModelDAO) ListTopOnlineAggregates(ctx context.Context, query v2mo
 	}
 	return dao.listPanelAggregatesBySQL(ctx, query, `SELECT game_id FROM (
 SELECT DISTINCT ON (game_id) game_id, count, collected_at, id
-FROM gfg_game_v2_player_counts WHERE status = 'success'
+FROM gfg_game_player_counts WHERE status = 'success'
 ORDER BY game_id, collected_at DESC, id DESC) latest
 ORDER BY count DESC, collected_at DESC LIMIT $1`, query.Limit)
 }
@@ -485,7 +485,7 @@ func (dao *ReadModelDAO) ListFreeGameAggregates(ctx context.Context, query v2mod
 	if query.Limit <= 0 {
 		query.Limit = 8
 	}
-	return dao.listPanelAggregatesBySQL(ctx, query, `SELECT p.game_id FROM gfg_game_v2_prices p
+	return dao.listPanelAggregatesBySQL(ctx, query, `SELECT p.game_id FROM gfg_game_prices p
 JOIN gfg_game g ON p.game_id = g.id WHERE p.region = $1 AND p.is_free = true
 ORDER BY random(), p.game_id LIMIT $2`, normalizeDAORegion(query.Region), query.Limit)
 }
@@ -517,7 +517,7 @@ func pricePanelSQL(order string) string {
 	if strings.HasPrefix(order, "p.discount_percent") {
 		extra = " AND p.discount_percent > 0"
 	}
-	return `SELECT p.game_id FROM gfg_game_v2_prices p JOIN gfg_game g ON p.game_id = g.id
+	return `SELECT p.game_id FROM gfg_game_prices p JOIN gfg_game g ON p.game_id = g.id
 WHERE p.region = $1 AND p.is_free = false AND p.final_amount > 0` + extra + `
 AND COALESCE(p.currency, '') <> '' AND COALESCE(p.final_formatted, '') <> ''
 ORDER BY ` + order + `, g.weight ASC, p.game_id ASC LIMIT $2`
@@ -526,12 +526,12 @@ ORDER BY ` + order + `, g.weight ASC, p.game_id ASC LIMIT $2`
 func (dao *ReadModelDAO) ListLowPriceAggregates(ctx context.Context, query v2models.GameV2PanelQuery) ([]v2models.GameV2Aggregate, common.GFError) {
 	region := normalizeDAORegion(query.Region)
 	return dao.listPanelAggregatesBySQL(ctx, query, `SELECT game_id FROM (
-(SELECT p.game_id, p.final_amount, p.discount_percent, g.weight FROM gfg_game_v2_prices p JOIN gfg_game g ON p.game_id=g.id WHERE p.region=$1 AND p.is_free=false AND p.final_amount>0 AND p.final_amount<=1000 AND COALESCE(p.currency,'')<>'' AND COALESCE(p.final_formatted,'')<>'' ORDER BY p.final_amount DESC,p.discount_percent DESC,g.weight,p.game_id LIMIT 15)
+(SELECT p.game_id, p.final_amount, p.discount_percent, g.weight FROM gfg_game_prices p JOIN gfg_game g ON p.game_id=g.id WHERE p.region=$1 AND p.is_free=false AND p.final_amount>0 AND p.final_amount<=1000 AND COALESCE(p.currency,'')<>'' AND COALESCE(p.final_formatted,'')<>'' ORDER BY p.final_amount DESC,p.discount_percent DESC,g.weight,p.game_id LIMIT 15)
 UNION ALL
-(SELECT p.game_id, p.final_amount, p.discount_percent, g.weight FROM gfg_game_v2_prices p JOIN gfg_game g ON p.game_id=g.id WHERE p.region=$1 AND p.is_free=false AND p.final_amount>0 AND p.final_amount<=1500 AND COALESCE(p.currency,'')<>'' AND COALESCE(p.final_formatted,'')<>'' ORDER BY p.final_amount DESC,p.discount_percent DESC,g.weight,p.game_id LIMIT 15)
+(SELECT p.game_id, p.final_amount, p.discount_percent, g.weight FROM gfg_game_prices p JOIN gfg_game g ON p.game_id=g.id WHERE p.region=$1 AND p.is_free=false AND p.final_amount>0 AND p.final_amount<=1500 AND COALESCE(p.currency,'')<>'' AND COALESCE(p.final_formatted,'')<>'' ORDER BY p.final_amount DESC,p.discount_percent DESC,g.weight,p.game_id LIMIT 15)
 UNION ALL
-(SELECT p.game_id, p.final_amount, p.discount_percent, g.weight FROM gfg_game_v2_prices p JOIN gfg_game g ON p.game_id=g.id WHERE p.region=$1 AND p.is_free=false AND p.final_amount>0 AND p.final_amount<=2000 AND COALESCE(p.currency,'')<>'' AND COALESCE(p.final_formatted,'')<>'' ORDER BY p.final_amount DESC,p.discount_percent DESC,g.weight,p.game_id LIMIT 15)
+(SELECT p.game_id, p.final_amount, p.discount_percent, g.weight FROM gfg_game_prices p JOIN gfg_game g ON p.game_id=g.id WHERE p.region=$1 AND p.is_free=false AND p.final_amount>0 AND p.final_amount<=2000 AND COALESCE(p.currency,'')<>'' AND COALESCE(p.final_formatted,'')<>'' ORDER BY p.final_amount DESC,p.discount_percent DESC,g.weight,p.game_id LIMIT 15)
 UNION ALL
-(SELECT p.game_id, p.final_amount, p.discount_percent, g.weight FROM gfg_game_v2_prices p JOIN gfg_game g ON p.game_id=g.id WHERE p.region=$1 AND p.is_free=false AND p.final_amount>0 AND p.final_amount<=2500 AND COALESCE(p.currency,'')<>'' AND COALESCE(p.final_formatted,'')<>'' ORDER BY p.final_amount DESC,p.discount_percent DESC,g.weight,p.game_id LIMIT 15)
+(SELECT p.game_id, p.final_amount, p.discount_percent, g.weight FROM gfg_game_prices p JOIN gfg_game g ON p.game_id=g.id WHERE p.region=$1 AND p.is_free=false AND p.final_amount>0 AND p.final_amount<=2500 AND COALESCE(p.currency,'')<>'' AND COALESCE(p.final_formatted,'')<>'' ORDER BY p.final_amount DESC,p.discount_percent DESC,g.weight,p.game_id LIMIT 15)
 ) bucketed GROUP BY game_id ORDER BY MAX(final_amount) DESC,MAX(discount_percent) DESC,MIN(weight),game_id`, region)
 }

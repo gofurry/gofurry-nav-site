@@ -106,91 +106,6 @@ func (q *Queries) GetSiteByID(ctx context.Context, siteID int64) (GfnSite, error
 	return i, err
 }
 
-const listCollectorObservations = `-- name: ListCollectorObservations :many
-SELECT
-    id,
-    site_id,
-    target,
-    protocol,
-    status,
-    observed_at,
-    COALESCE(duration_ms, 0)::bigint AS duration_ms,
-    error_code,
-    error_message,
-    COALESCE(payload->>'collector_id', '')::text AS collector_id,
-    COALESCE(payload->>'job_id', '')::text AS job_id
-FROM gfn_collector_observation
-WHERE ($1::bigint <= 0 OR site_id = $1)
-  AND ($2::text = '' OR target = $2)
-  AND ($3::text = '' OR protocol = $3)
-  AND ($4::text = '' OR status = $4)
-ORDER BY observed_at DESC, id DESC
-LIMIT $6
-OFFSET $5
-`
-
-type ListCollectorObservationsParams struct {
-	SiteID    int64  `json:"site_id"`
-	Target    string `json:"target"`
-	Protocol  string `json:"protocol"`
-	Status    string `json:"status"`
-	RowOffset int32  `json:"row_offset"`
-	RowLimit  int32  `json:"row_limit"`
-}
-
-type ListCollectorObservationsRow struct {
-	ID           int64              `json:"id"`
-	SiteID       int64              `json:"site_id"`
-	Target       string             `json:"target"`
-	Protocol     string             `json:"protocol"`
-	Status       string             `json:"status"`
-	ObservedAt   pgtype.Timestamptz `json:"observed_at"`
-	DurationMs   int64              `json:"duration_ms"`
-	ErrorCode    *string            `json:"error_code"`
-	ErrorMessage *string            `json:"error_message"`
-	CollectorID  string             `json:"collector_id"`
-	JobID        string             `json:"job_id"`
-}
-
-func (q *Queries) ListCollectorObservations(ctx context.Context, arg ListCollectorObservationsParams) ([]ListCollectorObservationsRow, error) {
-	rows, err := q.db.Query(ctx, listCollectorObservations,
-		arg.SiteID,
-		arg.Target,
-		arg.Protocol,
-		arg.Status,
-		arg.RowOffset,
-		arg.RowLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListCollectorObservationsRow{}
-	for rows.Next() {
-		var i ListCollectorObservationsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.SiteID,
-			&i.Target,
-			&i.Protocol,
-			&i.Status,
-			&i.ObservedAt,
-			&i.DurationMs,
-			&i.ErrorCode,
-			&i.ErrorMessage,
-			&i.CollectorID,
-			&i.JobID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listFeaturedSites = `-- name: ListFeaturedSites :many
 SELECT f.id, f.site_id, f.weight, f.create_time, f.update_time
 FROM gfn_featured_site AS f
@@ -216,40 +131,6 @@ func (q *Queries) ListFeaturedSites(ctx context.Context) ([]GfnFeaturedSite, err
 			&i.CreateTime,
 			&i.UpdateTime,
 		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listObservationStatusSummary = `-- name: ListObservationStatusSummary :many
-SELECT protocol, status, COUNT(*)::bigint AS count
-FROM gfn_collector_observation
-WHERE observed_at >= NOW() - INTERVAL '7 days'
-GROUP BY protocol, status
-ORDER BY protocol ASC, status ASC
-`
-
-type ListObservationStatusSummaryRow struct {
-	Protocol string `json:"protocol"`
-	Status   string `json:"status"`
-	Count    int64  `json:"count"`
-}
-
-func (q *Queries) ListObservationStatusSummary(ctx context.Context) ([]ListObservationStatusSummaryRow, error) {
-	rows, err := q.db.Query(ctx, listObservationStatusSummary)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListObservationStatusSummaryRow{}
-	for rows.Next() {
-		var i ListObservationStatusSummaryRow
-		if err := rows.Scan(&i.Protocol, &i.Status, &i.Count); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

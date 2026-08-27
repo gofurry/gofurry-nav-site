@@ -108,35 +108,6 @@ WHERE site_id = sqlc.arg(site_id)
   AND deleted IS NOT TRUE
 ORDER BY id ASC;
 
--- name: ListObservationStatusSummary :many
-SELECT protocol, status, COUNT(*)::bigint AS count
-FROM gfn_collector_observation
-WHERE observed_at >= NOW() - INTERVAL '7 days'
-GROUP BY protocol, status
-ORDER BY protocol ASC, status ASC;
-
--- name: ListCollectorObservations :many
-SELECT
-    id,
-    site_id,
-    target,
-    protocol,
-    status,
-    observed_at,
-    COALESCE(duration_ms, 0)::bigint AS duration_ms,
-    error_code,
-    error_message,
-    COALESCE(payload->>'collector_id', '')::text AS collector_id,
-    COALESCE(payload->>'job_id', '')::text AS job_id
-FROM gfn_collector_observation
-WHERE (sqlc.arg(site_id)::bigint <= 0 OR site_id = sqlc.arg(site_id))
-  AND (sqlc.arg(target)::text = '' OR target = sqlc.arg(target))
-  AND (sqlc.arg(protocol)::text = '' OR protocol = sqlc.arg(protocol))
-  AND (sqlc.arg(status)::text = '' OR status = sqlc.arg(status))
-ORDER BY observed_at DESC, id DESC
-LIMIT sqlc.arg(row_limit)
-OFFSET sqlc.arg(row_offset);
-
 -- name: ListTargetObservations :many
 SELECT id, site_id, target, protocol, status, observed_at,
        COALESCE(duration_ms, 0)::bigint AS duration_ms,

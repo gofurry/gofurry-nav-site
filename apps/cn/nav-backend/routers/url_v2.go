@@ -2,7 +2,6 @@ package routers
 
 import (
 	"github.com/gofiber/fiber/v3"
-	collect "github.com/gofurry/gofurry-nav-backend/apps/nav/collect/controller"
 	sitedirectory "github.com/gofurry/gofurry-nav-backend/apps/nav/sitedirectory/controller"
 	sitegroup "github.com/gofurry/gofurry-nav-backend/apps/nav/sitegroup/controller"
 	stats "github.com/gofurry/gofurry-nav-backend/apps/nav/stats/controller"
@@ -30,13 +29,6 @@ type DetailAPI interface {
 	GetTargetChanges(fiber.Ctx) error
 	GetTargetLightProbes(fiber.Ctx) error
 }
-type CollectAPI interface {
-	GetStatus(fiber.Ctx) error
-	ListObservations(fiber.Ctx) error
-	GetSiteStatus(fiber.Ctx) error
-	GetTargetStatus(fiber.Ctx) error
-}
-
 type NavDependencies struct {
 	Home      HomeAPI
 	Updates   UpdatesAPI
@@ -44,7 +36,6 @@ type NavDependencies struct {
 	SiteIndex SiteIndexAPI
 	NavPage   NavPageAPI
 	Detail    DetailAPI
-	Collect   CollectAPI
 }
 
 func navV2Api(g fiber.Router, cfg env.NavV2Config, dependencies NavDependencies) {
@@ -74,12 +65,4 @@ func navV2Api(g fiber.Router, cfg env.NavV2Config, dependencies NavDependencies)
 		g.Get("/sites/:siteId/targets/:target/changes", dependencies.Detail.GetTargetChanges)
 		g.Get("/sites/:siteId/targets/:target/light-probes", dependencies.Detail.GetTargetLightProbes)
 	}
-	collectApi(g.Group("/collect", collect.RequireAdminToken()), dependencies.Collect)
-}
-
-func collectApi(g fiber.Router, api CollectAPI) {
-	g.Get("/status", api.GetStatus)
-	g.Get("/observations", api.ListObservations)
-	g.Get("/sites/:siteId/status", api.GetSiteStatus)
-	g.Get("/sites/:siteId/targets/:target/status", api.GetTargetStatus)
 }

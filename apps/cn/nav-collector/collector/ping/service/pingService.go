@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytedance/sonic"
 	"github.com/go-ping/ping"
+	"github.com/gofurry/gofurry-nav-collector/collector/execution"
 	"github.com/gofurry/gofurry-nav-collector/collector/observation"
 	"github.com/gofurry/gofurry-nav-collector/collector/ping/dao"
 	models2 "github.com/gofurry/gofurry-nav-collector/collector/ping/models"
@@ -32,7 +33,7 @@ type Runner struct {
 // ============== Ping模块 - 初始化部分 ==============
 
 // 初始化
-func InitPingOnStart(persistence *dao.PingDAO, observations *observation.ObservationDAO) {
+func InitPingOnStart(persistence *dao.PingDAO, observations *observation.ObservationDAO) *Runner {
 	runner := &Runner{persistence: persistence, observations: observations}
 	defer func() {
 		if err := recover(); err != nil {
@@ -50,17 +51,11 @@ func InitPingOnStart(persistence *dao.PingDAO, observations *observation.Observa
 		"workers":         env.GetServerConfig().Collector.Ping.PingThread,
 	}, "Ping 采集模块初始化开始")
 
-	//初始化后执行一次 Ping
-	go runner.Ping()
-	go runner.Delete()
-	// 定时任务执行 Ping
-	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Ping.PingInterval)*time.Second, runner.Ping)
-	cs.AddCronJob(24*time.Hour, runner.Delete)
-
 	log.InfoFields(map[string]interface{}{
 		"event":    "module_init_complete",
 		"protocol": "ping",
 	}, "Ping 采集模块初始化完成")
+	return runner
 }
 
 // 每天清理一次日志表
@@ -124,22 +119,27 @@ func (runner *Runner) Delete() {
 }
 
 // 添加数据库全部采集域名到 redis
-func (runner *Runner) addAllIpToPing() (map[string]int64, common.GFError) {
+func (runner *Runner) addAllIpToPing(refreshRedis bool) ([]string, map[string]int64, common.GFError) {
 	// 查记录
 	domainRecords, err := runner.persistence.GetList()
 	if err != nil {
 		log.Error(fmt.Sprintf("查询 Ping 目标失败: %v", err.GetMsg()))
-		return nil, common.NewServiceError(fmt.Sprintf("查询 Ping 目标失败: %v", err))
+		return nil, nil, common.NewServiceError(fmt.Sprintf("查询 Ping 目标失败: %v", err))
 	}
 
 	// 添加 ping 的站点
 	pingList, siteIDByDomain := buildPingTargets(domainRecords)
 
-	// 存入 redis
+	if !refreshRedis {
+		return pingList, siteIDByDomain, nil
+	}
+
+	// Full collection refreshes the legacy global target cache. Scoped durable
+	// jobs must never replace it with a partial list.
 	pingJsonList, jsonErr := sonic.Marshal(pingList)
 	if jsonErr != nil {
 		log.Error(fmt.Sprintf("json转换失败: %v", jsonErr))
-		return siteIDByDomain, nil
+		return pingList, siteIDByDomain, nil
 	}
 
 	err = cs.SetExpire(env.GetServerConfig().Collector.Ping.PingKey, pingJsonList, 24*time.Hour)
@@ -150,20 +150,26 @@ func (runner *Runner) addAllIpToPing() (map[string]int64, common.GFError) {
 			"redis_key": env.GetServerConfig().Collector.Ping.PingKey,
 			"targets":   len(pingList),
 		}, "Ping 目标列表刷新到 Redis 失败: "+err.GetMsg())
-		return siteIDByDomain, err
+		return pingList, siteIDByDomain, err
 	}
 
-	return siteIDByDomain, nil
+	return pingList, siteIDByDomain, nil
 }
 
 func buildPingTargets(domainRecords []models2.GfnCollectorDomain) ([]string, map[string]int64) {
 	pingList := []string{}
 	siteIDByDomain := map[string]int64{}
+	seen := make(map[string]struct{}, len(domainRecords))
 	for _, v := range domainRecords {
 		domain := collectorDomainTarget(v)
 		if domain == "" || v.SiteID <= 0 {
 			continue
 		}
+		key := execution.TargetKey(v.SiteID, domain)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
 		pingList = append(pingList, domain)
 		siteIDByDomain[domain] = v.SiteID
 	}
@@ -222,8 +228,11 @@ func (runner *Runner) Ping() {
 	fields["workers"] = env.GetServerConfig().Collector.Ping.PingThread
 	log.InfoFields(fields, "Ping 采集运行开始")
 
-	// 查询数据库所有 IP 存 redis 每次采集都请求记录 热更新
-	siteIDByDomain, err := runner.addAllIpToPing()
+	request, controlled := execution.Current(observation.ProtocolPing)
+	scoped := controlled && request.ScopeType != "all"
+	// Always resolve the execution target set from PostgreSQL. Only full runs
+	// refresh the legacy global target-list Redis key.
+	pingList, siteIDByDomain, err := runner.addAllIpToPing(!scoped)
 	if err != nil {
 		run.Fail("load_targets_to_redis", 0)
 		fields := run.Fields()
@@ -234,21 +243,7 @@ func (runner *Runner) Ping() {
 		return
 	}
 
-	// redis 中获取 ping 的站点列表
-	var pingKey = env.GetServerConfig().Collector.Ping.PingKey
-	domains, err := cs.GetString(pingKey)
-	if err != nil {
-		run.Fail("load_targets_from_redis", 0)
-		fields := run.Fields()
-		fields["duration"] = time.Since(start)
-		fields["event"] = "run_failed"
-		fields["redis_key"] = pingKey
-		fields["stage"] = "load_targets_from_redis"
-		log.ErrorFields(fields, "Ping 目标列表读取失败: "+err.GetMsg())
-		return
-	}
-	// 判空
-	if domains == "" || len(domains) < 1 {
+	if len(pingList) < 1 {
 		run.Complete(0)
 		fields := run.Fields()
 		fields["duration"] = time.Since(start)
@@ -277,16 +272,6 @@ func (runner *Runner) Ping() {
 		data = map[string]string{}
 	}
 
-	var pingList = []string{}
-	if jsonErr := sonic.Unmarshal([]byte(domains), &pingList); jsonErr != nil {
-		run.Fail("decode_target_list", 0)
-		fields := run.Fields()
-		fields["duration"] = time.Since(start)
-		fields["event"] = "run_failed"
-		fields["stage"] = "decode_target_list"
-		log.ErrorFields(fields, "Ping 目标列表 JSON 解析失败: "+jsonErr.Error())
-		return
-	}
 	run.SetTargetCount(len(pingList))
 
 	// 复制旧记录中在站点列表中的部分到新纪录
@@ -306,6 +291,9 @@ func (runner *Runner) Ping() {
 	var pingRWLock sync.Mutex
 	// 遍历 IP 列表, 每个 IP 开一个线程执行 Ping
 	for _, v := range pingList {
+		if execution.Canceled(observation.ProtocolPing) {
+			break
+		}
 		target := models2.PingTarget{SiteID: siteIDByDomain[v], Domain: v}
 		pingThread.Go(runner.getPingResult(target, nowData, &pingRWLock, run))
 	}
@@ -325,7 +313,7 @@ func (runner *Runner) Ping() {
 			deleteList = append(deleteList, k)
 		}
 	}
-	if len(deleteList) != 0 {
+	if !scoped && len(deleteList) != 0 {
 		count, delErr := cs.HDel(resultKey, deleteList...)
 		if delErr != nil {
 			log.ErrorFields(map[string]interface{}{
@@ -430,6 +418,9 @@ func performPing(ip string) (pingModel models2.PingModel) {
 // 解析 ping 采集结果
 func (runner *Runner) getPingResult(target models2.PingTarget, data map[string]string, pingRWLock *sync.Mutex, run *runstate.Run) func() {
 	return func() {
+		if execution.Canceled(observation.ProtocolPing) {
+			return
+		}
 		ip := target.Domain
 		defer func() {
 			if err := recover(); err != nil {

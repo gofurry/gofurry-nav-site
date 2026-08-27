@@ -23,7 +23,7 @@ func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
 	if cfg.Collector.V2.Steam.MaxWorkers <= 0 || cfg.Collector.V2.Retention.PlayerCountsDays <= 0 {
 		t.Fatalf("collector v2 config fields were not decoded: %+v", cfg.Collector.V2)
 	}
-	if !cfg.Collector.Game.PlayersOnStartupEnabled() || cfg.Collector.Game.CollectPlayersOnStartup == nil {
+	if cfg.Collector.Game.CollectPlayersOnStartup == nil || *cfg.Collector.Game.CollectPlayersOnStartup {
 		t.Fatalf("startup players config was not decoded: %+v", cfg.Collector.Game)
 	}
 	if cfg.DataBase.MaxConns != 6 || cfg.DataBase.ConnectTimeoutSeconds != 5 || cfg.DataBase.PingTimeoutSeconds != 3 {
@@ -34,21 +34,21 @@ func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
 	}
 }
 
-func TestPlayersOnStartupDefaultsToEnabledAndCanBeDisabled(t *testing.T) {
+func TestLegacyPlayersOnStartupConfigIsAccepted(t *testing.T) {
 	var omitted serverConfig
 	if err := yaml.Unmarshal([]byte("collector:\n  game:\n    game_player_interval: 24\n"), &omitted); err != nil {
 		t.Fatal(err)
 	}
-	if !omitted.Collector.Game.PlayersOnStartupEnabled() {
-		t.Fatal("omitted startup players setting must preserve enabled behavior")
+	if omitted.Collector.Game.CollectPlayersOnStartup != nil {
+		t.Fatal("omitted legacy startup setting should stay nil")
 	}
 
 	var disabled serverConfig
 	if err := yaml.Unmarshal([]byte("collector:\n  game:\n    collect_players_on_startup: false\n"), &disabled); err != nil {
 		t.Fatal(err)
 	}
-	if disabled.Collector.Game.PlayersOnStartupEnabled() {
-		t.Fatal("explicit false must disable startup players collection")
+	if disabled.Collector.Game.CollectPlayersOnStartup == nil || *disabled.Collector.Game.CollectPlayersOnStartup {
+		t.Fatal("legacy false value was not decoded")
 	}
 }
 

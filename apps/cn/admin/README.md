@@ -6,6 +6,8 @@ GoFurry Admin is the active operations application for the China-site stack. It 
 
 Schema is owned exclusively by the root Goose migrations. Admin does not create or migrate tables during startup.
 
+The Collection Center manages durable Schedule / Job / Run / Result / Collector Instance state directly through the existing `gfg` and `gfn` pools. It supports schedule enable/disable and Run Now, manual Game/Nav collection, queue/history, cancellation, constrained retry, audit, and ECharts outcome/coverage/timing. It does not proxy collection through either Backend, and Admin downtime does not stop autonomous Collector scheduling or workers.
+
 ## Development
 
 Requirements: Go 1.26.7, Node.js/npm, PostgreSQL, and Redis.

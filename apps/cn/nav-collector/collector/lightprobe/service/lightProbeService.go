@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/gofurry/gofurry-nav-collector/collector/execution"
 	"github.com/gofurry/gofurry-nav-collector/collector/lightprobe/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/lightprobe/models"
 	"github.com/gofurry/gofurry-nav-collector/collector/observation"
@@ -93,101 +94,76 @@ type pageAssetDeclaration struct {
 	Sizes string `json:"sizes,omitempty"`
 }
 
-// InitLightProbeOnStart 注册默认关闭的 v2 低频轻探测任务。
-func InitLightProbeOnStart(persistence *dao.LightProbeDAO, observations *observation.ObservationDAO) {
+// InitLightProbeOnStart initializes protocol executors. Durable scheduling is
+// owned by collector/control; legacy run_on_start values are intentionally not
+// executed because a process restart must not create acquisition work.
+func InitLightProbeOnStart(persistence *dao.LightProbeDAO, observations *observation.ObservationDAO) *Runner {
 	runner := &Runner{persistence: persistence, observations: observations}
 	cfg := env.GetServerConfig().Collector.V2
 	if cfg.ProtocolEnabled(observation.ProtocolRDAP) {
 		interval := cfg.LightProbe.RDAP.Interval()
-		if cfg.LightProbe.RDAP.RunOnStart {
-			go runner.RunRDAP()
-		}
-		cs.AddCronJob(interval, runner.RunRDAP)
 		log.InfoFields(map[string]interface{}{
-			"event":        "light_probe_registered",
-			"interval":     interval,
-			"protocol":     observation.ProtocolRDAP,
-			"run_on_start": cfg.LightProbe.RDAP.RunOnStart,
-		}, "RDAP 低频轻探测已注册")
+			"event":                       "light_probe_capability_initialized",
+			"interval_bootstrap":          interval,
+			"protocol":                    observation.ProtocolRDAP,
+			"legacy_run_on_start_ignored": cfg.LightProbe.RDAP.RunOnStart,
+		}, "RDAP 低频轻探测能力已初始化")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolRobots) {
 		interval := cfg.LightProbe.Robots.Interval()
-		if cfg.LightProbe.Robots.RunOnStart {
-			go runner.RunRobots()
-		}
-		cs.AddCronJob(interval, runner.RunRobots)
 		log.InfoFields(map[string]interface{}{
-			"event":        "light_probe_registered",
-			"interval":     interval,
-			"protocol":     observation.ProtocolRobots,
-			"run_on_start": cfg.LightProbe.Robots.RunOnStart,
-		}, "robots.txt 低频轻探测已注册")
+			"event":                       "light_probe_capability_initialized",
+			"interval_bootstrap":          interval,
+			"protocol":                    observation.ProtocolRobots,
+			"legacy_run_on_start_ignored": cfg.LightProbe.Robots.RunOnStart,
+		}, "robots.txt 低频轻探测能力已初始化")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolSecurityTXT) {
 		interval := cfg.LightProbe.SecurityTXT.Interval()
-		if cfg.LightProbe.SecurityTXT.RunOnStart {
-			go runner.RunSecurityTXT()
-		}
-		cs.AddCronJob(interval, runner.RunSecurityTXT)
 		log.InfoFields(map[string]interface{}{
-			"event":        "light_probe_registered",
-			"interval":     interval,
-			"protocol":     observation.ProtocolSecurityTXT,
-			"run_on_start": cfg.LightProbe.SecurityTXT.RunOnStart,
-		}, "security.txt 低频轻探测已注册")
+			"event":                       "light_probe_capability_initialized",
+			"interval_bootstrap":          interval,
+			"protocol":                    observation.ProtocolSecurityTXT,
+			"legacy_run_on_start_ignored": cfg.LightProbe.SecurityTXT.RunOnStart,
+		}, "security.txt 低频轻探测能力已初始化")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolLLMSTXT) {
 		interval := cfg.LightProbe.LLMSTXT.Interval()
-		if cfg.LightProbe.LLMSTXT.RunOnStart {
-			go runner.RunLLMSTXT()
-		}
-		cs.AddCronJob(interval, runner.RunLLMSTXT)
 		log.InfoFields(map[string]interface{}{
-			"event":        "light_probe_registered",
-			"interval":     interval,
-			"protocol":     observation.ProtocolLLMSTXT,
-			"run_on_start": cfg.LightProbe.LLMSTXT.RunOnStart,
-		}, "llms.txt 低频轻探测已注册")
+			"event":                       "light_probe_capability_initialized",
+			"interval_bootstrap":          interval,
+			"protocol":                    observation.ProtocolLLMSTXT,
+			"legacy_run_on_start_ignored": cfg.LightProbe.LLMSTXT.RunOnStart,
+		}, "llms.txt 低频轻探测能力已初始化")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolPageAssets) {
 		interval := cfg.LightProbe.PageAssets.Interval()
-		if cfg.LightProbe.PageAssets.RunOnStart {
-			go runner.RunPageAssets()
-		}
-		cs.AddCronJob(interval, runner.RunPageAssets)
 		log.InfoFields(map[string]interface{}{
-			"event":        "light_probe_registered",
-			"interval":     interval,
-			"protocol":     observation.ProtocolPageAssets,
-			"run_on_start": cfg.LightProbe.PageAssets.RunOnStart,
-		}, "页面资源声明低频轻探测已注册")
+			"event":                       "light_probe_capability_initialized",
+			"interval_bootstrap":          interval,
+			"protocol":                    observation.ProtocolPageAssets,
+			"legacy_run_on_start_ignored": cfg.LightProbe.PageAssets.RunOnStart,
+		}, "页面资源声明低频轻探测能力已初始化")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolPortCheck) {
 		interval := cfg.LightProbe.PortCheck.Interval()
-		if cfg.LightProbe.PortCheck.RunOnStart {
-			go runner.RunPortCheck()
-		}
-		cs.AddCronJob(interval, runner.RunPortCheck)
 		log.InfoFields(map[string]interface{}{
-			"event":        "light_probe_registered",
-			"interval":     interval,
-			"protocol":     observation.ProtocolPortCheck,
-			"run_on_start": cfg.LightProbe.PortCheck.RunOnStart,
-		}, "端口连通性低频轻探测已注册")
+			"event":                       "light_probe_capability_initialized",
+			"interval_bootstrap":          interval,
+			"protocol":                    observation.ProtocolPortCheck,
+			"legacy_run_on_start_ignored": cfg.LightProbe.PortCheck.RunOnStart,
+		}, "端口连通性低频轻探测能力已初始化")
 	}
 	if cfg.ProtocolEnabled(observation.ProtocolWAFCanary) {
 		interval := cfg.LightProbe.WAFCanary.Interval()
-		if cfg.LightProbe.WAFCanary.RunOnStart {
-			go runner.RunWAFCanary()
-		}
-		cs.AddCronJob(interval, runner.RunWAFCanary)
 		log.InfoFields(map[string]interface{}{
-			"event":        "light_probe_registered",
-			"interval":     interval,
-			"protocol":     observation.ProtocolWAFCanary,
-			"run_on_start": cfg.LightProbe.WAFCanary.RunOnStart,
-		}, "WAF canary 低频轻探测已注册")
+			"event":                       "light_probe_capability_initialized",
+			"interval_bootstrap":          interval,
+			"protocol":                    observation.ProtocolWAFCanary,
+			"legacy_run_on_start_ignored": cfg.LightProbe.WAFCanary.RunOnStart,
+		}, "WAF canary 低频轻探测能力已初始化")
 	}
+	return runner
 }
 
 func (runner *Runner) RunRDAP() {
@@ -245,7 +221,7 @@ func (runner *Runner) runLightProbe(protocol string, interval time.Duration, run
 	run.Start()
 
 	start := time.Now()
-	targets, err := runner.persistence.GetList()
+	targets, err := runner.persistence.GetList(protocol)
 	if err != nil {
 		run.Fail("load_targets", 0)
 		fields := run.Fields()
@@ -287,6 +263,9 @@ func (runner *Runner) runRDAPTargets(targets []models.GfnCollectorDomain, run *r
 	client := rdapHTTPClient(cfg.Timeout())
 	results := map[string]probeResult{}
 	for _, target := range targets {
+		if execution.Canceled(observation.ProtocolRDAP) {
+			break
+		}
 		domain, domainErr := registrableDomain(target.TargetName())
 		if domainErr != nil {
 			result := failureResult("rdap_no_server", domainErr.Error(), map[string]any{
@@ -309,6 +288,9 @@ func (runner *Runner) runRDAPTargets(targets []models.GfnCollectorDomain, run *r
 func (runner *Runner) runRobotsTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.Robots
 	for _, target := range targets {
+		if execution.Canceled(observation.ProtocolRobots) {
+			break
+		}
 		result := probeRobots(target, cfg.Timeout(), cfg.MaxResponseSize(), cfg.MaxSitemaps())
 		runner.saveLightProbeResult(observation.ProtocolRobots, target, result, run)
 	}
@@ -317,6 +299,9 @@ func (runner *Runner) runRobotsTargets(targets []models.GfnCollectorDomain, run 
 func (runner *Runner) runSecurityTXTTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.SecurityTXT
 	for _, target := range targets {
+		if execution.Canceled(observation.ProtocolSecurityTXT) {
+			break
+		}
 		result := probeSecurityTXT(target, cfg.Timeout(), cfg.MaxResponseSize())
 		runner.saveLightProbeResult(observation.ProtocolSecurityTXT, target, result, run)
 	}
@@ -325,6 +310,9 @@ func (runner *Runner) runSecurityTXTTargets(targets []models.GfnCollectorDomain,
 func (runner *Runner) runLLMSTXTTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.LLMSTXT
 	for _, target := range targets {
+		if execution.Canceled(observation.ProtocolLLMSTXT) {
+			break
+		}
 		result := probeLLMSTXT(target, cfg.Timeout(), cfg.MaxResponseSize())
 		runner.saveLightProbeResult(observation.ProtocolLLMSTXT, target, result, run)
 	}
@@ -333,6 +321,9 @@ func (runner *Runner) runLLMSTXTTargets(targets []models.GfnCollectorDomain, run
 func (runner *Runner) runPageAssetsTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.PageAssets
 	for _, target := range targets {
+		if execution.Canceled(observation.ProtocolPageAssets) {
+			break
+		}
 		result := probePageAssets(target, cfg)
 		runner.saveLightProbeResult(observation.ProtocolPageAssets, target, result, run)
 	}
@@ -341,6 +332,9 @@ func (runner *Runner) runPageAssetsTargets(targets []models.GfnCollectorDomain, 
 func (runner *Runner) runPortCheckTargets(targets []models.GfnCollectorDomain, run *runstate.Run) {
 	cfg := env.GetServerConfig().Collector.V2.LightProbe.PortCheck
 	for _, target := range targets {
+		if execution.Canceled(observation.ProtocolPortCheck) {
+			break
+		}
 		result := probePortCheck(target, cfg)
 		runner.saveLightProbeResult(observation.ProtocolPortCheck, target, result, run)
 	}
@@ -352,6 +346,14 @@ func (runner *Runner) runWAFCanaryTargets(targets []models.GfnCollectorDomain, r
 	maxTargets := cfg.MaxTargets()
 	if maxTargets > 0 && len(targets) > maxTargets {
 		truncatedCount = len(targets) - maxTargets
+		for _, target := range targets[maxTargets:] {
+			now := time.Now()
+			execution.Record(execution.Result{
+				Protocol: observation.ProtocolWAFCanary, SiteID: target.SiteID, Target: target.TargetName(),
+				Status: "skipped", ErrorKind: "max_targets", ErrorMessage: "target omitted by max_targets_per_run",
+				StartedAt: now, EndedAt: now,
+			})
+		}
 		targets = targets[:maxTargets]
 		if run != nil {
 			run.RecordSkippedN(truncatedCount)
@@ -359,6 +361,9 @@ func (runner *Runner) runWAFCanaryTargets(targets []models.GfnCollectorDomain, r
 		}
 	}
 	for _, target := range targets {
+		if execution.Canceled(observation.ProtocolWAFCanary) {
+			break
+		}
 		result := probeWAFCanary(target, cfg)
 		result.Payload["max_targets_per_run"] = maxTargets
 		result.Payload["truncated_target_count"] = truncatedCount

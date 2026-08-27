@@ -8,6 +8,93 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// Durable scheduled, manual, and entity-triggered Nav collection jobs.
+type GfnCollectionJob struct {
+	ID                int64              `json:"id"`
+	ScheduleID        *int64             `json:"schedule_id"`
+	ScheduleVersion   *int64             `json:"schedule_version"`
+	JobKey            string             `json:"job_key"`
+	Trigger           string             `json:"trigger"`
+	ScopeType         string             `json:"scope_type"`
+	ScopeID           *int64             `json:"scope_id"`
+	Target            *string            `json:"target"`
+	Tasks             []string           `json:"tasks"`
+	Priority          int32              `json:"priority"`
+	ConcurrencyKey    string             `json:"concurrency_key"`
+	ScheduledFor      pgtype.Timestamptz `json:"scheduled_for"`
+	Status            string             `json:"status"`
+	RequestedBy       string             `json:"requested_by"`
+	DedupeKey         *string            `json:"dedupe_key"`
+	ClaimedBy         *string            `json:"claimed_by"`
+	LeaseUntil        pgtype.Timestamptz `json:"lease_until"`
+	CancelRequestedAt pgtype.Timestamptz `json:"cancel_requested_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
+}
+
+// Execution attempts for durable Nav collection jobs.
+type GfnCollectionRun struct {
+	ID                  string             `json:"id"`
+	JobID               int64              `json:"job_id"`
+	AttemptNo           int32              `json:"attempt_no"`
+	CollectorInstanceID string             `json:"collector_instance_id"`
+	Status              string             `json:"status"`
+	ScheduledFor        pgtype.Timestamptz `json:"scheduled_for"`
+	StartedAt           pgtype.Timestamptz `json:"started_at"`
+	EndedAt             pgtype.Timestamptz `json:"ended_at"`
+	ExpectedCount       int32              `json:"expected_count"`
+	AttemptedCount      int32              `json:"attempted_count"`
+	SuccessCount        int32              `json:"success_count"`
+	PartialCount        int32              `json:"partial_count"`
+	FailureCount        int32              `json:"failure_count"`
+	SkippedCount        int32              `json:"skipped_count"`
+	ScheduleDelayMs     int64              `json:"schedule_delay_ms"`
+	DurationMs          int64              `json:"duration_ms"`
+	ErrorKind           string             `json:"error_kind"`
+	ErrorMessage        string             `json:"error_message"`
+}
+
+// Durable Nav collection schedules; PostgreSQL is the source of truth.
+type GfnCollectionSchedule struct {
+	ID                  int64              `json:"id"`
+	JobKey              string             `json:"job_key"`
+	Name                string             `json:"name"`
+	Enabled             bool               `json:"enabled"`
+	ScheduleKind        string             `json:"schedule_kind"`
+	CronExpression      *string            `json:"cron_expression"`
+	IntervalSeconds     *int64             `json:"interval_seconds"`
+	AnchorAt            pgtype.Timestamptz `json:"anchor_at"`
+	Timezone            string             `json:"timezone"`
+	MisfirePolicy       string             `json:"misfire_policy"`
+	MisfireGraceSeconds int32              `json:"misfire_grace_seconds"`
+	OverlapPolicy       string             `json:"overlap_policy"`
+	Priority            int32              `json:"priority"`
+	ConcurrencyKey      string             `json:"concurrency_key"`
+	Version             int64              `json:"version"`
+	EffectiveFrom       pgtype.Timestamptz `json:"effective_from"`
+	LastMaterializedFor pgtype.Timestamptz `json:"last_materialized_for"`
+	NextScheduledFor    pgtype.Timestamptz `json:"next_scheduled_for"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Per-target results for Nav collection runs.
+type GfnCollectionTaskResult struct {
+	ID            int64              `json:"id"`
+	RunID         string             `json:"run_id"`
+	Protocol      string             `json:"protocol"`
+	SiteID        int64              `json:"site_id"`
+	Target        string             `json:"target"`
+	Status        string             `json:"status"`
+	ObservationID *int64             `json:"observation_id"`
+	DurationMs    int64              `json:"duration_ms"`
+	ErrorKind     string             `json:"error_kind"`
+	ErrorMessage  string             `json:"error_message"`
+	StartedAt     pgtype.Timestamptz `json:"started_at"`
+	EndedAt       pgtype.Timestamptz `json:"ended_at"`
+}
+
 // 域名请求表
 type GfnCollectorDomain struct {
 	// 域名请求表id
@@ -22,6 +109,19 @@ type GfnCollectorDomain struct {
 	Tls     string `json:"tls"`
 	SiteID  *int64 `json:"site_id"`
 	Deleted bool   `json:"deleted"`
+}
+
+// Nav collector process instances and heartbeats.
+type GfnCollectorInstance struct {
+	InstanceID      string             `json:"instance_id"`
+	CollectorID     string             `json:"collector_id"`
+	Hostname        string             `json:"hostname"`
+	Version         string             `json:"version"`
+	CommitSha       string             `json:"commit_sha"`
+	Capabilities    []string           `json:"capabilities"`
+	StartedAt       pgtype.Timestamptz `json:"started_at"`
+	LastHeartbeatAt pgtype.Timestamptz `json:"last_heartbeat_at"`
+	StoppedAt       pgtype.Timestamptz `json:"stopped_at"`
 }
 
 // DNS日志表
@@ -107,7 +207,10 @@ type GfnCollectorObservation struct {
 	// schema 版本
 	SchemaVersion int32 `json:"schema_version"`
 	// 创建时间
-	CreateTime pgtype.Timestamptz `json:"create_time"`
+	CreateTime          pgtype.Timestamptz `json:"create_time"`
+	JobID               *int64             `json:"job_id"`
+	RunID               *string            `json:"run_id"`
+	CollectorInstanceID *string            `json:"collector_instance_id"`
 }
 
 // 精选站点表

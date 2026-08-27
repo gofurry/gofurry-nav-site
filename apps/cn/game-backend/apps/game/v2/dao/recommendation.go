@@ -38,11 +38,11 @@ func (dao *ReadModelDAO) SaveSimilarRecommendations(ctx context.Context, sourceG
 		return common.NewDaoError(fmt.Sprintf("保存游戏 v2 相似推荐失败: %v", err))
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	if _, err := tx.Exec(ctx, `DELETE FROM gfg_game_v2_recommendations WHERE source_game_id = $1`, sourceGameID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM gfg_game_recommendations WHERE source_game_id = $1`, sourceGameID); err != nil {
 		return common.NewDaoError(fmt.Sprintf("保存游戏 v2 相似推荐失败: %v", err))
 	}
 	for _, row := range rows {
-		_, err = tx.Exec(ctx, `INSERT INTO gfg_game_v2_recommendations
+		_, err = tx.Exec(ctx, `INSERT INTO gfg_game_recommendations
 (source_game_id, target_game_id, score, display_score, rank, reason_json, algorithm_version, computed_at)
 VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8)
 ON CONFLICT (source_game_id, target_game_id) DO UPDATE SET
@@ -73,26 +73,26 @@ func (dao *ReadModelDAO) ListRecommendationFeatures(ctx context.Context, lang st
 }
 
 const recommendationAssetColumnsSQL = `
-COALESCE((SELECT a.url FROM gfg_game_v2_assets a
+COALESCE((SELECT a.url FROM gfg_game_assets a
   WHERE a.game_id=g.id AND a.exists IS DISTINCT FROM false AND a.source='store_browse'
     AND a.asset_type IN ('header_2x','header') AND COALESCE(a.url,'')<>''
   ORDER BY CASE a.asset_type WHEN 'header' THEN 0 WHEN 'header_2x' THEN 1 ELSE 2 END,
     a.sort_order,a.id LIMIT 1), NULLIF(d.header_url,''), NULLIF(g.header,''), '') AS header_url,
-COALESCE((SELECT a.url FROM gfg_game_v2_assets a
+COALESCE((SELECT a.url FROM gfg_game_assets a
   WHERE a.game_id=g.id AND a.exists IS DISTINCT FROM false AND a.source='store_browse'
     AND a.asset_type IN ('capsule_main_2x','capsule_main','hero_capsule_2x','hero_capsule') AND COALESCE(a.url,'')<>''
   ORDER BY CASE a.asset_type WHEN 'capsule_main' THEN 0 WHEN 'hero_capsule' THEN 1
     WHEN 'capsule_main_2x' THEN 2 WHEN 'hero_capsule_2x' THEN 3 ELSE 4 END,
     a.sort_order,a.id LIMIT 1), '') AS capsule_url,
-COALESCE((SELECT a.url FROM gfg_game_v2_assets a
+COALESCE((SELECT a.url FROM gfg_game_assets a
   WHERE a.game_id=g.id AND a.exists IS DISTINCT FROM false AND a.source='store_browse'
     AND a.asset_type='library_capsule' AND COALESCE(a.url,'')<>''
   ORDER BY a.sort_order,a.id LIMIT 1), '') AS library_cover_url,
 COALESCE(
-  (SELECT a.url FROM gfg_game_v2_assets a WHERE a.game_id=g.id
+  (SELECT a.url FROM gfg_game_assets a WHERE a.game_id=g.id
     AND a.exists IS DISTINCT FROM false AND a.source='store_browse'
     AND a.asset_type='library_capsule' AND COALESCE(a.url,'')<>'' ORDER BY a.sort_order,a.id LIMIT 1),
-  (SELECT a.url FROM gfg_game_v2_assets a WHERE a.game_id=g.id
+  (SELECT a.url FROM gfg_game_assets a WHERE a.game_id=g.id
     AND a.exists IS DISTINCT FROM false AND a.source='store_browse'
     AND a.asset_type='library_capsule_2x' AND COALESCE(a.url,'')<>'' ORDER BY a.sort_order,a.id LIMIT 1), '') AS library_cover_2x_url`
 
@@ -116,11 +116,11 @@ COALESCE(player.count,0) AS online_count, COALESCE(player.status,'unknown') AS o
 player.collected_at AS online_collected_at`
 
 const recommendationJoinsSQL = `
-JOIN gfg_game_v2_details d ON d.game_id=g.id
-LEFT JOIN gfg_game_v2_localized_details ld ON ld.game_id=g.id AND ld.lang=$1
-LEFT JOIN gfg_game_v2_prices p ON p.game_id=g.id AND p.region=$2
+JOIN gfg_game_details d ON d.game_id=g.id
+LEFT JOIN gfg_game_localized_details ld ON ld.game_id=g.id AND ld.lang=$1
+LEFT JOIN gfg_game_prices p ON p.game_id=g.id AND p.region=$2
 LEFT JOIN LATERAL (
- SELECT pc.count,pc.status,pc.collected_at FROM gfg_game_v2_player_counts pc
+ SELECT pc.count,pc.status,pc.collected_at FROM gfg_game_player_counts pc
  WHERE pc.game_id=g.id AND pc.status='success' ORDER BY pc.collected_at DESC,pc.id DESC LIMIT 1
 ) player ON true
 LEFT JOIN LATERAL (
@@ -135,7 +135,7 @@ LEFT JOIN LATERAL (
 const recommendationRowsSQL = `SELECT
 r.source_game_id,r.target_game_id,r.score,r.display_score,r.rank,
 r.reason_json::text AS reason_json,r.algorithm_version,r.computed_at,` + recommendationProjectionSQL + `
-FROM gfg_game_v2_recommendations r
+FROM gfg_game_recommendations r
 JOIN gfg_game g ON g.id=r.target_game_id
 ` + recommendationJoinsSQL + `
 WHERE r.source_game_id=$3 AND r.algorithm_version=$4

@@ -203,23 +203,6 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 		t.Fatalf("cleared recommendations: %+v err=%v", recRows, gfErr)
 	}
 
-	status, gfErr := readDAO.GetCollectStatus(ctx)
-	if gfErr != nil || status.LatestRun == nil || status.LatestRun.ID != "run-1" || len(status.Summary) != 1 {
-		t.Fatalf("collect status: %+v err=%v", status, gfErr)
-	}
-	runs, gfErr := readDAO.ListCollectRuns(ctx, v2models.GameV2CollectRunQuery{TaskType: "details"})
-	if gfErr != nil || len(runs) != 1 {
-		t.Fatalf("collect runs: %+v err=%v", runs, gfErr)
-	}
-	taskResults, gfErr := readDAO.ListCollectTaskResults(ctx, v2models.GameV2CollectTaskResultQuery{GameID: 91001})
-	if gfErr != nil || len(taskResults) != 1 {
-		t.Fatalf("task results: %+v err=%v", taskResults, gfErr)
-	}
-	gameStatus, gfErr := readDAO.GetGameCollectStatus(ctx, 91001, 0)
-	if gfErr != nil || gameStatus.DetailsUpdatedAt == nil || gameStatus.MediaCount != 0 || gameStatus.NewsCount != 1 {
-		t.Fatalf("game collect status: %+v err=%v", gameStatus, gfErr)
-	}
-
 	prizeDAO := prizedao.New(pool)
 	var prize prizemodels.GfgPrize
 	if gfErr := prizeDAO.GetById(93001, &prize); gfErr != nil {
@@ -259,23 +242,21 @@ func seedReadModel(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now ti
 (91001,'中文游戏','English Game','中文简介','English summary',$1,$1,'[]','[]','2026-08-01','["Dev"]','["Pub"]',92001,'header-1','[]',1,1,0,3),
 (91002,'第二游戏','Second Game','第二简介','Second summary',$1,$1,'[]','[]','2026-08-02','["Dev"]','["Pub"]',92002,'header-2','[]',2,1,0,1)`,
 		`INSERT INTO gfg_tag_map (id,game_id,tag_id,create_time,update_time) VALUES (1,91001,1,$1,$1),(2,91002,1,$1,$1)`,
-		`INSERT INTO gfg_game_v2_details (game_id,appid,source,type,name,is_free,developers,publishers,release_date_text,platforms,collected_at,updated_at) VALUES
+		`INSERT INTO gfg_game_details (game_id,appid,source,type,name,is_free,developers,publishers,release_date_text,platforms,collected_at,updated_at) VALUES
 (91001,92001,'steam','game','English Game',false,'["Dev"]','["Pub"]','2026-08-01','{"windows":true}',$1,$1),
 (91002,92002,'steam','game','Second Game',false,'["Dev"]','["Pub"]','2026-08-02','{"windows":true}',$1,$1)`,
-		`INSERT INTO gfg_game_v2_localized_details (game_id,appid,lang,name,short_description,collected_at,updated_at) VALUES
+		`INSERT INTO gfg_game_localized_details (game_id,appid,lang,name,short_description,collected_at,updated_at) VALUES
 (91001,92001,'zh','中文游戏','中文简介',$1,$1),(91001,92001,'en','English Game','English summary',$1,$1),
 (91002,92002,'zh','第二游戏','第二简介',$1,$1),(91002,92002,'en','Second Game','Second summary',$1,$1)`,
-		`INSERT INTO gfg_game_v2_prices (game_id,appid,region,is_free,currency,initial_amount,final_amount,discount_percent,initial_formatted,final_formatted,collected_at,updated_at) VALUES
+		`INSERT INTO gfg_game_prices (game_id,appid,region,is_free,currency,initial_amount,final_amount,discount_percent,initial_formatted,final_formatted,collected_at,updated_at) VALUES
 (91001,92001,'CN',false,'CNY',1000,800,20,'¥10','¥8',$1,$1),(91002,92002,'CN',false,'CNY',2000,1800,10,'¥20','¥18',$1,$1)`,
-		`INSERT INTO gfg_game_v2_assets (game_id,appid,asset_type,asset_family,source,lang,media_key,title,url,thumbnail_url,format,exists,collected_at,updated_at) VALUES
+		`INSERT INTO gfg_game_assets (game_id,appid,asset_type,asset_family,source,lang,media_key,title,url,thumbnail_url,format,exists,collected_at,updated_at) VALUES
 (91001,92001,'header','store','store_browse','','header','','asset-header-1','','jpg',true,$1,$1),
 (91002,92002,'header','store','store_browse','','header','','asset-header-2','','jpg',true,$1,$1)`,
-		`INSERT INTO gfg_game_v2_requirements (game_id,appid,pc,mac,linux,collected_at,updated_at) VALUES (91001,92001,'{}','{}','{}',$1,$1),(91002,92002,'{}','{}','{}',$1,$1)`,
+		`INSERT INTO gfg_game_requirements (game_id,appid,pc,mac,linux,collected_at,updated_at) VALUES (91001,92001,'{}','{}','{}',$1,$1),(91002,92002,'{}','{}','{}',$1,$1)`,
 		`INSERT INTO gfg_game_comment (id,region,content,score,create_time,game_id,ip,name) VALUES (1,'CN','old review',3,$2,91001,'127.0.0.1','old'),(2,'CN','new review',5,$1,91001,'127.0.0.2','new')`,
-		`INSERT INTO gfg_game_v2_news (game_id,appid,lang,event_gid,headline,summary,collected_at,published_at,updated_at) VALUES (91001,92001,'en','event-1','news','summary',$1,$1,$1)`,
-		`INSERT INTO gfg_game_v2_player_counts (run_id,game_id,appid,count,status,collected_at) VALUES ('run-1',91001,92001,42,'success',$1)`,
-		`INSERT INTO gfg_game_v2_collect_runs (id,task_type,status,total_count,success_count,task_summary,started_at,ended_at) VALUES ('run-1','details','success',1,1,'[]',$1,$1)`,
-		`INSERT INTO gfg_game_v2_collect_task_results (run_id,task_type,status,game_id,appid,started_at,ended_at) VALUES ('run-1','details','success',91001,92001,$1,$1)`,
+		`INSERT INTO gfg_game_news (game_id,appid,lang,event_gid,headline,summary,collected_at,published_at,updated_at) VALUES (91001,92001,'en','event-1','news','summary',$1,$1,$1)`,
+		`INSERT INTO gfg_game_player_counts (run_id,game_id,appid,count,status,collected_at) VALUES ('run-1',91001,92001,42,'success',$1)`,
 		`INSERT INTO gfg_game_release_state (game_id,availability,precision,exact_date,release_year,release_month,release_quarter,window_start,window_end,raw_text,source,source_region,source_locale,normalizer_version,observed_at) VALUES
 (91001,'available','day','2026-08-01',2026,8,NULL,'2026-08-01','2026-08-01','1 Aug, 2026','steam','US','en','steam-go/v1.3.9',$1),
 (91002,'upcoming','quarter',NULL,2026,NULL,4,'2026-10-01','2026-12-31','Q4 2026','steam','US','en','steam-go/v1.3.9',$1)`,
@@ -291,7 +272,7 @@ func seedReadModel(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now ti
 		switch i {
 		case 8:
 			args = append(args, now.Add(-time.Hour))
-		case 16:
+		case 14:
 			args = append(args, now.Add(24*time.Hour))
 		}
 		if _, err := pool.Exec(ctx, statement, args...); err != nil {

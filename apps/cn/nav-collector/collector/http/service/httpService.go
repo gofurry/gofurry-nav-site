@@ -23,6 +23,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/bytedance/sonic"
+	"github.com/gofurry/gofurry-nav-collector/collector/execution"
 	"github.com/gofurry/gofurry-nav-collector/collector/http/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/http/models"
 	"github.com/gofurry/gofurry-nav-collector/collector/observation"
@@ -64,7 +65,7 @@ const (
 // ============== HTTP模块 - 初始化部分 ==============
 
 // 初始化
-func InitHTTPOnStart(persistence *dao.HTTPDAO, observations *observation.ObservationDAO) {
+func InitHTTPOnStart(persistence *dao.HTTPDAO, observations *observation.ObservationDAO) *Runner {
 	runner := &Runner{persistence: persistence, observations: observations}
 	defer func() {
 		if err := recover(); err != nil {
@@ -82,17 +83,11 @@ func InitHTTPOnStart(persistence *dao.HTTPDAO, observations *observation.Observa
 		"workers":         env.GetServerConfig().Collector.Request.RequestThread,
 	}, "HTTP 采集模块初始化开始")
 
-	//初始化后执行一次 Request
-	go runner.Request()
-	go runner.Delete()
-	// 定时任务执行 Request
-	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Request.RequestInterval)*time.Hour, runner.Request)
-	cs.AddCronJob(48*time.Hour, runner.Delete)
-
 	log.InfoFields(map[string]interface{}{
 		"event":    "module_init_complete",
 		"protocol": "http",
 	}, "HTTP 采集模块初始化完成")
+	return runner
 }
 
 // 每天清理一次日志表
@@ -231,6 +226,9 @@ func (runner *Runner) Request() {
 	requestThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Request.RequestThread)
 	// 遍历站点列表, 每个站点开一个线程执行 request
 	for _, v := range requestList {
+		if execution.Canceled(observation.ProtocolHTTP) {
+			break
+		}
 		requestThread.Go(runner.getRequestResult(v, run))
 	}
 	// 等待所有采集和解析执行完毕
@@ -251,6 +249,9 @@ func (runner *Runner) Request() {
 // 解析 Request 采集结果
 func (runner *Runner) getRequestResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
 	return func() {
+		if execution.Canceled(observation.ProtocolHTTP) {
+			return
+		}
 		defer func() {
 			if err := recover(); err != nil {
 				log.ErrorFields(map[string]interface{}{

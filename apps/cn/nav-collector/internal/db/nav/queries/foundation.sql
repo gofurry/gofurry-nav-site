@@ -32,12 +32,14 @@ INSERT INTO gfn_collector_log_dns (
 -- name: InsertObservation :exec
 INSERT INTO gfn_collector_observation (
     id, site_id, target, protocol, status, observed_at, duration_ms,
-    error_code, error_message, payload, schema_version, create_time
+    error_code, error_message, payload, schema_version, create_time,
+    job_id, run_id, collector_instance_id
 ) VALUES (
     sqlc.arg(id), sqlc.arg(site_id), sqlc.arg(target), sqlc.arg(protocol),
     sqlc.arg(status), sqlc.arg(observed_at), sqlc.narg(duration_ms),
     sqlc.narg(error_code), sqlc.narg(error_message), sqlc.arg(payload)::jsonb,
-    sqlc.arg(schema_version), sqlc.arg(create_time)
+    sqlc.arg(schema_version), sqlc.arg(create_time), sqlc.narg(job_id),
+    sqlc.narg(run_id), sqlc.narg(collector_instance_id)
 );
 
 -- name: ListObservationTrendRows :many

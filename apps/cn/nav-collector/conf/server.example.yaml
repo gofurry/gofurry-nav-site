@@ -53,13 +53,13 @@ collector:
     max_dns_records_per_query: 64 # 单次 DNS 记录保留上限，避免异常响应撑大 payload。
     max_response_bytes: 1048576 # HTTP 响应体最多读取 1MiB；不保存完整页面正文。
 
-  # 调度与运行状态。单实例生产建议 lease 关闭，只保留 run state 方便人工排查。
+  # 兼容配置：只有 collector_id 仍用于实例标识；lease/run-state 旧字段已废弃并忽略。
   scheduler:
-    collector_id: "" # 采集器实例名；为空时自动使用 hostname。生产建议填固定值，便于日志和 Redis run state 识别。
-    lease_enabled: false # 多实例互斥 lease；单实例保持 false。
-    lease_ttl_seconds: 0 # lease TTL；0 表示按协议间隔自动推导，仅 lease_enabled=true 时生效。
-    run_state_redis: true # 是否写 collector:v2:run:{protocol}:latest，建议开启。
-    run_state_ttl_hours: 168 # 单次运行详情保留时间，默认 7 天。
+    collector_id: "" # 稳定 collector 名；instance_id 每次启动生成。为空时使用 hostname。
+    lease_enabled: false # 已废弃并忽略；lease 由 PostgreSQL durable Job 固定契约管理。
+    lease_ttl_seconds: 0 # 已废弃并忽略。
+    run_state_redis: false # 已废弃并忽略；Redis 仅写 collection:nav:run:{run_id}:progress。
+    run_state_ttl_hours: 0 # 已废弃并忽略。
 
   # v2 旁路数据面。开启后不改变旧 Redis key、旧日志表和旧前端展示，只额外写 observation/latest/summary。
   v2:
@@ -92,26 +92,26 @@ collector:
         enabled: false # 域名注册治理信息：注册商、过期时间、域名状态、nameserver、DNSSEC delegation。
         interval_hours: 168 # 默认 7 天一次。
         timeout_seconds: 10 # 单次 RDAP 请求超时。
-        run_on_start: false # 是否服务启动后立即补跑一轮；首次补数据可临时 true，完成后改回 false。
+        run_on_start: false # 已废弃并忽略；重启不得创建采集任务，请在 Admin Collection Center 使用 Run Now。
       robots:
         enabled: false # 读取 /robots.txt，提取 sitemap、User-agent:*、Disallow:/ 等治理信息。
         interval_hours: 168 # 默认 7 天一次。
         timeout_seconds: 10 # 单个 robots.txt 请求超时。
         max_response_bytes: 65536 # 最多读取 64KiB，不保存全文。
         max_sitemap_links: 20 # 最多记录 20 条 sitemap 链接。
-        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
+        run_on_start: false # 已废弃并忽略；使用 durable Schedule / Run Now。
       security_txt:
         enabled: false # 读取 /.well-known/security.txt，失败时尝试 /security.txt，提取 Contact/Policy/Expires 等。
         interval_hours: 168 # 默认 7 天一次。
         timeout_seconds: 10 # 单个 security.txt 请求超时。
         max_response_bytes: 65536 # 最多读取 64KiB，不保存全文。
-        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
+        run_on_start: false # 已废弃并忽略；使用 durable Schedule / Run Now。
       llms_txt:
         enabled: false # 读取 /llms.txt，提取标题、章节数、链接数等 AI/SEO 可发现性摘要，不保存全文。
         interval_hours: 168 # 默认 7 天一次。
         timeout_seconds: 10 # 单个 llms.txt 请求超时。
         max_response_bytes: 65536 # 最多读取 64KiB，仅保存结构摘要和 hash。
-        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
+        run_on_start: false # 已废弃并忽略；使用 durable Schedule / Run Now。
       page_assets:
         enabled: false # 基于 HTTP latest 里的 HTML 声明，低频拉取最多 1 个 favicon 和 1 个 manifest。
         interval_hours: 168 # 默认 7 天一次。
@@ -119,7 +119,7 @@ collector:
         max_icon_bytes: 262144 # favicon 最多读取 256KiB，不保存图片原文，只保存摘要和 hash。
         max_manifest_bytes: 65536 # manifest 最多读取 64KiB，不保存原文，只保存摘要字段。
         allowed_asset_hosts: [] # 跨站资源 allowlist；空数组表示默认只允许同注册域资源。
-        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
+        run_on_start: false # 已废弃并忽略；使用 durable Schedule / Run Now。
       port_check:
         enabled: false # TCP connect 级端口连通性检查；不读 banner，不发协议 payload，不做弱口令。
         interval_hours: 168 # 默认 7 天一次。
@@ -127,24 +127,24 @@ collector:
         concurrency: 8 # 端口检查并发数。
         max_ports_per_target: 24 # 单个 target 最多检查的端口数。
         ports: [] # 显式端口列表；空数组表示不检查任何端口。
-        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
+        run_on_start: false # 已废弃并忽略；使用 durable Schedule / Run Now。
       waf_canary:
         enabled: false # 低频 WAF canary；启用即代表目标已授权，只做固定无害规则回归，不做漏洞扫描。
         interval_hours: 720 # 默认 30 天一次。
         timeout_seconds: 10 # 单个 canary 请求超时。
         canary_path: "/.well-known/gofurry-waf-canary" # canary 路径，建议固定到 well-known，避免影响正常页面。
         user_agent: "GoFurry-Nav-Collector-WAF-Canary/1.0" # 专用 UA，便于服务器日志识别。
-        run_on_start: false # 首次补数据可临时 true，完成后改回 false。
+        run_on_start: false # 已废弃并忽略；使用 durable Schedule / Run Now。
         max_targets_per_run: 0 # 每轮最多目标数；0 表示不限制。
   ping:
     ping_thread: 5
-    ping_interval: 600
+    ping_interval: 600 # 仅用于首次创建 durable Schedule；之后以 PostgreSQL 为准。
     ping_key: "ping:sites"
     result_key: "ping:result"
     log_count: "288"
   request:
     request_thread: 3
-    request_interval: 6
+    request_interval: 6 # 仅用于首次创建 durable Schedule；之后以 PostgreSQL 为准。
     log_count: "240"
   dns:
     dns_thread: 3

@@ -16,6 +16,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/dao"
 	"github.com/gofurry/gofurry-nav-collector/collector/dns/models"
+	"github.com/gofurry/gofurry-nav-collector/collector/execution"
 	"github.com/gofurry/gofurry-nav-collector/collector/observation"
 	runstate "github.com/gofurry/gofurry-nav-collector/collector/scheduler"
 	"github.com/gofurry/gofurry-nav-collector/common"
@@ -171,7 +172,7 @@ func currentGeoDBs() *GeoDBSet {
 // ============== DNS解析 - 初始化部分 ==============
 
 // 初始化
-func InitDNSOnStart(persistence *dao.DNSDAO, observations *observation.ObservationDAO) {
+func InitDNSOnStart(persistence *dao.DNSDAO, observations *observation.ObservationDAO) *Runner {
 	runner := &Runner{persistence: persistence, observations: observations}
 	resolver = env.GetServerConfig().Collector.Dns.Resolver
 	defer func() {
@@ -193,17 +194,11 @@ func InitDNSOnStart(persistence *dao.DNSDAO, observations *observation.Observati
 	}, "DNS 采集模块初始化开始")
 	geoDBs = InitGeoDB(env.GetServerConfig().Collector.Dns.Geolite2Path)
 
-	//初始化后执行一次 ParseDNS
-	go runner.ParseDNS()
-	go runner.Delete()
-	// 定时任务执行 ParseDNS
-	cs.AddCronJob(time.Duration(env.GetServerConfig().Collector.Dns.DnsInterval)*time.Hour, runner.ParseDNS)
-	cs.AddCronJob(72*time.Hour, runner.Delete)
-
 	log.InfoFields(map[string]interface{}{
 		"event":    "module_init_complete",
 		"protocol": "dns",
 	}, "DNS 采集模块初始化完成")
+	return runner
 }
 
 // 每天清理一次日志表
@@ -348,6 +343,9 @@ func (runner *Runner) ParseDNS() {
 	dnsThread := pool.New().WithMaxGoroutines(env.GetServerConfig().Collector.Dns.DnsThread)
 	// 遍历站点列表, 每个站点开一个线程执行采集
 	for _, v := range requestList {
+		if execution.Canceled(observation.ProtocolDNS) {
+			break
+		}
 		dnsThread.Go(runner.getDNSResult(v, run))
 	}
 	// 等待所有采集和解析执行完毕
@@ -365,6 +363,9 @@ func (runner *Runner) ParseDNS() {
 
 func (runner *Runner) getDNSResult(site models.GfnCollectorDomain, run *runstate.Run) func() {
 	return func() {
+		if execution.Canceled(observation.ProtocolDNS) {
+			return
+		}
 		defer func() {
 			if err := recover(); err != nil {
 				log.ErrorFields(map[string]interface{}{

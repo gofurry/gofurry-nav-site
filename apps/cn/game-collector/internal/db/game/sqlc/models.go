@@ -8,6 +8,108 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// Durable scheduled, manual, and entity-triggered Game collection jobs.
+type GfgCollectionJob struct {
+	ID                int64              `json:"id"`
+	ScheduleID        *int64             `json:"schedule_id"`
+	ScheduleVersion   *int64             `json:"schedule_version"`
+	JobKey            string             `json:"job_key"`
+	Trigger           string             `json:"trigger"`
+	ScopeType         string             `json:"scope_type"`
+	ScopeID           *int64             `json:"scope_id"`
+	Target            *string            `json:"target"`
+	Tasks             []string           `json:"tasks"`
+	Priority          int32              `json:"priority"`
+	ConcurrencyKey    string             `json:"concurrency_key"`
+	ScheduledFor      pgtype.Timestamptz `json:"scheduled_for"`
+	Status            string             `json:"status"`
+	RequestedBy       string             `json:"requested_by"`
+	DedupeKey         *string            `json:"dedupe_key"`
+	ClaimedBy         *string            `json:"claimed_by"`
+	LeaseUntil        pgtype.Timestamptz `json:"lease_until"`
+	CancelRequestedAt pgtype.Timestamptz `json:"cancel_requested_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
+}
+
+// Execution attempts for durable Game collection jobs.
+type GfgCollectionRun struct {
+	ID                  string             `json:"id"`
+	JobID               int64              `json:"job_id"`
+	AttemptNo           int32              `json:"attempt_no"`
+	CollectorInstanceID string             `json:"collector_instance_id"`
+	Status              string             `json:"status"`
+	ScheduledFor        pgtype.Timestamptz `json:"scheduled_for"`
+	StartedAt           pgtype.Timestamptz `json:"started_at"`
+	EndedAt             pgtype.Timestamptz `json:"ended_at"`
+	ExpectedCount       int32              `json:"expected_count"`
+	AttemptedCount      int32              `json:"attempted_count"`
+	SuccessCount        int32              `json:"success_count"`
+	PartialCount        int32              `json:"partial_count"`
+	FailureCount        int32              `json:"failure_count"`
+	SkippedCount        int32              `json:"skipped_count"`
+	ScheduleDelayMs     int64              `json:"schedule_delay_ms"`
+	DurationMs          int64              `json:"duration_ms"`
+	ErrorKind           string             `json:"error_kind"`
+	ErrorMessage        string             `json:"error_message"`
+}
+
+// Durable Game collection schedules; PostgreSQL is the source of truth.
+type GfgCollectionSchedule struct {
+	ID                  int64              `json:"id"`
+	JobKey              string             `json:"job_key"`
+	Name                string             `json:"name"`
+	Enabled             bool               `json:"enabled"`
+	ScheduleKind        string             `json:"schedule_kind"`
+	CronExpression      *string            `json:"cron_expression"`
+	IntervalSeconds     *int64             `json:"interval_seconds"`
+	AnchorAt            pgtype.Timestamptz `json:"anchor_at"`
+	Timezone            string             `json:"timezone"`
+	MisfirePolicy       string             `json:"misfire_policy"`
+	MisfireGraceSeconds int32              `json:"misfire_grace_seconds"`
+	OverlapPolicy       string             `json:"overlap_policy"`
+	Priority            int32              `json:"priority"`
+	ConcurrencyKey      string             `json:"concurrency_key"`
+	Version             int64              `json:"version"`
+	EffectiveFrom       pgtype.Timestamptz `json:"effective_from"`
+	LastMaterializedFor pgtype.Timestamptz `json:"last_materialized_for"`
+	NextScheduledFor    pgtype.Timestamptz `json:"next_scheduled_for"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Per-game, per-task results for Game collection runs.
+type GfgCollectionTaskResult struct {
+	ID                 int64              `json:"id"`
+	RunID              string             `json:"run_id"`
+	TaskType           string             `json:"task_type"`
+	GameID             int64              `json:"game_id"`
+	Appid              int64              `json:"appid"`
+	Status             string             `json:"status"`
+	UpstreamStatusCode int32              `json:"upstream_status_code"`
+	TrafficBucket      string             `json:"traffic_bucket"`
+	RetryCount         int32              `json:"retry_count"`
+	DurationMs         int64              `json:"duration_ms"`
+	ErrorKind          string             `json:"error_kind"`
+	ErrorMessage       string             `json:"error_message"`
+	StartedAt          pgtype.Timestamptz `json:"started_at"`
+	EndedAt            pgtype.Timestamptz `json:"ended_at"`
+}
+
+// Game collector process instances and heartbeats.
+type GfgCollectorInstance struct {
+	InstanceID      string             `json:"instance_id"`
+	CollectorID     string             `json:"collector_id"`
+	Hostname        string             `json:"hostname"`
+	Version         string             `json:"version"`
+	CommitSha       string             `json:"commit_sha"`
+	Capabilities    []string           `json:"capabilities"`
+	StartedAt       pgtype.Timestamptz `json:"started_at"`
+	LastHeartbeatAt pgtype.Timestamptz `json:"last_heartbeat_at"`
+	StoppedAt       pgtype.Timestamptz `json:"stopped_at"`
+}
+
 // 游戏表
 type GfgGame struct {
 	// 游戏表ID
@@ -49,6 +151,30 @@ type GfgGame struct {
 	ViewCount    int64 `json:"view_count"`
 }
 
+type GfgGameAsset struct {
+	ID            int64              `json:"id"`
+	GameID        int64              `json:"game_id"`
+	Appid         int64              `json:"appid"`
+	AssetType     string             `json:"asset_type"`
+	AssetFamily   string             `json:"asset_family"`
+	Source        string             `json:"source"`
+	Lang          string             `json:"lang"`
+	MediaKey      string             `json:"media_key"`
+	Title         string             `json:"title"`
+	Url           string             `json:"url"`
+	ThumbnailUrl  string             `json:"thumbnail_url"`
+	Format        string             `json:"format"`
+	Exists        *bool              `json:"exists"`
+	StatusCode    int32              `json:"status_code"`
+	ContentType   string             `json:"content_type"`
+	ContentLength int64              `json:"content_length"`
+	Extra         []byte             `json:"extra"`
+	SortOrder     int32              `json:"sort_order"`
+	CheckedAt     pgtype.Timestamptz `json:"checked_at"`
+	CollectedAt   pgtype.Timestamptz `json:"collected_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
 // 评论表
 type GfgGameComment struct {
 	// 评论表ID
@@ -67,6 +193,40 @@ type GfgGameComment struct {
 	Ip string `json:"ip"`
 	// 评论人名称
 	Name string `json:"name"`
+}
+
+type GfgGameDetail struct {
+	GameID             int64              `json:"game_id"`
+	Appid              int64              `json:"appid"`
+	Source             string             `json:"source"`
+	Type               string             `json:"type"`
+	Name               string             `json:"name"`
+	IsFree             bool               `json:"is_free"`
+	Website            string             `json:"website"`
+	HeaderUrl          string             `json:"header_url"`
+	Developers         []byte             `json:"developers"`
+	Publishers         []byte             `json:"publishers"`
+	ReleaseComingSoon  bool               `json:"release_coming_soon"`
+	ReleaseDateText    string             `json:"release_date_text"`
+	Platforms          []byte             `json:"platforms"`
+	SupportedLanguages string             `json:"supported_languages"`
+	SupportInfo        []byte             `json:"support_info"`
+	ContentDescriptors []byte             `json:"content_descriptors"`
+	Ratings            []byte             `json:"ratings"`
+	CollectedAt        pgtype.Timestamptz `json:"collected_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GfgGameDetailSnapshot struct {
+	ID          int64              `json:"id"`
+	GameID      int64              `json:"game_id"`
+	Appid       int64              `json:"appid"`
+	Lang        string             `json:"lang"`
+	Region      string             `json:"region"`
+	Source      string             `json:"source"`
+	PayloadHash string             `json:"payload_hash"`
+	RawPayload  []byte             `json:"raw_payload"`
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
 }
 
 // Write-once canonical date or range when a game first became formally purchasable or playable.
@@ -107,6 +267,100 @@ type GfgGameLanguage struct {
 	NormalizerVersion  string             `json:"normalizer_version"`
 	ObservedAt         pgtype.Timestamptz `json:"observed_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GfgGameLocalizedDetail struct {
+	GameID              int64              `json:"game_id"`
+	Appid               int64              `json:"appid"`
+	Lang                string             `json:"lang"`
+	Name                string             `json:"name"`
+	ShortDescription    string             `json:"short_description"`
+	DetailedDescription string             `json:"detailed_description"`
+	AboutTheGame        string             `json:"about_the_game"`
+	CollectedAt         pgtype.Timestamptz `json:"collected_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GfgGameMedium struct {
+	ID           int64              `json:"id"`
+	GameID       int64              `json:"game_id"`
+	Appid        int64              `json:"appid"`
+	MediaType    string             `json:"media_type"`
+	MediaKey     string             `json:"media_key"`
+	Title        string             `json:"title"`
+	Url          string             `json:"url"`
+	ThumbnailUrl string             `json:"thumbnail_url"`
+	Extra        []byte             `json:"extra"`
+	SortOrder    int32              `json:"sort_order"`
+	CollectedAt  pgtype.Timestamptz `json:"collected_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GfgGameNews struct {
+	ID              int64              `json:"id"`
+	GameID          int64              `json:"game_id"`
+	Appid           int64              `json:"appid"`
+	Lang            string             `json:"lang"`
+	EventGid        string             `json:"event_gid"`
+	AnnouncementGid string             `json:"announcement_gid"`
+	ForumTopicID    string             `json:"forum_topic_id"`
+	Headline        string             `json:"headline"`
+	RawBody         string             `json:"raw_body"`
+	Html            string             `json:"html"`
+	PlainText       string             `json:"plain_text"`
+	Summary         string             `json:"summary"`
+	Url             string             `json:"url"`
+	Tags            []byte             `json:"tags"`
+	VoteUpCount     int32              `json:"vote_up_count"`
+	VoteDownCount   int32              `json:"vote_down_count"`
+	CommentCount    int32              `json:"comment_count"`
+	RawEvent        []byte             `json:"raw_event"`
+	PublishedAt     pgtype.Timestamptz `json:"published_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	CollectedAt     pgtype.Timestamptz `json:"collected_at"`
+}
+
+type GfgGamePlayerCount struct {
+	ID                 int64              `json:"id"`
+	GameID             int64              `json:"game_id"`
+	Appid              int64              `json:"appid"`
+	Count              int64              `json:"count"`
+	Status             string             `json:"status"`
+	UpstreamStatusCode int32              `json:"upstream_status_code"`
+	ErrorKind          string             `json:"error_kind"`
+	ErrorMessage       string             `json:"error_message"`
+	CollectedAt        pgtype.Timestamptz `json:"collected_at"`
+	RunID              string             `json:"run_id"`
+}
+
+type GfgGamePrice struct {
+	GameID           int64              `json:"game_id"`
+	Appid            int64              `json:"appid"`
+	Region           string             `json:"region"`
+	IsFree           bool               `json:"is_free"`
+	Currency         string             `json:"currency"`
+	InitialAmount    int64              `json:"initial_amount"`
+	FinalAmount      int64              `json:"final_amount"`
+	DiscountPercent  int64              `json:"discount_percent"`
+	InitialFormatted string             `json:"initial_formatted"`
+	FinalFormatted   string             `json:"final_formatted"`
+	CollectedAt      pgtype.Timestamptz `json:"collected_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Precomputed similar-game recommendations. One algorithm_version represents one scoring contract.
+type GfgGameRecommendation struct {
+	SourceGameID int64 `json:"source_game_id"`
+	TargetGameID int64 `json:"target_game_id"`
+	// Raw hybrid content similarity score in range 0..1.
+	Score float64 `json:"score"`
+	// Presentation score in range 0..1 after non-linear stretching.
+	DisplayScore float64 `json:"display_score"`
+	Rank         int32   `json:"rank"`
+	// Short explainable recommendation reasons for UI display and later tuning.
+	ReasonJson       []byte             `json:"reason_json"`
+	AlgorithmVersion string             `json:"algorithm_version"`
+	ComputedAt       pgtype.Timestamptz `json:"computed_at"`
 }
 
 // Semantic snapshots of canonical release-state changes; raw-text-only changes do not append rows.
@@ -150,193 +404,7 @@ type GfgGameReleaseState struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
-type GfgGameV2Asset struct {
-	ID            int64              `json:"id"`
-	GameID        int64              `json:"game_id"`
-	Appid         int64              `json:"appid"`
-	AssetType     string             `json:"asset_type"`
-	AssetFamily   string             `json:"asset_family"`
-	Source        string             `json:"source"`
-	Lang          string             `json:"lang"`
-	MediaKey      string             `json:"media_key"`
-	Title         string             `json:"title"`
-	Url           string             `json:"url"`
-	ThumbnailUrl  string             `json:"thumbnail_url"`
-	Format        string             `json:"format"`
-	Exists        *bool              `json:"exists"`
-	StatusCode    int32              `json:"status_code"`
-	ContentType   string             `json:"content_type"`
-	ContentLength int64              `json:"content_length"`
-	Extra         []byte             `json:"extra"`
-	SortOrder     int32              `json:"sort_order"`
-	CheckedAt     pgtype.Timestamptz `json:"checked_at"`
-	CollectedAt   pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-}
-
-type GfgGameV2CollectRun struct {
-	ID             string             `json:"id"`
-	TaskType       string             `json:"task_type"`
-	Status         string             `json:"status"`
-	TotalCount     int32              `json:"total_count"`
-	SuccessCount   int32              `json:"success_count"`
-	FailedCount    int32              `json:"failed_count"`
-	SkippedCount   int32              `json:"skipped_count"`
-	ErrorKind      string             `json:"error_kind"`
-	ErrorMessage   string             `json:"error_message"`
-	StartedAt      pgtype.Timestamptz `json:"started_at"`
-	EndedAt        pgtype.Timestamptz `json:"ended_at"`
-	PartialCount   int32              `json:"partial_count"`
-	TaskSummary    []byte             `json:"task_summary"`
-	DurationMillis int64              `json:"duration_millis"`
-}
-
-type GfgGameV2CollectTaskResult struct {
-	ID                 int64              `json:"id"`
-	RunID              string             `json:"run_id"`
-	TaskType           string             `json:"task_type"`
-	Status             string             `json:"status"`
-	GameID             int64              `json:"game_id"`
-	Appid              int64              `json:"appid"`
-	UpstreamStatusCode int32              `json:"upstream_status_code"`
-	TrafficBucket      string             `json:"traffic_bucket"`
-	RetryCount         int32              `json:"retry_count"`
-	DurationMillis     int64              `json:"duration_millis"`
-	ErrorKind          string             `json:"error_kind"`
-	ErrorMessage       string             `json:"error_message"`
-	StartedAt          pgtype.Timestamptz `json:"started_at"`
-	EndedAt            pgtype.Timestamptz `json:"ended_at"`
-}
-
-type GfgGameV2Detail struct {
-	GameID             int64              `json:"game_id"`
-	Appid              int64              `json:"appid"`
-	Source             string             `json:"source"`
-	Type               string             `json:"type"`
-	Name               string             `json:"name"`
-	IsFree             bool               `json:"is_free"`
-	Website            string             `json:"website"`
-	HeaderUrl          string             `json:"header_url"`
-	Developers         []byte             `json:"developers"`
-	Publishers         []byte             `json:"publishers"`
-	ReleaseComingSoon  bool               `json:"release_coming_soon"`
-	ReleaseDateText    string             `json:"release_date_text"`
-	Platforms          []byte             `json:"platforms"`
-	SupportedLanguages string             `json:"supported_languages"`
-	SupportInfo        []byte             `json:"support_info"`
-	ContentDescriptors []byte             `json:"content_descriptors"`
-	Ratings            []byte             `json:"ratings"`
-	CollectedAt        pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
-}
-
-type GfgGameV2DetailSnapshot struct {
-	ID          int64              `json:"id"`
-	GameID      int64              `json:"game_id"`
-	Appid       int64              `json:"appid"`
-	Lang        string             `json:"lang"`
-	Region      string             `json:"region"`
-	Source      string             `json:"source"`
-	PayloadHash string             `json:"payload_hash"`
-	RawPayload  []byte             `json:"raw_payload"`
-	CollectedAt pgtype.Timestamptz `json:"collected_at"`
-}
-
-type GfgGameV2LocalizedDetail struct {
-	GameID              int64              `json:"game_id"`
-	Appid               int64              `json:"appid"`
-	Lang                string             `json:"lang"`
-	Name                string             `json:"name"`
-	ShortDescription    string             `json:"short_description"`
-	DetailedDescription string             `json:"detailed_description"`
-	AboutTheGame        string             `json:"about_the_game"`
-	CollectedAt         pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-}
-
-type GfgGameV2Medium struct {
-	ID           int64              `json:"id"`
-	GameID       int64              `json:"game_id"`
-	Appid        int64              `json:"appid"`
-	MediaType    string             `json:"media_type"`
-	MediaKey     string             `json:"media_key"`
-	Title        string             `json:"title"`
-	Url          string             `json:"url"`
-	ThumbnailUrl string             `json:"thumbnail_url"`
-	Extra        []byte             `json:"extra"`
-	SortOrder    int32              `json:"sort_order"`
-	CollectedAt  pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-}
-
-type GfgGameV2News struct {
-	ID              int64              `json:"id"`
-	GameID          int64              `json:"game_id"`
-	Appid           int64              `json:"appid"`
-	Lang            string             `json:"lang"`
-	EventGid        string             `json:"event_gid"`
-	AnnouncementGid string             `json:"announcement_gid"`
-	ForumTopicID    string             `json:"forum_topic_id"`
-	Headline        string             `json:"headline"`
-	RawBody         string             `json:"raw_body"`
-	Html            string             `json:"html"`
-	PlainText       string             `json:"plain_text"`
-	Summary         string             `json:"summary"`
-	Url             string             `json:"url"`
-	Tags            []byte             `json:"tags"`
-	VoteUpCount     int32              `json:"vote_up_count"`
-	VoteDownCount   int32              `json:"vote_down_count"`
-	CommentCount    int32              `json:"comment_count"`
-	RawEvent        []byte             `json:"raw_event"`
-	PublishedAt     pgtype.Timestamptz `json:"published_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	CollectedAt     pgtype.Timestamptz `json:"collected_at"`
-}
-
-type GfgGameV2PlayerCount struct {
-	ID                 int64              `json:"id"`
-	GameID             int64              `json:"game_id"`
-	Appid              int64              `json:"appid"`
-	Count              int64              `json:"count"`
-	Status             string             `json:"status"`
-	UpstreamStatusCode int32              `json:"upstream_status_code"`
-	ErrorKind          string             `json:"error_kind"`
-	ErrorMessage       string             `json:"error_message"`
-	CollectedAt        pgtype.Timestamptz `json:"collected_at"`
-	RunID              string             `json:"run_id"`
-}
-
-type GfgGameV2Price struct {
-	GameID           int64              `json:"game_id"`
-	Appid            int64              `json:"appid"`
-	Region           string             `json:"region"`
-	IsFree           bool               `json:"is_free"`
-	Currency         string             `json:"currency"`
-	InitialAmount    int64              `json:"initial_amount"`
-	FinalAmount      int64              `json:"final_amount"`
-	DiscountPercent  int64              `json:"discount_percent"`
-	InitialFormatted string             `json:"initial_formatted"`
-	FinalFormatted   string             `json:"final_formatted"`
-	CollectedAt      pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
-}
-
-// Precomputed game v2 similar recommendations. One algorithm_version represents one scoring contract.
-type GfgGameV2Recommendation struct {
-	SourceGameID int64 `json:"source_game_id"`
-	TargetGameID int64 `json:"target_game_id"`
-	// Raw hybrid content similarity score in range 0..1.
-	Score float64 `json:"score"`
-	// Presentation score in range 0..1 after non-linear stretching.
-	DisplayScore float64 `json:"display_score"`
-	Rank         int32   `json:"rank"`
-	// Short explainable recommendation reasons for UI display and later tuning.
-	ReasonJson       []byte             `json:"reason_json"`
-	AlgorithmVersion string             `json:"algorithm_version"`
-	ComputedAt       pgtype.Timestamptz `json:"computed_at"`
-}
-
-type GfgGameV2Requirement struct {
+type GfgGameRequirement struct {
 	GameID      int64              `json:"game_id"`
 	Appid       int64              `json:"appid"`
 	Pc          []byte             `json:"pc"`
@@ -344,6 +412,11 @@ type GfgGameV2Requirement struct {
 	Linux       []byte             `json:"linux"`
 	CollectedAt pgtype.Timestamptz `json:"collected_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GfgLegacyRunJobMap struct {
+	RunID string `json:"run_id"`
+	JobID int64  `json:"job_id"`
 }
 
 // 抽奖活动表

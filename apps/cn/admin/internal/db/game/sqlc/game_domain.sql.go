@@ -69,7 +69,7 @@ func (q *Queries) LockGameForUpdate(ctx context.Context, id int64) (LockGameForU
 
 const resetSteamDerivedGameState = `-- name: ResetSteamDerivedGameState :exec
 WITH deleted_recommendations AS (
-    DELETE FROM gfg_game_v2_recommendations AS recommendations
+    DELETE FROM gfg_game_recommendations AS recommendations
     WHERE recommendations.source_game_id = $1
        OR recommendations.target_game_id = $1
 ), deleted_release_history AS (
@@ -85,31 +85,31 @@ WITH deleted_recommendations AS (
     DELETE FROM gfg_game_languages AS languages
     WHERE languages.game_id = $1
 ), deleted_snapshots AS (
-    DELETE FROM gfg_game_v2_detail_snapshots AS snapshots
+    DELETE FROM gfg_game_detail_snapshots AS snapshots
     WHERE snapshots.game_id = $1
 ), deleted_player_counts AS (
-    DELETE FROM gfg_game_v2_player_counts AS player_counts
+    DELETE FROM gfg_game_player_counts AS player_counts
     WHERE player_counts.game_id = $1
 ), deleted_news AS (
-    DELETE FROM gfg_game_v2_news AS news
+    DELETE FROM gfg_game_news AS news
     WHERE news.game_id = $1
 ), deleted_requirements AS (
-    DELETE FROM gfg_game_v2_requirements AS requirements
+    DELETE FROM gfg_game_requirements AS requirements
     WHERE requirements.game_id = $1
 ), deleted_assets AS (
-    DELETE FROM gfg_game_v2_assets AS assets
+    DELETE FROM gfg_game_assets AS assets
     WHERE assets.game_id = $1
 ), deleted_media AS (
-    DELETE FROM gfg_game_v2_media AS media
+    DELETE FROM gfg_game_media AS media
     WHERE media.game_id = $1
 ), deleted_prices AS (
-    DELETE FROM gfg_game_v2_prices AS prices
+    DELETE FROM gfg_game_prices AS prices
     WHERE prices.game_id = $1
 ), deleted_localized AS (
-    DELETE FROM gfg_game_v2_localized_details AS localized
+    DELETE FROM gfg_game_localized_details AS localized
     WHERE localized.game_id = $1
 )
-DELETE FROM gfg_game_v2_details AS details
+DELETE FROM gfg_game_details AS details
 WHERE details.game_id = $1
 `
 

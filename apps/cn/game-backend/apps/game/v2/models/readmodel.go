@@ -7,17 +7,15 @@ import (
 )
 
 const (
-	TableNameGfgGameV2Details            = "gfg_game_v2_details"
-	TableNameGfgGameV2LocalizedDetails   = "gfg_game_v2_localized_details"
-	TableNameGfgGameV2Prices             = "gfg_game_v2_prices"
-	TableNameGfgGameV2Media              = "gfg_game_v2_media"
-	TableNameGfgGameV2Assets             = "gfg_game_v2_assets"
-	TableNameGfgGameV2Requirements       = "gfg_game_v2_requirements"
-	TableNameGfgGameV2News               = "gfg_game_v2_news"
-	TableNameGfgGameV2PlayerCounts       = "gfg_game_v2_player_counts"
-	TableNameGfgGameV2CollectRuns        = "gfg_game_v2_collect_runs"
-	TableNameGfgGameV2CollectTaskResults = "gfg_game_v2_collect_task_results"
-	TableNameGfgGameV2Recommendations    = "gfg_game_v2_recommendations"
+	TableNameGfgGameV2Details          = "gfg_game_details"
+	TableNameGfgGameV2LocalizedDetails = "gfg_game_localized_details"
+	TableNameGfgGameV2Prices           = "gfg_game_prices"
+	TableNameGfgGameV2Media            = "gfg_game_media"
+	TableNameGfgGameV2Assets           = "gfg_game_assets"
+	TableNameGfgGameV2Requirements     = "gfg_game_requirements"
+	TableNameGfgGameV2News             = "gfg_game_news"
+	TableNameGfgGameV2PlayerCounts     = "gfg_game_player_counts"
+	TableNameGfgGameV2Recommendations  = "gfg_game_recommendations"
 )
 
 // The db tags are consumed by pgx's explicit row collectors. These are API/domain
@@ -174,44 +172,6 @@ type GfgGameV2PlayerCount struct {
 }
 
 func (*GfgGameV2PlayerCount) TableName() string { return TableNameGfgGameV2PlayerCounts }
-
-type GfgGameV2CollectRun struct {
-	ID             string     `db:"id" json:"id"`
-	TaskType       string     `db:"task_type" json:"task_type"`
-	Status         string     `db:"status" json:"status"`
-	TotalCount     int64      `db:"total_count" json:"total_count"`
-	SuccessCount   int64      `db:"success_count" json:"success_count"`
-	FailedCount    int64      `db:"failed_count" json:"failed_count"`
-	SkippedCount   int64      `db:"skipped_count" json:"skipped_count"`
-	PartialCount   int64      `db:"partial_count" json:"partial_count"`
-	TaskSummary    string     `db:"task_summary" json:"task_summary"`
-	DurationMillis int64      `db:"duration_millis" json:"duration_millis"`
-	ErrorKind      string     `db:"error_kind" json:"error_kind"`
-	ErrorMessage   string     `db:"error_message" json:"error_message"`
-	StartedAt      time.Time  `db:"started_at" json:"started_at"`
-	EndedAt        *time.Time `db:"ended_at" json:"ended_at"`
-}
-
-func (*GfgGameV2CollectRun) TableName() string { return TableNameGfgGameV2CollectRuns }
-
-type GfgGameV2CollectTaskResult struct {
-	ID                 int64      `db:"id" json:"id"`
-	RunID              string     `db:"run_id" json:"run_id"`
-	TaskType           string     `db:"task_type" json:"task_type"`
-	Status             string     `db:"status" json:"status"`
-	GameID             int64      `db:"game_id" json:"game_id"`
-	AppID              int64      `db:"appid" json:"appid"`
-	UpstreamStatusCode int        `db:"upstream_status_code" json:"upstream_status_code"`
-	TrafficBucket      string     `db:"traffic_bucket" json:"traffic_bucket"`
-	RetryCount         int        `db:"retry_count" json:"retry_count"`
-	DurationMillis     int64      `db:"duration_millis" json:"duration_millis"`
-	ErrorKind          string     `db:"error_kind" json:"error_kind"`
-	ErrorMessage       string     `db:"error_message" json:"error_message"`
-	StartedAt          time.Time  `db:"started_at" json:"started_at"`
-	EndedAt            *time.Time `db:"ended_at" json:"ended_at"`
-}
-
-func (*GfgGameV2CollectTaskResult) TableName() string { return TableNameGfgGameV2CollectTaskResults }
 
 type GfgGameV2Recommendation struct {
 	SourceGameID     int64     `db:"source_game_id" json:"source_game_id"`
@@ -516,66 +476,6 @@ type GameV2PanelQuery struct {
 	TopOnlineLimit int
 	PriceLimit     int
 	NewsLimit      int
-}
-
-type GameV2CollectRunQuery struct {
-	TaskType string
-	Status   string
-	Limit    int
-	Offset   int
-}
-
-type GameV2CollectTaskResultQuery struct {
-	RunID    string
-	TaskType string
-	Status   string
-	GameID   int64
-	AppID    int64
-	Limit    int
-	Offset   int
-}
-
-type GameV2CollectStatus struct {
-	LatestRun      *GfgGameV2CollectRun             `json:"latest_run"`
-	LatestTaskRuns []GfgGameV2CollectRun            `json:"latest_task_runs"`
-	Summary        []GameV2CollectTaskStatusSummary `json:"summary"`
-	GeneratedAt    time.Time                        `json:"generated_at"`
-}
-
-type GameV2CollectTaskStatusSummary struct {
-	TaskType string `db:"task_type" json:"task_type"`
-	Status   string `db:"status" json:"status"`
-	Count    int64  `db:"count" json:"count"`
-}
-
-type GameV2CollectLocalizedStatus struct {
-	Lang        string    `json:"lang"`
-	Name        string    `json:"name"`
-	CollectedAt time.Time `json:"collected_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-type GameV2CollectRegionFreshness struct {
-	Region      string    `json:"region"`
-	Available   bool      `json:"available"`
-	Currency    string    `json:"currency"`
-	FinalAmount int64     `json:"final_amount"`
-	CollectedAt time.Time `json:"collected_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-type GameV2CollectGameStatus struct {
-	GameID            int64                          `json:"game_id"`
-	AppID             int64                          `json:"appid"`
-	Name              string                         `json:"name"`
-	DetailsUpdatedAt  *time.Time                     `json:"details_updated_at"`
-	Localized         []GameV2CollectLocalizedStatus `json:"localized"`
-	Prices            []GameV2CollectRegionFreshness `json:"prices"`
-	MediaCount        int64                          `json:"media_count"`
-	NewsCount         int64                          `json:"news_count"`
-	LatestNewsAt      *time.Time                     `json:"latest_news_at"`
-	LatestPlayerCount *GfgGameV2PlayerCount          `json:"latest_player_count"`
-	LatestTaskResults []GfgGameV2CollectTaskResult   `json:"latest_task_results"`
 }
 
 type GameV2DetailRequest struct {

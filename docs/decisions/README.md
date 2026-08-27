@@ -7,5 +7,6 @@ Accepted Architecture Decision Records define durable choices that affect more t
 - [0003: CLI and systemd lifecycle](0003-cli-and-systemd-lifecycle.md)
 - [0004: Standalone availability observer](0004-standalone-availability-observer.md)
 - [0005: Normalize the Game release and language domain](0005-game-domain-normalization.md)
+- [0006: Use PostgreSQL as the collector control plane](0006-collector-control-plane.md)
 
 New decisions should be short, use the same section structure, and supersede rather than rewrite an accepted record when the decision changes.

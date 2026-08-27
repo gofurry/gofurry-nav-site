@@ -78,7 +78,6 @@ func (api *GameAPI) CreateGame(c fiber.Ctx) error {
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
-	enqueueGameCollect(created)
 	return common.NewResponse(c).SuccessWithData(gameDTO(created))
 }
 
@@ -108,12 +107,9 @@ func (api *GameAPI) UpdateGame(c fiber.Ctx) error {
 	}
 	params := gameUpdateParams(req)
 	params.ID = id
-	updated, appIDChanged, txErr := api.store.updateGame(c.Context(), audit.MetaFromFiber(c), params)
+	_, _, txErr := api.store.updateGame(c.Context(), audit.MetaFromFiber(c), params)
 	if txErr != nil {
 		return common.NewResponse(c).Error(txErr)
-	}
-	if appIDChanged {
-		enqueueGameCollect(updated)
 	}
 	return api.GetGame(c)
 }

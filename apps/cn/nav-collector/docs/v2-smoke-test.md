@@ -1,6 +1,6 @@
 # Collector v2 本地与测试环境 Smoke Test
 
-本文档用于在后端正式推进 `/api/v2/nav` 前，快速确认 `gofurry-nav-collector` v2 数据面是否完整可用。它只验证旁路数据，不要求改变旧 Redis key、旧日志表、旧前端展示或生产采集频率。
+本文档用于快速确认 `gofurry-nav-collector` v2 数据面与 V3-P0.1.1 durable control plane 可用。现有 public Redis key、旧日志表和前端读取语义保持不变；采集调度与运行历史以 PostgreSQL 为准。
 
 ## 前置条件
 
@@ -55,7 +55,7 @@ collector:
 在 collector 目录启动：
 
 ```powershell
-go run .
+go run . serve --config conf/server.yaml
 ```
 
 日志中应能看到：
@@ -63,7 +63,7 @@ go run .
 - Ping / HTTP / DNS 模块初始化完成。
 - v2 observation 写入失败不会影响旧链路。
 - 如果 light probe 未开启，不应出现对应 `light_probe_registered`。
-- 如果 run state 开启，应能看到每轮 run start / complete 结构化日志。
+- 应能看到 collector instance、schedule reconciliation、durable Job/Run start/finish 结构化日志。
 
 ## Redis Key 验证
 
@@ -120,18 +120,16 @@ GET collector:v2:change:target:133:go-furry.com
 - 没有变化时 `events=[]` 是正常状态。
 - 每条事件只包含 old/new 摘要、protocol、category、field 和 observed_at，不包含外部大文本原文。
 
-### run state
+### realtime progress
 
 ```text
-GET collector:v2:run:ping:latest
-GET collector:v2:run:http:latest
-GET collector:v2:run:dns:latest
+GET collection:nav:run:{run_id}:progress
 ```
 
 期望：
 
-- 包含 `collector_id`、`job_id`、`protocol`、`status`、`started_at`、`finished_at`、`target_count`、`success_count`、`failure_count`。
-- light probe 开启后才应出现对应协议的 run state。
+- 包含 `expected`、`attempted`、`success`、`partial`、`failed`、`skipped` 和 `updated_at`。
+- durable status、lease、cancellation、final counters 和历史只在 PostgreSQL `gfn_collection_*` 表中读取，Redis 不作为 source of truth。
 
 ## Observation DB 验证
 

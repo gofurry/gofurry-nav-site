@@ -17,7 +17,6 @@ import (
 
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/backfill"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
-	"github.com/gofurry/gofurry-game-collector/collector/game/v2/report"
 	gamesqlc "github.com/gofurry/gofurry-game-collector/internal/db/game/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -92,7 +91,7 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 	if err := detailsRepository.SaveDetails(ctx, invalid); err == nil {
 		t.Fatal("invalid snapshot JSON should roll back the details transaction")
 	}
-	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_details where game_id=$1`, 0, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_details where game_id=$1`, 0, int64(91001))
 
 	snapshots := make([]domain.RawSnapshot, 6)
 	for i := range snapshots {
@@ -108,9 +107,9 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 	if err := detailsRepository.SaveDetails(ctx, initial); err != nil {
 		t.Fatalf("save details: %v", err)
 	}
-	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_detail_snapshots where game_id=$1`, 5, int64(91001))
-	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_media where game_id=$1`, 1, int64(91001))
-	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_assets where game_id=$1`, 1, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_detail_snapshots where game_id=$1`, 5, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_media where game_id=$1`, 1, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_assets where game_id=$1`, 1, int64(91001))
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_state where game_id=$1 and availability='upcoming'`, 1, int64(91001))
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_history where game_id=$1`, 1, int64(91001))
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_first_available where game_id=$1`, 0, int64(91001))
@@ -164,7 +163,7 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 	if err := newsRepository.SaveNews(ctx, []domain.GameNews{news, news}); err != nil {
 		t.Fatalf("upsert news: %v", err)
 	}
-	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_news where game_id=$1`, 1, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_news where game_id=$1`, 1, int64(91001))
 
 	playerRepository := NewPlayerRepository(pool)
 	if err := playerRepository.SavePlayerCount(ctx, domain.PlayerCount{RunID: "current", GameID: 91001, AppID: 92001, Count: 42, Status: domain.StatusSuccess, CollectedAt: now}); err != nil {
@@ -175,26 +174,12 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 		t.Fatalf("insert old player count: %v", err)
 	}
 
-	runRepository := NewRunRepository(pool)
-	currentRun := runFixture("current", now)
-	if err := runRepository.SaveRunSummary(ctx, currentRun); err != nil {
-		t.Fatalf("save current run: %v", err)
-	}
-	currentRun.Results = nil
-	if err := runRepository.SaveRunSummary(ctx, currentRun); err != nil {
-		t.Fatalf("replace current run results: %v", err)
-	}
-	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_collect_task_results where run_id=$1`, 0, "current")
-	if err := runRepository.SaveRunSummary(ctx, runFixture("old", old)); err != nil {
-		t.Fatalf("save old run: %v", err)
-	}
-
 	if err := NewRetentionRepository(pool).Prune(ctx, RetentionConfig{PlayerCountsDays: 1, CollectRunsDays: 1, CollectTaskResultsDays: 1}); err != nil {
 		t.Fatalf("prune retention: %v", err)
 	}
-	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_player_counts where run_id=$1`, 0, "old")
-	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_collect_runs where id=$1`, 0, "old")
-	assertCount(t, ctx, pool, `select count(*) from gfg_game_v2_collect_runs where id=$1`, 1, "current")
+	// P0.1.1 freezes destructive player-count pruning until the P0.2
+	// retention/aggregation design is available.
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_player_counts where run_id=$1`, 1, "old")
 
 	if _, err := pool.Exec(ctx, `update gfg_game set appid=92002 where id=91001`); err != nil {
 		t.Fatal(err)
@@ -232,7 +217,7 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_state where game_id=$1`, 0, int64(91005))
 
 	seedAdditionalGameTarget(t, ctx, pool, 91002, 93002, now, "2020.01.02")
-	if _, err := pool.Exec(ctx, `insert into gfg_game_v2_details (game_id,appid,release_coming_soon,collected_at) values (91002,93002,false,$1)`, now); err != nil {
+	if _, err := pool.Exec(ctx, `insert into gfg_game_details (game_id,appid,release_coming_soon,collected_at) values (91002,93002,false,$1)`, now); err != nil {
 		t.Fatal(err)
 	}
 	seedAdditionalGameTarget(t, ctx, pool, 91006, 93006, now, "2020")
@@ -243,7 +228,7 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 		gameID, appID int64
 		comingSoon    bool
 	}{{91007, 93007, true}, {91008, 93008, false}, {91009, 93009, false}} {
-		if _, err := pool.Exec(ctx, `insert into gfg_game_v2_details (game_id,appid,release_coming_soon,collected_at) values ($1,$2,$3,$4)`, candidate.gameID, candidate.appID, candidate.comingSoon, now); err != nil {
+		if _, err := pool.Exec(ctx, `insert into gfg_game_details (game_id,appid,release_coming_soon,collected_at) values ($1,$2,$3,$4)`, candidate.gameID, candidate.appID, candidate.comingSoon, now); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -299,16 +284,6 @@ func languageFixture(observedAt time.Time, code, name string) *domain.GameLangua
 		Source: domain.SourceSteam, SourceRegion: domain.RegionUS, SourceLocale: domain.StoreLocaleEN,
 		Normalizer: "steam-go/v1.3.9", ObservedAt: observedAt,
 	}}}
-}
-
-func runFixture(id string, startedAt time.Time) report.RunSummary {
-	endedAt := startedAt.Add(time.Minute)
-	return report.RunSummary{
-		ID: id, Status: domain.StatusSuccess, StartedAt: startedAt, EndedAt: endedAt,
-		TotalCount: 1, SuccessCount: 1,
-		TaskSummaries: []report.TaskSummary{{Task: domain.TaskDetails, TotalCount: 1, SuccessCount: 1, DurationMillis: 60000}},
-		Results:       []report.TaskResult{{RunID: id, Task: domain.TaskDetails, Status: domain.StatusSuccess, GameID: 91001, AppID: 92001, StartedAt: startedAt, EndedAt: endedAt, DurationMillis: 60000}},
-	}
 }
 
 func seedGameTarget(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {

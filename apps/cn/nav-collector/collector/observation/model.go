@@ -33,6 +33,9 @@ type GfnCollectorObservation struct {
 	Payload       string    `db:"payload" json:"payload"`
 	SchemaVersion int       `db:"schema_version" json:"schema_version"`
 	CreateTime    time.Time `db:"create_time" json:"create_time"`
+	JobID         *int64    `db:"job_id" json:"job_id,omitempty"`
+	RunID         *string   `db:"run_id" json:"run_id,omitempty"`
+	InstanceID    *string   `db:"collector_instance_id" json:"collector_instance_id,omitempty"`
 }
 
 func (*GfnCollectorObservation) TableName() string {

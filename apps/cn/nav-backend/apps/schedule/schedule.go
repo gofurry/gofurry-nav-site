@@ -9,12 +9,7 @@ import (
 	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 )
 
-func InitScheduleOnStart(store task.NavCacheStore, nav task.NavCacheReader, home task.HomeCacheReader, views task.SiteViewStore) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("[InitScheduleOnStart] receive InitScheduleOnStart recover: %v", err))
-		}
-	}()
+func InitScheduleOnStart(store task.NavCacheStore, nav task.NavCacheReader, home task.HomeCacheReader, views task.SiteViewStore) error {
 	log.Debug("[Schedule] init start module initialization begin...")
 
 	refreshCaches := func() { Schedule(store, nav, home) }
@@ -22,10 +17,15 @@ func InitScheduleOnStart(store task.NavCacheStore, nav task.NavCacheReader, home
 	go refreshCaches()
 	go flushViews()
 
-	cs.AddCronJob(10*time.Minute, refreshCaches)
-	cs.AddCronJob(24*time.Hour, flushViews)
+	if err := cs.AddIntervalJob("nav-derived-caches", 10*time.Minute, refreshCaches); err != nil {
+		return fmt.Errorf("initialize Nav cache schedule: %w", err)
+	}
+	if err := cs.AddIntervalJob("nav-view-count", 24*time.Hour, flushViews); err != nil {
+		return fmt.Errorf("initialize Nav view schedule: %w", err)
+	}
 
 	log.Debug("[Schedule] init end module initialization finished...")
+	return nil
 }
 
 func Schedule(store task.NavCacheStore, nav task.NavCacheReader, home task.HomeCacheReader) {

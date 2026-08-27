@@ -1,107 +1,54 @@
-# GoFurry Game Collector V2 Deployment Notes
+# Game Collector deployment
 
-## 配置
+Game collection keeps the existing V2 data pipeline and public cache contracts, but V3-P0.1.1 moves acquisition control to PostgreSQL.
 
-v2.0.0 stable 后，游戏采集器默认只保留 v2 主线，不再提供 v1 fallback、dry-run 或任务级 enabled 开关。
+## Deployment order
 
-必需配置：
+1. Stop the old Game Collector.
+2. Back up `gfg` and record legacy collection-history row counts.
+3. Apply `db/game` Goose migrations through the current version.
+4. Deploy Admin, Game Collector, and Game Backend binaries built from the same revision.
+5. Start Game Collector and verify its instance heartbeat and the two default schedules in Admin Collection Center.
 
-```yaml
-collector:
-  proxy: ""
-  game:
-    collect_players_on_startup: true
-    game_player_interval: 24
-  v2:
-    steam:
-      api_requests_per_5_minutes: 240
-      store_requests_per_5_minutes: 180
-      burst: 1
-      max_workers: 3
-      request_timeout_seconds: 10
-      retry:
-        max_attempts: 2
-        base_delay_seconds: 5
-        cooldown_on_429_seconds: 300
-    retention:
-      player_counts_days: 90
-      collect_runs_days: 90
-      collect_task_results_days: 7
-```
+Do not create compatibility views for retired `gfg_game_v2_*` physical names. Existing `/api/v2/game/*` and valid `game:v2:*` read-cache namespaces remain unchanged.
 
-说明：
+## Durable schedules
 
-- `api_requests_per_5_minutes` 用于 official API 共享限流器。
-- `store_requests_per_5_minutes` 用于 Store 共享限流器，details / news 共用。
-- interval 由 `budget - burst` 计算，避免初始令牌突破 5 分钟预算。
-- `max_workers` 控制 runner 并发，不等于 Steam 请求速率。
-- `collect_players_on_startup` 控制无 pending 时是否在进程启动后立即执行一次全量 players；省略时为 `true`。
-- MongoDB 已从 collector v2 主线移除。
-- `retention.player_counts_days` 默认建议 90 天，便于未来做在线人数趋势图。
-- `retention.collect_runs_days` 默认建议 90 天。
-- `retention.collect_task_results_days` 默认建议 7 天，因为单游戏任务结果增长最快。
+| Job key | Work | Schedule | Misfire | Lane |
+|---|---|---|---|---|
+| `game.metadata` | details + news | `0 3 * * *`, `Asia/Shanghai` | `catch_up_once` | `steam` |
+| `game.players` | online player sample | anchored interval bootstrapped from `game_player_interval` | `skip` | `steam` |
 
-## 数据库
+PostgreSQL becomes the runtime schedule source after first bootstrap. `collect_players_on_startup` is accepted for configuration compatibility but ignored: restarting a collector must not enqueue work or shift interval phase. Use Admin Collection Center Run Now for an immediate sample.
 
-上线前需要确认已执行：
+Manual full/single jobs have priority 200. `entity_created` and AppID `entity_changed` metadata jobs have priority 300. All Steam-bound work shares one lane and is claimed through PostgreSQL with a renewable lease. An AppID change resets Steam-derived current/canonical state and enqueues a new entity job transactionally.
 
-```txt
-sql/20260607_game_collector_v2_alpha3.sql
-sql/20260607_game_collector_v2_alpha5.sql
-sql/20260607_game_collector_v2_stable_collect_runs.sql
-```
+## State ownership
 
-v2 不删除旧 v1 表。旧表可以等 backend / frontend 完成 v2 切换并稳定观察后再清理。
+- PostgreSQL: Schedule, Job, Run, Task Result, collector instance/heartbeat, claim, lease, cancel, and history.
+- Redis: expiring `collection:game:run:{run_id}:progress` plus existing public read caches.
+- gocron: reconciliation/claim/recovery/heartbeat clock only.
 
-## 验证
+The retired `game:v2:collect:pending`, `game:v2:collect:inflight:*`, and `game-collector:cmd:collect` keys are not read or written. Game Backend no longer exposes collection proxy routes.
 
-上线前建议：
+## Retention
 
-1. 运行 `go test ./...`。
-2. 用开发配置跑一次 details / news / players 采集。
-3. 检查 `gfg_game_v2_details`、`gfg_game_v2_localized_details`、`gfg_game_v2_prices`、`gfg_game_v2_media`、`gfg_game_v2_news`、`gfg_game_v2_player_counts` 是否有数据。
-4. 检查 Redis v2 key 是否刷新。
-5. 检查日志中的 run summary，确认 failed / partial 数量符合预期。
-6. 若出现 429 / 403 / block-detected，观察 cooldown 是否触发，并降低 Store 预算或 worker 数。
+Destructive pruning of `gfg_game_player_counts` and durable Job/Run history is frozen until P0.2. Operational Task Result pruning remains enabled with a 30-day minimum and 90-day default/recommendation. Raw detail-snapshot retention remains unchanged.
 
-一次性运行命令：
+## Verification
 
-```powershell
-go run . collect --config conf/server.yaml # 只跑 details/news 全量采集
-go run . players --config conf/server.yaml # 只跑当前在线人数采集
-go run . all --config conf/server.yaml     # 先跑 players，再跑 details/news
-```
+~~~powershell
+go run . serve --config conf/server.yaml
+go test ./...
+go vet ./...
+go build ./...
+~~~
 
-## Admin 新增游戏后的单游戏采集
+Verify in Admin Collection Center:
 
-`gofurry-admin` 创建游戏成功后会向 Redis 集合写入单游戏采集请求：
-
-```txt
-game:v2:collect:pending
-```
-
-集合成员格式为 `{game_id}:{appid}`。启动时与每次 1 分钟调度都会先扫描该集合；存在 pending 时立即跳过 startup players 和每日/手工全量，对单游戏任务加锁后执行 details / news 两类 v2 采集。players 仍由独立的低优先级小时任务采集，不会因未发售游戏的 players 请求失败或冷却阻塞新增游戏 onboarding。单游戏队列清空后，后续 tick 才恢复较低优先级的全量调度。锁 key 为：
-
-```txt
-game:v2:collect:inflight:{game_id}
-```
-
-任务执行完成后会从 pending 集合移除；若采集进程异常退出，pending 成员会保留，锁过期后会自动重试。
-
-观测表验证：
-
-```sql
-select * from gfg_game_v2_collect_runs order by started_at desc limit 5;
-select task_type, status, count(*) from gfg_game_v2_collect_task_results group by task_type, status;
-select run_id, count(*) from gfg_game_v2_player_counts where run_id <> '' group by run_id order by run_id desc limit 5;
-```
-
-## 发布后观察
-
-重点观察：
-
-- Store 请求是否持续触发 429 / 403。
-- official API 是否接近每日 key 预算。
-- raw snapshot 是否按最近 5 次保留。
-- Redis 写入失败是否影响 PostgreSQL 主数据。
-- 后端 v2 接入前，旧前端接口仍不会直接消费这些 v2 表。
+- both schedules have stable `next_scheduled_for` across collector restart;
+- a single metadata job produces two Task Results;
+- a players missed slot has Job `missed` and no Run;
+- state-refresh retry creates another Run attempt on the same Job;
+- cancel is cooperative and expired leases recover as `worker_lost`;
+- final Run counters match Task Result coverage.

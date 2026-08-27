@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gofurry/gofurry-nav-collector/collector/execution"
 	"github.com/gofurry/gofurry-nav-collector/collector/ping/models"
 	"github.com/gofurry/gofurry-nav-collector/common"
 	cm "github.com/gofurry/gofurry-nav-collector/common/models"
@@ -29,7 +30,20 @@ func (dao *PingDAO) GetList() ([]models.GfnCollectorDomain, common.GFError) {
 		return nil, common.NewDaoError(err.Error())
 	}
 	result := make([]models.GfnCollectorDomain, 0, len(rows))
+	seen := make(map[string]struct{}, len(rows))
 	for _, row := range rows {
+		target := row.Name
+		if row.Prefix != nil {
+			target = *row.Prefix + row.Name
+		}
+		if !execution.Allows("ping", row.SiteID, target) {
+			continue
+		}
+		key := execution.TargetKey(row.SiteID, target)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
 		result = append(result, models.GfnCollectorDomain{ID: row.ID, SiteID: row.SiteID, Name: row.Name, Proxy: row.Proxy, Prefix: row.Prefix, TLS: row.Tls, Deleted: row.Deleted})
 	}
 	return result, nil

@@ -74,10 +74,13 @@ func TestPostgresCollectorPersistenceSemantics(t *testing.T) {
 	dnsDAO := dnsdao.New(pool)
 	lightDAO := lightdao.New(pool)
 	for label, load := range map[string]func() (int, error){
-		"ping":  func() (int, error) { rows, e := pingDAO.GetList(); return len(rows), gfError(e) },
-		"http":  func() (int, error) { rows, e := httpDAO.GetList(); return len(rows), gfError(e) },
-		"dns":   func() (int, error) { rows, e := dnsDAO.GetList(); return len(rows), gfError(e) },
-		"light": func() (int, error) { rows, e := lightDAO.GetList(); return len(rows), gfError(e) },
+		"ping": func() (int, error) { rows, e := pingDAO.GetList(); return len(rows), gfError(e) },
+		"http": func() (int, error) { rows, e := httpDAO.GetList(); return len(rows), gfError(e) },
+		"dns":  func() (int, error) { rows, e := dnsDAO.GetList(); return len(rows), gfError(e) },
+		"light": func() (int, error) {
+			rows, e := lightDAO.GetList(observation.ProtocolRDAP)
+			return len(rows), gfError(e)
+		},
 	} {
 		count, err := load()
 		if err != nil || count != 1 {
@@ -128,11 +131,11 @@ func TestPostgresCollectorPersistenceSemantics(t *testing.T) {
 		t.Fatalf("change rows=%d err=%v", len(changes), gfErr)
 	}
 	deleted, gfErr := observationDAO.DeleteByProtocolLimit(observation.ProtocolPing, "1")
-	if gfErr != nil || deleted != 2 {
+	if gfErr != nil || deleted != 0 {
 		t.Fatalf("observation retention: deleted=%d err=%v", deleted, gfErr)
 	}
 	var remaining int64
-	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM gfn_collector_observation WHERE protocol='ping'`).Scan(&remaining); err != nil || remaining != 1 {
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM gfn_collector_observation WHERE protocol='ping'`).Scan(&remaining); err != nil || remaining != 3 {
 		t.Fatalf("remaining ping observations=%d err=%v", remaining, err)
 	}
 }

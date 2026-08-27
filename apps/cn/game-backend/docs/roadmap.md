@@ -219,7 +219,7 @@
 #### Tasks
 
 - [x] 选型为 v2 hybrid CBF：标签 Weighted Jaccard + 创作者 + 文本 + 平台 + 价格 + 活跃度。
-- [x] 新增 `gfg_game_v2_recommendations` 预计算表，记录 `score`、`display_score`、`reason_json`、`algorithm_version`。
+- [x] 新增 `gfg_game_recommendations` 预计算表，记录 `score`、`display_score`、`reason_json`、`algorithm_version`。
 - [x] 新增 `GET /api/v2/game/recommend/similar`，只返回已有 v2 details 的游戏。
 - [x] API 优先读取预计算结果；单个游戏缺失时即时计算 top 64 并写回，便于开发环境立即验证。
 - [x] 响应字段改为纯 v2 合同：`score`、`display_score`、`reasons`、`header_url`、`capsule_url`、`tags`、`price`、`online_count`。

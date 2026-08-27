@@ -18,6 +18,27 @@ func v1(root fiber.Router, runtime *bootstrap.Runtime) {
 	optionsRoutes(protected.Group("/options"), runtime)
 	navRoutes(protected.Group("/nav"), runtime)
 	gameRoutes(protected.Group("/game"), runtime)
+	collectionRoutes(protected.Group("/collection"), runtime)
+}
+
+func collectionRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	api := runtime.CollectionAPI
+	root.Get("/overview", api.Overview)
+	root.Get("/instances", api.Instances)
+	root.Get("/schedules", api.Schedules)
+	root.Put("/schedules/:domain/:id", api.UpdateSchedule)
+	root.Post("/schedules/:domain/:id/run", api.RunSchedule)
+	root.Get("/jobs", api.Jobs)
+	root.Post("/jobs", api.CreateJobs)
+	root.Get("/jobs/:domain/:id", api.Job)
+	root.Post("/jobs/:domain/:id/cancel", api.CancelJob)
+	root.Post("/jobs/:domain/:id/retry", api.RetryJob)
+	root.Get("/runs", api.Runs)
+	root.Get("/runs/:domain/:id", api.Run)
+	root.Get("/runs/:domain/:id/results", api.Results)
+	root.Get("/charts/outcomes", api.Charts)
+	root.Get("/charts/coverage", api.Charts)
+	root.Get("/charts/timing", api.Charts)
 }
 
 func authRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
@@ -37,11 +58,6 @@ func optionsRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 
 func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	api := runtime.NavAPI
-	root.Get("/collect/status", api.CollectStatus)
-	root.Get("/collect/observations", api.CollectObservations)
-	root.Get("/collect/sites/:site_id/status", api.CollectSiteStatus)
-	root.Get("/collect/sites/:site_id/targets/:target/status", api.CollectTargetStatus)
-
 	root.Get("/sayings", api.ListSayings)
 	root.Post("/sayings", api.CreateSaying)
 	root.Get("/sayings/:id", api.GetSaying)
@@ -88,12 +104,6 @@ func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 
 func gameRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	api := runtime.GameAPI
-	root.Get("/collect/status", api.CollectStatus)
-	root.Get("/collect/runs", api.CollectRuns)
-	root.Get("/collect/runs/:run_id", api.CollectRun)
-	root.Get("/collect/task-results", api.CollectTaskResults)
-	root.Get("/collect/games/:id/status", api.CollectGameStatus)
-
 	root.Get("/games", api.ListGames)
 	root.Post("/games", api.CreateGame)
 	root.Get("/games/steam-asset", api.ResolveSteamGameAsset)

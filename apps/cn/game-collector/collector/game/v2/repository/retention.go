@@ -12,17 +12,18 @@ import (
 const (
 	defaultPlayerCountsRetentionDays       = 90
 	defaultCollectRunsRetentionDays        = 90
-	defaultCollectTaskResultsRetentionDays = 7
+	defaultCollectTaskResultsRetentionDays = 90
 )
 
-// RetentionConfig controls cleanup for append-only v2 observation/history tables.
+// RetentionConfig keeps the existing typed configuration shape. Player-count
+// and Run pruning are intentionally frozen until the P0.2 retention design.
 type RetentionConfig struct {
 	PlayerCountsDays       int
 	CollectRunsDays        int
 	CollectTaskResultsDays int
 }
 
-// RetentionRepository prunes v2 append-only tables.
+// RetentionRepository prunes only temporary operational task results.
 type RetentionRepository struct {
 	pool *pgxpool.Pool
 }
@@ -32,7 +33,8 @@ func NewRetentionRepository(pool *pgxpool.Pool) *RetentionRepository {
 	return &RetentionRepository{pool: pool}
 }
 
-// Prune deletes records older than the configured retention windows.
+// Prune deliberately preserves gfg_game_player_counts and durable Job/Run
+// history. Only high-volume operational task results retain the short window.
 func (r *RetentionRepository) Prune(ctx context.Context, cfg RetentionConfig) error {
 	if r == nil || r.pool == nil {
 		return fmt.Errorf("retention repository database is nil")
@@ -48,13 +50,7 @@ func (r *RetentionRepository) Prune(ctx context.Context, cfg RetentionConfig) er
 	}
 	defer tx.Rollback(ctx)
 	queries := gamesqlc.New(tx)
-	if _, err := queries.DeleteTaskResultsOlderThan(ctx, timestamptz(retentionCutoff(cfg.CollectTaskResultsDays))); err != nil {
-		return err
-	}
-	if _, err := queries.DeleteCollectRunsOlderThan(ctx, timestamptz(retentionCutoff(cfg.CollectRunsDays))); err != nil {
-		return err
-	}
-	if _, err := queries.DeletePlayerCountsOlderThan(ctx, timestamptz(retentionCutoff(cfg.PlayerCountsDays))); err != nil {
+	if _, err := queries.DeleteGameCollectionTaskResultsOlderThan(ctx, timestamptz(retentionCutoff(cfg.CollectTaskResultsDays))); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
@@ -73,6 +69,8 @@ func normalizeRetentionConfig(cfg RetentionConfig) RetentionConfig {
 	}
 	if cfg.CollectTaskResultsDays <= 0 {
 		cfg.CollectTaskResultsDays = defaultCollectTaskResultsRetentionDays
+	} else if cfg.CollectTaskResultsDays < 30 {
+		cfg.CollectTaskResultsDays = 30
 	}
 	return cfg
 }

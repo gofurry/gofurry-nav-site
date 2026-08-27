@@ -2,11 +2,9 @@ package observation
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-collector/common"
-	"github.com/gofurry/gofurry-nav-collector/common/retention"
 	navsqlc "github.com/gofurry/gofurry-nav-collector/internal/db/nav/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,6 +26,7 @@ func (dao *ObservationDAO) AddObservation(record *GfnCollectorObservation) commo
 		Status: record.Status, ObservedAt: timestamptz(record.ObservedAt), DurationMs: &duration,
 		ErrorCode: record.ErrorCode, ErrorMessage: record.ErrorMessage, Payload: []byte(record.Payload),
 		SchemaVersion: int32(record.SchemaVersion), CreateTime: timestamptz(record.CreateTime),
+		JobID: record.JobID, RunID: record.RunID, CollectorInstanceID: record.InstanceID,
 	})
 	if err != nil {
 		return common.NewDaoError(err.Error())
@@ -36,15 +35,10 @@ func (dao *ObservationDAO) AddObservation(record *GfnCollectorObservation) commo
 }
 
 func (dao *ObservationDAO) DeleteByProtocolLimit(protocol string, count string) (int64, common.GFError) {
-	keepCount, err := strconv.Atoi(count)
-	if err != nil {
-		return 0, common.NewDaoError("count 格式错误: " + err.Error())
-	}
-	deleted, err := retention.DeleteObservationByProtocolLimit(dao.pool, protocol, keepCount, retention.DefaultBatchSize, 2*time.Minute, time.Second)
-	if err != nil {
-		return deleted, common.NewDaoError("v2 observation 分批删除失败: " + err.Error())
-	}
-	return deleted, nil
+	// Destructive gfn_collector_observation pruning is frozen in P0.1.1.
+	// Keep the hook so legacy log retention can continue without silently
+	// re-enabling fact deletion before the P0.2 retention design.
+	return 0, nil
 }
 
 type ObservationTrendRow struct {

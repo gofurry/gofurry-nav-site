@@ -1,9 +1,6 @@
 package main
 
 import (
-	collectcontroller "github.com/gofurry/gofurry-nav-backend/apps/nav/collect/controller"
-	collectdao "github.com/gofurry/gofurry-nav-backend/apps/nav/collect/dao"
-	collectservice "github.com/gofurry/gofurry-nav-backend/apps/nav/collect/service"
 	detailcontroller "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/controller"
 	detaildao "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/dao"
 	detailservice "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/service"
@@ -47,7 +44,6 @@ func newApplicationDependencies(pool *pgxpool.Pool) applicationDependencies {
 	detailService := detailservice.New(detaildao.New(queries), summaryService, readModelService)
 	sitePageStore := sitepagedao.New(queries)
 	sitePageService := sitepageservice.New(sitePageStore)
-	collectService := collectservice.New(collectdao.New(queries), readModelService)
 	searchService := searchservice.New(navService)
 
 	return applicationDependencies{
@@ -58,7 +54,6 @@ func newApplicationDependencies(pool *pgxpool.Pool) applicationDependencies {
 			SiteIndex: siteindexcontroller.New(siteindexservice.New(navStore)),
 			NavPage:   navpagecontroller.New(navService),
 			Detail:    detailcontroller.New(detailService, sitePageService),
-			Collect:   collectcontroller.New(collectService),
 		},
 		navStore:  navStore,
 		navReader: navService,

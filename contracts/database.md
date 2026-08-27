@@ -8,3 +8,6 @@
 - Preserve existing transaction boundaries. Redis refresh occurs only after DB commit where that was the established behavior; Redis failure never rolls back committed DB data.
 - Cross-database work is not atomic. In Admin, audit failure prevents the open `gfn`/`gfg` transaction from committing, but an already committed `gfa` audit is not presented as a distributed transaction.
 - Destructive migrations require a final production-module reference audit, recorded row counts, verified backup, fresh and baseline-upgrade tests, no `CASCADE`, no masking `IF EXISTS`, and no fake reversible `Down`.
+- Active Game storage objects use unversioned physical names. Long-lived compatibility views for retired `gfg_game_v2_*` names are not permitted.
+- `gfg_collection_*` and `gfn_collection_*` are the durable collector control-plane contracts. Scheduled slots are idempotent, active dedupe is enforced, and a concurrency lane has at most one running Job.
+- Destructive pruning of `gfg_game_player_counts` and `gfn_collector_observation` is frozen until an accepted P0.2 retention design supersedes this contract.

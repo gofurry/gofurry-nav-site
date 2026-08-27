@@ -12,7 +12,7 @@ import (
 )
 
 const deleteAssetsByGame = `-- name: DeleteAssetsByGame :exec
-DELETE FROM gfg_game_v2_assets WHERE game_id = $1
+DELETE FROM gfg_game_assets WHERE game_id = $1
 `
 
 func (q *Queries) DeleteAssetsByGame(ctx context.Context, gameID int64) error {
@@ -20,58 +20,13 @@ func (q *Queries) DeleteAssetsByGame(ctx context.Context, gameID int64) error {
 	return err
 }
 
-const deleteCollectRunsOlderThan = `-- name: DeleteCollectRunsOlderThan :execrows
-DELETE FROM gfg_game_v2_collect_runs WHERE started_at < $1
-`
-
-func (q *Queries) DeleteCollectRunsOlderThan(ctx context.Context, cutoff pgtype.Timestamptz) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteCollectRunsOlderThan, cutoff)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
 const deleteMediaByGame = `-- name: DeleteMediaByGame :exec
-DELETE FROM gfg_game_v2_media WHERE game_id = $1
+DELETE FROM gfg_game_media WHERE game_id = $1
 `
 
 func (q *Queries) DeleteMediaByGame(ctx context.Context, gameID int64) error {
 	_, err := q.db.Exec(ctx, deleteMediaByGame, gameID)
 	return err
-}
-
-const deletePlayerCountsOlderThan = `-- name: DeletePlayerCountsOlderThan :execrows
-DELETE FROM gfg_game_v2_player_counts WHERE collected_at < $1
-`
-
-func (q *Queries) DeletePlayerCountsOlderThan(ctx context.Context, cutoff pgtype.Timestamptz) (int64, error) {
-	result, err := q.db.Exec(ctx, deletePlayerCountsOlderThan, cutoff)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const deleteTaskResultsByRun = `-- name: DeleteTaskResultsByRun :exec
-DELETE FROM gfg_game_v2_collect_task_results WHERE run_id = $1
-`
-
-func (q *Queries) DeleteTaskResultsByRun(ctx context.Context, runID string) error {
-	_, err := q.db.Exec(ctx, deleteTaskResultsByRun, runID)
-	return err
-}
-
-const deleteTaskResultsOlderThan = `-- name: DeleteTaskResultsOlderThan :execrows
-DELETE FROM gfg_game_v2_collect_task_results WHERE started_at < $1
-`
-
-func (q *Queries) DeleteTaskResultsOlderThan(ctx context.Context, cutoff pgtype.Timestamptz) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteTaskResultsOlderThan, cutoff)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
 }
 
 const foundationPing = `-- name: FoundationPing :one
@@ -86,7 +41,7 @@ func (q *Queries) FoundationPing(ctx context.Context) (int64, error) {
 }
 
 const insertDetailSnapshot = `-- name: InsertDetailSnapshot :exec
-INSERT INTO gfg_game_v2_detail_snapshots (
+INSERT INTO gfg_game_detail_snapshots (
     game_id, appid, lang, region, source, payload_hash, raw_payload, collected_at
 ) VALUES (
     $1, $2, $3, $4,
@@ -121,7 +76,7 @@ func (q *Queries) InsertDetailSnapshot(ctx context.Context, arg InsertDetailSnap
 }
 
 const insertPlayerCount = `-- name: InsertPlayerCount :exec
-INSERT INTO gfg_game_v2_player_counts (
+INSERT INTO gfg_game_player_counts (
     run_id, game_id, appid, count, status, upstream_status_code,
     error_kind, error_message, collected_at
 ) VALUES (
@@ -158,54 +113,6 @@ func (q *Queries) InsertPlayerCount(ctx context.Context, arg InsertPlayerCountPa
 	return err
 }
 
-const insertTaskResult = `-- name: InsertTaskResult :exec
-INSERT INTO gfg_game_v2_collect_task_results (
-    run_id, task_type, status, game_id, appid, upstream_status_code,
-    traffic_bucket, retry_count, duration_millis, error_kind, error_message,
-    started_at, ended_at
-) VALUES (
-    $1, $2, $3, $4,
-    $5, $6, $7,
-    $8, $9, $10,
-    $11, $12, $13
-)
-`
-
-type InsertTaskResultParams struct {
-	RunID              string             `json:"run_id"`
-	TaskType           string             `json:"task_type"`
-	Status             string             `json:"status"`
-	GameID             int64              `json:"game_id"`
-	Appid              int64              `json:"appid"`
-	UpstreamStatusCode int32              `json:"upstream_status_code"`
-	TrafficBucket      string             `json:"traffic_bucket"`
-	RetryCount         int32              `json:"retry_count"`
-	DurationMillis     int64              `json:"duration_millis"`
-	ErrorKind          string             `json:"error_kind"`
-	ErrorMessage       string             `json:"error_message"`
-	StartedAt          pgtype.Timestamptz `json:"started_at"`
-	EndedAt            pgtype.Timestamptz `json:"ended_at"`
-}
-
-func (q *Queries) InsertTaskResult(ctx context.Context, arg InsertTaskResultParams) error {
-	_, err := q.db.Exec(ctx, insertTaskResult,
-		arg.RunID,
-		arg.TaskType,
-		arg.Status,
-		arg.GameID,
-		arg.Appid,
-		arg.UpstreamStatusCode,
-		arg.TrafficBucket,
-		arg.RetryCount,
-		arg.DurationMillis,
-		arg.ErrorKind,
-		arg.ErrorMessage,
-		arg.StartedAt,
-		arg.EndedAt,
-	)
-	return err
-}
-
 const listGameTargets = `-- name: ListGameTargets :many
 SELECT id, appid
 FROM gfg_game
@@ -237,7 +144,7 @@ func (q *Queries) ListGameTargets(ctx context.Context) ([]ListGameTargetsRow, er
 }
 
 const pruneDetailSnapshots = `-- name: PruneDetailSnapshots :one
-SELECT gfg_game_v2_prune_detail_snapshots(
+SELECT gfg_game_prune_detail_snapshots(
     $1, $2, $3, 5
 )::integer
 `
@@ -256,7 +163,7 @@ func (q *Queries) PruneDetailSnapshots(ctx context.Context, arg PruneDetailSnaps
 }
 
 const upsertAsset = `-- name: UpsertAsset :exec
-INSERT INTO gfg_game_v2_assets (
+INSERT INTO gfg_game_assets (
     game_id, appid, asset_type, asset_family, source, lang, media_key, title,
     url, thumbnail_url, format, exists, status_code, content_type, content_length,
     extra, sort_order, checked_at, collected_at, updated_at
@@ -334,73 +241,8 @@ func (q *Queries) UpsertAsset(ctx context.Context, arg UpsertAssetParams) error 
 	return err
 }
 
-const upsertCollectRun = `-- name: UpsertCollectRun :exec
-INSERT INTO gfg_game_v2_collect_runs (
-    id, task_type, status, total_count, success_count, failed_count,
-    skipped_count, partial_count, task_summary, duration_millis,
-    error_kind, error_message, started_at, ended_at
-) VALUES (
-    $1, $2, $3, $4,
-    $5, $6, $7,
-    $8, $9::jsonb,
-    $10, $11, $12,
-    $13, $14
-)
-ON CONFLICT (id) DO UPDATE SET
-    task_type = EXCLUDED.task_type,
-    status = EXCLUDED.status,
-    total_count = EXCLUDED.total_count,
-    success_count = EXCLUDED.success_count,
-    failed_count = EXCLUDED.failed_count,
-    skipped_count = EXCLUDED.skipped_count,
-    partial_count = EXCLUDED.partial_count,
-    task_summary = EXCLUDED.task_summary,
-    duration_millis = EXCLUDED.duration_millis,
-    error_kind = EXCLUDED.error_kind,
-    error_message = EXCLUDED.error_message,
-    started_at = EXCLUDED.started_at,
-    ended_at = EXCLUDED.ended_at
-`
-
-type UpsertCollectRunParams struct {
-	ID             string             `json:"id"`
-	TaskType       string             `json:"task_type"`
-	Status         string             `json:"status"`
-	TotalCount     int32              `json:"total_count"`
-	SuccessCount   int32              `json:"success_count"`
-	FailedCount    int32              `json:"failed_count"`
-	SkippedCount   int32              `json:"skipped_count"`
-	PartialCount   int32              `json:"partial_count"`
-	TaskSummary    []byte             `json:"task_summary"`
-	DurationMillis int64              `json:"duration_millis"`
-	ErrorKind      string             `json:"error_kind"`
-	ErrorMessage   string             `json:"error_message"`
-	StartedAt      pgtype.Timestamptz `json:"started_at"`
-	EndedAt        pgtype.Timestamptz `json:"ended_at"`
-}
-
-func (q *Queries) UpsertCollectRun(ctx context.Context, arg UpsertCollectRunParams) error {
-	_, err := q.db.Exec(ctx, upsertCollectRun,
-		arg.ID,
-		arg.TaskType,
-		arg.Status,
-		arg.TotalCount,
-		arg.SuccessCount,
-		arg.FailedCount,
-		arg.SkippedCount,
-		arg.PartialCount,
-		arg.TaskSummary,
-		arg.DurationMillis,
-		arg.ErrorKind,
-		arg.ErrorMessage,
-		arg.StartedAt,
-		arg.EndedAt,
-	)
-	return err
-}
-
 const upsertDetails = `-- name: UpsertDetails :exec
-INSERT INTO gfg_game_v2_details (
+INSERT INTO gfg_game_details (
     game_id, appid, source, type, name, is_free, website, header_url,
     developers, publishers, release_coming_soon, release_date_text,
     platforms, supported_languages, support_info, content_descriptors, ratings,
@@ -479,7 +321,7 @@ func (q *Queries) UpsertDetails(ctx context.Context, arg UpsertDetailsParams) er
 }
 
 const upsertLocalizedDetails = `-- name: UpsertLocalizedDetails :exec
-INSERT INTO gfg_game_v2_localized_details (
+INSERT INTO gfg_game_localized_details (
     game_id, appid, lang, name, short_description, detailed_description,
     about_the_game, collected_at, updated_at
 ) VALUES (
@@ -523,7 +365,7 @@ func (q *Queries) UpsertLocalizedDetails(ctx context.Context, arg UpsertLocalize
 }
 
 const upsertMedia = `-- name: UpsertMedia :exec
-INSERT INTO gfg_game_v2_media (
+INSERT INTO gfg_game_media (
     game_id, appid, media_type, media_key, title, url, thumbnail_url, extra,
     sort_order, collected_at, updated_at
 ) VALUES (
@@ -572,7 +414,7 @@ func (q *Queries) UpsertMedia(ctx context.Context, arg UpsertMediaParams) error 
 }
 
 const upsertNews = `-- name: UpsertNews :exec
-INSERT INTO gfg_game_v2_news (
+INSERT INTO gfg_game_news (
     game_id, appid, lang, event_gid, announcement_gid, forum_topic_id,
     headline, raw_body, html, plain_text, summary, url, tags, vote_up_count,
     vote_down_count, comment_count, raw_event, published_at, updated_at, collected_at
@@ -653,7 +495,7 @@ func (q *Queries) UpsertNews(ctx context.Context, arg UpsertNewsParams) error {
 }
 
 const upsertPrice = `-- name: UpsertPrice :exec
-INSERT INTO gfg_game_v2_prices (
+INSERT INTO gfg_game_prices (
     game_id, appid, region, is_free, currency, initial_amount, final_amount,
     discount_percent, initial_formatted, final_formatted, collected_at, updated_at
 ) VALUES (
@@ -707,7 +549,7 @@ func (q *Queries) UpsertPrice(ctx context.Context, arg UpsertPriceParams) error 
 }
 
 const upsertRequirements = `-- name: UpsertRequirements :exec
-INSERT INTO gfg_game_v2_requirements (
+INSERT INTO gfg_game_requirements (
     game_id, appid, pc, mac, linux, collected_at, updated_at
 ) VALUES (
     $1, $2, $3::jsonb,

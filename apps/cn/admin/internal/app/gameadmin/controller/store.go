@@ -84,6 +84,12 @@ func (store *gameStore) createGame(ctx context.Context, meta audit.Meta, req gam
 		}
 		req.ID = id
 		row, err := q.InsertGame(ctx, req)
+		if err == nil {
+			gameID := id
+			_, err = q.EnqueueGameEntityCollectionJob(ctx, gamesqlc.EnqueueGameEntityCollectionJobParams{
+				Trigger: "entity_created", GameID: gameID, Appid: req.Appid, RequestedBy: meta.Operator,
+			})
+		}
 		result = insertGameModel(row)
 		return id, nil, row, err
 	})
@@ -108,6 +114,12 @@ func (store *gameStore) updateGame(ctx context.Context, meta audit.Meta, req gam
 		appIDChanged = before.Appid != after.Appid
 		if appIDChanged {
 			if err := q.ResetSteamDerivedGameState(ctx, req.ID); err != nil {
+				return req.ID, before, after, err
+			}
+			gameID := req.ID
+			if _, err := q.EnqueueGameEntityCollectionJob(ctx, gamesqlc.EnqueueGameEntityCollectionJobParams{
+				Trigger: "entity_changed", GameID: gameID, Appid: after.Appid, RequestedBy: meta.Operator,
+			}); err != nil {
 				return req.ID, before, after, err
 			}
 		}

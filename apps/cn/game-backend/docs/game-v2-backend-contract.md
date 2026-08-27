@@ -21,21 +21,21 @@ collector v2 已定义的 PostgreSQL 表：
 | 表 | 后端用途 |
 | --- | --- |
 | `gfg_game` | 仍作为站内游戏主档案、权重、标签映射、人工维护资源的入口 |
-| `gfg_game_v2_details` | 游戏跨语言基础详情 |
-| `gfg_game_v2_localized_details` | zh/en 文案、简介、详情正文 |
-| `gfg_game_v2_prices` | CN/HK/US 等地区价格 |
-| `gfg_game_v2_media` | header、capsule、background、screenshots、movies |
-| `gfg_game_v2_requirements` | PC/macOS/Linux 系统需求 |
-| `gfg_game_v2_news` | Store events 新闻 |
-| `gfg_game_v2_player_counts` | 在线人数历史和当前状态回源 |
+| `gfg_game_details` | 游戏跨语言基础详情 |
+| `gfg_game_localized_details` | zh/en 文案、简介、详情正文 |
+| `gfg_game_prices` | CN/HK/US 等地区价格 |
+| `gfg_game_media` | header、capsule、background、screenshots、movies |
+| `gfg_game_requirements` | PC/macOS/Linux 系统需求 |
+| `gfg_game_news` | Store events 新闻 |
+| `gfg_game_player_counts` | 在线人数历史和当前状态回源 |
 | `gfg_game_v2_collect_runs` | 后台采集批次观测 |
 | `gfg_game_v2_collect_task_results` | 后台单游戏采集结果观测 |
-| `gfg_game_v2_detail_snapshots` | 调试和回放，不进入公开 API |
+| `gfg_game_detail_snapshots` | 调试和回放，不进入公开 API |
 | `gfg_game_release_state` | 当前 normalized US/English Steam release state |
 | `gfg_game_first_available` | write-once 首次正式可购买/可玩日期或区间 |
 | `gfg_game_languages` | normalized language capabilities |
 
-`gfg_game_release_history` 在 P0.1 只保存，不公开 API。`gfg_game.release_date`、`gfg_game_v2_details.release_date_text` 和 `supported_languages` 仅保留兼容/调试价值；业务排序、过滤和新 UI 不解析这些字符串。
+`gfg_game_release_history` 在 P0.1 只保存，不公开 API。`gfg_game.release_date`、`gfg_game_details.release_date_text` 和 `supported_languages` 仅保留兼容/调试价值；业务排序、过滤和新 UI 不解析这些字符串。
 
 建议 Redis key：
 
@@ -292,13 +292,13 @@ Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读�
 详情页建议聚合：
 
 1. 从 `gfg_game` 获取站内基础信息、权重、资源、社群、链接。
-2. 从 `gfg_game_v2_details` 获取跨语言基础详情。
-3. 从 `gfg_game_v2_localized_details` 按 `game_id + lang` 获取当前语言文案。
-4. 从 `gfg_game_v2_prices` 获取地区价格。
-5. 从 `gfg_game_v2_media` 获取媒体资源。
-6. 从 `gfg_game_v2_requirements` 获取系统需求。
-7. 从 `gfg_game_v2_news` 获取最近新闻。
-8. 从 `gfg_game_v2_player_counts` 获取最近一条 `status='success'` 的在线人数，并按后端 `game.online_peak_cache_days` 配置窗口计算 `peak_count`。
+2. 从 `gfg_game_details` 获取跨语言基础详情。
+3. 从 `gfg_game_localized_details` 按 `game_id + lang` 获取当前语言文案。
+4. 从 `gfg_game_prices` 获取地区价格。
+5. 从 `gfg_game_media` 获取媒体资源。
+6. 从 `gfg_game_requirements` 获取系统需求。
+7. 从 `gfg_game_news` 获取最近新闻。
+8. 从 `gfg_game_player_counts` 获取最近一条 `status='success'` 的在线人数，并按后端 `game.online_peak_cache_days` 配置窗口计算 `peak_count`。
 9. 从站内标签、评论、浏览量表补齐站内增强数据。
 
 列表批量读取 `release_state` 与 `first_available`，不为 languages 增加 N+1。Latest Games 只包含存在 First Available 的游戏并按 `window_end DESC, game_id DESC` 排序；Recently Collected 只按 `gfg_game.create_time DESC, game_id DESC` 排序，不因 `available`、`upcoming` 或 `unknown` 改变收录资格。

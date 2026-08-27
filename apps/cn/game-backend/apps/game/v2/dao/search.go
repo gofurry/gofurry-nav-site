@@ -11,13 +11,13 @@ import (
 )
 
 const searchJoins = `
-LEFT JOIN gfg_game_v2_details d ON d.game_id = g.id
+LEFT JOIN gfg_game_details d ON d.game_id = g.id
 LEFT JOIN gfg_game_first_available fa ON fa.game_id = g.id
 LEFT JOIN gfg_game_release_state rs ON rs.game_id = g.id
-LEFT JOIN gfg_game_v2_localized_details ld ON ld.game_id = g.id AND ld.lang = $1
+LEFT JOIN gfg_game_localized_details ld ON ld.game_id = g.id AND ld.lang = $1
 LEFT JOIN (
     SELECT DISTINCT ON (game_id) game_id, url
-    FROM gfg_game_v2_assets
+    FROM gfg_game_assets
     WHERE exists IS DISTINCT FROM false AND source = 'store_browse'
       AND asset_type IN ('header_2x', 'header')
     ORDER BY game_id,
