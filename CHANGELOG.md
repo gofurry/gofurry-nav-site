@@ -6,6 +6,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.2 - 2026-08-28
+
 ### Added
 
 - Add PostgreSQL-backed Game/Nav schedules, durable jobs, run attempts, per-target results, collector instances, heartbeats, leases, cancellation, recovery, and Redis realtime progress.
@@ -26,6 +28,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 ### Fixed
 
 - Preserve stable schedule phase across collector restarts, recover expired worker leases, protect concurrent lanes at the database layer, and keep scoped Nav ping collection from pruning global Redis results.
+- Clarify Admin schedule editing with field guidance, validation, database/browser/UTC clock comparison, timezone-aware previews, and a corrected modal layout.
+- Let Go CI fall back to direct module downloads when the public module proxy has a transient transport failure.
 
 ## v3.0.0-alpha.1 - 2026-08-27
 
