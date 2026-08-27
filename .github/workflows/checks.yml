@@ -33,6 +33,9 @@ on:
 permissions:
   contents: read
 
+env:
+  GOPROXY: "https://proxy.golang.org|direct"
+
 concurrency:
   group: engineering-foundation-${{ github.ref }}
   cancel-in-progress: true
