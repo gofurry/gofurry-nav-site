@@ -84,6 +84,10 @@ WHERE queued.status = 'queued'
         AND active.concurrency_key = queued.concurrency_key
   );
 
+-- name: DeleteNavCollectionTaskResultsOlderThan :execrows
+DELETE FROM gfn_collection_task_results
+WHERE started_at < now() - sqlc.arg(retention_days)::bigint * interval '1 day';
+
 -- name: ListNavCollectionTargets :many
 SELECT DISTINCT cd.site_id::bigint AS site_id,
        (COALESCE(cd.prefix, '') || cd.name)::text AS target

@@ -22,6 +22,7 @@ import (
 	pingdao "github.com/gofurry/gofurry-nav-collector/collector/ping/dao"
 	pingmodels "github.com/gofurry/gofurry-nav-collector/collector/ping/models"
 	cm "github.com/gofurry/gofurry-nav-collector/common/models"
+	navsqlc "github.com/gofurry/gofurry-nav-collector/internal/db/nav/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -137,6 +138,52 @@ func TestPostgresCollectorPersistenceSemantics(t *testing.T) {
 	var remaining int64
 	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM gfn_collector_observation WHERE protocol='ping'`).Scan(&remaining); err != nil || remaining != 3 {
 		t.Fatalf("remaining ping observations=%d err=%v", remaining, err)
+	}
+
+	var controlNow time.Time
+	if err := pool.QueryRow(ctx, `SELECT now()`).Scan(&controlNow); err != nil {
+		t.Fatal(err)
+	}
+	seedTaskResultRetention(t, ctx, pool, controlNow)
+	pruned, err := navsqlc.New(pool).DeleteNavCollectionTaskResultsOlderThan(ctx, 90)
+	if err != nil || pruned != 1 {
+		t.Fatalf("task-result retention: deleted=%d err=%v", pruned, err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM gfn_collection_task_results`).Scan(&remaining); err != nil || remaining != 1 {
+		t.Fatalf("remaining task results=%d err=%v", remaining, err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM gfn_collector_observation`).Scan(&remaining); err != nil || remaining != int64(len(protocols)) {
+		t.Fatalf("retention changed observations: remaining=%d err=%v", remaining, err)
+	}
+}
+
+func seedTaskResultRetention(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {
+	t.Helper()
+	_, err := pool.Exec(ctx, `
+INSERT INTO gfn_collector_instances
+(instance_id,collector_id,hostname,version,commit_sha,capabilities,started_at,last_heartbeat_at)
+VALUES ('retention-test','retention-test','localhost','test','',ARRAY['nav.ping']::text[],$1::timestamptz,$1::timestamptz);
+
+WITH jobs AS (
+  INSERT INTO gfn_collection_jobs
+  (job_key,trigger,scope_type,tasks,priority,concurrency_key,status,requested_by,created_at,updated_at,completed_at)
+  VALUES
+    ('nav.ping','manual','all',ARRAY['ping']::text[],200,'ping','success','test',$1::timestamptz - interval '91 days',$1::timestamptz - interval '91 days',$1::timestamptz - interval '91 days'),
+    ('nav.ping','manual','all',ARRAY['ping']::text[],200,'ping','success','test',$1::timestamptz,$1::timestamptz,$1::timestamptz)
+  RETURNING id, created_at
+), runs AS (
+  INSERT INTO gfn_collection_runs
+  (id,job_id,attempt_no,collector_instance_id,status,started_at,ended_at,expected_count,attempted_count,success_count)
+  SELECT CASE WHEN created_at < $1::timestamptz - interval '90 days' THEN 'retention-old' ELSE 'retention-new' END,
+         id,1,'retention-test','success',created_at,created_at,1,1,1
+  FROM jobs
+  RETURNING id, started_at
+)
+INSERT INTO gfn_collection_task_results
+(run_id,protocol,site_id,target,status,duration_ms,started_at,ended_at)
+SELECT id,'ping',1,'example.test','success',1,started_at,started_at FROM runs`, pgx.QueryExecModeSimpleProtocol, now)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

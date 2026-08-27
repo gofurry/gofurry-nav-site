@@ -30,6 +30,8 @@ type Engine struct {
 	stopOnce     sync.Once
 }
 
+const navTaskResultRetentionDays int64 = 90
+
 func NewEngine(pool *pgxpool.Pool) (*Engine, error) {
 	if pool == nil {
 		return nil, fmt.Errorf("Nav control plane requires PostgreSQL")
@@ -86,6 +88,10 @@ func (e *Engine) Start(parent context.Context) error {
 			if err == nil && rows != 1 {
 				return fmt.Errorf("Nav collector instance heartbeat row missing")
 			}
+			return err
+		}},
+		{"nav-task-result-retention", 24 * time.Hour, func() error {
+			_, err := e.queries.DeleteNavCollectionTaskResultsOlderThan(e.ctx, navTaskResultRetentionDays)
 			return err
 		}},
 		{"nav-legacy-log-retention", 24 * time.Hour, func() error { e.executor.RetainLegacyLogs(); return nil }},

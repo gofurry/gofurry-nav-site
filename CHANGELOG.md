@@ -17,6 +17,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 - Replace process-relative collector scheduling with fixed cron/anchored intervals, explicit `scheduled_for`, `skip`/`catch_up_once` misfire policy, priority lanes, and PostgreSQL `FOR UPDATE SKIP LOCKED` claims.
 - Route scheduled, manual, and Game entity-triggered acquisition through the same durable execution path; Redis now holds realtime progress only.
 - Freeze destructive player-count and Nav observation retention pending P0.2.
+- Retain temporary Game/Nav collection task results for 90 days while preserving durable Job/Run history.
 
 ### Removed
 

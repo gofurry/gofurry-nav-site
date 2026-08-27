@@ -69,6 +69,19 @@ func (q *Queries) ClaimNextNavCollectionJob(ctx context.Context, arg ClaimNextNa
 	return i, err
 }
 
+const deleteNavCollectionTaskResultsOlderThan = `-- name: DeleteNavCollectionTaskResultsOlderThan :execrows
+DELETE FROM gfn_collection_task_results
+WHERE started_at < now() - $1::bigint * interval '1 day'
+`
+
+func (q *Queries) DeleteNavCollectionTaskResultsOlderThan(ctx context.Context, retentionDays int64) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteNavCollectionTaskResultsOlderThan, retentionDays)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const ensureNavCollectionSchedule = `-- name: EnsureNavCollectionSchedule :exec
 INSERT INTO gfn_collection_schedules (
     job_key, name, enabled, schedule_kind, cron_expression, interval_seconds,
