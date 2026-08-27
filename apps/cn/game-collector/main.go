@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gofurry/gofurry-game-collector/collector/control"
 	gameService "github.com/gofurry/gofurry-game-collector/collector/game/service"
 	"github.com/gofurry/gofurry-game-collector/common/log"
 	cs "github.com/gofurry/gofurry-game-collector/common/service"
 	internalhealth "github.com/gofurry/gofurry-game-collector/internal/health"
 	"github.com/gofurry/gofurry-game-collector/internal/infra/postgres"
 	"github.com/gofurry/gofurry-game-collector/roof/env"
-	"github.com/gofurry/gofurry-game-collector/schedule"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -42,14 +42,13 @@ func (gf *goFurry) InitOnStart() error {
 	}
 	// 初始化 redis
 	cs.InitRedisOnStart()
-	// 初始化时间调度
-	cs.InitTimeWheelOnStart()
 	return gf.initPostgres()
 }
 
 type goFurry struct {
 	pool     *pgxpool.Pool
 	health   *internalhealth.Server
+	control  *control.Engine
 	stopOnce sync.Once
 }
 
@@ -65,9 +64,16 @@ func (gf *goFurry) Serve(ctx context.Context) error {
 	}
 	gf.health = healthServer
 	fmt.Println("gf-game-collector已启动...")
-	if schedule.InitSchedule() {
-		gf.health.MarkReady()
+	gameService.InitLimiter()
+	controlEngine, err := control.NewEngine(gf.pool, gameService.GetGameService())
+	if err != nil {
+		return errors.Join(err, gf.Shutdown())
 	}
+	gf.control = controlEngine
+	if err = gf.control.Start(ctx); err != nil {
+		return errors.Join(err, gf.Shutdown())
+	}
+	gf.health.MarkReady()
 	if err = gf.health.Start(); err != nil {
 		return errors.Join(err, gf.Shutdown())
 	}
@@ -111,7 +117,12 @@ func (gf *goFurry) Shutdown() error {
 			shutdownErr = errors.Join(shutdownErr, gf.health.Shutdown(ctx))
 			cancel()
 		}
-		cs.Stop()
+		if gf.control != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			shutdownErr = errors.Join(shutdownErr, gf.control.Shutdown(ctx))
+			cancel()
+			gf.control = nil
+		}
 		shutdownErr = errors.Join(shutdownErr, cs.CloseRedis())
 		if gf.pool != nil {
 			gf.pool.Close()

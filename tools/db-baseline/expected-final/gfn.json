@@ -1,8 +1,972 @@
 {
   "format_version": 1,
   "extensions": null,
-  "sequences": null,
+  "sequences": [
+    {
+      "name": "gfn_collection_jobs_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfn_collection_jobs",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfn_collection_schedules_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfn_collection_schedules",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfn_collection_task_results_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfn_collection_task_results",
+      "owned_column": "id"
+    }
+  ],
   "tables": [
+    {
+      "name": "gfn_collection_jobs",
+      "comment": "Durable scheduled, manual, and entity-triggered Nav collection jobs.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "schedule_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "schedule_version",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "job_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "trigger",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scope_type",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scope_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "target",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tasks",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "priority",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "concurrency_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scheduled_for",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "requested_by",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "dedupe_key",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "claimed_by",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "lease_until",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "cancel_requested_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "completed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_collection_jobs_claim_check",
+          "definition": "CHECK (status = 'running'::text AND claimed_by IS NOT NULL AND lease_until IS NOT NULL OR status \u003c\u003e 'running'::text)"
+        },
+        {
+          "name": "gfn_collection_jobs_concurrency_key_not_null",
+          "definition": "NOT NULL concurrency_key"
+        },
+        {
+          "name": "gfn_collection_jobs_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfn_collection_jobs_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfn_collection_jobs_job_key_not_null",
+          "definition": "NOT NULL job_key"
+        },
+        {
+          "name": "gfn_collection_jobs_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfn_collection_jobs_priority_check",
+          "definition": "CHECK (priority \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_jobs_priority_not_null",
+          "definition": "NOT NULL priority"
+        },
+        {
+          "name": "gfn_collection_jobs_requested_by_not_null",
+          "definition": "NOT NULL requested_by"
+        },
+        {
+          "name": "gfn_collection_jobs_schedule_check",
+          "definition": "CHECK (trigger \u003c\u003e 'scheduled'::text OR schedule_id IS NOT NULL AND schedule_version IS NOT NULL AND scheduled_for IS NOT NULL)"
+        },
+        {
+          "name": "gfn_collection_jobs_schedule_id_fkey",
+          "definition": "FOREIGN KEY (schedule_id) REFERENCES gfn_collection_schedules(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "gfn_collection_jobs_scope_check",
+          "definition": "CHECK (scope_type = 'all'::text AND scope_id IS NULL AND target IS NULL OR scope_type = 'site'::text AND scope_id IS NOT NULL AND target IS NULL OR scope_type = 'target'::text AND scope_id IS NOT NULL AND target IS NOT NULL AND btrim(target) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfn_collection_jobs_scope_type_check",
+          "definition": "CHECK (scope_type = ANY (ARRAY['all'::text, 'site'::text, 'target'::text]))"
+        },
+        {
+          "name": "gfn_collection_jobs_scope_type_not_null",
+          "definition": "NOT NULL scope_type"
+        },
+        {
+          "name": "gfn_collection_jobs_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['queued'::text, 'running'::text, 'success'::text, 'partial'::text, 'failed'::text, 'skipped'::text, 'missed'::text, 'canceled'::text]))"
+        },
+        {
+          "name": "gfn_collection_jobs_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfn_collection_jobs_tasks_check",
+          "definition": "CHECK (cardinality(tasks) \u003e 0)"
+        },
+        {
+          "name": "gfn_collection_jobs_tasks_not_null",
+          "definition": "NOT NULL tasks"
+        },
+        {
+          "name": "gfn_collection_jobs_trigger_check",
+          "definition": "CHECK (trigger = ANY (ARRAY['scheduled'::text, 'manual'::text, 'startup_catchup'::text, 'entity_created'::text, 'entity_changed'::text]))"
+        },
+        {
+          "name": "gfn_collection_jobs_trigger_not_null",
+          "definition": "NOT NULL trigger"
+        },
+        {
+          "name": "gfn_collection_jobs_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_collection_jobs_claim",
+          "definition": "CREATE INDEX idx_gfn_collection_jobs_claim ON public.gfn_collection_jobs USING btree (status, priority DESC, created_at, id)"
+        },
+        {
+          "name": "idx_gfn_collection_jobs_key_time",
+          "definition": "CREATE INDEX idx_gfn_collection_jobs_key_time ON public.gfn_collection_jobs USING btree (job_key, created_at DESC)"
+        },
+        {
+          "name": "idx_gfn_collection_jobs_lane",
+          "definition": "CREATE INDEX idx_gfn_collection_jobs_lane ON public.gfn_collection_jobs USING btree (concurrency_key, status)"
+        },
+        {
+          "name": "idx_gfn_collection_jobs_schedule_slot",
+          "definition": "CREATE INDEX idx_gfn_collection_jobs_schedule_slot ON public.gfn_collection_jobs USING btree (schedule_id, scheduled_for)"
+        },
+        {
+          "name": "uq_gfn_collection_jobs_active_dedupe",
+          "definition": "CREATE UNIQUE INDEX uq_gfn_collection_jobs_active_dedupe ON public.gfn_collection_jobs USING btree (dedupe_key) WHERE ((dedupe_key IS NOT NULL) AND (status = ANY (ARRAY['queued'::text, 'running'::text])))"
+        },
+        {
+          "name": "uq_gfn_collection_jobs_running_lane",
+          "definition": "CREATE UNIQUE INDEX uq_gfn_collection_jobs_running_lane ON public.gfn_collection_jobs USING btree (concurrency_key) WHERE (status = 'running'::text)"
+        },
+        {
+          "name": "uq_gfn_collection_jobs_scheduled_slot",
+          "definition": "CREATE UNIQUE INDEX uq_gfn_collection_jobs_scheduled_slot ON public.gfn_collection_jobs USING btree (schedule_id, scheduled_for) WHERE ((schedule_id IS NOT NULL) AND (scheduled_for IS NOT NULL))"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfn_collection_runs",
+      "comment": "Execution attempts for durable Nav collection jobs.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "job_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "attempt_no",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "collector_instance_id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scheduled_for",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "started_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "ended_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "expected_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "attempted_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "success_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "partial_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "failure_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "skipped_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "schedule_delay_ms",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "duration_ms",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "error_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "error_message",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_collection_runs_attempt_no_check",
+          "definition": "CHECK (attempt_no \u003e 0)"
+        },
+        {
+          "name": "gfn_collection_runs_attempt_no_not_null",
+          "definition": "NOT NULL attempt_no"
+        },
+        {
+          "name": "gfn_collection_runs_attempted_count_check",
+          "definition": "CHECK (attempted_count \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_runs_attempted_count_not_null",
+          "definition": "NOT NULL attempted_count"
+        },
+        {
+          "name": "gfn_collection_runs_collector_instance_id_fkey",
+          "definition": "FOREIGN KEY (collector_instance_id) REFERENCES gfn_collector_instances(instance_id)"
+        },
+        {
+          "name": "gfn_collection_runs_collector_instance_id_not_null",
+          "definition": "NOT NULL collector_instance_id"
+        },
+        {
+          "name": "gfn_collection_runs_counter_balance_check",
+          "definition": "CHECK (attempted_count = (success_count + partial_count + failure_count))"
+        },
+        {
+          "name": "gfn_collection_runs_duration_ms_check",
+          "definition": "CHECK (duration_ms \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_runs_duration_ms_not_null",
+          "definition": "NOT NULL duration_ms"
+        },
+        {
+          "name": "gfn_collection_runs_error_kind_not_null",
+          "definition": "NOT NULL error_kind"
+        },
+        {
+          "name": "gfn_collection_runs_error_message_not_null",
+          "definition": "NOT NULL error_message"
+        },
+        {
+          "name": "gfn_collection_runs_expected_count_check",
+          "definition": "CHECK (expected_count \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_runs_expected_count_not_null",
+          "definition": "NOT NULL expected_count"
+        },
+        {
+          "name": "gfn_collection_runs_failure_count_check",
+          "definition": "CHECK (failure_count \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_runs_failure_count_not_null",
+          "definition": "NOT NULL failure_count"
+        },
+        {
+          "name": "gfn_collection_runs_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfn_collection_runs_job_id_attempt_no_key",
+          "definition": "UNIQUE (job_id, attempt_no)"
+        },
+        {
+          "name": "gfn_collection_runs_job_id_fkey",
+          "definition": "FOREIGN KEY (job_id) REFERENCES gfn_collection_jobs(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfn_collection_runs_job_id_not_null",
+          "definition": "NOT NULL job_id"
+        },
+        {
+          "name": "gfn_collection_runs_partial_count_check",
+          "definition": "CHECK (partial_count \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_runs_partial_count_not_null",
+          "definition": "NOT NULL partial_count"
+        },
+        {
+          "name": "gfn_collection_runs_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfn_collection_runs_schedule_delay_ms_check",
+          "definition": "CHECK (schedule_delay_ms \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_runs_schedule_delay_ms_not_null",
+          "definition": "NOT NULL schedule_delay_ms"
+        },
+        {
+          "name": "gfn_collection_runs_skipped_count_check",
+          "definition": "CHECK (skipped_count \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_runs_skipped_count_not_null",
+          "definition": "NOT NULL skipped_count"
+        },
+        {
+          "name": "gfn_collection_runs_started_at_not_null",
+          "definition": "NOT NULL started_at"
+        },
+        {
+          "name": "gfn_collection_runs_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['running'::text, 'success'::text, 'partial'::text, 'failed'::text, 'canceled'::text]))"
+        },
+        {
+          "name": "gfn_collection_runs_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfn_collection_runs_success_count_check",
+          "definition": "CHECK (success_count \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_runs_success_count_not_null",
+          "definition": "NOT NULL success_count"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_collection_runs_instance_time",
+          "definition": "CREATE INDEX idx_gfn_collection_runs_instance_time ON public.gfn_collection_runs USING btree (collector_instance_id, started_at DESC)"
+        },
+        {
+          "name": "idx_gfn_collection_runs_job_time",
+          "definition": "CREATE INDEX idx_gfn_collection_runs_job_time ON public.gfn_collection_runs USING btree (job_id, started_at DESC)"
+        },
+        {
+          "name": "idx_gfn_collection_runs_scheduled_for",
+          "definition": "CREATE INDEX idx_gfn_collection_runs_scheduled_for ON public.gfn_collection_runs USING btree (scheduled_for)"
+        },
+        {
+          "name": "idx_gfn_collection_runs_status_time",
+          "definition": "CREATE INDEX idx_gfn_collection_runs_status_time ON public.gfn_collection_runs USING btree (status, started_at DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfn_collection_schedules",
+      "comment": "Durable Nav collection schedules; PostgreSQL is the source of truth.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "job_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "name",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "enabled",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "default": "true"
+        },
+        {
+          "name": "schedule_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "cron_expression",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "interval_seconds",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "anchor_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "timezone",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "misfire_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "misfire_grace_seconds",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "overlap_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'skip'::text"
+        },
+        {
+          "name": "priority",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "concurrency_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "version",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "1"
+        },
+        {
+          "name": "effective_from",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "last_materialized_for",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "next_scheduled_for",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_collection_schedules_concurrency_key_not_null",
+          "definition": "NOT NULL concurrency_key"
+        },
+        {
+          "name": "gfn_collection_schedules_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfn_collection_schedules_effective_from_not_null",
+          "definition": "NOT NULL effective_from"
+        },
+        {
+          "name": "gfn_collection_schedules_enabled_not_null",
+          "definition": "NOT NULL enabled"
+        },
+        {
+          "name": "gfn_collection_schedules_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfn_collection_schedules_job_key_key",
+          "definition": "UNIQUE (job_key)"
+        },
+        {
+          "name": "gfn_collection_schedules_job_key_not_null",
+          "definition": "NOT NULL job_key"
+        },
+        {
+          "name": "gfn_collection_schedules_misfire_grace_seconds_check",
+          "definition": "CHECK (misfire_grace_seconds \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_schedules_misfire_grace_seconds_not_null",
+          "definition": "NOT NULL misfire_grace_seconds"
+        },
+        {
+          "name": "gfn_collection_schedules_misfire_policy_check",
+          "definition": "CHECK (misfire_policy = ANY (ARRAY['skip'::text, 'catch_up_once'::text]))"
+        },
+        {
+          "name": "gfn_collection_schedules_misfire_policy_not_null",
+          "definition": "NOT NULL misfire_policy"
+        },
+        {
+          "name": "gfn_collection_schedules_name_not_null",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "gfn_collection_schedules_overlap_policy_check",
+          "definition": "CHECK (overlap_policy = 'skip'::text)"
+        },
+        {
+          "name": "gfn_collection_schedules_overlap_policy_not_null",
+          "definition": "NOT NULL overlap_policy"
+        },
+        {
+          "name": "gfn_collection_schedules_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfn_collection_schedules_priority_check",
+          "definition": "CHECK (priority \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_schedules_priority_not_null",
+          "definition": "NOT NULL priority"
+        },
+        {
+          "name": "gfn_collection_schedules_schedule_kind_check",
+          "definition": "CHECK (schedule_kind = ANY (ARRAY['cron'::text, 'interval'::text]))"
+        },
+        {
+          "name": "gfn_collection_schedules_schedule_kind_not_null",
+          "definition": "NOT NULL schedule_kind"
+        },
+        {
+          "name": "gfn_collection_schedules_shape_check",
+          "definition": "CHECK (schedule_kind = 'cron'::text AND cron_expression IS NOT NULL AND btrim(cron_expression) \u003c\u003e ''::text AND interval_seconds IS NULL AND anchor_at IS NULL OR schedule_kind = 'interval'::text AND cron_expression IS NULL AND interval_seconds \u003e 0 AND anchor_at IS NOT NULL)"
+        },
+        {
+          "name": "gfn_collection_schedules_timezone_not_null",
+          "definition": "NOT NULL timezone"
+        },
+        {
+          "name": "gfn_collection_schedules_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfn_collection_schedules_version_check",
+          "definition": "CHECK (version \u003e 0)"
+        },
+        {
+          "name": "gfn_collection_schedules_version_not_null",
+          "definition": "NOT NULL version"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_collection_schedules_due",
+          "definition": "CREATE INDEX idx_gfn_collection_schedules_due ON public.gfn_collection_schedules USING btree (enabled, next_scheduled_for)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfn_collection_task_results",
+      "comment": "Per-target results for Nav collection runs.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "run_id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "protocol",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "site_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "target",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "observation_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "duration_ms",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "error_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "error_message",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "started_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "ended_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_collection_task_results_duration_ms_check",
+          "definition": "CHECK (duration_ms \u003e= 0)"
+        },
+        {
+          "name": "gfn_collection_task_results_duration_ms_not_null",
+          "definition": "NOT NULL duration_ms"
+        },
+        {
+          "name": "gfn_collection_task_results_error_kind_not_null",
+          "definition": "NOT NULL error_kind"
+        },
+        {
+          "name": "gfn_collection_task_results_error_message_not_null",
+          "definition": "NOT NULL error_message"
+        },
+        {
+          "name": "gfn_collection_task_results_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfn_collection_task_results_observation_id_fkey",
+          "definition": "FOREIGN KEY (observation_id) REFERENCES gfn_collector_observation(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "gfn_collection_task_results_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfn_collection_task_results_protocol_check",
+          "definition": "CHECK (protocol = ANY (ARRAY['ping'::text, 'http'::text, 'dns'::text, 'rdap'::text, 'robots'::text, 'security_txt'::text, 'llms_txt'::text, 'page_assets'::text, 'port_check'::text, 'waf_canary'::text]))"
+        },
+        {
+          "name": "gfn_collection_task_results_protocol_not_null",
+          "definition": "NOT NULL protocol"
+        },
+        {
+          "name": "gfn_collection_task_results_run_id_fkey",
+          "definition": "FOREIGN KEY (run_id) REFERENCES gfn_collection_runs(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfn_collection_task_results_run_id_not_null",
+          "definition": "NOT NULL run_id"
+        },
+        {
+          "name": "gfn_collection_task_results_run_id_protocol_site_id_target_key",
+          "definition": "UNIQUE (run_id, protocol, site_id, target)"
+        },
+        {
+          "name": "gfn_collection_task_results_site_id_not_null",
+          "definition": "NOT NULL site_id"
+        },
+        {
+          "name": "gfn_collection_task_results_started_at_not_null",
+          "definition": "NOT NULL started_at"
+        },
+        {
+          "name": "gfn_collection_task_results_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['success'::text, 'partial'::text, 'failed'::text, 'skipped'::text]))"
+        },
+        {
+          "name": "gfn_collection_task_results_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfn_collection_task_results_target_not_null",
+          "definition": "NOT NULL target"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_collection_task_results_protocol_time",
+          "definition": "CREATE INDEX idx_gfn_collection_task_results_protocol_time ON public.gfn_collection_task_results USING btree (protocol, started_at DESC)"
+        },
+        {
+          "name": "idx_gfn_collection_task_results_run",
+          "definition": "CREATE INDEX idx_gfn_collection_task_results_run ON public.gfn_collection_task_results USING btree (run_id)"
+        },
+        {
+          "name": "idx_gfn_collection_task_results_site_time",
+          "definition": "CREATE INDEX idx_gfn_collection_task_results_site_time ON public.gfn_collection_task_results USING btree (site_id, started_at DESC)"
+        }
+      ],
+      "triggers": null
+    },
     {
       "name": "gfn_collector_domain",
       "comment": "域名请求表",
@@ -107,6 +1071,119 @@
         {
           "name": "idx_gfn_collector_domain_site_id",
           "definition": "CREATE INDEX idx_gfn_collector_domain_site_id ON public.gfn_collector_domain USING btree (site_id)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfn_collector_instances",
+      "comment": "Nav collector process instances and heartbeats.",
+      "columns": [
+        {
+          "name": "instance_id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "collector_id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "hostname",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "version",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "commit_sha",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "capabilities",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "started_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "last_heartbeat_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "stopped_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_collector_instances_capabilities_check",
+          "definition": "CHECK (cardinality(capabilities) \u003e 0)"
+        },
+        {
+          "name": "gfn_collector_instances_capabilities_not_null",
+          "definition": "NOT NULL capabilities"
+        },
+        {
+          "name": "gfn_collector_instances_collector_id_not_null",
+          "definition": "NOT NULL collector_id"
+        },
+        {
+          "name": "gfn_collector_instances_commit_sha_not_null",
+          "definition": "NOT NULL commit_sha"
+        },
+        {
+          "name": "gfn_collector_instances_hostname_not_null",
+          "definition": "NOT NULL hostname"
+        },
+        {
+          "name": "gfn_collector_instances_instance_id_not_null",
+          "definition": "NOT NULL instance_id"
+        },
+        {
+          "name": "gfn_collector_instances_last_heartbeat_at_not_null",
+          "definition": "NOT NULL last_heartbeat_at"
+        },
+        {
+          "name": "gfn_collector_instances_pkey",
+          "definition": "PRIMARY KEY (instance_id)"
+        },
+        {
+          "name": "gfn_collector_instances_started_at_not_null",
+          "definition": "NOT NULL started_at"
+        },
+        {
+          "name": "gfn_collector_instances_version_not_null",
+          "definition": "NOT NULL version"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_collector_instances_collector_heartbeat",
+          "definition": "CREATE INDEX idx_gfn_collector_instances_collector_heartbeat ON public.gfn_collector_instances USING btree (collector_id, last_heartbeat_at DESC)"
+        },
+        {
+          "name": "idx_gfn_collector_instances_heartbeat",
+          "definition": "CREATE INDEX idx_gfn_collector_instances_heartbeat ON public.gfn_collector_instances USING btree (last_heartbeat_at DESC)"
         }
       ],
       "triggers": null
@@ -491,6 +1568,24 @@
           "has_default": true,
           "default": "now()",
           "comment": "创建时间"
+        },
+        {
+          "name": "job_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "run_id",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "collector_instance_id",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
         }
       ],
       "constraints": [
@@ -501,6 +1596,14 @@
         {
           "name": "gfn_collector_observation_id_not_null",
           "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfn_collector_observation_instance_id_fkey",
+          "definition": "FOREIGN KEY (collector_instance_id) REFERENCES gfn_collector_instances(instance_id)"
+        },
+        {
+          "name": "gfn_collector_observation_job_id_fkey",
+          "definition": "FOREIGN KEY (job_id) REFERENCES gfn_collection_jobs(id)"
         },
         {
           "name": "gfn_collector_observation_observed_at_not_null",
@@ -517,6 +1620,10 @@
         {
           "name": "gfn_collector_observation_protocol_not_null",
           "definition": "NOT NULL protocol"
+        },
+        {
+          "name": "gfn_collector_observation_run_id_fkey",
+          "definition": "FOREIGN KEY (run_id) REFERENCES gfn_collection_runs(id)"
         },
         {
           "name": "gfn_collector_observation_schema_version_not_null",
@@ -537,12 +1644,20 @@
       ],
       "indexes": [
         {
+          "name": "idx_gfn_collector_observation_job",
+          "definition": "CREATE INDEX idx_gfn_collector_observation_job ON public.gfn_collector_observation USING btree (job_id) WHERE (job_id IS NOT NULL)"
+        },
+        {
           "name": "idx_gfn_collector_observation_protocol_site_time_id",
           "definition": "CREATE INDEX idx_gfn_collector_observation_protocol_site_time_id ON public.gfn_collector_observation USING btree (protocol, site_id, observed_at DESC, id DESC)"
         },
         {
           "name": "idx_gfn_collector_observation_protocol_time_id",
           "definition": "CREATE INDEX idx_gfn_collector_observation_protocol_time_id ON public.gfn_collector_observation USING btree (protocol, observed_at DESC, id DESC)"
+        },
+        {
+          "name": "idx_gfn_collector_observation_run",
+          "definition": "CREATE INDEX idx_gfn_collector_observation_run ON public.gfn_collector_observation USING btree (run_id) WHERE (run_id IS NOT NULL)"
         },
         {
           "name": "idx_gfn_collector_observation_site_protocol_time_id",

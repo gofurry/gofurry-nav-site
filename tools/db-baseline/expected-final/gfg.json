@@ -8,6 +8,66 @@
   ],
   "sequences": [
     {
+      "name": "gfg_collection_jobs_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_collection_jobs",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfg_collection_schedules_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_collection_schedules",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfg_collection_task_results_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_collection_task_results",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfg_game_assets_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_game_assets",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfg_game_detail_snapshots_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_game_detail_snapshots",
+      "owned_column": "id"
+    },
+    {
       "name": "gfg_game_languages_id_seq",
       "data_type": "bigint",
       "start": 1,
@@ -17,6 +77,42 @@
       "cache": 1,
       "cycle": false,
       "owned_table": "gfg_game_languages",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfg_game_media_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_game_media",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfg_game_news_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_game_news",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfg_game_player_counts_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_game_player_counts",
       "owned_column": "id"
     },
     {
@@ -30,81 +126,1076 @@
       "cycle": false,
       "owned_table": "gfg_game_release_history",
       "owned_column": "id"
-    },
-    {
-      "name": "gfg_game_v2_assets_id_seq",
-      "data_type": "bigint",
-      "start": 1,
-      "increment": 1,
-      "minimum": 1,
-      "maximum": 9223372036854775807,
-      "cache": 1,
-      "cycle": false,
-      "owned_table": "gfg_game_v2_assets",
-      "owned_column": "id"
-    },
-    {
-      "name": "gfg_game_v2_collect_task_results_id_seq",
-      "data_type": "bigint",
-      "start": 1,
-      "increment": 1,
-      "minimum": 1,
-      "maximum": 9223372036854775807,
-      "cache": 1,
-      "cycle": false,
-      "owned_table": "gfg_game_v2_collect_task_results",
-      "owned_column": "id"
-    },
-    {
-      "name": "gfg_game_v2_detail_snapshots_id_seq",
-      "data_type": "bigint",
-      "start": 1,
-      "increment": 1,
-      "minimum": 1,
-      "maximum": 9223372036854775807,
-      "cache": 1,
-      "cycle": false,
-      "owned_table": "gfg_game_v2_detail_snapshots",
-      "owned_column": "id"
-    },
-    {
-      "name": "gfg_game_v2_media_id_seq",
-      "data_type": "bigint",
-      "start": 1,
-      "increment": 1,
-      "minimum": 1,
-      "maximum": 9223372036854775807,
-      "cache": 1,
-      "cycle": false,
-      "owned_table": "gfg_game_v2_media",
-      "owned_column": "id"
-    },
-    {
-      "name": "gfg_game_v2_news_id_seq",
-      "data_type": "bigint",
-      "start": 1,
-      "increment": 1,
-      "minimum": 1,
-      "maximum": 9223372036854775807,
-      "cache": 1,
-      "cycle": false,
-      "owned_table": "gfg_game_v2_news",
-      "owned_column": "id"
-    },
-    {
-      "name": "gfg_game_v2_player_counts_id_seq",
-      "data_type": "bigint",
-      "start": 1,
-      "increment": 1,
-      "minimum": 1,
-      "maximum": 9223372036854775807,
-      "cache": 1,
-      "cycle": false,
-      "owned_table": "gfg_game_v2_player_counts",
-      "owned_column": "id"
     }
   ],
   "tables": [
+    {
+      "name": "gfg_collection_jobs",
+      "comment": "Durable scheduled, manual, and entity-triggered Game collection jobs.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "schedule_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "schedule_version",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "job_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "trigger",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scope_type",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scope_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "target",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tasks",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "priority",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "concurrency_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scheduled_for",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "requested_by",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "dedupe_key",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "claimed_by",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "lease_until",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "cancel_requested_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "completed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_collection_jobs_claim_check",
+          "definition": "CHECK (status = 'running'::text AND claimed_by IS NOT NULL AND lease_until IS NOT NULL OR status \u003c\u003e 'running'::text)"
+        },
+        {
+          "name": "gfg_collection_jobs_concurrency_key_not_null",
+          "definition": "NOT NULL concurrency_key"
+        },
+        {
+          "name": "gfg_collection_jobs_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_collection_jobs_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_collection_jobs_job_key_not_null",
+          "definition": "NOT NULL job_key"
+        },
+        {
+          "name": "gfg_collection_jobs_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_collection_jobs_priority_check",
+          "definition": "CHECK (priority \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_jobs_priority_not_null",
+          "definition": "NOT NULL priority"
+        },
+        {
+          "name": "gfg_collection_jobs_requested_by_not_null",
+          "definition": "NOT NULL requested_by"
+        },
+        {
+          "name": "gfg_collection_jobs_schedule_check",
+          "definition": "CHECK (trigger \u003c\u003e 'scheduled'::text OR schedule_id IS NOT NULL AND schedule_version IS NOT NULL AND scheduled_for IS NOT NULL)"
+        },
+        {
+          "name": "gfg_collection_jobs_schedule_id_fkey",
+          "definition": "FOREIGN KEY (schedule_id) REFERENCES gfg_collection_schedules(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "gfg_collection_jobs_scope_check",
+          "definition": "CHECK (scope_type = 'all'::text AND scope_id IS NULL AND target IS NULL OR scope_type = 'game'::text AND scope_id IS NOT NULL AND target IS NULL)"
+        },
+        {
+          "name": "gfg_collection_jobs_scope_type_check",
+          "definition": "CHECK (scope_type = ANY (ARRAY['all'::text, 'game'::text]))"
+        },
+        {
+          "name": "gfg_collection_jobs_scope_type_not_null",
+          "definition": "NOT NULL scope_type"
+        },
+        {
+          "name": "gfg_collection_jobs_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['queued'::text, 'running'::text, 'success'::text, 'partial'::text, 'failed'::text, 'skipped'::text, 'missed'::text, 'canceled'::text]))"
+        },
+        {
+          "name": "gfg_collection_jobs_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfg_collection_jobs_tasks_check",
+          "definition": "CHECK (cardinality(tasks) \u003e 0)"
+        },
+        {
+          "name": "gfg_collection_jobs_tasks_not_null",
+          "definition": "NOT NULL tasks"
+        },
+        {
+          "name": "gfg_collection_jobs_trigger_check",
+          "definition": "CHECK (trigger = ANY (ARRAY['scheduled'::text, 'manual'::text, 'startup_catchup'::text, 'entity_created'::text, 'entity_changed'::text, 'legacy_import'::text]))"
+        },
+        {
+          "name": "gfg_collection_jobs_trigger_not_null",
+          "definition": "NOT NULL trigger"
+        },
+        {
+          "name": "gfg_collection_jobs_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_collection_jobs_claim",
+          "definition": "CREATE INDEX idx_gfg_collection_jobs_claim ON public.gfg_collection_jobs USING btree (status, priority DESC, created_at, id)"
+        },
+        {
+          "name": "idx_gfg_collection_jobs_key_time",
+          "definition": "CREATE INDEX idx_gfg_collection_jobs_key_time ON public.gfg_collection_jobs USING btree (job_key, created_at DESC)"
+        },
+        {
+          "name": "idx_gfg_collection_jobs_lane",
+          "definition": "CREATE INDEX idx_gfg_collection_jobs_lane ON public.gfg_collection_jobs USING btree (concurrency_key, status)"
+        },
+        {
+          "name": "idx_gfg_collection_jobs_schedule_slot",
+          "definition": "CREATE INDEX idx_gfg_collection_jobs_schedule_slot ON public.gfg_collection_jobs USING btree (schedule_id, scheduled_for)"
+        },
+        {
+          "name": "uq_gfg_collection_jobs_active_dedupe",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_collection_jobs_active_dedupe ON public.gfg_collection_jobs USING btree (dedupe_key) WHERE ((dedupe_key IS NOT NULL) AND (status = ANY (ARRAY['queued'::text, 'running'::text])))"
+        },
+        {
+          "name": "uq_gfg_collection_jobs_running_lane",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_collection_jobs_running_lane ON public.gfg_collection_jobs USING btree (concurrency_key) WHERE (status = 'running'::text)"
+        },
+        {
+          "name": "uq_gfg_collection_jobs_scheduled_slot",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_collection_jobs_scheduled_slot ON public.gfg_collection_jobs USING btree (schedule_id, scheduled_for) WHERE ((schedule_id IS NOT NULL) AND (scheduled_for IS NOT NULL))"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_collection_runs",
+      "comment": "Execution attempts for durable Game collection jobs.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "job_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "attempt_no",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "collector_instance_id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scheduled_for",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "started_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "ended_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "expected_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "attempted_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "success_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "partial_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "failure_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "skipped_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "schedule_delay_ms",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "duration_ms",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "error_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "error_message",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_collection_runs_attempt_no_check",
+          "definition": "CHECK (attempt_no \u003e 0)"
+        },
+        {
+          "name": "gfg_collection_runs_attempt_no_not_null",
+          "definition": "NOT NULL attempt_no"
+        },
+        {
+          "name": "gfg_collection_runs_attempted_count_check",
+          "definition": "CHECK (attempted_count \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_runs_attempted_count_not_null",
+          "definition": "NOT NULL attempted_count"
+        },
+        {
+          "name": "gfg_collection_runs_collector_instance_id_fkey",
+          "definition": "FOREIGN KEY (collector_instance_id) REFERENCES gfg_collector_instances(instance_id)"
+        },
+        {
+          "name": "gfg_collection_runs_collector_instance_id_not_null",
+          "definition": "NOT NULL collector_instance_id"
+        },
+        {
+          "name": "gfg_collection_runs_counter_balance_check",
+          "definition": "CHECK (attempted_count = (success_count + partial_count + failure_count))"
+        },
+        {
+          "name": "gfg_collection_runs_duration_ms_check",
+          "definition": "CHECK (duration_ms \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_runs_duration_ms_not_null",
+          "definition": "NOT NULL duration_ms"
+        },
+        {
+          "name": "gfg_collection_runs_error_kind_not_null",
+          "definition": "NOT NULL error_kind"
+        },
+        {
+          "name": "gfg_collection_runs_error_message_not_null",
+          "definition": "NOT NULL error_message"
+        },
+        {
+          "name": "gfg_collection_runs_expected_count_check",
+          "definition": "CHECK (expected_count \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_runs_expected_count_not_null",
+          "definition": "NOT NULL expected_count"
+        },
+        {
+          "name": "gfg_collection_runs_failure_count_check",
+          "definition": "CHECK (failure_count \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_runs_failure_count_not_null",
+          "definition": "NOT NULL failure_count"
+        },
+        {
+          "name": "gfg_collection_runs_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_collection_runs_job_id_attempt_no_key",
+          "definition": "UNIQUE (job_id, attempt_no)"
+        },
+        {
+          "name": "gfg_collection_runs_job_id_fkey",
+          "definition": "FOREIGN KEY (job_id) REFERENCES gfg_collection_jobs(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_collection_runs_job_id_not_null",
+          "definition": "NOT NULL job_id"
+        },
+        {
+          "name": "gfg_collection_runs_partial_count_check",
+          "definition": "CHECK (partial_count \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_runs_partial_count_not_null",
+          "definition": "NOT NULL partial_count"
+        },
+        {
+          "name": "gfg_collection_runs_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_collection_runs_schedule_delay_ms_check",
+          "definition": "CHECK (schedule_delay_ms \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_runs_schedule_delay_ms_not_null",
+          "definition": "NOT NULL schedule_delay_ms"
+        },
+        {
+          "name": "gfg_collection_runs_skipped_count_check",
+          "definition": "CHECK (skipped_count \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_runs_skipped_count_not_null",
+          "definition": "NOT NULL skipped_count"
+        },
+        {
+          "name": "gfg_collection_runs_started_at_not_null",
+          "definition": "NOT NULL started_at"
+        },
+        {
+          "name": "gfg_collection_runs_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['running'::text, 'success'::text, 'partial'::text, 'failed'::text, 'canceled'::text]))"
+        },
+        {
+          "name": "gfg_collection_runs_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfg_collection_runs_success_count_check",
+          "definition": "CHECK (success_count \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_runs_success_count_not_null",
+          "definition": "NOT NULL success_count"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_collection_runs_instance_time",
+          "definition": "CREATE INDEX idx_gfg_collection_runs_instance_time ON public.gfg_collection_runs USING btree (collector_instance_id, started_at DESC)"
+        },
+        {
+          "name": "idx_gfg_collection_runs_job_time",
+          "definition": "CREATE INDEX idx_gfg_collection_runs_job_time ON public.gfg_collection_runs USING btree (job_id, started_at DESC)"
+        },
+        {
+          "name": "idx_gfg_collection_runs_scheduled_for",
+          "definition": "CREATE INDEX idx_gfg_collection_runs_scheduled_for ON public.gfg_collection_runs USING btree (scheduled_for)"
+        },
+        {
+          "name": "idx_gfg_collection_runs_status_time",
+          "definition": "CREATE INDEX idx_gfg_collection_runs_status_time ON public.gfg_collection_runs USING btree (status, started_at DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_collection_schedules",
+      "comment": "Durable Game collection schedules; PostgreSQL is the source of truth.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "job_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "name",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "enabled",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "default": "true"
+        },
+        {
+          "name": "schedule_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "cron_expression",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "interval_seconds",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "anchor_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "timezone",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "misfire_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "misfire_grace_seconds",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "overlap_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'skip'::text"
+        },
+        {
+          "name": "priority",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "concurrency_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "version",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "1"
+        },
+        {
+          "name": "effective_from",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "last_materialized_for",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "next_scheduled_for",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_collection_schedules_concurrency_key_not_null",
+          "definition": "NOT NULL concurrency_key"
+        },
+        {
+          "name": "gfg_collection_schedules_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_collection_schedules_effective_from_not_null",
+          "definition": "NOT NULL effective_from"
+        },
+        {
+          "name": "gfg_collection_schedules_enabled_not_null",
+          "definition": "NOT NULL enabled"
+        },
+        {
+          "name": "gfg_collection_schedules_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_collection_schedules_job_key_key",
+          "definition": "UNIQUE (job_key)"
+        },
+        {
+          "name": "gfg_collection_schedules_job_key_not_null",
+          "definition": "NOT NULL job_key"
+        },
+        {
+          "name": "gfg_collection_schedules_misfire_grace_seconds_check",
+          "definition": "CHECK (misfire_grace_seconds \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_schedules_misfire_grace_seconds_not_null",
+          "definition": "NOT NULL misfire_grace_seconds"
+        },
+        {
+          "name": "gfg_collection_schedules_misfire_policy_check",
+          "definition": "CHECK (misfire_policy = ANY (ARRAY['skip'::text, 'catch_up_once'::text]))"
+        },
+        {
+          "name": "gfg_collection_schedules_misfire_policy_not_null",
+          "definition": "NOT NULL misfire_policy"
+        },
+        {
+          "name": "gfg_collection_schedules_name_not_null",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "gfg_collection_schedules_overlap_policy_check",
+          "definition": "CHECK (overlap_policy = 'skip'::text)"
+        },
+        {
+          "name": "gfg_collection_schedules_overlap_policy_not_null",
+          "definition": "NOT NULL overlap_policy"
+        },
+        {
+          "name": "gfg_collection_schedules_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_collection_schedules_priority_check",
+          "definition": "CHECK (priority \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_schedules_priority_not_null",
+          "definition": "NOT NULL priority"
+        },
+        {
+          "name": "gfg_collection_schedules_schedule_kind_check",
+          "definition": "CHECK (schedule_kind = ANY (ARRAY['cron'::text, 'interval'::text]))"
+        },
+        {
+          "name": "gfg_collection_schedules_schedule_kind_not_null",
+          "definition": "NOT NULL schedule_kind"
+        },
+        {
+          "name": "gfg_collection_schedules_shape_check",
+          "definition": "CHECK (schedule_kind = 'cron'::text AND cron_expression IS NOT NULL AND btrim(cron_expression) \u003c\u003e ''::text AND interval_seconds IS NULL AND anchor_at IS NULL OR schedule_kind = 'interval'::text AND cron_expression IS NULL AND interval_seconds \u003e 0 AND anchor_at IS NOT NULL)"
+        },
+        {
+          "name": "gfg_collection_schedules_timezone_not_null",
+          "definition": "NOT NULL timezone"
+        },
+        {
+          "name": "gfg_collection_schedules_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfg_collection_schedules_version_check",
+          "definition": "CHECK (version \u003e 0)"
+        },
+        {
+          "name": "gfg_collection_schedules_version_not_null",
+          "definition": "NOT NULL version"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_collection_schedules_due",
+          "definition": "CREATE INDEX idx_gfg_collection_schedules_due ON public.gfg_collection_schedules USING btree (enabled, next_scheduled_for)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_collection_task_results",
+      "comment": "Per-game, per-task results for Game collection runs.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "run_id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "task_type",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "upstream_status_code",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "traffic_bucket",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "retry_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "duration_ms",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "error_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "error_message",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "started_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "ended_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_collection_task_results_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_collection_task_results_duration_ms_check",
+          "definition": "CHECK (duration_ms \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_task_results_duration_ms_not_null",
+          "definition": "NOT NULL duration_ms"
+        },
+        {
+          "name": "gfg_collection_task_results_error_kind_not_null",
+          "definition": "NOT NULL error_kind"
+        },
+        {
+          "name": "gfg_collection_task_results_error_message_not_null",
+          "definition": "NOT NULL error_message"
+        },
+        {
+          "name": "gfg_collection_task_results_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_collection_task_results_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_collection_task_results_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_collection_task_results_retry_count_check",
+          "definition": "CHECK (retry_count \u003e= 0)"
+        },
+        {
+          "name": "gfg_collection_task_results_retry_count_not_null",
+          "definition": "NOT NULL retry_count"
+        },
+        {
+          "name": "gfg_collection_task_results_run_id_fkey",
+          "definition": "FOREIGN KEY (run_id) REFERENCES gfg_collection_runs(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_collection_task_results_run_id_not_null",
+          "definition": "NOT NULL run_id"
+        },
+        {
+          "name": "gfg_collection_task_results_run_id_task_type_game_id_key",
+          "definition": "UNIQUE (run_id, task_type, game_id)"
+        },
+        {
+          "name": "gfg_collection_task_results_started_at_not_null",
+          "definition": "NOT NULL started_at"
+        },
+        {
+          "name": "gfg_collection_task_results_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['success'::text, 'partial'::text, 'failed'::text, 'skipped'::text]))"
+        },
+        {
+          "name": "gfg_collection_task_results_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfg_collection_task_results_task_type_check",
+          "definition": "CHECK (task_type = ANY (ARRAY['details'::text, 'news'::text, 'players'::text]))"
+        },
+        {
+          "name": "gfg_collection_task_results_task_type_not_null",
+          "definition": "NOT NULL task_type"
+        },
+        {
+          "name": "gfg_collection_task_results_traffic_bucket_not_null",
+          "definition": "NOT NULL traffic_bucket"
+        },
+        {
+          "name": "gfg_collection_task_results_upstream_status_code_not_null",
+          "definition": "NOT NULL upstream_status_code"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_collection_task_results_app_time",
+          "definition": "CREATE INDEX idx_gfg_collection_task_results_app_time ON public.gfg_collection_task_results USING btree (appid, task_type, started_at DESC)"
+        },
+        {
+          "name": "idx_gfg_collection_task_results_game_time",
+          "definition": "CREATE INDEX idx_gfg_collection_task_results_game_time ON public.gfg_collection_task_results USING btree (game_id, started_at DESC)"
+        },
+        {
+          "name": "idx_gfg_collection_task_results_run",
+          "definition": "CREATE INDEX idx_gfg_collection_task_results_run ON public.gfg_collection_task_results USING btree (run_id)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_collector_instances",
+      "comment": "Game collector process instances and heartbeats.",
+      "columns": [
+        {
+          "name": "instance_id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "collector_id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "hostname",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "version",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "commit_sha",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "capabilities",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "started_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "last_heartbeat_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "stopped_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_collector_instances_capabilities_check",
+          "definition": "CHECK (cardinality(capabilities) \u003e 0)"
+        },
+        {
+          "name": "gfg_collector_instances_capabilities_not_null",
+          "definition": "NOT NULL capabilities"
+        },
+        {
+          "name": "gfg_collector_instances_collector_id_not_null",
+          "definition": "NOT NULL collector_id"
+        },
+        {
+          "name": "gfg_collector_instances_commit_sha_not_null",
+          "definition": "NOT NULL commit_sha"
+        },
+        {
+          "name": "gfg_collector_instances_hostname_not_null",
+          "definition": "NOT NULL hostname"
+        },
+        {
+          "name": "gfg_collector_instances_instance_id_not_null",
+          "definition": "NOT NULL instance_id"
+        },
+        {
+          "name": "gfg_collector_instances_last_heartbeat_at_not_null",
+          "definition": "NOT NULL last_heartbeat_at"
+        },
+        {
+          "name": "gfg_collector_instances_pkey",
+          "definition": "PRIMARY KEY (instance_id)"
+        },
+        {
+          "name": "gfg_collector_instances_started_at_not_null",
+          "definition": "NOT NULL started_at"
+        },
+        {
+          "name": "gfg_collector_instances_version_not_null",
+          "definition": "NOT NULL version"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_collector_instances_collector_heartbeat",
+          "definition": "CREATE INDEX idx_gfg_collector_instances_collector_heartbeat ON public.gfg_collector_instances USING btree (collector_id, last_heartbeat_at DESC)"
+        },
+        {
+          "name": "idx_gfg_collector_instances_heartbeat",
+          "definition": "CREATE INDEX idx_gfg_collector_instances_heartbeat ON public.gfg_collector_instances USING btree (last_heartbeat_at DESC)"
+        }
+      ],
+      "triggers": null
+    },
     {
       "name": "gfg_game",
       "comment": "游戏表",
@@ -359,6 +1450,254 @@
       "triggers": null
     },
     {
+      "name": "gfg_game_assets",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "nextval('gfg_game_assets_id_seq'::regclass)"
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "asset_type",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "asset_family",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "source",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'steam'::text"
+        },
+        {
+          "name": "lang",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "media_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "title",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "url",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "thumbnail_url",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "format",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "exists",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "status_code",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "content_type",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "content_length",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "extra",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "sort_order",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "checked_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "collected_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_assets_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_assets_asset_family_not_null",
+          "definition": "NOT NULL asset_family"
+        },
+        {
+          "name": "gfg_game_assets_asset_type_not_null",
+          "definition": "NOT NULL asset_type"
+        },
+        {
+          "name": "gfg_game_assets_collected_at_not_null",
+          "definition": "NOT NULL collected_at"
+        },
+        {
+          "name": "gfg_game_assets_content_length_not_null",
+          "definition": "NOT NULL content_length"
+        },
+        {
+          "name": "gfg_game_assets_content_type_not_null",
+          "definition": "NOT NULL content_type"
+        },
+        {
+          "name": "gfg_game_assets_extra_not_null",
+          "definition": "NOT NULL extra"
+        },
+        {
+          "name": "gfg_game_assets_format_not_null",
+          "definition": "NOT NULL format"
+        },
+        {
+          "name": "gfg_game_assets_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_assets_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_game_assets_lang_not_null",
+          "definition": "NOT NULL lang"
+        },
+        {
+          "name": "gfg_game_assets_media_key_not_null",
+          "definition": "NOT NULL media_key"
+        },
+        {
+          "name": "gfg_game_assets_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_game_assets_sort_order_not_null",
+          "definition": "NOT NULL sort_order"
+        },
+        {
+          "name": "gfg_game_assets_source_not_null",
+          "definition": "NOT NULL source"
+        },
+        {
+          "name": "gfg_game_assets_status_code_not_null",
+          "definition": "NOT NULL status_code"
+        },
+        {
+          "name": "gfg_game_assets_thumbnail_url_not_null",
+          "definition": "NOT NULL thumbnail_url"
+        },
+        {
+          "name": "gfg_game_assets_title_not_null",
+          "definition": "NOT NULL title"
+        },
+        {
+          "name": "gfg_game_assets_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfg_game_assets_url_not_null",
+          "definition": "NOT NULL url"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_assets_app_type",
+          "definition": "CREATE INDEX idx_gfg_game_assets_app_type ON public.gfg_game_assets USING btree (appid, asset_type, lang)"
+        },
+        {
+          "name": "idx_gfg_game_assets_exists",
+          "definition": "CREATE INDEX idx_gfg_game_assets_exists ON public.gfg_game_assets USING btree (game_id, asset_type) WHERE (\"exists\" IS DISTINCT FROM false)"
+        },
+        {
+          "name": "idx_gfg_game_assets_game_family",
+          "definition": "CREATE INDEX idx_gfg_game_assets_game_family ON public.gfg_game_assets USING btree (game_id, asset_family, sort_order)"
+        },
+        {
+          "name": "uq_gfg_game_assets_item",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_game_assets_item ON public.gfg_game_assets USING btree (game_id, asset_type, lang, media_key)"
+        }
+      ],
+      "triggers": null
+    },
+    {
       "name": "gfg_game_comment",
       "comment": "评论表",
       "columns": [
@@ -467,6 +1806,346 @@
           "definition": "CREATE INDEX idx_gfg_game_comment_game_id_create_time ON public.gfg_game_comment USING btree (game_id, create_time DESC)"
         }
       ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_detail_snapshots",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "nextval('gfg_game_detail_snapshots_id_seq'::regclass)"
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "lang",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "region",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'steam'::text"
+        },
+        {
+          "name": "payload_hash",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "raw_payload",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "collected_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_detail_snapshots_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_detail_snapshots_collected_at_not_null",
+          "definition": "NOT NULL collected_at"
+        },
+        {
+          "name": "gfg_game_detail_snapshots_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_detail_snapshots_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_game_detail_snapshots_lang_not_null",
+          "definition": "NOT NULL lang"
+        },
+        {
+          "name": "gfg_game_detail_snapshots_payload_hash_not_null",
+          "definition": "NOT NULL payload_hash"
+        },
+        {
+          "name": "gfg_game_detail_snapshots_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_game_detail_snapshots_raw_payload_not_null",
+          "definition": "NOT NULL raw_payload"
+        },
+        {
+          "name": "gfg_game_detail_snapshots_region_not_null",
+          "definition": "NOT NULL region"
+        },
+        {
+          "name": "gfg_game_detail_snapshots_source_not_null",
+          "definition": "NOT NULL source"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_detail_snapshots_hash",
+          "definition": "CREATE INDEX idx_gfg_game_detail_snapshots_hash ON public.gfg_game_detail_snapshots USING btree (appid, lang, region, payload_hash)"
+        },
+        {
+          "name": "idx_gfg_game_detail_snapshots_lookup",
+          "definition": "CREATE INDEX idx_gfg_game_detail_snapshots_lookup ON public.gfg_game_detail_snapshots USING btree (appid, lang, region, collected_at DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_details",
+      "columns": [
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'steam'::text"
+        },
+        {
+          "name": "type",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "name",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "is_free",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "default": "false"
+        },
+        {
+          "name": "website",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "header_url",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "developers",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "name": "publishers",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "name": "release_coming_soon",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "default": "false"
+        },
+        {
+          "name": "release_date_text",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "platforms",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "supported_languages",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "support_info",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "content_descriptors",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "ratings",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "name": "collected_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_details_appid_key",
+          "definition": "UNIQUE (appid)"
+        },
+        {
+          "name": "gfg_game_details_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_details_collected_at_not_null",
+          "definition": "NOT NULL collected_at"
+        },
+        {
+          "name": "gfg_game_details_content_descriptors_not_null",
+          "definition": "NOT NULL content_descriptors"
+        },
+        {
+          "name": "gfg_game_details_developers_not_null",
+          "definition": "NOT NULL developers"
+        },
+        {
+          "name": "gfg_game_details_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_details_header_url_not_null",
+          "definition": "NOT NULL header_url"
+        },
+        {
+          "name": "gfg_game_details_is_free_not_null",
+          "definition": "NOT NULL is_free"
+        },
+        {
+          "name": "gfg_game_details_name_not_null",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "gfg_game_details_pkey",
+          "definition": "PRIMARY KEY (game_id)"
+        },
+        {
+          "name": "gfg_game_details_platforms_not_null",
+          "definition": "NOT NULL platforms"
+        },
+        {
+          "name": "gfg_game_details_publishers_not_null",
+          "definition": "NOT NULL publishers"
+        },
+        {
+          "name": "gfg_game_details_ratings_not_null",
+          "definition": "NOT NULL ratings"
+        },
+        {
+          "name": "gfg_game_details_release_coming_soon_not_null",
+          "definition": "NOT NULL release_coming_soon"
+        },
+        {
+          "name": "gfg_game_details_release_date_text_not_null",
+          "definition": "NOT NULL release_date_text"
+        },
+        {
+          "name": "gfg_game_details_source_not_null",
+          "definition": "NOT NULL source"
+        },
+        {
+          "name": "gfg_game_details_support_info_not_null",
+          "definition": "NOT NULL support_info"
+        },
+        {
+          "name": "gfg_game_details_supported_languages_not_null",
+          "definition": "NOT NULL supported_languages"
+        },
+        {
+          "name": "gfg_game_details_type_not_null",
+          "definition": "NOT NULL type"
+        },
+        {
+          "name": "gfg_game_details_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfg_game_details_website_not_null",
+          "definition": "NOT NULL website"
+        }
+      ],
+      "indexes": null,
       "triggers": null
     },
     {
@@ -841,6 +2520,904 @@
       "triggers": null
     },
     {
+      "name": "gfg_game_localized_details",
+      "columns": [
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "lang",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "name",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "short_description",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "detailed_description",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "about_the_game",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "collected_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_localized_details_about_the_game_not_null",
+          "definition": "NOT NULL about_the_game"
+        },
+        {
+          "name": "gfg_game_localized_details_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_localized_details_collected_at_not_null",
+          "definition": "NOT NULL collected_at"
+        },
+        {
+          "name": "gfg_game_localized_details_detailed_description_not_null",
+          "definition": "NOT NULL detailed_description"
+        },
+        {
+          "name": "gfg_game_localized_details_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_localized_details_lang_not_null",
+          "definition": "NOT NULL lang"
+        },
+        {
+          "name": "gfg_game_localized_details_name_not_null",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "gfg_game_localized_details_pkey",
+          "definition": "PRIMARY KEY (game_id, lang)"
+        },
+        {
+          "name": "gfg_game_localized_details_short_description_not_null",
+          "definition": "NOT NULL short_description"
+        },
+        {
+          "name": "gfg_game_localized_details_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_localized_details_app_lang",
+          "definition": "CREATE INDEX idx_gfg_game_localized_details_app_lang ON public.gfg_game_localized_details USING btree (appid, lang)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_media",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "nextval('gfg_game_media_id_seq'::regclass)"
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "media_type",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "media_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "title",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "url",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "thumbnail_url",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "extra",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "sort_order",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "collected_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_media_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_media_collected_at_not_null",
+          "definition": "NOT NULL collected_at"
+        },
+        {
+          "name": "gfg_game_media_extra_not_null",
+          "definition": "NOT NULL extra"
+        },
+        {
+          "name": "gfg_game_media_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_media_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_game_media_media_key_not_null",
+          "definition": "NOT NULL media_key"
+        },
+        {
+          "name": "gfg_game_media_media_type_not_null",
+          "definition": "NOT NULL media_type"
+        },
+        {
+          "name": "gfg_game_media_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_game_media_sort_order_not_null",
+          "definition": "NOT NULL sort_order"
+        },
+        {
+          "name": "gfg_game_media_thumbnail_url_not_null",
+          "definition": "NOT NULL thumbnail_url"
+        },
+        {
+          "name": "gfg_game_media_title_not_null",
+          "definition": "NOT NULL title"
+        },
+        {
+          "name": "gfg_game_media_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfg_game_media_url_not_null",
+          "definition": "NOT NULL url"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_media_app_type",
+          "definition": "CREATE INDEX idx_gfg_game_media_app_type ON public.gfg_game_media USING btree (appid, media_type, sort_order)"
+        },
+        {
+          "name": "uq_gfg_game_media_item",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_game_media_item ON public.gfg_game_media USING btree (game_id, media_type, media_key)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_news",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "nextval('gfg_game_news_id_seq'::regclass)"
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "lang",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "event_gid",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "announcement_gid",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "forum_topic_id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "headline",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "raw_body",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "html",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "plain_text",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "summary",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "url",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "tags",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'[]'::jsonb"
+        },
+        {
+          "name": "vote_up_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "vote_down_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "comment_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "raw_event",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "published_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "collected_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_news_announcement_gid_not_null",
+          "definition": "NOT NULL announcement_gid"
+        },
+        {
+          "name": "gfg_game_news_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_news_collected_at_not_null",
+          "definition": "NOT NULL collected_at"
+        },
+        {
+          "name": "gfg_game_news_comment_count_not_null",
+          "definition": "NOT NULL comment_count"
+        },
+        {
+          "name": "gfg_game_news_event_gid_not_null",
+          "definition": "NOT NULL event_gid"
+        },
+        {
+          "name": "gfg_game_news_forum_topic_id_not_null",
+          "definition": "NOT NULL forum_topic_id"
+        },
+        {
+          "name": "gfg_game_news_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_news_headline_not_null",
+          "definition": "NOT NULL headline"
+        },
+        {
+          "name": "gfg_game_news_html_not_null",
+          "definition": "NOT NULL html"
+        },
+        {
+          "name": "gfg_game_news_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_game_news_lang_not_null",
+          "definition": "NOT NULL lang"
+        },
+        {
+          "name": "gfg_game_news_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_game_news_plain_text_not_null",
+          "definition": "NOT NULL plain_text"
+        },
+        {
+          "name": "gfg_game_news_raw_body_not_null",
+          "definition": "NOT NULL raw_body"
+        },
+        {
+          "name": "gfg_game_news_raw_event_not_null",
+          "definition": "NOT NULL raw_event"
+        },
+        {
+          "name": "gfg_game_news_summary_not_null",
+          "definition": "NOT NULL summary"
+        },
+        {
+          "name": "gfg_game_news_tags_not_null",
+          "definition": "NOT NULL tags"
+        },
+        {
+          "name": "gfg_game_news_url_not_null",
+          "definition": "NOT NULL url"
+        },
+        {
+          "name": "gfg_game_news_vote_down_count_not_null",
+          "definition": "NOT NULL vote_down_count"
+        },
+        {
+          "name": "gfg_game_news_vote_up_count_not_null",
+          "definition": "NOT NULL vote_up_count"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_news_feed",
+          "definition": "CREATE INDEX idx_gfg_game_news_feed ON public.gfg_game_news USING btree (game_id, lang, published_at DESC NULLS LAST, collected_at DESC)"
+        },
+        {
+          "name": "uq_gfg_game_news_event_lang",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_game_news_event_lang ON public.gfg_game_news USING btree (appid, lang, event_gid, announcement_gid)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_player_counts",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "nextval('gfg_game_player_counts_id_seq'::regclass)"
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'success'::text"
+        },
+        {
+          "name": "upstream_status_code",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "error_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "error_message",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "collected_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "run_id",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_player_counts_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_player_counts_collected_at_not_null",
+          "definition": "NOT NULL collected_at"
+        },
+        {
+          "name": "gfg_game_player_counts_count_not_null",
+          "definition": "NOT NULL count"
+        },
+        {
+          "name": "gfg_game_player_counts_error_kind_not_null",
+          "definition": "NOT NULL error_kind"
+        },
+        {
+          "name": "gfg_game_player_counts_error_message_not_null",
+          "definition": "NOT NULL error_message"
+        },
+        {
+          "name": "gfg_game_player_counts_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_player_counts_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_game_player_counts_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_game_player_counts_run_id_not_null",
+          "definition": "NOT NULL run_id"
+        },
+        {
+          "name": "gfg_game_player_counts_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfg_game_player_counts_upstream_status_code_not_null",
+          "definition": "NOT NULL upstream_status_code"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_player_counts_collected_at",
+          "definition": "CREATE INDEX idx_gfg_game_player_counts_collected_at ON public.gfg_game_player_counts USING btree (collected_at)"
+        },
+        {
+          "name": "idx_gfg_game_player_counts_latest",
+          "definition": "CREATE INDEX idx_gfg_game_player_counts_latest ON public.gfg_game_player_counts USING btree (game_id, collected_at DESC)"
+        },
+        {
+          "name": "idx_gfg_game_player_counts_run",
+          "definition": "CREATE INDEX idx_gfg_game_player_counts_run ON public.gfg_game_player_counts USING btree (run_id) WHERE (run_id \u003c\u003e ''::text)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_prices",
+      "columns": [
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "region",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "is_free",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "default": "false"
+        },
+        {
+          "name": "currency",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "initial_amount",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "final_amount",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "discount_percent",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "initial_formatted",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "final_formatted",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "collected_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_prices_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_prices_collected_at_not_null",
+          "definition": "NOT NULL collected_at"
+        },
+        {
+          "name": "gfg_game_prices_currency_not_null",
+          "definition": "NOT NULL currency"
+        },
+        {
+          "name": "gfg_game_prices_discount_percent_not_null",
+          "definition": "NOT NULL discount_percent"
+        },
+        {
+          "name": "gfg_game_prices_final_amount_not_null",
+          "definition": "NOT NULL final_amount"
+        },
+        {
+          "name": "gfg_game_prices_final_formatted_not_null",
+          "definition": "NOT NULL final_formatted"
+        },
+        {
+          "name": "gfg_game_prices_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_prices_initial_amount_not_null",
+          "definition": "NOT NULL initial_amount"
+        },
+        {
+          "name": "gfg_game_prices_initial_formatted_not_null",
+          "definition": "NOT NULL initial_formatted"
+        },
+        {
+          "name": "gfg_game_prices_is_free_not_null",
+          "definition": "NOT NULL is_free"
+        },
+        {
+          "name": "gfg_game_prices_pkey",
+          "definition": "PRIMARY KEY (game_id, region)"
+        },
+        {
+          "name": "gfg_game_prices_region_not_null",
+          "definition": "NOT NULL region"
+        },
+        {
+          "name": "gfg_game_prices_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_prices_app_region",
+          "definition": "CREATE INDEX idx_gfg_game_prices_app_region ON public.gfg_game_prices USING btree (appid, region)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_recommendations",
+      "comment": "Precomputed similar-game recommendations. One algorithm_version represents one scoring contract.",
+      "columns": [
+        {
+          "name": "source_game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "target_game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "score",
+          "data_type": "double precision",
+          "not_null": true,
+          "has_default": true,
+          "default": "0",
+          "comment": "Raw hybrid content similarity score in range 0..1."
+        },
+        {
+          "name": "display_score",
+          "data_type": "double precision",
+          "not_null": true,
+          "has_default": true,
+          "default": "0",
+          "comment": "Presentation score in range 0..1 after non-linear stretching."
+        },
+        {
+          "name": "rank",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "reason_json",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'[]'::jsonb",
+          "comment": "Short explainable recommendation reasons for UI display and later tuning."
+        },
+        {
+          "name": "algorithm_version",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "computed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_recommendations_algorithm_version_not_null",
+          "definition": "NOT NULL algorithm_version"
+        },
+        {
+          "name": "gfg_game_recommendations_computed_at_not_null",
+          "definition": "NOT NULL computed_at"
+        },
+        {
+          "name": "gfg_game_recommendations_display_score_not_null",
+          "definition": "NOT NULL display_score"
+        },
+        {
+          "name": "gfg_game_recommendations_pkey",
+          "definition": "PRIMARY KEY (source_game_id, target_game_id)"
+        },
+        {
+          "name": "gfg_game_recommendations_rank_not_null",
+          "definition": "NOT NULL rank"
+        },
+        {
+          "name": "gfg_game_recommendations_reason_json_not_null",
+          "definition": "NOT NULL reason_json"
+        },
+        {
+          "name": "gfg_game_recommendations_score_not_null",
+          "definition": "NOT NULL score"
+        },
+        {
+          "name": "gfg_game_recommendations_source_game_id_not_null",
+          "definition": "NOT NULL source_game_id"
+        },
+        {
+          "name": "gfg_game_recommendations_target_game_id_not_null",
+          "definition": "NOT NULL target_game_id"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_recommendations_computed_at",
+          "definition": "CREATE INDEX idx_gfg_game_recommendations_computed_at ON public.gfg_game_recommendations USING btree (computed_at)"
+        },
+        {
+          "name": "idx_gfg_game_recommendations_lookup",
+          "definition": "CREATE INDEX idx_gfg_game_recommendations_lookup ON public.gfg_game_recommendations USING btree (source_game_id, algorithm_version, rank, score DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
       "name": "gfg_game_release_history",
       "comment": "Semantic snapshots of canonical release-state changes; raw-text-only changes do not append rows.",
       "columns": [
@@ -1206,1835 +3783,7 @@
       "triggers": null
     },
     {
-      "name": "gfg_game_v2_assets",
-      "columns": [
-        {
-          "name": "id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "nextval('gfg_game_v2_assets_id_seq'::regclass)"
-        },
-        {
-          "name": "game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "appid",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "asset_type",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "asset_family",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "source",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "'steam'::text"
-        },
-        {
-          "name": "lang",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "media_key",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "title",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "url",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "thumbnail_url",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "format",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "exists",
-          "data_type": "boolean",
-          "not_null": false,
-          "has_default": false
-        },
-        {
-          "name": "status_code",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "content_type",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "content_length",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "extra",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'{}'::jsonb"
-        },
-        {
-          "name": "sort_order",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "checked_at",
-          "data_type": "timestamp with time zone",
-          "not_null": false,
-          "has_default": false
-        },
-        {
-          "name": "collected_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        },
-        {
-          "name": "updated_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_assets_appid_not_null",
-          "definition": "NOT NULL appid"
-        },
-        {
-          "name": "gfg_game_v2_assets_asset_family_not_null",
-          "definition": "NOT NULL asset_family"
-        },
-        {
-          "name": "gfg_game_v2_assets_asset_type_not_null",
-          "definition": "NOT NULL asset_type"
-        },
-        {
-          "name": "gfg_game_v2_assets_collected_at_not_null",
-          "definition": "NOT NULL collected_at"
-        },
-        {
-          "name": "gfg_game_v2_assets_content_length_not_null",
-          "definition": "NOT NULL content_length"
-        },
-        {
-          "name": "gfg_game_v2_assets_content_type_not_null",
-          "definition": "NOT NULL content_type"
-        },
-        {
-          "name": "gfg_game_v2_assets_extra_not_null",
-          "definition": "NOT NULL extra"
-        },
-        {
-          "name": "gfg_game_v2_assets_format_not_null",
-          "definition": "NOT NULL format"
-        },
-        {
-          "name": "gfg_game_v2_assets_game_id_not_null",
-          "definition": "NOT NULL game_id"
-        },
-        {
-          "name": "gfg_game_v2_assets_id_not_null",
-          "definition": "NOT NULL id"
-        },
-        {
-          "name": "gfg_game_v2_assets_lang_not_null",
-          "definition": "NOT NULL lang"
-        },
-        {
-          "name": "gfg_game_v2_assets_media_key_not_null",
-          "definition": "NOT NULL media_key"
-        },
-        {
-          "name": "gfg_game_v2_assets_pkey",
-          "definition": "PRIMARY KEY (id)"
-        },
-        {
-          "name": "gfg_game_v2_assets_sort_order_not_null",
-          "definition": "NOT NULL sort_order"
-        },
-        {
-          "name": "gfg_game_v2_assets_source_not_null",
-          "definition": "NOT NULL source"
-        },
-        {
-          "name": "gfg_game_v2_assets_status_code_not_null",
-          "definition": "NOT NULL status_code"
-        },
-        {
-          "name": "gfg_game_v2_assets_thumbnail_url_not_null",
-          "definition": "NOT NULL thumbnail_url"
-        },
-        {
-          "name": "gfg_game_v2_assets_title_not_null",
-          "definition": "NOT NULL title"
-        },
-        {
-          "name": "gfg_game_v2_assets_updated_at_not_null",
-          "definition": "NOT NULL updated_at"
-        },
-        {
-          "name": "gfg_game_v2_assets_url_not_null",
-          "definition": "NOT NULL url"
-        }
-      ],
-      "indexes": [
-        {
-          "name": "idx_gfg_game_v2_assets_app_type",
-          "definition": "CREATE INDEX idx_gfg_game_v2_assets_app_type ON public.gfg_game_v2_assets USING btree (appid, asset_type, lang)"
-        },
-        {
-          "name": "idx_gfg_game_v2_assets_exists",
-          "definition": "CREATE INDEX idx_gfg_game_v2_assets_exists ON public.gfg_game_v2_assets USING btree (game_id, asset_type) WHERE (\"exists\" IS DISTINCT FROM false)"
-        },
-        {
-          "name": "idx_gfg_game_v2_assets_game_family",
-          "definition": "CREATE INDEX idx_gfg_game_v2_assets_game_family ON public.gfg_game_v2_assets USING btree (game_id, asset_family, sort_order)"
-        },
-        {
-          "name": "uq_gfg_game_v2_assets_item",
-          "definition": "CREATE UNIQUE INDEX uq_gfg_game_v2_assets_item ON public.gfg_game_v2_assets USING btree (game_id, asset_type, lang, media_key)"
-        }
-      ],
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_collect_runs",
-      "columns": [
-        {
-          "name": "id",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "task_type",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "status",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "total_count",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "success_count",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "failed_count",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "skipped_count",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "error_kind",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "error_message",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "started_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        },
-        {
-          "name": "ended_at",
-          "data_type": "timestamp with time zone",
-          "not_null": false,
-          "has_default": false
-        },
-        {
-          "name": "partial_count",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "task_summary",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'[]'::jsonb"
-        },
-        {
-          "name": "duration_millis",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_collect_runs_duration_millis_not_null",
-          "definition": "NOT NULL duration_millis"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_error_kind_not_null",
-          "definition": "NOT NULL error_kind"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_error_message_not_null",
-          "definition": "NOT NULL error_message"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_failed_count_not_null",
-          "definition": "NOT NULL failed_count"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_id_not_null",
-          "definition": "NOT NULL id"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_partial_count_not_null",
-          "definition": "NOT NULL partial_count"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_pkey",
-          "definition": "PRIMARY KEY (id)"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_skipped_count_not_null",
-          "definition": "NOT NULL skipped_count"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_started_at_not_null",
-          "definition": "NOT NULL started_at"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_status_not_null",
-          "definition": "NOT NULL status"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_success_count_not_null",
-          "definition": "NOT NULL success_count"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_task_summary_not_null",
-          "definition": "NOT NULL task_summary"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_task_type_not_null",
-          "definition": "NOT NULL task_type"
-        },
-        {
-          "name": "gfg_game_v2_collect_runs_total_count_not_null",
-          "definition": "NOT NULL total_count"
-        }
-      ],
-      "indexes": [
-        {
-          "name": "idx_gfg_game_v2_collect_runs_status_time",
-          "definition": "CREATE INDEX idx_gfg_game_v2_collect_runs_status_time ON public.gfg_game_v2_collect_runs USING btree (status, started_at DESC)"
-        },
-        {
-          "name": "idx_gfg_game_v2_collect_runs_task_time",
-          "definition": "CREATE INDEX idx_gfg_game_v2_collect_runs_task_time ON public.gfg_game_v2_collect_runs USING btree (task_type, started_at DESC)"
-        }
-      ],
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_collect_task_results",
-      "columns": [
-        {
-          "name": "id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "nextval('gfg_game_v2_collect_task_results_id_seq'::regclass)"
-        },
-        {
-          "name": "run_id",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "task_type",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "status",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "appid",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "upstream_status_code",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "traffic_bucket",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "retry_count",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "duration_millis",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "error_kind",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "error_message",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "started_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        },
-        {
-          "name": "ended_at",
-          "data_type": "timestamp with time zone",
-          "not_null": false,
-          "has_default": false
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_collect_task_results_appid_not_null",
-          "definition": "NOT NULL appid"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_duration_millis_not_null",
-          "definition": "NOT NULL duration_millis"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_error_kind_not_null",
-          "definition": "NOT NULL error_kind"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_error_message_not_null",
-          "definition": "NOT NULL error_message"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_game_id_not_null",
-          "definition": "NOT NULL game_id"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_id_not_null",
-          "definition": "NOT NULL id"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_pkey",
-          "definition": "PRIMARY KEY (id)"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_retry_count_not_null",
-          "definition": "NOT NULL retry_count"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_run_id_fkey",
-          "definition": "FOREIGN KEY (run_id) REFERENCES gfg_game_v2_collect_runs(id) ON DELETE CASCADE"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_run_id_not_null",
-          "definition": "NOT NULL run_id"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_started_at_not_null",
-          "definition": "NOT NULL started_at"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_status_not_null",
-          "definition": "NOT NULL status"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_task_type_not_null",
-          "definition": "NOT NULL task_type"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_traffic_bucket_not_null",
-          "definition": "NOT NULL traffic_bucket"
-        },
-        {
-          "name": "gfg_game_v2_collect_task_results_upstream_status_code_not_null",
-          "definition": "NOT NULL upstream_status_code"
-        }
-      ],
-      "indexes": [
-        {
-          "name": "idx_gfg_game_v2_collect_task_results_app_time",
-          "definition": "CREATE INDEX idx_gfg_game_v2_collect_task_results_app_time ON public.gfg_game_v2_collect_task_results USING btree (appid, task_type, started_at DESC)"
-        },
-        {
-          "name": "idx_gfg_game_v2_collect_task_results_run",
-          "definition": "CREATE INDEX idx_gfg_game_v2_collect_task_results_run ON public.gfg_game_v2_collect_task_results USING btree (run_id, status)"
-        },
-        {
-          "name": "idx_gfg_game_v2_collect_task_results_started_at",
-          "definition": "CREATE INDEX idx_gfg_game_v2_collect_task_results_started_at ON public.gfg_game_v2_collect_task_results USING btree (started_at)"
-        }
-      ],
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_detail_snapshots",
-      "columns": [
-        {
-          "name": "id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "nextval('gfg_game_v2_detail_snapshots_id_seq'::regclass)"
-        },
-        {
-          "name": "game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "appid",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "lang",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "region",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "source",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "'steam'::text"
-        },
-        {
-          "name": "payload_hash",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "raw_payload",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "collected_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_detail_snapshots_appid_not_null",
-          "definition": "NOT NULL appid"
-        },
-        {
-          "name": "gfg_game_v2_detail_snapshots_collected_at_not_null",
-          "definition": "NOT NULL collected_at"
-        },
-        {
-          "name": "gfg_game_v2_detail_snapshots_game_id_not_null",
-          "definition": "NOT NULL game_id"
-        },
-        {
-          "name": "gfg_game_v2_detail_snapshots_id_not_null",
-          "definition": "NOT NULL id"
-        },
-        {
-          "name": "gfg_game_v2_detail_snapshots_lang_not_null",
-          "definition": "NOT NULL lang"
-        },
-        {
-          "name": "gfg_game_v2_detail_snapshots_payload_hash_not_null",
-          "definition": "NOT NULL payload_hash"
-        },
-        {
-          "name": "gfg_game_v2_detail_snapshots_pkey",
-          "definition": "PRIMARY KEY (id)"
-        },
-        {
-          "name": "gfg_game_v2_detail_snapshots_raw_payload_not_null",
-          "definition": "NOT NULL raw_payload"
-        },
-        {
-          "name": "gfg_game_v2_detail_snapshots_region_not_null",
-          "definition": "NOT NULL region"
-        },
-        {
-          "name": "gfg_game_v2_detail_snapshots_source_not_null",
-          "definition": "NOT NULL source"
-        }
-      ],
-      "indexes": [
-        {
-          "name": "idx_gfg_game_v2_detail_snapshots_hash",
-          "definition": "CREATE INDEX idx_gfg_game_v2_detail_snapshots_hash ON public.gfg_game_v2_detail_snapshots USING btree (appid, lang, region, payload_hash)"
-        },
-        {
-          "name": "idx_gfg_game_v2_detail_snapshots_lookup",
-          "definition": "CREATE INDEX idx_gfg_game_v2_detail_snapshots_lookup ON public.gfg_game_v2_detail_snapshots USING btree (appid, lang, region, collected_at DESC)"
-        }
-      ],
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_details",
-      "columns": [
-        {
-          "name": "game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "appid",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "source",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "'steam'::text"
-        },
-        {
-          "name": "type",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "name",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "is_free",
-          "data_type": "boolean",
-          "not_null": true,
-          "has_default": true,
-          "default": "false"
-        },
-        {
-          "name": "website",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "header_url",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "developers",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'[]'::jsonb"
-        },
-        {
-          "name": "publishers",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'[]'::jsonb"
-        },
-        {
-          "name": "release_coming_soon",
-          "data_type": "boolean",
-          "not_null": true,
-          "has_default": true,
-          "default": "false"
-        },
-        {
-          "name": "release_date_text",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "platforms",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'{}'::jsonb"
-        },
-        {
-          "name": "supported_languages",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "support_info",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'{}'::jsonb"
-        },
-        {
-          "name": "content_descriptors",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'{}'::jsonb"
-        },
-        {
-          "name": "ratings",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'[]'::jsonb"
-        },
-        {
-          "name": "collected_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        },
-        {
-          "name": "updated_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_details_appid_key",
-          "definition": "UNIQUE (appid)"
-        },
-        {
-          "name": "gfg_game_v2_details_appid_not_null",
-          "definition": "NOT NULL appid"
-        },
-        {
-          "name": "gfg_game_v2_details_collected_at_not_null",
-          "definition": "NOT NULL collected_at"
-        },
-        {
-          "name": "gfg_game_v2_details_content_descriptors_not_null",
-          "definition": "NOT NULL content_descriptors"
-        },
-        {
-          "name": "gfg_game_v2_details_developers_not_null",
-          "definition": "NOT NULL developers"
-        },
-        {
-          "name": "gfg_game_v2_details_game_id_not_null",
-          "definition": "NOT NULL game_id"
-        },
-        {
-          "name": "gfg_game_v2_details_header_url_not_null",
-          "definition": "NOT NULL header_url"
-        },
-        {
-          "name": "gfg_game_v2_details_is_free_not_null",
-          "definition": "NOT NULL is_free"
-        },
-        {
-          "name": "gfg_game_v2_details_name_not_null",
-          "definition": "NOT NULL name"
-        },
-        {
-          "name": "gfg_game_v2_details_pkey",
-          "definition": "PRIMARY KEY (game_id)"
-        },
-        {
-          "name": "gfg_game_v2_details_platforms_not_null",
-          "definition": "NOT NULL platforms"
-        },
-        {
-          "name": "gfg_game_v2_details_publishers_not_null",
-          "definition": "NOT NULL publishers"
-        },
-        {
-          "name": "gfg_game_v2_details_ratings_not_null",
-          "definition": "NOT NULL ratings"
-        },
-        {
-          "name": "gfg_game_v2_details_release_coming_soon_not_null",
-          "definition": "NOT NULL release_coming_soon"
-        },
-        {
-          "name": "gfg_game_v2_details_release_date_text_not_null",
-          "definition": "NOT NULL release_date_text"
-        },
-        {
-          "name": "gfg_game_v2_details_source_not_null",
-          "definition": "NOT NULL source"
-        },
-        {
-          "name": "gfg_game_v2_details_support_info_not_null",
-          "definition": "NOT NULL support_info"
-        },
-        {
-          "name": "gfg_game_v2_details_supported_languages_not_null",
-          "definition": "NOT NULL supported_languages"
-        },
-        {
-          "name": "gfg_game_v2_details_type_not_null",
-          "definition": "NOT NULL type"
-        },
-        {
-          "name": "gfg_game_v2_details_updated_at_not_null",
-          "definition": "NOT NULL updated_at"
-        },
-        {
-          "name": "gfg_game_v2_details_website_not_null",
-          "definition": "NOT NULL website"
-        }
-      ],
-      "indexes": null,
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_localized_details",
-      "columns": [
-        {
-          "name": "game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "appid",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "lang",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "name",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "short_description",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "detailed_description",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "about_the_game",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "collected_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        },
-        {
-          "name": "updated_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_localized_details_about_the_game_not_null",
-          "definition": "NOT NULL about_the_game"
-        },
-        {
-          "name": "gfg_game_v2_localized_details_appid_not_null",
-          "definition": "NOT NULL appid"
-        },
-        {
-          "name": "gfg_game_v2_localized_details_collected_at_not_null",
-          "definition": "NOT NULL collected_at"
-        },
-        {
-          "name": "gfg_game_v2_localized_details_detailed_description_not_null",
-          "definition": "NOT NULL detailed_description"
-        },
-        {
-          "name": "gfg_game_v2_localized_details_game_id_not_null",
-          "definition": "NOT NULL game_id"
-        },
-        {
-          "name": "gfg_game_v2_localized_details_lang_not_null",
-          "definition": "NOT NULL lang"
-        },
-        {
-          "name": "gfg_game_v2_localized_details_name_not_null",
-          "definition": "NOT NULL name"
-        },
-        {
-          "name": "gfg_game_v2_localized_details_pkey",
-          "definition": "PRIMARY KEY (game_id, lang)"
-        },
-        {
-          "name": "gfg_game_v2_localized_details_short_description_not_null",
-          "definition": "NOT NULL short_description"
-        },
-        {
-          "name": "gfg_game_v2_localized_details_updated_at_not_null",
-          "definition": "NOT NULL updated_at"
-        }
-      ],
-      "indexes": [
-        {
-          "name": "idx_gfg_game_v2_localized_details_app_lang",
-          "definition": "CREATE INDEX idx_gfg_game_v2_localized_details_app_lang ON public.gfg_game_v2_localized_details USING btree (appid, lang)"
-        }
-      ],
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_media",
-      "columns": [
-        {
-          "name": "id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "nextval('gfg_game_v2_media_id_seq'::regclass)"
-        },
-        {
-          "name": "game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "appid",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "media_type",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "media_key",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "title",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "url",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "thumbnail_url",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "extra",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'{}'::jsonb"
-        },
-        {
-          "name": "sort_order",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "collected_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        },
-        {
-          "name": "updated_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_media_appid_not_null",
-          "definition": "NOT NULL appid"
-        },
-        {
-          "name": "gfg_game_v2_media_collected_at_not_null",
-          "definition": "NOT NULL collected_at"
-        },
-        {
-          "name": "gfg_game_v2_media_extra_not_null",
-          "definition": "NOT NULL extra"
-        },
-        {
-          "name": "gfg_game_v2_media_game_id_not_null",
-          "definition": "NOT NULL game_id"
-        },
-        {
-          "name": "gfg_game_v2_media_id_not_null",
-          "definition": "NOT NULL id"
-        },
-        {
-          "name": "gfg_game_v2_media_media_key_not_null",
-          "definition": "NOT NULL media_key"
-        },
-        {
-          "name": "gfg_game_v2_media_media_type_not_null",
-          "definition": "NOT NULL media_type"
-        },
-        {
-          "name": "gfg_game_v2_media_pkey",
-          "definition": "PRIMARY KEY (id)"
-        },
-        {
-          "name": "gfg_game_v2_media_sort_order_not_null",
-          "definition": "NOT NULL sort_order"
-        },
-        {
-          "name": "gfg_game_v2_media_thumbnail_url_not_null",
-          "definition": "NOT NULL thumbnail_url"
-        },
-        {
-          "name": "gfg_game_v2_media_title_not_null",
-          "definition": "NOT NULL title"
-        },
-        {
-          "name": "gfg_game_v2_media_updated_at_not_null",
-          "definition": "NOT NULL updated_at"
-        },
-        {
-          "name": "gfg_game_v2_media_url_not_null",
-          "definition": "NOT NULL url"
-        }
-      ],
-      "indexes": [
-        {
-          "name": "idx_gfg_game_v2_media_app_type",
-          "definition": "CREATE INDEX idx_gfg_game_v2_media_app_type ON public.gfg_game_v2_media USING btree (appid, media_type, sort_order)"
-        },
-        {
-          "name": "uq_gfg_game_v2_media_item",
-          "definition": "CREATE UNIQUE INDEX uq_gfg_game_v2_media_item ON public.gfg_game_v2_media USING btree (game_id, media_type, media_key)"
-        }
-      ],
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_news",
-      "columns": [
-        {
-          "name": "id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "nextval('gfg_game_v2_news_id_seq'::regclass)"
-        },
-        {
-          "name": "game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "appid",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "lang",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "event_gid",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "announcement_gid",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "forum_topic_id",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "headline",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "raw_body",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "html",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "plain_text",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "summary",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "url",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "tags",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'[]'::jsonb"
-        },
-        {
-          "name": "vote_up_count",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "vote_down_count",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "comment_count",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "raw_event",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'{}'::jsonb"
-        },
-        {
-          "name": "published_at",
-          "data_type": "timestamp with time zone",
-          "not_null": false,
-          "has_default": false
-        },
-        {
-          "name": "updated_at",
-          "data_type": "timestamp with time zone",
-          "not_null": false,
-          "has_default": false
-        },
-        {
-          "name": "collected_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_news_announcement_gid_not_null",
-          "definition": "NOT NULL announcement_gid"
-        },
-        {
-          "name": "gfg_game_v2_news_appid_not_null",
-          "definition": "NOT NULL appid"
-        },
-        {
-          "name": "gfg_game_v2_news_collected_at_not_null",
-          "definition": "NOT NULL collected_at"
-        },
-        {
-          "name": "gfg_game_v2_news_comment_count_not_null",
-          "definition": "NOT NULL comment_count"
-        },
-        {
-          "name": "gfg_game_v2_news_event_gid_not_null",
-          "definition": "NOT NULL event_gid"
-        },
-        {
-          "name": "gfg_game_v2_news_forum_topic_id_not_null",
-          "definition": "NOT NULL forum_topic_id"
-        },
-        {
-          "name": "gfg_game_v2_news_game_id_not_null",
-          "definition": "NOT NULL game_id"
-        },
-        {
-          "name": "gfg_game_v2_news_headline_not_null",
-          "definition": "NOT NULL headline"
-        },
-        {
-          "name": "gfg_game_v2_news_html_not_null",
-          "definition": "NOT NULL html"
-        },
-        {
-          "name": "gfg_game_v2_news_id_not_null",
-          "definition": "NOT NULL id"
-        },
-        {
-          "name": "gfg_game_v2_news_lang_not_null",
-          "definition": "NOT NULL lang"
-        },
-        {
-          "name": "gfg_game_v2_news_pkey",
-          "definition": "PRIMARY KEY (id)"
-        },
-        {
-          "name": "gfg_game_v2_news_plain_text_not_null",
-          "definition": "NOT NULL plain_text"
-        },
-        {
-          "name": "gfg_game_v2_news_raw_body_not_null",
-          "definition": "NOT NULL raw_body"
-        },
-        {
-          "name": "gfg_game_v2_news_raw_event_not_null",
-          "definition": "NOT NULL raw_event"
-        },
-        {
-          "name": "gfg_game_v2_news_summary_not_null",
-          "definition": "NOT NULL summary"
-        },
-        {
-          "name": "gfg_game_v2_news_tags_not_null",
-          "definition": "NOT NULL tags"
-        },
-        {
-          "name": "gfg_game_v2_news_url_not_null",
-          "definition": "NOT NULL url"
-        },
-        {
-          "name": "gfg_game_v2_news_vote_down_count_not_null",
-          "definition": "NOT NULL vote_down_count"
-        },
-        {
-          "name": "gfg_game_v2_news_vote_up_count_not_null",
-          "definition": "NOT NULL vote_up_count"
-        }
-      ],
-      "indexes": [
-        {
-          "name": "idx_gfg_game_v2_news_feed",
-          "definition": "CREATE INDEX idx_gfg_game_v2_news_feed ON public.gfg_game_v2_news USING btree (game_id, lang, published_at DESC NULLS LAST, collected_at DESC)"
-        },
-        {
-          "name": "uq_gfg_game_v2_news_event_lang",
-          "definition": "CREATE UNIQUE INDEX uq_gfg_game_v2_news_event_lang ON public.gfg_game_v2_news USING btree (appid, lang, event_gid, announcement_gid)"
-        }
-      ],
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_player_counts",
-      "columns": [
-        {
-          "name": "id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "nextval('gfg_game_v2_player_counts_id_seq'::regclass)"
-        },
-        {
-          "name": "game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "appid",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "count",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "status",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "'success'::text"
-        },
-        {
-          "name": "upstream_status_code",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "error_kind",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "error_message",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "collected_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        },
-        {
-          "name": "run_id",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_player_counts_appid_not_null",
-          "definition": "NOT NULL appid"
-        },
-        {
-          "name": "gfg_game_v2_player_counts_collected_at_not_null",
-          "definition": "NOT NULL collected_at"
-        },
-        {
-          "name": "gfg_game_v2_player_counts_count_not_null",
-          "definition": "NOT NULL count"
-        },
-        {
-          "name": "gfg_game_v2_player_counts_error_kind_not_null",
-          "definition": "NOT NULL error_kind"
-        },
-        {
-          "name": "gfg_game_v2_player_counts_error_message_not_null",
-          "definition": "NOT NULL error_message"
-        },
-        {
-          "name": "gfg_game_v2_player_counts_game_id_not_null",
-          "definition": "NOT NULL game_id"
-        },
-        {
-          "name": "gfg_game_v2_player_counts_id_not_null",
-          "definition": "NOT NULL id"
-        },
-        {
-          "name": "gfg_game_v2_player_counts_pkey",
-          "definition": "PRIMARY KEY (id)"
-        },
-        {
-          "name": "gfg_game_v2_player_counts_run_id_not_null",
-          "definition": "NOT NULL run_id"
-        },
-        {
-          "name": "gfg_game_v2_player_counts_status_not_null",
-          "definition": "NOT NULL status"
-        },
-        {
-          "name": "gfg_game_v2_player_counts_upstream_status_code_not_null",
-          "definition": "NOT NULL upstream_status_code"
-        }
-      ],
-      "indexes": [
-        {
-          "name": "idx_gfg_game_v2_player_counts_collected_at",
-          "definition": "CREATE INDEX idx_gfg_game_v2_player_counts_collected_at ON public.gfg_game_v2_player_counts USING btree (collected_at)"
-        },
-        {
-          "name": "idx_gfg_game_v2_player_counts_latest",
-          "definition": "CREATE INDEX idx_gfg_game_v2_player_counts_latest ON public.gfg_game_v2_player_counts USING btree (game_id, collected_at DESC)"
-        },
-        {
-          "name": "idx_gfg_game_v2_player_counts_run",
-          "definition": "CREATE INDEX idx_gfg_game_v2_player_counts_run ON public.gfg_game_v2_player_counts USING btree (run_id) WHERE (run_id \u003c\u003e ''::text)"
-        }
-      ],
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_prices",
-      "columns": [
-        {
-          "name": "game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "appid",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "region",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "is_free",
-          "data_type": "boolean",
-          "not_null": true,
-          "has_default": true,
-          "default": "false"
-        },
-        {
-          "name": "currency",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "initial_amount",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "final_amount",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "discount_percent",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "initial_formatted",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "final_formatted",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "collected_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        },
-        {
-          "name": "updated_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_prices_appid_not_null",
-          "definition": "NOT NULL appid"
-        },
-        {
-          "name": "gfg_game_v2_prices_collected_at_not_null",
-          "definition": "NOT NULL collected_at"
-        },
-        {
-          "name": "gfg_game_v2_prices_currency_not_null",
-          "definition": "NOT NULL currency"
-        },
-        {
-          "name": "gfg_game_v2_prices_discount_percent_not_null",
-          "definition": "NOT NULL discount_percent"
-        },
-        {
-          "name": "gfg_game_v2_prices_final_amount_not_null",
-          "definition": "NOT NULL final_amount"
-        },
-        {
-          "name": "gfg_game_v2_prices_final_formatted_not_null",
-          "definition": "NOT NULL final_formatted"
-        },
-        {
-          "name": "gfg_game_v2_prices_game_id_not_null",
-          "definition": "NOT NULL game_id"
-        },
-        {
-          "name": "gfg_game_v2_prices_initial_amount_not_null",
-          "definition": "NOT NULL initial_amount"
-        },
-        {
-          "name": "gfg_game_v2_prices_initial_formatted_not_null",
-          "definition": "NOT NULL initial_formatted"
-        },
-        {
-          "name": "gfg_game_v2_prices_is_free_not_null",
-          "definition": "NOT NULL is_free"
-        },
-        {
-          "name": "gfg_game_v2_prices_pkey",
-          "definition": "PRIMARY KEY (game_id, region)"
-        },
-        {
-          "name": "gfg_game_v2_prices_region_not_null",
-          "definition": "NOT NULL region"
-        },
-        {
-          "name": "gfg_game_v2_prices_updated_at_not_null",
-          "definition": "NOT NULL updated_at"
-        }
-      ],
-      "indexes": [
-        {
-          "name": "idx_gfg_game_v2_prices_app_region",
-          "definition": "CREATE INDEX idx_gfg_game_v2_prices_app_region ON public.gfg_game_v2_prices USING btree (appid, region)"
-        }
-      ],
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_recommendations",
-      "comment": "Precomputed game v2 similar recommendations. One algorithm_version represents one scoring contract.",
-      "columns": [
-        {
-          "name": "source_game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "target_game_id",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false
-        },
-        {
-          "name": "score",
-          "data_type": "double precision",
-          "not_null": true,
-          "has_default": true,
-          "default": "0",
-          "comment": "Raw hybrid content similarity score in range 0..1."
-        },
-        {
-          "name": "display_score",
-          "data_type": "double precision",
-          "not_null": true,
-          "has_default": true,
-          "default": "0",
-          "comment": "Presentation score in range 0..1 after non-linear stretching."
-        },
-        {
-          "name": "rank",
-          "data_type": "integer",
-          "not_null": true,
-          "has_default": true,
-          "default": "0"
-        },
-        {
-          "name": "reason_json",
-          "data_type": "jsonb",
-          "not_null": true,
-          "has_default": true,
-          "default": "'[]'::jsonb",
-          "comment": "Short explainable recommendation reasons for UI display and later tuning."
-        },
-        {
-          "name": "algorithm_version",
-          "data_type": "text",
-          "not_null": true,
-          "has_default": true,
-          "default": "''::text"
-        },
-        {
-          "name": "computed_at",
-          "data_type": "timestamp with time zone",
-          "not_null": true,
-          "has_default": true,
-          "default": "now()"
-        }
-      ],
-      "constraints": [
-        {
-          "name": "gfg_game_v2_recommendations_algorithm_version_not_null",
-          "definition": "NOT NULL algorithm_version"
-        },
-        {
-          "name": "gfg_game_v2_recommendations_computed_at_not_null",
-          "definition": "NOT NULL computed_at"
-        },
-        {
-          "name": "gfg_game_v2_recommendations_display_score_not_null",
-          "definition": "NOT NULL display_score"
-        },
-        {
-          "name": "gfg_game_v2_recommendations_pkey",
-          "definition": "PRIMARY KEY (source_game_id, target_game_id)"
-        },
-        {
-          "name": "gfg_game_v2_recommendations_rank_not_null",
-          "definition": "NOT NULL rank"
-        },
-        {
-          "name": "gfg_game_v2_recommendations_reason_json_not_null",
-          "definition": "NOT NULL reason_json"
-        },
-        {
-          "name": "gfg_game_v2_recommendations_score_not_null",
-          "definition": "NOT NULL score"
-        },
-        {
-          "name": "gfg_game_v2_recommendations_source_game_id_not_null",
-          "definition": "NOT NULL source_game_id"
-        },
-        {
-          "name": "gfg_game_v2_recommendations_target_game_id_not_null",
-          "definition": "NOT NULL target_game_id"
-        }
-      ],
-      "indexes": [
-        {
-          "name": "idx_gfg_game_v2_recommendations_computed_at",
-          "definition": "CREATE INDEX idx_gfg_game_v2_recommendations_computed_at ON public.gfg_game_v2_recommendations USING btree (computed_at)"
-        },
-        {
-          "name": "idx_gfg_game_v2_recommendations_lookup",
-          "definition": "CREATE INDEX idx_gfg_game_v2_recommendations_lookup ON public.gfg_game_v2_recommendations USING btree (source_game_id, algorithm_version, rank, score DESC)"
-        }
-      ],
-      "triggers": null
-    },
-    {
-      "name": "gfg_game_v2_requirements",
+      "name": "gfg_game_requirements",
       "columns": [
         {
           "name": "game_id",
@@ -3086,39 +3835,39 @@
       ],
       "constraints": [
         {
-          "name": "gfg_game_v2_requirements_appid_key",
+          "name": "gfg_game_requirements_appid_key",
           "definition": "UNIQUE (appid)"
         },
         {
-          "name": "gfg_game_v2_requirements_appid_not_null",
+          "name": "gfg_game_requirements_appid_not_null",
           "definition": "NOT NULL appid"
         },
         {
-          "name": "gfg_game_v2_requirements_collected_at_not_null",
+          "name": "gfg_game_requirements_collected_at_not_null",
           "definition": "NOT NULL collected_at"
         },
         {
-          "name": "gfg_game_v2_requirements_game_id_not_null",
+          "name": "gfg_game_requirements_game_id_not_null",
           "definition": "NOT NULL game_id"
         },
         {
-          "name": "gfg_game_v2_requirements_linux_not_null",
+          "name": "gfg_game_requirements_linux_not_null",
           "definition": "NOT NULL linux"
         },
         {
-          "name": "gfg_game_v2_requirements_mac_not_null",
+          "name": "gfg_game_requirements_mac_not_null",
           "definition": "NOT NULL mac"
         },
         {
-          "name": "gfg_game_v2_requirements_pc_not_null",
+          "name": "gfg_game_requirements_pc_not_null",
           "definition": "NOT NULL pc"
         },
         {
-          "name": "gfg_game_v2_requirements_pkey",
+          "name": "gfg_game_requirements_pkey",
           "definition": "PRIMARY KEY (game_id)"
         },
         {
-          "name": "gfg_game_v2_requirements_updated_at_not_null",
+          "name": "gfg_game_requirements_updated_at_not_null",
           "definition": "NOT NULL updated_at"
         }
       ],
@@ -3549,8 +4298,8 @@
   ],
   "functions": [
     {
-      "identity": "gfg_game_v2_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer)",
-      "definition": "CREATE OR REPLACE FUNCTION public.gfg_game_v2_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer DEFAULT 5)\n RETURNS integer\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    deleted_count INTEGER;\nBEGIN\n    WITH ranked AS (\n        SELECT id,\n               row_number() OVER (\n                   PARTITION BY appid, lang, region\n                   ORDER BY collected_at DESC, id DESC\n               ) AS rn\n        FROM gfg_game_v2_detail_snapshots\n        WHERE appid = p_appid\n          AND lang = p_lang\n          AND region = p_region\n    ),\n    deleted AS (\n        DELETE FROM gfg_game_v2_detail_snapshots s\n        USING ranked r\n        WHERE s.id = r.id\n          AND r.rn \u003e GREATEST(p_keep_count, 0)\n        RETURNING s.id\n    )\n    SELECT count(*) INTO deleted_count FROM deleted;\n\n    RETURN deleted_count;\nEND;\n$function$\n"
+      "identity": "gfg_game_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfg_game_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer DEFAULT 5)\n RETURNS integer\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    deleted_count integer;\nBEGIN\n    WITH ranked AS (\n        SELECT id,\n               row_number() OVER (\n                   PARTITION BY appid, lang, region\n                   ORDER BY collected_at DESC, id DESC\n               ) AS rn\n        FROM public.gfg_game_detail_snapshots\n        WHERE appid = p_appid\n          AND lang = p_lang\n          AND region = p_region\n    ),\n    deleted AS (\n        DELETE FROM public.gfg_game_detail_snapshots snapshot\n        USING ranked\n        WHERE snapshot.id = ranked.id\n          AND ranked.rn \u003e GREATEST(p_keep_count, 0)\n        RETURNING snapshot.id\n    )\n    SELECT count(*) INTO deleted_count FROM deleted;\n\n    RETURN deleted_count;\nEND;\n$function$\n"
     }
   ]
 }

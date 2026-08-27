@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	collectdao "github.com/gofurry/gofurry-nav-backend/apps/nav/collect/dao"
-	collectmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/collect/models"
 	detaildao "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/dao"
 	navdao "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/dao"
 	observationdao "github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/dao"
@@ -124,18 +122,6 @@ func TestPostgresNavBackendPersistenceSemantics(t *testing.T) {
 	domains, gfErr := details.ListCollectorDomains(1)
 	if gfErr != nil || len(domains) != 1 || domains[0].TargetName() != "www.example.test" {
 		t.Fatalf("detail domains: %+v err=%v", domains, gfErr)
-	}
-
-	collect := collectdao.New(queries)
-	summary, gfErr := collect.ListObservationSummary()
-	if gfErr != nil || len(summary) != 2 {
-		t.Fatalf("seven-day observation summary: %+v err=%v", summary, gfErr)
-	}
-	items, gfErr := collect.ListObservations(collectmodels.ObservationQuery{
-		SiteID: 1, Target: " www.example.test ", Protocol: "http", Status: "success", Limit: 1,
-	})
-	if gfErr != nil || len(items) != 1 || items[0].CollectorID != "collector-new" || items[0].DurationMS != 0 {
-		t.Fatalf("filtered observations: %+v err=%v", items, gfErr)
 	}
 
 	observations := observationdao.New(queries)

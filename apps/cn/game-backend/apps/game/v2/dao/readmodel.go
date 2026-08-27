@@ -61,14 +61,6 @@ COALESCE(n.updated_at, n.collected_at) AS updated_at, n.collected_at`
 
 	playerCountColumns = `id, run_id, game_id, appid, count, status,
 upstream_status_code, error_kind, error_message, collected_at`
-
-	collectRunColumns = `id, task_type, status, total_count, success_count,
-failed_count, skipped_count, partial_count, task_summary::text AS task_summary,
-duration_millis, error_kind, error_message, started_at, ended_at`
-
-	collectTaskResultColumns = `id, run_id, task_type, status, game_id, appid,
-upstream_status_code, traffic_bucket, retry_count, duration_millis,
-error_kind, error_message, started_at, ended_at`
 )
 
 type DetailQuery = v2models.GameV2DetailQuery
@@ -168,13 +160,13 @@ func (dao *ReadModelDAO) ListGameAggregates(ctx context.Context, query v2models.
 	if !query.UpdatedSince.IsZero() {
 		args = append(args, query.UpdatedSince)
 		where = ` WHERE g.update_time >= $1
-OR EXISTS (SELECT 1 FROM gfg_game_v2_details d2 WHERE d2.game_id = g.id AND d2.updated_at >= $1)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_localized_details ld WHERE ld.game_id = g.id AND ld.updated_at >= $1)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_prices p WHERE p.game_id = g.id AND p.updated_at >= $1)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_media m WHERE m.game_id = g.id AND m.updated_at >= $1)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_assets a WHERE a.game_id = g.id AND a.updated_at >= $1)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_requirements r WHERE r.game_id = g.id AND r.updated_at >= $1)
-OR EXISTS (SELECT 1 FROM gfg_game_v2_news n WHERE n.game_id = g.id AND n.updated_at >= $1)`
+OR EXISTS (SELECT 1 FROM gfg_game_details d2 WHERE d2.game_id = g.id AND d2.updated_at >= $1)
+OR EXISTS (SELECT 1 FROM gfg_game_localized_details ld WHERE ld.game_id = g.id AND ld.updated_at >= $1)
+OR EXISTS (SELECT 1 FROM gfg_game_prices p WHERE p.game_id = g.id AND p.updated_at >= $1)
+OR EXISTS (SELECT 1 FROM gfg_game_media m WHERE m.game_id = g.id AND m.updated_at >= $1)
+OR EXISTS (SELECT 1 FROM gfg_game_assets a WHERE a.game_id = g.id AND a.updated_at >= $1)
+OR EXISTS (SELECT 1 FROM gfg_game_requirements r WHERE r.game_id = g.id AND r.updated_at >= $1)
+OR EXISTS (SELECT 1 FROM gfg_game_news n WHERE n.game_id = g.id AND n.updated_at >= $1)`
 	}
 	args = append(args, query.Limit, query.Offset)
 	limitPos := len(args) - 1
@@ -206,7 +198,7 @@ FROM gfg_tag t
 LEFT JOIN (
     SELECT tm.tag_id, COUNT(DISTINCT tm.game_id) AS game_count
     FROM gfg_tag_map tm
-    JOIN gfg_game_v2_details d ON d.game_id = tm.game_id
+    JOIN gfg_game_details d ON d.game_id = tm.game_id
     GROUP BY tm.tag_id
 ) tc ON t.id = tc.tag_id
 ORDER BY game_count DESC, t.id ASC`, nameColumn)
@@ -269,8 +261,8 @@ COALESCE(NULLIF(d.header_url, ''), NULLIF(g.header, ''), '') AS game_cover,
 %s AS game_name
 FROM gfg_game_comment c
 JOIN gfg_game g ON c.game_id = g.id
-LEFT JOIN gfg_game_v2_details d ON d.game_id = g.id
-LEFT JOIN gfg_game_v2_localized_details ld ON ld.game_id = g.id AND ld.lang = $1
+LEFT JOIN gfg_game_details d ON d.game_id = g.id
+LEFT JOIN gfg_game_localized_details ld ON ld.game_id = g.id AND ld.lang = $1
 ORDER BY c.create_time DESC, c.id DESC LIMIT $2`, nameColumn)
 	rows, err := queryMany[v2models.GameV2LatestReview](ctx, dao.pool, sql, normalizeDAOLang(lang), limit)
 	if err != nil {
@@ -285,7 +277,7 @@ func (dao *ReadModelDAO) GetRandomGameID(ctx context.Context) (string, common.GF
 	}
 	var id string
 	err := dao.pool.QueryRow(ctx, `SELECT g.id::text FROM gfg_game g
-JOIN gfg_game_v2_details d ON d.game_id = g.id ORDER BY RANDOM() LIMIT 1`).Scan(&id)
+JOIN gfg_game_details d ON d.game_id = g.id ORDER BY RANDOM() LIMIT 1`).Scan(&id)
 	if err != nil {
 		return "", common.NewDaoError(fmt.Sprintf("随机查询游戏 v2 ID 失败: %v", err))
 	}
@@ -344,7 +336,7 @@ func (dao *ReadModelDAO) queryNewsRows(ctx context.Context, query v2models.GameV
 	args = append(args, query.Limit, query.Offset)
 	sql := fmt.Sprintf(`SELECT %s, COALESCE(g.name, '') AS game_name,
 COALESCE(g.name_en, '') AS game_name_en, COALESCE(g.header, '') AS header_url
-FROM gfg_game_v2_news n LEFT JOIN gfg_game g ON n.game_id = g.id
+FROM gfg_game_news n LEFT JOIN gfg_game g ON n.game_id = g.id
 WHERE %s ORDER BY n.published_at DESC NULLS LAST, n.collected_at DESC, n.id DESC
 LIMIT $%d OFFSET $%d`, newsColumnsN, where, len(args)-1, len(args))
 	rows, err := queryMany[v2models.GameV2NewsRow](ctx, dao.pool, sql, args...)

@@ -108,12 +108,6 @@ type GameConfig struct {
 	CollectPlayersOnStartup *bool `yaml:"collect_players_on_startup"`
 }
 
-// PlayersOnStartupEnabled preserves the historical startup collection unless
-// an operator explicitly disables it in typed configuration.
-func (cfg GameConfig) PlayersOnStartupEnabled() bool {
-	return cfg.CollectPlayersOnStartup == nil || *cfg.CollectPlayersOnStartup
-}
-
 type CollectorV2Config struct {
 	Steam     CollectorV2SteamConfig     `yaml:"steam"`
 	Retention CollectorV2RetentionConfig `yaml:"retention"`

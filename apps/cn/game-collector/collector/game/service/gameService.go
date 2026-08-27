@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gofurry/gofurry-game-collector/collector/game/models"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
@@ -78,7 +79,13 @@ func GetV2SteamAdapter() *steamclient.Adapter {
 	return v2SteamAdapter
 }
 
-func (s *gameService) runV2Tasks(ctx context.Context, gameList []models.GameID, tasks []domain.TaskType) (report.RunSummary, error) {
+func (s *gameService) runV2Tasks(
+	ctx context.Context,
+	gameList []models.GameID,
+	tasks []domain.TaskType,
+	runID string,
+	onResult func(report.TaskResult),
+) (report.RunSummary, error) {
 	bindings := make([]v2runner.TaskBinding, 0, len(tasks))
 	for _, task := range tasks {
 		switch task {
@@ -101,8 +108,47 @@ func (s *gameService) runV2Tasks(ctx context.Context, gameList []models.GameID, 
 	}
 
 	maxWorkers := env.GetServerConfig().Collector.V2.Steam.MaxWorkers
-	r := v2runner.New(v2runner.Options{MaxWorkers: maxWorkers}, bindings)
+	r := v2runner.New(v2runner.Options{RunID: runID, MaxWorkers: maxWorkers, OnResult: onResult}, bindings)
 	return r.Run(ctx, gameList)
+}
+
+// ResolveControlTargets freezes the target set for one durable Job.
+func (s *gameService) ResolveControlTargets(ctx context.Context, gameID *int64) ([]models.GameID, error) {
+	if gameID == nil {
+		rows, err := s.addAllGameToList(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("list Game targets: %s", err.GetMsg())
+		}
+		return rows, nil
+	}
+	if s == nil || s.queries == nil {
+		return nil, fmt.Errorf("game persistence is not initialized")
+	}
+	row, err := s.queries.GetGameTarget(ctx, *gameID)
+	if err != nil {
+		return nil, fmt.Errorf("get Game target %d: %w", *gameID, err)
+	}
+	return []models.GameID{{ID: row.ID, Appid: row.Appid}}, nil
+}
+
+// RunControlJob executes a target/task snapshot owned by the durable control plane.
+func (s *gameService) RunControlJob(
+	ctx context.Context,
+	targets []models.GameID,
+	taskNames []string,
+	runID string,
+	onResult func(report.TaskResult),
+) (report.RunSummary, error) {
+	tasks := make([]domain.TaskType, 0, len(taskNames))
+	for _, task := range taskNames {
+		switch domain.TaskType(task) {
+		case domain.TaskDetails, domain.TaskNews, domain.TaskPlayers:
+			tasks = append(tasks, domain.TaskType(task))
+		default:
+			return report.RunSummary{ID: runID}, fmt.Errorf("unsupported Game collection task %q", task)
+		}
+	}
+	return s.runV2Tasks(ctx, targets, tasks, runID, onResult)
 }
 
 func logV2RunSummary(prefix string, summary report.RunSummary, err error) {
@@ -116,24 +162,6 @@ func logV2RunSummary(prefix string, summary report.RunSummary, err error) {
 	}
 }
 
-func (s *gameService) persistV2RunSummary(ctx context.Context, prefix string, summary report.RunSummary) {
-	if summary.ID == "" {
-		return
-	}
-	if err := v2repo.NewRunRepository(s.pool).SaveRunSummary(ctx, summary); err != nil {
-		log.Error(prefix, " observation persist failed, run_id=", summary.ID, " err=", err)
-		return
-	}
-	retention := env.GetServerConfig().Collector.V2.Retention
-	if err := v2repo.NewRetentionRepository(s.pool).Prune(ctx, v2repo.RetentionConfig{
-		PlayerCountsDays:       retention.PlayerCountsDays,
-		CollectRunsDays:        retention.CollectRunsDays,
-		CollectTaskResultsDays: retention.CollectTaskResultsDays,
-	}); err != nil {
-		log.Error(prefix, " retention prune failed, run_id=", summary.ID, " err=", err)
-	}
-}
-
 // Collect runs the stable v2 details and news collectors.
 func (s gameService) Collect() {
 	ctx := context.Background()
@@ -143,9 +171,8 @@ func (s gameService) Collect() {
 	}
 
 	log.Info("Game Collect v2 采集开始")
-	summary, runErr := s.runV2Tasks(ctx, gameList, []domain.TaskType{domain.TaskDetails, domain.TaskNews})
+	summary, runErr := s.runV2Tasks(ctx, gameList, []domain.TaskType{domain.TaskDetails, domain.TaskNews}, "", nil)
 	logV2RunSummary("Game Collect v2", summary, runErr)
-	s.persistV2RunSummary(ctx, "Game Collect v2", summary)
 	log.Info("Game Collect v2 采集结束")
 }
 
@@ -158,9 +185,8 @@ func (s gameService) CollectCurrentPlayers() {
 	}
 
 	log.Info("CollectCurrentPlayers v2 采集开始")
-	summary, runErr := s.runV2Tasks(ctx, gameList, []domain.TaskType{domain.TaskPlayers})
+	summary, runErr := s.runV2Tasks(ctx, gameList, []domain.TaskType{domain.TaskPlayers}, "", nil)
 	logV2RunSummary("CollectCurrentPlayers v2", summary, runErr)
-	s.persistV2RunSummary(ctx, "CollectCurrentPlayers v2", summary)
 	log.Info("CollectCurrentPlayers v2 采集结束")
 }
 
@@ -171,9 +197,8 @@ func singleGameTaskTypes() []domain.TaskType {
 func (s gameService) CollectSingleGame(game models.GameID) (report.RunSummary, error) {
 	ctx := context.Background()
 	log.Info("SingleGame Collect v2 采集开始, game_id=", game.ID, " appid=", game.Appid)
-	summary, runErr := s.runV2Tasks(ctx, []models.GameID{game}, singleGameTaskTypes())
+	summary, runErr := s.runV2Tasks(ctx, []models.GameID{game}, singleGameTaskTypes(), "", nil)
 	logV2RunSummary("SingleGame Collect v2", summary, runErr)
-	s.persistV2RunSummary(ctx, "SingleGame Collect v2", summary)
 	log.Info("SingleGame Collect v2 采集结束, game_id=", game.ID, " appid=", game.Appid)
 	return summary, runErr
 }

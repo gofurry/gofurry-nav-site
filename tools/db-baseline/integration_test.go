@@ -304,6 +304,14 @@ INSERT INTO public.gfg_game_news
   (id,game_id,headline,content,"index",post_time,create_time,author,url,total,lang)
 VALUES (1,1,'headline','content',1,NOW(),NOW(),'author','https://example.test',1,'zh');
 INSERT INTO public.gfg_game_player_count (id,game_id,count,create_time) VALUES (1,1,10,NOW());
+INSERT INTO public.gfg_game_v2_collect_runs
+  (id,task_type,status,total_count,success_count,failed_count,skipped_count,partial_count,task_summary,duration_millis,started_at,ended_at)
+VALUES ('legacy-run-integration','details','partial',2,1,0,0,1,'[]',123,NOW() - INTERVAL '1 minute',NOW());
+INSERT INTO public.gfg_game_v2_collect_task_results
+  (run_id,task_type,status,game_id,appid,duration_millis,started_at,ended_at)
+VALUES
+  ('legacy-run-integration','details','success',900001,900101,60,NOW() - INTERVAL '1 minute',NOW()),
+  ('legacy-run-integration','details','partial',900002,900102,63,NOW() - INTERVAL '1 minute',NOW());
 CREATE SCHEMA foundation_cleanup_backup;
 CREATE TABLE foundation_cleanup_backup.gfg_game_creator_deprecated_20260614 AS TABLE public.gfg_game_creator_deprecated_20260614 WITH DATA;
 CREATE TABLE foundation_cleanup_backup.gfg_game_record AS TABLE public.gfg_game_record WITH DATA;
@@ -326,6 +334,22 @@ func assertDeprecatedCleanupAndBackup(t *testing.T, ctx context.Context, db *sql
 	t.Helper()
 	tables := deprecatedTables(label)
 	for _, table := range tables {
+		// V3-P0.1.1 intentionally reuses gfg_game_news for the canonical
+		// Steam news table after the deprecated table is backed up and dropped.
+		if label == "gfg" && table == "gfg_game_news" {
+			var oldShape bool
+			if err := db.QueryRowContext(ctx, `
+SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'gfg_game_news' AND column_name = 'content'
+)`).Scan(&oldShape); err != nil {
+				t.Fatal(err)
+			}
+			if oldShape {
+				t.Fatal("deprecated public.gfg_game_news shape still exists")
+			}
+			continue
+		}
 		var exists bool
 		if err := db.QueryRowContext(ctx, `SELECT to_regclass($1) IS NOT NULL`, "public."+table).Scan(&exists); err != nil {
 			t.Fatal(err)
@@ -338,6 +362,30 @@ func assertDeprecatedCleanupAndBackup(t *testing.T, ctx context.Context, db *sql
 	for table, count := range counts {
 		if count != 1 {
 			t.Fatalf("backup %s.%s row count=%d, want 1", "foundation_cleanup_backup", table, count)
+		}
+	}
+	if label == "gfg" {
+		var runs, results int64
+		if err := db.QueryRowContext(ctx, `
+SELECT count(*)
+FROM public.gfg_collection_runs r
+JOIN public.gfg_collection_jobs j ON j.id = r.job_id
+WHERE r.id = 'legacy-run-integration'
+  AND j.trigger = 'legacy_import'
+  AND j.requested_by = 'migration'
+  AND r.expected_count = 2
+  AND r.attempted_count = 2
+  AND r.success_count = 1
+  AND r.partial_count = 1`).Scan(&runs); err != nil {
+			t.Fatal(err)
+		}
+		if err := db.QueryRowContext(ctx, `
+SELECT count(*) FROM public.gfg_collection_task_results
+WHERE run_id = 'legacy-run-integration'`).Scan(&results); err != nil {
+			t.Fatal(err)
+		}
+		if runs != 1 || results != 2 {
+			t.Fatalf("legacy Game collection history migration: runs=%d results=%d", runs, results)
 		}
 	}
 }

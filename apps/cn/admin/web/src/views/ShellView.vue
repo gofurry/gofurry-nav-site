@@ -80,17 +80,23 @@ function iconFor(key: string) {
 
       <nav class="admin-nav" aria-label="管理菜单">
         <section class="admin-nav__section">
-          <div class="admin-nav__section-title">导航库</div>
+          <div class="admin-nav__section-title">采集控制</div>
           <div class="admin-nav__items">
             <RouterLink
-              to="/nav/collect"
+              to="/collection"
               class="admin-nav__link"
-              :class="{ 'admin-nav__link--active': isActive('/nav/collect') }"
-              title="采集观测"
+              :class="{ 'admin-nav__link--active': isActive('/collection') }"
+              title="Collection Center"
             >
               <Activity :size="18" />
-              <span>采集观测</span>
+              <span>Collection Center</span>
             </RouterLink>
+          </div>
+        </section>
+
+        <section class="admin-nav__section">
+          <div class="admin-nav__section-title">导航库</div>
+          <div class="admin-nav__items">
             <RouterLink
               v-for="item in navResources"
               :key="item.key"
@@ -108,15 +114,6 @@ function iconFor(key: string) {
         <section class="admin-nav__section">
           <div class="admin-nav__section-title">游戏库</div>
           <div class="admin-nav__items">
-            <RouterLink
-              to="/game/collect"
-              class="admin-nav__link"
-              :class="{ 'admin-nav__link--active': isActive('/game/collect') }"
-              title="采集观测"
-            >
-              <Activity :size="18" />
-              <span>采集观测</span>
-            </RouterLink>
             <RouterLink
               v-for="item in gameResources"
               :key="item.key"

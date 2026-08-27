@@ -79,9 +79,6 @@ func (gf *goFurry) InitOnStart() error {
 	}
 	// 初始化 redis
 	cs.InitRedisOnStart()
-	// 初始化时间调度
-	cs.InitTimeWheelOnStart()
-
 	if err := gf.initPostgres(); err != nil {
 		return err
 	}
@@ -90,8 +87,12 @@ func (gf *goFurry) InitOnStart() error {
 	gf.gameAPI = v2controller.New(gf.readDAO, gf.viewSvc, reviewService)
 	gf.prizeAPI = prizecontroller.New(prizeService)
 
-	// 初始化定时任务
-	schedule.InitScheduleOnStart(gf.readDAO, gf.viewSvc, gf.prizeDAO)
+	if err := cs.InitSchedulerOnStart(); err != nil {
+		return err
+	}
+	if err := schedule.InitScheduleOnStart(gf.readDAO, gf.viewSvc, gf.prizeDAO); err != nil {
+		return err
+	}
 	return nil
 }
 

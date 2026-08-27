@@ -26,10 +26,6 @@ DELETE FROM gfn_collector_log_http target USING doomed WHERE target.id=doomed.id
 SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY create_time DESC,id DESC) rn
 FROM gfn_collector_log_dns) ranked WHERE rn>$1 ORDER BY id LIMIT $2)
 DELETE FROM gfn_collector_log_dns target USING doomed WHERE target.id=doomed.id`
-	deleteObservationSQL = `WITH doomed AS (
-SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY site_id,protocol ORDER BY observed_at DESC,id DESC) rn
-FROM gfn_collector_observation WHERE protocol=$1) ranked WHERE rn>$2 ORDER BY id LIMIT $3)
-DELETE FROM gfn_collector_observation target USING doomed WHERE target.id=doomed.id`
 )
 
 func DeletePingByNameLimit(pool *pgxpool.Pool, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
@@ -49,13 +45,6 @@ func DeleteHTTPByNameLimit(pool *pgxpool.Pool, keepCount int, batchSize int, bat
 func DeleteDNSByNameLimit(pool *pgxpool.Pool, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
 	return deleteBatches(batchSize, batchTimeout, pause, func(ctx context.Context, batchSize int) (int64, error) {
 		tag, err := pool.Exec(ctx, deleteDNSSQL, keepCount, batchSize)
-		return tag.RowsAffected(), err
-	})
-}
-
-func DeleteObservationByProtocolLimit(pool *pgxpool.Pool, protocol string, keepCount int, batchSize int, batchTimeout time.Duration, pause time.Duration) (int64, error) {
-	return deleteBatches(batchSize, batchTimeout, pause, func(ctx context.Context, batchSize int) (int64, error) {
-		tag, err := pool.Exec(ctx, deleteObservationSQL, protocol, keepCount, batchSize)
 		return tag.RowsAffected(), err
 	})
 }

@@ -94,28 +94,33 @@ func (q *Queries) InsertHTTPLog(ctx context.Context, arg InsertHTTPLogParams) er
 const insertObservation = `-- name: InsertObservation :exec
 INSERT INTO gfn_collector_observation (
     id, site_id, target, protocol, status, observed_at, duration_ms,
-    error_code, error_message, payload, schema_version, create_time
+    error_code, error_message, payload, schema_version, create_time,
+    job_id, run_id, collector_instance_id
 ) VALUES (
     $1, $2, $3, $4,
     $5, $6, $7,
     $8, $9, $10::jsonb,
-    $11, $12
+    $11, $12, $13,
+    $14, $15
 )
 `
 
 type InsertObservationParams struct {
-	ID            int64              `json:"id"`
-	SiteID        int64              `json:"site_id"`
-	Target        string             `json:"target"`
-	Protocol      string             `json:"protocol"`
-	Status        string             `json:"status"`
-	ObservedAt    pgtype.Timestamptz `json:"observed_at"`
-	DurationMs    *int64             `json:"duration_ms"`
-	ErrorCode     *string            `json:"error_code"`
-	ErrorMessage  *string            `json:"error_message"`
-	Payload       []byte             `json:"payload"`
-	SchemaVersion int32              `json:"schema_version"`
-	CreateTime    pgtype.Timestamptz `json:"create_time"`
+	ID                  int64              `json:"id"`
+	SiteID              int64              `json:"site_id"`
+	Target              string             `json:"target"`
+	Protocol            string             `json:"protocol"`
+	Status              string             `json:"status"`
+	ObservedAt          pgtype.Timestamptz `json:"observed_at"`
+	DurationMs          *int64             `json:"duration_ms"`
+	ErrorCode           *string            `json:"error_code"`
+	ErrorMessage        *string            `json:"error_message"`
+	Payload             []byte             `json:"payload"`
+	SchemaVersion       int32              `json:"schema_version"`
+	CreateTime          pgtype.Timestamptz `json:"create_time"`
+	JobID               *int64             `json:"job_id"`
+	RunID               *string            `json:"run_id"`
+	CollectorInstanceID *string            `json:"collector_instance_id"`
 }
 
 func (q *Queries) InsertObservation(ctx context.Context, arg InsertObservationParams) error {
@@ -132,6 +137,9 @@ func (q *Queries) InsertObservation(ctx context.Context, arg InsertObservationPa
 		arg.Payload,
 		arg.SchemaVersion,
 		arg.CreateTime,
+		arg.JobID,
+		arg.RunID,
+		arg.CollectorInstanceID,
 	)
 	return err
 }

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/gofurry/gofurry-nav-collector/collector/execution"
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
@@ -23,10 +24,21 @@ func LatestKey(protocol string, siteID int64) string {
 
 func SaveIfEnabled(dao *ObservationDAO, input Input) common.GFError {
 	cfg := env.GetServerConfig().Collector.V2
+	request, controlled := execution.Current(input.Protocol)
+	if controlled {
+		input.CollectorID = request.InstanceID
+		input.JobID = request.RunID
+	}
 	if !cfg.ProtocolEnabled(input.Protocol) {
+		if controlled {
+			recordControlResult(input, nil, "failed", "protocol_disabled", "protocol is disabled by collector configuration")
+		}
 		return nil
 	}
 	if input.SiteID <= 0 {
+		if controlled {
+			recordControlResult(input, nil, "failed", "validation", "missing site_id")
+		}
 		log.WarnFields(map[string]interface{}{
 			"event":    "v2_observation_skipped",
 			"protocol": input.Protocol,
@@ -45,6 +57,9 @@ func SaveIfEnabled(dao *ObservationDAO, input Input) common.GFError {
 	payload := enrichPayload(input.Payload, input.CollectorID, input.JobID)
 	payloadBytes, err := marshalPayload(payload)
 	if err != nil {
+		if controlled {
+			recordControlResult(input, nil, "failed", "encoding", err.Error())
+		}
 		log.ErrorFields(map[string]interface{}{
 			"event":    "v2_payload_encode_failed",
 			"protocol": input.Protocol,
@@ -54,6 +69,9 @@ func SaveIfEnabled(dao *ObservationDAO, input Input) common.GFError {
 		return common.NewServiceError("v2 observation payload 编码失败")
 	}
 	if len(payloadBytes) > maxObservationPayloadBytes {
+		if controlled {
+			recordControlResult(input, nil, "failed", "payload_too_large", "observation payload exceeds size limit")
+		}
 		log.ErrorFields(map[string]interface{}{
 			"bytes":    len(payloadBytes),
 			"event":    "v2_payload_too_large",
@@ -66,6 +84,7 @@ func SaveIfEnabled(dao *ObservationDAO, input Input) common.GFError {
 	}
 
 	var firstErr common.GFError
+	var observationID *int64
 	if cfg.ObservationEnabled(input.Protocol) {
 		record := GfnCollectorObservation{
 			ID:            util.GenerateId(),
@@ -78,6 +97,11 @@ func SaveIfEnabled(dao *ObservationDAO, input Input) common.GFError {
 			Payload:       string(payloadBytes),
 			SchemaVersion: schemaVersion,
 			CreateTime:    time.Now(),
+		}
+		if controlled {
+			record.JobID = &request.JobID
+			record.RunID = &request.RunID
+			record.InstanceID = &request.InstanceID
 		}
 		if input.ErrorCode != "" {
 			record.ErrorCode = &input.ErrorCode
@@ -93,6 +117,20 @@ func SaveIfEnabled(dao *ObservationDAO, input Input) common.GFError {
 				"target":   input.Target,
 			}, "v2 observation 写入数据库失败: "+err.GetMsg())
 			firstErr = err
+		} else {
+			observationID = &record.ID
+		}
+	}
+	if controlled {
+		switch {
+		case firstErr != nil:
+			recordControlResult(input, nil, "failed", "storage", firstErr.GetMsg())
+		case !cfg.ObservationEnabled(input.Protocol):
+			recordControlResult(input, nil, "partial", "observation_disabled", "observation persistence is disabled")
+		case input.Status == StatusSuccess:
+			recordControlResult(input, observationID, "success", "", "")
+		default:
+			recordControlResult(input, observationID, "failed", input.ErrorCode, input.ErrorMessage)
 		}
 	}
 
@@ -166,6 +204,20 @@ func SaveIfEnabled(dao *ObservationDAO, input Input) common.GFError {
 	}
 
 	return firstErr
+}
+
+func recordControlResult(input Input, observationID *int64, status, errorKind, errorMessage string) {
+	endedAt := input.ObservedAt
+	if endedAt.IsZero() {
+		endedAt = time.Now()
+	}
+	startedAt := endedAt.Add(-time.Duration(input.DurationMS) * time.Millisecond)
+	execution.Record(execution.Result{
+		Protocol: input.Protocol, SiteID: input.SiteID, Target: input.Target,
+		Status: status, ObservationID: observationID, DurationMS: input.DurationMS,
+		ErrorKind: errorKind, ErrorMessage: errorMessage,
+		StartedAt: startedAt, EndedAt: endedAt,
+	})
 }
 
 func enrichPayload(payload any, collectorID string, jobID string) any {

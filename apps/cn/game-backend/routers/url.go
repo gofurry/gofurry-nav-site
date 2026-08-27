@@ -32,10 +32,4 @@ func gameV2Api(g fiber.Router, gameAPI *gamev2.GameV2API, prizeAPI *prize.PrizeA
 	g.Post("/prizes/participation", prizeAPI.PrizeParticipation)
 	g.Get("/prizes/participation/activation", prizeAPI.ActiveParticipation)
 
-	collect := g.Group("/collect", gamev2.RequireAdminToken())
-	collect.Get("/status", gameAPI.GetCollectStatus)
-	collect.Get("/runs", gameAPI.ListCollectRuns)
-	collect.Get("/runs/:run_id", gameAPI.GetCollectRun)
-	collect.Get("/task-results", gameAPI.ListCollectTaskResults)
-	collect.Get("/games/:id/status", gameAPI.GetGameCollectStatus)
 }

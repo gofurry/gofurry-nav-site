@@ -1,0 +1,111 @@
+-- Remove the physical V2 version suffix from the active Game storage namespace.
+-- The API and cache V2 namespaces are intentionally unaffected.
+-- +goose Up
+
+ALTER TABLE public.gfg_game_v2_assets RENAME TO gfg_game_assets;
+ALTER TABLE public.gfg_game_v2_detail_snapshots RENAME TO gfg_game_detail_snapshots;
+ALTER TABLE public.gfg_game_v2_details RENAME TO gfg_game_details;
+ALTER TABLE public.gfg_game_v2_localized_details RENAME TO gfg_game_localized_details;
+ALTER TABLE public.gfg_game_v2_media RENAME TO gfg_game_media;
+ALTER TABLE public.gfg_game_v2_news RENAME TO gfg_game_news;
+ALTER TABLE public.gfg_game_v2_player_counts RENAME TO gfg_game_player_counts;
+ALTER TABLE public.gfg_game_v2_prices RENAME TO gfg_game_prices;
+ALTER TABLE public.gfg_game_v2_recommendations RENAME TO gfg_game_recommendations;
+ALTER TABLE public.gfg_game_v2_requirements RENAME TO gfg_game_requirements;
+
+ALTER SEQUENCE public.gfg_game_v2_assets_id_seq RENAME TO gfg_game_assets_id_seq;
+ALTER SEQUENCE public.gfg_game_v2_detail_snapshots_id_seq RENAME TO gfg_game_detail_snapshots_id_seq;
+ALTER SEQUENCE public.gfg_game_v2_media_id_seq RENAME TO gfg_game_media_id_seq;
+ALTER SEQUENCE public.gfg_game_v2_news_id_seq RENAME TO gfg_game_news_id_seq;
+ALTER SEQUENCE public.gfg_game_v2_player_counts_id_seq RENAME TO gfg_game_player_counts_id_seq;
+
+ALTER TABLE public.gfg_game_assets RENAME CONSTRAINT gfg_game_v2_assets_pkey TO gfg_game_assets_pkey;
+ALTER TABLE public.gfg_game_detail_snapshots RENAME CONSTRAINT gfg_game_v2_detail_snapshots_pkey TO gfg_game_detail_snapshots_pkey;
+ALTER TABLE public.gfg_game_details RENAME CONSTRAINT gfg_game_v2_details_appid_key TO gfg_game_details_appid_key;
+ALTER TABLE public.gfg_game_details RENAME CONSTRAINT gfg_game_v2_details_pkey TO gfg_game_details_pkey;
+ALTER TABLE public.gfg_game_localized_details RENAME CONSTRAINT gfg_game_v2_localized_details_pkey TO gfg_game_localized_details_pkey;
+ALTER TABLE public.gfg_game_media RENAME CONSTRAINT gfg_game_v2_media_pkey TO gfg_game_media_pkey;
+ALTER TABLE public.gfg_game_news RENAME CONSTRAINT gfg_game_v2_news_pkey TO gfg_game_news_pkey;
+ALTER TABLE public.gfg_game_player_counts RENAME CONSTRAINT gfg_game_v2_player_counts_pkey TO gfg_game_player_counts_pkey;
+ALTER TABLE public.gfg_game_prices RENAME CONSTRAINT gfg_game_v2_prices_pkey TO gfg_game_prices_pkey;
+ALTER TABLE public.gfg_game_recommendations RENAME CONSTRAINT gfg_game_v2_recommendations_pkey TO gfg_game_recommendations_pkey;
+ALTER TABLE public.gfg_game_requirements RENAME CONSTRAINT gfg_game_v2_requirements_appid_key TO gfg_game_requirements_appid_key;
+ALTER TABLE public.gfg_game_requirements RENAME CONSTRAINT gfg_game_v2_requirements_pkey TO gfg_game_requirements_pkey;
+
+ALTER INDEX public.idx_gfg_game_v2_assets_app_type RENAME TO idx_gfg_game_assets_app_type;
+ALTER INDEX public.idx_gfg_game_v2_assets_exists RENAME TO idx_gfg_game_assets_exists;
+ALTER INDEX public.idx_gfg_game_v2_assets_game_family RENAME TO idx_gfg_game_assets_game_family;
+ALTER INDEX public.uq_gfg_game_v2_assets_item RENAME TO uq_gfg_game_assets_item;
+ALTER INDEX public.idx_gfg_game_v2_detail_snapshots_hash RENAME TO idx_gfg_game_detail_snapshots_hash;
+ALTER INDEX public.idx_gfg_game_v2_detail_snapshots_lookup RENAME TO idx_gfg_game_detail_snapshots_lookup;
+ALTER INDEX public.idx_gfg_game_v2_localized_details_app_lang RENAME TO idx_gfg_game_localized_details_app_lang;
+ALTER INDEX public.idx_gfg_game_v2_media_app_type RENAME TO idx_gfg_game_media_app_type;
+ALTER INDEX public.uq_gfg_game_v2_media_item RENAME TO uq_gfg_game_media_item;
+ALTER INDEX public.idx_gfg_game_v2_news_feed RENAME TO idx_gfg_game_news_feed;
+ALTER INDEX public.uq_gfg_game_v2_news_event_lang RENAME TO uq_gfg_game_news_event_lang;
+ALTER INDEX public.idx_gfg_game_v2_player_counts_collected_at RENAME TO idx_gfg_game_player_counts_collected_at;
+ALTER INDEX public.idx_gfg_game_v2_player_counts_latest RENAME TO idx_gfg_game_player_counts_latest;
+ALTER INDEX public.idx_gfg_game_v2_player_counts_run RENAME TO idx_gfg_game_player_counts_run;
+ALTER INDEX public.idx_gfg_game_v2_prices_app_region RENAME TO idx_gfg_game_prices_app_region;
+ALTER INDEX public.idx_gfg_game_v2_recommendations_computed_at RENAME TO idx_gfg_game_recommendations_computed_at;
+ALTER INDEX public.idx_gfg_game_v2_recommendations_lookup RENAME TO idx_gfg_game_recommendations_lookup;
+
+ALTER FUNCTION public.gfg_game_v2_prune_detail_snapshots(bigint, text, text, integer)
+    RENAME TO gfg_game_prune_detail_snapshots;
+
+COMMENT ON TABLE public.gfg_game_recommendations IS 'Precomputed similar-game recommendations. One algorithm_version represents one scoring contract.';
+
+-- +goose Down
+
+COMMENT ON TABLE public.gfg_game_recommendations IS 'Precomputed game v2 similar recommendations. One algorithm_version represents one scoring contract.';
+
+ALTER FUNCTION public.gfg_game_prune_detail_snapshots(bigint, text, text, integer)
+    RENAME TO gfg_game_v2_prune_detail_snapshots;
+
+ALTER INDEX public.idx_gfg_game_assets_app_type RENAME TO idx_gfg_game_v2_assets_app_type;
+ALTER INDEX public.idx_gfg_game_assets_exists RENAME TO idx_gfg_game_v2_assets_exists;
+ALTER INDEX public.idx_gfg_game_assets_game_family RENAME TO idx_gfg_game_v2_assets_game_family;
+ALTER INDEX public.uq_gfg_game_assets_item RENAME TO uq_gfg_game_v2_assets_item;
+ALTER INDEX public.idx_gfg_game_detail_snapshots_hash RENAME TO idx_gfg_game_v2_detail_snapshots_hash;
+ALTER INDEX public.idx_gfg_game_detail_snapshots_lookup RENAME TO idx_gfg_game_v2_detail_snapshots_lookup;
+ALTER INDEX public.idx_gfg_game_localized_details_app_lang RENAME TO idx_gfg_game_v2_localized_details_app_lang;
+ALTER INDEX public.idx_gfg_game_media_app_type RENAME TO idx_gfg_game_v2_media_app_type;
+ALTER INDEX public.uq_gfg_game_media_item RENAME TO uq_gfg_game_v2_media_item;
+ALTER INDEX public.idx_gfg_game_news_feed RENAME TO idx_gfg_game_v2_news_feed;
+ALTER INDEX public.uq_gfg_game_news_event_lang RENAME TO uq_gfg_game_v2_news_event_lang;
+ALTER INDEX public.idx_gfg_game_player_counts_collected_at RENAME TO idx_gfg_game_v2_player_counts_collected_at;
+ALTER INDEX public.idx_gfg_game_player_counts_latest RENAME TO idx_gfg_game_v2_player_counts_latest;
+ALTER INDEX public.idx_gfg_game_player_counts_run RENAME TO idx_gfg_game_v2_player_counts_run;
+ALTER INDEX public.idx_gfg_game_prices_app_region RENAME TO idx_gfg_game_v2_prices_app_region;
+ALTER INDEX public.idx_gfg_game_recommendations_computed_at RENAME TO idx_gfg_game_v2_recommendations_computed_at;
+ALTER INDEX public.idx_gfg_game_recommendations_lookup RENAME TO idx_gfg_game_v2_recommendations_lookup;
+
+ALTER TABLE public.gfg_game_assets RENAME CONSTRAINT gfg_game_assets_pkey TO gfg_game_v2_assets_pkey;
+ALTER TABLE public.gfg_game_detail_snapshots RENAME CONSTRAINT gfg_game_detail_snapshots_pkey TO gfg_game_v2_detail_snapshots_pkey;
+ALTER TABLE public.gfg_game_details RENAME CONSTRAINT gfg_game_details_appid_key TO gfg_game_v2_details_appid_key;
+ALTER TABLE public.gfg_game_details RENAME CONSTRAINT gfg_game_details_pkey TO gfg_game_v2_details_pkey;
+ALTER TABLE public.gfg_game_localized_details RENAME CONSTRAINT gfg_game_localized_details_pkey TO gfg_game_v2_localized_details_pkey;
+ALTER TABLE public.gfg_game_media RENAME CONSTRAINT gfg_game_media_pkey TO gfg_game_v2_media_pkey;
+ALTER TABLE public.gfg_game_news RENAME CONSTRAINT gfg_game_news_pkey TO gfg_game_v2_news_pkey;
+ALTER TABLE public.gfg_game_player_counts RENAME CONSTRAINT gfg_game_player_counts_pkey TO gfg_game_v2_player_counts_pkey;
+ALTER TABLE public.gfg_game_prices RENAME CONSTRAINT gfg_game_prices_pkey TO gfg_game_v2_prices_pkey;
+ALTER TABLE public.gfg_game_recommendations RENAME CONSTRAINT gfg_game_recommendations_pkey TO gfg_game_v2_recommendations_pkey;
+ALTER TABLE public.gfg_game_requirements RENAME CONSTRAINT gfg_game_requirements_appid_key TO gfg_game_v2_requirements_appid_key;
+ALTER TABLE public.gfg_game_requirements RENAME CONSTRAINT gfg_game_requirements_pkey TO gfg_game_v2_requirements_pkey;
+
+ALTER SEQUENCE public.gfg_game_assets_id_seq RENAME TO gfg_game_v2_assets_id_seq;
+ALTER SEQUENCE public.gfg_game_detail_snapshots_id_seq RENAME TO gfg_game_v2_detail_snapshots_id_seq;
+ALTER SEQUENCE public.gfg_game_media_id_seq RENAME TO gfg_game_v2_media_id_seq;
+ALTER SEQUENCE public.gfg_game_news_id_seq RENAME TO gfg_game_v2_news_id_seq;
+ALTER SEQUENCE public.gfg_game_player_counts_id_seq RENAME TO gfg_game_v2_player_counts_id_seq;
+
+ALTER TABLE public.gfg_game_assets RENAME TO gfg_game_v2_assets;
+ALTER TABLE public.gfg_game_detail_snapshots RENAME TO gfg_game_v2_detail_snapshots;
+ALTER TABLE public.gfg_game_details RENAME TO gfg_game_v2_details;
+ALTER TABLE public.gfg_game_localized_details RENAME TO gfg_game_v2_localized_details;
+ALTER TABLE public.gfg_game_media RENAME TO gfg_game_v2_media;
+ALTER TABLE public.gfg_game_news RENAME TO gfg_game_v2_news;
+ALTER TABLE public.gfg_game_player_counts RENAME TO gfg_game_v2_player_counts;
+ALTER TABLE public.gfg_game_prices RENAME TO gfg_game_v2_prices;
+ALTER TABLE public.gfg_game_recommendations RENAME TO gfg_game_v2_recommendations;
+ALTER TABLE public.gfg_game_requirements RENAME TO gfg_game_v2_requirements;

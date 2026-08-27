@@ -24,6 +24,8 @@ import (
 	authcontroller "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
 	authmw "github.com/gofurry/gofurry-admin/internal/app/auth/middleware"
 	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
+	collectioncontroller "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/controller"
+	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
 	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
 	navadmin "github.com/gofurry/gofurry-admin/internal/app/navadmin/controller"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
@@ -76,6 +78,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	authAPI := authcontroller.New(authService, auditLogger)
 	navAPI := navadmin.New(navPool, auditLogger)
 	gameAPI := gameadmin.New(gamePool, auditLogger)
+	collectionAPI := collectioncontroller.New(collectionservice.New(gamePool, navPool, auditLogger))
 	app := fiber.New()
 	app.Post("/auth/bootstrap", authAPI.Bootstrap)
 	app.Post("/auth/login", authAPI.Login)
@@ -91,6 +94,9 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Delete("/game/games/:id", gameAPI.DeleteGame)
 	protected.Post("/game/prizes", gameAPI.CreatePrize)
 	protected.Put("/game/prizes/:id", gameAPI.UpdatePrize)
+	protected.Post("/collection/jobs", collectionAPI.CreateJobs)
+	protected.Post("/collection/jobs/:domain/:id/cancel", collectionAPI.CancelJob)
+	protected.Post("/collection/jobs/:domain/:id/retry", collectionAPI.RetryJob)
 
 	requestJSON(t, app, http.MethodPost, "/auth/bootstrap", `{"password":"integration-password"}`, nil, http.StatusOK)
 	login := requestJSON(t, app, http.MethodPost, "/auth/login", `{"password":"integration-password"}`, nil, http.StatusOK)
@@ -111,9 +117,34 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	gamePayload := `{"name":"Game","name_en":"Game EN","info":"Info","info_en":"Info EN","resources":[],"groups":[],"developers":[],"publishers":[],"appid":424242,"header":"","links":[],"weight":5,"primary_tag":0,"secondary_tag":0}`
 	game := requestJSON(t, app, http.MethodPost, "/game/games", gamePayload, cookie, http.StatusOK)
 	gameID := responseID(t, game)
+	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_collection_jobs WHERE scope_id=$1 AND trigger='entity_created' AND tasks=ARRAY['details','news']::text[]`, gameID); count != 1 {
+		t.Fatalf("game creation durable job count=%d", count)
+	}
+	manualPayload := fmt.Sprintf(`{"domain":"game","scope_type":"game","scope_id":%d,"tasks":["details"]}`, gameID)
+	firstManual := responseFirstID(t, requestJSON(t, app, http.MethodPost, "/collection/jobs", manualPayload, cookie, http.StatusOK))
+	secondManual := responseFirstID(t, requestJSON(t, app, http.MethodPost, "/collection/jobs", manualPayload, cookie, http.StatusOK))
+	if firstManual != secondManual {
+		t.Fatalf("active manual dedupe returned jobs %d and %d", firstManual, secondManual)
+	}
+	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_collection_jobs WHERE dedupe_key=$1 AND status IN ('queued','running')`, fmt.Sprintf("game:game:%d:details", gameID)); count != 1 {
+		t.Fatalf("active manual dedupe count=%d", count)
+	}
+	requestJSON(t, app, http.MethodPost, fmt.Sprintf("/collection/jobs/game/%d/cancel", firstManual), "", cookie, http.StatusOK)
+	retried := responseID(t, requestJSON(t, app, http.MethodPost, fmt.Sprintf("/collection/jobs/game/%d/retry", firstManual), "", cookie, http.StatusOK))
+	if retried != firstManual {
+		t.Fatalf("state-refresh retry created job %d, want same job %d", retried, firstManual)
+	}
+	playersPayload := fmt.Sprintf(`{"domain":"game","scope_type":"game","scope_id":%d,"tasks":["players"]}`, gameID)
+	playersJob := responseFirstID(t, requestJSON(t, app, http.MethodPost, "/collection/jobs", playersPayload, cookie, http.StatusOK))
+	requestJSON(t, app, http.MethodPost, fmt.Sprintf("/collection/jobs/game/%d/cancel", playersJob), "", cookie, http.StatusOK)
+	requestJSON(t, app, http.MethodPost, fmt.Sprintf("/collection/jobs/game/%d/retry", playersJob), "", cookie, http.StatusBadRequest)
+	responseFirstID(t, requestJSON(t, app, http.MethodPost, "/collection/jobs", `{"domain":"nav","scope_type":"all","tasks":["ping","robots"]}`, cookie, http.StatusOK))
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_collection_jobs WHERE trigger='manual' AND scope_type='all' AND job_key IN ('nav.ping','nav.robots')`); count != 2 {
+		t.Fatalf("Nav multi-protocol fan-out job count=%d", count)
+	}
 	requestJSON(t, app, http.MethodPost, "/game/games", gamePayload, cookie, http.StatusBadRequest)
 	for _, statement := range []string{
-		`INSERT INTO gfg_game_v2_details (game_id,appid,collected_at) VALUES ($1,424242,now())`,
+		`INSERT INTO gfg_game_details (game_id,appid,collected_at) VALUES ($1,424242,now())`,
 		`INSERT INTO gfg_game_release_state (game_id,availability,precision,source,source_region,source_locale,normalizer_version,observed_at) VALUES ($1,'unknown','none','steam','US','en','steam-go/v1.3.9',now())`,
 		`INSERT INTO gfg_game_release_history (game_id,availability,precision,source,source_region,source_locale,normalizer_version,observed_at) VALUES ($1,'unknown','none','steam','US','en','steam-go/v1.3.9',now())`,
 		`INSERT INTO gfg_game_first_available (game_id,precision,exact_date,release_year,release_month,window_start,window_end,source,inferred,normalizer_version) VALUES ($1,'day','2020-01-02',2020,1,'2020-01-02','2020-01-02','legacy_manual',false,'gofurry-legacy-release/v1')`,
@@ -130,8 +161,11 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	}
 	changedAppIDPayload := `{"name":"Game Updated","name_en":"Game EN","info":"Info","info_en":"Info EN","resources":[],"groups":[],"developers":[],"publishers":[],"appid":424243,"header":"","links":[],"weight":0,"primary_tag":0,"secondary_tag":0}`
 	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/game/games/%d", gameID), changedAppIDPayload, cookie, http.StatusOK)
+	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_collection_jobs WHERE scope_id=$1 AND trigger='entity_changed' AND tasks=ARRAY['details','news']::text[]`, gameID); count != 1 {
+		t.Fatalf("AppID change durable recollect job count=%d", count)
+	}
 	if count := queryInt64(t, ctx, gamePool, `SELECT
-  (SELECT COUNT(*) FROM gfg_game_v2_details WHERE game_id=$1) +
+  (SELECT COUNT(*) FROM gfg_game_details WHERE game_id=$1) +
   (SELECT COUNT(*) FROM gfg_game_release_state WHERE game_id=$1) +
   (SELECT COUNT(*) FROM gfg_game_release_history WHERE game_id=$1) +
   (SELECT COUNT(*) FROM gfg_game_first_available WHERE game_id=$1) +
@@ -205,6 +239,25 @@ func responseID(t *testing.T, resp *http.Response) int64 {
 		t.Fatalf("invalid response id: %s", envelope.Data)
 	}
 	return data.ID
+}
+
+func responseFirstID(t *testing.T, resp *http.Response) int64 {
+	t.Helper()
+	defer resp.Body.Close()
+	var envelope integrationEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	var data []struct {
+		ID int64 `json:"id"`
+	}
+	if err := json.Unmarshal(envelope.Data, &data); err != nil {
+		t.Fatal(err)
+	}
+	if len(data) == 0 || data[0].ID <= 0 {
+		t.Fatalf("invalid job response: %s", envelope.Data)
+	}
+	return data[0].ID
 }
 
 func adminIntegrationDSN(t *testing.T, configPath string) string {

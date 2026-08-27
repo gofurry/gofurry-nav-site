@@ -30,6 +30,7 @@ type TaskBinding struct {
 type Options struct {
 	RunID      string
 	MaxWorkers int
+	OnResult   func(report.TaskResult)
 }
 
 // Runner coordinates enabled v2 collectors over a batch of games.
@@ -110,6 +111,9 @@ func (r *Runner) Run(ctx context.Context, games []models.GameID) (report.RunSumm
 	for result := range results {
 		summary.Results = append(summary.Results, result)
 		applyResult(&summary, result)
+		if r.options.OnResult != nil {
+			r.options.OnResult(result)
+		}
 	}
 
 	summary.EndedAt = time.Now()

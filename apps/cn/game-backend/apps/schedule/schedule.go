@@ -12,13 +12,7 @@ import (
 	cs "github.com/gofurry/gofurry-game-backend/common/service"
 )
 
-func InitScheduleOnStart(readDAO *v2dao.ReadModelDAO, viewService *v2service.GameViewService, prizeDAO *prizedao.PrizeDAO) {
-	defer func() {
-		if err := recover(); err != nil {
-			log.Error(fmt.Sprintf("[InitScheduleOnStart] recover: %v", err))
-		}
-	}()
-
+func InitScheduleOnStart(readDAO *v2dao.ReadModelDAO, viewService *v2service.GameViewService, prizeDAO *prizedao.PrizeDAO) error {
 	log.Info("[Schedule] init start")
 
 	go ScheduleByOneHour(prizeDAO)
@@ -26,12 +20,24 @@ func InitScheduleOnStart(readDAO *v2dao.ReadModelDAO, viewService *v2service.Gam
 	go task.UpdateGameViewCountCache(viewService)
 	task.RefreshGameHomeCache(readDAO)
 
-	cs.AddCronJob(1*time.Hour, func() { ScheduleByOneHour(prizeDAO) })
-	cs.AddCronJob(1*time.Hour, func() { task.RefreshGameHomeCache(readDAO) })
-	cs.AddCronJob(12*time.Hour, ScheduleByHalfDay)
-	cs.AddCronJob(24*time.Hour, func() { task.UpdateGameViewCountCache(viewService) })
+	jobs := []struct {
+		name     string
+		interval time.Duration
+		run      func()
+	}{
+		{"game-prize-winner", time.Hour, func() { ScheduleByOneHour(prizeDAO) }},
+		{"game-home-cache", time.Hour, func() { task.RefreshGameHomeCache(readDAO) }},
+		{"game-half-day", 12 * time.Hour, ScheduleByHalfDay},
+		{"game-view-count", 24 * time.Hour, func() { task.UpdateGameViewCountCache(viewService) }},
+	}
+	for _, job := range jobs {
+		if err := cs.AddIntervalJob(job.name, job.interval, job.run); err != nil {
+			return fmt.Errorf("initialize Game backend schedules: %w", err)
+		}
+	}
 
 	log.Info("[Schedule] init done")
+	return nil
 }
 
 func ScheduleByOneHour(prizeDAO *prizedao.PrizeDAO) {

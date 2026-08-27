@@ -14,11 +14,13 @@ V3-P0.1 在现有 V2 pipeline 内增加 canonical Game domain，不复制 collec
 
 US 请求失败、release field 缺失、或 languages observation 为空/不可解析时保留已有 canonical 数据。`SaveDetails` 先锁定 `gfg_game` 父行并核对 AppID；全部 raw/current/canonical/snapshot 写入仍在同一事务，提交后才刷新原有 Redis cache，且不新增 canonical Redis key。
 
-当前存储边界：
+当前存储与控制边界：
 
-- PostgreSQL：结构化详情、新闻、在线人数、采集运行记录、raw snapshot。
-- Redis：前端高频读取的当前详情、当前新闻列表、当前在线人数和最近采集状态。
+- PostgreSQL：结构化详情、新闻、在线人数、raw snapshot，以及 durable Schedule / Job / Run / Task Result / Collector Instance。
+- Redis：前端高频读取的当前详情、当前新闻列表、当前在线人数，以及带 TTL 的 run realtime progress；不承担 queue/lease/schedule source of truth。
 - MongoDB：不进入 v2 设计。
+
+active Game physical tables 使用无版本名；`gfg_game_v2_*` 仅可出现在历史 migration/说明中，不允许 active query 或 compatibility view。旧 collection run/task-result 历史通过 `legacy_import` synthetic Job 迁入 durable 表。
 
 v2 domain model 不等于数据库 model，也不等于 `steam-go` model。后续分层为：
 
@@ -78,7 +80,7 @@ gf-game-collector backfill-first-available --config <file>
 
 ### 游戏详情
 
-`gfg_game_v2_details`
+`gfg_game_details`
 
 保存跨语言的基础详情：
 
@@ -101,7 +103,7 @@ gf-game-collector backfill-first-available --config <file>
 - `collected_at`
 - `updated_at`
 
-`gfg_game_v2_localized_details`
+`gfg_game_localized_details`
 
 保存语言相关文本：
 
@@ -117,7 +119,7 @@ gf-game-collector backfill-first-available --config <file>
 
 ### 地区价格
 
-`gfg_game_v2_prices`
+`gfg_game_prices`
 
 保存每个地区的当前价格：
 
@@ -136,7 +138,7 @@ gf-game-collector backfill-first-available --config <file>
 
 ### 媒体资源
 
-`gfg_game_v2_media`
+`gfg_game_media`
 
 统一保存图片和视频资源：
 
@@ -151,7 +153,7 @@ gf-game-collector backfill-first-available --config <file>
 
 ### 系统需求
 
-`gfg_game_v2_requirements`
+`gfg_game_requirements`
 
 保存平台配置需求：
 
@@ -163,7 +165,7 @@ gf-game-collector backfill-first-available --config <file>
 
 ### Raw Snapshot
 
-`gfg_game_v2_detail_snapshots`
+`gfg_game_detail_snapshots`
 
 保存 Store appdetails raw payload：
 
@@ -179,14 +181,14 @@ gf-game-collector backfill-first-available --config <file>
 默认保留策略：
 
 - 每组 `appid + lang + region` 保留最近 5 次。
-- SQL 草案内提供 `gfg_game_v2_prune_detail_snapshots(appid, lang, region, keep_count)`。
+- SQL 草案内提供 `gfg_game_prune_detail_snapshots(appid, lang, region, keep_count)`。
 - repository 在成功写入新 snapshot 后调用 prune function。
 
 这样主详情表保持轻量，raw payload 可追溯但不会无限增长。
 
 ### 新闻
 
-`gfg_game_v2_news`
+`gfg_game_news`
 
 新闻主线统一使用 Store events，不再把 official news 作为 v2 主线依赖。official news 后续只作为备用研究方向。
 
@@ -220,7 +222,7 @@ https://store.steampowered.com/news/app/{appid}/view/{announcement_gid}
 
 ### 在线人数
 
-`gfg_game_v2_player_counts`
+`gfg_game_player_counts`
 
 保存在线人数历史和上游状态：
 

@@ -6,7 +6,7 @@ SELECT id, appid
 FROM gfg_game;
 
 -- name: UpsertDetails :exec
-INSERT INTO gfg_game_v2_details (
+INSERT INTO gfg_game_details (
     game_id, appid, source, type, name, is_free, website, header_url,
     developers, publishers, release_coming_soon, release_date_text,
     platforms, supported_languages, support_info, content_descriptors, ratings,
@@ -41,7 +41,7 @@ ON CONFLICT (game_id) DO UPDATE SET
     updated_at = now();
 
 -- name: UpsertLocalizedDetails :exec
-INSERT INTO gfg_game_v2_localized_details (
+INSERT INTO gfg_game_localized_details (
     game_id, appid, lang, name, short_description, detailed_description,
     about_the_game, collected_at, updated_at
 ) VALUES (
@@ -59,7 +59,7 @@ ON CONFLICT (game_id, lang) DO UPDATE SET
     updated_at = now();
 
 -- name: UpsertPrice :exec
-INSERT INTO gfg_game_v2_prices (
+INSERT INTO gfg_game_prices (
     game_id, appid, region, is_free, currency, initial_amount, final_amount,
     discount_percent, initial_formatted, final_formatted, collected_at, updated_at
 ) VALUES (
@@ -81,10 +81,10 @@ ON CONFLICT (game_id, region) DO UPDATE SET
     updated_at = now();
 
 -- name: DeleteMediaByGame :exec
-DELETE FROM gfg_game_v2_media WHERE game_id = sqlc.arg(game_id);
+DELETE FROM gfg_game_media WHERE game_id = sqlc.arg(game_id);
 
 -- name: UpsertMedia :exec
-INSERT INTO gfg_game_v2_media (
+INSERT INTO gfg_game_media (
     game_id, appid, media_type, media_key, title, url, thumbnail_url, extra,
     sort_order, collected_at, updated_at
 ) VALUES (
@@ -103,10 +103,10 @@ ON CONFLICT (game_id, media_type, media_key) DO UPDATE SET
     updated_at = now();
 
 -- name: DeleteAssetsByGame :exec
-DELETE FROM gfg_game_v2_assets WHERE game_id = sqlc.arg(game_id);
+DELETE FROM gfg_game_assets WHERE game_id = sqlc.arg(game_id);
 
 -- name: UpsertAsset :exec
-INSERT INTO gfg_game_v2_assets (
+INSERT INTO gfg_game_assets (
     game_id, appid, asset_type, asset_family, source, lang, media_key, title,
     url, thumbnail_url, format, exists, status_code, content_type, content_length,
     extra, sort_order, checked_at, collected_at, updated_at
@@ -137,7 +137,7 @@ ON CONFLICT (game_id, asset_type, lang, media_key) DO UPDATE SET
     updated_at = now();
 
 -- name: UpsertRequirements :exec
-INSERT INTO gfg_game_v2_requirements (
+INSERT INTO gfg_game_requirements (
     game_id, appid, pc, mac, linux, collected_at, updated_at
 ) VALUES (
     sqlc.arg(game_id), sqlc.arg(appid), sqlc.arg(pc)::jsonb,
@@ -152,7 +152,7 @@ ON CONFLICT (game_id) DO UPDATE SET
     updated_at = now();
 
 -- name: InsertDetailSnapshot :exec
-INSERT INTO gfg_game_v2_detail_snapshots (
+INSERT INTO gfg_game_detail_snapshots (
     game_id, appid, lang, region, source, payload_hash, raw_payload, collected_at
 ) VALUES (
     sqlc.arg(game_id), sqlc.arg(appid), sqlc.arg(lang), sqlc.arg(region),
@@ -161,12 +161,12 @@ INSERT INTO gfg_game_v2_detail_snapshots (
 );
 
 -- name: PruneDetailSnapshots :one
-SELECT gfg_game_v2_prune_detail_snapshots(
+SELECT gfg_game_prune_detail_snapshots(
     sqlc.arg(appid), sqlc.arg(lang), sqlc.arg(region), 5
 )::integer;
 
 -- name: UpsertNews :exec
-INSERT INTO gfg_game_v2_news (
+INSERT INTO gfg_game_news (
     game_id, appid, lang, event_gid, announcement_gid, forum_topic_id,
     headline, raw_body, html, plain_text, summary, url, tags, vote_up_count,
     vote_down_count, comment_count, raw_event, published_at, updated_at, collected_at
@@ -197,7 +197,7 @@ ON CONFLICT (appid, lang, event_gid, announcement_gid) DO UPDATE SET
     collected_at = EXCLUDED.collected_at;
 
 -- name: InsertPlayerCount :exec
-INSERT INTO gfg_game_v2_player_counts (
+INSERT INTO gfg_game_player_counts (
     run_id, game_id, appid, count, status, upstream_status_code,
     error_kind, error_message, collected_at
 ) VALUES (
@@ -205,54 +205,3 @@ INSERT INTO gfg_game_v2_player_counts (
     sqlc.arg(status), sqlc.arg(upstream_status_code), sqlc.arg(error_kind),
     sqlc.arg(error_message), sqlc.arg(collected_at)
 );
-
--- name: UpsertCollectRun :exec
-INSERT INTO gfg_game_v2_collect_runs (
-    id, task_type, status, total_count, success_count, failed_count,
-    skipped_count, partial_count, task_summary, duration_millis,
-    error_kind, error_message, started_at, ended_at
-) VALUES (
-    sqlc.arg(id), sqlc.arg(task_type), sqlc.arg(status), sqlc.arg(total_count),
-    sqlc.arg(success_count), sqlc.arg(failed_count), sqlc.arg(skipped_count),
-    sqlc.arg(partial_count), sqlc.arg(task_summary)::jsonb,
-    sqlc.arg(duration_millis), sqlc.arg(error_kind), sqlc.arg(error_message),
-    sqlc.arg(started_at), sqlc.narg(ended_at)
-)
-ON CONFLICT (id) DO UPDATE SET
-    task_type = EXCLUDED.task_type,
-    status = EXCLUDED.status,
-    total_count = EXCLUDED.total_count,
-    success_count = EXCLUDED.success_count,
-    failed_count = EXCLUDED.failed_count,
-    skipped_count = EXCLUDED.skipped_count,
-    partial_count = EXCLUDED.partial_count,
-    task_summary = EXCLUDED.task_summary,
-    duration_millis = EXCLUDED.duration_millis,
-    error_kind = EXCLUDED.error_kind,
-    error_message = EXCLUDED.error_message,
-    started_at = EXCLUDED.started_at,
-    ended_at = EXCLUDED.ended_at;
-
--- name: DeleteTaskResultsByRun :exec
-DELETE FROM gfg_game_v2_collect_task_results WHERE run_id = sqlc.arg(run_id);
-
--- name: InsertTaskResult :exec
-INSERT INTO gfg_game_v2_collect_task_results (
-    run_id, task_type, status, game_id, appid, upstream_status_code,
-    traffic_bucket, retry_count, duration_millis, error_kind, error_message,
-    started_at, ended_at
-) VALUES (
-    sqlc.arg(run_id), sqlc.arg(task_type), sqlc.arg(status), sqlc.arg(game_id),
-    sqlc.arg(appid), sqlc.arg(upstream_status_code), sqlc.arg(traffic_bucket),
-    sqlc.arg(retry_count), sqlc.arg(duration_millis), sqlc.arg(error_kind),
-    sqlc.arg(error_message), sqlc.arg(started_at), sqlc.narg(ended_at)
-);
-
--- name: DeleteTaskResultsOlderThan :execrows
-DELETE FROM gfg_game_v2_collect_task_results WHERE started_at < sqlc.arg(cutoff);
-
--- name: DeleteCollectRunsOlderThan :execrows
-DELETE FROM gfg_game_v2_collect_runs WHERE started_at < sqlc.arg(cutoff);
-
--- name: DeletePlayerCountsOlderThan :execrows
-DELETE FROM gfg_game_v2_player_counts WHERE collected_at < sqlc.arg(cutoff);

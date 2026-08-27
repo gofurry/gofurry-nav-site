@@ -6,6 +6,31 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.2 - 2026-08-28
+
+### Added
+
+- Add PostgreSQL-backed Game/Nav schedules, durable jobs, run attempts, per-target results, collector instances, heartbeats, leases, cancellation, recovery, and Redis realtime progress.
+- Add the Admin Collection Center for schedule control, queue/history, manual Game/Nav fan-out, retry/cancel, audit, and ECharts outcome/coverage/timing views.
+
+### Changed
+
+- Rename active Game V2 physical storage objects to unversioned canonical names while preserving existing data and legacy collection history.
+- Replace process-relative collector scheduling with fixed cron/anchored intervals, explicit `scheduled_for`, `skip`/`catch_up_once` misfire policy, priority lanes, and PostgreSQL `FOR UPDATE SKIP LOCKED` claims.
+- Route scheduled, manual, and Game entity-triggered acquisition through the same durable execution path; Redis now holds realtime progress only.
+- Freeze destructive player-count and Nav observation retention pending P0.2.
+- Retain temporary Game/Nav collection task results for 90 days while preserving durable Job/Run history.
+
+### Removed
+
+- Remove `go-timewheel` from active production modules, old Redis collection command/lease paths, and Game/Nav Backend collection proxy endpoints.
+
+### Fixed
+
+- Preserve stable schedule phase across collector restarts, recover expired worker leases, protect concurrent lanes at the database layer, and keep scoped Nav ping collection from pruning global Redis results.
+- Clarify Admin schedule editing with field guidance, validation, database/browser/UTC clock comparison, timezone-aware previews, and a corrected modal layout.
+- Let Go CI fall back to direct module downloads when the public module proxy has a transient transport failure.
+
 ## v3.0.0-alpha.1 - 2026-08-27
 
 ### Added

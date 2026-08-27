@@ -66,20 +66,22 @@ func (gf *goFurry) InitOnStart() error {
 	}
 	// 初始化 redis
 	cs.InitRedisOnStart()
-	// 初始化时间调度
-	cs.InitTimeWheelOnStart()
 	if err := gf.initPostgres(); err != nil {
 		return err
 	}
 	gf.dependencies = newApplicationDependencies(gf.pool)
 
-	// 初始化定时任务
-	schedule.InitScheduleOnStart(
+	if err := cs.InitSchedulerOnStart(); err != nil {
+		return err
+	}
+	if err := schedule.InitScheduleOnStart(
 		gf.dependencies.navStore,
 		gf.dependencies.navReader,
 		gf.dependencies.home,
 		gf.dependencies.views,
-	)
+	); err != nil {
+		return err
+	}
 	return nil
 }
 
