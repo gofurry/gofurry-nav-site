@@ -92,6 +92,14 @@ func (s *Service) Instances(ctx context.Context) ([]collectionmodels.Instance, c
 }
 
 func (s *Service) Schedules(ctx context.Context) ([]collectionmodels.Schedule, common.Error) {
+	gameClock, err := s.game.AdminGameCollectionClock(ctx)
+	if err != nil {
+		return nil, daoError(err)
+	}
+	navClock, err := s.nav.AdminNavCollectionClock(ctx)
+	if err != nil {
+		return nil, daoError(err)
+	}
 	gameRows, err := s.game.AdminListGameCollectionSchedules(ctx)
 	if err != nil {
 		return nil, daoError(err)
@@ -102,16 +110,20 @@ func (s *Service) Schedules(ctx context.Context) ([]collectionmodels.Schedule, c
 	}
 	rows := make([]collectionmodels.Schedule, 0, len(gameRows)+len(navRows))
 	for _, row := range gameRows {
-		rows = append(rows, scheduleDTO("game", row.ID, row.JobKey, row.Name, row.Enabled, row.ScheduleKind,
+		item := scheduleDTO("game", row.ID, row.JobKey, row.Name, row.Enabled, row.ScheduleKind,
 			row.CronExpression, row.IntervalSeconds, row.AnchorAt, row.Timezone, row.MisfirePolicy,
 			row.MisfireGraceSeconds, row.OverlapPolicy, row.Priority, row.ConcurrencyKey, row.Version,
-			row.LastMaterializedFor, row.NextScheduledFor, row.LastStatus, row.LastSuccessCount, row.LastExpectedCount))
+			row.LastMaterializedFor, row.NextScheduledFor, row.LastStatus, row.LastSuccessCount, row.LastExpectedCount)
+		item.ControlNow = timePointer(gameClock)
+		rows = append(rows, item)
 	}
 	for _, row := range navRows {
-		rows = append(rows, scheduleDTO("nav", row.ID, row.JobKey, row.Name, row.Enabled, row.ScheduleKind,
+		item := scheduleDTO("nav", row.ID, row.JobKey, row.Name, row.Enabled, row.ScheduleKind,
 			row.CronExpression, row.IntervalSeconds, row.AnchorAt, row.Timezone, row.MisfirePolicy,
 			row.MisfireGraceSeconds, row.OverlapPolicy, row.Priority, row.ConcurrencyKey, row.Version,
-			row.LastMaterializedFor, row.NextScheduledFor, row.LastStatus, row.LastSuccessCount, row.LastExpectedCount))
+			row.LastMaterializedFor, row.NextScheduledFor, row.LastStatus, row.LastSuccessCount, row.LastExpectedCount)
+		item.ControlNow = timePointer(navClock)
+		rows = append(rows, item)
 	}
 	return rows, nil
 }

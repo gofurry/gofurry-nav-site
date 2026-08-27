@@ -47,6 +47,7 @@ type Schedule struct {
 	LastSuccessCount    int32      `json:"last_success_count"`
 	LastExpectedCount   int32      `json:"last_expected_count"`
 	LastSuccessCoverage float64    `json:"last_success_coverage"`
+	ControlNow          *time.Time `json:"control_now,omitempty"`
 }
 
 type ScheduleUpdate struct {
