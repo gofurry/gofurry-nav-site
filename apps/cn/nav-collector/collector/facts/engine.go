@@ -81,9 +81,6 @@ func New(pool *pgxpool.Pool, opts Options) *Engine {
 	if opts.RetentionBatch <= 0 {
 		opts.RetentionBatch = 500
 	}
-	if opts.Now == nil {
-		opts.Now = time.Now
-	}
 	return &Engine{pool: pool, opts: opts}
 }
 
@@ -151,12 +148,17 @@ func (engine *Engine) Reconcile(ctx context.Context) error {
 }
 
 func (engine *Engine) Status(ctx context.Context) ([]CheckpointStatus, error) {
-	rows, err := navsqlc.New(engine.pool).ListNavFactCheckpoints(ctx)
+	queries := navsqlc.New(engine.pool)
+	rows, err := queries.ListNavFactCheckpoints(ctx)
+	if err != nil {
+		return nil, err
+	}
+	now, err := engine.now(ctx, queries)
 	if err != nil {
 		return nil, err
 	}
 	result := make([]CheckpointStatus, 0, len(rows))
-	latestClosed := engine.latestClosedDay()
+	latestClosed := engine.latestClosedDay(now)
 	for _, row := range rows {
 		result = append(result, CheckpointStatus{PipelineKey: row.PipelineKey, Projection: row.ProjectionVersion,
 			SourceStartDate: dateText(row.SourceStartDate), ProcessedThrough: dateText(row.ProcessedThrough),
@@ -492,7 +494,11 @@ func (engine *Engine) validateRebuildDay(ctx context.Context, pipeline string, d
 
 func (engine *Engine) finalizable(ctx context.Context, queries *navsqlc.Queries, pipeline string, day time.Time) (bool, string, error) {
 	start, end := utcDate(day), utcDate(day).AddDate(0, 0, 1)
-	if engine.opts.Now().UTC().Before(end.Add(engine.opts.FinalizationGrace)) {
+	now, err := engine.now(ctx, queries)
+	if err != nil {
+		return false, "", err
+	}
+	if now.UTC().Before(end.Add(engine.opts.FinalizationGrace)) {
 		return false, "UTC day is not closed past finalization grace", nil
 	}
 	if pipeline == TargetPipeline {
@@ -535,8 +541,22 @@ func navPipelines(pipeline string) ([]string, error) {
 	}
 }
 
-func (engine *Engine) latestClosedDay() time.Time {
-	return utcDate(engine.opts.Now().UTC().Add(-engine.opts.FinalizationGrace)).AddDate(0, 0, -1)
+func (engine *Engine) now(ctx context.Context, queries *navsqlc.Queries) (time.Time, error) {
+	if engine.opts.Now != nil {
+		return engine.opts.Now().UTC(), nil
+	}
+	clock, err := queries.NavCollectionClock(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if !clock.Valid {
+		return time.Time{}, errors.New("Nav database clock is unavailable")
+	}
+	return clock.Time.UTC(), nil
+}
+
+func (engine *Engine) latestClosedDay(now time.Time) time.Time {
+	return utcDate(now.UTC().Add(-engine.opts.FinalizationGrace)).AddDate(0, 0, -1)
 }
 
 func checkpointLagDays(source, processed pgtype.Date, latestClosed time.Time) *int {

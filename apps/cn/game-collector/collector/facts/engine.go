@@ -81,9 +81,6 @@ func New(pool *pgxpool.Pool, options Options) *Engine {
 	if options.RetentionBatch <= 0 {
 		options.RetentionBatch = 500
 	}
-	if options.Now == nil {
-		options.Now = time.Now
-	}
 	return &Engine{pool: pool, options: options}
 }
 
@@ -152,12 +149,17 @@ func (engine *Engine) Reconcile(ctx context.Context) error {
 }
 
 func (engine *Engine) Status(ctx context.Context) ([]CheckpointStatus, error) {
-	rows, err := gamesqlc.New(engine.pool).ListGameFactCheckpoints(ctx)
+	queries := gamesqlc.New(engine.pool)
+	rows, err := queries.ListGameFactCheckpoints(ctx)
+	if err != nil {
+		return nil, err
+	}
+	now, err := engine.now(ctx, queries)
 	if err != nil {
 		return nil, err
 	}
 	result := make([]CheckpointStatus, 0, len(rows))
-	latestClosed := engine.latestClosedDay()
+	latestClosed := engine.latestClosedDay(now)
 	for _, row := range rows {
 		result = append(result, CheckpointStatus{
 			PipelineKey:      row.PipelineKey,
@@ -442,8 +444,22 @@ func gamePipelines(pipeline string) ([]string, error) {
 	}
 }
 
-func (engine *Engine) latestClosedDay() time.Time {
-	return utcDate(engine.options.Now().UTC().Add(-engine.options.FinalizationGrace)).AddDate(0, 0, -1)
+func (engine *Engine) now(ctx context.Context, queries *gamesqlc.Queries) (time.Time, error) {
+	if engine.options.Now != nil {
+		return engine.options.Now().UTC(), nil
+	}
+	clock, err := queries.GameCollectionClock(ctx)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if !clock.Valid {
+		return time.Time{}, errors.New("Game database clock is unavailable")
+	}
+	return clock.Time.UTC(), nil
+}
+
+func (engine *Engine) latestClosedDay(now time.Time) time.Time {
+	return utcDate(now.UTC().Add(-engine.options.FinalizationGrace)).AddDate(0, 0, -1)
 }
 
 func checkpointLagDays(source, processed pgtype.Date, latestClosed time.Time) *int {
@@ -465,7 +481,11 @@ func checkpointLagDays(source, processed pgtype.Date, latestClosed time.Time) *i
 func (engine *Engine) finalizable(ctx context.Context, queries *gamesqlc.Queries, pipeline string, day time.Time) (bool, string, error) {
 	start := utcDate(day)
 	end := start.AddDate(0, 0, 1)
-	if engine.options.Now().UTC().Before(end.Add(engine.options.FinalizationGrace)) {
+	now, err := engine.now(ctx, queries)
+	if err != nil {
+		return false, "", err
+	}
+	if now.UTC().Before(end.Add(engine.options.FinalizationGrace)) {
 		return false, "UTC day is not closed past finalization grace", nil
 	}
 	jobKey := "game.metadata"
@@ -488,8 +508,13 @@ func (engine *Engine) PrunePlayerRaw(ctx context.Context) (int64, error) {
 	if !engine.options.RetentionEnabled {
 		return 0, nil
 	}
-	return gamesqlc.New(engine.pool).PruneGamePlayerRawBatch(ctx, gamesqlc.PruneGamePlayerRawBatchParams{
-		OlderThan: pgTimestamp(engine.options.Now().UTC().Add(-engine.options.PlayerRawAge)),
+	queries := gamesqlc.New(engine.pool)
+	now, err := engine.now(ctx, queries)
+	if err != nil {
+		return 0, err
+	}
+	return queries.PruneGamePlayerRawBatch(ctx, gamesqlc.PruneGamePlayerRawBatchParams{
+		OlderThan: pgTimestamp(now.UTC().Add(-engine.options.PlayerRawAge)),
 		BatchSize: engine.options.RetentionBatch,
 	})
 }
