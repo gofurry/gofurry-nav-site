@@ -144,10 +144,10 @@ func seedNavReadModel(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now
 	t.Helper()
 	_, err := pool.Exec(ctx, `
 INSERT INTO gfn_site
-    (id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count)
+    (id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,deleted_at,view_count)
 VALUES
-    (1,'站点','Site','简介','Info',$1,$1,'CN','0','0',NULL,false,7),
-    (2,'隐藏','Hidden','隐藏','Hidden',$1,$1,NULL,'0','0',NULL,true,3);
+    (1,'站点','Site','简介','Info',$1,$1,'CN','0','0',NULL,false,NULL,7),
+    (2,'隐藏','Hidden','隐藏','Hidden',$1,$1,NULL,'0','0',NULL,true,$1,3);
 INSERT INTO gfn_collector_domain (id,name,proxy,prefix,tls,site_id,deleted) VALUES
     (1,'example.test','0','www.','1',1,false),
     (2,'deleted.example.test','0',NULL,'1',1,true),
