@@ -10,4 +10,5 @@
 - Destructive migrations require a final production-module reference audit, recorded row counts, verified backup, fresh and baseline-upgrade tests, no `CASCADE`, no masking `IF EXISTS`, and no fake reversible `Down`.
 - Active Game storage objects use unversioned physical names. Long-lived compatibility views for retired `gfg_game_v2_*` names are not permitted.
 - `gfg_collection_*` and `gfn_collection_*` are the durable collector control-plane contracts. Scheduled slots are idempotent, active dedupe is enforced, and a concurrency lane has at most one running Job.
-- Destructive pruning of `gfg_game_player_counts` and `gfn_collector_observation` is frozen until an accepted P0.2 retention design supersedes this contract.
+- Historical Fact pipelines use one PostgreSQL checkpoint row per pipeline and `SELECT ... FOR UPDATE` as the ordered singleton. The checkpoint advances in the same transaction as projection and validation; rebuild never moves it backward.
+- Destructive raw retention is disabled by default and runs only in a separate batched transaction after checkpoint commit. Game Player Raw is gated by `game.player_facts` plus configured age. Nav Observation Raw is gated by `nav.target_facts` and preserves `keep_count` independently per `(site_id,target,protocol)`. Missing checkpoints always delete zero rows. Historical Facts have no automatic retention.

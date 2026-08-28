@@ -8,5 +8,6 @@ Accepted Architecture Decision Records define durable choices that affect more t
 - [0004: Standalone availability observer](0004-standalone-availability-observer.md)
 - [0005: Normalize the Game release and language domain](0005-game-domain-normalization.md)
 - [0006: Use PostgreSQL as the collector control plane](0006-collector-control-plane.md)
+- [0007: Build historical facts on eligibility, quality, and checkpoints](0007-historical-fact-foundation.md)
 
 New decisions should be short, use the same section structure, and supersede rather than rewrite an accepted record when the decision changes.
