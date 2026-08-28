@@ -6,8 +6,6 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
-## v3.0.0-alpha.3 - 2026-08-28
-
 ### Added
 
 - Add effective-dated Game/AppID, Nav target, and Primary Target periods; UTC hourly/daily Game Player facts; historical Game/Price facts; Nav protocol/target/Site facts; and ordered fact checkpoints.
@@ -16,7 +14,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Changed
 
-- Allocate `gfg_game.id` from a PostgreSQL sequence, add the four-state current price contract, enforce one Player Raw row per durable Run/Game, preserve release history across current Game deletion, and record `gfn_site.deleted_at`.
+- Allocate `gfg_game.id` from a PostgreSQL sequence seeded above every durable current, Raw, ledger, tracking, and Fact Game-ID source; add the four-state current price contract, enforce one Player Raw row per durable Run/Game, preserve release history across current Game deletion, and record `gfn_site.deleted_at`.
 - Make Game create/AppID-change/delete, Nav target identity mutations, Site deletion, and Primary replacement update historical eligibility in the same business transaction.
 - Allow Nav Site Daily `finalized_at` to remain null only for the mutable current-day Admin marker; closed UTC days are finalized by the Site pipeline.
 
