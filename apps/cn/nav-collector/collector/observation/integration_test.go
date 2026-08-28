@@ -198,7 +198,7 @@ VALUES (99100,10,'facts.example','http','failure',$1,20,'timeout','{}',1,99100,'
        (99103,10,'other.example','http','success',$1::timestamptz + interval '1 minute',10,NULL,'{"status_code":202}',1,NULL,NULL,NULL);
 INSERT INTO gfn_collection_task_results (run_id,protocol,site_id,target,status,observation_id,duration_ms,error_kind,started_at,ended_at)
 VALUES ('nav-facts-run','http',10,'facts.example','failed',99100,20,'upstream',$1,$1);
-`, pgx.QueryExecModeSimpleProtocol, day.Add(time.Hour), `{"status_code":200,"response_time_ms":10,"body":"must-not-persist","tls_version":"TLS1.3","cert_verified":true}`); err != nil {
+`, pgx.QueryExecModeSimpleProtocol, day.Add(time.Hour), `{"status_code":200,"response_time_ms":10,"body":"must-not-persist","tls_version":"TLS1.3","cert_verified":true,"cert_not_before":"","cert_not_after":""}`); err != nil {
 		t.Fatal(err)
 	}
 
@@ -209,6 +209,31 @@ VALUES ('nav-facts-run','http',10,'facts.example','failed',99100,20,'upstream',$
 	targetResult, err := retentionEngine.RunNext(ctx, facts.TargetPipeline, false)
 	if err != nil || !targetResult.Processed {
 		t.Fatalf("target facts result=%+v err=%v", targetResult, err)
+	}
+	if _, err := pool.Exec(ctx, `
+UPDATE gfn_site_target_protocol_daily
+SET known_state = jsonb_set(
+    known_state,
+    '{tls}',
+    '{"cert_not_before":"","cert_not_after":""}'::jsonb,
+    true
+)
+WHERE target_tracking_period_id=$1 AND protocol='http' AND fact_date=$2`, periodID, day); err != nil {
+		t.Fatalf("seed legacy empty TLS timestamps: %v", err)
+	}
+	var projectedRows int64
+	if err := pool.QueryRow(ctx, `SELECT gfn_project_target_fact_day($1::date)`, day).Scan(&projectedRows); err != nil {
+		t.Fatalf("project target facts with legacy empty TLS timestamps: %v", err)
+	}
+	if projectedRows == 0 {
+		t.Fatal("project target facts with legacy empty TLS timestamps returned no rows")
+	}
+	var emptyTLSIsNull bool
+	if err := pool.QueryRow(ctx, `
+SELECT tls_cert_not_before IS NULL AND tls_cert_not_after IS NULL
+FROM gfn_site_target_daily
+WHERE target_tracking_period_id=$1 AND fact_date=$2`, periodID, day).Scan(&emptyTLSIsNull); err != nil || !emptyTLSIsNull {
+		t.Fatalf("legacy empty TLS timestamps were not projected as unknown: null=%v err=%v", emptyTLSIsNull, err)
 	}
 	siteResult, err := retentionEngine.RunNext(ctx, facts.SitePipeline, false)
 	if err != nil || !siteResult.Processed {

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
+	"time"
 )
 
 // projectKnownState is the code-level whitelist boundary between raw probe
@@ -28,6 +30,7 @@ func projectKnownState(protocol string, payload []byte) ([]byte, error) {
 			"cert_issuer": "cert_issuer", "fingerprint_sha256": "fingerprint_sha256",
 			"spki_sha256": "spki_sha256", "cert_dns_names": "cert_dns_names",
 		})
+		dropInvalidRFC3339Fields(tls, "cert_not_before", "cert_not_after")
 		if len(tls) > 0 {
 			projected["tls"] = tls
 		}
@@ -70,6 +73,19 @@ func projectKnownState(protocol string, payload []byte) ([]byte, error) {
 		return nil, fmt.Errorf("unsupported known-state protocol %q", protocol)
 	}
 	return json.Marshal(projected)
+}
+
+func dropInvalidRFC3339Fields(values map[string]any, keys ...string) {
+	for _, key := range keys {
+		value, ok := values[key].(string)
+		if !ok {
+			delete(values, key)
+			continue
+		}
+		if _, err := time.Parse(time.RFC3339, strings.TrimSpace(value)); err != nil {
+			delete(values, key)
+		}
+	}
 }
 
 func pick(source map[string]any, keys ...string) map[string]any {

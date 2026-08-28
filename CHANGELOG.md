@@ -24,6 +24,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 - Separate scheduled acquisition quality from Fact values, retain unknown as nullable, exclude manual Player samples, keep manual Nav success out of scheduled quality, and prevent failed observations from clearing last-known structured state.
 - Replace the P0.1 raw-pruning freeze with disabled-by-default, post-checkpoint Game age retention and target-aware Nav keep-count retention.
 - Keep the SVG inside Game home/search review buttons on a fixed pixel box while cards reveal the controls, preventing Chromium hover resampling jitter.
+- Treat empty or malformed historical Nav TLS certificate timestamps as unknown so target Fact backfill cannot abort with `SQLSTATE 22007`.
 
 ## v3.0.0-alpha.2 - 2026-08-28
 

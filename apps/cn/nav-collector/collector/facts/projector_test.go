@@ -6,7 +6,7 @@ import (
 )
 
 func TestProjectKnownStateWhitelistsHTTP(t *testing.T) {
-	payload := []byte(`{"status_code":200,"response_time_ms":12,"headers":{"secret":"x"},"body":"private","tls_version":"TLS1.3","cert_verified":true}`)
+	payload := []byte(`{"status_code":200,"response_time_ms":12,"headers":{"secret":"x"},"body":"private","tls_version":"TLS1.3","cert_verified":true,"cert_not_before":"","cert_not_after":"2026-09-01T00:00:00Z"}`)
 	projected, err := projectKnownState("http", payload)
 	if err != nil {
 		t.Fatal(err)
@@ -24,8 +24,29 @@ func TestProjectKnownStateWhitelistsHTTP(t *testing.T) {
 	if state["status_code"] != float64(200) {
 		t.Fatalf("status_code = %v", state["status_code"])
 	}
-	if _, ok := state["tls"].(map[string]any); !ok {
+	tls, ok := state["tls"].(map[string]any)
+	if !ok {
 		t.Fatalf("tls projection = %#v", state["tls"])
+	}
+	if _, ok := tls["cert_not_before"]; ok {
+		t.Fatalf("empty cert_not_before escaped normalization: %#v", tls)
+	}
+	if tls["cert_not_after"] != "2026-09-01T00:00:00Z" {
+		t.Fatalf("valid cert_not_after was not preserved: %#v", tls)
+	}
+}
+
+func TestProjectKnownStateDropsMalformedHTTPTimestamps(t *testing.T) {
+	projected, err := projectKnownState("http", []byte(`{"cert_not_before":"not-a-time","cert_not_after":null}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var state map[string]any
+	if err := json.Unmarshal(projected, &state); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := state["tls"]; ok {
+		t.Fatalf("invalid-only TLS state should be omitted: %#v", state)
 	}
 }
 
