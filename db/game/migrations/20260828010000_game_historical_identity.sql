@@ -3,11 +3,40 @@
 
 CREATE SEQUENCE public.gfg_game_id_seq AS bigint;
 
+-- The current entity is not the historical high-water mark: a hard-deleted
+-- Game can still be named by Raw, acquisition ledger, release history, or
+-- another durable production table. Seed from every pre-P0.2 Game-ID owner.
+WITH historical_game_ids(game_id) AS (
+    SELECT id FROM public.gfg_game
+    UNION ALL SELECT scope_id FROM public.gfg_collection_jobs
+        WHERE scope_type = 'game' AND scope_id IS NOT NULL
+    UNION ALL SELECT game_id FROM public.gfg_collection_task_results
+    UNION ALL SELECT game_id FROM public.gfg_game_assets
+    UNION ALL SELECT game_id FROM public.gfg_game_comment
+    UNION ALL SELECT game_id FROM public.gfg_game_detail_snapshots
+    UNION ALL SELECT game_id FROM public.gfg_game_details
+    UNION ALL SELECT game_id FROM public.gfg_game_first_available
+    UNION ALL SELECT game_id FROM public.gfg_game_languages
+    UNION ALL SELECT game_id FROM public.gfg_game_localized_details
+    UNION ALL SELECT game_id FROM public.gfg_game_media
+    UNION ALL SELECT game_id FROM public.gfg_game_news
+    UNION ALL SELECT game_id FROM public.gfg_game_player_counts
+    UNION ALL SELECT game_id FROM public.gfg_game_prices
+    UNION ALL SELECT source_game_id FROM public.gfg_game_recommendations
+    UNION ALL SELECT target_game_id FROM public.gfg_game_recommendations
+    UNION ALL SELECT game_id FROM public.gfg_game_release_history
+    UNION ALL SELECT game_id FROM public.gfg_game_release_state
+    UNION ALL SELECT game_id FROM public.gfg_game_requirements
+    UNION ALL SELECT game_id FROM public.gfg_tag_map
+), historical_bound AS (
+    SELECT max(game_id) AS max_game_id FROM historical_game_ids
+)
 SELECT setval(
     'public.gfg_game_id_seq',
-    COALESCE((SELECT max(id) FROM public.gfg_game), 1),
-    EXISTS (SELECT 1 FROM public.gfg_game)
-);
+    GREATEST(COALESCE(max_game_id, 1), 1),
+    max_game_id IS NOT NULL
+)
+FROM historical_bound;
 
 ALTER SEQUENCE public.gfg_game_id_seq OWNED BY public.gfg_game.id;
 ALTER TABLE public.gfg_game
