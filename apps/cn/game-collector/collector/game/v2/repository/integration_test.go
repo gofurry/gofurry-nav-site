@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofurry/gofurry-game-collector/collector/facts"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/backfill"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
 	gamesqlc "github.com/gofurry/gofurry-game-collector/internal/db/game/sqlc"
@@ -241,6 +242,92 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 		t.Fatalf("unexpected backfill summary: %+v err=%v", actualSummary, err)
 	}
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_first_available where game_id=$1 and source='legacy_manual' and inferred=false and normalizer_version='gofurry-legacy-release/v1'`, 1, int64(91002))
+	testHistoricalPlayerFacts(t, ctx, pool)
+}
+
+func testHistoricalPlayerFacts(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
+	t.Helper()
+	day := time.Date(2026, 5, 10, 0, 0, 0, 0, time.UTC)
+	if _, err := pool.Exec(ctx, `
+INSERT INTO gfg_game_tracking_periods (game_id,appid,tracked_from,tracked_until,tracking_basis,opened_reason,closed_reason)
+VALUES (99001,99002,$1,$2,'explicit','integration','integration');
+INSERT INTO gfg_collection_schedules (job_key,name,enabled,schedule_kind,interval_seconds,anchor_at,timezone,misfire_policy,misfire_grace_seconds,priority,concurrency_key,next_scheduled_for)
+VALUES ('game.players','facts fixture',true,'interval',3600,$1,'UTC','skip',0,1,'steam',$2)
+ON CONFLICT (job_key) DO UPDATE SET enabled=true,next_scheduled_for=EXCLUDED.next_scheduled_for;
+INSERT INTO gfg_collector_instances (instance_id,collector_id,hostname,version,commit_sha,capabilities,started_at,last_heartbeat_at)
+VALUES ('facts-fixture','facts','localhost','test','',ARRAY['game.players'],$1,$2)
+ON CONFLICT (instance_id) DO NOTHING;
+UPDATE gfg_fact_rollup_checkpoints SET source_start_date=$1::date,processed_through=NULL,quality_cutover_at=$1 WHERE pipeline_key='game.player_facts';
+`, pgx.QueryExecModeSimpleProtocol, day, day.Add(25*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	counts := []int64{1, 100, 2}
+	for index := 0; index < 4; index++ {
+		slot := day.Add(time.Duration(index) * time.Hour)
+		jobID := int64(99010 + index)
+		runID := fmt.Sprintf("facts-player-%d", index)
+		status := "success"
+		if index == 3 {
+			status = "failed"
+		}
+		if _, err := pool.Exec(ctx, `
+INSERT INTO gfg_collection_jobs (id,schedule_id,schedule_version,job_key,trigger,scope_type,tasks,priority,concurrency_key,scheduled_for,status,requested_by,created_at,updated_at,completed_at)
+SELECT $1,id,version,'game.players','scheduled','all',ARRAY['players'],1,'steam',$2,'success','fixture',$2,$2,$2 FROM gfg_collection_schedules WHERE job_key='game.players';
+INSERT INTO gfg_collection_runs (id,job_id,attempt_no,collector_instance_id,status,scheduled_for,started_at,ended_at,expected_count,attempted_count,success_count,partial_count,failure_count,skipped_count)
+VALUES ($3,$1,1,'facts-fixture',CASE WHEN $4='success' THEN 'success' ELSE 'failed' END,$2,$2,$2,1,1,CASE WHEN $4='success' THEN 1 ELSE 0 END,0,CASE WHEN $4='failed' THEN 1 ELSE 0 END,0);
+INSERT INTO gfg_collection_task_results (run_id,task_type,game_id,appid,status,error_kind,started_at,ended_at)
+VALUES ($3,'players',99001,99002,$4,CASE WHEN $4='failed' THEN 'upstream' ELSE '' END,$2,$2);
+`, pgx.QueryExecModeSimpleProtocol, jobID, slot, runID, status); err != nil {
+			t.Fatal(err)
+		}
+		if index < len(counts) {
+			if _, err := pool.Exec(ctx, `INSERT INTO gfg_game_player_counts (game_id,appid,count,status,collected_at,run_id) VALUES (99001,99002,$1,'success',$2,$3)`, counts[index], slot.Add(time.Minute), runID); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	retentionEngine := facts.New(pool, facts.Options{Now: func() time.Time { return day.Add(26 * time.Hour) }, FinalizationGrace: time.Minute, RetentionEnabled: true, PlayerRawAge: time.Hour, RetentionBatch: 100})
+	if deleted, err := retentionEngine.PrunePlayerRaw(ctx); err != nil || deleted != 0 {
+		t.Fatalf("retention without checkpoint deleted=%d err=%v", deleted, err)
+	}
+	engine := facts.New(pool, facts.Options{Now: func() time.Time { return day.Add(26 * time.Hour) }, FinalizationGrace: time.Minute, RetentionEnabled: false})
+	result, err := engine.RunNext(ctx, facts.PlayerPipeline, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Processed {
+		t.Fatalf("player facts not processed: %+v", result)
+	}
+	var median float64
+	var expected, attempted, succeeded, failed int
+	if err := pool.QueryRow(ctx, `SELECT median_players,expected_samples,attempted_samples,successful_samples,failed_samples FROM gfg_game_player_daily WHERE game_id=99001 AND fact_date=$1`, day).Scan(&median, &expected, &attempted, &succeeded, &failed); err != nil {
+		t.Fatal(err)
+	}
+	if median != 2 || expected != 4 || attempted != 4 || succeeded != 3 || failed != 1 {
+		t.Fatalf("unexpected daily fact median=%v expected=%d attempted=%d success=%d failure=%d", median, expected, attempted, succeeded, failed)
+	}
+	if _, err := engine.Rebuild(ctx, facts.PlayerPipeline, day, day, true); err != nil {
+		t.Fatalf("player rebuild dry-run: %v", err)
+	}
+	for attempt := 0; attempt < 2; attempt++ {
+		if _, err := engine.Rebuild(ctx, facts.PlayerPipeline, day, day, false); err != nil {
+			t.Fatalf("idempotent player rebuild attempt %d: %v", attempt+1, err)
+		}
+	}
+	if deleted, err := engine.PrunePlayerRaw(ctx); err != nil || deleted != 0 {
+		t.Fatalf("retention disabled deleted=%d err=%v", deleted, err)
+	}
+	if _, err := pool.Exec(ctx, `INSERT INTO gfg_game_player_counts (game_id,appid,count,status,collected_at,run_id) VALUES (99001,99002,9,'success',$1,'facts-player-0')`, day); err == nil {
+		t.Fatal("duplicate (run_id,game_id) raw guard did not reject duplicate")
+	}
+	if deleted, err := retentionEngine.PrunePlayerRaw(ctx); err != nil || deleted < 3 {
+		t.Fatalf("checkpoint-safe player retention deleted=%d err=%v", deleted, err)
+	}
+	if _, err := retentionEngine.Rebuild(ctx, facts.PlayerPipeline, day, day, false); err == nil {
+		t.Fatal("rebuild pretended completeness after successful raw source was pruned")
+	}
 }
 
 func detailsFixture(now time.Time, snapshots []domain.RawSnapshot) domain.DetailsCollection {

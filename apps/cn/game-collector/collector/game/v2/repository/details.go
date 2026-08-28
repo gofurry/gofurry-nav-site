@@ -97,6 +97,11 @@ func (r *DetailsRepository) SaveDetails(ctx context.Context, data domain.Details
 			return err
 		}
 	}
+	if err := queries.RefreshCollectedGameDaily(ctx, gamesqlc.RefreshCollectedGameDailyParams{
+		GameID: data.Details.GameID, MaterializationSource: "observed",
+	}); err != nil {
+		return err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
@@ -166,11 +171,31 @@ func upsertLocalizedDetails(ctx context.Context, queries *gamesqlc.Queries, item
 }
 
 func upsertPrice(ctx context.Context, queries *gamesqlc.Queries, item domain.GamePrice) error {
+	state := item.PriceState
+	if state == "" {
+		switch {
+		case item.IsFree:
+			state = domain.PriceStateFree
+		case item.Currency != "":
+			state = domain.PriceStatePriced
+		default:
+			state = domain.PriceStateUnknown
+		}
+	}
+	if err := queries.UpsertPriceDailyObserved(ctx, gamesqlc.UpsertPriceDailyObservedParams{
+		GameID: item.GameID, Appid: int64(item.AppID), Region: string(item.Region),
+		PriceState: string(state), Currency: item.Currency,
+		InitialAmount: item.Initial, FinalAmount: item.Final,
+		DiscountPercent: int32(item.DiscountPercent), ObservedAt: timestamptz(item.CollectedAt),
+	}); err != nil {
+		return err
+	}
 	return queries.UpsertPrice(ctx, gamesqlc.UpsertPriceParams{
 		GameID:           item.GameID,
 		Appid:            int64(item.AppID),
 		Region:           string(item.Region),
 		IsFree:           item.IsFree,
+		PriceState:       string(state),
 		Currency:         item.Currency,
 		InitialAmount:    item.Initial,
 		FinalAmount:      item.Final,
