@@ -66,6 +66,10 @@
                 @click.stop="goGameDetail(item.id)"
               />
 
+              <div class="game-card__release-badge">
+                {{ releaseText(item) }}
+              </div>
+
               <button
                 class="review-float-button"
                 type="button"
@@ -115,8 +119,10 @@ import { useI18n } from 'vue-i18n'
 import RatingStar from '@/components/common/RatingStar.vue'
 import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import GameReviewDialog from '@/components/game/common/GameReviewDialog.vue'
+import type { GameV2FirstAvailable, GameV2ReleaseState } from '@/types/game'
+import { resolveGameReleaseDisplay } from '@/utils/gameDomain'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 const localePath = useLocalePath()
 
@@ -127,6 +133,8 @@ interface GameItem {
   desc: string
   score: number
   scoreCount: number
+  release: GameV2ReleaseState | null
+  firstAvailable: GameV2FirstAvailable | null
 }
 
 interface GameGroup {
@@ -158,6 +166,13 @@ const visibleGames = computed(() => {
 
 const totalPages = computed(() => Math.max(1, Math.ceil(props.group.games.length / PAGE_SIZE)))
 const pageTransitionName = computed(() => pageDirection.value > 0 ? 'game-page-next' : 'game-page-prev')
+const domainLocale = computed<'zh' | 'en'>(() => locale.value.startsWith('en') ? 'en' : 'zh')
+
+function releaseText(item: GameItem) {
+  const display = resolveGameReleaseDisplay(item.release, item.firstAvailable, domainLocale.value)
+  const label = display.kind === 'planned' ? t('game.detail.plannedRelease') : t('game.detail.releaseDate')
+  return `${label} · ${display.value}`
+}
 
 watch([() => props.group.title, () => props.group.games.length], () => {
   currentPage.value = Math.min(currentPage.value, totalPages.value - 1)

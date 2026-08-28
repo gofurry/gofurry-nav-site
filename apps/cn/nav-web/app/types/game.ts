@@ -16,6 +16,8 @@ export interface BaseGameInfoRecord {
     info: string
     info_en: string
     header: string
+    release: GameV2ReleaseState | null
+    first_available: GameV2FirstAvailable | null
 }
 
 export interface GamePanelRecord {
@@ -396,6 +398,7 @@ export interface GameV2ListItem {
     header_url: string
     capsule_url: string
     release_date: string
+    release: GameV2ReleaseState | null
     first_available: GameV2FirstAvailable | null
     developers: string[]
     publishers: string[]

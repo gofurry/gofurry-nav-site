@@ -39,7 +39,14 @@ import { useI18n } from 'vue-i18n'
 import GameInfoGroup from '@/components/game/main/content/GameInfoGroup.vue'
 import GameStatsPanels from '@/components/game/main/content/GameStatsPanels.vue'
 import GameUpdateNews from '@/components/game/main/content/GameUpdateNews.vue'
-import type { BaseGameInfoRecord, GameGroupRecord, GamePanelRecord, LatestNewsRecord } from '~/types/game'
+import type {
+  BaseGameInfoRecord,
+  GameGroupRecord,
+  GamePanelRecord,
+  GameV2FirstAvailable,
+  GameV2ReleaseState,
+  LatestNewsRecord,
+} from '~/types/game'
 
 interface GameItem {
   id: string
@@ -48,6 +55,8 @@ interface GameItem {
   desc: string
   score: number
   scoreCount: number
+  release: GameV2ReleaseState | null
+  firstAvailable: GameV2FirstAvailable | null
 }
 
 interface GameGroupViewModel {
@@ -73,6 +82,8 @@ function mapGames(list: BaseGameInfoRecord[], currentLang: string): GameItem[] {
     desc: currentLang === 'en' ? game.info_en : game.info,
     score: game.avg_score,
     scoreCount: game.comment_count,
+    release: game.release,
+    firstAvailable: game.first_available,
   }))
 }
 

@@ -1089,6 +1089,7 @@ func buildListItem(aggregate v2models.GameV2Aggregate, lang string, region strin
 		HeaderURL:      detail.HeaderURL,
 		CapsuleURL:     detail.Media.CapsuleURL,
 		ReleaseDate:    detail.Release.Date,
+		Release:        aggregate.ReleaseState,
 		FirstAvailable: detail.FirstAvailable,
 		Developers:     detail.Developers,
 		Publishers:     detail.Publishers,

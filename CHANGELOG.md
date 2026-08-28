@@ -17,6 +17,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 - Allocate `gfg_game.id` from a PostgreSQL sequence seeded above every durable current, Raw, ledger, tracking, and Fact Game-ID source; add the four-state current price contract, enforce one Player Raw row per durable Run/Game, preserve release history across current Game deletion, and record `gfn_site.deleted_at`.
 - Make Game create/AppID-change/delete, Nav target identity mutations, Site deletion, and Primary replacement update historical eligibility in the same business transaction.
 - Allow Nav Site Daily `finalized_at` to remain null only for the mutable current-day Admin marker; closed UTC days are finalized by the Site pipeline.
+- Show canonical release and planned-release dates on Game homepage cards using the same hover presentation as Game search results.
 
 ### Fixed
 
