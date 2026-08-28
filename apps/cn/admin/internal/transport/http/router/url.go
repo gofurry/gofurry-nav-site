@@ -75,6 +75,7 @@ func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Get("/collector-domains/:id", api.GetCollectorDomain)
 	root.Put("/collector-domains/:id", api.UpdateCollectorDomain)
 	root.Delete("/collector-domains/:id", api.DeleteCollectorDomain)
+	root.Post("/collector-domains/:id/primary", api.SetPrimaryCollectorDomain)
 
 	root.Get("/sites", api.ListSites)
 	root.Post("/sites", api.CreateSite)

@@ -88,6 +88,10 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Get("/nav/sites/:id", navAPI.GetSite)
 	protected.Put("/nav/sites/:id", navAPI.UpdateSite)
 	protected.Delete("/nav/sites/:id", navAPI.DeleteSite)
+	protected.Post("/nav/collector-domains", navAPI.CreateCollectorDomain)
+	protected.Put("/nav/collector-domains/:id", navAPI.UpdateCollectorDomain)
+	protected.Delete("/nav/collector-domains/:id", navAPI.DeleteCollectorDomain)
+	protected.Post("/nav/collector-domains/:id/primary", navAPI.SetPrimaryCollectorDomain)
 	protected.Post("/game/games", gameAPI.CreateGame)
 	protected.Get("/game/games/:id", gameAPI.GetGame)
 	protected.Put("/game/games/:id", gameAPI.UpdateGame)
@@ -113,10 +117,43 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	if got := queryBool(t, ctx, navPool, `SELECT deleted FROM gfn_site WHERE id=$1`, siteID); !got {
 		t.Fatal("Nav delete did not preserve soft-delete behavior")
 	}
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site WHERE id=$1 AND deleted_at IS NOT NULL`, siteID); count != 1 {
+		t.Fatal("Nav soft delete did not record deleted_at")
+	}
+
+	trackedSite := requestJSON(t, app, http.MethodPost, "/nav/sites", `{"name":"Tracked","name_en":"Tracked","info":"x","info_en":"x","country":"CN","nsfw":"0","welfare":"0"}`, cookie, http.StatusOK)
+	trackedSiteID := responseID(t, trackedSite)
+	rootDomain := requestJSON(t, app, http.MethodPost, "/nav/collector-domains", fmt.Sprintf(`{"site_id":%d,"name":"example.test","proxy":"0","prefix":null,"tls":"1"}`, trackedSiteID), cookie, http.StatusOK)
+	rootDomainID := responseID(t, rootDomain)
+	wwwDomain := requestJSON(t, app, http.MethodPost, "/nav/collector-domains", fmt.Sprintf(`{"site_id":%d,"name":"example.test","proxy":"0","prefix":"www.","tls":"1"}`, trackedSiteID), cookie, http.StatusOK)
+	wwwDomainID := responseID(t, wwwDomain)
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_target_tracking_periods WHERE site_id=$1 AND tracked_until IS NULL`, trackedSiteID); count != 2 {
+		t.Fatalf("active target period count=%d", count)
+	}
+	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/nav/collector-domains/%d", rootDomainID), fmt.Sprintf(`{"site_id":%d,"name":"example.test","proxy":"1","prefix":null,"tls":"0"}`, trackedSiteID), cookie, http.StatusOK)
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_target_tracking_periods WHERE collector_domain_id=$1`, rootDomainID); count != 1 {
+		t.Fatalf("proxy/TLS-only update changed Target identity, period count=%d", count)
+	}
+	requestJSON(t, app, http.MethodPost, fmt.Sprintf("/nav/collector-domains/%d/primary", wwwDomainID), "", cookie, http.StatusOK)
+	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/nav/collector-domains/%d", wwwDomainID), fmt.Sprintf(`{"site_id":%d,"name":"example.test","proxy":"1","prefix":"api.","tls":"0"}`, trackedSiteID), cookie, http.StatusOK)
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_target_tracking_periods WHERE collector_domain_id=$1`, wwwDomainID); count != 2 {
+		t.Fatalf("identity change period count=%d", count)
+	}
+	requestJSON(t, app, http.MethodDelete, fmt.Sprintf("/nav/collector-domains/%d", wwwDomainID), "", cookie, http.StatusOK)
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site_primary_target_periods p JOIN gfn_target_tracking_periods t ON t.id=p.target_tracking_period_id WHERE p.site_id=$1 AND p.effective_until IS NULL AND t.collector_domain_id=$2`, trackedSiteID, rootDomainID); count != 1 {
+		t.Fatal("deleting Primary Target did not select deterministic replacement")
+	}
+	requestJSON(t, app, http.MethodDelete, fmt.Sprintf("/nav/sites/%d", trackedSiteID), "", cookie, http.StatusOK)
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_target_tracking_periods WHERE site_id=$1 AND tracked_until IS NULL`, trackedSiteID); count != 0 {
+		t.Fatal("deleting Site left active target periods")
+	}
 
 	gamePayload := `{"name":"Game","name_en":"Game EN","info":"Info","info_en":"Info EN","resources":[],"groups":[],"developers":[],"publishers":[],"appid":424242,"header":"","links":[],"weight":5,"primary_tag":0,"secondary_tag":0}`
 	game := requestJSON(t, app, http.MethodPost, "/game/games", gamePayload, cookie, http.StatusOK)
 	gameID := responseID(t, game)
+	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_tracking_periods WHERE game_id=$1 AND tracked_until IS NULL`, gameID); count != 1 {
+		t.Fatal("Game create did not open tracking period")
+	}
 	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_collection_jobs WHERE scope_id=$1 AND trigger='entity_created' AND tasks=ARRAY['details','news']::text[]`, gameID); count != 1 {
 		t.Fatalf("game creation durable job count=%d", count)
 	}
@@ -169,8 +206,11 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
   (SELECT COUNT(*) FROM gfg_game_release_state WHERE game_id=$1) +
   (SELECT COUNT(*) FROM gfg_game_release_history WHERE game_id=$1) +
   (SELECT COUNT(*) FROM gfg_game_first_available WHERE game_id=$1) +
-  (SELECT COUNT(*) FROM gfg_game_languages WHERE game_id=$1)`, gameID); count != 0 {
-		t.Fatalf("changed AppID left %d Steam-derived rows", count)
+	  (SELECT COUNT(*) FROM gfg_game_languages WHERE game_id=$1)`, gameID); count != 1 {
+		t.Fatalf("changed AppID current reset/history preservation count=%d", count)
+	}
+	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_tracking_periods WHERE game_id=$1`, gameID); count != 2 {
+		t.Fatalf("AppID change tracking period count=%d", count)
 	}
 	requestJSON(t, app, http.MethodGet, fmt.Sprintf("/game/games/%d", gameID), "", cookie, http.StatusOK)
 
@@ -183,6 +223,17 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	requestJSON(t, app, http.MethodDelete, fmt.Sprintf("/game/games/%d", gameID), "", cookie, http.StatusOK)
 	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game WHERE id=$1`, gameID); count != 0 {
 		t.Fatalf("Game hard delete left %d rows", count)
+	}
+	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_release_history WHERE game_id=$1`, gameID); count != 1 {
+		t.Fatalf("Game delete removed historical release rows, count=%d", count)
+	}
+	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_tracking_periods WHERE game_id=$1 AND tracked_until IS NULL`, gameID); count != 0 {
+		t.Fatal("Game delete left an active tracking period")
+	}
+	secondGamePayload := `{"name":"Game 2","name_en":"Game 2","info":"Info","info_en":"Info","resources":[],"groups":[],"developers":[],"publishers":[],"appid":424244,"header":"","links":[],"weight":0,"primary_tag":0,"secondary_tag":0}`
+	secondGameID := responseID(t, requestJSON(t, app, http.MethodPost, "/game/games", secondGamePayload, cookie, http.StatusOK))
+	if secondGameID <= gameID {
+		t.Fatalf("Game sequence reused or regressed id: first=%d second=%d", gameID, secondGameID)
 	}
 	if count := queryInt64(t, ctx, adminPool, `SELECT COUNT(*) FROM gfa_admin_audit_log`); count < 10 {
 		t.Fatalf("expected auth and CRUD audit entries, got %d", count)

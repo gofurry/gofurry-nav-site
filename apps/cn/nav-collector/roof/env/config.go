@@ -84,6 +84,43 @@ type serverConfig struct {
 	Log       LogConfig       `yaml:"log"`
 	Health    health.Config   `yaml:"health"`
 	Collector CollectorConfig `yaml:"collector"`
+	Facts     FactsConfig     `yaml:"facts"`
+}
+
+type FactsConfig struct {
+	ReconcileIntervalSeconds int  `yaml:"reconcile_interval_seconds"`
+	FinalizationGraceMinutes int  `yaml:"finalization_grace_minutes"`
+	RetentionEnabled         bool `yaml:"retention_enabled"`
+	ObservationKeepCount     int  `yaml:"observation_keep_count"`
+	RetentionBatchSize       int  `yaml:"retention_batch_size"`
+}
+
+func (cfg FactsConfig) ReconcileInterval() time.Duration {
+	if cfg.ReconcileIntervalSeconds <= 0 {
+		return 10 * time.Minute
+	}
+	return time.Duration(cfg.ReconcileIntervalSeconds) * time.Second
+}
+
+func (cfg FactsConfig) FinalizationGrace() time.Duration {
+	if cfg.FinalizationGraceMinutes <= 0 {
+		return 30 * time.Minute
+	}
+	return time.Duration(cfg.FinalizationGraceMinutes) * time.Minute
+}
+
+func (cfg FactsConfig) KeepCount() int32 {
+	if cfg.ObservationKeepCount <= 0 {
+		return 288
+	}
+	return int32(cfg.ObservationKeepCount)
+}
+
+func (cfg FactsConfig) BatchSize() int32 {
+	if cfg.RetentionBatchSize <= 0 {
+		return 500
+	}
+	return int32(cfg.RetentionBatchSize)
 }
 
 type LogConfig struct {
