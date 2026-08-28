@@ -31,9 +31,25 @@ WHERE id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetPublicSiteByID(ctx context.Context, siteID int64) (GfnSite, error) {
+type GetPublicSiteByIDRow struct {
+	ID         int64            `json:"id"`
+	Name       string           `json:"name"`
+	NameEn     string           `json:"name_en"`
+	Info       string           `json:"info"`
+	InfoEn     string           `json:"info_en"`
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+	Country    *string          `json:"country"`
+	Nsfw       string           `json:"nsfw"`
+	Welfare    string           `json:"welfare"`
+	Icon       *string          `json:"icon"`
+	Deleted    bool             `json:"deleted"`
+	ViewCount  int64            `json:"view_count"`
+}
+
+func (q *Queries) GetPublicSiteByID(ctx context.Context, siteID int64) (GetPublicSiteByIDRow, error) {
 	row := q.db.QueryRow(ctx, getPublicSiteByID, siteID)
-	var i GfnSite
+	var i GetPublicSiteByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -85,9 +101,25 @@ WHERE id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetSiteByID(ctx context.Context, siteID int64) (GfnSite, error) {
+type GetSiteByIDRow struct {
+	ID         int64            `json:"id"`
+	Name       string           `json:"name"`
+	NameEn     string           `json:"name_en"`
+	Info       string           `json:"info"`
+	InfoEn     string           `json:"info_en"`
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+	Country    *string          `json:"country"`
+	Nsfw       string           `json:"nsfw"`
+	Welfare    string           `json:"welfare"`
+	Icon       *string          `json:"icon"`
+	Deleted    bool             `json:"deleted"`
+	ViewCount  int64            `json:"view_count"`
+}
+
+func (q *Queries) GetSiteByID(ctx context.Context, siteID int64) (GetSiteByIDRow, error) {
 	row := q.db.QueryRow(ctx, getSiteByID, siteID)
-	var i GfnSite
+	var i GetSiteByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,

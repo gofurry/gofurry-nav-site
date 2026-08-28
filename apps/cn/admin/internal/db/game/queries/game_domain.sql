@@ -11,9 +11,6 @@ WITH deleted_recommendations AS (
     DELETE FROM gfg_game_recommendations AS recommendations
     WHERE recommendations.source_game_id = sqlc.arg(target_id)
        OR recommendations.target_game_id = sqlc.arg(target_id)
-), deleted_release_history AS (
-    DELETE FROM gfg_game_release_history AS release_history
-    WHERE release_history.game_id = sqlc.arg(target_id)
 ), deleted_first_available AS (
     DELETE FROM gfg_game_first_available AS first_available
     WHERE first_available.game_id = sqlc.arg(target_id)
@@ -26,9 +23,6 @@ WITH deleted_recommendations AS (
 ), deleted_snapshots AS (
     DELETE FROM gfg_game_detail_snapshots AS snapshots
     WHERE snapshots.game_id = sqlc.arg(target_id)
-), deleted_player_counts AS (
-    DELETE FROM gfg_game_player_counts AS player_counts
-    WHERE player_counts.game_id = sqlc.arg(target_id)
 ), deleted_news AS (
     DELETE FROM gfg_game_news AS news
     WHERE news.game_id = sqlc.arg(target_id)

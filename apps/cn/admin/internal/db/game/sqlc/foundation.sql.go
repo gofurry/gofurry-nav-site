@@ -976,8 +976,7 @@ func (q *Queries) ListTags(ctx context.Context, arg ListTagsParams) ([]GfgTag, e
 }
 
 const nextGameID = `-- name: NextGameID :one
-WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfg_game')::bigint))
-SELECT (COALESCE(MAX(id),0)+1)::bigint FROM gfg_game CROSS JOIN lock_row
+SELECT nextval('gfg_game_id_seq')::bigint
 `
 
 func (q *Queries) NextGameID(ctx context.Context) (int64, error) {

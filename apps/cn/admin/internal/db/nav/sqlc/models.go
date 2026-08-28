@@ -213,6 +213,17 @@ type GfnCollectorObservation struct {
 	CollectorInstanceID *string            `json:"collector_instance_id"`
 }
 
+// Ordered singleton checkpoints for Nav fact pipelines.
+type GfnFactRollupCheckpoint struct {
+	PipelineKey       string             `json:"pipeline_key"`
+	ProjectionVersion int32              `json:"projection_version"`
+	SourceStartDate   pgtype.Date        `json:"source_start_date"`
+	ProcessedThrough  pgtype.Date        `json:"processed_through"`
+	QualityCutoverAt  pgtype.Timestamptz `json:"quality_cutover_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 // 精选站点表
 type GfnFeaturedSite struct {
 	// 精选站点表id
@@ -292,6 +303,31 @@ type GfnSite struct {
 	Deleted bool `json:"deleted"`
 	// 浏览量
 	ViewCount int64 `json:"view_count"`
+	// UTC soft-delete boundary for historical Site facts; legacy local timestamps are interpreted as Asia/Shanghai.
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+}
+
+// Historical Site dimensions and effective-dated Primary Target selection. finalized_at is NULL only for a current-day write-through marker.
+type GfnSiteDaily struct {
+	SiteID                        int64              `json:"site_id"`
+	FactDate                      pgtype.Date        `json:"fact_date"`
+	SnapshotAt                    pgtype.Timestamptz `json:"snapshot_at"`
+	TrackedAtEnd                  bool               `json:"tracked_at_end"`
+	Name                          string             `json:"name"`
+	NameEn                        string             `json:"name_en"`
+	SiteCountry                   *string            `json:"site_country"`
+	Nsfw                          *bool              `json:"nsfw"`
+	Welfare                       *bool              `json:"welfare"`
+	ViewCount                     int64              `json:"view_count"`
+	GroupIds                      []int64            `json:"group_ids"`
+	PrimaryTargetTrackingPeriodID *int64             `json:"primary_target_tracking_period_id"`
+	PrimaryTarget                 *string            `json:"primary_target"`
+	PrimaryBasis                  *string            `json:"primary_basis"`
+	ActiveTargetCount             int32              `json:"active_target_count"`
+	ProjectionVersion             int32              `json:"projection_version"`
+	FinalizedAt                   pgtype.Timestamptz `json:"finalized_at"`
+	CreatedAt                     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                     pgtype.Timestamptz `json:"updated_at"`
 }
 
 // 导航站点分组表
@@ -327,4 +363,130 @@ type GfnSiteGroupMap struct {
 	// 修改时间
 	UpdateTime pgtype.Timestamp `json:"update_time"`
 	Weight     int64            `json:"weight"`
+}
+
+// Single source of truth for effective-dated Primary Target selection.
+type GfnSitePrimaryTargetPeriod struct {
+	ID                     int64              `json:"id"`
+	SiteID                 int64              `json:"site_id"`
+	TargetTrackingPeriodID int64              `json:"target_tracking_period_id"`
+	EffectiveFrom          pgtype.Timestamptz `json:"effective_from"`
+	EffectiveUntil         pgtype.Timestamptz `json:"effective_until"`
+	Basis                  string             `json:"basis"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Typed compact HTTP/TLS/DNS/Ping historical target fact.
+type GfnSiteTargetDaily struct {
+	TargetTrackingPeriodID   int64              `json:"target_tracking_period_id"`
+	SiteID                   int64              `json:"site_id"`
+	CollectorDomainID        *int64             `json:"collector_domain_id"`
+	Target                   string             `json:"target"`
+	FactDate                 pgtype.Date        `json:"fact_date"`
+	SnapshotAt               pgtype.Timestamptz `json:"snapshot_at"`
+	TrackedAtEnd             bool               `json:"tracked_at_end"`
+	HttpProbeStatus          *string            `json:"http_probe_status"`
+	HttpProbeObservedAt      pgtype.Timestamptz `json:"http_probe_observed_at"`
+	HttpStateObservedAt      pgtype.Timestamptz `json:"http_state_observed_at"`
+	HttpStatusCode           *int32             `json:"http_status_code"`
+	HttpResponseTimeMs       *int64             `json:"http_response_time_ms"`
+	HttpTtfbMs               *int64             `json:"http_ttfb_ms"`
+	HttpProtocol             *string            `json:"http_protocol"`
+	HttpServer               *string            `json:"http_server"`
+	HttpRemoteIp             *string            `json:"http_remote_ip"`
+	HttpFinalUrl             *string            `json:"http_final_url"`
+	HttpCanonicalUrl         *string            `json:"http_canonical_url"`
+	HttpSecurityHeaders      []byte             `json:"http_security_headers"`
+	TlsStateObservedAt       pgtype.Timestamptz `json:"tls_state_observed_at"`
+	TlsHandshake             *string            `json:"tls_handshake"`
+	TlsVersion               *string            `json:"tls_version"`
+	TlsCipherSuite           *string            `json:"tls_cipher_suite"`
+	TlsCertVerified          *bool              `json:"tls_cert_verified"`
+	TlsVerifyErrorCategory   *string            `json:"tls_verify_error_category"`
+	TlsCertNotBefore         pgtype.Timestamptz `json:"tls_cert_not_before"`
+	TlsCertNotAfter          pgtype.Timestamptz `json:"tls_cert_not_after"`
+	TlsCertIssuer            *string            `json:"tls_cert_issuer"`
+	TlsCertFingerprintSha256 *string            `json:"tls_cert_fingerprint_sha256"`
+	TlsCertSpkiSha256        *string            `json:"tls_cert_spki_sha256"`
+	TlsCertDnsNames          []string           `json:"tls_cert_dns_names"`
+	DnsProbeStatus           *string            `json:"dns_probe_status"`
+	DnsProbeObservedAt       pgtype.Timestamptz `json:"dns_probe_observed_at"`
+	DnsStateObservedAt       pgtype.Timestamptz `json:"dns_state_observed_at"`
+	DnsHasA                  *bool              `json:"dns_has_a"`
+	DnsHasAaaa               *bool              `json:"dns_has_aaaa"`
+	DnsIpv4Count             *int32             `json:"dns_ipv4_count"`
+	DnsIpv6Count             *int32             `json:"dns_ipv6_count"`
+	DnsARecords              []string           `json:"dns_a_records"`
+	DnsAaaaRecords           []string           `json:"dns_aaaa_records"`
+	DnsCnameTerminal         *string            `json:"dns_cname_terminal"`
+	DnsCnameDepth            *int32             `json:"dns_cname_depth"`
+	DnsNsHosts               []string           `json:"dns_ns_hosts"`
+	DnsMxHosts               []string           `json:"dns_mx_hosts"`
+	DnsMinTtl                *int32             `json:"dns_min_ttl"`
+	DnsMaxTtl                *int32             `json:"dns_max_ttl"`
+	DnsRiskFlags             []string           `json:"dns_risk_flags"`
+	PingProbeStatus          *string            `json:"ping_probe_status"`
+	PingProbeObservedAt      pgtype.Timestamptz `json:"ping_probe_observed_at"`
+	PingStateObservedAt      pgtype.Timestamptz `json:"ping_state_observed_at"`
+	PingAvgRttMs             *float64           `json:"ping_avg_rtt_ms"`
+	PingMinRttMs             *float64           `json:"ping_min_rtt_ms"`
+	PingMaxRttMs             *float64           `json:"ping_max_rtt_ms"`
+	PingLossRate             *float64           `json:"ping_loss_rate"`
+	PingJitterMs             *float64           `json:"ping_jitter_ms"`
+	PingSelectedIp           *string            `json:"ping_selected_ip"`
+	PingIpFamily             *string            `json:"ping_ip_family"`
+	PingIcmpBlockedSuspected *bool              `json:"ping_icmp_blocked_suspected"`
+	ProjectionVersion        int32              `json:"projection_version"`
+	FinalizedAt              pgtype.Timestamptz `json:"finalized_at"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Scheduled protocol quality, latest observation outcome, and whitelisted last-known state.
+type GfnSiteTargetProtocolDaily struct {
+	TargetTrackingPeriodID  int64              `json:"target_tracking_period_id"`
+	SiteID                  int64              `json:"site_id"`
+	CollectorDomainID       *int64             `json:"collector_domain_id"`
+	Target                  string             `json:"target"`
+	Protocol                string             `json:"protocol"`
+	FactDate                pgtype.Date        `json:"fact_date"`
+	ExpectedCount           *int32             `json:"expected_count"`
+	AttemptedCount          int32              `json:"attempted_count"`
+	SuccessCount            int32              `json:"success_count"`
+	PartialCount            int32              `json:"partial_count"`
+	FailureCount            int32              `json:"failure_count"`
+	SkippedCount            *int32             `json:"skipped_count"`
+	MissedCount             *int32             `json:"missed_count"`
+	CanceledCount           *int32             `json:"canceled_count"`
+	UnattemptedCount        *int32             `json:"unattempted_count"`
+	FailureKindCounts       []byte             `json:"failure_kind_counts"`
+	QualityBasis            string             `json:"quality_basis"`
+	LatestScheduledStatus   *string            `json:"latest_scheduled_status"`
+	LatestScheduledAt       pgtype.Timestamptz `json:"latest_scheduled_at"`
+	LatestObservationStatus *string            `json:"latest_observation_status"`
+	LatestObservationAt     pgtype.Timestamptz `json:"latest_observation_at"`
+	KnownStateObservedAt    pgtype.Timestamptz `json:"known_state_observed_at"`
+	KnownState              []byte             `json:"known_state"`
+	AvgDurationMs           *float64           `json:"avg_duration_ms"`
+	P95DurationMs           *float64           `json:"p95_duration_ms"`
+	ProjectionVersion       int32              `json:"projection_version"`
+	FinalizedAt             pgtype.Timestamptz `json:"finalized_at"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Immutable Site target eligibility periods; current CollectorDomain is not a historical FK owner.
+type GfnTargetTrackingPeriod struct {
+	ID                int64              `json:"id"`
+	CollectorDomainID *int64             `json:"collector_domain_id"`
+	SiteID            int64              `json:"site_id"`
+	Target            string             `json:"target"`
+	TrackedFrom       pgtype.Timestamptz `json:"tracked_from"`
+	TrackedUntil      pgtype.Timestamptz `json:"tracked_until"`
+	TrackingBasis     string             `json:"tracking_basis"`
+	OpenedReason      string             `json:"opened_reason"`
+	ClosedReason      *string            `json:"closed_reason"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }

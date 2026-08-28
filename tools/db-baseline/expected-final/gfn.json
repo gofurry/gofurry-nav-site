@@ -37,6 +37,30 @@
       "cycle": false,
       "owned_table": "gfn_collection_task_results",
       "owned_column": "id"
+    },
+    {
+      "name": "gfn_site_primary_target_periods_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfn_site_primary_target_periods",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfn_target_tracking_periods_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfn_target_tracking_periods",
+      "owned_column": "id"
     }
   ],
   "tables": [
@@ -1671,6 +1695,92 @@
       "triggers": null
     },
     {
+      "name": "gfn_fact_rollup_checkpoints",
+      "comment": "Ordered singleton checkpoints for Nav fact pipelines.",
+      "columns": [
+        {
+          "name": "pipeline_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "projection_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_start_date",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "processed_through",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "quality_cutover_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_fact_rollup_checkpoints_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfn_fact_rollup_checkpoints_pipeline_check",
+          "definition": "CHECK (pipeline_key = ANY (ARRAY['nav.target_facts'::text, 'nav.site_facts'::text]))"
+        },
+        {
+          "name": "gfn_fact_rollup_checkpoints_pipeline_key_not_null",
+          "definition": "NOT NULL pipeline_key"
+        },
+        {
+          "name": "gfn_fact_rollup_checkpoints_pkey",
+          "definition": "PRIMARY KEY (pipeline_key)"
+        },
+        {
+          "name": "gfn_fact_rollup_checkpoints_projection_check",
+          "definition": "CHECK (projection_version \u003e 0)"
+        },
+        {
+          "name": "gfn_fact_rollup_checkpoints_projection_version_not_null",
+          "definition": "NOT NULL projection_version"
+        },
+        {
+          "name": "gfn_fact_rollup_checkpoints_range_check",
+          "definition": "CHECK (source_start_date IS NULL OR processed_through IS NULL OR processed_through \u003e= source_start_date)"
+        },
+        {
+          "name": "gfn_fact_rollup_checkpoints_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": null,
+      "triggers": null
+    },
+    {
       "name": "gfn_featured_site",
       "comment": "精选站点表",
       "columns": [
@@ -2073,12 +2183,23 @@
           "has_default": true,
           "default": "0",
           "comment": "浏览量"
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "comment": "UTC soft-delete boundary for historical Site facts; legacy local timestamps are interpreted as Asia/Shanghai."
         }
       ],
       "constraints": [
         {
           "name": "gfn_site_create_time_not_null",
           "definition": "NOT NULL create_time"
+        },
+        {
+          "name": "gfn_site_deleted_at_check",
+          "definition": "CHECK (deleted AND deleted_at IS NOT NULL OR NOT deleted AND deleted_at IS NULL)"
         },
         {
           "name": "gfn_site_deleted_not_null",
@@ -2149,6 +2270,209 @@
         {
           "name": "idx_gfn_site_update_time",
           "definition": "CREATE INDEX idx_gfn_site_update_time ON public.gfn_site USING btree (update_time DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfn_site_daily",
+      "comment": "Historical Site dimensions and effective-dated Primary Target selection. finalized_at is NULL only for a current-day write-through marker.",
+      "columns": [
+        {
+          "name": "site_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "fact_date",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "snapshot_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "tracked_at_end",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "name",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "name_en",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "site_country",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "nsfw",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "welfare",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "view_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "group_ids",
+          "data_type": "bigint[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "primary_target_tracking_period_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "primary_target",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "primary_basis",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "active_target_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "projection_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "finalized_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_site_daily_active_target_count_check",
+          "definition": "CHECK (active_target_count \u003e= 0)"
+        },
+        {
+          "name": "gfn_site_daily_active_target_count_not_null",
+          "definition": "NOT NULL active_target_count"
+        },
+        {
+          "name": "gfn_site_daily_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfn_site_daily_fact_date_not_null",
+          "definition": "NOT NULL fact_date"
+        },
+        {
+          "name": "gfn_site_daily_group_ids_not_null",
+          "definition": "NOT NULL group_ids"
+        },
+        {
+          "name": "gfn_site_daily_name_en_not_null",
+          "definition": "NOT NULL name_en"
+        },
+        {
+          "name": "gfn_site_daily_name_not_null",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "gfn_site_daily_pkey",
+          "definition": "PRIMARY KEY (site_id, fact_date)"
+        },
+        {
+          "name": "gfn_site_daily_primary_shape_check",
+          "definition": "CHECK (primary_target_tracking_period_id IS NULL AND primary_target IS NULL AND primary_basis IS NULL OR primary_target_tracking_period_id IS NOT NULL AND btrim(primary_target) \u003c\u003e ''::text AND (primary_basis = ANY (ARRAY['explicit'::text, 'single_target_inferred'::text, 'deterministic_fallback'::text, 'legacy_backfill'::text])))"
+        },
+        {
+          "name": "gfn_site_daily_primary_target_tracking_period_id_fkey",
+          "definition": "FOREIGN KEY (primary_target_tracking_period_id) REFERENCES gfn_target_tracking_periods(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfn_site_daily_projection_check",
+          "definition": "CHECK (projection_version \u003e 0)"
+        },
+        {
+          "name": "gfn_site_daily_projection_version_not_null",
+          "definition": "NOT NULL projection_version"
+        },
+        {
+          "name": "gfn_site_daily_site_id_not_null",
+          "definition": "NOT NULL site_id"
+        },
+        {
+          "name": "gfn_site_daily_snapshot_at_not_null",
+          "definition": "NOT NULL snapshot_at"
+        },
+        {
+          "name": "gfn_site_daily_tracked_at_end_not_null",
+          "definition": "NOT NULL tracked_at_end"
+        },
+        {
+          "name": "gfn_site_daily_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfn_site_daily_view_count_not_null",
+          "definition": "NOT NULL view_count"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_site_daily_date",
+          "definition": "CREATE INDEX idx_gfn_site_daily_date ON public.gfn_site_daily USING btree (fact_date DESC, site_id)"
+        },
+        {
+          "name": "idx_gfn_site_daily_primary",
+          "definition": "CREATE INDEX idx_gfn_site_daily_primary ON public.gfn_site_daily USING btree (primary_target_tracking_period_id, fact_date DESC) WHERE (primary_target_tracking_period_id IS NOT NULL)"
         }
       ],
       "triggers": null
@@ -2381,7 +2705,1031 @@
         }
       ],
       "triggers": null
+    },
+    {
+      "name": "gfn_site_primary_target_periods",
+      "comment": "Single source of truth for effective-dated Primary Target selection.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "site_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "target_tracking_period_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "effective_from",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "effective_until",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "basis",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_site_primary_target_peri_target_tracking_period_id_not_null",
+          "definition": "NOT NULL target_tracking_period_id"
+        },
+        {
+          "name": "gfn_site_primary_target_periods_basis_check",
+          "definition": "CHECK (basis = ANY (ARRAY['explicit'::text, 'single_target_inferred'::text, 'deterministic_fallback'::text, 'legacy_backfill'::text]))"
+        },
+        {
+          "name": "gfn_site_primary_target_periods_basis_not_null",
+          "definition": "NOT NULL basis"
+        },
+        {
+          "name": "gfn_site_primary_target_periods_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfn_site_primary_target_periods_effective_from_not_null",
+          "definition": "NOT NULL effective_from"
+        },
+        {
+          "name": "gfn_site_primary_target_periods_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfn_site_primary_target_periods_interval_check",
+          "definition": "CHECK (effective_until IS NULL OR effective_until \u003e effective_from)"
+        },
+        {
+          "name": "gfn_site_primary_target_periods_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfn_site_primary_target_periods_site_id_not_null",
+          "definition": "NOT NULL site_id"
+        },
+        {
+          "name": "gfn_site_primary_target_periods_target_tracking_period_id_fkey",
+          "definition": "FOREIGN KEY (target_tracking_period_id) REFERENCES gfn_target_tracking_periods(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfn_site_primary_target_periods_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_site_primary_target_periods_time",
+          "definition": "CREATE INDEX idx_gfn_site_primary_target_periods_time ON public.gfn_site_primary_target_periods USING btree (site_id, effective_from, effective_until)"
+        },
+        {
+          "name": "uq_gfn_site_primary_target_periods_active",
+          "definition": "CREATE UNIQUE INDEX uq_gfn_site_primary_target_periods_active ON public.gfn_site_primary_target_periods USING btree (site_id) WHERE (effective_until IS NULL)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfn_site_target_daily",
+      "comment": "Typed compact HTTP/TLS/DNS/Ping historical target fact.",
+      "columns": [
+        {
+          "name": "target_tracking_period_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "site_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "collector_domain_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "target",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "fact_date",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "snapshot_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "tracked_at_end",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "http_probe_status",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_probe_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_state_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_status_code",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_response_time_ms",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_ttfb_ms",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_protocol",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_server",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_remote_ip",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_final_url",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_canonical_url",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "http_security_headers",
+          "data_type": "jsonb",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_state_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_handshake",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_version",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_cipher_suite",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_cert_verified",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_verify_error_category",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_cert_not_before",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_cert_not_after",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_cert_issuer",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_cert_fingerprint_sha256",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_cert_spki_sha256",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tls_cert_dns_names",
+          "data_type": "text[]",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_probe_status",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_probe_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_state_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_has_a",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_has_aaaa",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_ipv4_count",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_ipv6_count",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_a_records",
+          "data_type": "text[]",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_aaaa_records",
+          "data_type": "text[]",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_cname_terminal",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_cname_depth",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_ns_hosts",
+          "data_type": "text[]",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_mx_hosts",
+          "data_type": "text[]",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_min_ttl",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_max_ttl",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dns_risk_flags",
+          "data_type": "text[]",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_probe_status",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_probe_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_state_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_avg_rtt_ms",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_min_rtt_ms",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_max_rtt_ms",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_loss_rate",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_jitter_ms",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_selected_ip",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_ip_family",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "ping_icmp_blocked_suspected",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "projection_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "finalized_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_site_target_daily_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfn_site_target_daily_fact_date_not_null",
+          "definition": "NOT NULL fact_date"
+        },
+        {
+          "name": "gfn_site_target_daily_finalized_at_not_null",
+          "definition": "NOT NULL finalized_at"
+        },
+        {
+          "name": "gfn_site_target_daily_http_security_headers_check",
+          "definition": "CHECK (http_security_headers IS NULL OR jsonb_typeof(http_security_headers) = 'object'::text)"
+        },
+        {
+          "name": "gfn_site_target_daily_pkey",
+          "definition": "PRIMARY KEY (target_tracking_period_id, fact_date)"
+        },
+        {
+          "name": "gfn_site_target_daily_projection_check",
+          "definition": "CHECK (projection_version \u003e 0)"
+        },
+        {
+          "name": "gfn_site_target_daily_projection_version_not_null",
+          "definition": "NOT NULL projection_version"
+        },
+        {
+          "name": "gfn_site_target_daily_site_id_not_null",
+          "definition": "NOT NULL site_id"
+        },
+        {
+          "name": "gfn_site_target_daily_snapshot_at_not_null",
+          "definition": "NOT NULL snapshot_at"
+        },
+        {
+          "name": "gfn_site_target_daily_target_check",
+          "definition": "CHECK (btrim(target) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfn_site_target_daily_target_not_null",
+          "definition": "NOT NULL target"
+        },
+        {
+          "name": "gfn_site_target_daily_target_tracking_period_id_fkey",
+          "definition": "FOREIGN KEY (target_tracking_period_id) REFERENCES gfn_target_tracking_periods(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfn_site_target_daily_target_tracking_period_id_not_null",
+          "definition": "NOT NULL target_tracking_period_id"
+        },
+        {
+          "name": "gfn_site_target_daily_tracked_at_end_not_null",
+          "definition": "NOT NULL tracked_at_end"
+        },
+        {
+          "name": "gfn_site_target_daily_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_site_target_daily_site_date",
+          "definition": "CREATE INDEX idx_gfn_site_target_daily_site_date ON public.gfn_site_target_daily USING btree (site_id, fact_date DESC)"
+        },
+        {
+          "name": "idx_gfn_site_target_daily_target_date",
+          "definition": "CREATE INDEX idx_gfn_site_target_daily_target_date ON public.gfn_site_target_daily USING btree (target, fact_date DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfn_site_target_protocol_daily",
+      "comment": "Scheduled protocol quality, latest observation outcome, and whitelisted last-known state.",
+      "columns": [
+        {
+          "name": "target_tracking_period_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "site_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "collector_domain_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "target",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "protocol",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "fact_date",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "expected_count",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "attempted_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "success_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "partial_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "failure_count",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "skipped_count",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "missed_count",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "canceled_count",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "unattempted_count",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "failure_kind_counts",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "quality_basis",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "latest_scheduled_status",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "latest_scheduled_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "latest_observation_status",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "latest_observation_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "known_state_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "known_state",
+          "data_type": "jsonb",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "avg_duration_ms",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "p95_duration_ms",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "projection_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "finalized_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_site_target_protocol_dai_target_tracking_period_id_not_null",
+          "definition": "NOT NULL target_tracking_period_id"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_attempted_count_not_null",
+          "definition": "NOT NULL attempted_count"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_counts_check",
+          "definition": "CHECK (attempted_count \u003e= 0 AND success_count \u003e= 0 AND partial_count \u003e= 0 AND failure_count \u003e= 0 AND attempted_count = (success_count + partial_count + failure_count))"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_fact_date_not_null",
+          "definition": "NOT NULL fact_date"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_failure_count_not_null",
+          "definition": "NOT NULL failure_count"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_failure_json_check",
+          "definition": "CHECK (jsonb_typeof(failure_kind_counts) = 'object'::text)"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_failure_kind_counts_not_null",
+          "definition": "NOT NULL failure_kind_counts"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_finalized_at_not_null",
+          "definition": "NOT NULL finalized_at"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_known_state_check",
+          "definition": "CHECK (known_state IS NULL OR jsonb_typeof(known_state) = 'object'::text)"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_partial_count_not_null",
+          "definition": "NOT NULL partial_count"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_pkey",
+          "definition": "PRIMARY KEY (target_tracking_period_id, protocol, fact_date)"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_projection_check",
+          "definition": "CHECK (projection_version \u003e 0)"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_projection_version_not_null",
+          "definition": "NOT NULL projection_version"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_protocol_check",
+          "definition": "CHECK (protocol = ANY (ARRAY['ping'::text, 'http'::text, 'dns'::text, 'rdap'::text, 'robots'::text, 'security_txt'::text, 'llms_txt'::text, 'page_assets'::text, 'port_check'::text, 'waf_canary'::text]))"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_protocol_not_null",
+          "definition": "NOT NULL protocol"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_quality_basis_not_null",
+          "definition": "NOT NULL quality_basis"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_quality_check",
+          "definition": "CHECK (quality_basis = 'legacy_observed_only'::text AND expected_count IS NULL AND skipped_count IS NULL AND missed_count IS NULL AND canceled_count IS NULL AND unattempted_count IS NULL OR quality_basis = 'acquisition_ledger'::text AND expected_count \u003e= 0 AND skipped_count \u003e= 0 AND missed_count \u003e= 0 AND canceled_count \u003e= 0 AND unattempted_count \u003e= 0 AND expected_count = (attempted_count + skipped_count + missed_count + canceled_count + unattempted_count))"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_site_id_not_null",
+          "definition": "NOT NULL site_id"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_success_count_not_null",
+          "definition": "NOT NULL success_count"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_target_not_null",
+          "definition": "NOT NULL target"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_target_tracking_period_id_fkey",
+          "definition": "FOREIGN KEY (target_tracking_period_id) REFERENCES gfn_target_tracking_periods(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfn_site_target_protocol_daily_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_site_target_protocol_daily_site_date",
+          "definition": "CREATE INDEX idx_gfn_site_target_protocol_daily_site_date ON public.gfn_site_target_protocol_daily USING btree (site_id, fact_date DESC, protocol)"
+        },
+        {
+          "name": "idx_gfn_site_target_protocol_daily_target_date",
+          "definition": "CREATE INDEX idx_gfn_site_target_protocol_daily_target_date ON public.gfn_site_target_protocol_daily USING btree (target, fact_date DESC, protocol)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfn_target_tracking_periods",
+      "comment": "Immutable Site target eligibility periods; current CollectorDomain is not a historical FK owner.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "collector_domain_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "site_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "target",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "tracked_from",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "tracked_until",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tracking_basis",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "opened_reason",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "closed_reason",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_target_tracking_periods_basis_check",
+          "definition": "CHECK (tracking_basis = ANY (ARRAY['explicit'::text, 'legacy_observed'::text]))"
+        },
+        {
+          "name": "gfn_target_tracking_periods_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfn_target_tracking_periods_explicit_shape_check",
+          "definition": "CHECK (tracking_basis \u003c\u003e 'explicit'::text OR collector_domain_id IS NOT NULL)"
+        },
+        {
+          "name": "gfn_target_tracking_periods_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfn_target_tracking_periods_interval_check",
+          "definition": "CHECK (tracked_until IS NULL OR tracked_until \u003e tracked_from)"
+        },
+        {
+          "name": "gfn_target_tracking_periods_opened_reason_not_null",
+          "definition": "NOT NULL opened_reason"
+        },
+        {
+          "name": "gfn_target_tracking_periods_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfn_target_tracking_periods_site_id_not_null",
+          "definition": "NOT NULL site_id"
+        },
+        {
+          "name": "gfn_target_tracking_periods_target_check",
+          "definition": "CHECK (btrim(target) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfn_target_tracking_periods_target_not_null",
+          "definition": "NOT NULL target"
+        },
+        {
+          "name": "gfn_target_tracking_periods_tracked_from_not_null",
+          "definition": "NOT NULL tracked_from"
+        },
+        {
+          "name": "gfn_target_tracking_periods_tracking_basis_not_null",
+          "definition": "NOT NULL tracking_basis"
+        },
+        {
+          "name": "gfn_target_tracking_periods_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_target_tracking_periods_identity_time",
+          "definition": "CREATE INDEX idx_gfn_target_tracking_periods_identity_time ON public.gfn_target_tracking_periods USING btree (site_id, lower(target), tracked_from, tracked_until)"
+        },
+        {
+          "name": "idx_gfn_target_tracking_periods_time",
+          "definition": "CREATE INDEX idx_gfn_target_tracking_periods_time ON public.gfn_target_tracking_periods USING btree (tracked_from, tracked_until)"
+        },
+        {
+          "name": "uq_gfn_target_tracking_periods_active_domain",
+          "definition": "CREATE UNIQUE INDEX uq_gfn_target_tracking_periods_active_domain ON public.gfn_target_tracking_periods USING btree (collector_domain_id) WHERE ((collector_domain_id IS NOT NULL) AND (tracked_until IS NULL))"
+        },
+        {
+          "name": "uq_gfn_target_tracking_periods_active_target",
+          "definition": "CREATE UNIQUE INDEX uq_gfn_target_tracking_periods_active_target ON public.gfn_target_tracking_periods USING btree (site_id, lower(target)) WHERE (tracked_until IS NULL)"
+        }
+      ],
+      "triggers": null
     }
   ],
-  "functions": null
+  "functions": [
+    {
+      "identity": "gfn_jsonb_text_array(value jsonb)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfn_jsonb_text_array(value jsonb)\n RETURNS text[]\n LANGUAGE sql\n IMMUTABLE PARALLEL SAFE\nAS $function$\n    SELECT CASE WHEN jsonb_typeof(value) = 'array'\n                THEN ARRAY(SELECT jsonb_array_elements_text(value))\n                ELSE NULL::text[]\n           END;\n$function$\n"
+    },
+    {
+      "identity": "gfn_project_site_fact_day(target_date date)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfn_project_site_fact_day(target_date date)\n RETURNS bigint\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    day_start timestamp with time zone := target_date::timestamp AT TIME ZONE 'UTC';\n    day_end timestamp with time zone := (target_date + 1)::timestamp AT TIME ZONE 'UTC';\n    projected_rows bigint;\nBEGIN\n    WITH eligible_sites AS (\n        SELECT DISTINCT site_id\n        FROM public.gfn_site_daily\n        WHERE fact_date \u003c= target_date\n          AND snapshot_at \u003c day_end\n    ), latest AS (\n        SELECT prior.*\n        FROM eligible_sites eligible\n        JOIN LATERAL (\n            SELECT daily.*\n            FROM public.gfn_site_daily daily\n            WHERE daily.site_id = eligible.site_id\n              AND daily.fact_date \u003c= target_date\n            ORDER BY daily.fact_date DESC\n            LIMIT 1\n        ) prior ON true\n        WHERE prior.tracked_at_end OR prior.fact_date = target_date\n    ), terminal_primary AS (\n        SELECT latest.site_id,\n               primary_period.target_tracking_period_id,\n               target_period.target,\n               primary_period.basis\n        FROM latest\n        LEFT JOIN LATERAL (\n            SELECT candidate.*\n            FROM public.gfn_site_primary_target_periods candidate\n            WHERE candidate.site_id = latest.site_id\n              AND candidate.effective_from \u003c day_end\n              AND (candidate.effective_until IS NULL OR candidate.effective_until \u003e day_end)\n            ORDER BY candidate.effective_from DESC, candidate.id DESC\n            LIMIT 1\n        ) primary_period ON true\n        LEFT JOIN public.gfn_target_tracking_periods target_period\n          ON target_period.id = primary_period.target_tracking_period_id\n    ), target_counts AS (\n        SELECT latest.site_id, count(target_period.id)::integer AS active_target_count\n        FROM latest\n        LEFT JOIN public.gfn_target_tracking_periods target_period\n          ON target_period.site_id = latest.site_id\n         AND target_period.tracked_from \u003c day_end\n         AND (target_period.tracked_until IS NULL OR target_period.tracked_until \u003e day_end)\n        GROUP BY latest.site_id\n    )\n    INSERT INTO public.gfn_site_daily (\n        site_id, fact_date, snapshot_at, tracked_at_end, name, name_en,\n        site_country, nsfw, welfare, view_count, group_ids,\n        primary_target_tracking_period_id, primary_target, primary_basis,\n        active_target_count, projection_version, finalized_at,\n        created_at, updated_at\n    )\n    SELECT latest.site_id, target_date,\n           CASE WHEN latest.fact_date = target_date AND NOT latest.tracked_at_end\n                THEN latest.snapshot_at ELSE day_end END,\n           latest.tracked_at_end, latest.name, latest.name_en,\n           latest.site_country, latest.nsfw, latest.welfare, latest.view_count,\n           latest.group_ids, primary_state.target_tracking_period_id,\n           primary_state.target, primary_state.basis, target_counts.active_target_count,\n           1, transaction_timestamp(), latest.created_at, transaction_timestamp()\n    FROM latest\n    JOIN terminal_primary primary_state ON primary_state.site_id = latest.site_id\n    JOIN target_counts ON target_counts.site_id = latest.site_id\n    ON CONFLICT (site_id, fact_date) DO UPDATE\n    SET snapshot_at = EXCLUDED.snapshot_at,\n        tracked_at_end = EXCLUDED.tracked_at_end,\n        name = EXCLUDED.name,\n        name_en = EXCLUDED.name_en,\n        site_country = EXCLUDED.site_country,\n        nsfw = EXCLUDED.nsfw,\n        welfare = EXCLUDED.welfare,\n        view_count = EXCLUDED.view_count,\n        group_ids = EXCLUDED.group_ids,\n        primary_target_tracking_period_id = EXCLUDED.primary_target_tracking_period_id,\n        primary_target = EXCLUDED.primary_target,\n        primary_basis = EXCLUDED.primary_basis,\n        active_target_count = EXCLUDED.active_target_count,\n        projection_version = EXCLUDED.projection_version,\n        finalized_at = transaction_timestamp(),\n        updated_at = transaction_timestamp();\n\n    GET DIAGNOSTICS projected_rows = ROW_COUNT;\n    RETURN projected_rows;\nEND;\n$function$\n"
+    },
+    {
+      "identity": "gfn_project_target_fact_day(target_date date)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfn_project_target_fact_day(target_date date)\n RETURNS bigint\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    day_start timestamp with time zone := target_date::timestamp AT TIME ZONE 'UTC';\n    day_end timestamp with time zone := (target_date + 1)::timestamp AT TIME ZONE 'UTC';\n    projected_rows bigint;\nBEGIN\n    DELETE FROM public.gfn_site_target_daily WHERE fact_date = target_date;\n\n    WITH eligible AS (\n        SELECT period.*,\n               LEAST(day_end, COALESCE(period.tracked_until, day_end)) AS terminal_at,\n               period.tracked_until IS NULL OR period.tracked_until \u003e day_end AS tracked_at_end\n        FROM public.gfn_target_tracking_periods period\n        WHERE period.tracked_from \u003c day_end\n          AND (period.tracked_until IS NULL OR period.tracked_until \u003e day_start)\n    ), protocol AS (\n        SELECT daily.*\n        FROM public.gfn_site_target_protocol_daily daily\n        WHERE daily.fact_date = target_date\n    )\n    INSERT INTO public.gfn_site_target_daily (\n        target_tracking_period_id, site_id, collector_domain_id, target,\n        fact_date, snapshot_at, tracked_at_end,\n        http_probe_status, http_probe_observed_at, http_state_observed_at,\n        http_status_code, http_response_time_ms, http_ttfb_ms, http_protocol,\n        http_server, http_remote_ip, http_final_url, http_canonical_url,\n        http_security_headers, tls_state_observed_at, tls_handshake, tls_version,\n        tls_cipher_suite, tls_cert_verified, tls_verify_error_category,\n        tls_cert_not_before, tls_cert_not_after, tls_cert_issuer,\n        tls_cert_fingerprint_sha256, tls_cert_spki_sha256, tls_cert_dns_names,\n        dns_probe_status, dns_probe_observed_at, dns_state_observed_at,\n        dns_has_a, dns_has_aaaa, dns_ipv4_count, dns_ipv6_count,\n        dns_a_records, dns_aaaa_records, dns_cname_terminal, dns_cname_depth,\n        dns_ns_hosts, dns_mx_hosts, dns_min_ttl, dns_max_ttl, dns_risk_flags,\n        ping_probe_status, ping_probe_observed_at, ping_state_observed_at,\n        ping_avg_rtt_ms, ping_min_rtt_ms, ping_max_rtt_ms, ping_loss_rate,\n        ping_jitter_ms, ping_selected_ip, ping_ip_family,\n        ping_icmp_blocked_suspected, projection_version, finalized_at,\n        created_at, updated_at\n    )\n    SELECT eligible.id, eligible.site_id, eligible.collector_domain_id,\n           eligible.target, target_date, eligible.terminal_at,\n           eligible.tracked_at_end,\n           http.latest_observation_status, http.latest_observation_at,\n           http.known_state_observed_at,\n           (http.known_state -\u003e\u003e 'status_code')::integer,\n           (http.known_state -\u003e\u003e 'response_time_ms')::bigint,\n           (http.known_state -\u003e\u003e 'ttfb_ms')::bigint,\n           http.known_state -\u003e\u003e 'http_protocol',\n           http.known_state -\u003e\u003e 'server',\n           http.known_state -\u003e\u003e 'remote_ip',\n           http.known_state -\u003e\u003e 'final_url',\n           http.known_state -\u003e\u003e 'canonical_url',\n           http.known_state -\u003e 'security_headers',\n           http.known_state_observed_at,\n           http.known_state #\u003e\u003e '{tls,handshake}',\n           http.known_state #\u003e\u003e '{tls,version}',\n           http.known_state #\u003e\u003e '{tls,cipher_suite}',\n           (http.known_state #\u003e\u003e '{tls,cert_verified}')::boolean,\n           http.known_state #\u003e\u003e '{tls,verify_error_category}',\n           (http.known_state #\u003e\u003e '{tls,cert_not_before}')::timestamptz,\n           (http.known_state #\u003e\u003e '{tls,cert_not_after}')::timestamptz,\n           http.known_state #\u003e\u003e '{tls,cert_issuer}',\n           http.known_state #\u003e\u003e '{tls,fingerprint_sha256}',\n           http.known_state #\u003e\u003e '{tls,spki_sha256}',\n           public.gfn_jsonb_text_array(http.known_state #\u003e '{tls,cert_dns_names}'),\n           dns.latest_observation_status, dns.latest_observation_at,\n           dns.known_state_observed_at,\n           (dns.known_state -\u003e\u003e 'has_a')::boolean,\n           (dns.known_state -\u003e\u003e 'has_aaaa')::boolean,\n           (dns.known_state -\u003e\u003e 'ipv4_count')::integer,\n           (dns.known_state -\u003e\u003e 'ipv6_count')::integer,\n           public.gfn_jsonb_text_array(dns.known_state -\u003e 'a_records'),\n           public.gfn_jsonb_text_array(dns.known_state -\u003e 'aaaa_records'),\n           dns.known_state -\u003e\u003e 'cname_terminal',\n           (dns.known_state -\u003e\u003e 'cname_depth')::integer,\n           public.gfn_jsonb_text_array(dns.known_state -\u003e 'ns_hosts'),\n           public.gfn_jsonb_text_array(dns.known_state -\u003e 'mx_hosts'),\n           (dns.known_state -\u003e\u003e 'min_ttl')::integer,\n           (dns.known_state -\u003e\u003e 'max_ttl')::integer,\n           public.gfn_jsonb_text_array(dns.known_state -\u003e 'risk_flags'),\n           ping.latest_observation_status, ping.latest_observation_at,\n           ping.known_state_observed_at,\n           (ping.known_state -\u003e\u003e 'avg_rtt_ms')::double precision,\n           (ping.known_state -\u003e\u003e 'min_rtt_ms')::double precision,\n           (ping.known_state -\u003e\u003e 'max_rtt_ms')::double precision,\n           (ping.known_state -\u003e\u003e 'loss_rate')::double precision,\n           (ping.known_state -\u003e\u003e 'jitter_ms')::double precision,\n           ping.known_state -\u003e\u003e 'selected_ip',\n           ping.known_state -\u003e\u003e 'ip_family',\n           (ping.known_state -\u003e\u003e 'icmp_blocked_suspected')::boolean,\n           1, transaction_timestamp(), transaction_timestamp(), transaction_timestamp()\n    FROM eligible\n    LEFT JOIN protocol http\n      ON http.target_tracking_period_id = eligible.id AND http.protocol = 'http'\n    LEFT JOIN protocol dns\n      ON dns.target_tracking_period_id = eligible.id AND dns.protocol = 'dns'\n    LEFT JOIN protocol ping\n      ON ping.target_tracking_period_id = eligible.id AND ping.protocol = 'ping';\n\n    GET DIAGNOSTICS projected_rows = ROW_COUNT;\n    RETURN projected_rows;\nEND;\n$function$\n"
+    },
+    {
+      "identity": "gfn_prune_observations_batch(target_keep_count integer, target_batch_size integer)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfn_prune_observations_batch(target_keep_count integer, target_batch_size integer)\n RETURNS bigint\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    deleted_rows bigint;\nBEGIN\n    IF target_keep_count \u003c 1 OR target_batch_size \u003c 1 THEN\n        RETURN 0;\n    END IF;\n\n    WITH ranked AS (\n        SELECT observation.id,\n               row_number() OVER (\n                   PARTITION BY observation.site_id, lower(observation.target), observation.protocol\n                   ORDER BY observation.observed_at DESC, observation.id DESC\n               ) AS retention_rank\n        FROM public.gfn_collector_observation observation\n        WHERE EXISTS (\n            SELECT 1\n            FROM public.gfn_fact_rollup_checkpoints checkpoint\n            WHERE checkpoint.pipeline_key = 'nav.target_facts'\n              AND checkpoint.processed_through IS NOT NULL\n              AND (observation.observed_at AT TIME ZONE 'UTC')::date \u003c= checkpoint.processed_through\n        )\n    ), eligible AS (\n        SELECT id\n        FROM ranked\n        WHERE retention_rank \u003e target_keep_count\n        ORDER BY id\n        LIMIT target_batch_size\n    )\n    DELETE FROM public.gfn_collector_observation observation\n    USING eligible\n    WHERE observation.id = eligible.id;\n\n    GET DIAGNOSTICS deleted_rows = ROW_COUNT;\n    RETURN deleted_rows;\nEND;\n$function$\n"
+    },
+    {
+      "identity": "gfn_refresh_current_site_daily(target_site_id bigint)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfn_refresh_current_site_daily(target_site_id bigint)\n RETURNS void\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n    WITH current_primary AS (\n        SELECT primary_period.site_id,\n               target_period.id AS target_tracking_period_id,\n               target_period.target,\n               primary_period.basis\n        FROM public.gfn_site_primary_target_periods primary_period\n        JOIN public.gfn_target_tracking_periods target_period\n          ON target_period.id = primary_period.target_tracking_period_id\n        WHERE primary_period.site_id = target_site_id\n          AND primary_period.effective_until IS NULL\n    ), current_targets AS (\n        SELECT site_id, count(*)::integer AS active_target_count\n        FROM public.gfn_target_tracking_periods\n        WHERE site_id = target_site_id AND tracked_until IS NULL\n        GROUP BY site_id\n    ), site_groups AS (\n        SELECT site_id, array_agg(DISTINCT group_id ORDER BY group_id) AS group_ids\n        FROM public.gfn_site_group_map\n        WHERE site_id = target_site_id\n        GROUP BY site_id\n    )\n    INSERT INTO public.gfn_site_daily (\n        site_id, fact_date, snapshot_at, tracked_at_end, name, name_en,\n        site_country, nsfw, welfare, view_count, group_ids,\n        primary_target_tracking_period_id, primary_target, primary_basis,\n        active_target_count, projection_version, finalized_at,\n        created_at, updated_at\n    )\n    SELECT s.id,\n           (transaction_timestamp() AT TIME ZONE 'UTC')::date,\n           transaction_timestamp(),\n           NOT s.deleted,\n           s.name::text,\n           s.name_en::text,\n           NULLIF(btrim(s.country), ''),\n           CASE lower(btrim(s.nsfw))\n               WHEN '1' THEN true WHEN 'true' THEN true WHEN 'yes' THEN true\n               WHEN '0' THEN false WHEN 'false' THEN false WHEN 'no' THEN false\n               ELSE NULL\n           END,\n           CASE lower(btrim(s.welfare))\n               WHEN '1' THEN true WHEN 'true' THEN true WHEN 'yes' THEN true\n               WHEN '0' THEN false WHEN 'false' THEN false WHEN 'no' THEN false\n               ELSE NULL\n           END,\n           s.view_count,\n           COALESCE(groups.group_ids, ARRAY[]::bigint[]),\n           primary_target.target_tracking_period_id,\n           primary_target.target,\n           primary_target.basis,\n           COALESCE(targets.active_target_count, 0),\n           1,\n           NULL,\n           transaction_timestamp(),\n           transaction_timestamp()\n    FROM public.gfn_site s\n    LEFT JOIN current_primary primary_target ON primary_target.site_id = s.id\n    LEFT JOIN current_targets targets ON targets.site_id = s.id\n    LEFT JOIN site_groups groups ON groups.site_id = s.id\n    WHERE s.id = target_site_id\n    ON CONFLICT (site_id, fact_date) DO UPDATE\n    SET snapshot_at = EXCLUDED.snapshot_at,\n        tracked_at_end = EXCLUDED.tracked_at_end,\n        name = EXCLUDED.name,\n        name_en = EXCLUDED.name_en,\n        site_country = EXCLUDED.site_country,\n        nsfw = EXCLUDED.nsfw,\n        welfare = EXCLUDED.welfare,\n        view_count = EXCLUDED.view_count,\n        group_ids = EXCLUDED.group_ids,\n        primary_target_tracking_period_id = EXCLUDED.primary_target_tracking_period_id,\n        primary_target = EXCLUDED.primary_target,\n        primary_basis = EXCLUDED.primary_basis,\n        active_target_count = EXCLUDED.active_target_count,\n        projection_version = EXCLUDED.projection_version,\n        updated_at = transaction_timestamp()\n    WHERE public.gfn_site_daily.finalized_at IS NULL;\nEND;\n$function$\n"
+    }
+  ]
 }

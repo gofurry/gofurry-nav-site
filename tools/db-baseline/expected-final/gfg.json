@@ -68,6 +68,18 @@
       "owned_column": "id"
     },
     {
+      "name": "gfg_game_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_game",
+      "owned_column": "id"
+    },
+    {
       "name": "gfg_game_languages_id_seq",
       "data_type": "bigint",
       "start": 1,
@@ -125,6 +137,18 @@
       "cache": 1,
       "cycle": false,
       "owned_table": "gfg_game_release_history",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfg_game_tracking_periods_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_game_tracking_periods",
       "owned_column": "id"
     }
   ],
@@ -1197,6 +1221,92 @@
       "triggers": null
     },
     {
+      "name": "gfg_fact_rollup_checkpoints",
+      "comment": "Ordered singleton checkpoints for Game fact pipelines.",
+      "columns": [
+        {
+          "name": "pipeline_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "projection_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_start_date",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "processed_through",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "quality_cutover_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_fact_rollup_checkpoints_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_fact_rollup_checkpoints_pipeline_check",
+          "definition": "CHECK (pipeline_key = ANY (ARRAY['game.player_facts'::text, 'game.state_facts'::text]))"
+        },
+        {
+          "name": "gfg_fact_rollup_checkpoints_pipeline_key_not_null",
+          "definition": "NOT NULL pipeline_key"
+        },
+        {
+          "name": "gfg_fact_rollup_checkpoints_pkey",
+          "definition": "PRIMARY KEY (pipeline_key)"
+        },
+        {
+          "name": "gfg_fact_rollup_checkpoints_projection_check",
+          "definition": "CHECK (projection_version \u003e 0)"
+        },
+        {
+          "name": "gfg_fact_rollup_checkpoints_projection_version_not_null",
+          "definition": "NOT NULL projection_version"
+        },
+        {
+          "name": "gfg_fact_rollup_checkpoints_range_check",
+          "definition": "CHECK (source_start_date IS NULL OR processed_through IS NULL OR processed_through \u003e= source_start_date)"
+        },
+        {
+          "name": "gfg_fact_rollup_checkpoints_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": null,
+      "triggers": null
+    },
+    {
       "name": "gfg_game",
       "comment": "游戏表",
       "columns": [
@@ -1204,7 +1314,8 @@
           "name": "id",
           "data_type": "bigint",
           "not_null": true,
-          "has_default": false,
+          "has_default": true,
+          "default": "nextval('gfg_game_id_seq'::regclass)",
           "comment": "游戏表ID"
         },
         {
@@ -1804,6 +1915,401 @@
         {
           "name": "idx_gfg_game_comment_game_id_create_time",
           "definition": "CREATE INDEX idx_gfg_game_comment_game_id_create_time ON public.gfg_game_comment USING btree (game_id, create_time DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_daily",
+      "comment": "Compact historical Game entity and canonical domain snapshot.",
+      "columns": [
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "fact_date",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "tracking_period_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "snapshot_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "tracked_at_end",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "name",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "name_en",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "view_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "game_type",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "is_free",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "windows",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "mac",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "linux",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_availability",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_precision",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_exact_date",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_year",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_month",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_quarter",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_window_start",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_window_end",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "release_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "first_available_precision",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "first_available_exact_date",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "first_available_year",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "first_available_month",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "first_available_quarter",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "first_available_window_start",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "first_available_window_end",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "first_available_source",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "first_available_inferred",
+          "data_type": "boolean",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "language_codes",
+          "data_type": "text[]",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "unknown_language_names",
+          "data_type": "text[]",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "full_audio_language_codes",
+          "data_type": "text[]",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "languages_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "developers",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "publishers",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "primary_tag_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "secondary_tag_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tag_ids",
+          "data_type": "bigint[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "details_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "materialization_source",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "projection_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "finalized_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_daily_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_daily_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_game_daily_developers_not_null",
+          "definition": "NOT NULL developers"
+        },
+        {
+          "name": "gfg_game_daily_fact_date_not_null",
+          "definition": "NOT NULL fact_date"
+        },
+        {
+          "name": "gfg_game_daily_first_available_precision_check",
+          "definition": "CHECK (first_available_precision IS NULL OR (first_available_precision = ANY (ARRAY['day'::text, 'month'::text, 'quarter'::text, 'year'::text])))"
+        },
+        {
+          "name": "gfg_game_daily_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_daily_materialization_source_not_null",
+          "definition": "NOT NULL materialization_source"
+        },
+        {
+          "name": "gfg_game_daily_name_en_not_null",
+          "definition": "NOT NULL name_en"
+        },
+        {
+          "name": "gfg_game_daily_name_not_null",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "gfg_game_daily_pkey",
+          "definition": "PRIMARY KEY (game_id, fact_date)"
+        },
+        {
+          "name": "gfg_game_daily_projection_check",
+          "definition": "CHECK (projection_version \u003e 0)"
+        },
+        {
+          "name": "gfg_game_daily_projection_version_not_null",
+          "definition": "NOT NULL projection_version"
+        },
+        {
+          "name": "gfg_game_daily_publishers_not_null",
+          "definition": "NOT NULL publishers"
+        },
+        {
+          "name": "gfg_game_daily_release_availability_check",
+          "definition": "CHECK (release_availability IS NULL OR (release_availability = ANY (ARRAY['upcoming'::text, 'available'::text, 'unknown'::text])))"
+        },
+        {
+          "name": "gfg_game_daily_release_precision_check",
+          "definition": "CHECK (release_precision IS NULL OR (release_precision = ANY (ARRAY['day'::text, 'month'::text, 'quarter'::text, 'year'::text, 'tba'::text, 'none'::text, 'unknown'::text])))"
+        },
+        {
+          "name": "gfg_game_daily_snapshot_at_not_null",
+          "definition": "NOT NULL snapshot_at"
+        },
+        {
+          "name": "gfg_game_daily_source_check",
+          "definition": "CHECK (materialization_source = ANY (ARRAY['bootstrap'::text, 'observed'::text, 'carried_forward'::text]))"
+        },
+        {
+          "name": "gfg_game_daily_tag_ids_not_null",
+          "definition": "NOT NULL tag_ids"
+        },
+        {
+          "name": "gfg_game_daily_tracked_at_end_not_null",
+          "definition": "NOT NULL tracked_at_end"
+        },
+        {
+          "name": "gfg_game_daily_tracking_period_id_fkey",
+          "definition": "FOREIGN KEY (tracking_period_id) REFERENCES gfg_game_tracking_periods(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_game_daily_tracking_period_id_not_null",
+          "definition": "NOT NULL tracking_period_id"
+        },
+        {
+          "name": "gfg_game_daily_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfg_game_daily_view_count_not_null",
+          "definition": "NOT NULL view_count"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_daily_date",
+          "definition": "CREATE INDEX idx_gfg_game_daily_date ON public.gfg_game_daily USING btree (fact_date DESC, game_id)"
+        },
+        {
+          "name": "idx_gfg_game_daily_tracking_period",
+          "definition": "CREATE INDEX idx_gfg_game_daily_tracking_period ON public.gfg_game_daily USING btree (tracking_period_id, fact_date DESC)"
         }
       ],
       "triggers": null
@@ -3154,6 +3660,731 @@
         {
           "name": "idx_gfg_game_player_counts_run",
           "definition": "CREATE INDEX idx_gfg_game_player_counts_run ON public.gfg_game_player_counts USING btree (run_id) WHERE (run_id \u003c\u003e ''::text)"
+        },
+        {
+          "name": "uq_gfg_game_player_counts_run_game",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_game_player_counts_run_game ON public.gfg_game_player_counts USING btree (run_id, game_id) WHERE (run_id \u003c\u003e ''::text)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_player_daily",
+      "comment": "UTC Game player facts aggregated directly from successful daily raw samples.",
+      "columns": [
+        {
+          "name": "tracking_period_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "fact_date",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "min_players",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "max_players",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "avg_players",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "median_players",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "expected_samples",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "attempted_samples",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "successful_samples",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "partial_samples",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "failed_samples",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "skipped_samples",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "missed_samples",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "canceled_samples",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "unattempted_samples",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "failure_kind_counts",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "first_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "last_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "avg_observation_lag_ms",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "max_observation_lag_ms",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "quality_basis",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "projection_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "finalized_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_player_daily_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_player_daily_attempted_samples_not_null",
+          "definition": "NOT NULL attempted_samples"
+        },
+        {
+          "name": "gfg_game_player_daily_counts_check",
+          "definition": "CHECK (attempted_samples \u003e= 0 AND successful_samples \u003e= 0 AND partial_samples \u003e= 0 AND failed_samples \u003e= 0 AND attempted_samples = (successful_samples + partial_samples + failed_samples))"
+        },
+        {
+          "name": "gfg_game_player_daily_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_game_player_daily_fact_date_not_null",
+          "definition": "NOT NULL fact_date"
+        },
+        {
+          "name": "gfg_game_player_daily_failed_samples_not_null",
+          "definition": "NOT NULL failed_samples"
+        },
+        {
+          "name": "gfg_game_player_daily_failure_json_check",
+          "definition": "CHECK (jsonb_typeof(failure_kind_counts) = 'object'::text)"
+        },
+        {
+          "name": "gfg_game_player_daily_failure_kind_counts_not_null",
+          "definition": "NOT NULL failure_kind_counts"
+        },
+        {
+          "name": "gfg_game_player_daily_finalized_at_not_null",
+          "definition": "NOT NULL finalized_at"
+        },
+        {
+          "name": "gfg_game_player_daily_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_player_daily_nonnegative_check",
+          "definition": "CHECK (expected_samples IS NULL OR expected_samples \u003e= 0)"
+        },
+        {
+          "name": "gfg_game_player_daily_numeric_check",
+          "definition": "CHECK (successful_samples = 0 AND min_players IS NULL AND max_players IS NULL AND avg_players IS NULL AND median_players IS NULL OR successful_samples \u003e 0 AND min_players IS NOT NULL AND max_players IS NOT NULL AND avg_players IS NOT NULL AND median_players IS NOT NULL)"
+        },
+        {
+          "name": "gfg_game_player_daily_partial_samples_not_null",
+          "definition": "NOT NULL partial_samples"
+        },
+        {
+          "name": "gfg_game_player_daily_pkey",
+          "definition": "PRIMARY KEY (tracking_period_id, fact_date)"
+        },
+        {
+          "name": "gfg_game_player_daily_projection_check",
+          "definition": "CHECK (projection_version \u003e 0)"
+        },
+        {
+          "name": "gfg_game_player_daily_projection_version_not_null",
+          "definition": "NOT NULL projection_version"
+        },
+        {
+          "name": "gfg_game_player_daily_quality_basis_not_null",
+          "definition": "NOT NULL quality_basis"
+        },
+        {
+          "name": "gfg_game_player_daily_quality_check",
+          "definition": "CHECK (quality_basis = 'legacy_observed_only'::text AND expected_samples IS NULL AND skipped_samples IS NULL AND missed_samples IS NULL AND canceled_samples IS NULL AND unattempted_samples IS NULL OR quality_basis = 'acquisition_ledger'::text AND expected_samples IS NOT NULL AND skipped_samples \u003e= 0 AND missed_samples \u003e= 0 AND canceled_samples \u003e= 0 AND unattempted_samples \u003e= 0 AND expected_samples = (attempted_samples + skipped_samples + missed_samples + canceled_samples + unattempted_samples))"
+        },
+        {
+          "name": "gfg_game_player_daily_successful_samples_not_null",
+          "definition": "NOT NULL successful_samples"
+        },
+        {
+          "name": "gfg_game_player_daily_tracking_period_id_fkey",
+          "definition": "FOREIGN KEY (tracking_period_id) REFERENCES gfg_game_tracking_periods(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_game_player_daily_tracking_period_id_not_null",
+          "definition": "NOT NULL tracking_period_id"
+        },
+        {
+          "name": "gfg_game_player_daily_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_player_daily_game_date",
+          "definition": "CREATE INDEX idx_gfg_game_player_daily_game_date ON public.gfg_game_player_daily USING btree (game_id, fact_date DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_player_hourly",
+      "comment": "UTC Game player facts; scheduled acquisition quality is separate from numeric values.",
+      "columns": [
+        {
+          "name": "tracking_period_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "bucket_start",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "min_players",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "max_players",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "avg_players",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "median_players",
+          "data_type": "double precision",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "expected_samples",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "attempted_samples",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "successful_samples",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "partial_samples",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "failed_samples",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "skipped_samples",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "missed_samples",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "canceled_samples",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "unattempted_samples",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "failure_kind_counts",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "first_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "last_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "avg_observation_lag_ms",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "max_observation_lag_ms",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "quality_basis",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "projection_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "finalized_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_player_hourly_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_player_hourly_attempted_samples_not_null",
+          "definition": "NOT NULL attempted_samples"
+        },
+        {
+          "name": "gfg_game_player_hourly_bucket_check",
+          "definition": "CHECK (bucket_start = date_trunc('hour'::text, bucket_start))"
+        },
+        {
+          "name": "gfg_game_player_hourly_bucket_start_not_null",
+          "definition": "NOT NULL bucket_start"
+        },
+        {
+          "name": "gfg_game_player_hourly_counts_check",
+          "definition": "CHECK (attempted_samples \u003e= 0 AND successful_samples \u003e= 0 AND partial_samples \u003e= 0 AND failed_samples \u003e= 0 AND attempted_samples = (successful_samples + partial_samples + failed_samples))"
+        },
+        {
+          "name": "gfg_game_player_hourly_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_game_player_hourly_failed_samples_not_null",
+          "definition": "NOT NULL failed_samples"
+        },
+        {
+          "name": "gfg_game_player_hourly_failure_json_check",
+          "definition": "CHECK (jsonb_typeof(failure_kind_counts) = 'object'::text)"
+        },
+        {
+          "name": "gfg_game_player_hourly_failure_kind_counts_not_null",
+          "definition": "NOT NULL failure_kind_counts"
+        },
+        {
+          "name": "gfg_game_player_hourly_finalized_at_not_null",
+          "definition": "NOT NULL finalized_at"
+        },
+        {
+          "name": "gfg_game_player_hourly_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_player_hourly_nonnegative_check",
+          "definition": "CHECK (expected_samples IS NULL OR expected_samples \u003e= 0)"
+        },
+        {
+          "name": "gfg_game_player_hourly_numeric_check",
+          "definition": "CHECK (successful_samples = 0 AND min_players IS NULL AND max_players IS NULL AND avg_players IS NULL AND median_players IS NULL OR successful_samples \u003e 0 AND min_players IS NOT NULL AND max_players IS NOT NULL AND avg_players IS NOT NULL AND median_players IS NOT NULL)"
+        },
+        {
+          "name": "gfg_game_player_hourly_partial_samples_not_null",
+          "definition": "NOT NULL partial_samples"
+        },
+        {
+          "name": "gfg_game_player_hourly_pkey",
+          "definition": "PRIMARY KEY (tracking_period_id, bucket_start)"
+        },
+        {
+          "name": "gfg_game_player_hourly_projection_check",
+          "definition": "CHECK (projection_version \u003e 0)"
+        },
+        {
+          "name": "gfg_game_player_hourly_projection_version_not_null",
+          "definition": "NOT NULL projection_version"
+        },
+        {
+          "name": "gfg_game_player_hourly_quality_basis_not_null",
+          "definition": "NOT NULL quality_basis"
+        },
+        {
+          "name": "gfg_game_player_hourly_quality_check",
+          "definition": "CHECK (quality_basis = 'legacy_observed_only'::text AND expected_samples IS NULL AND skipped_samples IS NULL AND missed_samples IS NULL AND canceled_samples IS NULL AND unattempted_samples IS NULL OR quality_basis = 'acquisition_ledger'::text AND expected_samples IS NOT NULL AND skipped_samples \u003e= 0 AND missed_samples \u003e= 0 AND canceled_samples \u003e= 0 AND unattempted_samples \u003e= 0 AND expected_samples = (attempted_samples + skipped_samples + missed_samples + canceled_samples + unattempted_samples))"
+        },
+        {
+          "name": "gfg_game_player_hourly_successful_samples_not_null",
+          "definition": "NOT NULL successful_samples"
+        },
+        {
+          "name": "gfg_game_player_hourly_tracking_period_id_fkey",
+          "definition": "FOREIGN KEY (tracking_period_id) REFERENCES gfg_game_tracking_periods(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_game_player_hourly_tracking_period_id_not_null",
+          "definition": "NOT NULL tracking_period_id"
+        },
+        {
+          "name": "gfg_game_player_hourly_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_player_hourly_game_time",
+          "definition": "CREATE INDEX idx_gfg_game_player_hourly_game_time ON public.gfg_game_player_hourly USING btree (game_id, bucket_start DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_price_daily",
+      "comment": "Historical regional price state with observation provenance and carry-forward source.",
+      "columns": [
+        {
+          "name": "tracking_period_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "region",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "fact_date",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "price_state",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "currency",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "initial_amount",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "final_amount",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "discount_percent",
+          "data_type": "integer",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "materialization_source",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "projection_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "finalized_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_price_daily_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_price_daily_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_game_price_daily_fact_date_not_null",
+          "definition": "NOT NULL fact_date"
+        },
+        {
+          "name": "gfg_game_price_daily_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_price_daily_materialization_source_not_null",
+          "definition": "NOT NULL materialization_source"
+        },
+        {
+          "name": "gfg_game_price_daily_pkey",
+          "definition": "PRIMARY KEY (tracking_period_id, region, fact_date)"
+        },
+        {
+          "name": "gfg_game_price_daily_price_state_not_null",
+          "definition": "NOT NULL price_state"
+        },
+        {
+          "name": "gfg_game_price_daily_projection_check",
+          "definition": "CHECK (projection_version \u003e 0)"
+        },
+        {
+          "name": "gfg_game_price_daily_projection_version_not_null",
+          "definition": "NOT NULL projection_version"
+        },
+        {
+          "name": "gfg_game_price_daily_region_check",
+          "definition": "CHECK (btrim(region) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfg_game_price_daily_region_not_null",
+          "definition": "NOT NULL region"
+        },
+        {
+          "name": "gfg_game_price_daily_shape_check",
+          "definition": "CHECK (price_state = 'free'::text AND currency IS NULL AND initial_amount IS NULL AND final_amount IS NULL AND discount_percent IS NULL OR price_state = 'priced'::text AND btrim(currency) \u003c\u003e ''::text AND initial_amount \u003e= 0 AND final_amount \u003e= 0 AND discount_percent \u003e= 0 AND discount_percent \u003c= 100 OR (price_state = ANY (ARRAY['unpriced'::text, 'unknown'::text])) AND currency IS NULL AND initial_amount IS NULL AND final_amount IS NULL AND discount_percent IS NULL)"
+        },
+        {
+          "name": "gfg_game_price_daily_source_check",
+          "definition": "CHECK (materialization_source = ANY (ARRAY['bootstrap'::text, 'observed'::text, 'carried_forward'::text]))"
+        },
+        {
+          "name": "gfg_game_price_daily_state_check",
+          "definition": "CHECK (price_state = ANY (ARRAY['free'::text, 'priced'::text, 'unpriced'::text, 'unknown'::text]))"
+        },
+        {
+          "name": "gfg_game_price_daily_tracking_period_id_fkey",
+          "definition": "FOREIGN KEY (tracking_period_id) REFERENCES gfg_game_tracking_periods(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_game_price_daily_tracking_period_id_not_null",
+          "definition": "NOT NULL tracking_period_id"
+        },
+        {
+          "name": "gfg_game_price_daily_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_price_daily_game_date",
+          "definition": "CREATE INDEX idx_gfg_game_price_daily_game_date ON public.gfg_game_price_daily USING btree (game_id, fact_date DESC, region)"
         }
       ],
       "triggers": null
@@ -3241,6 +4472,14 @@
           "not_null": true,
           "has_default": true,
           "default": "now()"
+        },
+        {
+          "name": "price_state",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'unknown'::text",
+          "comment": "Authoritative price state: free, priced, unpriced, or unknown."
         }
       ],
       "constraints": [
@@ -3287,6 +4526,14 @@
         {
           "name": "gfg_game_prices_pkey",
           "definition": "PRIMARY KEY (game_id, region)"
+        },
+        {
+          "name": "gfg_game_prices_price_state_check",
+          "definition": "CHECK (price_state = ANY (ARRAY['free'::text, 'priced'::text, 'unpriced'::text, 'unknown'::text]))"
+        },
+        {
+          "name": "gfg_game_prices_price_state_not_null",
+          "definition": "NOT NULL price_state"
         },
         {
           "name": "gfg_game_prices_region_not_null",
@@ -3535,10 +4782,6 @@
         {
           "name": "gfg_game_release_history_availability_not_null",
           "definition": "NOT NULL availability"
-        },
-        {
-          "name": "gfg_game_release_history_game_id_fkey",
-          "definition": "FOREIGN KEY (game_id) REFERENCES gfg_game(id) ON DELETE CASCADE"
         },
         {
           "name": "gfg_game_release_history_game_id_not_null",
@@ -3872,6 +5115,140 @@
         }
       ],
       "indexes": null,
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_tracking_periods",
+      "comment": "Immutable Game/AppID eligibility periods used by historical facts; no FK to current gfg_game.",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d"
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "appid",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "tracked_from",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "tracked_until",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "tracking_basis",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "opened_reason",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "closed_reason",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_tracking_periods_appid_not_null",
+          "definition": "NOT NULL appid"
+        },
+        {
+          "name": "gfg_game_tracking_periods_basis_check",
+          "definition": "CHECK (tracking_basis = ANY (ARRAY['explicit'::text, 'legacy_observed'::text]))"
+        },
+        {
+          "name": "gfg_game_tracking_periods_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_game_tracking_periods_explicit_shape_check",
+          "definition": "CHECK (tracking_basis \u003c\u003e 'explicit'::text OR appid \u003e 0)"
+        },
+        {
+          "name": "gfg_game_tracking_periods_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_tracking_periods_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_game_tracking_periods_interval_check",
+          "definition": "CHECK (tracked_until IS NULL OR tracked_until \u003e tracked_from)"
+        },
+        {
+          "name": "gfg_game_tracking_periods_opened_reason_not_null",
+          "definition": "NOT NULL opened_reason"
+        },
+        {
+          "name": "gfg_game_tracking_periods_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_game_tracking_periods_tracked_from_not_null",
+          "definition": "NOT NULL tracked_from"
+        },
+        {
+          "name": "gfg_game_tracking_periods_tracking_basis_not_null",
+          "definition": "NOT NULL tracking_basis"
+        },
+        {
+          "name": "gfg_game_tracking_periods_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_tracking_periods_identity_time",
+          "definition": "CREATE INDEX idx_gfg_game_tracking_periods_identity_time ON public.gfg_game_tracking_periods USING btree (game_id, appid, tracked_from, tracked_until)"
+        },
+        {
+          "name": "idx_gfg_game_tracking_periods_time",
+          "definition": "CREATE INDEX idx_gfg_game_tracking_periods_time ON public.gfg_game_tracking_periods USING btree (tracked_from, tracked_until)"
+        },
+        {
+          "name": "uq_gfg_game_tracking_periods_active_explicit",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_game_tracking_periods_active_explicit ON public.gfg_game_tracking_periods USING btree (game_id) WHERE ((tracking_basis = 'explicit'::text) AND (tracked_until IS NULL))"
+        }
+      ],
       "triggers": null
     },
     {
@@ -4300,6 +5677,18 @@
     {
       "identity": "gfg_game_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer)",
       "definition": "CREATE OR REPLACE FUNCTION public.gfg_game_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer DEFAULT 5)\n RETURNS integer\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    deleted_count integer;\nBEGIN\n    WITH ranked AS (\n        SELECT id,\n               row_number() OVER (\n                   PARTITION BY appid, lang, region\n                   ORDER BY collected_at DESC, id DESC\n               ) AS rn\n        FROM public.gfg_game_detail_snapshots\n        WHERE appid = p_appid\n          AND lang = p_lang\n          AND region = p_region\n    ),\n    deleted AS (\n        DELETE FROM public.gfg_game_detail_snapshots snapshot\n        USING ranked\n        WHERE snapshot.id = ranked.id\n          AND ranked.rn \u003e GREATEST(p_keep_count, 0)\n        RETURNING snapshot.id\n    )\n    SELECT count(*) INTO deleted_count FROM deleted;\n\n    RETURN deleted_count;\nEND;\n$function$\n"
+    },
+    {
+      "identity": "gfg_project_player_fact_day(target_date date)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfg_project_player_fact_day(target_date date)\n RETURNS TABLE(hourly_rows bigint, daily_rows bigint)\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    day_start timestamp with time zone := target_date::timestamp AT TIME ZONE 'UTC';\n    day_end timestamp with time zone := (target_date + 1)::timestamp AT TIME ZONE 'UTC';\n    cutover timestamp with time zone;\nBEGIN\n    SELECT quality_cutover_at INTO cutover\n    FROM public.gfg_fact_rollup_checkpoints\n    WHERE pipeline_key = 'game.player_facts';\n\n    DROP TABLE IF EXISTS pg_temp.gfg_player_fact_slots;\n    CREATE TEMPORARY TABLE pg_temp.gfg_player_fact_slots ON COMMIT DROP AS\n    WITH scheduled_jobs AS (\n        SELECT job.id,\n               job.scheduled_for,\n               job.scope_type,\n               job.scope_id,\n               job.status AS job_status\n        FROM public.gfg_collection_jobs job\n        WHERE job.trigger = 'scheduled'\n          AND job.job_key = 'game.players'\n          AND job.tasks @\u003e ARRAY['players']::text[]\n          AND job.scheduled_for \u003e= day_start\n          AND job.scheduled_for \u003c day_end\n    ), latest_runs AS (\n        SELECT DISTINCT ON (run.job_id)\n               run.job_id, run.id AS run_id, run.status AS run_status, run.attempt_no\n        FROM public.gfg_collection_runs run\n        JOIN scheduled_jobs job ON job.id = run.job_id\n        ORDER BY run.job_id, run.attempt_no DESC, run.started_at DESC\n    ), latest_results AS (\n        SELECT DISTINCT ON (run.job_id, result.game_id)\n               run.job_id,\n               result.game_id,\n               result.run_id,\n               result.status,\n               NULLIF(result.error_kind, '') AS error_kind,\n               result.started_at,\n               result.ended_at,\n               run.attempt_no\n        FROM public.gfg_collection_runs run\n        JOIN public.gfg_collection_task_results result ON result.run_id = run.id\n        JOIN scheduled_jobs job ON job.id = run.job_id\n        WHERE result.task_type = 'players'\n        ORDER BY run.job_id, result.game_id, run.attempt_no DESC,\n                 result.started_at DESC, result.id DESC\n    )\n    SELECT period.id AS tracking_period_id,\n           period.game_id,\n           period.appid,\n           job.id AS job_id,\n           job.scheduled_for,\n           date_trunc('hour', job.scheduled_for) AS bucket_start,\n           CASE\n               WHEN result.status = 'success' THEN 'success'\n               WHEN result.status = 'partial' THEN 'partial'\n               WHEN result.status = 'failed' THEN 'failure'\n               WHEN result.status = 'skipped' THEN 'skipped'\n               WHEN job.job_status = 'missed' THEN 'missed'\n               WHEN job.job_status = 'skipped' THEN 'skipped'\n               WHEN job.job_status = 'canceled' OR run.run_status = 'canceled' THEN 'canceled'\n               ELSE 'unattempted'\n           END AS outcome,\n           result.error_kind,\n           raw.status AS raw_status,\n           raw.count AS player_count,\n           raw.collected_at,\n           CASE WHEN raw.collected_at IS NULL THEN NULL\n                ELSE (extract(epoch FROM (raw.collected_at - job.scheduled_for)) * 1000)::bigint\n           END AS observation_lag_ms\n    FROM scheduled_jobs job\n    JOIN public.gfg_game_tracking_periods period\n      ON period.tracked_from \u003c= job.scheduled_for\n     AND (period.tracked_until IS NULL OR job.scheduled_for \u003c period.tracked_until)\n     AND (job.scope_type = 'all'\n          OR (job.scope_type = 'game' AND job.scope_id = period.game_id))\n    LEFT JOIN latest_runs run ON run.job_id = job.id\n    LEFT JOIN latest_results result\n      ON result.job_id = job.id AND result.game_id = period.game_id\n    LEFT JOIN public.gfg_game_player_counts raw\n      ON raw.run_id = result.run_id AND raw.game_id = period.game_id;\n\n    DELETE FROM public.gfg_game_player_hourly WHERE bucket_start \u003e= day_start AND bucket_start \u003c day_end;\n    DELETE FROM public.gfg_game_player_daily WHERE fact_date = target_date;\n\n    WITH failure_counts AS (\n        SELECT tracking_period_id,\n               bucket_start,\n               jsonb_object_agg(error_kind, failure_count ORDER BY error_kind) AS counts\n        FROM (\n            SELECT tracking_period_id, bucket_start,\n                   COALESCE(error_kind, 'unknown') AS error_kind,\n                   count(*)::bigint AS failure_count\n            FROM pg_temp.gfg_player_fact_slots\n            WHERE outcome = 'failure'\n            GROUP BY tracking_period_id, bucket_start, COALESCE(error_kind, 'unknown')\n        ) failures\n        GROUP BY tracking_period_id, bucket_start\n    ), aggregated AS (\n        SELECT slot.tracking_period_id,\n               slot.game_id,\n               slot.appid,\n               slot.bucket_start,\n               min(slot.player_count) FILTER (WHERE slot.outcome = 'success' AND slot.raw_status = 'success') AS min_players,\n               max(slot.player_count) FILTER (WHERE slot.outcome = 'success' AND slot.raw_status = 'success') AS max_players,\n               avg(slot.player_count::double precision) FILTER (WHERE slot.outcome = 'success' AND slot.raw_status = 'success') AS avg_players,\n               percentile_cont(0.5) WITHIN GROUP (ORDER BY slot.player_count)\n                   FILTER (WHERE slot.outcome = 'success' AND slot.raw_status = 'success') AS median_players,\n               count(*)::integer AS expected_samples,\n               count(*) FILTER (WHERE slot.outcome IN ('success', 'partial', 'failure'))::integer AS attempted_samples,\n               count(*) FILTER (WHERE slot.outcome = 'success')::integer AS successful_samples,\n               count(*) FILTER (WHERE slot.outcome = 'partial')::integer AS partial_samples,\n               count(*) FILTER (WHERE slot.outcome = 'failure')::integer AS failed_samples,\n               count(*) FILTER (WHERE slot.outcome = 'skipped')::integer AS skipped_samples,\n               count(*) FILTER (WHERE slot.outcome = 'missed')::integer AS missed_samples,\n               count(*) FILTER (WHERE slot.outcome = 'canceled')::integer AS canceled_samples,\n               count(*) FILTER (WHERE slot.outcome = 'unattempted')::integer AS unattempted_samples,\n               min(slot.collected_at) AS first_observed_at,\n               max(slot.collected_at) AS last_observed_at,\n               avg(slot.observation_lag_ms)::bigint AS avg_observation_lag_ms,\n               max(slot.observation_lag_ms) AS max_observation_lag_ms\n        FROM pg_temp.gfg_player_fact_slots slot\n        GROUP BY slot.tracking_period_id, slot.game_id, slot.appid, slot.bucket_start\n    )\n    INSERT INTO public.gfg_game_player_hourly (\n        tracking_period_id, game_id, appid, bucket_start,\n        min_players, max_players, avg_players, median_players,\n        expected_samples, attempted_samples, successful_samples, partial_samples,\n        failed_samples, skipped_samples, missed_samples, canceled_samples,\n        unattempted_samples, failure_kind_counts, first_observed_at,\n        last_observed_at, avg_observation_lag_ms, max_observation_lag_ms,\n        quality_basis, projection_version, finalized_at, created_at, updated_at\n    )\n    SELECT aggregate.tracking_period_id, aggregate.game_id, aggregate.appid, aggregate.bucket_start,\n           aggregate.min_players, aggregate.max_players, aggregate.avg_players, aggregate.median_players,\n           CASE WHEN day_start \u003e= cutover THEN aggregate.expected_samples END,\n           aggregate.attempted_samples, aggregate.successful_samples, aggregate.partial_samples,\n           aggregate.failed_samples,\n           CASE WHEN day_start \u003e= cutover THEN aggregate.skipped_samples END,\n           CASE WHEN day_start \u003e= cutover THEN aggregate.missed_samples END,\n           CASE WHEN day_start \u003e= cutover THEN aggregate.canceled_samples END,\n           CASE WHEN day_start \u003e= cutover THEN aggregate.unattempted_samples END,\n           COALESCE(failure.counts, '{}'::jsonb), aggregate.first_observed_at,\n           aggregate.last_observed_at, aggregate.avg_observation_lag_ms,\n           aggregate.max_observation_lag_ms,\n           CASE WHEN day_start \u003e= cutover THEN 'acquisition_ledger' ELSE 'legacy_observed_only' END,\n           1, transaction_timestamp(), transaction_timestamp(), transaction_timestamp()\n    FROM aggregated aggregate\n    LEFT JOIN failure_counts failure\n      ON failure.tracking_period_id = aggregate.tracking_period_id\n     AND failure.bucket_start = aggregate.bucket_start;\n\n    GET DIAGNOSTICS hourly_rows = ROW_COUNT;\n\n    WITH failure_counts AS (\n        SELECT tracking_period_id,\n               jsonb_object_agg(error_kind, failure_count ORDER BY error_kind) AS counts\n        FROM (\n            SELECT tracking_period_id,\n                   COALESCE(error_kind, 'unknown') AS error_kind,\n                   count(*)::bigint AS failure_count\n            FROM pg_temp.gfg_player_fact_slots\n            WHERE outcome = 'failure'\n            GROUP BY tracking_period_id, COALESCE(error_kind, 'unknown')\n        ) failures\n        GROUP BY tracking_period_id\n    ), aggregated AS (\n        SELECT slot.tracking_period_id,\n               slot.game_id,\n               slot.appid,\n               min(slot.player_count) FILTER (WHERE slot.outcome = 'success' AND slot.raw_status = 'success') AS min_players,\n               max(slot.player_count) FILTER (WHERE slot.outcome = 'success' AND slot.raw_status = 'success') AS max_players,\n               avg(slot.player_count::double precision) FILTER (WHERE slot.outcome = 'success' AND slot.raw_status = 'success') AS avg_players,\n               percentile_cont(0.5) WITHIN GROUP (ORDER BY slot.player_count)\n                   FILTER (WHERE slot.outcome = 'success' AND slot.raw_status = 'success') AS median_players,\n               count(*)::integer AS expected_samples,\n               count(*) FILTER (WHERE slot.outcome IN ('success', 'partial', 'failure'))::integer AS attempted_samples,\n               count(*) FILTER (WHERE slot.outcome = 'success')::integer AS successful_samples,\n               count(*) FILTER (WHERE slot.outcome = 'partial')::integer AS partial_samples,\n               count(*) FILTER (WHERE slot.outcome = 'failure')::integer AS failed_samples,\n               count(*) FILTER (WHERE slot.outcome = 'skipped')::integer AS skipped_samples,\n               count(*) FILTER (WHERE slot.outcome = 'missed')::integer AS missed_samples,\n               count(*) FILTER (WHERE slot.outcome = 'canceled')::integer AS canceled_samples,\n               count(*) FILTER (WHERE slot.outcome = 'unattempted')::integer AS unattempted_samples,\n               min(slot.collected_at) AS first_observed_at,\n               max(slot.collected_at) AS last_observed_at,\n               avg(slot.observation_lag_ms)::bigint AS avg_observation_lag_ms,\n               max(slot.observation_lag_ms) AS max_observation_lag_ms\n        FROM pg_temp.gfg_player_fact_slots slot\n        GROUP BY slot.tracking_period_id, slot.game_id, slot.appid\n    )\n    INSERT INTO public.gfg_game_player_daily (\n        tracking_period_id, game_id, appid, fact_date,\n        min_players, max_players, avg_players, median_players,\n        expected_samples, attempted_samples, successful_samples, partial_samples,\n        failed_samples, skipped_samples, missed_samples, canceled_samples,\n        unattempted_samples, failure_kind_counts, first_observed_at,\n        last_observed_at, avg_observation_lag_ms, max_observation_lag_ms,\n        quality_basis, projection_version, finalized_at, created_at, updated_at\n    )\n    SELECT aggregate.tracking_period_id, aggregate.game_id, aggregate.appid, target_date,\n           aggregate.min_players, aggregate.max_players, aggregate.avg_players, aggregate.median_players,\n           CASE WHEN day_start \u003e= cutover THEN aggregate.expected_samples END,\n           aggregate.attempted_samples, aggregate.successful_samples, aggregate.partial_samples,\n           aggregate.failed_samples,\n           CASE WHEN day_start \u003e= cutover THEN aggregate.skipped_samples END,\n           CASE WHEN day_start \u003e= cutover THEN aggregate.missed_samples END,\n           CASE WHEN day_start \u003e= cutover THEN aggregate.canceled_samples END,\n           CASE WHEN day_start \u003e= cutover THEN aggregate.unattempted_samples END,\n           COALESCE(failure.counts, '{}'::jsonb), aggregate.first_observed_at,\n           aggregate.last_observed_at, aggregate.avg_observation_lag_ms,\n           aggregate.max_observation_lag_ms,\n           CASE WHEN day_start \u003e= cutover THEN 'acquisition_ledger' ELSE 'legacy_observed_only' END,\n           1, transaction_timestamp(), transaction_timestamp(), transaction_timestamp()\n    FROM aggregated aggregate\n    LEFT JOIN failure_counts failure USING (tracking_period_id);\n\n    GET DIAGNOSTICS daily_rows = ROW_COUNT;\n    RETURN NEXT;\nEND;\n$function$\n"
+    },
+    {
+      "identity": "gfg_project_state_fact_day(target_date date)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfg_project_state_fact_day(target_date date)\n RETURNS TABLE(game_rows bigint, price_rows bigint)\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    day_start timestamp with time zone := target_date::timestamp AT TIME ZONE 'UTC';\n    day_end timestamp with time zone := (target_date + 1)::timestamp AT TIME ZONE 'UTC';\n    eligible_count bigint;\nBEGIN\n    WITH eligible AS (\n        SELECT period.*,\n               LEAST(day_end, COALESCE(period.tracked_until, day_end)) AS terminal_at,\n               period.tracked_until IS NULL OR period.tracked_until \u003e day_end AS tracked_at_end\n        FROM public.gfg_game_tracking_periods period\n        WHERE period.tracked_from \u003c day_end\n          AND (period.tracked_until IS NULL OR period.tracked_until \u003e day_start)\n          AND period.tracking_basis = 'explicit'\n    ), materialized AS (\n        SELECT eligible.*,\n               prior.game_id AS prior_game_id\n        FROM eligible\n        LEFT JOIN LATERAL (\n            SELECT daily.*\n            FROM public.gfg_game_daily daily\n            WHERE daily.tracking_period_id = eligible.id\n              AND daily.fact_date \u003c= target_date\n            ORDER BY daily.fact_date DESC\n            LIMIT 1\n        ) prior ON true\n    )\n    SELECT count(*), count(prior_game_id) INTO eligible_count, game_rows\n    FROM materialized;\n\n    IF game_rows \u003c\u003e eligible_count THEN\n        RAISE EXCEPTION 'Game state source unavailable for %, expected %, materialized %', target_date, eligible_count, game_rows;\n    END IF;\n\n    WITH eligible AS (\n        SELECT period.*,\n               LEAST(day_end, COALESCE(period.tracked_until, day_end)) AS terminal_at,\n               period.tracked_until IS NULL OR period.tracked_until \u003e day_end AS tracked_at_end\n        FROM public.gfg_game_tracking_periods period\n        WHERE period.tracked_from \u003c day_end\n          AND (period.tracked_until IS NULL OR period.tracked_until \u003e day_start)\n          AND period.tracking_basis = 'explicit'\n    ), latest AS (\n        SELECT eligible.id AS target_tracking_period_id,\n               eligible.appid AS target_appid,\n               eligible.terminal_at AS terminal_snapshot_at,\n               eligible.tracked_at_end AS terminal_tracked_at_end,\n               prior.*\n        FROM eligible\n        JOIN LATERAL (\n            SELECT daily.*\n            FROM public.gfg_game_daily daily\n            WHERE daily.tracking_period_id = eligible.id\n              AND daily.fact_date \u003c= target_date\n            ORDER BY daily.fact_date DESC\n            LIMIT 1\n        ) prior ON true\n    )\n    INSERT INTO public.gfg_game_daily (\n        game_id, fact_date, tracking_period_id, appid, snapshot_at, tracked_at_end,\n        name, name_en, view_count, game_type, is_free, windows, mac, linux,\n        release_availability, release_precision, release_exact_date, release_year,\n        release_month, release_quarter, release_window_start, release_window_end,\n        release_observed_at, first_available_precision, first_available_exact_date,\n        first_available_year, first_available_month, first_available_quarter,\n        first_available_window_start, first_available_window_end,\n        first_available_source, first_available_inferred, language_codes,\n        unknown_language_names, full_audio_language_codes, languages_observed_at,\n        developers, publishers, primary_tag_id, secondary_tag_id, tag_ids,\n        details_observed_at, materialization_source, projection_version,\n        finalized_at, created_at, updated_at\n    )\n    SELECT latest.game_id, target_date, latest.target_tracking_period_id, latest.target_appid,\n           latest.terminal_snapshot_at, latest.terminal_tracked_at_end,\n           latest.name, latest.name_en, latest.view_count, latest.game_type,\n           latest.is_free, latest.windows, latest.mac, latest.linux,\n           latest.release_availability, latest.release_precision,\n           latest.release_exact_date, latest.release_year, latest.release_month,\n           latest.release_quarter, latest.release_window_start,\n           latest.release_window_end, latest.release_observed_at,\n           latest.first_available_precision, latest.first_available_exact_date,\n           latest.first_available_year, latest.first_available_month,\n           latest.first_available_quarter, latest.first_available_window_start,\n           latest.first_available_window_end, latest.first_available_source,\n           latest.first_available_inferred, latest.language_codes,\n           latest.unknown_language_names, latest.full_audio_language_codes,\n           latest.languages_observed_at, latest.developers, latest.publishers,\n           latest.primary_tag_id, latest.secondary_tag_id, latest.tag_ids,\n           latest.details_observed_at,\n           CASE WHEN latest.fact_date = target_date THEN latest.materialization_source\n                ELSE 'carried_forward' END,\n           1, transaction_timestamp(), latest.created_at, transaction_timestamp()\n    FROM latest\n    ON CONFLICT (game_id, fact_date) DO UPDATE\n    SET tracking_period_id = EXCLUDED.tracking_period_id,\n        appid = EXCLUDED.appid,\n        snapshot_at = EXCLUDED.snapshot_at,\n        tracked_at_end = EXCLUDED.tracked_at_end,\n        name = EXCLUDED.name,\n        name_en = EXCLUDED.name_en,\n        view_count = EXCLUDED.view_count,\n        game_type = EXCLUDED.game_type,\n        is_free = EXCLUDED.is_free,\n        windows = EXCLUDED.windows,\n        mac = EXCLUDED.mac,\n        linux = EXCLUDED.linux,\n        release_availability = EXCLUDED.release_availability,\n        release_precision = EXCLUDED.release_precision,\n        release_exact_date = EXCLUDED.release_exact_date,\n        release_year = EXCLUDED.release_year,\n        release_month = EXCLUDED.release_month,\n        release_quarter = EXCLUDED.release_quarter,\n        release_window_start = EXCLUDED.release_window_start,\n        release_window_end = EXCLUDED.release_window_end,\n        release_observed_at = EXCLUDED.release_observed_at,\n        first_available_precision = EXCLUDED.first_available_precision,\n        first_available_exact_date = EXCLUDED.first_available_exact_date,\n        first_available_year = EXCLUDED.first_available_year,\n        first_available_month = EXCLUDED.first_available_month,\n        first_available_quarter = EXCLUDED.first_available_quarter,\n        first_available_window_start = EXCLUDED.first_available_window_start,\n        first_available_window_end = EXCLUDED.first_available_window_end,\n        first_available_source = EXCLUDED.first_available_source,\n        first_available_inferred = EXCLUDED.first_available_inferred,\n        language_codes = EXCLUDED.language_codes,\n        unknown_language_names = EXCLUDED.unknown_language_names,\n        full_audio_language_codes = EXCLUDED.full_audio_language_codes,\n        languages_observed_at = EXCLUDED.languages_observed_at,\n        developers = EXCLUDED.developers,\n        publishers = EXCLUDED.publishers,\n        primary_tag_id = EXCLUDED.primary_tag_id,\n        secondary_tag_id = EXCLUDED.secondary_tag_id,\n        tag_ids = EXCLUDED.tag_ids,\n        details_observed_at = EXCLUDED.details_observed_at,\n        materialization_source = EXCLUDED.materialization_source,\n        projection_version = EXCLUDED.projection_version,\n        finalized_at = transaction_timestamp(),\n        updated_at = transaction_timestamp();\n\n    GET DIAGNOSTICS game_rows = ROW_COUNT;\n\n    WITH eligible AS (\n        SELECT period.*\n        FROM public.gfg_game_tracking_periods period\n        WHERE period.tracked_from \u003c day_end\n          AND (period.tracked_until IS NULL OR period.tracked_until \u003e day_start)\n          AND period.tracking_basis = 'explicit'\n    ), candidates AS (\n        SELECT period.id AS tracking_period_id,\n               period.game_id,\n               period.appid,\n               region.region,\n               COALESCE(today.price_state, prior.price_state, current.price_state, 'unknown') AS price_state,\n               COALESCE(today.currency, prior.currency, NULLIF(current.currency, '')) AS currency,\n               COALESCE(today.initial_amount, prior.initial_amount, current.initial_amount) AS initial_amount,\n               COALESCE(today.final_amount, prior.final_amount, current.final_amount) AS final_amount,\n               COALESCE(today.discount_percent, prior.discount_percent, current.discount_percent::integer) AS discount_percent,\n               COALESCE(today.observed_at, prior.observed_at, current.collected_at) AS observed_at,\n               CASE WHEN today.tracking_period_id IS NOT NULL THEN today.materialization_source\n                    WHEN prior.tracking_period_id IS NOT NULL THEN 'carried_forward'\n                    ELSE 'bootstrap' END AS source_kind\n        FROM eligible period\n        CROSS JOIN (VALUES ('CN'::text), ('US'::text), ('HK'::text)) region(region)\n        LEFT JOIN public.gfg_game_price_daily today\n          ON today.tracking_period_id = period.id\n         AND today.region = region.region\n         AND today.fact_date = target_date\n        LEFT JOIN LATERAL (\n            SELECT daily.*\n            FROM public.gfg_game_price_daily daily\n            WHERE daily.tracking_period_id = period.id\n              AND daily.region = region.region\n              AND daily.fact_date \u003c target_date\n            ORDER BY daily.fact_date DESC\n            LIMIT 1\n        ) prior ON today.tracking_period_id IS NULL\n        LEFT JOIN public.gfg_game_prices current\n          ON current.game_id = period.game_id\n         AND current.appid = period.appid\n         AND current.region = region.region\n         AND today.tracking_period_id IS NULL\n         AND prior.tracking_period_id IS NULL\n    )\n    INSERT INTO public.gfg_game_price_daily (\n        tracking_period_id, game_id, appid, region, fact_date, price_state,\n        currency, initial_amount, final_amount, discount_percent, observed_at,\n        materialization_source, projection_version, finalized_at,\n        created_at, updated_at\n    )\n    SELECT tracking_period_id, game_id, appid, region, target_date, price_state,\n           CASE WHEN price_state = 'priced' THEN currency END,\n           CASE WHEN price_state = 'priced' THEN initial_amount END,\n           CASE WHEN price_state = 'priced' THEN final_amount END,\n           CASE WHEN price_state = 'priced' THEN discount_percent END,\n           observed_at, source_kind, 1, transaction_timestamp(),\n           transaction_timestamp(), transaction_timestamp()\n    FROM candidates\n    ON CONFLICT (tracking_period_id, region, fact_date) DO UPDATE\n    SET game_id = EXCLUDED.game_id,\n        appid = EXCLUDED.appid,\n        price_state = EXCLUDED.price_state,\n        currency = EXCLUDED.currency,\n        initial_amount = EXCLUDED.initial_amount,\n        final_amount = EXCLUDED.final_amount,\n        discount_percent = EXCLUDED.discount_percent,\n        observed_at = EXCLUDED.observed_at,\n        materialization_source = EXCLUDED.materialization_source,\n        projection_version = EXCLUDED.projection_version,\n        finalized_at = transaction_timestamp(),\n        updated_at = transaction_timestamp();\n\n    GET DIAGNOSTICS price_rows = ROW_COUNT;\n    RETURN NEXT;\nEND;\n$function$\n"
+    },
+    {
+      "identity": "gfg_refresh_current_game_daily(target_game_id bigint, source_kind text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfg_refresh_current_game_daily(target_game_id bigint, source_kind text)\n RETURNS void\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n    IF source_kind NOT IN ('bootstrap', 'observed', 'carried_forward') THEN\n        RAISE EXCEPTION 'invalid Game Daily materialization source: %', source_kind;\n    END IF;\n\n    WITH current_game AS (\n        SELECT g.*, p.id AS tracking_period_id\n        FROM public.gfg_game g\n        JOIN public.gfg_game_tracking_periods p\n          ON p.game_id = g.id\n         AND p.appid = g.appid\n         AND p.tracking_basis = 'explicit'\n         AND p.tracked_until IS NULL\n        WHERE g.id = target_game_id\n    ), languages AS (\n        SELECT l.game_id,\n               array_agg(l.language_code ORDER BY l.sort_order, l.id)\n                   FILTER (WHERE l.language_code IS NOT NULL) AS language_codes,\n               array_agg(l.steam_name ORDER BY l.sort_order, l.id)\n                   FILTER (WHERE l.language_code IS NULL) AS unknown_language_names,\n               array_agg(l.language_code ORDER BY l.sort_order, l.id)\n                   FILTER (WHERE l.language_code IS NOT NULL AND l.full_audio_supported) AS full_audio_language_codes,\n               max(l.observed_at) AS languages_observed_at\n        FROM public.gfg_game_languages l\n        WHERE l.game_id = target_game_id\n        GROUP BY l.game_id\n    ), tags AS (\n        SELECT m.game_id, array_agg(DISTINCT m.tag_id ORDER BY m.tag_id) AS tag_ids\n        FROM public.gfg_tag_map m\n        WHERE m.game_id = target_game_id\n        GROUP BY m.game_id\n    ), snapshot AS (\n        SELECT g.id AS game_id,\n               (transaction_timestamp() AT TIME ZONE 'UTC')::date AS fact_date,\n               g.tracking_period_id,\n               g.appid,\n               transaction_timestamp() AS snapshot_at,\n               g.name::text AS name,\n               g.name_en::text AS name_en,\n               g.view_count,\n               NULLIF(d.type, '') AS game_type,\n               d.is_free,\n               CASE WHEN d.game_id IS NULL THEN NULL ELSE (d.platforms -\u003e\u003e 'windows')::boolean END AS windows,\n               CASE WHEN d.game_id IS NULL THEN NULL ELSE (d.platforms -\u003e\u003e 'mac')::boolean END AS mac,\n               CASE WHEN d.game_id IS NULL THEN NULL ELSE (d.platforms -\u003e\u003e 'linux')::boolean END AS linux,\n               r.availability AS release_availability,\n               r.precision AS release_precision,\n               r.exact_date AS release_exact_date,\n               r.release_year,\n               r.release_month,\n               r.release_quarter,\n               r.window_start AS release_window_start,\n               r.window_end AS release_window_end,\n               r.observed_at AS release_observed_at,\n               f.precision AS first_available_precision,\n               f.exact_date AS first_available_exact_date,\n               f.release_year AS first_available_year,\n               f.release_month AS first_available_month,\n               f.release_quarter AS first_available_quarter,\n               f.window_start AS first_available_window_start,\n               f.window_end AS first_available_window_end,\n               f.source AS first_available_source,\n               f.inferred AS first_available_inferred,\n               l.language_codes,\n               l.unknown_language_names,\n               l.full_audio_language_codes,\n               l.languages_observed_at,\n               CASE WHEN jsonb_typeof(g.developers) = 'array'\n                    THEN ARRAY(SELECT jsonb_array_elements_text(g.developers))\n                    ELSE ARRAY[]::text[] END AS developers,\n               CASE WHEN jsonb_typeof(g.publishers) = 'array'\n                    THEN ARRAY(SELECT jsonb_array_elements_text(g.publishers))\n                    ELSE ARRAY[]::text[] END AS publishers,\n               NULLIF(g.primary_tag, 0) AS primary_tag_id,\n               NULLIF(g.secondary_tag, 0) AS secondary_tag_id,\n               COALESCE(t.tag_ids, ARRAY[]::bigint[]) AS tag_ids,\n               d.collected_at AS details_observed_at\n        FROM current_game g\n        LEFT JOIN public.gfg_game_details d ON d.game_id = g.id AND d.appid = g.appid\n        LEFT JOIN public.gfg_game_release_state r ON r.game_id = g.id\n        LEFT JOIN public.gfg_game_first_available f ON f.game_id = g.id\n        LEFT JOIN languages l ON l.game_id = g.id\n        LEFT JOIN tags t ON t.game_id = g.id\n    )\n    INSERT INTO public.gfg_game_daily (\n        game_id, fact_date, tracking_period_id, appid, snapshot_at, tracked_at_end,\n        name, name_en, view_count, game_type, is_free, windows, mac, linux,\n        release_availability, release_precision, release_exact_date, release_year,\n        release_month, release_quarter, release_window_start, release_window_end,\n        release_observed_at, first_available_precision, first_available_exact_date,\n        first_available_year, first_available_month, first_available_quarter,\n        first_available_window_start, first_available_window_end,\n        first_available_source, first_available_inferred, language_codes,\n        unknown_language_names, full_audio_language_codes, languages_observed_at,\n        developers, publishers, primary_tag_id, secondary_tag_id, tag_ids,\n        details_observed_at, materialization_source, projection_version,\n        finalized_at, created_at, updated_at\n    )\n    SELECT game_id, fact_date, tracking_period_id, appid, snapshot_at, true,\n           name, name_en, view_count, game_type, is_free, windows, mac, linux,\n           release_availability, release_precision, release_exact_date, release_year,\n           release_month, release_quarter, release_window_start, release_window_end,\n           release_observed_at, first_available_precision, first_available_exact_date,\n           first_available_year, first_available_month, first_available_quarter,\n           first_available_window_start, first_available_window_end,\n           first_available_source, first_available_inferred, language_codes,\n           unknown_language_names, full_audio_language_codes, languages_observed_at,\n           developers, publishers, primary_tag_id, secondary_tag_id, tag_ids,\n           details_observed_at, source_kind, 1,\n           NULL, transaction_timestamp(), transaction_timestamp()\n    FROM snapshot\n    ON CONFLICT (game_id, fact_date) DO UPDATE\n    SET tracking_period_id = EXCLUDED.tracking_period_id,\n        appid = EXCLUDED.appid,\n        snapshot_at = EXCLUDED.snapshot_at,\n        tracked_at_end = EXCLUDED.tracked_at_end,\n        name = EXCLUDED.name,\n        name_en = EXCLUDED.name_en,\n        view_count = EXCLUDED.view_count,\n        game_type = EXCLUDED.game_type,\n        is_free = EXCLUDED.is_free,\n        windows = EXCLUDED.windows,\n        mac = EXCLUDED.mac,\n        linux = EXCLUDED.linux,\n        release_availability = EXCLUDED.release_availability,\n        release_precision = EXCLUDED.release_precision,\n        release_exact_date = EXCLUDED.release_exact_date,\n        release_year = EXCLUDED.release_year,\n        release_month = EXCLUDED.release_month,\n        release_quarter = EXCLUDED.release_quarter,\n        release_window_start = EXCLUDED.release_window_start,\n        release_window_end = EXCLUDED.release_window_end,\n        release_observed_at = EXCLUDED.release_observed_at,\n        first_available_precision = EXCLUDED.first_available_precision,\n        first_available_exact_date = EXCLUDED.first_available_exact_date,\n        first_available_year = EXCLUDED.first_available_year,\n        first_available_month = EXCLUDED.first_available_month,\n        first_available_quarter = EXCLUDED.first_available_quarter,\n        first_available_window_start = EXCLUDED.first_available_window_start,\n        first_available_window_end = EXCLUDED.first_available_window_end,\n        first_available_source = EXCLUDED.first_available_source,\n        first_available_inferred = EXCLUDED.first_available_inferred,\n        language_codes = EXCLUDED.language_codes,\n        unknown_language_names = EXCLUDED.unknown_language_names,\n        full_audio_language_codes = EXCLUDED.full_audio_language_codes,\n        languages_observed_at = EXCLUDED.languages_observed_at,\n        developers = EXCLUDED.developers,\n        publishers = EXCLUDED.publishers,\n        primary_tag_id = EXCLUDED.primary_tag_id,\n        secondary_tag_id = EXCLUDED.secondary_tag_id,\n        tag_ids = EXCLUDED.tag_ids,\n        details_observed_at = EXCLUDED.details_observed_at,\n        materialization_source = EXCLUDED.materialization_source,\n        projection_version = EXCLUDED.projection_version,\n        updated_at = transaction_timestamp()\n    WHERE public.gfg_game_daily.finalized_at IS NULL;\nEND;\n$function$\n"
     }
   ]
 }

@@ -110,6 +110,17 @@ type GfgCollectorInstance struct {
 	StoppedAt       pgtype.Timestamptz `json:"stopped_at"`
 }
 
+// Ordered singleton checkpoints for Game fact pipelines.
+type GfgFactRollupCheckpoint struct {
+	PipelineKey       string             `json:"pipeline_key"`
+	ProjectionVersion int32              `json:"projection_version"`
+	SourceStartDate   pgtype.Date        `json:"source_start_date"`
+	ProcessedThrough  pgtype.Date        `json:"processed_through"`
+	QualityCutoverAt  pgtype.Timestamptz `json:"quality_cutover_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 // 游戏表
 type GfgGame struct {
 	// 游戏表ID
@@ -193,6 +204,57 @@ type GfgGameComment struct {
 	Ip string `json:"ip"`
 	// 评论人名称
 	Name string `json:"name"`
+}
+
+// Compact historical Game entity and canonical domain snapshot.
+type GfgGameDaily struct {
+	GameID                    int64              `json:"game_id"`
+	FactDate                  pgtype.Date        `json:"fact_date"`
+	TrackingPeriodID          int64              `json:"tracking_period_id"`
+	Appid                     int64              `json:"appid"`
+	SnapshotAt                pgtype.Timestamptz `json:"snapshot_at"`
+	TrackedAtEnd              bool               `json:"tracked_at_end"`
+	Name                      string             `json:"name"`
+	NameEn                    string             `json:"name_en"`
+	ViewCount                 int64              `json:"view_count"`
+	GameType                  *string            `json:"game_type"`
+	IsFree                    *bool              `json:"is_free"`
+	Windows                   *bool              `json:"windows"`
+	Mac                       *bool              `json:"mac"`
+	Linux                     *bool              `json:"linux"`
+	ReleaseAvailability       *string            `json:"release_availability"`
+	ReleasePrecision          *string            `json:"release_precision"`
+	ReleaseExactDate          pgtype.Date        `json:"release_exact_date"`
+	ReleaseYear               *int32             `json:"release_year"`
+	ReleaseMonth              *int32             `json:"release_month"`
+	ReleaseQuarter            *int32             `json:"release_quarter"`
+	ReleaseWindowStart        pgtype.Date        `json:"release_window_start"`
+	ReleaseWindowEnd          pgtype.Date        `json:"release_window_end"`
+	ReleaseObservedAt         pgtype.Timestamptz `json:"release_observed_at"`
+	FirstAvailablePrecision   *string            `json:"first_available_precision"`
+	FirstAvailableExactDate   pgtype.Date        `json:"first_available_exact_date"`
+	FirstAvailableYear        *int32             `json:"first_available_year"`
+	FirstAvailableMonth       *int32             `json:"first_available_month"`
+	FirstAvailableQuarter     *int32             `json:"first_available_quarter"`
+	FirstAvailableWindowStart pgtype.Date        `json:"first_available_window_start"`
+	FirstAvailableWindowEnd   pgtype.Date        `json:"first_available_window_end"`
+	FirstAvailableSource      *string            `json:"first_available_source"`
+	FirstAvailableInferred    *bool              `json:"first_available_inferred"`
+	LanguageCodes             []string           `json:"language_codes"`
+	UnknownLanguageNames      []string           `json:"unknown_language_names"`
+	FullAudioLanguageCodes    []string           `json:"full_audio_language_codes"`
+	LanguagesObservedAt       pgtype.Timestamptz `json:"languages_observed_at"`
+	Developers                []string           `json:"developers"`
+	Publishers                []string           `json:"publishers"`
+	PrimaryTagID              *int64             `json:"primary_tag_id"`
+	SecondaryTagID            *int64             `json:"secondary_tag_id"`
+	TagIds                    []int64            `json:"tag_ids"`
+	DetailsObservedAt         pgtype.Timestamptz `json:"details_observed_at"`
+	MaterializationSource     string             `json:"materialization_source"`
+	ProjectionVersion         int32              `json:"projection_version"`
+	FinalizedAt               pgtype.Timestamptz `json:"finalized_at"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GfgGameDetail struct {
@@ -333,6 +395,68 @@ type GfgGamePlayerCount struct {
 	RunID              string             `json:"run_id"`
 }
 
+// UTC Game player facts aggregated directly from successful daily raw samples.
+type GfgGamePlayerDaily struct {
+	TrackingPeriodID    int64              `json:"tracking_period_id"`
+	GameID              int64              `json:"game_id"`
+	Appid               int64              `json:"appid"`
+	FactDate            pgtype.Date        `json:"fact_date"`
+	MinPlayers          *int64             `json:"min_players"`
+	MaxPlayers          *int64             `json:"max_players"`
+	AvgPlayers          *float64           `json:"avg_players"`
+	MedianPlayers       *float64           `json:"median_players"`
+	ExpectedSamples     *int32             `json:"expected_samples"`
+	AttemptedSamples    int32              `json:"attempted_samples"`
+	SuccessfulSamples   int32              `json:"successful_samples"`
+	PartialSamples      int32              `json:"partial_samples"`
+	FailedSamples       int32              `json:"failed_samples"`
+	SkippedSamples      *int32             `json:"skipped_samples"`
+	MissedSamples       *int32             `json:"missed_samples"`
+	CanceledSamples     *int32             `json:"canceled_samples"`
+	UnattemptedSamples  *int32             `json:"unattempted_samples"`
+	FailureKindCounts   []byte             `json:"failure_kind_counts"`
+	FirstObservedAt     pgtype.Timestamptz `json:"first_observed_at"`
+	LastObservedAt      pgtype.Timestamptz `json:"last_observed_at"`
+	AvgObservationLagMs *int64             `json:"avg_observation_lag_ms"`
+	MaxObservationLagMs *int64             `json:"max_observation_lag_ms"`
+	QualityBasis        string             `json:"quality_basis"`
+	ProjectionVersion   int32              `json:"projection_version"`
+	FinalizedAt         pgtype.Timestamptz `json:"finalized_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+// UTC Game player facts; scheduled acquisition quality is separate from numeric values.
+type GfgGamePlayerHourly struct {
+	TrackingPeriodID    int64              `json:"tracking_period_id"`
+	GameID              int64              `json:"game_id"`
+	Appid               int64              `json:"appid"`
+	BucketStart         pgtype.Timestamptz `json:"bucket_start"`
+	MinPlayers          *int64             `json:"min_players"`
+	MaxPlayers          *int64             `json:"max_players"`
+	AvgPlayers          *float64           `json:"avg_players"`
+	MedianPlayers       *float64           `json:"median_players"`
+	ExpectedSamples     *int32             `json:"expected_samples"`
+	AttemptedSamples    int32              `json:"attempted_samples"`
+	SuccessfulSamples   int32              `json:"successful_samples"`
+	PartialSamples      int32              `json:"partial_samples"`
+	FailedSamples       int32              `json:"failed_samples"`
+	SkippedSamples      *int32             `json:"skipped_samples"`
+	MissedSamples       *int32             `json:"missed_samples"`
+	CanceledSamples     *int32             `json:"canceled_samples"`
+	UnattemptedSamples  *int32             `json:"unattempted_samples"`
+	FailureKindCounts   []byte             `json:"failure_kind_counts"`
+	FirstObservedAt     pgtype.Timestamptz `json:"first_observed_at"`
+	LastObservedAt      pgtype.Timestamptz `json:"last_observed_at"`
+	AvgObservationLagMs *int64             `json:"avg_observation_lag_ms"`
+	MaxObservationLagMs *int64             `json:"max_observation_lag_ms"`
+	QualityBasis        string             `json:"quality_basis"`
+	ProjectionVersion   int32              `json:"projection_version"`
+	FinalizedAt         pgtype.Timestamptz `json:"finalized_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
 type GfgGamePrice struct {
 	GameID           int64              `json:"game_id"`
 	Appid            int64              `json:"appid"`
@@ -346,6 +470,28 @@ type GfgGamePrice struct {
 	FinalFormatted   string             `json:"final_formatted"`
 	CollectedAt      pgtype.Timestamptz `json:"collected_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	// Authoritative price state: free, priced, unpriced, or unknown.
+	PriceState string `json:"price_state"`
+}
+
+// Historical regional price state with observation provenance and carry-forward source.
+type GfgGamePriceDaily struct {
+	TrackingPeriodID      int64              `json:"tracking_period_id"`
+	GameID                int64              `json:"game_id"`
+	Appid                 int64              `json:"appid"`
+	Region                string             `json:"region"`
+	FactDate              pgtype.Date        `json:"fact_date"`
+	PriceState            string             `json:"price_state"`
+	Currency              *string            `json:"currency"`
+	InitialAmount         *int64             `json:"initial_amount"`
+	FinalAmount           *int64             `json:"final_amount"`
+	DiscountPercent       *int32             `json:"discount_percent"`
+	ObservedAt            pgtype.Timestamptz `json:"observed_at"`
+	MaterializationSource string             `json:"materialization_source"`
+	ProjectionVersion     int32              `json:"projection_version"`
+	FinalizedAt           pgtype.Timestamptz `json:"finalized_at"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
 // Precomputed similar-game recommendations. One algorithm_version represents one scoring contract.
@@ -412,6 +558,20 @@ type GfgGameRequirement struct {
 	Linux       []byte             `json:"linux"`
 	CollectedAt pgtype.Timestamptz `json:"collected_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Immutable Game/AppID eligibility periods used by historical facts; no FK to current gfg_game.
+type GfgGameTrackingPeriod struct {
+	ID            int64              `json:"id"`
+	GameID        int64              `json:"game_id"`
+	Appid         int64              `json:"appid"`
+	TrackedFrom   pgtype.Timestamptz `json:"tracked_from"`
+	TrackedUntil  pgtype.Timestamptz `json:"tracked_until"`
+	TrackingBasis string             `json:"tracking_basis"`
+	OpenedReason  string             `json:"opened_reason"`
+	ClosedReason  *string            `json:"closed_reason"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GfgLegacyRunJobMap struct {

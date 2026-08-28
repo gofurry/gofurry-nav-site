@@ -2,8 +2,7 @@
 SELECT 1::bigint AS value;
 
 -- name: NextGameID :one
-WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfg_game')::bigint))
-SELECT (COALESCE(MAX(id),0)+1)::bigint FROM gfg_game CROSS JOIN lock_row;
+SELECT nextval('gfg_game_id_seq')::bigint;
 
 -- name: CountGames :one
 SELECT COUNT(*)::bigint FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%'
