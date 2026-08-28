@@ -6,6 +6,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.3 - 2026-08-29
+
 ### Added
 
 - Add effective-dated Game/AppID, Nav target, and Primary Target periods; UTC hourly/daily Game Player facts; historical Game/Price facts; Nav protocol/target/Site facts; and ordered fact checkpoints.
@@ -25,6 +27,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 - Replace the P0.1 raw-pruning freeze with disabled-by-default, post-checkpoint Game age retention and target-aware Nav keep-count retention.
 - Keep the SVG inside Game home/search review buttons on a fixed pixel box while cards reveal the controls, preventing Chromium hover resampling jitter.
 - Treat empty or malformed historical Nav TLS certificate timestamps as unknown so target Fact backfill cannot abort with `SQLSTATE 22007`.
+- Align the Nav Backend PostgreSQL integration fixture with the historical Site deletion timestamp invariant.
 
 ## v3.0.0-alpha.2 - 2026-08-28
 
