@@ -74,7 +74,11 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	now := time.Now().UTC().Truncate(time.Microsecond)
+	clock, err := gamesqlc.New(pool).GameCollectionClock(ctx)
+	if err != nil || !clock.Valid {
+		t.Fatalf("read integration database clock: %v", err)
+	}
+	now := clock.Time.UTC().Truncate(time.Microsecond)
 	seedGameTarget(t, ctx, pool, now)
 	targets, err := gamesqlc.New(pool).ListGameTargets(ctx)
 	if err != nil {
@@ -115,6 +119,8 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_release_history where game_id=$1`, 1, int64(91001))
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_first_available where game_id=$1`, 0, int64(91001))
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_languages where game_id=$1`, 1, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_price_daily where game_id=$1 and price_state='priced' and materialization_source='observed' and observed_at=$2`, 1, int64(91001), now)
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_daily where game_id=$1 and fact_date=($2 at time zone 'UTC')::date and materialization_source='observed'`, 1, int64(91001), now)
 
 	// A raw-text-only observation updates current provenance but not semantic history.
 	rawOnly := detailsFixture(now.Add(time.Minute), nil)
@@ -250,14 +256,35 @@ func testHistoricalPlayerFacts(t *testing.T, ctx context.Context, pool *pgxpool.
 	day := time.Date(2026, 5, 10, 0, 0, 0, 0, time.UTC)
 	if _, err := pool.Exec(ctx, `
 INSERT INTO gfg_game_tracking_periods (game_id,appid,tracked_from,tracked_until,tracking_basis,opened_reason,closed_reason)
-VALUES (99001,99002,$1,$2,'explicit','integration','integration');
+VALUES (99001,99002,$1,$2,'legacy_observed','integration','integration'),
+       (99003,99004,$1,$2,'explicit','integration','integration');
+INSERT INTO gfg_game_daily (
+    game_id,fact_date,tracking_period_id,appid,snapshot_at,tracked_at_end,
+    name,name_en,view_count,developers,publishers,tag_ids,
+    materialization_source,projection_version,created_at,updated_at
+)
+SELECT 99003,$1::date,id,99004,$2,true,'state fixture','state fixture',0,
+       ARRAY[]::text[],ARRAY[]::text[],ARRAY[]::bigint[],'observed',1,$1,$1
+FROM gfg_game_tracking_periods WHERE game_id=99003;
+INSERT INTO gfg_game_price_daily (
+    tracking_period_id,game_id,appid,region,fact_date,price_state,currency,
+    initial_amount,final_amount,discount_percent,observed_at,
+    materialization_source,projection_version,created_at,updated_at
+)
+SELECT id,99003,99004,'CN',$1::date,'priced','CNY',100,80,20,$1,
+       'observed',1,$1,$1
+FROM gfg_game_tracking_periods WHERE game_id=99003;
 INSERT INTO gfg_collection_schedules (job_key,name,enabled,schedule_kind,interval_seconds,anchor_at,timezone,misfire_policy,misfire_grace_seconds,priority,concurrency_key,next_scheduled_for)
 VALUES ('game.players','facts fixture',true,'interval',3600,$1,'UTC','skip',0,1,'steam',$2)
+ON CONFLICT (job_key) DO UPDATE SET enabled=true,next_scheduled_for=EXCLUDED.next_scheduled_for;
+INSERT INTO gfg_collection_schedules (job_key,name,enabled,schedule_kind,interval_seconds,anchor_at,timezone,misfire_policy,misfire_grace_seconds,priority,concurrency_key,next_scheduled_for)
+VALUES ('game.metadata','state facts fixture',true,'interval',3600,$1,'UTC','skip',0,1,'steam',$2)
 ON CONFLICT (job_key) DO UPDATE SET enabled=true,next_scheduled_for=EXCLUDED.next_scheduled_for;
 INSERT INTO gfg_collector_instances (instance_id,collector_id,hostname,version,commit_sha,capabilities,started_at,last_heartbeat_at)
 VALUES ('facts-fixture','facts','localhost','test','',ARRAY['game.players'],$1,$2)
 ON CONFLICT (instance_id) DO NOTHING;
 UPDATE gfg_fact_rollup_checkpoints SET source_start_date=$1::date,processed_through=NULL,quality_cutover_at=$1 WHERE pipeline_key='game.player_facts';
+UPDATE gfg_fact_rollup_checkpoints SET source_start_date=$1::date,processed_through=NULL,quality_cutover_at=$1 WHERE pipeline_key='game.state_facts';
 `, pgx.QueryExecModeSimpleProtocol, day, day.Add(25*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
@@ -315,6 +342,16 @@ VALUES ($3,'players',99001,99002,$4,CASE WHEN $4='failed' THEN 'upstream' ELSE '
 		if _, err := engine.Rebuild(ctx, facts.PlayerPipeline, day, day, false); err != nil {
 			t.Fatalf("idempotent player rebuild attempt %d: %v", attempt+1, err)
 		}
+	}
+	stateResult, err := engine.RunNext(ctx, facts.StatePipeline, false)
+	if err != nil || !stateResult.Processed {
+		t.Fatalf("state facts result=%+v err=%v", stateResult, err)
+	}
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_daily where game_id=99003 and fact_date=$1 and finalized_at is not null`, 1, day)
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_price_daily where game_id=99003 and fact_date=$1`, 3, day)
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_price_daily where game_id=99003 and fact_date=$1::date and region='CN' and materialization_source='observed' and observed_at=$2::timestamptz`, 1, day, day)
+	if _, err := engine.Rebuild(ctx, facts.StatePipeline, day, day, false); err != nil {
+		t.Fatalf("idempotent state rebuild: %v", err)
 	}
 	if deleted, err := engine.PrunePlayerRaw(ctx); err != nil || deleted != 0 {
 		t.Fatalf("retention disabled deleted=%d err=%v", deleted, err)
@@ -380,6 +417,9 @@ id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_da
 developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
 ) values ($1,'test','test','test','test',$2,$2,null,null,'', '[]'::jsonb,'[]'::jsonb,$3,'',null,0,0,0,0)`, int64(91001), now, int64(92001))
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `insert into gfg_game_tracking_periods (game_id,appid,tracked_from,tracking_basis,opened_reason) values ($1,$2,$3,'explicit','integration')`, int64(91001), int64(92001), now.Add(-time.Minute)); err != nil {
 		t.Fatal(err)
 	}
 }

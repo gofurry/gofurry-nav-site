@@ -123,6 +123,9 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 
 	trackedSite := requestJSON(t, app, http.MethodPost, "/nav/sites", `{"name":"Tracked","name_en":"Tracked","info":"x","info_en":"x","country":"CN","nsfw":"0","welfare":"0"}`, cookie, http.StatusOK)
 	trackedSiteID := responseID(t, trackedSite)
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site_daily WHERE site_id=$1 AND fact_date=(transaction_timestamp() AT TIME ZONE 'UTC')::date AND finalized_at IS NULL`, trackedSiteID); count != 1 {
+		t.Fatal("Site create did not write through today's Site Daily marker")
+	}
 	rootDomain := requestJSON(t, app, http.MethodPost, "/nav/collector-domains", fmt.Sprintf(`{"site_id":%d,"name":"example.test","proxy":"0","prefix":null,"tls":"1"}`, trackedSiteID), cookie, http.StatusOK)
 	rootDomainID := responseID(t, rootDomain)
 	wwwDomain := requestJSON(t, app, http.MethodPost, "/nav/collector-domains", fmt.Sprintf(`{"site_id":%d,"name":"example.test","proxy":"0","prefix":"www.","tls":"1"}`, trackedSiteID), cookie, http.StatusOK)
@@ -135,6 +138,9 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 		t.Fatalf("proxy/TLS-only update changed Target identity, period count=%d", count)
 	}
 	requestJSON(t, app, http.MethodPost, fmt.Sprintf("/nav/collector-domains/%d/primary", wwwDomainID), "", cookie, http.StatusOK)
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site_daily daily JOIN gfn_target_tracking_periods target ON target.id=daily.primary_target_tracking_period_id WHERE daily.site_id=$1 AND target.collector_domain_id=$2`, trackedSiteID, wwwDomainID); count != 1 {
+		t.Fatal("Set Primary did not refresh today's Site Daily marker")
+	}
 	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/nav/collector-domains/%d", wwwDomainID), fmt.Sprintf(`{"site_id":%d,"name":"example.test","proxy":"1","prefix":"api.","tls":"0"}`, trackedSiteID), cookie, http.StatusOK)
 	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_target_tracking_periods WHERE collector_domain_id=$1`, wwwDomainID); count != 2 {
 		t.Fatalf("identity change period count=%d", count)
@@ -153,6 +159,9 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	gameID := responseID(t, game)
 	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_tracking_periods WHERE game_id=$1 AND tracked_until IS NULL`, gameID); count != 1 {
 		t.Fatal("Game create did not open tracking period")
+	}
+	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_daily WHERE game_id=$1 AND fact_date=(transaction_timestamp() AT TIME ZONE 'UTC')::date AND finalized_at IS NULL`, gameID); count != 1 {
+		t.Fatal("Game create did not write through today's Game Daily marker")
 	}
 	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_collection_jobs WHERE scope_id=$1 AND trigger='entity_created' AND tasks=ARRAY['details','news']::text[]`, gameID); count != 1 {
 		t.Fatalf("game creation durable job count=%d", count)
@@ -211,6 +220,9 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	}
 	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_tracking_periods WHERE game_id=$1`, gameID); count != 2 {
 		t.Fatalf("AppID change tracking period count=%d", count)
+	}
+	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_daily WHERE game_id=$1 AND appid=424243 AND fact_date=(transaction_timestamp() AT TIME ZONE 'UTC')::date`, gameID); count != 1 {
+		t.Fatal("AppID change did not refresh today's Game Daily marker")
 	}
 	requestJSON(t, app, http.MethodGet, fmt.Sprintf("/game/games/%d", gameID), "", cookie, http.StatusOK)
 
