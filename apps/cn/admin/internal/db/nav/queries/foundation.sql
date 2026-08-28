@@ -127,31 +127,33 @@ SELECT COUNT(*)::bigint FROM gfn_site WHERE deleted IS NOT TRUE AND (sqlc.arg(ke
  OR id::text ILIKE '%'||sqlc.arg(keyword)||'%');
 
 -- name: ListSites :many
-SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count FROM gfn_site
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at FROM gfn_site
 WHERE deleted IS NOT TRUE AND (sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%'
  OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR info ILIKE '%'||sqlc.arg(keyword)||'%' OR info_en ILIKE '%'||sqlc.arg(keyword)||'%'
  OR id::text ILIKE '%'||sqlc.arg(keyword)||'%') ORDER BY update_time DESC,id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: GetSite :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count FROM gfn_site
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at FROM gfn_site
 WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE;
 
 -- name: GetSiteAny :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count FROM gfn_site WHERE id=sqlc.arg(id);
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at FROM gfn_site WHERE id=sqlc.arg(id);
 
 -- name: InsertSite :one
 INSERT INTO gfn_site (id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count)
 VALUES (sqlc.arg(id),sqlc.arg(name),sqlc.arg(name_en),sqlc.arg(info),sqlc.arg(info_en),NOW()::timestamp(0),NOW()::timestamp(0),sqlc.arg(country),sqlc.arg(nsfw),sqlc.arg(welfare),sqlc.arg(icon),false,0)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count;
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at;
 
 -- name: UpdateSite :one
 UPDATE gfn_site SET name=sqlc.arg(name),name_en=sqlc.arg(name_en),info=sqlc.arg(info),info_en=sqlc.arg(info_en),country=sqlc.arg(country),nsfw=sqlc.arg(nsfw),welfare=sqlc.arg(welfare),icon=sqlc.arg(icon),update_time=NOW()::timestamp(0)
 WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE
-RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count;
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at;
 
 -- name: SoftDeleteSite :one
-UPDATE gfn_site SET deleted=true,update_time=NOW()::timestamp(0) WHERE id=sqlc.arg(id)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count;
+UPDATE gfn_site
+SET deleted=true,deleted_at=transaction_timestamp(),update_time=NOW()::timestamp(0)
+WHERE id=sqlc.arg(id)
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at;
 
 -- name: NextSiteGroupID :one
 WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_site_group')::bigint))

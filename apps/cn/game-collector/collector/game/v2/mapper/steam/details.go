@@ -121,14 +121,18 @@ func (m DetailsMapper) ToPrice(gameID int64, appID uint32, region domain.Region,
 		AppID:       appID,
 		Region:      region,
 		IsFree:      data.IsFree,
+		PriceState:  domain.PriceStateUnknown,
 		CollectedAt: collectedAt,
 	}
 	if data.IsFree {
+		price.PriceState = domain.PriceStateFree
 		return price
 	}
 	if data.PriceOverview == nil {
+		price.PriceState = domain.PriceStateUnpriced
 		return price
 	}
+	price.PriceState = domain.PriceStatePriced
 	price.Currency = data.PriceOverview.Currency
 	price.Initial = int64(data.PriceOverview.Initial)
 	price.Final = int64(data.PriceOverview.Final)

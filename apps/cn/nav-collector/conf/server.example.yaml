@@ -153,3 +153,10 @@ collector:
     resolver: "8.8.8.8:53"
     geolite2_path: "./data/"
     log_count: "60"
+
+facts:
+  reconcile_interval_seconds: 600
+  finalization_grace_minutes: 30
+  retention_enabled: false # destructive observation pruning remains opt-in
+  observation_keep_count: 288 # retained independently per site/target/protocol
+  retention_batch_size: 500

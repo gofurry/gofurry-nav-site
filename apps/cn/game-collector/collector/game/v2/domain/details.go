@@ -41,18 +41,28 @@ type GameLocalizedDetails struct {
 }
 
 // GamePrice stores one regional price snapshot.
+type PriceState string
+
+const (
+	PriceStateFree     PriceState = "free"
+	PriceStatePriced   PriceState = "priced"
+	PriceStateUnpriced PriceState = "unpriced"
+	PriceStateUnknown  PriceState = "unknown"
+)
+
 type GamePrice struct {
 	GameID int64  `json:"game_id"`
 	AppID  uint32 `json:"appid"`
 	Region Region `json:"region"`
 
-	IsFree           bool   `json:"is_free"`
-	Currency         string `json:"currency"`
-	Initial          int64  `json:"initial"`
-	Final            int64  `json:"final"`
-	DiscountPercent  int64  `json:"discount_percent"`
-	InitialFormatted string `json:"initial_formatted"`
-	FinalFormatted   string `json:"final_formatted"`
+	IsFree           bool       `json:"is_free"`
+	PriceState       PriceState `json:"price_state"`
+	Currency         string     `json:"currency"`
+	Initial          int64      `json:"initial"`
+	Final            int64      `json:"final"`
+	DiscountPercent  int64      `json:"discount_percent"`
+	InitialFormatted string     `json:"initial_formatted"`
+	FinalFormatted   string     `json:"final_formatted"`
 
 	CollectedAt time.Time `json:"collected_at"`
 }

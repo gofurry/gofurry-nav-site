@@ -341,7 +341,7 @@ func (q *Queries) GetSaying(ctx context.Context, id int64) (GfnSaying, error) {
 }
 
 const getSite = `-- name: GetSite :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count FROM gfn_site
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at FROM gfn_site
 WHERE id=$1 AND deleted IS NOT TRUE
 `
 
@@ -362,12 +362,13 @@ func (q *Queries) GetSite(ctx context.Context, id int64) (GfnSite, error) {
 		&i.Icon,
 		&i.Deleted,
 		&i.ViewCount,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getSiteAny = `-- name: GetSiteAny :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count FROM gfn_site WHERE id=$1
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at FROM gfn_site WHERE id=$1
 `
 
 func (q *Queries) GetSiteAny(ctx context.Context, id int64) (GfnSite, error) {
@@ -387,6 +388,7 @@ func (q *Queries) GetSiteAny(ctx context.Context, id int64) (GfnSite, error) {
 		&i.Icon,
 		&i.Deleted,
 		&i.ViewCount,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -569,7 +571,7 @@ func (q *Queries) InsertSaying(ctx context.Context, arg InsertSayingParams) (Gfn
 const insertSite = `-- name: InsertSite :one
 INSERT INTO gfn_site (id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count)
 VALUES ($1,$2,$3,$4,$5,NOW()::timestamp(0),NOW()::timestamp(0),$6,$7,$8,$9,false,0)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at
 `
 
 type InsertSiteParams struct {
@@ -611,6 +613,7 @@ func (q *Queries) InsertSite(ctx context.Context, arg InsertSiteParams) (GfnSite
 		&i.Icon,
 		&i.Deleted,
 		&i.ViewCount,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -1074,7 +1077,7 @@ func (q *Queries) ListSiteOptions(ctx context.Context, arg ListSiteOptionsParams
 }
 
 const listSites = `-- name: ListSites :many
-SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count FROM gfn_site
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at FROM gfn_site
 WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%'
  OR name_en ILIKE '%'||$1||'%' OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%'
  OR id::text ILIKE '%'||$1||'%') ORDER BY update_time DESC,id DESC LIMIT $3 OFFSET $2
@@ -1109,6 +1112,7 @@ func (q *Queries) ListSites(ctx context.Context, arg ListSitesParams) ([]GfnSite
 			&i.Icon,
 			&i.Deleted,
 			&i.ViewCount,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1268,8 +1272,10 @@ func (q *Queries) SoftDeleteCollectorDomain(ctx context.Context, id int64) (GfnC
 }
 
 const softDeleteSite = `-- name: SoftDeleteSite :one
-UPDATE gfn_site SET deleted=true,update_time=NOW()::timestamp(0) WHERE id=$1
-RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count
+UPDATE gfn_site
+SET deleted=true,deleted_at=transaction_timestamp(),update_time=NOW()::timestamp(0)
+WHERE id=$1
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at
 `
 
 func (q *Queries) SoftDeleteSite(ctx context.Context, id int64) (GfnSite, error) {
@@ -1289,6 +1295,7 @@ func (q *Queries) SoftDeleteSite(ctx context.Context, id int64) (GfnSite, error)
 		&i.Icon,
 		&i.Deleted,
 		&i.ViewCount,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -1410,7 +1417,7 @@ func (q *Queries) UpdateSaying(ctx context.Context, arg UpdateSayingParams) (Gfn
 const updateSite = `-- name: UpdateSite :one
 UPDATE gfn_site SET name=$1,name_en=$2,info=$3,info_en=$4,country=$5,nsfw=$6,welfare=$7,icon=$8,update_time=NOW()::timestamp(0)
 WHERE id=$9 AND deleted IS NOT TRUE
-RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at
 `
 
 type UpdateSiteParams struct {
@@ -1452,6 +1459,7 @@ func (q *Queries) UpdateSite(ctx context.Context, arg UpdateSiteParams) (GfnSite
 		&i.Icon,
 		&i.Deleted,
 		&i.ViewCount,
+		&i.DeletedAt,
 	)
 	return i, err
 }

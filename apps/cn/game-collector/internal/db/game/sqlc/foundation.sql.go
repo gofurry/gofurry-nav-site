@@ -497,12 +497,13 @@ func (q *Queries) UpsertNews(ctx context.Context, arg UpsertNewsParams) error {
 const upsertPrice = `-- name: UpsertPrice :exec
 INSERT INTO gfg_game_prices (
     game_id, appid, region, is_free, currency, initial_amount, final_amount,
-    discount_percent, initial_formatted, final_formatted, collected_at, updated_at
+    discount_percent, initial_formatted, final_formatted, price_state,
+    collected_at, updated_at
 ) VALUES (
     $1, $2, $3, $4,
     $5, $6, $7,
     $8, $9,
-    $10, $11, now()
+    $10, $11, $12, now()
 )
 ON CONFLICT (game_id, region) DO UPDATE SET
     appid = EXCLUDED.appid,
@@ -513,6 +514,7 @@ ON CONFLICT (game_id, region) DO UPDATE SET
     discount_percent = EXCLUDED.discount_percent,
     initial_formatted = EXCLUDED.initial_formatted,
     final_formatted = EXCLUDED.final_formatted,
+    price_state = EXCLUDED.price_state,
     collected_at = EXCLUDED.collected_at,
     updated_at = now()
 `
@@ -528,6 +530,7 @@ type UpsertPriceParams struct {
 	DiscountPercent  int64              `json:"discount_percent"`
 	InitialFormatted string             `json:"initial_formatted"`
 	FinalFormatted   string             `json:"final_formatted"`
+	PriceState       string             `json:"price_state"`
 	CollectedAt      pgtype.Timestamptz `json:"collected_at"`
 }
 
@@ -543,6 +546,7 @@ func (q *Queries) UpsertPrice(ctx context.Context, arg UpsertPriceParams) error 
 		arg.DiscountPercent,
 		arg.InitialFormatted,
 		arg.FinalFormatted,
+		arg.PriceState,
 		arg.CollectedAt,
 	)
 	return err

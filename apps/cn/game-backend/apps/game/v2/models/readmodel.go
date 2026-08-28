@@ -498,6 +498,7 @@ type GameV2ListItem struct {
 	HeaderURL      string                `json:"header_url"`
 	CapsuleURL     string                `json:"capsule_url"`
 	ReleaseDate    string                `json:"release_date"`
+	Release        *GameV2ReleaseState   `json:"release"`
 	FirstAvailable *GameV2FirstAvailable `json:"first_available"`
 	Developers     []string              `json:"developers"`
 	Publishers     []string              `json:"publishers"`

@@ -118,6 +118,61 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 				t.Fatalf("fresh %s schema drift: %s", test.label, difference)
 			}
 
+			// Exercise the deployed alpha.2 -> alpha.3 boundary explicitly. Game
+			// additionally proves both the pre-P0.2 Raw floor and the follow-up
+			// P0.2 Tracking/Fact floor before the final sequence correction.
+			if alpha2Version, ok := map[string]int64{
+				"gfg": 20260827010400,
+				"gfn": 20260827010100,
+			}[test.label]; ok {
+				upgradeName := temporaryDatabaseName(test.label, "alpha2_upgrade")
+				createDatabase(t, ctx, adminDB, upgradeName)
+				defer dropDatabase(t, adminDB, upgradeName)
+				upgradeDB := openDatabase(t, adminDSN, upgradeName)
+				defer upgradeDB.Close()
+				if err := goose.UpToContext(ctx, upgradeDB, migrationDir, alpha2Version); err != nil {
+					t.Fatalf("prepare %s alpha.2 fixture: %v", test.label, err)
+				}
+				if test.label == "gfg" {
+					if _, err := upgradeDB.ExecContext(ctx, `
+INSERT INTO public.gfg_game_player_counts
+    (game_id, appid, count, status, collected_at, run_id)
+VALUES (950001, 950101, 1, 'success', transaction_timestamp(), 'alpha2-deleted-high-water');`); err != nil {
+						t.Fatalf("seed alpha.2 deleted Game evidence: %v", err)
+					}
+					if err := goose.UpToContext(ctx, upgradeDB, migrationDir, 20260828010200); err != nil {
+						t.Fatalf("upgrade gfg through initial P0.2 migrations: %v", err)
+					}
+					if _, err := upgradeDB.ExecContext(ctx, `
+INSERT INTO public.gfg_game_tracking_periods
+    (game_id, appid, tracked_from, tracked_until, tracking_basis, opened_reason, closed_reason)
+VALUES
+    (960001, 960101, transaction_timestamp() - interval '2 days',
+     transaction_timestamp() - interval '1 day', 'explicit', 'sequence_test', 'sequence_test');`); err != nil {
+						t.Fatalf("seed P0.2 historical Game evidence: %v", err)
+					}
+				}
+				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
+					t.Fatalf("upgrade %s alpha.2 to alpha.3: %v", test.label, err)
+				}
+				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
+				if err != nil {
+					t.Fatalf("inspect upgraded %s schema: %v", test.label, err)
+				}
+				if difference := schema.Difference(expected, upgradeActual); difference != "" {
+					t.Fatalf("alpha.2 -> alpha.3 %s schema drift: %s", test.label, difference)
+				}
+				if test.label == "gfg" {
+					var allocated int64
+					if err := upgradeDB.QueryRowContext(ctx, `SELECT nextval('public.gfg_game_id_seq')`).Scan(&allocated); err != nil {
+						t.Fatal(err)
+					}
+					if allocated <= 960001 {
+						t.Fatalf("historical Game ID was reusable after alpha.2 upgrade: next=%d", allocated)
+					}
+				}
+			}
+
 			adoptName := temporaryDatabaseName(test.label, "adopt")
 			createDatabase(t, ctx, adminDB, adoptName)
 			defer dropDatabase(t, adminDB, adoptName)

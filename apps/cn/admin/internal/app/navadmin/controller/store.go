@@ -201,10 +201,33 @@ func validateCollectorDomainQuery(ctx context.Context, q *navsqlc.Queries, req m
 	return nil
 }
 
+func collectorTarget(name string, prefix *string) string {
+	if prefix == nil {
+		return name
+	}
+	return *prefix + name
+}
+
+func validateCollectorTargetIdentity(ctx context.Context, q *navsqlc.Queries, req models.CollectorDomainPayload, excludeDomainID *int64) error {
+	conflicts, err := q.CountConflictingActiveTarget(ctx, navsqlc.CountConflictingActiveTargetParams{
+		SiteID: req.SiteID, Target: collectorTarget(req.Name, req.Prefix), ExcludeDomainID: excludeDomainID,
+	})
+	if err != nil {
+		return err
+	}
+	if conflicts > 0 {
+		return common.NewValidationError("site already has an active target with the same normalized identity")
+	}
+	return nil
+}
+
 func (store *navStore) createCollectorDomain(ctx context.Context, meta audit.Meta, req models.CollectorDomainPayload) (models.CollectorDomain, common.Error) {
 	var result models.CollectorDomain
 	err := store.mutate(ctx, meta, "create", "gfn_collector_domain", func(q *navsqlc.Queries) (int64, any, any, error) {
 		if err := validateCollectorDomainQuery(ctx, q, req); err != nil {
+			return 0, nil, nil, err
+		}
+		if err := validateCollectorTargetIdentity(ctx, q, req, nil); err != nil {
 			return 0, nil, nil, err
 		}
 		id, err := q.NextCollectorDomainID(ctx)
@@ -212,6 +235,18 @@ func (store *navStore) createCollectorDomain(ctx context.Context, meta audit.Met
 			return 0, nil, nil, err
 		}
 		row, err := q.InsertCollectorDomain(ctx, navsqlc.InsertCollectorDomainParams{ID: id, SiteID: &req.SiteID, Name: req.Name, Proxy: req.Proxy, Prefix: req.Prefix, Tls: req.TLS})
+		if err == nil {
+			_, err = q.OpenTargetTrackingPeriod(ctx, navsqlc.OpenTargetTrackingPeriodParams{
+				CollectorDomainID: &id, SiteID: req.SiteID,
+				Target: collectorTarget(req.Name, req.Prefix), OpenedReason: "created",
+			})
+		}
+		if err == nil {
+			_, err = q.AssignPrimaryTargetIfMissing(ctx, req.SiteID)
+		}
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, req.SiteID)
+		}
 		result = collectorDomainModel(row)
 		return id, nil, row, err
 	})
@@ -223,22 +258,137 @@ func (store *navStore) updateCollectorDomain(ctx context.Context, meta audit.Met
 		if err := validateCollectorDomainQuery(ctx, q, req); err != nil {
 			return id, nil, nil, err
 		}
-		before, err := q.GetCollectorDomainAny(ctx, id)
+		before, err := q.LockCollectorDomainForUpdate(ctx, id)
 		if err != nil {
 			return id, nil, nil, err
 		}
+		if before.Deleted {
+			return id, before, nil, pgx.ErrNoRows
+		}
+		if err := validateCollectorTargetIdentity(ctx, q, req, &id); err != nil {
+			return id, before, nil, err
+		}
+		oldSiteID := pointerInt64(before.SiteID)
+		identityChanged := oldSiteID != req.SiteID || before.Name != req.Name || !sameOptionalString(before.Prefix, req.Prefix)
+		wasPrimary := false
+		var oldPeriod navsqlc.GfnTargetTrackingPeriod
+		if identityChanged {
+			oldPeriod, err = q.GetActiveTargetPeriodByDomain(ctx, &id)
+			if err != nil {
+				return id, before, nil, err
+			}
+			primary, primaryErr := q.GetActivePrimaryTarget(ctx, oldSiteID)
+			if primaryErr == nil && primary.TargetTrackingPeriodID == oldPeriod.ID {
+				wasPrimary = true
+				if _, err = q.ClosePrimaryTargetBySite(ctx, oldSiteID); err != nil {
+					return id, before, nil, err
+				}
+			} else if primaryErr != nil && !errors.Is(primaryErr, pgx.ErrNoRows) {
+				return id, before, nil, primaryErr
+			}
+			closedReason := "identity_changed"
+			if _, err = q.CloseTargetTrackingPeriod(ctx, navsqlc.CloseTargetTrackingPeriodParams{ID: oldPeriod.ID, ClosedReason: &closedReason}); err != nil {
+				return id, before, nil, err
+			}
+		}
 		after, err := q.UpdateCollectorDomain(ctx, navsqlc.UpdateCollectorDomainParams{ID: id, SiteID: &req.SiteID, Name: req.Name, Proxy: req.Proxy, Prefix: req.Prefix, Tls: req.TLS})
+		if err == nil && identityChanged {
+			var opened navsqlc.GfnTargetTrackingPeriod
+			opened, err = q.OpenTargetTrackingPeriod(ctx, navsqlc.OpenTargetTrackingPeriodParams{
+				CollectorDomainID: &id, SiteID: req.SiteID,
+				Target: collectorTarget(req.Name, req.Prefix), OpenedReason: "identity_changed",
+			})
+			if err == nil && wasPrimary && oldSiteID == req.SiteID {
+				_, err = q.OpenPrimaryTarget(ctx, navsqlc.OpenPrimaryTargetParams{
+					SiteID: req.SiteID, TargetTrackingPeriodID: opened.ID, Basis: "explicit",
+				})
+			}
+		}
+		if err == nil && identityChanged {
+			_, err = q.AssignPrimaryTargetIfMissing(ctx, oldSiteID)
+		}
+		if err == nil && identityChanged && oldSiteID != req.SiteID {
+			_, err = q.AssignPrimaryTargetIfMissing(ctx, req.SiteID)
+		}
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, oldSiteID)
+		}
+		if err == nil && oldSiteID != req.SiteID {
+			err = q.RefreshCurrentSiteDaily(ctx, req.SiteID)
+		}
 		return id, before, after, err
 	})
 }
 
 func (store *navStore) deleteCollectorDomain(ctx context.Context, meta audit.Meta, id int64) common.Error {
 	return store.mutate(ctx, meta, "delete", "gfn_collector_domain", func(q *navsqlc.Queries) (int64, any, any, error) {
-		before, err := q.GetCollectorDomainAny(ctx, id)
+		before, err := q.LockCollectorDomainForUpdate(ctx, id)
 		if err != nil {
 			return id, nil, nil, err
 		}
+		if before.Deleted {
+			return id, before, nil, pgx.ErrNoRows
+		}
+		period, err := q.GetActiveTargetPeriodByDomain(ctx, &id)
+		if err != nil {
+			return id, before, nil, err
+		}
+		siteID := pointerInt64(before.SiteID)
+		primary, primaryErr := q.GetActivePrimaryTarget(ctx, siteID)
+		if primaryErr == nil && primary.TargetTrackingPeriodID == period.ID {
+			if _, err = q.ClosePrimaryTargetBySite(ctx, siteID); err != nil {
+				return id, before, nil, err
+			}
+		} else if primaryErr != nil && !errors.Is(primaryErr, pgx.ErrNoRows) {
+			return id, before, nil, primaryErr
+		}
+		closedReason := "deleted"
+		if _, err = q.CloseTargetTrackingPeriod(ctx, navsqlc.CloseTargetTrackingPeriodParams{ID: period.ID, ClosedReason: &closedReason}); err != nil {
+			return id, before, nil, err
+		}
 		after, err := q.SoftDeleteCollectorDomain(ctx, id)
+		if err == nil {
+			_, err = q.AssignPrimaryTargetIfMissing(ctx, siteID)
+		}
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, siteID)
+		}
+		return id, before, after, err
+	})
+}
+
+func (store *navStore) setPrimaryCollectorDomain(ctx context.Context, meta audit.Meta, id int64) common.Error {
+	return store.mutate(ctx, meta, "set_primary", "gfn_site_primary_target_periods", func(q *navsqlc.Queries) (int64, any, any, error) {
+		domain, err := q.LockCollectorDomainForUpdate(ctx, id)
+		if err != nil {
+			return id, nil, nil, err
+		}
+		if domain.Deleted || domain.SiteID == nil {
+			return id, domain, nil, pgx.ErrNoRows
+		}
+		period, err := q.GetActiveTargetPeriodByDomain(ctx, &id)
+		if err != nil {
+			return id, domain, nil, err
+		}
+		var before any
+		current, currentErr := q.GetActivePrimaryTarget(ctx, *domain.SiteID)
+		if currentErr == nil {
+			before = current
+			if current.TargetTrackingPeriodID == period.ID {
+				return id, before, current, nil
+			}
+			if _, err = q.ClosePrimaryTargetBySite(ctx, *domain.SiteID); err != nil {
+				return id, before, nil, err
+			}
+		} else if !errors.Is(currentErr, pgx.ErrNoRows) {
+			return id, nil, nil, currentErr
+		}
+		after, err := q.OpenPrimaryTarget(ctx, navsqlc.OpenPrimaryTargetParams{
+			SiteID: *domain.SiteID, TargetTrackingPeriodID: period.ID, Basis: "explicit",
+		})
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, *domain.SiteID)
+		}
 		return id, before, after, err
 	})
 }
@@ -273,6 +423,9 @@ func (store *navStore) createSite(ctx context.Context, meta audit.Meta, req mode
 			return 0, nil, nil, err
 		}
 		row, err := q.InsertSite(ctx, navsqlc.InsertSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare, Icon: req.Icon})
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, id)
+		}
 		result = siteDTO(siteModel(row))
 		return id, nil, row, err
 	})
@@ -286,17 +439,33 @@ func (store *navStore) updateSite(ctx context.Context, meta audit.Meta, id int64
 			return id, nil, nil, err
 		}
 		after, err := q.UpdateSite(ctx, navsqlc.UpdateSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare, Icon: req.Icon})
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, id)
+		}
 		return id, before, after, err
 	})
 }
 
 func (store *navStore) deleteSite(ctx context.Context, meta audit.Meta, id int64) common.Error {
 	return store.mutate(ctx, meta, "delete", "gfn_site", func(q *navsqlc.Queries) (int64, any, any, error) {
-		before, err := q.GetSiteAny(ctx, id)
+		before, err := q.LockSiteForUpdate(ctx, id)
 		if err != nil {
 			return id, nil, nil, err
 		}
+		if before.Deleted {
+			return id, before, nil, pgx.ErrNoRows
+		}
+		if _, err = q.ClosePrimaryTargetBySite(ctx, id); err != nil {
+			return id, before, nil, err
+		}
+		closedReason := "site_deleted"
+		if _, err = q.CloseTargetTrackingPeriodsBySite(ctx, navsqlc.CloseTargetTrackingPeriodsBySiteParams{SiteID: id, ClosedReason: &closedReason}); err != nil {
+			return id, before, nil, err
+		}
 		after, err := q.SoftDeleteSite(ctx, id)
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, id)
+		}
 		return id, before, after, err
 	})
 }
@@ -388,6 +557,9 @@ func (store *navStore) createSiteGroupMap(ctx context.Context, meta audit.Meta, 
 			return 0, nil, nil, err
 		}
 		row, err := q.InsertSiteGroupMap(ctx, navsqlc.InsertSiteGroupMapParams{ID: id, SiteID: req.SiteID, GroupID: req.GroupID, Weight: req.Weight})
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, req.SiteID)
+		}
 		result = siteGroupMapModel(row)
 		return id, nil, row, err
 	})
@@ -401,6 +573,12 @@ func (store *navStore) updateSiteGroupMap(ctx context.Context, meta audit.Meta, 
 			return id, nil, nil, err
 		}
 		after, err := q.UpdateSiteGroupMap(ctx, navsqlc.UpdateSiteGroupMapParams{ID: id, SiteID: req.SiteID, GroupID: req.GroupID, Weight: req.Weight})
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, before.SiteID)
+		}
+		if err == nil && before.SiteID != after.SiteID {
+			err = q.RefreshCurrentSiteDaily(ctx, after.SiteID)
+		}
 		return id, before, after, err
 	})
 }
@@ -410,6 +588,9 @@ func (store *navStore) deleteSiteGroupMap(ctx context.Context, meta audit.Meta, 
 		before, err := q.GetSiteGroupMap(ctx, id)
 		if err == nil {
 			_, err = q.DeleteSiteGroupMap(ctx, id)
+		}
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, before.SiteID)
 		}
 		return id, before, nil, err
 	})
@@ -440,6 +621,9 @@ func (store *navStore) replaceSiteGroupMaps(ctx context.Context, meta audit.Meta
 			}
 		}
 		after, err := q.ListSiteGroupMapsBySite(ctx, siteID)
+		if err == nil {
+			err = q.RefreshCurrentSiteDaily(ctx, siteID)
+		}
 		return siteID, before, after, err
 	})
 }
@@ -547,6 +731,13 @@ func pointerInt64(value *int64) int64 {
 		return 0
 	}
 	return *value
+}
+
+func sameOptionalString(left, right *string) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	return *left == *right
 }
 
 func sayingModel(row navsqlc.GfnSaying) models.Saying {

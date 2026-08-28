@@ -13,6 +13,18 @@
 
 GoFurry is an open-source, multi-service repository for furry culture discovery, site navigation, game information, and availability observation. Active production code lives under `apps/cn`, and each service is developed and deployed independently.
 
+```text
+                  ░██████             ░██████████                                        
+                 ░██   ░██            ░██                                                
+                ░██         ░███████  ░██        ░██    ░██ ░██░████ ░██░████ ░██    ░██ 
+                ░██  █████ ░██    ░██ ░█████████ ░██    ░██ ░███     ░███     ░██    ░██ 
+                ░██     ██ ░██    ░██ ░██        ░██    ░██ ░██      ░██      ░██    ░██ 
+                ░██   ░███ ░██    ░██ ░██        ░██   ░███ ░██      ░██      ░██   ░███ 
+                  ░█████░█  ░███████  ░██         ░█████░██ ░██      ░██       ░█████░██ 
+                                                                                    ░██ 
+                                                                              ░███████
+```
+
 ## Project Scope
 
 - `apps/cn/nav-web`: public Nuxt frontend

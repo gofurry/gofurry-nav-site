@@ -61,12 +61,13 @@ ON CONFLICT (game_id, lang) DO UPDATE SET
 -- name: UpsertPrice :exec
 INSERT INTO gfg_game_prices (
     game_id, appid, region, is_free, currency, initial_amount, final_amount,
-    discount_percent, initial_formatted, final_formatted, collected_at, updated_at
+    discount_percent, initial_formatted, final_formatted, price_state,
+    collected_at, updated_at
 ) VALUES (
     sqlc.arg(game_id), sqlc.arg(appid), sqlc.arg(region), sqlc.arg(is_free),
     sqlc.arg(currency), sqlc.arg(initial_amount), sqlc.arg(final_amount),
     sqlc.arg(discount_percent), sqlc.arg(initial_formatted),
-    sqlc.arg(final_formatted), sqlc.arg(collected_at), now()
+    sqlc.arg(final_formatted), sqlc.arg(price_state), sqlc.arg(collected_at), now()
 )
 ON CONFLICT (game_id, region) DO UPDATE SET
     appid = EXCLUDED.appid,
@@ -77,6 +78,7 @@ ON CONFLICT (game_id, region) DO UPDATE SET
     discount_percent = EXCLUDED.discount_percent,
     initial_formatted = EXCLUDED.initial_formatted,
     final_formatted = EXCLUDED.final_formatted,
+    price_state = EXCLUDED.price_state,
     collected_at = EXCLUDED.collected_at,
     updated_at = now();
 

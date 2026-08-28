@@ -218,6 +218,8 @@ function mapV2ListItemToBase(game: GameV2ListItem) {
     info: game.summary_zh || game.summary,
     info_en: game.summary_en || game.summary,
     header: bestV2Cover(game),
+    release: game.release,
+    first_available: game.first_available,
   }
 }
 

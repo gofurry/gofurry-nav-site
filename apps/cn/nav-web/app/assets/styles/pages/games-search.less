@@ -217,13 +217,18 @@ html.dark .games-search-page .search-release-badge {
   background: color-mix(in srgb, var(--games-search-surface-strong) 86%, transparent);
   color: var(--games-search-accent);
   opacity: 0;
-  transform: translateY(0.18rem) scale(0.96);
   backdrop-filter: blur(8px);
   transition:
     opacity 220ms ease,
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
     background-color 180ms ease,
     color 180ms ease;
+}
+
+.games-search-page .search-review-button svg {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
 }
 
 html.dark .games-search-page .search-review-button {
@@ -233,7 +238,6 @@ html.dark .games-search-page .search-review-button {
 .games-search-page .search-page-card:hover .search-review-button,
 .games-search-page .search-page-card:focus-within .search-review-button {
   opacity: 1;
-  transform: translateY(0) scale(1);
 }
 
 .games-search-page .search-review-button:hover {

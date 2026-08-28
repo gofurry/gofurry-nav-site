@@ -439,6 +439,9 @@ func TestGetGameReviewsDesensitizesIP(t *testing.T) {
 }
 
 func TestGetPanelMainBuildsAllSections(t *testing.T) {
+	exact := "2020-01-02"
+	year := int32(2020)
+	month := int32(1)
 	reader := &fakeDetailReader{
 		aggregate: v2models.GameV2Aggregate{
 			Site: v2models.GameV2SiteRecord{
@@ -481,6 +484,8 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 				AvgScore:     4.2,
 				CommentCount: 7,
 			},
+			ReleaseState:   &v2models.GameV2ReleaseState{Availability: "available", Precision: "day", ExactDate: &exact, Year: &year, Month: &month, WindowStart: &exact, WindowEnd: &exact, RawText: "2 Jan, 2020"},
+			FirstAvailable: &v2models.GameV2FirstAvailable{Precision: "day", ExactDate: &exact, Year: year, Month: &month, WindowStart: exact, WindowEnd: exact, Source: "legacy_manual"},
 		},
 	}
 
@@ -543,6 +548,12 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 	}
 	if res.LatestGames[0].SummaryZh != "中文站内简介" || res.LatestGames[0].SummaryEn != "English site summary" {
 		t.Fatalf("expected panel item bilingual summaries from site table, got zh=%s en=%s", res.LatestGames[0].SummaryZh, res.LatestGames[0].SummaryEn)
+	}
+	if res.LatestGames[0].Release == nil || res.LatestGames[0].Release.ExactDate == nil || *res.LatestGames[0].Release.ExactDate != exact {
+		t.Fatalf("expected panel item canonical release state, got %+v", res.LatestGames[0].Release)
+	}
+	if res.LatestGames[0].FirstAvailable == nil || res.LatestGames[0].FirstAvailable.ExactDate == nil || *res.LatestGames[0].FirstAvailable.ExactDate != exact {
+		t.Fatalf("expected panel item first-available state, got %+v", res.LatestGames[0].FirstAvailable)
 	}
 }
 

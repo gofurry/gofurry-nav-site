@@ -65,3 +65,9 @@ collector:
       player_counts_days: 90 # 兼容字段；P0.1.1 暂停 player counts destructive prune。
       collect_runs_days: 90 # 兼容字段；P0.1.1 暂停 durable Job/Run prune。
       collect_task_results_days: 90 # P0.1.1 operational Task Result 建议先保留 90 天。
+
+facts:
+  reconcile_interval_seconds: 600
+  finalization_grace_minutes: 30
+  retention_enabled: false # destructive raw pruning remains opt-in after checkpoint commit
+  retention_batch_size: 500

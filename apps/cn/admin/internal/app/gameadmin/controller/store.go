@@ -85,6 +85,16 @@ func (store *gameStore) createGame(ctx context.Context, meta audit.Meta, req gam
 		req.ID = id
 		row, err := q.InsertGame(ctx, req)
 		if err == nil {
+			_, err = q.OpenGameTrackingPeriod(ctx, gamesqlc.OpenGameTrackingPeriodParams{
+				GameID: id, Appid: req.Appid, OpenedReason: "created",
+			})
+		}
+		if err == nil {
+			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{
+				GameID: id, MaterializationSource: "bootstrap",
+			})
+		}
+		if err == nil {
 			gameID := id
 			_, err = q.EnqueueGameEntityCollectionJob(ctx, gamesqlc.EnqueueGameEntityCollectionJobParams{
 				Trigger: "entity_created", GameID: gameID, Appid: req.Appid, RequestedBy: meta.Operator,
@@ -107,12 +117,30 @@ func (store *gameStore) updateGame(ctx context.Context, meta audit.Meta, req gam
 		if err := ensureUniqueGameAppIDQuery(ctx, q, req.Appid, req.ID); err != nil {
 			return req.ID, before, nil, err
 		}
+		if before.Appid != req.Appid {
+			if err := q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{
+				GameID: req.ID, MaterializationSource: "observed",
+			}); err != nil {
+				return req.ID, before, nil, err
+			}
+			closedReason := "appid_changed"
+			if _, err := q.CloseGameTrackingPeriod(ctx, gamesqlc.CloseGameTrackingPeriodParams{
+				GameID: req.ID, ClosedReason: &closedReason,
+			}); err != nil {
+				return req.ID, before, nil, err
+			}
+		}
 		after, err := q.UpdateGame(ctx, req)
 		if err != nil {
 			return req.ID, before, nil, err
 		}
 		appIDChanged = before.Appid != after.Appid
 		if appIDChanged {
+			if _, err := q.OpenGameTrackingPeriod(ctx, gamesqlc.OpenGameTrackingPeriodParams{
+				GameID: req.ID, Appid: after.Appid, OpenedReason: "appid_changed",
+			}); err != nil {
+				return req.ID, before, after, err
+			}
 			if err := q.ResetSteamDerivedGameState(ctx, req.ID); err != nil {
 				return req.ID, before, after, err
 			}
@@ -123,6 +151,11 @@ func (store *gameStore) updateGame(ctx context.Context, meta audit.Meta, req gam
 				return req.ID, before, after, err
 			}
 		}
+		if err := q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{
+			GameID: req.ID, MaterializationSource: "observed",
+		}); err != nil {
+			return req.ID, before, after, err
+		}
 		result = updateGameModel(after)
 		return req.ID, before, after, nil
 	})
@@ -130,7 +163,25 @@ func (store *gameStore) updateGame(ctx context.Context, meta audit.Meta, req gam
 }
 
 func (store *gameStore) deleteGame(ctx context.Context, meta audit.Meta, id int64) common.Error {
-	return store.delete(ctx, meta, id, "gfg_game", func(q *gamesqlc.Queries) (any, error) { return q.GetGame(ctx, id) }, func(q *gamesqlc.Queries) error { _, err := q.DeleteGame(ctx, id); return err })
+	return store.mutate(ctx, meta, "delete", "gfg_game", func(q *gamesqlc.Queries) (int64, any, any, error) {
+		before, err := q.LockGameForUpdate(ctx, id)
+		if err != nil {
+			return id, nil, nil, err
+		}
+		if err := q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{
+			GameID: id, MaterializationSource: "observed",
+		}); err != nil {
+			return id, before, nil, err
+		}
+		closedReason := "deleted"
+		if _, err := q.CloseGameTrackingPeriod(ctx, gamesqlc.CloseGameTrackingPeriodParams{
+			GameID: id, ClosedReason: &closedReason,
+		}); err != nil {
+			return id, before, nil, err
+		}
+		_, err = q.DeleteGame(ctx, id)
+		return id, before, nil, err
+	})
 }
 
 func ensureUniqueGameAppIDQuery(ctx context.Context, q *gamesqlc.Queries, appID, excludeID int64) error {
@@ -323,6 +374,9 @@ func (store *gameStore) createTagMap(ctx context.Context, meta audit.Meta, gameI
 			return 0, nil, nil, err
 		}
 		row, err := q.InsertTagMap(ctx, gamesqlc.InsertTagMapParams{ID: id, GameID: gameID, TagID: tagID})
+		if err == nil {
+			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: gameID, MaterializationSource: "observed"})
+		}
 		result = tagMapModel(row)
 		return id, nil, row, err
 	})
@@ -336,12 +390,27 @@ func (store *gameStore) updateTagMap(ctx context.Context, meta audit.Meta, req g
 			return req.ID, nil, nil, err
 		}
 		after, err := q.UpdateTagMap(ctx, req)
+		if err == nil {
+			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: before.GameID, MaterializationSource: "observed"})
+		}
+		if err == nil && after.GameID != before.GameID {
+			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: after.GameID, MaterializationSource: "observed"})
+		}
 		return req.ID, before, after, err
 	})
 }
 
 func (store *gameStore) deleteTagMap(ctx context.Context, meta audit.Meta, id int64) common.Error {
-	return store.delete(ctx, meta, id, "gfg_tag_map", func(q *gamesqlc.Queries) (any, error) { return q.GetTagMap(ctx, id) }, func(q *gamesqlc.Queries) error { _, err := q.DeleteTagMap(ctx, id); return err })
+	return store.mutate(ctx, meta, "delete", "gfg_tag_map", func(q *gamesqlc.Queries) (int64, any, any, error) {
+		before, err := q.GetTagMap(ctx, id)
+		if err != nil {
+			return id, nil, nil, err
+		}
+		if _, err = q.DeleteTagMap(ctx, id); err == nil {
+			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: before.GameID, MaterializationSource: "observed"})
+		}
+		return id, before, nil, err
+	})
 }
 
 func (store *gameStore) replaceGameTags(ctx context.Context, meta audit.Meta, gameID int64, tagIDs []int64) common.Error {
@@ -365,6 +434,9 @@ func (store *gameStore) replaceGameTags(ctx context.Context, meta audit.Meta, ga
 			}
 		}
 		after, err := q.ListTagMapsByGame(ctx, gameID)
+		if err == nil {
+			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: gameID, MaterializationSource: "observed"})
+		}
 		return gameID, before, after, err
 	})
 }
@@ -405,6 +477,20 @@ func (store *gameStore) replaceTagGames(ctx context.Context, meta audit.Meta, ta
 			}
 		}
 		after, err := q.ListTagMapsByTag(ctx, tagID)
+		if err == nil {
+			affected := make(map[int64]struct{}, len(existing)+len(gameIDs))
+			for gameID := range existing {
+				affected[gameID] = struct{}{}
+			}
+			for _, gameID := range gameIDs {
+				affected[gameID] = struct{}{}
+			}
+			for gameID := range affected {
+				if err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: gameID, MaterializationSource: "observed"}); err != nil {
+					break
+				}
+			}
+		}
 		return tagID, before, after, err
 	})
 }

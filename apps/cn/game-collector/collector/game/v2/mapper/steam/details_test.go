@@ -42,8 +42,16 @@ func TestDetailsMapperMapsHighValueFields(t *testing.T) {
 		t.Fatalf("unexpected details: %#v", details)
 	}
 	price := mapper.ToPrice(10, 550, domain.RegionUS, data, now)
-	if price.Final != 499 || price.Currency != "USD" {
+	if price.Final != 499 || price.Currency != "USD" || price.PriceState != domain.PriceStatePriced {
 		t.Fatalf("unexpected price: %#v", price)
+	}
+	freeData := storefront.AppDetailsData{IsFree: true}
+	if free := mapper.ToPrice(10, 550, domain.RegionUS, freeData, now); free.PriceState != domain.PriceStateFree {
+		t.Fatalf("unexpected free state: %#v", free)
+	}
+	unpricedData := storefront.AppDetailsData{}
+	if unpriced := mapper.ToPrice(10, 550, domain.RegionUS, unpricedData, now); unpriced.PriceState != domain.PriceStateUnpriced {
+		t.Fatalf("unexpected unpriced state: %#v", unpriced)
 	}
 	media := mapper.ToMedia(10, 550, data, now)
 	if len(media.Screenshots) != 1 || len(media.Movies) != 1 || media.Movies[0].DASHH264URL != "movie.mpd" {

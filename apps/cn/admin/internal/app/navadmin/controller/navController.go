@@ -232,6 +232,18 @@ func (api *navAPI) DeleteCollectorDomain(c fiber.Ctx) error {
 	return nil
 }
 
+func (api *navAPI) SetPrimaryCollectorDomain(c fiber.Ctx) error {
+	id, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	if storeErr := api.store.setPrimaryCollectorDomain(c.Context(), audit.MetaFromFiber(c), id); storeErr != nil {
+		return common.NewResponse(c).Error(storeErr)
+	}
+	invalidateNavSiteListCache()
+	return common.NewResponse(c).Success()
+}
+
 func (api *navAPI) ListSites(c fiber.Ctx) error {
 	total, items, err := api.store.listSites(c.Context(), adminutil.ParsePageQuery(c))
 	if err != nil {

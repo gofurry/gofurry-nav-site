@@ -6,6 +6,29 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.3 - 2026-08-29
+
+### Added
+
+- Add effective-dated Game/AppID, Nav target, and Primary Target periods; UTC hourly/daily Game Player facts; historical Game/Price facts; Nav protocol/target/Site facts; and ordered fact checkpoints.
+- Add in-process Game/Nav Fact Engines plus `facts status`, `facts backfill`, and `facts rebuild` commands with dry-run support and shared runtime/backfill projection paths.
+- Add minimal Admin Primary Target selection with audit, current-day Game/Site fact write-through, code-whitelisted Nav known-state projection, and checkpoint-gated raw retention feature flags.
+
+### Changed
+
+- Allocate `gfg_game.id` from a PostgreSQL sequence seeded above every durable current, Raw, ledger, tracking, and Fact Game-ID source; add the four-state current price contract, enforce one Player Raw row per durable Run/Game, preserve release history across current Game deletion, and record `gfn_site.deleted_at`.
+- Make Game create/AppID-change/delete, Nav target identity mutations, Site deletion, and Primary replacement update historical eligibility in the same business transaction.
+- Allow Nav Site Daily `finalized_at` to remain null only for the mutable current-day Admin marker; closed UTC days are finalized by the Site pipeline.
+- Show canonical release and planned-release dates on Game homepage cards using the same hover presentation as Game search results.
+
+### Fixed
+
+- Separate scheduled acquisition quality from Fact values, retain unknown as nullable, exclude manual Player samples, keep manual Nav success out of scheduled quality, and prevent failed observations from clearing last-known structured state.
+- Replace the P0.1 raw-pruning freeze with disabled-by-default, post-checkpoint Game age retention and target-aware Nav keep-count retention.
+- Keep the SVG inside Game home/search review buttons on a fixed pixel box while cards reveal the controls, preventing Chromium hover resampling jitter.
+- Treat empty or malformed historical Nav TLS certificate timestamps as unknown so target Fact backfill cannot abort with `SQLSTATE 22007`.
+- Align the Nav Backend PostgreSQL integration fixture with the historical Site deletion timestamp invariant.
+
 ## v3.0.0-alpha.2 - 2026-08-28
 
 ### Added

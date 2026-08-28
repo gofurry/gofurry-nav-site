@@ -9,6 +9,7 @@ import {
   Plus,
   RotateCcw,
   Search,
+  Star,
   Trash2,
   X,
 } from 'lucide-vue-next'
@@ -21,6 +22,7 @@ import type { ResourceConfig, ResourceField } from '../types'
 const route = useRoute()
 const config = computed<ResourceConfig | undefined>(() => findResource(String(route.params.section), String(route.params.resource)))
 const isGameEditor = computed(() => config.value?.section === 'game' && config.value?.key === 'games')
+const isCollectorDomain = computed(() => config.value?.section === 'nav' && config.value?.key === 'collector-domains')
 
 const keyword = ref('')
 const pageNum = ref(1)
@@ -124,6 +126,18 @@ async function removeItem(id: string) {
     }
   } finally {
     deletingId.value = null
+  }
+}
+
+async function setPrimary(id: string) {
+  if (!config.value) return
+  message.value = ''
+  try {
+    await sendJSON(`${config.value.detailEndpoint}/${id}/primary`, 'POST')
+    message.value = '已设为 Primary Target'
+    await loadList()
+  } catch (error) {
+    message.value = error instanceof Error ? error.message : '设置 Primary Target 失败'
   }
 }
 
@@ -370,6 +384,16 @@ onMounted(async () => {
             >
               <td v-for="column in config.columns" :key="column.key">{{ formatCell(item[column.key]) }}</td>
               <td class="resource-table__actions">
+                <button
+                  v-if="isCollectorDomain"
+                  class="table-action"
+                  type="button"
+                  title="设为 Primary Target"
+                  aria-label="设为 Primary Target"
+                  @click="setPrimary(String(item.id))"
+                >
+                  <Star :size="16" />
+                </button>
                 <button
                   class="table-action"
                   type="button"
