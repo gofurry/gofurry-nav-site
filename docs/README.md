@@ -5,6 +5,8 @@ This directory contains cross-service documentation for the active GoFurry produ
 - [Repository architecture](architecture.md)
 - [Local development](development.md)
 - [Cross-service deployment](deployment.md)
+- [Historical Fact operations](historical-facts.md)
+- [Analytics Metric operations](analytics-metrics.md)
 - [Linux/systemd operations](operations/systemd.md)
 - [Architecture decisions](decisions/README.md)
 - [Compatibility contract](../contracts/compatibility.md)
