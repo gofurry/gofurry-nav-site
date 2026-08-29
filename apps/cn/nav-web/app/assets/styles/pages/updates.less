@@ -384,12 +384,6 @@ html.dark .updates-page {
   min-width: 0;
   padding-right: min(8vw, 48px);
   padding-left: 1.125rem;
-  transition: transform 180ms ease;
-}
-
-.updates-entry:hover .entry-copy,
-.updates-entry:focus-visible .entry-copy {
-  transform: translateX(4px);
 }
 
 .entry-heading {
@@ -552,10 +546,6 @@ html.dark .updates-page {
     flex-wrap: wrap;
   }
 
-  .updates-entry:hover .entry-copy,
-  .updates-entry:focus-visible .entry-copy {
-    transform: translateY(-2px);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -569,7 +559,6 @@ html.dark .updates-page {
     transform: none;
   }
 
-  .entry-copy,
   .entry-marker,
   .year-divider-chevron::before,
   .year-divider-chevron::after,
