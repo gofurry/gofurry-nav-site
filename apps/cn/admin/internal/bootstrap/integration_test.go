@@ -27,6 +27,7 @@ import (
 	collectioncontroller "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/controller"
 	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
 	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
+	metricadmin "github.com/gofurry/gofurry-admin/internal/app/metricadmin"
 	navadmin "github.com/gofurry/gofurry-admin/internal/app/navadmin/controller"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
 	"github.com/jackc/pgx/v5"
@@ -79,6 +80,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	navAPI := navadmin.New(navPool, auditLogger)
 	gameAPI := gameadmin.New(gamePool, auditLogger)
 	collectionAPI := collectioncontroller.New(collectionservice.New(gamePool, navPool, auditLogger))
+	metricAPI := metricadmin.NewAPI(metricadmin.New(gamePool, navPool))
 	app := fiber.New()
 	app.Post("/auth/bootstrap", authAPI.Bootstrap)
 	app.Post("/auth/login", authAPI.Login)
@@ -101,6 +103,11 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Post("/collection/jobs", collectionAPI.CreateJobs)
 	protected.Post("/collection/jobs/:domain/:id/cancel", collectionAPI.CancelJob)
 	protected.Post("/collection/jobs/:domain/:id/retry", collectionAPI.RetryJob)
+	protected.Get("/metrics/overview", metricAPI.Overview)
+	protected.Get("/metrics/registry", metricAPI.Registry)
+	protected.Get("/metrics/checkpoints", metricAPI.Checkpoints)
+	protected.Get("/metrics/daily", metricAPI.Daily)
+	protected.Get("/metrics/entities", metricAPI.Entities)
 
 	requestJSON(t, app, http.MethodPost, "/auth/bootstrap", `{"password":"integration-password"}`, nil, http.StatusOK)
 	login := requestJSON(t, app, http.MethodPost, "/auth/login", `{"password":"integration-password"}`, nil, http.StatusOK)
@@ -250,6 +257,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	if count := queryInt64(t, ctx, adminPool, `SELECT COUNT(*) FROM gfa_admin_audit_log`); count < 10 {
 		t.Fatalf("expected auth and CRUD audit entries, got %d", count)
 	}
+	testMetricCenterReadOnlyAPI(t, ctx, app, cookie, gamePool, navPool)
 
 	// Prove that gfn and gfa are not treated as a distributed transaction: a
 	// failed gfa audit must roll back the still-open gfn business transaction.
@@ -257,6 +265,108 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	requestJSON(t, app, http.MethodPost, "/nav/audit-failure", `{"name":"Rollback","name_en":"Rollback","info":"x","info_en":"x","nsfw":"0","welfare":"0"}`, nil, http.StatusInternalServerError)
 	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site WHERE name='Rollback'`); count != 0 {
 		t.Fatalf("cross-database audit failure left %d Nav rows", count)
+	}
+}
+
+func testMetricCenterReadOnlyAPI(t *testing.T, ctx context.Context, app *fiber.App, cookie *http.Cookie, gamePool, navPool *pgxpool.Pool) {
+	t.Helper()
+	const factDate = "2026-08-01"
+	var gamePeriodID int64
+	if err := gamePool.QueryRow(ctx, `
+INSERT INTO gfg_game_tracking_periods
+    (game_id, appid, tracked_from, tracked_until, tracking_basis, opened_reason, closed_reason)
+VALUES (998800, 998800, '2026-08-01T00:00:00Z', '2026-08-02T00:00:00Z',
+        'legacy_observed', 'admin_metric_test', 'admin_metric_test')
+RETURNING id`).Scan(&gamePeriodID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := gamePool.Exec(ctx, `
+INSERT INTO gfg_game_daily
+    (game_id, fact_date, tracking_period_id, appid, snapshot_at, tracked_at_end,
+     name, name_en, view_count, developers, publishers, tag_ids,
+     details_observed_at, materialization_source, projection_version, finalized_at)
+VALUES (998800, $1, $2, 998800, '2026-08-02T00:00:00Z', true,
+        'Historical Game Name', 'Historical Game Name EN', 0, '{}', '{}', '{}',
+        '2026-08-01T23:00:00Z', 'bootstrap', 1, '2026-08-02T01:00:00Z')`, factDate, gamePeriodID); err != nil {
+		t.Fatal(err)
+	}
+	for _, statement := range []string{
+		`INSERT INTO gfg_metric_entity_daily
+            (metric_key, metric_version, fact_date, game_id, state, reason_code,
+             source_observed_at, dimension_values, source_projection_versions, evaluated_at)
+         VALUES ('free_game_share', 1, $1::date, 998800, 'positive', 'game_is_free',
+                 '2026-08-01T23:00:00Z', '{}', '{"gfg_game_daily":1}', now())`,
+		`INSERT INTO gfg_metric_daily
+            (metric_key, metric_version, fact_date, dimension_key, dimension_value,
+             population_count, eligible_count, not_applicable_count, positive_count,
+             negative_count, stale_count, not_probed_count, probe_failed_count, unknown_count, computed_at)
+         VALUES ('free_game_share', 1, $1::date, 'global', 'all', 1, 1, 0, 1, 0, 0, 0, 0, 0, now())`,
+		`UPDATE gfg_metric_checkpoints SET source_start_date=$1::date, processed_through=$1::date, updated_at=now()
+         WHERE metric_key='free_game_share' AND metric_version=1`,
+	} {
+		if _, err := gamePool.Exec(ctx, statement, factDate); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if _, err := navPool.Exec(ctx, `INSERT INTO gfn_site_daily
+    (site_id, fact_date, snapshot_at, tracked_at_end, name, name_en,
+     view_count, group_ids, active_target_count, projection_version, finalized_at)
+VALUES (998800, $1, '2026-08-02T00:00:00Z', true,
+        'Historical Site Name', 'Historical Site Name EN', 0, '{}', 0, 1,
+	        '2026-08-02T01:00:00Z')`, factDate); err != nil {
+		t.Fatal(err)
+	}
+	for _, statement := range []string{
+		`INSERT INTO gfn_metric_entity_daily
+            (metric_key, metric_version, fact_date, site_id, state, reason_code,
+             dimension_values, source_projection_versions, evaluated_at)
+         VALUES ('ipv6_adoption', 1, $1::date, 998800, 'unknown', 'primary_target_unknown',
+                 '{}', '{"gfn_site_daily":1}', now())`,
+		`INSERT INTO gfn_metric_daily
+            (metric_key, metric_version, fact_date, dimension_key, dimension_value,
+             population_count, eligible_count, not_applicable_count, positive_count,
+             negative_count, stale_count, not_probed_count, probe_failed_count, unknown_count, computed_at)
+         VALUES ('ipv6_adoption', 1, $1::date, 'global', 'all', 1, 1, 0, 0, 0, 0, 0, 0, 1, now())`,
+		`UPDATE gfn_metric_checkpoints SET source_start_date=$1::date, processed_through=$1::date, updated_at=now()
+         WHERE metric_key='ipv6_adoption' AND metric_version=1`,
+	} {
+		if _, err := navPool.Exec(ctx, statement, factDate); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	requestJSON(t, app, http.MethodGet, "/metrics/overview", "", cookie, http.StatusOK).Body.Close()
+	requestJSON(t, app, http.MethodGet, "/metrics/registry", "", cookie, http.StatusOK).Body.Close()
+	requestJSON(t, app, http.MethodGet, "/metrics/checkpoints", "", cookie, http.StatusOK).Body.Close()
+	requestJSON(t, app, http.MethodGet, "/metrics/daily?domain=game&metric=free_game_share&version=1", "", cookie, http.StatusOK).Body.Close()
+
+	assertHistoricalMetricName(t, requestJSON(t, app, http.MethodGet,
+		"/metrics/entities?domain=game&metric=free_game_share&version=1&fact_date="+factDate,
+		"", cookie, http.StatusOK), "Historical Game Name")
+	assertHistoricalMetricName(t, requestJSON(t, app, http.MethodGet,
+		"/metrics/entities?domain=nav&metric=ipv6_adoption&version=1&fact_date="+factDate,
+		"", cookie, http.StatusOK), "Historical Site Name")
+}
+
+func assertHistoricalMetricName(t *testing.T, resp *http.Response, expected string) {
+	t.Helper()
+	defer resp.Body.Close()
+	var envelope integrationEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	var page struct {
+		Total int64 `json:"total"`
+		List  []struct {
+			HistoricalName string `json:"historical_name"`
+		} `json:"list"`
+	}
+	if err := json.Unmarshal(envelope.Data, &page); err != nil {
+		t.Fatal(err)
+	}
+	if page.Total != 1 || len(page.List) != 1 || page.List[0].HistoricalName != expected {
+		t.Fatalf("historical entity response=%s, want name %q", envelope.Data, expected)
 	}
 }
 

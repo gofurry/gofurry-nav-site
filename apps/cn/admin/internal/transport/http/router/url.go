@@ -19,6 +19,16 @@ func v1(root fiber.Router, runtime *bootstrap.Runtime) {
 	navRoutes(protected.Group("/nav"), runtime)
 	gameRoutes(protected.Group("/game"), runtime)
 	collectionRoutes(protected.Group("/collection"), runtime)
+	metricRoutes(protected.Group("/metrics"), runtime)
+}
+
+func metricRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	api := runtime.MetricAPI
+	root.Get("/overview", api.Overview)
+	root.Get("/registry", api.Registry)
+	root.Get("/checkpoints", api.Checkpoints)
+	root.Get("/daily", api.Daily)
+	root.Get("/entities", api.Entities)
 }
 
 func collectionRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
