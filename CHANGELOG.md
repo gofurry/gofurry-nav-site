@@ -6,6 +6,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.4 - 2026-08-29
+
 ### Added
 
 - Add Goose-owned versioned Game/Nav metric registries, explainable entity-daily state, global and single-dimension daily counts, and independent per-metric-version checkpoints.
