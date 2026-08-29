@@ -37,6 +37,18 @@ GoFurry 是一个面向兽圈文化内容发现、站点导航、兽游资料和
 
 `apps/intl` 仅是国际站占位。`legacy`、`experimental` 和 `third-party` 不在活跃构建、CI 或生产部署图中。`db/game`、`db/nav` 和 `db/admin` 分别管理 `gfg`、`gfn` 和 `gfa` 的 Goose migrations。
 
+## 架构概览
+
+<p align="center">
+  <img
+    src="./docs/diagrams/architecture/system-overview.svg"
+    alt="GoFurry System Architecture"
+    width="100%"
+  >
+</p>
+
+> 国际站相关组件目前处于规划阶段，不属于当前生产运行拓扑。
+
 ## 技术栈
 
 - Go / Fiber
