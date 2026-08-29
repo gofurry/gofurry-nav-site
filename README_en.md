@@ -41,7 +41,7 @@ GoFurry is an open-source, multi-service repository for furry culture discovery,
 
 <p align="center">
   <img
-    src="./docs/diagrams/architecture/system-overview.svg"
+    src="./docs/diagrams/architecture/system-overview.webp"
     alt="GoFurry System Architecture"
     width="100%"
   >

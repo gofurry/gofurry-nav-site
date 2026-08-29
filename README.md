@@ -41,7 +41,7 @@ GoFurry 是一个面向兽圈文化内容发现、站点导航、兽游资料和
 
 <p align="center">
   <img
-    src="./docs/diagrams/architecture/system-overview.svg"
+    src="./docs/diagrams/architecture/system-overview.webp"
     alt="GoFurry System Architecture"
     width="100%"
   >
