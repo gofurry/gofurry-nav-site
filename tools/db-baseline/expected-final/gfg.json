@@ -5252,6 +5252,631 @@
       "triggers": null
     },
     {
+      "name": "gfg_metric_checkpoints",
+      "comment": "Independent ordered checkpoints for each Game metric version.",
+      "columns": [
+        {
+          "name": "metric_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "metric_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_start_date",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "processed_through",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_gfg_metric_checkpoint_registry",
+          "definition": "FOREIGN KEY (metric_key, metric_version) REFERENCES gfg_metric_registry(metric_key, metric_version) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_metric_checkpoint_range_check",
+          "definition": "CHECK (source_start_date IS NULL OR processed_through IS NULL OR processed_through \u003e= source_start_date)"
+        },
+        {
+          "name": "gfg_metric_checkpoints_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_metric_checkpoints_metric_key_not_null",
+          "definition": "NOT NULL metric_key"
+        },
+        {
+          "name": "gfg_metric_checkpoints_metric_version_not_null",
+          "definition": "NOT NULL metric_version"
+        },
+        {
+          "name": "gfg_metric_checkpoints_pkey",
+          "definition": "PRIMARY KEY (metric_key, metric_version)"
+        },
+        {
+          "name": "gfg_metric_checkpoints_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": null,
+      "triggers": null
+    },
+    {
+      "name": "gfg_metric_daily",
+      "comment": "Global and single-dimension Game metric state counts; ratios are query-time only.",
+      "columns": [
+        {
+          "name": "metric_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "metric_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "fact_date",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "dimension_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "dimension_value",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "population_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "eligible_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "not_applicable_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "positive_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "negative_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "stale_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "not_probed_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "probe_failed_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "unknown_count",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "computed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_gfg_metric_daily_registry",
+          "definition": "FOREIGN KEY (metric_key, metric_version) REFERENCES gfg_metric_registry(metric_key, metric_version) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_metric_daily_computed_at_not_null",
+          "definition": "NOT NULL computed_at"
+        },
+        {
+          "name": "gfg_metric_daily_dimension_check",
+          "definition": "CHECK (btrim(dimension_key) \u003c\u003e ''::text AND btrim(dimension_value) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfg_metric_daily_dimension_key_not_null",
+          "definition": "NOT NULL dimension_key"
+        },
+        {
+          "name": "gfg_metric_daily_dimension_value_not_null",
+          "definition": "NOT NULL dimension_value"
+        },
+        {
+          "name": "gfg_metric_daily_eligible_check",
+          "definition": "CHECK (eligible_count = (positive_count + negative_count + stale_count + not_probed_count + probe_failed_count + unknown_count))"
+        },
+        {
+          "name": "gfg_metric_daily_eligible_count_not_null",
+          "definition": "NOT NULL eligible_count"
+        },
+        {
+          "name": "gfg_metric_daily_fact_date_not_null",
+          "definition": "NOT NULL fact_date"
+        },
+        {
+          "name": "gfg_metric_daily_metric_key_not_null",
+          "definition": "NOT NULL metric_key"
+        },
+        {
+          "name": "gfg_metric_daily_metric_version_not_null",
+          "definition": "NOT NULL metric_version"
+        },
+        {
+          "name": "gfg_metric_daily_negative_count_not_null",
+          "definition": "NOT NULL negative_count"
+        },
+        {
+          "name": "gfg_metric_daily_nonnegative_check",
+          "definition": "CHECK (population_count \u003e= 0 AND eligible_count \u003e= 0 AND not_applicable_count \u003e= 0 AND positive_count \u003e= 0 AND negative_count \u003e= 0 AND stale_count \u003e= 0 AND not_probed_count \u003e= 0 AND probe_failed_count \u003e= 0 AND unknown_count \u003e= 0)"
+        },
+        {
+          "name": "gfg_metric_daily_not_applicable_count_not_null",
+          "definition": "NOT NULL not_applicable_count"
+        },
+        {
+          "name": "gfg_metric_daily_not_probed_count_not_null",
+          "definition": "NOT NULL not_probed_count"
+        },
+        {
+          "name": "gfg_metric_daily_pkey",
+          "definition": "PRIMARY KEY (metric_key, metric_version, fact_date, dimension_key, dimension_value)"
+        },
+        {
+          "name": "gfg_metric_daily_population_check",
+          "definition": "CHECK (population_count = (eligible_count + not_applicable_count))"
+        },
+        {
+          "name": "gfg_metric_daily_population_count_not_null",
+          "definition": "NOT NULL population_count"
+        },
+        {
+          "name": "gfg_metric_daily_positive_count_not_null",
+          "definition": "NOT NULL positive_count"
+        },
+        {
+          "name": "gfg_metric_daily_probe_failed_count_not_null",
+          "definition": "NOT NULL probe_failed_count"
+        },
+        {
+          "name": "gfg_metric_daily_stale_count_not_null",
+          "definition": "NOT NULL stale_count"
+        },
+        {
+          "name": "gfg_metric_daily_unknown_count_not_null",
+          "definition": "NOT NULL unknown_count"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_metric_daily_dimension_date",
+          "definition": "CREATE INDEX idx_gfg_metric_daily_dimension_date ON public.gfg_metric_daily USING btree (dimension_key, dimension_value, fact_date DESC)"
+        },
+        {
+          "name": "idx_gfg_metric_daily_key_date",
+          "definition": "CREATE INDEX idx_gfg_metric_daily_key_date ON public.gfg_metric_daily USING btree (metric_key, metric_version, fact_date DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_metric_entity_daily",
+      "comment": "Explainable per-Game historical metric state derived only from finalized Game Facts.",
+      "columns": [
+        {
+          "name": "metric_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "metric_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "fact_date",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "state",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "reason_code",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_observed_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "dimension_values",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "source_projection_versions",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "evaluated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_gfg_metric_entity_registry",
+          "definition": "FOREIGN KEY (metric_key, metric_version) REFERENCES gfg_metric_registry(metric_key, metric_version) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_metric_entity_daily_dimension_values_not_null",
+          "definition": "NOT NULL dimension_values"
+        },
+        {
+          "name": "gfg_metric_entity_daily_evaluated_at_not_null",
+          "definition": "NOT NULL evaluated_at"
+        },
+        {
+          "name": "gfg_metric_entity_daily_fact_date_not_null",
+          "definition": "NOT NULL fact_date"
+        },
+        {
+          "name": "gfg_metric_entity_daily_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_metric_entity_daily_metric_key_not_null",
+          "definition": "NOT NULL metric_key"
+        },
+        {
+          "name": "gfg_metric_entity_daily_metric_version_not_null",
+          "definition": "NOT NULL metric_version"
+        },
+        {
+          "name": "gfg_metric_entity_daily_pkey",
+          "definition": "PRIMARY KEY (metric_key, metric_version, fact_date, game_id)"
+        },
+        {
+          "name": "gfg_metric_entity_daily_reason_code_not_null",
+          "definition": "NOT NULL reason_code"
+        },
+        {
+          "name": "gfg_metric_entity_daily_source_projection_versions_not_null",
+          "definition": "NOT NULL source_projection_versions"
+        },
+        {
+          "name": "gfg_metric_entity_daily_state_not_null",
+          "definition": "NOT NULL state"
+        },
+        {
+          "name": "gfg_metric_entity_dimensions_check",
+          "definition": "CHECK (jsonb_typeof(dimension_values) = 'object'::text)"
+        },
+        {
+          "name": "gfg_metric_entity_projection_check",
+          "definition": "CHECK (jsonb_typeof(source_projection_versions) = 'object'::text)"
+        },
+        {
+          "name": "gfg_metric_entity_reason_check",
+          "definition": "CHECK (btrim(reason_code) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfg_metric_entity_stale_evidence_check",
+          "definition": "CHECK (state \u003c\u003e 'stale'::text OR source_observed_at IS NOT NULL)"
+        },
+        {
+          "name": "gfg_metric_entity_state_check",
+          "definition": "CHECK (state = ANY (ARRAY['positive'::text, 'negative'::text, 'stale'::text, 'not_probed'::text, 'probe_failed'::text, 'unknown'::text, 'not_applicable'::text]))"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_metric_entity_game_date",
+          "definition": "CREATE INDEX idx_gfg_metric_entity_game_date ON public.gfg_metric_entity_daily USING btree (game_id, fact_date DESC)"
+        },
+        {
+          "name": "idx_gfg_metric_entity_key_date_state",
+          "definition": "CREATE INDEX idx_gfg_metric_entity_key_date_state ON public.gfg_metric_entity_daily USING btree (metric_key, metric_version, fact_date, state)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_metric_registry",
+      "comment": "Goose-owned versioned Game metric contracts; runtime and Admin are read-only.",
+      "columns": [
+        {
+          "name": "metric_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "metric_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "metric_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "entity_level",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "time_grain",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_facts",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "eligibility_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "state_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "coverage_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "freshness_seconds",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "allowed_dimensions",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "description",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "retired_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_metric_registry_allowed_dimensions_not_null",
+          "definition": "NOT NULL allowed_dimensions"
+        },
+        {
+          "name": "gfg_metric_registry_coverage_policy_not_null",
+          "definition": "NOT NULL coverage_policy"
+        },
+        {
+          "name": "gfg_metric_registry_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_metric_registry_description_not_null",
+          "definition": "NOT NULL description"
+        },
+        {
+          "name": "gfg_metric_registry_dimension_shape_check",
+          "definition": "CHECK (cardinality(allowed_dimensions) = 0 OR array_ndims(allowed_dimensions) = 1)"
+        },
+        {
+          "name": "gfg_metric_registry_dimension_value_check",
+          "definition": "CHECK (allowed_dimensions \u003c@ ARRAY['primary_tag_id'::text, 'tag_id'::text])"
+        },
+        {
+          "name": "gfg_metric_registry_eligibility_policy_not_null",
+          "definition": "NOT NULL eligibility_policy"
+        },
+        {
+          "name": "gfg_metric_registry_entity_check",
+          "definition": "CHECK (entity_level = 'game'::text)"
+        },
+        {
+          "name": "gfg_metric_registry_entity_level_not_null",
+          "definition": "NOT NULL entity_level"
+        },
+        {
+          "name": "gfg_metric_registry_freshness_check",
+          "definition": "CHECK (freshness_seconds IS NULL OR freshness_seconds \u003e 0)"
+        },
+        {
+          "name": "gfg_metric_registry_grain_check",
+          "definition": "CHECK (time_grain = 'day'::text)"
+        },
+        {
+          "name": "gfg_metric_registry_key_check",
+          "definition": "CHECK (btrim(metric_key) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfg_metric_registry_kind_check",
+          "definition": "CHECK (metric_kind = 'state_ratio'::text)"
+        },
+        {
+          "name": "gfg_metric_registry_metric_key_not_null",
+          "definition": "NOT NULL metric_key"
+        },
+        {
+          "name": "gfg_metric_registry_metric_kind_not_null",
+          "definition": "NOT NULL metric_kind"
+        },
+        {
+          "name": "gfg_metric_registry_metric_version_not_null",
+          "definition": "NOT NULL metric_version"
+        },
+        {
+          "name": "gfg_metric_registry_pkey",
+          "definition": "PRIMARY KEY (metric_key, metric_version)"
+        },
+        {
+          "name": "gfg_metric_registry_policy_check",
+          "definition": "CHECK (btrim(eligibility_policy) \u003c\u003e ''::text AND btrim(state_policy) \u003c\u003e ''::text AND btrim(coverage_policy) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfg_metric_registry_source_facts_not_null",
+          "definition": "NOT NULL source_facts"
+        },
+        {
+          "name": "gfg_metric_registry_source_shape_check",
+          "definition": "CHECK (cardinality(source_facts) \u003e 0 AND array_ndims(source_facts) = 1)"
+        },
+        {
+          "name": "gfg_metric_registry_state_policy_not_null",
+          "definition": "NOT NULL state_policy"
+        },
+        {
+          "name": "gfg_metric_registry_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['active'::text, 'retired'::text]))"
+        },
+        {
+          "name": "gfg_metric_registry_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfg_metric_registry_status_shape_check",
+          "definition": "CHECK (status = 'active'::text AND retired_at IS NULL OR status = 'retired'::text AND retired_at IS NOT NULL)"
+        },
+        {
+          "name": "gfg_metric_registry_time_grain_not_null",
+          "definition": "NOT NULL time_grain"
+        },
+        {
+          "name": "gfg_metric_registry_version_check",
+          "definition": "CHECK (metric_version \u003e 0)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_gfg_metric_registry_active_key",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_metric_registry_active_key ON public.gfg_metric_registry USING btree (metric_key) WHERE (status = 'active'::text)"
+        }
+      ],
+      "triggers": null
+    },
+    {
       "name": "gfg_prize",
       "comment": "抽奖活动表",
       "columns": [
@@ -5677,6 +6302,10 @@
     {
       "identity": "gfg_game_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer)",
       "definition": "CREATE OR REPLACE FUNCTION public.gfg_game_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer DEFAULT 5)\n RETURNS integer\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    deleted_count integer;\nBEGIN\n    WITH ranked AS (\n        SELECT id,\n               row_number() OVER (\n                   PARTITION BY appid, lang, region\n                   ORDER BY collected_at DESC, id DESC\n               ) AS rn\n        FROM public.gfg_game_detail_snapshots\n        WHERE appid = p_appid\n          AND lang = p_lang\n          AND region = p_region\n    ),\n    deleted AS (\n        DELETE FROM public.gfg_game_detail_snapshots snapshot\n        USING ranked\n        WHERE snapshot.id = ranked.id\n          AND ranked.rn \u003e GREATEST(p_keep_count, 0)\n        RETURNING snapshot.id\n    )\n    SELECT count(*) INTO deleted_count FROM deleted;\n\n    RETURN deleted_count;\nEND;\n$function$\n"
+    },
+    {
+      "identity": "gfg_project_metric_day(target_metric_key text, target_metric_version integer, target_date date)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfg_project_metric_day(target_metric_key text, target_metric_version integer, target_date date)\n RETURNS bigint\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    day_end timestamp with time zone := (target_date + 1)::timestamp AT TIME ZONE 'UTC';\n    freshness bigint;\n    dimensions text[];\n    entity_rows bigint;\nBEGIN\n    SELECT freshness_seconds, allowed_dimensions\n    INTO freshness, dimensions\n    FROM public.gfg_metric_registry\n    WHERE metric_key = target_metric_key\n      AND metric_version = target_metric_version;\n\n    IF NOT FOUND THEN\n        RAISE EXCEPTION 'unknown Game metric %/%', target_metric_key, target_metric_version;\n    END IF;\n    IF target_metric_version \u003c\u003e 1\n       OR target_metric_key NOT IN ('free_game_share', 'windows_support', 'linux_support') THEN\n        RAISE EXCEPTION 'Game metric evaluator is not compiled for %/%', target_metric_key, target_metric_version;\n    END IF;\n\n    IF EXISTS (\n        SELECT 1\n        FROM public.gfg_game_daily fact\n        WHERE fact.fact_date = target_date\n          AND fact.finalized_at IS NOT NULL\n          AND fact.tracked_at_end\n          AND fact.details_observed_at \u003e day_end\n    ) THEN\n        RAISE EXCEPTION 'Game metric source evidence is after UTC day end for %/% on %',\n            target_metric_key, target_metric_version, target_date;\n    END IF;\n\n    DELETE FROM public.gfg_metric_entity_daily\n    WHERE metric_key = target_metric_key\n      AND metric_version = target_metric_version\n      AND fact_date = target_date;\n    DELETE FROM public.gfg_metric_daily\n    WHERE metric_key = target_metric_key\n      AND metric_version = target_metric_version\n      AND fact_date = target_date;\n\n    INSERT INTO public.gfg_metric_entity_daily (\n        metric_key, metric_version, fact_date, game_id, state, reason_code,\n        source_observed_at, dimension_values, source_projection_versions,\n        evaluated_at\n    )\n    SELECT target_metric_key,\n           target_metric_version,\n           target_date,\n           fact.game_id,\n           CASE target_metric_key\n               WHEN 'free_game_share' THEN CASE\n                   WHEN fact.release_availability = 'upcoming' THEN 'not_applicable'\n                   WHEN fact.release_availability IS NULL\n                        OR fact.release_availability = 'unknown' THEN 'unknown'\n                   WHEN fact.details_observed_at IS NULL THEN 'unknown'\n                   WHEN fact.details_observed_at \u003c day_end - make_interval(secs =\u003e freshness::double precision) THEN 'stale'\n                   WHEN fact.is_free IS TRUE THEN 'positive'\n                   WHEN fact.is_free IS FALSE THEN 'negative'\n                   ELSE 'unknown'\n               END\n               WHEN 'windows_support' THEN CASE\n                   WHEN fact.details_observed_at IS NULL THEN 'unknown'\n                   WHEN fact.details_observed_at \u003c day_end - make_interval(secs =\u003e freshness::double precision) THEN 'stale'\n                   WHEN fact.windows IS TRUE THEN 'positive'\n                   WHEN fact.windows IS FALSE THEN 'negative'\n                   ELSE 'unknown'\n               END\n               WHEN 'linux_support' THEN CASE\n                   WHEN fact.details_observed_at IS NULL THEN 'unknown'\n                   WHEN fact.details_observed_at \u003c day_end - make_interval(secs =\u003e freshness::double precision) THEN 'stale'\n                   WHEN fact.linux IS TRUE THEN 'positive'\n                   WHEN fact.linux IS FALSE THEN 'negative'\n                   ELSE 'unknown'\n               END\n           END,\n           CASE target_metric_key\n               WHEN 'free_game_share' THEN CASE\n                   WHEN fact.release_availability = 'upcoming' THEN 'game_not_available'\n                   WHEN fact.release_availability IS NULL\n                        OR fact.release_availability = 'unknown' THEN 'game_availability_unknown'\n                   WHEN fact.details_observed_at IS NOT NULL\n                        AND fact.details_observed_at \u003c day_end - make_interval(secs =\u003e freshness::double precision)\n                       THEN 'details_state_stale'\n                   WHEN fact.is_free IS TRUE THEN 'game_is_free'\n                   WHEN fact.is_free IS FALSE THEN 'game_is_paid'\n                   ELSE 'is_free_unknown'\n               END\n               WHEN 'windows_support' THEN CASE\n                   WHEN fact.details_observed_at IS NOT NULL\n                        AND fact.details_observed_at \u003c day_end - make_interval(secs =\u003e freshness::double precision)\n                       THEN 'details_state_stale'\n                   WHEN fact.windows IS TRUE THEN 'windows_supported'\n                   WHEN fact.windows IS FALSE THEN 'windows_not_supported'\n                   ELSE 'windows_support_unknown'\n               END\n               WHEN 'linux_support' THEN CASE\n                   WHEN fact.details_observed_at IS NOT NULL\n                        AND fact.details_observed_at \u003c day_end - make_interval(secs =\u003e freshness::double precision)\n                       THEN 'details_state_stale'\n                   WHEN fact.linux IS TRUE THEN 'linux_supported'\n                   WHEN fact.linux IS FALSE THEN 'linux_not_supported'\n                   ELSE 'linux_support_unknown'\n               END\n           END,\n           fact.details_observed_at,\n           jsonb_build_object(\n               'primary_tag_id', to_jsonb(fact.primary_tag_id),\n               'tag_ids', to_jsonb(fact.tag_ids)\n           ),\n           jsonb_build_object('gfg_game_daily', fact.projection_version),\n           transaction_timestamp()\n    FROM public.gfg_game_daily fact\n    WHERE fact.fact_date = target_date\n      AND fact.finalized_at IS NOT NULL\n      AND fact.tracked_at_end;\n\n    GET DIAGNOSTICS entity_rows = ROW_COUNT;\n\n    WITH registry AS (\n        SELECT allowed_dimensions\n        FROM public.gfg_metric_registry\n        WHERE metric_key = target_metric_key\n          AND metric_version = target_metric_version\n    ), entities AS (\n        SELECT *\n        FROM public.gfg_metric_entity_daily\n        WHERE metric_key = target_metric_key\n          AND metric_version = target_metric_version\n          AND fact_date = target_date\n    ), memberships AS (\n        SELECT entity.game_id, 'global'::text AS dimension_key, 'all'::text AS dimension_value\n        FROM entities entity\n        UNION ALL\n        SELECT entity.game_id,\n               'primary_tag_id',\n               COALESCE(NULLIF(btrim(entity.dimension_values -\u003e\u003e 'primary_tag_id'), ''), 'unknown')\n        FROM entities entity CROSS JOIN registry\n        WHERE 'primary_tag_id' = ANY(registry.allowed_dimensions)\n        UNION ALL\n        SELECT entity.game_id, 'tag_id', member.value\n        FROM entities entity\n        CROSS JOIN registry\n        CROSS JOIN LATERAL jsonb_array_elements_text(\n            CASE WHEN jsonb_typeof(entity.dimension_values -\u003e 'tag_ids') = 'array'\n                 THEN entity.dimension_values -\u003e 'tag_ids'\n                 ELSE '[]'::jsonb END\n        ) member(value)\n        WHERE 'tag_id' = ANY(registry.allowed_dimensions)\n          AND member.value ~ '^[0-9]+$'\n    ), unique_memberships AS (\n        SELECT DISTINCT game_id, dimension_key, dimension_value\n        FROM memberships\n    )\n    INSERT INTO public.gfg_metric_daily (\n        metric_key, metric_version, fact_date, dimension_key, dimension_value,\n        population_count, eligible_count, not_applicable_count,\n        positive_count, negative_count, stale_count, not_probed_count,\n        probe_failed_count, unknown_count, computed_at\n    )\n    SELECT target_metric_key,\n           target_metric_version,\n           target_date,\n           membership.dimension_key,\n           membership.dimension_value,\n           count(*)::bigint,\n           count(*) FILTER (WHERE entity.state \u003c\u003e 'not_applicable')::bigint,\n           count(*) FILTER (WHERE entity.state = 'not_applicable')::bigint,\n           count(*) FILTER (WHERE entity.state = 'positive')::bigint,\n           count(*) FILTER (WHERE entity.state = 'negative')::bigint,\n           count(*) FILTER (WHERE entity.state = 'stale')::bigint,\n           count(*) FILTER (WHERE entity.state = 'not_probed')::bigint,\n           count(*) FILTER (WHERE entity.state = 'probe_failed')::bigint,\n           count(*) FILTER (WHERE entity.state = 'unknown')::bigint,\n           transaction_timestamp()\n    FROM unique_memberships membership\n    JOIN entities entity ON entity.game_id = membership.game_id\n    GROUP BY membership.dimension_key, membership.dimension_value;\n\n    INSERT INTO public.gfg_metric_daily (\n        metric_key, metric_version, fact_date, dimension_key, dimension_value,\n        population_count, eligible_count, not_applicable_count,\n        positive_count, negative_count, stale_count, not_probed_count,\n        probe_failed_count, unknown_count, computed_at\n    ) VALUES (\n        target_metric_key, target_metric_version, target_date, 'global', 'all',\n        0, 0, 0, 0, 0, 0, 0, 0, 0, transaction_timestamp()\n    ) ON CONFLICT (metric_key, metric_version, fact_date, dimension_key, dimension_value)\n      DO NOTHING;\n\n    IF EXISTS (\n        SELECT 1\n        FROM public.gfg_metric_daily daily\n        WHERE daily.metric_key = target_metric_key\n          AND daily.metric_version = target_metric_version\n          AND daily.fact_date = target_date\n          AND (\n              daily.population_count \u003c\u003e daily.eligible_count + daily.not_applicable_count\n              OR daily.eligible_count \u003c\u003e daily.positive_count + daily.negative_count\n                  + daily.stale_count + daily.not_probed_count\n                  + daily.probe_failed_count + daily.unknown_count\n          )\n    ) THEN\n        RAISE EXCEPTION 'Game metric count invariant failed for %/% on %',\n            target_metric_key, target_metric_version, target_date;\n    END IF;\n\n    RETURN entity_rows;\nEND;\n$function$\n"
     },
     {
       "identity": "gfg_project_player_fact_day(target_date date)",
