@@ -71,3 +71,6 @@ facts:
   finalization_grace_minutes: 30
   retention_enabled: false # destructive raw pruning remains opt-in after checkpoint commit
   retention_batch_size: 500
+
+metrics:
+  reconcile_interval_seconds: 600 # active metric versions process at most one UTC day per pass

@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofurry/gofurry-nav-collector/collector/control"
 	"github.com/gofurry/gofurry-nav-collector/collector/facts"
+	"github.com/gofurry/gofurry-nav-collector/collector/metrics"
 	"github.com/gofurry/gofurry-nav-collector/common"
 	"github.com/gofurry/gofurry-nav-collector/common/log"
 	cs "github.com/gofurry/gofurry-nav-collector/common/service"
@@ -39,6 +40,7 @@ type goFurry struct {
 	health   *internalhealth.Server
 	control  *control.Engine
 	facts    *facts.Engine
+	metrics  *metrics.Engine
 	stopOnce sync.Once
 }
 
@@ -76,6 +78,12 @@ func (gf *goFurry) Serve(ctx context.Context) error {
 	if err = gf.facts.Start(ctx); err != nil {
 		return errors.Join(err, gf.Shutdown())
 	}
+	gf.metrics = metrics.New(gf.pool, metrics.Options{
+		ReconcileInterval: env.GetServerConfig().Metrics.ReconcileInterval(),
+	})
+	if err = gf.metrics.Start(ctx); err != nil {
+		return errors.Join(err, gf.Shutdown())
+	}
 	gf.health.MarkReady()
 	if err = gf.health.Start(); err != nil {
 		return errors.Join(err, gf.Shutdown())
@@ -96,6 +104,12 @@ func (gf *goFurry) Shutdown() error {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			shutdownErr = errors.Join(shutdownErr, gf.health.Shutdown(ctx))
 			cancel()
+		}
+		if gf.metrics != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			shutdownErr = errors.Join(shutdownErr, gf.metrics.Shutdown(ctx))
+			cancel()
+			gf.metrics = nil
 		}
 		if gf.facts != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
