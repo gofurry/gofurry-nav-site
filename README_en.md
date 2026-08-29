@@ -37,6 +37,18 @@ GoFurry is an open-source, multi-service repository for furry culture discovery,
 
 `apps/intl` is placeholder-only. `legacy`, `experimental`, and `third-party` are outside the active build, CI, and production deployment graph. `db/game`, `db/nav`, and `db/admin` own Goose migrations for `gfg`, `gfn`, and `gfa`.
 
+## Architecture Overview
+
+<p align="center">
+  <img
+    src="./docs/diagrams/architecture/system-overview.webp"
+    alt="GoFurry System Architecture"
+    width="100%"
+  >
+</p>
+
+> International-site components are currently planned and are not part of the active production runtime topology.
+
 ## Stack
 
 - Go / Fiber

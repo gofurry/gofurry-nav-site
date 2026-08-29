@@ -13,6 +13,7 @@ import (
 	"github.com/gofurry/gofurry-game-collector/collector/facts"
 	gameService "github.com/gofurry/gofurry-game-collector/collector/game/service"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/backfill"
+	"github.com/gofurry/gofurry-game-collector/collector/metrics"
 	"github.com/gofurry/gofurry-game-collector/internal/infra/postgres"
 	"github.com/gofurry/gofurry-game-collector/roof/env"
 	"github.com/spf13/cobra"
@@ -55,6 +56,7 @@ func newRootCommand() *cobra.Command {
 		}),
 		newFirstAvailableBackfillCommand(options),
 		newFactsCommand(options),
+		newMetricsCommand(options),
 		newCollectorVersionCommand(),
 	)
 	return root
@@ -204,6 +206,138 @@ func openFactsEngine(ctx context.Context) (*facts.Engine, func(), error) {
 	return engine, pool.Close, nil
 }
 
+func newMetricsCommand(options *cliOptions) *cobra.Command {
+	command := &cobra.Command{Use: "metrics", Short: "Inspect and project versioned Game metrics", Args: cobra.NoArgs}
+	command.PersistentPreRunE = func(_ *cobra.Command, _ []string) error {
+		return env.LoadServerConfig(options.configFile)
+	}
+	command.AddCommand(newMetricsStatusCommand(), newMetricsBackfillCommand(), newMetricsRebuildCommand())
+	return command
+}
+
+func newMetricsStatusCommand() *cobra.Command {
+	return &cobra.Command{Use: "status", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		engine, closePool, err := openMetricsEngine(cmd.Context())
+		if err != nil {
+			return err
+		}
+		defer closePool()
+		status, err := engine.Status(cmd.Context())
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(cmd.OutOrStdout()).Encode(status)
+	}}
+}
+
+func newMetricsBackfillCommand() *cobra.Command {
+	var metric, fromText, throughText, toText string
+	var version int32
+	var maxDays int
+	var dryRun bool
+	command := &cobra.Command{Use: "backfill", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		throughText, err := metricThroughFlag(throughText, toText)
+		if err != nil {
+			return err
+		}
+		from, err := optionalFactDate(fromText, "--from")
+		if err != nil {
+			return err
+		}
+		through, err := optionalFactDate(throughText, "--through")
+		if err != nil {
+			return err
+		}
+		engine, closePool, err := openMetricsEngine(cmd.Context())
+		if err != nil {
+			return err
+		}
+		defer closePool()
+		summary, err := engine.Backfill(cmd.Context(), metrics.BackfillOptions{
+			Metric: metric, Version: version, From: from, Through: through, MaxDays: maxDays, DryRun: dryRun,
+		})
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(cmd.OutOrStdout()).Encode(summary)
+	}}
+	addMetricSelectionFlags(command, &metric, &version, &fromText, &throughText, &toText, &maxDays, &dryRun)
+	return command
+}
+
+func newMetricsRebuildCommand() *cobra.Command {
+	var metric, fromText, throughText, toText string
+	var version int32
+	var maxDays int
+	var dryRun bool
+	command := &cobra.Command{Use: "rebuild", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		throughText, err := metricThroughFlag(throughText, toText)
+		if err != nil {
+			return err
+		}
+		from, err := time.Parse(time.DateOnly, fromText)
+		if err != nil {
+			return fmt.Errorf("parse --from: %w", err)
+		}
+		through, err := time.Parse(time.DateOnly, throughText)
+		if err != nil {
+			return fmt.Errorf("parse --through: %w", err)
+		}
+		engine, closePool, err := openMetricsEngine(cmd.Context())
+		if err != nil {
+			return err
+		}
+		defer closePool()
+		summary, err := engine.Rebuild(cmd.Context(), metric, version, from, through, maxDays, dryRun)
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(cmd.OutOrStdout()).Encode(summary)
+	}}
+	addMetricSelectionFlags(command, &metric, &version, &fromText, &throughText, &toText, &maxDays, &dryRun)
+	_ = command.MarkFlagRequired("metric")
+	_ = command.MarkFlagRequired("version")
+	_ = command.MarkFlagRequired("from")
+	return command
+}
+
+func addMetricSelectionFlags(command *cobra.Command, metric *string, version *int32, from, through, to *string, maxDays *int, dryRun *bool) {
+	command.Flags().StringVar(metric, "metric", "", "metric key (default: all active metrics)")
+	command.Flags().Int32Var(version, "version", 0, "metric version (requires --metric; default: active version)")
+	command.Flags().StringVar(from, "from", "", "optional first UTC date (YYYY-MM-DD)")
+	command.Flags().StringVar(through, "through", "", "optional last UTC date, inclusive (YYYY-MM-DD)")
+	command.Flags().StringVar(to, "to", "", "alias for --through")
+	command.Flags().IntVar(maxDays, "max-days", 0, "maximum total days to inspect or process (0 is unlimited)")
+	command.Flags().BoolVar(dryRun, "dry-run", false, "validate and report without writing metrics or checkpoints")
+}
+
+func metricThroughFlag(through, to string) (string, error) {
+	if through == "" {
+		return to, nil
+	}
+	if to != "" && to != through {
+		return "", errors.New("--to and --through must identify the same date when both are set")
+	}
+	return through, nil
+}
+
+func openMetricsEngine(ctx context.Context) (*metrics.Engine, func(), error) {
+	dbConfig := env.GetServerConfig().DataBase
+	openCtx, cancel := context.WithTimeout(ctx, durationOrDefault(dbConfig.ConnectTimeoutSeconds+dbConfig.PingTimeoutSeconds, 8*time.Second))
+	defer cancel()
+	pool, err := postgres.Open(openCtx, postgres.Config{
+		ConnectionString: dbConfig.ConnectionString(), MaxConns: dbConfig.MaxConns,
+		MinConns: dbConfig.MinConns, MaxConnLifetime: seconds(dbConfig.MaxConnLifetimeSeconds),
+		MaxConnLifetimeJitter: seconds(dbConfig.MaxConnLifetimeJitterSeconds),
+		MaxConnIdleTime:       seconds(dbConfig.MaxConnIdleTimeSeconds), HealthCheckPeriod: seconds(dbConfig.HealthCheckPeriodSeconds),
+		ConnectTimeout: seconds(dbConfig.ConnectTimeoutSeconds), PingTimeout: seconds(dbConfig.PingTimeoutSeconds),
+	}, "gofurry-game-collector-metrics")
+	if err != nil {
+		return nil, func() {}, fmt.Errorf("open PostgreSQL pool: %w", err)
+	}
+	return metrics.New(pool, metrics.Options{ReconcileInterval: env.GetServerConfig().Metrics.ReconcileInterval()}), pool.Close, nil
+}
+
 func newFirstAvailableBackfillCommand(options *cliOptions) *cobra.Command {
 	var dryRun bool
 	command := &cobra.Command{
@@ -284,7 +418,7 @@ func newCollectorVersionCommand() *cobra.Command {
 		Short: "Print version information",
 		Args:  cobra.NoArgs,
 		Run: func(_ *cobra.Command, _ []string) {
-			fmt.Println("gf-game-collector v3.0.0-alpha.3")
+			fmt.Println("gf-game-collector v3.0.0-alpha.4")
 		},
 	}
 }

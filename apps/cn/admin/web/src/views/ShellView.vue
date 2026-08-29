@@ -3,6 +3,7 @@ import { computed, ref, type Component } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import {
   Activity,
+  BarChart3,
   Bell,
   Boxes,
   ChevronLeft,
@@ -90,6 +91,21 @@ function iconFor(key: string) {
             >
               <Activity :size="18" />
               <span>Collection Center</span>
+            </RouterLink>
+          </div>
+        </section>
+
+        <section class="admin-nav__section">
+          <div class="admin-nav__section-title">分析验证</div>
+          <div class="admin-nav__items">
+            <RouterLink
+              to="/metrics"
+              class="admin-nav__link"
+              :class="{ 'admin-nav__link--active': isActive('/metrics') }"
+              title="Metric Center"
+            >
+              <BarChart3 :size="18" />
+              <span>Metric Center</span>
             </RouterLink>
           </div>
         </section>

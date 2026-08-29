@@ -18,6 +18,7 @@ import (
 	"github.com/gofurry/gofurry-game-collector/collector/facts"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/backfill"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
+	metricengine "github.com/gofurry/gofurry-game-collector/collector/metrics"
 	gamesqlc "github.com/gofurry/gofurry-game-collector/internal/db/game/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -249,6 +250,229 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 	}
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_first_available where game_id=$1 and source='legacy_manual' and inferred=false and normalizer_version='gofurry-legacy-release/v1'`, 1, int64(91002))
 	testHistoricalPlayerFacts(t, ctx, pool)
+	testHistoricalGameMetrics(t, ctx, pool)
+}
+
+func testHistoricalGameMetrics(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
+	t.Helper()
+	day := time.Date(2026, 5, 12, 0, 0, 0, 0, time.UTC)
+	dayEnd := day.Add(24 * time.Hour)
+	if _, err := pool.Exec(ctx, `
+INSERT INTO gfg_game_tracking_periods
+    (game_id,appid,tracked_from,tracking_basis,opened_reason)
+SELECT game_id, game_id + 1000, $1::timestamptz - interval '1 day', 'legacy_observed', 'metric_integration'
+FROM unnest(ARRAY[99200,99201,99202,99203,99204,99205]::bigint[]) game_id;
+
+INSERT INTO gfg_game_daily (
+	game_id,fact_date,tracking_period_id,appid,snapshot_at,tracked_at_end,
+	name,name_en,view_count,is_free,windows,linux,release_availability,
+	release_observed_at,primary_tag_id,tag_ids,details_observed_at,developers,publishers,
+	materialization_source,projection_version,finalized_at,created_at,updated_at
+)
+SELECT input.game_id,$1::date,period.id,input.game_id + 1000,$2,true,
+	   'metric game ' || input.game_id,'metric game ' || input.game_id,0,
+	   input.is_free,input.windows,input.linux,input.availability,input.release_observed_at,
+	   input.primary_tag_id,input.tag_ids,input.details_observed_at,
+	   ARRAY[]::text[],ARRAY[]::text[],'observed',1,$2,$2,$2
+FROM (VALUES
+	(99200::bigint,true, true, false,'available'::text,100::bigint,ARRAY[100,101,101]::bigint[],$2::timestamptz - interval '1 hour',$2::timestamptz - interval '10 hours'),
+	(99201::bigint,false,false,true, 'available'::text,NULL::bigint,ARRAY[]::bigint[],$2::timestamptz - interval '2 hours',$2::timestamptz - interval '11 hours'),
+	(99202::bigint,false,true, true, 'upcoming'::text,102::bigint,ARRAY[102]::bigint[],$2::timestamptz - interval '1 hour',$2::timestamptz - interval '6 hours'),
+	(99203::bigint,true, true, true, 'unknown'::text,NULL::bigint,ARRAY[]::bigint[],$2::timestamptz - interval '1 hour',$2::timestamptz - interval '7 hours'),
+	(99204::bigint,true, true, true, 'available'::text,104::bigint,ARRAY[104]::bigint[],$2::timestamptz - interval '4 days',$2::timestamptz - interval '12 hours'),
+	(99205::bigint,NULL::boolean,NULL::boolean,NULL::boolean,'available'::text,NULL::bigint,ARRAY[]::bigint[],NULL::timestamptz,$2::timestamptz - interval '9 hours')
+) input(game_id,is_free,windows,linux,availability,primary_tag_id,tag_ids,details_observed_at,release_observed_at)
+JOIN gfg_game_tracking_periods period ON period.game_id=input.game_id;
+
+UPDATE gfg_fact_rollup_checkpoints
+SET source_start_date=$1::date,processed_through=$1::date,updated_at=$2
+WHERE pipeline_key='game.state_facts';
+UPDATE gfg_metric_checkpoints
+SET source_start_date=$1::date,processed_through=NULL,updated_at=$2;
+`, pgx.QueryExecModeSimpleProtocol, day, dayEnd); err != nil {
+		t.Fatal(err)
+	}
+
+	engine := metricengine.New(pool, metricengine.Options{})
+	if err := engine.ValidateCatalog(ctx); err != nil {
+		t.Fatalf("Game registry/evaluator drift: %v", err)
+	}
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_registry`, 3)
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_checkpoints`, 3)
+
+	// Two contenders serialize on the per-version checkpoint; exactly one can
+	// advance the only upstream-ready day.
+	type concurrentResult struct {
+		processed bool
+		err       error
+	}
+	results := make(chan concurrentResult, 2)
+	for range 2 {
+		go func() {
+			result, err := engine.RunNext(ctx, "free_game_share", 1, false)
+			results <- concurrentResult{processed: result.Processed, err: err}
+		}()
+	}
+	processed := 0
+	for range 2 {
+		result := <-results
+		if result.err != nil {
+			t.Fatalf("concurrent Game checkpoint run: %v", result.err)
+		}
+		if result.processed {
+			processed++
+		}
+	}
+	if processed != 1 {
+		t.Fatalf("concurrent Game checkpoint processed=%d, want 1", processed)
+	}
+	for _, key := range []string{"windows_support", "linux_support"} {
+		result, err := engine.RunNext(ctx, key, 1, false)
+		if err != nil || !result.Processed {
+			t.Fatalf("run Game metric %s: result=%+v err=%v", key, result, err)
+		}
+	}
+
+	wantFree := map[int64]string{99200: "positive/game_is_free", 99201: "negative/game_is_paid", 99202: "not_applicable/game_not_available", 99203: "unknown/game_availability_unknown", 99204: "stale/details_state_stale", 99205: "unknown/is_free_unknown"}
+	for gameID, expected := range wantFree {
+		var state, reason string
+		if err := pool.QueryRow(ctx, `SELECT state,reason_code FROM gfg_metric_entity_daily WHERE metric_key='free_game_share' AND metric_version=1 AND fact_date=$1 AND game_id=$2`, day, gameID).Scan(&state, &reason); err != nil {
+			t.Fatal(err)
+		}
+		if state+"/"+reason != expected {
+			t.Fatalf("free_game_share game=%d got=%s/%s want=%s", gameID, state, reason, expected)
+		}
+	}
+	wantEvidence := map[int64]time.Time{
+		99200: dayEnd.Add(-time.Hour),
+		99201: dayEnd.Add(-2 * time.Hour),
+		99202: dayEnd.Add(-6 * time.Hour),
+		99203: dayEnd.Add(-7 * time.Hour),
+		99204: dayEnd.Add(-4 * 24 * time.Hour),
+	}
+	for gameID, expected := range wantEvidence {
+		var observed time.Time
+		if err := pool.QueryRow(ctx, `SELECT source_observed_at FROM gfg_metric_entity_daily WHERE metric_key='free_game_share' AND metric_version=1 AND fact_date=$1 AND game_id=$2`, day, gameID).Scan(&observed); err != nil {
+			t.Fatal(err)
+		}
+		if !observed.Equal(expected) {
+			t.Fatalf("free_game_share provenance game=%d got=%s want=%s", gameID, observed, expected)
+		}
+	}
+	var missingEvidence *time.Time
+	if err := pool.QueryRow(ctx, `SELECT source_observed_at FROM gfg_metric_entity_daily WHERE metric_key='free_game_share' AND metric_version=1 AND fact_date=$1 AND game_id=99205`, day).Scan(&missingEvidence); err != nil {
+		t.Fatal(err)
+	}
+	if missingEvidence != nil {
+		t.Fatalf("is_free_unknown provenance=%s, want NULL details evidence", *missingEvidence)
+	}
+
+	var population, eligible, notApplicable, positive, negative, stale, unknown int64
+	if err := pool.QueryRow(ctx, `
+SELECT population_count,eligible_count,not_applicable_count,positive_count,negative_count,stale_count,unknown_count
+FROM gfg_metric_daily
+WHERE metric_key='free_game_share' AND metric_version=1 AND fact_date=$1
+  AND dimension_key='global' AND dimension_value='all'`, day).Scan(
+		&population, &eligible, &notApplicable, &positive, &negative, &stale, &unknown,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if population != 6 || eligible != 5 || notApplicable != 1 || positive != 1 || negative != 1 || stale != 1 || unknown != 2 {
+		t.Fatalf("unexpected Game global counts pop=%d eligible=%d na=%d +%d -%d stale=%d unknown=%d", population, eligible, notApplicable, positive, negative, stale, unknown)
+	}
+	assertCount(t, ctx, pool, `SELECT population_count FROM gfg_metric_daily WHERE metric_key='free_game_share' AND fact_date=$1 AND dimension_key='tag_id' AND dimension_value='101'`, 1, day)
+	assertCount(t, ctx, pool, `SELECT population_count FROM gfg_metric_daily WHERE metric_key='free_game_share' AND fact_date=$1 AND dimension_key='primary_tag_id' AND dimension_value='unknown'`, 3, day)
+
+	if _, err := engine.Rebuild(ctx, "windows_support", 1, day, day, 1, true); err != nil {
+		t.Fatalf("Game metric rebuild dry-run: %v", err)
+	}
+	if _, err := engine.Rebuild(ctx, "windows_support", 1, day, day, 1, false); err != nil {
+		t.Fatalf("Game metric rebuild: %v", err)
+	}
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_entity_daily WHERE metric_key='windows_support' AND fact_date=$1`, 6, day)
+
+	wantSupport := map[string]map[int64]string{
+		"windows_support": {
+			99200: "positive/windows_supported", 99201: "negative/windows_not_supported",
+			99202: "positive/windows_supported", 99203: "positive/windows_supported",
+			99204: "stale/details_state_stale", 99205: "unknown/windows_support_unknown",
+		},
+		"linux_support": {
+			99200: "negative/linux_not_supported", 99201: "positive/linux_supported",
+			99202: "positive/linux_supported", 99203: "positive/linux_supported",
+			99204: "stale/details_state_stale", 99205: "unknown/linux_support_unknown",
+		},
+	}
+	for metricKey, entities := range wantSupport {
+		for gameID, expected := range entities {
+			var state, reason string
+			if err := pool.QueryRow(ctx, `SELECT state,reason_code FROM gfg_metric_entity_daily WHERE metric_key=$1 AND metric_version=1 AND fact_date=$2 AND game_id=$3`, metricKey, day, gameID).Scan(&state, &reason); err != nil {
+				t.Fatal(err)
+			}
+			if state+"/"+reason != expected {
+				t.Fatalf("%s game=%d got=%s/%s want=%s", metricKey, gameID, state, reason, expected)
+			}
+		}
+	}
+
+	// Runtime failure of one metric must not block another active metric.
+	nextDay := day.AddDate(0, 0, 1)
+	if _, err := pool.Exec(ctx, `
+DELETE FROM gfg_metric_checkpoints WHERE metric_key='free_game_share' AND metric_version=1;
+INSERT INTO gfg_game_daily (
+ game_id,fact_date,tracking_period_id,appid,snapshot_at,tracked_at_end,name,name_en,view_count,
+ is_free,windows,linux,release_availability,tag_ids,details_observed_at,developers,publishers,
+ materialization_source,projection_version,finalized_at,created_at,updated_at
+)
+SELECT 99200,$1::date,id,100200,$2,true,'metric game 99200','metric game 99200',0,
+       true,true,false,'available',ARRAY[]::bigint[],$2::timestamptz - interval '1 hour',ARRAY[]::text[],ARRAY[]::text[],
+       'observed',1,$2,$2,$2
+FROM gfg_game_tracking_periods WHERE game_id=99200;
+UPDATE gfg_fact_rollup_checkpoints SET processed_through=$1::date WHERE pipeline_key='game.state_facts';
+`, pgx.QueryExecModeSimpleProtocol, nextDay, nextDay.Add(24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Reconcile(ctx); err == nil {
+		t.Fatal("Game metric reconcile should report the missing free_game_share checkpoint")
+	}
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_entity_daily WHERE metric_key='windows_support' AND fact_date=$1`, 1, nextDay)
+
+	// Future source evidence rolls back the whole metric day and leaves its checkpoint unchanged.
+	futureDay := nextDay.AddDate(0, 0, 1)
+	if _, err := pool.Exec(ctx, `
+INSERT INTO gfg_metric_checkpoints (metric_key,metric_version,source_start_date,processed_through)
+VALUES ('free_game_share',1,$2::date - 1,$2::date);
+INSERT INTO gfg_game_daily (
+ game_id,fact_date,tracking_period_id,appid,snapshot_at,tracked_at_end,name,name_en,view_count,
+ is_free,windows,linux,release_availability,release_observed_at,tag_ids,details_observed_at,developers,publishers,
+ materialization_source,projection_version,finalized_at,created_at,updated_at
+)
+SELECT 99200,$1::date,id,100200,$3,true,'metric game 99200','metric game 99200',0,
+	   true,true,false,'upcoming',$3::timestamptz + interval '1 second',ARRAY[]::bigint[],$3::timestamptz - interval '1 hour',ARRAY[]::text[],ARRAY[]::text[],
+	   'observed',1,$3,$3,$3
+FROM gfg_game_tracking_periods WHERE game_id=99200;
+UPDATE gfg_fact_rollup_checkpoints SET processed_through=$1::date WHERE pipeline_key='game.state_facts';
+`, pgx.QueryExecModeSimpleProtocol, futureDay, nextDay, futureDay.Add(24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.RunNext(ctx, "free_game_share", 1, false); err == nil {
+		t.Fatal("future Game release evidence did not fail")
+	}
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_entity_daily WHERE metric_key='free_game_share' AND fact_date=$1`, 0, futureDay)
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_checkpoints WHERE metric_key='free_game_share' AND processed_through=$1::date`, 1, nextDay)
+	if _, err := pool.Exec(ctx, `
+UPDATE gfg_game_daily
+SET release_availability='available',
+    release_observed_at=$2::timestamptz - interval '1 hour',
+    details_observed_at=$2::timestamptz + interval '1 second'
+WHERE game_id=99200 AND fact_date=$1::date`, futureDay, futureDay.Add(24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.RunNext(ctx, "free_game_share", 1, false); err == nil {
+		t.Fatal("future Game details evidence did not fail")
+	}
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_entity_daily WHERE metric_key='free_game_share' AND fact_date=$1`, 0, futureDay)
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_checkpoints WHERE metric_key='free_game_share' AND processed_through=$1::date`, 1, nextDay)
 }
 
 func testHistoricalPlayerFacts(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {

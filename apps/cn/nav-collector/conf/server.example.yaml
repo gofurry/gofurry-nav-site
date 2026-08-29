@@ -160,3 +160,6 @@ facts:
   retention_enabled: false # destructive observation pruning remains opt-in
   observation_keep_count: 288 # retained independently per site/target/protocol
   retention_batch_size: 500
+
+metrics:
+  reconcile_interval_seconds: 600 # active metric versions process at most one UTC day per pass

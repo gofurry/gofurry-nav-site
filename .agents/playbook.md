@@ -77,6 +77,8 @@ GOFURRY_ADMIN_INTEGRATION_CONFIG=/path/server.yaml go test ./internal/bootstrap 
 
 Historical Fact smoke checks use the Collector CLI against the same isolated config: `facts status`, `facts backfill --dry-run`, `facts backfill`, and a bounded `facts rebuild --pipeline ... --from ... --through ...`. Keep `facts.retention_enabled=false` until checkpoints and fact row counts are verified.
 
+Analytics Metric smoke checks run after Fact watermarks are ready: `metrics status`, `metrics backfill --dry-run`, a bounded `metrics backfill --metric ... --version ...`, and `metrics rebuild --metric ... --version ... --from ... --through ...`. Verify Registry/evaluator drift, per-version checkpoints, the all-zero global row, count conservation, historical-day freshness, and same-day Historical Fact names in Admin Metric Center.
+
 Run these only against explicitly isolated development PostgreSQL. Never use production credentials.
 
 Run the pinned vulnerability scanner from `tools` for every active module. CI performs the same active-only matrix on dependency changes and on a schedule.

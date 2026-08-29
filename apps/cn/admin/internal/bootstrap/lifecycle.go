@@ -14,6 +14,7 @@ import (
 	collectioncontroller "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/controller"
 	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
 	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
+	metricadmin "github.com/gofurry/gofurry-admin/internal/app/metricadmin"
 	navadmin "github.com/gofurry/gofurry-admin/internal/app/navadmin/controller"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
 	options "github.com/gofurry/gofurry-admin/internal/app/shared/options/controller"
@@ -32,6 +33,7 @@ type Runtime struct {
 	GameAPI       *gameadmin.GameAPI
 	OptionsAPI    *options.OptionsAPI
 	CollectionAPI *collectioncontroller.API
+	MetricAPI     *metricadmin.API
 
 	started      atomic.Bool
 	shutdownOnce sync.Once
@@ -70,6 +72,7 @@ func Start() (*Runtime, error) {
 		AuthAPI: authcontroller.New(auth, auditLogger), NavAPI: navadmin.New(pools.Nav, auditLogger),
 		GameAPI: gameadmin.New(pools.Game, auditLogger), OptionsAPI: options.New(pools.Nav, pools.Game),
 		CollectionAPI: collectioncontroller.New(collectionservice.New(pools.Game, pools.Nav, auditLogger)),
+		MetricAPI:     metricadmin.NewAPI(metricadmin.New(pools.Game, pools.Nav)),
 	}
 	runtime.started.Store(true)
 	log.InfoKV("application bootstrap completed")

@@ -6,6 +6,24 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.4 - 2026-08-29
+
+### Added
+
+- Add Goose-owned versioned Game/Nav metric registries, explainable entity-daily state, global and single-dimension daily counts, and independent per-metric-version checkpoints.
+- Add the first six compiled metrics: Game free share and Windows/Linux support plus Nav IPv6, TLS 1.3, and security.txt adoption.
+- Add in-process Game/Nav Metric Engines with registry drift guards and `metrics status`, `metrics backfill`, and `metrics rebuild` commands.
+- Add an authenticated read-only Admin Metric Center for Registry, checkpoint, daily aggregate, and historical entity inspection.
+
+### Changed
+
+- Run Collector reconciliation in Acquisition -> Facts -> Metrics order and gate metric days on finalized Historical Fact watermarks.
+- Compute historical freshness against the UTC Fact day end, persist seven-state reasons and provenance, and calculate adoption/coverage only at query time.
+
+### Fixed
+
+- Use release evidence for `free_game_share` availability outcomes, reject future release/details evidence atomically, and require compiled evaluators for both active and retired Registry versions.
+
 ## v3.0.0-alpha.3 - 2026-08-29
 
 ### Added

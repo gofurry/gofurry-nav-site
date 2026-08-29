@@ -173,6 +173,32 @@ VALUES
 				}
 			}
 
+			// Exercise the deployed alpha.3 -> alpha.4 Metric Foundation boundary
+			// independently from the longer alpha.2 upgrade path.
+			if alpha3Version, ok := map[string]int64{
+				"gfg": 20260828010300,
+				"gfn": 20260829010000,
+			}[test.label]; ok {
+				upgradeName := temporaryDatabaseName(test.label, "alpha3_upgrade")
+				createDatabase(t, ctx, adminDB, upgradeName)
+				defer dropDatabase(t, adminDB, upgradeName)
+				upgradeDB := openDatabase(t, adminDSN, upgradeName)
+				defer upgradeDB.Close()
+				if err := goose.UpToContext(ctx, upgradeDB, migrationDir, alpha3Version); err != nil {
+					t.Fatalf("prepare %s alpha.3 fixture: %v", test.label, err)
+				}
+				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
+					t.Fatalf("upgrade %s alpha.3 to alpha.4: %v", test.label, err)
+				}
+				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
+				if err != nil {
+					t.Fatalf("inspect alpha.4-upgraded %s schema: %v", test.label, err)
+				}
+				if difference := schema.Difference(expected, upgradeActual); difference != "" {
+					t.Fatalf("alpha.3 -> alpha.4 %s schema drift: %s", test.label, difference)
+				}
+			}
+
 			adoptName := temporaryDatabaseName(test.label, "adopt")
 			createDatabase(t, ctx, adminDB, adoptName)
 			defer dropDatabase(t, adminDB, adoptName)

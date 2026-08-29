@@ -19,6 +19,7 @@ import (
 	httpdao "github.com/gofurry/gofurry-nav-collector/collector/http/dao"
 	httpmodels "github.com/gofurry/gofurry-nav-collector/collector/http/models"
 	lightdao "github.com/gofurry/gofurry-nav-collector/collector/lightprobe/dao"
+	metricengine "github.com/gofurry/gofurry-nav-collector/collector/metrics"
 	"github.com/gofurry/gofurry-nav-collector/collector/observation"
 	pingdao "github.com/gofurry/gofurry-nav-collector/collector/ping/dao"
 	pingmodels "github.com/gofurry/gofurry-nav-collector/collector/ping/models"
@@ -157,6 +158,244 @@ func TestPostgresCollectorPersistenceSemantics(t *testing.T) {
 		t.Fatalf("retention changed observations: remaining=%d err=%v", remaining, err)
 	}
 	testHistoricalNavFacts(t, ctx, pool)
+	testHistoricalNavMetrics(t, ctx, pool)
+}
+
+func testHistoricalNavMetrics(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
+	t.Helper()
+	day := time.Date(2026, 5, 12, 0, 0, 0, 0, time.UTC)
+	dayEnd := day.Add(24 * time.Hour)
+	if _, err := pool.Exec(ctx, `
+INSERT INTO gfn_target_tracking_periods
+    (id,collector_domain_id,site_id,target,tracked_from,tracking_basis,opened_reason)
+SELECT site_id + 10000,NULL,site_id,'metric-' || site_id || '.example',$1::timestamptz - interval '1 day',
+       'legacy_observed','metric_integration'
+FROM unnest(ARRAY[99200,99201,99202,99204,99205,99206,99207,99208]::bigint[]) site_id;
+
+INSERT INTO gfn_site_daily (
+    site_id,fact_date,snapshot_at,tracked_at_end,name,name_en,site_country,nsfw,welfare,
+    view_count,group_ids,primary_target_tracking_period_id,primary_target,primary_basis,
+    active_target_count,projection_version,finalized_at,created_at,updated_at
+)
+SELECT input.site_id,$1::date,$2,true,'metric site ' || input.site_id,'metric site ' || input.site_id,
+       input.country,input.nsfw,input.welfare,0,input.group_ids,
+       CASE WHEN input.site_id=99203 THEN NULL ELSE input.site_id+10000 END,
+       CASE WHEN input.site_id=99203 THEN NULL ELSE 'metric-' || input.site_id || '.example' END,
+       CASE WHEN input.site_id=99203 THEN NULL ELSE 'legacy_backfill' END,
+       CASE WHEN input.site_id=99203 THEN 0 ELSE 1 END,1,$2,$2,$2
+FROM (VALUES
+    (99200::bigint,'CN'::text,true::boolean,NULL::boolean,ARRAY[2,5,5]::bigint[]),
+    (99201::bigint,NULL::text,false::boolean,true::boolean,ARRAY[]::bigint[]),
+    (99202::bigint,'JP'::text,NULL::boolean,false::boolean,ARRAY[2]::bigint[]),
+    (99203::bigint,'US'::text,false::boolean,false::boolean,ARRAY[]::bigint[]),
+    (99204::bigint,'JP'::text,false::boolean,false::boolean,ARRAY[]::bigint[]),
+    (99205::bigint,'JP'::text,false::boolean,false::boolean,ARRAY[]::bigint[]),
+    (99206::bigint,'JP'::text,false::boolean,false::boolean,ARRAY[]::bigint[]),
+    (99207::bigint,'JP'::text,false::boolean,false::boolean,ARRAY[]::bigint[]),
+    (99208::bigint,'JP'::text,false::boolean,false::boolean,ARRAY[]::bigint[])
+) input(site_id,country,nsfw,welfare,group_ids);
+
+INSERT INTO gfn_site_target_daily (
+    target_tracking_period_id,site_id,target,fact_date,snapshot_at,tracked_at_end,
+    tls_state_observed_at,tls_handshake,tls_version,
+    dns_state_observed_at,dns_has_aaaa,projection_version,finalized_at,created_at,updated_at
+)
+SELECT input.site_id+10000,input.site_id,'metric-' || input.site_id || '.example',$1::date,$2,true,
+       input.tls_observed,input.tls_handshake,input.tls_version,
+       input.dns_observed,input.dns_has_aaaa,1,$2,$2,$2
+FROM (VALUES
+    (99200::bigint,$2::timestamptz-interval '1 hour','tls'::text,'TLS1.3'::text,$2::timestamptz-interval '1 hour',true::boolean),
+    (99201::bigint,$2::timestamptz-interval '1 hour','tls'::text,'TLS1.2'::text,$2::timestamptz-interval '1 hour',false::boolean),
+    (99202::bigint,$2::timestamptz-interval '4 days','not_tls'::text,NULL::text,$2::timestamptz-interval '4 days',true::boolean),
+    (99204::bigint,NULL::timestamptz,NULL::text,NULL::text,NULL::timestamptz,NULL::boolean),
+    (99205::bigint,NULL::timestamptz,NULL::text,NULL::text,NULL::timestamptz,NULL::boolean),
+    (99206::bigint,$2::timestamptz-interval '1 hour','tls'::text,NULL::text,$2::timestamptz-interval '1 hour',NULL::boolean),
+    (99207::bigint,NULL::timestamptz,NULL::text,NULL::text,NULL::timestamptz,NULL::boolean),
+    (99208::bigint,$2::timestamptz-interval '1 hour','not_tls'::text,NULL::text,$2::timestamptz-interval '1 hour',true::boolean)
+) input(site_id,tls_observed,tls_handshake,tls_version,dns_observed,dns_has_aaaa);
+
+INSERT INTO gfn_site_target_protocol_daily (
+    target_tracking_period_id,site_id,target,protocol,fact_date,
+    expected_count,attempted_count,success_count,partial_count,failure_count,
+    skipped_count,missed_count,canceled_count,unattempted_count,failure_kind_counts,
+    quality_basis,known_state_observed_at,known_state,projection_version,finalized_at,created_at,updated_at
+)
+SELECT site.site_id+10000,site.site_id,'metric-' || site.site_id || '.example',protocol.protocol,$1::date,
+       CASE WHEN site.site_id=99207 THEN NULL ELSE CASE WHEN site.site_id=99205 THEN 0 ELSE 1 END END,
+       CASE WHEN site.site_id IN (99205,99207) THEN 0 ELSE 1 END,
+       CASE WHEN site.site_id IN (99204,99205,99207) THEN 0 ELSE 1 END,
+       0,
+       CASE WHEN site.site_id=99204 THEN 1 ELSE 0 END,
+       CASE WHEN site.site_id=99207 THEN NULL ELSE 0 END,
+       CASE WHEN site.site_id=99207 THEN NULL ELSE 0 END,
+       CASE WHEN site.site_id=99207 THEN NULL ELSE 0 END,
+       CASE WHEN site.site_id=99207 THEN NULL ELSE 0 END,
+       '{}'::jsonb,
+       CASE WHEN site.site_id=99207 THEN 'legacy_observed_only' ELSE 'acquisition_ledger' END,
+       CASE WHEN protocol.protocol='security_txt' AND site.site_id IN (99200,99201,99202,99206,99208)
+            THEN CASE WHEN site.site_id=99202 THEN $2::timestamptz-interval '22 days' ELSE $2::timestamptz-interval '1 hour' END
+            ELSE NULL END,
+       CASE WHEN protocol.protocol='security_txt' THEN CASE site.site_id
+            WHEN 99200 THEN '{"exists":true}'::jsonb
+            WHEN 99201 THEN '{"exists":false}'::jsonb
+            WHEN 99202 THEN '{"exists":true}'::jsonb
+            WHEN 99206 THEN '{}'::jsonb
+            WHEN 99208 THEN '{"exists":true}'::jsonb
+            ELSE NULL END ELSE NULL END,
+       1,$2,$2,$2
+FROM unnest(ARRAY[99200,99201,99202,99204,99205,99206,99207,99208]::bigint[]) site(site_id)
+CROSS JOIN unnest(ARRAY['dns','http','security_txt']::text[]) protocol(protocol);
+
+UPDATE gfn_fact_rollup_checkpoints
+SET source_start_date=$1::date,processed_through=$1::date,updated_at=$2
+WHERE pipeline_key IN ('nav.target_facts','nav.site_facts');
+UPDATE gfn_metric_checkpoints
+SET source_start_date=$1::date,processed_through=NULL,updated_at=$2;
+`, pgx.QueryExecModeSimpleProtocol, day, dayEnd); err != nil {
+		t.Fatal(err)
+	}
+
+	engine := metricengine.New(pool, metricengine.Options{})
+	if err := engine.ValidateCatalog(ctx); err != nil {
+		t.Fatalf("Nav registry/evaluator drift: %v", err)
+	}
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_registry`, 3)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints`, 3)
+	for _, key := range []string{"ipv6_adoption", "tls13_adoption", "security_txt_adoption"} {
+		result, err := engine.RunNext(ctx, key, 1, false)
+		if err != nil || !result.Processed {
+			t.Fatalf("run Nav metric %s: result=%+v err=%v", key, result, err)
+		}
+	}
+
+	wantIPv6 := map[int64]string{
+		99200: "positive/aaaa_present", 99201: "negative/aaaa_absent", 99202: "stale/dns_state_stale",
+		99203: "unknown/primary_target_unknown", 99204: "probe_failed/dns_probe_failed",
+		99205: "not_probed/dns_not_probed", 99206: "unknown/dns_metric_field_unknown",
+		99207: "unknown/historical_probe_state_unknown", 99208: "positive/aaaa_present",
+	}
+	for siteID, expected := range wantIPv6 {
+		var state, reason string
+		if err := pool.QueryRow(ctx, `SELECT state,reason_code FROM gfn_metric_entity_daily WHERE metric_key='ipv6_adoption' AND metric_version=1 AND fact_date=$1 AND site_id=$2`, day, siteID).Scan(&state, &reason); err != nil {
+			t.Fatal(err)
+		}
+		if state+"/"+reason != expected {
+			t.Fatalf("ipv6_adoption site=%d got=%s/%s want=%s", siteID, state, reason, expected)
+		}
+	}
+
+	wantTLS := map[int64]string{
+		99200: "positive/tls13_negotiated", 99201: "negative/tls_version_other", 99202: "stale/tls_state_stale",
+		99203: "unknown/primary_target_unknown", 99204: "probe_failed/tls_probe_failed",
+		99205: "not_probed/tls_not_probed", 99206: "unknown/tls_version_unknown",
+		99207: "unknown/historical_probe_state_unknown", 99208: "not_applicable/target_not_tls",
+	}
+	for siteID, expected := range wantTLS {
+		var state, reason string
+		if err := pool.QueryRow(ctx, `SELECT state,reason_code FROM gfn_metric_entity_daily WHERE metric_key='tls13_adoption' AND metric_version=1 AND fact_date=$1 AND site_id=$2`, day, siteID).Scan(&state, &reason); err != nil {
+			t.Fatal(err)
+		}
+		if state+"/"+reason != expected {
+			t.Fatalf("tls13_adoption site=%d got=%s/%s want=%s", siteID, state, reason, expected)
+		}
+	}
+
+	wantSecurity := map[int64]string{
+		99200: "positive/security_txt_present", 99201: "negative/security_txt_absent",
+		99202: "stale/security_txt_state_stale", 99203: "unknown/primary_target_unknown",
+		99204: "probe_failed/security_txt_probe_failed", 99205: "not_probed/security_txt_not_probed",
+		99206: "unknown/security_txt_field_unknown", 99207: "unknown/historical_probe_state_unknown",
+		99208: "positive/security_txt_present",
+	}
+	for siteID, expected := range wantSecurity {
+		var state, reason string
+		if err := pool.QueryRow(ctx, `SELECT state,reason_code FROM gfn_metric_entity_daily WHERE metric_key='security_txt_adoption' AND metric_version=1 AND fact_date=$1 AND site_id=$2`, day, siteID).Scan(&state, &reason); err != nil {
+			t.Fatal(err)
+		}
+		if state+"/"+reason != expected {
+			t.Fatalf("security_txt_adoption site=%d got=%s/%s want=%s", siteID, state, reason, expected)
+		}
+	}
+
+	var population, eligible, notApplicable int64
+	if err := pool.QueryRow(ctx, `SELECT population_count,eligible_count,not_applicable_count FROM gfn_metric_daily WHERE metric_key='tls13_adoption' AND fact_date=$1 AND dimension_key='global' AND dimension_value='all'`, day).Scan(&population, &eligible, &notApplicable); err != nil {
+		t.Fatal(err)
+	}
+	if population != 9 || eligible != 8 || notApplicable != 1 {
+		t.Fatalf("unexpected Nav TLS counts population=%d eligible=%d not_applicable=%d", population, eligible, notApplicable)
+	}
+	assertNavCount(t, ctx, pool, `SELECT population_count FROM gfn_metric_daily WHERE metric_key='ipv6_adoption' AND fact_date=$1 AND dimension_key='group_id' AND dimension_value='5'`, 1, day)
+	assertNavCount(t, ctx, pool, `SELECT population_count FROM gfn_metric_daily WHERE metric_key='ipv6_adoption' AND fact_date=$1 AND dimension_key='site_country' AND dimension_value='unknown'`, 1, day)
+
+	if _, err := engine.Rebuild(ctx, "ipv6_adoption", 1, day, day, 1, false); err != nil {
+		t.Fatalf("Nav metric rebuild: %v", err)
+	}
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_entity_daily WHERE metric_key='ipv6_adoption' AND fact_date=$1`, 9, day)
+
+	// Retired versions do not advance at runtime but remain explicitly rebuildable.
+	nextDay := day.AddDate(0, 0, 1)
+	if _, err := pool.Exec(ctx, `
+UPDATE gfn_metric_registry SET status='retired',retired_at=transaction_timestamp()
+WHERE metric_key='tls13_adoption' AND metric_version=1;
+DELETE FROM gfn_metric_checkpoints
+WHERE metric_key='security_txt_adoption' AND metric_version=1;
+UPDATE gfn_fact_rollup_checkpoints SET processed_through=$1::date
+WHERE pipeline_key IN ('nav.target_facts','nav.site_facts');
+`, pgx.QueryExecModeSimpleProtocol, nextDay); err != nil {
+		t.Fatal(err)
+	}
+	if err := engine.Reconcile(ctx); err == nil {
+		t.Fatal("Nav reconcile should report the missing security.txt checkpoint")
+	}
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints WHERE metric_key='ipv6_adoption' AND processed_through=$1::date`, 1, nextDay)
+	assertNavCount(t, ctx, pool, `SELECT population_count FROM gfn_metric_daily WHERE metric_key='ipv6_adoption' AND fact_date=$1 AND dimension_key='global' AND dimension_value='all'`, 0, nextDay)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints WHERE metric_key='tls13_adoption' AND processed_through=$1::date`, 1, day)
+	if _, err := engine.Rebuild(ctx, "tls13_adoption", 1, day, day, 1, true); err != nil {
+		t.Fatalf("retired Nav metric explicit rebuild: %v", err)
+	}
+
+	// Future evidence rejects the atomic day and preserves its prior checkpoint.
+	futureDay := nextDay.AddDate(0, 0, 1)
+	if _, err := pool.Exec(ctx, `
+INSERT INTO gfn_site_daily (
+ site_id,fact_date,snapshot_at,tracked_at_end,name,name_en,view_count,group_ids,
+ primary_target_tracking_period_id,primary_target,primary_basis,active_target_count,
+ projection_version,finalized_at,created_at,updated_at
+)
+VALUES (99200,$1::date,$2,true,'metric site 99200','metric site 99200',0,ARRAY[]::bigint[],
+        109200,'metric-99200.example','legacy_backfill',1,1,$2,$2,$2);
+INSERT INTO gfn_site_target_daily (
+ target_tracking_period_id,site_id,target,fact_date,snapshot_at,tracked_at_end,
+ dns_state_observed_at,dns_has_aaaa,projection_version,finalized_at,created_at,updated_at
+)
+VALUES (109200,99200,'metric-99200.example',$1::date,$2,true,$2::timestamptz + interval '1 second',true,1,$2,$2,$2);
+INSERT INTO gfn_site_target_protocol_daily (
+ target_tracking_period_id,site_id,target,protocol,fact_date,expected_count,attempted_count,
+ success_count,partial_count,failure_count,skipped_count,missed_count,canceled_count,
+ unattempted_count,failure_kind_counts,quality_basis,projection_version,finalized_at,created_at,updated_at
+)
+VALUES (109200,99200,'metric-99200.example','dns',$1::date,1,1,1,0,0,0,0,0,0,'{}','acquisition_ledger',1,$2,$2,$2);
+UPDATE gfn_fact_rollup_checkpoints SET processed_through=$1::date
+WHERE pipeline_key IN ('nav.target_facts','nav.site_facts');
+`, pgx.QueryExecModeSimpleProtocol, futureDay, futureDay.Add(24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.RunNext(ctx, "ipv6_adoption", 1, false); err == nil {
+		t.Fatal("future Nav metric evidence did not fail")
+	}
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_entity_daily WHERE metric_key='ipv6_adoption' AND fact_date=$1`, 0, futureDay)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints WHERE metric_key='ipv6_adoption' AND processed_through=$1::date`, 1, nextDay)
+}
+
+func assertNavCount(t *testing.T, ctx context.Context, pool *pgxpool.Pool, query string, want int64, args ...any) {
+	t.Helper()
+	var got int64
+	if err := pool.QueryRow(ctx, query, args...).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("count=%d want=%d query=%s", got, want, query)
+	}
 }
 
 func testHistoricalNavFacts(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {

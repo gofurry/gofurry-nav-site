@@ -579,6 +579,68 @@ type GfgLegacyRunJobMap struct {
 	JobID int64  `json:"job_id"`
 }
 
+// Independent ordered checkpoints for each Game metric version.
+type GfgMetricCheckpoint struct {
+	MetricKey        string             `json:"metric_key"`
+	MetricVersion    int32              `json:"metric_version"`
+	SourceStartDate  pgtype.Date        `json:"source_start_date"`
+	ProcessedThrough pgtype.Date        `json:"processed_through"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Global and single-dimension Game metric state counts; ratios are query-time only.
+type GfgMetricDaily struct {
+	MetricKey          string             `json:"metric_key"`
+	MetricVersion      int32              `json:"metric_version"`
+	FactDate           pgtype.Date        `json:"fact_date"`
+	DimensionKey       string             `json:"dimension_key"`
+	DimensionValue     string             `json:"dimension_value"`
+	PopulationCount    int64              `json:"population_count"`
+	EligibleCount      int64              `json:"eligible_count"`
+	NotApplicableCount int64              `json:"not_applicable_count"`
+	PositiveCount      int64              `json:"positive_count"`
+	NegativeCount      int64              `json:"negative_count"`
+	StaleCount         int64              `json:"stale_count"`
+	NotProbedCount     int64              `json:"not_probed_count"`
+	ProbeFailedCount   int64              `json:"probe_failed_count"`
+	UnknownCount       int64              `json:"unknown_count"`
+	ComputedAt         pgtype.Timestamptz `json:"computed_at"`
+}
+
+// Explainable per-Game historical metric state derived only from finalized Game Facts.
+type GfgMetricEntityDaily struct {
+	MetricKey                string             `json:"metric_key"`
+	MetricVersion            int32              `json:"metric_version"`
+	FactDate                 pgtype.Date        `json:"fact_date"`
+	GameID                   int64              `json:"game_id"`
+	State                    string             `json:"state"`
+	ReasonCode               string             `json:"reason_code"`
+	SourceObservedAt         pgtype.Timestamptz `json:"source_observed_at"`
+	DimensionValues          []byte             `json:"dimension_values"`
+	SourceProjectionVersions []byte             `json:"source_projection_versions"`
+	EvaluatedAt              pgtype.Timestamptz `json:"evaluated_at"`
+}
+
+// Goose-owned versioned Game metric contracts; runtime and Admin are read-only.
+type GfgMetricRegistry struct {
+	MetricKey         string             `json:"metric_key"`
+	MetricVersion     int32              `json:"metric_version"`
+	MetricKind        string             `json:"metric_kind"`
+	EntityLevel       string             `json:"entity_level"`
+	TimeGrain         string             `json:"time_grain"`
+	SourceFacts       []string           `json:"source_facts"`
+	EligibilityPolicy string             `json:"eligibility_policy"`
+	StatePolicy       string             `json:"state_policy"`
+	CoveragePolicy    string             `json:"coverage_policy"`
+	FreshnessSeconds  *int64             `json:"freshness_seconds"`
+	AllowedDimensions []string           `json:"allowed_dimensions"`
+	Status            string             `json:"status"`
+	Description       string             `json:"description"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	RetiredAt         pgtype.Timestamptz `json:"retired_at"`
+}
+
 // 抽奖活动表
 type GfgPrize struct {
 	// 抽奖活动表id
