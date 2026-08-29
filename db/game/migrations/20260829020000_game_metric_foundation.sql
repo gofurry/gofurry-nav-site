@@ -206,7 +206,12 @@ BEGIN
         WHERE fact.fact_date = target_date
           AND fact.finalized_at IS NOT NULL
           AND fact.tracked_at_end
-          AND fact.details_observed_at > day_end
+          AND CASE target_metric_key
+              WHEN 'free_game_share' THEN
+                  fact.release_observed_at > day_end
+                  OR fact.details_observed_at > day_end
+              ELSE fact.details_observed_at > day_end
+          END
     ) THEN
         RAISE EXCEPTION 'Game metric source evidence is after UTC day end for %/% on %',
             target_metric_key, target_metric_version, target_date;
@@ -285,7 +290,14 @@ BEGIN
                    ELSE 'linux_support_unknown'
                END
            END,
-           fact.details_observed_at,
+           CASE
+               WHEN target_metric_key = 'free_game_share'
+                    AND (fact.release_availability = 'upcoming'
+                         OR fact.release_availability IS NULL
+                         OR fact.release_availability = 'unknown')
+                   THEN fact.release_observed_at
+               ELSE fact.details_observed_at
+           END,
            jsonb_build_object(
                'primary_tag_id', to_jsonb(fact.primary_tag_id),
                'tag_ids', to_jsonb(fact.tag_ids)

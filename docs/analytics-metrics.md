@@ -12,7 +12,7 @@ Each active metric version reconciles once at startup and every `metrics.reconci
 
 ## Registry and state contract
 
-Goose owns the Registry. Runtime and Admin read it but do not mutate it. Alpha.4 contains exactly these evaluator contracts:
+Goose owns the Registry. Runtime and Admin read it but do not mutate it. Every active or retired Registry version must retain a matching compiled evaluator and full contract so explicit historical rebuild remains valid. Alpha.4 contains exactly these evaluator contracts:
 
 | Domain | Metric/version | Freshness | Dimensions |
 |---|---|---:|---|

@@ -18,6 +18,10 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 - Run Collector reconciliation in Acquisition -> Facts -> Metrics order and gate metric days on finalized Historical Fact watermarks.
 - Compute historical freshness against the UTC Fact day end, persist seven-state reasons and provenance, and calculate adoption/coverage only at query time.
 
+### Fixed
+
+- Use release evidence for `free_game_share` availability outcomes, reject future release/details evidence atomically, and require compiled evaluators for both active and retired Registry versions.
+
 ## v3.0.0-alpha.3 - 2026-08-29
 
 ### Added

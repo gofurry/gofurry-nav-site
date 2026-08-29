@@ -264,24 +264,24 @@ SELECT game_id, game_id + 1000, $1::timestamptz - interval '1 day', 'legacy_obse
 FROM unnest(ARRAY[99200,99201,99202,99203,99204,99205]::bigint[]) game_id;
 
 INSERT INTO gfg_game_daily (
-    game_id,fact_date,tracking_period_id,appid,snapshot_at,tracked_at_end,
-    name,name_en,view_count,is_free,windows,linux,release_availability,
-    primary_tag_id,tag_ids,details_observed_at,developers,publishers,
-    materialization_source,projection_version,finalized_at,created_at,updated_at
+	game_id,fact_date,tracking_period_id,appid,snapshot_at,tracked_at_end,
+	name,name_en,view_count,is_free,windows,linux,release_availability,
+	release_observed_at,primary_tag_id,tag_ids,details_observed_at,developers,publishers,
+	materialization_source,projection_version,finalized_at,created_at,updated_at
 )
 SELECT input.game_id,$1::date,period.id,input.game_id + 1000,$2,true,
-       'metric game ' || input.game_id,'metric game ' || input.game_id,0,
-       input.is_free,input.windows,input.linux,input.availability,
-       input.primary_tag_id,input.tag_ids,input.observed_at,
-       ARRAY[]::text[],ARRAY[]::text[],'observed',1,$2,$2,$2
+	   'metric game ' || input.game_id,'metric game ' || input.game_id,0,
+	   input.is_free,input.windows,input.linux,input.availability,input.release_observed_at,
+	   input.primary_tag_id,input.tag_ids,input.details_observed_at,
+	   ARRAY[]::text[],ARRAY[]::text[],'observed',1,$2,$2,$2
 FROM (VALUES
-    (99200::bigint,true, true, false,'available'::text,100::bigint,ARRAY[100,101,101]::bigint[],$2::timestamptz - interval '1 hour'),
-    (99201::bigint,false,false,true, 'available'::text,NULL::bigint,ARRAY[]::bigint[],$2::timestamptz - interval '2 hours'),
-    (99202::bigint,false,true, true, 'upcoming'::text,102::bigint,ARRAY[102]::bigint[],$2::timestamptz - interval '1 hour'),
-    (99203::bigint,true, true, true, 'unknown'::text,NULL::bigint,ARRAY[]::bigint[],$2::timestamptz - interval '1 hour'),
-    (99204::bigint,true, true, true, 'available'::text,104::bigint,ARRAY[104]::bigint[],$2::timestamptz - interval '4 days'),
-    (99205::bigint,NULL::boolean,NULL::boolean,NULL::boolean,'available'::text,NULL::bigint,ARRAY[]::bigint[],NULL::timestamptz)
-) input(game_id,is_free,windows,linux,availability,primary_tag_id,tag_ids,observed_at)
+	(99200::bigint,true, true, false,'available'::text,100::bigint,ARRAY[100,101,101]::bigint[],$2::timestamptz - interval '1 hour',$2::timestamptz - interval '10 hours'),
+	(99201::bigint,false,false,true, 'available'::text,NULL::bigint,ARRAY[]::bigint[],$2::timestamptz - interval '2 hours',$2::timestamptz - interval '11 hours'),
+	(99202::bigint,false,true, true, 'upcoming'::text,102::bigint,ARRAY[102]::bigint[],$2::timestamptz - interval '1 hour',$2::timestamptz - interval '6 hours'),
+	(99203::bigint,true, true, true, 'unknown'::text,NULL::bigint,ARRAY[]::bigint[],$2::timestamptz - interval '1 hour',$2::timestamptz - interval '7 hours'),
+	(99204::bigint,true, true, true, 'available'::text,104::bigint,ARRAY[104]::bigint[],$2::timestamptz - interval '4 days',$2::timestamptz - interval '12 hours'),
+	(99205::bigint,NULL::boolean,NULL::boolean,NULL::boolean,'available'::text,NULL::bigint,ARRAY[]::bigint[],NULL::timestamptz,$2::timestamptz - interval '9 hours')
+) input(game_id,is_free,windows,linux,availability,primary_tag_id,tag_ids,details_observed_at,release_observed_at)
 JOIN gfg_game_tracking_periods period ON period.game_id=input.game_id;
 
 UPDATE gfg_fact_rollup_checkpoints
@@ -342,6 +342,29 @@ SET source_start_date=$1::date,processed_through=NULL,updated_at=$2;
 		if state+"/"+reason != expected {
 			t.Fatalf("free_game_share game=%d got=%s/%s want=%s", gameID, state, reason, expected)
 		}
+	}
+	wantEvidence := map[int64]time.Time{
+		99200: dayEnd.Add(-time.Hour),
+		99201: dayEnd.Add(-2 * time.Hour),
+		99202: dayEnd.Add(-6 * time.Hour),
+		99203: dayEnd.Add(-7 * time.Hour),
+		99204: dayEnd.Add(-4 * 24 * time.Hour),
+	}
+	for gameID, expected := range wantEvidence {
+		var observed time.Time
+		if err := pool.QueryRow(ctx, `SELECT source_observed_at FROM gfg_metric_entity_daily WHERE metric_key='free_game_share' AND metric_version=1 AND fact_date=$1 AND game_id=$2`, day, gameID).Scan(&observed); err != nil {
+			t.Fatal(err)
+		}
+		if !observed.Equal(expected) {
+			t.Fatalf("free_game_share provenance game=%d got=%s want=%s", gameID, observed, expected)
+		}
+	}
+	var missingEvidence *time.Time
+	if err := pool.QueryRow(ctx, `SELECT source_observed_at FROM gfg_metric_entity_daily WHERE metric_key='free_game_share' AND metric_version=1 AND fact_date=$1 AND game_id=99205`, day).Scan(&missingEvidence); err != nil {
+		t.Fatal(err)
+	}
+	if missingEvidence != nil {
+		t.Fatalf("is_free_unknown provenance=%s, want NULL details evidence", *missingEvidence)
 	}
 
 	var population, eligible, notApplicable, positive, negative, stale, unknown int64
@@ -421,19 +444,32 @@ INSERT INTO gfg_metric_checkpoints (metric_key,metric_version,source_start_date,
 VALUES ('free_game_share',1,$2::date - 1,$2::date);
 INSERT INTO gfg_game_daily (
  game_id,fact_date,tracking_period_id,appid,snapshot_at,tracked_at_end,name,name_en,view_count,
- is_free,windows,linux,release_availability,tag_ids,details_observed_at,developers,publishers,
+ is_free,windows,linux,release_availability,release_observed_at,tag_ids,details_observed_at,developers,publishers,
  materialization_source,projection_version,finalized_at,created_at,updated_at
 )
 SELECT 99200,$1::date,id,100200,$3,true,'metric game 99200','metric game 99200',0,
-       true,true,false,'available',ARRAY[]::bigint[],$3::timestamptz + interval '1 second',ARRAY[]::text[],ARRAY[]::text[],
-       'observed',1,$3,$3,$3
+	   true,true,false,'upcoming',$3::timestamptz + interval '1 second',ARRAY[]::bigint[],$3::timestamptz - interval '1 hour',ARRAY[]::text[],ARRAY[]::text[],
+	   'observed',1,$3,$3,$3
 FROM gfg_game_tracking_periods WHERE game_id=99200;
 UPDATE gfg_fact_rollup_checkpoints SET processed_through=$1::date WHERE pipeline_key='game.state_facts';
 `, pgx.QueryExecModeSimpleProtocol, futureDay, nextDay, futureDay.Add(24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := engine.RunNext(ctx, "free_game_share", 1, false); err == nil {
-		t.Fatal("future Game metric evidence did not fail")
+		t.Fatal("future Game release evidence did not fail")
+	}
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_entity_daily WHERE metric_key='free_game_share' AND fact_date=$1`, 0, futureDay)
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_checkpoints WHERE metric_key='free_game_share' AND processed_through=$1::date`, 1, nextDay)
+	if _, err := pool.Exec(ctx, `
+UPDATE gfg_game_daily
+SET release_availability='available',
+    release_observed_at=$2::timestamptz - interval '1 hour',
+    details_observed_at=$2::timestamptz + interval '1 second'
+WHERE game_id=99200 AND fact_date=$1::date`, futureDay, futureDay.Add(24*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := engine.RunNext(ctx, "free_game_share", 1, false); err == nil {
+		t.Fatal("future Game details evidence did not fail")
 	}
 	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_entity_daily WHERE metric_key='free_game_share' AND fact_date=$1`, 0, futureDay)
 	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_checkpoints WHERE metric_key='free_game_share' AND processed_through=$1::date`, 1, nextDay)

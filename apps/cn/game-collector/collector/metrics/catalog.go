@@ -63,10 +63,8 @@ func validateCatalogRows(rows []gamesqlc.GfgMetricRegistry) error {
 	for _, row := range rows {
 		id := catalogID(row.MetricKey, row.MetricVersion)
 		registered[id] = row
-		if row.Status == "active" {
-			if _, ok := compiled[id]; !ok {
-				return fmt.Errorf("active Game metric registry %s has no compiled evaluator", id)
-			}
+		if _, ok := compiled[id]; !ok {
+			return fmt.Errorf("Game metric registry %s has no compiled evaluator", id)
 		}
 	}
 	for id, contract := range compiled {

@@ -66,10 +66,8 @@ func validateCatalogRows(rows []navsqlc.GfnMetricRegistry) error {
 	for _, row := range rows {
 		id := catalogID(row.MetricKey, row.MetricVersion)
 		registered[id] = row
-		if row.Status == "active" {
-			if _, ok := compiled[id]; !ok {
-				return fmt.Errorf("active Nav metric registry %s has no compiled evaluator", id)
-			}
+		if _, ok := compiled[id]; !ok {
+			return fmt.Errorf("Nav metric registry %s has no compiled evaluator", id)
 		}
 	}
 	for id, contract := range compiled {

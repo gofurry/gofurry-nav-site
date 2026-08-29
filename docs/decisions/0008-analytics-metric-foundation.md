@@ -10,7 +10,7 @@ Historical Facts preserve entity state and acquisition quality, but they do not 
 
 ## Decision
 
-Game and Nav use separate Goose-owned, versioned metric registries. Alpha.4 supports only `state_ratio` at daily grain and a fixed compiled evaluator catalog. Runtime validates every active Registry contract against that catalog before starting; evaluator predicates remain explicit SQL/code rather than a dynamic DSL.
+Game and Nav use separate Goose-owned, versioned metric registries. Alpha.4 supports only `state_ratio` at daily grain and a fixed compiled evaluator catalog. Runtime validates every active or retired Registry contract against that catalog before starting so retained versions remain explicitly rebuildable; evaluator predicates remain explicit SQL/code rather than a dynamic DSL.
 
 Each metric version owns an ordered PostgreSQL checkpoint. An atomic metric-day transaction locks that checkpoint, verifies the upstream Fact watermark, replaces entity and aggregate rows, validates state-count conservation, advances the checkpoint, and commits. Rebuild uses the same projector without moving the checkpoint. A projection error leaves the checkpoint unchanged and does not stop acquisition, Fact reconciliation, or other metrics.
 
