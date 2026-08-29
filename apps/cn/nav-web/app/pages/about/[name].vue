@@ -111,13 +111,16 @@ if (slug !== 'faolan') {
 
 const isZh = computed(() => locale.value === 'zh')
 const avatarUrl = 'https://qcdn.go-furry.com/nav/about/faolan.jpg'
+const currentYear = new Date().getFullYear()
+const age = currentYear - 2002
+const yearsOfExperience = currentYear - 2024
 
 const copy = computed(() => (
   isZh.value
     ? {
         back: '返回关于页',
-        roleYears: '软件工程师 · 2年',
-        summary: '熟悉Golang/Vue的软件开发生态，了解并可以初步使用多门编程语言，可以熟练编写Web、爬虫、桌面端、命令行工具等多种软件。',
+        roleYears: `软件工程师 · ${yearsOfExperience}年`,
+        summary: '熟悉Golang软件开发生态，了解并可以初步使用多门编程语言，可以熟练编写Web、爬虫、桌面端、命令行工具等多种软件。',
         basicInfo: '基础信息',
         workExperience: '在职经历',
         projectExperience: '项目经历',
@@ -126,8 +129,8 @@ const copy = computed(() => (
       }
     : {
         back: 'Back to About',
-        roleYears: 'Software Engineer · 2 years',
-        summary: 'Familiar with the Golang/Vue software development ecosystem, able to understand and make initial use of multiple programming languages, and comfortable building web apps, crawlers, desktop apps, command-line tools, and other software.',
+        roleYears: `Software Engineer · ${yearsOfExperience} years`,
+        summary: 'Familiar with the Golang software development ecosystem, able to understand and make initial use of multiple programming languages, and comfortable building web apps, crawlers, desktop apps, command-line tools, and other software.',
         basicInfo: 'Basic Info',
         workExperience: 'Work Experience',
         projectExperience: 'Project Experience',
@@ -141,7 +144,7 @@ const facts = computed(() => (
     ? [
         { label: '姓名', value: 'Faolan Grey' },
         { label: '性别', value: '男' },
-        { label: '年龄', value: '24' },
+        { label: '年龄', value: String(age) },
         { label: '联系方式', value: '2660621624@qq.com' },
         { label: '职业', value: '软件工程师' },
         { label: '学校', value: '成都信息工程大学 - 本科 - 机器人工程' },
@@ -149,7 +152,7 @@ const facts = computed(() => (
     : [
         { label: 'Name', value: 'Faolan Grey' },
         { label: 'Gender', value: 'Male' },
-        { label: 'Age', value: '24' },
+        { label: 'Age', value: String(age) },
         { label: 'Contact', value: '2660621624@qq.com' },
         { label: 'Profession', value: 'Software Engineer' },
         { label: 'Education', value: 'Chengdu University of Information Technology (CUIT) - Bachelor - Robotics Engineering' },
@@ -162,11 +165,13 @@ const workExperiences = computed(() => (
         '小厂 - 军工 - Golang 后端',
         '中国央企 - 网络工程师',
         '小厂 - 网络安全 / 军工 - Golang 全栈',
+        '小厂 - 互联网 - Golang 研发',
       ]
     : [
         'Small company - defense industry - Golang backend',
         'Chinese central state-owned enterprise - Network engineer',
         'Small company - cybersecurity / defense industry - Golang full-stack',
+        'Small company - internet - Golang development',
       ]
 ))
 
@@ -174,12 +179,14 @@ const projects = computed(() => (
   isZh.value
     ? [
         { title: 'GoFurry 导航站', note: '站长' },
+        { title: 'AI 模型聚合网关', note: '维护者' },
         { title: '某 P2P 隐蔽控制网络', note: '涉密' },
         { title: '某中心化运维系统', note: '涉密' },
         { title: '分布式人脸识别门禁系统', note: '优秀毕设' },
       ]
     : [
         { title: 'GoFurry Navigation', note: 'site owner' },
+        { title: 'AI model aggregation gateway', note: 'maintainer' },
         { title: 'P2P covert control network', note: 'confidential' },
         { title: 'Centralized operations platform', note: 'confidential' },
         { title: 'Distributed face-recognition access control system', note: 'excellent graduation project' },
@@ -188,7 +195,7 @@ const projects = computed(() => (
 
 const openSourceLinks = [
   {
-    label: 'GoFiber Coraza / Uptime',
+    label: 'GoFiber Coraza / Monitor / Uptime',
     value: 'gofiber/contrib',
     href: 'https://github.com/gofiber/contrib',
   },
