@@ -27,7 +27,10 @@ func TestRequireCapability(t *testing.T) {
 		{name: "developer metric technical", role: authorization.RoleDeveloper, capability: authorization.MetricsTechnical, wantStatus: fiber.StatusOK},
 		{name: "developer change technical", role: authorization.RoleDeveloper, capability: authorization.ChangesTechnical, wantStatus: fiber.StatusOK},
 		{name: "developer dataops", role: authorization.RoleDeveloper, capability: authorization.DataOpsRead, wantStatus: fiber.StatusOK},
+		{name: "developer audit", role: authorization.RoleDeveloper, capability: authorization.AuditRead, wantStatus: fiber.StatusOK},
 		{name: "developer account management denied", role: authorization.RoleDeveloper, capability: authorization.AccountManage, wantStatus: fiber.StatusForbidden},
+		{name: "operator dataops denied", role: authorization.RoleOperator, capability: authorization.DataOpsRead, wantStatus: fiber.StatusForbidden},
+		{name: "operator audit denied", role: authorization.RoleOperator, capability: authorization.AuditRead, wantStatus: fiber.StatusForbidden},
 		{name: "owner account management", role: authorization.RoleOwner, capability: authorization.AccountManage, wantStatus: fiber.StatusOK},
 	}
 

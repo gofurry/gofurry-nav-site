@@ -23,6 +23,21 @@ func v1(root fiber.Router, runtime *bootstrap.Runtime) {
 	collectionRoutes(protected.Group("/collection"), runtime)
 	metricRoutes(protected.Group("/metrics"), runtime)
 	changeRoutes(protected.Group("/changes"), runtime)
+	workbenchRoutes(protected.Group("/workbench"), runtime)
+	dataOpsRoutes(protected.Group("/dataops"), runtime)
+	auditRoutes(protected.Group("/audit"), runtime)
+}
+
+func workbenchRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	root.Get("/summary", authmw.Require(authorization.ContentRead), runtime.WorkbenchAPI.Summary)
+}
+
+func dataOpsRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	root.Get("/overview", authmw.Require(authorization.DataOpsRead), runtime.DataOpsAPI.Overview)
+}
+
+func auditRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	root.Get("/logs", authmw.Require(authorization.AuditRead), runtime.AuditAPI.Logs)
 }
 
 func changeRoutes(root fiber.Router, runtime *bootstrap.Runtime) {

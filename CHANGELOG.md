@@ -8,6 +8,9 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add native React Collection, Metrics, and Change Centers with capability-aware controls, count-backed history/explorers, operational charts, and technical contract views.
+- Add a capability-shaped Workbench Attention projection, read-only three-database Data Operations health center, filtered/redacted Audit explorer, and Owner account-governance UI.
+- Add static PostgreSQL metadata, Goose state, bounded relation-size, audit-pagination, and Workbench aggregation APIs with PostgreSQL integration coverage.
 - Add the React 19 Admin foundation with strict TypeScript, Tailwind v4 semantic themes, Base UI/shadcn-style primitives, TanStack Query/Table, React Hook Form/Zod, and capability-aware navigation.
 - Add schema-driven React CRUD for sayings, update notices, Site groups, tags, comments, and prizes; add first-class Site and Game content workspaces plus global Site/Game/Tag/Group search.
 - Add minimal sqlc-backed Site/Game workspace read models and Site list summaries without changing authentication, collection, Metric, or Change semantics.
@@ -27,6 +30,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Correct the React Data Operations capability from `data_ops.read` to canonical `dataops.read` and explicitly reject the legacy alias in regression tests.
 - Preserve `schedule_id` and `schedule_version` on Schedule Run Now jobs without creating or moving a scheduled slot, and report unavailable coverage as null rather than 0%.
 - Separate current and historical Collector instances, clarify chart timing units and spacing, and keep Task Result details within the viewport.
 

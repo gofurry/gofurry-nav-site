@@ -21,6 +21,7 @@ func TestEveryBusinessRouteDeclaresCapability(t *testing.T) {
 
 	protectedFunctions := map[string]bool{
 		"changeRoutes": true, "metricRoutes": true, "collectionRoutes": true,
+		"workbenchRoutes": true, "dataOpsRoutes": true, "auditRoutes": true,
 		"accountRoutes": true, "optionsRoutes": true, "navRoutes": true, "gameRoutes": true,
 	}
 	current := ""
@@ -58,6 +59,9 @@ func TestRepresentativeRouteCapabilityMatrix(t *testing.T) {
 		`root.Get("/registry", authmw.Require(authorization.MetricsTechnical)`,
 		`root.Get("/overview", authmw.Require(authorization.ChangesRead)`,
 		`root.Get("/registry", authmw.Require(authorization.ChangesTechnical)`,
+		`root.Get("/summary", authmw.Require(authorization.ContentRead)`,
+		`root.Get("/overview", authmw.Require(authorization.DataOpsRead)`,
+		`root.Get("/logs", authmw.Require(authorization.AuditRead)`,
 		`root.Post("/", authmw.Require(authorization.AccountManage)`,
 	}
 	for _, fragment := range expected {

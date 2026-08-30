@@ -37,6 +37,42 @@ func (q *Queries) CountAdminAccountsFiltered(ctx context.Context, keyword string
 	return column_1, err
 }
 
+const countAdminAuditLogs = `-- name: CountAdminAuditLogs :one
+SELECT COUNT(*)::bigint
+FROM gfa_admin_audit_log
+WHERE ($1::text = ''
+       OR operator ILIKE '%' || $1::text || '%'
+       OR operator_name ILIKE '%' || $1::text || '%')
+  AND ($2::text = '' OR operator_role = $2::text)
+  AND ($3::text = '' OR action ILIKE '%' || $3::text || '%')
+  AND ($4::text = '' OR resource ILIKE '%' || $4::text || '%')
+  AND ($5::timestamp IS NULL OR created_at >= $5::timestamp)
+  AND ($6::timestamp IS NULL OR created_at < $6::timestamp)
+`
+
+type CountAdminAuditLogsParams struct {
+	OperatorQuery string           `json:"operator_query"`
+	OperatorRole  string           `json:"operator_role"`
+	Action        string           `json:"action"`
+	Resource      string           `json:"resource"`
+	FromTime      pgtype.Timestamp `json:"from_time"`
+	UntilTime     pgtype.Timestamp `json:"until_time"`
+}
+
+func (q *Queries) CountAdminAuditLogs(ctx context.Context, arg CountAdminAuditLogsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminAuditLogs,
+		arg.OperatorQuery,
+		arg.OperatorRole,
+		arg.Action,
+		arg.Resource,
+		arg.FromTime,
+		arg.UntilTime,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const foundationPing = `-- name: FoundationPing :one
 SELECT 1::bigint AS value
 `
@@ -333,6 +369,97 @@ func (q *Queries) ListAdminAccounts(ctx context.Context, arg ListAdminAccountsPa
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PasswordUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAdminAuditLogs = `-- name: ListAdminAuditLogs :many
+SELECT id, action, resource, target_id, operator, session_version, request_id,
+       ip_address, user_agent, before_data, after_data, operator_account_id,
+       operator_name, operator_role, created_at
+FROM gfa_admin_audit_log
+WHERE ($1::text = ''
+       OR operator ILIKE '%' || $1::text || '%'
+       OR operator_name ILIKE '%' || $1::text || '%')
+  AND ($2::text = '' OR operator_role = $2::text)
+  AND ($3::text = '' OR action ILIKE '%' || $3::text || '%')
+  AND ($4::text = '' OR resource ILIKE '%' || $4::text || '%')
+  AND ($5::timestamp IS NULL OR created_at >= $5::timestamp)
+  AND ($6::timestamp IS NULL OR created_at < $6::timestamp)
+ORDER BY created_at DESC, id DESC
+LIMIT $8::int OFFSET $7::int
+`
+
+type ListAdminAuditLogsParams struct {
+	OperatorQuery string           `json:"operator_query"`
+	OperatorRole  string           `json:"operator_role"`
+	Action        string           `json:"action"`
+	Resource      string           `json:"resource"`
+	FromTime      pgtype.Timestamp `json:"from_time"`
+	UntilTime     pgtype.Timestamp `json:"until_time"`
+	RowOffset     int32            `json:"row_offset"`
+	RowLimit      int32            `json:"row_limit"`
+}
+
+type ListAdminAuditLogsRow struct {
+	ID                int64            `json:"id"`
+	Action            string           `json:"action"`
+	Resource          string           `json:"resource"`
+	TargetID          *string          `json:"target_id"`
+	Operator          string           `json:"operator"`
+	SessionVersion    int64            `json:"session_version"`
+	RequestID         *string          `json:"request_id"`
+	IpAddress         *string          `json:"ip_address"`
+	UserAgent         *string          `json:"user_agent"`
+	BeforeData        *string          `json:"before_data"`
+	AfterData         *string          `json:"after_data"`
+	OperatorAccountID *int64           `json:"operator_account_id"`
+	OperatorName      string           `json:"operator_name"`
+	OperatorRole      string           `json:"operator_role"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) ListAdminAuditLogs(ctx context.Context, arg ListAdminAuditLogsParams) ([]ListAdminAuditLogsRow, error) {
+	rows, err := q.db.Query(ctx, listAdminAuditLogs,
+		arg.OperatorQuery,
+		arg.OperatorRole,
+		arg.Action,
+		arg.Resource,
+		arg.FromTime,
+		arg.UntilTime,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAdminAuditLogsRow{}
+	for rows.Next() {
+		var i ListAdminAuditLogsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Action,
+			&i.Resource,
+			&i.TargetID,
+			&i.Operator,
+			&i.SessionVersion,
+			&i.RequestID,
+			&i.IpAddress,
+			&i.UserAgent,
+			&i.BeforeData,
+			&i.AfterData,
+			&i.OperatorAccountID,
+			&i.OperatorName,
+			&i.OperatorRole,
+			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

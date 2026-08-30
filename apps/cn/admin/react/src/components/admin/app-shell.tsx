@@ -4,12 +4,13 @@ import { Suspense, useEffect, useState, type ComponentType } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme, type ThemeMode } from '../../app/theme'
 import { useAuth } from '../../features/auth/auth-context'
+import { DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 import { GlobalSearch } from './global-search'
 import { LoadingState } from './states'
 
-type NavEntry = { label: string; href: string; icon: ComponentType<{ className?: string }>; capability?: string; legacy?: boolean }
+type NavEntry = { label: string; href: string; icon: ComponentType<{ className?: string }>; capability?: string }
 type NavGroup = { label: string; entries: NavEntry[] }
 
 export const navigationGroups: NavGroup[] = [
@@ -27,12 +28,12 @@ export const navigationGroups: NavGroup[] = [
     { label: '抽奖', href: '/game/prizes', icon: Sparkles, capability: 'content.read' },
   ] },
   { label: '数据运营', entries: [
-    { label: '采集', href: '/collection', icon: Activity, capability: 'collection.read', legacy: true },
-    { label: '数据指标', href: '/metrics', icon: CircleGauge, capability: 'metrics.read', legacy: true },
-    { label: '变化事件', href: '/changes', icon: FileClock, capability: 'changes.read', legacy: true },
+    { label: '采集', href: '/collection', icon: Activity, capability: 'collection.read' },
+    { label: '数据指标', href: '/metrics', icon: CircleGauge, capability: 'metrics.read' },
+    { label: '变化事件', href: '/changes', icon: FileClock, capability: 'changes.read' },
   ] },
   { label: '系统', entries: [
-    { label: '数据运维', href: '/system/data-operations', icon: Database, capability: 'data_ops.read' },
+    { label: '数据运维', href: '/system/data-operations', icon: Database, capability: DATAOPS_READ_CAPABILITY },
     { label: '操作审计', href: '/system/audit', icon: ShieldCheck, capability: 'audit.read' },
     { label: '账号与权限', href: '/system/accounts', icon: UserRound, capability: 'account.manage' },
   ] },
@@ -57,7 +58,6 @@ export function AppShell() {
   const { mode, setMode } = useTheme()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('gofurry-admin-sidebar') === 'collapsed')
   const [searchOpen, setSearchOpen] = useState(false)
-  const legacyOrigin = import.meta.env.VITE_LEGACY_ADMIN_ORIGIN || 'http://127.0.0.1:10099'
   useEffect(() => {
     const handler = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setSearchOpen(true) } }
     window.addEventListener('keydown', handler)
@@ -73,14 +73,14 @@ export function AppShell() {
     <aside className={cn('fixed inset-y-0 left-0 z-30 flex flex-col border-r bg-surface transition-[width] duration-200', collapsed ? 'w-16' : 'w-60')}>
       <div className="flex h-14 items-center gap-3 border-b px-4"><div className="grid size-8 shrink-0 place-items-center rounded-md bg-primary font-bold text-primary-foreground">GF</div>{!collapsed && <div><p className="text-sm font-semibold leading-none">GoFurry Admin</p><p className="mt-1 font-mono text-[10px] text-muted-foreground">V3 CONTENT</p></div>}</div>
       <nav className="min-h-0 flex-1 overflow-y-auto p-2">{visibleGroups.map((group) => {
-        return <div key={group.label || 'workbench'} className="mb-4">{group.label && !collapsed && <p className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{group.label}</p>}{group.entries.map((entry) => entry.legacy ? <a key={entry.href} href={`${legacyOrigin}${entry.href}`} className="mb-0.5 flex h-9 items-center gap-3 rounded-md px-2 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground" title={collapsed ? entry.label : undefined}><entry.icon className="size-4 shrink-0" />{!collapsed && <span>{entry.label}</span>}</a> : <NavLink key={entry.href} to={entry.href} end={entry.href === '/'} title={collapsed ? entry.label : undefined} className={({ isActive }) => cn('mb-0.5 flex h-9 items-center gap-3 rounded-md px-2 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground', isActive && 'bg-primary/10 font-medium text-primary')}><entry.icon className="size-4 shrink-0" />{!collapsed && <span>{entry.label}</span>}</NavLink>)}</div>
+        return <div key={group.label || 'workbench'} className="mb-4">{group.label && !collapsed && <p className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{group.label}</p>}{group.entries.map((entry) => <NavLink key={entry.href} to={entry.href} end={entry.href === '/'} title={collapsed ? entry.label : undefined} className={({ isActive }) => cn('mb-0.5 flex h-9 items-center gap-3 rounded-md px-2 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground', isActive && 'bg-primary/10 font-medium text-primary')}><entry.icon className="size-4 shrink-0" />{!collapsed && <span>{entry.label}</span>}</NavLink>)}</div>
       })}</nav>
       <button type="button" onClick={toggleSidebar} className="flex h-11 items-center justify-center border-t text-muted-foreground hover:bg-surface-muted" aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}>{collapsed ? <ChevronRight className="size-4" /> : <><ChevronLeft className="mr-2 size-4" /><span className="text-xs">收起导航</span></>}</button>
     </aside>
     <div className={cn('transition-[padding] duration-200', collapsed ? 'pl-16' : 'pl-60')}>
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b bg-background/92 px-6 backdrop-blur"><Breadcrumbs /><div className="flex items-center gap-2">
         <Button variant="secondary" className="w-56 justify-start text-muted-foreground" onClick={() => setSearchOpen(true)}><Search className="size-4" /><span className="flex-1 text-left">全局搜索</span><kbd className="rounded border bg-surface-muted px-1.5 font-mono text-[10px]">Ctrl K</kbd></Button>
-        <Button variant="ghost" size="icon" title="系统状态将在 P0.5.2-C 接入"><Wrench className="size-4" /></Button>
+        <Button variant="ghost" size="icon" title={auth.can(DATAOPS_READ_CAPABILITY) ? '数据库与迁移状态' : '当前账号无 dataops.read'} disabled={!auth.can(DATAOPS_READ_CAPABILITY)} onClick={() => navigate('/system/data-operations')}><Wrench className="size-4" /></Button>
         <Menu.Root><Menu.Trigger render={<Button variant="ghost" size="icon" aria-label="主题设置" />}><ThemeIcon className="size-4" /></Menu.Trigger><Menu.Portal><Menu.Positioner className="z-40" sideOffset={4} align="end"><Menu.Popup className="min-w-36 rounded-md border bg-surface p-1 shadow-lg outline-none"><Menu.RadioGroup value={mode} onValueChange={(value) => setMode(value as ThemeMode)}>{([['system', '跟随系统'], ['light', '浅色'], ['dark', '深色']] as Array<[ThemeMode, string]>).map(([value, label]) => <Menu.RadioItem key={value} value={value} closeOnClick className="cursor-default rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-muted">{label}</Menu.RadioItem>)}</Menu.RadioGroup></Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root>
         <Menu.Root><Menu.Trigger render={<Button variant="secondary" />}><UserRound className="size-4" /><span className="max-w-28 truncate">{auth.state?.identity?.display_name}</span></Menu.Trigger><Menu.Portal><Menu.Positioner className="z-40" sideOffset={4} align="end"><Menu.Popup className="min-w-52 rounded-md border bg-surface p-1 shadow-lg outline-none"><div className="border-b px-2 py-2"><p className="text-sm font-medium">{auth.state?.identity?.display_name}</p><p className="mt-0.5 font-mono text-xs text-muted-foreground">{auth.state?.identity?.username} · {auth.state?.identity?.role}</p></div><Menu.Item onClick={() => void logout()} className="mt-1 flex cursor-default items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-muted"><LogOut className="size-4" />退出登录</Menu.Item></Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root>
       </div></header>

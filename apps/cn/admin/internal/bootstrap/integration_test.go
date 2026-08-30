@@ -21,17 +21,21 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	env "github.com/gofurry/gofurry-admin/config"
+	"github.com/gofurry/gofurry-admin/internal/app/auditadmin"
 	authcontroller "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
 	authmw "github.com/gofurry/gofurry-admin/internal/app/auth/middleware"
 	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
 	changeadmin "github.com/gofurry/gofurry-admin/internal/app/changeadmin"
 	collectioncontroller "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/controller"
 	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
+	"github.com/gofurry/gofurry-admin/internal/app/dataops"
 	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
 	metricadmin "github.com/gofurry/gofurry-admin/internal/app/metricadmin"
 	navadmin "github.com/gofurry/gofurry-admin/internal/app/navadmin/controller"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
 	optionscontroller "github.com/gofurry/gofurry-admin/internal/app/shared/options/controller"
+	"github.com/gofurry/gofurry-admin/internal/app/workbench"
+	"github.com/gofurry/gofurry-admin/internal/infra/db"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -81,9 +85,17 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	authAPI := authcontroller.New(authService, auditLogger)
 	navAPI := navadmin.New(navPool, auditLogger)
 	gameAPI := gameadmin.New(gamePool, auditLogger)
-	collectionAPI := collectioncontroller.New(collectionservice.New(gamePool, navPool, auditLogger))
-	metricAPI := metricadmin.NewAPI(metricadmin.New(gamePool, navPool))
-	changeAPI := changeadmin.NewAPI(changeadmin.New(gamePool, navPool))
+	collectionService := collectionservice.New(gamePool, navPool, auditLogger)
+	metricService := metricadmin.New(gamePool, navPool)
+	changeService := changeadmin.New(gamePool, navPool)
+	dataOpsService := dataops.New(&db.Pools{Admin: adminPool, Nav: navPool, Game: gamePool})
+	auditService := auditadmin.New(adminPool)
+	collectionAPI := collectioncontroller.New(collectionService)
+	metricAPI := metricadmin.NewAPI(metricService)
+	changeAPI := changeadmin.NewAPI(changeService)
+	dataOpsAPI := dataops.NewAPI(dataOpsService)
+	auditAPI := auditadmin.NewAPI(auditService)
+	workbenchAPI := workbench.NewAPI(workbench.New(collectionService, metricService, changeService, dataOpsService, auditService, authService))
 	optionsAPI := optionscontroller.New(navPool, gamePool)
 	app := fiber.New()
 	app.Post("/auth/bootstrap", authAPI.Bootstrap)
@@ -127,6 +139,9 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Get("/changes/registry", changeAPI.Registry)
 	protected.Get("/changes/checkpoints", changeAPI.Checkpoints)
 	protected.Get("/changes/events", changeAPI.Events)
+	protected.Get("/dataops/overview", dataOpsAPI.Overview)
+	protected.Get("/audit/logs", auditAPI.Logs)
+	protected.Get("/workbench/summary", workbenchAPI.Summary)
 
 	requestJSON(t, app, http.MethodPost, "/auth/bootstrap", `{"username":"owner","display_name":"Integration Owner","password":"integration-password"}`, nil, http.StatusOK)
 	login := requestJSON(t, app, http.MethodPost, "/auth/login", `{"username":"owner","password":"integration-password"}`, nil, http.StatusOK)
@@ -285,6 +300,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	}
 	testMetricCenterReadOnlyAPI(t, ctx, app, cookie, gamePool, navPool)
 	testChangeCenterReadOnlyAPI(t, ctx, app, cookie, gamePool, navPool)
+	testDataSystemOperationsAPI(t, ctx, app, cookie, adminPool, names)
 
 	// Prove that gfn and gfa are not treated as a distributed transaction: a
 	// failed gfa audit must roll back the still-open gfn business transaction.
@@ -293,6 +309,87 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site WHERE name='Rollback'`); count != 0 {
 		t.Fatalf("cross-database audit failure left %d Nav rows", count)
 	}
+}
+
+func testDataSystemOperationsAPI(t *testing.T, ctx context.Context, app *fiber.App, cookie *http.Cookie, adminPool *pgxpool.Pool, databaseNames map[string]string) {
+	t.Helper()
+	if _, err := adminPool.Exec(ctx, `INSERT INTO gfa_admin_audit_log
+        (action,resource,target_id,operator,session_version,request_id,ip_address,user_agent,before_data,after_data,
+         operator_account_id,operator_name,operator_role,created_at)
+        VALUES ('security.redaction','gfa_admin_account','1','owner',1,'integration-redaction','127.0.0.1','integration',
+                '{"password":"plain-secret","safe":"before"}','{"token":"jwt-secret","safe":"after"}',
+                1,'Historical Owner','owner',now())`); err != nil {
+		t.Fatal(err)
+	}
+
+	dataResponse := requestJSON(t, app, http.MethodGet, "/dataops/overview", "", cookie, http.StatusOK)
+	defer dataResponse.Body.Close()
+	var dataEnvelope integrationEnvelope
+	if err := json.NewDecoder(dataResponse.Body).Decode(&dataEnvelope); err != nil {
+		t.Fatal(err)
+	}
+	var dataOverview struct {
+		Databases []struct {
+			Key          string `json:"key"`
+			Health       string `json:"health"`
+			DatabaseName string `json:"database_name"`
+			Migration    struct {
+				Status       string `json:"status"`
+				PendingCount int    `json:"pending_count"`
+			} `json:"migration"`
+			Relations []json.RawMessage `json:"relations"`
+		} `json:"databases"`
+	}
+	if err := json.Unmarshal(dataEnvelope.Data, &dataOverview); err != nil {
+		t.Fatal(err)
+	}
+	if len(dataOverview.Databases) != 3 {
+		t.Fatalf("DataOps database count=%d, want 3: %s", len(dataOverview.Databases), dataEnvelope.Data)
+	}
+	for _, database := range dataOverview.Databases {
+		domain := map[string]string{"gfa": "admin", "gfn": "nav", "gfg": "game"}[database.Key]
+		if database.Health != "healthy" || database.DatabaseName != databaseNames[domain] || database.Migration.Status != "current" || database.Migration.PendingCount != 0 || database.Relations == nil {
+			t.Fatalf("unexpected DataOps %s status: %s", database.Key, dataEnvelope.Data)
+		}
+	}
+
+	auditResponse := requestJSON(t, app, http.MethodGet, "/audit/logs?action=security.redaction&role=owner&page=1&page_size=1", "", cookie, http.StatusOK)
+	defer auditResponse.Body.Close()
+	var auditEnvelope integrationEnvelope
+	if err := json.NewDecoder(auditResponse.Body).Decode(&auditEnvelope); err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(auditEnvelope.Data, []byte("plain-secret")) || bytes.Contains(auditEnvelope.Data, []byte("jwt-secret")) || !bytes.Contains(auditEnvelope.Data, []byte("[REDACTED]")) || !bytes.Contains(auditEnvelope.Data, []byte("Historical Owner")) {
+		t.Fatalf("Audit pagination/snapshot/redaction contract failed: %s", auditEnvelope.Data)
+	}
+	assertPage(t, responseFromEnvelope(t, auditEnvelope), 1, 1)
+
+	workbenchResponse := requestJSON(t, app, http.MethodGet, "/workbench/summary", "", cookie, http.StatusOK)
+	defer workbenchResponse.Body.Close()
+	var workbenchEnvelope integrationEnvelope
+	if err := json.NewDecoder(workbenchResponse.Body).Decode(&workbenchEnvelope); err != nil {
+		t.Fatal(err)
+	}
+	var summary struct {
+		RecentChanges    []json.RawMessage `json:"recent_changes"`
+		RecentOperations []json.RawMessage `json:"recent_operations"`
+		SystemStatus     []json.RawMessage `json:"system_status"`
+	}
+	if err := json.Unmarshal(workbenchEnvelope.Data, &summary); err != nil {
+		t.Fatal(err)
+	}
+	if len(summary.RecentChanges) == 0 || len(summary.RecentOperations) == 0 || len(summary.SystemStatus) < 6 {
+		t.Fatalf("Workbench aggregation incomplete: %s", workbenchEnvelope.Data)
+	}
+}
+
+func responseFromEnvelope(t *testing.T, envelope integrationEnvelope) *http.Response {
+	t.Helper()
+	body, err := json.Marshal(envelope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &http.Response{Body: io.NopCloser(bytes.NewReader(body))}
 }
 
 func testCollectionCenterOperations(t *testing.T, ctx context.Context, app *fiber.App, cookie *http.Cookie, gamePool, navPool *pgxpool.Pool, gameID int64) {

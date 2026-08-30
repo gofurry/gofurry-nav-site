@@ -38,6 +38,9 @@ Unknown roles receive no capabilities and unknown capabilities are denied.
 | Collection overview, instances, schedules, jobs, runs, results, charts | `collection.read` | Run Now/manual/retry: `collection.execute`; schedule edit/enable/disable and cancel: `collection.control` |
 | Metric overview, daily, entities | `metrics.read` | Registry and checkpoints: `metrics.technical` |
 | Change overview and events | `changes.read` | Registry and checkpoints: `changes.technical` |
+| Workbench aggregation | `content.read`, shaped by the Principal's other capabilities | — |
+| Data Operations metadata | `dataops.read` | read-only; no mutation endpoints |
+| Audit history and details | `audit.read` | read-only, snapshot identity and secret redaction |
 | Account list/create/display name/role/status/password/revoke | — | `account.manage` |
 
 Account endpoints live under `/api/v1/auth/accounts`. There is no hard-delete endpoint. Username is immutable; display-name-only updates do not revoke sessions. Role, status, password, and explicit revoke operations increment session version and are audited without secret material.

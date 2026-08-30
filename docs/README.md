@@ -10,6 +10,7 @@ This directory contains cross-service documentation for the active GoFurry produ
 - [Change Intelligence operations](change-intelligence.md)
 - [Admin identity and authorization](admin-identity.md)
 - [React Admin development](admin-react.md)
+- [Admin Data and System Operations](admin-data-system-operations.md)
 - [Collection Center operations](operations/collection-center.md)
 - [Linux/systemd operations](operations/systemd.md)
 - [Architecture decisions](decisions/README.md)

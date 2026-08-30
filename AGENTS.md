@@ -5,7 +5,7 @@ Production code is limited to six Go modules plus one frontend:
 - `apps/cn/game-collector` and `apps/cn/game-backend` own Game runtime behavior.
 - `apps/cn/nav-collector` and `apps/cn/nav-backend` own Nav runtime behavior.
 - `apps/cn/admin` uses explicit `gfa`, `gfn`, and `gfg` PostgreSQL pools.
-- `apps/cn/admin/react` is the target React Admin; `apps/cn/admin/web` remains the embedded Vue compatibility frontend until the explicit production cutover stage.
+- `apps/cn/admin/react` owns target content workspaces plus Data/System operations; `apps/cn/admin/web` remains the embedded Vue compatibility frontend until the explicit production cutover stage.
 - `apps/cn/uptime` is the independent Fiber/Bbolt availability service and has no business PostgreSQL or Redis dependency.
 - `apps/cn/nav-web` is the production Nuxt frontend.
 - `apps/intl` is placeholder-only; `legacy`, `experimental`, and `third-party` are outside the active build and production tooling.

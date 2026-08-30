@@ -10,6 +10,8 @@ Admin 认证为数据库校验的多账号系统，固定使用 `owner`、`devel
 
 “采集中心”直接通过现有 `gfg` / `gfn` 连接池管理 durable Schedule / Job / Run / Result / Collector Instance，支持计划启停与 Run Now、Game/Nav 手工采集、队列与历史、取消、受约束重试、审计以及 ECharts outcome/coverage/timing。Admin 不代理调用 Game/Nav Backend；Admin 停机不会停止 Collector 自主调度和 worker。
 
+React 已原生提供采集、指标、变化、工作台关注事项、只读数据运维、审计和账号治理。界面只消费后端 capability；DataOps 只展示三个数据库的安全元数据、Goose 状态和有限 Top N 存储信息，不执行 SQL 或数据库维护。Vue 仍是生产嵌入入口，直到 P0.5.2-D 显式切流。
+
 ## 本地开发
 
 需要 Go 1.26.7、Node.js/npm、PostgreSQL 和 Redis。
@@ -79,4 +81,4 @@ npm test
 npm run build
 ~~~
 
-详见 [React Admin 本地开发](../../../docs/admin-react.md)与[前端契约](../../../contracts/admin-frontend.md)。
+详见 [React Admin 本地开发](../../../docs/admin-react.md)、[数据与系统运维](../../../docs/admin-data-system-operations.md)与[前端契约](../../../contracts/admin-frontend.md)。

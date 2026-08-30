@@ -10,6 +10,8 @@ Admin authentication is a database-backed multi-account system with fixed `owner
 
 The Collection Center manages durable Schedule / Job / Run / Result / Collector Instance state directly through the existing `gfg` and `gfn` pools. It supports schedule enable/disable and Run Now, manual Game/Nav collection, queue/history, cancellation, constrained retry, audit, and ECharts outcome/coverage/timing. It does not proxy collection through either Backend, and Admin downtime does not stop autonomous Collector scheduling or workers.
 
+React now natively provides Collection, Metrics, Changes, Workbench attention, read-only Data Operations, Audit, and account governance. UI behavior consumes backend capabilities only. DataOps exposes safe metadata, Goose state, and bounded Top N storage information for the three pools; it never executes SQL or database maintenance. Vue remains the embedded production entry until the explicit P0.5.2-D cutover.
+
 ## Development
 
 Requirements: Go 1.26.7, Node.js/npm, PostgreSQL, and Redis.
@@ -79,4 +81,4 @@ npm test
 npm run build
 ~~~
 
-See [React Admin development](../../../docs/admin-react.md) and the [frontend contract](../../../contracts/admin-frontend.md).
+See [React Admin development](../../../docs/admin-react.md), [Data and System Operations](../../../docs/admin-data-system-operations.md), and the [frontend contract](../../../contracts/admin-frontend.md).

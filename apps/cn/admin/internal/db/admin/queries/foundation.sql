@@ -124,3 +124,31 @@ VALUES
      sqlc.arg(user_agent), sqlc.arg(before_data), sqlc.arg(after_data),
      sqlc.arg(operator_account_id), sqlc.arg(operator_name), sqlc.arg(operator_role),
      NOW()::timestamp(0));
+
+-- name: CountAdminAuditLogs :one
+SELECT COUNT(*)::bigint
+FROM gfa_admin_audit_log
+WHERE (sqlc.arg(operator_query)::text = ''
+       OR operator ILIKE '%' || sqlc.arg(operator_query)::text || '%'
+       OR operator_name ILIKE '%' || sqlc.arg(operator_query)::text || '%')
+  AND (sqlc.arg(operator_role)::text = '' OR operator_role = sqlc.arg(operator_role)::text)
+  AND (sqlc.arg(action)::text = '' OR action ILIKE '%' || sqlc.arg(action)::text || '%')
+  AND (sqlc.arg(resource)::text = '' OR resource ILIKE '%' || sqlc.arg(resource)::text || '%')
+  AND (sqlc.narg(from_time)::timestamp IS NULL OR created_at >= sqlc.narg(from_time)::timestamp)
+  AND (sqlc.narg(until_time)::timestamp IS NULL OR created_at < sqlc.narg(until_time)::timestamp);
+
+-- name: ListAdminAuditLogs :many
+SELECT id, action, resource, target_id, operator, session_version, request_id,
+       ip_address, user_agent, before_data, after_data, operator_account_id,
+       operator_name, operator_role, created_at
+FROM gfa_admin_audit_log
+WHERE (sqlc.arg(operator_query)::text = ''
+       OR operator ILIKE '%' || sqlc.arg(operator_query)::text || '%'
+       OR operator_name ILIKE '%' || sqlc.arg(operator_query)::text || '%')
+  AND (sqlc.arg(operator_role)::text = '' OR operator_role = sqlc.arg(operator_role)::text)
+  AND (sqlc.arg(action)::text = '' OR action ILIKE '%' || sqlc.arg(action)::text || '%')
+  AND (sqlc.arg(resource)::text = '' OR resource ILIKE '%' || sqlc.arg(resource)::text || '%')
+  AND (sqlc.narg(from_time)::timestamp IS NULL OR created_at >= sqlc.narg(from_time)::timestamp)
+  AND (sqlc.narg(until_time)::timestamp IS NULL OR created_at < sqlc.narg(until_time)::timestamp)
+ORDER BY created_at DESC, id DESC
+LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;

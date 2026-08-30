@@ -56,3 +56,12 @@ func TestOwnerHasEveryDefinedCapability(t *testing.T) {
 		}
 	}
 }
+
+func TestDataOpsCapabilityHasNoCompatibilityAlias(t *testing.T) {
+	if DataOpsRead != Capability("dataops.read") {
+		t.Fatalf("DataOpsRead=%q, want canonical dataops.read", DataOpsRead)
+	}
+	if IsDefinedCapability(Capability("data_ops.read")) {
+		t.Fatal("legacy data_ops.read alias must fail closed")
+	}
+}
