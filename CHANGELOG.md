@@ -6,6 +6,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.5 - 2026-08-30
+
 ### Added
 
 - Add Goose-owned versioned Game/Nav change registries, deterministic canonical event stores, and independent per-detector-version checkpoints.
