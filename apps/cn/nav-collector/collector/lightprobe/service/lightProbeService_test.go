@@ -172,12 +172,56 @@ func TestProbeSecurityTXTFallback(t *testing.T) {
 	defer server.Close()
 
 	result := probeSecurityTXT(targetFromTestServer(server.URL), time.Second, 4096)
-	if result.Status != "success" || result.Payload["exists"] != true || result.Payload["path_used"] != "/security.txt" {
+	if result.Status != "success" || result.Payload["exists"] != true || result.Payload["recognition"] != "present_valid" || result.Payload["path_used"] != "/security.txt" {
 		t.Fatalf("probeSecurityTXT() = %+v, want fallback success", result)
 	}
 	contacts, _ := result.Payload["contact"].([]string)
 	if len(contacts) != 1 || contacts[0] != "mailto:security@example.com" {
 		t.Fatalf("unexpected contacts: %#v", result.Payload["contact"])
+	}
+}
+
+func TestProbeSecurityTXTRecognition(t *testing.T) {
+	validBody := "Contact: mailto:security@example.com\nExpires: 2030-01-01T00:00:00Z\n"
+	tests := []struct {
+		name        string
+		status      int
+		contentType string
+		body        string
+		want        string
+	}{
+		{name: "valid well known", status: http.StatusOK, contentType: "text/plain; charset=utf-8", body: validBody, want: "present_valid"},
+		{name: "spa html fallback", status: http.StatusOK, contentType: "text/html; charset=utf-8", body: "<html><body>app</body></html>", want: "present_invalid"},
+		{name: "empty body", status: http.StatusOK, contentType: "text/plain", body: "", want: "present_invalid"},
+		{name: "malformed document", status: http.StatusOK, contentType: "text/plain", body: "hello world", want: "present_invalid"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", tt.contentType)
+				w.WriteHeader(tt.status)
+				_, _ = w.Write([]byte(tt.body))
+			}))
+			defer server.Close()
+			result := probeSecurityTXT(targetFromTestServer(server.URL), time.Second, 4096)
+			if result.Status != "success" || result.Payload["recognition"] != tt.want {
+				t.Fatalf("probeSecurityTXT() = %+v, want recognition %q", result, tt.want)
+			}
+		})
+	}
+}
+
+func TestProbeSecurityTXTAbsentAndNetworkFailure(t *testing.T) {
+	server := httptest.NewServer(http.NotFoundHandler())
+	defer server.Close()
+	absent := probeSecurityTXT(targetFromTestServer(server.URL), time.Second, 4096)
+	if absent.Status != "success" || absent.Payload["recognition"] != "absent" || absent.Payload["path_used"] != "/security.txt" {
+		t.Fatalf("absent security.txt = %+v", absent)
+	}
+
+	failure := probeSecurityTXT(targetFromTestServer("http://127.0.0.1:1"), 100*time.Millisecond, 4096)
+	if failure.Status != "failure" || failure.ErrorCode != "security_txt_request_failed" {
+		t.Fatalf("network failure = %+v", failure)
 	}
 }
 

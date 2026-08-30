@@ -41,6 +41,45 @@ func TestDNSQueryThreadLimit(t *testing.T) {
 	}
 }
 
+func TestAAAAEvidenceClassification(t *testing.T) {
+	tests := []struct {
+		name     string
+		count    int
+		metadata map[string]dnsQueryMetadata
+		want     string
+	}{
+		{name: "present", count: 1, want: "present"},
+		{name: "confirmed absent", metadata: map[string]dnsQueryMetadata{"AAAA": {ResponseSummary: dnsResponseSummary{QueryStatus: "success", Rcode: "NOERROR"}}}, want: "confirmed_absent"},
+		{name: "query failed", metadata: map[string]dnsQueryMetadata{"AAAA": {ResponseSummary: dnsResponseSummary{QueryStatus: "failed", ErrorCategory: "query_failed"}}}, want: "unavailable"},
+		{name: "servfail", metadata: map[string]dnsQueryMetadata{"AAAA": {ResponseSummary: dnsResponseSummary{QueryStatus: "success", Rcode: "SERVFAIL"}}}, want: "unavailable"},
+		{name: "legacy missing metadata", want: "unavailable"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := classifyAAAAEvidence(tt.count, tt.metadata); got != tt.want {
+				t.Fatalf("classifyAAAAEvidence() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDNSPayloadRetainsFailedAAAAEvidence(t *testing.T) {
+	payload := buildDNSObservationPayloadWithMetadata(
+		map[string][]models.DNSRecord{"A": {{Type: "A", Value: "203.0.113.1"}}},
+		map[string]dnsQueryMetadata{
+			"A":    {ResponseSummary: dnsResponseSummary{QueryStatus: "success", Rcode: "NOERROR"}},
+			"AAAA": {ResponseSummary: dnsResponseSummary{QueryStatus: "failed", ErrorCategory: "query_failed"}},
+		},
+	)
+	if payload["has_aaaa"] != false || payload["aaaa_evidence"] != "unavailable" {
+		t.Fatalf("AAAA payload = %#v", payload)
+	}
+	summaries, ok := payload["response_summary"].(map[string]dnsResponseSummary)
+	if !ok || summaries["AAAA"].QueryStatus != "failed" {
+		t.Fatalf("response summaries = %#v", payload["response_summary"])
+	}
+}
+
 func TestDetectDNSRiskFlags(t *testing.T) {
 	msg := &dns.Msg{
 		MsgHdr: dns.MsgHdr{Rcode: dns.RcodeNameError},

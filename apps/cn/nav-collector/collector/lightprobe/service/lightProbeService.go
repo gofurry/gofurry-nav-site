@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
@@ -519,16 +520,71 @@ func probeSecurityTXT(target models.GfnCollectorDomain, timeout time.Duration, m
 	}
 
 	payload := parseSecurityTXTPayload(resp.Body)
+	recognition, validationErrors := classifySecurityTXTResponse(resp, payload, time.Now().UTC())
 	payload["exists"] = resp.StatusCode >= 200 && resp.StatusCode < 300
+	payload["recognition"] = recognition
+	payload["validation_errors"] = validationErrors
 	payload["path_used"] = pathUsed
 	payload["status_code"] = resp.StatusCode
 	payload["content_type"] = limitLightText(resp.ContentType)
 	payload["body_truncated"] = resp.BodyTruncated
+	if recognition == "unavailable" {
+		result := failureResult("security_txt_http_status", fmt.Sprintf("security.txt status %d", resp.StatusCode), payload)
+		result.DurationMS = resp.DurationMS
+		return result
+	}
 	return probeResult{
 		Status:     observation.StatusSuccess,
 		DurationMS: resp.DurationMS,
 		Payload:    payload,
 	}
+}
+
+func classifySecurityTXTResponse(resp httpProbeResponse, payload map[string]any, observedAt time.Time) (string, []string) {
+	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusGone {
+		return "absent", []string{}
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "unavailable", []string{"http_status_inconclusive"}
+	}
+
+	validationErrors := make([]string, 0, 5)
+	mediaType, _, err := mime.ParseMediaType(resp.ContentType)
+	if err != nil || !strings.EqualFold(mediaType, "text/plain") {
+		validationErrors = append(validationErrors, "content_type_not_text_plain")
+	}
+	if len(bytes.TrimSpace(resp.Body)) == 0 {
+		validationErrors = append(validationErrors, "body_empty")
+	}
+	if resp.BodyTruncated {
+		validationErrors = append(validationErrors, "body_truncated")
+	}
+
+	contacts, _ := payload["contact"].([]string)
+	validContact := false
+	for _, contact := range contacts {
+		parsed, parseErr := url.Parse(strings.TrimSpace(contact))
+		if parseErr == nil && parsed.IsAbs() && parsed.Scheme != "" {
+			validContact = true
+			break
+		}
+	}
+	if !validContact {
+		validationErrors = append(validationErrors, "contact_missing_or_invalid")
+	}
+
+	expires, _ := payload["expires"].(string)
+	expiresAt, expiresErr := time.Parse(time.RFC3339, strings.TrimSpace(expires))
+	if expiresErr != nil {
+		validationErrors = append(validationErrors, "expires_missing_or_invalid")
+	} else if !expiresAt.After(observedAt) {
+		validationErrors = append(validationErrors, "security_txt_expired")
+	}
+
+	if len(validationErrors) > 0 {
+		return "present_invalid", validationErrors
+	}
+	return "present_valid", validationErrors
 }
 
 func probeLLMSTXT(target models.GfnCollectorDomain, timeout time.Duration, maxBytes int64) probeResult {

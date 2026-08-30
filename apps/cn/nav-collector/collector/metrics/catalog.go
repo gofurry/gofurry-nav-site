@@ -31,9 +31,23 @@ var evaluatorCatalog = []Contract{
 		AllowedDimensions: []string{"group_id", "nsfw", "site_country", "welfare"},
 	},
 	{
+		Key: "ipv6_adoption", Version: 2, Kind: "state_ratio", EntityLevel: "site", TimeGrain: "day",
+		SourceFacts:       []string{"gfn_site_daily", "gfn_site_target_daily", "gfn_site_target_protocol_daily"},
+		EligibilityPolicy: "active_site_primary_target_v1", StatePolicy: "ipv6_adoption_state_v2",
+		CoveragePolicy: "known_over_eligible_v1", FreshnessSeconds: 259200,
+		AllowedDimensions: []string{"group_id", "nsfw", "site_country", "welfare"},
+	},
+	{
 		Key: "security_txt_adoption", Version: 1, Kind: "state_ratio", EntityLevel: "site", TimeGrain: "day",
 		SourceFacts:       []string{"gfn_site_daily", "gfn_site_target_daily", "gfn_site_target_protocol_daily"},
 		EligibilityPolicy: "active_site_primary_target_v1", StatePolicy: "security_txt_adoption_state_v1",
+		CoveragePolicy: "known_over_eligible_v1", FreshnessSeconds: 1814400,
+		AllowedDimensions: []string{"group_id", "nsfw", "site_country", "welfare"},
+	},
+	{
+		Key: "security_txt_adoption", Version: 2, Kind: "state_ratio", EntityLevel: "site", TimeGrain: "day",
+		SourceFacts:       []string{"gfn_site_daily", "gfn_site_target_daily", "gfn_site_target_protocol_daily"},
+		EligibilityPolicy: "active_site_primary_target_v1", StatePolicy: "security_txt_adoption_state_v2",
 		CoveragePolicy: "known_over_eligible_v1", FreshnessSeconds: 1814400,
 		AllowedDimensions: []string{"group_id", "nsfw", "site_country", "welfare"},
 	},

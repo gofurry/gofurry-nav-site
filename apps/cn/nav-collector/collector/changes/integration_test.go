@@ -63,9 +63,18 @@ func TestNavChangeProjectorsIntegration(t *testing.T) {
 			}
 		}
 	}
+	for _, metric := range []string{"ipv6_adoption", "security_txt_adoption"} {
+		if _, err := tx.Exec(ctx, `INSERT INTO gfn_metric_entity_daily(metric_key,metric_version,fact_date,site_id,state,reason_code,source_observed_at,dimension_values,source_projection_versions,evaluated_at) SELECT metric_key,2,fact_date,site_id,state,reason_code,source_observed_at,dimension_values,source_projection_versions,evaluated_at FROM gfn_metric_entity_daily WHERE metric_key=$1 AND metric_version=1 AND site_id=870001`, metric); err != nil {
+			t.Fatal(err)
+		}
+	}
 	for _, detector := range []string{"ipv6_transition", "tls13_transition", "security_txt_transition"} {
 		assertNavProjectCount(t, ctx, tx, detector, day3, 1)
 		assertNavProjectCount(t, ctx, tx, detector, day4, 0)
+	}
+	for _, detector := range []string{"ipv6_transition", "security_txt_transition"} {
+		assertNavProjectV2Count(t, ctx, tx, detector, day3, 1)
+		assertNavProjectV2Count(t, ctx, tx, detector, day4, 0)
 	}
 	// A -> B -> A within one day is two effective events, not a collapsed diff.
 	t0 := day3.Add(2 * time.Hour)
@@ -125,6 +134,16 @@ func assertNavProjectCount(t *testing.T, ctx context.Context, tx pgx.Tx, key str
 		t.Fatalf("project %s count=%d want=%d", key, got, want)
 	}
 }
+func assertNavProjectV2Count(t *testing.T, ctx context.Context, tx pgx.Tx, key string, day time.Time, want int64) {
+	t.Helper()
+	var got int64
+	if err := tx.QueryRow(ctx, `SELECT gfn_project_change_day_v2($1,2,$2::date)`, key, day).Scan(&got); err != nil {
+		t.Fatalf("project %s/2: %v", key, err)
+	}
+	if got != want {
+		t.Fatalf("project %s/2 count=%d want=%d", key, got, want)
+	}
+}
 func timePtr(value time.Time) *time.Time { return &value }
 
 func TestNavChangeEngineBackfillRebuildIntegration(t *testing.T) {
@@ -142,10 +161,10 @@ func TestNavChangeEngineBackfillRebuildIntegration(t *testing.T) {
 	}
 	defer pool.Close()
 	var originalMetricSource, originalMetricProcessed, originalChangeSource, originalChangeProcessed pgtype.Date
-	if err := pool.QueryRow(ctx, `SELECT source_start_date,processed_through FROM gfn_metric_checkpoints WHERE metric_key='ipv6_adoption' AND metric_version=1`).Scan(&originalMetricSource, &originalMetricProcessed); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT source_start_date,processed_through FROM gfn_metric_checkpoints WHERE metric_key='ipv6_adoption' AND metric_version=2`).Scan(&originalMetricSource, &originalMetricProcessed); err != nil {
 		t.Fatal(err)
 	}
-	if err := pool.QueryRow(ctx, `SELECT source_start_date,processed_through FROM gfn_change_checkpoints WHERE detector_key='ipv6_transition' AND detector_version=1`).Scan(&originalChangeSource, &originalChangeProcessed); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT source_start_date,processed_through FROM gfn_change_checkpoints WHERE detector_key='ipv6_transition' AND detector_version=2`).Scan(&originalChangeSource, &originalChangeProcessed); err != nil {
 		t.Fatal(err)
 	}
 	day1 := time.Date(2026, 4, 5, 0, 0, 0, 0, time.UTC)
@@ -155,27 +174,27 @@ func TestNavChangeEngineBackfillRebuildIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	cleanup := func() {
-		_, _ = pool.Exec(context.Background(), `DELETE FROM gfn_change_events WHERE detector_key='ipv6_transition' AND site_id=870101;DELETE FROM gfn_metric_entity_daily WHERE site_id=870101;DELETE FROM gfn_site_daily WHERE site_id=870101;DELETE FROM gfn_target_tracking_periods WHERE id=$1;UPDATE gfn_metric_checkpoints SET source_start_date=$2,processed_through=$3 WHERE metric_key='ipv6_adoption' AND metric_version=1;UPDATE gfn_change_checkpoints SET source_start_date=$4,processed_through=$5 WHERE detector_key='ipv6_transition' AND detector_version=1`, pgx.QueryExecModeSimpleProtocol, target, originalMetricSource, originalMetricProcessed, originalChangeSource, originalChangeProcessed)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM gfn_change_events WHERE detector_key='ipv6_transition' AND site_id=870101;DELETE FROM gfn_metric_entity_daily WHERE site_id=870101;DELETE FROM gfn_site_daily WHERE site_id=870101;DELETE FROM gfn_target_tracking_periods WHERE id=$1;UPDATE gfn_metric_checkpoints SET source_start_date=$2,processed_through=$3 WHERE metric_key='ipv6_adoption' AND metric_version=2;UPDATE gfn_change_checkpoints SET source_start_date=$4,processed_through=$5 WHERE detector_key='ipv6_transition' AND detector_version=2`, pgx.QueryExecModeSimpleProtocol, target, originalMetricSource, originalMetricProcessed, originalChangeSource, originalChangeProcessed)
 	}
 	defer cleanup()
 	for _, fixture := range []struct {
 		day   time.Time
 		state string
 	}{{day1, "negative"}, {day3, "positive"}} {
-		if _, err := pool.Exec(ctx, `INSERT INTO gfn_site_daily(site_id,fact_date,snapshot_at,tracked_at_end,name,name_en,view_count,group_ids,primary_target_tracking_period_id,primary_target,primary_basis,active_target_count,projection_version,finalized_at) VALUES(870101,$1::date,$1::date+interval '23 hours',true,'Engine Smoke Site','Engine Smoke Site',0,'{}',$2,'engine.change.test','explicit',1,1,$1::date+interval '24 hours');INSERT INTO gfn_metric_entity_daily(metric_key,metric_version,fact_date,site_id,state,reason_code,source_observed_at,dimension_values,source_projection_versions,evaluated_at) VALUES('ipv6_adoption',1,$1::date,870101,$3,'fixture',$1::date+interval '12 hours','{}','{"gfn_site_daily":1}',$1::date+interval '24 hours')`, pgx.QueryExecModeSimpleProtocol, fixture.day, target, fixture.state); err != nil {
+		if _, err := pool.Exec(ctx, `INSERT INTO gfn_site_daily(site_id,fact_date,snapshot_at,tracked_at_end,name,name_en,view_count,group_ids,primary_target_tracking_period_id,primary_target,primary_basis,active_target_count,projection_version,finalized_at) VALUES(870101,$1::date,$1::date+interval '23 hours',true,'Engine Smoke Site','Engine Smoke Site',0,'{}',$2,'engine.change.test','explicit',1,1,$1::date+interval '24 hours');INSERT INTO gfn_metric_entity_daily(metric_key,metric_version,fact_date,site_id,state,reason_code,source_observed_at,dimension_values,source_projection_versions,evaluated_at) VALUES('ipv6_adoption',2,$1::date,870101,$3,'fixture',$1::date+interval '12 hours','{}','{"gfn_site_daily":1}',$1::date+interval '24 hours')`, pgx.QueryExecModeSimpleProtocol, fixture.day, target, fixture.state); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := pool.Exec(ctx, `UPDATE gfn_metric_checkpoints SET source_start_date=$1::date,processed_through=$2::date WHERE metric_key='ipv6_adoption' AND metric_version=1;UPDATE gfn_change_checkpoints SET source_start_date=$1::date,processed_through=$3::date WHERE detector_key='ipv6_transition' AND detector_version=1`, pgx.QueryExecModeSimpleProtocol, day1, day3, day1.AddDate(0, 0, 1)); err != nil {
+	if _, err := pool.Exec(ctx, `UPDATE gfn_metric_checkpoints SET source_start_date=$1::date,processed_through=$2::date WHERE metric_key='ipv6_adoption' AND metric_version=2;UPDATE gfn_change_checkpoints SET source_start_date=$1::date,processed_through=$3::date WHERE detector_key='ipv6_transition' AND detector_version=2`, pgx.QueryExecModeSimpleProtocol, day1, day3, day1.AddDate(0, 0, 1)); err != nil {
 		t.Fatal(err)
 	}
 	engine := New(pool, Options{})
 	through := day3
-	summary, err := engine.Backfill(ctx, BackfillOptions{Detector: "ipv6_transition", Version: 1, Through: &through, MaxDays: 1})
+	summary, err := engine.Backfill(ctx, BackfillOptions{Detector: "ipv6_transition", Version: 2, Through: &through, MaxDays: 1})
 	if err != nil || summary.Processed != 1 {
 		t.Fatalf("backfill summary=%+v err=%v", summary, err)
 	}
-	rebuilt, err := engine.Rebuild(ctx, "ipv6_transition", 1, day3, nil, 0, false)
+	rebuilt, err := engine.Rebuild(ctx, "ipv6_transition", 2, day3, nil, 0, false)
 	if err != nil || rebuilt.Processed != 1 {
 		t.Fatalf("rebuild summary=%+v err=%v", rebuilt, err)
 	}

@@ -249,21 +249,28 @@ func (q *Queries) NavChangeUpstreamProcessedThrough(ctx context.Context, arg Nav
 }
 
 const projectNavChangeDay = `-- name: ProjectNavChangeDay :one
-SELECT gfn_project_change_day(
-    $1::text,
-    $2::integer,
-    $3::date
-)::bigint
+SELECT CASE
+    WHEN $1::integer = 2 THEN gfn_project_change_day_v2(
+        $2::text,
+        $1::integer,
+        $3::date
+    )
+    ELSE gfn_project_change_day(
+        $2::text,
+        $1::integer,
+        $3::date
+    )
+END::bigint
 `
 
 type ProjectNavChangeDayParams struct {
-	DetectorKey     string      `json:"detector_key"`
 	DetectorVersion int32       `json:"detector_version"`
+	DetectorKey     string      `json:"detector_key"`
 	ProjectionDate  pgtype.Date `json:"projection_date"`
 }
 
 func (q *Queries) ProjectNavChangeDay(ctx context.Context, arg ProjectNavChangeDayParams) (int64, error) {
-	row := q.db.QueryRow(ctx, projectNavChangeDay, arg.DetectorKey, arg.DetectorVersion, arg.ProjectionDate)
+	row := q.db.QueryRow(ctx, projectNavChangeDay, arg.DetectorVersion, arg.DetectorKey, arg.ProjectionDate)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err

@@ -73,11 +73,18 @@ WHERE registry.detector_key = sqlc.arg(detector_key)
   AND registry.detector_version = sqlc.arg(detector_version);
 
 -- name: ProjectNavChangeDay :one
-SELECT gfn_project_change_day(
-    sqlc.arg(detector_key)::text,
-    sqlc.arg(detector_version)::integer,
-    sqlc.arg(projection_date)::date
-)::bigint;
+SELECT CASE
+    WHEN sqlc.arg(detector_version)::integer = 2 THEN gfn_project_change_day_v2(
+        sqlc.arg(detector_key)::text,
+        sqlc.arg(detector_version)::integer,
+        sqlc.arg(projection_date)::date
+    )
+    ELSE gfn_project_change_day(
+        sqlc.arg(detector_key)::text,
+        sqlc.arg(detector_version)::integer,
+        sqlc.arg(projection_date)::date
+    )
+END::bigint;
 
 -- name: AdvanceNavChangeCheckpoint :execrows
 UPDATE gfn_change_checkpoints

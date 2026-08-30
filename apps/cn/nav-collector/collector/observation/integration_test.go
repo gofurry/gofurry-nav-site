@@ -223,25 +223,40 @@ INSERT INTO gfn_site_target_protocol_daily (
 SELECT site.site_id+10000,site.site_id,'metric-' || site.site_id || '.example',protocol.protocol,$1::date,
        CASE WHEN site.site_id=99207 THEN NULL ELSE CASE WHEN site.site_id=99205 THEN 0 ELSE 1 END END,
        CASE WHEN site.site_id IN (99205,99207) THEN 0 ELSE 1 END,
-       CASE WHEN site.site_id IN (99204,99205,99207) THEN 0 ELSE 1 END,
-       0,
-       CASE WHEN site.site_id=99204 THEN 1 ELSE 0 END,
+	       CASE WHEN site.site_id IN (99204,99205,99207)
+	                  OR (protocol.protocol='dns' AND site.site_id=99208) THEN 0 ELSE 1 END,
+	       0,
+	       CASE WHEN site.site_id=99204 OR (protocol.protocol='dns' AND site.site_id=99208) THEN 1 ELSE 0 END,
        CASE WHEN site.site_id=99207 THEN NULL ELSE 0 END,
        CASE WHEN site.site_id=99207 THEN NULL ELSE 0 END,
        CASE WHEN site.site_id=99207 THEN NULL ELSE 0 END,
        CASE WHEN site.site_id=99207 THEN NULL ELSE 0 END,
        '{}'::jsonb,
        CASE WHEN site.site_id=99207 THEN 'legacy_observed_only' ELSE 'acquisition_ledger' END,
-       CASE WHEN protocol.protocol='security_txt' AND site.site_id IN (99200,99201,99202,99206,99208)
-            THEN CASE WHEN site.site_id=99202 THEN $2::timestamptz-interval '22 days' ELSE $2::timestamptz-interval '1 hour' END
-            ELSE NULL END,
-       CASE WHEN protocol.protocol='security_txt' THEN CASE site.site_id
-            WHEN 99200 THEN '{"exists":true}'::jsonb
-            WHEN 99201 THEN '{"exists":false}'::jsonb
-            WHEN 99202 THEN '{"exists":true}'::jsonb
-            WHEN 99206 THEN '{}'::jsonb
-            WHEN 99208 THEN '{"exists":true}'::jsonb
-            ELSE NULL END ELSE NULL END,
+	       CASE
+	           WHEN protocol.protocol='dns' AND site.site_id IN (99200,99201,99202,99206,99208)
+	               THEN CASE WHEN site.site_id=99202 THEN $2::timestamptz-interval '4 days' ELSE $2::timestamptz-interval '1 hour' END
+	           WHEN protocol.protocol='security_txt' AND site.site_id IN (99200,99201,99202,99206,99208)
+	               THEN CASE WHEN site.site_id=99202 THEN $2::timestamptz-interval '22 days' ELSE $2::timestamptz-interval '1 hour' END
+	           ELSE NULL
+	       END,
+	       CASE
+	           WHEN protocol.protocol='dns' THEN CASE site.site_id
+	               WHEN 99200 THEN '{"aaaa_evidence":"present"}'::jsonb
+	               WHEN 99201 THEN '{"aaaa_evidence":"confirmed_absent"}'::jsonb
+	               WHEN 99202 THEN '{"aaaa_evidence":"present"}'::jsonb
+	               WHEN 99206 THEN '{"aaaa_evidence":"unavailable"}'::jsonb
+	               WHEN 99208 THEN '{"aaaa_evidence":"present"}'::jsonb
+	               ELSE NULL END
+	           WHEN protocol.protocol='security_txt' THEN CASE site.site_id
+	               WHEN 99200 THEN '{"exists":true,"recognition":"present_valid"}'::jsonb
+	               WHEN 99201 THEN '{"exists":false,"recognition":"absent"}'::jsonb
+	               WHEN 99202 THEN '{"exists":true,"recognition":"present_valid"}'::jsonb
+	               WHEN 99206 THEN '{"exists":true,"recognition":"present_invalid"}'::jsonb
+	               WHEN 99208 THEN '{"exists":true,"recognition":"present_valid"}'::jsonb
+	               ELSE NULL END
+	           ELSE NULL
+	       END,
        1,$2,$2,$2
 FROM unnest(ARRAY[99200,99201,99202,99204,99205,99206,99207,99208]::bigint[]) site(site_id)
 CROSS JOIN unnest(ARRAY['dns','http','security_txt']::text[]) protocol(protocol);
@@ -259,24 +274,27 @@ SET source_start_date=$1::date,processed_through=NULL,updated_at=$2;
 	if err := engine.ValidateCatalog(ctx); err != nil {
 		t.Fatalf("Nav registry/evaluator drift: %v", err)
 	}
-	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_registry`, 3)
-	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints`, 3)
-	for _, key := range []string{"ipv6_adoption", "tls13_adoption", "security_txt_adoption"} {
-		result, err := engine.RunNext(ctx, key, 1, false)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_registry`, 5)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints`, 5)
+	for _, metric := range []struct {
+		key     string
+		version int32
+	}{{"ipv6_adoption", 2}, {"tls13_adoption", 1}, {"security_txt_adoption", 2}} {
+		result, err := engine.RunNext(ctx, metric.key, metric.version, false)
 		if err != nil || !result.Processed {
-			t.Fatalf("run Nav metric %s: result=%+v err=%v", key, result, err)
+			t.Fatalf("run Nav metric %s/%d: result=%+v err=%v", metric.key, metric.version, result, err)
 		}
 	}
 
 	wantIPv6 := map[int64]string{
-		99200: "positive/aaaa_present", 99201: "negative/aaaa_absent", 99202: "stale/dns_state_stale",
+		99200: "positive/aaaa_present", 99201: "negative/aaaa_confirmed_absent", 99202: "stale/dns_state_stale",
 		99203: "unknown/primary_target_unknown", 99204: "probe_failed/dns_probe_failed",
-		99205: "not_probed/dns_not_probed", 99206: "unknown/dns_metric_field_unknown",
+		99205: "not_probed/dns_not_probed", 99206: "unknown/aaaa_evidence_unavailable",
 		99207: "unknown/historical_probe_state_unknown", 99208: "positive/aaaa_present",
 	}
 	for siteID, expected := range wantIPv6 {
 		var state, reason string
-		if err := pool.QueryRow(ctx, `SELECT state,reason_code FROM gfn_metric_entity_daily WHERE metric_key='ipv6_adoption' AND metric_version=1 AND fact_date=$1 AND site_id=$2`, day, siteID).Scan(&state, &reason); err != nil {
+		if err := pool.QueryRow(ctx, `SELECT state,reason_code FROM gfn_metric_entity_daily WHERE metric_key='ipv6_adoption' AND metric_version=2 AND fact_date=$1 AND site_id=$2`, day, siteID).Scan(&state, &reason); err != nil {
 			t.Fatal(err)
 		}
 		if state+"/"+reason != expected {
@@ -301,15 +319,15 @@ SET source_start_date=$1::date,processed_through=NULL,updated_at=$2;
 	}
 
 	wantSecurity := map[int64]string{
-		99200: "positive/security_txt_present", 99201: "negative/security_txt_absent",
+		99200: "positive/security_txt_valid", 99201: "negative/security_txt_absent",
 		99202: "stale/security_txt_state_stale", 99203: "unknown/primary_target_unknown",
 		99204: "probe_failed/security_txt_probe_failed", 99205: "not_probed/security_txt_not_probed",
-		99206: "unknown/security_txt_field_unknown", 99207: "unknown/historical_probe_state_unknown",
-		99208: "positive/security_txt_present",
+		99206: "unknown/security_txt_invalid", 99207: "unknown/historical_probe_state_unknown",
+		99208: "positive/security_txt_valid",
 	}
 	for siteID, expected := range wantSecurity {
 		var state, reason string
-		if err := pool.QueryRow(ctx, `SELECT state,reason_code FROM gfn_metric_entity_daily WHERE metric_key='security_txt_adoption' AND metric_version=1 AND fact_date=$1 AND site_id=$2`, day, siteID).Scan(&state, &reason); err != nil {
+		if err := pool.QueryRow(ctx, `SELECT state,reason_code FROM gfn_metric_entity_daily WHERE metric_key='security_txt_adoption' AND metric_version=2 AND fact_date=$1 AND site_id=$2`, day, siteID).Scan(&state, &reason); err != nil {
 			t.Fatal(err)
 		}
 		if state+"/"+reason != expected {
@@ -327,7 +345,7 @@ SET source_start_date=$1::date,processed_through=NULL,updated_at=$2;
 	assertNavCount(t, ctx, pool, `SELECT population_count FROM gfn_metric_daily WHERE metric_key='ipv6_adoption' AND fact_date=$1 AND dimension_key='group_id' AND dimension_value='5'`, 1, day)
 	assertNavCount(t, ctx, pool, `SELECT population_count FROM gfn_metric_daily WHERE metric_key='ipv6_adoption' AND fact_date=$1 AND dimension_key='site_country' AND dimension_value='unknown'`, 1, day)
 
-	if _, err := engine.Rebuild(ctx, "ipv6_adoption", 1, day, day, 1, false); err != nil {
+	if _, err := engine.Rebuild(ctx, "ipv6_adoption", 2, day, day, 1, false); err != nil {
 		t.Fatalf("Nav metric rebuild: %v", err)
 	}
 	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_entity_daily WHERE metric_key='ipv6_adoption' AND fact_date=$1`, 9, day)
@@ -338,7 +356,7 @@ SET source_start_date=$1::date,processed_through=NULL,updated_at=$2;
 UPDATE gfn_metric_registry SET status='retired',retired_at=transaction_timestamp()
 WHERE metric_key='tls13_adoption' AND metric_version=1;
 DELETE FROM gfn_metric_checkpoints
-WHERE metric_key='security_txt_adoption' AND metric_version=1;
+	WHERE metric_key='security_txt_adoption' AND metric_version=2;
 UPDATE gfn_fact_rollup_checkpoints SET processed_through=$1::date
 WHERE pipeline_key IN ('nav.target_facts','nav.site_facts');
 `, pgx.QueryExecModeSimpleProtocol, nextDay); err != nil {
@@ -347,7 +365,7 @@ WHERE pipeline_key IN ('nav.target_facts','nav.site_facts');
 	if err := engine.Reconcile(ctx); err == nil {
 		t.Fatal("Nav reconcile should report the missing security.txt checkpoint")
 	}
-	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints WHERE metric_key='ipv6_adoption' AND processed_through=$1::date`, 1, nextDay)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints WHERE metric_key='ipv6_adoption' AND metric_version=2 AND processed_through=$1::date`, 1, nextDay)
 	assertNavCount(t, ctx, pool, `SELECT population_count FROM gfn_metric_daily WHERE metric_key='ipv6_adoption' AND fact_date=$1 AND dimension_key='global' AND dimension_value='all'`, 0, nextDay)
 	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints WHERE metric_key='tls13_adoption' AND processed_through=$1::date`, 1, day)
 	if _, err := engine.Rebuild(ctx, "tls13_adoption", 1, day, day, 1, true); err != nil {
@@ -374,17 +392,17 @@ INSERT INTO gfn_site_target_protocol_daily (
  success_count,partial_count,failure_count,skipped_count,missed_count,canceled_count,
  unattempted_count,failure_kind_counts,quality_basis,projection_version,finalized_at,created_at,updated_at
 )
-VALUES (109200,99200,'metric-99200.example','dns',$1::date,1,1,1,0,0,0,0,0,0,'{}','acquisition_ledger',1,$2,$2,$2);
+	VALUES (109200,99200,'metric-99200.example','dns',$1::date,1,1,1,0,0,0,0,0,0,'{}','acquisition_ledger',1,$2,$2,$2);
 UPDATE gfn_fact_rollup_checkpoints SET processed_through=$1::date
 WHERE pipeline_key IN ('nav.target_facts','nav.site_facts');
 `, pgx.QueryExecModeSimpleProtocol, futureDay, futureDay.Add(24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := engine.RunNext(ctx, "ipv6_adoption", 1, false); err == nil {
+	if _, err := engine.RunNext(ctx, "ipv6_adoption", 2, false); err == nil {
 		t.Fatal("future Nav metric evidence did not fail")
 	}
 	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_entity_daily WHERE metric_key='ipv6_adoption' AND fact_date=$1`, 0, futureDay)
-	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints WHERE metric_key='ipv6_adoption' AND processed_through=$1::date`, 1, nextDay)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints WHERE metric_key='ipv6_adoption' AND metric_version=2 AND processed_through=$1::date`, 1, nextDay)
 }
 
 func assertNavCount(t *testing.T, ctx context.Context, pool *pgxpool.Pool, query string, want int64, args ...any) {

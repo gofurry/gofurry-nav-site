@@ -60,6 +60,8 @@ type Runner struct {
 }
 
 type dnsResponseSummary struct {
+	QueryStatus        string  `json:"query_status"`
+	ErrorCategory      string  `json:"error_category,omitempty"`
 	Rcode              string  `json:"rcode"`
 	Authoritative      bool    `json:"authoritative"`
 	Truncated          bool    `json:"truncated"`
@@ -517,9 +519,17 @@ func buildDNSObservationPayload(results map[string][]models.DNSRecord) map[strin
 func buildDNSObservationPayloadWithMetadata(results map[string][]models.DNSRecord, metadata map[string]dnsQueryMetadata) map[string]any {
 	payload := make(map[string]any, len(results)+1)
 	aggregateRisks := map[string]struct{}{}
-	responseSummary := make(map[string]dnsResponseSummary, len(results))
+	responseSummary := make(map[string]dnsResponseSummary, len(results)+len(metadata))
+	recordTypes := make(map[string]struct{}, len(results)+len(metadata))
+	for recordType := range results {
+		recordTypes[recordType] = struct{}{}
+	}
+	for recordType := range metadata {
+		recordTypes[recordType] = struct{}{}
+	}
 
-	for recordType, records := range results {
+	for recordType := range recordTypes {
+		records := results[recordType]
 		v2Records := make([]map[string]any, 0, len(records))
 		for _, record := range records {
 			v2Record, risks := buildDNSObservationRecord(record)
@@ -559,6 +569,7 @@ func enrichDNSObservationStructure(payload map[string]any, results map[string][]
 
 	payload["has_a"] = stats.IPv4Count > 0
 	payload["has_aaaa"] = stats.IPv6Count > 0
+	payload["aaaa_evidence"] = classifyAAAAEvidence(stats.IPv6Count, metadata)
 	payload["ipv4_count"] = stats.IPv4Count
 	payload["ipv6_count"] = stats.IPv6Count
 	payload["cname_terminal"] = limitDNSObservationString(stats.CNAMETerminal)
@@ -566,6 +577,20 @@ func enrichDNSObservationStructure(payload map[string]any, results map[string][]
 	payload["mx_hosts"] = sortedLimitedDNSSet(stats.MXHosts)
 	payload["ttl_spread"] = stats.TTLSpread()
 	payload["mixed_private_public_ip"] = stats.PrivateIPSeen && stats.PublicIPSeen
+}
+
+func classifyAAAAEvidence(ipv6Count int, metadata map[string]dnsQueryMetadata) string {
+	if ipv6Count > 0 {
+		return "present"
+	}
+	query, ok := metadata["AAAA"]
+	if !ok || query.ResponseSummary.QueryStatus != "success" {
+		return "unavailable"
+	}
+	if strings.EqualFold(query.ResponseSummary.Rcode, "NOERROR") {
+		return "confirmed_absent"
+	}
+	return "unavailable"
 }
 
 type dnsObservationStructureStats struct {
@@ -821,6 +846,11 @@ func performDNSQuery(site models.GfnCollectorDomain, asnDB *geoip2.Reader, cityD
 
 			records, stats, queryMetadata, err := queryDNS(domain, rt.Type, resolver, countryDB, cityDB, asnDB, 0)
 			if err != nil {
+				queryMu.Lock()
+				metadata[rt.Name] = dnsQueryMetadata{ResponseSummary: dnsResponseSummary{
+					QueryStatus: "failed", ErrorCategory: "query_failed",
+				}}
+				queryMu.Unlock()
 				log.WarnFields(map[string]interface{}{
 					"domain":      domain,
 					"event":       "query_failed",
@@ -941,6 +971,7 @@ func queryDNSWithBudget(domain string, qtype uint16, resolver string, countryDB 
 	var durations []time.Duration
 	metadata := dnsQueryMetadata{
 		ResponseSummary: dnsResponseSummary{
+			QueryStatus:        "success",
 			Rcode:              dnsRcodeName(in.Rcode),
 			Authoritative:      in.Authoritative,
 			Truncated:          in.Truncated,

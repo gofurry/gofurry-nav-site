@@ -39,7 +39,7 @@ func projectKnownState(protocol string, payload []byte) ([]byte, error) {
 			"has_a": "has_a", "has_aaaa": "has_aaaa", "ipv4_count": "ipv4_count",
 			"ipv6_count": "ipv6_count", "cname_terminal": "cname_terminal",
 			"cname_chain_depth": "cname_depth", "name_server_hosts": "ns_hosts",
-			"mx_hosts": "mx_hosts", "risk_flags": "risk_flags",
+			"mx_hosts": "mx_hosts", "risk_flags": "risk_flags", "aaaa_evidence": "aaaa_evidence",
 		})
 		projected["a_records"] = dnsRecordValues(raw["A"])
 		projected["aaaa_records"] = dnsRecordValues(raw["AAAA"])
@@ -53,7 +53,7 @@ func projectKnownState(protocol string, payload []byte) ([]byte, error) {
 	case "robots":
 		projected = pick(raw, "exists", "status_code", "sitemap_count", "global_disallow_all")
 	case "security_txt":
-		projected = pick(raw, "exists", "status_code", "contact", "expires", "policy", "canonical")
+		projected = pick(raw, "exists", "recognition", "validation_errors", "path_used", "status_code", "content_type", "contact", "expires", "policy", "canonical")
 	case "llms_txt":
 		projected = pick(raw, "exists", "status_code", "title", "heading_count", "link_count", "optional_section_present")
 	case "page_assets":

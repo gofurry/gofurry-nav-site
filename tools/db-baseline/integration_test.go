@@ -199,8 +199,8 @@ VALUES
 				}
 			}
 
-			// Exercise the deployed alpha.4 -> alpha.5 Change Intelligence
-			// boundary independently, including Goose-owned detector seeds.
+			// Exercise the deployed alpha.4 boundary through current independently,
+			// including Goose-owned detector seeds and later compatibility repairs.
 			if test.label == "gfg" || test.label == "gfn" {
 				upgradeName := temporaryDatabaseName(test.label, "alpha4_upgrade")
 				createDatabase(t, ctx, adminDB, upgradeName)
@@ -211,7 +211,7 @@ VALUES
 					t.Fatalf("prepare %s alpha.4 fixture: %v", test.label, err)
 				}
 				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
-					t.Fatalf("upgrade %s alpha.4 to alpha.5: %v", test.label, err)
+					t.Fatalf("upgrade %s alpha.4 to current: %v", test.label, err)
 				}
 				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
 				if err != nil {
@@ -228,8 +228,55 @@ VALUES
 				if err := upgradeDB.QueryRowContext(ctx, fmt.Sprintf(`SELECT count(*) FROM public.%s_change_checkpoints`, prefix)).Scan(&checkpointCount); err != nil {
 					t.Fatal(err)
 				}
-				if registryCount != 5 || checkpointCount != 5 {
-					t.Fatalf("%s alpha.5 detector seeds registry=%d checkpoints=%d", test.label, registryCount, checkpointCount)
+				expectedDetectors := 5
+				if test.label == "gfn" {
+					expectedDetectors = 7
+				}
+				if registryCount != expectedDetectors || checkpointCount != expectedDetectors {
+					t.Fatalf("%s current detector seeds registry=%d checkpoints=%d, want %d", test.label, registryCount, checkpointCount, expectedDetectors)
+				}
+			}
+
+			// Exercise the released alpha.5 -> P0.5.1 Nav semantics repair
+			// boundary, including version retirement and v2 activation.
+			if test.label == "gfn" {
+				upgradeName := temporaryDatabaseName(test.label, "alpha5_repair_upgrade")
+				createDatabase(t, ctx, adminDB, upgradeName)
+				defer dropDatabase(t, adminDB, upgradeName)
+				upgradeDB := openDatabase(t, adminDSN, upgradeName)
+				defer upgradeDB.Close()
+				if err := goose.UpToContext(ctx, upgradeDB, migrationDir, 20260830010000); err != nil {
+					t.Fatalf("prepare gfn alpha.5 fixture: %v", err)
+				}
+				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
+					t.Fatalf("upgrade gfn alpha.5 through P0.5.1 repair: %v", err)
+				}
+				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
+				if err != nil {
+					t.Fatalf("inspect P0.5.1-upgraded gfn schema: %v", err)
+				}
+				if difference := schema.Difference(expected, upgradeActual); difference != "" {
+					t.Fatalf("alpha.5 -> P0.5.1 gfn schema drift: %s", difference)
+				}
+				var activeMetricV2, retiredMetricV1, activeDetectorV2, retiredDetectorV1 int
+				if err := upgradeDB.QueryRowContext(ctx, `
+SELECT
+  count(*) FILTER (WHERE metric_version=2 AND status='active'),
+  count(*) FILTER (WHERE metric_version=1 AND status='retired')
+FROM gfn_metric_registry
+WHERE metric_key IN ('ipv6_adoption','security_txt_adoption')`).Scan(&activeMetricV2, &retiredMetricV1); err != nil {
+					t.Fatal(err)
+				}
+				if err := upgradeDB.QueryRowContext(ctx, `
+SELECT
+  count(*) FILTER (WHERE detector_version=2 AND status='active'),
+  count(*) FILTER (WHERE detector_version=1 AND status='retired')
+FROM gfn_change_registry
+WHERE detector_key IN ('ipv6_transition','security_txt_transition')`).Scan(&activeDetectorV2, &retiredDetectorV1); err != nil {
+					t.Fatal(err)
+				}
+				if activeMetricV2 != 2 || retiredMetricV1 != 2 || activeDetectorV2 != 2 || retiredDetectorV1 != 2 {
+					t.Fatalf("gfn version cutover metrics active-v2=%d retired-v1=%d detectors active-v2=%d retired-v1=%d", activeMetricV2, retiredMetricV1, activeDetectorV2, retiredDetectorV1)
 				}
 			}
 
