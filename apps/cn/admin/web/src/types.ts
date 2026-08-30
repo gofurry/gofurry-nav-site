@@ -12,6 +12,17 @@ export type PageResult<T> = {
 export type AuthState = {
   initialized: boolean
   authenticated: boolean
+  identity?: AuthIdentity
+}
+
+export type AuthIdentity = {
+  account_id: number
+  username: string
+  display_name: string
+  role: 'owner' | 'developer' | 'operator'
+  status: 'active' | 'disabled'
+  session_version: number
+  capabilities: string[]
 }
 
 export type OptionItem = {

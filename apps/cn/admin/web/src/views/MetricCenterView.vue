@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { X } from 'lucide-vue-next'
 import { getJSON } from '../api'
+import { useAuthStore } from '../stores/auth'
 
 type MetricCounts = {
   population_count: number
@@ -81,13 +82,16 @@ type EntityPage = { total: number; list: Entity[] }
 type DailyPage = { total: number; list: Daily[] }
 type Tab = 'overview' | 'registry' | 'checkpoints' | 'daily' | 'entities'
 
-const tabs: Array<{ key: Tab; label: string }> = [
+const allTabs: Array<{ key: Tab; label: string; technical?: boolean }> = [
   { key: 'overview', label: 'Overview' },
-  { key: 'registry', label: 'Registry' },
-  { key: 'checkpoints', label: 'Checkpoints' },
+  { key: 'registry', label: 'Registry', technical: true },
+  { key: 'checkpoints', label: 'Checkpoints', technical: true },
   { key: 'daily', label: 'Daily Results' },
   { key: 'entities', label: 'Entity Explorer' },
 ]
+const auth = useAuthStore()
+const canTechnical = computed(() => auth.has('metrics.technical'))
+const tabs = computed(() => allTabs.filter((tab) => !tab.technical || canTechnical.value))
 const states = ['', 'positive', 'negative', 'stale', 'not_probed', 'probe_failed', 'unknown', 'not_applicable']
 
 const activeTab = ref<Tab>('overview')
@@ -111,11 +115,20 @@ async function loadFoundation() {
   loading.value = true
   error.value = ''
   try {
-    ;[overview.value, registry.value, checkpoints.value] = await Promise.all([
-      getJSON<Overview[]>('/api/v1/metrics/overview'),
-      getJSON<Registry[]>('/api/v1/metrics/registry'),
-      getJSON<Checkpoint[]>('/api/v1/metrics/checkpoints'),
-    ])
+    overview.value = await getJSON<Overview[]>('/api/v1/metrics/overview')
+    if (canTechnical.value) {
+      ;[registry.value, checkpoints.value] = await Promise.all([
+        getJSON<Registry[]>('/api/v1/metrics/registry'),
+        getJSON<Checkpoint[]>('/api/v1/metrics/checkpoints'),
+      ])
+    } else {
+      registry.value = overview.value.map((item) => ({
+        domain: item.domain, metric_key: item.metric_key, metric_version: item.metric_version,
+        metric_kind: '', entity_level: '', source_facts: [], eligibility_policy: '', state_policy: '',
+        freshness_seconds: null, allowed_dimensions: [], status: 'active', description: item.description,
+      }))
+      checkpoints.value = []
+    }
     seedFilters()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)

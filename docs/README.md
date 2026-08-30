@@ -8,6 +8,7 @@ This directory contains cross-service documentation for the active GoFurry produ
 - [Historical Fact operations](historical-facts.md)
 - [Analytics Metric operations](analytics-metrics.md)
 - [Change Intelligence operations](change-intelligence.md)
+- [Admin identity and authorization](admin-identity.md)
 - [Collection Center operations](operations/collection-center.md)
 - [Linux/systemd operations](operations/systemd.md)
 - [Architecture decisions](decisions/README.md)
@@ -15,5 +16,6 @@ This directory contains cross-service documentation for the active GoFurry produ
 - [Database contract](../contracts/database.md)
 - [Availability contract](../contracts/availability.md)
 - [Upstream dependency contract](../contracts/upstream.md)
+- [Admin authorization contract](../contracts/authorization.md)
 
 Application-specific documents remain beside their owners under `apps/cn`. Operational files that are consumed directly by Nginx or Coraza live under `ops`. Archive documentation under `legacy` is historical and is not an active operator guide.

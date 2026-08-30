@@ -3,18 +3,21 @@ package audit
 import "time"
 
 type AdminAuditLog struct {
-	ID             int64     `json:"id"`
-	Action         string    `json:"action"`
-	Resource       string    `json:"resource"`
-	TargetID       string    `json:"target_id"`
-	Operator       string    `json:"operator"`
-	SessionVersion int64     `json:"session_version"`
-	RequestID      string    `json:"request_id"`
-	IPAddress      string    `json:"ip_address"`
-	UserAgent      string    `json:"user_agent"`
-	BeforeData     string    `json:"before_data"`
-	AfterData      string    `json:"after_data"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID                int64     `json:"id"`
+	Action            string    `json:"action"`
+	Resource          string    `json:"resource"`
+	TargetID          string    `json:"target_id"`
+	Operator          string    `json:"operator"`
+	SessionVersion    int64     `json:"session_version"`
+	RequestID         string    `json:"request_id"`
+	IPAddress         string    `json:"ip_address"`
+	UserAgent         string    `json:"user_agent"`
+	BeforeData        string    `json:"before_data"`
+	AfterData         string    `json:"after_data"`
+	OperatorAccountID *int64    `json:"operator_account_id"`
+	OperatorName      string    `json:"operator_name"`
+	OperatorRole      string    `json:"operator_role"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 func (AdminAuditLog) TableName() string {
@@ -22,9 +25,12 @@ func (AdminAuditLog) TableName() string {
 }
 
 type Meta struct {
-	Operator       string
-	SessionVersion int64
-	RequestID      string
-	IPAddress      string
-	UserAgent      string
+	Operator          string
+	OperatorAccountID *int64
+	OperatorName      string
+	OperatorRole      string
+	SessionVersion    int64
+	RequestID         string
+	IPAddress         string
+	UserAgent         string
 }

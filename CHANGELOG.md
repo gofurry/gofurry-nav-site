@@ -8,11 +8,15 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add multi-account Admin identity, database-backed Principal validation, fixed Owner/Developer/Operator capability RBAC, Owner-only account management APIs, and transaction-safe last-Owner protection.
+- Add durable audit identity snapshots plus migration, authorization, session invalidation, route enforcement, and PostgreSQL concurrency coverage.
 - Add `ipv6_adoption/2` and `security_txt_adoption/2` with matching v2 Change detectors while retaining published v1 contracts for explicit historical rebuild.
 - Add CI-enforced PostgreSQL integration coverage for Game/Nav Change engines and Admin collection operations.
 
 ### Changed
 
+- Change Admin bootstrap/login from a singleton password to canonical username, display name, and password while preserving the legacy account password and timestamps during migration.
+- Keep JWTs role-free and resolve current role, status, session version, and capabilities from `gfa` on every authenticated request; minimally update the existing Vue login/setup compatibility surface.
 - Preserve per-query AAAA evidence and validate security.txt content before treating either capability as adopted; inconclusive DNS and unrecognized documents remain unknown instead of becoming false or positive.
 - Add count-backed pagination and compact detail views to Metric Daily/Entity results, Collection Run/Task history, and Collector lifecycle views.
 - Replace manual collection database-ID entry with searchable Game, Site, and current Site Target selectors.

@@ -6,6 +6,8 @@ GoFurry Admin is the active operations application for the China-site stack. It 
 
 Schema is owned exclusively by the root Goose migrations. Admin does not create or migrate tables during startup.
 
+Admin authentication is a database-backed multi-account system with fixed `owner`, `developer`, and `operator` roles. Cookie JWTs carry account/session identity only; each request reloads the current active account and authorizes a compiled capability policy. See [Admin identity and authorization](../../../docs/admin-identity.md).
+
 The Collection Center manages durable Schedule / Job / Run / Result / Collector Instance state directly through the existing `gfg` and `gfn` pools. It supports schedule enable/disable and Run Now, manual Game/Nav collection, queue/history, cancellation, constrained retry, audit, and ECharts outcome/coverage/timing. It does not proxy collection through either Backend, and Admin downtime does not stop autonomous Collector scheduling or workers.
 
 ## Development
@@ -28,7 +30,7 @@ Other commands:
 ~~~bash
 go run . --help
 go run . version
-go run . reset-password --config config/server.yaml --password '<new-password>'
+go run . reset-password --config config/server.yaml --username owner --password '<new-password>'
 ~~~
 
 The root command only displays help. `serve` runs in the foreground and shuts down Fiber, Redis, all PostgreSQL pools, and logging on SIGINT/SIGTERM.

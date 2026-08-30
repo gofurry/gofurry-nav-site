@@ -6,6 +6,8 @@ GoFurry Admin 是中国站 active 运维后台。前端以 Vue 构建后嵌入 G
 
 数据库 schema 只由仓库根目录的 Goose migrations 管理，Admin 启动时不会建表或执行迁移。
 
+Admin 认证为数据库校验的多账号系统，固定使用 `owner`、`developer`、`operator` 三种角色。Cookie JWT 只携带账号与会话身份，每个请求都会重新读取当前启用账号并按编译期 capability 策略授权。详见 [Admin 身份与授权说明](../../../docs/admin-identity.md)。
+
 “采集中心”直接通过现有 `gfg` / `gfn` 连接池管理 durable Schedule / Job / Run / Result / Collector Instance，支持计划启停与 Run Now、Game/Nav 手工采集、队列与历史、取消、受约束重试、审计以及 ECharts outcome/coverage/timing。Admin 不代理调用 Game/Nav Backend；Admin 停机不会停止 Collector 自主调度和 worker。
 
 ## 本地开发
@@ -28,7 +30,7 @@ go run . serve --config config/server.yaml
 ~~~bash
 go run . --help
 go run . version
-go run . reset-password --config config/server.yaml --password '<新密码>'
+go run . reset-password --config config/server.yaml --username owner --password '<新密码>'
 ~~~
 
 根命令只显示帮助。`serve` 在前台运行，收到 SIGINT/SIGTERM 后会关闭 Fiber、Redis、三个 PostgreSQL 连接池和日志。

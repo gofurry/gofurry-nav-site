@@ -125,8 +125,8 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Get("/changes/checkpoints", changeAPI.Checkpoints)
 	protected.Get("/changes/events", changeAPI.Events)
 
-	requestJSON(t, app, http.MethodPost, "/auth/bootstrap", `{"password":"integration-password"}`, nil, http.StatusOK)
-	login := requestJSON(t, app, http.MethodPost, "/auth/login", `{"password":"integration-password"}`, nil, http.StatusOK)
+	requestJSON(t, app, http.MethodPost, "/auth/bootstrap", `{"username":"owner","display_name":"Integration Owner","password":"integration-password"}`, nil, http.StatusOK)
+	login := requestJSON(t, app, http.MethodPost, "/auth/login", `{"username":"owner","password":"integration-password"}`, nil, http.StatusOK)
 	if len(login.Cookies()) == 0 {
 		t.Fatal("login response did not set the auth cookie")
 	}

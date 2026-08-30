@@ -9,7 +9,7 @@ Usage:
   ./gofurry-admin [command]
     install: install this service into systemd.
     uninstall: uninstall this service from systemd.
-    reset-password: reset the single admin password.
+    reset-password: reset one admin account password by username.
     version: show the current version.
     help: show this help message.
 `

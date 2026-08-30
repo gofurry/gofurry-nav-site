@@ -157,7 +157,7 @@ function iconFor(key: string) {
 
       <button class="admin-nav__link admin-sidebar__logout" type="button" title="登出" @click="logout">
         <LogOut :size="18" />
-        <span>登出</span>
+        <span>{{ auth.identity?.display_name || auth.identity?.username || '登出' }} · {{ auth.identity?.role }}</span>
       </button>
     </aside>
 

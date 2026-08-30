@@ -74,7 +74,7 @@ GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/o
 GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/changes -count=1
 GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/changes -count=1
 GOFURRY_NAV_BACKEND_INTEGRATION_CONFIG=/path/config.yaml go test ./apps/nav/navPage/dao -run TestPostgresNavBackendPersistenceSemantics -count=1
-GOFURRY_ADMIN_INTEGRATION_CONFIG=/path/server.yaml go test ./internal/bootstrap -run TestAdminThreeDatabasePersistence -count=1
+GOFURRY_ADMIN_INTEGRATION_CONFIG=/path/server.yaml go test ./internal/bootstrap -run 'TestAdmin(ThreeDatabasePersistence|IdentityAuthorizationPersistence|LegacyIdentityUpgrade)' -count=1
 ~~~
 
 Historical Fact smoke checks use the Collector CLI against the same isolated config: `facts status`, `facts backfill --dry-run`, `facts backfill`, and a bounded `facts rebuild --pipeline ... --from ... --through ...`. Keep `facts.retention_enabled=false` until checkpoints and fact row counts are verified.
@@ -84,6 +84,8 @@ Analytics Metric smoke checks run after Fact watermarks are ready: `metrics stat
 For Nav capability semantics, verify that an AAAA subquery failure never becomes a negative IPv6 state and that HTML/empty/malformed security.txt responses never become positive. Published v1 remains rebuildable; active v2 begins at its Goose-owned source-start cutoff and must not be backdated over evidence that cannot be reconstructed.
 
 Collection Center smoke must verify Run Now schedule lineage without `scheduled_for` or phase movement, nullable coverage when `expected_count=0`, Current/Historical Collector lifecycle views, count-backed Run/Result pagination, and searchable Game/Site/Target manual selection.
+
+Admin identity smoke must verify zero-account bootstrap, username/password login, current Principal/capabilities, role/status/password/session revocation, account-management authorization, and transaction-safe last-active-Owner protection. Run the PostgreSQL identity tests explicitly; a skipped integration test is not evidence.
 
 Change Intelligence smoke checks run after Metric/Fact watermarks are ready: `changes status`, `changes backfill --dry-run`, a bounded `changes backfill --detector ... --version ...`, and `changes rebuild --detector ... --version ... --from ... --dry-run` followed by the actual rebuild when intended. Rebuild must propagate through `processed_through`; an optional `--through` must equal that checkpoint and `--max-days` must not truncate it. Verify stable event keys, semantic-memory gaps, tracking identity resets, event time/provenance, and same-day Historical Fact names in Admin Change Center.
 

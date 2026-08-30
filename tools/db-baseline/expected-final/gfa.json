@@ -48,7 +48,8 @@
           "name": "session_version",
           "data_type": "bigint",
           "not_null": true,
-          "has_default": false
+          "has_default": true,
+          "default": "1"
         },
         {
           "name": "created_at",
@@ -67,12 +68,50 @@
           "data_type": "timestamp(0) without time zone",
           "not_null": false,
           "has_default": false
+        },
+        {
+          "name": "username",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "display_name",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "role",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "last_login_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": false,
+          "has_default": false
         }
       ],
       "constraints": [
         {
           "name": "gfa_admin_account_created_at_not_null",
           "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfa_admin_account_display_name_check",
+          "definition": "CHECK (btrim(display_name) \u003c\u003e ''::text AND display_name = btrim(display_name) AND length(display_name) \u003c= 128)"
+        },
+        {
+          "name": "gfa_admin_account_display_name_not_null",
+          "definition": "NOT NULL display_name"
         },
         {
           "name": "gfa_admin_account_id_not_null",
@@ -87,15 +126,52 @@
           "definition": "PRIMARY KEY (id)"
         },
         {
+          "name": "gfa_admin_account_role_check",
+          "definition": "CHECK (role = ANY (ARRAY['owner'::text, 'developer'::text, 'operator'::text]))"
+        },
+        {
+          "name": "gfa_admin_account_role_not_null",
+          "definition": "NOT NULL role"
+        },
+        {
+          "name": "gfa_admin_account_session_version_check",
+          "definition": "CHECK (session_version \u003e 0)"
+        },
+        {
           "name": "gfa_admin_account_session_version_not_null",
           "definition": "NOT NULL session_version"
         },
         {
+          "name": "gfa_admin_account_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['active'::text, 'disabled'::text]))"
+        },
+        {
+          "name": "gfa_admin_account_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
           "name": "gfa_admin_account_updated_at_not_null",
           "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfa_admin_account_username_check",
+          "definition": "CHECK (username = lower(btrim(username)) AND username ~ '^[a-z0-9][a-z0-9._-]{2,63}$'::text)"
+        },
+        {
+          "name": "gfa_admin_account_username_not_null",
+          "definition": "NOT NULL username"
         }
       ],
-      "indexes": null,
+      "indexes": [
+        {
+          "name": "idx_gfa_admin_account_role_status",
+          "definition": "CREATE INDEX idx_gfa_admin_account_role_status ON public.gfa_admin_account USING btree (role, status, id)"
+        },
+        {
+          "name": "uq_gfa_admin_account_username_ci",
+          "definition": "CREATE UNIQUE INDEX uq_gfa_admin_account_username_ci ON public.gfa_admin_account USING btree (lower(username))"
+        }
+      ],
       "triggers": null
     },
     {
@@ -174,9 +250,31 @@
           "data_type": "timestamp(0) without time zone",
           "not_null": true,
           "has_default": false
+        },
+        {
+          "name": "operator_account_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "operator_name",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "operator_role",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
         }
       ],
       "constraints": [
+        {
+          "name": "fk_gfa_admin_audit_operator_account",
+          "definition": "FOREIGN KEY (operator_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
+        },
         {
           "name": "gfa_admin_audit_log_action_not_null",
           "definition": "NOT NULL action"
@@ -190,8 +288,16 @@
           "definition": "NOT NULL id"
         },
         {
+          "name": "gfa_admin_audit_log_operator_name_not_null",
+          "definition": "NOT NULL operator_name"
+        },
+        {
           "name": "gfa_admin_audit_log_operator_not_null",
           "definition": "NOT NULL operator"
+        },
+        {
+          "name": "gfa_admin_audit_log_operator_role_not_null",
+          "definition": "NOT NULL operator_role"
         },
         {
           "name": "gfa_admin_audit_log_pkey",
@@ -204,9 +310,22 @@
         {
           "name": "gfa_admin_audit_log_session_version_not_null",
           "definition": "NOT NULL session_version"
+        },
+        {
+          "name": "gfa_admin_audit_operator_name_check",
+          "definition": "CHECK (btrim(operator_name) \u003c\u003e ''::text AND length(operator_name) \u003c= 128)"
+        },
+        {
+          "name": "gfa_admin_audit_operator_role_check",
+          "definition": "CHECK (operator_role = ANY (ARRAY['owner'::text, 'developer'::text, 'operator'::text, 'system'::text]))"
         }
       ],
-      "indexes": null,
+      "indexes": [
+        {
+          "name": "idx_gfa_admin_audit_operator_account_created",
+          "definition": "CREATE INDEX idx_gfa_admin_audit_operator_account_created ON public.gfa_admin_audit_log USING btree (operator_account_id, created_at DESC) WHERE (operator_account_id IS NOT NULL)"
+        }
+      ],
       "triggers": null
     }
   ],

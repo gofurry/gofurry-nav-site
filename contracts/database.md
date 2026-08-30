@@ -7,6 +7,8 @@
 - Direct pgx is allowed for pool lifecycle/health, explicit transaction control, and a documented query that sqlc cannot represent without harming correctness. It must not become an alternate query layer.
 - Preserve existing transaction boundaries. Redis refresh occurs only after DB commit where that was the established behavior; Redis failure never rolls back committed DB data.
 - Cross-database work is not atomic. In Admin, audit failure prevents the open `gfn`/`gfg` transaction from committing, but an already committed `gfa` audit is not presented as a distributed transaction.
+- `gfa_admin_account` stores canonical identity, fixed role assignment, status, password hash, and session version. Authorization policy remains compiled Go code. Account role/status changes that could remove an active Owner lock the active Owner set and must never leave zero active Owners.
+- `gfa_admin_audit_log` preserves its legacy operator field while snapshotting account ID, display name, and role for durable multi-account history.
 - Destructive migrations require a final production-module reference audit, recorded row counts, verified backup, fresh and baseline-upgrade tests, no `CASCADE`, no masking `IF EXISTS`, and no fake reversible `Down`.
 - Active Game storage objects use unversioned physical names. Long-lived compatibility views for retired `gfg_game_v2_*` names are not permitted.
 - `gfg_game.id` allocation uses `gfg_game_id_seq`; its floor must never be below any Game ID retained by current rows, Raw, acquisition ledger, tracking periods, historical Facts, release history, or another durable production table.

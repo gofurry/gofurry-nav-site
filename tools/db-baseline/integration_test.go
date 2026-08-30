@@ -280,6 +280,88 @@ WHERE detector_key IN ('ipv6_transition','security_txt_transition')`).Scan(&acti
 				}
 			}
 
+			// Exercise the released single-account Admin boundary through the
+			// multi-account identity migration. Values that carry security or
+			// historical meaning must survive unchanged, while ambiguous legacy
+			// databases must fail rather than receive guessed Owner privilege.
+			if test.label == "gfa" {
+				upgradeName := temporaryDatabaseName(test.label, "identity_upgrade")
+				createDatabase(t, ctx, adminDB, upgradeName)
+				defer dropDatabase(t, adminDB, upgradeName)
+				upgradeDB := openDatabase(t, adminDSN, upgradeName)
+				defer upgradeDB.Close()
+				if err := goose.UpToContext(ctx, upgradeDB, migrationDir, expectedBaselineVersion); err != nil {
+					t.Fatalf("prepare gfa legacy identity fixture: %v", err)
+				}
+				if _, err := upgradeDB.ExecContext(ctx, `
+INSERT INTO gfa_admin_account(id,password_hash,session_version,created_at,updated_at,password_updated_at)
+VALUES (1,'legacy-password-hash',7,'2026-08-01','2026-08-02','2026-08-03');
+INSERT INTO gfa_admin_audit_log(action,resource,target_id,operator,session_version,created_at)
+VALUES ('legacy-action','legacy-resource','1','admin',7,'2026-08-04');`); err != nil {
+					t.Fatal(err)
+				}
+				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
+					t.Fatalf("upgrade legacy gfa identity: %v", err)
+				}
+				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if difference := schema.Difference(expected, upgradeActual); difference != "" {
+					t.Fatalf("legacy identity -> current gfa schema drift: %s", difference)
+				}
+				var preserved int
+				if err := upgradeDB.QueryRowContext(ctx, `
+SELECT count(*)
+FROM gfa_admin_account account
+JOIN gfa_admin_audit_log audit ON audit.operator_account_id=account.id
+WHERE account.id=1 AND account.username='owner' AND account.display_name='Owner'
+  AND account.role='owner' AND account.status='active'
+  AND account.password_hash='legacy-password-hash' AND account.session_version=7
+  AND account.created_at='2026-08-01' AND account.updated_at='2026-08-02'
+  AND account.password_updated_at='2026-08-03'
+  AND audit.action='legacy-action' AND audit.operator_name='Owner' AND audit.operator_role='owner'`).Scan(&preserved); err != nil {
+					t.Fatal(err)
+				}
+				if preserved != 1 {
+					t.Fatal("legacy Admin identity or audit snapshot was not preserved")
+				}
+				var nextID int64
+				if err := upgradeDB.QueryRowContext(ctx, `SELECT nextval('gfa_admin_account_id_seq')`).Scan(&nextID); err != nil {
+					t.Fatal(err)
+				}
+				if nextID != 2 {
+					t.Fatalf("Admin account sequence next=%d, want 2", nextID)
+				}
+
+				ambiguousName := temporaryDatabaseName(test.label, "identity_ambiguous")
+				createDatabase(t, ctx, adminDB, ambiguousName)
+				defer dropDatabase(t, adminDB, ambiguousName)
+				ambiguousDB := openDatabase(t, adminDSN, ambiguousName)
+				defer ambiguousDB.Close()
+				if err := goose.UpToContext(ctx, ambiguousDB, migrationDir, expectedBaselineVersion); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := ambiguousDB.ExecContext(ctx, `
+INSERT INTO gfa_admin_account(id,password_hash,session_version,created_at,updated_at)
+VALUES (1,'one',1,now(),now()),(2,'two',1,now(),now())`); err != nil {
+					t.Fatal(err)
+				}
+				if err := goose.UpContext(ctx, ambiguousDB, migrationDir); err == nil {
+					t.Fatal("ambiguous multi-row legacy Admin database was migrated")
+				}
+				var usernameColumnExists bool
+				if err := ambiguousDB.QueryRowContext(ctx, `SELECT EXISTS (
+  SELECT 1 FROM information_schema.columns
+  WHERE table_schema='public' AND table_name='gfa_admin_account' AND column_name='username'
+)`).Scan(&usernameColumnExists); err != nil {
+					t.Fatal(err)
+				}
+				if usernameColumnExists {
+					t.Fatal("failed ambiguous migration left partial identity columns")
+				}
+			}
+
 			adoptName := temporaryDatabaseName(test.label, "adopt")
 			createDatabase(t, ctx, adminDB, adoptName)
 			defer dropDatabase(t, adminDB, adoptName)

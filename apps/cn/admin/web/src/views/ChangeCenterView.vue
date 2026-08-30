@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { getJSON } from '../api'
+import { useAuthStore } from '../stores/auth'
 
 type Overview = { domain:'game'|'nav'; detector_key:string; detector_version:number; status:string; description:string; watermark_policy:string; source_start_date:string|null; processed_through:string|null; upstream_processed_through:string|null; lag_days:number|null; latest_projection_date:string|null; latest_event_count:number; total_event_count:number }
 type Registry = { domain:'game'|'nav'; detector_key:string; detector_version:number; source_kind:string; source_contracts:string[]; detection_policy:string; watermark_policy:string; event_codes:string[]; processing_grain:string; status:string; description:string }
@@ -9,7 +10,10 @@ type ChangeEvent = { domain:'game'|'nav'; event_key:string; detector_key:string;
 type EventPage = { list:ChangeEvent[]; total:number; page:number; page_size:number }
 type Tab = 'overview'|'registry'|'checkpoints'|'events'
 
-const tabs:Array<{key:Tab;label:string}>=[{key:'overview',label:'Overview'},{key:'registry',label:'Registry'},{key:'checkpoints',label:'Checkpoints'},{key:'events',label:'Events'}]
+const allTabs:Array<{key:Tab;label:string;technical?:boolean}>=[{key:'overview',label:'Overview'},{key:'registry',label:'Registry',technical:true},{key:'checkpoints',label:'Checkpoints',technical:true},{key:'events',label:'Events'}]
+const auth=useAuthStore()
+const canTechnical=computed(()=>auth.has('changes.technical'))
+const tabs=computed(()=>allTabs.filter((tab)=>!tab.technical||canTechnical.value))
 const activeTab=ref<Tab>('overview')
 const loading=ref(false)
 const error=ref('')
@@ -20,7 +24,7 @@ const events=ref<EventPage>({list:[],total:0,page:1,page_size:50})
 const selected=ref<ChangeEvent|null>(null)
 const filter=ref({domain:'nav',detector:'',version:0,eventCode:'',entityID:'',from:'',to:'',page:1,pageSize:50})
 
-async function loadFoundation(){loading.value=true;error.value='';try{;[overview.value,registry.value,checkpoints.value]=await Promise.all([getJSON<Overview[]>('/api/v1/changes/overview'),getJSON<Registry[]>('/api/v1/changes/registry'),getJSON<Checkpoint[]>('/api/v1/changes/checkpoints')])}catch(cause){error.value=cause instanceof Error?cause.message:String(cause)}finally{loading.value=false}}
+async function loadFoundation(){loading.value=true;error.value='';try{overview.value=await getJSON<Overview[]>('/api/v1/changes/overview');if(canTechnical.value){;[registry.value,checkpoints.value]=await Promise.all([getJSON<Registry[]>('/api/v1/changes/registry'),getJSON<Checkpoint[]>('/api/v1/changes/checkpoints')])}else{registry.value=[];checkpoints.value=[]}}catch(cause){error.value=cause instanceof Error?cause.message:String(cause)}finally{loading.value=false}}
 async function loadEvents(reset=false){if(reset)filter.value.page=1;loading.value=true;error.value='';try{const params=new URLSearchParams({domain:filter.value.domain,page:String(filter.value.page),page_size:String(filter.value.pageSize)});if(filter.value.detector)params.set('detector',filter.value.detector);if(filter.value.version)params.set('version',String(filter.value.version));if(filter.value.eventCode)params.set('event_code',filter.value.eventCode);if(filter.value.entityID)params.set('entity_id',filter.value.entityID);if(filter.value.from)params.set('from',filter.value.from);if(filter.value.to)params.set('to',filter.value.to);events.value=await getJSON<EventPage>(`/api/v1/changes/events?${params}`)}catch(cause){error.value=cause instanceof Error?cause.message:String(cause)}finally{loading.value=false}}
 function selectTab(tab:Tab){activeTab.value=tab;if(tab==='events'&&events.value.list.length===0)void loadEvents()}
 function previousPage(){if(filter.value.page>1){filter.value.page--;void loadEvents()}}

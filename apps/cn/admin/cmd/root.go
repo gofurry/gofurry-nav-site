@@ -119,7 +119,7 @@ func newUninstallCmd() *cobra.Command {
 }
 
 func newResetPasswordCmd(options *cliOptions) *cobra.Command {
-	var password string
+	var username, password string
 
 	cmd := &cobra.Command{
 		Use:   "reset-password",
@@ -127,6 +127,9 @@ func newResetPasswordCmd(options *cliOptions) *cobra.Command {
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if err := initConfig(options.configFile); err != nil {
 				return err
+			}
+			if strings.TrimSpace(username) == "" {
+				return fmt.Errorf("--username is required")
 			}
 			if strings.TrimSpace(password) == "" {
 				return fmt.Errorf("--password is required")
@@ -140,7 +143,7 @@ func newResetPasswordCmd(options *cliOptions) *cobra.Command {
 			}
 			defer func() { _ = runtime.Shutdown() }()
 
-			if err := runtime.AuthService.ResetPassword(password, audit.SystemMeta("cli/reset-password")); err != nil {
+			if err := runtime.AuthService.ResetPasswordByUsername(cmd.Context(), username, password, audit.SystemMeta("cli/reset-password")); err != nil {
 				return err
 			}
 			applog.InfoKV("admin password reset successfully")
@@ -148,6 +151,7 @@ func newResetPasswordCmd(options *cliOptions) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&username, "username", "", "canonical username of the account to reset")
 	cmd.Flags().StringVar(&password, "password", "", "new admin password")
 	return cmd
 }

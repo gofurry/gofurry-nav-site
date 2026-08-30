@@ -22,6 +22,21 @@ func (q *Queries) CountAdminAccounts(ctx context.Context) (int64, error) {
 	return column_1, err
 }
 
+const countAdminAccountsFiltered = `-- name: CountAdminAccountsFiltered :one
+SELECT COUNT(*)::bigint
+FROM gfa_admin_account
+WHERE $1::text = ''
+   OR username ILIKE '%' || $1::text || '%'
+   OR display_name ILIKE '%' || $1::text || '%'
+`
+
+func (q *Queries) CountAdminAccountsFiltered(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countAdminAccountsFiltered, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const foundationPing = `-- name: FoundationPing :one
 SELECT 1::bigint AS value
 `
@@ -33,19 +48,121 @@ func (q *Queries) FoundationPing(ctx context.Context) (int64, error) {
 	return value, err
 }
 
-const getAdminAccount = `-- name: GetAdminAccount :one
-SELECT id, password_hash, session_version, created_at, updated_at, password_updated_at
+const getAdminAccountByID = `-- name: GetAdminAccountByID :one
+SELECT id, username, display_name, role, status, password_hash, session_version,
+       last_login_at, created_at, updated_at, password_updated_at
 FROM gfa_admin_account
-WHERE id = 1
+WHERE id = $1
 `
 
-func (q *Queries) GetAdminAccount(ctx context.Context) (GfaAdminAccount, error) {
-	row := q.db.QueryRow(ctx, getAdminAccount)
-	var i GfaAdminAccount
+type GetAdminAccountByIDRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) GetAdminAccountByID(ctx context.Context, accountID int64) (GetAdminAccountByIDRow, error) {
+	row := q.db.QueryRow(ctx, getAdminAccountByID, accountID)
+	var i GetAdminAccountByIDRow
 	err := row.Scan(
 		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
 		&i.PasswordHash,
 		&i.SessionVersion,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
+}
+
+const getAdminAccountByUsername = `-- name: GetAdminAccountByUsername :one
+SELECT id, username, display_name, role, status, password_hash, session_version,
+       last_login_at, created_at, updated_at, password_updated_at
+FROM gfa_admin_account
+WHERE lower(username) = lower(btrim($1::text))
+`
+
+type GetAdminAccountByUsernameRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) GetAdminAccountByUsername(ctx context.Context, username string) (GetAdminAccountByUsernameRow, error) {
+	row := q.db.QueryRow(ctx, getAdminAccountByUsername, username)
+	var i GetAdminAccountByUsernameRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
+}
+
+const incrementAdminSessionVersion = `-- name: IncrementAdminSessionVersion :one
+UPDATE gfa_admin_account
+SET session_version = session_version + 1,
+    updated_at = NOW()::timestamp(0)
+WHERE id = $1
+RETURNING id, username, display_name, role, status, password_hash, session_version,
+          last_login_at, created_at, updated_at, password_updated_at
+`
+
+type IncrementAdminSessionVersionRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) IncrementAdminSessionVersion(ctx context.Context, accountID int64) (IncrementAdminSessionVersionRow, error) {
+	row := q.db.QueryRow(ctx, incrementAdminSessionVersion, accountID)
+	var i IncrementAdminSessionVersionRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordUpdatedAt,
@@ -55,25 +172,60 @@ func (q *Queries) GetAdminAccount(ctx context.Context) (GfaAdminAccount, error) 
 
 const insertAdminAccount = `-- name: InsertAdminAccount :one
 INSERT INTO gfa_admin_account
-    (id, password_hash, session_version, created_at, updated_at, password_updated_at)
+    (username, display_name, role, status, password_hash, session_version,
+     created_at, updated_at, password_updated_at)
 VALUES
-    (1, $1, $2, NOW()::timestamp(0), NOW()::timestamp(0), $3)
-RETURNING id, password_hash, session_version, created_at, updated_at, password_updated_at
+    ($1, $2, $3, $4,
+     $5, $6, NOW()::timestamp(0),
+     NOW()::timestamp(0), $7)
+RETURNING id, username, display_name, role, status, password_hash, session_version,
+          last_login_at, created_at, updated_at, password_updated_at
 `
 
 type InsertAdminAccountParams struct {
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
 	PasswordHash      string           `json:"password_hash"`
 	SessionVersion    int64            `json:"session_version"`
 	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
 }
 
-func (q *Queries) InsertAdminAccount(ctx context.Context, arg InsertAdminAccountParams) (GfaAdminAccount, error) {
-	row := q.db.QueryRow(ctx, insertAdminAccount, arg.PasswordHash, arg.SessionVersion, arg.PasswordUpdatedAt)
-	var i GfaAdminAccount
+type InsertAdminAccountRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) InsertAdminAccount(ctx context.Context, arg InsertAdminAccountParams) (InsertAdminAccountRow, error) {
+	row := q.db.QueryRow(ctx, insertAdminAccount,
+		arg.Username,
+		arg.DisplayName,
+		arg.Role,
+		arg.Status,
+		arg.PasswordHash,
+		arg.SessionVersion,
+		arg.PasswordUpdatedAt,
+	)
+	var i InsertAdminAccountRow
 	err := row.Scan(
 		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
 		&i.PasswordHash,
 		&i.SessionVersion,
+		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordUpdatedAt,
@@ -84,24 +236,30 @@ func (q *Queries) InsertAdminAccount(ctx context.Context, arg InsertAdminAccount
 const insertAdminAuditLog = `-- name: InsertAdminAuditLog :exec
 INSERT INTO gfa_admin_audit_log
     (action, resource, target_id, operator, session_version, request_id, ip_address,
-     user_agent, before_data, after_data, created_at)
+     user_agent, before_data, after_data, operator_account_id, operator_name,
+     operator_role, created_at)
 VALUES
     ($1, $2, $3, $4,
      $5, $6, $7,
-     $8, $9, $10, NOW()::timestamp(0))
+     $8, $9, $10,
+     $11, $12, $13,
+     NOW()::timestamp(0))
 `
 
 type InsertAdminAuditLogParams struct {
-	Action         string  `json:"action"`
-	Resource       string  `json:"resource"`
-	TargetID       *string `json:"target_id"`
-	Operator       string  `json:"operator"`
-	SessionVersion int64   `json:"session_version"`
-	RequestID      *string `json:"request_id"`
-	IpAddress      *string `json:"ip_address"`
-	UserAgent      *string `json:"user_agent"`
-	BeforeData     *string `json:"before_data"`
-	AfterData      *string `json:"after_data"`
+	Action            string  `json:"action"`
+	Resource          string  `json:"resource"`
+	TargetID          *string `json:"target_id"`
+	Operator          string  `json:"operator"`
+	SessionVersion    int64   `json:"session_version"`
+	RequestID         *string `json:"request_id"`
+	IpAddress         *string `json:"ip_address"`
+	UserAgent         *string `json:"user_agent"`
+	BeforeData        *string `json:"before_data"`
+	AfterData         *string `json:"after_data"`
+	OperatorAccountID *int64  `json:"operator_account_id"`
+	OperatorName      string  `json:"operator_name"`
+	OperatorRole      string  `json:"operator_role"`
 }
 
 func (q *Queries) InsertAdminAuditLog(ctx context.Context, arg InsertAdminAuditLogParams) error {
@@ -116,33 +274,384 @@ func (q *Queries) InsertAdminAuditLog(ctx context.Context, arg InsertAdminAuditL
 		arg.UserAgent,
 		arg.BeforeData,
 		arg.AfterData,
+		arg.OperatorAccountID,
+		arg.OperatorName,
+		arg.OperatorRole,
 	)
 	return err
+}
+
+const listAdminAccounts = `-- name: ListAdminAccounts :many
+SELECT id, username, display_name, role, status, password_hash, session_version,
+       last_login_at, created_at, updated_at, password_updated_at
+FROM gfa_admin_account
+WHERE $1::text = ''
+   OR username ILIKE '%' || $1::text || '%'
+   OR display_name ILIKE '%' || $1::text || '%'
+ORDER BY username, id
+LIMIT $3::int OFFSET $2::int
+`
+
+type ListAdminAccountsParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+type ListAdminAccountsRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) ListAdminAccounts(ctx context.Context, arg ListAdminAccountsParams) ([]ListAdminAccountsRow, error) {
+	rows, err := q.db.Query(ctx, listAdminAccounts, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAdminAccountsRow{}
+	for rows.Next() {
+		var i ListAdminAccountsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Username,
+			&i.DisplayName,
+			&i.Role,
+			&i.Status,
+			&i.PasswordHash,
+			&i.SessionVersion,
+			&i.LastLoginAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.PasswordUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockActiveOwnerIDs = `-- name: LockActiveOwnerIDs :many
+SELECT id
+FROM gfa_admin_account
+WHERE role = 'owner' AND status = 'active'
+ORDER BY id
+FOR UPDATE
+`
+
+func (q *Queries) LockActiveOwnerIDs(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.Query(ctx, lockActiveOwnerIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockAdminAccountByID = `-- name: LockAdminAccountByID :one
+SELECT id, username, display_name, role, status, password_hash, session_version,
+       last_login_at, created_at, updated_at, password_updated_at
+FROM gfa_admin_account
+WHERE id = $1
+FOR UPDATE
+`
+
+type LockAdminAccountByIDRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) LockAdminAccountByID(ctx context.Context, accountID int64) (LockAdminAccountByIDRow, error) {
+	row := q.db.QueryRow(ctx, lockAdminAccountByID, accountID)
+	var i LockAdminAccountByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
+}
+
+const lockAdminBootstrap = `-- name: LockAdminBootstrap :one
+SELECT pg_advisory_xact_lock(718210552001::bigint) IS NULL AS locked
+`
+
+func (q *Queries) LockAdminBootstrap(ctx context.Context) (interface{}, error) {
+	row := q.db.QueryRow(ctx, lockAdminBootstrap)
+	var locked interface{}
+	err := row.Scan(&locked)
+	return locked, err
+}
+
+const updateAdminAccountDisplayName = `-- name: UpdateAdminAccountDisplayName :one
+UPDATE gfa_admin_account
+SET display_name = $1,
+    updated_at = NOW()::timestamp(0)
+WHERE id = $2
+RETURNING id, username, display_name, role, status, password_hash, session_version,
+          last_login_at, created_at, updated_at, password_updated_at
+`
+
+type UpdateAdminAccountDisplayNameParams struct {
+	DisplayName string `json:"display_name"`
+	AccountID   int64  `json:"account_id"`
+}
+
+type UpdateAdminAccountDisplayNameRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) UpdateAdminAccountDisplayName(ctx context.Context, arg UpdateAdminAccountDisplayNameParams) (UpdateAdminAccountDisplayNameRow, error) {
+	row := q.db.QueryRow(ctx, updateAdminAccountDisplayName, arg.DisplayName, arg.AccountID)
+	var i UpdateAdminAccountDisplayNameRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
 }
 
 const updateAdminAccountPassword = `-- name: UpdateAdminAccountPassword :one
 UPDATE gfa_admin_account
 SET password_hash = $1,
-    session_version = $2,
+    session_version = session_version + 1,
     updated_at = NOW()::timestamp(0),
-    password_updated_at = $3
-WHERE id = 1
-RETURNING id, password_hash, session_version, created_at, updated_at, password_updated_at
+    password_updated_at = $2
+WHERE id = $3
+RETURNING id, username, display_name, role, status, password_hash, session_version,
+          last_login_at, created_at, updated_at, password_updated_at
 `
 
 type UpdateAdminAccountPasswordParams struct {
 	PasswordHash      string           `json:"password_hash"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+	AccountID         int64            `json:"account_id"`
+}
+
+type UpdateAdminAccountPasswordRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
 	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
 }
 
-func (q *Queries) UpdateAdminAccountPassword(ctx context.Context, arg UpdateAdminAccountPasswordParams) (GfaAdminAccount, error) {
-	row := q.db.QueryRow(ctx, updateAdminAccountPassword, arg.PasswordHash, arg.SessionVersion, arg.PasswordUpdatedAt)
-	var i GfaAdminAccount
+func (q *Queries) UpdateAdminAccountPassword(ctx context.Context, arg UpdateAdminAccountPasswordParams) (UpdateAdminAccountPasswordRow, error) {
+	row := q.db.QueryRow(ctx, updateAdminAccountPassword, arg.PasswordHash, arg.PasswordUpdatedAt, arg.AccountID)
+	var i UpdateAdminAccountPasswordRow
 	err := row.Scan(
 		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
 		&i.PasswordHash,
 		&i.SessionVersion,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
+}
+
+const updateAdminAccountRole = `-- name: UpdateAdminAccountRole :one
+UPDATE gfa_admin_account
+SET role = $1,
+    session_version = session_version + 1,
+    updated_at = NOW()::timestamp(0)
+WHERE id = $2
+RETURNING id, username, display_name, role, status, password_hash, session_version,
+          last_login_at, created_at, updated_at, password_updated_at
+`
+
+type UpdateAdminAccountRoleParams struct {
+	Role      string `json:"role"`
+	AccountID int64  `json:"account_id"`
+}
+
+type UpdateAdminAccountRoleRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) UpdateAdminAccountRole(ctx context.Context, arg UpdateAdminAccountRoleParams) (UpdateAdminAccountRoleRow, error) {
+	row := q.db.QueryRow(ctx, updateAdminAccountRole, arg.Role, arg.AccountID)
+	var i UpdateAdminAccountRoleRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
+}
+
+const updateAdminAccountStatus = `-- name: UpdateAdminAccountStatus :one
+UPDATE gfa_admin_account
+SET status = $1,
+    session_version = session_version + 1,
+    updated_at = NOW()::timestamp(0)
+WHERE id = $2
+RETURNING id, username, display_name, role, status, password_hash, session_version,
+          last_login_at, created_at, updated_at, password_updated_at
+`
+
+type UpdateAdminAccountStatusParams struct {
+	Status    string `json:"status"`
+	AccountID int64  `json:"account_id"`
+}
+
+type UpdateAdminAccountStatusRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) UpdateAdminAccountStatus(ctx context.Context, arg UpdateAdminAccountStatusParams) (UpdateAdminAccountStatusRow, error) {
+	row := q.db.QueryRow(ctx, updateAdminAccountStatus, arg.Status, arg.AccountID)
+	var i UpdateAdminAccountStatusRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
+}
+
+const updateAdminLastLogin = `-- name: UpdateAdminLastLogin :one
+UPDATE gfa_admin_account
+SET last_login_at = NOW()::timestamp(0),
+    updated_at = NOW()::timestamp(0)
+WHERE id = $1
+RETURNING id, username, display_name, role, status, password_hash, session_version,
+          last_login_at, created_at, updated_at, password_updated_at
+`
+
+type UpdateAdminLastLoginRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) UpdateAdminLastLogin(ctx context.Context, accountID int64) (UpdateAdminLastLoginRow, error) {
+	row := q.db.QueryRow(ctx, updateAdminLastLogin, accountID)
+	var i UpdateAdminLastLoginRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.LastLoginAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PasswordUpdatedAt,
