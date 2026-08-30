@@ -6,6 +6,22 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+### Added
+
+- Add `ipv6_adoption/2` and `security_txt_adoption/2` with matching v2 Change detectors while retaining published v1 contracts for explicit historical rebuild.
+- Add CI-enforced PostgreSQL integration coverage for Game/Nav Change engines and Admin collection operations.
+
+### Changed
+
+- Preserve per-query AAAA evidence and validate security.txt content before treating either capability as adopted; inconclusive DNS and unrecognized documents remain unknown instead of becoming false or positive.
+- Add count-backed pagination and compact detail views to Metric Daily/Entity results, Collection Run/Task history, and Collector lifecycle views.
+- Replace manual collection database-ID entry with searchable Game, Site, and current Site Target selectors.
+
+### Fixed
+
+- Preserve `schedule_id` and `schedule_version` on Schedule Run Now jobs without creating or moving a scheduled slot, and report unavailable coverage as null rather than 0%.
+- Separate current and historical Collector instances, clarify chart timing units and spacing, and keep Task Result details within the viewport.
+
 ## v3.0.0-alpha.5 - 2026-08-30
 
 ### Added

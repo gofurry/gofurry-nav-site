@@ -6,7 +6,7 @@ V3-P0.4 materializes canonical semantic changes after Historical Facts and Analy
 
 The existing collectors run `Control -> Facts -> Metrics -> Changes`. Goose owns `gfg_change_registry`, `gfg_change_events`, `gfg_change_checkpoints` and their `gfn_*` equivalents. Runtime and Admin never mutate Registry rows.
 
-Game detectors are `free_game_transition/1`, `windows_support_transition/1`, `linux_support_transition/1`, `game_release_transition/1`, and `game_price_transition/1`. Nav detectors are `ipv6_transition/1`, `tls13_transition/1`, `security_txt_transition/1`, `primary_target_transition/1`, and `tls_certificate_transition/1`.
+Game detectors are `free_game_transition/1`, `windows_support_transition/1`, `linux_support_transition/1`, `game_release_transition/1`, and `game_price_transition/1`. Nav keeps retired `ipv6_transition/1` and `security_txt_transition/1` compiled for historical rebuild, and runs active `ipv6_transition/2`, `security_txt_transition/2`, `tls13_transition/1`, `primary_target_transition/1`, and `tls_certificate_transition/1`. The v2 detectors consume only their matching v2 Metric contracts, so a semantic transition never mixes metric versions.
 
 Metric detectors read Metric Entity Daily plus same-day Historical Facts. Price and certificate detectors read finalized Facts. Release reads canonical Release History with reliable tracking-period attribution. Primary reads effective-dated Primary Target periods. Raw observations, collection Jobs/Runs/Results, Redis, current catalogs, and legacy Nav Change are excluded.
 

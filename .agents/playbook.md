@@ -81,6 +81,10 @@ Historical Fact smoke checks use the Collector CLI against the same isolated con
 
 Analytics Metric smoke checks run after Fact watermarks are ready: `metrics status`, `metrics backfill --dry-run`, a bounded `metrics backfill --metric ... --version ...`, and `metrics rebuild --metric ... --version ... --from ... --through ...`. Verify Registry/evaluator drift, per-version checkpoints, the all-zero global row, count conservation, historical-day freshness, and same-day Historical Fact names in Admin Metric Center.
 
+For Nav capability semantics, verify that an AAAA subquery failure never becomes a negative IPv6 state and that HTML/empty/malformed security.txt responses never become positive. Published v1 remains rebuildable; active v2 begins at its Goose-owned source-start cutoff and must not be backdated over evidence that cannot be reconstructed.
+
+Collection Center smoke must verify Run Now schedule lineage without `scheduled_for` or phase movement, nullable coverage when `expected_count=0`, Current/Historical Collector lifecycle views, count-backed Run/Result pagination, and searchable Game/Site/Target manual selection.
+
 Change Intelligence smoke checks run after Metric/Fact watermarks are ready: `changes status`, `changes backfill --dry-run`, a bounded `changes backfill --detector ... --version ...`, and `changes rebuild --detector ... --version ... --from ... --dry-run` followed by the actual rebuild when intended. Rebuild must propagate through `processed_through`; an optional `--through` must equal that checkpoint and `--max-days` must not truncate it. Verify stable event keys, semantic-memory gaps, tracking identity resets, event time/provenance, and same-day Historical Fact names in Admin Change Center.
 
 Run these only against explicitly isolated development PostgreSQL. Never use production credentials.

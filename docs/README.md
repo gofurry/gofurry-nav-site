@@ -8,6 +8,7 @@ This directory contains cross-service documentation for the active GoFurry produ
 - [Historical Fact operations](historical-facts.md)
 - [Analytics Metric operations](analytics-metrics.md)
 - [Change Intelligence operations](change-intelligence.md)
+- [Collection Center operations](operations/collection-center.md)
 - [Linux/systemd operations](operations/systemd.md)
 - [Architecture decisions](decisions/README.md)
 - [Compatibility contract](../contracts/compatibility.md)
