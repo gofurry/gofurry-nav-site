@@ -6,6 +6,7 @@ import ShellView from './views/ShellView.vue'
 import ResourceView from './views/ResourceView.vue'
 import CollectionCenterView from './views/CollectionCenterView.vue'
 import MetricCenterView from './views/MetricCenterView.vue'
+import ChangeCenterView from './views/ChangeCenterView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -19,6 +20,7 @@ const router = createRouter({
         { path: '', redirect: '/nav/sayings' },
         { path: 'collection', component: CollectionCenterView },
         { path: 'metrics', component: MetricCenterView },
+        { path: 'changes', component: ChangeCenterView },
         { path: ':section/:resource', component: ResourceView },
       ],
     },

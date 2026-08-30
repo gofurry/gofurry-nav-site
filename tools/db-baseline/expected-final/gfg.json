@@ -154,6 +154,495 @@
   ],
   "tables": [
     {
+      "name": "gfg_change_checkpoints",
+      "comment": "Independent ordered checkpoints for each Game detector version.",
+      "columns": [
+        {
+          "name": "detector_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "detector_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_start_date",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "processed_through",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_gfg_change_checkpoint_registry",
+          "definition": "FOREIGN KEY (detector_key, detector_version) REFERENCES gfg_change_registry(detector_key, detector_version) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_change_checkpoint_range_check",
+          "definition": "CHECK (source_start_date IS NULL OR processed_through IS NULL OR processed_through \u003e= source_start_date)"
+        },
+        {
+          "name": "gfg_change_checkpoints_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_change_checkpoints_detector_key_not_null",
+          "definition": "NOT NULL detector_key"
+        },
+        {
+          "name": "gfg_change_checkpoints_detector_version_not_null",
+          "definition": "NOT NULL detector_version"
+        },
+        {
+          "name": "gfg_change_checkpoints_pkey",
+          "definition": "PRIMARY KEY (detector_key, detector_version)"
+        },
+        {
+          "name": "gfg_change_checkpoints_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": null,
+      "triggers": null
+    },
+    {
+      "name": "gfg_change_events",
+      "comment": "Deterministic canonical Game change events derived only from history, facts, metrics, and periods.",
+      "columns": [
+        {
+          "name": "event_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "detector_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "detector_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "projection_date",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "event_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "time_basis",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "event_code",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scope_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scope_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "old_value",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "new_value",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "source_event_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_before_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_after_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_before_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "source_after_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "source_versions",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "materialized_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_gfg_change_event_registry",
+          "definition": "FOREIGN KEY (detector_key, detector_version) REFERENCES gfg_change_registry(detector_key, detector_version) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_change_event_json_shape_check",
+          "definition": "CHECK (jsonb_typeof(old_value) = 'object'::text AND jsonb_typeof(new_value) = 'object'::text AND jsonb_typeof(source_versions) = 'object'::text)"
+        },
+        {
+          "name": "gfg_change_event_text_shape_check",
+          "definition": "CHECK (btrim(event_key) \u003c\u003e ''::text AND btrim(event_code) \u003c\u003e ''::text AND btrim(scope_kind) \u003c\u003e ''::text AND btrim(scope_key) \u003c\u003e ''::text AND btrim(source_event_key) \u003c\u003e ''::text AND btrim(source_before_key) \u003c\u003e ''::text AND btrim(source_after_key) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfg_change_event_time_basis_check",
+          "definition": "CHECK (time_basis = ANY (ARRAY['effective'::text, 'observed'::text, 'day'::text]))"
+        },
+        {
+          "name": "gfg_change_event_time_shape_check",
+          "definition": "CHECK ((time_basis = ANY (ARRAY['effective'::text, 'observed'::text])) AND event_at IS NOT NULL OR time_basis = 'day'::text AND event_at IS NULL)"
+        },
+        {
+          "name": "gfg_change_events_detector_key_not_null",
+          "definition": "NOT NULL detector_key"
+        },
+        {
+          "name": "gfg_change_events_detector_version_not_null",
+          "definition": "NOT NULL detector_version"
+        },
+        {
+          "name": "gfg_change_events_event_code_not_null",
+          "definition": "NOT NULL event_code"
+        },
+        {
+          "name": "gfg_change_events_event_key_not_null",
+          "definition": "NOT NULL event_key"
+        },
+        {
+          "name": "gfg_change_events_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_change_events_materialized_at_not_null",
+          "definition": "NOT NULL materialized_at"
+        },
+        {
+          "name": "gfg_change_events_new_value_not_null",
+          "definition": "NOT NULL new_value"
+        },
+        {
+          "name": "gfg_change_events_old_value_not_null",
+          "definition": "NOT NULL old_value"
+        },
+        {
+          "name": "gfg_change_events_pkey",
+          "definition": "PRIMARY KEY (event_key)"
+        },
+        {
+          "name": "gfg_change_events_projection_date_not_null",
+          "definition": "NOT NULL projection_date"
+        },
+        {
+          "name": "gfg_change_events_scope_key_not_null",
+          "definition": "NOT NULL scope_key"
+        },
+        {
+          "name": "gfg_change_events_scope_kind_not_null",
+          "definition": "NOT NULL scope_kind"
+        },
+        {
+          "name": "gfg_change_events_source_after_key_not_null",
+          "definition": "NOT NULL source_after_key"
+        },
+        {
+          "name": "gfg_change_events_source_before_key_not_null",
+          "definition": "NOT NULL source_before_key"
+        },
+        {
+          "name": "gfg_change_events_source_event_key_not_null",
+          "definition": "NOT NULL source_event_key"
+        },
+        {
+          "name": "gfg_change_events_source_versions_not_null",
+          "definition": "NOT NULL source_versions"
+        },
+        {
+          "name": "gfg_change_events_time_basis_not_null",
+          "definition": "NOT NULL time_basis"
+        },
+        {
+          "name": "uq_gfg_change_event_source",
+          "definition": "UNIQUE (detector_key, detector_version, source_event_key)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_change_events_code_date",
+          "definition": "CREATE INDEX idx_gfg_change_events_code_date ON public.gfg_change_events USING btree (event_code, projection_date DESC)"
+        },
+        {
+          "name": "idx_gfg_change_events_detector_date",
+          "definition": "CREATE INDEX idx_gfg_change_events_detector_date ON public.gfg_change_events USING btree (detector_key, detector_version, projection_date DESC)"
+        },
+        {
+          "name": "idx_gfg_change_events_event_at",
+          "definition": "CREATE INDEX idx_gfg_change_events_event_at ON public.gfg_change_events USING btree (event_at DESC) WHERE (event_at IS NOT NULL)"
+        },
+        {
+          "name": "idx_gfg_change_events_game_date",
+          "definition": "CREATE INDEX idx_gfg_change_events_game_date ON public.gfg_change_events USING btree (game_id, projection_date DESC)"
+        },
+        {
+          "name": "idx_gfg_change_events_scope_date",
+          "definition": "CREATE INDEX idx_gfg_change_events_scope_date ON public.gfg_change_events USING btree (scope_kind, scope_key, projection_date DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_change_registry",
+      "comment": "Goose-owned versioned Game change detector contracts; Runtime and Admin are read-only.",
+      "columns": [
+        {
+          "name": "detector_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "detector_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_contracts",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "detection_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "watermark_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "event_codes",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "processing_grain",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "description",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "retired_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_change_registry_codes_shape_check",
+          "definition": "CHECK (array_ndims(event_codes) = 1 AND cardinality(event_codes) \u003e 0)"
+        },
+        {
+          "name": "gfg_change_registry_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_change_registry_description_not_null",
+          "definition": "NOT NULL description"
+        },
+        {
+          "name": "gfg_change_registry_detection_policy_not_null",
+          "definition": "NOT NULL detection_policy"
+        },
+        {
+          "name": "gfg_change_registry_detector_key_not_null",
+          "definition": "NOT NULL detector_key"
+        },
+        {
+          "name": "gfg_change_registry_detector_version_not_null",
+          "definition": "NOT NULL detector_version"
+        },
+        {
+          "name": "gfg_change_registry_event_codes_not_null",
+          "definition": "NOT NULL event_codes"
+        },
+        {
+          "name": "gfg_change_registry_grain_check",
+          "definition": "CHECK (processing_grain = 'day'::text)"
+        },
+        {
+          "name": "gfg_change_registry_key_check",
+          "definition": "CHECK (btrim(detector_key) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfg_change_registry_pkey",
+          "definition": "PRIMARY KEY (detector_key, detector_version)"
+        },
+        {
+          "name": "gfg_change_registry_policy_check",
+          "definition": "CHECK (btrim(detection_policy) \u003c\u003e ''::text AND btrim(watermark_policy) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfg_change_registry_processing_grain_not_null",
+          "definition": "NOT NULL processing_grain"
+        },
+        {
+          "name": "gfg_change_registry_source_contracts_not_null",
+          "definition": "NOT NULL source_contracts"
+        },
+        {
+          "name": "gfg_change_registry_source_kind_check",
+          "definition": "CHECK (source_kind = ANY (ARRAY['metric'::text, 'fact'::text, 'domain_history'::text, 'effective_period'::text]))"
+        },
+        {
+          "name": "gfg_change_registry_source_kind_not_null",
+          "definition": "NOT NULL source_kind"
+        },
+        {
+          "name": "gfg_change_registry_source_shape_check",
+          "definition": "CHECK (array_ndims(source_contracts) = 1 AND cardinality(source_contracts) \u003e 0)"
+        },
+        {
+          "name": "gfg_change_registry_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['active'::text, 'retired'::text]))"
+        },
+        {
+          "name": "gfg_change_registry_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfg_change_registry_status_shape_check",
+          "definition": "CHECK (status = 'active'::text AND retired_at IS NULL OR status = 'retired'::text AND retired_at IS NOT NULL)"
+        },
+        {
+          "name": "gfg_change_registry_version_check",
+          "definition": "CHECK (detector_version \u003e 0)"
+        },
+        {
+          "name": "gfg_change_registry_watermark_policy_not_null",
+          "definition": "NOT NULL watermark_policy"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_gfg_change_registry_active_key",
+          "definition": "CREATE UNIQUE INDEX uq_gfg_change_registry_active_key ON public.gfg_change_registry USING btree (detector_key) WHERE (status = 'active'::text)"
+        }
+      ],
+      "triggers": null
+    },
+    {
       "name": "gfg_collection_jobs",
       "comment": "Durable scheduled, manual, and entity-triggered Game collection jobs.",
       "columns": [
@@ -6302,6 +6791,10 @@
     {
       "identity": "gfg_game_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer)",
       "definition": "CREATE OR REPLACE FUNCTION public.gfg_game_prune_detail_snapshots(p_appid bigint, p_lang text, p_region text, p_keep_count integer DEFAULT 5)\n RETURNS integer\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    deleted_count integer;\nBEGIN\n    WITH ranked AS (\n        SELECT id,\n               row_number() OVER (\n                   PARTITION BY appid, lang, region\n                   ORDER BY collected_at DESC, id DESC\n               ) AS rn\n        FROM public.gfg_game_detail_snapshots\n        WHERE appid = p_appid\n          AND lang = p_lang\n          AND region = p_region\n    ),\n    deleted AS (\n        DELETE FROM public.gfg_game_detail_snapshots snapshot\n        USING ranked\n        WHERE snapshot.id = ranked.id\n          AND ranked.rn \u003e GREATEST(p_keep_count, 0)\n        RETURNING snapshot.id\n    )\n    SELECT count(*) INTO deleted_count FROM deleted;\n\n    RETURN deleted_count;\nEND;\n$function$\n"
+    },
+    {
+      "identity": "gfg_project_change_day(target_detector_key text, target_detector_version integer, target_date date)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfg_project_change_day(target_detector_key text, target_detector_version integer, target_date date)\n RETURNS bigint\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    inserted_rows bigint := 0;\n    source_metric_key text;\nBEGIN\n    IF target_detector_version \u003c\u003e 1 OR target_detector_key NOT IN (\n        'free_game_transition', 'windows_support_transition', 'linux_support_transition',\n        'game_release_transition', 'game_price_transition'\n    ) THEN\n        RAISE EXCEPTION 'Game change detector is not compiled for %/%', target_detector_key, target_detector_version;\n    END IF;\n\n    DELETE FROM public.gfg_change_events\n    WHERE detector_key = target_detector_key\n      AND detector_version = target_detector_version\n      AND projection_date = target_date;\n\n    IF target_detector_key IN ('free_game_transition', 'windows_support_transition', 'linux_support_transition') THEN\n        source_metric_key := CASE target_detector_key\n            WHEN 'free_game_transition' THEN 'free_game_share'\n            WHEN 'windows_support_transition' THEN 'windows_support'\n            WHEN 'linux_support_transition' THEN 'linux_support'\n        END;\n\n        INSERT INTO public.gfg_change_events (\n            event_key, detector_key, detector_version, game_id, projection_date,\n            event_at, time_basis, event_code, scope_kind, scope_key,\n            old_value, new_value, source_event_key, source_before_key, source_after_key,\n            source_before_at, source_after_at, source_versions, materialized_at\n        )\n        SELECT target_detector_key || '/1/' || source_event_key,\n               target_detector_key, 1, current_metric.game_id, target_date,\n               current_metric.source_observed_at,\n               CASE WHEN current_metric.source_observed_at IS NULL THEN 'day' ELSE 'observed' END,\n               CASE target_detector_key\n                   WHEN 'free_game_transition' THEN CASE WHEN current_metric.state = 'positive' THEN 'game_became_free' ELSE 'game_became_paid' END\n                   WHEN 'windows_support_transition' THEN CASE WHEN current_metric.state = 'positive' THEN 'windows_support_added' ELSE 'windows_support_removed' END\n                   WHEN 'linux_support_transition' THEN CASE WHEN current_metric.state = 'positive' THEN 'linux_support_added' ELSE 'linux_support_removed' END\n               END,\n               'global', 'all',\n               jsonb_build_object('state', previous_metric.state, 'reason_code', previous_metric.reason_code),\n               jsonb_build_object('state', current_metric.state, 'reason_code', current_metric.reason_code),\n               source_event_key,\n               source_metric_key || '/1/' || previous_metric.fact_date || '/' || current_metric.game_id,\n               source_metric_key || '/1/' || current_metric.fact_date || '/' || current_metric.game_id,\n               previous_metric.source_observed_at, current_metric.source_observed_at,\n               jsonb_build_object(\n                   'metric_key', source_metric_key, 'metric_version', 1,\n                   'before_fact_projection_versions', previous_metric.source_projection_versions,\n                   'after_fact_projection_versions', current_metric.source_projection_versions,\n                   'tracking_period_id', current_fact.tracking_period_id\n               ),\n               transaction_timestamp()\n        FROM public.gfg_metric_entity_daily current_metric\n        JOIN public.gfg_game_daily current_fact\n          ON current_fact.game_id = current_metric.game_id\n         AND current_fact.fact_date = current_metric.fact_date\n         AND current_fact.finalized_at IS NOT NULL\n        JOIN LATERAL (\n            SELECT previous_metric.*\n            FROM public.gfg_metric_entity_daily previous_metric\n            JOIN public.gfg_game_daily previous_fact\n              ON previous_fact.game_id = previous_metric.game_id\n             AND previous_fact.fact_date = previous_metric.fact_date\n             AND previous_fact.finalized_at IS NOT NULL\n            WHERE previous_metric.metric_key = current_metric.metric_key\n              AND previous_metric.metric_version = current_metric.metric_version\n              AND previous_metric.game_id = current_metric.game_id\n              AND previous_metric.fact_date \u003c current_metric.fact_date\n              AND previous_metric.state IN ('positive', 'negative')\n              AND previous_fact.tracking_period_id = current_fact.tracking_period_id\n            ORDER BY previous_metric.fact_date DESC\n            LIMIT 1\n        ) previous_metric ON true\n        CROSS JOIN LATERAL (\n            SELECT source_metric_key || '/1/' || current_fact.tracking_period_id || '/' || current_metric.game_id || '/'\n                   || previous_metric.fact_date || '/' || current_metric.fact_date AS source_event_key\n        ) event_identity\n        WHERE current_metric.metric_key = source_metric_key\n          AND current_metric.metric_version = 1\n          AND current_metric.fact_date = target_date\n          AND current_metric.state IN ('positive', 'negative')\n          AND current_metric.state \u003c\u003e previous_metric.state;\n\n    ELSIF target_detector_key = 'game_release_transition' THEN\n        WITH reliable AS (\n            SELECT history.*,\n                   (SELECT min(period.id)\n                    FROM public.gfg_game_tracking_periods period\n                    WHERE period.game_id = history.game_id\n                      AND history.observed_at \u003e= period.tracked_from\n                      AND (period.tracked_until IS NULL OR history.observed_at \u003c period.tracked_until)) AS tracking_period_id,\n                   (SELECT count(*)\n                    FROM public.gfg_game_tracking_periods period\n                    WHERE period.game_id = history.game_id\n                      AND history.observed_at \u003e= period.tracked_from\n                      AND (period.tracked_until IS NULL OR history.observed_at \u003c period.tracked_until)) AS period_count\n            FROM public.gfg_game_release_history history\n        ), chained AS (\n            SELECT reliable.*,\n                   lag(id) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_id,\n                   lag(availability) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_availability,\n                   lag(precision) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_precision,\n                   lag(exact_date) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_exact_date,\n                   lag(release_year) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_release_year,\n                   lag(release_month) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_release_month,\n                   lag(release_quarter) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_release_quarter,\n                   lag(window_start) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_window_start,\n                   lag(window_end) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_window_end,\n                   lag(observed_at) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_observed_at,\n                   lag(normalizer_version) OVER (PARTITION BY tracking_period_id ORDER BY observed_at, id) AS before_normalizer_version\n            FROM reliable\n            WHERE period_count = 1\n        ), events AS (\n            SELECT chained.*,\n                   CASE\n                       WHEN before_availability \u003c\u003e 'available' AND availability = 'available' THEN 'game_became_available'\n                       WHEN before_availability = 'available' AND availability \u003c\u003e 'available' THEN 'game_availability_withdrawn'\n                       WHEN ROW(before_availability, before_precision, before_exact_date, before_release_year, before_release_month,\n                                before_release_quarter, before_window_start, before_window_end)\n                            IS DISTINCT FROM\n                            ROW(availability, precision, exact_date, release_year, release_month,\n                                release_quarter, window_start, window_end) THEN 'game_release_plan_changed'\n                   END AS event_code\n            FROM chained\n            WHERE before_id IS NOT NULL\n              AND (observed_at AT TIME ZONE 'UTC')::date = target_date\n        )\n        INSERT INTO public.gfg_change_events (\n            event_key, detector_key, detector_version, game_id, projection_date,\n            event_at, time_basis, event_code, scope_kind, scope_key,\n            old_value, new_value, source_event_key, source_before_key, source_after_key,\n            source_before_at, source_after_at, source_versions, materialized_at\n        )\n        SELECT 'game_release_transition/1/history/' || id,\n               target_detector_key, 1, game_id, target_date,\n               observed_at, 'observed', event_code, 'global', 'all',\n               jsonb_build_object('availability', before_availability, 'precision', before_precision,\n                   'exact_date', before_exact_date, 'release_year', before_release_year,\n                   'release_month', before_release_month, 'release_quarter', before_release_quarter,\n                   'window_start', before_window_start, 'window_end', before_window_end),\n               jsonb_build_object('availability', availability, 'precision', precision,\n                   'exact_date', exact_date, 'release_year', release_year,\n                   'release_month', release_month, 'release_quarter', release_quarter,\n                   'window_start', window_start, 'window_end', window_end),\n               'history/' || id, 'history/' || before_id, 'history/' || id,\n               before_observed_at, observed_at,\n               jsonb_build_object('before_normalizer_version', before_normalizer_version,\n                                  'after_normalizer_version', normalizer_version,\n                                  'tracking_period_id', tracking_period_id),\n               transaction_timestamp()\n        FROM events\n        WHERE event_code IS NOT NULL;\n\n    ELSE\n        WITH current_price AS (\n            SELECT price.*\n            FROM public.gfg_game_price_daily price\n            WHERE price.fact_date = target_date\n              AND price.finalized_at IS NOT NULL\n              AND price.price_state IN ('free', 'priced', 'unpriced')\n        ), paired AS (\n            SELECT current_price.*,\n                   previous.fact_date AS before_date,\n                   previous.price_state AS before_price_state,\n                   previous.currency AS before_currency,\n                   previous.initial_amount AS before_initial_amount,\n                   previous.final_amount AS before_final_amount,\n                   previous.discount_percent AS before_discount_percent,\n                   previous.observed_at AS before_observed_at,\n                   previous.projection_version AS before_projection_version\n            FROM current_price\n            JOIN LATERAL (\n                SELECT candidate.*\n                FROM public.gfg_game_price_daily candidate\n                WHERE candidate.tracking_period_id = current_price.tracking_period_id\n                  AND candidate.region = current_price.region\n                  AND candidate.fact_date \u003c current_price.fact_date\n                  AND candidate.finalized_at IS NOT NULL\n                  AND candidate.price_state IN ('free', 'priced', 'unpriced')\n                ORDER BY candidate.fact_date DESC\n                LIMIT 1\n            ) previous ON true\n        ), event_rows AS (\n            SELECT paired.*,\n                   main.event_code,\n                   main.event_suffix\n            FROM paired\n            CROSS JOIN LATERAL (\n                SELECT CASE\n                    WHEN before_price_state \u003c\u003e price_state THEN 'game_price_state_changed'\n                    WHEN before_currency IS DISTINCT FROM currency THEN 'game_price_currency_changed'\n                    WHEN before_final_amount \u003e final_amount THEN 'game_price_decreased'\n                    WHEN before_final_amount \u003c final_amount THEN 'game_price_increased'\n                END AS event_code,\n                'main'::text AS event_suffix\n            ) main\n            WHERE main.event_code IS NOT NULL\n            UNION ALL\n            SELECT paired.*,\n                   CASE\n                       WHEN COALESCE(before_discount_percent, 0) = 0 AND COALESCE(discount_percent, 0) \u003e 0 THEN 'game_discount_started'\n                       WHEN COALESCE(before_discount_percent, 0) \u003e 0 AND COALESCE(discount_percent, 0) = 0 THEN 'game_discount_ended'\n                       WHEN before_discount_percent IS DISTINCT FROM discount_percent THEN 'game_discount_changed'\n                   END,\n                   'discount'::text\n            FROM paired\n            WHERE before_price_state = 'priced' AND price_state = 'priced'\n              AND before_currency IS NOT DISTINCT FROM currency\n              AND CASE\n                  WHEN COALESCE(before_discount_percent, 0) = 0 AND COALESCE(discount_percent, 0) \u003e 0 THEN true\n                  WHEN COALESCE(before_discount_percent, 0) \u003e 0 AND COALESCE(discount_percent, 0) = 0 THEN true\n                  ELSE before_discount_percent IS DISTINCT FROM discount_percent\n              END\n        )\n        INSERT INTO public.gfg_change_events (\n            event_key, detector_key, detector_version, game_id, projection_date,\n            event_at, time_basis, event_code, scope_kind, scope_key,\n            old_value, new_value, source_event_key, source_before_key, source_after_key,\n            source_before_at, source_after_at, source_versions, materialized_at\n        )\n        SELECT 'game_price_transition/1/' || tracking_period_id || '/' || region || '/' || fact_date || '/' || event_suffix,\n               target_detector_key, 1, game_id, target_date,\n               observed_at, CASE WHEN observed_at IS NULL THEN 'day' ELSE 'observed' END,\n               event_code, 'region', region,\n               jsonb_build_object('price_state', before_price_state, 'currency', before_currency,\n                                  'initial_amount', before_initial_amount, 'final_amount', before_final_amount,\n                                  'discount_percent', before_discount_percent),\n               jsonb_build_object('price_state', price_state, 'currency', currency,\n                                  'initial_amount', initial_amount, 'final_amount', final_amount,\n                                  'discount_percent', discount_percent),\n               tracking_period_id || '/' || region || '/' || fact_date || '/' || event_suffix,\n               'price/' || tracking_period_id || '/' || region || '/' || before_date,\n               'price/' || tracking_period_id || '/' || region || '/' || fact_date,\n               before_observed_at, observed_at,\n               jsonb_build_object('before_projection_version', before_projection_version,\n                                  'after_projection_version', projection_version,\n                                  'tracking_period_id', tracking_period_id),\n               transaction_timestamp()\n        FROM event_rows\n        WHERE event_code IS NOT NULL;\n    END IF;\n\n    GET DIAGNOSTICS inserted_rows = ROW_COUNT;\n\n    IF EXISTS (\n        SELECT 1\n        FROM public.gfg_change_events event\n        JOIN public.gfg_change_registry registry\n          ON registry.detector_key = event.detector_key\n         AND registry.detector_version = event.detector_version\n        WHERE event.detector_key = target_detector_key\n          AND event.detector_version = target_detector_version\n          AND event.projection_date = target_date\n          AND NOT (event.event_code = ANY(registry.event_codes))\n    ) THEN\n        RAISE EXCEPTION 'Game change detector emitted an undeclared event code for %/% on %',\n            target_detector_key, target_detector_version, target_date;\n    END IF;\n\n    IF EXISTS (\n        SELECT 1 FROM public.gfg_change_events\n        WHERE detector_key = target_detector_key AND detector_version = target_detector_version\n          AND projection_date = target_date AND time_basis = 'observed'\n          AND event_at IS DISTINCT FROM source_after_at\n    ) THEN\n        RAISE EXCEPTION 'Game observed change event timestamp differs from source_after_at for %/% on %',\n            target_detector_key, target_detector_version, target_date;\n    END IF;\n\n    RETURN inserted_rows;\nEND;\n$function$\n"
     },
     {
       "identity": "gfg_project_metric_day(target_metric_key text, target_metric_version integer, target_date date)",
