@@ -91,6 +91,8 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	app.Post("/nav/audit-failure", navAPI.CreateSite)
 	protected := app.Group("", authmw.Required(authService))
 	protected.Post("/nav/sites", navAPI.CreateSite)
+	protected.Get("/nav/site-summaries", navAPI.ListSiteWorkspaceSummaries)
+	protected.Get("/nav/sites/:id/workspace", navAPI.GetSiteWorkspace)
 	protected.Get("/nav/sites/:id", navAPI.GetSite)
 	protected.Put("/nav/sites/:id", navAPI.UpdateSite)
 	protected.Delete("/nav/sites/:id", navAPI.DeleteSite)
@@ -99,6 +101,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Delete("/nav/collector-domains/:id", navAPI.DeleteCollectorDomain)
 	protected.Post("/nav/collector-domains/:id/primary", navAPI.SetPrimaryCollectorDomain)
 	protected.Post("/game/games", gameAPI.CreateGame)
+	protected.Get("/game/games/:id/workspace", gameAPI.GetGameWorkspace)
 	protected.Get("/game/games/:id", gameAPI.GetGame)
 	protected.Put("/game/games/:id", gameAPI.UpdateGame)
 	protected.Delete("/game/games/:id", gameAPI.DeleteGame)
@@ -163,6 +166,8 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 		t.Fatalf("proxy/TLS-only update changed Target identity, period count=%d", count)
 	}
 	requestJSON(t, app, http.MethodPost, fmt.Sprintf("/nav/collector-domains/%d/primary", wwwDomainID), "", cookie, http.StatusOK)
+	assertSiteWorkspace(t, requestJSON(t, app, http.MethodGet, fmt.Sprintf("/nav/sites/%d/workspace", trackedSiteID), "", cookie, http.StatusOK), trackedSiteID, wwwDomainID)
+	assertPage(t, requestJSON(t, app, http.MethodGet, "/nav/site-summaries?page_num=1&page_size=10&keyword=Tracked", "", cookie, http.StatusOK), 1, 1)
 	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site_daily daily JOIN gfn_target_tracking_periods target ON target.id=daily.primary_target_tracking_period_id WHERE daily.site_id=$1 AND target.collector_domain_id=$2`, trackedSiteID, wwwDomainID); count != 1 {
 		t.Fatal("Set Primary did not refresh today's Site Daily marker")
 	}
@@ -182,6 +187,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	gamePayload := `{"name":"Game","name_en":"Game EN","info":"Info","info_en":"Info EN","resources":[],"groups":[],"developers":[],"publishers":[],"appid":424242,"header":"","links":[],"weight":5,"primary_tag":0,"secondary_tag":0}`
 	game := requestJSON(t, app, http.MethodPost, "/game/games", gamePayload, cookie, http.StatusOK)
 	gameID := responseID(t, game)
+	assertGameWorkspace(t, requestJSON(t, app, http.MethodGet, fmt.Sprintf("/game/games/%d/workspace", gameID), "", cookie, http.StatusOK), gameID)
 	assertOptionPage(t, requestJSON(t, app, http.MethodGet, "/options/games?page_num=1&page_size=10&keyword=424242", "", cookie, http.StatusOK), 1)
 	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_tracking_periods WHERE game_id=$1 AND tracked_until IS NULL`, gameID); count != 1 {
 		t.Fatal("Game create did not open tracking period")
@@ -393,6 +399,58 @@ func assertPage(t *testing.T, resp *http.Response, total int64, listLength int) 
 	}
 	if page.Total != total || len(page.List) != listLength {
 		t.Fatalf("page total/list=%d/%d, want %d/%d: %s", page.Total, len(page.List), total, listLength, envelope.Data)
+	}
+}
+
+func assertSiteWorkspace(t *testing.T, resp *http.Response, siteID, primaryTargetID int64) {
+	t.Helper()
+	defer resp.Body.Close()
+	var envelope integrationEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	var workspace struct {
+		Site struct {
+			ID int64 `json:"id"`
+		} `json:"site"`
+		Targets []struct {
+			ID      int64 `json:"id"`
+			Primary bool  `json:"primary"`
+		} `json:"targets"`
+		Groups []json.RawMessage `json:"groups"`
+	}
+	if err := json.Unmarshal(envelope.Data, &workspace); err != nil {
+		t.Fatal(err)
+	}
+	if workspace.Site.ID != siteID || len(workspace.Targets) != 2 || workspace.Groups == nil {
+		t.Fatalf("unexpected Site workspace: %s", envelope.Data)
+	}
+	for _, target := range workspace.Targets {
+		if target.ID == primaryTargetID && target.Primary {
+			return
+		}
+	}
+	t.Fatalf("Site workspace does not identify target %d as Primary: %s", primaryTargetID, envelope.Data)
+}
+
+func assertGameWorkspace(t *testing.T, resp *http.Response, gameID int64) {
+	t.Helper()
+	defer resp.Body.Close()
+	var envelope integrationEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	var workspace struct {
+		Game struct {
+			ID int64 `json:"id"`
+		} `json:"game"`
+		Tags []json.RawMessage `json:"tags"`
+	}
+	if err := json.Unmarshal(envelope.Data, &workspace); err != nil {
+		t.Fatal(err)
+	}
+	if workspace.Game.ID != gameID || workspace.Tags == nil {
+		t.Fatalf("unexpected Game workspace: %s", envelope.Data)
 	}
 }
 

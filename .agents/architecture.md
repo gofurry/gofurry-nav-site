@@ -15,6 +15,8 @@ Active production applications live under `apps/cn`: six independent Go modules 
 
 Admin identity is multi-account and database-backed. The HTTPOnly JWT carries account/session identity only; every request reloads the active account and builds a Principal. The fixed `owner`, `developer`, and `operator` roles map to a compiled capability policy, and business routes authorize capabilities rather than roles. See `contracts/authorization.md`.
 
+Admin frontend migration is intentionally dual-track. `apps/cn/admin/react` is the target React 19 architecture and owns the new content workspaces; `apps/cn/admin/web` remains the embedded Vue production fallback until P0.5.2-D. React uses the same HTTP APIs and capability contract, while small sqlc-backed Site/Game read models assemble UI detail without introducing a BFF framework. See `contracts/admin-frontend.md`.
+
 Collector acquisition uses fixed cron or anchored interval schedules stored in PostgreSQL. Collector-owned gocron jobs are clocks for reconciliation, claim, recovery, and heartbeat only; they are not a durable queue. Admin edits durable schedules and enqueues manual jobs directly through its existing `gfg`/`gfn` pools. Collectors claim with `FOR UPDATE SKIP LOCKED`, renewable leases, active dedupe, and one active Run per concurrency lane. Redis is not authoritative for queue, lease, run, or schedule state.
 
 Historical Fact reconciliation runs inside the existing Collectors after acquisition reconciliation. Game owns `game.player_facts` and `game.state_facts`; Nav owns `nav.target_facts` and `nav.site_facts`. Each pipeline locks one checkpoint, projects at most one closed UTC day, and commits before any separately gated raw prune. Fact projection never creates acquisition Jobs/Runs/Results.

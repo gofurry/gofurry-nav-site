@@ -111,7 +111,9 @@ func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Post("/collector-domains/:id/primary", authmw.Require(authorization.ContentWrite), api.SetPrimaryCollectorDomain)
 
 	root.Get("/sites", authmw.Require(authorization.ContentRead), api.ListSites)
+	root.Get("/site-summaries", authmw.Require(authorization.ContentRead), api.ListSiteWorkspaceSummaries)
 	root.Post("/sites", authmw.Require(authorization.ContentWrite), api.CreateSite)
+	root.Get("/sites/:id/workspace", authmw.Require(authorization.ContentRead), api.GetSiteWorkspace)
 	root.Get("/sites/:id", authmw.Require(authorization.ContentRead), api.GetSite)
 	root.Put("/sites/:id", authmw.Require(authorization.ContentWrite), api.UpdateSite)
 	root.Delete("/sites/:id", authmw.Require(authorization.ContentWrite), api.DeleteSite)
@@ -142,6 +144,7 @@ func gameRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Post("/games", authmw.Require(authorization.ContentWrite), api.CreateGame)
 	root.Get("/games/steam-asset", authmw.Require(authorization.ContentRead), api.ResolveSteamGameAsset)
 	root.Get("/games/steam-prefill", authmw.Require(authorization.ContentRead), api.ResolveSteamGamePrefill)
+	root.Get("/games/:id/workspace", authmw.Require(authorization.ContentRead), api.GetGameWorkspace)
 	root.Get("/games/:id", authmw.Require(authorization.ContentRead), api.GetGame)
 	root.Put("/games/:id", authmw.Require(authorization.ContentWrite), api.UpdateGame)
 	root.Delete("/games/:id", authmw.Require(authorization.ContentWrite), api.DeleteGame)

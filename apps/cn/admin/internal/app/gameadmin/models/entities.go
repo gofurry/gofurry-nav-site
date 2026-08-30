@@ -46,6 +46,18 @@ type GameDTO struct {
 	SecondaryTag int64               `json:"secondary_tag"`
 }
 
+type GameWorkspaceTag struct {
+	ID      int64  `json:"id"`
+	GameID  int64  `json:"game_id"`
+	TagID   int64  `json:"tag_id"`
+	TagName string `json:"tag_name"`
+}
+
+type GameWorkspace struct {
+	Game GameDTO            `json:"game"`
+	Tags []GameWorkspaceTag `json:"tags"`
+}
+
 type GamePayload struct {
 	Name         string              `json:"name"`
 	NameEn       string              `json:"name_en"`

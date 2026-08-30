@@ -252,6 +252,14 @@ func (api *navAPI) ListSites(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, items))
 }
 
+func (api *navAPI) ListSiteWorkspaceSummaries(c fiber.Ctx) error {
+	total, items, err := api.store.listSiteWorkspaceSummaries(c.Context(), adminutil.ParsePageQuery(c))
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, items))
+}
+
 func (api *navAPI) CreateSite(c fiber.Ctx) error {
 	req, err := decodeSite(c)
 	if err != nil {
@@ -271,6 +279,18 @@ func (api *navAPI) GetSite(c fiber.Ctx) error {
 		return common.NewResponse(c).Error(err)
 	}
 	item, storeErr := api.store.getSite(c.Context(), id)
+	if storeErr != nil {
+		return common.NewResponse(c).Error(storeErr)
+	}
+	return common.NewResponse(c).SuccessWithData(item)
+}
+
+func (api *navAPI) GetSiteWorkspace(c fiber.Ctx) error {
+	id, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	item, storeErr := api.store.getSiteWorkspace(c.Context(), id)
 	if storeErr != nil {
 		return common.NewResponse(c).Error(storeErr)
 	}

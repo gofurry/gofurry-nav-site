@@ -72,6 +72,22 @@ func (store *gameStore) getGame(ctx context.Context, id int64) (models.Game, com
 	return getGameModel(row), gameDAOError(err)
 }
 
+func (store *gameStore) getGameWorkspace(ctx context.Context, id int64) (models.Game, []models.GameWorkspaceTag, common.Error) {
+	game, storeErr := store.getGame(ctx, id)
+	if storeErr != nil {
+		return models.Game{}, nil, storeErr
+	}
+	rows, err := store.q.ListGameWorkspaceTags(ctx, id)
+	if err != nil {
+		return models.Game{}, nil, gameDAOError(err)
+	}
+	tags := make([]models.GameWorkspaceTag, 0, len(rows))
+	for _, row := range rows {
+		tags = append(tags, models.GameWorkspaceTag{ID: row.ID, GameID: row.GameID, TagID: row.TagID, TagName: row.TagName})
+	}
+	return game, tags, nil
+}
+
 func (store *gameStore) createGame(ctx context.Context, meta audit.Meta, req gamesqlc.InsertGameParams) (models.Game, common.Error) {
 	var result models.Game
 	err := store.mutate(ctx, meta, "create", "gfg_game", func(q *gamesqlc.Queries) (int64, any, any, error) {

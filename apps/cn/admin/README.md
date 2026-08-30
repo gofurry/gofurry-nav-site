@@ -2,7 +2,7 @@
 
 [中文](README_zh.md)
 
-GoFurry Admin is the active operations application for the China-site stack. It embeds its Vue frontend and uses PostgreSQL only: `gfa` for Admin authentication/audit state plus explicit `gfn` and `gfg` pools for Nav and Game operations. Redis supports existing runtime behavior.
+GoFurry Admin is the active operations application for the China-site stack. The target React frontend lives in `react`; the embedded Vue frontend in `web` remains the production compatibility entry until the explicit cutover stage. The service uses `gfa` for Admin authentication/audit state plus explicit `gfn` and `gfg` pools for Nav and Game operations. Redis supports existing runtime behavior.
 
 Schema is owned exclusively by the root Goose migrations. Admin does not create or migrate tables during startup.
 
@@ -15,6 +15,13 @@ The Collection Center manages durable Schedule / Job / Run / Result / Collector 
 Requirements: Go 1.26.7, Node.js/npm, PostgreSQL, and Redis.
 
 ~~~bash
+# Target React Admin (development server on 5178, API proxy to 10099)
+cd react
+npm ci
+npm run dev
+cd ..
+
+# Legacy embedded Vue production frontend
 cd web
 npm ci
 npm run build
@@ -64,4 +71,12 @@ go build ./...
 cd web
 npm ci
 npm run build
+
+cd ../react
+npm ci
+npm run typecheck
+npm test
+npm run build
 ~~~
+
+See [React Admin development](../../../docs/admin-react.md) and the [frontend contract](../../../contracts/admin-frontend.md).

@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-GoFurry Admin 是中国站 active 运维后台。前端以 Vue 构建后嵌入 Go 二进制；后端只支持 PostgreSQL：`gfa` 保存后台认证/审计状态，`gfn` 与 `gfg` 使用显式连接池操作 Nav 和 Game 业务数据，Redis 保持现有运行语义。
+GoFurry Admin 是中国站 active 运维后台。目标 React 前端位于 `react`；`web` 下已嵌入 Go 二进制的 Vue 前端继续作为生产兼容入口，直到显式 cutover 阶段。后端使用 `gfa` 保存后台认证/审计状态，并通过显式 `gfn`、`gfg` 连接池操作 Nav 和 Game 业务数据，Redis 保持现有运行语义。
 
 数据库 schema 只由仓库根目录的 Goose migrations 管理，Admin 启动时不会建表或执行迁移。
 
@@ -15,6 +15,13 @@ Admin 认证为数据库校验的多账号系统，固定使用 `owner`、`devel
 需要 Go 1.26.7、Node.js/npm、PostgreSQL 和 Redis。
 
 ~~~bash
+# 目标 React Admin（开发端口 5178，API 代理到 10099）
+cd react
+npm ci
+npm run dev
+cd ..
+
+# 生产仍嵌入的 Vue 兼容前端
 cd web
 npm ci
 npm run build
@@ -64,4 +71,12 @@ go build ./...
 cd web
 npm ci
 npm run build
+
+cd ../react
+npm ci
+npm run typecheck
+npm test
+npm run build
 ~~~
+
+详见 [React Admin 本地开发](../../../docs/admin-react.md)与[前端契约](../../../contracts/admin-frontend.md)。

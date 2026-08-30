@@ -8,6 +8,9 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add the React 19 Admin foundation with strict TypeScript, Tailwind v4 semantic themes, Base UI/shadcn-style primitives, TanStack Query/Table, React Hook Form/Zod, and capability-aware navigation.
+- Add schema-driven React CRUD for sayings, update notices, Site groups, tags, comments, and prizes; add first-class Site and Game content workspaces plus global Site/Game/Tag/Group search.
+- Add minimal sqlc-backed Site/Game workspace read models and Site list summaries without changing authentication, collection, Metric, or Change semantics.
 - Add multi-account Admin identity, database-backed Principal validation, fixed Owner/Developer/Operator capability RBAC, Owner-only account management APIs, and transaction-safe last-Owner protection.
 - Add durable audit identity snapshots plus migration, authorization, session invalidation, route enforcement, and PostgreSQL concurrency coverage.
 - Add `ipv6_adoption/2` and `security_txt_adoption/2` with matching v2 Change detectors while retaining published v1 contracts for explicit historical rebuild.
@@ -15,6 +18,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Changed
 
+- Validate both the target React Admin and the temporary legacy Vue Admin in CI; production embedding and cutover remain owned by P0.5.2-D.
 - Change Admin bootstrap/login from a singleton password to canonical username, display name, and password while preserving the legacy account password and timestamps during migration.
 - Keep JWTs role-free and resolve current role, status, session version, and capabilities from `gfa` on every authenticated request; minimally update the existing Vue login/setup compatibility surface.
 - Preserve per-query AAAA evidence and validate security.txt content before treating either capability as adopted; inconclusive DNS and unrecognized documents remain unknown instead of becoming false or positive.

@@ -153,6 +153,47 @@ type SiteDTO struct {
 	Deleted    bool                `json:"deleted"`
 }
 
+type SiteWorkspaceTarget struct {
+	ID      int64   `json:"id"`
+	SiteID  int64   `json:"site_id"`
+	Name    string  `json:"name"`
+	Proxy   string  `json:"proxy"`
+	Prefix  *string `json:"prefix"`
+	TLS     string  `json:"tls"`
+	Primary bool    `json:"primary"`
+}
+
+type SiteWorkspaceSummary struct {
+	ID            int64               `json:"id"`
+	Name          string              `json:"name"`
+	NameEn        string              `json:"name_en"`
+	UpdateTime    pkgmodels.LocalTime `json:"update_time"`
+	PrimaryTarget string              `json:"primary_target"`
+	GroupNames    []string            `json:"group_names"`
+	Featured      bool                `json:"featured"`
+}
+
+type SiteWorkspaceGroup struct {
+	ID        int64  `json:"id"`
+	SiteID    int64  `json:"site_id"`
+	GroupID   int64  `json:"group_id"`
+	GroupName string `json:"group_name"`
+	Weight    int64  `json:"weight"`
+}
+
+type SiteWorkspaceFeatured struct {
+	ID     int64 `json:"id"`
+	SiteID int64 `json:"site_id"`
+	Weight int64 `json:"weight"`
+}
+
+type SiteWorkspace struct {
+	Site     SiteDTO                `json:"site"`
+	Targets  []SiteWorkspaceTarget  `json:"targets"`
+	Groups   []SiteWorkspaceGroup   `json:"groups"`
+	Featured *SiteWorkspaceFeatured `json:"featured"`
+}
+
 type SiteGroupPayload struct {
 	Name     string `json:"name"`
 	NameEn   string `json:"name_en"`
