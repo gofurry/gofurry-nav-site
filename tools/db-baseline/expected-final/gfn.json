@@ -65,6 +65,495 @@
   ],
   "tables": [
     {
+      "name": "gfn_change_checkpoints",
+      "comment": "Independent ordered checkpoints for each Nav detector version.",
+      "columns": [
+        {
+          "name": "detector_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "detector_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_start_date",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "processed_through",
+          "data_type": "date",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_gfn_change_checkpoint_registry",
+          "definition": "FOREIGN KEY (detector_key, detector_version) REFERENCES gfn_change_registry(detector_key, detector_version) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfn_change_checkpoint_range_check",
+          "definition": "CHECK (source_start_date IS NULL OR processed_through IS NULL OR processed_through \u003e= source_start_date)"
+        },
+        {
+          "name": "gfn_change_checkpoints_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfn_change_checkpoints_detector_key_not_null",
+          "definition": "NOT NULL detector_key"
+        },
+        {
+          "name": "gfn_change_checkpoints_detector_version_not_null",
+          "definition": "NOT NULL detector_version"
+        },
+        {
+          "name": "gfn_change_checkpoints_pkey",
+          "definition": "PRIMARY KEY (detector_key, detector_version)"
+        },
+        {
+          "name": "gfn_change_checkpoints_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": null,
+      "triggers": null
+    },
+    {
+      "name": "gfn_change_events",
+      "comment": "Deterministic canonical Nav change events derived only from facts, metrics, and effective periods.",
+      "columns": [
+        {
+          "name": "event_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "detector_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "detector_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "site_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "projection_date",
+          "data_type": "date",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "event_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "time_basis",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "event_code",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scope_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "scope_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "old_value",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "new_value",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "source_event_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_before_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_after_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_before_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "source_after_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "source_versions",
+          "data_type": "jsonb",
+          "not_null": true,
+          "has_default": true,
+          "default": "'{}'::jsonb"
+        },
+        {
+          "name": "materialized_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "fk_gfn_change_event_registry",
+          "definition": "FOREIGN KEY (detector_key, detector_version) REFERENCES gfn_change_registry(detector_key, detector_version) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfn_change_event_json_shape_check",
+          "definition": "CHECK (jsonb_typeof(old_value) = 'object'::text AND jsonb_typeof(new_value) = 'object'::text AND jsonb_typeof(source_versions) = 'object'::text)"
+        },
+        {
+          "name": "gfn_change_event_text_shape_check",
+          "definition": "CHECK (btrim(event_key) \u003c\u003e ''::text AND btrim(event_code) \u003c\u003e ''::text AND btrim(scope_kind) \u003c\u003e ''::text AND btrim(scope_key) \u003c\u003e ''::text AND btrim(source_event_key) \u003c\u003e ''::text AND btrim(source_before_key) \u003c\u003e ''::text AND btrim(source_after_key) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfn_change_event_time_basis_check",
+          "definition": "CHECK (time_basis = ANY (ARRAY['effective'::text, 'observed'::text, 'day'::text]))"
+        },
+        {
+          "name": "gfn_change_event_time_shape_check",
+          "definition": "CHECK ((time_basis = ANY (ARRAY['effective'::text, 'observed'::text])) AND event_at IS NOT NULL OR time_basis = 'day'::text AND event_at IS NULL)"
+        },
+        {
+          "name": "gfn_change_events_detector_key_not_null",
+          "definition": "NOT NULL detector_key"
+        },
+        {
+          "name": "gfn_change_events_detector_version_not_null",
+          "definition": "NOT NULL detector_version"
+        },
+        {
+          "name": "gfn_change_events_event_code_not_null",
+          "definition": "NOT NULL event_code"
+        },
+        {
+          "name": "gfn_change_events_event_key_not_null",
+          "definition": "NOT NULL event_key"
+        },
+        {
+          "name": "gfn_change_events_materialized_at_not_null",
+          "definition": "NOT NULL materialized_at"
+        },
+        {
+          "name": "gfn_change_events_new_value_not_null",
+          "definition": "NOT NULL new_value"
+        },
+        {
+          "name": "gfn_change_events_old_value_not_null",
+          "definition": "NOT NULL old_value"
+        },
+        {
+          "name": "gfn_change_events_pkey",
+          "definition": "PRIMARY KEY (event_key)"
+        },
+        {
+          "name": "gfn_change_events_projection_date_not_null",
+          "definition": "NOT NULL projection_date"
+        },
+        {
+          "name": "gfn_change_events_scope_key_not_null",
+          "definition": "NOT NULL scope_key"
+        },
+        {
+          "name": "gfn_change_events_scope_kind_not_null",
+          "definition": "NOT NULL scope_kind"
+        },
+        {
+          "name": "gfn_change_events_site_id_not_null",
+          "definition": "NOT NULL site_id"
+        },
+        {
+          "name": "gfn_change_events_source_after_key_not_null",
+          "definition": "NOT NULL source_after_key"
+        },
+        {
+          "name": "gfn_change_events_source_before_key_not_null",
+          "definition": "NOT NULL source_before_key"
+        },
+        {
+          "name": "gfn_change_events_source_event_key_not_null",
+          "definition": "NOT NULL source_event_key"
+        },
+        {
+          "name": "gfn_change_events_source_versions_not_null",
+          "definition": "NOT NULL source_versions"
+        },
+        {
+          "name": "gfn_change_events_time_basis_not_null",
+          "definition": "NOT NULL time_basis"
+        },
+        {
+          "name": "uq_gfn_change_event_source",
+          "definition": "UNIQUE (detector_key, detector_version, source_event_key)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfn_change_events_code_date",
+          "definition": "CREATE INDEX idx_gfn_change_events_code_date ON public.gfn_change_events USING btree (event_code, projection_date DESC)"
+        },
+        {
+          "name": "idx_gfn_change_events_detector_date",
+          "definition": "CREATE INDEX idx_gfn_change_events_detector_date ON public.gfn_change_events USING btree (detector_key, detector_version, projection_date DESC)"
+        },
+        {
+          "name": "idx_gfn_change_events_event_at",
+          "definition": "CREATE INDEX idx_gfn_change_events_event_at ON public.gfn_change_events USING btree (event_at DESC) WHERE (event_at IS NOT NULL)"
+        },
+        {
+          "name": "idx_gfn_change_events_scope_date",
+          "definition": "CREATE INDEX idx_gfn_change_events_scope_date ON public.gfn_change_events USING btree (scope_kind, scope_key, projection_date DESC)"
+        },
+        {
+          "name": "idx_gfn_change_events_site_date",
+          "definition": "CREATE INDEX idx_gfn_change_events_site_date ON public.gfn_change_events USING btree (site_id, projection_date DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfn_change_registry",
+      "comment": "Goose-owned versioned Nav change detector contracts; Runtime and Admin are read-only.",
+      "columns": [
+        {
+          "name": "detector_key",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "detector_version",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_contracts",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "detection_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "watermark_policy",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "event_codes",
+          "data_type": "text[]",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "processing_grain",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "description",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "retired_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_change_registry_codes_shape_check",
+          "definition": "CHECK (array_ndims(event_codes) = 1 AND cardinality(event_codes) \u003e 0)"
+        },
+        {
+          "name": "gfn_change_registry_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfn_change_registry_description_not_null",
+          "definition": "NOT NULL description"
+        },
+        {
+          "name": "gfn_change_registry_detection_policy_not_null",
+          "definition": "NOT NULL detection_policy"
+        },
+        {
+          "name": "gfn_change_registry_detector_key_not_null",
+          "definition": "NOT NULL detector_key"
+        },
+        {
+          "name": "gfn_change_registry_detector_version_not_null",
+          "definition": "NOT NULL detector_version"
+        },
+        {
+          "name": "gfn_change_registry_event_codes_not_null",
+          "definition": "NOT NULL event_codes"
+        },
+        {
+          "name": "gfn_change_registry_grain_check",
+          "definition": "CHECK (processing_grain = 'day'::text)"
+        },
+        {
+          "name": "gfn_change_registry_key_check",
+          "definition": "CHECK (btrim(detector_key) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfn_change_registry_pkey",
+          "definition": "PRIMARY KEY (detector_key, detector_version)"
+        },
+        {
+          "name": "gfn_change_registry_policy_check",
+          "definition": "CHECK (btrim(detection_policy) \u003c\u003e ''::text AND btrim(watermark_policy) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfn_change_registry_processing_grain_not_null",
+          "definition": "NOT NULL processing_grain"
+        },
+        {
+          "name": "gfn_change_registry_source_contracts_not_null",
+          "definition": "NOT NULL source_contracts"
+        },
+        {
+          "name": "gfn_change_registry_source_kind_check",
+          "definition": "CHECK (source_kind = ANY (ARRAY['metric'::text, 'fact'::text, 'domain_history'::text, 'effective_period'::text]))"
+        },
+        {
+          "name": "gfn_change_registry_source_kind_not_null",
+          "definition": "NOT NULL source_kind"
+        },
+        {
+          "name": "gfn_change_registry_source_shape_check",
+          "definition": "CHECK (array_ndims(source_contracts) = 1 AND cardinality(source_contracts) \u003e 0)"
+        },
+        {
+          "name": "gfn_change_registry_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['active'::text, 'retired'::text]))"
+        },
+        {
+          "name": "gfn_change_registry_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfn_change_registry_status_shape_check",
+          "definition": "CHECK (status = 'active'::text AND retired_at IS NULL OR status = 'retired'::text AND retired_at IS NOT NULL)"
+        },
+        {
+          "name": "gfn_change_registry_version_check",
+          "definition": "CHECK (detector_version \u003e 0)"
+        },
+        {
+          "name": "gfn_change_registry_watermark_policy_not_null",
+          "definition": "NOT NULL watermark_policy"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "uq_gfn_change_registry_active_key",
+          "definition": "CREATE UNIQUE INDEX uq_gfn_change_registry_active_key ON public.gfn_change_registry USING btree (detector_key) WHERE (status = 'active'::text)"
+        }
+      ],
+      "triggers": null
+    },
+    {
       "name": "gfn_collection_jobs",
       "comment": "Durable scheduled, manual, and entity-triggered Nav collection jobs.",
       "columns": [
@@ -4339,6 +4828,10 @@
     {
       "identity": "gfn_jsonb_text_array(value jsonb)",
       "definition": "CREATE OR REPLACE FUNCTION public.gfn_jsonb_text_array(value jsonb)\n RETURNS text[]\n LANGUAGE sql\n IMMUTABLE PARALLEL SAFE\nAS $function$\n    SELECT CASE WHEN jsonb_typeof(value) = 'array'\n                THEN ARRAY(SELECT jsonb_array_elements_text(value))\n                ELSE NULL::text[]\n           END;\n$function$\n"
+    },
+    {
+      "identity": "gfn_project_change_day(target_detector_key text, target_detector_version integer, target_date date)",
+      "definition": "CREATE OR REPLACE FUNCTION public.gfn_project_change_day(target_detector_key text, target_detector_version integer, target_date date)\n RETURNS bigint\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    inserted_rows bigint := 0;\n    source_metric_key text;\nBEGIN\n    IF target_detector_version \u003c\u003e 1 OR target_detector_key NOT IN (\n        'ipv6_transition', 'tls13_transition', 'security_txt_transition',\n        'primary_target_transition', 'tls_certificate_transition'\n    ) THEN\n        RAISE EXCEPTION 'Nav change detector is not compiled for %/%', target_detector_key, target_detector_version;\n    END IF;\n\n    DELETE FROM public.gfn_change_events\n    WHERE detector_key = target_detector_key\n      AND detector_version = target_detector_version\n      AND projection_date = target_date;\n\n    IF target_detector_key IN ('ipv6_transition', 'tls13_transition', 'security_txt_transition') THEN\n        source_metric_key := CASE target_detector_key\n            WHEN 'ipv6_transition' THEN 'ipv6_adoption'\n            WHEN 'tls13_transition' THEN 'tls13_adoption'\n            WHEN 'security_txt_transition' THEN 'security_txt_adoption'\n        END;\n\n        INSERT INTO public.gfn_change_events (\n            event_key, detector_key, detector_version, site_id, projection_date,\n            event_at, time_basis, event_code, scope_kind, scope_key,\n            old_value, new_value, source_event_key, source_before_key, source_after_key,\n            source_before_at, source_after_at, source_versions, materialized_at\n        )\n        SELECT target_detector_key || '/1/' || event_identity.source_event_key,\n               target_detector_key, 1, current_metric.site_id, target_date,\n               current_metric.source_observed_at,\n               CASE WHEN current_metric.source_observed_at IS NULL THEN 'day' ELSE 'observed' END,\n               CASE target_detector_key\n                   WHEN 'ipv6_transition' THEN CASE WHEN current_metric.state = 'positive' THEN 'ipv6_enabled' ELSE 'ipv6_disabled' END\n                   WHEN 'tls13_transition' THEN CASE WHEN current_metric.state = 'positive' THEN 'tls13_enabled' ELSE 'tls13_disabled' END\n                   WHEN 'security_txt_transition' THEN CASE WHEN current_metric.state = 'positive' THEN 'security_txt_added' ELSE 'security_txt_removed' END\n               END,\n               'global', 'all',\n               jsonb_build_object('state', previous_metric.state, 'reason_code', previous_metric.reason_code),\n               jsonb_build_object('state', current_metric.state, 'reason_code', current_metric.reason_code),\n               event_identity.source_event_key,\n               source_metric_key || '/1/' || previous_metric.fact_date || '/' || current_metric.site_id,\n               source_metric_key || '/1/' || current_metric.fact_date || '/' || current_metric.site_id,\n               previous_metric.source_observed_at, current_metric.source_observed_at,\n               jsonb_build_object(\n                   'metric_key', source_metric_key, 'metric_version', 1,\n                   'before_fact_projection_versions', previous_metric.source_projection_versions,\n                   'after_fact_projection_versions', current_metric.source_projection_versions,\n                   'primary_target_tracking_period_id', current_fact.primary_target_tracking_period_id\n               ),\n               transaction_timestamp()\n        FROM public.gfn_metric_entity_daily current_metric\n        JOIN public.gfn_site_daily current_fact\n          ON current_fact.site_id = current_metric.site_id\n         AND current_fact.fact_date = current_metric.fact_date\n         AND current_fact.finalized_at IS NOT NULL\n        JOIN LATERAL (\n            SELECT previous_metric.*\n            FROM public.gfn_metric_entity_daily previous_metric\n            JOIN public.gfn_site_daily previous_fact\n              ON previous_fact.site_id = previous_metric.site_id\n             AND previous_fact.fact_date = previous_metric.fact_date\n             AND previous_fact.finalized_at IS NOT NULL\n            WHERE previous_metric.metric_key = current_metric.metric_key\n              AND previous_metric.metric_version = current_metric.metric_version\n              AND previous_metric.site_id = current_metric.site_id\n              AND previous_metric.fact_date \u003c current_metric.fact_date\n              AND previous_metric.state IN ('positive', 'negative')\n              AND previous_fact.primary_target_tracking_period_id = current_fact.primary_target_tracking_period_id\n            ORDER BY previous_metric.fact_date DESC\n            LIMIT 1\n        ) previous_metric ON true\n        CROSS JOIN LATERAL (\n            SELECT source_metric_key || '/1/' || current_fact.primary_target_tracking_period_id || '/'\n                   || current_metric.site_id || '/' || previous_metric.fact_date || '/' || current_metric.fact_date AS source_event_key\n        ) event_identity\n        WHERE current_metric.metric_key = source_metric_key\n          AND current_metric.metric_version = 1\n          AND current_metric.fact_date = target_date\n          AND current_fact.primary_target_tracking_period_id IS NOT NULL\n          AND current_metric.state IN ('positive', 'negative')\n          AND current_metric.state \u003c\u003e previous_metric.state;\n\n    ELSIF target_detector_key = 'primary_target_transition' THEN\n        INSERT INTO public.gfn_change_events (\n            event_key, detector_key, detector_version, site_id, projection_date,\n            event_at, time_basis, event_code, scope_kind, scope_key,\n            old_value, new_value, source_event_key, source_before_key, source_after_key,\n            source_before_at, source_after_at, source_versions, materialized_at\n        )\n        SELECT 'primary_target_transition/1/period/' || current_period.id,\n               target_detector_key, 1, current_period.site_id, target_date,\n               current_period.effective_from, 'effective', 'primary_target_changed', 'global', 'all',\n               jsonb_build_object('target_tracking_period_id', previous_period.target_tracking_period_id,\n                                  'target', previous_target.target, 'basis', previous_period.basis),\n               jsonb_build_object('target_tracking_period_id', current_period.target_tracking_period_id,\n                                  'target', current_target.target, 'basis', current_period.basis),\n               'period/' || current_period.id, 'period/' || previous_period.id, 'period/' || current_period.id,\n               previous_period.effective_from, current_period.effective_from,\n               jsonb_build_object('period_contract', 1), transaction_timestamp()\n        FROM public.gfn_site_primary_target_periods current_period\n        JOIN public.gfn_site_primary_target_periods previous_period\n          ON previous_period.site_id = current_period.site_id\n         AND previous_period.effective_until = current_period.effective_from\n        JOIN public.gfn_target_tracking_periods previous_target\n          ON previous_target.id = previous_period.target_tracking_period_id\n        JOIN public.gfn_target_tracking_periods current_target\n          ON current_target.id = current_period.target_tracking_period_id\n        WHERE (current_period.effective_from AT TIME ZONE 'UTC')::date = target_date\n          AND previous_period.target_tracking_period_id \u003c\u003e current_period.target_tracking_period_id;\n\n    ELSE\n        WITH current_certificate AS (\n            SELECT fact.*\n            FROM public.gfn_site_target_daily fact\n            WHERE fact.fact_date = target_date\n              AND fact.finalized_at IS NOT NULL\n              AND NULLIF(btrim(fact.tls_cert_fingerprint_sha256), '') IS NOT NULL\n        ), paired AS (\n            SELECT current_certificate.*,\n                   previous.fact_date AS before_date,\n                   previous.tls_state_observed_at AS before_observed_at,\n                   previous.tls_cert_fingerprint_sha256 AS before_fingerprint,\n                   previous.tls_cert_spki_sha256 AS before_spki,\n                   previous.tls_cert_issuer AS before_issuer,\n                   previous.tls_cert_not_before AS before_not_before,\n                   previous.tls_cert_not_after AS before_not_after,\n                   previous.tls_cert_verified AS before_verified,\n                   previous.projection_version AS before_projection_version\n            FROM current_certificate\n            JOIN LATERAL (\n                SELECT candidate.*\n                FROM public.gfn_site_target_daily candidate\n                WHERE candidate.target_tracking_period_id = current_certificate.target_tracking_period_id\n                  AND candidate.fact_date \u003c current_certificate.fact_date\n                  AND candidate.finalized_at IS NOT NULL\n                  AND NULLIF(btrim(candidate.tls_cert_fingerprint_sha256), '') IS NOT NULL\n                ORDER BY candidate.fact_date DESC\n                LIMIT 1\n            ) previous ON true\n        )\n        INSERT INTO public.gfn_change_events (\n            event_key, detector_key, detector_version, site_id, projection_date,\n            event_at, time_basis, event_code, scope_kind, scope_key,\n            old_value, new_value, source_event_key, source_before_key, source_after_key,\n            source_before_at, source_after_at, source_versions, materialized_at\n        )\n        SELECT 'tls_certificate_transition/1/' || target_tracking_period_id || '/' || fact_date,\n               target_detector_key, 1, site_id, target_date,\n               tls_state_observed_at,\n               CASE WHEN tls_state_observed_at IS NULL THEN 'day' ELSE 'observed' END,\n               'tls_certificate_changed', 'target', target_tracking_period_id::text,\n               jsonb_build_object('fingerprint_sha256', before_fingerprint, 'spki_sha256', before_spki,\n                                  'issuer', before_issuer, 'not_before', before_not_before,\n                                  'not_after', before_not_after, 'verified', before_verified),\n               jsonb_build_object('fingerprint_sha256', tls_cert_fingerprint_sha256,\n                                  'spki_sha256', tls_cert_spki_sha256, 'issuer', tls_cert_issuer,\n                                  'not_before', tls_cert_not_before, 'not_after', tls_cert_not_after,\n                                  'verified', tls_cert_verified),\n               target_tracking_period_id || '/' || fact_date,\n               'certificate/' || target_tracking_period_id || '/' || before_date,\n               'certificate/' || target_tracking_period_id || '/' || fact_date,\n               before_observed_at, tls_state_observed_at,\n               jsonb_build_object('before_projection_version', before_projection_version,\n                                  'after_projection_version', projection_version,\n                                  'target_tracking_period_id', target_tracking_period_id),\n               transaction_timestamp()\n        FROM paired\n        WHERE before_fingerprint \u003c\u003e tls_cert_fingerprint_sha256;\n    END IF;\n\n    GET DIAGNOSTICS inserted_rows = ROW_COUNT;\n\n    IF EXISTS (\n        SELECT 1\n        FROM public.gfn_change_events event\n        JOIN public.gfn_change_registry registry\n          ON registry.detector_key = event.detector_key\n         AND registry.detector_version = event.detector_version\n        WHERE event.detector_key = target_detector_key\n          AND event.detector_version = target_detector_version\n          AND event.projection_date = target_date\n          AND NOT (event.event_code = ANY(registry.event_codes))\n    ) THEN\n        RAISE EXCEPTION 'Nav change detector emitted an undeclared event code for %/% on %',\n            target_detector_key, target_detector_version, target_date;\n    END IF;\n\n    IF EXISTS (\n        SELECT 1 FROM public.gfn_change_events\n        WHERE detector_key = target_detector_key AND detector_version = target_detector_version\n          AND projection_date = target_date AND time_basis = 'observed'\n          AND event_at IS DISTINCT FROM source_after_at\n    ) THEN\n        RAISE EXCEPTION 'Nav observed change event timestamp differs from source_after_at for %/% on %',\n            target_detector_key, target_detector_version, target_date;\n    END IF;\n\n    RETURN inserted_rows;\nEND;\n$function$\n"
     },
     {
       "identity": "gfn_project_metric_day(target_metric_key text, target_metric_version integer, target_date date)",

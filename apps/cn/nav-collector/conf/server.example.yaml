@@ -163,3 +163,6 @@ facts:
 
 metrics:
   reconcile_interval_seconds: 600 # active metric versions process at most one UTC day per pass
+
+changes:
+  reconcile_interval_seconds: 600 # active detector versions process at most one UTC day per pass

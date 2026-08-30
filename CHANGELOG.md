@@ -6,6 +6,18 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+### Added
+
+- Add Goose-owned versioned Game/Nav change registries, deterministic canonical event stores, and independent per-detector-version checkpoints.
+- Add ten compiled detectors for Game free/support/release/price transitions and Nav IPv6/TLS 1.3/security.txt/Primary Target/TLS certificate transitions.
+- Add in-process Game/Nav Change Engines plus `changes status`, `changes backfill`, and forward-propagating `changes rebuild` commands.
+- Add an authenticated read-only Admin Change Center for detector Registry, checkpoints, events, filters, and provenance details.
+
+### Changed
+
+- Run Collector reconciliation in Acquisition -> Facts -> Metrics -> Changes order while preserving the existing Redis-backed Nav Change and all public routes.
+- Compare semantic states across unknown gaps only within historical tracking identities, and retain deterministic event time, scope, source keys, versions, and materialization provenance.
+
 ## v3.0.0-alpha.4 - 2026-08-29
 
 ### Added

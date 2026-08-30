@@ -8,6 +8,55 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// Independent ordered checkpoints for each Nav detector version.
+type GfnChangeCheckpoint struct {
+	DetectorKey      string             `json:"detector_key"`
+	DetectorVersion  int32              `json:"detector_version"`
+	SourceStartDate  pgtype.Date        `json:"source_start_date"`
+	ProcessedThrough pgtype.Date        `json:"processed_through"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Deterministic canonical Nav change events derived only from facts, metrics, and effective periods.
+type GfnChangeEvent struct {
+	EventKey        string             `json:"event_key"`
+	DetectorKey     string             `json:"detector_key"`
+	DetectorVersion int32              `json:"detector_version"`
+	SiteID          int64              `json:"site_id"`
+	ProjectionDate  pgtype.Date        `json:"projection_date"`
+	EventAt         pgtype.Timestamptz `json:"event_at"`
+	TimeBasis       string             `json:"time_basis"`
+	EventCode       string             `json:"event_code"`
+	ScopeKind       string             `json:"scope_kind"`
+	ScopeKey        string             `json:"scope_key"`
+	OldValue        []byte             `json:"old_value"`
+	NewValue        []byte             `json:"new_value"`
+	SourceEventKey  string             `json:"source_event_key"`
+	SourceBeforeKey string             `json:"source_before_key"`
+	SourceAfterKey  string             `json:"source_after_key"`
+	SourceBeforeAt  pgtype.Timestamptz `json:"source_before_at"`
+	SourceAfterAt   pgtype.Timestamptz `json:"source_after_at"`
+	SourceVersions  []byte             `json:"source_versions"`
+	MaterializedAt  pgtype.Timestamptz `json:"materialized_at"`
+}
+
+// Goose-owned versioned Nav change detector contracts; Runtime and Admin are read-only.
+type GfnChangeRegistry struct {
+	DetectorKey     string             `json:"detector_key"`
+	DetectorVersion int32              `json:"detector_version"`
+	SourceKind      string             `json:"source_kind"`
+	SourceContracts []string           `json:"source_contracts"`
+	DetectionPolicy string             `json:"detection_policy"`
+	WatermarkPolicy string             `json:"watermark_policy"`
+	EventCodes      []string           `json:"event_codes"`
+	ProcessingGrain string             `json:"processing_grain"`
+	Status          string             `json:"status"`
+	Description     string             `json:"description"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	RetiredAt       pgtype.Timestamptz `json:"retired_at"`
+}
+
 // Durable scheduled, manual, and entity-triggered Nav collection jobs.
 type GfnCollectionJob struct {
 	ID                int64              `json:"id"`

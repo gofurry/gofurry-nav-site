@@ -24,6 +24,7 @@ import (
 	authcontroller "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
 	authmw "github.com/gofurry/gofurry-admin/internal/app/auth/middleware"
 	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
+	changeadmin "github.com/gofurry/gofurry-admin/internal/app/changeadmin"
 	collectioncontroller "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/controller"
 	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
 	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
@@ -81,6 +82,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	gameAPI := gameadmin.New(gamePool, auditLogger)
 	collectionAPI := collectioncontroller.New(collectionservice.New(gamePool, navPool, auditLogger))
 	metricAPI := metricadmin.NewAPI(metricadmin.New(gamePool, navPool))
+	changeAPI := changeadmin.NewAPI(changeadmin.New(gamePool, navPool))
 	app := fiber.New()
 	app.Post("/auth/bootstrap", authAPI.Bootstrap)
 	app.Post("/auth/login", authAPI.Login)
@@ -108,6 +110,10 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Get("/metrics/checkpoints", metricAPI.Checkpoints)
 	protected.Get("/metrics/daily", metricAPI.Daily)
 	protected.Get("/metrics/entities", metricAPI.Entities)
+	protected.Get("/changes/overview", changeAPI.Overview)
+	protected.Get("/changes/registry", changeAPI.Registry)
+	protected.Get("/changes/checkpoints", changeAPI.Checkpoints)
+	protected.Get("/changes/events", changeAPI.Events)
 
 	requestJSON(t, app, http.MethodPost, "/auth/bootstrap", `{"password":"integration-password"}`, nil, http.StatusOK)
 	login := requestJSON(t, app, http.MethodPost, "/auth/login", `{"password":"integration-password"}`, nil, http.StatusOK)
@@ -258,6 +264,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 		t.Fatalf("expected auth and CRUD audit entries, got %d", count)
 	}
 	testMetricCenterReadOnlyAPI(t, ctx, app, cookie, gamePool, navPool)
+	testChangeCenterReadOnlyAPI(t, ctx, app, cookie, gamePool, navPool)
 
 	// Prove that gfn and gfa are not treated as a distributed transaction: a
 	// failed gfa audit must roll back the still-open gfn business transaction.
@@ -347,6 +354,34 @@ VALUES (998800, $1, '2026-08-02T00:00:00Z', true,
 	assertHistoricalMetricName(t, requestJSON(t, app, http.MethodGet,
 		"/metrics/entities?domain=nav&metric=ipv6_adoption&version=1&fact_date="+factDate,
 		"", cookie, http.StatusOK), "Historical Site Name")
+}
+
+func testChangeCenterReadOnlyAPI(t *testing.T, ctx context.Context, app *fiber.App, cookie *http.Cookie, gamePool, navPool *pgxpool.Pool) {
+	t.Helper()
+	const factDate = "2026-08-01"
+	if _, err := gamePool.Exec(ctx, `INSERT INTO gfg_change_events
+        (event_key,detector_key,detector_version,game_id,projection_date,event_at,time_basis,event_code,
+         scope_kind,scope_key,old_value,new_value,source_event_key,source_before_key,source_after_key,
+         source_before_at,source_after_at,source_versions,materialized_at)
+        VALUES ('admin-game-change','free_game_transition',1,998800,$1::date,'2026-08-01T23:00:00Z','observed','game_became_free',
+                'global','all','{"state":"negative"}','{"state":"positive"}','admin-game-source','before','after',
+                '2026-07-31T23:00:00Z','2026-08-01T23:00:00Z','{"metric_version":1}',now())`, factDate); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := navPool.Exec(ctx, `INSERT INTO gfn_change_events
+        (event_key,detector_key,detector_version,site_id,projection_date,event_at,time_basis,event_code,
+         scope_kind,scope_key,old_value,new_value,source_event_key,source_before_key,source_after_key,
+         source_before_at,source_after_at,source_versions,materialized_at)
+        VALUES ('admin-nav-change','ipv6_transition',1,998800,$1::date,'2026-08-01T23:00:00Z','observed','ipv6_enabled',
+                'global','all','{"state":"negative"}','{"state":"positive"}','admin-nav-source','before','after',
+                '2026-07-31T23:00:00Z','2026-08-01T23:00:00Z','{"metric_version":1}',now())`, factDate); err != nil {
+		t.Fatal(err)
+	}
+	requestJSON(t, app, http.MethodGet, "/changes/overview", "", cookie, http.StatusOK).Body.Close()
+	requestJSON(t, app, http.MethodGet, "/changes/registry", "", cookie, http.StatusOK).Body.Close()
+	requestJSON(t, app, http.MethodGet, "/changes/checkpoints", "", cookie, http.StatusOK).Body.Close()
+	assertHistoricalMetricName(t, requestJSON(t, app, http.MethodGet, "/changes/events?domain=game&detector=free_game_transition", "", cookie, http.StatusOK), "Historical Game Name")
+	assertHistoricalMetricName(t, requestJSON(t, app, http.MethodGet, "/changes/events?domain=nav&detector=ipv6_transition", "", cookie, http.StatusOK), "Historical Site Name")
 }
 
 func assertHistoricalMetricName(t *testing.T, resp *http.Response, expected string) {

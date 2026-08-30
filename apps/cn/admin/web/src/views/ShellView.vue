@@ -6,6 +6,7 @@ import {
   BarChart3,
   Bell,
   Boxes,
+  GitCompareArrows,
   ChevronLeft,
   ChevronRight,
   Database,
@@ -106,6 +107,15 @@ function iconFor(key: string) {
             >
               <BarChart3 :size="18" />
               <span>Metric Center</span>
+            </RouterLink>
+            <RouterLink
+              to="/changes"
+              class="admin-nav__link"
+              :class="{ 'admin-nav__link--active': isActive('/changes') }"
+              title="Change Center"
+            >
+              <GitCompareArrows :size="18" />
+              <span>Change Center</span>
             </RouterLink>
           </div>
         </section>

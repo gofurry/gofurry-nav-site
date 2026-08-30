@@ -86,6 +86,18 @@ type serverConfig struct {
 	Collector CollectorConfig `yaml:"collector"`
 	Facts     FactsConfig     `yaml:"facts"`
 	Metrics   MetricsConfig   `yaml:"metrics"`
+	Changes   ChangesConfig   `yaml:"changes"`
+}
+
+type ChangesConfig struct {
+	ReconcileIntervalSeconds int `yaml:"reconcile_interval_seconds"`
+}
+
+func (cfg ChangesConfig) ReconcileInterval() time.Duration {
+	if cfg.ReconcileIntervalSeconds <= 0 {
+		return 10 * time.Minute
+	}
+	return time.Duration(cfg.ReconcileIntervalSeconds) * time.Second
 }
 
 type MetricsConfig struct {

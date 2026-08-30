@@ -118,7 +118,7 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 				t.Fatalf("fresh %s schema drift: %s", test.label, difference)
 			}
 
-			// Exercise the deployed alpha.2 -> alpha.3 boundary explicitly. Game
+			// Exercise the deployed alpha.2 starting boundary through current. Game
 			// additionally proves both the pre-P0.2 Raw floor and the follow-up
 			// P0.2 Tracking/Fact floor before the final sequence correction.
 			if alpha2Version, ok := map[string]int64{
@@ -153,14 +153,14 @@ VALUES
 					}
 				}
 				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
-					t.Fatalf("upgrade %s alpha.2 to alpha.3: %v", test.label, err)
+					t.Fatalf("upgrade %s alpha.2 to current: %v", test.label, err)
 				}
 				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
 				if err != nil {
 					t.Fatalf("inspect upgraded %s schema: %v", test.label, err)
 				}
 				if difference := schema.Difference(expected, upgradeActual); difference != "" {
-					t.Fatalf("alpha.2 -> alpha.3 %s schema drift: %s", test.label, difference)
+					t.Fatalf("alpha.2 -> current %s schema drift: %s", test.label, difference)
 				}
 				if test.label == "gfg" {
 					var allocated int64
@@ -173,7 +173,7 @@ VALUES
 				}
 			}
 
-			// Exercise the deployed alpha.3 -> alpha.4 Metric Foundation boundary
+			// Exercise the deployed alpha.3 starting boundary through current,
 			// independently from the longer alpha.2 upgrade path.
 			if alpha3Version, ok := map[string]int64{
 				"gfg": 20260828010300,
@@ -188,14 +188,48 @@ VALUES
 					t.Fatalf("prepare %s alpha.3 fixture: %v", test.label, err)
 				}
 				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
-					t.Fatalf("upgrade %s alpha.3 to alpha.4: %v", test.label, err)
+					t.Fatalf("upgrade %s alpha.3 to current: %v", test.label, err)
 				}
 				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
 				if err != nil {
-					t.Fatalf("inspect alpha.4-upgraded %s schema: %v", test.label, err)
+					t.Fatalf("inspect alpha.3-upgraded %s schema: %v", test.label, err)
 				}
 				if difference := schema.Difference(expected, upgradeActual); difference != "" {
-					t.Fatalf("alpha.3 -> alpha.4 %s schema drift: %s", test.label, difference)
+					t.Fatalf("alpha.3 -> current %s schema drift: %s", test.label, difference)
+				}
+			}
+
+			// Exercise the deployed alpha.4 -> alpha.5 Change Intelligence
+			// boundary independently, including Goose-owned detector seeds.
+			if test.label == "gfg" || test.label == "gfn" {
+				upgradeName := temporaryDatabaseName(test.label, "alpha4_upgrade")
+				createDatabase(t, ctx, adminDB, upgradeName)
+				defer dropDatabase(t, adminDB, upgradeName)
+				upgradeDB := openDatabase(t, adminDSN, upgradeName)
+				defer upgradeDB.Close()
+				if err := goose.UpToContext(ctx, upgradeDB, migrationDir, 20260829020000); err != nil {
+					t.Fatalf("prepare %s alpha.4 fixture: %v", test.label, err)
+				}
+				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
+					t.Fatalf("upgrade %s alpha.4 to alpha.5: %v", test.label, err)
+				}
+				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
+				if err != nil {
+					t.Fatalf("inspect alpha.5-upgraded %s schema: %v", test.label, err)
+				}
+				if difference := schema.Difference(expected, upgradeActual); difference != "" {
+					t.Fatalf("alpha.4 -> alpha.5 %s schema drift: %s", test.label, difference)
+				}
+				var registryCount, checkpointCount int
+				prefix := map[string]string{"gfg": "gfg", "gfn": "gfn"}[test.label]
+				if err := upgradeDB.QueryRowContext(ctx, fmt.Sprintf(`SELECT count(*) FROM public.%s_change_registry`, prefix)).Scan(&registryCount); err != nil {
+					t.Fatal(err)
+				}
+				if err := upgradeDB.QueryRowContext(ctx, fmt.Sprintf(`SELECT count(*) FROM public.%s_change_checkpoints`, prefix)).Scan(&checkpointCount); err != nil {
+					t.Fatal(err)
+				}
+				if registryCount != 5 || checkpointCount != 5 {
+					t.Fatalf("%s alpha.5 detector seeds registry=%d checkpoints=%d", test.label, registryCount, checkpointCount)
 				}
 			}
 

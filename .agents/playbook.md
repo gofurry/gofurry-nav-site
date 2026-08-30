@@ -71,6 +71,8 @@ Local per-service integrations use isolated development configs:
 GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/game/v2/repository -run TestPostgresRepositorySemantics -count=1
 GOFURRY_GAME_BACKEND_INTEGRATION_CONFIG=/path/config.yaml go test ./apps/game/v2/dao -run TestPostgresReadModelSemantics -count=1
 GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/observation -run TestPostgresCollectorPersistenceSemantics -count=1
+GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/changes -count=1
+GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/changes -count=1
 GOFURRY_NAV_BACKEND_INTEGRATION_CONFIG=/path/config.yaml go test ./apps/nav/navPage/dao -run TestPostgresNavBackendPersistenceSemantics -count=1
 GOFURRY_ADMIN_INTEGRATION_CONFIG=/path/server.yaml go test ./internal/bootstrap -run TestAdminThreeDatabasePersistence -count=1
 ~~~
@@ -78,6 +80,8 @@ GOFURRY_ADMIN_INTEGRATION_CONFIG=/path/server.yaml go test ./internal/bootstrap 
 Historical Fact smoke checks use the Collector CLI against the same isolated config: `facts status`, `facts backfill --dry-run`, `facts backfill`, and a bounded `facts rebuild --pipeline ... --from ... --through ...`. Keep `facts.retention_enabled=false` until checkpoints and fact row counts are verified.
 
 Analytics Metric smoke checks run after Fact watermarks are ready: `metrics status`, `metrics backfill --dry-run`, a bounded `metrics backfill --metric ... --version ...`, and `metrics rebuild --metric ... --version ... --from ... --through ...`. Verify Registry/evaluator drift, per-version checkpoints, the all-zero global row, count conservation, historical-day freshness, and same-day Historical Fact names in Admin Metric Center.
+
+Change Intelligence smoke checks run after Metric/Fact watermarks are ready: `changes status`, `changes backfill --dry-run`, a bounded `changes backfill --detector ... --version ...`, and `changes rebuild --detector ... --version ... --from ... --dry-run` followed by the actual rebuild when intended. Rebuild must propagate through `processed_through`; an optional `--through` must equal that checkpoint and `--max-days` must not truncate it. Verify stable event keys, semantic-memory gaps, tracking identity resets, event time/provenance, and same-day Historical Fact names in Admin Change Center.
 
 Run these only against explicitly isolated development PostgreSQL. Never use production credentials.
 
