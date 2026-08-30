@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { X } from 'lucide-vue-next'
 import { getJSON } from '../api'
 
 type MetricCounts = {
@@ -73,9 +74,11 @@ type Entity = {
   source_observed_at: string | null
   dimension_values: Record<string, unknown>
   source_projection_versions: Record<string, number>
+	 evaluated_at?: string
 }
 
 type EntityPage = { total: number; list: Entity[] }
+type DailyPage = { total: number; list: Daily[] }
 type Tab = 'overview' | 'registry' | 'checkpoints' | 'daily' | 'entities'
 
 const tabs: Array<{ key: Tab; label: string }> = [
@@ -93,10 +96,11 @@ const error = ref('')
 const overview = ref<Overview[]>([])
 const registry = ref<Registry[]>([])
 const checkpoints = ref<Checkpoint[]>([])
-const daily = ref<Daily[]>([])
+const dailyPage = ref<DailyPage>({ total: 0, list: [] })
 const entityPage = ref<EntityPage>({ total: 0, list: [] })
+const selectedEntity = ref<Entity | null>(null)
 
-const dailyFilter = ref({ domain: 'nav', metric: '', version: 1, from: '', to: '', dimensionKey: 'global', dimensionValue: 'all' })
+const dailyFilter = ref({ domain: 'nav', metric: '', version: 1, from: '', to: '', dimensionKey: 'global', dimensionValue: 'all', page: 1, pageSize: 50 })
 const entityFilter = ref({ domain: 'nav', metric: '', version: 1, factDate: '', state: '', reasonCode: '', page: 1, pageSize: 50 })
 
 const activeRegistry = computed(() => registry.value.filter((item) => item.status === 'active'))
@@ -161,7 +165,8 @@ function syncEntityVersion() {
   entityFilter.value.page = 1
 }
 
-async function loadDaily() {
+async function loadDaily(resetPage = false) {
+	if (resetPage) dailyFilter.value.page = 1
   loading.value = true
   error.value = ''
   try {
@@ -171,10 +176,12 @@ async function loadDaily() {
       version: String(dailyFilter.value.version),
       dimension_key: dailyFilter.value.dimensionKey || 'global',
       dimension_value: dailyFilter.value.dimensionValue || 'all',
+		page: String(dailyFilter.value.page),
+		page_size: String(dailyFilter.value.pageSize),
     })
     if (dailyFilter.value.from) params.set('from', dailyFilter.value.from)
     if (dailyFilter.value.to) params.set('to', dailyFilter.value.to)
-    daily.value = await getJSON<Daily[]>(`/api/v1/metrics/daily?${params}`)
+		dailyPage.value = await getJSON<DailyPage>(`/api/v1/metrics/daily?${params}`)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : String(cause)
   } finally {
@@ -208,7 +215,7 @@ async function loadEntities(resetPage = false) {
 
 function selectTab(tab: Tab) {
   activeTab.value = tab
-  if (tab === 'daily' && daily.value.length === 0) void loadDaily()
+	if (tab === 'daily' && dailyPage.value.list.length === 0) void loadDaily()
   if (tab === 'entities' && entityPage.value.list.length === 0) void loadEntities()
 }
 
@@ -235,6 +242,34 @@ function nextPage() {
     entityFilter.value.page++
     void loadEntities()
   }
+}
+
+function previousDailyPage() {
+	if (dailyFilter.value.page > 1) {
+		dailyFilter.value.page--
+		void loadDaily()
+	}
+}
+
+function nextDailyPage() {
+	if (dailyFilter.value.page * dailyFilter.value.pageSize < dailyPage.value.total) {
+		dailyFilter.value.page++
+		void loadDaily()
+	}
+}
+
+function pageRange(page: number, pageSize: number, total: number) {
+	if (total === 0) return 'Showing 0 of 0'
+	const start = (page - 1) * pageSize + 1
+	const end = Math.min(page * pageSize, total)
+	return `Showing ${start}–${end} of ${total}`
+}
+
+function summarizeObject(value: Record<string, unknown>) {
+	const entries = Object.entries(value ?? {})
+	if (entries.length === 0) return '—'
+	const summary = entries.slice(0, 2).map(([key, item]) => `${key}=${Array.isArray(item) ? `[${item.length}]` : String(item)}`).join(', ')
+	return entries.length > 2 ? `${summary}, …` : summary
 }
 
 onMounted(loadFoundation)
@@ -271,13 +306,21 @@ onMounted(loadFoundation)
     <section v-else-if="activeTab === 'checkpoints'" class="resource-table-section"><div class="resource-table-scroll"><table class="resource-table"><thead><tr><th>Domain</th><th>Metric</th><th>Source Start</th><th>Processed</th><th>Upstream</th><th>Lag</th><th>Status</th><th>Updated</th></tr></thead><tbody><tr v-for="item in checkpoints" :key="`${item.domain}-${item.metric_key}-${item.metric_version}`"><td>{{ item.domain }}</td><td>{{ item.metric_key }} v{{ item.metric_version }}</td><td>{{ item.source_start_date ?? '—' }}</td><td>{{ item.processed_through ?? '—' }}</td><td>{{ item.upstream_processed_through ?? '—' }}</td><td>{{ item.lag_days ?? '—' }}</td><td>{{ item.status }}</td><td class="font-mono text-xs">{{ item.updated_at }}</td></tr></tbody></table></div></section>
 
     <section v-else-if="activeTab === 'daily'" class="mt-5">
-      <div class="flex flex-wrap gap-2"><select v-model="dailyFilter.domain" class="ui-control px-3" @change="syncDailyMetric"><option value="game">game</option><option value="nav">nav</option></select><select v-model="dailyFilter.metric" class="ui-control min-w-52 px-3" @change="syncDailyVersion"><option v-for="item in dailyMetrics" :key="item.metric_key" :value="item.metric_key">{{ item.metric_key }} v{{ item.metric_version }}</option></select><input v-model="dailyFilter.from" type="date" class="ui-control px-3"><input v-model="dailyFilter.to" type="date" class="ui-control px-3"><input v-model="dailyFilter.dimensionKey" class="ui-control px-3" placeholder="dimension key"><input v-model="dailyFilter.dimensionValue" class="ui-control px-3" placeholder="dimension value"><button class="ui-button ui-button--primary px-4" @click="loadDaily">Query</button></div>
-      <div class="resource-table-section"><div class="resource-table-scroll"><table class="resource-table min-w-[1250px]"><thead><tr><th>Date</th><th>Metric</th><th>Dimension</th><th>Population</th><th>Eligible</th><th>Positive</th><th>Negative</th><th>Stale</th><th>Not Probed</th><th>Failed</th><th>Unknown</th><th>N/A</th><th>Adoption</th><th>Coverage</th></tr></thead><tbody><tr v-for="item in daily" :key="`${item.domain}-${item.metric_key}-${item.fact_date}-${item.dimension_key}-${item.dimension_value}`"><td>{{ item.fact_date }}</td><td>{{ item.domain }}/{{ item.metric_key }} v{{ item.metric_version }}</td><td>{{ item.dimension_key }}/{{ item.dimension_value }}</td><td>{{ item.population_count }}</td><td>{{ item.eligible_count }}</td><td>{{ item.positive_count }}</td><td>{{ item.negative_count }}</td><td>{{ item.stale_count }}</td><td>{{ item.not_probed_count }}</td><td>{{ item.probe_failed_count }}</td><td>{{ item.unknown_count }}</td><td>{{ item.not_applicable_count }}</td><td>{{ formatRate(item.adoption_rate) }}</td><td>{{ formatRate(item.coverage_rate) }}</td></tr></tbody></table></div></div>
+      <div class="flex flex-wrap gap-2"><select v-model="dailyFilter.domain" class="ui-control px-3" @change="syncDailyMetric"><option value="game">game</option><option value="nav">nav</option></select><select v-model="dailyFilter.metric" class="ui-control min-w-52 px-3" @change="syncDailyVersion"><option v-for="item in dailyMetrics" :key="item.metric_key" :value="item.metric_key">{{ item.metric_key }} v{{ item.metric_version }}</option></select><input v-model="dailyFilter.from" type="date" class="ui-control px-3"><input v-model="dailyFilter.to" type="date" class="ui-control px-3"><input v-model="dailyFilter.dimensionKey" class="ui-control px-3" placeholder="dimension key"><input v-model="dailyFilter.dimensionValue" class="ui-control px-3" placeholder="dimension value"><button class="ui-button ui-button--primary px-4" @click="loadDaily(true)">Query</button></div>
+      <div class="resource-table-section"><div class="resource-table-scroll"><table class="resource-table min-w-[1250px]"><thead><tr><th>Date</th><th>Metric</th><th>Dimension</th><th>Population</th><th>Eligible</th><th>Positive</th><th>Negative</th><th>Stale</th><th>Not Probed</th><th>Failed</th><th>Unknown</th><th>N/A</th><th>Adoption</th><th>Coverage</th></tr></thead><tbody><tr v-for="item in dailyPage.list" :key="`${item.domain}-${item.metric_key}-${item.fact_date}-${item.dimension_key}-${item.dimension_value}`"><td>{{ item.fact_date }}</td><td>{{ item.domain }}/{{ item.metric_key }} v{{ item.metric_version }}</td><td>{{ item.dimension_key }}/{{ item.dimension_value }}</td><td>{{ item.population_count }}</td><td>{{ item.eligible_count }}</td><td>{{ item.positive_count }}</td><td>{{ item.negative_count }}</td><td>{{ item.stale_count }}</td><td>{{ item.not_probed_count }}</td><td>{{ item.probe_failed_count }}</td><td>{{ item.unknown_count }}</td><td>{{ item.not_applicable_count }}</td><td>{{ formatRate(item.adoption_rate) }}</td><td>{{ formatRate(item.coverage_rate) }}</td></tr></tbody></table></div><div class="resource-pagination"><span>{{ pageRange(dailyFilter.page, dailyFilter.pageSize, dailyPage.total) }}</span><label class="flex items-center gap-2">Rows per page:<select v-model.number="dailyFilter.pageSize" class="ui-control px-2 py-1" @change="loadDaily(true)"><option :value="25">25</option><option :value="50">50</option><option :value="100">100</option></select></label><button class="ui-button px-3" :disabled="dailyFilter.page <= 1" @click="previousDailyPage">Previous</button><button class="ui-button px-3" :disabled="dailyFilter.page * dailyFilter.pageSize >= dailyPage.total" @click="nextDailyPage">Next</button></div></div>
     </section>
 
     <section v-else class="mt-5">
       <div class="flex flex-wrap gap-2"><select v-model="entityFilter.domain" class="ui-control px-3" @change="syncEntityMetric"><option value="game">game</option><option value="nav">nav</option></select><select v-model="entityFilter.metric" class="ui-control min-w-52 px-3" @change="syncEntityVersion"><option v-for="item in entityMetrics" :key="item.metric_key" :value="item.metric_key">{{ item.metric_key }} v{{ item.metric_version }}</option></select><input v-model="entityFilter.factDate" type="date" class="ui-control px-3"><select v-model="entityFilter.state" class="ui-control px-3"><option v-for="state in states" :key="state" :value="state">{{ state || 'all states' }}</option></select><input v-model="entityFilter.reasonCode" class="ui-control px-3" placeholder="reason code"><button class="ui-button ui-button--primary px-4" @click="loadEntities(true)">Query</button></div>
-      <div class="resource-table-section"><div class="resource-table-scroll"><table class="resource-table min-w-[1100px]"><thead><tr><th>Entity</th><th>State</th><th>Reason</th><th>Evidence</th><th>Dimensions</th><th>Projection Versions</th></tr></thead><tbody><tr v-for="item in entityPage.list" :key="`${item.domain}-${item.entity_id}`"><td><strong>{{ item.historical_name }}</strong><div class="font-mono text-xs text-[var(--text-muted)]">{{ item.domain }} #{{ item.entity_id }}</div></td><td><span class="inline-flex rounded-full border border-current/30 px-2 py-1 font-mono text-xs" :class="stateClass(item.state)">{{ item.state }}</span></td><td class="font-mono text-xs">{{ item.reason_code }}</td><td class="font-mono text-xs">{{ item.source_observed_at ?? '—' }}</td><td><pre class="max-w-80 whitespace-pre-wrap text-xs">{{ JSON.stringify(item.dimension_values) }}</pre></td><td><pre class="max-w-64 whitespace-pre-wrap text-xs">{{ JSON.stringify(item.source_projection_versions) }}</pre></td></tr></tbody></table></div><div class="resource-pagination"><span>{{ entityPage.total }} entities · page {{ entityFilter.page }}</span><button class="ui-button px-3" :disabled="entityFilter.page <= 1" @click="previousPage">Previous</button><button class="ui-button px-3" :disabled="entityFilter.page * entityFilter.pageSize >= entityPage.total" @click="nextPage">Next</button></div></div>
+      <div class="resource-table-section"><div class="resource-table-scroll"><table class="resource-table min-w-[1100px]"><thead><tr><th>Entity</th><th>State</th><th>Reason</th><th>Evidence</th><th>Dimensions</th><th>Projection Versions</th><th>Details</th></tr></thead><tbody><tr v-for="item in entityPage.list" :key="`${item.domain}-${item.entity_id}`"><td><strong>{{ item.historical_name }}</strong><div class="font-mono text-xs text-[var(--text-muted)]">{{ item.domain }} #{{ item.entity_id }}</div></td><td><span class="inline-flex rounded-full border border-current/30 px-2 py-1 font-mono text-xs" :class="stateClass(item.state)">{{ item.state }}</span></td><td class="font-mono text-xs">{{ item.reason_code }}</td><td class="font-mono text-xs">{{ item.source_observed_at ?? '—' }}</td><td class="max-w-72 truncate font-mono text-xs" :title="summarizeObject(item.dimension_values)">{{ summarizeObject(item.dimension_values) }}</td><td class="max-w-64 truncate font-mono text-xs" :title="summarizeObject(item.source_projection_versions)">{{ summarizeObject(item.source_projection_versions) }}</td><td><button class="ui-button px-3 py-1" @click="selectedEntity = item">View</button></td></tr></tbody></table></div><div class="resource-pagination"><span>{{ pageRange(entityFilter.page, entityFilter.pageSize, entityPage.total) }}</span><label class="flex items-center gap-2">Rows per page:<select v-model.number="entityFilter.pageSize" class="ui-control px-2 py-1" @change="loadEntities(true)"><option :value="25">25</option><option :value="50">50</option><option :value="100">100</option></select></label><button class="ui-button px-3" :disabled="entityFilter.page <= 1" @click="previousPage">Previous</button><button class="ui-button px-3" :disabled="entityFilter.page * entityFilter.pageSize >= entityPage.total" @click="nextPage">Next</button></div></div>
     </section>
+
+    <div v-if="selectedEntity" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <section class="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden border border-[var(--line-strong)] bg-[var(--panel-strong)] shadow-2xl" role="dialog" aria-modal="true">
+        <header class="flex items-center justify-between border-b border-[var(--line)] px-5 py-4"><div><h2 class="text-lg font-semibold">Metric Entity Details</h2><p class="text-xs text-[var(--text-muted)]">{{ selectedEntity.historical_name }} · {{ selectedEntity.domain }} #{{ selectedEntity.entity_id }}</p></div><button class="ui-button px-2" @click="selectedEntity = null"><X :size="18" /></button></header>
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 text-sm"><div class="grid gap-3 sm:grid-cols-2"><div class="detail-block"><strong>State</strong><p class="mt-1 font-mono">{{ selectedEntity.state }}</p></div><div class="detail-block"><strong>Reason</strong><p class="mt-1 font-mono">{{ selectedEntity.reason_code }}</p></div><div class="detail-block sm:col-span-2"><strong>Source observed at</strong><p class="mt-1 font-mono">{{ selectedEntity.source_observed_at ?? '—' }}</p></div></div><div><h3 class="font-semibold">Dimension values</h3><pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all bg-[var(--panel)] p-3 text-xs">{{ JSON.stringify(selectedEntity.dimension_values, null, 2) }}</pre></div><div><h3 class="font-semibold">Source projection versions</h3><pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all bg-[var(--panel)] p-3 text-xs">{{ JSON.stringify(selectedEntity.source_projection_versions, null, 2) }}</pre></div></div>
+        <footer class="flex justify-end border-t border-[var(--line)] px-5 py-3"><button class="ui-button px-4 py-2" @click="selectedEntity = null">Close</button></footer>
+      </section>
+    </div>
   </main>
 </template>

@@ -163,10 +163,10 @@ DELETE FROM gfg_tag_map WHERE tag_id=sqlc.arg(tag_id)
 AND (cardinality(sqlc.arg(game_ids)::bigint[]) = 0 OR NOT (game_id = ANY(sqlc.arg(game_ids)::bigint[])));
 
 -- name: CountGameOptions :one
-SELECT COUNT(*)::bigint FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';
+SELECT COUNT(*)::bigint FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR appid::text ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';
 
 -- name: ListGameOptions :many
-SELECT id,name,name_en FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
+SELECT id,name,name_en,appid FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR appid::text ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
 ORDER BY id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: ListTagOptions :many

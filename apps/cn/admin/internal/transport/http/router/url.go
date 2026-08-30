@@ -70,6 +70,7 @@ func authRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 
 func optionsRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Get("/sites", runtime.OptionsAPI.SiteOptions)
+	root.Get("/site-targets", runtime.OptionsAPI.SiteTargetOptions)
 	root.Get("/site-groups", runtime.OptionsAPI.SiteGroupOptions)
 	root.Get("/games", runtime.OptionsAPI.GameOptions)
 	root.Get("/tags", runtime.OptionsAPI.TagOptions)

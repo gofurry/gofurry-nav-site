@@ -25,7 +25,7 @@ func (q *Queries) CountGameComments(ctx context.Context, keyword string) (int64,
 }
 
 const countGameOptions = `-- name: CountGameOptions :one
-SELECT COUNT(*)::bigint FROM gfg_game WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
+SELECT COUNT(*)::bigint FROM gfg_game WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR appid::text ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
 `
 
 func (q *Queries) CountGameOptions(ctx context.Context, keyword string) (int64, error) {
@@ -639,7 +639,7 @@ func (q *Queries) ListGameIDsByTag(ctx context.Context, tagID int64) ([]int64, e
 }
 
 const listGameOptions = `-- name: ListGameOptions :many
-SELECT id,name,name_en FROM gfg_game WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
+SELECT id,name,name_en,appid FROM gfg_game WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR appid::text ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
 ORDER BY id DESC LIMIT $3 OFFSET $2
 `
 
@@ -653,6 +653,7 @@ type ListGameOptionsRow struct {
 	ID     int64  `json:"id"`
 	Name   string `json:"name"`
 	NameEn string `json:"name_en"`
+	Appid  int64  `json:"appid"`
 }
 
 func (q *Queries) ListGameOptions(ctx context.Context, arg ListGameOptionsParams) ([]ListGameOptionsRow, error) {
@@ -664,7 +665,12 @@ func (q *Queries) ListGameOptions(ctx context.Context, arg ListGameOptionsParams
 	items := []ListGameOptionsRow{}
 	for rows.Next() {
 		var i ListGameOptionsRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.NameEn); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NameEn,
+			&i.Appid,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

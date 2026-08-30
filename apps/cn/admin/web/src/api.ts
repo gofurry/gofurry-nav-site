@@ -67,7 +67,8 @@ export async function listJSON<T>(path: string, pageNum: number, pageSize: numbe
   if (keyword.trim()) {
     params.set('keyword', keyword.trim())
   }
-  return getJSON<PageResult<T>>(`${path}?${params.toString()}`)
+  const separator = path.includes('?') ? '&' : '?'
+  return getJSON<PageResult<T>>(`${path}${separator}${params.toString()}`)
 }
 
 export async function listAllJSON<T>(path: string, keyword = '', pageSize = 200) {

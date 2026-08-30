@@ -259,11 +259,32 @@ WHERE id=sqlc.arg(id) RETURNING id,site_id,weight,create_time,update_time;
 DELETE FROM gfn_featured_site WHERE id=sqlc.arg(id);
 
 -- name: CountSiteOptions :one
-SELECT COUNT(*)::bigint FROM gfn_site WHERE deleted IS NOT TRUE AND (sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%');
+SELECT COUNT(*)::bigint FROM gfn_site site WHERE deleted IS NOT TRUE AND (
+    sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
+    OR EXISTS (SELECT 1 FROM gfn_collector_domain target WHERE target.site_id=site.id AND target.deleted IS NOT TRUE AND lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower(sqlc.arg(keyword))||'%')
+);
 
 -- name: ListSiteOptions :many
-SELECT id,name,name_en FROM gfn_site WHERE deleted IS NOT TRUE AND (sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%')
+SELECT id,name,name_en FROM gfn_site site WHERE deleted IS NOT TRUE AND (
+    sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
+    OR EXISTS (SELECT 1 FROM gfn_collector_domain target WHERE target.site_id=site.id AND target.deleted IS NOT TRUE AND lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower(sqlc.arg(keyword))||'%')
+)
 ORDER BY id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: CountSiteTargetOptions :one
+SELECT count(*)::bigint
+FROM gfn_collector_domain target
+JOIN gfn_site site ON site.id = target.site_id AND site.deleted IS NOT TRUE
+WHERE target.site_id = sqlc.arg(site_id) AND target.deleted IS NOT TRUE
+  AND (sqlc.arg(keyword)::text = '' OR lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower(sqlc.arg(keyword))||'%');
+
+-- name: ListSiteTargetOptions :many
+SELECT target.id, lower(COALESCE(target.prefix,'')||target.name)::text AS target, target.proxy, target.tls
+FROM gfn_collector_domain target
+JOIN gfn_site site ON site.id = target.site_id AND site.deleted IS NOT TRUE
+WHERE target.site_id = sqlc.arg(site_id) AND target.deleted IS NOT TRUE
+  AND (sqlc.arg(keyword)::text = '' OR lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower(sqlc.arg(keyword))||'%')
+ORDER BY target.id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: CountSiteGroupOptions :one
 SELECT COUNT(*)::bigint FROM gfn_site_group WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';

@@ -71,7 +71,17 @@ WHERE (sqlc.arg(metric_key)::text = '' OR metric_key = sqlc.arg(metric_key))
   AND dimension_key = sqlc.arg(dimension_key)
   AND dimension_value = sqlc.arg(dimension_value)
 ORDER BY fact_date DESC, metric_key, metric_version DESC
-LIMIT sqlc.arg(row_limit);
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: AdminCountNavMetricDaily :one
+SELECT count(*)::bigint
+FROM gfn_metric_daily
+WHERE (sqlc.arg(metric_key)::text = '' OR metric_key = sqlc.arg(metric_key))
+  AND (sqlc.arg(metric_version)::integer = 0 OR metric_version = sqlc.arg(metric_version))
+  AND (sqlc.narg(from_date)::date IS NULL OR fact_date >= sqlc.narg(from_date))
+  AND (sqlc.narg(through_date)::date IS NULL OR fact_date <= sqlc.narg(through_date))
+  AND dimension_key = sqlc.arg(dimension_key)
+  AND dimension_value = sqlc.arg(dimension_value);
 
 -- name: AdminCountNavMetricEntities :one
 SELECT count(*)::bigint

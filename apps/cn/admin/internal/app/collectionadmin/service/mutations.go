@@ -102,7 +102,7 @@ func (s *Service) RunScheduleNow(ctx context.Context, meta audit.Meta, domain st
 		} else if schedule.JobKey != "game.metadata" {
 			return nil, common.NewValidationError("unknown Game schedule capability")
 		}
-		return s.createGameJobs(ctx, meta, collectionmodels.ManualJobRequest{Domain: "game", ScopeType: "all", Tasks: tasks}, "collection.schedule.run", id)
+		return s.createGameJobs(ctx, meta, collectionmodels.ManualJobRequest{Domain: "game", ScopeType: "all", Tasks: tasks}, "collection.schedule.run", id, &schedule.ID, &schedule.Version)
 	case "nav":
 		schedule, err := s.nav.AdminGetNavCollectionSchedule(ctx, id)
 		if err != nil {
@@ -112,7 +112,7 @@ func (s *Service) RunScheduleNow(ctx context.Context, meta audit.Meta, domain st
 		if _, ok := navTasks[protocol]; !ok {
 			return nil, common.NewValidationError("unknown Nav schedule capability")
 		}
-		return s.createNavJobs(ctx, meta, collectionmodels.ManualJobRequest{Domain: "nav", ScopeType: "all", Tasks: []string{protocol}}, "collection.schedule.run", id)
+		return s.createNavJobs(ctx, meta, collectionmodels.ManualJobRequest{Domain: "nav", ScopeType: "all", Tasks: []string{protocol}}, "collection.schedule.run", id, &schedule.ID, &schedule.Version)
 	default:
 		return nil, common.NewValidationError("domain must be game or nav")
 	}
@@ -121,15 +121,15 @@ func (s *Service) RunScheduleNow(ctx context.Context, meta audit.Meta, domain st
 func (s *Service) CreateManualJobs(ctx context.Context, meta audit.Meta, request collectionmodels.ManualJobRequest) ([]collectionmodels.Job, common.Error) {
 	switch request.Domain {
 	case "game":
-		return s.createGameJobs(ctx, meta, request, "collection.job.create", nil)
+		return s.createGameJobs(ctx, meta, request, "collection.job.create", nil, nil, nil)
 	case "nav":
-		return s.createNavJobs(ctx, meta, request, "collection.job.create", nil)
+		return s.createNavJobs(ctx, meta, request, "collection.job.create", nil, nil, nil)
 	default:
 		return nil, common.NewValidationError("domain must be game or nav")
 	}
 }
 
-func (s *Service) createGameJobs(ctx context.Context, meta audit.Meta, request collectionmodels.ManualJobRequest, action string, targetID any) ([]collectionmodels.Job, common.Error) {
+func (s *Service) createGameJobs(ctx context.Context, meta audit.Meta, request collectionmodels.ManualJobRequest, action string, targetID any, scheduleID, scheduleVersion *int64) ([]collectionmodels.Job, common.Error) {
 	tasks, validationErr := normalizeKnownTasks(request.Tasks, gameTasks)
 	if validationErr != nil {
 		return nil, validationErr
@@ -155,12 +155,16 @@ func (s *Service) createGameJobs(ctx context.Context, meta audit.Meta, request c
 		jobKey = "game.players"
 	}
 	dedupe := manualDedupe("game", request.ScopeType, request.ScopeID, nil, tasks)
+	if scheduleID != nil && scheduleVersion != nil {
+		dedupe = fmt.Sprintf("game:schedule:%d:v%d:run-now", *scheduleID, *scheduleVersion)
+	}
 	tx, err := s.gamePool.Begin(ctx)
 	if err != nil {
 		return nil, daoError(err)
 	}
 	defer tx.Rollback(ctx)
 	row, err := s.game.WithTx(tx).AdminInsertGameManualJob(ctx, gamesqlc.AdminInsertGameManualJobParams{
+		ScheduleID: scheduleID, ScheduleVersion: scheduleVersion,
 		JobKey: jobKey, ScopeType: request.ScopeType, ScopeID: request.ScopeID,
 		Tasks: tasks, RequestedBy: meta.Operator, DedupeKey: &dedupe,
 	})
@@ -179,7 +183,7 @@ func (s *Service) createGameJobs(ctx context.Context, meta audit.Meta, request c
 	return []collectionmodels.Job{gameJobDTO(row)}, nil
 }
 
-func (s *Service) createNavJobs(ctx context.Context, meta audit.Meta, request collectionmodels.ManualJobRequest, action string, targetID any) ([]collectionmodels.Job, common.Error) {
+func (s *Service) createNavJobs(ctx context.Context, meta audit.Meta, request collectionmodels.ManualJobRequest, action string, targetID any, scheduleID, scheduleVersion *int64) ([]collectionmodels.Job, common.Error) {
 	tasks, validationErr := normalizeKnownTasks(request.Tasks, navTasks)
 	if validationErr != nil {
 		return nil, validationErr
@@ -223,7 +227,11 @@ func (s *Service) createNavJobs(ctx context.Context, meta audit.Meta, request co
 	created := make([]navsqlc.GfnCollectionJob, 0, len(tasks))
 	for _, protocol := range tasks {
 		dedupe := manualDedupe("nav", request.ScopeType, request.ScopeID, request.Target, []string{protocol})
+		if scheduleID != nil && scheduleVersion != nil {
+			dedupe = fmt.Sprintf("nav:schedule:%d:v%d:run-now:%s", *scheduleID, *scheduleVersion, protocol)
+		}
 		row, err := queries.AdminInsertNavManualJob(ctx, navsqlc.AdminInsertNavManualJobParams{
+			ScheduleID: scheduleID, ScheduleVersion: scheduleVersion,
 			JobKey: "nav." + protocol, ScopeType: request.ScopeType, ScopeID: request.ScopeID,
 			Target: request.Target, Protocol: protocol, RequestedBy: meta.Operator, DedupeKey: &dedupe,
 		})

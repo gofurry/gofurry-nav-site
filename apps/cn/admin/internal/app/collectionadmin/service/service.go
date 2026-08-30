@@ -54,6 +54,13 @@ type ResultFilters struct {
 	Offset   int32
 }
 
+type InstanceFilters struct {
+	Domain string
+	View   string
+	Limit  int32
+	Offset int32
+}
+
 func (s *Service) Overview(ctx context.Context) (collectionmodels.Overview, common.Error) {
 	game, err := s.game.AdminGameCollectionCounts(ctx)
 	if err != nil {
@@ -71,24 +78,62 @@ func (s *Service) Overview(ctx context.Context) (collectionmodels.Overview, comm
 	}, nil
 }
 
-func (s *Service) Instances(ctx context.Context) ([]collectionmodels.Instance, common.Error) {
-	gameRows, err := s.game.AdminListGameCollectorInstances(ctx, 50)
-	if err != nil {
-		return nil, daoError(err)
+func (s *Service) Instances(ctx context.Context, filter InstanceFilters) (collectionmodels.InstancePage, common.Error) {
+	filter.Domain = strings.TrimSpace(filter.Domain)
+	filter.View = strings.TrimSpace(filter.View)
+	if filter.Domain != "" && filter.Domain != "game" && filter.Domain != "nav" {
+		return collectionmodels.InstancePage{}, common.NewValidationError("domain must be game or nav")
 	}
-	navRows, err := s.nav.AdminListNavCollectorInstances(ctx, 50)
-	if err != nil {
-		return nil, daoError(err)
+	if filter.View == "" {
+		filter.View = "current"
 	}
-	rows := make([]collectionmodels.Instance, 0, len(gameRows)+len(navRows))
-	for _, row := range gameRows {
-		rows = append(rows, instanceDTO("game", row.InstanceID, row.CollectorID, row.Hostname, row.Version, row.CommitSha, row.Capabilities, row.StartedAt, row.LastHeartbeatAt, row.StoppedAt, row.HeartbeatAgeSeconds))
+	if filter.View != "current" && filter.View != "history" {
+		return collectionmodels.InstancePage{}, common.NewValidationError("view must be current or history")
 	}
-	for _, row := range navRows {
-		rows = append(rows, instanceDTO("nav", row.InstanceID, row.CollectorID, row.Hostname, row.Version, row.CommitSha, row.Capabilities, row.StartedAt, row.LastHeartbeatAt, row.StoppedAt, row.HeartbeatAgeSeconds))
+	if filter.Limit <= 0 || filter.Limit > 200 {
+		filter.Limit = 50
 	}
-	sort.Slice(rows, func(i, j int) bool { return rows[i].LastHeartbeatAt.After(rows[j].LastHeartbeatAt) })
-	return rows, nil
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+	queryLimit, queryOffset := filter.Limit, filter.Offset
+	if filter.Domain == "" {
+		queryLimit, queryOffset = filter.Offset+filter.Limit, 0
+	}
+	page := collectionmodels.InstancePage{List: make([]collectionmodels.Instance, 0)}
+	if filter.Domain == "" || filter.Domain == "game" {
+		total, err := s.game.AdminCountGameCollectorInstances(ctx, filter.View)
+		if err != nil {
+			return collectionmodels.InstancePage{}, daoError(err)
+		}
+		page.Total += total
+		rows, err := s.game.AdminListGameCollectorInstances(ctx, gamesqlc.AdminListGameCollectorInstancesParams{InstanceView: filter.View, RowLimit: queryLimit, RowOffset: queryOffset})
+		if err != nil {
+			return collectionmodels.InstancePage{}, daoError(err)
+		}
+		for _, row := range rows {
+			page.List = append(page.List, instanceDTO("game", row.InstanceID, row.CollectorID, row.Hostname, row.Version, row.CommitSha, row.Capabilities, row.StartedAt, row.LastHeartbeatAt, row.StoppedAt, row.HeartbeatAgeSeconds))
+		}
+	}
+	if filter.Domain == "" || filter.Domain == "nav" {
+		total, err := s.nav.AdminCountNavCollectorInstances(ctx, filter.View)
+		if err != nil {
+			return collectionmodels.InstancePage{}, daoError(err)
+		}
+		page.Total += total
+		rows, err := s.nav.AdminListNavCollectorInstances(ctx, navsqlc.AdminListNavCollectorInstancesParams{InstanceView: filter.View, RowLimit: queryLimit, RowOffset: queryOffset})
+		if err != nil {
+			return collectionmodels.InstancePage{}, daoError(err)
+		}
+		for _, row := range rows {
+			page.List = append(page.List, instanceDTO("nav", row.InstanceID, row.CollectorID, row.Hostname, row.Version, row.CommitSha, row.Capabilities, row.StartedAt, row.LastHeartbeatAt, row.StoppedAt, row.HeartbeatAgeSeconds))
+		}
+	}
+	sort.Slice(page.List, func(i, j int) bool { return page.List[i].LastHeartbeatAt.After(page.List[j].LastHeartbeatAt) })
+	if filter.Domain == "" {
+		page.List = pageRows(page.List, filter.Offset, filter.Limit)
+	}
+	return page, nil
 }
 
 func (s *Service) Schedules(ctx context.Context) ([]collectionmodels.Schedule, common.Error) {
@@ -143,7 +188,7 @@ func (s *Service) Jobs(ctx context.Context, filter Filters) ([]collectionmodels.
 			return nil, daoError(err)
 		}
 		for _, row := range gameRows {
-			item := jobDTO("game", row.ID, row.ScheduleID, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID,
+			item := jobDTO("game", row.ID, row.ScheduleID, row.ScheduleVersion, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID,
 				row.Target, row.Tasks, row.Priority, row.ScheduledFor, row.Status, row.RequestedBy,
 				row.ClaimedBy, row.LeaseUntil, row.CancelRequestedAt, row.CreatedAt, row.CompletedAt, row.RunID)
 			item.Progress = realtimeProgress("game", row.RunID)
@@ -158,7 +203,7 @@ func (s *Service) Jobs(ctx context.Context, filter Filters) ([]collectionmodels.
 			return nil, daoError(err)
 		}
 		for _, row := range navRows {
-			item := jobDTO("nav", row.ID, row.ScheduleID, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID,
+			item := jobDTO("nav", row.ID, row.ScheduleID, row.ScheduleVersion, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID,
 				row.Target, row.Tasks, row.Priority, row.ScheduledFor, row.Status, row.RequestedBy,
 				row.ClaimedBy, row.LeaseUntil, row.CancelRequestedAt, row.CreatedAt, row.CompletedAt, row.RunID)
 			item.Progress = realtimeProgress("nav", row.RunID)
@@ -167,7 +212,7 @@ func (s *Service) Jobs(ctx context.Context, filter Filters) ([]collectionmodels.
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].CreatedAt.After(rows[j].CreatedAt) })
 	if filter.Domain == "" {
-		rows = page(rows, filter.Offset, filter.Limit)
+		rows = pageRows(rows, filter.Offset, filter.Limit)
 	}
 	return rows, nil
 }
@@ -191,49 +236,61 @@ func (s *Service) Job(ctx context.Context, domain string, id int64) (collectionm
 	}
 }
 
-func (s *Service) Runs(ctx context.Context, filter Filters) ([]collectionmodels.Run, common.Error) {
+func (s *Service) Runs(ctx context.Context, filter Filters) (collectionmodels.RunPage, common.Error) {
 	filter = normalizeFilters(filter)
 	if filter.Domain != "" && filter.Domain != "game" && filter.Domain != "nav" {
-		return nil, common.NewValidationError("domain must be game or nav")
+		return collectionmodels.RunPage{}, common.NewValidationError("domain must be game or nav")
 	}
 	queryLimit, queryOffset := perDomainPage(filter)
 	since, until := nullableTime(filter.Since), nullableTime(filter.Until)
-	rows := make([]collectionmodels.Run, 0)
+	page := collectionmodels.RunPage{List: make([]collectionmodels.Run, 0)}
 	if filter.Domain == "" || filter.Domain == "game" {
+		countParams := gamesqlc.AdminCountGameCollectionRunsParams{Status: filter.Status, JobKey: filter.JobKey, Trigger: filter.Trigger, Since: since, Until: until}
+		total, err := s.game.AdminCountGameCollectionRuns(ctx, countParams)
+		if err != nil {
+			return collectionmodels.RunPage{}, daoError(err)
+		}
+		page.Total += total
 		gameRows, err := s.game.AdminListGameCollectionRuns(ctx, gamesqlc.AdminListGameCollectionRunsParams{
 			Status: filter.Status, JobKey: filter.JobKey, Trigger: filter.Trigger,
 			Since: since, Until: until, RowLimit: queryLimit, RowOffset: queryOffset,
 		})
 		if err != nil {
-			return nil, daoError(err)
+			return collectionmodels.RunPage{}, daoError(err)
 		}
 		for _, row := range gameRows {
-			rows = append(rows, runDTO("game", row.ID, row.JobID, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID, row.Target,
+			page.List = append(page.List, runDTO("game", row.ID, row.JobID, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID, row.Target,
 				row.AttemptNo, row.CollectorInstanceID, row.Status, row.ScheduledFor, row.StartedAt, row.EndedAt,
 				row.ExpectedCount, row.AttemptedCount, row.SuccessCount, row.PartialCount, row.FailureCount,
 				row.SkippedCount, row.ScheduleDelayMs, row.DurationMs, row.ErrorKind, row.ErrorMessage))
 		}
 	}
 	if filter.Domain == "" || filter.Domain == "nav" {
+		countParams := navsqlc.AdminCountNavCollectionRunsParams{Status: filter.Status, JobKey: filter.JobKey, Trigger: filter.Trigger, Since: since, Until: until}
+		total, err := s.nav.AdminCountNavCollectionRuns(ctx, countParams)
+		if err != nil {
+			return collectionmodels.RunPage{}, daoError(err)
+		}
+		page.Total += total
 		navRows, err := s.nav.AdminListNavCollectionRuns(ctx, navsqlc.AdminListNavCollectionRunsParams{
 			Status: filter.Status, JobKey: filter.JobKey, Trigger: filter.Trigger,
 			Since: since, Until: until, RowLimit: queryLimit, RowOffset: queryOffset,
 		})
 		if err != nil {
-			return nil, daoError(err)
+			return collectionmodels.RunPage{}, daoError(err)
 		}
 		for _, row := range navRows {
-			rows = append(rows, runDTO("nav", row.ID, row.JobID, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID, row.Target,
+			page.List = append(page.List, runDTO("nav", row.ID, row.JobID, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID, row.Target,
 				row.AttemptNo, row.CollectorInstanceID, row.Status, row.ScheduledFor, row.StartedAt, row.EndedAt,
 				row.ExpectedCount, row.AttemptedCount, row.SuccessCount, row.PartialCount, row.FailureCount,
 				row.SkippedCount, row.ScheduleDelayMs, row.DurationMs, row.ErrorKind, row.ErrorMessage))
 		}
 	}
-	sort.Slice(rows, func(i, j int) bool { return rows[i].StartedAt.After(rows[j].StartedAt) })
+	sort.Slice(page.List, func(i, j int) bool { return page.List[i].StartedAt.After(page.List[j].StartedAt) })
 	if filter.Domain == "" {
-		rows = page(rows, filter.Offset, filter.Limit)
+		page.List = pageRows(page.List, filter.Offset, filter.Limit)
 	}
-	return rows, nil
+	return page, nil
 }
 
 func (s *Service) Run(ctx context.Context, domain, id string) (collectionmodels.Run, common.Error) {
@@ -261,44 +318,56 @@ func (s *Service) Run(ctx context.Context, domain, id string) (collectionmodels.
 	}
 }
 
-func (s *Service) Results(ctx context.Context, domain, runID string, filter ResultFilters) ([]collectionmodels.Result, common.Error) {
+func (s *Service) Results(ctx context.Context, domain, runID string, filter ResultFilters) (collectionmodels.ResultPage, common.Error) {
 	if filter.Limit <= 0 || filter.Limit > 500 {
 		filter.Limit = 100
 	}
-	results := make([]collectionmodels.Result, 0)
+	page := collectionmodels.ResultPage{List: make([]collectionmodels.Result, 0)}
 	switch domain {
 	case "game":
+		countParams := gamesqlc.AdminCountGameCollectionResultsParams{RunID: runID, GameID: filter.GameID, Appid: filter.AppID}
+		total, err := s.game.AdminCountGameCollectionResults(ctx, countParams)
+		if err != nil {
+			return collectionmodels.ResultPage{}, daoError(err)
+		}
+		page.Total = total
 		rows, err := s.game.AdminListGameCollectionResults(ctx, gamesqlc.AdminListGameCollectionResultsParams{
 			RunID: runID, GameID: filter.GameID, Appid: filter.AppID, RowLimit: filter.Limit, RowOffset: filter.Offset,
 		})
 		if err != nil {
-			return nil, daoError(err)
+			return collectionmodels.ResultPage{}, daoError(err)
 		}
 		for _, row := range rows {
-			results = append(results, collectionmodels.Result{Domain: "game", ID: row.ID, RunID: row.RunID,
+			page.List = append(page.List, collectionmodels.Result{Domain: "game", ID: row.ID, RunID: row.RunID,
 				Task: row.TaskType, EntityID: row.GameID, AppID: row.Appid, Status: row.Status,
 				DurationMS: row.DurationMs, ErrorKind: row.ErrorKind, ErrorMessage: row.ErrorMessage,
 				StartedAt: row.StartedAt.Time, EndedAt: timePointer(row.EndedAt)})
 		}
 	case "nav":
+		countParams := navsqlc.AdminCountNavCollectionResultsParams{RunID: runID, SiteID: filter.SiteID, Target: filter.Target, Protocol: filter.Protocol}
+		total, err := s.nav.AdminCountNavCollectionResults(ctx, countParams)
+		if err != nil {
+			return collectionmodels.ResultPage{}, daoError(err)
+		}
+		page.Total = total
 		rows, err := s.nav.AdminListNavCollectionResults(ctx, navsqlc.AdminListNavCollectionResultsParams{
 			RunID: runID, SiteID: filter.SiteID, Target: filter.Target, Protocol: filter.Protocol,
 			RowLimit: filter.Limit, RowOffset: filter.Offset,
 		})
 		if err != nil {
-			return nil, daoError(err)
+			return collectionmodels.ResultPage{}, daoError(err)
 		}
 		for _, row := range rows {
-			results = append(results, collectionmodels.Result{Domain: "nav", ID: row.ID, RunID: row.RunID,
+			page.List = append(page.List, collectionmodels.Result{Domain: "nav", ID: row.ID, RunID: row.RunID,
 				Task: row.Protocol, EntityID: row.SiteID, Target: row.Target, Status: row.Status,
 				ObservationID: row.ObservationID, DurationMS: row.DurationMs,
 				ErrorKind: row.ErrorKind, ErrorMessage: row.ErrorMessage,
 				StartedAt: row.StartedAt.Time, EndedAt: timePointer(row.EndedAt)})
 		}
 	default:
-		return nil, common.NewValidationError("domain must be game or nav")
+		return collectionmodels.ResultPage{}, common.NewValidationError("domain must be game or nav")
 	}
-	return results, nil
+	return page, nil
 }
 
 func (s *Service) Charts(ctx context.Context, domain, jobKey string, window time.Duration) ([]collectionmodels.ChartPoint, common.Error) {
@@ -368,7 +437,7 @@ func perDomainPage(filter Filters) (limit, offset int32) {
 	return int32(total), 0
 }
 
-func page[T any](rows []T, offset, limit int32) []T {
+func pageRows[T any](rows []T, offset, limit int32) []T {
 	start := min(int(offset), len(rows))
 	end := min(start+int(limit), len(rows))
 	return rows[start:end]
@@ -425,7 +494,9 @@ func int32Value(value *int32) int32 {
 func instanceDTO(domain, instanceID, collectorID, hostname, version, commitSHA string, capabilities []string,
 	startedAt, heartbeatAt, stoppedAt pgtype.Timestamptz, heartbeatAgeSeconds int64) collectionmodels.Instance {
 	health := "online"
-	if stoppedAt.Valid || heartbeatAgeSeconds > 120 {
+	if stoppedAt.Valid {
+		health = "stopped"
+	} else if heartbeatAgeSeconds > 120 {
 		health = "offline"
 	} else if heartbeatAgeSeconds >= 60 {
 		health = "degraded"
@@ -441,9 +512,10 @@ func scheduleDTO(domain string, id int64, jobKey, name string, enabled bool, kin
 	overlap string, priority int32, concurrency string, version int64, last, next pgtype.Timestamptz,
 	lastStatus string, lastSuccess, lastExpected *int32) collectionmodels.Schedule {
 	expected := int32Value(lastExpected)
-	coverage := float64(0)
+	var coverage *float64
 	if expected > 0 {
-		coverage = float64(int32Value(lastSuccess)) / float64(expected)
+		value := float64(int32Value(lastSuccess)) / float64(expected)
+		coverage = &value
 	}
 	return collectionmodels.Schedule{Domain: domain, ID: id, JobKey: jobKey, Name: name, Enabled: enabled,
 		ScheduleKind: kind, CronExpression: cronExpression, IntervalSeconds: intervalSeconds,
@@ -454,10 +526,10 @@ func scheduleDTO(domain string, id int64, jobKey, name string, enabled bool, kin
 		LastSuccessCount: int32Value(lastSuccess), LastExpectedCount: expected, LastSuccessCoverage: coverage}
 }
 
-func jobDTO(domain string, id int64, scheduleID *int64, jobKey, trigger, scopeType string, scopeID *int64,
+func jobDTO(domain string, id int64, scheduleID, scheduleVersion *int64, jobKey, trigger, scopeType string, scopeID *int64,
 	target *string, tasks []string, priority int32, scheduled pgtype.Timestamptz, status, requestedBy string,
 	claimedBy *string, lease, cancel, created, completed pgtype.Timestamptz, runID string) collectionmodels.Job {
-	return collectionmodels.Job{Domain: domain, ID: id, ScheduleID: scheduleID, JobKey: jobKey, Trigger: trigger,
+	return collectionmodels.Job{Domain: domain, ID: id, ScheduleID: scheduleID, ScheduleVersion: scheduleVersion, JobKey: jobKey, Trigger: trigger,
 		ScopeType: scopeType, ScopeID: scopeID, Target: target, Tasks: tasks, Priority: priority,
 		ScheduledFor: timePointer(scheduled), Status: status, RequestedBy: requestedBy, ClaimedBy: claimedBy,
 		LeaseUntil: timePointer(lease), CancelRequestedAt: timePointer(cancel), CreatedAt: created.Time,
@@ -465,13 +537,13 @@ func jobDTO(domain string, id int64, scheduleID *int64, jobKey, trigger, scopeTy
 }
 
 func gameJobDTO(row gamesqlc.GfgCollectionJob) collectionmodels.Job {
-	return jobDTO("game", row.ID, row.ScheduleID, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID, row.Target,
+	return jobDTO("game", row.ID, row.ScheduleID, row.ScheduleVersion, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID, row.Target,
 		row.Tasks, row.Priority, row.ScheduledFor, row.Status, row.RequestedBy, row.ClaimedBy,
 		row.LeaseUntil, row.CancelRequestedAt, row.CreatedAt, row.CompletedAt, "")
 }
 
 func navJobDTO(row navsqlc.GfnCollectionJob) collectionmodels.Job {
-	return jobDTO("nav", row.ID, row.ScheduleID, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID, row.Target,
+	return jobDTO("nav", row.ID, row.ScheduleID, row.ScheduleVersion, row.JobKey, row.Trigger, row.ScopeType, row.ScopeID, row.Target,
 		row.Tasks, row.Priority, row.ScheduledFor, row.Status, row.RequestedBy, row.ClaimedBy,
 		row.LeaseUntil, row.CancelRequestedAt, row.CreatedAt, row.CompletedAt, "")
 }
@@ -492,9 +564,10 @@ func runDTO(domain, id string, jobID int64, jobKey, trigger, scopeType string, s
 func chartPoint(domain string, jobID int64, jobKey, jobStatus, runID, runStatus string,
 	expected, attempted, success, partial, failed, skipped int32, delay, duration int64,
 	created, started pgtype.Timestamptz) collectionmodels.ChartPoint {
-	coverage := float64(0)
+	var coverage *float64
 	if expected > 0 {
-		coverage = float64(success) / float64(expected)
+		value := float64(success) / float64(expected)
+		coverage = &value
 	}
 	return collectionmodels.ChartPoint{Domain: domain, JobID: jobID, JobKey: jobKey, JobStatus: jobStatus,
 		RunID: runID, RunStatus: runStatus, Expected: expected, Attempted: attempted, Success: success,

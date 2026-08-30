@@ -24,6 +24,11 @@ type Instance struct {
 	HeartbeatAgeSec int64      `json:"heartbeat_age_seconds"`
 }
 
+type InstancePage struct {
+	Total int64      `json:"total"`
+	List  []Instance `json:"list"`
+}
+
 type Schedule struct {
 	Domain              string     `json:"domain"`
 	ID                  int64      `json:"id"`
@@ -46,7 +51,7 @@ type Schedule struct {
 	LastStatus          string     `json:"last_status"`
 	LastSuccessCount    int32      `json:"last_success_count"`
 	LastExpectedCount   int32      `json:"last_expected_count"`
-	LastSuccessCoverage float64    `json:"last_success_coverage"`
+	LastSuccessCoverage *float64   `json:"last_success_coverage"`
 	ControlNow          *time.Time `json:"control_now,omitempty"`
 }
 
@@ -73,6 +78,7 @@ type Job struct {
 	Domain            string     `json:"domain"`
 	ID                int64      `json:"id"`
 	ScheduleID        *int64     `json:"schedule_id,omitempty"`
+	ScheduleVersion   *int64     `json:"schedule_version,omitempty"`
 	JobKey            string     `json:"job_key"`
 	Trigger           string     `json:"trigger"`
 	ScopeType         string     `json:"scope_type"`
@@ -119,6 +125,11 @@ type Run struct {
 	ErrorMessage        string     `json:"error_message"`
 }
 
+type RunPage struct {
+	Total int64 `json:"total"`
+	List  []Run `json:"list"`
+}
+
 type Result struct {
 	Domain        string     `json:"domain"`
 	ID            int64      `json:"id"`
@@ -136,6 +147,11 @@ type Result struct {
 	AppID         int64      `json:"appid,omitempty"`
 }
 
+type ResultPage struct {
+	Total int64    `json:"total"`
+	List  []Result `json:"list"`
+}
+
 type ChartPoint struct {
 	Domain          string     `json:"domain"`
 	JobID           int64      `json:"job_id"`
@@ -149,7 +165,7 @@ type ChartPoint struct {
 	Partial         int32      `json:"partial"`
 	Failed          int32      `json:"failed"`
 	Skipped         int32      `json:"skipped"`
-	Coverage        float64    `json:"coverage"`
+	Coverage        *float64   `json:"coverage"`
 	ScheduleDelayMS int64      `json:"schedule_delay_ms"`
 	DurationMS      int64      `json:"duration_ms"`
 	CreatedAt       time.Time  `json:"created_at"`

@@ -50,6 +50,83 @@ func (q *Queries) AdminCancelNavCollectionJob(ctx context.Context, id int64) (Gf
 	return i, err
 }
 
+const adminCountNavCollectionResults = `-- name: AdminCountNavCollectionResults :one
+SELECT count(*)::bigint
+FROM gfn_collection_task_results
+WHERE run_id = $1
+  AND ($2::bigint IS NULL OR site_id = $2)
+  AND ($3::text IS NULL OR target = $3)
+  AND ($4::text = '' OR protocol = $4)
+`
+
+type AdminCountNavCollectionResultsParams struct {
+	RunID    string  `json:"run_id"`
+	SiteID   *int64  `json:"site_id"`
+	Target   *string `json:"target"`
+	Protocol string  `json:"protocol"`
+}
+
+func (q *Queries) AdminCountNavCollectionResults(ctx context.Context, arg AdminCountNavCollectionResultsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, adminCountNavCollectionResults,
+		arg.RunID,
+		arg.SiteID,
+		arg.Target,
+		arg.Protocol,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const adminCountNavCollectionRuns = `-- name: AdminCountNavCollectionRuns :one
+SELECT count(*)::bigint
+FROM gfn_collection_runs run
+JOIN gfn_collection_jobs job ON job.id = run.job_id
+WHERE ($1::text = '' OR run.status = $1)
+  AND ($2::text = '' OR job.job_key = $2)
+  AND ($3::text = '' OR job.trigger = $3)
+  AND ($4::timestamptz IS NULL OR run.started_at >= $4)
+  AND ($5::timestamptz IS NULL OR run.started_at <= $5)
+`
+
+type AdminCountNavCollectionRunsParams struct {
+	Status  string             `json:"status"`
+	JobKey  string             `json:"job_key"`
+	Trigger string             `json:"trigger"`
+	Since   pgtype.Timestamptz `json:"since"`
+	Until   pgtype.Timestamptz `json:"until"`
+}
+
+func (q *Queries) AdminCountNavCollectionRuns(ctx context.Context, arg AdminCountNavCollectionRunsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, adminCountNavCollectionRuns,
+		arg.Status,
+		arg.JobKey,
+		arg.Trigger,
+		arg.Since,
+		arg.Until,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const adminCountNavCollectorInstances = `-- name: AdminCountNavCollectorInstances :one
+WITH ranked AS (
+    SELECT row_number() OVER (PARTITION BY collector_id ORDER BY started_at DESC, last_heartbeat_at DESC, instance_id DESC) AS lifecycle_rank
+    FROM gfn_collector_instances
+)
+SELECT count(*)::bigint FROM ranked
+WHERE ($1::text = 'current' AND lifecycle_rank = 1)
+   OR ($1::text = 'history' AND lifecycle_rank > 1)
+`
+
+func (q *Queries) AdminCountNavCollectorInstances(ctx context.Context, instanceView string) (int64, error) {
+	row := q.db.QueryRow(ctx, adminCountNavCollectorInstances, instanceView)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const adminGetNavCollectionJob = `-- name: AdminGetNavCollectionJob :one
 SELECT id, schedule_id, schedule_version, job_key, trigger, scope_type, scope_id, target, tasks, priority, concurrency_key, scheduled_for, status, requested_by, dedupe_key, claimed_by, lease_until, cancel_requested_at, created_at, updated_at, completed_at FROM gfn_collection_jobs WHERE id = $1
 `
@@ -180,12 +257,12 @@ func (q *Queries) AdminGetNavCollectionSchedule(ctx context.Context, id int64) (
 
 const adminInsertNavManualJob = `-- name: AdminInsertNavManualJob :one
 INSERT INTO gfn_collection_jobs (
-    job_key, trigger, scope_type, scope_id, target, tasks, priority,
+    schedule_id, schedule_version, job_key, trigger, scope_type, scope_id, target, tasks, priority,
     concurrency_key, status, requested_by, dedupe_key, created_at, updated_at
 ) VALUES (
-    $1, 'manual', $2, $3,
-    $4, ARRAY[$5::text], 200,
-    $5, 'queued', $6, $7,
+    $1, $2, $3, 'manual', $4, $5,
+    $6, ARRAY[$7::text], 200,
+    $7, 'queued', $8, $9,
     now(), now()
 )
 ON CONFLICT (dedupe_key)
@@ -195,17 +272,21 @@ RETURNING id, schedule_id, schedule_version, job_key, trigger, scope_type, scope
 `
 
 type AdminInsertNavManualJobParams struct {
-	JobKey      string  `json:"job_key"`
-	ScopeType   string  `json:"scope_type"`
-	ScopeID     *int64  `json:"scope_id"`
-	Target      *string `json:"target"`
-	Protocol    string  `json:"protocol"`
-	RequestedBy string  `json:"requested_by"`
-	DedupeKey   *string `json:"dedupe_key"`
+	ScheduleID      *int64  `json:"schedule_id"`
+	ScheduleVersion *int64  `json:"schedule_version"`
+	JobKey          string  `json:"job_key"`
+	ScopeType       string  `json:"scope_type"`
+	ScopeID         *int64  `json:"scope_id"`
+	Target          *string `json:"target"`
+	Protocol        string  `json:"protocol"`
+	RequestedBy     string  `json:"requested_by"`
+	DedupeKey       *string `json:"dedupe_key"`
 }
 
 func (q *Queries) AdminInsertNavManualJob(ctx context.Context, arg AdminInsertNavManualJobParams) (GfnCollectionJob, error) {
 	row := q.db.QueryRow(ctx, adminInsertNavManualJob,
+		arg.ScheduleID,
+		arg.ScheduleVersion,
 		arg.JobKey,
 		arg.ScopeType,
 		arg.ScopeID,
@@ -667,12 +748,26 @@ func (q *Queries) AdminListNavCollectionSchedules(ctx context.Context) ([]AdminL
 }
 
 const adminListNavCollectorInstances = `-- name: AdminListNavCollectorInstances :many
-SELECT instance.instance_id, instance.collector_id, instance.hostname, instance.version, instance.commit_sha, instance.capabilities, instance.started_at, instance.last_heartbeat_at, instance.stopped_at,
+WITH ranked AS (
+    SELECT instance.instance_id, instance.collector_id, instance.hostname, instance.version, instance.commit_sha, instance.capabilities, instance.started_at, instance.last_heartbeat_at, instance.stopped_at,
+           row_number() OVER (PARTITION BY collector_id ORDER BY started_at DESC, last_heartbeat_at DESC, instance_id DESC) AS lifecycle_rank
+    FROM gfn_collector_instances instance
+)
+SELECT instance_id, collector_id, hostname, version, commit_sha, capabilities,
+       started_at, last_heartbeat_at, stopped_at,
        GREATEST(0, extract(epoch FROM (now() - last_heartbeat_at)))::bigint AS heartbeat_age_seconds
-FROM gfn_collector_instances instance
+FROM ranked
+WHERE ($1::text = 'current' AND lifecycle_rank = 1)
+   OR ($1::text = 'history' AND lifecycle_rank > 1)
 ORDER BY last_heartbeat_at DESC
-LIMIT $1
+LIMIT $3 OFFSET $2
 `
+
+type AdminListNavCollectorInstancesParams struct {
+	InstanceView string `json:"instance_view"`
+	RowOffset    int32  `json:"row_offset"`
+	RowLimit     int32  `json:"row_limit"`
+}
 
 type AdminListNavCollectorInstancesRow struct {
 	InstanceID          string             `json:"instance_id"`
@@ -687,8 +782,8 @@ type AdminListNavCollectorInstancesRow struct {
 	HeartbeatAgeSeconds int64              `json:"heartbeat_age_seconds"`
 }
 
-func (q *Queries) AdminListNavCollectorInstances(ctx context.Context, rowLimit int32) ([]AdminListNavCollectorInstancesRow, error) {
-	rows, err := q.db.Query(ctx, adminListNavCollectorInstances, rowLimit)
+func (q *Queries) AdminListNavCollectorInstances(ctx context.Context, arg AdminListNavCollectorInstancesParams) ([]AdminListNavCollectorInstancesRow, error) {
+	rows, err := q.db.Query(ctx, adminListNavCollectorInstances, arg.InstanceView, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}

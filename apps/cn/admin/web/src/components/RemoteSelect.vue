@@ -3,7 +3,9 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { listAllJSON, listJSON } from '../api'
 import type { OptionItem } from '../types'
 
-const props = defineProps<{ endpoint: string; modelValue: string }>()
+const props = withDefaults(defineProps<{ endpoint: string; modelValue: string; valueField?: 'id' | 'label' }>(), {
+  valueField: 'id',
+})
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const keyword = ref('')
@@ -43,7 +45,7 @@ watch(keyword, load)
       @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
     >
       <option value="">请选择</option>
-      <option v-for="item in options" :key="item.id" :value="item.id">
+      <option v-for="item in options" :key="item.id" :value="props.valueField === 'label' ? item.label : item.id">
         {{ item.label }}{{ item.extra ? ` / ${item.extra}` : '' }}
       </option>
     </select>

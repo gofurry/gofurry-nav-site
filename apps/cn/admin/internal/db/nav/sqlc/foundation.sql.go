@@ -120,11 +120,34 @@ func (q *Queries) CountSiteGroups(ctx context.Context, keyword string) (int64, e
 }
 
 const countSiteOptions = `-- name: CountSiteOptions :one
-SELECT COUNT(*)::bigint FROM gfn_site WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%')
+SELECT COUNT(*)::bigint FROM gfn_site site WHERE deleted IS NOT TRUE AND (
+    $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
+    OR EXISTS (SELECT 1 FROM gfn_collector_domain target WHERE target.site_id=site.id AND target.deleted IS NOT TRUE AND lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower($1)||'%')
+)
 `
 
 func (q *Queries) CountSiteOptions(ctx context.Context, keyword string) (int64, error) {
 	row := q.db.QueryRow(ctx, countSiteOptions, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countSiteTargetOptions = `-- name: CountSiteTargetOptions :one
+SELECT count(*)::bigint
+FROM gfn_collector_domain target
+JOIN gfn_site site ON site.id = target.site_id AND site.deleted IS NOT TRUE
+WHERE target.site_id = $1 AND target.deleted IS NOT TRUE
+  AND ($2::text = '' OR lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower($2)||'%')
+`
+
+type CountSiteTargetOptionsParams struct {
+	SiteID  *int64 `json:"site_id"`
+	Keyword string `json:"keyword"`
+}
+
+func (q *Queries) CountSiteTargetOptions(ctx context.Context, arg CountSiteTargetOptionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSiteTargetOptions, arg.SiteID, arg.Keyword)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -1040,7 +1063,10 @@ func (q *Queries) ListSiteGroups(ctx context.Context, arg ListSiteGroupsParams) 
 }
 
 const listSiteOptions = `-- name: ListSiteOptions :many
-SELECT id,name,name_en FROM gfn_site WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%')
+SELECT id,name,name_en FROM gfn_site site WHERE deleted IS NOT TRUE AND (
+    $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
+    OR EXISTS (SELECT 1 FROM gfn_collector_domain target WHERE target.site_id=site.id AND target.deleted IS NOT TRUE AND lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower($1)||'%')
+)
 ORDER BY id DESC LIMIT $3 OFFSET $2
 `
 
@@ -1066,6 +1092,59 @@ func (q *Queries) ListSiteOptions(ctx context.Context, arg ListSiteOptionsParams
 	for rows.Next() {
 		var i ListSiteOptionsRow
 		if err := rows.Scan(&i.ID, &i.Name, &i.NameEn); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSiteTargetOptions = `-- name: ListSiteTargetOptions :many
+SELECT target.id, lower(COALESCE(target.prefix,'')||target.name)::text AS target, target.proxy, target.tls
+FROM gfn_collector_domain target
+JOIN gfn_site site ON site.id = target.site_id AND site.deleted IS NOT TRUE
+WHERE target.site_id = $1 AND target.deleted IS NOT TRUE
+  AND ($2::text = '' OR lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower($2)||'%')
+ORDER BY target.id DESC LIMIT $4 OFFSET $3
+`
+
+type ListSiteTargetOptionsParams struct {
+	SiteID    *int64 `json:"site_id"`
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+type ListSiteTargetOptionsRow struct {
+	ID     int64  `json:"id"`
+	Target string `json:"target"`
+	Proxy  string `json:"proxy"`
+	Tls    string `json:"tls"`
+}
+
+func (q *Queries) ListSiteTargetOptions(ctx context.Context, arg ListSiteTargetOptionsParams) ([]ListSiteTargetOptionsRow, error) {
+	rows, err := q.db.Query(ctx, listSiteTargetOptions,
+		arg.SiteID,
+		arg.Keyword,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSiteTargetOptionsRow{}
+	for rows.Next() {
+		var i ListSiteTargetOptionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Target,
+			&i.Proxy,
+			&i.Tls,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

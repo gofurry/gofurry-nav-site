@@ -4,15 +4,17 @@ import type { EChartsOption } from 'echarts'
 import { X } from 'lucide-vue-next'
 import { getJSON, sendJSON } from '../api'
 import EChart from '../components/EChart.vue'
+import RemoteSelect from '../components/RemoteSelect.vue'
 
 type Overview = { running_count: number; queued_count: number; failed_24h: number; missed_24h: number }
-type Instance = { domain: string; instance_id: string; collector_id: string; version: string; health: string; heartbeat_age_seconds: number; started_at: string }
-type Schedule = { domain: string; id: number; job_key: string; name: string; enabled: boolean; schedule_kind: string; cron_expression?: string; interval_seconds?: number; anchor_at?: string; timezone: string; misfire_policy: string; misfire_grace_seconds: number; next_scheduled_for?: string; last_materialized_for?: string; last_status: string; last_success_coverage: number; version?: number; control_now?: string }
+type Instance = { domain: string; instance_id: string; collector_id: string; version: string; health: string; heartbeat_age_seconds: number; started_at: string; stopped_at?: string }
+type Schedule = { domain: string; id: number; job_key: string; name: string; enabled: boolean; schedule_kind: string; cron_expression?: string; interval_seconds?: number; anchor_at?: string; timezone: string; misfire_policy: string; misfire_grace_seconds: number; next_scheduled_for?: string; last_materialized_for?: string; last_status: string; last_success_coverage: number | null; version?: number; control_now?: string }
 type Progress = { expected: number; attempted: number; success: number; partial: number; failed: number; skipped: number }
 type Job = { domain: string; id: number; job_key: string; trigger: string; scope_type: string; scope_id?: number; target?: string; tasks: string[]; priority: number; scheduled_for?: string; status: string; requested_by: string; claimed_by?: string; created_at: string; run_id?: string; progress?: Progress }
 type Run = { domain: string; id: string; job_id: number; job_key: string; trigger: string; scope_type: string; scope_id?: number; target?: string; status: string; expected_count: number; attempted_count: number; success_count: number; partial_count: number; failure_count: number; skipped_count: number; schedule_delay_ms: number; duration_ms: number; collector_instance_id: string; started_at: string }
 type Result = { domain: string; id: number; run_id: string; task: string; entity_id: number; appid?: number; target?: string; status: string; observation_id?: number; duration_ms: number; error_kind: string; error_message: string; started_at: string }
-type ChartPoint = { domain: string; job_id: number; job_key: string; job_status: string; run_status: string; expected: number; attempted: number; success: number; partial: number; failed: number; skipped: number; coverage: number; schedule_delay_ms: number; duration_ms: number; created_at: string }
+type ChartPoint = { domain: string; job_id: number; job_key: string; job_status: string; run_status: string; expected: number; attempted: number; success: number; partial: number; failed: number; skipped: number; coverage: number | null; schedule_delay_ms: number; duration_ms: number; created_at: string }
+type Page<T> = { total: number; list: T[] }
 
 const tabs = ['Overview', 'Schedules', 'Running / Queue', 'History', 'Manual'] as const
 const activeTab = ref<(typeof tabs)[number]>('Overview')
@@ -21,9 +23,16 @@ const error = ref('')
 const notice = ref('')
 const overview = ref<Overview>({ running_count: 0, queued_count: 0, failed_24h: 0, missed_24h: 0 })
 const instances = ref<Instance[]>([])
+const instanceTotal = ref(0)
+const instanceView = ref<'current' | 'history'>('current')
+const instancePage = ref(1)
+const instancePageSize = ref(25)
 const schedules = ref<Schedule[]>([])
 const jobs = ref<Job[]>([])
 const runs = ref<Run[]>([])
+const runTotal = ref(0)
+const runPage = ref(1)
+const runPageSize = ref(50)
 const chartPoints = ref<ChartPoint[]>([])
 const domainFilter = ref('')
 const chartWindow = ref('24h')
@@ -35,6 +44,9 @@ const historyUntil = ref('')
 const editing = ref<Schedule | null>(null)
 const resultRun = ref<Run | null>(null)
 const resultRows = ref<Result[]>([])
+const resultTotal = ref(0)
+const resultPage = ref(1)
+const resultPageSize = ref(50)
 const resultSearch = reactive({ game_id: '', appid: '', site_id: '', target: '', protocol: '' })
 const browserNow = ref(Date.now())
 const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local'
@@ -75,16 +87,18 @@ async function refresh(realtime = false) {
   try {
     const [overviewData, instanceData, scheduleData, jobData, runData] = await Promise.all([
       getJSON<Overview>('/api/v1/collection/overview'),
-      getJSON<Instance[]>('/api/v1/collection/instances'),
+      getJSON<Page<Instance>>(instancesURL()),
       getJSON<Schedule[]>('/api/v1/collection/schedules'),
       getJSON<Job[]>('/api/v1/collection/jobs?limit=200'),
-      getJSON<Run[]>(historyRunsURL()),
+      getJSON<Page<Run>>(historyRunsURL()),
     ])
     overview.value = overviewData
-    instances.value = instanceData
+		instances.value = instanceData.list
+		instanceTotal.value = instanceData.total
     schedules.value = scheduleData
     jobs.value = jobData
-    runs.value = runData
+		runs.value = runData.list
+		runTotal.value = runData.total
     await loadCharts()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '加载失败'
@@ -94,7 +108,7 @@ async function refresh(realtime = false) {
 }
 
 function historyRunsURL() {
-  const params = new URLSearchParams({ limit: '200' })
+	const params = new URLSearchParams({ page: String(runPage.value), page_size: String(runPageSize.value) })
   if (domainFilter.value) params.set('domain', domainFilter.value)
   if (chartJobKey.value.trim()) params.set('job_key', chartJobKey.value.trim())
   if (historyStatus.value) params.set('status', historyStatus.value)
@@ -104,11 +118,20 @@ function historyRunsURL() {
   return `/api/v1/collection/runs?${params}`
 }
 
-async function loadHistory() {
+function instancesURL() {
+	const params = new URLSearchParams({ view: instanceView.value, page: String(instancePage.value), page_size: String(instancePageSize.value) })
+	if (domainFilter.value) params.set('domain', domainFilter.value)
+	return `/api/v1/collection/instances?${params}`
+}
+
+async function loadHistory(resetPage = true) {
+	if (resetPage) runPage.value = 1
   loading.value = true
   error.value = ''
   try {
-    runs.value = await getJSON<Run[]>(historyRunsURL())
+		const page = await getJSON<Page<Run>>(historyRunsURL())
+		runs.value = page.list
+		runTotal.value = page.total
     await loadCharts()
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '历史加载失败'
@@ -171,11 +194,12 @@ async function retryRun(run: Run) {
   await mutate(() => sendJSON(`/api/v1/collection/jobs/${run.domain}/${run.job_id}/retry`, 'POST'))
 }
 
-async function loadResults(run = resultRun.value) {
-  if (!run) return
+async function loadResults(run = resultRun.value, resetPage = true) {
+	if (!run) return
+	if (resetPage) resultPage.value = 1
   resultRun.value = run
   resultRows.value = []
-  const params = new URLSearchParams({ limit: '500' })
+	const params = new URLSearchParams({ page: String(resultPage.value), page_size: String(resultPageSize.value) })
   if (run.domain === 'game') {
     if (resultSearch.game_id) params.set('game_id', resultSearch.game_id)
     if (resultSearch.appid) params.set('appid', resultSearch.appid)
@@ -187,7 +211,9 @@ async function loadResults(run = resultRun.value) {
   loading.value = true
   error.value = ''
   try {
-    resultRows.value = await getJSON<Result[]>(`/api/v1/collection/runs/${run.domain}/${run.id}/results?${params}`)
+		const page = await getJSON<Page<Result>>(`/api/v1/collection/runs/${run.domain}/${run.id}/results?${params}`)
+		resultRows.value = page.list
+		resultTotal.value = page.total
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '结果加载失败'
   } finally {
@@ -229,6 +255,11 @@ function setManualDomain(domain: string) {
   manual.scope_id = ''
   manual.target = ''
   manual.tasks = domain === 'game' ? ['details', 'news'] : ['ping']
+}
+
+function onManualScopeChange() {
+	manual.scope_id = ''
+	manual.target = ''
 }
 
 function onManualDomainChange(event: Event) {
@@ -274,8 +305,37 @@ function clockSkewLabel(seconds: number) {
   if (absolute < 86400) return `比浏览器${direction} ${(absolute / 3600).toFixed(1)} 小时`
   return `比浏览器${direction} ${(absolute / 86400).toFixed(1)} 天`
 }
-function formatDuration(value: number) { return value < 1000 ? `${value} ms` : `${(value / 1000).toFixed(1)} s` }
-function coverage(success: number, expected: number) { return expected ? `${Math.round(success / expected * 100)}%` : '0%' }
+function formatDuration(value: number) {
+	if (value < 1000) return `${value} ms`
+	if (value < 60000) return `${(value / 1000).toFixed(1)} s`
+	return `${(value / 60000).toFixed(1)} min`
+}
+function coverage(success: number, expected: number) { return expected > 0 ? `${Math.round(success / expected * 100)}%` : '—' }
+function pageRange(page: number, pageSize: number, total: number) {
+	if (total === 0) return 'Showing 0 of 0'
+	return `Showing ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} of ${total}`
+}
+
+function changeRunPage(delta: number) {
+	runPage.value += delta
+	void loadHistory(false)
+}
+
+function changeResultPage(delta: number) {
+	resultPage.value += delta
+	void loadResults(resultRun.value, false)
+}
+
+async function loadInstances(resetPage = true) {
+	if (resetPage) instancePage.value = 1
+	const page = await getJSON<Page<Instance>>(instancesURL())
+	instances.value = page.list
+	instanceTotal.value = page.total
+}
+
+async function onDomainFilterChange() {
+	await Promise.all([loadInstances(true), loadHistory(true)])
+}
 function progressFor(job: Job) { return job.progress || { expected: 0, attempted: 0, success: 0, partial: 0, failed: 0, skipped: 0 } }
 
 function chartBase(): EChartsOption {
@@ -283,7 +343,8 @@ function chartBase(): EChartsOption {
     backgroundColor: 'transparent',
     textStyle: { color: '#aeb9c5' },
     tooltip: { trigger: 'axis' },
-    grid: { left: 48, right: 18, top: 24, bottom: 48 },
+		legend: { top: 4, textStyle: { color: '#aeb9c5' } },
+		grid: { left: 52, right: 18, top: 56, bottom: 76 },
     xAxis: {
       type: 'category',
       data: chartPoints.value.map((item) => new Date(item.created_at).toLocaleString()),
@@ -295,7 +356,7 @@ function chartBase(): EChartsOption {
 
 const outcomeOption = computed<EChartsOption>(() => ({
   ...chartBase(),
-  legend: { data: ['success', 'partial', 'failed', 'skipped', 'missed'], textStyle: { color: '#aeb9c5' } },
+	legend: { top: 4, data: ['success', 'partial', 'failed', 'skipped', 'missed'], textStyle: { color: '#aeb9c5' } },
   series: [
     ...(['success', 'partial', 'failed', 'skipped'] as const).map((key) => ({
       name: key,
@@ -306,8 +367,8 @@ const outcomeOption = computed<EChartsOption>(() => ({
     { name: 'missed', type: 'bar', stack: 'outcome', data: chartPoints.value.map((item) => item.job_status === 'missed' ? 1 : 0) },
   ],
 }))
-const coverageOption = computed<EChartsOption>(() => ({ ...chartBase(), series: [{ name: 'success coverage', type: 'line', smooth: true, data: chartPoints.value.map((item) => Number((item.coverage * 100).toFixed(2))) }], yAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%' } } }))
-const timingOption = computed<EChartsOption>(() => ({ ...chartBase(), legend: { data: ['schedule delay', 'duration'], textStyle: { color: '#aeb9c5' } }, series: [{ name: 'schedule delay', type: 'line', data: chartPoints.value.map((item) => item.schedule_delay_ms) }, { name: 'duration', type: 'line', data: chartPoints.value.map((item) => item.duration_ms) }] }))
+const coverageOption = computed<EChartsOption>(() => ({ ...chartBase(), series: [{ name: 'Success Coverage', type: 'line', smooth: true, connectNulls: false, data: chartPoints.value.map((item) => item.coverage === null ? null : Number((item.coverage * 100).toFixed(2))) }], yAxis: { type: 'value', min: 0, max: 100, axisLabel: { formatter: '{value}%' } } }))
+const timingOption = computed<EChartsOption>(() => ({ ...chartBase(), legend: { top: 4, data: ['Schedule Delay', 'Run Duration'], textStyle: { color: '#aeb9c5' } }, yAxis: { type: 'value', name: 'Time', axisLabel: { formatter: (value: number) => formatDuration(value) } }, series: [{ name: 'Schedule Delay', type: 'line', data: chartPoints.value.map((item) => item.schedule_delay_ms), tooltip: { valueFormatter: (value) => formatDuration(Number(value)) } }, { name: 'Run Duration', type: 'line', data: chartPoints.value.map((item) => item.duration_ms), tooltip: { valueFormatter: (value) => formatDuration(Number(value)) } }] }))
 
 let timer = 0
 onMounted(async () => { await refresh(); timer = window.setInterval(() => { browserNow.value = Date.now(); void refresh(true) }, 3000) })
@@ -318,7 +379,7 @@ onBeforeUnmount(() => window.clearInterval(timer))
   <main class="space-y-5">
     <header class="page-header flex-col md:flex-row">
       <div><h1 class="text-2xl font-semibold">Collection Center</h1><p class="mt-1 text-sm text-[var(--text-muted)]">统一管理 Game / Nav 的调度、队列、运行历史与采集下发。</p></div>
-      <div class="flex gap-2"><select v-model="domainFilter" class="ui-control px-3 py-2 text-sm" @change="loadCharts"><option value="">全部域</option><option value="game">Game</option><option value="nav">Nav</option></select><button class="ui-button ui-button--primary px-4 py-2 text-sm" @click="refresh()">{{ loading ? '刷新中' : '刷新' }}</button></div>
+      <div class="flex gap-2"><select v-model="domainFilter" class="ui-control px-3 py-2 text-sm" @change="onDomainFilterChange"><option value="">全部域</option><option value="game">Game</option><option value="nav">Nav</option></select><button class="ui-button ui-button--primary px-4 py-2 text-sm" @click="refresh()">{{ loading ? '刷新中' : '刷新' }}</button></div>
     </header>
     <div v-if="error" class="status-alert px-4 py-3 text-sm text-[var(--danger)]">{{ error }}</div>
     <div v-if="notice" class="status-alert px-4 py-3 text-sm text-emerald-300">{{ notice }}</div>
@@ -326,7 +387,11 @@ onBeforeUnmount(() => window.clearInterval(timer))
 
     <template v-if="activeTab === 'Overview'">
       <section class="status-rail grid grid-cols-2 md:grid-cols-4"><div v-for="[label, value] in [['Running', overview.running_count], ['Queued', overview.queued_count], ['Failed 24h', overview.failed_24h], ['Missed 24h', overview.missed_24h]]" :key="String(label)" class="status-rail__item"><div class="text-xs text-[var(--text-muted)]">{{ label }}</div><div class="mt-2 text-xl font-semibold">{{ value }}</div></div></section>
-      <section class="workspace-section"><h2 class="text-lg font-semibold">Collector Instances</h2><div class="mt-3 overflow-x-auto"><table class="w-full min-w-[800px] text-left text-sm"><thead class="text-xs uppercase text-[var(--text-muted)]"><tr><th>Domain</th><th>Collector</th><th>Instance</th><th>Version</th><th>Health</th><th>Heartbeat</th><th>Started</th></tr></thead><tbody><tr v-for="item in instances" :key="`${item.domain}-${item.instance_id}`" class="border-t border-[var(--line)]"><td class="py-2">{{ item.domain }}</td><td>{{ item.collector_id }}</td><td class="font-mono text-xs">{{ item.instance_id }}</td><td>{{ item.version }}</td><td :class="statusClass(item.health)">{{ item.health }}</td><td>{{ item.heartbeat_age_seconds }}s</td><td>{{ formatTime(item.started_at) }}</td></tr></tbody></table></div></section>
+      <section class="workspace-section">
+        <div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-lg font-semibold">Collector Instances</h2><p class="mt-1 text-xs text-[var(--text-muted)]">Current shows the newest lifecycle record per collector. Historical records remain available for audit.</p></div><select v-model="instanceView" class="ui-control px-3 py-2 text-sm" @change="loadInstances(true)"><option value="current">Current</option><option value="history">Historical</option></select></div>
+        <div class="mt-3 overflow-x-auto"><table class="w-full min-w-[900px] text-left text-sm"><thead class="text-xs uppercase text-[var(--text-muted)]"><tr><th>Domain</th><th>Collector</th><th>Instance</th><th>Version</th><th>Health</th><th>Heartbeat</th><th>Started</th><th>Stopped</th></tr></thead><tbody><tr v-for="item in instances" :key="`${item.domain}-${item.instance_id}`" class="border-t border-[var(--line)]"><td class="py-2">{{ item.domain }}</td><td>{{ item.collector_id }}</td><td class="font-mono text-xs">{{ item.instance_id }}</td><td>{{ item.version }}</td><td :class="statusClass(item.health)">{{ item.health }}</td><td>{{ item.heartbeat_age_seconds }}s</td><td>{{ formatTime(item.started_at) }}</td><td>{{ formatTime(item.stopped_at) }}</td></tr></tbody></table></div>
+        <div class="resource-pagination"><span>{{ pageRange(instancePage, instancePageSize, instanceTotal) }}</span><label class="flex items-center gap-2">Rows per page:<select v-model.number="instancePageSize" class="ui-control px-2 py-1" @change="loadInstances(true)"><option :value="10">10</option><option :value="25">25</option><option :value="50">50</option></select></label><button class="ui-button px-3" :disabled="instancePage <= 1" @click="instancePage--; loadInstances(false)">Previous</button><button class="ui-button px-3" :disabled="instancePage * instancePageSize >= instanceTotal" @click="instancePage++; loadInstances(false)">Next</button></div>
+      </section>
       <section class="grid gap-4 xl:grid-cols-3"><div class="workspace-section"><h2 class="font-semibold">Outcome</h2><EChart :option="outcomeOption" /></div><div class="workspace-section"><h2 class="font-semibold">Coverage</h2><EChart :option="coverageOption" /></div><div class="workspace-section"><h2 class="font-semibold">Timing</h2><EChart :option="timingOption" /></div></section>
     </template>
 
@@ -359,7 +424,7 @@ onBeforeUnmount(() => window.clearInterval(timer))
                 <div v-if="item.timezone !== browserTimezone" class="text-xs text-[var(--text-muted)]">本地 {{ formatTime(item.next_scheduled_for) }}</div>
               </td>
               <td :class="statusClass(item.last_status)">{{ item.last_status || '-' }}</td>
-              <td>{{ Math.round(item.last_success_coverage * 100) }}%</td>
+              <td>{{ item.last_success_coverage === null ? '—' : `${Math.round(item.last_success_coverage * 100)}%` }}</td>
               <td class="space-x-2"><button class="ui-button px-2 py-1" @click="editing = { ...item }">Edit</button><button class="ui-button px-2 py-1" @click="toggleSchedule(item)">{{ item.enabled ? 'Disable' : 'Enable' }}</button><button class="ui-button px-2 py-1" @click="runNow(item)">Run Now</button></td>
             </tr>
           </tbody>
@@ -369,9 +434,9 @@ onBeforeUnmount(() => window.clearInterval(timer))
 
     <section v-else-if="activeTab === 'Running / Queue'" class="workspace-section"><h2 class="text-lg font-semibold">Running / Queue</h2><div class="mt-3 overflow-x-auto"><table class="w-full min-w-[1050px] text-left text-sm"><thead class="text-xs uppercase text-[var(--text-muted)]"><tr><th>Priority</th><th>Domain</th><th>Job</th><th>Trigger</th><th>Scope</th><th>Status</th><th>Progress</th><th>Scheduled / Created</th><th>Action</th></tr></thead><tbody><tr v-for="item in activeJobs" :key="`${item.domain}-${item.id}`" class="border-t border-[var(--line)]"><td class="py-2">{{ item.priority }}</td><td>{{ item.domain }}</td><td class="font-mono text-xs">{{ item.job_key }} #{{ item.id }}</td><td>{{ item.trigger }}</td><td>{{ item.scope_type }} {{ item.scope_id || '' }} {{ item.target || '' }}</td><td :class="statusClass(item.status)">{{ item.status }}</td><td class="min-w-[220px]"><div>{{ progressFor(item).attempted }}/{{ progressFor(item).expected }} · ✓{{ progressFor(item).success }} ◐{{ progressFor(item).partial }} ✕{{ progressFor(item).failed }}</div><div class="mt-1 h-1.5 bg-[var(--control)]"><div class="h-full bg-emerald-400" :style="{ width: `${progressFor(item).expected ? Math.min(100, progressFor(item).attempted / progressFor(item).expected * 100) : 0}%` }" /></div></td><td>{{ formatTime(item.scheduled_for || item.created_at) }}</td><td><button class="ui-button px-2 py-1" @click="cancelJob(item)">Cancel</button></td></tr></tbody></table></div></section>
 
-    <section v-else-if="activeTab === 'History'" class="workspace-section"><div class="flex flex-wrap items-center justify-between gap-2"><h2 class="text-lg font-semibold">Run History</h2><div class="flex flex-wrap gap-2"><select v-model="chartWindow" class="ui-control px-2 py-1" @change="loadCharts"><option value="24h">24h</option><option value="7d">7d</option><option value="30d">30d</option></select><input v-model="chartJobKey" class="ui-control px-2 py-1" placeholder="job_key" /><select v-model="historyStatus" class="ui-control px-2 py-1"><option value="">all status</option><option v-for="value in ['success','partial','failed','canceled','running']" :key="value" :value="value">{{ value }}</option></select><input v-model="historyTrigger" class="ui-control px-2 py-1" placeholder="trigger" /><input v-model="historySince" type="datetime-local" class="ui-control px-2 py-1" /><input v-model="historyUntil" type="datetime-local" class="ui-control px-2 py-1" /><button class="ui-button ui-button--primary px-3 py-1" @click="loadHistory">Apply</button></div></div><div class="mt-3 overflow-x-auto"><table class="w-full min-w-[1150px] text-left text-sm"><thead class="text-xs uppercase text-[var(--text-muted)]"><tr><th>Time</th><th>Domain / Job</th><th>Trigger</th><th>Status</th><th>Coverage</th><th>Counters</th><th>Duration</th><th>Delay</th><th>Collector</th><th>Action</th></tr></thead><tbody><tr v-for="item in visibleRuns" :key="item.id" class="border-t border-[var(--line)]"><td class="py-2">{{ formatTime(item.started_at) }}</td><td>{{ item.domain }} · <span class="font-mono text-xs">{{ item.job_key }}</span></td><td>{{ item.trigger }}</td><td :class="statusClass(item.status)">{{ item.status }}</td><td>{{ coverage(item.success_count, item.expected_count) }}</td><td>E{{ item.expected_count }} / A{{ item.attempted_count }} / S{{ item.success_count }} / P{{ item.partial_count }} / F{{ item.failure_count }}</td><td>{{ formatDuration(item.duration_ms) }}</td><td>{{ formatDuration(item.schedule_delay_ms) }}</td><td class="font-mono text-xs">{{ item.collector_instance_id }}</td><td class="space-x-2"><button class="ui-button px-2 py-1" @click="loadResults(item)">Results</button><button v-if="!['running'].includes(item.status)" class="ui-button px-2 py-1" @click="retryRun(item)">{{ isPointInTime(item) ? 'Run Again' : 'Retry' }}</button></td></tr></tbody></table></div></section>
+    <section v-else-if="activeTab === 'History'" class="workspace-section"><div class="flex flex-wrap items-center justify-between gap-2"><h2 class="text-lg font-semibold">Run History</h2><div class="flex flex-wrap gap-2"><select v-model="chartWindow" class="ui-control px-2 py-1" @change="loadCharts"><option value="24h">24h</option><option value="7d">7d</option><option value="30d">30d</option></select><input v-model="chartJobKey" class="ui-control px-2 py-1" placeholder="job_key" /><select v-model="historyStatus" class="ui-control px-2 py-1"><option value="">all status</option><option v-for="value in ['success','partial','failed','canceled','running']" :key="value" :value="value">{{ value }}</option></select><input v-model="historyTrigger" class="ui-control px-2 py-1" placeholder="trigger" /><input v-model="historySince" type="datetime-local" class="ui-control px-2 py-1" /><input v-model="historyUntil" type="datetime-local" class="ui-control px-2 py-1" /><button class="ui-button ui-button--primary px-3 py-1" @click="loadHistory(true)">Apply</button></div></div><div class="mt-3 overflow-x-auto"><table class="w-full min-w-[1150px] text-left text-sm"><thead class="text-xs uppercase text-[var(--text-muted)]"><tr><th>Time</th><th>Domain / Job</th><th>Trigger</th><th>Status</th><th>Coverage</th><th>Counters</th><th>Duration</th><th>Delay</th><th>Collector</th><th>Action</th></tr></thead><tbody><tr v-for="item in visibleRuns" :key="item.id" class="border-t border-[var(--line)]"><td class="py-2">{{ formatTime(item.started_at) }}</td><td>{{ item.domain }} · <span class="font-mono text-xs">{{ item.job_key }}</span></td><td>{{ item.trigger }}</td><td :class="statusClass(item.status)">{{ item.status }}</td><td>{{ coverage(item.success_count, item.expected_count) }}</td><td>E{{ item.expected_count }} / A{{ item.attempted_count }} / S{{ item.success_count }} / P{{ item.partial_count }} / F{{ item.failure_count }}</td><td>{{ formatDuration(item.duration_ms) }}</td><td>{{ formatDuration(item.schedule_delay_ms) }}</td><td class="font-mono text-xs">{{ item.collector_instance_id }}</td><td class="space-x-2"><button class="ui-button px-2 py-1" @click="loadResults(item)">Results</button><button v-if="!['running'].includes(item.status)" class="ui-button px-2 py-1" @click="retryRun(item)">{{ isPointInTime(item) ? 'Run Again' : 'Retry' }}</button></td></tr></tbody></table></div><div class="resource-pagination"><span>{{ pageRange(runPage, runPageSize, runTotal) }}</span><label class="flex items-center gap-2">Rows per page:<select v-model.number="runPageSize" class="ui-control px-2 py-1" @change="loadHistory(true)"><option :value="25">25</option><option :value="50">50</option><option :value="100">100</option></select></label><button class="ui-button px-3" :disabled="runPage <= 1" @click="changeRunPage(-1)">Previous</button><button class="ui-button px-3" :disabled="runPage * runPageSize >= runTotal" @click="changeRunPage(1)">Next</button></div></section>
 
-    <section v-else class="workspace-section"><h2 class="text-lg font-semibold">Manual Collection</h2><div class="mt-4 grid gap-4 md:grid-cols-2"><div class="detail-block space-y-3"><label class="block text-sm">Domain<select :value="manual.domain" class="ui-control mt-1 w-full px-3 py-2" @change="onManualDomainChange"><option value="game">Game</option><option value="nav">Nav</option></select></label><label class="block text-sm">Scope<select v-model="manual.scope_type" class="ui-control mt-1 w-full px-3 py-2"><option value="all">all</option><option v-if="manual.domain === 'game'" value="game">game</option><option v-if="manual.domain === 'nav'" value="site">site</option><option v-if="manual.domain === 'nav'" value="target">target</option></select></label><input v-if="manual.scope_type !== 'all'" v-model="manual.scope_id" class="ui-control w-full px-3 py-2" placeholder="scope id" /><input v-if="manual.scope_type === 'target'" v-model="manual.target" class="ui-control w-full px-3 py-2" placeholder="target host" /></div><div class="detail-block"><div class="text-sm">Tasks / Protocols</div><div class="mt-2 flex flex-wrap gap-2"><button v-for="task in manualTaskOptions" :key="task" class="ui-button px-2 py-1 text-xs" :class="{ 'ui-button--primary': manual.tasks.includes(task) }" @click="toggleManualTask(task)">{{ task }}</button></div><button class="ui-button ui-button--primary mt-5 px-4 py-2" :disabled="loading || !manual.tasks.length" @click="createManual">Create Job{{ manual.domain === 'nav' && manual.tasks.length > 1 ? 's' : '' }}</button></div></div></section>
+    <section v-else class="workspace-section"><h2 class="text-lg font-semibold">Manual Collection</h2><div class="mt-4 grid gap-4 md:grid-cols-2"><div class="detail-block space-y-3"><label class="block text-sm">Domain<select :value="manual.domain" class="ui-control mt-1 w-full px-3 py-2" @change="onManualDomainChange"><option value="game">Game</option><option value="nav">Nav</option></select></label><label class="block text-sm">Scope<select v-model="manual.scope_type" class="ui-control mt-1 w-full px-3 py-2" @change="onManualScopeChange"><option value="all">all</option><option v-if="manual.domain === 'game'" value="game">game</option><option v-if="manual.domain === 'nav'" value="site">site</option><option v-if="manual.domain === 'nav'" value="target">target</option></select></label><div v-if="manual.domain === 'game' && manual.scope_type === 'game'"><div class="mb-1 text-sm">Game</div><RemoteSelect v-model="manual.scope_id" endpoint="/api/v1/options/games" /></div><div v-if="manual.domain === 'nav' && ['site','target'].includes(manual.scope_type)"><div class="mb-1 text-sm">Site</div><RemoteSelect v-model="manual.scope_id" endpoint="/api/v1/options/sites" /></div><div v-if="manual.domain === 'nav' && manual.scope_type === 'target' && manual.scope_id"><div class="mb-1 text-sm">Target</div><RemoteSelect v-model="manual.target" :endpoint="`/api/v1/options/site-targets?site_id=${manual.scope_id}`" value-field="label" /></div></div><div class="detail-block"><div class="text-sm">Tasks / Protocols</div><div class="mt-2 flex flex-wrap gap-2"><button v-for="task in manualTaskOptions" :key="task" class="ui-button px-2 py-1 text-xs" :class="{ 'ui-button--primary': manual.tasks.includes(task) }" @click="toggleManualTask(task)">{{ task }}</button></div><button class="ui-button ui-button--primary mt-5 px-4 py-2" :disabled="loading || !manual.tasks.length || (manual.scope_type !== 'all' && !manual.scope_id) || (manual.scope_type === 'target' && !manual.target)" @click="createManual">Create Job{{ manual.domain === 'nav' && manual.tasks.length > 1 ? 's' : '' }}</button></div></div></section>
 
     <Teleport to="body">
       <div v-if="editing" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4" role="presentation">
@@ -415,6 +480,6 @@ onBeforeUnmount(() => window.clearInterval(timer))
         </section>
       </div>
     </Teleport>
-    <div v-if="resultRun" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"><div class="workspace-section max-h-[90vh] w-full max-w-6xl overflow-auto"><div class="flex items-center justify-between gap-3"><div><h2 class="text-lg font-semibold">Task Results</h2><p class="font-mono text-xs text-[var(--text-muted)]">{{ resultRun.domain }} · {{ resultRun.id }}</p></div><button class="ui-button px-3 py-2" @click="resultRun = null">Close</button></div><div class="mt-3 flex flex-wrap gap-2"><template v-if="resultRun.domain === 'game'"><input v-model="resultSearch.game_id" class="ui-control px-2 py-1" placeholder="game_id" /><input v-model="resultSearch.appid" class="ui-control px-2 py-1" placeholder="appid" /></template><template v-else><input v-model="resultSearch.site_id" class="ui-control px-2 py-1" placeholder="site_id" /><input v-model="resultSearch.target" class="ui-control px-2 py-1" placeholder="target" /><input v-model="resultSearch.protocol" class="ui-control px-2 py-1" placeholder="protocol" /></template><button class="ui-button ui-button--primary px-3 py-1" @click="loadResults()">Search</button></div><div class="mt-3 overflow-x-auto"><table class="w-full min-w-[950px] text-left text-sm"><thead class="text-xs uppercase text-[var(--text-muted)]"><tr><th>Started</th><th>Task</th><th>Entity</th><th>Target / AppID</th><th>Status</th><th>Observation</th><th>Duration</th><th>Error</th></tr></thead><tbody><tr v-for="item in resultRows" :key="item.id" class="border-t border-[var(--line)]"><td class="py-2">{{ formatTime(item.started_at) }}</td><td>{{ item.task }}</td><td>{{ item.entity_id }}</td><td>{{ item.target || item.appid || '-' }}</td><td :class="statusClass(item.status)">{{ item.status }}</td><td>{{ item.observation_id || '-' }}</td><td>{{ formatDuration(item.duration_ms) }}</td><td>{{ item.error_kind }} {{ item.error_message }}</td></tr></tbody></table></div></div></div>
+    <div v-if="resultRun" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"><section class="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden border border-[var(--line-strong)] bg-[var(--panel-strong)] shadow-2xl"><header class="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-4"><div><h2 class="text-lg font-semibold">Task Results</h2><p class="font-mono text-xs text-[var(--text-muted)]">{{ resultRun.domain }} · {{ resultRun.id }}</p></div><button class="ui-button px-3 py-2" @click="resultRun = null">Close</button></header><div class="min-h-0 flex-1 overflow-y-auto p-5"><div class="flex flex-wrap gap-2"><template v-if="resultRun.domain === 'game'"><input v-model="resultSearch.game_id" class="ui-control px-2 py-1" placeholder="game_id" /><input v-model="resultSearch.appid" class="ui-control px-2 py-1" placeholder="appid" /></template><template v-else><input v-model="resultSearch.site_id" class="ui-control px-2 py-1" placeholder="site_id" /><input v-model="resultSearch.target" class="ui-control px-2 py-1" placeholder="target" /><input v-model="resultSearch.protocol" class="ui-control px-2 py-1" placeholder="protocol" /></template><button class="ui-button ui-button--primary px-3 py-1" @click="loadResults(resultRun, true)">Search</button></div><div class="mt-3 overflow-x-auto"><table class="w-full min-w-[950px] text-left text-sm"><thead class="text-xs uppercase text-[var(--text-muted)]"><tr><th>Started</th><th>Task</th><th>Entity</th><th>Target / AppID</th><th>Status</th><th>Observation</th><th>Duration</th><th>Error</th></tr></thead><tbody><tr v-for="item in resultRows" :key="item.id" class="border-t border-[var(--line)]"><td class="py-2">{{ formatTime(item.started_at) }}</td><td>{{ item.task }}</td><td>{{ item.entity_id }}</td><td>{{ item.target || item.appid || '-' }}</td><td :class="statusClass(item.status)">{{ item.status }}</td><td>{{ item.observation_id || '-' }}</td><td>{{ formatDuration(item.duration_ms) }}</td><td class="max-w-96"><span class="font-medium">{{ item.error_kind }}</span><details v-if="item.error_message" class="mt-1"><summary class="cursor-pointer truncate text-xs text-[var(--text-muted)]">{{ item.error_message }}</summary><p class="mt-2 whitespace-pre-wrap break-words text-xs">{{ item.error_message }}</p></details></td></tr></tbody></table></div></div><footer class="resource-pagination shrink-0 border-t border-[var(--line)] px-5 py-3"><span>{{ pageRange(resultPage, resultPageSize, resultTotal) }}</span><label class="flex items-center gap-2">Rows per page:<select v-model.number="resultPageSize" class="ui-control px-2 py-1" @change="loadResults(resultRun, true)"><option :value="25">25</option><option :value="50">50</option><option :value="100">100</option></select></label><button class="ui-button px-3" :disabled="resultPage <= 1" @click="changeResultPage(-1)">Previous</button><button class="ui-button px-3" :disabled="resultPage * resultPageSize >= resultTotal" @click="changeResultPage(1)">Next</button></footer></section></div>
   </main>
 </template>

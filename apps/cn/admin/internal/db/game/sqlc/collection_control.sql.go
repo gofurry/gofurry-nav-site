@@ -50,6 +50,76 @@ func (q *Queries) AdminCancelGameCollectionJob(ctx context.Context, id int64) (G
 	return i, err
 }
 
+const adminCountGameCollectionResults = `-- name: AdminCountGameCollectionResults :one
+SELECT count(*)::bigint
+FROM gfg_collection_task_results
+WHERE run_id = $1
+  AND ($2::bigint IS NULL OR game_id = $2)
+  AND ($3::bigint IS NULL OR appid = $3)
+`
+
+type AdminCountGameCollectionResultsParams struct {
+	RunID  string `json:"run_id"`
+	GameID *int64 `json:"game_id"`
+	Appid  *int64 `json:"appid"`
+}
+
+func (q *Queries) AdminCountGameCollectionResults(ctx context.Context, arg AdminCountGameCollectionResultsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, adminCountGameCollectionResults, arg.RunID, arg.GameID, arg.Appid)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const adminCountGameCollectionRuns = `-- name: AdminCountGameCollectionRuns :one
+SELECT count(*)::bigint
+FROM gfg_collection_runs run
+JOIN gfg_collection_jobs job ON job.id = run.job_id
+WHERE ($1::text = '' OR run.status = $1)
+  AND ($2::text = '' OR job.job_key = $2)
+  AND ($3::text = '' OR job.trigger = $3)
+  AND ($4::timestamptz IS NULL OR run.started_at >= $4)
+  AND ($5::timestamptz IS NULL OR run.started_at <= $5)
+`
+
+type AdminCountGameCollectionRunsParams struct {
+	Status  string             `json:"status"`
+	JobKey  string             `json:"job_key"`
+	Trigger string             `json:"trigger"`
+	Since   pgtype.Timestamptz `json:"since"`
+	Until   pgtype.Timestamptz `json:"until"`
+}
+
+func (q *Queries) AdminCountGameCollectionRuns(ctx context.Context, arg AdminCountGameCollectionRunsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, adminCountGameCollectionRuns,
+		arg.Status,
+		arg.JobKey,
+		arg.Trigger,
+		arg.Since,
+		arg.Until,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const adminCountGameCollectorInstances = `-- name: AdminCountGameCollectorInstances :one
+WITH ranked AS (
+    SELECT row_number() OVER (PARTITION BY collector_id ORDER BY started_at DESC, last_heartbeat_at DESC, instance_id DESC) AS lifecycle_rank
+    FROM gfg_collector_instances
+)
+SELECT count(*)::bigint FROM ranked
+WHERE ($1::text = 'current' AND lifecycle_rank = 1)
+   OR ($1::text = 'history' AND lifecycle_rank > 1)
+`
+
+func (q *Queries) AdminCountGameCollectorInstances(ctx context.Context, instanceView string) (int64, error) {
+	row := q.db.QueryRow(ctx, adminCountGameCollectorInstances, instanceView)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const adminGameCollectionClock = `-- name: AdminGameCollectionClock :one
 SELECT now()::timestamptz AS control_now
 `
@@ -230,12 +300,12 @@ func (q *Queries) AdminGetGameCollectionSchedule(ctx context.Context, id int64) 
 
 const adminInsertGameManualJob = `-- name: AdminInsertGameManualJob :one
 INSERT INTO gfg_collection_jobs (
-    job_key, trigger, scope_type, scope_id, tasks, priority, concurrency_key,
+    schedule_id, schedule_version, job_key, trigger, scope_type, scope_id, tasks, priority, concurrency_key,
     status, requested_by, dedupe_key, created_at, updated_at
 ) VALUES (
-    $1, 'manual', $2, $3,
-    $4, 200, 'steam', 'queued', $5,
-    $6, now(), now()
+    $1, $2, $3, 'manual', $4, $5,
+    $6, 200, 'steam', 'queued', $7,
+    $8, now(), now()
 )
 ON CONFLICT (dedupe_key)
     WHERE dedupe_key IS NOT NULL AND status IN ('queued', 'running')
@@ -244,16 +314,20 @@ RETURNING id, schedule_id, schedule_version, job_key, trigger, scope_type, scope
 `
 
 type AdminInsertGameManualJobParams struct {
-	JobKey      string   `json:"job_key"`
-	ScopeType   string   `json:"scope_type"`
-	ScopeID     *int64   `json:"scope_id"`
-	Tasks       []string `json:"tasks"`
-	RequestedBy string   `json:"requested_by"`
-	DedupeKey   *string  `json:"dedupe_key"`
+	ScheduleID      *int64   `json:"schedule_id"`
+	ScheduleVersion *int64   `json:"schedule_version"`
+	JobKey          string   `json:"job_key"`
+	ScopeType       string   `json:"scope_type"`
+	ScopeID         *int64   `json:"scope_id"`
+	Tasks           []string `json:"tasks"`
+	RequestedBy     string   `json:"requested_by"`
+	DedupeKey       *string  `json:"dedupe_key"`
 }
 
 func (q *Queries) AdminInsertGameManualJob(ctx context.Context, arg AdminInsertGameManualJobParams) (GfgCollectionJob, error) {
 	row := q.db.QueryRow(ctx, adminInsertGameManualJob,
+		arg.ScheduleID,
+		arg.ScheduleVersion,
 		arg.JobKey,
 		arg.ScopeType,
 		arg.ScopeID,
@@ -713,12 +787,26 @@ func (q *Queries) AdminListGameCollectionSchedules(ctx context.Context) ([]Admin
 }
 
 const adminListGameCollectorInstances = `-- name: AdminListGameCollectorInstances :many
-SELECT instance.instance_id, instance.collector_id, instance.hostname, instance.version, instance.commit_sha, instance.capabilities, instance.started_at, instance.last_heartbeat_at, instance.stopped_at,
+WITH ranked AS (
+    SELECT instance.instance_id, instance.collector_id, instance.hostname, instance.version, instance.commit_sha, instance.capabilities, instance.started_at, instance.last_heartbeat_at, instance.stopped_at,
+           row_number() OVER (PARTITION BY collector_id ORDER BY started_at DESC, last_heartbeat_at DESC, instance_id DESC) AS lifecycle_rank
+    FROM gfg_collector_instances instance
+)
+SELECT instance_id, collector_id, hostname, version, commit_sha, capabilities,
+       started_at, last_heartbeat_at, stopped_at,
        GREATEST(0, extract(epoch FROM (now() - last_heartbeat_at)))::bigint AS heartbeat_age_seconds
-FROM gfg_collector_instances instance
+FROM ranked
+WHERE ($1::text = 'current' AND lifecycle_rank = 1)
+   OR ($1::text = 'history' AND lifecycle_rank > 1)
 ORDER BY last_heartbeat_at DESC
-LIMIT $1
+LIMIT $3 OFFSET $2
 `
+
+type AdminListGameCollectorInstancesParams struct {
+	InstanceView string `json:"instance_view"`
+	RowOffset    int32  `json:"row_offset"`
+	RowLimit     int32  `json:"row_limit"`
+}
 
 type AdminListGameCollectorInstancesRow struct {
 	InstanceID          string             `json:"instance_id"`
@@ -733,8 +821,8 @@ type AdminListGameCollectorInstancesRow struct {
 	HeartbeatAgeSeconds int64              `json:"heartbeat_age_seconds"`
 }
 
-func (q *Queries) AdminListGameCollectorInstances(ctx context.Context, rowLimit int32) ([]AdminListGameCollectorInstancesRow, error) {
-	rows, err := q.db.Query(ctx, adminListGameCollectorInstances, rowLimit)
+func (q *Queries) AdminListGameCollectorInstances(ctx context.Context, arg AdminListGameCollectorInstancesParams) ([]AdminListGameCollectorInstancesRow, error) {
+	rows, err := q.db.Query(ctx, adminListGameCollectorInstances, arg.InstanceView, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
