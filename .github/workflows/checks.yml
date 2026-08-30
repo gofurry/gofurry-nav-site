@@ -278,54 +278,65 @@ jobs:
       - name: Write isolated CI database configuration
         shell: bash
         run: |
-          cat > /tmp/gofurry-integration.yaml <<'YAML'
+          cat > /tmp/gofurry-game-collector-integration.yaml <<'YAML'
+          cluster_id: 1
+          server:
+            memory_limit: 1
           data_base:
+            db_name: gfg_integration
+            db_username: postgres
+            db_password: foundation
+            db_host: 127.0.0.1
+            db_port: "5432"
+          redis:
+            redis_addr: 127.0.0.1:6379
+          YAML
+          cat > /tmp/gofurry-nav-collector-integration.yaml <<'YAML'
+          cluster_id: 1
+          server:
+            memory_limit: 1
+          data_base:
+            db_name: gfn_integration
+            db_username: postgres
+            db_password: foundation
+            db_host: 127.0.0.1
+            db_port: "5432"
+          redis:
+            redis_addr: 127.0.0.1:6379
+          YAML
+          cat > /tmp/gofurry-backend-integration.yaml <<'YAML'
+          database:
             db_name: postgres
             db_username: postgres
             db_password: foundation
             db_host: 127.0.0.1
             db_port: "5432"
+          YAML
+          cat > /tmp/gofurry-admin-integration.yaml <<'YAML'
           database:
             enabled: true
             db_type: postgres
-            db_name: postgres
-            db_username: postgres
-            db_password: foundation
-            db_host: 127.0.0.1
-            db_port: "5432"
             postgres:
               db_name: postgres
               db_username: postgres
               db_password: foundation
               db_host: 127.0.0.1
               db_port: "5432"
-          business_databases:
-            nav:
-              enabled: true
-              db_type: postgres
-              postgres:
-                db_name: postgres
-                db_username: postgres
-                db_password: foundation
-                db_host: 127.0.0.1
-                db_port: "5432"
-            game:
-              enabled: true
-              db_type: postgres
-              postgres:
-                db_name: postgres
-                db_username: postgres
-                db_password: foundation
-                db_host: 127.0.0.1
-                db_port: "5432"
-          redis:
-            enabled: false
           YAML
+      - name: Prepare collector integration databases
+        working-directory: tools
+        env:
+          PGPASSWORD: foundation
+        run: |
+          createdb --host=127.0.0.1 --port=5432 --username=postgres gfg_integration
+          createdb --host=127.0.0.1 --port=5432 --username=postgres gfn_integration
+          go tool goose -dir ../db/game/migrations postgres "postgres://postgres:foundation@127.0.0.1:5432/gfg_integration?sslmode=disable" up
+          go tool goose -dir ../db/nav/migrations postgres "postgres://postgres:foundation@127.0.0.1:5432/gfn_integration?sslmode=disable" up
       - name: Game Collector integration
         if: needs.detect-changes.outputs.game_integration == 'true'
         working-directory: apps/cn/game-collector
         env:
-          GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
+          GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-game-collector-integration.yaml
         run: |
           go test ./collector/game/v2/repository -run TestPostgresRepositorySemantics -count=1 -v
           go test ./collector/changes -run 'TestGameChange(ProjectorsIntegration|CheckpointLockSerializes|EngineBackfillRebuildIntegration)' -count=1 -v
@@ -333,13 +344,13 @@ jobs:
         if: needs.detect-changes.outputs.game_integration == 'true'
         working-directory: apps/cn/game-backend
         env:
-          GOFURRY_GAME_BACKEND_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
+          GOFURRY_GAME_BACKEND_INTEGRATION_CONFIG: /tmp/gofurry-backend-integration.yaml
         run: go test ./apps/game/v2/dao -run TestPostgresReadModelSemantics -count=1 -v
       - name: Nav Collector integration
         if: needs.detect-changes.outputs.nav_integration == 'true'
         working-directory: apps/cn/nav-collector
         env:
-          GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
+          GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-nav-collector-integration.yaml
         run: |
           go test ./collector/observation -run TestPostgresCollectorPersistenceSemantics -count=1 -v
           go test ./collector/changes -run 'TestNavChange(ProjectorsIntegration|EngineBackfillRebuildIntegration)' -count=1 -v
@@ -347,11 +358,11 @@ jobs:
         if: needs.detect-changes.outputs.nav_integration == 'true'
         working-directory: apps/cn/nav-backend
         env:
-          GOFURRY_NAV_BACKEND_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
+          GOFURRY_NAV_BACKEND_INTEGRATION_CONFIG: /tmp/gofurry-backend-integration.yaml
         run: go test ./apps/nav/navPage/dao -run TestPostgresNavBackendPersistenceSemantics -count=1 -v
       - name: Admin three-database integration
         if: needs.detect-changes.outputs.admin_integration == 'true'
         working-directory: apps/cn/admin
         env:
-          GOFURRY_ADMIN_INTEGRATION_CONFIG: /tmp/gofurry-integration.yaml
+          GOFURRY_ADMIN_INTEGRATION_CONFIG: /tmp/gofurry-admin-integration.yaml
         run: go test ./internal/bootstrap -run TestAdminThreeDatabasePersistence -count=1 -v
