@@ -47,6 +47,8 @@ func TestHealthHandlers(t *testing.T) {
 	assertStatus(t, server.server.Handler, "/readyz", http.StatusOK)
 	dependencyReady = false
 	assertStatus(t, server.server.Handler, "/readyz", http.StatusServiceUnavailable)
+	dependencyReady = true
+	assertStatus(t, server.server.Handler, "/readyz", http.StatusOK)
 	server.MarkNotReady()
 	assertStatus(t, server.server.Handler, "/readyz", http.StatusServiceUnavailable)
 }

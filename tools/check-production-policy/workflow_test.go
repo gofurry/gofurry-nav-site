@@ -35,6 +35,8 @@ func TestPostgresIntegrationUsesSchemaReadyContractSpecificConfigs(t *testing.T)
 		"db_name: gfn_integration",
 		"go tool goose -dir ../db/game/migrations",
 		"go tool goose -dir ../db/nav/migrations",
+		"TestGameExpiredLeaseRecoveryIntegration",
+		"TestNavExpiredLeaseRecoveryIntegration",
 	} {
 		if !strings.Contains(workflow, expected) {
 			t.Fatalf("checks workflow is missing isolated integration contract %q", expected)

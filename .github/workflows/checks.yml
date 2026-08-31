@@ -340,6 +340,7 @@ jobs:
         env:
           GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-game-collector-integration.yaml
         run: |
+          go test ./collector/control -run TestGameExpiredLeaseRecoveryIntegration -count=1 -v
           go test ./collector/game/v2/repository -run TestPostgresRepositorySemantics -count=1 -v
           go test ./collector/changes -run 'TestGameChange(ProjectorsIntegration|CheckpointLockSerializes|EngineBackfillRebuildIntegration)' -count=1 -v
       - name: Game Backend integration
@@ -354,6 +355,7 @@ jobs:
         env:
           GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-nav-collector-integration.yaml
         run: |
+          go test ./collector/control -run TestNavExpiredLeaseRecoveryIntegration -count=1 -v
           go test ./collector/observation -run TestPostgresCollectorPersistenceSemantics -count=1 -v
           go test ./collector/changes -run 'TestNavChange(ProjectorsIntegration|EngineBackfillRebuildIntegration)' -count=1 -v
       - name: Nav Backend integration
