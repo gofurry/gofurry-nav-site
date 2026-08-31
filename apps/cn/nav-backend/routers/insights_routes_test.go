@@ -1,0 +1,38 @@
+package routers
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gofiber/fiber/v3"
+)
+
+type navInsightsRouteStub struct{}
+
+func (navInsightsRouteStub) GetOverview(c fiber.Ctx) error { return c.SendStatus(http.StatusNoContent) }
+func (navInsightsRouteStub) GetMetricTrend(c fiber.Ctx) error {
+	return c.SendStatus(http.StatusNoContent)
+}
+func (navInsightsRouteStub) GetSiteInsights(c fiber.Ctx) error {
+	return c.SendStatus(http.StatusNoContent)
+}
+
+func TestNavInsightsRoutesAreRegistered(t *testing.T) {
+	app := fiber.New()
+	registerRoutes(app, NavDependencies{Insights: navInsightsRouteStub{}})
+	for _, path := range []string{
+		"/api/v2/nav/insights/overview",
+		"/api/v2/nav/insights/metrics/ipv6/trend",
+		"/api/v2/nav/sites/1/insights",
+	} {
+		resp, err := app.Test(httptest.NewRequest(http.MethodGet, path, http.NoBody))
+		if err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusNoContent {
+			t.Fatalf("%s status=%d", path, resp.StatusCode)
+		}
+	}
+}

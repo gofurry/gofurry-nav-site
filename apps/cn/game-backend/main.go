@@ -21,6 +21,7 @@ import (
 	"github.com/gofurry/gofurry-game-backend/common"
 	gfLog "github.com/gofurry/gofurry-game-backend/common/log"
 	cs "github.com/gofurry/gofurry-game-backend/common/service"
+	gamesqlc "github.com/gofurry/gofurry-game-backend/internal/db/game/sqlc"
 	"github.com/gofurry/gofurry-game-backend/internal/infra/postgres"
 	"github.com/gofurry/gofurry-game-backend/middleware"
 	"github.com/gofurry/gofurry-game-backend/roof/env"
@@ -84,7 +85,8 @@ func (gf *goFurry) InitOnStart() error {
 	}
 	prizeService := prizeservice.New(gf.prizeDAO)
 	reviewService := reviewservice.New(reviewdao.New(gf.pool))
-	gf.gameAPI = v2controller.New(gf.readDAO, gf.viewSvc, reviewService)
+	insightsService := v2service.NewInsightsService(v2dao.NewInsightsDAO(gamesqlc.New(gf.pool)))
+	gf.gameAPI = v2controller.New(gf.readDAO, gf.viewSvc, reviewService, insightsService)
 	gf.prizeAPI = prizecontroller.New(prizeService)
 
 	if err := cs.InitSchedulerOnStart(); err != nil {

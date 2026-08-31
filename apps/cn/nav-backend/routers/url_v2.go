@@ -29,6 +29,11 @@ type DetailAPI interface {
 	GetTargetChanges(fiber.Ctx) error
 	GetTargetLightProbes(fiber.Ctx) error
 }
+type InsightsAPI interface {
+	GetOverview(fiber.Ctx) error
+	GetMetricTrend(fiber.Ctx) error
+	GetSiteInsights(fiber.Ctx) error
+}
 type NavDependencies struct {
 	Home      HomeAPI
 	Updates   UpdatesAPI
@@ -36,6 +41,7 @@ type NavDependencies struct {
 	SiteIndex SiteIndexAPI
 	NavPage   NavPageAPI
 	Detail    DetailAPI
+	Insights  InsightsAPI
 }
 
 func navV2Api(g fiber.Router, cfg env.NavV2Config, dependencies NavDependencies) {
@@ -65,4 +71,10 @@ func navV2Api(g fiber.Router, cfg env.NavV2Config, dependencies NavDependencies)
 		g.Get("/sites/:siteId/targets/:target/changes", dependencies.Detail.GetTargetChanges)
 		g.Get("/sites/:siteId/targets/:target/light-probes", dependencies.Detail.GetTargetLightProbes)
 	}
+}
+
+func registerNavInsightsRoutes(g fiber.Router, insights InsightsAPI) {
+	g.Get("/insights/overview", insights.GetOverview)
+	g.Get("/insights/metrics/:metricKey/trend", insights.GetMetricTrend)
+	g.Get("/sites/:siteId/insights", insights.GetSiteInsights)
 }

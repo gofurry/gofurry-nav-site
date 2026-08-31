@@ -15,12 +15,14 @@ import (
 
 	v2dao "github.com/gofurry/gofurry-game-backend/apps/game/v2/dao"
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
+	v2service "github.com/gofurry/gofurry-game-backend/apps/game/v2/service"
 	prizedao "github.com/gofurry/gofurry-game-backend/apps/prize/dao"
 	prizemodels "github.com/gofurry/gofurry-game-backend/apps/prize/models"
 	reviewdao "github.com/gofurry/gofurry-game-backend/apps/review/dao"
 	reviewmodels "github.com/gofurry/gofurry-game-backend/apps/review/models"
 	"github.com/gofurry/gofurry-game-backend/common"
 	cm "github.com/gofurry/gofurry-game-backend/common/models"
+	gamesqlc "github.com/gofurry/gofurry-game-backend/internal/db/game/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -76,6 +78,8 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 
 	now := time.Now().UTC().Truncate(time.Second)
 	seedReadModel(t, ctx, pool, now)
+	seedGameInsights(t, ctx, pool, now)
+	assertGameInsights(t, ctx, pool)
 	readDAO := v2dao.NewReadModelDAO(pool)
 
 	detail, gfErr := readDAO.GetGameDetailAggregate(ctx, v2models.GameV2DetailQuery{GameID: 91001, Lang: "en", NewsLimit: 5})
@@ -231,6 +235,97 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	newReview := reviewmodels.GfgGameComment{ID: 95001, Region: "test", Content: "inserted", Score: 4, CreateTime: cm.LocalTime(now), GameID: 91002, IP: "127.0.0.2", Name: "tester"}
 	if gfErr := reviewDAO.Add(&newReview); gfErr != nil {
 		t.Fatalf("insert review: %s", gfErr.GetMsg())
+	}
+}
+
+func seedGameInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {
+	t.Helper()
+	latestDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
+	_, err := pool.Exec(ctx, `
+INSERT INTO gfg_game_tracking_periods
+    (id,game_id,appid,tracked_from,tracking_basis,opened_reason)
+VALUES (99001,91001,92001,$1::timestamptz - interval '60 days','explicit','insights_test');
+INSERT INTO gfg_game_daily
+    (game_id,fact_date,tracking_period_id,appid,snapshot_at,tracked_at_end,name,name_en,view_count,
+     is_free,windows,linux,release_availability,developers,publishers,tag_ids,details_observed_at,
+     materialization_source,projection_version,finalized_at)
+VALUES (91001,$2::date,99001,92001,$1,true,'中文游戏','English Game',3,false,true,true,'available',
+        ARRAY['Dev'],ARRAY['Pub'],ARRAY[1::bigint],$1,'observed',1,$1);
+INSERT INTO gfg_metric_daily
+    (metric_key,metric_version,fact_date,dimension_key,dimension_value,population_count,eligible_count,
+     not_applicable_count,positive_count,negative_count,stale_count,not_probed_count,probe_failed_count,unknown_count,computed_at)
+VALUES
+    ('free_game_share',1,$3::date,'global','all',10,10,0,2,8,0,0,0,0,$1),
+    ('free_game_share',1,$2::date,'global','all',10,10,0,5,5,0,0,0,0,$1),
+    ('windows_support',1,$2::date,'global','all',10,10,0,8,2,0,0,0,0,$1);
+INSERT INTO gfg_game_player_counts (run_id,game_id,appid,count,status,collected_at)
+VALUES ('insights-zero',91001,92001,0,'success',$1::timestamptz + interval '1 second'),
+       ('insights-failed',91001,92001,0,'failure',$1::timestamptz + interval '2 seconds');
+INSERT INTO gfg_game_player_daily
+    (tracking_period_id,game_id,appid,fact_date,min_players,max_players,avg_players,median_players,
+     attempted_samples,successful_samples,partial_samples,failed_samples,failure_kind_counts,
+     quality_basis,projection_version,finalized_at)
+VALUES
+    (99001,91001,92001,$2::date - 1,0,0,0,0,1,1,0,0,'{}','legacy_observed_only',1,$1),
+    (99001,91001,92001,$2::date, NULL,NULL,NULL,NULL,1,0,0,1,'{"request_failed":1}','legacy_observed_only',1,$1);
+INSERT INTO gfg_game_price_daily
+    (tracking_period_id,game_id,appid,region,fact_date,price_state,currency,initial_amount,final_amount,discount_percent,
+     materialization_source,projection_version,finalized_at)
+VALUES
+    (99001,91001,92001,'CN',$2::date - 1,'free',NULL,NULL,NULL,NULL,'observed',1,$1),
+    (99001,91001,92001,'CN',$2::date,'priced','CNY',1000,0,100,'observed',1,$1),
+    (99001,91001,92001,'HK',$2::date + 1,'priced','HKD',2000,1800,10,'observed',1,$1);
+INSERT INTO gfg_change_events
+    (event_key,detector_key,detector_version,game_id,projection_date,event_at,time_basis,event_code,scope_kind,scope_key,
+     old_value,new_value,source_event_key,source_before_key,source_after_key,source_versions,materialized_at)
+VALUES
+    ('insights-free-old','free_game_transition',1,91001,$2::date - 1,NULL,'day','game_became_paid','global','all','{}','{}','game-src-old','before-old','after-old','{}',$1),
+    ('insights-free-new','free_game_transition',1,91001,$2::date,NULL,'day','game_became_free','global','all','{}','{}','game-src-new','before-new','after-new','{}',$1),
+    ('insights-price-cn','game_price_transition',1,91001,$2::date,NULL,'day','game_price_decreased','region','CN','{}','{}','game-src-price-cn','before-cn','after-cn','{}',$1),
+    ('insights-price-hk','game_price_transition',1,91001,$2::date + 1,NULL,'day','game_price_increased','region','HK','{}','{}','game-src-price-hk','before-hk','after-hk','{}',$1);
+`, pgx.QueryExecModeSimpleProtocol, now, latestDay, latestDay.AddDate(0, 0, -30))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertGameInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
+	t.Helper()
+	queries := gamesqlc.New(pool)
+	svc := v2service.NewInsightsService(v2dao.NewInsightsDAO(queries))
+	overview, err := svc.GetInsightsOverview(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(overview.Metrics) != 2 || overview.Metrics[0].Key != "free" || overview.Metrics[0].Delta30D == nil || *overview.Metrics[0].Delta30D != .3 {
+		t.Fatalf("metric mapping/exact delta: %#v", overview.Metrics)
+	}
+	if len(overview.RecentChanges) != 1 || overview.RecentChanges[0].Type != "game.price.decreased" {
+		t.Fatalf("overview dedup/CN whitelist: %#v", overview.RecentChanges)
+	}
+	summary, err := svc.GetGameInsights(ctx, 91001)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.Players.Current == nil || *summary.Players.Current != 0 || summary.Players.Peak30D == nil || *summary.Players.Peak30D != 0 {
+		t.Fatalf("real zero player summary: %#v", summary.Players)
+	}
+	if summary.Price == nil || summary.Price.Region != "CN" || summary.Price.State != "priced" || summary.Price.FinalAmount == nil || *summary.Price.FinalAmount != 0 {
+		t.Fatalf("CN priced-zero summary: %#v", summary.Price)
+	}
+	players, err := svc.GetGamePlayerInsights(ctx, 91001, "all")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(players.Points) != 1 || players.Points[0].Max != 0 {
+		t.Fatalf("failed day became zero or real zero was lost: %#v", players.Points)
+	}
+	prices, err := svc.GetGamePriceInsights(ctx, 91001, "all")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(prices.Points) != 2 || prices.Points[0].State != "free" || prices.Points[0].FinalAmount != nil || prices.Points[1].State != "priced" || prices.Points[1].FinalAmount == nil || *prices.Points[1].FinalAmount != 0 {
+		t.Fatalf("free/priced-zero/CN-only semantics: %#v", prices.Points)
 	}
 }
 

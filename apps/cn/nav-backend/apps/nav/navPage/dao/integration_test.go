@@ -14,6 +14,8 @@ import (
 	"time"
 
 	detaildao "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/dao"
+	insightsdao "github.com/gofurry/gofurry-nav-backend/apps/nav/insights/dao"
+	insightsservice "github.com/gofurry/gofurry-nav-backend/apps/nav/insights/service"
 	navdao "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/dao"
 	observationdao "github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/dao"
 	sitepagedao "github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/dao"
@@ -76,6 +78,8 @@ func TestPostgresNavBackendPersistenceSemantics(t *testing.T) {
 	now = now.UTC().Truncate(time.Second)
 	seedNavReadModel(t, ctx, pool, now)
 	queries := navsqlc.New(pool)
+	seedNavInsights(t, ctx, pool, now)
+	assertNavInsights(t, ctx, queries)
 	nav := navdao.New(queries)
 
 	sites, gfErr := nav.GetSiteList()
@@ -137,6 +141,70 @@ func TestPostgresNavBackendPersistenceSemantics(t *testing.T) {
 	siteIndex := siteindexservice.New(nav).GetSiteIndex()
 	if siteIndex.State != "ready" || len(siteIndex.Items) != 1 || len(siteIndex.Items[0].Domains) != 1 {
 		t.Fatalf("site index response: %+v", siteIndex)
+	}
+}
+
+func seedNavInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {
+	t.Helper()
+	entityDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
+	latestDay := entityDay.AddDate(0, 0, 1)
+	_, err := pool.Exec(ctx, `
+INSERT INTO gfn_metric_daily
+    (metric_key,metric_version,fact_date,dimension_key,dimension_value,population_count,eligible_count,
+     not_applicable_count,positive_count,negative_count,stale_count,not_probed_count,probe_failed_count,unknown_count,computed_at)
+VALUES
+    ('ipv6_adoption',2,$1,'global','all',10,10,0,2,6,0,0,1,1,$4),
+    ('ipv6_adoption',2,$2,'global','all',10,10,0,6,2,0,0,1,1,$4),
+    ('ipv6_adoption',2,$3,'global','all',10,10,0,2,6,0,0,1,1,$4),
+    ('ipv6_adoption',1,$5,'global','all',10,10,0,10,0,0,0,0,0,$4),
+    ('tls13_adoption',1,$1,'global','all',10,10,0,4,4,0,0,1,1,$4);
+INSERT INTO gfn_metric_entity_daily
+    (metric_key,metric_version,fact_date,site_id,state,reason_code,dimension_values,source_projection_versions,evaluated_at)
+VALUES
+    ('ipv6_adoption',2,$1,1,'probe_failed','probe_failed','{}','{}',$4),
+    ('tls13_adoption',1,$1,1,'unknown','unknown','{}','{}',$4);
+INSERT INTO gfn_site_daily
+    (site_id,fact_date,snapshot_at,tracked_at_end,name,name_en,view_count,group_ids,active_target_count,projection_version,finalized_at)
+VALUES (1,$1,$4,true,'站点','Site',7,'{}',1,1,$4)
+ON CONFLICT (site_id,fact_date) DO NOTHING;
+INSERT INTO gfn_change_events
+    (event_key,detector_key,detector_version,site_id,projection_date,event_at,time_basis,event_code,scope_kind,scope_key,
+     old_value,new_value,source_event_key,source_before_key,source_after_key,source_versions,materialized_at)
+VALUES
+    ('insights-ipv6-old','ipv6_transition',2,1,$6,NULL,'day','ipv6_disabled','global','all','{}','{}','src-old','before-old','after-old','{}',$4),
+    ('insights-ipv6-new','ipv6_transition',2,1,$1,NULL,'day','ipv6_enabled','global','all','{}','{}','src-new','before-new','after-new','{}',$4),
+    ('insights-primary','primary_target_transition',1,1,$1,NULL,'day','primary_target_changed','global','all','{}','{}','src-primary','before-primary','after-primary','{}',$4);
+`, pgx.QueryExecModeSimpleProtocol, entityDay, latestDay, latestDay.AddDate(0, 0, -30), now, latestDay.AddDate(0, 0, 1), entityDay.AddDate(0, 0, -1))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertNavInsights(t *testing.T, ctx context.Context, queries *navsqlc.Queries) {
+	t.Helper()
+	svc := insightsservice.New(insightsdao.New(queries))
+	overview, err := svc.GetOverview(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(overview.Metrics) != 2 || overview.Metrics[0].Key != "ipv6" || overview.Metrics[0].AsOf == "" || overview.Metrics[0].Delta30D == nil {
+		t.Fatalf("public metric mapping/math: %#v", overview.Metrics)
+	}
+	if overview.Metrics[0].Value == nil || *overview.Metrics[0].Value != .75 || *overview.Metrics[0].Delta30D != .5 {
+		t.Fatalf("public metric values: %#v", overview.Metrics[0])
+	}
+	if len(overview.RecentChanges) != 1 || overview.RecentChanges[0].Type != "site.ipv6.enabled" {
+		t.Fatalf("overview newest-one-per-entity/whitelist: %#v", overview.RecentChanges)
+	}
+	site, err := svc.GetSiteInsights(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(site.Capabilities) != 2 || site.Capabilities[0].State != "unavailable" || site.Capabilities[0].Ecosystem.Value == nil || *site.Capabilities[0].Ecosystem.Value != .25 || site.Capabilities[1].State != "unknown" {
+		t.Fatalf("same-day comparison/uncertainty semantics: %#v", site.Capabilities)
+	}
+	if len(site.RecentChanges) != 3 || site.RecentChanges[0].OccurredAt != nil {
+		t.Fatalf("entity timeline/time precision: %#v", site.RecentChanges)
 	}
 }
 

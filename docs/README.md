@@ -8,6 +8,7 @@ This directory contains cross-service documentation for the active GoFurry produ
 - [Historical Fact operations](historical-facts.md)
 - [Analytics Metric operations](analytics-metrics.md)
 - [Change Intelligence operations](change-intelligence.md)
+- [Public Insights contract](public-insights.md)
 - [Admin identity and authorization](admin-identity.md)
 - [React Admin development](admin-react.md)
 - [Admin frontend parity](admin-frontend-parity.md)

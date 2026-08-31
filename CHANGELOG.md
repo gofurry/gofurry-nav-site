@@ -8,6 +8,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add Nav and Game Public Insights overview, trend, entity, player, and CN price APIs with explicit public-to-internal version mappings and correctness regression coverage.
 - Add the final Admin Vue-to-React functional parity matrix, embedded SPA routing regression coverage, and Owner/Developer/Operator guide.
 - Add native React Collection, Metrics, and Change Centers with capability-aware controls, count-backed history/explorers, operational charts, and technical contract views.
 - Add a capability-shaped Workbench Attention projection, read-only three-database Data Operations health center, filtered/redacted Audit explorer, and Owner account-governance UI.

@@ -6,6 +6,9 @@ import (
 	detailservice "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/service"
 	homecontroller "github.com/gofurry/gofurry-nav-backend/apps/nav/home/controller"
 	homeservice "github.com/gofurry/gofurry-nav-backend/apps/nav/home/service"
+	insightscontroller "github.com/gofurry/gofurry-nav-backend/apps/nav/insights/controller"
+	insightsdao "github.com/gofurry/gofurry-nav-backend/apps/nav/insights/dao"
+	insightsservice "github.com/gofurry/gofurry-nav-backend/apps/nav/insights/service"
 	navpagecontroller "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/controller"
 	navpagedao "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/dao"
 	navpageservice "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/service"
@@ -54,6 +57,7 @@ func newApplicationDependencies(pool *pgxpool.Pool) applicationDependencies {
 			SiteIndex: siteindexcontroller.New(siteindexservice.New(navStore)),
 			NavPage:   navpagecontroller.New(navService),
 			Detail:    detailcontroller.New(detailService, sitePageService),
+			Insights:  insightscontroller.New(insightsservice.New(insightsdao.New(queries))),
 		},
 		navStore:  navStore,
 		navReader: navService,
