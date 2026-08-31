@@ -14,6 +14,7 @@ This directory contains cross-service documentation for the active GoFurry produ
 - [Admin Data and System Operations](admin-data-system-operations.md)
 - [Admin role operator guide](operations/admin-roles.md)
 - [Collection Center operations](operations/collection-center.md)
+- [V3 P0 production acceptance](acceptance/v3-p0-production-acceptance.md)
 - [Linux/systemd operations](operations/systemd.md)
 - [Architecture decisions](decisions/README.md)
 - [Compatibility contract](../contracts/compatibility.md)
