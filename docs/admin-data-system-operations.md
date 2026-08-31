@@ -1,6 +1,6 @@
 # Admin Data and System Operations
 
-P0.5.2-C makes `/collection`, `/metrics`, `/changes`, `/system/data-operations`, `/system/audit`, and `/system/accounts` native React routes. The embedded Vue build remains the production fallback until P0.5.2-D; this stage does not cut over production routing.
+`/collection`, `/metrics`, `/changes`, `/system/data-operations`, `/system/audit`, and `/system/accounts` are native React routes in the sole production Admin frontend.
 
 Collection, Metric, and Change pages consume the existing frozen control-plane and projection APIs. Run Now remains a manual job with schedule lineage and no scheduled slot. Zero expected targets render coverage as unavailable. Metric `unknown` remains distinct from `negative`, and technical Registry/checkpoint views require their technical capabilities.
 

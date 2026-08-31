@@ -5,6 +5,10 @@ import { defineConfig } from 'vitest/config'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    outDir: '../internal/transport/http/webui/dist',
+    emptyOutDir: true,
+  },
   server: {
     port: 5178,
     proxy: {

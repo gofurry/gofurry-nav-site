@@ -44,11 +44,10 @@ Frontend checks:
 
 ~~~text
 cd apps/cn/admin/react && npm ci && npm run typecheck && npm test && npm run build
-cd apps/cn/admin/web && npm ci && npm run build
 cd apps/cn/nav-web && npm ci && npm run typecheck && npm run build
 ~~~
 
-For local React Admin work, run the Go Admin API on `127.0.0.1:10099` and `npm run dev` from `apps/cn/admin/react`; Vite proxies `/api` and `/csrf`. The Vue frontend remains the production embed during coexistence.
+For local React Admin work, run the Go Admin API on `127.0.0.1:10099` and `npm run dev` from `apps/cn/admin/react`; Vite proxies `/api` and `/csrf`. `npm run build` clears and writes the canonical Go embed directory. The root `build.bat admin` target runs that React build before compiling the self-contained production binary.
 
 ## Repository and database checks
 

@@ -131,9 +131,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: |
-            apps/cn/admin/react/package-lock.json
-            apps/cn/admin/web/package-lock.json
+          cache-dependency-path: apps/cn/admin/react/package-lock.json
       - name: Validate React Admin
         if: matrix.module == 'apps/cn/admin'
         working-directory: apps/cn/admin/react
@@ -141,12 +139,6 @@ jobs:
           npm ci
           npm run typecheck
           npm test
-          npm run build
-      - name: Build legacy Vue Admin
-        if: matrix.module == 'apps/cn/admin'
-        working-directory: apps/cn/admin/web
-        run: |
-          npm ci
           npm run build
       - name: Check gofmt
         working-directory: ${{ matrix.module }}

@@ -2,8 +2,7 @@ package webui
 
 import "embed"
 
-// FS embeds the built frontend (dist/).
-// The build pipeline should copy the frontend build output into this folder.
+// FS embeds the React production frontend written to dist/ by apps/cn/admin/react.
 //
 //go:embed dist
 var FS embed.FS

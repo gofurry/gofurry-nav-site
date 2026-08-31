@@ -11,7 +11,7 @@ import { Detail, DetailGrid, FormField, FormSection, PageHeader, Section } from 
 import { ErrorState, LoadingState } from '../../components/admin/states'
 import { StatusBadge, TechnicalLabel } from '../../components/admin/status'
 import { TechnicalDetails } from '../../components/admin/technical-details'
-import { DeferredPanel, HistoryPanel, WorkspaceTabs, type WorkspaceTab } from '../../components/admin/workspace'
+import { DataCenterPanel, HistoryPanel, WorkspaceTabs, type WorkspaceTab } from '../../components/admin/workspace'
 import { Alert } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
 import { ConfirmAction, Dialog } from '../../components/ui/dialog'
@@ -127,7 +127,7 @@ function SiteOverview({ workspace }: { workspace: SiteWorkspace }) {
 
 function SiteDataStatus({ workspace }: { workspace: SiteWorkspace }) {
   const primary = workspace.targets.find((target) => target.primary)
-  return <div className="grid gap-5"><Section title="当前可确认状态" description="只展示本阶段现有 API 可以可靠确认的配置状态。"><div className="grid gap-3 md:grid-cols-3"><div className="rounded-md border p-4"><p className="text-sm font-medium">主采集目标</p><div className="mt-2"><StatusBadge tone={primary ? 'success' : 'warning'}>{primary ? '已配置' : '未知'}</StatusBadge></div><TechnicalLabel>active_site_primary_target_v1</TechnicalLabel></div><div className="rounded-md border p-4"><p className="text-sm font-medium">TLS 采集</p><div className="mt-2"><StatusBadge tone={primary?.tls === '1' ? 'success' : primary ? 'warning' : 'neutral'}>{primary ? (primary.tls === '1' ? '已开启' : '未开启') : 'N/A'}</StatusBadge></div><TechnicalLabel>collector_domain.tls</TechnicalLabel></div><div className="rounded-md border p-4"><p className="text-sm font-medium">采集覆盖</p><div className="mt-2"><StatusBadge tone={workspace.targets.length ? 'info' : 'warning'}>{workspace.targets.length} 个 Target</StatusBadge></div><TechnicalLabel>active_target_count</TechnicalLabel></div></div></Section><DeferredPanel title="Facts / Metrics / Changes 状态" legacyPath="/metrics">IPv6、TLS 1.3、security.txt、Coverage 与 Latest Fact 已由现有数据域维护；实体级聚合和异常解释属于 P0.5.2-C。本页不猜测缺少的事实值。</DeferredPanel></div>
+  return <div className="grid gap-5"><Section title="当前可确认状态" description="只展示现有 API 可以可靠确认的配置状态。"><div className="grid gap-3 md:grid-cols-3"><div className="rounded-md border p-4"><p className="text-sm font-medium">主采集目标</p><div className="mt-2"><StatusBadge tone={primary ? 'success' : 'warning'}>{primary ? '已配置' : '未知'}</StatusBadge></div><TechnicalLabel>active_site_primary_target_v1</TechnicalLabel></div><div className="rounded-md border p-4"><p className="text-sm font-medium">TLS 采集</p><div className="mt-2"><StatusBadge tone={primary?.tls === '1' ? 'success' : primary ? 'warning' : 'neutral'}>{primary ? (primary.tls === '1' ? '已开启' : '未开启') : 'N/A'}</StatusBadge></div><TechnicalLabel>collector_domain.tls</TechnicalLabel></div><div className="rounded-md border p-4"><p className="text-sm font-medium">采集覆盖</p><div className="mt-2"><StatusBadge tone={workspace.targets.length ? 'info' : 'warning'}>{workspace.targets.length} 个 Target</StatusBadge></div><TechnicalLabel>active_target_count</TechnicalLabel></div></div></Section><DataCenterPanel title="Facts / Metrics / Changes 状态" to="/metrics?tab=entities">IPv6、TLS 1.3、security.txt、Coverage 与 Latest Fact 由现有数据域维护；实体指标和异常解释在原生 React 数据中心查看。</DataCenterPanel></div>
 }
 
 export function SiteWorkspacePage() {

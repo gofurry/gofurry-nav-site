@@ -11,7 +11,7 @@ import { Detail, DetailGrid, FormField, FormSection, PageHeader, Section } from 
 import { ErrorState, LoadingState } from '../../components/admin/states'
 import { StatusBadge, TechnicalLabel } from '../../components/admin/status'
 import { TechnicalDetails } from '../../components/admin/technical-details'
-import { DeferredPanel, HistoryPanel, WorkspaceTabs, type WorkspaceTab } from '../../components/admin/workspace'
+import { DataCenterPanel, HistoryPanel, WorkspaceTabs, type WorkspaceTab } from '../../components/admin/workspace'
 import { Alert } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
 import { ConfirmAction } from '../../components/ui/dialog'
@@ -125,7 +125,7 @@ function GameOverview({ workspace }: { workspace: GameWorkspace }) {
 }
 
 function GameDataStatus({ game }: { game: Game }) {
-  return <div className="grid gap-5"><Section title="当前可确认状态" description="本阶段不推断尚未由 Admin API 暴露的事实值。"><div className="grid gap-3 md:grid-cols-3"><div className="rounded-md border p-4"><p className="text-sm font-medium">Steam 标识</p><div className="mt-2"><StatusBadge tone={game.appid > 0 ? 'success' : 'warning'}>{game.appid > 0 ? '可采集' : '缺失'}</StatusBadge></div><TechnicalLabel>game.appid</TechnicalLabel></div><div className="rounded-md border p-4"><p className="text-sm font-medium">内容完整性</p><div className="mt-2"><StatusBadge tone={game.name && game.info ? 'success' : 'warning'}>{game.name && game.info ? '基本内容完整' : '需要补充'}</StatusBadge></div><TechnicalLabel>content readiness</TechnicalLabel></div><div className="rounded-md border p-4"><p className="text-sm font-medium">分类状态</p><div className="mt-2"><StatusBadge tone={game.primary_tag > 0 ? 'success' : 'neutral'}>{game.primary_tag > 0 ? '已配置主标签' : '未配置'}</StatusBadge></div><TechnicalLabel>primary_tag</TechnicalLabel></div></div></Section><DeferredPanel title="Player / Price / Release Facts" legacyPath="/metrics">Windows、Linux、Free state、Player Facts、Price Facts、Release Facts 与 Latest Fact 仍由现有数据中心读取；实体级聚合会在 P0.5.2-C 完成。</DeferredPanel></div>
+  return <div className="grid gap-5"><Section title="当前可确认状态" description="不推断尚未由 Admin API 暴露的事实值。"><div className="grid gap-3 md:grid-cols-3"><div className="rounded-md border p-4"><p className="text-sm font-medium">Steam 标识</p><div className="mt-2"><StatusBadge tone={game.appid > 0 ? 'success' : 'warning'}>{game.appid > 0 ? '可采集' : '缺失'}</StatusBadge></div><TechnicalLabel>game.appid</TechnicalLabel></div><div className="rounded-md border p-4"><p className="text-sm font-medium">内容完整性</p><div className="mt-2"><StatusBadge tone={game.name && game.info ? 'success' : 'warning'}>{game.name && game.info ? '基本内容完整' : '需要补充'}</StatusBadge></div><TechnicalLabel>content readiness</TechnicalLabel></div><div className="rounded-md border p-4"><p className="text-sm font-medium">分类状态</p><div className="mt-2"><StatusBadge tone={game.primary_tag > 0 ? 'success' : 'neutral'}>{game.primary_tag > 0 ? '已配置主标签' : '未配置'}</StatusBadge></div><TechnicalLabel>primary_tag</TechnicalLabel></div></div></Section><DataCenterPanel title="Player / Price / Release Facts" to="/metrics?tab=entities">Windows、Linux、Free state、Player Facts、Price Facts、Release Facts 与 Latest Fact 在原生 React 数据中心查看。</DataCenterPanel></div>
 }
 
 function ExistingGameWorkspace({ numericId }: { numericId: number }) {

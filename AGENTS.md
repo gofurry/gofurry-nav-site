@@ -5,7 +5,7 @@ Production code is limited to six Go modules plus one frontend:
 - `apps/cn/game-collector` and `apps/cn/game-backend` own Game runtime behavior.
 - `apps/cn/nav-collector` and `apps/cn/nav-backend` own Nav runtime behavior.
 - `apps/cn/admin` uses explicit `gfa`, `gfn`, and `gfg` PostgreSQL pools.
-- `apps/cn/admin/react` owns target content workspaces plus Data/System operations; `apps/cn/admin/web` remains the embedded Vue compatibility frontend until the explicit production cutover stage.
+- `apps/cn/admin/react` is the sole Admin frontend and owns content workspaces plus Data/System operations.
 - `apps/cn/uptime` is the independent Fiber/Bbolt availability service and has no business PostgreSQL or Redis dependency.
 - `apps/cn/nav-web` is the production Nuxt frontend.
 - `apps/intl` is placeholder-only; `legacy`, `experimental`, and `third-party` are outside the active build and production tooling.
@@ -28,4 +28,4 @@ All six Go binaries use Cobra with an explicit `serve --config <file>` foregroun
 
 Hard rules: Goose is the only schema owner; sqlc is the normal SQL contract; production PostgreSQL uses pgx/v5 + pgxpool; generated sqlc code is committed and never hand-edited. Do not add an ORM, generic repository/UnitOfWork/query builder, startup migrations, arbitrary Viper `AutomaticEnv`, cross-platform service framework, Redis key changes, collector scheduling changes, forced Nav V1 removal, or modernization of `legacy`, `experimental`, or `third-party`. No active production application, build target, CI job, vulnerability scan, deployment tool, or dependency may depend on `legacy/**` or `experimental/**`.
 
-Admin frontend work follows `contracts/admin-frontend.md`. React business UI checks capabilities returned by the backend and never reconstructs the Role-to-Capability policy. Do not change the embedded production frontend or delete Vue without an explicit cutover task.
+Admin frontend work follows `contracts/admin-frontend.md`. React business UI checks capabilities returned by the backend and never reconstructs the Role-to-Capability policy. Its production build is embedded into the Go binary; do not introduce a runtime Node/Vite frontend service.

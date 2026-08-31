@@ -5,6 +5,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme, type ThemeMode } from '../../app/theme'
 import { useAuth } from '../../features/auth/auth-context'
 import { DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
+import { isGlobalSearchShortcut } from '../../lib/keyboard'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 import { GlobalSearch } from './global-search'
@@ -59,7 +60,11 @@ export function AppShell() {
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('gofurry-admin-sidebar') === 'collapsed')
   const [searchOpen, setSearchOpen] = useState(false)
   useEffect(() => {
-    const handler = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setSearchOpen(true) } }
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      const typing = target?.matches('input, textarea, select, [contenteditable="true"]')
+      if (isGlobalSearchShortcut(event, Boolean(typing))) { event.preventDefault(); setSearchOpen(true) }
+    }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])

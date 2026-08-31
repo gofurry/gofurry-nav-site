@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { LoaderCircle, Plus } from 'lucide-react'
+import { LoaderCircle, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm, type Resolver } from 'react-hook-form'
 import { useParams, useSearchParams } from 'react-router-dom'
@@ -26,9 +26,13 @@ function datetimeInputValue(value: unknown) {
   return text.length >= 16 ? text.slice(0, 16) : text
 }
 
-function RemoteSelect({ endpoint, value, onChange, disabled }: { endpoint: string; value: unknown; onChange: (value: string) => void; disabled?: boolean }) {
-  const query = useQuery({ queryKey: ['options', endpoint], queryFn: () => listJSON<OptionItem>(endpoint, 1, 200), staleTime: 60_000 })
-  return <Select value={value === null || value === undefined ? '' : String(value)} onValueChange={onChange} disabled={disabled || query.isLoading} options={(query.data?.list ?? []).map((item) => ({ label: item.extra ? `${item.label} · ${item.extra}` : item.label, value: String(item.id) }))} placeholder={query.isLoading ? '正在加载…' : '请选择'} />
+export function RemoteSelect({ endpoint, value, onChange, disabled }: { endpoint: string; value: unknown; onChange: (value: string) => void; disabled?: boolean }) {
+  const [search, setSearch] = useState('')
+  const selected = value === null || value === undefined ? '' : String(value)
+  const query = useQuery({ queryKey: ['options', endpoint, search], queryFn: () => listJSON<OptionItem>(endpoint, 1, 50, search), enabled: !disabled, staleTime: 30_000 })
+  const options = (query.data?.list ?? []).map((item) => ({ label: item.extra ? `${item.label} · ${item.extra}` : item.label, value: String(item.id) }))
+  if (selected && !options.some((option) => option.value === selected)) options.unshift({ label: `当前选择 #${selected}`, value: selected })
+  return <div className="grid gap-2"><div className="relative"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} disabled={disabled} placeholder="搜索远程选项…" /></div><Select value={selected} onValueChange={onChange} disabled={disabled || query.isLoading} options={options} placeholder={query.isLoading ? '正在加载…' : query.error ? '加载失败' : '请选择'} />{query.error && <p className="text-xs text-danger">{query.error.message}</p>}</div>
 }
 
 function FieldControl({ field, value, onChange, disabled }: { field: ResourceField; value: unknown; onChange: (value: unknown) => void; disabled?: boolean }) {

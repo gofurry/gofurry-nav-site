@@ -4,7 +4,7 @@ import { AppShell } from '../components/admin/app-shell'
 import { AuthGuard, CapabilityGuard } from '../features/auth/auth-guard'
 import { BootstrapPage, LoginPage } from '../features/auth/auth-pages'
 import { DATAOPS_READ_CAPABILITY } from '../lib/capabilities'
-import { NotFoundPage } from '../pages/placeholder-page'
+import { NotFoundPage } from '../pages/not-found-page'
 
 const WorkbenchPage = lazy(() => import('../features/workbench/workbench-page').then((module) => ({ default: module.WorkbenchPage })))
 const SiteListPage = lazy(() => import('../features/sites/site-pages').then((module) => ({ default: module.SiteListPage })))

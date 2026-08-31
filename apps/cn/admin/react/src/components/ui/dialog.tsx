@@ -22,12 +22,12 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
   </BaseDialog.Root>
 }
 
-export function ConfirmAction({ open, onOpenChange, title, description, busy, onConfirm }: {
+export function ConfirmAction({ open, onOpenChange, title, description, busy, onConfirm, confirmLabel = '确认删除', variant = 'danger' }: {
   open: boolean; onOpenChange: (open: boolean) => void; title: string; description: string
-  busy?: boolean; onConfirm: () => void
+  busy?: boolean; onConfirm: () => void; confirmLabel?: string; variant?: 'primary' | 'danger'
 }) {
   return <Dialog open={open} onOpenChange={onOpenChange} title={title} description={description} footer={<>
     <Button variant="secondary" onClick={() => onOpenChange(false)}>取消</Button>
-    <Button variant="danger" disabled={busy} onClick={onConfirm}>{busy ? '处理中…' : '确认删除'}</Button>
+    <Button variant={variant} disabled={busy} onClick={onConfirm}>{busy ? '处理中…' : confirmLabel}</Button>
   </>}><p className="text-sm text-muted-foreground">此操作会立即提交到服务器，请确认目标无误。</p></Dialog>
 }

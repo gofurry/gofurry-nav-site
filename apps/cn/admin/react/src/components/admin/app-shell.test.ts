@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
+import { isGlobalSearchShortcut } from '../../lib/keyboard'
 import { capabilityAwareNavigation } from './app-shell'
 
 describe('capability-aware navigation', () => {
@@ -44,5 +45,12 @@ describe('capability-aware navigation', () => {
   it('shows account governance only with account.manage', () => {
     const paths = capabilityAwareNavigation((capability) => capability === 'account.manage').flatMap((group) => group.entries.map((entry) => entry.href))
     expect(paths).toContain('/system/accounts')
+  })
+
+  it('keeps Ctrl/Cmd+K and slash global-search shortcuts without hijacking form input', () => {
+    expect(isGlobalSearchShortcut({ key: 'k', ctrlKey: true, metaKey: false }, true)).toBe(true)
+    expect(isGlobalSearchShortcut({ key: 'k', ctrlKey: false, metaKey: true }, false)).toBe(true)
+    expect(isGlobalSearchShortcut({ key: '/', ctrlKey: false, metaKey: false }, false)).toBe(true)
+    expect(isGlobalSearchShortcut({ key: '/', ctrlKey: false, metaKey: false }, true)).toBe(false)
   })
 })

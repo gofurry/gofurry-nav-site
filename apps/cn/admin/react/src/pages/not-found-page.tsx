@@ -1,0 +1,1 @@
+export function NotFoundPage() { return <div className="grid min-h-[60vh] place-items-center text-center"><div><p className="font-mono text-sm text-muted-foreground">404</p><h1 className="mt-2 text-2xl font-semibold">页面不存在</h1><a href="/" className="mt-4 inline-block text-sm text-primary hover:underline">返回工作台</a></div></div> }

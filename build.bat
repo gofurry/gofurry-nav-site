@@ -124,8 +124,8 @@ popd
 exit /b 0
 
 :build_admin
-echo [BUILD] gofurry-admin web
-pushd "%ROOT%\apps\cn\admin\web" || exit /b 1
+echo [BUILD] gofurry-admin React frontend
+pushd "%ROOT%\apps\cn\admin\react" || exit /b 1
 if not exist "node_modules" (
     call npm ci
     if errorlevel 1 (

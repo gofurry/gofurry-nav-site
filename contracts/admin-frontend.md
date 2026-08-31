@@ -1,6 +1,6 @@
 # Admin frontend contract
 
-`apps/cn/admin/react` is the target Admin frontend. Its frozen foundation is React 19, Vite, strict TypeScript, React Router, Tailwind CSS v4, shadcn-style wrappers over Base UI primitives, TanStack Query/Table, React Hook Form, Zod, ECharts, and Lucide.
+`apps/cn/admin/react` is the sole development and production Admin frontend. Its frozen foundation is React 19, Vite, strict TypeScript, React Router, Tailwind CSS v4, shadcn-style wrappers over Base UI primitives, TanStack Query/Table, React Hook Form, Zod, ECharts, and Lucide.
 
 ## Architecture boundaries
 
@@ -47,4 +47,4 @@ Data Operations is a read-only `dataops.read` health center for the explicit `gf
 
 Audit requires `audit.read`, uses historical identity snapshots, returns real pagination, and redacts secret-shaped fields before responses. Accounts requires `account.manage`, keeps fixed roles, and delegates last-active-Owner protection to the backend transaction. Workbench aggregation is capability-shaped and projects existing durable attention sources; it is not an alerting subsystem.
 
-The Vue frontend under `apps/cn/admin/web` remains the embedded production fallback until P0.5.2-D; no React change may silently switch production routing or delete Vue.
+The React production build is the only writer of `apps/cn/admin/internal/transport/http/webui/dist`. It clears stale output before building, and the Go binary embeds that directory. Production must not require Node, a Vite server, a separate frontend service, manual asset copying, or a second Admin frontend implementation. The completed parity audit is recorded in `docs/admin-frontend-parity.md`.

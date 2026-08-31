@@ -8,6 +8,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add the final Admin Vue-to-React functional parity matrix, embedded SPA routing regression coverage, and Owner/Developer/Operator guide.
 - Add native React Collection, Metrics, and Change Centers with capability-aware controls, count-backed history/explorers, operational charts, and technical contract views.
 - Add a capability-shaped Workbench Attention projection, read-only three-database Data Operations health center, filtered/redacted Audit explorer, and Owner account-governance UI.
 - Add static PostgreSQL metadata, Goose state, bounded relation-size, audit-pagination, and Workbench aggregation APIs with PostgreSQL integration coverage.
@@ -21,7 +22,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Changed
 
-- Validate both the target React Admin and the temporary legacy Vue Admin in CI; production embedding and cutover remain owned by P0.5.2-D.
+- Make React the sole Admin production frontend, write its clean Vite build directly to the Go embed directory, and remove the Vue build/cache path from CI.
+- Restore searchable Resource Engine remote options plus Collection chart/history/result filters found by the final parity audit.
 - Change Admin bootstrap/login from a singleton password to canonical username, display name, and password while preserving the legacy account password and timestamps during migration.
 - Keep JWTs role-free and resolve current role, status, session version, and capabilities from `gfa` on every authenticated request; minimally update the existing Vue login/setup compatibility surface.
 - Preserve per-query AAAA evidence and validate security.txt content before treating either capability as adopted; inconclusive DNS and unrecognized documents remain unknown instead of becoming false or positive.
@@ -30,6 +32,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Require explicit impact confirmation for collection cancellation and schedule state changes while preserving the existing control-plane semantics.
 - Correct the React Data Operations capability from `data_ops.read` to canonical `dataops.read` and explicitly reject the legacy alias in regression tests.
 - Preserve `schedule_id` and `schedule_version` on Schedule Run Now jobs without creating or moving a scheduled slot, and report unavailable coverage as null rather than 0%.
 - Separate current and historical Collector instances, clarify chart timing units and spacing, and keep Task Result details within the viewport.
