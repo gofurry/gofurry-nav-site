@@ -14,6 +14,13 @@ func (navInsightsRouteStub) GetOverview(c fiber.Ctx) error { return c.SendStatus
 func (navInsightsRouteStub) GetMetricTrend(c fiber.Ctx) error {
 	return c.SendStatus(http.StatusNoContent)
 }
+func (navInsightsRouteStub) GetMetricBreakdown(c fiber.Ctx) error {
+	return c.SendStatus(http.StatusNoContent)
+}
+func (navInsightsRouteStub) GetMetricSliceTrend(c fiber.Ctx) error {
+	return c.SendStatus(http.StatusNoContent)
+}
+func (navInsightsRouteStub) GetChanges(c fiber.Ctx) error { return c.SendStatus(http.StatusNoContent) }
 func (navInsightsRouteStub) GetSiteInsights(c fiber.Ctx) error {
 	return c.SendStatus(http.StatusNoContent)
 }
@@ -24,6 +31,9 @@ func TestNavInsightsRoutesAreRegistered(t *testing.T) {
 	for _, path := range []string{
 		"/api/v2/nav/insights/overview",
 		"/api/v2/nav/insights/metrics/ipv6/trend",
+		"/api/v2/nav/insights/metrics/ipv6/breakdown?dimension=country",
+		"/api/v2/nav/insights/metrics/ipv6/breakdown/country/CN/trend",
+		"/api/v2/nav/insights/changes",
 		"/api/v2/nav/sites/1/insights",
 	} {
 		resp, err := app.Test(httptest.NewRequest(http.MethodGet, path, http.NoBody))

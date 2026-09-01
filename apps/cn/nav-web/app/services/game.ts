@@ -26,10 +26,16 @@ import type {
 } from '~/types/game'
 import type { ApiResult } from '~/types/api'
 import type {
+  GameInsightChangeCategory,
+  GameInsightDimension,
   GameInsightMetricKey,
   GameInsightPlayerHistory,
   GameInsightPriceHistory,
   GameInsights,
+  InsightChangeExplorerPage,
+  InsightChangeRange,
+  InsightDimensionBreakdown,
+  InsightDimensionTrend,
   InsightMetricTrend,
   InsightOverview,
   InsightRange,
@@ -152,6 +158,24 @@ export function getGameInsightsOverview(): Promise<InsightOverview> {
 
 export function getGameInsightsTrend(metric: GameInsightMetricKey, range: InsightRange): Promise<InsightMetricTrend> {
   return useApi('gameV2')(`/game/insights/metrics/${metric}/trend`, { query: { range } })
+}
+
+export function getGameInsightsBreakdown(metric: GameInsightMetricKey, dimension: GameInsightDimension): Promise<InsightDimensionBreakdown> {
+  return useApi('gameV2')(`/game/insights/metrics/${metric}/breakdown`, { query: { dimension } })
+}
+
+export function getGameInsightsSliceTrend(metric: GameInsightMetricKey, dimension: GameInsightDimension, value: string, range: InsightRange): Promise<InsightDimensionTrend> {
+  return useApi('gameV2')(`/game/insights/metrics/${metric}/breakdown/${dimension}/${encodeURIComponent(value)}/trend`, { query: { range } })
+}
+
+export function getGameInsightChanges(query: {
+  range: InsightChangeRange
+  category?: GameInsightChangeCategory | ''
+  type?: string
+  cursor?: string
+  limit?: number
+}): Promise<InsightChangeExplorerPage> {
+  return useApi('gameV2')('/game/insights/changes', { query })
 }
 
 export function getGameInsights(gameId: string | number): Promise<GameInsights> {

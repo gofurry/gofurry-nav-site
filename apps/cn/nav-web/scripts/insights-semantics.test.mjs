@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { formatInsightChangeWhen, insightChangeOrder } from '../app/utils/insightChanges.ts'
 import { formatCnyMinorAmount, publicPriceDisplay } from '../app/utils/insightPrices.ts'
+import { formatInsightRatio, normalizeInsightSlice } from '../app/utils/insightDimensions.ts'
 
 const free = publicPriceDisplay({
   date: '2026-08-28', state: 'free', currency: null,
@@ -33,7 +34,14 @@ const exactChange = { ...dayChange, occurred_at: '2026-08-30T09:30:00Z' }
 assert(formatInsightChangeWhen(exactChange, 'en') !== exactChange.date, 'exact event lost its time')
 assert(insightChangeOrder(exactChange) > insightChangeOrder(dayChange), 'timeline ordering ignored exact timestamps')
 
-console.log('[insights] public price and timeline semantics passed')
+assert(normalizeInsightSlice('country', 'cn') === 'CN', 'country slice did not normalize to its stable code')
+assert(normalizeInsightSlice('nsfw', 'sfw') === 'sfw', 'boolean public slice mapping was rejected')
+assert(normalizeInsightSlice('public_interest', 'false') === null, 'internal boolean leaked into public URL state')
+assert(normalizeInsightSlice('tag', '123') === '123' && normalizeInsightSlice('tag', '0') === null, 'tag slice identity validation failed')
+assert(formatInsightRatio(null) === '—', 'zero denominator was rendered as 0%')
+assert(formatInsightRatio(0) === '0.0%', 'a real zero metric was rendered as unavailable')
+
+console.log('[insights] public price, timeline, and dimension semantics passed')
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)

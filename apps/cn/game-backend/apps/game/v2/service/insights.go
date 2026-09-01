@@ -10,9 +10,13 @@ import (
 )
 
 var (
-	ErrInvalidInsightMetric = errors.New("invalid public metric key")
-	ErrInvalidInsightRange  = errors.New("invalid insights range")
-	ErrInsightGameNotFound  = errors.New("game not found")
+	ErrInvalidInsightMetric    = errors.New("invalid public metric key")
+	ErrInvalidInsightRange     = errors.New("invalid insights range")
+	ErrInvalidInsightDimension = errors.New("invalid public dimension")
+	ErrInvalidInsightSlice     = errors.New("invalid public dimension slice")
+	ErrInvalidInsightChanges   = errors.New("invalid change explorer query")
+	ErrInvalidInsightCursor    = errors.New("invalid change explorer cursor")
+	ErrInsightGameNotFound     = errors.New("game not found")
 )
 
 var insightMetricContracts = []v2models.InsightMetricContract{
@@ -26,25 +30,26 @@ type insightChangeContract struct {
 	version  int32
 	code     string
 	public   string
+	category string
 }
 
 var insightChangeContracts = []insightChangeContract{
-	{"free_game_transition", 1, "game_became_free", "game.free.enabled"},
-	{"free_game_transition", 1, "game_became_paid", "game.free.disabled"},
-	{"windows_support_transition", 1, "windows_support_added", "game.windows.added"},
-	{"windows_support_transition", 1, "windows_support_removed", "game.windows.removed"},
-	{"linux_support_transition", 1, "linux_support_added", "game.linux.added"},
-	{"linux_support_transition", 1, "linux_support_removed", "game.linux.removed"},
-	{"game_release_transition", 1, "game_became_available", "game.release.available"},
-	{"game_release_transition", 1, "game_availability_withdrawn", "game.release.withdrawn"},
-	{"game_release_transition", 1, "game_release_plan_changed", "game.release.changed"},
-	{"game_price_transition", 1, "game_price_increased", "game.price.increased"},
-	{"game_price_transition", 1, "game_price_decreased", "game.price.decreased"},
-	{"game_price_transition", 1, "game_price_state_changed", "game.price.state_changed"},
-	{"game_price_transition", 1, "game_price_currency_changed", "game.price.currency_changed"},
-	{"game_price_transition", 1, "game_discount_started", "game.discount.started"},
-	{"game_price_transition", 1, "game_discount_ended", "game.discount.ended"},
-	{"game_price_transition", 1, "game_discount_changed", "game.discount.changed"},
+	{"free_game_transition", 1, "game_became_free", "game.free.enabled", "pricing_model"},
+	{"free_game_transition", 1, "game_became_paid", "game.free.disabled", "pricing_model"},
+	{"windows_support_transition", 1, "windows_support_added", "game.windows.added", "platform"},
+	{"windows_support_transition", 1, "windows_support_removed", "game.windows.removed", "platform"},
+	{"linux_support_transition", 1, "linux_support_added", "game.linux.added", "platform"},
+	{"linux_support_transition", 1, "linux_support_removed", "game.linux.removed", "platform"},
+	{"game_release_transition", 1, "game_became_available", "game.release.available", "release"},
+	{"game_release_transition", 1, "game_availability_withdrawn", "game.release.withdrawn", "release"},
+	{"game_release_transition", 1, "game_release_plan_changed", "game.release.changed", "release"},
+	{"game_price_transition", 1, "game_price_increased", "game.price.increased", "price"},
+	{"game_price_transition", 1, "game_price_decreased", "game.price.decreased", "price"},
+	{"game_price_transition", 1, "game_price_state_changed", "game.price.state_changed", "price"},
+	{"game_price_transition", 1, "game_price_currency_changed", "game.price.currency_changed", "price"},
+	{"game_price_transition", 1, "game_discount_started", "game.discount.started", "discount"},
+	{"game_price_transition", 1, "game_discount_ended", "game.discount.ended", "discount"},
+	{"game_price_transition", 1, "game_discount_changed", "game.discount.changed", "discount"},
 }
 
 type InsightsStore interface {
@@ -52,6 +57,9 @@ type InsightsStore interface {
 	GetInsightGame(context.Context, int64) (*v2models.InsightGameRecord, error)
 	GetInsightMetricSummary(context.Context, v2models.InsightMetricContract) (*v2models.InsightMetricSummaryRecord, error)
 	ListInsightMetricTrend(context.Context, v2models.InsightMetricContract, int32) ([]v2models.InsightMetricTrendRecord, error)
+	ListInsightMetricBreakdown(context.Context, v2models.InsightMetricContract, v2models.InsightDimensionContract, time.Time) ([]v2models.InsightDimensionRecord, error)
+	GetInsightMetricSliceAvailability(context.Context, v2models.InsightMetricContract, v2models.InsightDimensionContract, string) (v2models.InsightDimensionAvailabilityRecord, error)
+	ListInsightMetricSliceTrend(context.Context, v2models.InsightMetricContract, v2models.InsightDimensionContract, string, time.Time, int32) ([]v2models.InsightDimensionTrendRecord, error)
 	GetInsightGameState(context.Context, int64) (*v2models.InsightGameStateRecord, error)
 	GetInsightPlayerSummary(context.Context, v2models.InsightGameStateRecord) (v2models.InsightPlayerSummaryRecord, error)
 	GetInsightPriceSummary(context.Context, int64) (*v2models.InsightPriceRecord, error)
@@ -59,6 +67,7 @@ type InsightsStore interface {
 	ListInsightPriceHistory(context.Context, int64, int32) ([]v2models.InsightPriceRecord, error)
 	CountInsightOverviewChanges(context.Context, []string, []string) (int64, error)
 	ListInsightOverviewChanges(context.Context, []string, []string, int32) ([]v2models.InsightChangeRecord, error)
+	ListInsightExplorerChanges(context.Context, v2models.InsightChangeExplorerConditions) ([]v2models.InsightChangeRecord, error)
 	ListInsightGameChanges(context.Context, v2models.InsightGameRecord, []string, []string, int32) ([]v2models.InsightChangeRecord, error)
 }
 

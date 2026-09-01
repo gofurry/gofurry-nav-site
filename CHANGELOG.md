@@ -8,6 +8,9 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add Public Insights dimension breakdown and selected-slice trend APIs for Site country/group/content/public-interest and Game primary/all-tag dimensions, with frozen global horizons, null-safe public mathematics, overlapping-slice disclosure, and metadata fallbacks.
+- Add the domain-specific Change Explorer APIs and `/insights/changes` product flow with public category/type filters, projection-date ranges, precision-aware opaque keyset cursors, CN-only Game price/discount scope, SSR first pages, and client Load More.
+- Add independent Nuxt dimension URL state, SSR/deferred slice loading, responsive bilingual dimension tables/charts, Explorer filters, semantic regression coverage, and visual-guard scenarios.
 - Add SSR-isolated Site Entity Insights with exact seven-state capability rendering, same-day ecosystem context, semantic timelines, and links back to website ecosystem Insights.
 - Add a Game Detail Insights tab with SSR summary data, lazy player/CN-price histories, shared 30d/90d/all selection, page-lifecycle range caching, independent retry states, and entity timelines.
 - Add regression coverage for nullable/zero player semantics, free versus priced-zero versus unavailable prices, day/exact event precision, entity failure isolation, target-route boundaries, and entity visual scenarios.

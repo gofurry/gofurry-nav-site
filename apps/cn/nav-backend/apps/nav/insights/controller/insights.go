@@ -15,6 +15,9 @@ import (
 type insightsReader interface {
 	GetOverview(context.Context) (models.Overview, error)
 	GetMetricTrend(context.Context, string, string) (models.MetricTrend, error)
+	GetMetricBreakdown(context.Context, string, string) (models.DimensionBreakdown, error)
+	GetMetricSliceTrend(context.Context, string, string, string, string) (models.DimensionTrend, error)
+	GetChanges(context.Context, models.ChangeExplorerQuery) (models.ChangeExplorerPage, error)
 	GetSiteInsights(context.Context, int64) (models.SiteInsights, error)
 }
 
@@ -32,6 +35,30 @@ func (api *InsightsAPI) GetMetricTrend(c fiber.Ctx) error {
 	return respond(c, data, err)
 }
 
+func (api *InsightsAPI) GetMetricBreakdown(c fiber.Ctx) error {
+	data, err := api.service.GetMetricBreakdown(context.Background(), c.Params("metricKey"), c.Query("dimension"))
+	return respond(c, data, err)
+}
+
+func (api *InsightsAPI) GetMetricSliceTrend(c fiber.Ctx) error {
+	data, err := api.service.GetMetricSliceTrend(
+		context.Background(), c.Params("metricKey"), c.Params("dimension"), c.Params("value"), c.Query("range", "30d"),
+	)
+	return respond(c, data, err)
+}
+
+func (api *InsightsAPI) GetChanges(c fiber.Ctx) error {
+	limit, err := strconv.ParseInt(c.Query("limit", "20"), 10, 32)
+	if err != nil {
+		return common.NewResponse(c).ErrorWithCode(service.ErrInvalidChanges.Error(), http.StatusBadRequest)
+	}
+	data, err := api.service.GetChanges(context.Background(), models.ChangeExplorerQuery{
+		Range: c.Query("range", "30d"), Category: c.Query("category"), Type: c.Query("type"),
+		Cursor: c.Query("cursor"), Limit: int32(limit),
+	})
+	return respond(c, data, err)
+}
+
 func (api *InsightsAPI) GetSiteInsights(c fiber.Ctx) error {
 	siteID, err := strconv.ParseInt(c.Params("siteId"), 10, 64)
 	if err != nil || siteID <= 0 {
@@ -46,7 +73,9 @@ func respond(c fiber.Ctx, data any, err error) error {
 		return common.NewResponse(c).SuccessWithData(data)
 	}
 	switch {
-	case errors.Is(err, service.ErrInvalidMetricKey), errors.Is(err, service.ErrInvalidRange):
+	case errors.Is(err, service.ErrInvalidMetricKey), errors.Is(err, service.ErrInvalidRange),
+		errors.Is(err, service.ErrInvalidDimension), errors.Is(err, service.ErrInvalidSlice),
+		errors.Is(err, service.ErrInvalidChanges), errors.Is(err, service.ErrInvalidCursor):
 		return common.NewResponse(c).ErrorWithCode(err.Error(), http.StatusBadRequest)
 	case errors.Is(err, service.ErrNotFound):
 		return common.NewResponse(c).ErrorWithCode(err.Error(), http.StatusNotFound)

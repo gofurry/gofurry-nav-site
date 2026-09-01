@@ -63,6 +63,7 @@ export default defineEventHandler(async (event) => {
     '/insights',
     '/insights/sites',
     '/insights/games',
+    '/insights/changes',
     '/steam',
     '/updates',
     '/about',

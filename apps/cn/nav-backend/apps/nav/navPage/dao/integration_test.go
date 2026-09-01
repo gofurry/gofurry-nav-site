@@ -15,6 +15,7 @@ import (
 
 	detaildao "github.com/gofurry/gofurry-nav-backend/apps/nav/detail/dao"
 	insightsdao "github.com/gofurry/gofurry-nav-backend/apps/nav/insights/dao"
+	"github.com/gofurry/gofurry-nav-backend/apps/nav/insights/models"
 	insightsservice "github.com/gofurry/gofurry-nav-backend/apps/nav/insights/service"
 	navdao "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/dao"
 	observationdao "github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/dao"
@@ -71,11 +72,7 @@ func TestPostgresNavBackendPersistenceSemantics(t *testing.T) {
 	}
 	defer pool.Close()
 
-	var now time.Time
-	if err := pool.QueryRow(ctx, `SELECT NOW()`).Scan(&now); err != nil {
-		t.Fatal(err)
-	}
-	now = now.UTC().Truncate(time.Second)
+	now := time.Now().UTC().Truncate(time.Second)
 	seedNavReadModel(t, ctx, pool, now)
 	queries := navsqlc.New(pool)
 	seedNavInsights(t, ctx, pool, now)
@@ -155,6 +152,10 @@ INSERT INTO gfn_metric_daily
 VALUES
     ('ipv6_adoption',2,$1,'global','all',10,10,0,2,6,0,0,1,1,$4),
     ('ipv6_adoption',2,$2,'global','all',10,10,0,6,2,0,0,1,1,$4),
+    ('ipv6_adoption',2,$2,'site_country','CN',5,5,0,3,1,0,0,0,1,$4),
+    ('ipv6_adoption',2,$2,'site_country','unknown',2,0,2,0,0,0,0,0,0,$4),
+    ('ipv6_adoption',2,$2,'group_id','999',4,4,0,2,2,0,0,0,0,$4),
+    ('ipv6_adoption',2,$3::date + 28,'site_country','CN',4,4,0,2,2,0,0,0,0,$4),
     ('ipv6_adoption',2,$3,'global','all',10,10,0,2,6,0,0,1,1,$4),
     ('ipv6_adoption',1,$5,'global','all',10,10,0,10,0,0,0,0,0,$4),
     ('tls13_adoption',1,$1,'global','all',10,10,0,4,4,0,0,1,1,$4);
@@ -173,6 +174,7 @@ INSERT INTO gfn_change_events
 VALUES
     ('insights-ipv6-old','ipv6_transition',2,1,$6,NULL,'day','ipv6_disabled','global','all','{}','{}','src-old','before-old','after-old','{}',$4),
     ('insights-ipv6-new','ipv6_transition',2,1,$1,NULL,'day','ipv6_enabled','global','all','{}','{}','src-new','before-new','after-new','{}',$4),
+    ('insights-tls-exact','tls13_transition',1,1,$1,$4,'observed','tls13_enabled','global','all','{}','{}','src-exact','before-exact','after-exact','{}',$4),
     ('insights-primary','primary_target_transition',1,1,$1,NULL,'day','primary_target_changed','global','all','{}','{}','src-primary','before-primary','after-primary','{}',$4);
 `, pgx.QueryExecModeSimpleProtocol, entityDay, latestDay, latestDay.AddDate(0, 0, -30), now, latestDay.AddDate(0, 0, 1), entityDay.AddDate(0, 0, -1))
 	if err != nil {
@@ -193,7 +195,7 @@ func assertNavInsights(t *testing.T, ctx context.Context, queries *navsqlc.Queri
 	if overview.Metrics[0].Value == nil || *overview.Metrics[0].Value != .75 || *overview.Metrics[0].Delta30D != .5 {
 		t.Fatalf("public metric values: %#v", overview.Metrics[0])
 	}
-	if len(overview.RecentChanges) != 1 || overview.RecentChanges[0].Type != "site.ipv6.enabled" {
+	if len(overview.RecentChanges) != 1 || overview.RecentChanges[0].Type != "site.tls13.enabled" {
 		t.Fatalf("overview newest-one-per-entity/whitelist: %#v", overview.RecentChanges)
 	}
 	site, err := svc.GetSiteInsights(ctx, 1)
@@ -203,8 +205,28 @@ func assertNavInsights(t *testing.T, ctx context.Context, queries *navsqlc.Queri
 	if len(site.Capabilities) != 2 || site.Capabilities[0].State != "unavailable" || site.Capabilities[0].Ecosystem.Value == nil || *site.Capabilities[0].Ecosystem.Value != .25 || site.Capabilities[1].State != "unknown" {
 		t.Fatalf("same-day comparison/uncertainty semantics: %#v", site.Capabilities)
 	}
-	if len(site.RecentChanges) != 3 || site.RecentChanges[0].OccurredAt != nil {
+	if len(site.RecentChanges) != 4 || site.RecentChanges[0].OccurredAt == nil {
 		t.Fatalf("entity timeline/time precision: %#v", site.RecentChanges)
+	}
+	breakdown, err := svc.GetMetricBreakdown(ctx, "ipv6", "country")
+	if err != nil || breakdown.AsOf == nil || len(breakdown.Items) != 2 || breakdown.Items[1].Value != "unknown" || breakdown.Items[1].MetricValue != nil {
+		t.Fatalf("dimension breakdown/global horizon/unknown: %#v err=%v", breakdown, err)
+	}
+	trend, err := svc.GetMetricSliceTrend(ctx, "ipv6", "country", "CN", "90d")
+	if err != nil || trend.AsOf == nil || len(trend.Points) != 2 || trend.AvailableThrough == nil || *trend.AvailableThrough != *breakdown.AsOf {
+		t.Fatalf("slice trend/global anchor: %#v err=%v", trend, err)
+	}
+	group, err := svc.GetMetricBreakdown(ctx, "ipv6", "group")
+	if err != nil || len(group.Items) != 1 || group.Items[0].LabelEn == nil || *group.Items[0].LabelEn != "Group #999" || group.SliceMode != "overlapping" {
+		t.Fatalf("group fallback/overlap: %#v err=%v", group, err)
+	}
+	first, err := svc.GetChanges(ctx, models.ChangeExplorerQuery{Range: "30d", Limit: 2})
+	if err != nil || len(first.Items) != 2 || first.NextCursor == nil || first.Items[0].OccurredAt == nil {
+		t.Fatalf("change explorer first page/order: %#v err=%v", first, err)
+	}
+	second, err := svc.GetChanges(ctx, models.ChangeExplorerQuery{Range: "30d", Cursor: *first.NextCursor, Limit: 2})
+	if err != nil || len(second.Items) == 0 || second.Items[0].Type == first.Items[len(first.Items)-1].Type && second.Items[0].Date == first.Items[len(first.Items)-1].Date {
+		t.Fatalf("change explorer cursor page: %#v err=%v", second, err)
 	}
 }
 

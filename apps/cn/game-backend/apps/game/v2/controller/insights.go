@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gofiber/fiber/v3"
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
@@ -14,6 +15,9 @@ import (
 type insightsReader interface {
 	GetInsightsOverview(context.Context) (v2models.InsightOverview, error)
 	GetInsightsMetricTrend(context.Context, string, string) (v2models.InsightMetricTrend, error)
+	GetInsightsMetricBreakdown(context.Context, string, string) (v2models.InsightDimensionBreakdown, error)
+	GetInsightsMetricSliceTrend(context.Context, string, string, string, string) (v2models.InsightDimensionTrend, error)
+	GetInsightsChanges(context.Context, v2models.InsightChangeExplorerQuery) (v2models.InsightChangeExplorerPage, error)
 	GetGameInsights(context.Context, int64) (v2models.GameInsights, error)
 	GetGamePlayerInsights(context.Context, int64, string) (v2models.InsightPlayerHistory, error)
 	GetGamePriceInsights(context.Context, int64, string) (v2models.InsightPriceHistory, error)
@@ -26,6 +30,30 @@ func (api *GameV2API) GetInsightsOverview(c fiber.Ctx) error {
 
 func (api *GameV2API) GetInsightsMetricTrend(c fiber.Ctx) error {
 	data, err := api.insights.GetInsightsMetricTrend(context.Background(), c.Params("metricKey"), c.Query("range", "30d"))
+	return respondInsights(c, data, err)
+}
+
+func (api *GameV2API) GetInsightsMetricBreakdown(c fiber.Ctx) error {
+	data, err := api.insights.GetInsightsMetricBreakdown(context.Background(), c.Params("metricKey"), c.Query("dimension"))
+	return respondInsights(c, data, err)
+}
+
+func (api *GameV2API) GetInsightsMetricSliceTrend(c fiber.Ctx) error {
+	data, err := api.insights.GetInsightsMetricSliceTrend(
+		context.Background(), c.Params("metricKey"), c.Params("dimension"), c.Params("value"), c.Query("range", "30d"),
+	)
+	return respondInsights(c, data, err)
+}
+
+func (api *GameV2API) GetInsightsChanges(c fiber.Ctx) error {
+	limit, err := strconv.ParseInt(c.Query("limit", "20"), 10, 32)
+	if err != nil {
+		return common.NewResponse(c).ErrorWithCode(v2service.ErrInvalidInsightChanges.Error(), http.StatusBadRequest)
+	}
+	data, err := api.insights.GetInsightsChanges(context.Background(), v2models.InsightChangeExplorerQuery{
+		Range: c.Query("range", "30d"), Category: c.Query("category"), Type: c.Query("type"),
+		Cursor: c.Query("cursor"), Limit: int32(limit),
+	})
 	return respondInsights(c, data, err)
 }
 
@@ -61,7 +89,9 @@ func respondInsights(c fiber.Ctx, data any, err error) error {
 		return common.NewResponse(c).SuccessWithData(data)
 	}
 	switch {
-	case errors.Is(err, v2service.ErrInvalidInsightMetric), errors.Is(err, v2service.ErrInvalidInsightRange):
+	case errors.Is(err, v2service.ErrInvalidInsightMetric), errors.Is(err, v2service.ErrInvalidInsightRange),
+		errors.Is(err, v2service.ErrInvalidInsightDimension), errors.Is(err, v2service.ErrInvalidInsightSlice),
+		errors.Is(err, v2service.ErrInvalidInsightChanges), errors.Is(err, v2service.ErrInvalidInsightCursor):
 		return common.NewResponse(c).ErrorWithCode(err.Error(), http.StatusBadRequest)
 	case errors.Is(err, v2service.ErrInsightGameNotFound):
 		return common.NewResponse(c).ErrorWithCode(err.Error(), http.StatusNotFound)

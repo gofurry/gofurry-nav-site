@@ -27,6 +27,24 @@ func (fakeInsightsReader) GetInsightsMetricTrend(_ context.Context, key, request
 	}
 	return v2models.InsightMetricTrend{Key: key, RequestedRange: requestedRange, Points: []v2models.InsightTrendPoint{}}, nil
 }
+func (fakeInsightsReader) GetInsightsMetricBreakdown(_ context.Context, key, dimension string) (v2models.InsightDimensionBreakdown, error) {
+	if dimension == "bad" {
+		return v2models.InsightDimensionBreakdown{}, v2service.ErrInvalidInsightDimension
+	}
+	return v2models.InsightDimensionBreakdown{Key: key, Dimension: dimension, SliceMode: "partition", Items: []v2models.InsightDimensionSlice{}}, nil
+}
+func (fakeInsightsReader) GetInsightsMetricSliceTrend(_ context.Context, key, dimension, value, requestedRange string) (v2models.InsightDimensionTrend, error) {
+	if value == "bad" {
+		return v2models.InsightDimensionTrend{}, v2service.ErrInvalidInsightSlice
+	}
+	return v2models.InsightDimensionTrend{Key: key, Dimension: dimension, RequestedRange: requestedRange, Points: []v2models.InsightDimensionTrendPoint{}}, nil
+}
+func (fakeInsightsReader) GetInsightsChanges(_ context.Context, query v2models.InsightChangeExplorerQuery) (v2models.InsightChangeExplorerPage, error) {
+	if query.Cursor == "bad" {
+		return v2models.InsightChangeExplorerPage{}, v2service.ErrInvalidInsightCursor
+	}
+	return v2models.InsightChangeExplorerPage{Items: []v2models.InsightExplorerChange{}}, nil
+}
 func (fakeInsightsReader) GetGameInsights(_ context.Context, id int64) (v2models.GameInsights, error) {
 	if id == 404 {
 		return v2models.GameInsights{}, v2service.ErrInsightGameNotFound
@@ -57,6 +75,9 @@ func TestGameInsightsHTTPContract(t *testing.T) {
 	app := fiber.New()
 	app.Get("/api/v2/game/insights/overview", api.GetInsightsOverview)
 	app.Get("/api/v2/game/insights/metrics/:metricKey/trend", api.GetInsightsMetricTrend)
+	app.Get("/api/v2/game/insights/metrics/:metricKey/breakdown", api.GetInsightsMetricBreakdown)
+	app.Get("/api/v2/game/insights/metrics/:metricKey/breakdown/:dimension/:value/trend", api.GetInsightsMetricSliceTrend)
+	app.Get("/api/v2/game/insights/changes", api.GetInsightsChanges)
 	app.Get("/api/v2/game/games/:gameId/insights", api.GetGameInsights)
 	app.Get("/api/v2/game/games/:gameId/insights/players", api.GetGamePlayerInsights)
 	app.Get("/api/v2/game/games/:gameId/insights/prices", api.GetGamePriceInsights)
@@ -67,6 +88,10 @@ func TestGameInsightsHTTPContract(t *testing.T) {
 	}{
 		{"/api/v2/game/insights/overview", http.StatusOK},
 		{"/api/v2/game/insights/metrics/free/trend?range=90d", http.StatusOK},
+		{"/api/v2/game/insights/metrics/free/breakdown?dimension=primary_tag", http.StatusOK},
+		{"/api/v2/game/insights/metrics/free/breakdown/tag/1/trend?range=90d", http.StatusOK},
+		{"/api/v2/game/insights/changes?range=30d&limit=20", http.StatusOK},
+		{"/api/v2/game/insights/changes?cursor=bad", http.StatusBadRequest},
 		{"/api/v2/game/games/1/insights", http.StatusOK},
 		{"/api/v2/game/games/1/insights/players?range=all", http.StatusOK},
 		{"/api/v2/game/games/1/insights/prices?range=30d", http.StatusOK},

@@ -74,6 +74,61 @@ WHERE daily.metric_key = sqlc.arg(metric_key)
   )
 ORDER BY daily.fact_date;
 
+-- name: ListGameInsightMetricBreakdown :many
+SELECT daily.dimension_value,
+       COALESCE(tag.name, '')::text AS label,
+       COALESCE(tag.name_en, '')::text AS label_en,
+       daily.population_count,
+       daily.eligible_count,
+       daily.positive_count,
+       daily.negative_count
+FROM public.gfg_metric_daily daily
+LEFT JOIN public.gfg_tag tag
+  ON daily.dimension_key IN ('primary_tag_id', 'tag_id')
+ AND tag.id::text = daily.dimension_value
+WHERE daily.metric_key = sqlc.arg(metric_key)
+  AND daily.metric_version = sqlc.arg(metric_version)
+  AND daily.fact_date = sqlc.arg(fact_date)::date
+  AND daily.dimension_key = sqlc.arg(dimension_key)
+ORDER BY daily.eligible_count DESC, daily.dimension_value ASC;
+
+-- name: GetGameInsightMetricSliceAvailability :one
+WITH available AS (
+    SELECT min(fact_date)::date AS available_from,
+           max(fact_date)::date AS available_through
+    FROM public.gfg_metric_daily
+    WHERE metric_key = sqlc.arg(metric_key)
+      AND metric_version = sqlc.arg(metric_version)
+      AND dimension_key = sqlc.arg(dimension_key)
+      AND dimension_value = sqlc.arg(dimension_value)
+)
+SELECT available.available_from,
+       available.available_through,
+       COALESCE(tag.name, '')::text AS label,
+       COALESCE(tag.name_en, '')::text AS label_en
+FROM available
+LEFT JOIN public.gfg_tag tag
+  ON sqlc.arg(dimension_key)::text IN ('primary_tag_id', 'tag_id')
+ AND tag.id::text = sqlc.arg(dimension_value)::text;
+
+-- name: ListGameInsightMetricSliceTrend :many
+SELECT daily.fact_date,
+       daily.population_count,
+       daily.eligible_count,
+       daily.positive_count,
+       daily.negative_count
+FROM public.gfg_metric_daily daily
+WHERE daily.metric_key = sqlc.arg(metric_key)
+  AND daily.metric_version = sqlc.arg(metric_version)
+  AND daily.dimension_key = sqlc.arg(dimension_key)
+  AND daily.dimension_value = sqlc.arg(dimension_value)
+  AND daily.fact_date <= sqlc.arg(through_date)::date
+  AND (
+      sqlc.arg(range_days)::integer = 0
+      OR daily.fact_date >= sqlc.arg(through_date)::date - (sqlc.arg(range_days)::integer - 1)
+  )
+ORDER BY daily.fact_date;
+
 -- name: GetGameInsightState :one
 SELECT game_id, fact_date, tracking_period_id, appid, tracked_at_end,
        is_free, windows, linux, release_availability
@@ -246,6 +301,59 @@ LEFT JOIN public.gfg_game game ON game.id = newest.game_id
 ORDER BY newest.projection_date DESC,
          newest.event_at DESC NULLS LAST,
          newest.game_id DESC
+LIMIT sqlc.arg(limit_count);
+
+-- name: ListGameInsightExplorerChanges :many
+SELECT event.game_id,
+       COALESCE(NULLIF(history.name, ''), NULLIF(game.name, ''), '')::text AS game_name,
+       event.detector_key,
+       event.detector_version,
+       event.event_code,
+       event.projection_date,
+       event.time_basis,
+       event.event_at,
+       CASE WHEN event.time_basis = 'day' THEN 0 ELSE 1 END::integer AS precision_rank,
+       CASE
+           WHEN event.time_basis = 'day' THEN event.projection_date::timestamp AT TIME ZONE 'UTC'
+           ELSE event.event_at
+       END::timestamptz AS event_sort_at,
+       md5(event.event_key)::text AS opaque_tie
+FROM public.gfg_change_events event
+LEFT JOIN public.gfg_game_daily history
+  ON history.game_id = event.game_id
+ AND history.fact_date = event.projection_date
+LEFT JOIN public.gfg_game game ON game.id = event.game_id
+WHERE event.detector_key = ANY(sqlc.arg(detector_keys)::text[])
+  AND event.detector_key || '/' || event.detector_version::text || '/' || event.event_code
+      = ANY(sqlc.arg(contract_ids)::text[])
+  AND (event.detector_key <> 'game_price_transition'
+       OR (event.scope_kind = 'region' AND event.scope_key = 'CN'))
+  AND event.projection_date <= sqlc.arg(range_through)::date
+  AND (
+      sqlc.arg(range_days)::integer = 0
+      OR event.projection_date >= sqlc.arg(range_through)::date - (sqlc.arg(range_days)::integer - 1)
+  )
+  AND (
+      NOT sqlc.arg(has_position)::boolean
+      OR (
+          event.projection_date,
+          CASE WHEN event.time_basis = 'day' THEN 0 ELSE 1 END,
+          CASE
+              WHEN event.time_basis = 'day' THEN event.projection_date::timestamp AT TIME ZONE 'UTC'
+              ELSE event.event_at
+          END,
+          md5(event.event_key)
+      ) < (
+          sqlc.arg(position_date)::date,
+          sqlc.arg(position_rank)::integer,
+          sqlc.arg(position_sort_at)::timestamptz,
+          sqlc.arg(position_tie)::text
+      )
+  )
+ORDER BY event.projection_date DESC,
+         precision_rank DESC,
+         event_sort_at DESC,
+         opaque_tie DESC
 LIMIT sqlc.arg(limit_count);
 
 -- name: ListGameInsightGameChanges :many

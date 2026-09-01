@@ -45,6 +45,57 @@ func (q *Queries) CountNavInsightSites(ctx context.Context) (int64, error) {
 	return column_1, err
 }
 
+const getNavInsightMetricSliceAvailability = `-- name: GetNavInsightMetricSliceAvailability :one
+WITH available AS (
+    SELECT min(fact_date)::date AS available_from,
+           max(fact_date)::date AS available_through
+    FROM public.gfn_metric_daily
+    WHERE metric_key = $3
+      AND metric_version = $4
+      AND dimension_key = $1
+      AND dimension_value = $2
+)
+SELECT available.available_from,
+       available.available_through,
+       COALESCE(CASE WHEN $1::text = 'group_id' THEN site_group.name END, '')::text AS label,
+       COALESCE(CASE WHEN $1::text = 'group_id' THEN site_group.name_en END, '')::text AS label_en
+FROM available
+LEFT JOIN public.gfn_site_group site_group
+  ON $1::text = 'group_id'
+ AND site_group.id::text = $2::text
+`
+
+type GetNavInsightMetricSliceAvailabilityParams struct {
+	DimensionKey   string `json:"dimension_key"`
+	DimensionValue string `json:"dimension_value"`
+	MetricKey      string `json:"metric_key"`
+	MetricVersion  int32  `json:"metric_version"`
+}
+
+type GetNavInsightMetricSliceAvailabilityRow struct {
+	AvailableFrom    pgtype.Date `json:"available_from"`
+	AvailableThrough pgtype.Date `json:"available_through"`
+	Label            string      `json:"label"`
+	LabelEn          string      `json:"label_en"`
+}
+
+func (q *Queries) GetNavInsightMetricSliceAvailability(ctx context.Context, arg GetNavInsightMetricSliceAvailabilityParams) (GetNavInsightMetricSliceAvailabilityRow, error) {
+	row := q.db.QueryRow(ctx, getNavInsightMetricSliceAvailability,
+		arg.DimensionKey,
+		arg.DimensionValue,
+		arg.MetricKey,
+		arg.MetricVersion,
+	)
+	var i GetNavInsightMetricSliceAvailabilityRow
+	err := row.Scan(
+		&i.AvailableFrom,
+		&i.AvailableThrough,
+		&i.Label,
+		&i.LabelEn,
+	)
+	return i, err
+}
+
 const getNavInsightMetricSummary = `-- name: GetNavInsightMetricSummary :one
 WITH latest AS (
     SELECT fact_date, population_count, eligible_count, not_applicable_count,
@@ -195,6 +246,266 @@ func (q *Queries) GetNavInsightSiteMetric(ctx context.Context, arg GetNavInsight
 		&i.NegativeCount,
 	)
 	return i, err
+}
+
+const listNavInsightExplorerChanges = `-- name: ListNavInsightExplorerChanges :many
+SELECT event.site_id,
+       COALESCE(NULLIF(history.name, ''), NULLIF(site.name, ''), '')::text AS site_name,
+       event.detector_key,
+       event.detector_version,
+       event.event_code,
+       event.projection_date,
+       event.time_basis,
+       event.event_at,
+       CASE WHEN event.time_basis = 'day' THEN 0 ELSE 1 END::integer AS precision_rank,
+       CASE
+           WHEN event.time_basis = 'day' THEN event.projection_date::timestamp AT TIME ZONE 'UTC'
+           ELSE event.event_at
+       END::timestamptz AS event_sort_at,
+       md5(event.event_key)::text AS opaque_tie
+FROM public.gfn_change_events event
+LEFT JOIN public.gfn_site_daily history
+  ON history.site_id = event.site_id
+ AND history.fact_date = event.projection_date
+LEFT JOIN public.gfn_site site ON site.id = event.site_id
+WHERE event.detector_key = ANY($1::text[])
+  AND event.detector_key || '/' || event.detector_version::text || '/' || event.event_code
+      = ANY($2::text[])
+  AND event.projection_date <= $3::date
+  AND (
+      $4::integer = 0
+      OR event.projection_date >= $3::date - ($4::integer - 1)
+  )
+  AND (
+      NOT $5::boolean
+      OR (
+          event.projection_date,
+          CASE WHEN event.time_basis = 'day' THEN 0 ELSE 1 END,
+          CASE
+              WHEN event.time_basis = 'day' THEN event.projection_date::timestamp AT TIME ZONE 'UTC'
+              ELSE event.event_at
+          END,
+          md5(event.event_key)
+      ) < (
+          $6::date,
+          $7::integer,
+          $8::timestamptz,
+          $9::text
+      )
+  )
+ORDER BY event.projection_date DESC,
+         precision_rank DESC,
+         event_sort_at DESC,
+         opaque_tie DESC
+LIMIT $10
+`
+
+type ListNavInsightExplorerChangesParams struct {
+	DetectorKeys   []string           `json:"detector_keys"`
+	ContractIds    []string           `json:"contract_ids"`
+	RangeThrough   pgtype.Date        `json:"range_through"`
+	RangeDays      int32              `json:"range_days"`
+	HasPosition    bool               `json:"has_position"`
+	PositionDate   pgtype.Date        `json:"position_date"`
+	PositionRank   int32              `json:"position_rank"`
+	PositionSortAt pgtype.Timestamptz `json:"position_sort_at"`
+	PositionTie    string             `json:"position_tie"`
+	LimitCount     int32              `json:"limit_count"`
+}
+
+type ListNavInsightExplorerChangesRow struct {
+	SiteID          int64              `json:"site_id"`
+	SiteName        string             `json:"site_name"`
+	DetectorKey     string             `json:"detector_key"`
+	DetectorVersion int32              `json:"detector_version"`
+	EventCode       string             `json:"event_code"`
+	ProjectionDate  pgtype.Date        `json:"projection_date"`
+	TimeBasis       string             `json:"time_basis"`
+	EventAt         pgtype.Timestamptz `json:"event_at"`
+	PrecisionRank   int32              `json:"precision_rank"`
+	EventSortAt     pgtype.Timestamptz `json:"event_sort_at"`
+	OpaqueTie       string             `json:"opaque_tie"`
+}
+
+func (q *Queries) ListNavInsightExplorerChanges(ctx context.Context, arg ListNavInsightExplorerChangesParams) ([]ListNavInsightExplorerChangesRow, error) {
+	rows, err := q.db.Query(ctx, listNavInsightExplorerChanges,
+		arg.DetectorKeys,
+		arg.ContractIds,
+		arg.RangeThrough,
+		arg.RangeDays,
+		arg.HasPosition,
+		arg.PositionDate,
+		arg.PositionRank,
+		arg.PositionSortAt,
+		arg.PositionTie,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNavInsightExplorerChangesRow{}
+	for rows.Next() {
+		var i ListNavInsightExplorerChangesRow
+		if err := rows.Scan(
+			&i.SiteID,
+			&i.SiteName,
+			&i.DetectorKey,
+			&i.DetectorVersion,
+			&i.EventCode,
+			&i.ProjectionDate,
+			&i.TimeBasis,
+			&i.EventAt,
+			&i.PrecisionRank,
+			&i.EventSortAt,
+			&i.OpaqueTie,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listNavInsightMetricBreakdown = `-- name: ListNavInsightMetricBreakdown :many
+SELECT daily.dimension_value,
+       COALESCE(CASE WHEN daily.dimension_key = 'group_id' THEN site_group.name END, '')::text AS label,
+       COALESCE(CASE WHEN daily.dimension_key = 'group_id' THEN site_group.name_en END, '')::text AS label_en,
+       daily.population_count,
+       daily.eligible_count,
+       daily.positive_count,
+       daily.negative_count
+FROM public.gfn_metric_daily daily
+LEFT JOIN public.gfn_site_group site_group
+  ON daily.dimension_key = 'group_id'
+ AND site_group.id::text = daily.dimension_value
+WHERE daily.metric_key = $1
+  AND daily.metric_version = $2
+  AND daily.fact_date = $3::date
+  AND daily.dimension_key = $4
+ORDER BY daily.eligible_count DESC, daily.dimension_value ASC
+`
+
+type ListNavInsightMetricBreakdownParams struct {
+	MetricKey     string      `json:"metric_key"`
+	MetricVersion int32       `json:"metric_version"`
+	FactDate      pgtype.Date `json:"fact_date"`
+	DimensionKey  string      `json:"dimension_key"`
+}
+
+type ListNavInsightMetricBreakdownRow struct {
+	DimensionValue  string `json:"dimension_value"`
+	Label           string `json:"label"`
+	LabelEn         string `json:"label_en"`
+	PopulationCount int64  `json:"population_count"`
+	EligibleCount   int64  `json:"eligible_count"`
+	PositiveCount   int64  `json:"positive_count"`
+	NegativeCount   int64  `json:"negative_count"`
+}
+
+func (q *Queries) ListNavInsightMetricBreakdown(ctx context.Context, arg ListNavInsightMetricBreakdownParams) ([]ListNavInsightMetricBreakdownRow, error) {
+	rows, err := q.db.Query(ctx, listNavInsightMetricBreakdown,
+		arg.MetricKey,
+		arg.MetricVersion,
+		arg.FactDate,
+		arg.DimensionKey,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNavInsightMetricBreakdownRow{}
+	for rows.Next() {
+		var i ListNavInsightMetricBreakdownRow
+		if err := rows.Scan(
+			&i.DimensionValue,
+			&i.Label,
+			&i.LabelEn,
+			&i.PopulationCount,
+			&i.EligibleCount,
+			&i.PositiveCount,
+			&i.NegativeCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listNavInsightMetricSliceTrend = `-- name: ListNavInsightMetricSliceTrend :many
+SELECT daily.fact_date,
+       daily.population_count,
+       daily.eligible_count,
+       daily.positive_count,
+       daily.negative_count
+FROM public.gfn_metric_daily daily
+WHERE daily.metric_key = $1
+  AND daily.metric_version = $2
+  AND daily.dimension_key = $3
+  AND daily.dimension_value = $4
+  AND daily.fact_date <= $5::date
+  AND (
+      $6::integer = 0
+      OR daily.fact_date >= $5::date - ($6::integer - 1)
+  )
+ORDER BY daily.fact_date
+`
+
+type ListNavInsightMetricSliceTrendParams struct {
+	MetricKey      string      `json:"metric_key"`
+	MetricVersion  int32       `json:"metric_version"`
+	DimensionKey   string      `json:"dimension_key"`
+	DimensionValue string      `json:"dimension_value"`
+	ThroughDate    pgtype.Date `json:"through_date"`
+	RangeDays      int32       `json:"range_days"`
+}
+
+type ListNavInsightMetricSliceTrendRow struct {
+	FactDate        pgtype.Date `json:"fact_date"`
+	PopulationCount int64       `json:"population_count"`
+	EligibleCount   int64       `json:"eligible_count"`
+	PositiveCount   int64       `json:"positive_count"`
+	NegativeCount   int64       `json:"negative_count"`
+}
+
+func (q *Queries) ListNavInsightMetricSliceTrend(ctx context.Context, arg ListNavInsightMetricSliceTrendParams) ([]ListNavInsightMetricSliceTrendRow, error) {
+	rows, err := q.db.Query(ctx, listNavInsightMetricSliceTrend,
+		arg.MetricKey,
+		arg.MetricVersion,
+		arg.DimensionKey,
+		arg.DimensionValue,
+		arg.ThroughDate,
+		arg.RangeDays,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNavInsightMetricSliceTrendRow{}
+	for rows.Next() {
+		var i ListNavInsightMetricSliceTrendRow
+		if err := rows.Scan(
+			&i.FactDate,
+			&i.PopulationCount,
+			&i.EligibleCount,
+			&i.PositiveCount,
+			&i.NegativeCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listNavInsightMetricTrend = `-- name: ListNavInsightMetricTrend :many

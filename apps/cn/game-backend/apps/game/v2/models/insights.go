@@ -27,6 +27,52 @@ type InsightMetricTrend struct {
 	Points           []InsightTrendPoint `json:"points"`
 }
 
+type InsightDimensionSlice struct {
+	Value       string   `json:"value"`
+	Label       *string  `json:"label"`
+	LabelEn     *string  `json:"label_en"`
+	Population  int64    `json:"population"`
+	Eligible    int64    `json:"eligible"`
+	Known       int64    `json:"known"`
+	MetricValue *float64 `json:"metric_value"`
+	Coverage    *float64 `json:"coverage"`
+}
+
+type InsightDimensionBreakdown struct {
+	Key       string                  `json:"key"`
+	Dimension string                  `json:"dimension"`
+	SliceMode string                  `json:"slice_mode"`
+	AsOf      *string                 `json:"as_of"`
+	Items     []InsightDimensionSlice `json:"items"`
+}
+
+type InsightDimensionSliceRef struct {
+	Value   string  `json:"value"`
+	Label   *string `json:"label"`
+	LabelEn *string `json:"label_en"`
+}
+
+type InsightDimensionTrendPoint struct {
+	Date        string   `json:"date"`
+	Population  int64    `json:"population"`
+	Eligible    int64    `json:"eligible"`
+	Known       int64    `json:"known"`
+	MetricValue *float64 `json:"metric_value"`
+	Coverage    *float64 `json:"coverage"`
+}
+
+type InsightDimensionTrend struct {
+	Key              string                       `json:"key"`
+	Dimension        string                       `json:"dimension"`
+	Slice            InsightDimensionSliceRef     `json:"slice"`
+	SliceMode        string                       `json:"slice_mode"`
+	RequestedRange   string                       `json:"requested_range"`
+	AsOf             *string                      `json:"as_of"`
+	AvailableFrom    *string                      `json:"available_from"`
+	AvailableThrough *string                      `json:"available_through"`
+	Points           []InsightDimensionTrendPoint `json:"points"`
+}
+
 type InsightEntityRef struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
@@ -38,6 +84,29 @@ type InsightChange struct {
 	OccurredAt *time.Time       `json:"occurred_at"`
 	Entity     InsightEntityRef `json:"entity"`
 	Detail     any              `json:"detail"`
+}
+
+type InsightExplorerChange struct {
+	Domain     string           `json:"domain"`
+	Category   string           `json:"category"`
+	Type       string           `json:"type"`
+	Date       string           `json:"date"`
+	OccurredAt *time.Time       `json:"occurred_at"`
+	Entity     InsightEntityRef `json:"entity"`
+	Detail     any              `json:"detail"`
+}
+
+type InsightChangeExplorerPage struct {
+	Items      []InsightExplorerChange `json:"items"`
+	NextCursor *string                 `json:"next_cursor"`
+}
+
+type InsightChangeExplorerQuery struct {
+	Range    string
+	Category string
+	Type     string
+	Cursor   string
+	Limit    int32
 }
 
 type InsightOverview struct {
@@ -116,6 +185,37 @@ type InsightMetricContract struct {
 	Version     int32
 }
 
+type InsightDimensionContract struct {
+	PublicKey   string
+	InternalKey string
+	SliceMode   string
+}
+
+type InsightDimensionRecord struct {
+	Value         string
+	Label         *string
+	LabelEn       *string
+	Population    int64
+	Eligible      int64
+	PositiveCount int64
+	NegativeCount int64
+}
+
+type InsightDimensionAvailabilityRecord struct {
+	Label            *string
+	LabelEn          *string
+	AvailableFrom    *time.Time
+	AvailableThrough *time.Time
+}
+
+type InsightDimensionTrendRecord struct {
+	FactDate      time.Time
+	Population    int64
+	Eligible      int64
+	PositiveCount int64
+	NegativeCount int64
+}
+
 type InsightMetricSummaryRecord struct {
 	FactDate              time.Time
 	EligibleCount         int64
@@ -182,4 +282,23 @@ type InsightChangeRecord struct {
 	ProjectionDate  time.Time
 	TimeBasis       string
 	EventAt         *time.Time
+	PrecisionRank   int32
+	EventSortAt     time.Time
+	OpaqueTie       string
+}
+
+type InsightChangeExplorerPosition struct {
+	ProjectionDate time.Time
+	PrecisionRank  int32
+	EventSortAt    time.Time
+	OpaqueTie      string
+}
+
+type InsightChangeExplorerConditions struct {
+	DetectorKeys []string
+	ContractIDs  []string
+	RangeThrough time.Time
+	RangeDays    int32
+	Position     *InsightChangeExplorerPosition
+	Limit        int32
 }

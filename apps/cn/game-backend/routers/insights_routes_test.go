@@ -16,6 +16,15 @@ func (gameInsightsRouteStub) GetInsightsOverview(c fiber.Ctx) error {
 func (gameInsightsRouteStub) GetInsightsMetricTrend(c fiber.Ctx) error {
 	return c.SendStatus(http.StatusNoContent)
 }
+func (gameInsightsRouteStub) GetInsightsMetricBreakdown(c fiber.Ctx) error {
+	return c.SendStatus(http.StatusNoContent)
+}
+func (gameInsightsRouteStub) GetInsightsMetricSliceTrend(c fiber.Ctx) error {
+	return c.SendStatus(http.StatusNoContent)
+}
+func (gameInsightsRouteStub) GetInsightsChanges(c fiber.Ctx) error {
+	return c.SendStatus(http.StatusNoContent)
+}
 func (gameInsightsRouteStub) GetGameInsights(c fiber.Ctx) error {
 	return c.SendStatus(http.StatusNoContent)
 }
@@ -32,6 +41,9 @@ func TestGameInsightsRoutesAreRegistered(t *testing.T) {
 	for _, path := range []string{
 		"/api/v2/game/insights/overview",
 		"/api/v2/game/insights/metrics/free/trend",
+		"/api/v2/game/insights/metrics/free/breakdown?dimension=primary_tag",
+		"/api/v2/game/insights/metrics/free/breakdown/tag/1/trend",
+		"/api/v2/game/insights/changes",
 		"/api/v2/game/games/1/insights",
 		"/api/v2/game/games/1/insights/players",
 		"/api/v2/game/games/1/insights/prices",

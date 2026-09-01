@@ -32,6 +32,9 @@ type DetailAPI interface {
 type InsightsAPI interface {
 	GetOverview(fiber.Ctx) error
 	GetMetricTrend(fiber.Ctx) error
+	GetMetricBreakdown(fiber.Ctx) error
+	GetMetricSliceTrend(fiber.Ctx) error
+	GetChanges(fiber.Ctx) error
 	GetSiteInsights(fiber.Ctx) error
 }
 type NavDependencies struct {
@@ -76,5 +79,8 @@ func navV2Api(g fiber.Router, cfg env.NavV2Config, dependencies NavDependencies)
 func registerNavInsightsRoutes(g fiber.Router, insights InsightsAPI) {
 	g.Get("/insights/overview", insights.GetOverview)
 	g.Get("/insights/metrics/:metricKey/trend", insights.GetMetricTrend)
+	g.Get("/insights/metrics/:metricKey/breakdown", insights.GetMetricBreakdown)
+	g.Get("/insights/metrics/:metricKey/breakdown/:dimension/:value/trend", insights.GetMetricSliceTrend)
+	g.Get("/insights/changes", insights.GetChanges)
 	g.Get("/sites/:siteId/insights", insights.GetSiteInsights)
 }

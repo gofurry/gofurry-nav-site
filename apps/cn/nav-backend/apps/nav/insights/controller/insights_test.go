@@ -27,6 +27,24 @@ func (fakeReader) GetMetricTrend(_ context.Context, key, requestedRange string) 
 	}
 	return models.MetricTrend{Key: key, RequestedRange: requestedRange, Points: []models.TrendPoint{}}, nil
 }
+func (fakeReader) GetMetricBreakdown(_ context.Context, key, dimension string) (models.DimensionBreakdown, error) {
+	if dimension == "bad" {
+		return models.DimensionBreakdown{}, service.ErrInvalidDimension
+	}
+	return models.DimensionBreakdown{Key: key, Dimension: dimension, SliceMode: "partition", Items: []models.DimensionSlice{}}, nil
+}
+func (fakeReader) GetMetricSliceTrend(_ context.Context, key, dimension, value, requestedRange string) (models.DimensionTrend, error) {
+	if value == "bad" {
+		return models.DimensionTrend{}, service.ErrInvalidSlice
+	}
+	return models.DimensionTrend{Key: key, Dimension: dimension, RequestedRange: requestedRange, Points: []models.DimensionTrendPoint{}}, nil
+}
+func (fakeReader) GetChanges(_ context.Context, query models.ChangeExplorerQuery) (models.ChangeExplorerPage, error) {
+	if query.Cursor == "bad" {
+		return models.ChangeExplorerPage{}, service.ErrInvalidCursor
+	}
+	return models.ChangeExplorerPage{Items: []models.ExplorerChange{}}, nil
+}
 func (fakeReader) GetSiteInsights(_ context.Context, id int64) (models.SiteInsights, error) {
 	if id == 404 {
 		return models.SiteInsights{}, service.ErrNotFound
@@ -39,6 +57,9 @@ func TestNavInsightsHTTPContract(t *testing.T) {
 	app := fiber.New()
 	app.Get("/api/v2/nav/insights/overview", api.GetOverview)
 	app.Get("/api/v2/nav/insights/metrics/:metricKey/trend", api.GetMetricTrend)
+	app.Get("/api/v2/nav/insights/metrics/:metricKey/breakdown", api.GetMetricBreakdown)
+	app.Get("/api/v2/nav/insights/metrics/:metricKey/breakdown/:dimension/:value/trend", api.GetMetricSliceTrend)
+	app.Get("/api/v2/nav/insights/changes", api.GetChanges)
 	app.Get("/api/v2/nav/sites/:siteId/insights", api.GetSiteInsights)
 
 	cases := []struct {
@@ -47,9 +68,14 @@ func TestNavInsightsHTTPContract(t *testing.T) {
 	}{
 		{"/api/v2/nav/insights/overview", http.StatusOK},
 		{"/api/v2/nav/insights/metrics/ipv6/trend?range=all", http.StatusOK},
+		{"/api/v2/nav/insights/metrics/ipv6/breakdown?dimension=country", http.StatusOK},
+		{"/api/v2/nav/insights/metrics/ipv6/breakdown/country/CN/trend?range=90d", http.StatusOK},
+		{"/api/v2/nav/insights/changes?range=30d&limit=20", http.StatusOK},
+		{"/api/v2/nav/insights/changes?cursor=bad", http.StatusBadRequest},
 		{"/api/v2/nav/sites/1/insights", http.StatusOK},
 		{"/api/v2/nav/insights/metrics/bad/trend", http.StatusBadRequest},
 		{"/api/v2/nav/insights/metrics/ipv6/trend?range=bad", http.StatusBadRequest},
+		{"/api/v2/nav/insights/metrics/ipv6/breakdown?dimension=bad", http.StatusBadRequest},
 		{"/api/v2/nav/sites/404/insights", http.StatusNotFound},
 	}
 	for _, tc := range cases {

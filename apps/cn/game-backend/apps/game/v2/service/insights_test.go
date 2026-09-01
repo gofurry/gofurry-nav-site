@@ -12,15 +12,22 @@ import (
 )
 
 type fakeInsightsStore struct {
-	game          *v2models.InsightGameRecord
-	state         *v2models.InsightGameStateRecord
-	playerSummary v2models.InsightPlayerSummaryRecord
-	price         *v2models.InsightPriceRecord
-	players       []v2models.InsightPlayerPointRecord
-	prices        []v2models.InsightPriceRecord
-	summaries     map[string]*v2models.InsightMetricSummaryRecord
-	trend         []v2models.InsightMetricTrendRecord
-	changes       []v2models.InsightChangeRecord
+	game              *v2models.InsightGameRecord
+	state             *v2models.InsightGameStateRecord
+	playerSummary     v2models.InsightPlayerSummaryRecord
+	price             *v2models.InsightPriceRecord
+	players           []v2models.InsightPlayerPointRecord
+	prices            []v2models.InsightPriceRecord
+	summaries         map[string]*v2models.InsightMetricSummaryRecord
+	trend             []v2models.InsightMetricTrendRecord
+	changes           []v2models.InsightChangeRecord
+	breakdown         []v2models.InsightDimensionRecord
+	sliceAvailability v2models.InsightDimensionAvailabilityRecord
+	sliceTrend        []v2models.InsightDimensionTrendRecord
+	lastBreakdownDate time.Time
+	lastSliceThrough  time.Time
+	lastSliceValue    string
+	lastExplorer      v2models.InsightChangeExplorerConditions
 }
 
 func (f *fakeInsightsStore) CountInsightEntities(context.Context) (int64, error) { return 1, nil }
@@ -32,6 +39,17 @@ func (f *fakeInsightsStore) GetInsightMetricSummary(_ context.Context, c v2model
 }
 func (f *fakeInsightsStore) ListInsightMetricTrend(context.Context, v2models.InsightMetricContract, int32) ([]v2models.InsightMetricTrendRecord, error) {
 	return f.trend, nil
+}
+func (f *fakeInsightsStore) ListInsightMetricBreakdown(_ context.Context, _ v2models.InsightMetricContract, _ v2models.InsightDimensionContract, date time.Time) ([]v2models.InsightDimensionRecord, error) {
+	f.lastBreakdownDate = date
+	return f.breakdown, nil
+}
+func (f *fakeInsightsStore) GetInsightMetricSliceAvailability(context.Context, v2models.InsightMetricContract, v2models.InsightDimensionContract, string) (v2models.InsightDimensionAvailabilityRecord, error) {
+	return f.sliceAvailability, nil
+}
+func (f *fakeInsightsStore) ListInsightMetricSliceTrend(_ context.Context, _ v2models.InsightMetricContract, _ v2models.InsightDimensionContract, value string, through time.Time, _ int32) ([]v2models.InsightDimensionTrendRecord, error) {
+	f.lastSliceValue, f.lastSliceThrough = value, through
+	return f.sliceTrend, nil
 }
 func (f *fakeInsightsStore) GetInsightGameState(context.Context, int64) (*v2models.InsightGameStateRecord, error) {
 	return f.state, nil
@@ -52,6 +70,10 @@ func (f *fakeInsightsStore) CountInsightOverviewChanges(context.Context, []strin
 	return int64(len(f.changes)), nil
 }
 func (f *fakeInsightsStore) ListInsightOverviewChanges(context.Context, []string, []string, int32) ([]v2models.InsightChangeRecord, error) {
+	return f.changes, nil
+}
+func (f *fakeInsightsStore) ListInsightExplorerChanges(_ context.Context, conditions v2models.InsightChangeExplorerConditions) ([]v2models.InsightChangeRecord, error) {
+	f.lastExplorer = conditions
 	return f.changes, nil
 }
 func (f *fakeInsightsStore) ListInsightGameChanges(context.Context, v2models.InsightGameRecord, []string, []string, int32) ([]v2models.InsightChangeRecord, error) {
@@ -158,5 +180,87 @@ func TestInsightValidationAndExactDelta(t *testing.T) {
 	}
 	if _, err := service.GetGameInsights(context.Background(), 404); !errors.Is(err, ErrInsightGameNotFound) {
 		t.Fatalf("missing game error = %v", err)
+	}
+}
+
+func TestInsightDimensionsUseGlobalHorizonNullMathAndDeletedTagFallback(t *testing.T) {
+	horizon := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	store := &fakeInsightsStore{
+		summaries: map[string]*v2models.InsightMetricSummaryRecord{"free": {FactDate: horizon}},
+		breakdown: []v2models.InsightDimensionRecord{
+			{Value: "123", Population: 5, Eligible: 5, PositiveCount: 2, NegativeCount: 2},
+			{Value: "unknown", Population: 1, Eligible: 0},
+		},
+	}
+	got, err := NewInsightsService(store).GetInsightsMetricBreakdown(context.Background(), "free", "tag")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.SliceMode != "overlapping" || got.AsOf == nil || *got.AsOf != "2026-09-01" || !store.lastBreakdownDate.Equal(horizon) {
+		t.Fatalf("breakdown contract/horizon = %#v date=%v", got, store.lastBreakdownDate)
+	}
+	if len(got.Items) != 2 || got.Items[0].Label == nil || *got.Items[0].Label != "标签 #123" || got.Items[0].LabelEn == nil || *got.Items[0].LabelEn != "Tag #123" {
+		t.Fatalf("deleted tag fallback = %#v", got.Items)
+	}
+	if got.Items[1].MetricValue != nil || got.Items[1].Coverage != nil || got.Items[1].Value != "unknown" {
+		t.Fatalf("unknown/zero denominator collapsed = %#v", got.Items[1])
+	}
+}
+
+func TestInsightSliceTrendUsesGlobalHorizonAndDoesNotFill(t *testing.T) {
+	horizon := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	from, through := horizon.AddDate(0, 0, -10), horizon.AddDate(0, 0, -2)
+	store := &fakeInsightsStore{
+		summaries:         map[string]*v2models.InsightMetricSummaryRecord{"free": {FactDate: horizon}},
+		sliceAvailability: v2models.InsightDimensionAvailabilityRecord{AvailableFrom: &from, AvailableThrough: &through},
+		sliceTrend: []v2models.InsightDimensionTrendRecord{
+			{FactDate: horizon.AddDate(0, 0, -2), Population: 4, Eligible: 4, PositiveCount: 2, NegativeCount: 2},
+			{FactDate: horizon, Population: 4, Eligible: 0},
+		},
+	}
+	got, err := NewInsightsService(store).GetInsightsMetricSliceTrend(context.Background(), "free", "tag", "123", "90d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !store.lastSliceThrough.Equal(horizon) || store.lastSliceValue != "123" || len(got.Points) != 2 || got.Points[1].MetricValue != nil {
+		t.Fatalf("slice anchor/fill/null semantics = %#v through=%v", got, store.lastSliceThrough)
+	}
+}
+
+func TestInsightExplorerCategoryCursorAndNoEntityDedupe(t *testing.T) {
+	day := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	store := &fakeInsightsStore{changes: []v2models.InsightChangeRecord{
+		{EntityID: 1, DetectorKey: "game_price_transition", DetectorVersion: 1, EventCode: "game_price_decreased", ProjectionDate: day, TimeBasis: "day", PrecisionRank: 0, EventSortAt: day, OpaqueTie: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+		{EntityID: 1, DetectorKey: "game_price_transition", DetectorVersion: 1, EventCode: "game_price_increased", ProjectionDate: day.AddDate(0, 0, -1), TimeBasis: "day", PrecisionRank: 0, EventSortAt: day.AddDate(0, 0, -1), OpaqueTie: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+		{EntityID: 2, DetectorKey: "game_price_transition", DetectorVersion: 1, EventCode: "game_price_state_changed", ProjectionDate: day.AddDate(0, 0, -2), TimeBasis: "day", PrecisionRank: 0, EventSortAt: day.AddDate(0, 0, -2), OpaqueTie: "cccccccccccccccccccccccccccccccc"},
+	}}
+	service := NewInsightsService(store)
+	service.now = func() time.Time { return day }
+	first, err := service.GetInsightsChanges(context.Background(), v2models.InsightChangeExplorerQuery{Range: "30d", Category: "price", Limit: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first.Items) != 2 || first.Items[0].Entity.ID != first.Items[1].Entity.ID || first.Items[0].Category != "price" || first.NextCursor == nil {
+		t.Fatalf("explorer category/dedupe = %#v", first)
+	}
+	payload, err := json.Marshal(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"detector_key", "detector_version", "event_code", "event_key", "source_key", "game_price_transition"} {
+		if strings.Contains(string(payload), forbidden) {
+			t.Fatalf("explorer leaked %q: %s", forbidden, payload)
+		}
+	}
+	service.now = func() time.Time { return day.AddDate(0, 0, 1) }
+	_, err = service.GetInsightsChanges(context.Background(), v2models.InsightChangeExplorerQuery{Range: "30d", Category: "price", Cursor: *first.NextCursor, Limit: 2})
+	if err != nil || !store.lastExplorer.RangeThrough.Equal(day) || store.lastExplorer.Position == nil {
+		t.Fatalf("cursor anchor = err=%v conditions=%#v", err, store.lastExplorer)
+	}
+	if _, err := service.GetInsightsChanges(context.Background(), v2models.InsightChangeExplorerQuery{Range: "30d", Category: "discount", Cursor: *first.NextCursor, Limit: 2}); !errors.Is(err, ErrInvalidInsightCursor) {
+		t.Fatalf("cursor/filter mismatch = %v", err)
+	}
+	if contracts, ok := insightExplorerContracts("", "game.discount.started"); !ok || len(contracts) != 1 || contracts[0].category != "discount" {
+		t.Fatalf("exact public type filter = %#v, %v", contracts, ok)
 	}
 }

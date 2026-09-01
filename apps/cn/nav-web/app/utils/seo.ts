@@ -18,7 +18,7 @@ type GameDetailSeoInput = {
   locale?: SeoLocale
 }
 
-type InsightsSeoPage = 'overview' | 'sites' | 'games'
+type InsightsSeoPage = 'overview' | 'sites' | 'games' | 'changes'
 
 const MAX_TITLE_LENGTH = 78
 const MIN_DESCRIPTION_LENGTH = 80
@@ -159,6 +159,10 @@ export function buildInsightsSeo(page: InsightsSeoPage, locale?: SeoLocale): Det
         games: {
           title: 'Furry Game Ecosystem Insights - GoFurry',
           description: 'Explore free-game, Windows, and Linux support trends across Furry games, with coverage, reliable history, and recent ecosystem changes.'
+        },
+        changes: {
+          title: 'Furry Ecosystem Change Explorer - GoFurry',
+          description: 'Browse public website and game ecosystem changes by domain, date range, and category with stable chronological pagination.'
         }
       }
     : {
@@ -173,6 +177,10 @@ export function buildInsightsSeo(page: InsightsSeoPage, locale?: SeoLocale): Det
         games: {
           title: 'Furry 游戏生态洞察 - GoFurry',
           description: '查看 Furry 游戏的免费游戏、Windows 与 Linux 支持趋势，以及统计覆盖、可靠历史和近期生态变化。'
+        },
+        changes: {
+          title: 'Furry 生态变化探索 - GoFurry',
+          description: '按网站或游戏领域、时间范围和公开分类浏览 Furry 生态变化，并通过稳定的时间顺序继续加载历史。'
         }
       }
 

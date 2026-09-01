@@ -27,6 +27,52 @@ type MetricTrend struct {
 	Points           []TrendPoint `json:"points"`
 }
 
+type DimensionSlice struct {
+	Value       string   `json:"value"`
+	Label       *string  `json:"label"`
+	LabelEn     *string  `json:"label_en"`
+	Population  int64    `json:"population"`
+	Eligible    int64    `json:"eligible"`
+	Known       int64    `json:"known"`
+	MetricValue *float64 `json:"metric_value"`
+	Coverage    *float64 `json:"coverage"`
+}
+
+type DimensionBreakdown struct {
+	Key       string           `json:"key"`
+	Dimension string           `json:"dimension"`
+	SliceMode string           `json:"slice_mode"`
+	AsOf      *string          `json:"as_of"`
+	Items     []DimensionSlice `json:"items"`
+}
+
+type DimensionSliceRef struct {
+	Value   string  `json:"value"`
+	Label   *string `json:"label"`
+	LabelEn *string `json:"label_en"`
+}
+
+type DimensionTrendPoint struct {
+	Date        string   `json:"date"`
+	Population  int64    `json:"population"`
+	Eligible    int64    `json:"eligible"`
+	Known       int64    `json:"known"`
+	MetricValue *float64 `json:"metric_value"`
+	Coverage    *float64 `json:"coverage"`
+}
+
+type DimensionTrend struct {
+	Key              string                `json:"key"`
+	Dimension        string                `json:"dimension"`
+	Slice            DimensionSliceRef     `json:"slice"`
+	SliceMode        string                `json:"slice_mode"`
+	RequestedRange   string                `json:"requested_range"`
+	AsOf             *string               `json:"as_of"`
+	AvailableFrom    *string               `json:"available_from"`
+	AvailableThrough *string               `json:"available_through"`
+	Points           []DimensionTrendPoint `json:"points"`
+}
+
 type EntityRef struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
@@ -38,6 +84,29 @@ type Change struct {
 	OccurredAt *time.Time `json:"occurred_at"`
 	Entity     EntityRef  `json:"entity"`
 	Detail     any        `json:"detail"`
+}
+
+type ExplorerChange struct {
+	Domain     string     `json:"domain"`
+	Category   string     `json:"category"`
+	Type       string     `json:"type"`
+	Date       string     `json:"date"`
+	OccurredAt *time.Time `json:"occurred_at"`
+	Entity     EntityRef  `json:"entity"`
+	Detail     any        `json:"detail"`
+}
+
+type ChangeExplorerPage struct {
+	Items      []ExplorerChange `json:"items"`
+	NextCursor *string          `json:"next_cursor"`
+}
+
+type ChangeExplorerQuery struct {
+	Range    string
+	Category string
+	Type     string
+	Cursor   string
+	Limit    int32
 }
 
 type Overview struct {
@@ -70,6 +139,37 @@ type MetricContract struct {
 	PublicKey   string
 	InternalKey string
 	Version     int32
+}
+
+type DimensionContract struct {
+	PublicKey   string
+	InternalKey string
+	SliceMode   string
+}
+
+type DimensionRecord struct {
+	Value         string
+	Label         *string
+	LabelEn       *string
+	Population    int64
+	Eligible      int64
+	PositiveCount int64
+	NegativeCount int64
+}
+
+type DimensionAvailabilityRecord struct {
+	Label            *string
+	LabelEn          *string
+	AvailableFrom    *time.Time
+	AvailableThrough *time.Time
+}
+
+type DimensionTrendRecord struct {
+	FactDate      time.Time
+	Population    int64
+	Eligible      int64
+	PositiveCount int64
+	NegativeCount int64
 }
 
 type MetricSummaryRecord struct {
@@ -111,4 +211,23 @@ type ChangeRecord struct {
 	ProjectionDate  time.Time
 	TimeBasis       string
 	EventAt         *time.Time
+	PrecisionRank   int32
+	EventSortAt     time.Time
+	OpaqueTie       string
+}
+
+type ChangeExplorerPosition struct {
+	ProjectionDate time.Time
+	PrecisionRank  int32
+	EventSortAt    time.Time
+	OpaqueTie      string
+}
+
+type ChangeExplorerConditions struct {
+	DetectorKeys []string
+	ContractIDs  []string
+	RangeThrough time.Time
+	RangeDays    int32
+	Position     *ChangeExplorerPosition
+	Limit        int32
 }

@@ -12,7 +12,19 @@ import type {
   Site,
   SiteViewResponse,
 } from '~/types/nav'
-import type { InsightMetricTrend, InsightOverview, InsightRange, NavInsightMetricKey, SiteInsights } from '~/types/insights'
+import type {
+  InsightChangeExplorerPage,
+  InsightChangeRange,
+  InsightDimensionBreakdown,
+  InsightDimensionTrend,
+  InsightMetricTrend,
+  InsightOverview,
+  InsightRange,
+  NavInsightMetricKey,
+  SiteInsightChangeCategory,
+  SiteInsightDimension,
+  SiteInsights,
+} from '~/types/insights'
 
 export function getNavHome(lang: string): Promise<NavHomeResponse> {
   return useApi('navV2')('/nav/home', { query: { lang } })
@@ -64,6 +76,24 @@ export function getNavInsightsOverview(): Promise<InsightOverview> {
 
 export function getNavInsightsTrend(metric: NavInsightMetricKey, range: InsightRange): Promise<InsightMetricTrend> {
   return useApi('navV2')(`/nav/insights/metrics/${metric}/trend`, { query: { range } })
+}
+
+export function getNavInsightsBreakdown(metric: NavInsightMetricKey, dimension: SiteInsightDimension): Promise<InsightDimensionBreakdown> {
+  return useApi('navV2')(`/nav/insights/metrics/${metric}/breakdown`, { query: { dimension } })
+}
+
+export function getNavInsightsSliceTrend(metric: NavInsightMetricKey, dimension: SiteInsightDimension, value: string, range: InsightRange): Promise<InsightDimensionTrend> {
+  return useApi('navV2')(`/nav/insights/metrics/${metric}/breakdown/${dimension}/${encodeURIComponent(value)}/trend`, { query: { range } })
+}
+
+export function getNavInsightChanges(query: {
+  range: InsightChangeRange
+  category?: SiteInsightChangeCategory | ''
+  type?: string
+  cursor?: string
+  limit?: number
+}): Promise<InsightChangeExplorerPage> {
+  return useApi('navV2')('/nav/insights/changes', { query })
 }
 
 export function getSiteInsights(siteId: string | number): Promise<SiteInsights> {

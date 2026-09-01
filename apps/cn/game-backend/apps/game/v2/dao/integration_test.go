@@ -257,6 +257,10 @@ INSERT INTO gfg_metric_daily
 VALUES
     ('free_game_share',1,$3::date,'global','all',10,10,0,2,8,0,0,0,0,$1),
     ('free_game_share',1,$2::date,'global','all',10,10,0,5,5,0,0,0,0,$1),
+    ('free_game_share',1,$2::date,'primary_tag_id','1',6,6,0,4,2,0,0,0,0,$1),
+    ('free_game_share',1,$2::date,'tag_id','999',4,4,0,2,2,0,0,0,0,$1),
+    ('free_game_share',1,$2::date,'tag_id','unknown',2,0,2,0,0,0,0,0,0,$1),
+    ('free_game_share',1,$2::date - 2,'primary_tag_id','1',5,5,0,2,3,0,0,0,0,$1),
     ('windows_support',1,$2::date,'global','all',10,10,0,8,2,0,0,0,0,$1);
 INSERT INTO gfg_game_player_counts (run_id,game_id,appid,count,status,collected_at)
 VALUES ('insights-zero',91001,92001,0,'success',$1::timestamptz + interval '1 second'),
@@ -282,6 +286,7 @@ VALUES
     ('insights-free-old','free_game_transition',1,91001,$2::date - 1,NULL,'day','game_became_paid','global','all','{}','{}','game-src-old','before-old','after-old','{}',$1),
     ('insights-free-new','free_game_transition',1,91001,$2::date,NULL,'day','game_became_free','global','all','{}','{}','game-src-new','before-new','after-new','{}',$1),
     ('insights-price-cn','game_price_transition',1,91001,$2::date,NULL,'day','game_price_decreased','region','CN','{}','{}','game-src-price-cn','before-cn','after-cn','{}',$1),
+    ('insights-price-cn-old','game_price_transition',1,91001,$2::date - 1,NULL,'day','game_price_increased','region','CN','{}','{}','game-src-price-cn-old','before-cn-old','after-cn-old','{}',$1),
     ('insights-price-hk','game_price_transition',1,91001,$2::date + 1,NULL,'day','game_price_increased','region','HK','{}','{}','game-src-price-hk','before-hk','after-hk','{}',$1);
 `, pgx.QueryExecModeSimpleProtocol, now, latestDay, latestDay.AddDate(0, 0, -30))
 	if err != nil {
@@ -326,6 +331,27 @@ func assertGameInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	}
 	if len(prices.Points) != 2 || prices.Points[0].State != "free" || prices.Points[0].FinalAmount != nil || prices.Points[1].State != "priced" || prices.Points[1].FinalAmount == nil || *prices.Points[1].FinalAmount != 0 {
 		t.Fatalf("free/priced-zero/CN-only semantics: %#v", prices.Points)
+	}
+	breakdown, err := svc.GetInsightsMetricBreakdown(ctx, "free", "tag")
+	if err != nil || breakdown.AsOf == nil || breakdown.SliceMode != "overlapping" || len(breakdown.Items) != 2 || breakdown.Items[0].LabelEn == nil || *breakdown.Items[0].LabelEn != "Tag #999" || breakdown.Items[1].MetricValue != nil {
+		t.Fatalf("dimension breakdown/fallback/unknown: %#v err=%v", breakdown, err)
+	}
+	trend, err := svc.GetInsightsMetricSliceTrend(ctx, "free", "primary_tag", "1", "90d")
+	if err != nil || trend.AsOf == nil || len(trend.Points) != 2 || trend.AvailableThrough == nil || *trend.AvailableThrough != *breakdown.AsOf {
+		t.Fatalf("slice trend/global anchor: %#v err=%v", trend, err)
+	}
+	first, err := svc.GetInsightsChanges(ctx, v2models.InsightChangeExplorerQuery{Range: "30d", Limit: 2})
+	if err != nil || len(first.Items) != 2 || first.NextCursor == nil {
+		t.Fatalf("change explorer first page: %#v err=%v", first, err)
+	}
+	second, err := svc.GetInsightsChanges(ctx, v2models.InsightChangeExplorerQuery{Range: "30d", Cursor: *first.NextCursor, Limit: 2})
+	if err != nil || len(second.Items) != 2 {
+		t.Fatalf("change explorer cursor/CN scope/no dedupe: %#v err=%v", second, err)
+	}
+	for _, item := range append(first.Items, second.Items...) {
+		if item.Type == "game.price.increased" && item.Date == time.Now().UTC().Format("2006-01-02") {
+			t.Fatalf("non-CN price change leaked: %#v", item)
+		}
 	}
 }
 

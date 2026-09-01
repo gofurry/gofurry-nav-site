@@ -69,6 +69,58 @@ func (d *InsightsDAO) ListInsightMetricTrend(ctx context.Context, contract v2mod
 	return result, nil
 }
 
+func (d *InsightsDAO) ListInsightMetricBreakdown(ctx context.Context, contract v2models.InsightMetricContract, dimension v2models.InsightDimensionContract, factDate time.Time) ([]v2models.InsightDimensionRecord, error) {
+	rows, err := d.queries.ListGameInsightMetricBreakdown(ctx, gamesqlc.ListGameInsightMetricBreakdownParams{
+		MetricKey: contract.InternalKey, MetricVersion: contract.Version,
+		FactDate: pgtype.Date{Time: factDate, Valid: true}, DimensionKey: dimension.InternalKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]v2models.InsightDimensionRecord, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, v2models.InsightDimensionRecord{
+			Value: row.DimensionValue, Label: nonemptyStringPointer(row.Label), LabelEn: nonemptyStringPointer(row.LabelEn),
+			Population: row.PopulationCount, Eligible: row.EligibleCount,
+			PositiveCount: row.PositiveCount, NegativeCount: row.NegativeCount,
+		})
+	}
+	return result, nil
+}
+
+func (d *InsightsDAO) GetInsightMetricSliceAvailability(ctx context.Context, contract v2models.InsightMetricContract, dimension v2models.InsightDimensionContract, value string) (v2models.InsightDimensionAvailabilityRecord, error) {
+	row, err := d.queries.GetGameInsightMetricSliceAvailability(ctx, gamesqlc.GetGameInsightMetricSliceAvailabilityParams{
+		MetricKey: contract.InternalKey, MetricVersion: contract.Version,
+		DimensionKey: dimension.InternalKey, DimensionValue: value,
+	})
+	if err != nil {
+		return v2models.InsightDimensionAvailabilityRecord{}, err
+	}
+	return v2models.InsightDimensionAvailabilityRecord{
+		Label: nonemptyStringPointer(row.Label), LabelEn: nonemptyStringPointer(row.LabelEn),
+		AvailableFrom: datePointer(row.AvailableFrom), AvailableThrough: datePointer(row.AvailableThrough),
+	}, nil
+}
+
+func (d *InsightsDAO) ListInsightMetricSliceTrend(ctx context.Context, contract v2models.InsightMetricContract, dimension v2models.InsightDimensionContract, value string, through time.Time, rangeDays int32) ([]v2models.InsightDimensionTrendRecord, error) {
+	rows, err := d.queries.ListGameInsightMetricSliceTrend(ctx, gamesqlc.ListGameInsightMetricSliceTrendParams{
+		MetricKey: contract.InternalKey, MetricVersion: contract.Version,
+		DimensionKey: dimension.InternalKey, DimensionValue: value,
+		ThroughDate: pgtype.Date{Time: through, Valid: true}, RangeDays: rangeDays,
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]v2models.InsightDimensionTrendRecord, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, v2models.InsightDimensionTrendRecord{
+			FactDate: row.FactDate.Time, Population: row.PopulationCount, Eligible: row.EligibleCount,
+			PositiveCount: row.PositiveCount, NegativeCount: row.NegativeCount,
+		})
+	}
+	return result, nil
+}
+
 func (d *InsightsDAO) GetInsightGameState(ctx context.Context, gameID int64) (*v2models.InsightGameStateRecord, error) {
 	row, err := d.queries.GetGameInsightState(ctx, gameID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -171,6 +223,40 @@ func (d *InsightsDAO) ListInsightOverviewChanges(ctx context.Context, detectorKe
 	return result, nil
 }
 
+func (d *InsightsDAO) ListInsightExplorerChanges(ctx context.Context, conditions v2models.InsightChangeExplorerConditions) ([]v2models.InsightChangeRecord, error) {
+	positionDate := conditions.RangeThrough
+	positionSortAt := conditions.RangeThrough
+	positionRank := int32(0)
+	positionTie := ""
+	hasPosition := conditions.Position != nil
+	if conditions.Position != nil {
+		positionDate = conditions.Position.ProjectionDate
+		positionSortAt = conditions.Position.EventSortAt
+		positionRank = conditions.Position.PrecisionRank
+		positionTie = conditions.Position.OpaqueTie
+	}
+	rows, err := d.queries.ListGameInsightExplorerChanges(ctx, gamesqlc.ListGameInsightExplorerChangesParams{
+		DetectorKeys: conditions.DetectorKeys, ContractIds: conditions.ContractIDs,
+		RangeThrough: pgtype.Date{Time: conditions.RangeThrough, Valid: true}, RangeDays: conditions.RangeDays,
+		HasPosition: hasPosition, PositionDate: pgtype.Date{Time: positionDate, Valid: true},
+		PositionRank: positionRank, PositionSortAt: pgtype.Timestamptz{Time: positionSortAt, Valid: true},
+		PositionTie: positionTie, LimitCount: conditions.Limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]v2models.InsightChangeRecord, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, v2models.InsightChangeRecord{
+			EntityID: row.GameID, EntityName: row.GameName, DetectorKey: row.DetectorKey,
+			DetectorVersion: row.DetectorVersion, EventCode: row.EventCode,
+			ProjectionDate: row.ProjectionDate.Time, TimeBasis: row.TimeBasis, EventAt: timestampPointer(row.EventAt),
+			PrecisionRank: row.PrecisionRank, EventSortAt: row.EventSortAt.Time, OpaqueTie: row.OpaqueTie,
+		})
+	}
+	return result, nil
+}
+
 func (d *InsightsDAO) ListInsightGameChanges(ctx context.Context, game v2models.InsightGameRecord, detectorKeys, contractIDs []string, limit int32) ([]v2models.InsightChangeRecord, error) {
 	rows, err := d.queries.ListGameInsightGameChanges(ctx, gamesqlc.ListGameInsightGameChangesParams{
 		GameID: game.ID, DetectorKeys: detectorKeys, ContractIds: contractIDs, LimitCount: limit,
@@ -195,4 +281,11 @@ func datePointer(value pgtype.Date) *time.Time {
 	}
 	result := value.Time
 	return &result
+}
+
+func nonemptyStringPointer(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }

@@ -565,7 +565,8 @@
     "nav": {
       "overview": "生态概览",
       "sites": "网站生态",
-      "games": "游戏生态"
+      "games": "游戏生态",
+      "changes": "变化探索"
     },
     "overview": {
       "eyebrow": "PUBLIC INSIGHTS",
@@ -626,6 +627,7 @@
       "loading": "正在读取趋势数据"
     },
     "ranges": {
+      "7d": "7 天",
       "30d": "30 天",
       "90d": "90 天",
       "all": "全部"
@@ -660,6 +662,59 @@
         "gameDiscountEnded": "折扣结束",
         "gameDiscountChanged": "折扣发生变化",
         "unknown": "发生了一项公开变化"
+      }
+    },
+    "dimensions": {
+      "eyebrow": "DIMENSION BREAKDOWN",
+      "title": "维度拆分",
+      "names": {
+        "country": "国家或地区",
+        "group": "站点分组",
+        "nsfw": "内容分级",
+        "public_interest": "公益属性",
+        "primary_tag": "主标签",
+        "tag": "全部标签"
+      },
+      "overlapping": "该维度允许一个实体属于多个切片，各切片数量不能相加推导全局总量。",
+      "loading": "正在读取维度数据",
+      "empty": "当前统计日期暂无该维度数据",
+      "slice": "切片",
+      "metricValue": "指标值",
+      "coverage": "覆盖率",
+      "population": "总体",
+      "eligible": "可统计",
+      "known": "已知",
+      "selectedSlice": "SELECTED SLICE",
+      "availability": "切片实际数据范围：{from} 至 {through}",
+      "sliceEmpty": "所选范围内暂无该切片数据"
+    },
+    "changeExplorer": {
+      "title": "变化探索",
+      "description": "按领域、时间范围和公开分类浏览网站与游戏生态变化",
+      "filters": "变化筛选",
+      "domain": "领域",
+      "range": "范围",
+      "category": "分类",
+      "allCategories": "全部分类",
+      "feedEyebrow": "PUBLIC CHANGES",
+      "feedTitle": "变化时间线",
+      "empty": "当前筛选条件下暂无公开变化",
+      "loading": "正在加载",
+      "loadMore": "加载更多",
+      "moreUnavailable": "暂时无法加载更多变化，请稍后重试。",
+      "categories": {
+        "site": {
+          "capability": "技术能力",
+          "target": "主要目标",
+          "certificate": "证书"
+        },
+        "game": {
+          "pricing_model": "定价模式",
+          "platform": "平台支持",
+          "release": "发行状态",
+          "price": "国区价格",
+          "discount": "国区折扣"
+        }
       }
     },
     "dataInfo": {

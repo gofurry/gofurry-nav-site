@@ -38,6 +38,9 @@ func gameV2Api(g fiber.Router, gameAPI *gamev2.GameV2API, prizeAPI *prize.PrizeA
 type gameInsightsAPI interface {
 	GetInsightsOverview(fiber.Ctx) error
 	GetInsightsMetricTrend(fiber.Ctx) error
+	GetInsightsMetricBreakdown(fiber.Ctx) error
+	GetInsightsMetricSliceTrend(fiber.Ctx) error
+	GetInsightsChanges(fiber.Ctx) error
 	GetGameInsights(fiber.Ctx) error
 	GetGamePlayerInsights(fiber.Ctx) error
 	GetGamePriceInsights(fiber.Ctx) error
@@ -46,6 +49,9 @@ type gameInsightsAPI interface {
 func registerGameInsightRoutes(g fiber.Router, insights gameInsightsAPI) {
 	g.Get("/insights/overview", insights.GetInsightsOverview)
 	g.Get("/insights/metrics/:metricKey/trend", insights.GetInsightsMetricTrend)
+	g.Get("/insights/metrics/:metricKey/breakdown", insights.GetInsightsMetricBreakdown)
+	g.Get("/insights/metrics/:metricKey/breakdown/:dimension/:value/trend", insights.GetInsightsMetricSliceTrend)
+	g.Get("/insights/changes", insights.GetInsightsChanges)
 	g.Get("/games/:gameId/insights", insights.GetGameInsights)
 	g.Get("/games/:gameId/insights/players", insights.GetGamePlayerInsights)
 	g.Get("/games/:gameId/insights/prices", insights.GetGamePriceInsights)

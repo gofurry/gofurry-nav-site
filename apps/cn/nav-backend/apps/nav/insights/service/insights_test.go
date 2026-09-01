@@ -12,12 +12,20 @@ import (
 )
 
 type fakeStore struct {
-	site          *models.SiteRecord
-	summaries     map[string]*models.MetricSummaryRecord
-	trend         []models.MetricTrendRecord
-	siteMetrics   map[string]*models.SiteMetricRecord
-	overview      []models.ChangeRecord
-	entityChanges []models.ChangeRecord
+	site              *models.SiteRecord
+	summaries         map[string]*models.MetricSummaryRecord
+	trend             []models.MetricTrendRecord
+	siteMetrics       map[string]*models.SiteMetricRecord
+	overview          []models.ChangeRecord
+	entityChanges     []models.ChangeRecord
+	breakdown         []models.DimensionRecord
+	sliceAvailability models.DimensionAvailabilityRecord
+	sliceTrend        []models.DimensionTrendRecord
+	explorer          []models.ChangeRecord
+	lastBreakdownDate time.Time
+	lastSliceThrough  time.Time
+	lastSliceValue    string
+	lastExplorer      models.ChangeExplorerConditions
 }
 
 func (f *fakeStore) CountEntities(context.Context) (int64, error)               { return 2, nil }
@@ -28,6 +36,17 @@ func (f *fakeStore) GetMetricSummary(_ context.Context, c models.MetricContract)
 func (f *fakeStore) ListMetricTrend(context.Context, models.MetricContract, int32) ([]models.MetricTrendRecord, error) {
 	return f.trend, nil
 }
+func (f *fakeStore) ListMetricBreakdown(_ context.Context, _ models.MetricContract, _ models.DimensionContract, date time.Time) ([]models.DimensionRecord, error) {
+	f.lastBreakdownDate = date
+	return f.breakdown, nil
+}
+func (f *fakeStore) GetMetricSliceAvailability(context.Context, models.MetricContract, models.DimensionContract, string) (models.DimensionAvailabilityRecord, error) {
+	return f.sliceAvailability, nil
+}
+func (f *fakeStore) ListMetricSliceTrend(_ context.Context, _ models.MetricContract, _ models.DimensionContract, value string, through time.Time, _ int32) ([]models.DimensionTrendRecord, error) {
+	f.lastSliceValue, f.lastSliceThrough = value, through
+	return f.sliceTrend, nil
+}
 func (f *fakeStore) GetSiteMetric(_ context.Context, _ int64, c models.MetricContract) (*models.SiteMetricRecord, error) {
 	return f.siteMetrics[c.PublicKey], nil
 }
@@ -36,6 +55,10 @@ func (f *fakeStore) CountOverviewChanges(context.Context, []string, []string) (i
 }
 func (f *fakeStore) ListOverviewChanges(context.Context, []string, []string, int32) ([]models.ChangeRecord, error) {
 	return f.overview, nil
+}
+func (f *fakeStore) ListExplorerChanges(_ context.Context, conditions models.ChangeExplorerConditions) ([]models.ChangeRecord, error) {
+	f.lastExplorer = conditions
+	return f.explorer, nil
 }
 func (f *fakeStore) ListSiteChanges(context.Context, models.SiteRecord, []string, []string, int32) ([]models.ChangeRecord, error) {
 	return f.entityChanges, nil
@@ -131,5 +154,97 @@ func TestTrendValidationAndMissingEntity(t *testing.T) {
 	}
 	if _, err := service.GetSiteInsights(context.Background(), 99); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing site error = %v", err)
+	}
+}
+
+func TestDimensionBreakdownUsesGlobalHorizonAndPreservesNullUnknownAndFallback(t *testing.T) {
+	horizon := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	store := &fakeStore{
+		summaries: map[string]*models.MetricSummaryRecord{"ipv6": {FactDate: horizon}},
+		breakdown: []models.DimensionRecord{
+			{Value: "true", Population: 5, Eligible: 5, PositiveCount: 3, NegativeCount: 1},
+			{Value: "unknown", Population: 2, Eligible: 0},
+		},
+	}
+	got, err := New(store).GetMetricBreakdown(context.Background(), "ipv6", "nsfw")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AsOf == nil || *got.AsOf != "2026-09-01" || !store.lastBreakdownDate.Equal(horizon) {
+		t.Fatalf("breakdown did not use global horizon: %#v date=%v", got, store.lastBreakdownDate)
+	}
+	if len(got.Items) != 2 || got.Items[0].Value != "nsfw" || got.Items[0].Known != 4 ||
+		got.Items[0].MetricValue == nil || *got.Items[0].MetricValue != .75 || got.Items[0].Coverage == nil || *got.Items[0].Coverage != .8 {
+		t.Fatalf("breakdown mapping/math = %#v", got.Items)
+	}
+	if got.Items[1].Value != "unknown" || got.Items[1].MetricValue != nil || got.Items[1].Coverage != nil {
+		t.Fatalf("unknown/zero denominator collapsed: %#v", got.Items[1])
+	}
+	fallback := publicDimensionSliceRef(models.DimensionContract{PublicKey: "group"}, "12", nil, nil)
+	if fallback.Label == nil || *fallback.Label != "分组 #12" || fallback.LabelEn == nil || *fallback.LabelEn != "Group #12" {
+		t.Fatalf("deleted group fallback = %#v", fallback)
+	}
+}
+
+func TestSliceTrendAnchorsToGlobalAndDoesNotFillMissingDates(t *testing.T) {
+	horizon := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	from := horizon.AddDate(0, 0, -20)
+	through := horizon.AddDate(0, 0, -2)
+	store := &fakeStore{
+		summaries:         map[string]*models.MetricSummaryRecord{"ipv6": {FactDate: horizon}},
+		sliceAvailability: models.DimensionAvailabilityRecord{AvailableFrom: &from, AvailableThrough: &through},
+		sliceTrend: []models.DimensionTrendRecord{
+			{FactDate: horizon.AddDate(0, 0, -2), Population: 4, Eligible: 4, PositiveCount: 2, NegativeCount: 2},
+			{FactDate: horizon, Population: 4, Eligible: 0},
+		},
+	}
+	got, err := New(store).GetMetricSliceTrend(context.Background(), "ipv6", "nsfw", "sfw", "30d")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !store.lastSliceThrough.Equal(horizon) || store.lastSliceValue != "false" || len(got.Points) != 2 {
+		t.Fatalf("slice trend anchor/value/fill = %#v through=%v value=%q", got, store.lastSliceThrough, store.lastSliceValue)
+	}
+	if got.Points[1].MetricValue != nil || got.Points[1].Coverage != nil || got.AvailableThrough == nil || *got.AvailableThrough != "2026-08-30" {
+		t.Fatalf("slice null/availability semantics = %#v", got)
+	}
+}
+
+func TestExplorerCursorBindsFiltersAndFrozenRangeWithoutDedupe(t *testing.T) {
+	day := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	exact := day.Add(8 * time.Hour)
+	store := &fakeStore{explorer: []models.ChangeRecord{
+		{EntityID: 1, DetectorKey: "ipv6_transition", DetectorVersion: 2, EventCode: "ipv6_enabled", ProjectionDate: day, TimeBasis: "observed", EventAt: &exact, PrecisionRank: 1, EventSortAt: exact, OpaqueTie: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+		{EntityID: 1, DetectorKey: "tls13_transition", DetectorVersion: 1, EventCode: "tls13_disabled", ProjectionDate: day, TimeBasis: "day", PrecisionRank: 0, EventSortAt: day, OpaqueTie: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+		{EntityID: 2, DetectorKey: "security_txt_transition", DetectorVersion: 2, EventCode: "security_txt_added", ProjectionDate: day.AddDate(0, 0, -1), TimeBasis: "day", PrecisionRank: 0, EventSortAt: day.AddDate(0, 0, -1), OpaqueTie: "cccccccccccccccccccccccccccccccc"},
+	}}
+	service := New(store)
+	service.now = func() time.Time { return day.Add(12 * time.Hour) }
+	first, err := service.GetChanges(context.Background(), models.ChangeExplorerQuery{Range: "30d", Category: "capability", Limit: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first.Items) != 2 || first.Items[0].Entity.ID != first.Items[1].Entity.ID || first.Items[1].OccurredAt != nil || first.NextCursor == nil {
+		t.Fatalf("explorer deduplicated or fabricated precision: %#v", first)
+	}
+	payload, err := json.Marshal(first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"detector_key", "detector_version", "event_code", "event_key", "source_key", "ipv6_transition"} {
+		if strings.Contains(string(payload), forbidden) {
+			t.Fatalf("explorer leaked %q: %s", forbidden, payload)
+		}
+	}
+	service.now = func() time.Time { return day.AddDate(0, 0, 1) }
+	_, err = service.GetChanges(context.Background(), models.ChangeExplorerQuery{Range: "30d", Category: "capability", Cursor: *first.NextCursor, Limit: 2})
+	if err != nil || !store.lastExplorer.RangeThrough.Equal(day) || store.lastExplorer.Position == nil {
+		t.Fatalf("cursor did not freeze range/position: err=%v conditions=%#v", err, store.lastExplorer)
+	}
+	if _, err := service.GetChanges(context.Background(), models.ChangeExplorerQuery{Range: "7d", Category: "capability", Cursor: *first.NextCursor, Limit: 2}); !errors.Is(err, ErrInvalidCursor) {
+		t.Fatalf("cursor/filter mismatch = %v", err)
+	}
+	if contracts, ok := explorerContracts("", "site.tls13.enabled"); !ok || len(contracts) != 1 || contracts[0].category != "capability" {
+		t.Fatalf("exact public type filter = %#v, %v", contracts, ok)
 	}
 }

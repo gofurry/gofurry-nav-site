@@ -159,7 +159,7 @@ const visualScenarios = [
     path: '/insights/sites?metric=ipv6&range=30d',
     locale: 'zh-CN',
     rootSelector: '.insights-domain-page',
-    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-data-info'],
+    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-dimensions', '.insights-data-info'],
     optionalDataSelectors: ['.insights-change']
   }),
   ...makePageScenarios({
@@ -168,8 +168,17 @@ const visualScenarios = [
     path: '/insights/games?metric=free&range=30d',
     locale: 'zh-CN',
     rootSelector: '.insights-domain-page',
-    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-data-info'],
+    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-dimensions', '.insights-data-info'],
     optionalDataSelectors: ['.insights-change']
+  }),
+  ...makePageScenarios({
+    id: 'insights-changes',
+    label: '生态变化探索',
+    path: '/insights/changes?domain=site&range=30d',
+    locale: 'zh-CN',
+    rootSelector: '.insights-change-explorer',
+    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-change-explorer-filters', '.insights-change-explorer-feed'],
+    optionalDataSelectors: ['.insights-change-explorer-item']
   }),
   ...makePageScenarios({
     id: 'site-entity-insights',

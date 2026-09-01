@@ -565,7 +565,8 @@
     "nav": {
       "overview": "Overview",
       "sites": "Sites",
-      "games": "Games"
+      "games": "Games",
+      "changes": "Changes"
     },
     "overview": {
       "eyebrow": "PUBLIC INSIGHTS",
@@ -626,6 +627,7 @@
       "loading": "Loading trend data"
     },
     "ranges": {
+      "7d": "7 days",
       "30d": "30 days",
       "90d": "90 days",
       "all": "All"
@@ -660,6 +662,59 @@
         "gameDiscountEnded": "ended a discount",
         "gameDiscountChanged": "changed its discount",
         "unknown": "published a change"
+      }
+    },
+    "dimensions": {
+      "eyebrow": "DIMENSION BREAKDOWN",
+      "title": "Dimension breakdown",
+      "names": {
+        "country": "Country or region",
+        "group": "Site group",
+        "nsfw": "Content rating",
+        "public_interest": "Public interest",
+        "primary_tag": "Primary tag",
+        "tag": "All tags"
+      },
+      "overlapping": "An entity may belong to multiple slices in this dimension. Slice populations must not be added to derive the global population.",
+      "loading": "Loading dimension data",
+      "empty": "No dimension data is available for the current statistics date",
+      "slice": "Slice",
+      "metricValue": "Metric value",
+      "coverage": "Coverage",
+      "population": "Population",
+      "eligible": "Eligible",
+      "known": "Known",
+      "selectedSlice": "SELECTED SLICE",
+      "availability": "Actual slice availability: {from} to {through}",
+      "sliceEmpty": "No observations exist for this slice in the selected range"
+    },
+    "changeExplorer": {
+      "title": "Change Explorer",
+      "description": "Browse website and game ecosystem changes by domain, time range, and public category",
+      "filters": "Change filters",
+      "domain": "Domain",
+      "range": "Range",
+      "category": "Category",
+      "allCategories": "All categories",
+      "feedEyebrow": "PUBLIC CHANGES",
+      "feedTitle": "Change timeline",
+      "empty": "No public changes match these filters",
+      "loading": "Loading",
+      "loadMore": "Load more",
+      "moreUnavailable": "More changes are temporarily unavailable. Please try again.",
+      "categories": {
+        "site": {
+          "capability": "Capability",
+          "target": "Primary target",
+          "certificate": "Certificate"
+        },
+        "game": {
+          "pricing_model": "Pricing model",
+          "platform": "Platform support",
+          "release": "Release",
+          "price": "CN price",
+          "discount": "CN discount"
+        }
       }
     },
     "dataInfo": {

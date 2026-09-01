@@ -7,11 +7,13 @@ const entitySiteId = args['entity-site-id'] || process.env.INSIGHTS_SITE_ID || '
 const entityGameId = args['entity-game-id'] || process.env.INSIGHTS_GAME_ID || ''
 const insightsRoutes = [
   '/insights',
-  '/insights/sites?metric=ipv6&range=30d',
-  '/insights/games?metric=free&range=30d',
+  '/insights/sites?metric=ipv6&range=30d&dimension=country',
+  '/insights/games?metric=free&range=30d&dimension=primary_tag',
+  '/insights/changes?domain=site&range=30d',
   '/en/insights',
   '/en/insights/sites?metric=ipv6&range=90d',
   '/en/insights/games?metric=free&range=90d',
+  '/en/insights/changes?domain=game&range=7d',
 ]
 const removedWorkshopRoutes = [
   '/workshop',
@@ -72,13 +74,14 @@ const browser = await launchPerfBrowser()
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN' })
   const page = await context.newPage()
-  await page.goto(toAbsoluteUrl(baseUrl, '/insights/sites?metric=invalid&range=bad'), {
+  await page.goto(toAbsoluteUrl(baseUrl, '/insights/sites?metric=invalid&range=bad&dimension=bad&slice=true'), {
     waitUntil: 'domcontentloaded',
     timeout: 30000,
   })
   await page.waitForSelector('.insights-domain-page')
-  await page.waitForURL(url => url.searchParams.get('metric') === 'ipv6' && url.searchParams.get('range') === '30d')
+  await page.waitForURL(url => url.searchParams.get('metric') === 'ipv6' && url.searchParams.get('range') === '30d' && url.searchParams.get('dimension') === 'country' && !url.searchParams.has('slice'))
   assert(await page.locator('.insights-domain-page').getAttribute('data-selected-metric') === 'ipv6', 'invalid metric was not normalized before rendering')
+  assert(await page.locator('.insights-domain-page').getAttribute('data-selected-dimension') === 'country', 'invalid dimension was not normalized before rendering')
 
   await page.locator('[data-metric-key="security_txt"]').click()
   await page.waitForURL(url => url.searchParams.get('metric') === 'security_txt')
@@ -114,6 +117,37 @@ try {
       return
     }
     const metric = url.includes('/security_txt/') ? 'security_txt' : 'tls13'
+    if (url.includes('/breakdown/')) {
+      const match = url.match(/\/breakdown\/([^/]+)\/([^/]+)\/trend/)
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 1, data: {
+          key: metric,
+          dimension: match?.[1] || 'group',
+          slice: { value: decodeURIComponent(match?.[2] || '12'), label: '分组 #12', label_en: 'Group #12' },
+          slice_mode: 'overlapping', requested_range: '30d', as_of: '2026-09-01',
+          available_from: '2026-08-31', available_through: '2026-09-01',
+          points: [
+            { date: '2026-08-31', population: 4, eligible: 4, known: 2, metric_value: 0.5, coverage: 0.5 },
+            { date: '2026-09-01', population: 4, eligible: 0, known: 0, metric_value: null, coverage: null },
+          ],
+        } }),
+      })
+      return
+    }
+    if (url.includes('/breakdown')) {
+      const dimension = new URL(url).searchParams.get('dimension') || 'country'
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 1, data: {
+          key: metric, dimension, slice_mode: dimension === 'group' ? 'overlapping' : 'partition', as_of: '2026-09-01',
+          items: [{ value: dimension === 'group' ? '12' : 'CN', label: dimension === 'group' ? '分组 #12' : null, label_en: dimension === 'group' ? 'Group #12' : null, population: 4, eligible: 4, known: 2, metric_value: 0.5, coverage: 0.5 }],
+        } }),
+      })
+      return
+    }
     const points = metric === 'security_txt'
       ? [{ date: '2026-08-31', value: 0, coverage: 1 }]
       : []
@@ -133,13 +167,26 @@ try {
     })
   })
   await page.goto(toAbsoluteUrl(baseUrl, '/insights/sites?metric=ipv6&range=30d'), { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(500)
   await page.locator('[data-metric-key="tls13"]').click()
+  await page.waitForURL(url => url.searchParams.get('metric') === 'tls13')
   await page.getByText('暂无可用历史数据', { exact: true }).waitFor()
   await page.locator('[data-metric-key="security_txt"]').click()
+  await page.waitForURL(url => url.searchParams.get('metric') === 'security_txt')
   await page.getByText('正在积累历史数据', { exact: true }).waitFor()
   await page.locator('[data-metric-key="ipv6"]').click()
   await page.getByText('洞察数据暂不可用', { exact: true }).first().waitFor()
   console.log('[insights] empty, one-point, zero-value, and request-error semantics passed')
+
+  await page.locator('[data-metric-key="tls13"]').click()
+  await page.locator('[data-dimension="group"]').click()
+  await page.waitForURL(url => url.searchParams.get('dimension') === 'group' && !url.searchParams.has('slice'))
+  await page.locator('[data-slice="12"]').click()
+  await page.waitForURL(url => url.searchParams.get('slice') === '12')
+  await page.waitForSelector('.insights-slice-trend')
+  await page.locator('[data-metric-key="security_txt"]').click()
+  await page.waitForURL(url => url.searchParams.get('metric') === 'security_txt' && url.searchParams.get('dimension') === 'group' && url.searchParams.get('slice') === '12')
+  console.log('[insights] dimension URL state, slice selection, shared range, and isolated trend passed')
 
   const mockOverview = (domain) => ({
     generated_at: '2026-09-01T12:00:00Z',
@@ -297,9 +344,12 @@ try {
       }),
     })
   })
-  await page.goto(toAbsoluteUrl(baseUrl, '/'), { waitUntil: 'domcontentloaded' })
-  await page.getByRole('link', { name: '洞察', exact: true }).first().click()
+  await page.goto(toAbsoluteUrl(baseUrl, '/insights/sites?metric=ipv6&range=30d&dimension=country'), { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(500)
+  await page.locator('.insights-nav__link[href="/insights"]').click()
   await page.waitForURL(url => url.pathname === '/insights')
+  await page.waitForSelector('[data-change-link][href="/site/41"]')
+  await page.waitForSelector('[data-change-link][href="/games/82"]')
   const changeHrefs = await page.locator('[data-change-link]').evaluateAll(links => links.map(link => link.getAttribute('href')))
   assert(changeHrefs.includes('/site/41'), 'site change did not link to the existing Site detail route')
   assert(changeHrefs.includes('/games/82'), 'game change did not link to the existing Game detail route')
@@ -348,10 +398,42 @@ try {
   console.log('[insights] mixed feed links and Game summary failure isolation passed')
 
   await page.goto(toAbsoluteUrl(baseUrl, '/insights/games?metric=free&range=30d'), { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(500)
   await page.locator('[data-metric-key="linux"]').click()
   await page.locator('[data-range="90d"]').click()
   await page.waitForURL(url => url.searchParams.get('metric') === 'linux' && url.searchParams.get('range') === '90d')
   assert(await page.locator('.insights-domain-page').getAttribute('data-selected-metric') === 'linux', 'game metric interaction did not update locally')
+
+  const changePage = (domain, cursor) => ({
+    items: [{
+      domain, category: domain === 'site' ? 'capability' : 'price',
+      type: domain === 'site' ? 'site.ipv6.enabled' : 'game.price.decreased',
+      date: cursor ? '2026-08-31' : '2026-09-01', occurred_at: null,
+      entity: { id: cursor ? 2 : 1, name: `${domain} fixture` }, detail: null,
+    }],
+    next_cursor: cursor ? null : 'opaque-next',
+  })
+  await page.route('**/api/v2/nav/insights/changes**', route => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ code: 1, data: changePage('site', new URL(route.request().url()).searchParams.get('cursor')) }),
+  }))
+  await page.route('**/api/v2/game/insights/changes**', route => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ code: 1, data: changePage('game', new URL(route.request().url()).searchParams.get('cursor')) }),
+  }))
+  await page.goto(toAbsoluteUrl(baseUrl, '/insights/changes?domain=bad&range=bad&category=bad&cursor=leak'), { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(500)
+  await page.waitForURL(url => url.searchParams.get('domain') === 'site' && url.searchParams.get('range') === '30d' && !url.searchParams.has('category') && !url.searchParams.has('cursor'))
+  await page.locator('[data-domain-filter="game"]').click()
+  await page.waitForURL(url => url.searchParams.get('domain') === 'game')
+  await page.locator('[data-category-filter="price"]').click()
+  await page.waitForURL(url => url.searchParams.get('category') === 'price')
+  await page.waitForSelector('[data-load-more]')
+  assert(!new URL(page.url()).searchParams.has('cursor'), 'Explorer cursor leaked into URL')
+  await page.locator('[data-load-more]').click()
+  await page.waitForFunction(() => document.querySelectorAll('.insights-change-explorer-item').length === 2)
+  assert(!new URL(page.url()).searchParams.has('cursor'), 'Load More placed cursor in URL')
+  console.log('[insights] Change Explorer filters, reset, Load More, and cursor URL isolation passed')
 
   await context.close()
   console.log('[insights] URL state, locale preservation, interactions, and mobile overflow passed')

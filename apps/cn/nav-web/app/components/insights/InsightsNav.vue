@@ -20,6 +20,7 @@ const items = [
   { label: 'insights.nav.overview', path: '/insights' },
   { label: 'insights.nav.sites', path: '/insights/sites' },
   { label: 'insights.nav.games', path: '/insights/games' },
+  { label: 'insights.nav.changes', path: '/insights/changes' },
 ]
 
 function isActive(path: string) {

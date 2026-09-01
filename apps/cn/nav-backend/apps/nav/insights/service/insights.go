@@ -12,6 +12,10 @@ import (
 var (
 	ErrInvalidMetricKey = errors.New("invalid public metric key")
 	ErrInvalidRange     = errors.New("invalid insights range")
+	ErrInvalidDimension = errors.New("invalid public dimension")
+	ErrInvalidSlice     = errors.New("invalid public dimension slice")
+	ErrInvalidChanges   = errors.New("invalid change explorer query")
+	ErrInvalidCursor    = errors.New("invalid change explorer cursor")
 	ErrNotFound         = errors.New("site not found")
 )
 
@@ -27,17 +31,18 @@ type changeContract struct {
 	code     string
 	public   string
 	overview bool
+	category string
 }
 
 var changeContracts = []changeContract{
-	{"ipv6_transition", 2, "ipv6_enabled", "site.ipv6.enabled", true},
-	{"ipv6_transition", 2, "ipv6_disabled", "site.ipv6.disabled", true},
-	{"tls13_transition", 1, "tls13_enabled", "site.tls13.enabled", true},
-	{"tls13_transition", 1, "tls13_disabled", "site.tls13.disabled", true},
-	{"security_txt_transition", 2, "security_txt_added", "site.security_txt.added", true},
-	{"security_txt_transition", 2, "security_txt_removed", "site.security_txt.removed", true},
-	{"primary_target_transition", 1, "primary_target_changed", "site.primary_target.changed", false},
-	{"tls_certificate_transition", 1, "tls_certificate_changed", "site.tls_certificate.changed", false},
+	{"ipv6_transition", 2, "ipv6_enabled", "site.ipv6.enabled", true, "capability"},
+	{"ipv6_transition", 2, "ipv6_disabled", "site.ipv6.disabled", true, "capability"},
+	{"tls13_transition", 1, "tls13_enabled", "site.tls13.enabled", true, "capability"},
+	{"tls13_transition", 1, "tls13_disabled", "site.tls13.disabled", true, "capability"},
+	{"security_txt_transition", 2, "security_txt_added", "site.security_txt.added", true, "capability"},
+	{"security_txt_transition", 2, "security_txt_removed", "site.security_txt.removed", true, "capability"},
+	{"primary_target_transition", 1, "primary_target_changed", "site.primary_target.changed", false, "target"},
+	{"tls_certificate_transition", 1, "tls_certificate_changed", "site.tls_certificate.changed", false, "certificate"},
 }
 
 type Store interface {
@@ -45,9 +50,13 @@ type Store interface {
 	GetSite(context.Context, int64) (*models.SiteRecord, error)
 	GetMetricSummary(context.Context, models.MetricContract) (*models.MetricSummaryRecord, error)
 	ListMetricTrend(context.Context, models.MetricContract, int32) ([]models.MetricTrendRecord, error)
+	ListMetricBreakdown(context.Context, models.MetricContract, models.DimensionContract, time.Time) ([]models.DimensionRecord, error)
+	GetMetricSliceAvailability(context.Context, models.MetricContract, models.DimensionContract, string) (models.DimensionAvailabilityRecord, error)
+	ListMetricSliceTrend(context.Context, models.MetricContract, models.DimensionContract, string, time.Time, int32) ([]models.DimensionTrendRecord, error)
 	GetSiteMetric(context.Context, int64, models.MetricContract) (*models.SiteMetricRecord, error)
 	CountOverviewChanges(context.Context, []string, []string) (int64, error)
 	ListOverviewChanges(context.Context, []string, []string, int32) ([]models.ChangeRecord, error)
+	ListExplorerChanges(context.Context, models.ChangeExplorerConditions) ([]models.ChangeRecord, error)
 	ListSiteChanges(context.Context, models.SiteRecord, []string, []string, int32) ([]models.ChangeRecord, error)
 }
 
