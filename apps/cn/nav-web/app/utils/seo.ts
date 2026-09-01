@@ -18,6 +18,8 @@ type GameDetailSeoInput = {
   locale?: SeoLocale
 }
 
+type InsightsSeoPage = 'overview' | 'sites' | 'games'
+
 const MAX_TITLE_LENGTH = 78
 const MIN_DESCRIPTION_LENGTH = 80
 const MAX_DESCRIPTION_LENGTH = 180
@@ -140,4 +142,39 @@ export function buildGameDetailSeo(input: GameDetailSeoInput): DetailSeo {
       ])
 
   return { title, description }
+}
+
+export function buildInsightsSeo(page: InsightsSeoPage, locale?: SeoLocale): DetailSeo {
+  const en = isEnglish(locale)
+  const copy = en
+    ? {
+        overview: {
+          title: 'Furry Ecosystem Insights - GoFurry',
+          description: 'Explore public metrics and recent changes across the Furry website and game ecosystems, with transparent coverage and historical data availability.'
+        },
+        sites: {
+          title: 'Furry Website Ecosystem Insights - GoFurry',
+          description: 'Follow IPv6, TLS 1.3, and security.txt adoption trends across Furry websites, including coverage, reliable history, and recent public changes.'
+        },
+        games: {
+          title: 'Furry Game Ecosystem Insights - GoFurry',
+          description: 'Explore free-game, Windows, and Linux support trends across Furry games, with coverage, reliable history, and recent ecosystem changes.'
+        }
+      }
+    : {
+        overview: {
+          title: 'Furry 生态洞察 - GoFurry',
+          description: '查看 Furry 网站与游戏生态的公开指标、近期变化、统计覆盖和可靠历史数据，了解生态正在发生什么。'
+        },
+        sites: {
+          title: 'Furry 网站生态洞察 - GoFurry',
+          description: '查看 Furry 网站的 IPv6、TLS 1.3 与 security.txt 采用趋势，以及统计覆盖、可靠历史和近期公开变化。'
+        },
+        games: {
+          title: 'Furry 游戏生态洞察 - GoFurry',
+          description: '查看 Furry 游戏的免费游戏、Windows 与 Linux 支持趋势，以及统计覆盖、可靠历史和近期生态变化。'
+        }
+      }
+
+  return copy[page]
 }

@@ -222,14 +222,10 @@ type NavLink = {
   external?: boolean
 }
 
-const workshopLink = computed<NavLink>(() => (
-  { label: t('sidebar.workshop'), to: localePath('/workshop'), activePath: '/workshop' }
-))
-
 const navLinks = computed<NavLink[]>(() => [
   { label: t('sidebar.nav'), to: localePath('/'), activePath: '/' },
   { label: t('sidebar.games'), to: localePath('/games'), activePath: '/games' },
-  workshopLink.value,
+  { label: t('sidebar.insights'), to: localePath('/insights'), activePath: '/insights' },
   { label: currentLang.value === 'zh' ? '深度兽研' : 'DeepFurry', href: 'https://www.deepfurry.com', external: true },
 ])
 
@@ -288,7 +284,7 @@ function saveMode(value: string) {
 async function switchLang(lang: 'zh' | 'en') {
   const nextPath = switchLocalePath(lang)
   if (nextPath && nextPath !== route.fullPath) {
-    await router.push(nextPath)
+    await router.push({ path: nextPath, query: route.query, hash: route.hash })
   }
   mobileMenuOpen.value = false
 }

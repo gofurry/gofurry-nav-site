@@ -60,6 +60,9 @@ export default defineEventHandler(async (event) => {
   for (const path of [
     '/',
     '/games',
+    '/insights',
+    '/insights/sites',
+    '/insights/games',
     '/steam',
     '/updates',
     '/about',

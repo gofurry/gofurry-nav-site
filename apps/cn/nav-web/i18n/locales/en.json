@@ -117,7 +117,7 @@
     "survey": "DeepFurry",
     "about": "About Us",
     "join": "Join Us",
-    "workshop": "Workshop"
+    "insights": "Insights"
   },
   "footer": {
     "sections": {
@@ -394,7 +394,6 @@
     "action": {
       "shortcutFunction": "Shortcut Functions",
       "dailyGame": "Daily Game",
-      "workshop": "Workshop",
       "oneClickAddToLibrary": "Add to Library",
       "steamOneClickAddRun": "Add to Steam Library & Run",
       "inputAppIDInstallFreeGame": "Enter AppID to install the corresponding free game or app with one click",
@@ -561,31 +560,120 @@
   "siteGroup": {
     "backHome": "Back Home"
   },
-  "workshop": {
-    "eyebrow": "Steam furry games",
-    "title": "Workshop",
-    "description": "This page will host Steam-focused furry game topics, official assets, rankings, and curated entry points. It is now online as the new zone shell, with content capabilities to follow.",
-    "backToGames": "Back to Games",
-    "searchGames": "Search Page",
-    "tabs": {
-      "all": "All",
-      "discussion": "Discussion",
-      "developer": "Developers",
-      "tools": "Tools"
+  "insights": {
+    "nav": {
+      "overview": "Overview",
+      "sites": "Sites",
+      "games": "Games"
     },
-    "cards": {
-      "discovery": {
-        "title": "Game Discovery",
-        "description": "A more stable topic entry built around Steam furry game data."
+    "overview": {
+      "eyebrow": "PUBLIC INSIGHTS",
+      "title": "Insights",
+      "description": "See what is changing across the Furry website and game ecosystems",
+      "sitesCount": "Listed sites",
+      "gamesCount": "Listed games",
+      "changesCount": "Changes in 7 days",
+      "recentTitle": "What changed recently",
+      "recentDescription": "Public changes from the website and game ecosystems",
+      "sitesPreview": "Website ecosystem",
+      "gamesPreview": "Game ecosystem",
+      "viewSites": "Explore website insights",
+      "viewGames": "Explore game insights"
+    },
+    "sites": {
+      "eyebrow": "WEBSITE ECOSYSTEM",
+      "title": "Website Ecosystem Insights",
+      "description": "Follow adoption trends and recent changes in public capabilities across Furry websites"
+    },
+    "games": {
+      "eyebrow": "GAME ECOSYSTEM",
+      "title": "Game Ecosystem Insights",
+      "description": "See how platform support and the share of free Furry games are changing"
+    },
+    "metrics": {
+      "ipv6": {
+        "name": "IPv6",
+        "description": "The share of websites confirmed to have an IPv6 AAAA record."
       },
-      "assets": {
-        "title": "Official Assets",
-        "description": "Future cards will prioritize covers, banners, and media from the official Steam asset table."
+      "tls13": {
+        "name": "TLS 1.3",
+        "description": "The share of websites confirmed to support TLS 1.3 transport."
       },
-      "community": {
-        "title": "Community Links",
-        "description": "Games, creators, communities, and related sites will be connected more naturally here."
+      "security_txt": {
+        "name": "security.txt",
+        "description": "The share of websites confirmed to publish a valid security.txt document."
+      },
+      "free": {
+        "name": "Free games",
+        "description": "The share of listed games currently confirmed to be free."
+      },
+      "windows": {
+        "name": "Windows",
+        "description": "The share of listed games currently confirmed to support Windows."
+      },
+      "linux": {
+        "name": "Linux",
+        "description": "The share of listed games currently confirmed to support Linux."
+      },
+      "asOf": "As of {date}",
+      "deltaUnavailable": "No 30-day comparison"
+    },
+    "trend": {
+      "title": "Historical trend",
+      "value": "Metric value",
+      "coverage": "Coverage",
+      "loading": "Loading trend data"
+    },
+    "ranges": {
+      "30d": "30 days",
+      "90d": "90 days",
+      "all": "All"
+    },
+    "changes": {
+      "site": "Site",
+      "game": "Game",
+      "title": "Recent changes",
+      "events": {
+        "siteIpv6Enabled": "enabled IPv6",
+        "siteIpv6Disabled": "no longer supports IPv6",
+        "siteTls13Enabled": "enabled TLS 1.3",
+        "siteTls13Disabled": "no longer supports TLS 1.3",
+        "siteSecurityTxtAdded": "added security.txt",
+        "siteSecurityTxtRemoved": "removed security.txt",
+        "sitePrimaryTargetChanged": "changed its primary target",
+        "siteTlsCertificateChanged": "changed its TLS certificate",
+        "gameFreeEnabled": "became free to play",
+        "gameFreeDisabled": "became paid",
+        "gameWindowsAdded": "added Windows support",
+        "gameWindowsRemoved": "removed Windows support",
+        "gameLinuxAdded": "added Linux support",
+        "gameLinuxRemoved": "removed Linux support",
+        "gameReleaseAvailable": "became available",
+        "gameReleaseWithdrawn": "was withdrawn",
+        "gameReleaseChanged": "changed its release plan",
+        "gamePriceIncreased": "increased in price",
+        "gamePriceDecreased": "decreased in price",
+        "gamePriceStateChanged": "changed price state",
+        "gamePriceCurrencyChanged": "changed price currency",
+        "gameDiscountStarted": "started a discount",
+        "gameDiscountEnded": "ended a discount",
+        "gameDiscountChanged": "changed its discount",
+        "unknown": "published a change"
       }
+    },
+    "dataInfo": {
+      "title": "About this data",
+      "asOf": "Statistics date",
+      "coverage": "Coverage",
+      "availableFrom": "Reliable data from",
+      "unavailable": "—",
+      "caveat": "Unknown, stale, not-yet-probed, or failed observations are not treated as unsupported. Missing dates are never filled with zero."
+    },
+    "emptyStates": {
+      "unavailable": "Insights data is temporarily unavailable",
+      "trendEmpty": "No historical data is available yet",
+      "trendOne": "Historical data is still accumulating",
+      "changesEmpty": "No recent public changes"
     }
   }
 }

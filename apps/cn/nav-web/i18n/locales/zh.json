@@ -117,7 +117,7 @@
     "survey": "兽圈调研",
     "about": "关于本站",
     "join": "加入我们",
-    "workshop": "兽游工坊"
+    "insights": "洞察"
   },
   "footer": {
     "sections": {
@@ -394,7 +394,6 @@
     "action": {
       "shortcutFunction": "快捷功能",
       "dailyGame": "每日一游",
-      "workshop": "兽游工坊",
       "oneClickAddToLibrary": "一键入库",
       "steamOneClickAddRun": "Steam 一键入库 & 运行",
       "inputAppIDInstallFreeGame": "输入AppID, 一键安装对应免费游戏或应用",
@@ -561,31 +560,120 @@
   "siteGroup": {
     "backHome": "返回首页"
   },
-  "workshop": {
-    "eyebrow": "Steam 兽游情报",
-    "title": "兽游工坊",
-    "description": "这里会承接 Steam 兽游专题、官方静态资源、榜单和专题化入口。当前先作为新专区入口上线，后续逐步补齐内容能力。",
-    "backToGames": "返回游戏页",
-    "searchGames": "搜索兽游",
-    "tabs": {
-      "all": "全部",
-      "discussion": "讨论",
-      "developer": "开发者",
-      "tools": "工具"
+  "insights": {
+    "nav": {
+      "overview": "生态概览",
+      "sites": "网站生态",
+      "games": "游戏生态"
     },
-    "cards": {
-      "discovery": {
-        "title": "作品发现",
-        "description": "围绕 Steam 兽游数据沉淀更稳定的专题入口。"
+    "overview": {
+      "eyebrow": "PUBLIC INSIGHTS",
+      "title": "洞察",
+      "description": "看见 Furry 网站与游戏生态正在发生什么",
+      "sitesCount": "收录网站",
+      "gamesCount": "收录游戏",
+      "changesCount": "近 7 天变化",
+      "recentTitle": "最近发生了什么",
+      "recentDescription": "来自网站与游戏生态的公开变化",
+      "sitesPreview": "网站生态",
+      "gamesPreview": "游戏生态",
+      "viewSites": "查看网站生态",
+      "viewGames": "查看游戏生态"
+    },
+    "sites": {
+      "eyebrow": "WEBSITE ECOSYSTEM",
+      "title": "网站生态洞察",
+      "description": "了解 Furry 网站公开技术能力的采用趋势与近期变化"
+    },
+    "games": {
+      "eyebrow": "GAME ECOSYSTEM",
+      "title": "游戏生态洞察",
+      "description": "了解 Furry 游戏的平台支持与免费游戏比例如何变化"
+    },
+    "metrics": {
+      "ipv6": {
+        "name": "IPv6",
+        "description": "能够确认具有 IPv6 AAAA 记录的网站比例。"
       },
-      "assets": {
-        "title": "官方资源",
-        "description": "后续优先展示来自 Steam 官方资源表的封面、横幅和媒体资产。"
+      "tls13": {
+        "name": "TLS 1.3",
+        "description": "能够确认支持 TLS 1.3 安全传输的网站比例。"
       },
-      "community": {
-        "title": "社群关联",
-        "description": "把游戏、创作者、社区和相关站点更自然地组织在一起。"
+      "security_txt": {
+        "name": "security.txt",
+        "description": "能够确认发布有效 security.txt 文档的网站比例。"
+      },
+      "free": {
+        "name": "免费游戏",
+        "description": "当前能够确认属于免费游戏的已收录游戏比例。"
+      },
+      "windows": {
+        "name": "Windows",
+        "description": "当前能够确认支持 Windows 的已收录游戏比例。"
+      },
+      "linux": {
+        "name": "Linux",
+        "description": "当前能够确认支持 Linux 的已收录游戏比例。"
+      },
+      "asOf": "统计日期 {date}",
+      "deltaUnavailable": "暂无 30 天对比"
+    },
+    "trend": {
+      "title": "历史趋势",
+      "value": "指标值",
+      "coverage": "统计覆盖",
+      "loading": "正在读取趋势数据"
+    },
+    "ranges": {
+      "30d": "30 天",
+      "90d": "90 天",
+      "all": "全部"
+    },
+    "changes": {
+      "site": "网站",
+      "game": "游戏",
+      "title": "近期变化",
+      "events": {
+        "siteIpv6Enabled": "启用了 IPv6",
+        "siteIpv6Disabled": "不再支持 IPv6",
+        "siteTls13Enabled": "启用了 TLS 1.3",
+        "siteTls13Disabled": "不再支持 TLS 1.3",
+        "siteSecurityTxtAdded": "新增了 security.txt",
+        "siteSecurityTxtRemoved": "移除了 security.txt",
+        "sitePrimaryTargetChanged": "更新了主要访问目标",
+        "siteTlsCertificateChanged": "TLS 证书发生变化",
+        "gameFreeEnabled": "变为免费游戏",
+        "gameFreeDisabled": "变为付费游戏",
+        "gameWindowsAdded": "新增 Windows 支持",
+        "gameWindowsRemoved": "移除 Windows 支持",
+        "gameLinuxAdded": "新增 Linux 支持",
+        "gameLinuxRemoved": "移除 Linux 支持",
+        "gameReleaseAvailable": "现已可以游玩",
+        "gameReleaseWithdrawn": "已停止提供",
+        "gameReleaseChanged": "发行计划发生变化",
+        "gamePriceIncreased": "价格上涨",
+        "gamePriceDecreased": "价格下降",
+        "gamePriceStateChanged": "价格状态发生变化",
+        "gamePriceCurrencyChanged": "计价货币发生变化",
+        "gameDiscountStarted": "开始折扣",
+        "gameDiscountEnded": "折扣结束",
+        "gameDiscountChanged": "折扣发生变化",
+        "unknown": "发生了一项公开变化"
       }
+    },
+    "dataInfo": {
+      "title": "关于这个数据",
+      "asOf": "统计日期",
+      "coverage": "统计覆盖",
+      "availableFrom": "可靠数据始于",
+      "unavailable": "—",
+      "caveat": "未知、陈旧、尚未探测或探测失败的数据不会被视为“不支持”。缺失日期不会被补零。"
+    },
+    "emptyStates": {
+      "unavailable": "洞察数据暂不可用",
+      "trendEmpty": "暂无可用历史数据",
+      "trendOne": "正在积累历史数据",
+      "changesEmpty": "近期暂无可展示变化"
     }
   }
 }

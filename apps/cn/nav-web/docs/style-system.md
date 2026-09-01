@@ -151,9 +151,9 @@ Token 分三层：
 - `/games/prize/activation?status=success`：中文亮色、中文暗色、移动 `390x844`。
 - `/games/search`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/en/games/search`：英文亮色、英文暗色、桌面 `1440x900`、移动 `390x844`。
+- `/insights`、`/insights/sites`、`/insights/games`：中文亮色、中文暗色、桌面 `1440x900`、移动 `390x844`。
 - `/about`、`/en/about`：亮色、暗色、桌面 `1440x900`、移动 `390x844`。
 - `/updates`、`/en/updates`：亮色、暗色、桌面 `1440x900`、移动 `390x844`。
-- `/steam`：兽游专区，亮色、暗色、桌面 `1440x900`、移动 `390x844`。
 - `/terms`、`/privacy`、`/en/terms`、`/en/privacy`：亮色、暗色、移动 `390x844`。
 
 自动截图入口：

@@ -8,6 +8,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add SSR-rendered bilingual Public Insights overview, website ecosystem, and game ecosystem pages with metric cards, an ECharts trend view, coverage disclosure, and recent public changes.
+- Add focused Insights route, Workshop 404, URL interaction, null/error semantic, and responsive smoke coverage plus Insights visual-guard scenarios.
 - Add Nav and Game Public Insights overview, trend, entity, player, and CN price APIs with explicit public-to-internal version mappings and correctness regression coverage.
 - Add the final Admin Vue-to-React functional parity matrix, embedded SPA routing regression coverage, and Owner/Developer/Operator guide.
 - Add native React Collection, Metrics, and Change Centers with capability-aware controls, count-backed history/explorers, operational charts, and technical contract views.
@@ -23,6 +25,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Changed
 
+- Replace the legacy GoFurry Workshop navigation and pages with Insights, leaving old zh/en Workshop URLs as ordinary 404 responses.
 - Make React the sole Admin production frontend, write its clean Vite build directly to the Go embed directory, and remove the Vue build/cache path from CI.
 - Restore searchable Resource Engine remote options plus Collection chart/history/result filters found by the final parity audit.
 - Change Admin bootstrap/login from a singleton password to canonical username, display name, and password while preserving the legacy account password and timestamps during migration.

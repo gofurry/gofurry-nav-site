@@ -25,6 +25,7 @@ import type {
   SearchPageResponse
 } from '~/types/game'
 import type { ApiResult } from '~/types/api'
+import type { GameInsightMetricKey, InsightMetricTrend, InsightOverview, InsightRange } from '~/types/insights'
 
 export interface GameHomeData {
   mainInfo: GameGroupRecord
@@ -135,6 +136,14 @@ export function commitComment(query: CommentReq): Promise<ApiResult<string>> {
 
 export function getLottery(): Promise<LotteryResp> {
   return useApi('gameV2')('/game/prizes')
+}
+
+export function getGameInsightsOverview(): Promise<InsightOverview> {
+  return useApi('gameV2')('/game/insights/overview')
+}
+
+export function getGameInsightsTrend(metric: GameInsightMetricKey, range: InsightRange): Promise<InsightMetricTrend> {
+  return useApi('gameV2')(`/game/insights/metrics/${metric}/trend`, { query: { range } })
 }
 
 export function getLotteryParticipation(query: LotteryReq): Promise<ApiResult<string>> {
