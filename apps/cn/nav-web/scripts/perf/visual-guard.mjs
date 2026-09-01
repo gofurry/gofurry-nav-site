@@ -12,6 +12,8 @@ import {
 
 const args = parseArgs()
 const baseUrl = normalizeBaseUrl(args['base-url'] || process.env.PERF_BASE_URL || 'http://localhost:3000')
+const entitySiteId = args['entity-site-id'] || process.env.INSIGHTS_SITE_ID || '1'
+const entityGameId = args['entity-game-id'] || process.env.INSIGHTS_GAME_ID || '1'
 const outputName = `visual-${new Date().toISOString().replace(/[:.]/g, '-')}`
 const outputDir = path.join(reportsDir, outputName)
 
@@ -95,6 +97,16 @@ const visualScenarios = [
     optionalDataSelectors: ['.game-detail-sidebar-card', '.game-detail-tag', '.game-detail-similar-item']
   }),
   ...makePageScenarios({
+    id: 'game-entity-insights',
+    label: '游戏实体洞察',
+    path: `/games/${entityGameId}`,
+    locale: 'zh-CN',
+    rootSelector: '.game-detail-page',
+    requiredSelectors: ['.game-detail-page', '[data-game-tab="insights"]', '[data-game-insights]', '[data-player-history]', '[data-price-history]'],
+    optionalDataSelectors: ['[data-game-summary]', '[data-entity-timeline]'],
+    action: 'open-game-insights'
+  }),
+  ...makePageScenarios({
     id: 'lottery',
     label: '游戏抽奖页',
     path: '/games/prize',
@@ -158,6 +170,15 @@ const visualScenarios = [
     rootSelector: '.insights-domain-page',
     requiredSelectors: ['.insights-page', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-data-info'],
     optionalDataSelectors: ['.insights-change']
+  }),
+  ...makePageScenarios({
+    id: 'site-entity-insights',
+    label: '网站实体洞察',
+    path: `/site/${entitySiteId}`,
+    locale: 'zh-CN',
+    rootSelector: '.site-detail-page',
+    requiredSelectors: ['.site-detail-page', '[data-site-insights]', '[data-entity-timeline]'],
+    optionalDataSelectors: ['.site-insights-capability']
   }),
   ...makePageScenarios({
     id: 'about',
@@ -492,6 +513,12 @@ async function performScenarioAction(page, scenario) {
     await page.waitForSelector('.nav-content', { timeout: 5000 }).catch(() => {})
     await page.waitForTimeout(1800)
     return
+  }
+
+  if (scenario.action === 'open-game-insights') {
+    await page.locator('[data-game-tab="insights"]').click()
+    await page.waitForSelector('[data-game-insights]', { timeout: 5000 })
+    await page.waitForTimeout(500)
   }
 
 }

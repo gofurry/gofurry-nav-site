@@ -35,6 +35,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import type { InsightFeedItem } from '@/types/insights'
+import { formatInsightChangeWhen, insightChangeI18nKey } from '@/utils/insightChanges'
 import { siteDetailPath } from '@/utils/siteRoutes'
 
 defineProps<{
@@ -45,36 +46,8 @@ defineProps<{
 const localePath = useLocalePath()
 const { locale, t } = useI18n()
 
-const knownEvents: Record<string, string> = {
-  'site.ipv6.enabled': 'siteIpv6Enabled',
-  'site.ipv6.disabled': 'siteIpv6Disabled',
-  'site.tls13.enabled': 'siteTls13Enabled',
-  'site.tls13.disabled': 'siteTls13Disabled',
-  'site.security_txt.added': 'siteSecurityTxtAdded',
-  'site.security_txt.removed': 'siteSecurityTxtRemoved',
-  'site.primary_target.changed': 'sitePrimaryTargetChanged',
-  'site.tls_certificate.changed': 'siteTlsCertificateChanged',
-  'game.free.enabled': 'gameFreeEnabled',
-  'game.free.disabled': 'gameFreeDisabled',
-  'game.windows.added': 'gameWindowsAdded',
-  'game.windows.removed': 'gameWindowsRemoved',
-  'game.linux.added': 'gameLinuxAdded',
-  'game.linux.removed': 'gameLinuxRemoved',
-  'game.release.available': 'gameReleaseAvailable',
-  'game.release.withdrawn': 'gameReleaseWithdrawn',
-  'game.release.changed': 'gameReleaseChanged',
-  'game.price.increased': 'gamePriceIncreased',
-  'game.price.decreased': 'gamePriceDecreased',
-  'game.price.state_changed': 'gamePriceStateChanged',
-  'game.price.currency_changed': 'gamePriceCurrencyChanged',
-  'game.discount.started': 'gameDiscountStarted',
-  'game.discount.ended': 'gameDiscountEnded',
-  'game.discount.changed': 'gameDiscountChanged',
-}
-
 function eventLabel(type: string) {
-  const key = knownEvents[type]
-  return key ? t(`insights.changes.events.${key}`) : t('insights.changes.events.unknown')
+  return t(insightChangeI18nKey(type))
 }
 
 function entityPath(item: InsightFeedItem) {
@@ -82,12 +55,6 @@ function entityPath(item: InsightFeedItem) {
 }
 
 function formatWhen(item: InsightFeedItem) {
-  if (!item.occurred_at) return item.date
-  const value = new Date(item.occurred_at)
-  if (Number.isNaN(value.getTime())) return item.date
-  return new Intl.DateTimeFormat(locale.value === 'en' ? 'en-US' : 'zh-CN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(value)
+  return formatInsightChangeWhen(item, locale.value)
 }
 </script>

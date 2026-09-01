@@ -25,7 +25,15 @@ import type {
   SearchPageResponse
 } from '~/types/game'
 import type { ApiResult } from '~/types/api'
-import type { GameInsightMetricKey, InsightMetricTrend, InsightOverview, InsightRange } from '~/types/insights'
+import type {
+  GameInsightMetricKey,
+  GameInsightPlayerHistory,
+  GameInsightPriceHistory,
+  GameInsights,
+  InsightMetricTrend,
+  InsightOverview,
+  InsightRange,
+} from '~/types/insights'
 
 export interface GameHomeData {
   mainInfo: GameGroupRecord
@@ -144,6 +152,18 @@ export function getGameInsightsOverview(): Promise<InsightOverview> {
 
 export function getGameInsightsTrend(metric: GameInsightMetricKey, range: InsightRange): Promise<InsightMetricTrend> {
   return useApi('gameV2')(`/game/insights/metrics/${metric}/trend`, { query: { range } })
+}
+
+export function getGameInsights(gameId: string | number): Promise<GameInsights> {
+  return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights`)
+}
+
+export function getGameInsightPlayers(gameId: string | number, range: InsightRange): Promise<GameInsightPlayerHistory> {
+  return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights/players`, { query: { range } })
+}
+
+export function getGameInsightPrices(gameId: string | number, range: InsightRange): Promise<GameInsightPriceHistory> {
+  return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights/prices`, { query: { range } })
 }
 
 export function getLotteryParticipation(query: LotteryReq): Promise<ApiResult<string>> {

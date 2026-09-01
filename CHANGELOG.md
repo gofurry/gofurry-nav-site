@@ -8,6 +8,9 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add SSR-isolated Site Entity Insights with exact seven-state capability rendering, same-day ecosystem context, semantic timelines, and links back to website ecosystem Insights.
+- Add a Game Detail Insights tab with SSR summary data, lazy player/CN-price histories, shared 30d/90d/all selection, page-lifecycle range caching, independent retry states, and entity timelines.
+- Add regression coverage for nullable/zero player semantics, free versus priced-zero versus unavailable prices, day/exact event precision, entity failure isolation, target-route boundaries, and entity visual scenarios.
 - Add SSR-rendered bilingual Public Insights overview, website ecosystem, and game ecosystem pages with metric cards, an ECharts trend view, coverage disclosure, and recent public changes.
 - Add focused Insights route, Workshop 404, URL interaction, null/error semantic, and responsive smoke coverage plus Insights visual-guard scenarios.
 - Add Nav and Game Public Insights overview, trend, entity, player, and CN price APIs with explicit public-to-internal version mappings and correctness regression coverage.
@@ -36,6 +39,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Detect Site target child routes from the `domain` route parameter so localized `/en/site/:id` pages retain their Site-level Insights SSR panel.
 - Require explicit impact confirmation for collection cancellation and schedule state changes while preserving the existing control-plane semantics.
 - Correct the React Data Operations capability from `data_ops.read` to canonical `dataops.read` and explicitly reject the legacy alias in regression tests.
 - Preserve `schedule_id` and `schedule_version` on Schedule Run Now jobs without creating or moving a scheduled slot, and report unavailable coverage as null rather than 0%.

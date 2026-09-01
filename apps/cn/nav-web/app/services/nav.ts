@@ -12,7 +12,7 @@ import type {
   Site,
   SiteViewResponse,
 } from '~/types/nav'
-import type { InsightMetricTrend, InsightOverview, InsightRange, NavInsightMetricKey } from '~/types/insights'
+import type { InsightMetricTrend, InsightOverview, InsightRange, NavInsightMetricKey, SiteInsights } from '~/types/insights'
 
 export function getNavHome(lang: string): Promise<NavHomeResponse> {
   return useApi('navV2')('/nav/home', { query: { lang } })
@@ -64,4 +64,8 @@ export function getNavInsightsOverview(): Promise<InsightOverview> {
 
 export function getNavInsightsTrend(metric: NavInsightMetricKey, range: InsightRange): Promise<InsightMetricTrend> {
   return useApi('navV2')(`/nav/insights/metrics/${metric}/trend`, { query: { range } })
+}
+
+export function getSiteInsights(siteId: string | number): Promise<SiteInsights> {
+  return useApi('navV2')(`/nav/sites/${encodeURIComponent(String(siteId))}/insights`)
 }
