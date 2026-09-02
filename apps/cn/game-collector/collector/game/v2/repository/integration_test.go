@@ -297,8 +297,8 @@ SET source_start_date=$1::date,processed_through=NULL,updated_at=$2;
 	if err := engine.ValidateCatalog(ctx); err != nil {
 		t.Fatalf("Game registry/evaluator drift: %v", err)
 	}
-	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_registry`, 3)
-	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_checkpoints`, 3)
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_registry`, 4)
+	assertCount(t, ctx, pool, `SELECT count(*) FROM gfg_metric_checkpoints`, 4)
 
 	// Two contenders serialize on the per-version checkpoint; exactly one can
 	// advance the only upstream-ready day.
