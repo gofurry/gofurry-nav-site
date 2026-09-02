@@ -304,7 +304,8 @@ VALUES
     (99001,91001,92001,$2::date - 1,0,0,0,0,1,1,0,0,'{}','legacy_observed_only',1,$1),
     (99001,91001,92001,$2::date, NULL,NULL,NULL,NULL,1,0,0,1,'{"request_failed":1}','legacy_observed_only',1,$1);
 UPDATE gfg_fact_rollup_checkpoints
-SET processed_through = $2::date,
+SET source_start_date = $2::date - 1,
+    processed_through = $2::date,
     updated_at = $1
 WHERE pipeline_key = 'game.player_facts';
 INSERT INTO gfg_game_price_daily
