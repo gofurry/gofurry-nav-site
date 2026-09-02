@@ -6,6 +6,63 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.6 - 2026-09-03
+
+### Added
+
+- Add V3-P2.4 order-preserving Site and Game Entity Compare APIs and SSR product pages for bounded 2–4 entity cohorts, without scores, rankings, winners, or recommendations.
+- Add common-snapshot Site capability/certificate comparison and separately disclosed Game state, scheduled-player, 30-day player-quality, regional-price, observed-low, and language horizons.
+- Add Compare unit, route, PostgreSQL, URL-state, semantic, SSR, and CI regression coverage, including real-zero versus unavailable players and free versus priced-zero safeguards.
+- Add V3-P2.3 Site Capability Intelligence with version-frozen HTTP/2, HSTS, enforcement CSP, and TLS certificate-verification Metrics plus same-Primary-Target semantic Change detectors.
+- Add the bounded certificate overview API and bilingual `/insights/sites/certificates` product surface with common fact-day horizon, deterministic expiry buckets, attention lists, and public verification-issue whitelisting.
+- Add focused PostgreSQL projection, Metric-before-Change backfill/rebuild, certificate read-model, route, SSR/typecheck/build, Goose, sqlc, and query-plan regression coverage.
+- Add V3-P2.2 Game Intelligence: scheduled Player rankings and quality-aware 30-day peak/weighted-average read models, CN/US/HK price overview/discount APIs, region-aware histories, and bounded GoFurry Observed Low semantics.
+- Add `mac_support/1` and `mac_support_transition/1` Goose contracts, compiled Metric/Change projectors, global/primary-tag/tag slices, entity state, public platform changes, and explicit Metric-before-Change backfill support.
+- Add common-snapshot Supported Languages and Explicit Full-Audio distributions with freshness and normalization-quality disclosure, without fuzzy-mapping unknown language names.
+- Add SSR Game Intelligence Players, Prices, and Languages pages plus local navigation, regional Game Detail summaries, region+range price caching, currency-separated chart history, and bilingual responsive coverage.
+- Add Public Insights dimension breakdown and selected-slice trend APIs for Site country/group/content/public-interest and Game primary/all-tag dimensions, with frozen global horizons, null-safe public mathematics, overlapping-slice disclosure, and metadata fallbacks.
+- Add the domain-specific Change Explorer APIs and `/insights/changes` product flow with public category/type filters, projection-date ranges, precision-aware opaque keyset cursors, CN-only Game price/discount scope, SSR first pages, and client Load More.
+- Add independent Nuxt dimension URL state, SSR/deferred slice loading, responsive bilingual dimension tables/charts, Explorer filters, semantic regression coverage, and visual-guard scenarios.
+- Add SSR-isolated Site Entity Insights with exact seven-state capability rendering, same-day ecosystem context, semantic timelines, and links back to website ecosystem Insights.
+- Add a Game Detail Insights tab with SSR summary data, lazy player/CN-price histories, shared 30d/90d/all selection, page-lifecycle range caching, independent retry states, and entity timelines.
+- Add regression coverage for nullable/zero player semantics, free versus priced-zero versus unavailable prices, day/exact event precision, entity failure isolation, target-route boundaries, and entity visual scenarios.
+- Add SSR-rendered bilingual Public Insights overview, website ecosystem, and game ecosystem pages with metric cards, an ECharts trend view, coverage disclosure, and recent public changes.
+- Add focused Insights route, Workshop 404, URL interaction, null/error semantic, and responsive smoke coverage plus Insights visual-guard scenarios.
+- Add Nav and Game Public Insights overview, trend, entity, player, and CN price APIs with explicit public-to-internal version mappings and correctness regression coverage.
+- Add the final Admin Vue-to-React functional parity matrix, embedded SPA routing regression coverage, and Owner/Developer/Operator guide.
+- Add native React Collection, Metrics, and Change Centers with capability-aware controls, count-backed history/explorers, operational charts, and technical contract views.
+- Add a capability-shaped Workbench Attention projection, read-only three-database Data Operations health center, filtered/redacted Audit explorer, and Owner account-governance UI.
+- Add static PostgreSQL metadata, Goose state, bounded relation-size, audit-pagination, and Workbench aggregation APIs with PostgreSQL integration coverage.
+- Add the React 19 Admin foundation with strict TypeScript, Tailwind v4 semantic themes, Base UI/shadcn-style primitives, TanStack Query/Table, React Hook Form/Zod, and capability-aware navigation.
+- Add schema-driven React CRUD for sayings, update notices, Site groups, tags, comments, and prizes; add first-class Site and Game content workspaces plus global Site/Game/Tag/Group search.
+- Add minimal sqlc-backed Site/Game workspace read models and Site list summaries without changing authentication, collection, Metric, or Change semantics.
+- Add multi-account Admin identity, database-backed Principal validation, fixed Owner/Developer/Operator capability RBAC, Owner-only account management APIs, and transaction-safe last-Owner protection.
+- Add durable audit identity snapshots plus migration, authorization, session invalidation, route enforcement, and PostgreSQL concurrency coverage.
+- Add `ipv6_adoption/2` and `security_txt_adoption/2` with matching v2 Change detectors while retaining published v1 contracts for explicit historical rebuild.
+- Add CI-enforced PostgreSQL integration coverage for Game/Nav Change engines and Admin collection operations.
+
+### Changed
+
+- Replace the legacy GoFurry Workshop navigation and pages with Insights, leaving old zh/en Workshop URLs as ordinary 404 responses.
+- Make React the sole Admin production frontend, write its clean Vite build directly to the Go embed directory, and remove the Vue build/cache path from CI.
+- Restore searchable Resource Engine remote options plus Collection chart/history/result filters found by the final parity audit.
+- Change Admin bootstrap/login from a singleton password to canonical username, display name, and password while preserving the legacy account password and timestamps during migration.
+- Keep JWTs role-free and resolve current role, status, session version, and capabilities from `gfa` on every authenticated request; minimally update the existing Vue login/setup compatibility surface.
+- Preserve per-query AAAA evidence and validate security.txt content before treating either capability as adopted; inconclusive DNS and unrecognized documents remain unknown instead of becoming false or positive.
+- Add count-backed pagination and compact detail views to Metric Daily/Entity results, Collection Run/Task history, and Collector lifecycle views.
+- Replace manual collection database-ID entry with searchable Game, Site, and current Site Target selectors.
+
+### Fixed
+
+- Align Admin migration catalogs and Nav Metric registry/checkpoint integration expectations with the P2.2/P2.3 Goose contracts.
+- Detect Site target child routes from the `domain` route parameter so localized `/en/site/:id` pages retain their Site-level Insights SSR panel.
+- Require explicit impact confirmation for collection cancellation and schedule state changes while preserving the existing control-plane semantics.
+- Correct the React Data Operations capability from `data_ops.read` to canonical `dataops.read` and explicitly reject the legacy alias in regression tests.
+- Preserve `schedule_id` and `schedule_version` on Schedule Run Now jobs without creating or moving a scheduled slot, and report unavailable coverage as null rather than 0%.
+- Separate current and historical Collector instances, clarify chart timing units and spacing, and keep Task Result details within the viewport.
+
+## v3.0.0-alpha.5 - 2026-08-30
+
 ### Added
 
 - Add Goose-owned versioned Game/Nav change registries, deterministic canonical event stores, and independent per-detector-version checkpoints.

@@ -97,6 +97,11 @@ type EntityPage struct {
 	List  []Entity `json:"list"`
 }
 
+type DailyPage struct {
+	Total int64   `json:"total"`
+	List  []Daily `json:"list"`
+}
+
 type Filters struct {
 	Domain         string
 	MetricKey      string

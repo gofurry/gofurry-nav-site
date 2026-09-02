@@ -56,11 +56,26 @@ WHERE fact_date = sqlc.arg(fact_date)
   AND tracked_at_end;
 
 -- name: ProjectNavMetricDay :one
-SELECT gfn_project_metric_day(
-    sqlc.arg(metric_key)::text,
-    sqlc.arg(metric_version)::integer,
-    sqlc.arg(fact_date)::date
-)::bigint;
+SELECT CASE
+    WHEN sqlc.arg(metric_version)::integer = 2 THEN gfn_project_metric_day_v2(
+        sqlc.arg(metric_key)::text,
+        sqlc.arg(metric_version)::integer,
+        sqlc.arg(fact_date)::date
+    )
+    WHEN sqlc.arg(metric_key)::text IN (
+        'http2_adoption', 'hsts_adoption', 'csp_adoption',
+        'tls_certificate_verification'
+    ) THEN gfn_project_site_capability_metric_day(
+        sqlc.arg(metric_key)::text,
+        sqlc.arg(metric_version)::integer,
+        sqlc.arg(fact_date)::date
+    )
+    ELSE gfn_project_metric_day(
+        sqlc.arg(metric_key)::text,
+        sqlc.arg(metric_version)::integer,
+        sqlc.arg(fact_date)::date
+    )
+END::bigint;
 
 -- name: AdvanceNavMetricCheckpoint :execrows
 UPDATE gfn_metric_checkpoints

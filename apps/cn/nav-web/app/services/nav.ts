@@ -12,6 +12,21 @@ import type {
   Site,
   SiteViewResponse,
 } from '~/types/nav'
+import type {
+  CertificateInsightOverview,
+  InsightChangeExplorerPage,
+  InsightChangeRange,
+  InsightDimensionBreakdown,
+  InsightDimensionTrend,
+  InsightMetricTrend,
+  InsightOverview,
+  InsightRange,
+  NavInsightMetricKey,
+  SiteInsightChangeCategory,
+  SiteInsightDimension,
+  SiteInsights,
+  SiteCompare,
+} from '~/types/insights'
 
 export function getNavHome(lang: string): Promise<NavHomeResponse> {
   return useApi('navV2')('/nav/home', { query: { lang } })
@@ -55,4 +70,42 @@ export function getSearchSuggestion(
 
 export function getNavUpdates(lang: 'zh' | 'en'): Promise<NavUpdatesResponse> {
   return useApi('navV2')('/nav/updates', { query: { lang } })
+}
+
+export function getNavInsightsOverview(): Promise<InsightOverview> {
+  return useApi('navV2')('/nav/insights/overview')
+}
+
+export function getNavInsightsTrend(metric: NavInsightMetricKey, range: InsightRange): Promise<InsightMetricTrend> {
+  return useApi('navV2')(`/nav/insights/metrics/${metric}/trend`, { query: { range } })
+}
+
+export function getNavInsightsBreakdown(metric: NavInsightMetricKey, dimension: SiteInsightDimension): Promise<InsightDimensionBreakdown> {
+  return useApi('navV2')(`/nav/insights/metrics/${metric}/breakdown`, { query: { dimension } })
+}
+
+export function getNavInsightsSliceTrend(metric: NavInsightMetricKey, dimension: SiteInsightDimension, value: string, range: InsightRange): Promise<InsightDimensionTrend> {
+  return useApi('navV2')(`/nav/insights/metrics/${metric}/breakdown/${dimension}/${encodeURIComponent(value)}/trend`, { query: { range } })
+}
+
+export function getNavInsightChanges(query: {
+  range: InsightChangeRange
+  category?: SiteInsightChangeCategory | ''
+  type?: string
+  cursor?: string
+  limit?: number
+}): Promise<InsightChangeExplorerPage> {
+  return useApi('navV2')('/nav/insights/changes', { query })
+}
+
+export function getNavCertificateInsightsOverview(limit = 20): Promise<CertificateInsightOverview> {
+  return useApi('navV2')('/nav/insights/certificates/overview', { query: { limit } })
+}
+
+export function getSiteCompare(ids: number[]): Promise<SiteCompare> {
+  return useApi('navV2')('/nav/insights/compare', { query: { ids: ids.join(',') } })
+}
+
+export function getSiteInsights(siteId: string | number): Promise<SiteInsights> {
+  return useApi('navV2')(`/nav/sites/${encodeURIComponent(String(siteId))}/insights`)
 }

@@ -1,0 +1,207 @@
+# Public Insights contract
+
+Public Insights is the stable product read layer over finalized P0 Historical Facts, Analytics Metrics, and Change Intelligence. Nav Backend owns Nav responses; Game Backend owns Game responses. The response body uses each backend's existing `{ "code", "data" }` envelope.
+
+## Endpoints
+
+Nav:
+
+- `GET /api/v2/nav/insights/overview`
+- `GET /api/v2/nav/insights/metrics/:metricKey/trend?range=30d|90d|all`
+- `GET /api/v2/nav/insights/metrics/:metricKey/breakdown?dimension=country|group|nsfw|public_interest`
+- `GET /api/v2/nav/insights/metrics/:metricKey/breakdown/:dimension/:value/trend?range=30d|90d|all`
+- `GET /api/v2/nav/insights/changes?range=7d|30d|90d|all&category=&type=&cursor=&limit=`
+- `GET /api/v2/nav/insights/certificates/overview?limit=20`
+- `GET /api/v2/nav/insights/compare?ids=1,2,3,4`
+- `GET /api/v2/nav/sites/:siteId/insights`
+
+Game:
+
+- `GET /api/v2/game/insights/overview`
+- `GET /api/v2/game/insights/metrics/:metricKey/trend?range=30d|90d|all`
+- `GET /api/v2/game/insights/metrics/:metricKey/breakdown?dimension=primary_tag|tag`
+- `GET /api/v2/game/insights/metrics/:metricKey/breakdown/:dimension/:value/trend?range=30d|90d|all`
+- `GET /api/v2/game/insights/changes?range=7d|30d|90d|all&category=&type=&cursor=&limit=`
+- `GET /api/v2/game/insights/players/ranking?metric=latest_observed|peak_30d|average_30d&limit=20`
+- `GET /api/v2/game/insights/prices/overview?region=CN|US|HK`
+- `GET /api/v2/game/insights/prices/discounts?region=CN|US|HK&limit=20`
+- `GET /api/v2/game/insights/languages/overview`
+- `GET /api/v2/game/insights/compare?ids=1,2,3,4&region=CN|US|HK`
+- `GET /api/v2/game/games/:gameId/insights`
+- `GET /api/v2/game/games/:gameId/insights/players?range=30d|90d|all`
+- `GET /api/v2/game/games/:gameId/insights/prices?region=CN|US|HK&range=30d|90d|all`
+
+Normal and empty results return 200. Invalid metric keys or ranges return 400, missing entities return 404, and genuine backend failures return 500.
+
+## Metric contracts
+
+Public keys are deliberately mapped to one reviewed internal version:
+
+| Domain | Public key | Internal contract |
+|---|---|---|
+| Nav | `ipv6` | `ipv6_adoption/2` |
+| Nav | `tls13` | `tls13_adoption/1` |
+| Nav | `http2` | `http2_adoption/1` |
+| Nav | `hsts` | `hsts_adoption/1` |
+| Nav | `csp` | `csp_adoption/1` |
+| Nav | `security_txt` | `security_txt_adoption/2` |
+| Nav | `certificate_verified` | `tls_certificate_verification/1` |
+| Game | `free` | `free_game_share/1` |
+| Game | `windows` | `windows_support/1` |
+| Game | `mac` | `mac_support/1` |
+| Game | `linux` | `linux_support/1` |
+
+Registry `active` state does not select a public version. Adding or activating an internal version does not change Public Insights until this mapping and its regression tests are deliberately updated.
+
+Metric mathematics preserves the P0 contract:
+
+```text
+known    = positive_count + negative_count
+value    = positive_count / known
+coverage = known / eligible_count
+```
+
+A zero denominator produces `null`. `delta_30d` compares the current value with the same public contract exactly 30 calendar days earlier; it is `null` if that exact reliable date or either value is unavailable. Each metric carries its own `as_of` and `available_from`.
+
+Trends accept only `30d`, `90d`, and `all`. Points are real reliable rows for the mapped version. Missing days are not zero-filled, values are not copied backward, and versions are not stitched together. Empty history uses null availability fields and `points: []`.
+
+## Dimension contract
+
+Public dimension names are an anti-corruption mapping; internal keys never appear in a Public Insights response or URL.
+
+| Domain | Public dimension | Internal dimension | Slice mode |
+|---|---|---|---|
+| Nav | `country` | `site_country` | `partition` |
+| Nav | `group` | `group_id` | `overlapping` |
+| Nav | `nsfw` | `nsfw` | `partition` |
+| Nav | `public_interest` | `welfare` | `partition` |
+| Game | `primary_tag` | `primary_tag_id` | `partition` |
+| Game | `tag` | `tag_id` | `overlapping` |
+
+`overlapping` means one entity may appear in multiple slices. Overlapping slice populations must never be added to derive the global population. Breakdown responses state `slice_mode` explicitly.
+
+Every breakdown first resolves the mapped metric version's newest `global/all` row and freezes its `fact_date` as `as_of`. It then reads all requested dimension rows on exactly that date; individual slices never choose their own latest date. Each slice returns `population`, `eligible`, `known`, `metric_value`, and `coverage`, using the same public mathematics as the global metric. Zero denominators remain `null`, small slices are not hidden, and the `unknown` slice is retained.
+
+Country identity is its stored country code and has no backend dictionary. Public boolean identities are:
+
+| Public dimension | Internal value | Public value |
+|---|---|---|
+| `nsfw` | `true` | `nsfw` |
+| `nsfw` | `false` | `sfw` |
+| `public_interest` | `true` | `public_interest` |
+| `public_interest` | `false` | `standard` |
+
+Internal `unknown` remains public `unknown`. Tag and Group identity is the stable numeric ID; labels are current display metadata loaded with a `LEFT JOIN`. Missing metadata does not remove a historical slice and falls back to `标签 #ID` / `Tag #ID` or `分组 #ID` / `Group #ID`.
+
+Selected-slice trends use the current global metric horizon as their range anchor, not the slice's newest row. `as_of` is that global horizon. `available_from` and `available_through` separately describe the selected slice's actual history. A valid slice with no rows returns 200 with `points: []`; missing dates remain absent and no retired/current versions are combined.
+
+## Entity states
+
+| Internal state | Public state |
+|---|---|
+| `positive` | `supported` |
+| `negative` | `unsupported` |
+| `stale` | `stale` |
+| `not_probed` | `not_probed` |
+| `probe_failed` | `unavailable` |
+| `unknown` | `unknown` |
+| `not_applicable` | `not_applicable` |
+
+`unknown`, `unavailable`, `not_probed`, and `stale` never mean `unsupported`. A Site capability and its ecosystem comparison always come from the same `fact_date`.
+
+## Public changes
+
+Public DTOs expose only stable `type`, date/time precision, entity identity, and deliberately typed public detail. They never expose internal Metric or Detector keys/versions, event/source keys, source contracts/versions, or raw `old_value`/`new_value`. P1-A returns `detail: null`. Day-precision events retain `occurred_at: null`; midnight is not fabricated.
+
+Nav public types cover IPv6, TLS 1.3, HTTP/2, HSTS, enforcement CSP, security.txt, Primary Target, certificate replacement, and certificate-verification transitions. Capability transitions and certificate verification failed/restored are overview-eligible. Primary Target and routine fingerprint-only `site.tls_certificate.changed` remain entity-timeline-only; certificate replacement never implies verification failure, restoration, or successful renewal.
+
+Game public types cover free/paid, Windows, macOS, Linux, release availability/plan, CN price, and discount changes. Mac changes map `mac_support_transition/1` to `game.mac.added` and `game.mac.removed`. Price events must have region scope `CN`.
+
+Overview feeds apply the public whitelist, keep the newest eligible event per entity, order newest first, and return at most eight. Entity timelines do not deduplicate by entity and return at most twenty.
+
+## Change Explorer contract
+
+The domain-specific Explorer endpoints expose the complete approved public stream without overview entity deduplication. `/insights/changes` selects exactly one domain (`site` or `game`) in the UI; the P1 overview remains the only cross-domain recent feed.
+
+Site categories are:
+
+- `capability`: IPv6, TLS 1.3, HTTP/2, HSTS, enforcement CSP, and security.txt public types;
+- `target`: `site.primary_target.changed`;
+- `certificate`: `site.tls_certificate.changed`, `site.tls_certificate.verification_failed`, and `site.tls_certificate.verification_restored`.
+
+Game categories are:
+
+- `pricing_model`: free/paid transitions;
+- `platform`: Windows, macOS, and Linux added/removed transitions;
+- `release`: availability, withdrawal, and release-plan changes;
+- `price`: CN price increase/decrease/state/currency changes;
+- `discount`: CN discount start/end/change.
+
+Game `price` and `discount` retain the SQL-level `region/CN` scope guard; P2.2 regional price intelligence does not expand Change Explorer beyond CN. The API accepts exact public `type` filtering even though the first UI exposes category filtering only.
+
+Ranges are evaluated by `projection_date`, never `event_at`. Defaults are `range=30d` and `limit=20`; the maximum limit is 50. Items expose only `domain`, `category`, public `type`, entity, `date`, precision-preserving `occurred_at`, and `detail`. P2.1 keeps `detail: null`. Day precision remains `occurred_at: null`.
+
+Pagination is keyset-only. The stable descending position is:
+
+```text
+projection_date
+precision_rank (exact before day)
+event_sort_at
+md5(event_key) opaque tie
+```
+
+The DAO requests `limit + 1`; the Service trims and creates `next_cursor`. No offset, page number, `COUNT(*)`, or `total_count` is used. The base64url-encoded JSON cursor contains a version, bound range/category/type, frozen `range_through`, and the opaque position. A changed filter or malformed cursor returns 400. Raw event, detector, and source keys are never placed in the cursor or public DTO.
+
+## Game facts
+
+Player history reads finalized daily facts and emits only days with at least one successful sample and a valid player value. A genuine collected zero is returned as `0`; failed acquisition or no valid sample is omitted and never converted to zero. Entity `players.current` means the latest successful GoFurry observation in the current tracking period, including a successful manual observation; it is not realtime Steam concurrency.
+
+Player rankings accept `latest_observed`, `peak_30d`, and `average_30d`, default to `latest_observed`, and return at most 100 items. Latest ranking uses the newest successful or partial scheduled all-Game Job slot only; manual and unusable slots never enter its cohort. `latest_slot_scheduled_for` separately discloses a newer failed, skipped, missed, or canceled terminal slot. Population is the explicit tracking cohort at the usable slot and real zero remains rankable.
+
+The 30-day rankings and entity summary use the common `game.player_facts.processed_through` horizon and the current explicit tracking period only. `peak_30d` is the maximum daily peak. `average_30d` is weighted by `successful_samples`, not an average of daily averages. Player quality exposes eligible start, observed days, successful samples, and sample coverage. Sample coverage is `null` unless every applicable daily fact has a reliable expected-sample denominator.
+
+Regional price intelligence supports exactly `CN`, `US`, and `HK`; omitted `region` remains compatible with CN. Entity regional summaries use one common finalized Game State Fact `as_of`, and each region is read on exactly that day. A missing regional fact is `available: false`, while an explicit `unknown` fact is `available: true, state: unknown`; there is no region fallback.
+
+Price states remain independent: `free`, `priced`, `unpriced`, and `unknown`. Free has null monetary amounts. `priced` with `final_amount: 0` remains priced and may carry a 100% discount. History never zero-fills, forward-fills, interpolates, joins currencies, or crosses the current tracking period. The UI breaks chart lines across missing dates, non-monetary states, and currency changes.
+
+`GoFurry Observed Low` / `GoFurry 观测最低价` is the minimum finalized `final_amount` within the current continuous priced, same-currency identity for the selected region and tracking period. Tracking changes, currency changes, free/unpriced/unknown states, and missing finalized calendar days break the identity. Only priced facts participate, including priced zero; free never participates. `first_seen` is the first GoFurry finalized daily fact at that minimum, and makes no claim about Steam's first discount time. A current non-priced or unavailable region has no observed low.
+
+Price overview uses the common finalized State Fact cohort and preserves `population = priced + free + unpriced + unknown + unavailable`; `known = priced + free + unpriced` and zero-denominator coverage is null. Current discounts contain only priced facts with a positive discount, include priced zero at 100%, exclude free, and order by discount percentage descending then Game ID ascending. No endpoint performs FX conversion, cheapest-region judgment, or cross-currency monetary comparison.
+
+## Mac contract
+
+Mac is a peer of Windows and Linux. `gfg_game_daily.mac` is projected through the version-frozen `mac_support/1` Metric with `tracked_game_v1`, 259200-second freshness, and global/primary-tag/tag dimensions. Entity state exposes nullable `state.mac`. The `mac_support_transition/1` detector emits public platform changes only for adjacent reliable `unsupported -> supported` or `supported -> unsupported` states within one tracking period. Unknown evidence and tracking boundaries never create a transition.
+
+## Language analytics
+
+Language overview uses one common finalized Game State Fact snapshot. Evidence is `fresh`, `stale`, or `unobserved` with `freshness_seconds=259200`; coverage is fresh divided by population. Supported-language and Explicit Full-Audio shares use fresh as their denominator and are overlapping prevalence, so shares must not be summed to 100%.
+
+Canonical language codes provide stable identity. Unknown names are never fuzzy-mapped or merged into a fake language; they appear only in `fully_normalized_games`, `unmapped_games`, `unmapped_entries`, and `normalization_coverage`. Full Audio is positive-only evidence: absence of an explicit marker does not mean unsupported. Nullable Interface and Subtitle fields likewise remain unknown rather than false.
+
+## Site capability and certificate intelligence
+
+The Site ecosystem and entity surfaces expose capabilities in the stable order `ipv6`, `tls13`, `http2`, `hsts`, `csp`, `security_txt`, and `certificate_verified`. Each entity capability retains its own Metric `as_of`; capabilities are not forced onto an artificial oldest common date.
+
+`http2` means a reliable GoFurry HTTP observation negotiated normalized `HTTP/2` or `HTTP/2.0`. Other known protocols, including HTTP/3, are negative for this specific Metric; an absent protocol is unknown. `hsts` measures only `Strict-Transport-Security` presence on a fresh applicable TLS/HTTPS observation, so `tls_handshake=not_tls` is `not_applicable`. `csp` measures only enforcement `Content-Security-Policy` presence on HTTP or HTTPS; Report-Only alone is not positive. Missing historical header keys remain unknown.
+
+`certificate_verified` is based on fresh collected TLS evidence and the existing X.509 hostname, trust-chain, ServerAuth, and validity verification. `not_tls` is not applicable, handshake failure is unknown rather than certificate-negative, and a null verification result remains unknown. Public verification issues are restricted to `hostname_mismatch`, `unknown_authority`, `expired`, `not_yet_valid`, `incompatible_usage`, and `other`; raw X.509 error strings are never exposed.
+
+Certificate overview resolves the newest `tls_certificate_verification/1` `global/all` fact date once, then reads Metric Entity, Site, and Primary Target facts only on that common `as_of`. Its deterministic expiry reference is `(as_of + 1 day) 00:00:00 UTC`, never request time. Expiry eligibility requires a Primary Target, fresh TLS evidence, `tls_handshake=collected`, and a non-null `not_after`; successful verification is not required. Stale evidence is excluded.
+
+Expiry buckets use exact timestamp comparisons: `not_after <= reference_at` is expired, followed by `(0,7d]`, `(7d,30d]`, and later. Verification coverage is `(verified + failed) / eligible`; expiry coverage is the four expiry buckets divided by eligible; zero denominators remain null. `expiry_attention` contains only expired/7-day/8–30-day items ordered by `not_after, site_id`. `verification_issues` contains only negative certificate-verification Metric states, ordered by normalized issue then Site ID. A Site may occur in both lists. The shared `limit` defaults to 20, is capped at 100, and invalid values return 400.
+
+## Entity Compare
+
+Compare accepts a comma-separated `ids` list, removes repeated IDs while preserving the first occurrence, and requires two to four positive integer IDs after normalization. Invalid input returns 400 and a missing entity returns 404. Responses and the `/insights/sites/compare` and `/insights/games/compare` pages retain the requested order. Compare presents source facts and quality context only; it does not calculate a score, winner, ranking, recommendation, or cross-entity judgment.
+
+Site Compare resolves the newest date on which every selected Site has a complete row for all seven frozen Public Site Metric contracts. Every capability is read from that one date, so entity-specific latest values are never mixed. If no common complete date exists, the response is 200 with `status: insufficient_data` and no fabricated fallback. Certificate identity, verification, issue normalization, freshness, and deterministic expiry reuse the certificate-intelligence contract on the same snapshot date.
+
+Game Compare keeps its legitimate horizons separate and explicit rather than inventing a cross-product date. State, platform, release, canonical languages, and the selected CN/US/HK regional price share one common finalized Game Fact snapshot. Current player values use one common usable scheduled all-game snapshot; entities missing from that slot remain unavailable and never fall back to an entity-specific observation. Thirty-day peak, weighted average, and quality use the common finalized `game.player_facts` horizon. Real observed player zero remains zero, while absent/failed evidence remains unavailable.
+
+Regional price comparison preserves `free`, `priced`, `unpriced`, `unknown`, and missing regional facts. Priced zero remains monetary and distinct from free. GoFurry Observed Low reuses the current continuous priced, same-currency identity rules for the selected region. Language evidence preserves `fresh`, `stale`, and `unobserved`; unknown names remain explicit normalization evidence and nullable language capabilities are not converted to unsupported.
+
+## Product and architecture boundary
+
+The Game Intelligence product routes are `/insights/games`, `/insights/games/players`, `/insights/games/prices`, `/insights/games/languages`, and `/insights/games/compare`. Site Intelligence adds `/insights/sites/compare`. Compare builder and result state is URL-only and SSR-readable; Compare routes are intentionally `noindex` and omitted from the sitemap. Player ranking, regional overview/discounts, and language snapshot are SSR-loaded. Game Detail summary is SSR-loaded; player and region-plus-range price histories remain lazy and page-lifecycle cached.
+
+Player, State Fact, Metric, and Change horizons remain independently disclosed; no global cross-product `as_of` is fabricated. Other than formal Metric/Change contracts, Insights adds no leaderboard, observed-low, certificate, language, or Compare aggregate table, materialized view, cache, Analytics service, ORM, query builder, or generic Compare framework. Metric history is backfilled explicitly before dependent Change history. Regional Change Explorer, FX, language trends, scores, winners, and recommendations remain deferred.

@@ -93,6 +93,18 @@ func (api *GameAPI) GetGame(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(gameDTO(row))
 }
 
+func (api *GameAPI) GetGameWorkspace(c fiber.Ctx) error {
+	id, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	game, tags, storeErr := api.store.getGameWorkspace(c.Context(), id)
+	if storeErr != nil {
+		return common.NewResponse(c).Error(storeErr)
+	}
+	return common.NewResponse(c).SuccessWithData(models.GameWorkspace{Game: gameDTO(game), Tags: tags})
+}
+
 func (api *GameAPI) UpdateGame(c fiber.Ctx) error {
 	id, err := adminutil.ParseIDParam(c)
 	if err != nil {

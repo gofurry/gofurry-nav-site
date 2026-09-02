@@ -415,6 +415,63 @@ func (store *navStore) getSite(ctx context.Context, id int64) (models.SiteDTO, c
 	return siteDTO(siteModel(row)), navDAOError(err)
 }
 
+func (store *navStore) getSiteWorkspace(ctx context.Context, id int64) (models.SiteWorkspace, common.Error) {
+	site, storeErr := store.getSite(ctx, id)
+	if storeErr != nil {
+		return models.SiteWorkspace{}, storeErr
+	}
+	targetRows, err := store.q.ListSiteWorkspaceTargets(ctx, &id)
+	if err != nil {
+		return models.SiteWorkspace{}, navDAOError(err)
+	}
+	groupRows, err := store.q.ListSiteWorkspaceGroups(ctx, id)
+	if err != nil {
+		return models.SiteWorkspace{}, navDAOError(err)
+	}
+	targets := make([]models.SiteWorkspaceTarget, 0, len(targetRows))
+	for _, row := range targetRows {
+		targets = append(targets, models.SiteWorkspaceTarget{
+			ID: row.ID, SiteID: id, Name: row.Name, Proxy: row.Proxy, Prefix: row.Prefix, TLS: row.Tls, Primary: row.IsPrimary,
+		})
+	}
+	groups := make([]models.SiteWorkspaceGroup, 0, len(groupRows))
+	for _, row := range groupRows {
+		groups = append(groups, models.SiteWorkspaceGroup{
+			ID: row.ID, SiteID: row.SiteID, GroupID: row.GroupID, GroupName: row.GroupName, Weight: row.Weight,
+		})
+	}
+	var featured *models.SiteWorkspaceFeatured
+	featuredRow, err := store.q.GetSiteWorkspaceFeatured(ctx, id)
+	if err == nil {
+		featured = &models.SiteWorkspaceFeatured{ID: featuredRow.ID, SiteID: featuredRow.SiteID, Weight: featuredRow.Weight}
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return models.SiteWorkspace{}, navDAOError(err)
+	}
+	return models.SiteWorkspace{Site: site, Targets: targets, Groups: groups, Featured: featured}, nil
+}
+
+func (store *navStore) listSiteWorkspaceSummaries(ctx context.Context, page adminutil.PageQuery) (int64, []models.SiteWorkspaceSummary, common.Error) {
+	total, err := store.q.CountSites(ctx, page.Keyword)
+	if err != nil {
+		return 0, nil, navDAOError(err)
+	}
+	limit, offset := pageArgs(page)
+	rows, err := store.q.ListSiteWorkspaceSummaries(ctx, navsqlc.ListSiteWorkspaceSummariesParams{
+		Keyword: page.Keyword, RowLimit: limit, RowOffset: offset,
+	})
+	if err != nil {
+		return 0, nil, navDAOError(err)
+	}
+	items := make([]models.SiteWorkspaceSummary, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, models.SiteWorkspaceSummary{
+			ID: row.ID, Name: row.Name, NameEn: row.NameEn, UpdateTime: pkgmodels.LocalTime(row.UpdateTime.Time),
+			PrimaryTarget: row.PrimaryTarget, GroupNames: row.GroupNames, Featured: row.Featured,
+		})
+	}
+	return total, items, nil
+}
+
 func (store *navStore) createSite(ctx context.Context, meta audit.Meta, req models.SitePayload) (models.SiteDTO, common.Error) {
 	var result models.SiteDTO
 	err := store.mutate(ctx, meta, "create", "gfn_site", func(q *navsqlc.Queries) (int64, any, any, error) {

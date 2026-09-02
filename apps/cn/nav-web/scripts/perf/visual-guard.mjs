@@ -12,6 +12,8 @@ import {
 
 const args = parseArgs()
 const baseUrl = normalizeBaseUrl(args['base-url'] || process.env.PERF_BASE_URL || 'http://localhost:3000')
+const entitySiteId = args['entity-site-id'] || process.env.INSIGHTS_SITE_ID || '1'
+const entityGameId = args['entity-game-id'] || process.env.INSIGHTS_GAME_ID || '1'
 const outputName = `visual-${new Date().toISOString().replace(/[:.]/g, '-')}`
 const outputDir = path.join(reportsDir, outputName)
 
@@ -95,6 +97,16 @@ const visualScenarios = [
     optionalDataSelectors: ['.game-detail-sidebar-card', '.game-detail-tag', '.game-detail-similar-item']
   }),
   ...makePageScenarios({
+    id: 'game-entity-insights',
+    label: '游戏实体洞察',
+    path: `/games/${entityGameId}`,
+    locale: 'zh-CN',
+    rootSelector: '.game-detail-page',
+    requiredSelectors: ['.game-detail-page', '[data-game-tab="insights"]', '[data-game-insights]', '[data-player-history]', '[data-price-history]'],
+    optionalDataSelectors: ['[data-game-summary]', '[data-entity-timeline]'],
+    action: 'open-game-insights'
+  }),
+  ...makePageScenarios({
     id: 'lottery',
     label: '游戏抽奖页',
     path: '/games/prize',
@@ -133,6 +145,63 @@ const visualScenarios = [
     optionalDataSelectors: ['.search-page-card']
   }),
   ...makePageScenarios({
+    id: 'insights-overview',
+    label: '生态洞察概览',
+    path: '/insights',
+    locale: 'zh-CN',
+    rootSelector: '.insights-overview-page',
+    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-hero', '.insights-stats', '.insights-previews'],
+    optionalDataSelectors: ['.insights-change']
+  }),
+  ...makePageScenarios({
+    id: 'insights-sites',
+    label: '网站生态洞察',
+    path: '/insights/sites?metric=ipv6&range=30d',
+    locale: 'zh-CN',
+    rootSelector: '.insights-domain-page',
+    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-dimensions', '.insights-data-info'],
+    optionalDataSelectors: ['.insights-change']
+  }),
+  ...makePageScenarios({
+    id: 'insights-games',
+    label: '游戏生态洞察',
+    path: '/insights/games?metric=free&range=30d',
+    locale: 'zh-CN',
+    rootSelector: '.insights-domain-page',
+    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-dimensions', '.insights-data-info'],
+    optionalDataSelectors: ['.insights-change']
+  }),
+  ...makePageScenarios({
+    id: 'insights-changes',
+    label: '生态变化探索',
+    path: '/insights/changes?domain=site&range=30d',
+    locale: 'zh-CN',
+    rootSelector: '.insights-change-explorer',
+    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-change-explorer-filters', '.insights-change-explorer-feed'],
+    optionalDataSelectors: ['.insights-change-explorer-item']
+  }),
+  ...makePageScenarios({
+    id: 'game-player-intelligence', label: '游戏玩家洞察', path: '/insights/games/players?metric=latest_observed', locale: 'zh-CN',
+    rootSelector: '[data-player-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.intelligence-selector'], optionalDataSelectors: ['.intelligence-table tbody tr']
+  }),
+  ...makePageScenarios({
+    id: 'game-price-intelligence', label: '游戏区域价格洞察', path: '/insights/games/prices?region=CN', locale: 'zh-CN',
+    rootSelector: '[data-regional-price-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.intelligence-selector'], optionalDataSelectors: ['.intelligence-table tbody tr']
+  }),
+  ...makePageScenarios({
+    id: 'game-language-intelligence', label: '游戏语言洞察', path: '/insights/games/languages', locale: 'zh-CN',
+    rootSelector: '[data-language-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.insights-data-info'], optionalDataSelectors: ['.intelligence-table tbody tr']
+  }),
+  ...makePageScenarios({
+    id: 'site-entity-insights',
+    label: '网站实体洞察',
+    path: `/site/${entitySiteId}`,
+    locale: 'zh-CN',
+    rootSelector: '.site-detail-page',
+    requiredSelectors: ['.site-detail-page', '[data-site-insights]', '[data-entity-timeline]'],
+    optionalDataSelectors: ['.site-insights-capability']
+  }),
+  ...makePageScenarios({
     id: 'about',
     label: '关于页',
     path: '/about',
@@ -149,16 +218,6 @@ const visualScenarios = [
     locale: 'en-US',
     rootSelector: '.about-page',
     requiredSelectors: ['.gf-static-page', '.about-page', '.about-panel', '.about-link'],
-    optionalDataSelectors: [],
-    expectActiveNav: false
-  }),
-  ...makePageScenarios({
-    id: 'steam-zone',
-    label: '兽游专区',
-    path: '/steam',
-    locale: 'zh-CN',
-    rootSelector: '.steam-zone-page',
-    requiredSelectors: ['.games-page', '.steam-zone-page', '.steam-zone-panel', '.steam-zone-card'],
     optionalDataSelectors: [],
     expectActiveNav: false
   }),
@@ -305,7 +364,7 @@ function renderMarkdownReport(report) {
     '## 检查项',
     '',
     '- `html.dark` 与截图主题一致。',
-    '- `/`、`/en`、`/games`、`/games/1`、`/games/prize`、`/games/search`、`/en/games/search`、`/steam`、`/about`、`/updates` 和法律页移动端的关键容器存在。',
+    '- `/`、`/en`、`/games`、`/games/1`、`/games/prize`、`/games/search`、`/en/games/search`、`/insights*`、`/about`、`/updates` 和法律页移动端的关键容器存在。',
     '- 不再出现 `games-page--dark`、`search-results--dark`、`is-dark-theme`、`spotlight-panels--dark`、`about-page--dark`、`legal-page--dark`、`updates-page--dark`、`lottery-page--dark` 等旧暗色入口。',
     '- 源码静态扫描不允许新增旧暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 或已迁移游戏详情/抽奖页的复杂颜色类。',
     '- 桌面与移动端不出现明显横向溢出。',
@@ -475,6 +534,12 @@ async function performScenarioAction(page, scenario) {
     await page.waitForSelector('.nav-content', { timeout: 5000 }).catch(() => {})
     await page.waitForTimeout(1800)
     return
+  }
+
+  if (scenario.action === 'open-game-insights') {
+    await page.locator('[data-game-tab="insights"]').click()
+    await page.waitForSelector('[data-game-insights]', { timeout: 5000 })
+    await page.waitForTimeout(500)
   }
 
 }

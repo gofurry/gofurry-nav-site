@@ -117,7 +117,7 @@
     "survey": "DeepFurry",
     "about": "About Us",
     "join": "Join Us",
-    "workshop": "Workshop"
+    "insights": "Insights"
   },
   "footer": {
     "sections": {
@@ -394,7 +394,6 @@
     "action": {
       "shortcutFunction": "Shortcut Functions",
       "dailyGame": "Daily Game",
-      "workshop": "Workshop",
       "oneClickAddToLibrary": "Add to Library",
       "steamOneClickAddRun": "Add to Steam Library & Run",
       "inputAppIDInstallFreeGame": "Enter AppID to install the corresponding free game or app with one click",
@@ -446,6 +445,7 @@
       "commentCountSuffix": "comments",
       "share": "Share",
       "introduction": "Intro",
+      "insights": "Insights",
       "gallery": "Gallery",
       "comments": "Comments",
       "news": "News",
@@ -561,31 +561,330 @@
   "siteGroup": {
     "backHome": "Back Home"
   },
-  "workshop": {
-    "eyebrow": "Steam furry games",
-    "title": "Workshop",
-    "description": "This page will host Steam-focused furry game topics, official assets, rankings, and curated entry points. It is now online as the new zone shell, with content capabilities to follow.",
-    "backToGames": "Back to Games",
-    "searchGames": "Search Page",
-    "tabs": {
-      "all": "All",
-      "discussion": "Discussion",
-      "developer": "Developers",
-      "tools": "Tools"
+  "insights": {
+    "nav": {
+      "overview": "Overview",
+      "sites": "Sites",
+      "games": "Games",
+      "changes": "Changes"
     },
-    "cards": {
-      "discovery": {
-        "title": "Game Discovery",
-        "description": "A more stable topic entry built around Steam furry game data."
+    "overview": {
+      "eyebrow": "PUBLIC INSIGHTS",
+      "title": "Insights",
+      "description": "See what is changing across the Furry website and game ecosystems",
+      "sitesCount": "Listed sites",
+      "gamesCount": "Listed games",
+      "changesCount": "Changes in 7 days",
+      "recentTitle": "What changed recently",
+      "recentDescription": "Public changes from the website and game ecosystems",
+      "sitesPreview": "Website ecosystem",
+      "gamesPreview": "Game ecosystem",
+      "viewSites": "Explore website insights",
+      "viewGames": "Explore game insights"
+    },
+    "sites": {
+      "eyebrow": "WEBSITE ECOSYSTEM",
+      "title": "Website Ecosystem Insights",
+      "description": "Follow adoption trends and recent changes in public capabilities across Furry websites"
+    },
+    "games": {
+      "eyebrow": "GAME ECOSYSTEM",
+      "title": "Game Ecosystem Insights",
+      "description": "See how platform support and the share of free Furry games are changing"
+    },
+    "metrics": {
+      "ipv6": {
+        "name": "IPv6",
+        "description": "The share of websites confirmed to have an IPv6 AAAA record."
       },
-      "assets": {
-        "title": "Official Assets",
-        "description": "Future cards will prioritize covers, banners, and media from the official Steam asset table."
+      "tls13": {
+        "name": "TLS 1.3",
+        "description": "The share of websites confirmed to support TLS 1.3 transport."
       },
-      "community": {
-        "title": "Community Links",
-        "description": "Games, creators, communities, and related sites will be connected more naturally here."
+      "http2": {
+        "name": "HTTP/2",
+        "description": "The share of sites where a reliable GoFurry HTTP probe negotiated HTTP/2."
+      },
+      "hsts": {
+        "name": "HSTS",
+        "description": "The share of applicable HTTPS/TLS observations with a Strict-Transport-Security header."
+      },
+      "csp": {
+        "name": "CSP",
+        "description": "The share of sites with an observed enforcement Content-Security-Policy header."
+      },
+      "security_txt": {
+        "name": "security.txt",
+        "description": "The share of websites confirmed to publish a valid security.txt document."
+      },
+      "certificate_verified": {
+        "name": "Certificate verification",
+        "description": "The share of reliable TLS observations whose X.509 certificate verification succeeded."
+      },
+      "free": {
+        "name": "Free games",
+        "description": "The share of listed games currently confirmed to be free."
+      },
+      "windows": {
+        "name": "Windows",
+        "description": "The share of listed games currently confirmed to support Windows."
+      },
+      "linux": {
+        "name": "Linux",
+        "description": "The share of listed games currently confirmed to support Linux."
+      },
+      "mac": {
+        "name": "macOS",
+        "description": "The share of listed games currently confirmed to support macOS."
+      },
+      "asOf": "As of {date}",
+      "deltaUnavailable": "No 30-day comparison"
+    },
+    "trend": {
+      "title": "Historical trend",
+      "value": "Metric value",
+      "coverage": "Coverage",
+      "loading": "Loading trend data"
+    },
+    "ranges": {
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days",
+      "all": "All"
+    },
+    "changes": {
+      "site": "Site",
+      "game": "Game",
+      "title": "Recent changes",
+      "events": {
+        "siteIpv6Enabled": "enabled IPv6",
+        "siteIpv6Disabled": "no longer supports IPv6",
+        "siteTls13Enabled": "enabled TLS 1.3",
+        "siteTls13Disabled": "no longer supports TLS 1.3",
+        "siteHttp2Enabled": "enabled HTTP/2",
+        "siteHttp2Disabled": "no longer uses HTTP/2",
+        "siteHstsAdded": "added HSTS",
+        "siteHstsRemoved": "removed HSTS",
+        "siteCspAdded": "added CSP",
+        "siteCspRemoved": "removed CSP",
+        "siteSecurityTxtAdded": "added security.txt",
+        "siteSecurityTxtRemoved": "removed security.txt",
+        "sitePrimaryTargetChanged": "changed its primary target",
+        "siteTlsCertificateChanged": "changed its TLS certificate",
+        "siteTlsCertificateVerificationFailed": "failed TLS certificate verification",
+        "siteTlsCertificateVerificationRestored": "restored TLS certificate verification",
+        "gameFreeEnabled": "became free to play",
+        "gameFreeDisabled": "became paid",
+        "gameWindowsAdded": "added Windows support",
+        "gameWindowsRemoved": "removed Windows support",
+        "gameLinuxAdded": "added Linux support",
+        "gameLinuxRemoved": "removed Linux support",
+        "gameMacAdded": "added macOS support",
+        "gameMacRemoved": "removed macOS support",
+        "gameReleaseAvailable": "became available",
+        "gameReleaseWithdrawn": "was withdrawn",
+        "gameReleaseChanged": "changed its release plan",
+        "gamePriceIncreased": "increased in price",
+        "gamePriceDecreased": "decreased in price",
+        "gamePriceStateChanged": "changed price state",
+        "gamePriceCurrencyChanged": "changed price currency",
+        "gameDiscountStarted": "started a discount",
+        "gameDiscountEnded": "ended a discount",
+        "gameDiscountChanged": "changed its discount",
+        "unknown": "published a change"
       }
+    },
+    "dimensions": {
+      "eyebrow": "DIMENSION BREAKDOWN",
+      "title": "Dimension breakdown",
+      "names": {
+        "country": "Country or region",
+        "group": "Site group",
+        "nsfw": "Content rating",
+        "public_interest": "Public interest",
+        "primary_tag": "Primary tag",
+        "tag": "All tags"
+      },
+      "overlapping": "An entity may belong to multiple slices in this dimension. Slice populations must not be added to derive the global population.",
+      "loading": "Loading dimension data",
+      "empty": "No dimension data is available for the current statistics date",
+      "slice": "Slice",
+      "metricValue": "Metric value",
+      "coverage": "Coverage",
+      "population": "Population",
+      "eligible": "Eligible",
+      "known": "Known",
+      "selectedSlice": "SELECTED SLICE",
+      "availability": "Actual slice availability: {from} to {through}",
+      "sliceEmpty": "No observations exist for this slice in the selected range"
+    },
+    "changeExplorer": {
+      "title": "Change Explorer",
+      "description": "Browse website and game ecosystem changes by domain, time range, and public category",
+      "filters": "Change filters",
+      "domain": "Domain",
+      "range": "Range",
+      "category": "Category",
+      "allCategories": "All categories",
+      "feedEyebrow": "PUBLIC CHANGES",
+      "feedTitle": "Change timeline",
+      "empty": "No public changes match these filters",
+      "loading": "Loading",
+      "loadMore": "Load more",
+      "moreUnavailable": "More changes are temporarily unavailable. Please try again.",
+      "categories": {
+        "site": {
+          "capability": "Capability",
+          "target": "Primary target",
+          "certificate": "Certificate"
+        },
+        "game": {
+          "pricing_model": "Pricing model",
+          "platform": "Platform support",
+          "release": "Release",
+          "price": "CN price",
+          "discount": "CN discount"
+        }
+      }
+    },
+    "dataInfo": {
+      "title": "About this data",
+      "asOf": "Statistics date",
+      "coverage": "Coverage",
+      "availableFrom": "Reliable data from",
+      "unavailable": "—",
+      "caveat": "Unknown, stale, not-yet-probed, or failed observations are not treated as unsupported. Missing dates are never filled with zero."
+    },
+    "entity": {
+      "siteEyebrow": "SITE INSIGHTS",
+      "siteTitle": "Site Insights",
+      "siteDescription": "Current public capabilities, same-day ecosystem context, and recent semantic changes.",
+      "gameEyebrow": "GAME INSIGHTS",
+      "gameTitle": "Game Insights",
+      "gameDescription": "Current state, player history, CN pricing, and recent semantic changes.",
+      "backToSites": "View site ecosystem →",
+      "backToGames": "View game ecosystem →",
+      "ecosystemValue": "Ecosystem share",
+      "ecosystemCoverage": "Coverage",
+      "sameDayAsOf": "Same-day statistics · {date}",
+      "timelineEyebrow": "SEMANTIC CHANGES",
+      "timelineTitle": "Entity change timeline",
+      "historyRange": "History range",
+      "dailyMaximum": "Daily maximum",
+      "playerTrend": "Player trend",
+      "playerMax": "Maximum players",
+      "playerAverage": "Average players",
+      "cnOnly": "Mainland China only",
+      "priceHistory": "CN price history",
+      "currentPlayers": "Latest Observed",
+      "peak30d": "30-day peak players",
+      "average30d": "30-Day Observed Average",
+      "observedDays": "observed days",
+      "cnPrice": "Current CN price",
+      "regionalPrice": "Current regional price",
+      "priceRegion": "Price region",
+      "observedLow": "GoFurry Observed Low",
+      "observedSince": "Observed since {date}",
+      "platforms": "Platform state",
+      "freeState": "Game price type",
+      "releaseState": "Release state",
+      "freeGame": "Free",
+      "paidGame": "Paid",
+      "supported": "Supported",
+      "unsupported": "Unsupported",
+      "booleanUnknown": "Unable to confirm",
+      "priceFree": "Free",
+      "pricePriced": "Priced",
+      "priceMissing": "No same-day regional fact",
+      "priceUnavailable": "Unavailable",
+      "asOf": "As of {date}",
+      "asOfUnavailable": "No reliable date",
+      "retry": "Retry",
+      "states": {
+        "supported": "Supported",
+        "unsupported": "Unsupported",
+        "stale": "Data may be stale",
+        "not_probed": "Not observed yet",
+        "unavailable": "Data unavailable",
+        "unknown": "Unable to confirm",
+        "not_applicable": "Not applicable"
+      },
+      "priceStates": {
+        "free": "Free",
+        "priced": "Priced",
+        "unknown": "Unknown price",
+        "unpriced": "Unpriced"
+      },
+      "releaseStates": {
+        "available": "Available",
+        "upcoming": "Upcoming",
+        "withdrawn": "Withdrawn"
+      }
+    },
+    "regions": { "CN": "China", "US": "United States", "HK": "Hong Kong" },
+    "siteIntelligence": {
+      "navLabel": "Site Intelligence navigation", "ecosystem": "Ecosystem", "certificates": "Certificates", "compare": "Compare"
+    },
+    "certificateIntelligence": {
+      "title": "TLS Certificate Intelligence", "description": "Review certificate verification, expiry distribution, and attention items on one closed UTC fact day.",
+      "empty": "No reliable certificate statistics are available yet.", "verificationTitle": "Verification Summary", "expiryTitle": "Expiry Summary",
+      "verified": "Verified", "failed": "Failed", "known": "Known results", "coverage": "Coverage",
+      "expired": "Expired", "within7d": "Expires within 7 days", "in8to30d": "Expires in 8–30 days",
+      "quality": "Not applicable {not_applicable} · Stale {stale} · Not probed {not_probed} · Probe failed {probe_failed} · Unknown {unknown}",
+      "attentionTitle": "Expiry Attention", "issuesTitle": "Verification Issues", "noItems": "There are no items to display.",
+      "site": "Site", "target": "Primary target", "expiry": "Expiry status", "issue": "Verification issue", "notAfter": "Certificate not after",
+      "aboutTitle": "About certificate data", "about": "Expiry buckets use the end of the statistics day. Stale evidence is excluded from current expiry intelligence, and only stable verification categories are public—never raw X.509 errors.",
+      "asOf": "Statistics date {date} · reference time {reference}",
+      "values": {
+        "expired": "Expired", "expires_within_7d": "Expires within 7 days", "expires_in_8_30d": "Expires in 8–30 days", "later": "Later than 30 days",
+        "hostname_mismatch": "Hostname mismatch", "unknown_authority": "Unknown authority", "not_yet_valid": "Not yet valid", "incompatible_usage": "Incompatible usage", "other": "Other verification issue"
+      }
+    },
+    "gameIntelligence": {
+      "navLabel": "Game Intelligence navigation", "ecosystem": "Ecosystem", "players": "Players", "prices": "Prices", "languages": "Languages", "compare": "Compare"
+    },
+    "compare": {
+      "builderTitle": "Select entities", "idsLabel": "Entity IDs (2–4)", "idsPlaceholder": "For example 12,37,48", "apply": "Apply",
+      "emptyHint": "Enter 2–4 entity IDs to begin.", "oneHint": "One entity is preselected; add at least one more.", "readyHint": "Showing {count} entities side by side.",
+      "invalid": "Enter 1–4 valid positive integer IDs; at least 2 distinct entities are required for results.", "insufficientData": "The selected entities have no common complete snapshot; individual latest values were not mixed.",
+      "commonSnapshot": "Common complete snapshot: {date}", "fact": "Fact", "aboutTitle": "About comparison"
+    },
+    "siteCompare": {
+      "title": "Site Capability Compare", "description": "Review Site capabilities and valid certificate facts on one common complete Metric snapshot.",
+      "primaryTarget": "Primary target", "certificateVerification": "Certificate verification", "certificateExpiry": "Certificate expiry", "noValidCertificate": "No valid certificate evidence",
+      "about": "Every capability comes from the same complete fact day. Unknown, unavailable, not-probed, and stale never become unsupported. Certificate details appear only when same-day evidence is valid."
+    },
+    "gameCompare": {
+      "title": "Game Fact Compare", "description": "Review platform, player, regional price, and language facts side by side on common snapshots.",
+      "region": "Price region", "stateSnapshot": "State facts: {date}", "playerSnapshot": "Scheduled player snapshot: {date}", "playerWindow": "Player facts through: {date}",
+      "currentPlayers": "Scheduled snapshot players", "peak30d": "30-day peak", "average30d": "30-day observed average", "playerQuality": "Player data quality",
+      "qualityValue": "{days} observed days · {samples} successful samples · coverage {coverage}", "currentPrice": "Current {region} price", "languageEvidence": "Language evidence",
+      "supportedLanguages": "Supported languages", "fullAudio": "Explicit Full Audio", "unmappedLanguages": "Unmapped language names",
+      "languageStates": { "fresh": "Fresh", "stale": "Stale (not unsupported)", "unobserved": "Unobserved (not unsupported)" },
+      "about": "State facts, the scheduled player snapshot, and the 30-day player window disclose separate dates. Prices use no FX or cross-region monetary comparison; the page only places existing facts side by side."
+    },
+    "playerIntelligence": {
+      "title": "Player Intelligence", "description": "Explore player rankings and data quality from reliable GoFurry observations.",
+      "metrics": { "latest_observed": "Latest Scheduled Observation", "peak_30d": "30-Day Peak", "average_30d": "30-Day Observed Average" },
+      "population": "Observable games", "ranked": "Ranked", "coverage": "Entity coverage", "game": "Game", "value": "Observed value", "quality": "Data quality", "observed": "Successful observation", "observedDays": "{count} observed days", "successfulSamples": "{count} successful samples",
+      "snapshot": "Scheduled snapshot: {date}", "window": "Common window: {from} to {through}", "aboutTitle": "About player data", "about": "Latest Observed is not realtime Steam concurrency. Missing or failed observations never become zero; genuine observed zero remains zero."
+    },
+    "priceIntelligence": {
+      "title": "Regional Price Intelligence", "description": "Explore reliable regional price snapshots for China, the United States, and Hong Kong.",
+      "population": "Tracked population", "priced": "Priced", "free": "Free", "unpriced": "Unpriced", "unknown": "Unknown", "unavailable": "No same-day fact", "coverage": "Coverage", "discounted": "Currently discounted",
+      "discounts": "Current Regional Discounts", "currentPrice": "Current price", "discount": "Discount", "observedLow": "GoFurry Observed Low",
+      "aboutTitle": "About price data", "about": "Regions and currencies remain independent; no FX conversion or cheapest-region judgment is performed. GoFurry Observed Low is limited to the current continuous same-currency priced identity."
+    },
+    "languageIntelligence": {
+      "title": "Language Intelligence", "description": "Explore supported languages and Explicit Full Audio in one reliable snapshot.", "coverage": "Fresh evidence coverage", "fresh": "Fresh evidence", "normalization": "Normalization coverage",
+      "distribution": "Language Distribution", "overlap": "Languages are overlapping prevalence; shares must not be added to derive 100%.", "language": "Language", "supported": "Supported games", "share": "Share of fresh evidence", "fullAudio": "Explicit Full Audio",
+      "aboutTitle": "About language data", "about": "Unknown language names are never fuzzy-mapped, and absence of a Full Audio marker is not treated as unsupported."
+    },
+    "emptyStates": {
+      "unavailable": "Insights data is temporarily unavailable",
+      "trendEmpty": "No historical data is available yet",
+      "trendOne": "Historical data is still accumulating",
+      "changesEmpty": "No recent public changes"
     }
   }
 }

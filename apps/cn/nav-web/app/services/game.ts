@@ -25,6 +25,28 @@ import type {
   SearchPageResponse
 } from '~/types/game'
 import type { ApiResult } from '~/types/api'
+import type {
+  GameInsightChangeCategory,
+  GameInsightDimension,
+  GameInsightMetricKey,
+  GameInsightPlayerHistory,
+  GameInsightPriceHistory,
+  GameInsightRegion,
+  GameInsights,
+  GameCompare,
+  GamePlayerRanking,
+  GamePlayerRankingMetric,
+  GamePriceOverview,
+  GameDiscounts,
+  GameLanguageOverview,
+  InsightChangeExplorerPage,
+  InsightChangeRange,
+  InsightDimensionBreakdown,
+  InsightDimensionTrend,
+  InsightMetricTrend,
+  InsightOverview,
+  InsightRange,
+} from '~/types/insights'
 
 export interface GameHomeData {
   mainInfo: GameGroupRecord
@@ -135,6 +157,64 @@ export function commitComment(query: CommentReq): Promise<ApiResult<string>> {
 
 export function getLottery(): Promise<LotteryResp> {
   return useApi('gameV2')('/game/prizes')
+}
+
+export function getGameInsightsOverview(): Promise<InsightOverview> {
+  return useApi('gameV2')('/game/insights/overview')
+}
+
+export function getGameInsightsTrend(metric: GameInsightMetricKey, range: InsightRange): Promise<InsightMetricTrend> {
+  return useApi('gameV2')(`/game/insights/metrics/${metric}/trend`, { query: { range } })
+}
+
+export function getGameInsightsBreakdown(metric: GameInsightMetricKey, dimension: GameInsightDimension): Promise<InsightDimensionBreakdown> {
+  return useApi('gameV2')(`/game/insights/metrics/${metric}/breakdown`, { query: { dimension } })
+}
+
+export function getGameInsightsSliceTrend(metric: GameInsightMetricKey, dimension: GameInsightDimension, value: string, range: InsightRange): Promise<InsightDimensionTrend> {
+  return useApi('gameV2')(`/game/insights/metrics/${metric}/breakdown/${dimension}/${encodeURIComponent(value)}/trend`, { query: { range } })
+}
+
+export function getGameInsightChanges(query: {
+  range: InsightChangeRange
+  category?: GameInsightChangeCategory | ''
+  type?: string
+  cursor?: string
+  limit?: number
+}): Promise<InsightChangeExplorerPage> {
+  return useApi('gameV2')('/game/insights/changes', { query })
+}
+
+export function getGameInsights(gameId: string | number): Promise<GameInsights> {
+  return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights`)
+}
+
+export function getGameInsightPlayers(gameId: string | number, range: InsightRange): Promise<GameInsightPlayerHistory> {
+  return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights/players`, { query: { range } })
+}
+
+export function getGameInsightPrices(gameId: string | number, region: GameInsightRegion, range: InsightRange): Promise<GameInsightPriceHistory> {
+  return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights/prices`, { query: { region, range } })
+}
+
+export function getGamePlayerRanking(metric: GamePlayerRankingMetric, limit = 20): Promise<GamePlayerRanking> {
+  return useApi('gameV2')('/game/insights/players/ranking', { query: { metric, limit } })
+}
+
+export function getGamePriceOverview(region: GameInsightRegion): Promise<GamePriceOverview> {
+  return useApi('gameV2')('/game/insights/prices/overview', { query: { region } })
+}
+
+export function getGameDiscounts(region: GameInsightRegion, limit = 20): Promise<GameDiscounts> {
+  return useApi('gameV2')('/game/insights/prices/discounts', { query: { region, limit } })
+}
+
+export function getGameLanguageOverview(): Promise<GameLanguageOverview> {
+  return useApi('gameV2')('/game/insights/languages/overview')
+}
+
+export function getGameCompare(ids: number[], region: GameInsightRegion): Promise<GameCompare> {
+  return useApi('gameV2')('/game/insights/compare', { query: { ids: ids.join(','), region } })
 }
 
 export function getLotteryParticipation(query: LotteryReq): Promise<ApiResult<string>> {

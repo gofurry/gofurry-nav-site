@@ -9,16 +9,19 @@ import (
 	"time"
 
 	env "github.com/gofurry/gofurry-admin/config"
+	"github.com/gofurry/gofurry-admin/internal/app/auditadmin"
 	authcontroller "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
 	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
 	changeadmin "github.com/gofurry/gofurry-admin/internal/app/changeadmin"
 	collectioncontroller "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/controller"
 	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
+	"github.com/gofurry/gofurry-admin/internal/app/dataops"
 	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
 	metricadmin "github.com/gofurry/gofurry-admin/internal/app/metricadmin"
 	navadmin "github.com/gofurry/gofurry-admin/internal/app/navadmin/controller"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
 	options "github.com/gofurry/gofurry-admin/internal/app/shared/options/controller"
+	"github.com/gofurry/gofurry-admin/internal/app/workbench"
 	cache "github.com/gofurry/gofurry-admin/internal/infra/cache"
 	"github.com/gofurry/gofurry-admin/internal/infra/db"
 	log "github.com/gofurry/gofurry-admin/internal/infra/logging"
@@ -36,6 +39,9 @@ type Runtime struct {
 	CollectionAPI *collectioncontroller.API
 	MetricAPI     *metricadmin.API
 	ChangeAPI     *changeadmin.API
+	DataOpsAPI    *dataops.API
+	AuditAPI      *auditadmin.API
+	WorkbenchAPI  *workbench.API
 
 	started      atomic.Bool
 	shutdownOnce sync.Once
@@ -69,13 +75,19 @@ func Start() (*Runtime, error) {
 
 	auditLogger := audit.New(pools.Admin)
 	auth := authservice.New(pools.Admin, auditLogger)
+	collectionService := collectionservice.New(pools.Game, pools.Nav, auditLogger)
+	metricService := metricadmin.New(pools.Game, pools.Nav)
+	changeService := changeadmin.New(pools.Game, pools.Nav)
+	dataOpsService := dataops.New(pools)
+	auditService := auditadmin.New(pools.Admin)
 	runtime := &Runtime{
 		Pools: pools, Audit: auditLogger, AuthService: auth,
 		AuthAPI: authcontroller.New(auth, auditLogger), NavAPI: navadmin.New(pools.Nav, auditLogger),
 		GameAPI: gameadmin.New(pools.Game, auditLogger), OptionsAPI: options.New(pools.Nav, pools.Game),
-		CollectionAPI: collectioncontroller.New(collectionservice.New(pools.Game, pools.Nav, auditLogger)),
-		MetricAPI:     metricadmin.NewAPI(metricadmin.New(pools.Game, pools.Nav)),
-		ChangeAPI:     changeadmin.NewAPI(changeadmin.New(pools.Game, pools.Nav)),
+		CollectionAPI: collectioncontroller.New(collectionService),
+		MetricAPI:     metricadmin.NewAPI(metricService), ChangeAPI: changeadmin.NewAPI(changeService),
+		DataOpsAPI: dataops.NewAPI(dataOpsService), AuditAPI: auditadmin.NewAPI(auditService),
+		WorkbenchAPI: workbench.NewAPI(workbench.New(collectionService, metricService, changeService, dataOpsService, auditService, auth)),
 	}
 	runtime.started.Store(true)
 	log.InfoKV("application bootstrap completed")

@@ -120,11 +120,34 @@ func (q *Queries) CountSiteGroups(ctx context.Context, keyword string) (int64, e
 }
 
 const countSiteOptions = `-- name: CountSiteOptions :one
-SELECT COUNT(*)::bigint FROM gfn_site WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%')
+SELECT COUNT(*)::bigint FROM gfn_site site WHERE deleted IS NOT TRUE AND (
+    $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
+    OR EXISTS (SELECT 1 FROM gfn_collector_domain target WHERE target.site_id=site.id AND target.deleted IS NOT TRUE AND lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower($1)||'%')
+)
 `
 
 func (q *Queries) CountSiteOptions(ctx context.Context, keyword string) (int64, error) {
 	row := q.db.QueryRow(ctx, countSiteOptions, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countSiteTargetOptions = `-- name: CountSiteTargetOptions :one
+SELECT count(*)::bigint
+FROM gfn_collector_domain target
+JOIN gfn_site site ON site.id = target.site_id AND site.deleted IS NOT TRUE
+WHERE target.site_id = $1 AND target.deleted IS NOT TRUE
+  AND ($2::text = '' OR lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower($2)||'%')
+`
+
+type CountSiteTargetOptionsParams struct {
+	SiteID  *int64 `json:"site_id"`
+	Keyword string `json:"keyword"`
+}
+
+func (q *Queries) CountSiteTargetOptions(ctx context.Context, arg CountSiteTargetOptionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSiteTargetOptions, arg.SiteID, arg.Keyword)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -428,6 +451,23 @@ func (q *Queries) GetSiteGroupMap(ctx context.Context, id int64) (GfnSiteGroupMa
 		&i.UpdateTime,
 		&i.Weight,
 	)
+	return i, err
+}
+
+const getSiteWorkspaceFeatured = `-- name: GetSiteWorkspaceFeatured :one
+SELECT id,site_id,weight FROM gfn_featured_site WHERE site_id=$1 ORDER BY id ASC LIMIT 1
+`
+
+type GetSiteWorkspaceFeaturedRow struct {
+	ID     int64 `json:"id"`
+	SiteID int64 `json:"site_id"`
+	Weight int64 `json:"weight"`
+}
+
+func (q *Queries) GetSiteWorkspaceFeatured(ctx context.Context, siteID int64) (GetSiteWorkspaceFeaturedRow, error) {
+	row := q.db.QueryRow(ctx, getSiteWorkspaceFeatured, siteID)
+	var i GetSiteWorkspaceFeaturedRow
+	err := row.Scan(&i.ID, &i.SiteID, &i.Weight)
 	return i, err
 }
 
@@ -1040,7 +1080,10 @@ func (q *Queries) ListSiteGroups(ctx context.Context, arg ListSiteGroupsParams) 
 }
 
 const listSiteOptions = `-- name: ListSiteOptions :many
-SELECT id,name,name_en FROM gfn_site WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%')
+SELECT id,name,name_en FROM gfn_site site WHERE deleted IS NOT TRUE AND (
+    $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
+    OR EXISTS (SELECT 1 FROM gfn_collector_domain target WHERE target.site_id=site.id AND target.deleted IS NOT TRUE AND lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower($1)||'%')
+)
 ORDER BY id DESC LIMIT $3 OFFSET $2
 `
 
@@ -1066,6 +1109,218 @@ func (q *Queries) ListSiteOptions(ctx context.Context, arg ListSiteOptionsParams
 	for rows.Next() {
 		var i ListSiteOptionsRow
 		if err := rows.Scan(&i.ID, &i.Name, &i.NameEn); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSiteTargetOptions = `-- name: ListSiteTargetOptions :many
+SELECT target.id, lower(COALESCE(target.prefix,'')||target.name)::text AS target, target.proxy, target.tls
+FROM gfn_collector_domain target
+JOIN gfn_site site ON site.id = target.site_id AND site.deleted IS NOT TRUE
+WHERE target.site_id = $1 AND target.deleted IS NOT TRUE
+  AND ($2::text = '' OR lower(COALESCE(target.prefix,'')||target.name) ILIKE '%'||lower($2)||'%')
+ORDER BY target.id DESC LIMIT $4 OFFSET $3
+`
+
+type ListSiteTargetOptionsParams struct {
+	SiteID    *int64 `json:"site_id"`
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+type ListSiteTargetOptionsRow struct {
+	ID     int64  `json:"id"`
+	Target string `json:"target"`
+	Proxy  string `json:"proxy"`
+	Tls    string `json:"tls"`
+}
+
+func (q *Queries) ListSiteTargetOptions(ctx context.Context, arg ListSiteTargetOptionsParams) ([]ListSiteTargetOptionsRow, error) {
+	rows, err := q.db.Query(ctx, listSiteTargetOptions,
+		arg.SiteID,
+		arg.Keyword,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSiteTargetOptionsRow{}
+	for rows.Next() {
+		var i ListSiteTargetOptionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Target,
+			&i.Proxy,
+			&i.Tls,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSiteWorkspaceGroups = `-- name: ListSiteWorkspaceGroups :many
+SELECT m.id,m.site_id,m.group_id,COALESCE(g.name,'')::text AS group_name,m.weight
+FROM gfn_site_group_map m LEFT JOIN gfn_site_group g ON g.id=m.group_id
+WHERE m.site_id=$1 ORDER BY m.id ASC
+`
+
+type ListSiteWorkspaceGroupsRow struct {
+	ID        int64  `json:"id"`
+	SiteID    int64  `json:"site_id"`
+	GroupID   int64  `json:"group_id"`
+	GroupName string `json:"group_name"`
+	Weight    int64  `json:"weight"`
+}
+
+func (q *Queries) ListSiteWorkspaceGroups(ctx context.Context, siteID int64) ([]ListSiteWorkspaceGroupsRow, error) {
+	rows, err := q.db.Query(ctx, listSiteWorkspaceGroups, siteID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSiteWorkspaceGroupsRow{}
+	for rows.Next() {
+		var i ListSiteWorkspaceGroupsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SiteID,
+			&i.GroupID,
+			&i.GroupName,
+			&i.Weight,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSiteWorkspaceSummaries = `-- name: ListSiteWorkspaceSummaries :many
+SELECT site.id,site.name,site.name_en,site.update_time,
+       COALESCE(primary_target.target,'')::text AS primary_target,
+       COALESCE(site_groups.group_names,ARRAY[]::text[])::text[] AS group_names,
+       EXISTS (SELECT 1 FROM gfn_featured_site featured WHERE featured.site_id=site.id) AS featured
+FROM gfn_site site
+LEFT JOIN LATERAL (
+    SELECT target_period.target
+    FROM gfn_site_primary_target_periods primary_period
+    JOIN gfn_target_tracking_periods target_period ON target_period.id=primary_period.target_tracking_period_id
+    WHERE primary_period.site_id=site.id AND primary_period.effective_until IS NULL
+    LIMIT 1
+) primary_target ON true
+LEFT JOIN LATERAL (
+    SELECT array_agg(site_group.name ORDER BY site_group.priority DESC,site_group.id DESC)::text[] AS group_names
+    FROM gfn_site_group_map site_map
+    JOIN gfn_site_group site_group ON site_group.id=site_map.group_id
+    WHERE site_map.site_id=site.id
+) site_groups ON true
+WHERE site.deleted IS NOT TRUE AND ($1::text='' OR site.name ILIKE '%'||$1||'%'
+ OR site.name_en ILIKE '%'||$1||'%' OR site.info ILIKE '%'||$1||'%'
+ OR site.info_en ILIKE '%'||$1||'%' OR site.id::text ILIKE '%'||$1||'%')
+ORDER BY site.update_time DESC,site.id DESC LIMIT $3 OFFSET $2
+`
+
+type ListSiteWorkspaceSummariesParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
+
+type ListSiteWorkspaceSummariesRow struct {
+	ID            int64            `json:"id"`
+	Name          string           `json:"name"`
+	NameEn        string           `json:"name_en"`
+	UpdateTime    pgtype.Timestamp `json:"update_time"`
+	PrimaryTarget string           `json:"primary_target"`
+	GroupNames    []string         `json:"group_names"`
+	Featured      bool             `json:"featured"`
+}
+
+func (q *Queries) ListSiteWorkspaceSummaries(ctx context.Context, arg ListSiteWorkspaceSummariesParams) ([]ListSiteWorkspaceSummariesRow, error) {
+	rows, err := q.db.Query(ctx, listSiteWorkspaceSummaries, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSiteWorkspaceSummariesRow{}
+	for rows.Next() {
+		var i ListSiteWorkspaceSummariesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NameEn,
+			&i.UpdateTime,
+			&i.PrimaryTarget,
+			&i.GroupNames,
+			&i.Featured,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSiteWorkspaceTargets = `-- name: ListSiteWorkspaceTargets :many
+SELECT domain.id,domain.site_id,domain.name,domain.proxy,domain.prefix,domain.tls,
+       EXISTS (
+           SELECT 1 FROM gfn_site_primary_target_periods primary_period
+           JOIN gfn_target_tracking_periods target_period ON target_period.id=primary_period.target_tracking_period_id
+           WHERE primary_period.site_id=domain.site_id AND primary_period.effective_until IS NULL
+             AND target_period.collector_domain_id=domain.id
+       ) AS is_primary
+FROM gfn_collector_domain domain
+WHERE domain.site_id=$1 AND domain.deleted IS NOT TRUE ORDER BY domain.id ASC
+`
+
+type ListSiteWorkspaceTargetsRow struct {
+	ID        int64   `json:"id"`
+	SiteID    *int64  `json:"site_id"`
+	Name      string  `json:"name"`
+	Proxy     string  `json:"proxy"`
+	Prefix    *string `json:"prefix"`
+	Tls       string  `json:"tls"`
+	IsPrimary bool    `json:"is_primary"`
+}
+
+func (q *Queries) ListSiteWorkspaceTargets(ctx context.Context, siteID *int64) ([]ListSiteWorkspaceTargetsRow, error) {
+	rows, err := q.db.Query(ctx, listSiteWorkspaceTargets, siteID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSiteWorkspaceTargetsRow{}
+	for rows.Next() {
+		var i ListSiteWorkspaceTargetsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SiteID,
+			&i.Name,
+			&i.Proxy,
+			&i.Prefix,
+			&i.Tls,
+			&i.IsPrimary,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

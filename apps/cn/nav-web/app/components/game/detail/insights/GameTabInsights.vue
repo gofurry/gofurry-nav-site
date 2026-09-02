@@ -1,0 +1,285 @@
+<template>
+  <section
+    class="game-insights-tab"
+    data-game-insights
+    :data-player-loaded-ranges="playerLoadedRanges"
+    :data-price-loaded-ranges="priceLoadedRanges"
+    :data-price-region="selectedRegion"
+  >
+    <div class="entity-insights-heading game-insights-heading">
+      <div>
+        <p class="entity-insights-eyebrow">{{ $t('insights.entity.gameEyebrow') }}</p>
+        <h2>{{ $t('insights.entity.gameTitle') }}</h2>
+        <p>{{ $t('insights.entity.gameDescription') }}</p>
+      </div>
+      <NuxtLink :to="localePath('/insights/games')" class="entity-insights-back-link">
+        {{ $t('insights.entity.backToGames') }}
+      </NuxtLink>
+    </div>
+
+    <div v-if="summaryUnavailable || !summary" class="game-insights-summary entity-insights-empty" data-game-summary-unavailable>
+      {{ $t('insights.emptyStates.unavailable') }}
+    </div>
+    <div v-else class="game-insights-summary" data-game-summary>
+      <article>
+        <span>{{ $t('insights.entity.currentPlayers') }}</span>
+        <strong data-current-players>{{ formatPlayers(summary.players.current) }}</strong>
+        <small>{{ formatAsOf(summary.players.as_of) }}</small>
+      </article>
+      <article>
+        <span>{{ $t('insights.entity.peak30d') }}</span>
+        <strong>{{ formatPlayers(summary.players.peak_30d) }}</strong>
+        <small>{{ $t('insights.ranges.30d') }}</small>
+      </article>
+      <article>
+        <span>{{ $t('insights.entity.average30d') }}</span>
+        <strong>{{ formatPlayers(summary.players.average_30d) }}</strong>
+        <small>{{ summary.players.observed_days_30d }} {{ $t('insights.entity.observedDays') }}</small>
+      </article>
+      <article>
+        <span>{{ $t('insights.entity.regionalPrice') }}</span>
+        <strong :data-price-kind="summaryPriceKind">{{ summaryPriceText }}</strong>
+        <small>{{ formatAsOf(summary.regional_prices.as_of) }}</small>
+      </article>
+      <article>
+        <span>{{ $t('insights.entity.platforms') }}</span>
+        <strong>{{ platformSummary }}</strong>
+        <small>{{ formatAsOf(summary.state.as_of) }}</small>
+      </article>
+      <article>
+        <span>{{ $t('insights.entity.freeState') }}</span>
+        <strong>{{ freeStateText }}</strong>
+        <small>{{ formatAsOf(summary.state.as_of) }}</small>
+      </article>
+      <article>
+        <span>{{ $t('insights.entity.releaseState') }}</span>
+        <strong>{{ releaseStateText }}</strong>
+        <small>{{ formatAsOf(summary.state.as_of) }}</small>
+      </article>
+    </div>
+
+    <div class="game-insights-region-row">
+      <span>{{ $t('insights.entity.priceRegion') }}</span>
+      <div class="insights-ranges"><button v-for="region in regions" :key="region" :class="{ 'insights-ranges__button--active': selectedRegion === region }" @click="selectRegion(region)">{{ $t(`insights.regions.${region}`) }}</button></div>
+      <p v-if="selectedRegionalPrice?.observed_low" data-observed-low>
+        {{ $t('insights.entity.observedLow') }}: {{ formatMoney(selectedRegionalPrice.observed_low.amount, selectedRegionalPrice.observed_low.currency) }}
+        <small>{{ $t('insights.entity.observedSince', { date: selectedRegionalPrice.observed_low.observed_since }) }}</small>
+      </p>
+    </div>
+
+    <div class="game-insights-range-row">
+      <div class="insights-ranges" :aria-label="$t('insights.entity.historyRange')">
+        <button
+          v-for="option in ranges"
+          :key="option"
+          type="button"
+          :class="{ 'insights-ranges__button--active': option === selectedRange }"
+          :aria-pressed="option === selectedRange"
+          :data-game-insights-range="option"
+          @click="selectRange(option)"
+        >
+          {{ $t(`insights.ranges.${option}`) }}
+        </button>
+      </div>
+    </div>
+
+    <div class="game-insights-history-grid">
+      <GamePlayerTrend
+        :points="displayedPlayers?.points ?? []"
+        :loading="playerLoading[selectedRange]"
+        :unavailable="playerFailed[selectedRange]"
+        @retry="loadPlayers(selectedRange, true)"
+      />
+      <GamePriceHistory
+        :points="displayedPrices?.points ?? []"
+        :region="selectedRegion"
+        :loading="priceLoading[priceKey(selectedRegion, selectedRange)]"
+        :unavailable="priceFailed[priceKey(selectedRegion, selectedRange)]"
+        @retry="loadPrices(selectedRegion, selectedRange, true)"
+      />
+    </div>
+
+    <InsightsEntityTimeline
+      :items="summary?.recent_changes ?? []"
+      :unavailable="summaryUnavailable"
+    />
+  </section>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import GamePlayerTrend from '@/components/game/detail/insights/GamePlayerTrend.vue'
+import GamePriceHistory from '@/components/game/detail/insights/GamePriceHistory.vue'
+import InsightsEntityTimeline from '@/components/insights/InsightsEntityTimeline.vue'
+import { getGameInsightPlayers, getGameInsightPrices } from '@/services/game'
+import type { GameInsightPlayerHistory, GameInsightPriceHistory, GameInsightRegion, GameInsights, InsightRange } from '@/types/insights'
+import { formatMinorAmount, publicPriceDisplay } from '@/utils/insightPrices'
+
+type LoadingState = Record<InsightRange, boolean>
+type FailedState = Record<string, boolean>
+
+const props = defineProps<{
+  gameId: string
+  summary: GameInsights | null
+  summaryUnavailable?: boolean
+}>()
+
+const localePath = useLocalePath()
+const { locale, t } = useI18n()
+const ranges: InsightRange[] = ['30d', '90d', 'all']
+const regions: GameInsightRegion[] = ['CN', 'US', 'HK']
+const selectedRange = ref<InsightRange>('30d')
+const selectedRegion = ref<GameInsightRegion>('CN')
+const playerCache = ref<Partial<Record<InsightRange, GameInsightPlayerHistory>>>({})
+const priceCache = ref<Record<string, GameInsightPriceHistory>>({})
+const playerLoading = ref<LoadingState>(emptyFlags())
+const priceLoading = ref<FailedState>(emptyPriceFlags())
+const playerFailed = ref<FailedState>(emptyFlags())
+const priceFailed = ref<FailedState>(emptyPriceFlags())
+const lastPlayers = ref<GameInsightPlayerHistory | null>(null)
+const lastPrices = ref<GameInsightPriceHistory | null>(null)
+let generation = 0
+
+const displayedPlayers = computed(() => playerCache.value[selectedRange.value] ?? lastPlayers.value)
+const displayedPrices = computed(() => priceCache.value[priceKey(selectedRegion.value, selectedRange.value)] ?? lastPrices.value)
+const playerLoadedRanges = computed(() => ranges.filter(range => playerCache.value[range]).join(','))
+const priceLoadedRanges = computed(() => Object.keys(priceCache.value).join(','))
+const selectedRegionalPrice = computed(() => props.summary?.regional_prices.regions.find(item => item.region === selectedRegion.value) ?? null)
+const summaryPrice = computed(() => publicPriceDisplay(selectedRegionalPrice.value))
+const summaryPriceKind = computed(() => {
+  if (!selectedRegionalPrice.value?.available) return 'missing'
+  return selectedRegionalPrice.value.state ?? 'missing'
+})
+const summaryPriceText = computed(() => {
+  if (!selectedRegionalPrice.value?.available) return t('insights.entity.priceMissing')
+  if (summaryPrice.value.kind === 'free') return t('insights.entity.priceFree')
+  if (summaryPrice.value.kind === 'priced') {
+    return `${t('insights.entity.pricePriced')} · ${formatMoney(summaryPrice.value.amount, selectedRegionalPrice.value?.currency ?? '')}`
+  }
+  if (selectedRegionalPrice.value.state === 'unknown' || selectedRegionalPrice.value.state === 'unpriced') {
+    return t(`insights.entity.priceStates.${selectedRegionalPrice.value.state}`)
+  }
+  return t('insights.entity.priceUnavailable')
+})
+const platformSummary = computed(() => {
+  if (!props.summary) return '—'
+  return [
+    platformLabel('Windows', props.summary.state.windows),
+    platformLabel('macOS', props.summary.state.mac),
+    platformLabel('Linux', props.summary.state.linux),
+  ].join(' · ')
+})
+const freeStateText = computed(() => {
+  if (props.summary?.state.free === null || props.summary?.state.free === undefined) return t('insights.entity.booleanUnknown')
+  return props.summary.state.free ? t('insights.entity.freeGame') : t('insights.entity.paidGame')
+})
+const releaseStateText = computed(() => {
+  const state = props.summary?.state.release
+  if (!state) return t('insights.entity.booleanUnknown')
+  const knownStates: Record<string, string> = {
+    available: 'available',
+    upcoming: 'upcoming',
+    withdrawn: 'withdrawn',
+  }
+  const key = knownStates[state]
+  return key ? t(`insights.entity.releaseStates.${key}`) : state
+})
+
+function emptyFlags(): LoadingState {
+  return { '30d': false, '90d': false, all: false }
+}
+
+function emptyPriceFlags(): FailedState { return {} }
+function priceKey(region: GameInsightRegion, range: InsightRange) { return `${region}:${range}` }
+function formatMoney(amount: number, currency: string) { return currency ? formatMinorAmount(amount, currency, locale.value) : '—' }
+
+function formatPlayers(value: number | null) {
+  return value === null ? '—' : new Intl.NumberFormat(locale.value).format(value)
+}
+
+function formatAsOf(value: string | null) {
+  return value ? t('insights.entity.asOf', { date: value.slice(0, 10) }) : t('insights.entity.asOfUnavailable')
+}
+
+function platformLabel(name: string, value: boolean | null) {
+  if (value === null) return `${name}: ${t('insights.entity.booleanUnknown')}`
+  return `${name}: ${value ? t('insights.entity.supported') : t('insights.entity.unsupported')}`
+}
+
+function selectRange(range: InsightRange) {
+  if (range === selectedRange.value) return
+  selectedRange.value = range
+  void loadRange(range)
+}
+
+function selectRegion(region: GameInsightRegion) {
+  if (region === selectedRegion.value) return
+  selectedRegion.value = region
+  void loadPrices(region, selectedRange.value)
+}
+
+async function loadPlayers(range: InsightRange, force = false) {
+  if ((!force && playerCache.value[range]) || playerLoading.value[range]) return
+  const requestGeneration = generation
+  const requestGameId = props.gameId
+  playerLoading.value[range] = true
+  playerFailed.value[range] = false
+  try {
+    const response = await getGameInsightPlayers(requestGameId, range)
+    if (requestGeneration !== generation || requestGameId !== props.gameId) return
+    playerCache.value = { ...playerCache.value, [range]: response }
+    if (selectedRange.value === range) lastPlayers.value = response
+  } catch {
+    if (requestGeneration === generation && requestGameId === props.gameId) playerFailed.value[range] = true
+  } finally {
+    if (requestGeneration === generation && requestGameId === props.gameId) playerLoading.value[range] = false
+  }
+}
+
+async function loadPrices(region: GameInsightRegion, range: InsightRange, force = false) {
+  const key = priceKey(region, range)
+  if ((!force && priceCache.value[key]) || priceLoading.value[key]) return
+  const requestGeneration = generation
+  const requestGameId = props.gameId
+  priceLoading.value[key] = true
+  priceFailed.value[key] = false
+  try {
+    const response = await getGameInsightPrices(requestGameId, region, range)
+    if (requestGeneration !== generation || requestGameId !== props.gameId) return
+    priceCache.value = { ...priceCache.value, [key]: response }
+    if (selectedRange.value === range && selectedRegion.value === region) lastPrices.value = response
+  } catch {
+    if (requestGeneration === generation && requestGameId === props.gameId) priceFailed.value[key] = true
+  } finally {
+    if (requestGeneration === generation && requestGameId === props.gameId) priceLoading.value[key] = false
+  }
+}
+
+async function loadRange(range: InsightRange) {
+  await Promise.allSettled([loadPlayers(range), loadPrices(selectedRegion.value, range)])
+}
+
+function resetForGame() {
+  generation += 1
+  selectedRange.value = '30d'
+  selectedRegion.value = 'CN'
+  playerCache.value = {}
+  priceCache.value = {}
+  playerLoading.value = emptyFlags()
+  priceLoading.value = emptyPriceFlags()
+  playerFailed.value = emptyFlags()
+  priceFailed.value = emptyPriceFlags()
+  lastPlayers.value = null
+  lastPrices.value = null
+}
+
+onMounted(() => {
+  void loadRange(selectedRange.value)
+})
+
+watch(() => props.gameId, () => {
+  resetForGame()
+  void loadRange('30d')
+})
+</script>

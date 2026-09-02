@@ -11,6 +11,40 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const adminCountGameMetricDaily = `-- name: AdminCountGameMetricDaily :one
+SELECT count(*)::bigint
+FROM gfg_metric_daily
+WHERE ($1::text = '' OR metric_key = $1)
+  AND ($2::integer = 0 OR metric_version = $2)
+  AND ($3::date IS NULL OR fact_date >= $3)
+  AND ($4::date IS NULL OR fact_date <= $4)
+  AND dimension_key = $5
+  AND dimension_value = $6
+`
+
+type AdminCountGameMetricDailyParams struct {
+	MetricKey      string      `json:"metric_key"`
+	MetricVersion  int32       `json:"metric_version"`
+	FromDate       pgtype.Date `json:"from_date"`
+	ThroughDate    pgtype.Date `json:"through_date"`
+	DimensionKey   string      `json:"dimension_key"`
+	DimensionValue string      `json:"dimension_value"`
+}
+
+func (q *Queries) AdminCountGameMetricDaily(ctx context.Context, arg AdminCountGameMetricDailyParams) (int64, error) {
+	row := q.db.QueryRow(ctx, adminCountGameMetricDaily,
+		arg.MetricKey,
+		arg.MetricVersion,
+		arg.FromDate,
+		arg.ThroughDate,
+		arg.DimensionKey,
+		arg.DimensionValue,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const adminCountGameMetricEntities = `-- name: AdminCountGameMetricEntities :one
 SELECT count(*)::bigint
 FROM gfg_metric_entity_daily entity
@@ -199,7 +233,7 @@ WHERE ($1::text = '' OR metric_key = $1)
   AND dimension_key = $5
   AND dimension_value = $6
 ORDER BY fact_date DESC, metric_key, metric_version DESC
-LIMIT $7
+LIMIT $8 OFFSET $7
 `
 
 type AdminListGameMetricDailyParams struct {
@@ -209,6 +243,7 @@ type AdminListGameMetricDailyParams struct {
 	ThroughDate    pgtype.Date `json:"through_date"`
 	DimensionKey   string      `json:"dimension_key"`
 	DimensionValue string      `json:"dimension_value"`
+	RowOffset      int32       `json:"row_offset"`
 	RowLimit       int32       `json:"row_limit"`
 }
 
@@ -220,6 +255,7 @@ func (q *Queries) AdminListGameMetricDaily(ctx context.Context, arg AdminListGam
 		arg.ThroughDate,
 		arg.DimensionKey,
 		arg.DimensionValue,
+		arg.RowOffset,
 		arg.RowLimit,
 	)
 	if err != nil {

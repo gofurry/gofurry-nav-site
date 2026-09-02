@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Go 1.26.7 for all six active Go modules and `tools`
-- Node.js 24 and npm for `apps/cn/nav-web` and `apps/cn/admin/web`
+- Node.js 24 and npm for `apps/cn/nav-web` and `apps/cn/admin/react`
 - development PostgreSQL and Redis matching the selected app configuration
 - sqlc and govulncheck through the pinned Go tools in `tools/go.mod`
 
@@ -61,8 +61,10 @@ go build ./...
 Frontends:
 
 ~~~bash
-cd apps/cn/admin/web
+cd apps/cn/admin/react
 npm ci
+npm run typecheck
+npm test
 npm run build
 
 cd ../../nav-web

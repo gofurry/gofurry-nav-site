@@ -189,6 +189,8 @@ export default defineNuxtConfig({
     '/steam': { ssr: true },
     '/games': { ssr: true },
     '/games/**': { ssr: true },
+    '/insights': { ssr: true },
+    '/insights/**': { ssr: true },
     '/updates': { ssr: true },
     '/games/search': { ssr: false },
     '/games/prize/**': { ssr: false },

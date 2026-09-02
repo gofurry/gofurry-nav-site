@@ -193,7 +193,7 @@ func (engine *Engine) RunNext(ctx context.Context, key string, version int32, dr
 		result.Reason = "dry-run"
 		return result, tx.Commit(ctx)
 	}
-	result.EventCount, err = queries.ProjectGameChangeDay(ctx, gamesqlc.ProjectGameChangeDayParams{DetectorKey: key, DetectorVersion: version, ProjectionDate: pgDate(day)})
+	result.EventCount, err = projectChangeDay(ctx, queries, key, version, day)
 	if err != nil {
 		return DayResult{}, err
 	}
@@ -361,7 +361,7 @@ func (engine *Engine) Rebuild(ctx context.Context, key string, version int32, st
 		if dryRun {
 			result.Reason = "dry-run rebuild"
 		} else {
-			result.EventCount, err = queries.ProjectGameChangeDay(ctx, gamesqlc.ProjectGameChangeDayParams{DetectorKey: key, DetectorVersion: version, ProjectionDate: pgDate(day)})
+			result.EventCount, err = projectChangeDay(ctx, queries, key, version, day)
 			if err != nil {
 				return Summary{}, err
 			}
@@ -374,6 +374,15 @@ func (engine *Engine) Rebuild(ctx context.Context, key string, version int32, st
 		return Summary{}, err
 	}
 	return summary, nil
+}
+
+func projectChangeDay(ctx context.Context, queries *gamesqlc.Queries, key string, version int32, day time.Time) (int64, error) {
+	if key == "mac_support_transition" && version == 1 {
+		return queries.ProjectGameMacChangeDay(ctx, pgDate(day))
+	}
+	return queries.ProjectGameChangeDay(ctx, gamesqlc.ProjectGameChangeDayParams{
+		DetectorKey: key, DetectorVersion: version, ProjectionDate: pgDate(day),
+	})
 }
 
 func (engine *Engine) nextDetectorDate(ctx context.Context, contract Contract) (time.Time, bool, error) {

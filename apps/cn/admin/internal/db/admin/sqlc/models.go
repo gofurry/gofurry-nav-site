@@ -15,19 +15,27 @@ type GfaAdminAccount struct {
 	CreatedAt         pgtype.Timestamp `json:"created_at"`
 	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
 	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
 }
 
 type GfaAdminAuditLog struct {
-	ID             int64            `json:"id"`
-	Action         string           `json:"action"`
-	Resource       string           `json:"resource"`
-	TargetID       *string          `json:"target_id"`
-	Operator       string           `json:"operator"`
-	SessionVersion int64            `json:"session_version"`
-	RequestID      *string          `json:"request_id"`
-	IpAddress      *string          `json:"ip_address"`
-	UserAgent      *string          `json:"user_agent"`
-	BeforeData     *string          `json:"before_data"`
-	AfterData      *string          `json:"after_data"`
-	CreatedAt      pgtype.Timestamp `json:"created_at"`
+	ID                int64            `json:"id"`
+	Action            string           `json:"action"`
+	Resource          string           `json:"resource"`
+	TargetID          *string          `json:"target_id"`
+	Operator          string           `json:"operator"`
+	SessionVersion    int64            `json:"session_version"`
+	RequestID         *string          `json:"request_id"`
+	IpAddress         *string          `json:"ip_address"`
+	UserAgent         *string          `json:"user_agent"`
+	BeforeData        *string          `json:"before_data"`
+	AfterData         *string          `json:"after_data"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	OperatorAccountID *int64           `json:"operator_account_id"`
+	OperatorName      string           `json:"operator_name"`
+	OperatorRole      string           `json:"operator_role"`
 }

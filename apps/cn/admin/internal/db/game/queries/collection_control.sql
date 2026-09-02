@@ -10,11 +10,28 @@ FROM gfg_collection_jobs;
 SELECT now()::timestamptz AS control_now;
 
 -- name: AdminListGameCollectorInstances :many
-SELECT instance.*,
+WITH ranked AS (
+    SELECT instance.*,
+           row_number() OVER (PARTITION BY collector_id ORDER BY started_at DESC, last_heartbeat_at DESC, instance_id DESC) AS lifecycle_rank
+    FROM gfg_collector_instances instance
+)
+SELECT instance_id, collector_id, hostname, version, commit_sha, capabilities,
+       started_at, last_heartbeat_at, stopped_at,
        GREATEST(0, extract(epoch FROM (now() - last_heartbeat_at)))::bigint AS heartbeat_age_seconds
-FROM gfg_collector_instances instance
+FROM ranked
+WHERE (sqlc.arg(instance_view)::text = 'current' AND lifecycle_rank = 1)
+   OR (sqlc.arg(instance_view)::text = 'history' AND lifecycle_rank > 1)
 ORDER BY last_heartbeat_at DESC
-LIMIT sqlc.arg(row_limit);
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: AdminCountGameCollectorInstances :one
+WITH ranked AS (
+    SELECT row_number() OVER (PARTITION BY collector_id ORDER BY started_at DESC, last_heartbeat_at DESC, instance_id DESC) AS lifecycle_rank
+    FROM gfg_collector_instances
+)
+SELECT count(*)::bigint FROM ranked
+WHERE (sqlc.arg(instance_view)::text = 'current' AND lifecycle_rank = 1)
+   OR (sqlc.arg(instance_view)::text = 'history' AND lifecycle_rank > 1);
 
 -- name: AdminListGameCollectionSchedules :many
 SELECT schedule.*,
@@ -49,10 +66,10 @@ RETURNING *;
 
 -- name: AdminInsertGameManualJob :one
 INSERT INTO gfg_collection_jobs (
-    job_key, trigger, scope_type, scope_id, tasks, priority, concurrency_key,
+    schedule_id, schedule_version, job_key, trigger, scope_type, scope_id, tasks, priority, concurrency_key,
     status, requested_by, dedupe_key, created_at, updated_at
 ) VALUES (
-    sqlc.arg(job_key), 'manual', sqlc.arg(scope_type), sqlc.narg(scope_id),
+    sqlc.narg(schedule_id), sqlc.narg(schedule_version), sqlc.arg(job_key), 'manual', sqlc.arg(scope_type), sqlc.narg(scope_id),
     sqlc.arg(tasks), 200, 'steam', 'queued', sqlc.arg(requested_by),
     sqlc.narg(dedupe_key), now(), now()
 )
@@ -89,6 +106,16 @@ ORDER BY CASE WHEN job.status = 'running' THEN 0 WHEN job.status = 'queued' THEN
          job.priority DESC, job.created_at DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
+-- name: AdminCountGameCollectionRuns :one
+SELECT count(*)::bigint
+FROM gfg_collection_runs run
+JOIN gfg_collection_jobs job ON job.id = run.job_id
+WHERE (sqlc.arg(status)::text = '' OR run.status = sqlc.arg(status))
+  AND (sqlc.arg(job_key)::text = '' OR job.job_key = sqlc.arg(job_key))
+  AND (sqlc.arg(trigger)::text = '' OR job.trigger = sqlc.arg(trigger))
+  AND (sqlc.narg(since)::timestamptz IS NULL OR run.started_at >= sqlc.narg(since))
+  AND (sqlc.narg(until)::timestamptz IS NULL OR run.started_at <= sqlc.narg(until));
+
 -- name: AdminGetGameCollectionJob :one
 SELECT * FROM gfg_collection_jobs WHERE id = sqlc.arg(id);
 
@@ -120,6 +147,13 @@ WHERE (sqlc.arg(status)::text = '' OR run.status = sqlc.arg(status))
   AND (sqlc.narg(until)::timestamptz IS NULL OR run.started_at <= sqlc.narg(until))
 ORDER BY run.started_at DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: AdminCountGameCollectionResults :one
+SELECT count(*)::bigint
+FROM gfg_collection_task_results
+WHERE run_id = sqlc.arg(run_id)
+  AND (sqlc.narg(game_id)::bigint IS NULL OR game_id = sqlc.narg(game_id))
+  AND (sqlc.narg(appid)::bigint IS NULL OR appid = sqlc.narg(appid));
 
 -- name: AdminGetGameCollectionRun :one
 SELECT run.*, job.job_key, job.trigger, job.scope_type, job.scope_id, job.target

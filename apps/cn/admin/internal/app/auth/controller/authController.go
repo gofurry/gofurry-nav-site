@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	env "github.com/gofurry/gofurry-admin/config"
+	"github.com/gofurry/gofurry-admin/internal/app/auth/middleware"
 	"github.com/gofurry/gofurry-admin/internal/app/auth/models"
 	"github.com/gofurry/gofurry-admin/internal/app/auth/service"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/adminutil"
@@ -22,96 +23,179 @@ func New(authService *service.AuthService, auditLogger *audit.Logger) *AuthAPI {
 }
 
 func (api *AuthAPI) State(c fiber.Ctx) error {
-	initialized, err := api.service.IsInitialized()
+	initialized, err := api.service.IsInitialized(c.Context())
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
-
-	authenticated := false
+	var identity *models.IdentityResponse
 	token := strings.TrimSpace(c.Cookies(env.GetServerConfig().Auth.CookieName))
 	if token != "" {
-		if claims, parseErr := api.service.ParseAndValidateToken(token); parseErr == nil {
-			authenticated = true
-			c.Locals(service.ClaimsContextKey, claims)
+		if _, principal, parseErr := api.service.ParseAndValidateToken(c.Context(), token); parseErr == nil {
+			identity = models.IdentityDTO(principal)
 		}
 	}
-
 	return common.NewResponse(c).SuccessWithData(models.AuthStateResponse{
-		Initialized:   initialized,
-		Authenticated: authenticated,
+		Initialized: initialized, Authenticated: identity != nil, Identity: identity,
 	})
 }
 
 func (api *AuthAPI) Bootstrap(c fiber.Ctx) error {
-	var req models.PasswordRequest
-	if err := adminutil.DecodeBody(c, &req); err != nil {
+	var request models.BootstrapRequest
+	if err := adminutil.DecodeBody(c, &request); err != nil {
 		return common.NewResponse(c).Error(err)
 	}
-
-	if serviceErr := api.service.Bootstrap(req.Password, audit.MetaFromFiber(c)); serviceErr != nil {
-		return common.NewResponse(c).Error(serviceErr)
-	}
-
-	return common.NewResponse(c).Success()
-}
-
-func (api *AuthAPI) Login(c fiber.Ctx) error {
-	var req models.PasswordRequest
-	if err := adminutil.DecodeBody(c, &req); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-
-	token, claims, serviceErr := api.service.Login(req.Password)
+	account, serviceErr := api.service.Bootstrap(c.Context(), request, audit.MetaFromFiber(c))
 	if serviceErr != nil {
 		return common.NewResponse(c).Error(serviceErr)
 	}
-	if auditErr := api.audit.Log(c.Context(), audit.MetaFromFiber(c), "login", "gfa_admin_account", 1, nil, map[string]any{
-		"session_version": claims.SessionVersion,
+	return common.NewResponse(c).SuccessWithData(account)
+}
+
+func (api *AuthAPI) Login(c fiber.Ctx) error {
+	var request models.LoginRequest
+	if err := adminutil.DecodeBody(c, &request); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	token, principal, serviceErr := api.service.Login(c.Context(), request.Username, request.Password)
+	if serviceErr != nil {
+		return common.NewResponse(c).Error(serviceErr)
+	}
+	meta := audit.MetaForPrincipal(audit.MetaFromFiber(c), principal)
+	if auditErr := api.audit.Log(c.Context(), meta, "login", "gfa_admin_account", principal.AccountID, nil, map[string]any{
+		"account_id": principal.AccountID, "username": principal.Username, "role": principal.Role,
+		"session_version": principal.SessionVersion,
 	}); auditErr != nil {
 		return common.NewResponse(c).Error(auditErr)
 	}
-
 	c.Cookie(api.service.BuildAuthCookie(token))
 	return common.NewResponse(c).SuccessWithData(models.MeResponse{
-		Initialized:    true,
-		Authenticated:  true,
-		SessionVersion: claims.SessionVersion,
+		Initialized: true, Authenticated: true, Identity: models.IdentityDTO(principal),
 	})
 }
 
 func (api *AuthAPI) Logout(c fiber.Ctx) error {
-	claims, _ := currentClaims(c)
-	meta := audit.MetaFromFiber(c)
-	if claims != nil {
-		meta.SessionVersion = claims.SessionVersion
+	principal, _ := middleware.CurrentPrincipal(c)
+	if principal == nil {
+		token := strings.TrimSpace(c.Cookies(env.GetServerConfig().Auth.CookieName))
+		if token != "" {
+			_, principal, _ = api.service.ParseAndValidateToken(c.Context(), token)
+		}
 	}
-	if auditErr := api.audit.Log(c.Context(), meta, "logout", "gfa_admin_account", 1, nil, map[string]any{
-		"session_version": meta.SessionVersion,
-	}); auditErr != nil {
-		return common.NewResponse(c).Error(auditErr)
+	if principal != nil {
+		meta := audit.MetaForPrincipal(audit.MetaFromFiber(c), principal)
+		if auditErr := api.audit.Log(c.Context(), meta, "logout", "gfa_admin_account", principal.AccountID, nil, map[string]any{
+			"session_version": principal.SessionVersion,
+		}); auditErr != nil {
+			return common.NewResponse(c).Error(auditErr)
+		}
 	}
 	c.Cookie(api.service.BuildLogoutCookie())
 	return common.NewResponse(c).Success()
 }
 
 func (api *AuthAPI) Me(c fiber.Ctx) error {
-	claims, err := currentClaims(c)
+	principal, err := middleware.CurrentPrincipal(c)
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
-
 	return common.NewResponse(c).SuccessWithData(models.MeResponse{
-		Initialized:    true,
-		Authenticated:  true,
-		SessionVersion: claims.SessionVersion,
+		Initialized: true, Authenticated: true, Identity: models.IdentityDTO(principal),
 	})
 }
 
-func currentClaims(c fiber.Ctx) (*models.AdminClaims, common.Error) {
-	raw := c.Locals(service.ClaimsContextKey)
-	claims, ok := raw.(*models.AdminClaims)
-	if !ok || claims == nil {
-		return nil, common.NewError(common.RETURN_FAILED, fiber.StatusUnauthorized, "not logged in")
+func (api *AuthAPI) ListAccounts(c fiber.Ctx) error {
+	page := adminutil.ParsePageQuery(c)
+	result, err := api.service.ListAccounts(c.Context(), page.Keyword, int32(page.PageSize), int32((page.PageNum-1)*page.PageSize))
+	if err != nil {
+		return common.NewResponse(c).Error(err)
 	}
-	return claims, nil
+	return common.NewResponse(c).SuccessWithData(result)
+}
+
+func (api *AuthAPI) CreateAccount(c fiber.Ctx) error {
+	var request models.AccountCreateRequest
+	if err := adminutil.DecodeBody(c, &request); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	account, serviceErr := api.service.CreateAccount(c.Context(), request, audit.MetaFromFiber(c))
+	if serviceErr != nil {
+		return common.NewResponse(c).Error(serviceErr)
+	}
+	return common.NewResponse(c).SuccessWithData(account)
+}
+
+func (api *AuthAPI) UpdateDisplayName(c fiber.Ctx) error {
+	accountID, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var request models.DisplayNameRequest
+	if err := adminutil.DecodeBody(c, &request); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	account, serviceErr := api.service.UpdateDisplayName(c.Context(), accountID, request.DisplayName, audit.MetaFromFiber(c))
+	if serviceErr != nil {
+		return common.NewResponse(c).Error(serviceErr)
+	}
+	return common.NewResponse(c).SuccessWithData(account)
+}
+
+func (api *AuthAPI) ChangeRole(c fiber.Ctx) error {
+	accountID, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var request models.RoleRequest
+	if err := adminutil.DecodeBody(c, &request); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	account, serviceErr := api.service.ChangeRole(c.Context(), accountID, request.Role, audit.MetaFromFiber(c))
+	if serviceErr != nil {
+		return common.NewResponse(c).Error(serviceErr)
+	}
+	return common.NewResponse(c).SuccessWithData(account)
+}
+
+func (api *AuthAPI) ChangeStatus(c fiber.Ctx) error {
+	accountID, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var request models.StatusRequest
+	if err := adminutil.DecodeBody(c, &request); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	account, serviceErr := api.service.ChangeStatus(c.Context(), accountID, request.Status, audit.MetaFromFiber(c))
+	if serviceErr != nil {
+		return common.NewResponse(c).Error(serviceErr)
+	}
+	return common.NewResponse(c).SuccessWithData(account)
+}
+
+func (api *AuthAPI) ResetAccountPassword(c fiber.Ctx) error {
+	accountID, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var request models.PasswordRequest
+	if err := adminutil.DecodeBody(c, &request); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	account, serviceErr := api.service.ResetAccountPassword(c.Context(), accountID, request.Password, audit.MetaFromFiber(c))
+	if serviceErr != nil {
+		return common.NewResponse(c).Error(serviceErr)
+	}
+	return common.NewResponse(c).SuccessWithData(account)
+}
+
+func (api *AuthAPI) RevokeSessions(c fiber.Ctx) error {
+	accountID, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	account, serviceErr := api.service.RevokeSessions(c.Context(), accountID, audit.MetaFromFiber(c))
+	if serviceErr != nil {
+		return common.NewResponse(c).Error(serviceErr)
+	}
+	return common.NewResponse(c).SuccessWithData(account)
 }

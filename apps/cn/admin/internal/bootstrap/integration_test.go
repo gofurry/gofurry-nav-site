@@ -21,16 +21,21 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	env "github.com/gofurry/gofurry-admin/config"
+	"github.com/gofurry/gofurry-admin/internal/app/auditadmin"
 	authcontroller "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
 	authmw "github.com/gofurry/gofurry-admin/internal/app/auth/middleware"
 	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
 	changeadmin "github.com/gofurry/gofurry-admin/internal/app/changeadmin"
 	collectioncontroller "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/controller"
 	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
+	"github.com/gofurry/gofurry-admin/internal/app/dataops"
 	gameadmin "github.com/gofurry/gofurry-admin/internal/app/gameadmin/controller"
 	metricadmin "github.com/gofurry/gofurry-admin/internal/app/metricadmin"
 	navadmin "github.com/gofurry/gofurry-admin/internal/app/navadmin/controller"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
+	optionscontroller "github.com/gofurry/gofurry-admin/internal/app/shared/options/controller"
+	"github.com/gofurry/gofurry-admin/internal/app/workbench"
+	"github.com/gofurry/gofurry-admin/internal/infra/db"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -80,15 +85,26 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	authAPI := authcontroller.New(authService, auditLogger)
 	navAPI := navadmin.New(navPool, auditLogger)
 	gameAPI := gameadmin.New(gamePool, auditLogger)
-	collectionAPI := collectioncontroller.New(collectionservice.New(gamePool, navPool, auditLogger))
-	metricAPI := metricadmin.NewAPI(metricadmin.New(gamePool, navPool))
-	changeAPI := changeadmin.NewAPI(changeadmin.New(gamePool, navPool))
+	collectionService := collectionservice.New(gamePool, navPool, auditLogger)
+	metricService := metricadmin.New(gamePool, navPool)
+	changeService := changeadmin.New(gamePool, navPool)
+	dataOpsService := dataops.New(&db.Pools{Admin: adminPool, Nav: navPool, Game: gamePool})
+	auditService := auditadmin.New(adminPool)
+	collectionAPI := collectioncontroller.New(collectionService)
+	metricAPI := metricadmin.NewAPI(metricService)
+	changeAPI := changeadmin.NewAPI(changeService)
+	dataOpsAPI := dataops.NewAPI(dataOpsService)
+	auditAPI := auditadmin.NewAPI(auditService)
+	workbenchAPI := workbench.NewAPI(workbench.New(collectionService, metricService, changeService, dataOpsService, auditService, authService))
+	optionsAPI := optionscontroller.New(navPool, gamePool)
 	app := fiber.New()
 	app.Post("/auth/bootstrap", authAPI.Bootstrap)
 	app.Post("/auth/login", authAPI.Login)
 	app.Post("/nav/audit-failure", navAPI.CreateSite)
 	protected := app.Group("", authmw.Required(authService))
 	protected.Post("/nav/sites", navAPI.CreateSite)
+	protected.Get("/nav/site-summaries", navAPI.ListSiteWorkspaceSummaries)
+	protected.Get("/nav/sites/:id/workspace", navAPI.GetSiteWorkspace)
 	protected.Get("/nav/sites/:id", navAPI.GetSite)
 	protected.Put("/nav/sites/:id", navAPI.UpdateSite)
 	protected.Delete("/nav/sites/:id", navAPI.DeleteSite)
@@ -97,6 +113,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Delete("/nav/collector-domains/:id", navAPI.DeleteCollectorDomain)
 	protected.Post("/nav/collector-domains/:id/primary", navAPI.SetPrimaryCollectorDomain)
 	protected.Post("/game/games", gameAPI.CreateGame)
+	protected.Get("/game/games/:id/workspace", gameAPI.GetGameWorkspace)
 	protected.Get("/game/games/:id", gameAPI.GetGame)
 	protected.Put("/game/games/:id", gameAPI.UpdateGame)
 	protected.Delete("/game/games/:id", gameAPI.DeleteGame)
@@ -105,6 +122,14 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Post("/collection/jobs", collectionAPI.CreateJobs)
 	protected.Post("/collection/jobs/:domain/:id/cancel", collectionAPI.CancelJob)
 	protected.Post("/collection/jobs/:domain/:id/retry", collectionAPI.RetryJob)
+	protected.Get("/collection/instances", collectionAPI.Instances)
+	protected.Get("/collection/schedules", collectionAPI.Schedules)
+	protected.Post("/collection/schedules/:domain/:id/run", collectionAPI.RunSchedule)
+	protected.Get("/collection/runs", collectionAPI.Runs)
+	protected.Get("/collection/runs/:domain/:id/results", collectionAPI.Results)
+	protected.Get("/options/sites", optionsAPI.SiteOptions)
+	protected.Get("/options/site-targets", optionsAPI.SiteTargetOptions)
+	protected.Get("/options/games", optionsAPI.GameOptions)
 	protected.Get("/metrics/overview", metricAPI.Overview)
 	protected.Get("/metrics/registry", metricAPI.Registry)
 	protected.Get("/metrics/checkpoints", metricAPI.Checkpoints)
@@ -114,9 +139,12 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Get("/changes/registry", changeAPI.Registry)
 	protected.Get("/changes/checkpoints", changeAPI.Checkpoints)
 	protected.Get("/changes/events", changeAPI.Events)
+	protected.Get("/dataops/overview", dataOpsAPI.Overview)
+	protected.Get("/audit/logs", auditAPI.Logs)
+	protected.Get("/workbench/summary", workbenchAPI.Summary)
 
-	requestJSON(t, app, http.MethodPost, "/auth/bootstrap", `{"password":"integration-password"}`, nil, http.StatusOK)
-	login := requestJSON(t, app, http.MethodPost, "/auth/login", `{"password":"integration-password"}`, nil, http.StatusOK)
+	requestJSON(t, app, http.MethodPost, "/auth/bootstrap", `{"username":"owner","display_name":"Integration Owner","password":"integration-password"}`, nil, http.StatusOK)
+	login := requestJSON(t, app, http.MethodPost, "/auth/login", `{"username":"owner","password":"integration-password"}`, nil, http.StatusOK)
 	if len(login.Cookies()) == 0 {
 		t.Fatal("login response did not set the auth cookie")
 	}
@@ -143,6 +171,8 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	rootDomainID := responseID(t, rootDomain)
 	wwwDomain := requestJSON(t, app, http.MethodPost, "/nav/collector-domains", fmt.Sprintf(`{"site_id":%d,"name":"example.test","proxy":"0","prefix":"www.","tls":"1"}`, trackedSiteID), cookie, http.StatusOK)
 	wwwDomainID := responseID(t, wwwDomain)
+	assertOptionPage(t, requestJSON(t, app, http.MethodGet, "/options/sites?page_num=1&page_size=10&keyword=example.test", "", cookie, http.StatusOK), 1)
+	assertOptionPage(t, requestJSON(t, app, http.MethodGet, fmt.Sprintf("/options/site-targets?site_id=%d&page_num=1&page_size=10&keyword=www", trackedSiteID), "", cookie, http.StatusOK), 1)
 	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_target_tracking_periods WHERE site_id=$1 AND tracked_until IS NULL`, trackedSiteID); count != 2 {
 		t.Fatalf("active target period count=%d", count)
 	}
@@ -151,6 +181,8 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 		t.Fatalf("proxy/TLS-only update changed Target identity, period count=%d", count)
 	}
 	requestJSON(t, app, http.MethodPost, fmt.Sprintf("/nav/collector-domains/%d/primary", wwwDomainID), "", cookie, http.StatusOK)
+	assertSiteWorkspace(t, requestJSON(t, app, http.MethodGet, fmt.Sprintf("/nav/sites/%d/workspace", trackedSiteID), "", cookie, http.StatusOK), trackedSiteID, wwwDomainID)
+	assertPage(t, requestJSON(t, app, http.MethodGet, "/nav/site-summaries?page_num=1&page_size=10&keyword=Tracked", "", cookie, http.StatusOK), 1, 1)
 	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site_daily daily JOIN gfn_target_tracking_periods target ON target.id=daily.primary_target_tracking_period_id WHERE daily.site_id=$1 AND target.collector_domain_id=$2`, trackedSiteID, wwwDomainID); count != 1 {
 		t.Fatal("Set Primary did not refresh today's Site Daily marker")
 	}
@@ -170,6 +202,8 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	gamePayload := `{"name":"Game","name_en":"Game EN","info":"Info","info_en":"Info EN","resources":[],"groups":[],"developers":[],"publishers":[],"appid":424242,"header":"","links":[],"weight":5,"primary_tag":0,"secondary_tag":0}`
 	game := requestJSON(t, app, http.MethodPost, "/game/games", gamePayload, cookie, http.StatusOK)
 	gameID := responseID(t, game)
+	assertGameWorkspace(t, requestJSON(t, app, http.MethodGet, fmt.Sprintf("/game/games/%d/workspace", gameID), "", cookie, http.StatusOK), gameID)
+	assertOptionPage(t, requestJSON(t, app, http.MethodGet, "/options/games?page_num=1&page_size=10&keyword=424242", "", cookie, http.StatusOK), 1)
 	if count := queryInt64(t, ctx, gamePool, `SELECT COUNT(*) FROM gfg_game_tracking_periods WHERE game_id=$1 AND tracked_until IS NULL`, gameID); count != 1 {
 		t.Fatal("Game create did not open tracking period")
 	}
@@ -260,11 +294,13 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	if secondGameID <= gameID {
 		t.Fatalf("Game sequence reused or regressed id: first=%d second=%d", gameID, secondGameID)
 	}
+	testCollectionCenterOperations(t, ctx, app, cookie, gamePool, navPool, secondGameID)
 	if count := queryInt64(t, ctx, adminPool, `SELECT COUNT(*) FROM gfa_admin_audit_log`); count < 10 {
 		t.Fatalf("expected auth and CRUD audit entries, got %d", count)
 	}
 	testMetricCenterReadOnlyAPI(t, ctx, app, cookie, gamePool, navPool)
 	testChangeCenterReadOnlyAPI(t, ctx, app, cookie, gamePool, navPool)
+	testDataSystemOperationsAPI(t, ctx, app, cookie, adminPool, names)
 
 	// Prove that gfn and gfa are not treated as a distributed transaction: a
 	// failed gfa audit must roll back the still-open gfn business transaction.
@@ -273,6 +309,272 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site WHERE name='Rollback'`); count != 0 {
 		t.Fatalf("cross-database audit failure left %d Nav rows", count)
 	}
+}
+
+func testDataSystemOperationsAPI(t *testing.T, ctx context.Context, app *fiber.App, cookie *http.Cookie, adminPool *pgxpool.Pool, databaseNames map[string]string) {
+	t.Helper()
+	if _, err := adminPool.Exec(ctx, `INSERT INTO gfa_admin_audit_log
+        (action,resource,target_id,operator,session_version,request_id,ip_address,user_agent,before_data,after_data,
+         operator_account_id,operator_name,operator_role,created_at)
+        VALUES ('security.redaction','gfa_admin_account','1','owner',1,'integration-redaction','127.0.0.1','integration',
+                '{"password":"plain-secret","safe":"before"}','{"token":"jwt-secret","safe":"after"}',
+                1,'Historical Owner','owner',now())`); err != nil {
+		t.Fatal(err)
+	}
+
+	dataResponse := requestJSON(t, app, http.MethodGet, "/dataops/overview", "", cookie, http.StatusOK)
+	defer dataResponse.Body.Close()
+	var dataEnvelope integrationEnvelope
+	if err := json.NewDecoder(dataResponse.Body).Decode(&dataEnvelope); err != nil {
+		t.Fatal(err)
+	}
+	var dataOverview struct {
+		Databases []struct {
+			Key          string `json:"key"`
+			Health       string `json:"health"`
+			DatabaseName string `json:"database_name"`
+			Migration    struct {
+				Status       string `json:"status"`
+				PendingCount int    `json:"pending_count"`
+			} `json:"migration"`
+			Relations []json.RawMessage `json:"relations"`
+		} `json:"databases"`
+	}
+	if err := json.Unmarshal(dataEnvelope.Data, &dataOverview); err != nil {
+		t.Fatal(err)
+	}
+	if len(dataOverview.Databases) != 3 {
+		t.Fatalf("DataOps database count=%d, want 3: %s", len(dataOverview.Databases), dataEnvelope.Data)
+	}
+	for _, database := range dataOverview.Databases {
+		domain := map[string]string{"gfa": "admin", "gfn": "nav", "gfg": "game"}[database.Key]
+		if database.Health != "healthy" || database.DatabaseName != databaseNames[domain] || database.Migration.Status != "current" || database.Migration.PendingCount != 0 || database.Relations == nil {
+			t.Fatalf("unexpected DataOps %s status: %s", database.Key, dataEnvelope.Data)
+		}
+	}
+
+	auditResponse := requestJSON(t, app, http.MethodGet, "/audit/logs?action=security.redaction&role=owner&page=1&page_size=1", "", cookie, http.StatusOK)
+	defer auditResponse.Body.Close()
+	var auditEnvelope integrationEnvelope
+	if err := json.NewDecoder(auditResponse.Body).Decode(&auditEnvelope); err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(auditEnvelope.Data, []byte("plain-secret")) || bytes.Contains(auditEnvelope.Data, []byte("jwt-secret")) || !bytes.Contains(auditEnvelope.Data, []byte("[REDACTED]")) || !bytes.Contains(auditEnvelope.Data, []byte("Historical Owner")) {
+		t.Fatalf("Audit pagination/snapshot/redaction contract failed: %s", auditEnvelope.Data)
+	}
+	assertPage(t, responseFromEnvelope(t, auditEnvelope), 1, 1)
+
+	workbenchResponse := requestJSON(t, app, http.MethodGet, "/workbench/summary", "", cookie, http.StatusOK)
+	defer workbenchResponse.Body.Close()
+	var workbenchEnvelope integrationEnvelope
+	if err := json.NewDecoder(workbenchResponse.Body).Decode(&workbenchEnvelope); err != nil {
+		t.Fatal(err)
+	}
+	var summary struct {
+		RecentChanges    []json.RawMessage `json:"recent_changes"`
+		RecentOperations []json.RawMessage `json:"recent_operations"`
+		SystemStatus     []json.RawMessage `json:"system_status"`
+	}
+	if err := json.Unmarshal(workbenchEnvelope.Data, &summary); err != nil {
+		t.Fatal(err)
+	}
+	if len(summary.RecentChanges) == 0 || len(summary.RecentOperations) == 0 || len(summary.SystemStatus) < 6 {
+		t.Fatalf("Workbench aggregation incomplete: %s", workbenchEnvelope.Data)
+	}
+}
+
+func responseFromEnvelope(t *testing.T, envelope integrationEnvelope) *http.Response {
+	t.Helper()
+	body, err := json.Marshal(envelope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &http.Response{Body: io.NopCloser(bytes.NewReader(body))}
+}
+
+func testCollectionCenterOperations(t *testing.T, ctx context.Context, app *fiber.App, cookie *http.Cookie, gamePool, navPool *pgxpool.Pool, gameID int64) {
+	t.Helper()
+	if _, err := gamePool.Exec(ctx, `
+INSERT INTO gfg_collection_schedules
+    (job_key,name,enabled,schedule_kind,cron_expression,timezone,misfire_policy,
+     misfire_grace_seconds,priority,concurrency_key,last_materialized_for,next_scheduled_for)
+VALUES ('game.metadata','Integration metadata',true,'cron','0 3 * * *','UTC','catch_up_once',300,100,'steam',
+        now()-interval '1 day',now()+interval '1 day')`); err != nil {
+		t.Fatal(err)
+	}
+	var scheduleID, scheduleVersion int64
+	var lastMaterialized, nextScheduled *time.Time
+	if err := gamePool.QueryRow(ctx, `SELECT id, version, last_materialized_for, next_scheduled_for FROM gfg_collection_schedules WHERE job_key='game.metadata'`).Scan(&scheduleID, &scheduleVersion, &lastMaterialized, &nextScheduled); err != nil {
+		t.Fatal(err)
+	}
+	runNow := responseFirstID(t, requestJSON(t, app, http.MethodPost, fmt.Sprintf("/collection/schedules/game/%d/run", scheduleID), "", cookie, http.StatusOK))
+	if count := queryInt64(t, ctx, gamePool, `SELECT count(*) FROM gfg_collection_jobs WHERE id=$1 AND schedule_id=$2 AND schedule_version=$3 AND trigger='manual' AND scheduled_for IS NULL`, runNow, scheduleID, scheduleVersion); count != 1 {
+		t.Fatal("Run Now did not preserve schedule lineage without creating a scheduled slot")
+	}
+	if count := queryInt64(t, ctx, gamePool, `SELECT count(*) FROM gfg_collection_schedules WHERE id=$1 AND last_materialized_for IS NOT DISTINCT FROM $2::timestamptz AND next_scheduled_for IS NOT DISTINCT FROM $3::timestamptz`, scheduleID, lastMaterialized, nextScheduled); count != 1 {
+		t.Fatal("Run Now mutated schedule materialization phase")
+	}
+
+	if _, err := gamePool.Exec(ctx, `
+INSERT INTO gfg_collector_instances(instance_id,collector_id,hostname,version,commit_sha,capabilities,started_at,last_heartbeat_at,stopped_at)
+VALUES ('admin-old-instance','admin-integration','host','v1','old',ARRAY['game.metadata'],now()-interval '2 hours',now()-interval '90 minutes',now()-interval '90 minutes'),
+       ('admin-current-instance','admin-integration','host','v2','new',ARRAY['game.metadata'],now()-interval '5 minutes',now(),NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := navPool.Exec(ctx, `
+INSERT INTO gfn_collector_instances(instance_id,collector_id,hostname,version,commit_sha,capabilities,started_at,last_heartbeat_at,stopped_at)
+VALUES ('admin-old-nav-instance','admin-nav-integration','host','v1','old',ARRAY['nav.dns'],now()-interval '2 hours',now()-interval '90 minutes',now()-interval '90 minutes'),
+       ('admin-current-nav-instance','admin-nav-integration','host','v2','new',ARRAY['nav.dns'],now()-interval '5 minutes',now(),NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	assertPage(t, requestJSON(t, app, http.MethodGet, "/collection/instances?domain=game&view=current&page=1&page_size=1", "", cookie, http.StatusOK), 2, 1)
+	assertPage(t, requestJSON(t, app, http.MethodGet, "/collection/instances?domain=game&view=history&page=1&page_size=1", "", cookie, http.StatusOK), 1, 1)
+
+	if _, err := gamePool.Exec(ctx, `UPDATE gfg_collection_jobs SET status='success', completed_at=now(), updated_at=now() WHERE id=$1`, runNow); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := gamePool.Exec(ctx, `
+INSERT INTO gfg_collection_runs(id,job_id,attempt_no,collector_instance_id,status,started_at,ended_at,expected_count,attempted_count,success_count,duration_ms)
+VALUES ('admin-run-now',$1,1,'admin-current-instance','success',now()-interval '2 seconds',now(),0,0,0,2000)`, runNow); err != nil {
+		t.Fatal(err)
+	}
+	for _, statement := range []string{
+		`INSERT INTO gfg_collection_task_results(run_id,task_type,game_id,appid,status,duration_ms,error_message,started_at,ended_at) VALUES ('admin-run-now','details',$1,424244,'success',800,'',now()-interval '2 seconds',now()-interval '1 second')`,
+		`INSERT INTO gfg_collection_task_results(run_id,task_type,game_id,appid,status,duration_ms,error_kind,error_message,started_at,ended_at) VALUES ('admin-run-now','news',$1,424244,'failed',1200,'upstream','long integration error detail',now()-interval '1 second',now())`,
+	} {
+		if _, err := gamePool.Exec(ctx, statement, gameID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var secondJob int64
+	if err := gamePool.QueryRow(ctx, `
+INSERT INTO gfg_collection_jobs(job_key,trigger,scope_type,scope_id,tasks,priority,concurrency_key,status,requested_by)
+VALUES ('game.metadata','manual','game',$1,ARRAY['details'],200,'steam','success','integration') RETURNING id`, gameID).Scan(&secondJob); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := gamePool.Exec(ctx, `
+INSERT INTO gfg_collection_runs(id,job_id,attempt_no,collector_instance_id,status,started_at,ended_at,expected_count,attempted_count,success_count,duration_ms)
+VALUES ('admin-second-run',$1,1,'admin-current-instance','success',now()-interval '1 second',now(),1,1,1,1000)`, secondJob); err != nil {
+		t.Fatal(err)
+	}
+	assertPage(t, requestJSON(t, app, http.MethodGet, "/collection/runs?domain=game&page=1&page_size=1", "", cookie, http.StatusOK), 2, 1)
+	assertPage(t, requestJSON(t, app, http.MethodGet, fmt.Sprintf("/collection/runs/game/admin-run-now/results?page=1&page_size=1&game_id=%d", gameID), "", cookie, http.StatusOK), 2, 1)
+	assertScheduleCoverageUnavailable(t, requestJSON(t, app, http.MethodGet, "/collection/schedules", "", cookie, http.StatusOK), scheduleID)
+}
+
+func assertOptionPage(t *testing.T, resp *http.Response, minimum int64) {
+	t.Helper()
+	defer resp.Body.Close()
+	var envelope integrationEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	var page struct {
+		Total int64 `json:"total"`
+	}
+	if err := json.Unmarshal(envelope.Data, &page); err != nil {
+		t.Fatal(err)
+	}
+	if page.Total < minimum {
+		t.Fatalf("option page total=%d, want at least %d: %s", page.Total, minimum, envelope.Data)
+	}
+}
+
+func assertPage(t *testing.T, resp *http.Response, total int64, listLength int) {
+	t.Helper()
+	defer resp.Body.Close()
+	var envelope integrationEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	var page struct {
+		Total int64             `json:"total"`
+		List  []json.RawMessage `json:"list"`
+	}
+	if err := json.Unmarshal(envelope.Data, &page); err != nil {
+		t.Fatal(err)
+	}
+	if page.Total != total || len(page.List) != listLength {
+		t.Fatalf("page total/list=%d/%d, want %d/%d: %s", page.Total, len(page.List), total, listLength, envelope.Data)
+	}
+}
+
+func assertSiteWorkspace(t *testing.T, resp *http.Response, siteID, primaryTargetID int64) {
+	t.Helper()
+	defer resp.Body.Close()
+	var envelope integrationEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	var workspace struct {
+		Site struct {
+			ID int64 `json:"id"`
+		} `json:"site"`
+		Targets []struct {
+			ID      int64 `json:"id"`
+			Primary bool  `json:"primary"`
+		} `json:"targets"`
+		Groups []json.RawMessage `json:"groups"`
+	}
+	if err := json.Unmarshal(envelope.Data, &workspace); err != nil {
+		t.Fatal(err)
+	}
+	if workspace.Site.ID != siteID || len(workspace.Targets) != 2 || workspace.Groups == nil {
+		t.Fatalf("unexpected Site workspace: %s", envelope.Data)
+	}
+	for _, target := range workspace.Targets {
+		if target.ID == primaryTargetID && target.Primary {
+			return
+		}
+	}
+	t.Fatalf("Site workspace does not identify target %d as Primary: %s", primaryTargetID, envelope.Data)
+}
+
+func assertGameWorkspace(t *testing.T, resp *http.Response, gameID int64) {
+	t.Helper()
+	defer resp.Body.Close()
+	var envelope integrationEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	var workspace struct {
+		Game struct {
+			ID int64 `json:"id"`
+		} `json:"game"`
+		Tags []json.RawMessage `json:"tags"`
+	}
+	if err := json.Unmarshal(envelope.Data, &workspace); err != nil {
+		t.Fatal(err)
+	}
+	if workspace.Game.ID != gameID || workspace.Tags == nil {
+		t.Fatalf("unexpected Game workspace: %s", envelope.Data)
+	}
+}
+
+func assertScheduleCoverageUnavailable(t *testing.T, resp *http.Response, scheduleID int64) {
+	t.Helper()
+	defer resp.Body.Close()
+	var envelope integrationEnvelope
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		t.Fatal(err)
+	}
+	var schedules []struct {
+		ID                  int64    `json:"id"`
+		LastStatus          string   `json:"last_status"`
+		LastSuccessCoverage *float64 `json:"last_success_coverage"`
+	}
+	if err := json.Unmarshal(envelope.Data, &schedules); err != nil {
+		t.Fatal(err)
+	}
+	for _, schedule := range schedules {
+		if schedule.ID == scheduleID {
+			if schedule.LastStatus != "success" || schedule.LastSuccessCoverage != nil {
+				t.Fatalf("schedule Last/Coverage=%q/%v, want success/null", schedule.LastStatus, schedule.LastSuccessCoverage)
+			}
+			return
+		}
+	}
+	t.Fatal("schedule missing from Collection Center response")
 }
 
 func testMetricCenterReadOnlyAPI(t *testing.T, ctx context.Context, app *fiber.App, cookie *http.Cookie, gamePool, navPool *pgxpool.Pool) {
@@ -346,7 +648,7 @@ VALUES (998800, $1, '2026-08-02T00:00:00Z', true,
 	requestJSON(t, app, http.MethodGet, "/metrics/overview", "", cookie, http.StatusOK).Body.Close()
 	requestJSON(t, app, http.MethodGet, "/metrics/registry", "", cookie, http.StatusOK).Body.Close()
 	requestJSON(t, app, http.MethodGet, "/metrics/checkpoints", "", cookie, http.StatusOK).Body.Close()
-	requestJSON(t, app, http.MethodGet, "/metrics/daily?domain=game&metric=free_game_share&version=1", "", cookie, http.StatusOK).Body.Close()
+	assertPage(t, requestJSON(t, app, http.MethodGet, "/metrics/daily?domain=game&metric=free_game_share&version=1&page=1&page_size=1", "", cookie, http.StatusOK), 1, 1)
 
 	assertHistoricalMetricName(t, requestJSON(t, app, http.MethodGet,
 		"/metrics/entities?domain=game&metric=free_game_share&version=1&fact_date="+factDate,

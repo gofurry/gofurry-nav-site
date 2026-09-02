@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -15,6 +16,35 @@ func repositoryRootForTest(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return root
+}
+
+func TestPostgresIntegrationUsesSchemaReadyContractSpecificConfigs(t *testing.T) {
+	path := filepath.Join("..", "..", ".github", "workflows", "checks.yml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workflow := string(data)
+	for _, expected := range []string{
+		"GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-game-collector-integration.yaml",
+		"GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG: /tmp/gofurry-nav-collector-integration.yaml",
+		"GOFURRY_GAME_BACKEND_INTEGRATION_CONFIG: /tmp/gofurry-backend-integration.yaml",
+		"GOFURRY_NAV_BACKEND_INTEGRATION_CONFIG: /tmp/gofurry-backend-integration.yaml",
+		"GOFURRY_ADMIN_INTEGRATION_CONFIG: /tmp/gofurry-admin-integration.yaml",
+		"db_name: gfg_integration",
+		"db_name: gfn_integration",
+		"go tool goose -dir ../db/game/migrations",
+		"go tool goose -dir ../db/nav/migrations",
+		"TestGameExpiredLeaseRecoveryIntegration",
+		"TestNavExpiredLeaseRecoveryIntegration",
+	} {
+		if !strings.Contains(workflow, expected) {
+			t.Fatalf("checks workflow is missing isolated integration contract %q", expected)
+		}
+	}
+	if strings.Contains(workflow, "/tmp/gofurry-integration.yaml") {
+		t.Fatal("checks workflow still shares one incompatible integration config across applications")
+	}
 }
 
 func TestEngineeringFoundationWorkflowParses(t *testing.T) {

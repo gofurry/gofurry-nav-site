@@ -10,6 +10,8 @@
           :remark="gameDetailData.remarkInfo"
           :recommend="gameDetailData.recommendedGame"
           :game-id="gameId"
+          :insights="gameInsightsSnapshot.insights"
+          :insights-unavailable="gameInsightsSnapshot.unavailable"
         />
       </section>
 
@@ -29,14 +31,20 @@ import { useI18n } from 'vue-i18n'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import GameDetailMain from '@/components/game/detail/GameDetailMain.vue'
 import GameDetailSidebar from '@/components/game/detail/GameDetailSidebar.vue'
-import { getGameBaseInfo, getGameRemark, getRecommendedGame, touchGameView } from '~/services/game'
+import { getGameBaseInfo, getGameInsights, getGameRemark, getRecommendedGame, touchGameView } from '~/services/game'
 import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '~/types/game'
+import type { GameInsights } from '~/types/insights'
 import { buildGameDetailSeo } from '~/utils/seo'
 
 interface GameDetailPageData {
   gameBaseInfo: GameBaseInfoResponse | null
   recommendedGame: RecommendedModel[] | null
   remarkInfo: RemarkResponse | null
+}
+
+interface GameInsightsSnapshot {
+  insights: GameInsights | null
+  unavailable: boolean
 }
 
 const route = useRoute()
@@ -47,7 +55,7 @@ const touchingGameIds = new Set<string>()
 const gameId = computed(() => String(route.params.id ?? ''))
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
 
-const { data } = await useAsyncData<GameDetailPageData>(
+const detailRequest = useAsyncData<GameDetailPageData>(
   () => `game-detail:${gameId.value}:${lang.value}`,
   async () => {
     const [gameBaseInfo, remarkInfo, recommendedGame] = await Promise.all([
@@ -72,7 +80,26 @@ const { data } = await useAsyncData<GameDetailPageData>(
   }
 )
 
+const insightsRequest = useAsyncData<GameInsightsSnapshot>(
+  () => `game-insights:${gameId.value}`,
+  async () => {
+    try {
+      return { insights: await getGameInsights(gameId.value), unavailable: false }
+    } catch {
+      return { insights: null, unavailable: true }
+    }
+  },
+  {
+    watch: [gameId],
+    default: () => ({ insights: null, unavailable: true }),
+  },
+)
+
+const [detailState, insightsState] = await Promise.all([detailRequest, insightsRequest])
+const { data } = detailState
+
 const gameDetailData = computed(() => data.value!)
+const gameInsightsSnapshot = computed(() => insightsState.data.value!)
 const seo = computed(() => buildGameDetailSeo({
   name: gameDetailData.value.gameBaseInfo?.name,
   description: gameDetailData.value.gameBaseInfo?.info,

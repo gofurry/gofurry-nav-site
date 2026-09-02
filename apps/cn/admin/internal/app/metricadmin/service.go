@@ -138,9 +138,9 @@ func (service *Service) Checkpoints(ctx context.Context, filter Filters) ([]Chec
 	return result, nil
 }
 
-func (service *Service) Daily(ctx context.Context, filter Filters) ([]Daily, common.Error) {
+func (service *Service) Daily(ctx context.Context, filter Filters) (DailyPage, common.Error) {
 	if err := validateDomain(filter.Domain); err != nil {
-		return nil, err
+		return DailyPage{}, err
 	}
 	if filter.DimensionKey == "" {
 		filter.DimensionKey = "global"
@@ -148,45 +148,79 @@ func (service *Service) Daily(ctx context.Context, filter Filters) ([]Daily, com
 	if filter.DimensionValue == "" {
 		filter.DimensionValue = "all"
 	}
+	if filter.Page < 1 {
+		filter.Page = 1
+	}
+	if filter.PageSize < 1 || filter.PageSize > 200 {
+		filter.PageSize = 50
+	}
+	offset := (filter.Page - 1) * filter.PageSize
+	queryLimit, queryOffset := filter.PageSize, offset
+	if filter.Domain == "" {
+		queryLimit, queryOffset = offset+filter.PageSize, 0
+	}
 	from, through := dateParam(filter.From), dateParam(filter.Through)
-	result := make([]Daily, 0)
+	page := DailyPage{List: make([]Daily, 0)}
 	if filter.Domain == "" || filter.Domain == "game" {
+		countParams := gamesqlc.AdminCountGameMetricDailyParams{
+			MetricKey: filter.MetricKey, MetricVersion: filter.MetricVersion, FromDate: from, ThroughDate: through,
+			DimensionKey: filter.DimensionKey, DimensionValue: filter.DimensionValue,
+		}
+		total, err := service.game.AdminCountGameMetricDaily(ctx, countParams)
+		if err != nil {
+			return DailyPage{}, daoError(err)
+		}
+		page.Total += total
 		rows, err := service.game.AdminListGameMetricDaily(ctx, gamesqlc.AdminListGameMetricDailyParams{
 			MetricKey: filter.MetricKey, MetricVersion: filter.MetricVersion, FromDate: from, ThroughDate: through,
-			DimensionKey: filter.DimensionKey, DimensionValue: filter.DimensionValue, RowLimit: 1000,
+			DimensionKey: filter.DimensionKey, DimensionValue: filter.DimensionValue, RowLimit: queryLimit, RowOffset: queryOffset,
 		})
 		if err != nil {
-			return nil, daoError(err)
+			return DailyPage{}, daoError(err)
 		}
 		for _, row := range rows {
-			result = append(result, dailyDTO("game", row.MetricKey, row.MetricVersion, row.FactDate,
+			page.List = append(page.List, dailyDTO("game", row.MetricKey, row.MetricVersion, row.FactDate,
 				row.DimensionKey, row.DimensionValue, row.PopulationCount, row.EligibleCount,
 				row.NotApplicableCount, row.PositiveCount, row.NegativeCount, row.StaleCount,
 				row.NotProbedCount, row.ProbeFailedCount, row.UnknownCount, row.ComputedAt))
 		}
 	}
 	if filter.Domain == "" || filter.Domain == "nav" {
+		countParams := navsqlc.AdminCountNavMetricDailyParams{
+			MetricKey: filter.MetricKey, MetricVersion: filter.MetricVersion, FromDate: from, ThroughDate: through,
+			DimensionKey: filter.DimensionKey, DimensionValue: filter.DimensionValue,
+		}
+		total, err := service.nav.AdminCountNavMetricDaily(ctx, countParams)
+		if err != nil {
+			return DailyPage{}, daoError(err)
+		}
+		page.Total += total
 		rows, err := service.nav.AdminListNavMetricDaily(ctx, navsqlc.AdminListNavMetricDailyParams{
 			MetricKey: filter.MetricKey, MetricVersion: filter.MetricVersion, FromDate: from, ThroughDate: through,
-			DimensionKey: filter.DimensionKey, DimensionValue: filter.DimensionValue, RowLimit: 1000,
+			DimensionKey: filter.DimensionKey, DimensionValue: filter.DimensionValue, RowLimit: queryLimit, RowOffset: queryOffset,
 		})
 		if err != nil {
-			return nil, daoError(err)
+			return DailyPage{}, daoError(err)
 		}
 		for _, row := range rows {
-			result = append(result, dailyDTO("nav", row.MetricKey, row.MetricVersion, row.FactDate,
+			page.List = append(page.List, dailyDTO("nav", row.MetricKey, row.MetricVersion, row.FactDate,
 				row.DimensionKey, row.DimensionValue, row.PopulationCount, row.EligibleCount,
 				row.NotApplicableCount, row.PositiveCount, row.NegativeCount, row.StaleCount,
 				row.NotProbedCount, row.ProbeFailedCount, row.UnknownCount, row.ComputedAt))
 		}
 	}
-	sort.Slice(result, func(i, j int) bool {
-		if result[i].FactDate == result[j].FactDate {
-			return result[i].MetricKey < result[j].MetricKey
+	sort.Slice(page.List, func(i, j int) bool {
+		if page.List[i].FactDate == page.List[j].FactDate {
+			return page.List[i].MetricKey < page.List[j].MetricKey
 		}
-		return result[i].FactDate > result[j].FactDate
+		return page.List[i].FactDate > page.List[j].FactDate
 	})
-	return result, nil
+	if filter.Domain == "" {
+		start := min(int(offset), len(page.List))
+		end := min(start+int(filter.PageSize), len(page.List))
+		page.List = page.List[start:end]
+	}
+	return page, nil
 }
 
 func (service *Service) Entities(ctx context.Context, filter Filters) (EntityPage, common.Error) {

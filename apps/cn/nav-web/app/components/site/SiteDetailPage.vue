@@ -27,6 +27,12 @@
 
       <SiteSignalCards :cards="signalCards" />
 
+      <SiteInsightsPanel
+        v-if="showInsights"
+        :insights="siteInsightsSnapshot.insights"
+        :unavailable="siteInsightsSnapshot.unavailable"
+      />
+
       <SiteObservationOverviewPanel
         :protocol-availability-text="protocolAvailabilityText"
         :protocol-entries="protocolTrackEntries"
@@ -72,16 +78,54 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import SiteDetailHero from '@/components/site/SiteDetailHero.vue'
+import SiteInsightsPanel from '@/components/site/SiteInsightsPanel.vue'
 import SiteMetadataProbePanel from '@/components/site/SiteMetadataProbePanel.vue'
 import SiteObservationOverviewPanel from '@/components/site/SiteObservationOverviewPanel.vue'
 import SiteObservationTabs from '@/components/site/SiteObservationTabs.vue'
 import SitePerformancePanel from '@/components/site/SitePerformancePanel.vue'
 import SiteSignalCards from '@/components/site/SiteSignalCards.vue'
+import { getSiteInsights } from '@/services/nav'
+import type { SiteInsights } from '@/types/insights'
 import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
 import { buildSiteDetailSeo } from '~/utils/seo'
 
+interface SiteInsightsSnapshot {
+  insights: SiteInsights | null
+  unavailable: boolean
+}
+
+const props = withDefaults(defineProps<{
+  showInsights?: boolean
+}>(), {
+  showInsights: false,
+})
+
+const route = useRoute()
 const { locale, t } = useI18n()
-const { data, pending, error, siteId } = await useSiteDetailPage()
+const requestedSiteId = computed(() => String(route.params.id ?? ''))
+const detailRequest = useSiteDetailPage()
+const insightsRequest = useAsyncData<SiteInsightsSnapshot>(
+  () => `site-insights:${requestedSiteId.value}`,
+  async () => {
+    if (!props.showInsights || !requestedSiteId.value) {
+      return { insights: null, unavailable: false }
+    }
+
+    try {
+      return { insights: await getSiteInsights(requestedSiteId.value), unavailable: false }
+    } catch {
+      return { insights: null, unavailable: true }
+    }
+  },
+  {
+    watch: [requestedSiteId],
+    default: () => ({ insights: null, unavailable: props.showInsights }),
+  },
+)
+const [detailState, insightsState] = await Promise.all([detailRequest, insightsRequest])
+const { data, pending, error, siteId } = detailState
+const siteInsightsSnapshot = computed(() => insightsState.data.value)
+const showInsights = computed(() => props.showInsights)
 const navV2Api = useApi('navV2')
 const config = useRuntimeConfig()
 const pageRoot = ref<HTMLElement | null>(null)

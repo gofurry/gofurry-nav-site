@@ -199,8 +199,8 @@ VALUES
 				}
 			}
 
-			// Exercise the deployed alpha.4 -> alpha.5 Change Intelligence
-			// boundary independently, including Goose-owned detector seeds.
+			// Exercise the deployed alpha.4 boundary through current independently,
+			// including Goose-owned detector seeds and later compatibility repairs.
 			if test.label == "gfg" || test.label == "gfn" {
 				upgradeName := temporaryDatabaseName(test.label, "alpha4_upgrade")
 				createDatabase(t, ctx, adminDB, upgradeName)
@@ -211,7 +211,7 @@ VALUES
 					t.Fatalf("prepare %s alpha.4 fixture: %v", test.label, err)
 				}
 				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
-					t.Fatalf("upgrade %s alpha.4 to alpha.5: %v", test.label, err)
+					t.Fatalf("upgrade %s alpha.4 to current: %v", test.label, err)
 				}
 				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
 				if err != nil {
@@ -228,8 +228,179 @@ VALUES
 				if err := upgradeDB.QueryRowContext(ctx, fmt.Sprintf(`SELECT count(*) FROM public.%s_change_checkpoints`, prefix)).Scan(&checkpointCount); err != nil {
 					t.Fatal(err)
 				}
-				if registryCount != 5 || checkpointCount != 5 {
-					t.Fatalf("%s alpha.5 detector seeds registry=%d checkpoints=%d", test.label, registryCount, checkpointCount)
+				expectedDetectors := 5
+				if test.label == "gfg" {
+					expectedDetectors = 6
+				} else if test.label == "gfn" {
+					expectedDetectors = 11
+				}
+				if registryCount != expectedDetectors || checkpointCount != expectedDetectors {
+					t.Fatalf("%s current detector seeds registry=%d checkpoints=%d, want %d", test.label, registryCount, checkpointCount, expectedDetectors)
+				}
+			}
+
+			// Exercise the staged P2.2 Game Mac rollout boundary: the Metric
+			// contract is independently deployable/backfillable before the Change
+			// contract, and the completed upgrade converges on the current schema.
+			if test.label == "gfg" {
+				upgradeName := temporaryDatabaseName(test.label, "p22_mac_upgrade")
+				createDatabase(t, ctx, adminDB, upgradeName)
+				defer dropDatabase(t, adminDB, upgradeName)
+				upgradeDB := openDatabase(t, adminDSN, upgradeName)
+				defer upgradeDB.Close()
+				if err := goose.UpToContext(ctx, upgradeDB, migrationDir, 20260902010000); err != nil {
+					t.Fatalf("prepare gfg P2.2 Mac Metric boundary: %v", err)
+				}
+				var metricContracts, changeContracts int
+				if err := upgradeDB.QueryRowContext(ctx, `SELECT count(*) FROM gfg_metric_registry WHERE metric_key='mac_support' AND metric_version=1 AND status='active'`).Scan(&metricContracts); err != nil {
+					t.Fatal(err)
+				}
+				if err := upgradeDB.QueryRowContext(ctx, `SELECT count(*) FROM gfg_change_registry WHERE detector_key='mac_support_transition'`).Scan(&changeContracts); err != nil {
+					t.Fatal(err)
+				}
+				if metricContracts != 1 || changeContracts != 0 {
+					t.Fatalf("staged Mac boundary metric=%d change=%d", metricContracts, changeContracts)
+				}
+				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
+					t.Fatalf("upgrade gfg P2.2 Mac Change boundary: %v", err)
+				}
+				if err := upgradeDB.QueryRowContext(ctx, `SELECT count(*) FROM gfg_change_registry WHERE detector_key='mac_support_transition' AND detector_version=1 AND status='active'`).Scan(&changeContracts); err != nil {
+					t.Fatal(err)
+				}
+				if changeContracts != 1 {
+					t.Fatalf("completed Mac Change contracts=%d", changeContracts)
+				}
+				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
+				if err != nil {
+					t.Fatalf("inspect P2.2-upgraded gfg schema: %v", err)
+				}
+				if difference := schema.Difference(expected, upgradeActual); difference != "" {
+					t.Fatalf("P2.2 Mac staged upgrade schema drift: %s", difference)
+				}
+			}
+
+			// Exercise the released alpha.5 -> P0.5.1 Nav semantics repair
+			// boundary, including version retirement and v2 activation.
+			if test.label == "gfn" {
+				upgradeName := temporaryDatabaseName(test.label, "alpha5_repair_upgrade")
+				createDatabase(t, ctx, adminDB, upgradeName)
+				defer dropDatabase(t, adminDB, upgradeName)
+				upgradeDB := openDatabase(t, adminDSN, upgradeName)
+				defer upgradeDB.Close()
+				if err := goose.UpToContext(ctx, upgradeDB, migrationDir, 20260830010000); err != nil {
+					t.Fatalf("prepare gfn alpha.5 fixture: %v", err)
+				}
+				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
+					t.Fatalf("upgrade gfn alpha.5 through P0.5.1 repair: %v", err)
+				}
+				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
+				if err != nil {
+					t.Fatalf("inspect P0.5.1-upgraded gfn schema: %v", err)
+				}
+				if difference := schema.Difference(expected, upgradeActual); difference != "" {
+					t.Fatalf("alpha.5 -> P0.5.1 gfn schema drift: %s", difference)
+				}
+				var activeMetricV2, retiredMetricV1, activeDetectorV2, retiredDetectorV1 int
+				if err := upgradeDB.QueryRowContext(ctx, `
+SELECT
+  count(*) FILTER (WHERE metric_version=2 AND status='active'),
+  count(*) FILTER (WHERE metric_version=1 AND status='retired')
+FROM gfn_metric_registry
+WHERE metric_key IN ('ipv6_adoption','security_txt_adoption')`).Scan(&activeMetricV2, &retiredMetricV1); err != nil {
+					t.Fatal(err)
+				}
+				if err := upgradeDB.QueryRowContext(ctx, `
+SELECT
+  count(*) FILTER (WHERE detector_version=2 AND status='active'),
+  count(*) FILTER (WHERE detector_version=1 AND status='retired')
+FROM gfn_change_registry
+WHERE detector_key IN ('ipv6_transition','security_txt_transition')`).Scan(&activeDetectorV2, &retiredDetectorV1); err != nil {
+					t.Fatal(err)
+				}
+				if activeMetricV2 != 2 || retiredMetricV1 != 2 || activeDetectorV2 != 2 || retiredDetectorV1 != 2 {
+					t.Fatalf("gfn version cutover metrics active-v2=%d retired-v1=%d detectors active-v2=%d retired-v1=%d", activeMetricV2, retiredMetricV1, activeDetectorV2, retiredDetectorV1)
+				}
+			}
+
+			// Exercise the released single-account Admin boundary through the
+			// multi-account identity migration. Values that carry security or
+			// historical meaning must survive unchanged, while ambiguous legacy
+			// databases must fail rather than receive guessed Owner privilege.
+			if test.label == "gfa" {
+				upgradeName := temporaryDatabaseName(test.label, "identity_upgrade")
+				createDatabase(t, ctx, adminDB, upgradeName)
+				defer dropDatabase(t, adminDB, upgradeName)
+				upgradeDB := openDatabase(t, adminDSN, upgradeName)
+				defer upgradeDB.Close()
+				if err := goose.UpToContext(ctx, upgradeDB, migrationDir, expectedBaselineVersion); err != nil {
+					t.Fatalf("prepare gfa legacy identity fixture: %v", err)
+				}
+				if _, err := upgradeDB.ExecContext(ctx, `
+INSERT INTO gfa_admin_account(id,password_hash,session_version,created_at,updated_at,password_updated_at)
+VALUES (1,'legacy-password-hash',7,'2026-08-01','2026-08-02','2026-08-03');
+INSERT INTO gfa_admin_audit_log(action,resource,target_id,operator,session_version,created_at)
+VALUES ('legacy-action','legacy-resource','1','admin',7,'2026-08-04');`); err != nil {
+					t.Fatal(err)
+				}
+				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
+					t.Fatalf("upgrade legacy gfa identity: %v", err)
+				}
+				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if difference := schema.Difference(expected, upgradeActual); difference != "" {
+					t.Fatalf("legacy identity -> current gfa schema drift: %s", difference)
+				}
+				var preserved int
+				if err := upgradeDB.QueryRowContext(ctx, `
+SELECT count(*)
+FROM gfa_admin_account account
+JOIN gfa_admin_audit_log audit ON audit.operator_account_id=account.id
+WHERE account.id=1 AND account.username='owner' AND account.display_name='Owner'
+  AND account.role='owner' AND account.status='active'
+  AND account.password_hash='legacy-password-hash' AND account.session_version=7
+  AND account.created_at='2026-08-01' AND account.updated_at='2026-08-02'
+  AND account.password_updated_at='2026-08-03'
+  AND audit.action='legacy-action' AND audit.operator_name='Owner' AND audit.operator_role='owner'`).Scan(&preserved); err != nil {
+					t.Fatal(err)
+				}
+				if preserved != 1 {
+					t.Fatal("legacy Admin identity or audit snapshot was not preserved")
+				}
+				var nextID int64
+				if err := upgradeDB.QueryRowContext(ctx, `SELECT nextval('gfa_admin_account_id_seq')`).Scan(&nextID); err != nil {
+					t.Fatal(err)
+				}
+				if nextID != 2 {
+					t.Fatalf("Admin account sequence next=%d, want 2", nextID)
+				}
+
+				ambiguousName := temporaryDatabaseName(test.label, "identity_ambiguous")
+				createDatabase(t, ctx, adminDB, ambiguousName)
+				defer dropDatabase(t, adminDB, ambiguousName)
+				ambiguousDB := openDatabase(t, adminDSN, ambiguousName)
+				defer ambiguousDB.Close()
+				if err := goose.UpToContext(ctx, ambiguousDB, migrationDir, expectedBaselineVersion); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := ambiguousDB.ExecContext(ctx, `
+INSERT INTO gfa_admin_account(id,password_hash,session_version,created_at,updated_at)
+VALUES (1,'one',1,now(),now()),(2,'two',1,now(),now())`); err != nil {
+					t.Fatal(err)
+				}
+				if err := goose.UpContext(ctx, ambiguousDB, migrationDir); err == nil {
+					t.Fatal("ambiguous multi-row legacy Admin database was migrated")
+				}
+				var usernameColumnExists bool
+				if err := ambiguousDB.QueryRowContext(ctx, `SELECT EXISTS (
+  SELECT 1 FROM information_schema.columns
+  WHERE table_schema='public' AND table_name='gfa_admin_account' AND column_name='username'
+)`).Scan(&usernameColumnExists); err != nil {
+					t.Fatal(err)
+				}
+				if usernameColumnExists {
+					t.Fatal("failed ambiguous migration left partial identity columns")
 				}
 			}
 

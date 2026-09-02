@@ -7,14 +7,12 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	authmodels "github.com/gofurry/gofurry-admin/internal/app/auth/models"
+	"github.com/gofurry/gofurry-admin/internal/app/auth/authorization"
 	adminsqlc "github.com/gofurry/gofurry-admin/internal/db/admin/sqlc"
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-const claimsContextKey = "auth_claims"
 
 type Logger struct {
 	queries *adminsqlc.Queries
@@ -25,13 +23,23 @@ func New(pool *pgxpool.Pool) *Logger {
 }
 
 func MetaFromFiber(c fiber.Ctx) Meta {
-	meta := Meta{Operator: "admin", RequestID: strings.TrimSpace(c.RequestID()), IPAddress: strings.TrimSpace(c.IP()), UserAgent: strings.TrimSpace(c.UserAgent())}
-	if claims, ok := c.Locals(claimsContextKey).(*authmodels.AdminClaims); ok && claims != nil {
-		if subject := strings.TrimSpace(claims.Subject); subject != "" {
-			meta.Operator = subject
-		}
-		meta.SessionVersion = claims.SessionVersion
+	meta := Meta{Operator: "system", OperatorName: "system", OperatorRole: "system", RequestID: strings.TrimSpace(c.RequestID()), IPAddress: strings.TrimSpace(c.IP()), UserAgent: strings.TrimSpace(c.UserAgent())}
+	if principal, ok := c.Locals(authorization.PrincipalContextKey).(*authorization.Principal); ok && principal != nil {
+		return MetaForPrincipal(meta, principal)
 	}
+	return meta
+}
+
+func MetaForPrincipal(meta Meta, principal *authorization.Principal) Meta {
+	if principal == nil {
+		return meta
+	}
+	accountID := principal.AccountID
+	meta.Operator = principal.Username
+	meta.OperatorAccountID = &accountID
+	meta.OperatorName = principal.DisplayName
+	meta.OperatorRole = string(principal.Role)
+	meta.SessionVersion = principal.SessionVersion
 	return meta
 }
 
@@ -40,7 +48,7 @@ func SystemMeta(source string) Meta {
 	if source == "" {
 		source = "system"
 	}
-	return Meta{Operator: "admin", RequestID: source, IPAddress: "127.0.0.1", UserAgent: source}
+	return Meta{Operator: "system", OperatorName: "system", OperatorRole: "system", RequestID: source, IPAddress: "127.0.0.1", UserAgent: source}
 }
 
 func (logger *Logger) Log(ctx context.Context, meta Meta, action, resource string, targetID any, before, after any) common.Error {
@@ -55,6 +63,8 @@ func (logger *Logger) log(ctx context.Context, queries *adminsqlc.Queries, meta 
 	action = strings.TrimSpace(action)
 	resource = strings.TrimSpace(resource)
 	operator := strings.TrimSpace(meta.Operator)
+	operatorName := strings.TrimSpace(meta.OperatorName)
+	operatorRole := strings.TrimSpace(meta.OperatorRole)
 	if action == "" {
 		return common.NewValidationError("audit action is required")
 	}
@@ -62,7 +72,13 @@ func (logger *Logger) log(ctx context.Context, queries *adminsqlc.Queries, meta 
 		return common.NewValidationError("audit resource is required")
 	}
 	if operator == "" {
-		operator = "admin"
+		operator = "system"
+	}
+	if operatorName == "" {
+		operatorName = operator
+	}
+	if operatorRole == "" {
+		operatorRole = "system"
 	}
 	target := stringifyTargetID(targetID)
 	requestID, ipAddress, userAgent := strings.TrimSpace(meta.RequestID), strings.TrimSpace(meta.IPAddress), strings.TrimSpace(meta.UserAgent)
@@ -71,6 +87,7 @@ func (logger *Logger) log(ctx context.Context, queries *adminsqlc.Queries, meta 
 		Action: action, Resource: resource, TargetID: &target, Operator: operator,
 		SessionVersion: meta.SessionVersion, RequestID: &requestID, IpAddress: &ipAddress,
 		UserAgent: &userAgent, BeforeData: &beforeData, AfterData: &afterData,
+		OperatorAccountID: meta.OperatorAccountID, OperatorName: operatorName, OperatorRole: operatorRole,
 	})
 	if err != nil {
 		return common.NewDaoError(err.Error())

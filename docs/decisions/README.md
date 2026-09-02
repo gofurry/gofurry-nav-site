@@ -11,5 +11,7 @@ Accepted Architecture Decision Records define durable choices that affect more t
 - [0007: Build historical facts on eligibility, quality, and checkpoints](0007-historical-fact-foundation.md)
 - [0008: Derive versioned analytics metrics from finalized historical facts](0008-analytics-metric-foundation.md)
 - [0009: Materialize versioned change intelligence from canonical history](0009-change-intelligence-foundation.md)
+- [0010: Repair published capability semantics by versioning contracts](0010-repair-published-capability-semantics.md)
+- [0011: Expose Public Insights through backend-owned read models](0011-public-insights-read-model.md)
 
 New decisions should be short, use the same section structure, and supersede rather than rewrite an accepted record when the decision changes.

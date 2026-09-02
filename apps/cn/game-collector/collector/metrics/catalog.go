@@ -36,6 +36,12 @@ var evaluatorCatalog = []Contract{
 		FreshnessSeconds: 259200, AllowedDimensions: []string{"primary_tag_id", "tag_id"},
 	},
 	{
+		Key: "mac_support", Version: 1, Kind: "state_ratio", EntityLevel: "game", TimeGrain: "day",
+		SourceFacts: []string{"gfg_game_daily"}, EligibilityPolicy: "tracked_game_v1",
+		StatePolicy: "mac_support_state_v1", CoveragePolicy: "known_over_eligible_v1",
+		FreshnessSeconds: 259200, AllowedDimensions: []string{"primary_tag_id", "tag_id"},
+	},
+	{
 		Key: "windows_support", Version: 1, Kind: "state_ratio", EntityLevel: "game", TimeGrain: "day",
 		SourceFacts: []string{"gfg_game_daily"}, EligibilityPolicy: "tracked_game_v1",
 		StatePolicy: "windows_support_state_v1", CoveragePolicy: "known_over_eligible_v1",

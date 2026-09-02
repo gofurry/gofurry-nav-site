@@ -117,7 +117,7 @@
     "survey": "兽圈调研",
     "about": "关于本站",
     "join": "加入我们",
-    "workshop": "兽游工坊"
+    "insights": "洞察"
   },
   "footer": {
     "sections": {
@@ -394,7 +394,6 @@
     "action": {
       "shortcutFunction": "快捷功能",
       "dailyGame": "每日一游",
-      "workshop": "兽游工坊",
       "oneClickAddToLibrary": "一键入库",
       "steamOneClickAddRun": "Steam 一键入库 & 运行",
       "inputAppIDInstallFreeGame": "输入AppID, 一键安装对应免费游戏或应用",
@@ -446,6 +445,7 @@
       "commentCountSuffix": "条评论",
       "share": "分享",
       "introduction": "介绍",
+      "insights": "洞察",
       "gallery": "画廊",
       "comments": "评论",
       "news": "新闻",
@@ -561,31 +561,330 @@
   "siteGroup": {
     "backHome": "返回首页"
   },
-  "workshop": {
-    "eyebrow": "Steam 兽游情报",
-    "title": "兽游工坊",
-    "description": "这里会承接 Steam 兽游专题、官方静态资源、榜单和专题化入口。当前先作为新专区入口上线，后续逐步补齐内容能力。",
-    "backToGames": "返回游戏页",
-    "searchGames": "搜索兽游",
-    "tabs": {
-      "all": "全部",
-      "discussion": "讨论",
-      "developer": "开发者",
-      "tools": "工具"
+  "insights": {
+    "nav": {
+      "overview": "生态概览",
+      "sites": "网站生态",
+      "games": "游戏生态",
+      "changes": "变化探索"
     },
-    "cards": {
-      "discovery": {
-        "title": "作品发现",
-        "description": "围绕 Steam 兽游数据沉淀更稳定的专题入口。"
+    "overview": {
+      "eyebrow": "PUBLIC INSIGHTS",
+      "title": "洞察",
+      "description": "看见 Furry 网站与游戏生态正在发生什么",
+      "sitesCount": "收录网站",
+      "gamesCount": "收录游戏",
+      "changesCount": "近 7 天变化",
+      "recentTitle": "最近发生了什么",
+      "recentDescription": "来自网站与游戏生态的公开变化",
+      "sitesPreview": "网站生态",
+      "gamesPreview": "游戏生态",
+      "viewSites": "查看网站生态",
+      "viewGames": "查看游戏生态"
+    },
+    "sites": {
+      "eyebrow": "WEBSITE ECOSYSTEM",
+      "title": "网站生态洞察",
+      "description": "了解 Furry 网站公开技术能力的采用趋势与近期变化"
+    },
+    "games": {
+      "eyebrow": "GAME ECOSYSTEM",
+      "title": "游戏生态洞察",
+      "description": "了解 Furry 游戏的平台支持与免费游戏比例如何变化"
+    },
+    "metrics": {
+      "ipv6": {
+        "name": "IPv6",
+        "description": "能够确认具有 IPv6 AAAA 记录的网站比例。"
       },
-      "assets": {
-        "title": "官方资源",
-        "description": "后续优先展示来自 Steam 官方资源表的封面、横幅和媒体资产。"
+      "tls13": {
+        "name": "TLS 1.3",
+        "description": "能够确认支持 TLS 1.3 安全传输的网站比例。"
       },
-      "community": {
-        "title": "社群关联",
-        "description": "把游戏、创作者、社区和相关站点更自然地组织在一起。"
+      "http2": {
+        "name": "HTTP/2",
+        "description": "GoFurry 可靠 HTTP 探测协商到 HTTP/2 的网站比例。"
+      },
+      "hsts": {
+        "name": "HSTS",
+        "description": "在适用的 HTTPS/TLS 探测中观测到 HSTS 响应头的网站比例。"
+      },
+      "csp": {
+        "name": "CSP",
+        "description": "观测到生效型 Content-Security-Policy 响应头的网站比例。"
+      },
+      "security_txt": {
+        "name": "security.txt",
+        "description": "能够确认发布有效 security.txt 文档的网站比例。"
+      },
+      "certificate_verified": {
+        "name": "证书验证",
+        "description": "GoFurry 可靠 TLS 观测中通过 X.509 证书验证的网站比例。"
+      },
+      "free": {
+        "name": "免费游戏",
+        "description": "当前能够确认属于免费游戏的已收录游戏比例。"
+      },
+      "windows": {
+        "name": "Windows",
+        "description": "当前能够确认支持 Windows 的已收录游戏比例。"
+      },
+      "linux": {
+        "name": "Linux",
+        "description": "当前能够确认支持 Linux 的已收录游戏比例。"
+      },
+      "mac": {
+        "name": "macOS",
+        "description": "当前能够确认支持 macOS 的已收录游戏比例。"
+      },
+      "asOf": "统计日期 {date}",
+      "deltaUnavailable": "暂无 30 天对比"
+    },
+    "trend": {
+      "title": "历史趋势",
+      "value": "指标值",
+      "coverage": "统计覆盖",
+      "loading": "正在读取趋势数据"
+    },
+    "ranges": {
+      "7d": "7 天",
+      "30d": "30 天",
+      "90d": "90 天",
+      "all": "全部"
+    },
+    "changes": {
+      "site": "网站",
+      "game": "游戏",
+      "title": "近期变化",
+      "events": {
+        "siteIpv6Enabled": "启用了 IPv6",
+        "siteIpv6Disabled": "不再支持 IPv6",
+        "siteTls13Enabled": "启用了 TLS 1.3",
+        "siteTls13Disabled": "不再支持 TLS 1.3",
+        "siteHttp2Enabled": "启用了 HTTP/2",
+        "siteHttp2Disabled": "不再使用 HTTP/2",
+        "siteHstsAdded": "新增了 HSTS",
+        "siteHstsRemoved": "移除了 HSTS",
+        "siteCspAdded": "新增了 CSP",
+        "siteCspRemoved": "移除了 CSP",
+        "siteSecurityTxtAdded": "新增了 security.txt",
+        "siteSecurityTxtRemoved": "移除了 security.txt",
+        "sitePrimaryTargetChanged": "更新了主要访问目标",
+        "siteTlsCertificateChanged": "TLS 证书发生变化",
+        "siteTlsCertificateVerificationFailed": "TLS 证书验证失败",
+        "siteTlsCertificateVerificationRestored": "TLS 证书验证已恢复",
+        "gameFreeEnabled": "变为免费游戏",
+        "gameFreeDisabled": "变为付费游戏",
+        "gameWindowsAdded": "新增 Windows 支持",
+        "gameWindowsRemoved": "移除 Windows 支持",
+        "gameLinuxAdded": "新增 Linux 支持",
+        "gameLinuxRemoved": "移除 Linux 支持",
+        "gameMacAdded": "新增 macOS 支持",
+        "gameMacRemoved": "移除 macOS 支持",
+        "gameReleaseAvailable": "现已可以游玩",
+        "gameReleaseWithdrawn": "已停止提供",
+        "gameReleaseChanged": "发行计划发生变化",
+        "gamePriceIncreased": "价格上涨",
+        "gamePriceDecreased": "价格下降",
+        "gamePriceStateChanged": "价格状态发生变化",
+        "gamePriceCurrencyChanged": "计价货币发生变化",
+        "gameDiscountStarted": "开始折扣",
+        "gameDiscountEnded": "折扣结束",
+        "gameDiscountChanged": "折扣发生变化",
+        "unknown": "发生了一项公开变化"
       }
+    },
+    "dimensions": {
+      "eyebrow": "DIMENSION BREAKDOWN",
+      "title": "维度拆分",
+      "names": {
+        "country": "国家或地区",
+        "group": "站点分组",
+        "nsfw": "内容分级",
+        "public_interest": "公益属性",
+        "primary_tag": "主标签",
+        "tag": "全部标签"
+      },
+      "overlapping": "该维度允许一个实体属于多个切片，各切片数量不能相加推导全局总量。",
+      "loading": "正在读取维度数据",
+      "empty": "当前统计日期暂无该维度数据",
+      "slice": "切片",
+      "metricValue": "指标值",
+      "coverage": "覆盖率",
+      "population": "总体",
+      "eligible": "可统计",
+      "known": "已知",
+      "selectedSlice": "SELECTED SLICE",
+      "availability": "切片实际数据范围：{from} 至 {through}",
+      "sliceEmpty": "所选范围内暂无该切片数据"
+    },
+    "changeExplorer": {
+      "title": "变化探索",
+      "description": "按领域、时间范围和公开分类浏览网站与游戏生态变化",
+      "filters": "变化筛选",
+      "domain": "领域",
+      "range": "范围",
+      "category": "分类",
+      "allCategories": "全部分类",
+      "feedEyebrow": "PUBLIC CHANGES",
+      "feedTitle": "变化时间线",
+      "empty": "当前筛选条件下暂无公开变化",
+      "loading": "正在加载",
+      "loadMore": "加载更多",
+      "moreUnavailable": "暂时无法加载更多变化，请稍后重试。",
+      "categories": {
+        "site": {
+          "capability": "技术能力",
+          "target": "主要目标",
+          "certificate": "证书"
+        },
+        "game": {
+          "pricing_model": "定价模式",
+          "platform": "平台支持",
+          "release": "发行状态",
+          "price": "国区价格",
+          "discount": "国区折扣"
+        }
+      }
+    },
+    "dataInfo": {
+      "title": "关于这个数据",
+      "asOf": "统计日期",
+      "coverage": "统计覆盖",
+      "availableFrom": "可靠数据始于",
+      "unavailable": "—",
+      "caveat": "未知、陈旧、尚未探测或探测失败的数据不会被视为“不支持”。缺失日期不会被补零。"
+    },
+    "entity": {
+      "siteEyebrow": "SITE INSIGHTS",
+      "siteTitle": "网站洞察",
+      "siteDescription": "当前公开能力、同日生态对比与近期语义变化。",
+      "gameEyebrow": "GAME INSIGHTS",
+      "gameTitle": "游戏洞察",
+      "gameDescription": "当前状态、玩家历史、国区价格与近期语义变化。",
+      "backToSites": "查看网站生态 →",
+      "backToGames": "查看游戏生态 →",
+      "ecosystemValue": "生态占比",
+      "ecosystemCoverage": "统计覆盖",
+      "sameDayAsOf": "同日统计 · {date}",
+      "timelineEyebrow": "SEMANTIC CHANGES",
+      "timelineTitle": "实体变化时间线",
+      "historyRange": "历史范围",
+      "dailyMaximum": "每日最高值",
+      "playerTrend": "玩家趋势",
+      "playerMax": "最高在线",
+      "playerAverage": "平均在线",
+      "cnOnly": "仅中国大陆区",
+      "priceHistory": "国区价格历史",
+      "currentPlayers": "最近观测",
+      "peak30d": "30 天最高在线",
+      "average30d": "30 天观测均值",
+      "observedDays": "个观测日",
+      "cnPrice": "当前国区价格",
+      "regionalPrice": "当前区域价格",
+      "priceRegion": "价格区域",
+      "observedLow": "GoFurry 观测最低价",
+      "observedSince": "自 {date} 起观测",
+      "platforms": "平台状态",
+      "freeState": "游戏价格类型",
+      "releaseState": "发行状态",
+      "freeGame": "免费",
+      "paidGame": "付费",
+      "supported": "支持",
+      "unsupported": "不支持",
+      "booleanUnknown": "暂无法确认",
+      "priceFree": "免费",
+      "pricePriced": "付费价格",
+      "priceMissing": "无当日区域价格事实",
+      "priceUnavailable": "暂不可用",
+      "asOf": "截至 {date}",
+      "asOfUnavailable": "暂无可靠日期",
+      "retry": "重试",
+      "states": {
+        "supported": "支持",
+        "unsupported": "不支持",
+        "stale": "数据可能已过期",
+        "not_probed": "尚未获取数据",
+        "unavailable": "数据暂不可用",
+        "unknown": "暂时无法确认",
+        "not_applicable": "不适用"
+      },
+      "priceStates": {
+        "free": "免费",
+        "priced": "付费",
+        "unknown": "价格未知",
+        "unpriced": "暂无定价"
+      },
+      "releaseStates": {
+        "available": "已发行",
+        "upcoming": "即将发行",
+        "withdrawn": "已停止提供"
+      }
+    },
+    "regions": { "CN": "中国", "US": "美国", "HK": "中国香港" },
+    "siteIntelligence": {
+      "navLabel": "网站洞察导航", "ecosystem": "生态", "certificates": "证书", "compare": "对比"
+    },
+    "certificateIntelligence": {
+      "title": "TLS 证书洞察", "description": "在同一已完成 UTC 事实日查看证书验证、到期分布与需关注站点。",
+      "empty": "尚无可靠的证书统计数据。", "verificationTitle": "证书验证概览", "expiryTitle": "证书到期概览",
+      "verified": "验证通过", "failed": "验证失败", "known": "结果已知", "coverage": "覆盖率",
+      "expired": "已过期", "within7d": "7 天内到期", "in8to30d": "8–30 天内到期",
+      "quality": "不适用 {not_applicable} · 陈旧 {stale} · 未探测 {not_probed} · 探测失败 {probe_failed} · 未知 {unknown}",
+      "attentionTitle": "到期关注", "issuesTitle": "验证问题", "noItems": "当前没有需要展示的项目。",
+      "site": "网站", "target": "主要目标", "expiry": "到期状态", "issue": "验证问题", "notAfter": "证书截止时间",
+      "aboutTitle": "关于证书数据", "about": "到期分组使用统计日结束时刻计算；陈旧证据不会进入当前到期统计。验证问题仅公开稳定分类，不显示原始 X.509 错误。",
+      "asOf": "统计日期 {date} · 参考时刻 {reference}",
+      "values": {
+        "expired": "已过期", "expires_within_7d": "7 天内到期", "expires_in_8_30d": "8–30 天内到期", "later": "30 天以后",
+        "hostname_mismatch": "域名不匹配", "unknown_authority": "未知签发机构", "not_yet_valid": "尚未生效", "incompatible_usage": "证书用途不兼容", "other": "其他验证问题"
+      }
+    },
+    "gameIntelligence": {
+      "navLabel": "游戏洞察导航", "ecosystem": "生态", "players": "玩家", "prices": "价格", "languages": "语言", "compare": "对比"
+    },
+    "compare": {
+      "builderTitle": "选择对比实体", "idsLabel": "实体 ID（2–4 个）", "idsPlaceholder": "例如 12,37,48", "apply": "应用",
+      "emptyHint": "输入 2–4 个实体 ID 开始对比。", "oneHint": "已预选 1 个实体，请再加入至少 1 个。", "readyHint": "当前并列展示 {count} 个实体。",
+      "invalid": "请输入 1–4 个有效正整数 ID；开始对比至少需要 2 个不同实体。", "insufficientData": "所选实体暂无共同完整快照，未混用各自的最新数据。",
+      "commonSnapshot": "共同完整快照：{date}", "fact": "事实", "aboutTitle": "关于对比"
+    },
+    "siteCompare": {
+      "title": "网站能力对比", "description": "在同一个完整 Metric 快照上并列查看网站能力与有效证书事实。",
+      "primaryTarget": "主要目标", "certificateVerification": "证书验证", "certificateExpiry": "证书到期", "noValidCertificate": "无有效证书证据",
+      "about": "所有能力来自同一完整事实日；未知、不可用、未探测和陈旧均不会变成不支持。证书信息只在同日证据有效时展示。"
+    },
+    "gameCompare": {
+      "title": "游戏事实对比", "description": "并列查看共同事实快照中的平台、玩家、区域价格与语言数据。",
+      "region": "价格区域", "stateSnapshot": "状态事实：{date}", "playerSnapshot": "计划玩家快照：{date}", "playerWindow": "玩家事实截至：{date}",
+      "currentPlayers": "计划快照玩家", "peak30d": "30 天峰值", "average30d": "30 天观测均值", "playerQuality": "玩家数据质量",
+      "qualityValue": "{days} 个观测日 · {samples} 个成功样本 · 覆盖 {coverage}", "currentPrice": "{region} 当前价格", "languageEvidence": "语言证据",
+      "supportedLanguages": "支持语言", "fullAudio": "明确标注完整音频", "unmappedLanguages": "未映射语言名称",
+      "languageStates": { "fresh": "新鲜", "stale": "陈旧（不解释为不支持）", "unobserved": "未观测（不解释为不支持）" },
+      "about": "状态、计划玩家快照和 30 天玩家事实分别公开各自日期。价格不做汇率换算或跨区金额比较，页面只并列展示已有事实。"
+    },
+    "playerIntelligence": {
+      "title": "玩家洞察", "description": "基于 GoFurry 可靠观测查看玩家排名与数据质量。",
+      "metrics": { "latest_observed": "最近计划观测", "peak_30d": "30 天峰值", "average_30d": "30 天观测均值" },
+      "population": "可观测游戏", "ranked": "有效排名", "coverage": "实体覆盖", "game": "游戏", "value": "观测值", "quality": "数据质量", "observed": "成功观测", "observedDays": "{count} 个观测日", "successfulSamples": "{count} 个成功样本",
+      "snapshot": "计划快照：{date}", "window": "共同窗口：{from} 至 {through}", "aboutTitle": "关于玩家数据", "about": "最近观测不是 Steam 实时并发。缺失或失败观测不会变成 0，真实观测到的 0 会保留。"
+    },
+    "priceIntelligence": {
+      "title": "区域价格洞察", "description": "查看中国、美国和中国香港的可靠区域价格快照。",
+      "population": "追踪总体", "priced": "付费定价", "free": "免费", "unpriced": "暂无定价", "unknown": "未知", "unavailable": "无当日事实", "coverage": "覆盖率", "discounted": "当前折扣",
+      "discounts": "当前区域折扣", "currentPrice": "当前价格", "discount": "折扣", "observedLow": "GoFurry 观测最低价",
+      "aboutTitle": "关于价格数据", "about": "各区域和币种彼此独立，不进行汇率换算或最便宜区域判断。GoFurry 观测最低价仅限当前连续、同币种的付费价格身份。"
+    },
+    "languageIntelligence": {
+      "title": "语言洞察", "description": "查看可靠快照中的支持语言与明确标注完整音频。", "coverage": "新鲜证据覆盖", "fresh": "新鲜证据", "normalization": "规范化覆盖",
+      "distribution": "语言分布", "overlap": "语言是重叠分布，各语言比例不能相加推导 100%。", "language": "语言", "supported": "支持游戏", "share": "占新鲜证据比例", "fullAudio": "明确标注完整音频",
+      "aboutTitle": "关于语言数据", "about": "未知语言名称不会模糊匹配；没有完整音频标记也不会被解释为不支持。"
+    },
+    "emptyStates": {
+      "unavailable": "洞察数据暂不可用",
+      "trendEmpty": "暂无可用历史数据",
+      "trendOne": "正在积累历史数据",
+      "changesEmpty": "近期暂无可展示变化"
     }
   }
 }

@@ -78,9 +78,10 @@ func registerRoutes(app *fiber.App, dependencies NavDependencies) {
 	// v1 正式路由：/api/v1/nav/...
 	navApi(v1.Group("/nav"))
 
+	v2Nav := api.Group("/v2/nav")
+	registerNavInsightsRoutes(v2Nav, dependencies.Insights)
 	if env.GetServerConfig().NavV2.AnyRouteEnabled() {
-		v2 := api.Group("/v2")
-		navV2Api(v2.Group("/nav"), env.GetServerConfig().NavV2, dependencies)
+		navV2Api(v2Nav, env.GetServerConfig().NavV2, dependencies)
 	}
 }
 

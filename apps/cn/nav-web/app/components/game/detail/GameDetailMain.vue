@@ -15,6 +15,7 @@
         <div
             v-for="tab in tabs"
             :key="tab.key"
+            :data-game-tab="tab.key"
             @click="activeTab = tab.key"
             class="game-detail-tab flex-shrink-0"
             :class="[
@@ -31,6 +32,16 @@
 
       <!-- Tab Content -->
       <div class="game-detail-tab-panel p-5 text-sm">
+
+        <GameTabInsights
+            v-if="insightsVisited"
+            v-show="activeTab === 'insights'"
+            :game-id="gameId"
+            :summary="insights"
+            :summary-unavailable="insightsUnavailable"
+        />
+
+        <template v-if="activeTab !== 'insights'">
 
         <!-- Intro -->
         <BlurWrapper
@@ -85,6 +96,7 @@
             v-else-if="activeTab === 'detail'"
             :game="game"
         />
+        </template>
       </div>
     </div>
 
@@ -100,9 +112,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '@/types/game'
+import type { GameInsights } from '@/types/insights'
 
 import GameDetailHeader from '@/components/game/detail/GameDetailHeader.vue'
 import GameTabIntro from '@/components/game/detail/tabs/GameTabIntro.vue'
+import GameTabInsights from '@/components/game/detail/insights/GameTabInsights.vue'
 import GameTabGallery from '@/components/game/detail/tabs/GameTabGallery.vue'
 import GameTabComment from '@/components/game/detail/tabs/GameTabComment.vue'
 import GameTabNews from '@/components/game/detail/tabs/GameTabNews.vue'
@@ -128,12 +142,14 @@ const props = defineProps<{
   remark: RemarkResponse | null
   recommend: RecommendedModel[] | null
   gameId: string
+  insights: GameInsights | null
+  insightsUnavailable?: boolean
 }>()
 
 const hasSimilarRecommend = computed(() => (props.recommend?.length ?? 0) > 0)
 
 interface DetailTabItem {
-  key: 'intro' | 'gallery' | 'comment' | 'news' | 'similar' | 'detail'
+  key: 'intro' | 'insights' | 'gallery' | 'comment' | 'news' | 'similar' | 'detail'
   label: string
   mobileOnly?: boolean
 }
@@ -141,6 +157,7 @@ interface DetailTabItem {
 // Tabs 配置
 const tabs = computed<DetailTabItem[]>(() => ([
   { key: 'intro', label: t('game.detail.introduction') },
+  { key: 'insights', label: t('game.detail.insights') },
   { key: 'gallery', label: t('game.detail.gallery') },
   { key: 'comment', label: t('game.detail.comments') + `(${props.remark?.total ?? 0})` },
   { key: 'news', label: t('game.detail.news') },
@@ -150,6 +167,7 @@ const tabs = computed<DetailTabItem[]>(() => ([
 
 type TabKey = typeof tabs.value[number]['key']
 const activeTab = ref<TabKey>('intro')
+const insightsVisited = ref(false)
 
 // ---------- mode 逻辑 ----------
 
@@ -206,6 +224,12 @@ onUnmounted(() => {
 watch([isDesktop, activeTab], ([desktop, tabKey]) => {
   if (desktop && tabKey === 'similar') {
     activeTab.value = 'intro'
+  }
+})
+
+watch(activeTab, (tabKey) => {
+  if (tabKey === 'insights') {
+    insightsVisited.value = true
   }
 })
 </script>

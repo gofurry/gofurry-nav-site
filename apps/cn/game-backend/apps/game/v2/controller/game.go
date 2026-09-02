@@ -18,10 +18,11 @@ type GameV2API struct {
 	readModelDAO  *v2dao.ReadModelDAO
 	viewService   *v2service.GameViewService
 	reviewService *reviewservice.ReviewService
+	insights      insightsReader
 }
 
-func New(readModelDAO *v2dao.ReadModelDAO, viewService *v2service.GameViewService, reviewService *reviewservice.ReviewService) *GameV2API {
-	return &GameV2API{readModelDAO: readModelDAO, viewService: viewService, reviewService: reviewService}
+func New(readModelDAO *v2dao.ReadModelDAO, viewService *v2service.GameViewService, reviewService *reviewservice.ReviewService, insights insightsReader) *GameV2API {
+	return &GameV2API{readModelDAO: readModelDAO, viewService: viewService, reviewService: reviewService, insights: insights}
 }
 
 func (api *GameV2API) GetGameList(c fiber.Ctx) error {

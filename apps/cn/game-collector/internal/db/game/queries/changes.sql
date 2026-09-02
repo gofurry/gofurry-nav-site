@@ -28,6 +28,7 @@ LEFT JOIN gfg_metric_checkpoints metric_checkpoint
       WHEN 'free_game_transition' THEN 'free_game_share'
       WHEN 'windows_support_transition' THEN 'windows_support'
       WHEN 'linux_support_transition' THEN 'linux_support'
+      WHEN 'mac_support_transition' THEN 'mac_support'
   END
  AND metric_checkpoint.metric_version = registry.detector_version
 LEFT JOIN gfg_fact_rollup_checkpoints fact_checkpoint
@@ -63,6 +64,7 @@ LEFT JOIN gfg_metric_checkpoints metric_checkpoint
       WHEN 'free_game_transition' THEN 'free_game_share'
       WHEN 'windows_support_transition' THEN 'windows_support'
       WHEN 'linux_support_transition' THEN 'linux_support'
+      WHEN 'mac_support_transition' THEN 'mac_support'
   END
  AND metric_checkpoint.metric_version = registry.detector_version
 LEFT JOIN gfg_fact_rollup_checkpoints fact_checkpoint
@@ -78,6 +80,9 @@ SELECT gfg_project_change_day(
     sqlc.arg(detector_version)::integer,
     sqlc.arg(projection_date)::date
 )::bigint;
+
+-- name: ProjectGameMacChangeDay :one
+SELECT gfg_project_mac_change_day(sqlc.arg(projection_date)::date)::bigint;
 
 -- name: AdvanceGameChangeCheckpoint :execrows
 UPDATE gfg_change_checkpoints

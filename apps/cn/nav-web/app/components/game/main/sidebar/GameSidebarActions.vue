@@ -6,21 +6,13 @@
         {{ t("game.action.shortcutFunction") }}
       </h3>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 gap-3">
         <button
             class="sidebar-action-button"
             :disabled="loading"
             @click="handleRandomGame"
         >
           {{ t("game.action.dailyGame") }}
-        </button>
-
-        <button
-            class="sidebar-action-button"
-            type="button"
-            @click="goWorkshop"
-        >
-          {{ t("game.action.workshop") }}
         </button>
       </div>
     </div>
@@ -85,9 +77,5 @@ async function handleRandomGame() {
   } finally {
     loading.value = false;
   }
-}
-
-function goWorkshop() {
-  router.push(localePath('/workshop'));
 }
 </script>

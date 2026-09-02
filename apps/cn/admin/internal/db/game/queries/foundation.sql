@@ -18,6 +18,11 @@ ORDER BY id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 -- name: GetGame :one
 SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game WHERE id=sqlc.arg(id);
 
+-- name: ListGameWorkspaceTags :many
+SELECT m.id,m.game_id,m.tag_id,COALESCE(t.name,'')::text AS tag_name
+FROM gfg_tag_map m LEFT JOIN gfg_tag t ON t.id=m.tag_id
+WHERE m.game_id=sqlc.arg(game_id) ORDER BY m.id ASC;
+
 -- name: FindGameByAppIDExcluding :one
 SELECT id,name,appid FROM gfg_game WHERE appid=sqlc.arg(appid) AND id<>sqlc.arg(exclude_id) LIMIT 1;
 
@@ -163,10 +168,10 @@ DELETE FROM gfg_tag_map WHERE tag_id=sqlc.arg(tag_id)
 AND (cardinality(sqlc.arg(game_ids)::bigint[]) = 0 OR NOT (game_id = ANY(sqlc.arg(game_ids)::bigint[])));
 
 -- name: CountGameOptions :one
-SELECT COUNT(*)::bigint FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';
+SELECT COUNT(*)::bigint FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR appid::text ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';
 
 -- name: ListGameOptions :many
-SELECT id,name,name_en FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
+SELECT id,name,name_en,appid FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR appid::text ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
 ORDER BY id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: ListTagOptions :many
