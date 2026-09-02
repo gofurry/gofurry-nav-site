@@ -11,6 +11,7 @@ Nav:
 - `GET /api/v2/nav/insights/metrics/:metricKey/breakdown?dimension=country|group|nsfw|public_interest`
 - `GET /api/v2/nav/insights/metrics/:metricKey/breakdown/:dimension/:value/trend?range=30d|90d|all`
 - `GET /api/v2/nav/insights/changes?range=7d|30d|90d|all&category=&type=&cursor=&limit=`
+- `GET /api/v2/nav/insights/certificates/overview?limit=20`
 - `GET /api/v2/nav/sites/:siteId/insights`
 
 Game:
@@ -38,7 +39,11 @@ Public keys are deliberately mapped to one reviewed internal version:
 |---|---|---|
 | Nav | `ipv6` | `ipv6_adoption/2` |
 | Nav | `tls13` | `tls13_adoption/1` |
+| Nav | `http2` | `http2_adoption/1` |
+| Nav | `hsts` | `hsts_adoption/1` |
+| Nav | `csp` | `csp_adoption/1` |
 | Nav | `security_txt` | `security_txt_adoption/2` |
+| Nav | `certificate_verified` | `tls_certificate_verification/1` |
 | Game | `free` | `free_game_share/1` |
 | Game | `windows` | `windows_support/1` |
 | Game | `mac` | `mac_support/1` |
@@ -106,7 +111,7 @@ Selected-slice trends use the current global metric horizon as their range ancho
 
 Public DTOs expose only stable `type`, date/time precision, entity identity, and deliberately typed public detail. They never expose internal Metric or Detector keys/versions, event/source keys, source contracts/versions, or raw `old_value`/`new_value`. P1-A returns `detail: null`. Day-precision events retain `occurred_at: null`; midnight is not fabricated.
 
-Nav public types cover IPv6, TLS 1.3, security.txt, Primary Target, and TLS certificate changes. Only IPv6, TLS 1.3, and security.txt appear in the overview. Primary Target and TLS certificate remain entity-timeline-only.
+Nav public types cover IPv6, TLS 1.3, HTTP/2, HSTS, enforcement CSP, security.txt, Primary Target, certificate replacement, and certificate-verification transitions. Capability transitions and certificate verification failed/restored are overview-eligible. Primary Target and routine fingerprint-only `site.tls_certificate.changed` remain entity-timeline-only; certificate replacement never implies verification failure, restoration, or successful renewal.
 
 Game public types cover free/paid, Windows, macOS, Linux, release availability/plan, CN price, and discount changes. Mac changes map `mac_support_transition/1` to `game.mac.added` and `game.mac.removed`. Price events must have region scope `CN`.
 
@@ -118,9 +123,9 @@ The domain-specific Explorer endpoints expose the complete approved public strea
 
 Site categories are:
 
-- `capability`: IPv6, TLS 1.3, and security.txt public types;
+- `capability`: IPv6, TLS 1.3, HTTP/2, HSTS, enforcement CSP, and security.txt public types;
 - `target`: `site.primary_target.changed`;
-- `certificate`: `site.tls_certificate.changed`.
+- `certificate`: `site.tls_certificate.changed`, `site.tls_certificate.verification_failed`, and `site.tls_certificate.verification_restored`.
 
 Game categories are:
 
@@ -171,8 +176,20 @@ Language overview uses one common finalized Game State Fact snapshot. Evidence i
 
 Canonical language codes provide stable identity. Unknown names are never fuzzy-mapped or merged into a fake language; they appear only in `fully_normalized_games`, `unmapped_games`, `unmapped_entries`, and `normalization_coverage`. Full Audio is positive-only evidence: absence of an explicit marker does not mean unsupported. Nullable Interface and Subtitle fields likewise remain unknown rather than false.
 
-## P2.2 product and boundary
+## Site capability and certificate intelligence
+
+The Site ecosystem and entity surfaces expose capabilities in the stable order `ipv6`, `tls13`, `http2`, `hsts`, `csp`, `security_txt`, and `certificate_verified`. Each entity capability retains its own Metric `as_of`; capabilities are not forced onto an artificial oldest common date.
+
+`http2` means a reliable GoFurry HTTP observation negotiated normalized `HTTP/2` or `HTTP/2.0`. Other known protocols, including HTTP/3, are negative for this specific Metric; an absent protocol is unknown. `hsts` measures only `Strict-Transport-Security` presence on a fresh applicable TLS/HTTPS observation, so `tls_handshake=not_tls` is `not_applicable`. `csp` measures only enforcement `Content-Security-Policy` presence on HTTP or HTTPS; Report-Only alone is not positive. Missing historical header keys remain unknown.
+
+`certificate_verified` is based on fresh collected TLS evidence and the existing X.509 hostname, trust-chain, ServerAuth, and validity verification. `not_tls` is not applicable, handshake failure is unknown rather than certificate-negative, and a null verification result remains unknown. Public verification issues are restricted to `hostname_mismatch`, `unknown_authority`, `expired`, `not_yet_valid`, `incompatible_usage`, and `other`; raw X.509 error strings are never exposed.
+
+Certificate overview resolves the newest `tls_certificate_verification/1` `global/all` fact date once, then reads Metric Entity, Site, and Primary Target facts only on that common `as_of`. Its deterministic expiry reference is `(as_of + 1 day) 00:00:00 UTC`, never request time. Expiry eligibility requires a Primary Target, fresh TLS evidence, `tls_handshake=collected`, and a non-null `not_after`; successful verification is not required. Stale evidence is excluded.
+
+Expiry buckets use exact timestamp comparisons: `not_after <= reference_at` is expired, followed by `(0,7d]`, `(7d,30d]`, and later. Verification coverage is `(verified + failed) / eligible`; expiry coverage is the four expiry buckets divided by eligible; zero denominators remain null. `expiry_attention` contains only expired/7-day/8–30-day items ordered by `not_after, site_id`. `verification_issues` contains only negative certificate-verification Metric states, ordered by normalized issue then Site ID. A Site may occur in both lists. The shared `limit` defaults to 20, is capped at 100, and invalid values return 400.
+
+## Product and architecture boundary
 
 The Game Intelligence product routes are `/insights/games`, `/insights/games/players`, `/insights/games/prices`, and `/insights/games/languages`. Player ranking, regional overview/discounts, and language snapshot are SSR-loaded. Game Detail summary is SSR-loaded; player and region-plus-range price histories remain lazy and page-lifecycle cached.
 
-Player, State Fact, Metric, and Change horizons remain independently disclosed; P2.2 does not fabricate a global cross-product `as_of`. Other than the Mac Metric and Change contracts/projectors, P2.2 adds no leaderboard, observed-low, or language aggregate table, materialized view, cache, Analytics service, ORM, or query builder. Mac history is backfilled explicitly outside migrations in Metric-before-Change order. Site capability expansion, Compare, regional Change Explorer, FX, and language trends remain deferred.
+Player, State Fact, Metric, and Change horizons remain independently disclosed; no global cross-product `as_of` is fabricated. Other than formal Metric/Change contracts, Insights adds no leaderboard, observed-low, certificate, or language aggregate table, materialized view, cache, Analytics service, ORM, or query builder. Metric history is backfilled explicitly before dependent Change history. Entity Compare, regional Change Explorer, FX, and language trends remain deferred.

@@ -13,6 +13,7 @@ import type {
   SiteViewResponse,
 } from '~/types/nav'
 import type {
+  CertificateInsightOverview,
   InsightChangeExplorerPage,
   InsightChangeRange,
   InsightDimensionBreakdown,
@@ -94,6 +95,10 @@ export function getNavInsightChanges(query: {
   limit?: number
 }): Promise<InsightChangeExplorerPage> {
   return useApi('navV2')('/nav/insights/changes', { query })
+}
+
+export function getNavCertificateInsightsOverview(limit = 20): Promise<CertificateInsightOverview> {
+  return useApi('navV2')('/nav/insights/certificates/overview', { query: { limit } })
 }
 
 export function getSiteInsights(siteId: string | number): Promise<SiteInsights> {

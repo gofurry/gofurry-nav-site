@@ -3,6 +3,7 @@ package changes
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -145,6 +146,181 @@ func assertNavProjectV2Count(t *testing.T, ctx context.Context, tx pgx.Tx, key s
 	}
 }
 func timePtr(value time.Time) *time.Time { return &value }
+
+func TestP23SiteCapabilityChangeProjectorsIntegration(t *testing.T) {
+	config := os.Getenv("GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG")
+	if config == "" {
+		t.Skip("GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG is not set")
+	}
+	if err := env.LoadServerConfig(config); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, env.GetServerConfig().DataBase.ConnectionString())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	tx, err := pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+
+	day1 := time.Date(2026, 9, 10, 0, 0, 0, 0, time.UTC)
+	day2 := day1.AddDate(0, 0, 1)
+	day3 := day2.AddDate(0, 0, 1)
+	targets := map[string]int64{}
+	for _, fixture := range []struct {
+		key         string
+		siteID      int64
+		from, until time.Time
+	}{
+		{"normal", 872001, day1, day3.AddDate(0, 0, 1)},
+		{"unknown", 872002, day1, day3.AddDate(0, 0, 1)},
+		{"stale", 872003, day1, day3.AddDate(0, 0, 1)},
+		{"switch_before", 872004, day1, day2},
+		{"switch_after", 872004, day2, day3.AddDate(0, 0, 1)},
+	} {
+		var id int64
+		if err := tx.QueryRow(ctx, `INSERT INTO gfn_target_tracking_periods(site_id,target,tracked_from,tracked_until,tracking_basis,opened_reason,closed_reason) VALUES($1,$2,$3,$4,'legacy_observed','p23_change_test','p23_change_test') RETURNING id`, fixture.siteID, fixture.key+".p23.example", fixture.from, fixture.until).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		targets[fixture.key] = id
+	}
+	for _, fixture := range []struct {
+		siteID int64
+		day    time.Time
+		target int64
+	}{
+		{872001, day1, targets["normal"]}, {872001, day2, targets["normal"]}, {872001, day3, targets["normal"]},
+		{872002, day1, targets["unknown"]}, {872002, day2, targets["unknown"]},
+		{872003, day1, targets["stale"]}, {872003, day2, targets["stale"]},
+		{872004, day1, targets["switch_before"]}, {872004, day2, targets["switch_after"]},
+	} {
+		if _, err := tx.Exec(ctx, `INSERT INTO gfn_site_daily(site_id,fact_date,snapshot_at,tracked_at_end,name,name_en,view_count,group_ids,primary_target_tracking_period_id,primary_target,primary_basis,active_target_count,projection_version,finalized_at) VALUES($1,$2::date,$2::date+interval '23 hours',true,'P2.3 Change Site','P2.3 Change Site',0,ARRAY[]::bigint[],$3,'p23.example','explicit',1,1,$2::date+interval '24 hours')`, fixture.siteID, fixture.day, fixture.target); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, metric := range []string{"http2_adoption", "hsts_adoption", "csp_adoption", "tls_certificate_verification"} {
+		for _, fixture := range []struct {
+			siteID int64
+			day    time.Time
+			state  string
+		}{
+			{872001, day1, "negative"}, {872001, day2, "positive"}, {872001, day3, "negative"},
+			{872002, day1, "unknown"}, {872002, day2, "positive"},
+			{872003, day1, "stale"}, {872003, day2, "positive"},
+			{872004, day1, "negative"}, {872004, day2, "positive"},
+		} {
+			if _, err := tx.Exec(ctx, `INSERT INTO gfn_metric_entity_daily(metric_key,metric_version,fact_date,site_id,state,reason_code,source_observed_at,dimension_values,source_projection_versions,evaluated_at) VALUES($1,1,$2::date,$3,$4,'fixture',$2::date+interval '12 hours','{}','{"gfn_site_daily":1}',$2::date+interval '24 hours')`, metric, fixture.day, fixture.siteID, fixture.state); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	expectations := map[string][2]string{
+		"http2_transition":                        {"http2_enabled", "http2_disabled"},
+		"hsts_transition":                         {"hsts_added", "hsts_removed"},
+		"csp_transition":                          {"csp_added", "csp_removed"},
+		"tls_certificate_verification_transition": {"tls_certificate_verification_restored", "tls_certificate_verification_failed"},
+	}
+	for detector, codes := range expectations {
+		for index, day := range []time.Time{day2, day3} {
+			var count int64
+			if err := tx.QueryRow(ctx, `SELECT gfn_project_site_capability_change_day($1,1,$2::date)`, detector, day).Scan(&count); err != nil {
+				t.Fatalf("project %s: %v", detector, err)
+			}
+			if count != 1 {
+				t.Fatalf("%s day=%s count=%d want=1", detector, day.Format("2006-01-02"), count)
+			}
+			var siteID int64
+			var code string
+			if err := tx.QueryRow(ctx, `SELECT site_id,event_code FROM gfn_change_events WHERE detector_key=$1 AND detector_version=1 AND projection_date=$2`, detector, day).Scan(&siteID, &code); err != nil || siteID != 872001 || code != codes[index] {
+				t.Fatalf("%s day=%s site=%d code=%q want=%q err=%v", detector, day.Format("2006-01-02"), siteID, code, codes[index], err)
+			}
+		}
+	}
+	rows, err := tx.Query(ctx, `EXPLAIN (ANALYZE, BUFFERS) SELECT gfn_project_site_capability_change_day('http2_transition',1,$1::date)`, day2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var plan []string
+	for rows.Next() {
+		var line string
+		if err := rows.Scan(&line); err != nil {
+			rows.Close()
+			t.Fatal(err)
+		}
+		plan = append(plan, line)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		t.Fatal(err)
+	}
+	rows.Close()
+	joined := strings.Join(plan, "\n")
+	if !strings.Contains(joined, "Execution Time") {
+		t.Fatalf("Change EXPLAIN ANALYZE did not execute: %s", joined)
+	}
+	t.Logf("P2.3 Change projector query plan:\n%s", joined)
+}
+
+func TestP23SiteCapabilityChangeBackfillAndRebuildIntegration(t *testing.T) {
+	config := os.Getenv("GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG")
+	if config == "" {
+		t.Skip("GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG is not set")
+	}
+	if err := env.LoadServerConfig(config); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, env.GetServerConfig().DataBase.ConnectionString())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	var originalMetricSource, originalMetricProcessed, originalChangeSource, originalChangeProcessed pgtype.Date
+	if err := pool.QueryRow(ctx, `SELECT source_start_date,processed_through FROM gfn_metric_checkpoints WHERE metric_key='http2_adoption' AND metric_version=1`).Scan(&originalMetricSource, &originalMetricProcessed); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `SELECT source_start_date,processed_through FROM gfn_change_checkpoints WHERE detector_key='http2_transition' AND detector_version=1`).Scan(&originalChangeSource, &originalChangeProcessed); err != nil {
+		t.Fatal(err)
+	}
+	day1 := time.Date(2041, 2, 1, 0, 0, 0, 0, time.UTC)
+	day2 := day1.AddDate(0, 0, 1)
+	var target int64
+	if err := pool.QueryRow(ctx, `INSERT INTO gfn_target_tracking_periods(site_id,target,tracked_from,tracked_until,tracking_basis,opened_reason,closed_reason) VALUES(872101,'change-backfill.p23.example',$1::date,$2::date+interval '1 day','legacy_observed','p23_change_backfill','p23_change_backfill') RETURNING id`, day1, day2).Scan(&target); err != nil {
+		t.Fatal(err)
+	}
+	cleanup := func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM gfn_change_events WHERE detector_key='http2_transition' AND site_id=872101;DELETE FROM gfn_metric_entity_daily WHERE metric_key='http2_adoption' AND metric_version=1 AND site_id=872101;DELETE FROM gfn_site_daily WHERE site_id=872101;DELETE FROM gfn_target_tracking_periods WHERE id=$1;UPDATE gfn_metric_checkpoints SET source_start_date=$2,processed_through=$3 WHERE metric_key='http2_adoption' AND metric_version=1;UPDATE gfn_change_checkpoints SET source_start_date=$4,processed_through=$5 WHERE detector_key='http2_transition' AND detector_version=1`, pgx.QueryExecModeSimpleProtocol, target, originalMetricSource, originalMetricProcessed, originalChangeSource, originalChangeProcessed)
+	}
+	defer cleanup()
+	for _, fixture := range []struct {
+		day   time.Time
+		state string
+	}{{day1, "negative"}, {day2, "positive"}} {
+		if _, err := pool.Exec(ctx, `INSERT INTO gfn_site_daily(site_id,fact_date,snapshot_at,tracked_at_end,name,name_en,view_count,group_ids,primary_target_tracking_period_id,primary_target,primary_basis,active_target_count,projection_version,finalized_at) VALUES(872101,$1::date,$1::date+interval '23 hours',true,'Change Backfill','Change Backfill',0,ARRAY[]::bigint[],$2,'change-backfill.p23.example','explicit',1,1,$1::date+interval '24 hours');INSERT INTO gfn_metric_entity_daily(metric_key,metric_version,fact_date,site_id,state,reason_code,source_observed_at,dimension_values,source_projection_versions,evaluated_at) VALUES('http2_adoption',1,$1::date,872101,$3,'fixture',$1::date+interval '12 hours','{}','{"gfn_site_daily":1}',$1::date+interval '24 hours')`, pgx.QueryExecModeSimpleProtocol, fixture.day, target, fixture.state); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := pool.Exec(ctx, `UPDATE gfn_metric_checkpoints SET source_start_date=$1::date,processed_through=$2::date WHERE metric_key='http2_adoption' AND metric_version=1;UPDATE gfn_change_checkpoints SET source_start_date=$1::date,processed_through=NULL WHERE detector_key='http2_transition' AND detector_version=1`, pgx.QueryExecModeSimpleProtocol, day1, day2); err != nil {
+		t.Fatal(err)
+	}
+	engine := New(pool, Options{})
+	summary, err := engine.Backfill(ctx, BackfillOptions{Detector: "http2_transition", Version: 1, Through: &day2, MaxDays: 2})
+	if err != nil || summary.Processed != 2 {
+		t.Fatalf("HTTP/2 Change backfill summary=%+v err=%v", summary, err)
+	}
+	rebuilt, err := engine.Rebuild(ctx, "http2_transition", 1, day2, &day2, 0, false)
+	if err != nil || rebuilt.Processed != 1 {
+		t.Fatalf("HTTP/2 Change rebuild summary=%+v err=%v", rebuilt, err)
+	}
+	var eventCode string
+	if err := pool.QueryRow(ctx, `SELECT event_code FROM gfn_change_events WHERE detector_key='http2_transition' AND detector_version=1 AND site_id=872101 AND projection_date=$1`, day2).Scan(&eventCode); err != nil || eventCode != "http2_enabled" {
+		t.Fatalf("HTTP/2 Change backfill event=%q err=%v", eventCode, err)
+	}
+}
 
 func TestNavChangeEngineBackfillRebuildIntegration(t *testing.T) {
 	config := os.Getenv("GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG")

@@ -601,9 +601,25 @@
         "name": "TLS 1.3",
         "description": "能够确认支持 TLS 1.3 安全传输的网站比例。"
       },
+      "http2": {
+        "name": "HTTP/2",
+        "description": "GoFurry 可靠 HTTP 探测协商到 HTTP/2 的网站比例。"
+      },
+      "hsts": {
+        "name": "HSTS",
+        "description": "在适用的 HTTPS/TLS 探测中观测到 HSTS 响应头的网站比例。"
+      },
+      "csp": {
+        "name": "CSP",
+        "description": "观测到生效型 Content-Security-Policy 响应头的网站比例。"
+      },
       "security_txt": {
         "name": "security.txt",
         "description": "能够确认发布有效 security.txt 文档的网站比例。"
+      },
+      "certificate_verified": {
+        "name": "证书验证",
+        "description": "GoFurry 可靠 TLS 观测中通过 X.509 证书验证的网站比例。"
       },
       "free": {
         "name": "免费游戏",
@@ -645,10 +661,18 @@
         "siteIpv6Disabled": "不再支持 IPv6",
         "siteTls13Enabled": "启用了 TLS 1.3",
         "siteTls13Disabled": "不再支持 TLS 1.3",
+        "siteHttp2Enabled": "启用了 HTTP/2",
+        "siteHttp2Disabled": "不再使用 HTTP/2",
+        "siteHstsAdded": "新增了 HSTS",
+        "siteHstsRemoved": "移除了 HSTS",
+        "siteCspAdded": "新增了 CSP",
+        "siteCspRemoved": "移除了 CSP",
         "siteSecurityTxtAdded": "新增了 security.txt",
         "siteSecurityTxtRemoved": "移除了 security.txt",
         "sitePrimaryTargetChanged": "更新了主要访问目标",
         "siteTlsCertificateChanged": "TLS 证书发生变化",
+        "siteTlsCertificateVerificationFailed": "TLS 证书验证失败",
+        "siteTlsCertificateVerificationRestored": "TLS 证书验证已恢复",
         "gameFreeEnabled": "变为免费游戏",
         "gameFreeDisabled": "变为付费游戏",
         "gameWindowsAdded": "新增 Windows 支持",
@@ -798,6 +822,24 @@
       }
     },
     "regions": { "CN": "中国", "US": "美国", "HK": "中国香港" },
+    "siteIntelligence": {
+      "navLabel": "网站洞察导航", "ecosystem": "生态", "certificates": "证书"
+    },
+    "certificateIntelligence": {
+      "title": "TLS 证书洞察", "description": "在同一已完成 UTC 事实日查看证书验证、到期分布与需关注站点。",
+      "empty": "尚无可靠的证书统计数据。", "verificationTitle": "证书验证概览", "expiryTitle": "证书到期概览",
+      "verified": "验证通过", "failed": "验证失败", "known": "结果已知", "coverage": "覆盖率",
+      "expired": "已过期", "within7d": "7 天内到期", "in8to30d": "8–30 天内到期",
+      "quality": "不适用 {not_applicable} · 陈旧 {stale} · 未探测 {not_probed} · 探测失败 {probe_failed} · 未知 {unknown}",
+      "attentionTitle": "到期关注", "issuesTitle": "验证问题", "noItems": "当前没有需要展示的项目。",
+      "site": "网站", "target": "主要目标", "expiry": "到期状态", "issue": "验证问题", "notAfter": "证书截止时间",
+      "aboutTitle": "关于证书数据", "about": "到期分组使用统计日结束时刻计算；陈旧证据不会进入当前到期统计。验证问题仅公开稳定分类，不显示原始 X.509 错误。",
+      "asOf": "统计日期 {date} · 参考时刻 {reference}",
+      "values": {
+        "expired": "已过期", "expires_within_7d": "7 天内到期", "expires_in_8_30d": "8–30 天内到期", "later": "30 天以后",
+        "hostname_mismatch": "域名不匹配", "unknown_authority": "未知签发机构", "not_yet_valid": "尚未生效", "incompatible_usage": "证书用途不兼容", "other": "其他验证问题"
+      }
+    },
     "gameIntelligence": {
       "navLabel": "游戏洞察导航", "ecosystem": "生态", "players": "玩家", "prices": "价格", "languages": "语言"
     },

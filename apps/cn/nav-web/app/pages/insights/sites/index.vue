@@ -8,6 +8,7 @@
     <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
       <InsightsNav />
+      <SiteIntelligenceNav />
 
       <header class="insights-hero insights-hero--domain">
         <p class="insights-eyebrow">{{ $t('insights.sites.eyebrow') }}</p>
@@ -75,13 +76,14 @@ import InsightsMetricTrend from '@/components/insights/InsightsMetricTrend.vue'
 import InsightsNav from '@/components/insights/InsightsNav.vue'
 import InsightsRecentChanges from '@/components/insights/InsightsRecentChanges.vue'
 import InsightsSliceTrend from '@/components/insights/InsightsSliceTrend.vue'
+import SiteIntelligenceNav from '@/components/insights/SiteIntelligenceNav.vue'
 import { useInsightsDomain } from '@/composables/useInsightsDomain'
 import { useInsightsDimensions } from '@/composables/useInsightsDimensions'
 import { getNavInsightsBreakdown, getNavInsightsOverview, getNavInsightsSliceTrend, getNavInsightsTrend } from '@/services/nav'
 import type { NavInsightMetricKey, SiteInsightDimension } from '@/types/insights'
 import { buildInsightsSeo } from '@/utils/seo'
 
-const navMetrics = ['ipv6', 'tls13', 'security_txt'] as const satisfies readonly NavInsightMetricKey[]
+const navMetrics = ['ipv6', 'tls13', 'http2', 'hsts', 'csp', 'security_txt', 'certificate_verified'] as const satisfies readonly NavInsightMetricKey[]
 const siteDimensions = ['country', 'group', 'nsfw', 'public_interest'] as const satisfies readonly SiteInsightDimension[]
 const { locale } = useI18n()
 const {

@@ -358,7 +358,8 @@ jobs:
         run: |
           go test ./collector/control -run TestNavExpiredLeaseRecoveryIntegration -count=1 -v
           go test ./collector/observation -run TestPostgresCollectorPersistenceSemantics -count=1 -v
-          go test ./collector/changes -run 'TestNavChange(ProjectorsIntegration|EngineBackfillRebuildIntegration)' -count=1 -v
+          go test ./collector/metrics -run 'TestP23SiteCapabilityMetric(ProjectorsIntegration|BackfillAndRebuildIntegration)' -count=1 -v
+          go test ./collector/changes -run 'TestNavChange(ProjectorsIntegration|EngineBackfillRebuildIntegration)|TestP23SiteCapabilityChange(ProjectorsIntegration|BackfillAndRebuildIntegration)' -count=1 -v
       - name: Nav Backend integration
         if: needs.detect-changes.outputs.nav_integration == 'true'
         working-directory: apps/cn/nav-backend

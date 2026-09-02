@@ -6,9 +6,11 @@ V3-P0.4 materializes canonical semantic changes after Historical Facts and Analy
 
 The existing collectors run `Control -> Facts -> Metrics -> Changes`. Goose owns `gfg_change_registry`, `gfg_change_events`, `gfg_change_checkpoints` and their `gfn_*` equivalents. Runtime and Admin never mutate Registry rows.
 
-Game detectors are `free_game_transition/1`, `windows_support_transition/1`, `linux_support_transition/1`, `game_release_transition/1`, and `game_price_transition/1`. Nav keeps retired `ipv6_transition/1` and `security_txt_transition/1` compiled for historical rebuild, and runs active `ipv6_transition/2`, `security_txt_transition/2`, `tls13_transition/1`, `primary_target_transition/1`, and `tls_certificate_transition/1`. The v2 detectors consume only their matching v2 Metric contracts, so a semantic transition never mixes metric versions.
+Game detectors are `free_game_transition/1`, `windows_support_transition/1`, `mac_support_transition/1`, `linux_support_transition/1`, `game_release_transition/1`, and `game_price_transition/1`. Nav keeps retired `ipv6_transition/1` and `security_txt_transition/1` compiled for historical rebuild, and runs active `ipv6_transition/2`, `security_txt_transition/2`, `tls13_transition/1`, `http2_transition/1`, `hsts_transition/1`, `csp_transition/1`, `tls_certificate_verification_transition/1`, `primary_target_transition/1`, and `tls_certificate_transition/1`. Each Metric detector consumes only its explicitly versioned source contract, so a semantic transition never mixes Metric versions.
 
 Metric detectors read Metric Entity Daily plus same-day Historical Facts. Price and certificate detectors read finalized Facts. Release reads canonical Release History with reliable tracking-period attribution. Primary reads effective-dated Primary Target periods. Raw observations, collection Jobs/Runs/Results, Redis, current catalogs, and legacy Nav Change are excluded.
+
+HTTP/2, HSTS, CSP, and certificate-verification Changes emit only positive/negative transitions within the same Primary Target tracking identity. Unknown, stale, unavailable, initial, and Primary Target switch states never create an event. Fingerprint-only certificate replacement remains separate from verification failed/restored and is not interpreted as renewal success.
 
 ## Configuration and runtime
 
@@ -33,6 +35,8 @@ gf-game-collector changes rebuild --config /etc/gf-game-collector/server.yaml --
 ```
 
 Nav uses the same flags on `gf-nav-collector`. Backfill is ordered and cannot skip the next checkpoint day. Rebuild is intentionally forward-propagating: `--from D` recomputes through the locked `processed_through`. An optional `--through` must equal that checkpoint, and `--max-days` may not truncate the required range. Rebuild never moves the checkpoint.
+
+For P2.3 rollout, finish the four new Site capability Metric backfills before starting `http2_transition/1`, `hsts_transition/1`, `csp_transition/1`, or `tls_certificate_verification_transition/1` Change backfills.
 
 ## Verification
 

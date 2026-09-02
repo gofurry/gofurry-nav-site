@@ -12,20 +12,23 @@ import (
 )
 
 type fakeStore struct {
-	site              *models.SiteRecord
-	summaries         map[string]*models.MetricSummaryRecord
-	trend             []models.MetricTrendRecord
-	siteMetrics       map[string]*models.SiteMetricRecord
-	overview          []models.ChangeRecord
-	entityChanges     []models.ChangeRecord
-	breakdown         []models.DimensionRecord
-	sliceAvailability models.DimensionAvailabilityRecord
-	sliceTrend        []models.DimensionTrendRecord
-	explorer          []models.ChangeRecord
-	lastBreakdownDate time.Time
-	lastSliceThrough  time.Time
-	lastSliceValue    string
-	lastExplorer      models.ChangeExplorerConditions
+	site                 *models.SiteRecord
+	summaries            map[string]*models.MetricSummaryRecord
+	trend                []models.MetricTrendRecord
+	siteMetrics          map[string]*models.SiteMetricRecord
+	overview             []models.ChangeRecord
+	entityChanges        []models.ChangeRecord
+	breakdown            []models.DimensionRecord
+	sliceAvailability    models.DimensionAvailabilityRecord
+	sliceTrend           []models.DimensionTrendRecord
+	explorer             []models.ChangeRecord
+	lastBreakdownDate    time.Time
+	lastSliceThrough     time.Time
+	lastSliceValue       string
+	lastExplorer         models.ChangeExplorerConditions
+	certificateSummary   *models.CertificateOverviewRecord
+	certificateAttention []models.CertificateItemRecord
+	certificateIssues    []models.CertificateItemRecord
 }
 
 func (f *fakeStore) CountEntities(context.Context) (int64, error)               { return 2, nil }
@@ -50,6 +53,15 @@ func (f *fakeStore) ListMetricSliceTrend(_ context.Context, _ models.MetricContr
 func (f *fakeStore) GetSiteMetric(_ context.Context, _ int64, c models.MetricContract) (*models.SiteMetricRecord, error) {
 	return f.siteMetrics[c.PublicKey], nil
 }
+func (f *fakeStore) GetCertificateOverviewSummary(context.Context) (*models.CertificateOverviewRecord, error) {
+	return f.certificateSummary, nil
+}
+func (f *fakeStore) ListCertificateExpiryAttention(context.Context, int32) ([]models.CertificateItemRecord, error) {
+	return f.certificateAttention, nil
+}
+func (f *fakeStore) ListCertificateVerificationIssues(context.Context, int32) ([]models.CertificateItemRecord, error) {
+	return f.certificateIssues, nil
+}
 func (f *fakeStore) CountOverviewChanges(context.Context, []string, []string) (int64, error) {
 	return int64(len(f.overview)), nil
 }
@@ -70,7 +82,9 @@ func TestPublicMetricAndStateMappingsAreFrozen(t *testing.T) {
 		version int32
 	}{
 		"ipv6": {"ipv6_adoption", 2}, "tls13": {"tls13_adoption", 1},
-		"security_txt": {"security_txt_adoption", 2},
+		"http2": {"http2_adoption", 1}, "hsts": {"hsts_adoption", 1},
+		"csp": {"csp_adoption", 1}, "security_txt": {"security_txt_adoption", 2},
+		"certificate_verified": {"tls_certificate_verification", 1},
 	}
 	for publicKey, expected := range want {
 		contract, ok := resolveMetric(publicKey)
@@ -92,6 +106,76 @@ func TestPublicMetricAndStateMappingsAreFrozen(t *testing.T) {
 	}
 	if state, _ := publicState("unknown"); state == "unsupported" {
 		t.Fatal("unknown must not collapse to unsupported")
+	}
+}
+
+func TestCertificateOverviewUsesFactDayAndPreservesCertificateSemantics(t *testing.T) {
+	factDate := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	referenceAt := factDate.AddDate(0, 0, 1)
+	expired := referenceAt
+	sevenDays := referenceAt.Add(7 * 24 * time.Hour)
+	unknownIssue := "raw x509 text"
+	verified, failed := true, false
+	store := &fakeStore{
+		certificateSummary: &models.CertificateOverviewRecord{
+			FactDate: factDate, ReferenceAt: referenceAt, FreshnessSeconds: 172800,
+			Population: 10, Eligible: 8, Verified: 4, Failed: 2,
+			NotApplicable: 2, Stale: 1, NotProbed: 0, ProbeFailed: 0, Unknown: 1,
+			Expired: 1, ExpiresWithin7D: 1, ExpiresIn8To30D: 1, Later: 2,
+		},
+		certificateAttention: []models.CertificateItemRecord{
+			{SiteID: 1, SiteName: "Expired", Target: "expired.example", NotAfter: &expired, Verified: &failed, VerificationIssue: &unknownIssue},
+			{SiteID: 2, SiteName: "Boundary", Target: "boundary.example", NotAfter: &sevenDays, Verified: &verified},
+		},
+		certificateIssues: []models.CertificateItemRecord{
+			{SiteID: 1, SiteName: "Expired", Target: "expired.example", NotAfter: &expired, Verified: &failed, VerificationIssue: &unknownIssue},
+		},
+	}
+	got, err := New(store).GetCertificateOverview(context.Background(), 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AsOf == nil || *got.AsOf != "2026-09-01" || got.ReferenceAt == nil || !got.ReferenceAt.Equal(referenceAt) {
+		t.Fatalf("fact-day horizon = %#v", got)
+	}
+	if got.Verification.Known != 6 || got.Verification.Coverage == nil || *got.Verification.Coverage != .75 ||
+		got.Expiry.Known != 5 || got.Expiry.Coverage == nil || *got.Expiry.Coverage != .625 {
+		t.Fatalf("certificate denominator math = %#v", got)
+	}
+	if len(got.ExpiryAttention) != 2 || got.ExpiryAttention[0].ExpiryStatus == nil ||
+		*got.ExpiryAttention[0].ExpiryStatus != "expired" || got.ExpiryAttention[1].ExpiryStatus == nil ||
+		*got.ExpiryAttention[1].ExpiryStatus != "expires_within_7d" {
+		t.Fatalf("expiry boundaries = %#v", got.ExpiryAttention)
+	}
+	if got.VerificationIssues[0].VerificationIssue == nil || *got.VerificationIssues[0].VerificationIssue != "other" {
+		t.Fatalf("raw verification issue was not whitelisted: %#v", got.VerificationIssues)
+	}
+	if _, err := New(store).GetCertificateOverview(context.Background(), 101); !errors.Is(err, ErrInvalidCertificateLimit) {
+		t.Fatalf("invalid limit error = %v", err)
+	}
+	empty, err := New(&fakeStore{}).GetCertificateOverview(context.Background(), 0)
+	if err != nil || empty.AsOf != nil || empty.Verification.Coverage != nil || empty.Expiry.Coverage != nil {
+		t.Fatalf("empty overview = %#v, %v", empty, err)
+	}
+}
+
+func TestP23ChangeContractsKeepOverviewWhitelistAndCategories(t *testing.T) {
+	overviewDetectors, overviewIDs := changeQueryContracts(true)
+	joined := strings.Join(append(overviewDetectors, overviewIDs...), "|")
+	for _, required := range []string{
+		"http2_transition", "hsts_transition", "csp_transition",
+		"tls_certificate_verification_transition", "tls_certificate_verification_failed",
+	} {
+		if !strings.Contains(joined, required) {
+			t.Fatalf("overview contracts missing %q: %s", required, joined)
+		}
+	}
+	if strings.Contains(joined, "tls_certificate_changed") {
+		t.Fatalf("routine certificate replacement entered overview: %s", joined)
+	}
+	certificate, ok := explorerContracts("certificate", "")
+	if !ok || len(certificate) != 3 {
+		t.Fatalf("certificate explorer contracts = %#v, %v", certificate, ok)
 	}
 }
 

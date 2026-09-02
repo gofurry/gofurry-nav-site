@@ -275,6 +275,14 @@ SELECT CASE
         $1::integer,
         $3::date
     )
+    WHEN $2::text IN (
+        'http2_adoption', 'hsts_adoption', 'csp_adoption',
+        'tls_certificate_verification'
+    ) THEN gfn_project_site_capability_metric_day(
+        $2::text,
+        $1::integer,
+        $3::date
+    )
     ELSE gfn_project_metric_day(
         $2::text,
         $1::integer,

@@ -140,6 +140,59 @@ func (d *InsightsDAO) GetSiteMetric(ctx context.Context, siteID int64, contract 
 	}, nil
 }
 
+func (d *InsightsDAO) GetCertificateOverviewSummary(ctx context.Context) (*models.CertificateOverviewRecord, error) {
+	row, err := d.queries.GetNavCertificateInsightSummary(ctx)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &models.CertificateOverviewRecord{
+		FactDate: row.FactDate.Time, ReferenceAt: row.ReferenceAt.Time,
+		FreshnessSeconds: row.FreshnessSeconds, Population: row.PopulationCount,
+		Eligible: row.EligibleCount, Verified: row.VerifiedCount, Failed: row.FailedCount,
+		NotApplicable: row.NotApplicableCount, Stale: row.StaleCount,
+		NotProbed: row.NotProbedCount, ProbeFailed: row.ProbeFailedCount, Unknown: row.UnknownCount,
+		Expired: row.ExpiredCount, ExpiresWithin7D: row.ExpiresWithin7dCount,
+		ExpiresIn8To30D: row.ExpiresIn830dCount, Later: row.LaterCount,
+	}, nil
+}
+
+func (d *InsightsDAO) ListCertificateExpiryAttention(ctx context.Context, limit int32) ([]models.CertificateItemRecord, error) {
+	rows, err := d.queries.ListNavCertificateExpiryAttention(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]models.CertificateItemRecord, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.CertificateItemRecord{
+			SiteID: row.SiteID, SiteName: row.SiteName, Target: row.Target,
+			NotAfter: timestampPointer(row.TlsCertNotAfter), Verified: row.Verified,
+			VerificationIssue: nonemptyStringPointer(row.VerificationIssue), Issuer: row.Issuer,
+			ObservedAt: timestampPointer(row.ObservedAt),
+		})
+	}
+	return result, nil
+}
+
+func (d *InsightsDAO) ListCertificateVerificationIssues(ctx context.Context, limit int32) ([]models.CertificateItemRecord, error) {
+	rows, err := d.queries.ListNavCertificateVerificationIssues(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]models.CertificateItemRecord, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.CertificateItemRecord{
+			SiteID: row.SiteID, SiteName: row.SiteName, Target: row.Target,
+			NotAfter: timestampPointer(row.TlsCertNotAfter), Verified: row.Verified,
+			VerificationIssue: nonemptyStringPointer(row.VerificationIssue), Issuer: row.Issuer,
+			ObservedAt: timestampPointer(row.ObservedAt),
+		})
+	}
+	return result, nil
+}
+
 func (d *InsightsDAO) CountOverviewChanges(ctx context.Context, detectorKeys, contractIDs []string) (int64, error) {
 	return d.queries.CountNavInsightOverviewChanges(ctx, navsqlc.CountNavInsightOverviewChangesParams{
 		DetectorKeys: detectorKeys, ContractIds: contractIDs,

@@ -261,3 +261,176 @@ ORDER BY event.projection_date DESC,
          event.event_at DESC NULLS LAST,
          event.event_key DESC
 LIMIT sqlc.arg(limit_count);
+
+-- name: GetNavCertificateInsightSummary :one
+WITH horizon AS (
+    SELECT daily.fact_date,
+           ((daily.fact_date + 1)::timestamp AT TIME ZONE 'UTC')::timestamptz AS reference_at,
+           COALESCE(registry.freshness_seconds, 0)::bigint AS freshness_seconds,
+           daily.population_count,
+           daily.eligible_count,
+           daily.positive_count,
+           daily.negative_count,
+           daily.not_applicable_count,
+           daily.stale_count,
+           daily.not_probed_count,
+           daily.probe_failed_count,
+           daily.unknown_count
+    FROM public.gfn_metric_daily daily
+    JOIN public.gfn_metric_registry registry
+      ON registry.metric_key = daily.metric_key
+     AND registry.metric_version = daily.metric_version
+    WHERE daily.metric_key = 'tls_certificate_verification'
+      AND daily.metric_version = 1
+      AND daily.dimension_key = 'global'
+      AND daily.dimension_value = 'all'
+    ORDER BY daily.fact_date DESC
+    LIMIT 1
+), certificates AS (
+    SELECT target.tls_cert_not_after
+    FROM horizon
+    JOIN public.gfn_metric_entity_daily entity
+      ON entity.metric_key = 'tls_certificate_verification'
+     AND entity.metric_version = 1
+     AND entity.fact_date = horizon.fact_date
+    JOIN public.gfn_site_daily site
+      ON site.site_id = entity.site_id
+     AND site.fact_date = horizon.fact_date
+     AND site.finalized_at IS NOT NULL
+    JOIN public.gfn_site_target_daily target
+      ON target.target_tracking_period_id = site.primary_target_tracking_period_id
+     AND target.fact_date = horizon.fact_date
+     AND target.finalized_at IS NOT NULL
+    WHERE site.primary_target_tracking_period_id IS NOT NULL
+      AND target.tls_state_observed_at IS NOT NULL
+      AND target.tls_state_observed_at <= horizon.reference_at
+      AND target.tls_state_observed_at >= horizon.reference_at
+          - make_interval(secs => horizon.freshness_seconds::double precision)
+      AND lower(COALESCE(target.tls_handshake, '')) = 'collected'
+      AND target.tls_cert_not_after IS NOT NULL
+)
+SELECT horizon.fact_date,
+       horizon.reference_at,
+       horizon.freshness_seconds,
+       horizon.population_count,
+       horizon.eligible_count,
+       horizon.positive_count AS verified_count,
+       horizon.negative_count AS failed_count,
+       horizon.not_applicable_count,
+       horizon.stale_count,
+       horizon.not_probed_count,
+       horizon.probe_failed_count,
+       horizon.unknown_count,
+       count(*) FILTER (WHERE certificates.tls_cert_not_after <= horizon.reference_at)::bigint AS expired_count,
+       count(*) FILTER (WHERE certificates.tls_cert_not_after > horizon.reference_at
+                          AND certificates.tls_cert_not_after <= horizon.reference_at + interval '7 days')::bigint AS expires_within_7d_count,
+       count(*) FILTER (WHERE certificates.tls_cert_not_after > horizon.reference_at + interval '7 days'
+                          AND certificates.tls_cert_not_after <= horizon.reference_at + interval '30 days')::bigint AS expires_in_8_30d_count,
+       count(*) FILTER (WHERE certificates.tls_cert_not_after > horizon.reference_at + interval '30 days')::bigint AS later_count
+FROM horizon
+LEFT JOIN certificates ON true
+GROUP BY horizon.fact_date, horizon.reference_at, horizon.freshness_seconds,
+         horizon.population_count, horizon.eligible_count, horizon.positive_count,
+         horizon.negative_count, horizon.not_applicable_count, horizon.stale_count,
+         horizon.not_probed_count, horizon.probe_failed_count, horizon.unknown_count;
+
+-- name: ListNavCertificateExpiryAttention :many
+WITH horizon AS (
+    SELECT daily.fact_date,
+           ((daily.fact_date + 1)::timestamp AT TIME ZONE 'UTC')::timestamptz AS reference_at,
+           COALESCE(registry.freshness_seconds, 0)::bigint AS freshness_seconds
+    FROM public.gfn_metric_daily daily
+    JOIN public.gfn_metric_registry registry
+      ON registry.metric_key = daily.metric_key
+     AND registry.metric_version = daily.metric_version
+    WHERE daily.metric_key = 'tls_certificate_verification'
+      AND daily.metric_version = 1
+      AND daily.dimension_key = 'global'
+      AND daily.dimension_value = 'all'
+    ORDER BY daily.fact_date DESC
+    LIMIT 1
+)
+SELECT site.site_id,
+       COALESCE(NULLIF(site.name, ''), NULLIF(site.name_en, ''), '')::text AS site_name,
+       target.target,
+       target.tls_cert_not_after,
+       target.tls_cert_verified AS verified,
+       COALESCE(CASE
+           WHEN target.tls_cert_verified IS NOT FALSE THEN NULL
+           WHEN target.tls_verify_error_category IN (
+               'hostname_mismatch', 'unknown_authority', 'expired',
+               'not_yet_valid', 'incompatible_usage', 'other'
+           ) THEN target.tls_verify_error_category
+           ELSE 'other'
+       END, '')::text AS verification_issue,
+       target.tls_cert_issuer AS issuer,
+       target.tls_state_observed_at AS observed_at
+FROM horizon
+JOIN public.gfn_metric_entity_daily entity
+  ON entity.metric_key = 'tls_certificate_verification'
+ AND entity.metric_version = 1
+ AND entity.fact_date = horizon.fact_date
+JOIN public.gfn_site_daily site
+  ON site.site_id = entity.site_id
+ AND site.fact_date = horizon.fact_date
+ AND site.finalized_at IS NOT NULL
+JOIN public.gfn_site_target_daily target
+  ON target.target_tracking_period_id = site.primary_target_tracking_period_id
+ AND target.fact_date = horizon.fact_date
+ AND target.finalized_at IS NOT NULL
+WHERE site.primary_target_tracking_period_id IS NOT NULL
+  AND target.tls_state_observed_at IS NOT NULL
+  AND target.tls_state_observed_at <= horizon.reference_at
+  AND target.tls_state_observed_at >= horizon.reference_at
+      - make_interval(secs => horizon.freshness_seconds::double precision)
+  AND lower(COALESCE(target.tls_handshake, '')) = 'collected'
+  AND target.tls_cert_not_after IS NOT NULL
+  AND target.tls_cert_not_after <= horizon.reference_at + interval '30 days'
+ORDER BY target.tls_cert_not_after ASC, site.site_id ASC
+LIMIT sqlc.arg(limit_count);
+
+-- name: ListNavCertificateVerificationIssues :many
+WITH horizon AS (
+    SELECT fact_date,
+           ((fact_date + 1)::timestamp AT TIME ZONE 'UTC')::timestamptz AS reference_at
+    FROM public.gfn_metric_daily
+    WHERE metric_key = 'tls_certificate_verification'
+      AND metric_version = 1
+      AND dimension_key = 'global'
+      AND dimension_value = 'all'
+    ORDER BY fact_date DESC
+    LIMIT 1
+), issues AS (
+    SELECT site.site_id,
+           COALESCE(NULLIF(site.name, ''), NULLIF(site.name_en, ''), '')::text AS site_name,
+           target.target,
+           target.tls_cert_not_after,
+           target.tls_cert_verified AS verified,
+           CASE WHEN target.tls_verify_error_category IN (
+                    'hostname_mismatch', 'unknown_authority', 'expired',
+                    'not_yet_valid', 'incompatible_usage', 'other'
+                ) THEN target.tls_verify_error_category
+                ELSE 'other'
+           END::text AS verification_issue,
+           target.tls_cert_issuer AS issuer,
+           target.tls_state_observed_at AS observed_at
+    FROM horizon
+    JOIN public.gfn_metric_entity_daily entity
+      ON entity.metric_key = 'tls_certificate_verification'
+     AND entity.metric_version = 1
+     AND entity.fact_date = horizon.fact_date
+     AND entity.state = 'negative'
+    JOIN public.gfn_site_daily site
+      ON site.site_id = entity.site_id
+     AND site.fact_date = horizon.fact_date
+     AND site.finalized_at IS NOT NULL
+    JOIN public.gfn_site_target_daily target
+      ON target.target_tracking_period_id = site.primary_target_tracking_period_id
+     AND target.fact_date = horizon.fact_date
+     AND target.finalized_at IS NOT NULL
+)
+SELECT site_id, site_name, target, tls_cert_not_after,
+       verified, verification_issue, issuer, observed_at
+FROM issues
+ORDER BY verification_issue ASC, site_id ASC
+LIMIT sqlc.arg(limit_count);

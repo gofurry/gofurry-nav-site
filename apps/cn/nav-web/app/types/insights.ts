@@ -1,6 +1,6 @@
 export type InsightRange = '30d' | '90d' | 'all'
 export type InsightChangeRange = '7d' | InsightRange
-export type NavInsightMetricKey = 'ipv6' | 'tls13' | 'security_txt'
+export type NavInsightMetricKey = 'ipv6' | 'tls13' | 'http2' | 'hsts' | 'csp' | 'security_txt' | 'certificate_verified'
 export type GameInsightMetricKey = 'free' | 'windows' | 'mac' | 'linux'
 export type InsightMetricKey = NavInsightMetricKey | GameInsightMetricKey
 export type InsightDomain = 'site' | 'game'
@@ -144,6 +144,41 @@ export interface SiteInsights {
   site: InsightEntityRef
   capabilities: SiteInsightCapability[]
   recent_changes: InsightChange[]
+}
+
+export type CertificateExpiryStatus = 'expired' | 'expires_within_7d' | 'expires_in_8_30d' | 'later'
+export type CertificateVerificationIssue = 'hostname_mismatch' | 'unknown_authority' | 'expired' | 'not_yet_valid' | 'incompatible_usage' | 'other'
+
+export interface CertificateInsightItem {
+  site: InsightEntityRef
+  target: string
+  not_after: string | null
+  days_to_expiry: number | null
+  expiry_status: CertificateExpiryStatus | null
+  verified: boolean | null
+  verification_issue: CertificateVerificationIssue | null
+  issuer: string | null
+  observed_at: string | null
+}
+
+export interface CertificateInsightOverview {
+  as_of: string | null
+  reference_at: string | null
+  freshness_seconds: number
+  population: number
+  eligible: number
+  verification: { known: number; verified: number; failed: number; coverage: number | null }
+  quality: { not_applicable: number; stale: number; not_probed: number; probe_failed: number; unknown: number }
+  expiry: {
+    known: number
+    coverage: number | null
+    expired: number
+    expires_within_7d: number
+    expires_in_8_30d: number
+    later: number
+  }
+  expiry_attention: CertificateInsightItem[]
+  verification_issues: CertificateInsightItem[]
 }
 
 export interface GameInsightState {

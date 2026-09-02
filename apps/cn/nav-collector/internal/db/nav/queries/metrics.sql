@@ -62,6 +62,14 @@ SELECT CASE
         sqlc.arg(metric_version)::integer,
         sqlc.arg(fact_date)::date
     )
+    WHEN sqlc.arg(metric_key)::text IN (
+        'http2_adoption', 'hsts_adoption', 'csp_adoption',
+        'tls_certificate_verification'
+    ) THEN gfn_project_site_capability_metric_day(
+        sqlc.arg(metric_key)::text,
+        sqlc.arg(metric_version)::integer,
+        sqlc.arg(fact_date)::date
+    )
     ELSE gfn_project_metric_day(
         sqlc.arg(metric_key)::text,
         sqlc.arg(metric_version)::integer,

@@ -45,6 +45,12 @@ func (fakeReader) GetChanges(_ context.Context, query models.ChangeExplorerQuery
 	}
 	return models.ChangeExplorerPage{Items: []models.ExplorerChange{}}, nil
 }
+func (fakeReader) GetCertificateOverview(_ context.Context, limit int32) (models.CertificateOverview, error) {
+	if limit > 100 {
+		return models.CertificateOverview{}, service.ErrInvalidCertificateLimit
+	}
+	return models.CertificateOverview{ExpiryAttention: []models.CertificateItem{}, VerificationIssues: []models.CertificateItem{}}, nil
+}
 func (fakeReader) GetSiteInsights(_ context.Context, id int64) (models.SiteInsights, error) {
 	if id == 404 {
 		return models.SiteInsights{}, service.ErrNotFound
@@ -60,6 +66,7 @@ func TestNavInsightsHTTPContract(t *testing.T) {
 	app.Get("/api/v2/nav/insights/metrics/:metricKey/breakdown", api.GetMetricBreakdown)
 	app.Get("/api/v2/nav/insights/metrics/:metricKey/breakdown/:dimension/:value/trend", api.GetMetricSliceTrend)
 	app.Get("/api/v2/nav/insights/changes", api.GetChanges)
+	app.Get("/api/v2/nav/insights/certificates/overview", api.GetCertificateOverview)
 	app.Get("/api/v2/nav/sites/:siteId/insights", api.GetSiteInsights)
 
 	cases := []struct {
@@ -72,6 +79,9 @@ func TestNavInsightsHTTPContract(t *testing.T) {
 		{"/api/v2/nav/insights/metrics/ipv6/breakdown/country/CN/trend?range=90d", http.StatusOK},
 		{"/api/v2/nav/insights/changes?range=30d&limit=20", http.StatusOK},
 		{"/api/v2/nav/insights/changes?cursor=bad", http.StatusBadRequest},
+		{"/api/v2/nav/insights/certificates/overview", http.StatusOK},
+		{"/api/v2/nav/insights/certificates/overview?limit=101", http.StatusBadRequest},
+		{"/api/v2/nav/insights/certificates/overview?limit=bad", http.StatusBadRequest},
 		{"/api/v2/nav/sites/1/insights", http.StatusOK},
 		{"/api/v2/nav/insights/metrics/bad/trend", http.StatusBadRequest},
 		{"/api/v2/nav/insights/metrics/ipv6/trend?range=bad", http.StatusBadRequest},

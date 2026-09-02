@@ -28,6 +28,10 @@ LEFT JOIN gfn_metric_checkpoints metric_checkpoint
       WHEN 'ipv6_transition' THEN 'ipv6_adoption'
       WHEN 'tls13_transition' THEN 'tls13_adoption'
       WHEN 'security_txt_transition' THEN 'security_txt_adoption'
+      WHEN 'http2_transition' THEN 'http2_adoption'
+      WHEN 'hsts_transition' THEN 'hsts_adoption'
+      WHEN 'csp_transition' THEN 'csp_adoption'
+      WHEN 'tls_certificate_verification_transition' THEN 'tls_certificate_verification'
   END
  AND metric_checkpoint.metric_version = registry.detector_version
 LEFT JOIN gfn_fact_rollup_checkpoints fact_checkpoint
@@ -63,6 +67,10 @@ LEFT JOIN gfn_metric_checkpoints metric_checkpoint
       WHEN 'ipv6_transition' THEN 'ipv6_adoption'
       WHEN 'tls13_transition' THEN 'tls13_adoption'
       WHEN 'security_txt_transition' THEN 'security_txt_adoption'
+      WHEN 'http2_transition' THEN 'http2_adoption'
+      WHEN 'hsts_transition' THEN 'hsts_adoption'
+      WHEN 'csp_transition' THEN 'csp_adoption'
+      WHEN 'tls_certificate_verification_transition' THEN 'tls_certificate_verification'
   END
  AND metric_checkpoint.metric_version = registry.detector_version
 LEFT JOIN gfn_fact_rollup_checkpoints fact_checkpoint
@@ -75,6 +83,14 @@ WHERE registry.detector_key = sqlc.arg(detector_key)
 -- name: ProjectNavChangeDay :one
 SELECT CASE
     WHEN sqlc.arg(detector_version)::integer = 2 THEN gfn_project_change_day_v2(
+        sqlc.arg(detector_key)::text,
+        sqlc.arg(detector_version)::integer,
+        sqlc.arg(projection_date)::date
+    )
+    WHEN sqlc.arg(detector_key)::text IN (
+        'http2_transition', 'hsts_transition', 'csp_transition',
+        'tls_certificate_verification_transition'
+    ) THEN gfn_project_site_capability_change_day(
         sqlc.arg(detector_key)::text,
         sqlc.arg(detector_version)::integer,
         sqlc.arg(projection_date)::date

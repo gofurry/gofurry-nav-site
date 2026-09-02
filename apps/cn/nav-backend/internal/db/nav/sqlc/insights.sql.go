@@ -45,6 +45,122 @@ func (q *Queries) CountNavInsightSites(ctx context.Context) (int64, error) {
 	return column_1, err
 }
 
+const getNavCertificateInsightSummary = `-- name: GetNavCertificateInsightSummary :one
+WITH horizon AS (
+    SELECT daily.fact_date,
+           ((daily.fact_date + 1)::timestamp AT TIME ZONE 'UTC')::timestamptz AS reference_at,
+           COALESCE(registry.freshness_seconds, 0)::bigint AS freshness_seconds,
+           daily.population_count,
+           daily.eligible_count,
+           daily.positive_count,
+           daily.negative_count,
+           daily.not_applicable_count,
+           daily.stale_count,
+           daily.not_probed_count,
+           daily.probe_failed_count,
+           daily.unknown_count
+    FROM public.gfn_metric_daily daily
+    JOIN public.gfn_metric_registry registry
+      ON registry.metric_key = daily.metric_key
+     AND registry.metric_version = daily.metric_version
+    WHERE daily.metric_key = 'tls_certificate_verification'
+      AND daily.metric_version = 1
+      AND daily.dimension_key = 'global'
+      AND daily.dimension_value = 'all'
+    ORDER BY daily.fact_date DESC
+    LIMIT 1
+), certificates AS (
+    SELECT target.tls_cert_not_after
+    FROM horizon
+    JOIN public.gfn_metric_entity_daily entity
+      ON entity.metric_key = 'tls_certificate_verification'
+     AND entity.metric_version = 1
+     AND entity.fact_date = horizon.fact_date
+    JOIN public.gfn_site_daily site
+      ON site.site_id = entity.site_id
+     AND site.fact_date = horizon.fact_date
+     AND site.finalized_at IS NOT NULL
+    JOIN public.gfn_site_target_daily target
+      ON target.target_tracking_period_id = site.primary_target_tracking_period_id
+     AND target.fact_date = horizon.fact_date
+     AND target.finalized_at IS NOT NULL
+    WHERE site.primary_target_tracking_period_id IS NOT NULL
+      AND target.tls_state_observed_at IS NOT NULL
+      AND target.tls_state_observed_at <= horizon.reference_at
+      AND target.tls_state_observed_at >= horizon.reference_at
+          - make_interval(secs => horizon.freshness_seconds::double precision)
+      AND lower(COALESCE(target.tls_handshake, '')) = 'collected'
+      AND target.tls_cert_not_after IS NOT NULL
+)
+SELECT horizon.fact_date,
+       horizon.reference_at,
+       horizon.freshness_seconds,
+       horizon.population_count,
+       horizon.eligible_count,
+       horizon.positive_count AS verified_count,
+       horizon.negative_count AS failed_count,
+       horizon.not_applicable_count,
+       horizon.stale_count,
+       horizon.not_probed_count,
+       horizon.probe_failed_count,
+       horizon.unknown_count,
+       count(*) FILTER (WHERE certificates.tls_cert_not_after <= horizon.reference_at)::bigint AS expired_count,
+       count(*) FILTER (WHERE certificates.tls_cert_not_after > horizon.reference_at
+                          AND certificates.tls_cert_not_after <= horizon.reference_at + interval '7 days')::bigint AS expires_within_7d_count,
+       count(*) FILTER (WHERE certificates.tls_cert_not_after > horizon.reference_at + interval '7 days'
+                          AND certificates.tls_cert_not_after <= horizon.reference_at + interval '30 days')::bigint AS expires_in_8_30d_count,
+       count(*) FILTER (WHERE certificates.tls_cert_not_after > horizon.reference_at + interval '30 days')::bigint AS later_count
+FROM horizon
+LEFT JOIN certificates ON true
+GROUP BY horizon.fact_date, horizon.reference_at, horizon.freshness_seconds,
+         horizon.population_count, horizon.eligible_count, horizon.positive_count,
+         horizon.negative_count, horizon.not_applicable_count, horizon.stale_count,
+         horizon.not_probed_count, horizon.probe_failed_count, horizon.unknown_count
+`
+
+type GetNavCertificateInsightSummaryRow struct {
+	FactDate             pgtype.Date        `json:"fact_date"`
+	ReferenceAt          pgtype.Timestamptz `json:"reference_at"`
+	FreshnessSeconds     int64              `json:"freshness_seconds"`
+	PopulationCount      int64              `json:"population_count"`
+	EligibleCount        int64              `json:"eligible_count"`
+	VerifiedCount        int64              `json:"verified_count"`
+	FailedCount          int64              `json:"failed_count"`
+	NotApplicableCount   int64              `json:"not_applicable_count"`
+	StaleCount           int64              `json:"stale_count"`
+	NotProbedCount       int64              `json:"not_probed_count"`
+	ProbeFailedCount     int64              `json:"probe_failed_count"`
+	UnknownCount         int64              `json:"unknown_count"`
+	ExpiredCount         int64              `json:"expired_count"`
+	ExpiresWithin7dCount int64              `json:"expires_within_7d_count"`
+	ExpiresIn830dCount   int64              `json:"expires_in_8_30d_count"`
+	LaterCount           int64              `json:"later_count"`
+}
+
+func (q *Queries) GetNavCertificateInsightSummary(ctx context.Context) (GetNavCertificateInsightSummaryRow, error) {
+	row := q.db.QueryRow(ctx, getNavCertificateInsightSummary)
+	var i GetNavCertificateInsightSummaryRow
+	err := row.Scan(
+		&i.FactDate,
+		&i.ReferenceAt,
+		&i.FreshnessSeconds,
+		&i.PopulationCount,
+		&i.EligibleCount,
+		&i.VerifiedCount,
+		&i.FailedCount,
+		&i.NotApplicableCount,
+		&i.StaleCount,
+		&i.NotProbedCount,
+		&i.ProbeFailedCount,
+		&i.UnknownCount,
+		&i.ExpiredCount,
+		&i.ExpiresWithin7dCount,
+		&i.ExpiresIn830dCount,
+		&i.LaterCount,
+	)
+	return i, err
+}
+
 const getNavInsightMetricSliceAvailability = `-- name: GetNavInsightMetricSliceAvailability :one
 WITH available AS (
     SELECT min(fact_date)::date AS available_from,
@@ -246,6 +362,189 @@ func (q *Queries) GetNavInsightSiteMetric(ctx context.Context, arg GetNavInsight
 		&i.NegativeCount,
 	)
 	return i, err
+}
+
+const listNavCertificateExpiryAttention = `-- name: ListNavCertificateExpiryAttention :many
+WITH horizon AS (
+    SELECT daily.fact_date,
+           ((daily.fact_date + 1)::timestamp AT TIME ZONE 'UTC')::timestamptz AS reference_at,
+           COALESCE(registry.freshness_seconds, 0)::bigint AS freshness_seconds
+    FROM public.gfn_metric_daily daily
+    JOIN public.gfn_metric_registry registry
+      ON registry.metric_key = daily.metric_key
+     AND registry.metric_version = daily.metric_version
+    WHERE daily.metric_key = 'tls_certificate_verification'
+      AND daily.metric_version = 1
+      AND daily.dimension_key = 'global'
+      AND daily.dimension_value = 'all'
+    ORDER BY daily.fact_date DESC
+    LIMIT 1
+)
+SELECT site.site_id,
+       COALESCE(NULLIF(site.name, ''), NULLIF(site.name_en, ''), '')::text AS site_name,
+       target.target,
+       target.tls_cert_not_after,
+       target.tls_cert_verified AS verified,
+       COALESCE(CASE
+           WHEN target.tls_cert_verified IS NOT FALSE THEN NULL
+           WHEN target.tls_verify_error_category IN (
+               'hostname_mismatch', 'unknown_authority', 'expired',
+               'not_yet_valid', 'incompatible_usage', 'other'
+           ) THEN target.tls_verify_error_category
+           ELSE 'other'
+       END, '')::text AS verification_issue,
+       target.tls_cert_issuer AS issuer,
+       target.tls_state_observed_at AS observed_at
+FROM horizon
+JOIN public.gfn_metric_entity_daily entity
+  ON entity.metric_key = 'tls_certificate_verification'
+ AND entity.metric_version = 1
+ AND entity.fact_date = horizon.fact_date
+JOIN public.gfn_site_daily site
+  ON site.site_id = entity.site_id
+ AND site.fact_date = horizon.fact_date
+ AND site.finalized_at IS NOT NULL
+JOIN public.gfn_site_target_daily target
+  ON target.target_tracking_period_id = site.primary_target_tracking_period_id
+ AND target.fact_date = horizon.fact_date
+ AND target.finalized_at IS NOT NULL
+WHERE site.primary_target_tracking_period_id IS NOT NULL
+  AND target.tls_state_observed_at IS NOT NULL
+  AND target.tls_state_observed_at <= horizon.reference_at
+  AND target.tls_state_observed_at >= horizon.reference_at
+      - make_interval(secs => horizon.freshness_seconds::double precision)
+  AND lower(COALESCE(target.tls_handshake, '')) = 'collected'
+  AND target.tls_cert_not_after IS NOT NULL
+  AND target.tls_cert_not_after <= horizon.reference_at + interval '30 days'
+ORDER BY target.tls_cert_not_after ASC, site.site_id ASC
+LIMIT $1
+`
+
+type ListNavCertificateExpiryAttentionRow struct {
+	SiteID            int64              `json:"site_id"`
+	SiteName          string             `json:"site_name"`
+	Target            string             `json:"target"`
+	TlsCertNotAfter   pgtype.Timestamptz `json:"tls_cert_not_after"`
+	Verified          *bool              `json:"verified"`
+	VerificationIssue string             `json:"verification_issue"`
+	Issuer            *string            `json:"issuer"`
+	ObservedAt        pgtype.Timestamptz `json:"observed_at"`
+}
+
+func (q *Queries) ListNavCertificateExpiryAttention(ctx context.Context, limitCount int32) ([]ListNavCertificateExpiryAttentionRow, error) {
+	rows, err := q.db.Query(ctx, listNavCertificateExpiryAttention, limitCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNavCertificateExpiryAttentionRow{}
+	for rows.Next() {
+		var i ListNavCertificateExpiryAttentionRow
+		if err := rows.Scan(
+			&i.SiteID,
+			&i.SiteName,
+			&i.Target,
+			&i.TlsCertNotAfter,
+			&i.Verified,
+			&i.VerificationIssue,
+			&i.Issuer,
+			&i.ObservedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listNavCertificateVerificationIssues = `-- name: ListNavCertificateVerificationIssues :many
+WITH horizon AS (
+    SELECT fact_date,
+           ((fact_date + 1)::timestamp AT TIME ZONE 'UTC')::timestamptz AS reference_at
+    FROM public.gfn_metric_daily
+    WHERE metric_key = 'tls_certificate_verification'
+      AND metric_version = 1
+      AND dimension_key = 'global'
+      AND dimension_value = 'all'
+    ORDER BY fact_date DESC
+    LIMIT 1
+), issues AS (
+    SELECT site.site_id,
+           COALESCE(NULLIF(site.name, ''), NULLIF(site.name_en, ''), '')::text AS site_name,
+           target.target,
+           target.tls_cert_not_after,
+           target.tls_cert_verified AS verified,
+           CASE WHEN target.tls_verify_error_category IN (
+                    'hostname_mismatch', 'unknown_authority', 'expired',
+                    'not_yet_valid', 'incompatible_usage', 'other'
+                ) THEN target.tls_verify_error_category
+                ELSE 'other'
+           END::text AS verification_issue,
+           target.tls_cert_issuer AS issuer,
+           target.tls_state_observed_at AS observed_at
+    FROM horizon
+    JOIN public.gfn_metric_entity_daily entity
+      ON entity.metric_key = 'tls_certificate_verification'
+     AND entity.metric_version = 1
+     AND entity.fact_date = horizon.fact_date
+     AND entity.state = 'negative'
+    JOIN public.gfn_site_daily site
+      ON site.site_id = entity.site_id
+     AND site.fact_date = horizon.fact_date
+     AND site.finalized_at IS NOT NULL
+    JOIN public.gfn_site_target_daily target
+      ON target.target_tracking_period_id = site.primary_target_tracking_period_id
+     AND target.fact_date = horizon.fact_date
+     AND target.finalized_at IS NOT NULL
+)
+SELECT site_id, site_name, target, tls_cert_not_after,
+       verified, verification_issue, issuer, observed_at
+FROM issues
+ORDER BY verification_issue ASC, site_id ASC
+LIMIT $1
+`
+
+type ListNavCertificateVerificationIssuesRow struct {
+	SiteID            int64              `json:"site_id"`
+	SiteName          string             `json:"site_name"`
+	Target            string             `json:"target"`
+	TlsCertNotAfter   pgtype.Timestamptz `json:"tls_cert_not_after"`
+	Verified          *bool              `json:"verified"`
+	VerificationIssue string             `json:"verification_issue"`
+	Issuer            *string            `json:"issuer"`
+	ObservedAt        pgtype.Timestamptz `json:"observed_at"`
+}
+
+func (q *Queries) ListNavCertificateVerificationIssues(ctx context.Context, limitCount int32) ([]ListNavCertificateVerificationIssuesRow, error) {
+	rows, err := q.db.Query(ctx, listNavCertificateVerificationIssues, limitCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNavCertificateVerificationIssuesRow{}
+	for rows.Next() {
+		var i ListNavCertificateVerificationIssuesRow
+		if err := rows.Scan(
+			&i.SiteID,
+			&i.SiteName,
+			&i.Target,
+			&i.TlsCertNotAfter,
+			&i.Verified,
+			&i.VerificationIssue,
+			&i.Issuer,
+			&i.ObservedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listNavInsightExplorerChanges = `-- name: ListNavInsightExplorerChanges :many

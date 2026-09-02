@@ -135,6 +135,55 @@ type SiteInsights struct {
 	RecentChanges []Change     `json:"recent_changes"`
 }
 
+type CertificateVerificationSummary struct {
+	Known    int64    `json:"known"`
+	Verified int64    `json:"verified"`
+	Failed   int64    `json:"failed"`
+	Coverage *float64 `json:"coverage"`
+}
+
+type CertificateQualitySummary struct {
+	NotApplicable int64 `json:"not_applicable"`
+	Stale         int64 `json:"stale"`
+	NotProbed     int64 `json:"not_probed"`
+	ProbeFailed   int64 `json:"probe_failed"`
+	Unknown       int64 `json:"unknown"`
+}
+
+type CertificateExpirySummary struct {
+	Known           int64    `json:"known"`
+	Coverage        *float64 `json:"coverage"`
+	Expired         int64    `json:"expired"`
+	ExpiresWithin7D int64    `json:"expires_within_7d"`
+	ExpiresIn8To30D int64    `json:"expires_in_8_30d"`
+	Later           int64    `json:"later"`
+}
+
+type CertificateItem struct {
+	Site              EntityRef  `json:"site"`
+	Target            string     `json:"target"`
+	NotAfter          *time.Time `json:"not_after"`
+	DaysToExpiry      *int32     `json:"days_to_expiry"`
+	ExpiryStatus      *string    `json:"expiry_status"`
+	Verified          *bool      `json:"verified"`
+	VerificationIssue *string    `json:"verification_issue"`
+	Issuer            *string    `json:"issuer"`
+	ObservedAt        *time.Time `json:"observed_at"`
+}
+
+type CertificateOverview struct {
+	AsOf               *string                        `json:"as_of"`
+	ReferenceAt        *time.Time                     `json:"reference_at"`
+	FreshnessSeconds   int64                          `json:"freshness_seconds"`
+	Population         int64                          `json:"population"`
+	Eligible           int64                          `json:"eligible"`
+	Verification       CertificateVerificationSummary `json:"verification"`
+	Quality            CertificateQualitySummary      `json:"quality"`
+	Expiry             CertificateExpirySummary       `json:"expiry"`
+	ExpiryAttention    []CertificateItem              `json:"expiry_attention"`
+	VerificationIssues []CertificateItem              `json:"verification_issues"`
+}
+
 type MetricContract struct {
 	PublicKey   string
 	InternalKey string
@@ -200,6 +249,36 @@ type SiteMetricRecord struct {
 	EligibleCount int64
 	PositiveCount int64
 	NegativeCount int64
+}
+
+type CertificateOverviewRecord struct {
+	FactDate         time.Time
+	ReferenceAt      time.Time
+	FreshnessSeconds int64
+	Population       int64
+	Eligible         int64
+	Verified         int64
+	Failed           int64
+	NotApplicable    int64
+	Stale            int64
+	NotProbed        int64
+	ProbeFailed      int64
+	Unknown          int64
+	Expired          int64
+	ExpiresWithin7D  int64
+	ExpiresIn8To30D  int64
+	Later            int64
+}
+
+type CertificateItemRecord struct {
+	SiteID            int64
+	SiteName          string
+	Target            string
+	NotAfter          *time.Time
+	Verified          *bool
+	VerificationIssue *string
+	Issuer            *string
+	ObservedAt        *time.Time
 }
 
 type ChangeRecord struct {

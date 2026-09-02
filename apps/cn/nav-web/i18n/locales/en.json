@@ -601,9 +601,25 @@
         "name": "TLS 1.3",
         "description": "The share of websites confirmed to support TLS 1.3 transport."
       },
+      "http2": {
+        "name": "HTTP/2",
+        "description": "The share of sites where a reliable GoFurry HTTP probe negotiated HTTP/2."
+      },
+      "hsts": {
+        "name": "HSTS",
+        "description": "The share of applicable HTTPS/TLS observations with a Strict-Transport-Security header."
+      },
+      "csp": {
+        "name": "CSP",
+        "description": "The share of sites with an observed enforcement Content-Security-Policy header."
+      },
       "security_txt": {
         "name": "security.txt",
         "description": "The share of websites confirmed to publish a valid security.txt document."
+      },
+      "certificate_verified": {
+        "name": "Certificate verification",
+        "description": "The share of reliable TLS observations whose X.509 certificate verification succeeded."
       },
       "free": {
         "name": "Free games",
@@ -645,10 +661,18 @@
         "siteIpv6Disabled": "no longer supports IPv6",
         "siteTls13Enabled": "enabled TLS 1.3",
         "siteTls13Disabled": "no longer supports TLS 1.3",
+        "siteHttp2Enabled": "enabled HTTP/2",
+        "siteHttp2Disabled": "no longer uses HTTP/2",
+        "siteHstsAdded": "added HSTS",
+        "siteHstsRemoved": "removed HSTS",
+        "siteCspAdded": "added CSP",
+        "siteCspRemoved": "removed CSP",
         "siteSecurityTxtAdded": "added security.txt",
         "siteSecurityTxtRemoved": "removed security.txt",
         "sitePrimaryTargetChanged": "changed its primary target",
         "siteTlsCertificateChanged": "changed its TLS certificate",
+        "siteTlsCertificateVerificationFailed": "failed TLS certificate verification",
+        "siteTlsCertificateVerificationRestored": "restored TLS certificate verification",
         "gameFreeEnabled": "became free to play",
         "gameFreeDisabled": "became paid",
         "gameWindowsAdded": "added Windows support",
@@ -798,6 +822,24 @@
       }
     },
     "regions": { "CN": "China", "US": "United States", "HK": "Hong Kong" },
+    "siteIntelligence": {
+      "navLabel": "Site Intelligence navigation", "ecosystem": "Ecosystem", "certificates": "Certificates"
+    },
+    "certificateIntelligence": {
+      "title": "TLS Certificate Intelligence", "description": "Review certificate verification, expiry distribution, and attention items on one closed UTC fact day.",
+      "empty": "No reliable certificate statistics are available yet.", "verificationTitle": "Verification Summary", "expiryTitle": "Expiry Summary",
+      "verified": "Verified", "failed": "Failed", "known": "Known results", "coverage": "Coverage",
+      "expired": "Expired", "within7d": "Expires within 7 days", "in8to30d": "Expires in 8–30 days",
+      "quality": "Not applicable {not_applicable} · Stale {stale} · Not probed {not_probed} · Probe failed {probe_failed} · Unknown {unknown}",
+      "attentionTitle": "Expiry Attention", "issuesTitle": "Verification Issues", "noItems": "There are no items to display.",
+      "site": "Site", "target": "Primary target", "expiry": "Expiry status", "issue": "Verification issue", "notAfter": "Certificate not after",
+      "aboutTitle": "About certificate data", "about": "Expiry buckets use the end of the statistics day. Stale evidence is excluded from current expiry intelligence, and only stable verification categories are public—never raw X.509 errors.",
+      "asOf": "Statistics date {date} · reference time {reference}",
+      "values": {
+        "expired": "Expired", "expires_within_7d": "Expires within 7 days", "expires_in_8_30d": "Expires in 8–30 days", "later": "Later than 30 days",
+        "hostname_mismatch": "Hostname mismatch", "unknown_authority": "Unknown authority", "not_yet_valid": "Not yet valid", "incompatible_usage": "Incompatible usage", "other": "Other verification issue"
+      }
+    },
     "gameIntelligence": {
       "navLabel": "Game Intelligence navigation", "ecosystem": "Ecosystem", "players": "Players", "prices": "Prices", "languages": "Languages"
     },

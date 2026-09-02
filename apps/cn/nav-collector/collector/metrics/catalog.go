@@ -58,6 +58,34 @@ var evaluatorCatalog = []Contract{
 		CoveragePolicy: "known_over_eligible_v1", FreshnessSeconds: 172800,
 		AllowedDimensions: []string{"group_id", "nsfw", "site_country", "welfare"},
 	},
+	{
+		Key: "http2_adoption", Version: 1, Kind: "state_ratio", EntityLevel: "site", TimeGrain: "day",
+		SourceFacts:       []string{"gfn_site_daily", "gfn_site_target_daily", "gfn_site_target_protocol_daily"},
+		EligibilityPolicy: "active_site_primary_target_v1", StatePolicy: "http2_adoption_state_v1",
+		CoveragePolicy: "known_over_eligible_v1", FreshnessSeconds: 172800,
+		AllowedDimensions: []string{"group_id", "nsfw", "site_country", "welfare"},
+	},
+	{
+		Key: "hsts_adoption", Version: 1, Kind: "state_ratio", EntityLevel: "site", TimeGrain: "day",
+		SourceFacts:       []string{"gfn_site_daily", "gfn_site_target_daily", "gfn_site_target_protocol_daily"},
+		EligibilityPolicy: "active_site_primary_target_v1", StatePolicy: "hsts_adoption_state_v1",
+		CoveragePolicy: "known_over_eligible_v1", FreshnessSeconds: 172800,
+		AllowedDimensions: []string{"group_id", "nsfw", "site_country", "welfare"},
+	},
+	{
+		Key: "csp_adoption", Version: 1, Kind: "state_ratio", EntityLevel: "site", TimeGrain: "day",
+		SourceFacts:       []string{"gfn_site_daily", "gfn_site_target_daily", "gfn_site_target_protocol_daily"},
+		EligibilityPolicy: "active_site_primary_target_v1", StatePolicy: "csp_adoption_state_v1",
+		CoveragePolicy: "known_over_eligible_v1", FreshnessSeconds: 172800,
+		AllowedDimensions: []string{"group_id", "nsfw", "site_country", "welfare"},
+	},
+	{
+		Key: "tls_certificate_verification", Version: 1, Kind: "state_ratio", EntityLevel: "site", TimeGrain: "day",
+		SourceFacts:       []string{"gfn_site_daily", "gfn_site_target_daily", "gfn_site_target_protocol_daily"},
+		EligibilityPolicy: "active_site_primary_target_v1", StatePolicy: "tls_certificate_verification_state_v1",
+		CoveragePolicy: "known_over_eligible_v1", FreshnessSeconds: 172800,
+		AllowedDimensions: []string{"group_id", "nsfw", "site_country", "welfare"},
+	},
 }
 
 func (engine *Engine) ValidateCatalog(ctx context.Context) error {

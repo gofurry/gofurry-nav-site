@@ -10,19 +10,24 @@ import (
 )
 
 var (
-	ErrInvalidMetricKey = errors.New("invalid public metric key")
-	ErrInvalidRange     = errors.New("invalid insights range")
-	ErrInvalidDimension = errors.New("invalid public dimension")
-	ErrInvalidSlice     = errors.New("invalid public dimension slice")
-	ErrInvalidChanges   = errors.New("invalid change explorer query")
-	ErrInvalidCursor    = errors.New("invalid change explorer cursor")
-	ErrNotFound         = errors.New("site not found")
+	ErrInvalidMetricKey        = errors.New("invalid public metric key")
+	ErrInvalidRange            = errors.New("invalid insights range")
+	ErrInvalidDimension        = errors.New("invalid public dimension")
+	ErrInvalidSlice            = errors.New("invalid public dimension slice")
+	ErrInvalidChanges          = errors.New("invalid change explorer query")
+	ErrInvalidCursor           = errors.New("invalid change explorer cursor")
+	ErrInvalidCertificateLimit = errors.New("invalid certificate overview limit")
+	ErrNotFound                = errors.New("site not found")
 )
 
 var metricContracts = []models.MetricContract{
 	{PublicKey: "ipv6", InternalKey: "ipv6_adoption", Version: 2},
 	{PublicKey: "tls13", InternalKey: "tls13_adoption", Version: 1},
+	{PublicKey: "http2", InternalKey: "http2_adoption", Version: 1},
+	{PublicKey: "hsts", InternalKey: "hsts_adoption", Version: 1},
+	{PublicKey: "csp", InternalKey: "csp_adoption", Version: 1},
 	{PublicKey: "security_txt", InternalKey: "security_txt_adoption", Version: 2},
+	{PublicKey: "certificate_verified", InternalKey: "tls_certificate_verification", Version: 1},
 }
 
 type changeContract struct {
@@ -39,10 +44,18 @@ var changeContracts = []changeContract{
 	{"ipv6_transition", 2, "ipv6_disabled", "site.ipv6.disabled", true, "capability"},
 	{"tls13_transition", 1, "tls13_enabled", "site.tls13.enabled", true, "capability"},
 	{"tls13_transition", 1, "tls13_disabled", "site.tls13.disabled", true, "capability"},
+	{"http2_transition", 1, "http2_enabled", "site.http2.enabled", true, "capability"},
+	{"http2_transition", 1, "http2_disabled", "site.http2.disabled", true, "capability"},
+	{"hsts_transition", 1, "hsts_added", "site.hsts.added", true, "capability"},
+	{"hsts_transition", 1, "hsts_removed", "site.hsts.removed", true, "capability"},
+	{"csp_transition", 1, "csp_added", "site.csp.added", true, "capability"},
+	{"csp_transition", 1, "csp_removed", "site.csp.removed", true, "capability"},
 	{"security_txt_transition", 2, "security_txt_added", "site.security_txt.added", true, "capability"},
 	{"security_txt_transition", 2, "security_txt_removed", "site.security_txt.removed", true, "capability"},
 	{"primary_target_transition", 1, "primary_target_changed", "site.primary_target.changed", false, "target"},
 	{"tls_certificate_transition", 1, "tls_certificate_changed", "site.tls_certificate.changed", false, "certificate"},
+	{"tls_certificate_verification_transition", 1, "tls_certificate_verification_failed", "site.tls_certificate.verification_failed", true, "certificate"},
+	{"tls_certificate_verification_transition", 1, "tls_certificate_verification_restored", "site.tls_certificate.verification_restored", true, "certificate"},
 }
 
 type Store interface {
@@ -54,6 +67,9 @@ type Store interface {
 	GetMetricSliceAvailability(context.Context, models.MetricContract, models.DimensionContract, string) (models.DimensionAvailabilityRecord, error)
 	ListMetricSliceTrend(context.Context, models.MetricContract, models.DimensionContract, string, time.Time, int32) ([]models.DimensionTrendRecord, error)
 	GetSiteMetric(context.Context, int64, models.MetricContract) (*models.SiteMetricRecord, error)
+	GetCertificateOverviewSummary(context.Context) (*models.CertificateOverviewRecord, error)
+	ListCertificateExpiryAttention(context.Context, int32) ([]models.CertificateItemRecord, error)
+	ListCertificateVerificationIssues(context.Context, int32) ([]models.CertificateItemRecord, error)
 	CountOverviewChanges(context.Context, []string, []string) (int64, error)
 	ListOverviewChanges(context.Context, []string, []string, int32) ([]models.ChangeRecord, error)
 	ListExplorerChanges(context.Context, models.ChangeExplorerConditions) ([]models.ChangeRecord, error)

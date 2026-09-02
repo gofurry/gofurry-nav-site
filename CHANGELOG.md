@@ -8,6 +8,9 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add V3-P2.3 Site Capability Intelligence with version-frozen HTTP/2, HSTS, enforcement CSP, and TLS certificate-verification Metrics plus same-Primary-Target semantic Change detectors.
+- Add the bounded certificate overview API and bilingual `/insights/sites/certificates` product surface with common fact-day horizon, deterministic expiry buckets, attention lists, and public verification-issue whitelisting.
+- Add focused PostgreSQL projection, Metric-before-Change backfill/rebuild, certificate read-model, route, SSR/typecheck/build, Goose, sqlc, and query-plan regression coverage.
 - Add V3-P2.2 Game Intelligence: scheduled Player rankings and quality-aware 30-day peak/weighted-average read models, CN/US/HK price overview/discount APIs, region-aware histories, and bounded GoFurry Observed Low semantics.
 - Add `mac_support/1` and `mac_support_transition/1` Goose contracts, compiled Metric/Change projectors, global/primary-tag/tag slices, entity state, public platform changes, and explicit Metric-before-Change backfill support.
 - Add common-snapshot Supported Languages and Explicit Full-Audio distributions with freshness and normalization-quality disclosure, without fuzzy-mapping unknown language names.

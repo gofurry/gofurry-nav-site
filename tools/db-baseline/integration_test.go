@@ -232,7 +232,7 @@ VALUES
 				if test.label == "gfg" {
 					expectedDetectors = 6
 				} else if test.label == "gfn" {
-					expectedDetectors = 7
+					expectedDetectors = 11
 				}
 				if registryCount != expectedDetectors || checkpointCount != expectedDetectors {
 					t.Fatalf("%s current detector seeds registry=%d checkpoints=%d, want %d", test.label, registryCount, checkpointCount, expectedDetectors)

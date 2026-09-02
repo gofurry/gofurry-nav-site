@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
@@ -77,6 +78,8 @@ func TestPostgresNavBackendPersistenceSemantics(t *testing.T) {
 	queries := navsqlc.New(pool)
 	seedNavInsights(t, ctx, pool, now)
 	assertNavInsights(t, ctx, queries)
+	seedP23CertificateInsights(t, ctx, pool, now)
+	assertP23CertificateInsights(t, ctx, pool, queries)
 	nav := navdao.New(queries)
 
 	sites, gfErr := nav.GetSiteList()
@@ -139,6 +142,115 @@ func TestPostgresNavBackendPersistenceSemantics(t *testing.T) {
 	if siteIndex.State != "ready" || len(siteIndex.Items) != 1 || len(siteIndex.Items[0].Domains) != 1 {
 		t.Fatalf("site index response: %+v", siteIndex)
 	}
+}
+
+func seedP23CertificateInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {
+	t.Helper()
+	asOf := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, 10)
+	referenceAt := asOf.AddDate(0, 0, 1)
+	if _, err := pool.Exec(ctx, `INSERT INTO gfn_metric_daily(metric_key,metric_version,fact_date,dimension_key,dimension_value,population_count,eligible_count,not_applicable_count,positive_count,negative_count,stale_count,not_probed_count,probe_failed_count,unknown_count,computed_at) VALUES('tls_certificate_verification',1,$1,'global','all',10,8,2,4,2,1,0,0,1,$2)`, asOf, now); err != nil {
+		t.Fatal(err)
+	}
+	type fixture struct {
+		siteID     int64
+		state      string
+		observedAt time.Time
+		handshake  string
+		verified   *bool
+		issue      *string
+		notAfter   *time.Time
+	}
+	boolPointer := func(value bool) *bool { return &value }
+	stringPointer := func(value string) *string { return &value }
+	timePointer := func(value time.Time) *time.Time { return &value }
+	fixtures := []fixture{
+		{910001, "negative", referenceAt.Add(-time.Hour), "collected", boolPointer(false), stringPointer("hostname_mismatch"), timePointer(referenceAt)},
+		{910002, "negative", referenceAt.Add(-time.Hour), "collected", boolPointer(false), stringPointer("raw verification error"), timePointer(referenceAt.Add(7 * 24 * time.Hour))},
+		{910003, "positive", referenceAt.Add(-time.Hour), "collected", boolPointer(true), nil, timePointer(referenceAt.Add(8 * 24 * time.Hour))},
+		{910004, "positive", referenceAt.Add(-time.Hour), "collected", boolPointer(true), nil, timePointer(referenceAt.Add(31 * 24 * time.Hour))},
+		{910005, "positive", referenceAt.Add(-time.Hour), "collected", boolPointer(true), nil, timePointer(referenceAt.Add(30 * 24 * time.Hour))},
+		{910006, "stale", referenceAt.Add(-73 * time.Hour), "collected", boolPointer(true), nil, timePointer(referenceAt.Add(24 * time.Hour))},
+		{910007, "not_applicable", referenceAt.Add(-time.Hour), "not_tls", nil, nil, nil},
+		{910008, "positive", referenceAt.Add(-time.Hour), "collected", boolPointer(true), nil, nil},
+		{910009, "unknown", referenceAt.Add(-time.Hour), "failed", nil, nil, nil},
+		{910010, "not_applicable", referenceAt.Add(-time.Hour), "not_tls", nil, nil, nil},
+	}
+	for _, item := range fixtures {
+		targetName := fmt.Sprintf("certificate-%d.p23.example", item.siteID)
+		var targetID int64
+		if err := pool.QueryRow(ctx, `INSERT INTO gfn_target_tracking_periods(site_id,target,tracked_from,tracked_until,tracking_basis,opened_reason,closed_reason) VALUES($1,$2,$3::date,$3::date+interval '2 days','legacy_observed','certificate_test','certificate_test') RETURNING id`, item.siteID, targetName, asOf).Scan(&targetID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := pool.Exec(ctx, `INSERT INTO gfn_site_daily(site_id,fact_date,snapshot_at,tracked_at_end,name,name_en,view_count,group_ids,primary_target_tracking_period_id,primary_target,primary_basis,active_target_count,projection_version,finalized_at) VALUES($1,$2::date,$2::date+interval '23 hours',true,$3,$3,0,ARRAY[]::bigint[],$4,$5,'explicit',1,1,$2::date+interval '24 hours');INSERT INTO gfn_site_target_daily(target_tracking_period_id,site_id,target,fact_date,snapshot_at,tracked_at_end,tls_state_observed_at,tls_handshake,tls_cert_verified,tls_verify_error_category,tls_cert_not_after,tls_cert_issuer,projection_version,finalized_at) VALUES($4,$1,$5,$2::date,$2::date+interval '23 hours',true,$6,$7,$8,$9,$10,'P2.3 Test CA',1,$2::date+interval '24 hours');INSERT INTO gfn_metric_entity_daily(metric_key,metric_version,fact_date,site_id,state,reason_code,source_observed_at,dimension_values,source_projection_versions,evaluated_at) VALUES('tls_certificate_verification',1,$2::date,$1,$11,'fixture',$6,'{}','{"gfn_site_daily":1,"gfn_site_target_daily":1}',$2::date+interval '24 hours')`, pgx.QueryExecModeSimpleProtocol, item.siteID, asOf, fmt.Sprintf("Certificate Site %d", item.siteID), targetID, targetName, item.observedAt, item.handshake, item.verified, item.issue, item.notAfter, item.state); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func assertP23CertificateInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool, queries *navsqlc.Queries) {
+	t.Helper()
+	svc := insightsservice.New(insightsdao.New(queries))
+	overview, err := svc.GetCertificateOverview(ctx, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if overview.AsOf == nil || overview.ReferenceAt == nil {
+		t.Fatalf("certificate horizon = %#v", overview)
+	}
+	asOf, err := time.Parse(time.DateOnly, *overview.AsOf)
+	if err != nil || !overview.ReferenceAt.Equal(asOf.AddDate(0, 0, 1)) {
+		t.Fatalf("certificate reference_at=%v as_of=%v err=%v", overview.ReferenceAt, overview.AsOf, err)
+	}
+	if overview.Verification.Known != 6 || overview.Verification.Coverage == nil || *overview.Verification.Coverage != .75 || overview.Quality.Stale != 1 || overview.Quality.Unknown != 1 {
+		t.Fatalf("verification summary = %#v quality=%#v", overview.Verification, overview.Quality)
+	}
+	if overview.Expiry.Known != 5 || overview.Expiry.Coverage == nil || *overview.Expiry.Coverage != .625 || overview.Expiry.Expired != 1 || overview.Expiry.ExpiresWithin7D != 1 || overview.Expiry.ExpiresIn8To30D != 2 || overview.Expiry.Later != 1 {
+		t.Fatalf("expiry summary = %#v", overview.Expiry)
+	}
+	if len(overview.ExpiryAttention) != 4 || overview.ExpiryAttention[0].Site.ID != 910001 || overview.ExpiryAttention[1].Site.ID != 910002 || overview.ExpiryAttention[2].Site.ID != 910003 || overview.ExpiryAttention[3].Site.ID != 910005 {
+		t.Fatalf("expiry attention order/stale boundary = %#v", overview.ExpiryAttention)
+	}
+	if overview.ExpiryAttention[0].Verified == nil || *overview.ExpiryAttention[0].Verified || overview.ExpiryAttention[1].ExpiryStatus == nil || *overview.ExpiryAttention[1].ExpiryStatus != "expires_within_7d" || overview.ExpiryAttention[2].ExpiryStatus == nil || *overview.ExpiryAttention[2].ExpiryStatus != "expires_in_8_30d" {
+		t.Fatalf("unverified/bucket boundaries = %#v", overview.ExpiryAttention)
+	}
+	if len(overview.VerificationIssues) != 2 || overview.VerificationIssues[0].VerificationIssue == nil || *overview.VerificationIssues[0].VerificationIssue != "hostname_mismatch" || overview.VerificationIssues[1].VerificationIssue == nil || *overview.VerificationIssues[1].VerificationIssue != "other" {
+		t.Fatalf("verification whitelist/order = %#v", overview.VerificationIssues)
+	}
+	if overview.VerificationIssues[0].Site.ID != overview.ExpiryAttention[0].Site.ID {
+		t.Fatal("a Site must be allowed in both certificate lists")
+	}
+	for name, query := range map[string]string{
+		"summary":   `WITH horizon AS (SELECT fact_date,(fact_date+1)::timestamp AT TIME ZONE 'UTC' AS reference_at FROM gfn_metric_daily WHERE metric_key='tls_certificate_verification' AND metric_version=1 AND dimension_key='global' AND dimension_value='all' ORDER BY fact_date DESC LIMIT 1) SELECT count(target.tls_cert_not_after) FROM horizon JOIN gfn_metric_entity_daily entity ON entity.metric_key='tls_certificate_verification' AND entity.metric_version=1 AND entity.fact_date=horizon.fact_date JOIN gfn_site_daily site ON site.site_id=entity.site_id AND site.fact_date=horizon.fact_date JOIN gfn_site_target_daily target ON target.target_tracking_period_id=site.primary_target_tracking_period_id AND target.fact_date=horizon.fact_date WHERE target.tls_state_observed_at >= horizon.reference_at-interval '2 days' AND target.tls_handshake='collected'`,
+		"attention": `WITH horizon AS (SELECT fact_date,(fact_date+1)::timestamp AT TIME ZONE 'UTC' AS reference_at FROM gfn_metric_daily WHERE metric_key='tls_certificate_verification' AND metric_version=1 AND dimension_key='global' AND dimension_value='all' ORDER BY fact_date DESC LIMIT 1) SELECT target.tls_cert_not_after,site.site_id FROM horizon JOIN gfn_metric_entity_daily entity ON entity.metric_key='tls_certificate_verification' AND entity.metric_version=1 AND entity.fact_date=horizon.fact_date JOIN gfn_site_daily site ON site.site_id=entity.site_id AND site.fact_date=horizon.fact_date JOIN gfn_site_target_daily target ON target.target_tracking_period_id=site.primary_target_tracking_period_id AND target.fact_date=horizon.fact_date WHERE target.tls_state_observed_at >= horizon.reference_at-interval '2 days' AND target.tls_handshake='collected' AND target.tls_cert_not_after <= horizon.reference_at+interval '30 days' ORDER BY target.tls_cert_not_after,site.site_id LIMIT 20`,
+		"issues":    `WITH horizon AS (SELECT fact_date FROM gfn_metric_daily WHERE metric_key='tls_certificate_verification' AND metric_version=1 AND dimension_key='global' AND dimension_value='all' ORDER BY fact_date DESC LIMIT 1) SELECT entity.site_id FROM horizon JOIN gfn_metric_entity_daily entity ON entity.metric_key='tls_certificate_verification' AND entity.metric_version=1 AND entity.fact_date=horizon.fact_date AND entity.state='negative' ORDER BY entity.site_id LIMIT 20`,
+	} {
+		assertExplainAnalyze(t, ctx, pool, name, query)
+	}
+}
+
+func assertExplainAnalyze(t *testing.T, ctx context.Context, pool *pgxpool.Pool, name, query string) {
+	t.Helper()
+	rows, err := pool.Query(ctx, "EXPLAIN (ANALYZE, BUFFERS) "+query)
+	if err != nil {
+		t.Fatalf("EXPLAIN ANALYZE %s: %v", name, err)
+	}
+	defer rows.Close()
+	var plan []string
+	for rows.Next() {
+		var line string
+		if err := rows.Scan(&line); err != nil {
+			t.Fatal(err)
+		}
+		plan = append(plan, line)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(plan, "\n")
+	if !strings.Contains(joined, "Execution Time") {
+		t.Fatalf("EXPLAIN ANALYZE %s did not execute: %s", name, joined)
+	}
+	t.Logf("P2.3 %s query plan:\n%s", name, joined)
 }
 
 func seedNavInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {
