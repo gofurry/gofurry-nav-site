@@ -275,7 +275,7 @@ SET source_start_date=$1::date,processed_through=NULL,updated_at=$2;
 		t.Fatalf("Nav registry/evaluator drift: %v", err)
 	}
 	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_registry`, 9)
-	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints`, 5)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints`, 9)
 	for _, metric := range []struct {
 		key     string
 		version int32
