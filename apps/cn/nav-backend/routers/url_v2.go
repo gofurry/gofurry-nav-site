@@ -36,6 +36,7 @@ type InsightsAPI interface {
 	GetMetricSliceTrend(fiber.Ctx) error
 	GetChanges(fiber.Ctx) error
 	GetCertificateOverview(fiber.Ctx) error
+	GetSiteCompare(fiber.Ctx) error
 	GetSiteInsights(fiber.Ctx) error
 }
 type NavDependencies struct {
@@ -84,5 +85,6 @@ func registerNavInsightsRoutes(g fiber.Router, insights InsightsAPI) {
 	g.Get("/insights/metrics/:metricKey/breakdown/:dimension/:value/trend", insights.GetMetricSliceTrend)
 	g.Get("/insights/changes", insights.GetChanges)
 	g.Get("/insights/certificates/overview", insights.GetCertificateOverview)
+	g.Get("/insights/compare", insights.GetSiteCompare)
 	g.Get("/sites/:siteId/insights", insights.GetSiteInsights)
 }

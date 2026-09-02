@@ -239,6 +239,8 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	if gfErr := reviewDAO.Add(&newReview); gfErr != nil {
 		t.Fatalf("insert review: %s", gfErr.GetMsg())
 	}
+	seedGameCompare(t, ctx, pool, now)
+	assertGameCompare(t, ctx, pool)
 }
 
 func seedGameInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {
@@ -444,6 +446,106 @@ func assertGameInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 			t.Fatalf("non-CN price change leaked: %#v", item)
 		}
 	}
+}
+
+func seedGameCompare(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {
+	t.Helper()
+	asOf := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -2)
+	referenceAt := asOf.AddDate(0, 0, 1)
+	playerThrough := asOf.AddDate(0, 0, 1)
+	_, err := pool.Exec(ctx, `
+INSERT INTO gfg_game
+    (id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,
+     appid,header,links,weight,primary_tag,secondary_tag,view_count)
+VALUES
+    (93001,'比较游戏一','Compare Game One','','',$4,$4,'[]','[]','', '[]','[]',93101,'','[]',1,0,0,0),
+    (93002,'比较游戏二','Compare Game Two','','',$4,$4,'[]','[]','', '[]','[]',93102,'','[]',1,0,0,0);
+INSERT INTO gfg_game_tracking_periods
+    (id,game_id,appid,tracked_from,tracking_basis,opened_reason)
+VALUES
+    (93201,93001,93101,$1::date - interval '20 days','explicit','compare_test'),
+    (93202,93002,93102,$1::date - interval '20 days','explicit','compare_test');
+INSERT INTO gfg_game_daily
+    (game_id,fact_date,tracking_period_id,appid,snapshot_at,tracked_at_end,name,name_en,view_count,is_free,windows,mac,linux,
+     release_availability,language_codes,unknown_language_names,full_audio_language_codes,languages_observed_at,
+     developers,publishers,tag_ids,details_observed_at,materialization_source,projection_version,finalized_at)
+VALUES
+    (93001,$1,93201,93101,$2,true,'比较游戏一','Compare Game One',0,false,true,true,true,'available',
+     ARRAY['en'],ARRAY[]::text[],ARRAY['en'],$2::timestamptz - interval '1 hour',ARRAY[]::text[],ARRAY[]::text[],ARRAY[]::bigint[],$2,'observed',1,$4),
+    (93002,$1,93202,93102,$2,true,'比较游戏二','Compare Game Two',0,true,true,NULL,false,'available',
+     ARRAY['zh-CN'],ARRAY['Klingon'],ARRAY[]::text[],$2::timestamptz - interval '4 days',ARRAY[]::text[],ARRAY[]::text[],ARRAY[]::bigint[],$2,'observed',1,$4),
+    (93001,$3,93201,93101,$3::date + interval '23 hours',true,'比较游戏一','Compare Game One',0,false,true,true,true,'available',
+     ARRAY['en'],ARRAY[]::text[],ARRAY['en'],$3::date + interval '22 hours',ARRAY[]::text[],ARRAY[]::text[],ARRAY[]::bigint[],$3::date + interval '22 hours','observed',1,$4);
+INSERT INTO gfg_game_price_daily
+    (tracking_period_id,game_id,appid,region,fact_date,price_state,currency,initial_amount,final_amount,discount_percent,
+     materialization_source,projection_version,finalized_at)
+VALUES
+    (93201,93001,93101,'CN',$1,'priced','CNY',1000,0,100,'observed',1,$4),
+    (93202,93002,93102,'CN',$1,'free',NULL,NULL,NULL,NULL,'observed',1,$4);
+INSERT INTO gfg_game_player_counts (run_id,game_id,appid,count,status,collected_at)
+VALUES ('insights-ranking-scheduled',93001,93101,0,'success',$4::timestamptz - interval '1 hour 58 minutes');
+INSERT INTO gfg_game_player_daily
+    (tracking_period_id,game_id,appid,fact_date,min_players,max_players,avg_players,median_players,
+     attempted_samples,successful_samples,partial_samples,failed_samples,failure_kind_counts,
+     quality_basis,projection_version,finalized_at)
+VALUES
+    (93201,93001,93101,$3,0,0,0,0,1,1,0,0,'{}','legacy_observed_only',1,$4),
+    (93202,93002,93102,$3,NULL,NULL,NULL,NULL,1,0,0,1,'{"request_failed":1}','legacy_observed_only',1,$4);
+`, pgx.QueryExecModeSimpleProtocol, asOf, referenceAt, playerThrough, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertGameCompare(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
+	t.Helper()
+	comparison, err := v2service.NewInsightsService(v2dao.NewInsightsDAO(gamesqlc.New(pool))).GetGameCompare(ctx, "93002,93001,93002", "CN")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if comparison.Status != "ready" || comparison.StateAsOf == nil || len(comparison.Games) != 2 || comparison.Games[0].Game.ID != 93002 || comparison.Games[1].Game.ID != 93001 {
+		t.Fatalf("compare order/snapshot = %#v", comparison)
+	}
+	first, second := comparison.Games[0], comparison.Games[1]
+	if first.Players.CurrentAvailable || first.Players.Current != nil || first.Languages.Evidence != "stale" || len(first.Languages.UnknownNames) != 1 {
+		t.Fatalf("unavailable player/language freshness = %#v", first)
+	}
+	if first.Price.State == nil || *first.Price.State != "free" || first.Price.FinalAmount != nil {
+		t.Fatalf("free price semantics = %#v", first.Price)
+	}
+	if !second.Players.CurrentAvailable || second.Players.Current == nil || *second.Players.Current != 0 || second.Players.Peak30D == nil || *second.Players.Peak30D != 0 {
+		t.Fatalf("real player zero semantics = %#v", second.Players)
+	}
+	if second.Price.State == nil || *second.Price.State != "priced" || second.Price.FinalAmount == nil || *second.Price.FinalAmount != 0 || second.Price.ObservedLow == nil || second.Price.ObservedLow.Amount != 0 {
+		t.Fatalf("priced zero/observed low semantics = %#v", second.Price)
+	}
+	assertGameExplainAnalyze(t, ctx, pool, "P2.4 Game common fact snapshot", `WITH requested AS (SELECT unnest(ARRAY[93001,93002]::bigint[]) game_id) SELECT daily.fact_date FROM gfg_game_daily daily JOIN requested USING(game_id) WHERE daily.finalized_at IS NOT NULL AND daily.tracked_at_end GROUP BY daily.fact_date HAVING count(*)=2 ORDER BY daily.fact_date DESC LIMIT 1`)
+	assertGameExplainAnalyze(t, ctx, pool, "P2.4 Game scheduled player snapshot", `WITH snapshot AS (SELECT id FROM gfg_collection_jobs WHERE job_key='game.players' AND trigger='scheduled' AND scope_type='all' AND status IN ('success','partial') ORDER BY scheduled_for DESC,id DESC LIMIT 1) SELECT raw.game_id,raw.count FROM snapshot JOIN gfg_collection_runs run ON run.job_id=snapshot.id JOIN gfg_game_player_counts raw ON raw.run_id=run.id AND raw.status='success' WHERE raw.game_id=ANY(ARRAY[93001,93002]::bigint[])`)
+}
+
+func assertGameExplainAnalyze(t *testing.T, ctx context.Context, pool *pgxpool.Pool, name, query string) {
+	t.Helper()
+	rows, err := pool.Query(ctx, "EXPLAIN (ANALYZE, BUFFERS) "+query)
+	if err != nil {
+		t.Fatalf("EXPLAIN ANALYZE %s: %v", name, err)
+	}
+	defer rows.Close()
+	var plan []string
+	for rows.Next() {
+		var line string
+		if err := rows.Scan(&line); err != nil {
+			t.Fatal(err)
+		}
+		plan = append(plan, line)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(plan, "\n")
+	if !strings.Contains(joined, "Execution Time") {
+		t.Fatalf("EXPLAIN ANALYZE %s did not execute: %s", name, joined)
+	}
+	t.Logf("P2.4 %s query plan:\n%s", name, joined)
 }
 
 func seedReadModel(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {

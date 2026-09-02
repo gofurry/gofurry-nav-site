@@ -19,6 +19,7 @@ var (
 	ErrInvalidInsightRegion    = errors.New("invalid insights region")
 	ErrInvalidPlayerRanking    = errors.New("invalid player ranking query")
 	ErrInvalidInsightLimit     = errors.New("invalid insights limit")
+	ErrInvalidInsightCompare   = errors.New("invalid game comparison")
 	ErrInsightGameNotFound     = errors.New("game not found")
 )
 
@@ -67,6 +68,10 @@ type InsightsStore interface {
 	GetInsightMetricSliceAvailability(context.Context, v2models.InsightMetricContract, v2models.InsightDimensionContract, string) (v2models.InsightDimensionAvailabilityRecord, error)
 	ListInsightMetricSliceTrend(context.Context, v2models.InsightMetricContract, v2models.InsightDimensionContract, string, time.Time, int32) ([]v2models.InsightDimensionTrendRecord, error)
 	GetInsightGameState(context.Context, int64) (*v2models.InsightGameStateRecord, error)
+	GetInsightGameCompareFactHorizon(context.Context, []int64) (*time.Time, error)
+	ListInsightGameCompareFacts(context.Context, []int64, time.Time, string) ([]v2models.InsightGameCompareFactRecord, error)
+	ListInsightGameCompareCurrentPlayers(context.Context, []int64) ([]v2models.InsightGameCompareCurrentPlayerRecord, error)
+	ListInsightGameComparePlayer30D(context.Context, []int64) ([]v2models.InsightGameComparePlayer30DRecord, error)
 	GetInsightPlayerSummary(context.Context, v2models.InsightGameStateRecord) (v2models.InsightPlayerSummaryRecord, error)
 	ListInsightPlayerHistory(context.Context, int64, int32) ([]v2models.InsightPlayerPointRecord, error)
 	ListInsightPriceHistory(context.Context, int64, string, time.Time, int32) ([]v2models.InsightPriceRecord, error)

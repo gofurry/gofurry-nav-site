@@ -823,7 +823,7 @@
     },
     "regions": { "CN": "中国", "US": "美国", "HK": "中国香港" },
     "siteIntelligence": {
-      "navLabel": "网站洞察导航", "ecosystem": "生态", "certificates": "证书"
+      "navLabel": "网站洞察导航", "ecosystem": "生态", "certificates": "证书", "compare": "对比"
     },
     "certificateIntelligence": {
       "title": "TLS 证书洞察", "description": "在同一已完成 UTC 事实日查看证书验证、到期分布与需关注站点。",
@@ -841,7 +841,27 @@
       }
     },
     "gameIntelligence": {
-      "navLabel": "游戏洞察导航", "ecosystem": "生态", "players": "玩家", "prices": "价格", "languages": "语言"
+      "navLabel": "游戏洞察导航", "ecosystem": "生态", "players": "玩家", "prices": "价格", "languages": "语言", "compare": "对比"
+    },
+    "compare": {
+      "builderTitle": "选择对比实体", "idsLabel": "实体 ID（2–4 个）", "idsPlaceholder": "例如 12,37,48", "apply": "应用",
+      "emptyHint": "输入 2–4 个实体 ID 开始对比。", "oneHint": "已预选 1 个实体，请再加入至少 1 个。", "readyHint": "当前并列展示 {count} 个实体。",
+      "invalid": "请输入 1–4 个有效正整数 ID；开始对比至少需要 2 个不同实体。", "insufficientData": "所选实体暂无共同完整快照，未混用各自的最新数据。",
+      "commonSnapshot": "共同完整快照：{date}", "fact": "事实", "aboutTitle": "关于对比"
+    },
+    "siteCompare": {
+      "title": "网站能力对比", "description": "在同一个完整 Metric 快照上并列查看网站能力与有效证书事实。",
+      "primaryTarget": "主要目标", "certificateVerification": "证书验证", "certificateExpiry": "证书到期", "noValidCertificate": "无有效证书证据",
+      "about": "所有能力来自同一完整事实日；未知、不可用、未探测和陈旧均不会变成不支持。证书信息只在同日证据有效时展示。"
+    },
+    "gameCompare": {
+      "title": "游戏事实对比", "description": "并列查看共同事实快照中的平台、玩家、区域价格与语言数据。",
+      "region": "价格区域", "stateSnapshot": "状态事实：{date}", "playerSnapshot": "计划玩家快照：{date}", "playerWindow": "玩家事实截至：{date}",
+      "currentPlayers": "计划快照玩家", "peak30d": "30 天峰值", "average30d": "30 天观测均值", "playerQuality": "玩家数据质量",
+      "qualityValue": "{days} 个观测日 · {samples} 个成功样本 · 覆盖 {coverage}", "currentPrice": "{region} 当前价格", "languageEvidence": "语言证据",
+      "supportedLanguages": "支持语言", "fullAudio": "明确标注完整音频", "unmappedLanguages": "未映射语言名称",
+      "languageStates": { "fresh": "新鲜", "stale": "陈旧（不解释为不支持）", "unobserved": "未观测（不解释为不支持）" },
+      "about": "状态、计划玩家快照和 30 天玩家事实分别公开各自日期。价格不做汇率换算或跨区金额比较，页面只并列展示已有事实。"
     },
     "playerIntelligence": {
       "title": "玩家洞察", "description": "基于 GoFurry 可靠观测查看玩家排名与数据质量。",

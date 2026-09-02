@@ -12,6 +12,7 @@ const localePath = useLocalePath()
 const items = [
   { path: '/insights/sites', label: 'insights.siteIntelligence.ecosystem' },
   { path: '/insights/sites/certificates', label: 'insights.siteIntelligence.certificates' },
+  { path: '/insights/sites/compare', label: 'insights.siteIntelligence.compare' },
 ]
 function isActive(path: string) { return (route.path.replace(/^\/en(?=\/|$)/, '') || '/') === path }
 </script>

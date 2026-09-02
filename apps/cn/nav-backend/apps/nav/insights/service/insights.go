@@ -17,6 +17,7 @@ var (
 	ErrInvalidChanges          = errors.New("invalid change explorer query")
 	ErrInvalidCursor           = errors.New("invalid change explorer cursor")
 	ErrInvalidCertificateLimit = errors.New("invalid certificate overview limit")
+	ErrInvalidCompare          = errors.New("invalid site comparison")
 	ErrNotFound                = errors.New("site not found")
 )
 
@@ -67,6 +68,9 @@ type Store interface {
 	GetMetricSliceAvailability(context.Context, models.MetricContract, models.DimensionContract, string) (models.DimensionAvailabilityRecord, error)
 	ListMetricSliceTrend(context.Context, models.MetricContract, models.DimensionContract, string, time.Time, int32) ([]models.DimensionTrendRecord, error)
 	GetSiteMetric(context.Context, int64, models.MetricContract) (*models.SiteMetricRecord, error)
+	GetSiteCompareHorizon(context.Context, []int64, []models.MetricContract) (*time.Time, error)
+	ListSiteCompareCapabilities(context.Context, []int64, []models.MetricContract, time.Time) ([]models.SiteCompareCapabilityRecord, error)
+	ListSiteCompareCertificates(context.Context, []int64, time.Time) ([]models.CertificateItemRecord, error)
 	GetCertificateOverviewSummary(context.Context) (*models.CertificateOverviewRecord, error)
 	ListCertificateExpiryAttention(context.Context, int32) ([]models.CertificateItemRecord, error)
 	ListCertificateVerificationIssues(context.Context, int32) ([]models.CertificateItemRecord, error)

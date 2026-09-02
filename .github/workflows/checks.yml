@@ -175,6 +175,9 @@ jobs:
       - name: Typecheck
         working-directory: apps/cn/nav-web
         run: npm run typecheck
+      - name: Insights semantic guards
+        working-directory: apps/cn/nav-web
+        run: npm run insights:semantics
       - name: Build
         working-directory: apps/cn/nav-web
         run: npm run build

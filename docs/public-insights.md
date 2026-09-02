@@ -12,6 +12,7 @@ Nav:
 - `GET /api/v2/nav/insights/metrics/:metricKey/breakdown/:dimension/:value/trend?range=30d|90d|all`
 - `GET /api/v2/nav/insights/changes?range=7d|30d|90d|all&category=&type=&cursor=&limit=`
 - `GET /api/v2/nav/insights/certificates/overview?limit=20`
+- `GET /api/v2/nav/insights/compare?ids=1,2,3,4`
 - `GET /api/v2/nav/sites/:siteId/insights`
 
 Game:
@@ -25,6 +26,7 @@ Game:
 - `GET /api/v2/game/insights/prices/overview?region=CN|US|HK`
 - `GET /api/v2/game/insights/prices/discounts?region=CN|US|HK&limit=20`
 - `GET /api/v2/game/insights/languages/overview`
+- `GET /api/v2/game/insights/compare?ids=1,2,3,4&region=CN|US|HK`
 - `GET /api/v2/game/games/:gameId/insights`
 - `GET /api/v2/game/games/:gameId/insights/players?range=30d|90d|all`
 - `GET /api/v2/game/games/:gameId/insights/prices?region=CN|US|HK&range=30d|90d|all`
@@ -188,8 +190,18 @@ Certificate overview resolves the newest `tls_certificate_verification/1` `globa
 
 Expiry buckets use exact timestamp comparisons: `not_after <= reference_at` is expired, followed by `(0,7d]`, `(7d,30d]`, and later. Verification coverage is `(verified + failed) / eligible`; expiry coverage is the four expiry buckets divided by eligible; zero denominators remain null. `expiry_attention` contains only expired/7-day/8–30-day items ordered by `not_after, site_id`. `verification_issues` contains only negative certificate-verification Metric states, ordered by normalized issue then Site ID. A Site may occur in both lists. The shared `limit` defaults to 20, is capped at 100, and invalid values return 400.
 
+## Entity Compare
+
+Compare accepts a comma-separated `ids` list, removes repeated IDs while preserving the first occurrence, and requires two to four positive integer IDs after normalization. Invalid input returns 400 and a missing entity returns 404. Responses and the `/insights/sites/compare` and `/insights/games/compare` pages retain the requested order. Compare presents source facts and quality context only; it does not calculate a score, winner, ranking, recommendation, or cross-entity judgment.
+
+Site Compare resolves the newest date on which every selected Site has a complete row for all seven frozen Public Site Metric contracts. Every capability is read from that one date, so entity-specific latest values are never mixed. If no common complete date exists, the response is 200 with `status: insufficient_data` and no fabricated fallback. Certificate identity, verification, issue normalization, freshness, and deterministic expiry reuse the certificate-intelligence contract on the same snapshot date.
+
+Game Compare keeps its legitimate horizons separate and explicit rather than inventing a cross-product date. State, platform, release, canonical languages, and the selected CN/US/HK regional price share one common finalized Game Fact snapshot. Current player values use one common usable scheduled all-game snapshot; entities missing from that slot remain unavailable and never fall back to an entity-specific observation. Thirty-day peak, weighted average, and quality use the common finalized `game.player_facts` horizon. Real observed player zero remains zero, while absent/failed evidence remains unavailable.
+
+Regional price comparison preserves `free`, `priced`, `unpriced`, `unknown`, and missing regional facts. Priced zero remains monetary and distinct from free. GoFurry Observed Low reuses the current continuous priced, same-currency identity rules for the selected region. Language evidence preserves `fresh`, `stale`, and `unobserved`; unknown names remain explicit normalization evidence and nullable language capabilities are not converted to unsupported.
+
 ## Product and architecture boundary
 
-The Game Intelligence product routes are `/insights/games`, `/insights/games/players`, `/insights/games/prices`, and `/insights/games/languages`. Player ranking, regional overview/discounts, and language snapshot are SSR-loaded. Game Detail summary is SSR-loaded; player and region-plus-range price histories remain lazy and page-lifecycle cached.
+The Game Intelligence product routes are `/insights/games`, `/insights/games/players`, `/insights/games/prices`, `/insights/games/languages`, and `/insights/games/compare`. Site Intelligence adds `/insights/sites/compare`. Compare builder and result state is URL-only and SSR-readable; Compare routes are intentionally `noindex` and omitted from the sitemap. Player ranking, regional overview/discounts, and language snapshot are SSR-loaded. Game Detail summary is SSR-loaded; player and region-plus-range price histories remain lazy and page-lifecycle cached.
 
-Player, State Fact, Metric, and Change horizons remain independently disclosed; no global cross-product `as_of` is fabricated. Other than formal Metric/Change contracts, Insights adds no leaderboard, observed-low, certificate, or language aggregate table, materialized view, cache, Analytics service, ORM, or query builder. Metric history is backfilled explicitly before dependent Change history. Entity Compare, regional Change Explorer, FX, and language trends remain deferred.
+Player, State Fact, Metric, and Change horizons remain independently disclosed; no global cross-product `as_of` is fabricated. Other than formal Metric/Change contracts, Insights adds no leaderboard, observed-low, certificate, language, or Compare aggregate table, materialized view, cache, Analytics service, ORM, query builder, or generic Compare framework. Metric history is backfilled explicitly before dependent Change history. Regional Change Explorer, FX, language trends, scores, winners, and recommendations remain deferred.

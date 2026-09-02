@@ -14,6 +14,7 @@ const items = [
   { path: '/insights/games/players', label: 'insights.gameIntelligence.players' },
   { path: '/insights/games/prices', label: 'insights.gameIntelligence.prices' },
   { path: '/insights/games/languages', label: 'insights.gameIntelligence.languages' },
+  { path: '/insights/games/compare', label: 'insights.gameIntelligence.compare' },
 ]
 function isActive(path: string) { return (route.path.replace(/^\/en(?=\/|$)/, '') || '/') === path }
 </script>

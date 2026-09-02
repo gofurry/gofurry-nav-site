@@ -182,6 +182,50 @@ type GameInsights struct {
 	RecentChanges  []InsightChange       `json:"recent_changes"`
 }
 
+type GameCompareState struct {
+	Free    *bool   `json:"free"`
+	Windows *bool   `json:"windows"`
+	Mac     *bool   `json:"mac"`
+	Linux   *bool   `json:"linux"`
+	Release *string `json:"release"`
+}
+
+type GameComparePlayers struct {
+	CurrentAvailable     bool       `json:"current_available"`
+	Current              *int64     `json:"current"`
+	ObservedAt           *time.Time `json:"observed_at"`
+	Peak30D              *int64     `json:"peak_30d"`
+	Average30D           *float64   `json:"average_30d"`
+	EligibleFrom30D      *string    `json:"eligible_from_30d"`
+	ObservedDays30D      int64      `json:"observed_days_30d"`
+	SuccessfulSamples30D int64      `json:"successful_samples_30d"`
+	SampleCoverage30D    *float64   `json:"sample_coverage_30d"`
+}
+
+type GameCompareLanguages struct {
+	Evidence          string   `json:"evidence"`
+	Supported         []string `json:"supported"`
+	ExplicitFullAudio []string `json:"explicit_full_audio"`
+	UnknownNames      []string `json:"unknown_names"`
+}
+
+type GameCompareItem struct {
+	Game      InsightEntityRef     `json:"game"`
+	State     GameCompareState     `json:"state"`
+	Players   GameComparePlayers   `json:"players"`
+	Price     InsightRegionalPrice `json:"price"`
+	Languages GameCompareLanguages `json:"languages"`
+}
+
+type GameCompare struct {
+	Status                     string            `json:"status"`
+	Region                     string            `json:"region"`
+	StateAsOf                  *string           `json:"state_as_of"`
+	PlayerSnapshotScheduledFor *time.Time        `json:"player_snapshot_scheduled_for"`
+	PlayerFactThrough          *string           `json:"player_fact_through"`
+	Games                      []GameCompareItem `json:"games"`
+}
+
 type InsightPlayerPoint struct {
 	Date string   `json:"date"`
 	Min  *int64   `json:"min"`
@@ -365,6 +409,45 @@ type InsightGameStateRecord struct {
 	Mac              *bool
 	Linux            *bool
 	Release          *string
+}
+
+type InsightGameCompareFactRecord struct {
+	GameID                 int64
+	TrackingPeriodID       int64
+	Free                   *bool
+	Windows                *bool
+	Mac                    *bool
+	Linux                  *bool
+	Release                *string
+	LanguageEvidence       string
+	LanguageCodes          []string
+	FullAudioLanguageCodes []string
+	UnknownLanguageNames   []string
+	PriceAvailable         bool
+	PriceState             *string
+	Currency               *string
+	InitialAmount          *int64
+	FinalAmount            *int64
+	DiscountPercent        *int32
+}
+
+type InsightGameCompareCurrentPlayerRecord struct {
+	GameID               int64
+	SnapshotScheduledFor *time.Time
+	Available            bool
+	PlayerCount          int64
+	CollectedAt          *time.Time
+}
+
+type InsightGameComparePlayer30DRecord struct {
+	GameID            int64
+	FactThrough       *time.Time
+	EligibleFrom      *time.Time
+	Peak30D           *int64
+	Average30D        *float64
+	ObservedDays      int64
+	SuccessfulSamples int64
+	SampleCoverage    *float64
 }
 
 type InsightPlayerSummaryRecord struct {

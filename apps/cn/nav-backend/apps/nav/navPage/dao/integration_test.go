@@ -142,6 +142,8 @@ func TestPostgresNavBackendPersistenceSemantics(t *testing.T) {
 	if siteIndex.State != "ready" || len(siteIndex.Items) != 1 || len(siteIndex.Items[0].Domains) != 1 {
 		t.Fatalf("site index response: %+v", siteIndex)
 	}
+	seedP24SiteCompare(t, ctx, pool, now)
+	assertP24SiteCompare(t, ctx, pool, queries)
 }
 
 func seedP23CertificateInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {
@@ -251,6 +253,80 @@ func assertExplainAnalyze(t *testing.T, ctx context.Context, pool *pgxpool.Pool,
 		t.Fatalf("EXPLAIN ANALYZE %s did not execute: %s", name, joined)
 	}
 	t.Logf("P2.3 %s query plan:\n%s", name, joined)
+}
+
+func seedP24SiteCompare(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {
+	t.Helper()
+	asOf := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -2)
+	referenceAt := asOf.AddDate(0, 0, 1)
+	_, err := pool.Exec(ctx, `
+INSERT INTO gfn_site
+    (id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,deleted,view_count)
+VALUES
+    (920001,'比较站点一','Compare Site One','','',$2,$2,'CN','0','0',false,0),
+    (920002,'比较站点二','Compare Site Two','','',$2,$2,'US','0','0',false,0);
+INSERT INTO gfn_target_tracking_periods
+    (id,site_id,target,tracked_from,tracking_basis,opened_reason)
+VALUES
+    (921001,920001,'one.compare.example',$1::date - interval '10 days','legacy_observed','compare_test'),
+    (921002,920002,'two.compare.example',$1::date - interval '10 days','legacy_observed','compare_test');
+INSERT INTO gfn_site_daily
+    (site_id,fact_date,snapshot_at,tracked_at_end,name,name_en,site_country,nsfw,welfare,view_count,group_ids,
+     primary_target_tracking_period_id,primary_target,primary_basis,active_target_count,projection_version,finalized_at)
+VALUES
+    (920001,$1,$3,true,'比较站点一','Compare Site One','CN',false,false,0,ARRAY[]::bigint[],921001,'one.compare.example','explicit',1,1,$3),
+    (920002,$1,$3,true,'比较站点二','Compare Site Two','US',false,false,0,ARRAY[]::bigint[],921002,'two.compare.example','explicit',1,1,$3);
+INSERT INTO gfn_site_target_daily
+    (target_tracking_period_id,site_id,target,fact_date,snapshot_at,tracked_at_end,tls_state_observed_at,tls_handshake,
+     tls_cert_verified,tls_verify_error_category,tls_cert_not_after,tls_cert_issuer,projection_version,finalized_at)
+VALUES
+    (921001,920001,'one.compare.example',$1,$3,true,$4,'collected',false,'raw x509 error',$4::timestamptz + interval '5 days','Compare CA',1,$3),
+    (921002,920002,'two.compare.example',$1,$3,true,$4::timestamptz - interval '3 days','collected',true,NULL,$4::timestamptz + interval '20 days','Compare CA',1,$3);
+WITH contracts(metric_key,metric_version,position) AS (
+    VALUES ('ipv6_adoption',2,1),('tls13_adoption',1,2),('http2_adoption',1,3),('hsts_adoption',1,4),
+           ('csp_adoption',1,5),('security_txt_adoption',2,6),('tls_certificate_verification',1,7)
+), sites(site_id) AS (VALUES (920001::bigint),(920002::bigint))
+INSERT INTO gfn_metric_entity_daily
+    (metric_key,metric_version,fact_date,site_id,state,reason_code,source_observed_at,dimension_values,source_projection_versions,evaluated_at)
+SELECT contracts.metric_key,contracts.metric_version,$1,sites.site_id,
+       CASE
+           WHEN sites.site_id=920001 AND contracts.position=2 THEN 'unknown'
+           WHEN sites.site_id=920002 AND contracts.position=7 THEN 'stale'
+           WHEN sites.site_id=920002 THEN 'negative'
+           ELSE 'positive'
+       END,
+       'compare_fixture',$4,'{}','{}',$3
+FROM contracts CROSS JOIN sites;
+WITH contracts(metric_key,metric_version) AS (
+    VALUES ('ipv6_adoption',2),('tls13_adoption',1),('http2_adoption',1),('hsts_adoption',1),
+           ('csp_adoption',1),('security_txt_adoption',2),('tls_certificate_verification',1)
+)
+INSERT INTO gfn_metric_entity_daily
+    (metric_key,metric_version,fact_date,site_id,state,reason_code,source_observed_at,dimension_values,source_projection_versions,evaluated_at)
+SELECT metric_key,metric_version,$1::date + 1,920001,'positive','newer_incomplete',$4,'{}','{}',$3
+FROM contracts;
+`, pgx.QueryExecModeSimpleProtocol, asOf, now, referenceAt, referenceAt.Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertP24SiteCompare(t *testing.T, ctx context.Context, pool *pgxpool.Pool, queries *navsqlc.Queries) {
+	t.Helper()
+	comparison, err := insightsservice.New(insightsdao.New(queries)).GetSiteCompare(ctx, "920002,920001,920002")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if comparison.Status != "ready" || comparison.AsOf == nil || len(comparison.Sites) != 2 || comparison.Sites[0].Site.ID != 920002 || comparison.Sites[1].Site.ID != 920001 {
+		t.Fatalf("compare order/snapshot = %#v", comparison)
+	}
+	if len(comparison.Sites[0].Capabilities) != 7 || comparison.Sites[0].Capabilities[6].State != "stale" || comparison.Sites[1].Capabilities[1].State != "unknown" {
+		t.Fatalf("compare capability semantics = %#v", comparison.Sites)
+	}
+	if comparison.Sites[0].Certificate != nil || comparison.Sites[1].Certificate == nil || comparison.Sites[1].Certificate.VerificationIssue == nil || *comparison.Sites[1].Certificate.VerificationIssue != "other" {
+		t.Fatalf("compare certificate evidence = %#v", comparison.Sites)
+	}
+	assertExplainAnalyze(t, ctx, pool, "P2.4 Site common snapshot", `WITH requested AS (SELECT unnest(ARRAY[920001,920002]::bigint[]) site_id), required(metric_key,metric_version) AS (VALUES ('ipv6_adoption',2),('tls13_adoption',1),('http2_adoption',1),('hsts_adoption',1),('csp_adoption',1),('security_txt_adoption',2),('tls_certificate_verification',1)) SELECT entity.fact_date FROM gfn_metric_entity_daily entity JOIN requested USING(site_id) JOIN required USING(metric_key,metric_version) GROUP BY entity.fact_date HAVING count(*)=14 ORDER BY entity.fact_date DESC LIMIT 1`)
 }
 
 func seedNavInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {

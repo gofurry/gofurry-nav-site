@@ -45,6 +45,7 @@ type gameInsightsAPI interface {
 	GetPriceOverview(fiber.Ctx) error
 	GetDiscounts(fiber.Ctx) error
 	GetLanguageOverview(fiber.Ctx) error
+	GetGameCompare(fiber.Ctx) error
 	GetGameInsights(fiber.Ctx) error
 	GetGamePlayerInsights(fiber.Ctx) error
 	GetGamePriceInsights(fiber.Ctx) error
@@ -60,6 +61,7 @@ func registerGameInsightRoutes(g fiber.Router, insights gameInsightsAPI) {
 	g.Get("/insights/prices/overview", insights.GetPriceOverview)
 	g.Get("/insights/prices/discounts", insights.GetDiscounts)
 	g.Get("/insights/languages/overview", insights.GetLanguageOverview)
+	g.Get("/insights/compare", insights.GetGameCompare)
 	g.Get("/games/:gameId/insights", insights.GetGameInsights)
 	g.Get("/games/:gameId/insights/players", insights.GetGamePlayerInsights)
 	g.Get("/games/:gameId/insights/prices", insights.GetGamePriceInsights)

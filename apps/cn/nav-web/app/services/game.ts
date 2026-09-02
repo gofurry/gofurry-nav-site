@@ -33,6 +33,7 @@ import type {
   GameInsightPriceHistory,
   GameInsightRegion,
   GameInsights,
+  GameCompare,
   GamePlayerRanking,
   GamePlayerRankingMetric,
   GamePriceOverview,
@@ -210,6 +211,10 @@ export function getGameDiscounts(region: GameInsightRegion, limit = 20): Promise
 
 export function getGameLanguageOverview(): Promise<GameLanguageOverview> {
   return useApi('gameV2')('/game/insights/languages/overview')
+}
+
+export function getGameCompare(ids: number[], region: GameInsightRegion): Promise<GameCompare> {
+  return useApi('gameV2')('/game/insights/compare', { query: { ids: ids.join(','), region } })
 }
 
 export function getLotteryParticipation(query: LotteryReq): Promise<ApiResult<string>> {

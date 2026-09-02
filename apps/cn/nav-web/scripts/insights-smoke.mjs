@@ -12,6 +12,8 @@ const insightsRoutes = [
   '/insights/games/players?metric=latest_observed',
   '/insights/games/prices?region=CN',
   '/insights/games/languages',
+  '/insights/sites/compare',
+  '/insights/games/compare?region=CN',
   '/insights/changes?domain=site&range=30d',
   '/en/insights',
   '/en/insights/sites?metric=ipv6&range=90d',
@@ -19,6 +21,8 @@ const insightsRoutes = [
   '/en/insights/games/players?metric=average_30d',
   '/en/insights/games/prices?region=US',
   '/en/insights/games/languages',
+  '/en/insights/sites/compare',
+  '/en/insights/games/compare?region=US',
   '/en/insights/changes?domain=game&range=7d',
 ]
 const removedWorkshopRoutes = [
@@ -41,8 +45,14 @@ for (const route of insightsRoutes) {
   assert(response.status === 200, `${route} expected HTTP 200, received ${response.status}`)
   assert(html.includes('insights-page'), `${route} did not SSR the Insights page shell`)
   assert(/<h1(?:\s|>)/.test(html), `${route} did not SSR a visible h1`)
+  if (route.includes('/compare')) {
+    assert(html.includes('name="robots" content="noindex, follow"'), `${route} did not SSR its noindex policy`)
+  }
   console.log(`[insights] SSR ${route} -> 200`)
 }
+
+const sitemap = await (await fetch(toAbsoluteUrl(baseUrl, '/sitemap.xml'))).text()
+assert(!sitemap.includes('/insights/sites/compare') && !sitemap.includes('/insights/games/compare'), 'Compare routes leaked into sitemap')
 
 for (const route of removedWorkshopRoutes) {
   const response = await fetch(toAbsoluteUrl(baseUrl, route), { redirect: 'manual' })
@@ -474,6 +484,54 @@ try {
   await page.getByText('明确标注完整音频', { exact: true }).waitFor()
   await page.getByText('语言是重叠分布，各语言比例不能相加推导 100%。', { exact: true }).waitFor()
   console.log('[insights] P2.2 Player, regional Price, Mac, Language URL/zero/quality/failure semantics passed')
+
+  const siteCapabilityKeys = ['ipv6', 'tls13', 'http2', 'hsts', 'csp', 'security_txt', 'certificate_verified']
+  await page.route('**/api/v2/nav/insights/compare**', (route) => {
+    const ids = new URL(route.request().url()).searchParams.get('ids').split(',').map(Number)
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 1, data: {
+      status: 'ready', as_of: '2026-09-01', sites: ids.map((id) => ({
+        site: { id, name: `Site ${id}` },
+        capabilities: siteCapabilityKeys.map((key, index) => ({ key, state: id === 42 && index === 0 ? 'unknown' : 'supported' })),
+        certificate: id === 41 ? { target: 'site-41.example', not_after: '2026-09-08T00:00:00Z', days_to_expiry: 6, expiry_status: 'expires_within_7d', verified: true, verification_issue: null, issuer: 'Fixture CA', observed_at: '2026-09-01T23:00:00Z' } : null,
+      })),
+    } }) })
+  })
+  await page.goto(toAbsoluteUrl(baseUrl, '/insights/sites/compare'), { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(500)
+  await page.locator('.compare-builder input').fill('42,41,42')
+  await page.locator('.compare-builder button[type="submit"]').click()
+  await page.waitForURL(url => url.searchParams.get('ids') === '42,41')
+  await page.waitForSelector('[data-site-compare][data-compare-count="2"] [data-compare-result]')
+  assert((await page.locator('[data-compare-entity-id]').allTextContents()).map(value => value.trim()).join('|').includes('Site 42') && (await page.locator('[data-compare-entity-id]').first().getAttribute('data-compare-entity-id')) === '42', 'Site Compare lost first-appearance order or deduplication')
+  assert(await page.locator('[data-capability-state="unknown"]').count() === 1, 'Site Compare collapsed unknown capability state')
+
+  await page.route('**/api/v2/game/insights/compare**', (route) => {
+    const url = new URL(route.request().url())
+    const ids = url.searchParams.get('ids').split(',').map(Number)
+    const region = url.searchParams.get('region') || 'CN'
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 1, data: {
+      status: 'ready', region, state_as_of: '2026-09-01', player_snapshot_scheduled_for: '2026-09-01T12:00:00Z', player_fact_through: '2026-09-01',
+      games: ids.map((id) => ({ game: { id, name: `Game ${id}` }, state: { free: id === 83, windows: true, mac: null, linux: false },
+        players: { current_available: id === 82, current: id === 82 ? 0 : null, observed_at: id === 82 ? '2026-09-01T12:01:00Z' : null, peak_30d: id === 82 ? 0 : null, average_30d: id === 82 ? 0 : null, eligible_from_30d: '2026-08-03', observed_days_30d: id === 82 ? 1 : 0, successful_samples_30d: id === 82 ? 1 : 0, sample_coverage_30d: null },
+        price: id === 82 ? { region, available: true, state: 'priced', currency: region === 'US' ? 'USD' : 'CNY', initial_amount: 1000, final_amount: 0, discount_percent: 100, observed_low: { amount: 0, currency: region === 'US' ? 'USD' : 'CNY', first_seen: '2026-09-01', observed_since: '2026-09-01', initial_amount: 1000, discount_percent: 100 } } : { region, available: true, state: 'free', currency: null, initial_amount: null, final_amount: null, discount_percent: null, observed_low: null },
+        languages: { evidence: id === 82 ? 'fresh' : 'stale', supported: ['en'], explicit_full_audio: id === 82 ? ['en'] : [], unknown_names: id === 83 ? ['Klingon'] : [] },
+      })),
+    } }) })
+  })
+  await page.goto(toAbsoluteUrl(baseUrl, '/insights/games/compare?region=CN'), { waitUntil: 'domcontentloaded' })
+  await page.waitForTimeout(500)
+  await page.locator('.compare-builder input').fill('82,83')
+  await page.locator('.compare-builder button[type="submit"]').click()
+  await page.waitForURL(url => url.searchParams.get('ids') === '82,83' && url.searchParams.get('region') === 'CN')
+  await page.waitForSelector('[data-game-compare][data-compare-count="2"] [data-compare-result]')
+  assert((await page.locator('[data-current-player-available="true"]').textContent())?.trim() === '0', 'Game Compare changed real player zero')
+  assert((await page.locator('[data-current-player-available="false"]').textContent())?.trim() === '—', 'Game Compare changed unavailable players into zero')
+  assert(await page.locator('[data-price-state="priced"]').getByText('¥0.00', { exact: true }).count() === 1, 'Game Compare confused priced zero with Free')
+  assert(await page.locator('[data-language-evidence="stale"]').count() === 1, 'Game Compare changed stale language evidence')
+  await page.getByRole('button', { name: '美国', exact: true }).click()
+  await page.waitForURL(url => url.searchParams.get('ids') === '82,83' && url.searchParams.get('region') === 'US')
+  await page.waitForSelector('[data-game-compare][data-compare-region="US"]')
+  console.log('[insights] Site/Game Compare URL, order, zero, stale, and regional semantics passed')
 
   const changePage = (domain, cursor) => ({
     items: [{

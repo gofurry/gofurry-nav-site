@@ -146,6 +146,34 @@ export interface SiteInsights {
   recent_changes: InsightChange[]
 }
 
+export interface SiteCompareCapability {
+  key: SiteInsightCapabilityKey
+  state: SiteInsightCapabilityState
+}
+
+export interface SiteCompareCertificate {
+  target: string
+  not_after: string | null
+  days_to_expiry: number | null
+  expiry_status: CertificateExpiryStatus | null
+  verified: boolean | null
+  verification_issue: CertificateVerificationIssue | null
+  issuer: string | null
+  observed_at: string | null
+}
+
+export interface SiteCompareItem {
+  site: InsightEntityRef
+  capabilities: SiteCompareCapability[]
+  certificate: SiteCompareCertificate | null
+}
+
+export interface SiteCompare {
+  status: 'ready' | 'insufficient_data'
+  as_of: string | null
+  sites: SiteCompareItem[]
+}
+
 export type CertificateExpiryStatus = 'expired' | 'expires_within_7d' | 'expires_in_8_30d' | 'later'
 export type CertificateVerificationIssue = 'hostname_mismatch' | 'unknown_authority' | 'expired' | 'not_yet_valid' | 'incompatible_usage' | 'other'
 
@@ -244,6 +272,42 @@ export interface GameInsights {
   price: GameInsightPrice | null
   regional_prices: GameInsightRegionalPrices
   recent_changes: InsightChange[]
+}
+
+export interface GameComparePlayers {
+  current_available: boolean
+  current: number | null
+  observed_at: string | null
+  peak_30d: number | null
+  average_30d: number | null
+  eligible_from_30d: string | null
+  observed_days_30d: number
+  successful_samples_30d: number
+  sample_coverage_30d: number | null
+}
+
+export interface GameCompareLanguages {
+  evidence: 'fresh' | 'stale' | 'unobserved'
+  supported: string[]
+  explicit_full_audio: string[]
+  unknown_names: string[]
+}
+
+export interface GameCompareItem {
+  game: InsightEntityRef
+  state: Omit<GameInsightState, 'as_of'>
+  players: GameComparePlayers
+  price: GameInsightRegionalPrice
+  languages: GameCompareLanguages
+}
+
+export interface GameCompare {
+  status: 'ready' | 'insufficient_data'
+  region: GameInsightRegion
+  state_as_of: string | null
+  player_snapshot_scheduled_for: string | null
+  player_fact_through: string | null
+  games: GameCompareItem[]
 }
 
 export interface GameInsightPlayerPoint {

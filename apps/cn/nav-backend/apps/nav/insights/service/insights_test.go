@@ -13,6 +13,7 @@ import (
 
 type fakeStore struct {
 	site                 *models.SiteRecord
+	sites                map[int64]*models.SiteRecord
 	summaries            map[string]*models.MetricSummaryRecord
 	trend                []models.MetricTrendRecord
 	siteMetrics          map[string]*models.SiteMetricRecord
@@ -29,10 +30,18 @@ type fakeStore struct {
 	certificateSummary   *models.CertificateOverviewRecord
 	certificateAttention []models.CertificateItemRecord
 	certificateIssues    []models.CertificateItemRecord
+	compareHorizon       *time.Time
+	compareCapabilities  []models.SiteCompareCapabilityRecord
+	compareCertificates  []models.CertificateItemRecord
 }
 
-func (f *fakeStore) CountEntities(context.Context) (int64, error)               { return 2, nil }
-func (f *fakeStore) GetSite(context.Context, int64) (*models.SiteRecord, error) { return f.site, nil }
+func (f *fakeStore) CountEntities(context.Context) (int64, error) { return 2, nil }
+func (f *fakeStore) GetSite(_ context.Context, id int64) (*models.SiteRecord, error) {
+	if f.sites != nil {
+		return f.sites[id], nil
+	}
+	return f.site, nil
+}
 func (f *fakeStore) GetMetricSummary(_ context.Context, c models.MetricContract) (*models.MetricSummaryRecord, error) {
 	return f.summaries[c.PublicKey], nil
 }
@@ -52,6 +61,15 @@ func (f *fakeStore) ListMetricSliceTrend(_ context.Context, _ models.MetricContr
 }
 func (f *fakeStore) GetSiteMetric(_ context.Context, _ int64, c models.MetricContract) (*models.SiteMetricRecord, error) {
 	return f.siteMetrics[c.PublicKey], nil
+}
+func (f *fakeStore) GetSiteCompareHorizon(context.Context, []int64, []models.MetricContract) (*time.Time, error) {
+	return f.compareHorizon, nil
+}
+func (f *fakeStore) ListSiteCompareCapabilities(context.Context, []int64, []models.MetricContract, time.Time) ([]models.SiteCompareCapabilityRecord, error) {
+	return f.compareCapabilities, nil
+}
+func (f *fakeStore) ListSiteCompareCertificates(context.Context, []int64, time.Time) ([]models.CertificateItemRecord, error) {
+	return f.compareCertificates, nil
 }
 func (f *fakeStore) GetCertificateOverviewSummary(context.Context) (*models.CertificateOverviewRecord, error) {
 	return f.certificateSummary, nil

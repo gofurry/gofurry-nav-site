@@ -51,6 +51,15 @@ func (fakeReader) GetCertificateOverview(_ context.Context, limit int32) (models
 	}
 	return models.CertificateOverview{ExpiryAttention: []models.CertificateItem{}, VerificationIssues: []models.CertificateItem{}}, nil
 }
+func (fakeReader) GetSiteCompare(_ context.Context, ids string) (models.SiteCompare, error) {
+	if ids == "bad" {
+		return models.SiteCompare{}, service.ErrInvalidCompare
+	}
+	if ids == "1,404" {
+		return models.SiteCompare{}, service.ErrNotFound
+	}
+	return models.SiteCompare{Status: "ready", Sites: []models.SiteCompareItem{}}, nil
+}
 func (fakeReader) GetSiteInsights(_ context.Context, id int64) (models.SiteInsights, error) {
 	if id == 404 {
 		return models.SiteInsights{}, service.ErrNotFound
@@ -67,6 +76,7 @@ func TestNavInsightsHTTPContract(t *testing.T) {
 	app.Get("/api/v2/nav/insights/metrics/:metricKey/breakdown/:dimension/:value/trend", api.GetMetricSliceTrend)
 	app.Get("/api/v2/nav/insights/changes", api.GetChanges)
 	app.Get("/api/v2/nav/insights/certificates/overview", api.GetCertificateOverview)
+	app.Get("/api/v2/nav/insights/compare", api.GetSiteCompare)
 	app.Get("/api/v2/nav/sites/:siteId/insights", api.GetSiteInsights)
 
 	cases := []struct {
@@ -82,6 +92,9 @@ func TestNavInsightsHTTPContract(t *testing.T) {
 		{"/api/v2/nav/insights/certificates/overview", http.StatusOK},
 		{"/api/v2/nav/insights/certificates/overview?limit=101", http.StatusBadRequest},
 		{"/api/v2/nav/insights/certificates/overview?limit=bad", http.StatusBadRequest},
+		{"/api/v2/nav/insights/compare?ids=1,2", http.StatusOK},
+		{"/api/v2/nav/insights/compare?ids=bad", http.StatusBadRequest},
+		{"/api/v2/nav/insights/compare?ids=1,404", http.StatusNotFound},
 		{"/api/v2/nav/sites/1/insights", http.StatusOK},
 		{"/api/v2/nav/insights/metrics/bad/trend", http.StatusBadRequest},
 		{"/api/v2/nav/insights/metrics/ipv6/trend?range=bad", http.StatusBadRequest},

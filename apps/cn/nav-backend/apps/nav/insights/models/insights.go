@@ -135,6 +135,34 @@ type SiteInsights struct {
 	RecentChanges []Change     `json:"recent_changes"`
 }
 
+type SiteCompareCapability struct {
+	Key   string `json:"key"`
+	State string `json:"state"`
+}
+
+type SiteCompareCertificate struct {
+	Target            string     `json:"target"`
+	NotAfter          *time.Time `json:"not_after"`
+	DaysToExpiry      *int32     `json:"days_to_expiry"`
+	ExpiryStatus      *string    `json:"expiry_status"`
+	Verified          *bool      `json:"verified"`
+	VerificationIssue *string    `json:"verification_issue"`
+	Issuer            *string    `json:"issuer"`
+	ObservedAt        *time.Time `json:"observed_at"`
+}
+
+type SiteCompareItem struct {
+	Site         EntityRef               `json:"site"`
+	Capabilities []SiteCompareCapability `json:"capabilities"`
+	Certificate  *SiteCompareCertificate `json:"certificate"`
+}
+
+type SiteCompare struct {
+	Status string            `json:"status"`
+	AsOf   *string           `json:"as_of"`
+	Sites  []SiteCompareItem `json:"sites"`
+}
+
 type CertificateVerificationSummary struct {
 	Known    int64    `json:"known"`
 	Verified int64    `json:"verified"`
@@ -249,6 +277,13 @@ type SiteMetricRecord struct {
 	EligibleCount int64
 	PositiveCount int64
 	NegativeCount int64
+}
+
+type SiteCompareCapabilityRecord struct {
+	SiteID        int64
+	MetricKey     string
+	MetricVersion int32
+	State         string
 }
 
 type CertificateOverviewRecord struct {

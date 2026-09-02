@@ -72,6 +72,18 @@ func (fakeInsightsReader) GetDiscounts(_ context.Context, region string, limit i
 func (fakeInsightsReader) GetLanguageOverview(context.Context) (v2models.InsightLanguageOverview, error) {
 	return v2models.InsightLanguageOverview{Items: []v2models.InsightLanguageItem{}}, nil
 }
+func (fakeInsightsReader) GetGameCompare(_ context.Context, ids, region string) (v2models.GameCompare, error) {
+	if ids == "bad" {
+		return v2models.GameCompare{}, v2service.ErrInvalidInsightCompare
+	}
+	if ids == "1,404" {
+		return v2models.GameCompare{}, v2service.ErrInsightGameNotFound
+	}
+	if region == "JP" {
+		return v2models.GameCompare{}, v2service.ErrInvalidInsightRegion
+	}
+	return v2models.GameCompare{Status: "ready", Region: region, Games: []v2models.GameCompareItem{}}, nil
+}
 func (fakeInsightsReader) GetGameInsights(_ context.Context, id int64) (v2models.GameInsights, error) {
 	if id == 404 {
 		return v2models.GameInsights{}, v2service.ErrInsightGameNotFound
@@ -112,6 +124,7 @@ func TestGameInsightsHTTPContract(t *testing.T) {
 	app.Get("/api/v2/game/insights/prices/overview", api.GetPriceOverview)
 	app.Get("/api/v2/game/insights/prices/discounts", api.GetDiscounts)
 	app.Get("/api/v2/game/insights/languages/overview", api.GetLanguageOverview)
+	app.Get("/api/v2/game/insights/compare", api.GetGameCompare)
 	app.Get("/api/v2/game/games/:gameId/insights", api.GetGameInsights)
 	app.Get("/api/v2/game/games/:gameId/insights/players", api.GetGamePlayerInsights)
 	app.Get("/api/v2/game/games/:gameId/insights/prices", api.GetGamePriceInsights)
@@ -134,6 +147,10 @@ func TestGameInsightsHTTPContract(t *testing.T) {
 		{"/api/v2/game/insights/prices/discounts?region=HK", http.StatusOK},
 		{"/api/v2/game/insights/prices/discounts?limit=101", http.StatusBadRequest},
 		{"/api/v2/game/insights/languages/overview", http.StatusOK},
+		{"/api/v2/game/insights/compare?ids=1,2&region=US", http.StatusOK},
+		{"/api/v2/game/insights/compare?ids=bad", http.StatusBadRequest},
+		{"/api/v2/game/insights/compare?ids=1,2&region=JP", http.StatusBadRequest},
+		{"/api/v2/game/insights/compare?ids=1,404", http.StatusNotFound},
 		{"/api/v2/game/games/1/insights", http.StatusOK},
 		{"/api/v2/game/games/1/insights/players?range=all", http.StatusOK},
 		{"/api/v2/game/games/1/insights/prices?range=30d", http.StatusOK},

@@ -576,10 +576,54 @@
 .game-insights-region-row p { margin-top: .65rem; }
 .game-insights-region-row small { margin-left: .5rem; color: var(--gf-text-muted); }
 
+.compare-builder,
+.compare-result {
+  margin: 1rem 0;
+  padding: 1.1rem;
+  border: 1px solid var(--gf-border);
+  border-radius: 1rem;
+  background: var(--gf-surface);
+}
+
+.compare-builder h2,
+.compare-result h2 { margin: 0; }
+.compare-builder > p { margin: .45rem 0 0; color: var(--gf-text-muted); }
+.compare-builder__form { display: flex; align-items: end; gap: .75rem; margin-top: 1rem; }
+.compare-builder__form label { display: grid; flex: 1; gap: .35rem; color: var(--gf-text-muted); font-size: .8rem; }
+.compare-builder__form input {
+  width: 100%;
+  padding: .72rem .8rem;
+  border: 1px solid var(--gf-border-strong);
+  border-radius: .7rem;
+  color: var(--gf-text-main);
+  background: var(--gf-surface-strong);
+}
+.compare-builder__form button {
+  padding: .72rem 1.1rem;
+  border: 1px solid var(--gf-border-strong);
+  border-radius: .7rem;
+  color: var(--gf-text-main);
+  background: var(--gf-surface-strong);
+  font-weight: 700;
+  cursor: pointer;
+}
+.compare-builder__error { color: #b94a48 !important; }
+.compare-regions { margin: 1rem 0 0; }
+.compare-horizons { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-bottom: 1rem; color: var(--gf-text-muted); font-size: .8rem; }
+.compare-table-wrap { max-width: 100%; overflow-x: auto; }
+.compare-table { width: 100%; min-width: 680px; border-collapse: collapse; }
+.compare-table th,
+.compare-table td { min-width: 150px; padding: .75rem; border-bottom: 1px solid var(--gf-border); text-align: left; vertical-align: top; }
+.compare-table th:first-child { min-width: 190px; color: var(--gf-text-muted); font-size: .8rem; }
+.compare-table thead th { color: var(--gf-text-main); }
+.compare-table thead small { display: block; margin-top: .2rem; color: var(--gf-text-muted); font-weight: 400; }
+
 @media (max-width: 720px) {
   .game-intelligence-nav, .site-intelligence-nav { width: 100%; border-radius: 1rem; }
   .intelligence-stats, .intelligence-stats--wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .game-insights-region-row small { display: block; margin: .25rem 0 0; }
+  .compare-builder__form { align-items: stretch; flex-direction: column; }
+  .compare-builder__form button { width: 100%; }
 }
 
 .insights-data-info summary {

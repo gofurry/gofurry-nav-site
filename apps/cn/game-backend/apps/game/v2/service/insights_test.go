@@ -13,6 +13,7 @@ import (
 
 type fakeInsightsStore struct {
 	game              *v2models.InsightGameRecord
+	games             map[int64]*v2models.InsightGameRecord
 	state             *v2models.InsightGameStateRecord
 	playerSummary     v2models.InsightPlayerSummaryRecord
 	price             *v2models.InsightPriceRecord
@@ -36,10 +37,17 @@ type fakeInsightsStore struct {
 	discounts         []v2models.InsightDiscountRecord
 	languageOverview  v2models.InsightLanguageOverviewRecord
 	languages         []v2models.InsightLanguageRecord
+	compareHorizon    *time.Time
+	compareFacts      []v2models.InsightGameCompareFactRecord
+	compareCurrent    []v2models.InsightGameCompareCurrentPlayerRecord
+	comparePlayer30D  []v2models.InsightGameComparePlayer30DRecord
 }
 
 func (f *fakeInsightsStore) CountInsightEntities(context.Context) (int64, error) { return 1, nil }
-func (f *fakeInsightsStore) GetInsightGame(context.Context, int64) (*v2models.InsightGameRecord, error) {
+func (f *fakeInsightsStore) GetInsightGame(_ context.Context, id int64) (*v2models.InsightGameRecord, error) {
+	if f.games != nil {
+		return f.games[id], nil
+	}
 	return f.game, nil
 }
 func (f *fakeInsightsStore) GetInsightMetricSummary(_ context.Context, c v2models.InsightMetricContract) (*v2models.InsightMetricSummaryRecord, error) {
@@ -61,6 +69,18 @@ func (f *fakeInsightsStore) ListInsightMetricSliceTrend(_ context.Context, _ v2m
 }
 func (f *fakeInsightsStore) GetInsightGameState(context.Context, int64) (*v2models.InsightGameStateRecord, error) {
 	return f.state, nil
+}
+func (f *fakeInsightsStore) GetInsightGameCompareFactHorizon(context.Context, []int64) (*time.Time, error) {
+	return f.compareHorizon, nil
+}
+func (f *fakeInsightsStore) ListInsightGameCompareFacts(context.Context, []int64, time.Time, string) ([]v2models.InsightGameCompareFactRecord, error) {
+	return f.compareFacts, nil
+}
+func (f *fakeInsightsStore) ListInsightGameCompareCurrentPlayers(context.Context, []int64) ([]v2models.InsightGameCompareCurrentPlayerRecord, error) {
+	return f.compareCurrent, nil
+}
+func (f *fakeInsightsStore) ListInsightGameComparePlayer30D(context.Context, []int64) ([]v2models.InsightGameComparePlayer30DRecord, error) {
+	return f.comparePlayer30D, nil
 }
 func (f *fakeInsightsStore) GetInsightPlayerSummary(context.Context, v2models.InsightGameStateRecord) (v2models.InsightPlayerSummaryRecord, error) {
 	return f.playerSummary, nil

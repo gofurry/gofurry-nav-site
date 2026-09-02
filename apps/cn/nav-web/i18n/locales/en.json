@@ -823,7 +823,7 @@
     },
     "regions": { "CN": "China", "US": "United States", "HK": "Hong Kong" },
     "siteIntelligence": {
-      "navLabel": "Site Intelligence navigation", "ecosystem": "Ecosystem", "certificates": "Certificates"
+      "navLabel": "Site Intelligence navigation", "ecosystem": "Ecosystem", "certificates": "Certificates", "compare": "Compare"
     },
     "certificateIntelligence": {
       "title": "TLS Certificate Intelligence", "description": "Review certificate verification, expiry distribution, and attention items on one closed UTC fact day.",
@@ -841,7 +841,27 @@
       }
     },
     "gameIntelligence": {
-      "navLabel": "Game Intelligence navigation", "ecosystem": "Ecosystem", "players": "Players", "prices": "Prices", "languages": "Languages"
+      "navLabel": "Game Intelligence navigation", "ecosystem": "Ecosystem", "players": "Players", "prices": "Prices", "languages": "Languages", "compare": "Compare"
+    },
+    "compare": {
+      "builderTitle": "Select entities", "idsLabel": "Entity IDs (2–4)", "idsPlaceholder": "For example 12,37,48", "apply": "Apply",
+      "emptyHint": "Enter 2–4 entity IDs to begin.", "oneHint": "One entity is preselected; add at least one more.", "readyHint": "Showing {count} entities side by side.",
+      "invalid": "Enter 1–4 valid positive integer IDs; at least 2 distinct entities are required for results.", "insufficientData": "The selected entities have no common complete snapshot; individual latest values were not mixed.",
+      "commonSnapshot": "Common complete snapshot: {date}", "fact": "Fact", "aboutTitle": "About comparison"
+    },
+    "siteCompare": {
+      "title": "Site Capability Compare", "description": "Review Site capabilities and valid certificate facts on one common complete Metric snapshot.",
+      "primaryTarget": "Primary target", "certificateVerification": "Certificate verification", "certificateExpiry": "Certificate expiry", "noValidCertificate": "No valid certificate evidence",
+      "about": "Every capability comes from the same complete fact day. Unknown, unavailable, not-probed, and stale never become unsupported. Certificate details appear only when same-day evidence is valid."
+    },
+    "gameCompare": {
+      "title": "Game Fact Compare", "description": "Review platform, player, regional price, and language facts side by side on common snapshots.",
+      "region": "Price region", "stateSnapshot": "State facts: {date}", "playerSnapshot": "Scheduled player snapshot: {date}", "playerWindow": "Player facts through: {date}",
+      "currentPlayers": "Scheduled snapshot players", "peak30d": "30-day peak", "average30d": "30-day observed average", "playerQuality": "Player data quality",
+      "qualityValue": "{days} observed days · {samples} successful samples · coverage {coverage}", "currentPrice": "Current {region} price", "languageEvidence": "Language evidence",
+      "supportedLanguages": "Supported languages", "fullAudio": "Explicit Full Audio", "unmappedLanguages": "Unmapped language names",
+      "languageStates": { "fresh": "Fresh", "stale": "Stale (not unsupported)", "unobserved": "Unobserved (not unsupported)" },
+      "about": "State facts, the scheduled player snapshot, and the 30-day player window disclose separate dates. Prices use no FX or cross-region monetary comparison; the page only places existing facts side by side."
     },
     "playerIntelligence": {
       "title": "Player Intelligence", "description": "Explore player rankings and data quality from reliable GoFurry observations.",

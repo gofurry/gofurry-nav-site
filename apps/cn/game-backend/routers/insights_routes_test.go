@@ -37,6 +37,9 @@ func (gameInsightsRouteStub) GetDiscounts(c fiber.Ctx) error {
 func (gameInsightsRouteStub) GetLanguageOverview(c fiber.Ctx) error {
 	return c.SendStatus(http.StatusNoContent)
 }
+func (gameInsightsRouteStub) GetGameCompare(c fiber.Ctx) error {
+	return c.SendStatus(http.StatusNoContent)
+}
 func (gameInsightsRouteStub) GetGameInsights(c fiber.Ctx) error {
 	return c.SendStatus(http.StatusNoContent)
 }
@@ -60,6 +63,7 @@ func TestGameInsightsRoutesAreRegistered(t *testing.T) {
 		"/api/v2/game/insights/prices/overview",
 		"/api/v2/game/insights/prices/discounts",
 		"/api/v2/game/insights/languages/overview",
+		"/api/v2/game/insights/compare?ids=1,2&region=CN",
 		"/api/v2/game/games/1/insights",
 		"/api/v2/game/games/1/insights/players",
 		"/api/v2/game/games/1/insights/prices",

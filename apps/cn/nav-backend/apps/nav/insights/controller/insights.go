@@ -19,6 +19,7 @@ type insightsReader interface {
 	GetMetricSliceTrend(context.Context, string, string, string, string) (models.DimensionTrend, error)
 	GetChanges(context.Context, models.ChangeExplorerQuery) (models.ChangeExplorerPage, error)
 	GetCertificateOverview(context.Context, int32) (models.CertificateOverview, error)
+	GetSiteCompare(context.Context, string) (models.SiteCompare, error)
 	GetSiteInsights(context.Context, int64) (models.SiteInsights, error)
 }
 
@@ -69,6 +70,11 @@ func (api *InsightsAPI) GetCertificateOverview(c fiber.Ctx) error {
 	return respond(c, data, err)
 }
 
+func (api *InsightsAPI) GetSiteCompare(c fiber.Ctx) error {
+	data, err := api.service.GetSiteCompare(context.Background(), c.Query("ids"))
+	return respond(c, data, err)
+}
+
 func (api *InsightsAPI) GetSiteInsights(c fiber.Ctx) error {
 	siteID, err := strconv.ParseInt(c.Params("siteId"), 10, 64)
 	if err != nil || siteID <= 0 {
@@ -86,7 +92,7 @@ func respond(c fiber.Ctx, data any, err error) error {
 	case errors.Is(err, service.ErrInvalidMetricKey), errors.Is(err, service.ErrInvalidRange),
 		errors.Is(err, service.ErrInvalidDimension), errors.Is(err, service.ErrInvalidSlice),
 		errors.Is(err, service.ErrInvalidChanges), errors.Is(err, service.ErrInvalidCursor),
-		errors.Is(err, service.ErrInvalidCertificateLimit):
+		errors.Is(err, service.ErrInvalidCertificateLimit), errors.Is(err, service.ErrInvalidCompare):
 		return common.NewResponse(c).ErrorWithCode(err.Error(), http.StatusBadRequest)
 	case errors.Is(err, service.ErrNotFound):
 		return common.NewResponse(c).ErrorWithCode(err.Error(), http.StatusNotFound)

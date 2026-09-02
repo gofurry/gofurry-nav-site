@@ -8,6 +8,9 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add V3-P2.4 order-preserving Site and Game Entity Compare APIs and SSR product pages for bounded 2–4 entity cohorts, without scores, rankings, winners, or recommendations.
+- Add common-snapshot Site capability/certificate comparison and separately disclosed Game state, scheduled-player, 30-day player-quality, regional-price, observed-low, and language horizons.
+- Add Compare unit, route, PostgreSQL, URL-state, semantic, SSR, and CI regression coverage, including real-zero versus unavailable players and free versus priced-zero safeguards.
 - Add V3-P2.3 Site Capability Intelligence with version-frozen HTTP/2, HSTS, enforcement CSP, and TLS certificate-verification Metrics plus same-Primary-Target semantic Change detectors.
 - Add the bounded certificate overview API and bilingual `/insights/sites/certificates` product surface with common fact-day horizon, deterministic expiry buckets, attention lists, and public verification-issue whitelisting.
 - Add focused PostgreSQL projection, Metric-before-Change backfill/rebuild, certificate read-model, route, SSR/typecheck/build, Goose, sqlc, and query-plan regression coverage.

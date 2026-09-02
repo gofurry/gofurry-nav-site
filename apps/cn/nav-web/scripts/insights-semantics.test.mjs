@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { formatInsightChangeWhen, insightChangeOrder } from '../app/utils/insightChanges.ts'
 import { formatCnyMinorAmount, formatMinorAmount, priceSegmentKey, publicPriceDisplay } from '../app/utils/insightPrices.ts'
 import { formatInsightRatio, normalizeInsightSlice } from '../app/utils/insightDimensions.ts'
+import { insightCompareReady, parseInsightCompareIDs } from '../app/utils/insightCompare.ts'
 
 const freePoint = {
   date: '2026-08-28', state: 'free', currency: null,
@@ -46,6 +47,13 @@ assert(normalizeInsightSlice('tag', '123') === '123' && normalizeInsightSlice('t
 assert(formatInsightRatio(null) === '—', 'zero denominator was rendered as 0%')
 assert(formatInsightRatio(0) === '0.0%', 'a real zero metric was rendered as unavailable')
 
+const compareIDs = parseInsightCompareIDs('37,12,37,48')
+assert(compareIDs?.join(',') === '37,12,48', 'Compare IDs did not preserve first appearance while deduplicating')
+assert(insightCompareReady(compareIDs) && !insightCompareReady([37]), 'Compare builder state did not require 2–4 entities')
+assert(parseInsightCompareIDs('1,2,3,4,5') === null, 'Compare accepted more than four entities')
+assert(parseInsightCompareIDs('1,bad') === null, 'Compare accepted an invalid entity ID')
+assert(parseInsightCompareIDs('9')?.join(',') === '9', 'Compare lost its one-entity preselected builder state')
+
 const zh = JSON.parse(readFileSync(new URL('../i18n/locales/zh.json', import.meta.url), 'utf8'))
 const en = JSON.parse(readFileSync(new URL('../i18n/locales/en.json', import.meta.url), 'utf8'))
 assert(zh.insights.entity.currentPlayers === '最近观测' && en.insights.entity.currentPlayers === 'Latest Observed', 'entity player observation was presented as realtime')
@@ -53,8 +61,11 @@ assert(zh.insights.entity.observedLow === 'GoFurry 观测最低价' && en.insigh
 for (const forbidden of ['历史最低', 'Historical Low', 'All-time Low', 'Steam Historical Low']) {
   assert(!JSON.stringify([zh.insights, en.insights]).includes(forbidden), `forbidden observed-low wording leaked: ${forbidden}`)
 }
+for (const forbidden of ['winner', 'score', 'ranking', 'recommendation', '胜出', '评分', '排名', '推荐']) {
+  assert(!JSON.stringify([zh.insights.siteCompare, zh.insights.gameCompare, en.insights.siteCompare, en.insights.gameCompare]).toLowerCase().includes(forbidden.toLowerCase()), `judgement wording leaked into Compare: ${forbidden}`)
+}
 
-console.log('[insights] public price, regional identity, timeline, and dimension semantics passed')
+console.log('[insights] public price, regional identity, timeline, dimension, and Compare semantics passed')
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)

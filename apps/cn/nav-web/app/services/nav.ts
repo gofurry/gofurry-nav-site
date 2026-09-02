@@ -25,6 +25,7 @@ import type {
   SiteInsightChangeCategory,
   SiteInsightDimension,
   SiteInsights,
+  SiteCompare,
 } from '~/types/insights'
 
 export function getNavHome(lang: string): Promise<NavHomeResponse> {
@@ -99,6 +100,10 @@ export function getNavInsightChanges(query: {
 
 export function getNavCertificateInsightsOverview(limit = 20): Promise<CertificateInsightOverview> {
   return useApi('navV2')('/nav/insights/certificates/overview', { query: { limit } })
+}
+
+export function getSiteCompare(ids: number[]): Promise<SiteCompare> {
+  return useApi('navV2')('/nav/insights/compare', { query: { ids: ids.join(',') } })
 }
 
 export function getSiteInsights(siteId: string | number): Promise<SiteInsights> {

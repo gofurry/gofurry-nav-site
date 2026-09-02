@@ -22,6 +22,7 @@ type insightsReader interface {
 	GetPriceOverview(context.Context, string) (v2models.InsightPriceOverview, error)
 	GetDiscounts(context.Context, string, int32) (v2models.InsightDiscounts, error)
 	GetLanguageOverview(context.Context) (v2models.InsightLanguageOverview, error)
+	GetGameCompare(context.Context, string, string) (v2models.GameCompare, error)
 	GetGameInsights(context.Context, int64) (v2models.GameInsights, error)
 	GetGamePlayerInsights(context.Context, int64, string) (v2models.InsightPlayerHistory, error)
 	GetGamePriceInsights(context.Context, int64, string, string) (v2models.InsightPriceHistory, error)
@@ -89,6 +90,11 @@ func (api *GameV2API) GetLanguageOverview(c fiber.Ctx) error {
 	return respondInsights(c, data, err)
 }
 
+func (api *GameV2API) GetGameCompare(c fiber.Ctx) error {
+	data, err := api.insights.GetGameCompare(context.Background(), c.Query("ids"), c.Query("region", "CN"))
+	return respondInsights(c, data, err)
+}
+
 func (api *GameV2API) GetGameInsights(c fiber.Ctx) error {
 	gameID := parseInt64(c.Params("gameId", "0"))
 	if gameID <= 0 {
@@ -126,6 +132,7 @@ func respondInsights(c fiber.Ctx, data any, err error) error {
 		errors.Is(err, v2service.ErrInvalidInsightChanges), errors.Is(err, v2service.ErrInvalidInsightCursor):
 		return common.NewResponse(c).ErrorWithCode(err.Error(), http.StatusBadRequest)
 	case errors.Is(err, v2service.ErrInvalidInsightRegion), errors.Is(err, v2service.ErrInvalidPlayerRanking),
+		errors.Is(err, v2service.ErrInvalidInsightCompare),
 		errors.Is(err, v2service.ErrInvalidInsightLimit):
 		return common.NewResponse(c).ErrorWithCode(err.Error(), http.StatusBadRequest)
 	case errors.Is(err, v2service.ErrInsightGameNotFound):
