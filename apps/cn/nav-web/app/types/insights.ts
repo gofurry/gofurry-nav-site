@@ -1,7 +1,7 @@
 export type InsightRange = '30d' | '90d' | 'all'
 export type InsightChangeRange = '7d' | InsightRange
 export type NavInsightMetricKey = 'ipv6' | 'tls13' | 'security_txt'
-export type GameInsightMetricKey = 'free' | 'windows' | 'linux'
+export type GameInsightMetricKey = 'free' | 'windows' | 'mac' | 'linux'
 export type InsightMetricKey = NavInsightMetricKey | GameInsightMetricKey
 export type InsightDomain = 'site' | 'game'
 export type SiteInsightDimension = 'country' | 'group' | 'nsfw' | 'public_interest'
@@ -21,6 +21,8 @@ export type SiteInsightCapabilityState =
   | 'unknown'
   | 'not_applicable'
 export type GameInsightPriceState = 'free' | 'priced' | 'unknown' | 'unpriced'
+export type GameInsightRegion = 'CN' | 'US' | 'HK'
+export type GamePlayerRankingMetric = 'latest_observed' | 'peak_30d' | 'average_30d'
 
 export interface InsightMetric {
   key: InsightMetricKey
@@ -147,6 +149,7 @@ export interface SiteInsights {
 export interface GameInsightState {
   free: boolean | null
   windows: boolean | null
+  mac: boolean | null
   linux: boolean | null
   release: string | null
   as_of: string | null
@@ -155,7 +158,13 @@ export interface GameInsightState {
 export interface GameInsightPlayerSummary {
   current: number | null
   peak_30d: number | null
+  average_30d: number | null
   as_of: string | null
+  fact_through: string | null
+  eligible_from_30d: string | null
+  observed_days_30d: number
+  successful_samples_30d: number
+  sample_coverage_30d: number | null
 }
 
 export interface GameInsightPrice {
@@ -168,11 +177,37 @@ export interface GameInsightPrice {
   as_of: string | null
 }
 
+export interface GameInsightObservedLow {
+  amount: number
+  currency: string
+  first_seen: string
+  observed_since: string
+  initial_amount: number
+  discount_percent: number
+}
+
+export interface GameInsightRegionalPrice {
+  region: GameInsightRegion
+  available: boolean
+  state: GameInsightPriceState | null
+  currency: string | null
+  initial_amount: number | null
+  final_amount: number | null
+  discount_percent: number | null
+  observed_low: GameInsightObservedLow | null
+}
+
+export interface GameInsightRegionalPrices {
+  as_of: string | null
+  regions: GameInsightRegionalPrice[]
+}
+
 export interface GameInsights {
   game: InsightEntityRef
   state: GameInsightState
   players: GameInsightPlayerSummary
   price: GameInsightPrice | null
+  regional_prices: GameInsightRegionalPrices
   recent_changes: InsightChange[]
 }
 
@@ -200,8 +235,83 @@ export interface GameInsightPricePoint {
 }
 
 export interface GameInsightPriceHistory {
+  region: GameInsightRegion
   requested_range: InsightRange
   available_from: string | null
   available_through: string | null
   points: GameInsightPricePoint[]
+}
+
+export interface GamePlayerRankingItem {
+  rank: number
+  game: InsightEntityRef
+  value: number
+  observed_at: string | null
+  eligible_from: string | null
+  observed_days: number | null
+  successful_samples: number | null
+  sample_coverage: number | null
+}
+
+export interface GamePlayerRanking {
+  metric: GamePlayerRankingMetric
+  basis: 'scheduled_snapshot' | 'finalized_daily_facts'
+  snapshot_scheduled_for: string | null
+  latest_slot_scheduled_for: string | null
+  observed_from: string | null
+  observed_through: string | null
+  window_from: string | null
+  window_through: string | null
+  population: number
+  ranked: number
+  entity_coverage: number | null
+  items: GamePlayerRankingItem[]
+}
+
+export interface GamePriceOverview {
+  region: GameInsightRegion
+  as_of: string | null
+  population: number
+  priced: number
+  free: number
+  unpriced: number
+  unknown: number
+  unavailable: number
+  known: number
+  coverage: number | null
+  discounted: number
+  discounted_share: number | null
+}
+
+export interface GameDiscountItem {
+  game: InsightEntityRef
+  currency: string
+  initial_amount: number
+  final_amount: number
+  discount_percent: number
+  observed_low: GameInsightObservedLow | null
+}
+export interface GameDiscounts { region: GameInsightRegion; as_of: string | null; items: GameDiscountItem[] }
+
+export interface GameLanguageItem {
+  code: string
+  steam_name: string
+  supported_games: number
+  share: number | null
+  explicit_full_audio_games: number
+  explicit_full_audio_share: number | null
+}
+export interface GameLanguageOverview {
+  as_of: string | null
+  freshness_seconds: number
+  population: number
+  fresh: number
+  stale: number
+  unobserved: number
+  coverage: number | null
+  fully_normalized_games: number
+  unmapped_games: number
+  unmapped_entries: number
+  normalization_coverage: number | null
+  items: GameLanguageItem[]
 }

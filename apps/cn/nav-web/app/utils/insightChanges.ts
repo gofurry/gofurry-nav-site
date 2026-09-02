@@ -15,6 +15,8 @@ const publicChangeI18nKeys: Record<string, string> = {
   'game.windows.removed': 'gameWindowsRemoved',
   'game.linux.added': 'gameLinuxAdded',
   'game.linux.removed': 'gameLinuxRemoved',
+  'game.mac.added': 'gameMacAdded',
+  'game.mac.removed': 'gameMacRemoved',
   'game.release.available': 'gameReleaseAvailable',
   'game.release.withdrawn': 'gameReleaseWithdrawn',
   'game.release.changed': 'gameReleaseChanged',

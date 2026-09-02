@@ -617,6 +617,10 @@
         "name": "Linux",
         "description": "当前能够确认支持 Linux 的已收录游戏比例。"
       },
+      "mac": {
+        "name": "macOS",
+        "description": "当前能够确认支持 macOS 的已收录游戏比例。"
+      },
       "asOf": "统计日期 {date}",
       "deltaUnavailable": "暂无 30 天对比"
     },
@@ -651,6 +655,8 @@
         "gameWindowsRemoved": "移除 Windows 支持",
         "gameLinuxAdded": "新增 Linux 支持",
         "gameLinuxRemoved": "移除 Linux 支持",
+        "gameMacAdded": "新增 macOS 支持",
+        "gameMacRemoved": "移除 macOS 支持",
         "gameReleaseAvailable": "现已可以游玩",
         "gameReleaseWithdrawn": "已停止提供",
         "gameReleaseChanged": "发行计划发生变化",
@@ -746,9 +752,15 @@
       "playerAverage": "平均在线",
       "cnOnly": "仅中国大陆区",
       "priceHistory": "国区价格历史",
-      "currentPlayers": "当前公开在线人数",
+      "currentPlayers": "最近观测",
       "peak30d": "30 天最高在线",
+      "average30d": "30 天观测均值",
+      "observedDays": "个观测日",
       "cnPrice": "当前国区价格",
+      "regionalPrice": "当前区域价格",
+      "priceRegion": "价格区域",
+      "observedLow": "GoFurry 观测最低价",
+      "observedSince": "自 {date} 起观测",
       "platforms": "平台状态",
       "freeState": "游戏价格类型",
       "releaseState": "发行状态",
@@ -759,6 +771,7 @@
       "booleanUnknown": "暂无法确认",
       "priceFree": "免费",
       "pricePriced": "付费价格",
+      "priceMissing": "无当日区域价格事实",
       "priceUnavailable": "暂不可用",
       "asOf": "截至 {date}",
       "asOfUnavailable": "暂无可靠日期",
@@ -783,6 +796,27 @@
         "upcoming": "即将发行",
         "withdrawn": "已停止提供"
       }
+    },
+    "regions": { "CN": "中国", "US": "美国", "HK": "中国香港" },
+    "gameIntelligence": {
+      "navLabel": "游戏洞察导航", "ecosystem": "生态", "players": "玩家", "prices": "价格", "languages": "语言"
+    },
+    "playerIntelligence": {
+      "title": "玩家洞察", "description": "基于 GoFurry 可靠观测查看玩家排名与数据质量。",
+      "metrics": { "latest_observed": "最近计划观测", "peak_30d": "30 天峰值", "average_30d": "30 天观测均值" },
+      "population": "可观测游戏", "ranked": "有效排名", "coverage": "实体覆盖", "game": "游戏", "value": "观测值", "quality": "数据质量", "observed": "成功观测", "observedDays": "{count} 个观测日", "successfulSamples": "{count} 个成功样本",
+      "snapshot": "计划快照：{date}", "window": "共同窗口：{from} 至 {through}", "aboutTitle": "关于玩家数据", "about": "最近观测不是 Steam 实时并发。缺失或失败观测不会变成 0，真实观测到的 0 会保留。"
+    },
+    "priceIntelligence": {
+      "title": "区域价格洞察", "description": "查看中国、美国和中国香港的可靠区域价格快照。",
+      "population": "追踪总体", "priced": "付费定价", "free": "免费", "unpriced": "暂无定价", "unknown": "未知", "unavailable": "无当日事实", "coverage": "覆盖率", "discounted": "当前折扣",
+      "discounts": "当前区域折扣", "currentPrice": "当前价格", "discount": "折扣", "observedLow": "GoFurry 观测最低价",
+      "aboutTitle": "关于价格数据", "about": "各区域和币种彼此独立，不进行汇率换算或最便宜区域判断。GoFurry 观测最低价仅限当前连续、同币种的付费价格身份。"
+    },
+    "languageIntelligence": {
+      "title": "语言洞察", "description": "查看可靠快照中的支持语言与明确标注完整音频。", "coverage": "新鲜证据覆盖", "fresh": "新鲜证据", "normalization": "规范化覆盖",
+      "distribution": "语言分布", "overlap": "语言是重叠分布，各语言比例不能相加推导 100%。", "language": "语言", "supported": "支持游戏", "share": "占新鲜证据比例", "fullAudio": "明确标注完整音频",
+      "aboutTitle": "关于语言数据", "about": "未知语言名称不会模糊匹配；没有完整音频标记也不会被解释为不支持。"
     },
     "emptyStates": {
       "unavailable": "洞察数据暂不可用",

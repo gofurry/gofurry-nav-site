@@ -342,7 +342,8 @@ jobs:
         run: |
           go test ./collector/control -run TestGameExpiredLeaseRecoveryIntegration -count=1 -v
           go test ./collector/game/v2/repository -run TestPostgresRepositorySemantics -count=1 -v
-          go test ./collector/changes -run 'TestGameChange(ProjectorsIntegration|CheckpointLockSerializes|EngineBackfillRebuildIntegration)' -count=1 -v
+          go test ./collector/metrics -run 'TestPostgresMacMetric(Projection|BackfillAndRebuild)' -count=1 -v
+          go test ./collector/changes -run 'TestGameChange(ProjectorsIntegration|CheckpointLockSerializes|EngineBackfillRebuildIntegration)|TestMacChangeBackfillAndRebuildIntegration' -count=1 -v
       - name: Game Backend integration
         if: needs.detect-changes.outputs.game_integration == 'true'
         working-directory: apps/cn/game-backend

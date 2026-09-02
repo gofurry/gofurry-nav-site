@@ -8,6 +8,7 @@
     <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
       <InsightsNav />
+      <GameIntelligenceNav />
 
       <header class="insights-hero insights-hero--domain">
         <p class="insights-eyebrow">{{ $t('insights.games.eyebrow') }}</p>
@@ -69,6 +70,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import InsightsDataInfo from '@/components/insights/InsightsDataInfo.vue'
+import GameIntelligenceNav from '@/components/insights/GameIntelligenceNav.vue'
 import InsightsDimensionBreakdown from '@/components/insights/InsightsDimensionBreakdown.vue'
 import InsightsMetricCard from '@/components/insights/InsightsMetricCard.vue'
 import InsightsMetricTrend from '@/components/insights/InsightsMetricTrend.vue'
@@ -81,7 +83,7 @@ import { getGameInsightsBreakdown, getGameInsightsOverview, getGameInsightsSlice
 import type { GameInsightDimension, GameInsightMetricKey } from '@/types/insights'
 import { buildInsightsSeo } from '@/utils/seo'
 
-const gameMetrics = ['free', 'windows', 'linux'] as const satisfies readonly GameInsightMetricKey[]
+const gameMetrics = ['free', 'windows', 'mac', 'linux'] as const satisfies readonly GameInsightMetricKey[]
 const gameDimensions = ['primary_tag', 'tag'] as const satisfies readonly GameInsightDimension[]
 const { locale } = useI18n()
 const {

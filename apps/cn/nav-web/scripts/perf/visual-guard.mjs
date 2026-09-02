@@ -181,6 +181,18 @@ const visualScenarios = [
     optionalDataSelectors: ['.insights-change-explorer-item']
   }),
   ...makePageScenarios({
+    id: 'game-player-intelligence', label: '游戏玩家洞察', path: '/insights/games/players?metric=latest_observed', locale: 'zh-CN',
+    rootSelector: '[data-player-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.intelligence-selector'], optionalDataSelectors: ['.intelligence-table tbody tr']
+  }),
+  ...makePageScenarios({
+    id: 'game-price-intelligence', label: '游戏区域价格洞察', path: '/insights/games/prices?region=CN', locale: 'zh-CN',
+    rootSelector: '[data-regional-price-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.intelligence-selector'], optionalDataSelectors: ['.intelligence-table tbody tr']
+  }),
+  ...makePageScenarios({
+    id: 'game-language-intelligence', label: '游戏语言洞察', path: '/insights/games/languages', locale: 'zh-CN',
+    rootSelector: '[data-language-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.insights-data-info'], optionalDataSelectors: ['.intelligence-table tbody tr']
+  }),
+  ...makePageScenarios({
     id: 'site-entity-insights',
     label: '网站实体洞察',
     path: `/site/${entitySiteId}`,

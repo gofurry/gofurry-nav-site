@@ -67,6 +67,7 @@ LEFT JOIN gfg_metric_checkpoints metric_checkpoint
       WHEN 'free_game_transition' THEN 'free_game_share'
       WHEN 'windows_support_transition' THEN 'windows_support'
       WHEN 'linux_support_transition' THEN 'linux_support'
+      WHEN 'mac_support_transition' THEN 'mac_support'
   END
  AND metric_checkpoint.metric_version = registry.detector_version
 LEFT JOIN gfg_fact_rollup_checkpoints fact_checkpoint
@@ -112,6 +113,7 @@ LEFT JOIN gfg_metric_checkpoints metric_checkpoint
       WHEN 'free_game_transition' THEN 'free_game_share'
       WHEN 'windows_support_transition' THEN 'windows_support'
       WHEN 'linux_support_transition' THEN 'linux_support'
+      WHEN 'mac_support_transition' THEN 'mac_support'
   END
  AND metric_checkpoint.metric_version = registry.detector_version
 LEFT JOIN gfg_fact_rollup_checkpoints fact_checkpoint
@@ -264,6 +266,17 @@ type ProjectGameChangeDayParams struct {
 
 func (q *Queries) ProjectGameChangeDay(ctx context.Context, arg ProjectGameChangeDayParams) (int64, error) {
 	row := q.db.QueryRow(ctx, projectGameChangeDay, arg.DetectorKey, arg.DetectorVersion, arg.ProjectionDate)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const projectGameMacChangeDay = `-- name: ProjectGameMacChangeDay :one
+SELECT gfg_project_mac_change_day($1::date)::bigint
+`
+
+func (q *Queries) ProjectGameMacChangeDay(ctx context.Context, projectionDate pgtype.Date) (int64, error) {
+	row := q.db.QueryRow(ctx, projectGameMacChangeDay, projectionDate)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err

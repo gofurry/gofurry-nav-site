@@ -1,20 +1,25 @@
 #!/usr/bin/env node
+import { readFileSync } from 'node:fs'
 import { formatInsightChangeWhen, insightChangeOrder } from '../app/utils/insightChanges.ts'
-import { formatCnyMinorAmount, publicPriceDisplay } from '../app/utils/insightPrices.ts'
+import { formatCnyMinorAmount, formatMinorAmount, priceSegmentKey, publicPriceDisplay } from '../app/utils/insightPrices.ts'
 import { formatInsightRatio, normalizeInsightSlice } from '../app/utils/insightDimensions.ts'
 
-const free = publicPriceDisplay({
+const freePoint = {
   date: '2026-08-28', state: 'free', currency: null,
   initial_amount: null, final_amount: null, discount_percent: null,
-})
+}
+const free = publicPriceDisplay(freePoint)
 assert(free.kind === 'free' && free.amount === null, 'free price lost its distinct state')
 
-const pricedZero = publicPriceDisplay({
+const pricedZeroPoint = {
   date: '2026-08-29', state: 'priced', currency: 'CNY',
   initial_amount: 5800, final_amount: 0, discount_percent: 100,
-})
+}
+const pricedZero = publicPriceDisplay(pricedZeroPoint)
 assert(pricedZero.kind === 'priced' && pricedZero.amount === 0, 'priced zero was confused with free or unavailable')
 assert(formatCnyMinorAmount(pricedZero.amount, 'zh') === '¥0.00', 'priced zero was not formatted as a real CNY price')
+assert(formatMinorAmount(599, 'USD', 'en') === '$5.99', 'regional currency formatting replaced or converted USD')
+assert(priceSegmentKey(pricedZeroPoint) === 'priced:CNY' && priceSegmentKey(freePoint) === 'free', 'price identity segmentation collapsed free/priced currency semantics')
 
 for (const state of ['unknown', 'unpriced']) {
   const unavailable = publicPriceDisplay({
@@ -41,7 +46,15 @@ assert(normalizeInsightSlice('tag', '123') === '123' && normalizeInsightSlice('t
 assert(formatInsightRatio(null) === '—', 'zero denominator was rendered as 0%')
 assert(formatInsightRatio(0) === '0.0%', 'a real zero metric was rendered as unavailable')
 
-console.log('[insights] public price, timeline, and dimension semantics passed')
+const zh = JSON.parse(readFileSync(new URL('../i18n/locales/zh.json', import.meta.url), 'utf8'))
+const en = JSON.parse(readFileSync(new URL('../i18n/locales/en.json', import.meta.url), 'utf8'))
+assert(zh.insights.entity.currentPlayers === '最近观测' && en.insights.entity.currentPlayers === 'Latest Observed', 'entity player observation was presented as realtime')
+assert(zh.insights.entity.observedLow === 'GoFurry 观测最低价' && en.insights.entity.observedLow === 'GoFurry Observed Low', 'bounded observed-low naming drifted')
+for (const forbidden of ['历史最低', 'Historical Low', 'All-time Low', 'Steam Historical Low']) {
+  assert(!JSON.stringify([zh.insights, en.insights]).includes(forbidden), `forbidden observed-low wording leaked: ${forbidden}`)
+}
+
+console.log('[insights] public price, regional identity, timeline, and dimension semantics passed')
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)

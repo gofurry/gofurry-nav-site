@@ -9,10 +9,16 @@ const insightsRoutes = [
   '/insights',
   '/insights/sites?metric=ipv6&range=30d&dimension=country',
   '/insights/games?metric=free&range=30d&dimension=primary_tag',
+  '/insights/games/players?metric=latest_observed',
+  '/insights/games/prices?region=CN',
+  '/insights/games/languages',
   '/insights/changes?domain=site&range=30d',
   '/en/insights',
   '/en/insights/sites?metric=ipv6&range=90d',
   '/en/insights/games?metric=free&range=90d',
+  '/en/insights/games/players?metric=average_30d',
+  '/en/insights/games/prices?region=US',
+  '/en/insights/games/languages',
   '/en/insights/changes?domain=game&range=7d',
 ]
 const removedWorkshopRoutes = [
@@ -295,9 +301,14 @@ try {
         code: 1,
         data: {
           game: { id, name: `Game fixture ${id}` },
-          state: { free: false, windows: true, linux: null, release: 'available', as_of: '2026-08-30' },
-          players: { current: 0, peak_30d: 3, as_of: '2026-08-30T12:00:00Z' },
+          state: { free: false, windows: true, mac: true, linux: null, release: 'available', as_of: '2026-08-30' },
+          players: { current: 0, peak_30d: 3, average_30d: 1.5, as_of: '2026-08-30T12:00:00Z', fact_through: '2026-08-30', eligible_from_30d: '2026-08-01', observed_days_30d: 28, successful_samples_30d: 112, sample_coverage_30d: 0.93 },
           price: { region: 'CN', state: 'priced', currency: 'CNY', initial_amount: 5800, final_amount: 0, discount_percent: 100, as_of: '2026-08-30' },
+          regional_prices: { as_of: '2026-08-30', regions: [
+            { region: 'CN', available: true, state: 'priced', currency: 'CNY', initial_amount: 5800, final_amount: 0, discount_percent: 100, observed_low: { amount: 0, currency: 'CNY', first_seen: '2026-08-30', observed_since: '2026-08-28', initial_amount: 5800, discount_percent: 100 } },
+            { region: 'US', available: true, state: 'unknown', currency: null, initial_amount: null, final_amount: null, discount_percent: null, observed_low: null },
+            { region: 'HK', available: false, state: null, currency: null, initial_amount: null, final_amount: null, discount_percent: null, observed_low: null },
+          ] },
           recent_changes: [
             { type: 'game.price.decreased', date: '2026-08-30', occurred_at: null, entity: { id, name: `Game fixture ${id}` }, detail: null },
             { type: 'game.windows.added', date: '2026-08-29', occurred_at: '2026-08-29T09:30:00Z', entity: { id, name: `Game fixture ${id}` }, detail: null },
@@ -307,7 +318,7 @@ try {
     })
   })
   const playerRequests = { '30d': 0, '90d': 0, all: 0 }
-  const priceRequests = { '30d': 0, '90d': 0, all: 0 }
+  const priceRequests = {}
   await page.route('**/api/v2/game/games/*/insights/players**', (route) => {
     const range = new URL(route.request().url()).searchParams.get('range') || '30d'
     playerRequests[range] += 1
@@ -325,8 +336,11 @@ try {
     })
   })
   await page.route('**/api/v2/game/games/*/insights/prices**', (route) => {
-    const range = new URL(route.request().url()).searchParams.get('range') || '30d'
-    priceRequests[range] += 1
+    const requestUrl = new URL(route.request().url())
+    const range = requestUrl.searchParams.get('range') || '30d'
+    const region = requestUrl.searchParams.get('region') || 'CN'
+    const key = `${region}:${range}`
+    priceRequests[key] = (priceRequests[key] || 0) + 1
     if (range === '90d') return route.abort('failed')
     return route.fulfill({
       status: 200,
@@ -334,10 +348,10 @@ try {
       body: JSON.stringify({
         code: 1,
         data: {
-          requested_range: range, available_from: '2026-08-28', available_through: '2026-08-30',
+          region, requested_range: range, available_from: '2026-08-28', available_through: '2026-08-30',
           points: [
             { date: '2026-08-28', state: 'free', currency: null, initial_amount: null, final_amount: null, discount_percent: null },
-            { date: '2026-08-29', state: 'priced', currency: 'CNY', initial_amount: 5800, final_amount: 0, discount_percent: 100 },
+            { date: '2026-08-29', state: 'priced', currency: region === 'US' ? 'USD' : region === 'HK' ? 'HKD' : 'CNY', initial_amount: 5800, final_amount: 0, discount_percent: 100 },
             { date: '2026-08-30', state: 'unknown', currency: null, initial_amount: null, final_amount: null, discount_percent: null },
           ],
         },
@@ -374,6 +388,17 @@ try {
   assert((await page.locator('[data-current-players]').textContent())?.trim() === '0', 'real player zero was not displayed as zero')
   assert(await page.locator('[data-price-kind="priced"]').count() === 1, 'priced zero was confused with free')
   assert((await page.locator('[data-price-kind="priced"]').textContent())?.includes('¥0.00'), 'priced zero was not visibly priced')
+  assert(await page.locator('[data-observed-low]').getByText('GoFurry 观测最低价', { exact: false }).count() === 1, 'bounded observed-low product naming was not rendered')
+  assert((await page.locator('[data-game-summary]').innerText()).includes('macOS: 支持'), 'Mac was not rendered as a peer platform state')
+  await page.getByRole('button', { name: '美国', exact: true }).click()
+  await page.waitForSelector('[data-game-insights][data-price-region="US"][data-price-loaded-ranges*="US:30d"]')
+  assert(await page.locator('[data-price-kind="unknown"]').count() === 1, 'explicit unknown regional price was collapsed')
+  await page.getByRole('button', { name: '中国香港', exact: true }).click()
+  await page.waitForSelector('[data-game-insights][data-price-region="HK"][data-price-loaded-ranges*="HK:30d"]')
+  assert(await page.locator('[data-price-kind="missing"]').count() === 1, 'missing regional fact was collapsed into explicit unknown')
+  await page.getByRole('button', { name: '中国', exact: true }).click()
+  await page.waitForSelector('[data-game-insights][data-price-region="CN"]')
+  assert(priceRequests['CN:30d'] === 1 && priceRequests['US:30d'] === 1 && priceRequests['HK:30d'] === 1, 'region+range price cache repeated or merged requests')
   const gameTimelineTimes = await page.locator('[data-entity-timeline] time').allTextContents()
   assert(gameTimelineTimes[0]?.trim() === '2026-08-30', 'day-precision Game event fabricated midnight')
   assert(gameTimelineTimes[1]?.includes(':'), 'exact Game event lost its time precision')
@@ -382,7 +407,7 @@ try {
   await page.locator('[data-price-history]').getByText('洞察数据暂不可用', { exact: true }).waitFor()
   await page.locator('[data-game-insights-range="30d"]').click()
   await page.waitForTimeout(250)
-  assert(playerRequests['30d'] === 1 && priceRequests['30d'] === 1, 'returning to cached 30d repeated history requests')
+  assert(playerRequests['30d'] === 1 && priceRequests['CN:30d'] === 1, 'returning to cached 30d repeated history requests')
   await page.locator('[data-game-insights-range="all"]').click()
   await page.waitForSelector('[data-game-insights][data-price-loaded-ranges*="all"]')
   await page.locator('[data-player-history]').getByText('洞察数据暂不可用', { exact: true }).waitFor()
@@ -403,6 +428,52 @@ try {
   await page.locator('[data-range="90d"]').click()
   await page.waitForURL(url => url.searchParams.get('metric') === 'linux' && url.searchParams.get('range') === '90d')
   assert(await page.locator('.insights-domain-page').getAttribute('data-selected-metric') === 'linux', 'game metric interaction did not update locally')
+  await page.locator('[data-metric-key="mac"]').click()
+  await page.waitForURL(url => url.searchParams.get('metric') === 'mac')
+  assert(await page.locator('.insights-domain-page').getAttribute('data-selected-metric') === 'mac', 'Mac did not enter the existing Metric/dimension product flow')
+
+  await page.route('**/api/v2/game/insights/players/ranking**', (route) => {
+    const metric = new URL(route.request().url()).searchParams.get('metric') || 'latest_observed'
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 1, data: {
+      metric, basis: metric === 'latest_observed' ? 'scheduled_snapshot' : 'finalized_daily_facts',
+      snapshot_scheduled_for: '2026-09-01T00:00:00Z', latest_slot_scheduled_for: '2026-09-02T00:00:00Z',
+      observed_from: '2026-09-01T00:01:00Z', observed_through: '2026-09-01T00:02:00Z',
+      window_from: '2026-08-03', window_through: '2026-09-01', population: 2, ranked: 1, entity_coverage: 0.5,
+      items: [{ rank: 1, game: { id: 82, name: 'Zero fixture' }, value: 0, observed_at: metric === 'latest_observed' ? '2026-09-01T00:01:00Z' : null, eligible_from: '2026-08-03', observed_days: 28, successful_samples: 112, sample_coverage: null }],
+    } }) })
+  })
+  await page.route('**/api/v2/game/insights/prices/overview**', (route) => {
+    const region = new URL(route.request().url()).searchParams.get('region') || 'CN'
+    if (region === 'HK') return route.abort('failed')
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 1, data: { region, as_of: '2026-09-01', population: 4, priced: 1, free: 1, unpriced: 1, unknown: 0, unavailable: 1, known: 3, coverage: 0.75, discounted: 1, discounted_share: 1 } }) })
+  })
+  await page.route('**/api/v2/game/insights/prices/discounts**', (route) => {
+    const region = new URL(route.request().url()).searchParams.get('region') || 'CN'
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 1, data: { region, as_of: '2026-09-01', items: [{ game: { id: 82, name: 'Priced zero fixture' }, currency: region === 'US' ? 'USD' : 'CNY', initial_amount: 1000, final_amount: 0, discount_percent: 100, observed_low: { amount: 0, currency: region === 'US' ? 'USD' : 'CNY', first_seen: '2026-09-01', observed_since: '2026-08-30', initial_amount: 1000, discount_percent: 100 } }] } }) })
+  })
+  await page.route('**/api/v2/game/insights/languages/overview**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 1, data: {
+    as_of: '2026-09-01', freshness_seconds: 259200, population: 3, fresh: 2, stale: 1, unobserved: 0, coverage: 2 / 3,
+    fully_normalized_games: 1, unmapped_games: 1, unmapped_entries: 1, normalization_coverage: 0.5,
+    items: [{ code: 'en', steam_name: 'English', supported_games: 2, share: 1, explicit_full_audio_games: 1, explicit_full_audio_share: 0.5 }],
+  } }) }))
+
+  await page.locator('.game-intelligence-nav a[href="/insights/games/players"]').click()
+  await page.waitForSelector('[data-player-intelligence]')
+  await page.getByRole('button', { name: '30 天观测均值', exact: true }).click()
+  await page.waitForURL(url => url.searchParams.get('metric') === 'average_30d')
+  await page.getByText('112 个成功样本', { exact: false }).waitFor()
+  assert((await page.locator('.intelligence-table tbody tr td').nth(2).textContent())?.trim() === '0', 'Player ranking lost a real zero')
+  await page.locator('.game-intelligence-nav a[href="/insights/games/prices"]').click()
+  await page.waitForSelector('[data-regional-price-intelligence]')
+  await page.getByRole('button', { name: '中国香港', exact: true }).click()
+  await page.waitForURL(url => url.searchParams.get('region') === 'HK')
+  await page.getByText('Priced zero fixture', { exact: true }).waitFor()
+  assert(await page.locator('.intelligence-panel .intelligence-table').count() === 1, 'Price overview failure broke the independent discount list')
+  await page.locator('.game-intelligence-nav a[href="/insights/games/languages"]').click()
+  await page.waitForSelector('[data-language-intelligence]')
+  await page.getByText('明确标注完整音频', { exact: true }).waitFor()
+  await page.getByText('语言是重叠分布，各语言比例不能相加推导 100%。', { exact: true }).waitFor()
+  console.log('[insights] P2.2 Player, regional Price, Mac, Language URL/zero/quality/failure semantics passed')
 
   const changePage = (domain, cursor) => ({
     items: [{

@@ -229,11 +229,53 @@ VALUES
 					t.Fatal(err)
 				}
 				expectedDetectors := 5
-				if test.label == "gfn" {
+				if test.label == "gfg" {
+					expectedDetectors = 6
+				} else if test.label == "gfn" {
 					expectedDetectors = 7
 				}
 				if registryCount != expectedDetectors || checkpointCount != expectedDetectors {
 					t.Fatalf("%s current detector seeds registry=%d checkpoints=%d, want %d", test.label, registryCount, checkpointCount, expectedDetectors)
+				}
+			}
+
+			// Exercise the staged P2.2 Game Mac rollout boundary: the Metric
+			// contract is independently deployable/backfillable before the Change
+			// contract, and the completed upgrade converges on the current schema.
+			if test.label == "gfg" {
+				upgradeName := temporaryDatabaseName(test.label, "p22_mac_upgrade")
+				createDatabase(t, ctx, adminDB, upgradeName)
+				defer dropDatabase(t, adminDB, upgradeName)
+				upgradeDB := openDatabase(t, adminDSN, upgradeName)
+				defer upgradeDB.Close()
+				if err := goose.UpToContext(ctx, upgradeDB, migrationDir, 20260902010000); err != nil {
+					t.Fatalf("prepare gfg P2.2 Mac Metric boundary: %v", err)
+				}
+				var metricContracts, changeContracts int
+				if err := upgradeDB.QueryRowContext(ctx, `SELECT count(*) FROM gfg_metric_registry WHERE metric_key='mac_support' AND metric_version=1 AND status='active'`).Scan(&metricContracts); err != nil {
+					t.Fatal(err)
+				}
+				if err := upgradeDB.QueryRowContext(ctx, `SELECT count(*) FROM gfg_change_registry WHERE detector_key='mac_support_transition'`).Scan(&changeContracts); err != nil {
+					t.Fatal(err)
+				}
+				if metricContracts != 1 || changeContracts != 0 {
+					t.Fatalf("staged Mac boundary metric=%d change=%d", metricContracts, changeContracts)
+				}
+				if err := goose.UpContext(ctx, upgradeDB, migrationDir); err != nil {
+					t.Fatalf("upgrade gfg P2.2 Mac Change boundary: %v", err)
+				}
+				if err := upgradeDB.QueryRowContext(ctx, `SELECT count(*) FROM gfg_change_registry WHERE detector_key='mac_support_transition' AND detector_version=1 AND status='active'`).Scan(&changeContracts); err != nil {
+					t.Fatal(err)
+				}
+				if changeContracts != 1 {
+					t.Fatalf("completed Mac Change contracts=%d", changeContracts)
+				}
+				upgradeActual, err := schema.Inspect(ctx, upgradeDB)
+				if err != nil {
+					t.Fatalf("inspect P2.2-upgraded gfg schema: %v", err)
+				}
+				if difference := schema.Difference(expected, upgradeActual); difference != "" {
+					t.Fatalf("P2.2 Mac staged upgrade schema drift: %s", difference)
 				}
 			}
 

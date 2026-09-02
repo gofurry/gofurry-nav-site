@@ -95,6 +95,9 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	if detail.FirstAvailable == nil || detail.FirstAvailable.Precision != "month" || detail.FirstAvailable.ExactDate != nil || detail.FirstAvailable.WindowStart != "2026-08-01" || detail.FirstAvailable.WindowEnd != "2026-08-31" || len(detail.Languages) != 2 || detail.Languages[1].Code != nil || detail.Languages[1].SteamName != "Klingon" {
 		t.Fatalf("unexpected canonical domain aggregate: first=%+v languages=%+v", detail.FirstAvailable, detail.Languages)
 	}
+	if detail.Languages[0].InterfaceSupported != nil || detail.Languages[0].SubtitlesSupported != nil || detail.Languages[0].FullAudioSupported == nil || !*detail.Languages[0].FullAudioSupported {
+		t.Fatalf("nullable Interface/Subtitle or Explicit Full Audio semantics changed: %+v", detail.Languages[0])
+	}
 	if _, gfErr = readDAO.GetGameDetailAggregate(ctx, v2models.GameV2DetailQuery{GameID: 999999}); gfErr == nil {
 		t.Fatal("missing detail should preserve not-found error behavior")
 	}
@@ -244,13 +247,39 @@ func seedGameInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now
 	_, err := pool.Exec(ctx, `
 INSERT INTO gfg_game_tracking_periods
     (id,game_id,appid,tracked_from,tracking_basis,opened_reason)
-VALUES (99001,91001,92001,$1::timestamptz - interval '60 days','explicit','insights_test');
+VALUES (99001,91001,92001,$1::timestamptz - interval '60 days','explicit','insights_test'),
+       (99002,91002,92002,$1::timestamptz - interval '60 days','explicit','insights_test');
+INSERT INTO gfg_collector_instances
+    (instance_id,collector_id,hostname,version,commit_sha,capabilities,started_at,last_heartbeat_at)
+VALUES ('insights-ranking-instance','insights-ranking','localhost','test','test',ARRAY['game.players'],$1::timestamptz - interval '3 hours',$1::timestamptz);
+INSERT INTO gfg_collection_schedules
+    (id,job_key,name,schedule_kind,cron_expression,timezone,misfire_policy,priority,concurrency_key,effective_from)
+VALUES (99100,'game.players','Insights ranking fixture','cron','0 * * * *','UTC','skip',1,'insights-ranking',$1::timestamptz - interval '1 day');
+INSERT INTO gfg_collection_jobs
+    (id,schedule_id,schedule_version,job_key,trigger,scope_type,tasks,priority,concurrency_key,
+     scheduled_for,status,requested_by,created_at,updated_at,completed_at)
+VALUES (99101,99100,1,'game.players','scheduled','all',ARRAY['players'],1,'insights-ranking',
+        $1::timestamptz - interval '2 hours','success','fixture',$1::timestamptz - interval '2 hours',$1::timestamptz - interval '2 hours',$1::timestamptz - interval '1 hour 50 minutes');
+INSERT INTO gfg_collection_jobs
+    (id,schedule_id,schedule_version,job_key,trigger,scope_type,tasks,priority,concurrency_key,
+     scheduled_for,status,requested_by,created_at,updated_at,completed_at)
+VALUES (99102,99100,1,'game.players','scheduled','all',ARRAY['players'],1,'insights-ranking',
+        $1::timestamptz - interval '1 hour','failed','fixture',$1::timestamptz - interval '1 hour',$1::timestamptz - interval '1 hour',$1::timestamptz - interval '50 minutes');
+INSERT INTO gfg_collection_jobs
+    (id,job_key,trigger,scope_type,tasks,priority,concurrency_key,status,requested_by,created_at,updated_at,completed_at)
+VALUES (99103,'game.players','manual','all',ARRAY['players'],1,'insights-ranking','success','fixture',$1::timestamptz,$1::timestamptz,$1::timestamptz);
+INSERT INTO gfg_collection_runs
+    (id,job_id,attempt_no,collector_instance_id,status,scheduled_for,started_at,ended_at,
+     expected_count,attempted_count,success_count,partial_count,failure_count,skipped_count)
+VALUES ('insights-ranking-scheduled',99101,1,'insights-ranking-instance','success',$1::timestamptz - interval '2 hours',$1::timestamptz - interval '2 hours',$1::timestamptz - interval '1 hour 50 minutes',2,1,1,0,0,0),
+       ('insights-ranking-manual',99103,1,'insights-ranking-instance','success',NULL,$1::timestamptz,$1::timestamptz,1,1,1,0,0,0);
 INSERT INTO gfg_game_daily
     (game_id,fact_date,tracking_period_id,appid,snapshot_at,tracked_at_end,name,name_en,view_count,
-     is_free,windows,linux,release_availability,developers,publishers,tag_ids,details_observed_at,
+     is_free,windows,linux,release_availability,language_codes,unknown_language_names,
+     full_audio_language_codes,languages_observed_at,developers,publishers,tag_ids,details_observed_at,
      materialization_source,projection_version,finalized_at)
 VALUES (91001,$2::date,99001,92001,$1,true,'中文游戏','English Game',3,false,true,true,'available',
-        ARRAY['Dev'],ARRAY['Pub'],ARRAY[1::bigint],$1,'observed',1,$1);
+        ARRAY['en'],ARRAY['Klingon'],ARRAY['en'],$1,ARRAY['Dev'],ARRAY['Pub'],ARRAY[1::bigint],$1,'observed',1,$1);
 INSERT INTO gfg_metric_daily
     (metric_key,metric_version,fact_date,dimension_key,dimension_value,population_count,eligible_count,
      not_applicable_count,positive_count,negative_count,stale_count,not_probed_count,probe_failed_count,unknown_count,computed_at)
@@ -264,7 +293,9 @@ VALUES
     ('windows_support',1,$2::date,'global','all',10,10,0,8,2,0,0,0,0,$1);
 INSERT INTO gfg_game_player_counts (run_id,game_id,appid,count,status,collected_at)
 VALUES ('insights-zero',91001,92001,0,'success',$1::timestamptz + interval '1 second'),
-       ('insights-failed',91001,92001,0,'failure',$1::timestamptz + interval '2 seconds');
+       ('insights-failed',91001,92001,0,'failure',$1::timestamptz + interval '2 seconds'),
+       ('insights-ranking-scheduled',91001,92001,0,'success',$1::timestamptz - interval '1 hour 59 minutes'),
+       ('insights-ranking-manual',91001,92001,999,'success',$1::timestamptz + interval '3 seconds');
 INSERT INTO gfg_game_player_daily
     (tracking_period_id,game_id,appid,fact_date,min_players,max_players,avg_players,median_players,
      attempted_samples,successful_samples,partial_samples,failed_samples,failure_kind_counts,
@@ -272,12 +303,21 @@ INSERT INTO gfg_game_player_daily
 VALUES
     (99001,91001,92001,$2::date - 1,0,0,0,0,1,1,0,0,'{}','legacy_observed_only',1,$1),
     (99001,91001,92001,$2::date, NULL,NULL,NULL,NULL,1,0,0,1,'{"request_failed":1}','legacy_observed_only',1,$1);
+UPDATE gfg_fact_rollup_checkpoints
+SET processed_through = $2::date,
+    updated_at = $1
+WHERE pipeline_key = 'game.player_facts';
 INSERT INTO gfg_game_price_daily
     (tracking_period_id,game_id,appid,region,fact_date,price_state,currency,initial_amount,final_amount,discount_percent,
      materialization_source,projection_version,finalized_at)
 VALUES
+    (99001,91001,92001,'CN',$2::date - 5,'priced','CNY',700,500,28,'observed',1,$1),
+    (99001,91001,92001,'CN',$2::date - 4,'priced','USD',600,400,33,'observed',1,$1),
+    (99001,91001,92001,'CN',$2::date - 2,'priced','CNY',300,200,33,'observed',1,$1),
     (99001,91001,92001,'CN',$2::date - 1,'free',NULL,NULL,NULL,NULL,'observed',1,$1),
     (99001,91001,92001,'CN',$2::date,'priced','CNY',1000,0,100,'observed',1,$1),
+    (99001,91001,92001,'US',$2::date - 1,'unpriced',NULL,NULL,NULL,NULL,'observed',1,$1),
+    (99001,91001,92001,'US',$2::date,'unknown',NULL,NULL,NULL,NULL,'observed',1,$1),
     (99001,91001,92001,'HK',$2::date + 1,'priced','HKD',2000,1800,10,'observed',1,$1);
 INSERT INTO gfg_change_events
     (event_key,detector_key,detector_version,game_id,projection_date,event_at,time_basis,event_code,scope_kind,scope_key,
@@ -312,11 +352,17 @@ func assertGameInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if summary.Players.Current == nil || *summary.Players.Current != 0 || summary.Players.Peak30D == nil || *summary.Players.Peak30D != 0 {
-		t.Fatalf("real zero player summary: %#v", summary.Players)
+	if summary.Players.Current == nil || *summary.Players.Current != 999 || summary.Players.Peak30D == nil || *summary.Players.Peak30D != 0 {
+		t.Fatalf("manual entity current/real zero daily peak: %#v", summary.Players)
+	}
+	if summary.Players.Average30D == nil || *summary.Players.Average30D != 0 || summary.Players.FactThrough == nil || summary.Players.ObservedDays30D != 1 || summary.Players.SuccessfulSamples30D != 1 {
+		t.Fatalf("player weighted average/common horizon/quality: %#v", summary.Players)
 	}
 	if summary.Price == nil || summary.Price.Region != "CN" || summary.Price.State != "priced" || summary.Price.FinalAmount == nil || *summary.Price.FinalAmount != 0 {
 		t.Fatalf("CN priced-zero summary: %#v", summary.Price)
+	}
+	if len(summary.RegionalPrices.Regions) != 3 || !summary.RegionalPrices.Regions[0].Available || summary.RegionalPrices.Regions[0].ObservedLow == nil || summary.RegionalPrices.Regions[0].ObservedLow.Amount != 0 || !summary.RegionalPrices.Regions[1].Available || summary.RegionalPrices.Regions[1].State == nil || *summary.RegionalPrices.Regions[1].State != "unknown" || summary.RegionalPrices.Regions[2].Available {
+		t.Fatalf("regional common horizon/missing fact/observed low: %#v", summary.RegionalPrices)
 	}
 	players, err := svc.GetGamePlayerInsights(ctx, 91001, "all")
 	if err != nil {
@@ -325,12 +371,56 @@ func assertGameInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	if len(players.Points) != 1 || players.Points[0].Max != 0 {
 		t.Fatalf("failed day became zero or real zero was lost: %#v", players.Points)
 	}
-	prices, err := svc.GetGamePriceInsights(ctx, 91001, "all")
+	prices, err := svc.GetGamePriceInsights(ctx, 91001, "CN", "all")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(prices.Points) != 2 || prices.Points[0].State != "free" || prices.Points[0].FinalAmount != nil || prices.Points[1].State != "priced" || prices.Points[1].FinalAmount == nil || *prices.Points[1].FinalAmount != 0 {
+	if len(prices.Points) != 5 || prices.Points[3].State != "free" || prices.Points[3].FinalAmount != nil || prices.Points[4].State != "priced" || prices.Points[4].FinalAmount == nil || *prices.Points[4].FinalAmount != 0 {
 		t.Fatalf("free/priced-zero/CN-only semantics: %#v", prices.Points)
+	}
+	if prices.Points[1].Currency == nil || *prices.Points[1].Currency != "USD" || prices.Points[2].Date == prices.Points[1].Date {
+		t.Fatalf("currency/missing-day history semantics: %#v", prices.Points)
+	}
+	usPrices, err := svc.GetGamePriceInsights(ctx, 91001, "US", "all")
+	if err != nil || len(usPrices.Points) != 2 || usPrices.Points[0].State != "unpriced" || usPrices.Points[1].State != "unknown" {
+		t.Fatalf("non-priced regional history must preserve gaps and avoid CN fallback: %#v err=%v", usPrices, err)
+	}
+	insightsDAO := v2dao.NewInsightsDAO(queries)
+	currentDay, parseErr := time.Parse("2006-01-02", *summary.RegionalPrices.AsOf)
+	if parseErr != nil {
+		t.Fatal(parseErr)
+	}
+	currencyLow, err := insightsDAO.GetInsightObservedLow(ctx, 99001, "CN", currentDay.AddDate(0, 0, -4))
+	if err != nil || currencyLow == nil || currencyLow.Amount != 400 || currencyLow.Currency != "USD" || !currencyLow.ObservedSince.Equal(currentDay.AddDate(0, 0, -4)) {
+		t.Fatalf("observed low currency identity break: %#v err=%v", currencyLow, err)
+	}
+	missingDayLow, err := insightsDAO.GetInsightObservedLow(ctx, 99001, "CN", currentDay.AddDate(0, 0, -2))
+	if err != nil || missingDayLow == nil || missingDayLow.Amount != 200 || !missingDayLow.ObservedSince.Equal(currentDay.AddDate(0, 0, -2)) {
+		t.Fatalf("observed low missing-day identity break: %#v err=%v", missingDayLow, err)
+	}
+	nonPricedLow, err := insightsDAO.GetInsightObservedLow(ctx, 99001, "US", currentDay)
+	if err != nil || nonPricedLow != nil {
+		t.Fatalf("non-priced current state retained old observed low: %#v err=%v", nonPricedLow, err)
+	}
+	priceOverview, err := svc.GetPriceOverview(ctx, "CN")
+	if err != nil || priceOverview.Population != 1 || priceOverview.Priced != 1 || priceOverview.Known != 1 || priceOverview.Coverage == nil || *priceOverview.Coverage != 1 {
+		t.Fatalf("regional price overview population math: %#v err=%v", priceOverview, err)
+	}
+	discounts, err := svc.GetDiscounts(ctx, "CN", 20)
+	if err != nil || len(discounts.Items) != 1 || discounts.Items[0].FinalAmount != 0 || discounts.Items[0].DiscountPercent != 100 || discounts.Items[0].ObservedLow == nil {
+		t.Fatalf("priced zero discount/observed low: %#v err=%v", discounts, err)
+	}
+	languages, err := svc.GetLanguageOverview(ctx)
+	if err != nil || languages.Population != 1 || languages.Fresh != 1 || len(languages.Items) != 1 || languages.Items[0].Code != "en" || languages.Items[0].ExplicitFullAudioGames != 1 || languages.UnmappedGames != 1 || languages.UnmappedEntries != 1 {
+		t.Fatalf("language overlapping/full-audio/normalization semantics: %#v err=%v", languages, err)
+	}
+	latestRanking, err := svc.GetPlayerRanking(ctx, v2models.InsightPlayerRankingQuery{Metric: "latest_observed", Limit: 20})
+	if err != nil || latestRanking.Population != 2 || latestRanking.Ranked != 1 || len(latestRanking.Items) != 1 || latestRanking.Items[0].Value != 0 || latestRanking.SnapshotScheduledFor == nil || latestRanking.LatestSlotScheduledFor == nil || !latestRanking.LatestSlotScheduledFor.After(*latestRanking.SnapshotScheduledFor) {
+		t.Fatalf("scheduled snapshot/manual exclusion/latest failed slot/real zero: %#v err=%v", latestRanking, err)
+	}
+	averageRanking, err := svc.GetPlayerRanking(ctx, v2models.InsightPlayerRankingQuery{Metric: "average_30d", Limit: 20})
+	if err != nil || averageRanking.Population != 2 || averageRanking.Ranked != 1 || len(averageRanking.Items) != 1 || averageRanking.Items[0].Value != 0 || averageRanking.Items[0].ObservedDays == nil || *averageRanking.Items[0].ObservedDays != 1 || averageRanking.Items[0].SampleCoverage != nil {
+		t.Fatalf("common 30d horizon/weighted average/legacy coverage: %#v err=%v", averageRanking, err)
 	}
 	breakdown, err := svc.GetInsightsMetricBreakdown(ctx, "free", "tag")
 	if err != nil || breakdown.AsOf == nil || breakdown.SliceMode != "overlapping" || len(breakdown.Items) != 2 || breakdown.Items[0].LabelEn == nil || *breakdown.Items[0].LabelEn != "Tag #999" || breakdown.Items[1].MetricValue != nil {

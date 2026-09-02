@@ -41,6 +41,10 @@ type gameInsightsAPI interface {
 	GetInsightsMetricBreakdown(fiber.Ctx) error
 	GetInsightsMetricSliceTrend(fiber.Ctx) error
 	GetInsightsChanges(fiber.Ctx) error
+	GetPlayerRanking(fiber.Ctx) error
+	GetPriceOverview(fiber.Ctx) error
+	GetDiscounts(fiber.Ctx) error
+	GetLanguageOverview(fiber.Ctx) error
 	GetGameInsights(fiber.Ctx) error
 	GetGamePlayerInsights(fiber.Ctx) error
 	GetGamePriceInsights(fiber.Ctx) error
@@ -52,6 +56,10 @@ func registerGameInsightRoutes(g fiber.Router, insights gameInsightsAPI) {
 	g.Get("/insights/metrics/:metricKey/breakdown", insights.GetInsightsMetricBreakdown)
 	g.Get("/insights/metrics/:metricKey/breakdown/:dimension/:value/trend", insights.GetInsightsMetricSliceTrend)
 	g.Get("/insights/changes", insights.GetInsightsChanges)
+	g.Get("/insights/players/ranking", insights.GetPlayerRanking)
+	g.Get("/insights/prices/overview", insights.GetPriceOverview)
+	g.Get("/insights/prices/discounts", insights.GetDiscounts)
+	g.Get("/insights/languages/overview", insights.GetLanguageOverview)
 	g.Get("/games/:gameId/insights", insights.GetGameInsights)
 	g.Get("/games/:gameId/insights/players", insights.GetGamePlayerInsights)
 	g.Get("/games/:gameId/insights/prices", insights.GetGamePriceInsights)

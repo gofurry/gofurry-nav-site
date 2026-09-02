@@ -16,12 +16,16 @@ var (
 	ErrInvalidInsightSlice     = errors.New("invalid public dimension slice")
 	ErrInvalidInsightChanges   = errors.New("invalid change explorer query")
 	ErrInvalidInsightCursor    = errors.New("invalid change explorer cursor")
+	ErrInvalidInsightRegion    = errors.New("invalid insights region")
+	ErrInvalidPlayerRanking    = errors.New("invalid player ranking query")
+	ErrInvalidInsightLimit     = errors.New("invalid insights limit")
 	ErrInsightGameNotFound     = errors.New("game not found")
 )
 
 var insightMetricContracts = []v2models.InsightMetricContract{
 	{PublicKey: "free", InternalKey: "free_game_share", Version: 1},
 	{PublicKey: "windows", InternalKey: "windows_support", Version: 1},
+	{PublicKey: "mac", InternalKey: "mac_support", Version: 1},
 	{PublicKey: "linux", InternalKey: "linux_support", Version: 1},
 }
 
@@ -40,6 +44,8 @@ var insightChangeContracts = []insightChangeContract{
 	{"windows_support_transition", 1, "windows_support_removed", "game.windows.removed", "platform"},
 	{"linux_support_transition", 1, "linux_support_added", "game.linux.added", "platform"},
 	{"linux_support_transition", 1, "linux_support_removed", "game.linux.removed", "platform"},
+	{"mac_support_transition", 1, "mac_support_added", "game.mac.added", "platform"},
+	{"mac_support_transition", 1, "mac_support_removed", "game.mac.removed", "platform"},
 	{"game_release_transition", 1, "game_became_available", "game.release.available", "release"},
 	{"game_release_transition", 1, "game_availability_withdrawn", "game.release.withdrawn", "release"},
 	{"game_release_transition", 1, "game_release_plan_changed", "game.release.changed", "release"},
@@ -62,9 +68,18 @@ type InsightsStore interface {
 	ListInsightMetricSliceTrend(context.Context, v2models.InsightMetricContract, v2models.InsightDimensionContract, string, time.Time, int32) ([]v2models.InsightDimensionTrendRecord, error)
 	GetInsightGameState(context.Context, int64) (*v2models.InsightGameStateRecord, error)
 	GetInsightPlayerSummary(context.Context, v2models.InsightGameStateRecord) (v2models.InsightPlayerSummaryRecord, error)
-	GetInsightPriceSummary(context.Context, int64) (*v2models.InsightPriceRecord, error)
 	ListInsightPlayerHistory(context.Context, int64, int32) ([]v2models.InsightPlayerPointRecord, error)
-	ListInsightPriceHistory(context.Context, int64, int32) ([]v2models.InsightPriceRecord, error)
+	ListInsightPriceHistory(context.Context, int64, string, time.Time, int32) ([]v2models.InsightPriceRecord, error)
+	ListInsightRegionalPrices(context.Context, int64, time.Time) ([]v2models.InsightRegionalPriceRecord, error)
+	GetInsightObservedLow(context.Context, int64, string, time.Time) (*v2models.InsightObservedLowRecord, error)
+	GetLatestPlayerRankingMeta(context.Context) (v2models.InsightPlayerRankingMetaRecord, error)
+	ListLatestPlayerRanking(context.Context, int32) ([]v2models.InsightPlayerRankingRecord, error)
+	GetPlayer30DRankingMeta(context.Context) (v2models.InsightPlayerRankingMetaRecord, error)
+	ListPlayer30DRanking(context.Context, bool, int32) ([]v2models.InsightPlayerRankingRecord, error)
+	GetInsightPriceOverview(context.Context, string) (v2models.InsightPriceOverviewRecord, error)
+	ListInsightDiscounts(context.Context, string, int32) ([]v2models.InsightDiscountRecord, error)
+	GetInsightLanguageOverview(context.Context) (v2models.InsightLanguageOverviewRecord, error)
+	ListInsightLanguages(context.Context) ([]v2models.InsightLanguageRecord, error)
 	CountInsightOverviewChanges(context.Context, []string, []string) (int64, error)
 	ListInsightOverviewChanges(context.Context, []string, []string, int32) ([]v2models.InsightChangeRecord, error)
 	ListInsightExplorerChanges(context.Context, v2models.InsightChangeExplorerConditions) ([]v2models.InsightChangeRecord, error)
@@ -154,7 +169,7 @@ func (s *InsightsService) GetGameInsights(ctx context.Context, gameID int64) (v2
 	if state != nil {
 		asOf := insightFormatDate(state.FactDate)
 		result.State = v2models.InsightGameState{
-			Free: state.Free, Windows: state.Windows, Linux: state.Linux, Release: state.Release, AsOf: &asOf,
+			Free: state.Free, Windows: state.Windows, Mac: state.Mac, Linux: state.Linux, Release: state.Release, AsOf: &asOf,
 		}
 		players, queryErr := s.store.GetInsightPlayerSummary(ctx, *state)
 		if queryErr != nil {
@@ -165,17 +180,19 @@ func (s *InsightsService) GetGameInsights(ctx context.Context, gameID int64) (v2
 			result.Players.Current = &value
 			result.Players.AsOf = players.CurrentAt
 		}
-		if players.HasPeak30D {
-			value := players.Peak30D
-			result.Players.Peak30D = &value
-		}
-		price, queryErr := s.store.GetInsightPriceSummary(ctx, state.TrackingPeriodID)
+		result.Players.Peak30D = players.Peak30D
+		result.Players.Average30D = players.Average30D
+		result.Players.FactThrough = insightDateStringPointer(players.FactThrough)
+		result.Players.EligibleFrom30D = insightDateStringPointer(players.EligibleFrom)
+		result.Players.ObservedDays30D = players.ObservedDays
+		result.Players.SuccessfulSamples30D = players.SuccessfulSamples
+		result.Players.SampleCoverage30D = players.SampleCoverage
+		regional, queryErr := s.regionalPrices(ctx, *state)
 		if queryErr != nil {
 			return result, queryErr
 		}
-		if price != nil {
-			result.Price = insightPublicPrice(*price)
-		}
+		result.RegionalPrices = regional
+		result.Price = compatibilityCNPrice(regional)
 	}
 	detectors, contracts := insightChangeQueryContracts()
 	changes, err := s.store.ListInsightGameChanges(ctx, *game, detectors, contracts, 20)
@@ -212,8 +229,11 @@ func (s *InsightsService) GetGamePlayerInsights(ctx context.Context, gameID int6
 	return result, nil
 }
 
-func (s *InsightsService) GetGamePriceInsights(ctx context.Context, gameID int64, requestedRange string) (v2models.InsightPriceHistory, error) {
-	result := v2models.InsightPriceHistory{RequestedRange: requestedRange, Points: []v2models.InsightPricePoint{}}
+func (s *InsightsService) GetGamePriceInsights(ctx context.Context, gameID int64, region, requestedRange string) (v2models.InsightPriceHistory, error) {
+	result := v2models.InsightPriceHistory{Region: region, RequestedRange: requestedRange, Points: []v2models.InsightPricePoint{}}
+	if !validInsightRegion(region) {
+		return result, ErrInvalidInsightRegion
+	}
 	rangeDays, ok := parseInsightRange(requestedRange)
 	if !ok {
 		return result, ErrInvalidInsightRange
@@ -225,7 +245,7 @@ func (s *InsightsService) GetGamePriceInsights(ctx context.Context, gameID int64
 	if err != nil || state == nil {
 		return result, err
 	}
-	rows, err := s.store.ListInsightPriceHistory(ctx, state.TrackingPeriodID, rangeDays)
+	rows, err := s.store.ListInsightPriceHistory(ctx, state.TrackingPeriodID, region, state.FactDate, rangeDays)
 	if err != nil {
 		return result, err
 	}

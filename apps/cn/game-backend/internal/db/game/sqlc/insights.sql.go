@@ -65,6 +65,112 @@ func (q *Queries) GetGameInsightGame(ctx context.Context, gameID int64) (GetGame
 	return i, err
 }
 
+const getGameInsightLanguageOverview = `-- name: GetGameInsightLanguageOverview :one
+WITH horizon AS (
+    SELECT max(fact_date)::date AS as_of FROM public.gfg_game_daily
+    WHERE finalized_at IS NOT NULL AND tracked_at_end
+), cohort AS (
+    SELECT fact.game_id, fact.fact_date, fact.tracking_period_id, fact.appid, fact.snapshot_at, fact.tracked_at_end, fact.name, fact.name_en, fact.view_count, fact.game_type, fact.is_free, fact.windows, fact.mac, fact.linux, fact.release_availability, fact.release_precision, fact.release_exact_date, fact.release_year, fact.release_month, fact.release_quarter, fact.release_window_start, fact.release_window_end, fact.release_observed_at, fact.first_available_precision, fact.first_available_exact_date, fact.first_available_year, fact.first_available_month, fact.first_available_quarter, fact.first_available_window_start, fact.first_available_window_end, fact.first_available_source, fact.first_available_inferred, fact.language_codes, fact.unknown_language_names, fact.full_audio_language_codes, fact.languages_observed_at, fact.developers, fact.publishers, fact.primary_tag_id, fact.secondary_tag_id, fact.tag_ids, fact.details_observed_at, fact.materialization_source, fact.projection_version, fact.finalized_at, fact.created_at, fact.updated_at,
+           CASE WHEN fact.languages_observed_at IS NULL THEN 'unobserved'
+                WHEN fact.languages_observed_at < ((horizon.as_of + 1)::timestamp AT TIME ZONE 'UTC') - interval '259200 seconds' THEN 'stale'
+                ELSE 'fresh' END AS evidence
+    FROM horizon JOIN public.gfg_game_daily fact ON fact.fact_date = horizon.as_of
+      AND fact.finalized_at IS NOT NULL AND fact.tracked_at_end
+)
+SELECT horizon.as_of, count(cohort.game_id)::bigint AS population,
+       count(*) FILTER (WHERE evidence = 'fresh')::bigint AS fresh,
+       count(*) FILTER (WHERE evidence = 'stale')::bigint AS stale,
+       count(*) FILTER (WHERE evidence = 'unobserved')::bigint AS unobserved,
+       count(*) FILTER (WHERE evidence = 'fresh' AND COALESCE(cardinality(unknown_language_names), 0) = 0)::bigint AS fully_normalized_games,
+       count(*) FILTER (WHERE evidence = 'fresh' AND COALESCE(cardinality(unknown_language_names), 0) > 0)::bigint AS unmapped_games,
+       COALESCE(sum(cardinality(unknown_language_names)) FILTER (WHERE evidence = 'fresh'), 0)::bigint AS unmapped_entries
+FROM horizon LEFT JOIN cohort ON true GROUP BY horizon.as_of
+`
+
+type GetGameInsightLanguageOverviewRow struct {
+	AsOf                 pgtype.Date `json:"as_of"`
+	Population           int64       `json:"population"`
+	Fresh                int64       `json:"fresh"`
+	Stale                int64       `json:"stale"`
+	Unobserved           int64       `json:"unobserved"`
+	FullyNormalizedGames int64       `json:"fully_normalized_games"`
+	UnmappedGames        int64       `json:"unmapped_games"`
+	UnmappedEntries      int64       `json:"unmapped_entries"`
+}
+
+func (q *Queries) GetGameInsightLanguageOverview(ctx context.Context) (GetGameInsightLanguageOverviewRow, error) {
+	row := q.db.QueryRow(ctx, getGameInsightLanguageOverview)
+	var i GetGameInsightLanguageOverviewRow
+	err := row.Scan(
+		&i.AsOf,
+		&i.Population,
+		&i.Fresh,
+		&i.Stale,
+		&i.Unobserved,
+		&i.FullyNormalizedGames,
+		&i.UnmappedGames,
+		&i.UnmappedEntries,
+	)
+	return i, err
+}
+
+const getGameInsightLatestPlayerRankingMeta = `-- name: GetGameInsightLatestPlayerRankingMeta :one
+WITH latest_slot AS (
+    SELECT max(scheduled_for) AS scheduled_for
+    FROM public.gfg_collection_jobs
+    WHERE job_key = 'game.players' AND trigger = 'scheduled' AND scope_type = 'all'
+      AND status IN ('success', 'partial', 'failed', 'skipped', 'missed', 'canceled')
+), snapshot AS (
+    SELECT id, scheduled_for
+    FROM public.gfg_collection_jobs
+    WHERE job_key = 'game.players' AND trigger = 'scheduled' AND scope_type = 'all'
+      AND status IN ('success', 'partial')
+    ORDER BY scheduled_for DESC, id DESC LIMIT 1
+), observations AS (
+    SELECT DISTINCT ON (raw.game_id) raw.game_id, raw.collected_at
+    FROM snapshot
+    JOIN public.gfg_collection_runs run ON run.job_id = snapshot.id
+    JOIN public.gfg_game_player_counts raw ON raw.run_id = run.id AND raw.status = 'success'
+    ORDER BY raw.game_id, raw.collected_at DESC, raw.id DESC
+)
+SELECT snapshot.scheduled_for::timestamptz AS snapshot_scheduled_for,
+       latest_slot.scheduled_for::timestamptz AS latest_slot_scheduled_for,
+       min(observations.collected_at)::timestamptz AS observed_from,
+       max(observations.collected_at)::timestamptz AS observed_through,
+       (SELECT count(*)::bigint FROM public.gfg_game_tracking_periods period
+        WHERE snapshot.scheduled_for IS NOT NULL AND period.tracking_basis = 'explicit'
+          AND period.tracked_from <= snapshot.scheduled_for
+          AND (period.tracked_until IS NULL OR snapshot.scheduled_for < period.tracked_until)) AS population,
+       count(observations.game_id)::bigint AS ranked
+FROM latest_slot
+LEFT JOIN snapshot ON true
+LEFT JOIN observations ON true
+GROUP BY snapshot.scheduled_for, latest_slot.scheduled_for
+`
+
+type GetGameInsightLatestPlayerRankingMetaRow struct {
+	SnapshotScheduledFor   pgtype.Timestamptz `json:"snapshot_scheduled_for"`
+	LatestSlotScheduledFor pgtype.Timestamptz `json:"latest_slot_scheduled_for"`
+	ObservedFrom           pgtype.Timestamptz `json:"observed_from"`
+	ObservedThrough        pgtype.Timestamptz `json:"observed_through"`
+	Population             int64              `json:"population"`
+	Ranked                 int64              `json:"ranked"`
+}
+
+func (q *Queries) GetGameInsightLatestPlayerRankingMeta(ctx context.Context) (GetGameInsightLatestPlayerRankingMetaRow, error) {
+	row := q.db.QueryRow(ctx, getGameInsightLatestPlayerRankingMeta)
+	var i GetGameInsightLatestPlayerRankingMetaRow
+	err := row.Scan(
+		&i.SnapshotScheduledFor,
+		&i.LatestSlotScheduledFor,
+		&i.ObservedFrom,
+		&i.ObservedThrough,
+		&i.Population,
+		&i.Ranked,
+	)
+	return i, err
+}
+
 const getGameInsightMetricSliceAvailability = `-- name: GetGameInsightMetricSliceAvailability :one
 WITH available AS (
     SELECT min(fact_date)::date AS available_from,
@@ -201,7 +307,150 @@ func (q *Queries) GetGameInsightMetricSummary(ctx context.Context, arg GetGameIn
 	return i, err
 }
 
+const getGameInsightObservedLow = `-- name: GetGameInsightObservedLow :one
+WITH RECURSIVE current_price AS (
+    SELECT price.tracking_period_id, price.game_id, price.appid, price.region, price.fact_date, price.price_state, price.currency, price.initial_amount, price.final_amount, price.discount_percent, price.observed_at, price.materialization_source, price.projection_version, price.finalized_at, price.created_at, price.updated_at
+    FROM public.gfg_game_price_daily price
+    WHERE price.tracking_period_id = $1
+      AND price.region = $2
+      AND price.fact_date = $3::date
+      AND price.finalized_at IS NOT NULL
+      AND price.price_state = 'priced'
+      AND price.currency IS NOT NULL
+), identity AS (
+    SELECT current_price.tracking_period_id, current_price.game_id, current_price.appid, current_price.region, current_price.fact_date, current_price.price_state, current_price.currency, current_price.initial_amount, current_price.final_amount, current_price.discount_percent, current_price.observed_at, current_price.materialization_source, current_price.projection_version, current_price.finalized_at, current_price.created_at, current_price.updated_at FROM current_price
+    UNION ALL
+    SELECT previous.tracking_period_id, previous.game_id, previous.appid, previous.region, previous.fact_date, previous.price_state, previous.currency, previous.initial_amount, previous.final_amount, previous.discount_percent, previous.observed_at, previous.materialization_source, previous.projection_version, previous.finalized_at, previous.created_at, previous.updated_at
+    FROM identity next
+    JOIN public.gfg_game_price_daily previous
+      ON previous.tracking_period_id = next.tracking_period_id
+     AND previous.region = next.region
+     AND previous.fact_date = next.fact_date - 1
+     AND previous.finalized_at IS NOT NULL
+     AND previous.price_state = 'priced'
+     AND previous.currency = next.currency
+), low_amount AS (
+    SELECT min(final_amount)::bigint AS amount, min(fact_date)::date AS observed_since
+    FROM identity
+), first_low AS (
+    SELECT identity.tracking_period_id, identity.game_id, identity.appid, identity.region, identity.fact_date, identity.price_state, identity.currency, identity.initial_amount, identity.final_amount, identity.discount_percent, identity.observed_at, identity.materialization_source, identity.projection_version, identity.finalized_at, identity.created_at, identity.updated_at FROM identity CROSS JOIN low_amount
+    WHERE identity.final_amount = low_amount.amount
+    ORDER BY identity.fact_date ASC
+    LIMIT 1
+)
+SELECT low_amount.amount, first_low.currency, first_low.fact_date AS first_seen,
+       low_amount.observed_since, first_low.initial_amount, first_low.discount_percent
+FROM low_amount
+JOIN first_low ON true
+`
+
+type GetGameInsightObservedLowParams struct {
+	TrackingPeriodID int64       `json:"tracking_period_id"`
+	Region           string      `json:"region"`
+	FactDate         pgtype.Date `json:"fact_date"`
+}
+
+type GetGameInsightObservedLowRow struct {
+	Amount          int64       `json:"amount"`
+	Currency        *string     `json:"currency"`
+	FirstSeen       pgtype.Date `json:"first_seen"`
+	ObservedSince   pgtype.Date `json:"observed_since"`
+	InitialAmount   *int64      `json:"initial_amount"`
+	DiscountPercent *int32      `json:"discount_percent"`
+}
+
+func (q *Queries) GetGameInsightObservedLow(ctx context.Context, arg GetGameInsightObservedLowParams) (GetGameInsightObservedLowRow, error) {
+	row := q.db.QueryRow(ctx, getGameInsightObservedLow, arg.TrackingPeriodID, arg.Region, arg.FactDate)
+	var i GetGameInsightObservedLowRow
+	err := row.Scan(
+		&i.Amount,
+		&i.Currency,
+		&i.FirstSeen,
+		&i.ObservedSince,
+		&i.InitialAmount,
+		&i.DiscountPercent,
+	)
+	return i, err
+}
+
+const getGameInsightPlayer30dMeta = `-- name: GetGameInsightPlayer30dMeta :one
+WITH horizon AS (
+    SELECT processed_through FROM public.gfg_fact_rollup_checkpoints WHERE pipeline_key = 'game.player_facts'
+), population AS (
+    SELECT count(*)::bigint AS count
+    FROM horizon
+    JOIN public.gfg_game_tracking_periods period ON period.tracking_basis = 'explicit'
+     AND period.tracked_from < (horizon.processed_through + 1)::timestamp AT TIME ZONE 'UTC'
+     AND (period.tracked_until IS NULL OR period.tracked_until >= (horizon.processed_through + 1)::timestamp AT TIME ZONE 'UTC')
+), ranked AS (
+    SELECT count(DISTINCT daily.tracking_period_id)::bigint AS count
+    FROM horizon
+    JOIN public.gfg_game_tracking_periods period ON period.tracking_basis = 'explicit'
+     AND period.tracked_from < (horizon.processed_through + 1)::timestamp AT TIME ZONE 'UTC'
+     AND (period.tracked_until IS NULL OR period.tracked_until >= (horizon.processed_through + 1)::timestamp AT TIME ZONE 'UTC')
+    JOIN public.gfg_game_player_daily daily ON daily.tracking_period_id = period.id
+     AND daily.fact_date BETWEEN GREATEST(horizon.processed_through - 29, (period.tracked_from AT TIME ZONE 'UTC')::date) AND horizon.processed_through
+     AND daily.finalized_at IS NOT NULL AND daily.successful_samples > 0
+)
+SELECT horizon.processed_through AS window_through,
+       (horizon.processed_through - 29)::date AS window_from,
+       population.count AS population, ranked.count AS ranked
+FROM horizon CROSS JOIN population CROSS JOIN ranked
+`
+
+type GetGameInsightPlayer30dMetaRow struct {
+	WindowThrough pgtype.Date `json:"window_through"`
+	WindowFrom    pgtype.Date `json:"window_from"`
+	Population    int64       `json:"population"`
+	Ranked        int64       `json:"ranked"`
+}
+
+func (q *Queries) GetGameInsightPlayer30dMeta(ctx context.Context) (GetGameInsightPlayer30dMetaRow, error) {
+	row := q.db.QueryRow(ctx, getGameInsightPlayer30dMeta)
+	var i GetGameInsightPlayer30dMetaRow
+	err := row.Scan(
+		&i.WindowThrough,
+		&i.WindowFrom,
+		&i.Population,
+		&i.Ranked,
+	)
+	return i, err
+}
+
 const getGameInsightPlayerSummary = `-- name: GetGameInsightPlayerSummary :one
+WITH player_horizon AS (
+    SELECT processed_through
+    FROM public.gfg_fact_rollup_checkpoints
+    WHERE pipeline_key = 'game.player_facts'
+), quality AS (
+    SELECT COALESCE(max(daily.max_players), 0)::bigint AS peak_30d,
+           COALESCE(sum(daily.avg_players * daily.successful_samples)
+             / NULLIF(sum(daily.successful_samples), 0), 0)::double precision AS average_30d,
+           GREATEST(horizon.processed_through - 29, (period.tracked_from AT TIME ZONE 'UTC')::date)::date AS eligible_from,
+           count(*) FILTER (WHERE daily.successful_samples > 0)::bigint AS observed_days,
+           COALESCE(sum(daily.successful_samples), 0)::bigint AS successful_samples,
+           CASE
+             WHEN count(daily.*) = horizon.processed_through
+                    - GREATEST(horizon.processed_through - 29, (period.tracked_from AT TIME ZONE 'UTC')::date) + 1
+              AND bool_and(daily.expected_samples IS NOT NULL)
+              AND sum(daily.expected_samples) > 0
+             THEN sum(daily.successful_samples)::double precision / sum(daily.expected_samples)
+             ELSE 0::double precision
+           END::double precision AS sample_coverage,
+           (count(daily.*) = horizon.processed_through
+              - GREATEST(horizon.processed_through - 29, (period.tracked_from AT TIME ZONE 'UTC')::date) + 1
+            AND bool_and(daily.expected_samples IS NOT NULL)
+            AND sum(daily.expected_samples) > 0) AS has_sample_coverage,
+           horizon.processed_through AS fact_through
+    FROM player_horizon horizon
+    JOIN public.gfg_game_tracking_periods period ON period.id = $1
+    LEFT JOIN public.gfg_game_player_daily daily
+      ON daily.tracking_period_id = period.id
+     AND daily.fact_date BETWEEN GREATEST(horizon.processed_through - 29, (period.tracked_from AT TIME ZONE 'UTC')::date)
+                             AND horizon.processed_through
+     AND daily.finalized_at IS NOT NULL
+    GROUP BY horizon.processed_through, period.tracked_from
+)
 SELECT EXISTS (
            SELECT 1
            FROM public.gfg_game_player_counts raw
@@ -239,96 +488,109 @@ SELECT EXISTS (
            ORDER BY raw.collected_at DESC, raw.id DESC
            LIMIT 1
        ) AS current_as_of,
-       EXISTS (
-           SELECT 1
-           FROM public.gfg_game_player_daily daily
-           WHERE daily.tracking_period_id = $1
-             AND daily.fact_date BETWEEN $4::date - 29
-                                     AND $4::date
-             AND daily.successful_samples > 0
-             AND daily.max_players IS NOT NULL
-       ) AS has_peak_30d,
-       COALESCE((
-           SELECT max(daily.max_players)::bigint
-           FROM public.gfg_game_player_daily daily
-           WHERE daily.tracking_period_id = $1
-             AND daily.fact_date BETWEEN $4::date - 29
-                                     AND $4::date
-             AND daily.successful_samples > 0
-             AND daily.max_players IS NOT NULL
-       ), 0)::bigint AS peak_30d
+       quality.peak_30d,
+       quality.average_30d,
+       quality.fact_through,
+       quality.eligible_from,
+       quality.observed_days,
+       quality.successful_samples,
+       quality.sample_coverage,
+       quality.has_sample_coverage
+FROM quality
 `
 
 type GetGameInsightPlayerSummaryParams struct {
-	TrackingPeriodID int64       `json:"tracking_period_id"`
-	GameID           int64       `json:"game_id"`
-	Appid            int64       `json:"appid"`
-	ThroughDate      pgtype.Date `json:"through_date"`
+	TrackingPeriodID int64 `json:"tracking_period_id"`
+	GameID           int64 `json:"game_id"`
+	Appid            int64 `json:"appid"`
 }
 
 type GetGameInsightPlayerSummaryRow struct {
-	HasCurrent     bool               `json:"has_current"`
-	CurrentPlayers int64              `json:"current_players"`
-	CurrentAsOf    pgtype.Timestamptz `json:"current_as_of"`
-	HasPeak30d     bool               `json:"has_peak_30d"`
-	Peak30d        int64              `json:"peak_30d"`
+	HasCurrent        bool               `json:"has_current"`
+	CurrentPlayers    int64              `json:"current_players"`
+	CurrentAsOf       pgtype.Timestamptz `json:"current_as_of"`
+	Peak30d           int64              `json:"peak_30d"`
+	Average30d        float64            `json:"average_30d"`
+	FactThrough       pgtype.Date        `json:"fact_through"`
+	EligibleFrom      pgtype.Date        `json:"eligible_from"`
+	ObservedDays      int64              `json:"observed_days"`
+	SuccessfulSamples int64              `json:"successful_samples"`
+	SampleCoverage    float64            `json:"sample_coverage"`
+	HasSampleCoverage *bool              `json:"has_sample_coverage"`
 }
 
 func (q *Queries) GetGameInsightPlayerSummary(ctx context.Context, arg GetGameInsightPlayerSummaryParams) (GetGameInsightPlayerSummaryRow, error) {
-	row := q.db.QueryRow(ctx, getGameInsightPlayerSummary,
-		arg.TrackingPeriodID,
-		arg.GameID,
-		arg.Appid,
-		arg.ThroughDate,
-	)
+	row := q.db.QueryRow(ctx, getGameInsightPlayerSummary, arg.TrackingPeriodID, arg.GameID, arg.Appid)
 	var i GetGameInsightPlayerSummaryRow
 	err := row.Scan(
 		&i.HasCurrent,
 		&i.CurrentPlayers,
 		&i.CurrentAsOf,
-		&i.HasPeak30d,
 		&i.Peak30d,
+		&i.Average30d,
+		&i.FactThrough,
+		&i.EligibleFrom,
+		&i.ObservedDays,
+		&i.SuccessfulSamples,
+		&i.SampleCoverage,
+		&i.HasSampleCoverage,
 	)
 	return i, err
 }
 
-const getGameInsightPriceSummary = `-- name: GetGameInsightPriceSummary :one
-SELECT fact_date, price_state, currency, initial_amount,
-       final_amount, discount_percent
-FROM public.gfg_game_price_daily
-WHERE tracking_period_id = $1
-  AND region = 'CN'
-  AND finalized_at IS NOT NULL
-ORDER BY fact_date DESC
-LIMIT 1
+const getGameInsightPriceOverview = `-- name: GetGameInsightPriceOverview :one
+WITH horizon AS (
+    SELECT max(fact_date)::date AS as_of FROM public.gfg_game_daily
+    WHERE finalized_at IS NOT NULL AND tracked_at_end
+), cohort AS (
+    SELECT fact.game_id, price.price_state, price.discount_percent
+    FROM horizon JOIN public.gfg_game_daily fact ON fact.fact_date = horizon.as_of
+      AND fact.finalized_at IS NOT NULL AND fact.tracked_at_end
+    LEFT JOIN public.gfg_game_price_daily price
+      ON price.tracking_period_id = fact.tracking_period_id AND price.fact_date = horizon.as_of
+     AND price.region = $1 AND price.finalized_at IS NOT NULL
+)
+SELECT horizon.as_of, count(cohort.game_id)::bigint AS population,
+       count(*) FILTER (WHERE price_state = 'priced')::bigint AS priced,
+       count(*) FILTER (WHERE price_state = 'free')::bigint AS free,
+       count(*) FILTER (WHERE price_state = 'unpriced')::bigint AS unpriced,
+       count(*) FILTER (WHERE price_state = 'unknown')::bigint AS unknown,
+       count(cohort.game_id) FILTER (WHERE price_state IS NULL)::bigint AS unavailable,
+       count(*) FILTER (WHERE price_state = 'priced' AND discount_percent > 0)::bigint AS discounted
+FROM horizon LEFT JOIN cohort ON true
+GROUP BY horizon.as_of
 `
 
-type GetGameInsightPriceSummaryRow struct {
-	FactDate        pgtype.Date `json:"fact_date"`
-	PriceState      string      `json:"price_state"`
-	Currency        *string     `json:"currency"`
-	InitialAmount   *int64      `json:"initial_amount"`
-	FinalAmount     *int64      `json:"final_amount"`
-	DiscountPercent *int32      `json:"discount_percent"`
+type GetGameInsightPriceOverviewRow struct {
+	AsOf        pgtype.Date `json:"as_of"`
+	Population  int64       `json:"population"`
+	Priced      int64       `json:"priced"`
+	Free        int64       `json:"free"`
+	Unpriced    int64       `json:"unpriced"`
+	Unknown     int64       `json:"unknown"`
+	Unavailable int64       `json:"unavailable"`
+	Discounted  int64       `json:"discounted"`
 }
 
-func (q *Queries) GetGameInsightPriceSummary(ctx context.Context, trackingPeriodID int64) (GetGameInsightPriceSummaryRow, error) {
-	row := q.db.QueryRow(ctx, getGameInsightPriceSummary, trackingPeriodID)
-	var i GetGameInsightPriceSummaryRow
+func (q *Queries) GetGameInsightPriceOverview(ctx context.Context, region string) (GetGameInsightPriceOverviewRow, error) {
+	row := q.db.QueryRow(ctx, getGameInsightPriceOverview, region)
+	var i GetGameInsightPriceOverviewRow
 	err := row.Scan(
-		&i.FactDate,
-		&i.PriceState,
-		&i.Currency,
-		&i.InitialAmount,
-		&i.FinalAmount,
-		&i.DiscountPercent,
+		&i.AsOf,
+		&i.Population,
+		&i.Priced,
+		&i.Free,
+		&i.Unpriced,
+		&i.Unknown,
+		&i.Unavailable,
+		&i.Discounted,
 	)
 	return i, err
 }
 
 const getGameInsightState = `-- name: GetGameInsightState :one
 SELECT game_id, fact_date, tracking_period_id, appid, tracked_at_end,
-       is_free, windows, linux, release_availability
+       is_free, windows, mac, linux, release_availability
 FROM public.gfg_game_daily
 WHERE game_id = $1
   AND finalized_at IS NOT NULL
@@ -344,6 +606,7 @@ type GetGameInsightStateRow struct {
 	TrackedAtEnd        bool        `json:"tracked_at_end"`
 	IsFree              *bool       `json:"is_free"`
 	Windows             *bool       `json:"windows"`
+	Mac                 *bool       `json:"mac"`
 	Linux               *bool       `json:"linux"`
 	ReleaseAvailability *string     `json:"release_availability"`
 }
@@ -359,10 +622,74 @@ func (q *Queries) GetGameInsightState(ctx context.Context, gameID int64) (GetGam
 		&i.TrackedAtEnd,
 		&i.IsFree,
 		&i.Windows,
+		&i.Mac,
 		&i.Linux,
 		&i.ReleaseAvailability,
 	)
 	return i, err
+}
+
+const listGameInsightCurrentDiscounts = `-- name: ListGameInsightCurrentDiscounts :many
+WITH horizon AS (
+    SELECT max(fact_date)::date AS as_of FROM public.gfg_game_daily
+    WHERE finalized_at IS NOT NULL AND tracked_at_end
+)
+SELECT horizon.as_of, fact.game_id, fact.tracking_period_id,
+       COALESCE(NULLIF(fact.name, ''), fact.name_en, '')::text AS game_name,
+       price.currency, price.initial_amount, price.final_amount, price.discount_percent
+FROM horizon
+JOIN public.gfg_game_daily fact ON fact.fact_date = horizon.as_of
+ AND fact.finalized_at IS NOT NULL AND fact.tracked_at_end
+JOIN public.gfg_game_price_daily price ON price.tracking_period_id = fact.tracking_period_id
+ AND price.fact_date = horizon.as_of AND price.region = $1
+ AND price.finalized_at IS NOT NULL AND price.price_state = 'priced' AND price.discount_percent > 0
+ORDER BY price.discount_percent DESC, fact.game_id ASC
+LIMIT $2
+`
+
+type ListGameInsightCurrentDiscountsParams struct {
+	Region     string `json:"region"`
+	LimitCount int32  `json:"limit_count"`
+}
+
+type ListGameInsightCurrentDiscountsRow struct {
+	AsOf             pgtype.Date `json:"as_of"`
+	GameID           int64       `json:"game_id"`
+	TrackingPeriodID int64       `json:"tracking_period_id"`
+	GameName         string      `json:"game_name"`
+	Currency         *string     `json:"currency"`
+	InitialAmount    *int64      `json:"initial_amount"`
+	FinalAmount      *int64      `json:"final_amount"`
+	DiscountPercent  *int32      `json:"discount_percent"`
+}
+
+func (q *Queries) ListGameInsightCurrentDiscounts(ctx context.Context, arg ListGameInsightCurrentDiscountsParams) ([]ListGameInsightCurrentDiscountsRow, error) {
+	rows, err := q.db.Query(ctx, listGameInsightCurrentDiscounts, arg.Region, arg.LimitCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGameInsightCurrentDiscountsRow{}
+	for rows.Next() {
+		var i ListGameInsightCurrentDiscountsRow
+		if err := rows.Scan(
+			&i.AsOf,
+			&i.GameID,
+			&i.TrackingPeriodID,
+			&i.GameName,
+			&i.Currency,
+			&i.InitialAmount,
+			&i.FinalAmount,
+			&i.DiscountPercent,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listGameInsightExplorerChanges = `-- name: ListGameInsightExplorerChanges :many
@@ -546,6 +873,125 @@ func (q *Queries) ListGameInsightGameChanges(ctx context.Context, arg ListGameIn
 			&i.ProjectionDate,
 			&i.TimeBasis,
 			&i.EventAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGameInsightLanguages = `-- name: ListGameInsightLanguages :many
+WITH horizon AS (
+    SELECT max(fact_date)::date AS as_of FROM public.gfg_game_daily
+    WHERE finalized_at IS NOT NULL AND tracked_at_end
+), fresh AS (
+    SELECT fact.game_id, fact.fact_date, fact.tracking_period_id, fact.appid, fact.snapshot_at, fact.tracked_at_end, fact.name, fact.name_en, fact.view_count, fact.game_type, fact.is_free, fact.windows, fact.mac, fact.linux, fact.release_availability, fact.release_precision, fact.release_exact_date, fact.release_year, fact.release_month, fact.release_quarter, fact.release_window_start, fact.release_window_end, fact.release_observed_at, fact.first_available_precision, fact.first_available_exact_date, fact.first_available_year, fact.first_available_month, fact.first_available_quarter, fact.first_available_window_start, fact.first_available_window_end, fact.first_available_source, fact.first_available_inferred, fact.language_codes, fact.unknown_language_names, fact.full_audio_language_codes, fact.languages_observed_at, fact.developers, fact.publishers, fact.primary_tag_id, fact.secondary_tag_id, fact.tag_ids, fact.details_observed_at, fact.materialization_source, fact.projection_version, fact.finalized_at, fact.created_at, fact.updated_at FROM horizon JOIN public.gfg_game_daily fact ON fact.fact_date = horizon.as_of
+    WHERE fact.finalized_at IS NOT NULL AND fact.tracked_at_end
+      AND fact.languages_observed_at IS NOT NULL
+      AND fact.languages_observed_at >= ((horizon.as_of + 1)::timestamp AT TIME ZONE 'UTC') - interval '259200 seconds'
+), supported AS (
+    SELECT DISTINCT fresh.game_id, code FROM fresh CROSS JOIN LATERAL unnest(COALESCE(fresh.language_codes, ARRAY[]::text[])) code
+), audio AS (
+    SELECT DISTINCT fresh.game_id, code FROM fresh CROSS JOIN LATERAL unnest(COALESCE(fresh.full_audio_language_codes, ARRAY[]::text[])) code
+), names AS (
+    SELECT language_code AS code, min(steam_name)::text AS steam_name
+    FROM public.gfg_game_languages WHERE language_code IS NOT NULL GROUP BY language_code
+), codes AS (
+    SELECT code FROM supported UNION SELECT code FROM audio
+)
+SELECT codes.code::text AS code, COALESCE(names.steam_name, codes.code)::text AS steam_name,
+       count(DISTINCT supported.game_id)::bigint AS supported_games,
+       count(DISTINCT audio.game_id)::bigint AS explicit_full_audio_games
+FROM codes LEFT JOIN supported ON supported.code = codes.code
+LEFT JOIN audio ON audio.code = codes.code
+LEFT JOIN names ON names.code = codes.code
+GROUP BY codes.code, names.steam_name
+ORDER BY supported_games DESC, codes.code ASC
+`
+
+type ListGameInsightLanguagesRow struct {
+	Code                   string `json:"code"`
+	SteamName              string `json:"steam_name"`
+	SupportedGames         int64  `json:"supported_games"`
+	ExplicitFullAudioGames int64  `json:"explicit_full_audio_games"`
+}
+
+func (q *Queries) ListGameInsightLanguages(ctx context.Context) ([]ListGameInsightLanguagesRow, error) {
+	rows, err := q.db.Query(ctx, listGameInsightLanguages)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGameInsightLanguagesRow{}
+	for rows.Next() {
+		var i ListGameInsightLanguagesRow
+		if err := rows.Scan(
+			&i.Code,
+			&i.SteamName,
+			&i.SupportedGames,
+			&i.ExplicitFullAudioGames,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGameInsightLatestPlayerRanking = `-- name: ListGameInsightLatestPlayerRanking :many
+WITH snapshot AS (
+    SELECT id, scheduled_for
+    FROM public.gfg_collection_jobs
+    WHERE job_key = 'game.players' AND trigger = 'scheduled' AND scope_type = 'all'
+      AND status IN ('success', 'partial')
+    ORDER BY scheduled_for DESC, id DESC LIMIT 1
+), observations AS (
+    SELECT DISTINCT ON (raw.game_id) raw.game_id, raw.count AS player_count, raw.collected_at
+    FROM snapshot
+    JOIN public.gfg_collection_runs run ON run.job_id = snapshot.id
+    JOIN public.gfg_game_player_counts raw ON raw.run_id = run.id AND raw.status = 'success'
+    JOIN public.gfg_game_tracking_periods period
+      ON period.game_id = raw.game_id AND period.tracking_basis = 'explicit'
+     AND period.tracked_from <= snapshot.scheduled_for
+     AND (period.tracked_until IS NULL OR snapshot.scheduled_for < period.tracked_until)
+    ORDER BY raw.game_id, raw.collected_at DESC, raw.id DESC
+)
+SELECT observations.game_id, COALESCE(NULLIF(game.name, ''), game.name_en, '')::text AS game_name,
+       observations.player_count, observations.collected_at
+FROM observations
+JOIN public.gfg_game game ON game.id = observations.game_id
+ORDER BY observations.player_count DESC, observations.game_id ASC
+LIMIT $1
+`
+
+type ListGameInsightLatestPlayerRankingRow struct {
+	GameID      int64              `json:"game_id"`
+	GameName    string             `json:"game_name"`
+	PlayerCount int64              `json:"player_count"`
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
+}
+
+func (q *Queries) ListGameInsightLatestPlayerRanking(ctx context.Context, limitCount int32) ([]ListGameInsightLatestPlayerRankingRow, error) {
+	rows, err := q.db.Query(ctx, listGameInsightLatestPlayerRanking, limitCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGameInsightLatestPlayerRankingRow{}
+	for rows.Next() {
+		var i ListGameInsightLatestPlayerRankingRow
+		if err := rows.Scan(
+			&i.GameID,
+			&i.GameName,
+			&i.PlayerCount,
+			&i.CollectedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -844,6 +1290,92 @@ func (q *Queries) ListGameInsightOverviewChanges(ctx context.Context, arg ListGa
 	return items, nil
 }
 
+const listGameInsightPlayer30dRanking = `-- name: ListGameInsightPlayer30dRanking :many
+WITH horizon AS (
+    SELECT processed_through FROM public.gfg_fact_rollup_checkpoints WHERE pipeline_key = 'game.player_facts'
+), cohort AS (
+    SELECT period.id, period.game_id,
+           GREATEST(horizon.processed_through - 29, (period.tracked_from AT TIME ZONE 'UTC')::date)::date AS eligible_from,
+           horizon.processed_through
+    FROM horizon
+    JOIN public.gfg_game_tracking_periods period ON period.tracking_basis = 'explicit'
+     AND period.tracked_from < (horizon.processed_through + 1)::timestamp AT TIME ZONE 'UTC'
+     AND (period.tracked_until IS NULL OR period.tracked_until >= (horizon.processed_through + 1)::timestamp AT TIME ZONE 'UTC')
+), aggregate AS (
+    SELECT cohort.game_id, cohort.eligible_from,
+           max(daily.max_players)::bigint AS peak_30d,
+           (sum(daily.avg_players * daily.successful_samples) / NULLIF(sum(daily.successful_samples), 0))::double precision AS average_30d,
+           count(*) FILTER (WHERE daily.successful_samples > 0)::bigint AS observed_days,
+           sum(daily.successful_samples)::bigint AS successful_samples,
+           CASE WHEN count(*) = cohort.processed_through - cohort.eligible_from + 1
+                  AND bool_and(daily.expected_samples IS NOT NULL) AND sum(daily.expected_samples) > 0
+                THEN sum(daily.successful_samples)::double precision / sum(daily.expected_samples)
+                ELSE 0::double precision END::double precision AS sample_coverage,
+           (count(*) = cohort.processed_through - cohort.eligible_from + 1
+             AND bool_and(daily.expected_samples IS NOT NULL) AND sum(daily.expected_samples) > 0) AS has_sample_coverage
+    FROM cohort
+    JOIN public.gfg_game_player_daily daily ON daily.tracking_period_id = cohort.id
+     AND daily.fact_date BETWEEN cohort.eligible_from AND cohort.processed_through
+     AND daily.finalized_at IS NOT NULL
+    GROUP BY cohort.game_id, cohort.eligible_from, cohort.processed_through
+    HAVING sum(daily.successful_samples) > 0
+)
+SELECT aggregate.game_id, COALESCE(NULLIF(game.name, ''), game.name_en, '')::text AS game_name,
+       aggregate.peak_30d, aggregate.average_30d, aggregate.eligible_from,
+       aggregate.observed_days, aggregate.successful_samples, aggregate.sample_coverage, aggregate.has_sample_coverage
+FROM aggregate JOIN public.gfg_game game ON game.id = aggregate.game_id
+ORDER BY CASE WHEN $1::boolean THEN aggregate.average_30d ELSE aggregate.peak_30d END DESC,
+         aggregate.game_id ASC
+LIMIT $2
+`
+
+type ListGameInsightPlayer30dRankingParams struct {
+	UseAverage bool  `json:"use_average"`
+	LimitCount int32 `json:"limit_count"`
+}
+
+type ListGameInsightPlayer30dRankingRow struct {
+	GameID            int64       `json:"game_id"`
+	GameName          string      `json:"game_name"`
+	Peak30d           int64       `json:"peak_30d"`
+	Average30d        float64     `json:"average_30d"`
+	EligibleFrom      pgtype.Date `json:"eligible_from"`
+	ObservedDays      int64       `json:"observed_days"`
+	SuccessfulSamples int64       `json:"successful_samples"`
+	SampleCoverage    float64     `json:"sample_coverage"`
+	HasSampleCoverage *bool       `json:"has_sample_coverage"`
+}
+
+func (q *Queries) ListGameInsightPlayer30dRanking(ctx context.Context, arg ListGameInsightPlayer30dRankingParams) ([]ListGameInsightPlayer30dRankingRow, error) {
+	rows, err := q.db.Query(ctx, listGameInsightPlayer30dRanking, arg.UseAverage, arg.LimitCount)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGameInsightPlayer30dRankingRow{}
+	for rows.Next() {
+		var i ListGameInsightPlayer30dRankingRow
+		if err := rows.Scan(
+			&i.GameID,
+			&i.GameName,
+			&i.Peak30d,
+			&i.Average30d,
+			&i.EligibleFrom,
+			&i.ObservedDays,
+			&i.SuccessfulSamples,
+			&i.SampleCoverage,
+			&i.HasSampleCoverage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGameInsightPlayerHistory = `-- name: ListGameInsightPlayerHistory :many
 WITH latest AS (
     SELECT max(fact_date)::date AS fact_date
@@ -908,13 +1440,6 @@ func (q *Queries) ListGameInsightPlayerHistory(ctx context.Context, arg ListGame
 }
 
 const listGameInsightPriceHistory = `-- name: ListGameInsightPriceHistory :many
-WITH latest AS (
-    SELECT max(fact_date)::date AS fact_date
-    FROM public.gfg_game_price_daily
-    WHERE tracking_period_id = $1
-      AND region = 'CN'
-      AND finalized_at IS NOT NULL
-)
 SELECT daily.fact_date,
        daily.price_state,
        daily.currency,
@@ -922,20 +1447,22 @@ SELECT daily.fact_date,
        daily.final_amount,
        daily.discount_percent
 FROM public.gfg_game_price_daily daily
-CROSS JOIN latest
 WHERE daily.tracking_period_id = $1
-  AND daily.region = 'CN'
+  AND daily.region = $2
   AND daily.finalized_at IS NOT NULL
+  AND daily.fact_date <= $3::date
   AND (
-      $2::integer = 0
-      OR daily.fact_date >= latest.fact_date - ($2::integer - 1)
+      $4::integer = 0
+      OR daily.fact_date >= $3::date - ($4::integer - 1)
   )
 ORDER BY daily.fact_date
 `
 
 type ListGameInsightPriceHistoryParams struct {
-	TrackingPeriodID int64 `json:"tracking_period_id"`
-	RangeDays        int32 `json:"range_days"`
+	TrackingPeriodID int64       `json:"tracking_period_id"`
+	Region           string      `json:"region"`
+	ThroughDate      pgtype.Date `json:"through_date"`
+	RangeDays        int32       `json:"range_days"`
 }
 
 type ListGameInsightPriceHistoryRow struct {
@@ -948,7 +1475,12 @@ type ListGameInsightPriceHistoryRow struct {
 }
 
 func (q *Queries) ListGameInsightPriceHistory(ctx context.Context, arg ListGameInsightPriceHistoryParams) ([]ListGameInsightPriceHistoryRow, error) {
-	rows, err := q.db.Query(ctx, listGameInsightPriceHistory, arg.TrackingPeriodID, arg.RangeDays)
+	rows, err := q.db.Query(ctx, listGameInsightPriceHistory,
+		arg.TrackingPeriodID,
+		arg.Region,
+		arg.ThroughDate,
+		arg.RangeDays,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -957,6 +1489,67 @@ func (q *Queries) ListGameInsightPriceHistory(ctx context.Context, arg ListGameI
 	for rows.Next() {
 		var i ListGameInsightPriceHistoryRow
 		if err := rows.Scan(
+			&i.FactDate,
+			&i.PriceState,
+			&i.Currency,
+			&i.InitialAmount,
+			&i.FinalAmount,
+			&i.DiscountPercent,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGameInsightRegionalPrices = `-- name: ListGameInsightRegionalPrices :many
+WITH regions AS (SELECT unnest(ARRAY['CN', 'US', 'HK']::text[]) AS region)
+SELECT regions.region::text AS region,
+       price.fact_date,
+       price.price_state,
+       price.currency,
+       price.initial_amount,
+       price.final_amount,
+       price.discount_percent
+FROM regions
+LEFT JOIN public.gfg_game_price_daily price
+  ON price.tracking_period_id = $1
+ AND price.region = regions.region
+ AND price.fact_date = $2::date
+ AND price.finalized_at IS NOT NULL
+ORDER BY CASE regions.region WHEN 'CN' THEN 1 WHEN 'US' THEN 2 ELSE 3 END
+`
+
+type ListGameInsightRegionalPricesParams struct {
+	TrackingPeriodID int64       `json:"tracking_period_id"`
+	FactDate         pgtype.Date `json:"fact_date"`
+}
+
+type ListGameInsightRegionalPricesRow struct {
+	Region          string      `json:"region"`
+	FactDate        pgtype.Date `json:"fact_date"`
+	PriceState      *string     `json:"price_state"`
+	Currency        *string     `json:"currency"`
+	InitialAmount   *int64      `json:"initial_amount"`
+	FinalAmount     *int64      `json:"final_amount"`
+	DiscountPercent *int32      `json:"discount_percent"`
+}
+
+func (q *Queries) ListGameInsightRegionalPrices(ctx context.Context, arg ListGameInsightRegionalPricesParams) ([]ListGameInsightRegionalPricesRow, error) {
+	rows, err := q.db.Query(ctx, listGameInsightRegionalPrices, arg.TrackingPeriodID, arg.FactDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGameInsightRegionalPricesRow{}
+	for rows.Next() {
+		var i ListGameInsightRegionalPricesRow
+		if err := rows.Scan(
+			&i.Region,
 			&i.FactDate,
 			&i.PriceState,
 			&i.Currency,

@@ -2,7 +2,7 @@
   <section class="game-insights-chart-card" data-price-history>
     <div class="entity-insights-heading">
       <div>
-        <p class="entity-insights-eyebrow">{{ $t('insights.entity.cnOnly') }}</p>
+        <p class="entity-insights-eyebrow">{{ $t(`insights.regions.${region}`) }}</p>
         <h3>{{ $t('insights.entity.priceHistory') }}</h3>
       </div>
     </div>
@@ -32,13 +32,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { GameInsightPricePoint } from '@/types/insights'
-import { formatCnyMinorAmount, publicPriceDisplay } from '@/utils/insightPrices'
+import type { GameInsightPricePoint, GameInsightRegion } from '@/types/insights'
+import { formatMinorAmount, priceSegmentKey, publicPriceDisplay } from '@/utils/insightPrices'
 
 type EChartsInstance = import('echarts').ECharts
 
 const props = defineProps<{
   points: GameInsightPricePoint[]
+  region: GameInsightRegion
   loading?: boolean
   unavailable?: boolean
 }>()
@@ -56,7 +57,7 @@ let active = false
 function pointLabel(point: GameInsightPricePoint) {
   const display = publicPriceDisplay(point)
   if (display.kind === 'free') return t('insights.entity.priceFree')
-  if (display.kind === 'priced') return `${t('insights.entity.pricePriced')}: ${formatCnyMinorAmount(display.amount, locale.value)}`
+  if (display.kind === 'priced') return `${t('insights.entity.pricePriced')}: ${point.currency ? formatMinorAmount(display.amount, point.currency, locale.value) : display.amount}`
   return t(`insights.entity.priceStates.${point.state}`)
 }
 
@@ -75,9 +76,15 @@ async function renderChart() {
     border: dark ? 'rgba(167, 243, 208, .28)' : 'rgba(21, 128, 61, .22)',
     text: dark ? '#e2e8f0' : '#292524',
   }
-  const series = props.points.map(point => {
-    const display = publicPriceDisplay(point)
-    return { value: display.kind === 'priced' ? display.amount / 100 : display.kind === 'free' ? 0 : null, point }
+  const segments: Array<{ key: string, indexes: number[] }> = []
+  let current: { key: string, indexes: number[] } | null = null
+  props.points.forEach((point, index) => {
+    const key = priceSegmentKey(point)
+    const previous = index > 0 ? props.points[index - 1] : null
+    const consecutive = previous ? (new Date(`${point.date}T00:00:00Z`).getTime() - new Date(`${previous.date}T00:00:00Z`).getTime()) === 86400000 : true
+    if (!key) { current = null; return }
+    if (!current || current.key !== key || !consecutive) { current = { key, indexes: [] }; segments.push(current) }
+    current.indexes.push(index)
   })
 
   chart.value.setOption({
@@ -105,19 +112,23 @@ async function renderChart() {
     yAxis: {
       type: 'value',
       min: 0,
-      axisLabel: { color: colors.axis, formatter: (value: number) => `¥${value}` },
+      axisLabel: { color: colors.axis },
       splitLine: { lineStyle: { color: colors.split } },
     },
-    series: [{
+    series: segments.map(segment => ({
       type: 'line',
-      data: series,
+      data: props.points.map((point, index) => {
+        if (!segment.indexes.includes(index)) return null
+        const display = publicPriceDisplay(point)
+        return { value: display.kind === 'priced' ? display.amount / 100 : 0, point }
+      }),
       connectNulls: false,
       symbol: 'circle',
       symbolSize: 6,
       showSymbol: props.points.length <= 31,
       lineStyle: { width: 3, color: colors.line },
       itemStyle: { color: colors.line },
-    }],
+    })),
   }, true)
 }
 

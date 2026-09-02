@@ -255,6 +255,17 @@ func (q *Queries) LockGameMetricCheckpoint(ctx context.Context, arg LockGameMetr
 	return i, err
 }
 
+const projectGameMacMetricDay = `-- name: ProjectGameMacMetricDay :one
+SELECT gfg_project_mac_metric_day($1::date)::bigint
+`
+
+func (q *Queries) ProjectGameMacMetricDay(ctx context.Context, factDate pgtype.Date) (int64, error) {
+	row := q.db.QueryRow(ctx, projectGameMacMetricDay, factDate)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const projectGameMetricDay = `-- name: ProjectGameMetricDay :one
 SELECT gfg_project_metric_day(
     $1::text,

@@ -56,6 +56,9 @@ SELECT gfg_project_metric_day(
     sqlc.arg(fact_date)::date
 )::bigint;
 
+-- name: ProjectGameMacMetricDay :one
+SELECT gfg_project_mac_metric_day(sqlc.arg(fact_date)::date)::bigint;
+
 -- name: AdvanceGameMetricCheckpoint :execrows
 UPDATE gfg_metric_checkpoints
 SET processed_through = sqlc.arg(processed_through),

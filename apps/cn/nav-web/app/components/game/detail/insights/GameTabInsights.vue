@@ -4,6 +4,7 @@
     data-game-insights
     :data-player-loaded-ranges="playerLoadedRanges"
     :data-price-loaded-ranges="priceLoadedRanges"
+    :data-price-region="selectedRegion"
   >
     <div class="entity-insights-heading game-insights-heading">
       <div>
@@ -31,9 +32,14 @@
         <small>{{ $t('insights.ranges.30d') }}</small>
       </article>
       <article>
-        <span>{{ $t('insights.entity.cnPrice') }}</span>
-        <strong :data-price-kind="summaryPrice.kind">{{ summaryPriceText }}</strong>
-        <small>{{ formatAsOf(summary.price?.as_of ?? null) }}</small>
+        <span>{{ $t('insights.entity.average30d') }}</span>
+        <strong>{{ formatPlayers(summary.players.average_30d) }}</strong>
+        <small>{{ summary.players.observed_days_30d }} {{ $t('insights.entity.observedDays') }}</small>
+      </article>
+      <article>
+        <span>{{ $t('insights.entity.regionalPrice') }}</span>
+        <strong :data-price-kind="summaryPriceKind">{{ summaryPriceText }}</strong>
+        <small>{{ formatAsOf(summary.regional_prices.as_of) }}</small>
       </article>
       <article>
         <span>{{ $t('insights.entity.platforms') }}</span>
@@ -50,6 +56,15 @@
         <strong>{{ releaseStateText }}</strong>
         <small>{{ formatAsOf(summary.state.as_of) }}</small>
       </article>
+    </div>
+
+    <div class="game-insights-region-row">
+      <span>{{ $t('insights.entity.priceRegion') }}</span>
+      <div class="insights-ranges"><button v-for="region in regions" :key="region" :class="{ 'insights-ranges__button--active': selectedRegion === region }" @click="selectRegion(region)">{{ $t(`insights.regions.${region}`) }}</button></div>
+      <p v-if="selectedRegionalPrice?.observed_low" data-observed-low>
+        {{ $t('insights.entity.observedLow') }}: {{ formatMoney(selectedRegionalPrice.observed_low.amount, selectedRegionalPrice.observed_low.currency) }}
+        <small>{{ $t('insights.entity.observedSince', { date: selectedRegionalPrice.observed_low.observed_since }) }}</small>
+      </p>
     </div>
 
     <div class="game-insights-range-row">
@@ -77,9 +92,10 @@
       />
       <GamePriceHistory
         :points="displayedPrices?.points ?? []"
-        :loading="priceLoading[selectedRange]"
-        :unavailable="priceFailed[selectedRange]"
-        @retry="loadPrices(selectedRange, true)"
+        :region="selectedRegion"
+        :loading="priceLoading[priceKey(selectedRegion, selectedRange)]"
+        :unavailable="priceFailed[priceKey(selectedRegion, selectedRange)]"
+        @retry="loadPrices(selectedRegion, selectedRange, true)"
       />
     </div>
 
@@ -97,11 +113,11 @@ import GamePlayerTrend from '@/components/game/detail/insights/GamePlayerTrend.v
 import GamePriceHistory from '@/components/game/detail/insights/GamePriceHistory.vue'
 import InsightsEntityTimeline from '@/components/insights/InsightsEntityTimeline.vue'
 import { getGameInsightPlayers, getGameInsightPrices } from '@/services/game'
-import type { GameInsightPlayerHistory, GameInsightPriceHistory, GameInsights, InsightRange } from '@/types/insights'
-import { formatCnyMinorAmount, publicPriceDisplay } from '@/utils/insightPrices'
+import type { GameInsightPlayerHistory, GameInsightPriceHistory, GameInsightRegion, GameInsights, InsightRange } from '@/types/insights'
+import { formatMinorAmount, publicPriceDisplay } from '@/utils/insightPrices'
 
 type LoadingState = Record<InsightRange, boolean>
-type FailedState = Record<InsightRange, boolean>
+type FailedState = Record<string, boolean>
 
 const props = defineProps<{
   gameId: string
@@ -112,26 +128,37 @@ const props = defineProps<{
 const localePath = useLocalePath()
 const { locale, t } = useI18n()
 const ranges: InsightRange[] = ['30d', '90d', 'all']
+const regions: GameInsightRegion[] = ['CN', 'US', 'HK']
 const selectedRange = ref<InsightRange>('30d')
+const selectedRegion = ref<GameInsightRegion>('CN')
 const playerCache = ref<Partial<Record<InsightRange, GameInsightPlayerHistory>>>({})
-const priceCache = ref<Partial<Record<InsightRange, GameInsightPriceHistory>>>({})
+const priceCache = ref<Record<string, GameInsightPriceHistory>>({})
 const playerLoading = ref<LoadingState>(emptyFlags())
-const priceLoading = ref<LoadingState>(emptyFlags())
+const priceLoading = ref<FailedState>(emptyPriceFlags())
 const playerFailed = ref<FailedState>(emptyFlags())
-const priceFailed = ref<FailedState>(emptyFlags())
+const priceFailed = ref<FailedState>(emptyPriceFlags())
 const lastPlayers = ref<GameInsightPlayerHistory | null>(null)
 const lastPrices = ref<GameInsightPriceHistory | null>(null)
 let generation = 0
 
 const displayedPlayers = computed(() => playerCache.value[selectedRange.value] ?? lastPlayers.value)
-const displayedPrices = computed(() => priceCache.value[selectedRange.value] ?? lastPrices.value)
+const displayedPrices = computed(() => priceCache.value[priceKey(selectedRegion.value, selectedRange.value)] ?? lastPrices.value)
 const playerLoadedRanges = computed(() => ranges.filter(range => playerCache.value[range]).join(','))
-const priceLoadedRanges = computed(() => ranges.filter(range => priceCache.value[range]).join(','))
-const summaryPrice = computed(() => publicPriceDisplay(props.summary?.price ?? null))
+const priceLoadedRanges = computed(() => Object.keys(priceCache.value).join(','))
+const selectedRegionalPrice = computed(() => props.summary?.regional_prices.regions.find(item => item.region === selectedRegion.value) ?? null)
+const summaryPrice = computed(() => publicPriceDisplay(selectedRegionalPrice.value))
+const summaryPriceKind = computed(() => {
+  if (!selectedRegionalPrice.value?.available) return 'missing'
+  return selectedRegionalPrice.value.state ?? 'missing'
+})
 const summaryPriceText = computed(() => {
+  if (!selectedRegionalPrice.value?.available) return t('insights.entity.priceMissing')
   if (summaryPrice.value.kind === 'free') return t('insights.entity.priceFree')
   if (summaryPrice.value.kind === 'priced') {
-    return `${t('insights.entity.pricePriced')} · ${formatCnyMinorAmount(summaryPrice.value.amount, locale.value)}`
+    return `${t('insights.entity.pricePriced')} · ${formatMoney(summaryPrice.value.amount, selectedRegionalPrice.value?.currency ?? '')}`
+  }
+  if (selectedRegionalPrice.value.state === 'unknown' || selectedRegionalPrice.value.state === 'unpriced') {
+    return t(`insights.entity.priceStates.${selectedRegionalPrice.value.state}`)
   }
   return t('insights.entity.priceUnavailable')
 })
@@ -139,6 +166,7 @@ const platformSummary = computed(() => {
   if (!props.summary) return '—'
   return [
     platformLabel('Windows', props.summary.state.windows),
+    platformLabel('macOS', props.summary.state.mac),
     platformLabel('Linux', props.summary.state.linux),
   ].join(' · ')
 })
@@ -162,6 +190,10 @@ function emptyFlags(): LoadingState {
   return { '30d': false, '90d': false, all: false }
 }
 
+function emptyPriceFlags(): FailedState { return {} }
+function priceKey(region: GameInsightRegion, range: InsightRange) { return `${region}:${range}` }
+function formatMoney(amount: number, currency: string) { return currency ? formatMinorAmount(amount, currency, locale.value) : '—' }
+
 function formatPlayers(value: number | null) {
   return value === null ? '—' : new Intl.NumberFormat(locale.value).format(value)
 }
@@ -179,6 +211,12 @@ function selectRange(range: InsightRange) {
   if (range === selectedRange.value) return
   selectedRange.value = range
   void loadRange(range)
+}
+
+function selectRegion(region: GameInsightRegion) {
+  if (region === selectedRegion.value) return
+  selectedRegion.value = region
+  void loadPrices(region, selectedRange.value)
 }
 
 async function loadPlayers(range: InsightRange, force = false) {
@@ -199,37 +237,39 @@ async function loadPlayers(range: InsightRange, force = false) {
   }
 }
 
-async function loadPrices(range: InsightRange, force = false) {
-  if ((!force && priceCache.value[range]) || priceLoading.value[range]) return
+async function loadPrices(region: GameInsightRegion, range: InsightRange, force = false) {
+  const key = priceKey(region, range)
+  if ((!force && priceCache.value[key]) || priceLoading.value[key]) return
   const requestGeneration = generation
   const requestGameId = props.gameId
-  priceLoading.value[range] = true
-  priceFailed.value[range] = false
+  priceLoading.value[key] = true
+  priceFailed.value[key] = false
   try {
-    const response = await getGameInsightPrices(requestGameId, range)
+    const response = await getGameInsightPrices(requestGameId, region, range)
     if (requestGeneration !== generation || requestGameId !== props.gameId) return
-    priceCache.value = { ...priceCache.value, [range]: response }
-    if (selectedRange.value === range) lastPrices.value = response
+    priceCache.value = { ...priceCache.value, [key]: response }
+    if (selectedRange.value === range && selectedRegion.value === region) lastPrices.value = response
   } catch {
-    if (requestGeneration === generation && requestGameId === props.gameId) priceFailed.value[range] = true
+    if (requestGeneration === generation && requestGameId === props.gameId) priceFailed.value[key] = true
   } finally {
-    if (requestGeneration === generation && requestGameId === props.gameId) priceLoading.value[range] = false
+    if (requestGeneration === generation && requestGameId === props.gameId) priceLoading.value[key] = false
   }
 }
 
 async function loadRange(range: InsightRange) {
-  await Promise.allSettled([loadPlayers(range), loadPrices(range)])
+  await Promise.allSettled([loadPlayers(range), loadPrices(selectedRegion.value, range)])
 }
 
 function resetForGame() {
   generation += 1
   selectedRange.value = '30d'
+  selectedRegion.value = 'CN'
   playerCache.value = {}
   priceCache.value = {}
   playerLoading.value = emptyFlags()
-  priceLoading.value = emptyFlags()
+  priceLoading.value = emptyPriceFlags()
   playerFailed.value = emptyFlags()
-  priceFailed.value = emptyFlags()
+  priceFailed.value = emptyPriceFlags()
   lastPlayers.value = null
   lastPrices.value = null
 }

@@ -28,6 +28,14 @@ type fakeInsightsStore struct {
 	lastSliceThrough  time.Time
 	lastSliceValue    string
 	lastExplorer      v2models.InsightChangeExplorerConditions
+	regional          []v2models.InsightRegionalPriceRecord
+	observedLow       *v2models.InsightObservedLowRecord
+	rankingMeta       v2models.InsightPlayerRankingMetaRecord
+	rankingRows       []v2models.InsightPlayerRankingRecord
+	priceOverview     v2models.InsightPriceOverviewRecord
+	discounts         []v2models.InsightDiscountRecord
+	languageOverview  v2models.InsightLanguageOverviewRecord
+	languages         []v2models.InsightLanguageRecord
 }
 
 func (f *fakeInsightsStore) CountInsightEntities(context.Context) (int64, error) { return 1, nil }
@@ -57,14 +65,49 @@ func (f *fakeInsightsStore) GetInsightGameState(context.Context, int64) (*v2mode
 func (f *fakeInsightsStore) GetInsightPlayerSummary(context.Context, v2models.InsightGameStateRecord) (v2models.InsightPlayerSummaryRecord, error) {
 	return f.playerSummary, nil
 }
-func (f *fakeInsightsStore) GetInsightPriceSummary(context.Context, int64) (*v2models.InsightPriceRecord, error) {
-	return f.price, nil
-}
 func (f *fakeInsightsStore) ListInsightPlayerHistory(context.Context, int64, int32) ([]v2models.InsightPlayerPointRecord, error) {
 	return f.players, nil
 }
-func (f *fakeInsightsStore) ListInsightPriceHistory(context.Context, int64, int32) ([]v2models.InsightPriceRecord, error) {
+func (f *fakeInsightsStore) ListInsightPriceHistory(context.Context, int64, string, time.Time, int32) ([]v2models.InsightPriceRecord, error) {
 	return f.prices, nil
+}
+func (f *fakeInsightsStore) ListInsightRegionalPrices(context.Context, int64, time.Time) ([]v2models.InsightRegionalPriceRecord, error) {
+	if f.regional != nil {
+		return f.regional, nil
+	}
+	rows := []v2models.InsightRegionalPriceRecord{{Region: "CN"}, {Region: "US"}, {Region: "HK"}}
+	if f.price != nil {
+		state := f.price.State
+		rows[0] = v2models.InsightRegionalPriceRecord{Region: "CN", Available: true, FactDate: f.price.FactDate, State: &state, Currency: f.price.Currency, InitialAmount: f.price.InitialAmount, FinalAmount: f.price.FinalAmount, DiscountPercent: f.price.DiscountPercent}
+	}
+	return rows, nil
+}
+func (f *fakeInsightsStore) GetInsightObservedLow(context.Context, int64, string, time.Time) (*v2models.InsightObservedLowRecord, error) {
+	return f.observedLow, nil
+}
+func (f *fakeInsightsStore) GetLatestPlayerRankingMeta(context.Context) (v2models.InsightPlayerRankingMetaRecord, error) {
+	return f.rankingMeta, nil
+}
+func (f *fakeInsightsStore) ListLatestPlayerRanking(context.Context, int32) ([]v2models.InsightPlayerRankingRecord, error) {
+	return f.rankingRows, nil
+}
+func (f *fakeInsightsStore) GetPlayer30DRankingMeta(context.Context) (v2models.InsightPlayerRankingMetaRecord, error) {
+	return f.rankingMeta, nil
+}
+func (f *fakeInsightsStore) ListPlayer30DRanking(context.Context, bool, int32) ([]v2models.InsightPlayerRankingRecord, error) {
+	return f.rankingRows, nil
+}
+func (f *fakeInsightsStore) GetInsightPriceOverview(context.Context, string) (v2models.InsightPriceOverviewRecord, error) {
+	return f.priceOverview, nil
+}
+func (f *fakeInsightsStore) ListInsightDiscounts(context.Context, string, int32) ([]v2models.InsightDiscountRecord, error) {
+	return f.discounts, nil
+}
+func (f *fakeInsightsStore) GetInsightLanguageOverview(context.Context) (v2models.InsightLanguageOverviewRecord, error) {
+	return f.languageOverview, nil
+}
+func (f *fakeInsightsStore) ListInsightLanguages(context.Context) ([]v2models.InsightLanguageRecord, error) {
+	return f.languages, nil
 }
 func (f *fakeInsightsStore) CountInsightOverviewChanges(context.Context, []string, []string) (int64, error) {
 	return int64(len(f.changes)), nil
@@ -84,7 +127,7 @@ func TestInsightMetricMappingIsExplicit(t *testing.T) {
 	want := map[string]struct {
 		key     string
 		version int32
-	}{"free": {"free_game_share", 1}, "windows": {"windows_support", 1}, "linux": {"linux_support", 1}}
+	}{"free": {"free_game_share", 1}, "windows": {"windows_support", 1}, "mac": {"mac_support", 1}, "linux": {"linux_support", 1}}
 	for publicKey, expected := range want {
 		contract, ok := resolveInsightMetric(publicKey)
 		if !ok || contract.InternalKey != expected.key || contract.Version != expected.version {
@@ -110,7 +153,8 @@ func TestPlayerMissingAndRealZeroStayDistinct(t *testing.T) {
 	if got.Players.Current != nil || got.Players.Peak30D != nil {
 		t.Fatalf("missing player sample became a value: %#v", got.Players)
 	}
-	store.playerSummary = v2models.InsightPlayerSummaryRecord{HasCurrent: true, Current: 0, HasPeak30D: true, Peak30D: 0}
+	zero := int64(0)
+	store.playerSummary = v2models.InsightPlayerSummaryRecord{HasCurrent: true, Current: 0, Peak30D: &zero}
 	got, err = NewInsightsService(store).GetGameInsights(context.Background(), 1)
 	if err != nil {
 		t.Fatal(err)
@@ -132,7 +176,7 @@ func TestPriceFreeAndPricedZeroStayDistinctAndHistoryIsNotFabricated(t *testing.
 		},
 		summaries: map[string]*v2models.InsightMetricSummaryRecord{},
 	}
-	got, err := NewInsightsService(store).GetGamePriceInsights(context.Background(), 1, "30d")
+	got, err := NewInsightsService(store).GetGamePriceInsights(context.Background(), 1, "CN", "30d")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,10 +193,20 @@ func TestChangeContractAndDayPrecisionDoNotLeakInternals(t *testing.T) {
 	at := date.Add(12 * time.Hour)
 	changes := insightPublicChanges([]v2models.InsightChangeRecord{
 		{EntityID: 1, EntityName: "Game", DetectorKey: "game_price_transition", DetectorVersion: 1, EventCode: "game_price_increased", ProjectionDate: date, TimeBasis: "day", EventAt: &at},
+		{EntityID: 1, EntityName: "Game", DetectorKey: "mac_support_transition", DetectorVersion: 1, EventCode: "mac_support_added", ProjectionDate: date, TimeBasis: "observed", EventAt: &at},
 		{EntityID: 1, EntityName: "Game", DetectorKey: "game_price_transition", DetectorVersion: 2, EventCode: "game_price_increased", ProjectionDate: date},
 	})
-	if len(changes) != 1 || changes[0].Type != "game.price.increased" || changes[0].OccurredAt != nil || changes[0].Detail != nil {
+	if len(changes) != 2 || changes[0].Type != "game.price.increased" || changes[0].OccurredAt != nil || changes[0].Detail != nil || changes[1].Type != "game.mac.added" || changes[1].OccurredAt == nil {
 		t.Fatalf("changes = %#v", changes)
+	}
+	macCategory := ""
+	for _, contract := range insightChangeContracts {
+		if contract.public == "game.mac.added" {
+			macCategory = contract.category
+		}
+	}
+	if macCategory != "platform" {
+		t.Fatalf("Mac public category = %q", macCategory)
 	}
 	payload, err := json.Marshal(changes)
 	if err != nil {
@@ -264,3 +318,76 @@ func TestInsightExplorerCategoryCursorAndNoEntityDedupe(t *testing.T) {
 		t.Fatalf("exact public type filter = %#v, %v", contracts, ok)
 	}
 }
+
+func TestRegionalPricesPreserveAvailabilityStatesPricedZeroAndObservedLow(t *testing.T) {
+	day := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	priced, free := "priced", "free"
+	cny := "CNY"
+	zero := int64(0)
+	hundred := int32(100)
+	store := &fakeInsightsStore{
+		game:  &v2models.InsightGameRecord{ID: 1, Name: "Game"},
+		state: &v2models.InsightGameStateRecord{GameID: 1, FactDate: day, TrackingPeriodID: 9, Mac: boolPointer(true)},
+		regional: []v2models.InsightRegionalPriceRecord{
+			{Region: "CN", Available: true, FactDate: day, State: &priced, Currency: &cny, InitialAmount: &zero, FinalAmount: &zero, DiscountPercent: &hundred},
+			{Region: "US", Available: true, FactDate: day, State: &free},
+			{Region: "HK", Available: false},
+		},
+		observedLow: &v2models.InsightObservedLowRecord{Amount: 0, Currency: "CNY", FirstSeen: day, ObservedSince: day, InitialAmount: 0, DiscountPercent: 100},
+		summaries:   map[string]*v2models.InsightMetricSummaryRecord{},
+	}
+	got, err := NewInsightsService(store).GetGameInsights(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.RegionalPrices.Regions) != 3 || got.Price == nil || got.Price.State != "priced" || got.Price.FinalAmount == nil || *got.Price.FinalAmount != 0 {
+		t.Fatalf("regional/CN compatibility = %#v", got)
+	}
+	if got.State.Mac == nil || !*got.State.Mac {
+		t.Fatalf("entity Mac state missing: %#v", got.State)
+	}
+	if got.RegionalPrices.Regions[0].ObservedLow == nil || got.RegionalPrices.Regions[0].ObservedLow.Amount != 0 || got.RegionalPrices.Regions[1].State == nil || *got.RegionalPrices.Regions[1].State != "free" || got.RegionalPrices.Regions[2].State != nil {
+		t.Fatalf("priced zero/free/unavailable semantics = %#v", got.RegionalPrices)
+	}
+	if _, err := NewInsightsService(store).GetGamePriceInsights(context.Background(), 1, "JP", "30d"); !errors.Is(err, ErrInvalidInsightRegion) {
+		t.Fatalf("invalid region = %v", err)
+	}
+}
+
+func TestPlayerRankingRealZeroQualityAndValidation(t *testing.T) {
+	day := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	coverage := .5
+	store := &fakeInsightsStore{
+		rankingMeta: v2models.InsightPlayerRankingMetaRecord{WindowFrom: &day, WindowThrough: &day, Population: 2, Ranked: 1},
+		rankingRows: []v2models.InsightPlayerRankingRecord{{GameID: 1, GameName: "Zero", Value: 0, SampleCoverage: &coverage}},
+	}
+	got, err := NewInsightsService(store).GetPlayerRanking(context.Background(), v2models.InsightPlayerRankingQuery{Metric: "average_30d", Limit: 20})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Items) != 1 || got.Items[0].Value != 0 || got.EntityCoverage == nil || *got.EntityCoverage != .5 || got.Items[0].SampleCoverage == nil {
+		t.Fatalf("ranking zero/coverage = %#v", got)
+	}
+	if _, err := NewInsightsService(store).GetPlayerRanking(context.Background(), v2models.InsightPlayerRankingQuery{Metric: "growth"}); !errors.Is(err, ErrInvalidPlayerRanking) {
+		t.Fatalf("invalid metric = %v", err)
+	}
+}
+
+func TestPriceOverviewAndLanguageMathUseCorrectDenominators(t *testing.T) {
+	day := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	store := &fakeInsightsStore{
+		priceOverview:    v2models.InsightPriceOverviewRecord{AsOf: &day, Population: 10, Priced: 4, Free: 1, Unpriced: 1, Unknown: 2, Unavailable: 2, Discounted: 2},
+		languageOverview: v2models.InsightLanguageOverviewRecord{AsOf: &day, Population: 10, Fresh: 5, Stale: 3, Unobserved: 2, FullyNormalizedGames: 4, UnmappedGames: 1, UnmappedEntries: 2},
+		languages:        []v2models.InsightLanguageRecord{{Code: "en", SteamName: "English", SupportedGames: 5, ExplicitFullAudioGames: 2}},
+	}
+	price, err := NewInsightsService(store).GetPriceOverview(context.Background(), "CN")
+	if err != nil || price.Known != 6 || price.Coverage == nil || *price.Coverage != .6 || price.DiscountedShare == nil || *price.DiscountedShare != .5 {
+		t.Fatalf("price overview = %#v err=%v", price, err)
+	}
+	languages, err := NewInsightsService(store).GetLanguageOverview(context.Background())
+	if err != nil || languages.Coverage == nil || *languages.Coverage != .5 || languages.Items[0].Share == nil || *languages.Items[0].Share != 1 || languages.Items[0].ExplicitFullAudioShare == nil || *languages.Items[0].ExplicitFullAudioShare != .4 {
+		t.Fatalf("language overview = %#v err=%v", languages, err)
+	}
+}
+
+func boolPointer(value bool) *bool { return &value }

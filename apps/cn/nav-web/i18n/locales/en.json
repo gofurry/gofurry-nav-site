@@ -617,6 +617,10 @@
         "name": "Linux",
         "description": "The share of listed games currently confirmed to support Linux."
       },
+      "mac": {
+        "name": "macOS",
+        "description": "The share of listed games currently confirmed to support macOS."
+      },
       "asOf": "As of {date}",
       "deltaUnavailable": "No 30-day comparison"
     },
@@ -651,6 +655,8 @@
         "gameWindowsRemoved": "removed Windows support",
         "gameLinuxAdded": "added Linux support",
         "gameLinuxRemoved": "removed Linux support",
+        "gameMacAdded": "added macOS support",
+        "gameMacRemoved": "removed macOS support",
         "gameReleaseAvailable": "became available",
         "gameReleaseWithdrawn": "was withdrawn",
         "gameReleaseChanged": "changed its release plan",
@@ -746,9 +752,15 @@
       "playerAverage": "Average players",
       "cnOnly": "Mainland China only",
       "priceHistory": "CN price history",
-      "currentPlayers": "Current public players",
+      "currentPlayers": "Latest Observed",
       "peak30d": "30-day peak players",
+      "average30d": "30-Day Observed Average",
+      "observedDays": "observed days",
       "cnPrice": "Current CN price",
+      "regionalPrice": "Current regional price",
+      "priceRegion": "Price region",
+      "observedLow": "GoFurry Observed Low",
+      "observedSince": "Observed since {date}",
       "platforms": "Platform state",
       "freeState": "Game price type",
       "releaseState": "Release state",
@@ -759,6 +771,7 @@
       "booleanUnknown": "Unable to confirm",
       "priceFree": "Free",
       "pricePriced": "Priced",
+      "priceMissing": "No same-day regional fact",
       "priceUnavailable": "Unavailable",
       "asOf": "As of {date}",
       "asOfUnavailable": "No reliable date",
@@ -783,6 +796,27 @@
         "upcoming": "Upcoming",
         "withdrawn": "Withdrawn"
       }
+    },
+    "regions": { "CN": "China", "US": "United States", "HK": "Hong Kong" },
+    "gameIntelligence": {
+      "navLabel": "Game Intelligence navigation", "ecosystem": "Ecosystem", "players": "Players", "prices": "Prices", "languages": "Languages"
+    },
+    "playerIntelligence": {
+      "title": "Player Intelligence", "description": "Explore player rankings and data quality from reliable GoFurry observations.",
+      "metrics": { "latest_observed": "Latest Scheduled Observation", "peak_30d": "30-Day Peak", "average_30d": "30-Day Observed Average" },
+      "population": "Observable games", "ranked": "Ranked", "coverage": "Entity coverage", "game": "Game", "value": "Observed value", "quality": "Data quality", "observed": "Successful observation", "observedDays": "{count} observed days", "successfulSamples": "{count} successful samples",
+      "snapshot": "Scheduled snapshot: {date}", "window": "Common window: {from} to {through}", "aboutTitle": "About player data", "about": "Latest Observed is not realtime Steam concurrency. Missing or failed observations never become zero; genuine observed zero remains zero."
+    },
+    "priceIntelligence": {
+      "title": "Regional Price Intelligence", "description": "Explore reliable regional price snapshots for China, the United States, and Hong Kong.",
+      "population": "Tracked population", "priced": "Priced", "free": "Free", "unpriced": "Unpriced", "unknown": "Unknown", "unavailable": "No same-day fact", "coverage": "Coverage", "discounted": "Currently discounted",
+      "discounts": "Current Regional Discounts", "currentPrice": "Current price", "discount": "Discount", "observedLow": "GoFurry Observed Low",
+      "aboutTitle": "About price data", "about": "Regions and currencies remain independent; no FX conversion or cheapest-region judgment is performed. GoFurry Observed Low is limited to the current continuous same-currency priced identity."
+    },
+    "languageIntelligence": {
+      "title": "Language Intelligence", "description": "Explore supported languages and Explicit Full Audio in one reliable snapshot.", "coverage": "Fresh evidence coverage", "fresh": "Fresh evidence", "normalization": "Normalization coverage",
+      "distribution": "Language Distribution", "overlap": "Languages are overlapping prevalence; shares must not be added to derive 100%.", "language": "Language", "supported": "Supported games", "share": "Share of fresh evidence", "fullAudio": "Explicit Full Audio",
+      "aboutTitle": "About language data", "about": "Unknown language names are never fuzzy-mapped, and absence of a Full Audio marker is not treated as unsupported."
     },
     "emptyStates": {
       "unavailable": "Insights data is temporarily unavailable",

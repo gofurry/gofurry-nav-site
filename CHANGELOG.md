@@ -8,6 +8,10 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add V3-P2.2 Game Intelligence: scheduled Player rankings and quality-aware 30-day peak/weighted-average read models, CN/US/HK price overview/discount APIs, region-aware histories, and bounded GoFurry Observed Low semantics.
+- Add `mac_support/1` and `mac_support_transition/1` Goose contracts, compiled Metric/Change projectors, global/primary-tag/tag slices, entity state, public platform changes, and explicit Metric-before-Change backfill support.
+- Add common-snapshot Supported Languages and Explicit Full-Audio distributions with freshness and normalization-quality disclosure, without fuzzy-mapping unknown language names.
+- Add SSR Game Intelligence Players, Prices, and Languages pages plus local navigation, regional Game Detail summaries, region+range price caching, currency-separated chart history, and bilingual responsive coverage.
 - Add Public Insights dimension breakdown and selected-slice trend APIs for Site country/group/content/public-interest and Game primary/all-tag dimensions, with frozen global horizons, null-safe public mathematics, overlapping-slice disclosure, and metadata fallbacks.
 - Add the domain-specific Change Explorer APIs and `/insights/changes` product flow with public category/type filters, projection-date ranges, precision-aware opaque keyset cursors, CN-only Game price/discount scope, SSR first pages, and client Load More.
 - Add independent Nuxt dimension URL state, SSR/deferred slice loading, responsive bilingual dimension tables/charts, Explorer filters, semantic regression coverage, and visual-guard scenarios.

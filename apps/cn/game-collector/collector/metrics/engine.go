@@ -196,9 +196,7 @@ func (engine *Engine) RunNext(ctx context.Context, metricKey string, metricVersi
 		result.Reason = "dry-run"
 		return result, tx.Commit(ctx)
 	}
-	if _, err := queries.ProjectGameMetricDay(ctx, gamesqlc.ProjectGameMetricDayParams{
-		MetricKey: metricKey, MetricVersion: metricVersion, FactDate: pgDate(next),
-	}); err != nil {
+	if _, err := projectMetricDay(ctx, queries, metricKey, metricVersion, next); err != nil {
 		return DayResult{}, err
 	}
 	rows, err := queries.AdvanceGameMetricCheckpoint(ctx, gamesqlc.AdvanceGameMetricCheckpointParams{
@@ -345,9 +343,7 @@ func (engine *Engine) rebuildDay(ctx context.Context, metricKey string, metricVe
 		result.Reason = "dry-run rebuild"
 		return result, tx.Commit(ctx)
 	}
-	if _, err := queries.ProjectGameMetricDay(ctx, gamesqlc.ProjectGameMetricDayParams{
-		MetricKey: metricKey, MetricVersion: metricVersion, FactDate: pgDate(day),
-	}); err != nil {
+	if _, err := projectMetricDay(ctx, queries, metricKey, metricVersion, day); err != nil {
 		return DayResult{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -355,6 +351,15 @@ func (engine *Engine) rebuildDay(ctx context.Context, metricKey string, metricVe
 	}
 	result.Processed = true
 	return result, nil
+}
+
+func projectMetricDay(ctx context.Context, queries *gamesqlc.Queries, key string, version int32, day time.Time) (int64, error) {
+	if key == "mac_support" && version == 1 {
+		return queries.ProjectGameMacMetricDay(ctx, pgDate(day))
+	}
+	return queries.ProjectGameMetricDay(ctx, gamesqlc.ProjectGameMetricDayParams{
+		MetricKey: key, MetricVersion: version, FactDate: pgDate(day),
+	})
 }
 
 func (engine *Engine) plan(ctx context.Context, contract Contract, from, through *time.Time, maxDays int) ([]DayResult, error) {

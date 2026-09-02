@@ -45,6 +45,33 @@ func (fakeInsightsReader) GetInsightsChanges(_ context.Context, query v2models.I
 	}
 	return v2models.InsightChangeExplorerPage{Items: []v2models.InsightExplorerChange{}}, nil
 }
+func (fakeInsightsReader) GetPlayerRanking(_ context.Context, query v2models.InsightPlayerRankingQuery) (v2models.InsightPlayerRanking, error) {
+	if query.Metric == "bad" {
+		return v2models.InsightPlayerRanking{}, v2service.ErrInvalidPlayerRanking
+	}
+	if query.Limit > 100 {
+		return v2models.InsightPlayerRanking{}, v2service.ErrInvalidInsightLimit
+	}
+	return v2models.InsightPlayerRanking{Items: []v2models.InsightPlayerRankingItem{}}, nil
+}
+func (fakeInsightsReader) GetPriceOverview(_ context.Context, region string) (v2models.InsightPriceOverview, error) {
+	if region == "JP" {
+		return v2models.InsightPriceOverview{}, v2service.ErrInvalidInsightRegion
+	}
+	return v2models.InsightPriceOverview{}, nil
+}
+func (fakeInsightsReader) GetDiscounts(_ context.Context, region string, limit int32) (v2models.InsightDiscounts, error) {
+	if region == "JP" {
+		return v2models.InsightDiscounts{}, v2service.ErrInvalidInsightRegion
+	}
+	if limit > 100 {
+		return v2models.InsightDiscounts{}, v2service.ErrInvalidInsightLimit
+	}
+	return v2models.InsightDiscounts{Items: []v2models.InsightDiscountItem{}}, nil
+}
+func (fakeInsightsReader) GetLanguageOverview(context.Context) (v2models.InsightLanguageOverview, error) {
+	return v2models.InsightLanguageOverview{Items: []v2models.InsightLanguageItem{}}, nil
+}
 func (fakeInsightsReader) GetGameInsights(_ context.Context, id int64) (v2models.GameInsights, error) {
 	if id == 404 {
 		return v2models.GameInsights{}, v2service.ErrInsightGameNotFound
@@ -60,12 +87,15 @@ func (fakeInsightsReader) GetGamePlayerInsights(_ context.Context, id int64, req
 	}
 	return v2models.InsightPlayerHistory{RequestedRange: requestedRange, Points: []v2models.InsightPlayerPoint{}}, nil
 }
-func (fakeInsightsReader) GetGamePriceInsights(_ context.Context, id int64, requestedRange string) (v2models.InsightPriceHistory, error) {
+func (fakeInsightsReader) GetGamePriceInsights(_ context.Context, id int64, region, requestedRange string) (v2models.InsightPriceHistory, error) {
 	if id == 404 {
 		return v2models.InsightPriceHistory{}, v2service.ErrInsightGameNotFound
 	}
 	if requestedRange == "bad" {
 		return v2models.InsightPriceHistory{}, v2service.ErrInvalidInsightRange
+	}
+	if region == "JP" {
+		return v2models.InsightPriceHistory{}, v2service.ErrInvalidInsightRegion
 	}
 	return v2models.InsightPriceHistory{RequestedRange: requestedRange, Points: []v2models.InsightPricePoint{}}, nil
 }
@@ -78,6 +108,10 @@ func TestGameInsightsHTTPContract(t *testing.T) {
 	app.Get("/api/v2/game/insights/metrics/:metricKey/breakdown", api.GetInsightsMetricBreakdown)
 	app.Get("/api/v2/game/insights/metrics/:metricKey/breakdown/:dimension/:value/trend", api.GetInsightsMetricSliceTrend)
 	app.Get("/api/v2/game/insights/changes", api.GetInsightsChanges)
+	app.Get("/api/v2/game/insights/players/ranking", api.GetPlayerRanking)
+	app.Get("/api/v2/game/insights/prices/overview", api.GetPriceOverview)
+	app.Get("/api/v2/game/insights/prices/discounts", api.GetDiscounts)
+	app.Get("/api/v2/game/insights/languages/overview", api.GetLanguageOverview)
 	app.Get("/api/v2/game/games/:gameId/insights", api.GetGameInsights)
 	app.Get("/api/v2/game/games/:gameId/insights/players", api.GetGamePlayerInsights)
 	app.Get("/api/v2/game/games/:gameId/insights/prices", api.GetGamePriceInsights)
@@ -92,9 +126,18 @@ func TestGameInsightsHTTPContract(t *testing.T) {
 		{"/api/v2/game/insights/metrics/free/breakdown/tag/1/trend?range=90d", http.StatusOK},
 		{"/api/v2/game/insights/changes?range=30d&limit=20", http.StatusOK},
 		{"/api/v2/game/insights/changes?cursor=bad", http.StatusBadRequest},
+		{"/api/v2/game/insights/players/ranking", http.StatusOK},
+		{"/api/v2/game/insights/players/ranking?metric=bad", http.StatusBadRequest},
+		{"/api/v2/game/insights/players/ranking?limit=101", http.StatusBadRequest},
+		{"/api/v2/game/insights/prices/overview?region=US", http.StatusOK},
+		{"/api/v2/game/insights/prices/overview?region=JP", http.StatusBadRequest},
+		{"/api/v2/game/insights/prices/discounts?region=HK", http.StatusOK},
+		{"/api/v2/game/insights/prices/discounts?limit=101", http.StatusBadRequest},
+		{"/api/v2/game/insights/languages/overview", http.StatusOK},
 		{"/api/v2/game/games/1/insights", http.StatusOK},
 		{"/api/v2/game/games/1/insights/players?range=all", http.StatusOK},
 		{"/api/v2/game/games/1/insights/prices?range=30d", http.StatusOK},
+		{"/api/v2/game/games/1/insights/prices?region=JP", http.StatusBadRequest},
 		{"/api/v2/game/insights/metrics/bad/trend", http.StatusBadRequest},
 		{"/api/v2/game/insights/metrics/free/trend?range=bad", http.StatusBadRequest},
 		{"/api/v2/game/games/404/insights", http.StatusNotFound},
