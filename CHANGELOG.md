@@ -6,6 +6,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.6 - 2026-09-03
+
 ### Added
 
 - Add V3-P2.4 order-preserving Site and Game Entity Compare APIs and SSR product pages for bounded 2–4 entity cohorts, without scores, rankings, winners, or recommendations.
@@ -52,6 +54,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Align Admin migration catalogs and Nav Metric registry/checkpoint integration expectations with the P2.2/P2.3 Goose contracts.
 - Detect Site target child routes from the `domain` route parameter so localized `/en/site/:id` pages retain their Site-level Insights SSR panel.
 - Require explicit impact confirmation for collection cancellation and schedule state changes while preserving the existing control-plane semantics.
 - Correct the React Data Operations capability from `data_ops.read` to canonical `dataops.read` and explicitly reject the legacy alias in regression tests.
