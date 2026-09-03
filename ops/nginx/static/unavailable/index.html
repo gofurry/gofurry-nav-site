@@ -1,450 +1,163 @@
-<!doctype html>
-<html lang="zh-CN" data-lang="zh" data-theme="light">
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#efe0ca">
-  <title>GoFurry 正在维护中</title>
-  <script>
-    (function () {
-      try {
-        var savedTheme = localStorage.getItem('gf-maintenance-theme');
-        var theme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        var savedLang = localStorage.getItem('gf-maintenance-lang');
-        var lang = savedLang || (/^en/i.test(navigator.language || '') ? 'en' : 'zh');
-        document.documentElement.dataset.theme = theme;
-        document.documentElement.dataset.lang = lang;
-        document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#07111f' : '#efe0ca');
-      } catch (error) {
-        document.documentElement.dataset.theme = 'light';
-        document.documentElement.dataset.lang = 'zh';
-      }
-    })();
-  </script>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg: #efe0ca;
-      --grid: rgba(95, 69, 49, 0.16);
-      --grid-soft: rgba(95, 69, 49, 0.11);
-      --panel: rgba(255, 250, 242, 0.96);
-      --panel-warm: rgba(255, 237, 213, 0.72);
-      --text: #1c1917;
-      --muted: rgba(87, 83, 78, 0.76);
-      --accent: #7c2d12;
-      --accent-soft: rgba(249, 115, 22, 0.14);
-      --border: rgba(126, 92, 58, 0.18);
-      --border-strong: rgba(126, 92, 58, 0.28);
-      --shadow: rgba(91, 62, 28, 0.16);
-      --control-bg: rgba(255, 250, 242, 0.74);
-      --control-hover: rgba(255, 237, 213, 0.92);
-    }
-
-    html[data-theme="dark"] {
-      color-scheme: dark;
-      --bg: #07111f;
-      --grid: rgba(148, 163, 184, 0.15);
-      --grid-soft: rgba(148, 163, 184, 0.10);
-      --panel: rgba(17, 24, 39, 0.94);
-      --panel-warm: rgba(30, 41, 59, 0.82);
-      --text: rgba(248, 250, 252, 0.94);
-      --muted: rgba(203, 213, 225, 0.76);
-      --accent: #fed7aa;
-      --accent-soft: rgba(251, 146, 60, 0.12);
-      --border: rgba(226, 232, 240, 0.15);
-      --border-strong: rgba(226, 232, 240, 0.24);
-      --shadow: rgba(2, 6, 23, 0.42);
-      --control-bg: rgba(15, 23, 42, 0.62);
-      --control-hover: rgba(30, 41, 59, 0.92);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      min-height: 100%;
-      margin: 0;
-    }
-
-    body {
-      display: grid;
-      min-height: 100vh;
-      place-items: center;
-      overflow-x: hidden;
-      background:
-        radial-gradient(circle at 16% 12%, rgba(255, 247, 237, 0.64), transparent 28%),
-        radial-gradient(circle at 82% 10%, rgba(251, 146, 60, 0.10), transparent 26%),
-        repeating-linear-gradient(90deg, var(--grid) 0, var(--grid) 1px, transparent 1px, transparent 40px),
-        repeating-linear-gradient(0deg, var(--grid-soft) 0, var(--grid-soft) 1px, transparent 1px, transparent 40px),
-        var(--bg);
-      color: var(--text);
-      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
-      letter-spacing: 0.025em;
-      padding: 32px 18px;
-      transition:
-        background-color 260ms ease,
-        color 260ms ease;
-    }
-
-    html[data-theme="dark"] body {
-      background:
-        radial-gradient(circle at 18% 12%, rgba(20, 184, 166, 0.09), transparent 28%),
-        radial-gradient(circle at 82% 10%, rgba(251, 146, 60, 0.08), transparent 26%),
-        repeating-linear-gradient(90deg, var(--grid) 0, var(--grid) 1px, transparent 1px, transparent 40px),
-        repeating-linear-gradient(0deg, var(--grid-soft) 0, var(--grid-soft) 1px, transparent 1px, transparent 40px),
-        var(--bg);
-    }
-
-    main {
-      position: relative;
-      width: min(100%, 760px);
-      border: 1px solid var(--border);
-      border-radius: 28px;
-      background:
-        linear-gradient(145deg, var(--panel), var(--panel-warm)),
-        var(--panel);
-      box-shadow: 0 28px 80px var(--shadow);
-      isolation: isolate;
-      padding: clamp(30px, 6vw, 58px);
-      transition:
-        background-color 260ms ease,
-        border-color 260ms ease,
-        box-shadow 260ms ease;
-    }
-
-    main::before {
-      content: "";
-      position: absolute;
-      inset: auto 12% -28% 12%;
-      z-index: -1;
-      height: 42%;
-      border-radius: 999px;
-      background: radial-gradient(circle, rgba(249, 115, 22, 0.16), transparent 68%);
-      filter: blur(18px);
-      opacity: 0.86;
-    }
-
-    html[data-theme="dark"] main::before {
-      opacity: 0.28;
-    }
-
-    .toolbar {
-      position: absolute;
-      top: 22px;
-      right: 22px;
-      display: flex;
-      gap: 8px;
-    }
-
-    .control-button {
-      min-width: 68px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: var(--control-bg);
-      color: var(--text);
-      cursor: pointer;
-      font: inherit;
-      font-size: 13px;
-      font-weight: 750;
-      letter-spacing: 0.035em;
-      line-height: 1;
-      padding: 10px 13px;
-      transition:
-        background-color 180ms ease,
-        border-color 180ms ease,
-        color 180ms ease;
-    }
-
-    .control-button:hover {
-      border-color: var(--border-strong);
-      background: var(--control-hover);
-    }
-
-    .control-button:focus-visible {
-      outline: 3px solid rgba(249, 115, 22, 0.28);
-      outline-offset: 3px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      margin-bottom: 32px;
-      padding-right: 170px;
-    }
-
-    .brand-title {
-      margin: 0;
-      font-size: 23px;
-      font-weight: 850;
-      letter-spacing: 0.005em;
-      line-height: 1.2;
-    }
-
-    .brand-subtitle {
-      margin: 5px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    .eyebrow {
-      margin: 0;
-      color: var(--accent);
-      font-size: 13px;
-      font-weight: 850;
-      letter-spacing: 0.20em;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      max-width: 680px;
-      margin: 14px 0 0;
-      font-size: clamp(34px, 5.4vw, 52px);
-      font-weight: 900;
-      letter-spacing: 0.045em;
-      line-height: 1.16;
-      text-wrap: balance;
-    }
-
-    html[data-lang="en"] h1 {
-      max-width: 720px;
-      font-size: clamp(34px, 5vw, 50px);
-      letter-spacing: -0.025em;
-      line-height: 1.08;
-    }
-
-    .lead {
-      max-width: 610px;
-      margin: 22px 0 0;
-      color: var(--muted);
-      font-size: 17px;
-      letter-spacing: 0.035em;
-      line-height: 2;
-      text-wrap: pretty;
-    }
-
-    html[data-lang="en"] .lead {
-      letter-spacing: 0.012em;
-      line-height: 1.8;
-    }
-
-    .progress {
-      position: relative;
-      height: 7px;
-      margin-top: 38px;
-      overflow: hidden;
-      border-radius: 999px;
-      background: rgba(126, 92, 58, 0.14);
-    }
-
-    html[data-theme="dark"] .progress {
-      background: rgba(226, 232, 240, 0.13);
-    }
-
-    .progress span {
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: 36%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, #7c2d12, #fb923c, #7c2d12);
-      animation: loading 2.8s ease-in-out infinite;
-    }
-
-    html[data-theme="dark"] .progress span {
-      background: linear-gradient(90deg, #fed7aa, #fb923c, #fed7aa);
-    }
-
-    footer {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 14px;
-      margin-top: 28px;
-      color: var(--muted);
-      font-size: 13px;
-      letter-spacing: 0.025em;
-      line-height: 1.8;
-    }
-
-    code {
-      border-radius: 999px;
-      background: rgba(124, 45, 18, 0.08);
-      color: var(--accent);
-      padding: 3px 8px;
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      font-size: 12px;
-      letter-spacing: 0;
-    }
-
-    html[data-theme="dark"] code {
-      background: rgba(251, 146, 60, 0.12);
-    }
-
-    @keyframes loading {
-      0% {
-        transform: translateX(-80%);
-      }
-      50% {
-        transform: translateX(110%);
-      }
-      100% {
-        transform: translateX(-80%);
-      }
-    }
-
-    @media (max-width: 620px) {
-      body {
-        padding: 18px 12px;
-      }
-
-      main {
-        border-radius: 24px;
-        padding: 84px 24px 30px;
-      }
-
-      .toolbar {
-        top: 20px;
-        right: 20px;
-        left: 20px;
-        justify-content: flex-end;
-      }
-
-      .brand {
-        align-items: flex-start;
-        margin-bottom: 30px;
-        padding-right: 0;
-      }
-
-      h1 {
-        font-size: clamp(32px, 11vw, 42px);
-      }
-
-      html[data-lang="en"] h1 {
-        font-size: clamp(30px, 10vw, 40px);
-      }
-
-      .lead {
-        font-size: 16px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GoFurry 正在维护</title>
+<style>
+:root{--orange:#ff9d2e}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+  background:radial-gradient(circle at 50% 45%,#382314 0%,#140e09 35%,#050505 75%);
+  font-family:Inter,"Microsoft YaHei","PingFang SC",sans-serif
+}
+body::before{
+  content:"";
+  position:absolute;
+  width:700px;
+  height:300px;
+  background:rgba(255,145,40,.18);
+  filter:blur(130px)
+}
+.card{
+  position:relative;
+  width:min(900px,90vw);
+  padding:55px 70px;
+  text-align:center;
+  border-radius:28px;
+  overflow:hidden;
+  background:linear-gradient(145deg,rgba(255,255,255,.05),transparent 35%),linear-gradient(160deg,#21170f,#100c08);
+  border:1px solid rgba(255,170,70,.38);
+  box-shadow:0 0 0 1px rgba(255,180,90,.08) inset,0 35px 90px rgba(0,0,0,.85),0 0 55px rgba(255,130,30,.22)
+}
+.card::before{
+  content:"";
+  position:absolute;
+  inset:9px;
+  border-radius:22px;
+  border:1px solid rgba(255,190,100,.18)
+}
+.card::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:0;
+  width:320px;
+  height:3px;
+  transform:translateX(-50%);
+  background:linear-gradient(90deg,transparent,var(--orange),transparent);
+  box-shadow:0 0 25px var(--orange)
+}
+.logo{
+  display:block;
+  width:120px;
+  height:70px;
+  margin:0 auto 28px;
+  object-fit:contain;
+  filter:drop-shadow(0 0 15px rgba(255,145,40,.45))
+}
+.divider{
+  width:260px;
+  height:1px;
+  margin:0 auto 38px;
+  background:linear-gradient(90deg,transparent,rgba(255,160,60,.55),rgba(255,210,140,.85),rgba(255,160,60,.55),transparent);
+  box-shadow:0 0 12px rgba(255,150,50,.25)
+}
+h1{
+  margin:0 0 22px;
+  font-size:clamp(34px,5vw,54px);
+  font-weight:800;
+  background:linear-gradient(90deg,#ff8a20,#ffd09a);
+  -webkit-background-clip:text;
+  color:transparent
+}
+.desc{margin-bottom:18px;color:#dfd1bf;font-size:20px}
+.en{margin-bottom:28px;color:var(--orange);font-size:25px;font-weight:700}
+.heart{color:var(--orange);font-size:20px;letter-spacing:12px}
+.footer{margin-top:42px;color:#98765a;font-size:14px}
+@media(max-width:600px){
+  .card{padding:45px 25px}
+  .logo{width:100px;height:60px}
+  .desc{font-size:16px}
+  .en{font-size:20px}
+}
+</style>
 </head>
 <body>
-  <main>
-    <div class="toolbar" aria-label="Display controls">
-      <button class="control-button" type="button" data-action="language" aria-label="Switch language">EN</button>
-      <button class="control-button" type="button" data-action="theme" aria-label="Switch color mode">深色</button>
-    </div>
+<div class="card">
 
-    <div class="brand" aria-label="GoFurry">
-      <div>
-        <p class="brand-title">GoFurry</p>
-        <p class="brand-subtitle" data-i18n="brandSubtitle">兽人控导航站 / Furry Navigation</p>
-      </div>
-    </div>
 
-    <p class="eyebrow" data-i18n="eyebrow">Scheduled Maintenance</p>
-    <h1 data-i18n="headline">网站正在维护中</h1>
-    <p class="lead" data-i18n="lead">我们正在对 GoFurry 做一次短暂停机维护，请稍后刷新页面再试。</p>
+<svg class="logo" viewBox="0 0 1287 1024" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#ffd58a"/>
+    <stop offset="50%" stop-color="#ff9d2e"/>
+    <stop offset="100%" stop-color="#d96818"/>
+  </linearGradient>
+</defs>
+<metadata>
+Created by potrace 1.16, written by Peter Selinger 2001-2019
+</metadata>
+<g transform="translate(0.000000,1024.000000) scale(0.100000,-0.100000)"
+fill="url(#logoGradient)" stroke="none">
+<path d="M6570 8550 c-58 -15 -126 -37 -151 -48 -58 -25 -408 -260 -515 -346
+l-81 -65 -59 15 c-32 8 -205 87 -384 174 -295 145 -338 163 -460 195 -173 45
+-274 47 -423 9 -132 -33 -216 -87 -289 -188 -45 -62 -54 -82 -84 -203 -33
+-131 -34 -140 -34 -338 0 -166 4 -224 21 -312 30 -154 25 -176 -59 -271 -316
+-360 -490 -726 -572 -1206 -94 -554 9 -1117 278 -1520 216 -321 522 -585 881
+-758 193 -93 516 -185 771 -220 146 -20 528 -17 670 5 410 64 721 185 1067
+416 100 66 203 139 228 161 26 23 49 39 52 37 2 -3 8 -175 13 -383 13 -525 34
+-832 86 -1254 45 -367 93 -508 212 -630 77 -77 136 -110 241 -134 97 -21 146
+-20 244 5 167 42 254 130 297 299 27 105 27 112 -39 550 -56 379 -95 679 -89
+686 3 2 63 -7 134 -20 304 -58 632 -92 997 -106 274 -10 647 1 809 24 121 17
+290 58 346 83 103 48 201 134 242 214 26 51 50 149 50 205 -1 123 -63 279
+-137 344 -129 114 -307 145 -555 96 -208 -42 -314 -50 -643 -49 -321 0 -497
+10 -795 43 -152 17 -480 66 -486 73 -5 5 16 631 26 762 l9 140 38 33 c49 42
+129 80 310 148 131 49 164 57 312 77 154 20 203 22 696 21 516 -2 907 -14
+1090 -35 50 -6 160 -24 245 -41 191 -38 291 -41 410 -9 176 47 277 139 320
+292 54 196 -7 384 -163 503 -71 53 -132 79 -262 109 -248 58 -530 80 -1225 97
+-234 6 -513 15 -620 20 -214 12 -1644 -3 -2055 -20 -126 -6 -387 -15 -580 -20
+-560 -16 -781 -34 -1055 -85 -313 -59 -441 -101 -542 -175 -93 -68 -150 -148
+-177 -248 -27 -99 -27 -175 0 -273 41 -154 143 -247 310 -285 92 -21 151 -15
+291 30 171 55 356 80 586 78 228 -2 318 -19 477 -89 123 -54 239 -130 243
+-159 4 -28 -237 -259 -393 -377 -175 -132 -389 -232 -558 -261 -254 -44 -595
+-20 -832 58 -107 36 -301 131 -400 197 -96 64 -251 211 -311 295 -54 76 -128
+229 -149 309 -59 228 -32 629 59 865 97 251 233 448 431 623 221 197 487 327
+771 379 100 18 158 21 364 21 429 1 712 -51 985 -182 129 -61 219 -121 325
+-216 191 -172 310 -217 470 -181 193 44 286 155 319 383 8 50 6 81 -9 152 -22
+102 -48 160 -114 248 -113 151 -365 332 -615 444 l-106 47 -11 149 c-10 138
+-36 271 -66 340 -17 38 -80 123 -114 154 -68 60 -104 79 -202 103 -126 32
+-180 32 -312 -4z"/>
+<path d="M2350 7368 c-296 -25 -498 -145 -544 -324 -39 -150 1 -278 117 -380
+92 -81 249 -139 432 -160 240 -28 377 -25 511 11 169 46 255 103 333 219 100
+147 93 255 -26 419 -34 46 -130 121 -186 145 -57 24 -214 64 -272 69 -101 8
+-276 8 -365 1z"/>
+<path d="M1940 6217 c-3 -3 -111 -8 -240 -12 -305 -8 -333 -10 -514 -36 -68
+-9 -193 -48 -251 -77 -110 -55 -183 -140 -216 -254 l-23 -77 22 -82 c27 -101
+71 -163 156 -223 151 -106 205 -119 556 -131 182 -6 503 -6 637 0 240 12 461
+105 555 235 29 40 78 175 78 214 0 15 -12 64 -27 109 -25 74 -35 89 -98 153
+-47 47 -90 79 -130 98 -33 15 -68 32 -78 37 -41 22 -198 47 -307 48 -64 1
+-118 0 -120 -2z"/>
+<path d="M1845 4930 c-228 -33 -326 -63 -432 -131 -123 -81 -160 -132 -187
+-264 -14 -63 -5 -116 29 -182 8 -15 15 -33 15 -39 0 -17 60 -77 117 -118 67
+-48 155 -83 262 -105 121 -25 134 -26 346 -25 l190 1 102 36 c102 35 208 99
+265 158 14 16 39 54 55 86 25 51 28 69 28 153 0 106 -17 154 -83 231 -42 48
+-160 130 -222 152 -129 47 -343 68 -485 47z"/>
+</g>
+</svg>
 
-    <div class="progress" aria-hidden="true"><span></span></div>
-
-    <footer>
-      <span><span data-i18n="httpStatus">HTTP status:</span> <code>503 Service Unavailable</code></span>
-      <span data-i18n="retry">请稍后刷新页面</span>
-    </footer>
-  </main>
-
-  <script>
-    (function () {
-      var copy = {
-        zh: {
-          title: 'GoFurry 正在维护中',
-          brandSubtitle: '兽人控导航站 / Furry Navigation',
-          eyebrow: 'Scheduled Maintenance',
-          headline: '网站正在维护中',
-          lead: '我们正在对 GoFurry 做一次短暂停机维护，请稍后刷新页面再试。',
-          httpStatus: 'HTTP status:',
-          retry: '请稍后刷新页面',
-          languageButton: 'EN',
-          themeToDark: '深色',
-          themeToLight: '浅色'
-        },
-        en: {
-          title: 'GoFurry is under maintenance',
-          brandSubtitle: 'Furry Navigation',
-          eyebrow: 'Scheduled Maintenance',
-          headline: 'Maintenance in progress',
-          lead: 'We are performing brief maintenance on GoFurry. Please refresh the page later.',
-          httpStatus: 'HTTP status:',
-          retry: 'Please refresh the page later.',
-          languageButton: '中文',
-          themeToDark: 'Dark',
-          themeToLight: 'Light'
-        }
-      };
-
-      var root = document.documentElement;
-      var languageButton = document.querySelector('[data-action="language"]');
-      var themeButton = document.querySelector('[data-action="theme"]');
-      var themeMeta = document.querySelector('meta[name="theme-color"]');
-
-      function currentLang() {
-        return root.dataset.lang === 'en' ? 'en' : 'zh';
-      }
-
-      function currentTheme() {
-        return root.dataset.theme === 'dark' ? 'dark' : 'light';
-      }
-
-      function applyLang(lang) {
-        var pack = copy[lang] || copy.zh;
-        root.dataset.lang = lang;
-        root.lang = lang === 'en' ? 'en' : 'zh-CN';
-        document.title = pack.title;
-        document.querySelectorAll('[data-i18n]').forEach(function (node) {
-          var key = node.getAttribute('data-i18n');
-          if (key && pack[key]) {
-            node.textContent = pack[key];
-          }
-        });
-        languageButton.textContent = pack.languageButton;
-        languageButton.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : '切换为英文');
-        applyTheme(currentTheme(), false);
-        try {
-          localStorage.setItem('gf-maintenance-lang', lang);
-        } catch (error) {}
-      }
-
-      function applyTheme(theme, persist) {
-        var lang = currentLang();
-        var pack = copy[lang] || copy.zh;
-        root.dataset.theme = theme;
-        themeMeta.setAttribute('content', theme === 'dark' ? '#07111f' : '#efe0ca');
-        themeButton.textContent = theme === 'dark' ? pack.themeToLight : pack.themeToDark;
-        themeButton.setAttribute('aria-label', lang === 'en' ? 'Switch color mode' : '切换亮暗色');
-        if (persist) {
-          try {
-            localStorage.setItem('gf-maintenance-theme', theme);
-          } catch (error) {}
-        }
-      }
-
-      languageButton.addEventListener('click', function () {
-        applyLang(currentLang() === 'en' ? 'zh' : 'en');
-      });
-
-      themeButton.addEventListener('click', function () {
-        applyTheme(currentTheme() === 'dark' ? 'light' : 'dark', true);
-      });
-
-      applyLang(currentLang());
-      applyTheme(currentTheme(), false);
-    })();
-  </script>
+<div class="divider"></div>
+<h1>GoFurry 正在停机维护</h1>
+<div class="desc">网站正在进行更新升级，请稍后再来。</div>
+<div class="en">We'll be back soon.</div>
+<div class="heart">· · · ♥ · · ·</div>
+<div class="footer">Maintenance in progress · Thanks for your patience</div>
+</div>
 </body>
 </html>
