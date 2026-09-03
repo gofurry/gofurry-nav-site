@@ -76,7 +76,7 @@ type GamePayload struct {
 }
 
 type GameComment struct {
-	ID         int64               `json:"id"`
+	ID         int64               `json:"id,string"`
 	Region     string              `json:"region"`
 	Content    string              `json:"content"`
 	Score      float64             `json:"score"`

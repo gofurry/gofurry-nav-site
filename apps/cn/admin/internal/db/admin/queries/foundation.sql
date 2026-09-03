@@ -77,6 +77,14 @@ WHERE id = sqlc.arg(account_id)
 RETURNING id, username, display_name, role, status, password_hash, session_version,
           last_login_at, created_at, updated_at, password_updated_at;
 
+-- name: UpdateAdminAccountUsername :one
+UPDATE gfa_admin_account
+SET username = sqlc.arg(username),
+    updated_at = NOW()::timestamp(0)
+WHERE id = sqlc.arg(account_id)
+RETURNING id, username, display_name, role, status, password_hash, session_version,
+          last_login_at, created_at, updated_at, password_updated_at;
+
 -- name: UpdateAdminAccountRole :one
 UPDATE gfa_admin_account
 SET role = sqlc.arg(role),

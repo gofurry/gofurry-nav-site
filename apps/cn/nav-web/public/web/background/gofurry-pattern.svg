@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 160 160"
+     width="160"
+     height="160"
+     fill="none">
+  <!--
+    GoFurry seamless pattern prototype
+    - transparent background
+    - designed for repeat
+    - monochrome/mask-friendly
+    - no element touches the tile edges
+  -->
+
+  <defs>
+    <!-- Medium paw -->
+    <g id="paw">
+      <ellipse cx="0" cy="-8.5" rx="4.2" ry="5.2" fill="#000"/>
+      <ellipse cx="8.2" cy="-5.2" rx="4.0" ry="5.0" fill="#000"/>
+      <ellipse cx="-8.2" cy="-5.2" rx="4.0" ry="5.0" fill="#000"/>
+      <ellipse cx="13.2" cy="2.5" rx="3.7" ry="4.6" fill="#000"/>
+      <ellipse cx="-13.2" cy="2.5" rx="3.7" ry="4.6" fill="#000"/>
+      <path d="M-10.8 11.7
+               C-8.8 5.3 -3.9 2.0 0 2.0
+               C3.9 2.0 8.8 5.3 10.8 11.7
+               C12.3 16.4 9.1 21.0 4.7 21.0
+               C2.5 21.0 1.2 19.7 0 18.8
+               C-1.2 19.7 -2.5 21.0 -4.7 21.0
+               C-9.1 21.0 -12.3 16.4 -10.8 11.7Z"
+            fill="#000"/>
+    </g>
+
+    <!-- Tiny bean pair -->
+    <g id="beans">
+      <ellipse cx="-4.2" cy="0" rx="4.0" ry="5.4"
+               transform="rotate(-24 -4.2 0)"
+               fill="#000"/>
+      <ellipse cx="4.4" cy="1.2" rx="3.5" ry="4.8"
+               transform="rotate(18 4.4 1.2)"
+               fill="#000"/>
+    </g>
+
+    <!-- Four-point sparkle -->
+    <path id="sparkle"
+          d="M0-7
+             C1.1-2.4 2.4-1.1 7 0
+             C2.4 1.1 1.1 2.4 0 7
+             C-1.1 2.4-2.4 1.1-7 0
+             C-2.4-1.1-1.1-2.4 0-7Z"
+          fill="#000"/>
+  </defs>
+
+  <!-- Main paw -->
+  <g transform="translate(42 38) rotate(-8)">
+    <use href="#paw"/>
+  </g>
+
+  <!-- Smaller paw -->
+  <g transform="translate(118 51) scale(.62) rotate(14)">
+    <use href="#paw"/>
+  </g>
+
+  <!-- Tiny paw -->
+  <g transform="translate(76 116) scale(.48) rotate(-18)">
+    <use href="#paw"/>
+  </g>
+
+  <!-- Bean accents -->
+  <g transform="translate(112 126) scale(.62) rotate(12)">
+    <use href="#beans"/>
+  </g>
+
+  <g transform="translate(31 111) scale(.48) rotate(-18)">
+    <use href="#beans"/>
+  </g>
+
+  <!-- Sparkles -->
+  <g transform="translate(132 104) scale(.72)">
+    <use href="#sparkle"/>
+  </g>
+
+  <g transform="translate(28 134) scale(.52)">
+    <use href="#sparkle"/>
+  </g>
+
+  <g transform="translate(93 27) scale(.38)">
+    <use href="#sparkle"/>
+  </g>
+</svg>

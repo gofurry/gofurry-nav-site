@@ -1,14 +1,8 @@
 <template>
   <div class="insights-page insights-change-explorer" :data-domain="selectedDomain" :data-range="selectedRange">
-    <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
-      <InsightsNav />
-
-      <header class="insights-hero insights-hero--domain">
-        <p class="insights-eyebrow">CHANGE EXPLORER</p>
-        <h1>{{ $t('insights.changeExplorer.title') }}</h1>
-        <p>{{ $t('insights.changeExplorer.description') }}</p>
-      </header>
+      <EcosystemNavigation />
+      <h1 class="sr-only">{{ $t('insights.changeExplorer.title') }}</h1>
 
       <section class="insights-change-explorer-filters" :aria-label="$t('insights.changeExplorer.filters')">
         <div class="insights-change-explorer-filters__group">
@@ -76,12 +70,11 @@
 </template>
 
 <script setup lang="ts">
+import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import type { LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import InsightsChangeExplorerFeed from '@/components/insights/InsightsChangeExplorerFeed.vue'
-import InsightsNav from '@/components/insights/InsightsNav.vue'
 import { getGameInsightChanges } from '@/services/game'
 import { getNavInsightChanges } from '@/services/nav'
 import type {

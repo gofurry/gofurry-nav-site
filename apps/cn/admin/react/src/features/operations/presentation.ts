@@ -1,6 +1,7 @@
-import type { CollectionRun } from './types'
+import type { CollectionProgress, CollectionRun } from './types'
 
 export type SemanticTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
+export const ACTIVE_COLLECTION_REFRESH_MS = 2_500
 
 const stateLabels: Record<string, string> = {
   positive: '支持', negative: '不支持', stale: '数据过期', not_probed: '未探测',
@@ -29,4 +30,11 @@ export function statusTone(status: string): SemanticTone {
   return 'neutral'
 }
 export function runCoverage(run: Pick<CollectionRun, 'expected_count' | 'success_count'>) { return run.expected_count === 0 ? null : run.success_count / run.expected_count }
+export function collectionJobProgress(status: string, progress?: CollectionProgress) {
+  if (status === 'queued') return { state: 'queued' as const, attempted: 0, expected: 0, percentage: null }
+  const attempted = Number.isFinite(progress?.attempted) && progress!.attempted! >= 0 ? progress!.attempted! : 0
+  const expected = Number.isFinite(progress?.expected) && progress!.expected! > 0 ? progress!.expected! : 0
+  if (expected === 0) return { state: 'waiting' as const, attempted, expected, percentage: null }
+  return { state: 'progress' as const, attempted, expected, percentage: Math.min(100, Math.max(0, Math.round((attempted / expected) * 100))) }
+}
 export function safeJSON(value: unknown) { try { return JSON.stringify(value, null, 2) } catch { return '{}' } }

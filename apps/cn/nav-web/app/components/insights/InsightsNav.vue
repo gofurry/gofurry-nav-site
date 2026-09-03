@@ -1,5 +1,5 @@
 <template>
-  <nav class="insights-nav" :aria-label="$t('sidebar.insights')">
+  <nav class="insights-nav" :aria-label="$t('insights.navLabel')">
     <NuxtLink
       v-for="item in items"
       :key="item.path"
@@ -25,6 +25,8 @@ const items = [
 
 function isActive(path: string) {
   const normalized = route.path.replace(/^\/en(?=\/|$)/, '') || '/'
-  return normalized === path
+  return path === '/insights'
+    ? normalized === path
+    : normalized === path || normalized.startsWith(`${path}/`)
 }
 </script>

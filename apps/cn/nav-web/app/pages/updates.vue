@@ -1,6 +1,5 @@
 <template>
   <div class="updates-page">
-    <GoFurryGridBackground :fixed="false" palette="nav-content" />
 
     <main class="updates-main">
       <h1 class="sr-only">{{ copy.pageHeading }}</h1>
@@ -61,7 +60,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@/stores/theme'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import updatesDividerUrl from '@/assets/svgs/updates-divider.svg'
 import updatesDividerDarkUrl from '@/assets/svgs/updates-divider-dark.svg'
 import { getNavUpdates } from '~/services/nav'

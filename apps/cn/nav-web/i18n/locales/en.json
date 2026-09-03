@@ -117,7 +117,8 @@
     "survey": "DeepFurry",
     "about": "About Us",
     "join": "Join Us",
-    "insights": "Insights"
+    "insights": "Ecosystem",
+    "ecosystemShort": "Ecosystem"
   },
   "footer": {
     "sections": {
@@ -445,7 +446,7 @@
       "commentCountSuffix": "comments",
       "share": "Share",
       "introduction": "Intro",
-      "insights": "Insights",
+      "insights": "Ecosystem",
       "gallery": "Gallery",
       "comments": "Comments",
       "news": "News",
@@ -562,6 +563,8 @@
     "backHome": "Back Home"
   },
   "insights": {
+    "navLabel": "Ecosystem navigation",
+    "metricsLabel": "Ecosystem metrics",
     "nav": {
       "overview": "Overview",
       "sites": "Sites",
@@ -569,8 +572,8 @@
       "changes": "Changes"
     },
     "overview": {
-      "eyebrow": "PUBLIC INSIGHTS",
-      "title": "Insights",
+      "eyebrow": "PUBLIC ECOSYSTEM",
+      "title": "Ecosystem",
       "description": "See what is changing across the Furry website and game ecosystems",
       "sitesCount": "Listed sites",
       "gamesCount": "Listed games",
@@ -579,17 +582,17 @@
       "recentDescription": "Public changes from the website and game ecosystems",
       "sitesPreview": "Website ecosystem",
       "gamesPreview": "Game ecosystem",
-      "viewSites": "Explore website insights",
-      "viewGames": "Explore game insights"
+      "viewSites": "Explore website ecosystem",
+      "viewGames": "Explore game ecosystem"
     },
     "sites": {
       "eyebrow": "WEBSITE ECOSYSTEM",
-      "title": "Website Ecosystem Insights",
+      "title": "Website Ecosystem",
       "description": "Follow adoption trends and recent changes in public capabilities across Furry websites"
     },
     "games": {
       "eyebrow": "GAME ECOSYSTEM",
-      "title": "Game Ecosystem Insights",
+      "title": "Game Ecosystem",
       "description": "See how platform support and the share of free Furry games are changing"
     },
     "metrics": {
@@ -756,11 +759,11 @@
       "caveat": "Unknown, stale, not-yet-probed, or failed observations are not treated as unsupported. Missing dates are never filled with zero."
     },
     "entity": {
-      "siteEyebrow": "SITE INSIGHTS",
-      "siteTitle": "Site Insights",
+      "siteEyebrow": "SITE ECOSYSTEM",
+      "siteTitle": "Site Ecosystem",
       "siteDescription": "Current public capabilities, same-day ecosystem context, and recent semantic changes.",
-      "gameEyebrow": "GAME INSIGHTS",
-      "gameTitle": "Game Insights",
+      "gameEyebrow": "GAME ECOSYSTEM",
+      "gameTitle": "Game Ecosystem",
       "gameDescription": "Current state, player history, CN pricing, and recent semantic changes.",
       "backToSites": "View site ecosystem →",
       "backToGames": "View game ecosystem →",
@@ -881,7 +884,7 @@
       "aboutTitle": "About language data", "about": "Unknown language names are never fuzzy-mapped, and absence of a Full Audio marker is not treated as unsupported."
     },
     "emptyStates": {
-      "unavailable": "Insights data is temporarily unavailable",
+      "unavailable": "Ecosystem data is temporarily unavailable",
       "trendEmpty": "No historical data is available yet",
       "trendOne": "Historical data is still accumulating",
       "changesEmpty": "No recent public changes"

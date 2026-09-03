@@ -1,14 +1,8 @@
 <template>
   <div class="insights-page insights-intelligence-page" data-regional-price-intelligence>
-    <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
-      <InsightsNav />
-      <GameIntelligenceNav />
-      <header class="insights-hero insights-hero--domain">
-        <p class="insights-eyebrow">REGIONAL PRICE INTELLIGENCE</p>
-        <h1>{{ $t('insights.priceIntelligence.title') }}</h1>
-        <p>{{ $t('insights.priceIntelligence.description') }}</p>
-      </header>
+      <EcosystemNavigation context="game" />
+      <h1 class="sr-only">{{ $t('insights.priceIntelligence.title') }}</h1>
       <div class="insights-ranges intelligence-selector">
         <button v-for="region in regions" :key="region" :class="{ 'insights-ranges__button--active': selectedRegion === region }" @click="selectRegion(region)">
           {{ $t(`insights.regions.${region}`) }}
@@ -40,11 +34,9 @@
 </template>
 
 <script setup lang="ts">
+import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
-import GameIntelligenceNav from '@/components/insights/GameIntelligenceNav.vue'
-import InsightsNav from '@/components/insights/InsightsNav.vue'
 import { getGameDiscounts, getGamePriceOverview } from '@/services/game'
 import type { GameInsightRegion, GamePriceOverview } from '@/types/insights'
 import { formatMinorAmount } from '@/utils/insightPrices'

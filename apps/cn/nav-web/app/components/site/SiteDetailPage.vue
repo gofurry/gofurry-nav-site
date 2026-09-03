@@ -1,6 +1,5 @@
 <template>
   <div ref="pageRoot" class="site-detail-page min-h-full overflow-x-hidden text-slate-900 transition-colors duration-500 dark:text-slate-100">
-    <GoFurryGridBackground palette="nav-content" />
 
     <div v-if="pending" class="relative flex min-h-[68vh] items-center justify-center text-slate-500 dark:text-slate-400">
       {{ t('common.loading') }}
@@ -76,7 +75,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import SiteDetailHero from '@/components/site/SiteDetailHero.vue'
 import SiteInsightsPanel from '@/components/site/SiteInsightsPanel.vue'
 import SiteMetadataProbePanel from '@/components/site/SiteMetadataProbePanel.vue'

@@ -1,14 +1,8 @@
 <template>
   <div class="insights-page insights-intelligence-page" data-language-intelligence>
-    <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
-      <InsightsNav />
-      <GameIntelligenceNav />
-      <header class="insights-hero insights-hero--domain">
-        <p class="insights-eyebrow">LANGUAGE INTELLIGENCE</p>
-        <h1>{{ $t('insights.languageIntelligence.title') }}</h1>
-        <p>{{ $t('insights.languageIntelligence.description') }}</p>
-      </header>
+      <EcosystemNavigation context="game" />
+      <h1 class="sr-only">{{ $t('insights.languageIntelligence.title') }}</h1>
       <p v-if="error" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
       <template v-else-if="overview">
         <div class="intelligence-stats">
@@ -33,10 +27,8 @@
 </template>
 
 <script setup lang="ts">
+import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
-import GameIntelligenceNav from '@/components/insights/GameIntelligenceNav.vue'
-import InsightsNav from '@/components/insights/InsightsNav.vue'
 import { getGameLanguageOverview } from '@/services/game'
 
 const { locale } = useI18n()

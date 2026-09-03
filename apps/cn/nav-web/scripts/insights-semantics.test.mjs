@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { formatInsightChangeWhen, insightChangeOrder } from '../app/utils/insightChanges.ts'
 import { formatCnyMinorAmount, formatMinorAmount, priceSegmentKey, publicPriceDisplay } from '../app/utils/insightPrices.ts'
 import { formatInsightRatio, normalizeInsightSlice } from '../app/utils/insightDimensions.ts'
@@ -56,6 +56,33 @@ assert(parseInsightCompareIDs('9')?.join(',') === '9', 'Compare lost its one-ent
 
 const zh = JSON.parse(readFileSync(new URL('../i18n/locales/zh.json', import.meta.url), 'utf8'))
 const en = JSON.parse(readFileSync(new URL('../i18n/locales/en.json', import.meta.url), 'utf8'))
+assert(zh.sidebar.insights === '生态观测' && en.sidebar.insights === 'Ecosystem', 'public Ecosystem naming drifted')
+assert(!JSON.stringify(zh).includes('洞察') && !JSON.stringify(en).includes('Insights'), 'retired public product naming remains in localized UI copy')
+const insightsPageDirectory = new URL('../app/pages/insights/', import.meta.url)
+const insightPageFiles = readdirSync(insightsPageDirectory, { recursive: true }).filter(path => String(path).endsWith('.vue'))
+for (const path of insightPageFiles) {
+  const source = readFileSync(new URL(String(path).replaceAll('\\', '/'), insightsPageDirectory), 'utf8')
+  assert(!source.includes('insights-hero'), `${path} restored the retired large Ecosystem hero`)
+  assert(!source.includes('GoFurryGridBackground'), `${path} bypassed the app-level background foundation`)
+}
+const layoutSource = readFileSync(new URL('../app/layouts/default.vue', import.meta.url), 'utf8')
+assert(layoutSource.includes('<PublicPageBackground />'), 'default layout lost the public background owner')
+const backgroundSource = readFileSync(new URL('../app/components/common/PublicPageBackground.vue', import.meta.url), 'utf8')
+const globalStyles = readFileSync(new URL('../app/assets/css/main.css', import.meta.url), 'utf8')
+const shellStyles = readFileSync(new URL('../app/assets/styles/components/shell.less', import.meta.url), 'utf8')
+assert(backgroundSource.includes('data-pattern-status="default"') && backgroundSource.includes('mask-image: var(--gf-page-pattern)'), 'default layout lost its mask-based public pattern')
+assert(globalStyles.includes("--gf-page-pattern: url('/web/background/gofurry-pattern.svg')") && globalStyles.includes('--gf-page-pattern-size: 160px 160px'), 'default public pattern contract drifted')
+assert(!globalStyles.includes('--gf-page-pattern: none') && existsSync(new URL('../public/web/background/gofurry-pattern.svg', import.meta.url)), 'public pattern asset is missing or disabled')
+for (const root of ['.nav-home-page', '.nav-content-shell', '.games-page', '.games-search-page', '.gf-static-page', '.lottery-page', '.lottery-activation-page']) {
+  assert(shellStyles.includes(root), `${root} can hide the layout-owned public background`)
+}
+const mobileNavigationSource = readFileSync(new URL('../app/components/common/MobileBottomTabBar.vue', import.meta.url), 'utf8')
+assert(mobileNavigationSource.includes("localePath('/insights')") && mobileNavigationSource.includes('isEcosystemActive'), 'mobile navigation lost the Ecosystem destination or active state')
+assert(mobileNavigationSource.includes('@phosphor-icons/vue'), 'mobile navigation stopped using the primary system icon family')
+const topNavigationSource = readFileSync(new URL('../app/components/NavBar.vue', import.meta.url), 'utf8')
+assert(topNavigationSource.includes('@phosphor-icons/vue'), 'top navigation stopped using the primary system icon family')
+assert(existsSync(new URL('../app/components/experimental/ambient/GoFurryGridBackground.vue', import.meta.url))
+  && existsSync(new URL('../app/components/experimental/ambient/FallingLeavesCanvas.vue', import.meta.url)), 'retired ambient effects were deleted instead of preserved experimentally')
 assert(zh.insights.entity.currentPlayers === '最近观测' && en.insights.entity.currentPlayers === 'Latest Observed', 'entity player observation was presented as realtime')
 assert(zh.insights.entity.observedLow === 'GoFurry 观测最低价' && en.insights.entity.observedLow === 'GoFurry Observed Low', 'bounded observed-low naming drifted')
 for (const forbidden of ['历史最低', 'Historical Low', 'All-time Low', 'Steam Historical Low']) {

@@ -2,6 +2,20 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --gf-page-background: #f2e3d0;
+  --gf-page-pattern: url('/web/background/gofurry-pattern.svg');
+  --gf-page-pattern-color: #A88773;
+  --gf-page-pattern-opacity: 0.065;
+  --gf-page-pattern-size: 160px 160px;
+}
+
+html.dark {
+  --gf-page-background: #0b1728;
+  --gf-page-pattern-color: #D7C1AF;
+  --gf-page-pattern-opacity: 0.045;
+}
+
 /* 确保 html, body, #app 占满屏幕 */
 html, body, #app {
   margin: 0;

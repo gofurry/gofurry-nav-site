@@ -1,6 +1,5 @@
 <template>
   <div class="lottery-page relative isolate min-h-[calc(100svh-3.5rem)] overflow-hidden">
-    <GoFurryGridBackground :fixed="false" palette="nav-content" />
     <div class="lottery-page__wash absolute inset-0 z-0" aria-hidden="true" />
     <div class="lottery-page__top-line absolute inset-x-0 top-0 h-px" aria-hidden="true" />
 
@@ -182,7 +181,6 @@
 import { computed, onMounted, ref } from "vue"
 import { getLottery } from "@/utils/api/game"
 import { i18n } from '@/main'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import LotteryJoinModal from "@/components/game/lottery/LotteryJoinModal.vue"
 
 import type {

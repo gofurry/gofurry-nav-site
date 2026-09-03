@@ -98,7 +98,7 @@ const visualScenarios = [
   }),
   ...makePageScenarios({
     id: 'game-entity-insights',
-    label: '游戏实体洞察',
+    label: '游戏实体生态观测',
     path: `/games/${entityGameId}`,
     locale: 'zh-CN',
     rootSelector: '.game-detail-page',
@@ -146,29 +146,29 @@ const visualScenarios = [
   }),
   ...makePageScenarios({
     id: 'insights-overview',
-    label: '生态洞察概览',
+    label: '生态观测概览',
     path: '/insights',
     locale: 'zh-CN',
     rootSelector: '.insights-overview-page',
-    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-hero', '.insights-stats', '.insights-previews'],
+    requiredSelectors: ['.insights-page', '.ecosystem-navigation', '.insights-nav', '.insights-stats', '.insights-previews'],
     optionalDataSelectors: ['.insights-change']
   }),
   ...makePageScenarios({
     id: 'insights-sites',
-    label: '网站生态洞察',
+    label: '网站生态观测',
     path: '/insights/sites?metric=ipv6&range=30d',
     locale: 'zh-CN',
     rootSelector: '.insights-domain-page',
-    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-dimensions', '.insights-data-info'],
+    requiredSelectors: ['.insights-page', '.ecosystem-navigation', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-dimensions', '.insights-data-info'],
     optionalDataSelectors: ['.insights-change']
   }),
   ...makePageScenarios({
     id: 'insights-games',
-    label: '游戏生态洞察',
+    label: '游戏生态观测',
     path: '/insights/games?metric=free&range=30d',
     locale: 'zh-CN',
     rootSelector: '.insights-domain-page',
-    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-dimensions', '.insights-data-info'],
+    requiredSelectors: ['.insights-page', '.ecosystem-navigation', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-dimensions', '.insights-data-info'],
     optionalDataSelectors: ['.insights-change']
   }),
   ...makePageScenarios({
@@ -181,20 +181,20 @@ const visualScenarios = [
     optionalDataSelectors: ['.insights-change-explorer-item']
   }),
   ...makePageScenarios({
-    id: 'game-player-intelligence', label: '游戏玩家洞察', path: '/insights/games/players?metric=latest_observed', locale: 'zh-CN',
+    id: 'game-player-intelligence', label: '游戏玩家生态观测', path: '/insights/games/players?metric=latest_observed', locale: 'zh-CN',
     rootSelector: '[data-player-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.intelligence-selector'], optionalDataSelectors: ['.intelligence-table tbody tr']
   }),
   ...makePageScenarios({
-    id: 'game-price-intelligence', label: '游戏区域价格洞察', path: '/insights/games/prices?region=CN', locale: 'zh-CN',
+    id: 'game-price-intelligence', label: '游戏区域价格生态观测', path: '/insights/games/prices?region=CN', locale: 'zh-CN',
     rootSelector: '[data-regional-price-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.intelligence-selector'], optionalDataSelectors: ['.intelligence-table tbody tr']
   }),
   ...makePageScenarios({
-    id: 'game-language-intelligence', label: '游戏语言洞察', path: '/insights/games/languages', locale: 'zh-CN',
+    id: 'game-language-intelligence', label: '游戏语言生态观测', path: '/insights/games/languages', locale: 'zh-CN',
     rootSelector: '[data-language-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.insights-data-info'], optionalDataSelectors: ['.intelligence-table tbody tr']
   }),
   ...makePageScenarios({
     id: 'site-entity-insights',
-    label: '网站实体洞察',
+    label: '网站实体生态观测',
     path: `/site/${entitySiteId}`,
     locale: 'zh-CN',
     rootSelector: '.site-detail-page',

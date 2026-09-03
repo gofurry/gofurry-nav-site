@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { createElement } from 'react'
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
 import { isGlobalSearchShortcut } from '../../lib/keyboard'
-import { capabilityAwareNavigation } from './app-shell'
+import { AdminBrand, capabilityAwareHeaderActions, capabilityAwareNavigation, logoutAndRedirect } from './app-shell'
 
 describe('capability-aware navigation', () => {
   it('shows content routes without reproducing role checks', () => {
@@ -52,5 +54,33 @@ describe('capability-aware navigation', () => {
     expect(isGlobalSearchShortcut({ key: 'k', ctrlKey: false, metaKey: true }, false)).toBe(true)
     expect(isGlobalSearchShortcut({ key: '/', ctrlKey: false, metaKey: false }, false)).toBe(true)
     expect(isGlobalSearchShortcut({ key: '/', ctrlKey: false, metaKey: false }, true)).toBe(false)
+  })
+
+  it('shows a text-only brand that follows the sidebar state', () => {
+    const { rerender } = render(createElement(AdminBrand, { collapsed: false }))
+    expect(screen.getByText('GoFurry')).toBeInTheDocument()
+    expect(screen.queryByText('GF')).not.toBeInTheDocument()
+    expect(screen.queryByText('GoFurry Admin')).not.toBeInTheDocument()
+    expect(screen.queryByText('V3 CONTENT')).not.toBeInTheDocument()
+
+    rerender(createElement(AdminBrand, { collapsed: true }))
+    expect(screen.getByText('GF')).toBeInTheDocument()
+    expect(screen.queryByText('GoFurry')).not.toBeInTheDocument()
+  })
+
+  it('shows the Collection header shortcut only with collection.read', () => {
+    expect(capabilityAwareHeaderActions((capability) => capability === 'collection.read').map((action) => action.href)).toEqual(['/collection'])
+    expect(capabilityAwareHeaderActions(() => false)).toEqual([])
+  })
+
+  it('replaces the protected route only after logout state has been cleared', async () => {
+    const events: string[] = []
+    const logout = vi.fn(async () => { events.push('logout') })
+    const navigate = vi.fn(() => { events.push('navigate') })
+
+    await logoutAndRedirect(logout, navigate)
+
+    expect(events).toEqual(['logout', 'navigate'])
+    expect(navigate).toHaveBeenCalledWith('/login', { replace: true })
   })
 })

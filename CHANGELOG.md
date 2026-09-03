@@ -6,6 +6,37 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.7 - 2026-09-04
+
+### Added
+
+- Establish Phosphor as the primary system UI icon family for the Admin and public navigation surfaces touched by Stable Polish Batch 1.
+- Add an application-level public background foundation with the supplied mask-friendly, infinitely tiled `gofurry-pattern.svg`, theme-controlled color/opacity, and a replaceable `--gf-page-pattern` asset slot; keep default-layout page roots transparent and preserve the previous grid and falling-leaf effects under an experimental namespace.
+- Add authenticated Admin self-service username and password APIs with current-password verification, uniqueness enforcement, audit history, identity refresh, and session-version revocation.
+
+### Changed
+
+- Rename the public `洞察 / Insights` product to `生态观测 / Ecosystem` while preserving all `/insights/*` routes and internal contracts.
+- Remove repetitive Ecosystem hero blocks, combine size-consistent primary and domain navigation into responsive left/right or two-row layouts, and add Ecosystem to the localized mobile bottom navigation.
+- Make the Admin shell own the viewport, sidebar/workspace scrolling, subtle shared scrollbars, and table-local horizontal overflow; simplify the text-only sidebar brand to `GoFurry` expanded and `GF` collapsed.
+- Polish the Admin product shell with a 208px expanded sidebar, warm-gray Light surfaces, a persisted single-button Light/Dark switch, and an explicit capability-aware Data Operations shortcut.
+- Recompose the Workbench into flat list cards, simplify every shared Admin PageHeader to title plus actions, align shared DataTable toolbar controls, and replace split remote search/select controls with one searchable metadata-aware combobox.
+- Present active Collection jobs with attempted/expected progress bars and 2.5-second Running-tab refreshes, including explicit queued and waiting-for-progress states.
+- Tighten shared Admin PageHeader spacing, replace native select/date controls with reusable Base UI controls, add the capability-aware Collection header shortcut, and constrain long comment previews.
+- Recompose Data Operations around selectable database summary cards, two operational status regions, a single-layer relation table, and on-demand technical details while preserving read-only 60-second refresh behavior.
+- Standardize every Admin workspace on a compact shared page rhythm, anchor shared Select popups below their triggers, and make visible DataTable columns immediately identifiable with check indicators.
+- Recompose Collection overview and schedules plus Metrics and Changes into compact, single-level operational layouts with denser KPIs, unified chart/filter toolbars, separator-based lists, and on-demand technical details.
+- Further compact the Collection KPI row by removing its collector-view subtitle.
+
+### Fixed
+
+- Bind all six schema-driven Admin resource routes to an explicit Nav or Game domain so valid Site Group, Update Notice, Saying, Tag, Comment, and Prize pages resolve their definitions.
+- Keep shared Admin dialogs centered and viewport-safe with portal backdrops, bounded height, and internal scrolling without document-level horizontal shift.
+- Keep Collection ECharts lines visible while axis tooltips are active by disabling hover emphasis replacement.
+- Clear protected Query/Mutation state on logout before replacing the current route with `/login`, preventing protected-shell error remnants.
+- Preserve Game Comment IDs as strings across Go JSON and React CRUD routes so 64-bit detail, update, and delete operations never lose precision.
+- Remove the invisible DataTable search-label spacer so page headings and table toolbars follow the shared compact vertical rhythm.
+
 ## v3.0.0-alpha.6 - 2026-09-03
 
 ### Added

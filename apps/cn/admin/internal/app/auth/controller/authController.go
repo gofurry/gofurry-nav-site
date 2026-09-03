@@ -103,6 +103,40 @@ func (api *AuthAPI) Me(c fiber.Ctx) error {
 	})
 }
 
+func (api *AuthAPI) ChangeOwnUsername(c fiber.Ctx) error {
+	principal, err := middleware.CurrentPrincipal(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var request models.SelfUsernameRequest
+	if err := adminutil.DecodeBody(c, &request); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	updated, serviceErr := api.service.ChangeOwnUsername(c.Context(), principal.AccountID, request.Username, request.CurrentPassword, audit.MetaFromFiber(c))
+	if serviceErr != nil {
+		return common.NewResponse(c).Error(serviceErr)
+	}
+	return common.NewResponse(c).SuccessWithData(models.MeResponse{
+		Initialized: true, Authenticated: true, Identity: models.IdentityDTO(updated),
+	})
+}
+
+func (api *AuthAPI) ChangeOwnPassword(c fiber.Ctx) error {
+	principal, err := middleware.CurrentPrincipal(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var request models.SelfPasswordRequest
+	if err := adminutil.DecodeBody(c, &request); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	if serviceErr := api.service.ChangeOwnPassword(c.Context(), principal.AccountID, request.CurrentPassword, request.NewPassword, audit.MetaFromFiber(c)); serviceErr != nil {
+		return common.NewResponse(c).Error(serviceErr)
+	}
+	c.Cookie(api.service.BuildLogoutCookie())
+	return common.NewResponse(c).Success()
+}
+
 func (api *AuthAPI) ListAccounts(c fiber.Ctx) error {
 	page := adminutil.ParsePageQuery(c)
 	result, err := api.service.ListAccounts(c.Context(), page.Keyword, int32(page.PageSize), int32((page.PageNum-1)*page.PageSize))

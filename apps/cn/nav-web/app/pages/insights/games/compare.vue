@@ -6,15 +6,9 @@
     :data-compare-region="selectedRegion"
     :data-compare-status="compare?.status || (ready ? 'loading' : 'builder')"
   >
-    <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
-      <InsightsNav />
-      <GameIntelligenceNav />
-      <header class="insights-hero insights-hero--domain">
-        <p class="insights-eyebrow">GAME COMPARE</p>
-        <h1>{{ $t('insights.gameCompare.title') }}</h1>
-        <p>{{ $t('insights.gameCompare.description') }}</p>
-      </header>
+      <EcosystemNavigation context="game" />
+      <h1 class="sr-only">{{ $t('insights.gameCompare.title') }}</h1>
 
       <section class="compare-builder">
         <h2>{{ $t('insights.compare.builderTitle') }}</h2>
@@ -82,11 +76,9 @@
 </template>
 
 <script setup lang="ts">
+import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
-import GameIntelligenceNav from '@/components/insights/GameIntelligenceNav.vue'
-import InsightsNav from '@/components/insights/InsightsNav.vue'
 import { getGameCompare } from '@/services/game'
 import type { GameCompareItem, GameInsightRegion } from '@/types/insights'
 import { insightCompareReady, parseInsightCompareIDs } from '@/utils/insightCompare'

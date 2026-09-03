@@ -1,18 +1,33 @@
 import type { ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 
-export function PageHeader({ title, description, actions, eyebrow }: { title: string; description?: string; actions?: ReactNode; eyebrow?: string }) {
-  return <header className="flex items-start justify-between gap-6">
-    <div>{eyebrow && <p className="mb-1 font-mono text-xs text-muted-foreground">{eyebrow}</p>}<h1 className="text-2xl font-semibold tracking-tight">{title}</h1>{description && <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>}</div>
+export function PageLayout({ children, className }: { children: ReactNode; className?: string }) {
+  return <div data-admin-page className={cn('grid gap-4', className)}>{children}</div>
+}
+
+export function PageHeader({ title, actions }: { title: string; description?: string; actions?: ReactNode; eyebrow?: string }) {
+  return <header data-admin-page-header className="flex min-h-9 items-center justify-between gap-4">
+    <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
     {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
   </header>
 }
 
 export function Section({ title, description, actions, children, className }: { title?: string; description?: string; actions?: ReactNode; children: ReactNode; className?: string }) {
   return <section className={cn('rounded-lg border bg-surface', className)}>
-    {(title || description || actions) && <div className="flex items-start justify-between gap-4 border-b px-5 py-4"><div>{title && <h2 className="font-semibold">{title}</h2>}{description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}</div>{actions}</div>}
-    <div className="p-5">{children}</div>
+    {(title || description || actions) && <div className="flex min-h-11 items-center justify-between gap-4 border-b px-4 py-3"><div>{title && <h2 className="font-semibold">{title}</h2>}{description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}</div>{actions}</div>}
+    <div className="p-4">{children}</div>
   </section>
+}
+
+export function ListPanel({ title, actions, children, className }: { title: string; actions?: ReactNode; children: ReactNode; className?: string }) {
+  return <section className={cn('overflow-hidden rounded-lg border bg-surface', className)}>
+    <div className="flex min-h-11 items-center justify-between gap-3 border-b px-4 py-2.5"><h2 className="font-semibold">{title}</h2>{actions}</div>
+    <div className="divide-y">{children}</div>
+  </section>
+}
+
+export function ListRow({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('px-4 py-3', className)}>{children}</div>
 }
 
 export function FormField({ label, help, error, required, children }: { label: string; help?: string; error?: string; required?: boolean; children: ReactNode }) {

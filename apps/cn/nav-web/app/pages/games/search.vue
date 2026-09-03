@@ -2,7 +2,6 @@
   <div
       class="games-search-page games-page relative isolate flex min-h-full w-full flex-col overflow-hidden"
   >
-    <GoFurryGridBackground :fixed="false" palette="games" />
     <h1 class="sr-only">{{ searchPageSeo.heading }}</h1>
     <div class="relative z-10 mx-auto flex w-full max-w-[1720px] flex-1 flex-col gap-5 p-6">
 
@@ -57,7 +56,6 @@ import type {
   GameTagRecord,
   SearchPageQueryRequest
 } from '@/types/game'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import { useThemeStore } from '@/stores/theme'
 import { i18n } from '@/main'
 
