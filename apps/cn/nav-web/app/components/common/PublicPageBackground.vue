@@ -16,10 +16,15 @@
 .gf-public-background__pattern {
   position: absolute;
   inset: 0;
-  background-image: var(--gf-page-pattern);
-  background-position: top left;
-  background-repeat: repeat;
-  background-size: var(--gf-page-pattern-size);
+  background-color: var(--gf-page-pattern-color);
+  -webkit-mask-image: var(--gf-page-pattern);
+  mask-image: var(--gf-page-pattern);
+  -webkit-mask-position: top left;
+  mask-position: top left;
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+  -webkit-mask-size: var(--gf-page-pattern-size);
+  mask-size: var(--gf-page-pattern-size);
   opacity: var(--gf-page-pattern-opacity);
 }
 </style>

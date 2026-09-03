@@ -55,7 +55,7 @@ for (const route of insightsRoutes) {
   console.log(`[insights] SSR ${route} -> 200`)
 }
 
-const patternResponse = await fetch(toAbsoluteUrl(baseUrl, '/web/background/gofurry-paw-doodle-tile.svg'))
+const patternResponse = await fetch(toAbsoluteUrl(baseUrl, '/web/background/gofurry-pattern.svg'))
 assert(patternResponse.status === 200 && patternResponse.headers.get('content-type')?.includes('image/svg+xml'), 'default public pattern asset is not served as SVG')
 
 const sitemap = await (await fetch(toAbsoluteUrl(baseUrl, '/sitemap.xml'))).text()
@@ -109,16 +109,18 @@ try {
     const wasDark = root.classList.contains('dark')
     root.classList.remove('dark')
     const light = getComputedStyle(pattern)
-    const lightState = { image: light.backgroundImage, opacity: Number(light.opacity), repeat: light.backgroundRepeat }
+    const lightState = { color: light.backgroundColor, image: light.maskImage || light.webkitMaskImage, opacity: Number(light.opacity), repeat: light.maskRepeat || light.webkitMaskRepeat, size: light.maskSize || light.webkitMaskSize }
     root.classList.add('dark')
     const dark = getComputedStyle(pattern)
-    const darkState = { image: dark.backgroundImage, opacity: Number(dark.opacity), repeat: dark.backgroundRepeat }
+    const darkState = { color: dark.backgroundColor, image: dark.maskImage || dark.webkitMaskImage, opacity: Number(dark.opacity), repeat: dark.maskRepeat || dark.webkitMaskRepeat, size: dark.maskSize || dark.webkitMaskSize }
     root.classList.toggle('dark', wasDark)
     return { lightState, darkState }
   })
-  assert(patternState?.lightState.image.includes('gofurry-paw-doodle-tile.svg') && patternState.darkState.image.includes('gofurry-paw-doodle-tile.svg'), 'public pattern is not active in both themes')
+  assert(patternState?.lightState.image.includes('gofurry-pattern.svg') && patternState.darkState.image.includes('gofurry-pattern.svg'), 'public pattern is not active in both themes')
   assert(patternState?.lightState.repeat === 'repeat' && patternState.darkState.repeat === 'repeat', 'public pattern is not infinitely tiled')
-  assert(patternState?.lightState.opacity > 0 && patternState.lightState.opacity <= 0.2 && patternState.darkState.opacity > 0 && patternState.darkState.opacity <= 0.2, 'public pattern opacity is not visible and restrained in both themes')
+  assert(patternState?.lightState.size === '160px 160px' && patternState.darkState.size === '160px 160px', 'public pattern does not use the default 160px tile size')
+  assert(patternState?.lightState.color === 'rgb(168, 135, 115)' && patternState.darkState.color === 'rgb(215, 193, 175)', 'public pattern theme colors drifted')
+  assert(patternState?.lightState.opacity === 0.065 && patternState.darkState.opacity === 0.045, 'public pattern theme opacity drifted')
   const desktopNavigation = await page.evaluate(() => {
     const shell = document.querySelector('.ecosystem-navigation')
     const primary = document.querySelector('.insights-nav')

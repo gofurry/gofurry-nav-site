@@ -4,14 +4,16 @@
 
 :root {
   --gf-page-background: #f2e3d0;
-  --gf-page-pattern: url('/web/background/gofurry-paw-doodle-tile.svg');
-  --gf-page-pattern-opacity: 0.1;
-  --gf-page-pattern-size: 128px 128px;
+  --gf-page-pattern: url('/web/background/gofurry-pattern.svg');
+  --gf-page-pattern-color: #A88773;
+  --gf-page-pattern-opacity: 0.065;
+  --gf-page-pattern-size: 160px 160px;
 }
 
 html.dark {
   --gf-page-background: #0b1728;
-  --gf-page-pattern-opacity: 0.14;
+  --gf-page-pattern-color: #D7C1AF;
+  --gf-page-pattern-opacity: 0.045;
 }
 
 /* 确保 html, body, #app 占满屏幕 */

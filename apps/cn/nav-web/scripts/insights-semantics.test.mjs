@@ -69,8 +69,13 @@ const layoutSource = readFileSync(new URL('../app/layouts/default.vue', import.m
 assert(layoutSource.includes('<PublicPageBackground />'), 'default layout lost the public background owner')
 const backgroundSource = readFileSync(new URL('../app/components/common/PublicPageBackground.vue', import.meta.url), 'utf8')
 const globalStyles = readFileSync(new URL('../app/assets/css/main.css', import.meta.url), 'utf8')
-assert(backgroundSource.includes('data-pattern-status="default"') && globalStyles.includes("--gf-page-pattern: url('/web/background/gofurry-paw-doodle-tile.svg')"), 'default layout lost its active public pattern')
-assert(!globalStyles.includes('--gf-page-pattern: none') && existsSync(new URL('../public/web/background/gofurry-paw-doodle-tile.svg', import.meta.url)), 'public pattern asset is missing or disabled')
+const shellStyles = readFileSync(new URL('../app/assets/styles/components/shell.less', import.meta.url), 'utf8')
+assert(backgroundSource.includes('data-pattern-status="default"') && backgroundSource.includes('mask-image: var(--gf-page-pattern)'), 'default layout lost its mask-based public pattern')
+assert(globalStyles.includes("--gf-page-pattern: url('/web/background/gofurry-pattern.svg')") && globalStyles.includes('--gf-page-pattern-size: 160px 160px'), 'default public pattern contract drifted')
+assert(!globalStyles.includes('--gf-page-pattern: none') && existsSync(new URL('../public/web/background/gofurry-pattern.svg', import.meta.url)), 'public pattern asset is missing or disabled')
+for (const root of ['.nav-home-page', '.nav-content-shell', '.games-page', '.games-search-page', '.gf-static-page', '.lottery-page', '.lottery-activation-page']) {
+  assert(shellStyles.includes(root), `${root} can hide the layout-owned public background`)
+}
 const mobileNavigationSource = readFileSync(new URL('../app/components/common/MobileBottomTabBar.vue', import.meta.url), 'utf8')
 assert(mobileNavigationSource.includes("localePath('/insights')") && mobileNavigationSource.includes('isEcosystemActive'), 'mobile navigation lost the Ecosystem destination or active state')
 assert(mobileNavigationSource.includes('@phosphor-icons/vue'), 'mobile navigation stopped using the primary system icon family')

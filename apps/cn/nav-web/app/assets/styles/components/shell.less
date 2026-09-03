@@ -1,8 +1,20 @@
 .gf-app-shell {
-  background: var(--gf-bg-page);
+  background: var(--gf-page-background);
   color: var(--gf-text-main);
 }
 
 html.dark .gf-app-shell {
-  background: #020617;
+  background: var(--gf-page-background);
+}
+
+/* Page roots stay transparent so the layout-owned background remains visible. */
+.gf-app-shell .nav-home-page,
+.gf-app-shell .nav-content-shell,
+.gf-app-shell .games-page,
+.gf-app-shell .games-search-page,
+.gf-app-shell .games-page.game-detail-page,
+.gf-app-shell .gf-static-page,
+.gf-app-shell .lottery-page,
+.gf-app-shell .lottery-activation-page {
+  background-color: transparent;
 }
