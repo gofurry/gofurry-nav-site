@@ -1,10 +1,11 @@
 import { Menu } from '@base-ui/react/menu'
-import { CaretLeft, CaretRight, Chats, ClockCounterClockwise, Database, GameController, Gauge, ListBullets, MagnifyingGlass, Megaphone, Moon, Pulse, Quotes, ShieldCheck, SignOut, Sparkle, SquaresFour, Sun, Tag, UserCircle } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, Chats, ClockCounterClockwise, Database, GameController, Gauge, Key, ListBullets, MagnifyingGlass, Megaphone, Moon, PencilSimple, Pulse, Quotes, ShieldCheck, SignOut, Sparkle, SquaresFour, Sun, Tag, UserCircle } from '@phosphor-icons/react'
 import { Suspense, useEffect, useState, type ComponentType } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../../app/theme'
 import { useAuth } from '../../features/auth/auth-context'
-import { DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
+import { SelfPasswordDialog, SelfUsernameDialog } from '../../features/auth/self-service-dialogs'
+import { COLLECTION_READ_CAPABILITY, DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
 import { isGlobalSearchShortcut } from '../../lib/keyboard'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
@@ -13,6 +14,16 @@ import { LoadingState } from './states'
 
 type NavEntry = { label: string; href: string; icon: ComponentType<{ className?: string }>; capability?: string }
 type NavGroup = { label: string; entries: NavEntry[] }
+type HeaderQuickAction = { label: string; title: string; href: string; icon: ComponentType<{ className?: string }>; capability: string }
+
+const headerQuickActionDefinitions: HeaderQuickAction[] = [
+  { label: '采集', title: '采集中心', href: '/collection', icon: Pulse, capability: COLLECTION_READ_CAPABILITY },
+  { label: '数据运维', title: '数据库与迁移状态', href: '/system/data-operations', icon: Database, capability: DATAOPS_READ_CAPABILITY },
+]
+
+export function capabilityAwareHeaderActions(can: (capability: string) => boolean) {
+  return headerQuickActionDefinitions.filter((action) => can(action.capability))
+}
 
 export const navigationGroups: NavGroup[] = [
   { label: '', entries: [{ label: '工作台', href: '/', icon: SquaresFour, capability: 'content.read' }] },
@@ -70,6 +81,7 @@ export function AppShell() {
   const { resolvedTheme, setMode } = useTheme()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('gofurry-admin-sidebar') === 'collapsed')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [credentialsDialog, setCredentialsDialog] = useState<'username' | 'password' | null>(null)
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
@@ -84,6 +96,7 @@ export function AppShell() {
   const nextTheme = resolvedTheme === 'dark' ? 'light' : 'dark'
   const ThemeIcon = resolvedTheme === 'dark' ? Sun : Moon
   const visibleGroups = capabilityAwareNavigation(auth.can)
+  const headerActions = capabilityAwareHeaderActions(auth.can)
 
   return <div data-admin-shell className="h-dvh overflow-hidden bg-background">
     <aside data-admin-sidebar className={cn('fixed inset-y-0 left-0 z-30 flex h-dvh flex-col border-r bg-surface transition-[width] duration-200', collapsed ? 'w-16' : 'w-52')}>
@@ -96,12 +109,14 @@ export function AppShell() {
     <div data-admin-workspace className={cn('flex h-dvh min-w-0 flex-col overflow-hidden transition-[padding] duration-200', collapsed ? 'pl-16' : 'pl-52')}>
       <header className="z-20 flex h-14 min-w-0 shrink-0 items-center justify-between gap-3 border-b bg-background/92 px-3 backdrop-blur sm:px-6"><Breadcrumbs /><div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <Button variant="secondary" className="w-9 justify-center overflow-hidden px-0 text-muted-foreground xl:w-56 xl:justify-start xl:px-3" onClick={() => setSearchOpen(true)} aria-label="全局搜索"><MagnifyingGlass className="size-4 shrink-0" /><span className="hidden flex-1 text-left xl:inline">全局搜索</span><kbd className="hidden rounded border bg-surface-muted px-1.5 font-mono text-[10px] xl:inline">Ctrl K</kbd></Button>
-        {auth.can(DATAOPS_READ_CAPABILITY) && <Button variant="ghost" className="px-2 text-muted-foreground" title="数据库与迁移状态" onClick={() => navigate('/system/data-operations')}><Database className="size-4" /><span>数据运维</span></Button>}
+        {headerActions.map((action) => <Button key={action.href} variant="ghost" className="px-2 text-muted-foreground" title={action.title} onClick={() => navigate(action.href)}><action.icon className="size-4" /><span>{action.label}</span></Button>)}
         <Button variant="ghost" size="icon" aria-label={`切换到${nextTheme === 'dark' ? '深色' : '浅色'}主题`} title={`切换到${nextTheme === 'dark' ? '深色' : '浅色'}主题`} onClick={() => setMode(nextTheme)}><ThemeIcon className="size-4" /></Button>
-        <Menu.Root><Menu.Trigger render={<Button variant="secondary" size="icon" aria-label="账号菜单" />}><UserCircle className="size-4" /></Menu.Trigger><Menu.Portal><Menu.Positioner className="z-40" sideOffset={4} align="end"><Menu.Popup className="min-w-52 rounded-md border bg-surface p-1 shadow-lg outline-none"><div className="border-b px-2 py-2"><p className="text-sm font-medium">{auth.state?.identity?.display_name}</p><p className="mt-0.5 font-mono text-xs text-muted-foreground">{auth.state?.identity?.username} · {auth.state?.identity?.role}</p></div><Menu.Item onClick={() => void logout()} className="mt-1 flex cursor-default items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-muted"><SignOut className="size-4" />退出登录</Menu.Item></Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root>
+        <Menu.Root><Menu.Trigger render={<Button variant="secondary" size="icon" aria-label="账号菜单" />}><UserCircle className="size-4" /></Menu.Trigger><Menu.Portal><Menu.Positioner className="z-40" sideOffset={4} align="end"><Menu.Popup className="min-w-52 rounded-md border bg-surface p-1 shadow-lg outline-none"><div className="border-b px-2 py-2"><p className="text-sm font-medium">{auth.state?.identity?.display_name}</p><p className="mt-0.5 font-mono text-xs text-muted-foreground">{auth.state?.identity?.username} · {auth.state?.identity?.role}</p></div><Menu.Item onClick={() => setCredentialsDialog('username')} className="mt-1 flex cursor-default items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-muted"><PencilSimple className="size-4" />修改用户名</Menu.Item><Menu.Item onClick={() => setCredentialsDialog('password')} className="flex cursor-default items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-muted"><Key className="size-4" />修改密码</Menu.Item><Menu.Item onClick={() => void logout()} className="mt-1 flex cursor-default items-center gap-2 border-t rounded px-2 py-1.5 pt-2 text-sm outline-none data-[highlighted]:bg-surface-muted"><SignOut className="size-4" />退出登录</Menu.Item></Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root>
       </div></header>
       <main data-admin-workspace-scroll className="admin-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto"><div className="mx-auto w-full max-w-[1680px] p-3 sm:p-6"><Suspense fallback={<LoadingState label="正在加载工作区…" />}><Outlet /></Suspense></div></main>
     </div>
     <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+    <SelfUsernameDialog open={credentialsDialog === 'username'} onOpenChange={(open) => { if (!open) setCredentialsDialog(null) }} />
+    <SelfPasswordDialog open={credentialsDialog === 'password'} onOpenChange={(open) => { if (!open) setCredentialsDialog(null) }} />
   </div>
 }

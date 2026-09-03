@@ -10,6 +10,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 - Establish Phosphor as the primary system UI icon family for the Admin and public navigation surfaces touched by Stable Polish Batch 1.
 - Add an application-level public background foundation with the supplied mask-friendly, infinitely tiled `gofurry-pattern.svg`, theme-controlled color/opacity, and a replaceable `--gf-page-pattern` asset slot; keep default-layout page roots transparent and preserve the previous grid and falling-leaf effects under an experimental namespace.
+- Add authenticated Admin self-service username and password APIs with current-password verification, uniqueness enforcement, audit history, identity refresh, and session-version revocation.
 
 ### Changed
 
@@ -19,6 +20,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 - Polish the Admin product shell with a 208px expanded sidebar, warm-gray Light surfaces, a persisted single-button Light/Dark switch, and an explicit capability-aware Data Operations shortcut.
 - Recompose the Workbench into flat list cards, simplify every shared Admin PageHeader to title plus actions, align shared DataTable toolbar controls, and replace split remote search/select controls with one searchable metadata-aware combobox.
 - Present active Collection jobs with attempted/expected progress bars and 2.5-second Running-tab refreshes, including explicit queued and waiting-for-progress states.
+- Tighten shared Admin PageHeader spacing, replace native select/date controls with reusable Base UI controls, add the capability-aware Collection header shortcut, and constrain long comment previews.
+- Recompose Data Operations around selectable database summary cards, two operational status regions, a single-layer relation table, and on-demand technical details while preserving read-only 60-second refresh behavior.
 
 ### Fixed
 

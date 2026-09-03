@@ -744,6 +744,53 @@ func (q *Queries) UpdateAdminAccountStatus(ctx context.Context, arg UpdateAdminA
 	return i, err
 }
 
+const updateAdminAccountUsername = `-- name: UpdateAdminAccountUsername :one
+UPDATE gfa_admin_account
+SET username = $1,
+    updated_at = NOW()::timestamp(0)
+WHERE id = $2
+RETURNING id, username, display_name, role, status, password_hash, session_version,
+          last_login_at, created_at, updated_at, password_updated_at
+`
+
+type UpdateAdminAccountUsernameParams struct {
+	Username  string `json:"username"`
+	AccountID int64  `json:"account_id"`
+}
+
+type UpdateAdminAccountUsernameRow struct {
+	ID                int64            `json:"id"`
+	Username          string           `json:"username"`
+	DisplayName       string           `json:"display_name"`
+	Role              string           `json:"role"`
+	Status            string           `json:"status"`
+	PasswordHash      string           `json:"password_hash"`
+	SessionVersion    int64            `json:"session_version"`
+	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
+}
+
+func (q *Queries) UpdateAdminAccountUsername(ctx context.Context, arg UpdateAdminAccountUsernameParams) (UpdateAdminAccountUsernameRow, error) {
+	row := q.db.QueryRow(ctx, updateAdminAccountUsername, arg.Username, arg.AccountID)
+	var i UpdateAdminAccountUsernameRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.DisplayName,
+		&i.Role,
+		&i.Status,
+		&i.PasswordHash,
+		&i.SessionVersion,
+		&i.LastLoginAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PasswordUpdatedAt,
+	)
+	return i, err
+}
+
 const updateAdminLastLogin = `-- name: UpdateAdminLastLogin :one
 UPDATE gfa_admin_account
 SET last_login_at = NOW()::timestamp(0),

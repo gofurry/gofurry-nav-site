@@ -16,6 +16,7 @@ func v1(root fiber.Router, runtime *bootstrap.Runtime) {
 
 	protected := root.Group("")
 	protected.Use(authmw.Required(runtime.AuthService))
+	selfServiceRoutes(protected.Group("/auth/self"), runtime)
 	accountRoutes(protected.Group("/auth/accounts"), runtime)
 	optionsRoutes(protected.Group("/options"), runtime)
 	navRoutes(protected.Group("/nav"), runtime)
@@ -26,6 +27,11 @@ func v1(root fiber.Router, runtime *bootstrap.Runtime) {
 	workbenchRoutes(protected.Group("/workbench"), runtime)
 	dataOpsRoutes(protected.Group("/dataops"), runtime)
 	auditRoutes(protected.Group("/audit"), runtime)
+}
+
+func selfServiceRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	root.Put("/username", runtime.AuthAPI.ChangeOwnUsername)
+	root.Post("/password", runtime.AuthAPI.ChangeOwnPassword)
 }
 
 func workbenchRoutes(root fiber.Router, runtime *bootstrap.Runtime) {

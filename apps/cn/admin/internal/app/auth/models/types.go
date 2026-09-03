@@ -39,6 +39,16 @@ type PasswordRequest struct {
 	Password string `json:"password"`
 }
 
+type SelfUsernameRequest struct {
+	Username        string `json:"username"`
+	CurrentPassword string `json:"current_password"`
+}
+
+type SelfPasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
 type IdentityResponse struct {
 	AccountID      int64                       `json:"account_id"`
 	Username       string                      `json:"username"`

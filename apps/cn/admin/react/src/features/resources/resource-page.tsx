@@ -10,6 +10,7 @@ import { RemoteSelect as SharedRemoteSelect } from '../../components/admin/opera
 import { FormField, FormSection, PageHeader } from '../../components/admin/page'
 import { Alert } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
+import { DateTimePicker } from '../../components/ui/date-picker'
 import { ConfirmAction } from '../../components/ui/dialog'
 import { Input, Textarea } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
@@ -19,12 +20,6 @@ import { errorMessage, getJSON, listJSON, sendJSON } from '../../lib/api'
 import { formatDate, getAtPath } from '../../lib/utils'
 import { findResource } from './definitions'
 import type { ResourceDefinition, ResourceField, ResourceRecord } from './resource-types'
-
-function datetimeInputValue(value: unknown) {
-  if (!value) return ''
-  const text = String(value).replace(' ', 'T')
-  return text.length >= 16 ? text.slice(0, 16) : text
-}
 
 export function RemoteSelect({ endpoint, value, onChange, disabled }: { endpoint: string; value: unknown; onChange: (value: string) => void; disabled?: boolean }) {
   const selected = value === null || value === undefined ? '' : String(value)
@@ -37,7 +32,8 @@ function FieldControl({ field, value, onChange, disabled }: { field: ResourceFie
   if (field.type === 'remote-select' && field.optionEndpoint) return <RemoteSelect endpoint={field.optionEndpoint} value={value} onChange={onChange} disabled={disabled} />
   if (field.type === 'boolean') return <label className="flex h-9 items-center gap-2"><input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} disabled={disabled} className="size-4 accent-primary" /><span className="text-sm text-muted-foreground">{value ? '已启用' : '未启用'}</span></label>
   if (field.type === 'string-array') return <Textarea value={Array.isArray(value) ? value.join('\n') : ''} onChange={(event) => onChange(event.target.value.split('\n').map((item) => item.trim()).filter(Boolean))} disabled={disabled} placeholder={field.placeholder} />
-  return <Input type={field.type === 'number' ? 'number' : field.type === 'datetime' ? 'datetime-local' : 'text'} value={field.type === 'datetime' ? datetimeInputValue(value) : String(value ?? '')} onChange={(event) => onChange(event.target.value)} disabled={disabled} placeholder={field.placeholder} />
+  if (field.type === 'datetime') return <DateTimePicker value={String(value ?? '')} onValueChange={onChange} disabled={disabled} ariaLabel={field.label} />
+  return <Input type={field.type === 'number' ? 'number' : 'text'} value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} disabled={disabled} placeholder={field.placeholder} />
 }
 
 function groupFields(fields: ResourceField[]) {

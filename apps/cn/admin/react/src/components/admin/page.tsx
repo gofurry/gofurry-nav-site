@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 
 export function PageHeader({ title, actions }: { title: string; description?: string; actions?: ReactNode; eyebrow?: string }) {
-  return <header className="flex min-h-9 items-center justify-between gap-6">
+  return <header data-admin-page-header className="-mb-2 flex min-h-9 items-center justify-between gap-6">
     <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
     {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
   </header>

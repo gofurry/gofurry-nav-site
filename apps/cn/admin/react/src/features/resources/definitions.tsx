@@ -42,7 +42,7 @@ export const resourceDefinitions: ResourceDefinition<ResourceRecord>[] = [
   {
     key: 'comments', section: 'game', title: '评论', description: '审核与维护游戏评论内容。',
     listEndpoint: '/api/v1/game/comments', detailEndpoint: '/api/v1/game/comments',
-    columns: [{ key: 'id', label: 'ID', hidden: true }, { key: 'game_id', label: '游戏' }, { key: 'name', label: '昵称' }, { key: 'score', label: '评分' }, { key: 'content', label: '内容' }, { key: 'create_time', label: '提交时间', format: formatDate }],
+    columns: [{ key: 'id', label: 'ID', hidden: true }, { key: 'game_id', label: '游戏' }, { key: 'name', label: '昵称' }, { key: 'score', label: '评分' }, { key: 'content', label: '内容', format: (value: unknown) => <span className="block max-w-[36rem] overflow-hidden text-ellipsis whitespace-nowrap" title={String(value ?? '')}>{String(value ?? '')}</span> }, { key: 'create_time', label: '提交时间', format: formatDate }],
     fields: [{ key: 'game_id', label: '游戏', type: 'remote-select', optionEndpoint: '/api/v1/options/games', section: '评论对象' }, { key: 'region', label: '地区', type: 'text' }, { key: 'name', label: '昵称', type: 'text', section: '评论内容' }, { key: 'ip', label: 'IP', type: 'text' }, { key: 'score', label: '评分', type: 'number' }, { key: 'content', label: '内容', type: 'textarea' }],
     defaults: { game_id: '', region: '', name: '', ip: '', score: 0, content: '' },
     schema: z.object({ game_id: z.coerce.number().int().positive('请选择游戏'), region: optionalText, name: optionalText, ip: optionalText, score: z.coerce.number().min(0), content: z.string().min(1, '请输入评论内容') }),

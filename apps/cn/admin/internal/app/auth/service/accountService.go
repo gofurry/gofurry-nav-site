@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GoFurry/easyhash"
 	"github.com/gofurry/gofurry-admin/internal/app/auth/authorization"
 	"github.com/gofurry/gofurry-admin/internal/app/auth/models"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
@@ -14,6 +15,98 @@ import (
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/jackc/pgx/v5"
 )
+
+func (s *AuthService) ChangeOwnUsername(ctx context.Context, accountID int64, value, currentPassword string, meta audit.Meta) (*authorization.Principal, common.Error) {
+	username, validationErr := validateUsername(value)
+	if validationErr != nil {
+		return nil, validationErr
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, daoError(err)
+	}
+	defer tx.Rollback(ctx)
+	queries := s.q.WithTx(tx)
+	before, appErr := lockAccount(ctx, queries, accountID)
+	if appErr != nil {
+		return nil, appErr
+	}
+	if passwordErr := verifyCurrentPassword(before, currentPassword); passwordErr != nil {
+		return nil, passwordErr
+	}
+	if before.Username == username {
+		if commitErr := commitAccountTx(ctx, tx); commitErr != nil {
+			return nil, commitErr
+		}
+		return principalForAccount(before), nil
+	}
+	row, err := queries.UpdateAdminAccountUsername(ctx, adminsqlc.UpdateAdminAccountUsernameParams{Username: username, AccountID: accountID})
+	if err != nil {
+		return nil, accountWriteError(err)
+	}
+	after, convertErr := accountFromValues(row.ID, row.Username, row.DisplayName, row.Role, row.Status,
+		row.PasswordHash, row.SessionVersion, row.LastLoginAt, row.CreatedAt, row.UpdatedAt, row.PasswordUpdatedAt)
+	if convertErr != nil {
+		return nil, convertErr
+	}
+	if auditErr := s.audit.LogTx(ctx, tx, meta, "account.username_changed", "gfa_admin_account", accountID, accountAuditSnapshot(before), accountAuditSnapshot(after)); auditErr != nil {
+		return nil, auditErr
+	}
+	if commitErr := commitAccountTx(ctx, tx); commitErr != nil {
+		return nil, commitErr
+	}
+	return principalForAccount(after), nil
+}
+
+func (s *AuthService) ChangeOwnPassword(ctx context.Context, accountID int64, currentPassword, newPassword string, meta audit.Meta) common.Error {
+	if validationErr := validatePassword(newPassword); validationErr != nil {
+		return validationErr
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return daoError(err)
+	}
+	defer tx.Rollback(ctx)
+	queries := s.q.WithTx(tx)
+	before, appErr := lockAccount(ctx, queries, accountID)
+	if appErr != nil {
+		return appErr
+	}
+	if passwordErr := verifyCurrentPassword(before, currentPassword); passwordErr != nil {
+		return passwordErr
+	}
+	hash, hashErr := s.createPasswordHash(newPassword)
+	if hashErr != nil {
+		return hashErr
+	}
+	row, err := queries.UpdateAdminAccountPassword(ctx, adminsqlc.UpdateAdminAccountPasswordParams{PasswordHash: hash, PasswordUpdatedAt: timestamp(time.Now()), AccountID: accountID})
+	if err != nil {
+		return accountWriteError(err)
+	}
+	after, convertErr := accountFromValues(row.ID, row.Username, row.DisplayName, row.Role, row.Status,
+		row.PasswordHash, row.SessionVersion, row.LastLoginAt, row.CreatedAt, row.UpdatedAt, row.PasswordUpdatedAt)
+	if convertErr != nil {
+		return convertErr
+	}
+	if auditErr := s.audit.LogTx(ctx, tx, meta, "account.password_changed", "gfa_admin_account", accountID, accountAuditSnapshot(before), accountAuditSnapshot(after)); auditErr != nil {
+		return auditErr
+	}
+	return commitAccountTx(ctx, tx)
+}
+
+func verifyCurrentPassword(account *models.AdminAccount, password string) common.Error {
+	if account == nil || password == "" {
+		return invalidCredentials()
+	}
+	ok, err := easyhash.VerifyPBKDF2(password, account.PasswordHash)
+	if err != nil {
+		return common.NewServiceError("password verification failed")
+	}
+	if !ok {
+		return invalidCredentials()
+	}
+	return nil
+}
 
 func (s *AuthService) ListAccounts(ctx context.Context, keyword string, limit, offset int32) (models.AccountPage, common.Error) {
 	keyword = strings.TrimSpace(keyword)

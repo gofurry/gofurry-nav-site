@@ -1,15 +1,15 @@
 import { Select as BaseSelect } from '@base-ui/react/select'
 import { Check, ChevronDown } from 'lucide-react'
-import type { ReactNode, SelectHTMLAttributes } from 'react'
+import { cn } from '../../lib/utils'
 
 export type SelectOption = { label: string; value: string }
 
-export function Select({ value, onValueChange, options, placeholder = '请选择', disabled, name }: {
+export function Select({ value, onValueChange, options, placeholder = '请选择', disabled, name, className, ariaLabel }: {
   value?: string; onValueChange: (value: string) => void; options: SelectOption[]
-  placeholder?: string; disabled?: boolean; name?: string
+  placeholder?: string; disabled?: boolean; name?: string; className?: string; ariaLabel?: string
 }) {
   return <BaseSelect.Root value={value ?? ''} onValueChange={(next) => next !== null && onValueChange(next)} disabled={disabled} name={name}>
-    <BaseSelect.Trigger className="flex h-9 w-full items-center justify-between rounded-md border bg-surface px-3 text-left text-sm outline-none focus:ring-2 focus:ring-ring">
+    <BaseSelect.Trigger aria-label={ariaLabel} className={cn('flex h-9 w-full items-center justify-between gap-2 rounded-md border bg-surface px-3 text-left text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-60', className)}>
       <BaseSelect.Value placeholder={placeholder}>{(selected: string) => options.find((item) => item.value === selected)?.label ?? placeholder}</BaseSelect.Value>
       <BaseSelect.Icon><ChevronDown className="size-4 text-muted-foreground" /></BaseSelect.Icon>
     </BaseSelect.Trigger>
@@ -24,8 +24,4 @@ export function Select({ value, onValueChange, options, placeholder = '请选择
       </BaseSelect.Positioner>
     </BaseSelect.Portal>
   </BaseSelect.Root>
-}
-
-export function NativeSelect({ children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { children: ReactNode }) {
-  return <select className="h-9 rounded-md border bg-surface px-3 text-sm outline-none focus:ring-2 focus:ring-ring" {...props}>{children}</select>
 }

@@ -75,6 +75,26 @@ func TestAdminIdentityAuthorizationPersistence(t *testing.T) {
 	closeResponse(requestJSON(t, app, http.MethodGet, "/auth/me", "", developerAsOperator, http.StatusUnauthorized))
 	developerCookie = loginCookie(t, app, "developer", "developer-password")
 
+	// Every authenticated account can update its own credentials without the
+	// account.manage capability. Current-password verification, uniqueness,
+	// identity refresh, session revocation, and audit are database-backed.
+	closeResponse(requestJSON(t, app, http.MethodPut, "/auth/self/username", `{"username":"developer","current_password":"developer-password"}`, developerCookie, http.StatusOK))
+	secondOwnerCookie := loginCookie(t, app, "owner-two", "owner-two-password")
+	closeResponse(requestJSON(t, app, http.MethodPut, "/auth/self/username", `{"username":"owner-self","current_password":"wrong-password"}`, secondOwnerCookie, http.StatusUnauthorized))
+	closeResponse(requestJSON(t, app, http.MethodPut, "/auth/self/username", `{"username":"developer","current_password":"owner-two-password"}`, secondOwnerCookie, http.StatusConflict))
+	closeResponse(requestJSON(t, app, http.MethodPut, "/auth/self/username", `{"username":"owner-self","current_password":"owner-two-password"}`, secondOwnerCookie, http.StatusOK))
+	closeResponse(requestJSON(t, app, http.MethodGet, "/auth/me", "", secondOwnerCookie, http.StatusOK))
+	closeResponse(requestJSON(t, app, http.MethodPost, "/auth/login", `{"username":"owner-two","password":"owner-two-password"}`, nil, http.StatusUnauthorized))
+	secondOwnerCookie = loginCookie(t, app, "owner-self", "owner-two-password")
+	closeResponse(requestJSON(t, app, http.MethodPost, "/auth/self/password", `{"current_password":"wrong-password","new_password":"owner-self-password"}`, secondOwnerCookie, http.StatusUnauthorized))
+	closeResponse(requestJSON(t, app, http.MethodPost, "/auth/self/password", `{"current_password":"owner-two-password","new_password":"owner-self-password"}`, secondOwnerCookie, http.StatusOK))
+	closeResponse(requestJSON(t, app, http.MethodGet, "/auth/me", "", secondOwnerCookie, http.StatusUnauthorized))
+	closeResponse(requestJSON(t, app, http.MethodPost, "/auth/login", `{"username":"owner-self","password":"owner-two-password"}`, nil, http.StatusUnauthorized))
+	_ = loginCookie(t, app, "owner-self", "owner-self-password")
+	if count := queryInt64(t, ctx, pool, `SELECT count(*) FROM gfa_admin_audit_log WHERE target_id=$1 AND action IN ('account.username_changed','account.password_changed')`, fmt.Sprint(secondOwnerID)); count != 2 {
+		t.Fatalf("self-service audit count=%d, want 2", count)
+	}
+
 	// Disabled accounts immediately lose access and cannot log in.
 	closeResponse(requestJSON(t, app, http.MethodPut, fmt.Sprintf("/auth/accounts/%d/status", operatorID), `{"status":"disabled"}`, ownerCookie, http.StatusOK))
 	closeResponse(requestJSON(t, app, http.MethodGet, "/auth/me", "", operatorCookie, http.StatusUnauthorized))
@@ -202,6 +222,8 @@ func identityTestApp(authService *authservice.AuthService, authAPI *authcontroll
 	app.Post("/auth/login", authAPI.Login)
 	protected := app.Group("", authmw.Required(authService))
 	protected.Get("/auth/me", authAPI.Me)
+	protected.Put("/auth/self/username", authAPI.ChangeOwnUsername)
+	protected.Post("/auth/self/password", authAPI.ChangeOwnPassword)
 	accounts := protected.Group("/auth/accounts", authmw.Require(authorization.AccountManage))
 	accounts.Get("/", authAPI.ListAccounts)
 	accounts.Post("/", authAPI.CreateAccount)

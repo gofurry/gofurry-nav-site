@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
 import { isGlobalSearchShortcut } from '../../lib/keyboard'
-import { AdminBrand, capabilityAwareNavigation, logoutAndRedirect } from './app-shell'
+import { AdminBrand, capabilityAwareHeaderActions, capabilityAwareNavigation, logoutAndRedirect } from './app-shell'
 
 describe('capability-aware navigation', () => {
   it('shows content routes without reproducing role checks', () => {
@@ -66,6 +66,11 @@ describe('capability-aware navigation', () => {
     rerender(createElement(AdminBrand, { collapsed: true }))
     expect(screen.getByText('GF')).toBeInTheDocument()
     expect(screen.queryByText('GoFurry')).not.toBeInTheDocument()
+  })
+
+  it('shows the Collection header shortcut only with collection.read', () => {
+    expect(capabilityAwareHeaderActions((capability) => capability === 'collection.read').map((action) => action.href)).toEqual(['/collection'])
+    expect(capabilityAwareHeaderActions(() => false)).toEqual([])
   })
 
   it('replaces the protected route only after logout state has been cleared', async () => {

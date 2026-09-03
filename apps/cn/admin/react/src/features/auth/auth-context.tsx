@@ -12,6 +12,8 @@ type AuthContextValue = {
   login: (input: { username: string; password: string }) => Promise<AuthState>
   bootstrap: (input: { username: string; display_name: string; password: string }) => Promise<unknown>
   logout: () => Promise<void>
+  setState: (state: AuthState) => void
+  clearSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -21,6 +23,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const stateQuery = useQuery({ queryKey: ['auth-state'], queryFn: () => getJSON<AuthState>('/api/v1/auth/state'), staleTime: 10_000 })
   const loginMutation = useMutation({ mutationFn: (input: { username: string; password: string }) => sendJSON<AuthState>('/api/v1/auth/login', 'POST', input) })
   const bootstrapMutation = useMutation({ mutationFn: (input: { username: string; display_name: string; password: string }) => sendJSON('/api/v1/auth/bootstrap', 'POST', input) })
+  const clearSession = async () => {
+    resetCsrf()
+    await client.cancelQueries()
+    client.getMutationCache().clear()
+    client.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth-state' })
+    client.setQueryData<AuthState>(['auth-state'], { initialized: true, authenticated: false })
+  }
 
   useEffect(() => {
     const onUnauthorized = () => {
@@ -49,12 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     logout: async () => {
       await sendJSON('/api/v1/auth/logout', 'POST', {})
-      resetCsrf()
-      await client.cancelQueries()
-      client.getMutationCache().clear()
-      client.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth-state' })
-      client.setQueryData<AuthState>(['auth-state'], { initialized: true, authenticated: false })
+      await clearSession()
     },
+    setState: (state) => client.setQueryData(['auth-state'], state),
+    clearSession,
   }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
