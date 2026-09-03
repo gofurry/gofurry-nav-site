@@ -28,4 +28,22 @@ describe('DataTable column visibility menu', () => {
     expect(hidden).toHaveAttribute('aria-checked', 'false')
     expect(hidden.querySelector('svg')).toBeNull()
   })
+
+  it('does not reserve an invisible label row above the search input', () => {
+    render(<DataTable
+      data={[]}
+      columns={[{ key: 'name', header: '名称' }]}
+      total={0}
+      page={1}
+      pageSize={20}
+      search=""
+      onSearchChange={() => undefined}
+      onPageChange={() => undefined}
+      onPageSizeChange={() => undefined}
+    />)
+
+    const search = screen.getByRole('textbox', { name: '搜索列表' })
+    expect(search.closest('label')).toHaveClass('relative', 'block')
+    expect(search.closest('label')?.querySelector('span.invisible[aria-hidden="true"]')).toBeNull()
+  })
 })

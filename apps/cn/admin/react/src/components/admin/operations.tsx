@@ -22,8 +22,8 @@ export function OperationTabs({ tabs, active, onChange, can = () => true }: { ta
 }
 
 export function KpiGrid({ children }: { children: ReactNode }) { return <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{children}</div> }
-export function Kpi({ label, value, detail, tone = 'neutral' }: { label: string; value: ReactNode; detail?: string; tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }) {
-  return <div className={cn('rounded-md border bg-surface px-3 py-2.5', tone === 'warning' && 'border-warning/40', tone === 'danger' && 'border-danger/40', tone === 'success' && 'border-success/40', tone === 'info' && 'border-info/40')}><div className="flex items-baseline justify-between gap-3"><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="text-xl font-semibold tracking-tight">{value}</p></div>{detail && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{detail}</p>}</div>
+export function Kpi({ label, value, tone = 'neutral' }: { label: string; value: ReactNode; tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }) {
+  return <div className={cn('rounded-md border bg-surface px-3 py-2', tone === 'warning' && 'border-warning/40', tone === 'danger' && 'border-danger/40', tone === 'success' && 'border-success/40', tone === 'info' && 'border-info/40')}><div className="flex items-baseline justify-between gap-3"><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="text-xl font-semibold tracking-tight">{value}</p></div></div>
 }
 
 export function FilterBar({ children }: { children: ReactNode }) { return <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-surface p-4">{children}</div> }
