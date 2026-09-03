@@ -45,6 +45,9 @@ for (const route of insightsRoutes) {
   assert(response.status === 200, `${route} expected HTTP 200, received ${response.status}`)
   assert(html.includes('insights-page'), `${route} did not SSR the Insights page shell`)
   assert(/<h1(?:\s|>)/.test(html), `${route} did not SSR a visible h1`)
+  assert(!html.includes('insights-hero'), `${route} still SSR-rendered the retired large hero`)
+  assert(html.includes('data-public-background'), `${route} did not SSR the app-level public background`)
+  assert(html.includes(route.startsWith('/en/') ? 'Ecosystem' : '生态观测'), `${route} did not expose the localized Ecosystem product name`)
   if (route.includes('/compare')) {
     assert(html.includes('name="robots" content="noindex, follow"'), `${route} did not SSR its noindex policy`)
   }
@@ -95,6 +98,17 @@ try {
     timeout: 30000,
   })
   await page.waitForSelector('.insights-domain-page')
+  const desktopNavigation = await page.evaluate(() => {
+    const shell = document.querySelector('.ecosystem-navigation')
+    const primary = document.querySelector('.insights-nav')
+    const context = document.querySelector('.site-intelligence-nav')
+    if (!shell || !primary || !context) return null
+    const primaryBox = primary.getBoundingClientRect()
+    const contextBox = context.getBoundingClientRect()
+    return { direction: getComputedStyle(shell).flexDirection, primaryLeft: primaryBox.left, contextLeft: contextBox.left, centerDelta: Math.abs((primaryBox.top + primaryBox.height / 2) - (contextBox.top + contextBox.height / 2)) }
+  })
+  assert(desktopNavigation?.direction === 'row' && desktopNavigation.primaryLeft < desktopNavigation.contextLeft && desktopNavigation.centerDelta <= 2, 'desktop Ecosystem navigation was not left/right grouped')
+  assert(await page.locator('.insights-hero').count() === 0, 'large Ecosystem hero remained visible')
   await page.waitForURL(url => url.searchParams.get('metric') === 'ipv6' && url.searchParams.get('range') === '30d' && url.searchParams.get('dimension') === 'country' && !url.searchParams.has('slice'))
   assert(await page.locator('.insights-domain-page').getAttribute('data-selected-metric') === 'ipv6', 'invalid metric was not normalized before rendering')
   assert(await page.locator('.insights-domain-page').getAttribute('data-selected-dimension') === 'country', 'invalid dimension was not normalized before rendering')
@@ -119,11 +133,18 @@ try {
   const mobileState = await page.evaluate(() => ({
     overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth,
     text: document.body.innerText,
+    navigationDirection: getComputedStyle(document.querySelector('.ecosystem-navigation')).flexDirection,
   }))
   assert(mobileState.overflow <= 2, `mobile Insights page overflowed horizontally by ${mobileState.overflow}px`)
+  assert(mobileState.navigationDirection === 'column', 'small-screen Ecosystem navigation did not split into two centered rows')
   for (const forbidden of ['undefined', 'NaN', 'null%']) {
     assert(!mobileState.text.includes(forbidden), `mobile Insights page exposed ${forbidden}`)
   }
+  await page.evaluate(() => window.scrollTo(0, 240))
+  await page.waitForSelector('.mobile-bottom-tabs--visible')
+  assert(await page.locator('.mobile-bottom-tabs__item').count() === 4, 'mobile bottom navigation did not expose four destinations')
+  const activeMobileHref = await page.locator('.mobile-bottom-tabs__item--active').getAttribute('href')
+  assert(activeMobileHref === '/en/insights', 'nested Ecosystem route did not activate the mobile Ecosystem destination')
 
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.route('**/api/v2/nav/insights/metrics/**', async (route) => {
@@ -191,7 +212,7 @@ try {
   await page.waitForURL(url => url.searchParams.get('metric') === 'security_txt')
   await page.getByText('正在积累历史数据', { exact: true }).waitFor()
   await page.locator('[data-metric-key="ipv6"]').click()
-  await page.getByText('洞察数据暂不可用', { exact: true }).first().waitFor()
+  await page.getByText('生态观测数据暂不可用', { exact: true }).first().waitFor()
   console.log('[insights] empty, one-point, zero-value, and request-error semantics passed')
 
   await page.locator('[data-metric-key="tls13"]').click()
@@ -414,13 +435,13 @@ try {
   assert(gameTimelineTimes[1]?.includes(':'), 'exact Game event lost its time precision')
   await page.locator('[data-game-insights-range="90d"]').click()
   await page.waitForSelector('[data-game-insights][data-player-loaded-ranges*="90d"]')
-  await page.locator('[data-price-history]').getByText('洞察数据暂不可用', { exact: true }).waitFor()
+  await page.locator('[data-price-history]').getByText('生态观测数据暂不可用', { exact: true }).waitFor()
   await page.locator('[data-game-insights-range="30d"]').click()
   await page.waitForTimeout(250)
   assert(playerRequests['30d'] === 1 && priceRequests['CN:30d'] === 1, 'returning to cached 30d repeated history requests')
   await page.locator('[data-game-insights-range="all"]').click()
   await page.waitForSelector('[data-game-insights][data-price-loaded-ranges*="all"]')
-  await page.locator('[data-player-history]').getByText('洞察数据暂不可用', { exact: true }).waitFor()
+  await page.locator('[data-player-history]').getByText('生态观测数据暂不可用', { exact: true }).waitFor()
   assert(await page.locator('[data-price-history] .game-insights-chart--visible').count() === 1, 'player failure prevented price history from rendering')
   console.log('[insights] Game zero, priced-zero, lazy range cache, and partial failures passed')
 

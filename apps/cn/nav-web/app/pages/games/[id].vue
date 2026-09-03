@@ -2,7 +2,6 @@
   <div
     class="games-page game-detail-page relative isolate min-h-full w-full overflow-hidden"
   >
-    <GoFurryGridBackground :fixed="false" palette="games" />
     <div class="game-detail-layout relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 p-6">
       <section class="w-full xl:w-[75%]">
         <GameDetailMain
@@ -28,7 +27,6 @@
 <script setup lang="ts">
 import { computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import GameDetailMain from '@/components/game/detail/GameDetailMain.vue'
 import GameDetailSidebar from '@/components/game/detail/GameDetailSidebar.vue'
 import { getGameBaseInfo, getGameInsights, getGameRemark, getRecommendedGame, touchGameView } from '~/services/game'

@@ -5,15 +5,9 @@
     :data-compare-count="selectedIDs.length"
     :data-compare-status="compare?.status || (ready ? 'loading' : 'builder')"
   >
-    <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
-      <InsightsNav />
-      <SiteIntelligenceNav />
-      <header class="insights-hero insights-hero--domain">
-        <p class="insights-eyebrow">SITE COMPARE</p>
-        <h1>{{ $t('insights.siteCompare.title') }}</h1>
-        <p>{{ $t('insights.siteCompare.description') }}</p>
-      </header>
+      <EcosystemNavigation context="site" />
+      <h1 class="sr-only">{{ $t('insights.siteCompare.title') }}</h1>
 
       <section class="compare-builder">
         <h2>{{ $t('insights.compare.builderTitle') }}</h2>
@@ -77,11 +71,9 @@
 </template>
 
 <script setup lang="ts">
+import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
-import InsightsNav from '@/components/insights/InsightsNav.vue'
-import SiteIntelligenceNav from '@/components/insights/SiteIntelligenceNav.vue'
 import { getSiteCompare } from '@/services/nav'
 import type { NavInsightMetricKey, SiteCompareItem, SiteInsightCapabilityState } from '@/types/insights'
 import { insightCompareReady, parseInsightCompareIDs } from '@/utils/insightCompare'

@@ -10,7 +10,6 @@
         ref="contentRef"
         class="nav-content-shell relative z-10 flex-1 overflow-hidden"
     >
-      <GoFurryGridBackground :fixed="false" palette="nav-content" />
       <div class="absolute z-30 w-full">
         <NavTransitionBar :initial-saying="navPageData.saying" />
       </div>
@@ -38,7 +37,6 @@ import NavHeader from '@/components/nav/NavHeader.vue'
 import NavToolDock from '@/components/nav/NavToolDock.vue'
 import NavTransitionBar from '@/components/nav/NavTransitionBar.vue'
 import NavContent from '@/components/nav/NavContent.vue'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import { debounce, throttle } from '@/utils/util'
 import { dispatchNavPageReveal, isNavPageRevealLocked } from '@/utils/navPageReveal'
 

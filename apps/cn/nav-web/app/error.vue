@@ -1,7 +1,6 @@
 <template>
   <NuxtLayout>
     <section class="not-found-page">
-      <GoFurryGridBackground palette="nav-content" />
       <div class="not-found-page__content">
         <p class="not-found-page__eyebrow">{{ copy.eyebrow }}</p>
         <h1 class="not-found-page__code">{{ statusCode }}</h1>
@@ -23,7 +22,6 @@
 
 <script setup lang="ts">
 import type { NuxtError } from '#app'
-import GoFurryGridBackground from '~/components/common/GoFurryGridBackground.vue'
 
 const props = defineProps<{
   error: NuxtError

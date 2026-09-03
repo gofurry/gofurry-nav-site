@@ -1,6 +1,5 @@
 <template>
   <div class="lottery-activation-page relative isolate flex min-h-[calc(100svh-3.5rem)] items-center justify-center overflow-hidden px-4 py-8">
-    <GoFurryGridBackground :fixed="false" palette="nav-content" />
     <div class="lottery-activation-page__wash absolute inset-0 z-0" aria-hidden="true" />
 
     <main class="activation-card relative z-10 w-full max-w-xl">
@@ -51,7 +50,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { i18n } from '@/main'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 
 const { t } = i18n.global
 

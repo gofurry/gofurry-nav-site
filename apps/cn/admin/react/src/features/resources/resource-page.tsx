@@ -91,8 +91,9 @@ function ResourceEditor({ definition, id, open, onOpenChange }: { definition: Re
   </Sheet>
 }
 
-export function ResourcePage() {
-  const { section, resource } = useParams()
+type ResourceSection = 'nav' | 'game'
+
+export function ResourcePage({ section, resource }: { section: ResourceSection; resource?: string }) {
   const definition = findResource(section, resource)
   const auth = useAuth()
   const client = useQueryClient()
@@ -117,4 +118,7 @@ export function ResourcePage() {
   </div>
 }
 
-export function ResourceEngineBoundary() { return <ResourcePage /> }
+export function ResourceEngineBoundary({ section }: { section: ResourceSection }) {
+  const { resource } = useParams()
+  return <ResourcePage section={section} resource={resource} />
+}

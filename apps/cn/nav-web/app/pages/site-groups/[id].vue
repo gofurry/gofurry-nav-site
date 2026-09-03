@@ -1,6 +1,5 @@
 <template>
   <div class="games-page game-detail-page relative isolate min-h-screen overflow-hidden">
-    <GoFurryGridBackground :fixed="false" palette="nav-content" />
 
     <main class="site-group-content relative z-10 mx-auto w-full max-w-[1880px] px-4 pb-16 pt-6 sm:px-6 lg:pt-8 xl:px-8">
       <header class="site-group-header mb-6">
@@ -48,7 +47,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import NavSiteGrid from '@/components/nav/NavSiteGrid.vue'
 import { getNavHomePing, getNavSiteGroupPage } from '~/services/nav'
 import type { Delay, NavSiteGroupPageResponse, Site } from '~/types/nav'

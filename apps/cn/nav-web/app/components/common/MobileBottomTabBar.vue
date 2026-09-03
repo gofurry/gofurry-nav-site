@@ -13,7 +13,7 @@
         :aria-label="t('sidebar.nav')"
         :tabindex="showBottomTabs ? 0 : -1"
       >
-        <img :src="homeIcon" alt="" />
+        <PhHouse :size="17" weight="regular" aria-hidden="true" />
         <span class="mobile-bottom-tabs__label">{{ t('sidebar.nav') }}</span>
       </NuxtLink>
 
@@ -24,8 +24,19 @@
         :aria-label="t('sidebar.games')"
         :tabindex="showBottomTabs ? 0 : -1"
       >
-        <img :src="gameIcon" alt="" />
+        <PhGameController :size="17" weight="regular" aria-hidden="true" />
         <span class="mobile-bottom-tabs__label">{{ t('sidebar.games') }}</span>
+      </NuxtLink>
+
+      <NuxtLink
+        :to="localePath('/insights')"
+        class="mobile-bottom-tabs__item"
+        :class="{ 'mobile-bottom-tabs__item--active': isEcosystemActive }"
+        :aria-label="t('sidebar.ecosystemShort')"
+        :tabindex="showBottomTabs ? 0 : -1"
+      >
+        <PhBinoculars :size="17" weight="regular" aria-hidden="true" />
+        <span class="mobile-bottom-tabs__label">{{ t('sidebar.ecosystemShort') }}</span>
       </NuxtLink>
 
       <button
@@ -36,7 +47,7 @@
         :tabindex="showBottomTabs ? 0 : -1"
         @click="showModeModal = true"
       >
-        <img :src="gearIcon" alt="" />
+        <PhGearSix :size="17" weight="regular" aria-hidden="true" />
         <span class="mobile-bottom-tabs__label">{{ t('navbar.mode') }}</span>
       </button>
     </nav>
@@ -52,10 +63,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { PhBinoculars, PhGameController, PhGearSix, PhHouse } from '@phosphor-icons/vue'
 import { useI18n } from 'vue-i18n'
-import homeIcon from '@/assets/svgs/mobile-home.svg'
-import gameIcon from '@/assets/svgs/mobile-games.svg'
-import gearIcon from '@/assets/svgs/mobile-settings.svg'
 import ModeSettingModal from '@/components/common/ModeSettingModal.vue'
 import { readMode, subscribeModeChange, writeMode } from '@/utils/modeStorage'
 
@@ -73,6 +82,7 @@ let scrollSyncTimer: ReturnType<typeof setInterval> | null = null
 const normalizedPath = computed(() => route.path.replace(/^\/(zh|en)(?=\/|$)/, '') || '/')
 const isHomeActive = computed(() => normalizedPath.value === '/')
 const isGamesActive = computed(() => normalizedPath.value === '/games' || normalizedPath.value.startsWith('/games/'))
+const isEcosystemActive = computed(() => normalizedPath.value === '/insights' || normalizedPath.value.startsWith('/insights/'))
 const showBottomTabs = computed(() => isNarrowScreen.value && isAwayFromTop.value)
 
 function updateScrollState() {
@@ -179,11 +189,10 @@ html.dark .mobile-bottom-tabs {
     border-color 420ms ease;
 }
 
-.mobile-bottom-tabs__item img {
+.mobile-bottom-tabs__item svg {
   width: 17px;
   height: 17px;
-  object-fit: contain;
-  filter: brightness(0) saturate(100%) invert(98%) sepia(4%) saturate(734%) hue-rotate(180deg) brightness(102%) contrast(97%);
+  color: rgba(248, 250, 252, 0.98);
 }
 
 .mobile-bottom-tabs__item--active,

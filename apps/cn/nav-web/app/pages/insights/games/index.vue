@@ -5,16 +5,9 @@
     :data-selected-dimension="selectedDimension"
     :data-selected-slice="selectedSlice || ''"
   >
-    <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
-      <InsightsNav />
-      <GameIntelligenceNav />
-
-      <header class="insights-hero insights-hero--domain">
-        <p class="insights-eyebrow">{{ $t('insights.games.eyebrow') }}</p>
-        <h1>{{ $t('insights.games.title') }}</h1>
-        <p>{{ $t('insights.games.description') }}</p>
-      </header>
+      <EcosystemNavigation context="game" />
+      <h1 class="sr-only">{{ $t('insights.games.title') }}</h1>
 
       <p v-if="overviewUnavailable" class="insights-empty-state insights-overview-error">
         {{ $t('insights.emptyStates.unavailable') }}
@@ -66,15 +59,13 @@
 </template>
 
 <script setup lang="ts">
+import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 import InsightsDataInfo from '@/components/insights/InsightsDataInfo.vue'
-import GameIntelligenceNav from '@/components/insights/GameIntelligenceNav.vue'
 import InsightsDimensionBreakdown from '@/components/insights/InsightsDimensionBreakdown.vue'
 import InsightsMetricCard from '@/components/insights/InsightsMetricCard.vue'
 import InsightsMetricTrend from '@/components/insights/InsightsMetricTrend.vue'
-import InsightsNav from '@/components/insights/InsightsNav.vue'
 import InsightsRecentChanges from '@/components/insights/InsightsRecentChanges.vue'
 import InsightsSliceTrend from '@/components/insights/InsightsSliceTrend.vue'
 import { useInsightsDomain } from '@/composables/useInsightsDomain'

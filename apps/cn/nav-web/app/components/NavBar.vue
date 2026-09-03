@@ -82,7 +82,8 @@
             :title="themeToggleLabel"
             @click.stop="toggleThemeIcon"
         >
-          <img :src="themeIconSrc" class="h-4 w-4" alt="" />
+          <PhSun v-if="themeStore.theme === 'light'" :size="16" weight="regular" aria-hidden="true" />
+          <PhMoon v-else :size="16" weight="regular" aria-hidden="true" />
         </button>
 
         <button
@@ -91,7 +92,7 @@
             :aria-label="t('navbar.mode')"
             @click.stop="showModeModal = true"
         >
-          <img :src="gear" class="gf-nav__settings-icon h-4 w-4" alt="" />
+          <PhGearSix :size="16" weight="regular" aria-hidden="true" />
         </button>
 
         <button
@@ -101,12 +102,8 @@
             :aria-label="t('navbar.expandNav')"
             @click.stop="mobileMenuOpen = !mobileMenuOpen"
         >
-          <svg v-if="!mobileMenuOpen" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-          <svg v-else class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 6l12 12M6 18L18 6" />
-          </svg>
+          <PhList v-if="!mobileMenuOpen" :size="24" weight="regular" aria-hidden="true" />
+          <PhX v-else :size="24" weight="regular" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -149,7 +146,7 @@
                 @click="openModeModalFromMobile"
             >
               <span class="flex items-center gap-2">
-                <img :src="gear" class="gf-nav__settings-icon h-4 w-4" alt="" />
+                <PhGearSix :size="16" weight="regular" aria-hidden="true" />
                 {{ t('navbar.mode') }}
               </span>
               <span class="gf-nav__mobile-action-value">{{ mode || '--' }}</span>
@@ -186,15 +183,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { PhGearSix, PhList, PhMoon, PhSun, PhX } from '@phosphor-icons/vue'
 import { useThemeStore } from '@/stores/theme'
 import { useI18n } from 'vue-i18n'
 import cnFlag from '@/assets/flags/cn.svg'
 import usFlag from '@/assets/flags/us.svg'
 import logo from '@/assets/svgs/logo-mini.svg'
-import gear from '@/assets/svgs/mobile-settings.svg'
 import githubLightIcon from '@/assets/svgs/logo-github-light.svg'
-import moonIcon from '@/assets/svgs/moon-light.svg'
-import sunIcon from '@/assets/svgs/sun.svg'
 import ModeSettingModal from '@/components/common/ModeSettingModal.vue'
 import { readMode, subscribeModeChange, writeMode } from '@/utils/modeStorage'
 
@@ -233,7 +228,6 @@ const languageOptions = [
   { value: 'zh' as const, label: 'CN', flag: cnFlag },
   { value: 'en' as const, label: 'EN', flag: usFlag },
 ]
-const themeIconSrc = computed(() => themeStore.theme === 'light' ? sunIcon : moonIcon)
 const githubIconSrc = githubLightIcon
 const themeToggleLabel = computed(() => (
   currentLang.value === 'zh' ? '切换明暗主题图标' : 'Toggle theme icon'

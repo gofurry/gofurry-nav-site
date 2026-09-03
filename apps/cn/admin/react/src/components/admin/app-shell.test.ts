@@ -1,7 +1,9 @@
+import { createElement } from 'react'
+import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
 import { isGlobalSearchShortcut } from '../../lib/keyboard'
-import { capabilityAwareNavigation } from './app-shell'
+import { AdminBrand, capabilityAwareNavigation } from './app-shell'
 
 describe('capability-aware navigation', () => {
   it('shows content routes without reproducing role checks', () => {
@@ -52,5 +54,16 @@ describe('capability-aware navigation', () => {
     expect(isGlobalSearchShortcut({ key: 'k', ctrlKey: false, metaKey: true }, false)).toBe(true)
     expect(isGlobalSearchShortcut({ key: '/', ctrlKey: false, metaKey: false }, false)).toBe(true)
     expect(isGlobalSearchShortcut({ key: '/', ctrlKey: false, metaKey: false }, true)).toBe(false)
+  })
+
+  it('shows the compact GoFurry brand without the legacy V3 CONTENT label', () => {
+    const { rerender } = render(createElement(AdminBrand, { collapsed: false }))
+    expect(screen.getByText('GF')).toBeInTheDocument()
+    expect(screen.getByText('GoFurry Admin')).toBeInTheDocument()
+    expect(screen.queryByText('V3 CONTENT')).not.toBeInTheDocument()
+
+    rerender(createElement(AdminBrand, { collapsed: true }))
+    expect(screen.getByText('GF')).toBeInTheDocument()
+    expect(screen.queryByText('GoFurry Admin')).not.toBeInTheDocument()
   })
 })

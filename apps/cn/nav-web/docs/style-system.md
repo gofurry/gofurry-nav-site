@@ -132,7 +132,7 @@ Token 分三层：
 
 | 文件 | 保留项 | 原因 | 后续处理 |
 | --- | --- | --- | --- |
-| `components/common/GoFurryGridBackground.vue` | `:global(html.dark ...)` | 通用背景组件需要跟随全站 `html.dark`，并通过组件根类限制影响范围。 | 保留。 |
+| `components/experimental/ambient/GoFurryGridBackground.vue` | `:global(html.dark ...)` | 旧网格效果仅作为实验性环境效果保留；默认布局由 `PublicPageBackground.vue` 和主题 token 统一负责。 | 保留但不进入默认页面路径。 |
 | `components/site/*` | `:global(html.dark ...)` | 站点详情观测面板仍处于独立页面迁移之外，本阶段先统一暗色入口，不再保留 `.dark` 简写。 | 后续若迁移站点详情页，再沉淀到页面 Less。 |
 | `components/site/SiteDetailPage.vue` | `:deep(...)` | 站点详情页需要包裹子面板生成的 Tailwind 表面，当前只能通过父级边界局部覆盖。 | 保留登记，禁止扩散到其他页面。 |
 | `components/site/SitePerformancePanel.vue` | `:deep(...)` | 性能面板包装共享 `SitePerformance` 子组件，局部覆盖用于约束子组件布局和材质。 | 保留登记，禁止扩散到其他页面。 |

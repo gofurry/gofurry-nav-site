@@ -1,14 +1,8 @@
 <template>
   <div class="insights-page insights-intelligence-page" data-certificate-intelligence>
-    <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
-      <InsightsNav />
-      <SiteIntelligenceNav />
-      <header class="insights-hero insights-hero--domain">
-        <p class="insights-eyebrow">TLS CERTIFICATE INTELLIGENCE</p>
-        <h1>{{ $t('insights.certificateIntelligence.title') }}</h1>
-        <p>{{ $t('insights.certificateIntelligence.description') }}</p>
-      </header>
+      <EcosystemNavigation context="site" />
+      <h1 class="sr-only">{{ $t('insights.certificateIntelligence.title') }}</h1>
 
       <p v-if="error" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
       <p v-else-if="!overview?.as_of" class="insights-empty-state">{{ $t('insights.certificateIntelligence.empty') }}</p>
@@ -60,11 +54,9 @@
 </template>
 
 <script setup lang="ts">
+import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { useI18n } from 'vue-i18n'
 import CertificateInsightTable from '@/components/insights/CertificateInsightTable.vue'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
-import InsightsNav from '@/components/insights/InsightsNav.vue'
-import SiteIntelligenceNav from '@/components/insights/SiteIntelligenceNav.vue'
 import { getNavCertificateInsightsOverview } from '@/services/nav'
 
 const { locale, t } = useI18n()

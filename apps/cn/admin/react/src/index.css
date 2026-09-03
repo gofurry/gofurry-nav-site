@@ -15,6 +15,8 @@
   --danger: oklch(0.58 0.2 27);
   --info: oklch(0.58 0.13 231);
   --ring: oklch(0.62 0.15 250);
+  --scrollbar-thumb: oklch(0.7 0.015 255 / 0.7);
+  --scrollbar-thumb-hover: oklch(0.56 0.025 255 / 0.82);
   --radius: 0.55rem;
 }
 
@@ -33,6 +35,8 @@
   --danger: oklch(0.7 0.18 27);
   --info: oklch(0.7 0.13 231);
   --ring: oklch(0.7 0.13 249);
+  --scrollbar-thumb: oklch(0.43 0.025 257 / 0.82);
+  --scrollbar-thumb-hover: oklch(0.56 0.03 252 / 0.92);
 }
 
 @theme inline {
@@ -57,14 +61,24 @@
 }
 
 * { border-color: var(--border); }
+html, body, #root { width: 100%; height: 100%; min-width: 0; overflow: hidden; }
 html { background: var(--background); }
-body { margin: 0; min-width: 1024px; min-height: 100vh; background: var(--background); color: var(--foreground); }
+body { margin: 0; background: var(--background); color: var(--foreground); }
 button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 ::selection { background: color-mix(in oklch, var(--primary) 24%, transparent); }
 
+.admin-scroll {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  scrollbar-width: thin;
+}
+.admin-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.admin-scroll::-webkit-scrollbar-track { background: transparent; }
+.admin-scroll::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: var(--scrollbar-thumb); background-clip: padding-box; }
+.admin-scroll::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); background-clip: padding-box; }
+
 @keyframes enter-overlay { from { opacity: 0; } to { opacity: 1; } }
-@keyframes enter-dialog { from { opacity: 0; transform: translate(-50%, -48%) scale(.98); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes enter-dialog { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: scale(1); } }
 @keyframes enter-sheet { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
 .overlay-open { animation: enter-overlay .14s ease-out; }

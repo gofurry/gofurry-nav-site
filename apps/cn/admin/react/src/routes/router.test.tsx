@@ -21,6 +21,17 @@ describe('content workspace routing', () => {
     expect(matches?.at(-1)?.route.path).toBe(expected)
   })
 
+  it.each([
+    ['/nav/site-groups', 'nav'], ['/nav/update-notices', 'nav'], ['/nav/sayings', 'nav'],
+    ['/game/tags', 'game'], ['/game/comments', 'game'], ['/game/prizes', 'game'],
+  ])('binds generic resource route %s to its explicit domain', (pathname, section) => {
+    const matches = matchRoutes(router.routes, pathname)
+    const element = matches?.at(-1)?.route.element
+
+    expect(matches?.at(-1)?.route.path).toBe(`${section}/:resource`)
+    expect(isValidElement<{ section?: string }>(element) ? element.props.section : undefined).toBe(section)
+  })
+
   it('guards Data Operations with the canonical backend capability', () => {
     const matches = matchRoutes(router.routes, '/system/data-operations')
     const guard = matches

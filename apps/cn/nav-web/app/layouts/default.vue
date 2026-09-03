@@ -1,9 +1,10 @@
 <template>
-  <div class="gf-app-shell relative flex min-h-screen flex-col transition-colors duration-500">
+  <div class="gf-app-shell relative isolate flex min-h-screen flex-col transition-colors duration-500">
+    <PublicPageBackground />
     <div :class="navBarWrapperClass">
       <NavBar :nav-overlay-desktop="isNavPage" />
     </div>
-    <main class="relative flex min-w-0 flex-1 flex-col">
+    <main class="relative z-[1] flex min-w-0 flex-1 flex-col">
       <slot />
       <div v-if="showFooter" class="gf-footer-shell relative mt-auto">
         <Footer />
@@ -18,6 +19,7 @@
 <script setup lang="ts">
 import { NAV_PAGE_REVEAL_EVENT } from '@/utils/navPageReveal'
 import MobileBottomTabBar from '@/components/common/MobileBottomTabBar.vue'
+import PublicPageBackground from '@/components/common/PublicPageBackground.vue'
 
 const route = useRoute()
 const navPageRevealed = ref(true)

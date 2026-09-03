@@ -1,18 +1,12 @@
 <template>
   <div class="insights-page insights-overview-page">
-    <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
-      <InsightsNav />
-
-      <header class="insights-hero">
-        <p class="insights-eyebrow">{{ $t('insights.overview.eyebrow') }}</p>
-        <h1>{{ $t('insights.overview.title') }}</h1>
-        <p>{{ $t('insights.overview.description') }}</p>
-      </header>
+      <EcosystemNavigation />
+      <h1 class="sr-only">{{ $t('insights.overview.title') }}</h1>
 
       <InsightsStats :items="stats" />
 
-      <section class="insights-previews" aria-label="Insights metrics">
+      <section class="insights-previews" :aria-label="$t('insights.metricsLabel')">
         <article class="insights-preview">
           <div class="insights-preview__heading">
             <h2>{{ $t('insights.overview.sitesPreview') }}</h2>
@@ -48,10 +42,9 @@
 </template>
 
 <script setup lang="ts">
+import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
-import InsightsNav from '@/components/insights/InsightsNav.vue'
 import InsightsRecentChanges from '@/components/insights/InsightsRecentChanges.vue'
 import InsightsStats from '@/components/insights/InsightsStats.vue'
 import { getGameInsightsOverview } from '@/services/game'

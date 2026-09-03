@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@nuxtjs/i18n": "^10.3.0",
+    "@phosphor-icons/vue": "^2.2.1",
     "@pinia/nuxt": "^0.11.3",
     "@tailwindcss/vite": "^4.2.4",
     "@vuepic/vue-datepicker": "^12.1.0",

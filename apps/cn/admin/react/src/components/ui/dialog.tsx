@@ -1,5 +1,5 @@
 import { Dialog as BaseDialog } from '@base-ui/react/dialog'
-import { X } from 'lucide-react'
+import { X } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { Button } from './button'
 
@@ -10,13 +10,13 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
   return <BaseDialog.Root open={open} onOpenChange={onOpenChange}>
     <BaseDialog.Portal>
       <BaseDialog.Backdrop className="overlay-open fixed inset-0 z-50 bg-black/45" />
-      <BaseDialog.Popup className="dialog-open fixed left-1/2 top-1/2 z-50 w-[min(34rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-surface shadow-2xl outline-none">
-        <div className="flex items-start justify-between gap-4 border-b p-5">
+      <BaseDialog.Popup data-admin-dialog className="dialog-open fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[min(34rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border bg-surface shadow-2xl outline-none">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b p-5">
           <div><BaseDialog.Title className="text-base font-semibold">{title}</BaseDialog.Title>{description && <BaseDialog.Description className="mt-1 text-sm text-muted-foreground">{description}</BaseDialog.Description>}</div>
           <BaseDialog.Close aria-label="关闭" className="rounded p-1 hover:bg-surface-muted"><X className="size-4" /></BaseDialog.Close>
         </div>
-        <div className="p-5">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t p-4">{footer}</div>}
+        <div data-admin-dialog-scroll className="admin-scroll min-h-0 overflow-x-hidden overflow-y-auto p-5">{children}</div>
+        {footer && <div className="flex shrink-0 justify-end gap-2 border-t p-4">{footer}</div>}
       </BaseDialog.Popup>
     </BaseDialog.Portal>
   </BaseDialog.Root>

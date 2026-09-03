@@ -1,14 +1,8 @@
 <template>
   <div class="insights-page insights-intelligence-page" data-player-intelligence>
-    <GoFurryGridBackground :fixed="false" profile="light" />
     <main class="insights-container">
-      <InsightsNav />
-      <GameIntelligenceNav />
-      <header class="insights-hero insights-hero--domain">
-        <p class="insights-eyebrow">PLAYER INTELLIGENCE</p>
-        <h1>{{ $t('insights.playerIntelligence.title') }}</h1>
-        <p>{{ $t('insights.playerIntelligence.description') }}</p>
-      </header>
+      <EcosystemNavigation context="game" />
+      <h1 class="sr-only">{{ $t('insights.playerIntelligence.title') }}</h1>
       <div class="insights-ranges intelligence-selector">
         <button v-for="metric in metrics" :key="metric" :class="{ 'insights-ranges__button--active': selectedMetric === metric }" @click="selectMetric(metric)">
           {{ $t(`insights.playerIntelligence.metrics.${metric}`) }}
@@ -34,11 +28,9 @@
 </template>
 
 <script setup lang="ts">
+import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
-import GameIntelligenceNav from '@/components/insights/GameIntelligenceNav.vue'
-import InsightsNav from '@/components/insights/InsightsNav.vue'
 import { getGamePlayerRanking } from '@/services/game'
 import type { GamePlayerRankingItem, GamePlayerRankingMetric } from '@/types/insights'
 

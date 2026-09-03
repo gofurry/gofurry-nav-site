@@ -1,6 +1,5 @@
 <template>
   <div class="gf-static-page legal-page relative isolate flex w-full flex-1 flex-col overflow-hidden transition-colors duration-500">
-    <GoFurryGridBackground :fixed="false" palette="nav-content" />
     <div class="gf-static-page__top-veil" />
 
     <main class="gf-static-page__main gf-static-page__main--legal">
@@ -40,7 +39,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import GoFurryGridBackground from '@/components/common/GoFurryGridBackground.vue'
 
 const { locale } = useI18n()
 const isZh = computed(() => locale.value === 'zh')

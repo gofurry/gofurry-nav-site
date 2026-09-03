@@ -117,7 +117,8 @@
     "survey": "兽圈调研",
     "about": "关于本站",
     "join": "加入我们",
-    "insights": "洞察"
+    "insights": "生态观测",
+    "ecosystemShort": "生态"
   },
   "footer": {
     "sections": {
@@ -445,7 +446,7 @@
       "commentCountSuffix": "条评论",
       "share": "分享",
       "introduction": "介绍",
-      "insights": "洞察",
+      "insights": "生态观测",
       "gallery": "画廊",
       "comments": "评论",
       "news": "新闻",
@@ -562,6 +563,8 @@
     "backHome": "返回首页"
   },
   "insights": {
+    "navLabel": "生态观测导航",
+    "metricsLabel": "生态观测指标",
     "nav": {
       "overview": "生态概览",
       "sites": "网站生态",
@@ -569,8 +572,8 @@
       "changes": "变化探索"
     },
     "overview": {
-      "eyebrow": "PUBLIC INSIGHTS",
-      "title": "洞察",
+      "eyebrow": "PUBLIC ECOSYSTEM",
+      "title": "生态观测",
       "description": "看见 Furry 网站与游戏生态正在发生什么",
       "sitesCount": "收录网站",
       "gamesCount": "收录游戏",
@@ -584,12 +587,12 @@
     },
     "sites": {
       "eyebrow": "WEBSITE ECOSYSTEM",
-      "title": "网站生态洞察",
+      "title": "网站生态观测",
       "description": "了解 Furry 网站公开技术能力的采用趋势与近期变化"
     },
     "games": {
       "eyebrow": "GAME ECOSYSTEM",
-      "title": "游戏生态洞察",
+      "title": "游戏生态观测",
       "description": "了解 Furry 游戏的平台支持与免费游戏比例如何变化"
     },
     "metrics": {
@@ -756,11 +759,11 @@
       "caveat": "未知、陈旧、尚未探测或探测失败的数据不会被视为“不支持”。缺失日期不会被补零。"
     },
     "entity": {
-      "siteEyebrow": "SITE INSIGHTS",
-      "siteTitle": "网站洞察",
+      "siteEyebrow": "SITE ECOSYSTEM",
+      "siteTitle": "网站生态观测",
       "siteDescription": "当前公开能力、同日生态对比与近期语义变化。",
-      "gameEyebrow": "GAME INSIGHTS",
-      "gameTitle": "游戏洞察",
+      "gameEyebrow": "GAME ECOSYSTEM",
+      "gameTitle": "游戏生态观测",
       "gameDescription": "当前状态、玩家历史、国区价格与近期语义变化。",
       "backToSites": "查看网站生态 →",
       "backToGames": "查看游戏生态 →",
@@ -823,10 +826,10 @@
     },
     "regions": { "CN": "中国", "US": "美国", "HK": "中国香港" },
     "siteIntelligence": {
-      "navLabel": "网站洞察导航", "ecosystem": "生态", "certificates": "证书", "compare": "对比"
+      "navLabel": "网站生态观测导航", "ecosystem": "生态", "certificates": "证书", "compare": "对比"
     },
     "certificateIntelligence": {
-      "title": "TLS 证书洞察", "description": "在同一已完成 UTC 事实日查看证书验证、到期分布与需关注站点。",
+      "title": "TLS 证书生态观测", "description": "在同一已完成 UTC 事实日查看证书验证、到期分布与需关注站点。",
       "empty": "尚无可靠的证书统计数据。", "verificationTitle": "证书验证概览", "expiryTitle": "证书到期概览",
       "verified": "验证通过", "failed": "验证失败", "known": "结果已知", "coverage": "覆盖率",
       "expired": "已过期", "within7d": "7 天内到期", "in8to30d": "8–30 天内到期",
@@ -841,7 +844,7 @@
       }
     },
     "gameIntelligence": {
-      "navLabel": "游戏洞察导航", "ecosystem": "生态", "players": "玩家", "prices": "价格", "languages": "语言", "compare": "对比"
+      "navLabel": "游戏生态观测导航", "ecosystem": "生态", "players": "玩家", "prices": "价格", "languages": "语言", "compare": "对比"
     },
     "compare": {
       "builderTitle": "选择对比实体", "idsLabel": "实体 ID（2–4 个）", "idsPlaceholder": "例如 12,37,48", "apply": "应用",
@@ -864,24 +867,24 @@
       "about": "状态、计划玩家快照和 30 天玩家事实分别公开各自日期。价格不做汇率换算或跨区金额比较，页面只并列展示已有事实。"
     },
     "playerIntelligence": {
-      "title": "玩家洞察", "description": "基于 GoFurry 可靠观测查看玩家排名与数据质量。",
+      "title": "玩家生态观测", "description": "基于 GoFurry 可靠观测查看玩家排名与数据质量。",
       "metrics": { "latest_observed": "最近计划观测", "peak_30d": "30 天峰值", "average_30d": "30 天观测均值" },
       "population": "可观测游戏", "ranked": "有效排名", "coverage": "实体覆盖", "game": "游戏", "value": "观测值", "quality": "数据质量", "observed": "成功观测", "observedDays": "{count} 个观测日", "successfulSamples": "{count} 个成功样本",
       "snapshot": "计划快照：{date}", "window": "共同窗口：{from} 至 {through}", "aboutTitle": "关于玩家数据", "about": "最近观测不是 Steam 实时并发。缺失或失败观测不会变成 0，真实观测到的 0 会保留。"
     },
     "priceIntelligence": {
-      "title": "区域价格洞察", "description": "查看中国、美国和中国香港的可靠区域价格快照。",
+      "title": "区域价格生态观测", "description": "查看中国、美国和中国香港的可靠区域价格快照。",
       "population": "追踪总体", "priced": "付费定价", "free": "免费", "unpriced": "暂无定价", "unknown": "未知", "unavailable": "无当日事实", "coverage": "覆盖率", "discounted": "当前折扣",
       "discounts": "当前区域折扣", "currentPrice": "当前价格", "discount": "折扣", "observedLow": "GoFurry 观测最低价",
       "aboutTitle": "关于价格数据", "about": "各区域和币种彼此独立，不进行汇率换算或最便宜区域判断。GoFurry 观测最低价仅限当前连续、同币种的付费价格身份。"
     },
     "languageIntelligence": {
-      "title": "语言洞察", "description": "查看可靠快照中的支持语言与明确标注完整音频。", "coverage": "新鲜证据覆盖", "fresh": "新鲜证据", "normalization": "规范化覆盖",
+      "title": "语言生态观测", "description": "查看可靠快照中的支持语言与明确标注完整音频。", "coverage": "新鲜证据覆盖", "fresh": "新鲜证据", "normalization": "规范化覆盖",
       "distribution": "语言分布", "overlap": "语言是重叠分布，各语言比例不能相加推导 100%。", "language": "语言", "supported": "支持游戏", "share": "占新鲜证据比例", "fullAudio": "明确标注完整音频",
       "aboutTitle": "关于语言数据", "about": "未知语言名称不会模糊匹配；没有完整音频标记也不会被解释为不支持。"
     },
     "emptyStates": {
-      "unavailable": "洞察数据暂不可用",
+      "unavailable": "生态观测数据暂不可用",
       "trendEmpty": "暂无可用历史数据",
       "trendOne": "正在积累历史数据",
       "changesEmpty": "近期暂无可展示变化"
