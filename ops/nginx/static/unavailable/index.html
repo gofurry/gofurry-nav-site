@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#efe0ca">
+  <meta name="theme-color" content="#f7f1e8">
   <title>GoFurry 正在维护中</title>
   <script>
     (function () {
@@ -16,7 +16,7 @@
         document.documentElement.dataset.theme = theme;
         document.documentElement.dataset.lang = lang;
         document.documentElement.lang = lang === 'en' ? 'en' : 'zh-CN';
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#07111f' : '#efe0ca');
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#111827' : '#f7f1e8');
       } catch (error) {
         document.documentElement.dataset.theme = 'light';
         document.documentElement.dataset.lang = 'zh';
@@ -26,38 +26,46 @@
   <style>
     :root {
       color-scheme: light;
-      --bg: #efe0ca;
-      --grid: rgba(95, 69, 49, 0.16);
-      --grid-soft: rgba(95, 69, 49, 0.11);
-      --panel: rgba(255, 250, 242, 0.96);
-      --panel-warm: rgba(255, 237, 213, 0.72);
-      --text: #1c1917;
-      --muted: rgba(87, 83, 78, 0.76);
-      --accent: #7c2d12;
-      --accent-soft: rgba(249, 115, 22, 0.14);
-      --border: rgba(126, 92, 58, 0.18);
-      --border-strong: rgba(126, 92, 58, 0.28);
-      --shadow: rgba(91, 62, 28, 0.16);
-      --control-bg: rgba(255, 250, 242, 0.74);
-      --control-hover: rgba(255, 237, 213, 0.92);
+      --bg: #f7f1e8;
+      --panel: #fffaf3;
+      --text: #3d2b1f;
+      --muted: rgba(91, 67, 50, 0.82);
+      --accent: #79543a;
+      --border: rgba(112, 82, 61, 0.18);
+      --border-strong: rgba(91, 67, 50, 0.30);
+      --shadow: rgba(30, 41, 59, 0.13);
+      --control-bg: #f2e7d7;
+      --control-hover: #eadbc6;
+      --radius: clamp(76px, 16vw, 118px);
+      --card-padding: clamp(30px, 6vw, 58px);
+      --squircle: polygon(
+        50% 0%, 64.76% 0.10%, 70.84% 0.38%, 75.44% 0.86%, 79.24% 1.53%, 82.50% 2.40%,
+        85.36% 3.47%, 87.87% 4.75%, 90.09% 6.24%, 92.04% 7.96%, 93.76% 9.91%, 95.25% 12.13%,
+        96.53% 14.64%, 97.60% 17.50%, 98.47% 20.76%, 99.14% 24.56%, 99.62% 29.16%, 99.90% 35.24%,
+        100% 50%, 99.90% 64.76%, 99.62% 70.84%, 99.14% 75.44%, 98.47% 79.24%, 97.60% 82.50%,
+        96.53% 85.36%, 95.25% 87.87%, 93.76% 90.09%, 92.04% 92.04%, 90.09% 93.76%, 87.87% 95.25%,
+        85.36% 96.53%, 82.50% 97.60%, 79.24% 98.47%, 75.44% 99.14%, 70.84% 99.62%, 64.76% 99.90%,
+        50% 100%, 35.24% 99.90%, 29.16% 99.62%, 24.56% 99.14%, 20.76% 98.47%, 17.50% 97.60%,
+        14.64% 96.53%, 12.13% 95.25%, 9.91% 93.76%, 7.96% 92.04%, 6.24% 90.09%, 4.75% 87.87%,
+        3.47% 85.36%, 2.40% 82.50%, 1.53% 79.24%, 0.86% 75.44%, 0.38% 70.84%, 0.10% 64.76%,
+        0% 50%, 0.10% 35.24%, 0.38% 29.16%, 0.86% 24.56%, 1.53% 20.76%, 2.40% 17.50%,
+        3.47% 14.64%, 4.75% 12.13%, 6.24% 9.91%, 7.96% 7.96%, 9.91% 6.24%, 12.13% 4.75%,
+        14.64% 3.47%, 17.50% 2.40%, 20.76% 1.53%, 24.56% 0.86%, 29.16% 0.38%, 35.24% 0.10%
+      );
     }
 
     html[data-theme="dark"] {
       color-scheme: dark;
-      --bg: #07111f;
-      --grid: rgba(148, 163, 184, 0.15);
-      --grid-soft: rgba(148, 163, 184, 0.10);
-      --panel: rgba(17, 24, 39, 0.94);
-      --panel-warm: rgba(30, 41, 59, 0.82);
-      --text: rgba(248, 250, 252, 0.94);
-      --muted: rgba(203, 213, 225, 0.76);
-      --accent: #fed7aa;
-      --accent-soft: rgba(251, 146, 60, 0.12);
-      --border: rgba(226, 232, 240, 0.15);
-      --border-strong: rgba(226, 232, 240, 0.24);
-      --shadow: rgba(2, 6, 23, 0.42);
-      --control-bg: rgba(15, 23, 42, 0.62);
-      --control-hover: rgba(30, 41, 59, 0.92);
+      --bg: #111827;
+      --panel: #1b2535;
+      --text: rgba(241, 245, 249, 0.96);
+      --muted: rgba(203, 213, 225, 0.80);
+      --accent: #9bc5ed;
+      --border: rgba(203, 213, 225, 0.16);
+      --border-strong: rgba(226, 232, 240, 0.28);
+      --shadow: rgba(2, 6, 23, 0.38);
+      --control-bg: #26364a;
+      --control-hover: #31465e;
     }
 
     * {
@@ -71,88 +79,79 @@
     }
 
     body {
-      display: grid;
+      display: flex;
       min-height: 100vh;
-      place-items: center;
+      flex-direction: column;
+      align-items: center;
       overflow-x: hidden;
-      background:
-        radial-gradient(circle at 16% 12%, rgba(255, 247, 237, 0.64), transparent 28%),
-        radial-gradient(circle at 82% 10%, rgba(251, 146, 60, 0.10), transparent 26%),
-        repeating-linear-gradient(90deg, var(--grid) 0, var(--grid) 1px, transparent 1px, transparent 40px),
-        repeating-linear-gradient(0deg, var(--grid-soft) 0, var(--grid-soft) 1px, transparent 1px, transparent 40px),
-        var(--bg);
+      background: var(--bg);
       color: var(--text);
       font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
       letter-spacing: 0.025em;
-      padding: 32px 18px;
+      padding: 0 18px 32px;
       transition:
         background-color 260ms ease,
         color 260ms ease;
     }
 
-    html[data-theme="dark"] body {
-      background:
-        radial-gradient(circle at 18% 12%, rgba(20, 184, 166, 0.09), transparent 28%),
-        radial-gradient(circle at 82% 10%, rgba(251, 146, 60, 0.08), transparent 26%),
-        repeating-linear-gradient(90deg, var(--grid) 0, var(--grid) 1px, transparent 1px, transparent 40px),
-        repeating-linear-gradient(0deg, var(--grid-soft) 0, var(--grid-soft) 1px, transparent 1px, transparent 40px),
-        var(--bg);
+    .topbar {
+      display: flex;
+      position: absolute;
+      z-index: 1;
+      bottom: clamp(28px, 5vw, 42px);
+      left: 50%;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      transform: translateX(-50%);
+    }
+
+    .card-shell {
+      display: grid;
+      flex: 1;
+      width: min(100%, 680px);
+      place-items: center;
+      filter: drop-shadow(0 28px 36px var(--shadow));
+      transition: filter 260ms ease;
     }
 
     main {
       position: relative;
-      width: min(100%, 760px);
-      border: 1px solid var(--border);
-      border-radius: 28px;
-      background:
-        linear-gradient(145deg, var(--panel), var(--panel-warm)),
-        var(--panel);
-      box-shadow: 0 28px 80px var(--shadow);
+      display: flex;
+      width: 100%;
+      aspect-ratio: 1;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius);
+      corner-shape: squircle;
+      clip-path: var(--squircle);
+      background: var(--panel);
       isolation: isolate;
-      padding: clamp(30px, 6vw, 58px);
+      padding: var(--card-padding);
+      text-align: center;
       transition:
         background-color 260ms ease,
-        border-color 260ms ease,
-        box-shadow 260ms ease;
-    }
-
-    main::before {
-      content: "";
-      position: absolute;
-      inset: auto 12% -28% 12%;
-      z-index: -1;
-      height: 42%;
-      border-radius: 999px;
-      background: radial-gradient(circle, rgba(249, 115, 22, 0.16), transparent 68%);
-      filter: blur(18px);
-      opacity: 0.86;
-    }
-
-    html[data-theme="dark"] main::before {
-      opacity: 0.28;
-    }
-
-    .toolbar {
-      position: absolute;
-      top: 22px;
-      right: 22px;
-      display: flex;
-      gap: 8px;
+        border-color 260ms ease;
     }
 
     .control-button {
-      min-width: 68px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: var(--control-bg);
+      display: inline-flex;
+      min-width: 44px;
+      align-items: center;
+      flex-direction: column;
+      justify-content: center;
+      gap: 7px;
+      border: 0;
+      background: transparent;
       color: var(--text);
       cursor: pointer;
       font: inherit;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 750;
       letter-spacing: 0.035em;
       line-height: 1;
-      padding: 10px 13px;
+      padding: 0;
       transition:
         background-color 180ms ease,
         border-color 180ms ease,
@@ -160,71 +159,99 @@
     }
 
     .control-button:hover {
-      border-color: var(--border-strong);
-      background: var(--control-hover);
+      color: var(--accent);
     }
 
     .control-button:focus-visible {
-      outline: 3px solid rgba(249, 115, 22, 0.28);
+      outline: 3px solid rgba(96, 165, 250, 0.42);
       outline-offset: 3px;
+    }
+
+    .control-label {
+      min-width: 36px;
+      text-align: center;
+    }
+
+    .control-track {
+      display: flex;
+      width: 26px;
+      height: 16px;
+      align-items: center;
+      border-radius: 999px;
+      background: rgba(91, 67, 50, 0.24);
+      padding: 2px;
+      transition: background-color 180ms ease;
+    }
+
+    .control-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--panel);
+      box-shadow: 0 1px 3px rgba(61, 43, 31, 0.18);
+      transition: transform 180ms ease, background-color 180ms ease;
+    }
+
+    .control-button[aria-checked="true"] .control-track {
+      background: var(--accent);
+    }
+
+    .control-button[aria-checked="true"] .control-thumb {
+      transform: translateX(10px);
+    }
+
+    html[data-theme="dark"] .control-track {
+      background: rgba(203, 213, 225, 0.30);
     }
 
     .brand {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      margin-bottom: 32px;
-      padding-right: 170px;
+      justify-content: center;
+      margin-bottom: 34px;
+      text-align: center;
+      transition:
+        background-color 260ms ease,
+        border-color 260ms ease;
     }
 
-    .brand-title {
+    .brand-logo {
+      display: block;
+      width: clamp(128px, 20vw, 164px);
+      height: auto;
+      color: var(--text);
+      filter: none;
+      transition: filter 260ms ease;
+    }
+
+    html[data-theme="dark"] .brand-logo {
+      filter: invert(1);
+    }
+
+    .headline {
+      max-width: 610px;
       margin: 0;
-      font-size: 23px;
-      font-weight: 850;
-      letter-spacing: 0.005em;
-      line-height: 1.2;
-    }
-
-    .brand-subtitle {
-      margin: 5px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    .eyebrow {
-      margin: 0;
-      color: var(--accent);
-      font-size: 13px;
-      font-weight: 850;
-      letter-spacing: 0.20em;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      max-width: 680px;
-      margin: 14px 0 0;
-      font-size: clamp(34px, 5.4vw, 52px);
+      color: var(--text);
+      font-size: clamp(32px, 5.2vw, 52px);
       font-weight: 900;
-      letter-spacing: 0.045em;
-      line-height: 1.16;
+      letter-spacing: 0.035em;
+      line-height: 1.22;
       text-wrap: balance;
-    }
-
-    html[data-lang="en"] h1 {
-      max-width: 720px;
-      font-size: clamp(34px, 5vw, 50px);
-      letter-spacing: -0.025em;
-      line-height: 1.08;
     }
 
     .lead {
       max-width: 610px;
-      margin: 22px 0 0;
+      margin: 18px auto 0;
       color: var(--muted);
-      font-size: 17px;
+      font-size: clamp(16px, 2.2vw, 20px);
       letter-spacing: 0.035em;
       line-height: 2;
       text-wrap: pretty;
+    }
+
+    html[data-lang="en"] .headline {
+      letter-spacing: -0.02em;
     }
 
     html[data-lang="en"] .lead {
@@ -232,99 +259,34 @@
       line-height: 1.8;
     }
 
-    .progress {
-      position: relative;
-      height: 7px;
-      margin-top: 38px;
-      overflow: hidden;
-      border-radius: 999px;
-      background: rgba(126, 92, 58, 0.14);
-    }
-
-    html[data-theme="dark"] .progress {
-      background: rgba(226, 232, 240, 0.13);
-    }
-
-    .progress span {
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: 36%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, #7c2d12, #fb923c, #7c2d12);
-      animation: loading 2.8s ease-in-out infinite;
-    }
-
-    html[data-theme="dark"] .progress span {
-      background: linear-gradient(90deg, #fed7aa, #fb923c, #fed7aa);
-    }
-
-    footer {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 14px;
-      margin-top: 28px;
-      color: var(--muted);
-      font-size: 13px;
-      letter-spacing: 0.025em;
-      line-height: 1.8;
-    }
-
-    code {
-      border-radius: 999px;
-      background: rgba(124, 45, 18, 0.08);
-      color: var(--accent);
-      padding: 3px 8px;
-      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      font-size: 12px;
-      letter-spacing: 0;
-    }
-
-    html[data-theme="dark"] code {
-      background: rgba(251, 146, 60, 0.12);
-    }
-
-    @keyframes loading {
-      0% {
-        transform: translateX(-80%);
-      }
-      50% {
-        transform: translateX(110%);
-      }
-      100% {
-        transform: translateX(-80%);
-      }
-    }
-
     @media (max-width: 620px) {
       body {
-        padding: 18px 12px;
+        padding: 0 12px 18px;
+      }
+
+      .topbar {
+        bottom: 24px;
+        gap: 20px;
+      }
+
+      .control-button {
+        min-width: 42px;
       }
 
       main {
-        border-radius: 24px;
-        padding: 84px 24px 30px;
-      }
-
-      .toolbar {
-        top: 20px;
-        right: 20px;
-        left: 20px;
-        justify-content: flex-end;
+        --card-padding: 24px;
+        --radius: 68px;
+        min-height: min(680px, calc(100vh - 104px));
+        aspect-ratio: auto;
+        border-radius: var(--radius);
       }
 
       .brand {
-        align-items: flex-start;
         margin-bottom: 30px;
-        padding-right: 0;
       }
 
-      h1 {
-        font-size: clamp(32px, 11vw, 42px);
-      }
-
-      html[data-lang="en"] h1 {
-        font-size: clamp(30px, 10vw, 40px);
+      .brand-logo {
+        width: 132px;
       }
 
       .lead {
@@ -334,55 +296,47 @@
   </style>
 </head>
 <body>
-  <main>
-    <div class="toolbar" aria-label="Display controls">
-      <button class="control-button" type="button" data-action="language" aria-label="Switch language">EN</button>
-      <button class="control-button" type="button" data-action="theme" aria-label="Switch color mode">深色</button>
-    </div>
-
+  <div class="card-shell">
+    <main>
+    <header class="topbar" aria-label="Display controls">
+      <button class="control-button" type="button" role="switch" aria-checked="false" data-action="language" aria-label="Switch language">
+        <span class="control-label">EN</span><span class="control-track" aria-hidden="true"><span class="control-thumb"></span></span>
+      </button>
+      <button class="control-button" type="button" role="switch" aria-checked="false" data-action="theme" aria-label="Switch color mode">
+        <span class="control-label">深色</span><span class="control-track" aria-hidden="true"><span class="control-thumb"></span></span>
+      </button>
+    </header>
     <div class="brand" aria-label="GoFurry">
-      <div>
-        <p class="brand-title">GoFurry</p>
-        <p class="brand-subtitle" data-i18n="brandSubtitle">兽人控导航站 / Furry Navigation</p>
-      </div>
+      <img
+        class="brand-logo"
+        src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/Pgo8IURPQ1RZUEUgc3ZnIFBVQkxJQyAiLS8vVzNDLy9EVEQgU1ZHIDIwMDEwOTA0Ly9FTiIKICJodHRwOi8vd3d3LnczLm9yZy9UUi8yMDAxL1JFQy1TVkctMjAwMTA5MDQvRFREL3N2ZzEwLmR0ZCI+CjxzdmcgdmVyc2lvbj0iMS4wIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiB3aWR0aD0iMTI4Ny4wMDAwMDBwdCIgaGVpZ2h0PSIxMDI0LjAwMDAwMHB0IiB2aWV3Qm94PSIwIDAgMTI4Ny4wMDAwMDAgMTAyNC4wMDAwMDAiCiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBtZWV0Ij4KPG1ldGFkYXRhPgpDcmVhdGVkIGJ5IHBvdHJhY2UgMS4xNiwgd3JpdHRlbiBieSBQZXRlciBTZWxpbmdlciAyMDAxLTIwMTkKPC9tZXRhZGF0YT4KPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMC4wMDAwMDAsMTAyNC4wMDAwMDApIHNjYWxlKDAuMTAwMDAwLC0wLjEwMDAwMCkiCmZpbGw9IiMwMDAwMDAiIHN0cm9rZT0ibm9uZSI+CjxwYXRoIGQ9Ik02NTcwIDg1NTAgYy01OCAtMTUgLTEyNiAtMzcgLTE1MSAtNDggLTU4IC0yNSAtNDA4IC0yNjAgLTUxNSAtMzQ2CmwtODEgLTY1IC01OSAxNSBjLTMyIDggLTIwNSA4NyAtMzg0IDE3NCAtMjk1IDE0NSAtMzM4IDE2MyAtNDYwIDE5NSAtMTczIDQ1Ci0yNzQgNDcgLTQyMyA5IC0xMzIgLTMzIC0yMTYgLTg3IC0yODkgLTE4OCAtNDUgLTYyIC01NCAtODIgLTg0IC0yMDMgLTMzCi0xMzEgLTM0IC0xNDAgLTM0IC0zMzggMCAtMTY2IDQgLTIyNCAyMSAtMzEyIDMwIC0xNTQgMjUgLTE3NiAtNTkgLTI3MSAtMzE2Ci0zNjAgLTQ5MCAtNzI2IC01NzIgLTEyMDYgLTk0IC01NTQgOSAtMTExNyAyNzggLTE1MjAgMjE2IC0zMjEgNTIyIC01ODUgODgxCi03NTggMTkzIC05MyA1MTYgLTE4NSA3NzEgLTIyMCAxNDYgLTIwIDUyOCAtMTcgNjcwIDUgNDEwIDY0IDcyMSAxODUgMTA2Nwo0MTYgMTAwIDY2IDIwMyAxMzkgMjI4IDE2MSAyNiAyMyA0OSAzOSA1MiAzNyAyIC0zIDggLTE3NSAxMyAtMzgzIDEzIC01MjUgMzQKLTgzMiA4NiAtMTI1NCA0NSAtMzY3IDkzIC01MDggMjEyIC02MzAgNzcgLTc3IDEzNiAtMTEwIDI0MSAtMTM0IDk3IC0yMSAxNDYKLTIwIDI0NCA1IDE2NyA0MiAyNTQgMTMwIDI5NyAyOTkgMjcgMTA1IDI3IDExMiAtMzkgNTUwIC01NiAzNzkgLTk1IDY3OSAtODkKNjg2IDMgMiA2MyAtNyAxMzQgLTIwIDMwNCAtNTggNjMyIC05MiA5OTcgLTEwNiAyNzQgLTEwIDY0NyAxIDgwOSAyNCAxMjEgMTcKMjkwIDU4IDM0NiA4MyAxMDMgNDggMjAxIDEzNCAyNDIgMjE0IDI2IDUxIDUwIDE0OSA1MCAyMDUgLTEgMTIzIC02MyAyNzkKLTEzNyAzNDQgLTEyOSAxMTQgLTMwNyAxNDUgLTU1NSA5NiAtMjA4IC00MiAtMzE0IC01MCAtNjQzIC00OSAtMzIxIDAgLTQ5NwoxMCAtNzk1IDQzIC0xNTIgMTcgLTQ4MCA2NiAtNDg2IDczIC01IDUgMTYgNjMxIDI2IDc2MiBsOSAxNDAgMzggMzMgYzQ5IDQyCjEyOSA4MCAzMTAgMTQ4IDEzMSA0OSAxNjQgNTcgMzEyIDc3IDE1NCAyMCAyMDMgMjIgNjk2IDIxIDUxNiAtMiA5MDcgLTE0CjEwOTAgLTM1IDUwIC02IDE2MCAtMjQgMjQ1IC00MSAxOTEgLTM4IDI5MSAtNDEgNDEwIC05IDE3NiA0NyAyNzcgMTM5IDMyMAoyOTIgNTQgMTk2IC03IDM4NCAtMTYzIDUwMyAtNzEgNTMgLTEzMiA3OSAtMjYyIDEwOSAtMjQ4IDU4IC01MzAgODAgLTEyMjUgOTcKLTIzNCA2IC01MTMgMTUgLTYyMCAyMCAtMjE0IDEyIC0xNjQ0IC0zIC0yMDU1IC0yMCAtMTI2IC02IC0zODcgLTE1IC01ODAgLTIwCi01NjAgLTE2IC03ODEgLTM0IC0xMDU1IC04NSAtMzEzIC01OSAtNDQxIC0xMDEgLTU0MiAtMTc1IC05MyAtNjggLTE1MCAtMTQ4Ci0xNzcgLTI0OCAtMjcgLTk5IC0yNyAtMTc1IDAgLTI3MyA0MSAtMTU0IDE0MyAtMjQ3IDMxMCAtMjg1IDkyIC0yMSAxNTEgLTE1CjI5MSAzMCAxNzEgNTUgMzU2IDgwIDU4NiA3OCAyMjggLTIgMzE4IC0xOSA0NzcgLTg5IDEyMyAtNTQgMjM5IC0xMzAgMjQzCi0xNTkgNCAtMjggLTIzNyAtMjU5IC0zOTMgLTM3NyAtMTc1IC0xMzIgLTM4OSAtMjMyIC01NTggLTI2MSAtMjU0IC00NCAtNTk1Ci0yMCAtODMyIDU4IC0xMDcgMzYgLTMwMSAxMzEgLTQwMCAxOTcgLTk2IDY0IC0yNTEgMjExIC0zMTEgMjk1IC01NCA3NiAtMTI4CjIyOSAtMTQ5IDMwOSAtNTkgMjI4IC0zMiA2MjkgNTkgODY1IDk3IDI1MSAyMzMgNDQ4IDQzMSA2MjMgMjIxIDE5NyA0ODcgMzI3Cjc3MSAzNzkgMTAwIDE4IDE1OCAyMSAzNjQgMjEgNDI5IDEgNzEyIC01MSA5ODUgLTE4MiAxMjkgLTYxIDIxOSAtMTIxIDMyNQotMjE2IDE5MSAtMTcyIDMxMCAtMjE3IDQ3MCAtMTgxIDE5MyA0NCAyODYgMTU1IDMxOSAzODMgOCA1MCA2IDgxIC05IDE1MiAtMjIKMTAyIC00OCAxNjAgLTExNCAyNDggLTExMyAxNTEgLTM2NSAzMzIgLTYxNSA0NDQgbC0xMDYgNDcgLTExIDE0OSBjLTEwIDEzOAotMzYgMjcxIC02NiAzNDAgLTE3IDM4IC04MCAxMjMgLTExNCAxNTQgLTY4IDYwIC0xMDQgNzkgLTIwMiAxMDMgLTEyNiAzMgotMTgwIDMyIC0zMTIgLTR6Ii8+CjxwYXRoIGQ9Ik0yMzUwIDczNjggYy0yOTYgLTI1IC00OTggLTE0NSAtNTQ0IC0zMjQgLTM5IC0xNTAgMSAtMjc4IDExNyAtMzgwCjkyIC04MSAyNDkgLTEzOSA0MzIgLTE2MCAyNDAgLTI4IDM3NyAtMjUgNTExIDExIDE2OSA0NiAyNTUgMTAzIDMzMyAyMTkgMTAwCjE0NyA5MyAyNTUgLTI2IDQxOSAtMzQgNDYgLTEzMCAxMjEgLTE4NiAxNDUgLTU3IDI0IC0yMTQgNjQgLTI3MiA2OSAtMTAxIDgKLTI3NiA4IC0zNjUgMXoiLz4KPHBhdGggZD0iTTE5NDAgNjIxNyBjLTMgLTMgLTExMSAtOCAtMjQwIC0xMiAtMzA1IC04IC0zMzMgLTEwIC01MTQgLTM2IC02OAotOSAtMTkzIC00OCAtMjUxIC03NyAtMTEwIC01NSAtMTgzIC0xNDAgLTIxNiAtMjU0IGwtMjMgLTc3IDIyIC04MiBjMjcgLTEwMQo3MSAtMTYzIDE1NiAtMjIzIDE1MSAtMTA2IDIwNSAtMTE5IDU1NiAtMTMxIDE4MiAtNiA1MDMgLTYgNjM3IDAgMjQwIDEyIDQ2MQoxMDUgNTU1IDIzNSAyOSA0MCA3OCAxNzUgNzggMjE0IDAgMTUgLTEyIDY0IC0yNyAxMDkgLTI1IDc0IC0zNSA4OSAtOTggMTUzCi00NyA0NyAtOTAgNzkgLTEzMCA5OCAtMzMgMTUgLTY4IDMyIC03OCAzNyAtNDEgMjIgLTE5OCA0NyAtMzA3IDQ4IC02NCAxCi0xMTggMCAtMTIwIC0yeiIvPgo8cGF0aCBkPSJNMTg0NSA0OTMwIGMtMjI4IC0zMyAtMzI2IC02MyAtNDMyIC0xMzEgLTEyMyAtODEgLTE2MCAtMTMyIC0xODcKLTI2NCAtMTQgLTYzIC01IC0xMTYgMjkgLTE4MiA4IC0xNSAxNSAtMzMgMTUgLTM5IDAgLTE3IDYwIC03NyAxMTcgLTExOCA2NwotNDggMTU1IC04MyAyNjIgLTEwNSAxMjEgLTI1IDEzNCAtMjYgMzQ2IC0yNSBsMTkwIDEgMTAyIDM2IGMxMDIgMzUgMjA4IDk5CjI2NSAxNTggMTQgMTYgMzkgNTQgNTUgODYgMjUgNTEgMjggNjkgMjggMTUzIDAgMTA2IC0xNyAxNTQgLTgzIDIzMSAtNDIgNDgKLTE2MCAxMzAgLTIyMiAxNTIgLTEyOSA0NyAtMzQzIDY4IC00ODUgNDd6Ii8+CjwvZz4KPC9zdmc+Cg=="
+        width="129"
+        height="102"
+        alt="GoFurry"
+      >
     </div>
 
-    <p class="eyebrow" data-i18n="eyebrow">Scheduled Maintenance</p>
-    <h1 data-i18n="headline">网站正在维护中</h1>
-    <p class="lead" data-i18n="lead">我们正在对 GoFurry 做一次短暂停机维护，请稍后刷新页面再试。</p>
-
-    <div class="progress" aria-hidden="true"><span></span></div>
-
-    <footer>
-      <span><span data-i18n="httpStatus">HTTP status:</span> <code>503 Service Unavailable</code></span>
-      <span data-i18n="retry">请稍后刷新页面</span>
-    </footer>
-  </main>
+    <h1 class="headline" data-i18n="headline">GoFurry正在接受维护</h1>
+    <p class="lead" data-i18n="lead">我们将很快与你再见面</p>
+    </main>
+  </div>
 
   <script>
     (function () {
       var copy = {
         zh: {
           title: 'GoFurry 正在维护中',
-          brandSubtitle: '兽人控导航站 / Furry Navigation',
-          eyebrow: 'Scheduled Maintenance',
-          headline: '网站正在维护中',
-          lead: '我们正在对 GoFurry 做一次短暂停机维护，请稍后刷新页面再试。',
-          httpStatus: 'HTTP status:',
-          retry: '请稍后刷新页面',
-          languageButton: 'EN',
+          headline: 'GoFurry正在接受维护',
+          lead: '我们将很快与你再见面',
+          languageButton: '中文',
           themeToDark: '深色',
           themeToLight: '浅色'
         },
         en: {
           title: 'GoFurry is under maintenance',
-          brandSubtitle: 'Furry Navigation',
-          eyebrow: 'Scheduled Maintenance',
-          headline: 'Maintenance in progress',
-          lead: 'We are performing brief maintenance on GoFurry. Please refresh the page later.',
-          httpStatus: 'HTTP status:',
-          retry: 'Please refresh the page later.',
-          languageButton: '中文',
+          headline: 'GoFurry is under maintenance',
+          lead: 'We will be back with you soon.',
+          languageButton: 'EN',
           themeToDark: 'Dark',
           themeToLight: 'Light'
         }
@@ -391,6 +345,8 @@
       var root = document.documentElement;
       var languageButton = document.querySelector('[data-action="language"]');
       var themeButton = document.querySelector('[data-action="theme"]');
+      var languageLabel = languageButton.querySelector('.control-label');
+      var themeLabel = themeButton.querySelector('.control-label');
       var themeMeta = document.querySelector('meta[name="theme-color"]');
 
       function currentLang() {
@@ -412,7 +368,8 @@
             node.textContent = pack[key];
           }
         });
-        languageButton.textContent = pack.languageButton;
+        languageLabel.textContent = pack.languageButton;
+        languageButton.setAttribute('aria-checked', String(lang === 'en'));
         languageButton.setAttribute('aria-label', lang === 'en' ? 'Switch to Chinese' : '切换为英文');
         applyTheme(currentTheme(), false);
         try {
@@ -424,8 +381,9 @@
         var lang = currentLang();
         var pack = copy[lang] || copy.zh;
         root.dataset.theme = theme;
-        themeMeta.setAttribute('content', theme === 'dark' ? '#07111f' : '#efe0ca');
-        themeButton.textContent = theme === 'dark' ? pack.themeToLight : pack.themeToDark;
+        themeMeta.setAttribute('content', theme === 'dark' ? '#111827' : '#f7f1e8');
+        themeLabel.textContent = theme === 'dark' ? pack.themeToDark : pack.themeToLight;
+        themeButton.setAttribute('aria-checked', String(theme === 'dark'));
         themeButton.setAttribute('aria-label', lang === 'en' ? 'Switch color mode' : '切换亮暗色');
         if (persist) {
           try {
