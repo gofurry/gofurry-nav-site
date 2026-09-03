@@ -33,7 +33,7 @@ NUXT_PUBLIC_SITE_URL=http://localhost:3000
 
 The public Ecosystem product is SSR-rendered at `/insights`, `/insights/sites`, and `/insights/games`, with English equivalents under `/en`. It consumes the stable Nav and Game `/api/v2/*/insights` contracts. Metric and range selections are stored in the URL query.
 
-Primary public system navigation icons use Phosphor. The default layout owns the theme background and exposes a seamless-pattern asset slot; until an approved Furry pattern is supplied, production uses the solid theme fallback.
+Primary public system navigation icons use Phosphor. The default layout owns the theme background and exposes `--gf-page-pattern` as its replaceable asset slot. The current lightweight paw-doodle SVG is the shared default for light and dark themes; pages must not instantiate their own background.
 
 After starting a production preview, run the focused route and interaction smoke plus the visual guard:
 

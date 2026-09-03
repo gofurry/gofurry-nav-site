@@ -4,14 +4,14 @@
 
 :root {
   --gf-page-background: #f2e3d0;
-  --gf-page-pattern: none;
-  --gf-page-pattern-opacity: 0.045;
-  --gf-page-pattern-size: 96px 96px;
+  --gf-page-pattern: url('/web/background/gofurry-paw-doodle-tile.svg');
+  --gf-page-pattern-opacity: 0.1;
+  --gf-page-pattern-size: 128px 128px;
 }
 
 html.dark {
   --gf-page-background: #0b1728;
-  --gf-page-pattern-opacity: 0.035;
+  --gf-page-pattern-opacity: 0.14;
 }
 
 /* 确保 html, body, #app 占满屏幕 */

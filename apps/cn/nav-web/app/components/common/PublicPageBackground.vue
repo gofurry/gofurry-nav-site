@@ -1,5 +1,5 @@
 <template>
-  <div class="gf-public-background" data-public-background data-pattern-status="fallback" aria-hidden="true">
+  <div class="gf-public-background" data-public-background data-pattern-status="default" aria-hidden="true">
     <div class="gf-public-background__pattern" />
   </div>
 </template>

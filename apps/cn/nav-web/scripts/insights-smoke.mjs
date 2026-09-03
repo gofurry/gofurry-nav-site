@@ -47,12 +47,16 @@ for (const route of insightsRoutes) {
   assert(/<h1(?:\s|>)/.test(html), `${route} did not SSR a visible h1`)
   assert(!html.includes('insights-hero'), `${route} still SSR-rendered the retired large hero`)
   assert(html.includes('data-public-background'), `${route} did not SSR the app-level public background`)
+  assert(html.includes('data-pattern-status="default"'), `${route} did not SSR the active public pattern`)
   assert(html.includes(route.startsWith('/en/') ? 'Ecosystem' : '生态观测'), `${route} did not expose the localized Ecosystem product name`)
   if (route.includes('/compare')) {
     assert(html.includes('name="robots" content="noindex, follow"'), `${route} did not SSR its noindex policy`)
   }
   console.log(`[insights] SSR ${route} -> 200`)
 }
+
+const patternResponse = await fetch(toAbsoluteUrl(baseUrl, '/web/background/gofurry-paw-doodle-tile.svg'))
+assert(patternResponse.status === 200 && patternResponse.headers.get('content-type')?.includes('image/svg+xml'), 'default public pattern asset is not served as SVG')
 
 const sitemap = await (await fetch(toAbsoluteUrl(baseUrl, '/sitemap.xml'))).text()
 assert(!sitemap.includes('/insights/sites/compare') && !sitemap.includes('/insights/games/compare'), 'Compare routes leaked into sitemap')
@@ -98,6 +102,23 @@ try {
     timeout: 30000,
   })
   await page.waitForSelector('.insights-domain-page')
+  const patternState = await page.evaluate(() => {
+    const pattern = document.querySelector('.gf-public-background__pattern')
+    if (!pattern) return null
+    const root = document.documentElement
+    const wasDark = root.classList.contains('dark')
+    root.classList.remove('dark')
+    const light = getComputedStyle(pattern)
+    const lightState = { image: light.backgroundImage, opacity: Number(light.opacity), repeat: light.backgroundRepeat }
+    root.classList.add('dark')
+    const dark = getComputedStyle(pattern)
+    const darkState = { image: dark.backgroundImage, opacity: Number(dark.opacity), repeat: dark.backgroundRepeat }
+    root.classList.toggle('dark', wasDark)
+    return { lightState, darkState }
+  })
+  assert(patternState?.lightState.image.includes('gofurry-paw-doodle-tile.svg') && patternState.darkState.image.includes('gofurry-paw-doodle-tile.svg'), 'public pattern is not active in both themes')
+  assert(patternState?.lightState.repeat === 'repeat' && patternState.darkState.repeat === 'repeat', 'public pattern is not infinitely tiled')
+  assert(patternState?.lightState.opacity > 0 && patternState.lightState.opacity <= 0.2 && patternState.darkState.opacity > 0 && patternState.darkState.opacity <= 0.2, 'public pattern opacity is not visible and restrained in both themes')
   const desktopNavigation = await page.evaluate(() => {
     const shell = document.querySelector('.ecosystem-navigation')
     const primary = document.querySelector('.insights-nav')

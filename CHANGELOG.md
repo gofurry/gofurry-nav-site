@@ -9,7 +9,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 ### Added
 
 - Establish Phosphor as the primary system UI icon family for the Admin and public navigation surfaces touched by Stable Polish Batch 1.
-- Add an application-level public background foundation with theme-aware solid fallback and a drop-in seamless-pattern asset slot; preserve the previous grid and falling-leaf effects under an experimental namespace.
+- Add an application-level public background foundation with a low-opacity, infinitely tiled paw-doodle SVG wired through the replaceable `--gf-page-pattern` asset slot; preserve the previous grid and falling-leaf effects under an experimental namespace.
 
 ### Changed
 
