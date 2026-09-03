@@ -14,10 +14,10 @@ export function Select({ value, onValueChange, options, placeholder = '请选择
       <BaseSelect.Icon><ChevronDown className="size-4 text-muted-foreground" /></BaseSelect.Icon>
     </BaseSelect.Trigger>
     <BaseSelect.Portal>
-      <BaseSelect.Positioner className="z-[80] outline-none" sideOffset={4}>
+      <BaseSelect.Positioner className="z-[80] outline-none" side="bottom" align="start" alignItemWithTrigger={false} sideOffset={4}>
         <BaseSelect.Popup className="max-h-72 min-w-[var(--anchor-width)] overflow-auto rounded-md border bg-surface p-1 shadow-xl">
-          {options.map((option) => <BaseSelect.Item key={option.value} value={option.value} className="grid cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-muted">
-            <BaseSelect.ItemIndicator><Check className="size-4 text-primary" /></BaseSelect.ItemIndicator>
+          {options.map((option) => <BaseSelect.Item key={option.value} value={option.value} className="grid cursor-default grid-cols-[1rem_minmax(0,1fr)] items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-muted">
+            <span className="grid size-4 place-items-center"><BaseSelect.ItemIndicator><Check className="size-4 text-primary" /></BaseSelect.ItemIndicator></span>
             <BaseSelect.ItemText>{option.label}</BaseSelect.ItemText>
           </BaseSelect.Item>)}
         </BaseSelect.Popup>

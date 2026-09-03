@@ -3,7 +3,7 @@ import { Database, LockKeyhole } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { DataTable, type AdminColumn } from '../../components/admin/data-table'
 import { JsonBlock } from '../../components/admin/operations'
-import { Detail, DetailGrid, PageHeader, Section } from '../../components/admin/page'
+import { Detail, DetailGrid, PageHeader, PageLayout, Section } from '../../components/admin/page'
 import { ErrorState, LoadingState } from '../../components/admin/states'
 import { StatusBadge, TechnicalLabel } from '../../components/admin/status'
 import { TechnicalDetails } from '../../components/admin/technical-details'
@@ -23,7 +23,7 @@ export function DataOperationsPage() {
     if (database.key === selected?.key) setTechnical(database)
     else { setSelectedKey(database.key); setTechnical(null) }
   }
-  return <div className="grid gap-6">
+  return <PageLayout>
     <PageHeader title="数据运维" actions={<StatusBadge tone="info"><LockKeyhole className="size-3" />只读</StatusBadge>} />
     <div className="grid gap-3 md:grid-cols-3">{query.data.databases.map((database) => {
       const active = database.key === selected?.key
@@ -32,7 +32,7 @@ export function DataOperationsPage() {
     {selected && <DatabasePanel database={selected} />}
     <p className="text-right text-xs text-muted-foreground">检查时间 {formatDate(query.data.generated_at)} · 每 60 秒刷新</p>
     <TechnicalDetails open={Boolean(technical)} onOpenChange={(open) => { if (!open) setTechnical(null) }} title={technical?.key.toUpperCase() ?? '数据库'} identifier={technical?.database_name} showHint={false}>{technical && <JsonBlock value={{ key: technical.key, health: technical.health, postgresql_version: technical.postgresql_version, database_name: technical.database_name, database_time: technical.database_time, database_size_bytes: technical.database_size_bytes, connections: { total: technical.total_connections, active: technical.active_connections, max: technical.max_connections, usage: technical.connection_usage }, migration: technical.migration, relations: technical.relations }} />}</TechnicalDetails>
-  </div>
+  </PageLayout>
 }
 
 function DatabasePanel({ database }: { database: DatabaseStatus }) {

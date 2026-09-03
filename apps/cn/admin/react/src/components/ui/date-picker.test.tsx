@@ -13,6 +13,14 @@ describe('Admin form controls', () => {
     expect(container.querySelector('select')).toBeNull()
   })
 
+  it('opens the shared select below and left-aligned with its trigger', async () => {
+    render(<Select value="nav" onValueChange={() => undefined} options={[{ value: 'nav', label: 'Nav' }, { value: 'game', label: 'Game' }]} ariaLabel="Domain" />)
+    await userEvent.click(screen.getByRole('combobox', { name: 'Domain' }))
+    const popup = await screen.findByRole('listbox')
+    expect(popup.parentElement).toHaveAttribute('data-side', 'bottom')
+    expect(popup.parentElement).toHaveAttribute('data-align', 'start')
+  })
+
   it('selects calendar dates without native date inputs', async () => {
     const onChange = vi.fn()
     const { container } = render(<DatePicker value="2026-09-03" onValueChange={onChange} ariaLabel="开始日期" />)

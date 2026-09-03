@@ -21,9 +21,9 @@ export function OperationTabs({ tabs, active, onChange, can = () => true }: { ta
   return <div className="flex flex-wrap gap-1 rounded-lg border bg-surface p-1">{visible.map((tab) => <button key={tab.key} type="button" onClick={() => onChange(tab.key)} className={cn('rounded-md px-3 py-2 text-sm font-medium text-muted-foreground', active === tab.key && 'bg-primary text-primary-foreground')}>{tab.label}</button>)}</div>
 }
 
-export function KpiGrid({ children }: { children: ReactNode }) { return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{children}</div> }
+export function KpiGrid({ children }: { children: ReactNode }) { return <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{children}</div> }
 export function Kpi({ label, value, detail, tone = 'neutral' }: { label: string; value: ReactNode; detail?: string; tone?: 'neutral' | 'success' | 'warning' | 'danger' | 'info' }) {
-  return <div className={cn('rounded-lg border bg-surface p-4', tone === 'warning' && 'border-warning/40', tone === 'danger' && 'border-danger/40', tone === 'success' && 'border-success/40', tone === 'info' && 'border-info/40')}><p className="text-xs text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>{detail && <p className="mt-1 text-xs text-muted-foreground">{detail}</p>}</div>
+  return <div className={cn('rounded-md border bg-surface px-3 py-2.5', tone === 'warning' && 'border-warning/40', tone === 'danger' && 'border-danger/40', tone === 'success' && 'border-success/40', tone === 'info' && 'border-info/40')}><div className="flex items-baseline justify-between gap-3"><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="text-xl font-semibold tracking-tight">{value}</p></div>{detail && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{detail}</p>}</div>
 }
 
 export function FilterBar({ children }: { children: ReactNode }) { return <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-surface p-4">{children}</div> }
@@ -40,7 +40,7 @@ export function operationLineSeries(points: Array<{ value: number | null }>, pri
   return { type: 'line' as const, data: points.map((point) => point.value), connectNulls: false, showSymbol: points.length < 16, symbolSize: 6, lineStyle: { color: primary, width: 2 }, itemStyle: { color: primary }, emphasis: { disabled: true } }
 }
 
-export function OperationsChart({ points, unit, label, loading, error }: { points: Array<{ label: string; value: number | null }>; unit: string; label: string; loading?: boolean; error?: string }) {
+export function OperationsChart({ points, unit, label, loading, error, className }: { points: Array<{ label: string; value: number | null }>; unit: string; label: string; loading?: boolean; error?: string; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!ref.current || points.length === 0) return
@@ -61,7 +61,7 @@ export function OperationsChart({ points, unit, label, loading, error }: { point
   if (loading) return <LoadingState />
   if (error) return <ErrorState message={error} />
   if (points.length === 0) return <EmptyState />
-  return <div ref={ref} className="h-64 w-full" role="img" aria-label={label} />
+  return <div ref={ref} className={cn('h-64 w-full', className)} role="img" aria-label={label} />
 }
 
 export function RemoteSelect({ endpoint, value, onChange, placeholder = '搜索并选择…', disabled }: { endpoint: string; value: OptionItem | string | null; onChange: (value: OptionItem | null) => void; placeholder?: string; disabled?: boolean }) {

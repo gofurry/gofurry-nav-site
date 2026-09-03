@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { useToast } from '../../app/toast'
 import { DataTable, type AdminColumn } from '../../components/admin/data-table'
-import { FormField, PageHeader } from '../../components/admin/page'
+import { FormField, PageHeader, PageLayout } from '../../components/admin/page'
 import { StatusBadge, TechnicalLabel } from '../../components/admin/status'
 import { Alert } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
@@ -32,7 +32,7 @@ export function AccountsPage() {
     { key: 'last_login_at', header: 'Last Login', render: (row) => formatDate(row.last_login_at) },
   ], [])
   const start = (account: Account, next: AccountAction) => { setTarget(account); setAction(next) }
-  return <div className="grid gap-6"><PageHeader title="账号与权限" description="管理固定 Owner / Developer / Operator 角色，不创建自定义权限。" eyebrow="account.manage" actions={<Button onClick={() => setCreateOpen(true)}><Plus className="size-4" />创建账号</Button>} /><DataTable data={query.data?.list ?? []} columns={columns} total={query.data?.total ?? 0} page={page} pageSize={20} search={search} onSearchChange={(value) => { setSearch(value); setPage(1) }} onPageChange={setPage} onPageSizeChange={() => undefined} searchPlaceholder="搜索用户名或显示名称…" onRowClick={(row) => { setTarget(row); setAction('display') }} loading={query.isLoading} error={query.error?.message} onRetry={() => void query.refetch()} /><CreateAccountDialog open={createOpen} onOpenChange={setCreateOpen} />{target && action && <AccountActionDialog key={`${target.id}-${action}`} account={target} action={action} onActionChange={(next) => { setAction(next); if (!next) setTarget(null) }} start={start} />}</div>
+  return <PageLayout><PageHeader title="账号与权限" description="管理固定 Owner / Developer / Operator 角色，不创建自定义权限。" eyebrow="account.manage" actions={<Button onClick={() => setCreateOpen(true)}><Plus className="size-4" />创建账号</Button>} /><DataTable data={query.data?.list ?? []} columns={columns} total={query.data?.total ?? 0} page={page} pageSize={20} search={search} onSearchChange={(value) => { setSearch(value); setPage(1) }} onPageChange={setPage} onPageSizeChange={() => undefined} searchPlaceholder="搜索用户名或显示名称…" onRowClick={(row) => { setTarget(row); setAction('display') }} loading={query.isLoading} error={query.error?.message} onRetry={() => void query.refetch()} /><CreateAccountDialog open={createOpen} onOpenChange={setCreateOpen} />{target && action && <AccountActionDialog key={`${target.id}-${action}`} account={target} action={action} onActionChange={(next) => { setAction(next); if (!next) setTarget(null) }} start={start} />}</PageLayout>
 }
 
 function CreateAccountDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {

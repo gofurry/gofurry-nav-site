@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Activity, ArrowRight, Gamepad2, Megaphone, Plus, ShieldCheck, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { PageHeader, Section } from '../../components/admin/page'
+import { PageHeader, PageLayout, Section } from '../../components/admin/page'
 import { EmptyState, ErrorState, LoadingState } from '../../components/admin/states'
 import { StatusBadge, TechnicalLabel } from '../../components/admin/status'
 import { getJSON } from '../../lib/api'
@@ -24,7 +24,7 @@ export function WorkbenchPage() {
     ] : []),
     ...(auth.can('collection.execute') ? [{ href: '/collection?tab=manual', label: '手动采集', icon: Activity }] : []),
   ]
-  return <div className="grid gap-6">
+  return <PageLayout>
     <PageHeader title="工作台" />
     <div className="grid gap-5 xl:grid-cols-2">
       <Section title="快捷操作">{quickActions.length === 0 ? <EmptyState title="暂无可用操作" /> : <div className="-my-2 divide-y">{quickActions.map((item) => <Link key={item.href} to={item.href} className="flex items-center gap-3 py-3 text-sm hover:text-primary"><item.icon className="size-4 text-muted-foreground" /><span className="flex-1 font-medium">{item.label}</span><ArrowRight className="size-4 text-muted-foreground" /></Link>)}</div>}</Section>
@@ -35,5 +35,5 @@ export function WorkbenchPage() {
       <Section title="最近变化" actions={<Link className="text-sm font-medium text-primary" to="/changes">全部变化 →</Link>}>{summary.recent_changes.length === 0 ? <EmptyState title="暂无变化" /> : <div className="-my-2 divide-y">{summary.recent_changes.map((change) => <Link key={change.event_key} to={`/changes?domain=${change.domain}`} className="flex items-center gap-3 py-3 hover:text-primary"><Sparkles className="size-4 text-info" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{eventSentence(change.historical_name, change.event_code)}</p><p className="mt-1 text-xs text-muted-foreground">{formatDate(change.event_at ?? change.projection_date)}</p></div><TechnicalLabel>{change.domain}</TechnicalLabel></Link>)}</div>}</Section>
       <Section title="最近操作" actions={auth.can('audit.read') && <Link className="text-sm font-medium text-primary" to="/system/audit">审计日志 →</Link>}>{summary.recent_operations.length === 0 ? <EmptyState title="无可见操作" /> : <div className="-my-2 divide-y">{summary.recent_operations.map((operation) => <div key={operation.id} className="flex items-center gap-3 py-3"><ShieldCheck className="size-4 text-muted-foreground" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{operation.operator_name} · {operation.action}</p><p className="mt-1 text-xs text-muted-foreground">{operation.resource} · {formatDate(operation.created_at)}</p></div><StatusBadge>{operation.operator_role}</StatusBadge></div>)}</div>}</Section>
     </div>
-  </div>
+  </PageLayout>
 }

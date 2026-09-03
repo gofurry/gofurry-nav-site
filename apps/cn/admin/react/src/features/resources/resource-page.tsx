@@ -7,7 +7,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useToast } from '../../app/toast'
 import { DataTable, type AdminColumn } from '../../components/admin/data-table'
 import { RemoteSelect as SharedRemoteSelect } from '../../components/admin/operations'
-import { FormField, FormSection, PageHeader } from '../../components/admin/page'
+import { FormField, FormSection, PageHeader, PageLayout } from '../../components/admin/page'
 import { Alert } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
 import { DateTimePicker } from '../../components/ui/date-picker'
@@ -111,12 +111,12 @@ export function ResourcePage({ section, resource }: { section: ResourceSection; 
   if (!definition) return <Alert tone="danger">未找到资源定义。</Alert>
   const changeParam = (key: string, value: string) => { const next = new URLSearchParams(params); if (value) next.set(key, value); else next.delete(key); setParams(next, { replace: true }) }
   const canWrite = auth.can('content.write')
-  return <div className="grid gap-6">
+  return <PageLayout>
     <PageHeader title={definition.title} description={definition.description} eyebrow={`${definition.section}.${definition.key}`} actions={canWrite && <Button onClick={() => setEditor({ open: true, id: null })}><Plus className="size-4" />新增{definition.title}</Button>} />
     <DataTable data={query.data?.list ?? []} columns={columns} total={query.data?.total ?? 0} page={page} pageSize={pageSize} search={search} onSearchChange={(value) => { const next = new URLSearchParams(params); next.set('page', '1'); if (value) next.set('search', value); else next.delete('search'); setParams(next, { replace: true }) }} onPageChange={(value) => changeParam('page', String(value))} onPageSizeChange={(value) => { const next = new URLSearchParams(params); next.set('page', '1'); next.set('page_size', String(value)); setParams(next, { replace: true }) }} onEdit={canWrite ? (row) => setEditor({ open: true, id: resourceRecordID(row) }) : undefined} onDelete={canWrite ? setDeleting : undefined} onRowClick={canWrite ? (row) => setEditor({ open: true, id: resourceRecordID(row) }) : undefined} loading={query.isLoading} error={query.error?.message} onRetry={() => void query.refetch()} />
     <ResourceEditor definition={definition} id={editor.id} open={editor.open} onOpenChange={(open) => setEditor((current) => ({ ...current, open }))} />
     <ConfirmAction open={Boolean(deleting)} onOpenChange={(open) => { if (!open) setDeleting(null) }} title={`删除${definition.title}`} description={`确定删除记录 #${deleting?.id ?? ''} 吗？`} busy={deleteMutation.isPending} onConfirm={() => deleteMutation.mutate()} />
-  </div>
+  </PageLayout>
 }
 
 export function ResourceEngineBoundary({ section }: { section: ResourceSection }) {

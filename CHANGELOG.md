@@ -22,6 +22,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 - Present active Collection jobs with attempted/expected progress bars and 2.5-second Running-tab refreshes, including explicit queued and waiting-for-progress states.
 - Tighten shared Admin PageHeader spacing, replace native select/date controls with reusable Base UI controls, add the capability-aware Collection header shortcut, and constrain long comment previews.
 - Recompose Data Operations around selectable database summary cards, two operational status regions, a single-layer relation table, and on-demand technical details while preserving read-only 60-second refresh behavior.
+- Standardize every Admin workspace on a compact shared page rhythm, anchor shared Select popups below their triggers, and make visible DataTable columns immediately identifiable with check indicators.
+- Recompose Collection overview and schedules plus Metrics and Changes into compact, single-level operational layouts with denser KPIs, unified chart/filter toolbars, separator-based lists, and on-demand technical details.
 
 ### Fixed
 
