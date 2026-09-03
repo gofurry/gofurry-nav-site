@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useToast } from '../../app/toast'
 import { DataTable, type AdminColumn } from '../../components/admin/data-table'
-import { FilterBar, FilterField, JsonBlock, Kpi, KpiGrid, OperationTabs, OperationsChart, RemotePicker, type OperationTab } from '../../components/admin/operations'
+import { FilterBar, FilterField, JsonBlock, Kpi, KpiGrid, OperationTabs, OperationsChart, RemoteSelect, type OperationTab } from '../../components/admin/operations'
 import { Detail, DetailGrid, FormField, PageHeader, Section } from '../../components/admin/page'
 import { ErrorState, LoadingState } from '../../components/admin/states'
 import { StatusBadge, TechnicalLabel } from '../../components/admin/status'
@@ -20,7 +20,7 @@ import { formatDate } from '../../lib/utils'
 import { useAuth } from '../auth/auth-context'
 import { collectionActionVisibility } from './capability-ux'
 import { queryString, toRFC3339 } from './collection-query'
-import { duration, percent, runCoverage, statusTone } from './presentation'
+import { ACTIVE_COLLECTION_REFRESH_MS, collectionJobProgress, duration, percent, runCoverage, statusTone } from './presentation'
 import type { CollectionChartPoint, CollectionJob, CollectionOverview, CollectionResult, CollectionRun, CollectionSchedule, CollectorInstance } from './types'
 
 const tabs: OperationTab[] = [
@@ -96,17 +96,24 @@ function RunningPanel() {
   const client = useQueryClient()
   const { toast } = useToast()
   const [cancelling, setCancelling] = useState<CollectionJob | null>(null)
-  const query = useQuery({ queryKey: ['collection', 'active-jobs'], queryFn: async () => { const [running, queued] = await Promise.all([getJSON<CollectionJob[]>('/api/v1/collection/jobs?status=running&limit=100'), getJSON<CollectionJob[]>('/api/v1/collection/jobs?status=queued&limit=100')]); return [...running, ...queued] } })
+  const query = useQuery({ queryKey: ['collection', 'active-jobs'], queryFn: async () => { const [running, queued] = await Promise.all([getJSON<CollectionJob[]>('/api/v1/collection/jobs?status=running&limit=100'), getJSON<CollectionJob[]>('/api/v1/collection/jobs?status=queued&limit=100')]); return [...running, ...queued] }, refetchInterval: ACTIVE_COLLECTION_REFRESH_MS })
   const cancel = useMutation({ mutationFn: (job: CollectionJob) => sendJSON(`/api/v1/collection/jobs/${job.domain}/${job.id}/cancel`, 'POST'), onSuccess: async () => { await client.invalidateQueries({ queryKey: ['collection'] }); toast('已请求取消任务'); setCancelling(null) }, onError: (error) => toast(errorMessage(error), 'danger') })
   const columns = useMemo<AdminColumn<CollectionJob>[]>(() => [
     { key: 'job_key', header: '任务', render: (row) => <div><p className="font-medium">{row.job_key}</p><TechnicalLabel>{row.domain} · job #{row.id}</TechnicalLabel></div> },
     { key: 'scope_type', header: '范围', render: (row) => `${row.scope_type}${row.scope_id ? ` #${row.scope_id}` : ''}${row.target ? ` · ${row.target}` : ''}` },
     { key: 'status', header: '状态', render: (row) => <StatusBadge tone={statusTone(row.status)}>{row.status}</StatusBadge> },
-    { key: 'progress', header: '进度', render: (row) => row.progress ? <TechnicalLabel>{JSON.stringify(row.progress)}</TechnicalLabel> : '—' },
+    { key: 'progress', header: '进度', render: (row) => <CollectionProgressCell job={row} /> },
     { key: 'created_at', header: '创建 / 开始', render: (row) => formatDate(row.created_at) },
     { key: '_control', header: '', sortable: false, render: (row) => access.control ? <Button size="sm" variant="secondary" disabled={cancel.isPending} onClick={(event) => { event.stopPropagation(); setCancelling(row) }}><Ban className="size-3.5" />取消</Button> : null },
   ], [access.control, cancel])
   return <><DataTable data={query.data ?? []} columns={columns} total={query.data?.length ?? 0} page={1} pageSize={100} search="" onSearchChange={() => undefined} onPageChange={() => undefined} onPageSizeChange={() => undefined} searchable={false} loading={query.isLoading} error={query.error?.message} onRetry={() => void query.refetch()} /><ConfirmAction open={Boolean(cancelling)} onOpenChange={(open) => { if (!open) setCancelling(null) }} title="取消采集任务" description={`任务 ${cancelling?.job_key ?? ''} #${cancelling?.id ?? ''} 将收到取消请求；已经完成的结果不会回滚。`} busy={cancel.isPending} confirmLabel="确认取消任务" onConfirm={() => cancelling && cancel.mutate(cancelling)} /></>
+}
+
+function CollectionProgressCell({ job }: { job: CollectionJob }) {
+  const progress = collectionJobProgress(job.status, job.progress)
+  if (progress.state === 'queued') return <span className="text-sm text-muted-foreground">排队中</span>
+  if (progress.state === 'waiting') return <span className="text-sm text-muted-foreground">等待进度</span>
+  return <div className="w-40" aria-label={`进度 ${progress.percentage}% · ${progress.attempted} / ${progress.expected}`}><div className="mb-1 flex items-center justify-between text-xs"><span>{progress.percentage}%</span><span className="text-muted-foreground">{progress.attempted} / {progress.expected}</span></div><div className="h-2 overflow-hidden rounded-full bg-surface-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.percentage}><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${progress.percentage}%` }} /></div></div>
 }
 
 function RunHistoryPanel() {
@@ -147,5 +154,5 @@ function ManualCollectionPanel() {
   const changeDomain = (value: 'game' | 'nav') => { setDomain(value); setScope('all'); setEntity(null); setTarget(null); setTasks(value === 'game' ? ['details'] : ['ping']) }
   const toggle = (task: string) => setTasks((current) => current.includes(task) ? current.filter((item) => item !== task) : [...current, task])
   const valid = tasks.length > 0 && (scope === 'all' || entity) && (scope !== 'target' || target)
-  return <div className="grid gap-5 xl:grid-cols-[1fr_1.4fr]"><Section title="采集对象" description="先选择业务对象，再选择任务，无需记忆内部 ID。"><div className="grid gap-4"><FilterField label="Domain"><NativeSelect value={domain} onChange={(event) => changeDomain(event.target.value as 'game' | 'nav')}><option value="game">Game</option><option value="nav">Nav</option></NativeSelect></FilterField><FilterField label="Scope"><NativeSelect value={scope} onChange={(event) => { setScope(event.target.value); setEntity(null); setTarget(null) }}><option value="all">全部</option>{domain === 'game' ? <option value="game">指定游戏</option> : <><option value="site">指定网站</option><option value="target">指定 Target</option></>}</NativeSelect></FilterField>{scope !== 'all' && <RemotePicker endpoint={domain === 'game' ? '/api/v1/options/games' : '/api/v1/options/sites'} value={entity} onChange={(value) => { setEntity(value); setTarget(null) }} placeholder={domain === 'game' ? '搜索游戏…' : '搜索网站…'} />}{scope === 'target' && entity && <RemotePicker endpoint={`/api/v1/options/site-targets?site_id=${entity.id}`} value={target} onChange={setTarget} placeholder="搜索 Target…" />}</div></Section><Section title="任务 / 协议" description="手动执行使用现有 Collection 业务语义。"><div className="flex flex-wrap gap-2">{taskOptions.map((task) => <button key={task} type="button" onClick={() => toggle(task)} className={tasks.includes(task) ? 'rounded-md border border-primary bg-primary px-3 py-2 text-sm text-primary-foreground' : 'rounded-md border bg-surface px-3 py-2 text-sm hover:bg-surface-muted'}>{task}</button>)}</div><div className="mt-6 flex items-center justify-between"><p className="text-xs text-muted-foreground">{domain} · {scope} · {tasks.length} tasks</p><Button disabled={!valid || mutation.isPending} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="size-4 animate-spin" /> : <Activity className="size-4" />}创建采集任务</Button></div></Section></div>
+  return <div className="grid gap-5 xl:grid-cols-[1fr_1.4fr]"><Section title="采集对象" description="先选择业务对象，再选择任务，无需记忆内部 ID。"><div className="grid gap-4"><FilterField label="Domain"><NativeSelect value={domain} onChange={(event) => changeDomain(event.target.value as 'game' | 'nav')}><option value="game">Game</option><option value="nav">Nav</option></NativeSelect></FilterField><FilterField label="Scope"><NativeSelect value={scope} onChange={(event) => { setScope(event.target.value); setEntity(null); setTarget(null) }}><option value="all">全部</option>{domain === 'game' ? <option value="game">指定游戏</option> : <><option value="site">指定网站</option><option value="target">指定 Target</option></>}</NativeSelect></FilterField>{scope !== 'all' && <RemoteSelect endpoint={domain === 'game' ? '/api/v1/options/games' : '/api/v1/options/sites'} value={entity} onChange={(value) => { setEntity(value); setTarget(null) }} placeholder={domain === 'game' ? '搜索游戏…' : '搜索网站…'} />}{scope === 'target' && entity && <RemoteSelect endpoint={`/api/v1/options/site-targets?site_id=${entity.id}`} value={target} onChange={setTarget} placeholder="搜索 Target…" />}</div></Section><Section title="任务 / 协议" description="手动执行使用现有 Collection 业务语义。"><div className="flex flex-wrap gap-2">{taskOptions.map((task) => <button key={task} type="button" onClick={() => toggle(task)} className={tasks.includes(task) ? 'rounded-md border border-primary bg-primary px-3 py-2 text-sm text-primary-foreground' : 'rounded-md border bg-surface px-3 py-2 text-sm hover:bg-surface-muted'}>{task}</button>)}</div><div className="mt-6 flex items-center justify-between"><p className="text-xs text-muted-foreground">{domain} · {scope} · {tasks.length} tasks</p><Button disabled={!valid || mutation.isPending} onClick={() => mutation.mutate()}>{mutation.isPending ? <LoaderCircle className="size-4 animate-spin" /> : <Activity className="size-4" />}创建采集任务</Button></div></Section></div>
 }

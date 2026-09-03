@@ -3,7 +3,7 @@ import { Braces, FileClock } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { DataTable, type AdminColumn } from '../../components/admin/data-table'
-import { FilterBar, FilterField, JsonBlock, OperationTabs, RemotePicker } from '../../components/admin/operations'
+import { FilterBar, FilterField, JsonBlock, OperationTabs, RemoteSelect } from '../../components/admin/operations'
 import { Detail, DetailGrid, PageHeader, Section } from '../../components/admin/page'
 import { ErrorState, LoadingState } from '../../components/admin/states'
 import { StatusBadge, TechnicalLabel } from '../../components/admin/status'
@@ -48,7 +48,7 @@ function RecentChangesPanel() {
 
 function EntityChangesPanel() {
   const [domain, setDomain] = useState<'game' | 'nav'>('nav'); const [entity, setEntity] = useState<OptionItem | null>(null)
-  return <div className="grid gap-5"><Section title="选择实体" description="按网站或游戏查看可重现的语义变化历史。"><div className="grid gap-3 md:grid-cols-[12rem_1fr]"><FilterField label="Domain"><NativeSelect value={domain} onChange={(event) => { setDomain(event.target.value as 'game' | 'nav'); setEntity(null) }}><option value="nav">网站</option><option value="game">游戏</option></NativeSelect></FilterField><RemotePicker endpoint={domain === 'game' ? '/api/v1/options/games' : '/api/v1/options/sites'} value={entity} onChange={setEntity} placeholder={domain === 'game' ? '搜索游戏…' : '搜索网站…'} /></div></Section>{entity ? <ChangeTable key={`${domain}-${entity.id}`} domain={domain} entityID={Number(entity.id)} /> : <Section><div className="grid min-h-40 place-items-center text-sm text-muted-foreground"><FileClock className="mb-2 size-8" />请先选择实体。</div></Section>}</div>
+  return <div className="grid gap-5"><Section title="选择实体" description="按网站或游戏查看可重现的语义变化历史。"><div className="grid gap-3 md:grid-cols-[12rem_1fr]"><FilterField label="Domain"><NativeSelect value={domain} onChange={(event) => { setDomain(event.target.value as 'game' | 'nav'); setEntity(null) }}><option value="nav">网站</option><option value="game">游戏</option></NativeSelect></FilterField><RemoteSelect endpoint={domain === 'game' ? '/api/v1/options/games' : '/api/v1/options/sites'} value={entity} onChange={setEntity} placeholder={domain === 'game' ? '搜索游戏…' : '搜索网站…'} /></div></Section>{entity ? <ChangeTable key={`${domain}-${entity.id}`} domain={domain} entityID={Number(entity.id)} /> : <Section><div className="grid min-h-40 place-items-center text-sm text-muted-foreground"><FileClock className="mb-2 size-8" />请先选择实体。</div></Section>}</div>
 }
 
 function EventDrawer({ event, onOpenChange }: { event: ChangeEvent | null; onOpenChange: (open: boolean) => void }) {

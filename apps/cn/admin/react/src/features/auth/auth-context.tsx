@@ -50,7 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout: async () => {
       await sendJSON('/api/v1/auth/logout', 'POST', {})
       resetCsrf()
-      client.clear()
+      await client.cancelQueries()
+      client.getMutationCache().clear()
+      client.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth-state' })
       client.setQueryData<AuthState>(['auth-state'], { initialized: true, authenticated: false })
     },
   }

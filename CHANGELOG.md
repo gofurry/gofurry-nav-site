@@ -16,11 +16,17 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 - Rename the public `洞察 / Insights` product to `生态观测 / Ecosystem` while preserving all `/insights/*` routes and internal contracts.
 - Remove repetitive Ecosystem hero blocks, combine size-consistent primary and domain navigation into responsive left/right or two-row layouts, and add Ecosystem to the localized mobile bottom navigation.
 - Make the Admin shell own the viewport, sidebar/workspace scrolling, subtle shared scrollbars, and table-local horizontal overflow; simplify the text-only sidebar brand to `GoFurry` expanded and `GF` collapsed.
+- Polish the Admin product shell with a 208px expanded sidebar, warm-gray Light surfaces, a persisted single-button Light/Dark switch, and an explicit capability-aware Data Operations shortcut.
+- Recompose the Workbench into flat list cards, simplify every shared Admin PageHeader to title plus actions, align shared DataTable toolbar controls, and replace split remote search/select controls with one searchable metadata-aware combobox.
+- Present active Collection jobs with attempted/expected progress bars and 2.5-second Running-tab refreshes, including explicit queued and waiting-for-progress states.
 
 ### Fixed
 
 - Bind all six schema-driven Admin resource routes to an explicit Nav or Game domain so valid Site Group, Update Notice, Saying, Tag, Comment, and Prize pages resolve their definitions.
 - Keep shared Admin dialogs centered and viewport-safe with portal backdrops, bounded height, and internal scrolling without document-level horizontal shift.
+- Keep Collection ECharts lines visible while axis tooltips are active by disabling hover emphasis replacement.
+- Clear protected Query/Mutation state on logout before replacing the current route with `/login`, preventing protected-shell error remnants.
+- Preserve Game Comment IDs as strings across Go JSON and React CRUD routes so 64-bit detail, update, and delete operations never lose precision.
 
 ## v3.0.0-alpha.6 - 2026-09-03
 

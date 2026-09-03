@@ -12,7 +12,7 @@ components/ui -> components/admin -> features
 
 TanStack Query owns server state. Route filters, search, pagination, sorting, and workspace tabs use URL state where practical. React local state owns transient UI. Do not introduce a second server-state copy or a role-based client store.
 
-Themes are `system`, `light`, and `dark`, defaulting to `system`. Business components consume semantic tokens: background, surface, surface-muted, foreground, muted-foreground, border, primary, success, warning, danger, and info.
+Themes default to the system preference. The shared header exposes a single Light/Dark toggle; the first manual choice becomes an explicit persisted `light` or `dark` preference. Business components consume semantic tokens: background, surface, surface-muted, foreground, muted-foreground, border, primary, success, warning, danger, and info.
 
 The backend authorization contract remains authoritative. Navigation and actions ask whether the current principal has a capability; frontend code must not reproduce the Role-to-Capability mapping.
 

@@ -1,6 +1,6 @@
 import type { z } from 'zod'
 
-export type ResourceRecord = Record<string, unknown> & { id?: number }
+export type ResourceRecord = Record<string, unknown> & { id?: string | number }
 export type ResourceFieldType = 'text' | 'textarea' | 'number' | 'boolean' | 'datetime' | 'select' | 'remote-select' | 'string-array'
 export type ResourceOption = { label: string; value: string }
 

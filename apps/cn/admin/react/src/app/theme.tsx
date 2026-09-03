@@ -1,12 +1,16 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 export type ThemeMode = 'system' | 'light' | 'dark'
-type ThemeContextValue = { mode: ThemeMode; setMode: (mode: ThemeMode) => void }
+export type ResolvedTheme = Exclude<ThemeMode, 'system'>
+type ThemeContextValue = { mode: ThemeMode; resolvedTheme: ResolvedTheme; setMode: (mode: ThemeMode) => void }
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-function applyTheme(mode: ThemeMode) {
-  const dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
-  document.documentElement.classList.toggle('dark', dark)
+function systemPrefersDark() {
+  return matchMedia('(prefers-color-scheme: dark)').matches
+}
+
+function applyTheme(theme: ResolvedTheme) {
+  document.documentElement.classList.toggle('dark', theme === 'dark')
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -14,17 +18,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem('gofurry-admin-theme')
     return stored === 'light' || stored === 'dark' ? stored : 'system'
   })
+  const [systemDark, setSystemDark] = useState(systemPrefersDark)
+  const resolvedTheme: ResolvedTheme = mode === 'system' ? (systemDark ? 'dark' : 'light') : mode
   useEffect(() => {
-    applyTheme(mode)
     const media = matchMedia('(prefers-color-scheme: dark)')
-    const onChange = () => mode === 'system' && applyTheme(mode)
+    const onChange = () => setSystemDark(media.matches)
     media.addEventListener('change', onChange)
     return () => media.removeEventListener('change', onChange)
-  }, [mode])
-  const value = useMemo(() => ({ mode, setMode: (next: ThemeMode) => {
+  }, [])
+  useEffect(() => applyTheme(resolvedTheme), [resolvedTheme])
+  const value = useMemo(() => ({ mode, resolvedTheme, setMode: (next: ThemeMode) => {
     setModeState(next)
-    localStorage.setItem('gofurry-admin-theme', next)
-  } }), [mode])
+    if (next === 'system') localStorage.removeItem('gofurry-admin-theme')
+    else localStorage.setItem('gofurry-admin-theme', next)
+  } }), [mode, resolvedTheme])
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 

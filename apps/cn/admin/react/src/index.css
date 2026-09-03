@@ -2,21 +2,21 @@
 
 :root {
   color-scheme: light;
-  --background: oklch(0.985 0.003 247);
-  --surface: oklch(1 0 0);
-  --surface-muted: oklch(0.96 0.006 247);
-  --foreground: oklch(0.24 0.02 257);
-  --muted-foreground: oklch(0.52 0.025 257);
-  --border: oklch(0.89 0.012 255);
-  --primary: oklch(0.52 0.16 250);
-  --primary-foreground: oklch(0.99 0 0);
+  --background: #ebe8e2;
+  --surface: #f4f1eb;
+  --surface-muted: #e4e0d9;
+  --foreground: #292622;
+  --muted-foreground: #6d665f;
+  --border: #d4cec5;
+  --primary: #3f6fa8;
+  --primary-foreground: #f7f4ef;
   --success: oklch(0.56 0.14 154);
   --warning: oklch(0.67 0.15 72);
   --danger: oklch(0.58 0.2 27);
   --info: oklch(0.58 0.13 231);
   --ring: oklch(0.62 0.15 250);
-  --scrollbar-thumb: oklch(0.7 0.015 255 / 0.7);
-  --scrollbar-thumb-hover: oklch(0.56 0.025 255 / 0.82);
+  --scrollbar-thumb: rgb(140 131 120 / 0.58);
+  --scrollbar-thumb-hover: rgb(110 101 91 / 0.76);
   --radius: 0.55rem;
 }
 

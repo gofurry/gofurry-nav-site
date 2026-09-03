@@ -1,9 +1,9 @@
 import { createElement } from 'react'
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
 import { isGlobalSearchShortcut } from '../../lib/keyboard'
-import { AdminBrand, capabilityAwareNavigation } from './app-shell'
+import { AdminBrand, capabilityAwareNavigation, logoutAndRedirect } from './app-shell'
 
 describe('capability-aware navigation', () => {
   it('shows content routes without reproducing role checks', () => {
@@ -66,5 +66,16 @@ describe('capability-aware navigation', () => {
     rerender(createElement(AdminBrand, { collapsed: true }))
     expect(screen.getByText('GF')).toBeInTheDocument()
     expect(screen.queryByText('GoFurry')).not.toBeInTheDocument()
+  })
+
+  it('replaces the protected route only after logout state has been cleared', async () => {
+    const events: string[] = []
+    const logout = vi.fn(async () => { events.push('logout') })
+    const navigate = vi.fn(() => { events.push('navigate') })
+
+    await logoutAndRedirect(logout, navigate)
+
+    expect(events).toEqual(['logout', 'navigate'])
+    expect(navigate).toHaveBeenCalledWith('/login', { replace: true })
   })
 })
