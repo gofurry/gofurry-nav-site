@@ -56,14 +56,15 @@ describe('capability-aware navigation', () => {
     expect(isGlobalSearchShortcut({ key: '/', ctrlKey: false, metaKey: false }, true)).toBe(false)
   })
 
-  it('shows the compact GoFurry brand without the legacy V3 CONTENT label', () => {
+  it('shows a text-only brand that follows the sidebar state', () => {
     const { rerender } = render(createElement(AdminBrand, { collapsed: false }))
-    expect(screen.getByText('GF')).toBeInTheDocument()
-    expect(screen.getByText('GoFurry Admin')).toBeInTheDocument()
+    expect(screen.getByText('GoFurry')).toBeInTheDocument()
+    expect(screen.queryByText('GF')).not.toBeInTheDocument()
+    expect(screen.queryByText('GoFurry Admin')).not.toBeInTheDocument()
     expect(screen.queryByText('V3 CONTENT')).not.toBeInTheDocument()
 
     rerender(createElement(AdminBrand, { collapsed: true }))
     expect(screen.getByText('GF')).toBeInTheDocument()
-    expect(screen.queryByText('GoFurry Admin')).not.toBeInTheDocument()
+    expect(screen.queryByText('GoFurry')).not.toBeInTheDocument()
   })
 })

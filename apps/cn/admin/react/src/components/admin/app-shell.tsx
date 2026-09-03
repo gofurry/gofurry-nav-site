@@ -54,9 +54,8 @@ function Breadcrumbs() {
 }
 
 export function AdminBrand({ collapsed }: { collapsed: boolean }) {
-  return <div className="flex h-14 items-center gap-3 border-b px-4">
-    <div className="grid size-8 shrink-0 place-items-center rounded-md bg-primary font-bold text-primary-foreground">GF</div>
-    {!collapsed && <p className="truncate text-sm font-semibold leading-none">GoFurry Admin</p>}
+  return <div className={cn('flex h-14 items-center border-b', collapsed ? 'justify-center px-2' : 'px-4')}>
+    <p className={cn('truncate font-semibold leading-none tracking-tight', collapsed ? 'text-sm' : 'text-base')}>{collapsed ? 'GF' : 'GoFurry'}</p>
   </div>
 }
 
@@ -85,7 +84,7 @@ export function AppShell() {
     <aside data-admin-sidebar className={cn('fixed inset-y-0 left-0 z-30 flex h-dvh flex-col border-r bg-surface transition-[width] duration-200', collapsed ? 'w-16' : 'w-60')}>
       <AdminBrand collapsed={collapsed} />
       <nav className="admin-scroll min-h-0 flex-1 overflow-y-auto p-2">{visibleGroups.map((group) => {
-        return <div key={group.label || 'workbench'} className="mb-4">{group.label && !collapsed && <p className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{group.label}</p>}{group.entries.map((entry) => <NavLink key={entry.href} to={entry.href} end={entry.href === '/'} title={collapsed ? entry.label : undefined} className={({ isActive }) => cn('mb-0.5 flex h-9 items-center gap-3 rounded-md px-2 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground', isActive && 'bg-primary/10 font-medium text-primary')}><entry.icon className="size-4 shrink-0" />{!collapsed && <span>{entry.label}</span>}</NavLink>)}</div>
+        return <div key={group.label || 'workbench'} className="mb-4">{group.label && !collapsed && <p className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{group.label}</p>}{group.entries.map((entry) => <NavLink key={entry.href} to={entry.href} end={entry.href === '/'} title={collapsed ? entry.label : undefined} className={({ isActive }) => cn('mb-0.5 flex h-9 items-center gap-3 rounded-md px-2 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground', collapsed && 'justify-center px-0', isActive && 'bg-primary/10 font-medium text-primary')}><entry.icon className="size-4 shrink-0" />{!collapsed && <span>{entry.label}</span>}</NavLink>)}</div>
       })}</nav>
       <button type="button" onClick={toggleSidebar} className="flex h-11 shrink-0 items-center justify-center border-t text-muted-foreground hover:bg-surface-muted" aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}>{collapsed ? <CaretRight className="size-4" /> : <><CaretLeft className="mr-2 size-4" /><span className="text-xs">收起导航</span></>}</button>
     </aside>

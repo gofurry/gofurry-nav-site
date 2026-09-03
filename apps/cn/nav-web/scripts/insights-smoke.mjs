@@ -105,9 +105,28 @@ try {
     if (!shell || !primary || !context) return null
     const primaryBox = primary.getBoundingClientRect()
     const contextBox = context.getBoundingClientRect()
-    return { direction: getComputedStyle(shell).flexDirection, primaryLeft: primaryBox.left, contextLeft: contextBox.left, centerDelta: Math.abs((primaryBox.top + primaryBox.height / 2) - (contextBox.top + contextBox.height / 2)) }
+    const primaryStyle = getComputedStyle(primary)
+    const contextStyle = getComputedStyle(context)
+    const primaryLink = primary.querySelector('a')
+    const contextLink = context.querySelector('a')
+    const primaryLinkStyle = primaryLink ? getComputedStyle(primaryLink) : null
+    const contextLinkStyle = contextLink ? getComputedStyle(contextLink) : null
+    return {
+      direction: getComputedStyle(shell).flexDirection,
+      primaryLeft: primaryBox.left,
+      contextLeft: contextBox.left,
+      centerDelta: Math.abs((primaryBox.top + primaryBox.height / 2) - (contextBox.top + contextBox.height / 2)),
+      containerHeightDelta: Math.abs(primaryBox.height - contextBox.height),
+      containerPaddingMatches: primaryStyle.padding === contextStyle.padding,
+      containerBorderMatches: primaryStyle.borderWidth === contextStyle.borderWidth && primaryStyle.borderRadius === contextStyle.borderRadius,
+      itemHeightDelta: primaryLink && contextLink ? Math.abs(primaryLink.getBoundingClientRect().height - contextLink.getBoundingClientRect().height) : Number.POSITIVE_INFINITY,
+      itemTypographyMatches: primaryLinkStyle?.fontSize === contextLinkStyle?.fontSize && primaryLinkStyle?.fontWeight === contextLinkStyle?.fontWeight,
+      itemPaddingMatches: primaryLinkStyle?.paddingInline === contextLinkStyle?.paddingInline,
+    }
   })
   assert(desktopNavigation?.direction === 'row' && desktopNavigation.primaryLeft < desktopNavigation.contextLeft && desktopNavigation.centerDelta <= 2, 'desktop Ecosystem navigation was not left/right grouped')
+  assert(desktopNavigation?.containerHeightDelta <= 1 && desktopNavigation.containerPaddingMatches && desktopNavigation.containerBorderMatches, 'primary and context navigation containers do not share one visual specification')
+  assert(desktopNavigation?.itemHeightDelta <= 1 && desktopNavigation.itemTypographyMatches && desktopNavigation.itemPaddingMatches, 'primary and context navigation items do not share one visual specification')
   assert(await page.locator('.insights-hero').count() === 0, 'large Ecosystem hero remained visible')
   await page.waitForURL(url => url.searchParams.get('metric') === 'ipv6' && url.searchParams.get('range') === '30d' && url.searchParams.get('dimension') === 'country' && !url.searchParams.has('slice'))
   assert(await page.locator('.insights-domain-page').getAttribute('data-selected-metric') === 'ipv6', 'invalid metric was not normalized before rendering')

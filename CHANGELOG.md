@@ -14,8 +14,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 ### Changed
 
 - Rename the public `洞察 / Insights` product to `生态观测 / Ecosystem` while preserving all `/insights/*` routes and internal contracts.
-- Remove repetitive Ecosystem hero blocks, combine primary and domain navigation into responsive left/right or two-row layouts, and add Ecosystem to the localized mobile bottom navigation.
-- Make the Admin shell own the viewport, sidebar/workspace scrolling, subtle shared scrollbars, and table-local horizontal overflow; simplify the sidebar brand to `GF · GoFurry Admin`.
+- Remove repetitive Ecosystem hero blocks, combine size-consistent primary and domain navigation into responsive left/right or two-row layouts, and add Ecosystem to the localized mobile bottom navigation.
+- Make the Admin shell own the viewport, sidebar/workspace scrolling, subtle shared scrollbars, and table-local horizontal overflow; simplify the text-only sidebar brand to `GoFurry` expanded and `GF` collapsed.
 
 ### Fixed
 
