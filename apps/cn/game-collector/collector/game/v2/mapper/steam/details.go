@@ -9,7 +9,7 @@ import (
 	"github.com/gofurry/steam-go/web/storefront"
 )
 
-const steamNormalizerVersion = "steam-go/v1.3.9"
+const steamNormalizerVersion = "steam-go/v1.3.10"
 
 // DetailsMapper converts steam-go Store appdetails into collector v2 domain models.
 type DetailsMapper struct{}

@@ -34,8 +34,8 @@ github.com/go-co-op/gocron/v2 v2.22.0 h1:uEuH2F7k7VoESb1BYSaffuuV+T0kkpzsC0aXk7/
 github.com/go-co-op/gocron/v2 v2.22.0/go.mod h1:hiH/U9RMhTi1BBZJmef9s3KC9QwhpBF6PFrvUKaXY9M=
 github.com/go-viper/mapstructure/v2 v2.4.0 h1:EBsztssimR/CONLSZZ04E8qAkxNYq4Qp9LvH92wZUgs=
 github.com/go-viper/mapstructure/v2 v2.4.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
-github.com/gofurry/steam-go v1.3.9 h1:2luPRrzvX9I9vA2bJgvEj/i8eByn86Jlgnd/S3D6wQ4=
-github.com/gofurry/steam-go v1.3.9/go.mod h1:FW2CNaCS6XiYjXGJhbHc/YCZyfDZU/G+eFb0oNWf5Jc=
+github.com/gofurry/steam-go v1.3.10 h1:63FAYeeoh1n7L0nXHY+19vyg08e3RY5UHfrmaPBj2LU=
+github.com/gofurry/steam-go v1.3.10/go.mod h1:FW2CNaCS6XiYjXGJhbHc/YCZyfDZU/G+eFb0oNWf5Jc=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=

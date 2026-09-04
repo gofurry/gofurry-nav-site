@@ -8,6 +8,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Upgrade steam-go to v1.3.10 to restore StoreBrowse asset decoding after Steam introduced non-string asset metadata.
+- Confirm vertical library-cover acquisition through the local single-game canary.
 - Preserve Steam StoreBrowse vertical-cover Last Known Good with explicit source/language replacement scopes, observable partial failures, Official API traffic classification, and post-commit merged cache refreshes.
 - Keep authoritative hashed Steam asset pathnames unchanged while selecting real 1x/2x library-cover rows independently in Game Backend and Nav Web CDN fallback.
 

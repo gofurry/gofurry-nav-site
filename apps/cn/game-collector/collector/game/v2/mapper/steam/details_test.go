@@ -106,7 +106,7 @@ func TestDetailsMapperCanonicalReleasePrecisions(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got := mapper.ToCanonicalRelease(1, &test.value, time.Now())
-			if got.Precision != test.precision || got.RawText != test.raw || got.SourceRegion != domain.RegionUS || got.SourceLocale != domain.StoreLocaleEN || got.Normalizer != "steam-go/v1.3.9" {
+			if got.Precision != test.precision || got.RawText != test.raw || got.SourceRegion != domain.RegionUS || got.SourceLocale != domain.StoreLocaleEN || got.Normalizer != "steam-go/v1.3.10" {
 				t.Fatalf("unexpected canonical release: %#v", got)
 			}
 			if test.precision == domain.ReleasePrecisionUnknown && (got.WindowStart != nil || got.Year != nil) {
