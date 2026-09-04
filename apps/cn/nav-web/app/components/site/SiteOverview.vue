@@ -139,6 +139,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { i18n } from '@/main'
+import { siteTargetPath } from '@/utils/siteRoutes'
 
 const t = (key: string) => i18n.global.t(key)
 
@@ -262,7 +263,7 @@ function scheduleCloseDomainCard() {
 
 function domainLink(domain: string) {
   const siteId = props.siteId ? String(props.siteId) : ''
-  return localePath(`/site/${encodeURIComponent(siteId)}/${encodeURIComponent(domain)}`)
+  return localePath(siteTargetPath(siteId, domain))
 }
 
 const tags = computed(() => {

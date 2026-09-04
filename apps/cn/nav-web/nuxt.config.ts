@@ -186,7 +186,6 @@ export default defineNuxtConfig({
     '/sites/**': { ssr: true },
     '/site/**': { ssr: true },
     '/site-groups/**': { ssr: true },
-    '/steam': { ssr: true },
     '/games': { ssr: true },
     '/games/**': { ssr: true },
     '/insights': { ssr: true },

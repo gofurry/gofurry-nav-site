@@ -1,10 +1,14 @@
-export function siteDetailPath(siteId: string | number, domain?: string) {
+export function siteEntityPath(siteId: string | number) {
   const id = encodeURIComponent(String(siteId))
-  const cleanDomain = domain?.trim()
+  return `/site/${id}`
+}
 
+export function siteTargetPath(siteId: string | number, domain: string) {
+  const entityPath = siteEntityPath(siteId)
+  const cleanDomain = domain.trim()
   if (!cleanDomain) {
-    return `/site/${id}`
+    return entityPath
   }
 
-  return `/site/${id}/${encodeURIComponent(cleanDomain)}`
+  return `${entityPath}?domain=${encodeURIComponent(cleanDomain)}`
 }

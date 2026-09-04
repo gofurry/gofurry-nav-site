@@ -4,6 +4,7 @@ import { launchPerfBrowser, normalizeBaseUrl, parseArgs, toAbsoluteUrl } from '.
 const args = parseArgs()
 const baseUrl = normalizeBaseUrl(args['base-url'] || process.env.INSIGHTS_BASE_URL || 'http://localhost:3000')
 const entitySiteId = args['entity-site-id'] || process.env.INSIGHTS_SITE_ID || ''
+const entitySiteDomain = args['entity-site-domain'] || process.env.INSIGHTS_SITE_DOMAIN || 'target.example'
 const entityGameId = args['entity-game-id'] || process.env.INSIGHTS_GAME_ID || ''
 const insightsRoutes = [
   '/insights',
@@ -35,7 +36,11 @@ const removedWorkshopRoutes = [
   '/en/workshop/developer',
   '/en/workshop/discussion',
 ]
-const siteTargetRoutes = ['/site/1/target.example', '/en/site/1/target.example']
+const targetSiteId = entitySiteId || '1'
+const siteTargetRoutes = [
+  `/site/${targetSiteId}?domain=${encodeURIComponent(entitySiteDomain)}`,
+  `/en/site/${targetSiteId}?domain=${encodeURIComponent(entitySiteDomain)}`,
+]
 const localizedSiteRoutes = entitySiteId ? [`/site/${entitySiteId}`, `/en/site/${entitySiteId}`] : []
 const localizedGameRoutes = entityGameId ? [`/games/${entityGameId}`, `/en/games/${entityGameId}`] : []
 
@@ -97,6 +102,16 @@ const browser = await launchPerfBrowser()
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN' })
   const page = await context.newPage()
+  await page.route('**/api/v2/nav/sites/*/view', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ code: 1, data: { site_id: 41, view_count: 1 } }),
+  }))
+  await page.route('**/api/v2/game/games/*/view', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ code: 1, data: { game_id: 82, view_count: 1 } }),
+  }))
   await page.goto(toAbsoluteUrl(baseUrl, '/insights/sites?metric=invalid&range=bad&dimension=bad&slice=true'), {
     waitUntil: 'domcontentloaded',
     timeout: 30000,

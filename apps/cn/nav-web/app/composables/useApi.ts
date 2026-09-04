@@ -41,7 +41,8 @@ export const useApi = (service: ApiService = 'nav'): ApiRequest => {
     })
 
     if (!response || response.code !== 1) {
-      throw new ApiError(response?.message || response?.msg || '接口返回错误', undefined, response?.code)
+      const dataMessage = typeof response?.data === 'string' ? response.data : ''
+      throw new ApiError(response?.message || response?.msg || dataMessage || '接口返回错误', undefined, response?.code)
     }
 
     return response.data

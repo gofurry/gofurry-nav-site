@@ -8,6 +8,9 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Consolidate public Site entity SEO identity on `/site/:id`, permanently redirect legacy Site detail aliases, and keep target selection as a non-canonical query view.
+- Return real 404/503 semantics for authoritative Site/Game detail failures instead of indexable HTTP 200 error shells.
+- Make sitemap generation fail closed on inventory errors and publish canonical entity URLs only.
 - Upgrade steam-go to v1.3.10 to restore StoreBrowse asset decoding after Steam introduced non-string asset metadata.
 - Confirm vertical library-cover acquisition through the local single-game canary.
 - Preserve Steam StoreBrowse vertical-cover Last Known Good with explicit source/language replacement scopes, observable partial failures, Official API traffic classification, and post-commit merged cache refreshes.

@@ -124,6 +124,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { i18n } from '@/main'
+import { siteTargetPath } from '@/utils/siteRoutes'
 import type { SiteHeroBadge } from './detailTypes'
 
 const props = defineProps<{
@@ -158,7 +159,7 @@ function copyToClipboard(text: string) {
 }
 
 function domainLink(domain: string) {
-  return localePath(`/site/${encodeURIComponent(String(props.siteId))}/${encodeURIComponent(domain)}`)
+  return localePath(siteTargetPath(props.siteId, domain))
 }
 
 function logoUrl(icon: string) {

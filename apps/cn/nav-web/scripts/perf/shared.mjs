@@ -11,7 +11,7 @@ export const baselinePath = path.join(performanceDir, 'baseline.json')
 export const budgetPath = path.join(performanceDir, 'budget.json')
 
 const defaultViewport = { width: 1440, height: 900 }
-const defaultSitePath = process.env.PERF_SITE_PATH || '/sites/1'
+const defaultSitePath = process.env.PERF_SITE_PATH || '/site/1'
 
 export const scenarios = [
   {

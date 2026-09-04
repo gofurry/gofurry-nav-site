@@ -36,7 +36,7 @@
 import { useI18n } from 'vue-i18n'
 import type { InsightFeedItem } from '@/types/insights'
 import { formatInsightChangeWhen, insightChangeI18nKey } from '@/utils/insightChanges'
-import { siteDetailPath } from '@/utils/siteRoutes'
+import { siteEntityPath } from '@/utils/siteRoutes'
 
 defineProps<{
   items: InsightFeedItem[]
@@ -51,7 +51,7 @@ function eventLabel(type: string) {
 }
 
 function entityPath(item: InsightFeedItem) {
-  return item.domain === 'site' ? siteDetailPath(item.entity.id) : `/games/${encodeURIComponent(String(item.entity.id))}`
+  return item.domain === 'site' ? siteEntityPath(item.entity.id) : `/games/${encodeURIComponent(String(item.entity.id))}`
 }
 
 function formatWhen(item: InsightFeedItem) {

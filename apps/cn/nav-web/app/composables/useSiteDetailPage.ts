@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { CollectorEnvelope, DnsRecord, HttpRecord, PingRecord, SiteHealthSummary, SiteInfo, SiteV2DetailResponse, SiteV2Info, TargetHealthSummary, TargetLatestResponse } from '~/types/nav'
+import { authoritativePageStatus } from '~/utils/authoritativePageError'
 
 export interface SiteDetailPageData {
   siteInfo: SiteInfo | null
@@ -84,6 +85,15 @@ export async function useSiteDetailPage() {
       }),
     }
   )
+
+  if (asyncData.error.value) {
+    const statusCode = authoritativePageStatus(asyncData.error.value, 'site')
+    throw createError({
+      statusCode,
+      statusMessage: statusCode === 404 ? 'Site not found' : 'Site service temporarily unavailable',
+      cause: asyncData.error.value,
+    })
+  }
 
   return {
     ...asyncData,

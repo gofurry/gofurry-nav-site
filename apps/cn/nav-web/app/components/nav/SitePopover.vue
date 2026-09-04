@@ -48,7 +48,7 @@ import type { Site, Delay } from '@/types/nav'
 import greenCircle from '@/assets/svgs/green-circle.svg'
 import redCircle from '@/assets/svgs/red-circle.svg'
 import { i18n } from "@/main";
-import { siteDetailPath } from '@/utils/siteRoutes'
+import { siteTargetPath } from '@/utils/siteRoutes'
 
 const { t } = i18n.global
 const router = useRouter()
@@ -118,7 +118,7 @@ function sendPopoverHeight() {
 // 跳转站点详情
 function goSite(domain: string) {
   if (!site.value) return
-  router.push(localePath(siteDetailPath(site.value.id, domain)))
+  router.push(localePath(siteTargetPath(site.value.id, domain)))
 }
 
 // 事件处理

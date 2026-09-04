@@ -13,7 +13,9 @@
     "perf:baseline": "node scripts/perf/measure.mjs --baseline",
     "visual:guard": "node scripts/perf/visual-guard.mjs",
     "insights:smoke": "node scripts/insights-smoke.mjs",
-    "insights:semantics": "node scripts/insights-semantics.test.mjs"
+    "insights:semantics": "node scripts/insights-semantics.test.mjs",
+    "seo:recovery:test": "node scripts/seo-recovery.test.mjs",
+    "seo:recovery:smoke": "node scripts/seo-recovery-smoke.mjs"
   },
   "dependencies": {
     "@nuxtjs/i18n": "^10.3.0",

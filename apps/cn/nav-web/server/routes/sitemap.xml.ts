@@ -1,23 +1,4 @@
-type ApiResult<T> = {
-  code: number
-  data: T
-}
-
-type SiteRecord = {
-  id: number | string
-  domains: string[]
-}
-
-type SiteGroupRecord = {
-  id: number | string
-}
-
-type GameRecord = {
-  id?: string
-  game_id?: string
-}
-
-type GameListPayload = GameRecord[]
+import { parseGameInventory, parseSiteGroupInventory, parseSiteInventory } from '../utils/sitemapInventory'
 
 function escapeXml(value: string) {
   return value
@@ -45,13 +26,6 @@ function addLocalizedUrls(urls: Set<string>, path: string) {
   }
 }
 
-function firstDomain(domains: string[] | undefined) {
-  if (!domains?.length) {
-    return ''
-  }
-  return domains[0] ?? ''
-}
-
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
   const siteUrl = String(config.public.siteUrl).replace(/\/$/, '')
@@ -68,46 +42,48 @@ export default defineEventHandler(async (event) => {
     '/insights/games/prices',
     '/insights/games/languages',
     '/insights/changes',
-    '/steam',
     '/updates',
     '/about',
     '/privacy',
-    '/terms',
-    '/games/prize'
+    '/terms'
   ]) {
     addLocalizedUrls(urls, path)
   }
 
-  const [sites, siteGroups, games] = await Promise.all([
-    $fetch<ApiResult<{ items: SiteRecord[] }>>('/api/v2/nav/sites/index').then((res) => res.code === 1 ? res.data.items : []).catch(() => []),
-    $fetch<ApiResult<SiteGroupRecord[]>>('/api/v2/nav/site-groups', {
-      query: { lang: 'zh' }
-    }).then((res) => res.code === 1 ? res.data : []).catch(() => []),
-    $fetch<ApiResult<GameListPayload>>('/api/v2/game/list', {
-      query: { limit: '5000', lang: 'zh', region: 'CN' }
-    }).then((res) => res.code === 1 ? res.data : []).catch(() => [])
-  ])
+  let sites
+  let siteGroups
+  let games
+  try {
+    const [siteResponse, siteGroupResponse, gameResponse] = await Promise.all([
+      $fetch('/api/v2/nav/sites/index'),
+      $fetch('/api/v2/nav/site-groups', {
+        query: { lang: 'zh' }
+      }),
+      $fetch('/api/v2/game/list', {
+        query: { limit: '5000', lang: 'zh', region: 'CN' }
+      })
+    ])
+    sites = parseSiteInventory(siteResponse)
+    siteGroups = parseSiteGroupInventory(siteGroupResponse)
+    games = parseGameInventory(gameResponse)
+  } catch (error) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'Sitemap inventory temporarily unavailable',
+      cause: error,
+    })
+  }
 
   for (const site of sites) {
-    if (site?.id != null) {
-      const domain = firstDomain(site.domains)
-      addLocalizedUrls(urls, domain
-        ? `/site/${encodeURIComponent(String(site.id))}/${encodeURIComponent(domain)}`
-        : `/site/${encodeURIComponent(String(site.id))}`)
-    }
+    addLocalizedUrls(urls, `/site/${encodeURIComponent(site.id)}`)
   }
 
   for (const group of siteGroups) {
-    if (group?.id != null && group.id !== '') {
-      addLocalizedUrls(urls, `/site-groups/${encodeURIComponent(String(group.id))}`)
-    }
+    addLocalizedUrls(urls, `/site-groups/${encodeURIComponent(group.id)}`)
   }
 
   for (const game of games) {
-    const gameId = game.id ?? game.game_id
-    if (gameId != null && gameId !== '') {
-      addLocalizedUrls(urls, `/games/${encodeURIComponent(String(gameId))}`)
-    }
+    addLocalizedUrls(urls, `/games/${encodeURIComponent(game.id)}`)
   }
 
   setHeader(event, 'content-type', 'application/xml; charset=utf-8')
