@@ -199,6 +199,9 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	if gfErr != nil || len(recRows) != 1 || recRows[0].TargetGameID != 91002 || recRows[0].Name != "Second Game" {
 		t.Fatalf("recommendations: %+v err=%v", recRows, gfErr)
 	}
+	if recRows[0].LibraryCoverURL != "asset-library-1x-2" || recRows[0].LibraryCover2xURL != "asset-library-2x-2" {
+		t.Fatalf("recommendation asset variants: %+v", recRows[0])
+	}
 	features, gfErr := readDAO.ListRecommendationFeatures(ctx, "en", "CN")
 	if gfErr != nil || len(features) != 2 {
 		t.Fatalf("recommendation features: %d err=%v", len(features), gfErr)
@@ -566,7 +569,9 @@ func seedReadModel(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now ti
 (91001,92001,'CN',false,'CNY',1000,800,20,'¥10','¥8',$1,$1),(91002,92002,'CN',false,'CNY',2000,1800,10,'¥20','¥18',$1,$1)`,
 		`INSERT INTO gfg_game_assets (game_id,appid,asset_type,asset_family,source,lang,media_key,title,url,thumbnail_url,format,exists,collected_at,updated_at) VALUES
 (91001,92001,'header','store','store_browse','','header','','asset-header-1','','jpg',true,$1,$1),
-(91002,92002,'header','store','store_browse','','header','','asset-header-2','','jpg',true,$1,$1)`,
+(91002,92002,'header','store','store_browse','','header','','asset-header-2','','jpg',true,$1,$1),
+(91002,92002,'library_capsule','library','store_browse','','library_capsule','','asset-library-1x-2','','jpg',true,$1,$1),
+(91002,92002,'library_capsule_2x','library','store_browse','','library_capsule_2x','','asset-library-2x-2','','jpg',true,$1,$1)`,
 		`INSERT INTO gfg_game_requirements (game_id,appid,pc,mac,linux,collected_at,updated_at) VALUES (91001,92001,'{}','{}','{}',$1,$1),(91002,92002,'{}','{}','{}',$1,$1)`,
 		`INSERT INTO gfg_game_comment (id,region,content,score,create_time,game_id,ip,name) VALUES (1,'CN','old review',3,$2,91001,'127.0.0.1','old'),(2,'CN','new review',5,$1,91001,'127.0.0.2','new')`,
 		`INSERT INTO gfg_game_news (game_id,appid,lang,event_gid,headline,summary,collected_at,published_at,updated_at) VALUES (91001,92001,'en','event-1','news','summary',$1,$1,$1)`,

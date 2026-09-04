@@ -6,6 +6,11 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+### Fixed
+
+- Preserve Steam StoreBrowse vertical-cover Last Known Good with explicit source/language replacement scopes, observable partial failures, Official API traffic classification, and post-commit merged cache refreshes.
+- Keep authoritative hashed Steam asset pathnames unchanged while selecting real 1x/2x library-cover rows independently in Game Backend and Nav Web CDN fallback.
+
 ## v3.0.0-alpha.7 - 2026-09-04
 
 ### Added

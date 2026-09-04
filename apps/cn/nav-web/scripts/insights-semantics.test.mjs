@@ -4,6 +4,7 @@ import { formatInsightChangeWhen, insightChangeOrder } from '../app/utils/insigh
 import { formatCnyMinorAmount, formatMinorAmount, priceSegmentKey, publicPriceDisplay } from '../app/utils/insightPrices.ts'
 import { formatInsightRatio, normalizeInsightSlice } from '../app/utils/insightDimensions.ts'
 import { insightCompareReady, parseInsightCompareIDs } from '../app/utils/insightCompare.ts'
+import { steamSharedAssetCandidates } from '../app/utils/steamAssets.ts'
 
 const freePoint = {
   date: '2026-08-28', state: 'free', currency: null,
@@ -53,6 +54,16 @@ assert(insightCompareReady(compareIDs) && !insightCompareReady([37]), 'Compare b
 assert(parseInsightCompareIDs('1,2,3,4,5') === null, 'Compare accepted more than four entities')
 assert(parseInsightCompareIDs('1,bad') === null, 'Compare accepted an invalid entity ID')
 assert(parseInsightCompareIDs('9')?.join(',') === '9', 'Compare lost its one-entity preselected builder state')
+
+const hashed2xAsset = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/123/digest/library_capsule_2x.jpg?version=1#cover'
+const hashed2xURL = new URL(hashed2xAsset)
+const assetCandidates = steamSharedAssetCandidates(hashed2xAsset, 'zh')
+assert(assetCandidates.length > 1, 'Steam shared CDN fallback candidates were not generated')
+for (const candidate of assetCandidates) {
+  const parsed = new URL(candidate)
+  assert(parsed.pathname === hashed2xURL.pathname, `Steam CDN fallback changed hashed asset pathname: ${parsed.pathname}`)
+  assert(parsed.search === hashed2xURL.search && parsed.hash === hashed2xURL.hash, 'Steam CDN fallback changed asset query/hash')
+}
 
 const zh = JSON.parse(readFileSync(new URL('../i18n/locales/zh.json', import.meta.url), 'utf8'))
 const en = JSON.parse(readFileSync(new URL('../i18n/locales/en.json', import.meta.url), 'utf8'))

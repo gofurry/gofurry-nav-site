@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/gofurry/gofurry-game-collector/collector/game/models"
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
@@ -66,12 +68,67 @@ func InitV2SteamAdapter() {
 		log.Error("init game collector v2 steam adapter failed: ", err)
 		return
 	}
+	adapter.SetObserver(steamclient.ObserverFunc(observeV2SteamRequest))
 
 	if v2SteamAdapter != nil {
 		v2SteamAdapter.Close()
 	}
 	v2SteamAdapter = adapter
 	log.Info("game collector v2 steam adapter initialized")
+}
+
+func observeV2SteamRequest(event steamclient.Event) {
+	if !steamRequestNeedsDiagnostic(event) {
+		return
+	}
+	log.WarnFields(steamRequestDiagnosticFields(event), "Steam request degraded")
+}
+
+func steamRequestNeedsDiagnostic(event steamclient.Event) bool {
+	return event.ErrorKind != "" || event.BlockDetected || !event.CooldownUntil.IsZero() ||
+		event.StatusCode == 403 || event.StatusCode == 429 || event.StatusCode >= 500
+}
+
+func steamRequestDiagnosticFields(event steamclient.Event) map[string]interface{} {
+	cooldownUntil := ""
+	if !event.CooldownUntil.IsZero() {
+		cooldownUntil = event.CooldownUntil.UTC().Format(time.RFC3339)
+	}
+	return map[string]interface{}{
+		"bucket":         string(event.Bucket),
+		"traffic_class":  string(event.TrafficClass),
+		"method":         event.Method,
+		"host":           sanitizeSteamObserverHost(event.Host),
+		"path":           sanitizeSteamObserverPath(event.Path),
+		"status_code":    event.StatusCode,
+		"error_kind":     event.ErrorKind,
+		"attempts":       event.Attempts,
+		"block_detected": event.BlockDetected,
+		"duration":       event.Duration,
+		"cooldown_until": cooldownUntil,
+	}
+}
+
+func sanitizeSteamObserverHost(host string) string {
+	host = strings.TrimSpace(host)
+	if index := strings.LastIndex(host, "@"); index >= 0 {
+		host = host[index+1:]
+	}
+	if index := strings.IndexAny(host, "/?#"); index >= 0 {
+		host = host[:index]
+	}
+	return host
+}
+
+func sanitizeSteamObserverPath(path string) string {
+	path = strings.TrimSpace(path)
+	if index := strings.IndexAny(path, "?#"); index >= 0 {
+		path = path[:index]
+	}
+	if path == "" {
+		return "/"
+	}
+	return path
 }
 
 // GetV2SteamAdapter returns the initialized collector v2 Steam adapter.

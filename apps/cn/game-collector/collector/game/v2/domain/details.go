@@ -109,6 +109,19 @@ type GameMediaAsset struct {
 	CollectedAt time.Time  `json:"collected_at"`
 }
 
+const (
+	AssetSourceStoreBrowse = "store_browse"
+	AssetSourceStorefront  = "storefront_appdetails"
+)
+
+// AssetReplaceScope identifies one source/language asset set that was
+// completely and reliably observed by the current collection. A missing scope
+// is not an authoritative empty observation and must preserve Last Known Good.
+type AssetReplaceScope struct {
+	Source   string `json:"source"`
+	Language string `json:"language"`
+}
+
 // Screenshot stores one Steam screenshot asset pair.
 type Screenshot struct {
 	ID           int    `json:"id"`
@@ -170,13 +183,16 @@ type Rating struct {
 
 // DetailsCollection is one complete v2 details collection result for an app.
 type DetailsCollection struct {
-	Details      GameDetails            `json:"details"`
-	Localized    []GameLocalizedDetails `json:"localized"`
-	Prices       []GamePrice            `json:"prices"`
-	Media        GameMedia              `json:"media"`
-	Assets       []GameMediaAsset       `json:"assets"`
-	Requirements SystemRequirements     `json:"requirements"`
-	Snapshots    []RawSnapshot          `json:"snapshots"`
+	Details   GameDetails            `json:"details"`
+	Localized []GameLocalizedDetails `json:"localized"`
+	Prices    []GamePrice            `json:"prices"`
+	Media     GameMedia              `json:"media"`
+	Assets    []GameMediaAsset       `json:"assets"`
+	// AssetReplaceScopes contains only source/language scopes that this run may
+	// replace. Repositories must retain assets belonging to every omitted scope.
+	AssetReplaceScopes []AssetReplaceScope `json:"asset_replace_scopes"`
+	Requirements       SystemRequirements  `json:"requirements"`
+	Snapshots          []RawSnapshot       `json:"snapshots"`
 
 	// CanonicalRelease and CanonicalLanguages are nil when this collection has
 	// no authoritative US/English observation. Repositories must preserve the

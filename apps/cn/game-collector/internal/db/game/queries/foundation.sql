@@ -104,8 +104,17 @@ ON CONFLICT (game_id, media_type, media_key) DO UPDATE SET
     collected_at = EXCLUDED.collected_at,
     updated_at = now();
 
--- name: DeleteAssetsByGame :exec
-DELETE FROM gfg_game_assets WHERE game_id = sqlc.arg(game_id);
+-- name: DeleteAssetsByGameSourceLang :exec
+DELETE FROM gfg_game_assets
+WHERE game_id = sqlc.arg(game_id)
+  AND source = sqlc.arg(source)
+  AND lang = sqlc.arg(lang);
+
+-- name: ListAssetsByGame :many
+SELECT *
+FROM gfg_game_assets
+WHERE game_id = sqlc.arg(game_id)
+ORDER BY asset_family, sort_order, id;
 
 -- name: UpsertAsset :exec
 INSERT INTO gfg_game_assets (

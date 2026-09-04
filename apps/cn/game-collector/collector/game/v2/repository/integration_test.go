@@ -123,6 +123,38 @@ func TestPostgresRepositorySemantics(t *testing.T) {
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_price_daily where game_id=$1 and price_state='priced' and materialization_source='observed' and observed_at=$2`, 1, int64(91001), now)
 	assertCount(t, ctx, pool, `select count(*) from gfg_game_daily where game_id=$1 and fact_date=($2 at time zone 'UTC')::date and materialization_source='observed'`, 1, int64(91001), now)
 
+	// Asset replacement is authoritative only for explicitly successful
+	// source/language scopes. A failed StoreBrowse observation must preserve its
+	// Last Known Good cover while a successful storefront scope still updates.
+	if _, err := pool.Exec(ctx, `INSERT INTO gfg_game_assets
+(game_id,appid,asset_type,asset_family,source,lang,media_key,url,format,exists,collected_at,updated_at)
+VALUES ($1,$2,'library_capsule','library',$3,'zh','library_capsule','https://example.test/old-cover.jpg','image',true,$4,$4)`,
+		int64(91001), int64(92001), domain.AssetSourceStoreBrowse, now); err != nil {
+		t.Fatal(err)
+	}
+	partialAssets := detailsFixture(now.Add(30*time.Second), nil)
+	partialAssets.Assets[0].URL = "https://example.test/new-screenshot.jpg"
+	if err := detailsRepository.SaveDetails(ctx, partialAssets); err != nil {
+		t.Fatalf("save partial-scope assets: %v", err)
+	}
+	assertAssetURL(t, ctx, pool, 91001, domain.AssetSourceStoreBrowse, "zh", "library_capsule", "https://example.test/old-cover.jpg")
+	assertAssetURL(t, ctx, pool, 91001, domain.AssetSourceStorefront, "", "screenshot_full", "https://example.test/new-screenshot.jpg")
+
+	replacement := detailsFixture(now.Add(45*time.Second), nil)
+	replacement.AssetReplaceScopes = append(replacement.AssetReplaceScopes, domain.AssetReplaceScope{Source: domain.AssetSourceStoreBrowse, Language: "zh"})
+	replacement.Assets = append(replacement.Assets,
+		domain.GameMediaAsset{GameID: 91001, AppID: 92001, AssetType: "library_capsule", AssetFamily: "library", Source: domain.AssetSourceStoreBrowse, Language: "zh", MediaKey: "library_capsule", URL: "https://example.test/new-cover.jpg", CollectedAt: now.Add(45 * time.Second)},
+		domain.GameMediaAsset{GameID: 91001, AppID: 92001, AssetType: "library_logo", AssetFamily: "library", Source: domain.AssetSourceStoreBrowse, Language: "zh", MediaKey: "library_logo", URL: "https://example.test/new-logo.png", CollectedAt: now.Add(45 * time.Second)},
+	)
+	for attempt := 0; attempt < 2; attempt++ {
+		if err := detailsRepository.SaveDetails(ctx, replacement); err != nil {
+			t.Fatalf("save complete-scope assets attempt %d: %v", attempt+1, err)
+		}
+	}
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_assets where game_id=$1`, 3, int64(91001))
+	assertCount(t, ctx, pool, `select count(*) from gfg_game_assets where game_id=$1 and source=$2 and lang='zh' and url like '%old-cover%'`, 0, int64(91001), domain.AssetSourceStoreBrowse)
+	assertAssetURL(t, ctx, pool, 91001, domain.AssetSourceStoreBrowse, "zh", "library_capsule", "https://example.test/new-cover.jpg")
+
 	// A raw-text-only observation updates current provenance but not semantic history.
 	rawOnly := detailsFixture(now.Add(time.Minute), nil)
 	rawOnly.CanonicalRelease = releaseFixture(now.Add(time.Minute), domain.ReleaseUpcoming, domain.ReleasePrecisionMonth, "Sep 2026", time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC))
@@ -593,13 +625,25 @@ VALUES ($3,'players',99001,99002,$4,CASE WHEN $4='failed' THEN 'upstream' ELSE '
 
 func detailsFixture(now time.Time, snapshots []domain.RawSnapshot) domain.DetailsCollection {
 	return domain.DetailsCollection{
-		Details:      domain.GameDetails{GameID: 91001, AppID: 92001, Type: "game", Name: "test", CollectedAt: now},
-		Localized:    []domain.GameLocalizedDetails{{GameID: 91001, AppID: 92001, Language: domain.StoreLocale("zh-CN"), Name: "test", CollectedAt: now}},
-		Prices:       []domain.GamePrice{{GameID: 91001, AppID: 92001, Region: domain.Region("CN"), Currency: "CNY", CollectedAt: now}},
-		Media:        domain.GameMedia{GameID: 91001, AppID: 92001, HeaderURL: "https://example.test/header.jpg", CollectedAt: now},
-		Assets:       []domain.GameMediaAsset{{GameID: 91001, AppID: 92001, AssetType: "header", AssetFamily: "store", Source: "steam", MediaKey: "header", URL: "https://example.test/header.jpg", CollectedAt: now}},
-		Requirements: domain.SystemRequirements{GameID: 91001, AppID: 92001, CollectedAt: now},
-		Snapshots:    snapshots,
+		Details:            domain.GameDetails{GameID: 91001, AppID: 92001, Type: "game", Name: "test", CollectedAt: now},
+		Localized:          []domain.GameLocalizedDetails{{GameID: 91001, AppID: 92001, Language: domain.StoreLocale("zh-CN"), Name: "test", CollectedAt: now}},
+		Prices:             []domain.GamePrice{{GameID: 91001, AppID: 92001, Region: domain.Region("CN"), Currency: "CNY", CollectedAt: now}},
+		Media:              domain.GameMedia{GameID: 91001, AppID: 92001, HeaderURL: "https://example.test/header.jpg", CollectedAt: now},
+		Assets:             []domain.GameMediaAsset{{GameID: 91001, AppID: 92001, AssetType: "screenshot_full", AssetFamily: "screenshot", Source: domain.AssetSourceStorefront, MediaKey: "1", URL: "https://example.test/screenshot.jpg", CollectedAt: now}},
+		AssetReplaceScopes: []domain.AssetReplaceScope{{Source: domain.AssetSourceStorefront}},
+		Requirements:       domain.SystemRequirements{GameID: 91001, AppID: 92001, CollectedAt: now},
+		Snapshots:          snapshots,
+	}
+}
+
+func assertAssetURL(t *testing.T, ctx context.Context, pool *pgxpool.Pool, gameID int64, source, lang, assetType, want string) {
+	t.Helper()
+	var got string
+	if err := pool.QueryRow(ctx, `SELECT url FROM gfg_game_assets WHERE game_id=$1 AND source=$2 AND lang=$3 AND asset_type=$4`, gameID, source, lang, assetType).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("asset %s/%s/%s url=%q, want %q", source, lang, assetType, got, want)
 	}
 }
 

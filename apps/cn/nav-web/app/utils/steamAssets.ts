@@ -53,7 +53,7 @@ export function steamSharedAssetCandidates(rawUrl?: string | null, locale?: stri
     return [source]
   }
 
-  const assetPath = `${toSteamShared1xPath(parsed.pathname)}${parsed.search}${parsed.hash}`
+  const assetPath = `${parsed.pathname}${parsed.search}${parsed.hash}`
   const candidates = steamSharedFallbackPrefixes(locale).map((prefix) => `${prefix}${assetPath}`)
   candidates.push(source)
   return [...new Set(candidates)]
@@ -73,7 +73,7 @@ export function ensureSteamSharedCdnPreference(rawUrl?: string | null, locale?: 
     return
   }
 
-  const assetPath = `${toSteamShared1xPath(parsed.pathname)}${parsed.search}${parsed.hash}`
+  const assetPath = `${parsed.pathname}${parsed.search}${parsed.hash}`
   const defaultGroup = defaultSteamSharedCdnGroup(locale)
   const fallbackGroup = defaultGroup === 'china' ? 'global' : 'china'
 
@@ -109,17 +109,6 @@ function steamSharedFallbackPrefixes(locale?: string | null) {
 
 function defaultSteamSharedCdnGroup(locale?: string | null): SteamSharedCdnGroup {
   return locale?.toLowerCase().startsWith('en') ? 'global' : 'china'
-}
-
-function toSteamShared1xPath(pathname: string) {
-  return pathname
-    .replace(/header_2x(\.[a-z0-9]+)$/i, 'header$1')
-    .replace(/library_capsule_2x(\.[a-z0-9]+)$/i, 'library_capsule$1')
-    .replace(/capsule_main_2x(\.[a-z0-9]+)$/i, 'capsule_main$1')
-    .replace(/hero_capsule_2x(\.[a-z0-9]+)$/i, 'hero_capsule$1')
-    .replace(/capsule_small_2x(\.[a-z0-9]+)$/i, 'capsule_small$1')
-    .replace(/library_hero_2x(\.[a-z0-9]+)$/i, 'library_hero$1')
-    .replace(/library_logo_2x(\.[a-z0-9]+)$/i, 'library_logo$1')
 }
 
 function parseSteamSharedUrl(rawUrl?: string | null) {

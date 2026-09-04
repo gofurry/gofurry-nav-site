@@ -4,12 +4,14 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/gofurry/gofurry-game-collector/collector/game/v2/domain"
+	"github.com/gofurry/gofurry-game-collector/common/log"
 	cs "github.com/gofurry/gofurry-game-collector/common/service"
 	gamesqlc "github.com/gofurry/gofurry-game-collector/internal/db/game/sqlc"
 	"github.com/jackc/pgx/v5"
@@ -73,7 +75,7 @@ func (r *DetailsRepository) SaveDetails(ctx context.Context, data domain.Details
 	if err := replaceMedia(ctx, queries, data.Media); err != nil {
 		return err
 	}
-	if err := replaceAssets(ctx, queries, data.Details.GameID, data.Assets); err != nil {
+	if err := replaceAssets(ctx, queries, data.Details.GameID, data.Assets, data.AssetReplaceScopes); err != nil {
 		return err
 	}
 	if err := upsertRequirements(ctx, queries, data.Requirements); err != nil {
@@ -106,6 +108,16 @@ func (r *DetailsRepository) SaveDetails(ctx context.Context, data domain.Details
 		return err
 	}
 
+	// Cache payloads must reflect the post-commit merged asset state. In
+	// particular, an upstream scope omitted from this collection may still have
+	// Last Known Good rows in PostgreSQL.
+	persistedAssets, err := r.loadPersistedAssets(ctx, data.Details.GameID)
+	if err != nil {
+		log.Error("load persisted assets for cache refresh failed: ", err)
+		r.invalidateCache(data)
+		return nil
+	}
+	data.Assets = persistedAssets
 	r.refreshCache(data)
 	return nil
 }
@@ -222,16 +234,77 @@ func replaceMedia(ctx context.Context, queries *gamesqlc.Queries, media domain.G
 	return nil
 }
 
-func replaceAssets(ctx context.Context, queries *gamesqlc.Queries, gameID int64, assets []domain.GameMediaAsset) error {
-	if err := queries.DeleteAssetsByGame(ctx, gameID); err != nil {
-		return err
-	}
+func replaceAssets(ctx context.Context, queries *gamesqlc.Queries, gameID int64, assets []domain.GameMediaAsset, scopes []domain.AssetReplaceScope) error {
+	type scopeKey struct{ source, language string }
+	itemsByScope := make(map[scopeKey][]domain.GameMediaAsset, len(scopes))
 	for _, item := range assets {
-		if err := insertAsset(ctx, queries, item); err != nil {
+		key := scopeKey{source: item.Source, language: item.Language}
+		itemsByScope[key] = append(itemsByScope[key], item)
+	}
+
+	seen := make(map[scopeKey]struct{}, len(scopes))
+	for _, scope := range scopes {
+		if scope.Source == "" {
+			return fmt.Errorf("asset replacement scope source is required")
+		}
+		key := scopeKey{source: scope.Source, language: scope.Language}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		if err := queries.DeleteAssetsByGameSourceLang(ctx, gamesqlc.DeleteAssetsByGameSourceLangParams{
+			GameID: gameID,
+			Source: scope.Source,
+			Lang:   scope.Language,
+		}); err != nil {
 			return err
+		}
+		for _, item := range itemsByScope[key] {
+			if item.GameID != gameID {
+				return fmt.Errorf("asset game_id=%d does not match replacement game_id=%d", item.GameID, gameID)
+			}
+			if err := insertAsset(ctx, queries, item); err != nil {
+				return err
+			}
+		}
+	}
+	for key := range itemsByScope {
+		if _, ok := seen[key]; !ok {
+			return fmt.Errorf("asset source=%s lang=%s has no successful replacement scope", key.source, key.language)
 		}
 	}
 	return nil
+}
+
+func (r *DetailsRepository) loadPersistedAssets(ctx context.Context, gameID int64) ([]domain.GameMediaAsset, error) {
+	rows, err := gamesqlc.New(r.pool).ListAssetsByGame(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]domain.GameMediaAsset, 0, len(rows))
+	for _, row := range rows {
+		var extra any
+		if len(row.Extra) > 0 {
+			if err := json.Unmarshal(row.Extra, &extra); err != nil {
+				return nil, fmt.Errorf("decode persisted asset extra: %w", err)
+			}
+		}
+		var checkedAt *time.Time
+		if row.CheckedAt.Valid {
+			value := row.CheckedAt.Time
+			checkedAt = &value
+		}
+		items = append(items, domain.GameMediaAsset{
+			GameID: row.GameID, AppID: uint32(row.Appid), AssetType: row.AssetType,
+			AssetFamily: row.AssetFamily, Source: row.Source, Language: row.Lang,
+			MediaKey: row.MediaKey, Title: row.Title, URL: row.Url,
+			ThumbnailURL: row.ThumbnailUrl, Format: row.Format, Exists: row.Exists,
+			StatusCode: int(row.StatusCode), ContentType: row.ContentType,
+			ContentLength: row.ContentLength, Extra: extra, SortOrder: int(row.SortOrder),
+			CheckedAt: checkedAt, CollectedAt: row.CollectedAt.Time,
+		})
+	}
+	return items, nil
 }
 
 func insertAsset(ctx context.Context, queries *gamesqlc.Queries, item domain.GameMediaAsset) error {
@@ -409,6 +482,20 @@ func (r *DetailsRepository) refreshCache(data domain.DetailsCollection) {
 	if payload, err := marshalJSON(data.Assets); err == nil {
 		_ = cs.SetExpire(assetsCacheKey(data.Details.GameID), string(payload), r.cacheTTL)
 	}
+}
+
+func (r *DetailsRepository) invalidateCache(data domain.DetailsCollection) {
+	if cs.GetRedisService() == nil {
+		return
+	}
+	keys := []string{
+		detailsCacheKey(data.Details.GameID, domain.StoreLocaleZH),
+		detailsCacheKey(data.Details.GameID, domain.StoreLocaleEN),
+		pricesCacheKey(data.Details.GameID),
+		mediaCacheKey(data.Details.GameID),
+		assetsCacheKey(data.Details.GameID),
+	}
+	_ = cs.Del(keys...)
 }
 
 func detailsCacheKey(gameID int64, lang domain.StoreLocale) string {

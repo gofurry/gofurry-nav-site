@@ -4,7 +4,6 @@ import (
 	"context"
 	"math"
 	"net"
-	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -37,15 +36,6 @@ type onlinePeakCachePayload struct {
 	PeakCount   int64     `json:"peak_count"`
 	WindowDays  int       `json:"window_days"`
 	RefreshedAt time.Time `json:"refreshed_at"`
-}
-
-var steamSharedAssetHosts = map[string]struct{}{
-	"shared.steamstatic.com":             {},
-	"shared.akamai.steamstatic.com":      {},
-	"shared.cloudflare.steamstatic.com":  {},
-	"shared.fastly.steamstatic.com":      {},
-	"shared.st.dl.eccdnx.com":            {},
-	"shared.cdn.steamchina.queniuam.com": {},
 }
 
 var gameHomeCacheRefreshMu sync.Mutex
@@ -656,16 +646,17 @@ func buildSimilarRecommendationsFromRows(rows []v2models.GameV2RecommendationRow
 	for _, row := range rows {
 		reasons := decodeJSON[[]v2models.GameV2RecommendationReason](&row.ReasonJSON, []v2models.GameV2RecommendationReason{})
 		tags := decodeJSON[[]recommendationTag](row.Tags, []recommendationTag{})
-		libraryCoverURL := prefer1xAssetURL(row.LibraryCoverURL, row.LibraryCover2xURL)
+		libraryCoverURL := preferAssetURL(row.LibraryCoverURL, row.LibraryCover2xURL)
+		libraryCover2xURL := preferAssetURL(row.LibraryCover2xURL, row.LibraryCoverURL)
 		res = append(res, v2models.GameV2SimilarRecommendation{
 			ID:                strconv.FormatInt(row.TargetGameID, 10),
 			AppID:             strconv.FormatInt(row.AppID, 10),
 			Name:              row.Name,
 			Summary:           row.Summary,
-			HeaderURL:         normalizeSteamShared1xAssetURL(row.HeaderURL),
-			CapsuleURL:        normalizeSteamShared1xAssetURL(row.CapsuleURL),
+			HeaderURL:         normalizeSteamAssetURL(row.HeaderURL),
+			CapsuleURL:        normalizeSteamAssetURL(row.CapsuleURL),
 			LibraryCoverURL:   libraryCoverURL,
-			LibraryCover2xURL: libraryCoverURL,
+			LibraryCover2xURL: libraryCover2xURL,
 			Score:             row.Score,
 			DisplayScore:      row.DisplayScore,
 			Rank:              row.Rank,
@@ -681,16 +672,17 @@ func buildSimilarRecommendationsFromRows(rows []v2models.GameV2RecommendationRow
 }
 
 func buildSimilarRecommendationFromFeature(feature recommendationFeature, score float64, displayScore float64, rank int, reasons []v2models.GameV2RecommendationReason, computedAt time.Time) v2models.GameV2SimilarRecommendation {
-	libraryCoverURL := prefer1xAssetURL(feature.row.LibraryCoverURL, feature.row.LibraryCover2xURL)
+	libraryCoverURL := preferAssetURL(feature.row.LibraryCoverURL, feature.row.LibraryCover2xURL)
+	libraryCover2xURL := preferAssetURL(feature.row.LibraryCover2xURL, feature.row.LibraryCoverURL)
 	return v2models.GameV2SimilarRecommendation{
 		ID:                strconv.FormatInt(feature.row.GameID, 10),
 		AppID:             strconv.FormatInt(feature.row.AppID, 10),
 		Name:              feature.row.Name,
 		Summary:           feature.row.Summary,
-		HeaderURL:         normalizeSteamShared1xAssetURL(feature.row.HeaderURL),
-		CapsuleURL:        normalizeSteamShared1xAssetURL(feature.row.CapsuleURL),
+		HeaderURL:         normalizeSteamAssetURL(feature.row.HeaderURL),
+		CapsuleURL:        normalizeSteamAssetURL(feature.row.CapsuleURL),
 		LibraryCoverURL:   libraryCoverURL,
-		LibraryCover2xURL: libraryCoverURL,
+		LibraryCover2xURL: libraryCover2xURL,
 		Score:             score,
 		DisplayScore:      displayScore,
 		Rank:              rank,
@@ -703,72 +695,17 @@ func buildSimilarRecommendationFromFeature(feature recommendationFeature, score 
 	}
 }
 
-func prefer1xAssetURL(primary1x string, fallback2x string) string {
-	if strings.TrimSpace(primary1x) != "" {
-		return normalizeSteamShared1xAssetURL(primary1x)
+func preferAssetURL(primary string, fallback string) string {
+	if strings.TrimSpace(primary) != "" {
+		return normalizeSteamAssetURL(primary)
 	}
-	return normalizeSteamShared1xAssetURL(fallback2x)
+	return normalizeSteamAssetURL(fallback)
 }
 
-func normalizeSteamShared1xAssetURL(rawURL string) string {
-	source := strings.TrimSpace(rawURL)
-	if source == "" {
-		return ""
-	}
-
-	parsed, err := url.Parse(source)
-	if err != nil {
-		return source
-	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return source
-	}
-	if _, ok := steamSharedAssetHosts[strings.ToLower(parsed.Hostname())]; !ok {
-		return source
-	}
-
-	parsed.Path = normalizeSteamShared1xPath(parsed.Path)
-	return parsed.String()
-}
-
-func normalizeSteamShared1xPath(path string) string {
-	slashIndex := strings.LastIndex(path, "/")
-	dir := ""
-	filename := path
-	if slashIndex >= 0 {
-		dir = path[:slashIndex+1]
-		filename = path[slashIndex+1:]
-	}
-	if filename == "" {
-		return path
-	}
-
-	dotIndex := strings.LastIndex(filename, ".")
-	base := filename
-	extension := ""
-	if dotIndex >= 0 {
-		base = filename[:dotIndex]
-		extension = filename[dotIndex:]
-	}
-
-	switch strings.ToLower(base) {
-	case "header_2x":
-		base = "header"
-	case "library_capsule_2x":
-		base = "library_capsule"
-	case "capsule_main_2x":
-		base = "capsule_main"
-	case "hero_capsule_2x":
-		base = "hero_capsule"
-	case "capsule_small_2x":
-		base = "capsule_small"
-	case "library_hero_2x":
-		base = "library_hero"
-	case "library_logo_2x":
-		base = "library_logo"
-	}
-
-	return dir + base + extension
+func normalizeSteamAssetURL(rawURL string) string {
+	// StoreBrowse hashed pathnames are authoritative observations. Variant
+	// selection happens from real asset rows; filenames are never rewritten.
+	return strings.TrimSpace(rawURL)
 }
 
 func recommendationTagWeight(tag recommendationTag, primaryTagID int64, secondaryTagID int64) float64 {
@@ -1113,7 +1050,7 @@ func buildDetailReadModel(aggregate v2models.GameV2Aggregate, requestedLang stri
 	displayLang := requestedLang
 	name := localizedName(aggregate, displayLang)
 	summary := localizedSummary(aggregate, displayLang)
-	headerURL := normalizeSteamShared1xAssetURL(aggregate.Site.Header)
+	headerURL := normalizeSteamAssetURL(aggregate.Site.Header)
 	siteName := siteNameForLang(aggregate.Site, displayLang)
 	siteInfo := siteInfoForLang(aggregate.Site, displayLang)
 
@@ -1156,7 +1093,7 @@ func buildDetailReadModel(aggregate v2models.GameV2Aggregate, requestedLang stri
 		res.IsFree = details.IsFree
 		res.Website = strValue(details.Website)
 		if strValue(details.HeaderURL) != "" {
-			res.HeaderURL = normalizeSteamShared1xAssetURL(strValue(details.HeaderURL))
+			res.HeaderURL = normalizeSteamAssetURL(strValue(details.HeaderURL))
 		}
 		res.Release.ComingSoon = details.ReleaseComingSoon
 		res.Release.Date = strValue(details.ReleaseDateText)
@@ -1428,27 +1365,27 @@ func buildMedia(items []v2models.GfgGameV2Media, assets []v2models.GfgGameV2Asse
 	for _, item := range items {
 		switch item.MediaType {
 		case "header":
-			res.HeaderURL = normalizeSteamShared1xAssetURL(strValue(item.URL))
+			res.HeaderURL = normalizeSteamAssetURL(strValue(item.URL))
 		case "capsule":
-			res.CapsuleURL = normalizeSteamShared1xAssetURL(strValue(item.URL))
+			res.CapsuleURL = normalizeSteamAssetURL(strValue(item.URL))
 		case "capsule_v5":
-			res.CapsuleV5URL = normalizeSteamShared1xAssetURL(strValue(item.URL))
+			res.CapsuleV5URL = normalizeSteamAssetURL(strValue(item.URL))
 		case "background":
-			res.BackgroundURL = normalizeSteamShared1xAssetURL(strValue(item.URL))
+			res.BackgroundURL = normalizeSteamAssetURL(strValue(item.URL))
 		case "background_raw":
-			res.BackgroundRawURL = normalizeSteamShared1xAssetURL(strValue(item.URL))
+			res.BackgroundRawURL = normalizeSteamAssetURL(strValue(item.URL))
 		case "screenshot":
 			res.Screenshots = append(res.Screenshots, v2models.GameV2Screenshot{
 				ID:           item.MediaKey,
-				URL:          normalizeSteamShared1xAssetURL(strValue(item.URL)),
-				ThumbnailURL: normalizeSteamShared1xAssetURL(strValue(item.ThumbnailURL)),
+				URL:          normalizeSteamAssetURL(strValue(item.URL)),
+				ThumbnailURL: normalizeSteamAssetURL(strValue(item.ThumbnailURL)),
 			})
 		case "movie":
 			res.Movies = append(res.Movies, v2models.GameV2Movie{
 				ID:           item.MediaKey,
 				Name:         strValue(item.Title),
-				URL:          normalizeSteamShared1xAssetURL(strValue(item.URL)),
-				ThumbnailURL: normalizeSteamShared1xAssetURL(strValue(item.ThumbnailURL)),
+				URL:          normalizeSteamAssetURL(strValue(item.URL)),
+				ThumbnailURL: normalizeSteamAssetURL(strValue(item.ThumbnailURL)),
 				Extra:        decodeAny(item.Extra),
 			})
 		}
@@ -1466,7 +1403,7 @@ func buildMedia(items []v2models.GfgGameV2Media, assets []v2models.GfgGameV2Asse
 	res.CapsuleSmallURL = firstAssetURL(assets, lang, "capsule_small", "capsule_small_2x")
 	res.CapsuleMainURL = firstAssetURL(assets, lang, "capsule_main", "capsule_main_2x")
 	res.LibraryCoverURL = firstAssetURL(assets, lang, "library_capsule", "library_capsule_2x")
-	res.LibraryCover2xURL = res.LibraryCoverURL
+	res.LibraryCover2xURL = firstAssetURL(assets, lang, "library_capsule_2x", "library_capsule")
 	res.LibraryHeroURL = firstAssetURL(assets, lang, "library_hero", "library_hero_2x")
 	res.LibraryLogoURL = firstAssetURL(assets, lang, "library_logo")
 	res.LibraryLogo2xURL = res.LibraryLogoURL
@@ -1492,8 +1429,8 @@ func buildAssetViews(items []v2models.GfgGameV2Asset) []v2models.GameV2AssetView
 			Lang:          item.Lang,
 			Key:           item.MediaKey,
 			Title:         item.Title,
-			URL:           normalizeSteamShared1xAssetURL(item.URL),
-			ThumbnailURL:  normalizeSteamShared1xAssetURL(item.ThumbnailURL),
+			URL:           normalizeSteamAssetURL(item.URL),
+			ThumbnailURL:  normalizeSteamAssetURL(item.ThumbnailURL),
 			Format:        item.Format,
 			Exists:        item.Exists,
 			StatusCode:    item.StatusCode,
@@ -1541,7 +1478,7 @@ func findAssetURL(items []v2models.GfgGameV2Asset, assetType string, lang string
 		if item.Exists != nil && !*item.Exists {
 			continue
 		}
-		return normalizeSteamShared1xAssetURL(item.URL)
+		return normalizeSteamAssetURL(item.URL)
 	}
 	return ""
 }

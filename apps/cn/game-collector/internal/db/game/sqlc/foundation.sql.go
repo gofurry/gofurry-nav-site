@@ -11,12 +11,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deleteAssetsByGame = `-- name: DeleteAssetsByGame :exec
-DELETE FROM gfg_game_assets WHERE game_id = $1
+const deleteAssetsByGameSourceLang = `-- name: DeleteAssetsByGameSourceLang :exec
+DELETE FROM gfg_game_assets
+WHERE game_id = $1
+  AND source = $2
+  AND lang = $3
 `
 
-func (q *Queries) DeleteAssetsByGame(ctx context.Context, gameID int64) error {
-	_, err := q.db.Exec(ctx, deleteAssetsByGame, gameID)
+type DeleteAssetsByGameSourceLangParams struct {
+	GameID int64  `json:"game_id"`
+	Source string `json:"source"`
+	Lang   string `json:"lang"`
+}
+
+func (q *Queries) DeleteAssetsByGameSourceLang(ctx context.Context, arg DeleteAssetsByGameSourceLangParams) error {
+	_, err := q.db.Exec(ctx, deleteAssetsByGameSourceLang, arg.GameID, arg.Source, arg.Lang)
 	return err
 }
 
@@ -111,6 +120,55 @@ func (q *Queries) InsertPlayerCount(ctx context.Context, arg InsertPlayerCountPa
 		arg.CollectedAt,
 	)
 	return err
+}
+
+const listAssetsByGame = `-- name: ListAssetsByGame :many
+SELECT id, game_id, appid, asset_type, asset_family, source, lang, media_key, title, url, thumbnail_url, format, exists, status_code, content_type, content_length, extra, sort_order, checked_at, collected_at, updated_at
+FROM gfg_game_assets
+WHERE game_id = $1
+ORDER BY asset_family, sort_order, id
+`
+
+func (q *Queries) ListAssetsByGame(ctx context.Context, gameID int64) ([]GfgGameAsset, error) {
+	rows, err := q.db.Query(ctx, listAssetsByGame, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GfgGameAsset{}
+	for rows.Next() {
+		var i GfgGameAsset
+		if err := rows.Scan(
+			&i.ID,
+			&i.GameID,
+			&i.Appid,
+			&i.AssetType,
+			&i.AssetFamily,
+			&i.Source,
+			&i.Lang,
+			&i.MediaKey,
+			&i.Title,
+			&i.Url,
+			&i.ThumbnailUrl,
+			&i.Format,
+			&i.Exists,
+			&i.StatusCode,
+			&i.ContentType,
+			&i.ContentLength,
+			&i.Extra,
+			&i.SortOrder,
+			&i.CheckedAt,
+			&i.CollectedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listGameTargets = `-- name: ListGameTargets :many
