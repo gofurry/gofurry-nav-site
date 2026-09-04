@@ -1,6 +1,6 @@
 # GoFurry Nav Web 性能测量与回归守卫
 
-这套脚本用于样式系统维护回归。目标是让前端性能与样式调整有可重复的本地验证方式，防止首页、兽游专区、游戏页和游戏搜索页重新误加载重型依赖，也为亮暗色截图检查留下固定入口。
+这套脚本用于样式系统维护回归。目标是让前端性能与样式调整有可重复的本地验证方式，防止首页、游戏页和游戏搜索页重新误加载重型依赖，也为亮暗色截图检查留下固定入口。
 
 ## 使用方式
 
@@ -31,15 +31,14 @@ npm run visual:guard -- --base-url http://localhost:3001
 - `/` 首页内容区 reveal 后
 - `/updates`
 - `/about`
-- `/steam`
 - `/games`
 - `/games/search`
-- `/sites/1`
+- `/site/1`
 
 如果开发环境的站点详情 ID 不是 `1`，可以覆盖：
 
 ```bash
-$env:PERF_SITE_PATH="/sites/123"
+$env:PERF_SITE_PATH="/site/123"
 npm run perf:measure -- --base-url http://localhost:3000
 ```
 
@@ -62,7 +61,6 @@ npm run perf:guard -- --base-url http://localhost:3001
 - Long Task 数量和总耗时
 - JS Heap
 - 首页首屏是否误加载 `md-editor-v3`、`echarts`、`hls.js`
-- `/steam` 是否误加载 `md-editor-v3`
 - `/games` 首屏是否误加载 `hls.js`
 - `/games/search` 是否误加载 `hls.js`
 
@@ -131,7 +129,7 @@ npm run perf:baseline -- --base-url http://localhost:3000
 如果任务管理器里仍然看到 GPU 占用异常，可以生成 Chrome trace：
 
 ```bash
-npm run perf:trace -- --base-url http://localhost:3000 --path /steam --wait 8000
+npm run perf:trace -- --base-url http://localhost:3000 --path /games --wait 8000
 ```
 
 首页需要 reveal 后观察时：

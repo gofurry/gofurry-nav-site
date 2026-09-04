@@ -18,11 +18,18 @@ type GameDetailSeoInput = {
   locale?: SeoLocale
 }
 
+type SiteGroupSeoInput = {
+  name?: string | null
+  description?: string | null
+  id?: string | number | null
+  locale?: SeoLocale
+}
+
 type InsightsSeoPage = 'overview' | 'sites' | 'games' | 'changes'
 
 const MAX_TITLE_LENGTH = 78
 const MIN_DESCRIPTION_LENGTH = 80
-const MAX_DESCRIPTION_LENGTH = 180
+export const MAX_DESCRIPTION_LENGTH = 180
 
 function isEnglish(locale?: SeoLocale) {
   return locale === 'en' || locale === 'en-US'
@@ -140,6 +147,33 @@ export function buildGameDetailSeo(input: GameDetailSeoInput): DetailSeo {
         'GoFurry 收录兽人、拟人和相关题材游戏资料，整理简介、封面、评价信号、相关作品与社区资源入口。',
         '本页帮助你了解游戏内容，并继续发现相近作品与更新信息。'
       ])
+
+  return { title, description }
+}
+
+export function buildSiteGroupSeo(input: SiteGroupSeoInput): DetailSeo {
+  const en = isEnglish(input.locale)
+  const id = normalizeText(input.id == null ? '' : String(input.id))
+  const name = normalizeText(input.name)
+  const identity = name || (en ? `Site Collection ${id}` : `站点分组 ${id}`)
+  const identitySentence = en
+    ? `This is GoFurry's “${identity}” site collection.`
+    : `这是 GoFurry「${identity}」站点分组。`
+  const summary = normalizeText(input.description)
+  const summaryLimit = Math.max(MAX_DESCRIPTION_LENGTH - identitySentence.length - 1, 1)
+  const primary = summary
+    ? `${truncateText(summary, summaryLimit)} ${identitySentence}`
+    : identitySentence
+
+  const title = buildTitle(
+    name
+      ? (en ? `${name} - Furry Site Collection | GoFurry` : `${name} - Furry 站点分组 | GoFurry`)
+      : (en ? `Site Collection ${id} - GoFurry` : `站点分组 ${id} - GoFurry`),
+    en ? 'Furry Site Collection - GoFurry' : 'Furry 站点分组 - GoFurry'
+  )
+  const description = buildDescription(primary, en
+    ? ['Browse its listed Furry websites, resource summaries, and visit links, then continue discovering related communities, creative work, tools, and content.']
+    : ['浏览该分类下收录的 Furry 网站、资源简介与访问入口，继续发现相关社区、创作、工具与内容资源。'])
 
   return { title, description }
 }

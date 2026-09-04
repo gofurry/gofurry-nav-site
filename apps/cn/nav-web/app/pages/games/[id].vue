@@ -33,7 +33,12 @@ import { getGameBaseInfo, getGameInsights, getGameRemark, getRecommendedGame, to
 import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '~/types/game'
 import type { GameInsights } from '~/types/insights'
 import { authoritativePageStatus } from '~/utils/authoritativePageError'
+import { parsePositiveEntityRouteId } from '~/utils/routeIdentity'
 import { buildGameDetailSeo } from '~/utils/seo'
+
+definePageMeta({
+  validate: route => parsePositiveEntityRouteId(route.params.id) !== null,
+})
 
 interface GameDetailPageData {
   gameBaseInfo: GameBaseInfoResponse | null
@@ -50,6 +55,14 @@ const route = useRoute()
 const { locale } = useI18n()
 const touchedGameIds = new Set<string>()
 const touchingGameIds = new Set<string>()
+
+const initialGameId = parsePositiveEntityRouteId(route.params.id)
+if (!initialGameId) {
+  throw createError({
+    statusCode: 404,
+    statusMessage: 'Game not found',
+  })
+}
 
 const gameId = computed(() => String(route.params.id ?? ''))
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))

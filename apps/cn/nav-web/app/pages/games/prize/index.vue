@@ -207,6 +207,7 @@ useSeoMeta({
   description: () => pageSeo.value.description,
   ogTitle: () => pageSeo.value.title,
   ogDescription: () => pageSeo.value.description,
+  robots: 'noindex, follow',
 })
 
 const loading = ref(true)

@@ -5,7 +5,10 @@ const notFoundMessages: Record<AuthoritativeEntity, string[]> = {
     '查询站内游戏主档案失败: game not found',
     '目标游戏不存在或缺少 v2 详情',
   ],
-  site: ['站点不存在'],
+  site: [
+    '站点不存在',
+    'target 不属于当前 site',
+  ],
 }
 
 export function authoritativePageStatus(error: unknown, entity: AuthoritativeEntity): 404 | 503 {

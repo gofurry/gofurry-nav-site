@@ -4,12 +4,16 @@ const args = parseArgs(process.argv.slice(2))
 const baseUrl = normalizeBaseUrl(args['base-url'] || process.env.SEO_BASE_URL || 'http://127.0.0.1:3000')
 const siteId = args['site-id'] || process.env.SEO_SITE_ID || '1'
 const siteDomain = args['site-domain'] || process.env.SEO_SITE_DOMAIN || 'example.com'
+const invalidSiteDomain = args['invalid-site-domain'] || process.env.SEO_INVALID_SITE_DOMAIN || 'seo-invalid-target.invalid'
 const gameId = args['game-id'] || process.env.SEO_GAME_ID || '110'
 const missingSiteId = args['missing-site-id'] || process.env.SEO_MISSING_SITE_ID || '999999999'
 const missingGameId = args['missing-game-id'] || process.env.SEO_MISSING_GAME_ID || '999999999'
+const siteGroupId = args['site-group-id'] || process.env.SEO_SITE_GROUP_ID || ''
 const failureMode = args.mode === 'failure' || process.env.SEO_EXPECT_UPSTREAM_FAILURES === '1'
 
 if (failureMode) {
+  await expectNotFound('/site/abc')
+  await expectNotFound('/games/abc')
   await expectStatus(`/site/${siteId}`, 503)
   await expectStatus(`/games/${gameId}`, 503)
   await expectStatus('/sitemap.xml', 503)
@@ -31,8 +35,18 @@ for (const route of [`/en/site/${siteId}`, `/en/site/${siteId}?domain=${encodeUR
 
 await expectStatus(`/games/${gameId}`, 200, 'text/html', 'game-detail-page')
 await expectStatus(`/site/${siteId}`, 200, 'text/html', 'site-detail-page')
+await expectNotFound('/games/abc')
+await expectNotFound('/site/abc')
+await expectNotFound(`/site/${siteId}?domain=${encodeURIComponent(invalidSiteDomain)}`)
 await expectNotFound(`/games/${missingGameId}`)
 await expectNotFound(`/site/${missingSiteId}`)
+for (const route of ['/games/prize', '/en/games/prize', '/games/prize/activation', '/en/games/prize/activation']) {
+  await expectPrizeNoIndex(route)
+}
+if (siteGroupId) {
+  await expectSiteGroupSeo(`/site-groups/${encodeURIComponent(siteGroupId)}`)
+  await expectSiteGroupSeo(`/en/site-groups/${encodeURIComponent(siteGroupId)}`)
+}
 await expectStatus('/steam', 404)
 await expectStatus('/en/steam', 404)
 
@@ -94,6 +108,23 @@ async function expectNotFound(route) {
     || /<meta[^>]+content=["']noindex, nofollow["'][^>]+name=["']robots["']/i.test(html), `${route} 404 HTML is missing noindex, nofollow`)
 }
 
+async function expectPrizeNoIndex(route) {
+  const response = await request(route)
+  assert(response.status === 200, `${route} expected HTTP 200, received ${response.status}`)
+  const robots = response.headers.get('x-robots-tag') || ''
+  assert(robots.toLowerCase().includes('noindex') && robots.toLowerCase().includes('follow'), `${route} returned X-Robots-Tag: ${robots || '[missing]'}`)
+}
+
+async function expectSiteGroupSeo(route) {
+  const response = await request(route)
+  const html = await response.text()
+  assert(response.status === 200, `${route} expected HTTP 200, received ${response.status}`)
+  const title = html.match(/<title>(.*?)<\/title>/i)?.[1] || ''
+  const description = parseMeta(html).find(meta => meta.name === 'description')?.content || ''
+  assert(title && !title.includes('发现兽人文化相关资源与社区'), `${route} retained the default home title`)
+  assert(description && !description.includes('GoFurry is a bilingual Furry navigation hub'), `${route} retained the default site description`)
+}
+
 async function expectStatus(route, expectedStatus, expectedContentType = '', bodyMarker = '') {
   const response = await request(route)
   const body = await response.text()
@@ -115,6 +146,16 @@ function request(path, options = {}) {
 
 function parseLinks(html) {
   return Array.from(html.matchAll(/<link\b[^>]*>/gi), ([tag]) => {
+    const attributes = {}
+    for (const [, name, value] of tag.matchAll(/([\w:-]+)=["']([^"']*)["']/g)) {
+      attributes[name.toLowerCase()] = value
+    }
+    return attributes
+  })
+}
+
+function parseMeta(html) {
+  return Array.from(html.matchAll(/<meta\b[^>]*>/gi), ([tag]) => {
     const attributes = {}
     for (const [, name, value] of tag.matchAll(/([\w:-]+)=["']([^"']*)["']/g)) {
       attributes[name.toLowerCase()] = value

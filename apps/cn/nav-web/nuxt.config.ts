@@ -192,7 +192,22 @@ export default defineNuxtConfig({
     '/insights/**': { ssr: true },
     '/updates': { ssr: true },
     '/games/search': { ssr: false },
-    '/games/prize/**': { ssr: false },
+    '/games/prize': {
+      ssr: false,
+      headers: { 'X-Robots-Tag': 'noindex, follow' }
+    },
+    '/games/prize/**': {
+      ssr: false,
+      headers: { 'X-Robots-Tag': 'noindex, follow' }
+    },
+    '/en/games/prize': {
+      ssr: false,
+      headers: { 'X-Robots-Tag': 'noindex, follow' }
+    },
+    '/en/games/prize/**': {
+      ssr: false,
+      headers: { 'X-Robots-Tag': 'noindex, follow' }
+    },
     '/user/**': { ssr: false },
     '/settings/**': { ssr: false }
   },

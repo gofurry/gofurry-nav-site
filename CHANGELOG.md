@@ -8,6 +8,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Close the remaining SEO recovery edge cases with strict invalid-entity 404 semantics, CI recovery guards, unique Site Group metadata, Prize noindex headers, and removal of the retired Steam-page performance scenario.
 - Consolidate public Site entity SEO identity on `/site/:id`, permanently redirect legacy Site detail aliases, and keep target selection as a non-canonical query view.
 - Return real 404/503 semantics for authoritative Site/Game detail failures instead of indexable HTTP 200 error shells.
 - Make sitemap generation fail closed on inventory errors and publish canonical entity URLs only.
