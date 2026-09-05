@@ -96,20 +96,23 @@ async function renderChart() {
     if (!current || current.key !== key || !consecutive) { current = { key, indexes: [] }; segments.push(current) }
     current.indexes.push(index)
   })
+  const unavailablePoints = props.points.map((point) => {
+    if (publicPriceDisplay(point).kind !== 'unavailable') return null
+    return { value: 0, point }
+  })
 
   chart.value.setOption({
     animation: false,
     grid: { top: 20, right: 18, bottom: 48, left: 62 },
     tooltip: {
-      trigger: 'axis',
+      trigger: 'item',
       confine: true,
       backgroundColor: colors.tooltip,
       borderColor: colors.border,
       textStyle: { color: colors.text },
-      formatter(params: Array<{ axisValue?: string, data?: { value: number | null, point: GameInsightPricePoint } | null }>) {
-        const entry = params.find(item => item.data?.point)?.data
-        const axisDate = params.find(item => item.axisValue)?.axisValue
-        const point = entry?.point ?? props.points.find(item => item.date === axisDate)
+      formatter(params: { data?: { value: number | null, point: GameInsightPricePoint } | null } | Array<{ data?: { value: number | null, point: GameInsightPricePoint } | null }>) {
+        const entries = Array.isArray(params) ? params : [params]
+        const point = entries.find(item => item.data?.point)?.data?.point
         return point ? [point.date, ...pointLines(point)].join('<br/>') : ''
       },
     },
@@ -127,20 +130,30 @@ async function renderChart() {
       axisLabel: { color: colors.axis },
       splitLine: { lineStyle: { color: colors.split } },
     },
-    series: segments.map(segment => ({
-      type: 'line',
-      data: props.points.map((point, index) => {
-        if (!segment.indexes.includes(index)) return null
-        const display = publicPriceDisplay(point)
-        return { value: display.kind === 'priced' ? display.amount / 100 : 0, point }
-      }),
-      connectNulls: false,
-      symbol: 'circle',
-      symbolSize: 6,
-      showSymbol: props.points.length <= 31,
-      lineStyle: { width: 3, color: colors.line },
-      itemStyle: { color: colors.line },
-    })),
+    series: [
+      ...segments.map(segment => ({
+        type: 'line',
+        data: props.points.map((point, index) => {
+          if (!segment.indexes.includes(index)) return null
+          const display = publicPriceDisplay(point)
+          return { value: display.kind === 'priced' ? display.amount / 100 : 0, point }
+        }),
+        connectNulls: false,
+        symbol: 'circle',
+        symbolSize: props.points.length <= 31 ? 6 : 3,
+        showSymbol: true,
+        lineStyle: { width: 3, color: colors.line },
+        itemStyle: { color: colors.line },
+      })),
+      {
+        type: 'scatter',
+        data: unavailablePoints,
+        symbol: 'emptyCircle',
+        symbolSize: 7,
+        clip: false,
+        itemStyle: { color: colors.axis },
+      },
+    ],
   }, true)
 }
 

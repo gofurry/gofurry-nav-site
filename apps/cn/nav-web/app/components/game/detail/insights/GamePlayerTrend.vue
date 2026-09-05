@@ -79,13 +79,14 @@ async function renderChart() {
       data: [t('insights.entity.dailyPeak'), t('insights.entity.dailyAverage')],
     },
     tooltip: {
-      trigger: 'axis',
+      trigger: 'item',
       confine: true,
       backgroundColor: colors.tooltip,
       borderColor: colors.border,
       textStyle: { color: colors.text },
-      formatter(params: Array<{ data?: { value: number | null, point: GameInsightPlayerPoint } }>) {
-        const point = params.find(item => item.data?.point)?.data?.point
+      formatter(params: { data?: { value: number | null, point: GameInsightPlayerPoint } } | Array<{ data?: { value: number | null, point: GameInsightPlayerPoint } }>) {
+        const entries = Array.isArray(params) ? params : [params]
+        const point = entries.find(item => item.data?.point)?.data?.point
         if (!point) return ''
         const average = point.avg === null ? t('insights.entity.dataUnavailable') : new Intl.NumberFormat(locale.value).format(point.avg)
         return `${point.date}<br/>${t('insights.entity.playerTooltipPeak')}: ${new Intl.NumberFormat(locale.value).format(point.max)}<br/>${t('insights.entity.playerTooltipAverage')}: ${average}`
@@ -113,8 +114,8 @@ async function renderChart() {
         data: peakSeries,
         connectNulls: false,
         symbol: 'circle',
-        symbolSize: 6,
-        showSymbol: props.points.length <= 31,
+        symbolSize: props.points.length <= 31 ? 6 : 3,
+        showSymbol: true,
         lineStyle: { width: 3, color: colors.peak },
         itemStyle: { color: colors.peak },
         areaStyle: { color: colors.area },
@@ -125,8 +126,8 @@ async function renderChart() {
         data: averageSeries,
         connectNulls: false,
         symbol: 'circle',
-        symbolSize: 5,
-        showSymbol: props.points.length <= 31,
+        symbolSize: props.points.length <= 31 ? 5 : 2,
+        showSymbol: true,
         lineStyle: { width: 2, color: colors.average },
         itemStyle: { color: colors.average },
       },

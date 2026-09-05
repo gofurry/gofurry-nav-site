@@ -100,7 +100,7 @@ const insightsStyles = readFileSync(new URL('../app/assets/styles/pages/insights
 assert(gameTabSource.includes('<GameInsightsOverview') && gameTabSource.includes('<GameInsightsTimeline'), 'Game detail lost its dedicated overview or timeline')
 assert(!gameTabSource.includes('gameEyebrow') && !gameTabSource.includes('gameDescription'), 'retired Game ecosystem explanatory chrome returned')
 assert(playerTrendSource.includes("dailyPeak") && playerTrendSource.includes("dailyAverage") && playerTrendSource.includes('point.avg'), 'player history lost its peak/average dual-series contract')
-assert(priceHistorySource.includes('params.find(item => item.data?.point)'), 'segmented price tooltip stopped selecting the real point entry')
+assert(priceHistorySource.includes('entries.find(item => item.data?.point)'), 'segmented price tooltip stopped selecting the real point entry')
 assert(gameTimelineSource.includes('v-for="(item, index) in orderedItems"') && !gameTimelineSource.includes('.reverse('), 'Game timeline changed DOM order to create its visual path')
 assert(insightsStyles.includes('grid-template-columns: repeat(3, minmax(0, 1fr))') && insightsStyles.includes("[data-connector='left']"), 'Game compact timeline lost its three-column serpentine layout')
 assert(existsSync(new URL('../app/components/experimental/ambient/GoFurryGridBackground.vue', import.meta.url))
