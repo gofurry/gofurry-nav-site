@@ -84,17 +84,7 @@
                 rel="noopener noreferrer"
                 :aria-label="t(item.labelKey)"
             >
-              <component
-                  :is="item.iconComponent"
-                  v-if="item.iconComponent"
-                  :size="24"
-                  weight="regular"
-                  aria-hidden="true"
-                  class="gf-footer__social-icon h-6 w-6 text-slate-500 dark:text-slate-400"
-                  :class="item.hoverClass"
-              />
               <img
-                  v-else
                   :src="item.icon"
                   :alt="t(item.labelKey)"
                   class="gf-footer__social-icon h-6 w-6"
@@ -143,11 +133,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, type Component } from 'vue'
-import { PhBracketsCurly, PhChatCircleDots, PhCompass, PhGithubLogo, PhInfo, PhXLogo } from '@phosphor-icons/vue'
+import { computed } from 'vue'
+import { PhBracketsCurly, PhChatCircleDots, PhCompass, PhInfo } from '@phosphor-icons/vue'
 import { useI18n } from 'vue-i18n'
 import bilibiliIcon from '@/assets/icons/bilibili.svg'
 import weiboIcon from '@/assets/icons/weibo.svg'
+import githubIcon from '@/assets/icons/github.svg'
+import twitterIcon from '@/assets/icons/twitter.svg'
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -164,8 +156,7 @@ interface FeedbackLink {
   key: string
   href: string
   labelKey: string
-  icon?: string
-  iconComponent?: Component
+  icon: string
   hoverClass: string
 }
 
@@ -188,14 +179,14 @@ const feedbackLinks: FeedbackLink[] = [
     key: 'github',
     href: 'https://github.com/gofurry',
     labelKey: 'footer.links.github',
-    iconComponent: PhGithubLogo,
+    icon: githubIcon,
     hoverClass: 'hover:drop-shadow-[0_0_6px_rgb(56,189,248)]'
   },
   {
     key: 'twitter',
     href: 'https://x.com/InLoveWithCharr',
     labelKey: 'footer.links.twitter',
-    iconComponent: PhXLogo,
+    icon: twitterIcon,
     hoverClass: 'hover:drop-shadow-[0_0_6px_rgb(29,155,240)]'
   },
 ]

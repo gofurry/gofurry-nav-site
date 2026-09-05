@@ -103,8 +103,8 @@
             :aria-label="t(mobileMenuOpen ? 'navbar.closeNav' : 'navbar.expandNav')"
             @click.stop="mobileMenuOpen = !mobileMenuOpen"
         >
-          <PhList v-if="!mobileMenuOpen" :size="20" weight="regular" aria-hidden="true" />
-          <PhX v-else :size="20" weight="regular" aria-hidden="true" />
+          <PhCaretDown v-if="!mobileMenuOpen" :size="18" weight="regular" aria-hidden="true" />
+          <PhCaretUp v-else :size="18" weight="regular" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -184,7 +184,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { PhGearSix, PhList, PhMoon, PhSun, PhX } from '@phosphor-icons/vue'
+import { PhCaretDown, PhCaretUp, PhGearSix, PhMoon, PhSun } from '@phosphor-icons/vue'
 import { useThemeStore } from '@/stores/theme'
 import { useI18n } from 'vue-i18n'
 import cnFlag from '@/assets/flags/cn.svg'
