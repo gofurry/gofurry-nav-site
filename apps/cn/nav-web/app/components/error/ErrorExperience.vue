@@ -29,19 +29,19 @@
     </div>
 
     <div class="error-page__content">
-      <p class="error-page__code error-page__step" style="--delay: 850ms">{{ statusCode }}</p>
-      <h1 id="error-title" class="error-page__title error-page__step" style="--delay: 1030ms">
+      <p class="error-page__code error-page__step" style="--delay: 1350ms">{{ statusCode }}</p>
+      <h1 id="error-title" class="error-page__title error-page__step" style="--delay: 1650ms">
         {{ t(`errorPage.${variant}.title`) }}
       </h1>
       <p class="error-page__copy">
-        <span class="error-page__line1 error-page__step" style="--delay: 1210ms">
+        <span class="error-page__line1 error-page__step" style="--delay: 1950ms">
           {{ t(`errorPage.${variant}.line1`) }}
         </span>
-        <span class="error-page__line2 error-page__step" style="--delay: 1370ms">
+        <span class="error-page__line2 error-page__step" style="--delay: 2200ms">
           {{ t(`errorPage.${variant}.line2`) }}
         </span>
       </p>
-      <div class="error-page__actions error-page__step" style="--delay: 1580ms">
+      <div class="error-page__actions error-page__step" style="--delay: 2550ms">
         <button
           class="gf-button gf-button--primary"
           type="button"
@@ -188,7 +188,7 @@ onBeforeUnmount(() => {
 }
 
 .error-page__image.is-entering {
-  animation: error-art-enter 820ms cubic-bezier(.22, 1, .36, 1) both;
+  animation: error-art-enter 1800ms cubic-bezier(.65, 0, .35, 1) both;
 }
 
 .error-page__content { width: min(100%, 560px); }
@@ -247,7 +247,7 @@ onBeforeUnmount(() => {
 
 .error-page__step { opacity: 0; }
 .has-entered .error-page__step {
-  animation: error-content-enter 420ms cubic-bezier(.22, 1, .36, 1) var(--delay) both;
+  animation: error-content-enter 650ms cubic-bezier(.22, 1, .36, 1) var(--delay) both;
 }
 .error-page__actions:focus-within {
   opacity: 1 !important;
@@ -255,7 +255,7 @@ onBeforeUnmount(() => {
 }
 
 @keyframes error-art-enter {
-  from { opacity: .72; filter: blur(10px); }
+  from { opacity: .58; filter: blur(16px); }
   to { opacity: 1; filter: blur(0); }
 }
 @keyframes error-content-enter {
