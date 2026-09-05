@@ -1,8 +1,8 @@
 import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { cn } from '../../lib/utils'
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(({ className, ...props }, ref) => (
-  <input ref={ref} className={cn('h-9 w-full rounded-md border bg-surface px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring disabled:opacity-60', className)} {...props} />
+export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(({ className, autoComplete = 'off', ...props }, ref) => (
+  <input ref={ref} autoComplete={autoComplete} className={cn('h-9 w-full rounded-md border bg-surface px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring disabled:opacity-60', className)} {...props} />
 ))
 Input.displayName = 'Input'
 

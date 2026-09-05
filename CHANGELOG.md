@@ -13,6 +13,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Prevent browser history autocomplete from covering Admin search, filter, and remote-option input experiences.
 - Align the Site detail background with the public shell, refine the responsive navigation toggle, initialize Admin datetime drafts from local time, and close Sheet footers cleanly at the viewport edge.
 - Close the remaining SEO recovery edge cases with strict invalid-entity 404 semantics, CI recovery guards, unique Site Group metadata, Prize noindex headers, and removal of the retired Steam-page performance scenario.
 - Consolidate public Site entity SEO identity on `/site/:id`, permanently redirect legacy Site detail aliases, and keep target selection as a non-canonical query view.

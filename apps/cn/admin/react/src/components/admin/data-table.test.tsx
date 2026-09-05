@@ -43,6 +43,7 @@ describe('DataTable column visibility menu', () => {
     />)
 
     const search = screen.getByRole('textbox', { name: '搜索列表' })
+    expect(search).toHaveAttribute('autocomplete', 'off')
     expect(search.closest('label')).toHaveClass('relative', 'block')
     expect(search.closest('label')?.querySelector('span.invisible[aria-hidden="true"]')).toBeNull()
   })

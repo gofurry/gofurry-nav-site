@@ -37,7 +37,9 @@ describe('Resource Engine remote options', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(<QueryClientProvider client={client}><RemoteSelect endpoint="/api/v1/options/games" value="" onChange={() => undefined} /></QueryClientProvider>)
     await waitFor(() => expect(listJSON).toHaveBeenCalledWith('/api/v1/options/games', 1, 50, ''))
-    await userEvent.type(screen.getByPlaceholderText('搜索远程选项…'), 'steam')
+    const combobox = screen.getByPlaceholderText('搜索远程选项…')
+    expect(combobox).toHaveAttribute('autocomplete', 'off')
+    await userEvent.type(combobox, 'steam')
     await waitFor(() => expect(listJSON).toHaveBeenLastCalledWith('/api/v1/options/games', 1, 50, 'steam'))
   })
 
