@@ -257,6 +257,29 @@ func TestInsightValidationAndExactDelta(t *testing.T) {
 	}
 }
 
+func TestParseInsightRange(t *testing.T) {
+	tests := map[string]int32{
+		"30d":  30,
+		"90d":  90,
+		"180d": 180,
+		"1y":   365,
+		"3y":   1095,
+		"5y":   1825,
+		"all":  0,
+	}
+	for input, want := range tests {
+		t.Run(input, func(t *testing.T) {
+			got, ok := parseInsightRange(input)
+			if !ok || got != want {
+				t.Fatalf("parseInsightRange(%q) = %d, %v; want %d, true", input, got, ok, want)
+			}
+		})
+	}
+	if got, ok := parseInsightRange("7d"); ok || got != 0 {
+		t.Fatalf("parseInsightRange(7d) = %d, %v; want 0, false", got, ok)
+	}
+}
+
 func TestInsightDimensionsUseGlobalHorizonNullMathAndDeletedTagFallback(t *testing.T) {
 	horizon := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
 	store := &fakeInsightsStore{

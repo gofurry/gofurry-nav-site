@@ -405,12 +405,12 @@ try {
       }),
     })
   })
-  const playerRequests = { '30d': 0, '90d': 0, all: 0 }
+  const playerRequests = { '30d': 0, '90d': 0, '180d': 0, '1y': 0, '3y': 0, '5y': 0 }
   const priceRequests = {}
   await page.route('**/api/v2/game/games/*/insights/players**', (route) => {
     const range = new URL(route.request().url()).searchParams.get('range') || '30d'
     playerRequests[range] += 1
-    if (range === 'all') return route.abort('failed')
+    if (range === '5y') return route.abort('failed')
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -498,8 +498,8 @@ try {
   await page.locator('[data-game-insights-range="30d"]').click()
   await page.waitForTimeout(250)
   assert(playerRequests['30d'] === 1 && priceRequests['CN:30d'] === 1, 'returning to cached 30d repeated history requests')
-  await page.locator('[data-game-insights-range="all"]').click()
-  await page.waitForSelector('[data-game-insights][data-price-loaded-ranges*="all"]')
+  await page.locator('[data-game-insights-range="5y"]').click()
+  await page.waitForSelector('[data-game-insights][data-price-loaded-ranges*="5y"]')
   await page.locator('[data-player-history]').getByText('生态观测数据暂不可用', { exact: true }).waitFor()
   assert(await page.locator('[data-price-history] .game-insights-chart--visible').count() === 1, 'player failure prevented price history from rendering')
   console.log('[insights] Game zero, priced-zero, lazy range cache, and partial failures passed')

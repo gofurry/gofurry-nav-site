@@ -31,6 +31,7 @@ import type {
   GameInsightMetricKey,
   GameInsightPlayerHistory,
   GameInsightPriceHistory,
+  GameInsightHistoryRange,
   GameInsightRegion,
   GameInsights,
   GameCompare,
@@ -189,11 +190,11 @@ export function getGameInsights(gameId: string | number): Promise<GameInsights> 
   return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights`)
 }
 
-export function getGameInsightPlayers(gameId: string | number, range: InsightRange): Promise<GameInsightPlayerHistory> {
+export function getGameInsightPlayers(gameId: string | number, range: GameInsightHistoryRange): Promise<GameInsightPlayerHistory> {
   return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights/players`, { query: { range } })
 }
 
-export function getGameInsightPrices(gameId: string | number, region: GameInsightRegion, range: InsightRange): Promise<GameInsightPriceHistory> {
+export function getGameInsightPrices(gameId: string | number, region: GameInsightRegion, range: GameInsightHistoryRange): Promise<GameInsightPriceHistory> {
   return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights/prices`, { query: { region, range } })
 }
 

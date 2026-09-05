@@ -1,7 +1,7 @@
 <template>
   <section class="game-insights-timeline" data-entity-timeline :data-timeline-mode="mode">
     <div class="game-insights-section-heading">
-      <h3>{{ $t('insights.entity.timelineTitle') }}</h3>
+      <h3>{{ $t('insights.entity.gameTimelineTitle') }}</h3>
       <div class="game-insights-timeline__modes" :aria-label="$t('insights.entity.timelineView')">
         <button
           v-for="option in modes"

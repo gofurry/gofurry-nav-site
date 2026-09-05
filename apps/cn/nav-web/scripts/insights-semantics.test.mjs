@@ -4,6 +4,7 @@ import { formatInsightChangeWhen, insightChangeOrder } from '../app/utils/insigh
 import { formatCnyMinorAmount, formatMinorAmount, priceSegmentKey, publicPriceDisplay } from '../app/utils/insightPrices.ts'
 import { formatInsightRatio, normalizeInsightSlice } from '../app/utils/insightDimensions.ts'
 import { insightCompareReady, parseInsightCompareIDs } from '../app/utils/insightCompare.ts'
+import { formatGameInsightAxisDate, gameDetailInsightRanges } from '../app/utils/insightHistoryRanges.ts'
 import { steamSharedAssetCandidates } from '../app/utils/steamAssets.ts'
 
 const freePoint = {
@@ -47,6 +48,10 @@ assert(normalizeInsightSlice('public_interest', 'false') === null, 'internal boo
 assert(normalizeInsightSlice('tag', '123') === '123' && normalizeInsightSlice('tag', '0') === null, 'tag slice identity validation failed')
 assert(formatInsightRatio(null) === '—', 'zero denominator was rendered as 0%')
 assert(formatInsightRatio(0) === '0.0%', 'a real zero metric was rendered as unavailable')
+assert(gameDetailInsightRanges.join(',') === '30d,90d,180d,1y,3y,5y', 'Game detail history ranges drifted or exposed all')
+assert(formatGameInsightAxisDate('2026-09-05', '30d') === '09-05', 'short Game history date label was not compact')
+assert(formatGameInsightAxisDate('2026-09-05', '1y') === '2026-09', 'one-year Game history date label lost its month')
+assert(formatGameInsightAxisDate('2026-09-05', '5y') === '2026-09', 'long Game history date label lost its month')
 
 const compareIDs = parseInsightCompareIDs('37,12,37,48')
 assert(compareIDs?.join(',') === '37,12,48', 'Compare IDs did not preserve first appearance while deduplicating')
@@ -101,6 +106,8 @@ assert(gameTabSource.includes('<GameInsightsOverview') && gameTabSource.includes
 assert(!gameTabSource.includes('gameEyebrow') && !gameTabSource.includes('gameDescription'), 'retired Game ecosystem explanatory chrome returned')
 assert(playerTrendSource.includes("dailyPeak") && playerTrendSource.includes("dailyAverage") && playerTrendSource.includes('point.avg'), 'player history lost its peak/average dual-series contract')
 assert(priceHistorySource.includes('entries.find(item => item.data?.point)'), 'segmented price tooltip stopped selecting the real point entry')
+assert(playerTrendSource.includes("trigger: 'axis'") && priceHistorySource.includes("trigger: 'axis'"), 'long Game history lost axis hover tooltips')
+assert(playerTrendSource.includes('showSymbol: props.points.length <= 31') && priceHistorySource.includes('showSymbol: props.points.length <= 31'), 'long Game history restored persistent point symbols')
 assert(gameTimelineSource.includes('v-for="(item, index) in orderedItems"') && !gameTimelineSource.includes('.reverse('), 'Game timeline changed DOM order to create its visual path')
 assert(insightsStyles.includes('grid-template-columns: repeat(3, minmax(0, 1fr))') && insightsStyles.includes("[data-connector='left']"), 'Game compact timeline lost its three-column serpentine layout')
 assert(existsSync(new URL('../app/components/experimental/ambient/GoFurryGridBackground.vue', import.meta.url))

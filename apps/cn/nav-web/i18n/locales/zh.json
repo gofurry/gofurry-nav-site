@@ -654,6 +654,10 @@
       "7d": "7 天",
       "30d": "30 天",
       "90d": "90 天",
+      "180d": "180 天",
+      "1y": "1 年",
+      "3y": "3 年",
+      "5y": "5 年",
       "all": "全部"
     },
     "changes": {
@@ -802,6 +806,7 @@
       "sameDayAsOf": "同日统计 · {date}",
       "timelineEyebrow": "SEMANTIC CHANGES",
       "timelineTitle": "实体变化时间线",
+      "gameTimelineTitle": "近期变化",
       "historyRange": "时间范围",
       "dailyMaximum": "每日最高值",
       "playerTrend": "玩家趋势",

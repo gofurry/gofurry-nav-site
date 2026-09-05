@@ -652,8 +652,12 @@
     },
     "ranges": {
       "7d": "7 days",
-      "30d": "30 days",
-      "90d": "90 days",
+      "30d": "30 Days",
+      "90d": "90 Days",
+      "180d": "180 Days",
+      "1y": "1 Year",
+      "3y": "3 Years",
+      "5y": "5 Years",
       "all": "All"
     },
     "changes": {
@@ -802,6 +806,7 @@
       "sameDayAsOf": "Same-day statistics · {date}",
       "timelineEyebrow": "SEMANTIC CHANGES",
       "timelineTitle": "Entity change timeline",
+      "gameTimelineTitle": "Recent Changes",
       "historyRange": "Time range",
       "dailyMaximum": "Daily maximum",
       "playerTrend": "Player trend",

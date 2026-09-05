@@ -57,6 +57,7 @@
       <div class="game-insights-history-grid">
         <GamePlayerTrend
           :points="displayedPlayers?.points ?? []"
+          :range="selectedRange"
           :loading="playerLoading[selectedRange]"
           :unavailable="playerFailed[selectedRange]"
           @retry="loadPlayers(selectedRange, true)"
@@ -64,6 +65,7 @@
         <GamePriceHistory
           :points="displayedPrices?.points ?? []"
           :region="selectedRegion"
+          :range="selectedRange"
           :loading="priceLoading[priceKey(selectedRegion, selectedRange)]"
           :unavailable="priceFailed[priceKey(selectedRegion, selectedRange)]"
           @retry="loadPrices(selectedRegion, selectedRange, true)"
@@ -85,9 +87,10 @@ import GameInsightsTimeline from '@/components/game/detail/insights/GameInsights
 import GamePlayerTrend from '@/components/game/detail/insights/GamePlayerTrend.vue'
 import GamePriceHistory from '@/components/game/detail/insights/GamePriceHistory.vue'
 import { getGameInsightPlayers, getGameInsightPrices } from '@/services/game'
-import type { GameInsightPlayerHistory, GameInsightPriceHistory, GameInsightRegion, GameInsights, InsightRange } from '@/types/insights'
+import type { GameDetailInsightRange, GameInsightPlayerHistory, GameInsightPriceHistory, GameInsightRegion, GameInsights } from '@/types/insights'
+import { gameDetailInsightRanges } from '@/utils/insightHistoryRanges'
 
-type LoadingState = Record<InsightRange, boolean>
+type LoadingState = Record<GameDetailInsightRange, boolean>
 type FailedState = Record<string, boolean>
 
 const props = defineProps<{
@@ -97,11 +100,11 @@ const props = defineProps<{
 }>()
 
 const localePath = useLocalePath()
-const ranges: InsightRange[] = ['30d', '90d', 'all']
+const ranges = gameDetailInsightRanges
 const regions: GameInsightRegion[] = ['CN', 'US', 'HK']
-const selectedRange = ref<InsightRange>('30d')
+const selectedRange = ref<GameDetailInsightRange>('30d')
 const selectedRegion = ref<GameInsightRegion>('CN')
-const playerCache = ref<Partial<Record<InsightRange, GameInsightPlayerHistory>>>({})
+const playerCache = ref<Partial<Record<GameDetailInsightRange, GameInsightPlayerHistory>>>({})
 const priceCache = ref<Record<string, GameInsightPriceHistory>>({})
 const playerLoading = ref<LoadingState>(emptyFlags())
 const priceLoading = ref<FailedState>(emptyPriceFlags())
@@ -117,13 +120,13 @@ const playerLoadedRanges = computed(() => ranges.filter(range => playerCache.val
 const priceLoadedRanges = computed(() => Object.keys(priceCache.value).join(','))
 
 function emptyFlags(): LoadingState {
-  return { '30d': false, '90d': false, all: false }
+  return { '30d': false, '90d': false, '180d': false, '1y': false, '3y': false, '5y': false }
 }
 
 function emptyPriceFlags(): FailedState { return {} }
-function priceKey(region: GameInsightRegion, range: InsightRange) { return `${region}:${range}` }
+function priceKey(region: GameInsightRegion, range: GameDetailInsightRange) { return `${region}:${range}` }
 
-function selectRange(range: InsightRange) {
+function selectRange(range: GameDetailInsightRange) {
   if (range === selectedRange.value) return
   selectedRange.value = range
   void loadRange(range)
@@ -135,7 +138,7 @@ function selectRegion(region: GameInsightRegion) {
   void loadPrices(region, selectedRange.value)
 }
 
-async function loadPlayers(range: InsightRange, force = false) {
+async function loadPlayers(range: GameDetailInsightRange, force = false) {
   if ((!force && playerCache.value[range]) || playerLoading.value[range]) return
   const requestGeneration = generation
   const requestGameId = props.gameId
@@ -153,7 +156,7 @@ async function loadPlayers(range: InsightRange, force = false) {
   }
 }
 
-async function loadPrices(region: GameInsightRegion, range: InsightRange, force = false) {
+async function loadPrices(region: GameInsightRegion, range: GameDetailInsightRange, force = false) {
   const key = priceKey(region, range)
   if ((!force && priceCache.value[key]) || priceLoading.value[key]) return
   const requestGeneration = generation
@@ -172,7 +175,7 @@ async function loadPrices(region: GameInsightRegion, range: InsightRange, force 
   }
 }
 
-async function loadRange(range: InsightRange) {
+async function loadRange(range: GameDetailInsightRange) {
   await Promise.allSettled([loadPlayers(range), loadPrices(selectedRegion.value, range)])
 }
 

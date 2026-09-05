@@ -97,7 +97,7 @@
 
         <button
             type="button"
-            class="gf-nav__mobile-toggle inline-flex h-10 w-10 items-center justify-center xl:hidden"
+            class="gf-nav__mobile-toggle inline-flex h-10 w-10 items-center justify-center rounded-lg xl:hidden"
             :class="{ 'gf-nav__mobile-toggle--open': mobileMenuOpen }"
             :aria-expanded="mobileMenuOpen"
             :aria-label="t(mobileMenuOpen ? 'navbar.closeNav' : 'navbar.expandNav')"

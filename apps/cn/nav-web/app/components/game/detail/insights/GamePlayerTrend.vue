@@ -27,12 +27,14 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { GameInsightPlayerPoint } from '@/types/insights'
+import type { GameDetailInsightRange, GameInsightPlayerPoint } from '@/types/insights'
+import { formatGameInsightAxisDate } from '@/utils/insightHistoryRanges'
 
 type EChartsInstance = import('echarts').ECharts
 
 const props = defineProps<{
   points: GameInsightPlayerPoint[]
+  range: GameDetailInsightRange
   loading?: boolean
   unavailable?: boolean
 }>()
@@ -79,14 +81,16 @@ async function renderChart() {
       data: [t('insights.entity.dailyPeak'), t('insights.entity.dailyAverage')],
     },
     tooltip: {
-      trigger: 'item',
+      trigger: 'axis',
       confine: true,
       backgroundColor: colors.tooltip,
       borderColor: colors.border,
       textStyle: { color: colors.text },
-      formatter(params: { data?: { value: number | null, point: GameInsightPlayerPoint } } | Array<{ data?: { value: number | null, point: GameInsightPlayerPoint } }>) {
+      formatter(params: { axisValue?: string, data?: { value: number | null, point: GameInsightPlayerPoint } } | Array<{ axisValue?: string, data?: { value: number | null, point: GameInsightPlayerPoint } }>) {
         const entries = Array.isArray(params) ? params : [params]
+        const axisDate = entries.find(item => item.axisValue)?.axisValue
         const point = entries.find(item => item.data?.point)?.data?.point
+          ?? props.points.find(item => item.date === axisDate)
         if (!point) return ''
         const average = point.avg === null ? t('insights.entity.dataUnavailable') : new Intl.NumberFormat(locale.value).format(point.avg)
         return `${point.date}<br/>${t('insights.entity.playerTooltipPeak')}: ${new Intl.NumberFormat(locale.value).format(point.max)}<br/>${t('insights.entity.playerTooltipAverage')}: ${average}`
@@ -98,7 +102,12 @@ async function renderChart() {
       data: props.points.map(point => point.date),
       axisLine: { lineStyle: { color: colors.split } },
       axisTick: { show: false },
-      axisLabel: { color: colors.axis, hideOverlap: true, margin: 14 },
+      axisLabel: {
+        color: colors.axis,
+        hideOverlap: true,
+        margin: 14,
+        formatter: (value: string) => formatGameInsightAxisDate(value, props.range),
+      },
     },
     yAxis: {
       type: 'value',
@@ -114,8 +123,8 @@ async function renderChart() {
         data: peakSeries,
         connectNulls: false,
         symbol: 'circle',
-        symbolSize: props.points.length <= 31 ? 6 : 3,
-        showSymbol: true,
+        symbolSize: 6,
+        showSymbol: props.points.length <= 31,
         lineStyle: { width: 3, color: colors.peak },
         itemStyle: { color: colors.peak },
         areaStyle: { color: colors.area },
@@ -126,8 +135,8 @@ async function renderChart() {
         data: averageSeries,
         connectNulls: false,
         symbol: 'circle',
-        symbolSize: props.points.length <= 31 ? 5 : 2,
-        showSymbol: true,
+        symbolSize: 5,
+        showSymbol: props.points.length <= 31,
         lineStyle: { width: 2, color: colors.average },
         itemStyle: { color: colors.average },
       },
@@ -144,7 +153,7 @@ onMounted(async () => {
 })
 
 watch(
-  () => [props.points, props.unavailable, isDark.value, locale.value],
+  () => [props.points, props.range, props.unavailable, isDark.value, locale.value],
   async () => {
     await nextTick()
     await renderChart()

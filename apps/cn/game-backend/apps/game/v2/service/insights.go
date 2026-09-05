@@ -309,6 +309,14 @@ func parseInsightRange(value string) (int32, bool) {
 		return 30, true
 	case "90d":
 		return 90, true
+	case "180d":
+		return 180, true
+	case "1y":
+		return 365, true
+	case "3y":
+		return 1095, true
+	case "5y":
+		return 1825, true
 	case "all":
 		return 0, true
 	default:

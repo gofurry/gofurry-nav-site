@@ -27,7 +27,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { GameInsightPricePoint, GameInsightRegion } from '@/types/insights'
+import type { GameDetailInsightRange, GameInsightPricePoint, GameInsightRegion } from '@/types/insights'
+import { formatGameInsightAxisDate } from '@/utils/insightHistoryRanges'
 import { formatMinorAmount, priceSegmentKey, publicPriceDisplay } from '@/utils/insightPrices'
 
 type EChartsInstance = import('echarts').ECharts
@@ -35,6 +36,7 @@ type EChartsInstance = import('echarts').ECharts
 const props = defineProps<{
   points: GameInsightPricePoint[]
   region: GameInsightRegion
+  range: GameDetailInsightRange
   loading?: boolean
   unavailable?: boolean
 }>()
@@ -105,14 +107,16 @@ async function renderChart() {
     animation: false,
     grid: { top: 20, right: 18, bottom: 48, left: 62 },
     tooltip: {
-      trigger: 'item',
+      trigger: 'axis',
       confine: true,
       backgroundColor: colors.tooltip,
       borderColor: colors.border,
       textStyle: { color: colors.text },
-      formatter(params: { data?: { value: number | null, point: GameInsightPricePoint } | null } | Array<{ data?: { value: number | null, point: GameInsightPricePoint } | null }>) {
+      formatter(params: { axisValue?: string, data?: { value: number | null, point: GameInsightPricePoint } | null } | Array<{ axisValue?: string, data?: { value: number | null, point: GameInsightPricePoint } | null }>) {
         const entries = Array.isArray(params) ? params : [params]
+        const axisDate = entries.find(item => item.axisValue)?.axisValue
         const point = entries.find(item => item.data?.point)?.data?.point
+          ?? props.points.find(item => item.date === axisDate)
         return point ? [point.date, ...pointLines(point)].join('<br/>') : ''
       },
     },
@@ -122,7 +126,12 @@ async function renderChart() {
       data: props.points.map(point => point.date),
       axisLine: { lineStyle: { color: colors.split } },
       axisTick: { show: false },
-      axisLabel: { color: colors.axis, hideOverlap: true, margin: 14 },
+      axisLabel: {
+        color: colors.axis,
+        hideOverlap: true,
+        margin: 14,
+        formatter: (value: string) => formatGameInsightAxisDate(value, props.range),
+      },
     },
     yAxis: {
       type: 'value',
@@ -140,8 +149,8 @@ async function renderChart() {
         }),
         connectNulls: false,
         symbol: 'circle',
-        symbolSize: props.points.length <= 31 ? 6 : 3,
-        showSymbol: true,
+        symbolSize: 6,
+        showSymbol: props.points.length <= 31,
         lineStyle: { width: 3, color: colors.line },
         itemStyle: { color: colors.line },
       })),
@@ -149,7 +158,7 @@ async function renderChart() {
         type: 'scatter',
         data: unavailablePoints,
         symbol: 'emptyCircle',
-        symbolSize: 7,
+        symbolSize: props.points.length <= 31 ? 7 : 0,
         clip: false,
         itemStyle: { color: colors.axis },
       },
@@ -166,7 +175,7 @@ onMounted(async () => {
 })
 
 watch(
-  () => [props.points, props.unavailable, isDark.value, locale.value],
+  () => [props.points, props.range, props.unavailable, isDark.value, locale.value],
   async () => {
     await nextTick()
     await renderChart()
