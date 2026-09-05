@@ -6,6 +6,10 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+### Changed
+
+- Redesign the Game detail ecosystem tab around a unified player/price/state overview, dual-series player history, reliable price tooltips, and responsive compact/list change timelines.
+
 ### Fixed
 
 - Align the Site detail background with the public shell, refine the responsive navigation toggle, initialize Admin datetime drafts from local time, and close Sheet footers cleanly at the viewport edge.

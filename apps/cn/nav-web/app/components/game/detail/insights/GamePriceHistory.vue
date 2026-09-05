@@ -1,11 +1,6 @@
 <template>
   <section class="game-insights-chart-card" data-price-history>
-    <div class="entity-insights-heading">
-      <div>
-        <p class="entity-insights-eyebrow">{{ $t(`insights.regions.${region}`) }}</p>
-        <h3>{{ $t('insights.entity.priceHistory') }}</h3>
-      </div>
-    </div>
+    <h3>{{ $t('insights.entity.priceHistoryRegion', { region: $t(`insights.regions.${region}`) }) }}</h3>
 
     <div class="game-insights-chart-shell" :aria-busy="loading">
       <div ref="chartRef" class="game-insights-chart" :class="{ 'game-insights-chart--visible': points.length >= 2 && !unavailable }" />
@@ -54,11 +49,26 @@ const isDark = computed(() => themeStore.theme === 'dark')
 let resizeObserver: ResizeObserver | null = null
 let active = false
 
-function pointLabel(point: GameInsightPricePoint) {
+function pointLines(point: GameInsightPricePoint) {
   const display = publicPriceDisplay(point)
-  if (display.kind === 'free') return t('insights.entity.priceFree')
-  if (display.kind === 'priced') return `${t('insights.entity.pricePriced')}: ${point.currency ? formatMinorAmount(display.amount, point.currency, locale.value) : display.amount}`
-  return t(`insights.entity.priceStates.${point.state}`)
+  if (display.kind === 'free') {
+    return [`${t('insights.entity.currentPrice')}: ${t('insights.entity.priceFree')}`]
+  }
+  if (display.kind === 'priced') {
+    const current = point.currency ? formatMinorAmount(display.amount, point.currency, locale.value) : t('insights.entity.priceStatusUnknown')
+    const lines = [`${t('insights.entity.currentPrice')}: ${current}`]
+    if (point.initial_amount !== null && point.currency) {
+      lines.push(`${t('insights.entity.originalPriceLabel')}: ${formatMinorAmount(point.initial_amount, point.currency, locale.value)}`)
+    }
+    if (point.discount_percent !== null && point.discount_percent > 0) {
+      lines.push(`${t('insights.entity.discount')}: -${point.discount_percent}%`)
+    }
+    return lines
+  }
+  const state = point.state === 'unknown'
+    ? t('insights.entity.priceStatusUnknown')
+    : t('insights.entity.priceMissingShort')
+  return [`${t('insights.entity.priceStatus')}: ${state}`]
 }
 
 async function renderChart() {
@@ -96,9 +106,11 @@ async function renderChart() {
       backgroundColor: colors.tooltip,
       borderColor: colors.border,
       textStyle: { color: colors.text },
-      formatter(params: Array<{ data: { value: number | null, point: GameInsightPricePoint } }>) {
-        const entry = params?.[0]?.data
-        return entry ? `${entry.point.date}<br/>${pointLabel(entry.point)}` : ''
+      formatter(params: Array<{ axisValue?: string, data?: { value: number | null, point: GameInsightPricePoint } | null }>) {
+        const entry = params.find(item => item.data?.point)?.data
+        const axisDate = params.find(item => item.axisValue)?.axisValue
+        const point = entry?.point ?? props.points.find(item => item.date === axisDate)
+        return point ? [point.date, ...pointLines(point)].join('<br/>') : ''
       },
     },
     xAxis: {
