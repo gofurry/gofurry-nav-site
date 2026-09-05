@@ -87,10 +87,9 @@ html.dark .gf-nav {
   color: #ffffff;
 }
 
-.gf-nav__mode-button,
 .gf-nav__mobile-toggle {
-  border: 1px solid var(--gf-nav-control-border);
-  background: var(--gf-nav-control-bg);
+  border: 1px solid transparent;
+  background: transparent;
   color: #ffffff;
 }
 
@@ -100,6 +99,25 @@ html.dark .gf-nav {
 }
 
 .gf-nav__mode-button:hover {
+  background: var(--gf-nav-control-hover-bg);
+}
+
+.gf-nav__mobile-toggle--open {
+  border-color: var(--gf-nav-control-border);
+  border-radius: 0.5rem;
+  background: var(--gf-nav-control-bg);
+}
+
+.gf-nav__mobile-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.gf-nav__mobile-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.gf-nav__mobile-toggle--open:hover {
   background: var(--gf-nav-control-hover-bg);
 }
 

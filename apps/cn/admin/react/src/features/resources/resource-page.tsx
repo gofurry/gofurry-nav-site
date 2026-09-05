@@ -83,11 +83,10 @@ function ResourceEditor({ definition, id, open, onOpenChange }: { definition: Re
     if (!next && form.formState.isDirty && !window.confirm('存在未保存的修改，确定离开吗？')) return
     onOpenChange(next)
   }
-  return <Sheet open={open} onOpenChange={requestClose} title={id === null ? `新增${definition.title}` : `编辑${definition.title}`} description={id === null ? '填写业务字段后提交' : `记录 #${id}`}>
-    {detail.isLoading && id !== null ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />正在加载详情…</div> : <form className="grid gap-7" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>
+  return <Sheet open={open} onOpenChange={requestClose} title={id === null ? `新增${definition.title}` : `编辑${definition.title}`} description={id === null ? '填写业务字段后提交' : `记录 #${id}`} footer={<div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => requestClose(false)}>取消</Button><Button type="submit" form="resource-editor-form" disabled={(detail.isLoading && id !== null) || mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}{id === null ? '创建' : '保存修改'}</Button></div>}>
+    {detail.isLoading && id !== null ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />正在加载详情…</div> : <form id="resource-editor-form" className="grid gap-7" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>
       {operationError && <Alert tone="danger">{operationError}</Alert>}
       {groupFields(definition.fields).map((group) => <FormSection key={group.title} title={group.title}>{group.fields.map((field) => <Controller key={field.key} name={field.key} control={form.control} render={({ field: controlField, fieldState }) => <FormField label={field.label} help={field.help} error={fieldState.error?.message}><FieldControl field={field} value={controlField.value} onChange={controlField.onChange} disabled={mutation.isPending || (id !== null && field.key === 'id')} /></FormField>} />)}</FormSection>)}
-      <div className="sticky bottom-0 -mx-5 -mb-5 flex justify-end gap-2 border-t bg-surface px-5 py-4"><Button type="button" variant="secondary" onClick={() => requestClose(false)}>取消</Button><Button type="submit" disabled={mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}{id === null ? '创建' : '保存修改'}</Button></div>
     </form>}
   </Sheet>
 }

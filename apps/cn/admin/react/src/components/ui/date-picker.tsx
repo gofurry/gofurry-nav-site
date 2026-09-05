@@ -1,4 +1,5 @@
 import { Popover } from '@base-ui/react/popover'
+import { Minus, Plus } from '@phosphor-icons/react'
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { cn } from '../../lib/utils'
@@ -30,6 +31,24 @@ function localDate(value = '') {
 
 function dateValue(value: Date) {
   return [value.getFullYear(), String(value.getMonth() + 1).padStart(2, '0'), String(value.getDate()).padStart(2, '0')].join('-')
+}
+
+function dateTimeDraft(value: string, now: Date) {
+  if (datePart(value)) {
+    return { date: datePart(value), month: localDate(value), ...timePart(value) }
+  }
+
+  return {
+    date: dateValue(now),
+    month: now,
+    hour: String(now.getHours()).padStart(2, '0'),
+    minute: String(now.getMinutes()).padStart(2, '0'),
+  }
+}
+
+function adjustTimePart(value: string, offset: number, maximum: number) {
+  const adjusted = Math.min(maximum, Math.max(0, Number(value) + offset))
+  return String(adjusted).padStart(2, '0')
 }
 
 export function calendarMonthDays(month: Date) {
@@ -70,29 +89,29 @@ export function DatePicker({ value, onValueChange, placeholder = '选择日期',
   </Popover.Root>
 }
 
-export function DateTimePicker({ value, onValueChange, placeholder = '选择日期和时间', disabled, ariaLabel = '选择日期和时间' }: { value: string; onValueChange: (value: string) => void; placeholder?: string; disabled?: boolean; ariaLabel?: string }) {
-  const initialTime = timePart(value)
+export function DateTimePicker({ value, onValueChange, placeholder = '选择日期和时间', disabled, ariaLabel = '选择日期和时间', now = () => new Date() }: { value: string; onValueChange: (value: string) => void; placeholder?: string; disabled?: boolean; ariaLabel?: string; now?: () => Date }) {
+  const initialDraft = dateTimeDraft(value, now())
   const [open, setOpen] = useState(false)
-  const [month, setMonth] = useState(() => localDate(value))
-  const [draftDate, setDraftDate] = useState(() => datePart(value))
-  const [hour, setHour] = useState(initialTime.hour)
-  const [minute, setMinute] = useState(initialTime.minute)
+  const [month, setMonth] = useState(initialDraft.month)
+  const [draftDate, setDraftDate] = useState(initialDraft.date)
+  const [hour, setHour] = useState(initialDraft.hour)
+  const [minute, setMinute] = useState(initialDraft.minute)
   const display = value ? `${datePart(value)} ${timePart(value).hour}:${timePart(value).minute}` : ''
   const openPicker = (next: boolean) => {
     setOpen(next)
     if (next) {
-      const time = timePart(value)
-      setMonth(localDate(value))
-      setDraftDate(datePart(value))
-      setHour(time.hour)
-      setMinute(time.minute)
+      const draft = dateTimeDraft(value, now())
+      setMonth(draft.month)
+      setDraftDate(draft.date)
+      setHour(draft.hour)
+      setMinute(draft.minute)
     }
   }
   return <Popover.Root open={open} onOpenChange={openPicker}>
     <PickerTrigger value={display} placeholder={placeholder} icon={<Clock3 className="size-4" />} ariaLabel={ariaLabel} disabled={disabled} />
     {disabled ? null : <Popover.Portal><Popover.Positioner className="z-[90]" sideOffset={4} align="start"><Popover.Popup className="rounded-lg border bg-surface shadow-xl outline-none">
       <CalendarGrid month={month} selected={draftDate} onMonthChange={setMonth} onSelect={setDraftDate} />
-      <div className="flex items-end gap-2 border-t p-3"><label className="grid flex-1 gap-1 text-xs text-muted-foreground"><span>小时</span><Select value={hour} onValueChange={setHour} options={hourOptions} ariaLabel="小时" /></label><span className="pb-2">:</span><label className="grid flex-1 gap-1 text-xs text-muted-foreground"><span>分钟</span><Select value={minute} onValueChange={setMinute} options={minuteOptions} ariaLabel="分钟" /></label></div>
+      <div className="flex items-end gap-2 border-t p-3"><div className="grid min-w-0 flex-1 gap-1 text-xs text-muted-foreground"><span>小时</span><span className="flex items-center gap-1"><Button type="button" variant="ghost" size="icon" className="size-8 shrink-0" aria-label="小时减一" onClick={() => setHour((current) => adjustTimePart(current, -1, 23))}><Minus className="size-3.5" aria-hidden="true" /></Button><span className="min-w-0 flex-1"><Select value={hour} onValueChange={setHour} options={hourOptions} ariaLabel="小时" /></span><Button type="button" variant="ghost" size="icon" className="size-8 shrink-0" aria-label="小时加一" onClick={() => setHour((current) => adjustTimePart(current, 1, 23))}><Plus className="size-3.5" aria-hidden="true" /></Button></span></div><span className="pb-2">:</span><div className="grid min-w-0 flex-1 gap-1 text-xs text-muted-foreground"><span>分钟</span><span className="flex items-center gap-1"><Button type="button" variant="ghost" size="icon" className="size-8 shrink-0" aria-label="分钟减一" onClick={() => setMinute((current) => adjustTimePart(current, -1, 59))}><Minus className="size-3.5" aria-hidden="true" /></Button><span className="min-w-0 flex-1"><Select value={minute} onValueChange={setMinute} options={minuteOptions} ariaLabel="分钟" /></span><Button type="button" variant="ghost" size="icon" className="size-8 shrink-0" aria-label="分钟加一" onClick={() => setMinute((current) => adjustTimePart(current, 1, 59))}><Plus className="size-3.5" aria-hidden="true" /></Button></span></div></div>
       <div className="flex justify-between border-t p-2"><Button type="button" variant="ghost" size="sm" onClick={() => { onValueChange(''); setOpen(false) }}>清除</Button><Button type="button" size="sm" disabled={!draftDate} onClick={() => { onValueChange(`${draftDate}T${hour}:${minute}`); setOpen(false) }}>确定</Button></div>
     </Popover.Popup></Popover.Positioner></Popover.Portal>}
   </Popover.Root>

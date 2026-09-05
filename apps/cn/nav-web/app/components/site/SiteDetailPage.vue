@@ -567,8 +567,6 @@ function label(zh: string, en: string) {
   --accent: #fb8c2f;
   isolation: isolate;
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(255, 251, 245, 0.96) 0%, rgba(248, 240, 229, 0.96) 52%, rgba(255, 246, 234, 0.98) 100%);
 }
 
 .site-detail-page > main {
@@ -579,8 +577,6 @@ function label(zh: string, en: string) {
   --surface: rgba(15, 23, 42, 0.72);
   --surface-strong: rgba(30, 41, 59, 0.78);
   --ink-muted: #94a3b8;
-  background:
-    linear-gradient(180deg, rgba(2, 6, 23, 0.96) 0%, rgba(15, 23, 42, 0.98) 54%, rgba(12, 18, 32, 0.98) 100%);
 }
 
 .detail-section,

@@ -8,6 +8,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Align the Site detail background with the public shell, refine the responsive navigation toggle, initialize Admin datetime drafts from local time, and close Sheet footers cleanly at the viewport edge.
 - Close the remaining SEO recovery edge cases with strict invalid-entity 404 semantics, CI recovery guards, unique Site Group metadata, Prize noindex headers, and removal of the retired Steam-page performance scenario.
 - Consolidate public Site entity SEO identity on `/site/:id`, permanently redirect legacy Site detail aliases, and keep target selection as a non-canonical query view.
 - Return real 404/503 semantics for authoritative Site/Game detail failures instead of indexable HTTP 200 error shells.
