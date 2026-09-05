@@ -86,8 +86,8 @@ useHead({
 
 type Theme = 'light' | 'dark'
 const artworks: { theme: Theme; src: string }[] = [
-  { theme: 'light', src: 'https://qcdn.go-furry.com/web/404/error_16_9_light.avif' },
-  { theme: 'dark', src: 'https://qcdn.go-furry.com/web/404/error_16_9_dark.avif' },
+  { theme: 'light', src: 'https://qcdn.go-furry.com/web/404/illustration_001_16_9_light.avif' },
+  { theme: 'dark', src: 'https://qcdn.go-furry.com/web/404/illustration_001_16_9_dark.avif' },
 ]
 const artworkElements: Partial<Record<Theme, HTMLImageElement>> = {}
 const artReady = reactive<Record<Theme, boolean>>({ light: false, dark: false })
@@ -212,8 +212,9 @@ onBeforeUnmount(() => {
 
 .error-page__copy { margin: 24px 0 0; }
 .error-page__copy span { display: block; line-height: 1.7; }
-.error-page__line1 { font-size: 18px; }
-.error-page__line2 { margin-top: 3px; color: var(--error-muted); font-size: 16px; }
+.error-page__line1,
+.error-page__line2 { color: var(--error-muted); font-size: 16px; }
+.error-page__line2 { margin-top: 3px; }
 
 .error-page__actions { display: flex; gap: 12px; margin-top: 30px; }
 .error-page__actions .gf-button {
@@ -255,8 +256,8 @@ onBeforeUnmount(() => {
 }
 
 @keyframes error-art-enter {
-  from { opacity: .58; filter: blur(16px); }
-  to { opacity: 1; filter: blur(0); }
+  from { opacity: .58; }
+  to { opacity: 1; }
 }
 @keyframes error-content-enter {
   from { opacity: 0; transform: translateY(12px); }
@@ -290,7 +291,7 @@ onBeforeUnmount(() => {
   .error-page__code { font-size: 64px; }
   .error-page__title { margin-top: 18px; font-size: 28px; }
   .error-page__copy { margin-top: 18px; }
-  .error-page__line1 { font-size: 17px; }
+  .error-page__line1,
   .error-page__line2 { font-size: 15px; }
   .error-page__actions { margin-top: 24px; }
 }
