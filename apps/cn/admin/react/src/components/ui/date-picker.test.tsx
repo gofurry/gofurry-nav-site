@@ -72,6 +72,11 @@ describe('Admin form controls', () => {
     render(<DateTimePicker value="2026-09-03T08:30" onValueChange={onChange} ariaLabel="执行时间" />)
 
     await userEvent.click(screen.getByRole('button', { name: '执行时间' }))
+    await userEvent.click(screen.getByRole('combobox', { name: '小时' }))
+    const hourList = await screen.findByRole('listbox')
+    expect(hourList.parentElement).toHaveClass('z-[100]')
+    expect(hourList).toHaveClass('admin-scroll', 'max-h-[min(14rem,var(--available-height))]', 'overscroll-contain')
+    await userEvent.keyboard('{Escape}')
     await userEvent.click(screen.getByRole('button', { name: '小时加一' }))
     await userEvent.click(screen.getByRole('button', { name: '分钟减一' }))
     expect(screen.getByRole('combobox', { name: '小时' })).toHaveTextContent('09')

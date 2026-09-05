@@ -103,8 +103,8 @@
             :aria-label="t(mobileMenuOpen ? 'navbar.closeNav' : 'navbar.expandNav')"
             @click.stop="mobileMenuOpen = !mobileMenuOpen"
         >
-          <PhList v-if="!mobileMenuOpen" :size="24" weight="regular" aria-hidden="true" />
-          <PhX v-else :size="24" weight="regular" aria-hidden="true" />
+          <PhList v-if="!mobileMenuOpen" :size="20" weight="regular" aria-hidden="true" />
+          <PhX v-else :size="20" weight="regular" aria-hidden="true" />
         </button>
       </div>
     </div>

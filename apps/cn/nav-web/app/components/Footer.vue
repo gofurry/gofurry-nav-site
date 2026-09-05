@@ -4,7 +4,7 @@
       <div class="space-y-8">
         <section class="space-y-3">
           <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
-            <img :src="compassIcon" alt="" class="h-4 w-4 opacity-80" />
+            <PhCompass :size="16" weight="regular" class="opacity-80" aria-hidden="true" />
             {{ t('footer.sections.sitemap') }}
           </h3>
           <div class="flex flex-wrap gap-2">
@@ -37,7 +37,7 @@
 
         <section class="space-y-3">
           <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
-            <img :src="apiIcon" alt="" class="h-4 w-4 opacity-80" />
+            <PhBracketsCurly :size="16" weight="regular" class="opacity-80" aria-hidden="true" />
             {{ t('footer.sections.openPlatform') }}
           </h3>
           <div class="flex flex-wrap gap-2">
@@ -72,7 +72,7 @@
       <div class="space-y-8">
         <section class="space-y-3">
           <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
-            <img :src="siteIcon" alt="" class="h-4 w-4 opacity-80" />
+            <PhChatCircleDots :size="16" weight="regular" class="opacity-80" aria-hidden="true" />
             {{ t('footer.sections.feedback') }}
           </h3>
           <div class="flex items-center gap-4">
@@ -84,7 +84,17 @@
                 rel="noopener noreferrer"
                 :aria-label="t(item.labelKey)"
             >
+              <component
+                  :is="item.iconComponent"
+                  v-if="item.iconComponent"
+                  :size="24"
+                  weight="regular"
+                  aria-hidden="true"
+                  class="gf-footer__social-icon h-6 w-6 text-slate-500 dark:text-slate-400"
+                  :class="item.hoverClass"
+              />
               <img
+                  v-else
                   :src="item.icon"
                   :alt="t(item.labelKey)"
                   class="gf-footer__social-icon h-6 w-6"
@@ -96,7 +106,7 @@
 
         <section class="space-y-3">
           <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
-            <img :src="featherIcon" alt="" class="h-4 w-4 opacity-80" />
+            <PhInfo :size="16" weight="regular" class="opacity-80" aria-hidden="true" />
             {{ t('footer.sections.about') }}
           </h3>
           <div class="flex gap-2">
@@ -133,16 +143,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
+import { PhBracketsCurly, PhChatCircleDots, PhCompass, PhGithubLogo, PhInfo, PhXLogo } from '@phosphor-icons/vue'
 import { useI18n } from 'vue-i18n'
-import siteIcon from '@/assets/svgs/site.svg'
-import apiIcon from '@/assets/svgs/api.svg'
-import compassIcon from '@/assets/svgs/compass.svg'
-import featherIcon from '@/assets/svgs/feather.svg'
 import bilibiliIcon from '@/assets/icons/bilibili.svg'
 import weiboIcon from '@/assets/icons/weibo.svg'
-import githubIcon from '@/assets/icons/github.svg'
-import twitterIcon from '@/assets/icons/twitter.svg'
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -155,7 +160,16 @@ const config = useRuntimeConfig()
 const uptimeUrl = computed(() => config.public.uptimeUrl)
 const navMonitorUrl = computed(() => config.public.navMonitorUrl)
 
-const feedbackLinks = [
+interface FeedbackLink {
+  key: string
+  href: string
+  labelKey: string
+  icon?: string
+  iconComponent?: Component
+  hoverClass: string
+}
+
+const feedbackLinks: FeedbackLink[] = [
   {
     key: 'bilibili',
     href: 'https://space.bilibili.com/37124259',
@@ -174,14 +188,14 @@ const feedbackLinks = [
     key: 'github',
     href: 'https://github.com/gofurry',
     labelKey: 'footer.links.github',
-    icon: githubIcon,
+    iconComponent: PhGithubLogo,
     hoverClass: 'hover:drop-shadow-[0_0_6px_rgb(56,189,248)]'
   },
   {
     key: 'twitter',
     href: 'https://x.com/InLoveWithCharr',
     labelKey: 'footer.links.twitter',
-    icon: twitterIcon,
+    iconComponent: PhXLogo,
     hoverClass: 'hover:drop-shadow-[0_0_6px_rgb(29,155,240)]'
   },
 ]
