@@ -1,6 +1,6 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DataTable } from './data-table'
 
 afterEach(cleanup)
@@ -46,5 +46,35 @@ describe('DataTable column visibility menu', () => {
     expect(search).toHaveAttribute('autocomplete', 'off')
     expect(search.closest('label')).toHaveClass('relative', 'block')
     expect(search.closest('label')?.querySelector('span.invisible[aria-hidden="true"]')).toBeNull()
+  })
+
+  it('keeps IME composition local until the candidate is committed', () => {
+    const onSearchChange = vi.fn()
+    render(<DataTable
+      data={[]}
+      columns={[{ key: 'name', header: '名称' }]}
+      total={0}
+      page={1}
+      pageSize={20}
+      search=""
+      onSearchChange={onSearchChange}
+      onPageChange={() => undefined}
+      onPageSizeChange={() => undefined}
+    />)
+
+    const search = screen.getByRole('textbox', { name: '搜索列表' })
+    fireEvent.compositionStart(search)
+    fireEvent.change(search, { target: { value: 'long' } })
+    fireEvent.change(search, { target: { value: 'longlong' } })
+
+    expect(search).toHaveValue('longlong')
+    expect(onSearchChange).not.toHaveBeenCalled()
+
+    fireEvent.compositionEnd(search, { data: '龙', target: { value: '龙' } })
+    fireEvent.change(search, { target: { value: '龙' } })
+
+    expect(search).toHaveValue('龙')
+    expect(onSearchChange).toHaveBeenCalledOnce()
+    expect(onSearchChange).toHaveBeenCalledWith('龙')
   })
 })

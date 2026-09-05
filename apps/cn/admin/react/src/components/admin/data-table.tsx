@@ -28,6 +28,9 @@ export function DataTable<T extends object>({ data, columns, total, page, pageSi
   searchable?: boolean; searchPlaceholder?: string; toolbar?: ReactNode; title?: ReactNode; headerActions?: ReactNode
 }) {
   const searchRef = useRef<HTMLInputElement>(null)
+  const composingSearch = useRef(false)
+  const emittedSearch = useRef(search)
+  const [searchInput, setSearchInput] = useState(search)
   const [sorting, setSorting] = useState<SortingState>([])
   const [visibility, setVisibility] = useState<VisibilityState>(() => Object.fromEntries(columns.filter((column) => column.hidden).map((column) => [column.key, false])))
   const tableColumns = useMemo<ColumnDef<T>[]>(() => [
@@ -38,6 +41,11 @@ export function DataTable<T extends object>({ data, columns, total, page, pageSi
   const pageCount = Math.max(1, Math.ceil(total / pageSize))
 
   useEffect(() => {
+    emittedSearch.current = search
+    if (!composingSearch.current) setSearchInput(search)
+  }, [search])
+
+  useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (event.key === '/' && !(event.target instanceof HTMLInputElement) && !(event.target instanceof HTMLTextAreaElement)) { event.preventDefault(); searchRef.current?.focus() }
     }
@@ -45,9 +53,15 @@ export function DataTable<T extends object>({ data, columns, total, page, pageSi
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  const emitSearch = (value: string) => {
+    if (emittedSearch.current === value) return
+    emittedSearch.current = value
+    onSearchChange(value)
+  }
+
   return <div className="grid gap-3">
     <div className="flex flex-wrap items-end justify-between gap-3">
-      <div className="flex min-w-0 flex-1 flex-wrap items-end gap-2">{title && <h2 className="mr-2 self-center font-semibold">{title}</h2>}{searchable && <label className="relative block w-full max-w-md"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input ref={searchRef} className="pl-9" value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder={searchPlaceholder} aria-label="搜索列表" /></label>}{toolbar}</div>
+      <div className="flex min-w-0 flex-1 flex-wrap items-end gap-2">{title && <h2 className="mr-2 self-center font-semibold">{title}</h2>}{searchable && <label className="relative block w-full max-w-md"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input ref={searchRef} className="pl-9" value={searchInput} onCompositionStart={() => { composingSearch.current = true }} onCompositionEnd={(event) => { composingSearch.current = false; setSearchInput(event.currentTarget.value); emitSearch(event.currentTarget.value) }} onChange={(event) => { setSearchInput(event.target.value); if (!composingSearch.current) emitSearch(event.target.value) }} placeholder={searchPlaceholder} aria-label="搜索列表" /></label>}{toolbar}</div>
       <div className="flex items-center gap-2">{headerActions}<Menu.Root><Menu.Trigger render={<Button variant="secondary" />}><Columns3 className="size-4" />列<ChevronDown className="size-3.5" /></Menu.Trigger><Menu.Portal><Menu.Positioner className="z-40" align="end" sideOffset={4}><Menu.Popup className="min-w-40 rounded-md border bg-surface p-1 shadow-lg outline-none">{table.getAllLeafColumns().filter((column) => column.getCanHide()).map((column) => <Menu.CheckboxItem key={column.id} checked={column.getIsVisible()} onCheckedChange={column.toggleVisibility} className="grid cursor-default grid-cols-[1rem_minmax(0,1fr)] items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-muted"><span className="grid size-4 place-items-center"><Menu.CheckboxItemIndicator><Check className="size-4 text-primary" /></Menu.CheckboxItemIndicator></span><span>{column.columnDef.header as string}</span></Menu.CheckboxItem>)}</Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root></div>
     </div>
     {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={onRetry} /> : data.length === 0 ? <EmptyState /> : <div className="admin-scroll overflow-x-auto rounded-md border bg-surface"><table className="w-full min-w-max border-collapse text-sm"><thead className="bg-surface-muted text-left text-xs text-muted-foreground">{table.getHeaderGroups().map((group) => <tr key={group.id}>{group.headers.map((header) => <th key={header.id} className="h-10 border-b px-3 font-medium"><button type="button" className="inline-flex items-center gap-1" disabled={!header.column.getCanSort()} onClick={header.column.getToggleSortingHandler()}>{flexRender(header.column.columnDef.header, header.getContext())}{header.column.getCanSort() && <ChevronsUpDown className="size-3" />}</button></th>)}</tr>)}</thead><tbody>{table.getRowModel().rows.map((row) => <tr key={row.id} className="border-b last:border-0 hover:bg-surface-muted/70" onClick={() => onRowClick?.(row.original)}>{row.getVisibleCells().map((cell) => <td key={cell.id} className="h-12 px-3" onClick={cell.column.id === '_actions' ? (event) => event.stopPropagation() : undefined}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>)}</tr>)}</tbody></table></div>}
