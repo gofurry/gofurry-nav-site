@@ -1,4 +1,27 @@
 {
+  "errorPage": {
+    "notFound": {
+      "title": "Only the unknown lies ahead",
+      "line1": "Turn back, traveler",
+      "line2": "There’s still so much more to explore",
+      "home": "Back Home",
+      "back": "Go Back"
+    },
+    "serverError": {
+      "title": "Something unexpected happened up ahead",
+      "line1": "Hold on, traveler",
+      "line2": "The journey will continue soon",
+      "retry": "Try Again",
+      "home": "Back Home"
+    },
+    "generic": {
+      "title": "A little trouble along the way",
+      "line1": "Don’t worry, traveler",
+      "line2": "Take another path and keep exploring",
+      "home": "Back Home",
+      "back": "Go Back"
+    }
+  },
   "common": {
     "loading": "Loading...",
     "commit": "Commit",

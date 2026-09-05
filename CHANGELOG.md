@@ -8,6 +8,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Changed
 
+- Redesign the public Nuxt error experience with immersive theme-aware artwork, staged accessible transitions, localized 404/5xx copy, and dedicated recovery actions.
 - Redesign the Game detail ecosystem tab around a unified player/price/state overview, dual-series player history, reliable price tooltips, and responsive compact/list change timelines.
 
 ### Fixed

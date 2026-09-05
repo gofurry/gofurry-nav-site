@@ -1,4 +1,27 @@
 {
+  "errorPage": {
+    "notFound": {
+      "title": "前方只有一片未知",
+      "line1": "回头吧，旅行者",
+      "line2": "还有更多美好等待你探索",
+      "home": "回到首页",
+      "back": "原路返回"
+    },
+    "serverError": {
+      "title": "前方发生意外",
+      "line1": "稍等一下，旅行者",
+      "line2": "这段旅途很快就能继续",
+      "retry": "再试一次",
+      "home": "回到首页"
+    },
+    "generic": {
+      "title": "出了一点小状况",
+      "line1": "别担心，旅行者",
+      "line2": "换个方向继续看看吧",
+      "home": "回到首页",
+      "back": "原路返回"
+    }
+  },
   "common": {
     "loading": "加载中...",
     "commit": "提交",
