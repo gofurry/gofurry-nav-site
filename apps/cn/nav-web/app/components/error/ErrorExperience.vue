@@ -78,10 +78,12 @@ const emit = defineEmits<{ home: []; back: []; retry: [] }>()
 const { t } = useI18n()
 const themeStore = useThemeStore()
 
-// Hide the staggered content from the first SSR paint, while keeping a
-// readable error page when JavaScript is disabled.
+// Keep the enhanced experience hidden from the first SSR paint, while making
+// the complete error page visible when JavaScript is disabled.
 useHead({
-  noscript: [{ innerHTML: '<style>.error-page__step { opacity: 1 !important; }</style>' }],
+  noscript: [{
+    innerHTML: '<style>.error-page__step,.error-page__artwork-layer.is-active{opacity:1!important}</style>',
+  }],
 })
 
 type Theme = 'light' | 'dark'
@@ -177,8 +179,7 @@ onBeforeUnmount(() => {
   transition: opacity 300ms ease;
 }
 
-.error-page__artwork-layer.is-active { opacity: 1; }
-.is-enhanced .error-page__artwork-layer:not(.is-ready) { opacity: 0; }
+.error-page__artwork-layer.is-active.is-ready { opacity: 1; }
 
 .error-page__image {
   width: 100%;
@@ -256,7 +257,7 @@ onBeforeUnmount(() => {
 }
 
 @keyframes error-art-enter {
-  from { opacity: .58; }
+  from { opacity: 0; }
   to { opacity: 1; }
 }
 @keyframes error-content-enter {
