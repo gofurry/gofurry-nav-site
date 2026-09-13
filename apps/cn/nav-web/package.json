@@ -8,6 +8,7 @@
     "preview": "nuxt preview",
     "typecheck": "nuxt typecheck",
     "assets:test": "node scripts/managed-assets.test.mjs",
+    "background:smoke": "node scripts/background-storage-smoke.mjs",
     "perf:measure": "node scripts/perf/measure.mjs",
     "perf:guard": "node scripts/perf/guard.mjs",
     "perf:trace": "node scripts/perf/trace.mjs",

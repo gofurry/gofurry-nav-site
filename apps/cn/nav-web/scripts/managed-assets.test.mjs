@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { assetURL, assetCandidate, chooseAssetCDN, probeAssetCDNs, ASSET_PROBE_SHA256 } from '../app/utils/managedAssets.ts'
+import { parseBackgroundPreference, patternAppearance } from '../app/utils/backgroundPreferences.ts'
 
 const origins = { primary: 'https://primary.example.com', mirror: 'https://mirror.example.com' }
 const key = `nav/hero/desktop/${'a'.repeat(32)}.avif`
@@ -37,3 +38,12 @@ const failure = await probeAssetCDNs(origins, async () => new Response(new Uint8
 assert.equal(failure.primaryMs, null, 'wrong probe bytes must not count as a healthy CDN')
 assert.equal(failure.mirrorMs, null)
 console.log('Managed asset key, fallback, selection, and full-body probe contracts passed')
+
+const preference = parseBackgroundPreference(JSON.stringify({ version: 1, source: 'server', pattern_id: '9007199254740993', overrides: { opacity: 0, size_px: 200 }, blob: 'must not persist', object_key: key, light_color: '#ffffff' }))
+assert.deepEqual(preference, { version: 1, source: 'server', pattern_id: '9007199254740993', overrides: { opacity: 0, size_px: 200 } })
+assert.deepEqual(parseBackgroundPreference('{"version":2,"source":"local"}'), { version: 1, source: 'default', overrides: {} })
+assert.deepEqual(parseBackgroundPreference('{"version":1,"source":"local","overrides":{"opacity":2,"size_px":0,"color":"url(https://x)"}}').overrides, {})
+const defaults = { light_color: '#123456', dark_color: '#abcdef', light_opacity: 0.1, dark_opacity: 0.2, default_size_px: 160 }
+assert.deepEqual(patternAppearance(defaults, 'dark', { opacity: 0 }), { color: '#abcdef', opacity: 0, size: 160 })
+assert.deepEqual(patternAppearance({ ...defaults, default_size_px: 240 }, 'light', {}), { color: '#123456', opacity: 0.1, size: 240 }, 'catalog updates must flow through when no override exists')
+console.log('Background preference normalization and explicit override contracts passed')

@@ -65,6 +65,22 @@ Nav Backend's opt-in `TestRealDevAppearanceQueries` uses only transaction-local
 temporary tables copied from the Goose schema to verify pool isolation,
 disabled/deleted filtering and pattern order on real PostgreSQL.
 
+## Page background preferences
+
+Preferences offers bundled default, enabled server patterns and a local image.
+SVG uses the same repeating CSS mask as the public page, including light/dark
+colors, opacity and tile size. Raster images expose opacity and size only.
+Only explicit overrides are stored in `gf_background_preference`; catalog
+defaults remain live. Local SVG is validated, and SVG/raster bytes stay in
+IndexedDB. No local image upload endpoint exists. Clearing removes the stored
+Blob; missing/disabled patterns, missing local files and exhausted CDN retries
+fall back to the bundled pattern. SSR always renders the bundled background
+before browser-only preferences are loaded.
+
+Run `npm run background:smoke` for real Chromium IndexedDB persistence,
+SVG/raster validation, clearing and verification that local images cause no
+network mutations.
+
 ## CloudOps
 
 System / Cloud resources uses `/api/v1/system/cloud`:

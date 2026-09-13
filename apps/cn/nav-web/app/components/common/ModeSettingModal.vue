@@ -29,6 +29,7 @@
         </div>
 
         <div class="gf-modal__body">
+          <BackgroundPreferencesEditor ref="backgroundEditor" />
           <section class="gf-modal__section">
             <div class="gf-modal__copy">
               <label class="gf-modal__label" for="mode-setting-input">
@@ -116,6 +117,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
+import BackgroundPreferencesEditor from './BackgroundPreferencesEditor.vue'
 import { i18n } from '@/main'
 import {
   clearCustomNavHeaderBackgroundDirectory,
@@ -143,6 +145,7 @@ const emit = defineEmits<{
 }>()
 
 const localMode = ref('')
+const backgroundEditor = ref<InstanceType<typeof BackgroundPreferencesEditor> | null>(null)
 const showQuickAccessLocal = ref(true)
 const supportsCustomBgPicker = supportsCustomNavHeaderBackground()
 const customBgFolderNameLocal = ref('')
@@ -201,6 +204,7 @@ function clearCustomBgDirectory() {
 }
 
 const save = async () => {
+  if (backgroundEditor.value && !(await backgroundEditor.value.save())) return
   localMode.value = localMode.value.trim().slice(0, 32)
 
   if (shouldClearCustomBg) {
