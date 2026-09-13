@@ -34,6 +34,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Recognize the managed-asset migration in Admin Data Operations and align three-database integration coverage with dedicated icon mutation endpoints, including preservation of existing icons during ordinary Site edits.
 - Make Admin Steam prefill best-effort across Chinese/English details and auxiliary assets; apply available nonempty fields even when another source fails, and fail only when no meaningful data remains (#103).
 - Reuse the cached Game Home panel for Ecosystem pages instead of rebuilding the uncached panel during SSR.
 - Keep Game detail tabs working when regional price data is missing; batch independent detail reads and provide an opt-in, debug-only homepage cache for remote development infrastructure without changing production cache defaults or SEO/SSR semantics.

@@ -157,7 +157,15 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 
 	site := requestJSON(t, app, http.MethodPost, "/nav/sites", `{"name":"站点","name_en":"Site","info":"简介","info_en":"Info","country":"CN","nsfw":"0","welfare":"0"}`, cookie, http.StatusOK)
 	siteID := responseID(t, site)
-	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/nav/sites/%d", siteID), `{"name":"站点更新","name_en":"Updated Site","info":"简介","info_en":"Updated info","country":null,"nsfw":"0","welfare":"0","icon":null}`, cookie, http.StatusOK)
+	iconKey := fmt.Sprintf("nav/sites/%d/icon/%s.svg", siteID, strings.Repeat("a", 32))
+	if _, err := navPool.Exec(ctx, `UPDATE gfn_site SET icon=$1 WHERE id=$2`, iconKey, siteID); err != nil {
+		t.Fatal(err)
+	}
+	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/nav/sites/%d", siteID), `{"name":"站点更新","icon":null}`, cookie, http.StatusBadRequest)
+	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/nav/sites/%d", siteID), `{"name":"站点更新","name_en":"Updated Site","info":"简介","info_en":"Updated info","country":null,"nsfw":"0","welfare":"0"}`, cookie, http.StatusOK)
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site WHERE id=$1 AND icon=$2 AND name='站点更新' AND country IS NULL`, siteID, iconKey); count != 1 {
+		t.Fatal("ordinary Site update did not preserve its managed icon and update content")
+	}
 	requestJSON(t, app, http.MethodGet, fmt.Sprintf("/nav/sites/%d", siteID), "", cookie, http.StatusOK)
 	requestJSON(t, app, http.MethodDelete, fmt.Sprintf("/nav/sites/%d", siteID), "", cookie, http.StatusOK)
 	if got := queryBool(t, ctx, navPool, `SELECT deleted FROM gfn_site WHERE id=$1`, siteID); !got {
