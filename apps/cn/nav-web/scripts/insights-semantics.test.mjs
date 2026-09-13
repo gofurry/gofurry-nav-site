@@ -213,7 +213,7 @@ assert(layoutSource.includes('<PublicPageBackground />'), 'default layout lost t
 const backgroundSource = readFileSync(new URL('../app/components/common/PublicPageBackground.vue', import.meta.url), 'utf8')
 const globalStyles = readFileSync(new URL('../app/assets/css/main.css', import.meta.url), 'utf8')
 const shellStyles = readFileSync(new URL('../app/assets/styles/components/shell.less', import.meta.url), 'utf8')
-assert(backgroundSource.includes('data-pattern-status="default"') && backgroundSource.includes('mask-image: var(--gf-page-pattern)'), 'default layout lost its mask-based public pattern')
+assert(backgroundSource.includes('ref(defaultBackgroundPreference())') && backgroundSource.includes('mask-image: var(--gf-page-pattern)'), 'default layout lost its SSR default mask-based public pattern')
 assert(globalStyles.includes("--gf-page-pattern: url('/web/background/gofurry-pattern.svg')") && globalStyles.includes('--gf-page-pattern-size: 160px 160px'), 'default public pattern contract drifted')
 assert(!globalStyles.includes('--gf-page-pattern: none') && existsSync(new URL('../public/web/background/gofurry-pattern.svg', import.meta.url)), 'public pattern asset is missing or disabled')
 for (const root of ['.nav-home-page', '.nav-content-shell', '.games-page', '.games-search-page', '.gf-static-page', '.lottery-page', '.lottery-activation-page']) {

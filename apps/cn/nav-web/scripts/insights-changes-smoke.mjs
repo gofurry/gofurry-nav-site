@@ -32,8 +32,8 @@ export async function runChangesSmoke() {
       assert(!html.includes('insights-domain-nav'), 'global Changes page gained a domain navigation')
       assert(html.includes('data-change-date="2026-09-09"') && html.includes('2026-09-09T13:32:00Z'))
       assert(html.includes(`${locale === 'en' ? '/en' : ''}/${domain === 'site' ? 'site' : 'games'}/31`))
-      assert(html.includes(domain === 'site' ? 'change-icon.svg' : 'change-header.svg'))
-      assert(html.includes(domain === 'site' ? 'default.svg' : 'data-media-state="fallback"'))
+      assert(html.includes(domain === 'site' ? '/nav/sites/31/icon/' : 'change-header.svg'))
+      assert(html.includes(domain === 'site' ? '/defaultLogo.svg' : 'data-media-state="fallback"'))
       assert.equal(dataRequests().length, 1, 'SSR exceeded one change-list request')
       console.log(`[changes] SSR ${domain} ${locale}: identity, fallback, time precision, 1 request PASS`)
     }
@@ -155,6 +155,8 @@ export async function runChangesSmoke() {
       assert.equal(await events(page).count(), 4)
     }
     await page.route('**/media/**', route => route.abort())
+    await page.route('**/nav/sites/*/icon/*', route => route.abort())
+    await page.route('**/defaultLogo.svg', route => route.abort())
     for (const domain of ['site', 'game']) {
       await page.goto(base + pathFor(domain, 'en'), { waitUntil: 'networkidle' })
       await events(page).last().scrollIntoViewIfNeeded()
@@ -162,6 +164,8 @@ export async function runChangesSmoke() {
       assert.equal(await events(page).locator('[role="img"][aria-label]').count(), 4)
     }
     await page.unroute('**/media/**')
+    await page.unroute('**/nav/sites/*/icon/*')
+    await page.unroute('**/defaultLogo.svg')
     await page.goto(base + pathFor('game', 'en'), { waitUntil: 'networkidle' })
     await page.getByRole('button', { name: 'Toggle theme icon', exact: true }).first().click()
     for (const width of [1440, 1024, 390]) {

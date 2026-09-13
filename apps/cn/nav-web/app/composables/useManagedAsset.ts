@@ -17,6 +17,9 @@ export function useManagedAsset(key: MaybeRefOrGetter<string | null | undefined>
     if (preload !== false) stop = watch([src, () => toValue(preload)], ([url, enabled], _old, cleanup) => {
       if (!url || !enabled) return
       const image = new Image()
+      // CSS masks fetch anonymously with CORS; probe with the same mode so a
+      // missing CORS header triggers fallback instead of an invisible pattern.
+      if (toValue(key)?.startsWith('nav/patterns/')) image.crossOrigin = 'anonymous'
       image.onerror = () => { if (src.value === url) onError() }
       image.src = url
       cleanup(() => { image.onerror = null })

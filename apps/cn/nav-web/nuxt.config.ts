@@ -70,10 +70,6 @@ export default defineNuxtConfig({
     define: {
       'import.meta.env.VITE_NAV_API_BASE_URL': JSON.stringify(process.env.NUXT_PUBLIC_NAV_API_BASE || '/api/v1'),
       'import.meta.env.VITE_GAME_API_BASE_URL': JSON.stringify(publicGameApiBase),
-      'import.meta.env.VITE_SITE_LOGO_PREFIX_URL': JSON.stringify(process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/'),
-      'import.meta.env.VITE_SITE_DEFAULT_LOGO': JSON.stringify(process.env.NUXT_PUBLIC_SITE_DEFAULT_LOGO || 'https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg'),
-      'import.meta.env.VITE_GAME_SITE_LOGO_PREFIX_URL': JSON.stringify(process.env.NUXT_PUBLIC_GAME_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/game/icons/'),
-      'import.meta.env.VITE_GAME_PREFIX_URL': JSON.stringify(process.env.NUXT_PUBLIC_GAME_PREFIX_URL || 'https://qcdn.go-furry.com/game/'),
       'import.meta.env.VITE_STEAM_APP_PREFIX_URL': JSON.stringify(process.env.NUXT_PUBLIC_STEAM_APP_PREFIX_URL || 'https://store.steampowered.com/app/')
     }
   },
@@ -172,10 +168,6 @@ export default defineNuxtConfig({
       assetMirrorBase: process.env.NUXT_PUBLIC_ASSET_MIRROR_BASE || (process.env.NODE_ENV === 'production' ? 'https://assets.gofurry.com' : 'https://assets-dev.gofurry.com'),
       gameApiBase: publicGameApiBase,
       gameV2ApiBase: publicGameV2ApiBase,
-      siteLogoPrefixUrl: process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/',
-      siteDefaultLogo: process.env.NUXT_PUBLIC_SITE_DEFAULT_LOGO || 'https://qcdn.go-furry.com/nav/static/SiteLogos/defaultLogo.svg',
-      gameSiteLogoPrefixUrl: process.env.NUXT_PUBLIC_GAME_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/game/icons/',
-      gamePrefixUrl: process.env.NUXT_PUBLIC_GAME_PREFIX_URL || 'https://qcdn.go-furry.com/game/',
       steamAppPrefixUrl: process.env.NUXT_PUBLIC_STEAM_APP_PREFIX_URL || 'https://store.steampowered.com/app/'
     }
   },

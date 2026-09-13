@@ -3,13 +3,13 @@ export const compareSiteKeys = ['ipv6', 'tls13', 'http2', 'hsts', 'csp', 'securi
 export const compareGroups = { site: ['capabilities', 'certificate'], game: ['basic', 'platform', 'activity', 'price', 'language'] }
 const order = [2, 1, 4, 3, 5, 6]
 const names = { 1: 'Cedar Archive', 2: 'Fox Atlas — a long shared identity / 一个需要自然换行的实体名称', 3: 'Fox', 4: 'Fox Den', 5: 'Some Fox', 6: 'Canyon' }
-const entity = (domain, id, media) => ({ id, name: names[id] || 'Entity ' + id, ...(id !== 1 ? { visual: { kind: domain === 'site' ? 'site_icon' : 'game_header', asset: domain === 'site' ? 'site-' + id + '.svg' : media + '/game-' + id + '.svg' } } : {}) })
+const entity = (domain, id, media) => ({ id, name: names[id] || 'Entity ' + id, ...(id !== 1 ? { visual: { kind: domain === 'site' ? 'site_icon' : 'game_header', asset: domain === 'site' ? 'nav/sites/' + id + '/icon/' + 'a'.repeat(32) + '.svg' : media + '/game-' + id + '.svg' } } : {}) })
 
 export async function compareFixtureResponse(url, media, body, state = {}) {
   const path = url.pathname
   if (path.endsWith('/nav/sites/directory')) {
     if (state.directoryFailure) return { status: 503 }
-    return { data: order.map(id => ({ id: String(id), name: names[id], domain: id === 5 ? 'fox.example' : 'site-' + id + '.example', icon: id === 1 ? null : 'site-' + id + '.svg', info: '', country: null, nsfw: 'false', welfare: 'false', view_count: 0, create_time: '', update_time: '' })) }
+    return { data: order.map(id => ({ id: String(id), name: names[id], domain: id === 5 ? 'fox.example' : 'site-' + id + '.example', icon: id === 1 ? null : 'nav/sites/' + id + '/icon/' + 'a'.repeat(32) + '.svg', info: '', country: null, nsfw: 'false', welfare: 'false', view_count: 0, create_time: '', update_time: '' })) }
   }
   if (path.endsWith('/game/search/simple')) {
     state.searches?.push(body?.txt)

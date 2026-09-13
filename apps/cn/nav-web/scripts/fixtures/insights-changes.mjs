@@ -18,7 +18,7 @@ export async function changesFixtureResponse(url, mediaBase, state) {
     entity: {
       id: cursor ? 34 + index : [31, 31, 32, 33][index],
       name: index === 2 ? '' : index === 3 ? `${domain} · 公开生态记录 LongEntityNameWithoutSpacesForResponsiveVerification` : `${domain === 'site' ? 'Furry Archive' : 'Moonlit Journey'} ${cursor ? index + 5 : index + 1} · ${url.searchParams.get('range')}`,
-      ...(index === 0 || index === 3 ? { visual: { kind: domain === 'site' ? 'site_icon' : 'game_header', asset: domain === 'site' ? 'change-icon.svg' : mediaBase + '/change-header.svg' } } : {}),
+      ...(index === 0 || index === 3 ? { visual: { kind: domain === 'site' ? 'site_icon' : 'game_header', asset: domain === 'site' ? 'nav/sites/' + (cursor ? 34 + index : [31, 31, 32, 33][index]) + '/icon/' + 'a'.repeat(32) + '.svg' : mediaBase + '/change-header.svg' } } : {}),
     },
     detail: null,
   }))

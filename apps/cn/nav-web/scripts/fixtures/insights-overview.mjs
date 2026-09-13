@@ -10,7 +10,7 @@ export function mockOverview(domain, mediaBase = 'https://media.example') {
       { key: 'security_txt', value: null, delta_30d: null },
     ] : [],
     recent_changes: domain === 'site' ? [
-      { type: 'site.ipv6.enabled', date: '2026-09-01', occurred_at: null, entity: { id: 41, name: 'Site fixture', visual: { kind: 'site_icon', asset: 'site.svg' } }, detail: null },
+      { type: 'site.ipv6.enabled', date: '2026-09-01', occurred_at: null, entity: { id: 41, name: 'Site fixture', visual: { kind: 'site_icon', asset: 'nav/sites/41/icon/' + 'a'.repeat(32) + '.svg' } }, detail: null },
       { type: 'site.tls13.disabled', date: '2026-08-31', occurred_at: null, entity: { id: 42, name: 'Site failure fixture' }, detail: null },
     ] : [
       { type: 'game.windows.added', date: '2026-09-01', occurred_at: '2026-09-01T12:00:00Z', entity: { id: 82, name: 'Game fixture — a long title across the ecosystem', visual: { kind: 'game_header', asset: `${mediaBase}/game.svg` } }, detail: null },

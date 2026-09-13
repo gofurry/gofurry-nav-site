@@ -18,6 +18,7 @@ assert.equal(assetCandidate(origins, 'primary', key, new Set(['primary']), '/def
 assert.equal(assetCandidate(origins, 'mirror', key, new Set(['primary', 'mirror']), '/defaultLogo.svg').url, '/defaultLogo.svg')
 assert.equal(assetCandidate(origins, 'primary', null, new Set(), '').url, '')
 assert.equal(assetCandidate(origins, 'primary', 'old-icon.ico', new Set(), '/defaultLogo.svg').url, '/defaultLogo.svg')
+assert.equal(assetCandidate({ primary: origins.primary, mirror: origins.primary }, 'primary', key, new Set(['primary']), '/defaultLogo.svg').url, '/defaultLogo.svg', 'identical origins must not retry the same failed URL indefinitely')
 
 const probe = readFileSync(new URL('./fixtures/cdn-probe.bin', import.meta.url))
 assert.equal(probe.length, 8192)

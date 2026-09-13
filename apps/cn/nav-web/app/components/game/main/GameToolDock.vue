@@ -61,7 +61,7 @@ const tools = computed(() => [
   {
     key: 'lottery',
     label: t('game.tools.lottery'),
-    image: 'https://qcdn.go-furry.com/game/background/steam.jpg',
+    image: '/web/game/tool-covers/lottery.jpg',
     cover: true,
     action: () => router.push('/games/prize'),
   }

@@ -3,7 +3,7 @@ export const workspaceRegionKeys = ['CN', 'US', 'HK']
 const asOf = '2026-09-08'
 const observed = '2026-09-09T04:00:00Z'
 const game = (i, media) => ({ id: 101 + i, name: i === 1 ? 'Across the Quiet Mountains — A Very Long Game Name / 越过寂静山脉的漫长旅途' : 'Game ' + (i + 1), ...(i % 3 !== 2 ? { visual: { kind: 'game_header', asset: media + '/game-' + i + '.svg' } } : {}) })
-const site = (i) => ({ id: 201 + i, name: i === 1 ? 'Long Site Identity / 很长的网站名称用于验证自然换行' : 'Site ' + (i + 1), ...(i % 2 === 0 ? { visual: { kind: 'site_icon', asset: 'site-' + i + '.svg' } } : {}) })
+const site = (i) => ({ id: 201 + i, name: i === 1 ? 'Long Site Identity / 很长的网站名称用于验证自然换行' : 'Site ' + (i + 1), ...(i % 2 === 0 ? { visual: { kind: 'site_icon', asset: 'nav/sites/' + (201 + i) + '/icon/' + 'a'.repeat(32) + '.svg' } } : {}) })
 export function workspaceFixtureResponse(url, media, state = {}) {
   const path = url.pathname
   if (state.failure && path.endsWith(state.failure)) return { status: 503 }

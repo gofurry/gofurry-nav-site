@@ -42,7 +42,7 @@ export async function runOverviewSmoke() {
       for (const section of ['header', 'activity', 'sites', 'games', 'explore']) assert(html.includes(`data-overview-${section}`), `missing ${section}`)
       const prefix = route.startsWith('/en/') ? '/en' : ''
       for (const path of ['/site/41', '/site/42', '/games/82', '/games/83', '/games/91', '/games/92', '/games/93']) assert(html.includes(`href="${prefix}${path}"`), `missing localized ${path}`)
-      assert(html.includes(`${upstreamUrl}/media/site.svg`) && html.includes(`${upstreamUrl}/media/default.svg`), 'Site refs/default must SSR')
+      assert(html.includes(`${upstreamUrl}/nav/sites/41/icon/${'a'.repeat(32)}.svg`) && html.includes('/defaultLogo.svg'), 'Site refs/default must SSR')
       assert(html.includes('data-media-state="fallback"'), 'missing Game header must SSR a neutral fallback')
       assert.match(html, /<time datetime="2026-09-01T10:00:00.000Z"/, 'earlier snapshot time must SSR')
       assert.deepEqual(requests.filter(path => Object.values(sourcePaths).includes(path)).sort(), Object.values(sourcePaths).sort(), 'Overview must request exactly three independent sources')
@@ -113,6 +113,8 @@ export async function runOverviewSmoke() {
     assert((await page.locator('.insight-activity-item--hero img').boundingBox()).width <= 72, 'Site icon was stretched into a cover')
     await page.screenshot({ path: join(screenshots, 'site-hero-mobile.png'), fullPage: true })
     await page.route('**/media/**', route => route.abort())
+    await page.route('**/nav/sites/*/icon/*', route => route.abort())
+    await page.route('**/defaultLogo.svg', route => route.abort())
     await page.reload({ waitUntil: 'networkidle' })
     await revealImages(page)
     assert.equal(await page.locator('main .insight-entity-media img').count(), 0, 'failed Site/default/Game images did not reach fallback')

@@ -111,6 +111,8 @@ and provider mapping have separate unit coverage.
 ## Development configuration and storage acceptance
 
 The durable boundaries are in [the asset contract](../contracts/assets.md).
+Production staging, generated cutover/rollback SQL and the maintenance sequence
+are in [the cutover runbook](managed-assets-cutover.md).
 
 Admin reads `external_services.asset_storage` and `external_services.cloud_ops` from its explicit configuration file. Copy the shape from `apps/cn/admin/config/server.example.yaml` and put actual development values only in the ignored `config/server.yaml`. Nav Backend has no cloud secret; Nav Web needs public CDN origins only.
 
@@ -122,3 +124,17 @@ go test ./internal/infra/assets -run TestRealDevStorage -count=1 -v
 ```
 
 It requires development bucket/CDN names, calls real COS and R2 Put/Head/Get, checks both CDN responses, performs mirror repair, and verifies the fixed probe length/hash. It leaves a small set of immutable test objects (including a synthetic, unreferenced site ID); runtime credentials deliberately cannot delete objects. Normal unit tests skip live acceptance without this explicit configuration variable. A skipped test is not cloud acceptance.
+
+`TestRealDevStorageCORS` separately checks the probe and pattern with the real
+development browser Origin. A successful ordinary image GET does not prove CSS
+mask usability. On 2026-09-13, acceptance found missing Primary SVG CORS headers;
+the maintainer configured EdgeOne response headers for the development asset
+hostname and the HTTP plus production-Nuxt browser suites then passed. Runtime
+COS CAM permissions stayed unchanged; bucket configuration is not a runtime duty.
+
+The final browser suite (`npm run assets:cloud-smoke` after a production build)
+also verifies live catalog-default updates without copying defaults into browser
+overrides, local SVG/raster editing and clearing, 12-hour preference cookies,
+independent desktop/mobile AVIF reads and terminal icon/Hero/pattern fallbacks.
+It exercises actual development CDN URLs; its isolated API row fixtures complement
+the separate real PostgreSQL/Admin/cloud suites instead of replacing them.

@@ -45,6 +45,7 @@ export async function probeAssetCDNs(origins: AssetOrigins, fetcher: typeof fetc
 
 export function assetCandidate(origins: AssetOrigins, preferred: AssetCDN, key: string | null | undefined, failed: ReadonlySet<AssetCDN>, fallback: string) {
   const candidates: AssetCDN[] = [preferred, preferred === 'primary' ? 'mirror' : 'primary']
-  for (const provider of candidates) { if (!failed.has(provider)) { const url = assetURL(origins, provider, key); if (url) return { url, provider } } }
+  const failedURLs = new Set([...failed].map(provider => assetURL(origins, provider, key)))
+  for (const provider of candidates) { if (!failed.has(provider)) { const url = assetURL(origins, provider, key); if (url && !failedURLs.has(url)) return { url, provider } } }
   return { url: fallback, provider: null }
 }

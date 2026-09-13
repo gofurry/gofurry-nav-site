@@ -29,7 +29,7 @@ export async function runCompareSmoke() {
         if (ready) {
           assert.deepEqual([...html.matchAll(/data-compare-entity-id="(\d+)"/g)].map(match => Number(match[1])), [...new Set(ids.split(',').map(Number))])
           assert(html.includes('Cedar Archive') && html.includes('Fox Atlas'), 'identity missing from SSR')
-          assert(html.includes(domain === 'site' ? '/media/site-2.svg' : '/media/game-2.svg'), 'visual missing from SSR')
+          assert(html.includes(domain === 'site' ? '/nav/sites/2/icon/' + 'a'.repeat(32) + '.svg' : '/media/game-2.svg'), 'visual missing from SSR')
           const entityRoute = `${locale === 'en' ? '/en' : ''}/${domain === 'site' ? 'site' : 'games'}/2`
           assert(html.includes(`href="${entityRoute}"`), 'localized entity link changed')
         }
@@ -43,7 +43,7 @@ export async function runCompareSmoke() {
     let imageFailure = false
     await page.route('**/*', route => {
       const url = new URL(route.request().url())
-      if (imageFailure && url.pathname.startsWith('/media/')) return route.abort()
+      if (imageFailure && (url.pathname.startsWith('/media/') || url.pathname.startsWith('/nav/sites/') || url.pathname === '/defaultLogo.svg')) return route.abort()
       return ['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol) ? route.continue() : route.abort()
     })
     const screenshots = await mkdtemp(join(tmpdir(), 'gofurry-compare-b5-'))

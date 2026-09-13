@@ -8,7 +8,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { rootDir } from '../perf/shared.mjs'
 
 // Isolated production server with loopback-only API origins; no runtime .env loading.
-export async function startInsightsFixtureApp(resolveResponse) {
+export async function startInsightsFixtureApp(resolveResponse, runtimeOverrides = {}) {
   assert(existsSync(join(rootDir, '.output/server/index.mjs')), 'Build Nav Web before running the production fixture smoke')
   let upstreamUrl = ''
   const requests = []
@@ -16,7 +16,7 @@ export async function startInsightsFixtureApp(resolveResponse) {
     const url = new URL(request.url, 'http://localhost')
     const path = url.pathname
     requests.push(url)
-    if (path.startsWith('/media/')) {
+    if (path.startsWith('/media/') || path.startsWith('/nav/sites/')) {
       // Small local artwork for layout verification only; never shipped as product assets.
       const site = path.includes('site') || path.includes('default')
       response.writeHead(200, { 'Content-Type': 'image/svg+xml' })
@@ -47,8 +47,9 @@ export async function startInsightsFixtureApp(resolveResponse) {
     ...process.env, NITRO_HOST: '127.0.0.1', NITRO_PORT: String(port),
     NUXT_PUBLIC_NAV_API_BASE: '/api/v1', NUXT_PUBLIC_NAV_V2_API_BASE: '/api/v2',
     NUXT_PUBLIC_GAME_API_BASE: '/api/v1', NUXT_PUBLIC_GAME_V2_API_BASE: '/api/v2',
-    NUXT_PUBLIC_SITE_LOGO_PREFIX_URL: upstreamUrl + '/media/',
-    NUXT_PUBLIC_SITE_DEFAULT_LOGO: upstreamUrl + '/media/default.svg',
+    NUXT_PUBLIC_ASSET_PRIMARY_BASE: upstreamUrl,
+    NUXT_PUBLIC_ASSET_MIRROR_BASE: upstreamUrl,
+    ...runtimeOverrides,
   }
   for (const name of ['NAV_API', 'NAV_V2_API', 'GAME_API', 'GAME_V2_API']) environment[`NUXT_${name}_INTERNAL_BASE`] = `${upstreamUrl}/api/${name.includes('V2') ? 'v2' : 'v1'}`
   const preview = spawn(process.execPath, ['.output/server/index.mjs'], { cwd: rootDir, env: environment, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })

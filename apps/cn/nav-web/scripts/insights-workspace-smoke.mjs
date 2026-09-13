@@ -34,8 +34,8 @@ export async function runWorkspaceSmoke() {
       if (kind !== 'languages') {
         const prefix = route.startsWith('/en/') ? '/en' : ''
         assert(html.includes(`href="${prefix}/${kind === 'certificates' ? 'site/201' : 'games/101'}"`), 'localized identity link missing')
-        assert(html.includes('/media/' + (kind === 'certificates' ? 'site-0.svg' : 'game-0.svg')), 'identity asset missing from SSR')
-        assert(html.includes(kind === 'certificates' ? '/media/default.svg' : 'data-media-state="fallback"'), 'missing-asset fallback missing from SSR')
+        assert(html.includes((kind === 'certificates' ? '/nav/sites/201/icon/' + 'a'.repeat(32) + '.svg' : '/media/game-0.svg')), 'identity asset missing from SSR')
+        assert(html.includes(kind === 'certificates' ? '/defaultLogo.svg' : 'data-media-state="fallback"'), 'missing-asset fallback missing from SSR')
       }
       if (kind === 'players') assert(html.includes('189') && html.includes('213') && html.includes('88.7%'))
       if (kind === 'prices') assert(html.includes(route.startsWith('/en/') ? '$5.99' : '¥5.99'), 'regional minor-unit price changed')
@@ -48,7 +48,7 @@ export async function runWorkspaceSmoke() {
     let failImages = false
     await page.route('**/*', route => {
       const url = new URL(route.request().url())
-      if (failImages && url.pathname.startsWith('/media/')) return route.abort()
+      if (failImages && (url.pathname.startsWith('/media/') || url.pathname.startsWith('/nav/sites/') || url.pathname === '/defaultLogo.svg')) return route.abort()
       return ['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol) ? route.continue() : route.abort()
     })
     const screenshots = await mkdtemp(join(tmpdir(), 'gofurry-workspace-b4-'))

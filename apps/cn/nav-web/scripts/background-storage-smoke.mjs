@@ -27,7 +27,8 @@ try {
     const raster = await bg.prepareLocalBackground(new File([bitmap], 'local.png', { type: 'image/png' }))
     if (raster.kind !== 'raster') throw new Error('raster was treated as a color mask')
     const local = await bg.prepareLocalBackground(new File([svg], 'local.svg', { type: 'image/svg+xml' }))
-    await bg.saveBackgroundPreference({ version: 1, source: 'local', overrides: { color: '#123456', opacity: 0, size_px: 200 } }, local)
+    // Reactive UI records are proxies; persist a plain record containing the Blob.
+    await bg.saveBackgroundPreference({ version: 1, source: 'local', overrides: { color: '#123456', opacity: 0, size_px: 200 } }, new Proxy(local, {}))
     return { raw: localStorage.getItem(bg.BACKGROUND_PREFERENCE_KEY), text: await (await bg.readLocalBackground()).blob.text() }
   }, { moduleURL, svg, png })
   assert.equal(first.text, svg)

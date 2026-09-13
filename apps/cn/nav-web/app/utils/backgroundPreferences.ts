@@ -54,7 +54,8 @@ export async function readLocalBackground(): Promise<LocalBackground | null> {
   return item?.blob instanceof Blob && (item.kind === 'svg' || item.kind === 'raster') ? item : null
 }
 export async function saveBackgroundPreference(preference: BackgroundPreference, file?: LocalBackground | null, removeLocal = false) {
-  if (file) await localStore('readwrite', (store) => store.put(file, 'selected'))
+  // Vue refs wrap records in a Proxy, which IndexedDB cannot structured-clone.
+  if (file) await localStore('readwrite', (store) => store.put({ blob: file.blob, kind: file.kind, name: file.name }, 'selected'))
   if (removeLocal) await localStore('readwrite', (store) => store.delete('selected'))
   // Normalize to the exact contract; never persist Blob data, object URLs or catalog defaults here.
   localStorage.setItem(BACKGROUND_PREFERENCE_KEY, JSON.stringify(parseBackgroundPreference(JSON.stringify(preference))))

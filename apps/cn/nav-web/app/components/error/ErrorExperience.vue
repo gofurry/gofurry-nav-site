@@ -88,8 +88,8 @@ useHead({
 
 type Theme = 'light' | 'dark'
 const artworks: { theme: Theme; src: string }[] = [
-  { theme: 'light', src: 'https://qcdn.go-furry.com/web/404/illustration_001_16_9_light.avif' },
-  { theme: 'dark', src: 'https://qcdn.go-furry.com/web/404/illustration_001_16_9_dark.avif' },
+  { theme: 'light', src: '/web/404/illustration_001_16_9_light.avif' },
+  { theme: 'dark', src: '/web/404/illustration_001_16_9_dark.avif' },
 ]
 const artworkElements: Partial<Record<Theme, HTMLImageElement>> = {}
 const artReady = reactive<Record<Theme, boolean>>({ light: false, dark: false })

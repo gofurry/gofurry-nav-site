@@ -98,3 +98,37 @@ func TestRealDevStorage(t *testing.T) {
 		}
 	}
 }
+
+// Image GET alone cannot prove that a browser can use a cross-origin SVG mask.
+func TestRealDevStorageCORS(t *testing.T) {
+	config := os.Getenv("GOFURRY_ASSET_DEV_CONFIG")
+	if config == "" {
+		t.Skip("set GOFURRY_ASSET_DEV_CONFIG for real browser-origin CORS acceptance")
+	}
+	if err := env.MustInitServerConfig("gofurry-admin", config); err != nil {
+		t.Fatal("dev config unavailable")
+	}
+	cfg := env.GetServerConfig().ExternalServices.AssetStorage
+	for _, base := range []string{cfg.Primary.PublicBaseURL, cfg.Mirror.PublicBaseURL} {
+		if !strings.Contains(base, "assets-dev.") {
+			t.Fatal("requires development CDN")
+		}
+		for _, key := range []string{ProbeKey, "nav/patterns/e3f8e3ed70a58cfdf4625b74f1e19563.svg"} {
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			req, _ := http.NewRequestWithContext(ctx, "GET", URL(base, key), nil)
+			req.Header.Set("Origin", "http://localhost:3000")
+			r, err := http.DefaultClient.Do(req)
+			if err != nil {
+				cancel()
+				t.Fatal("CORS request failed")
+			}
+			_, readErr := readBounded(r.Body)
+			r.Body.Close()
+			cancel()
+			origin := r.Header.Get("Access-Control-Allow-Origin")
+			if r.StatusCode != 200 || readErr != nil || (origin != "*" && origin != "http://localhost:3000") {
+				t.Errorf("%s/%s: HTTP %d, missing/mismatched CORS origin %q", base, key, r.StatusCode, origin)
+			}
+		}
+	}
+}

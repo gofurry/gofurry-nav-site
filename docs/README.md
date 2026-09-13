@@ -13,6 +13,8 @@ This directory contains cross-service documentation for the active GoFurry produ
 - [React Admin development](admin-react.md)
 - [Admin frontend parity](admin-frontend-parity.md)
 - [Admin Data and System Operations](admin-data-system-operations.md)
+- [Managed assets and real cloud acceptance](managed-assets.md)
+- [Managed asset maintenance cutover](managed-assets-cutover.md)
 - [Admin role operator guide](operations/admin-roles.md)
 - [Collection Center operations](operations/collection-center.md)
 - [V3 P0 production acceptance](acceptance/v3-p0-production-acceptance.md)
@@ -24,5 +26,6 @@ This directory contains cross-service documentation for the active GoFurry produ
 - [Upstream dependency contract](../contracts/upstream.md)
 - [Admin authorization contract](../contracts/authorization.md)
 - [Admin frontend contract](../contracts/admin-frontend.md)
+- [Managed asset contract](../contracts/assets.md)
 
 Application-specific documents remain beside their owners under `apps/cn`. Operational files that are consumed directly by Nginx or Coraza live under `ops`. Archive documentation under `legacy` is historical and is not an active operator guide.

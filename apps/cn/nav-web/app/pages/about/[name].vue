@@ -108,7 +108,7 @@ if (slug !== 'faolan') {
 }
 
 const isZh = computed(() => locale.value === 'zh')
-const avatarUrl = 'https://qcdn.go-furry.com/nav/about/faolan.jpg'
+const avatarUrl = '/web/about/faolan.jpg'
 const currentYear = new Date().getFullYear()
 const age = currentYear - 2002
 const yearsOfExperience = currentYear - 2024

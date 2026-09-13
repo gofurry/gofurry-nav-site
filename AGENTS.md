@@ -12,6 +12,7 @@ Production code is limited to six Go modules plus one frontend:
 - `db/game`, `db/nav`, and `db/admin` own Goose migrations for `gfg`, `gfn`, and `gfa`.
 
 Read `.agents/architecture.md`, `.agents/playbook.md`, `docs/`, and `contracts/` before database or deployment work. Use `rg` to locate any deeper module documentation.
+Managed asset work follows `contracts/assets.md`; cloud acceptance and one-time maintenance cutover procedures are in `docs/managed-assets.md` and `docs/managed-assets-cutover.md`.
 
 ## Sources of truth
 
