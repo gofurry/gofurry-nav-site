@@ -47,9 +47,11 @@ type serverConfig struct {
 type ServerConfigHolder = serverConfig
 
 type ExternalServicesConfig struct {
-	GameBackend BackendServiceConfig `mapstructure:"game_backend" yaml:"game_backend"`
-	NavBackend  BackendServiceConfig `mapstructure:"nav_backend" yaml:"nav_backend"`
-	Steam       SteamServiceConfig   `mapstructure:"steam" yaml:"steam"`
+	AssetStorage AssetStorageConfig   `mapstructure:"asset_storage" yaml:"asset_storage"`
+	CloudOps     CloudOpsConfig       `mapstructure:"cloud_ops" yaml:"cloud_ops"`
+	GameBackend  BackendServiceConfig `mapstructure:"game_backend" yaml:"game_backend"`
+	NavBackend   BackendServiceConfig `mapstructure:"nav_backend" yaml:"nav_backend"`
+	Steam        SteamServiceConfig   `mapstructure:"steam" yaml:"steam"`
 }
 
 type BackendServiceConfig struct {

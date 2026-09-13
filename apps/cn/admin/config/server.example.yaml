@@ -96,6 +96,35 @@ auth:
   csrf_header_required: true
 
 external_services:
+  asset_storage:
+    primary:
+      provider: "cos"
+      bucket: ""
+      region: "ap-chengdu"
+      access_key_id: ""
+      secret_access_key: ""
+      public_base_url: "https://assets.example.com"
+    mirror:
+      provider: "r2"
+      bucket: ""
+      region: "auto"
+      endpoint: ""
+      access_key_id: ""
+      secret_access_key: ""
+      public_base_url: "https://mirror-assets.example.com"
+  cloud_ops:
+    edgeone:
+      enabled: false
+      zone_id: ""
+      secret_id: ""
+      secret_key: ""
+      main_host: ""
+      asset_host: ""
+    cloudflare:
+      enabled: false
+      zone_id: ""
+      cache_token: ""
+      asset_host: ""
   game_backend:
     base_url: "http://127.0.0.1:9998" # gofurry-game-backend 内网地址。
     admin_token: "CHANGE_ME_LONG_RANDOM_ADMIN_TOKEN" # 与 game-backend admin.token 保持一致。
