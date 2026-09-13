@@ -109,6 +109,8 @@
     "mode": "模式",
     "modeSetting": "Mode 设置",
     "modeDesc": "用于控制页面显示模式, 例如: nsfw",
+    "homePreferences": "首屏设置",
+    "pageBackground": "页面背景",
     "preferences": "页面偏好",
     "displayMode": "显示模式",
     "displayModeDesc": "输入 nsfw 可显示完整内容，留空则使用默认安全模式。",

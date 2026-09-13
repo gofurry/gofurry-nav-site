@@ -109,6 +109,8 @@
     "mode": "Mode",
     "modeSetting": "Mode Settings",
     "modeDesc": "Used to control page display mode, for example: nsfw",
+    "homePreferences": "Home settings",
+    "pageBackground": "Page background",
     "preferences": "Page Preferences",
     "displayMode": "Display Mode",
     "displayModeDesc": "Enter nsfw to show full content, or leave empty for the default safe mode.",
