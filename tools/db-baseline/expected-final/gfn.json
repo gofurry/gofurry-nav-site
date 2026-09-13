@@ -65,6 +65,209 @@
   ],
   "tables": [
     {
+      "name": "gfn_background_pattern",
+      "comment": "Self-contained SVG pattern catalog; defaults are not copied into user overrides",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "name",
+          "data_type": "character varying(120)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "name_en",
+          "data_type": "character varying(120)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "object_key",
+          "data_type": "character varying(255)",
+          "not_null": true,
+          "has_default": false,
+          "comment": "Immutable provider-neutral managed object key"
+        },
+        {
+          "name": "light_color",
+          "data_type": "character varying(7)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "dark_color",
+          "data_type": "character varying(7)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "light_opacity",
+          "data_type": "numeric(5,4)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "dark_opacity",
+          "data_type": "numeric(5,4)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "default_size_px",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "enabled",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "default": "true"
+        },
+        {
+          "name": "sort_order",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "deleted",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "default": "false"
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "create_time",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "update_time",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_background_pattern_create_time_not_null",
+          "definition": "NOT NULL create_time"
+        },
+        {
+          "name": "gfn_background_pattern_dark_color_check",
+          "definition": "CHECK (dark_color::text ~ '^#[a-fA-F0-9]{6}$'::text)"
+        },
+        {
+          "name": "gfn_background_pattern_dark_color_not_null",
+          "definition": "NOT NULL dark_color"
+        },
+        {
+          "name": "gfn_background_pattern_dark_opacity_check",
+          "definition": "CHECK (dark_opacity \u003e= 0::numeric AND dark_opacity \u003c= 1::numeric)"
+        },
+        {
+          "name": "gfn_background_pattern_dark_opacity_not_null",
+          "definition": "NOT NULL dark_opacity"
+        },
+        {
+          "name": "gfn_background_pattern_default_size_px_check",
+          "definition": "CHECK (default_size_px \u003e 0)"
+        },
+        {
+          "name": "gfn_background_pattern_default_size_px_not_null",
+          "definition": "NOT NULL default_size_px"
+        },
+        {
+          "name": "gfn_background_pattern_deleted_not_null",
+          "definition": "NOT NULL deleted"
+        },
+        {
+          "name": "gfn_background_pattern_enabled_not_null",
+          "definition": "NOT NULL enabled"
+        },
+        {
+          "name": "gfn_background_pattern_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfn_background_pattern_light_color_check",
+          "definition": "CHECK (light_color::text ~ '^#[a-fA-F0-9]{6}$'::text)"
+        },
+        {
+          "name": "gfn_background_pattern_light_color_not_null",
+          "definition": "NOT NULL light_color"
+        },
+        {
+          "name": "gfn_background_pattern_light_opacity_check",
+          "definition": "CHECK (light_opacity \u003e= 0::numeric AND light_opacity \u003c= 1::numeric)"
+        },
+        {
+          "name": "gfn_background_pattern_light_opacity_not_null",
+          "definition": "NOT NULL light_opacity"
+        },
+        {
+          "name": "gfn_background_pattern_name_check",
+          "definition": "CHECK (length(TRIM(BOTH FROM name)) \u003e 0)"
+        },
+        {
+          "name": "gfn_background_pattern_name_en_check",
+          "definition": "CHECK (length(TRIM(BOTH FROM name_en)) \u003e 0)"
+        },
+        {
+          "name": "gfn_background_pattern_name_en_not_null",
+          "definition": "NOT NULL name_en"
+        },
+        {
+          "name": "gfn_background_pattern_name_not_null",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "gfn_background_pattern_object_key_check",
+          "definition": "CHECK (object_key::text ~ '^nav/patterns/[a-f0-9]{32}\\.svg$'::text)"
+        },
+        {
+          "name": "gfn_background_pattern_object_key_not_null",
+          "definition": "NOT NULL object_key"
+        },
+        {
+          "name": "gfn_background_pattern_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfn_background_pattern_sort_order_not_null",
+          "definition": "NOT NULL sort_order"
+        },
+        {
+          "name": "gfn_background_pattern_update_time_not_null",
+          "definition": "NOT NULL update_time"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "gfn_background_pattern_catalog_idx",
+          "definition": "CREATE INDEX gfn_background_pattern_catalog_idx ON public.gfn_background_pattern USING btree (sort_order, id) WHERE (enabled AND (NOT deleted))"
+        }
+      ],
+      "triggers": null
+    },
+    {
       "name": "gfn_change_checkpoints",
       "comment": "Independent ordered checkpoints for each Nav detector version.",
       "columns": [
@@ -2351,6 +2554,128 @@
       "triggers": null
     },
     {
+      "name": "gfn_home_hero_asset",
+      "comment": "Independent desktop/mobile AVIF random pools; no pairing or cross-pool fallback",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "variant",
+          "data_type": "character varying(16)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "name",
+          "data_type": "character varying(120)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "object_key",
+          "data_type": "character varying(255)",
+          "not_null": true,
+          "has_default": false,
+          "comment": "Immutable provider-neutral managed object key"
+        },
+        {
+          "name": "enabled",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "default": "true"
+        },
+        {
+          "name": "deleted",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "default": "false"
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "create_time",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        },
+        {
+          "name": "update_time",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfn_home_hero_asset_create_time_not_null",
+          "definition": "NOT NULL create_time"
+        },
+        {
+          "name": "gfn_home_hero_asset_deleted_not_null",
+          "definition": "NOT NULL deleted"
+        },
+        {
+          "name": "gfn_home_hero_asset_enabled_not_null",
+          "definition": "NOT NULL enabled"
+        },
+        {
+          "name": "gfn_home_hero_asset_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfn_home_hero_asset_key",
+          "definition": "CHECK (object_key::text ~ (('^nav/hero/'::text || variant::text) || '/[a-f0-9]{32}\\.avif$'::text))"
+        },
+        {
+          "name": "gfn_home_hero_asset_name_check",
+          "definition": "CHECK (length(TRIM(BOTH FROM name)) \u003e 0)"
+        },
+        {
+          "name": "gfn_home_hero_asset_name_not_null",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "gfn_home_hero_asset_object_key_not_null",
+          "definition": "NOT NULL object_key"
+        },
+        {
+          "name": "gfn_home_hero_asset_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfn_home_hero_asset_update_time_not_null",
+          "definition": "NOT NULL update_time"
+        },
+        {
+          "name": "gfn_home_hero_asset_variant_check",
+          "definition": "CHECK (variant::text = ANY (ARRAY['desktop'::character varying, 'mobile'::character varying]::text[]))"
+        },
+        {
+          "name": "gfn_home_hero_asset_variant_not_null",
+          "definition": "NOT NULL variant"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "gfn_home_hero_asset_pool_idx",
+          "definition": "CREATE INDEX gfn_home_hero_asset_pool_idx ON public.gfn_home_hero_asset USING btree (variant, id) WHERE (enabled AND (NOT deleted))"
+        }
+      ],
+      "triggers": null
+    },
+    {
       "name": "gfn_metric_checkpoints",
       "comment": "Independent ordered checkpoints for each Nav metric version.",
       "columns": [
@@ -3281,7 +3606,7 @@
           "data_type": "character varying(255)",
           "not_null": false,
           "has_default": false,
-          "comment": "站点图标"
+          "comment": "Nullable managed object key nav/sites/{id}/icon/{hash}[.{ext}]; populated during maintenance cutover"
         },
         {
           "name": "deleted",

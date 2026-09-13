@@ -8,6 +8,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// Self-contained SVG pattern catalog; defaults are not copied into user overrides
+type GfnBackgroundPattern struct {
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	NameEn string `json:"name_en"`
+	// Immutable provider-neutral managed object key
+	ObjectKey     string             `json:"object_key"`
+	LightColor    string             `json:"light_color"`
+	DarkColor     string             `json:"dark_color"`
+	LightOpacity  pgtype.Numeric     `json:"light_opacity"`
+	DarkOpacity   pgtype.Numeric     `json:"dark_opacity"`
+	DefaultSizePx int32              `json:"default_size_px"`
+	Enabled       bool               `json:"enabled"`
+	SortOrder     int64              `json:"sort_order"`
+	Deleted       bool               `json:"deleted"`
+	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
+	CreateTime    pgtype.Timestamp   `json:"create_time"`
+	UpdateTime    pgtype.Timestamp   `json:"update_time"`
+}
+
 // Independent ordered checkpoints for each Nav detector version.
 type GfnChangeCheckpoint struct {
 	DetectorKey      string             `json:"detector_key"`
@@ -287,6 +307,20 @@ type GfnFeaturedSite struct {
 	UpdateTime pgtype.Timestamp `json:"update_time"`
 }
 
+// Independent desktop/mobile AVIF random pools; no pairing or cross-pool fallback
+type GfnHomeHeroAsset struct {
+	ID      int64  `json:"id"`
+	Variant string `json:"variant"`
+	Name    string `json:"name"`
+	// Immutable provider-neutral managed object key
+	ObjectKey  string             `json:"object_key"`
+	Enabled    bool               `json:"enabled"`
+	Deleted    bool               `json:"deleted"`
+	DeletedAt  pgtype.Timestamptz `json:"deleted_at"`
+	CreateTime pgtype.Timestamp   `json:"create_time"`
+	UpdateTime pgtype.Timestamp   `json:"update_time"`
+}
+
 // Independent ordered checkpoints for each Nav metric version.
 type GfnMetricCheckpoint struct {
 	MetricKey        string             `json:"metric_key"`
@@ -408,7 +442,7 @@ type GfnSite struct {
 	Nsfw string `json:"nsfw"`
 	// 是否公益项目 1 0
 	Welfare string `json:"welfare"`
-	// 站点图标
+	// Nullable managed object key nav/sites/{id}/icon/{hash}[.{ext}]; populated during maintenance cutover
 	Icon *string `json:"icon"`
 	// 软删除
 	Deleted bool `json:"deleted"`
