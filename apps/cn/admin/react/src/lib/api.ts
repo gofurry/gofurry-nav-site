@@ -38,6 +38,12 @@ async function ensureCsrf() {
 }
 
 export function resetCsrf() { csrfState = null }
+
+export async function sendForm<T>(path: string, body: FormData) {
+  const csrf = await ensureCsrf()
+  // Let the browser generate the multipart boundary; retain session and CSRF.
+  return request<T>(path, { method: 'POST', headers: { [csrf.headerName]: csrf.token }, body })
+}
 export function getJSON<T>(path: string) { return request<T>(path, { method: 'GET' }) }
 
 export async function sendJSON<T>(path: string, method: 'POST' | 'PUT' | 'DELETE', body?: unknown) {

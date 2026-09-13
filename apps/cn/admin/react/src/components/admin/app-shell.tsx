@@ -30,6 +30,8 @@ export const navigationGroups: NavGroup[] = [
   { label: '导航内容', entries: [
     { label: '网站', href: '/nav/sites', icon: Sparkle, capability: 'content.read' },
     { label: '网站分组', href: '/nav/site-groups', icon: ListBullets, capability: 'content.read' },
+    { label: '首页 Hero', href: '/nav/hero-assets', icon: Sparkle, capability: 'content.read' },
+    { label: '背景图案', href: '/nav/background-patterns', icon: SquaresFour, capability: 'content.read' },
     { label: '更新公告', href: '/nav/update-notices', icon: Megaphone, capability: 'content.read' },
     { label: '金句', href: '/nav/sayings', icon: Quotes, capability: 'content.read' },
   ] },
@@ -55,7 +57,7 @@ export function capabilityAwareNavigation(can: (capability: string) => boolean) 
   return navigationGroups.map((group) => ({ ...group, entries: group.entries.filter((entry) => !entry.capability || can(entry.capability)) })).filter((group) => group.entries.length > 0)
 }
 
-const breadcrumbLabels: Record<string, string> = { nav: '导航内容', game: '游戏内容', sites: '网站', games: '游戏', 'site-groups': '网站分组', 'update-notices': '更新公告', sayings: '金句', tags: '标签', comments: '评论', prizes: '抽奖', collection: '采集', metrics: '数据指标', changes: '变化事件', system: '系统', 'data-operations': '数据运维', audit: '操作审计', accounts: '账号与权限' }
+const breadcrumbLabels: Record<string, string> = { nav: '导航内容', game: '游戏内容', sites: '网站', games: '游戏', 'site-groups': '网站分组', 'hero-assets': '首页 Hero', 'background-patterns': '背景图案', 'update-notices': '更新公告', sayings: '金句', tags: '标签', comments: '评论', prizes: '抽奖', collection: '采集', metrics: '数据指标', changes: '变化事件', system: '系统', 'data-operations': '数据运维', audit: '操作审计', accounts: '账号与权限' }
 
 function Breadcrumbs() {
   const location = useLocation()

@@ -1,3 +1,4 @@
+import { SiteIconEditor } from '../assets/site-icon-editor'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Braces, Check, LoaderCircle, Pencil, Plus, RefreshCw, Star, Trash2 } from 'lucide-react'
@@ -24,7 +25,7 @@ import { formatDate } from '../../lib/utils'
 import { useAuth } from '../auth/auth-context'
 
 const siteSchema = z.object({
-  name: z.string().trim().min(1, '请输入中文名称'), name_en: z.string(), info: z.string(), info_en: z.string(), icon: z.string(),
+  name: z.string().trim().min(1, '请输入中文名称'), name_en: z.string(), info: z.string(), info_en: z.string(),
 })
 type SiteValues = z.infer<typeof siteSchema>
 
@@ -64,14 +65,15 @@ function SiteContentForm({ site, creating = false }: { site?: Site; creating?: b
   const client = useQueryClient()
   const { toast } = useToast()
   const [operationError, setOperationError] = useState('')
-  const form = useForm<SiteValues>({ resolver: zodResolver(siteSchema), defaultValues: { name: site?.name ?? '', name_en: site?.name_en ?? '', info: site?.info ?? '', info_en: site?.info_en ?? '', icon: site?.icon ?? '' } })
-  useEffect(() => form.reset({ name: site?.name ?? '', name_en: site?.name_en ?? '', info: site?.info ?? '', info_en: site?.info_en ?? '', icon: site?.icon ?? '' }), [form, site])
-  useUnsavedChanges(form.formState.isDirty)
+  const [iconDirty, setIconDirty] = useState(false)
+  const form = useForm<SiteValues>({ resolver: zodResolver(siteSchema), defaultValues: { name: site?.name ?? '', name_en: site?.name_en ?? '', info: site?.info ?? '', info_en: site?.info_en ?? '' } })
+  useEffect(() => form.reset({ name: site?.name ?? '', name_en: site?.name_en ?? '', info: site?.info ?? '', info_en: site?.info_en ?? '' }, { keepDirtyValues: true }), [form, site])
+  useUnsavedChanges(form.formState.isDirty || iconDirty)
   const mutation = useMutation({ mutationFn: async (values: SiteValues) => {
-    const payload = { ...values, icon: values.icon || null, country: site?.country ?? null, nsfw: site?.nsfw ?? '0', welfare: site?.welfare ?? '0' }
+    const payload = { ...values, country: site?.country ?? null, nsfw: site?.nsfw ?? '0', welfare: site?.welfare ?? '0' }
     return creating ? sendJSON<Site>('/api/v1/nav/sites', 'POST', payload) : sendJSON<Site>(`/api/v1/nav/sites/${site!.id}`, 'PUT', payload)
-  }, onSuccess: async (saved) => { form.reset({ name: saved.name, name_en: saved.name_en, info: saved.info, info_en: saved.info_en, icon: saved.icon ?? '' }); await client.invalidateQueries({ queryKey: ['site'] }); await client.invalidateQueries({ queryKey: ['site-summaries'] }); toast(creating ? '网站已创建' : '网站内容已保存'); if (creating) navigate(`/nav/sites/${saved.id}`, { replace: true }) }, onError: (error) => setOperationError(errorMessage(error)) })
-  return <Section title={creating ? '新增网站' : '内容'} description="按业务语言维护网站名称、简介与图标。"><form className="grid gap-6" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>{operationError && <Alert tone="danger">{operationError}</Alert>}<FormSection title="基本内容"><div className="grid gap-4 md:grid-cols-2"><FormField label="中文名称" required error={form.formState.errors.name?.message}><Input {...form.register('name')} /></FormField><FormField label="英文名称" error={form.formState.errors.name_en?.message}><Input {...form.register('name_en')} /></FormField></div><FormField label="中文简介" error={form.formState.errors.info?.message}><Textarea {...form.register('info')} /></FormField><FormField label="英文简介" error={form.formState.errors.info_en?.message}><Textarea {...form.register('info_en')} /></FormField></FormSection><FormSection title="媒体"><FormField label="Icon" help="填写现有图标 URL 或资源标识。"><Input {...form.register('icon')} /></FormField></FormSection><div className="flex justify-end"><Button disabled={mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}{creating ? '创建网站' : '保存内容'}</Button></div></form></Section>
+  }, onSuccess: async (saved) => { form.reset({ name: saved.name, name_en: saved.name_en, info: saved.info, info_en: saved.info_en }); await client.invalidateQueries({ queryKey: ['site'] }); await client.invalidateQueries({ queryKey: ['site-summaries'] }); toast(creating ? '网站已创建' : '网站内容已保存'); if (creating) navigate(`/nav/sites/${saved.id}`, { replace: true }) }, onError: (error) => setOperationError(errorMessage(error)) })
+  return <><Section title={creating ? '新增网站' : '内容'} description="按业务语言维护网站名称、简介与图标。"><form className="grid gap-6" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>{operationError && <Alert tone="danger">{operationError}</Alert>}<FormSection title="基本内容"><div className="grid gap-4 md:grid-cols-2"><FormField label="中文名称" required error={form.formState.errors.name?.message}><Input {...form.register('name')} /></FormField><FormField label="英文名称" error={form.formState.errors.name_en?.message}><Input {...form.register('name_en')} /></FormField></div><FormField label="中文简介" error={form.formState.errors.info?.message}><Textarea {...form.register('info')} /></FormField><FormField label="英文简介" error={form.formState.errors.info_en?.message}><Textarea {...form.register('info_en')} /></FormField></FormSection><div className="flex justify-end"><Button disabled={mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}{creating ? '创建网站' : '保存内容'}</Button></div></form></Section>{site && <SiteIconEditor site={site} onDirtyChange={setIconDirty} />}</>
 }
 
 function MultiOptions({ options, selected, onChange, disabled }: { options: OptionItem[]; selected: string[]; onChange: (next: string[]) => void; disabled?: boolean }) {
@@ -87,7 +89,7 @@ function SiteClassificationForm({ workspace }: { workspace: SiteWorkspace }) {
   useUnsavedChanges(form.formState.isDirty)
   const mutation = useMutation({ mutationFn: async (values: ClassificationValues) => {
     const site = workspace.site
-    await sendJSON(`/api/v1/nav/sites/${site.id}`, 'PUT', { name: site.name, name_en: site.name_en, info: site.info, info_en: site.info_en, icon: site.icon, country: values.country || null, nsfw: values.nsfw, welfare: values.welfare })
+    await sendJSON(`/api/v1/nav/sites/${site.id}`, 'PUT', { name: site.name, name_en: site.name_en, info: site.info, info_en: site.info_en, country: values.country || null, nsfw: values.nsfw, welfare: values.welfare })
     await sendJSON('/api/v1/nav/site-group-maps/bulk-replace', 'PUT', { owner_id: site.id, ids: values.group_ids.map(Number) })
     if (values.featured && workspace.featured) await sendJSON(`/api/v1/nav/featured-sites/${workspace.featured.id}`, 'PUT', { site_id: site.id, weight: values.featured_weight })
     else if (values.featured) await sendJSON('/api/v1/nav/featured-sites', 'POST', { site_id: site.id, weight: values.featured_weight })

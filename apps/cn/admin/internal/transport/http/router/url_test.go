@@ -52,6 +52,14 @@ func TestRepresentativeRouteCapabilityMatrix(t *testing.T) {
 	}
 	source := string(data)
 	expected := []string{
+		`root.Post("/sites/:id/icon", authmw.Require(authorization.ContentWrite)`,
+		`root.Delete("/sites/:id/icon", authmw.Require(authorization.ContentWrite)`,
+		`root.Get("/hero-assets", authmw.Require(authorization.ContentRead)`,
+		`root.Post("/hero-assets", authmw.Require(authorization.ContentWrite)`,
+		`root.Put("/hero-assets/:id", authmw.Require(authorization.ContentWrite)`,
+		`root.Get("/background-patterns", authmw.Require(authorization.ContentRead)`,
+		`root.Post("/background-patterns/:id/file", authmw.Require(authorization.ContentWrite)`,
+		`root.Delete("/background-patterns/:id", authmw.Require(authorization.ContentWrite)`,
 		`root.Get("/site-groups/:id/curation", authmw.Require(authorization.ContentRead)`,
 		`root.Put("/site-groups/:id/curation", authmw.Require(authorization.ContentWrite)`,
 		`root.Post("/sites", authmw.Require(authorization.ContentWrite)`,

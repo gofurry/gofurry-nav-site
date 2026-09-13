@@ -74,19 +74,24 @@ func (s *Service) Publish(ctx context.Context, o Object) (Publication, error) {
 	if s == nil || s.Primary == nil {
 		return p, errors.New("COS primary is not configured")
 	}
-	if err := ensure(ctx, s.Primary, o); err != nil {
+	primaryCtx, cancelPrimary := context.WithTimeout(ctx, 16*time.Second)
+	defer cancelPrimary()
+	if err := ensure(primaryCtx, s.Primary, o); err != nil {
 		return p, fmt.Errorf("COS primary publication failed: %w", err)
 	}
 	p.Primary = "ready"
+	// Leave time for the business transaction and audit after a mirror timeout.
+	mirrorCtx, cancelMirror := context.WithTimeout(ctx, 8*time.Second)
+	defer cancelMirror()
 	if s.Mirror != nil {
 		for i := 0; i < 2; i++ {
-			if err := ensure(ctx, s.Mirror, o); err == nil {
+			if err := ensure(mirrorCtx, s.Mirror, o); err == nil {
 				p.Mirror = "ready"
 				return p, nil
 			}
 			if i == 0 {
 				select {
-				case <-ctx.Done():
+				case <-mirrorCtx.Done():
 					p.Warnings = append(p.Warnings, "R2 mirror sync failed")
 					return p, nil
 				case <-time.After(200 * time.Millisecond):

@@ -184,11 +184,11 @@ SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare
 
 -- name: InsertSite :one
 INSERT INTO gfn_site (id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count)
-VALUES (sqlc.arg(id),sqlc.arg(name),sqlc.arg(name_en),sqlc.arg(info),sqlc.arg(info_en),NOW()::timestamp(0),NOW()::timestamp(0),sqlc.arg(country),sqlc.arg(nsfw),sqlc.arg(welfare),sqlc.arg(icon),false,0)
+VALUES (sqlc.arg(id),sqlc.arg(name),sqlc.arg(name_en),sqlc.arg(info),sqlc.arg(info_en),NOW()::timestamp(0),NOW()::timestamp(0),sqlc.arg(country),sqlc.arg(nsfw),sqlc.arg(welfare),NULL,false,0)
 RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at;
 
 -- name: UpdateSite :one
-UPDATE gfn_site SET name=sqlc.arg(name),name_en=sqlc.arg(name_en),info=sqlc.arg(info),info_en=sqlc.arg(info_en),country=sqlc.arg(country),nsfw=sqlc.arg(nsfw),welfare=sqlc.arg(welfare),icon=sqlc.arg(icon),update_time=NOW()::timestamp(0)
+UPDATE gfn_site SET name=sqlc.arg(name),name_en=sqlc.arg(name_en),info=sqlc.arg(info),info_en=sqlc.arg(info_en),country=sqlc.arg(country),nsfw=sqlc.arg(nsfw),welfare=sqlc.arg(welfare),update_time=NOW()::timestamp(0)
 WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE
 RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at;
 

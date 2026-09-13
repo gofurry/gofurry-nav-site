@@ -45,8 +45,9 @@ func (builder *Builder) Init() *fiber.App {
 		ServerHeader: appName,
 		ErrorHandler: customErrorHandler,
 		TrustProxy:   true,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 45 * time.Second,
+		BodyLimit:    6 * 1024 * 1024, // 5 MiB asset plus bounded multipart overhead.
 	})
 
 	registerMiddlewares(app)

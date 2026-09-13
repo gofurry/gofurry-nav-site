@@ -112,6 +112,20 @@ func optionsRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 
 func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	api := runtime.NavAPI
+	root.Post("/sites/:id/icon", authmw.Require(authorization.ContentWrite), api.ReplaceSiteIcon)
+	root.Delete("/sites/:id/icon", authmw.Require(authorization.ContentWrite), api.ClearSiteIcon)
+	root.Get("/hero-assets", authmw.Require(authorization.ContentRead), api.ListHeroAssets)
+	root.Post("/hero-assets", authmw.Require(authorization.ContentWrite), api.CreateHeroAsset)
+	root.Get("/hero-assets/:id", authmw.Require(authorization.ContentRead), api.GetHeroAsset)
+	root.Put("/hero-assets/:id", authmw.Require(authorization.ContentWrite), api.UpdateHeroAsset)
+	root.Post("/hero-assets/:id/file", authmw.Require(authorization.ContentWrite), api.ReplaceHeroAssetFile)
+	root.Delete("/hero-assets/:id", authmw.Require(authorization.ContentWrite), api.DeleteHeroAsset)
+	root.Get("/background-patterns", authmw.Require(authorization.ContentRead), api.ListBackgroundPatterns)
+	root.Post("/background-patterns", authmw.Require(authorization.ContentWrite), api.CreateBackgroundPattern)
+	root.Get("/background-patterns/:id", authmw.Require(authorization.ContentRead), api.GetBackgroundPattern)
+	root.Put("/background-patterns/:id", authmw.Require(authorization.ContentWrite), api.UpdateBackgroundPattern)
+	root.Post("/background-patterns/:id/file", authmw.Require(authorization.ContentWrite), api.ReplaceBackgroundPatternFile)
+	root.Delete("/background-patterns/:id", authmw.Require(authorization.ContentWrite), api.DeleteBackgroundPattern)
 	root.Get("/sayings", authmw.Require(authorization.ContentRead), api.ListSayings)
 	root.Post("/sayings", authmw.Require(authorization.ContentWrite), api.CreateSaying)
 	root.Get("/sayings/:id", authmw.Require(authorization.ContentRead), api.GetSaying)

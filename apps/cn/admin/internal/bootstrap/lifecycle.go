@@ -22,6 +22,7 @@ import (
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
 	options "github.com/gofurry/gofurry-admin/internal/app/shared/options/controller"
 	"github.com/gofurry/gofurry-admin/internal/app/workbench"
+	"github.com/gofurry/gofurry-admin/internal/infra/assets"
 	cache "github.com/gofurry/gofurry-admin/internal/infra/cache"
 	"github.com/gofurry/gofurry-admin/internal/infra/db"
 	log "github.com/gofurry/gofurry-admin/internal/infra/logging"
@@ -74,6 +75,10 @@ func Start() (*Runtime, error) {
 	}
 
 	auditLogger := audit.New(pools.Admin)
+	assetStorage, err := assets.New(cfg.ExternalServices.AssetStorage)
+	if err != nil {
+		return cleanupOnError(fmt.Errorf("asset storage configuration: %w", err))
+	}
 	auth := authservice.New(pools.Admin, auditLogger)
 	collectionService := collectionservice.New(pools.Game, pools.Nav, auditLogger)
 	metricService := metricadmin.New(pools.Game, pools.Nav)
@@ -82,7 +87,7 @@ func Start() (*Runtime, error) {
 	auditService := auditadmin.New(pools.Admin)
 	runtime := &Runtime{
 		Pools: pools, Audit: auditLogger, AuthService: auth,
-		AuthAPI: authcontroller.New(auth, auditLogger), NavAPI: navadmin.New(pools.Nav, auditLogger),
+		AuthAPI: authcontroller.New(auth, auditLogger), NavAPI: navadmin.New(pools.Nav, auditLogger).WithAssets(assetStorage, cfg.ExternalServices.AssetStorage.Primary.PublicBaseURL, cfg.ExternalServices.AssetStorage.Mirror.PublicBaseURL),
 		GameAPI: gameadmin.New(pools.Game, auditLogger), OptionsAPI: options.New(pools.Nav, pools.Game),
 		CollectionAPI: collectioncontroller.New(collectionService),
 		MetricAPI:     metricadmin.NewAPI(metricService), ChangeAPI: changeadmin.NewAPI(changeService),

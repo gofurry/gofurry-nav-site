@@ -610,7 +610,7 @@ func (q *Queries) InsertSaying(ctx context.Context, arg InsertSayingParams) (Gfn
 
 const insertSite = `-- name: InsertSite :one
 INSERT INTO gfn_site (id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count)
-VALUES ($1,$2,$3,$4,$5,NOW()::timestamp(0),NOW()::timestamp(0),$6,$7,$8,$9,false,0)
+VALUES ($1,$2,$3,$4,$5,NOW()::timestamp(0),NOW()::timestamp(0),$6,$7,$8,NULL,false,0)
 RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at
 `
 
@@ -623,7 +623,6 @@ type InsertSiteParams struct {
 	Country *string `json:"country"`
 	Nsfw    string  `json:"nsfw"`
 	Welfare string  `json:"welfare"`
-	Icon    *string `json:"icon"`
 }
 
 func (q *Queries) InsertSite(ctx context.Context, arg InsertSiteParams) (GfnSite, error) {
@@ -636,7 +635,6 @@ func (q *Queries) InsertSite(ctx context.Context, arg InsertSiteParams) (GfnSite
 		arg.Country,
 		arg.Nsfw,
 		arg.Welfare,
-		arg.Icon,
 	)
 	var i GfnSite
 	err := row.Scan(
@@ -1670,8 +1668,8 @@ func (q *Queries) UpdateSaying(ctx context.Context, arg UpdateSayingParams) (Gfn
 }
 
 const updateSite = `-- name: UpdateSite :one
-UPDATE gfn_site SET name=$1,name_en=$2,info=$3,info_en=$4,country=$5,nsfw=$6,welfare=$7,icon=$8,update_time=NOW()::timestamp(0)
-WHERE id=$9 AND deleted IS NOT TRUE
+UPDATE gfn_site SET name=$1,name_en=$2,info=$3,info_en=$4,country=$5,nsfw=$6,welfare=$7,update_time=NOW()::timestamp(0)
+WHERE id=$8 AND deleted IS NOT TRUE
 RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at
 `
 
@@ -1683,7 +1681,6 @@ type UpdateSiteParams struct {
 	Country *string `json:"country"`
 	Nsfw    string  `json:"nsfw"`
 	Welfare string  `json:"welfare"`
-	Icon    *string `json:"icon"`
 	ID      int64   `json:"id"`
 }
 
@@ -1696,7 +1693,6 @@ func (q *Queries) UpdateSite(ctx context.Context, arg UpdateSiteParams) (GfnSite
 		arg.Country,
 		arg.Nsfw,
 		arg.Welfare,
-		arg.Icon,
 		arg.ID,
 	)
 	var i GfnSite

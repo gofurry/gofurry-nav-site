@@ -479,7 +479,7 @@ func (store *navStore) createSite(ctx context.Context, meta audit.Meta, req mode
 		if err != nil {
 			return 0, nil, nil, err
 		}
-		row, err := q.InsertSite(ctx, navsqlc.InsertSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare, Icon: req.Icon})
+		row, err := q.InsertSite(ctx, navsqlc.InsertSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare})
 		if err == nil {
 			err = q.RefreshCurrentSiteDaily(ctx, id)
 		}
@@ -495,7 +495,7 @@ func (store *navStore) updateSite(ctx context.Context, meta audit.Meta, id int64
 		if err != nil {
 			return id, nil, nil, err
 		}
-		after, err := q.UpdateSite(ctx, navsqlc.UpdateSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare, Icon: req.Icon})
+		after, err := q.UpdateSite(ctx, navsqlc.UpdateSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare})
 		if err == nil {
 			err = q.RefreshCurrentSiteDaily(ctx, id)
 		}
