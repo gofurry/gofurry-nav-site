@@ -19,6 +19,7 @@ const CollectionPage = lazy(() => import('../features/operations/collection-page
 const MetricsPage = lazy(() => import('../features/operations/metrics-page').then((module) => ({ default: module.MetricsPage })))
 const ChangesPage = lazy(() => import('../features/operations/changes-page').then((module) => ({ default: module.ChangesPage })))
 const DataOperationsPage = lazy(() => import('../features/system/data-operations-page').then((module) => ({ default: module.DataOperationsPage })))
+const CloudOperationsPage = lazy(() => import('../features/system/cloud-operations-page').then((module) => ({ default: module.CloudOperationsPage })))
 const AuditPage = lazy(() => import('../features/system/audit-page').then((module) => ({ default: module.AuditPage })))
 const AccountsPage = lazy(() => import('../features/system/accounts-page').then((module) => ({ default: module.AccountsPage })))
 
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
         { element: <CapabilityGuard capability="metrics.read" />, children: [{ path: 'metrics', element: <MetricsPage /> }] },
         { element: <CapabilityGuard capability="changes.read" />, children: [{ path: 'changes', element: <ChangesPage /> }] },
         { element: <CapabilityGuard capability={DATAOPS_READ_CAPABILITY} />, children: [{ path: 'system/data-operations', element: <DataOperationsPage /> }] },
+        { element: <CapabilityGuard capability="cloudops.read" />, children: [{ path: 'system/cloud', element: <CloudOperationsPage /> }] },
         { element: <CapabilityGuard capability="audit.read" />, children: [{ path: 'system/audit', element: <AuditPage /> }] },
         { element: <CapabilityGuard capability="account.manage" />, children: [{ path: 'system/accounts', element: <AccountsPage /> }] },
         { path: '*', element: <NotFoundPage /> },

@@ -134,7 +134,7 @@ func readBounded(r io.Reader) ([]byte, error) {
 	return data, nil
 }
 func URL(base, key string) string {
-	if !ValidKey(key) {
+	if strings.TrimSpace(base) == "" || !ValidKey(key) {
 		return ""
 	}
 	return strings.TrimRight(base, "/") + "/" + key

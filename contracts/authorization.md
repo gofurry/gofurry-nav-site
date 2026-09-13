@@ -4,6 +4,7 @@
 - Every authenticated request resolves the current `gfa_admin_account`, requires `status=active`, and requires an exact session-version match before constructing one request-scoped Principal.
 - The fixed roles are `owner`, `developer`, and `operator`. The database stores only the role assignment; the compiled Go policy owns Role-to-Capability mapping. Custom roles, permission tables, policy DSLs, and per-resource ACLs are outside the contract.
 - Business routes authorize capabilities, never roles. Missing roles and unknown capabilities fail closed. Authentication failure returns `401`; capability denial returns `403`.
+- CloudOps uses `cloudops.read` and `cloudops.manage` for Owner/Developer, while `cloudops.purge_all` belongs only to Owner. Operator keeps `content.write` for business asset management and receives no CloudOps permissions. Full-zone EdgeOne purge has a separate route; ordinary host purge cannot invoke it.
 - Bootstrap is available only while the account count is zero and creates one active Owner. Disabled accounts never reopen bootstrap.
 - Role changes, status changes, password resets, and explicit revocation increment `session_version`. Display-name changes do not. Usernames are immutable after account creation in P0.5.2-A.
 - Disabling or demoting the last active Owner is forbidden under transaction-safe PostgreSQL row locking. Concurrent mutations must never leave zero active Owners.

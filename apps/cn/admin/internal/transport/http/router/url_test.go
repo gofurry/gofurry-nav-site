@@ -20,6 +20,7 @@ func TestEveryBusinessRouteDeclaresCapability(t *testing.T) {
 	defer content.Close()
 
 	protectedFunctions := map[string]bool{
+		"cloudRoutes":  true,
 		"changeRoutes": true, "metricRoutes": true, "collectionRoutes": true,
 		"workbenchRoutes": true, "dataOpsRoutes": true, "auditRoutes": true,
 		"accountRoutes": true, "optionsRoutes": true, "navRoutes": true, "gameRoutes": true,
@@ -52,6 +53,11 @@ func TestRepresentativeRouteCapabilityMatrix(t *testing.T) {
 	}
 	source := string(data)
 	expected := []string{
+		`root.Get("/overview", authmw.Require(authorization.CloudOpsRead)`,
+		`root.Post("/object/repair-mirror", authmw.Require(authorization.CloudOpsManage)`,
+		`root.Post("/edgeone/purge", authmw.Require(authorization.CloudOpsManage)`,
+		`root.Post("/edgeone/purge-all", authmw.Require(authorization.CloudOpsPurgeAll)`,
+		`root.Post("/cloudflare/purge", authmw.Require(authorization.CloudOpsManage)`,
 		`root.Post("/sites/:id/icon", authmw.Require(authorization.ContentWrite)`,
 		`root.Delete("/sites/:id/icon", authmw.Require(authorization.ContentWrite)`,
 		`root.Get("/hero-assets", authmw.Require(authorization.ContentRead)`,

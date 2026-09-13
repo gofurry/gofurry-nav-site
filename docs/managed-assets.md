@@ -34,6 +34,33 @@ exercises real COS/R2 plus the development GFN/GFA transaction and audit path.
 It creates labeled dev records and soft-deletes them afterward. Immutable files
 and their audit trail are retained; no production data or object deletion occurs.
 
+## CloudOps
+
+System / Cloud resources uses `/api/v1/system/cloud`:
+
+- `GET /overview` reports configured/reachable storage using HEAD of the fixed probe and configured CDN hosts.
+- `GET /object?key=...` inspects both stores and compares size, full SHA256, kind, content type and cache policy.
+- `POST /object/repair-mirror` accepts `{ "key": "..." }`; COS supplies the validated bytes for R2 repair.
+- `POST /edgeone/purge` and `/cloudflare/purge` accept `{ "type": "url|prefix|host", "targets": [...] }`, at most 20 targets. URL and prefix inputs include a scheme. Only configured exact hosts are allowed; the adapter translates provider enums and Cloudflare's scheme-free prefixes.
+- `GET /edgeone/purge-tasks?job_id=...&page_num=1` reads the real task state. Empty job ID selects the past 24 hours.
+- `POST /edgeone/purge-all` is a separate Owner-only whole-zone action. The main-site shortcut submits ordinary `host` purge.
+
+CDN actions are bounded and never automatically retried after an ambiguous
+network failure. Each cloud mutation writes an intent audit before the provider
+call and a result audit afterward, under the same action and request ID. Remote
+effects cannot be rolled back: if result-audit writing fails after success, the
+response preserves success with a warning and the intent audit remains.
+
+Provider contracts: [Cloudflare purge API](https://developers.cloudflare.com/api/resources/cache/methods/purge/)
+and [EdgeOne task query](https://edgeone.ai/document/50532).
+
+From Admin, run `GOFURRY_ASSET_DEV_CONFIG=<ignored dev YAML> go test ./internal/app/cloudops -run TestRealDevCloudOps -count=1 -v`.
+Acceptance exercises real storage status/HEAD/repair, Cloudflare URL purge,
+EdgeOne URL and **development asset host** purge, completion queries and GFA
+audits. The development EdgeOne zone also contains the production main host;
+the test does not purge that host or the whole zone. Whole-zone authorization
+and provider mapping have separate unit coverage.
+
 ## Development configuration and storage acceptance
 
 The durable boundaries are in [the asset contract](../contracts/assets.md).

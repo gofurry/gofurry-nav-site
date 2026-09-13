@@ -18,6 +18,15 @@ Themes default to the system preference. The shared header exposes a single Ligh
 
 The backend authorization contract remains authoritative. Navigation and actions ask whether the current principal has a capability; frontend code must not reproduce the Role-to-Capability mapping.
 
+Managed assets use content capabilities: separate desktop/mobile Hero pools and
+the Pattern catalog live under Navigation content; Site Icon uses upload/clear
+inside the site workspace. Pattern selection is previewed locally with the same
+repeating CSS mask model as Nav Web before any upload. System / Cloud resources
+uses CloudOps capabilities for live object inspection, COS-to-R2 repair and CDN
+purges. The main-host button and Owner-only entire-EdgeOne-zone button must remain
+visibly distinct. No object delete, Cloudflare purge everything, invented global
+sync percentage, or frontend reconstruction of the role policy is exposed.
+
 ## Product structure
 
 Top-level groups are Workbench, Nav Content, Game Content, Data Operations, and System. Content and operational routes are native React:

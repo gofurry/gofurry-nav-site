@@ -16,6 +16,9 @@ const (
 	AuditRead         Capability = "audit.read"
 	AccountManage     Capability = "account.manage"
 	SystemManage      Capability = "system.manage"
+	CloudOpsRead      Capability = "cloudops.read"
+	CloudOpsManage    Capability = "cloudops.manage"
+	CloudOpsPurgeAll  Capability = "cloudops.purge_all"
 )
 
 var capabilityCatalog = []Capability{
@@ -32,6 +35,9 @@ var capabilityCatalog = []Capability{
 	AuditRead,
 	AccountManage,
 	SystemManage,
+	CloudOpsRead,
+	CloudOpsManage,
+	CloudOpsPurgeAll,
 }
 
 func AllCapabilities() []Capability {

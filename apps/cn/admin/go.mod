@@ -21,6 +21,8 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.178
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.178
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.75
 	go.uber.org/zap v1.28.0
 	go.yaml.in/yaml/v4 v4.0.0-rc.6

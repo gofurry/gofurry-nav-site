@@ -13,6 +13,7 @@ import (
 	authcontroller "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
 	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
 	changeadmin "github.com/gofurry/gofurry-admin/internal/app/changeadmin"
+	cloudapi "github.com/gofurry/gofurry-admin/internal/app/cloudops"
 	collectioncontroller "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/controller"
 	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
 	"github.com/gofurry/gofurry-admin/internal/app/dataops"
@@ -24,6 +25,7 @@ import (
 	"github.com/gofurry/gofurry-admin/internal/app/workbench"
 	"github.com/gofurry/gofurry-admin/internal/infra/assets"
 	cache "github.com/gofurry/gofurry-admin/internal/infra/cache"
+	"github.com/gofurry/gofurry-admin/internal/infra/cloudops"
 	"github.com/gofurry/gofurry-admin/internal/infra/db"
 	log "github.com/gofurry/gofurry-admin/internal/infra/logging"
 	"github.com/gofurry/gofurry-admin/pkg/common"
@@ -35,6 +37,7 @@ type Runtime struct {
 	AuthService   *authservice.AuthService
 	AuthAPI       *authcontroller.AuthAPI
 	NavAPI        *navadmin.NavAPI
+	CloudAPI      *cloudapi.API
 	GameAPI       *gameadmin.GameAPI
 	OptionsAPI    *options.OptionsAPI
 	CollectionAPI *collectioncontroller.API
@@ -79,6 +82,10 @@ func Start() (*Runtime, error) {
 	if err != nil {
 		return cleanupOnError(fmt.Errorf("asset storage configuration: %w", err))
 	}
+	cloudService, err := cloudops.New(assetStorage, cfg.ExternalServices.AssetStorage, cfg.ExternalServices.CloudOps)
+	if err != nil {
+		return cleanupOnError(err)
+	}
 	auth := authservice.New(pools.Admin, auditLogger)
 	collectionService := collectionservice.New(pools.Game, pools.Nav, auditLogger)
 	metricService := metricadmin.New(pools.Game, pools.Nav)
@@ -87,7 +94,8 @@ func Start() (*Runtime, error) {
 	auditService := auditadmin.New(pools.Admin)
 	runtime := &Runtime{
 		Pools: pools, Audit: auditLogger, AuthService: auth,
-		AuthAPI: authcontroller.New(auth, auditLogger), NavAPI: navadmin.New(pools.Nav, auditLogger).WithAssets(assetStorage, cfg.ExternalServices.AssetStorage.Primary.PublicBaseURL, cfg.ExternalServices.AssetStorage.Mirror.PublicBaseURL),
+		CloudAPI: cloudapi.New(cloudService, auditLogger),
+		AuthAPI:  authcontroller.New(auth, auditLogger), NavAPI: navadmin.New(pools.Nav, auditLogger).WithAssets(assetStorage, cfg.ExternalServices.AssetStorage.Primary.PublicBaseURL, cfg.ExternalServices.AssetStorage.Mirror.PublicBaseURL),
 		GameAPI: gameadmin.New(pools.Game, auditLogger), OptionsAPI: options.New(pools.Nav, pools.Game),
 		CollectionAPI: collectioncontroller.New(collectionService),
 		MetricAPI:     metricadmin.NewAPI(metricService), ChangeAPI: changeadmin.NewAPI(changeService),

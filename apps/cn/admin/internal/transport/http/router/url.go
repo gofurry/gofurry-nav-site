@@ -27,6 +27,18 @@ func v1(root fiber.Router, runtime *bootstrap.Runtime) {
 	workbenchRoutes(protected.Group("/workbench"), runtime)
 	dataOpsRoutes(protected.Group("/dataops"), runtime)
 	auditRoutes(protected.Group("/audit"), runtime)
+	cloudRoutes(protected.Group("/system/cloud"), runtime)
+}
+
+func cloudRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	api := runtime.CloudAPI
+	root.Get("/overview", authmw.Require(authorization.CloudOpsRead), api.Overview)
+	root.Get("/object", authmw.Require(authorization.CloudOpsRead), api.Object)
+	root.Post("/object/repair-mirror", authmw.Require(authorization.CloudOpsManage), api.RepairMirror)
+	root.Post("/edgeone/purge", authmw.Require(authorization.CloudOpsManage), api.EdgeOnePurge)
+	root.Get("/edgeone/purge-tasks", authmw.Require(authorization.CloudOpsRead), api.EdgeOnePurgeTasks)
+	root.Post("/edgeone/purge-all", authmw.Require(authorization.CloudOpsPurgeAll), api.EdgeOnePurgeAll)
+	root.Post("/cloudflare/purge", authmw.Require(authorization.CloudOpsManage), api.CloudflarePurge)
 }
 
 func selfServiceRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
