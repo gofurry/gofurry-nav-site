@@ -91,6 +91,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 [data-admin-shell][data-sidebar-collapsed="true"] { --admin-sidebar-width: 4rem; }
 .admin-sidebar { width: var(--admin-sidebar-width); transition: width 200ms ease; }
 .admin-sidebar > :first-child { flex-shrink: 0; overflow: hidden; white-space: nowrap; }
+.admin-sidebar .admin-scroll { scrollbar-width: none; }
+.admin-sidebar .admin-scroll::-webkit-scrollbar { display: none; }
 .admin-workspace { padding-left: var(--admin-sidebar-width); transition: padding-left 200ms ease; }
 .admin-nav-link { display: flex; align-items: center; height: 2.25rem; min-width: 0; overflow: hidden; }
 .admin-nav-icon { display: grid; flex: 0 0 46px; place-items: center; }

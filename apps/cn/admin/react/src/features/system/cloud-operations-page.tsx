@@ -1,6 +1,6 @@
-import { ArrowClockwise, ArrowSquareOut, Copy, MagnifyingGlass, ArrowRight, Warning, CloudArrowUp, CloudCheck, ShieldWarning } from '@phosphor-icons/react'
+import { ArrowClockwise, ArrowSquareOut, Copy, MagnifyingGlass, ArrowRight, Warning, CloudArrowUp, CloudCheck, ShieldWarning, CaretDown } from '@phosphor-icons/react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Detail, FormField, PageHeader, PageLayout, Section } from '../../components/admin/page'
 import { EmptyState, ErrorState, LoadingState } from '../../components/admin/states'
 import { Alert } from '../../components/ui/alert'
@@ -94,6 +94,8 @@ function CDNPurge({ provider, config, submitted }: { provider: 'edgeone' | 'clou
   const canManage = auth.can('cloudops.manage')
   const [type, setType] = useState<'url' | 'prefix' | 'host'>('url')
   const [targets, setTargets] = useState('')
+  const [dangerOpen, setDangerOpen] = useState(false)
+  const dangerPanelID = useId()
   const [confirmation, setConfirmation] = useState<{ type: string; targets: string[] } | 'all' | null>(null)
   const mutation = useMutation({ mutationFn: (request: { type: string; targets: string[] } | 'all') => sendJSON<Operation<Purge>>(`${base}/${provider}/${request === 'all' ? 'purge-all' : 'purge'}`, 'POST', request === 'all' ? undefined : request), onSuccess: (response) => { if (response.result.job_id) submitted(response.result.job_id) } })
   const purge = (request: { type: string; targets: string[] } | 'all') => setConfirmation(request)
@@ -108,7 +110,14 @@ function CDNPurge({ provider, config, submitted }: { provider: 'edgeone' | 'clou
         <div className="flex justify-end"><Button disabled={!targets.trim()} onClick={() => purge({ type, targets: targets.split(/\r?\n/).map((target) => target.trim()).filter(Boolean) })}><ArrowClockwise className="size-4" />提交清缓存</Button></div>
         {provider === 'edgeone' && config.main_host && <div className="grid gap-2 border-t pt-3"><p className="text-xs text-muted-foreground">快捷操作 · 仅清除主站域名</p><Button variant="secondary" className="h-auto min-h-9 whitespace-normal break-all" onClick={() => purge({ type: 'host', targets: [config.main_host!] })}>清除主站缓存 · {config.main_host}</Button></div>}
       </fieldset> : <p className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldWarning className="size-4" />当前账号仅可查看配置与任务。</p>}
-      {provider === 'edgeone' && auth.can('cloudops.purge_all') && <aside aria-label="高风险操作" className="grid gap-3 rounded-md border border-danger/30 bg-danger/5 p-4"><div className="flex items-center gap-2 text-sm font-semibold text-danger"><Warning className="size-4" />高风险操作</div><p className="text-xs leading-relaxed text-muted-foreground">覆盖整个 EdgeOne Zone 的所有加速域名。此操作的范围大于主站或指定资源清缓存。</p><Button variant="danger" className="h-auto min-h-9 whitespace-normal" disabled={!config.configured || mutation.isPending} onClick={() => purge('all')}>清除整个 EdgeOne Zone 缓存</Button></aside>}
+      {provider === 'edgeone' && auth.can('cloudops.purge_all') && <aside aria-label="高风险操作" className="overflow-hidden rounded-md border border-danger/30 bg-danger/5">
+        <button type="button" aria-expanded={dangerOpen} aria-controls={dangerPanelID} onClick={() => setDangerOpen((open) => !open)} className="flex w-full items-center justify-between gap-3 p-4 text-sm font-semibold text-danger transition-colors hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+          <span className="flex items-center gap-2"><Warning className="size-4" />高风险操作</span><CaretDown className={`size-4 shrink-0 transition-transform motion-reduce:transition-none ${dangerOpen ? 'rotate-180' : ''}`} />
+        </button>
+        <div id={dangerPanelID} hidden={!dangerOpen}>
+          <div className="grid gap-3 border-t border-danger/20 p-4"><p className="text-xs leading-relaxed text-muted-foreground">覆盖整个 EdgeOne Zone 的所有加速域名。此操作的范围大于主站或指定资源清缓存。</p><Button variant="danger" className="h-auto min-h-9 whitespace-normal" disabled={!config.configured || mutation.isPending} onClick={() => purge('all')}>清除整个 EdgeOne Zone 缓存</Button></div>
+        </div>
+      </aside>}
     </div>
   </Section><ConfirmAction open={confirmation !== null} onOpenChange={(open) => { if (!open) setConfirmation(null) }} title={confirmation === 'all' ? '清除整个 EdgeOne Zone 缓存' : `${name} 清缓存确认`} description={confirmation === 'all' ? '范围：整个 EdgeOne Zone（包括所有加速域名）。确认清除该范围的全部缓存？' : `请核对以下 ${confirmation?.targets.length ?? 0} 个目标，确认后提交缓存清除任务。`} confirmLabel="确认清缓存" variant={confirmation === 'all' ? 'danger' : 'primary'} onConfirm={() => { if (confirmation) { mutation.mutate(confirmation); setConfirmation(null) } }} >{confirmation && confirmation !== 'all' && <ul className="mt-3 divide-y rounded-md border bg-surface-muted px-3">{confirmation.targets.map((target, index) => <li key={index} className="break-all py-2 font-mono text-xs">{target}</li>)}</ul>}</ConfirmAction></>
 }
