@@ -163,8 +163,8 @@ func TestRealDevManagedAssetAPI(t *testing.T) {
 	publication := upload("/pattern", "pattern.svg", pattern, map[string]string{"name": "[dev acceptance] Pattern", "name_en": "Dev acceptance", "light_color": "#123456", "dark_color": "#abcdef", "light_opacity": "0.1", "dark_opacity": "0.2", "default_size_px": "96", "enabled": "false", "sort_order": "999999"}, true)
 	patternID := publication.Item.(map[string]any)["id"].(string)
 	defer jsonCall("DELETE", "/pattern/"+patternID, nil, true)
-	upload("/pattern/"+patternID+"/file", "unsafe.svg", []byte(`<svg><script/></svg>`), nil, false)
-	upload("/pattern/"+patternID+"/file", "safe.svg", pattern, nil, true)
+	upload("/pattern/"+patternID+"/file", "export.svg", []byte(`<?xml version="1.0"?><!DOCTYPE svg><!-- exported drawing --><svg xmlns="http://www.w3.org/2000/svg"><style>path{fill:black}</style><path d="M0 0h10v10z"/></svg>`), nil, true)
+	upload("/pattern/"+patternID+"/file", "pattern.svg", pattern, nil, true)
 	patternUpdate := patternPayload{Name: "[dev acceptance] Pattern", NameEn: "Dev acceptance", LightColor: "#111111", DarkColor: "#eeeeee", LightOpacity: 0.25, DarkOpacity: 0.5, DefaultSizePx: 128, Enabled: false, SortOrder: 999999}
 	jsonCall("PUT", "/pattern/"+patternID, patternUpdate, true)
 	var got patternDTO

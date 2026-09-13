@@ -11,7 +11,7 @@ Active production applications live under `apps/cn`: six independent Go modules 
 | Admin | explicit `gfa`, `gfn`, `gfg` pools | `gfa` auth/audit; no cross-DB transaction claim |
 | Uptime | none | local Bbolt availability history; no business Redis |
 
-Admin owns managed Site icons, independent desktop/mobile Hero pools and safe SVG
+Admin owns managed Site icons, independent desktop/mobile Hero pools and SVG
 patterns. It verifies COS Primary before committing business references and treats
 R2 Mirror failure as a warning. CloudOps uses scoped capabilities and GFA audit;
 there is no asset registry, replica table or synchronization worker. Nav Backend

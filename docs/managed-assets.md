@@ -71,14 +71,14 @@ Preferences offers bundled default, enabled server patterns and a local image.
 SVG uses the same repeating CSS mask as the public page, including light/dark
 colors, opacity and tile size. Raster images expose opacity and size only.
 Only explicit overrides are stored in `gf_background_preference`; catalog
-defaults remain live. Local SVG is validated, and SVG/raster bytes stay in
+defaults remain live. Original SVG/raster bytes stay in
 IndexedDB. No local image upload endpoint exists. Clearing removes the stored
 Blob; missing/disabled patterns, missing local files and exhausted CDN retries
 fall back to the bundled pattern. SSR always renders the bundled background
 before browser-only preferences are loaded.
 
 Run `npm run background:smoke` for real Chromium IndexedDB persistence,
-SVG/raster validation, clearing and verification that local images cause no
+SVG preservation/raster decoding, clearing and verification that local images cause no
 network mutations.
 
 ## CloudOps
@@ -138,3 +138,17 @@ overrides, local SVG/raster editing and clearing, 12-hour preference cookies,
 independent desktop/mobile AVIF reads and terminal icon/Hero/pattern fallbacks.
 It exercises actual development CDN URLs; its isolated API row fixtures complement
 the separate real PostgreSQL/Admin/cloud suites instead of replacing them.
+
+## Preview follow-up (2026-09-13)
+
+The initial SVG geometry whitelist is superseded by the owner's request to accept
+original SVG content without restrictions. Admin and local background selection
+no longer inspect declarations, comments, styles, elements or attributes; the
+backend keeps the SVG extension and common upload size checks only. This also
+allows the bundled `gofurry-pattern.svg`, whose comments the initial browser
+validator incorrectly rejected. Rendering remains URL-based CSS masks/images.
+
+Admin explicitly uses `Cross-Origin-Embedder-Policy: unsafe-none`: Helmet's
+implicit `require-corp` blocked ordinary public CDN icon/Hero previews despite
+successful uploads. Other security headers and authorization remain unchanged.
+Rebuild the React bundle and restart Admin to load both changes.

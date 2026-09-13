@@ -9,7 +9,7 @@ import { Input } from '../../components/ui/input'
 import { useUnsavedChanges } from '../../hooks/use-unsaved-changes'
 import { errorMessage, listJSON, sendForm, sendJSON } from '../../lib/api'
 import { useAuth } from '../auth/auth-context'
-import { PatternPreview, validatePatternSVG, type PatternAppearance } from './pattern-preview'
+import { PatternPreview, type PatternAppearance } from './pattern-preview'
 
 type Kind = 'hero' | 'pattern'
 type Metadata = PatternAppearance & { name: string; name_en: string; enabled: boolean; sort_order: number }
@@ -31,7 +31,7 @@ function AssetPage({ kind }: { kind: Kind }) {
   return <PageLayout>
     <PageHeader title={kind === 'hero' ? '首页 Hero' : '背景图案'} actions={canWrite && selected === undefined && <Button onClick={() => setSelected(null)}>新增{kind === 'hero' ? ' Hero' : '图案'}</Button>} />
     {kind === 'hero' && <div className="flex gap-2">{(['desktop', 'mobile'] as const).map((value) => <Button key={value} variant={variant === value ? 'primary' : 'secondary'} disabled={selected !== undefined} onClick={() => { setVariant(value); setPage(1) }}>{value === 'desktop' ? '桌面资源池' : '移动资源池'}</Button>)}</div>}
-    <p className="text-sm text-muted-foreground">{kind === 'hero' ? '首页从当前设备的已启用资源中随机选择。桌面与移动资源互相独立。仅接受 AVIF。' : '安全 SVG 图案可平铺展示，颜色、透明度和尺寸作为用户选择此图案时的默认外观。'}</p>
+    <p className="text-sm text-muted-foreground">{kind === 'hero' ? '首页从当前设备的已启用资源中随机选择。桌面与移动资源互相独立。仅接受 AVIF。' : 'SVG 图案可平铺展示，颜色、透明度和尺寸作为用户选择此图案时的默认外观。'}</p>
     {selected !== undefined && <AssetEditor key={`${kind}-${variant}-${selected?.id ?? 'new'}`} kind={kind} variant={variant} asset={selected} close={() => setSelected(undefined)} saved={() => { setSelected(undefined); void query.refetch() }} />}
     {query.isLoading ? <LoadingState /> : query.error ? <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} /> : <>
       <div className="grid gap-4 lg:grid-cols-2">{query.data?.list.map((asset) => <Section key={asset.id} title={asset.name} actions={<Button variant="secondary" disabled={selected !== undefined} onClick={() => setSelected(asset)}>{canWrite ? '管理' : '查看'}</Button>}>
@@ -76,8 +76,7 @@ export function AssetEditor({ kind, variant, asset, close, saved }: { kind: Kind
     setValidating(true)
     try {
       if (candidate.size > 5 * 1024 * 1024) throw new Error('文件不能超过 5 MiB')
-      if (kind === 'pattern') validatePatternSVG(await candidate.text())
-      else if (!candidate.name.toLowerCase().endsWith('.avif')) throw new Error('Hero 只接受 AVIF 文件')
+      if (kind === 'hero' && !candidate.name.toLowerCase().endsWith('.avif')) throw new Error('Hero 只接受 AVIF 文件')
       setFile(candidate)
     } catch (err) { setError(errorMessage(err)) } finally { setValidating(false) }
   }

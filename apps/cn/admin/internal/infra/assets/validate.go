@@ -1,11 +1,8 @@
 package assets
 
 import (
-	"bytes"
 	"encoding/binary"
-	"encoding/xml"
 	"errors"
-	"io"
 	"mime"
 	"net/http"
 	"path"
@@ -54,82 +51,11 @@ func Validate(kind, filename string, data []byte) (string, string, error) {
 		}
 		return "image/avif", ".avif", nil
 	case "pattern":
-		if len(data) > 512<<10 {
-			return "", "", errors.New("pattern exceeds 512 KiB")
+		if !strings.EqualFold(path.Ext(filename), ".svg") {
+			return "", "", errors.New("pattern must be an SVG file")
 		}
-		if err := ValidateSVG(data); err != nil {
-			return "", "", err
-		}
+		// Preserve administrator-supplied SVG bytes without content filtering.
 		return "image/svg+xml", ".svg", nil
 	}
 	return "", "", errors.New("unsupported asset kind")
-}
-
-// Parse XML and accept a self-contained geometry subset suitable for CSS masks.
-// CSS and animation are excluded, so escapes cannot hide external references.
-func ValidateSVG(data []byte) error {
-	allowed := map[string]bool{}
-	for _, name := range strings.Fields("svg g path rect circle ellipse line polyline polygon defs use symbol pattern mask clipPath title desc") {
-		allowed[name] = true
-	}
-	d := xml.NewDecoder(bytes.NewReader(data))
-	depth, roots, tokens := 0, 0, 0
-	for {
-		token, err := d.Token()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return errors.New("invalid SVG XML")
-		}
-		tokens++
-		if tokens > 50000 {
-			return errors.New("SVG too complex")
-		}
-		switch t := token.(type) {
-		case xml.StartElement:
-			if depth == 0 {
-				roots++
-				if t.Name.Local != "svg" {
-					return errors.New("SVG root required")
-				}
-			}
-			depth++
-			if depth > 64 || !allowed[t.Name.Local] || (t.Name.Space != "" && t.Name.Space != "http://www.w3.org/2000/svg") {
-				return errors.New("unsafe SVG element")
-			}
-			for _, a := range t.Attr {
-				name := strings.ToLower(a.Name.Local)
-				value := strings.ToLower(strings.TrimSpace(a.Value))
-				if a.Name.Space == "xmlns" || name == "xmlns" {
-					continue
-				}
-				if strings.HasPrefix(name, "on") || name == "style" || name == "base" || strings.ContainsAny(value, `\`) || strings.Contains(value, "@import") || strings.Contains(value, ":") {
-					return errors.New("unsafe SVG attribute")
-				}
-				if name == "href" && !strings.HasPrefix(value, "#") {
-					return errors.New("SVG external reference is forbidden")
-				}
-				if strings.Contains(value, "url(") && !regexp.MustCompile(`^url\(#[a-z0-9_-]+\)$`).MatchString(value) {
-					return errors.New("SVG external paint is forbidden")
-				}
-			}
-		case xml.EndElement:
-			depth--
-		case xml.Directive:
-			return errors.New("SVG directives are forbidden")
-		case xml.ProcInst:
-			if t.Target != "xml" {
-				return errors.New("SVG processing instruction is forbidden")
-			}
-		case xml.CharData:
-			if depth == 0 && strings.TrimSpace(string(t)) != "" {
-				return errors.New("invalid SVG text")
-			}
-		}
-	}
-	if roots != 1 || depth != 0 {
-		return errors.New("one complete SVG is required")
-	}
-	return nil
 }

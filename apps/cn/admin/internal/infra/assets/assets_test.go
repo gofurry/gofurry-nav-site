@@ -1,6 +1,7 @@
 package assets
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -88,15 +89,27 @@ func TestObjectKeysAndFormats(t *testing.T) {
 		}
 	}
 }
-func TestSVGSecurity(t *testing.T) {
-	for _, body := range []string{`<svg xmlns="http://www.w3.org/2000/svg"><defs><path id="p" d="M0 0"/></defs><use href="#p"/></svg>`, `<svg><path fill="url(#p)"/></svg>`} {
-		if err := ValidateSVG([]byte(body)); err != nil {
+func TestSVGOriginalContent(t *testing.T) {
+	for _, body := range []string{
+		`<?xml version="1.0"?><!DOCTYPE svg><!-- exported drawing --><svg xmlns="http://www.w3.org/2000/svg"><style>.shape{fill:black}</style><filter id="blur"><feGaussianBlur stdDeviation="2"/></filter><path class="shape" filter="url(#blur)" d="M0 0h10v10z"/></svg>`,
+		`<svg onload="example()"><script/><image href="https://example.com/image.png"/><foreignObject/><animate attributeName="opacity"/></svg>`,
+		`<svg><!--` + strings.Repeat("drawing metadata ", 40000) + `--></svg>`,
+	} {
+		data := []byte(body)
+		o, err := NewObject("pattern", 0, "export.SVG", data)
+		if err != nil {
 			t.Fatal(err)
 		}
-	}
-	for _, body := range []string{`<svg><script/></svg>`, `<svg><image href="#p"/></svg>`, `<svg><foreignObject/></svg>`, `<svg onload="bad()"/>`, `<svg><use href="&#104;ttps://example.com/x"/></svg>`, `<svg><path style="fill:url(https://x)"/></svg>`, `<!DOCTYPE svg><svg/>`, `<svg/><svg/>`, `<svg><path fill="url(//example.com/x)"/></svg>`, `<svg><animate attributeName="href"/></svg>`} {
-		if err := ValidateSVG([]byte(body)); err == nil {
-			t.Fatalf("unsafe SVG accepted: %s", body)
+		if !bytes.Equal(o.Data, data) || o.ContentType != "image/svg+xml" || !ValidKey(o.Key) {
+			t.Fatal("SVG bytes or publication format changed")
 		}
+	}
+	for _, data := range [][]byte{nil, make([]byte, MaxSize+1)} {
+		if _, _, err := Validate("pattern", "pattern.svg", data); err == nil {
+			t.Fatal("upload size limit bypassed")
+		}
+	}
+	if _, _, err := Validate("pattern", "photo.png", []byte("image")); err == nil {
+		t.Fatal("non-SVG pattern accepted")
 	}
 }

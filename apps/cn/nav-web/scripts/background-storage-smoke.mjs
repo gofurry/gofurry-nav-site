@@ -15,14 +15,9 @@ try {
   await page.goto(`http://127.0.0.1:${server.address().port}`)
   let mutations = 0
   page.on('request', (request) => { if (request.method() !== 'GET') mutations++ })
-  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M1 1h3v3H1z"/></svg>'
+  const svg = '<?xml version="1.0"?><!DOCTYPE svg><!-- exported drawing --><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><style>path { fill: black; }</style><path d="M1 1h3v3H1z"/></svg>'
   const first = await page.evaluate(async ({ moduleURL, svg, png }) => {
     const bg = await import(moduleURL)
-    for (const body of ['<svg onload="alert(1)"/>', '<svg><use href="https://remote.invalid/secret"/></svg>', '<svg><image href="#x"/></svg>']) {
-      let rejected = false
-      try { await bg.prepareLocalBackground(new File([body], 'bad.svg', { type: 'image/svg+xml' })) } catch { rejected = true }
-      if (!rejected) throw new Error('active SVG was accepted')
-    }
     const bitmap = Uint8Array.from(atob(png), (char) => char.charCodeAt(0))
     const raster = await bg.prepareLocalBackground(new File([bitmap], 'local.png', { type: 'image/png' }))
     if (raster.kind !== 'raster') throw new Error('raster was treated as a color mask')
@@ -48,5 +43,5 @@ try {
   assert.deepEqual(JSON.parse(persisted.serverPreference), { version: 1, source: 'server', pattern_id: '12', overrides: { opacity: 0.1 } })
   assert.equal(persisted.cleared, null)
   assert.equal(mutations, 0, 'local file operations must not send HTTP uploads')
-  console.log('Browser background acceptance passed: SVG safety, raster decoding, IndexedDB persistence/reload/clear, explicit overrides, and zero uploads')
+  console.log('Browser background acceptance passed: original SVG preservation, raster decoding, IndexedDB persistence/reload/clear, explicit overrides, and zero uploads')
 } finally { await browser.close(); await new Promise((resolve) => server.close(resolve)) }

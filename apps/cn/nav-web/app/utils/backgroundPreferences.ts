@@ -62,26 +62,10 @@ export async function saveBackgroundPreference(preference: BackgroundPreference,
   window.dispatchEvent(new Event(BACKGROUND_CHANGE_EVENT))
 }
 
-export function validateLocalSVG(text: string) {
-  if (text.length > 512 * 1024 || /<!|<\?(?!xml\s)/i.test(text)) throw new Error('SVG 必须是自包含图案，不能带声明、实体或处理指令')
-  const doc = new DOMParser().parseFromString(text, 'image/svg+xml')
-  const allowed = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'defs', 'use', 'symbol', 'pattern', 'mask', 'clipPath', 'title', 'desc'])
-  if (doc.querySelector('parsererror') || doc.documentElement.localName !== 'svg') throw new Error('无效的 SVG 文件')
-  for (const node of doc.querySelectorAll('*')) {
-    if (!allowed.has(node.localName) || (node.namespaceURI && node.namespaceURI !== 'http://www.w3.org/2000/svg')) throw new Error('SVG 含有不支持的元素')
-    for (const attr of node.attributes) {
-      const name = attr.localName.toLowerCase(), value = attr.value.trim()
-      if (attr.name === 'xmlns' || attr.name === 'xmlns:xlink') continue
-      if (name.startsWith('on') || name === 'style' || name === 'base' || value.includes('\\') || value.includes(':') || /@import/i.test(value) || (name === 'href' && !/^#[\w-]+$/.test(value)) || /url\s*\(\s*(?!#[\w-]+\s*\))/i.test(value)) throw new Error('SVG 不允许脚本、样式或外部资源')
-    }
-  }
-}
-
 export async function prepareLocalBackground(file: File): Promise<LocalBackground> {
   if (!file.size || file.size > 10 * 1024 * 1024) throw new Error('请选择不超过 10 MiB 的图片')
   if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
-    const text = await file.text(); validateLocalSVG(text)
-    return { blob: new Blob([text], { type: 'image/svg+xml' }), kind: 'svg', name: file.name }
+    return { blob: new Blob([file], { type: 'image/svg+xml' }), kind: 'svg', name: file.name }
   }
   if (!/^image\/(png|jpeg|webp|avif|gif|bmp)$/.test(file.type)) throw new Error('支持 SVG、PNG、JPEG、WebP、AVIF、GIF 或 BMP')
   const bitmap = await createImageBitmap(file)

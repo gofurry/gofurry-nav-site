@@ -5,7 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../app/toast'
 import { sendForm } from '../../lib/api'
 import { AssetEditor } from './asset-pages'
-import { PatternPreview, validatePatternSVG } from './pattern-preview'
+import { PatternPreview } from './pattern-preview'
 
 const auth = vi.hoisted(() => ({ write: true }))
 vi.mock('../auth/auth-context', () => ({ useAuth: () => ({ can: () => auth.write }) }))
@@ -19,11 +19,6 @@ function editor(kind: 'hero' | 'pattern' = 'pattern') {
   render(<QueryClientProvider client={new QueryClient()}><ToastProvider><RouterProvider router={router} /></ToastProvider></QueryClientProvider>)
   return saved
 }
-
-it('rejects active SVG and external references before creating a preview', () => {
-  for (const text of ['<svg><script/></svg>', '<svg onload="alert(1)"/>', '<svg><use href="https://example.com/x"/></svg>', '<svg><path fill="url(//example.com/x)"/></svg>', '<!DOCTYPE svg><svg/>']) expect(() => validatePatternSVG(text)).toThrow()
-  expect(() => validatePatternSVG('<svg xmlns="http://www.w3.org/2000/svg"><defs><path id="p" d="M0 0"/></defs><use href="#p"/></svg>')).not.toThrow()
-})
 
 it('uses an actual repeating mask for both themes with the edited settings', () => {
   const { container, rerender } = render(<PatternPreview url="blob:pattern-preview" appearance={{ light_color: '#123456', dark_color: '#abcdef', light_opacity: 0.1, dark_opacity: 0.4, default_size_px: 96 }} />)
@@ -40,11 +35,11 @@ it('previews a selected pattern without uploading, then submits metadata and ret
   const saved = editor()
   fireEvent.change(screen.getByLabelText(/英文名称/), { target: { value: 'Pattern' } })
   fireEvent.change(screen.getByLabelText(/^名称/), { target: { value: '图案' } })
-  const file = new File(['<svg/>'], 'pattern.svg', { type: 'image/svg+xml' })
-  Object.defineProperty(file, 'text', { value: async () => '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>' })
+  const file = new File(['<?xml version="1.0"?><!DOCTYPE svg><!-- exported drawing --><svg xmlns="http://www.w3.org/2000/svg"><style>.shape{fill:black}</style><path class="shape" d="M0 0h10v10z"/></svg>'], 'pattern.svg', { type: 'image/svg+xml' })
   fireEvent.change(screen.getByLabelText(/选择文件/), { target: { files: [file] } })
   await waitFor(() => expect(screen.getByLabelText('背景亮暗预览')).toBeInTheDocument())
   expect(sendForm).not.toHaveBeenCalled()
+  expect(URL.createObjectURL).toHaveBeenCalledWith(file)
   vi.mocked(sendForm).mockResolvedValue({ primary: 'ready', mirror: 'failed', warnings: ['R2 mirror sync failed'] })
   fireEvent.click(screen.getByRole('button', { name: '创建资源' }))
   await waitFor(() => expect(sendForm).toHaveBeenCalledOnce())
