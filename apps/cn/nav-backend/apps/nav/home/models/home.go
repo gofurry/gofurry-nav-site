@@ -7,15 +7,19 @@ import (
 )
 
 const (
-	HomeSchemaVersion = 3
+	HomeSchemaVersion = 4
 
 	HomeStateReady   = "ready"
 	HomeStateMissing = "missing"
 )
 
-type HomeBackgrounds struct {
-	Desktop string `json:"desktop"`
-	Mobile  string `json:"mobile"`
+type HeroAsset struct {
+	ID        int64  `json:"id,string"`
+	ObjectKey string `json:"object_key"`
+}
+type HomeHero struct {
+	Desktop *HeroAsset `json:"desktop"`
+	Mobile  *HeroAsset `json:"mobile"`
 }
 
 type HomeGroup struct {
@@ -47,7 +51,7 @@ type HomeResponse struct {
 	Spotlight      HomeSpotlight          `json:"spotlight"`
 	Ping           map[string]string      `json:"ping"`
 	Saying         *navmodels.SayingModel `json:"saying"`
-	Backgrounds    HomeBackgrounds        `json:"backgrounds"`
+	Hero           HomeHero               `json:"hero"`
 }
 
 type HomePingResponse struct {
@@ -66,10 +70,26 @@ type HomeSayingResponse struct {
 	Saying         *navmodels.SayingModel `json:"saying"`
 }
 
-type HomeBackgroundsResponse struct {
-	SchemaVersion  int             `json:"schema_version"`
-	GeneratedAt    time.Time       `json:"generated_at"`
-	State          string          `json:"state"`
-	ReasonMessages []string        `json:"reason_messages,omitempty"`
-	Backgrounds    HomeBackgrounds `json:"backgrounds"`
+type HomeHeroResponse struct {
+	SchemaVersion  int       `json:"schema_version"`
+	GeneratedAt    time.Time `json:"generated_at"`
+	State          string    `json:"state"`
+	ReasonMessages []string  `json:"reason_messages,omitempty"`
+	Hero           HomeHero  `json:"hero"`
+}
+
+type BackgroundPattern struct {
+	ID            int64   `json:"id,string"`
+	Name          string  `json:"name"`
+	NameEn        string  `json:"name_en"`
+	ObjectKey     string  `json:"object_key"`
+	LightColor    string  `json:"light_color"`
+	DarkColor     string  `json:"dark_color"`
+	LightOpacity  float64 `json:"light_opacity"`
+	DarkOpacity   float64 `json:"dark_opacity"`
+	DefaultSizePx int32   `json:"default_size_px"`
+}
+type PatternCatalog struct {
+	SchemaVersion int                 `json:"schema_version"`
+	Patterns      []BackgroundPattern `json:"patterns"`
 }

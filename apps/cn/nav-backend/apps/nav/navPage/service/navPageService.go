@@ -6,7 +6,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"sort"
@@ -501,22 +500,6 @@ func normalizeLang(lang string) string {
 		return "en"
 	}
 	return "zh"
-}
-
-func (svc *navPageService) GetImageUrl(t string) string {
-	rand.Seed(time.Now().UnixNano())
-	addr := "https://qcdn.go-furry.com/nav/bg/"
-	res := env.GetServerConfig().Resource
-	num := res.NavImageNum
-	if t == "standard" {
-		addr += "standard-"
-		num = res.NavResizedImageNum
-	}
-	if t == "mobile" {
-		addr += "mobile-"
-		num = res.NavResizedImageNum
-	}
-	return addr + "bg-" + util.Int2String(rand.Intn(num)+1) + ".avif"
 }
 
 func (svc *navPageService) convertRecords(records []models.GfnSite, lang string) []models.SiteVo {

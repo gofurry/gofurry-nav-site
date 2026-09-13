@@ -158,7 +158,7 @@ assert(siteBars[0].signal === 0 && siteBars[1].signal === null && siteBars[2].si
 assert(gameBars[0].value === 10 && gameBars[0].maximum === 10 && gameBars[1].value === 9, 'Game bars used metric ratios instead of population')
 const mediaSource = readFileSync(new URL('../app/components/insights/entity/InsightEntityMedia.vue', import.meta.url), 'utf8')
 assert(mediaSource.includes(':alt="entity.name"') && mediaSource.includes(':aria-label="entity.name"') && mediaSource.includes('@error="onError"'), 'entity media lost accessible identity or error fallback')
-assert(mediaSource.includes('useSiteAssets()') && mediaSource.includes("'lazy'"), 'entity media lost existing Site resolver or native lazy loading')
+assert(mediaSource.includes('useManagedAsset(') && mediaSource.includes("'lazy'"), 'entity media lost managed Site resolution or native lazy loading')
 for (const path of ['activity/InsightActivityItem.vue', 'overview/InsightsOverviewSites.vue', 'domain/InsightsGamePulse.vue']) {
   const source = readFileSync(new URL(`../app/components/insights/${path}`, import.meta.url), 'utf8')
   assert(source.includes('localePath('), `${path} lost localized entity links`)

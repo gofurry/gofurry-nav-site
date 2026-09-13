@@ -1,5 +1,6 @@
 import type {
-  NavHomeBackgrounds,
+  NavHomeHero,
+  BackgroundPattern,
   NavHomePingResponse,
   NavHomeResponse,
   NavHomeSayingResponse,
@@ -40,8 +41,12 @@ export function getNavHomeSaying(lang: string): Promise<NavHomeSayingResponse> {
   return useApi('navV2')('/nav/home/saying', { query: { lang } })
 }
 
-export function getNavHomeBackgrounds(): Promise<NavHomeResponse['backgrounds']> {
-  return useApi('navV2')<{ backgrounds: NavHomeBackgrounds }>('/nav/home/backgrounds').then((response) => response.backgrounds)
+export function getNavHomeHero(): Promise<NavHomeHero> {
+  return useApi('navV2')<{ hero: NavHomeHero }>('/nav/home/hero').then((response) => response.hero)
+}
+
+export function getBackgroundPatterns(): Promise<{ schema_version: number; patterns: BackgroundPattern[] }> {
+  return useApi('navV2')('/nav/appearance/patterns')
 }
 
 export function getNavSiteIndex(): Promise<NavSiteIndexResponse> {

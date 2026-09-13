@@ -16,7 +16,6 @@
         :icon="sitePageData.siteInfo?.icon || undefined"
         :info="sitePageData.siteInfo?.info || undefined"
         :keywords="overviewKeywords"
-        :logo-prefix="siteLogoPrefix"
         :site-id="siteId"
         :site-name="siteName"
         :switchable-domains="switchableDomains"
@@ -125,11 +124,9 @@ const { data, pending, error, siteId } = detailState
 const siteInsightsSnapshot = computed(() => insightsState.data.value)
 const showInsights = computed(() => props.showInsights)
 const navV2Api = useApi('navV2')
-const config = useRuntimeConfig()
 const pageRoot = ref<HTMLElement | null>(null)
 const sitePageData = computed(() => data.value!)
 const siteName = computed(() => sitePageData.value.siteInfo?.name?.trim() || 'GoFurry')
-const siteLogoPrefix = computed(() => String(config.public?.siteLogoPrefixUrl || ''))
 const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'Failed to load site data.' : '站点数据加载失败。'))
 const httpPayload = computed(() => asRecord(sitePageData.value.targetLatestCore?.protocols?.http?.payload))
 const primaryEdgeLabel = computed(() => {

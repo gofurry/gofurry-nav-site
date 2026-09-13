@@ -34,6 +34,37 @@ exercises real COS/R2 plus the development GFN/GFA transaction and audit path.
 It creates labeled dev records and soft-deletes them afterward. Immutable files
 and their audit trail are retained; no production data or object deletion occurs.
 
+## Public appearance and CDN resolution
+
+Home schema v4 replaces `backgrounds` with `hero.desktop` and `hero.mobile`.
+Each is either NULL or `{ "id": "...", "object_key": "nav/hero/..." }`.
+`GET /api/v2/nav/home/hero` replaces `/home/backgrounds`.
+`GET /api/v2/nav/appearance/patterns` returns schema version 1 and an ordered
+`patterns` array. Public responses contain keys, never COS/R2/CDN URLs.
+The old Nav V1-to-V2 assessment describes the historical background endpoint;
+this contract supersedes that endpoint and the old numbered resource config.
+
+The derived home cache still owns navigation content. Hero selection is composed
+at request time from independent pools, so disabling or deleting an asset takes
+effect without waiting for the content cache. Empty pools stay NULL and never
+borrow from the other viewport. The reader rejects pre-v4 home payloads; the
+maintenance cutover must clear/rebuild derived caches before traffic resumes.
+
+Nuxt configures `NUXT_PUBLIC_ASSET_PRIMARY_BASE` and
+`NUXT_PUBLIC_ASSET_MIRROR_BASE`, with public origins only. SSR uses the valid
+`gf_asset_cdn` cookie or Primary. After hydration, idle work performs two rounds
+of parallel GET probes, consumes and validates all 8192 bytes, and caches the
+choice for 12 hours. Mirror must be at least 20% or 50 ms faster. A real asset
+failure tries the other provider, invalidates the cookie and schedules another
+probe; terminal fallbacks are the bundled default logo, no Hero image and the
+bundled page pattern. Steam asset resolution remains separate.
+
+Run Nav Web `npm run assets:test`, `npm run insights:semantics`,
+`npm run seo:recovery:test`, `npm run typecheck`, and `npm run build`.
+Nav Backend's opt-in `TestRealDevAppearanceQueries` uses only transaction-local
+temporary tables copied from the Goose schema to verify pool isolation,
+disabled/deleted filtering and pattern order on real PostgreSQL.
+
 ## CloudOps
 
 System / Cloud resources uses `/api/v1/system/cloud`:

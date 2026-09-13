@@ -87,18 +87,12 @@ type serverConfig struct {
 	Middleware MiddlewareConfig `yaml:"middleware"`
 	Waf        WafConfig        `yaml:"waf"`
 	Proxy      ProxyConfig      `yaml:"proxy"`
-	Resource   ResourceConfig   `yaml:"resource"`
 	Admin      AdminConfig      `yaml:"admin"`
 }
 
 type AdminConfig struct {
 	Token  string `yaml:"token"`
 	Header string `yaml:"header"`
-}
-
-type ResourceConfig struct {
-	NavImageNum        int `yaml:"nav_image_num"`
-	NavResizedImageNum int `yaml:"nav_resized_image_num"`
 }
 
 type ProxyConfig struct {

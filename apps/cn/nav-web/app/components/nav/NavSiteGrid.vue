@@ -10,9 +10,9 @@
       @mouseleave="scheduleSiteHide"
     >
       <div class="nav-site-card__logo">
-        <img
-          :key="siteLogoKey(site)"
-          :src="siteLogoSrc(site)"
+        <ManagedAssetImage
+          :key="`${site.id}:${site.icon}`"
+          :object-key="site.icon"
           class="h-full w-full object-contain"
           :alt="site.name"
           width="48"
@@ -53,6 +53,7 @@
 </template>
 
 <script setup lang="ts">
+import ManagedAssetImage from '@/components/common/ManagedAssetImage.vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Delay, Site } from '~/types/nav'
 import { touchSiteView } from '~/services/nav'
@@ -65,8 +66,6 @@ const props = defineProps<{
   pingData?: Record<string, Delay>
 }>()
 
-const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
-const defaultLogo = 'defaultLogo.svg'
 const pingData = computed(() => props.pingData ?? {})
 const displayMode = ref<DisplayMode>('sfw')
 const siteRefs = ref<HTMLElement[]>([])
@@ -78,35 +77,9 @@ function isSiteVisible(site: Site) {
 
 const visibleSites = computed(() => props.sites.filter((site): site is Site => !!site && isSiteVisible(site)))
 
-function joinAssetUrl(prefix: string, path: string) {
-  if (!prefix) {
-    return path
-  }
 
-  return `${prefix.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
-}
 
-function withAssetVersion(url: string, version?: string | null) {
-  const normalizedVersion = (version || '').trim()
-  if (!normalizedVersion) {
-    return url
-  }
-  const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}v=${encodeURIComponent(normalizedVersion)}`
-}
 
-function siteLogoSrc(site: Site) {
-  const iconPath = site.icon || defaultLogo
-  const assetURL = joinAssetUrl(logoPrefix, iconPath)
-  if (!site.icon) {
-    return assetURL
-  }
-  return withAssetVersion(assetURL, site.update_time)
-}
-
-function siteLogoKey(site: Site) {
-  return `${site.id}:${site.icon || defaultLogo}:${site.update_time || ''}`
-}
 
 function domainList(site: Site) {
   if (Array.isArray(site.domain)) {

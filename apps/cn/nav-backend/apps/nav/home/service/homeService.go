@@ -25,12 +25,12 @@ type navHomeReader interface {
 	GetFeaturedSiteList() ([]navmodels.FeaturedSiteVo, common.GFError)
 	GetPingList() (map[string]string, common.GFError)
 	GetSayingService(lang string) (navmodels.SayingModel, common.GFError)
-	GetImageUrl(t string) string
 }
 
 type homeService struct {
-	navPage navHomeReader
-	now     func() time.Time
+	appearance appearanceReader
+	navPage    navHomeReader
+	now        func() time.Time
 }
 
 var (
@@ -73,8 +73,8 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 			Latest:   []navmodels.SiteVo{},
 			Random:   []navmodels.SiteVo{},
 		},
-		Ping:        map[string]string{},
-		Backgrounds: models.HomeBackgrounds{},
+		Ping: map[string]string{},
+		Hero: models.HomeHero{},
 	}
 
 	var sites []navmodels.SiteVo
@@ -128,15 +128,6 @@ func (svc *homeService) GetHome(lang string) models.HomeResponse {
 		response.Saying = &saying
 	}
 
-	response.Backgrounds.Desktop = svc.reader().GetImageUrl("standard")
-	response.Backgrounds.Mobile = svc.reader().GetImageUrl("mobile")
-	if response.Backgrounds.Desktop == "" && response.Backgrounds.Mobile == "" {
-		response.CacheState["backgrounds"] = models.HomeStateMissing
-		response.ReasonMessages["backgrounds"] = "背景图不可用"
-	} else {
-		response.CacheState["backgrounds"] = models.HomeStateReady
-	}
-
 	if len(response.ReasonMessages) == 0 {
 		response.ReasonMessages = nil
 	}
@@ -177,24 +168,6 @@ func (svc *homeService) GetHomeSaying(lang string) models.HomeSayingResponse {
 	}
 	response.State = models.HomeStateReady
 	response.Saying = &saying
-	return response
-}
-
-func (svc *homeService) GetHomeBackgrounds() models.HomeBackgroundsResponse {
-	response := models.HomeBackgroundsResponse{
-		SchemaVersion: models.HomeSchemaVersion,
-		GeneratedAt:   svc.clock()(),
-		State:         models.HomeStateMissing,
-		Backgrounds: models.HomeBackgrounds{
-			Desktop: svc.reader().GetImageUrl("standard"),
-			Mobile:  svc.reader().GetImageUrl("mobile"),
-		},
-	}
-	if response.Backgrounds.Desktop == "" && response.Backgrounds.Mobile == "" {
-		response.ReasonMessages = []string{"背景图不可用"}
-		return response
-	}
-	response.State = models.HomeStateReady
 	return response
 }
 
@@ -348,8 +321,8 @@ func GetCachedHome(lang string) models.HomeResponse {
 			Latest:   []navmodels.SiteVo{},
 			Random:   []navmodels.SiteVo{},
 		},
-		Ping:        map[string]string{},
-		Backgrounds: models.HomeBackgrounds{},
+		Ping: map[string]string{},
+		Hero: models.HomeHero{},
 	}
 
 	raw, err := cs.GetString(cachekeys.Home(lang))
@@ -360,12 +333,14 @@ func GetCachedHome(lang string) models.HomeResponse {
 		return response
 	}
 
-	if unmarshalErr := sonic.Unmarshal([]byte(raw), &response); unmarshalErr != nil {
-		response.ReasonMessages["home"] = "首页缓存反序列化失败"
+	var cached models.HomeResponse
+	if unmarshalErr := sonic.Unmarshal([]byte(raw), &cached); unmarshalErr != nil || cached.SchemaVersion != models.HomeSchemaVersion {
+		response.ReasonMessages["home"] = "首页缓存版本不匹配或无法读取"
 		response.CacheState["home"] = models.HomeStateMissing
 		return response
 	}
 
+	response = cached
 	if response.CacheState == nil {
 		response.CacheState = map[string]string{}
 	}

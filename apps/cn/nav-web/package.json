@@ -7,6 +7,7 @@
     "build": "nuxt build",
     "preview": "nuxt preview",
     "typecheck": "nuxt typecheck",
+    "assets:test": "node scripts/managed-assets.test.mjs",
     "perf:measure": "node scripts/perf/measure.mjs",
     "perf:guard": "node scripts/perf/guard.mjs",
     "perf:trace": "node scripts/perf/trace.mjs",

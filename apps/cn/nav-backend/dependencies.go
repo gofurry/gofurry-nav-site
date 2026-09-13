@@ -41,7 +41,7 @@ func newApplicationDependencies(pool *pgxpool.Pool) applicationDependencies {
 	queries := navsqlc.New(pool)
 	navStore := navpagedao.New(queries)
 	navService := navpageservice.New(navStore)
-	homeService := homeservice.New(navService)
+	homeService := homeservice.New(navService).WithAppearance(queries)
 	readModelService := readmodelservice.New(observationdao.New(queries))
 	summaryService := summaryservice.GetSummaryService()
 	detailService := detailservice.New(detaildao.New(queries), summaryService, readModelService)

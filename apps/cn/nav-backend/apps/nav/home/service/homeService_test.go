@@ -26,10 +26,8 @@ func TestGetHomeAggregatesNavPageData(t *testing.T) {
 			Priority: 1,
 			Sites:    []string{"1"},
 		}},
-		ping:       map[string]string{"example.com": `{"status":"up"}`},
-		saying:     navmodels.SayingModel{Content: "hello"},
-		desktopURL: "desktop.avif",
-		mobileURL:  "mobile.avif",
+		ping:   map[string]string{"example.com": `{"status":"up"}`},
+		saying: navmodels.SayingModel{Content: "hello"},
 	}
 
 	response := newHomeService(reader, func() time.Time { return now }).GetHome("en")
@@ -58,10 +56,8 @@ func TestGetHomeAggregatesNavPageData(t *testing.T) {
 	if reader.sayingLang != "en" {
 		t.Fatalf("saying lang = %q, want en", reader.sayingLang)
 	}
-	if response.Backgrounds.Desktop != "desktop.avif" || response.Backgrounds.Mobile != "mobile.avif" {
-		t.Fatalf("unexpected backgrounds: %#v", response.Backgrounds)
-	}
-	if response.CacheState["sites"] != models.HomeStateReady || response.CacheState["backgrounds"] != models.HomeStateReady {
+
+	if response.CacheState["sites"] != models.HomeStateReady {
 		t.Fatalf("unexpected cache state: %#v", response.CacheState)
 	}
 	if response.ReasonMessages != nil {
@@ -71,11 +67,10 @@ func TestGetHomeAggregatesNavPageData(t *testing.T) {
 
 func TestGetHomeKeepsPartialDataWhenOptionalBlockFails(t *testing.T) {
 	reader := &fakeHomeReader{
-		sites:      []navmodels.SiteVo{{ID: "1"}},
-		groupErr:   common.NewServiceError("groups unavailable"),
-		pingErr:    common.NewServiceError("ping unavailable"),
-		sayingErr:  common.NewServiceError("saying unavailable"),
-		desktopURL: "desktop.avif",
+		sites:     []navmodels.SiteVo{{ID: "1"}},
+		groupErr:  common.NewServiceError("groups unavailable"),
+		pingErr:   common.NewServiceError("ping unavailable"),
+		sayingErr: common.NewServiceError("saying unavailable"),
 	}
 
 	response := newHomeService(reader, time.Now).GetHome("bad-lang")
@@ -211,8 +206,6 @@ type fakeHomeReader struct {
 	saying      navmodels.SayingModel
 	sayingErr   common.GFError
 	sayingLang  string
-	desktopURL  string
-	mobileURL   string
 }
 
 func (f *fakeHomeReader) GetSiteList(lang string) ([]navmodels.SiteVo, common.GFError) {
@@ -258,14 +251,4 @@ func (f *fakeHomeReader) GetSayingService(lang string) (navmodels.SayingModel, c
 		return navmodels.SayingModel{}, common.NewServiceError(errors.New("missing saying").Error())
 	}
 	return f.saying, nil
-}
-
-func (f *fakeHomeReader) GetImageUrl(t string) string {
-	if t == "standard" {
-		return f.desktopURL
-	}
-	if t == "mobile" {
-		return f.mobileURL
-	}
-	return ""
 }

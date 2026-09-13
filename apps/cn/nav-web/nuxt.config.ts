@@ -168,6 +168,8 @@ export default defineNuxtConfig({
       navV2ApiBase: publicNavV2ApiBase,
       navMonitorUrl: publicNavMonitorUrl,
       uptimeUrl: publicUptimeUrl,
+      assetPrimaryBase: process.env.NUXT_PUBLIC_ASSET_PRIMARY_BASE || (process.env.NODE_ENV === 'production' ? 'https://assets.go-furry.com' : 'https://assets-dev.go-furry.com'),
+      assetMirrorBase: process.env.NUXT_PUBLIC_ASSET_MIRROR_BASE || (process.env.NODE_ENV === 'production' ? 'https://assets.gofurry.com' : 'https://assets-dev.gofurry.com'),
       gameApiBase: publicGameApiBase,
       gameV2ApiBase: publicGameV2ApiBase,
       siteLogoPrefixUrl: process.env.NUXT_PUBLIC_SITE_LOGO_PREFIX_URL || 'https://qcdn.go-furry.com/nav/static/SiteLogos/',
