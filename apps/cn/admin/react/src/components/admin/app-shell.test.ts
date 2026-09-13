@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
 import { isGlobalSearchShortcut } from '../../lib/keyboard'
-import { AdminBrand, capabilityAwareHeaderActions, capabilityAwareNavigation, logoutAndRedirect } from './app-shell'
+import { AdminBrand, capabilityAwareHeaderActions, capabilityAwareNavigation, logoutAndRedirect, navigationGroups } from './app-shell'
 
 describe('capability-aware navigation', () => {
   it('shows content routes without reproducing role checks', () => {
@@ -83,4 +83,9 @@ describe('capability-aware navigation', () => {
     expect(events).toEqual(['logout', 'navigate'])
     expect(navigate).toHaveBeenCalledWith('/login', { replace: true })
   })
+})
+
+it('assigns distinct Phosphor icons to each sidebar destination', () => {
+  const entries = navigationGroups.flatMap(group => group.entries)
+  expect(new Set(entries.map(entry => entry.icon)).size).toBe(entries.length)
 })

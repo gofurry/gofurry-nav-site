@@ -84,3 +84,21 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .overlay-open { animation: enter-overlay .14s ease-out; }
 .dialog-open { animation: enter-dialog .16s ease-out; }
 .sheet-open { animation: enter-sheet .18s ease-out; }
+
+/* The rail and workspace share one width and timing; labels never participate
+   in width calculation or wrap while the sidebar animates. */
+[data-admin-shell] { --admin-sidebar-width: 13rem; }
+[data-admin-shell][data-sidebar-collapsed="true"] { --admin-sidebar-width: 4rem; }
+.admin-sidebar { width: var(--admin-sidebar-width); transition: width 200ms ease; }
+.admin-sidebar > :first-child { flex-shrink: 0; overflow: hidden; white-space: nowrap; }
+.admin-workspace { padding-left: var(--admin-sidebar-width); transition: padding-left 200ms ease; }
+.admin-nav-link { display: flex; align-items: center; height: 2.25rem; min-width: 0; overflow: hidden; }
+.admin-nav-icon { display: grid; flex: 0 0 46px; place-items: center; }
+.admin-sidebar-label { display: block; flex: 0 0 auto; width: 9rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; opacity: 1; visibility: visible; transition: opacity 120ms 100ms ease, visibility 0s 100ms; }
+[data-sidebar-collapsed="true"] .admin-sidebar-label { opacity: 0; visibility: hidden; transition: opacity 80ms ease, visibility 0s; }
+.admin-nav-group-heading { position: relative; height: 1.5rem; margin-bottom: .25rem; padding: .25rem .5rem; color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
+.admin-nav-group-heading::after { content: ''; position: absolute; inset: 50% 12px auto; height: 1px; background: var(--border); opacity: 0; transition: opacity 120ms; }
+[data-sidebar-collapsed="true"] .admin-nav-group-heading::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar, .admin-workspace, .admin-sidebar-label, .admin-nav-group-heading::after { transition: none; }
+}

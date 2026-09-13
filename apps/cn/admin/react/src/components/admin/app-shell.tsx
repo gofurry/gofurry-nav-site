@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui/react/menu'
-import { CaretLeft, CaretRight, Chats, ClockCounterClockwise, Database, GameController, Gauge, Key, ListBullets, MagnifyingGlass, Megaphone, Moon, PencilSimple, Pulse, Quotes, ShieldCheck, SignOut, Sparkle, SquaresFour, Sun, Tag, UserCircle } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, Chats, ClockCounterClockwise, Database, GameController, Gauge, Key, ListBullets, MagnifyingGlass, Megaphone, Moon, PencilSimple, Pulse, Quotes, ShieldCheck, SignOut, GlobeHemisphereWest, ImageSquare, PaintBrushBroad, Gift, Cloud, SquaresFour, Sun, Tag, UserCircle } from '@phosphor-icons/react'
 import { Suspense, useEffect, useState, type ComponentType } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../../app/theme'
@@ -28,10 +28,10 @@ export function capabilityAwareHeaderActions(can: (capability: string) => boolea
 export const navigationGroups: NavGroup[] = [
   { label: '', entries: [{ label: '工作台', href: '/', icon: SquaresFour, capability: 'content.read' }] },
   { label: '导航内容', entries: [
-    { label: '网站', href: '/nav/sites', icon: Sparkle, capability: 'content.read' },
+    { label: '网站', href: '/nav/sites', icon: GlobeHemisphereWest, capability: 'content.read' },
     { label: '网站分组', href: '/nav/site-groups', icon: ListBullets, capability: 'content.read' },
-    { label: '首页 Hero', href: '/nav/hero-assets', icon: Sparkle, capability: 'content.read' },
-    { label: '背景图案', href: '/nav/background-patterns', icon: SquaresFour, capability: 'content.read' },
+    { label: '首页 Hero', href: '/nav/hero-assets', icon: ImageSquare, capability: 'content.read' },
+    { label: '背景图案', href: '/nav/background-patterns', icon: PaintBrushBroad, capability: 'content.read' },
     { label: '更新公告', href: '/nav/update-notices', icon: Megaphone, capability: 'content.read' },
     { label: '金句', href: '/nav/sayings', icon: Quotes, capability: 'content.read' },
   ] },
@@ -39,7 +39,7 @@ export const navigationGroups: NavGroup[] = [
     { label: '游戏', href: '/game/games', icon: GameController, capability: 'content.read' },
     { label: '标签', href: '/game/tags', icon: Tag, capability: 'content.read' },
     { label: '评论', href: '/game/comments', icon: Chats, capability: 'content.read' },
-    { label: '抽奖', href: '/game/prizes', icon: Sparkle, capability: 'content.read' },
+    { label: '抽奖', href: '/game/prizes', icon: Gift, capability: 'content.read' },
   ] },
   { label: '数据运营', entries: [
     { label: '采集', href: '/collection', icon: Pulse, capability: 'collection.read' },
@@ -47,7 +47,7 @@ export const navigationGroups: NavGroup[] = [
     { label: '变化事件', href: '/changes', icon: ClockCounterClockwise, capability: 'changes.read' },
   ] },
   { label: '系统', entries: [
-    { label: '云资源', href: '/system/cloud', icon: Database, capability: 'cloudops.read' },
+    { label: '云资源', href: '/system/cloud', icon: Cloud, capability: 'cloudops.read' },
     { label: '数据运维', href: '/system/data-operations', icon: Database, capability: DATAOPS_READ_CAPABILITY },
     { label: '操作审计', href: '/system/audit', icon: ShieldCheck, capability: 'audit.read' },
     { label: '账号与权限', href: '/system/accounts', icon: UserCircle, capability: 'account.manage' },
@@ -101,18 +101,19 @@ export function AppShell() {
   const visibleGroups = capabilityAwareNavigation(auth.can)
   const headerActions = capabilityAwareHeaderActions(auth.can)
 
-  return <div data-admin-shell className="h-dvh overflow-hidden bg-background">
-    <aside data-admin-sidebar className={cn('fixed inset-y-0 left-0 z-30 flex h-dvh flex-col border-r bg-surface transition-[width] duration-200', collapsed ? 'w-16' : 'w-52')}>
+  return <div data-admin-shell data-sidebar-collapsed={collapsed} className="h-dvh overflow-hidden bg-background">
+    <aside data-admin-sidebar className="admin-sidebar fixed inset-y-0 left-0 z-30 flex h-dvh flex-col overflow-hidden border-r bg-surface">
       <AdminBrand collapsed={collapsed} />
-      <nav className="admin-scroll min-h-0 flex-1 overflow-y-auto p-2">{visibleGroups.map((group) => {
-        return <div key={group.label || 'workbench'} className="mb-4">{group.label && !collapsed && <p className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{group.label}</p>}{group.entries.map((entry) => <NavLink key={entry.href} to={entry.href} end={entry.href === '/'} title={collapsed ? entry.label : undefined} className={({ isActive }) => cn('mb-0.5 flex h-9 items-center gap-3 rounded-md px-2 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground', collapsed && 'justify-center px-0', isActive && 'bg-primary/10 font-medium text-primary')}><entry.icon className="size-4 shrink-0" />{!collapsed && <span>{entry.label}</span>}</NavLink>)}</div>
-      })}</nav>
-      <button type="button" onClick={toggleSidebar} className="flex h-11 shrink-0 items-center justify-center border-t text-muted-foreground hover:bg-surface-muted" aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}>{collapsed ? <CaretRight className="size-4" /> : <><CaretLeft className="mr-2 size-4" /><span className="text-xs">收起导航</span></>}</button>
+      <nav id="admin-sidebar-navigation" aria-label="主导航" className="admin-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-2">{visibleGroups.map((group) => <div key={group.label || 'workbench'} className="mb-3">
+        {group.label && <div className="admin-nav-group-heading"><span className="admin-sidebar-label" aria-hidden={collapsed}>{group.label}</span></div>}
+        {group.entries.map((entry) => <NavLink key={entry.href} to={entry.href} end={entry.href === '/'} aria-label={entry.label} title={collapsed ? entry.label : undefined} className={({ isActive }) => cn('admin-nav-link mb-0.5 rounded-md text-sm text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring', isActive && 'bg-primary/10 font-medium text-primary')}><span className="admin-nav-icon"><entry.icon className="size-[18px]" /></span><span className="admin-sidebar-label" aria-hidden={collapsed}>{entry.label}</span></NavLink>)}
+      </div>)}</nav>
+      <button type="button" onClick={toggleSidebar} className="admin-sidebar-toggle flex h-11 shrink-0 items-center overflow-hidden border-t text-muted-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'} aria-expanded={!collapsed} aria-controls="admin-sidebar-navigation"><span className="grid w-16 shrink-0 place-items-center">{collapsed ? <CaretRight className="size-4" /> : <CaretLeft className="size-4" />}</span><span className="admin-sidebar-label text-xs" aria-hidden={collapsed}>收起导航</span></button>
     </aside>
-    <div data-admin-workspace className={cn('flex h-dvh min-w-0 flex-col overflow-hidden transition-[padding] duration-200', collapsed ? 'pl-16' : 'pl-52')}>
+    <div data-admin-workspace className="admin-workspace flex h-dvh min-w-0 flex-col overflow-hidden">
       <header className="z-20 flex h-14 min-w-0 shrink-0 items-center justify-between gap-3 border-b bg-background/92 px-3 backdrop-blur sm:px-6"><Breadcrumbs /><div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <Button variant="secondary" className="w-9 justify-center overflow-hidden px-0 text-muted-foreground xl:w-56 xl:justify-start xl:px-3" onClick={() => setSearchOpen(true)} aria-label="全局搜索"><MagnifyingGlass className="size-4 shrink-0" /><span className="hidden flex-1 text-left xl:inline">全局搜索</span><kbd className="hidden rounded border bg-surface-muted px-1.5 font-mono text-[10px] xl:inline">Ctrl K</kbd></Button>
-        {headerActions.map((action) => <Button key={action.href} variant="ghost" className="px-2 text-muted-foreground" title={action.title} onClick={() => navigate(action.href)}><action.icon className="size-4" /><span>{action.label}</span></Button>)}
+        {headerActions.map((action) => <Button key={action.href} variant="ghost" className="px-2 text-muted-foreground" title={action.title} aria-label={action.label} onClick={() => navigate(action.href)}><action.icon className="size-4" /><span className="hidden md:inline">{action.label}</span></Button>)}
         <Button variant="ghost" size="icon" aria-label={`切换到${nextTheme === 'dark' ? '深色' : '浅色'}主题`} title={`切换到${nextTheme === 'dark' ? '深色' : '浅色'}主题`} onClick={() => setMode(nextTheme)}><ThemeIcon className="size-4" /></Button>
         <Menu.Root><Menu.Trigger render={<Button variant="secondary" size="icon" aria-label="账号菜单" />}><UserCircle className="size-4" /></Menu.Trigger><Menu.Portal><Menu.Positioner className="z-40" sideOffset={4} align="end"><Menu.Popup className="min-w-52 rounded-md border bg-surface p-1 shadow-lg outline-none"><div className="border-b px-2 py-2"><p className="text-sm font-medium">{auth.state?.identity?.display_name}</p><p className="mt-0.5 font-mono text-xs text-muted-foreground">{auth.state?.identity?.username} · {auth.state?.identity?.role}</p></div><Menu.Item onClick={() => setCredentialsDialog('username')} className="mt-1 flex cursor-default items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-muted"><PencilSimple className="size-4" />修改用户名</Menu.Item><Menu.Item onClick={() => setCredentialsDialog('password')} className="flex cursor-default items-center gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-muted"><Key className="size-4" />修改密码</Menu.Item><Menu.Item onClick={() => void logout()} className="mt-1 flex cursor-default items-center gap-2 border-t rounded px-2 py-1.5 pt-2 text-sm outline-none data-[highlighted]:bg-surface-muted"><SignOut className="size-4" />退出登录</Menu.Item></Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root>
       </div></header>
