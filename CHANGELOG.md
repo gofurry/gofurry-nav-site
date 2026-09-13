@@ -6,8 +6,26 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+### Added
+
+- Add group-centric Admin homepage curation with an ordered Top 8 preview and remaining members; persist existing group-map weights with revision checks, transaction locking, audit, and cache invalidation while preserving site-level group editing and bulk-replacement weights (#101).
+- Add managed Site icons, independent desktop/mobile AVIF Hero pools, and a bilingual SVG pattern catalog with Admin publishing, previews, capabilities, and audit. COS is Primary; R2 is a best-effort Mirror whose failure returns a warning without blocking Primary publication (#104, #93, #85).
+- Add the Goose-owned `gfn_home_hero_asset` and `gfn_background_pattern` tables, generated sqlc queries, managed object keys in `gfn_site.icon`, Home schema v4, and the public pattern catalog API.
+- Add the Admin Cloud Resources workspace for COS/R2 status, object inspection, COS-to-R2 repair, scoped EdgeOne/Cloudflare cache purges, and EdgeOne task history; reserve full-zone purge for its separate Owner capability and endpoint (#105).
+- Add an SSR-aware managed-asset CDN resolver with verified background probes, a 12-hour CDN preference cookie, request-failure fallback, and bundled defaults while preserving the independent Steam CDN system.
+- Add public background preferences for bundled/server patterns and browser-local images, with theme-specific appearance overrides and IndexedDB file persistence; local files never upload and SSR starts from the bundled default.
+- Add explicit cloud configuration examples, opt-in real development cloud acceptance suites, and asset staging with manifests and reviewable cutover/rollback SQL. Production migration requires a maintenance-window cutover; Goose never contacts object storage.
+
 ### Changed
 
+- Recompose player, price, language, and certificate analytical workspaces with shared selectors, rankings, risk lists, coverage summaries, and expandable methodology; improve Site/Game comparison with searchable entity pickers, media, and responsive matrices.
+- Redesign the Change Explorer as a date-grouped entity timeline while retaining authoritative cursor ordering, repeated events, filtering, and localized presentation.
+- Split public preferences into Home and Page Background underline tabs; replace background dropdowns with source controls and a preview carousel, align appearance inputs, and preserve explicit Save/Cancel behavior.
+- Compact Admin asset editors with shared SVG file-picker buttons, full-card Hero previews at desktop 16:9 and mobile 1:1 ratios, split light/dark pattern previews, and confirmation before clearing icons, replacing files, or deleting entries.
+- Organize Cloud Resources into storage summaries, a full-width object inspector, paired CDN controls, and task history using shared Admin components and custom Selects; keep full-zone operations in a separate, initially collapsed section with explicit confirmation.
+- Migrate Game email delivery from `gomail` to `github.com/wneessen/go-mail`, retaining all five templates, attachments, retry/timeout behavior, and CC/BCC recipients (#72).
+- Migrate direct YAML usage in active Go services and tools to `go.yaml.in/yaml/v4` through its v3-compatible API while preserving explicit YAML loading and configuration decoding semantics (#72).
+- Migrate Nav Backend monitoring to native `github.com/gofiber/contrib/v3/monitor` middleware with `Next`-mode global request accounting, retaining `/monitor` without the HTTP adaptor, manual request counters, or a `Stop()` lifecycle hook (#102).
 - Differentiate the Site and Game observatories with capability rails, contextual trends, selectable dimension bars and complete raw tables; reuse existing entity media and Game Pulse while preserving query and SEO contracts.
 - Recompose the Ecosystem overview as an editorial entry with independent Site/Game snapshots, recent entity activity, existing Game Panel highlights, and optional Overview image references; preserve domain pages and SEO contracts.
 - Establish the Ecosystem Observatory visual foundation with scoped layout tokens and stacked, accessible primary/domain text navigation while preserving existing page content and URLs.
@@ -16,6 +34,13 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Make Admin Steam prefill best-effort across Chinese/English details and auxiliary assets; apply available nonempty fields even when another source fails, and fail only when no meaningful data remains (#103).
+- Reuse the cached Game Home panel for Ecosystem pages instead of rebuilding the uncached panel during SSR.
+- Keep Game detail tabs working when regional price data is missing; batch independent detail reads and provide an opt-in, debug-only homepage cache for remote development infrastructure without changing production cache defaults or SEO/SSR semantics.
+- Replace obsolete workstation-specific Nuxt backend and development monitor defaults with loopback addresses while retaining environment overrides.
+- Reuse the shared Insights selector styles for Game detail compact/list timeline controls, preserving their existing responsive behavior (#100).
+- Restore Admin CDN image previews through compatible response headers and accept original SVG content without sanitizing or rejecting declarations; retain upload size limits and render SVG through image URLs/CSS masks rather than inline markup.
+- Stabilize Admin sidebar width transitions with a shared rail/workspace width, nonwrapping hidden labels, and collapsed group separators; use distinct semantic Phosphor menu icons and hide only the sidebar scrollbar while retaining scrolling.
 - Prevent browser history autocomplete and IME composition rerenders from disrupting Admin search, filter, and remote-option input experiences.
 - Align the Site detail background with the public shell, refine the responsive navigation toggle, initialize Admin datetime drafts from local time, and close Sheet footers cleanly at the viewport edge.
 - Close the remaining SEO recovery edge cases with strict invalid-entity 404 semantics, CI recovery guards, unique Site Group metadata, Prize noindex headers, and removal of the retired Steam-page performance scenario.
@@ -26,6 +51,12 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 - Confirm vertical library-cover acquisition through the local single-game canary.
 - Preserve Steam StoreBrowse vertical-cover Last Known Good with explicit source/language replacement scopes, observable partial failures, Official API traffic classification, and post-commit merged cache refreshes.
 - Keep authoritative hashed Steam asset pathnames unchanged while selecting real 1x/2x library-cover rows independently in Game Backend and Nav Web CDN fallback.
+
+### Removed
+
+- Remove active hardcoded `qcdn.go-furry.com` URLs, legacy `SiteLogo`/`GamePrefix` configuration, `nav/static/SiteLogos` and `nav/bg` path conventions, numbered Hero counts, and `GetImageUrl()`; bundle fixed artwork and use managed keys without a permanent legacy compatibility layer (#104, #93, #85).
+- Remove unused Nav Web Axios helpers, `md-editor-v3`, and `highlight.js`, plus dead copied Go HTTP helpers and their unused dependency edges; retain actively used HTML parsing, media, date-picker, and chart dependencies (#72).
+- Remove the obsolete cross-framework monitor experiment and `third-party/monitor` submodule after the production middleware migration; retain the Steam reference submodule (#72).
 
 ## v3.0.0-alpha.7 - 2026-09-04
 
