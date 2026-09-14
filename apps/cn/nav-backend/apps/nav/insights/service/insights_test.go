@@ -316,8 +316,8 @@ func TestExplorerCursorBindsFiltersAndFrozenRangeWithoutDedupe(t *testing.T) {
 	day := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
 	exact := day.Add(8 * time.Hour)
 	store := &fakeStore{explorer: []models.ChangeRecord{
-		{EntityID: 1, DetectorKey: "ipv6_transition", DetectorVersion: 2, EventCode: "ipv6_enabled", ProjectionDate: day, TimeBasis: "observed", EventAt: &exact, PrecisionRank: 1, EventSortAt: exact, OpaqueTie: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
-		{EntityID: 1, DetectorKey: "tls13_transition", DetectorVersion: 1, EventCode: "tls13_disabled", ProjectionDate: day, TimeBasis: "day", PrecisionRank: 0, EventSortAt: day, OpaqueTie: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+		{EntityID: 1, VisualAsset: " site-icon.png ", DetectorKey: "ipv6_transition", DetectorVersion: 2, EventCode: "ipv6_enabled", ProjectionDate: day, TimeBasis: "observed", EventAt: &exact, PrecisionRank: 1, EventSortAt: exact, OpaqueTie: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+		{EntityID: 1, VisualAsset: " ", DetectorKey: "tls13_transition", DetectorVersion: 1, EventCode: "tls13_disabled", ProjectionDate: day, TimeBasis: "day", PrecisionRank: 0, EventSortAt: day, OpaqueTie: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
 		{EntityID: 2, DetectorKey: "security_txt_transition", DetectorVersion: 2, EventCode: "security_txt_added", ProjectionDate: day.AddDate(0, 0, -1), TimeBasis: "day", PrecisionRank: 0, EventSortAt: day.AddDate(0, 0, -1), OpaqueTie: "cccccccccccccccccccccccccccccccc"},
 	}}
 	service := New(store)
@@ -328,6 +328,16 @@ func TestExplorerCursorBindsFiltersAndFrozenRangeWithoutDedupe(t *testing.T) {
 	}
 	if len(first.Items) != 2 || first.Items[0].Entity.ID != first.Items[1].Entity.ID || first.Items[1].OccurredAt != nil || first.NextCursor == nil {
 		t.Fatalf("explorer deduplicated or fabricated precision: %#v", first)
+	}
+	if visual := first.Items[0].Entity.Visual; visual == nil || visual.Kind != "site_icon" || visual.Asset != "site-icon.png" {
+		t.Fatalf("explorer visual = %#v", visual)
+	}
+	if first.Items[1].Entity.Visual != nil || first.Items[0].Detail != nil || first.Items[1].Detail != nil {
+		t.Fatal("explorer fabricated media or event details")
+	}
+	missing, err := json.Marshal(first.Items[1].Entity)
+	if err != nil || strings.Contains(string(missing), "visual") {
+		t.Fatalf("missing visual was not omitted: %s (%v)", missing, err)
 	}
 	payload, err := json.Marshal(first)
 	if err != nil {
@@ -348,5 +358,22 @@ func TestExplorerCursorBindsFiltersAndFrozenRangeWithoutDedupe(t *testing.T) {
 	}
 	if contracts, ok := explorerContracts("", "site.tls13.enabled"); !ok || len(contracts) != 1 || contracts[0].category != "capability" {
 		t.Fatalf("exact public type filter = %#v, %v", contracts, ok)
+	}
+}
+
+func TestOverviewEntityVisualIsOptionalPresentationOnly(t *testing.T) {
+	base := models.ChangeRecord{EntityID: 41, EntityName: "Site", DetectorKey: "ipv6_transition", DetectorVersion: 2, EventCode: "ipv6_enabled", ProjectionDate: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC), TimeBasis: "day"}
+	withVisual := base
+	withVisual.VisualAsset = "site-icon.png"
+	changes := publicChanges([]models.ChangeRecord{withVisual, base})
+	if len(changes) != 2 || changes[0].Entity.Visual == nil || changes[0].Entity.Visual.Kind != "site_icon" || changes[0].Entity.Visual.Asset != "site-icon.png" {
+		t.Fatalf("overview icon reference lost: %+v", changes)
+	}
+	if changes[0].Type != changes[1].Type || changes[0].Date != changes[1].Date || changes[0].OccurredAt != nil || changes[0].Detail != nil {
+		t.Fatalf("presentation changed the event: %+v", changes)
+	}
+	payload, err := json.Marshal(changes[1].Entity)
+	if err != nil || strings.Contains(string(payload), "visual") {
+		t.Fatalf("ordinary EntityRef must omit visual: %s (%v)", payload, err)
 	}
 }

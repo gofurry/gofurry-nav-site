@@ -5,10 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
-func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
+func TestExampleConfigDecodesWithYAMLV4(t *testing.T) {
 	data, err := os.ReadFile("../../conf/server.example.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -19,6 +19,9 @@ func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
 	}
 	if cfg.Server.Mode != "debug" || cfg.Server.AppName != "GF-Game-Collector" || cfg.DataBase.DBName != "gfg" {
 		t.Fatalf("example config fields changed semantics: %+v", cfg)
+	}
+	if cfg.Redis.RedisUsername != "gofurry_app" {
+		t.Fatalf("redis username = %q, want gofurry_app", cfg.Redis.RedisUsername)
 	}
 	if cfg.Collector.V2.Steam.MaxWorkers <= 0 || cfg.Collector.V2.Retention.PlayerCountsDays <= 0 {
 		t.Fatalf("collector v2 config fields were not decoded: %+v", cfg.Collector.V2)
@@ -31,6 +34,16 @@ func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
 	}
 	if !cfg.Health.Enabled || cfg.Health.ListenAddr != "127.0.0.1:19092" {
 		t.Fatalf("health config was not decoded: %+v", cfg.Health)
+	}
+}
+
+func TestRedisUsernameIsOptional(t *testing.T) {
+	var cfg serverConfig
+	if err := yaml.Unmarshal([]byte("redis:\n  redis_addr: 127.0.0.1:6379\n"), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Redis.RedisUsername != "" {
+		t.Fatalf("omitted redis username = %q, want empty", cfg.Redis.RedisUsername)
 	}
 }
 

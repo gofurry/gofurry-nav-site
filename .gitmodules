@@ -1,6 +1,3 @@
 [submodule "third-party/steam-go"]
 	path = third-party/steam-go
 	url = https://github.com/gofurry/steam-go.git
-[submodule "third-party/monitor"]
-	path = third-party/monitor
-	url = https://github.com/gofurry/monitor.git

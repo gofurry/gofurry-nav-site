@@ -107,7 +107,7 @@ func (s *InsightsService) GetPlayerRanking(ctx context.Context, query v2models.I
 	result.EntityCoverage = insightRatio(meta.Ranked, meta.Population)
 	for index, row := range rows {
 		item := v2models.InsightPlayerRankingItem{
-			Rank: int32(index + 1), Game: v2models.InsightEntityRef{ID: row.GameID, Name: row.GameName},
+			Rank: int32(index + 1), Game: insightGameEntity(row.GameID, row.GameName, row.VisualAsset),
 			Value: row.Value, ObservedAt: row.ObservedAt, EligibleFrom: insightDateStringPointer(row.EligibleFrom),
 			ObservedDays: row.ObservedDays, SuccessfulSamples: row.SuccessfulSamples, SampleCoverage: row.SampleCoverage,
 		}
@@ -160,7 +160,7 @@ func (s *InsightsService) GetDiscounts(ctx context.Context, region string, limit
 			return result, queryErr
 		}
 		result.Items = append(result.Items, v2models.InsightDiscountItem{
-			Game: v2models.InsightEntityRef{ID: row.GameID, Name: row.GameName}, Currency: row.Currency,
+			Game: insightGameEntity(row.GameID, row.GameName, row.VisualAsset), Currency: row.Currency,
 			InitialAmount: row.InitialAmount, FinalAmount: row.FinalAmount, DiscountPercent: row.DiscountPercent,
 			ObservedLow: publicObservedLow(low),
 		})

@@ -1,78 +1,41 @@
 <template>
-  <div
-    class="insights-page insights-compare-page"
-    data-site-compare
-    :data-compare-count="selectedIDs.length"
-    :data-compare-status="compare?.status || (ready ? 'loading' : 'builder')"
-  >
+  <div class="insights-page insights-workspace-page insights-compare-page" data-site-compare :data-compare-count="selectedIDs.length"
+    :data-compare-status="invalidURL ? 'invalid' : error ? 'error' : compare?.status || (ready ? 'loading' : 'builder')">
     <main class="insights-container">
       <EcosystemNavigation context="site" />
-      <h1 class="sr-only">{{ $t('insights.siteCompare.title') }}</h1>
-
-      <section class="compare-builder">
-        <h2>{{ $t('insights.compare.builderTitle') }}</h2>
-        <p>{{ builderHint }}</p>
-        <form class="compare-builder__form" @submit.prevent="applySelection">
-          <label>
-            <span>{{ $t('insights.compare.idsLabel') }}</span>
-            <input v-model="input" inputmode="numeric" autocomplete="off" :placeholder="$t('insights.compare.idsPlaceholder')" />
-          </label>
-          <button type="submit">{{ $t('insights.compare.apply') }}</button>
-        </form>
-        <p v-if="inputError || invalidURL" class="compare-builder__error">{{ $t('insights.compare.invalid') }}</p>
+      <InsightsWorkspaceHeader :eyebrow="$t('insights.sites.title')" :title="$t('insights.siteCompare.title')" :description="$t('insights.siteCompare.description')" />
+      <div v-if="invalidURL" class="insight-compare-invalid" role="alert">
+        <p>{{ $t('insights.compare.invalid') }}</p><button type="button" @click="updateSelection([])">{{ $t('insights.comparePicker.reset') }}</button>
+      </div>
+      <InsightComparePicker domain="site" :selected-ids="selectedIDs" :entities="entities" @change="updateSelection" />
+      <section class="insight-compare-result" :aria-busy="pending" aria-live="polite">
+        <p v-if="invalidURL" class="insights-workspace-note">{{ $t('insights.comparePicker.restart') }}</p>
+        <p v-else-if="error" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
+        <p v-else-if="pending && ready" class="insights-empty-state">{{ $t('insights.comparePicker.loadingComparison') }}</p>
+        <p v-else-if="compare?.status === 'insufficient_data'" class="insights-empty-state">{{ $t('insights.compare.insufficientData') }}</p>
+        <template v-else-if="compare?.status === 'ready'">
+          <h2>{{ $t('insights.comparePicker.resultsTitle') }}</h2>
+          <div class="insight-compare-horizons">
+            <span>{{ $t('insights.compare.commonSnapshot', { date: compare.as_of || '—' }) }}</span>
+          </div>
+          <InsightCompareMatrix domain="site" :entities="entities" :groups="groups" :label="$t('insights.siteCompare.title')" data-compare-result />
+        </template>
       </section>
-
-      <p v-if="error" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
-      <p v-else-if="compare?.status === 'insufficient_data'" class="insights-empty-state">{{ $t('insights.compare.insufficientData') }}</p>
-
-      <section v-else-if="compare?.status === 'ready'" class="compare-result" data-compare-result>
-        <p class="insights-data-note">{{ $t('insights.compare.commonSnapshot', { date: compare.as_of || '—' }) }}</p>
-        <div class="compare-table-wrap">
-          <table class="compare-table">
-            <thead>
-              <tr>
-                <th>{{ $t('insights.compare.fact') }}</th>
-                <th v-for="item in compare.sites" :key="item.site.id" :data-compare-entity-id="item.site.id">
-                  <NuxtLink :to="localePath(`/site/${item.site.id}`)">{{ item.site.name || `#${item.site.id}` }}</NuxtLink>
-                  <small>#{{ item.site.id }}</small>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="key in capabilityKeys" :key="key">
-                <th>{{ $t(`insights.metrics.${key}.title`) }}</th>
-                <td v-for="item in compare.sites" :key="item.site.id" :data-capability-state="siteCapability(item, key)">
-                  {{ $t(`insights.entity.states.${siteCapability(item, key)}`) }}
-                </td>
-              </tr>
-              <tr>
-                <th>{{ $t('insights.siteCompare.primaryTarget') }}</th>
-                <td v-for="item in compare.sites" :key="item.site.id">{{ item.certificate?.target || '—' }}</td>
-              </tr>
-              <tr>
-                <th>{{ $t('insights.siteCompare.certificateVerification') }}</th>
-                <td v-for="item in compare.sites" :key="item.site.id">{{ certificateVerification(item) }}</td>
-              </tr>
-              <tr>
-                <th>{{ $t('insights.siteCompare.certificateExpiry') }}</th>
-                <td v-for="item in compare.sites" :key="item.site.id">{{ certificateExpiry(item) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="insights-data-info">
-        <h2>{{ $t('insights.compare.aboutTitle') }}</h2>
+      <InsightWorkspaceDisclosure :title="$t('insights.compare.aboutTitle')">
         <p>{{ $t('insights.siteCompare.about') }}</p>
-      </section>
+      </InsightWorkspaceDisclosure>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
+import InsightsWorkspaceHeader from '@/components/insights/workspace/InsightsWorkspaceHeader.vue'
+import InsightWorkspaceDisclosure from '@/components/insights/workspace/InsightWorkspaceDisclosure.vue'
+import InsightComparePicker from '@/components/insights/compare/InsightComparePicker.vue'
+import InsightCompareMatrix from '@/components/insights/compare/InsightCompareMatrix.vue'
+import type { CompareMatrixGroup } from '@/types/insightCompare'
 import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getSiteCompare } from '@/services/nav'
 import type { NavInsightMetricKey, SiteCompareItem, SiteInsightCapabilityState } from '@/types/insights'
@@ -80,7 +43,6 @@ import { insightCompareReady, parseInsightCompareIDs } from '@/utils/insightComp
 
 const route = useRoute()
 const router = useRouter()
-const localePath = useLocalePath()
 const { t } = useI18n()
 const capabilityKeys = ['ipv6', 'tls13', 'http2', 'hsts', 'csp', 'security_txt', 'certificate_verified'] as const satisfies readonly NavInsightMetricKey[]
 const parsedIDs = computed(() => parseInsightCompareIDs(route.query.ids))
@@ -88,27 +50,21 @@ const selectedIDs = computed(() => parsedIDs.value ?? [])
 const invalidURL = computed(() => parsedIDs.value === null)
 const ready = computed(() => insightCompareReady(selectedIDs.value))
 const requestKey = computed(() => selectedIDs.value.join(','))
-const input = ref(typeof route.query.ids === 'string' ? route.query.ids : '')
-const inputError = ref(false)
-
-watch(() => route.query.ids, value => { input.value = typeof value === 'string' ? value : '' })
-
-const { data: compare, error } = await useAsyncData('site-compare', async () => {
-  if (!ready.value) return null
-  return getSiteCompare(selectedIDs.value)
+const { data: snapshot, error, pending } = await useAsyncData('site-compare', async () => {
+  const selection = requestKey.value
+  const result = ready.value ? await getSiteCompare(selectedIDs.value) : null
+  return { selection, result }
 }, { watch: [requestKey] })
+const compare = computed(() => snapshot.value?.selection === requestKey.value ? snapshot.value.result : null)
+const orderedItems = computed(() => selectedIDs.value.flatMap(id => {
+  const item = compare.value?.sites.find(item => item.site.id === id)
+  return item ? [item] : []
+}))
+const entities = computed(() => orderedItems.value.map(item => item.site))
 
-const builderHint = computed(() => selectedIDs.value.length === 0
-  ? t('insights.compare.emptyHint')
-  : selectedIDs.value.length === 1
-    ? t('insights.compare.oneHint')
-    : t('insights.compare.readyHint', { count: selectedIDs.value.length }))
-
-function applySelection() {
-  const ids = parseInsightCompareIDs(input.value)
-  inputError.value = ids === null
-  if (ids === null) return
-  void router.push({ path: route.path, query: ids.length ? { ids: ids.join(',') } : {} })
+function updateSelection(ids: number[]) {
+  if (parseInsightCompareIDs(ids.join(',')) === null) return
+  void router.push({ path: route.path, query: { ...route.query, ids: ids.length ? ids.join(',') : undefined } })
 }
 
 function siteCapability(item: SiteCompareItem, key: NavInsightMetricKey): SiteInsightCapabilityState {
@@ -129,6 +85,19 @@ function certificateExpiry(item: SiteCompareItem) {
   const status = item.certificate?.expiry_status
   return status ? t(`insights.certificateIntelligence.values.${status}`) : '—'
 }
+
+const groups = computed<CompareMatrixGroup[]>(() => [
+  { key: 'capabilities', label: t('insights.comparePicker.groups.capabilities'), rows: capabilityKeys.map(key => ({
+    key, label: t('insights.metrics.' + key + '.name'), cells: orderedItems.value.map(item => ({
+      text: t('insights.entity.states.' + siteCapability(item, key)), state: siteCapability(item, key),
+    })),
+  })) },
+  { key: 'certificate', label: t('insights.comparePicker.groups.certificate'), rows: [
+    { key: 'target', label: t('insights.siteCompare.primaryTarget'), cells: orderedItems.value.map(item => ({ text: item.certificate?.target || '—' })) },
+    { key: 'verification', label: t('insights.siteCompare.certificateVerification'), cells: orderedItems.value.map(item => ({ text: certificateVerification(item) })) },
+    { key: 'expiry', label: t('insights.siteCompare.certificateExpiry'), cells: orderedItems.value.map(item => ({ text: certificateExpiry(item) })) },
+  ] },
+])
 
 useSeoMeta({
   title: () => `${t('insights.siteCompare.title')} | GoFurry`,

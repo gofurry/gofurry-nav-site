@@ -317,9 +317,24 @@ export interface SayingModel {
     language: 'zh' | 'en';
 }
 
-export interface NavHomeBackgrounds {
-    desktop: string;
-    mobile: string;
+export interface ManagedHeroAsset {
+    id: string;
+    object_key: string;
+}
+export interface NavHomeHero {
+    desktop: ManagedHeroAsset | null;
+    mobile: ManagedHeroAsset | null;
+}
+export interface BackgroundPattern {
+    id: string;
+    name: string;
+    name_en: string;
+    object_key: string;
+    light_color: string;
+    dark_color: string;
+    light_opacity: number;
+    dark_opacity: number;
+    default_size_px: number;
 }
 
 export interface NavHomeSpotlight {
@@ -340,7 +355,7 @@ export interface NavHomeResponse {
     spotlight: NavHomeSpotlight;
     ping: Record<string, string>;
     saying: SayingModel | null;
-    backgrounds: NavHomeBackgrounds;
+    hero: NavHomeHero;
 }
 
 export type NavSiteGroupState = 'ready' | 'missing';

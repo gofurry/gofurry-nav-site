@@ -4,27 +4,44 @@ go 1.26.7
 
 require (
 	github.com/GoFurry/easyhash v1.0.0
+	github.com/aws/aws-sdk-go-v2 v1.47.0
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.4
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.113.1
+	github.com/aws/smithy-go v1.28.1
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/gofiber/contrib/v3/coraza v0.2.1
 	github.com/gofiber/fiber/v3 v3.5.0
-	github.com/gofurry/steam-go v1.3.9
+	github.com/gofurry/steam-go v1.3.10
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/redis/go-redis/v9 v9.21.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.178
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/teo v1.3.178
+	github.com/tencentyun/cos-go-sdk-v5 v0.7.75
 	go.uber.org/zap v1.28.0
+	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	golang.org/x/net v0.58.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/andybalholm/brotli v1.2.2 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.20 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.19 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.11.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.20.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/corazawaf/coraza/v3 v3.7.0 // indirect
 	github.com/corazawaf/libinjection-go v0.3.2 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
@@ -34,6 +51,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gofiber/schema v1.8.4 // indirect
 	github.com/gofiber/utils/v2 v2.4.1 // indirect
+	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -46,10 +64,11 @@ require (
 	github.com/magefile/mage v1.17.2 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
+	github.com/mitchellh/mapstructure v1.4.3 // indirect
+	github.com/mozillazg/go-httpheader v0.2.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/petar-dambovaliev/aho-corasick v0.0.0-20250424160509-463d218d4745 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.15.0 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
 	github.com/spf13/afero v1.15.0 // indirect

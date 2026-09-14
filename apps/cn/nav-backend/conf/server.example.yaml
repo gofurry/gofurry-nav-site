@@ -18,7 +18,7 @@ server:
 
 database:
   db_name: "gfn" # Nav 主业务库。
-  db_username: "postgres"
+  db_username: "gofurry_app" # Runtime DML role; Goose uses gofurry_migrator separately.
   db_password: "CHANGE_ME"
   db_host: "127.0.0.1"
   db_port: "5432"
@@ -32,6 +32,7 @@ database:
   ping_timeout_seconds: 3
 
 redis:
+  redis_username: "gofurry_app" # Runtime ACL user; empty remains compatible with password-only Redis.
   redis_addr: "127.0.0.1:6379"
   redis_password: "CHANGE_ME"
   timeout_seconds: 2 # 每次 Redis 命令超时；Redis 慢或断连时避免公开接口长时间悬挂。
@@ -79,7 +80,3 @@ waf:
 
 proxy:
   url: "" # 后端主动访问外部资源时的代理；为空表示直连。
-
-resource:
-  nav_image_num: 10 # 导航资源图相关数量配置。
-  nav_resized_image_num: 10

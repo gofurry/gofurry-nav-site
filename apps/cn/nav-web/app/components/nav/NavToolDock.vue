@@ -28,8 +28,8 @@
               type="button"
               @click="openSite(item)"
             >
-              <img
-                :src="siteLogoSrc(item)"
+              <ManagedAssetImage
+                :object-key="item.icon"
                 :alt="item.name"
               />
               <span>
@@ -83,6 +83,7 @@
 </template>
 
 <script setup lang="ts">
+import ManagedAssetImage from '@/components/common/ManagedAssetImage.vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Site } from '@/types/nav'
@@ -97,8 +98,6 @@ import searchIconLight from '@/assets/svgs/search.svg'
 
 const { t, locale } = useI18n()
 const themeStore = useThemeStore()
-const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
-const defaultLogo = 'defaultLogo.svg'
 
 const activePanel = ref<'search' | null>(null)
 const keyword = ref('')
@@ -174,31 +173,8 @@ async function ensureDirectoryLoaded() {
   }
 }
 
-function joinAssetUrl(prefix: string, path: string) {
-  if (!prefix) {
-    return path
-  }
 
-  return `${prefix.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
-}
 
-function withAssetVersion(url: string, version?: string | null) {
-  const normalizedVersion = (version || '').trim()
-  if (!normalizedVersion) {
-    return url
-  }
-  const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}v=${encodeURIComponent(normalizedVersion)}`
-}
-
-function siteLogoSrc(item: Site) {
-  const iconPath = item.icon || defaultLogo
-  const assetURL = joinAssetUrl(logoPrefix, iconPath)
-  if (!item.icon) {
-    return assetURL
-  }
-  return withAssetVersion(assetURL, item.update_time)
-}
 
 function domainList(item: Site) {
   if (Array.isArray(item.domain)) {

@@ -50,6 +50,7 @@ import { useI18n } from 'vue-i18n'
 import NavSiteGrid from '@/components/nav/NavSiteGrid.vue'
 import { getNavHomePing, getNavSiteGroupPage } from '~/services/nav'
 import type { Delay, NavSiteGroupPageResponse, Site } from '~/types/nav'
+import { buildSiteGroupSeo } from '~/utils/seo'
 
 const route = useRoute()
 const router = useRouter()
@@ -135,9 +136,19 @@ watch(
   { immediate: true }
 )
 
-useHead(() => ({
-  title: groupInfo.value?.name || String(route.params.id),
+const pageSeo = computed(() => buildSiteGroupSeo({
+  name: groupInfo.value?.name,
+  description: groupInfo.value?.info,
+  id: String(route.params.id ?? ''),
+  locale: locale.value,
 }))
+
+useSeoMeta({
+  title: () => pageSeo.value.title,
+  description: () => pageSeo.value.description,
+  ogTitle: () => pageSeo.value.title,
+  ogDescription: () => pageSeo.value.description,
+})
 
 async function loadMore() {
   if (isLoadingMore.value || !hasMore.value) {

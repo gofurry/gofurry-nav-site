@@ -40,6 +40,15 @@ go run . version
 
 Do not run `install` or `uninstall` against a real host as a routine test. Unit rendering and non-Linux behavior are covered in `internal/systemd` tests.
 
+## Shared development configuration
+
+- Run applications and Goose on the developer workstation. Use Tailscale only to reach the shared PostgreSQL and Redis services; do not clone the repository onto the infrastructure server as the normal workflow.
+- Treat the ignored root `.env` as a private input for Codex, Goose, and ignored local `server.yaml` maintenance. It is not an application runtime loader; keep explicit `serve --config <file>` YAML loading.
+- Preserve unrelated local settings when updating an existing ignored `server.yaml`; create it from the matching example only when absent.
+- Runtime PostgreSQL and Redis credentials use `gofurry_app`. Read-only GUI access uses `gofurry_readonly`. Infrastructure administration credentials do not belong in ordinary developer configuration.
+- Run Goose only with the database-specific `GOFURRY_GFN_MIGRATOR_URL`, `GOFURRY_GFG_MIGRATOR_URL`, or `GOFURRY_GFA_MIGRATOR_URL` from the local `.env`. The URL must identify `gofurry_migrator`, and must never be copied into runtime YAML.
+- Never print credentials or complete DSNs. Never run Goose unless the task explicitly authorizes a migration operation.
+
 Frontend checks:
 
 ~~~text

@@ -1,6 +1,5 @@
 // 把字符串类型的对象体解析成对象
 // 如 '{"ip":"1.1.1.1","country":"US"}' => {"ip":"1.1.1.1","country":"US"}
-import axios from "axios";
 
 export function safeJsonParse<T>(data: any): T | null {
     try {
@@ -125,10 +124,4 @@ export function getCookie(name: string): string | null {
 
 export function deleteCookie(name: string) {
     document.cookie = `${name}=; path=/; max-age=0`
-}
-
-export function getMarkdown(url: string): Promise<string> {
-    return axios.get(url, {
-        responseType: 'text',
-    }).then(res => res.data)
 }

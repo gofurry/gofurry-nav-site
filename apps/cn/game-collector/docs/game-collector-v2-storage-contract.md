@@ -14,6 +14,8 @@ V3-P0.1 在现有 V2 pipeline 内增加 canonical Game domain，不复制 collec
 
 US 请求失败、release field 缺失、或 languages observation 为空/不可解析时保留已有 canonical 数据。`SaveDetails` 先锁定 `gfg_game` 父行并核对 AppID；全部 raw/current/canonical/snapshot 写入仍在同一事务，提交后才刷新原有 Redis cache，且不新增 canonical Redis key。
 
+Steam 资产按本轮显式成功观察到的 `(source, lang)` scope 替换。Storefront appdetails 与 zh/en StoreBrowse 分别授权自己的 scope；失败或缺少竖版封面的 StoreBrowse 响应不授权替换，因此保留 PostgreSQL Last Known Good。缓存刷新使用事务提交后重新读取的合并资产集，绝不使用缺失失败 scope 的本轮内存切片覆盖旧资产。
+
 当前存储与控制边界：
 
 - PostgreSQL：结构化详情、新闻、在线人数、raw snapshot，以及 durable Schedule / Job / Run / Task Result / Collector Instance。

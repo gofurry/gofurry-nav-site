@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,8 +18,8 @@ func TestSiteComparePreservesOrderDeduplicatesAndUsesOneCompleteSnapshot(t *test
 	notAfter := horizon.AddDate(0, 0, 5)
 	store := &fakeStore{
 		sites: map[int64]*models.SiteRecord{
-			2: {ID: 2, Name: "Second"},
-			1: {ID: 1, Name: "First"},
+			2: {ID: 2, Name: "Second", VisualAsset: " site-logo.png "},
+			1: {ID: 1, Name: "First", VisualAsset: " "},
 		},
 		compareHorizon: &horizon,
 		compareCertificates: []models.CertificateItemRecord{
@@ -42,6 +44,14 @@ func TestSiteComparePreservesOrderDeduplicatesAndUsesOneCompleteSnapshot(t *test
 	}
 	if got.Status != "ready" || got.AsOf == nil || *got.AsOf != "2026-09-01" {
 		t.Fatalf("snapshot = %#v", got)
+	}
+	visual := got.Sites[0].Site.Visual
+	if visual == nil || visual.Kind != "site_icon" || visual.Asset != "site-logo.png" {
+		t.Fatalf("compare visual = %#v", visual)
+	}
+	encoded, marshalErr := json.Marshal(got.Sites[1].Site)
+	if marshalErr != nil || strings.Contains(string(encoded), "visual") {
+		t.Fatalf("absent visual must be omitted: %s", encoded)
 	}
 	if len(got.Sites) != 2 || got.Sites[0].Site.ID != 2 || got.Sites[1].Site.ID != 1 {
 		t.Fatalf("order/dedup = %#v", got.Sites)

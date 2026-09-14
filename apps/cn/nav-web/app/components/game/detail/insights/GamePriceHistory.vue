@@ -1,11 +1,6 @@
 <template>
   <section class="game-insights-chart-card" data-price-history>
-    <div class="entity-insights-heading">
-      <div>
-        <p class="entity-insights-eyebrow">{{ $t(`insights.regions.${region}`) }}</p>
-        <h3>{{ $t('insights.entity.priceHistory') }}</h3>
-      </div>
-    </div>
+    <h3>{{ $t('insights.entity.priceHistoryRegion', { region: $t(`insights.regions.${region}`) }) }}</h3>
 
     <div class="game-insights-chart-shell" :aria-busy="loading">
       <div ref="chartRef" class="game-insights-chart" :class="{ 'game-insights-chart--visible': points.length >= 2 && !unavailable }" />
@@ -32,7 +27,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { GameInsightPricePoint, GameInsightRegion } from '@/types/insights'
+import type { GameDetailInsightRange, GameInsightPricePoint, GameInsightRegion } from '@/types/insights'
+import { formatGameInsightAxisDate } from '@/utils/insightHistoryRanges'
 import { formatMinorAmount, priceSegmentKey, publicPriceDisplay } from '@/utils/insightPrices'
 
 type EChartsInstance = import('echarts').ECharts
@@ -40,6 +36,7 @@ type EChartsInstance = import('echarts').ECharts
 const props = defineProps<{
   points: GameInsightPricePoint[]
   region: GameInsightRegion
+  range: GameDetailInsightRange
   loading?: boolean
   unavailable?: boolean
 }>()
@@ -54,11 +51,26 @@ const isDark = computed(() => themeStore.theme === 'dark')
 let resizeObserver: ResizeObserver | null = null
 let active = false
 
-function pointLabel(point: GameInsightPricePoint) {
+function pointLines(point: GameInsightPricePoint) {
   const display = publicPriceDisplay(point)
-  if (display.kind === 'free') return t('insights.entity.priceFree')
-  if (display.kind === 'priced') return `${t('insights.entity.pricePriced')}: ${point.currency ? formatMinorAmount(display.amount, point.currency, locale.value) : display.amount}`
-  return t(`insights.entity.priceStates.${point.state}`)
+  if (display.kind === 'free') {
+    return [`${t('insights.entity.currentPrice')}: ${t('insights.entity.priceFree')}`]
+  }
+  if (display.kind === 'priced') {
+    const current = point.currency ? formatMinorAmount(display.amount, point.currency, locale.value) : t('insights.entity.priceStatusUnknown')
+    const lines = [`${t('insights.entity.currentPrice')}: ${current}`]
+    if (point.initial_amount !== null && point.currency) {
+      lines.push(`${t('insights.entity.originalPriceLabel')}: ${formatMinorAmount(point.initial_amount, point.currency, locale.value)}`)
+    }
+    if (point.discount_percent !== null && point.discount_percent > 0) {
+      lines.push(`${t('insights.entity.discount')}: -${point.discount_percent}%`)
+    }
+    return lines
+  }
+  const state = point.state === 'unknown'
+    ? t('insights.entity.priceStatusUnknown')
+    : t('insights.entity.priceMissingShort')
+  return [`${t('insights.entity.priceStatus')}: ${state}`]
 }
 
 async function renderChart() {
@@ -86,6 +98,10 @@ async function renderChart() {
     if (!current || current.key !== key || !consecutive) { current = { key, indexes: [] }; segments.push(current) }
     current.indexes.push(index)
   })
+  const unavailablePoints = props.points.map((point) => {
+    if (publicPriceDisplay(point).kind !== 'unavailable') return null
+    return { value: 0, point }
+  })
 
   chart.value.setOption({
     animation: false,
@@ -96,9 +112,12 @@ async function renderChart() {
       backgroundColor: colors.tooltip,
       borderColor: colors.border,
       textStyle: { color: colors.text },
-      formatter(params: Array<{ data: { value: number | null, point: GameInsightPricePoint } }>) {
-        const entry = params?.[0]?.data
-        return entry ? `${entry.point.date}<br/>${pointLabel(entry.point)}` : ''
+      formatter(params: { axisValue?: string, data?: { value: number | null, point: GameInsightPricePoint } | null } | Array<{ axisValue?: string, data?: { value: number | null, point: GameInsightPricePoint } | null }>) {
+        const entries = Array.isArray(params) ? params : [params]
+        const axisDate = entries.find(item => item.axisValue)?.axisValue
+        const point = entries.find(item => item.data?.point)?.data?.point
+          ?? props.points.find(item => item.date === axisDate)
+        return point ? [point.date, ...pointLines(point)].join('<br/>') : ''
       },
     },
     xAxis: {
@@ -107,7 +126,12 @@ async function renderChart() {
       data: props.points.map(point => point.date),
       axisLine: { lineStyle: { color: colors.split } },
       axisTick: { show: false },
-      axisLabel: { color: colors.axis, hideOverlap: true, margin: 14 },
+      axisLabel: {
+        color: colors.axis,
+        hideOverlap: true,
+        margin: 14,
+        formatter: (value: string) => formatGameInsightAxisDate(value, props.range),
+      },
     },
     yAxis: {
       type: 'value',
@@ -115,20 +139,30 @@ async function renderChart() {
       axisLabel: { color: colors.axis },
       splitLine: { lineStyle: { color: colors.split } },
     },
-    series: segments.map(segment => ({
-      type: 'line',
-      data: props.points.map((point, index) => {
-        if (!segment.indexes.includes(index)) return null
-        const display = publicPriceDisplay(point)
-        return { value: display.kind === 'priced' ? display.amount / 100 : 0, point }
-      }),
-      connectNulls: false,
-      symbol: 'circle',
-      symbolSize: 6,
-      showSymbol: props.points.length <= 31,
-      lineStyle: { width: 3, color: colors.line },
-      itemStyle: { color: colors.line },
-    })),
+    series: [
+      ...segments.map(segment => ({
+        type: 'line',
+        data: props.points.map((point, index) => {
+          if (!segment.indexes.includes(index)) return null
+          const display = publicPriceDisplay(point)
+          return { value: display.kind === 'priced' ? display.amount / 100 : 0, point }
+        }),
+        connectNulls: false,
+        symbol: 'circle',
+        symbolSize: 6,
+        showSymbol: props.points.length <= 31,
+        lineStyle: { width: 3, color: colors.line },
+        itemStyle: { color: colors.line },
+      })),
+      {
+        type: 'scatter',
+        data: unavailablePoints,
+        symbol: 'emptyCircle',
+        symbolSize: props.points.length <= 31 ? 7 : 0,
+        clip: false,
+        itemStyle: { color: colors.axis },
+      },
+    ],
   }, true)
 }
 
@@ -141,7 +175,7 @@ onMounted(async () => {
 })
 
 watch(
-  () => [props.points, props.unavailable, isDark.value, locale.value],
+  () => [props.points, props.range, props.unavailable, isDark.value, locale.value],
   async () => {
     await nextTick()
     await renderChart()

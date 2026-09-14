@@ -1,12 +1,16 @@
 <template>
-  <div class="insights-page insights-change-explorer" :data-domain="selectedDomain" :data-range="selectedRange">
+  <div class="insights-page insights-workspace-page insights-change-explorer" :data-domain="selectedDomain" :data-range="selectedRange">
     <main class="insights-container">
       <EcosystemNavigation />
-      <h1 class="sr-only">{{ $t('insights.changeExplorer.title') }}</h1>
+      <InsightsWorkspaceHeader
+        :eyebrow="$t('insights.overview.title')"
+        :title="$t('insights.changeExplorer.title')"
+        :description="$t('insights.changeExplorer.description')"
+      />
 
       <section class="insights-change-explorer-filters" :aria-label="$t('insights.changeExplorer.filters')">
-        <div class="insights-change-explorer-filters__group">
-          <span>{{ $t('insights.changeExplorer.domain') }}</span>
+        <div class="insights-change-explorer-filters__group" role="group" aria-labelledby="changes-domain-label">
+          <span id="changes-domain-label">{{ $t('insights.changeExplorer.domain') }}</span>
           <button
             v-for="domain in domains"
             :key="domain"
@@ -19,8 +23,8 @@
             {{ $t(`insights.changes.${domain}`) }}
           </button>
         </div>
-        <div class="insights-change-explorer-filters__group">
-          <span>{{ $t('insights.changeExplorer.range') }}</span>
+        <div class="insights-change-explorer-filters__group" role="group" aria-labelledby="changes-range-label">
+          <span id="changes-range-label">{{ $t('insights.changeExplorer.range') }}</span>
           <button
             v-for="range in ranges"
             :key="range"
@@ -33,8 +37,8 @@
             {{ $t(`insights.ranges.${range}`) }}
           </button>
         </div>
-        <div class="insights-change-explorer-filters__group insights-change-explorer-filters__categories">
-          <span>{{ $t('insights.changeExplorer.category') }}</span>
+        <div class="insights-change-explorer-filters__group insights-change-explorer-filters__categories" role="group" aria-labelledby="changes-category-label">
+          <span id="changes-category-label">{{ $t('insights.changeExplorer.category') }}</span>
           <button
             type="button"
             :class="{ active: selectedCategory === '' }"
@@ -64,7 +68,11 @@
         :loading="loading"
         :unavailable="unavailable"
         @more="loadMore"
+        @retry="loadFirstPage"
       />
+      <InsightWorkspaceDisclosure :title="$t('insights.changeExplorer.aboutTitle')">
+        <p>{{ $t('insights.changeExplorer.about') }}</p>
+      </InsightWorkspaceDisclosure>
     </main>
   </div>
 </template>
@@ -74,6 +82,8 @@ import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import type { LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import InsightsWorkspaceHeader from '@/components/insights/workspace/InsightsWorkspaceHeader.vue'
+import InsightWorkspaceDisclosure from '@/components/insights/workspace/InsightWorkspaceDisclosure.vue'
 import InsightsChangeExplorerFeed from '@/components/insights/InsightsChangeExplorerFeed.vue'
 import { getGameInsightChanges } from '@/services/game'
 import { getNavInsightChanges } from '@/services/nav'

@@ -16,7 +16,6 @@ type navPageReader interface {
 	GetGoogleSuggestion(q string) ([]string, common.GFError)
 	GetBiliBiliSuggestion(q string) ([]string, common.GFError)
 	GetSayingService(lang string) (models.SayingModel, common.GFError)
-	GetImageUrl(t string) string
 }
 
 type navPageApi struct{ reader navPageReader }
@@ -127,10 +126,4 @@ func (api *navPageApi) GetSaying(c fiber.Ctx) error {
 		return common.NewResponse(c).Error(err)
 	}
 	return common.NewResponse(c).SuccessWithData(saying)
-}
-
-// @Schemes
-// @Description 提供背景随机图片的CDN地址, type= resized 或 normal 默认 normal
-func (api *navPageApi) GetImageUrl(c fiber.Ctx) error {
-	return common.NewResponse(c).SuccessWithData(api.service().GetImageUrl(c.Query("type", "normal")))
 }

@@ -1,12 +1,63 @@
 package controller
 
 import (
+	"context"
+	"errors"
 	"reflect"
 	"testing"
 
 	"github.com/gofurry/gofurry-admin/internal/app/gameadmin/models"
 	"github.com/gofurry/steam-go/web/storefront"
 )
+
+func TestResolveSteamPrefillPartialSuccess(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		zh, en, asset bool
+	}{
+		{"bilingual", true, true, true},
+		{"Chinese unavailable", false, true, true},
+		{"English unavailable", true, false, true},
+		{"assets unavailable", true, true, false},
+		{"assets only", false, false, true},
+		{"fully unavailable", false, false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			data, err := resolveSteamPrefill(context.Background(), 550, func(_ context.Context, lang string) (storefront.AppDetailsData, error) {
+				if (lang == "schinese" && tc.zh) || (lang == "english" && tc.en) {
+					return storefront.AppDetailsData{Name: lang, HeaderImage: "fallback.jpg", ShortDescription: lang + " description"}, nil
+				}
+				return storefront.AppDetailsData{}, errors.New("locale unavailable")
+			}, func(context.Context) (string, error) {
+				if tc.asset {
+					return "asset.jpg", nil
+				}
+				return "", errors.New("assets unavailable")
+			})
+			if (err == nil) != (tc.zh || tc.en || tc.asset) {
+				t.Fatalf("unexpected result: %+v, %v", data, err)
+			}
+			if (data.Name != "") != tc.zh || (data.NameEn != "") != tc.en {
+				t.Fatalf("locale data lost: %+v", data)
+			}
+			if tc.asset && data.Header != "asset.jpg" {
+				t.Fatalf("asset data lost: %+v", data)
+			}
+			if !tc.asset && (tc.zh || tc.en) && data.Header != "fallback.jpg" {
+				t.Fatalf("header fallback lost: %+v", data)
+			}
+		})
+	}
+}
+
+func TestResolveSteamPrefillRejectsEmptySuccess(t *testing.T) {
+	_, err := resolveSteamPrefill(context.Background(), 550, func(context.Context, string) (storefront.AppDetailsData, error) {
+		return storefront.AppDetailsData{}, nil
+	}, func(context.Context) (string, error) { return "", nil })
+	if err == nil {
+		t.Fatal("synthetic links and appid must not count as Steam data")
+	}
+}
 
 func TestGameDTOParsesJSONCollections(t *testing.T) {
 	t.Parallel()

@@ -1,4 +1,6 @@
 export type InsightRange = '30d' | '90d' | 'all'
+export type GameInsightHistoryRange = InsightRange | '180d' | '1y' | '3y' | '5y'
+export type GameDetailInsightRange = Exclude<GameInsightHistoryRange, 'all'>
 export type InsightChangeRange = '7d' | InsightRange
 export type NavInsightMetricKey = 'ipv6' | 'tls13' | 'http2' | 'hsts' | 'csp' | 'security_txt' | 'certificate_verified'
 export type GameInsightMetricKey = 'free' | 'windows' | 'mac' | 'linux'
@@ -98,6 +100,7 @@ export interface InsightDimensionTrend {
 export interface InsightEntityRef {
   id: number
   name: string
+  visual?: { kind: 'site_icon' | 'game_header', asset: string | null }
 }
 
 export interface InsightChange {
@@ -318,7 +321,7 @@ export interface GameInsightPlayerPoint {
 }
 
 export interface GameInsightPlayerHistory {
-  requested_range: InsightRange
+  requested_range: GameInsightHistoryRange
   available_from: string | null
   available_through: string | null
   points: GameInsightPlayerPoint[]
@@ -335,7 +338,7 @@ export interface GameInsightPricePoint {
 
 export interface GameInsightPriceHistory {
   region: GameInsightRegion
-  requested_range: InsightRange
+  requested_range: GameInsightHistoryRange
   available_from: string | null
   available_through: string | null
   points: GameInsightPricePoint[]

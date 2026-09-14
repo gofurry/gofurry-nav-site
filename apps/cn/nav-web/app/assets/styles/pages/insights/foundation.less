@@ -1,0 +1,26 @@
+.insights-page {
+  --insights-content-max: 1400px;
+  --insights-page-gutter: clamp(16px, 3vw, 40px);
+  --insights-section-gap: clamp(48px, 6vw, 72px);
+  --insights-navigation-gap: clamp(24px, 3vw, 40px);
+  --insights-radius-sm: var(--gf-radius-sm);
+  --insights-radius-md: var(--gf-radius-md);
+  --insights-radius-media: var(--gf-radius-lg);
+
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100vh - 64px);
+  overflow: hidden;
+  color: var(--gf-text-main);
+}
+
+.insights-page .insights-container {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: calc(var(--insights-content-max) + 2 * var(--insights-page-gutter));
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(24px, 3vw, 48px) var(--insights-page-gutter) var(--insights-section-gap);
+}

@@ -13,7 +13,7 @@ health:
 
 data_base:
   db_name: "gfn"
-  db_username: "postgres"
+  db_username: "gofurry_app" # Runtime DML role; Goose uses gofurry_migrator separately.
   db_password: "CHANGE_ME"
   db_host: "127.0.0.1"
   db_port: "5432"
@@ -27,6 +27,7 @@ data_base:
   ping_timeout_seconds: 3
 
 redis:
+  redis_username: "gofurry_app" # Runtime ACL user; empty remains compatible with password-only Redis.
   redis_addr: "127.0.0.1:6379"
   redis_password: "CHANGE_ME"
 

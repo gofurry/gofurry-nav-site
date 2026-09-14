@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"regexp"
@@ -13,7 +12,7 @@ import (
 	"github.com/gofurry/gofurry-game-backend/common/log"
 	"github.com/gofurry/gofurry-game-backend/common/util"
 	"github.com/gofurry/gofurry-game-backend/roof/env"
-	"gopkg.in/gomail.v2"
+	mail "github.com/wneessen/go-mail"
 )
 
 /*
@@ -25,9 +24,9 @@ import (
 // TODO:发件人池, 免费账号单日仅可发送1000条邮件, 大需求量可使用云服务
 
 type EmailService struct {
-	dialer     *gomail.Dialer // SMTP 拨号器
-	sender     string         // 发件人邮箱
-	senderName string         // 发件人名称
+	dialAndSend func(*mail.Msg) error // 每次发送使用独立 SMTP 客户端
+	sender      string                // 发件人邮箱
+	senderName  string                // 发件人名称
 }
 
 // 全局邮箱服务实例
@@ -66,16 +65,32 @@ func newEmailService() (*EmailService, error) {
 		return nil, errors.New("邮箱账号/密码不能为空")
 	}
 
-	// 创建 SMTP 拨号器
-	dialer := gomail.NewDialer(
-		cfg.Email.EmailHost,
-		cfg.Email.EmailPort,
-		cfg.Email.EmailUser,
-		cfg.Email.EmailPassword,
-	)
+	// Preserve the configured port, implicit TLS on 465 and STARTTLS when offered.
+	emailConfig := cfg.Email
+	newClient := func() (*mail.Client, error) {
+		opts := []mail.Option{
+			mail.WithPort(emailConfig.EmailPort), mail.WithTimeout(10 * time.Second),
+			mail.WithHELO("localhost"), mail.WithTLSPolicy(mail.TLSOpportunistic),
+			mail.WithUsername(emailConfig.EmailUser), mail.WithPassword(emailConfig.EmailPassword),
+			mail.WithOpportunisticSMTPAuth(mail.SMTPAuthCramMD5, mail.SMTPAuthPlain, mail.SMTPAuthLogin),
+		}
+		if emailConfig.EmailPort == 465 {
+			opts = append(opts, mail.WithSSL())
+		}
+		return mail.NewClient(emailConfig.EmailHost, opts...)
+	}
+	if _, err := newClient(); err != nil {
+		return nil, err
+	}
 
 	return &EmailService{
-		dialer:     dialer,
+		dialAndSend: func(m *mail.Msg) error {
+			client, err := newClient()
+			if err != nil {
+				return err
+			}
+			return client.DialAndSend(m)
+		},
 		sender:     cfg.Email.EmailUser,
 		senderName: "GoFurry 邮件服务",
 	}, nil
@@ -149,29 +164,18 @@ func (es *EmailService) SendEmail(to string, cc []string, bcc []string, subject,
 		return common.NewServiceError("邮件标题不能为空")
 	}
 
-	// 构建邮件消息
-	m := gomail.NewMessage()
-	from := es.mimeEncode(es.senderName) + " <" + es.sender + ">"
-	m.SetHeader("From", from)
-	m.SetHeader("To", to)
-
-	// 处理抄送/密送
-	if len(cc) > 0 {
-		m.SetHeader("Cc", cc...)
+	// Keep the same message, including CC/BCC, across all retry attempts.
+	m, err := es.buildMessage(to, cc, bcc, subject, htmlBody)
+	if err != nil {
+		return common.NewServiceError("邮件发送失败, 请稍后重试")
 	}
-	if len(bcc) > 0 {
-		m.SetHeader("Bcc", bcc...)
-	}
-
-	m.SetHeader("Subject", es.mimeEncode(subject))
-	m.SetBody("text/html; charset=UTF-8", htmlBody) // 防XSS
 
 	// 异步发送邮件
 	var sendErr error
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		sendErr = es.sendEmailWithRetry(to, subject, htmlBody)
+		sendErr = es.sendMessageWithRetry(m, to)
 	}()
 
 	// 等待发送结果
@@ -203,17 +207,17 @@ func (es *EmailService) SendEmailWithAttachment(to, subject, htmlBody string, at
 		return common.NewServiceError("附件列表不能为空")
 	}
 
-	// 构建邮件
-	m := gomail.NewMessage()
-	from := es.mimeEncode(es.senderName) + " <" + es.sender + ">"
-	m.SetHeader("From", from)
-	m.SetHeader("To", to)
-	m.SetHeader("Subject", es.mimeEncode(subject))
-	m.SetBody("text/html; charset=UTF-8", htmlBody)
-
-	// 添加附件
+	m, err := es.buildMessage(to, nil, nil, subject, htmlBody)
+	if err != nil {
+		return common.NewServiceError("带附件邮件发送失败")
+	}
 	for filePath, fileName := range attachments {
-		m.Attach(filePath, gomail.Rename(fileName))
+		// AttachFile silently ignores missing files; never send a partial attachment set.
+		count := len(m.GetAttachments())
+		m.AttachFile(filePath, mail.WithFileName(fileName))
+		if len(m.GetAttachments()) != count+1 {
+			return common.NewServiceError("带附件邮件发送失败")
+		}
 	}
 
 	// 异步发送
@@ -224,7 +228,7 @@ func (es *EmailService) SendEmailWithAttachment(to, subject, htmlBody string, at
 		maxRetries := 2
 		var err error
 		for i := 0; i <= maxRetries; i++ {
-			err = es.dialer.DialAndSend(m)
+			err = es.dialAndSend(m)
 			if err == nil {
 				sendErr = nil
 				return
@@ -494,19 +498,42 @@ func (es *EmailService) IsEmailValid(email string) bool {
 
 // sendEmailWithRetry 发送邮件
 func (es *EmailService) sendEmailWithRetry(to, subject, body string) error {
-	// 构建邮件消息
-	m := gomail.NewMessage()
-	from := es.mimeEncode(es.senderName) + " <" + es.sender + ">"
-	m.SetHeader("From", from)
-	m.SetHeader("To", to)
-	m.SetHeader("Subject", es.mimeEncode(subject))
-	m.SetBody("text/html; charset=UTF-8", body) // 防XSS
+	m, err := es.buildMessage(to, nil, nil, subject, body)
+	if err != nil {
+		return err
+	}
+	return es.sendMessageWithRetry(m, to)
+}
 
+func (es *EmailService) buildMessage(to string, cc, bcc []string, subject, body string) (*mail.Msg, error) {
+	m := mail.NewMsg(mail.WithNoDefaultUserAgent())
+	if err := m.FromFormat(es.senderName, es.sender); err != nil {
+		return nil, err
+	}
+	if err := m.To(to); err != nil {
+		return nil, err
+	}
+	if len(cc) > 0 {
+		if err := m.Cc(cc...); err != nil {
+			return nil, err
+		}
+	}
+	if len(bcc) > 0 {
+		if err := m.Bcc(bcc...); err != nil {
+			return nil, err
+		}
+	}
+	m.Subject(subject)
+	m.SetBodyString(mail.TypeTextHTML, body)
+	return m, nil
+}
+
+func (es *EmailService) sendMessageWithRetry(m *mail.Msg, to string) error {
 	// 重试
 	maxRetries := 2
 	var err error
 	for i := 0; i <= maxRetries; i++ {
-		err = es.dialer.DialAndSend(m)
+		err = es.dialAndSend(m)
 		if err == nil {
 			return nil
 		}
@@ -565,23 +592,6 @@ func (es *EmailService) buildCodeEmailContent(code string) (string, error) {
 	</html>
 	`
 	return tpl, nil
-}
-
-// mimeEncode 对中文进行MIME编码
-func (es *EmailService) mimeEncode(s string) string {
-	hasNonASCII := false
-	for _, r := range s {
-		if r > 127 {
-			hasNonASCII = true
-			break
-		}
-	}
-	if !hasNonASCII {
-		return s
-	}
-	b := []byte(s)
-	encoded := base64.StdEncoding.EncodeToString(b)
-	return "=?UTF-8?B?" + encoded + "?="
 }
 
 // 原有快捷方法

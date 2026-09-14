@@ -31,7 +31,7 @@ func (d *InsightsDAO) GetSite(ctx context.Context, siteID int64) (*models.SiteRe
 	if name == "" {
 		name = row.NameEn
 	}
-	return &models.SiteRecord{ID: row.ID, Name: name}, nil
+	return &models.SiteRecord{ID: row.ID, Name: name, VisualAsset: row.Icon}, nil
 }
 
 func (d *InsightsDAO) GetMetricSummary(ctx context.Context, contract models.MetricContract) (*models.MetricSummaryRecord, error) {
@@ -167,7 +167,7 @@ func (d *InsightsDAO) ListCertificateExpiryAttention(ctx context.Context, limit 
 	result := make([]models.CertificateItemRecord, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, models.CertificateItemRecord{
-			SiteID: row.SiteID, SiteName: row.SiteName, Target: row.Target,
+			SiteID: row.SiteID, SiteName: row.SiteName, VisualAsset: row.Icon, Target: row.Target,
 			NotAfter: timestampPointer(row.TlsCertNotAfter), Verified: row.Verified,
 			VerificationIssue: nonemptyStringPointer(row.VerificationIssue), Issuer: row.Issuer,
 			ObservedAt: timestampPointer(row.ObservedAt),
@@ -184,7 +184,7 @@ func (d *InsightsDAO) ListCertificateVerificationIssues(ctx context.Context, lim
 	result := make([]models.CertificateItemRecord, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, models.CertificateItemRecord{
-			SiteID: row.SiteID, SiteName: row.SiteName, Target: row.Target,
+			SiteID: row.SiteID, SiteName: row.SiteName, VisualAsset: row.Icon, Target: row.Target,
 			NotAfter: timestampPointer(row.TlsCertNotAfter), Verified: row.Verified,
 			VerificationIssue: nonemptyStringPointer(row.VerificationIssue), Issuer: row.Issuer,
 			ObservedAt: timestampPointer(row.ObservedAt),
@@ -210,6 +210,7 @@ func (d *InsightsDAO) ListOverviewChanges(ctx context.Context, detectorKeys, con
 	for _, row := range rows {
 		result = append(result, models.ChangeRecord{
 			EntityID: row.SiteID, EntityName: row.SiteName, DetectorKey: row.DetectorKey,
+			VisualAsset:     row.Icon,
 			DetectorVersion: row.DetectorVersion, EventCode: row.EventCode,
 			ProjectionDate: row.ProjectionDate.Time, TimeBasis: row.TimeBasis, EventAt: timestampPointer(row.EventAt),
 		})
@@ -242,7 +243,7 @@ func (d *InsightsDAO) ListExplorerChanges(ctx context.Context, conditions models
 	result := make([]models.ChangeRecord, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, models.ChangeRecord{
-			EntityID: row.SiteID, EntityName: row.SiteName, DetectorKey: row.DetectorKey,
+			EntityID: row.SiteID, EntityName: row.SiteName, VisualAsset: row.Icon, DetectorKey: row.DetectorKey,
 			DetectorVersion: row.DetectorVersion, EventCode: row.EventCode,
 			ProjectionDate: row.ProjectionDate.Time, TimeBasis: row.TimeBasis, EventAt: timestampPointer(row.EventAt),
 			PrecisionRank: row.PrecisionRank, EventSortAt: row.EventSortAt.Time, OpaqueTie: row.OpaqueTie,

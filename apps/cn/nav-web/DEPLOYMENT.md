@@ -48,6 +48,8 @@ Keep the existing `nav.go-furry.com` and `game.go-furry.com` API server blocks u
 
 ## Maintenance page
 
+Planned maintenance only places GoFurry business hosts into maintenance mode. `status.go-furry.com` remains live and continues proxying the independent `gf-uptime` service. The canonical maintenance config preserves its separate HTTP redirect and HTTPS proxy to `http://127.0.0.1:9980`.
+
 For planned downtime, switch nginx to the dedicated maintenance config instead of letting requests fail against stopped services:
 
 ```bash
@@ -72,7 +74,7 @@ Required values:
 - `NAV_API_INTERNAL_BASE=http://10.6.0.11:9999/api/v1`
 - `GAME_API_INTERNAL_BASE=http://10.6.0.11:9998/api/v1`
 
-The CDN and logo URLs stay pointed at the existing `qcdn.go-furry.com` assets.
+Managed object keys use `NUXT_PUBLIC_ASSET_PRIMARY_BASE=https://assets.go-furry.com` (COS / EdgeOne) and `NUXT_PUBLIC_ASSET_MIRROR_BASE=https://assets.gofurry.com` (R2 / Cloudflare). Fixed platform icons, About portraits, tool covers and error illustrations are bundled with Nuxt. Follow [the managed asset cutover runbook](../../../docs/managed-assets-cutover.md) when upgrading from the old CDN model.
 
 ## Notes
 

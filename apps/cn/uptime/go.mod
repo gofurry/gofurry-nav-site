@@ -11,8 +11,8 @@ require (
 	github.com/spf13/viper v1.21.0
 	go.etcd.io/bbolt v1.5.0
 	go.uber.org/zap v1.28.0
+	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

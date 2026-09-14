@@ -161,7 +161,10 @@ func (s *InsightsService) GetInsightsMetricTrend(ctx context.Context, publicKey,
 }
 
 func (s *InsightsService) GetGameInsights(ctx context.Context, gameID int64) (v2models.GameInsights, error) {
-	result := v2models.GameInsights{RecentChanges: []v2models.InsightChange{}}
+	result := v2models.GameInsights{
+		RecentChanges:  []v2models.InsightChange{},
+		RegionalPrices: v2models.InsightRegionalPrices{Regions: []v2models.InsightRegionalPrice{}},
+	}
 	game, err := s.requireGame(ctx, gameID)
 	if err != nil {
 		return result, err
@@ -309,6 +312,14 @@ func parseInsightRange(value string) (int32, bool) {
 		return 30, true
 	case "90d":
 		return 90, true
+	case "180d":
+		return 180, true
+	case "1y":
+		return 365, true
+	case "3y":
+		return 1095, true
+	case "5y":
+		return 1825, true
 	case "all":
 		return 0, true
 	default:
@@ -334,9 +345,13 @@ func insightPublicChanges(records []v2models.InsightChangeRecord) []v2models.Ins
 		if record.TimeBasis != "day" {
 			occurredAt = record.EventAt
 		}
+		entity := v2models.InsightEntityRef{ID: record.EntityID, Name: record.EntityName}
+		if asset := normalizeSteamAssetURL(record.VisualAsset); asset != "" {
+			entity.Visual = &v2models.InsightEntityVisual{Kind: "game_header", Asset: asset}
+		}
 		result = append(result, v2models.InsightChange{
 			Type: publicType, Date: insightFormatDate(record.ProjectionDate), OccurredAt: occurredAt,
-			Entity: v2models.InsightEntityRef{ID: record.EntityID, Name: record.EntityName}, Detail: nil,
+			Entity: entity, Detail: nil,
 		})
 	}
 	return result

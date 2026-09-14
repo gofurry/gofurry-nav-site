@@ -1,84 +1,69 @@
 <template>
-  <div
-    class="insights-page insights-domain-page"
-    :data-selected-metric="selectedMetric"
-    :data-selected-dimension="selectedDimension"
-    :data-selected-slice="selectedSlice || ''"
-  >
+  <div class="insights-page insights-domain-page insights-game-domain" data-domain="game" :data-selected-metric="selectedMetric" :data-selected-dimension="selectedDimension" :data-selected-slice="selectedSlice || ''">
     <main class="insights-container">
       <EcosystemNavigation context="game" />
-      <h1 class="sr-only">{{ $t('insights.games.title') }}</h1>
+      <InsightsDomainHeader domain="game" :entity-count="overview?.entity_count ?? null" :generated-at="overview?.generated_at ?? null" />
+      <p v-if="overviewUnavailable" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
 
-      <p v-if="overviewUnavailable" class="insights-empty-state insights-overview-error">
-        {{ $t('insights.emptyStates.unavailable') }}
-      </p>
+      <section class="insight-domain-pulse" aria-labelledby="domain-pulse-title" data-domain-pulse>
+        <div class="insight-domain-heading"><div><p class="insight-domain-kicker">{{ $t('insights.editorial.gamesKicker') }}</p><h2 id="domain-pulse-title">{{ $t('insights.domain.pulse') }}</h2></div></div>
+        <InsightsGamePulse :panel="panelData.panel" />
+      </section>
 
-      <div class="insights-metric-strip" aria-label="Game metrics">
-        <InsightsMetricCard
-          v-for="metricKey in metrics"
-          :key="metricKey"
-          :metric-key="metricKey"
-          :metric="metricsByKey.get(metricKey) ?? null"
-          :selected="selectedMetric === metricKey"
-          @select="selectMetric"
-        />
-      </div>
+      <InsightMetricRail :metrics="metrics" :metrics-by-key="metricsByKey" :selected-metric="selectedMetric" :groups="metricGroups" @select="selectMetric" />
 
-      <InsightsMetricTrend
-        :metric-key="selectedMetric"
-        :range="selectedRange"
-        :points="trend?.points ?? []"
-        :loading="trendLoading"
-        :unavailable="trendUnavailable"
-        @range="selectRange"
-      />
+      <InsightTrendWorkspace domain="game" :metric-key="selectedMetric" :metric="selectedMetricData" :range="selectedRange" :points="trend?.points ?? []" :loading="trendLoading" :unavailable="trendUnavailable" @range="selectRange" />
 
-      <InsightsDimensionBreakdown
-        :dimensions="dimensions"
-        :dimension="selectedDimension"
-        :selected-slice="selectedSlice"
-        :breakdown="breakdown"
-        :loading="breakdownLoading"
-        :unavailable="breakdownUnavailable"
-        @dimension="selectDimension"
-        @slice="selectSlice"
-      />
+      <InsightDimensionExplorer domain="game" :metric-key="selectedMetric" :dimensions="dimensions" :dimension="selectedDimension" :selected-slice="selectedSlice" :breakdown="breakdown" :loading="breakdownLoading" :unavailable="breakdownUnavailable" :range="selectedRange" :slice-trend="sliceTrend" :slice-loading="sliceTrendLoading" :slice-unavailable="sliceTrendUnavailable" @dimension="selectDimension" @slice="selectSlice" />
 
-      <InsightsSliceTrend
-        :slice="selectedSlice"
-        :range="selectedRange"
-        :trend="sliceTrend"
-        :loading="sliceTrendLoading"
-        :unavailable="sliceTrendUnavailable"
-      />
+      <InsightDomainActivity domain="game" :items="recentChanges" :unavailable="overviewUnavailable" />
 
+      <section class="insight-domain-continue" aria-labelledby="domain-continue-title">
+        <div class="insight-domain-heading"><h2 id="domain-continue-title">{{ $t('insights.domain.continue') }}</h2></div>
+        <div>
+          <NuxtLink v-for="item in destinations" :key="item.path" :to="localePath(item.path)"><span><strong>{{ $t(`insights.editorial.links.${item.key}.title`) }}</strong><span>{{ $t(`insights.editorial.links.${item.key}.description`) }}</span></span><span aria-hidden="true">↗</span></NuxtLink>
+        </div>
+      </section>
       <InsightsDataInfo :metric-key="selectedMetric" :metric="selectedMetricData" />
-      <InsightsRecentChanges :items="recentChanges" :unavailable="overviewUnavailable" />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
+import InsightsGamePulse from '@/components/insights/domain/InsightsGamePulse.vue'
+import type { GameV2PanelRecord } from '@/types/game'
 import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed } from 'vue'
+import InsightsDomainHeader from '@/components/insights/domain/InsightsDomainHeader.vue'
+import InsightMetricRail from '@/components/insights/domain/InsightMetricRail.vue'
+import InsightTrendWorkspace from '@/components/insights/domain/InsightTrendWorkspace.vue'
+import InsightDimensionExplorer from '@/components/insights/domain/InsightDimensionExplorer.vue'
+import InsightDomainActivity from '@/components/insights/domain/InsightDomainActivity.vue'
+import { overviewExploreGroups } from '@/utils/insightOverview'
 import { useI18n } from 'vue-i18n'
 import InsightsDataInfo from '@/components/insights/InsightsDataInfo.vue'
-import InsightsDimensionBreakdown from '@/components/insights/InsightsDimensionBreakdown.vue'
-import InsightsMetricCard from '@/components/insights/InsightsMetricCard.vue'
-import InsightsMetricTrend from '@/components/insights/InsightsMetricTrend.vue'
-import InsightsRecentChanges from '@/components/insights/InsightsRecentChanges.vue'
-import InsightsSliceTrend from '@/components/insights/InsightsSliceTrend.vue'
 import { useInsightsDomain } from '@/composables/useInsightsDomain'
 import { useInsightsDimensions } from '@/composables/useInsightsDimensions'
-import { getGameInsightsBreakdown, getGameInsightsOverview, getGameInsightsSliceTrend, getGameInsightsTrend } from '@/services/game'
+import { getGameHomePanel, getGameInsightsBreakdown, getGameInsightsOverview, getGameInsightsSliceTrend, getGameInsightsTrend } from '@/services/game'
 import type { GameInsightDimension, GameInsightMetricKey } from '@/types/insights'
 import { buildInsightsSeo } from '@/utils/seo'
 
 const gameMetrics = ['free', 'windows', 'mac', 'linux'] as const satisfies readonly GameInsightMetricKey[]
 const gameDimensions = ['primary_tag', 'tag'] as const satisfies readonly GameInsightDimension[]
 const { locale } = useI18n()
+const localePath = useLocalePath()
+const destinations = overviewExploreGroups.game.slice(1)
+const panelSnapshot = useAsyncData(() => `insights:game:panel:${locale.value}`, async () => {
+  const [result] = await Promise.allSettled([getGameHomePanel(locale.value)])
+  return { panel: result.status === 'fulfilled' ? result.value : null }
+}, { default: () => ({ panel: null as GameV2PanelRecord | null }) })
+const metricGroups = [
+  { label: 'insights.domain.businessModel', keys: ['free'] as const },
+  { label: 'insights.domain.platforms', keys: ['windows', 'mac', 'linux'] as const },
+]
 const {
   metrics,
+  overview,
   overviewUnavailable,
   trend,
   trendUnavailable,
@@ -118,6 +103,7 @@ const {
   getBreakdown: getGameInsightsBreakdown,
   getSliceTrend: getGameInsightsSliceTrend,
 })
+const { data: panelData } = await panelSnapshot
 const seo = computed(() => buildInsightsSeo('games', locale.value))
 
 useSeoMeta({

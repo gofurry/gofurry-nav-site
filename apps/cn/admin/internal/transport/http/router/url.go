@@ -27,6 +27,18 @@ func v1(root fiber.Router, runtime *bootstrap.Runtime) {
 	workbenchRoutes(protected.Group("/workbench"), runtime)
 	dataOpsRoutes(protected.Group("/dataops"), runtime)
 	auditRoutes(protected.Group("/audit"), runtime)
+	cloudRoutes(protected.Group("/system/cloud"), runtime)
+}
+
+func cloudRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	api := runtime.CloudAPI
+	root.Get("/overview", authmw.Require(authorization.CloudOpsRead), api.Overview)
+	root.Get("/object", authmw.Require(authorization.CloudOpsRead), api.Object)
+	root.Post("/object/repair-mirror", authmw.Require(authorization.CloudOpsManage), api.RepairMirror)
+	root.Post("/edgeone/purge", authmw.Require(authorization.CloudOpsManage), api.EdgeOnePurge)
+	root.Get("/edgeone/purge-tasks", authmw.Require(authorization.CloudOpsRead), api.EdgeOnePurgeTasks)
+	root.Post("/edgeone/purge-all", authmw.Require(authorization.CloudOpsPurgeAll), api.EdgeOnePurgeAll)
+	root.Post("/cloudflare/purge", authmw.Require(authorization.CloudOpsManage), api.CloudflarePurge)
 }
 
 func selfServiceRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
@@ -112,6 +124,20 @@ func optionsRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 
 func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	api := runtime.NavAPI
+	root.Post("/sites/:id/icon", authmw.Require(authorization.ContentWrite), api.ReplaceSiteIcon)
+	root.Delete("/sites/:id/icon", authmw.Require(authorization.ContentWrite), api.ClearSiteIcon)
+	root.Get("/hero-assets", authmw.Require(authorization.ContentRead), api.ListHeroAssets)
+	root.Post("/hero-assets", authmw.Require(authorization.ContentWrite), api.CreateHeroAsset)
+	root.Get("/hero-assets/:id", authmw.Require(authorization.ContentRead), api.GetHeroAsset)
+	root.Put("/hero-assets/:id", authmw.Require(authorization.ContentWrite), api.UpdateHeroAsset)
+	root.Post("/hero-assets/:id/file", authmw.Require(authorization.ContentWrite), api.ReplaceHeroAssetFile)
+	root.Delete("/hero-assets/:id", authmw.Require(authorization.ContentWrite), api.DeleteHeroAsset)
+	root.Get("/background-patterns", authmw.Require(authorization.ContentRead), api.ListBackgroundPatterns)
+	root.Post("/background-patterns", authmw.Require(authorization.ContentWrite), api.CreateBackgroundPattern)
+	root.Get("/background-patterns/:id", authmw.Require(authorization.ContentRead), api.GetBackgroundPattern)
+	root.Put("/background-patterns/:id", authmw.Require(authorization.ContentWrite), api.UpdateBackgroundPattern)
+	root.Post("/background-patterns/:id/file", authmw.Require(authorization.ContentWrite), api.ReplaceBackgroundPatternFile)
+	root.Delete("/background-patterns/:id", authmw.Require(authorization.ContentWrite), api.DeleteBackgroundPattern)
 	root.Get("/sayings", authmw.Require(authorization.ContentRead), api.ListSayings)
 	root.Post("/sayings", authmw.Require(authorization.ContentWrite), api.CreateSaying)
 	root.Get("/sayings/:id", authmw.Require(authorization.ContentRead), api.GetSaying)
@@ -141,6 +167,8 @@ func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 
 	root.Get("/site-groups", authmw.Require(authorization.ContentRead), api.ListSiteGroups)
 	root.Post("/site-groups", authmw.Require(authorization.ContentWrite), api.CreateSiteGroup)
+	root.Get("/site-groups/:id/curation", authmw.Require(authorization.ContentRead), api.GetGroupCuration)
+	root.Put("/site-groups/:id/curation", authmw.Require(authorization.ContentWrite), api.ReorderGroupCuration)
 	root.Get("/site-groups/:id", authmw.Require(authorization.ContentRead), api.GetSiteGroup)
 	root.Put("/site-groups/:id", authmw.Require(authorization.ContentWrite), api.UpdateSiteGroup)
 	root.Delete("/site-groups/:id", authmw.Require(authorization.ContentWrite), api.DeleteSiteGroup)

@@ -32,7 +32,13 @@ import GameDetailSidebar from '@/components/game/detail/GameDetailSidebar.vue'
 import { getGameBaseInfo, getGameInsights, getGameRemark, getRecommendedGame, touchGameView } from '~/services/game'
 import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '~/types/game'
 import type { GameInsights } from '~/types/insights'
+import { authoritativePageStatus } from '~/utils/authoritativePageError'
+import { parsePositiveEntityRouteId } from '~/utils/routeIdentity'
 import { buildGameDetailSeo } from '~/utils/seo'
+
+definePageMeta({
+  validate: route => parsePositiveEntityRouteId(route.params.id) !== null,
+})
 
 interface GameDetailPageData {
   gameBaseInfo: GameBaseInfoResponse | null
@@ -50,6 +56,14 @@ const { locale } = useI18n()
 const touchedGameIds = new Set<string>()
 const touchingGameIds = new Set<string>()
 
+const initialGameId = parsePositiveEntityRouteId(route.params.id)
+if (!initialGameId) {
+  throw createError({
+    statusCode: 404,
+    statusMessage: 'Game not found',
+  })
+}
+
 const gameId = computed(() => String(route.params.id ?? ''))
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
 
@@ -57,7 +71,7 @@ const detailRequest = useAsyncData<GameDetailPageData>(
   () => `game-detail:${gameId.value}:${lang.value}`,
   async () => {
     const [gameBaseInfo, remarkInfo, recommendedGame] = await Promise.all([
-      getGameBaseInfo(gameId.value, lang.value).catch(() => null),
+      getGameBaseInfo(gameId.value, lang.value),
       getGameRemark(gameId.value, 1, 5).catch(() => null),
       getRecommendedGame(gameId.value, lang.value).catch(() => null),
     ])
@@ -94,6 +108,14 @@ const insightsRequest = useAsyncData<GameInsightsSnapshot>(
 )
 
 const [detailState, insightsState] = await Promise.all([detailRequest, insightsRequest])
+if (detailState.error.value) {
+  const statusCode = authoritativePageStatus(detailState.error.value, 'game')
+  throw createError({
+    statusCode,
+    statusMessage: statusCode === 404 ? 'Game not found' : 'Game service temporarily unavailable',
+    cause: detailState.error.value,
+  })
+}
 const { data } = detailState
 
 const gameDetailData = computed(() => data.value!)

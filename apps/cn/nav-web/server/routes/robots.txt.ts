@@ -5,7 +5,6 @@ export default defineEventHandler((event) => {
     'Allow: /',
     'Disallow: /admin/',
     'Disallow: /api/',
-    'Host: https://go-furry.com',
     'Sitemap: https://go-furry.com/sitemap.xml'
   ].join('\n')
 })

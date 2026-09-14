@@ -45,8 +45,8 @@ defineProps<{
   initialReviews?: AnonymousReviewModel[]
 }>()
 
-const LOGO_PREFIX = import.meta.env.VITE_GAME_SITE_LOGO_PREFIX_URL || ''
-const defaultLogo = import.meta.env.VITE_SITE_DEFAULT_LOGO || ''
+const LOGO_PREFIX = '/web/platform-icons/'
+const defaultLogo = '/defaultLogo.svg'
 
 const icons = {
   defaultLogo,

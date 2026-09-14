@@ -1,0 +1,40 @@
+
+	<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>GoFurry 抽奖服务-获奖</title>
+		<style>
+			body { font-family: "Microsoft YaHei", "Helvetica Neue", sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+			.container { background-color: #f9f9f9; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+			.logo { color: #2c3e50; font-size: 24px; font-weight: bold; margin-bottom: 20px; display: flex; align-items: center; }
+			.logo span { color: #3498db; margin-right: 8px; }
+			.greeting { font-size: 18px; margin-bottom: 20px; }
+			.code-box { background-color: #fff; border: 1px dashed #ddd; border-radius: 4px; padding: 20px; text-align: center; margin: 25px 0; }
+			.code { font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2c3e50; margin: 0; }
+			.note { color: #666; font-size: 14px; margin: 20px 0; }
+			.warning { color: #e74c3c; font-size: 13px; padding: 10px; background-color: #fef0f0; border-radius: 4px; margin-top: 15px; }
+			.footer { margin-top: 30px; color: #999; font-size: 12px; text-align: center; }
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="logo">
+				<span>🐺</span> GoFurry
+			</div>
+			<div class="greeting">您好！</div>
+			<p>{{text}}</p>
+			<div class="code-box">
+				<p class="code">[ {{code}} ]</p>
+			</div>
+			<p class="note">
+				• 祝您能够享用本站的礼品
+			</p>
+			<div class="warning">
+				如果您未发起此操作, 请忽略本邮件, 您的账号安全不会受到影响。
+			</div>
+			<div class="footer">
+				<p>GoFurry 邮箱服务 © {{year}}</p>
+			</div>
+		</div>
+	</body>
+	</html>

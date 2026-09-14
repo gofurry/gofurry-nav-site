@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/insights/models"
@@ -72,8 +73,12 @@ func publicCertificateItems(records []models.CertificateItemRecord, referenceAt 
 	items := make([]models.CertificateItem, 0, len(records))
 	for _, record := range records {
 		daysToExpiry, expiryStatus := certificateExpiry(record.NotAfter, referenceAt)
+		entity := models.EntityRef{ID: record.SiteID, Name: record.SiteName}
+		if asset := strings.TrimSpace(record.VisualAsset); asset != "" {
+			entity.Visual = &models.EntityVisual{Kind: "site_icon", Asset: asset}
+		}
 		items = append(items, models.CertificateItem{
-			Site:   models.EntityRef{ID: record.SiteID, Name: record.SiteName},
+			Site:   entity,
 			Target: record.Target, NotAfter: record.NotAfter, DaysToExpiry: daysToExpiry,
 			ExpiryStatus: expiryStatus, Verified: record.Verified,
 			VerificationIssue: normalizeVerificationIssue(record.VerificationIssue),

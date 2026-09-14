@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 var configuration = new(serverConfig)
@@ -64,6 +64,12 @@ func readServerConfig(configFile string) (*serverConfig, error) {
 }
 
 func (cfg *serverConfig) validate() error {
+	if cfg.Server.DevelopmentHomeCacheSeconds < 0 || cfg.Server.DevelopmentHomeCacheSeconds > 30 {
+		return errors.New("server.development_home_cache_seconds must be between 0 and 30")
+	}
+	if cfg.Server.DevelopmentHomeCacheSeconds > 0 && cfg.Server.Mode != "debug" {
+		return errors.New("server.development_home_cache_seconds is only allowed in debug mode")
+	}
 	if cfg.ClusterId < 0 || cfg.ClusterId > 1023 {
 		return errors.New("cluster_id must be between 0 and 1023")
 	}
@@ -163,6 +169,7 @@ type CorsConfig struct {
 
 type RedisConfig struct {
 	RedisAddr     string `yaml:"redis_addr"`
+	RedisUsername string `yaml:"redis_username"`
 	RedisPassword string `yaml:"redis_password"`
 }
 
@@ -201,13 +208,14 @@ func (cfg DataBaseConfig) ConnectionString() string {
 }
 
 type ServerConfig struct {
-	Mode          string `yaml:"mode"`
-	IPAddress     string `yaml:"ip_address"`
-	Port          string `yaml:"port"`
-	MemoryLimit   int    `yaml:"memory_limit"`
-	GCPercent     int    `yaml:"gc_percent"`
-	Network       string `yaml:"network"`
-	EnablePrefork bool   `yaml:"enable_prefork"`
+	DevelopmentHomeCacheSeconds int    `yaml:"development_home_cache_seconds"`
+	Mode                        string `yaml:"mode"`
+	IPAddress                   string `yaml:"ip_address"`
+	Port                        string `yaml:"port"`
+	MemoryLimit                 int    `yaml:"memory_limit"`
+	GCPercent                   int    `yaml:"gc_percent"`
+	Network                     string `yaml:"network"`
+	EnablePrefork               bool   `yaml:"enable_prefork"`
 }
 
 func InitServerConfig(projectName string) {

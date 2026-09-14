@@ -8,6 +8,7 @@
         class="nav-header__background"
         :style="{ backgroundImage: `url(${bgImage})` }"
     ></div>
+    <div v-else class="nav-header__background nav-header__background--managed" :style="managedBackgroundStyle"></div>
     <div class="nav-header__search">
       <SearchBox />
     </div>
@@ -115,11 +116,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SearchBox from './SearchBox.vue'
 import NavQuickAccess from './NavQuickAccess.vue'
-import { getNavHomeBackgrounds } from '~/services/nav'
+import { getNavHomeHero } from '~/services/nav'
 import { loadRecentSites, RECENT_SITES_EVENT, type RecentSiteItem } from '@/utils/recentSites'
 import {
   addCustomSite,
@@ -141,8 +142,8 @@ import {
 } from '@/utils/navHeaderSettings'
 
 const props = defineProps<{
-  desktopBgUrl?: string | null
-  mobileBgUrl?: string | null
+  desktopObjectKey?: string | null
+  mobileObjectKey?: string | null
 }>()
 
 const { locale, t } = useI18n()
@@ -151,6 +152,18 @@ const homeHeading = computed(() => locale.value === 'en'
   : 'GoFurry 兽人控导航站 - 发现兽人社区、艺术、小说、游戏、工具与站点监测资源'
 )
 const bgImage = ref<string | null>(null)
+const desktopKey = ref(props.desktopObjectKey)
+const mobileKey = ref(props.mobileObjectKey)
+watch(() => props.desktopObjectKey, (value) => { desktopKey.value = value })
+watch(() => props.mobileObjectKey, (value) => { mobileKey.value = value })
+const desktopViewport = ref(import.meta.client && window.innerWidth >= 768)
+const desktopAsset = useManagedAsset(desktopKey, '', () => desktopViewport.value && !bgImage.value)
+const mobileAsset = useManagedAsset(mobileKey, '', () => !desktopViewport.value && !bgImage.value)
+const updateViewport = () => { desktopViewport.value = window.innerWidth >= 768 }
+const managedBackgroundStyle = computed(() => ({
+  '--hero-desktop': desktopAsset.src.value ? `url("${desktopAsset.src.value}")` : 'none',
+  '--hero-mobile': mobileAsset.src.value ? `url("${mobileAsset.src.value}")` : 'none',
+}))
 const recentSites = ref<RecentSiteItem[]>([])
 const customSites = ref<CustomSiteItem[]>([])
 const showQuickAccess = ref(true)
@@ -162,7 +175,6 @@ const customSiteForm = ref({
 })
 const draggingCustomSiteId = ref<string | null>(null)
 
-let fallbackBackgroundUpdater: (() => void) | null = null
 let customBgObjectUrl: string | null = null
 let stopNavHeaderSettingsSubscription: (() => void) | null = null
 
@@ -187,7 +199,7 @@ async function applyBackground() {
   }
 
   revokeCustomBackgroundUrl()
-  fallbackBackgroundUpdater?.()
+  bgImage.value = null
   return false
 }
 
@@ -195,13 +207,6 @@ function handleCustomBackgroundChange() {
   void applyBackground()
 }
 
-function handleResize() {
-  if (customBgObjectUrl) {
-    return
-  }
-
-  fallbackBackgroundUpdater?.()
-}
 
 function syncRecentSites() {
   if (!import.meta.client) {
@@ -313,24 +318,15 @@ function handleCustomSiteDragEnd() {
 }
 
 onMounted(async () => {
+	window.addEventListener('resize',updateViewport)
   try {
-    fallbackBackgroundUpdater = () => {
-      bgImage.value = window.innerWidth >= 768
-        ? (props.desktopBgUrl ?? props.mobileBgUrl ?? null)
-        : (props.mobileBgUrl ?? props.desktopBgUrl ?? null)
-    }
-
-    const customBackgroundLoaded = await applyBackground()
-
-    if (!customBackgroundLoaded && !props.desktopBgUrl && !props.mobileBgUrl) {
-      const backgrounds = await getNavHomeBackgrounds()
-      const resizedUrl = backgrounds.desktop
-      const normalUrl = backgrounds.mobile
-
-      fallbackBackgroundUpdater = () => {
-        bgImage.value = window.innerWidth >= 768 ? resizedUrl : normalUrl
-      }
-      fallbackBackgroundUpdater()
+    await applyBackground()
+    if (props.desktopObjectKey === undefined && props.mobileObjectKey === undefined) {
+      try {
+        const hero = await getNavHomeHero()
+        desktopKey.value = hero.desktop?.object_key ?? null
+        mobileKey.value = hero.mobile?.object_key ?? null
+      } catch { /* Keep the page usable when the optional Hero pool is unavailable. */ }
     }
 
     syncNavHeaderSettings()
@@ -339,7 +335,6 @@ onMounted(async () => {
     stopNavHeaderSettingsSubscription = subscribeNavHeaderSettingsChange(({ showQuickAccess: nextValue }) => {
       showQuickAccess.value = nextValue
     })
-    window.addEventListener('resize', handleResize)
     window.addEventListener(CUSTOM_NAV_HEADER_BG_EVENT, handleCustomBackgroundChange)
     window.addEventListener(RECENT_SITES_EVENT, handleRecentSitesChange)
     window.addEventListener(CUSTOM_SITES_EVENT, handleCustomSitesChange)
@@ -351,7 +346,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
+	window.removeEventListener('resize',updateViewport)
   window.removeEventListener(CUSTOM_NAV_HEADER_BG_EVENT, handleCustomBackgroundChange)
   window.removeEventListener(RECENT_SITES_EVENT, handleRecentSitesChange)
   window.removeEventListener(CUSTOM_SITES_EVENT, handleCustomSitesChange)
@@ -362,3 +357,10 @@ onUnmounted(() => {
   revokeCustomBackgroundUrl()
 })
 </script>
+
+<style scoped>
+.nav-header__background--managed { background-image: var(--hero-mobile); }
+@media (min-width: 768px) {
+  .nav-header__background--managed { background-image: var(--hero-desktop); }
+}
+</style>

@@ -4,10 +4,10 @@ import (
 	"os"
 	"testing"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
-func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
+func TestExampleConfigDecodesWithYAMLV4(t *testing.T) {
 	data, err := os.ReadFile("../../conf/server.example.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -19,8 +19,21 @@ func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
 	if cfg.Server.Mode != "debug" || cfg.Server.Port != "9999" || cfg.DataBase.DBName != "gfn" {
 		t.Fatalf("example config fields changed semantics: %+v", cfg)
 	}
+	if cfg.Redis.RedisUsername != "gofurry_app" {
+		t.Fatalf("redis username = %q, want gofurry_app", cfg.Redis.RedisUsername)
+	}
 	if cfg.Middleware.Cors.AllowOrigins == "" || !cfg.Middleware.Limiter.IsOn {
 		t.Fatalf("middleware config fields were not decoded: %+v", cfg.Middleware)
+	}
+}
+
+func TestRedisUsernameIsOptional(t *testing.T) {
+	var cfg serverConfig
+	if err := yaml.Unmarshal([]byte("redis:\n  redis_addr: 127.0.0.1:6379\n"), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Redis.RedisUsername != "" {
+		t.Fatalf("omitted redis username = %q, want empty", cfg.Redis.RedisUsername)
 	}
 }
 

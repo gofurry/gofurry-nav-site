@@ -7,7 +7,7 @@
 v2 后端消费边界：
 
 - PostgreSQL 是事实来源，读取 collector v2 写入的结构化表。
-- Redis 是热缓存，只用于高频读取和首页聚合。
+- 当前可执行详情读模型直接从 PostgreSQL 聚合；Redis 用于首页、在线峰值和 collector 保留的兼容缓存键。
 - Steam raw snapshot 只用于排查、回放和后续 mapper 改进，不进入公开 API。
 - official news 暂不进入 v2 主线，新闻统一消费 Store events。
 - MongoDB 不进入游戏模块 v2。
@@ -49,7 +49,7 @@ collector v2 已定义的 PostgreSQL 表：
 | `game:v2:players:{game_id}:peak` | 配置窗口内在线峰值缓存；热数据不过期，随在线人数读模型刷新 |
 | `game:v2:collect:last:{task_type}` | 后台最近采集状态 |
 
-Redis 未命中时，后端应从 PostgreSQL 聚合并回填缓存。Redis 读取失败不能让详情页直接不可用，除非 PostgreSQL 回源也失败。
+详情 API 始终以 PostgreSQL 聚合结果为事实。Collector 只允许用提交后重新读取的完整合并资产集刷新兼容详情/媒体缓存，StoreBrowse 失败不得把 Last Known Good 竖版封面覆盖为空。
 
 ## 字段分层
 

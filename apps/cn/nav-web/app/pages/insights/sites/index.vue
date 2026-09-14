@@ -1,59 +1,25 @@
 <template>
-  <div
-    class="insights-page insights-domain-page"
-    :data-selected-metric="selectedMetric"
-    :data-selected-dimension="selectedDimension"
-    :data-selected-slice="selectedSlice || ''"
-  >
+  <div class="insights-page insights-domain-page insights-site-domain" data-domain="site" :data-selected-metric="selectedMetric" :data-selected-dimension="selectedDimension" :data-selected-slice="selectedSlice || ''">
     <main class="insights-container">
       <EcosystemNavigation context="site" />
-      <h1 class="sr-only">{{ $t('insights.sites.title') }}</h1>
+      <InsightsDomainHeader domain="site" :entity-count="overview?.entity_count ?? null" :generated-at="overview?.generated_at ?? null" />
+      <p v-if="overviewUnavailable" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
 
-      <p v-if="overviewUnavailable" class="insights-empty-state insights-overview-error">
-        {{ $t('insights.emptyStates.unavailable') }}
-      </p>
+      <InsightMetricRail :metrics="metrics" :metrics-by-key="metricsByKey" :selected-metric="selectedMetric" @select="selectMetric" />
 
-      <div class="insights-metric-strip" aria-label="Website metrics">
-        <InsightsMetricCard
-          v-for="metricKey in metrics"
-          :key="metricKey"
-          :metric-key="metricKey"
-          :metric="metricsByKey.get(metricKey) ?? null"
-          :selected="selectedMetric === metricKey"
-          @select="selectMetric"
-        />
-      </div>
+      <InsightTrendWorkspace domain="site" :metric-key="selectedMetric" :metric="selectedMetricData" :range="selectedRange" :points="trend?.points ?? []" :loading="trendLoading" :unavailable="trendUnavailable" @range="selectRange" />
 
-      <InsightsMetricTrend
-        :metric-key="selectedMetric"
-        :range="selectedRange"
-        :points="trend?.points ?? []"
-        :loading="trendLoading"
-        :unavailable="trendUnavailable"
-        @range="selectRange"
-      />
+      <InsightDimensionExplorer domain="site" :metric-key="selectedMetric" :dimensions="dimensions" :dimension="selectedDimension" :selected-slice="selectedSlice" :breakdown="breakdown" :loading="breakdownLoading" :unavailable="breakdownUnavailable" :range="selectedRange" :slice-trend="sliceTrend" :slice-loading="sliceTrendLoading" :slice-unavailable="sliceTrendUnavailable" @dimension="selectDimension" @slice="selectSlice" />
 
-      <InsightsDimensionBreakdown
-        :dimensions="dimensions"
-        :dimension="selectedDimension"
-        :selected-slice="selectedSlice"
-        :breakdown="breakdown"
-        :loading="breakdownLoading"
-        :unavailable="breakdownUnavailable"
-        @dimension="selectDimension"
-        @slice="selectSlice"
-      />
+      <InsightDomainActivity domain="site" :items="recentChanges" :unavailable="overviewUnavailable" />
 
-      <InsightsSliceTrend
-        :slice="selectedSlice"
-        :range="selectedRange"
-        :trend="sliceTrend"
-        :loading="sliceTrendLoading"
-        :unavailable="sliceTrendUnavailable"
-      />
-
+      <section class="insight-domain-continue" aria-labelledby="domain-continue-title">
+        <div class="insight-domain-heading"><h2 id="domain-continue-title">{{ $t('insights.domain.continue') }}</h2></div>
+        <div>
+          <NuxtLink v-for="item in destinations" :key="item.path" :to="localePath(item.path)"><span><strong>{{ $t(`insights.editorial.links.${item.key}.title`) }}</strong><span>{{ $t(`insights.editorial.links.${item.key}.description`) }}</span></span><span aria-hidden="true">↗</span></NuxtLink>
+        </div>
+      </section>
       <InsightsDataInfo :metric-key="selectedMetric" :metric="selectedMetricData" />
-      <InsightsRecentChanges :items="recentChanges" :unavailable="overviewUnavailable" />
     </main>
   </div>
 </template>
@@ -61,13 +27,14 @@
 <script setup lang="ts">
 import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed } from 'vue'
+import InsightsDomainHeader from '@/components/insights/domain/InsightsDomainHeader.vue'
+import InsightMetricRail from '@/components/insights/domain/InsightMetricRail.vue'
+import InsightTrendWorkspace from '@/components/insights/domain/InsightTrendWorkspace.vue'
+import InsightDimensionExplorer from '@/components/insights/domain/InsightDimensionExplorer.vue'
+import InsightDomainActivity from '@/components/insights/domain/InsightDomainActivity.vue'
+import { overviewExploreGroups } from '@/utils/insightOverview'
 import { useI18n } from 'vue-i18n'
 import InsightsDataInfo from '@/components/insights/InsightsDataInfo.vue'
-import InsightsDimensionBreakdown from '@/components/insights/InsightsDimensionBreakdown.vue'
-import InsightsMetricCard from '@/components/insights/InsightsMetricCard.vue'
-import InsightsMetricTrend from '@/components/insights/InsightsMetricTrend.vue'
-import InsightsRecentChanges from '@/components/insights/InsightsRecentChanges.vue'
-import InsightsSliceTrend from '@/components/insights/InsightsSliceTrend.vue'
 import { useInsightsDomain } from '@/composables/useInsightsDomain'
 import { useInsightsDimensions } from '@/composables/useInsightsDimensions'
 import { getNavInsightsBreakdown, getNavInsightsOverview, getNavInsightsSliceTrend, getNavInsightsTrend } from '@/services/nav'
@@ -77,8 +44,11 @@ import { buildInsightsSeo } from '@/utils/seo'
 const navMetrics = ['ipv6', 'tls13', 'http2', 'hsts', 'csp', 'security_txt', 'certificate_verified'] as const satisfies readonly NavInsightMetricKey[]
 const siteDimensions = ['country', 'group', 'nsfw', 'public_interest'] as const satisfies readonly SiteInsightDimension[]
 const { locale } = useI18n()
+const localePath = useLocalePath()
+const destinations = overviewExploreGroups.site.slice(1)
 const {
   metrics,
+  overview,
   overviewUnavailable,
   trend,
   trendUnavailable,

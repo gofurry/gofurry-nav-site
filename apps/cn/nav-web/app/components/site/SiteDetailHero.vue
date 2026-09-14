@@ -3,15 +3,7 @@
     <div class="relative z-10 flex min-w-0 flex-col gap-5 md:flex-row md:items-center">
       <div class="flex shrink-0 justify-center md:self-center">
         <div class="logo-shell">
-          <img
-            v-if="icon"
-            :src="logoUrl(icon)"
-            :alt="siteName"
-            class="h-20 w-20 rounded-lg object-contain"
-          >
-          <div v-else class="flex h-20 w-20 items-center justify-center rounded-lg text-2xl font-bold text-slate-700 dark:text-slate-100">
-            GF
-          </div>
+          <ManagedAssetImage :object-key="icon" :alt="siteName" class="h-20 w-20 rounded-lg object-contain" />
         </div>
       </div>
 
@@ -122,8 +114,10 @@
 </template>
 
 <script setup lang="ts">
+import ManagedAssetImage from '@/components/common/ManagedAssetImage.vue'
 import { ref } from 'vue'
 import { i18n } from '@/main'
+import { siteTargetPath } from '@/utils/siteRoutes'
 import type { SiteHeroBadge } from './detailTypes'
 
 const props = defineProps<{
@@ -132,7 +126,6 @@ const props = defineProps<{
   icon?: string
   info?: string
   keywords: string[]
-  logoPrefix: string
   siteId: string | number
   siteName: string
   switchableDomains: string[]
@@ -158,15 +151,9 @@ function copyToClipboard(text: string) {
 }
 
 function domainLink(domain: string) {
-  return localePath(`/site/${encodeURIComponent(String(props.siteId))}/${encodeURIComponent(domain)}`)
+  return localePath(siteTargetPath(props.siteId, domain))
 }
 
-function logoUrl(icon: string) {
-  if (/^https?:\/\//i.test(icon)) {
-    return icon
-  }
-  return `${props.logoPrefix}${icon}`
-}
 
 function t(key: string) {
   return i18n.global.t(key)

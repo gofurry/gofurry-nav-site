@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/insights/models"
@@ -97,10 +98,14 @@ func (s *InsightsService) GetChanges(ctx context.Context, query models.ChangeExp
 		if row.TimeBasis != "day" {
 			occurredAt = row.EventAt
 		}
+		entity := models.EntityRef{ID: row.EntityID, Name: row.EntityName}
+		if asset := strings.TrimSpace(row.VisualAsset); asset != "" {
+			entity.Visual = &models.EntityVisual{Kind: "site_icon", Asset: asset}
+		}
 		result.Items = append(result.Items, models.ExplorerChange{
 			Domain: "site", Category: contract.category, Type: contract.public,
 			Date: formatDate(row.ProjectionDate), OccurredAt: occurredAt,
-			Entity: models.EntityRef{ID: row.EntityID, Name: row.EntityName}, Detail: nil,
+			Entity: entity, Detail: nil,
 		})
 	}
 	if hasMore && len(rows) > 0 {

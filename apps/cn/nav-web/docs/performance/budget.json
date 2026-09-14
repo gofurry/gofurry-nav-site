@@ -20,7 +20,6 @@
       "maxLongTaskTotalMs": 1800,
       "maxJsHeapUsedMb": 150,
       "blockedHeavyDependencies": [
-        "md-editor-v3",
         "echarts",
         "hls.js"
       ]
@@ -51,18 +50,6 @@
       "maxLongTaskCount": 20,
       "maxLongTaskTotalMs": 2000,
       "maxJsHeapUsedMb": 170
-    },
-    "steam-zone": {
-      "maxDomNodes": 5200,
-      "maxJsRequests": 320,
-      "maxJsTransferKb": 10500,
-      "maxImageRequests": 20,
-      "maxLongTaskCount": 26,
-      "maxLongTaskTotalMs": 2600,
-      "maxJsHeapUsedMb": 210,
-      "blockedHeavyDependencies": [
-        "md-editor-v3"
-      ]
     },
     "games": {
       "maxDomNodes": 8500,

@@ -1,8 +1,8 @@
 <template>
   <div class="nav-home-page flex w-full flex-col">
     <NavHeader
-      :desktop-bg-url="navPageData.desktopBgUrl"
-      :mobile-bg-url="navPageData.mobileBgUrl"
+      :desktop-object-key="navPageData.desktopObjectKey"
+      :mobile-object-key="navPageData.mobileObjectKey"
     />
     <NavToolDock v-if="isContentRevealed" />
     <main
@@ -41,8 +41,8 @@ import { debounce, throttle } from '@/utils/util'
 import { dispatchNavPageReveal, isNavPageRevealLocked } from '@/utils/navPageReveal'
 
 interface NavPageData {
-  desktopBgUrl: string | null
-  mobileBgUrl: string | null
+  desktopObjectKey: string | null
+  mobileObjectKey: string | null
   saying: SayingModel | null
   groups: Group[]
   spotlight: NavHomeSpotlight
@@ -86,8 +86,8 @@ const { data } = await useAsyncData<NavPageData>(
     const home = await getNavHome(lang.value)
 
     return {
-      desktopBgUrl: home.backgrounds.desktop || null,
-      mobileBgUrl: home.backgrounds.mobile || null,
+      desktopObjectKey: home.hero.desktop?.object_key ?? null,
+      mobileObjectKey: home.hero.mobile?.object_key ?? null,
       saying: home.saying,
       groups: home.groups.sort((a, b) => Number(a.priority) - Number(b.priority)),
       spotlight: home.spotlight,
@@ -97,8 +97,8 @@ const { data } = await useAsyncData<NavPageData>(
   {
     watch: [lang],
     default: () => ({
-      desktopBgUrl: null,
-      mobileBgUrl: null,
+      desktopObjectKey: null,
+      mobileObjectKey: null,
       saying: null,
       groups: [],
       spotlight: { page_size: 6, featured: [], popular: [], latest: [], random: [] },

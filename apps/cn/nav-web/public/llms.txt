@@ -1,19 +1,18 @@
 # GoFurry
 
-> GoFurry is a bilingual furry-focused web directory and research site. It includes a navigation homepage for furry sites, a furry games index, a Steam-focused furry games zone, and an updates timeline.
+> GoFurry is a bilingual furry-focused web directory and research site. It includes a navigation homepage for furry sites, a furry games index, and an updates timeline.
 
 ## Main Pages
 
 - [Home](https://go-furry.com/) - Main furry site navigation homepage.
 - [Games](https://go-furry.com/games) - Furry games index and discovery page.
-- [Steam Zone](https://go-furry.com/steam) - Steam-focused furry games topic entry.
 - [Updates](https://go-furry.com/updates) - Product, content, and maintenance update timeline.
 - [About](https://go-furry.com/about) - Project overview and public contact information.
 
 ## Important Content Routes
 
 - [Site Detail](https://go-furry.com/site/1) - Detail page pattern for a listed furry site. Replace the numeric ID with a real site ID.
-- [Target Detail](https://go-furry.com/site/1/example.com) - Detail page pattern for a specific monitored target under a site. Replace both path parameters with real values.
+- [Target Detail](https://go-furry.com/site/1?domain=example.com) - Non-canonical target selection view under a Site entity. Replace both values with real data and cite the canonical Site Detail URL.
 - [Game Detail](https://go-furry.com/games/1) - Detail page pattern for a game entry. Replace the numeric ID with a real game ID.
 - [Game Search](https://go-furry.com/games/search) - Search interface for game discovery.
 

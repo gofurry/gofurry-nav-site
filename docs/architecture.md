@@ -28,11 +28,25 @@ Admin writes business data through explicit `gfn` or `gfg` pools and records aut
 
 ## Availability boundaries
 
+Planned maintenance keeps `status.go-furry.com` proxying independent `gf-uptime` while business hosts serve the maintenance page.
+
 - Nav Web exposes dependency-free `GET /healthz`.
 - Nav/Game Backend and Admin retain their existing health endpoints.
 - Nav/Game Collector expose optional internal `net/http` `/livez` and `/readyz` listeners only during scheduled `serve`.
 - Collector readiness covers only local PostgreSQL, required Redis, scheduler initialization, and shutdown state.
 - `uptime` owns the public status UI and should preferably run outside the business host's failure domain. A cloud HTTP monitor should probe the status service itself.
+
+## Managed Asset Delivery
+
+Admin publishes to COS Primary, then an R2 best-effort Mirror; a Mirror failure
+does not block Primary publication. GFN stores provider-neutral object keys.
+Nav Web resolves these through the EdgeOne Primary or Cloudflare Mirror public
+origin using an SSR-readable preference cookie, browser background probes, and
+failure fallback. CloudOps provides scoped object inspection, COS-to-R2 repair,
+and CDN purges with capability checks and audited mutations.
+
+The initial production cutover completed on 2026-09-14. See [Managed assets](managed-assets.md)
+and the [asset contract](../contracts/assets.md) for the durable boundaries.
 
 ## Process lifecycle
 

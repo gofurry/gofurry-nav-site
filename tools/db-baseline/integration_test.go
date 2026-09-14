@@ -17,7 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 type integrationPostgresConfig struct {

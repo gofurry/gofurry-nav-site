@@ -5,10 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
-func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
+func TestExampleConfigDecodesWithYAMLV4(t *testing.T) {
 	data, err := os.ReadFile("../../conf/server.example.yaml")
 	if err != nil {
 		t.Fatal(err)
@@ -20,11 +20,49 @@ func TestExampleConfigDecodesWithYAMLV3(t *testing.T) {
 	if cfg.Server.Mode != "debug" || cfg.Server.Port != "9998" || cfg.DataBase.DBName != "gfg" {
 		t.Fatalf("example config fields changed semantics: %+v", cfg)
 	}
+	if cfg.Redis.RedisUsername != "gofurry_app" {
+		t.Fatalf("redis username = %q, want gofurry_app", cfg.Redis.RedisUsername)
+	}
 	if cfg.Middleware.Cors.AllowOrigins == "" || !cfg.Middleware.Limiter.IsOn {
 		t.Fatalf("middleware config fields were not decoded: %+v", cfg.Middleware)
 	}
 	if cfg.DataBase.MaxConns != 12 || cfg.DataBase.ConnectTimeoutSeconds != 5 || cfg.DataBase.PingTimeoutSeconds != 3 {
 		t.Fatalf("database pool config was not decoded: %+v", cfg.DataBase)
+	}
+}
+
+func TestRedisUsernameIsOptional(t *testing.T) {
+	var cfg serverConfig
+	if err := yaml.Unmarshal([]byte("redis:\n  redis_addr: 127.0.0.1:6379\n"), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Redis.RedisUsername != "" {
+		t.Fatalf("omitted redis username = %q, want empty", cfg.Redis.RedisUsername)
+	}
+}
+
+func TestDevelopmentHomeCacheCannotBeEnabledInProduction(t *testing.T) {
+	data, err := os.ReadFile("../../conf/server.example.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		mode    string
+		seconds int
+		valid   bool
+	}{
+		{"debug", 0, true}, {"debug", 10, true}, {"debug", 31, false}, {"debug", -1, false},
+		{"release", 0, true}, {"release", 10, false}, {"production", 10, false},
+	} {
+		var cfg serverConfig
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			t.Fatal(err)
+		}
+		cfg.Server.Mode = tc.mode
+		cfg.Server.DevelopmentHomeCacheSeconds = tc.seconds
+		if err := cfg.validate(); (err == nil) != tc.valid {
+			t.Fatalf("mode=%s seconds=%d error=%v", tc.mode, tc.seconds, err)
+		}
 	}
 }
 

@@ -4,7 +4,7 @@
       <div class="space-y-8">
         <section class="space-y-3">
           <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
-            <img :src="compassIcon" alt="" class="h-4 w-4 opacity-80" />
+            <PhCompass :size="16" weight="regular" class="opacity-80" aria-hidden="true" />
             {{ t('footer.sections.sitemap') }}
           </h3>
           <div class="flex flex-wrap gap-2">
@@ -37,7 +37,7 @@
 
         <section class="space-y-3">
           <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
-            <img :src="apiIcon" alt="" class="h-4 w-4 opacity-80" />
+            <PhBracketsCurly :size="16" weight="regular" class="opacity-80" aria-hidden="true" />
             {{ t('footer.sections.openPlatform') }}
           </h3>
           <div class="flex flex-wrap gap-2">
@@ -72,7 +72,7 @@
       <div class="space-y-8">
         <section class="space-y-3">
           <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
-            <img :src="siteIcon" alt="" class="h-4 w-4 opacity-80" />
+            <PhChatCircleDots :size="16" weight="regular" class="opacity-80" aria-hidden="true" />
             {{ t('footer.sections.feedback') }}
           </h3>
           <div class="flex items-center gap-4">
@@ -96,7 +96,7 @@
 
         <section class="space-y-3">
           <h3 class="gf-footer__section-title flex items-center gap-2 text-xs font-semibold uppercase transition-colors duration-500">
-            <img :src="featherIcon" alt="" class="h-4 w-4 opacity-80" />
+            <PhInfo :size="16" weight="regular" class="opacity-80" aria-hidden="true" />
             {{ t('footer.sections.about') }}
           </h3>
           <div class="flex gap-2">
@@ -134,11 +134,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { PhBracketsCurly, PhChatCircleDots, PhCompass, PhInfo } from '@phosphor-icons/vue'
 import { useI18n } from 'vue-i18n'
-import siteIcon from '@/assets/svgs/site.svg'
-import apiIcon from '@/assets/svgs/api.svg'
-import compassIcon from '@/assets/svgs/compass.svg'
-import featherIcon from '@/assets/svgs/feather.svg'
 import bilibiliIcon from '@/assets/icons/bilibili.svg'
 import weiboIcon from '@/assets/icons/weibo.svg'
 import githubIcon from '@/assets/icons/github.svg'
@@ -155,7 +152,15 @@ const config = useRuntimeConfig()
 const uptimeUrl = computed(() => config.public.uptimeUrl)
 const navMonitorUrl = computed(() => config.public.navMonitorUrl)
 
-const feedbackLinks = [
+interface FeedbackLink {
+  key: string
+  href: string
+  labelKey: string
+  icon: string
+  hoverClass: string
+}
+
+const feedbackLinks: FeedbackLink[] = [
   {
     key: 'bilibili',
     href: 'https://space.bilibili.com/37124259',

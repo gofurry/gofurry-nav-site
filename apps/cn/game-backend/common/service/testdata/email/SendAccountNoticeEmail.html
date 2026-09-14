@@ -1,0 +1,38 @@
+
+	<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>GoFurry 账号安全提醒</title>
+		<style>
+			body { font-family: "Microsoft YaHei", "Helvetica Neue", sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+			.container { background-color: #f9f9f9; border-radius: 8px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+			.logo { color: #2c3e50; font-size: 24px; font-weight: bold; margin-bottom: 20px; display: flex; align-items: center; }
+			.logo span { color: #3498db; margin-right: 8px; }
+			.greeting { font-size: 18px; margin-bottom: 20px; }
+			.info-box { background-color: #fff; border: 1px dashed #ddd; border-radius: 4px; padding: 20px; margin: 25px 0; }
+			.info-item { line-height: 2; font-size: 14px; }
+			.warning { color: #e74c3c; font-size: 13px; padding: 10px; background-color: #fef0f0; border-radius: 4px; margin-top: 15px; }
+			.footer { margin-top: 30px; color: #999; font-size: 12px; text-align: center; }
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="logo">
+				<span>🐺</span> GoFurry
+			</div>
+			<div class="greeting">您好！</div>
+			<p>检测到您的账号有异常操作，详情如下：</p>
+			<div class="info-box">
+				<div class="info-item">操作类型：{{operation}}</div>
+				<div class="info-item">操作IP：{{ip}}</div>
+				<div class="info-item">操作时间：{{timeStr}}</div>
+			</div>
+			<div class="warning">
+				如果非您本人操作，请立即修改密码并检查账号安全！
+			</div>
+			<div class="footer">
+				<p>GoFurry 邮箱服务 © {{year}}</p>
+			</div>
+		</div>
+	</body>
+	</html>

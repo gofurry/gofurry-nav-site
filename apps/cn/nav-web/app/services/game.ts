@@ -31,6 +31,7 @@ import type {
   GameInsightMetricKey,
   GameInsightPlayerHistory,
   GameInsightPriceHistory,
+  GameInsightHistoryRange,
   GameInsightRegion,
   GameInsights,
   GameCompare,
@@ -60,12 +61,7 @@ export function getGameList() {
 }
 
 export async function getGameHomeData(lang = 'zh'): Promise<GameHomeData> {
-  const payload = await useApi('gameV2')<GameHomeApiResponse>('/game/home', {
-    query: {
-      lang: normalizeGameLang(lang),
-      region: 'CN',
-    }
-  })
+  const payload = await getGameHomeSnapshot(lang)
 
   return {
     mainInfo: mapV2PanelToGameGroup(payload.panel),
@@ -76,6 +72,20 @@ export async function getGameHomeData(lang = 'zh'): Promise<GameHomeData> {
     },
     latestReviews: payload.latest_reviews,
   }
+}
+
+// Insights needs the same prewarmed panel as Game Home. The uncached panel
+// endpoint rebuilds every collection, so it must not block the overview SSR.
+export async function getGameHomePanel(lang: string): Promise<GameV2PanelRecord> {
+  const snapshot = await getGameHomeSnapshot(lang, { timeout: 8000, retry: 0 })
+  return snapshot.panel
+}
+
+function getGameHomeSnapshot(lang: string, options: { timeout?: number; retry?: number } = {}) {
+  return useApi('gameV2')<GameHomeApiResponse>('/game/home', {
+    query: { lang: normalizeGameLang(lang), region: 'CN' },
+    ...options,
+  })
 }
 
 export async function getGameMainInfo(lang = 'zh'): Promise<GameGroupRecord> {
@@ -189,11 +199,11 @@ export function getGameInsights(gameId: string | number): Promise<GameInsights> 
   return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights`)
 }
 
-export function getGameInsightPlayers(gameId: string | number, range: InsightRange): Promise<GameInsightPlayerHistory> {
+export function getGameInsightPlayers(gameId: string | number, range: GameInsightHistoryRange): Promise<GameInsightPlayerHistory> {
   return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights/players`, { query: { range } })
 }
 
-export function getGameInsightPrices(gameId: string | number, region: GameInsightRegion, range: InsightRange): Promise<GameInsightPriceHistory> {
+export function getGameInsightPrices(gameId: string | number, region: GameInsightRegion, range: GameInsightHistoryRange): Promise<GameInsightPriceHistory> {
   return useApi('gameV2')(`/game/games/${encodeURIComponent(String(gameId))}/insights/prices`, { query: { region, range } })
 }
 
@@ -226,7 +236,7 @@ export function getLotteryParticipation(query: LotteryReq): Promise<ApiResult<st
   })
 }
 
-function getGameV2Panel(lang: string): Promise<GameV2PanelRecord> {
+export function getGameV2Panel(lang: string): Promise<GameV2PanelRecord> {
   return useApi('gameV2')('/game/panel/main', {
     query: {
       lang: normalizeGameLang(lang),

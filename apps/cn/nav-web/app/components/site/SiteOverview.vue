@@ -4,11 +4,10 @@
       <div
         class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg bg-orange-100 transition-transform duration-500 hover:scale-[1.05]"
       >
-        <img
-          :src="logoSrc"
+        <ManagedAssetImage
+          :object-key="site.icon"
           :alt="site.name"
           class="h-full w-full object-contain"
-          @error="onImageError"
         />
       </div>
 
@@ -137,8 +136,10 @@
 </template>
 
 <script setup lang="ts">
+import ManagedAssetImage from '@/components/common/ManagedAssetImage.vue'
 import { computed, ref } from 'vue'
 import { i18n } from '@/main'
+import { siteTargetPath } from '@/utils/siteRoutes'
 
 const t = (key: string) => i18n.global.t(key)
 
@@ -164,19 +165,6 @@ interface SiteOverviewProps {
 
 const props = defineProps<SiteOverviewProps>()
 const localePath = useLocalePath()
-
-const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
-const defaultLogo = 'defaultLogo.svg'
-
-const logoSrc = computed(() => {
-  const icon = props.site.icon || defaultLogo
-  return `${logoPrefix ? `${logoPrefix}/` : ''}${icon}`
-})
-
-function onImageError(event: Event) {
-  const target = event.target as HTMLImageElement
-  target.src = `${logoPrefix ? `${logoPrefix}/` : ''}${defaultLogo}`
-}
 
 const copied = ref(false)
 function copyToClipboard(text: string) {
@@ -262,7 +250,7 @@ function scheduleCloseDomainCard() {
 
 function domainLink(domain: string) {
   const siteId = props.siteId ? String(props.siteId) : ''
-  return localePath(`/site/${encodeURIComponent(siteId)}/${encodeURIComponent(domain)}`)
+  return localePath(siteTargetPath(siteId, domain))
 }
 
 const tags = computed(() => {

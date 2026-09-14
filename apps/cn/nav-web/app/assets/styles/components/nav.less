@@ -87,11 +87,10 @@ html.dark .gf-nav {
   color: #ffffff;
 }
 
-.gf-nav__mode-button,
 .gf-nav__mobile-toggle {
-  border: 1px solid var(--gf-nav-control-border);
-  background: var(--gf-nav-control-bg);
-  color: #ffffff;
+  border: 0;
+  background: transparent;
+  color: var(--gf-nav-text-muted);
 }
 
 .gf-nav__mode-button {
@@ -101,6 +100,15 @@ html.dark .gf-nav {
 
 .gf-nav__mode-button:hover {
   background: var(--gf-nav-control-hover-bg);
+}
+
+.gf-nav__mobile-toggle--open {
+  background: var(--gf-nav-control-bg);
+}
+
+.gf-nav__mobile-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 .gf-nav__settings-icon {

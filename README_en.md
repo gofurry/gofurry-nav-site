@@ -49,6 +49,8 @@ GoFurry is an open-source, multi-service repository for furry culture discovery,
 
 > International-site components are currently planned and are not part of the active production runtime topology.
 
+Admin publishes managed assets to COS Primary and an R2 best-effort Mirror, delivered through EdgeOne Primary CDN and Cloudflare Mirror CDN. The database stores provider-neutral object keys; the frontend uses browser-side preference and failure fallback. See [Managed assets](./docs/managed-assets.md) and the [asset contract](./contracts/assets.md).
+
 ## Stack
 
 - Go / Fiber
@@ -57,6 +59,7 @@ GoFurry is an open-source, multi-service repository for furry culture discovery,
 - Tailwind CSS / Less
 - Coraza WAF
 - Bbolt
+- Tencent COS / EdgeOne, Cloudflare R2 / CDN
 
 ## Quick Start
 
@@ -78,6 +81,10 @@ go run . serve --config conf/server.yaml
 ```
 
 The root command of every Go application only displays help. Running a service requires explicit `serve --config <file>`. Copy example configuration files for local use and never commit real keys or credentials.
+
+For day-to-day development, application code always runs on the developer workstation and may reach shared development PostgreSQL and Redis through Tailscale. Private local connection values live in the ignored root `.env`, which is used by Codex, Goose, and local configuration maintenance; applications never load it automatically. Runtime `server.yaml` files must use `gofurry_app` for PostgreSQL and the Redis ACL, while Goose exclusively uses `gofurry_migrator`.
+
+See [Local development](./docs/development.md) and [Shared development infrastructure](./docs/operations/dev-infrastructure.md) for the complete workflow.
 
 ## Build and Validation
 

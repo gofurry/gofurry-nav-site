@@ -24,8 +24,12 @@ func (s *InsightsService) GetSiteCompare(ctx context.Context, rawIDs string) (mo
 		if site == nil {
 			return result, ErrNotFound
 		}
+		entity := models.EntityRef{ID: site.ID, Name: site.Name}
+		if asset := strings.TrimSpace(site.VisualAsset); asset != "" {
+			entity.Visual = &models.EntityVisual{Kind: "site_icon", Asset: asset}
+		}
 		result.Sites = append(result.Sites, models.SiteCompareItem{
-			Site: models.EntityRef{ID: site.ID, Name: site.Name}, Capabilities: []models.SiteCompareCapability{},
+			Site: entity, Capabilities: []models.SiteCompareCapability{},
 		})
 	}
 

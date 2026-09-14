@@ -2,82 +2,78 @@
   <div class="insights-page insights-overview-page">
     <main class="insights-container">
       <EcosystemNavigation />
-      <h1 class="sr-only">{{ $t('insights.overview.title') }}</h1>
 
-      <InsightsStats :items="stats" />
+      <header class="overview-header" data-overview-header>
+        <h1>{{ $t('insights.overview.title') }}</h1>
+        <p class="overview-header__intro">{{ $t('insights.editorial.description') }}</p>
+        <div class="overview-header__facts">
+          <dl class="overview-stats">
+            <div v-for="stat in stats" :key="stat.label"><dt>{{ stat.label }}</dt><dd>{{ stat.value === null ? '—' : number(stat.value) }}</dd></div>
+          </dl>
+          <p class="overview-freshness">{{ $t('insights.editorial.snapshot') }}<time v-if="generatedAt" :datetime="generatedAt">{{ formatOverviewSnapshot(generatedAt, locale) }}</time><span v-else>—</span></p>
+        </div>
+      </header>
 
-      <section class="insights-previews" :aria-label="$t('insights.metricsLabel')">
-        <article class="insights-preview">
-          <div class="insights-preview__heading">
-            <h2>{{ $t('insights.overview.sitesPreview') }}</h2>
-            <NuxtLink :to="localePath('/insights/sites')">{{ $t('insights.overview.viewSites') }}</NuxtLink>
-          </div>
-          <p v-if="navUnavailable" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
-          <div v-else class="insights-preview__metrics">
-            <div v-for="metric in navPreview" :key="metric.key">
-              <span>{{ $t(`insights.metrics.${metric.key}.name`) }}</span>
-              <strong>{{ formatPercent(metric.value) }}</strong>
-            </div>
-          </div>
-        </article>
+      <InsightsOverviewActivity :items="recentChanges" :unavailable="!data.nav && !data.game" />
 
-        <article class="insights-preview">
-          <div class="insights-preview__heading">
-            <h2>{{ $t('insights.overview.gamesPreview') }}</h2>
-            <NuxtLink :to="localePath('/insights/games')">{{ $t('insights.overview.viewGames') }}</NuxtLink>
+      <div class="overview-ecosystems">
+        <InsightsOverviewSites :overview="data.nav" />
+        <InsightsOverviewGamePulse :panel="data.panel" />
+      </div>
+
+      <section class="overview-explore" aria-labelledby="overview-explore-title" data-overview-explore>
+        <div class="overview-section-heading"><div><p class="overview-kicker">{{ $t('insights.editorial.exploreKicker') }}</p><h2 id="overview-explore-title">{{ $t('insights.editorial.exploreTitle') }}</h2></div></div>
+        <div class="overview-explore__groups">
+          <div v-for="(items, domain) in overviewExploreGroups" :key="domain">
+            <h3>{{ $t(`insights.editorial.${domain === 'site' ? 'sitesTitle' : 'gamesTitle'}`) }}</h3>
+            <NuxtLink v-for="item in items" :key="item.path" :to="localePath(item.path)" class="overview-explore__link">
+              <span><strong>{{ $t(`insights.editorial.links.${item.key}.title`) }}</strong><span>{{ $t(`insights.editorial.links.${item.key}.description`) }}</span></span><span aria-hidden="true">↗</span>
+            </NuxtLink>
           </div>
-          <p v-if="gameUnavailable" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
-          <div v-else class="insights-preview__metrics">
-            <div v-for="metric in gamePreview" :key="metric.key">
-              <span>{{ $t(`insights.metrics.${metric.key}.name`) }}</span>
-              <strong>{{ formatPercent(metric.value) }}</strong>
-            </div>
-          </div>
-        </article>
+        </div>
+        <NuxtLink :to="localePath(overviewChangesPath)" class="overview-explore__all"><span>{{ $t('insights.editorial.allChanges') }}</span><span aria-hidden="true">↗</span></NuxtLink>
       </section>
-
-      <InsightsRecentChanges :items="recentChanges" :unavailable="navUnavailable && gameUnavailable" />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import InsightsRecentChanges from '@/components/insights/InsightsRecentChanges.vue'
-import InsightsStats from '@/components/insights/InsightsStats.vue'
-import { getGameInsightsOverview } from '@/services/game'
+import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
+import InsightsOverviewActivity from '@/components/insights/activity/InsightsOverviewActivity.vue'
+import InsightsOverviewSites from '@/components/insights/overview/InsightsOverviewSites.vue'
+import InsightsOverviewGamePulse from '@/components/insights/overview/InsightsOverviewGamePulse.vue'
+import { getGameInsightsOverview, getGameHomePanel } from '@/services/game'
 import { getNavInsightsOverview } from '@/services/nav'
-import type { InsightFeedItem, InsightMetric, InsightMetricKey, InsightOverview } from '@/types/insights'
+import type { GameV2PanelRecord } from '@/types/game'
+import type { InsightOverview } from '@/types/insights'
+import { formatOverviewSnapshot, overviewActivity, overviewChangesPath, overviewExploreGroups, overviewGeneratedAt } from '@/utils/insightOverview'
 import { buildInsightsSeo } from '@/utils/seo'
 
 interface OverviewSnapshot {
   nav: InsightOverview | null
   game: InsightOverview | null
-  navUnavailable: boolean
-  gameUnavailable: boolean
+  panel: GameV2PanelRecord | null
 }
 
 const { locale, t } = useI18n()
 const localePath = useLocalePath()
-const { data } = await useAsyncData<OverviewSnapshot>('insights:overview', async () => {
-  const [navResult, gameResult] = await Promise.allSettled([
+const { data } = await useAsyncData<OverviewSnapshot>(() => `insights:overview:${locale.value}`, async () => {
+  const [navResult, gameResult, panelResult] = await Promise.allSettled([
     getNavInsightsOverview(),
     getGameInsightsOverview(),
+    getGameHomePanel(locale.value),
   ])
   return {
     nav: navResult.status === 'fulfilled' ? navResult.value : null,
     game: gameResult.status === 'fulfilled' ? gameResult.value : null,
-    navUnavailable: navResult.status === 'rejected',
-    gameUnavailable: gameResult.status === 'rejected',
+    panel: panelResult.status === 'fulfilled' ? panelResult.value : null,
   }
 }, {
-  default: () => ({ nav: null, game: null, navUnavailable: true, gameUnavailable: true }),
+  default: () => ({ nav: null, game: null, panel: null }),
 })
 
-const navUnavailable = computed(() => data.value.navUnavailable)
-const gameUnavailable = computed(() => data.value.gameUnavailable)
 const stats = computed(() => [
   { label: t('insights.overview.sitesCount'), value: data.value.nav?.entity_count ?? null },
   { label: t('insights.overview.gamesCount'), value: data.value.game?.entity_count ?? null },
@@ -88,12 +84,9 @@ const stats = computed(() => [
       : null,
   },
 ])
-const navPreview = computed(() => metricPreview(data.value.nav, ['ipv6', 'tls13', 'security_txt']))
-const gamePreview = computed(() => metricPreview(data.value.game, ['free', 'windows', 'linux']))
-const recentChanges = computed<InsightFeedItem[]>(() => [
-  ...(data.value.nav?.recent_changes ?? []).map(change => ({ ...change, domain: 'site' as const })),
-  ...(data.value.game?.recent_changes ?? []).map(change => ({ ...change, domain: 'game' as const })),
-].sort((left, right) => eventOrder(right) - eventOrder(left)).slice(0, 8))
+const number = (value: number) => new Intl.NumberFormat(locale.value === 'en' ? 'en-US' : 'zh-CN').format(value)
+const generatedAt = computed(() => overviewGeneratedAt(data.value.nav, data.value.game))
+const recentChanges = computed(() => overviewActivity(data.value.nav, data.value.game))
 const seo = computed(() => buildInsightsSeo('overview', locale.value))
 
 useSeoMeta({
@@ -102,18 +95,4 @@ useSeoMeta({
   ogTitle: () => seo.value.title,
   ogDescription: () => seo.value.description,
 })
-
-function metricPreview(overview: InsightOverview | null, keys: InsightMetricKey[]) {
-  const byKey = new Map((overview?.metrics ?? []).map(metric => [metric.key, metric]))
-  return keys.map(key => byKey.get(key) ?? { key, value: null }) as Array<Pick<InsightMetric, 'key' | 'value'>>
-}
-
-function eventOrder(item: InsightFeedItem) {
-  const timestamp = Date.parse(item.occurred_at || `${item.date}T00:00:00Z`)
-  return Number.isFinite(timestamp) ? timestamp : 0
-}
-
-function formatPercent(value: number | null) {
-  return value === null || !Number.isFinite(value) ? '—' : `${(value * 100).toFixed(1)}%`
-}
 </script>

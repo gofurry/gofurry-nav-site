@@ -42,6 +42,7 @@ func connect() {
 	defer cancel()
 	client = redis.NewClient(&redis.Options{
 		Addr:      env.GetServerConfig().Redis.RedisAddr,
+		Username:  env.GetServerConfig().Redis.RedisUsername,
 		Password:  env.GetServerConfig().Redis.RedisPassword,
 		DB:        0,
 		OnConnect: OnConnectFunc,

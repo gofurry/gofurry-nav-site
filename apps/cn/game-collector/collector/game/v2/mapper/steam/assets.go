@@ -12,15 +12,10 @@ import (
 	"github.com/gofurry/steam-go/web/storefront"
 )
 
-const (
-	assetSourceSteamStoreBrowse = assets.SourceStoreBrowse
-	assetSourceSteamStorefront  = assets.SourceStorefrontAppDetails
-)
-
 // ToStoreBrowseAssets maps official StoreBrowse asset URLs into the unified asset model.
 // Newer apps often use hashed paths, while older apps can still return legacy direct paths.
 func (m DetailsMapper) ToStoreBrowseAssets(gameID int64, appID uint32, lang domain.StoreLocale, items []assets.URLItem, collectedAt time.Time) []domain.GameMediaAsset {
-	return m.urlItemsToAssets(gameID, appID, string(lang), assetSourceSteamStoreBrowse, items, collectedAt)
+	return m.urlItemsToAssets(gameID, appID, string(lang), domain.AssetSourceStoreBrowse, items, collectedAt)
 }
 
 // ToStorefrontAssets maps all Steam appdetails media URLs into the unified asset model.
@@ -88,7 +83,7 @@ func storefrontAsset(gameID int64, appID uint32, assetType string, family string
 		AppID:        appID,
 		AssetType:    assetType,
 		AssetFamily:  family,
-		Source:       assetSourceSteamStorefront,
+		Source:       domain.AssetSourceStorefront,
 		MediaKey:     key,
 		Title:        title,
 		URL:          cleanURL,

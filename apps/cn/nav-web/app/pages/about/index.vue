@@ -121,7 +121,7 @@ const teamSection = computed(() => (
         member: {
           name: '福狼',
           role: '开发者 / 维护者',
-          avatar: 'https://qcdn.go-furry.com/nav/about/faolan.jpg',
+          avatar: '/web/about/faolan.jpg',
           link: 'https://github.com/gofurry',
           action: '前往个人主页',
         },
@@ -135,7 +135,7 @@ const teamSection = computed(() => (
         member: {
           name: 'Faolan Grey',
           role: 'Developer / Maintainer',
-          avatar: 'https://qcdn.go-furry.com/nav/about/faolan.jpg',
+          avatar: '/web/about/faolan.jpg',
           link: 'https://github.com/gofurry',
           action: 'Open project page',
         },

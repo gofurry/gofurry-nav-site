@@ -479,7 +479,7 @@ func (store *navStore) createSite(ctx context.Context, meta audit.Meta, req mode
 		if err != nil {
 			return 0, nil, nil, err
 		}
-		row, err := q.InsertSite(ctx, navsqlc.InsertSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare, Icon: req.Icon})
+		row, err := q.InsertSite(ctx, navsqlc.InsertSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare})
 		if err == nil {
 			err = q.RefreshCurrentSiteDaily(ctx, id)
 		}
@@ -495,7 +495,7 @@ func (store *navStore) updateSite(ctx context.Context, meta audit.Meta, id int64
 		if err != nil {
 			return id, nil, nil, err
 		}
-		after, err := q.UpdateSite(ctx, navsqlc.UpdateSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare, Icon: req.Icon})
+		after, err := q.UpdateSite(ctx, navsqlc.UpdateSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare})
 		if err == nil {
 			err = q.RefreshCurrentSiteDaily(ctx, id)
 		}
@@ -609,6 +609,9 @@ func (store *navStore) getSiteGroupMap(ctx context.Context, id int64) (models.Si
 func (store *navStore) createSiteGroupMap(ctx context.Context, meta audit.Meta, req models.SiteGroupMapPayload) (models.SiteGroupMap, common.Error) {
 	var result models.SiteGroupMap
 	err := store.mutate(ctx, meta, "create", "gfn_site_group_map", func(q *navsqlc.Queries) (int64, any, any, error) {
+		if err := q.LockSiteGroupCuration(ctx); err != nil {
+			return 0, nil, nil, err
+		}
 		id, err := q.NextSiteGroupMapID(ctx)
 		if err != nil {
 			return 0, nil, nil, err
@@ -625,6 +628,9 @@ func (store *navStore) createSiteGroupMap(ctx context.Context, meta audit.Meta, 
 
 func (store *navStore) updateSiteGroupMap(ctx context.Context, meta audit.Meta, id int64, req models.SiteGroupMapPayload) common.Error {
 	return store.mutate(ctx, meta, "update", "gfn_site_group_map", func(q *navsqlc.Queries) (int64, any, any, error) {
+		if err := q.LockSiteGroupCuration(ctx); err != nil {
+			return 0, nil, nil, err
+		}
 		before, err := q.GetSiteGroupMap(ctx, id)
 		if err != nil {
 			return id, nil, nil, err
@@ -642,6 +648,9 @@ func (store *navStore) updateSiteGroupMap(ctx context.Context, meta audit.Meta, 
 
 func (store *navStore) deleteSiteGroupMap(ctx context.Context, meta audit.Meta, id int64) common.Error {
 	return store.mutate(ctx, meta, "delete", "gfn_site_group_map", func(q *navsqlc.Queries) (int64, any, any, error) {
+		if err := q.LockSiteGroupCuration(ctx); err != nil {
+			return 0, nil, nil, err
+		}
 		before, err := q.GetSiteGroupMap(ctx, id)
 		if err == nil {
 			_, err = q.DeleteSiteGroupMap(ctx, id)
@@ -655,6 +664,9 @@ func (store *navStore) deleteSiteGroupMap(ctx context.Context, meta audit.Meta, 
 
 func (store *navStore) replaceSiteGroupMaps(ctx context.Context, meta audit.Meta, siteID int64, groupIDs []int64) common.Error {
 	return store.mutate(ctx, meta, "bulk_replace", "gfn_site_group_map", func(q *navsqlc.Queries) (int64, any, any, error) {
+		if err := q.LockSiteGroupCuration(ctx); err != nil {
+			return 0, nil, nil, err
+		}
 		before, err := q.ListSiteGroupMapsBySite(ctx, siteID)
 		if err != nil {
 			return siteID, nil, nil, err

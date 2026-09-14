@@ -45,8 +45,9 @@ func (builder *Builder) Init() *fiber.App {
 		ServerHeader: appName,
 		ErrorHandler: customErrorHandler,
 		TrustProxy:   true,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 45 * time.Second,
+		BodyLimit:    6 * 1024 * 1024, // 5 MiB asset plus bounded multipart overhead.
 	})
 
 	registerMiddlewares(app)
@@ -232,12 +233,15 @@ func registerMiddlewares(app *fiber.App) {
 
 	if cfg.Middleware.SecurityHeaders.Enabled {
 		app.Use(helmet.New(helmet.Config{
-			ContentSecurityPolicy: cfg.Middleware.SecurityHeaders.ContentSecurityPolicy,
-			PermissionPolicy:      cfg.Middleware.SecurityHeaders.PermissionPolicy,
-			HSTSMaxAge:            cfg.Middleware.SecurityHeaders.HSTSMaxAge,
-			HSTSExcludeSubdomains: cfg.Middleware.SecurityHeaders.HSTSExcludeSubdomains,
-			HSTSPreloadEnabled:    cfg.Middleware.SecurityHeaders.HSTSPreloadEnabled,
-			CSPReportOnly:         cfg.Middleware.SecurityHeaders.CSPReportOnly,
+			// Admin previews public CDN images without cross-origin isolation.
+			// Helmet's require-corp default blocks ordinary cross-origin <img> loads.
+			CrossOriginEmbedderPolicy: "unsafe-none",
+			ContentSecurityPolicy:     cfg.Middleware.SecurityHeaders.ContentSecurityPolicy,
+			PermissionPolicy:          cfg.Middleware.SecurityHeaders.PermissionPolicy,
+			HSTSMaxAge:                cfg.Middleware.SecurityHeaders.HSTSMaxAge,
+			HSTSExcludeSubdomains:     cfg.Middleware.SecurityHeaders.HSTSExcludeSubdomains,
+			HSTSPreloadEnabled:        cfg.Middleware.SecurityHeaders.HSTSPreloadEnabled,
+			CSPReportOnly:             cfg.Middleware.SecurityHeaders.CSPReportOnly,
 		}))
 	}
 

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { LoaderCircle, Plus } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm, type Resolver } from 'react-hook-form'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useToast } from '../../app/toast'
 import { DataTable, type AdminColumn } from '../../components/admin/data-table'
 import { RemoteSelect as SharedRemoteSelect } from '../../components/admin/operations'
@@ -83,11 +83,10 @@ function ResourceEditor({ definition, id, open, onOpenChange }: { definition: Re
     if (!next && form.formState.isDirty && !window.confirm('存在未保存的修改，确定离开吗？')) return
     onOpenChange(next)
   }
-  return <Sheet open={open} onOpenChange={requestClose} title={id === null ? `新增${definition.title}` : `编辑${definition.title}`} description={id === null ? '填写业务字段后提交' : `记录 #${id}`}>
-    {detail.isLoading && id !== null ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />正在加载详情…</div> : <form className="grid gap-7" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>
+  return <Sheet open={open} onOpenChange={requestClose} title={id === null ? `新增${definition.title}` : `编辑${definition.title}`} description={id === null ? '填写业务字段后提交' : `记录 #${id}`} footer={<div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => requestClose(false)}>取消</Button><Button type="submit" form="resource-editor-form" disabled={(detail.isLoading && id !== null) || mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}{id === null ? '创建' : '保存修改'}</Button></div>}>
+    {detail.isLoading && id !== null ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />正在加载详情…</div> : <form id="resource-editor-form" className="grid gap-7" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>
       {operationError && <Alert tone="danger">{operationError}</Alert>}
       {groupFields(definition.fields).map((group) => <FormSection key={group.title} title={group.title}>{group.fields.map((field) => <Controller key={field.key} name={field.key} control={form.control} render={({ field: controlField, fieldState }) => <FormField label={field.label} help={field.help} error={fieldState.error?.message}><FieldControl field={field} value={controlField.value} onChange={controlField.onChange} disabled={mutation.isPending || (id !== null && field.key === 'id')} /></FormField>} />)}</FormSection>)}
-      <div className="sticky bottom-0 -mx-5 -mb-5 flex justify-end gap-2 border-t bg-surface px-5 py-4"><Button type="button" variant="secondary" onClick={() => requestClose(false)}>取消</Button><Button type="submit" disabled={mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}{id === null ? '创建' : '保存修改'}</Button></div>
     </form>}
   </Sheet>
 }
@@ -113,7 +112,7 @@ export function ResourcePage({ section, resource }: { section: ResourceSection; 
   const canWrite = auth.can('content.write')
   return <PageLayout>
     <PageHeader title={definition.title} description={definition.description} eyebrow={`${definition.section}.${definition.key}`} actions={canWrite && <Button onClick={() => setEditor({ open: true, id: null })}><Plus className="size-4" />新增{definition.title}</Button>} />
-    <DataTable data={query.data?.list ?? []} columns={columns} total={query.data?.total ?? 0} page={page} pageSize={pageSize} search={search} onSearchChange={(value) => { const next = new URLSearchParams(params); next.set('page', '1'); if (value) next.set('search', value); else next.delete('search'); setParams(next, { replace: true }) }} onPageChange={(value) => changeParam('page', String(value))} onPageSizeChange={(value) => { const next = new URLSearchParams(params); next.set('page', '1'); next.set('page_size', String(value)); setParams(next, { replace: true }) }} onEdit={canWrite ? (row) => setEditor({ open: true, id: resourceRecordID(row) }) : undefined} onDelete={canWrite ? setDeleting : undefined} onRowClick={canWrite ? (row) => setEditor({ open: true, id: resourceRecordID(row) }) : undefined} loading={query.isLoading} error={query.error?.message} onRetry={() => void query.refetch()} />
+    <DataTable data={query.data?.list ?? []} columns={definition.key === 'site-groups' ? [...columns, { key: 'curation', header: '首页展示', render: (row) => <Link className="text-primary hover:underline" to={`/nav/site-groups/${resourceRecordID(row)}/curation`} onClick={(event) => event.stopPropagation()}>首页编排</Link> }] : columns} total={query.data?.total ?? 0} page={page} pageSize={pageSize} search={search} onSearchChange={(value) => { const next = new URLSearchParams(params); next.set('page', '1'); if (value) next.set('search', value); else next.delete('search'); setParams(next, { replace: true }) }} onPageChange={(value) => changeParam('page', String(value))} onPageSizeChange={(value) => { const next = new URLSearchParams(params); next.set('page', '1'); next.set('page_size', String(value)); setParams(next, { replace: true }) }} onEdit={canWrite ? (row) => setEditor({ open: true, id: resourceRecordID(row) }) : undefined} onDelete={canWrite ? setDeleting : undefined} onRowClick={canWrite ? (row) => setEditor({ open: true, id: resourceRecordID(row) }) : undefined} loading={query.isLoading} error={query.error?.message} onRetry={() => void query.refetch()} />
     <ResourceEditor definition={definition} id={editor.id} open={editor.open} onOpenChange={(open) => setEditor((current) => ({ ...current, open }))} />
     <ConfirmAction open={Boolean(deleting)} onOpenChange={(open) => { if (!open) setDeleting(null) }} title={`删除${definition.title}`} description={`确定删除记录 #${deleting?.id ?? ''} 吗？`} busy={deleteMutation.isPending} onConfirm={() => deleteMutation.mutate()} />
   </PageLayout>

@@ -135,22 +135,23 @@ type SitePayload struct {
 	Country *string `json:"country"`
 	Nsfw    string  `json:"nsfw"`
 	Welfare string  `json:"welfare"`
-	Icon    *string `json:"icon"`
 }
 
 type SiteDTO struct {
-	ID         int64               `json:"id"`
-	Name       string              `json:"name"`
-	NameEn     string              `json:"name_en"`
-	Info       string              `json:"info"`
-	InfoEn     string              `json:"info_en"`
-	CreateTime pkgmodels.LocalTime `json:"create_time"`
-	UpdateTime pkgmodels.LocalTime `json:"update_time"`
-	Country    *string             `json:"country"`
-	Nsfw       string              `json:"nsfw"`
-	Welfare    string              `json:"welfare"`
-	Icon       *string             `json:"icon"`
-	Deleted    bool                `json:"deleted"`
+	IconPrimaryURL string              `json:"icon_primary_url"`
+	IconMirrorURL  string              `json:"icon_mirror_url"`
+	ID             int64               `json:"id"`
+	Name           string              `json:"name"`
+	NameEn         string              `json:"name_en"`
+	Info           string              `json:"info"`
+	InfoEn         string              `json:"info_en"`
+	CreateTime     pkgmodels.LocalTime `json:"create_time"`
+	UpdateTime     pkgmodels.LocalTime `json:"update_time"`
+	Country        *string             `json:"country"`
+	Nsfw           string              `json:"nsfw"`
+	Welfare        string              `json:"welfare"`
+	Icon           *string             `json:"icon"`
+	Deleted        bool                `json:"deleted"`
 }
 
 type SiteWorkspaceTarget struct {

@@ -178,6 +178,9 @@ jobs:
       - name: Insights semantic guards
         working-directory: apps/cn/nav-web
         run: npm run insights:semantics
+      - name: SEO recovery contract guards
+        working-directory: apps/cn/nav-web
+        run: npm run seo:recovery:test
       - name: Build
         working-directory: apps/cn/nav-web
         run: npm run build

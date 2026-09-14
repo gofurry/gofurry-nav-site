@@ -34,36 +34,10 @@ func (dao *ReadModelDAO) loadAggregateExtras(ctx context.Context, aggregate *v2m
 	if err := dao.loadCanonicalGameDomain(ctx, aggregate); err != nil {
 		return err
 	}
-	details, err := queryOptional[v2models.GfgGameV2Details](ctx, dao.pool,
-		"SELECT "+detailsColumns+" FROM gfg_game_details WHERE game_id = $1", gameID)
-	if err != nil {
-		return fmt.Errorf("查询游戏 v2 详情失败: %w", err)
+	if err := dao.loadDetailBatch(ctx, aggregate, lang); err != nil {
+		return fmt.Errorf("查询游戏 v2 详情批次失败: %w", err)
 	}
-	aggregate.Details = details
-
-	localized, err := dao.loadLocalized(ctx, gameID, lang)
-	if err != nil {
-		return err
-	}
-	aggregate.Localized = localized
-
-	if aggregate.Prices, err = queryMany[v2models.GfgGameV2Price](ctx, dao.pool,
-		"SELECT "+priceColumns+" FROM gfg_game_prices WHERE game_id = $1 ORDER BY region ASC", gameID); err != nil {
-		return fmt.Errorf("查询游戏 v2 价格失败: %w", err)
-	}
-	if aggregate.Media, err = queryMany[v2models.GfgGameV2Media](ctx, dao.pool,
-		"SELECT "+mediaColumns+" FROM gfg_game_media WHERE game_id = $1 ORDER BY media_type, sort_order, id", gameID); err != nil {
-		return fmt.Errorf("查询游戏 v2 媒体失败: %w", err)
-	}
-	if aggregate.Assets, err = queryMany[v2models.GfgGameV2Asset](ctx, dao.pool,
-		"SELECT "+assetColumns+" FROM gfg_game_assets WHERE game_id = $1 ORDER BY asset_family, sort_order, id", gameID); err != nil {
-		return fmt.Errorf("查询游戏 v2 统一媒体资产失败: %w", err)
-	}
-	aggregate.Requirements, err = queryOptional[v2models.GfgGameV2Requirements](ctx, dao.pool,
-		"SELECT "+requirementsColumns+" FROM gfg_game_requirements WHERE game_id = $1", gameID)
-	if err != nil {
-		return fmt.Errorf("查询游戏 v2 配置需求失败: %w", err)
-	}
+	var err error
 	if newsLimit > 0 {
 		aggregate.News, err = dao.loadNews(ctx, gameID, lang, newsLimit)
 		if err != nil {
@@ -79,15 +53,6 @@ func (dao *ReadModelDAO) loadAggregateExtras(ctx context.Context, aggregate *v2m
 		if err := dao.loadOnlinePeakForRow(ctx, aggregate.OnlineCount); err != nil {
 			return err
 		}
-	}
-	if err := dao.pool.QueryRow(ctx, `SELECT COALESCE(AVG(score), 0)::double precision, COUNT(*)::bigint
-FROM gfg_game_comment WHERE game_id = $1`, gameID).
-		Scan(&aggregate.ReviewStats.AvgScore, &aggregate.ReviewStats.CommentCount); err != nil {
-		return fmt.Errorf("查询游戏 v2 评论统计失败: %w", err)
-	}
-	aggregate.Tags, err = dao.loadTags(ctx, gameID, lang)
-	if err != nil {
-		return err
 	}
 	return nil
 }

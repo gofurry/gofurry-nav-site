@@ -16,7 +16,6 @@
         :icon="sitePageData.siteInfo?.icon || undefined"
         :info="sitePageData.siteInfo?.info || undefined"
         :keywords="overviewKeywords"
-        :logo-prefix="siteLogoPrefix"
         :site-id="siteId"
         :site-name="siteName"
         :switchable-domains="switchableDomains"
@@ -125,11 +124,9 @@ const { data, pending, error, siteId } = detailState
 const siteInsightsSnapshot = computed(() => insightsState.data.value)
 const showInsights = computed(() => props.showInsights)
 const navV2Api = useApi('navV2')
-const config = useRuntimeConfig()
 const pageRoot = ref<HTMLElement | null>(null)
 const sitePageData = computed(() => data.value!)
 const siteName = computed(() => sitePageData.value.siteInfo?.name?.trim() || 'GoFurry')
-const siteLogoPrefix = computed(() => String(config.public?.siteLogoPrefixUrl || ''))
 const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'Failed to load site data.' : '站点数据加载失败。'))
 const httpPayload = computed(() => asRecord(sitePageData.value.targetLatestCore?.protocols?.http?.payload))
 const primaryEdgeLabel = computed(() => {
@@ -567,8 +564,6 @@ function label(zh: string, en: string) {
   --accent: #fb8c2f;
   isolation: isolate;
   position: relative;
-  background:
-    linear-gradient(180deg, rgba(255, 251, 245, 0.96) 0%, rgba(248, 240, 229, 0.96) 52%, rgba(255, 246, 234, 0.98) 100%);
 }
 
 .site-detail-page > main {
@@ -579,8 +574,6 @@ function label(zh: string, en: string) {
   --surface: rgba(15, 23, 42, 0.72);
   --surface-strong: rgba(30, 41, 59, 0.78);
   --ink-muted: #94a3b8;
-  background:
-    linear-gradient(180deg, rgba(2, 6, 23, 0.96) 0%, rgba(15, 23, 42, 0.98) 54%, rgba(12, 18, 32, 0.98) 100%);
 }
 
 .detail-section,

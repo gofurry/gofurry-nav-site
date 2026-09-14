@@ -1,4 +1,27 @@
 {
+  "errorPage": {
+    "notFound": {
+      "title": "前方只有一片未知",
+      "line1": "回头吧，旅行者",
+      "line2": "还有更多美好等待你探索",
+      "home": "回到首页",
+      "back": "原路返回"
+    },
+    "serverError": {
+      "title": "前方发生意外",
+      "line1": "稍等一下，旅行者",
+      "line2": "这段旅途很快就能继续",
+      "retry": "再试一次",
+      "home": "回到首页"
+    },
+    "generic": {
+      "title": "出了一点小状况",
+      "line1": "别担心，旅行者",
+      "line2": "换个方向继续看看吧",
+      "home": "回到首页",
+      "back": "原路返回"
+    }
+  },
   "common": {
     "loading": "加载中...",
     "commit": "提交",
@@ -86,6 +109,8 @@
     "mode": "模式",
     "modeSetting": "Mode 设置",
     "modeDesc": "用于控制页面显示模式, 例如: nsfw",
+    "homePreferences": "首屏设置",
+    "pageBackground": "页面背景",
     "preferences": "页面偏好",
     "displayMode": "显示模式",
     "displayModeDesc": "输入 nsfw 可显示完整内容，留空则使用默认安全模式。",
@@ -94,7 +119,8 @@
     "quickAccessOn": "显示",
     "quickAccessOff": "隐藏",
     "showCustomSites": "显示常用网站区域",
-    "expandNav": "展开导航栏",
+    "expandNav": "展开导航",
+    "closeNav": "关闭导航",
     "customPanelCode": "面板自定义前端代码",
     "customPanelCodePlaceholder": "<div style='padding:24px;color:white'>Hello gofurry</div>",
     "customPanelCodeDesc": "填写后将覆盖第一个分栏的默认内容，可使用 HTML / CSS / JS；留空则保持默认展示。",
@@ -563,6 +589,59 @@
     "backHome": "返回首页"
   },
   "insights": {
+    "comparePicker": {
+      "siteLabel": "选择要比较的站点",
+      "sitePlaceholder": "搜索名称或域名…",
+      "gameLabel": "选择要比较的游戏",
+      "gamePlaceholder": "搜索游戏…",
+      "loading": "正在查找…",
+      "failed": "搜索暂不可用，已选实体与对比结果仍保留。",
+      "startSearch": "输入名称查找游戏。",
+      "noResults": "没有可添加的结果。",
+      "results": "可添加的实体",
+      "count": "已选择 {count} / 4",
+      "maximum": "最多比较 4 个实体，移除一个后可继续添加。",
+      "selected": "已选择的实体",
+      "remove": "移除 {name}",
+      "reset": "重置选择",
+      "restart": "重置选择，或通过搜索重新开始。",
+      "loadingComparison": "正在读取共同观测数据…",
+      "resultsTitle": "事实对照",
+      "groups": {
+        "capabilities": "Web 能力",
+        "certificate": "证书",
+        "basic": "基本信息",
+        "platform": "平台",
+        "activity": "活跃度",
+        "price": "价格",
+        "language": "语言"
+      }
+    },
+    "workspace": {
+      "observationSummary": "观测概况",
+      "priceSummary": "价格生态概况",
+      "ranking": "玩家排名",
+      "rankingMetric": "排名依据",
+      "region": "区域",
+      "sampleCoverage": "样本覆盖率",
+      "observedAt": "观测时间",
+      "daysToExpiry": "距到期 {count} 天",
+      "noItems": "当前没有可展示的观测项目。",
+      "rawData": "查看完整数据",
+      "observationQuality": "观测质量",
+      "stale": "陈旧证据",
+      "unobserved": "未观测",
+      "unmapped_games": "含未映射语言的游戏",
+      "unmapped_entries": "未映射语言条目",
+      "not_applicable": "不适用",
+      "not_probed": "未探测",
+      "probe_failed": "探测失败",
+      "unknown": "未知",
+      "playerBasis": "最近计划观测使用同一计划快照；30 天峰值与均值使用已完成的每日事实，样本覆盖率缺失时不推算。",
+      "observationWindow": "观测区间：{from} 至 {through}",
+      "discountSubset": "折扣游戏属于付费定价游戏的子集，不能与免费、付费数量相加。",
+      "normalizationBasis": "语言覆盖率以追踪总体为分母；规范化覆盖率以新鲜证据游戏为分母。完整音频比例同样以新鲜证据游戏为分母。"
+    },
     "navLabel": "生态观测导航",
     "metricsLabel": "生态观测指标",
     "nav": {
@@ -570,6 +649,86 @@
       "sites": "网站生态",
       "games": "游戏生态",
       "changes": "变化探索"
+    },
+    "domain": {
+      "site": {
+        "description": "观察 Furry 网站基础设施、Web 能力与公开技术信号的演进。",
+        "count": "个站点",
+        "dimensions": "哪些地方不同？",
+        "activity": "最近站点变化"
+      },
+      "game": {
+        "description": "观察 Furry 游戏的活跃度、平台支持、内容结构与公开变化。",
+        "count": "款游戏",
+        "dimensions": "类型结构",
+        "activity": "最近游戏变化"
+      },
+      "current": "当前状态",
+      "businessModel": "商业模式",
+      "platforms": "平台支持",
+      "pulse": "游戏脉搏",
+      "fullData": "查看完整数据",
+      "continue": "继续观测"
+    },
+    "editorial": {
+      "description": "从公开数据中，看见兽圈正在发生什么。",
+      "snapshot": "快照生成于",
+      "activityKicker": "最近的生态变化",
+      "activityTitle": "正在发生",
+      "allChanges": "全部变化",
+      "sitesKicker": "技术与连接",
+      "sitesTitle": "站点生态",
+      "sitesDescription": "从安全传输到开放协议，观察站点技术能力的采用。",
+      "gamesKicker": "玩家与作品",
+      "gamesTitle": "游戏生态",
+      "explore": "继续观测",
+      "deltaWindow": "/ 30 天",
+      "recentSites": "最近发生变化的站点",
+      "pulse": {
+        "players": "当前最活跃",
+        "discount": "折扣观察",
+        "latest": "近期发行"
+      },
+      "playersUnit": "位玩家",
+      "latestObservation": "最近一次玩家观测",
+      "discount": "减价 {percent}%",
+      "usRegion": "美国区",
+      "exploreKicker": "沿着数据继续探索",
+      "exploreTitle": "深入观测",
+      "links": {
+        "sites": {
+          "title": "站点生态",
+          "description": "技术采用、趋势与生态分布"
+        },
+        "certificates": {
+          "title": "证书观测",
+          "description": "有效期与验证状态"
+        },
+        "siteCompare": {
+          "title": "站点对比",
+          "description": "并列查看站点技术能力"
+        },
+        "games": {
+          "title": "游戏生态",
+          "description": "平台支持与生态分布"
+        },
+        "players": {
+          "title": "玩家",
+          "description": "玩家观测与活跃度"
+        },
+        "prices": {
+          "title": "价格",
+          "description": "地区价格与折扣"
+        },
+        "languages": {
+          "title": "语言",
+          "description": "语言支持与覆盖"
+        },
+        "gameCompare": {
+          "title": "游戏对比",
+          "description": "比较平台、价格与玩家观测"
+        }
+      }
     },
     "overview": {
       "eyebrow": "PUBLIC ECOSYSTEM",
@@ -653,6 +812,10 @@
       "7d": "7 天",
       "30d": "30 天",
       "90d": "90 天",
+      "180d": "180 天",
+      "1y": "1 年",
+      "3y": "3 年",
+      "5y": "5 年",
       "all": "全部"
     },
     "changes": {
@@ -724,6 +887,9 @@
     "changeExplorer": {
       "title": "变化探索",
       "description": "按领域、时间范围和公开分类浏览网站与游戏生态变化",
+      "retry": "重新加载",
+      "aboutTitle": "关于变化记录",
+      "about": "按记录日期分组，并保留数据源的事件顺序。具有时间观测的记录显示具体时间，其余仅显示日期。图片使用实体当前已有的标识，不代表事件发生时的外观。",
       "filters": "变化筛选",
       "domain": "领域",
       "range": "范围",
@@ -767,12 +933,42 @@
       "gameDescription": "当前状态、玩家历史、国区价格与近期语义变化。",
       "backToSites": "查看网站生态 →",
       "backToGames": "查看游戏生态 →",
+      "playerObservation": "玩家观测",
+      "latestPlayerObservation": "最近一次玩家观测",
+      "playerCount": "{count} 人",
+      "dataUnavailable": "暂无数据",
+      "latestObservationAt": "最近观测时间 · {date}",
+      "latestObservationUnavailable": "暂无最近观测时间",
+      "observedDaysValue": "观测日 {count} 天",
+      "sampleCoverageValue": "样本覆盖 {coverage}",
+      "regionalPrices": "地区价格",
+      "priceMissingShort": "暂无价格",
+      "priceStatusUnknown": "价格状态未知",
+      "originalPrice": "原价 {price}",
+      "observedLowValue": "GoFurry 观测低价 {price} · 自 {date}",
+      "gameState": "游戏状态",
+      "historyTrends": "历史趋势",
+      "playerHistory": "玩家历史",
+      "dailyPeak": "每日峰值",
+      "dailyAverage": "每日平均",
+      "playerTooltipPeak": "最高玩家数",
+      "playerTooltipAverage": "平均玩家数",
+      "priceHistoryRegion": "价格历史 · {region}",
+      "currentPrice": "当前价格",
+      "originalPriceLabel": "原价",
+      "discount": "折扣",
+      "priceStatus": "价格状态",
+      "timelineView": "时间线展示方式",
+      "timelineModes": { "compact": "紧凑", "list": "列表" },
+      "changeCategories": { "price": "价格", "discount": "折扣", "platform": "平台", "release": "发售", "pricingModel": "定价模式", "other": "变化" },
+      "platformStates": { "supported": "支持", "unsupported": "不支持", "unknown": "未知" },
       "ecosystemValue": "生态占比",
       "ecosystemCoverage": "统计覆盖",
       "sameDayAsOf": "同日统计 · {date}",
       "timelineEyebrow": "SEMANTIC CHANGES",
       "timelineTitle": "实体变化时间线",
-      "historyRange": "历史范围",
+      "gameTimelineTitle": "近期变化",
+      "historyRange": "时间范围",
       "dailyMaximum": "每日最高值",
       "playerTrend": "玩家趋势",
       "playerMax": "最高在线",
@@ -780,12 +976,12 @@
       "cnOnly": "仅中国大陆区",
       "priceHistory": "国区价格历史",
       "currentPlayers": "最近观测",
-      "peak30d": "30 天最高在线",
-      "average30d": "30 天观测均值",
+      "peak30d": "30 天峰值",
+      "average30d": "30 天平均",
       "observedDays": "个观测日",
       "cnPrice": "当前国区价格",
       "regionalPrice": "当前区域价格",
-      "priceRegion": "价格区域",
+      "priceRegion": "价格地区",
       "observedLow": "GoFurry 观测最低价",
       "observedSince": "自 {date} 起观测",
       "platforms": "平台状态",
@@ -795,7 +991,7 @@
       "paidGame": "付费",
       "supported": "支持",
       "unsupported": "不支持",
-      "booleanUnknown": "暂无法确认",
+      "booleanUnknown": "未知",
       "priceFree": "免费",
       "pricePriced": "付费价格",
       "priceMissing": "无当日区域价格事实",
@@ -819,12 +1015,12 @@
         "unpriced": "暂无定价"
       },
       "releaseStates": {
-        "available": "已发行",
-        "upcoming": "即将发行",
-        "withdrawn": "已停止提供"
+        "available": "已发售",
+        "upcoming": "即将发售",
+        "withdrawn": "已下架"
       }
     },
-    "regions": { "CN": "中国", "US": "美国", "HK": "中国香港" },
+    "regions": { "CN": "中国", "US": "美国", "HK": "香港" },
     "siteIntelligence": {
       "navLabel": "网站生态观测导航", "ecosystem": "生态", "certificates": "证书", "compare": "对比"
     },
@@ -848,8 +1044,8 @@
     },
     "compare": {
       "builderTitle": "选择对比实体", "idsLabel": "实体 ID（2–4 个）", "idsPlaceholder": "例如 12,37,48", "apply": "应用",
-      "emptyHint": "输入 2–4 个实体 ID 开始对比。", "oneHint": "已预选 1 个实体，请再加入至少 1 个。", "readyHint": "当前并列展示 {count} 个实体。",
-      "invalid": "请输入 1–4 个有效正整数 ID；开始对比至少需要 2 个不同实体。", "insufficientData": "所选实体暂无共同完整快照，未混用各自的最新数据。",
+      "emptyHint": "选择 2–4 个实体开始对比。", "oneHint": "已预选 1 个实体，请再加入至少 1 个。", "readyHint": "当前并列展示 {count} 个实体。",
+      "invalid": "比较链接无效，请重置选择或重新选择实体。", "insufficientData": "所选实体暂无共同完整快照，未混用各自的最新数据。",
       "commonSnapshot": "共同完整快照：{date}", "fact": "事实", "aboutTitle": "关于对比"
     },
     "siteCompare": {

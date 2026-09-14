@@ -16,6 +16,12 @@ func TestRequireCapability(t *testing.T) {
 		capability authorization.Capability
 		wantStatus int
 	}{
+		{name: "operator cloud read denied", role: authorization.RoleOperator, capability: authorization.CloudOpsRead, wantStatus: fiber.StatusForbidden},
+		{name: "operator cloud manage denied", role: authorization.RoleOperator, capability: authorization.CloudOpsManage, wantStatus: fiber.StatusForbidden},
+		{name: "developer cloud read", role: authorization.RoleDeveloper, capability: authorization.CloudOpsRead, wantStatus: fiber.StatusOK},
+		{name: "developer cloud manage", role: authorization.RoleDeveloper, capability: authorization.CloudOpsManage, wantStatus: fiber.StatusOK},
+		{name: "developer zone purge denied", role: authorization.RoleDeveloper, capability: authorization.CloudOpsPurgeAll, wantStatus: fiber.StatusForbidden},
+		{name: "owner zone purge", role: authorization.RoleOwner, capability: authorization.CloudOpsPurgeAll, wantStatus: fiber.StatusOK},
 		{name: "operator content mutation", role: authorization.RoleOperator, capability: authorization.ContentWrite, wantStatus: fiber.StatusOK},
 		{name: "operator run now", role: authorization.RoleOperator, capability: authorization.CollectionExecute, wantStatus: fiber.StatusOK},
 		{name: "operator schedule mutation denied", role: authorization.RoleOperator, capability: authorization.CollectionControl, wantStatus: fiber.StatusForbidden},

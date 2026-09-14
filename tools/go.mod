@@ -11,8 +11,10 @@ tool (
 require (
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/pressly/goose/v3 v3.27.1
-	gopkg.in/yaml.v3 v3.0.1
+	go.yaml.in/yaml/v4 v4.0.0-rc.6
 )
+
+require gopkg.in/yaml.v3 v3.0.1 // indirect
 
 require (
 	cel.dev/expr v0.25.1 // indirect

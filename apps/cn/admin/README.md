@@ -12,6 +12,13 @@ The Collection Center manages durable Schedule / Job / Run / Result / Collector 
 
 React natively provides Collection, Metrics, Changes, Workbench attention, read-only Data Operations, Audit, and account governance. UI behavior consumes backend capabilities only. DataOps exposes safe metadata, Goose state, and bounded Top N storage information for the three pools; it never executes SQL or database maintenance.
 
+Admin manages original-format Site icons, independent desktop/mobile AVIF Hero
+pools, and an SVG Pattern catalog using COS Primary and an R2 best-effort Mirror.
+Cloud Resources provides Object Inspector, Mirror Repair, and scoped EdgeOne /
+Cloudflare purges through backend capabilities; full-zone EdgeOne purge is
+Owner-only. See [Managed assets](../../../docs/managed-assets.md) and the
+[asset contract](../../../contracts/assets.md).
+
 ## Development
 
 Requirements: Go 1.26.7, Node.js/npm, PostgreSQL, and Redis.

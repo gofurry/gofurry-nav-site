@@ -3,7 +3,6 @@ module github.com/gofurry/gofurry-game-backend
 go 1.26.7
 
 require (
-	github.com/PuerkitoBio/goquery v1.12.0
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/bytedance/sonic v1.15.2
 	github.com/go-co-op/gocron/v2 v2.22.0
@@ -18,16 +17,15 @@ require (
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
+	github.com/wneessen/go-mail v0.8.1
 	github.com/yuin/goldmark v1.8.5
 	go.uber.org/zap v1.28.0
-	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
+	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/andybalholm/brotli v1.2.2 // indirect
-	github.com/andybalholm/cascadia v1.3.4 // indirect
 	github.com/bytedance/gopkg v0.1.4 // indirect
 	github.com/bytedance/sonic/loader v0.5.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -84,6 +82,5 @@ require (
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
-	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	rsc.io/binaryregexp v0.2.0 // indirect
 )

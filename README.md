@@ -49,6 +49,8 @@ GoFurry 是一个面向兽圈文化内容发现、站点导航、兽游资料和
 
 > 国际站相关组件目前处于规划阶段，不属于当前生产运行拓扑。
 
+托管资产由 Admin 发布到 COS Primary 与 R2 尽力镜像，分别通过 EdgeOne 主 CDN 和 Cloudflare 镜像 CDN 分发。数据库保存与云厂商无关的对象键，前端使用浏览器优选与失败回退。详见[托管资产说明](./docs/managed-assets.md)与[资产契约](./contracts/assets.md)。
+
 ## 技术栈
 
 - Go / Fiber
@@ -57,6 +59,7 @@ GoFurry 是一个面向兽圈文化内容发现、站点导航、兽游资料和
 - Tailwind CSS / Less
 - Coraza WAF
 - Bbolt
+- Tencent COS / EdgeOne、Cloudflare R2 / CDN
 
 ## 快速开始
 
@@ -78,6 +81,10 @@ go run . serve --config conf/server.yaml
 ```
 
 六个 Go 程序的根命令只显示帮助；运行服务必须显式使用 `serve --config <file>`。示例配置只用于复制，不要提交真实密钥或凭据。
+
+日常开发时，应用代码始终在开发者电脑运行；可通过 Tailscale 连接共享开发 PostgreSQL 和 Redis。私有本机连接值放在被忽略的根目录 `.env` 中，由 Codex、Goose 和本地配置维护流程使用，应用不会自动加载它。runtime `server.yaml` 必须使用 `gofurry_app`（PostgreSQL 与 Redis ACL），Goose 则仅使用 `gofurry_migrator`。
+
+完整流程见 [本地开发文档](./docs/development.md) 和 [共享开发基础设施](./docs/operations/dev-infrastructure.md)。
 
 ## 构建与验证
 

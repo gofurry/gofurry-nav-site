@@ -250,9 +250,13 @@ func publicChanges(records []models.ChangeRecord) []models.Change {
 		if record.TimeBasis != "day" {
 			occurredAt = record.EventAt
 		}
+		entity := models.EntityRef{ID: record.EntityID, Name: record.EntityName}
+		if record.VisualAsset != "" {
+			entity.Visual = &models.EntityVisual{Kind: "site_icon", Asset: record.VisualAsset}
+		}
 		result = append(result, models.Change{
 			Type: publicType, Date: formatDate(record.ProjectionDate), OccurredAt: occurredAt,
-			Entity: models.EntityRef{ID: record.EntityID, Name: record.EntityName}, Detail: nil,
+			Entity: entity, Detail: nil,
 		})
 	}
 	return result

@@ -74,8 +74,14 @@ type InsightDimensionTrend struct {
 }
 
 type InsightEntityRef struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID     int64                `json:"id"`
+	Name   string               `json:"name"`
+	Visual *InsightEntityVisual `json:"visual,omitempty"`
+}
+
+type InsightEntityVisual struct {
+	Kind  string `json:"kind"`
+	Asset string `json:"asset"`
 }
 
 type InsightChange struct {
@@ -395,8 +401,9 @@ type InsightMetricTrendRecord struct {
 }
 
 type InsightGameRecord struct {
-	ID   int64
-	Name string
+	VisualAsset string
+	ID          int64
+	Name        string
 }
 
 type InsightGameStateRecord struct {
@@ -501,6 +508,7 @@ type InsightPlayerRankingMetaRecord struct {
 	Ranked                 int64
 }
 type InsightPlayerRankingRecord struct {
+	VisualAsset       string
 	GameID            int64
 	GameName          string
 	Value             float64
@@ -515,6 +523,7 @@ type InsightPriceOverviewRecord struct {
 	Population, Priced, Free, Unpriced, Unknown, Unavailable, Discounted int64
 }
 type InsightDiscountRecord struct {
+	VisualAsset                string
 	AsOf                       time.Time
 	GameID, TrackingPeriodID   int64
 	GameName, Currency         string
@@ -540,6 +549,7 @@ type InsightPlayerPointRecord struct {
 type InsightChangeRecord struct {
 	EntityID        int64
 	EntityName      string
+	VisualAsset     string
 	DetectorKey     string
 	DetectorVersion int32
 	EventCode       string

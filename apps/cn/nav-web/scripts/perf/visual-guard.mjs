@@ -150,8 +150,8 @@ const visualScenarios = [
     path: '/insights',
     locale: 'zh-CN',
     rootSelector: '.insights-overview-page',
-    requiredSelectors: ['.insights-page', '.ecosystem-navigation', '.insights-nav', '.insights-stats', '.insights-previews'],
-    optionalDataSelectors: ['.insights-change']
+    requiredSelectors: ['.insights-page', '.ecosystem-navigation', '.insights-primary-nav', '[data-overview-header]', '[data-overview-activity]', '[data-overview-explore]'],
+    optionalDataSelectors: ['.insight-activity-item']
   }),
   ...makePageScenarios({
     id: 'insights-sites',
@@ -159,8 +159,8 @@ const visualScenarios = [
     path: '/insights/sites?metric=ipv6&range=30d',
     locale: 'zh-CN',
     rootSelector: '.insights-domain-page',
-    requiredSelectors: ['.insights-page', '.ecosystem-navigation', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-dimensions', '.insights-data-info'],
-    optionalDataSelectors: ['.insights-change']
+    requiredSelectors: ['.insights-page', '.ecosystem-navigation', '.insights-primary-nav', '[data-metric-rail]', '.insights-chart-shell', '[data-dimension-explorer]', '.insights-data-info'],
+    optionalDataSelectors: ['.insight-activity-item']
   }),
   ...makePageScenarios({
     id: 'insights-games',
@@ -168,8 +168,8 @@ const visualScenarios = [
     path: '/insights/games?metric=free&range=30d',
     locale: 'zh-CN',
     rootSelector: '.insights-domain-page',
-    requiredSelectors: ['.insights-page', '.ecosystem-navigation', '.insights-nav', '.insights-metric-strip', '.insights-chart-shell', '.insights-dimensions', '.insights-data-info'],
-    optionalDataSelectors: ['.insights-change']
+    requiredSelectors: ['.insights-page', '.ecosystem-navigation', '.insights-primary-nav', '[data-metric-rail]', '.insights-chart-shell', '[data-dimension-explorer]', '.insights-data-info'],
+    optionalDataSelectors: ['.insight-activity-item']
   }),
   ...makePageScenarios({
     id: 'insights-changes',
@@ -177,20 +177,20 @@ const visualScenarios = [
     path: '/insights/changes?domain=site&range=30d',
     locale: 'zh-CN',
     rootSelector: '.insights-change-explorer',
-    requiredSelectors: ['.insights-page', '.insights-nav', '.insights-change-explorer-filters', '.insights-change-explorer-feed'],
+    requiredSelectors: ['.insights-page', '.insights-primary-nav', '.insights-change-explorer-filters', '.insights-change-explorer-feed'],
     optionalDataSelectors: ['.insights-change-explorer-item']
   }),
   ...makePageScenarios({
     id: 'game-player-intelligence', label: '游戏玩家生态观测', path: '/insights/games/players?metric=latest_observed', locale: 'zh-CN',
-    rootSelector: '[data-player-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.intelligence-selector'], optionalDataSelectors: ['.intelligence-table tbody tr']
+    rootSelector: '[data-player-intelligence]', requiredSelectors: ['.insights-page', '.insights-domain-nav[data-domain="game"]', '.intelligence-selector'], optionalDataSelectors: ['.intelligence-table tbody tr']
   }),
   ...makePageScenarios({
     id: 'game-price-intelligence', label: '游戏区域价格生态观测', path: '/insights/games/prices?region=CN', locale: 'zh-CN',
-    rootSelector: '[data-regional-price-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.intelligence-selector'], optionalDataSelectors: ['.intelligence-table tbody tr']
+    rootSelector: '[data-regional-price-intelligence]', requiredSelectors: ['.insights-page', '.insights-domain-nav[data-domain="game"]', '.intelligence-selector'], optionalDataSelectors: ['.intelligence-table tbody tr']
   }),
   ...makePageScenarios({
     id: 'game-language-intelligence', label: '游戏语言生态观测', path: '/insights/games/languages', locale: 'zh-CN',
-    rootSelector: '[data-language-intelligence]', requiredSelectors: ['.insights-page', '.game-intelligence-nav', '.insights-data-info'], optionalDataSelectors: ['.intelligence-table tbody tr']
+    rootSelector: '[data-language-intelligence]', requiredSelectors: ['.insights-page', '.insights-domain-nav[data-domain="game"]', '.insights-data-info'], optionalDataSelectors: ['.intelligence-table tbody tr']
   }),
   ...makePageScenarios({
     id: 'site-entity-insights',

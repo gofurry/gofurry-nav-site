@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 var configuration = new(serverConfig)
@@ -87,18 +87,12 @@ type serverConfig struct {
 	Middleware MiddlewareConfig `yaml:"middleware"`
 	Waf        WafConfig        `yaml:"waf"`
 	Proxy      ProxyConfig      `yaml:"proxy"`
-	Resource   ResourceConfig   `yaml:"resource"`
 	Admin      AdminConfig      `yaml:"admin"`
 }
 
 type AdminConfig struct {
 	Token  string `yaml:"token"`
 	Header string `yaml:"header"`
-}
-
-type ResourceConfig struct {
-	NavImageNum        int `yaml:"nav_image_num"`
-	NavResizedImageNum int `yaml:"nav_resized_image_num"`
 }
 
 type ProxyConfig struct {
@@ -146,6 +140,7 @@ type ThreadConfig struct {
 
 type RedisConfig struct {
 	RedisAddr      string `yaml:"redis_addr"`
+	RedisUsername  string `yaml:"redis_username"`
 	RedisPassword  string `yaml:"redis_password"`
 	TimeoutSeconds int    `yaml:"timeout_seconds"`
 }

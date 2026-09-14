@@ -37,7 +37,9 @@ describe('Resource Engine remote options', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(<QueryClientProvider client={client}><RemoteSelect endpoint="/api/v1/options/games" value="" onChange={() => undefined} /></QueryClientProvider>)
     await waitFor(() => expect(listJSON).toHaveBeenCalledWith('/api/v1/options/games', 1, 50, ''))
-    await userEvent.type(screen.getByPlaceholderText('搜索远程选项…'), 'steam')
+    const combobox = screen.getByPlaceholderText('搜索远程选项…')
+    expect(combobox).toHaveAttribute('autocomplete', 'off')
+    await userEvent.type(combobox, 'steam')
     await waitFor(() => expect(listJSON).toHaveBeenLastCalledWith('/api/v1/options/games', 1, 50, 'steam'))
   })
 
@@ -55,6 +57,12 @@ describe('Resource Engine remote options', () => {
 
 describe('Resource Engine route definitions', () => {
   beforeEach(() => { vi.clearAllMocks(); authTestState.canWrite = false; vi.mocked(listJSON).mockResolvedValue({ list: [], total: 0 }) })
+
+  it('exposes group-centric curation from the group list', async () => {
+    vi.mocked(listJSON).mockResolvedValue({ list: [{ id: 42, name: '社区' }], total: 1 })
+    renderResource('nav', 'site-groups')
+    expect(await screen.findByRole('link', { name: '首页编排' })).toHaveAttribute('href', '/nav/site-groups/42/curation')
+  })
 
   it.each([
     ['nav', 'site-groups', '网站分组'],

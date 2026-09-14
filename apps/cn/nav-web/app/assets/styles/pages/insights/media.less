@@ -1,0 +1,44 @@
+.insights-page {
+  .insight-activity-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--gf-border);
+    color: var(--gf-text-main);
+    text-decoration: none;
+
+    > .insight-entity-media--site { width: 44px; height: 44px; }
+    > .insight-entity-media--game { width: 76px; aspect-ratio: 460 / 215; }
+    &:hover strong { color: var(--gf-accent); }
+  }
+
+  .insight-activity-item__body {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 5px;
+
+    strong { font-size: 15px; font-weight: 650; line-height: 1.4; overflow-wrap: anywhere; }
+    time { color: var(--gf-text-soft); font-size: 11px; line-height: 1.5; }
+  }
+  .insight-activity-item__event { color: var(--gf-text-muted); font-size: 12px; line-height: 1.5; }
+  .insight-activity-item__domain { margin-bottom: 8px; color: var(--gf-text-muted); font-size: 12px; }
+  .insight-activity-item__arrow { flex: none; color: var(--gf-text-soft); }
+
+  .insight-entity-media {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: var(--insights-radius-sm);
+    background: var(--gf-surface-strong);
+
+    img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    > span { display: grid; width: 100%; height: 100%; place-items: center; padding: 8px; color: var(--gf-text-muted); font-size: 20px; font-weight: 600; }
+  }
+
+}

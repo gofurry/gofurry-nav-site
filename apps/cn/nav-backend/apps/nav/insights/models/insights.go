@@ -74,8 +74,14 @@ type DimensionTrend struct {
 }
 
 type EntityRef struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID     int64         `json:"id"`
+	Name   string        `json:"name"`
+	Visual *EntityVisual `json:"visual,omitempty"`
+}
+
+type EntityVisual struct {
+	Kind  string `json:"kind"`
+	Asset string `json:"asset"`
 }
 
 type Change struct {
@@ -267,8 +273,9 @@ type MetricTrendRecord struct {
 }
 
 type SiteRecord struct {
-	ID   int64
-	Name string
+	VisualAsset string
+	ID          int64
+	Name        string
 }
 
 type SiteMetricRecord struct {
@@ -306,6 +313,7 @@ type CertificateOverviewRecord struct {
 }
 
 type CertificateItemRecord struct {
+	VisualAsset       string
 	SiteID            int64
 	SiteName          string
 	Target            string
@@ -319,6 +327,7 @@ type CertificateItemRecord struct {
 type ChangeRecord struct {
 	EntityID        int64
 	EntityName      string
+	VisualAsset     string
 	DetectorKey     string
 	DetectorVersion int32
 	EventCode       string

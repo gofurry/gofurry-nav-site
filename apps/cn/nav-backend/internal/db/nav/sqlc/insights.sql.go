@@ -298,7 +298,7 @@ func (q *Queries) GetNavInsightMetricSummary(ctx context.Context, arg GetNavInsi
 }
 
 const getNavInsightSite = `-- name: GetNavInsightSite :one
-SELECT id, name, name_en
+SELECT id, name, name_en, COALESCE(icon, '')::text AS icon
 FROM public.gfn_site
 WHERE id = $1
   AND deleted IS NOT TRUE
@@ -308,12 +308,18 @@ type GetNavInsightSiteRow struct {
 	ID     int64  `json:"id"`
 	Name   string `json:"name"`
 	NameEn string `json:"name_en"`
+	Icon   string `json:"icon"`
 }
 
 func (q *Queries) GetNavInsightSite(ctx context.Context, siteID int64) (GetNavInsightSiteRow, error) {
 	row := q.db.QueryRow(ctx, getNavInsightSite, siteID)
 	var i GetNavInsightSiteRow
-	err := row.Scan(&i.ID, &i.Name, &i.NameEn)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameEn,
+		&i.Icon,
+	)
 	return i, err
 }
 
@@ -382,6 +388,7 @@ WITH horizon AS (
 )
 SELECT site.site_id,
        COALESCE(NULLIF(site.name, ''), NULLIF(site.name_en, ''), '')::text AS site_name,
+       COALESCE(current_site.icon, '')::text AS icon,
        target.target,
        target.tls_cert_not_after,
        target.tls_cert_verified AS verified,
@@ -408,6 +415,7 @@ JOIN public.gfn_site_target_daily target
   ON target.target_tracking_period_id = site.primary_target_tracking_period_id
  AND target.fact_date = horizon.fact_date
  AND target.finalized_at IS NOT NULL
+LEFT JOIN public.gfn_site current_site ON current_site.id = site.site_id
 WHERE site.primary_target_tracking_period_id IS NOT NULL
   AND target.tls_state_observed_at IS NOT NULL
   AND target.tls_state_observed_at <= horizon.reference_at
@@ -423,6 +431,7 @@ LIMIT $1
 type ListNavCertificateExpiryAttentionRow struct {
 	SiteID            int64              `json:"site_id"`
 	SiteName          string             `json:"site_name"`
+	Icon              string             `json:"icon"`
 	Target            string             `json:"target"`
 	TlsCertNotAfter   pgtype.Timestamptz `json:"tls_cert_not_after"`
 	Verified          *bool              `json:"verified"`
@@ -443,6 +452,7 @@ func (q *Queries) ListNavCertificateExpiryAttention(ctx context.Context, limitCo
 		if err := rows.Scan(
 			&i.SiteID,
 			&i.SiteName,
+			&i.Icon,
 			&i.Target,
 			&i.TlsCertNotAfter,
 			&i.Verified,
@@ -500,9 +510,11 @@ WITH horizon AS (
      AND target.fact_date = horizon.fact_date
      AND target.finalized_at IS NOT NULL
 )
-SELECT site_id, site_name, target, tls_cert_not_after,
+SELECT issues.site_id, site_name, target, tls_cert_not_after,
+       COALESCE(current_site.icon, '')::text AS icon,
        verified, verification_issue, issuer, observed_at
 FROM issues
+LEFT JOIN public.gfn_site current_site ON current_site.id = issues.site_id
 ORDER BY verification_issue ASC, site_id ASC
 LIMIT $1
 `
@@ -512,6 +524,7 @@ type ListNavCertificateVerificationIssuesRow struct {
 	SiteName          string             `json:"site_name"`
 	Target            string             `json:"target"`
 	TlsCertNotAfter   pgtype.Timestamptz `json:"tls_cert_not_after"`
+	Icon              string             `json:"icon"`
 	Verified          *bool              `json:"verified"`
 	VerificationIssue string             `json:"verification_issue"`
 	Issuer            *string            `json:"issuer"`
@@ -532,6 +545,7 @@ func (q *Queries) ListNavCertificateVerificationIssues(ctx context.Context, limi
 			&i.SiteName,
 			&i.Target,
 			&i.TlsCertNotAfter,
+			&i.Icon,
 			&i.Verified,
 			&i.VerificationIssue,
 			&i.Issuer,
@@ -550,6 +564,7 @@ func (q *Queries) ListNavCertificateVerificationIssues(ctx context.Context, limi
 const listNavInsightExplorerChanges = `-- name: ListNavInsightExplorerChanges :many
 SELECT event.site_id,
        COALESCE(NULLIF(history.name, ''), NULLIF(site.name, ''), '')::text AS site_name,
+       COALESCE(site.icon, '')::text AS icon,
        event.detector_key,
        event.detector_version,
        event.event_code,
@@ -615,6 +630,7 @@ type ListNavInsightExplorerChangesParams struct {
 type ListNavInsightExplorerChangesRow struct {
 	SiteID          int64              `json:"site_id"`
 	SiteName        string             `json:"site_name"`
+	Icon            string             `json:"icon"`
 	DetectorKey     string             `json:"detector_key"`
 	DetectorVersion int32              `json:"detector_version"`
 	EventCode       string             `json:"event_code"`
@@ -649,6 +665,7 @@ func (q *Queries) ListNavInsightExplorerChanges(ctx context.Context, arg ListNav
 		if err := rows.Scan(
 			&i.SiteID,
 			&i.SiteName,
+			&i.Icon,
 			&i.DetectorKey,
 			&i.DetectorVersion,
 			&i.EventCode,
@@ -891,6 +908,7 @@ WITH newest AS (
 )
 SELECT newest.site_id,
        COALESCE(NULLIF(history.name, ''), NULLIF(site.name, ''), '')::text AS site_name,
+       COALESCE(site.icon, '')::text AS icon,
        newest.detector_key,
        newest.detector_version,
        newest.event_code,
@@ -917,6 +935,7 @@ type ListNavInsightOverviewChangesParams struct {
 type ListNavInsightOverviewChangesRow struct {
 	SiteID          int64              `json:"site_id"`
 	SiteName        string             `json:"site_name"`
+	Icon            string             `json:"icon"`
 	DetectorKey     string             `json:"detector_key"`
 	DetectorVersion int32              `json:"detector_version"`
 	EventCode       string             `json:"event_code"`
@@ -937,6 +956,7 @@ func (q *Queries) ListNavInsightOverviewChanges(ctx context.Context, arg ListNav
 		if err := rows.Scan(
 			&i.SiteID,
 			&i.SiteName,
+			&i.Icon,
 			&i.DetectorKey,
 			&i.DetectorVersion,
 			&i.EventCode,

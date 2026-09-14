@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -204,40 +205,58 @@ func (api *GameAPI) ResolveSteamGamePrefill(c fiber.Ctx) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	zhData, err := fetchSteamAppDetails(ctx, client, appid, "schinese")
+	data, err := resolveSteamPrefill(ctx, appid, func(ctx context.Context, language string) (storefront.AppDetailsData, error) {
+		return fetchSteamAppDetails(ctx, client, appid, language)
+	}, func(ctx context.Context) (string, error) {
+		items, err := steamassets.FetchStoreItemAssetURLs(ctx, client.API.StoreBrowseService, steamassets.StoreItemAssetOptions{
+			CountryCode: "CN", Language: "schinese", Kinds: steamAssetKinds("header"), StripQuery: true,
+		}, uint32(appid))
+		for _, item := range items {
+			if value := strings.TrimSpace(item.URL); value != "" {
+				return value, err
+			}
+		}
+		return "", err
+	})
 	if err != nil {
-		return common.NewResponse(c).Error(common.NewServiceError(fmt.Sprintf("fetch schinese steam app details failed: %v", err)))
+		return common.NewResponse(c).Error(common.NewServiceError(err.Error()))
 	}
-	enData, err := fetchSteamAppDetails(ctx, client, appid, "english")
-	if err != nil {
-		return common.NewResponse(c).Error(common.NewServiceError(fmt.Sprintf("fetch english steam app details failed: %v", err)))
-	}
+	return common.NewResponse(c).SuccessWithData(data)
+}
 
-	header := strings.TrimSpace(zhData.HeaderImage)
+// Independent requests share a bounded deadline; one slow locale cannot consume
+// the other locale's opportunity to return useful data.
+func resolveSteamPrefill(ctx context.Context, appid int64, details func(context.Context, string) (storefront.AppDetailsData, error), asset func(context.Context) (string, error)) (steamGamePrefillDTO, error) {
+	var zhData, enData storefront.AppDetailsData
+	var header string
+	var zhErr, enErr, assetErr error
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go func() { defer wg.Done(); zhData, zhErr = details(ctx, "schinese") }()
+	go func() { defer wg.Done(); enData, enErr = details(ctx, "english") }()
+	go func() { defer wg.Done(); header, assetErr = asset(ctx) }()
+	wg.Wait()
+	if strings.TrimSpace(header) == "" {
+		header = strings.TrimSpace(zhData.HeaderImage)
+	}
 	if header == "" {
 		header = strings.TrimSpace(enData.HeaderImage)
 	}
-	items, assetErr := steamassets.FetchStoreItemAssetURLs(ctx, client.API.StoreBrowseService, steamassets.StoreItemAssetOptions{
-		CountryCode: "CN",
-		Language:    "schinese",
-		Kinds:       steamAssetKinds("header"),
-		StripQuery:  true,
-	}, uint32(appid))
-	if assetErr == nil {
-		for _, item := range items {
-			if value := strings.TrimSpace(item.URL); value != "" {
-				header = value
-				break
-			}
-		}
+	data := steamGamePrefill(appid, zhData, enData, header)
+	// AppID and synthetic links alone are not evidence of a successful lookup.
+	if data.Name == "" && data.NameEn == "" && data.Info == "" && data.InfoEn == "" && data.Header == "" && len(data.Groups)+len(data.Developers)+len(data.Publishers) == 0 {
+		return data, fmt.Errorf("no usable Steam prefill data: %w", errors.Join(errors.New("empty upstream data"), zhErr, enErr, assetErr))
 	}
-
-	return common.NewResponse(c).SuccessWithData(steamGamePrefill(appid, zhData, enData, header))
+	return data, nil
 }
 
 func fetchSteamAppDetails(ctx context.Context, client *steam.Client, appid int64, language string) (storefront.AppDetailsData, error) {
+	country := "CN"
+	if language == "english" {
+		country = "US"
+	}
 	envelope, err := client.Web.Storefront.GetAppDetails(ctx, uint32(appid), &storefront.GetAppDetailsOptions{
-		CountryCode: "CN",
+		CountryCode: country,
 		Language:    language,
 	})
 	if err != nil {

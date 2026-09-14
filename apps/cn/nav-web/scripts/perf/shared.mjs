@@ -11,7 +11,7 @@ export const baselinePath = path.join(performanceDir, 'baseline.json')
 export const budgetPath = path.join(performanceDir, 'budget.json')
 
 const defaultViewport = { width: 1440, height: 900 }
-const defaultSitePath = process.env.PERF_SITE_PATH || '/sites/1'
+const defaultSitePath = process.env.PERF_SITE_PATH || '/site/1'
 
 export const scenarios = [
   {
@@ -19,7 +19,7 @@ export const scenarios = [
     label: '首页首屏',
     path: '/',
     critical: true,
-    blockedHeavyDependencies: ['md-editor-v3', 'echarts', 'hls.js']
+    blockedHeavyDependencies: ['echarts', 'hls.js']
   },
   {
     id: 'home-revealed',
@@ -40,13 +40,6 @@ export const scenarios = [
     label: '关于页',
     path: '/about',
     critical: true
-  },
-  {
-    id: 'steam-zone',
-    label: '兽游专区',
-    path: '/steam',
-    critical: true,
-    blockedHeavyDependencies: ['md-editor-v3']
   },
   {
     id: 'games',
@@ -71,10 +64,6 @@ export const scenarios = [
 ]
 
 export const heavyDependencyPatterns = {
-  'md-editor-v3': {
-    url: [/md-editor-v3/i, /md-editor/i, /preview\.[\w-]+\.css/i],
-    body: []
-  },
   echarts: {
     url: [/echarts/i, /zrender/i],
     body: [/zrender/i, /apache echarts/i, /seriesType/i]

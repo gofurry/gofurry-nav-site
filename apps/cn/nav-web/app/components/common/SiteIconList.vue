@@ -66,12 +66,12 @@ const ICON_MAP: Record<string, string> = {
   xiaoheihe: 'xiaoheihe.png'
 }
 
-const BASE_URL = import.meta.env.VITE_GAME_SITE_LOGO_PREFIX_URL || ''
+const BASE_URL = '/web/platform-icons/'
 
 const normalizeIconKey = (key: string) => key.trim().toLowerCase()
 
 const getIconUrl = (key: string) => {
   const iconKey = normalizeIconKey(key)
-  return ICON_MAP[iconKey] ? BASE_URL + ICON_MAP[iconKey] : ''
+  return ICON_MAP[iconKey] ? BASE_URL + ICON_MAP[iconKey] : '/defaultLogo.svg'
 }
 </script>

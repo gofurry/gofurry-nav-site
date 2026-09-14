@@ -12,7 +12,7 @@ import (
 
 	"github.com/gofurry/gofurry-game-collector/internal/health"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 var configuration = new(serverConfig)
@@ -222,6 +222,7 @@ func (cfg DataBaseConfig) ConnectionString() string {
 
 type RedisConfig struct {
 	RedisAddr     string `yaml:"redis_addr"`
+	RedisUsername string `yaml:"redis_username"`
 	RedisPassword string `yaml:"redis_password"`
 }
 

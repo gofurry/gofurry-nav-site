@@ -146,5 +146,5 @@ func parseGameCompareIDs(raw string) ([]int64, error) {
 }
 
 func gameCompareEntity(game v2models.InsightGameRecord) v2models.InsightEntityRef {
-	return v2models.InsightEntityRef{ID: game.ID, Name: game.Name}
+	return insightGameEntity(game.ID, game.Name, game.VisualAsset)
 }

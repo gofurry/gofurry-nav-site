@@ -18,6 +18,16 @@ Themes default to the system preference. The shared header exposes a single Ligh
 
 The backend authorization contract remains authoritative. Navigation and actions ask whether the current principal has a capability; frontend code must not reproduce the Role-to-Capability mapping.
 
+Managed assets use content capabilities: separate desktop/mobile Hero pools and
+the Pattern catalog live under Navigation content; Site Icon uses upload/clear
+inside the site workspace. Pattern selection is previewed locally with the same
+repeating CSS mask model as Nav Web before any upload. System / Cloud resources
+requires `cloudops.read` for inspection and task history, `cloudops.manage` for
+COS-to-R2 repair and scoped CDN purges, and `cloudops.purge_all` for the Owner-only
+entire-EdgeOne-zone action. The main-host button and initially collapsed full-zone
+section must remain visibly distinct, with explicit purge confirmation. No object delete, Cloudflare purge everything, invented global
+sync percentage, or frontend reconstruction of the role policy is exposed.
+
 ## Product structure
 
 Top-level groups are Workbench, Nav Content, Game Content, Data Operations, and System. Content and operational routes are native React:
@@ -26,6 +36,9 @@ Top-level groups are Workbench, Nav Content, Game Content, Data Operations, and 
 /nav/sites
 /nav/sites/:id
 /nav/site-groups
+/nav/site-groups/:id/curation
+/nav/hero-assets
+/nav/background-patterns
 /nav/update-notices
 /nav/sayings
 /game/games
@@ -36,10 +49,13 @@ Top-level groups are Workbench, Nav Content, Game Content, Data Operations, and 
 /collection
 /metrics
 /changes
+/system/cloud
 /system/data-operations
 /system/audit
 /system/accounts
 ~~~
+
+Site Group exposes a homepage curation page showing the first eight active sites and the remaining members. Operators move sites instead of entering weights. Group-oriented GET/PUT `/api/v1/nav/site-groups/:id/curation` uses `content.read`/`content.write`, a revision-checked complete member order, and the existing Nav transaction/audit/cache invalidation path. It persists only mapping weights; site-level bulk replacement preserves existing weights. Public derived caches refresh on the existing ten-minute schedule, so saving is not an immediate public-cache publication.
 
 Site and Game are dedicated workspaces. Simple resources use the typed Resource Engine. Persistence mapping tables are managed as relationships inside workspaces, not exposed as primary navigation.
 

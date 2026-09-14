@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -589,8 +590,8 @@ func TestGetSimilarRecommendationsComputesAndSavesHybridScore(t *testing.T) {
 	if res[0].ID != "2" {
 		t.Fatalf("expected strong tag match first, got %s", res[0].ID)
 	}
-	if res[0].LibraryCoverURL != "library.jpg" || res[0].LibraryCover2xURL != "library.jpg" {
-		t.Fatalf("expected library covers to prefer 1x assets, got %#v", res[0])
+	if res[0].LibraryCoverURL != "library.jpg" || res[0].LibraryCover2xURL != "library_2x.jpg" {
+		t.Fatalf("expected independent real 1x/2x library covers, got %#v", res[0])
 	}
 	if len(res[0].Reasons) == 0 || res[0].Reasons[0].Type != "tag" {
 		t.Fatalf("expected tag reason first, got %#v", res[0].Reasons)
@@ -603,16 +604,59 @@ func TestGetSimilarRecommendationsComputesAndSavesHybridScore(t *testing.T) {
 	}
 }
 
-func TestNormalizeSteamShared1xAssetURL(t *testing.T) {
-	got := normalizeSteamShared1xAssetURL("https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/header_2x.jpg?t=1")
-	want := "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/header.jpg?t=1"
-	if got != want {
-		t.Fatalf("expected 1x steam asset url, got %s", got)
+func TestBuildMediaSelectsRealVerticalCoverVariants(t *testing.T) {
+	oneX := "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/one-digest/library_capsule.jpg?x=1"
+	twoX := "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/two-digest/library_capsule_2x.jpg?x=2"
+	valid := true
+	invalid := false
+	items := []v2models.GfgGameV2Asset{
+		{AssetType: "library_capsule", Source: "store_browse", Lang: "zh", URL: "https://example.test/rejected.jpg", Exists: &invalid},
+		{AssetType: "library_capsule", Source: "store_browse", Lang: "zh", URL: oneX, Exists: &valid},
+		{AssetType: "library_capsule_2x", Source: "store_browse", Lang: "zh", URL: twoX, Exists: &valid},
 	}
 
-	nonSteam := "https://cdn.example.com/store_item_assets/steam/apps/730/header_2x.jpg"
-	if got := normalizeSteamShared1xAssetURL(nonSteam); got != nonSteam {
-		t.Fatalf("expected non-steam url untouched, got %s", got)
+	media := buildMedia(nil, items, "zh")
+	if media.LibraryCoverURL != oneX || media.LibraryCover2xURL != twoX {
+		t.Fatalf("real vertical variants not selected independently: %+v", media)
+	}
+	if len(media.Assets) != 3 || media.Assets[1].URL != oneX || media.Assets[2].URL != twoX {
+		t.Fatalf("asset view rewrote an authoritative URL: %+v", media.Assets)
+	}
+
+	only2x := buildMedia(nil, []v2models.GfgGameV2Asset{{AssetType: "library_capsule_2x", Source: "store_browse", Lang: "en", URL: twoX, Exists: &valid}}, "zh")
+	if only2x.LibraryCoverURL != twoX || only2x.LibraryCover2xURL != twoX {
+		t.Fatalf("real 2x fallback was not preserved exactly: %+v", only2x)
+	}
+
+	neutral := "https://example.test/neutral/library_capsule.jpg"
+	fallback := buildMedia(nil, []v2models.GfgGameV2Asset{
+		{AssetType: "library_capsule", Source: "store_browse", Lang: "zh", URL: "https://example.test/false.jpg", Exists: &invalid},
+		{AssetType: "library_capsule", Source: "store_browse", Lang: "", URL: neutral, Exists: &valid},
+	}, "zh")
+	if fallback.LibraryCoverURL != neutral {
+		t.Fatalf("exists=false blocked neutral language fallback: %+v", fallback)
+	}
+}
+
+func TestNormalizeSteamAssetURLPreservesHashedVariantPath(t *testing.T) {
+	raw := "  https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/730/digest/library_capsule_2x.jpg?t=1  "
+	want := strings.TrimSpace(raw)
+	if got := normalizeSteamAssetURL(raw); got != want {
+		t.Fatalf("hashed Steam asset URL changed: got %s want %s", got, want)
+	}
+}
+
+func TestBuildSimilarRecommendationsKeepsRealCoverVariants(t *testing.T) {
+	rows := []v2models.GameV2RecommendationRow{{
+		GfgGameV2Recommendation: v2models.GfgGameV2Recommendation{TargetGameID: 2},
+		AppID:                   1002,
+		Name:                    "Target",
+		LibraryCoverURL:         "https://example.test/library.jpg",
+		LibraryCover2xURL:       "https://example.test/library_2x.jpg",
+	}}
+	got := buildSimilarRecommendationsFromRows(rows)
+	if len(got) != 1 || got[0].LibraryCoverURL != rows[0].LibraryCoverURL || got[0].LibraryCover2xURL != rows[0].LibraryCover2xURL {
+		t.Fatalf("recommendation cover variants changed: %+v", got)
 	}
 }
 

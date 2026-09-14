@@ -1,7 +1,11 @@
-<template>
-  <SiteDetailPage />
-</template>
-
 <script setup lang="ts">
-import SiteDetailPage from '@/components/site/SiteDetailPage.vue'
+import { siteEntityPath } from '~/utils/siteRoutes'
+
+const route = useRoute()
+const localePath = useLocalePath()
+
+await navigateTo(localePath(siteEntityPath(String(route.params.id ?? ''))), {
+  redirectCode: 301,
+  replace: true,
+})
 </script>

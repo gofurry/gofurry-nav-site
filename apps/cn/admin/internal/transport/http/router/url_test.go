@@ -20,6 +20,7 @@ func TestEveryBusinessRouteDeclaresCapability(t *testing.T) {
 	defer content.Close()
 
 	protectedFunctions := map[string]bool{
+		"cloudRoutes":  true,
 		"changeRoutes": true, "metricRoutes": true, "collectionRoutes": true,
 		"workbenchRoutes": true, "dataOpsRoutes": true, "auditRoutes": true,
 		"accountRoutes": true, "optionsRoutes": true, "navRoutes": true, "gameRoutes": true,
@@ -52,6 +53,21 @@ func TestRepresentativeRouteCapabilityMatrix(t *testing.T) {
 	}
 	source := string(data)
 	expected := []string{
+		`root.Get("/overview", authmw.Require(authorization.CloudOpsRead)`,
+		`root.Post("/object/repair-mirror", authmw.Require(authorization.CloudOpsManage)`,
+		`root.Post("/edgeone/purge", authmw.Require(authorization.CloudOpsManage)`,
+		`root.Post("/edgeone/purge-all", authmw.Require(authorization.CloudOpsPurgeAll)`,
+		`root.Post("/cloudflare/purge", authmw.Require(authorization.CloudOpsManage)`,
+		`root.Post("/sites/:id/icon", authmw.Require(authorization.ContentWrite)`,
+		`root.Delete("/sites/:id/icon", authmw.Require(authorization.ContentWrite)`,
+		`root.Get("/hero-assets", authmw.Require(authorization.ContentRead)`,
+		`root.Post("/hero-assets", authmw.Require(authorization.ContentWrite)`,
+		`root.Put("/hero-assets/:id", authmw.Require(authorization.ContentWrite)`,
+		`root.Get("/background-patterns", authmw.Require(authorization.ContentRead)`,
+		`root.Post("/background-patterns/:id/file", authmw.Require(authorization.ContentWrite)`,
+		`root.Delete("/background-patterns/:id", authmw.Require(authorization.ContentWrite)`,
+		`root.Get("/site-groups/:id/curation", authmw.Require(authorization.ContentRead)`,
+		`root.Put("/site-groups/:id/curation", authmw.Require(authorization.ContentWrite)`,
 		`root.Post("/sites", authmw.Require(authorization.ContentWrite)`,
 		`root.Post("/schedules/:domain/:id/run", authmw.Require(authorization.CollectionExecute)`,
 		`root.Put("/schedules/:domain/:id", authmw.Require(authorization.CollectionControl)`,

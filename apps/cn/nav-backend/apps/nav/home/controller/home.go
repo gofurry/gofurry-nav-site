@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/home/models"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/home/service"
@@ -10,7 +11,8 @@ import (
 type homeReader interface {
 	GetHomePing() models.HomePingResponse
 	GetHomeSaying(lang string) models.HomeSayingResponse
-	GetHomeBackgrounds() models.HomeBackgroundsResponse
+	GetHomeHero(context.Context) models.HomeHeroResponse
+	GetPatterns(context.Context) (models.PatternCatalog, common.GFError)
 }
 
 type homeApi struct{ reader homeReader }
@@ -32,6 +34,9 @@ func (api homeApi) service() homeReader {
 
 func (api homeApi) GetHome(c fiber.Ctx) error {
 	data := service.GetCachedHome(c.Query("lang", "zh"))
+	hero := api.service().GetHomeHero(c.Context())
+	data.Hero = hero.Hero
+	data.CacheState["hero"] = hero.State
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
@@ -45,7 +50,15 @@ func (api homeApi) GetHomeSaying(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api homeApi) GetHomeBackgrounds(c fiber.Ctx) error {
-	data := api.service().GetHomeBackgrounds()
+func (api homeApi) GetHomeHero(c fiber.Ctx) error {
+	data := api.service().GetHomeHero(c.Context())
+	return common.NewResponse(c).SuccessWithData(data)
+}
+
+func (api homeApi) GetPatterns(c fiber.Ctx) error {
+	data, err := api.service().GetPatterns(c.Context())
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
 	return common.NewResponse(c).SuccessWithData(data)
 }

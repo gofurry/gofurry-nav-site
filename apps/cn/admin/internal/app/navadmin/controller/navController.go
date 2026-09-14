@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -9,12 +10,18 @@ import (
 	"github.com/gofurry/gofurry-admin/internal/app/navadmin/models"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/adminutil"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
+	"github.com/gofurry/gofurry-admin/internal/infra/assets"
 	"github.com/gofurry/gofurry-admin/internal/infra/cache"
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type navAPI struct{ store *navStore }
+type navAPI struct {
+	store            *navStore
+	assetStorage     *assets.Service
+	assetPrimaryBase string
+	assetMirrorBase  string
+}
 
 type NavAPI = navAPI
 
@@ -249,6 +256,9 @@ func (api *navAPI) ListSites(c fiber.Ctx) error {
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
+	for i := range items {
+		api.siteIconLinks(&items[i])
+	}
 	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, items))
 }
 
@@ -282,6 +292,7 @@ func (api *navAPI) GetSite(c fiber.Ctx) error {
 	if storeErr != nil {
 		return common.NewResponse(c).Error(storeErr)
 	}
+	api.siteIconLinks(&item)
 	return common.NewResponse(c).SuccessWithData(item)
 }
 
@@ -294,6 +305,7 @@ func (api *navAPI) GetSiteWorkspace(c fiber.Ctx) error {
 	if storeErr != nil {
 		return common.NewResponse(c).Error(storeErr)
 	}
+	api.siteIconLinks(&item.Site)
 	return common.NewResponse(c).SuccessWithData(item)
 }
 
@@ -553,6 +565,13 @@ func decodeCollectorDomain(c fiber.Ctx) (models.CollectorDomainPayload, common.E
 }
 
 func decodeSite(c fiber.Ctx) (models.SitePayload, common.Error) {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(c.Body(), &fields); err != nil {
+		return models.SitePayload{}, common.NewValidationError("request body must be valid json")
+	}
+	if _, exists := fields["icon"]; exists {
+		return models.SitePayload{}, common.NewValidationError("use the dedicated site icon upload or clear endpoint")
+	}
 	var req models.SitePayload
 	if err := adminutil.DecodeBody(c, &req); err != nil {
 		return req, err

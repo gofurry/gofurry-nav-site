@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,17 +16,18 @@ func TestGameComparePreservesSemanticZerosAndCommonHorizons(t *testing.T) {
 	snapshot := horizon.Add(12 * time.Hour)
 	observed := snapshot.Add(time.Minute)
 	priced, free := "priced", "free"
+	supported, unsupported, releaseState := true, false, "available"
 	currency := "CNY"
 	zero := int64(0)
 	discount := int32(100)
 	store := &fakeInsightsStore{
 		games: map[int64]*v2models.InsightGameRecord{
-			2: {ID: 2, Name: "Second"},
-			1: {ID: 1, Name: "First"},
+			2: {ID: 2, Name: "Second", VisualAsset: " https://example.test/header.jpg?version=1 "},
+			1: {ID: 1, Name: "First", VisualAsset: " "},
 		},
 		compareHorizon: &horizon,
 		compareFacts: []v2models.InsightGameCompareFactRecord{
-			{GameID: 2, TrackingPeriodID: 20, LanguageEvidence: "fresh", LanguageCodes: []string{"en"}, FullAudioLanguageCodes: []string{}, UnknownLanguageNames: []string{}, PriceAvailable: true, PriceState: &priced, Currency: &currency, InitialAmount: &zero, FinalAmount: &zero, DiscountPercent: &discount},
+			{GameID: 2, TrackingPeriodID: 20, Free: &unsupported, Windows: &supported, Mac: &unsupported, Release: &releaseState, LanguageEvidence: "fresh", LanguageCodes: []string{"en"}, FullAudioLanguageCodes: []string{}, UnknownLanguageNames: []string{}, PriceAvailable: true, PriceState: &priced, Currency: &currency, InitialAmount: &zero, FinalAmount: &zero, DiscountPercent: &discount},
 			{GameID: 1, TrackingPeriodID: 10, LanguageEvidence: "stale", LanguageCodes: []string{"zh-CN"}, FullAudioLanguageCodes: []string{"zh-CN"}, UnknownLanguageNames: []string{"Klingon"}, PriceAvailable: true, PriceState: &free},
 		},
 		compareCurrent: []v2models.InsightGameCompareCurrentPlayerRecord{
@@ -45,10 +48,21 @@ func TestGameComparePreservesSemanticZerosAndCommonHorizons(t *testing.T) {
 	if got.Status != "ready" || got.StateAsOf == nil || *got.StateAsOf != "2026-09-01" || got.PlayerFactThrough == nil || *got.PlayerFactThrough != "2026-09-01" {
 		t.Fatalf("horizons = %#v", got)
 	}
+	visual := got.Games[0].Game.Visual
+	if visual == nil || visual.Kind != "game_header" || visual.Asset != "https://example.test/header.jpg?version=1" {
+		t.Fatalf("compare visual = %#v", visual)
+	}
+	encoded, marshalErr := json.Marshal(got.Games[1].Game)
+	if marshalErr != nil || strings.Contains(string(encoded), "visual") {
+		t.Fatalf("absent visual must be omitted: %s", encoded)
+	}
 	if len(got.Games) != 2 || got.Games[0].Game.ID != 2 || got.Games[1].Game.ID != 1 {
 		t.Fatalf("order/dedup = %#v", got.Games)
 	}
 	first := got.Games[0]
+	if first.State.Free == nil || *first.State.Free || first.State.Windows == nil || !*first.State.Windows || first.State.Mac == nil || *first.State.Mac || first.State.Linux != nil || first.State.Release == nil || *first.State.Release != "available" {
+		t.Fatalf("release/platform evidence changed: %#v", first.State)
+	}
 	if !first.Players.CurrentAvailable || first.Players.Current == nil || *first.Players.Current != 0 || first.Players.Peak30D == nil || *first.Players.Peak30D != 0 {
 		t.Fatalf("real player zero was lost: %#v", first.Players)
 	}

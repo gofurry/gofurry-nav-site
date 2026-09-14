@@ -15,18 +15,18 @@ import (
 )
 
 type GameV2API struct {
-	readModelDAO  *v2dao.ReadModelDAO
-	viewService   *v2service.GameViewService
-	reviewService *reviewservice.ReviewService
-	insights      insightsReader
+	readModelService *v2service.ReadModelService
+	viewService      *v2service.GameViewService
+	reviewService    *reviewservice.ReviewService
+	insights         insightsReader
 }
 
 func New(readModelDAO *v2dao.ReadModelDAO, viewService *v2service.GameViewService, reviewService *reviewservice.ReviewService, insights insightsReader) *GameV2API {
-	return &GameV2API{readModelDAO: readModelDAO, viewService: viewService, reviewService: reviewService, insights: insights}
+	return &GameV2API{readModelService: v2service.NewReadModelServiceWithReader(readModelDAO), viewService: viewService, reviewService: reviewService, insights: insights}
 }
 
 func (api *GameV2API) GetGameList(c fiber.Ctx) error {
-	data, err := api.newReadModelService().GetGameList(context.Background(), v2models.GameV2ListQuery{
+	data, err := api.getReadModelService().GetGameList(context.Background(), v2models.GameV2ListQuery{
 		Lang:   c.Query("lang", "zh"),
 		Region: c.Query("region", "CN"),
 		Limit:  parseInt(c.Query("limit", "20")),
@@ -45,7 +45,7 @@ func (api *GameV2API) GetGameInfo(c fiber.Ctx) error {
 	if id <= 0 && appid <= 0 {
 		return common.NewResponse(c).Error("id 或 appid 不能为空")
 	}
-	data, err := api.newReadModelService().GetGameDetail(context.Background(), v2models.GameV2DetailRequest{
+	data, err := api.getReadModelService().GetGameDetail(context.Background(), v2models.GameV2DetailRequest{
 		GameID:    id,
 		AppID:     appid,
 		Lang:      c.Query("lang", "zh"),
@@ -85,7 +85,7 @@ func (api *GameV2API) SearchSimple(c fiber.Ctx) error {
 	if err := c.Bind().Body(&req); err != nil {
 		return common.NewResponse(c).Error("解析请求体失败")
 	}
-	data, err := api.newReadModelService().SimpleSearch(context.Background(), req)
+	data, err := api.getReadModelService().SimpleSearch(context.Background(), req)
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -97,7 +97,7 @@ func (api *GameV2API) SearchPage(c fiber.Ctx) error {
 	if err := c.Bind().Body(&req); err != nil {
 		return common.NewResponse(c).Error("解析请求体失败")
 	}
-	data, err := api.newReadModelService().SearchPage(context.Background(), req)
+	data, err := api.getReadModelService().SearchPage(context.Background(), req)
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -105,7 +105,7 @@ func (api *GameV2API) SearchPage(c fiber.Ctx) error {
 }
 
 func (api *GameV2API) GetTags(c fiber.Ctx) error {
-	data, err := api.newReadModelService().ListTags(context.Background(), c.Query("lang", "zh"))
+	data, err := api.getReadModelService().ListTags(context.Background(), c.Query("lang", "zh"))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -113,7 +113,7 @@ func (api *GameV2API) GetTags(c fiber.Ctx) error {
 }
 
 func (api *GameV2API) GetGameReviews(c fiber.Ctx) error {
-	data, err := api.newReadModelService().GetGameReviews(
+	data, err := api.getReadModelService().GetGameReviews(
 		context.Background(),
 		c.Query("id", "0"),
 		parseInt(c.Query("page", "1")),
@@ -137,7 +137,7 @@ func (api *GameV2API) AddAnonymousReview(c fiber.Ctx) error {
 }
 
 func (api *GameV2API) GetLatestReviews(c fiber.Ctx) error {
-	data, err := api.newReadModelService().ListLatestReviews(context.Background(), c.Query("lang", "zh"), parseInt(c.Query("limit", "15")))
+	data, err := api.getReadModelService().ListLatestReviews(context.Background(), c.Query("lang", "zh"), parseInt(c.Query("limit", "15")))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -145,7 +145,7 @@ func (api *GameV2API) GetLatestReviews(c fiber.Ctx) error {
 }
 
 func (api *GameV2API) GetRandomGame(c fiber.Ctx) error {
-	data, err := api.newReadModelService().GetRandomGameID(context.Background())
+	data, err := api.getReadModelService().GetRandomGameID(context.Background())
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
@@ -153,7 +153,7 @@ func (api *GameV2API) GetRandomGame(c fiber.Ctx) error {
 }
 
 func (api *GameV2API) GetSimilarRecommendations(c fiber.Ctx) error {
-	data, err := api.newReadModelService().GetSimilarRecommendations(context.Background(), v2models.GameV2SimilarRecommendationQuery{
+	data, err := api.getReadModelService().GetSimilarRecommendations(context.Background(), v2models.GameV2SimilarRecommendationQuery{
 		GameID: parseInt64(c.Query("id", "0")),
 		Lang:   c.Query("lang", "zh"),
 		Region: c.Query("region", "CN"),
@@ -171,7 +171,7 @@ func (api *GameV2API) GetGameNews(c fiber.Ctx) error {
 	if id <= 0 && appid <= 0 {
 		return common.NewResponse(c).Error("id 或 appid 不能为空")
 	}
-	data, err := api.newReadModelService().GetGameNews(context.Background(), v2models.GameV2NewsQuery{
+	data, err := api.getReadModelService().GetGameNews(context.Background(), v2models.GameV2NewsQuery{
 		GameID: id,
 		AppID:  appid,
 		Lang:   c.Query("lang", "zh"),
@@ -185,7 +185,7 @@ func (api *GameV2API) GetGameNews(c fiber.Ctx) error {
 }
 
 func (api *GameV2API) GetLatestGameNews(c fiber.Ctx) error {
-	data, err := api.newReadModelService().GetLatestGameNews(context.Background(), v2models.GameV2NewsQuery{
+	data, err := api.getReadModelService().GetLatestGameNews(context.Background(), v2models.GameV2NewsQuery{
 		Lang:   c.Query("lang", "zh"),
 		Limit:  parseInt(c.Query("limit", "20")),
 		Offset: parseInt(c.Query("offset", "0")),
@@ -197,7 +197,7 @@ func (api *GameV2API) GetLatestGameNews(c fiber.Ctx) error {
 }
 
 func (api *GameV2API) GetPanelMain(c fiber.Ctx) error {
-	data, err := api.newReadModelService().GetPanelMain(context.Background(), v2models.GameV2PanelQuery{
+	data, err := api.getReadModelService().GetPanelMain(context.Background(), v2models.GameV2PanelQuery{
 		Lang:           c.Query("lang", "zh"),
 		Region:         c.Query("region", "CN"),
 		Limit:          parseInt(c.Query("limit", "8")),
@@ -212,15 +212,15 @@ func (api *GameV2API) GetPanelMain(c fiber.Ctx) error {
 }
 
 func (api *GameV2API) GetHome(c fiber.Ctx) error {
-	data, err := api.newReadModelService().GetHome(context.Background(), c.Query("lang", "zh"), c.Query("region", "CN"))
+	data, err := api.getReadModelService().GetHome(context.Background(), c.Query("lang", "zh"), c.Query("region", "CN"))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
-func (api *GameV2API) newReadModelService() *v2service.ReadModelService {
-	return v2service.NewReadModelServiceWithReader(api.readModelDAO)
+func (api *GameV2API) getReadModelService() *v2service.ReadModelService {
+	return api.readModelService
 }
 
 func (api *GameV2API) newGameViewService() *v2service.GameViewService {

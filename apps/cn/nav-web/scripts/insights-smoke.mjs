@@ -1,9 +1,36 @@
 #!/usr/bin/env node
 import { launchPerfBrowser, normalizeBaseUrl, parseArgs, toAbsoluteUrl } from './perf/shared.mjs'
+import { mockOverview, mockGameHome } from './fixtures/insights-overview.mjs'
 
 const args = parseArgs()
+if (args['changes-fixtures']) {
+  const { runChangesSmoke } = await import('./insights-changes-smoke.mjs')
+  await runChangesSmoke()
+  process.exit(0)
+}
+if (args['compare-fixtures']) {
+  const { runCompareSmoke } = await import('./insights-compare-smoke.mjs')
+  await runCompareSmoke()
+  process.exit(0)
+}
+if (args['workspace-fixtures']) {
+  const { runWorkspaceSmoke } = await import('./insights-workspace-smoke.mjs')
+  await runWorkspaceSmoke()
+  process.exit(0)
+}
+if (args['domain-fixtures']) {
+  const { runDomainSmoke } = await import('./insights-domain-smoke.mjs')
+  await runDomainSmoke()
+  process.exit(0)
+}
+if (args['overview-fixtures']) {
+  const { runOverviewSmoke } = await import('./insights-overview-smoke.mjs')
+  await runOverviewSmoke()
+  process.exit(0)
+}
 const baseUrl = normalizeBaseUrl(args['base-url'] || process.env.INSIGHTS_BASE_URL || 'http://localhost:3000')
 const entitySiteId = args['entity-site-id'] || process.env.INSIGHTS_SITE_ID || ''
+const entitySiteDomain = args['entity-site-domain'] || process.env.INSIGHTS_SITE_DOMAIN || 'target.example'
 const entityGameId = args['entity-game-id'] || process.env.INSIGHTS_GAME_ID || ''
 const insightsRoutes = [
   '/insights',
@@ -35,7 +62,11 @@ const removedWorkshopRoutes = [
   '/en/workshop/developer',
   '/en/workshop/discussion',
 ]
-const siteTargetRoutes = ['/site/1/target.example', '/en/site/1/target.example']
+const targetSiteId = entitySiteId || '1'
+const siteTargetRoutes = [
+  `/site/${targetSiteId}?domain=${encodeURIComponent(entitySiteDomain)}`,
+  `/en/site/${targetSiteId}?domain=${encodeURIComponent(entitySiteDomain)}`,
+]
 const localizedSiteRoutes = entitySiteId ? [`/site/${entitySiteId}`, `/en/site/${entitySiteId}`] : []
 const localizedGameRoutes = entityGameId ? [`/games/${entityGameId}`, `/en/games/${entityGameId}`] : []
 
@@ -97,6 +128,16 @@ const browser = await launchPerfBrowser()
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'zh-CN' })
   const page = await context.newPage()
+  await page.route('**/api/v2/nav/sites/*/view', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ code: 1, data: { site_id: 41, view_count: 1 } }),
+  }))
+  await page.route('**/api/v2/game/games/*/view', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ code: 1, data: { game_id: 82, view_count: 1 } }),
+  }))
   await page.goto(toAbsoluteUrl(baseUrl, '/insights/sites?metric=invalid&range=bad&dimension=bad&slice=true'), {
     waitUntil: 'domcontentloaded',
     timeout: 30000,
@@ -123,8 +164,8 @@ try {
   assert(patternState?.lightState.opacity === 0.065 && patternState.darkState.opacity === 0.045, 'public pattern theme opacity drifted')
   const desktopNavigation = await page.evaluate(() => {
     const shell = document.querySelector('.ecosystem-navigation')
-    const primary = document.querySelector('.insights-nav')
-    const context = document.querySelector('.site-intelligence-nav')
+    const primary = document.querySelector('.insights-primary-nav')
+    const context = document.querySelector('.insights-domain-nav[data-domain="site"]')
     if (!shell || !primary || !context) return null
     const primaryBox = primary.getBoundingClientRect()
     const contextBox = context.getBoundingClientRect()
@@ -136,20 +177,17 @@ try {
     const contextLinkStyle = contextLink ? getComputedStyle(contextLink) : null
     return {
       direction: getComputedStyle(shell).flexDirection,
-      primaryLeft: primaryBox.left,
-      contextLeft: contextBox.left,
-      centerDelta: Math.abs((primaryBox.top + primaryBox.height / 2) - (contextBox.top + contextBox.height / 2)),
-      containerHeightDelta: Math.abs(primaryBox.height - contextBox.height),
-      containerPaddingMatches: primaryStyle.padding === contextStyle.padding,
-      containerBorderMatches: primaryStyle.borderWidth === contextStyle.borderWidth && primaryStyle.borderRadius === contextStyle.borderRadius,
-      itemHeightDelta: primaryLink && contextLink ? Math.abs(primaryLink.getBoundingClientRect().height - contextLink.getBoundingClientRect().height) : Number.POSITIVE_INFINITY,
-      itemTypographyMatches: primaryLinkStyle?.fontSize === contextLinkStyle?.fontSize && primaryLinkStyle?.fontWeight === contextLinkStyle?.fontWeight,
-      itemPaddingMatches: primaryLinkStyle?.paddingInline === contextLinkStyle?.paddingInline,
+      alignedLeft: Math.abs(primaryBox.left - contextBox.left) <= 1,
+      stacked: contextBox.top >= primaryBox.bottom && contextBox.top - primaryBox.bottom <= 12,
+      plainSurfaces: [primaryStyle, contextStyle].every(style => style.boxShadow === 'none' && style.backgroundColor === 'rgba(0, 0, 0, 0)' && style.backgroundImage === 'none' && style.backdropFilter === 'none' && style.borderRadius === '0px'),
+      lowerDomainWeight: Number.parseFloat(contextLinkStyle?.fontSize) < Number.parseFloat(primaryLinkStyle?.fontSize) && Number(contextLinkStyle?.fontWeight) < Number(primaryLinkStyle?.fontWeight),
+      primaryActive: primary.querySelector('[aria-current="page"]')?.getAttribute('href'),
+      domainActive: context.querySelector('[aria-current="page"]')?.getAttribute('href'),
     }
   })
-  assert(desktopNavigation?.direction === 'row' && desktopNavigation.primaryLeft < desktopNavigation.contextLeft && desktopNavigation.centerDelta <= 2, 'desktop Ecosystem navigation was not left/right grouped')
-  assert(desktopNavigation?.containerHeightDelta <= 1 && desktopNavigation.containerPaddingMatches && desktopNavigation.containerBorderMatches, 'primary and context navigation containers do not share one visual specification')
-  assert(desktopNavigation?.itemHeightDelta <= 1 && desktopNavigation.itemTypographyMatches && desktopNavigation.itemPaddingMatches, 'primary and context navigation items do not share one visual specification')
+  assert(desktopNavigation?.direction === 'column' && desktopNavigation.alignedLeft && desktopNavigation.stacked, 'Ecosystem navigation did not stack primary and domain rows')
+  assert(desktopNavigation?.plainSurfaces && desktopNavigation.lowerDomainWeight, 'navigation lost its plain text-tab hierarchy')
+  assert(desktopNavigation?.primaryActive === '/insights/sites' && desktopNavigation.domainActive === '/insights/sites', 'Site navigation did not expose current primary and domain links')
   assert(await page.locator('.insights-hero').count() === 0, 'large Ecosystem hero remained visible')
   await page.waitForURL(url => url.searchParams.get('metric') === 'ipv6' && url.searchParams.get('range') === '30d' && url.searchParams.get('dimension') === 'country' && !url.searchParams.has('slice'))
   assert(await page.locator('.insights-domain-page').getAttribute('data-selected-metric') === 'ipv6', 'invalid metric was not normalized before rendering')
@@ -178,7 +216,7 @@ try {
     navigationDirection: getComputedStyle(document.querySelector('.ecosystem-navigation')).flexDirection,
   }))
   assert(mobileState.overflow <= 2, `mobile Insights page overflowed horizontally by ${mobileState.overflow}px`)
-  assert(mobileState.navigationDirection === 'column', 'small-screen Ecosystem navigation did not split into two centered rows')
+  assert(mobileState.navigationDirection === 'column', 'small-screen Ecosystem navigation did not preserve stacked rows')
   for (const forbidden of ['undefined', 'NaN', 'null%']) {
     assert(!mobileState.text.includes(forbidden), `mobile Insights page exposed ${forbidden}`)
   }
@@ -267,21 +305,6 @@ try {
   await page.waitForURL(url => url.searchParams.get('metric') === 'security_txt' && url.searchParams.get('dimension') === 'group' && url.searchParams.get('slice') === '12')
   console.log('[insights] dimension URL state, slice selection, shared range, and isolated trend passed')
 
-  const mockOverview = (domain) => ({
-    generated_at: '2026-09-01T12:00:00Z',
-    entity_count: domain === 'site' ? 12 : 8,
-    changes_7d: 2,
-    metrics: [],
-    recent_changes: domain === 'site'
-      ? [
-          { type: 'site.ipv6.enabled', date: '2026-09-01', occurred_at: null, entity: { id: 41, name: 'Site fixture' }, detail: null },
-          { type: 'site.tls13.disabled', date: '2026-08-31', occurred_at: null, entity: { id: 42, name: 'Site failure fixture' }, detail: null },
-        ]
-      : [
-          { type: 'game.windows.added', date: '2026-09-01', occurred_at: '2026-09-01T12:00:00Z', entity: { id: 82, name: 'Game fixture' }, detail: null },
-          { type: 'game.linux.added', date: '2026-08-31', occurred_at: '2026-08-31T12:00:00Z', entity: { id: 83, name: 'Game failure fixture' }, detail: null },
-        ],
-  })
   await page.route('**/api/v2/nav/insights/overview', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -291,6 +314,9 @@ try {
     status: 200,
     contentType: 'application/json',
     body: JSON.stringify({ code: 1, data: mockOverview('game') }),
+  }))
+  await page.route('**/api/v2/game/home**', route => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ code: 1, data: mockGameHome() }),
   }))
   await page.route('**/api/v2/nav/sites/*/detail**', (route) => {
     const id = Number(new URL(route.request().url()).pathname.match(/sites\/(\d+)\/detail/)?.[1] || 0)
@@ -390,12 +416,12 @@ try {
       }),
     })
   })
-  const playerRequests = { '30d': 0, '90d': 0, all: 0 }
+  const playerRequests = { '30d': 0, '90d': 0, '180d': 0, '1y': 0, '3y': 0, '5y': 0 }
   const priceRequests = {}
   await page.route('**/api/v2/game/games/*/insights/players**', (route) => {
     const range = new URL(route.request().url()).searchParams.get('range') || '30d'
     playerRequests[range] += 1
-    if (range === 'all') return route.abort('failed')
+    if (range === '5y') return route.abort('failed')
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -433,7 +459,7 @@ try {
   })
   await page.goto(toAbsoluteUrl(baseUrl, '/insights/sites?metric=ipv6&range=30d&dimension=country'), { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(500)
-  await page.locator('.insights-nav__link[href="/insights"]').click()
+  await page.locator('.insights-primary-nav__link[href="/insights"]').click()
   await page.waitForURL(url => url.pathname === '/insights')
   await page.waitForSelector('[data-change-link][href="/site/41"]')
   await page.waitForSelector('[data-change-link][href="/games/82"]')
@@ -458,15 +484,22 @@ try {
   await page.waitForSelector('[data-game-tab="insights"]')
   await page.locator('[data-game-tab="insights"]').click()
   await page.waitForSelector('[data-game-insights][data-player-loaded-ranges*="30d"][data-price-loaded-ranges*="30d"]')
-  assert((await page.locator('[data-current-players]').textContent())?.trim() === '0', 'real player zero was not displayed as zero')
+  assert((await page.locator('[data-current-players]').textContent())?.trim() === '0 人', 'real player zero was not displayed as zero')
+  assert(await page.locator('[data-price-region-summary]').count() === 3, 'Game overview did not expose all three regional prices')
   assert(await page.locator('[data-price-kind="priced"]').count() === 1, 'priced zero was confused with free')
   assert((await page.locator('[data-price-kind="priced"]').textContent())?.includes('¥0.00'), 'priced zero was not visibly priced')
-  assert(await page.locator('[data-observed-low]').getByText('GoFurry 观测最低价', { exact: false }).count() === 1, 'bounded observed-low product naming was not rendered')
-  assert((await page.locator('[data-game-summary]').innerText()).includes('macOS: 支持'), 'Mac was not rendered as a peer platform state')
+  assert(await page.locator('[data-observed-low]').getByText('GoFurry 观测低价', { exact: false }).count() === 1, 'bounded observed-low product naming was not rendered')
+  assert((await page.locator('.game-insights-platform-list').innerText()).includes('macOS') && (await page.locator('.game-insights-platform-list').innerText()).includes('支持'), 'Mac was not rendered as a peer platform state')
+  assert(await page.locator('[data-entity-timeline][data-timeline-mode="compact"]').count() === 1, 'Game timeline did not default to compact mode')
+  const timelineModes = page.locator('[data-entity-timeline] .insights-ranges button')
+  await timelineModes.nth(1).click()
+  assert(await page.locator('[data-entity-timeline][data-timeline-mode="list"]').count() === 1, 'Game timeline list switch failed')
+  assert(await timelineModes.nth(1).getAttribute('aria-pressed') === 'true' && (await timelineModes.nth(1).getAttribute('class')).includes('insights-ranges__button--active'), 'Game timeline lost shared active styling')
+  await timelineModes.nth(0).click()
   await page.getByRole('button', { name: '美国', exact: true }).click()
   await page.waitForSelector('[data-game-insights][data-price-region="US"][data-price-loaded-ranges*="US:30d"]')
   assert(await page.locator('[data-price-kind="unknown"]').count() === 1, 'explicit unknown regional price was collapsed')
-  await page.getByRole('button', { name: '中国香港', exact: true }).click()
+  await page.getByRole('button', { name: '香港', exact: true }).click()
   await page.waitForSelector('[data-game-insights][data-price-region="HK"][data-price-loaded-ranges*="HK:30d"]')
   assert(await page.locator('[data-price-kind="missing"]').count() === 1, 'missing regional fact was collapsed into explicit unknown')
   await page.getByRole('button', { name: '中国', exact: true }).click()
@@ -481,8 +514,8 @@ try {
   await page.locator('[data-game-insights-range="30d"]').click()
   await page.waitForTimeout(250)
   assert(playerRequests['30d'] === 1 && priceRequests['CN:30d'] === 1, 'returning to cached 30d repeated history requests')
-  await page.locator('[data-game-insights-range="all"]').click()
-  await page.waitForSelector('[data-game-insights][data-price-loaded-ranges*="all"]')
+  await page.locator('[data-game-insights-range="5y"]').click()
+  await page.waitForSelector('[data-game-insights][data-price-loaded-ranges*="5y"]')
   await page.locator('[data-player-history]').getByText('生态观测数据暂不可用', { exact: true }).waitFor()
   assert(await page.locator('[data-price-history] .game-insights-chart--visible').count() === 1, 'player failure prevented price history from rendering')
   console.log('[insights] Game zero, priced-zero, lazy range cache, and partial failures passed')
@@ -530,22 +563,22 @@ try {
     items: [{ code: 'en', steam_name: 'English', supported_games: 2, share: 1, explicit_full_audio_games: 1, explicit_full_audio_share: 0.5 }],
   } }) }))
 
-  await page.locator('.game-intelligence-nav a[href="/insights/games/players"]').click()
+  await page.locator('.insights-domain-nav[data-domain="game"] a[href="/insights/games/players"]').click()
   await page.waitForSelector('[data-player-intelligence]')
   await page.getByRole('button', { name: '30 天观测均值', exact: true }).click()
   await page.waitForURL(url => url.searchParams.get('metric') === 'average_30d')
   await page.getByText('112 个成功样本', { exact: false }).waitFor()
-  assert((await page.locator('.intelligence-table tbody tr td').nth(2).textContent())?.trim() === '0', 'Player ranking lost a real zero')
-  await page.locator('.game-intelligence-nav a[href="/insights/games/prices"]').click()
+  assert((await page.locator('[data-rank="1"] .insight-ranking-row__value strong').textContent())?.trim() === '0', 'Player ranking lost a real zero')
+  await page.locator('.insights-domain-nav[data-domain="game"] a[href="/insights/games/prices"]').click()
   await page.waitForSelector('[data-regional-price-intelligence]')
-  await page.getByRole('button', { name: '中国香港', exact: true }).click()
+  await page.getByRole('button', { name: '香港', exact: true }).click()
   await page.waitForURL(url => url.searchParams.get('region') === 'HK')
   await page.getByText('Priced zero fixture', { exact: true }).waitFor()
-  assert(await page.locator('.intelligence-panel .intelligence-table').count() === 1, 'Price overview failure broke the independent discount list')
-  await page.locator('.game-intelligence-nav a[href="/insights/games/languages"]').click()
+  assert(await page.locator('.insight-discount-row').count() === 1, 'Price overview failure broke the independent discount list')
+  await page.locator('.insights-domain-nav[data-domain="game"] a[href="/insights/games/languages"]').click()
   await page.waitForSelector('[data-language-intelligence]')
-  await page.getByText('明确标注完整音频', { exact: true }).waitFor()
-  await page.getByText('语言是重叠分布，各语言比例不能相加推导 100%。', { exact: true }).waitFor()
+  await page.locator('[data-language]').getByText('明确标注完整音频', { exact: false }).waitFor()
+  await page.locator('[data-language-overlap]').waitFor()
   console.log('[insights] P2.2 Player, regional Price, Mac, Language URL/zero/quality/failure semantics passed')
 
   const siteCapabilityKeys = ['ipv6', 'tls13', 'http2', 'hsts', 'csp', 'security_txt', 'certificate_verified']
@@ -559,10 +592,13 @@ try {
       })),
     } }) })
   })
+  await page.route('**/api/v2/nav/sites/directory**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 1, data: [42,41].map(id => ({ id: String(id), name: 'Site ' + id, domain: 'site-' + id + '.example', icon: null })) }) }))
   await page.goto(toAbsoluteUrl(baseUrl, '/insights/sites/compare'), { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(500)
-  await page.locator('.compare-builder input').fill('42,41,42')
-  await page.locator('.compare-builder button[type="submit"]').click()
+  await page.getByRole('combobox').fill('Site')
+  await page.locator('[data-picker-result="42"]').click()
+  await page.getByRole('combobox').press('ArrowDown')
+  await page.locator('[data-picker-result="41"]').click()
   await page.waitForURL(url => url.searchParams.get('ids') === '42,41')
   await page.waitForSelector('[data-site-compare][data-compare-count="2"] [data-compare-result]')
   assert((await page.locator('[data-compare-entity-id]').allTextContents()).map(value => value.trim()).join('|').includes('Site 42') && (await page.locator('[data-compare-entity-id]').first().getAttribute('data-compare-entity-id')) === '42', 'Site Compare lost first-appearance order or deduplication')
@@ -581,10 +617,13 @@ try {
       })),
     } }) })
   })
+  await page.route('**/api/v2/game/search/simple**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 1, data: [82,83].map(id => ({ id: String(id), name: 'Game ' + id, info: '', cover: '' })) }) }))
   await page.goto(toAbsoluteUrl(baseUrl, '/insights/games/compare?region=CN'), { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(500)
-  await page.locator('.compare-builder input').fill('82,83')
-  await page.locator('.compare-builder button[type="submit"]').click()
+  await page.getByRole('combobox').fill('Game')
+  await page.locator('[data-picker-result="82"]').click()
+  await page.getByRole('combobox').press('ArrowDown')
+  await page.locator('[data-picker-result="83"]').click()
   await page.waitForURL(url => url.searchParams.get('ids') === '82,83' && url.searchParams.get('region') === 'CN')
   await page.waitForSelector('[data-game-compare][data-compare-count="2"] [data-compare-result]')
   assert((await page.locator('[data-current-player-available="true"]').textContent())?.trim() === '0', 'Game Compare changed real player zero')
@@ -626,6 +665,24 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('.insights-change-explorer-item').length === 2)
   assert(!new URL(page.url()).searchParams.has('cursor'), 'Load More placed cursor in URL')
   console.log('[insights] Change Explorer filters, reset, Load More, and cursor URL isolation passed')
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(toAbsoluteUrl(baseUrl, '/en/insights/games/prices'), { waitUntil: 'domcontentloaded' })
+  await page.waitForSelector('.insights-domain-nav[data-domain="game"]')
+  await page.waitForTimeout(500)
+  await page.keyboard.press('Tab')
+  for (const selector of ['.insights-primary-nav', '.insights-domain-nav']) {
+    const links = page.locator(`${selector} a`)
+    await links.first().focus()
+    for (let index = 1; index < await links.count(); index += 1) await page.keyboard.press('Tab')
+    const focus = await links.last().evaluate(link => {
+      const box = link.getBoundingClientRect()
+      const nav = link.closest('nav').getBoundingClientRect()
+      return link === document.activeElement && link.matches(':focus-visible') && getComputedStyle(link).outlineStyle === 'solid' && box.left >= nav.left - 1 && box.right <= nav.right + 1
+    })
+    assert(focus, `${selector} did not keep the last keyboard-focused mobile link fully visible`)
+  }
+  console.log('[insights] mobile text navigation keyboard focus and horizontal scrolling passed')
 
   await context.close()
   console.log('[insights] URL state, locale preservation, interactions, and mobile overflow passed')

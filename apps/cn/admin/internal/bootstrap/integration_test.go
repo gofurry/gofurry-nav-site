@@ -22,6 +22,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	env "github.com/gofurry/gofurry-admin/config"
 	"github.com/gofurry/gofurry-admin/internal/app/auditadmin"
+	"github.com/gofurry/gofurry-admin/internal/app/auth/authorization"
 	authcontroller "github.com/gofurry/gofurry-admin/internal/app/auth/controller"
 	authmw "github.com/gofurry/gofurry-admin/internal/app/auth/middleware"
 	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
@@ -39,7 +40,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 type integrationEnvelope struct {
@@ -103,6 +104,10 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	app.Post("/nav/audit-failure", navAPI.CreateSite)
 	protected := app.Group("", authmw.Required(authService))
 	protected.Post("/nav/sites", navAPI.CreateSite)
+	protected.Post("/nav/site-groups", authmw.Require(authorization.ContentWrite), navAPI.CreateSiteGroup)
+	protected.Get("/nav/site-groups/:id/curation", authmw.Require(authorization.ContentRead), navAPI.GetGroupCuration)
+	protected.Put("/nav/site-groups/:id/curation", authmw.Require(authorization.ContentWrite), navAPI.ReorderGroupCuration)
+	protected.Put("/nav/site-group-maps/bulk-replace", authmw.Require(authorization.ContentWrite), navAPI.BulkReplaceSiteGroupMaps)
 	protected.Get("/nav/site-summaries", navAPI.ListSiteWorkspaceSummaries)
 	protected.Get("/nav/sites/:id/workspace", navAPI.GetSiteWorkspace)
 	protected.Get("/nav/sites/:id", navAPI.GetSite)
@@ -152,7 +157,15 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 
 	site := requestJSON(t, app, http.MethodPost, "/nav/sites", `{"name":"站点","name_en":"Site","info":"简介","info_en":"Info","country":"CN","nsfw":"0","welfare":"0"}`, cookie, http.StatusOK)
 	siteID := responseID(t, site)
-	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/nav/sites/%d", siteID), `{"name":"站点更新","name_en":"Updated Site","info":"简介","info_en":"Updated info","country":null,"nsfw":"0","welfare":"0","icon":null}`, cookie, http.StatusOK)
+	iconKey := fmt.Sprintf("nav/sites/%d/icon/%s.svg", siteID, strings.Repeat("a", 32))
+	if _, err := navPool.Exec(ctx, `UPDATE gfn_site SET icon=$1 WHERE id=$2`, iconKey, siteID); err != nil {
+		t.Fatal(err)
+	}
+	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/nav/sites/%d", siteID), `{"name":"站点更新","icon":null}`, cookie, http.StatusBadRequest)
+	requestJSON(t, app, http.MethodPut, fmt.Sprintf("/nav/sites/%d", siteID), `{"name":"站点更新","name_en":"Updated Site","info":"简介","info_en":"Updated info","country":null,"nsfw":"0","welfare":"0"}`, cookie, http.StatusOK)
+	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site WHERE id=$1 AND icon=$2 AND name='站点更新' AND country IS NULL`, siteID, iconKey); count != 1 {
+		t.Fatal("ordinary Site update did not preserve its managed icon and update content")
+	}
 	requestJSON(t, app, http.MethodGet, fmt.Sprintf("/nav/sites/%d", siteID), "", cookie, http.StatusOK)
 	requestJSON(t, app, http.MethodDelete, fmt.Sprintf("/nav/sites/%d", siteID), "", cookie, http.StatusOK)
 	if got := queryBool(t, ctx, navPool, `SELECT deleted FROM gfn_site WHERE id=$1`, siteID); !got {
@@ -301,6 +314,8 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	testMetricCenterReadOnlyAPI(t, ctx, app, cookie, gamePool, navPool)
 	testChangeCenterReadOnlyAPI(t, ctx, app, cookie, gamePool, navPool)
 	testDataSystemOperationsAPI(t, ctx, app, cookie, adminPool, names)
+
+	testHomepageGroupCuration(t, ctx, app, cookie, navPool, adminPool)
 
 	// Prove that gfn and gfa are not treated as a distributed transaction: a
 	// failed gfa audit must roll back the still-open gfn business transaction.

@@ -12,3 +12,5 @@ all request values use PostgreSQL parameters, sort expressions come from
 closed internal variants, and PostgreSQL characterization tests cover the
 public detail/list/search/review/tag/recommendation/collector-status behavior.
 This package is not a generic repository or a SQL builder.
+
+Detail hydration queues independent projections in one pgx batch on one pool connection. Localized rows still merge field by field; news, player data, and the initial entity lookup retain their existing behavior. Batching does not add parallel per-request connections or change the HTTP error/SEO contract.

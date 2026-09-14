@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 func TestExampleConfigDecodesDatabasePool(t *testing.T) {
@@ -21,8 +21,21 @@ func TestExampleConfigDecodesDatabasePool(t *testing.T) {
 	if cfg.DataBase.DBName != "gfn" || cfg.DataBase.MaxConns != 6 || cfg.DataBase.ConnectTimeoutSeconds != 5 || cfg.DataBase.PingTimeoutSeconds != 3 {
 		t.Fatalf("database pool config not decoded: %+v", cfg.DataBase)
 	}
+	if cfg.Redis.RedisUsername != "gofurry_app" {
+		t.Fatalf("redis username = %q, want gofurry_app", cfg.Redis.RedisUsername)
+	}
 	if !cfg.Health.Enabled || cfg.Health.ListenAddr != "127.0.0.1:19091" {
 		t.Fatalf("health config not decoded: %+v", cfg.Health)
+	}
+}
+
+func TestRedisUsernameIsOptional(t *testing.T) {
+	var cfg serverConfig
+	if err := yaml.Unmarshal([]byte("redis:\n  redis_addr: 127.0.0.1:6379\n"), &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Redis.RedisUsername != "" {
+		t.Fatalf("omitted redis username = %q, want empty", cfg.Redis.RedisUsername)
 	}
 }
 

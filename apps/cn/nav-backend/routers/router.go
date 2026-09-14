@@ -7,14 +7,13 @@ package routers
  */
 
 import (
-	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/gofiber/contrib/v3/monitor"
 	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/fiber/v3/middleware/pprof"
@@ -23,18 +22,12 @@ import (
 	"github.com/gofurry/gofurry-nav-backend/common/util"
 	"github.com/gofurry/gofurry-nav-backend/middleware"
 	"github.com/gofurry/gofurry-nav-backend/roof/env"
-	"github.com/gofurry/monitor"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var Router *router
 
 type router struct{}
-
-var (
-	navMonitorOnce sync.Once
-	navMonitor     *monitor.Monitor
-)
 
 func NewRouter() *router {
 	return &router{}
@@ -60,6 +53,7 @@ func (router *router) Init(pool *pgxpool.Pool, dependencies NavDependencies) *fi
 		JSONEncoder:  sonic.Marshal,
 		JSONDecoder:  sonic.Unmarshal,
 	})
+	registerMonitor(app)
 	registerHealthChecks(app, pool)
 
 	// 注册全局中间件
@@ -88,7 +82,6 @@ func registerRoutes(app *fiber.App, dependencies NavDependencies) {
 // registerMiddlewares 注册中间件
 func registerMiddlewares(app *fiber.App) {
 	cfg := env.GetServerConfig()
-	registerMonitor(app)
 
 	// 恢复 panic
 	app.Use(recover.New(recover.Config{
@@ -133,52 +126,12 @@ func registerMiddlewares(app *fiber.App) {
 }
 
 func registerMonitor(app *fiber.App) {
-	mon := getNavMonitor()
-	app.All("/monitor", adaptor.HTTPHandler(mon))
-	app.Use(navMonitorMiddleware(mon))
-	app.Hooks().OnPostShutdown(func(_ error) error {
-		mon.Stop()
-		return nil
-	})
-}
-
-func getNavMonitor() *monitor.Monitor {
-	navMonitorOnce.Do(func() {
-		navMonitor = monitor.NewMonitor(http.NotFoundHandler(), monitor.Config{
-			Path:            "/monitor",
-			Title:           "GoFurry Nav Monitor",
-			Description:     "GoFurry navigation backend single-service monitor.",
-			DefaultLanguage: "zh-CN",
-			DefaultTheme:    "dark",
-			Refresh:         5 * time.Second,
-		})
-	})
-	return navMonitor
-}
-
-func navMonitorMiddleware(mon *monitor.Monitor) fiber.Handler {
-	return func(c fiber.Ctx) error {
-		if c.Path() == "/monitor" {
-			return c.Next()
-		}
-
-		started := time.Now()
-		mon.RequestStarted()
-		err := c.Next()
-
-		status := c.Response().StatusCode()
-		if err != nil {
-			status = fiber.StatusInternalServerError
-			if fiberErr, ok := err.(*fiber.Error); ok {
-				status = fiberErr.Code
-			}
-		}
-		if status < 100 {
-			status = fiber.StatusOK
-		}
-		mon.RequestFinished(status, time.Since(started))
-		return err
-	}
+	app.Use(monitor.New(monitor.Config{
+		Next:        func(c fiber.Ctx) bool { return !strings.EqualFold(strings.TrimRight(c.Path(), "/"), "/monitor") },
+		Title:       "GoFurry Nav Monitor",
+		Description: "GoFurry navigation backend single-service monitor.",
+		Refresh:     5 * time.Second,
+	}))
 }
 
 // customErrorHandler 自定义错误处理

@@ -16,6 +16,7 @@ export type OptionItem = { id: string; label: string; extra?: string }
 export type KeyValue = { key: string; value: string }
 
 export type Site = {
+	icon_primary_url?: string; icon_mirror_url?: string
   id: number; name: string; name_en: string; info: string; info_en: string
   create_time: string; update_time: string; country: string | null
   nsfw: string; welfare: string; icon: string | null; deleted: boolean

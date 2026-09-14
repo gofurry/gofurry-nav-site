@@ -100,7 +100,7 @@ func (s *InsightsService) GetInsightsChanges(ctx context.Context, query v2models
 		result.Items = append(result.Items, v2models.InsightExplorerChange{
 			Domain: "game", Category: contract.category, Type: contract.public,
 			Date: insightFormatDate(row.ProjectionDate), OccurredAt: occurredAt,
-			Entity: v2models.InsightEntityRef{ID: row.EntityID, Name: row.EntityName}, Detail: nil,
+			Entity: insightGameEntity(row.EntityID, row.EntityName, row.VisualAsset), Detail: nil,
 		})
 	}
 	if hasMore && len(rows) > 0 {

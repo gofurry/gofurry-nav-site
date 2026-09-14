@@ -47,21 +47,44 @@ func (q *Queries) CountGameInsightOverviewChanges(ctx context.Context, arg Count
 }
 
 const getGameInsightGame = `-- name: GetGameInsightGame :one
-SELECT id, name, name_en
-FROM public.gfg_game
-WHERE id = $1
+SELECT game.id, game.name, game.name_en,
+       -- Match Game V2's default zh header selection: header before header_2x,
+       -- zh/en/unlocalized assets, then media, details, and the existing game header.
+       COALESCE(
+           (SELECT asset.url FROM public.gfg_game_assets asset
+            WHERE asset.game_id = game.id
+              AND asset.asset_type IN ('header', 'header_2x')
+              AND asset.lang IN ('zh', 'en', '')
+              AND asset.exists IS DISTINCT FROM false AND BTRIM(asset.url) <> ''
+            ORDER BY CASE asset.asset_type WHEN 'header' THEN 0 ELSE 1 END,
+                     CASE asset.lang WHEN 'zh' THEN 0 WHEN 'en' THEN 1 ELSE 2 END,
+                     asset.asset_family, asset.sort_order, asset.id LIMIT 1),
+           NULLIF((SELECT media.url FROM public.gfg_game_media media
+                   WHERE media.game_id = game.id AND media.media_type = 'header'
+                   ORDER BY media.sort_order DESC, media.id DESC LIMIT 1), ''),
+           NULLIF((SELECT details.header_url FROM public.gfg_game_details details
+                   WHERE details.game_id = game.id), ''),
+           NULLIF(game.header, ''), '')::text AS header_url
+FROM public.gfg_game game
+WHERE game.id = $1
 `
 
 type GetGameInsightGameRow struct {
-	ID     int64  `json:"id"`
-	Name   string `json:"name"`
-	NameEn string `json:"name_en"`
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	NameEn    string `json:"name_en"`
+	HeaderUrl string `json:"header_url"`
 }
 
 func (q *Queries) GetGameInsightGame(ctx context.Context, gameID int64) (GetGameInsightGameRow, error) {
 	row := q.db.QueryRow(ctx, getGameInsightGame, gameID)
 	var i GetGameInsightGameRow
-	err := row.Scan(&i.ID, &i.Name, &i.NameEn)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.NameEn,
+		&i.HeaderUrl,
+	)
 	return i, err
 }
 
@@ -636,6 +659,23 @@ WITH horizon AS (
 )
 SELECT horizon.as_of, fact.game_id, fact.tracking_period_id,
        COALESCE(NULLIF(fact.name, ''), fact.name_en, '')::text AS game_name,
+       -- Match Game V2's default zh header selection: header before header_2x,
+       -- zh/en/unlocalized assets, then media, details, and the existing game header.
+       COALESCE(
+           (SELECT asset.url FROM public.gfg_game_assets asset
+            WHERE asset.game_id = fact.game_id
+              AND asset.asset_type IN ('header', 'header_2x')
+              AND asset.lang IN ('zh', 'en', '')
+              AND asset.exists IS DISTINCT FROM false AND BTRIM(asset.url) <> ''
+            ORDER BY CASE asset.asset_type WHEN 'header' THEN 0 ELSE 1 END,
+                     CASE asset.lang WHEN 'zh' THEN 0 WHEN 'en' THEN 1 ELSE 2 END,
+                     asset.asset_family, asset.sort_order, asset.id LIMIT 1),
+           NULLIF((SELECT media.url FROM public.gfg_game_media media
+                   WHERE media.game_id = fact.game_id AND media.media_type = 'header'
+                   ORDER BY media.sort_order DESC, media.id DESC LIMIT 1), ''),
+           NULLIF((SELECT details.header_url FROM public.gfg_game_details details
+                   WHERE details.game_id = fact.game_id), ''),
+           NULLIF(game.header, ''), '')::text AS header_url,
        price.currency, price.initial_amount, price.final_amount, price.discount_percent
 FROM horizon
 JOIN public.gfg_game_daily fact ON fact.fact_date = horizon.as_of
@@ -643,6 +683,7 @@ JOIN public.gfg_game_daily fact ON fact.fact_date = horizon.as_of
 JOIN public.gfg_game_price_daily price ON price.tracking_period_id = fact.tracking_period_id
  AND price.fact_date = horizon.as_of AND price.region = $1
  AND price.finalized_at IS NOT NULL AND price.price_state = 'priced' AND price.discount_percent > 0
+LEFT JOIN public.gfg_game game ON game.id = fact.game_id
 ORDER BY price.discount_percent DESC, fact.game_id ASC
 LIMIT $2
 `
@@ -657,6 +698,7 @@ type ListGameInsightCurrentDiscountsRow struct {
 	GameID           int64       `json:"game_id"`
 	TrackingPeriodID int64       `json:"tracking_period_id"`
 	GameName         string      `json:"game_name"`
+	HeaderUrl        string      `json:"header_url"`
 	Currency         *string     `json:"currency"`
 	InitialAmount    *int64      `json:"initial_amount"`
 	FinalAmount      *int64      `json:"final_amount"`
@@ -677,6 +719,7 @@ func (q *Queries) ListGameInsightCurrentDiscounts(ctx context.Context, arg ListG
 			&i.GameID,
 			&i.TrackingPeriodID,
 			&i.GameName,
+			&i.HeaderUrl,
 			&i.Currency,
 			&i.InitialAmount,
 			&i.FinalAmount,
@@ -695,6 +738,23 @@ func (q *Queries) ListGameInsightCurrentDiscounts(ctx context.Context, arg ListG
 const listGameInsightExplorerChanges = `-- name: ListGameInsightExplorerChanges :many
 SELECT event.game_id,
        COALESCE(NULLIF(history.name, ''), NULLIF(game.name, ''), '')::text AS game_name,
+       -- Match Game V2's default zh header selection: header before header_2x,
+       -- zh/en/unlocalized assets, then media, details, and the existing game header.
+       COALESCE(
+           (SELECT asset.url FROM public.gfg_game_assets asset
+            WHERE asset.game_id = event.game_id
+              AND asset.asset_type IN ('header', 'header_2x')
+              AND asset.lang IN ('zh', 'en', '')
+              AND asset.exists IS DISTINCT FROM false AND BTRIM(asset.url) <> ''
+            ORDER BY CASE asset.asset_type WHEN 'header' THEN 0 ELSE 1 END,
+                     CASE asset.lang WHEN 'zh' THEN 0 WHEN 'en' THEN 1 ELSE 2 END,
+                     asset.asset_family, asset.sort_order, asset.id LIMIT 1),
+           NULLIF((SELECT media.url FROM public.gfg_game_media media
+                   WHERE media.game_id = event.game_id AND media.media_type = 'header'
+                   ORDER BY media.sort_order DESC, media.id DESC LIMIT 1), ''),
+           NULLIF((SELECT details.header_url FROM public.gfg_game_details details
+                   WHERE details.game_id = event.game_id), ''),
+           NULLIF(game.header, ''), '')::text AS header_url,
        event.detector_key,
        event.detector_version,
        event.event_code,
@@ -762,6 +822,7 @@ type ListGameInsightExplorerChangesParams struct {
 type ListGameInsightExplorerChangesRow struct {
 	GameID          int64              `json:"game_id"`
 	GameName        string             `json:"game_name"`
+	HeaderUrl       string             `json:"header_url"`
 	DetectorKey     string             `json:"detector_key"`
 	DetectorVersion int32              `json:"detector_version"`
 	EventCode       string             `json:"event_code"`
@@ -796,6 +857,7 @@ func (q *Queries) ListGameInsightExplorerChanges(ctx context.Context, arg ListGa
 		if err := rows.Scan(
 			&i.GameID,
 			&i.GameName,
+			&i.HeaderUrl,
 			&i.DetectorKey,
 			&i.DetectorVersion,
 			&i.EventCode,
@@ -964,6 +1026,23 @@ WITH snapshot AS (
     ORDER BY raw.game_id, raw.collected_at DESC, raw.id DESC
 )
 SELECT observations.game_id, COALESCE(NULLIF(game.name, ''), game.name_en, '')::text AS game_name,
+       -- Match Game V2's default zh header selection: header before header_2x,
+       -- zh/en/unlocalized assets, then media, details, and the existing game header.
+       COALESCE(
+           (SELECT asset.url FROM public.gfg_game_assets asset
+            WHERE asset.game_id = observations.game_id
+              AND asset.asset_type IN ('header', 'header_2x')
+              AND asset.lang IN ('zh', 'en', '')
+              AND asset.exists IS DISTINCT FROM false AND BTRIM(asset.url) <> ''
+            ORDER BY CASE asset.asset_type WHEN 'header' THEN 0 ELSE 1 END,
+                     CASE asset.lang WHEN 'zh' THEN 0 WHEN 'en' THEN 1 ELSE 2 END,
+                     asset.asset_family, asset.sort_order, asset.id LIMIT 1),
+           NULLIF((SELECT media.url FROM public.gfg_game_media media
+                   WHERE media.game_id = observations.game_id AND media.media_type = 'header'
+                   ORDER BY media.sort_order DESC, media.id DESC LIMIT 1), ''),
+           NULLIF((SELECT details.header_url FROM public.gfg_game_details details
+                   WHERE details.game_id = observations.game_id), ''),
+           NULLIF(game.header, ''), '')::text AS header_url,
        observations.player_count, observations.collected_at
 FROM observations
 JOIN public.gfg_game game ON game.id = observations.game_id
@@ -974,6 +1053,7 @@ LIMIT $1
 type ListGameInsightLatestPlayerRankingRow struct {
 	GameID      int64              `json:"game_id"`
 	GameName    string             `json:"game_name"`
+	HeaderUrl   string             `json:"header_url"`
 	PlayerCount int64              `json:"player_count"`
 	CollectedAt pgtype.Timestamptz `json:"collected_at"`
 }
@@ -990,6 +1070,7 @@ func (q *Queries) ListGameInsightLatestPlayerRanking(ctx context.Context, limitC
 		if err := rows.Scan(
 			&i.GameID,
 			&i.GameName,
+			&i.HeaderUrl,
 			&i.PlayerCount,
 			&i.CollectedAt,
 		); err != nil {
@@ -1227,6 +1308,23 @@ WITH newest AS (
 )
 SELECT newest.game_id,
        COALESCE(NULLIF(history.name, ''), NULLIF(game.name, ''), '')::text AS game_name,
+       -- Match Game V2's default zh header selection: header before header_2x,
+       -- zh/en/unlocalized assets, then media, details, and the existing game header.
+       COALESCE(
+           (SELECT asset.url FROM public.gfg_game_assets asset
+            WHERE asset.game_id = newest.game_id
+              AND asset.asset_type IN ('header', 'header_2x')
+              AND asset.lang IN ('zh', 'en', '')
+              AND asset.exists IS DISTINCT FROM false AND BTRIM(asset.url) <> ''
+            ORDER BY CASE asset.asset_type WHEN 'header' THEN 0 ELSE 1 END,
+                     CASE asset.lang WHEN 'zh' THEN 0 WHEN 'en' THEN 1 ELSE 2 END,
+                     asset.asset_family, asset.sort_order, asset.id LIMIT 1),
+           NULLIF((SELECT media.url FROM public.gfg_game_media media
+                   WHERE media.game_id = newest.game_id AND media.media_type = 'header'
+                   ORDER BY media.sort_order DESC, media.id DESC LIMIT 1), ''),
+           NULLIF((SELECT details.header_url FROM public.gfg_game_details details
+                   WHERE details.game_id = newest.game_id), ''),
+           NULLIF(game.header, ''), '')::text AS header_url,
        newest.detector_key,
        newest.detector_version,
        newest.event_code,
@@ -1253,6 +1351,7 @@ type ListGameInsightOverviewChangesParams struct {
 type ListGameInsightOverviewChangesRow struct {
 	GameID          int64              `json:"game_id"`
 	GameName        string             `json:"game_name"`
+	HeaderUrl       string             `json:"header_url"`
 	DetectorKey     string             `json:"detector_key"`
 	DetectorVersion int32              `json:"detector_version"`
 	EventCode       string             `json:"event_code"`
@@ -1273,6 +1372,7 @@ func (q *Queries) ListGameInsightOverviewChanges(ctx context.Context, arg ListGa
 		if err := rows.Scan(
 			&i.GameID,
 			&i.GameName,
+			&i.HeaderUrl,
 			&i.DetectorKey,
 			&i.DetectorVersion,
 			&i.EventCode,
@@ -1321,6 +1421,23 @@ WITH horizon AS (
     HAVING sum(daily.successful_samples) > 0
 )
 SELECT aggregate.game_id, COALESCE(NULLIF(game.name, ''), game.name_en, '')::text AS game_name,
+       -- Match Game V2's default zh header selection: header before header_2x,
+       -- zh/en/unlocalized assets, then media, details, and the existing game header.
+       COALESCE(
+           (SELECT asset.url FROM public.gfg_game_assets asset
+            WHERE asset.game_id = aggregate.game_id
+              AND asset.asset_type IN ('header', 'header_2x')
+              AND asset.lang IN ('zh', 'en', '')
+              AND asset.exists IS DISTINCT FROM false AND BTRIM(asset.url) <> ''
+            ORDER BY CASE asset.asset_type WHEN 'header' THEN 0 ELSE 1 END,
+                     CASE asset.lang WHEN 'zh' THEN 0 WHEN 'en' THEN 1 ELSE 2 END,
+                     asset.asset_family, asset.sort_order, asset.id LIMIT 1),
+           NULLIF((SELECT media.url FROM public.gfg_game_media media
+                   WHERE media.game_id = aggregate.game_id AND media.media_type = 'header'
+                   ORDER BY media.sort_order DESC, media.id DESC LIMIT 1), ''),
+           NULLIF((SELECT details.header_url FROM public.gfg_game_details details
+                   WHERE details.game_id = aggregate.game_id), ''),
+           NULLIF(game.header, ''), '')::text AS header_url,
        aggregate.peak_30d, aggregate.average_30d, aggregate.eligible_from,
        aggregate.observed_days, aggregate.successful_samples, aggregate.sample_coverage, aggregate.has_sample_coverage
 FROM aggregate JOIN public.gfg_game game ON game.id = aggregate.game_id
@@ -1337,6 +1454,7 @@ type ListGameInsightPlayer30dRankingParams struct {
 type ListGameInsightPlayer30dRankingRow struct {
 	GameID            int64       `json:"game_id"`
 	GameName          string      `json:"game_name"`
+	HeaderUrl         string      `json:"header_url"`
 	Peak30d           int64       `json:"peak_30d"`
 	Average30d        float64     `json:"average_30d"`
 	EligibleFrom      pgtype.Date `json:"eligible_from"`
@@ -1358,6 +1476,7 @@ func (q *Queries) ListGameInsightPlayer30dRanking(ctx context.Context, arg ListG
 		if err := rows.Scan(
 			&i.GameID,
 			&i.GameName,
+			&i.HeaderUrl,
 			&i.Peak30d,
 			&i.Average30d,
 			&i.EligibleFrom,

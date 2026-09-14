@@ -119,6 +119,14 @@ Game public types cover free/paid, Windows, macOS, Linux, release availability/p
 
 Overview feeds apply the public whitelist, keep the newest eligible event per entity, order newest first, and return at most eight. Entity timelines do not deduplicate by entity and return at most twenty.
 
+Overview changes may include `entity.visual: { kind, asset }`. `site_icon` carries the managed Site icon object key, resolved by Nav Web's `useManagedAsset` with a bundled logo fallback; `game_header` carries an existing absolute Game V2 header reference. Game headers follow the default Chinese public asset preference (header before header_2x, zh/en/unlocalized), then existing media/details/game-header fallbacks. These are current presentation assets, not historical event facts. Missing references and other EntityRef uses omit `visual`; no image collection or per-entity request is introduced.
+
+The editorial `/insights` entry merges the two Overview feeds into one leading event plus at most four compact events. Its third independent source is the existing `/game/panel/main`: player observations, US-ranked discounts displayed in their original currency/region, and recent releases. It adds no endpoint. `generated_at` labels snapshot generation, using the earlier available Overview response when both exist; it is not an observation timestamp or a shared backend snapshot.
+
+Run `npm run insights:smoke -- --overview-fixtures` from Nav Web after a production build for an isolated Overview smoke with a temporary loopback upstream/server. This covers SSR, the three independent failure states, media fallbacks and zh/en responsive layouts without a database or live CDN. The regular `insights:smoke` continues to exercise the wider live-data contracts. Screenshots from the fixture run are written to the OS temporary directory, outside Git.
+
+The Domain observatories preserve `useInsightsDomain` / `useInsightsDimensions` query ownership. Site begins with seven capability metrics and an 8:4 trend/context layout; Game begins with the shared Panel pulse, separates business-model/platform metrics, and uses a wider trend. Dimension bars preserve the first eight backend items: Site visualizes `metric_value`, Game visualizes population counts. The expandable table retains every item, and selected slice history stays inline. `insights:smoke -- --domain-fixtures` verifies zh/en SSR, constant initial requests (Site three, Game four, plus one for selected slice history), independent Panel failure, query interactions and deferred `all` histories using the same isolated fixture server as the Overview regression.
+
 ## Change Explorer contract
 
 The domain-specific Explorer endpoints expose the complete approved public stream without overview entity deduplication. `/insights/changes` selects exactly one domain (`site` or `game`) in the UI; the P1 overview remains the only cross-domain recent feed.

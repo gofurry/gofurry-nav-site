@@ -54,8 +54,8 @@
                     <template v-else>{{ slide.page * pageSize + index + 1 }}</template>
                   </span>
                   <span class="spotlight-site__logo">
-                    <img
-                      :src="siteLogoSrc(site)"
+                    <ManagedAssetImage
+                      :object-key="site.icon"
                       :alt="site.name"
                       width="29"
                       height="29"
@@ -81,6 +81,7 @@
 </template>
 
 <script setup lang="ts">
+import ManagedAssetImage from '@/components/common/ManagedAssetImage.vue'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { NavHomeSpotlight, Site } from '~/types/nav'
@@ -105,8 +106,6 @@ const props = defineProps<{
   displayMode: DisplayMode
 }>()
 
-const logoPrefix = import.meta.env.VITE_SITE_LOGO_PREFIX_URL || ''
-const defaultLogo = 'defaultLogo.svg'
 const { locale } = useI18n()
 const isEnglish = computed(() => locale.value === 'en')
 const pages = ref<Record<PanelKey, number>>({
@@ -303,30 +302,8 @@ function resetPanelPages() {
   panelMotion.value = createPanelMotionStates()
 }
 
-function joinAssetUrl(prefix: string, path: string) {
-  if (!prefix) {
-    return path
-  }
-  return `${prefix.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
-}
 
-function withAssetVersion(url: string, version?: string | null) {
-  const normalizedVersion = (version || '').trim()
-  if (!normalizedVersion) {
-    return url
-  }
-  const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}v=${encodeURIComponent(normalizedVersion)}`
-}
 
-function siteLogoSrc(site: Site) {
-  const iconPath = site.icon || defaultLogo
-  const assetURL = joinAssetUrl(logoPrefix, iconPath)
-  if (!site.icon) {
-    return assetURL
-  }
-  return withAssetVersion(assetURL, site.update_time)
-}
 
 function domainList(site: Site) {
   if (Array.isArray(site.domain)) {

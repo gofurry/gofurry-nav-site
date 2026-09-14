@@ -84,17 +84,20 @@ COALESCE((SELECT a.url FROM gfg_game_assets a
   ORDER BY CASE a.asset_type WHEN 'capsule_main' THEN 0 WHEN 'hero_capsule' THEN 1
     WHEN 'capsule_main_2x' THEN 2 WHEN 'hero_capsule_2x' THEN 3 ELSE 4 END,
     a.sort_order,a.id LIMIT 1), '') AS capsule_url,
-COALESCE((SELECT a.url FROM gfg_game_assets a
-  WHERE a.game_id=g.id AND a.exists IS DISTINCT FROM false AND a.source='store_browse'
-    AND a.asset_type='library_capsule' AND COALESCE(a.url,'')<>''
-  ORDER BY a.sort_order,a.id LIMIT 1), '') AS library_cover_url,
 COALESCE(
   (SELECT a.url FROM gfg_game_assets a WHERE a.game_id=g.id
     AND a.exists IS DISTINCT FROM false AND a.source='store_browse'
     AND a.asset_type='library_capsule' AND COALESCE(a.url,'')<>'' ORDER BY a.sort_order,a.id LIMIT 1),
   (SELECT a.url FROM gfg_game_assets a WHERE a.game_id=g.id
     AND a.exists IS DISTINCT FROM false AND a.source='store_browse'
-    AND a.asset_type='library_capsule_2x' AND COALESCE(a.url,'')<>'' ORDER BY a.sort_order,a.id LIMIT 1), '') AS library_cover_2x_url`
+    AND a.asset_type='library_capsule_2x' AND COALESCE(a.url,'')<>'' ORDER BY a.sort_order,a.id LIMIT 1), '') AS library_cover_url,
+COALESCE(
+  (SELECT a.url FROM gfg_game_assets a WHERE a.game_id=g.id
+    AND a.exists IS DISTINCT FROM false AND a.source='store_browse'
+    AND a.asset_type='library_capsule_2x' AND COALESCE(a.url,'')<>'' ORDER BY a.sort_order,a.id LIMIT 1),
+  (SELECT a.url FROM gfg_game_assets a WHERE a.game_id=g.id
+    AND a.exists IS DISTINCT FROM false AND a.source='store_browse'
+    AND a.asset_type='library_capsule' AND COALESCE(a.url,'')<>'' ORDER BY a.sort_order,a.id LIMIT 1), '') AS library_cover_2x_url`
 
 const recommendationProjectionSQL = `
 g.appid,

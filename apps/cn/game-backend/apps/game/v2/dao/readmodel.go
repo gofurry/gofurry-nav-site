@@ -101,6 +101,10 @@ func queryOptional[T any](ctx context.Context, pool *pgxpool.Pool, sql string, a
 	if err != nil {
 		return nil, err
 	}
+	return collectOptional[T](rows)
+}
+
+func collectOptional[T any](rows pgx.Rows) (*T, error) {
 	value, err := pgx.CollectOneRow(rows, pgx.RowToStructByNameLax[T])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil

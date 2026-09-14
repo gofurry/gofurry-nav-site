@@ -11,6 +11,21 @@ import (
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 )
 
+func TestGameInsightsWithoutFinalizedFactsHasEmptyRegions(t *testing.T) {
+	store := &fakeInsightsStore{game: &v2models.InsightGameRecord{ID: 1, Name: "Game"}}
+	got, err := NewInsightsService(store).GetGameInsights(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.RegionalPrices.Regions == nil || len(got.RegionalPrices.Regions) != 0 || got.RegionalPrices.AsOf != nil || got.Price != nil || got.State.AsOf != nil || got.Players.Current != nil {
+		t.Fatalf("empty facts must preserve unknown values and an empty regions array: %+v", got)
+	}
+	data, err := json.Marshal(got.RegionalPrices)
+	if err != nil || string(data) != `{"as_of":null,"regions":[]}` {
+		t.Fatalf("invalid empty JSON: %s, %v", data, err)
+	}
+}
+
 type fakeInsightsStore struct {
 	game              *v2models.InsightGameRecord
 	games             map[int64]*v2models.InsightGameRecord
@@ -257,6 +272,29 @@ func TestInsightValidationAndExactDelta(t *testing.T) {
 	}
 }
 
+func TestParseInsightRange(t *testing.T) {
+	tests := map[string]int32{
+		"30d":  30,
+		"90d":  90,
+		"180d": 180,
+		"1y":   365,
+		"3y":   1095,
+		"5y":   1825,
+		"all":  0,
+	}
+	for input, want := range tests {
+		t.Run(input, func(t *testing.T) {
+			got, ok := parseInsightRange(input)
+			if !ok || got != want {
+				t.Fatalf("parseInsightRange(%q) = %d, %v; want %d, true", input, got, ok, want)
+			}
+		})
+	}
+	if got, ok := parseInsightRange("7d"); ok || got != 0 {
+		t.Fatalf("parseInsightRange(7d) = %d, %v; want 0, false", got, ok)
+	}
+}
+
 func TestInsightDimensionsUseGlobalHorizonNullMathAndDeletedTagFallback(t *testing.T) {
 	horizon := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
 	store := &fakeInsightsStore{
@@ -304,8 +342,8 @@ func TestInsightSliceTrendUsesGlobalHorizonAndDoesNotFill(t *testing.T) {
 func TestInsightExplorerCategoryCursorAndNoEntityDedupe(t *testing.T) {
 	day := time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
 	store := &fakeInsightsStore{changes: []v2models.InsightChangeRecord{
-		{EntityID: 1, DetectorKey: "game_price_transition", DetectorVersion: 1, EventCode: "game_price_decreased", ProjectionDate: day, TimeBasis: "day", PrecisionRank: 0, EventSortAt: day, OpaqueTie: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
-		{EntityID: 1, DetectorKey: "game_price_transition", DetectorVersion: 1, EventCode: "game_price_increased", ProjectionDate: day.AddDate(0, 0, -1), TimeBasis: "day", PrecisionRank: 0, EventSortAt: day.AddDate(0, 0, -1), OpaqueTie: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+		{EntityID: 1, VisualAsset: " https://example.test/header.jpg ", DetectorKey: "game_price_transition", DetectorVersion: 1, EventCode: "game_price_decreased", ProjectionDate: day, TimeBasis: "day", PrecisionRank: 0, EventSortAt: day, OpaqueTie: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+		{EntityID: 1, VisualAsset: " ", DetectorKey: "game_price_transition", DetectorVersion: 1, EventCode: "game_price_increased", ProjectionDate: day.AddDate(0, 0, -1), TimeBasis: "day", PrecisionRank: 0, EventSortAt: day.AddDate(0, 0, -1), OpaqueTie: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
 		{EntityID: 2, DetectorKey: "game_price_transition", DetectorVersion: 1, EventCode: "game_price_state_changed", ProjectionDate: day.AddDate(0, 0, -2), TimeBasis: "day", PrecisionRank: 0, EventSortAt: day.AddDate(0, 0, -2), OpaqueTie: "cccccccccccccccccccccccccccccccc"},
 	}}
 	service := NewInsightsService(store)
@@ -316,6 +354,16 @@ func TestInsightExplorerCategoryCursorAndNoEntityDedupe(t *testing.T) {
 	}
 	if len(first.Items) != 2 || first.Items[0].Entity.ID != first.Items[1].Entity.ID || first.Items[0].Category != "price" || first.NextCursor == nil {
 		t.Fatalf("explorer category/dedupe = %#v", first)
+	}
+	if visual := first.Items[0].Entity.Visual; visual == nil || visual.Kind != "game_header" || visual.Asset != "https://example.test/header.jpg" {
+		t.Fatalf("explorer visual = %#v", visual)
+	}
+	if first.Items[1].Entity.Visual != nil || first.Items[0].Detail != nil || first.Items[1].Detail != nil {
+		t.Fatal("explorer fabricated media or event details")
+	}
+	missing, err := json.Marshal(first.Items[1].Entity)
+	if err != nil || strings.Contains(string(missing), "visual") {
+		t.Fatalf("missing visual was not omitted: %s (%v)", missing, err)
 	}
 	payload, err := json.Marshal(first)
 	if err != nil {
@@ -411,3 +459,21 @@ func TestPriceOverviewAndLanguageMathUseCorrectDenominators(t *testing.T) {
 }
 
 func boolPointer(value bool) *bool { return &value }
+
+func TestOverviewEntityVisualPreservesPublicHeaderAndOptionalShape(t *testing.T) {
+	asset := "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/123/digest/header.jpg?version=1"
+	base := v2models.InsightChangeRecord{EntityID: 82, EntityName: "Game", DetectorKey: "mac_support_transition", DetectorVersion: 1, EventCode: "mac_support_added", ProjectionDate: time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC), TimeBasis: "day"}
+	withVisual := base
+	withVisual.VisualAsset = asset
+	changes := insightPublicChanges([]v2models.InsightChangeRecord{withVisual, base})
+	if len(changes) != 2 || changes[0].Entity.Visual == nil || changes[0].Entity.Visual.Kind != "game_header" || changes[0].Entity.Visual.Asset != asset {
+		t.Fatalf("authoritative header reference changed: %+v", changes)
+	}
+	if changes[0].Type != changes[1].Type || changes[0].Date != changes[1].Date || changes[0].OccurredAt != nil || changes[0].Detail != nil {
+		t.Fatalf("presentation changed the event: %+v", changes)
+	}
+	payload, err := json.Marshal(changes[1].Entity)
+	if err != nil || strings.Contains(string(payload), "visual") {
+		t.Fatalf("ordinary EntityRef must omit visual: %s (%v)", payload, err)
+	}
+}

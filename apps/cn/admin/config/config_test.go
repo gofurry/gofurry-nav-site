@@ -46,3 +46,16 @@ func TestExplicitViperConfigDoesNotEnableAutomaticEnv(t *testing.T) {
 		t.Fatalf("server port = %q, want file value", cfg.Server.Port)
 	}
 }
+
+func TestExampleConfigUsesRuntimeRoles(t *testing.T) {
+	var cfg serverConfig
+	if err := InitConfig("gofurry-admin", "server.yaml", "server.example.yaml", &cfg); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.DataBase.Postgres.DBUser != "gofurry_app" || cfg.BusinessDatabases.Nav.Postgres.DBUser != "gofurry_app" || cfg.BusinessDatabases.Game.Postgres.DBUser != "gofurry_app" {
+		t.Fatal("example PostgreSQL pools must use the runtime gofurry_app role")
+	}
+	if cfg.Redis.RedisUsername != "gofurry_app" {
+		t.Fatalf("redis username = %q, want gofurry_app", cfg.Redis.RedisUsername)
+	}
+}

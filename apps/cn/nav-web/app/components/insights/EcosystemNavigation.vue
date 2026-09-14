@@ -1,15 +1,13 @@
 <template>
   <div class="ecosystem-navigation" :data-context="context || 'none'">
-    <InsightsNav />
-    <SiteIntelligenceNav v-if="context === 'site'" />
-    <GameIntelligenceNav v-else-if="context === 'game'" />
+    <InsightsPrimaryNav />
+    <InsightsDomainNav v-if="context" :domain="context" />
   </div>
 </template>
 
 <script setup lang="ts">
-import GameIntelligenceNav from '@/components/insights/GameIntelligenceNav.vue'
-import InsightsNav from '@/components/insights/InsightsNav.vue'
-import SiteIntelligenceNav from '@/components/insights/SiteIntelligenceNav.vue'
+import InsightsPrimaryNav from './navigation/InsightsPrimaryNav.vue'
+import InsightsDomainNav from './navigation/InsightsDomainNav.vue'
 
 defineProps<{
   context?: 'site' | 'game'
