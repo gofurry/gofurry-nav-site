@@ -1,6 +1,11 @@
 # Managed asset production cutover
 
-This is a maintenance-window cutover, not a rolling deployment. The tools never
+> **Production status: Initial production cutover completed on 2026-09-14.**
+> Do not rerun the initial cutover SQL against the already-migrated production database.
+> This runbook is retained for historical evidence, rollback context, and first-time deployment of other environments.
+> See the [production acceptance record](acceptance/v3-alpha8-managed-assets-production-acceptance.md).
+
+This runbook describes the one-time initial maintenance-window cutover, not a rolling deployment. The tools never
 load the root `.env`, connect to PostgreSQL, purge a CDN, delete old objects or
 execute their generated SQL. Goose remains the sole schema owner.
 

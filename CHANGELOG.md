@@ -6,15 +6,17 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+## v3.0.0-alpha.8 - 2026-09-15
+
 ### Added
 
 - Add group-centric Admin homepage curation with an ordered Top 8 preview and remaining members; persist existing group-map weights with revision checks, transaction locking, audit, and cache invalidation while preserving site-level group editing and bulk-replacement weights (#101).
-- Add managed Site icons, independent desktop/mobile AVIF Hero pools, and a bilingual SVG pattern catalog with Admin publishing, previews, capabilities, and audit. COS is Primary; R2 is a best-effort Mirror whose failure returns a warning without blocking Primary publication (#104, #93, #85).
+- Add managed Site icons, independent desktop/mobile AVIF Hero pools, and a bilingual SVG pattern catalog with Admin publishing, previews, capabilities, and audit. COS is Primary; R2 is a best-effort Mirror whose failure returns a warning without blocking Primary publication (#104, #85).
 - Add the Goose-owned `gfn_home_hero_asset` and `gfn_background_pattern` tables, generated sqlc queries, managed object keys in `gfn_site.icon`, Home schema v4, and the public pattern catalog API.
-- Add the Admin Cloud Resources workspace for COS/R2 status, object inspection, COS-to-R2 repair, scoped EdgeOne/Cloudflare cache purges, and EdgeOne task history; reserve full-zone purge for its separate Owner capability and endpoint (#105).
-- Add an SSR-aware managed-asset CDN resolver with verified background probes, a 12-hour CDN preference cookie, request-failure fallback, and bundled defaults while preserving the independent Steam CDN system.
-- Add public background preferences for bundled/server patterns and browser-local images, with theme-specific appearance overrides and IndexedDB file persistence; local files never upload and SSR starts from the bundled default.
-- Add explicit cloud configuration examples, opt-in real development cloud acceptance suites, and asset staging with manifests and reviewable cutover/rollback SQL. Production migration requires a maintenance-window cutover; Goose never contacts object storage.
+- Add the Admin Cloud Resources workspace for COS/R2 status, object inspection, COS-to-R2 repair, scoped EdgeOne/Cloudflare cache purges, and EdgeOne task history; reserve full-zone purge for its separate Owner capability and endpoint (#93).
+- Add an SSR-aware managed-asset CDN resolver with verified background probes, a 12-hour CDN preference cookie, request-failure fallback, and bundled defaults while preserving the independent Steam CDN system (#104).
+- Add public background preferences for bundled/server patterns and browser-local images, with theme-specific appearance overrides and IndexedDB file persistence; local files never upload and SSR starts from the bundled default (#85).
+- Add explicit cloud configuration examples, opt-in real development cloud acceptance suites, and asset staging with manifests and reviewable cutover/rollback SQL. The initial production maintenance-window cutover completed on 2026-09-14; Goose never contacts object storage. Archive the verified production results in [the acceptance record](docs/acceptance/v3-alpha8-managed-assets-production-acceptance.md).
 
 ### Changed
 
@@ -34,6 +36,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Preserve the independent `status.go-furry.com` uptime service while planned maintenance places the main GoFurry application hosts behind the 503 maintenance page.
 - Recognize the managed-asset migration in Admin Data Operations and align three-database integration coverage with dedicated icon mutation endpoints, including preservation of existing icons during ordinary Site edits.
 - Make Admin Steam prefill best-effort across Chinese/English details and auxiliary assets; apply available nonempty fields even when another source fails, and fail only when no meaningful data remains (#103).
 - Reuse the cached Game Home panel for Ecosystem pages instead of rebuilding the uncached panel during SSR.
@@ -55,7 +58,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Removed
 
-- Remove active hardcoded `qcdn.go-furry.com` URLs, legacy `SiteLogo`/`GamePrefix` configuration, `nav/static/SiteLogos` and `nav/bg` path conventions, numbered Hero counts, and `GetImageUrl()`; bundle fixed artwork and use managed keys without a permanent legacy compatibility layer (#104, #93, #85).
+- Remove active hardcoded `qcdn.go-furry.com` URLs, legacy `SiteLogo`/`GamePrefix` configuration, `nav/static/SiteLogos` and `nav/bg` path conventions, numbered Hero counts, and `GetImageUrl()`; bundle fixed artwork and use managed keys without a permanent legacy compatibility layer (#105).
 - Remove unused Nav Web Axios helpers, `md-editor-v3`, and `highlight.js`, plus dead copied Go HTTP helpers and their unused dependency edges; retain actively used HTML parsing, media, date-picker, and chart dependencies (#72).
 - Remove the obsolete cross-framework monitor experiment and `third-party/monitor` submodule after the production middleware migration; retain the Steam reference submodule (#72).
 

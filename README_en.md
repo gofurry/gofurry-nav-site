@@ -49,6 +49,8 @@ GoFurry is an open-source, multi-service repository for furry culture discovery,
 
 > International-site components are currently planned and are not part of the active production runtime topology.
 
+Admin publishes managed assets to COS Primary and an R2 best-effort Mirror, delivered through EdgeOne Primary CDN and Cloudflare Mirror CDN. The database stores provider-neutral object keys; the frontend uses browser-side preference and failure fallback. See [Managed assets](./docs/managed-assets.md) and the [asset contract](./contracts/assets.md).
+
 ## Stack
 
 - Go / Fiber
@@ -57,6 +59,7 @@ GoFurry is an open-source, multi-service repository for furry culture discovery,
 - Tailwind CSS / Less
 - Coraza WAF
 - Bbolt
+- Tencent COS / EdgeOne, Cloudflare R2 / CDN
 
 ## Quick Start
 

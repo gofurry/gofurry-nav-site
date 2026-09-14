@@ -1,5 +1,15 @@
 # Managed assets: development and operations
 
+## Production status
+
+The initial production cutover completed on 2026-09-14. Managed Assets is the
+production architecture: COS / EdgeOne is Primary and R2 / Cloudflare is the
+best-effort Mirror. Daily content writes go through Admin. See the
+[production acceptance record](acceptance/v3-alpha8-managed-assets-production-acceptance.md)
+and the [historical cutover runbook](managed-assets-cutover.md), retained for
+rollback context and first-time deployment of other environments. Do not rerun
+initial `cutover.sql` against the already-migrated production database.
+
 ## Admin content management
 
 All paths below are under `/api/v1/nav`. Reads require `content.read`; mutations
@@ -48,7 +58,7 @@ The derived home cache still owns navigation content. Hero selection is composed
 at request time from independent pools, so disabling or deleting an asset takes
 effect without waiting for the content cache. Empty pools stay NULL and never
 borrow from the other viewport. The reader rejects pre-v4 home payloads; the
-maintenance cutover must clear/rebuild derived caches before traffic resumes.
+initial maintenance cutover required clearing/rebuilding derived caches before traffic resumed.
 
 Nuxt configures `NUXT_PUBLIC_ASSET_PRIMARY_BASE` and
 `NUXT_PUBLIC_ASSET_MIRROR_BASE`, with public origins only. SSR uses the valid
@@ -111,8 +121,8 @@ and provider mapping have separate unit coverage.
 ## Development configuration and storage acceptance
 
 The durable boundaries are in [the asset contract](../contracts/assets.md).
-Production staging, generated cutover/rollback SQL and the maintenance sequence
-are in [the cutover runbook](managed-assets-cutover.md).
+Initial staging, generated cutover/rollback SQL and the maintenance sequence
+are preserved in [the historical cutover runbook](managed-assets-cutover.md).
 
 Admin reads `external_services.asset_storage` and `external_services.cloud_ops` from its explicit configuration file. Copy the shape from `apps/cn/admin/config/server.example.yaml` and put actual development values only in the ignored `config/server.yaml`. Nav Backend has no cloud secret; Nav Web needs public CDN origins only.
 

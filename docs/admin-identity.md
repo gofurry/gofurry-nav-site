@@ -27,8 +27,11 @@ The alpha.5 singleton migration accepts zero or one legacy account. One row beco
 | `audit.read` | yes | yes | no |
 | `account.manage` | yes | no | no |
 | `system.manage` | yes | no | no |
+| `cloudops.read` | yes | yes | no |
+| `cloudops.manage` | yes | yes | no |
+| `cloudops.purge_all` | yes | no | no |
 
-Unknown roles receive no capabilities and unknown capabilities are denied.
+The compiled catalog has 16 capabilities. Owner receives all of them. Unknown roles receive no capabilities and unknown capabilities are denied; frontend code consumes returned capabilities rather than reconstructing this policy.
 
 ## Route authorization
 
@@ -42,7 +45,11 @@ Unknown roles receive no capabilities and unknown capabilities are denied.
 | Data Operations metadata | `dataops.read` | read-only; no mutation endpoints |
 | Audit history and details | `audit.read` | read-only, snapshot identity and secret redaction |
 | Account list/create/display name/role/status/password/revoke | — | `account.manage` |
+| Cloud Resources overview, object inspection, EdgeOne tasks | `cloudops.read` | Mirror repair and scoped EdgeOne/Cloudflare purge: `cloudops.manage`; full-zone EdgeOne purge: `cloudops.purge_all` (Owner-only) |
+| Self-service username/password | authenticated account | current-password verification; no `account.manage` requirement |
 
-Account endpoints live under `/api/v1/auth/accounts`. There is no hard-delete endpoint. Username is immutable; display-name-only updates do not revoke sessions. Role, status, password, and explicit revoke operations increment session version and are audited without secret material.
+Account-management endpoints live under `/api/v1/auth/accounts`. There is no hard-delete endpoint. Display-name-only updates do not revoke sessions. Role, status, password, and explicit revoke operations increment session version and are audited without secret material.
+
+Every authenticated account can use `PUT /api/v1/auth/self/username` and `POST /api/v1/auth/self/password` after current-password verification. Username changes enforce canonical uniqueness, preserve the current session, and refresh identity. Password changes increment `session_version`, clear the auth cookie, invalidate prior sessions, and require a new login. Both actions record redacted audit snapshots; self-service does not grant account-management access.
 
 The last active Owner invariant is enforced inside the account transaction by locking the active Owner set before role/status mutation. With two active Owners one can be demoted or disabled; concurrent requests cannot remove both.

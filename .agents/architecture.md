@@ -18,6 +18,9 @@ there is no asset registry, replica table or synchronization worker. Nav Backend
 returns object keys, and Nuxt resolves the CDN using an SSR-readable preference
 cookie and browser probes. Local backgrounds stay in IndexedDB. See
 `contracts/assets.md` and `docs/managed-assets.md`.
+This architecture entered production on 2026-09-14. Initial cutover is complete;
+`docs/managed-assets-cutover.md` is historical/rollback context and a first-deployment
+runbook for other environments. Never rerun initial cutover SQL on migrated production.
 
 `db/game`, `db/nav`, and `db/admin` exclusively own schema through Goose. Applications open bounded pgxpool connections and never execute migrations. Root `sqlc.yaml` generates service-local packages; normal business SQL is static sqlc SQL.
 

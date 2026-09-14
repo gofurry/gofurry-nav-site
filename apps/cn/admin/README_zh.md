@@ -12,6 +12,11 @@ Admin 认证为数据库校验的多账号系统，固定使用 `owner`、`devel
 
 React 原生提供采集、指标、变化、工作台关注事项、只读数据运维、审计和账号治理。界面只消费后端 capability；DataOps 只展示三个数据库的安全元数据、Goose 状态和有限 Top N 存储信息，不执行 SQL 或数据库维护。
 
+Admin 管理保留原格式的网站图标、独立的桌面/移动端 AVIF Hero 资源池和 SVG
+图案目录，使用 COS Primary 与 R2 尽力镜像。“云资源”按后端 capability 提供对象检查、
+镜像修复与限定范围的 EdgeOne / Cloudflare 清缓存；整个 EdgeOne Zone 清缓存仅限
+Owner。详见[托管资产说明](../../../docs/managed-assets.md)与[资产契约](../../../contracts/assets.md)。
+
 ## 本地开发
 
 需要 Go 1.26.7、Node.js/npm、PostgreSQL 和 Redis。

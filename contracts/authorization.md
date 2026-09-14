@@ -6,7 +6,8 @@
 - Business routes authorize capabilities, never roles. Missing roles and unknown capabilities fail closed. Authentication failure returns `401`; capability denial returns `403`.
 - CloudOps uses `cloudops.read` and `cloudops.manage` for Owner/Developer, while `cloudops.purge_all` belongs only to Owner. Operator keeps `content.write` for business asset management and receives no CloudOps permissions. Full-zone EdgeOne purge has a separate route; ordinary host purge cannot invoke it.
 - Bootstrap is available only while the account count is zero and creates one active Owner. Disabled accounts never reopen bootstrap.
-- Role changes, status changes, password resets, and explicit revocation increment `session_version`. Display-name changes do not. Usernames are immutable after account creation in P0.5.2-A.
+- Role changes, status changes, password resets, and explicit revocation increment `session_version`. Display-name changes do not.
+- Every authenticated account can change its own username or password through `/api/v1/auth/self/*` after current-password verification, without `account.manage`. Username changes enforce canonical uniqueness, preserve the session, and refresh identity. Password changes increment `session_version`, clear the auth cookie, invalidate prior sessions, and require login again. Both actions write redacted audit snapshots.
 - Disabling or demoting the last active Owner is forbidden under transaction-safe PostgreSQL row locking. Concurrent mutations must never leave zero active Owners.
 - Account deletion is not exposed. Disable preserves audit identity.
 - Audit rows retain the legacy `operator` field and also snapshot `operator_account_id`, `operator_name`, and `operator_role`. Snapshots remain interpretable after later account changes and never contain password hashes, tokens, cookies, or secrets.

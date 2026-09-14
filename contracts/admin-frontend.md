@@ -22,9 +22,10 @@ Managed assets use content capabilities: separate desktop/mobile Hero pools and
 the Pattern catalog live under Navigation content; Site Icon uses upload/clear
 inside the site workspace. Pattern selection is previewed locally with the same
 repeating CSS mask model as Nav Web before any upload. System / Cloud resources
-uses CloudOps capabilities for live object inspection, COS-to-R2 repair and CDN
-purges. The main-host button and Owner-only entire-EdgeOne-zone button must remain
-visibly distinct. No object delete, Cloudflare purge everything, invented global
+requires `cloudops.read` for inspection and task history, `cloudops.manage` for
+COS-to-R2 repair and scoped CDN purges, and `cloudops.purge_all` for the Owner-only
+entire-EdgeOne-zone action. The main-host button and initially collapsed full-zone
+section must remain visibly distinct, with explicit purge confirmation. No object delete, Cloudflare purge everything, invented global
 sync percentage, or frontend reconstruction of the role policy is exposed.
 
 ## Product structure
@@ -36,6 +37,8 @@ Top-level groups are Workbench, Nav Content, Game Content, Data Operations, and 
 /nav/sites/:id
 /nav/site-groups
 /nav/site-groups/:id/curation
+/nav/hero-assets
+/nav/background-patterns
 /nav/update-notices
 /nav/sayings
 /game/games
@@ -46,6 +49,7 @@ Top-level groups are Workbench, Nav Content, Game Content, Data Operations, and 
 /collection
 /metrics
 /changes
+/system/cloud
 /system/data-operations
 /system/audit
 /system/accounts

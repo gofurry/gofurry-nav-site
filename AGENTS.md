@@ -13,6 +13,7 @@ Production code is limited to six Go modules plus one frontend:
 
 Read `.agents/architecture.md`, `.agents/playbook.md`, `docs/`, and `contracts/` before database or deployment work. Use `rg` to locate any deeper module documentation.
 Managed asset work follows `contracts/assets.md`; cloud acceptance and one-time maintenance cutover procedures are in `docs/managed-assets.md` and `docs/managed-assets-cutover.md`.
+Managed Assets is production architecture; initial production cutover completed on 2026-09-14. The cutover runbook is historical/rollback context and for other environments' first deployment. Never rerun initial cutover SQL on already-migrated production. See `docs/acceptance/v3-alpha8-managed-assets-production-acceptance.md`.
 
 ## Sources of truth
 

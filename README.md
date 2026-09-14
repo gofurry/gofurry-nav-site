@@ -49,6 +49,8 @@ GoFurry 是一个面向兽圈文化内容发现、站点导航、兽游资料和
 
 > 国际站相关组件目前处于规划阶段，不属于当前生产运行拓扑。
 
+托管资产由 Admin 发布到 COS Primary 与 R2 尽力镜像，分别通过 EdgeOne 主 CDN 和 Cloudflare 镜像 CDN 分发。数据库保存与云厂商无关的对象键，前端使用浏览器优选与失败回退。详见[托管资产说明](./docs/managed-assets.md)与[资产契约](./contracts/assets.md)。
+
 ## 技术栈
 
 - Go / Fiber
@@ -57,6 +59,7 @@ GoFurry 是一个面向兽圈文化内容发现、站点导航、兽游资料和
 - Tailwind CSS / Less
 - Coraza WAF
 - Bbolt
+- Tencent COS / EdgeOne、Cloudflare R2 / CDN
 
 ## 快速开始
 
