@@ -119,3 +119,23 @@ func (api *OptionsAPI) TagOptions(c fiber.Ctx) error {
 	}
 	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, list))
 }
+
+func (api *OptionsAPI) TagCategoryOptions(c fiber.Ctx) error {
+	page := adminutil.ParsePageQuery(c)
+	if strings.TrimSpace(c.Query("page_size")) == "" {
+		page.PageSize = 10
+	}
+	total, err := api.game.CountTagCategoryOptions(c.Context(), page.Keyword)
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
+	}
+	rows, err := api.game.ListTagCategoryOptions(c.Context(), gamesqlc.ListTagCategoryOptionsParams{Keyword: page.Keyword, RowOffset: int32((page.PageNum - 1) * page.PageSize), RowLimit: int32(page.PageSize)})
+	if err != nil {
+		return common.NewResponse(c).Error(common.NewDaoError(err.Error()))
+	}
+	list := make([]adminutil.OptionItem, 0, len(rows))
+	for _, row := range rows {
+		list = append(list, adminutil.OptionItem{ID: row.ID, Label: row.Name, Extra: row.NameEn})
+	}
+	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, list))
+}

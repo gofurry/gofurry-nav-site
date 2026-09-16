@@ -97,7 +97,10 @@ export interface AnonymousReviewModel {
 export interface GameTagRecord {
     id: string
     name: string
-    prefix: string
+    code: string
+    category_id: string
+    category_code: string
+    category_name: string
     game_count: number
 }
 
@@ -248,6 +251,9 @@ export interface NewsModel {
 }
 
 export interface TagModel {
+    code: string
+    category_code: string
+    role: 'normal' | 'primary' | 'secondary'
     id: string
     name: string
     desc: string
@@ -359,6 +365,9 @@ export interface LotteryReq {
 }
 
 export interface GameV2Tag {
+    code: string
+    category_code: string
+    role: 'normal' | 'primary' | 'secondary'
     id: string
     name: string
     desc: string
@@ -613,4 +622,11 @@ export interface GameV2NewsItem {
     comment_count: number
     vote_up_count: number
     vote_down_count: number
+}
+
+export interface GameTagCategory {
+    id: string
+    code: string
+    name: string
+    tags: GameTagRecord[]
 }

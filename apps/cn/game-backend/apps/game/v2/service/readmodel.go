@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"net"
 	"sort"
@@ -27,7 +28,7 @@ const (
 	priceUnavailable = "region_price_unavailable"
 	priceMissing     = "region_price_missing"
 
-	similarRecommendationAlgorithmVersion = "similar-v2.3.1-hybrid-cbf"
+	similarRecommendationAlgorithmVersion = "similar-v2.4.0-hybrid-cbf"
 	similarPrecomputeLimit                = 64
 	gameHomeCacheTTL                      = 0
 )
@@ -50,7 +51,7 @@ type gameDetailReader interface {
 	ListLatestReviews(ctx context.Context, lang string, limit int) ([]v2models.GameV2LatestReview, common.GFError)
 	GetRandomGameID(ctx context.Context) (string, common.GFError)
 	ListSimilarRecommendations(ctx context.Context, query v2models.GameV2SimilarRecommendationQuery) ([]v2models.GameV2RecommendationRow, common.GFError)
-	SaveSimilarRecommendations(ctx context.Context, sourceGameID int64, rows []v2models.GfgGameV2Recommendation) common.GFError
+	RecomputeRecommendation(context.Context, int64, string, string, func([]v2models.GameV2RecommendationFeature) ([]v2models.GfgGameV2Recommendation, common.GFError)) common.GFError
 	ListRecommendationFeatures(ctx context.Context, lang string, region string) ([]v2models.GameV2RecommendationFeature, common.GFError)
 	GetGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
 	GetLatestGameNews(ctx context.Context, query v2models.GameV2NewsQuery) ([]v2models.GameV2NewsRow, common.GFError)
@@ -283,15 +284,18 @@ func (svc *ReadModelService) GetSimilarRecommendations(ctx context.Context, quer
 		return buildSimilarRecommendationsFromRows(rows), nil
 	}
 
-	features, err := svc.reader.ListRecommendationFeatures(ctx, query.Lang, query.Region)
+	return svc.recomputeRecommendation(ctx, query)
+}
+
+func (svc *ReadModelService) recomputeRecommendation(ctx context.Context, query v2models.GameV2SimilarRecommendationQuery) ([]v2models.GameV2SimilarRecommendation, common.GFError) {
+	var computed []v2models.GameV2SimilarRecommendation
+	err := svc.reader.RecomputeRecommendation(ctx, query.GameID, query.Lang, query.Region, func(features []v2models.GameV2RecommendationFeature) ([]v2models.GfgGameV2Recommendation, common.GFError) {
+		var rows []v2models.GfgGameV2Recommendation
+		var e common.GFError
+		computed, rows, _, e = computeSimilarRecommendations(features, query)
+		return rows, e
+	})
 	if err != nil {
-		return nil, err
-	}
-	computed, saveRows, sourceGameID, computeErr := computeSimilarRecommendations(features, query)
-	if computeErr != nil {
-		return nil, computeErr
-	}
-	if err := svc.reader.SaveSimilarRecommendations(ctx, sourceGameID, saveRows); err != nil {
 		return nil, err
 	}
 	if len(computed) > query.Limit {
@@ -475,10 +479,12 @@ type recommendationFeature struct {
 }
 
 type recommendationTag struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Desc   string `json:"desc"`
-	Prefix string `json:"prefix"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Desc         string `json:"desc"`
+	Code         string `json:"code"`
+	CategoryCode string `json:"category_code"`
+	Role         string `json:"role"`
 }
 
 type recommendationScore struct {
@@ -489,7 +495,7 @@ type recommendationScore struct {
 }
 
 /*
-v2.3.1 相似推荐选型说明：
+v2.4.0 相似推荐选型说明：
 
  1. 这版不继续沿用 v1 的“请求时标签独热编码 + 余弦相似度”作为主实现，因为它把计算放在详情页请求路径上，
     后续游戏数量增多时容易让详情页性能抖动，也不方便解释“为什么推荐这个游戏”。
@@ -500,7 +506,7 @@ v2.3.1 相似推荐选型说明：
 
 算法结构：
   - 标签相似度占 60%。标签是最强业务语义，使用 Weighted Jaccard，而不是纯 one-hot cosine。
-    权重来源优先使用 gfg_tag.prefix 和站内主/次标签，避免继续硬编码“某个 ID 段一定代表某种含义”的历史做法。
+    权重来源优先使用 category_code 和关联 role，避免继续硬编码“某个 ID 段一定代表某种含义”的历史做法。
   - 创作者/开发商/发行商占 15%。同工作室或同发行商通常是强相关，但不能压过标签。
   - 文本相似度占 10%。只用清洗后的名称与简介做轻量 token Jaccard，避免在数据库主链路里引入重分词依赖。
   - 平台占 7%。平台是过滤和弱偏好信号，不应该让“都支持 Windows”变成过强推荐理由。
@@ -624,7 +630,7 @@ func normalizeRecommendationFeature(row v2models.GameV2RecommendationFeature) re
 		if tag.ID == "" {
 			continue
 		}
-		tagWeights[tag.ID] = recommendationTagWeight(tag, row.PrimaryTagID, row.SecondaryTagID)
+		tagWeights[tag.ID] = recommendationTagWeight(tag)
 		tagNames[tag.ID] = tag.Name
 	}
 
@@ -718,22 +724,21 @@ func normalizeSteamAssetURL(rawURL string) string {
 	return strings.TrimSpace(rawURL)
 }
 
-func recommendationTagWeight(tag recommendationTag, primaryTagID int64, secondaryTagID int64) float64 {
-	id, _ := strconv.ParseInt(tag.ID, 10, 64)
-	switch id {
-	case primaryTagID:
+func recommendationTagWeight(tag recommendationTag) float64 {
+	switch tag.Role {
+	case "primary":
 		return 2.0
-	case secondaryTagID:
+	case "secondary":
 		return 1.5
 	}
-	switch tag.Prefix {
-	case "1000":
+	switch tag.CategoryCode {
+	case "classification":
 		return 1.2
-	case "2000":
+	case "species":
 		return 1.4
-	case "3000":
+	case "platform":
 		return 0.4
-	case "9000":
+	case "other":
 		return 1.3
 	default:
 		return 1.0
@@ -935,6 +940,7 @@ func recommendationTagsToView(tags []recommendationTag) []v2models.GameV2Tag {
 	for _, tag := range tags {
 		res = append(res, v2models.GameV2Tag{
 			ID:   tag.ID,
+			Code: tag.Code, CategoryCode: tag.CategoryCode, Role: tag.Role,
 			Name: tag.Name,
 			Desc: tag.Desc,
 		})
@@ -1698,4 +1704,42 @@ func saveGameHomeCache(key string, payload v2models.GameV2HomeReadModel) {
 	if setErr := cs.SetExpire(key, data, gameHomeCacheTTL); setErr != nil {
 		log.Error("写入首页缓存失败:", setErr)
 	}
+}
+
+func (svc *ReadModelService) ListTagCategories(ctx context.Context, lang string) ([]v2models.GameV2TagCategory, common.GFError) {
+	reader, ok := svc.reader.(interface {
+		ListTagCategories(context.Context, string) ([]v2models.GameV2TagCategory, common.GFError)
+	})
+	if !ok {
+		return nil, common.NewServiceError("tag category reader is unavailable")
+	}
+	return reader.ListTagCategories(ctx, normalizeLang(lang))
+}
+
+type RecommendationRebuildResult struct{ Total, Rebuilt, Failed int }
+
+// RebuildRecommendations recomputes every eligible source through the same bounded
+// top-64 calculator used on a cache miss. Failures remain visible to the operator.
+func (svc *ReadModelService) RebuildRecommendations(ctx context.Context) (RecommendationRebuildResult, error) {
+	result := RecommendationRebuildResult{}
+	features, e := svc.reader.ListRecommendationFeatures(ctx, "zh", "CN")
+	if e != nil {
+		return result, fmt.Errorf("load recommendation source games failed")
+	}
+	result.Total = len(features)
+	for _, feature := range features {
+		if err := ctx.Err(); err != nil {
+			return result, err
+		}
+		_, e := svc.recomputeRecommendation(ctx, v2models.GameV2SimilarRecommendationQuery{GameID: feature.GameID, Lang: "zh", Region: "CN", Limit: similarPrecomputeLimit, AlgorithmVersion: similarRecommendationAlgorithmVersion})
+		if e != nil {
+			result.Failed++
+		} else {
+			result.Rebuilt++
+		}
+	}
+	if result.Failed > 0 {
+		return result, fmt.Errorf("recommendation rebuild failed for %d source games", result.Failed)
+	}
+	return result, nil
 }

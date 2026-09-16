@@ -17,7 +17,7 @@ func testGameEditingRegression(t *testing.T, ctx context.Context, app *fiber.App
 	t.Helper()
 	// Test the real HTTP -> sqlc -> PostgreSQL path with more than one result page.
 	for i := 0; i < 23; i++ {
-		_, err := pool.Exec(ctx, `INSERT INTO gfg_tag (id,name,name_en,info,info_en,prefix,create_time,update_time) VALUES ($3,$1,$2,'','',-1,NOW(),NOW())`, fmt.Sprintf("分页回归-%02d", i), fmt.Sprintf("PaginationRegression-%02d", i), 900000+i)
+		_, err := pool.Exec(ctx, `INSERT INTO gfg_tag (id,name,name_en,info,info_en,code,category_id,create_time,update_time) VALUES ($3,$1,$2,'','','pagination-'||($3::bigint)::text,1,NOW(),NOW())`, fmt.Sprintf("分页回归-%02d", i), fmt.Sprintf("PaginationRegression-%02d", i), 900000+i)
 		if err != nil {
 			t.Fatal(err)
 		}

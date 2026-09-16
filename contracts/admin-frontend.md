@@ -44,6 +44,7 @@ Top-level groups are Workbench, Nav Content, Game Content, Data Operations, and 
 /game/games
 /game/games/:id
 /game/tags
+/game/tag-categories
 /game/comments
 /game/prizes
 /collection
@@ -77,3 +78,10 @@ Unicode characters, with the same business validation in Admin and PostgreSQL.
 Game primary/secondary tag searches request ten results with a 300 ms debounce;
 the complete tag checklist loads paginated options once and filters locally,
 independently of selected IDs.
+
+Category and Tag resources create explicit stable codes with database-assigned IDs;
+code controls are read-only after creation. Categories are selected by name and
+normal removal is visibly archive/restore. Game classification saves weight,
+nullable primary/secondary IDs and the complete Tag set in one
+`PUT /api/v1/game/games/:id/classification` request; content saves do not overwrite
+classification. The returned workspace includes the role union and resets the form.

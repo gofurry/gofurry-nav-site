@@ -12,6 +12,7 @@ import type {
   GameV2NewsItem,
   GameV2PanelRecord,
   GameTagRecord,
+  GameTagCategory,
   GameHomeApiResponse,
   GameViewTouchResponse,
   LatestNewsRecord,
@@ -128,6 +129,10 @@ export function getLatestReview(limit = 15): Promise<AnonymousReviewModel[]> {
 
 export function getTagList(lang: string): Promise<GameTagRecord[]> {
   return useApi('gameV2')('/game/tags', { query: { lang } })
+}
+
+export function getTagCategories(lang: string): Promise<GameTagCategory[]> {
+  return useApi('gameV2')('/game/tag-categories', { query: { lang } })
 }
 
 export function searchGameAdvanced(query: SearchPageQueryRequest, lang: string): Promise<SearchPageResponse> {

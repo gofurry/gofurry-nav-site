@@ -49,11 +49,11 @@ import { useI18n } from 'vue-i18n'
 import GameSidebarSearch from '@/components/game/main/sidebar/GameSidebarSearch.vue'
 import GameSearchFilter from '@/components/game/search/GameSearchFilter.vue'
 import GameSearchResult from '@/components/game/search/GameSearchResult.vue'
-import { searchGameAdvanced, getTagList } from '@/utils/api/game'
+import { searchGameAdvanced, getTagCategories } from '@/utils/api/game'
 import type {
   GameSearchAvailability,
   SearchPageResponseItem,
-  GameTagRecord,
+  GameTagCategory,
   SearchPageQueryRequest
 } from '@/types/game'
 import { useThemeStore } from '@/stores/theme'
@@ -118,7 +118,7 @@ const createDefaultQuery = (): SearchPageQueryRequest => ({
 
 const query = reactive<SearchPageQueryRequest>(createDefaultQuery())
 
-const tagGroups = ref<GameTagRecord[]>([])
+const tagGroups = ref<GameTagCategory[]>([])
 let tagRequestController: AbortController | null = null
 let searchRequestController: AbortController | null = null
 let tagRequestToken = 0
@@ -280,7 +280,7 @@ const loadTags = async () => {
   tagRequestController = controller
 
   try {
-    const result = await getTagList(lang.value, { signal: controller.signal })
+    const result = await getTagCategories(lang.value, { signal: controller.signal })
     if (currentToken !== tagRequestToken) {
       return
     }

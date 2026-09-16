@@ -66,8 +66,8 @@ FROM gfg_game_comment WHERE game_id = $1`, gameID).Query(func(rows pgx.Rows) err
 	if requested == "en" {
 		nameColumns = "t.name_en AS name, t.info_en AS desc"
 	}
-	batch.Queue(fmt.Sprintf(`SELECT t.id::text AS id, %s FROM gfg_tag_map tm
-JOIN gfg_tag t ON tm.tag_id=t.id WHERE tm.game_id=$1 ORDER BY t.id`, nameColumns), gameID).Query(func(rows pgx.Rows) error {
+	batch.Queue(fmt.Sprintf(`SELECT t.id::text AS id, t.code, c.code AS category_code, tm.role, %s FROM gfg_game_tag tm
+JOIN gfg_tag t ON tm.tag_id=t.id JOIN gfg_tag_category c ON c.id=t.category_id WHERE tm.game_id=$1 ORDER BY t.id`, nameColumns), gameID).Query(func(rows pgx.Rows) error {
 		var err error
 		aggregate.Tags, err = pgx.CollectRows(rows, pgx.RowToStructByNameLax[v2models.GameV2Tag])
 		return err

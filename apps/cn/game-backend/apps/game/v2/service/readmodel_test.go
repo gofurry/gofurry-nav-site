@@ -97,12 +97,13 @@ func (reader *fakeDetailReader) ListSimilarRecommendations(_ context.Context, _ 
 	return reader.similarRows, nil
 }
 
-func (reader *fakeDetailReader) SaveSimilarRecommendations(_ context.Context, _ int64, rows []v2models.GfgGameV2Recommendation) common.GFError {
+func (reader *fakeDetailReader) RecomputeRecommendation(_ context.Context, _ int64, _, _ string, calculate func([]v2models.GameV2RecommendationFeature) ([]v2models.GfgGameV2Recommendation, common.GFError)) common.GFError {
 	if reader.err != nil {
 		return reader.err
 	}
+	rows, e := calculate(reader.features)
 	reader.savedRecs = rows
-	return nil
+	return e
 }
 
 func (reader *fakeDetailReader) ListRecommendationFeatures(_ context.Context, _ string, _ string) ([]v2models.GameV2RecommendationFeature, common.GFError) {
@@ -559,9 +560,9 @@ func TestGetPanelMainBuildsAllSections(t *testing.T) {
 }
 
 func TestGetSimilarRecommendationsComputesAndSavesHybridScore(t *testing.T) {
-	tagsA := `[{"id":"1001","name":"RPG","prefix":"1000"},{"id":"2001","name":"Wolf","prefix":"2000"}]`
-	tagsB := `[{"id":"1001","name":"RPG","prefix":"1000"},{"id":"2001","name":"Wolf","prefix":"2000"}]`
-	tagsC := `[{"id":"3001","name":"Windows","prefix":"3000"}]`
+	tagsA := `[{"id":"1001","name":"RPG","category_code":"classification","role":"primary"},{"id":"2001","name":"Wolf","category_code":"species","role":"normal"}]`
+	tagsB := `[{"id":"1001","name":"RPG","category_code":"classification","role":"primary"},{"id":"2001","name":"Wolf","category_code":"species","role":"normal"}]`
+	tagsC := `[{"id":"3001","name":"Windows","category_code":"platform","role":"normal"}]`
 	developersA := `["Studio A"]`
 	developersB := `["Studio A"]`
 	developersC := `["Studio C"]`
@@ -569,8 +570,8 @@ func TestGetSimilarRecommendationsComputesAndSavesHybridScore(t *testing.T) {
 
 	reader := &fakeDetailReader{
 		features: []v2models.GameV2RecommendationFeature{
-			{GameID: 1, AppID: 1001, Name: "Source", Summary: "furry rpg", Tags: &tagsA, Developers: &developersA, Platforms: &platforms, PrimaryTagID: 1001, PriceRegion: "CN", PriceAvailable: true, FinalAmount: 1000, OnlineCount: 100},
-			{GameID: 2, AppID: 1002, Name: "Strong Match", Summary: "furry rpg", Tags: &tagsB, Developers: &developersB, Platforms: &platforms, PrimaryTagID: 1001, LibraryCoverURL: "library.jpg", LibraryCover2xURL: "library_2x.jpg", PriceRegion: "CN", PriceAvailable: true, FinalAmount: 1200, OnlineCount: 90},
+			{GameID: 1, AppID: 1001, Name: "Source", Summary: "furry rpg", Tags: &tagsA, Developers: &developersA, Platforms: &platforms, PriceRegion: "CN", PriceAvailable: true, FinalAmount: 1000, OnlineCount: 100},
+			{GameID: 2, AppID: 1002, Name: "Strong Match", Summary: "furry rpg", Tags: &tagsB, Developers: &developersB, Platforms: &platforms, LibraryCoverURL: "library.jpg", LibraryCover2xURL: "library_2x.jpg", PriceRegion: "CN", PriceAvailable: true, FinalAmount: 1200, OnlineCount: 90},
 			{GameID: 3, AppID: 1003, Name: "Weak Match", Summary: "space puzzle", Tags: &tagsC, Developers: &developersC, Platforms: &platforms, PriceRegion: "CN", PriceAvailable: true, FinalAmount: 8000, OnlineCount: 3},
 		},
 	}

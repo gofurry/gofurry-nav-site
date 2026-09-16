@@ -110,3 +110,58 @@ describe('Resource Engine route definitions', () => {
     await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`/api/v1/game/comments/${id}`, 'DELETE'))
   })
 })
+
+describe('Tag domain resources', () => {
+  beforeEach(() => { vi.clearAllMocks(); authTestState.canWrite = true })
+  it.each([['tags', '标签'], ['tag-categories', '标签类别']] as const)('offers archive/restore instead of deletion for %s', async (resource, title) => {
+    const row = { id: 12, code: 'stable-code', name: '测试条目', name_en: 'Test', archived_at: null }
+    vi.mocked(listJSON).mockResolvedValue({ total: 1, list: [row] })
+    vi.mocked(sendJSON).mockResolvedValue(row)
+    const view = renderResource('game', resource)
+    await userEvent.click(await screen.findByRole('button', { name: '归档' }))
+    expect(screen.getByRole('heading', { name: `归档${title}` })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '确认归档' }))
+    await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`/api/v1/game/${resource}/12`, 'DELETE'))
+    view.unmount()
+    vi.mocked(listJSON).mockResolvedValue({ total: 1, list: [{ ...row, archived_at: '2026-09-16' }] })
+    renderResource('game', resource)
+    await userEvent.click(await screen.findByRole('button', { name: '恢复' }))
+    await userEvent.click(screen.getByRole('button', { name: '确认恢复' }))
+    await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`/api/v1/game/${resource}/12/restore`, 'POST'))
+  })
+  it('keeps existing tag code immutable and resolves the category name', async () => {
+    const row = { id: 12, code: 'stable-code', name: '现有标签', name_en: 'Tag', info: '', info_en: '', category_id: 2 }
+    vi.mocked(listJSON).mockImplementation(async endpoint => endpoint.includes('/options/') ? { total: 1, list: [{ id: '2', label: '物种' }] } : { total: 1, list: [row] })
+    vi.mocked(getJSON).mockResolvedValue(row)
+    vi.mocked(sendJSON).mockResolvedValue(row)
+    renderResource('game', 'tags')
+    await userEvent.click(await screen.findByText('现有标签'))
+    expect(await screen.findByLabelText(/^Code/)).toBeDisabled()
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('物种'))
+    const input = screen.getByLabelText('中文名称')
+    await userEvent.clear(input); await userEvent.type(input, '新名称')
+    await userEvent.click(screen.getByRole('button', { name: '保存修改' }))
+    await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/tags/12', 'PUT', expect.objectContaining({ code: 'stable-code', name: '新名称', category_id: 2 })))
+  })
+})
+
+it.each([['tags', '标签'], ['tag-categories', '标签类别']] as const)('creates %s with an explicit code and no manual ID', async (resource, title) => {
+  vi.clearAllMocks(); authTestState.canWrite = true
+  vi.mocked(listJSON).mockImplementation(async endpoint => endpoint.includes('/options/') ? { total: 1, list: [{ id: '2', label: '物种' }] } : { total: 0, list: [] })
+  vi.mocked(sendJSON).mockResolvedValue({ id: 777 })
+  renderResource('game', resource)
+  await userEvent.click(screen.getByRole('button', { name: `新增${title}` }))
+  const code = await screen.findByLabelText(/^Code/)
+  expect(code).toBeEnabled()
+  expect(screen.queryByLabelText('标签 ID')).not.toBeInTheDocument()
+  await userEvent.type(code, 'new-identity')
+  await userEvent.type(screen.getByLabelText('中文名称'), '新条目')
+  await userEvent.type(screen.getByLabelText('英文名称'), 'New Item')
+  if (resource === 'tags') {
+    await userEvent.click(screen.getByRole('combobox'))
+    await userEvent.click(await screen.findByRole('option', { name: '物种' }))
+  }
+  await userEvent.click(screen.getByRole('button', { name: '创建' }))
+  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`/api/v1/game/${resource}`, 'POST', expect.objectContaining({ code: 'new-identity', name: '新条目' })))
+  expect(vi.mocked(sendJSON).mock.calls[0]?.[2]).not.toHaveProperty('id')
+})

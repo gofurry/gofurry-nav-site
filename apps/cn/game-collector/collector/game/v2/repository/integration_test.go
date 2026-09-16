@@ -682,8 +682,8 @@ func seedGameTarget(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now t
 	t.Helper()
 	_, err := pool.Exec(ctx, `insert into gfg_game (
 id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,
-developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
-) values ($1,'test','test','test','test',$2,$2,null,null,'', '[]'::jsonb,'[]'::jsonb,$3,'',null,0,0,0,0)`, int64(91001), now, int64(92001))
+developers,publishers,appid,header,links,weight,view_count
+) values ($1,'test','test','test','test',$2,$2,null,null,'', '[]'::jsonb,'[]'::jsonb,$3,'',null,0,0)`, int64(91001), now, int64(92001))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -696,8 +696,8 @@ func seedAdditionalGameTarget(t *testing.T, ctx context.Context, pool *pgxpool.P
 	t.Helper()
 	_, err := pool.Exec(ctx, `insert into gfg_game (
 id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,
-developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
-) values ($1,'test','test','test','test',$3,$3,null,null,$4,'[]'::jsonb,'[]'::jsonb,$2,'',null,0,0,0,0)`, gameID, appID, now, releaseDate)
+developers,publishers,appid,header,links,weight,view_count
+) values ($1,'test','test','test','test',$3,$3,null,null,$4,'[]'::jsonb,'[]'::jsonb,$2,'',null,0,0)`, gameID, appID, now, releaseDate)
 	if err != nil {
 		t.Fatal(err)
 	}

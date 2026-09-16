@@ -58,7 +58,7 @@ func TestGameSummaryLengthMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := goose.UpContext(ctx, db, dir); err != nil {
+	if err := goose.UpToContext(ctx, db, dir, 20260916010000); err != nil {
 		t.Fatal(err)
 	}
 	assertLengths(400)
@@ -90,7 +90,7 @@ func TestGameSummaryLengthMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertLengths(300)
-	if err := goose.UpContext(ctx, db, dir); err != nil {
+	if err := goose.UpToContext(ctx, db, dir, 20260916010000); err != nil {
 		t.Fatal(err)
 	}
 	assertLengths(400)

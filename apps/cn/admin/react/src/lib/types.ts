@@ -42,5 +42,5 @@ export type Game = {
   weight: number; primary_tag: number; secondary_tag: number
 }
 
-export type GameTagRelation = { id: number; game_id: number; tag_id: number; tag_name: string }
+export type GameTagRelation = { code: string; category_code: string; role: 'normal' | 'primary' | 'secondary'; game_id: number; tag_id: number; tag_name: string }
 export type GameWorkspace = { game: Game; tags: GameTagRelation[] }

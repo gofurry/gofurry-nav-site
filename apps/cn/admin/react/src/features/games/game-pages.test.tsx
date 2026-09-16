@@ -31,7 +31,7 @@ it.each(['中文简介', '英文简介'])('blocks overlong %s on the actual cont
 
 it('wires both remote selectors and saves all selected tags after local filtering', async () => {
   vi.mocked(listJSON).mockResolvedValue({ total: 2, list: [{ id: '1', label: '冒险' }, { id: '2', label: '解谜' }] })
-  vi.mocked(sendJSON).mockResolvedValue(game)
+  vi.mocked(sendJSON).mockResolvedValue({ game, tags: [{ tag_id: 1, tag_name: '冒险' }, { tag_id: 2, tag_name: '解谜' }] })
   setup(<GameClassificationForm workspace={{ game, tags: [{ tag_id: 1, tag_name: '冒险' }] } as Parameters<typeof GameClassificationForm>[0]['workspace']} />)
   await screen.findByRole('checkbox', { name: '冒险' })
   expect(screen.getByPlaceholderText('搜索主要标签…')).toHaveValue('冒险')
@@ -42,5 +42,5 @@ it('wires both remote selectors and saves all selected tags after local filterin
   fireEvent.click(screen.getByRole('checkbox', { name: '解谜' }))
   expect(listJSON).toHaveBeenCalledTimes(requests)
   fireEvent.click(screen.getByRole('button', { name: '保存分类与展示' }))
-  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/tag-maps/bulk-replace', 'PUT', { owner_id: 1, ids: [1, 2] }))
+  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/games/1/classification', 'PUT', { weight: 1, primary_tag_id: 1, secondary_tag_id: null, tag_ids: [1, 2] }))
 })

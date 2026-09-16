@@ -3,6 +3,9 @@ package dao
 import (
 	"context"
 	"fmt"
+	gamesqlc "github.com/gofurry/gofurry-game-backend/internal/db/game/sqlc"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 	"github.com/gofurry/gofurry-game-backend/common"
@@ -24,40 +27,6 @@ func (dao *ReadModelDAO) ListSimilarRecommendations(ctx context.Context, query v
 		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 相似推荐失败: %v", err))
 	}
 	return rows, nil
-}
-
-func (dao *ReadModelDAO) SaveSimilarRecommendations(ctx context.Context, sourceGameID int64, rows []v2models.GfgGameV2Recommendation) common.GFError {
-	if err := dao.ready(); err != nil {
-		return common.NewDaoError(err.Error())
-	}
-	if sourceGameID <= 0 {
-		return common.NewDaoError("source_game_id is required")
-	}
-	tx, err := dao.pool.Begin(ctx)
-	if err != nil {
-		return common.NewDaoError(fmt.Sprintf("保存游戏 v2 相似推荐失败: %v", err))
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	if _, err := tx.Exec(ctx, `DELETE FROM gfg_game_recommendations WHERE source_game_id = $1`, sourceGameID); err != nil {
-		return common.NewDaoError(fmt.Sprintf("保存游戏 v2 相似推荐失败: %v", err))
-	}
-	for _, row := range rows {
-		_, err = tx.Exec(ctx, `INSERT INTO gfg_game_recommendations
-(source_game_id, target_game_id, score, display_score, rank, reason_json, algorithm_version, computed_at)
-VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8)
-ON CONFLICT (source_game_id, target_game_id) DO UPDATE SET
-score=EXCLUDED.score, display_score=EXCLUDED.display_score, rank=EXCLUDED.rank,
-reason_json=EXCLUDED.reason_json, algorithm_version=EXCLUDED.algorithm_version,
-computed_at=EXCLUDED.computed_at`, row.SourceGameID, row.TargetGameID, row.Score,
-			row.DisplayScore, row.Rank, row.ReasonJSON, row.AlgorithmVersion, row.ComputedAt)
-		if err != nil {
-			return common.NewDaoError(fmt.Sprintf("保存游戏 v2 相似推荐失败: %v", err))
-		}
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return common.NewDaoError(fmt.Sprintf("保存游戏 v2 相似推荐失败: %v", err))
-	}
-	return nil
 }
 
 func (dao *ReadModelDAO) ListRecommendationFeatures(ctx context.Context, lang string, region string) ([]v2models.GameV2RecommendationFeature, common.GFError) {
@@ -131,8 +100,8 @@ LEFT JOIN LATERAL (
    'id',t.id::text,
    'name',CASE WHEN $1='en' THEN COALESCE(NULLIF(t.name_en,''),t.name) ELSE COALESCE(NULLIF(t.name,''),t.name_en) END,
    'desc',CASE WHEN $1='en' THEN COALESCE(NULLIF(t.info_en,''),t.info) ELSE COALESCE(NULLIF(t.info,''),t.info_en) END,
-   'prefix',t.prefix::text) ORDER BY t.id) AS tags
- FROM gfg_tag_map tm JOIN gfg_tag t ON t.id=tm.tag_id WHERE tm.game_id=g.id
+   'code',t.code,'category_code',c.code,'role',tm.role) ORDER BY t.id) AS tags
+ FROM gfg_game_tag tm JOIN gfg_tag t ON t.id=tm.tag_id JOIN gfg_tag_category c ON c.id=t.category_id WHERE tm.game_id=g.id
 ) tags ON true`
 
 const recommendationRowsSQL = `SELECT
@@ -146,8 +115,46 @@ ORDER BY r.rank,r.score DESC,r.target_game_id LIMIT $5`
 
 const recommendationFeaturesSQL = `SELECT g.id AS game_id,` + recommendationProjectionSQL + `,
 d.developers::text AS developers,d.publishers::text AS publishers,d.platforms::text AS platforms,
-COALESCE(g.primary_tag,0) AS primary_tag_id,COALESCE(g.secondary_tag,0) AS secondary_tag_id,
 GREATEST(g.update_time,COALESCE(d.updated_at,g.update_time),COALESCE(ld.updated_at,g.update_time)) AS updated_at
 FROM gfg_game g
 ` + recommendationJoinsSQL + `
 ORDER BY g.weight,g.id`
+
+// RecomputeRecommendation holds the same transaction lock as editorial tag writes.
+// A computation started before an edit cannot repopulate a cache invalidated by it.
+func (dao *ReadModelDAO) RecomputeRecommendation(ctx context.Context, gameID int64, lang, region string, calculate func([]v2models.GameV2RecommendationFeature) ([]v2models.GfgGameV2Recommendation, common.GFError)) common.GFError {
+	tx, err := dao.pool.Begin(ctx)
+	if err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	defer tx.Rollback(ctx)
+	q := dao.q.WithTx(tx)
+	if err = q.LockRecommendationDomain(ctx); err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	// The existing bounded recommendation read model includes lateral JSON/asset projections.
+	result, err := tx.Query(ctx, recommendationFeaturesSQL, normalizeDAOLang(lang), normalizeDAORegion(region))
+	if err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	features, err := pgx.CollectRows(result, pgx.RowToStructByNameLax[v2models.GameV2RecommendationFeature])
+	if err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	rows, e := calculate(features)
+	if e != nil {
+		return e
+	}
+	if err = q.DeleteSourceRecommendations(ctx, gameID); err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	for _, row := range rows {
+		if err = q.StoreRecommendation(ctx, gamesqlc.StoreRecommendationParams{SourceGameID: gameID, TargetGameID: row.TargetGameID, Score: row.Score, DisplayScore: row.DisplayScore, Rank: int32(row.Rank), ReasonJson: []byte(row.ReasonJSON), AlgorithmVersion: row.AlgorithmVersion, ComputedAt: pgtype.Timestamptz{Time: row.ComputedAt, Valid: true}}); err != nil {
+			return common.NewDaoError(err.Error())
+		}
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return common.NewDaoError(err.Error())
+	}
+	return nil
+}

@@ -1,7 +1,7 @@
 -- name: LockGameForUpdate :one
 SELECT id, name, name_en, info, info_en, create_time, update_time,
        resources, groups, developers, publishers, appid, header, links,
-       weight, primary_tag, secondary_tag, view_count
+       weight, view_count
 FROM gfg_game
 WHERE id = sqlc.arg(id)
 FOR UPDATE;

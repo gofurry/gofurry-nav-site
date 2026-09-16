@@ -47,10 +47,12 @@ type GameDTO struct {
 }
 
 type GameWorkspaceTag struct {
-	ID      int64  `json:"id"`
-	GameID  int64  `json:"game_id"`
-	TagID   int64  `json:"tag_id"`
-	TagName string `json:"tag_name"`
+	GameID       int64  `json:"game_id"`
+	TagID        int64  `json:"tag_id"`
+	TagName      string `json:"tag_name"`
+	Code         string `json:"code"`
+	CategoryCode string `json:"category_code"`
+	Role         string `json:"role"`
 }
 
 type GameWorkspace struct {
@@ -59,20 +61,18 @@ type GameWorkspace struct {
 }
 
 type GamePayload struct {
-	Name         string              `json:"name"`
-	NameEn       string              `json:"name_en"`
-	Info         string              `json:"info"`
-	InfoEn       string              `json:"info_en"`
-	Resources    []pkgmodels.KvModel `json:"resources"`
-	Groups       []pkgmodels.KvModel `json:"groups"`
-	Developers   []string            `json:"developers"`
-	Publishers   []string            `json:"publishers"`
-	Appid        int64               `json:"appid"`
-	Header       string              `json:"header"`
-	Links        []pkgmodels.KvModel `json:"links"`
-	Weight       int64               `json:"weight"`
-	PrimaryTag   int64               `json:"primary_tag"`
-	SecondaryTag int64               `json:"secondary_tag"`
+	Name       string              `json:"name"`
+	NameEn     string              `json:"name_en"`
+	Info       string              `json:"info"`
+	InfoEn     string              `json:"info_en"`
+	Resources  []pkgmodels.KvModel `json:"resources"`
+	Groups     []pkgmodels.KvModel `json:"groups"`
+	Developers []string            `json:"developers"`
+	Publishers []string            `json:"publishers"`
+	Appid      int64               `json:"appid"`
+	Header     string              `json:"header"`
+	Links      []pkgmodels.KvModel `json:"links"`
+	Weight     int64               `json:"weight"`
 }
 
 type GameComment struct {
@@ -140,48 +140,48 @@ type PrizePayload struct {
 }
 
 type Tag struct {
-	ID         int64               `json:"id"`
-	Name       string              `json:"name"`
-	NameEn     string              `json:"name_en"`
-	Info       string              `json:"info"`
-	InfoEn     string              `json:"info_en"`
-	Prefix     int64               `json:"prefix"`
-	CreateTime pkgmodels.LocalTime `json:"create_time"`
-	UpdateTime pkgmodels.LocalTime `json:"update_time"`
+	ID         int64                `json:"id"`
+	Code       string               `json:"code"`
+	CategoryID int64                `json:"category_id"`
+	Name       string               `json:"name"`
+	NameEn     string               `json:"name_en"`
+	Info       string               `json:"info"`
+	InfoEn     string               `json:"info_en"`
+	ArchivedAt *pkgmodels.LocalTime `json:"archived_at"`
+	CreateTime pkgmodels.LocalTime  `json:"create_time"`
+	UpdateTime pkgmodels.LocalTime  `json:"update_time"`
 }
-
-func (*Tag) TableName() string { return "gfg_tag" }
-
 type TagPayload struct {
-	ID     int64  `json:"id"`
-	Name   string `json:"name"`
-	NameEn string `json:"name_en"`
-	Info   string `json:"info"`
-	InfoEn string `json:"info_en"`
-	Prefix int64  `json:"prefix"`
+	Code       string `json:"code"`
+	CategoryID int64  `json:"category_id"`
+	Name       string `json:"name"`
+	NameEn     string `json:"name_en"`
+	Info       string `json:"info"`
+	InfoEn     string `json:"info_en"`
 }
-
-type TagMap struct {
-	ID         int64               `json:"id"`
-	GameID     int64               `json:"game_id"`
-	TagID      int64               `json:"tag_id"`
-	CreateTime pkgmodels.LocalTime `json:"create_time"`
-	UpdateTime pkgmodels.LocalTime `json:"update_time"`
+type TagCategory struct {
+	ID         int64                `json:"id"`
+	Code       string               `json:"code"`
+	Name       string               `json:"name"`
+	NameEn     string               `json:"name_en"`
+	Info       string               `json:"info"`
+	InfoEn     string               `json:"info_en"`
+	SortOrder  int32                `json:"sort_order"`
+	ArchivedAt *pkgmodels.LocalTime `json:"archived_at"`
+	CreateTime pkgmodels.LocalTime  `json:"create_time"`
+	UpdateTime pkgmodels.LocalTime  `json:"update_time"`
 }
-
-func (*TagMap) TableName() string { return "gfg_tag_map" }
-
-type TagMapPayload struct {
-	GameID int64 `json:"game_id"`
-	TagID  int64 `json:"tag_id"`
+type TagCategoryPayload struct {
+	Code      string `json:"code"`
+	Name      string `json:"name"`
+	NameEn    string `json:"name_en"`
+	Info      string `json:"info"`
+	InfoEn    string `json:"info_en"`
+	SortOrder int32  `json:"sort_order"`
 }
-
-type TagMapDTO struct {
-	ID         int64               `json:"id"`
-	GameID     int64               `json:"game_id"`
-	TagID      int64               `json:"tag_id"`
-	GameName   string              `json:"game_name"`
-	TagName    string              `json:"tag_name"`
-	CreateTime pkgmodels.LocalTime `json:"create_time"`
-	UpdateTime pkgmodels.LocalTime `json:"update_time"`
+type GameClassificationPayload struct {
+	Weight         int64   `json:"weight"`
+	PrimaryTagID   *int64  `json:"primary_tag_id"`
+	SecondaryTagID *int64  `json:"secondary_tag_id"`
+	TagIDs         []int64 `json:"tag_ids"`
 }

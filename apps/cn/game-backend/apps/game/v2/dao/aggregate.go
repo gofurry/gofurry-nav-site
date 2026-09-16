@@ -154,8 +154,8 @@ func (dao *ReadModelDAO) loadTags(ctx context.Context, gameID int64, lang string
 		nameColumns = "t.name_en AS name, t.info_en AS desc"
 	}
 	rows, err := queryMany[v2models.GameV2Tag](ctx, dao.pool, fmt.Sprintf(`
-SELECT t.id::text AS id, %s FROM gfg_tag_map tm
-JOIN gfg_tag t ON tm.tag_id = t.id WHERE tm.game_id = $1 ORDER BY t.id`, nameColumns), gameID)
+SELECT t.id::text AS id, t.code, c.code AS category_code, tm.role, %s FROM gfg_game_tag tm
+JOIN gfg_tag t ON tm.tag_id = t.id JOIN gfg_tag_category c ON c.id=t.category_id WHERE tm.game_id = $1 ORDER BY t.id`, nameColumns), gameID)
 	if err != nil {
 		return nil, fmt.Errorf("查询游戏 v2 标签失败: %w", err)
 	}
@@ -315,23 +315,26 @@ FROM gfg_game_comment WHERE game_id = ANY($1::bigint[]) GROUP BY game_id`, gameI
 	}
 
 	type tagRow struct {
-		GameID int64  `db:"game_id"`
-		ID     string `db:"id"`
-		Name   string `db:"name"`
-		Desc   string `db:"desc"`
+		GameID       int64  `db:"game_id"`
+		ID           string `db:"id"`
+		Name         string `db:"name"`
+		Desc         string `db:"desc"`
+		Code         string `db:"code"`
+		CategoryCode string `db:"category_code"`
+		Role         string `db:"role"`
 	}
 	tagNames := "t.name AS name, t.info AS desc"
 	if requested == "en" {
 		tagNames = "t.name_en AS name, t.info_en AS desc"
 	}
-	tags, err := queryMany[tagRow](ctx, dao.pool, fmt.Sprintf(`SELECT tm.game_id, t.id::text AS id, %s
-FROM gfg_tag_map tm JOIN gfg_tag t ON tm.tag_id = t.id
+	tags, err := queryMany[tagRow](ctx, dao.pool, fmt.Sprintf(`SELECT tm.game_id, t.id::text AS id, t.code, c.code AS category_code, tm.role, %s
+FROM gfg_game_tag tm JOIN gfg_tag t ON tm.tag_id = t.id JOIN gfg_tag_category c ON c.id=t.category_id
 WHERE tm.game_id = ANY($1::bigint[]) ORDER BY tm.game_id, t.id`, tagNames), gameIDs)
 	if err != nil {
 		return fmt.Errorf("批量查询游戏 v2 标签失败: %w", err)
 	}
 	for _, row := range tags {
-		aggregateMap[row.GameID].Tags = append(aggregateMap[row.GameID].Tags, v2models.GameV2Tag{ID: row.ID, Name: row.Name, Desc: row.Desc})
+		aggregateMap[row.GameID].Tags = append(aggregateMap[row.GameID].Tags, v2models.GameV2Tag{ID: row.ID, Name: row.Name, Desc: row.Desc, Code: row.Code, CategoryCode: row.CategoryCode, Role: row.Role})
 	}
 	return nil
 }

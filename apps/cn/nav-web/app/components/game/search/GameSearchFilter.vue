@@ -190,7 +190,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted } from 'vue'
-import type { GameSearchAvailability, GameTagRecord, SearchPageQueryRequest } from '@/types/game'
+import { buildGameTagGroups, type GameTagGroup } from '@/utils/gameTagDomain'
+import type { GameSearchAvailability, GameTagCategory, SearchPageQueryRequest } from '@/types/game'
 import { formatLocalDateTime } from '@/utils/util'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
@@ -199,7 +200,7 @@ import { i18n } from '@/main'
 const { t } = i18n.global
 
 const props = defineProps<{
-  tagGroups: GameTagRecord[]
+  tagGroups: GameTagCategory[]
   query: SearchPageQueryRequest
 }>()
 
@@ -269,37 +270,10 @@ const toggleSort = (key: string) => {
 }
 
 // =============== 分类 & 标签 ===============
-type CategoryGroup = GameTagRecord & {
-  children: (GameTagRecord & { selected: boolean })[]
-  expanded: boolean
-  limit: number
-}
-
-const categoryGroups = ref<CategoryGroup[]>([])
+const categoryGroups = ref<GameTagGroup[]>([])
 
 const buildCategoryGroups = () => {
-  const groups: CategoryGroup[] = props.tagGroups
-      .filter(t => Number(t.prefix) === -1)
-      .sort((a, b) => Number(a.id) - Number(b.id))
-      .map(g => ({
-        ...g,
-        children: [],
-        expanded: false,
-        limit: 16
-      }))
-
-  const tags = props.tagGroups.filter(t => Number(t.prefix) !== -1)
-
-  groups.forEach(group => {
-    group.children = tags
-        .filter(t => Number(t.prefix) === Number(group.id))
-        .map(t => ({
-          ...t,
-          selected: (props.query.tag_list ?? []).includes(Number(t.id))
-        }))
-  })
-
-  categoryGroups.value = groups
+  categoryGroups.value = buildGameTagGroups(props.tagGroups, props.query.tag_list ?? [], categoryGroups.value)
 }
 
 const toggleTag = (tag: any) => {
@@ -313,7 +287,7 @@ const toggleTag = (tag: any) => {
 // =============== watch & 生命周期 ===============
 onMounted(buildCategoryGroups)
 
-watch(() => props.tagGroups, buildCategoryGroups, { deep: true })
+watch([() => props.tagGroups, () => props.query.tag_list], buildCategoryGroups, { deep: true })
 
 const formatDateTime = formatLocalDateTime
 

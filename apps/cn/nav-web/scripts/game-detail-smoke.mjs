@@ -20,7 +20,7 @@ const app = await startInsightsFixtureApp((url, media) => {
     if (state.failure) return { status: 503 }
     if (url.searchParams.get('id') !== '82') return { status: 404 }
     return { data: state.gallery ? { ...game,
-      tags: state.adult ? [{ id: '1014', name: 'Adult' }] : [],
+      tags: state.adult ? [{ id: '777777', code: 'adult', category_code: 'classification', role: 'normal', name: 'Adult' }] : [],
       media: { ...game.media, screenshots: Array.from({ length: 24 }, (_, i) => ({ id: i + 1, thumbnail_url: `${media}/shot-${i}.svg`, url: `${media}/shot-${i}.svg` })) },
     } : game }
   }

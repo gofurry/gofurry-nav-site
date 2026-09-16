@@ -112,6 +112,7 @@
 </template>
 
 <script setup lang="ts">
+import { hasAdultTag } from '@/utils/gameTagDomain'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '@/types/game'
 import type { GameInsights } from '@/types/insights'
@@ -180,7 +181,7 @@ const nsfwEnabled = computed(() => {
 
 // 判断是否成人游戏
 const isAdultGame = computed<boolean>(() => {
-  return props.game?.tags?.some(tag => tag.id === '1014') ?? false
+  return hasAdultTag(props.game?.tags)
 })
 
 // 是否需要模糊处理

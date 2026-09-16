@@ -28,8 +28,10 @@ LEFT JOIN (
     SELECT game_id, COUNT(*) AS remark_count, AVG(score) AS avg_score
     FROM gfg_game_comment GROUP BY game_id
 ) comment_stats ON comment_stats.game_id = g.id
-LEFT JOIN gfg_tag primary_tag ON g.primary_tag = primary_tag.id
-LEFT JOIN gfg_tag secondary_tag ON g.secondary_tag = secondary_tag.id`
+LEFT JOIN gfg_game_tag primary_role ON primary_role.game_id=g.id AND primary_role.role='primary'
+LEFT JOIN gfg_tag primary_tag ON primary_role.tag_id = primary_tag.id
+LEFT JOIN gfg_game_tag secondary_role ON secondary_role.game_id=g.id AND secondary_role.role='secondary'
+LEFT JOIN gfg_tag secondary_tag ON secondary_role.tag_id = secondary_tag.id`
 
 func (dao *ReadModelDAO) SearchGames(ctx context.Context, query v2models.GameV2SearchPageQuery) (cm.PageResponse, common.GFError) {
 	res := cm.PageResponse{}
@@ -72,7 +74,7 @@ func buildSearchWhere(query v2models.GameV2SearchPageQuery) (string, []any) {
 OR g.info ILIKE `+p+` OR g.info_en ILIKE `+p+` OR d.name ILIKE `+p+`
 OR d.developers::text ILIKE `+p+` OR d.publishers::text ILIKE `+p+`
 OR ld.name ILIKE `+p+` OR ld.short_description ILIKE `+p+`
-OR EXISTS (SELECT 1 FROM gfg_tag_map tm JOIN gfg_tag t ON t.id=tm.tag_id
+OR EXISTS (SELECT 1 FROM gfg_game_tag tm JOIN gfg_tag t ON t.id=tm.tag_id
 WHERE tm.game_id=g.id AND (t.name ILIKE `+p+` OR t.name_en ILIKE `+p+`)))`)
 	}
 	if query.Availability != "" {
@@ -93,7 +95,7 @@ WHERE tm.game_id=g.id AND (t.name ILIKE `+p+` OR t.name_en ILIKE `+p+`)))`)
 	}
 	if len(query.TagList) > 0 {
 		args = append(args, query.TagList, len(query.TagList))
-		clauses = append(clauses, fmt.Sprintf(`g.id IN (SELECT game_id FROM gfg_tag_map
+		clauses = append(clauses, fmt.Sprintf(`g.id IN (SELECT game_id FROM gfg_game_tag
 WHERE tag_id = ANY($%d::bigint[]) GROUP BY game_id HAVING COUNT(DISTINCT tag_id) = $%d)`, len(args)-1, len(args)))
 	}
 	return " WHERE " + strings.Join(clauses, " AND "), args

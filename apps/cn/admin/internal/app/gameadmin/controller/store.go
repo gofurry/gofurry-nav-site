@@ -13,6 +13,7 @@ import (
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	pkgmodels "github.com/gofurry/gofurry-admin/pkg/models"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -35,7 +36,13 @@ func (store *gameStore) mutate(ctx context.Context, meta audit.Meta, action, res
 		return gameDAOError(err)
 	}
 	defer tx.Rollback(ctx)
-	targetID, before, after, err := change(store.q.WithTx(tx))
+	q := store.q.WithTx(tx)
+	if resource == "gfg_game" || resource == "gfg_tag" || resource == "gfg_tag_category" || resource == "gfg_game_tag" {
+		if err := q.LockTagDomain(ctx); err != nil {
+			return gameDAOError(err)
+		}
+	}
+	targetID, before, after, err := change(q)
 	if err != nil {
 		return gameDAOError(err)
 	}
@@ -73,17 +80,27 @@ func (store *gameStore) getGame(ctx context.Context, id int64) (models.Game, com
 }
 
 func (store *gameStore) getGameWorkspace(ctx context.Context, id int64) (models.Game, []models.GameWorkspaceTag, common.Error) {
-	game, storeErr := store.getGame(ctx, id)
-	if storeErr != nil {
-		return models.Game{}, nil, storeErr
+	tx, err := store.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return models.Game{}, nil, gameDAOError(err)
 	}
-	rows, err := store.q.ListGameWorkspaceTags(ctx, id)
+	defer tx.Rollback(ctx)
+	q := store.q.WithTx(tx)
+	gameRow, err := q.GetGame(ctx, id)
+	if err != nil {
+		return models.Game{}, nil, gameDAOError(err)
+	}
+	game := getGameModel(gameRow)
+	rows, err := q.ListGameWorkspaceTags(ctx, id)
 	if err != nil {
 		return models.Game{}, nil, gameDAOError(err)
 	}
 	tags := make([]models.GameWorkspaceTag, 0, len(rows))
 	for _, row := range rows {
-		tags = append(tags, models.GameWorkspaceTag{ID: row.ID, GameID: row.GameID, TagID: row.TagID, TagName: row.TagName})
+		tags = append(tags, models.GameWorkspaceTag{Code: row.Code, CategoryCode: row.CategoryCode, Role: row.Role, GameID: row.GameID, TagID: row.TagID, TagName: row.TagName})
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return models.Game{}, nil, gameDAOError(err)
 	}
 	return game, tags, nil
 }
@@ -193,6 +210,12 @@ func (store *gameStore) deleteGame(ctx context.Context, meta audit.Meta, id int6
 		if _, err := q.CloseGameTrackingPeriod(ctx, gamesqlc.CloseGameTrackingPeriodParams{
 			GameID: id, ClosedReason: &closedReason,
 		}); err != nil {
+			return id, before, nil, err
+		}
+		if err = q.DeleteGameTagRelations(ctx, id); err != nil {
+			return id, before, nil, err
+		}
+		if err = q.InvalidateGameRecommendations(ctx); err != nil {
 			return id, before, nil, err
 		}
 		_, err = q.DeleteGame(ctx, id)
@@ -313,204 +336,6 @@ func (store *gameStore) deletePrize(ctx context.Context, meta audit.Meta, id int
 	return store.delete(ctx, meta, id, "gfg_prize", func(q *gamesqlc.Queries) (any, error) { return q.GetPrize(ctx, id) }, func(q *gamesqlc.Queries) error { _, err := q.DeletePrize(ctx, id); return err })
 }
 
-func (store *gameStore) listTags(ctx context.Context, page adminutil.PageQuery) (int64, []models.Tag, common.Error) {
-	total, err := store.q.CountTags(ctx, page.Keyword)
-	if err != nil {
-		return 0, nil, gameDAOError(err)
-	}
-	limit, offset := pageArgsGame(page)
-	rows, err := store.q.ListTags(ctx, gamesqlc.ListTagsParams{Keyword: page.Keyword, RowLimit: limit, RowOffset: offset})
-	if err != nil {
-		return 0, nil, gameDAOError(err)
-	}
-	items := make([]models.Tag, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, tagModel(row))
-	}
-	return total, items, nil
-}
-
-func (store *gameStore) getTag(ctx context.Context, id int64) (models.Tag, common.Error) {
-	row, err := store.q.GetTag(ctx, id)
-	return tagModel(row), gameDAOError(err)
-}
-
-func (store *gameStore) createTag(ctx context.Context, meta audit.Meta, req gamesqlc.InsertTagParams) (models.Tag, common.Error) {
-	var result models.Tag
-	err := store.mutate(ctx, meta, "create", "gfg_tag", func(q *gamesqlc.Queries) (int64, any, any, error) {
-		row, err := q.InsertTag(ctx, req)
-		result = tagModel(row)
-		return req.ID, nil, row, err
-	})
-	return result, err
-}
-
-func (store *gameStore) updateTag(ctx context.Context, meta audit.Meta, req gamesqlc.UpdateTagParams) common.Error {
-	return store.mutate(ctx, meta, "update", "gfg_tag", func(q *gamesqlc.Queries) (int64, any, any, error) {
-		before, err := q.GetTag(ctx, req.ID)
-		if err != nil {
-			return req.ID, nil, nil, err
-		}
-		after, err := q.UpdateTag(ctx, req)
-		return req.ID, before, after, err
-	})
-}
-
-func (store *gameStore) deleteTag(ctx context.Context, meta audit.Meta, id int64) common.Error {
-	return store.delete(ctx, meta, id, "gfg_tag", func(q *gamesqlc.Queries) (any, error) { return q.GetTag(ctx, id) }, func(q *gamesqlc.Queries) error { _, err := q.DeleteTag(ctx, id); return err })
-}
-
-func (store *gameStore) listTagMaps(ctx context.Context, page adminutil.PageQuery) (int64, []models.TagMapDTO, common.Error) {
-	total, err := store.q.CountTagMaps(ctx, page.Keyword)
-	if err != nil {
-		return 0, nil, gameDAOError(err)
-	}
-	limit, offset := pageArgsGame(page)
-	rows, err := store.q.ListTagMaps(ctx, gamesqlc.ListTagMapsParams{Keyword: page.Keyword, RowLimit: limit, RowOffset: offset})
-	if err != nil {
-		return 0, nil, gameDAOError(err)
-	}
-	items := make([]models.TagMapDTO, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, models.TagMapDTO{ID: row.ID, GameID: row.GameID, TagID: row.TagID, GameName: row.GameName, TagName: row.TagName, CreateTime: localTime(row.CreateTime), UpdateTime: localTime(row.UpdateTime)})
-	}
-	return total, items, nil
-}
-
-func (store *gameStore) getTagMap(ctx context.Context, id int64) (models.TagMap, common.Error) {
-	row, err := store.q.GetTagMap(ctx, id)
-	return tagMapModel(row), gameDAOError(err)
-}
-
-func (store *gameStore) createTagMap(ctx context.Context, meta audit.Meta, gameID, tagID int64) (models.TagMap, common.Error) {
-	var result models.TagMap
-	err := store.mutate(ctx, meta, "create", "gfg_tag_map", func(q *gamesqlc.Queries) (int64, any, any, error) {
-		id, err := q.NextTagMapID(ctx)
-		if err != nil {
-			return 0, nil, nil, err
-		}
-		row, err := q.InsertTagMap(ctx, gamesqlc.InsertTagMapParams{ID: id, GameID: gameID, TagID: tagID})
-		if err == nil {
-			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: gameID, MaterializationSource: "observed"})
-		}
-		result = tagMapModel(row)
-		return id, nil, row, err
-	})
-	return result, err
-}
-
-func (store *gameStore) updateTagMap(ctx context.Context, meta audit.Meta, req gamesqlc.UpdateTagMapParams) common.Error {
-	return store.mutate(ctx, meta, "update", "gfg_tag_map", func(q *gamesqlc.Queries) (int64, any, any, error) {
-		before, err := q.GetTagMap(ctx, req.ID)
-		if err != nil {
-			return req.ID, nil, nil, err
-		}
-		after, err := q.UpdateTagMap(ctx, req)
-		if err == nil {
-			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: before.GameID, MaterializationSource: "observed"})
-		}
-		if err == nil && after.GameID != before.GameID {
-			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: after.GameID, MaterializationSource: "observed"})
-		}
-		return req.ID, before, after, err
-	})
-}
-
-func (store *gameStore) deleteTagMap(ctx context.Context, meta audit.Meta, id int64) common.Error {
-	return store.mutate(ctx, meta, "delete", "gfg_tag_map", func(q *gamesqlc.Queries) (int64, any, any, error) {
-		before, err := q.GetTagMap(ctx, id)
-		if err != nil {
-			return id, nil, nil, err
-		}
-		if _, err = q.DeleteTagMap(ctx, id); err == nil {
-			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: before.GameID, MaterializationSource: "observed"})
-		}
-		return id, before, nil, err
-	})
-}
-
-func (store *gameStore) replaceGameTags(ctx context.Context, meta audit.Meta, gameID int64, tagIDs []int64) common.Error {
-	return store.mutate(ctx, meta, "bulk_replace", "gfg_tag_map", func(q *gamesqlc.Queries) (int64, any, any, error) {
-		before, err := q.ListTagMapsByGame(ctx, gameID)
-		if err != nil {
-			return gameID, nil, nil, err
-		}
-		if _, err = q.DeleteTagMapsByGame(ctx, gameID); err != nil {
-			return gameID, before, nil, err
-		}
-		if len(tagIDs) > 0 {
-			firstID, err := q.NextTagMapID(ctx)
-			if err != nil {
-				return gameID, before, nil, err
-			}
-			for index, tagID := range tagIDs {
-				if _, err = q.InsertTagMap(ctx, gamesqlc.InsertTagMapParams{ID: firstID + int64(index), GameID: gameID, TagID: tagID}); err != nil {
-					return gameID, before, nil, err
-				}
-			}
-		}
-		after, err := q.ListTagMapsByGame(ctx, gameID)
-		if err == nil {
-			err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: gameID, MaterializationSource: "observed"})
-		}
-		return gameID, before, after, err
-	})
-}
-
-func (store *gameStore) listGameIDsByTag(ctx context.Context, tagID int64) ([]int64, common.Error) {
-	rows, err := store.q.ListGameIDsByTag(ctx, tagID)
-	return rows, gameDAOError(err)
-}
-
-func (store *gameStore) replaceTagGames(ctx context.Context, meta audit.Meta, tagID int64, gameIDs []int64) common.Error {
-	return store.mutate(ctx, meta, "bulk_replace_by_tag", "gfg_tag_map", func(q *gamesqlc.Queries) (int64, any, any, error) {
-		before, err := q.ListTagMapsByTag(ctx, tagID)
-		if err != nil {
-			return tagID, nil, nil, err
-		}
-		existing := make(map[int64]struct{}, len(before))
-		for _, row := range before {
-			existing[row.GameID] = struct{}{}
-		}
-		if _, err = q.DeleteTagMapsByTagExceptGames(ctx, gamesqlc.DeleteTagMapsByTagExceptGamesParams{TagID: tagID, GameIds: gameIDs}); err != nil {
-			return tagID, before, nil, err
-		}
-		missing := make([]int64, 0, len(gameIDs))
-		for _, gameID := range gameIDs {
-			if _, ok := existing[gameID]; !ok {
-				missing = append(missing, gameID)
-			}
-		}
-		if len(missing) > 0 {
-			firstID, err := q.NextTagMapID(ctx)
-			if err != nil {
-				return tagID, before, nil, err
-			}
-			for index, gameID := range missing {
-				if _, err = q.InsertTagMap(ctx, gamesqlc.InsertTagMapParams{ID: firstID + int64(index), GameID: gameID, TagID: tagID}); err != nil {
-					return tagID, before, nil, err
-				}
-			}
-		}
-		after, err := q.ListTagMapsByTag(ctx, tagID)
-		if err == nil {
-			affected := make(map[int64]struct{}, len(existing)+len(gameIDs))
-			for gameID := range existing {
-				affected[gameID] = struct{}{}
-			}
-			for _, gameID := range gameIDs {
-				affected[gameID] = struct{}{}
-			}
-			for gameID := range affected {
-				if err = q.RefreshCurrentGameDaily(ctx, gamesqlc.RefreshCurrentGameDailyParams{GameID: gameID, MaterializationSource: "observed"}); err != nil {
-					break
-				}
-			}
-		}
-		return tagID, before, after, err
-	})
-}
-
 func (store *gameStore) delete(ctx context.Context, meta audit.Meta, id int64, resource string, beforeFn func(*gamesqlc.Queries) (any, error), deleteFn func(*gamesqlc.Queries) error) common.Error {
 	return store.mutate(ctx, meta, "delete", resource, func(q *gamesqlc.Queries) (int64, any, any, error) {
 		before, err := beforeFn(q)
@@ -531,6 +356,10 @@ func gameDAOError(err error) common.Error {
 	}
 	if appErr, ok := err.(common.Error); ok {
 		return appErr
+	}
+	var constraint *pgconn.PgError
+	if errors.As(err, &constraint) && (constraint.Code == "23505" || constraint.Code == "23503" || constraint.Code == "23514") {
+		return common.NewValidationError("value conflicts with a domain constraint")
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return common.NewDaoError("record not found")
@@ -587,12 +416,4 @@ func commentModel(row gamesqlc.GfgGameComment) models.GameComment {
 
 func prizeModel(row gamesqlc.GfgPrize) models.Prize {
 	return models.Prize{ID: row.ID, Title: row.Title, Desc: row.Desc, Prize: string(row.Prize), Key: row.Key, StartTime: localTime(row.StartTime), EndTime: localTime(row.EndTime), CreateTime: localTime(row.CreateTime), Status: row.Status}
-}
-
-func tagModel(row gamesqlc.GfgTag) models.Tag {
-	return models.Tag{ID: row.ID, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Prefix: row.Prefix, CreateTime: localTime(row.CreateTime), UpdateTime: localTime(row.UpdateTime)}
-}
-
-func tagMapModel(row gamesqlc.GfgTagMap) models.TagMap {
-	return models.TagMap{ID: row.ID, GameID: row.GameID, TagID: row.TagID, CreateTime: localTime(row.CreateTime), UpdateTime: localTime(row.UpdateTime)}
 }

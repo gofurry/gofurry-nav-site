@@ -242,3 +242,11 @@ func parseInt64(value string) int64 {
 	}
 	return parsed
 }
+
+func (api *GameV2API) GetTagCategories(c fiber.Ctx) error {
+	data, err := api.getReadModelService().ListTagCategories(c.Context(), c.Query("lang", "zh"))
+	if err != nil {
+		return common.NewResponse(c).Error(err.GetMsg())
+	}
+	return common.NewResponse(c).SuccessWithData(data)
+}

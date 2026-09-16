@@ -1,6 +1,7 @@
 import type {
     AnonymousReviewModel, CommentReq,
     GameTagRecord,
+    GameTagCategory,
     LotteryReq, LotteryResp, RecommendedModel,
     SearchItemModel, SearchPageQueryRequest, SearchPageResponse,
 } from '@/types/game'
@@ -27,6 +28,10 @@ export function getLatestReview(limit = 15): Promise<AnonymousReviewModel[]> {
 
 export function getTagList(lang: string, options: ApiRequestOptions = {}): Promise<GameTagRecord[]> {
     return useApi('gameV2')('/game/tags', { query: { lang }, ...options })
+}
+
+export function getTagCategories(lang: string, options: ApiRequestOptions = {}): Promise<GameTagCategory[]> {
+    return useApi('gameV2')('/game/tag-categories', { query: { lang }, ...options })
 }
 
 export function searchGameAdvanced(
