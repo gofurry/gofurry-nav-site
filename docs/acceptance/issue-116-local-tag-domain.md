@@ -1,8 +1,9 @@
 # Issue 116 local acceptance evidence (2026-09-16)
 
 Scope: local dev, tag domain only. Shared development gfg and production were not
-modified. The disposable shared development clone acceptance is pending the
-operator checkpoint in `docs/operations/tag-domain-development-acceptance.md`.
+modified. After the operator provisioned `gfg_tag_refactor_test`, the workstation
+completed the clone migration and the database/API checks below. The provisioning
+and cleanup boundaries remain in `docs/operations/tag-domain-development-acceptance.md`.
 
 ## Root causes and decisions
 
@@ -63,9 +64,60 @@ primary_tag_id/tag_id dimensions, and derived public/admin primary/secondary
 response fields are legitimate and retained. Nav collector DNS prefix fields are
 unrelated to Tag hierarchy and unchanged.
 
+## Populated development clone evidence (2026-09-16)
+
+- Operator-created clone was empty and owned by `gofurry_migrator`. Workstation
+  `pg_dump`/`pg_restore` used only the verified development host. Goose targeted
+  only `gfg_tag_refactor_test`; runtime checks used `gofurry_app`.
+- The initial full dump was rejected for lack of access to the infrastructure
+  `infra_backup.restore_canary`. Nothing had been restored. After confirming all
+  business objects were in `public`, the successful business-domain backup excluded
+  only `infra_backup`, retaining the required `pg_trgm` extension. No permissions
+  were elevated. Custom archive catalog verification and restore both succeeded.
+  Archive size: 9,048,246 bytes; SHA-256:
+  `3439f751806d1ac743c15f64f28bb083cf59b0e66898bcb52115cc0abb793615`.
+  The archive and private runtime configuration remain outside Git on the workstation.
+- Migrated `20260916010000` to `20260916020000`: 213 Games, 218 legacy Tag rows
+  became 4 Categories plus 214 retained leaf Tags. All 214 permanent codes match
+  the explicit mapping. 3,882 legacy map pairs plus 18 missing primary and 31
+  missing secondary pairs became 3,931 relations: 212 primary, 212 secondary,
+  3,507 normal. Exact memberships, roles and timestamp rules passed comparison.
+- All 34 unrelated business tables retained their row counts and content hashes;
+  Game content excluding removed columns also matched. Removed current columns,
+  map table and function references were absent. Runtime grants were verified.
+  Final schema matched `tools/db-baseline/expected-final/gfg.json`; fingerprint:
+  `278ecb518b7b2ac6ea3358be48cae3f1b2be63bb8adbe736c533bd6734043946`.
+- This source contains zero Game Daily rows and zero tracking periods. Consequently
+  its unchanged empty history is not evidence for populated historical preservation.
+  Existing isolated migration regressions cover that case. A clone-only transaction
+  additionally seeded tracking/current/past fixtures, verified exact projected
+  membership and roles, current/finalized version 2, preserved past version 1, and
+  generated Tag ID above the retained maximum 9010, then rolled all fixture rows
+  back. Identity sequence advancement from this test is expected.
+- Populated Game Backend checks passed in Chinese and English: 4 explicit
+  Categories, 214 leaves, Adult code and role/category metadata, and actual HTTP
+  handlers for Tags, Categories, detail, search and recommendations.
+- Private recommendation CLI completed on the populated clone:
+  `algorithm=similar-v2.4.0-hybrid-cbf total=213 rebuilt=213 failed=0`.
+  SQL verification found 13,632 cache rows across all 213 sources, only the new
+  algorithm version, and maximum rank 64. No HTTP service, collector or Redis was
+  started for the rebuild.
+- Admin HTTP checks passed against the clone Game pool: Categories, Tags, searchable
+  options, workspace, atomic no-op classification and invalid-role rejection without
+  changing Game weight/membership. Authentication/audit used a local disposable
+  Admin database, which was removed afterward; shared `gfa`/`gfn` were not used.
+  These targeted probes ran through temporary workstation test harnesses; they do
+  not replace the committed regression suites or claim live browser acceptance.
+
 ## Remaining operator work
 
-Create/restore the development disposable clone and provide ignored clone runtime
-configs. Actual clone row counts, backup/restore evidence, populated-catalog
-rebuild and live Admin/Nav Web acceptance are not yet verified. Follow the linked
-runbook; production migration/restarts are outside this task.
+Live Admin/Nav Web browser acceptance against this populated clone remains manual:
+Category/Tag creation and archive/restore flows, category labels, preserved search
+selections, Adult display, and bilingual desktop/mobile Gallery. Earlier browser
+smokes used isolated fixtures, not this populated clone.
+
+Shared development `gfg` remains at `20260916010000`. Its eventual cutover needs a
+fresh verified backup and a coordinated stop/update of incompatible old Game
+Backend, Game Collector and Admin clients, alongside Nav Web. No shared-source
+migration or service cutover was executed here. Clone deletion remains an operator
+checkpoint. Production migration/restarts are outside this task.

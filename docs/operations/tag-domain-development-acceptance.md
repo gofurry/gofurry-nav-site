@@ -67,7 +67,7 @@ shared-infrastructure actions remain manual:
 
    ```powershell
    $tag116Backup = Join-Path $env:TEMP 'gofurry-dev-gfg-tag116.dump'
-   pg_dump --format=custom --file $tag116Backup --dbname "$env:GOFURRY_GFG_MIGRATOR_URL"
+   pg_dump --format=custom --exclude-schema=infra_backup --file $tag116Backup --dbname "$env:GOFURRY_GFG_MIGRATOR_URL"
    if ($LASTEXITCODE -ne 0) { throw 'Development backup failed' }
    pg_restore --list $tag116Backup | Out-Null
    if ($LASTEXITCODE -ne 0) { throw 'Backup catalog verification failed' }
@@ -77,6 +77,12 @@ shared-infrastructure actions remain manual:
 
    The restore must finish successfully before migration. Retain this verified
    pre-migration copy for clone retry. Do not restore onto the source database.
+   `infra_backup` is the infrastructure-owned restore-canary schema, outside the
+   application/Goose contract; the migrator cannot read it. The exclusion above
+   was verified against the development database: application objects are in
+   `public`, and required extensions remain included. This is a business-domain
+   clone backup, not a replacement for infrastructure-wide backups. Investigate
+   any other permission failure instead of adding further exclusions blindly.
 5. In the clone as its migrator owner, establish clone-local runtime grants,
    including default privileges for the new tables/sequences:
 
@@ -94,8 +100,8 @@ shared-infrastructure actions remain manual:
    ```
 
 Once prepared, tell Codex the ignored clone-config paths. Do not grant blanket
-infrastructure administration permission. The following acceptance is still
-pending until actually executed on that clone.
+infrastructure administration permission. Record the actual execution outcome in
+`docs/acceptance/issue-116-local-tag-domain.md`; provisioning alone is not acceptance.
 
 ## Workstation acceptance after the checkpoint
 
