@@ -1,7 +1,7 @@
 # Issue 116 local acceptance evidence (2026-09-16)
 
-Scope: local dev, tag domain only. Shared development gfg and production were not
-modified. After the operator provisioned `gfg_tag_refactor_test`, the workstation
+Scope: local and shared development, tag domain only. Production was not accessed.
+After the operator provisioned `gfg_tag_refactor_test`, the workstation
 completed the clone migration and the database/API checks below. The provisioning
 and cleanup boundaries remain in `docs/operations/tag-domain-development-acceptance.md`.
 
@@ -116,8 +116,47 @@ Category/Tag creation and archive/restore flows, category labels, preserved sear
 selections, Adult display, and bilingual desktop/mobile Gallery. Earlier browser
 smokes used isolated fixtures, not this populated clone.
 
-Shared development `gfg` remains at `20260916010000`. Its eventual cutover needs a
-fresh verified backup and a coordinated stop/update of incompatible old Game
-Backend, Game Collector and Admin clients, alongside Nav Web. No shared-source
-migration or service cutover was executed here. Clone deletion remains an operator
-checkpoint. Production migration/restarts are outside this task.
+At the end of clone acceptance, shared development `gfg` was still at
+`20260916010000`. The subsequently authorized shared-development migration is
+recorded below. Clone deletion remains an operator checkpoint. Production
+migration/restarts are outside this task.
+
+## Authorized shared development cutover (2026-09-16)
+
+After reviewing the successful clone acceptance, the user explicitly authorized
+migration of shared development `gfg`. The workstation verified the configured
+development host, database name and migrator role; there were no other connections
+before backup or immediately before migration. No credentials, ports, Compose,
+Tailscale configuration or infrastructure roles were changed.
+
+A fresh business-domain backup excluded only the previously audited
+`infra_backup` schema. Its catalog was verified, and the archive was successfully
+restored into a local disposable PostgreSQL database: 213 Games, 218 legacy Tags,
+3,882 pairs, version `20260916010000`. That local verification database was then
+removed. A verified backup copy is retained in the workstation's private backup
+directory, outside Git. SHA-256:
+`16f8718a2bd851ca742be6a25c1cefd7fca078b84bdff828a02b3a24a7673063`.
+
+Goose `up-to 20260916020000` completed against shared development `gfg`, with a
+10-second lock timeout and a bounded statement timeout. The resulting 4 Categories,
+214 original leaf identities/codes and 3,931 role relations matched the saved
+pre-migration data and timestamp rules exactly. All 34 unrelated table hashes and
+Game content excluding removed columns remained unchanged. Removed objects were
+absent; `gofurry_app` inherited the required new-table permissions from the existing
+default privileges. No shared database fixture rows were inserted for acceptance.
+
+The shared database's complete public schema matched the committed final snapshot
+(fingerprint `278ecb518b7b2ac6ea3358be48cae3f1b2be63bb8adbe736c533bd6734043946`).
+Game Backend's Chinese/English Tags, Categories, detail, search and recommendation
+HTTP handler checks passed using `gofurry_app` with read-only transactions enforced.
+The private recommendation rebuild then completed against shared development:
+`algorithm=similar-v2.4.0-hybrid-cbf total=213 rebuilt=213 failed=0`.
+Final SQL verification found 13,632 rows, 213 sources, maximum rank 64 and no old
+algorithm versions. Final data comparisons still preserved every migrated
+membership/timestamp and all unrelated table hashes. Both shared `gfg` and the
+retained clone had zero other connections after the workstation checks finished.
+
+Developers must restart current Game Backend, Game Collector, Admin (including the
+updated embedded React build) and Nav Web on their workstations. Old binaries are
+incompatible with the migrated schema. Application services were not started or
+restarted by this database operation; the infrastructure server remains infrastructure-only.
