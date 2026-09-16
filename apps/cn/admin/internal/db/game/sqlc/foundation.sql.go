@@ -74,6 +74,17 @@ func (q *Queries) CountTagMaps(ctx context.Context, keyword string) (int64, erro
 	return column_1, err
 }
 
+const countTagOptions = `-- name: CountTagOptions :one
+SELECT COUNT(*)::bigint FROM gfg_tag WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
+`
+
+func (q *Queries) CountTagOptions(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countTagOptions, keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countTags = `-- name: CountTags :one
 SELECT COUNT(*)::bigint FROM gfg_tag WHERE $1::text='' OR name ILIKE '%'||$1||'%'
  OR name_en ILIKE '%'||$1||'%' OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%'
@@ -948,8 +959,14 @@ func (q *Queries) ListTagMapsByTag(ctx context.Context, tagID int64) ([]GfgTagMa
 
 const listTagOptions = `-- name: ListTagOptions :many
 SELECT id,name,name_en FROM gfg_tag WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
-ORDER BY id DESC
+ORDER BY id DESC LIMIT $3 OFFSET $2
 `
+
+type ListTagOptionsParams struct {
+	Keyword   string `json:"keyword"`
+	RowOffset int32  `json:"row_offset"`
+	RowLimit  int32  `json:"row_limit"`
+}
 
 type ListTagOptionsRow struct {
 	ID     int64  `json:"id"`
@@ -957,8 +974,8 @@ type ListTagOptionsRow struct {
 	NameEn string `json:"name_en"`
 }
 
-func (q *Queries) ListTagOptions(ctx context.Context, keyword string) ([]ListTagOptionsRow, error) {
-	rows, err := q.db.Query(ctx, listTagOptions, keyword)
+func (q *Queries) ListTagOptions(ctx context.Context, arg ListTagOptionsParams) ([]ListTagOptionsRow, error) {
+	rows, err := q.db.Query(ctx, listTagOptions, arg.Keyword, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}

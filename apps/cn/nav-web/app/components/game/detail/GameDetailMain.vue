@@ -1,5 +1,5 @@
 <template>
-  <section class="game-detail-main space-y-4">
+  <section class="game-detail-main min-w-0 w-full max-w-full space-y-4">
 
     <!-- 顶部信息 -->
     <GameDetailHeader
@@ -8,7 +8,7 @@
     />
 
     <!-- Tabs -->
-    <div class="game-detail-tabs">
+    <div class="game-detail-tabs min-w-0 w-full max-w-full">
 
       <!-- Tab Header -->
       <div class="game-detail-tab-list flex overflow-x-auto scrollbar-hide">
@@ -31,7 +31,7 @@
       </div>
 
       <!-- Tab Content -->
-      <div class="game-detail-tab-panel p-5 text-sm">
+      <div class="game-detail-tab-panel min-w-0 max-w-full p-5 text-sm">
 
         <GameTabInsights
             v-if="insightsVisited"
@@ -56,6 +56,8 @@
         <!-- Gallery -->
         <BlurWrapper
             v-else-if="activeTab === 'gallery'"
+            class="game-detail-gallery-wrapper min-w-0 w-full max-w-full"
+            :class="{ 'overflow-clip': needBlur }"
             :enable="needBlur"
             :tip='t("common.modal.galleryBlur")'
             @unlock="openNsfwConfirm"

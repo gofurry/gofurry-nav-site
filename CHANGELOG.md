@@ -6,6 +6,13 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+### Fixed
+
+- Restore debounced primary/secondary tag search and selection-preserving local tag filtering in React Admin; honor tag option pagination and keyword filtering (#113).
+- Use the public frontend platform icon key catalog for Admin Game group/link selectors, prevent duplicate choices, and preserve free-text resource keys (#114).
+- Widen Chinese and English Game summaries to 400 characters through a new Goose migration, with matching Admin validation and character counts (#115).
+- Constrain the Game detail flex column and Gallery media to their parent width while preserving local thumbnail scrolling, the desktop sidebar, and mobile tabs (#120).
+
 ## v3.0.0-alpha.8 - 2026-09-15
 
 ### Added

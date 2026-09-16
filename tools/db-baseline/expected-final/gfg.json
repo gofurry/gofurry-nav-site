@@ -1823,14 +1823,14 @@
         },
         {
           "name": "info",
-          "data_type": "character varying(300)",
+          "data_type": "character varying(400)",
           "not_null": true,
           "has_default": false,
           "comment": "游戏简介"
         },
         {
           "name": "info_en",
-          "data_type": "character varying(300)",
+          "data_type": "character varying(400)",
           "not_null": true,
           "has_default": false,
           "comment": "游戏英文简介"

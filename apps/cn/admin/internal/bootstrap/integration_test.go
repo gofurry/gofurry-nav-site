@@ -135,6 +135,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Get("/options/sites", optionsAPI.SiteOptions)
 	protected.Get("/options/site-targets", optionsAPI.SiteTargetOptions)
 	protected.Get("/options/games", optionsAPI.GameOptions)
+	protected.Get("/options/tags", optionsAPI.TagOptions)
 	protected.Get("/metrics/overview", metricAPI.Overview)
 	protected.Get("/metrics/registry", metricAPI.Registry)
 	protected.Get("/metrics/checkpoints", metricAPI.Checkpoints)
@@ -307,6 +308,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	if secondGameID <= gameID {
 		t.Fatalf("Game sequence reused or regressed id: first=%d second=%d", gameID, secondGameID)
 	}
+	testGameEditingRegression(t, ctx, app, cookie, gamePool, secondGameID, secondGamePayload)
 	testCollectionCenterOperations(t, ctx, app, cookie, gamePool, navPool, secondGameID)
 	if count := queryInt64(t, ctx, adminPool, `SELECT COUNT(*) FROM gfa_admin_audit_log`); count < 10 {
 		t.Fatalf("expected auth and CRUD audit entries, got %d", count)

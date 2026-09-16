@@ -95,7 +95,7 @@ jobs:
           if affected "^apps/cn/game-backend/|^db/game/|${shared}"; then add_module apps/cn/game-backend; fi
           if affected "^apps/cn/nav-collector/|^db/nav/|${shared}"; then add_module apps/cn/nav-collector; fi
           if affected "^apps/cn/nav-backend/|^db/nav/|${shared}"; then add_module apps/cn/nav-backend; fi
-          if affected "^apps/cn/admin/|^db/(admin|game|nav)/|${shared}"; then add_module apps/cn/admin; fi
+          if affected "^apps/cn/admin/|^apps/cn/nav-web/app/data/platform-icons\.json$|^db/(admin|game|nav)/|${shared}"; then add_module apps/cn/admin; fi
           if affected "^apps/cn/uptime/|${shared}"; then add_module apps/cn/uptime; fi
           echo "modules=${modules}" >> "${GITHUB_OUTPUT}"
           if [[ "${modules}" == "[]" ]]; then

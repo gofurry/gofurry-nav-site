@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Braces, Check, LoaderCircle, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { ArrowLeft, Braces, LoaderCircle, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm, type Resolver } from 'react-hook-form'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -16,17 +16,18 @@ import { Alert } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
 import { ConfirmAction } from '../../components/ui/dialog'
 import { Input, Textarea } from '../../components/ui/input'
-import { Select } from '../../components/ui/select'
+import { RemoteSelect } from '../../components/admin/operations'
+import { KeyValueEditor, TagMultiSelect, loadAllTagOptions, summarySchema, SummaryField } from './game-editors'
 import { useUnsavedChanges } from '../../hooks/use-unsaved-changes'
 import { errorMessage, getJSON, listJSON, sendJSON } from '../../lib/api'
-import type { Game, GameWorkspace, KeyValue, OptionItem } from '../../lib/types'
+import type { Game, GameWorkspace } from '../../lib/types'
 import { formatDate } from '../../lib/utils'
 import { useAuth } from '../auth/auth-context'
 import { steamPrefillValues, type SteamPrefill } from './steam-prefill'
 
 const kvSchema = z.object({ key: z.string(), value: z.string() })
 const gameContentSchema = z.object({
-  name: z.string().trim().min(1, '请输入中文名称'), name_en: z.string(), info: z.string(), info_en: z.string(), appid: z.coerce.number().int().positive('Steam AppID 必须是正整数'),
+  name: z.string().trim().min(1, '请输入中文名称'), name_en: z.string(), info: summarySchema, info_en: summarySchema, appid: z.coerce.number().int().positive('Steam AppID 必须是正整数'),
   developers: z.array(z.string()), publishers: z.array(z.string()), header: z.string(), groups: z.array(kvSchema), links: z.array(kvSchema), resources: z.array(kvSchema),
 })
 type GameContentValues = z.infer<typeof gameContentSchema>
@@ -52,8 +53,8 @@ export function GameListPage() {
   const pageSize = [20, 50, 100].includes(Number(params.get('page_size'))) ? Number(params.get('page_size')) : 50
   const search = params.get('search') ?? ''
   const query = useQuery({ queryKey: ['games', page, pageSize, search], queryFn: () => listJSON<Game>('/api/v1/game/games', page, pageSize, search) })
-  const tagOptions = useQuery({ queryKey: ['options', 'tags'], queryFn: () => listJSON<OptionItem>('/api/v1/options/tags', 1, 200), staleTime: 60_000 })
-  const tagNames = useMemo(() => new Map((tagOptions.data?.list ?? []).map((item) => [Number(item.id), item.label])), [tagOptions.data?.list])
+  const tagOptions = useQuery({ queryKey: ['options', 'tags', 'all'], queryFn: loadAllTagOptions, staleTime: 60_000 })
+  const tagNames = useMemo(() => new Map((tagOptions.data ?? []).map((item) => [Number(item.id), item.label])), [tagOptions.data])
   const columns = useMemo<AdminColumn<Game>[]>(() => [
     { key: 'id', header: 'ID', hidden: true }, { key: 'name', header: '名称', render: (game) => <div><p className="font-medium text-primary">{game.name}</p>{game.name_en && <p className="text-xs text-muted-foreground">{game.name_en}</p>}</div> },
     { key: 'appid', header: 'Steam AppID', render: (game) => <span className="font-mono text-xs">{game.appid}</span> },
@@ -69,16 +70,11 @@ function LinesEditor({ value, onChange, placeholder }: { value: string[]; onChan
   return <Textarea value={value.join('\n')} onChange={(event) => onChange(event.target.value.split('\n').map((item) => item.trim()).filter(Boolean))} placeholder={placeholder} />
 }
 
-function KeyValueEditor({ value, onChange }: { value: KeyValue[]; onChange: (value: KeyValue[]) => void }) {
-  const items = value.length ? value : [{ key: '', value: '' }]
-  return <div className="grid gap-2">{items.map((item, index) => <div key={index} className="grid grid-cols-[10rem_1fr_auto] gap-2"><Input value={item.key} onChange={(event) => onChange(items.map((entry, current) => current === index ? { ...entry, key: event.target.value } : entry))} placeholder="键" /><Input value={item.value} onChange={(event) => onChange(items.map((entry, current) => current === index ? { ...entry, value: event.target.value } : entry))} placeholder="值 / URL" /><Button type="button" variant="ghost" size="icon" aria-label="删除此项" onClick={() => onChange(items.filter((_, current) => current !== index))}><Trash2 className="size-4" /></Button></div>)}<Button type="button" variant="secondary" size="sm" className="w-fit" onClick={() => onChange([...items, { key: '', value: '' }])}><Plus className="size-3.5" />新增一项</Button></div>
-}
-
 function gameContentValues(game: Game): GameContentValues {
   return { name: game.name, name_en: game.name_en, info: game.info, info_en: game.info_en, appid: game.appid, developers: game.developers ?? [], publishers: game.publishers ?? [], header: game.header, groups: game.groups ?? [], links: game.links ?? [], resources: game.resources ?? [] }
 }
 
-function GameContentForm({ game, creating = false }: { game: Game; creating?: boolean }) {
+export function GameContentForm({ game, creating = false }: { game: Game; creating?: boolean }) {
   const navigate = useNavigate()
   const client = useQueryClient()
   const { toast } = useToast()
@@ -91,18 +87,14 @@ function GameContentForm({ game, creating = false }: { game: Game; creating?: bo
     return creating ? sendJSON<Game>('/api/v1/game/games', 'POST', payload) : sendJSON<Game>(`/api/v1/game/games/${game.id}`, 'PUT', payload)
   }, onSuccess: async (saved) => { form.reset(gameContentValues(saved)); await client.invalidateQueries({ queryKey: ['game'] }); await client.invalidateQueries({ queryKey: ['games'] }); toast(creating ? '游戏已创建' : '游戏内容已保存'); if (creating) navigate(`/game/games/${saved.id}`, { replace: true }) }, onError: (error) => setOperationError(errorMessage(error)) })
   const prefill = useMutation({ mutationFn: () => getJSON<SteamPrefill>(`/api/v1/game/games/steam-prefill?appid=${form.getValues('appid')}`), onSuccess: (data) => { Object.entries(steamPrefillValues(data)).forEach(([key, value]) => form.setValue(key as keyof GameContentValues, value, { shouldDirty: true })); toast('已加载 Steam 预填内容', 'info') }, onError: (error) => toast(errorMessage(error), 'danger') })
-  return <Section title={creating ? '新增游戏' : '内容'} description="按业务意义组织基本内容、创作者、媒体与外部资源。"><form className="grid gap-7" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>{operationError && <Alert tone="danger">{operationError}</Alert>}<FormSection title="基本内容"><div className="grid gap-4 md:grid-cols-2"><FormField label="中文名称" required error={form.formState.errors.name?.message}><Input {...form.register('name')} /></FormField><FormField label="英文名称"><Input {...form.register('name_en')} /></FormField></div><FormField label="中文简介"><Textarea {...form.register('info')} /></FormField><FormField label="英文简介"><Textarea {...form.register('info_en')} /></FormField><div className="grid gap-4 md:grid-cols-[1fr_auto]"><FormField label="Steam AppID" required error={form.formState.errors.appid?.message}><Input type="number" {...form.register('appid')} /></FormField><Button type="button" variant="secondary" className="self-end" disabled={prefill.isPending || Number(form.watch('appid')) <= 0} onClick={() => prefill.mutate()}>{prefill.isPending && <LoaderCircle className="size-4 animate-spin" />}从 Steam 预填</Button></div></FormSection><FormSection title="创作者"><Controller name="developers" control={form.control} render={({ field }) => <FormField label="开发者" help="每行一个开发者。"><LinesEditor value={field.value} onChange={field.onChange} /></FormField>} /><Controller name="publishers" control={form.control} render={({ field }) => <FormField label="发行商" help="每行一个发行商。"><LinesEditor value={field.value} onChange={field.onChange} /></FormField>} /></FormSection><FormSection title="媒体"><FormField label="封面 / Header URL"><Input {...form.register('header')} /></FormField></FormSection><FormSection title="外部资源"><Controller name="groups" control={form.control} render={({ field }) => <FormField label="社群"><KeyValueEditor value={field.value} onChange={field.onChange} /></FormField>} /><Controller name="links" control={form.control} render={({ field }) => <FormField label="第三方链接"><KeyValueEditor value={field.value} onChange={field.onChange} /></FormField>} /><Controller name="resources" control={form.control} render={({ field }) => <FormField label="资源"><KeyValueEditor value={field.value} onChange={field.onChange} /></FormField>} /></FormSection><div className="flex justify-end"><Button disabled={mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}{creating ? '创建游戏' : '保存内容'}</Button></div></form></Section>
+  return <Section title={creating ? '新增游戏' : '内容'} description="按业务意义组织基本内容、创作者、媒体与外部资源。"><form className="grid gap-7" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>{operationError && <Alert tone="danger">{operationError}</Alert>}<FormSection title="基本内容"><div className="grid gap-4 md:grid-cols-2"><FormField label="中文名称" required error={form.formState.errors.name?.message}><Input {...form.register('name')} /></FormField><FormField label="英文名称"><Input {...form.register('name_en')} /></FormField></div><Controller name="info" control={form.control} render={({ field, fieldState }) => <SummaryField label="中文简介" value={field.value} onChange={field.onChange} error={fieldState.error?.message} />} /><Controller name="info_en" control={form.control} render={({ field, fieldState }) => <SummaryField label="英文简介" value={field.value} onChange={field.onChange} error={fieldState.error?.message} />} /><div className="grid gap-4 md:grid-cols-[1fr_auto]"><FormField label="Steam AppID" required error={form.formState.errors.appid?.message}><Input type="number" {...form.register('appid')} /></FormField><Button type="button" variant="secondary" className="self-end" disabled={prefill.isPending || Number(form.watch('appid')) <= 0} onClick={() => prefill.mutate()}>{prefill.isPending && <LoaderCircle className="size-4 animate-spin" />}从 Steam 预填</Button></div></FormSection><FormSection title="创作者"><Controller name="developers" control={form.control} render={({ field }) => <FormField label="开发者" help="每行一个开发者。"><LinesEditor value={field.value} onChange={field.onChange} /></FormField>} /><Controller name="publishers" control={form.control} render={({ field }) => <FormField label="发行商" help="每行一个发行商。"><LinesEditor value={field.value} onChange={field.onChange} /></FormField>} /></FormSection><FormSection title="媒体"><FormField label="封面 / Header URL"><Input {...form.register('header')} /></FormField></FormSection><FormSection title="外部资源"><Controller name="groups" control={form.control} render={({ field }) => <FormField label="社群"><KeyValueEditor platformKeys value={field.value} onChange={field.onChange} /></FormField>} /><Controller name="links" control={form.control} render={({ field }) => <FormField label="第三方链接"><KeyValueEditor platformKeys value={field.value} onChange={field.onChange} /></FormField>} /><Controller name="resources" control={form.control} render={({ field }) => <FormField label="资源"><KeyValueEditor value={field.value} onChange={field.onChange} /></FormField>} /></FormSection><div className="flex justify-end"><Button disabled={mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}{creating ? '创建游戏' : '保存内容'}</Button></div></form></Section>
 }
 
-function TagMultiSelect({ options, selected, onChange }: { options: OptionItem[]; selected: string[]; onChange: (value: string[]) => void }) {
-  return <div className="grid max-h-64 gap-1 overflow-auto rounded-md border p-2 md:grid-cols-2 xl:grid-cols-3">{options.map((option) => { const active = selected.includes(String(option.id)); return <button key={option.id} type="button" onClick={() => onChange(active ? selected.filter((id) => id !== String(option.id)) : [...selected, String(option.id)])} className="flex items-center gap-2 rounded px-2 py-2 text-sm hover:bg-surface-muted"><span className={active ? 'grid size-4 place-items-center rounded border border-primary bg-primary text-primary-foreground' : 'size-4 rounded border'}>{active && <Check className="size-3" />}</span>{option.label}</button> })}</div>
-}
-
-function GameClassificationForm({ workspace }: { workspace: GameWorkspace }) {
+export function GameClassificationForm({ workspace }: { workspace: GameWorkspace }) {
   const client = useQueryClient()
   const { toast } = useToast()
   const [operationError, setOperationError] = useState('')
-  const options = useQuery({ queryKey: ['options', 'tags'], queryFn: () => listJSON<OptionItem>('/api/v1/options/tags', 1, 200) })
+  const options = useQuery({ queryKey: ['options', 'tags', 'all'], queryFn: loadAllTagOptions })
   const form = useForm<GameClassificationValues>({ resolver: zodResolver(gameClassificationSchema) as unknown as Resolver<GameClassificationValues>, defaultValues: { primary_tag: workspace.game.primary_tag, secondary_tag: workspace.game.secondary_tag, tag_ids: workspace.tags.map((tag) => String(tag.tag_id)), weight: workspace.game.weight } })
   useUnsavedChanges(form.formState.isDirty)
   const mutation = useMutation({ mutationFn: async (values: GameClassificationValues) => {
@@ -110,9 +102,10 @@ function GameClassificationForm({ workspace }: { workspace: GameWorkspace }) {
     await sendJSON(`/api/v1/game/games/${game.id}`, 'PUT', { name: game.name, name_en: game.name_en, info: game.info, info_en: game.info_en, resources: game.resources, groups: game.groups, developers: game.developers, publishers: game.publishers, appid: game.appid, header: game.header, links: game.links, weight: values.weight, primary_tag: values.primary_tag, secondary_tag: values.secondary_tag })
     await sendJSON('/api/v1/game/tag-maps/bulk-replace', 'PUT', { owner_id: game.id, ids: values.tag_ids.map(Number) })
   }, onSuccess: async () => { await client.invalidateQueries({ queryKey: ['game', workspace.game.id] }); await client.invalidateQueries({ queryKey: ['games'] }); form.reset(form.getValues()); toast('游戏分类与展示已保存') }, onError: (error) => setOperationError(errorMessage(error)) })
-  const tagOptions = options.data?.list ?? []
-  const selectOptions = [{ value: '0', label: '无' }, ...tagOptions.map((option) => ({ value: String(option.id), label: option.label }))]
-  return <Section title="分类与展示" description="主标签、副标签与完整标签集合在同一工作流维护。"><form className="grid gap-6" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>{operationError && <Alert tone="danger">{operationError}</Alert>}<FormSection title="主要分类"><div className="grid gap-4 md:grid-cols-3"><FormField label="主要标签"><Select value={String(form.watch('primary_tag'))} onValueChange={(value) => form.setValue('primary_tag', Number(value), { shouldDirty: true })} options={selectOptions} /></FormField><FormField label="次要标签"><Select value={String(form.watch('secondary_tag'))} onValueChange={(value) => form.setValue('secondary_tag', Number(value), { shouldDirty: true })} options={selectOptions} /></FormField><FormField label="展示权重"><Input type="number" {...form.register('weight')} /></FormField></div></FormSection><FormSection title="全部标签" description="保存后一次替换 Game 的 Tag Map 集合。"><TagMultiSelect options={tagOptions} selected={form.watch('tag_ids')} onChange={(value) => form.setValue('tag_ids', value, { shouldDirty: true })} /></FormSection><div className="flex justify-end"><Button disabled={mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}保存分类与展示</Button></div></form></Section>
+  const tagOptions = options.data ?? []
+  const selectedTag = (id: number) => tagOptions.find((option) => Number(option.id) === id)
+    ?? (id ? { id: String(id), label: workspace.tags.find((tag) => tag.tag_id === id)?.tag_name ?? `标签 #${id}` } : null)
+  return <Section title="分类与展示" description="主标签、副标签与完整标签集合在同一工作流维护。"><form className="grid gap-6" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>{operationError && <Alert tone="danger">{operationError}</Alert>}<FormSection title="主要分类"><div className="grid gap-4 md:grid-cols-3"><FormField label="主要标签"><RemoteSelect endpoint="/api/v1/options/tags" pageSize={10} debounceMs={300} placeholder="搜索主要标签…" value={selectedTag(form.watch('primary_tag'))} onChange={(value) => form.setValue('primary_tag', Number(value?.id ?? 0), { shouldDirty: true })} /></FormField><FormField label="次要标签"><RemoteSelect endpoint="/api/v1/options/tags" pageSize={10} debounceMs={300} placeholder="搜索次要标签…" value={selectedTag(form.watch('secondary_tag'))} onChange={(value) => form.setValue('secondary_tag', Number(value?.id ?? 0), { shouldDirty: true })} /></FormField><FormField label="展示权重"><Input type="number" {...form.register('weight')} /></FormField></div></FormSection><FormSection title="全部标签" description="保存后一次替换 Game 的 Tag Map 集合。"><TagMultiSelect loading={options.isLoading} error={options.error?.message} options={tagOptions} selected={form.watch('tag_ids')} onChange={(value) => form.setValue('tag_ids', value, { shouldDirty: true })} /></FormSection><div className="flex justify-end"><Button disabled={mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}保存分类与展示</Button></div></form></Section>
 }
 
 function GameSteamCollection({ game }: { game: Game }) {

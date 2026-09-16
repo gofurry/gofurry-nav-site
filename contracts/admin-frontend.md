@@ -68,3 +68,12 @@ Audit requires `audit.read`, uses historical identity snapshots, returns real pa
 Every authenticated account may change its own username or password through `/api/v1/auth/self/*` after current-password verification. These routes do not require or reuse `account.manage`; username changes preserve the current session and refresh the identity, while password changes increment `session_version`, clear the auth cookie, invalidate prior sessions, and require a new login. Both mutations write redacted GFA audit snapshots.
 
 The React production build is the only writer of `apps/cn/admin/internal/transport/http/webui/dist`. It clears stale output before building, and the Go binary embeds that directory. Production must not require Node, a Vite server, a separate frontend service, manual asset copying, or a second Admin frontend implementation. The completed parity audit is recorded in `docs/admin-frontend-parity.md`.
+
+Game content `groups` and `links` choose platform keys from Nav Web's data-only
+`apps/cn/nav-web/app/data/platform-icons.json`, also consumed by `SiteIconList.vue`.
+Keys cannot be chosen twice within one editor; existing key spelling is retained.
+`resources` keeps free-text keys. Both Game summary fields accept at most 400
+Unicode characters, with the same business validation in Admin and PostgreSQL.
+Game primary/secondary tag searches request ten results with a 300 ms debounce;
+the complete tag checklist loads paginated options once and filters locally,
+independently of selected IDs.

@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
-import { launchPerfBrowser } from './perf/shared.mjs'
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
+import { launchPerfBrowser, reportsDir } from './perf/shared.mjs'
 import { startInsightsFixtureApp } from './fixtures/insights-app.mjs'
 import { mockGameHome } from './fixtures/insights-overview.mjs'
 
 // A populated catalog with no finalized Facts is a valid development/new-game
 // state. Exercise both older null arrays and the corrected empty-array response.
-const state = { legacyNull: true, failure: false }
+const state = { legacyNull: true, failure: false, gallery: false, adult: false }
 const game = {
   id: '82', appid: 82, name: 'SSR Fixture Game', summary: 'SSR fixture description',
   about_the_game: '<p>SSR fixture introduction</p>',
@@ -17,7 +19,10 @@ const app = await startInsightsFixtureApp((url, media) => {
   if (url.pathname.endsWith('/game/info')) {
     if (state.failure) return { status: 503 }
     if (url.searchParams.get('id') !== '82') return { status: 404 }
-    return { data: game }
+    return { data: state.gallery ? { ...game,
+      tags: state.adult ? [{ id: '1014', name: 'Adult' }] : [],
+      media: { ...game.media, screenshots: Array.from({ length: 24 }, (_, i) => ({ id: i + 1, thumbnail_url: `${media}/shot-${i}.svg`, url: `${media}/shot-${i}.svg` })) },
+    } : game }
   }
   if (url.pathname.endsWith('/game/home')) return { data: mockGameHome(media) }
   if (url.pathname.endsWith('/games/82/insights')) return { data: {
@@ -70,6 +75,59 @@ try {
     assert.deepEqual(errors, [], 'tab switching raised a rendering exception')
     await page.close()
     console.log(`[game-detail] ${legacyNull ? 'null' : 'empty'} regions, missing facts and repeated tab switching PASS`)
+  }
+  state.gallery = true
+  const layoutDir = join(reportsDir, 'game-detail-layout')
+  await mkdir(layoutDir, { recursive: true })
+  for (const width of [390, 768, 1440, 1920]) {
+    for (const adult of [false, true]) {
+      state.adult = adult
+      const page = await browser.newPage({ viewport: { width, height: 900 } })
+      await page.goto(app.base + '/games/82', { waitUntil: 'networkidle' })
+      await page.waitForFunction(() => Boolean(document.querySelector('#__nuxt')?.__vue_app__))
+      let mainWidth
+      for (const tab of ['intro', 'gallery', 'insights', 'comment', 'news', 'detail', 'gallery']) {
+        await page.locator(`[data-game-tab="${tab}"]`).click()
+        await page.waitForFunction(tab => document.querySelector('.game-detail-tab--active')?.getAttribute('data-game-tab') === tab, tab)
+        const box = await page.evaluate(() => {
+          const layout = document.querySelector('.game-detail-layout')
+          const main = layout.querySelector(':scope > section')
+          const sidebar = layout.querySelector(':scope > aside')
+          const rect = main.getBoundingClientRect()
+          return { width: rect.width, right: rect.right, left: rect.left,
+            scroll: main.scrollWidth, client: main.clientWidth,
+            sidebar: sidebar.getBoundingClientRect().width,
+            sidebarLeft: sidebar.getBoundingClientRect().left,
+            layoutRight: layout.getBoundingClientRect().right }
+        })
+        mainWidth ??= box.width
+        assert(Math.abs(box.width - mainWidth) < 1, `${width}/${adult}/${tab}: tab changed main width`)
+        assert(box.right <= width && box.scroll <= box.client + 1, `${width}/${adult}/${tab}: main overflow ${JSON.stringify(box)}`)
+        if (width >= 1280) {
+          assert(Math.abs(box.width / box.sidebar - 3) < 0.02, '75/25 columns changed')
+          assert(box.right <= box.sidebarLeft && box.sidebarLeft + box.sidebar <= box.layoutRight, 'sidebar escaped layout')
+        }
+        if (tab === 'gallery') {
+          const gallery = await page.locator('.game-detail-gallery').evaluate(element => {
+            const stage = element.querySelector('.game-detail-media-stage')
+            const thumbs = element.querySelector('.game-detail-thumb-grid')
+            return { width: element.clientWidth, scroll: element.scrollWidth,
+              stage: stage.getBoundingClientRect().width,
+              thumbs: thumbs.clientWidth, thumbsScroll: thumbs.scrollWidth,
+              overflow: getComputedStyle(thumbs).overflowX }
+          })
+          assert(gallery.scroll <= gallery.width + 1 && gallery.stage <= gallery.width + 1, 'gallery or media escaped parent')
+          assert(gallery.thumbsScroll > gallery.thumbs && gallery.overflow === 'auto', 'thumbnail list must scroll locally')
+          if (!adult) {
+            await page.locator('.game-detail-thumb').last().click()
+            await page.waitForFunction(() => document.querySelector('.game-detail-media-image')?.getAttribute('src')?.includes('shot-23'))
+          }
+          await page.screenshot({ path: join(layoutDir, `${width}-${adult ? 'blurred' : 'visible'}.png`), fullPage: true })
+        }
+      }
+      await page.close()
+      console.log(`[game-detail] ${width}px ${adult ? 'blurred' : 'visible'} gallery, local scrolling and all tabs PASS`)
+    }
   }
   for (const path of ['/games/999999', '/en/games/999999', '/games/abc']) {
     assert.equal((await fetch(app.base + path)).status, 404, path)

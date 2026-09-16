@@ -3,7 +3,7 @@
     class="games-page game-detail-page relative isolate min-h-full w-full overflow-hidden"
   >
     <div class="game-detail-layout relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 p-6">
-      <section class="w-full xl:w-[75%]">
+      <section class="min-w-0 w-full max-w-full xl:w-[75%]">
         <GameDetailMain
           :game="gameDetailData.gameBaseInfo"
           :remark="gameDetailData.remarkInfo"
@@ -14,7 +14,7 @@
         />
       </section>
 
-      <aside class="hidden xl:block xl:w-[25%]">
+      <aside class="hidden min-w-0 xl:block xl:w-[25%]">
         <GameDetailSidebar
           :game="gameDetailData.gameBaseInfo"
           :recommend="gameDetailData.recommendedGame"

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v3"
 	env "github.com/gofurry/gofurry-admin/config"
@@ -696,6 +697,9 @@ func (api *GameAPI) BulkReplaceTagGameMaps(c fiber.Ctx) error {
 }
 
 func validateGamePayload(req models.GamePayload) common.Error {
+	if utf8.RuneCountInString(req.Info) > 400 || utf8.RuneCountInString(req.InfoEn) > 400 {
+		return common.NewValidationError("info and info_en must each be at most 400 characters")
+	}
 	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.NameEn) == "" {
 		return common.NewValidationError("name and name_en are required")
 	}
