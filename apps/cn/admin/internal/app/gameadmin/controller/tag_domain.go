@@ -402,13 +402,11 @@ func (api *GameAPI) SaveClassification(c fiber.Ctx) error {
 			}
 		}
 		after, err := q.ListGameTagRelations(ctx, id)
-		return id, struct {
+		type classificationSnapshot struct {
 			Weight int64
 			Tags   any
-		}{game.Weight, before}, struct {
-			Weight int64
-			Tags   any
-		}{req.Weight, after}, err
+		}
+		return id, classificationSnapshot{game.Weight, before}, classificationSnapshot{req.Weight, after}, err
 	})
 	if err != nil {
 		return common.NewResponse(c).Error(err)
