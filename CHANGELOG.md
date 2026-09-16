@@ -6,12 +6,34 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ## Unreleased
 
+### Added
+
+- Add explicit Admin Tag Category/Tag management with immutable codes, database-generated Tag IDs, archive/restore confirmations and usage guards, plus atomic Game classification saves (#116).
+- Add a public Game tag-category endpoint and a private `recommendations rebuild --config <file>` command that rebuilds up to 64 recommendations per eligible Game without starting HTTP, collectors, or Redis (#116).
+
+### Changed
+
+- Replace the legacy Game tag hierarchy with `gfg_tag_category`, `gfg_tag`, and `gfg_game_tag`; preserve existing leaf IDs using the reviewed 214-entry ID/code mapping and backfill primary/secondary assignments missing from the old map. Relation roles become the sole current classification source, with compatibility response fields derived from them (#116).
+- Upgrade recommendations to `similar-v2.4.0-hybrid-cbf`, using category codes and relation roles instead of numeric Tag IDs/prefixes for weighting; serialize recomputation with classification changes to prevent stale cache writes (#116).
+- Use explicit categories for Nav Web tag filtering and `code=adult` for Adult detection, preserving selected leaf tags through search changes (#116).
+- Advance current Game Daily projection to version 2 and preserve source projection versions during daily finalization, without rewriting historical Facts or Analytics dimensions (#116).
+
 ### Fixed
 
 - Restore debounced primary/secondary tag search and selection-preserving local tag filtering in React Admin; honor tag option pagination and keyword filtering (#113).
 - Use the public frontend platform icon key catalog for Admin Game group/link selectors, prevent duplicate choices, and preserve free-text resource keys (#114).
-- Widen Chinese and English Game summaries to 400 characters through a new Goose migration, with matching Admin validation and character counts (#115).
+- Widen Chinese and English Game summaries to 400 characters through a new Goose migration, with matching backend/Admin validation and character counts (#115).
 - Constrain the Game detail flex column and Gallery media to their parent width while preserving local thumbnail scrolling, the desktop sidebar, and mobile tabs (#120).
+- Keep Admin classification audit snapshots compatible with both Go 1.26.7 and 1.27.1 formatting rules, fixing the pinned CI `gofmt` failure without changing audit payloads.
+
+### Removed
+
+- Remove current `gfg_tag.prefix`, `gfg_tag_map`, and physical `gfg_game.primary_tag` / `secondary_tag` columns, along with the legacy Admin Tag Map editor/API; retain historical tag dimensions and derive supported primary/secondary response fields from the new relations (#116).
+
+### Upgrade notes
+
+- The irreversible `20260916020000_game_tag_domain.sql` migration requires a verified backup and coordinated updates to Game Backend, Game Collector, Admin with its embedded React build, and Nav Web. Stop old runtime clients before migrating; rollback requires restoring the database and compatible binaries rather than running Goose Down. The migration clears old recommendation rows; rebuild them with the new private command (#116).
+- Record isolated regressions, populated development-clone acceptance, and the authorized shared-development migration in [the Tag domain acceptance record](docs/acceptance/issue-116-local-tag-domain.md).
 
 ## v3.0.0-alpha.8 - 2026-09-15
 
