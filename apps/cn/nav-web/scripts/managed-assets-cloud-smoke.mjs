@@ -106,6 +106,11 @@ try {
   const icon = normal.page.locator('.nav-site-card__logo img').first()
   await loadedImage(normal.page, icon)
   await normal.page.waitForFunction(selector => getComputedStyle(document.querySelector(selector)).maskImage.includes('/nav/patterns/'), background)
+  // A tiny probe finishing does not imply that the original Hero request has
+  // finished; route selection now deliberately leaves that request unchanged.
+  if (!normal.assets.some(r => r.url().endsWith('/' + desktopKey) && r.ok())) {
+    await normal.page.waitForResponse(response => response.url().endsWith('/' + desktopKey) && response.ok(), { timeout: 15000 })
+  }
   assert(normal.assets.some(r => r.url().endsWith('/' + desktopKey) && r.ok()))
   assert(normal.assets.some(r => r.url().endsWith('/' + patternKey) && r.ok()))
   assert.equal(normal.errors.length, 0, normal.errors.join('\n'))
@@ -225,7 +230,7 @@ try {
   await settleTab(mobile.page, 1)
   await mobile.page.locator('[data-pattern-id="1"]').waitFor()
   await mobile.page.screenshot({ path: join(artifactDir, 'preferences-mobile-background.png') })
-  const overflow = await mobile.page.locator('.preferences-page').last().evaluate(el => el.scrollWidth > el.clientWidth + 1)
+  const overflow = await mobile.page.locator('.preferences-page').nth(1).evaluate(el => el.scrollWidth > el.clientWidth + 1)
   assert.equal(overflow, false, 'Mobile panel overflows horizontally')
   await mobile.page.locator('.gf-modal__header-actions .gf-button--ghost').click()
   await mobile.page.evaluate(() => localStorage.setItem('theme', 'dark'))

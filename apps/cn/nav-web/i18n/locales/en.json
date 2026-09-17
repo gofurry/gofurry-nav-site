@@ -1085,5 +1085,31 @@
       "trendOne": "Historical data is still accumulating",
       "changesEmpty": "No recent public changes"
     }
+  },
+  "resourceRouting": {
+    "title": "Resource routing",
+    "gofurry": "GoFurry assets",
+    "steam": "Steam game assets",
+    "auto": "Automatic",
+    "primary": "EdgeOne",
+    "mirror": "Cloudflare",
+    "china": "China route",
+    "global": "Global route",
+    "preferred": "Preferred for new assets",
+    "recommendation": "Test recommendation",
+    "pinned": "Pinned",
+    "checked": "Last tested",
+    "retest": "Test again",
+    "probing": "Testing…",
+    "never": "Not tested",
+    "timeout": "Timed out",
+    "failed": "Test failed",
+    "stale": "Expired",
+    "latency": "{ms} ms",
+    "cooldown": "Retry in {seconds}s",
+    "details": "Route details",
+    "help": "Save to apply to new assets. Loaded images stay unchanged. Test recommendations update independently and survive Cancel.",
+    "steamProbeHint": "Reference latency uses a small image on one node per group. A failed test does not mean the whole route is unavailable.",
+    "pinnedWarning": "The pinned route did not pass this test. Assets will still try fallback routes if loading actually fails."
   }
 }

@@ -99,7 +99,7 @@ assert(parseInsightCompareIDs('9')?.join(',') === '9', 'Compare lost its one-ent
 
 const hashed2xAsset = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/123/digest/library_capsule_2x.jpg?version=1#cover'
 const hashed2xURL = new URL(hashed2xAsset)
-const assetCandidates = steamSharedAssetCandidates(hashed2xAsset, 'zh')
+const assetCandidates = steamSharedAssetCandidates(hashed2xAsset, 'china')
 assert(assetCandidates.length > 1, 'Steam shared CDN fallback candidates were not generated')
 for (const candidate of assetCandidates) {
   const parsed = new URL(candidate)

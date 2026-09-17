@@ -10,7 +10,7 @@
           controls
           :muted="isBlocked"
           :autoplay="false"
-          :poster="steamAssetUrl(activeMedia.thumb)"
+          :poster="poster"
           preload="metadata"
           playsinline
           class="game-detail-video h-full w-full object-contain"
@@ -105,9 +105,10 @@
 import {ref, computed, watch, onMounted, onBeforeUnmount, nextTick} from 'vue'
 import { i18n } from '@/main'
 import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
-import { preferredSteamSharedAssetUrl } from '@/utils/steamAssets'
+import { steamSharedAssetCandidates } from '@/utils/steamAssets'
 
 const { t, locale } = i18n.global
+const steamRoute = useNuxtApp().$steamAssetRoute
 
 export interface MoviesModel {
   id: number
@@ -170,6 +171,7 @@ const activeKey = ref<string | null>(null)
 const activeMedia = computed(() =>
     mediaList.value.find(m => m.key === activeKey.value) ?? null
 )
+const { src: poster } = useSteamAsset(() => activeMedia.value?.type === 'movie' ? activeMedia.value.thumb : null, true)
 const openFullscreen = ref(false)
 const videoReady = ref(false)
 const videoLoadError = ref(false)
@@ -275,7 +277,7 @@ function playableMovieSource(movie: MoviesModel) {
 }
 
 function steamAssetUrl(url?: string | null) {
-  return preferredSteamSharedAssetUrl(url, locale.value) || url || ''
+  return steamSharedAssetCandidates(url, steamRoute.resolvePreferred(locale.value))[0] || ''
 }
 
 function resetVideoState() {

@@ -118,6 +118,9 @@
           <div :id="`${panelId}-panel-1`" role="tabpanel" :aria-labelledby="`${panelId}-tab-1`" :inert="activeTab !== 1" class="preferences-page">
             <BackgroundPreferencesEditor ref="backgroundEditor" />
           </div>
+          <div :id="`${panelId}-panel-2`" role="tabpanel" :aria-labelledby="`${panelId}-tab-2`" :inert="activeTab !== 2" class="preferences-page">
+            <ResourceRoutingPreferencesEditor ref="routingEditor" />
+          </div>
         </div>
       </div>
     </div>
@@ -127,6 +130,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, useId, watch } from 'vue'
 import BackgroundPreferencesEditor from './BackgroundPreferencesEditor.vue'
+import ResourceRoutingPreferencesEditor from './ResourceRoutingPreferencesEditor.vue'
 import { i18n } from '@/main'
 import {
   clearCustomNavHeaderBackgroundDirectory,
@@ -156,7 +160,7 @@ const emit = defineEmits<{
 const panelId = useId()
 const activeTab = ref(0)
 const pages = ref<HTMLElement | null>(null)
-const tabs = computed(() => [t('navbar.homePreferences'), t('navbar.pageBackground')])
+const tabs = computed(() => [t('navbar.homePreferences'), t('navbar.pageBackground'), t('resourceRouting.title')])
 function selectTab(index: number) {
   activeTab.value = index
   const element = pages.value
@@ -171,7 +175,9 @@ function syncTab() {
 }
 onUnmounted(() => clearTimeout(tabScrollTimer))
 function tabKeydown(event: KeyboardEvent, index: number) {
-  const next = event.key === 'Home' ? 0 : event.key === 'End' ? 1 : ['ArrowLeft', 'ArrowRight'].includes(event.key) ? 1 - index : undefined
+  const count = tabs.value.length
+  const next = event.key === 'Home' ? 0 : event.key === 'End' ? count - 1
+    : event.key === 'ArrowRight' ? (index + 1) % count : event.key === 'ArrowLeft' ? (index + count - 1) % count : undefined
   if (next === undefined) return
   event.preventDefault()
   selectTab(next)
@@ -179,6 +185,7 @@ function tabKeydown(event: KeyboardEvent, index: number) {
 }
 const localMode = ref('')
 const backgroundEditor = ref<InstanceType<typeof BackgroundPreferencesEditor> | null>(null)
+const routingEditor = ref<InstanceType<typeof ResourceRoutingPreferencesEditor> | null>(null)
 const showQuickAccessLocal = ref(true)
 const supportsCustomBgPicker = supportsCustomNavHeaderBackground()
 const customBgFolderNameLocal = ref('')
@@ -250,6 +257,7 @@ const save = async () => {
   }
 
   writeShowQuickAccess(showQuickAccessLocal.value)
+  routingEditor.value?.save()
   emit('save', localMode.value)
 }
 </script>

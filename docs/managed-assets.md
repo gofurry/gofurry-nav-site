@@ -61,13 +61,90 @@ borrow from the other viewport. The reader rejects pre-v4 home payloads; the
 initial maintenance cutover required clearing/rebuilding derived caches before traffic resumed.
 
 Nuxt configures `NUXT_PUBLIC_ASSET_PRIMARY_BASE` and
-`NUXT_PUBLIC_ASSET_MIRROR_BASE`, with public origins only. SSR uses the valid
-`gf_asset_cdn` cookie or Primary. After hydration, idle work performs two rounds
-of parallel GET probes, consumes and validates all 8192 bytes, and caches the
-choice for 12 hours. Mirror must be at least 20% or 50 ms faster. A real asset
-failure tries the other provider, invalidates the cookie and schedules another
-probe; terminal fallbacks are the bundled default logo, no Hero image and the
-bundled page pattern. Steam asset resolution remains separate.
+`NUXT_PUBLIC_ASSET_MIRROR_BASE`, with public origins only. SSR resolves the saved
+mode first, then the recommendation (default Primary). After hydration, idle work
+performs two rounds of parallel GET probes and consumes and SHA-256 validates all
+8192 bytes of `system/probes/cdn.bin`. Mirror must be at least 20% or 50 ms faster.
+Both probes failing retains the previous recommendation. Terminal fallbacks are
+the bundled default logo, no Hero image and the bundled page pattern.
+
+## Resource routing preferences (#107 / #121)
+
+Page preferences has three scroll-snap tabs: Home, Page background, and Resource
+routing. Home/End and wrapping Left/Right arrows work across all tabs. Resource
+routing contains two independent sections:
+
+- **GoFurry assets:** Automatic / EdgeOne (Primary) / Cloudflare (Mirror).
+- **Steam game assets:** Automatic / China route / Global route.
+
+Each section shows the preferred route for new resources, the latest test
+recommendation, per-route latency or test state, last test time, and a manual
+retest button. Steam route details disclose the underlying hosts without making
+them six separate modes. Changes to modes are drafts until Save; Cancel discards
+them. Tests immediately persist diagnostics and recommendations, even if the
+modal is cancelled. Pinned routes still test, but results never overwrite a pin.
+A failed probe is diagnostic, not proof that an entire route is unavailable;
+pinned routes with failed tests remain saveable with an inline note.
+
+| Storage | Meaning | Lifetime |
+| --- | --- | --- |
+| `gf_asset_cdn_mode` cookie | `auto`, `primary`, `mirror` | 1 year |
+| `gf_asset_cdn` cookie | Auto recommendation, compatible with old cookies | 12 hours |
+| `gf_steam_asset_mode` cookie | `auto`, `china`, `global` | 1 year |
+| `gf_steam_asset_group` cookie | Steam Auto recommendation | 12 hours |
+| `gf_asset_cdn_diagnostics` localStorage | GoFurry timings, states, checked/manual times | 12-hour freshness |
+| `gf_steam_asset_diagnostics_v1` localStorage | Versioned Steam timings, states, sample, checked/manual times | 12-hour freshness |
+
+Missing modes default to Auto. The old
+`gofurry:steam-shared-cdn-preference:v1` record is imported only if valid and within
+its original six-hour lifetime, and only when no new recommendation exists. It
+becomes a recommendation, **never a pinned mode**, then the legacy record is
+removed. LocalStorage history is read after hydration; SSR and initial client
+render share cookie-derived state. Without history, Chinese uses China and
+English uses Global as a cold-start hint only.
+
+`useManagedAsset` snapshots its provider per object key. `useSteamAsset`, used by
+`SteamAssetImage` and Gallery video posters, snapshots its candidate list per
+source URL. Automatic tests, manual tests and Save do not change the URLs or
+reload already successful resources. Newly mounted resources and changed
+keys/sources use the latest policy. Only real load errors advance the current
+snapshot's fallback chain; they may stale diagnostics/schedule a test but never
+clear the saved mode. Steam's former global preference-updated event is removed.
+
+Steam's China group is `shared.st.dl.eccdnx.com`, followed by
+`shared.cdn.steamchina.queniuam.com`. Global is `shared.akamai.steamstatic.com`,
+`shared.cloudflare.steamstatic.com`, `shared.fastly.steamstatic.com`, then
+`shared.steamstatic.com`. Candidate order is the preferred group followed by the
+other group, preserving the full original path/query/hash and original-source
+fallback where needed.
+
+Steam probes use `Image()` timing against the first host of each group, with two
+parallel-group rounds and a 2.8-second timeout per image. The bounded fallback
+pool is `/store_item_assets/steam/apps/{570,440,550,730}/capsule_sm_120.jpg` in that
+order. A subsequent sample is tried only if both groups failed; normally only
+one sample is downloaded. URLs use a minute bucket plus distinct automatic/manual
+round slots (at most four per minute/sample/host), so neither the second round nor
+an immediate manual test reuses the automatic test's cached image. Lower mean
+latency wins; one successful group wins; both failures retain history or the
+locale hint. Browser validation on 2026-09-17 decoded all four Global representative
+samples and China's 570/440/730 samples as 120×45 images. China needed retries;
+its 550 sample still timed out on the workstation network. These are point-in-time
+path checks, not a guarantee of route availability or latency for other users.
+
+Both managers schedule automatic tests only after mount and browser idle,
+deduplicate concurrent tests within their domain and use a 12-hour TTL. Automatic tests skip offline and
+Save-Data browsers. Manual tests start immediately and have a persisted 60-second
+cooldown; explicit tests may still be attempted offline. No continuous probing,
+backend API, database state, cloud mutation or dependency is introduced.
+
+`npm run assets:test` includes resolver, fixed-probe, legacy migration, actual Vue
+snapshot/fallback, scheduling, TTL and cooldown regressions.
+After `npm run build`, `npm run assets:routing-smoke` runs the production Nuxt
+application with isolated API/CDN fixtures to check SSR, actual loaded image
+stability, changed resources, failures, Save/Cancel, three-tab keyboard navigation
+and mobile/light/dark rendering. Screenshots go to ignored
+`apps/cn/nav-web/docs/performance/reports/resource-routing/`. This deterministic
+suite does not depend on real CDN availability or substitute for cloud acceptance.
 
 Run Nav Web `npm run assets:test`, `npm run insights:semantics`,
 `npm run seo:recovery:test`, `npm run typecheck`, and `npm run build`.

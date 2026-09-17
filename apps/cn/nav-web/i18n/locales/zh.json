@@ -1085,5 +1085,31 @@
       "trendOne": "正在积累历史数据",
       "changesEmpty": "近期暂无可展示变化"
     }
+  },
+  "resourceRouting": {
+    "title": "资源线路",
+    "gofurry": "GoFurry 资源",
+    "steam": "Steam 游戏资源",
+    "auto": "自动优选",
+    "primary": "EdgeOne",
+    "mirror": "Cloudflare",
+    "china": "中国线路",
+    "global": "全球线路",
+    "preferred": "新资源优先线路",
+    "recommendation": "测速建议",
+    "pinned": "已固定",
+    "checked": "上次测速",
+    "retest": "重新测速",
+    "probing": "测速中…",
+    "never": "未测速",
+    "timeout": "超时",
+    "failed": "测速失败",
+    "stale": "已过期",
+    "latency": "{ms} ms",
+    "cooldown": "{seconds} 秒后可重测",
+    "details": "线路详情",
+    "help": "保存后应用于新资源，当前已加载的图片保持不变。测速建议独立更新，取消不会撤销测速结果。",
+    "steamProbeHint": "延迟来自代表节点的小图测速，仅供参考；失败不代表整条线路不可用。",
+    "pinnedWarning": "固定线路本次测速未成功。资源实际加载失败时仍会自动尝试备用线路。"
   }
 }

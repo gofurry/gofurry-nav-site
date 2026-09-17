@@ -1,30 +1,32 @@
-import { ASSET_CDN_TTL_SECONDS, probeAssetCDNs, type AssetCDN, type AssetOrigins } from '~/utils/managedAssets'
+import { ASSET_CDN_TTL_SECONDS, isAssetCDN, normalizeAssetMode, probeAssetCDNs, readAssetDiagnostics, resolveAssetPreferred, type AssetMode, type AssetOrigins } from '~/utils/managedAssets'
+import { createRouteProbe, readRouteStorage, ROUTE_MODE_MAX_AGE, writeRouteStorage } from '~/utils/resourceRouting'
 
 export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig()
   const origins: AssetOrigins = { primary: String(config.public.assetPrimaryBase), mirror: String(config.public.assetMirrorBase) }
-  const cookie = useCookie<AssetCDN | null>('gf_asset_cdn', { path: '/', sameSite: 'lax', maxAge: ASSET_CDN_TTL_SECONDS, secure: !import.meta.dev })
-  const provider = useState<AssetCDN>('managed-asset-cdn', () => cookie.value === 'mirror' ? 'mirror' : 'primary')
-  let pending: Promise<void> | null = null
-  let scheduled = false
-  const probe = () => {
-    if (!import.meta.client) return Promise.resolve()
-    if (pending) return pending
-    pending = probeAssetCDNs(origins).then((result) => {
-      provider.value = result.selected
-      cookie.value = result.selected
-      try { localStorage.setItem('gf_asset_cdn_diagnostics', JSON.stringify(result)) } catch { /* Browser storage may be disabled. */ }
-    }).finally(() => { pending = null })
-    return pending
-  }
-  const schedule = () => {
-    if (!import.meta.client || scheduled || pending) return
-    scheduled = true
-    const run = () => { scheduled = false; void probe() }
-    if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 2000 })
-    else setTimeout(run, 250)
-  }
-  const invalidate = () => { if (import.meta.client) { cookie.value = null; schedule() } }
-  if (import.meta.client) nuxtApp.hook('app:mounted', () => { if (cookie.value !== 'primary' && cookie.value !== 'mirror') schedule() })
-  return { provide: { assetCDN: { provider, origins, invalidate } } }
+  const options = { path: '/', sameSite: 'lax' as const, secure: !import.meta.dev }
+  const cookie = useCookie('gf_asset_cdn', { ...options, maxAge: ASSET_CDN_TTL_SECONDS })
+  const modeCookie = useCookie('gf_asset_cdn_mode', { ...options, maxAge: ROUTE_MODE_MAX_AGE })
+  const mode = useState<AssetMode>('managed-asset-mode', () => normalizeAssetMode(modeCookie.value))
+  const recommendation = useState('managed-asset-recommendation', () => isAssetCDN(cookie.value) ? cookie.value : null)
+  const storageKey = 'gf_asset_cdn_diagnostics'
+  const runner = createRouteProbe(async () => {
+    const result = await probeAssetCDNs(origins, fetch, () => performance.now(), recommendation.value || 'primary')
+    recommendation.value = result.selected
+    cookie.value = result.selected
+    return result
+  }, result => writeRouteStorage(storageKey, result))
+  if (import.meta.client) nuxtApp.hook('app:mounted', () => {
+    const stored = readAssetDiagnostics(readRouteStorage(storageKey))
+    // Keep history when the short-lived cookie has expired. This cannot mutate
+    // the already hydrated resource snapshots.
+    if (!recommendation.value && stored) recommendation.value = stored.selected
+    runner.start(stored)
+  })
+  return { provide: { assetCDN: {
+    ...runner, mode, recommendation, origins,
+    resolvePreferred: () => resolveAssetPreferred(mode.value, recommendation.value),
+    saveMode(value: AssetMode) { mode.value = normalizeAssetMode(value); modeCookie.value = mode.value },
+    reportFailure: () => runner.markStale(),
+  } } }
 })
