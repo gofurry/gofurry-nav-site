@@ -19,6 +19,7 @@
     "game:tags:smoke": "node scripts/game-tag-domain-smoke.mjs",
     "game:tags:test": "node scripts/game-tag-domain.test.mjs",
     "game:detail:smoke": "node scripts/game-detail-smoke.mjs",
+    "game:groups:smoke": "node scripts/game-group-layout-smoke.mjs",
     "insights:semantics": "node scripts/insights-semantics.test.mjs",
     "seo:recovery:test": "node scripts/seo-recovery.test.mjs",
     "seo:recovery:smoke": "node scripts/seo-recovery-smoke.mjs"

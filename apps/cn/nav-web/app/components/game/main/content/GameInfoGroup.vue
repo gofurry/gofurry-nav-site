@@ -44,7 +44,9 @@
           <div class="game-card__media"></div>
           <p class="h-[1.25rem]"></p>
           <p class="mt-1 h-[2rem]"></p>
-          <div class="mt-2 h-[1.25rem]"></div>
+          <div class="mt-2">
+            <RatingStar :score="0" :count="0" />
+          </div>
         </div>
       </div>
 
