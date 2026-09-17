@@ -36,9 +36,6 @@
     </div>
 
     <div class="relative">
-      <div class="news-edge news-edge--left" :class="{ 'news-edge--visible': canMovePrev }"></div>
-      <div class="news-edge news-edge--right" :class="{ 'news-edge--visible': canMoveNext }"></div>
-
       <div
         ref="viewportRef"
         class="news-viewport"

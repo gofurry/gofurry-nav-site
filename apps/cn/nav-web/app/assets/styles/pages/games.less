@@ -31,7 +31,6 @@
   --games-shadow-soft: 0 4px 12px rgba(91, 62, 28, 0.03);
   --games-shadow-sidebar: 0 10px 26px rgba(91, 62, 28, 0.035);
   --games-shadow-popover: 0 12px 30px rgba(91, 62, 28, 0.08);
-  --games-item-hover-shadow: 0 14px 32px rgba(91, 62, 28, 0.10);
   --games-tool-border: rgba(255, 255, 255, 0.55);
   --games-tool-bg: rgba(255, 255, 255, 0.70);
   --games-tool-color: #334155;
@@ -101,7 +100,6 @@ html.dark .games-page {
   --games-shadow-soft: none;
   --games-shadow-sidebar: none;
   --games-shadow-popover: 0 14px 34px rgba(0, 0, 0, 0.28);
-  --games-item-hover-shadow: 0 14px 32px rgba(0, 0, 0, 0.26);
   --games-tool-border: rgba(255, 255, 255, 0.10);
   --games-tool-bg: rgba(15, 23, 42, 0.76);
   --games-tool-color: #dbe4f0;
@@ -204,15 +202,13 @@ html.dark .games-page {
   box-shadow: var(--games-shadow-soft);
   transition:
     background-color 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease;
+    border-color 180ms ease;
 }
 
 .games-page .game-card:hover,
 .games-page .game-card:focus-within {
-  border-color: transparent;
-  background: var(--games-item-hover-bg);
-  box-shadow: var(--games-item-hover-shadow);
+  border-color: var(--games-item-hover-border);
+  background: color-mix(in srgb, var(--games-item-bg) 85%, var(--games-item-hover-bg));
 }
 
 .games-page .game-card__media {
@@ -499,8 +495,7 @@ html.dark .games-page .stats-page-tab--idle:hover {
 }
 
 .games-page .game-stats-feature:hover {
-  background: var(--games-item-hover-bg);
-  box-shadow: var(--games-item-hover-shadow);
+  background: color-mix(in srgb, var(--games-item-bg) 85%, var(--games-item-hover-bg));
 }
 
 .games-page .game-stats-card--placeholder,
@@ -639,13 +634,11 @@ html.dark .games-page .game-stats-rank--top {
   background: var(--games-item-bg);
   box-shadow: var(--games-shadow-soft);
   backdrop-filter: blur(1px);
-  transition: background-color 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  transition: background-color 180ms ease, border-color 180ms ease;
 }
 
 .games-page .news-card:hover {
-  border-color: transparent;
-  background: var(--games-item-hover-bg);
-  box-shadow: var(--games-item-hover-shadow);
+  border-color: var(--games-item-hover-border);
 }
 
 .games-page .news-card__cover {
@@ -692,39 +685,6 @@ html.dark .games-page .game-stats-rank--top {
 
 .games-page .news-nav-button--disabled {
   opacity: 0.36;
-}
-
-.games-page .news-edge {
-  pointer-events: none;
-  position: absolute;
-  top: 0;
-  bottom: 1.6rem;
-  z-index: 1;
-  width: 2.5rem;
-  opacity: 0;
-  transition: opacity 180ms ease;
-}
-
-.games-page .news-edge--visible {
-  opacity: 1;
-}
-
-.games-page .news-edge--left {
-  left: -0.25rem;
-  background: linear-gradient(90deg, rgba(255, 250, 242, 0.42), rgba(255, 250, 242, 0));
-}
-
-.games-page .news-edge--right {
-  right: -0.25rem;
-  background: linear-gradient(270deg, rgba(255, 250, 242, 0.42), rgba(255, 250, 242, 0));
-}
-
-html.dark .games-page .news-edge--left {
-  background: linear-gradient(90deg, rgba(10, 21, 36, 0.58), rgba(10, 21, 36, 0));
-}
-
-html.dark .games-page .news-edge--right {
-  background: linear-gradient(270deg, rgba(10, 21, 36, 0.58), rgba(10, 21, 36, 0));
 }
 
 .games-page .news-progress-track {
@@ -776,8 +736,7 @@ html.dark .games-page .news-edge--right {
 .games-page .game-site-item:hover,
 .games-page .latest-review-item:hover {
   border-color: var(--games-item-hover-border);
-  background: var(--games-item-hover-bg);
-  box-shadow: var(--games-item-hover-shadow);
+  background: color-mix(in srgb, var(--games-item-bg) 85%, var(--games-item-hover-bg));
 }
 
 .games-page .game-sidebar-shell .sidebar-action-button,
@@ -1156,17 +1115,13 @@ html.dark .games-page .game-detail-tag-tip {
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
-    color 180ms ease,
-    transform 180ms ease,
-    box-shadow 180ms ease;
+    color 180ms ease;
 }
 
 .games-page .game-detail-share-button:hover,
 .games-page .game-detail-load-more:hover {
-  background: var(--games-detail-surface-hover);
+  background: color-mix(in srgb, var(--games-detail-surface) 85%, var(--games-detail-surface-hover));
   color: var(--games-accent-strong);
-  box-shadow: var(--games-item-hover-shadow);
-  transform: translateY(-1px);
 }
 
 .games-page .game-detail-tab-panel .game-detail-load-more {
@@ -1188,9 +1143,8 @@ html.dark .games-page .game-detail-tag-tip {
 .games-page .site-icon-link:hover,
 .games-page .game-detail-page-button--idle:hover {
   border-color: var(--games-detail-border-hover);
-  background: var(--games-detail-surface-hover);
+  background: color-mix(in srgb, var(--games-detail-surface) 85%, var(--games-detail-surface-hover));
   color: var(--games-accent-strong);
-  box-shadow: var(--games-item-hover-shadow);
 }
 
 .games-page .game-detail-share-button {
@@ -1200,8 +1154,8 @@ html.dark .games-page .game-detail-tag-tip {
 }
 
 .games-page .game-detail-share-button:hover {
-  border-color: transparent;
-  background: var(--games-detail-share-hover-bg);
+  border-color: var(--games-detail-border-hover);
+  background: color-mix(in srgb, var(--games-detail-share-bg) 85%, var(--games-detail-share-hover-bg));
 }
 
 .games-page .share-icon {
@@ -1419,9 +1373,8 @@ html.dark .games-page .site-icon-image--official {
 }
 
 .games-page .game-detail-similar-item:hover {
-  border-color: transparent;
-  background: var(--games-detail-surface-hover);
-  box-shadow: var(--games-item-hover-shadow);
+  border-color: var(--games-detail-border-hover);
+  background: color-mix(in srgb, var(--games-detail-surface) 85%, var(--games-detail-surface-hover));
 }
 
 .games-page .game-detail-similar-item--placeholder {
@@ -1456,7 +1409,7 @@ html.dark .games-page .site-icon-image--official {
   box-shadow: var(--games-shadow-soft);
   transition:
     background-color 180ms ease,
-    box-shadow 180ms ease;
+    border-color 180ms ease;
 }
 
 .games-page .game-detail-content-card {
@@ -1467,10 +1420,13 @@ html.dark .games-page .site-icon-image--official {
   overflow: hidden;
 }
 
-.games-page .game-detail-comment:hover,
+.games-page .game-detail-comment:hover {
+  border-color: var(--games-detail-border-hover);
+  background: color-mix(in srgb, var(--games-detail-surface) 85%, var(--games-detail-surface-hover));
+}
+
 .games-page .game-detail-news-item:hover {
-  background: var(--games-detail-surface-hover);
-  box-shadow: var(--games-item-hover-shadow);
+  border-color: var(--games-detail-border-hover);
 }
 
 .games-page .game-detail-info-summary .game-detail-info-label {
