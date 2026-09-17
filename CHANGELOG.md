@@ -8,11 +8,14 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add a bilingual Resource routing tab to page preferences with Auto/EdgeOne/Cloudflare modes for GoFurry assets and Auto/China/Global modes for Steam assets, per-route diagnostics, manual retesting, route details, and keyboard navigation across all three tabs (#107).
 - Add explicit Admin Tag Category/Tag management with immutable codes, database-generated Tag IDs, archive/restore confirmations and usage guards, plus atomic Game classification saves (#116).
 - Add a public Game tag-category endpoint and a private `recommendations rebuild --config <file>` command that rebuilds up to 64 recommendations per eligible Game without starting HTTP, collectors, or Redis (#116).
 
 ### Changed
 
+- Separate saved resource routing modes from probe recommendations with SSR-readable cookies, 12-hour probe freshness, a 60-second manual cooldown, and fixed Valve thumbnail probes; migrate old Steam automatic preferences as recommendations rather than pinned modes, and retain runtime fallback for pinned routes (#107, #121).
+- Remove ordinary Game content hover shadows and share/load-more hover movement while preserving original hover colors and shadows on actual floating UI (#118).
 - Replace the legacy Game tag hierarchy with `gfg_tag_category`, `gfg_tag`, and `gfg_game_tag`; preserve existing leaf IDs using the reviewed 214-entry ID/code mapping and backfill primary/secondary assignments missing from the old map. Relation roles become the sole current classification source, with compatibility response fields derived from them (#116).
 - Upgrade recommendations to `similar-v2.4.0-hybrid-cbf`, using category codes and relation roles instead of numeric Tag IDs/prefixes for weighting; serialize recomputation with classification changes to prevent stale cache writes (#116).
 - Use explicit categories for Nav Web tag filtering and `code=adult` for Adult detection, preserving selected leaf tags through search changes (#116).
@@ -20,6 +23,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Snapshot CDN providers and Steam candidate chains per resource so automatic/manual probes and saved route changes never replace loaded image URLs; new keys/sources adopt the latest policy, and real loading failures still advance fallback. Include Gallery video posters in the same behavior (#121).
+- Match Game group placeholder rating heights to real cards so accumulated row-height differences no longer clip the bottom cards on small and medium screens; preserve pagination overflow and existing hover styling.
 - Restore debounced primary/secondary tag search and selection-preserving local tag filtering in React Admin; honor tag option pagination and keyword filtering (#113).
 - Use the public frontend platform icon key catalog for Admin Game group/link selectors, prevent duplicate choices, and preserve free-text resource keys (#114).
 - Widen Chinese and English Game summaries to 400 characters through a new Goose migration, with matching backend/Admin validation and character counts (#115).
@@ -28,10 +33,12 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Removed
 
+- Remove News carousel edge decorations while retaining overflow clipping, pagination, and progress indicators (#118).
 - Remove current `gfg_tag.prefix`, `gfg_tag_map`, and physical `gfg_game.primary_tag` / `secondary_tag` columns, along with the legacy Admin Tag Map editor/API; retain historical tag dimensions and derive supported primary/secondary response fields from the new relations (#116).
 
 ### Upgrade notes
 
+- The #118 visual cleanup, responsive Game card clipping fix, and #107/#121 resource routing changes require only rebuilding and redeploying Nav Web. They introduce no backend/Admin update, database migration, dependency, or environment-variable requirement; earlier Tag domain upgrade requirements below remain separate.
 - The irreversible `20260916020000_game_tag_domain.sql` migration requires a verified backup and coordinated updates to Game Backend, Game Collector, Admin with its embedded React build, and Nav Web. Stop old runtime clients before migrating; rollback requires restoring the database and compatible binaries rather than running Goose Down. The migration clears old recommendation rows; rebuild them with the new private command (#116).
 - Record isolated regressions, populated development-clone acceptance, and the authorized shared-development migration in [the Tag domain acceptance record](docs/acceptance/issue-116-local-tag-domain.md).
 
