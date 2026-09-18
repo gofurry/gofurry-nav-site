@@ -422,6 +422,9 @@ func (cfg *serverConfig) normalize() {
 
 func (cfg *serverConfig) validate() error {
 	var errs []error
+	if _, _, err := cfg.ExternalServices.CloudOps.EdgeOne.ScheduledPurgeSchedule(); err != nil {
+		errs = append(errs, err)
+	}
 
 	switch cfg.Server.Mode {
 	case "debug", "release", "prod":
@@ -607,6 +610,9 @@ func ensureServerConfig() {
 }
 
 func applyDefaults(v *viper.Viper) {
+	v.SetDefault("external_services.cloud_ops.edgeone.scheduled_purge.enabled", false)
+	v.SetDefault("external_services.cloud_ops.edgeone.scheduled_purge.time", "05:30")
+	v.SetDefault("external_services.cloud_ops.edgeone.scheduled_purge.timezone", "Asia/Shanghai")
 	v.SetDefault("cluster_id", 1)
 	v.SetDefault("server.app_id", common.COMMON_PROJECT_NAME)
 	v.SetDefault("server.app_name", "gofurry Admin")

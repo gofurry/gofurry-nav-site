@@ -120,6 +120,11 @@ external_services:
       secret_key: ""
       main_host: ""
       asset_host: ""
+      # Daily main_host purge only; no startup catch-up or automatic retry.
+      scheduled_purge:
+        enabled: false
+        time: "05:30"
+        timezone: "Asia/Shanghai"
     cloudflare:
       enabled: false
       zone_id: ""

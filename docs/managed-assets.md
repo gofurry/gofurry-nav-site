@@ -285,6 +285,33 @@ audits. The development EdgeOne zone also contains the production main host;
 the test does not purge that host or the whole zone. Whole-zone authorization
 and provider mapping have separate unit coverage.
 
+### Daily EdgeOne main-host purge
+
+Admin optionally submits one EdgeOne `host` purge per day for the configured
+`external_services.cloud_ops.edgeone.main_host` (#122). The explicit Admin YAML
+adds `edgeone.scheduled_purge: { enabled: false, time: "05:30", timezone: "Asia/Shanghai" }`.
+It is disabled by default; enabling it requires a fully configured EdgeOne
+provider, a valid main host, strict `HH:mm`, and an explicit IANA timezone.
+The production operator can enable `05:30 Asia/Shanghai` after deployment.
+
+The application scheduler calls the same validated `Service.Purge("edgeone", …)`
+as manual host operations, never `PurgeAll`, asset-host or Cloudflare scheduling.
+It does not run at startup, catch up missed slots, overlap locally, or retry
+failed/ambiguous submissions. A dedicated GFA session advisory lock serializes
+instances; a same-slot audit lookup under that lock prevents a later instance
+from submitting again after the first releases it. The existing audit table is
+the intent record; no migration or scheduler table is added.
+
+System audit action `cloud.edgeone.purge.host.scheduled` targets `main_host`, with
+`requested` followed by `completed` (provider job submitted) or `failed`, sharing
+a deterministic slot request ID. Intent-audit failure prevents submission;
+outcome-audit failure is logged and never triggers resubmission. Task history
+remains the source for remote completion. Runtime starts the scheduler after
+pools/services and drains it before Redis, database and logger shutdown.
+
+See [Admin CloudOps operations](operations/admin-cloudops.md) for configuration,
+development acceptance, audit inspection, and the multi-instance prerequisites.
+
 ## Development configuration and storage acceptance
 
 The durable boundaries are in [the asset contract](../contracts/assets.md).

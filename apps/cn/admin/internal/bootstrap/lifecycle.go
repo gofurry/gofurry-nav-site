@@ -47,6 +47,8 @@ type Runtime struct {
 	AuditAPI      *auditadmin.API
 	WorkbenchAPI  *workbench.API
 
+	EdgeOneScheduler interface{ Stop() }
+
 	started      atomic.Bool
 	shutdownOnce sync.Once
 }
@@ -64,7 +66,11 @@ func Start() (*Runtime, error) {
 		_ = log.Sync()
 		return nil, fmt.Errorf("database init failed: %w", err)
 	}
+	redisStarted := false
 	cleanupOnError := func(cause error) (*Runtime, error) {
+		if redisStarted {
+			cause = errors.Join(cause, cache.Close())
+		}
 		pools.Close()
 		return nil, errors.Join(cause, log.Sync())
 	}
@@ -75,6 +81,7 @@ func Start() (*Runtime, error) {
 		if err := cache.InitRedisOnStart(); err != nil {
 			return cleanupOnError(fmt.Errorf("redis init failed: %w", err))
 		}
+		redisStarted = true
 	}
 
 	auditLogger := audit.New(pools.Admin)
@@ -86,6 +93,10 @@ func Start() (*Runtime, error) {
 	if err != nil {
 		return cleanupOnError(err)
 	}
+	scheduler, err := cloudapi.NewScheduler(cfg.ExternalServices.CloudOps.EdgeOne, cloudService, pools.Admin, auditLogger)
+	if err != nil {
+		return cleanupOnError(err)
+	}
 	auth := authservice.New(pools.Admin, auditLogger)
 	collectionService := collectionservice.New(pools.Game, pools.Nav, auditLogger)
 	metricService := metricadmin.New(pools.Game, pools.Nav)
@@ -93,7 +104,7 @@ func Start() (*Runtime, error) {
 	dataOpsService := dataops.New(pools)
 	auditService := auditadmin.New(pools.Admin)
 	runtime := &Runtime{
-		Pools: pools, Audit: auditLogger, AuthService: auth,
+		Pools: pools, Audit: auditLogger, AuthService: auth, EdgeOneScheduler: scheduler,
 		CloudAPI: cloudapi.New(cloudService, auditLogger),
 		AuthAPI:  authcontroller.New(auth, auditLogger), NavAPI: navadmin.New(pools.Nav, auditLogger).WithAssets(assetStorage, cfg.ExternalServices.AssetStorage.Primary.PublicBaseURL, cfg.ExternalServices.AssetStorage.Mirror.PublicBaseURL),
 		GameAPI: gameadmin.New(pools.Game, auditLogger), OptionsAPI: options.New(pools.Nav, pools.Game),
@@ -102,6 +113,7 @@ func Start() (*Runtime, error) {
 		DataOpsAPI: dataops.NewAPI(dataOpsService), AuditAPI: auditadmin.NewAPI(auditService),
 		WorkbenchAPI: workbench.NewAPI(workbench.New(collectionService, metricService, changeService, dataOpsService, auditService, auth)),
 	}
+	scheduler.Start()
 	runtime.started.Store(true)
 	log.InfoKV("application bootstrap completed")
 	return runtime, nil
@@ -114,6 +126,9 @@ func (runtime *Runtime) Shutdown() error {
 	var shutdownErr error
 	runtime.shutdownOnce.Do(func() {
 		runtime.started.Store(false)
+		if runtime.EdgeOneScheduler != nil {
+			runtime.EdgeOneScheduler.Stop()
+		}
 		if env.GetServerConfig().Redis.Enabled {
 			if err := cache.Close(); err != nil {
 				shutdownErr = errors.Join(shutdownErr, fmt.Errorf("redis shutdown failed: %w", err))
