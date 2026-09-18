@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gofurry/gofurry-nav-backend/apps/nav/home/models"
 	navsqlc "github.com/gofurry/gofurry-nav-backend/internal/db/nav/sqlc"
 	"github.com/jackc/pgx/v5"
 )
@@ -63,6 +64,38 @@ INSERT INTO pg_temp.gfn_background_pattern(id,name,name_en,object_key,light_colo
 	}
 	if _, err := q.RandomHeroAsset(ctx, "desktop"); err != pgx.ErrNoRows {
 		t.Fatal("soft-deleted Hero remained visible")
+	}
+	_, err = tx.Exec(ctx, `INSERT INTO pg_temp.gfn_home_hero_asset(id,variant,name,object_key,enabled,deleted)
+SELECT n, 'desktop', 'visible ' || n, 'nav/hero/desktop/' || md5(n::text) || '.avif', true, false FROM generate_series(10, 34) n;
+INSERT INTO pg_temp.gfn_home_hero_asset(id,variant,name,object_key,enabled,deleted) VALUES
+(9007199254740993,'mobile','mobile fixed','nav/hero/mobile/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.avif',true,false);`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog, catalogErr := svc.GetHeroes(ctx, models.HeroCatalogQuery{Variant: "desktop", PageNum: 2, PageSize: 12, SelectedID: 10})
+	if catalogErr != nil || catalog.Total != 25 || len(catalog.Items) != 12 || catalog.Items[0].ID != 22 || catalog.Selected == nil || catalog.Selected.ID != 10 {
+		t.Fatalf("pagination/selected_id filtering failed: %+v", catalog)
+	}
+	for _, id := range []int64{1, 2, 3, 999, 9007199254740993} {
+		catalog, catalogErr = svc.GetHeroes(ctx, models.HeroCatalogQuery{Variant: "desktop", PageNum: 4, PageSize: 12, SelectedID: id})
+		if catalogErr != nil || len(catalog.Items) != 0 || catalog.Selected != nil {
+			t.Fatal("ineligible selected asset leaked")
+		}
+		resolved, err := svc.resolveHero(ctx, "desktop", id)
+		if err != nil || resolved == nil || resolved.ID < 10 || resolved.ID > 34 {
+			t.Fatal("invalid fixed did not fall back to eligible same-viewport pool")
+		}
+	}
+	fixed, err := svc.resolveHero(ctx, "mobile", 9007199254740993)
+	if err != nil || fixed == nil || fixed.ID != 9007199254740993 {
+		t.Fatal("bigint fixed ID did not resolve")
+	}
+	if _, err := tx.Exec(ctx, `UPDATE pg_temp.gfn_home_hero_asset SET object_key='nav/hero/mobile/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.avif' WHERE id=9007199254740993`); err != nil {
+		t.Fatal(err)
+	}
+	fixed, err = svc.resolveHero(ctx, "mobile", 9007199254740993)
+	if err != nil || fixed.ObjectKey != "nav/hero/mobile/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.avif" {
+		t.Fatal("fixed ID did not follow current metadata")
 	}
 	t.Log("real PostgreSQL appearance query acceptance passed; only temporary fixtures were used")
 }

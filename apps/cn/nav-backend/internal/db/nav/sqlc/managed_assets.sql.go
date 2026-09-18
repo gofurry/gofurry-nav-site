@@ -9,6 +9,18 @@ import (
 	"context"
 )
 
+const countPublicHeroAssets = `-- name: CountPublicHeroAssets :one
+SELECT count(*) FROM gfn_home_hero_asset
+WHERE variant = $1 AND enabled AND NOT deleted
+`
+
+func (q *Queries) CountPublicHeroAssets(ctx context.Context, variant string) (int64, error) {
+	row := q.db.QueryRow(ctx, countPublicHeroAssets, variant)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const publicBackgroundPatterns = `-- name: PublicBackgroundPatterns :many
 SELECT id,name,name_en,object_key,light_color,dark_color,light_opacity::double precision AS light_opacity,dark_opacity::double precision AS dark_opacity,default_size_px
 FROM gfn_background_pattern WHERE enabled AND NOT deleted ORDER BY sort_order,id
@@ -46,6 +58,68 @@ func (q *Queries) PublicBackgroundPatterns(ctx context.Context) ([]PublicBackgro
 			&i.DarkOpacity,
 			&i.DefaultSizePx,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const publicHeroAsset = `-- name: PublicHeroAsset :one
+SELECT id, name, object_key FROM gfn_home_hero_asset
+WHERE id = $1 AND variant = $2 AND enabled AND NOT deleted
+`
+
+type PublicHeroAssetParams struct {
+	ID      int64  `json:"id"`
+	Variant string `json:"variant"`
+}
+
+type PublicHeroAssetRow struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	ObjectKey string `json:"object_key"`
+}
+
+func (q *Queries) PublicHeroAsset(ctx context.Context, arg PublicHeroAssetParams) (PublicHeroAssetRow, error) {
+	row := q.db.QueryRow(ctx, publicHeroAsset, arg.ID, arg.Variant)
+	var i PublicHeroAssetRow
+	err := row.Scan(&i.ID, &i.Name, &i.ObjectKey)
+	return i, err
+}
+
+const publicHeroAssets = `-- name: PublicHeroAssets :many
+SELECT id, name, object_key FROM gfn_home_hero_asset
+WHERE variant = $1 AND enabled AND NOT deleted
+ORDER BY id
+LIMIT $3::integer OFFSET $2::integer
+`
+
+type PublicHeroAssetsParams struct {
+	Variant    string `json:"variant"`
+	PageOffset int32  `json:"page_offset"`
+	PageSize   int32  `json:"page_size"`
+}
+
+type PublicHeroAssetsRow struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	ObjectKey string `json:"object_key"`
+}
+
+func (q *Queries) PublicHeroAssets(ctx context.Context, arg PublicHeroAssetsParams) ([]PublicHeroAssetsRow, error) {
+	rows, err := q.db.Query(ctx, publicHeroAssets, arg.Variant, arg.PageOffset, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PublicHeroAssetsRow{}
+	for rows.Next() {
+		var i PublicHeroAssetsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.ObjectKey); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

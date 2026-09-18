@@ -162,7 +162,7 @@ try {
     assert.equal(await displayed(page), initial)
     assert.deepEqual(requests, [origins.primary + '/' + key(variant)], 'existing Hero was fetched again')
     // Explicitly refreshing data is a new key, unlike mount/focus/probe work.
-    await page.evaluate(() => document.querySelector('#__nuxt').__vue_app__.config.globalProperties.$nuxt.callHook('app:data:refresh', ['nav-page:zh']))
+    await page.evaluate(() => { const nuxt = document.querySelector('#__nuxt').__vue_app__.config.globalProperties.$nuxt; return nuxt.callHook('app:data:refresh', Object.keys(nuxt.payload.data).filter(key => key.startsWith('nav-page:zh:'))) })
     await page.waitForFunction(() => document.querySelector('.nav-header__background--managed img').currentSrc.includes('mirror.example') && document.querySelector('.nav-header__background--managed img').currentSrc.includes('bbbbbbbb'))
     assert.equal(homeRequests, 2)
     await close(context)

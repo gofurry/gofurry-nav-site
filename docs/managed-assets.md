@@ -60,6 +60,64 @@ effect without waiting for the content cache. Empty pools stay NULL and never
 borrow from the other viewport. The reader rejects pre-v4 home payloads; the
 initial maintenance cutover required clearing/rebuilding derived caches before traffic resumed.
 
+### Hero source preferences (#112)
+
+Home preferences now owns **Random cloud / Fixed cloud / Local folder** inside
+the existing first tab. Desktop and mobile fixed selections are independent.
+`gf_hero_mode` (`random`, `fixed`, `local`), `gf_hero_desktop_id`, and
+`gf_hero_mobile_id` are one-year, path `/`, SameSite=Lax cookies. IDs are positive
+signed-bigint **strings**, including cookie decoding; object keys are never
+persisted. Missing/invalid modes default to Random. Leaving Fixed retains its IDs.
+
+Both `GET /api/v2/nav/home` and `GET /api/v2/nav/home/hero` accept optional
+`hero_desktop_id` and `hero_mobile_id`. Each ID resolves against the current
+enabled, non-deleted row of that variant before falling back to its own random
+pool. Missing, malformed, wrong-variant, disabled or deleted pins cannot affect
+the other viewport. Replacing an asset's file under the same ID therefore takes
+effect on the next request. `hero_mode=local` skips both cloud pool queries and
+returns null Hero entries. Existing clients omitting these parameters retain
+the random behavior; navigation-content caches and Home schema version 4 stay
+unchanged. No new database table or migration is needed.
+
+`GET /api/v2/nav/appearance/heroes?variant=desktop&page_num=1&page_size=12&selected_id=123`
+is a public, read-only metadata catalog. `variant` is required (`desktop` or
+`mobile`); page defaults to 1 (maximum 1,000,000), size to 12 (maximum 24), with invalid parameters
+returning HTTP 400. Stable ID ordering, `total`, `items` and optional `selected`
+all use only enabled/non-deleted rows. `selected_id` resolves a selection outside
+the current page directly. Response schema version is 1; items contain string
+`id`, `name`, and `object_key`, with no provider URL. Empty results use `[]` and
+an unavailable selected row uses `null`.
+
+Nuxt reads cookies before its SSR Home fetch. The async-data identity includes
+language and the initial preference tuple; hydration reuses the same response.
+Fixed therefore never renders Random first. Local SSR emits only the neutral
+surface, no cloud Hero URL. After mount Local restores the folder/cache from
+IndexedDB; unavailable or undecodable local data switches to Random and performs
+one focused Hero fetch. Stored folder handles/cache are never consulted for
+explicit Random/Fixed modes. Only a missing mode cookie permits a one-time legacy
+local restoration; it writes the new mode without deleting the handle/cache.
+That first upgrade alone may transition from the SSR cloud image to the old
+local image, since the server cannot read legacy browser storage.
+
+The editor holds drafts until Save. It fetches one viewport's catalog page at a
+time; text options are metadata only, and an IntersectionObserver mounts just
+the visible current preview while the Home tab is active. It does not preload
+the remaining AVIFs. An unavailable saved ID shows a non-blocking warning.
+Cancel leaves cookies, local storage and the displayed Hero untouched. A changed
+source/selection uses `/home/hero` instead of refreshing Home or reloading the
+page. The previous image remains while the request and new DOM image load; the
+same new `picture`/`img` is promoted on success with no blank-first transition.
+Exhausted new-image fallback retains the old frame. Unchanged settings do not
+reselect Hero, and background routing probes/Save retain #121 snapshot semantics.
+
+`hero-preferences.test.mjs` runs in `assets:test`. The production browser fixture
+`hero-preferences-smoke.mjs` runs in `assets:routing-smoke` alongside #121. It
+covers SSR/hydration, bigint and independent pins, current metadata, Local/legacy
+behavior, lazy previews and pagination, selected IDs outside the page, Save under
+gated API/image latency, Cancel, themes and keyboard focus. Backend controller,
+service and real PostgreSQL temporary-table tests cover invalid parameters,
+variant isolation, partial failures, disabled/deleted filtering and pagination.
+
 Nuxt configures `NUXT_PUBLIC_ASSET_PRIMARY_BASE` and
 `NUXT_PUBLIC_ASSET_MIRROR_BASE`, with public origins only. SSR resolves the saved
 mode first, then the recommendation (default Primary). After hydration, idle work
@@ -122,10 +180,9 @@ exhausted pool renders transparent content without borrowing the other pool.
 `NavHomePage` reuses the SSR home payload during hydration. Mount, focus, content
 prewarming, probes and route preference Save do not refetch its random Hero pool.
 An explicit home data refresh/new navigation may select a new key; crossing the
-768px breakpoint selects the other viewport pool. A saved local header background
-is still restored asynchronously from IndexedDB after mount and intentionally
-supersedes the server Hero. Only changing/clearing that local setting triggers its
-change event; saving resource routes does not reselect a local image.
+768px breakpoint selects the other viewport pool. Local restoration now follows
+the explicit Hero source contract above, including its one-time legacy migration.
+Saving resource routes never reselects a local image or cloud Hero.
 
 The Hero lifecycle regression in `npm run assets:routing-smoke` injects a late
 failure into independently constructed Hero Images while allowing the actual

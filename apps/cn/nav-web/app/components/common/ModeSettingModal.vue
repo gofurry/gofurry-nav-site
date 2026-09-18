@@ -71,48 +71,7 @@
             </button>
           </section>
 
-          <section class="gf-modal__section">
-            <div class="gf-modal__section-heading">
-              <div class="gf-modal__copy">
-                <label class="gf-modal__label">
-                  {{ t("navbar.customNavHeaderBg") }}
-                </label>
-                <p class="gf-modal__help">
-                  {{ customBgFolderNameLocal
-                    ? t('navbar.customNavHeaderBgSelected', { name: customBgFolderNameLocal })
-                    : t('navbar.customNavHeaderBgEmpty') }}
-                </p>
-              </div>
-              <span class="gf-chip gf-chip--muted">
-                {{ supportsCustomBgPicker
-                  ? t('navbar.customNavHeaderBgSupported')
-                  : t('navbar.customNavHeaderBgUnsupported') }}
-              </span>
-            </div>
-
-            <div class="gf-modal__actions">
-              <button
-                  type="button"
-                  class="gf-button gf-button--surface"
-                  :disabled="!supportsCustomBgPicker"
-                  @click="pickCustomBgDirectory"
-              >
-                {{ t('navbar.customNavHeaderBgPick') }}
-              </button>
-              <button
-                  type="button"
-                  class="gf-button gf-button--ghost"
-                  :disabled="!customBgFolderNameLocal"
-                  @click="clearCustomBgDirectory"
-              >
-                {{ t('navbar.customNavHeaderBgClear') }}
-              </button>
-            </div>
-
-            <p class="gf-modal__footnote">
-              {{ t("navbar.customNavHeaderBgDesc") }}
-            </p>
-          </section>
+          <HeroPreferencesEditor ref="heroEditor" :active="activeTab === 0" />
 
           </div>
           <div :id="`${panelId}-panel-1`" role="tabpanel" :aria-labelledby="`${panelId}-tab-1`" :inert="activeTab !== 1" class="preferences-page">
@@ -129,17 +88,10 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, useId, watch } from 'vue'
+import HeroPreferencesEditor from './HeroPreferencesEditor.vue'
 import BackgroundPreferencesEditor from './BackgroundPreferencesEditor.vue'
 import ResourceRoutingPreferencesEditor from './ResourceRoutingPreferencesEditor.vue'
 import { i18n } from '@/main'
-import {
-  clearCustomNavHeaderBackgroundDirectory,
-  type CustomNavHeaderBackgroundSelection,
-  loadCustomNavHeaderBackgroundMeta,
-  pickCustomNavHeaderBackgroundDirectory,
-  saveCustomNavHeaderBackgroundDirectory,
-  supportsCustomNavHeaderBackground,
-} from '@/utils/customNavHeaderBackground'
 import {
   readShowQuickAccess,
   writeShowQuickAccess,
@@ -186,19 +138,10 @@ function tabKeydown(event: KeyboardEvent, index: number) {
 const localMode = ref('')
 const backgroundEditor = ref<InstanceType<typeof BackgroundPreferencesEditor> | null>(null)
 const routingEditor = ref<InstanceType<typeof ResourceRoutingPreferencesEditor> | null>(null)
+const heroEditor = ref<InstanceType<typeof HeroPreferencesEditor> | null>(null)
 const showQuickAccessLocal = ref(true)
-const supportsCustomBgPicker = supportsCustomNavHeaderBackground()
-const customBgFolderNameLocal = ref('')
-
-let pendingCustomBgSelection: CustomNavHeaderBackgroundSelection | null = null
-let shouldClearCustomBg = false
-
 function syncCustomBgState() {
-  const meta = loadCustomNavHeaderBackgroundMeta()
-  customBgFolderNameLocal.value = meta.folderName
   showQuickAccessLocal.value = readShowQuickAccess()
-  pendingCustomBgSelection = null
-  shouldClearCustomBg = false
 }
 
 watch(
@@ -225,36 +168,12 @@ onMounted(() => {
   syncCustomBgState()
 })
 
-async function pickCustomBgDirectory() {
-  try {
-    const selection = await pickCustomNavHeaderBackgroundDirectory()
-    if (!selection) {
-      return
-    }
-
-    pendingCustomBgSelection = selection
-    customBgFolderNameLocal.value = selection.folderName
-    shouldClearCustomBg = false
-  } catch (error) {
-    console.error('Pick custom nav header background directory err:', error)
-  }
-}
-
-function clearCustomBgDirectory() {
-  pendingCustomBgSelection = null
-  customBgFolderNameLocal.value = ''
-  shouldClearCustomBg = true
-}
-
 const save = async () => {
+  if (heroEditor.value && !heroEditor.value.validate()) { selectTab(0); return }
   if (backgroundEditor.value && !(await backgroundEditor.value.save())) { selectTab(1); return }
   localMode.value = localMode.value.trim().slice(0, 32)
 
-  if (shouldClearCustomBg) {
-    await clearCustomNavHeaderBackgroundDirectory()
-  } else if (pendingCustomBgSelection) {
-    await saveCustomNavHeaderBackgroundDirectory(pendingCustomBgSelection)
-  }
+  if (heroEditor.value && !(await heroEditor.value.save())) { selectTab(0); return }
 
   writeShowQuickAccess(showQuickAccessLocal.value)
   routingEditor.value?.save()

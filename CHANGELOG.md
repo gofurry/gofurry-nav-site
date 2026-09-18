@@ -8,6 +8,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Added
 
+- Add Random cloud, independent desktop/mobile Fixed cloud, and Local folder Hero sources in Home preferences, with SSR-readable ID cookies, a paginated public metadata catalog, lazy single-image previews, and Save/Cancel with no blank-first transition (#112).
 - Add a bilingual Resource routing tab to page preferences with Auto/EdgeOne/Cloudflare modes for GoFurry assets and Auto/China/Global modes for Steam assets, per-route diagnostics, manual retesting, route details, and keyboard navigation across all three tabs (#107).
 - Add explicit Admin Tag Category/Tag management with immutable codes, database-generated Tag IDs, archive/restore confirmations and usage guards, plus atomic Game classification saves (#116).
 - Add a public Game tag-category endpoint and a private `recommendations rebuild --config <file>` command that rebuilds up to 64 recommendations per eligible Game without starting HTTP, collectors, or Redis (#116).
@@ -38,6 +39,7 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Upgrade notes
 
+- Deploy Nav Backend before Nav Web for Hero source selection (#112). This adds read-only Hero catalog and request-time fixed-ID resolution; no database migration, new dependency, or environment variable is required.
 - The #118 visual cleanup, responsive Game card clipping fix, and #107/#121 resource routing changes require only rebuilding and redeploying Nav Web. They introduce no backend/Admin update, database migration, dependency, or environment-variable requirement; earlier Tag domain upgrade requirements below remain separate.
 - The irreversible `20260916020000_game_tag_domain.sql` migration requires a verified backup and coordinated updates to Game Backend, Game Collector, Admin with its embedded React build, and Nav Web. Stop old runtime clients before migrating; rollback requires restoring the database and compatible binaries rather than running Goose Down. The migration clears old recommendation rows; rebuild them with the new private command (#116).
 - Record isolated regressions, populated development-clone acceptance, and the authorized shared-development migration in [the Tag domain acceptance record](docs/acceptance/issue-116-local-tag-domain.md).

@@ -15,6 +15,7 @@ type HomeAPI interface {
 	GetHomeSaying(fiber.Ctx) error
 	GetHomeHero(fiber.Ctx) error
 	GetPatterns(fiber.Ctx) error
+	GetHeroes(fiber.Ctx) error
 }
 
 type UpdatesAPI interface{ GetUpdates(fiber.Ctx) error }
@@ -56,6 +57,7 @@ func navV2Api(g fiber.Router, cfg env.NavV2Config, dependencies NavDependencies)
 	g.Get("/home/saying", dependencies.Home.GetHomeSaying)
 	g.Get("/home/hero", dependencies.Home.GetHomeHero)
 	g.Get("/appearance/patterns", dependencies.Home.GetPatterns)
+	g.Get("/appearance/heroes", dependencies.Home.GetHeroes)
 	g.Get("/updates", dependencies.Updates.GetUpdates)
 	g.Get("/search/suggestions", dependencies.Search.GetSearchSuggestions)
 	g.Get("/sites/index", dependencies.SiteIndex.GetSiteIndex)

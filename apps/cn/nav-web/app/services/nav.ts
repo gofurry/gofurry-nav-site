@@ -1,4 +1,5 @@
 import type {
+  HeroCatalog,
   NavHomeHero,
   BackgroundPattern,
   NavHomePingResponse,
@@ -13,6 +14,7 @@ import type {
   Site,
   SiteViewResponse,
 } from '~/types/nav'
+import { heroQuery, type HeroPreference } from '~/utils/heroPreferences'
 import type {
   CertificateInsightOverview,
   InsightChangeExplorerPage,
@@ -29,8 +31,8 @@ import type {
   SiteCompare,
 } from '~/types/insights'
 
-export function getNavHome(lang: string): Promise<NavHomeResponse> {
-  return useApi('navV2')('/nav/home', { query: { lang } })
+export function getNavHome(lang: string, preference?: HeroPreference): Promise<NavHomeResponse> {
+  return useApi('navV2')('/nav/home', { query: { lang, ...(preference ? heroQuery(preference) : {}) } })
 }
 
 export function getNavHomePing(): Promise<NavHomePingResponse> {
@@ -41,8 +43,12 @@ export function getNavHomeSaying(lang: string): Promise<NavHomeSayingResponse> {
   return useApi('navV2')('/nav/home/saying', { query: { lang } })
 }
 
-export function getNavHomeHero(): Promise<NavHomeHero> {
-  return useApi('navV2')<{ hero: NavHomeHero }>('/nav/home/hero').then((response) => response.hero)
+export function getNavHomeHero(preference?: HeroPreference): Promise<NavHomeHero> {
+  return useApi('navV2')<{ hero: NavHomeHero }>('/nav/home/hero', { query: preference ? heroQuery(preference) : {} }).then((response) => response.hero)
+}
+
+export function getHeroCatalog(variant: 'desktop' | 'mobile', pageNum: number, selectedId: string | null): Promise<HeroCatalog> {
+  return useApi('navV2')('/nav/appearance/heroes', { query: { variant, page_num: pageNum, page_size: 12, selected_id: selectedId ?? undefined } })
 }
 
 export function getBackgroundPatterns(): Promise<{ schema_version: number; patterns: BackgroundPattern[] }> {

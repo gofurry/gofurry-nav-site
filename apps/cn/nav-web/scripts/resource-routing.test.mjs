@@ -113,6 +113,25 @@ assetMode.value = 'mirror'; steamMode.value = 'global'
 await nextTick()
 assert.equal(managed.src.value, originalManaged, 'Save must not reload managed images')
 assert.equal(steam.src.value, originalSteam, 'Save must not reload Steam images')
+// A Hero handoff for the other viewport retains this key's provider and failed
+// candidates. A genuinely different key still starts with the latest policy.
+let retained, fresh
+const handoff = renderer.createApp({ setup() {
+  retained = useManagedAsset(key.value, '/default.svg', false, managed.snapshot())
+  fresh = useManagedAsset('nav/hero/mobile/' + 'c'.repeat(32) + '.avif', '', false, managed.snapshot())
+  return () => h('img')
+} })
+handoff.mount({})
+assert.equal(retained.src.value, originalManaged)
+assert(fresh.src.value.startsWith('https://mirror.example/'))
+retained.onError()
+let retry
+const retryHandoff = renderer.createApp({ setup() { retry = useManagedAsset(key.value, '/default.svg', false, retained.snapshot()); return () => h('img') } })
+retryHandoff.mount({})
+assert(retry.src.value.startsWith('https://mirror.example/'))
+retry.onError()
+assert.equal(retry.src.value, '/default.svg', 'handoff forgot a real failed provider')
+handoff.unmount(); retryHandoff.unmount()
 key.value = 'nav/hero/desktop/' + 'b'.repeat(32) + '.avif'
 steamSource.value = source.replace('header.jpg', 'capsule.jpg')
 await nextTick()

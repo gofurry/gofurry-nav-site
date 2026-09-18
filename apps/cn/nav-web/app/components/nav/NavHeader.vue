@@ -3,15 +3,7 @@
       class="nav-header"
   >
     <h1 class="sr-only">{{ homeHeading }}</h1>
-    <div
-        v-if="bgImage"
-        class="nav-header__background"
-        :style="{ backgroundImage: `url(${bgImage})` }"
-    ></div>
-    <picture v-else class="nav-header__background nav-header__background--managed" aria-hidden="true">
-      <source media="(min-width: 768px)" :srcset="desktopAsset.src.value || emptyHeroImage" />
-      <img ref="managedImage" :src="mobileAsset.src.value || emptyHeroImage" alt="" @error="handleManagedHeroError" />
-    </picture>
+    <HeroBackground :desktop-object-key="desktopObjectKey" :mobile-object-key="mobileObjectKey" />
     <div class="nav-header__search">
       <SearchBox />
     </div>
@@ -119,11 +111,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import SearchBox from './SearchBox.vue'
 import NavQuickAccess from './NavQuickAccess.vue'
-import { getNavHomeHero } from '~/services/nav'
+import HeroBackground from './HeroBackground.vue'
 import { loadRecentSites, RECENT_SITES_EVENT, type RecentSiteItem } from '@/utils/recentSites'
 import {
   addCustomSite,
@@ -136,15 +128,11 @@ import {
   type CustomSiteItem,
 } from '@/utils/customSites'
 import {
-  CUSTOM_NAV_HEADER_BG_EVENT,
-  loadRandomCustomNavHeaderBackground,
-} from '@/utils/customNavHeaderBackground'
-import {
   readShowQuickAccess,
   subscribeNavHeaderSettingsChange,
 } from '@/utils/navHeaderSettings'
 
-const props = defineProps<{
+defineProps<{
   desktopObjectKey?: string | null
   mobileObjectKey?: string | null
 }>()
@@ -154,26 +142,6 @@ const homeHeading = computed(() => locale.value === 'en'
   ? 'GoFurry Navigation - Discover furry communities, art, fiction, games, tools, and site monitoring'
   : 'GoFurry 兽人控导航站 - 发现兽人社区、艺术、小说、游戏、工具与站点监测资源'
 )
-const bgImage = ref<string | null>(null)
-const desktopKey = ref(props.desktopObjectKey)
-const mobileKey = ref(props.mobileObjectKey)
-watch(() => props.desktopObjectKey, (value) => { desktopKey.value = value })
-watch(() => props.mobileObjectKey, (value) => { mobileKey.value = value })
-// The displayed img owns load errors. A separate new Image() cannot tell us
-// whether a CSS background has already painted successfully.
-const desktopAsset = useManagedAsset(desktopKey)
-const mobileAsset = useManagedAsset(mobileKey)
-const managedImage = ref<HTMLImageElement | null>(null)
-// An explicit empty candidate prevents picture's desktop source from falling
-// through to the mobile pool when desktop is absent/exhausted (and vice versa).
-const emptyHeroImage = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%221%22%20height=%221%22/%3E'
-function handleManagedHeroError() {
-  const image = managedImage.value
-  if (!image || image.naturalWidth > 0) return
-  const current = image.currentSrc
-  if (current && current === desktopAsset.src.value) desktopAsset.onError()
-  else if (current && current === mobileAsset.src.value) mobileAsset.onError()
-}
 const recentSites = ref<RecentSiteItem[]>([])
 const customSites = ref<CustomSiteItem[]>([])
 const showQuickAccess = ref(true)
@@ -185,38 +153,7 @@ const customSiteForm = ref({
 })
 const draggingCustomSiteId = ref<string | null>(null)
 
-let customBgObjectUrl: string | null = null
 let stopNavHeaderSettingsSubscription: (() => void) | null = null
-
-function revokeCustomBackgroundUrl() {
-  if (customBgObjectUrl) {
-    URL.revokeObjectURL(customBgObjectUrl)
-    customBgObjectUrl = null
-  }
-}
-
-async function applyBackground() {
-  try {
-    const customBackground = await loadRandomCustomNavHeaderBackground()
-    if (customBackground) {
-      revokeCustomBackgroundUrl()
-      bgImage.value = customBackground
-      customBgObjectUrl = customBackground
-      return true
-    }
-  } catch (error) {
-    console.error('Load custom nav header background err:', error)
-  }
-
-  revokeCustomBackgroundUrl()
-  bgImage.value = null
-  return false
-}
-
-function handleCustomBackgroundChange() {
-  void applyBackground()
-}
-
 
 function syncRecentSites() {
   if (!import.meta.client) {
@@ -327,26 +264,14 @@ function handleCustomSiteDragEnd() {
   draggingCustomSiteId.value = null
 }
 
-onMounted(async () => {
-  // The SSR image can finish (including failing) before Vue attaches events.
-  if (managedImage.value?.complete) handleManagedHeroError()
+onMounted(() => {
   try {
-    await applyBackground()
-    if (props.desktopObjectKey === undefined && props.mobileObjectKey === undefined) {
-      try {
-        const hero = await getNavHomeHero()
-        desktopKey.value = hero.desktop?.object_key ?? null
-        mobileKey.value = hero.mobile?.object_key ?? null
-      } catch { /* Keep the page usable when the optional Hero pool is unavailable. */ }
-    }
-
     syncNavHeaderSettings()
     syncRecentSites()
     syncCustomSites()
     stopNavHeaderSettingsSubscription = subscribeNavHeaderSettingsChange(({ showQuickAccess: nextValue }) => {
       showQuickAccess.value = nextValue
     })
-    window.addEventListener(CUSTOM_NAV_HEADER_BG_EVENT, handleCustomBackgroundChange)
     window.addEventListener(RECENT_SITES_EVENT, handleRecentSitesChange)
     window.addEventListener(CUSTOM_SITES_EVENT, handleCustomSitesChange)
     window.addEventListener('storage', handleRecentSitesChange)
@@ -357,17 +282,11 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener(CUSTOM_NAV_HEADER_BG_EVENT, handleCustomBackgroundChange)
   window.removeEventListener(RECENT_SITES_EVENT, handleRecentSitesChange)
   window.removeEventListener(CUSTOM_SITES_EVENT, handleCustomSitesChange)
   window.removeEventListener('storage', handleRecentSitesChange)
   window.removeEventListener('storage', handleCustomSitesChange)
   stopNavHeaderSettingsSubscription?.()
   stopNavHeaderSettingsSubscription = null
-  revokeCustomBackgroundUrl()
 })
 </script>
-
-<style scoped>
-.nav-header__background--managed img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center; }
-</style>
