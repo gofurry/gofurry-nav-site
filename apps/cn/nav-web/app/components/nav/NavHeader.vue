@@ -8,7 +8,10 @@
         class="nav-header__background"
         :style="{ backgroundImage: `url(${bgImage})` }"
     ></div>
-    <div v-else class="nav-header__background nav-header__background--managed" :style="managedBackgroundStyle"></div>
+    <picture v-else class="nav-header__background nav-header__background--managed" aria-hidden="true">
+      <source media="(min-width: 768px)" :srcset="desktopAsset.src.value || emptyHeroImage" />
+      <img ref="managedImage" :src="mobileAsset.src.value || emptyHeroImage" alt="" @error="handleManagedHeroError" />
+    </picture>
     <div class="nav-header__search">
       <SearchBox />
     </div>
@@ -156,14 +159,21 @@ const desktopKey = ref(props.desktopObjectKey)
 const mobileKey = ref(props.mobileObjectKey)
 watch(() => props.desktopObjectKey, (value) => { desktopKey.value = value })
 watch(() => props.mobileObjectKey, (value) => { mobileKey.value = value })
-const desktopViewport = ref(import.meta.client && window.innerWidth >= 768)
-const desktopAsset = useManagedAsset(desktopKey, '', () => desktopViewport.value && !bgImage.value)
-const mobileAsset = useManagedAsset(mobileKey, '', () => !desktopViewport.value && !bgImage.value)
-const updateViewport = () => { desktopViewport.value = window.innerWidth >= 768 }
-const managedBackgroundStyle = computed(() => ({
-  '--hero-desktop': desktopAsset.src.value ? `url("${desktopAsset.src.value}")` : 'none',
-  '--hero-mobile': mobileAsset.src.value ? `url("${mobileAsset.src.value}")` : 'none',
-}))
+// The displayed img owns load errors. A separate new Image() cannot tell us
+// whether a CSS background has already painted successfully.
+const desktopAsset = useManagedAsset(desktopKey)
+const mobileAsset = useManagedAsset(mobileKey)
+const managedImage = ref<HTMLImageElement | null>(null)
+// An explicit empty candidate prevents picture's desktop source from falling
+// through to the mobile pool when desktop is absent/exhausted (and vice versa).
+const emptyHeroImage = 'data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%221%22%20height=%221%22/%3E'
+function handleManagedHeroError() {
+  const image = managedImage.value
+  if (!image || image.naturalWidth > 0) return
+  const current = image.currentSrc
+  if (current && current === desktopAsset.src.value) desktopAsset.onError()
+  else if (current && current === mobileAsset.src.value) mobileAsset.onError()
+}
 const recentSites = ref<RecentSiteItem[]>([])
 const customSites = ref<CustomSiteItem[]>([])
 const showQuickAccess = ref(true)
@@ -318,7 +328,8 @@ function handleCustomSiteDragEnd() {
 }
 
 onMounted(async () => {
-	window.addEventListener('resize',updateViewport)
+  // The SSR image can finish (including failing) before Vue attaches events.
+  if (managedImage.value?.complete) handleManagedHeroError()
   try {
     await applyBackground()
     if (props.desktopObjectKey === undefined && props.mobileObjectKey === undefined) {
@@ -346,7 +357,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-	window.removeEventListener('resize',updateViewport)
   window.removeEventListener(CUSTOM_NAV_HEADER_BG_EVENT, handleCustomBackgroundChange)
   window.removeEventListener(RECENT_SITES_EVENT, handleRecentSitesChange)
   window.removeEventListener(CUSTOM_SITES_EVENT, handleCustomSitesChange)
@@ -359,8 +369,5 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.nav-header__background--managed { background-image: var(--hero-mobile); }
-@media (min-width: 768px) {
-  .nav-header__background--managed { background-image: var(--hero-desktop); }
-}
+.nav-header__background--managed img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center; }
 </style>

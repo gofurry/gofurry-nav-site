@@ -111,6 +111,32 @@ keys/sources use the latest policy. Only real load errors advance the current
 snapshot's fallback chain; they may stale diagnostics/schedule a test but never
 clear the saved mode. Steam's former global preference-updated event is removed.
 
+Managed Hero uses a responsive `picture`/`img` as its decorative background layer,
+with the same centered cover layout. Only that displayed image's real error event
+(or an already-failed SSR image detected at mount) may advance its CDN fallback.
+Hero does not use the independent `useManagedAsset` hidden-Image preloader: that
+auxiliary request could fail after a CSS background had already painted, wrongly
+replacing a successful Hero. Desktop/mobile sources remain separate; an empty or
+exhausted pool renders transparent content without borrowing the other pool.
+
+`NavHomePage` reuses the SSR home payload during hydration. Mount, focus, content
+prewarming, probes and route preference Save do not refetch its random Hero pool.
+An explicit home data refresh/new navigation may select a new key; crossing the
+768px breakpoint selects the other viewport pool. A saved local header background
+is still restored asynchronously from IndexedDB after mount and intentionally
+supersedes the server Hero. Only changing/clearing that local setting triggers its
+change event; saving resource routes does not reselect a local image.
+
+The Hero lifecycle regression in `npm run assets:routing-smoke` injects a late
+failure into independently constructed Hero Images while allowing the actual
+renderer to paint, compares the displayed source and pixels, verifies one home
+request using a different-key second-response fixture, and tests explicit new
+keys, pre-hydration display failures, terminal fallback and local restoration.
+It also records the existing narrow-screen Footer hydration mismatch in
+`layouts/default.vue` (server-hidden versus initially client-visible), separately
+from the Hero assertions. The SSR Hero node is retained even in that case; this
+Hero fix does not change the unrelated Footer/reveal lifecycle.
+
 Steam's China group is `shared.st.dl.eccdnx.com`, followed by
 `shared.cdn.steamchina.queniuam.com`. Global is `shared.akamai.steamstatic.com`,
 `shared.cloudflare.steamstatic.com`, `shared.fastly.steamstatic.com`, then

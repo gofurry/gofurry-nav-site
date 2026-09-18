@@ -128,7 +128,7 @@ try {
   })
   const readAssets = () => page.evaluate(() => ({
     icon: document.querySelector('.nav-site-card__logo img').src,
-    hero: getComputedStyle(document.querySelector('.nav-header__background--managed')).backgroundImage,
+    hero: document.querySelector('.nav-header__background--managed img').currentSrc,
     pattern: getComputedStyle(document.querySelector('.gf-public-background__pattern')).maskImage,
   }))
   const before = await readAssets()
