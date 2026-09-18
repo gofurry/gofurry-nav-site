@@ -183,15 +183,7 @@ const save = async () => {
 
 <style scoped>
 .gf-preferences-modal .gf-modal__header { border-bottom: 0; flex-shrink: 0; }
-.preferences-tabs { display: flex; flex-shrink: 0; margin: 0 1.3rem; border-bottom: 1px solid var(--gf-border-strong); overflow-x: auto; }
-.preferences-tabs button { position: relative; flex: 1; padding: .85rem 1rem; border: 0; background: transparent; color: var(--gf-text-muted); font-size: .88rem; font-weight: 600; white-space: nowrap; cursor: pointer; transition: color 160ms, background 160ms; }
-.preferences-tabs button::after { content: ''; position: absolute; inset: auto 0 0; height: 2px; background: var(--gf-accent); transform: scaleX(0); transition: transform 160ms; }
-.preferences-tabs button[aria-selected='true'] { color: var(--gf-accent); }
-.preferences-tabs button[aria-selected='true']::after { transform: scaleX(1); }
-.preferences-tabs button:hover { background: var(--gf-accent-soft); color: var(--gf-text-main); }
-.preferences-tabs button:focus-visible { outline: 2px solid var(--gf-accent); outline-offset: -3px; }
 .preferences-pages { display: flex; height: min(34rem, calc(100dvh - 11rem)); min-height: 0; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
 .preferences-pages::-webkit-scrollbar { display: none; }
 .preferences-page { flex: 0 0 100%; min-width: 0; padding: .8rem 1.3rem 1.2rem; overflow-y: auto; scroll-snap-align: start; overscroll-behavior-y: contain; }
-@media (prefers-reduced-motion: reduce) { .preferences-tabs button, .preferences-tabs button::after { transition: none; } }
 </style>

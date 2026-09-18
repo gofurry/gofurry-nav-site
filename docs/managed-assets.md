@@ -99,10 +99,17 @@ local restoration; it writes the new mode without deleting the handle/cache.
 That first upgrade alone may transition from the SSR cloud image to the old
 local image, since the server cannot read legacy browser storage.
 
-The editor holds drafts until Save. It fetches one viewport's catalog page at a
-time; text options are metadata only, and an IntersectionObserver mounts just
-the visible current preview while the Home tab is active. It does not preload
-the remaining AVIFs. An unavailable saved ID shows a non-blocking warning.
+The editor holds drafts until Save. Source options reuse the page-background
+selector, and compact underline tabs keep desktop/mobile browsing independent.
+Arrows browse one preview at a time, automatically fetching adjacent metadata
+pages at their boundaries. The preview is the draft selection; there is no
+separate apply or random action inside the picker. Each viewport keeps its page
+position and metadata cache until the editor closes. For a saved ID outside the
+first page, the editor uses stable ID ordering to locate its page by binary
+search, so the name and ordinal are accurate without scanning the full catalog.
+An IntersectionObserver mounts only the visible current preview while the Home
+tab and viewport are active; metadata lookup never loads the other AVIFs. An
+unavailable saved ID shows a non-blocking warning.
 Cancel leaves cookies, local storage and the displayed Hero untouched. A changed
 source/selection uses `/home/hero` instead of refreshing Home or reloading the
 page. The previous image remains while the request and new DOM image load; the

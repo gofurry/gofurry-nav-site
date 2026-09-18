@@ -3,7 +3,7 @@
     <div class="gf-modal__copy"><h3 class="gf-modal__label">{{ label('页面背景', 'Page background') }}</h3><p class="gf-modal__help">{{ label('预览后点击“保存”应用。本地图片只保存在此浏览器。', 'Preview, then save to apply. Local images stay in this browser.') }}</p></div>
     <div class="background-preferences__field">
       <span :id="`${fieldId}-source`">{{ label('背景来源', 'Source') }}</span>
-      <div class="background-preferences__sources" role="group" :aria-labelledby="`${fieldId}-source`">
+      <div class="preferences-sources" role="group" :aria-labelledby="`${fieldId}-source`">
         <button v-for="source in (['default', 'server', 'local'] as const)" :key="source" type="button" :aria-pressed="draft.source === source" @click="changeSource(source)">
           {{ source === 'default' ? label('默认图案', 'Default') : source === 'server' ? label('服务端图案', 'Server patterns') : label('本地图片', 'Local image') }}
         </button>
@@ -11,12 +11,12 @@
     </div>
     <div v-if="draft.source === 'server' && patterns.length" class="background-preferences__field">
       <span :id="`${fieldId}-patterns`">{{ label('选择图案', 'Choose a pattern') }}</span>
-      <div class="background-preferences__carousel">
-        <button type="button" class="background-preferences__arrow" :disabled="!canPrevious" :aria-label="label('上一组图案', 'Previous patterns')" @click="scrollPatterns(-1)"><PhCaretLeft :size="18" /></button>
+      <div class="preferences-carousel">
+        <button type="button" class="preferences-arrow" :disabled="!canPrevious" :aria-label="label('上一组图案', 'Previous patterns')" @click="scrollPatterns(-1)"><PhCaretLeft :size="18" /></button>
         <div ref="strip" class="background-preferences__strip" role="group" :aria-labelledby="`${fieldId}-patterns`" @scroll="syncStrip">
           <BackgroundPatternOption v-for="pattern in patterns" :key="pattern.id" :pattern="pattern" :selected="draft.pattern_id === pattern.id" @select="selectPattern(pattern.id)" />
         </div>
-        <button type="button" class="background-preferences__arrow" :disabled="!canNext" :aria-label="label('下一组图案', 'Next patterns')" @click="scrollPatterns(1)"><PhCaretRight :size="18" /></button>
+        <button type="button" class="preferences-arrow" :disabled="!canNext" :aria-label="label('下一组图案', 'Next patterns')" @click="scrollPatterns(1)"><PhCaretRight :size="18" /></button>
       </div>
     </div>
     <p v-if="draft.source === 'server' && !patterns.length" class="gf-modal__help">{{ label('暂无可用图案，将使用默认背景。', 'No patterns available. The bundled background will be used.') }}</p>
@@ -151,16 +151,8 @@ onUnmounted(() => { stripObserver?.disconnect(); disposed = true; selectionVersi
 <style scoped>
 .background-preferences { display: grid; gap: 1.1rem; }
 .background-preferences__field { display: grid; min-width: 0; gap: .5rem; font-size: .82rem; line-height: 1.4; color: var(--gf-text-main); }
-.background-preferences__sources { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
-.background-preferences__sources button { padding: .65rem .3rem; border: 1px solid var(--gf-border); border-radius: var(--gf-radius-sm); background: transparent; color: var(--gf-text-muted); cursor: pointer; transition: background 160ms, border-color 160ms; }
-.background-preferences__sources button:hover { background: var(--gf-surface-hover); }
-.background-preferences__sources button[aria-pressed='true'] { border-color: var(--gf-accent); background: var(--gf-accent-soft); color: var(--gf-accent); }
-.background-preferences__carousel { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) 1.5rem; gap: .4rem; align-items: center; }
 .background-preferences__strip { display: flex; gap: .6rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; padding: 3px; }
 .background-preferences__strip::-webkit-scrollbar { display: none; }
-.background-preferences__arrow { display: grid; place-items: center; height: 2.5rem; border: 0; border-radius: 6px; background: transparent; color: var(--gf-text-main); cursor: pointer; }
-.background-preferences__arrow:hover:not(:disabled) { background: var(--gf-accent-soft); color: var(--gf-accent); }
-.background-preferences__arrow:disabled { opacity: .25; cursor: default; }
 .background-preferences__controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; align-items: start; }
 .background-preferences__controls:has(> :nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .background-preferences__label-row { display: flex; align-items: baseline; justify-content: space-between; gap: .25rem; }
@@ -188,5 +180,4 @@ onUnmounted(() => { stripObserver?.disconnect(); disposed = true; selectionVersi
 .background-preferences__error { color: var(--gf-danger); font-size: .8rem; }
 .background-preferences button:focus-visible, .background-preferences__slider:focus-visible { outline: 2px solid var(--gf-accent); outline-offset: 3px; }
 @media (max-width: 400px) { .background-preferences__controls { gap: .55rem; } .background-preferences__color-input button { padding: 4px; } .background-preferences__color-input button svg { display: none; } .background-preferences__color-input button span { width: 15px; height: 15px; } .background-preferences__color-input input { font-size: .68rem; } }
-@media (prefers-reduced-motion: reduce) { .background-preferences__sources button { transition: none; } }
 </style>

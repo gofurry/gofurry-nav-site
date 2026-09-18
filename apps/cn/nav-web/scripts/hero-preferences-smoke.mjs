@@ -7,11 +7,11 @@ import { launchPerfBrowser, reportsDir } from './perf/shared.mjs'
 
 const origins = { primary: 'https://primary.example', mirror: 'https://mirror.example' }
 const makeHero = (id, variant, hash = String(BigInt(id) % 10n)) => ({ id, name: `${variant} ${id}`, object_key: `nav/hero/${variant}/${hash.repeat(32)}.avif` })
-const desktop = Array.from({ length: 25 }, (_, i) => makeHero(String(i + 10), 'desktop', (i + 10).toString(16).padStart(32, '0').slice(-1)))
+const desktop = Array.from({ length: 48 }, (_, i) => makeHero(String(i + 10), 'desktop', (i + 10).toString(16).padStart(32, '0').slice(-1)))
 // Unique keys across all pages, with no dependence on numeric ID conversion.
 desktop.forEach((item, i) => { item.object_key = `nav/hero/desktop/${String(i + 10).padStart(32, '0')}.avif` })
 const mobile = [makeHero('9007199254740993', 'mobile'), makeHero('9007199254740994', 'mobile')]
-let heroGate = null
+let heroGate = null, failedCatalogPage = 0
 const resolveHero = url => {
   if (url.searchParams.get('hero_mode') === 'local') return { desktop: null, mobile: null }
   return { desktop: desktop.find(item => item.id === url.searchParams.get('hero_desktop_id')) ?? desktop[0], mobile: mobile.find(item => item.id === url.searchParams.get('hero_mobile_id')) ?? mobile[0] }
@@ -22,6 +22,7 @@ const app = await startInsightsFixtureApp(async url => {
   if (url.pathname === '/api/v2/nav/appearance/heroes') {
     const variant = url.searchParams.get('variant'), items = variant === 'desktop' ? desktop : mobile
     const page = Number(url.searchParams.get('page_num')), size = Number(url.searchParams.get('page_size'))
+    if (page === failedCatalogPage) return { status: 503 }
     return { data: { schema_version: 1, variant, page_num: page, page_size: size, total: items.length, items: items.slice((page - 1) * size, page * size), selected: items.find(item => item.id === url.searchParams.get('selected_id')) ?? null } }
   }
   if (url.pathname === '/api/v2/nav/appearance/patterns') return { data: { schema_version: 1, patterns: [] } }
@@ -41,6 +42,23 @@ async function open(page) { await page.locator('.gf-nav__mode-button').click(); 
 async function cancel(page) { await page.locator('.gf-modal__header-actions .gf-button--ghost').click(); await page.locator('[data-hero-preferences]').waitFor({ state: 'detached' }) }
 async function save(page) { await page.locator('.gf-modal__header-actions .gf-button--primary').click(); await page.locator('[data-hero-preferences]').waitFor({ state: 'detached' }) }
 async function close(context) { await context.unrouteAll({ behavior: 'wait' }); await context.close() }
+async function waitPosition(page, expected) {
+  await page.waitForFunction(expected => {
+    const picker = [...document.querySelectorAll('[data-hero-catalog]')].find(el => el.closest('[role="tabpanel"]').style.display !== 'none')
+    return picker?.getAttribute('aria-busy') === 'false' && Number.parseInt(picker.querySelector('[data-hero-position]').textContent) === expected
+  }, expected)
+}
+async function browseTo(page, target) {
+  const picker = page.locator('[data-hero-catalog]:visible')
+  await page.waitForFunction(() => [...document.querySelectorAll('[data-hero-catalog]')].some(el => el.closest('[role="tabpanel"]').style.display !== 'none' && el.getAttribute('aria-busy') === 'false' && Number.parseInt(el.querySelector('[data-hero-position]').textContent) > 0))
+  let position = Number.parseInt(await picker.locator('[data-hero-position]').textContent())
+  while (position !== target) {
+    const direction = target > position ? 1 : -1
+    await picker.getByRole('button', { name: direction > 0 ? '下一张背景' : '上一张背景', exact: true }).click()
+    position += direction
+    await waitPosition(page, position)
+  }
+}
 async function setup({ width = 1440, mode = 'random', desktopId = null, mobileId = null, local = false } = {}) {
   app.requests.length = 0
   const context = await browser.newContext({ viewport: { width, height: 1000 }, locale: 'zh-CN', reducedMotion: 'reduce' })
@@ -75,7 +93,11 @@ async function setup({ width = 1440, mode = 'random', desktopId = null, mobileId
       images.push(url.href)
       if (control.imageGate) await control.imageGate
       if (control.fail && url.href.includes(control.fail)) return route.abort()
-      return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#775544"/></svg>' })
+      // Local artwork with real viewport proportions for visual review only.
+      const height = url.pathname.includes('/mobile/') ? 1200 : 506
+      const colors = ['#6b8277', '#7c8c95', '#88826a']
+      const color = colors[[...url.pathname].reduce((sum, char) => sum + char.charCodeAt(0), 0) % colors.length]
+      return route.fulfill({ contentType: 'image/svg+xml', body: `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="${height}" viewBox="0 0 900 ${height}"><rect width="900" height="${height}" fill="#e5d5b6"/><circle cx="660" cy="${height * .28}" r="72" fill="#faf1d9"/><path d="M0 ${height}V${height * .72}L270 ${height * .32}L560 ${height}Z" fill="${color}"/><path d="M230 ${height}L620 ${height * .5}L900 ${height * .76}V${height}Z" fill="#475f59"/></svg>` })
     }
     return route.abort()
   })
@@ -155,24 +177,34 @@ try {
   assert.equal(await ui.page.getByRole('tab').count(), 3, 'Hero source created another preferences tab')
   assert.equal(catalogCalls().length, 0, 'opening Random preferences queried the entire Hero catalog')
   await ui.page.getByRole('button', { name: '固定云端背景', exact: true }).click()
-  const picker = ui.page.locator('[data-hero-catalog]')
-  await picker.locator('select').waitFor()
+  const picker = ui.page.locator('[data-hero-catalog]:visible')
   await picker.scrollIntoViewIfNeeded()
-  await ui.page.waitForFunction(() => document.querySelector('[data-hero-catalog] select')?.options.length === 12)
+  await waitPosition(ui.page, 1)
+  assert(await picker.getByRole('button', { name: '上一张背景', exact: true }).isDisabled())
+  assert.equal(await picker.locator('select').count(), 0, 'Hero still uses a dropdown')
+  assert.equal(await picker.getByRole('button').count(), 2, 'Picker has duplicate selection/random actions')
   assert.equal(catalogCalls().length, 1)
   assert.equal(new Set(ui.images).size, 1, 'opening Fixed downloaded all catalog entries')
-  await picker.locator('select').selectOption('11')
-  await picker.locator('img').waitFor()
-  await ui.page.waitForFunction(() => document.querySelector('[data-hero-catalog] img')?.complete)
+  await browseTo(ui.page, 2)
+  await ui.page.waitForFunction(() => document.querySelector('[data-hero-catalog="desktop"] img')?.complete)
   assert.equal(new Set(ui.images).size, 2, 'selecting a visible preview fetched hidden previews')
-  await picker.getByRole('button', { name: '使用这张背景' }).click()
-  await picker.getByRole('button', { name: '下一页', exact: true }).click()
-  await ui.page.waitForFunction(() => document.querySelector('[data-hero-catalog] select')?.value === '22')
-  assert.equal(catalogCalls().at(-1).searchParams.get('selected_id'), '11', 'paging did not use selected_id')
-  assert((new Set(ui.images)).size <= 3, 'metadata paging eagerly fetched the page')
-  await ui.page.getByRole('button', { name: '手机背景', exact: true }).click()
-  await picker.locator('select').selectOption(mobile[1].id)
-  await picker.getByRole('button', { name: '使用这张背景' }).click()
+  await browseTo(ui.page, 12)
+  assert.equal(catalogCalls().length, 1, 'in-page browsing requested metadata again')
+  const beforeBoundary = new Set(ui.images).size
+  await browseTo(ui.page, 13)
+  assert.equal(catalogCalls().length, 2)
+  assert.equal(catalogCalls().at(-1).searchParams.get('page_num'), '2')
+  assert.equal(catalogCalls().at(-1).searchParams.get('selected_id'), '21')
+  await ui.page.waitForFunction(() => document.querySelector('[data-hero-catalog="desktop"] img')?.complete)
+  assert.equal(new Set(ui.images).size, beforeBoundary + 1, 'page boundary eagerly fetched unseen images')
+  await browseTo(ui.page, 12)
+  assert.equal(catalogCalls().length, 2, 'backward page boundary did not reuse metadata')
+  await ui.page.getByRole('tab', { name: '手机', exact: true }).click()
+  await browseTo(ui.page, 2)
+  assert.equal(await ui.page.locator('[data-hero-catalog] img').count(), 1, 'inactive viewport retained a mounted preview')
+  await ui.page.getByRole('tab', { name: '桌面', exact: true }).click()
+  await waitPosition(ui.page, 12)
+  assert.equal(catalogCalls().length, 3, 'viewport switch lost its browsing position/page cache')
   await cancel(ui.page)
   assert.equal(await current(ui.page), before)
   assert.equal(await cookieValue(ui.context, 'gf_hero_mode'), 'random')
@@ -181,11 +213,9 @@ try {
 
   await open(ui.page)
   await ui.page.getByRole('button', { name: '固定云端背景', exact: true }).click()
-  await picker.locator('select').selectOption('12')
-  await picker.getByRole('button', { name: '使用这张背景' }).click()
-  await ui.page.getByRole('button', { name: '手机背景', exact: true }).click()
-  await picker.locator('select').selectOption(mobile[1].id)
-  await picker.getByRole('button', { name: '使用这张背景' }).click()
+  await browseTo(ui.page, 3)
+  await ui.page.getByRole('tab', { name: '手机', exact: true }).click()
+  await browseTo(ui.page, 2)
   let releaseAPI, releaseImage
   // Simulate replacing the same ID's file after preview. The staged renderer
   // must actually wait for an uncached image, not reuse the decoded preview.
@@ -212,10 +242,9 @@ try {
   // unchanged, already successful resource during the frame handoff.
   const callsBeforeMobile = heroCalls().length
   await open(ui.page)
-  await ui.page.getByRole('button', { name: '手机背景', exact: true }).click()
-  await picker.locator('select').selectOption(mobile[0].id)
-  await picker.getByRole('button', { name: '使用这张背景' }).click()
-  await ui.page.getByRole('tab').last().click()
+  await ui.page.getByRole('tab', { name: '手机', exact: true }).click()
+  await browseTo(ui.page, 1)
+  await ui.page.locator('.preferences-tabs:not(.preferences-tabs--compact)').getByRole('tab').last().click()
   await ui.page.locator('[data-resource-routing] .resource-route').first().getByRole('radio', { name: 'Cloudflare' }).check()
   await save(ui.page)
   await delay(500)
@@ -227,8 +256,7 @@ try {
 
   const retainedDesktop = await current(ui.page)
   await open(ui.page)
-  await picker.locator('select').selectOption('14')
-  await picker.getByRole('button', { name: '使用这张背景' }).click()
+  await browseTo(ui.page, 5)
   desktop[4].object_key = 'nav/hero/desktop/' + 'd'.repeat(32) + '.avif'
   ui.control.fail = desktop[4].object_key
   await save(ui.page)
@@ -240,21 +268,43 @@ try {
   assert.equal(await current(ui.page), retainedDesktop, 'exhausted staged fallback removed a successful old Hero')
   ui.control.fail = ''
 
-  // Selected ID outside the first page must resolve with one metadata request.
+  // Locate an out-of-page pin by stable metadata order, never by loading images.
   await ui.context.addCookies([{ name: 'gf_hero_desktop_id', value: '34', url: app.base }])
   await ui.page.reload({ waitUntil: 'networkidle' })
   const catalogBefore = catalogCalls().length
   await open(ui.page)
   await picker.scrollIntoViewIfNeeded()
-  await ui.page.waitForFunction(() => document.querySelector('[data-hero-catalog] select')?.value === '34')
-  assert.equal(catalogCalls().length, catalogBefore + 1, 'out-of-page selection scanned the catalog')
+  await waitPosition(ui.page, 25)
+  assert.equal(catalogCalls().length, catalogBefore + 2, 'out-of-page selection scanned the catalog')
   assert.equal(catalogCalls().at(-1).searchParams.get('selected_id'), '34')
   assert.equal(await ui.page.locator('[data-hero-catalog] img').count(), 1)
-  for (const width of [1440, 390]) {
+  const locatedImages = ui.images.length
+  await browseTo(ui.page, 24)
+  assert.equal(catalogCalls().at(-1).searchParams.get('page_num'), '2', 'left arrow did not request the preceding page')
+  await browseTo(ui.page, 25)
+  assert(ui.images.length <= locatedImages + 2, 'browsing mounted hidden images')
+  const viewportTabs = ui.page.locator('.preferences-tabs--compact').getByRole('tab')
+  await viewportTabs.first().focus()
+  await ui.page.keyboard.press('ArrowRight')
+  await waitPosition(ui.page, 1)
+  assert(await viewportTabs.last().evaluate(el => el === document.activeElement))
+  await ui.page.keyboard.press('Home')
+  await waitPosition(ui.page, 25)
+  assert(await viewportTabs.first().evaluate(el => el === document.activeElement))
+  await ui.page.locator('[data-hero-preferences] h3').click()
+  await ui.page.mouse.move(2, 2)
+  for (const width of [1440, 390, 320]) {
     await ui.page.setViewportSize({ width, height: 1000 })
     for (const dark of [false, true]) {
       await ui.page.evaluate(dark => document.documentElement.classList.toggle('dark', dark), dark)
       await picker.scrollIntoViewIfNeeded()
+      const sourceStyles = await ui.page.evaluate(() => {
+        const read = el => { const s = getComputedStyle(el); return ['padding', 'borderRadius', 'borderColor', 'backgroundColor', 'color', 'fontSize', 'lineHeight'].map(key => s[key]) }
+        return [read(document.querySelector('[data-hero-preferences] .preferences-sources button[aria-pressed="true"]')), read(document.querySelector('[data-background-preferences] .preferences-sources button[aria-pressed="true"]'))]
+      })
+      assert.deepEqual(sourceStyles[0], sourceStyles[1], 'Hero source selector differs from page background controls')
+      const widths = await ui.page.locator('[data-hero-preferences] .preferences-sources button').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().width))
+      assert(Math.max(...widths) - Math.min(...widths) < 1, 'source options are not equal-width columns')
       assert.equal(await ui.page.locator('.preferences-page').first().evaluate(el => el.scrollWidth > el.clientWidth + 1), false, 'Hero editor overflows horizontally')
       await ui.page.screenshot({ path: join(output, `${width}-${dark ? 'dark' : 'light'}.png`) })
     }
@@ -265,6 +315,35 @@ try {
   assert.notEqual(await source.evaluate(el => getComputedStyle(el).outlineStyle), 'none', 'keyboard focus is invisible')
   await cancel(ui.page)
   await close(ui.context)
+
+  const boundary = await setup({ mode: 'fixed', desktopId: '57' })
+  await open(boundary.page)
+  await waitPosition(boundary.page, 48)
+  const boundaryPicker = boundary.page.locator('[data-hero-catalog]:visible')
+  assert(await boundaryPicker.getByRole('button', { name: '下一张背景', exact: true }).isDisabled(), 'last image can advance beyond the catalog')
+  assert.equal(catalogCalls().length, 3, 'last-page pin did not use bounded metadata lookup')
+  assert.deepEqual([...new Set(boundary.images)], [origins.primary + '/' + desktop[47].object_key], 'pin lookup loaded intermediate previews')
+  await browseTo(boundary.page, 47)
+  await browseTo(boundary.page, 48)
+  assert.equal(await cookieValue(boundary.context, 'gf_hero_desktop_id'), '57')
+  await cancel(boundary.page)
+  await close(boundary.context)
+
+  const retry = await setup({ mode: 'fixed', desktopId: '21' })
+  await open(retry.page)
+  await waitPosition(retry.page, 12)
+  failedCatalogPage = 2
+  await retry.page.getByRole('button', { name: '下一张背景', exact: true }).click()
+  const retryPicker = retry.page.locator('[data-hero-catalog]:visible')
+  await retryPicker.getByRole('alert').waitFor()
+  await waitPosition(retry.page, 12)
+  assert.equal(await cookieValue(retry.context, 'gf_hero_desktop_id'), '21', 'metadata failure changed persisted selection')
+  failedCatalogPage = 0
+  await retryPicker.getByRole('button', { name: '重试', exact: true }).click()
+  await waitPosition(retry.page, 13)
+  assert.equal(await cookieValue(retry.context, 'gf_hero_desktop_id'), '21', 'browsing implicitly saved the draft')
+  await cancel(retry.page)
+  await close(retry.context)
   assert.deepEqual(errors, [])
   console.log('[hero preferences] lazy metadata/preview paging, Cancel, Save without blank-first, ID cookies, selected_id, responsive themes/focus PASS')
 } finally {
