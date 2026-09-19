@@ -23,7 +23,13 @@
     "game:groups:smoke": "node scripts/game-group-layout-smoke.mjs",
     "insights:semantics": "node scripts/insights-semantics.test.mjs",
     "seo:recovery:test": "node scripts/seo-recovery.test.mjs",
-    "seo:recovery:smoke": "node scripts/seo-recovery-smoke.mjs"
+    "seo:recovery:smoke": "node scripts/seo-recovery-smoke.mjs",
+    "lint": "eslint .",
+    "lint:prune": "eslint . --prune-suppressions",
+    "stylelint": "stylelint \"app/**/*.{css,less,vue}\"",
+    "style:policy": "node scripts/style-policy.mjs",
+    "style:policy:test": "node --test scripts/style-policy/*.test.mjs",
+    "style:policy:update": "node scripts/style-policy.mjs --update-baseline"
   },
   "dependencies": {
     "@nuxtjs/i18n": "^10.3.0",
@@ -40,9 +46,19 @@
     "vue-i18n": "^11.4.0"
   },
   "devDependencies": {
+    "@nuxt/eslint-config": "^1.17.0",
     "@types/node": "^24.5.2",
+    "@vue/compiler-sfc": "3.5.33",
+    "eslint": "^10.11.0",
     "less": "^4.6.6",
     "playwright": "^1.60.0",
+    "postcss": "^8.5.28",
+    "postcss-html": "^2.0.0",
+    "postcss-less": "^6.0.0",
+    "stylelint": "^17.15.0",
+    "stylelint-config-html": "^2.0.0",
+    "stylelint-config-recommended": "^18.0.0",
+    "stylelint-config-recommended-vue": "^2.0.0",
     "typescript": "~5.8.3",
     "vue-tsc": "^3.0.7"
   }

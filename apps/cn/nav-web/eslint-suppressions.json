@@ -1,0 +1,167 @@
+{
+  "app/components/common/ManagedAssetImage.vue": {
+    "vue/require-default-prop": {
+      "count": 1
+    }
+  },
+  "app/components/common/SteamAssetImage.vue": {
+    "vue/require-default-prop": {
+      "count": 1
+    }
+  },
+  "app/components/game/detail/tabs/GameTabComment.vue": {
+    "vue/no-template-shadow": {
+      "count": 1
+    }
+  },
+  "app/components/game/detail/tabs/GameTabDetail.vue": {
+    "@typescript-eslint/no-unused-vars": {
+      "count": 1
+    },
+    "vue/no-v-html": {
+      "count": 2
+    }
+  },
+  "app/components/game/detail/tabs/GameTabIntro.vue": {
+    "vue/no-v-html": {
+      "count": 1
+    }
+  },
+  "app/components/game/detail/tabs/GameTabNews.vue": {
+    "vue/no-v-html": {
+      "count": 1
+    }
+  },
+  "app/components/game/lottery/LotteryJoinModal.vue": {
+    "@typescript-eslint/no-unused-vars": {
+      "count": 1
+    }
+  },
+  "app/components/game/main/content/CountTablePanel.vue": {
+    "vue/require-default-prop": {
+      "count": 1
+    }
+  },
+  "app/components/game/main/content/GameUpdateNews.vue": {
+    "@typescript-eslint/no-dynamic-delete": {
+      "count": 1
+    }
+  },
+  "app/components/game/search/GameSearchFilter.vue": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 1
+    },
+    "vue/no-mutating-props": {
+      "count": 17
+    }
+  },
+  "app/components/nav/NavSpotlightPanels.vue": {
+    "@typescript-eslint/no-dynamic-delete": {
+      "count": 4
+    }
+  },
+  "app/components/nav/SearchBox.vue": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 1
+    },
+    "@typescript-eslint/no-unsafe-function-type": {
+      "count": 1
+    },
+    "vue/no-v-html": {
+      "count": 1
+    }
+  },
+  "app/components/site/SiteDetailPage.vue": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 2
+    }
+  },
+  "app/components/site/SiteDnsPanel.vue": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 6
+    },
+    "vue/no-template-shadow": {
+      "count": 1
+    }
+  },
+  "app/components/site/SiteObservationTabs.vue": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 3
+    }
+  },
+  "app/components/site/SitePerformance.vue": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 6
+    }
+  },
+  "app/composables/useSiteDetailPage.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 2
+    }
+  },
+  "app/composables/useSiteMetadataProbePanel.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 7
+    }
+  },
+  "app/layouts/empty.vue": {
+    "vue/no-multiple-template-root": {
+      "count": 1
+    }
+  },
+  "app/main.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 2
+    }
+  },
+  "app/pages/games/prize/index.vue": {
+    "vue/no-multiple-template-root": {
+      "count": 1
+    }
+  },
+  "app/services/nav.ts": {
+    "@typescript-eslint/no-unused-vars": {
+      "count": 1
+    }
+  },
+  "app/types/common.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 1
+    }
+  },
+  "app/utils/authoritativePageError.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 2
+    }
+  },
+  "app/utils/customNavHeaderBackground.ts": {
+    "@typescript-eslint/no-invalid-void-type": {
+      "count": 1
+    }
+  },
+  "app/utils/customSites.ts": {
+    "@typescript-eslint/no-empty-object-type": {
+      "count": 1
+    }
+  },
+  "app/utils/util.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 4
+    }
+  },
+  "scripts/fixtures/insights-app.mjs": {
+    "no-empty": {
+      "count": 1
+    }
+  },
+  "server/utils/apiProxy.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 1
+    }
+  },
+  "server/utils/sitemapInventory.ts": {
+    "@typescript-eslint/no-explicit-any": {
+      "count": 2
+    }
+  }
+}

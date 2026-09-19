@@ -51,6 +51,12 @@ belong in semantic variables under the existing `html.dark` model, not new
 - P0 only establishes governance and the one-time baseline. Do not change UI,
   production CSS/Less/Vue, dependencies, CI, scripts or style directories for P0.
   Keep current `components/*.less` and regression harnesses until their own phases.
+- P1 installs static checks, not UI/style migration. ESLint's official bulk
+  suppressions hold historical engineering debt; never regenerate suppress-all
+  to hide new findings. Use `npm run lint:prune` after removing lint debt.
+- `style:policy` requires exact rule/file equality. Both increased debt and a
+  stale higher budget fail. After removing debt, run `npm run style:policy:update`;
+  it refuses all writes if any rule/file increased. Never raise budgets manually.
 
 ## Verify the change
 
@@ -58,15 +64,22 @@ Run from `apps/cn/nav-web`:
 
 ```text
 npm ci
+npm run lint
+npm run stylelint
+npm run style:policy:test
+npm run style:policy
 npm run typecheck
+npm run insights:semantics
+npm run seo:recovery:test
 npm run build
 ```
 
 Check `package.json` for existing focused checks and run those relevant to the
 changed area. Keep regression coverage beside the existing `scripts/` harnesses
 until the testing migration; do not assume future runners or commands exist.
-For governance-only P0 changes, the three commands above are sufficient.
-Review the complete diff for accidental Vue/style/package/CI changes before commit.
+P1 uses Node built-in tests for the policy guard; Vitest and Playwright Test
+migration remain P3 work. Static checks also run in the existing Nav Web CI job.
+Review the complete diff for accidental production Vue/style changes before commit.
 
 [Frontend documentation](../../../docs/frontend/README.md) routes to the contract,
 debt state and later design/testing guidance.

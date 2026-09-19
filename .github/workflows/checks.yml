@@ -172,6 +172,18 @@ jobs:
           cache-dependency-path: apps/cn/nav-web/package-lock.json
       - working-directory: apps/cn/nav-web
         run: npm ci
+      - name: Lint
+        working-directory: apps/cn/nav-web
+        run: npm run lint
+      - name: Stylelint
+        working-directory: apps/cn/nav-web
+        run: npm run stylelint
+      - name: Style policy tests
+        working-directory: apps/cn/nav-web
+        run: npm run style:policy:test
+      - name: Style policy
+        working-directory: apps/cn/nav-web
+        run: npm run style:policy
       - name: Typecheck
         working-directory: apps/cn/nav-web
         run: npm run typecheck

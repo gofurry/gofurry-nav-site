@@ -14,3 +14,11 @@ records historical noncompliance, not examples or permission for new code.
 Design Foundation guidance arrives in P2, testing guidance in P3, and migration
 guidance grows from P4 onward. These are planned work, not tools/directories that
 P0 installs. The existing source and regression harnesses remain in place.
+
+P1 now enforces the contract through ESLint, Stylelint and `style:policy` in the
+existing Nav Web CI job. The [Agent entry](../../apps/cn/nav-web/AGENTS.md) lists
+the same commands for local validation. Historical ESLint findings use official
+bulk suppressions; prune them after fixes. Style policy requires exact rule/file
+budgets; use `npm run style:policy:update` only to record reductions. Neither
+mechanism permits adding debt. See the contract's P1 maintenance section for
+the static-analysis boundaries and fail-closed behavior.

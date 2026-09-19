@@ -229,6 +229,9 @@ selector references such as `:deep(.rounded-xl)` again as Tailwind use.
 Arbitrary visual utility occurrences are a **subset** of appearance and appear
 in both rule budgets. They MUST NOT be counted a third time as raw color values.
 Totals across rules are rule hits, not disjoint violations.
+Bracket-only CSS properties follow the same ownership: `[color:#fff]` is visual,
+`[width:10px]` is structural, and an arbitrary transform is visual under the
+interaction variants below. None occurred in the initial P0 snapshot.
 
 Tailwind candidates are validated against the lockfile's Tailwind v4 default
 theme/utility compiler before classification, so semantic names such as
@@ -332,29 +335,72 @@ for newly added files or script-generated styles.
 
 ## Verification responsibilities and phase boundary
 
-| Responsibility | Owner / state at P0 |
+| Responsibility | Current owner / phase |
 | --- | --- |
 | TypeScript/Vue typing | Existing Nuxt typecheck |
-| JS/TS/Vue engineering rules | Planned ESLint, P1 |
-| CSS/Less correctness and hygiene | Planned Stylelint, P1 |
-| GoFurry-specific ownership and per-file debt budget | Planned `style:policy`, P1 |
+| JS/TS/Vue engineering rules | Nuxt-compatible ESLint flat config; official bulk suppressions track historical findings |
+| CSS/Less correctness and hygiene | Conservative Stylelint recommended rules with CSS/Less/Vue parsers |
+| GoFurry-specific ownership and per-file debt budget | Parser-backed `style:policy`; Node built-in tests verify the guard |
 | Unit/component logic | Planned Vitest, P3; current focused Node harnesses remain |
 | Browser behavior, SSR, hydration and historical regressions | Current Playwright scripts; Playwright Test migration in P3 |
 | Screenshot baseline comparison | Planned Playwright Visual, P3; current screenshots alone are not a visual regression gate |
 | Performance budget | Existing `perf:guard`, separate from visual correctness |
 | Real external services | Explicit development acceptance, not a default PR gate |
 
-P0 MUST NOT add runners, dependencies, CI gates or nonexistent package commands.
-Run from `apps/cn/nav-web`: `npm ci`, `npm run typecheck`, `npm run build`.
-For later runtime changes, run relevant existing focused scripts from
-`package.json` as well. A skipped external acceptance test is not a pass.
+P0 introduced no runners, dependencies or CI gates. P1's local/CI sequence is
+`npm ci`, `npm run lint`, `npm run stylelint`, `npm run style:policy:test`,
+`npm run style:policy`, `npm run typecheck`, `npm run insights:semantics`,
+`npm run seo:recovery:test`, `npm run build`, from `apps/cn/nav-web`.
+For runtime changes, run relevant existing focused scripts from `package.json`
+as well. A skipped external acceptance test is not a pass.
 
 Keep `scripts/perf/visual-guard.mjs` and current regression harnesses intact.
-P1 implements the policy detector and MUST first reproduce this baseline with
-zero regressions on the unchanged app tree. P2 owns token/primitive organization;
+P1's detector reproduces the P0 baseline on the unchanged app tree. P2 owns token/primitive organization;
 P3 owns the testing foundation; P4+ owns staged, visually equivalent migrations.
 Each phase MUST finish in a stable, independently deployable state.
 
 P0 MUST NOT change production Vue, CSS/Less, runtime behavior, package/lockfiles,
 CI, dependency versions or style directories, and MUST NOT implement #108/#109.
 It neither replaces Nuxt/Tailwind/Less nor introduces a new UI framework.
+
+### P1 enforcement and maintenance
+
+ESLint uses the official Nuxt static flat-config factory without a runtime module
+or formatting policy. `eslint-suppressions.json` is the one-time historical
+bootstrap, not a license to suppress new code. Contributors MUST fix new lint
+findings, MUST NOT rerun bulk suppress-all to grant debt, and MUST NOT use
+`--pass-on-unpruned-suppressions`. Use `npm run lint:prune` when removing debt;
+unused suppressions fail the normal lint command.
+
+Stylelint owns correctness only. Its config documents narrow Less/Tailwind/Vue
+compatibility decisions and existing cascade patterns; it does not enforce
+formatting or duplicate the six architecture-debt rules. The configured current
+source must have zero Stylelint violations; no Stylelint debt manifest exists.
+
+`scripts/style-policy.mjs` discovers tracked and non-ignored new application
+source, parses SFC/TS/CSS/Less, extracts shared style facts, applies the six
+detectors and exact exceptions, then compares every rule/file budget:
+
+- `actual > baseline`: regression, fail.
+- `actual < baseline`: stale budget, fail.
+- `actual == baseline`: pass.
+
+`npm run style:policy:update` can only lower budgets or remove zero entries. If
+any pair increased, it refuses every write. It preserves exceptions and refuses
+to overwrite a manifest changed during the scan. New files default to zero;
+moving debt never transfers its budget.
+
+Class extraction works backward from template/DOM class sinks through bounded
+local constants, arrays/objects, refs/computed values and simple function returns.
+Script visual settings/palettes and actual `innerHTML`/`v-html` embedded styles
+are supported without interpreting arbitrary runtime code. Authored literals
+are deduplicated across references. Unresolved runtime expressions are an
+explicit static-analysis boundary, not permission for new architecture debt.
+Cross-file execution, imported function evaluation and general dynamic string
+solving are outside P1. Parse/read/manifest/compiler failures fail closed.
+
+Tests verify extraction, classification, exact exceptions, all three comparison
+outcomes, update safety, fail-closed CLI behavior and current per-file parity.
+The existing Nav Web CI job runs each guard separately before the preserved
+typecheck, Insights semantics, SEO recovery and build steps. P1 adds no Vitest,
+Playwright Test migration, production style cleanup or UI behavior change.
