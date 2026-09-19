@@ -233,11 +233,13 @@ backend API, database state, cloud mutation or dependency is introduced.
 TTL and cooldown regressions. `npm run test:nuxt` covers actual Nuxt composable
 snapshots/fallback and Hero cookie/state behavior. See
 [frontend testing](frontend/testing.md) for the runner boundaries.
-After `npm run build`, `npm run assets:routing-smoke` runs the production Nuxt
+After `npm run build`, `npm run test:browser` runs Resource Routing against the production Nuxt
 application with isolated API/CDN fixtures to check SSR, actual loaded image
 stability, changed resources, failures, Save/Cancel, three-tab keyboard navigation
-and mobile/light/dark rendering. Screenshots go to ignored
-`apps/cn/nav-web/docs/performance/reports/resource-routing/`. This deterministic
+and mobile/light/dark interaction. Playwright keeps traces/screenshots only on
+failure in ignored `test-results/`; no visual baseline is defined here.
+`npm run assets:routing-smoke` retains only Hero lifecycle and Hero Preferences
+legacy coverage until P3.2.3. This deterministic
 suite does not depend on real CDN availability or substitute for cloud acceptance.
 
 Run Nav Web `npm run test:unit`, `npm run test:nuxt`, `npm run insights:semantics`,

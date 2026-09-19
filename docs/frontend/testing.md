@@ -12,8 +12,8 @@ the commands below run from `apps/cn/nav-web`.
 | Nuxt composables and runtime | `tests/nuxt/*.nuxt.test.ts`, `npm run test:nuxt` | Vitest `nuxt` project, real Nuxt app/context through `@nuxt/test-utils`, happy-dom |
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
-| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail is the only migrated domain in P3.2.1 |
-| Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Hero/Resource/Insights and other domains retain existing runners until their own migration |
+| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail and Resource Routing/Managed/Steam are migrated |
+| Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Hero lifecycle/Preferences, Insights and other domains retain existing runners until their own migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
 
 `npm test` runs both Vitest projects once. `vitest.config.ts` uses `projects`, not
@@ -120,8 +120,48 @@ guards browser behavior, not pixel equality. Do not port success screenshots,
 Playwright retains trace/screenshot only on failure (video off), writes HTML to
 `playwright-report/` and diagnostics to `test-results/`, both ignored. Fixture
 server logs are attached to failing cases. CI uploads both directories only on
-Browser tests failure. Hero/Preferences/Resource Routing/Insights legacy runners
-and the shared fixture/performance helpers are unchanged by this migration.
+Browser tests failure. Shared fixture/performance helpers remain unchanged.
+
+## Resource Routing browser regressions (P3.2.2)
+
+The same three browser commands discover Resource Routing automatically through
+the existing single CI Browser tests step. No new runner, project or CI step is
+needed. `tests/browser/fixtures/resource-routing.ts` reuses
+`startInsightsFixtureApp`: the worker owns only production Nitro/local API and
+fixed icon/Hero/pattern/Steam payloads. Every test receives fresh context/storage,
+probe latencies (primary 160 / mirror 15 / china 180 / global 15 ms), failure flag,
+blocked URL, probe request evidence and an independent gate. `releaseProbes()`
+lets a test first prove successful resource rendering, then allow recommendations
+to change. Teardown releases pending handlers and awaits unroute before Playwright
+closes the context; the worker always closes its app. No serial-suite dependency.
+
+The fixture owns all network interception: exact Managed fixture origins and
+known Steam origins return local binary/SVG responses, and unknown external
+requests are aborted. Managed probes use `tests/fixtures/cdn-probe.bin` with
+the real digest and CORS path. Real routing plugins remain active. Cookies and
+background/optional legacy Steam storage are seeded before navigation/hydration.
+The narrow prop bridge simulates new `objectKey`/`src` on the same mounted
+resource component; it is test-only and not a shared Vue introspection API.
+
+`browser-errors.ts` remains the error guard. Fault tests supply only URLs they
+deliberately aborted; the exact Chromium `net::ERR_FAILED` console diagnostic
+for those URLs is expected. Page exceptions, hydration errors, unknown-network
+errors and other console errors still fail. Fallback cases also assert that the
+injected failure occurred and that the fallback image actually loaded.
+
+The former `scripts/resource-routing-smoke.mjs` is retired with this mapping:
+
+| Former assertion | Current owner under `tests/browser/` |
+| --- | --- |
+| Managed and Steam SSR explicit pin takes precedence; Routing UI hydrates with two sections | `smoke/resource-routing.spec.ts` (3 cases) |
+| Three tabs, Home/End/wrapping arrows and focus; Cancel/Save pins; manual diagnostics/cooldown survive Cancel; 390px no overflow/focus/light/dark; English failed pins with two warnings | `regression/resource-routing-preferences.spec.ts` (4 cases) |
+| Loaded icon/Hero/Pattern survive automatic/manual/Save; icon src MutationObserver; new key uses current pin; actual mirror failure falls back to primary without clearing pin | `regression/managed-asset-routing.spec.ts` (1 lifecycle case) |
+| Loaded Steam image survives automatic/manual/Save; new src uses Global; first host failure falls back without clearing pin; legacy storage migrates only to recommendation, is deleted, retains hydrated China image and Auto UI | `regression/steam-asset-routing.spec.ts` (2 cases, legacy migration separate) |
+
+No success screenshots or pixel assertions are migrated. `assets:routing-smoke`
+temporarily runs only `hero-lifecycle-smoke.mjs` and `hero-preferences-smoke.mjs`;
+those remain for P3.2.3. Insights/background/cloud/performance/visual legacy
+runners retain their owners. Visual baselines remain P3.3.
 
 ## Verification
 

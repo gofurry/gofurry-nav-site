@@ -1,0 +1,105 @@
+import { test, expect } from '../fixtures/resource-routing'
+import { captureBrowserErrors } from '../fixtures/browser-errors'
+
+test('three tabs support wrapping arrows, Home/End and active keyboard focus', async ({ page, routing }) => {
+  const errors = captureBrowserErrors(page)
+  await routing.open()
+  routing.releaseProbes()
+  await routing.openResourceRouting()
+  const tabs = page.locator('.preferences-tabs').getByRole('tab')
+  await expect(tabs).toHaveCount(3)
+  for (const [key, index] of [['Home', 0], ['ArrowLeft', 2], ['ArrowRight', 0], ['End', 2], ['ArrowLeft', 1], ['ArrowRight', 2]] as const) {
+    await page.keyboard.press(key)
+    await routing.settleTab(index)
+    await expect(tabs.nth(index)).toHaveAttribute('aria-selected', 'true')
+    await expect(tabs.nth(index)).toBeFocused()
+  }
+  expect(errors).toEqual([])
+})
+
+test('Cancel discards pins; diagnostics and cooldown survive Cancel; Save persists pins', async ({ page, routing }) => {
+  const errors = captureBrowserErrors(page)
+  await routing.open()
+  routing.releaseProbes()
+  await routing.waitForDiagnostics('managed', 'mirror')
+  await routing.openResourceRouting()
+  const sections = page.locator('[data-resource-routing] .resource-route')
+  const assets = sections.nth(0), steam = sections.nth(1)
+  await assets.getByRole('radio', { name: 'EdgeOne', exact: true }).check()
+  await steam.getByRole('radio', { name: '全球线路', exact: true }).check()
+  await routing.cancelPreferences()
+  expect(await routing.cookieValue('gf_asset_cdn_mode')).toBeUndefined()
+  expect(await routing.cookieValue('gf_steam_asset_mode')).toBeUndefined()
+
+  await routing.openResourceRouting()
+  await expect(assets.getByRole('radio', { name: '自动优选' })).toBeChecked()
+  await expect(steam.getByRole('radio', { name: '自动优选' })).toBeChecked()
+  routing.state.primary = 10
+  routing.state.mirror = 170
+  const probesBefore = routing.state.probeRequests.length
+  await assets.getByRole('button', { name: '重新测速', exact: true }).click()
+  await routing.waitForDiagnostics('managed', 'primary')
+  expect(routing.state.probeRequests.length).toBeGreaterThan(probesBefore)
+  const diagnostics = await page.evaluate(() => localStorage.getItem('gf_asset_cdn_diagnostics'))
+  await expect(assets.getByRole('button', { name: /秒后可重测/ })).toBeDisabled()
+  await routing.cancelPreferences()
+  expect(await page.evaluate(() => localStorage.getItem('gf_asset_cdn_diagnostics'))).toBe(diagnostics)
+
+  await routing.openResourceRouting()
+  await expect(assets.getByRole('button', { name: /秒后可重测/ })).toBeDisabled()
+  await assets.getByRole('radio', { name: 'Cloudflare' }).check()
+  await steam.getByRole('radio', { name: '中国线路' }).check()
+  await routing.savePreferences()
+  expect(await routing.cookieValue('gf_asset_cdn_mode')).toBe('mirror')
+  expect(await routing.cookieValue('gf_steam_asset_mode')).toBe('china')
+  expect(errors).toEqual([])
+})
+
+test('routing controls keep focus indication and work at 390px in light and dark', async ({ page, routing }) => {
+  const errors = captureBrowserErrors(page)
+  await routing.open()
+  routing.releaseProbes()
+  await routing.openResourceRouting()
+  const sections = page.locator('[data-resource-routing] .resource-route')
+  const cloudflare = sections.nth(0).getByRole('radio', { name: 'Cloudflare' })
+  await cloudflare.focus()
+  await expect(cloudflare).toBeFocused()
+  expect(await cloudflare.evaluate(el => getComputedStyle(el.closest('label')!).outlineStyle)).not.toBe('none')
+
+  // Preserve the legacy resize-after-hydration scenario, not a new mobile SSR scope.
+  await page.setViewportSize({ width: 390, height: 844 })
+  await routing.settleTab(2)
+  const routingPage = page.locator('.preferences-page').nth(2)
+  expect(await routingPage.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+  await cloudflare.check()
+  await expect(cloudflare).toBeChecked()
+  await page.evaluate(() => document.documentElement.classList.add('dark'))
+  await expect(page.locator('html')).toHaveClass(/dark/)
+  const global = sections.nth(1).getByRole('radio', { name: '全球线路' })
+  await global.check()
+  await expect(global).toBeChecked()
+  expect(await routingPage.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+  await routing.savePreferences()
+  expect(await routing.cookieValue('gf_asset_cdn_mode')).toBe('mirror')
+  expect(await routing.cookieValue('gf_steam_asset_mode')).toBe('global')
+  expect(errors).toEqual([])
+})
+
+test('English failed probes show two warnings without clearing explicit pins', async ({ page, routing }) => {
+  const errors = captureBrowserErrors(page, routing.expectedNetworkFailures)
+  routing.state.failProbes = true
+  await routing.open('/en/games', { cookies: { gf_asset_cdn_mode: 'mirror', gf_steam_asset_mode: 'china' } })
+  routing.releaseProbes()
+  await routing.waitForDiagnostics('managed')
+  await routing.waitForDiagnostics('steam')
+  await routing.openResourceRouting()
+  const sections = page.locator('[data-resource-routing] .resource-route')
+  await expect(sections.nth(0).getByRole('radio', { name: 'Cloudflare' })).toBeChecked()
+  await expect(sections.nth(1).getByRole('radio', { name: 'China route' })).toBeChecked()
+  await expect(page.locator('.resource-route__warning')).toHaveCount(2)
+  expect(routing.expectedNetworkFailures.size).toBeGreaterThan(0)
+  await routing.savePreferences()
+  expect(await routing.cookieValue('gf_asset_cdn_mode')).toBe('mirror')
+  expect(await routing.cookieValue('gf_steam_asset_mode')).toBe('china')
+  expect(errors).toEqual([])
+})

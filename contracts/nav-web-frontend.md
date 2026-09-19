@@ -442,7 +442,7 @@ for newly added files or script-generated styles.
 | Pure TS/domain/utility logic | Vitest `unit` project, Node environment, `tests/unit/*.test.ts` |
 | Nuxt runtime/composables | Vitest `nuxt` project with `@nuxt/test-utils`, happy-dom, `tests/nuxt/*.nuxt.test.ts` |
 | Repository/source/config/semantic contracts | Existing Node Insights/SEO Contract Guards, outside Vitest |
-| Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`; P3.2.1 migrates Game Detail only; other domains retain legacy scripts |
+| Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`: Game Detail and Resource Routing Preferences/Managed/Steam lifecycle; other domains retain legacy scripts |
 | Screenshot baseline comparison | Planned Playwright Visual, P3.3; failure screenshots and existing captures are not visual baselines |
 | Performance budget | Existing `perf:guard`, separate from visual correctness |
 | Real external services | Explicit development acceptance, not a default PR gate |
@@ -483,7 +483,12 @@ and reset mutable state for every case. Playwright owns per-test browser context
 and pages; do not introduce a global `webServer` or order-dependent serial suites.
 Capture/assert browser exceptions and hydration errors explicitly. Retain traces
 and screenshots only on failure, with video off; CI uploads failure diagnostics.
-Only Game Detail has migrated. Hero/Resource/Insights and other legacy browser
+Game Detail and Resource Routing have migrated, including Preferences, Managed
+and Steam resource snapshots/fallback, and legacy Steam recommendation-only
+migration. Routing probe latency/failure/block/gate state MUST be test-scoped;
+the worker owns only stable production Nitro/local API resources. Managed/Steam
+requests MUST use deterministic local responses, never real CDN services.
+Hero lifecycle/Preferences, Insights and other legacy browser
 suites keep their existing runners until scoped migration. `npm test` remains
 Vitest-only; visual baselines belong to P3.3.
 
