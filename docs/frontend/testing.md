@@ -76,6 +76,10 @@ this phase does not introduce visual baselines or external acceptance runs.
 
 ## Verification
 
+Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
+types/config before either test project runs. Verification must not rely on a
+previous dev server or build having generated `.nuxt/tsconfig.json`.
+
 Run `npm ci`, `npm run lint`, `npm run stylelint`, `npm run style:policy:test`,
 `npm run style:policy`, `npm run test:unit`, `npm run test:nuxt`, `npm test`,
 `npm run typecheck`, `npm run insights:semantics`, `npm run seo:recovery:test`,
