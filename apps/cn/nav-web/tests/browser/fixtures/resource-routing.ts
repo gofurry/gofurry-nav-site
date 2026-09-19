@@ -141,10 +141,10 @@ export const test = base.extend<{ routing: RoutingScenario }, { routingApp: Rout
         },
       })
     } finally {
-      // Release pending handlers even after a failed assertion, before Playwright
-      // closes its context. Do not leave a worker waiting on a previous test's gate.
+      // Release probes even after a failed assertion. Playwright owns this test's
+      // context and routes: unrouteAll(wait) can stall on an already-handled probe
+      // and prevent the runner from reaching context.close().
       releaseProbes()
-      await context.unrouteAll({ behavior: 'wait' })
       if (testInfo.status !== testInfo.expectedStatus) {
         await testInfo.attach('resource-routing-fixture.log', { body: routingApp.logs(), contentType: 'text/plain' })
         await testInfo.attach('resource-routing-network.json', { body: JSON.stringify({ ...state, expectedNetworkFailures: [...expectedNetworkFailures] }, null, 2), contentType: 'application/json' })

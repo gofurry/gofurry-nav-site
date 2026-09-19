@@ -132,8 +132,10 @@ fixed icon/Hero/pattern/Steam payloads. Every test receives fresh context/storag
 probe latencies (primary 160 / mirror 15 / china 180 / global 15 ms), failure flag,
 blocked URL, probe request evidence and an independent gate. `releaseProbes()`
 lets a test first prove successful resource rendering, then allow recommendations
-to change. Teardown releases pending handlers and awaits unroute before Playwright
-closes the context; the worker always closes its app. No serial-suite dependency.
+to change. Teardown always releases the probe gate, then leaves route disposal to
+Playwright's test-scoped context close. It must not wait for already-handled probe
+routes with `unrouteAll({ behavior: 'wait' })`, which can stall that context close.
+The worker always closes its app. No serial-suite dependency.
 
 The fixture owns all network interception: exact Managed fixture origins and
 known Steam origins return local binary/SVG responses, and unknown external
