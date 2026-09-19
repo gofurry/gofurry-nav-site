@@ -442,7 +442,7 @@ for newly added files or script-generated styles.
 | Pure TS/domain/utility logic | Vitest `unit` project, Node environment, `tests/unit/*.test.ts` |
 | Nuxt runtime/composables | Vitest `nuxt` project with `@nuxt/test-utils`, happy-dom, `tests/nuxt/*.nuxt.test.ts` |
 | Repository/source/config/semantic contracts | Existing Node Insights/SEO Contract Guards, outside Vitest |
-| Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`: Game Detail and Resource Routing Preferences/Managed/Steam lifecycle; other domains retain legacy scripts |
+| Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`: Game Detail, Resource Routing/Managed/Steam, Hero lifecycle/Local, Preferences foundation, Fixed/BigInt, Catalog and handoff |
 | Screenshot baseline comparison | Planned Playwright Visual, P3.3; failure screenshots and existing captures are not visual baselines |
 | Performance budget | Existing `perf:guard`, separate from visual correctness |
 | Real external services | Explicit development acceptance, not a default PR gate |
@@ -488,8 +488,18 @@ and Steam resource snapshots/fallback, and legacy Steam recommendation-only
 migration. Routing probe latency/failure/block/gate state MUST be test-scoped;
 the worker owns only stable production Nitro/local API resources. Managed/Steam
 requests MUST use deterministic local responses, never real CDN services.
-Hero lifecycle/Preferences, Insights and other legacy browser
-suites keep their existing runners until scoped migration. `npm test` remains
+P3.2.3 also migrates Hero lifecycle/Local, Preferences foundation, Fixed/BigInt,
+Catalog and staged handoff. The two Hero domain fixtures MUST remain separate;
+each test owns fresh catalogs, request evidence, failures and independent gates.
+Teardown MUST release API/image/IndexedDB gates and clear the active scenario;
+the worker's API resolver MUST reject access without an active scenario.
+Only the Hero-specific assertion may acknowledge the existing mobile homepage
+Footer hydration debt: width below 768, exactly one mismatch, no SSR footer,
+exactly one client footer, retained SSR Hero node, and no other browser errors.
+Generic error capture MUST NOT ignore hydration. Same-run clipped paint Buffer
+and computed-style equality MAY remain runtime invariants; success screenshots,
+computed audit JSON and golden baselines MUST NOT be introduced in P3.2.3.
+Insights and other legacy browser suites keep their runners. `npm test` remains
 Vitest-only; visual baselines belong to P3.3.
 
 P0 MUST NOT change production Vue, CSS/Less, runtime behavior, package/lockfiles,

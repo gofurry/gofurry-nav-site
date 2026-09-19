@@ -1,0 +1,70 @@
+import { test, expect } from '../fixtures/hero-preferences'
+
+test('Quick Access Space/Enter, focus, Cancel and Save retain their draft semantics', async ({ page, preferences }) => {
+  await preferences.open()
+  await preferences.openPreferences()
+  const toggle = page.locator('#quick-access-toggle')
+  const input = page.locator('#mode-setting-input')
+  await input.focus()
+  await expect(input).toBeFocused()
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await toggle.focus()
+  await page.keyboard.press('Space')
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await expect(toggle).toBeFocused()
+  await preferences.cancelPreferences()
+  await preferences.openPreferences()
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await toggle.click()
+  await preferences.savePreferences()
+  expect(await page.evaluate(() => localStorage.getItem('nav-header-show-quick-access'))).toBe('0')
+  await preferences.openPreferences()
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  await toggle.focus()
+  await page.keyboard.press('Enter')
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  await expect(toggle).toBeFocused()
+  await preferences.savePreferences()
+  expect(await page.evaluate(() => localStorage.getItem('nav-header-show-quick-access'))).toBe('1')
+  expect(preferences.errors).toEqual([])
+})
+
+for (const width of [1440, 390, 320]) for (const dark of [false, true]) {
+  test(`${width}px ${dark ? 'dark' : 'light'} Preferences share source appearance with no overflow and visible focus`, async ({ page, preferences }) => {
+    await preferences.open({ width, mode: 'fixed', desktopId: '34' })
+    await page.evaluate(dark => document.documentElement.classList.toggle('dark', dark), dark)
+    await preferences.openPreferences()
+    await preferences.waitCatalogPosition(25)
+    await page.locator('[data-hero-catalog]:visible').scrollIntoViewIfNeeded()
+    await page.mouse.move(2, 2)
+    // Finish CSS transitions without writing success screenshots or style JSON.
+    await page.evaluate(async () => {
+      const animations = document.querySelector('.gf-preferences-modal')!.getAnimations({ subtree: true })
+      await Promise.all(animations.filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {})))
+    })
+    const styles = await page.evaluate(() => {
+      const read = (selector: string) => {
+        const style = getComputedStyle(document.querySelector(selector)!)
+        return ['padding', 'borderRadius', 'borderColor', 'backgroundColor', 'color', 'fontSize', 'lineHeight'].map(key => style[key as keyof CSSStyleDeclaration])
+      }
+      return [read('[data-hero-preferences] .preferences-sources button[aria-pressed="true"]'), read('[data-background-preferences] .preferences-sources button[aria-pressed="true"]')]
+    })
+    expect(styles[0]).toEqual(styles[1])
+    const widths = await page.locator('[data-hero-preferences] .preferences-sources button').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().width))
+    expect(widths).toHaveLength(3)
+    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThan(1)
+    expect(await page.locator('.preferences-page').first().evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+    expect(await page.locator('.gf-preferences-modal').evaluate(el => el.getBoundingClientRect().right <= innerWidth && el.getBoundingClientRect().left >= 0)).toBe(true)
+    await page.locator('#mode-setting-input').focus()
+    await expect(page.locator('#mode-setting-input')).toBeFocused()
+    await page.keyboard.press('Tab')
+    const source = page.getByRole('button', { name: '固定云端背景', exact: true })
+    await source.focus()
+    await expect(source).toBeFocused()
+    expect(await source.evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe('none')
+    await page.getByRole('button', { name: '云端随机', exact: true }).click()
+    await expect(page.getByRole('button', { name: '云端随机', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await preferences.cancelPreferences()
+    expect(preferences.errors).toEqual([])
+  })
+}

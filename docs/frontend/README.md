@@ -5,7 +5,7 @@
 - [Agent entry](../../apps/cn/nav-web/AGENTS.md): short operational guidance.
 - [Design system](design-system.md): token ownership, naming and usage examples;
   actual values remain in the source owners.
-- [Testing](testing.md): Vitest Unit/Nuxt, Playwright Game Detail/Resource Routing, isolation and
+- [Testing](testing.md): Vitest Unit/Nuxt, Playwright Game Detail/Resource Routing/Hero/Preferences, isolation and
   retained Contract Guards, style-policy, legacy browser and external acceptance.
 - [Style debt manifest](../../apps/cn/nav-web/frontend-style-debt.json): current
   implementation debt by rule/file; it never overrides the contract.
@@ -21,7 +21,8 @@ P2.3 separates Generic Modal from Preferences composition and retires its raw
 debt without changing rendered states. P3.1 establishes Vitest Unit/Nuxt and
 migrates four legacy suites. P3.2.1 establishes the Playwright Browser Gate and
 migrates Game Detail; P3.2.2 adds Resource Routing/Managed/Steam browser regressions.
-Hero lifecycle/Preferences, Insights and other domains keep legacy runners. Visual
+P3.2.3 migrates Hero lifecycle/Local, Preferences foundation, Fixed/BigInt, Catalog
+and handoff. Insights and unrelated browser tools keep legacy runners. Visual
 baselines remain P3.3 and staged style migrations P4 onward. Independent
 contract/tooling guards remain in place.
 

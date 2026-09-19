@@ -5,10 +5,11 @@ export function captureBrowserErrors(page: Page, expectedNetworkFailures: Readon
   const errors: string[] = []
   page.on('pageerror', error => errors.push(`pageerror: ${error.message}`))
   page.on('console', message => {
-    // Fault-injection scenarios may abort specific requests. Only Chromium's
+    // Fault-injection scenarios may abort requests or return a Catalog 503. Only Chromium's
     // exact network diagnostic for an injected URL is expected; never suppress
     // application errors or hydration messages, even at the same URL.
-    if (message.type() === 'error' && message.text() === 'Failed to load resource: net::ERR_FAILED'
+    if (message.type() === 'error' && ['Failed to load resource: net::ERR_FAILED',
+      'Failed to load resource: the server responded with a status of 503 (Service Unavailable)'].includes(message.text())
       && expectedNetworkFailures.has(message.location().url)) return
     if (message.type() === 'error' || /hydration.*mismatch|mismatch.*hydration/i.test(message.text())) {
       errors.push(`${message.type()}: ${message.text()}`)

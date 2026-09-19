@@ -14,7 +14,6 @@
     "test:browser": "playwright test",
     "test:browser:smoke": "playwright test tests/browser/smoke",
     "test:browser:regression": "playwright test tests/browser/regression",
-    "assets:routing-smoke": "node scripts/hero-lifecycle-smoke.mjs && node scripts/hero-preferences-smoke.mjs",
     "assets:cloud-smoke": "node --env-file=.env scripts/managed-assets-cloud-smoke.mjs",
     "background:smoke": "node scripts/background-storage-smoke.mjs",
     "perf:measure": "node scripts/perf/measure.mjs",

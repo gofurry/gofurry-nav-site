@@ -12,8 +12,8 @@ the commands below run from `apps/cn/nav-web`.
 | Nuxt composables and runtime | `tests/nuxt/*.nuxt.test.ts`, `npm run test:nuxt` | Vitest `nuxt` project, real Nuxt app/context through `@nuxt/test-utils`, happy-dom |
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
-| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail and Resource Routing/Managed/Steam are migrated |
-| Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Hero lifecycle/Preferences, Insights and other domains retain existing runners until their own migration |
+| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail, Resource Routing/Managed/Steam and Hero/Preferences are migrated |
+| Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Insights and unrelated domains retain their runners until scoped migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
 
 `npm test` runs both Vitest projects once. `vitest.config.ts` uses `projects`, not
@@ -72,8 +72,8 @@ after each case. Pure probes use injected measurements/fetch responses, never
 real CDN or backend endpoints.
 
 happy-dom does not prove browser rendering, SSR/hydration or actual image loading.
-Keep `assets:routing-smoke`, `game:tags:smoke` and other non-migrated smoke commands.
-Current screenshots and `visual:guard` remain; this phase does not introduce
+Keep `game:tags:smoke` and other non-migrated smoke commands.
+Unrelated screenshots and `visual:guard` remain; this phase does not introduce
 visual baselines or external acceptance runs.
 
 ## Game Detail browser gate (P3.2.1)
@@ -144,8 +144,8 @@ The narrow prop bridge simulates new `objectKey`/`src` on the same mounted
 resource component; it is test-only and not a shared Vue introspection API.
 
 `browser-errors.ts` remains the error guard. Fault tests supply only URLs they
-deliberately aborted; the exact Chromium `net::ERR_FAILED` console diagnostic
-for those URLs is expected. Page exceptions, hydration errors, unknown-network
+deliberately failed; only the exact Chromium `net::ERR_FAILED` or injected HTTP
+503 console diagnostic for those URLs is expected. Page exceptions, hydration errors, unknown-network
 errors and other console errors still fail. Fallback cases also assert that the
 injected failure occurred and that the fallback image actually loaded.
 
@@ -158,10 +158,67 @@ The former `scripts/resource-routing-smoke.mjs` is retired with this mapping:
 | Loaded icon/Hero/Pattern survive automatic/manual/Save; icon src MutationObserver; new key uses current pin; actual mirror failure falls back to primary without clearing pin | `regression/managed-asset-routing.spec.ts` (1 lifecycle case) |
 | Loaded Steam image survives automatic/manual/Save; new src uses Global; first host failure falls back without clearing pin; legacy storage migrates only to recommendation, is deleted, retains hydrated China image and Auto UI | `regression/steam-asset-routing.spec.ts` (2 cases, legacy migration separate) |
 
-No success screenshots or pixel assertions are migrated. `assets:routing-smoke`
-temporarily runs only `hero-lifecycle-smoke.mjs` and `hero-preferences-smoke.mjs`;
-those remain for P3.2.3. Insights/background/cloud/performance/visual legacy
-runners retain their owners. Visual baselines remain P3.3.
+No Resource Routing success screenshots or pixel assertions are migrated.
+Insights/background/cloud/performance/visual legacy runners retain their owners.
+Visual baselines remain P3.3.
+
+## Hero / Preferences browser regressions (P3.2.3)
+
+`hero-lifecycle.ts` and `hero-preferences.ts` remain separate domain fixtures.
+Each worker owns stable production Nitro/local API resources and a nullable
+active-scenario reference. A test installs a fresh scenario only when that slot
+is empty; the resolver rejects calls without an active scenario. Counts, image
+requests, failures and gates belong to that scenario. Preferences receives 48
+new Desktop items and two new Mobile items per test, so key replacement and
+failed-page injection never change a later case. IDs stay strings, including
+`9007199254740994`.
+
+Lifecycle gates hydration scripts until the real renderer request fails, traps
+auxiliary `new Image()` authority, and can release the two Local readonly opens
+separately. Local data is a real cached Blob at
+`gofurry-custom-nav-header-bg` / `directoryHandles` / `nav-header-bg-cache`, plus
+`customNavHeaderBgFolderName`; no DirectoryHandle is faked. Preferences seeds the
+cache once so reload tests exercise actual persistence. Its API and image gates
+are independent: cookies can commit while the old frame remains displayed, and
+the pending frame promotes only after its real image loads. Teardown releases
+all pending gates, awaits unroute and clears the active scenario, even on failure.
+The worker always closes its app; Playwright owns browser/context/page lifetime.
+
+Both fixtures reuse `startInsightsFixtureApp`, the managed probe binary and
+`captureBrowserErrors`. Hero and known probe URLs receive deterministic local
+artwork/binary responses; unknown external requests abort. Intentional image
+failure and Catalog 503 URLs enter the exact expected-failure set before the
+failure, without suppressing unrelated network or application errors.
+
+The known narrow-screen homepage Footer mismatch remains production debt.
+`assertHeroHydration` is Hero-specific and verifies all of: width < 768, homepage,
+exactly one hydration mismatch, no `.gf-footer-shell` in SSR, exactly one client
+footer, the same SSR Hero node, and zero other browser errors. Only that verified
+navigation evidence is consumed; subsequent errors remain guarded, and reload
+must pass the assertion again. The generic collector still captures hydration.
+`app/layouts/default.vue` is unchanged.
+
+| Retired source / contract | New owner under `tests/browser/` |
+| --- | --- |
+| Lifecycle: 1440/390 SSR, actual image load, viewport-only request, retained node, one Home and no Hero API refetch | `smoke/hero.spec.ts` |
+| Lifecycle: no auxiliary Hero Images, auxiliary failure leaves URL/paint unchanged, recommendation/Save/focus/resize/prewarm stability, explicit data refresh, pre-hydration Primary→Mirror/terminal fallback, empty Mobile pool | `regression/hero-lifecycle.spec.ts` |
+| Lifecycle + Preferences: two-stage Local restore and route stability; explicit Local SSR, Cancel, Local→Random, missing cache one-shot fallback, legacy cookie migration/reload | `regression/hero-local-background.spec.ts` |
+| Preferences: Quick Access ARIA/Space/Enter/focus and draft/persistence; input focus; 1440/390/320 × light/dark no overflow, equal source widths, shared computed appearance | `regression/preferences-foundation.spec.ts` |
+| Preferences: independent Fixed Desktop/Mobile SSR and exact BigInt cookie, saved Local isolation, reload, same ID/new key, invalid Desktop preserves valid Mobile | `regression/hero-preference-modes.spec.ts` |
+| Preferences: lazy Fixed initialization, page size 12, boundary/cache/preview laziness, independent viewport state, Cancel, bounded ID lookup, compact tab keyboard, final Next disabled, 503/retry without saving | `regression/hero-catalog.spec.ts` |
+| Preferences: independent API/image gates, no blank-first promotion, no unrelated Home request, Mobile-only + Mirror preserves successful Desktop, failed Mirror→Primary stage retains old frame | `regression/hero-handoff.spec.ts` |
+
+`scripts/hero-lifecycle-smoke.mjs`, `scripts/hero-preferences-smoke.mjs` and
+`assets:routing-smoke` are retired. Direct `playwright` remains for other legacy
+tools. The existing single Browser tests CI step discovers these specs without
+runner/browser/retry/worker changes.
+
+The old `hero-*-before.png`, `foundation-*-on/off.png`, Hero Preferences success
+screenshots and `foundation-computed.json` writes are retired. Only same-run
+clipped screenshot **Buffers** (never files), selected-control computed-style
+equality and layout/focus assertions remain. These guard runtime invariants,
+not golden visuals. No `toHaveScreenshot()` or committed images are introduced;
+P3.3 owns visual baselines.
 
 ## Verification
 

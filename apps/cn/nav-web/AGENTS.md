@@ -103,11 +103,14 @@ Choose the lowest-cost faithful environment: pure logic goes in `tests/unit`
 and Nuxt state per case; mock business injections, never the Nuxt runtime itself.
 See [testing guidance](../../../docs/frontend/testing.md) for migration coverage
 and isolation. Migrated browser SSR/hydration/interaction regressions belong in
-`tests/browser`; build production Nitro before running them. Game Detail and
-Resource Routing (Preferences, Managed/Steam lifecycle and legacy Steam migration)
-now belong to Playwright Test; do not recreate `resource-routing-smoke.mjs`.
-Hero lifecycle/Preferences remain legacy until P3.2.3; Insights and other smokes
-keep their current runners. Chromium is the browser gate; retries are zero and CI
+`tests/browser`; build production Nitro before running them. Game Detail,
+Resource Routing/Managed/Steam, Hero lifecycle/Local, Preferences foundation,
+Fixed/BigInt, Catalog and handoff now belong to Playwright Test. Do not recreate
+their retired smoke scripts or `assets:routing-smoke`. Keep the two Hero domain
+fixtures separate, with fresh test scenarios and gate teardown. Only the narrow
+Hero assertion may acknowledge the known mobile Footer hydration debt; never
+globally suppress hydration errors. Insights and other smokes keep their runners.
+Chromium is the browser gate; retries are zero and CI
 uses one worker. Domain fixtures own servers and reset state per case; Playwright
 owns contexts/pages. Failure artifacts are diagnostics, not visual baselines.
 Style-policy keeps its separate Node built-in runner; Insights/SEO remain

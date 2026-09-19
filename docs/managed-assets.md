@@ -119,9 +119,9 @@ reselect Hero, and background routing probes/Save retain #121 snapshot semantics
 
 Hero normalization lives in `tests/unit/hero-preferences.test.ts`; the real Nuxt
 cookie/state composable runs in `tests/nuxt/use-hero-preferences.nuxt.test.ts`.
-Use `npm run test:unit` and `npm run test:nuxt`. The production browser fixture
-`hero-preferences-smoke.mjs` runs in `assets:routing-smoke` alongside #121. It
-covers SSR/hydration, bigint and independent pins, current metadata, Local/legacy
+Use `npm run test:unit` and `npm run test:nuxt`. Production Hero/Preferences browser
+regressions run in `npm run test:browser` alongside #121. The two Hero fixtures
+cover SSR/hydration, bigint and independent pins, current metadata, Local/legacy
 behavior, lazy previews and pagination, selected IDs outside the page, Save under
 gated API/image latency, Cancel, themes and keyboard focus. Backend controller,
 service and real PostgreSQL temporary-table tests cover invalid parameters,
@@ -193,12 +193,12 @@ An explicit home data refresh/new navigation may select a new key; crossing the
 the explicit Hero source contract above, including its one-time legacy migration.
 Saving resource routes never reselects a local image or cloud Hero.
 
-The Hero lifecycle regression in `npm run assets:routing-smoke` injects a late
+The Hero lifecycle regression in `npm run test:browser` injects a late
 failure into independently constructed Hero Images while allowing the actual
 renderer to paint, compares the displayed source and pixels, verifies one home
 request using a different-key second-response fixture, and tests explicit new
 keys, pre-hydration display failures, terminal fallback and local restoration.
-It also records the existing narrow-screen Footer hydration mismatch in
+It also narrowly verifies the existing narrow-screen Footer hydration mismatch in
 `layouts/default.vue` (server-hidden versus initially client-visible), separately
 from the Hero assertions. The SSR Hero node is retained even in that case; this
 Hero fix does not change the unrelated Footer/reveal lifecycle.
@@ -238,8 +238,8 @@ application with isolated API/CDN fixtures to check SSR, actual loaded image
 stability, changed resources, failures, Save/Cancel, three-tab keyboard navigation
 and mobile/light/dark interaction. Playwright keeps traces/screenshots only on
 failure in ignored `test-results/`; no visual baseline is defined here.
-`npm run assets:routing-smoke` retains only Hero lifecycle and Hero Preferences
-legacy coverage until P3.2.3. This deterministic
+Hero lifecycle and Hero Preferences now share the same Browser Gate; their old
+scripts and `assets:routing-smoke` alias are retired. This deterministic
 suite does not depend on real CDN availability or substitute for cloud acceptance.
 
 Run Nav Web `npm run test:unit`, `npm run test:nuxt`, `npm run insights:semantics`,
