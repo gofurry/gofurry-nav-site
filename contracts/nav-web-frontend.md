@@ -8,7 +8,9 @@ MUST/MUST NOT are requirements; SHOULD permits a reasoned, documented departure;
 MAY denotes an allowed choice. P0 established governance and a one-time debt
 baseline; P1 added static enforcement. P2.1 formalized token ownership and
 annotation; P2.2 separates visual primitives from compound product styles without
-changing their contents or visual behavior.
+changing their contents or visual behavior. P2.3 separates Generic Modal from
+Preferences composition and retires its dead cascade/raw-color debt while
+preserving effective rendered states.
 
 For frontend decisions, resolve evidence in this order:
 
@@ -78,14 +80,14 @@ until a separately scoped migration:
   including the layout-owned `--gf-page-background` and `--gf-page-pattern*` group.
 - `styles/mixins.less`: reusable Less behavior built on tokens.
 - `styles/primitives/*.less`: shared domain-neutral visual building blocks.
-- `styles/components/*.less`: compound product UI, including modal/preferences,
+- `styles/components/*.less`: compound product UI, including preferences,
   shell, navigation and footer; this directory is not deprecated.
 - `styles/pages/*.less` and existing subdirectories: current page/domain styles.
 - `app/components/common`, `nav`, `game`, `site`, `insights`: existing Vue owners.
 
 `index.less` MUST compose `tokens → mixins → primitives → components → pages`.
-The primitive order is button, card, chip, input, pagination, rating; retain the
-existing relative page-style order. P2.2 creates only the approved primitive layer.
+The primitive order is button, card, chip, input, modal, pagination, rating; retain
+the existing relative page-style order. Preferences MUST load after Modal.
 `domains/` and the later test layout remain future migration work; contributors
 MUST NOT create empty placeholders. Existing raw values and domain theme islands
 remain historical debt. Do not copy them into new code.
@@ -96,6 +98,7 @@ remain historical debt. Do not copy them into new code.
 | --- | --- | --- |
 | Global/Foundation | Reusable product/theme semantics in `styles/tokens.less`, shared across domains and primitives | `--gf-page-background`, `--gf-surface`, `--gf-text-main`, `--gf-border`, `--gf-accent`, `--gf-focus-ring` |
 | Primitive-local | Meaning specific to a reusable primitive, declared in its owning stylesheet | `--gf-rating-empty`, `--gf-rating-fill` in `styles/primitives/rating.less` |
+| Compound-local | Product composition/state semantics with an exact approved owner, selector and prefix | `--gf-preferences-*` in `styles/components/preferences.less` |
 | Domain | Shared visual meaning within a domain, in that domain's existing Less owner | `--games-*`, `--nav-*`, `--updates-*` |
 
 Contributors MUST search existing tokens before adding one. Primitive-specific
@@ -164,9 +167,10 @@ repository examples; it is not a second token-value source.
 
 A reusable, domain-neutral visual building block MUST be treated as a primitive.
 It has stable appearance semantics, composes into larger UI, and SHOULD NOT
-depend on a page root or business token namespace. The six current owners in
-`styles/primitives/` are button, card, chip, input, pagination and rating, exposing
-`.gf-button`, `.gf-card`, `.gf-chip`, `.gf-input`, `.gf-pagination` and `.gf-rating`.
+depend on a page root or business token namespace. The seven current owners in
+`styles/primitives/` are button, card, chip, input, modal, pagination and rating,
+exposing `.gf-button`, `.gf-card`, `.gf-chip`, `.gf-input`, `.gf-modal`,
+`.gf-pagination` and `.gf-rating`.
 Contributors MUST inspect and reuse the appropriate primitive and its variants
 before creating a new selector. New consumers MUST NOT redefine its core
 appearance through local overrides; extend the owning primitive deliberately
@@ -176,9 +180,19 @@ A product-level UI composition SHOULD remain in `styles/components/`, even when
 reused across routes. Navigation, footer and shell are compound owners, not
 primitives. Their product-local semantics such as `--gf-nav-*` and `--gf-footer-*`
 MAY stay with those owners; reuse alone does not promote them to global tokens.
-`modal.less` currently combines generic `.gf-modal` behavior and preferences UI.
-Contributors MUST continue to reuse it in place; P2.3 owns its eventual split.
-P2.2 MUST NOT move or partially split modal, nav, footer or shell styles.
+`primitives/modal.less` owns generic `.gf-modal*` appearance, shared by Preferences
+and NSFW confirmation. `components/preferences.less` owns Preferences overrides,
+tabs, source selectors, carousel/arrows and the product-only `preferences-toggle`.
+Contributors MUST NOT reintroduce `gf-modal__toggle` or promote a control with
+one product-specific consumer into a speculative generic primitive.
+
+Preferences input/toggle idle, focus and active semantics MUST stay local under
+`--gf-preferences-*`, declared only at `.gf-preferences-modal` and
+`html.dark .gf-preferences-modal` in `components/preferences.less`. Theme selects
+token values; control selectors select state. Compound-local approval MUST match
+the exact file, root selectors and prefix; it is never a whole-file exemption.
+Private `.preferences-pages`/`.preferences-page` and Background/Hero/ResourceRoute
+editor structure MUST stay scoped, not accumulate in the shared compound owner.
 
 Moving a primitive MUST preserve its selectors, declarations, token values and
 variants. A structural move is not authorization to clean up typography,
@@ -210,8 +224,8 @@ Raw colors (`#hex`, `rgb()`, `rgba()`), literal shadows/radii and visual duratio
 SHOULD live in approved token declarations, not ordinary component/page
 selectors, inline styles or script-generated appearance. The same ownership
 applies to typography scales. Approved locations are global declarations,
-primitive-local declarations, justified domain declarations, and precise
-documented exceptions. The narrow
+primitive-local declarations, approved compound-local declarations, justified
+domain declarations, and precise documented exceptions. The narrow
 P0 color count below does not authorize uncatalogued raw typography or geometry
 used as control appearance.
 
@@ -234,6 +248,9 @@ MUST explicitly migrate debt ownership under review as a policy change, proving
 no new debt is granted. Neither a rename nor `style:policy:update` transfers a
 budget automatically. P2.2's six selected files have no per-file style debt to
 transfer, so their move MUST leave the manifest and all six totals unchanged.
+P2.3 retires the old `components/modal.less` raw-color budget of 29 through dead
+cascade removal and semantic ownership: raw debt decreases from 924 to 895.
+Neither new stylesheet receives a debt budget; other rule/file counts stay intact.
 
 An exception intentionally retains a specific pattern temporarily; baseline
 debt merely records historical noncompliance. Every exception MUST specify all
@@ -390,6 +407,7 @@ group and its corresponding all-dark group.
 | `app/assets/styles/tokens.less` | `:root`, `html.dark` | `--gf-` |
 | `app/assets/styles/components/nav.less` | `.gf-nav`, `html.dark .gf-nav` | `--gf-nav-` |
 | `app/assets/styles/components/footer.less` | `.gf-footer-shell`, `html.dark .gf-footer-shell` | `--gf-footer-` |
+| `app/assets/styles/components/preferences.less` | `.gf-preferences-modal`, `html.dark .gf-preferences-modal` | `--gf-preferences-` |
 | `app/assets/styles/primitives/rating.less` | `.gf-rating`, `html.dark .gf-rating` | `--gf-rating-` |
 | `app/assets/styles/pages/games.less` | `.games-page`, `html.dark .games-page` | `--games-` |
 | `app/assets/styles/pages/games-search.less` | `.games-search-page`, `html.dark .games-search-page` | `--games-search-` |

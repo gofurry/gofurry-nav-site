@@ -15,8 +15,9 @@ records historical noncompliance, not examples or permission for new code.
 
 P2.1 formalized global token ownership and annotation. P2.2 separates six shared
 visual primitives from compound product styles, preserving their contents.
-Preference/modal cleanup remains P2.3, testing guidance P3, and staged style
-migrations P4 onward. Existing regression harnesses remain in place.
+P2.3 separates Generic Modal from Preferences composition and retires its raw
+debt without changing rendered states. Testing guidance remains P3, and staged
+style migrations P4 onward. Existing regression harnesses remain in place.
 
 The older [style-system document](../../apps/cn/nav-web/docs/style-system.md) and
 [roadmap](../../apps/cn/nav-web/docs/roadmap.md) are historical migration context.

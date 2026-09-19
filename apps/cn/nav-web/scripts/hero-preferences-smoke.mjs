@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { startInsightsFixtureApp } from './fixtures/insights-app.mjs'
@@ -38,7 +38,15 @@ const current = page => page.locator(rendered).evaluate(el => el.currentSrc || e
 const heroCalls = () => app.requests.filter(url => url.pathname === '/api/v2/nav/home/hero')
 const homeCalls = () => app.requests.filter(url => url.pathname === '/api/v2/nav/home')
 const catalogCalls = () => app.requests.filter(url => url.pathname === '/api/v2/nav/appearance/heroes')
-async function open(page) { await page.locator('.gf-nav__mode-button').click(); await page.locator('[data-hero-preferences]').waitFor() }
+async function open(page) {
+  const desktopButton = page.locator('.gf-nav__mode-button')
+  if (await desktopButton.isVisible()) await desktopButton.click()
+  else {
+    await page.locator('.gf-nav__mobile-toggle').click()
+    await page.locator('.gf-nav__mobile-action').click()
+  }
+  await page.locator('[data-hero-preferences]').waitFor()
+}
 async function cancel(page) { await page.locator('.gf-modal__header-actions .gf-button--ghost').click(); await page.locator('[data-hero-preferences]').waitFor({ state: 'detached' }) }
 async function save(page) { await page.locator('.gf-modal__header-actions .gf-button--primary').click(); await page.locator('[data-hero-preferences]').waitFor({ state: 'detached' }) }
 async function close(context) { await context.unrouteAll({ behavior: 'wait' }); await context.close() }
@@ -109,6 +117,57 @@ async function setup({ width = 1440, mode = 'random', desktopId = null, mobileId
 }
 
 try {
+  // Record real computed input/toggle states alongside the existing Hero shots.
+  // This evidence can be compared across style-only migrations without baking
+  // a second palette into the test or introducing a screenshot framework.
+  const foundation = {}
+  for (const width of [1440, 390]) {
+    const { page, context } = await setup({ width })
+    for (const dark of [false, true]) {
+      await page.evaluate(dark => document.documentElement.classList.toggle('dark', dark), dark)
+      await open(page)
+      const key = `${width}-${dark ? 'dark' : 'light'}`
+      const capture = async state => {
+        await page.waitForTimeout(300)
+        foundation[`${key}-${state}`] = await page.evaluate(() => {
+          const properties = ['display', 'width', 'height', 'padding', 'gap', 'border', 'borderRadius', 'backgroundColor', 'backgroundImage', 'boxShadow', 'color', 'fontSize', 'fontWeight', 'lineHeight', 'transform', 'outline', 'outlineOffset', 'flexShrink']
+          const selectors = ['.gf-preferences-modal', '.gf-modal__header', '#mode-setting-input', '#quick-access-toggle', '#quick-access-toggle span', '.gf-modal__header-actions .gf-button--primary', '.preferences-sources button[aria-pressed="true"]']
+          return Object.fromEntries(selectors.map(selector => {
+            const style = getComputedStyle(document.querySelector(selector))
+            return [selector, Object.fromEntries(properties.map(property => [property, style[property]]))]
+          }))
+        })
+      }
+      const toggle = page.locator('#quick-access-toggle')
+      assert.equal(await toggle.getAttribute('aria-pressed'), 'true')
+      await page.locator('#mode-setting-input').focus()
+      await capture('input-focus-toggle-on')
+      await page.screenshot({ path: join(output, `foundation-${key}-on.png`) })
+      await toggle.focus()
+      await page.keyboard.press('Space')
+      assert.equal(await toggle.getAttribute('aria-pressed'), 'false')
+      assert(await toggle.evaluate(el => el === document.activeElement), 'toggle lost keyboard focus')
+      await capture('input-idle-toggle-off')
+      await page.screenshot({ path: join(output, `foundation-${key}-off.png`) })
+      assert.equal(await page.locator('.preferences-page').first().evaluate(el => el.scrollWidth > el.clientWidth + 1), false)
+      await cancel(page)
+      await open(page)
+      assert.equal(await toggle.getAttribute('aria-pressed'), 'true', 'Cancel applied the toggle draft')
+      await toggle.click()
+      await save(page)
+      assert.equal(await page.evaluate(() => localStorage.getItem('nav-header-show-quick-access')), '0')
+      await open(page)
+      assert.equal(await toggle.getAttribute('aria-pressed'), 'false', 'Save lost the toggle draft')
+      await toggle.focus()
+      await page.keyboard.press('Enter')
+      assert.equal(await toggle.getAttribute('aria-pressed'), 'true')
+      await save(page)
+    }
+    await close(context)
+  }
+  await writeFile(join(output, 'foundation-computed.json'), JSON.stringify(foundation, null, 2))
+  console.log('[preferences] input idle/focus, toggle keyboard/ARIA, Save/Cancel, light/dark desktop/mobile PASS')
+
   for (const width of [1440, 390]) {
     const state = await setup({ width, mode: 'fixed', desktopId: '34', mobileId: mobile[1].id, local: true })
     const expected = width >= 768 ? desktop[24] : mobile[1]
@@ -306,7 +365,9 @@ try {
       const widths = await ui.page.locator('[data-hero-preferences] .preferences-sources button').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().width))
       assert(Math.max(...widths) - Math.min(...widths) < 1, 'source options are not equal-width columns')
       assert.equal(await ui.page.locator('.preferences-page').first().evaluate(el => el.scrollWidth > el.clientWidth + 1), false, 'Hero editor overflows horizontally')
-      await ui.page.screenshot({ path: join(output, `${width}-${dark ? 'dark' : 'light'}.png`) })
+      // Finish theme transitions so evidence shows the selected theme, not an
+      // intermediate input/button color from the previous theme.
+      await ui.page.screenshot({ path: join(output, `${width}-${dark ? 'dark' : 'light'}.png`), animations: 'disabled' })
     }
   }
   const source = ui.page.getByRole('button', { name: '固定云端背景', exact: true })

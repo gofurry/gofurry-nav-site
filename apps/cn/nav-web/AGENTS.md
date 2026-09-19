@@ -31,8 +31,12 @@ Keep actual values in source, not docs. New page backgrounds use
 `--gf-page-background`; do not reuse legacy `--gf-bg-page` in new code.
 The [design-system guide](../../../docs/frontend/design-system.md) gives examples.
 
-Rating's tokens stay in `primitives/rating.less`. Modal/preferences, nav, footer
-and shell stay in `components/`; Modal's split belongs to P2.3. Preserve the
+Rating's tokens stay in `primitives/rating.less`. Generic Modal appearance belongs
+to `primitives/modal.less`; shared Preferences composition and local
+`--gf-preferences-*` semantics belong to `components/preferences.less`. Do not
+reintroduce `gf-modal__toggle`: the product-only control is `preferences-toggle`.
+Keep private Preferences paging/editor structure scoped unless shared across
+editors. Nav, footer and shell stay in `components/`. Preserve the
 `tokens → mixins → primitives → components → pages` import order. Do not create
 an empty `domains/` directory or use file moves to clean up appearance.
 

@@ -61,8 +61,8 @@
             <button
                 id="quick-access-toggle"
                 type="button"
-                class="gf-modal__toggle"
-                :class="{ 'gf-modal__toggle--on': showQuickAccessLocal }"
+                class="preferences-toggle"
+                :class="{ 'preferences-toggle--on': showQuickAccessLocal }"
                 :aria-pressed="showQuickAccessLocal"
                 :aria-label="t('navbar.quickAccess')"
                 @click="showQuickAccessLocal = !showQuickAccessLocal"
@@ -182,7 +182,6 @@ const save = async () => {
 </script>
 
 <style scoped>
-.gf-preferences-modal .gf-modal__header { border-bottom: 0; flex-shrink: 0; }
 .preferences-pages { display: flex; height: min(34rem, calc(100dvh - 11rem)); min-height: 0; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
 .preferences-pages::-webkit-scrollbar { display: none; }
 .preferences-page { flex: 0 0 100%; min-width: 0; padding: .8rem 1.3rem 1.2rem; overflow-y: auto; scroll-snap-align: start; overscroll-behavior-y: contain; }

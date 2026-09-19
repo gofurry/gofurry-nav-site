@@ -1,0 +1,173 @@
+.gf-preferences-modal {
+  /* Input treatment belongs to this compound: its quiet inset field and focus
+   * states differ from the generic input. Light values reuse global semantics. */
+  --gf-preferences-input-border: color-mix(in srgb, var(--gf-border) 74%, var(--gf-border-strong));
+  --gf-preferences-input-surface: color-mix(in srgb, var(--gf-input-bg) 72%, var(--gf-surface-hover));
+  --gf-preferences-input-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+  --gf-preferences-input-focus-border: var(--gf-border-strong);
+  --gf-preferences-input-focus-surface: var(--gf-input-bg-focus);
+  --gf-preferences-input-focus-ring: 0 0 0 2px color-mix(in srgb, var(--gf-focus-ring) 52%, transparent);
+
+  /* Quick-access switch: idle/active track, text and thumb are Preferences
+   * semantics, not a Modal API or a new global Toggle primitive. */
+  --gf-preferences-toggle-surface: rgba(148, 163, 184, 0.20);
+  --gf-preferences-toggle-text: var(--gf-text-muted);
+  --gf-preferences-toggle-thumb: color-mix(in srgb, var(--gf-text-soft) 78%, #ffffff);
+  --gf-preferences-toggle-thumb-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+  --gf-preferences-toggle-active-surface: var(--gf-accent-soft);
+  --gf-preferences-toggle-active-text: var(--gf-accent);
+  --gf-preferences-toggle-active-thumb: var(--gf-accent-fill);
+  --gf-preferences-toggle-active-thumb-shadow: var(--gf-preferences-toggle-thumb-shadow);
+
+  border-color: transparent;
+  border-radius: var(--gf-radius-md);
+  box-shadow: none;
+}
+
+/* Dark retains the existing Preferences-specific contrast and depth; theme
+ * changes values here, while the shared selectors below own control state. */
+html.dark .gf-preferences-modal {
+  --gf-preferences-input-border: rgba(148, 163, 184, 0.28);
+  --gf-preferences-input-surface: rgba(30, 41, 59, 0.74);
+  --gf-preferences-input-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --gf-preferences-input-focus-border: rgba(125, 211, 252, 0.58);
+  --gf-preferences-input-focus-surface: rgba(30, 41, 59, 0.92);
+  --gf-preferences-input-focus-ring: 0 0 0 2px rgba(125, 211, 252, 0.12);
+
+  --gf-preferences-toggle-surface: rgba(51, 65, 85, 0.72);
+  --gf-preferences-toggle-text: rgba(203, 213, 225, 0.78);
+  --gf-preferences-toggle-thumb: rgba(203, 213, 225, 0.82);
+  --gf-preferences-toggle-thumb-shadow: 0 2px 8px rgba(2, 6, 23, 0.30);
+  --gf-preferences-toggle-active-surface: rgba(56, 189, 248, 0.22);
+  --gf-preferences-toggle-active-text: rgba(240, 249, 255, 0.96);
+  --gf-preferences-toggle-active-thumb: #7dd3fc;
+  --gf-preferences-toggle-active-thumb-shadow: 0 2px 8px rgba(2, 6, 23, 0.32);
+}
+
+.gf-preferences-modal .gf-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 0;
+  padding: 1.1rem 1.3rem 0.75rem;
+  flex-shrink: 0;
+}
+
+.gf-preferences-modal .gf-modal__body {
+  gap: 0.65rem;
+  padding: 0.8rem 1.3rem 1.2rem;
+}
+
+.gf-preferences-modal .gf-modal__section {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.55rem 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.gf-preferences-modal .gf-modal__section + .gf-modal__section {
+  border-top: 1px dashed color-mix(in srgb, var(--gf-modal-divider) 86%, var(--gf-border-strong));
+  padding-top: 0.85rem;
+}
+
+.gf-preferences-modal .gf-input {
+  border-color: var(--gf-preferences-input-border);
+  background: var(--gf-preferences-input-surface);
+  box-shadow: var(--gf-preferences-input-inset-shadow);
+}
+
+.gf-preferences-modal .gf-input:focus {
+  border-color: var(--gf-preferences-input-focus-border);
+  background: var(--gf-preferences-input-focus-surface);
+  box-shadow: var(--gf-preferences-input-focus-ring);
+}
+
+.gf-preferences-modal .gf-button--surface,
+.gf-preferences-modal .gf-button--surface:hover,
+.gf-preferences-modal .gf-chip {
+  border-color: transparent;
+}
+
+.gf-preferences-modal .gf-button,
+.gf-preferences-modal .gf-button:hover {
+  border-color: transparent;
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .gf-preferences-modal .gf-modal__header {
+    align-items: flex-start;
+  }
+
+  .gf-preferences-modal .gf-modal__header-actions .gf-button {
+    min-height: 2.1rem;
+    padding: 0.48rem 0.65rem;
+  }
+}
+
+// Shared preference controls: page background, Hero source and modal tabs.
+.preferences-sources { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; font-size: .82rem; line-height: 1.4; }
+.preferences-sources button { padding: .65rem .3rem; border: 1px solid var(--gf-border); border-radius: var(--gf-radius-sm); background: transparent; color: var(--gf-text-muted); cursor: pointer; transition: background 160ms, border-color 160ms; }
+.preferences-sources button:hover { background: var(--gf-surface-hover); }
+.preferences-sources button[aria-pressed='true'] { border-color: var(--gf-accent); background: var(--gf-accent-soft); color: var(--gf-accent); }
+.preferences-carousel { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) 1.5rem; gap: .4rem; align-items: center; }
+.preferences-arrow { display: grid; place-items: center; height: 2.5rem; border: 0; border-radius: 6px; background: transparent; color: var(--gf-text-main); cursor: pointer; }
+.preferences-arrow:hover:not(:disabled) { background: var(--gf-accent-soft); color: var(--gf-accent); }
+.preferences-arrow:disabled { opacity: .25; cursor: default; }
+.preferences-tabs { display: flex; flex-shrink: 0; margin: 0 1.3rem; border-bottom: 1px solid var(--gf-border-strong); overflow-x: auto; }
+.preferences-tabs button { position: relative; flex: 1; padding: .85rem 1rem; border: 0; background: transparent; color: var(--gf-text-muted); font-size: .88rem; font-weight: 600; white-space: nowrap; cursor: pointer; transition: color 160ms, background 160ms; }
+.preferences-tabs button::after { content: ''; position: absolute; inset: auto 0 0; height: 2px; background: var(--gf-accent); transform: scaleX(0); transition: transform 160ms; }
+.preferences-tabs button[aria-selected='true'] { color: var(--gf-accent); }
+.preferences-tabs button[aria-selected='true']::after { transform: scaleX(1); }
+.preferences-tabs button:hover { background: var(--gf-accent-soft); color: var(--gf-text-main); }
+.preferences-tabs button:focus-visible { outline: 2px solid var(--gf-accent); outline-offset: -3px; }
+.preferences-sources button:focus-visible, .preferences-arrow:focus-visible { outline: 2px solid var(--gf-accent); outline-offset: 3px; }
+.preferences-tabs--compact { margin: 0; }
+.preferences-tabs--compact button { padding: .55rem .75rem; font-size: .8rem; }
+@media (prefers-reduced-motion: reduce) { .preferences-sources button, .preferences-tabs button, .preferences-tabs button::after { transition: none; } }
+
+.preferences-toggle {
+  display: inline-flex;
+  width: 3.25rem;
+  min-width: 3.25rem;
+  height: 1.72rem;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--gf-preferences-toggle-surface);
+  color: var(--gf-preferences-toggle-text);
+  cursor: pointer;
+  padding: 0.18rem;
+  box-shadow: none;
+  transition:
+    background-color var(--gf-motion-fast) ease,
+    border-color var(--gf-motion-fast) ease,
+    color var(--gf-motion-fast) ease;
+}
+
+.preferences-toggle span {
+  display: block;
+  width: 1.36rem;
+  height: 1.36rem;
+  border-radius: 999px;
+  background: var(--gf-preferences-toggle-thumb);
+  box-shadow: var(--gf-preferences-toggle-thumb-shadow);
+  transition:
+    background-color var(--gf-motion-fast) ease,
+    transform var(--gf-motion-fast) ease;
+}
+
+.preferences-toggle--on {
+  background: var(--gf-preferences-toggle-active-surface);
+  color: var(--gf-preferences-toggle-active-text);
+}
+
+.preferences-toggle--on span {
+  background: var(--gf-preferences-toggle-active-thumb);
+  box-shadow: var(--gf-preferences-toggle-active-thumb-shadow);
+  transform: translateX(1.52rem);
+}

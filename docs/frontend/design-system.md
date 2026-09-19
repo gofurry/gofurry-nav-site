@@ -2,8 +2,9 @@
 
 The [frontend contract](../../contracts/nav-web-frontend.md) owns the rules.
 This guide explains how the existing source applies them. P2.1 established token
-ownership and annotation; P2.2 gives domain-neutral primitives an explicit owner.
-Neither phase redesigns the palette or introduces token scales. Actual values
+ownership and annotation; P2.2 gives domain-neutral primitives an explicit owner;
+P2.3 separates Modal from Preferences and removes its dead cascade. These phases
+preserve rendered appearance and introduce no token scales. Actual values
 belong in source, not this guide.
 
 ## Visual layers
@@ -15,8 +16,8 @@ The [Less entry](../../apps/cn/nav-web/app/assets/styles/index.less) composes
 | --- | --- |
 | `tokens.less` | Shared global foundation semantics |
 | `mixins.less` | Reusable Less behavior consuming tokens |
-| `primitives/` | Domain-neutral button, card, chip, input, pagination and rating building blocks |
-| `components/` | Compound product UI: modal/preferences, shell, navigation and footer |
+| `primitives/` | Domain-neutral button, card, chip, input, modal, pagination and rating building blocks |
+| `components/` | Compound product UI: preferences, shell, navigation and footer |
 | `pages/` | Existing page/domain composition and its historical styles |
 
 A primitive has stable appearance semantics and can be composed across domains
@@ -25,9 +26,10 @@ building blocks into product UI. Navigation's `--gf-nav-*` and Footer's
 `--gf-footer-*` therefore remain with their compound owners; reuse across routes
 does not make them primitives or global tokens.
 
-[modal.less](../../apps/cn/nav-web/app/assets/styles/components/modal.less) mixes
-generic modal styling and preferences-specific UI. Keep consuming its existing
-classes in place; separating those responsibilities belongs to P2.3.
+[modal.less](../../apps/cn/nav-web/app/assets/styles/primitives/modal.less) owns
+generic `.gf-modal*` appearance for both Preferences and NSFW confirmation.
+[preferences.less](../../apps/cn/nav-web/app/assets/styles/components/preferences.less)
+composes Modal/Input/Button/Chip and shared tabs, sources and carousel controls.
 `components/` is an intentional layer, not a directory awaiting wholesale renaming.
 `domains/` remains a later page-migration target; do not create it empty.
 
@@ -37,6 +39,7 @@ classes in place; separating those responsibilities belongs to P2.3.
 | --- | --- | --- |
 | Product/theme semantics shared across domains and primitives | [tokens.less](../../apps/cn/nav-web/app/assets/styles/tokens.less) | `--gf-surface`, `--gf-text-main`, `--gf-focus-ring` |
 | Semantics specific to a reusable primitive | Its stylesheet under `styles/primitives/` | [rating.less](../../apps/cn/nav-web/app/assets/styles/primitives/rating.less) owns `--gf-rating-empty` and `--gf-rating-fill` |
+| State semantics of a product composition | Its exact compound stylesheet/root | `preferences.less` owns local `--gf-preferences-*` input/toggle states |
 | Business/domain semantics | Its existing page/domain stylesheet | [games.less](../../apps/cn/nav-web/app/assets/styles/pages/games.less) owns `--games-*` |
 
 Component-private geometry, such as a cover ratio or a title line count, can stay
@@ -118,3 +121,28 @@ Run the existing checks listed in the [Agent entry](../../apps/cn/nav-web/AGENTS
 For token-owner work, compare declarations by theme selector and token name before
 and after, including inherited dark values. A green debt check alone does not
 prove preservation of active visual values.
+
+## Modal and Preferences ownership example
+
+Preferences' quick-access switch has one product-specific consumer. Its
+`preferences-toggle` / `preferences-toggle--on` API belongs to that compound,
+not Generic Modal or a speculative Toggle primitive. P2.3 removed the overridden
+generic toggle cascade instead of creating tokens for dead styles.
+
+The compound's local tokens describe input idle/focus border, surface and shadow,
+and toggle idle/active surface, text, thumb and thumb shadow. Light values alias
+global semantics where they already did; dark values preserve the existing
+Preferences treatment. Only `.gf-preferences-modal` and
+`html.dark .gf-preferences-modal` in `components/preferences.less` may declare
+these tokens. Ordinary raw properties there still count as debt.
+
+Shared composition belongs in `preferences.less`; paging/scroll geometry and
+Background/Hero/ResourceRoute private structure remain in their Vue scoped styles.
+The header override moved from the Modal SFC into the compound owner. Toggle
+events, ARIA and Save/Cancel behavior remain with the unchanged Vue logic.
+
+P2.3 retires 29 raw-color occurrences: 11 overridden values are deleted and 18
+effective values keep their meaning in 14 local semantic tokens. The safe updater
+removes only the old modal budget (924 → 895), granting neither new file debt.
+Use the existing Hero/preferences, resource-routing and game-detail smoke scripts
+for themed responsive screenshots and effective input/toggle/NSFW modal checks.

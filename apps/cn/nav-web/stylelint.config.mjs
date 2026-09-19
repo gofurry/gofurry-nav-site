@@ -34,7 +34,6 @@ export default {
     },
     {
       files: [
-        'app/assets/styles/components/modal.less',
         'app/assets/styles/pages/games.less',
         'app/assets/styles/pages/nav.less',
       ],

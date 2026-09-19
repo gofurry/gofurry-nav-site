@@ -224,3 +224,16 @@ test('current application tree exactly matches every checked-in rule/file budget
   assert.equal(result.ok, true, formatReport(result))
   assert.deepEqual(result.differences, [])
 })
+
+test('Modal retirement updater removes only its stale entry and grants no new file debt', async t => {
+  const dir = await fixture(t)
+  const oldFile = 'app/assets/styles/components/modal.less'
+  const current = JSON.parse(await readFile(path.join(root, 'frontend-style-debt.json'), 'utf8'))
+  const before = structuredClone(current)
+  before.baseline['raw-visual-value'][oldFile] = 29
+  const target = path.join(dir, 'frontend-style-debt.json')
+  await writeFile(target, JSON.stringify(before))
+  const { updateBaseline } = await import('./debt.mjs')
+  await updateBaseline(target, before, current.baseline)
+  assert.deepEqual(JSON.parse(await readFile(target, 'utf8')), current)
+})

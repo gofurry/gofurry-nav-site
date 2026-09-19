@@ -200,6 +200,41 @@ html.dark .lottery-page, html.dark .lottery-activation-page, html.dark .lottery-
   assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#123']);
 });
 
+test('Preferences tokens require the exact compound owner and both theme roots', () => {
+  const source = `.gf-preferences-modal { --gf-preferences-input-surface: #123456; }
+html.dark .gf-preferences-modal { --gf-preferences-toggle-thumb: rgba(1, 2, 3, .5); }`;
+  const approvedFile = 'app/assets/styles/components/preferences.less';
+  assert.deepEqual(detectCssFacts(extractCssFacts(source, { file: approvedFile, less: true })), []);
+  for (const file of ['app/assets/styles/primitives/modal.less', 'app/assets/styles/components/modal.less', 'app/components/Preferences.vue']) {
+    assert.equal(values(detectCssFacts(extractCssFacts(source, { file, less: true })), 'raw-visual-value').length, 2);
+  }
+});
+
+test('Preferences approval never covers ordinary properties, other prefixes or nested/other selectors', () => {
+  const facts = extractCssFacts(`.gf-preferences-modal { background: #111; --other-surface: #222; }
+html.dark .gf-preferences-modal { color: #333; --gf-input-surface: #444; }
+.preferences-toggle { --gf-preferences-toggle-surface: #555; }
+.gf-preferences-modal .child { --gf-preferences-input-surface: #666; }
+.parent { .gf-preferences-modal { --gf-preferences-input-surface: #777; } }
+:root { --gf-preferences-input-surface: #888; }`, {
+    file: 'app/assets/styles/components/preferences.less', less: true,
+  });
+  assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#111', '#222', '#333', '#444', '#555', '#666', '#777', '#888']);
+});
+
+test('Modal primitive and Preferences retire the old raw debt without transferring a budget', async () => {
+  const manifest = validateManifest(JSON.parse(await readFile(new URL('../../frontend-style-debt.json', import.meta.url), 'utf8')));
+  const oldFile = 'app/assets/styles/components/modal.less';
+  await assert.rejects(readFile(new URL(`../../${oldFile}`, import.meta.url)), { code: 'ENOENT' });
+  for (const file of ['app/assets/styles/primitives/modal.less', 'app/assets/styles/components/preferences.less']) {
+    const source = await readFile(new URL(`../../${file}`, import.meta.url), 'utf8');
+    assert.deepEqual(detectCssFacts(extractCssFacts(source, { file, less: true })), []);
+    assert.equal(manifest.baseline['raw-visual-value'][file], undefined);
+    assert(!source.includes('gf-modal__toggle'));
+  }
+  assert.equal(manifest.baseline['raw-visual-value'][oldFile], undefined);
+});
+
 test('inline/script visual values count raw literals without counting Tailwind a third time', async () => {
   const facts = [fact('visual-value', 'color: #abc; fill: #112233; border-color: rgb(2 3 4 / .2)'), fact('class', 'bg-[#fff]')];
   assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#abc', '#112233', 'rgb(2 3 4 / .2)']);

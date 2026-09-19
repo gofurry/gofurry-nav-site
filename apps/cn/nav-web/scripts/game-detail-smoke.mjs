@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { launchPerfBrowser, reportsDir } from './perf/shared.mjs'
 import { startInsightsFixtureApp } from './fixtures/insights-app.mjs'
@@ -79,6 +79,7 @@ try {
   state.gallery = true
   const layoutDir = join(reportsDir, 'game-detail-layout')
   await mkdir(layoutDir, { recursive: true })
+  const modalStyles = {}
   for (const width of [390, 768, 1440, 1920]) {
     for (const adult of [false, true]) {
       state.adult = adult
@@ -125,10 +126,33 @@ try {
           await page.screenshot({ path: join(layoutDir, `${width}-${adult ? 'blurred' : 'visible'}.png`), fullPage: true })
         }
       }
+      if (adult && [390, 1440].includes(width)) {
+        for (const dark of [false, true]) {
+          await page.evaluate(dark => document.documentElement.classList.toggle('dark', dark), dark)
+          await page.locator('.blur-wrapper__unlock').first().click()
+          const modal = page.locator('.gf-modal--compact')
+          await modal.waitFor({ state: 'visible' })
+          await page.waitForTimeout(300)
+          const key = `${width}-${dark ? 'dark' : 'light'}`
+          modalStyles[key] = await modal.evaluate(element => {
+            const properties = ['width', 'height', 'padding', 'border', 'borderRadius', 'backgroundColor', 'boxShadow', 'color', 'fontSize', 'lineHeight']
+            return [element, ...element.querySelectorAll('[class*="gf-modal__"], button')].map(el => {
+              const style = getComputedStyle(el)
+              return { class: el.className, ...Object.fromEntries(properties.map(property => [property, style[property]])) }
+            })
+          })
+          assert(await modal.evaluate(el => el.getBoundingClientRect().right <= innerWidth && el.scrollWidth <= el.clientWidth + 1), 'NSFW modal overflows')
+          await page.screenshot({ path: join(layoutDir, `nsfw-modal-${key}.png`) })
+          await modal.locator('.gf-button--ghost').click()
+          await modal.waitFor({ state: 'detached' })
+          assert(await page.locator('.blur-wrapper__unlock').first().isVisible(), 'Cancel unlocked adult content')
+        }
+      }
       await page.close()
       console.log(`[game-detail] ${width}px ${adult ? 'blurred' : 'visible'} gallery, local scrolling and all tabs PASS`)
     }
   }
+  await writeFile(join(layoutDir, 'modal-computed.json'), JSON.stringify(modalStyles, null, 2))
   for (const path of ['/games/999999', '/en/games/999999', '/games/abc']) {
     assert.equal((await fetch(app.base + path)).status, 404, path)
   }
