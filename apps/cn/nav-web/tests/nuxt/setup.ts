@@ -41,7 +41,9 @@ function resetNuxtState() {
     'gf_hero_mode', 'gf_hero_desktop_id', 'gf_hero_mobile_id',
     'gf_asset_cdn', 'gf_asset_cdn_mode', 'gf_steam_asset_mode', 'gf_steam_asset_group',
   ]) {
-    document.cookie = `${name}=; Max-Age=0; Path=/`
+    // happy-dom treats expiration as strictly before now; Max-Age=0 can linger
+    // during the same millisecond and pollute the next case's cookie snapshot.
+    document.cookie = `${name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/`
     refreshCookie(name)
   }
   clearNuxtState()
