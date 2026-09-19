@@ -184,6 +184,12 @@ jobs:
       - name: Style policy
         working-directory: apps/cn/nav-web
         run: npm run style:policy
+      - name: Unit tests
+        working-directory: apps/cn/nav-web
+        run: npm run test:unit
+      - name: Nuxt tests
+        working-directory: apps/cn/nav-web
+        run: npm run test:nuxt
       - name: Typecheck
         working-directory: apps/cn/nav-web
         run: npm run typecheck

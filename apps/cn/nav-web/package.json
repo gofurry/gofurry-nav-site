@@ -7,7 +7,9 @@
     "build": "nuxt build",
     "preview": "nuxt preview",
     "typecheck": "nuxt typecheck",
-    "assets:test": "node scripts/managed-assets.test.mjs && node scripts/resource-routing.test.mjs && node scripts/hero-preferences.test.mjs",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:nuxt": "vitest run --project nuxt",
     "assets:routing-smoke": "node scripts/hero-lifecycle-smoke.mjs && node scripts/resource-routing-smoke.mjs && node scripts/hero-preferences-smoke.mjs",
     "assets:cloud-smoke": "node --env-file=.env scripts/managed-assets-cloud-smoke.mjs",
     "background:smoke": "node scripts/background-storage-smoke.mjs",
@@ -18,7 +20,6 @@
     "visual:guard": "node scripts/perf/visual-guard.mjs",
     "insights:smoke": "node scripts/insights-smoke.mjs",
     "game:tags:smoke": "node scripts/game-tag-domain-smoke.mjs",
-    "game:tags:test": "node scripts/game-tag-domain.test.mjs",
     "game:detail:smoke": "node scripts/game-detail-smoke.mjs",
     "game:groups:smoke": "node scripts/game-group-layout-smoke.mjs",
     "insights:semantics": "node scripts/insights-semantics.test.mjs",
@@ -47,9 +48,12 @@
   },
   "devDependencies": {
     "@nuxt/eslint-config": "^1.17.0",
+    "@nuxt/test-utils": "4.3.2",
     "@types/node": "^24.5.2",
     "@vue/compiler-sfc": "3.5.33",
+    "@vue/test-utils": "2.5.1",
     "eslint": "^10.11.0",
+    "happy-dom": "20.14.5",
     "less": "^4.6.6",
     "playwright": "^1.60.0",
     "postcss": "^8.5.28",
@@ -60,6 +64,7 @@
     "stylelint-config-recommended": "^18.0.0",
     "stylelint-config-recommended-vue": "^2.0.0",
     "typescript": "~5.8.3",
+    "vitest": "5.0.1",
     "vue-tsc": "^3.0.7"
   }
 }

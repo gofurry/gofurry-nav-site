@@ -439,8 +439,10 @@ for newly added files or script-generated styles.
 | JS/TS/Vue engineering rules | Nuxt-compatible ESLint flat config; official bulk suppressions track historical findings |
 | CSS/Less correctness and hygiene | Conservative Stylelint recommended rules with CSS/Less/Vue parsers |
 | GoFurry-specific ownership and per-file debt budget | Parser-backed `style:policy`; Node built-in tests verify the guard |
-| Unit/component logic | Planned Vitest, P3; current focused Node harnesses remain |
-| Browser behavior, SSR, hydration and historical regressions | Current Playwright scripts; Playwright Test migration in P3 |
+| Pure TS/domain/utility logic | Vitest `unit` project, Node environment, `tests/unit/*.test.ts` |
+| Nuxt runtime/composables | Vitest `nuxt` project with `@nuxt/test-utils`, happy-dom, `tests/nuxt/*.nuxt.test.ts` |
+| Repository/source/config/semantic contracts | Existing Node Insights/SEO Contract Guards, outside Vitest |
+| Browser behavior, SSR, hydration and historical regressions | Current Playwright scripts; Playwright Test migration in P3.2 |
 | Screenshot baseline comparison | Planned Playwright Visual, P3; current screenshots alone are not a visual regression gate |
 | Performance budget | Existing `perf:guard`, separate from visual correctness |
 | Real external services | Explicit development acceptance, not a default PR gate |
@@ -456,6 +458,22 @@ Keep `scripts/perf/visual-guard.mjs` and current regression harnesses intact.
 P1's detector reproduces the P0 baseline on the unchanged app tree. P2 owns token/primitive organization;
 P3 owns the testing foundation; P4+ owns staged, visually equivalent migrations.
 Each phase MUST finish in a stable, independently deployable state.
+
+P3.1 uses Vitest `projects` with separate `test:unit` and `test:nuxt` commands;
+`npm test` runs both. CI MUST execute separate Unit tests and Nuxt tests steps
+before typecheck, retained Insights/SEO guards and build. Choose the lowest-cost
+environment that faithfully represents the tested behavior. Browser-like globals
+alone do not require Nuxt; pure tests SHOULD use Vitest-controlled stubs/cleanup.
+
+Nuxt-dependent cases MUST use the real Nuxt runtime and reset cookies/useState
+between cases using supported APIs. Mock only business injection boundaries,
+not Nuxt's state/cookie/app context. Source-transpile/data-URL import hacks and
+handwritten fake Nuxt runtimes MUST NOT replace ordinary imports/runtime tests.
+Keep `@nuxt/test-utils/module` out of production Nuxt config. Do not refactor
+production behavior merely to accommodate tests. The first four legacy suites
+are replaced, not duplicated; [testing guidance](../docs/frontend/testing.md)
+records their assertion ownership. Style-policy's Node runner, Contract Guards,
+browser smoke, `visual:guard` and external acceptance retain independent scope.
 
 P0 MUST NOT change production Vue, CSS/Less, runtime behavior, package/lockfiles,
 CI, dependency versions or style directories, and MUST NOT implement #108/#109.

@@ -117,7 +117,9 @@ same new `picture`/`img` is promoted on success with no blank-first transition.
 Exhausted new-image fallback retains the old frame. Unchanged settings do not
 reselect Hero, and background routing probes/Save retain #121 snapshot semantics.
 
-`hero-preferences.test.mjs` runs in `assets:test`. The production browser fixture
+Hero normalization lives in `tests/unit/hero-preferences.test.ts`; the real Nuxt
+cookie/state composable runs in `tests/nuxt/use-hero-preferences.nuxt.test.ts`.
+Use `npm run test:unit` and `npm run test:nuxt`. The production browser fixture
 `hero-preferences-smoke.mjs` runs in `assets:routing-smoke` alongside #121. It
 covers SSR/hydration, bigint and independent pins, current metadata, Local/legacy
 behavior, lazy previews and pagination, selected IDs outside the page, Save under
@@ -227,8 +229,10 @@ Save-Data browsers. Manual tests start immediately and have a persisted 60-secon
 cooldown; explicit tests may still be attempted offline. No continuous probing,
 backend API, database state, cloud mutation or dependency is introduced.
 
-`npm run assets:test` includes resolver, fixed-probe, legacy migration, actual Vue
-snapshot/fallback, scheduling, TTL and cooldown regressions.
+`npm run test:unit` covers resolver, fixed-probe, legacy migration, scheduling,
+TTL and cooldown regressions. `npm run test:nuxt` covers actual Nuxt composable
+snapshots/fallback and Hero cookie/state behavior. See
+[frontend testing](frontend/testing.md) for the runner boundaries.
 After `npm run build`, `npm run assets:routing-smoke` runs the production Nuxt
 application with isolated API/CDN fixtures to check SSR, actual loaded image
 stability, changed resources, failures, Save/Cancel, three-tab keyboard navigation
@@ -236,7 +240,7 @@ and mobile/light/dark rendering. Screenshots go to ignored
 `apps/cn/nav-web/docs/performance/reports/resource-routing/`. This deterministic
 suite does not depend on real CDN availability or substitute for cloud acceptance.
 
-Run Nav Web `npm run assets:test`, `npm run insights:semantics`,
+Run Nav Web `npm run test:unit`, `npm run test:nuxt`, `npm run insights:semantics`,
 `npm run seo:recovery:test`, `npm run typecheck`, and `npm run build`.
 Nav Backend's opt-in `TestRealDevAppearanceQueries` uses only transaction-local
 temporary tables copied from the Goose schema to verify pool isolation,

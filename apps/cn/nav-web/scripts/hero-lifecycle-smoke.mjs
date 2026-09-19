@@ -21,7 +21,7 @@ const app = await startInsightsFixtureApp(url => {
 const browser = await launchPerfBrowser()
 const output = join(reportsDir, 'hero-lifecycle')
 await mkdir(output, { recursive: true })
-const probeBody = await readFile(new URL('./fixtures/cdn-probe.bin', import.meta.url))
+const probeBody = await readFile(new URL('../tests/fixtures/cdn-probe.bin', import.meta.url))
 const artwork = color => '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="' + color + '"/></svg>'
 const failures = []
 async function setup(width, blocked = [], local = false) {

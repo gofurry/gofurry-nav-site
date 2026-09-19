@@ -85,17 +85,23 @@ npm run lint
 npm run stylelint
 npm run style:policy:test
 npm run style:policy
+npm run test:unit
+npm run test:nuxt
+npm test
 npm run typecheck
 npm run insights:semantics
 npm run seo:recovery:test
 npm run build
 ```
 
-Check `package.json` for existing focused checks and run those relevant to the
-changed area. Keep regression coverage beside the existing `scripts/` harnesses
-until the testing migration; do not assume future runners or commands exist.
-P1 uses Node built-in tests for the policy guard; Vitest and Playwright Test
-migration remain P3 work. Static checks also run in the existing Nav Web CI job.
+Choose the lowest-cost faithful environment: pure logic goes in `tests/unit`
+(`test:unit`); real Nuxt runtime goes in `tests/nuxt` (`test:nuxt`). Reset cookies
+and Nuxt state per case; mock business injections, never the Nuxt runtime itself.
+See [testing guidance](../../../docs/frontend/testing.md) for migration coverage
+and isolation. Browser behavior stays in existing smoke scripts until P3.2.
+Style-policy keeps its separate Node built-in runner; Insights/SEO remain
+Contract Guards. Check `package.json` for relevant focused commands. CI runs
+Unit and Nuxt tests as independent steps alongside the existing guards.
 Review the complete diff for accidental production Vue/style changes before commit.
 
 [Frontend documentation](../../../docs/frontend/README.md) routes to the contract,

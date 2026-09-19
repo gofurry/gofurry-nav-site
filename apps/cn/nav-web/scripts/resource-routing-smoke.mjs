@@ -12,7 +12,7 @@ const nextKey = iconKey.replace(/a{32}/, 'b'.repeat(32))
 const heroKey = 'nav/hero/desktop/' + 'a'.repeat(32) + '.avif'
 const patternKey = 'nav/patterns/' + 'a'.repeat(32) + '.svg'
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="45"><rect width="120" height="45" fill="#78644b"/></svg>'
-const probeBody = await readFile(new URL('./fixtures/cdn-probe.bin', import.meta.url))
+const probeBody = await readFile(new URL('../tests/fixtures/cdn-probe.bin', import.meta.url))
 const steamSource = 'https://shared.steamstatic.com/store_item_assets/steam/apps/570/header.jpg'
 const app = await startInsightsFixtureApp(url => {
   if (url.pathname === '/api/v2/nav/home') return { data: {

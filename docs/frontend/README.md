@@ -5,6 +5,8 @@
 - [Agent entry](../../apps/cn/nav-web/AGENTS.md): short operational guidance.
 - [Design system](design-system.md): token ownership, naming and usage examples;
   actual values remain in the source owners.
+- [Testing](testing.md): Vitest Unit/Nuxt projects, isolation and the retained
+  Contract Guards, style-policy runner, browser smoke and external acceptance.
 - [Style debt manifest](../../apps/cn/nav-web/frontend-style-debt.json): current
   implementation debt by rule/file; it never overrides the contract.
 - [#124 phase plan](https://github.com/gofurry/gofurry-nav-site/issues/124#issuecomment-5740012423):
@@ -16,8 +18,9 @@ records historical noncompliance, not examples or permission for new code.
 P2.1 formalized global token ownership and annotation. P2.2 separates six shared
 visual primitives from compound product styles, preserving their contents.
 P2.3 separates Generic Modal from Preferences composition and retires its raw
-debt without changing rendered states. Testing guidance remains P3, and staged
-style migrations P4 onward. Existing regression harnesses remain in place.
+debt without changing rendered states. P3.1 establishes Vitest Unit/Nuxt and
+migrates four legacy suites; browser migration remains P3.2 and staged style
+migrations P4 onward. Independent contract/tooling guards remain in place.
 
 The older [style-system document](../../apps/cn/nav-web/docs/style-system.md) and
 [roadmap](../../apps/cn/nav-web/docs/roadmap.md) are historical migration context.
