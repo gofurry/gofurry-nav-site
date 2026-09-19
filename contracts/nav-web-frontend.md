@@ -443,7 +443,8 @@ for newly added files or script-generated styles.
 | Nuxt runtime/composables | Vitest `nuxt` project with `@nuxt/test-utils`, happy-dom, `tests/nuxt/*.nuxt.test.ts` |
 | Repository/source/config/semantic contracts | Existing Node Insights/SEO Contract Guards, outside Vitest |
 | Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`: Game Detail, Resource Routing/Managed/Steam, Hero lifecycle/Local, Preferences foundation, Fixed/BigInt, Catalog and handoff |
-| Screenshot baseline comparison | Planned Playwright Visual, P3.3; failure screenshots and existing captures are not visual baselines |
+| Stable pixel appearance | `playwright.visual.config.ts` / `test:visual`; P3.3.1 establishes only the pinned environment sentinel, no golden baselines |
+| Legacy broad page visual/report checks | Retained `scripts/perf/visual-guard.mjs` / `visual:guard`; independent of Visual snapshots and static `style:policy` |
 | Performance budget | Existing `perf:guard`, separate from visual correctness |
 | Real external services | Explicit development acceptance, not a default PR gate |
 
@@ -505,6 +506,43 @@ Vitest-only; visual baselines belong to P3.3.
 P0 MUST NOT change production Vue, CSS/Less, runtime behavior, package/lockfiles,
 CI, dependency versions or style directories, and MUST NOT implement #108/#109.
 It neither replaces Nuxt/Tailwind/Less nor introduces a new UI framework.
+
+### P3.3 Visual environment and baseline governance
+
+Functional `playwright.config.ts` MUST exclude `tests/browser/visual/**` and keep
+the existing Smoke/Regression gate unchanged. `playwright.visual.config.ts` owns
+Visual tests with Chromium only, one worker, zero retries and a 60-second timeout.
+The environment MUST fix headless mode, 1440×900, zh-CN, UTC, DPR 1, light default
+and reduced motion. Failure-only trace/screenshots and no video use independent
+`playwright-visual-report/` and `visual-test-results/` directories.
+
+Authoritative Visual CI MUST use the official Playwright image matching the
+package version, pinned by a verified immutable digest, with `--ipc=host` and
+Node 24. The exact identity and local commands live in
+[testing guidance](../docs/frontend/testing.md#visual-runner-and-pinned-environment-p331).
+The separate `nav-web-visual` job MUST depend on successful `nav-web` and a Nav Web
+change, install packages and rebuild inside that container, then run `test:visual`.
+It MUST NOT install browsers, reuse the functional job's `.output`, or update
+snapshots. Failure artifacts retain the distinct Visual report/results for seven days.
+
+Baseline update is an explicit visual-change review action, not a test-fix
+command. Agents MUST NOT update baselines just to make CI green. Updates require
+explicit maintainer/user approval or a task explicitly authorizing the visual
+migration, and MUST use `test:visual:update` in the pinned environment. Its guard
+requires Linux, Node 24 and `GOFURRY_VISUAL_ENV=pinned`; the marker is an operator
+assertion, not approval or an image fingerprint. Unpinned `test:visual` runs are
+diagnostic only. Unexpected differences require investigation and implementation
+fixes followed by comparison, not automatic acceptance.
+
+Future baselines MUST live in tracked `tests/browser/visual/__snapshots__/`,
+using deterministic test-file and explicit snapshot-name paths. No global
+`maxDiffPixels` / `maxDiffPixelRatio` or broad threshold widening is allowed;
+any future tolerance needs a small, local, justified exception. Playwright
+packages, Docker tag/digest, browser revision and visual baselines MUST be reviewed
+as one atomic upgrade unit. P3.3.1 MUST create no golden PNG, screenshot assertion,
+production test route or UI fixture. The sentinel launches real Chromium and
+checks the environment without taking a screenshot; real visual contracts start
+in P3.3.2. Keep `visual:guard` and direct `playwright` until their scoped retirement.
 
 ### P1 enforcement and maintenance
 

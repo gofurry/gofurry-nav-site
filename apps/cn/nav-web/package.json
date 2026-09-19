@@ -14,6 +14,8 @@
     "test:browser": "playwright test",
     "test:browser:smoke": "playwright test tests/browser/smoke",
     "test:browser:regression": "playwright test tests/browser/regression",
+    "test:visual": "playwright test --config=playwright.visual.config.ts",
+    "test:visual:update": "node scripts/visual-baseline-env.mjs && playwright test --config=playwright.visual.config.ts --update-snapshots",
     "assets:cloud-smoke": "node --env-file=.env scripts/managed-assets-cloud-smoke.mjs",
     "background:smoke": "node scripts/background-storage-smoke.mjs",
     "perf:measure": "node scripts/perf/measure.mjs",

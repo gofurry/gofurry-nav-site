@@ -13,6 +13,8 @@ the commands below run from `apps/cn/nav-web`.
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
 | Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail, Resource Routing/Managed/Steam and Hero/Preferences are migrated |
+| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned pixel-comparison owner; P3.3.1 only checks the environment and creates no golden baselines |
+| Legacy visual/report guard | `npm run visual:guard` | Broad page/selector/theme/overflow reports and historical checks; retained independently of Visual and `style:policy` |
 | Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Insights and unrelated domains retain their runners until scoped migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
 
@@ -222,6 +224,92 @@ equality and layout/focus assertions remain. These guard runtime invariants,
 not golden visuals. No `toHaveScreenshot()` or committed images are introduced;
 P3.3 owns visual baselines.
 
+## Visual runner and pinned environment (P3.3.1)
+
+`playwright.config.ts` explicitly ignores `tests/browser/visual/**`; the 63
+functional Browser cases remain Smoke/Regression only. The separate
+`playwright.visual.config.ts` owns Chromium Visual tests: headless, one worker,
+zero retries, 60-second timeout, 1440×900, zh-CN, UTC, DPR 1, light default and
+reduced motion (`use.contextOptions.reducedMotion` in Playwright 1.60).
+Traces/screenshots are failure-only, video is off. Reports go to
+`playwright-visual-report/` and diagnostics to `visual-test-results/`, both ignored.
+
+The authoritative identity is Linux amd64 / Ubuntu Noble with Node 24 and
+`@playwright/test`, `playwright`, `playwright-core` 1.60.0 (the committed lockfile).
+The bundled Chromium/headless-shell revision is **1223**, browser **148.0.7778.96**.
+Use the official image:
+
+```text
+mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
+```
+
+The MCR manifest-list digest was verified on 2026-09-19 against the SHA-256 of
+the returned manifest bytes and `docker buildx imagetools inspect`. Its linux/amd64
+manifest is `sha256:83192064c7510f7ee73dd63dc5f22a5e01a92c81a2e6a9c715d9e3fe55471fd9`.
+The image contains Node 24 and browser/system dependencies; CI still explicitly
+selects Node 24 with `actions/setup-node@v6`. The [Playwright Docker guidance](https://playwright.dev/docs/docker)
+describes the matching-package/image requirement and `--ipc=host`.
+
+`nav-web-visual` runs only for Nav Web changes after `nav-web` succeeds. It uses
+that tag **and** immutable digest with `--ipc=host` and `GOFURRY_VISUAL_ENV=pinned`,
+then independently runs `npm ci`, `npm run build`, `npm run test:visual`. It neither
+installs browsers nor transfers `.output` from the functional job. On failure,
+`nav-web-visual-failure` contains the distinct Visual report/results for seven days.
+
+The environment sentinel uses a real Chromium page to check browser type,
+viewport, DPR, language, timezone, reduced motion and light theme; CI/pinned runs
+also check Linux and Node 24. It takes no screenshot and needs no server or
+production test route. **P3.3.1 has zero golden snapshots and no screenshot
+assertions.** UI Foundation and Preferences baselines belong to later phases.
+Direct `playwright` and `scripts/perf/visual-guard.mjs` / `visual:guard` remain active.
+Static architecture/debt remains `style:policy`'s responsibility.
+
+### Comparison and approved updates
+
+Local `npm run test:visual` is diagnostic only outside the pinned environment.
+Comparisons use `updateSnapshots: 'none'`, so missing baselines also fail instead
+of being created. Future snapshots belong in tracked
+`tests/browser/visual/__snapshots__/{testFilePath}/{explicit-name}.png`; do not
+ignore this source directory. No global pixel tolerance is configured. Future
+tolerances must be small, local and justified for an individual snapshot.
+
+**A baseline update is an explicit visual-change review action, not a test-fix
+command.** Agents must not update baselines just to make CI green. A maintainer
+must explicitly approve the visual change, or the task must explicitly authorize
+that migration, before `test:visual:update` may run. Investigate unexpected
+differences, fix the implementation and rerun comparison. Review Playwright
+packages, Docker tag/digest, browser revision and baselines as one atomic upgrade.
+
+`test:visual:update` first runs `scripts/visual-baseline-env.mjs`, requiring Linux,
+Node 24 and `GOFURRY_VISUAL_ENV=pinned`, before invoking `--update-snapshots`. The
+marker asserts that the caller chose the pinned container; it does not grant
+approval or fingerprint the image. CI must never invoke the update command/flag.
+
+From a disposable checkout's repository root in a POSIX shell, this compares
+inside the pinned image. An empty anonymous volume isolates Linux dependencies.
+Nuxt must own normal writable `.nuxt` / `.output` directories in that checkout;
+do not mount `.output` itself, because Nitro removes and recreates it on build.
+
+```sh
+docker run --rm --init --ipc=host --platform linux/amd64 \
+  --mount type=bind,source="$(pwd)",target=/work \
+  --mount type=volume,destination=/work/apps/cn/nav-web/node_modules,volume-nocopy \
+  --workdir /work/apps/cn/nav-web \
+  --env GOFURRY_VISUAL_ENV=pinned \
+  mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948 \
+  sh -lc 'npm ci && npm run build && npm run test:visual'
+```
+
+Only for an explicitly approved future baseline change, use the same command
+with its last line replaced by:
+
+```sh
+  sh -lc 'npm ci && npm run build && npm run test:visual:update'
+```
+
+Review the resulting snapshot diff before committing. P3.3.1 does not run this
+update flow or create a `__snapshots__/` directory.
+
 ## Verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
@@ -237,9 +325,12 @@ above. On Linux CI use `npx playwright install --with-deps chromium`.
 The existing Nav Web CI job has separate **Unit tests** and **Nuxt tests** steps
 before typecheck/contract guards/build. After Build succeeds it installs Chromium
 and runs **Browser tests** (`npm run test:browser`). A successful local run of the
-same commands is local evidence, not proof of a remote Actions run. Verify both
-browser steps after an authorized push; when instructed not to push, report that
-remote gate acceptance remains unverified.
+same commands is local evidence, not proof of a remote Actions run. The separate
+`nav-web-visual` job adds its own container install/build/Visual gate after this.
+Run those three commands in the pinned container as well. After an authorized
+push verify that both `nav-web` and `nav-web-visual` actually ran and passed; a
+skipped Visual job is not acceptance. When instructed not to push, report remote
+gate acceptance as unverified.
 
 No manual UI review is required for a test-only change with unchanged production
 Vue/styles/runtime and unchanged browser smoke behavior, once the migrated tests

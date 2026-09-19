@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests/browser',
+  testIgnore: ['**/visual/**'],
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,

@@ -220,6 +220,42 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
+  nav-web-visual:
+    needs: [detect-changes, nav-web]
+    if: needs.detect-changes.outputs.nav_web == 'true' && needs.nav-web.result == 'success'
+    runs-on: ubuntu-latest
+    container:
+      # Verified against the MCR manifest list; upgrade with Playwright and baselines.
+      image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
+      options: --ipc=host
+    env:
+      GOFURRY_VISUAL_ENV: pinned
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/cn/nav-web/package-lock.json
+      - working-directory: apps/cn/nav-web
+        run: npm ci
+      - name: Build
+        working-directory: apps/cn/nav-web
+        run: npm run build
+      - name: Visual tests
+        working-directory: apps/cn/nav-web
+        run: npm run test:visual
+      - name: Visual failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nav-web-visual-failure
+          path: |
+            apps/cn/nav-web/playwright-visual-report/
+            apps/cn/nav-web/visual-test-results/
+          retention-days: 7
+          if-no-files-found: warn
+
   repository-policy:
     needs: detect-changes
     if: needs.detect-changes.outputs.policy == 'true'

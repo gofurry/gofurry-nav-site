@@ -117,6 +117,16 @@ Style-policy keeps its separate Node built-in runner; Insights/SEO remain
 Contract Guards. Check `package.json` for relevant focused commands. CI runs
 Unit and Nuxt tests as independent steps alongside the existing guards, followed
 by Build, Chromium installation and Browser tests.
+Functional `test:browser` excludes `tests/browser/visual/**`. Visual checks use
+`playwright.visual.config.ts` / `test:visual`; only the digest-pinned Linux
+Playwright container with Node 24 is authoritative. P3.3.1 adds an environment
+sentinel, no golden images. Keep `visual:guard` and direct `playwright` for legacy
+page/report checks. See testing guidance for the pinned container commands.
+
+Never update visual baselines merely to make CI pass. An explicit maintainer
+approval or a task authorizing the visual migration is required before running
+`test:visual:update` in the pinned environment. CI only compares. Review package,
+Docker tag/digest, browser revision and baselines together on Playwright upgrades.
 Review the complete diff for accidental production Vue/style changes before commit.
 
 [Frontend documentation](../../../docs/frontend/README.md) routes to the contract,
