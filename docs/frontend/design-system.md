@@ -1,16 +1,42 @@
 # Nav Web design system
 
 The [frontend contract](../../contracts/nav-web-frontend.md) owns the rules.
-This guide explains how the existing source applies them. P2.1 establishes token
-ownership and annotation; it does not redesign the palette, migrate consumers or
-introduce token scales. Actual values belong in source, not this guide.
+This guide explains how the existing source applies them. P2.1 established token
+ownership and annotation; P2.2 gives domain-neutral primitives an explicit owner.
+Neither phase redesigns the palette or introduces token scales. Actual values
+belong in source, not this guide.
+
+## Visual layers
+
+The [Less entry](../../apps/cn/nav-web/app/assets/styles/index.less) composes
+`tokens → mixins → primitives → components → pages`:
+
+| Layer | Responsibility |
+| --- | --- |
+| `tokens.less` | Shared global foundation semantics |
+| `mixins.less` | Reusable Less behavior consuming tokens |
+| `primitives/` | Domain-neutral button, card, chip, input, pagination and rating building blocks |
+| `components/` | Compound product UI: modal/preferences, shell, navigation and footer |
+| `pages/` | Existing page/domain composition and its historical styles |
+
+A primitive has stable appearance semantics and can be composed across domains
+without depending on a page root or business tokens. A compound component combines
+building blocks into product UI. Navigation's `--gf-nav-*` and Footer's
+`--gf-footer-*` therefore remain with their compound owners; reuse across routes
+does not make them primitives or global tokens.
+
+[modal.less](../../apps/cn/nav-web/app/assets/styles/components/modal.less) mixes
+generic modal styling and preferences-specific UI. Keep consuming its existing
+classes in place; separating those responsibilities belongs to P2.3.
+`components/` is an intentional layer, not a directory awaiting wholesale renaming.
+`domains/` remains a later page-migration target; do not create it empty.
 
 ## Choose the owner by meaning
 
 | Meaning | Owner | Current example |
 | --- | --- | --- |
 | Product/theme semantics shared across domains and primitives | [tokens.less](../../apps/cn/nav-web/app/assets/styles/tokens.less) | `--gf-surface`, `--gf-text-main`, `--gf-focus-ring` |
-| Semantics specific to a reusable primitive | Its stylesheet under `styles/components/` | [rating.less](../../apps/cn/nav-web/app/assets/styles/components/rating.less) owns `--gf-rating-empty` and `--gf-rating-fill` |
+| Semantics specific to a reusable primitive | Its stylesheet under `styles/primitives/` | [rating.less](../../apps/cn/nav-web/app/assets/styles/primitives/rating.less) owns `--gf-rating-empty` and `--gf-rating-fill` |
 | Business/domain semantics | Its existing page/domain stylesheet | [games.less](../../apps/cn/nav-web/app/assets/styles/pages/games.less) owns `--games-*` |
 
 Component-private geometry, such as a cover ratio or a title line count, can stay
@@ -33,9 +59,9 @@ Equal values do not mean equal tokens. `--gf-accent` describes emphasis;
 content surface; `--gf-input-bg` describes a form surface. These pairs already
 diverge in dark mode, so replacing one with the other would erase meaning.
 
-The existing [button primitive](../../apps/cn/nav-web/app/assets/styles/components/button.less)
+The existing [button primitive](../../apps/cn/nav-web/app/assets/styles/primitives/button.less)
 uses action fill/contrast tokens for its primary variant, while the
-[input primitive](../../apps/cn/nav-web/app/assets/styles/components/input.less)
+[input primitive](../../apps/cn/nav-web/app/assets/styles/primitives/input.less)
 uses form background/focus tokens. Choose a token for the role it serves, not
 because its current color happens to match a screenshot.
 
@@ -69,7 +95,7 @@ control-height, z-index or container scales.
 
 Search for consumers before removing a token. Confirmed unused tokens should be
 removed unless an explicit external compatibility contract needs them. P2.1
-removes unused `--gf-bg-grid-line` from both themes.
+removed unused `--gf-bg-grid-line` from both themes.
 
 `--gf-bg-page` remains a legacy fallback consumed by
 [static.less](../../apps/cn/nav-web/app/assets/styles/pages/static.less). Its value
@@ -81,6 +107,12 @@ tokens by literal equality, or moving primitive/domain semantics into the global
 file for convenience. The policy approves exact declaration owners and still
 measures ordinary raw values inside those files. P2.1's owner migration is
 debt-neutral; the P0/P1 rule/file budgets remain unchanged.
+
+P2.2 moves six zero-debt primitive files without changing their contents. Rating's
+exact policy owner follows its new path, while its tokens stay with Rating. A
+future debt-bearing file move needs reviewed policy migration: the old path would
+have a stale baseline and the new path would have zero budget. Do not raise
+budgets or use a structural move to change selectors, values or behavior.
 
 Run the existing checks listed in the [Agent entry](../../apps/cn/nav-web/AGENTS.md).
 For token-owner work, compare declarations by theme selector and token name before

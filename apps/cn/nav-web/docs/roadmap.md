@@ -1,3 +1,9 @@
+> **Historical documentation / 历史文档（非当前规范）**
+>
+> 当前前端工程规范以 [frontend contract](../../../../contracts/nav-web-frontend.md)、
+> [Nav Web AGENTS](../AGENTS.md) 和 [design-system guide](../../../../docs/frontend/design-system.md) 为准。
+> 下文保留历史迁移事实；“v2.2.x 样式迁移完成”不代表 #124 Frontend Engineering Foundation 已完成。
+
 # GoFurry Nav Web 样式系统路线图
 
 ## 当前状态

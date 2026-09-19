@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { detectCssFacts, extractCssFacts } from './css.mjs';
+import { aggregateFindings, compareDebt, validateManifest } from './debt.mjs';
 import { detectTailwindFacts } from './tailwind.mjs';
 
 const file = 'app/components/PolicyFixture.vue';
@@ -134,6 +136,61 @@ html.dark .card { --gf-page-background: #666; }
     file: 'app/assets/styles/tokens.less', less: true,
   });
   assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#111', '#222', '#333', '#444', '#555', '#666', '#777', '#888']);
+});
+
+test('Rating tokens are approved at the exact primitive owner in light and dark', () => {
+  const facts = extractCssFacts(`.gf-rating {
+  --gf-rating-empty: rgba(1, 2, 3, .5);
+  --gf-rating-fill: #123456;
+}
+html.dark .gf-rating { --gf-rating-empty: rgba(4, 5, 6, .5); }`, {
+    file: 'app/assets/styles/primitives/rating.less', less: true,
+  });
+  assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), []);
+});
+
+test('the former components Rating path no longer approves token declarations', () => {
+  const facts = extractCssFacts(`.gf-rating { --gf-rating-fill: #123456; }
+html.dark .gf-rating { --gf-rating-empty: rgba(4, 5, 6, .5); }`, {
+    file: 'app/assets/styles/components/rating.less', less: true,
+  });
+  assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#123456', 'rgba(4, 5, 6, .5)']);
+});
+
+test('Rating approval stays limited to exact selectors, prefix and primitive file', () => {
+  const facts = extractCssFacts(`.gf-rating { color: #111; --other-fill: #222; }
+html.dark .gf-rating { background: #333; --gf-fill: #444; }
+.gf-rating .child { --gf-rating-fill: #555; }
+html.dark .gf-rating .child { --gf-rating-fill: #666; }
+.parent { .gf-rating { --gf-rating-fill: #777; } }`, {
+    file: 'app/assets/styles/primitives/rating.less', less: true,
+  });
+  assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#111', '#222', '#333', '#444', '#555', '#666', '#777']);
+  const outsideFile = extractCssFacts('.gf-rating { --gf-rating-fill: #888; }', {
+    file: 'app/assets/styles/primitives/new-rating.less', less: true,
+  });
+  assert.deepEqual(values(detectCssFacts(outsideFile), 'raw-visual-value'), ['#888']);
+});
+
+test('moved zero-debt primitive needs no budget and new primitive debt defaults to zero', async () => {
+  const manifest = validateManifest(JSON.parse(await readFile(new URL('../../frontend-style-debt.json', import.meta.url), 'utf8')));
+  const movedFile = 'app/assets/styles/primitives/rating.less';
+  const movedSource = await readFile(new URL(`../../${movedFile}`, import.meta.url), 'utf8');
+  const movedFacts = extractCssFacts(movedSource, { file: movedFile, less: true });
+  const movedFindings = [...detectCssFacts(movedFacts), ...await detectTailwindFacts(movedFacts)];
+  assert.deepEqual(movedFindings, []);
+
+  const newFile = 'app/assets/styles/primitives/new.less';
+  const newFindings = detectCssFacts(extractCssFacts('.new-primitive { color: #123456; }', { file: newFile, less: true }));
+  const actual = aggregateFindings([...movedFindings, ...newFindings], manifest);
+  assert.equal(manifest.baseline['raw-visual-value'][movedFile], undefined);
+  assert.equal(manifest.baseline['raw-visual-value'][newFile], undefined);
+  // This fixture scans only the two primitive paths; other files' stale entries
+  // belong to the separate full-tree parity test, not this local regression.
+  const differences = compareDebt(actual, manifest.baseline).filter(item => [movedFile, newFile].includes(item.file));
+  assert.deepEqual(differences, [{
+    rule: 'raw-visual-value', file: newFile, baseline: 0, actual: 1, kind: 'regression',
+  }]);
 });
 
 test('approved lottery group normalizes whitespace but does not approve individual roots', () => {

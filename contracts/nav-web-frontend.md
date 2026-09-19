@@ -6,8 +6,9 @@ This contract governs `apps/cn/nav-web` under
 [#124](https://github.com/gofurry/gofurry-nav-site/issues/124#issuecomment-5740012423).
 MUST/MUST NOT are requirements; SHOULD permits a reasoned, documented departure;
 MAY denotes an allowed choice. P0 established governance and a one-time debt
-baseline; P1 added static enforcement. P2.1 formalizes token ownership and
-annotation without changing active visual values.
+baseline; P1 added static enforcement. P2.1 formalized token ownership and
+annotation; P2.2 separates visual primitives from compound product styles without
+changing their contents or visual behavior.
 
 For frontend decisions, resolve evidence in this order:
 
@@ -15,7 +16,11 @@ For frontend decisions, resolve evidence in this order:
 2. This contract for intended frontend architecture.
 3. `apps/cn/nav-web/AGENTS.md` for operational guidance.
 4. `docs/frontend/*` for explanation and usage.
-5. `frontend-style-debt.json` only for historical migration state.
+5. Historical `apps/cn/nav-web/docs/*` for past migration context only.
+
+`frontend-style-debt.json` records migration state; it is not design authority.
+Historical completion claims such as the `v2.2.x` style migration MUST NOT be
+interpreted as completion of #124's engineering foundation.
 
 Contributors MUST report discrepancies. Existing noncompliant code is evidence of
 debt, not precedent that overrides the new-code contract. Repository-wide and
@@ -34,7 +39,7 @@ expressed through semantic classes, Less and design tokens.
 | --- | --- |
 | Placement, flex/grid, alignment, position, responsive composition, overflow, visibility, page/container sizing, outer spacing | Tailwind |
 | Text alignment, truncation and whitespace behavior | Tailwind MAY be used |
-| Control height/padding, color, background, border appearance, radius, shadow, ring, typography, opacity, visual hover/focus/motion | Shared primitive or domain Less using semantic tokens |
+| Control height/padding, color, background, border appearance, radius, shadow, ring, typography, opacity, visual hover/focus/motion | Owning primitive, compound component or domain Less using semantic tokens |
 | Component-private structural geometry not broadly reusable | Scoped style MAY be used |
 
 Allowed examples: `flex`, `grid`, `items-center`, `justify-between`, `relative`,
@@ -72,20 +77,25 @@ until a separately scoped migration:
 - `styles/tokens.less`: canonical owner of global semantic token declarations,
   including the layout-owned `--gf-page-background` and `--gf-page-pattern*` group.
 - `styles/mixins.less`: reusable Less behavior built on tokens.
-- `styles/components/*.less`: current shared visual primitives.
+- `styles/primitives/*.less`: shared domain-neutral visual building blocks.
+- `styles/components/*.less`: compound product UI, including modal/preferences,
+  shell, navigation and footer; this directory is not deprecated.
 - `styles/pages/*.less` and existing subdirectories: current page/domain styles.
 - `app/components/common`, `nav`, `game`, `site`, `insights`: existing Vue owners.
 
-The parent plan's `primitives/`, `domains/` and `tests/` layout is a future target,
-not an instruction to create/move directories in P0. Existing raw values and
-domain theme islands remain historical debt. Do not copy them into new code.
+`index.less` MUST compose `tokens → mixins → primitives → components → pages`.
+The primitive order is button, card, chip, input, pagination, rating; retain the
+existing relative page-style order. P2.2 creates only the approved primitive layer.
+`domains/` and the later test layout remain future migration work; contributors
+MUST NOT create empty placeholders. Existing raw values and domain theme islands
+remain historical debt. Do not copy them into new code.
 
 ## Token ownership, naming and lifecycle
 
 | Level | Meaning and ownership | Examples |
 | --- | --- | --- |
 | Global/Foundation | Reusable product/theme semantics in `styles/tokens.less`, shared across domains and primitives | `--gf-page-background`, `--gf-surface`, `--gf-text-main`, `--gf-border`, `--gf-accent`, `--gf-focus-ring` |
-| Primitive-local | Meaning specific to a reusable primitive, declared in its owning stylesheet | `--gf-rating-empty`, `--gf-rating-fill` in `styles/components/rating.less` |
+| Primitive-local | Meaning specific to a reusable primitive, declared in its owning stylesheet | `--gf-rating-empty`, `--gf-rating-fill` in `styles/primitives/rating.less` |
 | Domain | Shared visual meaning within a domain, in that domain's existing Less owner | `--games-*`, `--nav-*`, `--updates-*` |
 
 Contributors MUST search existing tokens before adding one. Primitive-specific
@@ -150,14 +160,29 @@ should explain its business role and why the global meaning does not fit.
 See the [design-system guide](../docs/frontend/design-system.md) for current
 repository examples; it is not a second token-value source.
 
-## Shared primitives
+## Shared visual primitives and compound components
 
-The existing foundation includes `.gf-button`, `.gf-card`, `.gf-input`,
-`.gf-chip`, `.gf-modal`, `.gf-pagination` and `.gf-rating` in `styles/components/`.
+A reusable, domain-neutral visual building block MUST be treated as a primitive.
+It has stable appearance semantics, composes into larger UI, and SHOULD NOT
+depend on a page root or business token namespace. The six current owners in
+`styles/primitives/` are button, card, chip, input, pagination and rating, exposing
+`.gf-button`, `.gf-card`, `.gf-chip`, `.gf-input`, `.gf-pagination` and `.gf-rating`.
 Contributors MUST inspect and reuse the appropriate primitive and its variants
 before creating a new selector. New consumers MUST NOT redefine its core
 appearance through local overrides; extend the owning primitive deliberately
 when a reusable variant is needed.
+
+A product-level UI composition SHOULD remain in `styles/components/`, even when
+reused across routes. Navigation, footer and shell are compound owners, not
+primitives. Their product-local semantics such as `--gf-nav-*` and `--gf-footer-*`
+MAY stay with those owners; reuse alone does not promote them to global tokens.
+`modal.less` currently combines generic `.gf-modal` behavior and preferences UI.
+Contributors MUST continue to reuse it in place; P2.3 owns its eventual split.
+P2.2 MUST NOT move or partially split modal, nav, footer or shell styles.
+
+Moving a primitive MUST preserve its selectors, declarations, token values and
+variants. A structural move is not authorization to clean up typography,
+hover/focus behavior or other historical appearance.
 
 Appearance reuse belongs in a **CSS primitive**. Reused behavior plus
 accessibility (state, ARIA, keyboard navigation and focus management) belongs
@@ -202,6 +227,13 @@ maps Nav Web-relative POSIX paths to positive integer occurrence counts. Omitted
 file/rule pairs have budget **0**, including new files. Do not store line numbers.
 Contributors MUST NOT offset one file's increase with another file's decrease,
 inflate counts to pass checks, or evade measurement by moving/renaming debt.
+
+Moving a debt-bearing source file is a **policy migration**, not a mechanical
+rename: the old path becomes stale and the new path has budget zero. Future moves
+MUST explicitly migrate debt ownership under review as a policy change, proving
+no new debt is granted. Neither a rename nor `style:policy:update` transfers a
+budget automatically. P2.2's six selected files have no per-file style debt to
+transfer, so their move MUST leave the manifest and all six totals unchanged.
 
 An exception intentionally retains a specific pattern temporarily; baseline
 debt merely records historical noncompliance. Every exception MUST specify all
@@ -334,13 +366,18 @@ Match complete names in classes, selectors or class-bearing script literals,
 not substrings/comments. Include the guard's prohibited `:global(.dark…)` form
 in this family. Canonical `html.dark`/`:global(html.dark …)` is not legacy debt.
 
-### Approved raw-color declaration locations after P2.1
+### Current approved raw-color declaration locations
 
 The P0/P1 snapshot also approved `app/assets/css/main.css` at `:root` and
 `html.dark` for the `--gf-page-` prefix. P2.1 moved those declarations unchanged
 into `tokens.less` and removed that obsolete approval. The table below is the
 current policy; this ownership migration and removal of the approved dead
 `--gf-bg-grid-line` declarations leave all six debt budgets unchanged.
+
+P2.2 moved Rating's approved owner from
+`app/assets/styles/components/rating.less` to
+`app/assets/styles/primitives/rating.less`, retaining the exact selectors and
+`--gf-rating-` prefix. The old path is historical only and is no longer approved.
 
 Only declarations matching **all three** columns are excluded from
 `raw-visual-value`. Match the exact rule selector (normalize whitespace and comma
@@ -353,7 +390,7 @@ group and its corresponding all-dark group.
 | `app/assets/styles/tokens.less` | `:root`, `html.dark` | `--gf-` |
 | `app/assets/styles/components/nav.less` | `.gf-nav`, `html.dark .gf-nav` | `--gf-nav-` |
 | `app/assets/styles/components/footer.less` | `.gf-footer-shell`, `html.dark .gf-footer-shell` | `--gf-footer-` |
-| `app/assets/styles/components/rating.less` | `.gf-rating`, `html.dark .gf-rating` | `--gf-rating-` |
+| `app/assets/styles/primitives/rating.less` | `.gf-rating`, `html.dark .gf-rating` | `--gf-rating-` |
 | `app/assets/styles/pages/games.less` | `.games-page`, `html.dark .games-page` | `--games-` |
 | `app/assets/styles/pages/games-search.less` | `.games-search-page`, `html.dark .games-search-page` | `--games-search-` |
 | `app/assets/styles/pages/nav.less` | `.nav-home-page`, `html.dark .nav-home-page` | `--nav-home-` |
@@ -431,7 +468,7 @@ detectors and exact exceptions, then compares every rule/file budget:
 `npm run style:policy:update` can only lower budgets or remove zero entries. If
 any pair increased, it refuses every write. It preserves exceptions and refuses
 to overwrite a manifest changed during the scan. New files default to zero;
-moving debt never transfers its budget.
+moving debt never transfers its budget automatically.
 
 Class extraction works backward from template/DOM class sinks through bounded
 local constants, arrays/objects, refs/computed values and simple function returns.

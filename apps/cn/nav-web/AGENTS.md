@@ -13,8 +13,8 @@ SSR work also follows [the asset contract](../../../contracts/assets.md) and
 1. Use Tailwind for placement: flex/grid, alignment, responsive composition,
    outer spacing, width, position, overflow, visibility and text alignment/truncation.
 2. Before adding appearance, search `app/assets/styles/tokens.less`, the canonical
-   global token owner, for an existing semantic token and `app/assets/styles/components/` for an
-   existing shared primitive. Search the relevant domain styles under `pages/`.
+   global token owner, and `app/assets/styles/primitives/` for reusable appearance.
+   `styles/components/` owns compound product UI; search `pages/` for domain styles.
 3. Reuse `.gf-button`, `.gf-card`, `.gf-input`, `.gf-chip`, `.gf-modal`,
    `.gf-pagination` and `.gf-rating`; use their existing variants before adding one.
 4. Keep control height/padding, typography, colors, radius, shadow and hover/focus
@@ -30,6 +30,11 @@ literals into tokens just to pass policy or merge tokens because values match.
 Keep actual values in source, not docs. New page backgrounds use
 `--gf-page-background`; do not reuse legacy `--gf-bg-page` in new code.
 The [design-system guide](../../../docs/frontend/design-system.md) gives examples.
+
+Rating's tokens stay in `primitives/rating.less`. Modal/preferences, nav, footer
+and shell stay in `components/`; Modal's split belongs to P2.3. Preserve the
+`tokens → mixins → primitives → components → pages` import order. Do not create
+an empty `domains/` directory or use file moves to clean up appearance.
 
 Appearance reuse belongs in CSS primitives. Reused behavior and accessibility
 (keyboard, focus, ARIA and state) justify a Vue primitive. Evaluate promotion when
@@ -50,13 +55,15 @@ belong in semantic variables under the existing `html.dark` model, not new
 - [frontend-style-debt.json](frontend-style-debt.json) is state, not permission.
   Do not increase any rule/file budget; absent rule/file entries have budget **0**.
   Reduce the matching budget when removing debt. Do not transfer debt between files.
+- A debt-bearing file move requires an explicit reviewed policy migration:
+  renaming leaves a stale old budget and a zero-budget new path. Do not move it casually.
 - Exceptions need exact `path`, `rule`, `issue`, `reason`, and `remove_when`.
   A wildcard ignore or an old visual-guard allowlist is not a new style exception.
 - #108 Insights and #109 Site Detail are excluded from proactive P4–P6 migration,
   not debt-free areas. Measure their existing debt; new code follows the contract.
 - P0 only establishes governance and the one-time baseline. Do not change UI,
   production CSS/Less/Vue, dependencies, CI, scripts or style directories for P0.
-  Keep current `components/*.less` and regression harnesses until their own phases.
+  Keep existing source and regression harnesses until their own scoped phases.
 - P1 installs static checks, not UI/style migration. ESLint's official bulk
   suppressions hold historical engineering debt; never regenerate suppress-all
   to hide new findings. Use `npm run lint:prune` after removing lint debt.

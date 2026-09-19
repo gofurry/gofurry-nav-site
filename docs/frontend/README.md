@@ -13,10 +13,15 @@
 Contracts state requirements. Documentation explains usage. The debt manifest
 records historical noncompliance, not examples or permission for new code.
 
-P2.1 formalizes global token ownership and annotation without changing active
-visual values. Primitive boundary/directory work remains P2.2, preference/modal
-cleanup P2.3, testing guidance P3, and staged style migrations P4 onward.
-The existing source layout and regression harnesses remain in place.
+P2.1 formalized global token ownership and annotation. P2.2 separates six shared
+visual primitives from compound product styles, preserving their contents.
+Preference/modal cleanup remains P2.3, testing guidance P3, and staged style
+migrations P4 onward. Existing regression harnesses remain in place.
+
+The older [style-system document](../../apps/cn/nav-web/docs/style-system.md) and
+[roadmap](../../apps/cn/nav-web/docs/roadmap.md) are historical migration context.
+Their completion claims do not describe #124's current status;
+the contract, Agent entry and guide above are the current sources.
 
 P1 now enforces the contract through ESLint, Stylelint and `style:policy` in the
 existing Nav Web CI job. The [Agent entry](../../apps/cn/nav-web/AGENTS.md) lists

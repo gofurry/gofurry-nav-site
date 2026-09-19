@@ -6,7 +6,7 @@ const tokenLocations = [
   ['app/assets/styles/tokens.less', [':root', 'html.dark'], '--gf-'],
   ['app/assets/styles/components/nav.less', ['.gf-nav', 'html.dark .gf-nav'], '--gf-nav-'],
   ['app/assets/styles/components/footer.less', ['.gf-footer-shell', 'html.dark .gf-footer-shell'], '--gf-footer-'],
-  ['app/assets/styles/components/rating.less', ['.gf-rating', 'html.dark .gf-rating'], '--gf-rating-'],
+  ['app/assets/styles/primitives/rating.less', ['.gf-rating', 'html.dark .gf-rating'], '--gf-rating-'],
   ['app/assets/styles/pages/games.less', ['.games-page', 'html.dark .games-page'], '--games-'],
   ['app/assets/styles/pages/games-search.less', ['.games-search-page', 'html.dark .games-search-page'], '--games-search-'],
   ['app/assets/styles/pages/nav.less', ['.nav-home-page', 'html.dark .nav-home-page'], '--nav-home-'],
