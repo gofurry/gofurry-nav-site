@@ -92,16 +92,26 @@ npm run typecheck
 npm run insights:semantics
 npm run seo:recovery:test
 npm run build
+npx playwright install chromium
+npm run test:browser:smoke
+npm run test:browser:regression
+npm run test:browser
 ```
 
 Choose the lowest-cost faithful environment: pure logic goes in `tests/unit`
 (`test:unit`); real Nuxt runtime goes in `tests/nuxt` (`test:nuxt`). Reset cookies
 and Nuxt state per case; mock business injections, never the Nuxt runtime itself.
 See [testing guidance](../../../docs/frontend/testing.md) for migration coverage
-and isolation. Browser behavior stays in existing smoke scripts until P3.2.
+and isolation. Migrated browser SSR/hydration/interaction regressions belong in
+`tests/browser`; build production Nitro before running them. P3.2.1 migrates only
+Game Detail to Playwright Test. Hero/Resource/Insights and other legacy smokes stay
+until their own migration. Chromium is the browser gate; retries are zero and CI
+uses one worker. Domain fixtures own servers and reset state per case; Playwright
+owns contexts/pages. Failure artifacts are diagnostics, not visual baselines.
 Style-policy keeps its separate Node built-in runner; Insights/SEO remain
 Contract Guards. Check `package.json` for relevant focused commands. CI runs
-Unit and Nuxt tests as independent steps alongside the existing guards.
+Unit and Nuxt tests as independent steps alongside the existing guards, followed
+by Build, Chromium installation and Browser tests.
 Review the complete diff for accidental production Vue/style changes before commit.
 
 [Frontend documentation](../../../docs/frontend/README.md) routes to the contract,

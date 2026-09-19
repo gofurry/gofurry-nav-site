@@ -202,6 +202,23 @@ jobs:
       - name: Build
         working-directory: apps/cn/nav-web
         run: npm run build
+      - name: Install Playwright Chromium
+        working-directory: apps/cn/nav-web
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        id: browser-tests
+        working-directory: apps/cn/nav-web
+        run: npm run test:browser
+      - name: Browser failure artifacts
+        if: ${{ failure() && steps.browser-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: nav-web-browser-failure
+          path: |
+            apps/cn/nav-web/playwright-report/
+            apps/cn/nav-web/test-results/
+          retention-days: 7
+          if-no-files-found: warn
 
   repository-policy:
     needs: detect-changes

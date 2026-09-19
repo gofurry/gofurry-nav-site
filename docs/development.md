@@ -78,7 +78,7 @@ The shared database state and operator boundaries are documented in [Development
 
 Game Backend may opt into `server.development_home_cache_seconds` in its explicit local YAML (for example `10`, maximum `30`). It defaults to `0` (disabled) and a nonzero value is rejected outside `debug` mode. The two CN homepage language snapshots are held briefly in process to avoid repeatedly transferring the large Redis payload over Tailscale. Other processes' cache updates can take up to that interval to appear locally. Expired entries never mask a failed Redis read, and the existing Redis keys, scheduled refreshes, and production cache behavior stay the same. Restart the local Game Backend after changing this setting.
 
-After a Nav Web production build, `npm run game:detail:smoke` uses isolated fixture APIs to verify full homepage/detail SSR, title/description/canonical/hreflang, empty historical data, tab switching, and authoritative 404/503 responses. No live database or collector is required.
+After a Nav Web production build and `npx playwright install chromium`, `npm run test:browser` runs Game Detail Smoke/Regression against isolated fixture APIs. It verifies homepage/detail SSR, title/description/canonical/hreflang, hydration, empty historical data, tab switching, responsive gallery/NSFW behavior, and authoritative 404/503 responses. No live database or collector is required. See [frontend testing](frontend/testing.md).
 
 ## Normal validation
 

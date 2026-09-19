@@ -442,8 +442,8 @@ for newly added files or script-generated styles.
 | Pure TS/domain/utility logic | Vitest `unit` project, Node environment, `tests/unit/*.test.ts` |
 | Nuxt runtime/composables | Vitest `nuxt` project with `@nuxt/test-utils`, happy-dom, `tests/nuxt/*.nuxt.test.ts` |
 | Repository/source/config/semantic contracts | Existing Node Insights/SEO Contract Guards, outside Vitest |
-| Browser behavior, SSR, hydration and historical regressions | Current Playwright scripts; Playwright Test migration in P3.2 |
-| Screenshot baseline comparison | Planned Playwright Visual, P3; current screenshots alone are not a visual regression gate |
+| Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`; P3.2.1 migrates Game Detail only; other domains retain legacy scripts |
+| Screenshot baseline comparison | Planned Playwright Visual, P3.3; failure screenshots and existing captures are not visual baselines |
 | Performance budget | Existing `perf:guard`, separate from visual correctness |
 | Real external services | Explicit development acceptance, not a default PR gate |
 
@@ -474,6 +474,18 @@ production behavior merely to accommodate tests. The first four legacy suites
 are replaced, not duplicated; [testing guidance](../docs/frontend/testing.md)
 records their assertion ownership. Style-policy's Node runner, Contract Guards,
 browser smoke, `visual:guard` and external acceptance retain independent scope.
+
+P3.2.1 establishes a Chromium-only Playwright Test gate against the production
+Nitro build, never `nuxt dev`. CI MUST build successfully before installing
+Chromium and running `test:browser`; retries are zero and CI has one worker.
+Domain fixtures own worker-scoped production servers, close them at teardown,
+and reset mutable state for every case. Playwright owns per-test browser contexts
+and pages; do not introduce a global `webServer` or order-dependent serial suites.
+Capture/assert browser exceptions and hydration errors explicitly. Retain traces
+and screenshots only on failure, with video off; CI uploads failure diagnostics.
+Only Game Detail has migrated. Hero/Resource/Insights and other legacy browser
+suites keep their existing runners until scoped migration. `npm test` remains
+Vitest-only; visual baselines belong to P3.3.
 
 P0 MUST NOT change production Vue, CSS/Less, runtime behavior, package/lockfiles,
 CI, dependency versions or style directories, and MUST NOT implement #108/#109.

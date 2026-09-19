@@ -12,14 +12,16 @@ the commands below run from `apps/cn/nav-web`.
 | Nuxt composables and runtime | `tests/nuxt/*.nuxt.test.ts`, `npm run test:nuxt` | Vitest `nuxt` project, real Nuxt app/context through `@nuxt/test-utils`, happy-dom |
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
-| Legacy Browser Smoke | Existing `*:smoke` scripts, after `npm run build` | Real browser/production SSR, hydration, interactions and resource loading; runner migration remains P3.2 |
+| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail is the only migrated domain in P3.2.1 |
+| Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Hero/Resource/Insights and other domains retain existing runners until their own migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
 
 `npm test` runs both Vitest projects once. `vitest.config.ts` uses `projects`, not
 the deprecated workspace model. Nuxt configuration is loaded by the test-utils
 project; the test module is **not** added to production `nuxt.config.ts`.
-Dependencies are pinned in package/lockfiles. No coverage provider, Testing Library
-or Playwright Test runner is introduced. Existing `playwright` remains for smoke.
+Dependencies are pinned in package/lockfiles. No coverage provider or Testing
+Library is introduced. Playwright Test and the retained direct `playwright` use
+matching 1.60.x versions; legacy smoke/performance still import `playwright`.
 Nuxt cases have a 30-second budget for the first mount's cold app/router transform;
 unit cases retain Vitest's default timeout. Nuxt's generated `.nuxtrc` module setup
 marker is local and ignored, like `.nuxt/`.
@@ -70,9 +72,56 @@ after each case. Pure probes use injected measurements/fetch responses, never
 real CDN or backend endpoints.
 
 happy-dom does not prove browser rendering, SSR/hydration or actual image loading.
-Keep `assets:routing-smoke`, `game:tags:smoke`, `game:detail:smoke` and the other
-existing smoke commands until P3.2. Current screenshots and `visual:guard` remain;
-this phase does not introduce visual baselines or external acceptance runs.
+Keep `assets:routing-smoke`, `game:tags:smoke` and other non-migrated smoke commands.
+Current screenshots and `visual:guard` remain; this phase does not introduce
+visual baselines or external acceptance runs.
+
+## Game Detail browser gate (P3.2.1)
+
+```sh
+npm run build
+npx playwright install chromium
+npm run test:browser:smoke
+npm run test:browser:regression
+npm run test:browser
+```
+
+`npm test` remains Vitest-only. Browser commands use `playwright.config.ts`:
+Chromium only, zero retries, one worker in CI, normal isolated contexts/pages.
+There is no global `webServer`: `tests/browser/fixtures/game-detail.ts` starts
+one production Nitro app and loopback API per worker via the unchanged
+`scripts/fixtures/insights-app.mjs`. `app.close()` runs in worker teardown.
+The automatic per-test fixture resets `legacyNull=true`, `failure=false`,
+`gallery=false`, `adult=false` and clears recorded requests before/after use.
+Its `baseURL` also serves Playwright's request fixture. Specs configure scenarios
+through that state; they never launch/close browsers or create contexts themselves.
+The page fixture fulfills only the known managed/Steam background probe endpoints
+with local binary/SVG fixtures, keeping real plugins active without external CDN
+availability affecting this domain gate.
+`browser-errors.ts` explicitly captures page exceptions, hydration mismatch
+messages and console errors for assertions in each browser scenario.
+
+The former `scripts/game-detail-smoke.mjs` and unused `game:detail:smoke` alias
+are retired after this coverage split:
+
+| Former assertion | Current owner |
+| --- | --- |
+| `/games`, `/en/games`, `/games/82`, `/en/games/82`: HTTP 200, title/description, unique canonical/path, en-US alternate, no noindex, SSR heading/intro/home content | `smoke/game-detail.spec.ts`: four SSR cases |
+| Nuxt hydration, core tabs, missing players/prices, rendering errors | Smoke core navigation case |
+| `regional_prices.regions` null versus empty array, missing != zero, repeated tabs/labels | `regression/game-detail.spec.ts`: two data cases |
+| All major tabs keep main width, viewport containment, desktop 75/25 and sidebar bounds | Regression at 390/768/1440/1920, ordinary/adult content |
+| Gallery/media stay inside parent, thumbnails scroll locally with overflow auto, last ordinary thumbnail activates final image | Same eight layout cases |
+| NSFW modal contained, Cancel closes without unlocking | Four regression cases: 390/1440 × light/dark |
+| Unknown/nonnumeric IDs return 404, upstream failure returns 503 in both locales | Five regression status cases |
+
+The API uses the same no-Facts and 24-image fixtures as the legacy script. This
+guards browser behavior, not pixel equality. Do not port success screenshots,
+`modal-computed.json` or add `toHaveScreenshot()`; visual baselines belong to P3.3.
+Playwright retains trace/screenshot only on failure (video off), writes HTML to
+`playwright-report/` and diagnostics to `test-results/`, both ignored. Fixture
+server logs are attached to failing cases. CI uploads both directories only on
+Browser tests failure. Hero/Preferences/Resource Routing/Insights legacy runners
+and the shared fixture/performance helpers are unchanged by this migration.
 
 ## Verification
 
@@ -83,12 +132,15 @@ previous dev server or build having generated `.nuxt/tsconfig.json`.
 Run `npm ci`, `npm run lint`, `npm run stylelint`, `npm run style:policy:test`,
 `npm run style:policy`, `npm run test:unit`, `npm run test:nuxt`, `npm test`,
 `npm run typecheck`, `npm run insights:semantics`, `npm run seo:recovery:test`,
-and `npm run build`.
+and `npm run build`, then the Chromium installation and three browser commands
+above. On Linux CI use `npx playwright install --with-deps chromium`.
 
 The existing Nav Web CI job has separate **Unit tests** and **Nuxt tests** steps
-before typecheck/contract guards/build. A successful local run of the same
-commands is local evidence, not proof of a remote Actions run. Verify remote
-results after an authorized push.
+before typecheck/contract guards/build. After Build succeeds it installs Chromium
+and runs **Browser tests** (`npm run test:browser`). A successful local run of the
+same commands is local evidence, not proof of a remote Actions run. Verify both
+browser steps after an authorized push; when instructed not to push, report that
+remote gate acceptance remains unverified.
 
 No manual UI review is required for a test-only change with unchanged production
 Vue/styles/runtime and unchanged browser smoke behavior, once the migrated tests
