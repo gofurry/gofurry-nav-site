@@ -43,3 +43,5 @@ All six Go binaries use Cobra with an explicit `serve --config <file>` foregroun
 Hard rules: Goose is the only schema owner; sqlc is the normal SQL contract; production PostgreSQL uses pgx/v5 + pgxpool; generated sqlc code is committed and never hand-edited. Do not add an ORM, generic repository/UnitOfWork/query builder, startup migrations, arbitrary Viper `AutomaticEnv`, cross-platform service framework, Redis key changes, collector scheduling changes, forced Nav V1 removal, or modernization of `legacy`, `experimental`, or `third-party`. No active production application, build target, CI job, vulnerability scan, deployment tool, or dependency may depend on `legacy/**` or `experimental/**`.
 
 Admin frontend work follows `contracts/admin-frontend.md`. React business UI checks capabilities returned by the backend and never reconstructs the Role-to-Capability policy. Its production build is embedded into the Go binary; do not introduce a runtime Node/Vite frontend service.
+
+Nav Web frontend work also follows `apps/cn/nav-web/AGENTS.md` and `contracts/nav-web-frontend.md`.
