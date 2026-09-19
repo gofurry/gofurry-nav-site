@@ -99,6 +99,43 @@ html.dark .games-page { --games-bg: #000; }
   assert.deepEqual(values(detectCssFacts(outsideFile), 'raw-visual-value'), ['#fff']);
 });
 
+test('global and page tokens share the canonical tokens.less root and dark owner', () => {
+  const facts = extractCssFacts(`:root {
+  --gf-surface: rgba(1, 2, 3, .5);
+  --gf-page-background: #123456;
+  --gf-page-pattern-color: #ABCDEF;
+}
+html.dark {
+  --gf-surface: rgba(4, 5, 6, .5);
+  --gf-page-background: #654321;
+  --gf-page-pattern-color: #FEDCBA;
+}`, { file: 'app/assets/styles/tokens.less', less: true });
+  assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), []);
+});
+
+test('main.css root and dark page-token declarations are no longer approved owners', () => {
+  const facts = extractCssFacts(`:root {
+  --gf-page-background: #123456;
+  --gf-page-pattern-color: #ABCDEF;
+}
+html.dark {
+  --gf-page-background: #654321;
+  --gf-page-pattern-color: #FEDCBA;
+}`, { file: 'app/assets/css/main.css' });
+  assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#123456', '#ABCDEF', '#654321', '#FEDCBA']);
+});
+
+test('tokens.less approval does not cover ordinary properties, wrong prefixes or other selectors', () => {
+  const facts = extractCssFacts(`:root { background: #111; --other-surface: #222; }
+html.dark { color: #333; --other-surface: #444; }
+.card { --gf-surface: #555; }
+html.dark .card { --gf-page-background: #666; }
+.parent { :root { --gf-surface: #777; } html.dark { --gf-page-background: #888; } }`, {
+    file: 'app/assets/styles/tokens.less', less: true,
+  });
+  assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#111', '#222', '#333', '#444', '#555', '#666', '#777', '#888']);
+});
+
 test('approved lottery group normalizes whitespace but does not approve individual roots', () => {
   const facts = extractCssFacts(`.lottery-page,\n .lottery-activation-page , .lottery-modal { --lottery-bg: #fff; }
 html.dark .lottery-page, html.dark .lottery-activation-page, html.dark .lottery-modal { --lottery-bg: #000; }

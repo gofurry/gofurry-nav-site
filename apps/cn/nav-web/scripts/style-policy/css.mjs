@@ -4,7 +4,6 @@ import lessSyntax from 'postcss-less';
 // These are precise declaration locations, not file-level style exemptions.
 const tokenLocations = [
   ['app/assets/styles/tokens.less', [':root', 'html.dark'], '--gf-'],
-  ['app/assets/css/main.css', [':root', 'html.dark'], '--gf-page-'],
   ['app/assets/styles/components/nav.less', ['.gf-nav', 'html.dark .gf-nav'], '--gf-nav-'],
   ['app/assets/styles/components/footer.less', ['.gf-footer-shell', 'html.dark .gf-footer-shell'], '--gf-footer-'],
   ['app/assets/styles/components/rating.less', ['.gf-rating', 'html.dark .gf-rating'], '--gf-rating-'],

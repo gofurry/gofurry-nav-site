@@ -12,18 +12,24 @@ SSR work also follows [the asset contract](../../../contracts/assets.md) and
 
 1. Use Tailwind for placement: flex/grid, alignment, responsive composition,
    outer spacing, width, position, overflow, visibility and text alignment/truncation.
-2. Before adding appearance, search `app/assets/styles/tokens.less` for an
-   existing `--gf-*` semantic token and `app/assets/styles/components/` for an
+2. Before adding appearance, search `app/assets/styles/tokens.less`, the canonical
+   global token owner, for an existing semantic token and `app/assets/styles/components/` for an
    existing shared primitive. Search the relevant domain styles under `pages/`.
 3. Reuse `.gf-button`, `.gf-card`, `.gf-input`, `.gf-chip`, `.gf-modal`,
    `.gf-pagination` and `.gf-rating`; use their existing variants before adding one.
 4. Keep control height/padding, typography, colors, radius, shadow and hover/focus
    in the owning primitive/Less layer, not a new bundle of Tailwind visual classes.
-5. Domain tokens should alias global tokens. Add an independent value only for
-   a documented domain meaning. Component tokens are for local geometry/behavior,
-   not a second color/theme system.
+5. Primitive-local tokens stay with their primitive; domain tokens should alias
+   global meaning by default. Independent domain values need a documented role.
+   Component-private geometry may stay scoped; it is not a second theme system.
 6. Token comments explain semantics, scope and ownership. Use group comments;
    add an individual rationale for exceptional tokens, not comments naming colors.
+
+New global tokens need a real consumer and stable semantic meaning; do not move
+literals into tokens just to pass policy or merge tokens because values match.
+Keep actual values in source, not docs. New page backgrounds use
+`--gf-page-background`; do not reuse legacy `--gf-bg-page` in new code.
+The [design-system guide](../../../docs/frontend/design-system.md) gives examples.
 
 Appearance reuse belongs in CSS primitives. Reused behavior and accessibility
 (keyboard, focus, ARIA and state) justify a Vue primitive. Evaluate promotion when

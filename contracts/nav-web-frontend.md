@@ -5,8 +5,9 @@
 This contract governs `apps/cn/nav-web` under
 [#124](https://github.com/gofurry/gofurry-nav-site/issues/124#issuecomment-5740012423).
 MUST/MUST NOT are requirements; SHOULD permits a reasoned, documented departure;
-MAY denotes an allowed choice. The P0 implementation specification narrows the
-parent programme to governance and a one-time debt baseline.
+MAY denotes an allowed choice. P0 established governance and a one-time debt
+baseline; P1 added static enforcement. P2.1 formalizes token ownership and
+annotation without changing active visual values.
 
 For frontend decisions, resolve evidence in this order:
 
@@ -65,10 +66,11 @@ create a local scale. Text alignment/truncation remains structural.
 `app/assets/styles/index.less`. Contributors MUST retain this working structure
 until a separately scoped migration:
 
-- `main.css`: Tailwind bootstrap, reset, base elements/scrollbars and existing
-  page-background base variables. This is not an alternate business-style layer.
+- `main.css`: Tailwind bootstrap, reset, base elements/scrollbars and generic
+  helpers. It MUST NOT own global GoFurry theme/design-token declarations.
 - `styles/index.less`: style composition/import root.
-- `styles/tokens.less`: global semantic token declarations.
+- `styles/tokens.less`: canonical owner of global semantic token declarations,
+  including the layout-owned `--gf-page-background` and `--gf-page-pattern*` group.
 - `styles/mixins.less`: reusable Less behavior built on tokens.
 - `styles/components/*.less`: current shared visual primitives.
 - `styles/pages/*.less` and existing subdirectories: current page/domain styles.
@@ -78,30 +80,63 @@ The parent plan's `primitives/`, `domains/` and `tests/` layout is a future targ
 not an instruction to create/move directories in P0. Existing raw values and
 domain theme islands remain historical debt. Do not copy them into new code.
 
-## Token hierarchy and annotation
+## Token ownership, naming and lifecycle
 
 | Level | Meaning and ownership | Examples |
 | --- | --- | --- |
-| Global | Reusable product semantics in `styles/tokens.less`, independent of a business page | `--gf-surface`, `--gf-surface-strong`, `--gf-surface-hover`, `--gf-text-main`, `--gf-text-muted`, `--gf-border`, `--gf-accent`, `--gf-danger`, `--gf-radius-*`, `--gf-shadow-*`, `--gf-motion-*` |
+| Global/Foundation | Reusable product/theme semantics in `styles/tokens.less`, shared across domains and primitives | `--gf-page-background`, `--gf-surface`, `--gf-text-main`, `--gf-border`, `--gf-accent`, `--gf-focus-ring` |
+| Primitive-local | Meaning specific to a reusable primitive, declared in its owning stylesheet | `--gf-rating-empty`, `--gf-rating-fill` in `styles/components/rating.less` |
 | Domain | Shared visual meaning within a domain, in that domain's existing Less owner | `--games-*`, `--nav-*`, `--updates-*` |
-| Component | Local geometry or behavior, not a second theme | Proposed examples: cover ratio or title line count |
 
-Contributors MUST search existing tokens before adding one. Domain tokens SHOULD
+Contributors MUST search existing tokens before adding one. Primitive-specific
+meaning SHOULD stay with its primitive rather than being promoted merely because
+the primitive is reusable. Domain tokens SHOULD
 alias global semantics by default, for example `--games-border: var(--gf-border)`.
 An independent domain value requires a genuine business meaning and a documented
 rationale, such as discount emphasis differing from ordinary interaction accent.
-Component-local tokens MUST NOT create a separate color, shadow, radius or
-typography theme. A token name alone does not make an arbitrary value semantic.
+Component-private geometry, such as cover ratio or title line count, MAY remain
+scoped. It is not another theme-token level and MUST NOT create a separate color,
+shadow, radius or typography system.
 
-Future feedback, typography, spacing, control-height, layer and container tokens
-MAY be added when actual reuse justifies them. Examples in the parent plan are
-not a claim that names such as `--gf-success` or `--gf-warning` exist today.
+Token identity MUST follow semantic role, not current literal equality.
+`--gf-accent` and `--gf-accent-fill`, or `--gf-surface` and `--gf-input-bg`, MUST
+remain distinct: emphasis, action fill, general surface and form surface have
+different roles, including different dark-theme behavior. Contributors MUST NOT
+deduplicate tokens solely because their current values match.
+
+New global names MUST follow `--gf-<semantic-role>[-<variant-or-state>]`, such as
+`--gf-surface-hover` or `--gf-accent-fill-hover`. New literal/color/property-first
+names such as `--gf-orange-500`, `--gf-bg-foo` or `--gf-color-bar` require an
+explicit compatibility rationale. This is not a mandate to rename active tokens.
+
+A new token MUST have a real consumer and stable semantic meaning. Moving a
+literal into a token only to satisfy `style:policy` does not meet that requirement.
+Contributors SHOULD remove confirmed unused tokens unless an explicit external
+compatibility contract requires retention. P2.1 removed unused `--gf-bg-grid-line`;
+do not retain dead tokens for hypothetical future use.
+
+`--gf-bg-page` remains the legacy static-page fallback with its existing consumer
+and value. New layout-owned backgrounds MUST use `--gf-page-background`;
+contributors MUST NOT use `--gf-bg-page` in new code. Remove that fallback with
+the later static-page migration, not by changing its consumer in P2.1.
+
+P2.1 MUST NOT prebuild typography, spacing, control-height, z-index or container
+scales. Later promotion requires repeated real needs and a scoped migration.
+Examples in the parent plan do not imply that `--gf-success` or `--gf-warning`
+exist today. Actual values belong in their source owner, not duplicated in docs.
+
+### Annotation and theme semantics
 
 New/changed token groups MUST have concise comments explaining semantic meaning,
 scope, why they exist and why they belong at that level. Exceptional tokens MUST
 also explain the specific exception. Group comments SHOULD carry shared context;
 individual comments are for exceptions, not a description of every CSS literal.
-P0 records this requirement without rewriting existing token declarations.
+Global values stay in the single `tokens.less` owner. Its root groups are ordered
+Page & Canvas, Surface, Border, Text, Accent & Action, Form Controls, Modal &
+Overlay, Feedback, Focus, Elevation & Blur, Shape, Motion, Legacy Compatibility.
+`html.dark` MUST preserve those meanings and the relative group order; omitted
+tokens intentionally inherit root values. Short dark-section labels suffice;
+do not repeat the root explanations or invent groups for symmetry.
 
 ```less
 /* Surface: shared content and interaction surfaces across domains.
@@ -112,6 +147,8 @@ P0 records this requirement without rewriting existing token declarations.
 
 A comment merely saying "red" is not a rationale. A domain exception comment
 should explain its business role and why the global meaning does not fit.
+See the [design-system guide](../docs/frontend/design-system.md) for current
+repository examples; it is not a second token-value source.
 
 ## Shared primitives
 
@@ -148,7 +185,8 @@ Raw colors (`#hex`, `rgb()`, `rgba()`), literal shadows/radii and visual duratio
 SHOULD live in approved token declarations, not ordinary component/page
 selectors, inline styles or script-generated appearance. The same ownership
 applies to typography scales. Approved locations are global declarations,
-justified domain declarations, and precise documented exceptions. The narrow
+primitive-local declarations, justified domain declarations, and precise
+documented exceptions. The narrow
 P0 color count below does not authorize uncatalogued raw typography or geometry
 used as control appearance.
 
@@ -296,7 +334,13 @@ Match complete names in classes, selectors or class-bearing script literals,
 not substrings/comments. Include the guard's prohibited `:global(.dark…)` form
 in this family. Canonical `html.dark`/`:global(html.dark …)` is not legacy debt.
 
-### Approved existing raw-color declaration locations
+### Approved raw-color declaration locations after P2.1
+
+The P0/P1 snapshot also approved `app/assets/css/main.css` at `:root` and
+`html.dark` for the `--gf-page-` prefix. P2.1 moved those declarations unchanged
+into `tokens.less` and removed that obsolete approval. The table below is the
+current policy; this ownership migration and removal of the approved dead
+`--gf-bg-grid-line` declarations leave all six debt budgets unchanged.
 
 Only declarations matching **all three** columns are excluded from
 `raw-visual-value`. Match the exact rule selector (normalize whitespace and comma
@@ -307,7 +351,6 @@ group and its corresponding all-dark group.
 | File | Exact declaration selector(s) | Custom-property prefix |
 | --- | --- | --- |
 | `app/assets/styles/tokens.less` | `:root`, `html.dark` | `--gf-` |
-| `app/assets/css/main.css` | `:root`, `html.dark` | `--gf-page-` |
 | `app/assets/styles/components/nav.less` | `.gf-nav`, `html.dark .gf-nav` | `--gf-nav-` |
 | `app/assets/styles/components/footer.less` | `.gf-footer-shell`, `html.dark .gf-footer-shell` | `--gf-footer-` |
 | `app/assets/styles/components/rating.less` | `.gf-rating`, `html.dark .gf-rating` | `--gf-rating-` |
@@ -321,8 +364,8 @@ group and its corresponding all-dark group.
 | `app/assets/styles/pages/insights/foundation.less` | `.insights-page` | `--insights-` |
 
 This recognizes existing declaration locations only. It does not approve all
-current token hierarchy, aliasing or annotation, nor establish a fourth token
-level; consolidation belongs to P2. `foundation.less` currently has structural
+current token hierarchy, aliasing or annotation, nor establish another token
+level; further consolidation belongs to later phases. `foundation.less` has structural
 values/aliases and excludes no raw colors. Ordinary selectors in every listed
 file remain measured. Game-detail-specific text overrides, datepicker `--dp-*`
 overrides, `ErrorExperience.vue`'s local theme and `SiteDetailPage.vue`'s local

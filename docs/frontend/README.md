@@ -3,6 +3,8 @@
 - [Contract](../../contracts/nav-web-frontend.md): normative Nav Web rules,
   ownership boundaries and the P0 audit counting definitions.
 - [Agent entry](../../apps/cn/nav-web/AGENTS.md): short operational guidance.
+- [Design system](design-system.md): token ownership, naming and usage examples;
+  actual values remain in the source owners.
 - [Style debt manifest](../../apps/cn/nav-web/frontend-style-debt.json): current
   implementation debt by rule/file; it never overrides the contract.
 - [#124 phase plan](https://github.com/gofurry/gofurry-nav-site/issues/124#issuecomment-5740012423):
@@ -11,9 +13,10 @@
 Contracts state requirements. Documentation explains usage. The debt manifest
 records historical noncompliance, not examples or permission for new code.
 
-Design Foundation guidance arrives in P2, testing guidance in P3, and migration
-guidance grows from P4 onward. These are planned work, not tools/directories that
-P0 installs. The existing source and regression harnesses remain in place.
+P2.1 formalizes global token ownership and annotation without changing active
+visual values. Primitive boundary/directory work remains P2.2, preference/modal
+cleanup P2.3, testing guidance P3, and staged style migrations P4 onward.
+The existing source layout and regression harnesses remain in place.
 
 P1 now enforces the contract through ESLint, Stylelint and `style:policy` in the
 existing Nav Web CI job. The [Agent entry](../../apps/cn/nav-web/AGENTS.md) lists
