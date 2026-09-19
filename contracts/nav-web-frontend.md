@@ -534,7 +534,7 @@ assertion, not approval or an image fingerprint. Unpinned `test:visual` runs are
 diagnostic only. Unexpected differences require investigation and implementation
 fixes followed by comparison, not automatic acceptance.
 
-Future baselines MUST live in tracked `tests/browser/visual/__snapshots__/`,
+Baselines MUST live in tracked `tests/browser/visual/__snapshots__/`,
 using deterministic test-file and explicit snapshot-name paths. No global
 `maxDiffPixels` / `maxDiffPixelRatio` or broad threshold widening is allowed;
 any future tolerance needs a small, local, justified exception. Playwright
@@ -543,6 +543,18 @@ as one atomic upgrade unit. P3.3.1 MUST create no golden PNG, screenshot asserti
 production test route or UI fixture. The sentinel launches real Chromium and
 checks the environment without taking a screenshot; real visual contracts start
 in P3.3.2. Keep `visual:guard` and direct `playwright` until their scoped retirement.
+
+P3.3.2's `ui-foundation.spec.ts` owns stable shared primitive appearance through
+exactly four locator baselines (light/dark × desktop/mobile). Its test-only
+markup MUST consume production Nitro CSS loaded from `/about`, preserve the
+production head and exclude product JavaScript. Fixture CSS MAY own structure;
+it MUST NOT redefine control appearance. Only the canvas MAY set background/text
+using production page/text tokens. Generic Modal MUST remain outside the isolated
+Preferences Toggle token scope. Verify tokens, scope, fonts, focus and overflow
+before capture; do not mask instability or widen tolerances. Approved baseline
+creation MUST pass two consecutive pinned comparisons and receive maintainer
+review of all four images. Real Preferences/backdrop composition belongs to
+P3.3.3 and business surfaces to P4+, not this Foundation fixture.
 
 ### P1 enforcement and maintenance
 

@@ -13,7 +13,7 @@ the commands below run from `apps/cn/nav-web`.
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
 | Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail, Resource Routing/Managed/Steam and Hero/Preferences are migrated |
-| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned pixel-comparison owner; P3.3.1 only checks the environment and creates no golden baselines |
+| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned environment sentinel and four Shared Primitive Foundation locator baselines; real product composition remains separate |
 | Legacy visual/report guard | `npm run visual:guard` | Broad page/selector/theme/overflow reports and historical checks; retained independently of Visual and `style:policy` |
 | Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Insights and unrelated domains retain their runners until scoped migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
@@ -260,7 +260,8 @@ The environment sentinel uses a real Chromium page to check browser type,
 viewport, DPR, language, timezone, reduced motion and light theme; CI/pinned runs
 also check Linux and Node 24. It takes no screenshot and needs no server or
 production test route. **P3.3.1 has zero golden snapshots and no screenshot
-assertions.** UI Foundation and Preferences baselines belong to later phases.
+assertions.** P3.3.2 adds the Foundation contract below; real Preferences
+composition belongs to P3.3.3.
 Direct `playwright` and `scripts/perf/visual-guard.mjs` / `visual:guard` remain active.
 Static architecture/debt remains `style:policy`'s responsibility.
 
@@ -268,7 +269,7 @@ Static architecture/debt remains `style:policy`'s responsibility.
 
 Local `npm run test:visual` is diagnostic only outside the pinned environment.
 Comparisons use `updateSnapshots: 'none'`, so missing baselines also fail instead
-of being created. Future snapshots belong in tracked
+of being created. Snapshots belong in tracked
 `tests/browser/visual/__snapshots__/{testFilePath}/{explicit-name}.png`; do not
 ignore this source directory. No global pixel tolerance is configured. Future
 tolerances must be small, local and justified for an individual snapshot.
@@ -300,7 +301,7 @@ docker run --rm --init --ipc=host --platform linux/amd64 \
   sh -lc 'npm ci && npm run build && npm run test:visual'
 ```
 
-Only for an explicitly approved future baseline change, use the same command
+Only for an explicitly approved baseline change, use the same command
 with its last line replaced by:
 
 ```sh
@@ -309,6 +310,45 @@ with its last line replaced by:
 
 Review the resulting snapshot diff before committing. P3.3.1 does not run this
 update flow or create a `__snapshots__/` directory.
+
+### Shared Primitive Foundation (P3.3.2)
+
+`visual/fixtures/ui-foundation.ts` reuses `startInsightsFixtureApp` with a
+worker-owned production Nitro/local upstream. `/about` supplies the real built
+stylesheets; the fixture preserves its head and replaces only the body. A
+test-only response CSP (`script-src 'none'`) blocks all product scripts, including
+inline bootstraps, so hydration/plugins cannot affect the result. Playwright 1.60
+with `javaScriptEnabled: false` also blocks style-load callbacks and animation
+frames; CSP permits test evaluation and the required two-frame wait without
+running the app. External requests are blocked and fail the fixture sanity check.
+
+Fixture CSS owns grid/flex/spacing geometry only. Its sole canvas exception uses
+`--gf-page-background` / `--gf-text-main`; controls consume production CSS/tokens.
+Button, Card, Input, Chip, Pagination, Rating and Generic Modal are generic;
+Preferences Toggle alone receives a local `.gf-preferences-modal` token scope.
+Rating mirrors production's empty/fill DOM, including the partial fifth star.
+Token availability, scope isolation, focused input and overflow are asserted.
+Fonts and two animation frames settle before locator capture; other controls
+remain idle. There are no masks, custom fonts or screenshot tolerance overrides.
+
+`ui-foundation.spec.ts` owns exactly these four tracked images under
+`tests/browser/visual/__snapshots__/ui-foundation.spec.ts/`:
+
+- `foundation-light-desktop.png` and `foundation-dark-desktop.png`: 1440×900.
+- `foundation-light-mobile.png` and `foundation-dark-mobile.png`: 390×844.
+
+Dark uses production `html.dark`, while browser color scheme stays light. The
+Visual gate now has five cases: one environment sentinel plus four Foundation
+cases. The 63 functional Browser cases retain their existing ownership.
+Real Preferences/backdrop composition belongs to P3.3.3; business surfaces to
+P4+. Do not turn Foundation into a page gallery.
+
+Initial baseline creation is an approved visual-contract action. Use the pinned
+container/update guard above, then run `npm run test:visual` **twice consecutively**
+without updating. Both comparisons must pass. Investigate any difference rather
+than regenerating it away. Maintainers must review all four PNGs for correct
+primitive states, independent Generic Modal/Toggle scope and mobile fit before
+accepting the visual contract; no full-site walkthrough is required.
 
 ## Verification
 
@@ -332,9 +372,9 @@ push verify that both `nav-web` and `nav-web-visual` actually ran and passed; a
 skipped Visual job is not acceptance. When instructed not to push, report remote
 gate acceptance as unverified.
 
-No manual UI review is required for a test-only change with unchanged production
-Vue/styles/runtime and unchanged browser smoke behavior, once the migrated tests
-and existing guards pass.
+Ordinary test-only migrations with unchanged production/runtime and smoke
+behavior need no manual UI review once guards pass. Creating or changing golden
+baselines additionally requires the focused maintainer visual review above.
 
 Configuration references: [Nuxt testing](https://nuxt.com/docs/4.x/getting-started/testing)
 and [Vitest projects](https://vitest.dev/guide/projects).

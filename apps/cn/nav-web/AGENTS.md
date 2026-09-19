@@ -120,8 +120,12 @@ by Build, Chromium installation and Browser tests.
 Functional `test:browser` excludes `tests/browser/visual/**`. Visual checks use
 `playwright.visual.config.ts` / `test:visual`; only the digest-pinned Linux
 Playwright container with Node 24 is authoritative. P3.3.1 adds an environment
-sentinel, no golden images. Keep `visual:guard` and direct `playwright` for legacy
-page/report checks. See testing guidance for the pinned container commands.
+sentinel; P3.3.2's `ui-foundation.spec.ts` owns four Shared Primitive baselines.
+Its fixture uses production `/about` CSS with product JavaScript disabled;
+fixture CSS must not redefine product appearance. Keep Generic Modal separate
+from the local Preferences Toggle scope. Real Preferences composition belongs
+to P3.3.3. Keep `visual:guard` and direct `playwright` for legacy page/report checks.
+See testing guidance for pinned commands and the four-image maintainer review.
 
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
