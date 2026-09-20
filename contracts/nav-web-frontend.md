@@ -136,6 +136,15 @@ token MUST NOT be reintroduced or replaced with a Static-specific canvas token.
 Dark intentionally inherits the root value. `static.less` owns the full migrated
 color-transition property set, its 500ms duration and existing easing.
 
+Updates global selectors MUST use the `updates-*` domain namespace. State
+modifiers MAY use `is-*` only when attached to an Updates-owned base selector.
+Updates-owned custom properties MUST use `--updates-*`; domain styles MAY consume
+`--gf-*` global semantics. P4.4.2 normalizes Timeline/Year/Entry names without
+ancestor scoping or specificity changes; declarations and accepted visual behavior
+MUST remain equivalent. Stylelint enforces names only: Style Policy token owners
+remain `.updates-page` / `html.dark .updates-page` with the `--updates-` prefix.
+`--updates-timeline-delay` is a dynamic runtime property, not a global design token.
+
 P2.1 MUST NOT prebuild typography, spacing, control-height, z-index or container
 scales. Later promotion requires repeated real needs and a scoped migration.
 Examples in the parent plan do not imply that `--gf-success` or `--gf-warning`

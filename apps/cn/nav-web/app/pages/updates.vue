@@ -28,12 +28,12 @@
           <p>{{ copy.empty }}</p>
         </div>
 
-        <ol v-else class="timeline-feed">
+        <ol v-else class="updates-timeline">
           <li
             v-for="(group, groupIndex) in yearGroups"
             :key="group.year"
-            class="timeline-year-group"
-            :style="{ '--delay': `${Math.min(groupIndex, 10) * 55}ms` }"
+            class="updates-timeline__year"
+            :style="{ '--updates-timeline-delay': `${Math.min(groupIndex, 10) * 55}ms` }"
           >
             <UpdatesTimelineYearGroup
               :group="group"

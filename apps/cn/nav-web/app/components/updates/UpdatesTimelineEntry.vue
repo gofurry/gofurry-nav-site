@@ -6,20 +6,20 @@
     }"
     tabindex="0"
   >
-    <div class="entry-marker" aria-hidden="true" />
+    <div class="updates-entry__marker" aria-hidden="true" />
 
-    <time class="entry-stamp" :datetime="item.published_at">
-      <span class="entry-month">{{ monthDayLabel }}</span>
-      <span class="entry-time">{{ clockLabel }}</span>
+    <time class="updates-entry__stamp" :datetime="item.published_at">
+      <span class="updates-entry__month">{{ monthDayLabel }}</span>
+      <span class="updates-entry__time">{{ clockLabel }}</span>
     </time>
 
-    <div class="entry-copy">
-      <div class="entry-heading">
+    <div class="updates-entry__copy">
+      <div class="updates-entry__heading">
         <h2>{{ item.title }}</h2>
-        <span v-if="latest" class="entry-tag">{{ latestTag }}</span>
+        <span v-if="latest" class="updates-entry__tag">{{ latestTag }}</span>
       </div>
-      <p class="entry-body">{{ item.body }}</p>
-      <p class="entry-meta">{{ fullDateLabel }}</p>
+      <p class="updates-entry__body">{{ item.body }}</p>
+      <p class="updates-entry__meta">{{ fullDateLabel }}</p>
     </div>
   </article>
 </template>

@@ -76,6 +76,20 @@ React Admin owns separate state components. The policy updater removes the three
 dead files' 11 + 8 + 2 Tailwind appearances, without moving debt or changing live
 styles. #108/#109 consumers remain excluded from proactive migration.
 
+## Updates domain namespace
+
+P4.4.2 normalizes generic Timeline/Year/Entry selectors to `updates-timeline*`,
+`updates-year-group*` and `updates-entry*`, retaining declaration values,
+specificity and visual behavior. The unused template wrapper class is removed;
+its list item remains. `is-*` state modifiers remain valid on domain-owned bases.
+Stylelint enforces this namespace only in `pages/updates.less`; it allows
+`--updates-*` custom properties and consumption of `--gf-*` global semantics.
+Style Policy retains its exact root/theme token ownership, and all 41 existing
+Updates tokens keep their identities and values. `--updates-timeline-delay` is
+the Vue-supplied per-year animation delay, a dynamic Updates-local property rather
+than a global design token. Existing runtime tests and accepted goldens protect
+this boundary without snapshot or debt updates.
+
 ## Preserve semantic identity
 
 Equal values do not mean equal tokens. `--gf-accent` describes emphasis;

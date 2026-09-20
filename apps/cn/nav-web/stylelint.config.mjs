@@ -33,6 +33,17 @@ export default {
       rules: { 'declaration-property-value-keyword-no-deprecated': [true, { ignoreKeywords: ['break-word'] }] },
     },
     {
+      files: ['app/assets/styles/pages/updates.less'],
+      // Namespace validity only; Style Policy keeps token declaration ownership narrow.
+      rules: {
+        'selector-class-pattern': [
+          /^(?:dark|is-[a-z0-9]+(?:-[a-z0-9]+)*|updates-[a-z0-9]+(?:-[a-z0-9]+)*(?:__[a-z0-9]+(?:-[a-z0-9]+)*)?)$/,
+          { message: 'Updates classes must use the updates-* domain namespace or an allowed state class.' },
+        ],
+        'custom-property-pattern': /^(?:(?:updates|gf)-[a-z0-9]+(?:-[a-z0-9]+)*)$/,
+      },
+    },
+    {
       files: [
         'app/assets/styles/pages/games.less',
         'app/assets/styles/pages/nav.less',

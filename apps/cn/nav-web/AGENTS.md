@@ -147,6 +147,9 @@ the gate green. See testing guidance for semantic readiness and network isolatio
 `updates-page.spec.ts` owns Updates appearance; `regression/updates.spec.ts`
 owns grouped-year/load-more behavior through the shared real SSR fixture.
 Selector normalization must pass both without updating accepted snapshots.
+`updates.less` is namespace-enforced by Stylelint: use `updates-*` classes and
+`--updates-*` owned custom properties; consuming `--gf-*` global semantics is
+allowed. Keep `is-*` states attached to Updates-owned bases and preserve specificity.
 
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
