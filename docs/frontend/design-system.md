@@ -74,8 +74,7 @@ kebab-case forms), imports, dynamic component resolution and source paths.
 Insights' `LoadingState` type and empty-state CSS/i18n names are unrelated;
 React Admin owns separate state components. The policy updater removes the three
 dead files' 11 + 8 + 2 Tailwind appearances, without moving debt or changing live
-styles. Background editor appearance remains later P4.2 work; #108/#109 consumers
-remain excluded from proactive migration.
+styles. #108/#109 consumers remain excluded from proactive migration.
 
 ## Preserve semantic identity
 
@@ -162,6 +161,14 @@ Shared composition belongs in `preferences.less`; paging/scroll geometry and
 Background/Hero/ResourceRoute private structure remain in their Vue scoped styles.
 The header override moved from the Modal SFC into the compound owner. Toggle
 events, ARIA and Save/Cancel behavior remain with the unchanged Vue logic.
+
+P4.2 keeps Background Preferences' private layout, scrolling and dynamic preview
+state in its Vue component. Control, palette, slider and preview appearance lives
+under `.gf-preferences-modal` in `components/preferences.less`. Its ordered
+`--gf-preferences-background-preset-*` palette and swatch ring are local product
+semantics, inherited unchanged by both themes, not global theme tokens. Vue reads
+the palette through its editor root's CSSOM; pattern defaults continue to consume
+the real `--gf-page-pattern-*` tokens without a duplicate fallback palette.
 
 P2.3 retires 29 raw-color occurrences: 11 overridden values are deleted and 18
 effective values keep their meaning in 14 local semantic tokens. The safe updater

@@ -29,6 +29,27 @@ test('Quick Access Space/Enter, focus, Cancel and Save retain their draft semant
   expect(preferences.errors).toEqual([])
 })
 
+test('Background palette resolves all 12 Preferences presets and applies the selected color', async ({ page, preferences }) => {
+  await preferences.open({ theme: 'light' })
+  await preferences.openPreferences()
+  const backgroundTab = page.getByRole('tab', { name: '页面背景', exact: true })
+  await backgroundTab.click()
+  await expect(backgroundTab).toHaveAttribute('aria-selected', 'true')
+  const editor = page.locator('[data-background-preferences]')
+  const toggle = editor.getByRole('button', { name: '选择图案颜色', exact: true })
+  await toggle.click()
+  const palette = editor.getByRole('group', { name: '常用颜色', exact: true })
+  const presets = palette.getByRole('button')
+  await expect(presets).toHaveCount(12)
+  await expect(presets.first()).toHaveAttribute('aria-label', '#9c846a')
+  await palette.getByRole('button', { name: '#9c846a', exact: true }).click()
+  await expect(editor.getByRole('textbox', { name: '图案颜色', exact: true })).toHaveValue('#9c846a')
+  await toggle.click()
+  await expect(palette.getByRole('button', { name: '#9c846a', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await preferences.cancelPreferences()
+  expect(preferences.errors).toEqual([])
+})
+
 for (const width of [1440, 390, 320]) for (const dark of [false, true]) {
   test(`${width}px ${dark ? 'dark' : 'light'} Preferences share source appearance with no overflow and visible focus`, async ({ page, preferences }) => {
     await preferences.open({ width, mode: 'fixed', desktopId: '34' })

@@ -73,7 +73,6 @@
       "app/assets/styles/pages/lottery.less": 20,
       "app/assets/styles/pages/nav.less": 226,
       "app/assets/styles/pages/static.less": 1,
-      "app/components/common/BackgroundPreferencesEditor.vue": 15,
       "app/components/common/MobileBottomTabBar.vue": 5,
       "app/components/common/PageScrollDock.vue": 11,
       "app/components/error/ErrorExperience.vue": 14,
