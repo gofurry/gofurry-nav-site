@@ -44,6 +44,13 @@ Appearance reuse belongs in CSS primitives. Reused behavior and accessibility
 (keyboard, focus, ARIA and state) justify a Vue primitive. Evaluate promotion when
 the same pattern appears in two business domains; do not create speculative wrappers.
 
+`app/components/common/` does not confer shared visual ownership. Follow the
+[semantic ownership map](../../../docs/frontend/design-system.md#common-directory-semantic-boundaries)
+for P4/P4.5/P5/P6 and runtime asset boundaries; do not move files by directory
+label. Delete historical components only after proving zero consumers across
+template/auto-import names, imports, dynamic resolution and source paths. Keep
+live consumers unchanged. Inspect stale-only policy debt before using the updater.
+
 `<style scoped>` is valid for component-private structure. It must not redefine
 shared primitive appearance or invent a local theme. Repeated appearance should
 move from component to domain to shared primitive as reuse warrants it.

@@ -165,6 +165,21 @@ repository examples; it is not a second token-value source.
 
 ## Shared visual primitives and compound components
 
+Physical placement in `app/components/common/` MUST NOT imply shared visual
+ownership. Classify by responsibility and real consumers: Preferences belongs to
+P4, PageScrollDock to P4.5, MobileBottomTabBar to P5, and BlurWrapper/LinkTag to
+P6 Game. ManagedAssetImage/SteamAssetImage are runtime infrastructure; their
+location does not authorize appearance or routing migration. See the current
+[ownership map](../docs/frontend/design-system.md#common-directory-semantic-boundaries).
+
+Before deleting a historical common component, contributors MUST prove zero
+production consumers by checking PascalCase, Nuxt path-derived/lazy names,
+kebab-case, explicit imports, dynamic components/`resolveComponent` and source
+paths. Generated registrations are not consumers. Live components MUST remain;
+do not rewrite consumers to force deletion. P4.1 makes no file moves or visual
+migration. After deletion, inspect `style:policy` for stale-only debt before
+running its downward-only updater; never transfer or raise budgets.
+
 A reusable, domain-neutral visual building block MUST be treated as a primitive.
 It has stable appearance semantics, composes into larger UI, and SHOULD NOT
 depend on a page root or business token namespace. The seven current owners in

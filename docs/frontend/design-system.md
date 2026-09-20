@@ -55,6 +55,28 @@ The layout-owned canvas defaults (`--gf-page-background` and
 keeps its existing behavior. [main.css](../../apps/cn/nav-web/app/assets/css/main.css)
 owns Tailwind bootstrap, browser reset and base helpers, not global theme tokens.
 
+## Common directory semantic boundaries
+
+`app/components/common/` is a physical location, not a shared visual owner.
+Current consumers establish these boundaries; no file moves accompany P4.1:
+
+| Surface | Evidence and semantic owner |
+| --- | --- |
+| Preferences family | NavBar/MobileBottomTabBar open ModeSettingModal; its Background, Hero and Resource Routing editors and their child controls belong to P4 Preferences |
+| PageScrollDock | Mounted by `app.vue`; global scroll tooling belongs to P4.5 |
+| MobileBottomTabBar | Mounted by the default layout; mobile navigation belongs to P5 |
+| BlurWrapper / LinkTag | Consumed by GameDetailMain / GameSidebarLinks; Game semantics belong to P6 |
+| ManagedAssetImage / SteamAssetImage | Managed/Steam loading and fallback infrastructure used by Nav, Site and/or Game; not appearance migration targets based on directory placement |
+
+P4.1 removed EmptyState, ErrorState and LoadingState only after finding no
+production consumers across template names (including Nuxt-prefixed/lazy and
+kebab-case forms), imports, dynamic component resolution and source paths.
+Insights' `LoadingState` type and empty-state CSS/i18n names are unrelated;
+React Admin owns separate state components. The policy updater removes the three
+dead files' 11 + 8 + 2 Tailwind appearances, without moving debt or changing live
+styles. Background editor appearance remains later P4.2 work; #108/#109 consumers
+remain excluded from proactive migration.
+
 ## Preserve semantic identity
 
 Equal values do not mean equal tokens. `--gf-accent` describes emphasis;
