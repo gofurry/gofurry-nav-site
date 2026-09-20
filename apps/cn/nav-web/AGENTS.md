@@ -123,9 +123,12 @@ Playwright container with Node 24 is authoritative. P3.3.1 adds an environment
 sentinel; P3.3.2's `ui-foundation.spec.ts` owns four Shared Primitive baselines.
 Its fixture uses production `/about` CSS with product JavaScript disabled;
 fixture CSS must not redefine product appearance. Keep Generic Modal separate
-from the local Preferences Toggle scope. Real Preferences composition belongs
-to P3.3.3. Keep `visual:guard` and direct `playwright` for legacy page/report checks.
-See testing guidance for pinned commands and the four-image maintainer review.
+from the local Preferences Toggle scope. `preferences-modal.spec.ts` owns eight
+real Preferences/backdrop baselines, reusing the Hero fixture and production
+theme/runtime. Never fake Preferences DOM, restyle it in tests or bind its
+snapshots to homepage pixels. Business surfaces remain P4+ scope. Keep
+`visual:guard` and direct `playwright` for legacy page/report checks. See testing
+guidance for pinned commands, deterministic Routing seeds and maintainer review.
 
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running

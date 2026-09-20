@@ -556,6 +556,23 @@ creation MUST pass two consecutive pinned comparisons and receive maintainer
 review of all four images. Real Preferences/backdrop composition belongs to
 P3.3.3 and business surfaces to P4+, not this Foundation fixture.
 
+P3.3.3's real Preferences visual contract MUST exercise production Nuxt/Vue,
+NavBar, Teleport, backdrop and child components through the existing Hero
+Preferences fixture. Optional visual seeds MUST preserve functional defaults.
+Tests MAY hide unrelated underlying page content and use the semantic canvas;
+they MUST NOT fake or restyle Preferences. Theme MUST use the production
+localStorage/Theme Store path. Routing time and fresh diagnostics MUST be fixed
+only in the test context, with no automatic probe traffic before capture.
+Real tab selection, finite animations/fonts, backdrop/filter/containment and
+active-page overflow MUST settle semantically, without arbitrary sleeps, masks
+or tolerance widening. The eight-case matrix is Home light/dark desktop/mobile,
+Background light desktop/mobile and Routing light desktop/mobile. It MUST remain
+separate from functional regressions and business surfaces; expansion requires
+explicit review. Creation requires pinned generation, two consecutive comparisons
+and maintainer review of the eight new images; the four Foundation images remain
+unchanged. Real product defects MUST be reported without expanding this phase
+into production UI changes.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

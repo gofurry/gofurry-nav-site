@@ -13,7 +13,7 @@ the commands below run from `apps/cn/nav-web`.
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
 | Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail, Resource Routing/Managed/Steam and Hero/Preferences are migrated |
-| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned environment sentinel and four Shared Primitive Foundation locator baselines; real product composition remains separate |
+| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel, four Shared Primitive Foundation and eight real Preferences Modal locator baselines; business surfaces remain separate |
 | Legacy visual/report guard | `npm run visual:guard` | Broad page/selector/theme/overflow reports and historical checks; retained independently of Visual and `style:policy` |
 | Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Insights and unrelated domains retain their runners until scoped migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
@@ -260,8 +260,8 @@ The environment sentinel uses a real Chromium page to check browser type,
 viewport, DPR, language, timezone, reduced motion and light theme; CI/pinned runs
 also check Linux and Node 24. It takes no screenshot and needs no server or
 production test route. **P3.3.1 has zero golden snapshots and no screenshot
-assertions.** P3.3.2 adds the Foundation contract below; real Preferences
-composition belongs to P3.3.3.
+assertions.** P3.3.2 adds the Foundation contract below; P3.3.3 adds real
+Preferences composition.
 Direct `playwright` and `scripts/perf/visual-guard.mjs` / `visual:guard` remain active.
 Static architecture/debt remains `style:policy`'s responsibility.
 
@@ -338,7 +338,7 @@ remain idle. There are no masks, custom fonts or screenshot tolerance overrides.
 - `foundation-light-mobile.png` and `foundation-dark-mobile.png`: 390×844.
 
 Dark uses production `html.dark`, while browser color scheme stays light. The
-Visual gate now has five cases: one environment sentinel plus four Foundation
+P3.3.2 gate has five cases: one environment sentinel plus four Foundation
 cases. The 63 functional Browser cases retain their existing ownership.
 Real Preferences/backdrop composition belongs to P3.3.3; business surfaces to
 P4+. Do not turn Foundation into a page gallery.
@@ -349,6 +349,59 @@ without updating. Both comparisons must pass. Investigate any difference rather
 than regenerating it away. Maintainers must review all four PNGs for correct
 primitive states, independent Generic Modal/Toggle scope and mobile fit before
 accepting the visual contract; no full-site walkthrough is required.
+
+### Real Preferences / Modal (P3.3.3)
+
+`visual/fixtures/preferences-visual.ts` extends the existing `hero-preferences.ts`
+fixture. It reuses production Nitro, real Nuxt/Vue hydration, NavBar interaction,
+Teleport, backdrop and all real Preferences children/scoped styles. It does not
+copy API/network fixtures or fake Modal markup. Optional `height`, `theme`,
+`fixedNow` and `seedSteamDiagnostics` open parameters leave functional defaults
+unchanged. Theme is seeded in localStorage before navigation and initialized by
+the real Theme Store, including Pinia state and `html.dark`.
+
+After opening the Modal, only `#__nuxt` is hidden and the body canvas uses
+`--gf-page-background`. No Preferences appearance is overridden. Real tab clicks
+settle on ARIA selection, non-inert panel and carousel scroll position. Idle
+captures blur focus, move the mouse away, await finite animations/fonts/two frames,
+then verify viewport backdrop coverage/filter, Modal containment and active-panel
+overflow. The existing browser-error guard and narrow mobile Footer debt check
+remain active. Functional keyboard/persistence/Catalog/handoff coverage stays in
+`tests/browser/regression`; Visual does not duplicate it.
+
+Modal geometry uses frame bounds plus header/tab/active-panel overflow checks.
+Its aggregate `scrollWidth` also includes the offscreen Routing `sr-only` legends:
+their absolute containing block is the Modal because of `backdrop-filter`, despite
+their clipped pixels. Do not misclassify those accessible labels or the intentional
+three-page carousel as visible overflow; do not alter production CSS to remove them.
+
+Routing alone fixes browser `Date.now()` to `VISUAL_FIXED_NOW` and seeds fresh
+Managed 10/20 ms and Steam 30/60 ms diagnostics. Existing Primary/Global pins
+remain; recommendations are Primary/China. The wrapper checks zero probe traffic,
+stable measurements and collapsed Details. There are no probe gates, screenshot
+sleeps, masks or tolerance overrides.
+
+`preferences-modal.spec.ts` adds exactly eight images under
+`tests/browser/visual/__snapshots__/preferences-modal.spec.ts/`:
+
+- `preferences-home-{light,dark}-{desktop,mobile}.png` (four): Random Hero,
+  Quick Access on and the default display-mode input.
+- `preferences-background-light-{desktop,mobile}.png` (two): default pattern,
+  no artificial pattern gallery.
+- `preferences-routing-light-{desktop,mobile}.png` (two): fixed diagnostics.
+
+Desktop is 1440×900 and Mobile 390×844. Each locator captures the real
+`.gf-modal-backdrop`, including centering and outer padding. The Visual suite has
+**13 cases** (sentinel + 4 Foundation + 8 Preferences); the existing Visual CI job
+discovers them. Foundation images remain unchanged. NSFW, catalogs, local pickers
+and business pages are outside this matrix; business surface visuals belong to P4+.
+
+The initial eight images are explicitly authorized by the P3.3.3 task. Generate
+only with the pinned update guard, then pass two consecutive `test:visual`
+comparisons without updating. Maintainers review these eight PNGs for backdrop,
+theme, controls and mobile fit. Do not regenerate on unexpected differences;
+investigate the fixture/environment/product and report real product defects
+without redesigning production in this phase.
 
 ## Verification
 

@@ -2,7 +2,7 @@ import { test as base, expect, type Page, type Response } from '@playwright/test
 import { readFile } from 'node:fs/promises'
 import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.mjs'
 import { STEAM_SHARED_CDN_GROUP_PREFIXES } from '../../../app/utils/steamAssets'
-import { STEAM_PROBE_PATHS } from '../../../app/utils/steamAssetRouting'
+import { STEAM_DIAGNOSTICS_KEY, STEAM_PROBE_PATHS } from '../../../app/utils/steamAssetRouting'
 import { captureBrowserErrors } from './browser-errors'
 import { assertHeroHydration, heroOrigins } from './hero-lifecycle'
 
@@ -28,9 +28,20 @@ interface PreferenceState {
 }
 type FixtureApp = Awaited<ReturnType<typeof startInsightsFixtureApp>>
 interface PreferenceWorker { app: FixtureApp; current: PreferenceState | null }
+interface PreferenceOpenOptions {
+  width?: number
+  height?: number
+  theme?: 'light' | 'dark'
+  fixedNow?: number
+  seedSteamDiagnostics?: boolean
+  mode?: 'random' | 'fixed' | 'local' | null
+  desktopId?: string
+  mobileId?: string
+  seedLocalCache?: boolean
+}
 interface HeroPreferences extends PreferenceState {
   errors: string[]
-  open(options?: { width?: number; mode?: 'random' | 'fixed' | 'local' | null; desktopId?: string; mobileId?: string; seedLocalCache?: boolean }): Promise<{ ssrHTML: string }>
+  open(options?: PreferenceOpenOptions): Promise<{ ssrHTML: string }>
   reload(): Promise<{ ssrHTML: string }>
   holdHeroAPI(): void
   releaseHeroAPI(): void
@@ -109,16 +120,24 @@ export const test = base.extend<{ preferences: HeroPreferences }, { preferenceAp
     }
     const scenario: HeroPreferences = Object.assign(state, {
       errors,
-      async open({ width = 1440, mode = 'random', desktopId, mobileId, seedLocalCache = false }: { width?: number; mode?: 'random' | 'fixed' | 'local' | null; desktopId?: string; mobileId?: string; seedLocalCache?: boolean } = {}) {
-        await page.setViewportSize({ width, height: 1000 })
+      async open({ width = 1440, height = 1000, theme, fixedNow, seedSteamDiagnostics = false, mode = 'random', desktopId, mobileId, seedLocalCache = false }: PreferenceOpenOptions = {}) {
+        await page.setViewportSize({ width, height })
         const cookies = [['gf_asset_cdn', 'primary'], ['gf_steam_asset_mode', 'global'], ['gf_asset_cdn_mode', 'primary']]
         if (mode) cookies.push(['gf_hero_mode', mode])
         if (desktopId) cookies.push(['gf_hero_desktop_id', desktopId])
         if (mobileId) cookies.push(['gf_hero_mobile_id', mobileId])
         await context.addCookies(cookies.map(([name, value]) => ({ name: name!, value: value!, url: preferenceApp.app.base })))
-        await context.addInitScript(({ baseURL, seedLocalCache }) => {
+        await context.addInitScript(({ baseURL, seedLocalCache, theme, fixedNow, seedSteamDiagnostics, steamDiagnosticsKey, steamProbePath }) => {
           if (location.origin !== baseURL) return
+          // Optional Visual seeds; ordinary functional scenarios keep real time,
+          // their existing viewport, and the production theme initialization.
+          if (theme) localStorage.setItem('theme', theme)
+          if (fixedNow !== undefined) Date.now = () => fixedNow
           localStorage.setItem('gf_asset_cdn_diagnostics', JSON.stringify({ selected: 'primary', checkedAt: Date.now(), primaryMs: 10, mirrorMs: 20, primaryState: 'success', mirrorState: 'success' }))
+          if (seedSteamDiagnostics) localStorage.setItem(steamDiagnosticsKey, JSON.stringify({
+            version: 1, china: { ms: 30, state: 'success' }, global: { ms: 60, state: 'success' },
+            selected: 'china', checkedAt: Date.now(), sample: steamProbePath,
+          }))
           const evidence = window as Window & { initialHeroNode?: Element | null }
           new MutationObserver(() => { evidence.initialHeroNode ||= document.querySelector('.nav-header__background') }).observe(document, { subtree: true, childList: true })
           // Seed a real cached Blob once, never a fake FileSystemDirectoryHandle.
@@ -144,7 +163,8 @@ export const test = base.extend<{ preferences: HeroPreferences }, { preferenceAp
             } })
             return request
           }
-        }, { baseURL: preferenceApp.app.base, seedLocalCache })
+        }, { baseURL: preferenceApp.app.base, seedLocalCache, theme, fixedNow, seedSteamDiagnostics,
+          steamDiagnosticsKey: STEAM_DIAGNOSTICS_KEY, steamProbePath: STEAM_PROBE_PATHS[0] })
         await context.route('**/*', async route => {
           const url = new URL(route.request().url())
           if (url.origin === preferenceApp.app.base) {
