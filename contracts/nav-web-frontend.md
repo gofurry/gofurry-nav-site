@@ -588,6 +588,18 @@ and maintainer review of the eight new images; the four Foundation images remain
 unchanged. Real product defects MUST be reported without expanding this phase
 into production UI changes.
 
+P4.3.1's Static/Legal Visual baselines MUST exercise real production Nitro,
+Nuxt SSR/hydration, Theme Store, default layout and `PublicPageBackground`.
+Layout owns the canvas; the Static root MUST remain computed-transparent.
+Fixtures MAY hide only PageScrollDock and MobileBottomTabBar, never restyle
+Static/Legal content. The six viewport baselines cover About light/dark at
+desktop/mobile and Terms light/dark on mobile. Readiness MUST use load plus
+semantic image/animation/font waits, with zero external/upstream requests and
+the current computed color-transition contract. Creation requires pinned
+generation, two consecutive comparisons and maintainer review. P4.3.2 MUST wait
+for acceptance of all six images and pass them without snapshot updates; it MUST
+NOT replace layout-owned canvas semantics. Existing twelve baselines stay intact.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

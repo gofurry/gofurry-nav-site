@@ -137,6 +137,11 @@ snapshots to homepage pixels. Business surfaces remain P4+ scope. Keep
 `visual:guard` and direct `playwright` for legacy page/report checks. See testing
 guidance for pinned commands, deterministic Routing seeds and maintainer review.
 
+`static-pages.spec.ts` owns the six real Static/Legal viewport baselines, including
+the layout-owned canvas and transparent Static root. Review all six before P4.3.2;
+that migration must pass accepted baselines unchanged, never update them to turn
+the gate green. See testing guidance for semantic readiness and network isolation.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

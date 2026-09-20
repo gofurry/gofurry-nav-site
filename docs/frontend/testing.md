@@ -13,7 +13,7 @@ the commands below run from `apps/cn/nav-web`.
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
 | Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail, Resource Routing/Managed/Steam and Hero/Preferences are migrated |
-| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel, four Shared Primitive Foundation and eight real Preferences Modal locator baselines; business surfaces remain separate |
+| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel, four Foundation and eight Preferences locator baselines, plus six real Static/Legal viewport baselines |
 | Legacy visual/report guard | `npm run visual:guard` | Broad page/selector/theme/overflow reports and historical checks; retained independently of Visual and `style:policy` |
 | Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Insights and unrelated domains retain their runners until scoped migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
@@ -402,6 +402,53 @@ comparisons without updating. Maintainers review these eight PNGs for backdrop,
 theme, controls and mobile fit. Do not regenerate on unexpected differences;
 investigate the fixture/environment/product and report real product defects
 without redesigning production in this phase.
+
+### Static / Legal business surfaces (P4.3.1)
+
+`visual/fixtures/static-pages.ts` reuses `startInsightsFixtureApp` for real
+production Nitro, Nuxt SSR/hydration, Vue/Pinia and the default layout. Fresh
+contexts seed `localStorage.theme`; production NavBar/Theme Store applies
+the theme. Both global Resource Routing plugins probe even on Static pages with
+empty history, so the fixture also seeds valid Managed/Steam diagnostics. Real
+TTL logic skips probes; modes remain Auto, with no pin or plugin override.
+`PublicPageBackground` stays real and reports `default`; the Static
+root is computed-transparent: **Layout owns canvas; Static owns content surfaces.**
+Only PageScrollDock and MobileBottomTabBar are hidden in test CSS.
+
+`static-pages.spec.ts` owns six viewport images in its snapshot directory:
+`static-about-{light,dark}-{desktop,mobile}.png` and
+`static-terms-{light,dark}-mobile.png`. Desktop is 1440×900; mobile is 390×844.
+No Privacy, English, Resume or full-page Legal images are included. The root is
+instant-scrolled to viewport top, keeping NavBar/Footer outside this contract.
+
+Navigation uses `load`, never `networkidle`; hydration/theme/root readiness,
+successful local images, blur/neutral mouse, finite animations, fonts and two
+RAF ticks settle before capture. Tests assert no horizontal overflow, effective
+panel shadow/blur and top veil, and the current 0.5-second color-related root
+transition. `static-transition.json` retains the computed property/duration/timing;
+`static-requests.json` proves zero external, failed and upstream requests, including
+during comparison. External traffic is recorded and aborted; no API data is faked.
+
+The prerequisite Resume fix explicitly prerenders `/about/faolan`; a wildcard
+rule advertised a payload that the build did not emit. Keep the zero-error check
+for real NuxtLink prefetch rather than hiding missing-payload errors in fixtures.
+
+Initial creation is explicitly authorized only for these six images. In the
+pinned Linux/Node 24 container above, after `npm ci` and `npm run build`, run:
+
+```sh
+npm run test:visual:update -- -- static-pages.spec.ts
+npm run test:visual
+npm run test:visual
+```
+
+The extra separator keeps the file filter out of Playwright's optional update
+mode argument, protects the existing twelve images and still runs the guard.
+Both comparisons must report **19 passed**; Functional Browser remains **64**.
+The six new images require maintainer review for natural pattern/translucency,
+top veil, desktop columns/mobile stack, loaded avatar/actions and Legal wrapping.
+P4.3.2 starts only after that approval and must pass the accepted images without
+updating them. P4.3.1 changes no production source or style debt.
 
 ## Verification
 
