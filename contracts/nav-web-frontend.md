@@ -603,6 +603,15 @@ generation, two consecutive comparisons and maintainer review. Appearance
 migrations MUST pass these accepted images without snapshot updates or changes
 to layout-owned canvas semantics. All eighteen baselines MUST stay intact.
 
+Updates business-surface baselines MUST use the real production SSR/hydration
+path with deterministic ready-state `/nav/updates` data. Functional coverage
+owns year expansion and load-more persistence; the shared fixture MUST prove
+exactly one SSR API call, payload reuse and zero external/unrelated requests.
+The four viewport baselines retain Theme Store, PublicPageBackground and real
+reduced motion. Creation requires pinned generation, two consecutive comparisons
+and maintainer review. Updates selector normalization MUST pass accepted goldens
+without snapshot updates; no selector or token cleanup accompanies P4.4.1.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

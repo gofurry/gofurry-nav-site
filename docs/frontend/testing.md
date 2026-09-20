@@ -13,7 +13,7 @@ the commands below run from `apps/cn/nav-web`.
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
 | Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail, Resource Routing/Managed/Steam and Hero/Preferences are migrated |
-| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel, four Foundation and eight Preferences locator baselines, plus six real Static/Legal viewport baselines |
+| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel, four Foundation and eight Preferences locator baselines, plus six Static/Legal and four Updates viewport baselines |
 | Legacy visual/report guard | `npm run visual:guard` | Broad page/selector/theme/overflow reports and historical checks; retained independently of Visual and `style:policy` |
 | Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Insights and unrelated domains retain their runners until scoped migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
@@ -449,6 +449,47 @@ The six new images require maintainer review for natural pattern/translucency,
 top veil, desktop columns/mobile stack, loaded avatar/actions and Legal wrapping.
 P4.3.2 starts only after that approval and must pass the accepted images without
 updating them. P4.3.1 changes no production source or style debt.
+
+### Updates runtime and appearance (P4.4.1)
+
+`tests/browser/fixtures/updates.ts` serves both `regression/updates.spec.ts` and
+`visual/updates-page.spec.ts`. It reuses `startInsightsFixtureApp` for production
+Nitro and the real SSR `useAsyncData` → `/api/v2/nav/updates?lang=zh` → payload
+hydration path. Nine fixed notices (7×2026 + 2×2025) naturally produce the initial
+six entries, one latest tag, Load more and a collapsed older year. Every fresh
+scenario records exactly one upstream Updates call, no browser refetch, no other
+business API, external traffic, failed resources or browser errors.
+
+One functional case owns keyboard focus appearance, 6→7 loading, collapse to 0,
+re-expansion retaining 7 and older-year expansion to 9. Its accessible/domain
+locators avoid the generic selectors scheduled for P4.4.2. The four viewport
+goldens are `updates-{light,dark}-{desktop,mobile}.png` under
+`visual/__snapshots__/updates-page.spec.ts/`, at 1440×900 and 390×844. Real Theme
+Store seeds and fresh Managed/Steam diagnostics keep plugins active and quiet.
+Real PublicPageBackground stays `default`; production reduced motion settles
+Updates animations. This spec also supplies Chromium's native
+`--force-prefers-reduced-motion`: isolated SVG image documents copy native
+settings rather than the page's CDP media override. The divider's own media
+query disables its animation; no product CSS or shared runner is changed.
+Only unrelated fixed tools are hidden. Navigation uses load
+and semantic hydration/image/animation/font/RAF readiness, never networkidle or
+fixed sleeps; viewport capture starts at `.updates-page`, with overflow checks.
+
+Initial creation is authorized only for the four Updates images. After install
+and build in the pinned environment, run:
+
+```sh
+npm run test:visual:update -- -- updates-page.spec.ts
+npm run test:visual
+npm run test:visual
+```
+
+Both comparisons must report **23 passed**; Functional Browser is **65**.
+Existing eighteen PNGs stay byte-identical, giving twenty-two total. Maintainers
+must review the four new images for canvas, summary/divider, timeline/latest
+hierarchy, typography/wrapping and mobile containment before P4.4.2. That later
+selector migration must pass these accepted images without updates. P4.4.1
+changes neither production source nor style debt.
 
 ## Verification
 

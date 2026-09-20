@@ -144,6 +144,10 @@ the layout-owned canvas and transparent Static root. Appearance migrations must
 pass these accepted baselines unchanged, never update them to turn
 the gate green. See testing guidance for semantic readiness and network isolation.
 
+`updates-page.spec.ts` owns Updates appearance; `regression/updates.spec.ts`
+owns grouped-year/load-more behavior through the shared real SSR fixture.
+Selector normalization must pass both without updating accepted snapshots.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,
