@@ -174,7 +174,7 @@ export default defineNuxtConfig({
   routeRules: {
     '/': { ssr: true },
     '/about': { prerender: true },
-    '/about/**': { prerender: true },
+    '/about/faolan': { prerender: true },
     '/nav': { ssr: true },
     '/sites': { ssr: true },
     '/sites/**': { ssr: true },
