@@ -128,10 +128,13 @@ Contributors SHOULD remove confirmed unused tokens unless an explicit external
 compatibility contract requires retention. P2.1 removed unused `--gf-bg-grid-line`;
 do not retain dead tokens for hypothetical future use.
 
-`--gf-bg-page` remains the legacy static-page fallback with its existing consumer
-and value. New layout-owned backgrounds MUST use `--gf-page-background`;
-contributors MUST NOT use `--gf-bg-page` in new code. Remove that fallback with
-the later static-page migration, not by changing its consumer in P2.1.
+Static/Legal roots MUST remain transparent and MUST NOT own the application
+canvas; the default layout and `PublicPageBackground` own page background
+semantics through `--gf-page-background`. The retired `--gf-bg-page` compatibility
+token MUST NOT be reintroduced or replaced with a Static-specific canvas token.
+`--gf-static-panel-shadow` owns the shared About/Legal reading-surface elevation;
+Dark intentionally inherits the root value. `static.less` owns the full migrated
+color-transition property set, its 500ms duration and existing easing.
 
 P2.1 MUST NOT prebuild typography, spacing, control-height, z-index or container
 scales. Later promotion requires repeated real needs and a scoped migration.
@@ -146,7 +149,7 @@ also explain the specific exception. Group comments SHOULD carry shared context;
 individual comments are for exceptions, not a description of every CSS literal.
 Global values stay in the single `tokens.less` owner. Its root groups are ordered
 Page & Canvas, Surface, Border, Text, Accent & Action, Form Controls, Modal &
-Overlay, Feedback, Focus, Elevation & Blur, Shape, Motion, Legacy Compatibility.
+Overlay, Feedback, Focus, Elevation & Blur, Shape, Motion.
 `html.dark` MUST preserve those meanings and the relative group order; omitted
 tokens intentionally inherit root values. Short dark-section labels suffice;
 do not repeat the root explanations or invent groups for symmetry.
@@ -596,9 +599,9 @@ Static/Legal content. The six viewport baselines cover About light/dark at
 desktop/mobile and Terms light/dark on mobile. Readiness MUST use load plus
 semantic image/animation/font waits, with zero external/upstream requests and
 the current computed color-transition contract. Creation requires pinned
-generation, two consecutive comparisons and maintainer review. P4.3.2 MUST wait
-for acceptance of all six images and pass them without snapshot updates; it MUST
-NOT replace layout-owned canvas semantics. Existing twelve baselines stay intact.
+generation, two consecutive comparisons and maintainer review. Appearance
+migrations MUST pass these accepted images without snapshot updates or changes
+to layout-owned canvas semantics. All eighteen baselines MUST stay intact.
 
 ### P1 enforcement and maintenance
 

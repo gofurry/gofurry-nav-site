@@ -42,13 +42,9 @@
       "app/components/site/SitePerformance.vue": 174,
       "app/components/site/SiteSignalCards.vue": 20,
       "app/layouts/default.vue": 2,
-      "app/pages/about/[name].vue": 2,
-      "app/pages/about/index.vue": 2,
       "app/pages/games/prize/activation.vue": 17,
       "app/pages/games/prize/index.vue": 67,
-      "app/pages/privacy.vue": 2,
-      "app/pages/site-groups/[id].vue": 12,
-      "app/pages/terms.vue": 2
+      "app/pages/site-groups/[id].vue": 12
     },
     "tailwind-arbitrary-appearance": {
       "app/components/Footer.vue": 4,
@@ -72,7 +68,6 @@
       "app/assets/styles/pages/insights.less": 10,
       "app/assets/styles/pages/lottery.less": 20,
       "app/assets/styles/pages/nav.less": 226,
-      "app/assets/styles/pages/static.less": 1,
       "app/components/common/MobileBottomTabBar.vue": 5,
       "app/components/common/PageScrollDock.vue": 11,
       "app/components/error/ErrorExperience.vue": 14,

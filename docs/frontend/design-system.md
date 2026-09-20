@@ -121,10 +121,13 @@ Search for consumers before removing a token. Confirmed unused tokens should be
 removed unless an explicit external compatibility contract needs them. P2.1
 removed unused `--gf-bg-grid-line` from both themes.
 
-`--gf-bg-page` remains a legacy fallback consumed by
-[static.less](../../apps/cn/nav-web/app/assets/styles/pages/static.less). Its value
-and consumer stay intact until the static-page migration. New layout backgrounds
-use `--gf-page-background`; do not copy the legacy fallback into new code.
+P4.3.2 retired `--gf-bg-page` after the real Static/Legal visual contract proved
+the roots transparent under the shell. Do not reintroduce that fallback or a
+replacement canvas token: the layout and `PublicPageBackground` own the canvas.
+[static.less](../../apps/cn/nav-web/app/assets/styles/pages/static.less) owns the
+full migrated color transition, retaining its duration and easing. Shared
+`--gf-static-panel-shadow` was promoted to global Elevation & Blur only after
+About and Legal demonstrated real shared usage; Dark inherits the same value.
 
 Avoid promoting a raw literal solely to make the style-policy check pass, merging
 tokens by literal equality, or moving primitive/domain semantics into the global

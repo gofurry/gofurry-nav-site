@@ -212,6 +212,8 @@ const layoutSource = readFileSync(new URL('../app/layouts/default.vue', import.m
 assert(layoutSource.includes('<PublicPageBackground />'), 'default layout lost the public background owner')
 const backgroundSource = readFileSync(new URL('../app/components/common/PublicPageBackground.vue', import.meta.url), 'utf8')
 const globalStyles = readFileSync(new URL('../app/assets/styles/tokens.less', import.meta.url), 'utf8')
+const staticStyles = readFileSync(new URL('../app/assets/styles/pages/static.less', import.meta.url), 'utf8')
+assert(!globalStyles.includes('--gf-bg-page') && !staticStyles.includes('--gf-bg-page'), 'retired static-page canvas fallback returned')
 const shellStyles = readFileSync(new URL('../app/assets/styles/components/shell.less', import.meta.url), 'utf8')
 assert(backgroundSource.includes('ref(defaultBackgroundPreference())') && backgroundSource.includes('mask-image: var(--gf-page-pattern)'), 'default layout lost its SSR default mask-based public pattern')
 assert(globalStyles.includes("--gf-page-pattern: url('/web/background/gofurry-pattern.svg')") && globalStyles.includes('--gf-page-pattern-size: 160px 160px'), 'default public pattern contract drifted')

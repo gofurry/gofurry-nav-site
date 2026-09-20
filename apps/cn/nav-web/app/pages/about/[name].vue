@@ -1,5 +1,5 @@
 <template>
-  <div class="gf-static-page about-page resume-page relative isolate flex w-full flex-1 flex-col overflow-hidden transition-colors duration-500">
+  <div class="gf-static-page about-page resume-page relative isolate flex w-full flex-1 flex-col overflow-hidden">
     <div class="gf-static-page__top-veil" />
 
     <main class="gf-static-page__main gf-static-page__main--resume">

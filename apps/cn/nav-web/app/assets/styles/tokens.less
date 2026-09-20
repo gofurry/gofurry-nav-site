@@ -71,6 +71,10 @@
   --gf-shadow-soft: 0 18px 44px rgba(126, 92, 58, 0.12);
   --gf-shadow-hover: 0 22px 54px rgba(126, 92, 58, 0.16);
   --gf-blur-surface: 18px;
+  /* Static reading surfaces: About and Legal share this elevation.
+   * Dark intentionally inherits the same value to preserve current appearance.
+   */
+  --gf-static-panel-shadow: 0 20px 48px rgba(15, 23, 42, 0.10);
 
   /* Shape: existing shared corner treatments for controls, surfaces and dialogs. */
   --gf-radius-sm: 8px;
@@ -80,11 +84,6 @@
   /* Motion: existing interaction timing; consumers retain reduced-motion rules. */
   --gf-motion-fast: 160ms;
   --gf-motion-base: 220ms;
-
-  /* Legacy Compatibility: static-page fallback only. New layout-owned backgrounds
-   * use --gf-page-background. Do not use in new code; remove with static-page migration.
-   */
-  --gf-bg-page: #f6ebdc;
 }
 
 /* Dark theme preserves token semantics; only values change.
@@ -143,7 +142,4 @@ html.dark {
   --gf-shadow-hover: 0 22px 54px rgba(0, 0, 0, 0.34);
 
   /* Shape and Motion inherit the root values. */
-
-  /* Legacy Compatibility */
-  --gf-bg-page: #07111f;
 }

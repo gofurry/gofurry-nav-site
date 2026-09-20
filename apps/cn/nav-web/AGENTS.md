@@ -28,7 +28,9 @@ SSR work also follows [the asset contract](../../../contracts/assets.md) and
 New global tokens need a real consumer and stable semantic meaning; do not move
 literals into tokens just to pass policy or merge tokens because values match.
 Keep actual values in source, not docs. New page backgrounds use
-`--gf-page-background`; do not reuse legacy `--gf-bg-page` in new code.
+`--gf-page-background`. Static/Legal roots stay transparent; the layout and
+`PublicPageBackground` own the canvas. Do not reintroduce retired `--gf-bg-page`.
+About/Legal panel elevation shares `--gf-static-panel-shadow` in global tokens.
 The [design-system guide](../../../docs/frontend/design-system.md) gives examples.
 
 Rating's tokens stay in `primitives/rating.less`. Generic Modal appearance belongs
@@ -138,8 +140,8 @@ snapshots to homepage pixels. Business surfaces remain P4+ scope. Keep
 guidance for pinned commands, deterministic Routing seeds and maintainer review.
 
 `static-pages.spec.ts` owns the six real Static/Legal viewport baselines, including
-the layout-owned canvas and transparent Static root. Review all six before P4.3.2;
-that migration must pass accepted baselines unchanged, never update them to turn
+the layout-owned canvas and transparent Static root. Appearance migrations must
+pass these accepted baselines unchanged, never update them to turn
 the gate green. See testing guidance for semantic readiness and network isolation.
 
 Never update visual baselines merely to make CI pass. An explicit maintainer
