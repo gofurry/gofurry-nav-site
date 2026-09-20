@@ -151,6 +151,11 @@ Selector normalization must pass both without updating accepted snapshots.
 `--updates-*` owned custom properties; consuming `--gf-*` global semantics is
 allowed. Keep `is-*` states attached to Updates-owned bases and preserve specificity.
 
+`visual/error-experience.spec.ts` owns four real Nuxt 404 locator baselines.
+`regression/error-experience.spec.ts` owns normal-motion keyboard focus safety
+and the genuine no-JS Light fallback. Error appearance migration must pass these
+contracts without updating snapshots; new goldens require maintainer review.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

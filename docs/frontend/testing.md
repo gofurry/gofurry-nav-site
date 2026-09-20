@@ -13,7 +13,7 @@ the commands below run from `apps/cn/nav-web`.
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
 | Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail, Resource Routing/Managed/Steam and Hero/Preferences are migrated |
-| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel, four Foundation and eight Preferences locator baselines, plus six Static/Legal and four Updates viewport baselines |
+| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel; Foundation, Preferences and Error locator baselines; Static/Legal and Updates viewport baselines |
 | Legacy visual/report guard | `npm run visual:guard` | Broad page/selector/theme/overflow reports and historical checks; retained independently of Visual and `style:policy` |
 | Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Insights and unrelated domains retain their runners until scoped migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
@@ -490,6 +490,48 @@ must review the four new images for canvas, summary/divider, timeline/latest
 hierarchy, typography/wrapping and mobile containment before P4.4.2. That later
 selector migration must pass these accepted images without updates. P4.4.1
 changes neither production source nor style debt.
+
+### Error Experience runtime and appearance (P4.5.1)
+
+`tests/browser/fixtures/error-experience.ts` reuses `startInsightsFixtureApp`
+for real production Nitro and `/__gofurry_error_contract_missing__`: HTTP 404,
+SSR Chinese error content, `app/error.vue`, error layout and real Nuxt hydration.
+It seeds localStorage theme for NavBar's Theme Store and fresh Managed/Steam TTL
+diagnostics. The error owns its canvas; no DOM, artwork or product CSS is faked.
+Hydrated readiness requires exactly one active, ready bundled Light/Dark AVIF
+and `.error-page.is-enhanced.has-entered`, not a timer delay.
+
+The two `regression/error-experience.spec.ts` cases use normal motion. The first
+reads staged hidden actions and focuses Home in one browser turn, proving
+immediate opacity 1, transform none and focus indication before the 2550ms delay
+expires. The other uses a real `javaScriptEnabled: false` context and checks all
+five steps and the loaded active Light artwork are visible through noscript;
+it does not invent no-JS button navigation. Playwright owns both contexts.
+
+Every scenario asserts zero upstream business/external requests and unexpected
+resource/browser errors. The shared collector remains unchanged: the exact main
+document 404 console diagnostic is separately recorded and required once; no-JS
+`csp` script blocks must refer to local module preloads advertised in that SSR
+document. All other HTTP/resource/application/hydration errors still fail.
+
+`visual/error-experience.spec.ts` captures only `.error-page`, excluding NavBar,
+at 1440×900 / 390×844 in Light/Dark Chinese. Real reduced motion, complete images,
+blur, neutral mouse, finite animations, fonts and two RAFs settle capture with
+overflow checks, no networkidle, fixed sleeps, masks or tolerance changes.
+Initial creation is authorized only for these four Error images in the pinned
+Linux/Node 24 environment, after install/build:
+
+```sh
+npm run test:visual:update -- -- error-experience.spec.ts
+npm run test:visual
+npm run test:visual
+```
+
+Both comparisons must report **27 passed**; Functional Browser is **67**.
+The existing 22 PNGs remain byte-identical, for 26 total. Maintainers must review
+the four `error-404-{light,dark}-{desktop,mobile}.png` images for loaded artwork,
+mask/composition, text hierarchy, dark contrast and mobile stacked buttons before
+P4.5.2. P4.5.1 changes no production source or style debt.
 
 ## Verification
 

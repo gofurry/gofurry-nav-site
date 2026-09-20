@@ -621,6 +621,14 @@ reduced motion. Creation requires pinned generation, two consecutive comparisons
 and maintainer review. Updates selector normalization MUST pass accepted goldens
 without snapshot updates; no selector or token cleanup accompanies P4.4.1.
 
+Error Experience baselines MUST exercise the real Nuxt missing-route error
+boundary and its own canvas. Hydrated coverage owns production theme/artwork
+readiness and normal-motion keyboard focus visibility; a genuinely JS-disabled,
+normal-motion regression MUST preserve the readable default Light fallback.
+Appearance migration MUST pass the four accepted Error locator goldens and both
+behavior contracts without snapshot updates. Initial creation requires pinned
+generation, two consecutive comparisons and maintainer review.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module
