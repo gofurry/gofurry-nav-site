@@ -158,7 +158,7 @@ also explain the specific exception. Group comments SHOULD carry shared context;
 individual comments are for exceptions, not a description of every CSS literal.
 Global values stay in the single `tokens.less` owner. Its root groups are ordered
 Page & Canvas, Surface, Border, Text, Accent & Action, Form Controls, Modal &
-Overlay, Feedback, Focus, Elevation & Blur, Shape, Motion.
+Overlay, Feedback, Focus, Elevation & Blur, Shape, Motion, Browser Chrome.
 `html.dark` MUST preserve those meanings and the relative group order; omitted
 tokens intentionally inherit root values. Short dark-section labels suffice;
 do not repeat the root explanations or invent groups for symmetry.
@@ -655,6 +655,16 @@ assertions own heading/icon/meta/link appearance, four accessible-name social
 hover colors and the exact App Shell color-transition property set/timing.
 Creation requires pinned generation, two consecutive comparisons and maintainer
 review. Footer/Shell migration MUST pass these contracts without snapshot updates.
+
+P4.6.2 completes Footer appearance in `components/footer.less` and its local
+`--gf-footer-*` semantics; structural composition remains Tailwind. App Shell's
+full color transition belongs to `components/shell.less`. Global scrollbar colors
+use foundation-level `--gf-scrollbar-*` semantics. P4 completion means no
+unassigned Stable/Common appearance debt remains: every remaining baseline entry
+has an explicit [later owner](../docs/frontend/design-system.md#p4-exit-ownership).
+That baseline MUST NOT authorize opportunistic or early cross-phase migration.
+Dark Footer link-hover aliases its normal link token to preserve the prior
+computed cascade; brand glows retain the same values in both themes.
 
 ### P1 enforcement and maintenance
 

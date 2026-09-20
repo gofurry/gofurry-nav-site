@@ -64,6 +64,10 @@ belong in semantic variables under the existing `html.dark` model, not new
 
 ## Historical debt and phase boundaries
 
+After P4, do not opportunistically clear remaining debt: Nav/MobileBottomTabBar
+belong to P5, Game plus BlurWrapper/LinkTag to P6, Site to #109, Insights page/domain
+to #108, and ambient effects remain intentionally preserved experimental code.
+
 - Existing violations are historical debt, not examples to copy.
 - [frontend-style-debt.json](frontend-style-debt.json) is state, not permission.
   Do not increase any rule/file budget; absent rule/file entries have budget **0**.

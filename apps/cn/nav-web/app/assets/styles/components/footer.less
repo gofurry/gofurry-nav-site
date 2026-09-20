@@ -1,57 +1,69 @@
 .gf-footer-shell {
+  /* Footer owns its canvas, hierarchy and link treatment across both themes. */
   --gf-footer-bg: #172033;
   --gf-footer-bg-deep: #101827;
+  --gf-footer-border: rgba(255, 255, 255, 0.06);
+  --gf-footer-text: rgb(211, 222, 238);
+  --gf-footer-section-title: rgb(100, 116, 139);
+  --gf-footer-link: rgb(203, 213, 225);
+  --gf-footer-link-hover: #ffffff;
+  --gf-footer-meta: rgb(148, 163, 184);
+
+  /* Brand hover glows retain their identities independently of the theme. */
+  --gf-footer-social-bilibili-glow: drop-shadow(0 0 6px rgb(240, 128, 128));
+  --gf-footer-social-weibo-glow: drop-shadow(0 0 6px rgb(255, 69, 0));
+  --gf-footer-social-github-glow: drop-shadow(0 0 6px rgb(56, 189, 248));
+  --gf-footer-social-twitter-glow: drop-shadow(0 0 6px rgb(29, 155, 240));
 }
 
+/* Only theme-sensitive semantics change; brand glows inherit. */
 html.dark .gf-footer-shell {
   --gf-footer-bg: #05070d;
   --gf-footer-bg-deep: #03050a;
+  --gf-footer-border: rgba(255, 255, 255, 0.05);
+  --gf-footer-text: rgb(148, 163, 184);
+  --gf-footer-section-title: rgb(71, 85, 105);
+  --gf-footer-link: rgb(148, 163, 184);
+  /* The former Dark selector won over :hover; preserve its unchanged link color. */
+  --gf-footer-link-hover: var(--gf-footer-link);
+  --gf-footer-meta: rgb(100, 116, 139);
 }
 
 .gf-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--gf-footer-border);
   background:
     linear-gradient(180deg, var(--gf-footer-bg), var(--gf-footer-bg-deep)),
     var(--gf-footer-bg);
-  color: rgb(211, 222, 238);
+  color: var(--gf-footer-text);
   transition:
     background-color 500ms ease,
     border-color 500ms ease,
     color 500ms ease;
 }
 
-html.dark .gf-footer {
-  border-top-color: rgba(255, 255, 255, 0.05);
-  background:
-    linear-gradient(180deg, var(--gf-footer-bg), var(--gf-footer-bg-deep)),
-    var(--gf-footer-bg);
-  color: rgb(148, 163, 184);
-}
-
 .gf-footer__section-title {
-  color: rgb(100, 116, 139);
+  color: var(--gf-footer-section-title);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  text-transform: uppercase;
   letter-spacing: 0.24em;
   transition: color 500ms ease;
 }
 
-html.dark .gf-footer__section-title {
-  color: rgb(71, 85, 105);
+.gf-footer__section-title svg {
+  opacity: 0.8;
 }
 
 .gf-footer__link,
 .gf-footer__meta-link {
-  color: rgb(203, 213, 225);
+  color: var(--gf-footer-link);
   transition: color var(--gf-motion-fast) ease;
-}
-
-html.dark .gf-footer__link,
-html.dark .gf-footer__meta-link {
-  color: rgb(148, 163, 184);
 }
 
 .gf-footer__link:hover,
 .gf-footer__meta-link:hover {
-  color: #ffffff;
+  color: var(--gf-footer-link-hover);
 }
 
 .gf-footer__social-icon {
@@ -68,11 +80,28 @@ html.dark .gf-footer__meta-link {
   transform: scale(1.25);
 }
 
-.gf-footer__meta {
-  color: rgb(148, 163, 184);
-  transition: color 500ms ease;
+/* Preserve the original Tailwind hover capability guard for brand glows. */
+@media (hover: hover) {
+  .gf-footer__social-icon[data-brand='bilibili']:hover {
+    filter: var(--gf-footer-social-bilibili-glow);
+  }
+
+  .gf-footer__social-icon[data-brand='weibo']:hover {
+    filter: var(--gf-footer-social-weibo-glow);
+  }
+
+  .gf-footer__social-icon[data-brand='github']:hover {
+    filter: var(--gf-footer-social-github-glow);
+  }
+
+  .gf-footer__social-icon[data-brand='twitter']:hover {
+    filter: var(--gf-footer-social-twitter-glow);
+  }
 }
 
-html.dark .gf-footer__meta {
-  color: rgb(100, 116, 139);
+.gf-footer__meta {
+  color: var(--gf-footer-meta);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  transition: color 500ms ease;
 }

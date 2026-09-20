@@ -60,13 +60,13 @@ button {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(249, 115, 22, 0.4);
+  background: var(--gf-scrollbar-thumb);
   border-radius: 4px;
   backdrop-filter: blur(4px);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(249, 115, 22, 0.7);
+  background: var(--gf-scrollbar-thumb-hover);
 }
 
 .scrollbar-hide::-webkit-scrollbar {

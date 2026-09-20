@@ -1,6 +1,19 @@
 .gf-app-shell {
   background: var(--gf-page-background);
   color: var(--gf-text-main);
+  transition-property:
+    color,
+    background-color,
+    border-color,
+    outline-color,
+    text-decoration-color,
+    fill,
+    stroke,
+    --tw-gradient-from,
+    --tw-gradient-via,
+    --tw-gradient-to;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html.dark .gf-app-shell {

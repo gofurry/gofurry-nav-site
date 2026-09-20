@@ -84,6 +84,12 @@
   /* Motion: existing interaction timing; consumers retain reduced-motion rules. */
   --gf-motion-fast: 160ms;
   --gf-motion-base: 220ms;
+
+  /* Browser Chrome: global scrollbar thumb and hover treatment.
+   * Both themes intentionally share these values; geometry stays in main.css.
+   */
+  --gf-scrollbar-thumb: rgba(249, 115, 22, 0.4);
+  --gf-scrollbar-thumb-hover: rgba(249, 115, 22, 0.7);
 }
 
 /* Dark theme preserves token semantics; only values change.

@@ -1,5 +1,5 @@
 <template>
-  <div class="gf-app-shell relative isolate flex min-h-screen flex-col transition-colors duration-500">
+  <div class="gf-app-shell relative isolate flex min-h-screen flex-col">
     <PublicPageBackground />
     <div :class="navBarWrapperClass">
       <NavBar :nav-overlay-desktop="isNavPage" />

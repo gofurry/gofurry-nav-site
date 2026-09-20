@@ -76,6 +76,44 @@ React Admin owns separate state components. The policy updater removes the three
 dead files' 11 + 8 + 2 Tailwind appearances, without moving debt or changing live
 styles. #108/#109 consumers remain excluded from proactive migration.
 
+## Footer, App Shell and global browser chrome
+
+P4.6.2 completes Footer's compound appearance in
+[footer.less](../../apps/cn/nav-web/app/assets/styles/components/footer.less).
+Its local `--gf-footer-*` tokens own canvas, text/link hierarchy and brand hover
+glows; Dark overrides only theme-sensitive values. Vue retains structural
+Tailwind and business link data, with `data-brand` identifying social icons.
+Typography includes the original section-title and meta line heights; brand
+glows retain the generated Tailwind hover-capability media condition.
+
+Audit correction to the P4.6.2 plan: the old Dark link selector's specificity
+kept ordinary and meta links at their resting color on hover. Dark therefore
+aliases `--gf-footer-link-hover` to `--gf-footer-link`, preserving that verified
+behavior rather than introducing the plan's assumed cross-theme white hover.
+
+[shell.less](../../apps/cn/nav-web/app/assets/styles/components/shell.less) owns
+the App Shell's full color-transition contract. The global scrollbar consumes
+foundation `--gf-scrollbar-*` browser-chrome semantics in `main.css`, retaining
+selectors, geometry and the shared Light/Dark treatment. Accepted Footer/Shell
+tests and goldens remain the authority; this migration adds no new visual design.
+
+## P4 exit ownership
+
+The remaining manifest was audited by semantic consumer, including Common and
+Game Detail insights widgets. No unassigned Stable/Common debt remains.
+
+| Remaining surface | Next owner |
+| --- | --- |
+| NavBar, Nav domain, site-groups, MobileBottomTabBar | P5 Nav Surface |
+| Game, Lottery, BlurWrapper, LinkTag, Game Detail insights widgets | P6 Game Surface |
+| Site Detail components | #109 |
+| Insights page/domain styles | #108 |
+| Experimental ambient effects | Intentionally preserved experimental |
+
+`frontend-style-debt.json` remains the exact machine-owned inventory. These
+assignments are phase boundaries, not authorization to clear debt early; ambient
+effects must not be deleted merely to lower totals.
+
 ## Error and PageScrollDock appearance
 
 P4.5.3 moves Error appearance into
