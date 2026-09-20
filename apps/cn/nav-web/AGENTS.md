@@ -156,6 +156,11 @@ allowed. Keep `is-*` states attached to Updates-owned bases and preserve specifi
 and the genuine no-JS Light fallback. Error appearance migration must pass these
 contracts without updating snapshots; new goldens require maintainer review.
 
+`visual/page-scroll-dock.spec.ts` owns Dock normal/hover appearance at 50%.
+`regression/page-scroll-dock.spec.ts` owns real document progress, quarter-step
+scrolling and Mobile unmount. Appearance migration must pass both unchanged;
+do not expand this contract to unused custom scrollers.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

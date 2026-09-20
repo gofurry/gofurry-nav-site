@@ -13,7 +13,7 @@ the commands below run from `apps/cn/nav-web`.
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
 | Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail, Resource Routing/Managed/Steam and Hero/Preferences are migrated |
-| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel; Foundation, Preferences and Error locator baselines; Static/Legal and Updates viewport baselines |
+| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel; Foundation, Preferences and Error locator baselines; Static/Legal and Updates viewport baselines; Dock expanded clips |
 | Legacy visual/report guard | `npm run visual:guard` | Broad page/selector/theme/overflow reports and historical checks; retained independently of Visual and `style:policy` |
 | Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Insights and unrelated domains retain their runners until scoped migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
@@ -532,6 +532,45 @@ The existing 22 PNGs remain byte-identical, for 26 total. Maintainers must revie
 the four `error-404-{light,dark}-{desktop,mobile}.png` images for loaded artwork,
 mask/composition, text hierarchy, dark contrast and mobile stacked buttons before
 P4.5.2. P4.5.1 changes no production source or style debt.
+
+### PageScrollDock runtime and appearance (P4.5.2)
+
+`tests/browser/fixtures/page-scroll-dock.ts` reuses `startInsightsFixtureApp`
+with real production `/terms`, Nuxt hydration and the default document scroller.
+The actual page must naturally exceed the 320px render threshold; do not inject
+height or a custom scroll host. Fresh Light theme and Managed/Steam diagnostics
+use real Theme Store/TTL paths, with zero upstream/external requests, failed
+resources or browser errors. Playwright owns fresh contexts and route disposal.
+
+One `regression/page-scroll-dock.spec.ts` case owns Desktop mount at 1440×900,
+the rendered-but-inactive 0% state and accessible labels, real instant scrolling
+to 50%, visible opacity 0.78/pointer events, a real click smoothly stepping back
+by 25% of maxScroll, the resulting 25% label, then unmount at 390×844. Polling
+uses document position and product listener/RAF output, with one pixel of scroll
+rounding. No internal CSS property, custom-scroller or override-prop contract is
+introduced; there is no fixed sleep or networkidle.
+
+`visual/page-scroll-dock.spec.ts` adds exactly two Light Desktop images at 50%:
+`page-scroll-dock-light-50.png` and `page-scroll-dock-light-50-hover.png`. It checks
+the real 46×46 button, progress/accessibility, opacity, pointer events and shadow;
+real `hover()` additionally checks opacity 0.93 and saturation. Both Page captures
+expand the actual button box by 20px per side, clamped to the viewport, retaining
+shadow and real canvas. Blur/neutral mouse or hover, computed state, fonts and
+two RAFs settle capture without fake classes, masks or tolerance changes.
+
+Initial creation is authorized only for these two images in the pinned
+Linux/Node 24 environment, after install/build:
+
+```sh
+npm run test:visual:update -- -- page-scroll-dock.spec.ts
+npm run test:visual
+npm run test:visual
+```
+
+Both comparisons must report **29 passed**; Functional Browser is **68**.
+Existing 26 PNGs remain byte-identical, giving 28 total. Maintainers must review
+ring/track, inner highlight/core/border, percentage text, normal/hover opacity
+and shadow containment before P4.5.3. Production and all style debt stay unchanged.
 
 ## Verification
 

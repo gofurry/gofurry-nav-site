@@ -629,6 +629,13 @@ Appearance migration MUST pass the four accepted Error locator goldens and both
 behavior contracts without snapshot updates. Initial creation requires pinned
 generation, two consecutive comparisons and maintainer review.
 
+PageScrollDock runtime coverage MUST use the real document scroller on a
+production page. It owns Desktop render/visibility, displayed/accessibly labelled
+progress, quarter-of-total-distance scrolling and Mobile unmount. The two Visual
+baselines own normal/hover appearance at 50%, including surrounding shadow and
+canvas. Appearance migration MUST pass these contracts without snapshot updates;
+unused custom-scroller props are outside the current product contract.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module
