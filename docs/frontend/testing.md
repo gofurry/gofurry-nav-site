@@ -572,6 +572,37 @@ Existing 26 PNGs remain byte-identical, giving 28 total. Maintainers must review
 ring/track, inner highlight/core/border, percentage text, normal/hover opacity
 and shadow containment before P4.5.3. Production and all style debt stay unchanged.
 
+### Footer and App Shell (P4.6.1)
+
+`visual/fixtures/footer-shell.ts` independently reuses `startInsightsFixtureApp`
+for real production `/terms`, SSR/hydration, Theme Store and default
+PublicPageBackground. Fresh routing diagnostics keep real plugins on the quiet
+TTL path. Each Light/Dark Desktop scenario at 1440×900 requires zero upstream,
+external, failed-resource and browser errors; only unrelated fixed tools hide.
+
+The two `footer-shell.spec.ts` Page captures scroll the whole Footer into view
+and derive their right edge from the gap between its second and third columns.
+The meta/currentYear column must lie outside the clip; time/text is never mocked
+or masked. Computed assertions cover all four heading/icon styles, themed
+meta/link colors/transitions, four accessible-name social hover RGBs and the exact
+App Shell color-transition properties, duration and easing. Real hover settles
+through polling and all icons return to neutral before capture. Image/font/finite
+animation/two-RAF readiness uses no fixed sleeps or networkidle.
+
+Create only `footer-light-desktop.png` and `footer-dark-desktop.png` in the pinned
+Linux/Node 24 environment after install/build:
+
+```sh
+npm run test:visual:update -- -- footer-shell.spec.ts
+npm run test:visual
+npm run test:visual
+```
+
+Both comparisons must report **31 passed**; Functional Browser stays **68**.
+The existing 28 PNGs remain byte-identical, giving 30 total. Maintainers review
+both Footer images for canvas, border, typography, icons, spacing and exclusion
+of dynamic meta before P4.6.2. No production source or style debt changes here.
+
 ## Verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`

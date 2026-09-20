@@ -647,6 +647,15 @@ to global `tokens.less`. `--gf-error-step-delay` and `--gf-scroll-dock-progress`
 are Vue-supplied runtime channels, not static tokens. The existing Browser and
 Visual contracts MUST pass unchanged, without snapshot updates.
 
+Footer/Shell Visual contracts MUST use real production `/terms`, SSR/hydration,
+Theme Store and default PublicPageBackground. The two Desktop light/dark goldens
+own the stable first/second columns and Footer canvas; DOM-derived clips MUST
+exclude dynamic current-year meta without mocking time or masking. Computed
+assertions own heading/icon/meta/link appearance, four accessible-name social
+hover colors and the exact App Shell color-transition property set/timing.
+Creation requires pinned generation, two consecutive comparisons and maintainer
+review. Footer/Shell migration MUST pass these contracts without snapshot updates.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

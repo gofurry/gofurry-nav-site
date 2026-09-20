@@ -166,6 +166,11 @@ Error/Dock appearance belongs to `components/error.less` and
 only. Reuse local `--gf-error-*` / `--gf-scroll-dock-*` semantics, keeping dynamic
 delay/progress channels and the P4.5 behavior/visual contracts unchanged.
 
+`visual/footer-shell.spec.ts` owns the two Desktop Footer baselines and exact
+App Shell color-transition semantics. Derive the clip from real columns to exclude
+dynamic current-year meta; computed assertions protect meta/link appearance,
+heading/icon semantics and social hover colors. Migration must pass unchanged.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,
