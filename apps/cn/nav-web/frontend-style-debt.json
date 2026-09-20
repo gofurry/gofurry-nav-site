@@ -69,8 +69,6 @@
       "app/assets/styles/pages/lottery.less": 20,
       "app/assets/styles/pages/nav.less": 226,
       "app/components/common/MobileBottomTabBar.vue": 5,
-      "app/components/common/PageScrollDock.vue": 11,
-      "app/components/error/ErrorExperience.vue": 14,
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
       "app/components/game/common/GameReviewDialog.vue": 13,
       "app/components/game/detail/GameSidebarSimilar.vue": 1,
@@ -94,8 +92,7 @@
     "important": {
       "app/assets/styles/pages/games-search.less": 8,
       "app/assets/styles/pages/insights.less": 5,
-      "app/assets/styles/pages/insights/domain.less": 2,
-      "app/components/error/ErrorExperience.vue": 3
+      "app/assets/styles/pages/insights/domain.less": 2
     },
     "deep-selector": {
       "app/components/site/SiteDetailPage.vue": 8,

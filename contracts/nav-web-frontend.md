@@ -435,6 +435,8 @@ group and its corresponding all-dark group.
 | `app/assets/styles/components/nav.less` | `.gf-nav`, `html.dark .gf-nav` | `--gf-nav-` |
 | `app/assets/styles/components/footer.less` | `.gf-footer-shell`, `html.dark .gf-footer-shell` | `--gf-footer-` |
 | `app/assets/styles/components/preferences.less` | `.gf-preferences-modal`, `html.dark .gf-preferences-modal` | `--gf-preferences-` |
+| `app/assets/styles/components/error.less` | `.error-page`, `html.dark .error-page` | `--gf-error-` |
+| `app/assets/styles/components/page-scroll-dock.less` | `.page-scroll-dock` | `--gf-scroll-dock-` |
 | `app/assets/styles/primitives/rating.less` | `.gf-rating`, `html.dark .gf-rating` | `--gf-rating-` |
 | `app/assets/styles/pages/games.less` | `.games-page`, `html.dark .games-page` | `--games-` |
 | `app/assets/styles/pages/games-search.less` | `.games-search-page`, `html.dark .games-search-page` | `--games-search-` |
@@ -450,8 +452,9 @@ current token hierarchy, aliasing or annotation, nor establish another token
 level; further consolidation belongs to later phases. `foundation.less` has structural
 values/aliases and excludes no raw colors. Ordinary selectors in every listed
 file remain measured. Game-detail-specific text overrides, datepicker `--dp-*`
-overrides, `ErrorExperience.vue`'s local theme and `SiteDetailPage.vue`'s local
-theme are not approved declaration layers and remain raw-color debt.
+overrides and `SiteDetailPage.vue`'s local theme are not approved declaration
+layers and remain raw-color debt. P4.5.3 moves Error and Dock declarations into
+the exact component owners above; ordinary properties there still count as debt.
 
 P1 MUST compare its initial detector results against this same source snapshot,
 investigate discrepancies and document corrections rather than raising budgets
@@ -635,6 +638,14 @@ progress, quarter-of-total-distance scrolling and Mobile unmount. The two Visual
 baselines own normal/hover appearance at 50%, including surrounding shadow and
 canvas. Appearance migration MUST pass these contracts without snapshot updates;
 unused custom-scroller props are outside the current product contract.
+
+P4.5.3 assigns Error appearance to `components/error.less` with local
+`--gf-error-*` semantics and Dock appearance to `components/page-scroll-dock.less`
+with local `--gf-scroll-dock-*` semantics. Private geometry/placement MUST remain
+in their SFC scoped styles. These single-consumer semantics MUST NOT be promoted
+to global `tokens.less`. `--gf-error-step-delay` and `--gf-scroll-dock-progress`
+are Vue-supplied runtime channels, not static tokens. The existing Browser and
+Visual contracts MUST pass unchanged, without snapshot updates.
 
 ### P1 enforcement and maintenance
 

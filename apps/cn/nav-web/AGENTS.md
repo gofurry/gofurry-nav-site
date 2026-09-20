@@ -161,6 +161,11 @@ contracts without updating snapshots; new goldens require maintainer review.
 scrolling and Mobile unmount. Appearance migration must pass both unchanged;
 do not expand this contract to unused custom scrollers.
 
+Error/Dock appearance belongs to `components/error.less` and
+`components/page-scroll-dock.less`; their SFC scoped styles own private structure
+only. Reuse local `--gf-error-*` / `--gf-scroll-dock-*` semantics, keeping dynamic
+delay/progress channels and the P4.5 behavior/visual contracts unchanged.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

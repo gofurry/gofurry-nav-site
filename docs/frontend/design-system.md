@@ -17,7 +17,7 @@ The [Less entry](../../apps/cn/nav-web/app/assets/styles/index.less) composes
 | `tokens.less` | Shared global foundation semantics |
 | `mixins.less` | Reusable Less behavior consuming tokens |
 | `primitives/` | Domain-neutral button, card, chip, input, modal, pagination and rating building blocks |
-| `components/` | Compound product UI: preferences, shell, navigation and footer |
+| `components/` | Compound product UI: preferences, shell, navigation, footer, error experience and scroll dock |
 | `pages/` | Existing page/domain composition and its historical styles |
 
 A primitive has stable appearance semantics and can be composed across domains
@@ -75,6 +75,26 @@ Insights' `LoadingState` type and empty-state CSS/i18n names are unrelated;
 React Admin owns separate state components. The policy updater removes the three
 dead files' 11 + 8 + 2 Tailwind appearances, without moving debt or changing live
 styles. #108/#109 consumers remain excluded from proactive migration.
+
+## Error and PageScrollDock appearance
+
+P4.5.3 moves Error appearance into
+[error.less](../../apps/cn/nav-web/app/assets/styles/components/error.less),
+including its local `--gf-error-*` canvas/text/action semantics, artwork mask,
+typography and motion. Its scoped SFC retains private layout. No-JS visibility
+uses normal declarations with greater specificity; keyboard focus cancels the
+staged action animation before revealing controls, without `!important`.
+
+[page-scroll-dock.less](../../apps/cn/nav-web/app/assets/styles/components/page-scroll-dock.less)
+owns Dock ring/core/shadow/text and hover appearance through compound local
+`--gf-scroll-dock-*` tokens. Placement, grid and mobile unmount/display structure
+stay in the SFC. The step-delay and progress properties remain dynamic Vue
+channels, preserving their original values and behavior.
+
+Single-consumer visual semantics stay component-local; clearing debt alone does
+not justify promotion to global tokens. Both owners load in the component layer
+before pages and must preserve the accepted Error/Dock runtime and pixel
+contracts without modifying tests or snapshots.
 
 ## Updates domain namespace
 
