@@ -58,7 +58,7 @@
       "app/assets/styles/pages/games.less": 62,
       "app/assets/styles/pages/insights.less": 10,
       "app/assets/styles/pages/lottery.less": 20,
-      "app/assets/styles/pages/nav.less": 56,
+      "app/assets/styles/pages/nav.less": 5,
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
       "app/components/game/common/GameReviewDialog.vue": 13,
       "app/components/game/detail/GameSidebarSimilar.vue": 1,

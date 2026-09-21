@@ -125,6 +125,49 @@
   --nav-home-tool-result-meta: rgba(68, 64, 60, 0.65);
   --nav-home-tool-empty-text: rgba(68, 64, 60, 0.68);
 
+  /* Spotlight panel chrome, row hierarchy and visited state share the Nav Home theme.
+   * Gradients and icon glow remain complete semantic values. */
+  --nav-home-spotlight-panel-bg:
+    linear-gradient(
+      180deg,
+      rgba(255, 250, 242, 0.42) 0%,
+      rgba(255, 250, 242, 0.20) 42%,
+      rgba(255, 250, 242, 0) 100%
+    );
+  --nav-home-spotlight-accent-line:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(154, 52, 18, 0.16) 14%,
+      rgba(154, 52, 18, 0.42) 34%,
+      rgba(154, 52, 18, 0.58) 50%,
+      rgba(154, 52, 18, 0.42) 66%,
+      rgba(154, 52, 18, 0.16) 86%,
+      transparent 100%
+    );
+  --nav-home-spotlight-header-wash: linear-gradient(180deg, rgba(255, 237, 213, 0.22), transparent);
+  --nav-home-spotlight-divider:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(126, 92, 58, 0.10) 20%,
+      rgba(126, 92, 58, 0.24) 50%,
+      rgba(126, 92, 58, 0.10) 80%,
+      transparent
+    );
+  --nav-home-spotlight-title-text: rgba(71, 42, 20, 0.92);
+  --nav-home-spotlight-pager-text: rgba(154, 52, 18, 0.74);
+  --nav-home-spotlight-pager-hover-bg: rgba(154, 52, 18, 0.10);
+  --nav-home-spotlight-pager-hover-text: rgba(124, 45, 18, 1);
+  --nav-home-spotlight-pager-meta: rgba(68, 64, 60, 0.72);
+  --nav-home-spotlight-site-bg: rgba(255, 250, 242, 0.20);
+  --nav-home-spotlight-site-accent: rgba(154, 52, 18, 0.70);
+  --nav-home-spotlight-site-hover-bg: rgba(255, 237, 213, 0.36);
+  --nav-home-spotlight-muted-text: rgba(120, 83, 53, 0.58);
+  --nav-home-spotlight-visited-text: #16a34a;
+  --nav-home-spotlight-visited-filter: drop-shadow(0 0 3px rgba(22, 163, 74, 0.25));
+  --nav-home-spotlight-logo-bg: rgba(255, 250, 242, 0.32);
+
   min-height: 100vh;
   background: var(--nav-home-bg);
 }
@@ -170,6 +213,48 @@ html.dark .nav-home-page {
   --nav-home-tool-result-logo-bg: rgba(30, 41, 59, 0.90);
   --nav-home-tool-result-meta: rgba(148, 163, 184, 0.82);
   --nav-home-tool-empty-text: rgba(148, 163, 184, 0.82);
+
+  /* Spotlight Dark palette; structure and interaction stay in the shared selectors. */
+  --nav-home-spotlight-panel-bg:
+    linear-gradient(
+      180deg,
+      rgba(30, 41, 59, 0.38) 0%,
+      rgba(15, 23, 42, 0.20) 44%,
+      rgba(15, 23, 42, 0) 100%
+    );
+  --nav-home-spotlight-accent-line:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(125, 211, 252, 0.12) 14%,
+      rgba(125, 211, 252, 0.30) 34%,
+      rgba(125, 211, 252, 0.44) 50%,
+      rgba(125, 211, 252, 0.30) 66%,
+      rgba(125, 211, 252, 0.12) 86%,
+      transparent 100%
+    );
+  --nav-home-spotlight-header-wash: linear-gradient(180deg, rgba(30, 41, 59, 0.22), transparent);
+  --nav-home-spotlight-divider:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(148, 163, 184, 0.08) 20%,
+      rgba(148, 163, 184, 0.22) 50%,
+      rgba(148, 163, 184, 0.08) 80%,
+      transparent
+    );
+  --nav-home-spotlight-title-text: #f8fafc;
+  --nav-home-spotlight-pager-text: rgba(180, 213, 226, 0.62);
+  --nav-home-spotlight-pager-hover-bg: rgba(148, 163, 184, 0.12);
+  --nav-home-spotlight-pager-hover-text: rgba(226, 232, 240, 0.90);
+  --nav-home-spotlight-pager-meta: rgba(203, 213, 225, 0.72);
+  --nav-home-spotlight-site-bg: rgba(15, 23, 42, 0.18);
+  --nav-home-spotlight-site-accent: rgba(125, 211, 252, 0.54);
+  --nav-home-spotlight-site-hover-bg: rgba(148, 163, 184, 0.15);
+  --nav-home-spotlight-muted-text: rgba(203, 213, 225, 0.72);
+  --nav-home-spotlight-visited-text: #fb923c;
+  --nav-home-spotlight-visited-filter: drop-shadow(0 0 3px rgba(251, 146, 60, 0.34));
+  --nav-home-spotlight-logo-bg: rgba(15, 23, 42, 0.72);
 }
 
 .nav-header {
@@ -829,12 +914,6 @@ html.dark .nav-home-page {
   min-height: 100vh;
   overflow: hidden;
   padding: 1.5rem;
-}
-
-.nav-content-loading {
-  padding-block: 2rem;
-  color: var(--nav-home-card-muted);
-  text-align: center;
 }
 
 .nav-group-section {
@@ -1681,13 +1760,7 @@ html.dark .nav-tool-empty {
   overflow: hidden;
   border: 0;
   border-radius: 0;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 250, 242, 0.42) 0%,
-      rgba(255, 250, 242, 0.20) 42%,
-      rgba(255, 250, 242, 0) 100%
-    );
+  background: var(--nav-home-spotlight-panel-bg);
   box-shadow: none;
   backdrop-filter: none;
   isolation: isolate;
@@ -1700,16 +1773,7 @@ html.dark .nav-tool-empty {
   right: 0.2rem;
   left: 0.2rem;
   height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(154, 52, 18, 0.16) 14%,
-    rgba(154, 52, 18, 0.42) 34%,
-    rgba(154, 52, 18, 0.58) 50%,
-    rgba(154, 52, 18, 0.42) 66%,
-    rgba(154, 52, 18, 0.16) 86%,
-    transparent 100%
-  );
+  background: var(--nav-home-spotlight-accent-line);
   content: "";
   pointer-events: none;
 }
@@ -1721,7 +1785,7 @@ html.dark .nav-tool-empty {
   right: 0;
   left: 0;
   height: 4.8rem;
-  background: linear-gradient(180deg, rgba(255, 237, 213, 0.22), transparent);
+  background: var(--nav-home-spotlight-header-wash);
   content: "";
   pointer-events: none;
 }
@@ -1751,21 +1815,14 @@ html.dark .nav-tool-empty {
   bottom: 0;
   left: 0.72rem;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(126, 92, 58, 0.10) 20%,
-    rgba(126, 92, 58, 0.24) 50%,
-    rgba(126, 92, 58, 0.10) 80%,
-    transparent
-  );
+  background: var(--nav-home-spotlight-divider);
   content: "";
   pointer-events: none;
 }
 
 .spotlight-panel__header h2 {
   margin: 0;
-  color: rgba(71, 42, 20, 0.92);
+  color: var(--nav-home-spotlight-title-text);
   font-size: 1rem;
   font-weight: 650;
   line-height: 1.2;
@@ -1786,19 +1843,19 @@ html.dark .nav-tool-empty {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: rgba(154, 52, 18, 0.74);
+  color: var(--nav-home-spotlight-pager-text);
   cursor: pointer;
   transition: background-color 180ms ease, color 180ms ease;
 }
 
 .spotlight-panel__pager button:hover {
-  background: rgba(154, 52, 18, 0.10);
-  color: rgba(124, 45, 18, 1);
+  background: var(--nav-home-spotlight-pager-hover-bg);
+  color: var(--nav-home-spotlight-pager-hover-text);
 }
 
 .spotlight-panel__pager span {
   min-width: 2.5rem;
-  color: rgba(68, 64, 60, 0.72);
+  color: var(--nav-home-spotlight-pager-meta);
   font-size: 0.72rem;
   text-align: center;
 }
@@ -1857,7 +1914,7 @@ html.dark .nav-tool-empty {
   gap: 0.42rem;
   border: 0;
   border-radius: 0.32rem;
-  background: rgba(255, 250, 242, 0.20);
+  background: var(--nav-home-spotlight-site-bg);
   color: inherit;
   cursor: pointer;
   padding: 0.2rem 0.36rem 0.2rem 0.44rem;
@@ -1874,14 +1931,14 @@ html.dark .nav-tool-empty {
   width: 2px;
   height: 0;
   border-radius: 999px;
-  background: rgba(154, 52, 18, 0.70);
+  background: var(--nav-home-spotlight-site-accent);
   content: "";
   transform: translateY(-50%);
   transition: height 180ms ease, background-color 180ms ease;
 }
 
 .spotlight-site:hover {
-  background: rgba(255, 237, 213, 0.36);
+  background: var(--nav-home-spotlight-site-hover-bg);
 }
 
 .spotlight-site:hover::before {
@@ -1893,14 +1950,14 @@ html.dark .nav-tool-empty {
   width: 1.45rem;
   height: 1.45rem;
   place-items: center;
-  color: rgba(120, 83, 53, 0.58);
+  color: var(--nav-home-spotlight-muted-text);
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
 
 .spotlight-site__rank--visited {
-  color: #16a34a;
+  color: var(--nav-home-spotlight-visited-text);
 }
 
 .spotlight-site__rank svg {
@@ -1911,7 +1968,7 @@ html.dark .nav-tool-empty {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 3.2;
-  filter: drop-shadow(0 0 3px rgba(22, 163, 74, 0.25));
+  filter: var(--nav-home-spotlight-visited-filter);
 }
 
 .spotlight-site__logo {
@@ -1920,7 +1977,7 @@ html.dark .nav-tool-empty {
   height: 1.78rem;
   overflow: hidden;
   border-radius: 0.32rem;
-  background: rgba(255, 250, 242, 0.32);
+  background: var(--nav-home-spotlight-logo-bg);
 }
 
 .spotlight-site__logo img {
@@ -1942,7 +1999,7 @@ html.dark .nav-tool-empty {
 }
 
 .spotlight-site__body strong {
-  color: rgba(71, 42, 20, 0.92);
+  color: var(--nav-home-spotlight-title-text);
   font-size: 0.84rem;
   font-weight: 620;
   line-height: 1.1;
@@ -1950,7 +2007,7 @@ html.dark .nav-tool-empty {
 
 .spotlight-site__body small {
   margin-top: 0.08rem;
-  color: rgba(120, 83, 53, 0.58);
+  color: var(--nav-home-spotlight-muted-text);
   font-size: 0.7rem;
 }
 
@@ -1958,96 +2015,8 @@ html.dark .nav-tool-empty {
   display: grid;
   min-height: 12rem;
   place-items: center;
-  color: rgba(120, 83, 53, 0.58);
+  color: var(--nav-home-spotlight-muted-text);
   font-size: 0.8rem;
-}
-
-html.dark .spotlight-panel {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(30, 41, 59, 0.38) 0%,
-      rgba(15, 23, 42, 0.20) 44%,
-      rgba(15, 23, 42, 0) 100%
-    );
-  box-shadow: none;
-}
-
-html.dark .spotlight-panel::before {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(125, 211, 252, 0.12) 14%,
-    rgba(125, 211, 252, 0.30) 34%,
-    rgba(125, 211, 252, 0.44) 50%,
-    rgba(125, 211, 252, 0.30) 66%,
-    rgba(125, 211, 252, 0.12) 86%,
-    transparent 100%
-  );
-}
-
-html.dark .spotlight-panel::after {
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.22), transparent);
-}
-
-html.dark .spotlight-panel__header::after {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(148, 163, 184, 0.08) 20%,
-    rgba(148, 163, 184, 0.22) 50%,
-    rgba(148, 163, 184, 0.08) 80%,
-    transparent
-  );
-}
-
-html.dark .spotlight-panel__header h2,
-html.dark .spotlight-site__body strong {
-  color: #f8fafc;
-}
-
-html.dark .spotlight-site__rank,
-html.dark .spotlight-site__body small,
-html.dark .spotlight-panel__empty {
-  color: rgba(203, 213, 225, 0.72);
-}
-
-html.dark .spotlight-site__rank--visited {
-  color: #fb923c;
-}
-
-html.dark .spotlight-site__rank--visited svg {
-  filter: drop-shadow(0 0 3px rgba(251, 146, 60, 0.34));
-}
-
-html.dark .spotlight-site {
-  background: rgba(15, 23, 42, 0.18);
-}
-
-html.dark .spotlight-site::before {
-  background: rgba(125, 211, 252, 0.54);
-}
-
-html.dark .spotlight-site:hover {
-  background: rgba(148, 163, 184, 0.15);
-}
-
-html.dark .spotlight-panel__pager button {
-  background: transparent;
-  color: rgba(180, 213, 226, 0.62);
-}
-
-html.dark .spotlight-panel__pager button:hover {
-  background: rgba(148, 163, 184, 0.12);
-  color: rgba(226, 232, 240, 0.90);
-}
-
-html.dark .spotlight-panel__pager span {
-  color: rgba(203, 213, 225, 0.72);
-}
-
-html.dark .spotlight-site__logo {
-  background: rgba(15, 23, 42, 0.72);
 }
 
 @keyframes spotlight-panel-next {
