@@ -16,6 +16,9 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Changed
 
+- Relicense GoFurry-owned source code and project documentation from MIT to BSD-3-Clause.
+- Add repository licensing, contribution, conduct, and security guidance.
+- Route ideas and architecture proposals to GitHub Discussions and clarify website content-license boundaries.
 - Separate saved resource routing modes from probe recommendations with SSR-readable cookies, 12-hour probe freshness, a 60-second manual cooldown, and fixed Valve thumbnail probes; migrate old Steam automatic preferences as recommendations rather than pinned modes, and retain runtime fallback for pinned routes (#107, #121).
 - Remove ordinary Game content hover shadows and share/load-more hover movement while preserving original hover colors and shadows on actual floating UI (#118).
 - Replace the legacy Game tag hierarchy with `gfg_tag_category`, `gfg_tag`, and `gfg_game_tag`; preserve existing leaf IDs using the reviewed 214-entry ID/code mapping and backfill primary/secondary assignments missing from the old map. Relation roles become the sole current classification source, with compatibility response fields derived from them (#116).

@@ -132,4 +132,4 @@ APP_RAG_TENCENT_API_KEY=your-api-key
 
 ## 许可
 
-沿用父仓库 MIT License。
+本 legacy 目录遵循父仓库的 [根许可政策](../../LICENSING.md)，包括其中的第三方与历史版本例外。

@@ -111,4 +111,4 @@ Do not commit real database passwords, console passcodes, or JWT secrets.
 
 ## License
 
-MIT, following the parent gofurry repository.
+This legacy directory follows the parent repository's [root licensing policy](../../LICENSING.md), including its third-party and historical-version exceptions.

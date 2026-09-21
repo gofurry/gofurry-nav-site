@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ideas and proposals
+    url: https://github.com/gofurry/gofurry-nav-site/discussions/categories/ideas
+    about: Discuss feature ideas first; accepted work can then be tracked in an Issue.
+  - name: Questions and help
+    url: https://github.com/gofurry/gofurry-nav-site/discussions/categories/q-a
+    about: Ask questions and get help in GitHub Discussions.
+  - name: Security vulnerabilities
+    url: https://github.com/gofurry/gofurry-nav-site/blob/dev/SECURITY.md
+    about: Follow SECURITY.md to report privately; do not post unresolved vulnerabilities here.
