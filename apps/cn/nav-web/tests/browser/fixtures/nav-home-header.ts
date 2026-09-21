@@ -2,6 +2,7 @@ import { test as base, expect, type Locator } from '@playwright/test'
 import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.mjs'
 import { STEAM_DIAGNOSTICS_KEY, STEAM_PROBE_PATHS } from '../../../app/utils/steamAssetRouting'
 import { captureBrowserErrors } from './browser-errors'
+import { assertHeroHydration } from './hero-lifecycle'
 
 type App = Awaited<ReturnType<typeof startInsightsFixtureApp>>
 type Gate = { promise: Promise<void>, release(): void }
@@ -88,6 +89,7 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
     const upstreamStart = app.requests.length
     const expectedFailures = new Set<string>()
     const errors = captureBrowserErrors(page, expectedFailures)
+    const knownHydration: string[] = []
     const popupErrors: string[][] = []
     const external: string[] = [], unexpectedFailed: string[] = [], injectedFailed: string[] = []
     const managed: string[] = [], icons: string[] = [], weather: string[] = [], popups: string[] = [], browserAPI: string[] = []
@@ -152,7 +154,9 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
       expect(weather).toEqual([weatherURL])
       expect(external).toEqual([])
       expect(unexpectedFailed).toEqual([])
-      expect(errors).toEqual([])
+      // Raw evidence stays intact. Consume only the initial Mobile error already
+      // verified by the existing helper; any later error (even identical) fails.
+      expect(errors.slice(knownHydration.length)).toEqual([])
       expect(popupErrors.flat()).toEqual([])
       expect(popups).toEqual(popupAllowed ? [searchPopupURL] : [])
     }
@@ -216,6 +220,18 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
               primaryMs: 10, mirrorMs: 20, primaryState: 'success', mirrorState: 'success' }))
             localStorage.setItem(steamKey, JSON.stringify({ version: 1, selected: 'china', checkedAt, sample,
               china: { ms: 30, state: 'success' }, global: { ms: 60, state: 'success' } }))
+            if (innerWidth < 768) {
+              // Observe the earliest real SSR Hero for assertHeroHydration;
+              // never modify DOM, Vue state or the displayed resource.
+              const observer = new MutationObserver(() => {
+                const node = document.querySelector('.nav-header__background:not([data-hero-pending])')
+                if (node) {
+                  (window as Window & { initialHeroNode?: Element }).initialHeroNode = node
+                  observer.disconnect()
+                }
+              })
+              observer.observe(document, { childList: true, subtree: true })
+            }
           }, { origin: app.base, recent: recentSeed, custom: customSeed, steamKey: STEAM_DIAGNOSTICS_KEY, sample: STEAM_PROBE_PATHS[0] })
           const response = await page.goto('/', { waitUntil: 'load' })
           expect(response?.status()).toBe(200)
@@ -241,6 +257,11 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
               && images.every(image => image.complete && image.naturalWidth > 0))).toBe(true)
           } else await expect(quick).toBeHidden()
           await settle(search)
+          if (width < 768) {
+            const initialErrors = [...errors]
+            await assertHeroHydration(page, ssr, [...initialErrors])
+            knownHydration.push(...initialErrors)
+          } else expect(errors).toEqual([])
           expect(state.requests).toHaveLength(1)
           expect(browserAPI).toEqual([])
           assertQuiet()
@@ -284,7 +305,7 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
       releaseSuggestions()
       await testInfo.attach('header-network-evidence', { contentType: 'application/json', body: JSON.stringify({
         upstream: state.requests.map(String), browserAPI, managed, icons, injectedFailed, weather, popups,
-        external, unexpectedFailed, errors, popupErrors,
+        external, unexpectedFailed, errors, knownHydration, popupErrors,
       }, null, 2) })
       headerApp.current = null
       // Playwright owns the context and routes. Never await unrouteAll(wait)

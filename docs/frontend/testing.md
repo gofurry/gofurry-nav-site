@@ -674,6 +674,11 @@ The production exact Tianqi iframe is isolated locally; external traffic and
 unexpected failures/errors must remain zero. Bing popup navigation is allowed
 only at the exact selected-suggestion URL after the real Enter action.
 
+Mobile Home reuses the existing `assertHeroHydration` strict Footer mismatch
+contract, with an observer recording the earliest real SSR Hero. Raw errors stay
+attached; only that verified initial mismatch is consumed. Every later error
+still fails, and Desktop keeps zero browser errors.
+
 Two regressions protect Search typography/theme parity, debounce/loading/empty,
 keyboard/popup and reveal lock; plus QuickAccess slots/favicon fallback and
 Modal validation/add/delete/localStorage. The audited chip transition is

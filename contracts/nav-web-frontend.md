@@ -694,6 +694,9 @@ Nav Shell contracts. The chip transition's actual Less cascade (background,
 box-shadow and color, 500ms each) takes precedence over utility-name inference.
 Unused `SiteIconStrip` is a P5.2.2 cleanup candidate, not live Header coverage.
 Production, the debt baseline and the original 38 PNGs remain unchanged.
+Mobile Home reuses the existing `assertHeroHydration` strict Footer mismatch
+contract with SSR Hero retention evidence. Preserve raw errors and reject all
+later errors; Desktop retains zero browser errors. This is not a general exception.
 
 ### P1 enforcement and maintenance
 
