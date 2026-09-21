@@ -175,6 +175,12 @@ App Shell color-transition semantics. Derive the clip from real columns to exclu
 dynamic current-year meta; computed assertions protect meta/link appearance,
 heading/icon semantics and social hover colors. Migration must pass unchanged.
 
+`regression/nav-shell.spec.ts` owns Nav Shell interactions; `visual/nav-shell.spec.ts`
+owns Standard/Overlay/Mobile Menu/BottomTab appearance through the shared fixture.
+Keep its audited Home/Mode side-effect exceptions precise (see testing guidance).
+Hero lifecycle, SearchBox, QuickAccess, Nav content and Site Groups remain separate
+P5 contracts. The eight new goldens require maintainer review before P5.1.2.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

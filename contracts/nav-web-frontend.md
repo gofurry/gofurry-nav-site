@@ -666,6 +666,20 @@ That baseline MUST NOT authorize opportunistic or early cross-phase migration.
 Dark Footer link-hover aliases its normal link token to preserve the prior
 computed cascade; brand glows retain the same values in both themes.
 
+Nav Shell contracts own ordinary and homepage-overlay NavBar states, Desktop
+theme/language integration, Mobile Menu behavior and MobileBottomTabBar scroll,
+active-state and breakpoint semantics. P5.1.2 appearance migration MUST pass
+these accepted Browser/Visual contracts without snapshot updates. Hero lifecycle,
+SearchBox, QuickAccess and Nav content retain separate ownership.
+The P5.1.1 audit found existing Home side effects absent from its initial plan:
+null saying triggers one saying request, mounted content creates a weather iframe,
+and Mobile Home has the already-guarded Footer hydration mismatch. The approved
+fixture exceptions MUST remain exact, locally fulfilled and separately recorded;
+reuse the narrow existing hydration evidence check, never broaden generic error
+suppression. Terms remains quiet except for one separately recorded empty pattern
+catalog requested only after the real BottomTab Mode action mounts Preferences.
+All other requests/errors MUST remain zero.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

@@ -603,6 +603,59 @@ The existing 28 PNGs remain byte-identical, giving 30 total. Maintainers review
 both Footer images for canvas, border, typography, icons, spacing and exclusion
 of dynamic meta before P4.6.2. No production source or style debt changes here.
 
+### Nav Shell runtime and appearance (P5.1.1)
+
+`tests/browser/fixtures/nav-shell.ts` serves both the Functional and Visual specs,
+reusing `startInsightsFixtureApp` with worker-owned production Nitro/local API
+and fresh test-owned contexts, diagnostics, request/error evidence and state.
+`/terms` hosts ordinary Nav and Mobile Menu with zero upstream/external requests
+or errors before opening Mode. `/` supplies one SSR Home response with empty
+groups/spotlights and null Hero keys; real Hero frames, Mobile reveal and Desktop
+prewarm remain active.
+Theme uses only localStorage seeds and real NavBar/Theme Store initialization.
+
+The initial plan's fully quiet Home assumption conflicts with production.
+Explicitly approved exceptions are one `/nav/home/saying?lang=zh` response with
+null saying and the exact weather iframe, fulfilled locally without external
+network access. Both are counted separately; all other upstream/external calls
+fail. Mobile Home reuses the existing narrow `assertHeroHydration` evidence
+(one mismatch, narrow viewport, absent SSR/present client Footer, retained SSR
+Hero node and no other error), without modifying Hero tests or the generic guard.
+Raw errors remain in the attachment and any later mismatch fails.
+The real Mode modal also mounts Background Editor eagerly: a further approved
+exception allows exactly one empty `/nav/appearance/patterns` catalog only after
+the Mobile Functional test clicks BottomTab Mode. Other Terms scenarios allow none.
+
+Two Functional cases own Desktop Theme→EN routing to `/en/terms` and persistent
+Dark state; Mobile menu theme retention, route-driven close, English active state,
+BottomTab hidden-at-top/visible-above-72 behavior, Mode modal active/Cancel and
+the mounted-but-hidden 640px breakpoint. Real scrolling polls product listeners
+and its 160ms sync path; no internal state mutation or fixed sleep is used.
+
+Eight Page clips under `visual/__snapshots__/nav-shell.spec.ts/` cover
+`nav-shell-standard-{light,dark}-desktop.png`,
+`nav-shell-overlay-{light,dark}-desktop.png`,
+`nav-shell-mobile-menu-{light,dark}.png` and
+`nav-shell-bottom-tabs-{light,dark}-mobile.png` (1440×900 / 390×844, zh-CN).
+Desktop clips extend real Nav bounds to include shadow/canvas while excluding
+SearchBox/QuickAccess; menu clips include the absolute panel; BottomTab clips
+expand its bounds by 12px and use genuine Home active state, never hover.
+Target-scoped finite transitions, loaded assets, fonts and two RAFs precede
+geometry/quiet checks. No global Home animation wait, mask or tolerance is added.
+
+Only these eight initial images are authorized, in the existing pinned environment:
+
+```sh
+npm run test:visual:update -- -- nav-shell.spec.ts
+npm run test:visual
+npm run test:visual
+```
+
+Both comparisons must report **39 passed**, Functional Browser **70**. The original
+30 PNGs remain byte-identical, for **38** total. Maintainers must review all eight
+new images before P5.1.2, which must pass them unchanged. Production, style debt,
+existing P4/Hero tests and legacy `visual:guard` remain untouched.
+
 ## Verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
