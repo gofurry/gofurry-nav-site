@@ -432,7 +432,7 @@ group and its corresponding all-dark group.
 | File | Exact declaration selector(s) | Custom-property prefix |
 | --- | --- | --- |
 | `app/assets/styles/tokens.less` | `:root`, `html.dark` | `--gf-` |
-| `app/assets/styles/components/nav.less` | `.gf-nav`, `html.dark .gf-nav` | `--gf-nav-` |
+| `app/assets/styles/components/nav.less` | `.gf-nav`, `html.dark .gf-nav`, `.mobile-bottom-tabs`, `html.dark .mobile-bottom-tabs` | `--gf-nav-` |
 | `app/assets/styles/components/footer.less` | `.gf-footer-shell`, `html.dark .gf-footer-shell` | `--gf-footer-` |
 | `app/assets/styles/components/preferences.less` | `.gf-preferences-modal`, `html.dark .gf-preferences-modal` | `--gf-preferences-` |
 | `app/assets/styles/components/error.less` | `.error-page`, `html.dark .error-page` | `--gf-error-` |
@@ -668,9 +668,13 @@ computed cascade; brand glows retain the same values in both themes.
 
 Nav Shell contracts own ordinary and homepage-overlay NavBar states, Desktop
 theme/language integration, Mobile Menu behavior and MobileBottomTabBar scroll,
-active-state and breakpoint semantics. P5.1.2 appearance migration MUST pass
-these accepted Browser/Visual contracts without snapshot updates. Hero lifecycle,
-SearchBox, QuickAccess and Nav content retain separate ownership.
+active-state and breakpoint semantics. P5.1.2 places NavBar and MobileBottomTabBar
+appearance together in `components/nav.less`, using the exact Navigation roots
+and `--gf-nav-*` declaration prefix above. Vue MUST retain behavior and private
+runtime geometry; the physical `common/` location does not create a separate
+BottomTab appearance owner. Changes MUST pass the accepted Browser/Visual
+contracts without snapshot updates. Hero lifecycle, SearchBox, QuickAccess and
+Nav content retain separate ownership.
 The P5.1.1 audit found existing Home side effects absent from its initial plan:
 null saying triggers one saying request, mounted content creates a weather iframe,
 and Mobile Home has the already-guarded Footer hydration mismatch. The approved

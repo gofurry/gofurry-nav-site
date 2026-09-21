@@ -97,6 +97,29 @@ foundation `--gf-scrollbar-*` browser-chrome semantics in `main.css`, retaining
 selectors, geometry and the shared Light/Dark treatment. Accepted Footer/Shell
 tests and goldens remain the authority; this migration adds no new visual design.
 
+## Navigation shell appearance
+
+P5.1.2 gives NavBar and MobileBottomTabBar one compound appearance owner in
+[nav.less](../../apps/cn/nav-web/app/assets/styles/components/nav.less).
+Local `--gf-nav-*` semantics belong to `.gf-nav` and `.mobile-bottom-tabs`, with
+their exact `html.dark` counterparts. BottomTab's physical `common/` location
+does not create a new visual owner or require a separate stylesheet.
+
+NavBar retains structural Tailwind and explicit appearance hooks; its menu
+transition, typography and surface treatment live in Less. BottomTab retains
+private placement, breakpoint and runtime geometry in scoped styles, while Less
+owns its surface, icon, active/hover and motion treatment. Active border and fill
+keep separate semantic identities. The accepted Nav Shell contracts remain
+unchanged; Nav Home Header/Content, SearchBox and QuickAccess belong to later P5
+work, not this shell migration.
+
+Audit correction to the P5.1.2 plan: button `text-sm` was overridden by the
+unlayered `font: inherit` rule in `main.css`. Theme/Mode and Mobile action/language
+buttons therefore retain inherited typography (currently 16px/24px), while brand
+and navigation links retain their effective 14px/20px typography. Migration
+preserves accepted computed appearance, not an overridden utility's intent; no
+button typography override or otherwise-unused theme-button hook is needed.
+
 ## P4 exit ownership
 
 The remaining manifest was audited by semantic consumer, including Common and

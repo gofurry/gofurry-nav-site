@@ -179,7 +179,11 @@ heading/icon semantics and social hover colors. Migration must pass unchanged.
 owns Standard/Overlay/Mobile Menu/BottomTab appearance through the shared fixture.
 Keep its audited Home/Mode side-effect exceptions precise (see testing guidance).
 Hero lifecycle, SearchBox, QuickAccess, Nav content and Site Groups remain separate
-P5 contracts. The eight new goldens require maintainer review before P5.1.2.
+P5 contracts. P5.1.2 gives NavBar and MobileBottomTabBar the shared compound
+appearance owner `components/nav.less` and local `--gf-nav-*` tokens. Keep runtime
+behavior/private geometry in Vue; do not fold SearchBox, QuickAccess or Nav Home
+debt into this shell boundary. The eight accepted Nav Shell goldens must pass
+unchanged.
 
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running

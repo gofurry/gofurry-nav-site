@@ -2,7 +2,6 @@
   "schema_version": 1,
   "baseline": {
     "tailwind-appearance": {
-      "app/components/NavBar.vue": 44,
       "app/components/common/BlurWrapper.vue": 5,
       "app/components/common/LinkTag.vue": 1,
       "app/components/game/common/GameReviewDialog.vue": 24,
@@ -57,13 +56,11 @@
       "app/pages/games/prize/index.vue": 10
     },
     "raw-visual-value": {
-      "app/assets/styles/components/nav.less": 11,
       "app/assets/styles/pages/games-search.less": 8,
       "app/assets/styles/pages/games.less": 62,
       "app/assets/styles/pages/insights.less": 10,
       "app/assets/styles/pages/lottery.less": 20,
       "app/assets/styles/pages/nav.less": 226,
-      "app/components/common/MobileBottomTabBar.vue": 5,
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
       "app/components/game/common/GameReviewDialog.vue": 13,
       "app/components/game/detail/GameSidebarSimilar.vue": 1,

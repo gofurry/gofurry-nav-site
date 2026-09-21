@@ -1,10 +1,10 @@
 <template>
   <header
-    class="gf-nav relative z-[70] w-full backdrop-blur-xl transition-all duration-300"
+    class="gf-nav relative z-[70] w-full"
     :class="{ 'gf-nav--overlay': navOverlayDesktop }"
   >
     <div
-        class="relative mx-auto flex w-full max-w-[1700px] items-center gap-3 px-4 py-2 transition-all duration-300 sm:px-6"
+        class="gf-nav__inner relative mx-auto flex w-full max-w-[1700px] items-center gap-3 px-4 py-2 sm:px-6"
     >
       <NuxtLink
           :to="localePath('/')"
@@ -12,18 +12,18 @@
           @click.stop="closeMenus"
       >
         <img :src="logo" alt="GoFurry" class="h-10 w-10" />
-        <span class="gf-nav__brand-text hidden text-sm font-semibold tracking-wide sm:inline">GoFurry</span>
+        <span class="gf-nav__brand-text hidden sm:inline">GoFurry</span>
       </NuxtLink>
 
-      <div class="pointer-events-none absolute left-1/2 top-1/2 z-0 flex max-w-[calc(100vw-10rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden transition-all duration-300 sm:max-w-[calc(100vw-14rem)] md:max-w-[760px]">
-        <nav class="pointer-events-auto flex min-w-0 items-center justify-center gap-1 transition-all duration-200 opacity-100 md:min-w-max md:max-w-[760px]">
+      <div class="gf-nav__center pointer-events-none absolute left-1/2 top-1/2 z-0 flex max-w-[calc(100vw-10rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden sm:max-w-[calc(100vw-14rem)] md:max-w-[760px]">
+        <nav class="gf-nav__links pointer-events-auto flex min-w-0 items-center justify-center gap-1 md:min-w-max md:max-w-[760px]">
           <template v-for="(link, index) in navLinks" :key="link.label">
             <a
                 v-if="link.external"
                 :href="link.href"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="gf-nav__link gf-nav__link--idle rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap sm:px-3 md:px-4"
+                class="gf-nav__link gf-nav__link--idle px-2 py-2 whitespace-nowrap sm:px-3 md:px-4"
                 :class="index > 1 ? 'hidden md:inline-flex' : 'inline-flex'"
                 @click.stop
             >
@@ -32,7 +32,7 @@
             <NuxtLink
                 v-else
                 :to="link.to"
-                class="gf-nav__link rounded-lg px-2 py-2 text-sm font-medium whitespace-nowrap sm:px-3 md:px-4"
+                class="gf-nav__link px-2 py-2 whitespace-nowrap sm:px-3 md:px-4"
                 :class="[
                   index > 1 ? 'hidden md:inline-flex' : 'inline-flex',
                   isActive(link)
@@ -47,12 +47,12 @@
         </nav>
       </div>
 
-      <div class="relative z-10 ml-auto flex shrink-0 items-center gap-2 transition-all duration-300">
+      <div class="gf-nav__actions relative z-10 ml-auto flex shrink-0 items-center gap-2">
         <a
             href="https://github.com/gofurry/gofurry-nav-site"
             target="_blank"
             rel="noopener noreferrer"
-            class="gf-nav__github-link hidden h-8 w-16 items-center justify-center rounded-lg xl:inline-flex"
+            class="gf-nav__github-link hidden h-8 w-16 items-center justify-center xl:inline-flex"
             aria-label="GitHub"
             title="GitHub"
             @click.stop
@@ -65,7 +65,7 @@
               v-for="option in languageOptions"
               :key="option.value"
               type="button"
-              class="gf-nav__icon-button flex h-8 w-8 items-center justify-center rounded-lg"
+              class="gf-nav__icon-button flex h-8 w-8 items-center justify-center"
               :class="currentLang === option.value
                 ? 'gf-nav__icon-button--active'
                 : ''"
@@ -77,7 +77,7 @@
 
         <button
             type="button"
-            class="gf-nav__icon-button inline-flex h-10 w-10 items-center justify-center rounded-lg text-sm xl:h-8 xl:w-8"
+            class="gf-nav__icon-button inline-flex h-10 w-10 items-center justify-center xl:h-8 xl:w-8"
             :aria-label="themeToggleLabel"
             :title="themeToggleLabel"
             @click.stop="toggleThemeIcon"
@@ -88,7 +88,7 @@
 
         <button
             type="button"
-            class="gf-nav__icon-button gf-nav__mode-button hidden h-8 w-8 items-center justify-center rounded-lg text-sm xl:flex"
+            class="gf-nav__icon-button gf-nav__mode-button hidden h-8 w-8 items-center justify-center xl:flex"
             :aria-label="t('navbar.mode')"
             @click.stop="showModeModal = true"
         >
@@ -97,7 +97,7 @@
 
         <button
             type="button"
-            class="gf-nav__mobile-toggle inline-flex h-10 w-10 items-center justify-center rounded-lg xl:hidden"
+            class="gf-nav__mobile-toggle inline-flex h-10 w-10 items-center justify-center xl:hidden"
             :class="{ 'gf-nav__mobile-toggle--open': mobileMenuOpen }"
             :aria-expanded="mobileMenuOpen"
             :aria-label="t(mobileMenuOpen ? 'navbar.closeNav' : 'navbar.expandNav')"
@@ -112,7 +112,7 @@
     <transition name="mobile-menu">
       <div
           v-if="mobileMenuOpen"
-          class="gf-nav__mobile-panel absolute left-3 right-3 top-full z-[90] mt-2 rounded-xl px-4 pb-4 pt-3 backdrop-blur-xl transition-colors duration-500 xl:hidden"
+          class="gf-nav__mobile-panel absolute left-3 right-3 top-full z-[90] mt-2 px-4 pb-4 pt-3 xl:hidden"
           @click.stop
       >
         <div class="mx-auto flex w-full max-w-[1700px] flex-col gap-2">
@@ -122,7 +122,7 @@
                 :href="link.href"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="gf-nav__mobile-link rounded-lg px-4 py-3 text-sm font-medium"
+                class="gf-nav__mobile-link px-4 py-3"
                 @click="mobileMenuOpen = false"
             >
               {{ link.label }}
@@ -130,7 +130,7 @@
             <NuxtLink
                 v-else
                 :to="link.to"
-                class="gf-nav__mobile-link rounded-lg px-4 py-3 text-sm font-medium"
+                class="gf-nav__mobile-link px-4 py-3"
                 :class="isActive(link)
                   ? 'gf-nav__mobile-link--active'
                   : ''"
@@ -140,10 +140,10 @@
             </NuxtLink>
           </template>
 
-          <div class="mt-2 flex flex-col gap-3 border-t border-white/10 pt-4">
+          <div class="gf-nav__mobile-divider mt-2 flex flex-col gap-3 pt-4">
             <button
                 type="button"
-                class="gf-nav__mobile-action flex items-center justify-between rounded-lg px-4 py-3 text-sm"
+                class="gf-nav__mobile-action flex items-center justify-between px-4 py-3"
                 @click="openModeModalFromMobile"
             >
               <span class="flex items-center gap-2">
@@ -158,7 +158,7 @@
                   v-for="option in languageOptions"
                   :key="option.value"
                   type="button"
-                  class="gf-nav__mobile-language flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm"
+                  class="gf-nav__mobile-language flex items-center justify-center gap-2 px-4 py-3"
                   :class="currentLang === option.value
                     ? 'gf-nav__mobile-language--active'
                     : ''"
@@ -297,16 +297,3 @@ function closeMenus() {
   mobileMenuOpen.value = false
 }
 </script>
-
-<style scoped>
-.mobile-menu-enter-active,
-.mobile-menu-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.mobile-menu-enter-from,
-.mobile-menu-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-</style>

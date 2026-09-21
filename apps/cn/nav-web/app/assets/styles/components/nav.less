@@ -1,4 +1,5 @@
 .gf-nav {
+  /* Navigation shell and controls keep their existing translucent treatment. */
   --gf-nav-bg: rgba(10, 16, 28, 0.88);
   --gf-nav-bg-overlay: rgba(18, 24, 37, 0.70);
   --gf-nav-border: rgba(255, 255, 255, 0.15);
@@ -11,11 +12,36 @@
   --gf-nav-control-border: rgba(255, 255, 255, 0.10);
   --gf-nav-control-hover-bg: rgba(255, 255, 255, 0.14);
   --gf-nav-shadow: 0 10px 28px rgba(15, 23, 42, 0.28);
+  --gf-nav-active-text: #ffffff;
+  --gf-nav-control-active-bg: rgba(255, 255, 255, 0.25);
+  /* The expanded menu is a distinct surface, not the desktop overlay canvas. */
+  --gf-nav-mobile-panel-bg: rgba(18, 24, 37, 0.96);
+  --gf-nav-mobile-panel-shadow: 0 24px 52px rgba(2, 6, 23, 0.30);
+  --gf-nav-mobile-item-bg: rgba(255, 255, 255, 0.05);
+  --gf-nav-mobile-item-text: rgba(209, 213, 219, 0.94);
+  --gf-nav-mobile-action-value: #fdba74;
 
   border-bottom: 1px solid var(--gf-nav-border);
   background: var(--gf-nav-bg);
   color: var(--gf-nav-text);
   box-shadow: var(--gf-nav-shadow);
+  backdrop-filter: blur(24px);
+}
+
+.gf-nav,
+.gf-nav__inner,
+.gf-nav__center,
+.gf-nav__actions {
+  transition-property: all;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gf-nav__links {
+  opacity: 1;
+  transition-property: all;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html.dark .gf-nav {
@@ -24,6 +50,7 @@ html.dark .gf-nav {
   --gf-nav-border: rgba(255, 255, 255, 0.08);
   --gf-nav-border-overlay: rgba(255, 255, 255, 0.06);
   --gf-nav-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  --gf-nav-mobile-panel-bg: rgba(5, 7, 13, 0.97);
 }
 
 @media (min-width: 768px) {
@@ -40,7 +67,22 @@ html.dark .gf-nav {
   color: var(--gf-nav-text);
 }
 
+.gf-nav__brand-text {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.gf-nav__link,
+.gf-nav__mobile-link {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+}
+
 .gf-nav__link {
+  border-radius: var(--gf-radius-sm);
   transition:
     background-color var(--gf-motion-fast) ease,
     color var(--gf-motion-fast) ease;
@@ -53,7 +95,7 @@ html.dark .gf-nav {
 .gf-nav__link--idle:hover,
 .gf-nav__link--active {
   background: var(--gf-nav-active-bg);
-  color: #ffffff;
+  color: var(--gf-nav-active-text);
 }
 
 .gf-nav__link--idle:hover {
@@ -66,6 +108,7 @@ html.dark .gf-nav {
 .gf-nav__mobile-action,
 .gf-nav__mobile-language,
 .gf-nav__mobile-link {
+  border-radius: var(--gf-radius-sm);
   transition:
     background-color var(--gf-motion-fast) ease,
     border-color var(--gf-motion-fast) ease,
@@ -83,8 +126,8 @@ html.dark .gf-nav {
 }
 
 .gf-nav__icon-button--active {
-  background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
+  background: var(--gf-nav-control-active-bg);
+  color: var(--gf-nav-active-text);
 }
 
 .gf-nav__mobile-toggle {
@@ -117,35 +160,102 @@ html.dark .gf-nav {
 
 .gf-nav__mobile-panel {
   border: 1px solid var(--gf-nav-control-border);
-  background: rgba(18, 24, 37, 0.96);
+  border-radius: var(--gf-radius-md);
+  background: var(--gf-nav-mobile-panel-bg);
   color: var(--gf-nav-text);
-  box-shadow: 0 24px 52px rgba(2, 6, 23, 0.30);
+  box-shadow: var(--gf-nav-mobile-panel-shadow);
+  backdrop-filter: blur(24px);
+  transition-property: color, background-color, border-color, outline-color,
+    text-decoration-color, fill, stroke,
+    --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-html.dark .gf-nav__mobile-panel {
-  background: rgba(5, 7, 13, 0.97);
+.gf-nav__mobile-divider {
+  border-top: 1px solid var(--gf-nav-control-border);
 }
 
 .gf-nav__mobile-link,
 .gf-nav__mobile-action,
 .gf-nav__mobile-language {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(209, 213, 219, 0.94);
+  background: var(--gf-nav-mobile-item-bg);
+  color: var(--gf-nav-mobile-item-text);
 }
 
 .gf-nav__mobile-link:hover,
 .gf-nav__mobile-action:hover,
 .gf-nav__mobile-language:hover {
   background: var(--gf-nav-hover-bg);
-  color: #ffffff;
+  color: var(--gf-nav-active-text);
 }
 
 .gf-nav__mobile-link--active,
 .gf-nav__mobile-language--active {
   background: var(--gf-nav-active-bg);
-  color: #ffffff;
+  color: var(--gf-nav-active-text);
 }
 
 .gf-nav__mobile-action-value {
-  color: #fdba74;
+  color: var(--gf-nav-mobile-action-value);
+}
+
+/* Keep menu enter/leave above the panel's ordinary color transition. */
+.gf-nav .mobile-menu-enter-active,
+.gf-nav .mobile-menu-leave-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.gf-nav .mobile-menu-enter-from,
+.gf-nav .mobile-menu-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.mobile-bottom-tabs {
+  /* Compact mobile navigation shares the shell owner, not the desktop canvas.
+   * Active outline and fill are separate roles despite their current equality.
+   */
+  --gf-nav-bottom-tabs-bg: rgba(0, 0, 0, 0.18);
+  --gf-nav-bottom-tabs-icon: rgba(248, 250, 252, 0.98);
+  --gf-nav-bottom-tabs-active-border: rgba(255, 255, 255, 0.20);
+  --gf-nav-bottom-tabs-active-bg: rgba(255, 255, 255, 0.20);
+
+  border: 0;
+  border-radius: var(--gf-radius-md);
+  background: var(--gf-nav-bottom-tabs-bg);
+  box-shadow: none;
+  opacity: 0;
+  backdrop-filter: blur(10px) saturate(1.04);
+  transition:
+    opacity var(--gf-motion-base) ease,
+    transform var(--gf-motion-base) ease;
+}
+
+html.dark .mobile-bottom-tabs {
+  --gf-nav-bottom-tabs-bg: rgba(255, 255, 255, 0.14);
+}
+
+.mobile-bottom-tabs--visible {
+  opacity: 0.88;
+}
+
+.mobile-bottom-tabs__item {
+  border: 1px solid transparent;
+  border-radius: var(--gf-radius-sm);
+  background: transparent;
+  text-decoration: none;
+  transition:
+    background-color 420ms ease,
+    border-color 420ms ease;
+}
+
+.mobile-bottom-tabs__item svg {
+  color: var(--gf-nav-bottom-tabs-icon);
+}
+
+.mobile-bottom-tabs__item--active,
+.mobile-bottom-tabs__item:hover {
+  border-color: var(--gf-nav-bottom-tabs-active-border);
+  background: var(--gf-nav-bottom-tabs-active-bg);
 }
