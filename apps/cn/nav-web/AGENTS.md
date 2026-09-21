@@ -206,6 +206,14 @@ a P5.3.4 audit candidate; `.nav-tool-button--search` is live dynamic output.
 Site Groups and games-page coupling stay P5.4-owned. Maintainer review of the
 eight new goldens precedes P5.3.2; production and debt are unchanged in P5.3.1.
 
+P5.3.2 Core appearance stays in `pages/nav.less`. Approved narrow token roots
+cover the three body Teleports (Site/Group popovers and TransitionBar author)
+and shared Card hover/group-toggle states, with exact prefixes and Dark roots.
+Preserve SitePopover's effective transparent canvas/zero border and Site Groups'
+existing cascade. Keep title 16/24/500 and description 12/16.2. Remaining raw
+ownership is ToolDock 42, Spotlight 51, P5.4 Site Groups 5; do not migrate them
+with Core. P5.3.1 tests and all 50 PNGs remain unchanged.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

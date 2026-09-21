@@ -22,6 +22,12 @@
   --nav-home-transition-bg: rgba(18, 24, 37, 0.55);
   --nav-home-transition-text: rgba(243, 244, 246, 0.96);
 
+  /* Revealed content chrome and group-heading interaction; floats own their Teleport-local semantics below. */
+  --nav-home-group-title-hover: #d97706;
+  --nav-home-transition-border: rgba(0, 0, 0, 0.30);
+  --nav-home-transition-shadow: 0 10px 15px rgba(15, 23, 42, 0.20);
+  --nav-home-transition-time-text: rgba(209, 213, 219, 0.96);
+
   /* Header elevation and scroll affordance over Hero imagery; inherited unchanged in Dark. */
   --nav-home-header-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
   --nav-home-header-scroll-frame-border: rgba(255, 255, 255, 0.35);
@@ -116,6 +122,7 @@ html.dark .nav-home-page {
   --nav-home-popover-text: rgba(226, 232, 240, 0.96);
   --nav-home-popover-muted: rgba(148, 163, 184, 0.88);
   --nav-home-transition-bg: rgba(20, 28, 41, 0.84);
+  --nav-home-group-title-hover: #7dd3fc;
 }
 
 .nav-header {
@@ -807,11 +814,11 @@ html.dark .nav-home-page {
 }
 
 .nav-group-title:hover {
-  color: #d97706;
+  color: var(--nav-home-group-title-hover);
 }
 
 html.dark .nav-group-title:hover {
-  color: #7dd3fc;
+  color: var(--nav-home-group-title-hover);
 }
 
 .nav-site-grid {
@@ -819,6 +826,10 @@ html.dark .nav-group-title:hover {
 }
 
 .nav-site-card {
+  /* Shared by Nav Home and Site Groups; keep hover semantics at the consumer. */
+  --nav-home-card-hover-bg: #fff7ed;
+  --nav-home-card-hover-ring: inset 0 0 0 1px rgba(180, 96, 24, 0.46);
+
   display: flex;
   min-height: 4.75rem;
   align-items: center;
@@ -838,18 +849,20 @@ html.dark .nav-group-title:hover {
 }
 
 .nav-site-card:hover {
-  background: #fff7ed;
-  box-shadow: inset 0 0 0 1px rgba(180, 96, 24, 0.46);
+  background: var(--nav-home-card-hover-bg);
+  box-shadow: var(--nav-home-card-hover-ring);
 }
 
 html.dark .nav-site-card {
-  background: #121e30;
+  --nav-home-card-hover-bg: #1e293b;
+  --nav-home-card-hover-ring: inset 0 0 0 1px rgba(203, 213, 225, 0.42);
+
   box-shadow: inset 0 0 0 0 transparent;
 }
 
 html.dark .nav-site-card:hover {
-  background: #1e293b;
-  box-shadow: inset 0 0 0 1px rgba(203, 213, 225, 0.42);
+  background: var(--nav-home-card-hover-bg);
+  box-shadow: var(--nav-home-card-hover-ring);
 }
 
 .games-page .nav-site-card {
@@ -898,11 +911,15 @@ html.dark .games-page .nav-site-card:hover {
 
 .nav-site-card__title {
   color: var(--nav-home-card-text);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 500;
 }
 
 .nav-site-card__desc {
   color: var(--nav-home-card-muted);
   overflow: hidden;
+  font-size: 0.75rem;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -944,10 +961,16 @@ html.dark .games-page .site-group-content .game-detail-tabs {
 }
 
 .nav-group-toggle {
+  /* Shared toggle states preserve the existing Site Groups cascade too. */
+  --nav-home-group-toggle-text: var(--nav-home-card-text);
+  --nav-home-group-toggle-hover-bg: rgba(255, 250, 242, 0.62);
+  --nav-home-group-toggle-hover-text: var(--nav-home-card-text);
+  --nav-home-group-toggle-hover-ring: inset 0 0 0 1px rgba(126, 92, 58, 0.14);
+
   border: 0;
   border-radius: 0.5rem;
   background: transparent;
-  color: var(--nav-home-card-text);
+  color: var(--nav-home-group-toggle-text);
   padding: 0.4rem 0.72rem;
   font-size: 0.875rem;
   font-weight: 650;
@@ -957,18 +980,22 @@ html.dark .games-page .site-group-content .game-detail-tabs {
 }
 
 .nav-group-toggle:hover {
-  background: rgba(255, 250, 242, 0.62);
-  color: var(--nav-home-card-text);
-  box-shadow: inset 0 0 0 1px rgba(126, 92, 58, 0.14);
+  background: var(--nav-home-group-toggle-hover-bg);
+  color: var(--nav-home-group-toggle-hover-text);
+  box-shadow: var(--nav-home-group-toggle-hover-ring);
 }
 
 html.dark .nav-group-toggle {
-  color: rgba(226, 232, 240, 0.88);
+  --nav-home-group-toggle-text: rgba(226, 232, 240, 0.88);
+  --nav-home-group-toggle-hover-bg: rgba(148, 163, 184, 0.12);
+  --nav-home-group-toggle-hover-text: rgba(248, 250, 252, 0.96);
+
+  color: var(--nav-home-group-toggle-text);
 }
 
 html.dark .nav-group-toggle:hover {
-  background: rgba(148, 163, 184, 0.12);
-  color: rgba(248, 250, 252, 0.96);
+  background: var(--nav-home-group-toggle-hover-bg);
+  color: var(--nav-home-group-toggle-hover-text);
 }
 
 .nav-group-toggle:disabled {
@@ -993,14 +1020,21 @@ html.dark .nav-group-toggle:hover {
 }
 
 .site-popover {
+  /* Teleport mounts under body: preserve the effective fallback palette locally,
+   * with the accepted transparent canvas and zero border, not the inactive page-root surface tokens. */
+  --nav-home-popover-text: rgba(55, 65, 81, 0.94);
+  --nav-home-popover-muted: rgba(107, 114, 128, 0.88);
+  --nav-home-popover-shadow: 0 16px 40px rgba(25, 35, 38, 0.16);
+  --nav-home-popover-domain-hover-bg: rgba(255, 237, 213, 0.88);
+
   position: fixed;
   z-index: 9999;
   width: 18rem;
-  border: 1px solid var(--nav-home-popover-border);
+  border: 0;
   border-radius: 0.75rem;
-  background: var(--nav-home-popover-bg);
-  color: var(--nav-home-popover-text, rgba(55, 65, 81, 0.94));
-  box-shadow: 0 16px 40px rgba(25, 35, 38, 0.16);
+  background: transparent;
+  color: var(--nav-home-popover-text);
+  box-shadow: var(--nav-home-popover-shadow);
   padding: 1rem;
   font-size: 0.875rem;
   backdrop-filter: blur(12px);
@@ -1012,8 +1046,13 @@ html.dark .nav-group-toggle:hover {
 }
 
 html.dark .site-popover {
-  color: var(--nav-home-popover-text, rgba(226, 232, 240, 0.96));
-  box-shadow: 0 16px 40px rgba(2, 6, 23, 0.42);
+  --nav-home-popover-text: rgba(226, 232, 240, 0.96);
+  --nav-home-popover-muted: rgba(148, 163, 184, 0.88);
+  --nav-home-popover-shadow: 0 16px 40px rgba(2, 6, 23, 0.42);
+  --nav-home-popover-domain-hover-bg: rgba(255, 255, 255, 0.08);
+
+  color: var(--nav-home-popover-text);
+  box-shadow: var(--nav-home-popover-shadow);
 }
 
 .site-popover--visible {
@@ -1041,14 +1080,14 @@ html.dark .site-popover {
 
 .site-popover__title {
   margin-bottom: 0.25rem;
-  color: var(--nav-home-popover-text, rgba(55, 65, 81, 0.94));
+  color: var(--nav-home-popover-text);
   font-size: 1rem;
   font-weight: 600;
 }
 
 .site-popover__desc {
   margin-bottom: 0.75rem;
-  color: var(--nav-home-popover-muted, rgba(107, 114, 128, 0.88));
+  color: var(--nav-home-popover-muted);
   word-break: break-word;
 }
 
@@ -1068,11 +1107,11 @@ html.dark .site-popover {
 }
 
 .site-popover__domain:hover {
-  background: rgba(255, 237, 213, 0.88);
+  background: var(--nav-home-popover-domain-hover-bg);
 }
 
 html.dark .site-popover__domain:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--nav-home-popover-domain-hover-bg);
 }
 
 .site-popover__domain-name {
@@ -1081,7 +1120,7 @@ html.dark .site-popover__domain:hover {
   min-width: 0;
   align-items: center;
   gap: 0.25rem;
-  color: var(--nav-home-popover-text, rgba(55, 65, 81, 0.94));
+  color: var(--nav-home-popover-text);
 }
 
 .site-popover__domain-name img {
@@ -1091,37 +1130,43 @@ html.dark .site-popover__domain:hover {
 
 .site-popover__domain-metrics {
   flex-shrink: 0;
-  color: var(--nav-home-popover-muted, rgba(107, 114, 128, 0.88));
+  color: var(--nav-home-popover-muted);
 }
 
 .site-popover__empty {
   margin-top: 0.5rem;
-  color: var(--nav-home-popover-muted, rgba(107, 114, 128, 0.88));
+  color: var(--nav-home-popover-muted);
   font-size: 0.75rem;
   text-align: center;
 }
 
 html.dark .site-popover__title,
 html.dark .site-popover__domain-name {
-  color: var(--nav-home-popover-text, rgba(226, 232, 240, 0.96));
+  color: var(--nav-home-popover-text);
 }
 
 html.dark .site-popover__desc,
 html.dark .site-popover__domain-metrics,
 html.dark .site-popover__empty {
-  color: var(--nav-home-popover-muted, rgba(148, 163, 184, 0.88));
+  color: var(--nav-home-popover-muted);
 }
 
 .group-popover {
-  z-index: 95;
-  width: 16rem;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 0.875rem;
-  background: rgba(255, 247, 237, 0.94);
-  color: rgba(86, 47, 14, 0.86);
-  box-shadow:
+  /* Group explanations have their own Teleport-local surface and compound elevation. */
+  --nav-home-group-popover-border: rgba(255, 255, 255, 0.45);
+  --nav-home-group-popover-bg: rgba(255, 247, 237, 0.94);
+  --nav-home-group-popover-text: rgba(86, 47, 14, 0.86);
+  --nav-home-group-popover-shadow:
     0 18px 42px rgba(87, 48, 10, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.58);
+
+  z-index: 95;
+  width: 16rem;
+  border: 1px solid var(--nav-home-group-popover-border);
+  border-radius: 0.875rem;
+  background: var(--nav-home-group-popover-bg);
+  color: var(--nav-home-group-popover-text);
+  box-shadow: var(--nav-home-group-popover-shadow);
   padding: 0.75rem 0.85rem;
   font-size: 0.875rem;
   line-height: 1.5;
@@ -1129,12 +1174,17 @@ html.dark .site-popover__empty {
 }
 
 html.dark .group-popover {
-  border-color: rgba(255, 255, 255, 0.10);
-  background: rgba(15, 23, 42, 0.92);
-  color: rgba(226, 232, 240, 0.92);
-  box-shadow:
+  --nav-home-group-popover-border: rgba(255, 255, 255, 0.10);
+  --nav-home-group-popover-bg: rgba(15, 23, 42, 0.92);
+  --nav-home-group-popover-text: rgba(226, 232, 240, 0.92);
+  --nav-home-group-popover-shadow:
     0 18px 42px rgba(2, 6, 23, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+  border-color: var(--nav-home-group-popover-border);
+  background: var(--nav-home-group-popover-bg);
+  color: var(--nav-home-group-popover-text);
+  box-shadow: var(--nav-home-group-popover-shadow);
 }
 
 .nav-transition-bar {
@@ -1143,10 +1193,10 @@ html.dark .group-popover {
 }
 
 .nav-transition-bar__inner {
-  border-top: 4px solid rgba(0, 0, 0, 0.30);
+  border-top: 4px solid var(--nav-home-transition-border);
   background: var(--nav-home-transition-bg);
   color: var(--nav-home-transition-text);
-  box-shadow: 0 10px 15px rgba(15, 23, 42, 0.20);
+  box-shadow: var(--nav-home-transition-shadow);
 }
 
 .nav-transition-bar__content {
@@ -1167,7 +1217,7 @@ html.dark .group-popover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: rgba(209, 213, 219, 0.96);
+  color: var(--nav-home-transition-time-text);
   font-size: 0.875rem;
   font-weight: 600;
 }
@@ -1217,14 +1267,20 @@ html.dark .group-popover {
 }
 
 .nav-transition-bar__author {
+  /* The quoted author floats under body but remains TransitionBar-owned. */
+  --nav-home-transition-author-border: rgba(231, 229, 228, 0.85);
+  --nav-home-transition-author-bg: rgba(255, 255, 255, 0.94);
+  --nav-home-transition-author-text: rgba(68, 64, 60, 0.94);
+  --nav-home-transition-author-shadow: 0 12px 28px rgba(120, 83, 42, 0.16);
+
   pointer-events: none;
   position: fixed;
   z-index: 120;
-  border: 1px solid rgba(231, 229, 228, 0.85);
+  border: 1px solid var(--nav-home-transition-author-border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  color: rgba(68, 64, 60, 0.94);
-  box-shadow: 0 12px 28px rgba(120, 83, 42, 0.16);
+  background: var(--nav-home-transition-author-bg);
+  color: var(--nav-home-transition-author-text);
+  box-shadow: var(--nav-home-transition-author-shadow);
   padding: 0.38rem 0.75rem;
   font-size: 0.75rem;
   font-weight: 500;
@@ -1233,10 +1289,15 @@ html.dark .group-popover {
 }
 
 html.dark .nav-transition-bar__author {
-  border-color: rgba(255, 255, 255, 0.10);
-  background: rgba(12, 18, 31, 0.94);
-  color: rgba(248, 250, 252, 0.96);
-  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.42);
+  --nav-home-transition-author-border: rgba(255, 255, 255, 0.10);
+  --nav-home-transition-author-bg: rgba(12, 18, 31, 0.94);
+  --nav-home-transition-author-text: rgba(248, 250, 252, 0.96);
+  --nav-home-transition-author-shadow: 0 12px 28px rgba(2, 6, 23, 0.42);
+
+  border-color: var(--nav-home-transition-author-border);
+  background: var(--nav-home-transition-author-bg);
+  color: var(--nav-home-transition-author-text);
+  box-shadow: var(--nav-home-transition-author-shadow);
 }
 
 .nav-tool-dock {

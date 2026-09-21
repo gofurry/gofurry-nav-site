@@ -138,7 +138,28 @@ rounding them to exact rem heights shifts layout by 1/64px despite equal compute
 pixel labels and changes input text rasterization.
 `SiteIconStrip` and its complete stylesheet block were removed after confirming
 zero consumers, rather than tokenizing dead code. P5.3 owns revealed Content,
-Spotlight, ToolDock, TransitionBar, Cards and Popovers; their debt is unchanged.
+Spotlight, ToolDock, TransitionBar, Cards and Popovers.
+
+## Nav revealed Core appearance
+
+P5.3.2 keeps Cards, Groups, Popovers and TransitionBar in `pages/nav.less` with
+`--nav-home-*` semantics. Card titles retain 16px/24px/500; descriptions retain
+12px/16.2px (`line-height: 1.35`). Existing token names and compound shadow values
+remain intact; the redundant Dark card background declaration is removed.
+
+Audited corrections to the page-root-only plan are explicitly approved:
+body Teleports declare their own narrow tokens on `.site-popover`,
+`.group-popover` and `.nav-transition-bar__author` (and their Dark roots).
+SitePopover preserves its actual transparent background and zero border, rather
+than activating previously unreachable page-root surface tokens. Cards and group
+toggles also serve Site Groups outside `.nav-home-page`, so their precise
+`--nav-home-card-hover-*` and `--nav-home-group-toggle-*` states belong on those
+shared consumer roots. Policy registration permits only these selector/prefix
+pairs, not whole-file exemptions. The existing games-page cascade is unchanged.
+
+The remaining 98 raw occurrences are ToolDock 42 (P5.3.3), Spotlight 51 and
+Site Groups 5 (P5.4). Neither these owners nor the deferred content-loading
+candidate are authorized cleanup in the Core migration.
 
 ## P4 exit ownership
 

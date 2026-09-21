@@ -13,6 +13,13 @@ const tokenLocations = [
   ['app/assets/styles/pages/games.less', ['.games-page', 'html.dark .games-page'], '--games-'],
   ['app/assets/styles/pages/games-search.less', ['.games-search-page', 'html.dark .games-search-page'], '--games-search-'],
   ['app/assets/styles/pages/nav.less', ['.nav-home-page', 'html.dark .nav-home-page'], '--nav-home-'],
+  // These states also serve Site Groups outside the Nav Home root.
+  ['app/assets/styles/pages/nav.less', ['.nav-site-card', 'html.dark .nav-site-card'], '--nav-home-card-hover-'],
+  ['app/assets/styles/pages/nav.less', ['.nav-group-toggle', 'html.dark .nav-group-toggle'], '--nav-home-group-toggle-'],
+  // Body Teleports cannot inherit Nav Home's page-root declarations.
+  ['app/assets/styles/pages/nav.less', ['.site-popover', 'html.dark .site-popover'], '--nav-home-popover-'],
+  ['app/assets/styles/pages/nav.less', ['.group-popover', 'html.dark .group-popover'], '--nav-home-group-popover-'],
+  ['app/assets/styles/pages/nav.less', ['.nav-transition-bar__author', 'html.dark .nav-transition-bar__author'], '--nav-home-transition-author-'],
   ['app/assets/styles/pages/updates.less', ['.updates-page', 'html.dark .updates-page'], '--updates-'],
   ['app/assets/styles/pages/lottery.less', ['.lottery-page,.lottery-activation-page,.lottery-modal', 'html.dark .lottery-page,html.dark .lottery-activation-page,html.dark .lottery-modal'], '--lottery-'],
   ['app/assets/styles/pages/static.less', ['.about-page', 'html.dark .about-page'], '--about-'],

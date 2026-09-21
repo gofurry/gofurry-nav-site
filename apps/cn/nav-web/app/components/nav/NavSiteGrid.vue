@@ -25,12 +25,12 @@
 
       <div class="flex flex-1 flex-col overflow-hidden">
         <div class="flex items-center gap-1">
-          <h3 class="nav-site-card__title truncate text-base font-medium">
+          <h3 class="nav-site-card__title truncate">
             {{ site.name }}
           </h3>
         </div>
 
-        <p class="nav-site-card__desc mt-1 text-xs">
+        <p class="nav-site-card__desc mt-1">
           {{ site.info }}
         </p>
       </div>

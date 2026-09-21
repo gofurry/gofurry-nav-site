@@ -441,6 +441,11 @@ group and its corresponding all-dark group.
 | `app/assets/styles/pages/games.less` | `.games-page`, `html.dark .games-page` | `--games-` |
 | `app/assets/styles/pages/games-search.less` | `.games-search-page`, `html.dark .games-search-page` | `--games-search-` |
 | `app/assets/styles/pages/nav.less` | `.nav-home-page`, `html.dark .nav-home-page` | `--nav-home-` |
+| `app/assets/styles/pages/nav.less` | `.nav-site-card`, `html.dark .nav-site-card` | `--nav-home-card-hover-` |
+| `app/assets/styles/pages/nav.less` | `.nav-group-toggle`, `html.dark .nav-group-toggle` | `--nav-home-group-toggle-` |
+| `app/assets/styles/pages/nav.less` | `.site-popover`, `html.dark .site-popover` | `--nav-home-popover-` |
+| `app/assets/styles/pages/nav.less` | `.group-popover`, `html.dark .group-popover` | `--nav-home-group-popover-` |
+| `app/assets/styles/pages/nav.less` | `.nav-transition-bar__author`, `html.dark .nav-transition-bar__author` | `--nav-home-transition-author-` |
 | `app/assets/styles/pages/updates.less` | `.updates-page`, `html.dark .updates-page` | `--updates-` |
 | `app/assets/styles/pages/lottery.less` | `.lottery-page, .lottery-activation-page, .lottery-modal`; the same group with `html.dark ` before each root | `--lottery-` |
 | `app/assets/styles/pages/static.less` | `.about-page`, `html.dark .about-page` | `--about-` |
@@ -718,6 +723,21 @@ No production/debt changes are authorized by this contract stage. Keep
 `.nav-tool-button--search`; Site Groups/games-page coupling remains P5.4-owned.
 The eight initial goldens require pinned generation, two full comparisons and
 maintainer review before P5.3.2. Existing 42 snapshots MUST remain unchanged.
+
+P5.3.2 Core appearance stays in `pages/nav.less`; NavSiteGrid's accepted title
+16/24/500 and description 12/16.2 are preserved. Cards/Groups/Popovers and
+TransitionBar retire 46 raw occurrences. ToolDock 42, Spotlight 51 and the five
+games-page occurrences remain outside this migration. P5.3.1 tests and all 50
+accepted PNGs are frozen.
+Approved inheritance corrections add only exact local declaration owners:
+SitePopover (`--nav-home-popover-*`), GroupPopover (`--nav-home-group-popover-*`)
+and the TransitionBar author (`--nav-home-transition-author-*`) on their body
+Teleport roots; shared Card hover (`--nav-home-card-hover-*`) and group toggle
+(`--nav-home-group-toggle-*`) on their consumer roots, including exact Dark roots.
+SitePopover MUST retain its effective transparent background/zero border.
+Do not activate unreachable page-root surface tokens or alter Site Groups'
+existing cascade. Other Nav Home semantics retain their existing page owner;
+detectors and exception rules are unchanged.
 
 ### P1 enforcement and maintenance
 
