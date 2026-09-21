@@ -189,8 +189,12 @@ unchanged.
 regressions and four Header/Search/Quick Sites visual contracts. Keep exact
 Hero/favicon/weather/popup isolation, SSR-only Home, real debounce and storage
 actions. Preserve the audited computed cascade rather than inferred Tailwind
-intent. `SiteIconStrip` remains an unused P5.2.2 cleanup candidate, not a live
-Header contract. Production/debt changes belong to the next migration stage.
+intent. P5.2.2 keeps Header/Search/QuickAccess/Quick Sites appearance in
+`pages/nav.less`, with theme-independent `--nav-home-*` tokens on `.nav-home-page`,
+including mobile states. Do not split out a Header stylesheet or add Dark
+overrides for these semantics. Proven-dead `SiteIconStrip` and its styles are
+removed. Spotlight/ToolDock/TransitionBar/Cards/Popovers belong to P5.3; do not
+clean them up opportunistically. Preserve the accepted Header tests and 42 PNGs.
 
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running

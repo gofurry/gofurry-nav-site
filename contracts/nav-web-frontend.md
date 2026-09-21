@@ -692,8 +692,13 @@ The shared fixture keeps real SSR/hydration/Hero rendering, exact local asset
 boundaries and one SSR Home request; it does not supersede Hero lifecycle or
 Nav Shell contracts. The chip transition's actual Less cascade (background,
 box-shadow and color, 500ms each) takes precedence over utility-name inference.
-Unused `SiteIconStrip` is a P5.2.2 cleanup candidate, not live Header coverage.
-Production, the debt baseline and the original 38 PNGs remain unchanged.
+P5.2.2 keeps Header, Search, QuickAccess and Quick Sites appearance in
+`pages/nav.less`, with `--nav-home-*` declarations on `.nav-home-page`; do not split
+out a Header stylesheet. These Hero-backed semantics remain theme-independent,
+including mobile states. `SiteIconStrip` and its styles were deleted after a
+zero-consumer audit. The accepted Header contracts and all 42 PNGs are unchanged.
+Spotlight, ToolDock, TransitionBar, Cards and Popovers remain P5.3-owned; this
+Header migration does not authorize their cleanup.
 Mobile Home reuses the existing `assertHeroHydration` strict Footer mismatch
 contract with SSR Hero retention evidence. Preserve raw errors and reject all
 later errors; Desktop retains zero browser errors. This is not a general exception.

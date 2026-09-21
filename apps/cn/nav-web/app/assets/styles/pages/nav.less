@@ -22,6 +22,81 @@
   --nav-home-transition-bg: rgba(18, 24, 37, 0.55);
   --nav-home-transition-text: rgba(243, 244, 246, 0.96);
 
+  /* Header elevation and scroll affordance over Hero imagery; inherited unchanged in Dark. */
+  --nav-home-header-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --nav-home-header-scroll-frame-border: rgba(255, 255, 255, 0.35);
+  --nav-home-header-scroll-frame-bg: rgba(0, 0, 0, 0.10);
+  --nav-home-header-scroll-dot-bg: rgba(255, 255, 255, 0.90);
+
+  /* Quick Sites dialog surfaces, hierarchy and actions retain their Hero-overlay treatment in both themes. */
+  --nav-home-quick-modal-backdrop: rgba(2, 6, 23, 0.52);
+  --nav-home-quick-modal-border: rgba(255, 255, 255, 0.10);
+  --nav-home-quick-modal-panel-bg: rgba(12, 17, 21, 0.84);
+  --nav-home-quick-modal-panel-shadow: 0 24px 60px rgba(7, 12, 16, 0.28);
+  --nav-home-quick-modal-text-strong: rgba(255, 248, 241, 0.96);
+  --nav-home-quick-modal-text-muted: rgba(233, 241, 246, 0.68);
+  --nav-home-quick-modal-control-border: rgba(255, 255, 255, 0.08);
+  --nav-home-quick-modal-control-bg: rgba(255, 255, 255, 0.03);
+  --nav-home-quick-modal-control-text: rgba(255, 248, 241, 0.88);
+  --nav-home-quick-modal-surface-subtle: rgba(255, 255, 255, 0.045);
+  --nav-home-quick-modal-focus-border: rgba(151, 226, 255, 0.34);
+  --nav-home-quick-modal-error-text: rgba(255, 173, 173, 0.94);
+  --nav-home-quick-modal-primary-border: rgba(151, 226, 255, 0.18);
+  --nav-home-quick-modal-primary-bg: rgba(151, 226, 255, 0.90);
+  --nav-home-quick-modal-primary-text: rgba(8, 15, 18, 0.94);
+  --nav-home-quick-modal-grip: rgba(255, 248, 241, 0.42);
+  --nav-home-quick-modal-item-muted: rgba(233, 241, 246, 0.62);
+  --nav-home-quick-modal-delete-bg: rgba(242, 78, 78, 0.95);
+  --nav-home-quick-modal-delete-text: rgba(255, 235, 235, 0.96);
+
+  /* Search glass and state hierarchy stay theme-independent; compound shadows preserve the accepted cascade. */
+  --nav-home-search-chip-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 24px rgba(2, 6, 23, 0.14);
+  --nav-home-search-chip-text-hover: rgba(255, 255, 255, 0.98);
+  --nav-home-search-chip-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 10px 28px rgba(2, 6, 23, 0.18);
+  --nav-home-search-chip-shadow-active: inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 12px 30px rgba(2, 6, 23, 0.20);
+  --nav-home-search-chip-active-bg-hover: rgba(255, 255, 255, 0.96);
+  --nav-home-search-chip-active-text-hover: rgba(15, 23, 42, 0.96);
+  --nav-home-search-input-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 12px 36px rgba(2, 6, 23, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.18);
+  --nav-home-search-input-shadow-focus: inset 0 1px 0 rgba(255, 255, 255, 0.90),
+    0 16px 42px rgba(2, 6, 23, 0.26),
+    0 0 0 1px rgba(255, 255, 255, 0.34),
+    0 0 0 4px rgba(15, 23, 42, 0.20);
+  --nav-home-search-chip-shadow-mobile: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  --nav-home-search-chip-shadow-active-mobile: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  --nav-home-search-input-bg-mobile: rgba(255, 255, 255, 0.82);
+  --nav-home-search-input-shadow-mobile: inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 0 0 1px rgba(255, 255, 255, 0.28);
+  --nav-home-search-input-shadow-focus-mobile: inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    0 0 0 1px rgba(255, 255, 255, 0.38),
+    0 0 0 3px rgba(15, 23, 42, 0.12);
+  --nav-home-search-icon-filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.42));
+  --nav-home-search-dropdown-border: rgba(255, 255, 255, 0.12);
+  --nav-home-search-dropdown-shadow: 0 25px 50px rgba(2, 6, 23, 0.35);
+  --nav-home-search-suggestion-header-border: rgba(255, 255, 255, 0.10);
+  --nav-home-search-suggestion-header-bg: rgba(255, 255, 255, 0.05);
+  --nav-home-search-suggestion-header-text: rgba(203, 213, 225, 0.90);
+  --nav-home-search-suggestion-muted-text: rgba(203, 213, 225, 0.78);
+  --nav-home-search-spinner-border: rgba(255, 255, 255, 0.30);
+  --nav-home-search-spinner-accent: rgb(103, 232, 249);
+  --nav-home-search-suggestion-text: rgba(241, 245, 249, 0.90);
+  --nav-home-search-suggestion-active-bg: rgba(255, 255, 255, 0.08);
+  --nav-home-search-suggestion-active-text: rgba(255, 255, 255, 0.98);
+  --nav-home-search-highlight-text: rgb(249, 115, 22);
+
+  /* QuickAccess labels and shortcut controls share Hero-backed semantics across themes. */
+  --nav-home-quick-title-bg: rgba(8, 12, 18, 0.24);
+  --nav-home-quick-title-text: rgba(255, 247, 237, 0.92);
+  --nav-home-quick-site-bg: rgba(0, 0, 0, 0.18);
+  --nav-home-quick-site-text: rgba(255, 248, 241, 0.94);
+  --nav-home-quick-site-hover-bg: rgba(241, 245, 249, 0.30);
+  --nav-home-quick-site-fallback-bg: rgba(17, 24, 39, 0.84);
+  --nav-home-quick-site-manage-bg: rgba(0, 0, 0, 0.16);
+
   min-height: 100vh;
   background: var(--nav-home-bg);
 }
@@ -53,7 +128,7 @@ html.dark .nav-home-page {
   justify-content: flex-start;
   overflow: hidden;
   padding: 1.5rem 1rem 0;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--nav-home-header-shadow);
   transition: background 0.4s ease-in-out;
 }
 
@@ -152,9 +227,9 @@ html.dark .nav-home-page {
   height: 1.5rem;
   align-items: flex-start;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--nav-home-header-scroll-frame-border);
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.10);
+  background: var(--nav-home-header-scroll-frame-bg);
   padding: 0.25rem;
   backdrop-filter: blur(6px);
 }
@@ -163,7 +238,7 @@ html.dark .nav-home-page {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.90);
+  background: var(--nav-home-header-scroll-dot-bg);
   animation: navHeaderBounce 1s infinite;
 }
 
@@ -174,7 +249,7 @@ html.dark .nav-home-page {
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(2, 6, 23, 0.52);
+  background: var(--nav-home-quick-modal-backdrop);
   padding-inline: 1rem;
   backdrop-filter: blur(8px);
 }
@@ -191,10 +266,10 @@ html.dark .nav-home-page {
   width: min(100%, 36rem);
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid var(--nav-home-quick-modal-border);
   border-radius: 1rem;
-  background: rgba(12, 17, 21, 0.84);
-  box-shadow: 0 24px 60px rgba(7, 12, 16, 0.28);
+  background: var(--nav-home-quick-modal-panel-bg);
+  box-shadow: var(--nav-home-quick-modal-panel-shadow);
   backdrop-filter: blur(22px);
 }
 
@@ -213,14 +288,14 @@ html.dark .nav-home-page {
 }
 
 .quick-modal-title {
-  color: rgba(255, 248, 241, 0.96);
+  color: var(--nav-home-quick-modal-text-strong);
   font-size: 0.96rem;
   font-weight: 650;
 }
 
 .quick-modal-desc {
   margin-top: 0.2rem;
-  color: rgba(233, 241, 246, 0.68);
+  color: var(--nav-home-quick-modal-text-muted);
   font-size: 0.76rem;
   line-height: 1.3;
 }
@@ -230,10 +305,10 @@ html.dark .nav-home-page {
   width: 1.8rem;
   height: 1.8rem;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--nav-home-quick-modal-control-border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 248, 241, 0.88);
+  background: var(--nav-home-quick-modal-control-bg);
+  color: var(--nav-home-quick-modal-control-text);
 }
 
 .quick-modal-form {
@@ -251,16 +326,16 @@ html.dark .nav-home-page {
 .quick-modal-inline-field input {
   width: 100%;
   height: 2.45rem;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid var(--nav-home-quick-modal-border);
   border-radius: 0.8rem;
-  background: rgba(255, 255, 255, 0.045);
-  color: rgba(255, 248, 241, 0.96);
+  background: var(--nav-home-quick-modal-surface-subtle);
+  color: var(--nav-home-quick-modal-text-strong);
   outline: none;
   padding-inline: 0.8rem;
 }
 
 .quick-modal-inline-field input:focus {
-  border-color: rgba(151, 226, 255, 0.34);
+  border-color: var(--nav-home-quick-modal-focus-border);
 }
 
 .quick-modal-inline-action {
@@ -269,7 +344,7 @@ html.dark .nav-home-page {
 
 .quick-modal-error {
   padding: 0.55rem 1rem 0;
-  color: rgba(255, 173, 173, 0.94);
+  color: var(--nav-home-quick-modal-error-text);
   font-size: 0.76rem;
 }
 
@@ -285,9 +360,9 @@ html.dark .nav-home-page {
 
 .quick-modal-primary {
   height: 2.45rem;
-  border: 1px solid rgba(151, 226, 255, 0.18);
-  background: rgba(151, 226, 255, 0.90);
-  color: rgba(8, 15, 18, 0.94);
+  border: 1px solid var(--nav-home-quick-modal-primary-border);
+  background: var(--nav-home-quick-modal-primary-bg);
+  color: var(--nav-home-quick-modal-primary-text);
   padding-inline: 0.95rem;
 }
 
@@ -313,7 +388,7 @@ html.dark .nav-home-page {
   align-items: center;
   gap: 0.65rem;
   border-radius: 0.85rem;
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--nav-home-quick-modal-surface-subtle);
   cursor: grab;
   padding: 0.55rem 0.7rem;
 }
@@ -332,19 +407,19 @@ html.dark .nav-home-page {
   width: 0.22rem;
   height: 0.22rem;
   border-radius: 999px;
-  background: rgba(255, 248, 241, 0.42);
-  box-shadow: 0 0.38rem 0 rgba(255, 248, 241, 0.42);
+  background: var(--nav-home-quick-modal-grip);
+  box-shadow: 0 0.38rem 0 var(--nav-home-quick-modal-grip);
 }
 
 .quick-modal-item-name {
-  color: rgba(255, 248, 241, 0.96);
+  color: var(--nav-home-quick-modal-text-strong);
   font-size: 0.82rem;
   font-weight: 600;
 }
 
 .quick-modal-item-url {
   margin-top: 0.12rem;
-  color: rgba(233, 241, 246, 0.62);
+  color: var(--nav-home-quick-modal-item-muted);
   font-size: 0.72rem;
   word-break: break-all;
 }
@@ -357,12 +432,12 @@ html.dark .nav-home-page {
   place-items: center;
   border: 0;
   border-radius: 999px;
-  background: rgba(242, 78, 78, 0.95);
-  color: rgba(255, 235, 235, 0.96);
+  background: var(--nav-home-quick-modal-delete-bg);
+  color: var(--nav-home-quick-modal-delete-text);
 }
 
 .quick-modal-empty {
-  color: rgba(233, 241, 246, 0.62);
+  color: var(--nav-home-quick-modal-item-muted);
   font-size: 0.8rem;
   line-height: 1.5;
 }
@@ -391,11 +466,11 @@ html.dark .nav-home-page {
 }
 
 .search-chip {
+  border-radius: 0.75rem;
+  font-weight: 500;
   background: var(--nav-home-search-chip-bg);
   color: var(--nav-home-search-chip-text);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 8px 24px rgba(2, 6, 23, 0.14);
+  box-shadow: var(--nav-home-search-chip-shadow);
   backdrop-filter: blur(14px) saturate(1.12);
   -webkit-backdrop-filter: blur(14px) saturate(1.12);
   transition:
@@ -404,25 +479,32 @@ html.dark .nav-home-page {
     color 500ms ease;
 }
 
+.search-category-row .search-chip {
+  font-size: 0.875rem;
+  /* Preserve the accepted Tailwind ratio and its subpixel line-box geometry. */
+  line-height: 1.42857;
+}
+
+.search-platform-row .search-chip {
+  font-size: 0.75rem;
+  line-height: 1.33333;
+}
+
 .search-chip:hover {
   background: var(--nav-home-search-chip-bg-hover);
-  color: rgba(255, 255, 255, 0.98);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 10px 28px rgba(2, 6, 23, 0.18);
+  color: var(--nav-home-search-chip-text-hover);
+  box-shadow: var(--nav-home-search-chip-shadow-hover);
 }
 
 .search-chip-active {
   background: var(--nav-home-search-chip-active-bg);
   color: var(--nav-home-search-chip-active-text);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
-    0 12px 30px rgba(2, 6, 23, 0.20);
+  box-shadow: var(--nav-home-search-chip-shadow-active);
 }
 
 .search-chip-active:hover {
-  background: rgba(255, 255, 255, 0.96);
-  color: rgba(15, 23, 42, 0.96);
+  background: var(--nav-home-search-chip-active-bg-hover);
+  color: var(--nav-home-search-chip-active-text-hover);
 }
 
 .search-input {
@@ -431,10 +513,7 @@ html.dark .nav-home-page {
   background: var(--nav-home-search-input-bg);
   color: var(--nav-home-search-input-text);
   outline: none;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 12px 36px rgba(2, 6, 23, 0.22),
-    0 0 0 1px rgba(255, 255, 255, 0.18);
+  box-shadow: var(--nav-home-search-input-shadow);
   backdrop-filter: blur(18px) saturate(1.08);
   -webkit-backdrop-filter: blur(18px) saturate(1.08);
   transition:
@@ -449,11 +528,7 @@ html.dark .nav-home-page {
 
 .search-input:focus {
   background: var(--nav-home-search-input-bg-focus);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.90),
-    0 16px 42px rgba(2, 6, 23, 0.26),
-    0 0 0 1px rgba(255, 255, 255, 0.34),
-    0 0 0 4px rgba(15, 23, 42, 0.20);
+  box-shadow: var(--nav-home-search-input-shadow-focus);
 }
 
 @media (max-width: 639px) {
@@ -467,29 +542,24 @@ html.dark .nav-home-page {
 
   .search-category-row .search-chip,
   .search-platform-row .search-chip {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+    box-shadow: var(--nav-home-search-chip-shadow-mobile);
   }
 
   .search-category-row .search-chip-active,
   .search-platform-row .search-chip-active {
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+    box-shadow: var(--nav-home-search-chip-shadow-active-mobile);
   }
 
   .search-input {
-    background: rgba(255, 255, 255, 0.82);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.82),
-      0 0 0 1px rgba(255, 255, 255, 0.28);
+    background: var(--nav-home-search-input-bg-mobile);
+    box-shadow: var(--nav-home-search-input-shadow-mobile);
     backdrop-filter: blur(12px) saturate(1.04);
     -webkit-backdrop-filter: blur(12px) saturate(1.04);
   }
 
   .search-input:focus {
-    background: rgba(255, 255, 255, 0.90);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.88),
-      0 0 0 1px rgba(255, 255, 255, 0.38),
-      0 0 0 3px rgba(15, 23, 42, 0.12);
+    background: var(--nav-home-search-input-bg-focus);
+    box-shadow: var(--nav-home-search-input-shadow-focus-mobile);
   }
 }
 
@@ -501,7 +571,7 @@ html.dark .nav-home-page {
   height: 1.25rem;
   cursor: pointer;
   opacity: 0.72;
-  filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.42));
+  filter: var(--nav-home-search-icon-filter);
   transform: translateY(-50%);
   transition:
     opacity 500ms ease,
@@ -520,11 +590,11 @@ html.dark .nav-home-page {
 }
 
 .search-suggestion-list {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--nav-home-search-dropdown-border);
   border-radius: 1rem;
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--nav-home-search-dropdown-border);
   background: var(--nav-home-search-dropdown-bg);
-  box-shadow: 0 25px 50px rgba(2, 6, 23, 0.35);
+  box-shadow: var(--nav-home-search-dropdown-shadow);
   backdrop-filter: blur(40px);
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -544,28 +614,33 @@ html.dark .nav-home-page {
 }
 
 .search-suggestion-header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(203, 213, 225, 0.90);
+  font-size: 0.75rem;
+  line-height: 1.33333;
+  border-bottom: 1px solid var(--nav-home-search-suggestion-header-border);
+  background: var(--nav-home-search-suggestion-header-bg);
+  color: var(--nav-home-search-suggestion-header-text);
 }
 
 .search-suggestion-loading,
 .search-suggestion-empty {
-  color: rgba(203, 213, 225, 0.78);
+  color: var(--nav-home-search-suggestion-muted-text);
 }
 
 .search-suggestion-spinner {
   display: inline-block;
   width: 1.25rem;
   height: 1.25rem;
-  border: 2px solid rgba(255, 255, 255, 0.30);
-  border-top-color: rgb(103, 232, 249);
+  border: 2px solid var(--nav-home-search-spinner-border);
+  border-top-color: var(--nav-home-search-spinner-accent);
   border-radius: 999px;
   animation: navSearchSpin 1s linear infinite;
 }
 
 .search-suggestion-item {
-  color: rgba(241, 245, 249, 0.90);
+  font-size: 0.875rem;
+  line-height: 1.42857;
+  font-weight: 500;
+  color: var(--nav-home-search-suggestion-text);
   transition:
     background 500ms ease,
     color 500ms ease;
@@ -573,60 +648,12 @@ html.dark .nav-home-page {
 
 .search-suggestion-item:hover,
 .search-suggestion-item-active {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.98);
+  background: var(--nav-home-search-suggestion-active-bg);
+  color: var(--nav-home-search-suggestion-active-text);
 }
 
 .search-highlight {
-  color: rgb(249, 115, 22);
-  font-weight: 700;
-}
-
-.site-icon-strip {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.site-icon-strip::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-
-.site-icon-strip__link {
-  border-radius: 0.75rem;
-  background: rgba(0, 0, 0, 0.20);
-  backdrop-filter: blur(10px);
-  transition:
-    background 500ms ease,
-    box-shadow 500ms ease,
-    transform 500ms ease;
-}
-
-.site-icon-strip__link:hover {
-  background: rgba(241, 245, 249, 0.30);
-  box-shadow: 0 8px 18px rgba(2, 6, 23, 0.16);
-  transform: translateY(-1px);
-}
-
-.site-icon-strip__image,
-.site-icon-strip__fallback {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 0.375rem;
-}
-
-.site-icon-strip__image {
-  object-fit: cover;
-}
-
-.site-icon-strip__fallback {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.86);
-  color: rgba(248, 250, 252, 0.96);
-  font-size: 0.75rem;
+  color: var(--nav-home-search-highlight-text);
   font-weight: 700;
 }
 
@@ -653,8 +680,8 @@ html.dark .nav-home-page {
   max-width: 100%;
   align-items: center;
   border-radius: 999px;
-  background: rgba(8, 12, 18, 0.24);
-  color: rgba(255, 247, 237, 0.92);
+  background: var(--nav-home-quick-title-bg);
+  color: var(--nav-home-quick-title-text);
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.16em;
@@ -679,8 +706,8 @@ html.dark .nav-home-page {
   overflow: hidden;
   border: 0;
   border-radius: 0.75rem;
-  background: rgba(0, 0, 0, 0.18);
-  color: rgba(255, 248, 241, 0.94);
+  background: var(--nav-home-quick-site-bg);
+  color: var(--nav-home-quick-site-text);
   backdrop-filter: blur(10px);
   transition:
     background 180ms ease,
@@ -688,7 +715,7 @@ html.dark .nav-home-page {
 }
 
 .quick-site-tile:hover:not(:disabled) {
-  background: rgba(241, 245, 249, 0.30);
+  background: var(--nav-home-quick-site-hover-bg);
 }
 
 .quick-site-tile:disabled {
@@ -713,17 +740,17 @@ html.dark .nav-home-page {
 .quick-site-fallback {
   display: grid;
   place-items: center;
-  background: rgba(17, 24, 39, 0.84);
+  background: var(--nav-home-quick-site-fallback-bg);
   font-size: 0.72rem;
   font-weight: 700;
 }
 
 .quick-site-manage {
-  background: rgba(0, 0, 0, 0.16);
+  background: var(--nav-home-quick-site-manage-bg);
 }
 
 .quick-site-manage:hover:not(:disabled) {
-  background: rgba(241, 245, 249, 0.30);
+  background: var(--nav-home-quick-site-hover-bg);
 }
 
 .quick-site-manage-icon {
@@ -731,7 +758,7 @@ html.dark .nav-home-page {
   width: 1.5rem;
   height: 1.5rem;
   place-items: center;
-  color: rgba(255, 248, 241, 0.94);
+  color: var(--nav-home-quick-site-text);
   font-size: 1.05rem;
   line-height: 1;
 }

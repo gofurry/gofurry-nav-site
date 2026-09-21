@@ -110,8 +110,8 @@ transition, typography and surface treatment live in Less. BottomTab retains
 private placement, breakpoint and runtime geometry in scoped styles, while Less
 owns its surface, icon, active/hover and motion treatment. Active border and fill
 keep separate semantic identities. The accepted Nav Shell contracts remain
-unchanged; Nav Home Header/Content, SearchBox and QuickAccess belong to later P5
-work, not this shell migration.
+unchanged; Nav Home Header/Content, SearchBox and QuickAccess have separate P5
+ownership from this shell migration.
 
 Audit correction to the P5.1.2 plan: button `text-sm` was overridden by the
 unlayered `font: inherit` rule in `main.css`. Theme/Mode and Mobile action/language
@@ -119,6 +119,26 @@ buttons therefore retain inherited typography (currently 16px/24px), while brand
 and navigation links retain their effective 14px/20px typography. Migration
 preserves accepted computed appearance, not an overridden utility's intent; no
 button typography override or otherwise-unused theme-button hook is needed.
+
+## Nav Home Header appearance
+
+P5.2.2 keeps Header, Search, QuickAccess and Quick Sites in
+[pages/nav.less](../../apps/cn/nav-web/app/assets/styles/pages/nav.less), using
+`--nav-home-*` on `.nav-home-page`; there is no separate Header stylesheet.
+Hero-backed surfaces remain theme-independent. Mobile shadows/backgrounds are
+root-declared semantics consumed by media rules, not Dark overrides. Compound
+shadows and filters preserve their full values; shared Quick Sites roles reuse
+tokens for borders, subtle surfaces and text hierarchy.
+
+Search retains the accepted category 14px/20px and platform 12px/16px typography,
+500 weight and 12px radius. Its effective background/box-shadow/color 500ms
+transition remains authoritative over the removed `transition-all` utility.
+The unitless line-height ratios retain Tailwind's accepted built precision;
+rounding them to exact rem heights shifts layout by 1/64px despite equal computed
+pixel labels and changes input text rasterization.
+`SiteIconStrip` and its complete stylesheet block were removed after confirming
+zero consumers, rather than tokenizing dead code. P5.3 owns revealed Content,
+Spotlight, ToolDock, TransitionBar, Cards and Popovers; their debt is unchanged.
 
 ## P4 exit ownership
 

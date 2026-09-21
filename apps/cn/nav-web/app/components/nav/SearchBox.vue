@@ -11,7 +11,7 @@
             :key="item"
             @click="selectedCategory = item"
             :class="[
-              'search-chip cursor-pointer rounded-xl px-3 py-1.5 text-sm font-medium transition-all duration-500',
+              'search-chip cursor-pointer px-3 py-1.5',
               selectedCategory === item ? 'search-chip-active' : ''
             ]"
         >
@@ -51,7 +51,7 @@
           @touchmove.stop
       >
         <!-- 标题 -->
-        <li class="search-suggestion-header px-4 py-2 text-xs">
+        <li class="search-suggestion-header px-4 py-2">
           <template v-if="isLoading">{{ t('common.loading') }}</template>
           <template v-else>{{ t('searchBox.searchSuggest') }} ({{ suggestions.length }})</template>
         </li>
@@ -69,7 +69,7 @@
               @click="selectSuggestion(index)"
               @mouseenter="hoveredIndex = index"
               @mouseleave="hoveredIndex = -1"
-              class="search-suggestion-item cursor-pointer px-4 py-3 text-sm font-medium"
+              class="search-suggestion-item cursor-pointer px-4 py-3"
               :class="hoveredIndex === index ? 'search-suggestion-item-active' : ''"
           >
             <!-- 关键词高亮 -->
@@ -91,7 +91,7 @@
             :key="platform.name"
             @click="selectedPlatform = platform"
             :class="[
-              'search-chip cursor-pointer rounded-xl px-2.5 py-1.5 text-center text-xs font-medium whitespace-nowrap transition-all duration-500',
+              'search-chip cursor-pointer px-2.5 py-1.5 text-center whitespace-nowrap',
               selectedPlatform.name === platform.name ? 'search-chip-active' : ''
             ]"
         >
