@@ -684,6 +684,17 @@ suppression. Terms remains quiet except for one separately recorded empty patter
 catalog requested only after the real BottomTab Mode action mounts Preferences.
 All other requests/errors MUST remain zero.
 
+P5.2.1 adds a separate live Home Header contract: two Functional cases own
+Search debounce/keyboard/popup/reveal lock, theme-independent computed appearance,
+and Quick Sites validation/add/delete/storage. Four clipped Visual cases own
+Desktop Header, Desktop/Mobile suggestions and Desktop Quick Sites validation.
+The shared fixture keeps real SSR/hydration/Hero rendering, exact local asset
+boundaries and one SSR Home request; it does not supersede Hero lifecycle or
+Nav Shell contracts. The chip transition's actual Less cascade (background,
+box-shadow and color, 500ms each) takes precedence over utility-name inference.
+Unused `SiteIconStrip` is a P5.2.2 cleanup candidate, not live Header coverage.
+Production, the debt baseline and the original 38 PNGs remain unchanged.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

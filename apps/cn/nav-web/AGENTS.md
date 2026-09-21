@@ -185,6 +185,13 @@ behavior/private geometry in Vue; do not fold SearchBox, QuickAccess or Nav Home
 debt into this shell boundary. The eight accepted Nav Shell goldens must pass
 unchanged.
 
+`fixtures/nav-home-header.ts` owns the shared live Home boundary for two Header
+regressions and four Header/Search/Quick Sites visual contracts. Keep exact
+Hero/favicon/weather/popup isolation, SSR-only Home, real debounce and storage
+actions. Preserve the audited computed cascade rather than inferred Tailwind
+intent. `SiteIconStrip` remains an unused P5.2.2 cleanup candidate, not a live
+Header contract. Production/debt changes belong to the next migration stage.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

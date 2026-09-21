@@ -656,6 +656,50 @@ Both comparisons must report **39 passed**, Functional Browser **70**. The origi
 new images before P5.1.2, which must pass them unchanged. Production, style debt,
 existing P4/Hero tests and legacy `visual:guard` remain untouched.
 
+### Nav Home Header (P5.2.1)
+
+`fixtures/nav-home-header.ts` shares a real production Home between Functional
+and Visual. The worker owns Nitro/local API; every test gets fresh request/gate
+state, storage, context and routes. Fixed desktop/mobile Hero keys still render
+through production HeroBackground/Frame and managed assets. Only their exact
+URLs and seeded favicon URLs are fulfilled locally; one exact favicon abort
+exercises the real fallback. The explicit Add action additionally permits its
+known `example.com` favicon. No CDN/favicon-origin wildcard is allowed.
+
+Home is requested exactly once on SSR, with empty groups/spotlights, a non-null
+saying and deterministic Hero. Hydration cannot refetch Home. Only real Bing
+`wolf`/`noresult` suggestion requests may follow, through the production debounce
+and API chain. A response gate exposes loading and releases in failure cleanup.
+The production exact Tianqi iframe is isolated locally; external traffic and
+unexpected failures/errors must remain zero. Bing popup navigation is allowed
+only at the exact selected-suggestion URL after the real Enter action.
+
+Two regressions protect Search typography/theme parity, debounce/loading/empty,
+keyboard/popup and reveal lock; plus QuickAccess slots/favicon fallback and
+Modal validation/add/delete/localStorage. The audited chip transition is
+`background, box-shadow, color` at 500ms each: existing unlayered Less overrides
+the plan's `transition-all` assumption. Accepted computed appearance is authority.
+
+Four Page clips cover Desktop Header, Desktop/Mobile focused suggestions and
+Desktop Quick Sites validation. Geometry comes from live Nav/Search/Modal bounds;
+intentional input focus stays intact. Target images, finite transitions, fonts
+and two RAFs settle before capture; infinite unrelated Home motion is not awaited.
+No Dark golden is added: Functional compares representative Light/Dark styles.
+`SiteIconStrip` has no production consumer and remains a P5.2.2 dead-cleanup
+candidate; its five raw debts are not live Header coverage.
+
+Only these four initial snapshots may be created in the pinned environment:
+
+```sh
+npm run test:visual:update -- -- nav-home-header.spec.ts
+npm run test:visual
+npm run test:visual
+```
+
+Acceptance is **72 Functional / 43 Visual / 42 PNG**, with the existing 38 PNGs,
+production and style debt unchanged. Maintainer review of all four new images
+precedes P5.2.2; existing Hero/Nav Shell contracts retain their ownership.
+
 ## Verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
