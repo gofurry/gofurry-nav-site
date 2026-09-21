@@ -705,6 +705,57 @@ Acceptance is **72 Functional / 43 Visual / 42 PNG**, with the existing 38 PNGs,
 production and style debt unchanged. Maintainer review of all four new images
 precedes P5.2.2; existing Hero/Nav Shell contracts retain their ownership.
 
+### Nav Revealed Content (P5.3.1)
+
+`fixtures/nav-revealed-content.ts` is independent of the Header fixture and
+reuses `startInsightsFixtureApp()`. Its worker owns production Nitro/local API;
+each test owns context/routes and fresh scenario data, storage and request
+evidence. The responsive case first resizes a hydrated Desktop, then closes its
+documents and opens a fresh NSFW document/storage scenario before navigation.
+No Mobile SSR exception or internal component mutation is involved.
+
+Real wheel input reveals Cards/Popovers, TransitionBar, ToolDock and Spotlight.
+The clock fixes only current time to `2026-09-18T12:40:00+08:00` with
+`Asia/Shanghai`; browser timers still run normally. Theme/mode/recent storage
+and fresh routing diagnostics initialize production consumers. Saved QuickAccess
+is disabled to keep the P5.2 favicon boundary out of this content contract.
+Managed Hero/site images remain real, fulfilled only at exact seeded URLs.
+
+Every scenario proves one SSR Home request and no hydration refetch. Non-null
+saying avoids a secondary saying request. The exact Tianqi iframe is fulfilled
+locally. Directory GET is allowed once only after Search; a view POST and exact
+popup URL are authorized only by the real site action. ToolDock clicks must not
+POST views. Unexpected API/external traffic, request failures and browser errors
+fail; raw network/error evidence is attached even when opening fails. Ping refresh
+is not allowed: scenarios must finish before the real 60-second interval.
+
+Four regressions cover Cards' computed typography, quote focus/blur, Group hover,
+top SitePopover geometry and ping, ToolDock search/empty/Escape/cache/popup,
+Spotlight motion/wrap/visited/POST, 1/2/3/4 responsive panels and cross-surface
+SFW/NSFW. Audit correction: the real description is **12px / 16.2px**, because
+unlayered `line-height: 1.35` overrides `text-xs`; the plan's 16px is not current
+appearance. No product style is changed to satisfy a static utility inference.
+
+Eight Light/Dark Page clips cover Core (1000px), top SitePopover (1000px),
+ToolDock Search (1440px) and Spotlight (960px). Clips come from target geometry;
+intentional focus/hover remains real. Visible images, target-scoped finite
+animations, fonts and two RAFs settle before capture. No global animation wait,
+sleep, network-idle, mask, tolerance or full-page snapshot is used.
+
+Only the eight new baselines may be created in the existing pinned environment:
+
+```sh
+npm run test:visual:update -- -- nav-revealed-content.spec.ts
+npm run test:visual
+npm run test:visual
+```
+
+Acceptance is **76 Functional / 51 Visual / 50 PNG**, with two consecutive full
+visual comparisons and existing 42 PNGs, production and style debt unchanged.
+Maintainer review of all eight new images precedes P5.3.2. `.nav-content-loading`
+stays a P5.3.4 final-sweep candidate; `.nav-tool-button--search` is live dynamic
+output. Site Groups and games-page coupling remain P5.4-owned.
+
 ## Verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`

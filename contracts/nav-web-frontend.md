@@ -703,6 +703,22 @@ Mobile Home reuses the existing `assertHeroHydration` strict Footer mismatch
 contract with SSR Hero retention evidence. Preserve raw errors and reject all
 later errors; Desktop retains zero browser errors. This is not a general exception.
 
+P5.3.1's independent `nav-revealed-content` fixture/specs MUST use real production
+Home SSR/hydration and wheel reveal. Four runtime cases own Card typography,
+Group/Site popovers (including geometric top placement and ping), fixed-time
+TransitionBar/weather/author, ToolDock directory/search/cache/popup, Spotlight
+paging/visited/view side effects, responsive panel counts and SFW/NSFW filtering.
+The actual description cascade is 12px / 16.2px (`line-height: 1.35`), overriding
+the plan's inferred 16px; accepted computed appearance remains authority.
+Eight Light/Dark clips own Core, SitePopover, ToolDock Search and Spotlight.
+Home MUST be SSR-only exactly once per scenario; other requests are limited to
+exact fixture assets/weather and explicitly exercised directory/view/popup paths.
+No production/debt changes are authorized by this contract stage. Keep
+`.nav-content-loading` for P5.3.4 re-audit and the dynamic live
+`.nav-tool-button--search`; Site Groups/games-page coupling remains P5.4-owned.
+The eight initial goldens require pinned generation, two full comparisons and
+maintainer review before P5.3.2. Existing 42 snapshots MUST remain unchanged.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

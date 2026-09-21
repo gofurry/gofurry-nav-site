@@ -196,6 +196,16 @@ overrides for these semantics. Proven-dead `SiteIconStrip` and its styles are
 removed. Spotlight/ToolDock/TransitionBar/Cards/Popovers belong to P5.3; do not
 clean them up opportunistically. Preserve the accepted Header tests and 42 PNGs.
 
+`fixtures/nav-revealed-content.ts` separately owns P5.3.1's four runtime and
+eight Light/Dark visual cases: real wheel reveal, Cards/Popovers, fixed-time
+TransitionBar, ToolDock directory/cache/popup, Spotlight paging/visits/resizing
+and shared SFW/NSFW filtering. Preserve the measured description line-height
+(12px font / 16.2px line), not the plan's utility-based 16px assumption. Keep
+exact Home/assets/weather/view/popup accounting. `.nav-content-loading` is only
+a P5.3.4 audit candidate; `.nav-tool-button--search` is live dynamic output.
+Site Groups and games-page coupling stay P5.4-owned. Maintainer review of the
+eight new goldens precedes P5.3.2; production and debt are unchanged in P5.3.1.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,
