@@ -991,42 +991,6 @@ html.dark .nav-site-card:hover {
   box-shadow: var(--nav-home-card-hover-ring);
 }
 
-.games-page .nav-site-card {
-  background: #fff4e2;
-  color: var(--games-text-title);
-  box-shadow: inset 0 0 0 1px rgba(126, 92, 58, 0.18);
-}
-
-.games-page .nav-site-card:hover {
-  background: #ffe6bf;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--games-item-hover-border) 66%, transparent);
-}
-
-html.dark .games-page .nav-site-card {
-  background: #121e30;
-}
-
-html.dark .games-page .nav-site-card:hover {
-  background: #1e293b;
-}
-
-.games-page .nav-site-card__title {
-  color: var(--games-text-title);
-}
-
-.games-page .nav-site-card__desc {
-  color: var(--games-text-soft);
-}
-
-.games-page .nav-group-toggle {
-  color: var(--games-accent);
-}
-
-.games-page .nav-group-toggle:hover {
-  background: var(--games-detail-surface-hover);
-  color: var(--games-text-title);
-}
-
 .nav-site-card__logo {
   width: 2.5rem;
   height: 2.5rem;
@@ -1049,41 +1013,6 @@ html.dark .games-page .nav-site-card:hover {
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.games-page .site-group-header {
-  color: var(--games-text-muted);
-}
-
-.games-page .site-group-title {
-  color: var(--games-text-title);
-}
-
-.games-page .site-group-summary {
-  color: var(--games-text-soft);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.games-page .site-group-total {
-  color: var(--games-accent);
-}
-
-.games-page .site-group-content {
-  min-height: calc(100svh - 15rem);
-}
-
-.games-page .site-group-content .game-detail-tabs {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-html.dark .games-page .site-group-content .game-detail-tabs {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
 }
 
 .nav-group-toggle {
@@ -1127,6 +1056,150 @@ html.dark .nav-group-toggle:hover {
 .nav-group-toggle:disabled {
   cursor: default;
   opacity: 0.55;
+}
+
+.site-group-page {
+  /* Standalone Nav directory hierarchy and interaction surfaces preserve the
+   * accepted Site Groups appearance; the layout owns the transparent canvas. */
+  --nav-site-group-page-text: rgba(57, 53, 48, 0.84);
+  --nav-site-group-header-text: rgba(57, 53, 48, 0.84);
+  --nav-site-group-title-text: rgba(71, 42, 20, 0.92);
+  --nav-site-group-muted-text: rgba(78, 60, 46, 0.76);
+  --nav-site-group-accent-text: rgba(124, 45, 18, 0.88);
+  --nav-site-group-accent-strong-text: rgba(124, 45, 18, 1);
+  --nav-site-group-card-bg: #fff4e2;
+  --nav-site-group-card-ring: inset 0 0 0 1px rgba(126, 92, 58, 0.18);
+  --nav-site-group-card-hover-bg: #ffe6bf;
+  --nav-site-group-card-hover-ring: inset 0 0 0 1px color-mix(in srgb, rgba(180, 96, 24, 0.46) 66%, transparent);
+  --nav-site-group-back-text: rgba(124, 45, 18, 0.88);
+  --nav-site-group-back-hover-bg: rgba(255, 235, 205, 0.82);
+  --nav-site-group-back-hover-text: rgba(71, 42, 20, 0.92);
+  --nav-site-group-back-hover-ring: inset 0 0 0 1px rgba(126, 92, 58, 0.14);
+  --nav-site-group-action-border: rgba(126, 92, 58, 0.15);
+  --nav-site-group-action-bg: rgba(255, 250, 242, 0.42);
+  --nav-site-group-action-hover-bg: rgba(255, 235, 205, 0.82);
+
+  color: var(--nav-site-group-page-text);
+  transition: background-color 500ms ease, color 500ms ease;
+}
+
+html.dark .site-group-page {
+  /* Dark keeps the shared layout canvas and the accepted independent Back Home state. */
+  --nav-site-group-page-text: rgba(226, 232, 240, 0.88);
+  --nav-site-group-header-text: rgba(226, 232, 240, 0.76);
+  --nav-site-group-title-text: rgba(241, 245, 249, 0.88);
+  --nav-site-group-muted-text: rgba(203, 213, 225, 0.62);
+  --nav-site-group-accent-text: rgba(190, 208, 222, 0.72);
+  --nav-site-group-accent-strong-text: rgba(226, 232, 240, 0.90);
+  --nav-site-group-card-bg: #121e30;
+  --nav-site-group-card-ring: inset 0 0 0 0 transparent;
+  --nav-site-group-card-hover-bg: #1e293b;
+  --nav-site-group-card-hover-ring: inset 0 0 0 1px rgba(203, 213, 225, 0.42);
+  --nav-site-group-back-text: rgba(226, 232, 240, 0.88);
+  --nav-site-group-back-hover-bg: rgba(148, 163, 184, 0.12);
+  --nav-site-group-back-hover-text: rgba(248, 250, 252, 0.96);
+  --nav-site-group-action-border: rgba(226, 232, 240, 0.15);
+  --nav-site-group-action-bg: rgba(226, 232, 240, 0.065);
+  --nav-site-group-action-hover-bg: rgba(148, 163, 184, 0.18);
+}
+
+.site-group-header {
+  color: var(--nav-site-group-header-text);
+}
+
+.site-group-title {
+  color: var(--nav-site-group-title-text);
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 2.25rem;
+}
+
+.site-group-total {
+  color: var(--nav-site-group-accent-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+.site-group-summary {
+  color: var(--nav-site-group-muted-text);
+  overflow: hidden;
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-group-content {
+  min-height: calc(100svh - 15rem);
+}
+
+.site-group-panel {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.site-group-empty {
+  color: var(--nav-site-group-muted-text);
+  border-radius: var(--gf-radius-md);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.site-group-load-more {
+  border: 1px solid var(--nav-site-group-action-border);
+  border-radius: 999px;
+  background: var(--nav-site-group-action-bg);
+  color: var(--nav-site-group-accent-text);
+  text-decoration: none;
+  /* Keep inherited button typography: accepted 16px/24px, not the old text-sm intent. */
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.site-group-load-more:hover {
+  background: var(--nav-site-group-action-hover-bg);
+  color: var(--nav-site-group-accent-strong-text);
+}
+
+/* Explicit consumer rules beat the shared Nav Dark defaults without changing them. */
+.site-group-page .nav-site-card,
+html.dark .site-group-page .nav-site-card {
+  background: var(--nav-site-group-card-bg);
+  color: var(--nav-site-group-title-text);
+  box-shadow: var(--nav-site-group-card-ring);
+}
+
+.site-group-page .nav-site-card:hover,
+html.dark .site-group-page .nav-site-card:hover {
+  background: var(--nav-site-group-card-hover-bg);
+  box-shadow: var(--nav-site-group-card-hover-ring);
+}
+
+.site-group-page .nav-site-card__title {
+  color: var(--nav-site-group-title-text);
+}
+
+.site-group-page .nav-site-card__desc {
+  color: var(--nav-site-group-muted-text);
+}
+
+.site-group-page .nav-group-toggle,
+html.dark .site-group-page .nav-group-toggle {
+  color: var(--nav-site-group-back-text);
+}
+
+.site-group-page .nav-group-toggle:hover,
+html.dark .site-group-page .nav-group-toggle:hover {
+  background: var(--nav-site-group-back-hover-bg);
+  color: var(--nav-site-group-back-hover-text);
+  box-shadow: var(--nav-site-group-back-hover-ring);
 }
 
 @media (max-width: 1023px) {

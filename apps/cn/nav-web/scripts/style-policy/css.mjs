@@ -13,6 +13,7 @@ const tokenLocations = [
   ['app/assets/styles/pages/games.less', ['.games-page', 'html.dark .games-page'], '--games-'],
   ['app/assets/styles/pages/games-search.less', ['.games-search-page', 'html.dark .games-search-page'], '--games-search-'],
   ['app/assets/styles/pages/nav.less', ['.nav-home-page', 'html.dark .nav-home-page'], '--nav-home-'],
+  ['app/assets/styles/pages/nav.less', ['.site-group-page', 'html.dark .site-group-page'], '--nav-site-group-'],
   // These states also serve Site Groups outside the Nav Home root.
   ['app/assets/styles/pages/nav.less', ['.nav-site-card', 'html.dark .nav-site-card'], '--nav-home-card-hover-'],
   ['app/assets/styles/pages/nav.less', ['.nav-group-toggle', 'html.dark .nav-group-toggle'], '--nav-home-group-toggle-'],

@@ -115,6 +115,24 @@ html.dark {
   assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), []);
 });
 
+test('Site Groups tokens require the exact Nav file, theme root and domain prefix', () => {
+  const approvedFile = 'app/assets/styles/pages/nav.less';
+  const approved = `.site-group-page { --nav-site-group-card-bg: #fff; }
+html.dark .site-group-page { --nav-site-group-card-bg: #000; }`;
+  assert.deepEqual(detectCssFacts(extractCssFacts(approved, { file: approvedFile, less: true })), []);
+  const rejected = `.site-group-page { background: #111; --nav-home-card-bg: #222; }
+html.dark .site-group-page { --games-bg: #333; }
+.site-group-page .child { --nav-site-group-card-bg: #444; }
+html.dark .site-group-page .child { --nav-site-group-card-bg: #555; }
+.parent { .site-group-page { --nav-site-group-card-bg: #666; } }
+:root { --nav-site-group-card-bg: #777; }`;
+  assert.deepEqual(values(detectCssFacts(extractCssFacts(rejected, { file: approvedFile, less: true })), 'raw-visual-value'),
+    ['#111', '#222', '#333', '#444', '#555', '#666', '#777']);
+  for (const file of ['app/assets/styles/pages/games.less', 'app/assets/styles/pages/site-groups.less']) {
+    assert.deepEqual(values(detectCssFacts(extractCssFacts(approved, { file, less: true })), 'raw-visual-value'), ['#fff', '#000']);
+  }
+});
+
 test('main.css root and dark page-token declarations are no longer approved owners', () => {
   const facts = extractCssFacts(`:root {
   --gf-page-background: #123456;

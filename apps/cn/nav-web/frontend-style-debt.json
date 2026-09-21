@@ -38,8 +38,7 @@
       "app/components/site/SitePerformance.vue": 174,
       "app/components/site/SiteSignalCards.vue": 20,
       "app/pages/games/prize/activation.vue": 17,
-      "app/pages/games/prize/index.vue": 67,
-      "app/pages/site-groups/[id].vue": 12
+      "app/pages/games/prize/index.vue": 67
     },
     "tailwind-arbitrary-appearance": {
       "app/components/game/common/GameReviewDialog.vue": 1,
@@ -58,7 +57,6 @@
       "app/assets/styles/pages/games.less": 62,
       "app/assets/styles/pages/insights.less": 10,
       "app/assets/styles/pages/lottery.less": 20,
-      "app/assets/styles/pages/nav.less": 5,
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
       "app/components/game/common/GameReviewDialog.vue": 13,
       "app/components/game/detail/GameSidebarSimilar.vue": 1,
