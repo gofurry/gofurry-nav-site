@@ -759,6 +759,18 @@ remain unchanged. This completion excludes shared ReviewDialog (P6.2),
 SidebarSearch (P6.3), Lottery (P6.4), Detail/Common (P6.5) and legacy Games root
 cleanup (P6.6); remaining debt is not authorization to cross those boundaries.
 
+P6.2.1 protects shared GameReviewDialog through real Home, mounted Search and
+SSR Detail consumers. Its body Teleport MUST stay outside page-root ownership.
+Eight runtime cases cover settled reset, required/score validation, trim/decimal
+normalization, gated pending, success/rejection/503 and Mobile focus/bounds.
+Submit requests MUST be exact local fulfillments, with raw evidence and no real
+backend writes. Successful submission currently keeps the dialog/draft and does
+not refetch host data. Eight pinned modal clips preserve current computed styles,
+including the Light panel on Dark hosts; they require maintainer approval before
+P6.2.2. Existing production, debt and 64 earlier PNGs remain unchanged. Missing
+close translation/accessibility behavior and potential pending-close races are
+separate debt, not authorization to alter runtime during appearance migration.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

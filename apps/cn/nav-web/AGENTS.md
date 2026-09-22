@@ -225,6 +225,14 @@ Home migration is complete; shared ReviewDialog remains P6.2, SidebarSearch P6.3
 Lottery P6.4, Detail/Common P6.5 and the legacy Games root P6.6. Do not clear
 their debt opportunistically or reinterpret Home completion as all Games.
 
+P6.2.1's `game-review-dialog` fixture owns the shared Home/Search/Detail review
+contract: real body Teleport, settled draft reset, validation, gated submission
+and feedback. Preserve each host's exact SSR/mounted request boundary. Writes
+are fulfilled locally; only one explicitly injected 503 may produce its exact
+network diagnostic. Eight modal goldens retain the current Light appearance in
+Dark hosts; maintainer review precedes P6.2.2. Do not fix accessibility or pending
+close/reopen risks inside appearance work, or move Review into Home tokens.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

@@ -783,6 +783,40 @@ Acceptance is **98 Functional / 65 Visual / 64 PNG**, including two consecutive
 pinned comparisons and all previous 58 PNGs unchanged. Maintainer review of the
 six new images precedes P6.1.4; News appearance debt is deliberately retained.
 
+### Shared GameReviewDialog (P6.2.1)
+
+`fixtures/game-review-dialog.ts` serves eight runtime cases and eight modal
+visual cases through the existing production Nitro helper. Home reads once in
+SSR; Search reads categories/results once after mount; Detail reads four SSR
+resources plus one browser view POST. Every test gets fresh scenario state and
+an exact request ledger. The real form's anonymous review POST is locally gated
+at the browser boundary, never sent to a development/production backend.
+Teardown releases every gate and awaits only its own finite submit handlers;
+context teardown owns registrations, without `unrouteAll(wait)`.
+
+Runtime coverage includes all three game identities, settled draft reset,
+required/lexical/range validation, inclusive 0/5, trim and decimal normalization,
+disabled pending/no duplicate click, success, business rejection/user retry,
+one precise 503 diagnostic, Mobile keyboard order/focus and viewport bounds.
+Success retains the dialog/draft without refreshing host data. Search's stable
+slide omits `aria-hidden`; use `:not([aria-hidden="true"])`. Raw console evidence
+remains available; there is no hydration allowance or broad network suppression.
+
+Eight clipped Home-consumer goldens cover default Light/Dark Desktop/Mobile,
+validation Light Desktop/Dark Mobile, pending Dark Desktop and success Light
+Desktop. Only unrelated `#__nuxt` content is hidden after opening the real body
+Teleport; the body uses the production page-background token. Real geometry
+expands the panel clip by 48px, protecting shadow/backdrop without owning Home
+pixels. Focus, finite motion, fonts and two RAFs determine readiness. Pending
+remains gated through capture. The actual panel stays Light under both themes.
+
+Acceptance is **106 Functional / 73 Visual / 72 PNG**, two full pinned compares,
+and original 64 PNG hashes, production and style debt unchanged. Only the new
+spec may generate missing snapshots through the pinned update guard. Maintainer
+review of all eight new images precedes P6.2.2. Missing close translation,
+accessibility enhancements and potential pending-close response races remain
+separate work; no negative assertions freeze those deficiencies as requirements.
+
 ## Verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
