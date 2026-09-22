@@ -823,6 +823,32 @@ The revised Dark images require renewed maintainer review. Missing close transla
 accessibility enhancements and potential pending-close response races remain
 separate work; no negative assertions freeze those deficiencies as requirements.
 
+## Games Search draft/request correctness (P6.3.0)
+
+`fixtures/games-search.ts` and `regression/games-search-lifecycle.spec.ts` add
+eight real-production cases: Cancel isolation, atomic Apply, simple supersession,
+Home clear, simple unmount, advanced supersession/pending, advanced unmount and
+category/locale cancellation. The shared Nitro/local API is worker-owned; each
+test owns response gates, request objects and raw console/network evidence.
+Only explicitly canceled request instances may fail with `net::ERR_ABORTED`;
+application and hydration errors remain failures. Teardown releases every API
+gate and leaves route cleanup to the test context.
+
+The locale case preserves the audited existing lifecycle: the departing page's
+locale watcher makes an English call before the replacement page mounts and
+loads English again. Its two canceled category requests and departing English
+result request are separately gated and accounted for; there is no broad
+URL/error allowance or deduplication change.
+Late metadata must preserve the new Filter draft and committed tag selection.
+Search's initial category/result reads are mounted-only, while Home is SSR;
+browser and server use UTC. Date assertions distinguish real picker display from
+the unchanged API serialization. Keep `game:tags:smoke` as an independent legacy
+check. Its maintainer-approved readiness correction waits for the exact selected-tag
+POST response; SPA `networkidle` could pass before that request, including on the
+unmodified baseline. All four legacy scenarios and original assertions remain.
+Acceptance is 114 Browser / 73 Visual / 72 unchanged PNGs; no new golden,
+style migration, failure UI or overlay repair belongs to this stage.
+
 ## Verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`

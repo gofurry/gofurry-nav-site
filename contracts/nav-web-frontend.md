@@ -778,6 +778,17 @@ identical. The shared SFC's 24 Tailwind / 1 arbitrary / 13 raw debts are retired
 without transferring them. Missing close translation/accessibility behavior and
 potential pending-close races remain separate work.
 
+P6.3.0 gives Advanced Filter a component-local draft. The parent Search query
+MUST represent committed criteria; Cancel MUST NOT affect later pagination.
+Apply emits an independent snapshot, explicitly clears inactive/removed date
+fields and retains the existing single-query route-replace behavior. Simple,
+advanced and category requests MUST recognize cancellation through their captured
+AbortController signal, reject canceled/stale writes and preserve latest-request
+pending ownership. Do not swallow non-cancellation failures. This repair does not
+change Search's zh CSR/en SSR-shell boundary, mounted API loading, shared Sidebar
+debounce, CSS or accepted images. Missing failure feedback and overlay stacking
+remain separately scoped defects, not behavior to freeze as correct.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

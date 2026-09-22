@@ -237,6 +237,14 @@ stay identical. Updated Dark images require visual review. Keep geometry,
 typography and runtime unchanged; do not fix accessibility or pending-close
 risks inside this work, or move Review into Home tokens.
 
+P6.3.0 isolates Advanced Filter drafts from committed Search queries: Cancel
+discards edits; Apply submits a copied snapshot including cleared date fields.
+Search/Sidebar cancellation uses the captured request signal and token, not the
+top-level ofetch error name. The eight `games-search-lifecycle` regressions own
+these boundaries through real Home/Search consumers; retain exact abort evidence.
+This is runtime repair only. Search failure UI, overlay stacking and appearance
+migration remain separate work; existing CSS, style debt and goldens stay fixed.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

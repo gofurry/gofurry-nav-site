@@ -270,9 +270,6 @@ const normalizeRouteQuery = (routeQuery: LocationQuery | LocationQueryRaw) => {
   return JSON.stringify(normalized)
 }
 
-const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === 'AbortError'
-
 const loadTags = async () => {
   tagRequestController?.abort()
   const controller = new AbortController()
@@ -281,12 +278,12 @@ const loadTags = async () => {
 
   try {
     const result = await getTagCategories(lang.value, { signal: controller.signal })
-    if (currentToken !== tagRequestToken) {
+    if (controller.signal.aborted || currentToken !== tagRequestToken) {
       return
     }
     tagGroups.value = result
   } catch (error) {
-    if (isAbortError(error)) {
+    if (controller.signal.aborted) {
       return
     }
     throw error
@@ -303,7 +300,7 @@ const fetchData = async () => {
 
   try {
     const res = await searchGameAdvanced(query, lang.value, { signal: controller.signal })
-    if (currentToken !== searchRequestToken) {
+    if (controller.signal.aborted || currentToken !== searchRequestToken) {
       return
     }
 
@@ -314,7 +311,7 @@ const fetchData = async () => {
         Math.ceil(total.value / pageSize)
     )
   } catch (error) {
-    if (isAbortError(error)) {
+    if (controller.signal.aborted) {
       return
     }
     throw error
@@ -345,9 +342,9 @@ const onPageChange = async (page: number) => {
   await syncRouteWithQuery()
 }
 
-const onSearch = async () => {
+const onSearch = async (snapshot: SearchPageQueryRequest) => {
+  Object.assign(query, snapshot, { tag_list: [...(snapshot.tag_list ?? [])], pageNum: 1 })
   pageDirection.value = 1
-  query.pageNum = 1
   showFilter.value = false
   await syncRouteWithQuery()
 }
@@ -385,6 +382,8 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  tagRequestToken++
+  searchRequestToken++
   tagRequestController?.abort()
   searchRequestController?.abort()
 })

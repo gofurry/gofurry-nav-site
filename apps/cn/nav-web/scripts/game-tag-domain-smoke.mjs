@@ -30,9 +30,14 @@ try {
       assert.match(await chip.textContent(), /Leaf Tag/)
       await chip.click()
       await page.waitForSelector('.game-search-filter-chip--active')
+      // SPA navigation does not reset an already reached networkidle state.
+      const searchResponse = page.waitForResponse(response =>
+        new URL(response.url()).pathname === '/api/v2/game/search/page'
+        && response.request().method() === 'POST'
+        && response.request().postDataJSON()?.tag_list?.includes(812345))
       await page.locator('.game-search-filter-action--primary').click()
       await page.waitForURL(url => url.search.length > 0)
-      await page.waitForLoadState('networkidle')
+      assert.equal((await searchResponse).status(), 200)
       assert(searchBodies.some(body => body.tag_list?.includes(812345)), 'selected leaf ID not sent to search')
       await page.locator('.search-filter-button').click()
       await page.waitForSelector('.game-search-filter-chip--active')

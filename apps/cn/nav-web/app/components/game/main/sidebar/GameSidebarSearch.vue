@@ -78,9 +78,6 @@ let searchController: AbortController | null = null;
 let searchRequestToken = 0;
 let resizeObserver: ResizeObserver | null = null;
 
-const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === 'AbortError'
-
 // 监听语言变化
 watch(
     lang,
@@ -94,6 +91,7 @@ watch(keyword, (val) => {
   if (timer) clearTimeout(timer);
 
   if (!val.trim()) {
+    searchRequestToken++;
     searchController?.abort();
     results.value = [];
     showResults.value = false;
@@ -113,13 +111,13 @@ async function fetchResults(val: string) {
 
   try {
     const res = await getSearchSimple(lang.value, val, { signal: controller.signal });
-    if (currentToken !== searchRequestToken) {
+    if (controller.signal.aborted || currentToken !== searchRequestToken) {
       return;
     }
     results.value = res;
     showResults.value = res.length > 0;
   } catch (e) {
-    if (isAbortError(e)) {
+    if (controller.signal.aborted) {
       return;
     }
     console.error("搜索失败", e);
@@ -181,6 +179,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  searchRequestToken++;
   if (timer) clearTimeout(timer);
   if (blurTimer) clearTimeout(blurTimer);
   searchController?.abort();

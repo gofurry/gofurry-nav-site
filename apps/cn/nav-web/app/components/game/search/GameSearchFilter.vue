@@ -29,14 +29,14 @@
           <div class="grid grid-cols-1 w-[75%]">
             <label class="game-search-filter-label">{{ t("common.keyword") }}</label>
             <input
-                v-model="props.query.content"
+                v-model="draft.content"
                 class="game-search-filter-input ml-1 mt-1 w-full px-3 py-2 focus:outline-none"
             />
           </div>
           <div class="grid grid-cols-1 w-[18%]">
             <label class="game-search-filter-label">{{ t("common.pageSize") }}</label>
             <input
-                v-model.number="props.query.pageSize"
+                v-model.number="draft.pageSize"
                 min="1"
                 class="game-search-filter-input mt-1 w-full px-3 py-2 focus:outline-none"
             />
@@ -52,11 +52,11 @@
                 :key="item.value"
                 type="button"
                 role="radio"
-                :aria-checked="props.query.availability === item.value"
+                :aria-checked="draft.availability === item.value"
                 @click="setAvailability(item.value)"
                 :class="[
                   'game-search-filter-chip',
-                  props.query.availability === item.value
+                  draft.availability === item.value
                     ? 'game-search-filter-chip--active'
                     : 'game-search-filter-chip--idle'
                 ]"
@@ -67,7 +67,7 @@
         </div>
 
         <!-- 首次可用时间 -->
-        <div v-if="props.query.availability === 'available'">
+        <div v-if="draft.availability === 'available'">
           <label class="game-search-filter-label">{{ t("game.search.firstAvailableTime") }}</label>
           <div class="game-search-date-range mt-1">
             <VueDatePicker
@@ -144,7 +144,7 @@
                   : 'game-search-filter-chip--idle'
               ]"
             >
-              {{ t(item.key === 'latestInfo' && props.query.availability === 'upcoming' ? 'game.search.plannedReleaseOrder' : item.label) }}
+              {{ t(item.key === 'latestInfo' && draft.availability === 'upcoming' ? 'game.search.plannedReleaseOrder' : item.label) }}
             </span>
           </div>
         </div>
@@ -189,7 +189,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted } from 'vue'
+import { computed, ref, reactive, watch, onMounted } from 'vue'
 import { buildGameTagGroups, type GameTagGroup } from '@/utils/gameTagDomain'
 import type { GameSearchAvailability, GameTagCategory, SearchPageQueryRequest } from '@/types/game'
 import { formatLocalDateTime } from '@/utils/util'
@@ -206,18 +206,21 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'search'): void
+  (e: 'search', query: SearchPageQueryRequest): void
 }>()
+
+// The parent owns committed criteria. This instance's draft is discarded on Cancel.
+const draft = reactive<SearchPageQueryRequest>({ ...props.query, tag_list: [...(props.query.tag_list ?? [])] })
 
 // =============== 时间 ===============
 const parseOptionalDate = (value?: string) => value ? new Date(value.replace(' ', 'T')) : null
 
-const publishStart = ref<Date | null>(parseOptionalDate(props.query.pub_start_time))
-const publishEnd = ref<Date | null>(parseOptionalDate(props.query.pub_end_time))
-const plannedStart = ref<Date | null>(parseOptionalDate(props.query.planned_start_time))
-const plannedEnd = ref<Date | null>(parseOptionalDate(props.query.planned_end_time))
-const updateStart = ref<Date | null>(parseOptionalDate(props.query.update_start_time))
-const updateEnd = ref<Date | null>(parseOptionalDate(props.query.update_end_time))
+const publishStart = ref<Date | null>(parseOptionalDate(draft.pub_start_time))
+const publishEnd = ref<Date | null>(parseOptionalDate(draft.pub_end_time))
+const plannedStart = ref<Date | null>(parseOptionalDate(draft.planned_start_time))
+const plannedEnd = ref<Date | null>(parseOptionalDate(draft.planned_end_time))
+const updateStart = ref<Date | null>(parseOptionalDate(draft.update_start_time))
+const updateEnd = ref<Date | null>(parseOptionalDate(draft.update_end_time))
 
 const availabilityOptions: Array<{ value: GameSearchAvailability, label: string }> = [
   { value: 'available', label: 'game.search.released' },
@@ -225,91 +228,98 @@ const availabilityOptions: Array<{ value: GameSearchAvailability, label: string 
 ]
 
 const setAvailability = (availability: GameSearchAvailability) => {
-  props.query.availability = availability
+  draft.availability = availability
   if (availability === 'available') {
     plannedStart.value = null
     plannedEnd.value = null
-    props.query.planned_start_time = undefined
-    props.query.planned_end_time = undefined
+    draft.planned_start_time = undefined
+    draft.planned_end_time = undefined
     return
   }
   publishStart.value = null
   publishEnd.value = null
-  props.query.pub_start_time = undefined
-  props.query.pub_end_time = undefined
+  draft.pub_start_time = undefined
+  draft.pub_end_time = undefined
 }
 
 // =============== 排序 ===============
-const sortOptions = reactive([
+const sortOptions = computed(() => [
   {
     key: 'highestRating',
+    field: 'score' as const,
     label: 'game.search.highestRating',
-    selected: props.query.score ?? false
+    selected: draft.score ?? false
   },
   {
     key: 'mostComments',
+    field: 'remark_order' as const,
     label: 'game.search.mostComments',
-    selected: props.query.remark_order ?? false
+    selected: draft.remark_order ?? false
   },
   {
     key: 'latestInfo',
+    field: 'time_order' as const,
     label: 'game.search.latestInfo',
-    selected: props.query.time_order ?? false
+    selected: draft.time_order ?? false
   }
 ])
 
 const toggleSort = (key: string) => {
-  const item = sortOptions.find(i => i.key === key)
+  const item = sortOptions.value.find(i => i.key === key)
   if (!item) return
 
-  item.selected = !item.selected
-
-  props.query.score = !!sortOptions.find(i => i.key === 'highestRating')?.selected
-  props.query.remark_order = !!sortOptions.find(i => i.key === 'mostComments')?.selected
-  props.query.time_order = !!sortOptions.find(i => i.key === 'latestInfo')?.selected
+  draft[item.field] = !item.selected
 }
 
 // =============== 分类 & 标签 ===============
 const categoryGroups = ref<GameTagGroup[]>([])
 
 const buildCategoryGroups = () => {
-  categoryGroups.value = buildGameTagGroups(props.tagGroups, props.query.tag_list ?? [], categoryGroups.value)
+  categoryGroups.value = buildGameTagGroups(props.tagGroups, draft.tag_list ?? [], categoryGroups.value)
 }
 
-const toggleTag = (tag: any) => {
-  tag.selected = !tag.selected
-  props.query.tag_list = categoryGroups.value
-      .flatMap(g => g.children)
-      .filter(t => t.selected)
-      .map(t => Number(t.id))
+const toggleTag = (tag: GameTagGroup['children'][number]) => {
+  const id = Number(tag.id)
+  const selected = draft.tag_list ?? []
+  draft.tag_list = selected.includes(id) ? selected.filter(value => value !== id) : [...selected, id]
 }
 
 // =============== watch & 生命周期 ===============
 onMounted(buildCategoryGroups)
 
-watch([() => props.tagGroups, () => props.query.tag_list], buildCategoryGroups, { deep: true })
+watch([() => props.tagGroups, () => draft.tag_list], buildCategoryGroups, { deep: true })
 
 const formatDateTime = formatLocalDateTime
 
 const formatOptionalDateTime = (value: Date | null) => value ? formatDateTime(value) : undefined
 
 watch([publishStart, publishEnd], () => {
-  props.query.pub_start_time = formatOptionalDateTime(publishStart.value)
-  props.query.pub_end_time = formatOptionalDateTime(publishEnd.value)
+  draft.pub_start_time = formatOptionalDateTime(publishStart.value)
+  draft.pub_end_time = formatOptionalDateTime(publishEnd.value)
 })
 
 watch([plannedStart, plannedEnd], () => {
-  props.query.planned_start_time = formatOptionalDateTime(plannedStart.value)
-  props.query.planned_end_time = formatOptionalDateTime(plannedEnd.value)
+  draft.planned_start_time = formatOptionalDateTime(plannedStart.value)
+  draft.planned_end_time = formatOptionalDateTime(plannedEnd.value)
 })
 
 watch([updateStart, updateEnd], () => {
-  props.query.update_start_time = formatOptionalDateTime(updateStart.value)
-  props.query.update_end_time = formatOptionalDateTime(updateEnd.value)
+  draft.update_start_time = formatOptionalDateTime(updateStart.value)
+  draft.update_end_time = formatOptionalDateTime(updateEnd.value)
 })
 
 const onSearch = () => {
-  emit('search')
+  // Include cleared optional fields so applying a snapshot cannot retain old dates.
+  emit('search', {
+    ...draft,
+    pub_start_time: draft.pub_start_time,
+    pub_end_time: draft.pub_end_time,
+    planned_start_time: draft.planned_start_time,
+    planned_end_time: draft.planned_end_time,
+    update_start_time: draft.update_start_time,
+    update_end_time: draft.update_end_time,
+    tag_list: [...(draft.tag_list ?? [])],
+  })
   emit('close')
 }
 </script>

@@ -47,14 +47,6 @@
       "count": 1
     }
   },
-  "app/components/game/search/GameSearchFilter.vue": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    },
-    "vue/no-mutating-props": {
-      "count": 17
-    }
-  },
   "app/components/nav/NavSpotlightPanels.vue": {
     "@typescript-eslint/no-dynamic-delete": {
       "count": 4
