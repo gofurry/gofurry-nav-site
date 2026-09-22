@@ -1,10 +1,10 @@
 <template>
   <div class="space-y-3">
-    <h3 class="sidebar-section-title mb-1 text-sm font-bold">
+    <h3 class="sidebar-section-title latest-review-heading mb-1">
       {{ titleText }}
     </h3>
 
-    <div v-if="reviews.length === 0" class="latest-review-state py-4 text-center text-xs">
+    <div v-if="reviews.length === 0" class="latest-review-state py-4 text-center">
       {{ emptyText }}
     </div>
 
@@ -22,7 +22,7 @@
           />
         </div>
         <p
-          class="latest-review-item__title w-full truncate text-xs font-semibold"
+          class="latest-review-item__title w-full truncate"
           :title="item.game_name"
         >
           {{ item.game_name }}
@@ -31,13 +31,13 @@
 
       <div class="flex min-w-0 flex-1 flex-col justify-between">
         <p
-          class="latest-review-item__body line-clamp-2 text-sm leading-snug"
+          class="latest-review-item__body line-clamp-2"
           :title="item.content"
         >
           {{ item.content }}
         </p>
 
-        <div class="latest-review-item__meta mt-2 space-y-0.5 text-xs">
+        <div class="latest-review-item__meta mt-2 space-y-0.5">
           <div class="truncate">
             {{ regionLabel }}: {{ item.region }}
           </div>

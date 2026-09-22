@@ -132,11 +132,170 @@ html.dark .games-page {
   color: rgba(226, 232, 240, 0.88);
 }
 
-.games-page .game-info-shell,
-.games-page .game-sidebar-shell {
+.games-page {
+  /* Card and group presentation. Rating remains owned by its shared primitive. */
+  --games-home-group-title: rgba(71, 42, 20, 0.92);
+  --games-home-card-bg: rgba(255, 250, 242, 0.40);
+  --games-home-card-shadow: 0 4px 12px rgba(91, 62, 28, 0.03);
+  --games-home-card-hover-bg: rgba(255, 235, 205, 0.82);
+  --games-home-card-title: rgba(71, 42, 20, 0.92);
+  --games-home-card-description: rgba(120, 83, 53, 0.58);
+  --games-home-card-badge-text: rgba(124, 45, 18, 0.88);
+  --games-home-group-control-text: rgba(154, 52, 18, 0.74);
+  --games-home-group-control-hover-bg: rgba(154, 52, 18, 0.12);
+  --games-home-group-control-active-text: rgba(124, 45, 18, 1);
+  --games-home-group-meta: rgba(87, 83, 78, 0.70);
+  --games-home-group-more-text: rgba(124, 45, 18, 0.88);
+  --games-home-card-badge-bg: rgba(255, 250, 242, 0.86);
+  --games-home-card-badge-border: rgba(255, 255, 255, 0.48);
+  --games-home-review-button-bg: rgba(255, 250, 242, 0.84);
+  --games-home-review-button-text: rgba(124, 45, 18, 0.92);
+  --games-home-review-button-shadow: 0 8px 22px rgba(45, 28, 12, 0.14);
+  --games-home-review-button-border: rgba(255, 255, 255, 0.48);
+  --games-home-review-button-hover-bg: rgba(255, 244, 228, 0.96);
+  --games-home-review-button-hover-text: rgba(99, 39, 15, 1);
+  --games-home-card-border: transparent;
+  --games-home-card-page-transition: opacity 360ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Home statistics: tabs, ranking and price/count surfaces; no data or paging ownership. */
+  --games-home-stats-text: rgba(71, 42, 20, 0.92);
+  --games-home-stats-muted: rgba(120, 83, 53, 0.58);
+  --games-home-stats-tab-idle-text: rgba(154, 52, 18, 0.74);
+  --games-home-stats-tab-active-text: rgba(124, 45, 18, 1);
+  --games-home-stats-badge-border: rgba(253, 186, 116, 0.30);
+  --games-home-stats-badge-bg: rgba(255, 247, 237, 0.50);
+  --games-home-stats-badge-text: rgba(124, 45, 18, 0.88);
+  --games-home-stats-row-border: rgba(255, 255, 255, 0.35);
+  --games-home-stats-feature-bg: rgba(255, 250, 242, 0.40);
+  --games-home-stats-feature-shadow: 0 4px 12px rgba(91, 62, 28, 0.03);
+  --games-home-stats-feature-hover-bg: rgba(255, 235, 205, 0.82);
+  --games-home-stats-row-hover-bg: rgba(255, 229, 194, 0.64);
+  --games-home-stats-row-hover-accent: rgba(180, 96, 24, 0.46);
+  --games-home-stats-row-activity: linear-gradient(90deg, rgba(251, 146, 60, 0.14), rgba(251, 146, 60, 0.02));
+  --games-home-stats-row-warm-bg: rgba(255, 237, 213, 0.18);
+  --games-home-stats-row-clear-bg: rgba(255, 255, 255, 0.08);
+  --games-home-stats-secondary-text: rgba(87, 83, 78, 0.70);
+  --games-home-stats-discount-text: #ef4444;
+  --games-home-stats-tab-active-bg: rgba(255, 255, 255, 0.58);
+  --games-home-stats-tab-active-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  --games-home-stats-tab-hover-bg: rgba(255, 255, 255, 0.28);
+  --games-home-stats-rank-bg: rgba(255, 255, 255, 0.28);
+  --games-home-stats-rank-text: rgba(87, 83, 78, 0.88);
+  --games-home-stats-rank-top-bg: rgba(255, 237, 213, 0.42);
+  --games-home-stats-rank-top-text: var(--games-home-stats-tab-active-text);
+  /* Preserve Tailwind's circular marker radius as literal CSS through Less. */
+  --games-home-stats-round-radius: ~"calc(infinity * 1px)";
+
+  /* Home sidebar actions, links and reviews. The shared search control is excluded. */
+  --games-home-sidebar-text: rgba(71, 42, 20, 0.92);
+  --games-home-sidebar-muted: rgba(120, 83, 53, 0.58);
+  --games-home-sidebar-action-text: rgba(124, 45, 18, 0.88);
+  --games-home-sidebar-item-border: rgba(126, 92, 58, 0.16);
+  --games-home-sidebar-item-bg: rgba(255, 250, 242, 0.40);
+  --games-home-sidebar-item-shadow: 0 4px 12px rgba(91, 62, 28, 0.03);
+  --games-home-sidebar-item-hover-border: rgba(180, 96, 24, 0.46);
+  --games-home-sidebar-item-hover-bg: rgba(255, 235, 205, 0.82);
+  --games-home-sidebar-action-hover-text: rgba(124, 45, 18, 1);
+  --games-home-sidebar-bg: transparent;
+  --games-home-sidebar-border: 0;
+
+  /* Game Home tooling; independent from Nav tools and other Games pages. */
+  --games-home-tool-border: rgba(255, 255, 255, 0.55);
+  --games-home-tool-bg: rgba(255, 255, 255, 0.70);
+  --games-home-tool-shadow: 0 12px 32px rgba(76, 42, 18, 0.14);
+  --games-home-tool-text: #334155;
+  --games-home-tool-hover-border: rgba(253, 186, 116, 0.90);
+  --games-home-tool-hover-bg: rgba(255, 255, 255, 0.90);
+  --games-home-tool-hover-text: #c2410c;
+  --games-home-tool-hover-shadow: 0 14px 36px rgba(76, 42, 18, 0.18);
+  --games-home-tool-icon-filter: none;
+}
+
+html.dark .games-page {
+  /* Dark: Card and group presentation. Rating remains owned by its shared primitive. */
+  --games-home-group-title: rgba(241, 245, 249, 0.88);
+  --games-home-card-bg: rgba(226, 232, 240, 0.065);
+  --games-home-card-shadow: none;
+  --games-home-card-hover-bg: rgba(148, 163, 184, 0.18);
+  --games-home-card-title: rgba(241, 245, 249, 0.88);
+  --games-home-card-description: rgba(203, 213, 225, 0.62);
+  --games-home-card-badge-text: rgba(190, 208, 222, 0.72);
+  --games-home-group-control-text: rgba(180, 213, 226, 0.62);
+  --games-home-group-control-hover-bg: rgba(148, 163, 184, 0.12);
+  --games-home-group-control-active-text: rgba(226, 232, 240, 0.90);
+  --games-home-group-meta: rgba(226, 232, 240, 0.76);
+  --games-home-group-more-text: rgba(190, 208, 222, 0.72);
+  --games-home-card-badge-bg: rgba(15, 23, 42, 0.86);
+  --games-home-card-badge-border: rgba(255, 255, 255, 0.16);
+  --games-home-review-button-bg: rgba(15, 23, 42, 0.76);
+  --games-home-review-button-text: rgba(226, 232, 240, 0.88);
+  --games-home-review-button-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+  --games-home-review-button-border: rgba(255, 255, 255, 0.14);
+  --games-home-review-button-hover-bg: rgba(30, 41, 59, 0.92);
+  --games-home-review-button-hover-text: rgba(248, 250, 252, 0.96);
+
+  /* Dark: Home statistics: tabs, ranking and price/count surfaces; no data or paging ownership. */
+  --games-home-stats-text: rgba(241, 245, 249, 0.88);
+  --games-home-stats-muted: rgba(203, 213, 225, 0.62);
+  --games-home-stats-tab-idle-text: rgba(180, 213, 226, 0.62);
+  --games-home-stats-tab-active-text: rgba(226, 232, 240, 0.90);
+  --games-home-stats-badge-border: rgba(148, 163, 184, 0.20);
+  --games-home-stats-badge-bg: rgba(148, 163, 184, 0.08);
+  --games-home-stats-badge-text: rgba(190, 208, 222, 0.72);
+  --games-home-stats-row-border: rgba(148, 163, 184, 0.13);
+  --games-home-stats-feature-bg: rgba(226, 232, 240, 0.065);
+  --games-home-stats-feature-shadow: none;
+  --games-home-stats-feature-hover-bg: rgba(148, 163, 184, 0.18);
+  --games-home-stats-row-hover-bg: rgba(51, 65, 85, 0.40);
+  --games-home-stats-row-hover-accent: rgba(203, 213, 225, 0.48);
+  --games-home-stats-row-activity: linear-gradient(90deg, rgba(148, 163, 184, 0.22), rgba(100, 116, 139, 0.045));
+  --games-home-stats-row-warm-bg: rgba(30, 41, 59, 0.16);
+  --games-home-stats-row-clear-bg: rgba(15, 23, 42, 0.08);
+  --games-home-stats-secondary-text: rgba(226, 232, 240, 0.76);
+  --games-home-stats-discount-text: #f87171;
+  --games-home-stats-tab-active-bg: rgba(30, 41, 59, 0.52);
+  --games-home-stats-tab-active-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --games-home-stats-tab-hover-bg: rgba(30, 41, 59, 0.45);
+  --games-home-stats-rank-bg: rgba(255, 255, 255, 0.075);
+  --games-home-stats-rank-text: rgba(226, 232, 240, 0.88);
+  --games-home-stats-rank-top-bg: rgba(148, 163, 184, 0.13);
+  --games-home-stats-rank-top-text: rgba(226, 232, 240, 0.86);
+
+  /* Dark: Home sidebar actions, links and reviews. The shared search control is excluded. */
+  --games-home-sidebar-text: rgba(241, 245, 249, 0.88);
+  --games-home-sidebar-muted: rgba(203, 213, 225, 0.62);
+  --games-home-sidebar-action-text: rgba(190, 208, 222, 0.72);
+  --games-home-sidebar-item-border: rgba(226, 232, 240, 0.15);
+  --games-home-sidebar-item-bg: rgba(226, 232, 240, 0.065);
+  --games-home-sidebar-item-shadow: none;
+  --games-home-sidebar-item-hover-border: rgba(203, 213, 225, 0.48);
+  --games-home-sidebar-item-hover-bg: rgba(148, 163, 184, 0.18);
+  --games-home-sidebar-action-hover-text: rgba(226, 232, 240, 0.90);
+
+  /* Dark: Game Home tooling; independent from Nav tools and other Games pages. */
+  --games-home-tool-border: rgba(255, 255, 255, 0.10);
+  --games-home-tool-bg: rgba(15, 23, 42, 0.76);
+  --games-home-tool-shadow: 0 12px 32px rgba(2, 6, 23, 0.28);
+  --games-home-tool-text: #dbe4f0;
+  --games-home-tool-hover-border: rgba(125, 211, 252, 0.42);
+  --games-home-tool-hover-bg: rgba(30, 41, 59, 0.92);
+  --games-home-tool-hover-text: #f8fafc;
+  --games-home-tool-hover-shadow: 0 14px 36px rgba(2, 6, 23, 0.36);
+  --games-home-tool-icon-filter: drop-shadow(0 0 5px rgba(248, 250, 252, 0.42));
+}
+
+.games-page .game-info-shell {
   border: 0;
   border-radius: 0;
   background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.games-page .game-sidebar-shell {
+  border: var(--games-home-sidebar-border);
+  border-radius: 0;
+  background: var(--games-home-sidebar-bg);
   box-shadow: none;
   backdrop-filter: none;
 }
@@ -152,34 +311,55 @@ html.dark .games-page {
   content: none;
 }
 
-.games-page .game-group-title,
+.games-page .game-group-title {
+  color: var(--games-home-group-title);
+}
+
 .games-page .game-stats-card__title,
 .games-page .game-stats-row__title,
-.games-page .game-stats-feature__title,
-.games-page .game-card__title,
-.games-page .game-site-item__title,
-.games-page .latest-review-item__title,
+.games-page .game-stats-feature__title {
+  color: var(--games-home-stats-text);
+}
+
+.games-page .game-card__title {
+  color: var(--games-home-card-title);
+}
+
 .games-page .news-card__title,
-.games-page .game-news-title,
-.games-page .sidebar-section-title {
+.games-page .game-news-title {
   color: var(--games-text-title);
 }
 
-.games-page .game-card__desc,
+.games-page .game-site-item__title,
+.games-page .latest-review-item__title,
+.games-page .sidebar-section-title {
+  color: var(--games-home-sidebar-text);
+}
+
+.games-page .game-card__desc {
+  color: var(--games-home-card-description);
+}
+
+.games-page .news-card__summary,
+.games-page .news-card__meta,
+.games-page .game-news-desc,
+.games-page .news-pager__count {
+  color: var(--games-text-soft);
+}
+
 .games-page .game-stats-card__desc,
 .games-page .game-stats-feature__desc,
 .games-page .game-stats-feature__meta,
 .games-page .game-stats-row__meta,
-.games-page .game-stats-row__muted,
+.games-page .game-stats-row__muted {
+  color: var(--games-home-stats-muted);
+}
+
 .games-page .game-site-item__subtitle,
 .games-page .latest-review-item__body,
 .games-page .latest-review-item__meta,
-.games-page .news-card__summary,
-.games-page .news-card__meta,
-.games-page .game-news-desc,
-.games-page .news-pager__count,
 .games-page .latest-review-state {
-  color: var(--games-text-soft);
+  color: var(--games-home-sidebar-muted);
 }
 
 .games-page .game-info-group {
@@ -195,11 +375,11 @@ html.dark .games-page {
 .games-page .game-card {
   position: relative;
   cursor: pointer;
-  border: 1px solid transparent;
+  border: 1px solid var(--games-home-card-border);
   border-radius: 0.75rem;
-  background: var(--games-item-bg);
+  background: var(--games-home-card-bg);
   padding: 0.5rem;
-  box-shadow: var(--games-shadow-soft);
+  box-shadow: var(--games-home-card-shadow);
   transition:
     background-color 180ms ease,
     border-color 180ms ease;
@@ -208,7 +388,7 @@ html.dark .games-page {
 .games-page .game-card:hover,
 .games-page .game-card:focus-within {
   border-color: transparent;
-  background: var(--games-item-hover-bg);
+  background: var(--games-home-card-hover-bg);
 }
 
 .games-page .game-card__media {
@@ -219,7 +399,7 @@ html.dark .games-page {
   overflow: hidden;
   margin-bottom: 0.5rem;
   border-radius: 0.375rem;
-  background: color-mix(in srgb, var(--games-item-hover-bg) 76%, transparent);
+  background: color-mix(in srgb, var(--games-home-card-hover-bg) 76%, transparent);
 }
 
 .games-page .game-card__media > img,
@@ -235,10 +415,10 @@ html.dark .games-page {
   top: 0.55rem;
   max-width: calc(100% - 3.75rem);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  border: 1px solid var(--games-home-card-badge-border);
   border-radius: 999px;
-  background: rgba(255, 250, 242, 0.86);
-  color: var(--games-accent);
+  background: var(--games-home-card-badge-bg);
+  color: var(--games-home-card-badge-text);
   padding: 0.34rem 0.66rem;
   font-size: 0.75rem;
   font-weight: 650;
@@ -253,11 +433,6 @@ html.dark .games-page {
   transition:
     opacity 220ms ease,
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-html.dark .games-page .game-card__release-badge {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(15, 23, 42, 0.86);
 }
 
 .games-page .game-card:hover .game-card__release-badge,
@@ -280,11 +455,11 @@ html.dark .games-page .game-card__release-badge {
   width: 2.15rem;
   height: 2.15rem;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  border: 1px solid var(--games-home-review-button-border);
   border-radius: 999px;
-  background: rgba(255, 250, 242, 0.84);
-  color: rgba(124, 45, 18, 0.92);
-  box-shadow: 0 8px 22px rgba(45, 28, 12, 0.14);
+  background: var(--games-home-review-button-bg);
+  color: var(--games-home-review-button-text);
+  box-shadow: var(--games-home-review-button-shadow);
   opacity: 0;
   backdrop-filter: blur(8px);
   transition:
@@ -300,26 +475,14 @@ html.dark .games-page .game-card__release-badge {
   flex: none;
 }
 
-html.dark .games-page .review-float-button {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: rgba(15, 23, 42, 0.76);
-  color: rgba(226, 232, 240, 0.88);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
-}
-
 .games-page .game-card:hover .review-float-button,
 .games-page .game-card:focus-within .review-float-button {
   opacity: 1;
 }
 
 .games-page .review-float-button:hover {
-  background: rgba(255, 244, 228, 0.96);
-  color: rgba(99, 39, 15, 1);
-}
-
-html.dark .games-page .review-float-button:hover {
-  background: rgba(30, 41, 59, 0.92);
-  color: rgba(248, 250, 252, 0.96);
+  background: var(--games-home-review-button-hover-bg);
+  color: var(--games-home-review-button-hover-text);
 }
 
 .games-page .game-group-pager,
@@ -329,7 +492,20 @@ html.dark .games-page .review-float-button:hover {
   gap: 0.48rem;
 }
 
-.games-page .game-group-pager button,
+.games-page .game-group-pager button {
+  display: grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--games-home-group-control-text);
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: background-color 180ms ease, color 180ms ease, opacity 180ms ease;
+}
+
 .games-page .news-nav-button {
   display: grid;
   width: 1.65rem;
@@ -349,7 +525,11 @@ html.dark .games-page .review-float-button:hover {
   height: 1.75rem;
 }
 
-.games-page .game-group-pager button:hover,
+.games-page .game-group-pager button:hover {
+  background: var(--games-home-group-control-hover-bg);
+  color: var(--games-home-group-control-active-text);
+}
+
 .games-page .news-nav-button:hover {
   background: var(--games-accent-hover-bg);
   color: var(--games-accent-strong);
@@ -357,15 +537,20 @@ html.dark .games-page .review-float-button:hover {
 
 .games-page .game-group-pager span {
   min-width: 2.25rem;
-  color: var(--games-text-muted);
+  color: var(--games-home-group-meta);
   font-size: 0.76rem;
   font-weight: 650;
   text-align: center;
 }
 
-.games-page .game-group-more,
+.games-page .game-group-more {
+  color: var(--games-home-group-more-text);
+  font-weight: 650;
+  transition: border-color 220ms ease, color 220ms ease, background-color 180ms ease;
+}
+
 .games-page .sidebar-expand-button {
-  color: var(--games-accent);
+  color: var(--games-home-sidebar-action-text);
   font-weight: 650;
   transition: border-color 220ms ease, color 220ms ease, background-color 180ms ease;
 }
@@ -375,30 +560,30 @@ html.dark .games-page .review-float-button:hover {
   flex-shrink: 0;
   align-items: center;
   gap: 0.24rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--games-accent) 28%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--games-home-group-more-text) 28%, transparent);
   font-size: 0.9rem;
   line-height: 1.5;
   white-space: nowrap;
 }
 
 .games-page .game-group-more:hover {
-  border-color: color-mix(in srgb, var(--games-accent-strong) 72%, transparent);
-  color: var(--games-accent-strong);
+  border-color: color-mix(in srgb, var(--games-home-group-control-active-text) 72%, transparent);
+  color: var(--games-home-group-control-active-text);
 }
 
 .games-page .stats-type-tabs {
-  border-bottom: 1px solid color-mix(in srgb, var(--games-accent-muted) 24%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--games-home-stats-tab-idle-text) 24%, transparent);
 }
 
 .games-page .stats-type-tab,
 .games-page .stats-page-tab {
-  color: var(--games-accent-muted);
+  color: var(--games-home-stats-tab-idle-text);
   transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
 }
 
 .games-page .stats-type-tab--active,
 .games-page .stats-page-tab--active {
-  color: var(--games-accent-strong);
+  color: var(--games-home-stats-tab-active-text);
 }
 
 .games-page .stats-type-tab--active::after {
@@ -408,30 +593,21 @@ html.dark .games-page .review-float-button:hover {
   bottom: -1px;
   height: 0.125rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--games-accent-strong) 58%, transparent);
+  background: color-mix(in srgb, var(--games-home-stats-tab-active-text) 58%, transparent);
 }
 
 .games-page .stats-type-tab--idle:hover,
 .games-page .stats-page-tab--idle:hover {
-  color: var(--games-accent-strong);
+  color: var(--games-home-stats-tab-active-text);
 }
 
 .games-page .stats-page-tab--active {
-  background: rgba(255, 255, 255, 0.58);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
-}
-
-html.dark .games-page .stats-page-tab--active {
-  background: rgba(30, 41, 59, 0.52);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: var(--games-home-stats-tab-active-bg);
+  box-shadow: var(--games-home-stats-tab-active-shadow);
 }
 
 .games-page .stats-page-tab--idle:hover {
-  background: rgba(255, 255, 255, 0.28);
-}
-
-html.dark .games-page .stats-page-tab--idle:hover {
-  background: rgba(30, 41, 59, 0.45);
+  background: var(--games-home-stats-tab-hover-bg);
 }
 
 .games-page .game-stats-page-shell {
@@ -470,16 +646,16 @@ html.dark .games-page .stats-page-tab--idle:hover {
 }
 
 .games-page .game-stats-card__badge {
-  border: 1px solid var(--games-badge-border);
+  border: 1px solid var(--games-home-stats-badge-border);
   border-radius: 999px;
-  background: var(--games-badge-bg);
-  color: var(--games-accent);
+  background: var(--games-home-stats-badge-bg);
+  color: var(--games-home-stats-badge-text);
 }
 
 .games-page .game-stats-table {
   border: 0;
-  border-top: 1px solid var(--games-row-line);
-  border-bottom: 1px solid var(--games-row-line);
+  border-top: 1px solid var(--games-home-stats-row-border);
+  border-bottom: 1px solid var(--games-home-stats-row-border);
   border-radius: 0;
   background: transparent;
 }
@@ -487,15 +663,15 @@ html.dark .games-page .stats-page-tab--idle:hover {
 .games-page .game-stats-feature {
   border: 1px solid transparent;
   border-radius: 0.78rem;
-  background: var(--games-item-bg);
+  background: var(--games-home-stats-feature-bg);
   padding-right: 0.68rem;
   padding-left: 0.68rem;
-  box-shadow: var(--games-shadow-soft);
+  box-shadow: var(--games-home-stats-feature-shadow);
   transition: background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .games-page .game-stats-feature:hover {
-  background: var(--games-item-hover-bg);
+  background: var(--games-home-stats-feature-hover-bg);
 }
 
 .games-page .game-stats-card--placeholder,
@@ -520,7 +696,7 @@ html.dark .games-page .game-stats-table {
 }
 
 .games-page .game-stats-table-head {
-  color: var(--games-text-soft);
+  color: var(--games-home-stats-muted);
   font-weight: 650;
 }
 
@@ -528,13 +704,13 @@ html.dark .games-page .game-stats-table {
   isolation: isolate;
   position: relative;
   overflow: hidden;
-  border-top: 1px solid var(--games-row-line);
+  border-top: 1px solid var(--games-home-stats-row-border);
   transition: background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .games-page .game-stats-row:hover {
-  background: var(--games-row-hover);
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--games-item-hover-border) 72%, transparent);
+  background: var(--games-home-stats-row-hover-bg);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--games-home-stats-row-hover-accent) 72%, transparent);
 }
 
 .games-page .game-stats-row::before {
@@ -543,55 +719,45 @@ html.dark .games-page .game-stats-table {
   inset: 0 auto 0 0;
   z-index: -1;
   width: var(--activity);
-  background: var(--games-row-activity);
+  background: var(--games-home-stats-row-activity);
 }
 
 .games-page .stats-row--warm {
-  background: var(--games-row-warm);
+  background: var(--games-home-stats-row-warm-bg);
 }
 
 .games-page .stats-row--clear {
-  background: var(--games-row-clear);
+  background: var(--games-home-stats-row-clear-bg);
 }
 
 .games-page .game-stats-rank {
-  background: rgba(255, 255, 255, 0.28);
-  color: rgba(87, 83, 78, 0.88);
+  background: var(--games-home-stats-rank-bg);
+  color: var(--games-home-stats-rank-text);
 }
 
 .games-page .game-stats-rank--top {
-  background: rgba(255, 237, 213, 0.42);
-  color: var(--games-accent-strong);
-}
-
-html.dark .games-page .game-stats-rank {
-  background: rgba(255, 255, 255, 0.075);
-  color: rgba(226, 232, 240, 0.88);
-}
-
-html.dark .games-page .game-stats-rank--top {
-  background: rgba(148, 163, 184, 0.13);
-  color: rgba(226, 232, 240, 0.86);
+  background: var(--games-home-stats-rank-top-bg);
+  color: var(--games-home-stats-rank-top-text);
 }
 
 .games-page .game-stats-row__value {
-  color: var(--games-text-title);
+  color: var(--games-home-stats-text);
 }
 
 .games-page .game-stats-feature__value {
-  color: var(--games-text-title);
+  color: var(--games-home-stats-text);
 }
 
 .games-page .game-stats-row__value--secondary {
-  color: var(--games-text-muted);
+  color: var(--games-home-stats-secondary-text);
 }
 
 .games-page .game-stats-row__discount--deal {
-  color: var(--games-deal);
+  color: var(--games-home-stats-discount-text);
 }
 
 .games-page .game-stats-row__discount--idle {
-  color: var(--games-text-soft);
+  color: var(--games-home-stats-muted);
 }
 
 .games-page .stats-feature-cover,
@@ -723,9 +889,9 @@ html.dark .games-page .game-stats-rank--top {
 .games-page .sidebar-action-button,
 .games-page .game-site-item,
 .games-page .latest-review-item {
-  border: 1px solid var(--games-item-border);
-  background: var(--games-item-bg);
-  box-shadow: var(--games-shadow-soft);
+  border: 1px solid var(--games-home-sidebar-item-border);
+  background: var(--games-home-sidebar-item-bg);
+  box-shadow: var(--games-home-sidebar-item-shadow);
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
@@ -736,8 +902,8 @@ html.dark .games-page .game-stats-rank--top {
 .games-page .sidebar-action-button:hover,
 .games-page .game-site-item:hover,
 .games-page .latest-review-item:hover {
-  border-color: var(--games-item-hover-border);
-  background: var(--games-item-hover-bg);
+  border-color: var(--games-home-sidebar-item-hover-border);
+  background: var(--games-home-sidebar-item-hover-bg);
 }
 
 .games-page .game-sidebar-shell .sidebar-action-button,
@@ -755,13 +921,13 @@ html.dark .games-page .game-stats-rank--top {
   align-items: center;
   justify-content: center;
   border-radius: 0.75rem;
-  color: var(--games-accent);
+  color: var(--games-home-sidebar-action-text);
   font-size: 0.9rem;
   font-weight: 650;
 }
 
 .games-page .sidebar-action-button:hover {
-  color: var(--games-accent-strong);
+  color: var(--games-home-sidebar-action-hover-text);
 }
 
 .games-page .sidebar-action-button:disabled {
@@ -780,7 +946,7 @@ html.dark .games-page .game-stats-rank--top {
 }
 
 .games-page .sidebar-expand-button:hover {
-  color: var(--games-accent-strong);
+  color: var(--games-home-sidebar-action-hover-text);
 }
 
 .games-page .sidebar-sites-expand-enter-active,
@@ -843,11 +1009,11 @@ html.dark .games-page .game-stats-rank--top {
 
 .games-page .game-tool-button,
 .games-page .game-tool-feedback {
-  border: 1px solid var(--games-tool-border);
+  border: 1px solid var(--games-home-tool-border);
   border-radius: 0.65rem;
-  background: var(--games-tool-bg);
-  box-shadow: var(--games-tool-shadow);
-  color: var(--games-tool-color);
+  background: var(--games-home-tool-bg);
+  box-shadow: var(--games-home-tool-shadow);
+  color: var(--games-home-tool-text);
   backdrop-filter: blur(18px);
   transition:
     background 500ms ease,
@@ -869,10 +1035,10 @@ html.dark .games-page .game-stats-rank--top {
 .games-page .game-tool-button:hover,
 .games-page .game-tool-button.active,
 .games-page .game-tool-feedback:hover {
-  border-color: var(--games-tool-hover-border);
-  background: var(--games-tool-hover-bg);
-  color: var(--games-tool-hover-color);
-  box-shadow: var(--games-tool-hover-shadow);
+  border-color: var(--games-home-tool-hover-border);
+  background: var(--games-home-tool-hover-bg);
+  color: var(--games-home-tool-hover-text);
+  box-shadow: var(--games-home-tool-hover-shadow);
   filter: saturate(1.05);
 }
 
@@ -887,7 +1053,7 @@ html.dark .games-page .game-stats-rank--top {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: var(--games-tool-icon-filter);
+  filter: var(--games-home-tool-icon-filter);
 }
 
 .games-page .game-tool-icon--cover {
@@ -971,7 +1137,134 @@ html.dark .games-page .game-stats-rank--top {
   flex: none;
   overflow: hidden;
   border-radius: 0.375rem;
-  background: color-mix(in srgb, var(--games-item-hover-bg) 76%, transparent);
+  background: color-mix(in srgb, var(--games-home-sidebar-item-hover-bg) 76%, transparent);
+}
+
+/* The existing page transition changes owner only; Vue paging and private grid
+ * geometry remain in GameInfoGroup. Both selectors retain two-class specificity.
+ */
+.games-page .game-page-next-enter-active,
+.games-page .game-page-next-leave-active,
+.games-page .game-page-prev-enter-active,
+.games-page .game-page-prev-leave-active {
+  transition: var(--games-home-card-page-transition);
+  will-change: transform, opacity;
+}
+
+.games-page .game-page-next-enter-from,
+.games-page .game-page-prev-leave-to {
+  opacity: 0;
+  transform: translateX(2.75rem);
+}
+
+.games-page .game-page-next-leave-to,
+.games-page .game-page-prev-enter-from {
+  opacity: 0;
+  transform: translateX(-2.75rem);
+}
+
+/* Home typography keeps the effective Tailwind line-height ratios. In particular,
+ * the table head's existing 650 weight and zero table radius beat the old utilities.
+ * Rating owns its own typography/colors; no Home override is added to that primitive.
+ */
+.games-page .game-group-title {
+  font-size: 1.5rem;
+  line-height: calc(2 / 1.5);
+  font-weight: 700;
+}
+
+.games-page .game-card__title,
+.games-page .stats-type-tab,
+.games-page .stats-page-tab {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+  font-weight: 600;
+}
+
+.games-page .game-card__desc,
+.games-page .game-stats-card__badge,
+.games-page .game-stats-feature__desc,
+.games-page .game-stats-feature__meta,
+.games-page .game-stats-table-head,
+.games-page .game-stats-rank,
+.games-page .game-stats-row__meta,
+.games-page .game-stats-row__muted,
+.games-page .latest-review-state,
+.games-page .latest-review-item__title,
+.games-page .latest-review-item__meta,
+.games-page .game-site-item__subtitle {
+  font-size: 0.75rem;
+  line-height: calc(1 / 0.75);
+}
+
+.games-page .game-stats-card__title {
+  font-size: 1.125rem;
+  line-height: calc(1.75 / 1.125);
+  font-weight: 700;
+}
+
+.games-page .game-stats-card__badge {
+  font-weight: 700;
+}
+
+.games-page .game-stats-card__desc,
+.games-page .game-stats-feature__title,
+.games-page .game-stats-feature__value,
+.games-page .game-stats-row__title,
+.games-page .game-stats-row__value,
+.games-page .game-stats-row__discount--deal,
+.games-page .game-stats-row__discount--idle,
+.games-page .game-sidebar-links {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+}
+
+.games-page .game-stats-feature__title,
+.games-page .game-stats-feature__value,
+.games-page .game-stats-row__title,
+.games-page .game-stats-row__value,
+.games-page .game-stats-row__discount--deal,
+.games-page .game-stats-row__discount--idle {
+  font-weight: 700;
+}
+
+.games-page .game-stats-row__value--secondary,
+.games-page .latest-review-item__title {
+  font-weight: 600;
+}
+
+.games-page .game-stats-rank {
+  font-weight: 800;
+}
+
+.games-page .game-stats-rank,
+.games-page .stats-page-tab {
+  border-radius: var(--games-home-stats-round-radius);
+}
+
+.games-page .stats-feature-cover {
+  border-radius: var(--gf-radius-sm);
+}
+
+.games-page .stats-row-cover {
+  border-radius: 0.375rem;
+}
+
+.games-page .latest-review-heading {
+  line-height: calc(1.25 / 0.875);
+}
+
+.games-page .latest-review-item__body {
+  font-size: 0.875rem;
+  line-height: 1.375;
+}
+
+.games-page .game-site-item__title {
+  font-weight: 500;
+}
+
+.games-page .game-site-item img {
+  border-radius: 0.25rem;
 }
 
 .games-page.game-detail-page {

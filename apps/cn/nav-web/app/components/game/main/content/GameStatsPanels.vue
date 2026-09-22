@@ -9,7 +9,7 @@
         <div
             v-for="item in panelTypes"
             :key="item.key"
-            class="stats-type-tab relative cursor-pointer px-1 pb-2 text-sm font-semibold"
+            class="stats-type-tab relative cursor-pointer px-1 pb-2"
             :class="activeType === item.key
               ? 'stats-type-tab--active'
               : 'stats-type-tab--idle'"
@@ -24,7 +24,7 @@
         <div
             v-for="(_, idx) in (activeType === 'count' ? visibleCountGroups : priceGroups)"
             :key="idx"
-            class="stats-page-tab grid h-7 min-w-7 cursor-pointer place-items-center rounded-full px-2 text-sm font-semibold"
+            class="stats-page-tab grid h-7 min-w-7 cursor-pointer place-items-center px-2"
             :class="activeGroup === idx
               ? 'stats-page-tab--active'
               : 'stats-page-tab--idle'"
