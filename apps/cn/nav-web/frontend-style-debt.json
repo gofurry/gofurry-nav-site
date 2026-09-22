@@ -4,7 +4,6 @@
     "tailwind-appearance": {
       "app/components/common/BlurWrapper.vue": 5,
       "app/components/common/LinkTag.vue": 1,
-      "app/components/game/common/GameReviewDialog.vue": 24,
       "app/components/game/detail/GameDetailHeader.vue": 18,
       "app/components/game/detail/GameDetailMain.vue": 2,
       "app/components/game/detail/GameSidebarLinks.vue": 4,
@@ -33,7 +32,6 @@
       "app/pages/games/prize/index.vue": 67
     },
     "tailwind-arbitrary-appearance": {
-      "app/components/game/common/GameReviewDialog.vue": 1,
       "app/components/game/detail/GameDetailHeader.vue": 1,
       "app/components/game/detail/GameSidebarSimilar.vue": 3,
       "app/components/game/lottery/LotteryJoinModal.vue": 2,
@@ -50,7 +48,6 @@
       "app/assets/styles/pages/insights.less": 10,
       "app/assets/styles/pages/lottery.less": 20,
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
-      "app/components/game/common/GameReviewDialog.vue": 13,
       "app/components/game/detail/GameSidebarSimilar.vue": 1,
       "app/components/game/detail/insights/GamePlayerTrend.vue": 16,
       "app/components/game/detail/insights/GamePriceHistory.vue": 12,

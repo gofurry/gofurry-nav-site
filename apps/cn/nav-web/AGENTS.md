@@ -229,9 +229,13 @@ P6.2.1's `game-review-dialog` fixture owns the shared Home/Search/Detail review
 contract: real body Teleport, settled draft reset, validation, gated submission
 and feedback. Preserve each host's exact SSR/mounted request boundary. Writes
 are fulfilled locally; only one explicitly injected 503 may produce its exact
-network diagnostic. Eight modal goldens retain the current Light appearance in
-Dark hosts; maintainer review precedes P6.2.2. Do not fix accessibility or pending
-close/reopen risks inside appearance work, or move Review into Home tokens.
+network diagnostic. P6.2.2 moves appearance to `components/game-review-dialog.less`
+and `--games-review-*` on the body-owned `.review-dialog-backdrop` / Dark root.
+The maintainer requested a Dark palette correction after the P6.2.1 review;
+only its four Dark goldens may change, while four Light and 64 earlier images
+stay identical. Updated Dark images require visual review. Keep geometry,
+typography and runtime unchanged; do not fix accessibility or pending-close
+risks inside this work, or move Review into Home tokens.
 
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running

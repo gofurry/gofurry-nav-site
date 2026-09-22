@@ -808,12 +808,18 @@ Desktop. Only unrelated `#__nuxt` content is hidden after opening the real body
 Teleport; the body uses the production page-background token. Real geometry
 expands the panel clip by 48px, protecting shadow/backdrop without owning Home
 pixels. Focus, finite motion, fonts and two RAFs determine readiness. Pending
-remains gated through capture. The actual panel stays Light under both themes.
+remains gated through capture. P6.2.1 captured the original Light panel in both
+themes; P6.2.2 corrects Dark after explicit maintainer feedback.
 
 Acceptance is **106 Functional / 73 Visual / 72 PNG**, two full pinned compares,
-and original 64 PNG hashes, production and style debt unchanged. Only the new
-spec may generate missing snapshots through the pinned update guard. Maintainer
-review of all eight new images precedes P6.2.2. Missing close translation,
+and original 64 PNG hashes, production and style debt unchanged for P6.2.1.
+P6.2.2 first proves an equivalent style-owner migration against all eight old
+Review images, then revises only the four Dark images in the pinned environment.
+Four Light and 64 earlier images remain byte-identical. Computed expectations
+split only the approved palette by theme, supplementing Dark placeholder,
+focus and hover checks; geometry/typography and eight runtime cases stay intact.
+Full acceptance remains 106 Functional / 73 Visual (two compares) / 72 PNG.
+The revised Dark images require renewed maintainer review. Missing close translation,
 accessibility enhancements and potential pending-close response races remain
 separate work; no negative assertions freeze those deficiencies as requirements.
 

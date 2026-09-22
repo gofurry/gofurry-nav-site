@@ -1,0 +1,156 @@
+/* Shared Home/Search/Detail review compound. Its body Teleport owns these
+ * semantics directly, independently of any Games page-root palette. Light
+ * preserves the accepted legacy appearance, including its own action treatment. */
+.review-dialog-backdrop {
+  --games-review-overlay: oklab(0.147 0.00261104 0.00303026 / 0.3);
+  --games-review-panel-bg: rgba(255, 250, 242, 0.92);
+  --games-review-border: rgba(126, 92, 58, 0.18);
+  --games-review-panel-shadow: 0 22px 70px rgba(45, 28, 12, 0.20);
+  --games-review-title: oklch(0.266 0.079 36.259);
+  --games-review-muted: oklch(0.553 0.013 58.071);
+  --games-review-label: oklch(0.444 0.011 73.639);
+  --games-review-field-bg: rgba(255, 255, 255, 0.46);
+  --games-review-field-border: var(--games-review-border);
+  --games-review-field-text: rgba(41, 37, 36, 0.92);
+  --games-review-field-focus-border: rgba(249, 115, 22, 0.42);
+  --games-review-field-focus-bg: rgba(255, 255, 255, 0.68);
+  --games-review-close-text: rgba(120, 83, 53, 0.72);
+  --games-review-close-hover-bg: rgba(251, 146, 60, 0.12);
+  --games-review-close-hover-text: rgba(124, 45, 18, 0.94);
+  --games-review-action-bg: rgba(180, 83, 9, 0.86);
+  --games-review-action-hover-bg: rgba(154, 52, 18, 0.92);
+  --games-review-action-text: white;
+  --games-review-error: oklch(0.637 0.237 25.331);
+  --games-review-success: oklch(0.627 0.194 149.214);
+
+  background: var(--games-review-overlay);
+  backdrop-filter: blur(2px);
+}
+
+/* Approved Dark correction: follow the existing shared dialog/controls palette
+ * without inheriting Games Home or Preferences-private tokens. Review's focus
+ * border and textual feedback are local states, not new global colors. */
+html.dark .review-dialog-backdrop {
+  --games-review-overlay: var(--gf-modal-overlay);
+  --games-review-panel-bg: var(--gf-modal-bg);
+  --games-review-border: var(--gf-modal-border);
+  --games-review-panel-shadow: var(--gf-modal-shadow);
+  --games-review-title: var(--gf-text-main);
+  --games-review-muted: var(--gf-text-muted);
+  --games-review-label: var(--gf-text-muted);
+  --games-review-field-bg: var(--gf-input-bg);
+  --games-review-field-border: var(--gf-border-strong);
+  --games-review-field-text: var(--gf-text-main);
+  --games-review-field-focus-border: rgba(125, 211, 252, 0.58);
+  --games-review-field-focus-bg: var(--gf-input-bg-focus);
+  --games-review-close-text: var(--gf-text-muted);
+  --games-review-close-hover-bg: var(--gf-surface-hover);
+  --games-review-close-hover-text: var(--gf-text-main);
+  --games-review-action-bg: var(--gf-accent-fill);
+  --games-review-action-hover-bg: var(--gf-accent-fill-hover);
+  --games-review-action-text: var(--gf-accent-contrast);
+  --games-review-error: #f87171;
+  --games-review-success: #4ade80;
+}
+
+.review-dialog {
+  border: 1px solid var(--games-review-border);
+  border-radius: 1.05rem;
+  background: var(--games-review-panel-bg);
+  box-shadow: var(--games-review-panel-shadow);
+  backdrop-filter: blur(12px);
+  animation: review-dialog-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.review-dialog__title {
+  font-size: 1.125rem;
+  line-height: 1.55556;
+  font-weight: 700;
+  color: var(--games-review-title);
+}
+
+.review-dialog__game-name {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--games-review-muted);
+}
+
+.review-dialog__score-label {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: var(--games-review-label);
+}
+
+.review-dialog__feedback {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.review-dialog__feedback--error { color: var(--games-review-error); }
+.review-dialog__feedback--success { color: var(--games-review-success); }
+
+.review-dialog__close {
+  border-radius: 999px;
+  color: var(--games-review-close-text);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.review-dialog__close:hover {
+  background: var(--games-review-close-hover-bg);
+  color: var(--games-review-close-hover-text);
+}
+
+.review-field {
+  border: 1px solid var(--games-review-field-border);
+  border-radius: 0.75rem;
+  background: var(--games-review-field-bg);
+  color: var(--games-review-field-text);
+  outline: none;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+html.dark .review-dialog-backdrop .review-field::placeholder {
+  color: var(--games-review-muted);
+}
+
+.review-field:focus {
+  border-color: var(--games-review-field-focus-border);
+  background: var(--games-review-field-focus-bg);
+}
+
+.review-submit {
+  border-radius: 0.75rem;
+  background: var(--games-review-action-bg);
+  color: var(--games-review-action-text);
+  font-weight: 700;
+  transition: background-color 160ms ease, opacity 160ms ease;
+}
+
+.review-submit:hover { background: var(--games-review-action-hover-bg); }
+.review-submit:disabled { opacity: 0.56; }
+
+.review-overlay-enter-active,
+.review-overlay-leave-active {
+  transition-property: color, background-color, border-color, outline-color,
+    text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via,
+    --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate,
+    filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+}
+.review-overlay-enter-active {
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+.review-overlay-leave-active {
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+}
+.review-overlay-enter-from,
+.review-overlay-leave-to { opacity: 0; }
+.review-overlay-enter-to,
+.review-overlay-leave-from { opacity: 1; }
+
+@keyframes review-dialog-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}

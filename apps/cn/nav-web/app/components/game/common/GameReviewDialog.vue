@@ -1,16 +1,11 @@
 <template>
   <Teleport to="body">
     <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
+      name="review-overlay"
     >
       <div
         v-if="visible"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/30 px-4 backdrop-blur-[2px]"
+        class="review-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center px-4"
         @click.self="close"
       >
         <div class="review-dialog">
@@ -24,10 +19,10 @@
           </button>
 
           <div class="mb-4">
-            <h2 class="text-lg font-bold text-orange-950">
+            <h2 class="review-dialog__title">
               {{ t('game.detail.makeComment') }}
             </h2>
-            <p class="mt-1 truncate text-sm text-stone-500">
+            <p class="review-dialog__game-name mt-1 truncate">
               {{ gameName }}
             </p>
           </div>
@@ -48,7 +43,7 @@
             />
 
             <label class="block">
-              <span class="mb-1 block text-sm font-medium text-stone-600">
+              <span class="review-dialog__score-label mb-1 block">
                 {{ t('game.detail.score') }} (0.0 ~ 5.0)
               </span>
               <input
@@ -62,10 +57,10 @@
               />
             </label>
 
-            <p v-if="errorMsg" class="text-sm text-red-500">
+            <p v-if="errorMsg" class="review-dialog__feedback review-dialog__feedback--error">
               {{ errorMsg }}
             </p>
-            <p v-if="successMsg" class="text-sm text-green-600">
+            <p v-if="successMsg" class="review-dialog__feedback review-dialog__feedback--success">
               {{ successMsg }}
             </p>
 
@@ -218,13 +213,7 @@ function close() {
 .review-dialog {
   position: relative;
   width: min(30rem, 100%);
-  border: 1px solid rgba(126, 92, 58, 0.18);
-  border-radius: 1.05rem;
-  background: rgba(255, 250, 242, 0.92);
   padding: 1.2rem;
-  box-shadow: 0 22px 70px rgba(45, 28, 12, 0.20);
-  backdrop-filter: blur(12px);
-  animation: review-dialog-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .review-dialog__close {
@@ -235,58 +224,15 @@ function close() {
   width: 1.9rem;
   height: 1.9rem;
   place-items: center;
-  border-radius: 999px;
-  color: rgba(120, 83, 53, 0.72);
-  transition: background-color 160ms ease, color 160ms ease;
-}
-
-.review-dialog__close:hover {
-  background: rgba(251, 146, 60, 0.12);
-  color: rgba(124, 45, 18, 0.94);
 }
 
 .review-field {
   width: 100%;
-  border: 1px solid rgba(126, 92, 58, 0.18);
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.46);
   padding: 0.65rem 0.75rem;
-  color: rgba(41, 37, 36, 0.92);
-  outline: none;
-  transition: border-color 160ms ease, background-color 160ms ease;
-}
-
-.review-field:focus {
-  border-color: rgba(249, 115, 22, 0.42);
-  background: rgba(255, 255, 255, 0.68);
 }
 
 .review-submit {
   width: 100%;
-  border-radius: 0.75rem;
-  background: rgba(180, 83, 9, 0.86);
   padding: 0.72rem 1rem;
-  color: white;
-  font-weight: 700;
-  transition: background-color 160ms ease, opacity 160ms ease;
-}
-
-.review-submit:hover {
-  background: rgba(154, 52, 18, 0.92);
-}
-
-.review-submit:disabled {
-  opacity: 0.56;
-}
-
-@keyframes review-dialog-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 </style>

@@ -145,6 +145,24 @@ html.dark {
   assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#123456', '#ABCDEF', '#654321', '#FEDCBA']);
 });
 
+test('shared Review tokens require the exact body-Teleport root, theme and compound file', () => {
+  const file = 'app/assets/styles/components/game-review-dialog.less';
+  const approved = `.review-dialog-backdrop { --games-review-panel-bg: #fff; }
+html.dark .review-dialog-backdrop { --games-review-panel-bg: #000; }`;
+  assert.deepEqual(detectCssFacts(extractCssFacts(approved, { file, less: true })), []);
+  const rejected = `.review-dialog-backdrop { background: #111; --games-home-bg: #222; }
+.review-dialog { --games-review-panel-bg: #333; }
+.review-dialog-backdrop .child { --games-review-panel-bg: #444; }
+html.dark .review-dialog { --games-review-panel-bg: #555; }
+.parent { .review-dialog-backdrop { --games-review-panel-bg: #666; } }
+:root { --games-review-panel-bg: #777; }`;
+  assert.deepEqual(values(detectCssFacts(extractCssFacts(rejected, { file, less: true })), 'raw-visual-value'),
+    ['#111', '#222', '#333', '#444', '#555', '#666', '#777']);
+  for (const file of ['app/assets/styles/pages/games.less', 'app/assets/styles/components/other.less']) {
+    assert.deepEqual(values(detectCssFacts(extractCssFacts(approved, { file, less: true })), 'raw-visual-value'), ['#fff', '#000']);
+  }
+});
+
 test('tokens.less approval does not cover ordinary properties, wrong prefixes or other selectors', () => {
   const facts = extractCssFacts(`:root { background: #111; --other-surface: #222; }
 html.dark { color: #333; --other-surface: #444; }

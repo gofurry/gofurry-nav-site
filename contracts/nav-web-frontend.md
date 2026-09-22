@@ -765,11 +765,18 @@ Eight runtime cases cover settled reset, required/score validation, trim/decimal
 normalization, gated pending, success/rejection/503 and Mobile focus/bounds.
 Submit requests MUST be exact local fulfillments, with raw evidence and no real
 backend writes. Successful submission currently keeps the dialog/draft and does
-not refetch host data. Eight pinned modal clips preserve current computed styles,
-including the Light panel on Dark hosts; they require maintainer approval before
-P6.2.2. Existing production, debt and 64 earlier PNGs remain unchanged. Missing
-close translation/accessibility behavior and potential pending-close races are
-separate debt, not authorization to alter runtime during appearance migration.
+not refetch host data. P6.2.1 recorded the legacy Light panel on Dark hosts; the
+maintainer subsequently requested its Dark palette correction for P6.2.2.
+
+Shared Review appearance belongs to `components/game-review-dialog.less`, with
+`--games-review-*` declared only on `.review-dialog-backdrop` and its exact Dark
+root. Dark aliases global Modal/Text/Form/Action semantics; compound-specific
+focus and feedback retain local ownership. Light values, geometry, typography
+and runtime stay unchanged. Only the four Review Dark PNGs may change for this
+approved correction, subject to renewed visual review; the other 68 MUST remain
+identical. The shared SFC's 24 Tailwind / 1 arbitrary / 13 raw debts are retired
+without transferring them. Missing close translation/accessibility behavior and
+potential pending-close races remain separate work.
 
 ### P1 enforcement and maintenance
 

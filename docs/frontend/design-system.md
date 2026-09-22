@@ -241,6 +241,20 @@ Do not delete legacy `--games-*` declarations while those consumers still need
 them. ReviewDialog belongs to P6.2 and Lottery to P6.4; Home completion does not
 close the whole Games programme or authorize unrelated debt cleanup.
 
+## Shared Review appearance
+
+P6.2.2 gives the Home/Search/Detail Review Dialog its own compound owner,
+`components/game-review-dialog.less`. The `.review-dialog-backdrop` body Teleport
+and its Dark root declare `--games-review-*`; no page-root inheritance is assumed.
+Vue keeps private geometry and behavior. Global Modal/Text/Form/Action aliases
+provide the approved deep slate Dark theme, while focus/feedback and the accepted
+Light treatment keep their distinct Review semantics. This does not apply the
+Generic Modal markup or its geometry. The four Dark Review goldens are deliberately
+revised after P6.2.1 maintainer feedback; Light and the other 64 images are frozen.
+Field/button typography follows the actual inherited 16px/24px cascade, and the
+title retains its audited line height. Accessibility and request lifecycle changes
+remain outside this appearance phase.
+
 ## Preserve semantic identity
 
 Equal values do not mean equal tokens. `--gf-accent` describes emphasis;

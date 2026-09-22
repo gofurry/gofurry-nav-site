@@ -66,7 +66,7 @@ function responseFor(path: string, media: string) {
 const artwork = '<svg xmlns="http://www.w3.org/2000/svg" width="460" height="215"><rect width="460" height="215" fill="#394b44"/><circle cx="350" cy="62" r="28" fill="#c8b398"/></svg>'
 
 export type ReviewScene = {
-  page: Page, dialog: Locator, backdrop: Locator, name: Locator, content: Locator, score: Locator, submit: Locator,
+  page: Page, theme: Theme, dialog: Locator, backdrop: Locator, name: Locator, content: Locator, score: Locator, submit: Locator,
   close: Locator, feedback: Locator, text: typeof copy.zh | typeof copy.en, submissions: Submission[], rendered: string,
   openDialog(index?: number): Promise<void>, closeDialog(backdrop?: boolean): Promise<void>,
   fill(values?: Partial<typeof reviewDraft>): Promise<void>, queue(outcome?: Outcome): Gate,
@@ -224,7 +224,7 @@ export const test = base.extend<{ review: { open(options?: OpenOptions): Promise
             expect(box!.y + box!.height).toBeLessThanOrEqual(geometry.h + 1)
           }
         }
-        const scene: ReviewScene = { page, dialog, backdrop, name, content, score, submit, close, feedback, text: copy[locale], submissions, rendered,
+        const scene: ReviewScene = { page, theme, dialog, backdrop, name, content, score, submit, close, feedback, text: copy[locale], submissions, rendered,
           queue, settle, assertQuiet, assertBounds,
           async openDialog(index = 0) {
             await expect(dialog).toHaveCount(0)
@@ -299,32 +299,48 @@ async function css(target: Locator, values: Record<string, string>) {
 }
 export async function assertReviewAppearance(scene: ReviewScene) {
   const { page, dialog, backdrop, name, content, score, submit, close } = scene
+  const dark = scene.theme === 'dark'
   await page.mouse.move(1, 1)
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   await scene.settle()
   await css(dialog, { width: page.viewportSize()!.width === 390 ? '358px' : '480px', padding: '19.2px', 'border-width': '1px',
-    'border-color': 'rgba(126, 92, 58, 0.18)', 'border-radius': '16.8px', 'background-color': 'rgba(255, 250, 242, 0.92)',
-    'box-shadow': 'rgba(45, 28, 12, 0.2) 0px 22px 70px 0px', 'backdrop-filter': 'blur(12px)',
+    'border-color': dark ? 'rgba(255, 255, 255, 0.14)' : 'rgba(126, 92, 58, 0.18)', 'border-radius': '16.8px',
+    'background-color': dark ? 'rgba(15, 23, 42, 0.88)' : 'rgba(255, 250, 242, 0.92)',
+    'background-image': dark ? 'linear-gradient(rgba(22, 30, 45, 0.94), rgba(12, 18, 30, 0.92)), none' : 'none',
+    'box-shadow': dark ? 'rgba(2, 6, 23, 0.42) 0px 28px 72px 0px' : 'rgba(45, 28, 12, 0.2) 0px 22px 70px 0px', 'backdrop-filter': 'blur(12px)',
     'animation-duration': '0.18s', 'animation-timing-function': 'cubic-bezier(0.22, 1, 0.36, 1)' })
   await css(backdrop, { 'padding-left': '16px', 'padding-right': '16px', 'backdrop-filter': 'blur(2px)',
-    'background-color': 'oklab(0.147 0.00261104 0.00303026 / 0.3)' })
-  await css(dialog.getByRole('heading'), { 'font-size': '18px', 'line-height': '28.0001px', 'font-weight': '700', color: 'oklch(0.266 0.079 36.259)' })
-  await css(dialog.locator(':scope > div').first().locator('p'), { 'font-size': '14px', 'line-height': '20px', 'font-weight': '400', color: 'oklch(0.553 0.013 58.071)' })
-  await css(dialog.locator('label > span'), { 'font-size': '14px', 'line-height': '20px', 'font-weight': '500', color: 'oklch(0.444 0.011 73.639)' })
+    'background-color': dark ? 'rgba(2, 6, 23, 0.64)' : 'oklab(0.147 0.00261104 0.00303026 / 0.3)' })
+  await css(dialog.getByRole('heading'), { 'font-size': '18px', 'line-height': '28.0001px', 'font-weight': '700', color: dark ? 'rgba(248, 250, 252, 0.94)' : 'oklch(0.266 0.079 36.259)' })
+  await css(dialog.locator(':scope > div').first().locator('p'), { 'font-size': '14px', 'line-height': '20px', 'font-weight': '400', color: dark ? 'rgba(203, 213, 225, 0.76)' : 'oklch(0.553 0.013 58.071)' })
+  await css(dialog.locator('label > span'), { 'font-size': '14px', 'line-height': '20px', 'font-weight': '500', color: dark ? 'rgba(203, 213, 225, 0.76)' : 'oklch(0.444 0.011 73.639)' })
   for (const field of [name, content, score]) await css(field, { 'font-size': '16px', 'line-height': '24px', 'font-weight': '400',
-    color: 'rgba(41, 37, 36, 0.92)', 'border-radius': '12px', 'border-color': 'rgba(126, 92, 58, 0.18)',
-    'background-color': 'rgba(255, 255, 255, 0.46)', 'transition-property': 'border-color, background-color', 'transition-duration': '0.16s, 0.16s' })
-  await css(submit, { 'font-size': '16px', 'line-height': '24px', 'font-weight': '700', color: 'rgb(255, 255, 255)',
-    'border-radius': '12px', 'background-color': 'rgba(180, 83, 9, 0.86)', opacity: '1' })
-  await css(close, { 'font-size': '16px', 'line-height': '24px', 'font-weight': '400', color: 'rgba(120, 83, 53, 0.72)' })
+    color: dark ? 'rgba(248, 250, 252, 0.94)' : 'rgba(41, 37, 36, 0.92)', 'border-radius': '12px',
+    'border-color': dark ? 'rgba(226, 232, 240, 0.28)' : 'rgba(126, 92, 58, 0.18)',
+    'background-color': dark ? 'rgba(15, 23, 42, 0.72)' : 'rgba(255, 255, 255, 0.46)', 'transition-property': 'border-color, background-color', 'transition-duration': '0.16s, 0.16s' })
+  if (dark) await expect.poll(() => name.evaluate(el => getComputedStyle(el, '::placeholder').color)).toBe('rgba(203, 213, 225, 0.76)')
+  await css(submit, { 'font-size': '16px', 'line-height': '24px', 'font-weight': '700', color: dark ? 'rgba(248, 250, 252, 0.96)' : 'rgb(255, 255, 255)',
+    'border-radius': '12px', 'background-color': dark ? 'rgba(203, 213, 225, 0.18)' : 'rgba(180, 83, 9, 0.86)', opacity: '1' })
+  await css(close, { 'font-size': '16px', 'line-height': '24px', 'font-weight': '400', color: dark ? 'rgba(203, 213, 225, 0.76)' : 'rgba(120, 83, 53, 0.72)' })
+  if (dark) {
+    await close.hover(); await scene.settle()
+    await css(close, { 'background-color': 'rgba(226, 232, 240, 0.16)', color: 'rgba(248, 250, 252, 0.94)' })
+    await submit.hover(); await scene.settle()
+    await css(submit, { 'background-color': 'rgba(203, 213, 225, 0.26)' })
+    await assertReviewFocus(scene)
+    await name.blur(); await page.mouse.move(1, 1); await scene.settle()
+  }
   await scene.assertBounds()
 }
 export async function assertReviewFocus(scene: ReviewScene) {
   await scene.name.focus(); await scene.settle()
   await expect(scene.name).toBeFocused()
-  await css(scene.name, { 'border-color': 'rgba(249, 115, 22, 0.42)', 'background-color': 'rgba(255, 255, 255, 0.68)' })
+  await css(scene.name, { 'border-color': scene.theme === 'dark' ? 'rgba(125, 211, 252, 0.58)' : 'rgba(249, 115, 22, 0.42)',
+    'background-color': scene.theme === 'dark' ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.68)' })
 }
 export async function assertReviewFeedback(scene: ReviewScene, message: string, success = false) {
   await expect(scene.feedback).toHaveText(message)
-  await css(scene.feedback, { 'font-size': '14px', 'line-height': '20px', color: success ? 'oklch(0.627 0.194 149.214)' : 'oklch(0.637 0.237 25.331)' })
+  await css(scene.feedback, { 'font-size': '14px', 'line-height': '20px', color: scene.theme === 'dark'
+    ? (success ? 'rgb(74, 222, 128)' : 'rgb(248, 113, 113)')
+    : (success ? 'oklch(0.627 0.194 149.214)' : 'oklch(0.637 0.237 25.331)') })
 }
