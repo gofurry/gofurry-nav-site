@@ -15,7 +15,6 @@
       "app/components/game/detail/tabs/GameTabIntro.vue": 1,
       "app/components/game/detail/tabs/GameTabNews.vue": 5,
       "app/components/game/lottery/LotteryJoinModal.vue": 48,
-      "app/components/game/main/content/GameUpdateNews.vue": 5,
       "app/components/game/main/sidebar/GameSidebarSearch.vue": 15,
       "app/components/game/search/GamePagination.vue": 4,
       "app/components/game/search/GameSearchFilter.vue": 2,

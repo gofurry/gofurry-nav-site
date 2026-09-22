@@ -157,6 +157,18 @@ html.dark .games-page {
   --games-home-card-border: transparent;
   --games-home-card-page-transition: opacity 360ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
 
+  /* Home News: independent text, carousel surfaces and progress semantics. */
+  --games-home-news-text: rgba(71, 42, 20, 0.92);
+  --games-home-news-muted: rgba(120, 83, 53, 0.58);
+  --games-home-news-card-bg: rgba(255, 250, 242, 0.40);
+  --games-home-news-card-shadow: 0 4px 12px rgba(91, 62, 28, 0.03);
+  --games-home-news-card-hover-bg: rgba(255, 235, 205, 0.82);
+  --games-home-news-control-text: rgba(154, 52, 18, 0.74);
+  --games-home-news-control-hover-bg: rgba(154, 52, 18, 0.12);
+  --games-home-news-control-hover-text: rgba(124, 45, 18, 1);
+  --games-home-news-progress-track-bg: color-mix(in srgb, rgba(126, 92, 58, 0.16) 64%, transparent);
+  --games-home-news-progress-fill-bg: color-mix(in srgb, rgba(124, 45, 18, 1) 44%, transparent);
+
   /* Home statistics: tabs, ranking and price/count surfaces; no data or paging ownership. */
   --games-home-stats-text: rgba(71, 42, 20, 0.92);
   --games-home-stats-muted: rgba(120, 83, 53, 0.58);
@@ -233,6 +245,18 @@ html.dark .games-page {
   --games-home-review-button-border: rgba(255, 255, 255, 0.14);
   --games-home-review-button-hover-bg: rgba(30, 41, 59, 0.92);
   --games-home-review-button-hover-text: rgba(248, 250, 252, 0.96);
+
+  /* Dark: Home News. */
+  --games-home-news-text: rgba(241, 245, 249, 0.88);
+  --games-home-news-muted: rgba(203, 213, 225, 0.62);
+  --games-home-news-card-bg: rgba(226, 232, 240, 0.065);
+  --games-home-news-card-shadow: none;
+  --games-home-news-card-hover-bg: rgba(148, 163, 184, 0.18);
+  --games-home-news-control-text: rgba(180, 213, 226, 0.62);
+  --games-home-news-control-hover-bg: rgba(148, 163, 184, 0.12);
+  --games-home-news-control-hover-text: rgba(226, 232, 240, 0.90);
+  --games-home-news-progress-track-bg: color-mix(in srgb, rgba(226, 232, 240, 0.15) 64%, transparent);
+  --games-home-news-progress-fill-bg: color-mix(in srgb, rgba(226, 232, 240, 0.90) 44%, transparent);
 
   /* Dark: Home statistics: tabs, ranking and price/count surfaces; no data or paging ownership. */
   --games-home-stats-text: rgba(241, 245, 249, 0.88);
@@ -327,7 +351,7 @@ html.dark .games-page {
 
 .games-page .news-card__title,
 .games-page .game-news-title {
-  color: var(--games-text-title);
+  color: var(--games-home-news-text);
 }
 
 .games-page .game-site-item__title,
@@ -344,7 +368,7 @@ html.dark .games-page {
 .games-page .news-card__meta,
 .games-page .game-news-desc,
 .games-page .news-pager__count {
-  color: var(--games-text-soft);
+  color: var(--games-home-news-muted);
 }
 
 .games-page .game-stats-card__desc,
@@ -514,7 +538,7 @@ html.dark .games-page {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--games-accent-muted);
+  color: var(--games-home-news-control-text);
   font-size: 1.1rem;
   line-height: 1;
   transition: background-color 180ms ease, color 180ms ease, opacity 180ms ease;
@@ -531,8 +555,8 @@ html.dark .games-page {
 }
 
 .games-page .news-nav-button:hover {
-  background: var(--games-accent-hover-bg);
-  color: var(--games-accent-strong);
+  background: var(--games-home-news-control-hover-bg);
+  color: var(--games-home-news-control-hover-text);
 }
 
 .games-page .game-group-pager span {
@@ -777,6 +801,23 @@ html.dark .games-page .game-stats-table {
   padding: 0;
 }
 
+.games-page .game-news-title {
+  font-size: 1.125rem;
+  line-height: calc(1.75 / 1.125);
+  font-weight: 700;
+}
+
+.games-page .game-news-desc {
+  font-size: 0.875rem;
+  line-height: calc(1.25 / 0.875);
+}
+
+.games-page .news-pager__count {
+  font-size: 0.75rem;
+  line-height: calc(1 / 0.75);
+  font-weight: 600;
+}
+
 .games-page .news-viewport {
   overflow: hidden;
   padding: 0.1rem 0 0.2rem;
@@ -797,15 +838,15 @@ html.dark .games-page .game-stats-table {
   overflow: hidden;
   border: 1px solid transparent;
   border-radius: 0.78rem;
-  background: var(--games-item-bg);
-  box-shadow: var(--games-shadow-soft);
+  background: var(--games-home-news-card-bg);
+  box-shadow: var(--games-home-news-card-shadow);
   backdrop-filter: blur(1px);
   transition: background-color 180ms ease, border-color 180ms ease;
 }
 
 .games-page .news-card:hover {
   border-color: transparent;
-  background: var(--games-item-hover-bg);
+  background: var(--games-home-news-card-hover-bg);
 }
 
 .games-page .news-card__cover {
@@ -858,13 +899,13 @@ html.dark .games-page .game-stats-table {
   height: 0.12rem;
   overflow: hidden;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--games-item-border) 64%, transparent);
+  background: var(--games-home-news-progress-track-bg);
 }
 
 .games-page .news-progress-fill {
   height: 100%;
   border-radius: inherit;
-  background: color-mix(in srgb, var(--games-accent-strong) 44%, transparent);
+  background: var(--games-home-news-progress-fill-bg);
   transition: width 220ms ease;
 }
 

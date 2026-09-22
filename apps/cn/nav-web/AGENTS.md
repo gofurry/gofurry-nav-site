@@ -218,8 +218,12 @@ P6.1.3 Games Home closure tests own nonempty/empty/single News, populated Review
 and the former group-layout runner's seven-breakpoint clipping contract. Keep
 the original core dataset/default clock unchanged; only closure specs enable
 the isolated SSR/browser fixed clock. Six local-surface goldens supplement the
-existing Home views. News appearance debt remains for P6.1.4 after maintainer
-review; this test-only closure does not authorize further migration.
+existing Home views. P6.1.4 completes News appearance in `pages/games.less` with
+ten `--games-home-news-*` roles on the existing `.games-page` / Dark roots.
+Preserve the accepted computed typography and carousel contract. Direct Games
+Home migration is complete; shared ReviewDialog remains P6.2, SidebarSearch P6.3,
+Lottery P6.4, Detail/Common P6.5 and the legacy Games root P6.6. Do not clear
+their debt opportunistically or reinterpret Home completion as all Games.
 
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running

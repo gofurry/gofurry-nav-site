@@ -750,6 +750,15 @@ their acceptance. The equivalent group-layout cases retire only their old runner
 and alias, not other legacy smoke ownership. Production and style debt remain
 unchanged; P6.1.4 requires maintainer review of these six new images first.
 
+P6.1.4 completes direct Games Home appearance ownership. News typography and its
+ten `--games-home-news-*` roles belong to `pages/games.less` under the existing
+`.games-page` / `html.dark .games-page` roots. Preserve accepted computed values,
+including line-height precision, rather than replacing them with rounded values
+or inferred utility intent. Carousel behavior, fixtures and all 64 accepted PNGs
+remain unchanged. This completion excludes shared ReviewDialog (P6.2),
+SidebarSearch (P6.3), Lottery (P6.4), Detail/Common (P6.5) and legacy Games root
+cleanup (P6.6); remaining debt is not authorization to cross those boundaries.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

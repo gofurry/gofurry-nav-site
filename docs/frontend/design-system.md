@@ -212,6 +212,35 @@ the Vue-supplied per-year animation delay, a dynamic Updates-local property rath
 than a global design token. Existing runtime tests and accepted goldens protect
 this boundary without snapshot or debt updates.
 
+## Games Home News ownership
+
+P6.1.4 completes direct Home appearance with News in the existing `pages/games.less`.
+Its ten `--games-home-news-*` roles belong to `.games-page` and
+`html.dark .games-page`: text/muted; card background/shadow/hover background;
+control text/hover background/hover text; and progress track/fill backgrounds.
+These are independent News semantics, not aliases granted because another
+surface currently has equal literals. Progress keeps its complete color-mix
+meaning. No global scale, stylesheet or policy owner is added.
+
+Typography stays in the same Less owner; Vue retains structure and behavior.
+The accepted computed line-height precision is authority: preserve the existing
+ratio and build result rather than rounding the rendered value. Authored alpha
+values likewise remain distinct from browser serialization. News card typography,
+clipping, motion and hover semantics remain frozen by the P6.1.3 contracts.
+
+Home closure excludes shared ReviewDialog and SidebarSearch. The remaining
+33 raw occurrences in `games.less` have explicit future owners:
+
+| Remaining surface | Raw occurrences | Owner |
+| --- | ---: | --- |
+| Shared Dark Games root color | 1 | P6.6, after auditing all Games consumers |
+| Detail and BlurWrapper notice | 19 | P6.5 Detail/Common |
+| Shared SidebarSearch styles under `.search-shell` | 13 | P6.3 Search/SidebarSearch |
+
+Do not delete legacy `--games-*` declarations while those consumers still need
+them. ReviewDialog belongs to P6.2 and Lottery to P6.4; Home completion does not
+close the whole Games programme or authorize unrelated debt cleanup.
+
 ## Preserve semantic identity
 
 Equal values do not mean equal tokens. `--gf-accent` describes emphasis;
