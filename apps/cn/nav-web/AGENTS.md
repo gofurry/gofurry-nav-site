@@ -214,6 +214,13 @@ existing cascade. Keep title 16/24/500 and description 12/16.2. Remaining raw
 ownership is ToolDock 42, Spotlight 51, P5.4 Site Groups 5; do not migrate them
 with Core. P5.3.1 tests and all 50 PNGs remain unchanged.
 
+P6.1.3 Games Home closure tests own nonempty/empty/single News, populated Reviews
+and the former group-layout runner's seven-breakpoint clipping contract. Keep
+the original core dataset/default clock unchanged; only closure specs enable
+the isolated SSR/browser fixed clock. Six local-surface goldens supplement the
+existing Home views. News appearance debt remains for P6.1.4 after maintainer
+review; this test-only closure does not authorize further migration.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

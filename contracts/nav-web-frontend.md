@@ -739,6 +739,17 @@ Do not activate unreachable page-root surface tokens or alter Site Groups'
 existing cascade. Other Nav Home semantics retain their existing page owner;
 detectors and exception rules are unchanged.
 
+P6.1.3 Games Home closure MUST preserve the P6.1.1 core fixture and four Home
+goldens. Ten additional regressions protect News empty/single/multiple states,
+locale/carousel/resize/popup, populated Reviews SSR time/content/appearance and
+seven-breakpoint group clipping in Light zh / Dark en. The isolated SSR/browser
+clock is opt-in, fixes only current time and MUST NOT alter production or timers.
+Exact requests and raw errors remain accounted for. Six additional pinned Page
+clips cover News and Reviews; historical nonempty Reviews equivalence precedes
+their acceptance. The equivalent group-layout cases retire only their old runner
+and alias, not other legacy smoke ownership. Production and style debt remain
+unchanged; P6.1.4 requires maintainer review of these six new images first.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

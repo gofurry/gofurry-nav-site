@@ -756,6 +756,33 @@ Maintainer review of all eight new images precedes P5.3.2. `.nav-content-loading
 stays a P5.3.4 final-sweep candidate; `.nav-tool-button--search` is live dynamic
 output. Site Groups and games-page coupling remain P5.4-owned.
 
+### Games Home missing states and closure (P6.1.3)
+
+`fixtures/games-home.ts` preserves the P6.1.1 core dataset and default clock.
+The closure specs add ten regressions: News multiple/locale/carousel/resize/popup,
+empty/single states, populated Reviews in both locales, and four group-layout
+cases covering Light zh / Dark en at 390, 639, 640, 768, 1023, 1024 and 1440px.
+Each layout case protects four groups, 17 records, 8/8/1/wrap pagination,
+card/rating bounds, spacer height and local overflow clipping. These take over
+the retired `game-group-layout-smoke.mjs` and `game:groups:smoke`; its diagnostic
+success screenshots are not golden baselines. Other legacy runners stay intact.
+
+Only the new specs enable a worker clock: a child-process-only Node preload
+fixes `Date.now()` and UTC through existing runtime overrides; the browser uses
+the same fixed time. Real SSR and hydrated Reviews must show 5 minutes, 2 hours
+and 3 days, without hydration errors. No timers, production modules or parent
+process environment are patched. Exact asset/popup registration and raw evidence
+enforce one SSR Home request, zero browser API calls and zero unexpected traffic.
+
+Before accepting Reviews, identical pinned builds of `0894fc7` and `f4c322c`
+were compared: 1,584 computed properties and four Light/Dark normal/hover
+captures were identical. Six new Page clips cover News Light/Dark at Desktop
+and Mobile, plus populated Reviews Light/Dark at Desktop. Target geometry,
+loaded images, finite transitions, fonts and two RAFs determine readiness.
+Acceptance is **98 Functional / 65 Visual / 64 PNG**, including two consecutive
+pinned comparisons and all previous 58 PNGs unchanged. Maintainer review of the
+six new images precedes P6.1.4; News appearance debt is deliberately retained.
+
 ## Verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
