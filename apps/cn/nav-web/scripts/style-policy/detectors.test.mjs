@@ -236,6 +236,20 @@ html.dark .lottery-page, html.dark .lottery-activation-page, html.dark .lottery-
   assert.deepEqual(values(detectCssFacts(facts), 'raw-visual-value'), ['#123']);
 });
 
+test('Search Filter shares only the exact page/Teleport token roots and Search prefix', () => {
+  const file = 'app/assets/styles/pages/games-search.less';
+  const source = `.games-search-page, .games-search-overlay-scope { --games-search-border: #111; }
+html.dark .games-search-page, html.dark .games-search-overlay-scope { --games-search-border: #222; }`;
+  assert.deepEqual(detectCssFacts(extractCssFacts(source, { file, less: true })), []);
+  const rejected = `.games-search-overlay-scope { --games-search-border: #333; }
+.games-search-page, .games-search-overlay-scope { color: #444; --other-color: #555; }
+.games-search-overlay-scope .child { --games-search-border: #666; }
+.parent { .games-search-page, .games-search-overlay-scope { --games-search-border: #777; } }`;
+  assert.deepEqual(values(detectCssFacts(extractCssFacts(rejected, { file, less: true })), 'raw-visual-value'),
+    ['#333', '#444', '#555', '#666', '#777']);
+  assert.deepEqual(values(detectCssFacts(extractCssFacts(source, { file: 'app/assets/styles/pages/games.less', less: true })), 'raw-visual-value'), ['#111', '#222']);
+});
+
 test('Preferences tokens require the exact compound owner and both theme roots', () => {
   const source = `.gf-preferences-modal { --gf-preferences-input-surface: #123456; }
 html.dark .gf-preferences-modal { --gf-preferences-toggle-thumb: rgba(1, 2, 3, .5); }`;

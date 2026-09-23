@@ -7,12 +7,14 @@ import { captureBrowserErrors } from './browser-errors'
 type Kind = 'advanced' | 'simple' | 'tags' | 'home'
 type Body = Record<string, unknown>
 type Call = { kind: Kind, path: string, query: Record<string, string>, body?: Body }
-type BrowserCall = Call & { method: string, request: Request }
+type BrowserCall = Call & { method: string, request: Request, reply?: Reply }
+type Reply = 'success' | 'empty' | 'rejected' | 503
+type Script = { kind: Kind, value: string, replies: Reply[], upstreamReplies: Reply[], serverIndex: number, browserIndex: number }
 type Gate = {
   kind: Kind, value: string, promise: Promise<void>, received?: Call, request?: Request, completed: boolean,
   release(): void, waitReceived(): Promise<Call>, waitCompleted(): Promise<void>,
 }
-type State = { calls: Call[], gates: Gate[], unexpected: string[] }
+type State = { calls: Call[], gates: Gate[], scripts: Script[], unexpected: string[] }
 type App = Awaited<ReturnType<typeof startInsightsFixtureApp>>
 type Worker = { app: App, current: State | null }
 const paths: Record<Kind, string> = { advanced: '/api/v2/game/search/page', simple: '/api/v2/game/search/simple',
@@ -41,7 +43,8 @@ const artwork = '<svg xmlns="http://www.w3.org/2000/svg" width="460" height="215
 export type SearchScene = {
   page: Page, input: Locator, filter: Locator, keyword: Locator, pageSize: Locator,
   calls(kind: Kind): Call[], hold(kind: Exclude<Kind, 'home'>, value: string): Gate,
-  open(options?: { home?: boolean, query?: Record<string, string> }): Promise<void>,
+  respond(kind: Exclude<Kind, 'home'>, value: string, replies: Reply[]): void,
+  open(options?: { home?: boolean, query?: Record<string, string>, locale?: 'zh' | 'en', theme?: 'light' | 'dark', ready?: boolean }): Promise<void>,
   openFilter(): Promise<void>, cancel(): Promise<void>, apply(): Promise<void>,
   leaf(name: string): Locator, sort(name: string): Locator,
   waitResults(name: string, count?: number): Promise<void>,
@@ -62,10 +65,18 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
       if (!kind) { state.unexpected.push(`upstream ${url.pathname}`); return { status: 500 } }
       const call: Call = { kind, path: url.pathname, query: Object.fromEntries(url.searchParams), body }
       state.calls.push(call)
+      const script = state.scripts.find(item => item.kind === kind && item.value === keyFor(call))
+      const reply = script?.upstreamReplies[script.serverIndex++] ?? 'success'
       const gate = state.gates.find(item => item.kind === kind && item.value === keyFor(call) && !item.received)
       if (gate) { gate.received = call; await gate.promise }
-      const data = responseFor(call, media)
       if (gate) gate.completed = true
+      if (reply === 503) return { status: 503 }
+      // The upstream helper uses an explicit status to emit a non-success envelope.
+      // HTTP 200 exercises useApi's business rejection without transport retry.
+      if (reply === 'rejected') return { status: 200 }
+      const data = reply === 'empty'
+        ? kind === 'advanced' ? { total: 0, list: [] } : []
+        : responseFor(call, media)
       return { data }
     }, { TZ: 'UTC' })
     try { await use(worker) } finally { await worker.app.close() }
@@ -73,13 +84,16 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
   baseURL: async ({ searchApp }, use) => { await use(searchApp.app.base) },
   search: async ({ page, context, searchApp }, use, testInfo) => {
     expect(searchApp.current).toBeNull()
-    const state: State = { calls: [], gates: [], unexpected: [] }
+    const state: State = { calls: [], gates: [], scripts: [], unexpected: [] }
     searchApp.current = state
     const { app } = searchApp
-    const errors = captureBrowserErrors(page)
+    const expectedNetworkURLs = new Set<string>()
+    const errors = captureBrowserErrors(page, expectedNetworkURLs)
     const browserCalls: BrowserCall[] = [], external: string[] = []
     const failed: { request: Request, error: string | undefined }[] = []
     const expectedAborts = new Set<Request>()
+    const expectedHTTP = new Set<Request>(), receivedHTTP = new Set<Request>()
+    const networkDiagnostic = 'Failed to load resource: the server responded with a status of 503 (Service Unavailable)'
     const rawConsole: { type: string, text: string, url: string }[] = []
     const assets = new Set([...Array.from({ length: 29 }, (_, index) => `${app.upstreamUrl}/media/search-${7100 + index}.svg`),
       ...[91, 92, 93].map(id => `${app.upstreamUrl}/media/game-${id}.svg`)])
@@ -95,9 +109,20 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
       const call: BrowserCall = { kind, path: url.pathname, query: Object.fromEntries(url.searchParams),
         body: request.postData() ? request.postDataJSON() : undefined, method: request.method(), request }
       browserCalls.push(call)
+      const script = state.scripts.find(item => item.kind === kind && item.value === keyFor(call))
+      call.reply = script?.replies[script.browserIndex++] ?? 'success'
+      if (call.reply === 503) {
+        expectedHTTP.add(request)
+        expectedNetworkURLs.add(request.url())
+      }
       expect(call.method).toBe(['advanced', 'simple'].includes(kind) ? 'POST' : 'GET')
       const gate = state.gates.find(item => item.kind === kind && item.value === keyFor(call) && !item.request)
       if (gate) gate.request = request
+    })
+    context.on('response', response => {
+      if (response.status() < 400 || new URL(response.url()).origin !== app.base) return
+      if (response.status() === 503 && expectedHTTP.has(response.request())) receivedHTTP.add(response.request())
+      else state.unexpected.push(`HTTP ${response.status()} ${response.url()}`)
     })
     await context.route('**/*', route => {
       const request = route.request(), url = new URL(request.url())
@@ -112,7 +137,6 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
     })
     await context.addInitScript(({ origin, steamKey, sample }) => {
       if (location.origin !== origin) return
-      localStorage.setItem('theme', 'light')
       const checkedAt = Date.now()
       localStorage.setItem('gf_asset_cdn_diagnostics', JSON.stringify({ selected: 'primary', checkedAt,
         primaryMs: 10, mirrorMs: 20, primaryState: 'success', mirrorState: 'success' }))
@@ -122,7 +146,14 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
     const filter = page.locator('.game-search-filter-panel')
     const assertQuiet = () => {
       expect(errors).toEqual([])
-      expect(rawConsole.filter(item => item.type === 'error')).toEqual([])
+      const diagnostics = rawConsole.filter(item => item.type === 'error')
+      expect(diagnostics.filter(item => item.text !== networkDiagnostic || !expectedNetworkURLs.has(item.url))).toEqual([])
+      // Console events lack Request identity. Bound the exact diagnostic quota to verified
+      // request instances/statuses, so another failure at the same URL cannot be ignored.
+      expect(receivedHTTP).toEqual(new Set([...expectedHTTP].filter(request => !expectedAborts.has(request))))
+      for (const url of expectedNetworkURLs) {
+        expect(diagnostics.filter(item => item.url === url)).toHaveLength([...receivedHTTP].filter(request => request.url() === url).length)
+      }
       expect(external).toEqual([]); expect(state.unexpected).toEqual([])
       expect(failed).toHaveLength(expectedAborts.size)
       for (const request of expectedAborts) expect(failed.filter(item => item.request === request)).toHaveLength(1)
@@ -130,10 +161,13 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
         expect(expectedAborts.has(failure.request)).toBe(true)
         expect(failure.error).toBe('net::ERR_ABORTED')
       }
-      // Every browser call (including canceled ones) reached the real local API once.
+      // The real Nitro proxy retries a failing GET once, independently of the browser's
+      // ofetch retry. Preserve and account for both transport layers exactly.
       const wire = (call: Call) => JSON.stringify({ path: call.path, query: call.query, body: call.body })
       const mounted = state.calls.filter(call => call.kind !== 'home')
-      expect(browserCalls.filter(call => call.kind !== 'home').map(wire).sort()).toEqual(mounted.map(wire).sort())
+      expect(browserCalls.filter(call => call.kind !== 'home').flatMap(call =>
+        call.kind === 'tags' && call.reply === 503 ? [wire(call), wire(call)] : [wire(call)],
+      ).sort()).toEqual(mounted.map(wire).sort())
       expect(state.calls.filter(call => call.kind === 'home')).toHaveLength(expectedHomeCalls)
       expect(browserCalls.filter(call => call.kind === 'home')).toHaveLength(expectedBrowserHomeCalls)
       for (const call of state.calls.filter(item => item.kind === 'home')) expect(call.query).toEqual({ lang: 'zh', region: 'CN' })
@@ -143,6 +177,11 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
       page, filter, input: page.locator('.game-sidebar-search-input'),
       keyword: filter.locator('.game-search-filter-input').first(), pageSize: filter.locator('.game-search-filter-input').nth(1),
       calls: kind => state.calls.filter(call => call.kind === kind),
+      respond(kind, value, replies) {
+        expect(state.scripts.some(script => script.kind === kind && script.value === value)).toBe(false)
+        const upstreamReplies = replies.flatMap(reply => kind === 'tags' && reply === 503 ? [reply, reply] : [reply])
+        state.scripts.push({ kind, value, replies, upstreamReplies, serverIndex: 0, browserIndex: 0 })
+      },
       hold(kind, value) {
         let release!: () => void
         const promise = new Promise<void>(resolve => { release = resolve })
@@ -156,20 +195,24 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
         state.gates.push(gate)
         return gate
       },
-      async open({ home = false, query = {} } = {}) {
+      async open({ home = false, query = {}, locale = 'zh', theme = 'light', ready = true } = {}) {
         expect(opened).toBe(false); opened = true
+        await context.addInitScript(({ origin, theme }) => {
+          if (location.origin === origin) localStorage.setItem('theme', theme)
+        }, { origin: app.base, theme })
         if (home) expectedHomeCalls++
-        const path = home ? '/games' : `/games/search?${new URLSearchParams({ pageSize: '4', ...query })}`
+        const path = (locale === 'en' ? '/en' : '') + (home ? '/games' : `/games/search?${new URLSearchParams({ pageSize: '4', ...query })}`)
         const response = await page.goto(path, { waitUntil: 'load' })
         expect(response?.status()).toBe(200)
         const html = await response!.text()
         if (home) expect(html).toContain('Active game fixture')
         else expect(html).not.toContain('A deterministic search lifecycle result.')
         await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as Element & { __vue_app__?: unknown })?.__vue_app__))
-        await expect(page.locator('html')).not.toHaveClass(/\bdark\b/)
+        if (theme === 'dark') await expect(page.locator('html')).toHaveClass(/\bdark\b/)
+        else await expect(page.locator('html')).not.toHaveClass(/\bdark\b/)
         await expect(scene.input).toBeVisible()
         if (home) expect(scene.calls('home')).toHaveLength(1)
-        else {
+        else if (ready) {
           await expect.poll(() => scene.calls('advanced').length).toBe(1)
           await expect.poll(() => scene.calls('tags').length).toBe(1)
           await scene.waitResults(query.content || 'Result', Number(query.pageSize || 4))
@@ -209,6 +252,7 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
           upstream: state.calls, browserCalls: browserCalls.map(({ request: _request, ...call }) => call),
           failed: failed.map(item => ({ url: item.request.url(), body: item.request.postData(), error: item.error,
             expected: expectedAborts.has(item.request) })), rawConsole, errors, external, unexpected: state.unexpected,
+          injectedHTTP: [...expectedHTTP].map(request => ({ url: request.url(), method: request.method(), body: request.postData(), received: receivedHTTP.has(request) })),
         }, null, 2) })
         searchApp.current = null
       }

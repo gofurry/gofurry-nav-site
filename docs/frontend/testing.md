@@ -849,6 +849,23 @@ unmodified baseline. All four legacy scenarios and original assertions remain.
 Acceptance is 114 Browser / 73 Visual / 72 unchanged PNGs; no new golden,
 style migration, failure UI or overlay repair belongs to this stage.
 
+P6.3.0a adds eight `games-search-states` regressions using the same production
+fixture: initial failure recovery, independent tag retry/draft, failed page
+identity, initial loading/empty, shared Home/Search simple failure/retry and
+blur/clear, canceled old failure versus new pending, and English business
+rejection. Optional reply scripts are test-owned; old lifecycle defaults remain
+unchanged. GET transport retries are explicitly scripted and counted.
+Each injected HTTP failure is assigned to an exact Request and checked against
+its received status. Raw Chromium diagnostics are retained with exact URL/text
+quotas tied to those responses; cancellation has its separate Request set.
+Unexpected exceptions, extra failures and hydration errors still fail. Keep the
+legacy four-case tag smoke and all existing Visual snapshots unchanged. Four
+additional desktop/mobile × Light/Dark cases cover the approved short-page Filter
+repair: real error/empty pages, Footer backdrop/panel hit tests, tag selection and
+Apply/Cancel through the body-mounted Filter. No force-clicks or new goldens.
+This raises Functional Browser to 126 while Visual remains 73 (72 PNGs). Jump
+and the complete focus system are not accepted by these tests.
+
 ## Verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`

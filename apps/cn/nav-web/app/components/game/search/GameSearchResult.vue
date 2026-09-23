@@ -1,8 +1,18 @@
 <template>
-  <div class="search-results space-y-4" :class="{ 'search-results--pending': loading, 'search-results--sliding': trackActive }">
+  <div class="search-results space-y-4" :class="{ 'search-results--pending': loading, 'search-results--sliding': trackActive }" :aria-busy="loading">
+
+    <p v-if="loading" role="status" class="sr-only">{{ t('game.search.loading') }}</p>
+    <div v-if="status === 'error'" class="game-search-state flex min-h-48 flex-col items-center justify-center gap-4 p-8" data-state="error" role="alert">
+      <p>{{ t('game.search.unavailable') }}</p>
+      <button type="button" class="gf-button gf-button--surface" @click="$emit('retry')">{{ t('game.search.retry') }}</button>
+    </div>
+    <div v-else-if="status === 'empty'" class="game-search-state flex min-h-48 flex-col items-center justify-center gap-4 p-8" data-state="empty" role="status">
+      <p>{{ t('game.search.noResults') }}</p>
+      <p>{{ t('common.total') }} 0 {{ t('common.record') }}</p>
+    </div>
 
     <!-- 游戏列表 -->
-    <div class="search-result-grid-shell">
+    <div v-else class="search-result-grid-shell">
       <div class="search-result-grid search-result-grid--spacer" aria-hidden="true">
         <div
             v-for="index in displayPageSize"
@@ -162,6 +172,7 @@
 
     <!-- 分页 -->
     <GamePagination
+        v-if="status === 'success' || (loading && currentGames.length > 0)"
         :current-page="currentPage"
         :total-pages="totalPages"
         :total="total"
@@ -226,10 +237,12 @@ const props = defineProps<{
   totalPages: number
   total: number
   loading?: boolean
+  status?: 'idle' | 'pending' | 'success' | 'empty' | 'error'
 }>()
 
 defineEmits<{
   (e: 'page-change', page: number): void
+  (e: 'retry'): void
 }>()
 
 interface SearchSlide {
@@ -256,7 +269,7 @@ let initialized = false
 
 const renderedSlides = computed<SearchSlide[]>(() => {
   if (!trackActive.value) {
-    return [{ key: `page-${props.currentPage}`, games: currentGames.value }]
+    return [{ key: `page-${props.currentPage}`, games: currentGames.value, loading: props.loading && !currentGames.value.length }]
   }
 
   const sourceSlide: SearchSlide = {

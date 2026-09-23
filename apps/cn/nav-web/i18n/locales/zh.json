@@ -466,7 +466,16 @@
       "latestInfo": "最新情报",
       "plannedReleaseOrder": "预计发售优先",
       "comment": "评论",
-      "jumpPage": "跳转到页"
+      "jumpPage": "跳转到页",
+      "loading": "搜索中…",
+      "unavailable": "搜索暂时不可用，请重试",
+      "retry": "重试",
+      "noResults": "没有找到符合条件的游戏",
+      "noSuggestions": "没有找到相关游戏",
+      "tagsLoading": "正在加载标签…",
+      "tagsUnavailable": "标签加载失败，其他筛选条件仍可使用",
+      "retryTags": "重新加载标签",
+      "noTags": "暂无可用标签"
     },
     "detail": {
       "commentCountSuffix": "条评论",

@@ -13,6 +13,8 @@ const tokenLocations = [
   ['app/assets/styles/primitives/rating.less', ['.gf-rating', 'html.dark .gf-rating'], '--gf-rating-'],
   ['app/assets/styles/pages/games.less', ['.games-page', 'html.dark .games-page'], '--games-'],
   ['app/assets/styles/pages/games-search.less', ['.games-search-page', 'html.dark .games-search-page'], '--games-search-'],
+  // Filter is body-mounted; share only the existing Search token declarations.
+  ['app/assets/styles/pages/games-search.less', ['.games-search-page,.games-search-overlay-scope', 'html.dark .games-search-page,html.dark .games-search-overlay-scope'], '--games-search-'],
   ['app/assets/styles/pages/nav.less', ['.nav-home-page', 'html.dark .nav-home-page'], '--nav-home-'],
   ['app/assets/styles/pages/nav.less', ['.site-group-page', 'html.dark .site-group-page'], '--nav-site-group-'],
   // These states also serve Site Groups outside the Nav Home root.

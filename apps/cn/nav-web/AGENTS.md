@@ -245,6 +245,18 @@ these boundaries through real Home/Search consumers; retain exact abort evidence
 This is runtime repair only. Search failure UI, overlay stacking and appearance
 migration remain separate work; existing CSS, style debt and goldens stay fixed.
 
+P6.3.0a makes mounted Search route readiness independent of request success.
+Results, tags and shared SidebarSearch own separate loading/empty/error/retry
+states; never present stale cards as the current query/page. Keep retries local
+to the failed resource, draft/cancellation guarantees intact and late simple
+responses closed after blur. `games-search-states` covers these boundaries;
+fault diagnostics must match injected request instances and exact quotas.
+The approved short-page Filter repair mounts it on body in
+`.games-search-overlay-scope`, sharing existing Search tokens and same-specificity
+Filter/datepicker rules in `games-search.less`. Keep that exact declaration owner;
+do not exempt the file or change successful appearance. Jump/full focus work and
+Search appearance migration remain follow-ups; existing goldens/debt stay fixed.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

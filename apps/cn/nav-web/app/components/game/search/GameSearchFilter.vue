@@ -152,7 +152,11 @@
         <!-- 标签 -->
         <div>
           <label class="game-search-filter-label">{{ t("common.tag") }}</label>
-          <div class="mt-2 space-y-2">
+          <div v-if="tagsStatus && tagsStatus !== 'success'" class="game-search-tag-state mt-2 flex flex-wrap items-center gap-3" :data-state="tagsStatus" :role="tagsStatus === 'error' ? 'alert' : 'status'">
+            <p>{{ t(tagsStatus === 'error' ? 'game.search.tagsUnavailable' : tagsStatus === 'empty' ? 'game.search.noTags' : 'game.search.tagsLoading') }}</p>
+            <button v-if="tagsStatus === 'error'" type="button" class="gf-button gf-button--surface" @click="emit('retry-tags')">{{ t('game.search.retryTags') }}</button>
+          </div>
+          <div v-else class="mt-2 space-y-2">
             <div v-for="group in categoryGroups" :key="group.id">
               <div class="game-search-filter-group-title">
                 {{ group.name }}
@@ -200,12 +204,14 @@ import { i18n } from '@/main'
 const { t } = i18n.global
 
 const props = defineProps<{
+  tagsStatus?: 'idle' | 'pending' | 'success' | 'empty' | 'error'
   tagGroups: GameTagCategory[]
   query: SearchPageQueryRequest
 }>()
 
 const emit = defineEmits<{
   (e: 'close'): void
+  (e: 'retry-tags'): void
   (e: 'search', query: SearchPageQueryRequest): void
 }>()
 

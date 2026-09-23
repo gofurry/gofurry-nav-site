@@ -789,6 +789,24 @@ change Search's zh CSR/en SSR-shell boundary, mounted API loading, shared Sideba
 debounce, CSS or accepted images. Missing failure feedback and overlay stacking
 remain separately scoped defects, not behavior to freeze as correct.
 
+P6.3.0a resolves Search failure feedback/recovery without changing its API/SSR
+boundary. Route initialization MUST finish independently of tags/results I/O.
+Current results, tag options and shared simple suggestions MUST distinguish
+pending, success, empty and error. A failed page MUST NOT display an older page's
+cards as current results; retry preserves the committed URL/criteria and reloads
+only the failed resource. Tag retry preserves the open Filter draft. Simple
+results/errors belong to the current input and locale; blur, Escape and clear
+MUST NOT be undone by a late response. Expected transport/business failures are
+visible UI states, while unexpected application errors remain test failures.
+Keep captured signal/token cancellation, existing successful card/track/Review
+behavior, debounce and locale lifecycle. The maintainer-approved scope extension
+repairs short-page Filter stacking: body Teleport uses `.games-search-overlay-scope`,
+sharing existing `--games-search-*` declarations with the page in `games-search.less`.
+The overlay scope gets no page canvas. Filter/datepicker selectors retain their
+specificity and declaration values; Style Policy approves only the exact shared
+Light/Dark declaration roots and prefix. Jump and full focus redesign stay outside
+this repair.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

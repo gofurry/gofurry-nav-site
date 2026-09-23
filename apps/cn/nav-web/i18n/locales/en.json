@@ -466,7 +466,16 @@
       "latestInfo": "Latest Info",
       "plannedReleaseOrder": "Planned Release First",
       "comment": "Comment",
-      "jumpPage": "Jump To Page"
+      "jumpPage": "Jump To Page",
+      "loading": "Searching…",
+      "unavailable": "Search is temporarily unavailable. Please retry.",
+      "retry": "Retry",
+      "noResults": "No games match your filters",
+      "noSuggestions": "No matching games found",
+      "tagsLoading": "Loading tags…",
+      "tagsUnavailable": "Tags could not be loaded. Other filters are still available.",
+      "retryTags": "Reload tags",
+      "noTags": "No tags available"
     },
     "detail": {
       "commentCountSuffix": "comments",

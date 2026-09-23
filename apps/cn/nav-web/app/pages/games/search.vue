@@ -28,17 +28,24 @@
             :total-pages="totalPages"
             :total="total"
             :loading="isSearching"
+            :status="searchStatus"
             @page-change="onPageChange"
+            @retry="retrySearch"
         />
       </section>
 
-      <GameSearchFilter
-          v-if="showFilter"
-          :tag-groups="tagGroups"
-          :query="query"
-          @close="showFilter = false"
-          @search="onSearch"
-      />
+      <Teleport v-if="showFilter" to="body">
+        <div class="games-search-overlay-scope">
+          <GameSearchFilter
+              :tag-groups="tagGroups"
+              :tags-status="tagsStatus"
+              :query="query"
+              @close="showFilter = false"
+              @search="onSearch"
+              @retry-tags="retryTags"
+          />
+        </div>
+      </Teleport>
     </div>
   </div>
 </template>
@@ -58,6 +65,7 @@ import type {
 } from '@/types/game'
 import { useThemeStore } from '@/stores/theme'
 import { i18n } from '@/main'
+import { ApiError } from '@/types/api'
 
 const { t } = i18n.global
 const { locale } = useI18n()
@@ -103,6 +111,8 @@ const gameList = ref<SearchPageResponseItem[]>([])
 const total = ref(0)
 const totalPages = ref(1)
 const isSearching = ref(false)
+const searchStatus = ref<'idle' | 'pending' | 'success' | 'empty' | 'error'>('idle')
+const tagsStatus = ref<'idle' | 'pending' | 'success' | 'empty' | 'error'>('idle')
 const pageDirection = ref<1 | -1>(1)
 
 const createDefaultQuery = (): SearchPageQueryRequest => ({
@@ -275,6 +285,7 @@ const loadTags = async () => {
   const controller = new AbortController()
   const currentToken = ++tagRequestToken
   tagRequestController = controller
+  tagsStatus.value = 'pending'
 
   try {
     const result = await getTagCategories(lang.value, { signal: controller.signal })
@@ -282,8 +293,13 @@ const loadTags = async () => {
       return
     }
     tagGroups.value = result
+    tagsStatus.value = result.length ? 'success' : 'empty'
   } catch (error) {
-    if (controller.signal.aborted) {
+    if (controller.signal.aborted || currentToken !== tagRequestToken) {
+      return
+    }
+    if (error instanceof ApiError || (error instanceof Error && error.name === 'FetchError')) {
+      tagsStatus.value = 'error'
       return
     }
     throw error
@@ -297,6 +313,7 @@ const fetchData = async () => {
   const pageSize = query.pageSize
   searchRequestController = controller
   isSearching.value = true
+  searchStatus.value = 'pending'
 
   try {
     const res = await searchGameAdvanced(query, lang.value, { signal: controller.signal })
@@ -310,8 +327,13 @@ const fetchData = async () => {
         1,
         Math.ceil(total.value / pageSize)
     )
+    searchStatus.value = res.list.length ? 'success' : 'empty'
   } catch (error) {
-    if (controller.signal.aborted) {
+    if (controller.signal.aborted || currentToken !== searchRequestToken) {
+      return
+    }
+    if (error instanceof ApiError || (error instanceof Error && error.name === 'FetchError')) {
+      searchStatus.value = 'error'
       return
     }
     throw error
@@ -320,6 +342,14 @@ const fetchData = async () => {
       isSearching.value = false
     }
   }
+}
+
+const retrySearch = () => {
+  if (!isSearching.value) return fetchData()
+}
+
+const retryTags = () => {
+  if (tagsStatus.value !== 'pending') return loadTags()
 }
 
 const syncRouteWithQuery = async () => {
@@ -377,8 +407,9 @@ watch(
 onMounted(async () => {
   themeStore.initTheme()
   applyRouteQuery(route.query)
-  await Promise.all([loadTags(), fetchData()])
+  // Route readiness must not depend on either remote resource succeeding.
   initialized.value = true
+  await Promise.all([loadTags(), fetchData()])
 })
 
 onBeforeUnmount(() => {

@@ -2099,7 +2099,8 @@ html.dark .games-page .search-shell .game-sidebar-search-input:focus {
     inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.games-page .search-shell .search-results-panel {
+.games-page .search-shell .search-results-panel,
+.games-page .search-shell .search-status-panel {
   pointer-events: auto;
   position: absolute;
   z-index: 50;
@@ -2116,7 +2117,8 @@ html.dark .games-page .search-shell .game-sidebar-search-input:focus {
   backdrop-filter: blur(8px);
 }
 
-html.dark .games-page .search-shell .search-results-panel {
+html.dark .games-page .search-shell .search-results-panel,
+html.dark .games-page .search-shell .search-status-panel {
   background: rgba(15, 23, 42, 0.96);
 }
 
@@ -2129,6 +2131,10 @@ html.dark .games-page .search-shell .search-results-panel {
   background: rgba(255, 255, 255, 0.26);
   padding: 0.42rem;
   transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.games-page .search-shell .search-status-content {
+  color: var(--games-text-muted);
 }
 
 .games-page .search-shell .search-result-card:hover {
