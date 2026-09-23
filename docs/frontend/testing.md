@@ -74,7 +74,8 @@ after each case. Pure probes use injected measurements/fetch responses, never
 real CDN or backend endpoints.
 
 happy-dom does not prove browser rendering, SSR/hydration or actual image loading.
-Keep `game:tags:smoke` and other non-migrated smoke commands.
+Keep other non-migrated smoke commands. P6.3.1 retires `game:tags:smoke` after
+moving its four cases into the Search Browser contract.
 Unrelated screenshots and `visual:guard` remain; this phase does not introduce
 visual baselines or external acceptance runs.
 
@@ -842,7 +843,7 @@ URL/error allowance or deduplication change.
 Late metadata must preserve the new Filter draft and committed tag selection.
 Search's initial category/result reads are mounted-only, while Home is SSR;
 browser and server use UTC. Date assertions distinguish real picker display from
-the unchanged API serialization. Keep `game:tags:smoke` as an independent legacy
+the unchanged API serialization. P6.3.0 retained `game:tags:smoke` as a legacy
 check. Its maintainer-approved readiness correction waits for the exact selected-tag
 POST response; SPA `networkidle` could pass before that request, including on the
 unmodified baseline. All four legacy scenarios and original assertions remain.
@@ -858,8 +859,8 @@ unchanged. GET transport retries are explicitly scripted and counted.
 Each injected HTTP failure is assigned to an exact Request and checked against
 its received status. Raw Chromium diagnostics are retained with exact URL/text
 quotas tied to those responses; cancellation has its separate Request set.
-Unexpected exceptions, extra failures and hydration errors still fail. Keep the
-legacy four-case tag smoke and all existing Visual snapshots unchanged. Four
+Unexpected exceptions, extra failures and hydration errors still fail. P6.3.0a
+retained the four-case tag smoke and all existing Visual snapshots. Four
 additional desktop/mobile × Light/Dark cases cover the approved short-page Filter
 repair: real error/empty pages, Footer backdrop/panel hit tests, tag selection and
 Apply/Cancel through the body-mounted Filter. No force-clicks or new goldens.
@@ -867,6 +868,52 @@ This raises Functional Browser to 126 while Visual remains 73 (72 PNGs). Jump
 and the complete focus system are not accepted by these tests.
 
 ## Verification
+
+### Search interaction and visual closure (P6.3.1)
+
+`games-search-interactions.spec.ts` adds eleven cases for Filter focus/scroll
+isolation, calendar selection/clear and Escape priority, narrow controls, Jump
+integer/locale/boundary validation and genuine history-unmount cleanup.
+`games-search-contract.spec.ts` adds ten cases: four former tag-domain smoke
+scenarios (390/1440 × zh/en), initial CSR/SSR-shell/noindex, paging/resizing,
+shared Home/Search simple-result navigation and Search Review/Steam consumers.
+The former runner and alias are retired after equivalent coverage and a final
+four-case pass. References above describe their earlier P6.3.0/0a ownership.
+The original eight lifecycle and twelve failure/short-page cases remain intact.
+
+All reuse `fixtures/games-search.ts`: production Nitro/local API is worker-owned;
+requests, gates, fault quotas, exact Detail/Steam navigation permissions and
+diagnostics are scenario-owned. The optional single-category fixture and fixed
+date do not change older tests' defaults. Fixed-date diagnostics use that same
+clock, avoiding cache invalidation by a future timestamp. No external CDN or
+Steam network is permitted; successful scenarios have zero browser errors.
+
+`visual/games-search.spec.ts` adds fourteen local-surface goldens: results and
+Filter in Light/Dark × Desktop/Mobile; Jump in Light/Dark Desktop; and shared
+simple dropdowns on Home/Search in Light/Dark Desktop. Use real UI actions,
+target-scoped readiness and geometry clips. The layout owns the transparent
+Search canvas; native control conversion retains measured typography. Computed
+assertions supplement screenshots, including the distinct Sidebar cascades.
+
+Only these fourteen initial snapshots may be created in the existing pinned
+Linux/Node24 environment, after its own clean install/build:
+
+```sh
+npm run test:visual:update -- missing games-search.spec.ts
+npm run test:visual
+npm run test:visual
+```
+
+Playwright's `missing` mode writes absent images but reports their first creation
+as missing-snapshot failures. Confirm that these are the only failures, then run
+the ordinary comparisons above; do not rerun an update to hide a pixel difference.
+
+Acceptance: 147 Functional / 87 Visual / 86 PNG, with all earlier 72 image hashes
+unchanged and style debt unchanged. Initial golden creation is limited to this
+spec, never an update of existing baselines. Stop for maintainer review of the
+fourteen new images before P6.3.2; the Search appearance migration is not included.
+
+### Full verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
 types/config before either test project runs. Verification must not rely on a

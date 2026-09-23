@@ -1,9 +1,11 @@
 <template>
-  <div class="gf-pagination game-search-pagination flex items-center justify-center gap-2 select-none">
+  <div ref="pagination" class="gf-pagination game-search-pagination flex items-center justify-center gap-2 select-none">
 
     <!-- 页码 -->
     <div class="game-search-pagination-pages">
-      <span
+      <button type="button"
+          :aria-current="item.type === 'page' && item.page === currentPage ? 'page' : undefined"
+          :aria-label="item.type === 'ellipsis' ? t('game.search.jumpPage') : undefined"
           v-for="(item, idx) in displayPages"
           :key="item.type === 'page' ? `page-${item.page}` : `ellipsis-${idx}`"
           class="gf-pagination__button game-search-page-button"
@@ -13,7 +15,7 @@
           @click="item.type === 'page' ? changePage(item.page!) : openJump()"
       >
         {{ item.type === 'page' ? item.page : '...' }}
-      </span>
+      </button>
     </div>
 
     <span class="gf-pagination__total game-search-pagination-total ml-2">
@@ -21,16 +23,23 @@
     </span>
 
     <!-- 跳页 -->
+    <Teleport v-if="showJump" to="body">
+      <div class="games-search-overlay-scope">
     <div
-        v-if="showJump"
         class="game-search-jump-overlay fixed inset-0 z-50
              flex items-center justify-center"
     >
-      <div class="game-search-jump-dialog w-64 space-y-3 p-4">
-        <div class="game-search-jump-title text-sm font-semibold">{{ t("game.search.jumpPage") }}</div>
+      <div ref="panel" role="dialog" aria-modal="true" :aria-labelledby="`${id}-title`" tabindex="-1" class="game-search-jump-dialog w-64 space-y-3 p-4">
+        <div :id="`${id}-title`" class="game-search-jump-title text-sm font-semibold">{{ t("game.search.jumpPage") }}</div>
 
         <input
-            v-model.number="jumpPage"
+            ref="jumpInput"
+            v-model="jumpPage"
+            inputmode="numeric"
+            :aria-label="t('game.search.jumpPage')"
+            :aria-invalid="invalid || undefined"
+            @input="clearValidity"
+            @keydown.enter.prevent="confirmJump"
             :min="1"
             :max="totalPages"
             class="game-search-jump-input w-full px-2 py-1 text-sm focus:outline-none"
@@ -50,13 +59,16 @@
         </div>
       </div>
     </div>
+      </div>
+    </Teleport>
 
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, useId } from 'vue'
 import { i18n } from '@/main'
+import { useGameSearchDialog } from '@/composables/useGameSearchDialog'
 
 const { t } = i18n.global
 const props = defineProps<{
@@ -100,16 +112,36 @@ const changePage = (page: number) => {
 
 // 跳页
 const showJump = ref(false)
-const jumpPage = ref(props.currentPage)
-
-watch(() => props.currentPage, v => (jumpPage.value = v))
-
-const openJump = () => (showJump.value = true)
-
+const jumpPage = ref(String(props.currentPage))
+const invalid = ref(false)
+const id = useId()
+const pagination = ref<HTMLElement | null>(null)
+const panel = ref<HTMLElement | null>(null)
+const jumpInput = ref<HTMLInputElement | null>(null)
+useGameSearchDialog(panel, {
+  initialFocus: () => jumpInput.value,
+  fallbackFocus: () => pagination.value?.querySelector<HTMLElement>('[aria-current="page"]') ?? null,
+  dismiss: () => { showJump.value = false },
+})
+const clearValidity = () => {
+  invalid.value = false
+  jumpInput.value?.setCustomValidity('')
+}
+const openJump = () => {
+  jumpPage.value = String(props.currentPage)
+  invalid.value = false
+  showJump.value = true
+}
 const confirmJump = () => {
-  if (jumpPage.value >= 1 && jumpPage.value <= props.totalPages) {
-    emit('page-change', jumpPage.value)
-    showJump.value = false
+  const input = String(jumpPage.value).trim()
+  const page = Number(input)
+  if (!/^\d+$/.test(input) || !Number.isSafeInteger(page) || page < 1 || page > props.totalPages) {
+    invalid.value = true
+    jumpInput.value?.setCustomValidity(t('game.search.invalidPage', { max: props.totalPages }))
+    jumpInput.value?.reportValidity()
+    return
   }
+  changePage(page)
+  showJump.value = false
 }
 </script>

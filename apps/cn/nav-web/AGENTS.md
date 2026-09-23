@@ -257,6 +257,15 @@ Filter/datepicker rules in `games-search.less`. Keep that exact declaration owne
 do not exempt the file or change successful appearance. Jump/full focus work and
 Search appearance migration remain follow-ups; existing goldens/debt stay fixed.
 
+P6.3.1 completes Search-only Filter/Jump keyboard, focus, scroll and integer-page
+contracts. Reuse `useGameSearchDialog` only within this boundary and keep the
+existing body overlay token owner. Preserve date-menu Escape priority and native
+button computed typography. Search interaction/consumer and four former tag-smoke
+cases now belong to the existing Browser runner; fourteen Search/SidebarSearch
+visuals await maintainer review before P6.3.2 appearance migration. Keep the earlier
+draft/failure regressions and accepted snapshots; do not expand into Review,
+Detail or Lottery or revive the retired `game:tags:smoke` runner.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

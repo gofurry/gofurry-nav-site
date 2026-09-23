@@ -807,6 +807,22 @@ specificity and declaration values; Style Policy approves only the exact shared
 Light/Dark declaration roots and prefix. Jump and full focus redesign stay outside
 this repair.
 
+P6.3.1 completes Search dialog interaction before appearance migration. Filter
+and Jump share the existing body-owned Search overlay scope and a Search-only
+focus/scroll lifecycle. Keyboard navigation stays within the dialog; Cancel,
+Escape and unmount restore background interaction. Datepicker Escape consumes
+only its menu before Filter can close. Jump accepts only safe integer pages in
+range, preserves locale/route-replace semantics and never requests an invalid
+or unchanged page. Preserve the previous computed typography when replacing
+clickable spans/divs with native buttons. Search's root remains transparent under
+the layout-owned canvas; SidebarSearch's Home and Search cascades are distinct.
+The shared Search fixture owns interaction/consumer/legacy-tag regressions and
+fourteen Light/Dark local-surface visual contracts. Earlier lifecycle/failure
+assertions and all pre-existing snapshots remain authoritative. Tag smoke's four
+locale/viewport cases move into the Browser gate; no separate legacy runner is
+needed. New Search snapshots require maintainer review before P6.3.2; this work
+does not authorize style-debt migration or changes to Review/Detail/Lottery.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

@@ -318,6 +318,8 @@ html.dark .games-search-page .search-page-steam-icon {
 }
 
 .games-search-page .game-search-page-button {
+  // Native buttons retain the original span's computed line height.
+  line-height: 1.5;
   position: relative;
   min-width: 2rem;
   border: 1px solid transparent;
@@ -381,12 +383,12 @@ html.dark .games-search-page .search-page-steam-icon {
   font-size: 0.75rem;
 }
 
-.games-search-page .game-search-jump-overlay,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-overlay,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-overlay {
   background: var(--games-search-overlay);
 }
 
-.games-search-page .game-search-jump-dialog {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-dialog {
   border: 1px solid var(--games-search-border);
   border-radius: 0.65rem;
   background: var(--games-search-surface-strong);
@@ -394,11 +396,11 @@ html.dark .games-search-page .search-page-steam-icon {
   box-shadow: var(--games-search-shadow-popover);
 }
 
-.games-search-page .game-search-jump-title {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-title {
   color: var(--games-search-text-title);
 }
 
-.games-search-page .game-search-jump-input,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-input,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-input {
   border: 1px solid transparent;
   background: var(--games-search-input-bg);
@@ -406,14 +408,14 @@ html.dark .games-search-page .search-page-steam-icon {
   box-shadow: none;
 }
 
-.games-search-page .game-search-jump-input:focus,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-input:focus,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-input:focus {
   border-color: var(--games-search-border-hover);
   outline: none;
   box-shadow: none;
 }
 
-.games-search-page .game-search-jump-action,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-action,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-action {
   cursor: pointer;
   border-radius: 0.65rem;
@@ -422,24 +424,24 @@ html.dark .games-search-page .search-page-steam-icon {
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
 }
 
-.games-search-page .game-search-jump-action--ghost,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-action--ghost,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-action--ghost {
   color: var(--games-search-text-muted);
 }
 
-.games-search-page .game-search-jump-action--ghost:hover,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-action--ghost:hover,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-action--ghost:hover {
   background: var(--games-search-surface-hover);
   color: var(--games-search-text-title);
 }
 
-.games-search-page .game-search-jump-action--primary,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-action--primary,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-action--primary {
   background: var(--games-search-accent-fill);
   color: var(--games-search-accent-text);
 }
 
-.games-search-page .game-search-jump-action--primary:hover,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-action--primary:hover,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-action--primary:hover {
   background: var(--games-search-accent-fill-hover);
   color: var(--games-search-accent-text);
@@ -722,4 +724,17 @@ html.dark :is(.games-search-page, .games-search-overlay-scope) .game-date-picker
   :is(.games-search-page, .games-search-overlay-scope) .game-search-date-range {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+// Native keyboard controls retain the existing span/div typography and geometry.
+:is(.games-search-page, .games-search-overlay-scope) {
+  .game-search-filter-action,
+  .game-search-filter-chip,
+  .game-search-filter-expand { line-height: 1.5; }
+
+  .game-search-page-button:focus-visible,
+  .game-search-filter-action:focus-visible,
+  .game-search-filter-chip:focus-visible,
+  .game-search-filter-expand:focus-visible,
+  .game-search-jump-action:focus-visible { .gf-focus-ring(); }
 }
