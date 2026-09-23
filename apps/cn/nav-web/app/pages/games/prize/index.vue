@@ -22,22 +22,29 @@
             <div class="lottery-summary__label text-[11px] uppercase tracking-[0.18em]">
               {{ t('game.lottery.home.activePool') }}
             </div>
-            <div class="lottery-summary__value mt-2 text-3xl font-semibold">{{ activeList.length }}</div>
+            <div class="lottery-summary__value mt-2 text-3xl font-semibold">{{ status === 'ready' ? activeList.length : '—' }}</div>
           </div>
           <div class="lottery-summary__item p-4">
             <div class="lottery-summary__label text-[11px] uppercase tracking-[0.18em]">
               {{ t('game.lottery.home.winnerAnnouncement') }}
             </div>
-            <div class="lottery-summary__value mt-2 text-3xl font-semibold">{{ prizeCount }}</div>
+            <div class="lottery-summary__value mt-2 text-3xl font-semibold">{{ status === 'ready' ? prizeCount : '—' }}</div>
           </div>
         </div>
       </header>
 
-      <div v-if="loading" class="lottery-page__loading flex flex-1 items-center text-sm">
+      <div v-if="loading" role="status" class="lottery-page__loading flex flex-1 items-center text-sm">
         {{ t('common.loading') }}
       </div>
 
-      <div v-else class="space-y-16 pb-16">
+      <div v-if="loadError" role="alert" class="lottery-empty flex flex-col items-start gap-4 px-5 py-8">
+        <p>{{ t('game.lottery.home.unavailable') }}</p>
+        <button type="button" class="lottery-retry gf-button gf-button--surface" :disabled="loading" @click="loadLottery">
+          {{ t('game.lottery.home.retry') }}
+        </button>
+      </div>
+
+      <div v-if="status === 'ready'" class="space-y-16 pb-16">
         <section class="lottery-section">
           <div class="mb-5 flex items-end justify-between gap-4">
             <h2 class="lottery-section__title text-sm font-medium uppercase tracking-[0.22em]">
@@ -178,7 +185,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 import { getLottery } from "@/utils/api/game"
 import { i18n } from '@/main'
 import LotteryJoinModal from "@/components/game/lottery/LotteryJoinModal.vue"
@@ -210,7 +217,11 @@ useSeoMeta({
   robots: 'noindex, follow',
 })
 
-const loading = ref(true)
+const status = ref<'loading' | 'ready' | 'error'>('loading')
+const loading = computed(() => status.value === 'loading')
+const loadError = ref(false)
+let controller: AbortController | null = null
+let disposed = false
 const activeList = ref<LotteryActiveModel[]>([])
 const historyList = ref<HistoryPrizeModel[]>([])
 const prizeCount = ref(0)
@@ -223,15 +234,34 @@ function openLottery(item: LotteryActiveModel) {
   showModal.value = true
 }
 
-onMounted(async () => {
+async function loadLottery() {
+  if (controller || disposed) return
+  const request = new AbortController()
+  controller = request
+  status.value = 'loading'
   try {
-    const res = await getLottery()
+    const res = await getLottery({ signal: request.signal })
+    if (disposed || request.signal.aborted || controller !== request) return
+    const history = res.history.prize || []
+    const count = res.history.prize_count
     activeList.value = res.active || []
-    historyList.value = res.history.prize || []
-    prizeCount.value = res.history.prize_count
+    historyList.value = history
+    prizeCount.value = count
+    loadError.value = false
+    status.value = 'ready'
+  } catch {
+    if (disposed || request.signal.aborted || controller !== request) return
+    loadError.value = true
+    status.value = 'error'
   } finally {
-    loading.value = false
+    if (controller === request) controller = null
   }
+}
+
+onMounted(loadLottery)
+onBeforeUnmount(() => {
+  disposed = true
+  controller?.abort()
 })
 
 function formatDate(time: string) {

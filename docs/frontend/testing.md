@@ -913,6 +913,35 @@ unchanged and style debt unchanged. Initial golden creation is limited to this
 spec, never an update of existing baselines. Stop for maintainer review of the
 fourteen new images before P6.3.2; the Search appearance migration is not included.
 
+### Lottery runtime and initial visuals (P6.4.1)
+
+`fixtures/lottery.ts` shares production Nitro/local upstream across a worker;
+each test owns data, gates, submissions and failure accounting. Prize/Activation
+are deliberately CSR/noindex. A normal mounted GET has one browser and one
+upstream request. HTTP 503 preserves existing browser/proxy retry behavior
+(two browser requests, four upstream reads); exact response identities and raw
+diagnostic quotas bound that exception. Cancellations have their own Request set.
+Participation POSTs are intercepted only at the exact endpoint with checked
+body fields, never sent to real infrastructure. Teardown releases every gate.
+
+The fourteen regression cases cover zh/en data/computed semantics, valid empty,
+business/HTTP recovery, unmount cancellation, Desktop/Mobile dialog lifecycle,
+trim/validation/pending/rejection/network/success, late responses after Close,
+and locale-safe manual/automatic Activation return. Ordinary scenes fix wall
+time while leaving timers live. Activation pauses Playwright Clock before
+navigation; runtime tests advance the real countdown, then resume asynchronous
+Nuxt routing after the deadline. The twelve visuals cover Prize and Join in
+Light/Dark × Desktop/Mobile, success Activation on Desktop and failure on Mobile.
+They retain the real canvas, inherited form typography and 12px backdrop blur.
+
+Only the twelve missing `visual/lottery.spec.ts` PNGs may be generated in the
+existing pinned Linux/Node24 environment, after its own install/build and the
+baseline guard. Run the targeted spec with `--update-snapshots=missing`; initial
+missing-image failures must contain no other failure. Then run the complete
+Visual suite twice without update flags. Expected totals: **161 Browser / 99
+Visual / 98 PNG**, with the previous 86 hashes and style debt unchanged. Stop
+for maintainer review of the twelve new images; no appearance migration yet.
+
 ### Full verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`

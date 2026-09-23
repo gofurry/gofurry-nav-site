@@ -63,8 +63,8 @@ export function commitComment(
     })
 }
 
-export function getLottery(): Promise<LotteryResp> {
-    return useApi('gameV2')('/game/prizes')
+export function getLottery(options: { signal?: AbortSignal } = {}): Promise<LotteryResp> {
+    return useApi('gameV2')('/game/prizes', options)
 }
 
 export function getLotteryParticipation(

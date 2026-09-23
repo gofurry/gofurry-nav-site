@@ -32,11 +32,6 @@
       "count": 1
     }
   },
-  "app/components/game/lottery/LotteryJoinModal.vue": {
-    "@typescript-eslint/no-unused-vars": {
-      "count": 1
-    }
-  },
   "app/components/game/main/content/CountTablePanel.vue": {
     "vue/require-default-prop": {
       "count": 1

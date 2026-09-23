@@ -274,6 +274,15 @@ Dark shared rules, inherited 16px/24px input typography and runtime-only SFC
 geometry. Do not remove Search's legacy `games-page` bridge before P6.6 or expand
 this completion into Lottery/Detail. All 86 accepted PNGs remain frozen.
 
+P6.4.1 gives Lottery fourteen runtime cases and twelve initial visual contracts.
+Prize/Activation remain CSR and noindex: distinguish unavailable from empty,
+cancel the mounted GET on exit, and keep participation POSTs explicit and isolated.
+The body-mounted Lottery dialog owns its local focus/inert/scroll lifecycle;
+activation preserves locale and the existing 15-second return. Tests use only
+loopback reads and exact local POST responses, never real participation or email.
+Keep Lottery appearance/debt unchanged until these new goldens are reviewed;
+P6.4.1 does not authorize P6.4.2 token migration.
+
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
 `test:visual:update` in the pinned environment. CI only compares. Review package,

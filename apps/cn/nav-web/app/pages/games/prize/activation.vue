@@ -37,7 +37,7 @@
 
       <div class="mt-7 flex flex-wrap gap-3">
         <RouterLink
-          to="/games/prize"
+          :to="prizePath"
           class="activation-card__link inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition"
         >
           {{ t('game.lottery.activation.returnNow') }}
@@ -55,6 +55,8 @@ const { t } = i18n.global
 
 const route = useRoute()
 const router = useRouter()
+const localePath = useLocalePath()
+const prizePath = computed(() => localePath('/games/prize'))
 
 useHead({
   meta: [
@@ -81,7 +83,7 @@ onMounted(() => {
   timer = window.setInterval(() => {
     countdown.value -= 1
     if (countdown.value <= 0) {
-      router.push('/games/prize')
+      router.push(prizePath.value)
     }
   }, 1000)
 })

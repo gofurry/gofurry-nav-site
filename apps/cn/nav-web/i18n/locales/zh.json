@@ -552,6 +552,8 @@
         "title": "兽游喜加一",
         "activePool": "活跃奖池",
         "noActiveLottery": "当前暂无活跃抽奖",
+        "unavailable": "抽奖信息暂时无法加载，请稍后重试。",
+        "retry": "重试",
         "clickToJoin": "点击参与",
         "prize": "奖品",
         "prizeQuantity": "奖品数量",

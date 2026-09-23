@@ -552,6 +552,8 @@
         "title": "gofurry Lottery",
         "activePool": "Active Pools",
         "noActiveLottery": "No active lotteries currently",
+        "unavailable": "Lottery information is temporarily unavailable. Please try again.",
+        "retry": "Retry",
         "clickToJoin": "Click to Join",
         "prize": "Prize",
         "prizeQuantity": "Quantity",

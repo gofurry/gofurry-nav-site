@@ -1,14 +1,21 @@
 <template>
+  <Teleport to="body">
   <div
-      class="lottery-modal fixed inset-0 z-50 flex items-center justify-center px-4 py-6 backdrop-blur-md"
+      class="lottery-modal fixed inset-0 z-[120] flex items-center justify-center px-4 py-6 backdrop-blur-md"
   >
     <div
+        ref="panel"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="titleId"
+        :aria-busy="loading"
+        tabindex="-1"
         class="lottery-modal__dialog relative max-h-[calc(100vh-3rem)] w-full max-w-2xl overflow-y-auto rounded-xl p-5 backdrop-blur-xl sm:p-6"
     >
       <div class="lottery-modal__top-line absolute inset-x-6 top-0 h-px" aria-hidden="true" />
 
       <div class="mb-4 flex items-start justify-between gap-4">
-        <h3 class="lottery-modal__title text-xl font-semibold leading-7">
+        <h3 :id="titleId" class="lottery-modal__title text-xl font-semibold leading-7">
           {{ lottery.lottery.title }}
         </h3>
         <button
@@ -96,19 +103,23 @@
 
       <div class="space-y-3">
         <input
+            ref="keyField"
             v-model="keyInput"
+            :aria-label="t('game.lottery.submitModal.enterLotteryKey')"
             :placeholder="t('game.lottery.submitModal.enterLotteryKey')"
             class="lottery-modal__input w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
         />
 
         <input
             v-model="nameInput"
+            :aria-label="t('game.lottery.submitModal.enterName')"
             :placeholder="t('game.lottery.submitModal.enterName')"
             class="lottery-modal__input w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
         />
 
         <input
             v-model="emailInput"
+            :aria-label="t('game.lottery.submitModal.enterEmail')"
             :placeholder="t('game.lottery.submitModal.enterEmail')"
             class="lottery-modal__input w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
         />
@@ -144,10 +155,11 @@
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue"
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from "vue"
 import { getLotteryParticipation } from "@/utils/api/game"
 import type { LotteryActiveModel } from "@/types/game"
 import { i18n } from '@/main'
@@ -159,6 +171,67 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits(["close"])
+const titleId = useId()
+const panel = ref<HTMLElement | null>(null)
+const keyField = ref<HTMLInputElement | null>(null)
+let disposed = false
+let cleanupDialog: (() => void) | undefined
+
+// Lottery owns this body-mounted dialog lifecycle; Search/Review remain independent.
+onMounted(async () => {
+  const element = panel.value
+  if (!element) return
+  const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  const root = document.querySelector<HTMLElement>('#__nuxt')
+  const wasInert = root?.inert ?? false
+  const html = document.documentElement
+  const overflow = html.style.overflow
+  const gutter = html.style.scrollbarGutter
+  const scroll = { left: window.scrollX, top: window.scrollY }
+  html.style.scrollbarGutter = 'stable'
+  html.style.overflow = 'hidden'
+  const focusable = () => [...element.querySelectorAll<HTMLElement>('button, input, [tabindex]')]
+    .filter(node => node.tabIndex >= 0 && !node.matches(':disabled') && node.getClientRects().length
+      && getComputedStyle(node).visibility !== 'hidden' && !node.closest('[inert]'))
+  const focusInside = () => (keyField.value ?? focusable()[0] ?? element).focus({ preventScroll: true })
+  const onKey = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault(); event.stopImmediatePropagation(); emit('close')
+    } else if (event.key === 'Tab') {
+      const nodes = focusable(), first = nodes[0], last = nodes.at(-1)
+      if (!first || !last) { event.preventDefault(); element.focus(); return }
+      if (event.shiftKey && (document.activeElement === first || !element.contains(document.activeElement))) {
+        event.preventDefault(); last.focus()
+      } else if (!event.shiftKey && (document.activeElement === last || !element.contains(document.activeElement))) {
+        event.preventDefault(); first.focus()
+      }
+    }
+  }
+  const onFocus = (event: FocusEvent) => {
+    if (!element.contains(event.target as Node)) focusInside()
+  }
+  cleanupDialog = () => {
+    document.removeEventListener('keydown', onKey, true)
+    document.removeEventListener('focusin', onFocus)
+    if (root) root.inert = wasInert
+    html.style.overflow = overflow; html.style.scrollbarGutter = gutter
+    window.scrollTo({ ...scroll, behavior: 'instant' })
+    void nextTick(() => {
+      if (trigger?.isConnected && !trigger.closest('[inert]')) trigger.focus({ preventScroll: true })
+    })
+  }
+  await nextTick()
+  if (disposed) return
+  focusInside()
+  if (root) root.inert = true
+  document.addEventListener('keydown', onKey, true)
+  document.addEventListener('focusin', onFocus)
+})
+
+onBeforeUnmount(() => {
+  disposed = true
+  cleanupDialog?.()
+})
 
 const visibleCount = ref(5)
 const loading = ref(false)
@@ -192,16 +265,24 @@ function validateEmail(email: string) {
 }
 
 async function submit() {
+  if (loading.value) return
   submitError.value = ""
   emailError.value = ""
   successMsg.value = ""
 
-  if (!keyInput.value || !nameInput.value || !emailInput.value) {
+  const req = {
+    id: Number(props.lottery.lottery.id),
+    name: nameInput.value.trim(),
+    email: emailInput.value.trim(),
+    key: keyInput.value.trim()
+  }
+
+  if (!req.key || !req.name || !req.email) {
     submitError.value = t('game.lottery.submitModal.fillAllInfo')
     return
   }
 
-  if (!validateEmail(emailInput.value)) {
+  if (!validateEmail(req.email)) {
     emailError.value = t('game.lottery.submitModal.invalidEmail')
     return
   }
@@ -209,14 +290,8 @@ async function submit() {
   try {
     loading.value = true
 
-    const req = {
-      id: Number(props.lottery.lottery.id),
-      name: nameInput.value.trim(),
-      email: emailInput.value.trim(),
-      key: keyInput.value.trim()
-    }
-
     const res = await getLotteryParticipation(req)
+    if (disposed) return
 
     // 根据 code 判断
     if (res.code === 1) {
@@ -231,8 +306,8 @@ async function submit() {
       submitError.value = res.data || t('game.lottery.submitModal.submitFail')
     }
 
-  } catch (e) {
-    submitError.value = t('game.lottery.submitModal.networkError')
+  } catch {
+    if (!disposed) submitError.value = t('game.lottery.submitModal.networkError')
   } finally {
     loading.value = false
   }

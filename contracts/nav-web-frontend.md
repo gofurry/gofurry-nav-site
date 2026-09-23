@@ -836,6 +836,25 @@ tokens expand. All 147 Browser / 87 Visual contracts and 86 PNGs remain unchange
 The remaining Games raw debt belongs to Detail/BlurWrapper and the legacy root;
 P6.3 completion does not authorize Lottery, Detail or P6.6 root removal.
 
+### Lottery runtime boundary (P6.4.1)
+
+Lottery Prize and Activation remain CSR/noindex surfaces. The mounted Prize GET
+MUST distinguish loading, ready-empty and unavailable data; Retry is local,
+single-flight and canceled on unmount. The live request owner is
+`app/utils/api/game.ts`, not the unused duplicate in `app/services/game.ts`.
+The local body-mounted Lottery dialog owns focus trapping/restoration, background
+inertness and scroll cleanup. Validate a trimmed input snapshot before POST;
+pending Close/Cancel remains available, and late responses cannot affect a new
+instance. Successful submission clears fields and reports the activation email,
+without inventing a member or refreshing Prize data. Activation's immediate and
+15-second return both preserve locale, with timer cleanup on exit.
+
+`fixtures/lottery.ts` supports fourteen real runtime cases and twelve initial
+Prize/Join/Activation goldens. All participation responses are exact local test
+routes; no real email, backend activation or production access is authorized.
+The existing appearance, style debt and earlier 86 PNGs stay frozen. Stop for
+maintainer review before P6.4.2 appearance migration.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module
