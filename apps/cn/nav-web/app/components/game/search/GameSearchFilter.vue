@@ -31,7 +31,7 @@
             <label :for="`${id}-keyword`" class="game-search-filter-label">{{ t("common.keyword") }}</label>
             <input ref="keywordInput" :id="`${id}-keyword`"
                 v-model="draft.content"
-                class="game-search-filter-input ml-1 mt-1 w-full px-3 py-2 focus:outline-none"
+                class="game-search-filter-input ml-1 mt-1 w-full px-3 py-2"
             />
           </div>
           <div class="grid grid-cols-1 w-[18%]">
@@ -40,7 +40,7 @@
                 :id="`${id}-size`"
                 v-model.number="draft.pageSize"
                 min="1"
-                class="game-search-filter-input mt-1 w-full px-3 py-2 focus:outline-none"
+                class="game-search-filter-input mt-1 w-full px-3 py-2"
             />
           </div>
         </div>

@@ -2067,11 +2067,79 @@ html.dark .games-page .game-detail-media-image {
   color: rgba(255, 255, 255, 0.96);
 }
 
+// SidebarSearch is shared by Home and Search. Keep its existing Dark selector
+// priority: Search's later page rules do not replace these higher-specificity states.
+.games-page {
+  --games-sidebar-search-input-bg: rgba(255, 250, 242, 0.42);
+  --games-sidebar-search-input-focus-bg: rgba(255, 250, 242, 0.60);
+  --games-sidebar-search-input-focus-border: color-mix(in srgb, var(--games-accent-muted) 44%, transparent);
+  --games-sidebar-search-input-focus-shadow: 0 0 0 1px var(--games-focus-ring);
+  --games-sidebar-search-panel-bg: rgba(255, 250, 242, 0.94);
+  --games-sidebar-search-card-bg: rgba(255, 255, 255, 0.26);
+  --games-sidebar-search-card-hover-bg: color-mix(in srgb, var(--games-item-hover-bg) 80%, transparent);
+  --games-sidebar-search-card-hover-border: color-mix(in srgb, var(--games-item-hover-border) 55%, transparent);
+}
+
+html.dark .games-page {
+  --games-sidebar-search-input-bg: rgba(30, 41, 59, 0.64);
+  --games-sidebar-search-input-focus-bg: rgba(30, 41, 59, 0.76);
+  --games-sidebar-search-input-focus-border: rgba(125, 211, 252, 0.46);
+  --games-sidebar-search-input-focus-shadow:
+    0 0 0 2px rgba(125, 211, 252, 0.14),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --games-sidebar-search-panel-bg: rgba(15, 23, 42, 0.96);
+  --games-sidebar-search-card-bg: rgba(30, 41, 59, 0.58);
+  --games-sidebar-search-card-hover-bg: rgba(51, 65, 85, 0.72);
+  --games-sidebar-search-card-hover-border: rgba(203, 213, 225, 0.46);
+}
+
+.games-page .game-sidebar-search-icon {
+  opacity: 0.6;
+}
+
+html.dark .games-page .game-sidebar-search-icon {
+  filter: brightness(0) invert(1);
+}
+
+// Preserve the full former Tailwind transition set, including individual transforms.
+.games-page .search-shell .game-sidebar-search-input,
+.games-page .search-shell .game-sidebar-search-enter-active,
+.games-page .search-shell .game-sidebar-search-leave-active {
+  transition-property:
+    color, background-color, border-color, outline-color, text-decoration-color,
+    fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to,
+    opacity, box-shadow, transform, translate, scale, rotate,
+    filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+}
+
+.games-page .search-shell .game-sidebar-search-enter-active {
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+
+.games-page .search-shell .game-sidebar-search-leave-active {
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+}
+
+.games-page .search-shell .game-sidebar-search-enter-from,
+.games-page .search-shell .game-sidebar-search-leave-to {
+  opacity: 0;
+}
+
+.games-page .search-shell .game-sidebar-search-enter-to,
+.games-page .search-shell .game-sidebar-search-leave-from {
+  opacity: 1;
+}
+
 .games-page .search-shell .game-sidebar-search-input {
   border: 1px solid transparent;
-  background: rgba(255, 250, 242, 0.42);
+  border-radius: var(--gf-radius-sm);
+  background: var(--games-sidebar-search-input-bg);
   color: var(--games-text-main);
   box-shadow: none;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .games-page .search-shell .game-sidebar-search-input::placeholder {
@@ -2079,24 +2147,22 @@ html.dark .games-page .game-detail-media-image {
 }
 
 .games-page .search-shell .game-sidebar-search-input:focus {
-  border-color: color-mix(in srgb, var(--games-accent-muted) 44%, transparent);
-  background: rgba(255, 250, 242, 0.60);
+  border-color: var(--games-sidebar-search-input-focus-border);
+  background: var(--games-sidebar-search-input-focus-bg);
   outline: none;
-  box-shadow: 0 0 0 1px var(--games-focus-ring);
+  box-shadow: var(--games-sidebar-search-input-focus-shadow);
 }
 
 html.dark .games-page .search-shell .game-sidebar-search-input {
   border-color: transparent;
-  background: rgba(30, 41, 59, 0.64);
+  background: var(--games-sidebar-search-input-bg);
   box-shadow: none;
 }
 
 html.dark .games-page .search-shell .game-sidebar-search-input:focus {
-  border-color: rgba(125, 211, 252, 0.46);
-  background: rgba(30, 41, 59, 0.76);
-  box-shadow:
-    0 0 0 2px rgba(125, 211, 252, 0.14),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-color: var(--games-sidebar-search-input-focus-border);
+  background: var(--games-sidebar-search-input-focus-bg);
+  box-shadow: var(--games-sidebar-search-input-focus-shadow);
 }
 
 .games-page .search-shell .search-results-panel,
@@ -2111,7 +2177,7 @@ html.dark .games-page .search-shell .game-sidebar-search-input:focus {
   gap: 0.55rem;
   border: 1px solid color-mix(in srgb, var(--games-item-border) 112%, transparent);
   border-radius: 0.82rem;
-  background: rgba(255, 250, 242, 0.94);
+  background: var(--games-sidebar-search-panel-bg);
   padding: 0.62rem;
   box-shadow: var(--games-shadow-popover);
   backdrop-filter: blur(8px);
@@ -2119,7 +2185,7 @@ html.dark .games-page .search-shell .game-sidebar-search-input:focus {
 
 html.dark .games-page .search-shell .search-results-panel,
 html.dark .games-page .search-shell .search-status-panel {
-  background: rgba(15, 23, 42, 0.96);
+  background: var(--games-sidebar-search-panel-bg);
 }
 
 .games-page .search-shell .search-result-card {
@@ -2128,7 +2194,7 @@ html.dark .games-page .search-shell .search-status-panel {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--games-item-border) 70%, transparent);
   border-radius: 0.68rem;
-  background: rgba(255, 255, 255, 0.26);
+  background: var(--games-sidebar-search-card-bg);
   padding: 0.42rem;
   transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
 }
@@ -2138,17 +2204,17 @@ html.dark .games-page .search-shell .search-status-panel {
 }
 
 .games-page .search-shell .search-result-card:hover {
-  border-color: color-mix(in srgb, var(--games-item-hover-border) 55%, transparent);
-  background: color-mix(in srgb, var(--games-item-hover-bg) 80%, transparent);
+  border-color: var(--games-sidebar-search-card-hover-border);
+  background: var(--games-sidebar-search-card-hover-bg);
 }
 
 html.dark .games-page .search-shell .search-result-card {
-  background: rgba(30, 41, 59, 0.58);
+  background: var(--games-sidebar-search-card-bg);
 }
 
 html.dark .games-page .search-shell .search-result-card:hover {
-  border-color: rgba(203, 213, 225, 0.46);
-  background: rgba(51, 65, 85, 0.72);
+  border-color: var(--games-sidebar-search-card-hover-border);
+  background: var(--games-sidebar-search-card-hover-bg);
 }
 
 .games-page .search-shell .search-result-cover {

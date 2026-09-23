@@ -121,7 +121,7 @@
                       <img
                           src="@/assets/icons/steam.svg"
                           alt="Steam"
-                          class="search-page-steam-icon w-4 h-4 opacity-70 hover:opacity-100 transition"
+                          class="search-page-steam-icon w-4 h-4"
                       />
                     </a>
                   </div>
@@ -454,19 +454,6 @@ onBeforeUnmount(() => {
   will-change: transform;
 }
 
-.search-result-page-track--instant {
-  animation: none;
-  transition: none;
-}
-
-.search-result-page-track--next {
-  animation: search-result-page-next 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.search-result-page-track--prev {
-  animation: search-result-page-prev 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
 .search-result-page-slide {
   width: 100%;
   min-width: 100%;
@@ -479,17 +466,11 @@ onBeforeUnmount(() => {
   grid-template-columns: 1fr;
   gap: 1rem;
   min-width: 0;
-  transition: opacity 180ms ease, filter 180ms ease;
 }
 
 .search-result-page-slide .search-result-grid {
   height: 100%;
   align-content: start;
-}
-
-.search-results--pending:not(.search-results--sliding) .search-result-page-slide .search-result-grid {
-  opacity: 0.72;
-  filter: saturate(0.92);
 }
 
 @container game-search-results (min-width: 42rem) {
@@ -526,7 +507,6 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 0.35rem;
-  font-size: 0.875rem;
 }
 
 .search-page-title-wrap {
@@ -605,15 +585,6 @@ onBeforeUnmount(() => {
 .search-page-skeleton-line,
 .search-page-skeleton-meta {
   overflow: hidden;
-  border-radius: 0.52rem;
-  background: linear-gradient(
-    110deg,
-    color-mix(in srgb, var(--games-search-surface-strong) 70%, transparent) 0%,
-    color-mix(in srgb, var(--games-search-surface-hover) 82%, transparent) 46%,
-    color-mix(in srgb, var(--games-search-surface-strong) 70%, transparent) 100%
-  );
-  background-size: 220% 100%;
-  animation: search-card-skeleton 1.35s ease-in-out infinite;
 }
 
 .search-page-skeleton-title {
@@ -631,33 +602,6 @@ onBeforeUnmount(() => {
   width: 76%;
   height: 0.86rem;
   margin-top: 0.72rem;
-}
-
-@keyframes search-card-skeleton {
-  from {
-    background-position: 120% 0;
-  }
-  to {
-    background-position: -120% 0;
-  }
-}
-
-@keyframes search-result-page-next {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(-100%, 0, 0);
-  }
-}
-
-@keyframes search-result-page-prev {
-  from {
-    transform: translate3d(-100%, 0, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
 }
 
 </style>

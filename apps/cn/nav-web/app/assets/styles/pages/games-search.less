@@ -32,7 +32,15 @@
   --games-search-shadow-popover: 0 12px 30px rgba(91, 62, 28, 0.08);
   --games-search-shadow-dialog: 0 24px 70px rgba(91, 62, 28, 0.14);
 
-  color: var(--games-search-text-muted);
+  // Search body text and the two controls floating over a result cover.
+  --games-search-text-body: var(--games-search-text-muted);
+  --games-search-media-overlay-border: rgba(255, 255, 255, 0.48);
+  // Datepicker adapter semantics; retain the same feedback palette in both themes.
+  --games-search-date-success: #16a34a;
+  --games-search-date-success-disabled: #a3d9b1;
+  --games-search-date-danger: #dc2626;
+
+  color: var(--games-search-text-body);
 }
 
 .games-search-page {
@@ -73,8 +81,10 @@ html.dark .games-search-overlay-scope {
   --games-search-shadow-soft: none;
   --games-search-shadow-popover: 0 14px 34px rgba(0, 0, 0, 0.28);
   --games-search-shadow-dialog: 0 24px 70px rgba(0, 0, 0, 0.38);
+  --games-search-text-body: rgba(226, 232, 240, 0.88);
+  --games-search-media-overlay-border: rgba(255, 255, 255, 0.16);
 
-  color: rgba(226, 232, 240, 0.88);
+  color: var(--games-search-text-body);
 }
 
 .games-search-page .search-filter-button {
@@ -196,7 +206,7 @@ html.dark .games-search-overlay-scope {
   top: 0.5rem;
   max-width: calc(100% - 3.5rem);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  border: 1px solid var(--games-search-media-overlay-border);
   border-radius: 999px;
   background: color-mix(in srgb, var(--games-search-surface-strong) 86%, transparent);
   color: var(--games-search-accent);
@@ -217,7 +227,7 @@ html.dark .games-search-overlay-scope {
 }
 
 html.dark .games-search-page .search-release-badge {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--games-search-media-overlay-border);
 }
 
 .games-search-page .search-page-card:hover .search-release-badge,
@@ -234,7 +244,7 @@ html.dark .games-search-page .search-release-badge {
   width: 2rem;
   height: 2rem;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  border: 1px solid var(--games-search-media-overlay-border);
   border-radius: 999px;
   background: color-mix(in srgb, var(--games-search-surface-strong) 86%, transparent);
   color: var(--games-search-accent);
@@ -254,7 +264,7 @@ html.dark .games-search-page .search-release-badge {
 }
 
 html.dark .games-search-page .search-review-button {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--games-search-media-overlay-border);
 }
 
 .games-search-page .search-page-card:hover .search-review-button,
@@ -398,6 +408,9 @@ html.dark .games-search-page .search-page-steam-icon {
 
 :is(.games-search-page, .games-search-overlay-scope) .game-search-jump-title {
   color: var(--games-search-text-title);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
 }
 
 :is(.games-search-page, .games-search-overlay-scope) .game-search-jump-input,
@@ -505,10 +518,10 @@ html.dark .games-search-page .search-page-steam-icon {
 }
 
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-search-filter-input:focus {
-  border-color: var(--games-search-border-hover) !important;
+  border-color: var(--games-search-border-hover);
   background: var(--games-search-filter-field-focus-bg);
-  outline: none !important;
-  box-shadow: none !important;
+  outline: none;
+  box-shadow: none;
 }
 
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-chip {
@@ -563,10 +576,10 @@ html.dark .games-search-page .search-page-steam-icon {
   --dp-disabled-color: var(--games-search-chip-bg);
   --dp-scroll-bar-background: var(--games-search-surface-strong);
   --dp-scroll-bar-color: color-mix(in srgb, var(--games-search-border-hover) 84%, transparent);
-  --dp-success-color: #16a34a;
-  --dp-success-color-disabled: #a3d9b1;
+  --dp-success-color: var(--games-search-date-success);
+  --dp-success-color-disabled: var(--games-search-date-success-disabled);
   --dp-icon-color: var(--games-search-accent);
-  --dp-danger-color: #dc2626;
+  --dp-danger-color: var(--games-search-date-danger);
   --dp-marker-color: var(--games-search-accent);
   --dp-tooltip-color: var(--games-search-surface-strong);
   --dp-disabled-color-text: var(--games-search-text-soft);
@@ -623,18 +636,18 @@ html.dark :is(.games-search-page, .games-search-overlay-scope) .game-date-picker
 
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker .dp__input:focus,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker.dp__main:focus-within .dp__input {
-  border-color: var(--games-search-border-hover) !important;
+  border-color: var(--games-search-border-hover);
   background: var(--games-search-filter-field-focus-bg);
-  outline: none !important;
-  box-shadow: none !important;
+  outline: none;
+  box-shadow: none;
 }
 
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker .dp__input_wrap,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker .dp__input_wrap:focus,
 :is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker .dp__input_wrap:focus-within {
-  outline: none !important;
-  box-shadow: none !important;
+  outline: none;
+  box-shadow: none;
 }
 
 :is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__input_icon,
@@ -737,4 +750,90 @@ html.dark :is(.games-search-page, .games-search-overlay-scope) .game-date-picker
   .game-search-filter-chip:focus-visible,
   .game-search-filter-expand:focus-visible,
   .game-search-jump-action:focus-visible { .gf-focus-ring(); }
+}
+
+// Steam remains a result action; preserve the former utility's opacity and motion.
+.games-search-page .search-page-steam-icon {
+  opacity: 0.7;
+  transition-property:
+    color, background-color, border-color, outline-color, text-decoration-color,
+    fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to,
+    opacity, box-shadow, transform, translate, scale, rotate,
+    filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.games-search-page .search-page-steam-icon:hover {
+  opacity: 1;
+}
+
+// Result typography, pending/skeleton treatment and motion. Vue retains the
+// track geometry, inline transform and existing request/timer lifecycle.
+.games-search-page .search-result-page-track--instant {
+  animation: none;
+  transition: none;
+}
+
+.games-search-page .search-result-page-track--next {
+  animation: search-result-page-next 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.games-search-page .search-result-page-track--prev {
+  animation: search-result-page-prev 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.games-search-page .search-result-grid {
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.games-search-page .search-results--pending:not(.search-results--sliding) .search-result-page-slide .search-result-grid {
+  opacity: 0.72;
+  filter: saturate(0.92);
+}
+
+.games-search-page .search-page-title-row {
+  font-size: 0.875rem;
+}
+
+.games-search-page .search-page-skeleton-cover,
+.games-search-page .search-page-skeleton-title,
+.games-search-page .search-page-skeleton-line,
+.games-search-page .search-page-skeleton-meta {
+  border-radius: 0.52rem;
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--games-search-surface-strong) 70%, transparent) 0%,
+    color-mix(in srgb, var(--games-search-surface-hover) 82%, transparent) 46%,
+    color-mix(in srgb, var(--games-search-surface-strong) 70%, transparent) 100%
+  );
+  background-size: 220% 100%;
+  animation: search-card-skeleton 1.35s ease-in-out infinite;
+}
+
+@keyframes search-card-skeleton {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@keyframes search-result-page-next {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes search-result-page-prev {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
 }

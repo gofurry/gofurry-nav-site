@@ -228,18 +228,39 @@ ratio and build result rather than rounding the rendered value. Authored alpha
 values likewise remain distinct from browser serialization. News card typography,
 clipping, motion and hover semantics remain frozen by the P6.1.3 contracts.
 
-Home closure excludes shared ReviewDialog and SidebarSearch. The remaining
-33 raw occurrences in `games.less` have explicit future owners:
+Home closure excludes shared ReviewDialog and SidebarSearch. P6.3.2 subsequently
+retires the shared SidebarSearch block's 13 raw occurrences. The remaining
+20 raw occurrences in `games.less` have explicit future owners:
 
 | Remaining surface | Raw occurrences | Owner |
 | --- | ---: | --- |
 | Shared Dark Games root color | 1 | P6.6, after auditing all Games consumers |
 | Detail and BlurWrapper notice | 19 | P6.5 Detail/Common |
-| Shared SidebarSearch styles under `.search-shell` | 13 | P6.3 Search/SidebarSearch |
 
 Do not delete legacy `--games-*` declarations while those consumers still need
 them. ReviewDialog belongs to P6.2 and Lottery to P6.4; Home completion does not
 close the whole Games programme or authorize unrelated debt cleanup.
+
+## Search and shared SidebarSearch appearance
+
+P6.3.2 keeps Advanced Search, Filter/Jump and result motion in the existing
+`pages/games-search.less`. The page and body-overlay roots share `--games-search-*`
+semantics, including media-overlay borders and Datepicker feedback adapters.
+The layout still owns the transparent Search canvas. SFCs retain track geometry,
+container layouts and unchanged timers, inline transforms and interaction logic.
+
+Shared SidebarSearch stays in `pages/games.less`: eight
+`--games-sidebar-search-*` roles cover input/focus, panel and card/hover states
+on the existing Games roots. Keep its higher-specificity Dark consumer selectors;
+merely moving all theme differences into root variables would let later Search
+rules change accepted pixels. The Search `games-page` bridge remains P6.6 work.
+
+Input `text-sm` did not own the rendered typography: Sidebar/Jump inputs inherit
+16px/24px through the existing reset. Jump title remains 14px/20px, while Datepicker
+keeps 13.76px/24px and simple-result title 13.12px/15.088px. Preserve these measured
+cascades and complete transition properties/durations, not overridden utility
+intent. Domain focus selectors retain their reset values without `!important`.
+The accepted 14 Search goldens and all earlier images remain unchanged.
 
 ## Shared Review appearance
 

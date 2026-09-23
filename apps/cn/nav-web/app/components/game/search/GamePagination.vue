@@ -30,7 +30,7 @@
              flex items-center justify-center"
     >
       <div ref="panel" role="dialog" aria-modal="true" :aria-labelledby="`${id}-title`" tabindex="-1" class="game-search-jump-dialog w-64 space-y-3 p-4">
-        <div :id="`${id}-title`" class="game-search-jump-title text-sm font-semibold">{{ t("game.search.jumpPage") }}</div>
+        <div :id="`${id}-title`" class="game-search-jump-title">{{ t("game.search.jumpPage") }}</div>
 
         <input
             ref="jumpInput"
@@ -42,7 +42,7 @@
             @keydown.enter.prevent="confirmJump"
             :min="1"
             :max="totalPages"
-            class="game-search-jump-input w-full px-2 py-1 text-sm focus:outline-none"
+            class="game-search-jump-input w-full px-2 py-1"
         />
 
         <div class="flex justify-end gap-2">

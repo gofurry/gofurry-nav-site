@@ -262,9 +262,17 @@ contracts. Reuse `useGameSearchDialog` only within this boundary and keep the
 existing body overlay token owner. Preserve date-menu Escape priority and native
 button computed typography. Search interaction/consumer and four former tag-smoke
 cases now belong to the existing Browser runner; fourteen Search/SidebarSearch
-visuals await maintainer review before P6.3.2 appearance migration. Keep the earlier
+visuals were accepted by the maintainer before P6.3.2 appearance migration. Keep the earlier
 draft/failure regressions and accepted snapshots; do not expand into Review,
 Detail or Lottery or revive the retired `game:tags:smoke` runner.
+
+P6.3.2 completes Search/SidebarSearch appearance in the existing two page owners:
+`games-search.less` owns Advanced/Filter/Jump and result motion through the page
+and body overlay; `games.less` owns shared SidebarSearch via
+`--games-sidebar-search-*` on its existing Games roots. Preserve the higher-priority
+Dark shared rules, inherited 16px/24px input typography and runtime-only SFC
+geometry. Do not remove Search's legacy `games-page` bridge before P6.6 or expand
+this completion into Lottery/Detail. All 86 accepted PNGs remain frozen.
 
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running

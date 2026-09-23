@@ -4,26 +4,26 @@
     <div class="relative">
       <img
           src="../../../../assets/svgs/search.svg"
-          class="game-sidebar-search-icon absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-60"
+          class="game-sidebar-search-icon absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
           alt=""
       />
       <input
           v-model="keyword"
           type="text"
           :placeholder="t('game.search.simple')"
-          class="game-sidebar-search-input w-full rounded-lg py-2 pl-9 pr-3 text-sm transition focus:outline-none"
+          class="game-sidebar-search-input w-full py-2 pl-9 pr-3"
           :aria-busy="status === 'pending' || status === 'debouncing'"
       />
     </div>
 
     <!-- 搜索结果提示框 -->
     <Transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="opacity-0 translate-y-1"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 translate-y-1"
+        enter-active-class="game-sidebar-search-enter-active"
+        enter-from-class="game-sidebar-search-enter-from translate-y-1"
+        enter-to-class="game-sidebar-search-enter-to translate-y-0"
+        leave-active-class="game-sidebar-search-leave-active"
+        leave-from-class="game-sidebar-search-leave-from translate-y-0"
+        leave-to-class="game-sidebar-search-leave-to translate-y-1"
     >
       <div
           v-if="showResults && status !== 'idle'"
@@ -239,10 +239,6 @@ onBeforeUnmount(() => {
   gap: 0.55rem;
 }
 
-:global(html.dark .game-sidebar-search-icon) {
-  filter: brightness(0) invert(1);
-}
-
 .search-result-card {
   min-width: 0;
   cursor: pointer;
@@ -258,8 +254,6 @@ onBeforeUnmount(() => {
 .search-result-title {
   margin-top: 0.38rem;
   overflow: hidden;
-  font-size: 0.82rem;
-  line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -267,8 +261,6 @@ onBeforeUnmount(() => {
 .search-result-desc {
   margin-top: 0.18rem;
   overflow: hidden;
-  font-size: 0.72rem;
-  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

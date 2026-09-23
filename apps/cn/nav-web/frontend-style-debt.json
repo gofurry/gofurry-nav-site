@@ -14,10 +14,6 @@
       "app/components/game/detail/tabs/GameTabIntro.vue": 1,
       "app/components/game/detail/tabs/GameTabNews.vue": 5,
       "app/components/game/lottery/LotteryJoinModal.vue": 48,
-      "app/components/game/main/sidebar/GameSidebarSearch.vue": 15,
-      "app/components/game/search/GamePagination.vue": 4,
-      "app/components/game/search/GameSearchFilter.vue": 2,
-      "app/components/game/search/GameSearchResult.vue": 3,
       "app/components/site/SiteDetailHero.vue": 53,
       "app/components/site/SiteDetailPage.vue": 7,
       "app/components/site/SiteDnsPanel.vue": 84,
@@ -43,8 +39,7 @@
       "app/pages/games/prize/index.vue": 10
     },
     "raw-visual-value": {
-      "app/assets/styles/pages/games-search.less": 8,
-      "app/assets/styles/pages/games.less": 33,
+      "app/assets/styles/pages/games.less": 20,
       "app/assets/styles/pages/insights.less": 10,
       "app/assets/styles/pages/lottery.less": 20,
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
@@ -67,7 +62,6 @@
       "app/components/site/SiteSignalCards.vue": 11
     },
     "important": {
-      "app/assets/styles/pages/games-search.less": 8,
       "app/assets/styles/pages/insights.less": 5,
       "app/assets/styles/pages/insights/domain.less": 2
     },

@@ -820,8 +820,21 @@ The shared Search fixture owns interaction/consumer/legacy-tag regressions and
 fourteen Light/Dark local-surface visual contracts. Earlier lifecycle/failure
 assertions and all pre-existing snapshots remain authoritative. Tag smoke's four
 locale/viewport cases move into the Browser gate; no separate legacy runner is
-needed. New Search snapshots require maintainer review before P6.3.2; this work
+needed. The maintainer accepted the new Search snapshots before P6.3.2; this work
 does not authorize style-debt migration or changes to Review/Detail/Lottery.
+
+P6.3.2 completes the authorized Search appearance migration while retaining those
+runtime contracts. Advanced Search, Filter/Jump, result typography and motion
+stay in `pages/games-search.less` with the existing page/body-overlay declaration
+roots and `--games-search-*`. Shared SidebarSearch uses `pages/games.less` and
+`--games-sidebar-search-*` on existing Games roots; its higher-specificity Dark
+selectors MUST retain their priority over Search overrides. SFCs keep private
+geometry and unchanged script lifecycles. Preserve the measured inherited
+16px/24px inputs, Datepicker adapter, complete transition sets and focus reset
+values when removing utility/important debt. Neither policy ownership nor global
+tokens expand. All 147 Browser / 87 Visual contracts and 86 PNGs remain unchanged.
+The remaining Games raw debt belongs to Detail/BlurWrapper and the legacy root;
+P6.3 completion does not authorize Lottery, Detail or P6.6 root removal.
 
 ### P1 enforcement and maintenance
 
