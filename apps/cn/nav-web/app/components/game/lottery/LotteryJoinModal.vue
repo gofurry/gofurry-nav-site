@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
   <div
-      class="lottery-modal fixed inset-0 z-[120] flex items-center justify-center px-4 py-6 backdrop-blur-md"
+      class="lottery-modal fixed inset-0 z-[120] flex items-center justify-center px-4 py-6"
   >
     <div
         ref="panel"
@@ -10,17 +10,17 @@
         :aria-labelledby="titleId"
         :aria-busy="loading"
         tabindex="-1"
-        class="lottery-modal__dialog relative max-h-[calc(100vh-3rem)] w-full max-w-2xl overflow-y-auto rounded-xl p-5 backdrop-blur-xl sm:p-6"
+        class="lottery-modal__dialog relative max-h-[calc(100vh-3rem)] w-full max-w-2xl overflow-y-auto p-5 sm:p-6"
     >
       <div class="lottery-modal__top-line absolute inset-x-6 top-0 h-px" aria-hidden="true" />
 
       <div class="mb-4 flex items-start justify-between gap-4">
-        <h3 :id="titleId" class="lottery-modal__title text-xl font-semibold leading-7">
+        <h3 :id="titleId" class="lottery-modal__title">
           {{ lottery.lottery.title }}
         </h3>
         <button
             type="button"
-            class="lottery-modal__close grid size-8 shrink-0 place-items-center rounded-lg transition"
+            class="lottery-modal__close grid size-8 shrink-0 place-items-center"
             :aria-label="t('common.cancel')"
             @click="emit('close')"
         >
@@ -28,11 +28,11 @@
         </button>
       </div>
 
-      <p class="lottery-modal__desc mb-5 text-sm leading-6">
+      <p class="lottery-modal__desc mb-5">
         {{ lottery.lottery.desc }}
       </p>
 
-      <div class="lottery-modal__summary mb-5 grid gap-3 rounded-lg p-4 text-sm">
+      <div class="lottery-modal__summary mb-5 grid gap-3 p-4">
         <div class="flex items-center justify-between gap-4">
           <div class="lottery-modal__label">{{ t('game.lottery.home.prize') }}</div>
           <div>
@@ -42,15 +42,15 @@
         </div>
 
         <div class="grid grid-cols-2 gap-3">
-          <div class="lottery-modal__stat rounded-lg px-3 py-2">
-            <div class="lottery-modal__label text-[11px]">{{ t('game.lottery.home.prizeQuantity') }}</div>
+          <div class="lottery-modal__stat px-3 py-2">
+            <div class="lottery-modal__label">{{ t('game.lottery.home.prizeQuantity') }}</div>
             <div>
               {{ lottery.lottery.prize.count }}
             </div>
           </div>
 
-          <div class="lottery-modal__stat rounded-lg px-3 py-2">
-            <div class="lottery-modal__label text-[11px]">{{ t('game.lottery.home.participants') }}</div>
+          <div class="lottery-modal__stat px-3 py-2">
+            <div class="lottery-modal__label">{{ t('game.lottery.home.participants') }}</div>
             <div>
               {{ lottery.count }}
             </div>
@@ -59,13 +59,13 @@
       </div>
 
       <div class="mb-4">
-        <div class="lottery-modal__section-title mb-2 text-sm font-medium">
+        <div class="lottery-modal__section-title mb-2">
           {{ t('game.lottery.submitModal.currentParticipants') }}
         </div>
 
         <div
             v-if="!lottery.member.length"
-            class="lottery-modal__empty text-sm"
+            class="lottery-modal__empty"
         >
           {{ t('game.lottery.submitModal.noParticipants') }}
         </div>
@@ -77,7 +77,7 @@
           <span
               v-for="m in visibleMembers"
               :key="m.email"
-              class="lottery-modal__chip rounded-full px-3 py-1 text-xs"
+              class="lottery-modal__chip px-3 py-1"
           >
             {{ m.name }} - {{ m.email }}
           </span>
@@ -87,7 +87,7 @@
           <button
               type="button"
               @click="loadMore"
-              class="lottery-modal__load-more rounded-lg px-2.5 py-1 text-xs transition"
+              class="lottery-modal__load-more px-2.5 py-1"
           >
             {{ t('common.loadMore') }}
           </button>
@@ -95,7 +95,7 @@
 
         <div
             v-else-if="lottery.member.length > 5"
-            class="lottery-modal__empty mt-2 text-xs"
+            class="lottery-modal__empty lottery-modal__empty--complete mt-2"
         >
           {{ t('game.lottery.submitModal.allLoaded') }}
         </div>
@@ -107,32 +107,32 @@
             v-model="keyInput"
             :aria-label="t('game.lottery.submitModal.enterLotteryKey')"
             :placeholder="t('game.lottery.submitModal.enterLotteryKey')"
-            class="lottery-modal__input w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
+            class="lottery-modal__input w-full px-3 py-2.5"
         />
 
         <input
             v-model="nameInput"
             :aria-label="t('game.lottery.submitModal.enterName')"
             :placeholder="t('game.lottery.submitModal.enterName')"
-            class="lottery-modal__input w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
+            class="lottery-modal__input w-full px-3 py-2.5"
         />
 
         <input
             v-model="emailInput"
             :aria-label="t('game.lottery.submitModal.enterEmail')"
             :placeholder="t('game.lottery.submitModal.enterEmail')"
-            class="lottery-modal__input w-full rounded-lg px-3 py-2.5 text-sm outline-none transition"
+            class="lottery-modal__input w-full px-3 py-2.5"
         />
 
-        <div v-if="emailError" class="lottery-modal__message lottery-modal__message--error text-xs">
+        <div v-if="emailError" class="lottery-modal__message lottery-modal__message--error">
           {{ emailError }}
         </div>
 
-        <div v-if="submitError" class="lottery-modal__message lottery-modal__message--error text-xs">
+        <div v-if="submitError" class="lottery-modal__message lottery-modal__message--error">
           {{ submitError }}
         </div>
 
-        <div v-if="successMsg" class="lottery-modal__message lottery-modal__message--success text-xs">
+        <div v-if="successMsg" class="lottery-modal__message lottery-modal__message--success">
           {{ successMsg }}
         </div>
       </div>
@@ -140,7 +140,7 @@
       <div class="mt-6 flex justify-end gap-3">
         <button
             @click="emit('close')"
-            class="lottery-modal__button lottery-modal__button--secondary rounded-lg px-4 py-2 text-sm transition"
+            class="lottery-modal__button lottery-modal__button--secondary px-4 py-2"
         >
           {{ t('common.cancel') }}
         </button>
@@ -148,7 +148,7 @@
         <button
             @click="submit"
             :disabled="loading"
-            class="lottery-modal__button lottery-modal__button--primary rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50"
+            class="lottery-modal__button lottery-modal__button--primary px-4 py-2 disabled:cursor-not-allowed"
         >
           {{ loading ? t("common.commiting") : t("common.commit") }}
         </button>

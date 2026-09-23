@@ -13,7 +13,6 @@
       "app/components/game/detail/tabs/GameTabGallery.vue": 3,
       "app/components/game/detail/tabs/GameTabIntro.vue": 1,
       "app/components/game/detail/tabs/GameTabNews.vue": 5,
-      "app/components/game/lottery/LotteryJoinModal.vue": 48,
       "app/components/site/SiteDetailHero.vue": 53,
       "app/components/site/SiteDetailPage.vue": 7,
       "app/components/site/SiteDnsPanel.vue": 84,
@@ -23,25 +22,19 @@
       "app/components/site/SiteObservationTabs.vue": 8,
       "app/components/site/SiteOverview.vue": 85,
       "app/components/site/SitePerformance.vue": 174,
-      "app/components/site/SiteSignalCards.vue": 20,
-      "app/pages/games/prize/activation.vue": 17,
-      "app/pages/games/prize/index.vue": 67
+      "app/components/site/SiteSignalCards.vue": 20
     },
     "tailwind-arbitrary-appearance": {
       "app/components/game/detail/GameDetailHeader.vue": 1,
       "app/components/game/detail/GameSidebarSimilar.vue": 3,
-      "app/components/game/lottery/LotteryJoinModal.vue": 2,
       "app/components/site/SiteHealthSummaryPanel.vue": 1,
       "app/components/site/SiteObservationOverviewPanel.vue": 2,
       "app/components/site/SiteOverview.vue": 1,
-      "app/components/site/SitePerformance.vue": 1,
-      "app/pages/games/prize/activation.vue": 1,
-      "app/pages/games/prize/index.vue": 10
+      "app/components/site/SitePerformance.vue": 1
     },
     "raw-visual-value": {
       "app/assets/styles/pages/games.less": 20,
       "app/assets/styles/pages/insights.less": 10,
-      "app/assets/styles/pages/lottery.less": 20,
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
       "app/components/game/detail/GameSidebarSimilar.vue": 1,
       "app/components/game/detail/insights/GamePlayerTrend.vue": 16,

@@ -276,6 +276,24 @@ Field/button typography follows the actual inherited 16px/24px cascade, and the
 title retains its audited line height. Accessibility and request lifecycle changes
 remain outside this appearance phase.
 
+## Lottery appearance and closure
+
+After the twelve P6.4.1 images received maintainer acceptance, P6.4.2 moves
+Prize/Join/Activation appearance to the existing `pages/lottery.less` owner.
+Its full three-root selector group and Dark counterpart declare `--lottery-*`;
+the body-mounted modal remains independent of page ancestry. Thirteen new roles
+cover complete canvas washes, summary fill, dialog elevation, action contrast/
+hover, activation card composition/elevation and status border/fill/text. No
+palette redesign, global token or policy expansion accompanies this migration.
+
+The layout still owns the transparent page canvas; existing Lottery background
+tokens and theme overrides are retained. Form controls preserve the reset's
+inherited 16px/24px/400 instead of activating old `text-sm`/`font-medium` intent.
+Preserve built unitless line-height precision, including small summary labels,
+the measured 12px backdrop blur and complete transition property sets. Accepted
+runtime tests and all 98 images are unchanged. P6.4 is closed; Detail/Common and
+Games-wide final cleanup remain separate P6.5/P6.6 work.
+
 ## Preserve semantic identity
 
 Equal values do not mean equal tokens. `--gf-accent` describes emphasis;

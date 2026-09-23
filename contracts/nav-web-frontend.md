@@ -852,8 +852,18 @@ without inventing a member or refreshing Prize data. Activation's immediate and
 `fixtures/lottery.ts` supports fourteen real runtime cases and twelve initial
 Prize/Join/Activation goldens. All participation responses are exact local test
 routes; no real email, backend activation or production access is authorized.
-The existing appearance, style debt and earlier 86 PNGs stay frozen. Stop for
-maintainer review before P6.4.2 appearance migration.
+The maintainer accepted the twelve initial Lottery goldens before P6.4.2.
+
+P6.4.2 closes Lottery appearance in `pages/lottery.less`, using only the existing
+full `.lottery-page, .lottery-activation-page, .lottery-modal` declaration group
+and its Dark counterpart for `--lottery-*`. Compound canvas, elevation, action
+and status tokens preserve their exact values; the layout continues to own the
+transparent page roots. Vue keeps structure and unchanged runtime scripts.
+Native controls retain inherited typography; explicit text hierarchy keeps the
+accepted unitless line-height precision, complete transition sets and existing
+reduced-motion behavior. The seven Lottery debt entries are retired without
+policy exceptions or ownership expansion. All 161 Browser / 99 Visual contracts
+and 98 PNGs stay unchanged. Detail/Common and final Games cleanup remain P6.5/P6.6.
 
 ### P1 enforcement and maintenance
 

@@ -6,34 +6,34 @@
     <div class="relative z-10 mx-auto flex min-h-[calc(100svh-3.5rem)] w-full max-w-6xl flex-col px-5 py-10 sm:px-8 lg:py-14">
       <header class="lottery-hero grid gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
         <div class="max-w-3xl">
-          <p class="lottery-page__eyebrow mb-4 text-xs font-medium uppercase tracking-[0.28em]">
+          <p class="lottery-page__eyebrow mb-4">
             gofurry games
           </p>
-          <h1 class="lottery-page__title text-4xl font-semibold leading-tight sm:text-6xl">
+          <h1 class="lottery-page__title">
             {{ t('game.lottery.home.title') }}
           </h1>
-          <p class="lottery-page__subtitle mt-5 max-w-2xl text-sm leading-7 sm:text-base">
+          <p class="lottery-page__subtitle mt-5 max-w-2xl">
             {{ t('game.lottery.home.activePool') }} · {{ t('game.lottery.home.winnerAnnouncement') }}
           </p>
         </div>
 
-        <div class="lottery-summary grid grid-cols-2 gap-px overflow-hidden rounded-lg backdrop-blur-md">
+        <div class="lottery-summary grid grid-cols-2 gap-px overflow-hidden">
           <div class="lottery-summary__item p-4">
-            <div class="lottery-summary__label text-[11px] uppercase tracking-[0.18em]">
+            <div class="lottery-summary__label">
               {{ t('game.lottery.home.activePool') }}
             </div>
-            <div class="lottery-summary__value mt-2 text-3xl font-semibold">{{ status === 'ready' ? activeList.length : '—' }}</div>
+            <div class="lottery-summary__value mt-2">{{ status === 'ready' ? activeList.length : '—' }}</div>
           </div>
           <div class="lottery-summary__item p-4">
-            <div class="lottery-summary__label text-[11px] uppercase tracking-[0.18em]">
+            <div class="lottery-summary__label">
               {{ t('game.lottery.home.winnerAnnouncement') }}
             </div>
-            <div class="lottery-summary__value mt-2 text-3xl font-semibold">{{ status === 'ready' ? prizeCount : '—' }}</div>
+            <div class="lottery-summary__value mt-2">{{ status === 'ready' ? prizeCount : '—' }}</div>
           </div>
         </div>
       </header>
 
-      <div v-if="loading" role="status" class="lottery-page__loading flex flex-1 items-center text-sm">
+      <div v-if="loading" role="status" class="lottery-page__loading flex flex-1 items-center">
         {{ t('common.loading') }}
       </div>
 
@@ -47,13 +47,13 @@
       <div v-if="status === 'ready'" class="space-y-16 pb-16">
         <section class="lottery-section">
           <div class="mb-5 flex items-end justify-between gap-4">
-            <h2 class="lottery-section__title text-sm font-medium uppercase tracking-[0.22em]">
+            <h2 class="lottery-section__title">
               {{ t('game.lottery.home.activePool') }}
             </h2>
             <div class="lottery-section__divider h-px flex-1" aria-hidden="true" />
           </div>
 
-          <div v-if="!activeList.length" class="lottery-empty rounded-lg px-5 py-8 text-sm">
+          <div v-if="!activeList.length" class="lottery-empty lottery-empty--ready px-5 py-8">
             {{ t('game.lottery.home.noActiveLottery') }}
           </div>
 
@@ -62,23 +62,23 @@
               v-for="item in activeList"
               :key="item.lottery.id"
               type="button"
-              class="lottery-pool group rounded-lg p-5 text-left backdrop-blur-xl transition duration-300"
+              class="lottery-pool group p-5 text-left"
               @click="openLottery(item)"
             >
               <div class="flex items-start justify-between gap-4">
-                <h3 class="lottery-pool__title min-w-0 text-lg font-semibold leading-7">
+                <h3 class="lottery-pool__title min-w-0">
                   {{ item.lottery.title }}
                 </h3>
-                <span class="lottery-pool__action shrink-0 rounded-full px-2.5 py-1 text-[11px]">
+                <span class="lottery-pool__action shrink-0 px-2.5 py-1">
                   {{ t('game.lottery.home.clickToJoin') }}
                 </span>
               </div>
 
-              <p class="lottery-pool__desc mt-3 line-clamp-2 min-h-12 text-sm leading-6">
+              <p class="lottery-pool__desc mt-3 line-clamp-2 min-h-12">
                 {{ item.lottery.desc }}
               </p>
 
-              <div class="lottery-meta mt-5 grid gap-3 text-sm">
+              <div class="lottery-meta mt-5 grid gap-3">
                 <div class="flex items-center justify-between gap-4">
                   <span class="lottery-meta__label">{{ t('game.lottery.home.prize') }}</span>
                   <span class="lottery-meta__value min-w-0 truncate text-right">
@@ -96,13 +96,13 @@
               </div>
 
               <div class="mt-5">
-                <div class="lottery-progress h-1 overflow-hidden rounded-full">
+                <div class="lottery-progress h-1 overflow-hidden">
                   <div
-                    class="lottery-progress__bar h-full rounded-full transition-all duration-500"
+                    class="lottery-progress__bar h-full"
                     :style="{ width: calcProgress(item.lottery.start_time, item.lottery.end_time) + '%' }"
                   />
                 </div>
-                <div class="lottery-progress__time mt-2 flex justify-between gap-3 text-[11px]">
+                <div class="lottery-progress__time mt-2 flex justify-between gap-3">
                   <span>{{ formatDate(item.lottery.start_time) }}</span>
                   <span>{{ formatDate(item.lottery.end_time) }}</span>
                 </div>
@@ -113,33 +113,33 @@
 
         <section class="lottery-section">
           <div class="mb-5 flex items-center justify-between gap-4">
-            <h2 class="lottery-section__title text-sm font-medium uppercase tracking-[0.22em]">
+            <h2 class="lottery-section__title">
               {{ t('game.lottery.home.winnerAnnouncement') }}
             </h2>
-            <span class="lottery-section__count text-xs">{{ t('common.total') }} {{ prizeCount }}</span>
+            <span class="lottery-section__count">{{ t('common.total') }} {{ prizeCount }}</span>
           </div>
 
-          <div v-if="!historyList.length" class="lottery-empty rounded-lg px-5 py-8 text-sm">
+          <div v-if="!historyList.length" class="lottery-empty lottery-empty--ready px-5 py-8">
             {{ t('game.lottery.home.noHistory') }}
           </div>
 
-          <div class="lottery-history overflow-hidden rounded-lg backdrop-blur-md">
+          <div class="lottery-history overflow-hidden">
             <article
               v-for="item in historyList"
               :key="`${item.name}-${item.end_time}`"
-              class="lottery-history__row grid gap-5 px-5 py-5 transition duration-200 lg:grid-cols-[minmax(0,1fr)_20rem]"
+              class="lottery-history__row grid gap-5 px-5 py-5 lg:grid-cols-[minmax(0,1fr)_20rem]"
             >
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <h3 class="lottery-history__title text-base font-semibold">
+                  <h3 class="lottery-history__title">
                     {{ item.name }}
                   </h3>
-                  <span class="lottery-history__deadline text-xs">
+                  <span class="lottery-history__deadline">
                     {{ t('game.lottery.home.deadline') }} {{ formatDate(item.end_time) }}
                   </span>
                 </div>
 
-                <p class="lottery-history__desc mt-2 line-clamp-2 text-sm leading-6">
+                <p class="lottery-history__desc mt-2 line-clamp-2">
                   {{ item.desc }}
                 </p>
 
@@ -147,18 +147,18 @@
                   <span
                     v-for="winner in item.winner"
                     :key="winner.email"
-                    class="lottery-winner max-w-full truncate rounded-full px-2.5 py-1 text-[11px]"
+                    class="lottery-winner max-w-full truncate px-2.5 py-1"
                   >
                     {{ winner.name }} · {{ winner.email }}
                   </span>
                 </div>
 
-                <div v-else class="lottery-history__empty mt-5 text-xs">
+                <div v-else class="lottery-history__empty mt-5">
                   {{ t('game.lottery.home.noWinner') }}
                 </div>
               </div>
 
-              <div class="lottery-meta space-y-3 text-sm">
+              <div class="lottery-meta space-y-3">
                 <div class="flex items-center justify-between gap-3">
                   <span class="lottery-meta__label shrink-0 whitespace-nowrap">{{ t('game.lottery.home.prize') }}</span>
                   <span class="lottery-meta__value min-w-0 truncate text-right">

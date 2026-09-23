@@ -23,6 +23,31 @@
   --lottery-modal-bg: rgba(21, 20, 18, 0.92);
   --lottery-focus-ring: var(--gf-focus-ring);
 
+  /* Lottery canvas washes and overlays retain their independent domain appearance. */
+  --lottery-page-wash:
+    radial-gradient(circle at 74% 18%, rgba(244, 170, 96, 0.16), transparent 30%),
+    linear-gradient(115deg, rgba(17, 16, 15, 0.72) 0%, rgba(17, 16, 15, 0.54) 54%, rgba(17, 16, 15, 0.38) 100%);
+  --lottery-activation-wash:
+    radial-gradient(circle at 50% 25%, rgba(244, 170, 96, 0.10), transparent 32%),
+    linear-gradient(180deg, rgba(8, 14, 28, 0.52), rgba(8, 14, 28, 0.62));
+  --lottery-summary-bg: rgba(255, 255, 255, 0.10);
+  --lottery-dialog-shadow: 0 24px 90px rgba(0, 0, 0, 0.45);
+
+  /* Submission and return actions share contrast, not the page background role. */
+  --lottery-action-contrast: #11100f;
+  --lottery-action-hover-bg: color-mix(in srgb, var(--lottery-accent) 86%, #ffffff);
+  --lottery-activation-card-bg:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
+    rgba(15, 23, 42, 0.62);
+  --lottery-activation-card-shadow: 0 24px 70px rgba(2, 6, 23, 0.34);
+
+  /* Status indicators keep their existing cross-theme success/failure meaning. */
+  --lottery-status-success-border: rgba(74, 222, 128, 0.34);
+  --lottery-status-success-bg: rgba(34, 197, 94, 0.16);
+  --lottery-status-fail-border: rgba(251, 146, 60, 0.34);
+  --lottery-status-fail-bg: rgba(251, 146, 60, 0.16);
+  --lottery-status-fail-text: #fdba74;
+
   background: var(--lottery-bg);
   color: var(--lottery-text);
 }
@@ -43,15 +68,11 @@ html.dark .lottery-modal {
 }
 
 .lottery-page__wash {
-  background:
-    radial-gradient(circle at 74% 18%, rgba(244, 170, 96, 0.16), transparent 30%),
-    linear-gradient(115deg, rgba(17, 16, 15, 0.72) 0%, rgba(17, 16, 15, 0.54) 54%, rgba(17, 16, 15, 0.38) 100%);
+  background: var(--lottery-page-wash);
 }
 
 .lottery-activation-page__wash {
-  background:
-    radial-gradient(circle at 50% 25%, rgba(244, 170, 96, 0.10), transparent 32%),
-    linear-gradient(180deg, rgba(8, 14, 28, 0.52), rgba(8, 14, 28, 0.62));
+  background: var(--lottery-activation-wash);
 }
 
 .lottery-page__top-line,
@@ -107,7 +128,7 @@ html.dark .lottery-modal {
 }
 
 .lottery-summary {
-  background: rgba(255, 255, 255, 0.10);
+  background: var(--lottery-summary-bg);
 }
 
 .lottery-summary__item,
@@ -133,6 +154,7 @@ html.dark .lottery-modal {
 
 .lottery-pool {
   box-shadow: var(--lottery-shadow);
+  transition-duration: 300ms;
 }
 
 .lottery-pool:hover,
@@ -166,6 +188,7 @@ html.dark .lottery-modal {
 
 .lottery-progress__bar {
   background: linear-gradient(90deg, var(--lottery-accent), var(--lottery-accent-strong));
+  transition: all 500ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .lottery-history {
@@ -187,8 +210,9 @@ html.dark .lottery-modal {
 
 .lottery-modal__dialog {
   border: 1px solid var(--lottery-border);
+  border-radius: var(--gf-radius-md);
   background: var(--lottery-modal-bg);
-  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--lottery-dialog-shadow);
   color: var(--lottery-text);
 }
 
@@ -211,6 +235,7 @@ html.dark .lottery-modal {
   border: 1px solid var(--lottery-border);
   background: var(--lottery-surface-strong);
   color: var(--lottery-text);
+  outline-style: none;
 }
 
 .lottery-modal__input::placeholder {
@@ -232,27 +257,26 @@ html.dark .lottery-modal {
 .lottery-modal__button--primary,
 .activation-card__link {
   background: var(--lottery-accent);
-  color: #11100f;
+  color: var(--lottery-action-contrast);
 }
 
 .lottery-modal__button--primary:hover,
 .activation-card__link:hover {
-  background: color-mix(in srgb, var(--lottery-accent) 86%, #ffffff);
+  background: var(--lottery-action-hover-bg);
 }
 
 .activation-card {
   border: 1px solid var(--lottery-border);
   border-radius: 1rem;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
-    rgba(15, 23, 42, 0.62);
-  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.34);
+  background: var(--lottery-activation-card-bg);
+  box-shadow: var(--lottery-activation-card-shadow);
   padding: clamp(1.5rem, 4vw, 2.5rem);
   backdrop-filter: blur(18px) saturate(1.12);
 }
 
 .activation-card__eyebrow {
   color: var(--lottery-accent);
+  font-weight: 600;
 }
 
 .activation-card__title--success {
@@ -287,15 +311,206 @@ html.dark .lottery-modal {
 }
 
 .activation-status--success {
-  border: 1px solid rgba(74, 222, 128, 0.34);
-  background: rgba(34, 197, 94, 0.16);
+  border: 1px solid var(--lottery-status-success-border);
+  background: var(--lottery-status-success-bg);
   color: var(--lottery-success);
 }
 
 .activation-status--fail {
-  border: 1px solid rgba(251, 146, 60, 0.34);
-  background: rgba(251, 146, 60, 0.16);
-  color: #fdba74;
+  border: 1px solid var(--lottery-status-fail-border);
+  background: var(--lottery-status-fail-bg);
+  color: var(--lottery-status-fail-text);
+}
+
+/* P6.4.1's rendered typography is authoritative. Keep the built unitless ratios:
+   rounding to rem line boxes changes inherited small labels and text rasterization. */
+.lottery-page__eyebrow,
+.activation-card__eyebrow {
+  font-size: 0.75rem;
+  line-height: 1.33333;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.lottery-page__eyebrow {
+  font-weight: 500;
+}
+
+.lottery-page__title {
+  font-size: 2.25rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.lottery-page__subtitle,
+.activation-card__message {
+  font-size: 0.875rem;
+  line-height: 1.75rem;
+}
+
+.lottery-summary__label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.lottery-summary__value,
+.activation-card__title {
+  font-size: 1.875rem;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.lottery-page__loading,
+.lottery-empty--ready,
+.lottery-section__title,
+.lottery-meta,
+.lottery-modal__summary,
+.lottery-modal__section-title,
+.lottery-modal__empty,
+.activation-card__countdown,
+.activation-card__link {
+  font-size: 0.875rem;
+  line-height: 1.42857;
+}
+
+.lottery-section__title,
+.lottery-modal__section-title {
+  font-weight: 500;
+}
+
+.lottery-section__title {
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.lottery-pool__title {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+.lottery-pool__action,
+.lottery-progress__time,
+.lottery-winner,
+.lottery-modal__stat .lottery-modal__label {
+  font-size: 11px;
+}
+
+.lottery-pool__desc,
+.lottery-history__desc,
+.lottery-modal__desc {
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+}
+
+.lottery-section__count,
+.lottery-history__deadline,
+.lottery-history__empty,
+.lottery-modal__chip,
+.lottery-modal__empty--complete,
+.lottery-modal__message {
+  font-size: 0.75rem;
+  line-height: 1.33333;
+}
+
+.lottery-history__title {
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.lottery-modal__title {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+.activation-card__countdown-value,
+.activation-card__link {
+  font-weight: 600;
+}
+
+@media (min-width: 640px) {
+  .lottery-page__title {
+    font-size: 3.75rem;
+  }
+
+  .lottery-page__subtitle {
+    font-size: 1rem;
+  }
+
+  .activation-card__title {
+    font-size: 2.25rem;
+    line-height: 1.11111;
+  }
+}
+
+.lottery-summary,
+.lottery-empty--ready,
+.lottery-pool,
+.lottery-history,
+.lottery-modal__close,
+.lottery-modal__summary,
+.lottery-modal__stat,
+.lottery-modal__load-more,
+.lottery-modal__input,
+.lottery-modal__button,
+.activation-card__countdown,
+.activation-card__link {
+  border-radius: var(--gf-radius-sm);
+}
+
+.lottery-pool__action,
+.lottery-progress,
+.lottery-progress__bar,
+.lottery-winner,
+.lottery-modal__chip {
+  // Local compiler bridge: emit the original CSS calculation without Less math.
+  @pill-radius: ~"calc(infinity * 1px)";
+  border-radius: @pill-radius;
+}
+
+.lottery-summary,
+.lottery-history,
+.lottery-modal {
+  backdrop-filter: blur(12px);
+}
+
+.lottery-pool,
+.lottery-modal__dialog {
+  backdrop-filter: blur(24px);
+}
+
+/* Preserve the full generated transition contract. Native controls retain
+   main.css's font: inherit rather than reviving overridden text utilities. */
+.lottery-pool,
+.lottery-history__row,
+.lottery-modal__close,
+.lottery-modal__load-more,
+.lottery-modal__input,
+.lottery-modal__button,
+.activation-card__link {
+  transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke,
+    --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate,
+    filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lottery-modal__close,
+.lottery-modal__load-more,
+.lottery-modal__input,
+.lottery-modal__button,
+.activation-card__link {
+  transition-duration: 150ms;
+}
+
+.lottery-history__row {
+  transition-duration: 200ms;
+}
+
+.lottery-modal__button--primary:disabled {
+  opacity: 0.5;
 }
 
 @keyframes lotteryEnter {

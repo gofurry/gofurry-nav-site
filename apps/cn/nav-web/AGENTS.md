@@ -280,8 +280,12 @@ cancel the mounted GET on exit, and keep participation POSTs explicit and isolat
 The body-mounted Lottery dialog owns its local focus/inert/scroll lifecycle;
 activation preserves locale and the existing 15-second return. Tests use only
 loopback reads and exact local POST responses, never real participation or email.
-Keep Lottery appearance/debt unchanged until these new goldens are reviewed;
-P6.4.1 does not authorize P6.4.2 token migration.
+After maintainer acceptance of those twelve images, P6.4.2 completes Lottery
+appearance in `pages/lottery.less`. Only the existing full Prize/Activation/Modal
+selector group and its Dark counterpart declare `--lottery-*`; no owner expansion.
+Preserve native-control inheritance, exact line-height ratios and transition
+sets. All 98 PNGs and runtime tests remain frozen. Lottery closure does not
+authorize Detail/Common (P6.5) or Games final cleanup (P6.6).
 
 Never update visual baselines merely to make CI pass. An explicit maintainer
 approval or a task authorizing the visual migration is required before running
