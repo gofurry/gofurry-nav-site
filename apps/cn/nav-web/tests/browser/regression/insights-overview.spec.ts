@@ -1,5 +1,6 @@
 import { test, expect, sources, openRuntime, revealImages, keyboardFocus } from '../fixtures/insights-overview'
 import type { Page } from '@playwright/test'
+import { assertRuntimeSurface } from '../fixtures/insights-runtime'
 
 function stats(html: string) {
   const dl = html.match(/<dl class="overview-stats">([\s\S]*?)<\/dl>/)?.[1] || ''
@@ -72,4 +73,17 @@ test('Overview Site hero and real media failures preserve identity and Dark layo
   await page.getByRole('button', { name: '切换明暗主题图标', exact: true }).click()
   await expect(page.locator('html')).toHaveClass(/dark/)
   await layout(page, 390); runtime.assertQuiet()
+})
+
+for (const width of [1440, 390]) test(`Overview Dark ready shell ${width}`, async ({ page, context, runtime }) => {
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+  await context.addInitScript(() => localStorage.setItem('theme', 'dark'))
+  const html = await openRuntime(page, '/insights')
+  expect(stats(html)).toEqual(['238', '213', '47'])
+  for (const part of ['header', 'activity', 'sites', 'games', 'explore']) await expect(page.locator('[data-overview-' + part + ']')).toBeVisible()
+  await expect(page.locator('.insights-primary-nav')).toBeVisible()
+  await revealImages(page)
+  await assertRuntimeSurface(page, '.insights-overview-page', 'dark')
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  runtime.assertQuiet()
 })

@@ -31,7 +31,7 @@ const fixtureItems = (): NavUpdateNotice[] => [
 ]
 
 type UpdatesApp = Awaited<ReturnType<typeof startInsightsFixtureApp>>
-type UpdatesOptions = { width?: number; height?: number; theme?: 'light' | 'dark' }
+type UpdatesOptions = { width?: number; height?: number; theme?: 'light' | 'dark'; locale?: 'zh' | 'en' }
 type UpdatesScenario = {
   items: NavUpdateNotice[]
   errors: string[]
@@ -52,7 +52,7 @@ export const test = base.extend<{ updates: UpdatesScenario }, { updatesApp: Upda
   // eslint-disable-next-line no-empty-pattern -- Playwright requires fixture argument destructuring.
   updatesApp: [async ({}, use) => {
     const app = await startInsightsFixtureApp(url => {
-      if (url.pathname !== '/api/v2/nav/updates' || url.searchParams.get('lang') !== 'zh') return { status: 500 }
+      if (url.pathname !== '/api/v2/nav/updates' || !['zh', 'en'].includes(url.searchParams.get('lang') || '')) return { status: 500 }
       const data: NavUpdatesResponse = {
         schema_version: 1, state: 'ready', generated_at: '2026-09-18T12:40:00Z', items: fixtureItems(),
       }
@@ -63,6 +63,7 @@ export const test = base.extend<{ updates: UpdatesScenario }, { updatesApp: Upda
   }, { scope: 'worker' }],
   baseURL: async ({ updatesApp }, use) => { await use(updatesApp.base) },
   updates: async ({ page, context, updatesApp }, use, testInfo) => {
+    let locale: 'zh' | 'en' = 'zh'
     const items = fixtureItems()
     const errors = captureBrowserErrors(page)
     const external: string[] = [], failed: string[] = [], clientUpdates: string[] = []
@@ -83,14 +84,14 @@ export const test = base.extend<{ updates: UpdatesScenario }, { updatesApp: Upda
     const root = page.locator('.updates-page')
     const timeline = root.locator('.updates-timeline-section')
     const entries = timeline.getByRole('article')
-    const latest = timeline.getByText('最新', { exact: true })
-    const loadMore = timeline.getByRole('button', { name: '加载更多', exact: true })
+    const latest = () => timeline.getByText(locale === 'en' ? 'Latest' : '最新', { exact: true })
+    const loadMore = () => timeline.getByRole('button', { name: locale === 'en' ? 'Load more' : '加载更多', exact: true })
     const yearControl = (year: string) => timeline.getByRole('button').filter({ hasText: year })
     const yearEntries = (year: string) => timeline.getByRole('listitem')
       .filter({ has: page.getByRole('button').filter({ hasText: year }) }).getByRole('article')
     const assertQuiet = () => {
       expect(updatesCalls(), 'Exactly one real SSR Updates request').toHaveLength(1)
-      expect(updatesCalls()[0]!.searchParams.toString()).toBe('lang=zh')
+      expect(updatesCalls()[0]!.searchParams.toString()).toBe('lang=' + locale)
       expect(upstreamCalls(), 'No unrelated business API requests').toHaveLength(1)
       expect(clientUpdates, 'Hydration must reuse the SSR payload').toEqual([])
       expect(external, 'Updates must not depend on external resources').toEqual([])
@@ -101,8 +102,8 @@ export const test = base.extend<{ updates: UpdatesScenario }, { updatesApp: Upda
       await expect(root).toHaveCount(1)
       await expect(root).toBeVisible()
       await expect(timeline).toHaveAttribute('aria-busy', 'false')
-      const summary = root.getByRole('region', { name: '更新公告概览', exact: true })
-      await expect(summary).toContainText('公告数量')
+      const summary = root.getByRole('region', { name: locale === 'en' ? 'Updates summary' : '更新公告概览', exact: true })
+      await expect(summary).toContainText(locale === 'en' ? 'Entries' : '公告数量')
       await expect(summary.getByText('9', { exact: true })).toBeVisible()
       await expect(yearControl('2026')).toBeVisible()
       await expect(yearControl('2025')).toBeVisible()
@@ -110,16 +111,19 @@ export const test = base.extend<{ updates: UpdatesScenario }, { updatesApp: Upda
       await expect(yearEntries('2026')).toHaveCount(6)
       await expect(yearEntries('2025')).toHaveCount(0)
       await expect(entries).toHaveCount(6)
-      await expect(latest).toHaveCount(1)
-      await expect(latest).toBeVisible()
-      await expect(loadMore).toBeVisible()
+      await expect(latest()).toHaveCount(1)
+      await expect(latest()).toBeVisible()
+      await expect(loadMore()).toBeVisible()
       assertQuiet()
     }
     try {
       await use({
-        items, errors, root, timeline, entries, latest, loadMore, yearControl, yearEntries,
+        items, errors, root, timeline, entries, yearControl, yearEntries,
+        get latest() { return latest() },
+        get loadMore() { return loadMore() },
         assertInitial, assertQuiet, updatesCalls,
-        async open({ width = 1440, height = 900, theme = 'light' } = {}) {
+        async open({ width = 1440, height = 900, theme = 'light', locale: requestedLocale = 'zh' } = {}) {
+          locale = requestedLocale
           await page.setViewportSize({ width, height })
           await context.addInitScript(({ origin, theme, steamDiagnosticsKey, steamSample }) => {
             if (location.origin !== origin) return
@@ -136,7 +140,7 @@ export const test = base.extend<{ updates: UpdatesScenario }, { updatesApp: Upda
               china: { ms: 30, state: 'success' }, global: { ms: 60, state: 'success' },
             }))
           }, { origin: updatesApp.base, theme, steamDiagnosticsKey: STEAM_DIAGNOSTICS_KEY, steamSample: STEAM_PROBE_PATHS[0] })
-          const response = await page.goto('/updates', { waitUntil: 'load' })
+          const response = await page.goto((locale === 'en' ? '/en' : '') + '/updates', { waitUntil: 'load' })
           expect(response?.status()).toBe(200)
           const ssrHTML = await response!.text()
           expect(ssrHTML).toContain(items[0]!.title)

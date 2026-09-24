@@ -1,4 +1,26 @@
 import { test, expect, openRuntime, revealImages } from '../fixtures/insights-entity'
+import { assertRuntimeSurface } from '../fixtures/insights-runtime'
+
+for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const) {
+  test(`Site entity ready shell ${width} ${theme}`, async ({ page, context, runtime }) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await context.addInitScript(theme => localStorage.setItem('theme', theme), theme)
+    const view = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v2/nav/sites/41/view'
+      && res.request().method() === 'POST' && res.status() === 200)
+    const html = await openRuntime(page, '/site/41')
+    expect(html).toContain('data-site-insights')
+    await expect(page.locator('[data-site-insights]')).toBeVisible()
+    await expect(page.locator('[data-entity-timeline]')).toBeVisible()
+    await expect(page.locator('[data-capability-key="ipv6"]')).toHaveAttribute('data-capability-state', 'unknown')
+    await revealImages(page)
+    await assertRuntimeSurface(page, '.site-detail-page', theme)
+    await (await view).finished()
+    expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([
+      '/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/view',
+    ])
+    runtime.assertQuiet()
+  })
+}
 
 for (const prefix of ['', '/en']) test('Entity SSR keeps Site-level Insights separate from target observations ' + (prefix || 'zh'), async ({ request, runtime }) => {
   const entity = await request.get(prefix + '/site/41')

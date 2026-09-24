@@ -1,5 +1,22 @@
 import type { Page } from '@playwright/test'
+import { assertRuntimeSurface } from '../fixtures/insights-runtime'
 import { test, expect, pathFor, changeCategories, openRuntime, revealImages, keyboardFocus, settleRuntime } from '../fixtures/insights-changes'
+
+for (const width of [1440, 390]) test(`Changes Site Dark ready shell ${width}`, async ({ page, context, runtime }) => {
+  await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+  await context.addInitScript(() => localStorage.setItem('theme', 'dark'))
+  await openRuntime(page, pathFor('site'))
+  await ready(page)
+  await expect(events(page)).toHaveCount(4)
+  await expect(page.locator('.insights-primary-nav')).toBeVisible()
+  await expect(page.locator('.insights-change-explorer-filters')).toBeVisible()
+  await revealImages(page)
+  await layout(page)
+  await assertRuntimeSurface(page, '.insights-change-explorer', 'dark')
+  expect(runtime.calls).toHaveLength(1)
+  runtime.assertQuiet()
+})
+
 const events = (page: Page) => page.locator('.insights-change-explorer-item')
 async function ready(page: Page) { await expect(page.locator('.insights-change-explorer-feed')).toHaveAttribute('aria-busy', 'false') }
 async function layout(page: Page) {

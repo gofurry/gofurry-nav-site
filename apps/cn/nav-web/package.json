@@ -21,7 +21,6 @@
     "perf:guard": "node scripts/perf/guard.mjs",
     "perf:trace": "node scripts/perf/trace.mjs",
     "perf:baseline": "node scripts/perf/measure.mjs --baseline",
-    "visual:guard": "node scripts/perf/visual-guard.mjs",
     "insights:semantics": "node scripts/insights-semantics.test.mjs",
     "seo:recovery:test": "node scripts/seo-recovery.test.mjs",
     "lint": "eslint .",

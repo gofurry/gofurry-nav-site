@@ -1,5 +1,25 @@
 import { test, expect, assertSearchAppearance } from '../fixtures/games-search'
 
+for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const) {
+  test(`English Search ready shell ${width} ${theme}`, async ({ search }) => {
+    await search.page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await search.open({ locale: 'en', theme })
+    await assertSearchAppearance(search, theme)
+    await expect(search.page.locator('.games-search-page')).toBeVisible()
+    await expect(search.page.locator('.search-result-page-slide:not([aria-hidden="true"]) .search-result-grid')).toBeVisible()
+    await expect(search.page.locator('.gf-pagination')).toBeVisible()
+    await expect(search.page.locator('.game-search-pagination-total')).toContainText('29')
+    await search.page.evaluate(async () => {
+      await document.fonts.ready
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    })
+    expect(await search.page.evaluate(() => Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - document.documentElement.clientWidth)).toBeLessThanOrEqual(1)
+    expect(search.calls('advanced')).toHaveLength(1)
+    expect(search.calls('tags')).toHaveLength(1)
+    search.assertQuiet()
+  })
+}
+
 for (const width of [390, 1440]) for (const locale of ['zh', 'en'] as const) {
   test(`Explicit category and leaf-only tag contract (${width} ${locale})`, async ({ search }) => {
     await search.page.setViewportSize({ width, height: 900 })

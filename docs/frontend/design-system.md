@@ -7,6 +7,10 @@ P2.3 separates Modal from Preferences and removes its dead cascade. These phases
 preserve rendered appearance and introduce no token scales. Actual values
 belong in source, not this guide.
 
+P4–P6 migration is complete; the phase names below preserve implementation and
+cascade decisions, not pending cleanup authorization. Current verification and
+remaining owners are recorded in [#124 closure](../acceptance/issue-124-frontend-engineering-closure.md).
+
 ## Visual layers
 
 The [Less entry](../../apps/cn/nav-web/app/assets/styles/index.less) composes
@@ -31,7 +35,8 @@ generic `.gf-modal*` appearance for both Preferences and NSFW confirmation.
 [preferences.less](../../apps/cn/nav-web/app/assets/styles/components/preferences.less)
 composes Modal/Input/Button/Chip and shared tabs, sources and carousel controls.
 `components/` is an intentional layer, not a directory awaiting wholesale renaming.
-`domains/` remains a later page-migration target; do not create it empty.
+The existing page/domain files remain canonical; `domains/` is not a mandatory
+follow-up or a reason to move files without a concrete product need.
 
 ## Choose the owner by meaning
 
@@ -157,11 +162,12 @@ toggles also serve Site Groups outside `.nav-home-page`, so their precise
 shared consumer roots. Policy registration permits only these selector/prefix
 pairs, not whole-file exemptions. The existing games-page cascade is unchanged.
 
-The remaining 98 raw occurrences are ToolDock 42 (P5.3.3), Spotlight 51 and
-Site Groups 5 (P5.4). Neither these owners nor the deferred content-loading
-candidate are authorized cleanup in the Core migration.
+P5.3.3/P5.3.4 subsequently completed ToolDock/Spotlight tokens at the same page
+roots, and removed the proven-dead content-loading selector. P5.4 decoupled Site
+Groups into `.site-group-page` / `--nav-site-group-*`. These completed migrations
+do not change the Core/Teleport ownership decisions above.
 
-## P4 exit ownership
+## P4 exit ownership (historical assignment, now completed through P6)
 
 The remaining manifest was audited by semantic consumer, including Common and
 Game Detail insights widgets. No unassigned Stable/Common debt remains.
@@ -348,7 +354,8 @@ Remaining baseline ownership is explicit: Site #109 owns Tailwind 632, arbitrary
 `insights.less`). Ambient's 75 raw values remain experimental. The three shared
 Insights foundation `!important` declarations and two Insights domain declarations
 remain #108/shared-boundary work; shared consumers do not authorize Game-only
-removal. P6 closure does not authorize #108/#109 changes or P7 runner retirement.
+removal. P6 closure does not authorize #108/#109 changes. P7 subsequently retires
+the legacy runners after mapping their assertions into the formal gates.
 
 ## Preserve semantic identity
 
@@ -450,5 +457,6 @@ the real `--gf-page-pattern-*` tokens without a duplicate fallback palette.
 P2.3 retires 29 raw-color occurrences: 11 overridden values are deleted and 18
 effective values keep their meaning in 14 local semantic tokens. The safe updater
 removes only the old modal budget (924 → 895), granting neither new file debt.
-Use the existing Hero/preferences, resource-routing and game-detail smoke scripts
-for themed responsive screenshots and effective input/toggle/NSFW modal checks.
+Use the formal Hero/preferences, resource-routing and game-detail Browser/Visual
+specs for themed responsive and effective input/toggle/NSFW modal checks. Their
+old smoke scripts are retired; see the current commands in [testing](testing.md).

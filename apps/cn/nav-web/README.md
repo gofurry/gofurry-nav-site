@@ -42,8 +42,10 @@ npm run build
 npm run test:browser -- insights
 ```
 
-The separate legacy `npm run visual:guard -- --base-url http://localhost:3000`
-still requires a running production preview; its retirement belongs to P7.2.
+The legacy visual report guard is retired. Run `npm run test:browser` for runtime
+contracts and `npm run test:visual` in the pinned Linux environment for accepted
+pixel comparisons. See [testing](../../../docs/frontend/testing.md) for all gates;
+performance tools retain their separate scope.
 
 ## Production
 

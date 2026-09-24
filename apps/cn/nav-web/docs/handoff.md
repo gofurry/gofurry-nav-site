@@ -1,5 +1,11 @@
 # GoFurry Nav Web 样式系统维护 Handoff
 
+> Historical notice: this v2.2.x handoff is retained as migration history.
+> Its old commands and authority list are not current instructions. Use
+> [the frontend contract](../../../../contracts/nav-web-frontend.md),
+> [Agent entry](../AGENTS.md) and [testing guide](../../../../docs/frontend/testing.md).
+> The legacy visual report runner was retired in #124 P7.2.
+
 ## 当前状态
 
 `gofurry-nav-web` 的 `v2.2.x` 样式系统迁移已经完成。后续工作不再从“迁移历史债”出发，而是按维护规则增量演进。

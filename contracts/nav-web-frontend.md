@@ -12,6 +12,12 @@ changing their contents or visual behavior. P2.3 separates Generic Modal from
 Preferences composition and retires its dead cascade/raw-color debt while
 preserving effective rendered states.
 
+P4–P6 appearance ownership and P7 runner retirement are implemented. Phase-labelled
+creation constraints below record those migrations' boundaries; they do not
+authorize reopening completed work or running retired commands. Current commands
+and coverage live in [testing](../docs/frontend/testing.md); remote/manual sign-off
+status lives in the [closure record](../docs/acceptance/issue-124-frontend-engineering-closure.md).
+
 For frontend decisions, resolve evidence in this order:
 
 1. Executable code and tests for actual behavior and compatibility.
@@ -400,9 +406,10 @@ baseline, not a claim that all raw visual debt has been measured.
 Count `!important` and deep entries in authored styles, including CSS emitted by
 script strings: the `<noscript>` style in `ErrorExperience.vue` counts. Tailwind's
 `!` marker is handled as a class modifier, not another CSS `!important` annotation.
-Existing visual-guard deep allowlists do not remove those occurrences from debt.
+Historical visual-guard deep allowlists do not remove those occurrences from debt.
 
-The legacy list comes from `scripts/perf/visual-guard.mjs`: `games-page--dark`,
+The legacy list, inherited from the retired visual guard, is enforced by
+`scripts/style-policy/css.mjs`: `games-page--dark`,
 `search-results--dark`, `is-dark-theme`, `spotlight-panels--dark`,
 `about-page--dark`, `legal-page--dark`, `updates-page--dark`,
 `nav-home-page--dark`, `gf-static-page--dark`, `lottery-page--dark`.
@@ -478,8 +485,8 @@ for newly added files or script-generated styles.
 | Nuxt runtime/composables | Vitest `nuxt` project with `@nuxt/test-utils`, happy-dom, `tests/nuxt/*.nuxt.test.ts` |
 | Repository/source/config/semantic contracts | Existing Node Insights/SEO Contract Guards, outside Vitest |
 | Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`: Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO HTTP/SSR and background IndexedDB |
-| Stable pixel appearance | `playwright.visual.config.ts` / `test:visual`; P3.3.1 establishes only the pinned environment sentinel, no golden baselines |
-| Legacy broad page visual/report checks | Retained `scripts/perf/visual-guard.mjs` / `visual:guard`; independent of Visual snapshots and static `style:policy` |
+| Stable pixel appearance | `playwright.visual.config.ts` / `test:visual`; pinned sentinel and accepted surface golden comparisons |
+| Broad route/theme/overflow checks formerly in visual guard | Domain Browser/Visual cases plus P7.2 locale/theme gaps; explicit retirement mapping in the closure record |
 | Performance budget | Existing `perf:guard`, separate from visual correctness |
 | Real external services | Explicit development acceptance, not a default PR gate |
 
@@ -490,7 +497,7 @@ P0 introduced no runners, dependencies or CI gates. P1's local/CI sequence is
 For runtime changes, run relevant existing focused scripts from `package.json`
 as well. A skipped external acceptance test is not a pass.
 
-Keep `scripts/perf/visual-guard.mjs` and current regression harnesses intact.
+The old visual guard is retired after P7 responsibility mapping; do not recreate it.
 P1's detector reproduces the P0 baseline on the unchanged app tree. P2 owns token/primitive organization;
 P3 owns the testing foundation; P4+ owns staged, visually equivalent migrations.
 Each phase MUST finish in a stable, independently deployable state.
@@ -503,7 +510,7 @@ hydration or console-error suppression. Real debounce/timeout behavior remains.
 Search-to-Detail acceptance waits for the exact mounted view POST response before
 comparing ledgers. [Testing guidance](../docs/frontend/testing.md#p71-runtime-consolidation)
 records the coverage mapping. This phase changes no production code, style debt
-or Visual baseline; `visual:guard` retirement remains P7.2, not implicit cleanup.
+or Visual baseline. P7.2 completes the separate legacy visual-guard retirement.
 
 P3.1 uses Vitest `projects` with separate `test:unit` and `test:nuxt` commands;
 `npm test` runs both. CI MUST execute separate Unit tests and Nuxt tests steps
@@ -519,7 +526,7 @@ Keep `@nuxt/test-utils/module` out of production Nuxt config. Do not refactor
 production behavior merely to accommodate tests. The first four legacy suites
 are replaced, not duplicated; [testing guidance](../docs/frontend/testing.md)
 records their assertion ownership. Style-policy's Node runner, Contract Guards,
-browser smoke, `visual:guard` and external acceptance retain independent scope.
+Browser tests and external acceptance retain independent scope.
 
 P3.2.1 establishes a Chromium-only Playwright Test gate against the production
 Nitro build, never `nuxt dev`. CI MUST build successfully before installing
@@ -542,11 +549,15 @@ the worker's API resolver MUST reject access without an active scenario.
 Only the Hero-specific assertion may acknowledge the existing mobile homepage
 Footer hydration debt: width below 768, exactly one mismatch, no SSR footer,
 exactly one client footer, retained SSR Hero node, and no other browser errors.
+Its default route remains `/`; P7.2 explicitly opts English Home into exact `/en`.
+Callers MUST preserve raw initial evidence and fail on subsequent errors. See
+[RUNTIME-FOOTER-01](../docs/acceptance/issue-124-frontend-engineering-closure.md#runtime-footer-01)
+for the owned follow-up and removal condition; no generic capture exemption exists.
 Generic error capture MUST NOT ignore hydration. Same-run clipped paint Buffer
 and computed-style equality MAY remain runtime invariants; success screenshots,
 computed audit JSON and golden baselines MUST NOT be introduced in P3.2.3.
-Insights and other legacy browser suites keep their runners. `npm test` remains
-Vitest-only; visual baselines belong to P3.3.
+P7.1 migrated the remaining Insights/background/SEO runtime runners. `npm test`
+remains Vitest-only; Visual keeps its separate pinned runner.
 
 P0 MUST NOT change production Vue, CSS/Less, runtime behavior, package/lockfiles,
 CI, dependency versions or style directories, and MUST NOT implement #108/#109.
@@ -587,7 +598,7 @@ packages, Docker tag/digest, browser revision and visual baselines MUST be revie
 as one atomic upgrade unit. P3.3.1 MUST create no golden PNG, screenshot assertion,
 production test route or UI fixture. The sentinel launches real Chromium and
 checks the environment without taking a screenshot; real visual contracts start
-in P3.3.2. Keep `visual:guard` and direct `playwright` until their scoped retirement.
+in P3.3.2. Keep direct `playwright` for the retained performance/cloud tools.
 
 P3.3.2's `ui-foundation.spec.ts` owns stable shared primitive appearance through
 exactly four locator baselines (light/dark × desktop/mobile). Its test-only
@@ -928,9 +939,24 @@ it MUST NOT reset the shared `.gf-pagination__button*` appearance again.
 P6 completion means no unassigned Games appearance debt, not removal of every
 shared root or private scoped style. Site #109, experimental Ambient and the
 five shared/domain Insights `!important` declarations keep their documented
-owners. The accepted 179 Browser / 119 Visual / 118 PNG contracts stay frozen.
-Legacy runner retirement requires P7 assertion/consumer mapping; P6 closure
-does not authorize deleting tools or migrating #108/#109.
+owners. The accepted P6 runtime/Visual contracts remain intact through P7.
+Retirement mapping MUST preserve effective checks, not stale class spellings or
+uncompared success screenshot reports. No #108/#109 migration follows from closure.
+
+### P7 completion boundary
+
+`visual:guard` and the eight P7.1 runtime runners MUST NOT be restored. Formal
+Browser tests own route/theme/overflow and behavior; style-policy owns the old
+source scans; pinned Visual owns accepted pixels. Performance tools, reusable
+fixture data/transport, Node Contract Guards and policy tooling tests deliberately
+remain under `scripts/`. Directory relocation is not a completion requirement.
+
+P7.2 changes no production code, debt or golden. Remaining measured raw debt is
+Site #109's 388 (including six Site capability values physically in `insights.less`)
+and preserved ambient's 75; five Insights important declarations belong to #108.
+The manifest remains authoritative at rule/file granularity, with no wildcard
+exceptions. Completion of #124 requires final-SHA local and actual remote gates,
+maintainer acceptance and explicit known-issue ownership, not zero excluded debt.
 
 ### P1 enforcement and maintenance
 

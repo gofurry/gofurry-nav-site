@@ -12,7 +12,7 @@ type NavShell = {
   menu: Locator
   toggle: Locator
   bottomTabs: Locator
-  open(options?: { width?: number, theme?: Theme, route?: '/terms' | '/' }): Promise<void>
+  open(options?: { width?: number, theme?: Theme, route?: '/terms' | '/' | '/en' }): Promise<void>
   assertTheme(theme: Theme): Promise<void>
   assertLinks(locale: 'zh' | 'en', mobile?: boolean): Promise<void>
   language(locale: 'CN' | 'EN', mobile?: boolean): Locator
@@ -52,6 +52,7 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
     const browserAPI: string[] = []
     const isolatedWeather: string[] = [], knownHydration: string[] = []
     let home = false
+    let locale = 'zh'
     let modeCatalogExpected = false
     const upstreamStart = shellApp.requests.length
     page.on('requestfailed', request => failed.push(`${request.url()}: ${request.failure()?.errorText}`))
@@ -87,7 +88,7 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
         .toEqual(expected.filter(path => path !== '/api/v2/nav/home'))
       for (const url of upstream) {
         if (url.pathname === '/api/v2/nav/appearance/patterns') expect(url.search).toBe('')
-        else expect(url.searchParams.get('lang')).toBe('zh')
+        else expect(url.searchParams.get('lang')).toBe(locale)
       }
       expect(isolatedWeather, 'Only the exact Home weather frame is isolated').toEqual(home ? [weatherURL] : [])
       expect(external, 'No external origins may be requested').toEqual([])
@@ -118,7 +119,8 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
       await use({
         nav, menu, toggle, bottomTabs, language, assertTheme, assertQuiet, settle,
         async open({ width = 1440, theme = 'light', route = '/terms' } = {}) {
-          home = route === '/'
+          home = route === '/' || route === '/en'
+          locale = route === '/en' ? 'en' : 'zh'
           await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
           await context.addInitScript(({ origin, theme, steamKey, sample, home }) => {
             if (location.origin !== origin) return
@@ -164,7 +166,7 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
             await expect.poll(() => shellApp.requests.slice(upstreamStart).length).toBe(2)
             await expect.poll(() => isolatedWeather.length).toBe(1)
             const initialErrors = [...errors]
-            await assertHeroHydration(page, ssr, [...initialErrors])
+            await assertHeroHydration(page, ssr, [...initialErrors], route === '/en' ? '/en' : '/')
             knownHydration.push(...initialErrors)
           } else await expect(nav).not.toHaveClass(/\bgf-nav--overlay\b/)
           await expect(page.locator('[data-public-background]')).toHaveAttribute('data-pattern-status', 'default')

@@ -4,6 +4,13 @@ Use the lowest-cost environment that faithfully represents the behavior under
 test. The [frontend contract](../../contracts/nav-web-frontend.md) owns this rule;
 the commands below run from `apps/cn/nav-web`.
 
+Current P7.2 inventory: **406 Functional Browser /119 Visual /118 PNG**. The
+phase-labelled sections preserve earlier acceptance matrices/counts; use
+[Full verification](#full-verification) for current commands and the
+[closure record](../acceptance/issue-124-frontend-engineering-closure.md) for
+actual local/remote/manual status. Earlier baseline-creation instructions are
+not authorization to update an accepted golden.
+
 ## Choose the test owner
 
 | Category | Owner / command | Boundary |
@@ -14,7 +21,7 @@ the commands below run from `apps/cn/nav-web`.
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
 | Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO and background storage |
 | Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel; Foundation, Preferences and Error locator baselines; Static/Legal and Updates viewport baselines; Dock expanded clips |
-| Legacy visual/report guard | `npm run visual:guard` | Broad page/selector/theme/overflow reports and historical checks; retained independently of Visual and `style:policy` |
+| Broad route/theme/overflow checks | Domain Browser/Visual contracts, including P7.2 locale/theme gaps | The legacy visual report runner is retired; no second browser lifecycle or success screenshot inventory |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
 
 `npm test` runs both Vitest projects once. `vitest.config.ts` uses `projects`, not
@@ -75,8 +82,8 @@ real CDN or backend endpoints.
 happy-dom does not prove browser rendering, SSR/hydration or actual image loading.
 P6.3.1 retired `game:tags:smoke` after moving its four cases into the Search
 Browser contract; P7.1 retires the remaining deterministic runtime smoke runners.
-Unrelated screenshots and `visual:guard` remain; this phase does not introduce
-visual baselines or external acceptance runs.
+P7.2 separately retires `visual:guard` after mapping its effective checks. These
+test migrations introduce no new Visual baselines or external acceptance runs.
 
 ## Game Detail browser gate (P3.2.1)
 
@@ -262,7 +269,8 @@ also check Linux and Node 24. It takes no screenshot and needs no server or
 production test route. **P3.3.1 has zero golden snapshots and no screenshot
 assertions.** P3.3.2 adds the Foundation contract below; P3.3.3 adds real
 Preferences composition.
-Direct `playwright` and `scripts/perf/visual-guard.mjs` / `visual:guard` remain active.
+Direct `playwright` remains for performance/cloud tools. P7.2 retires the separate
+`visual:guard` report runner; only this pinned runner owns accepted Visual pixels.
 Static architecture/debt remains `style:policy`'s responsibility.
 
 ### Comparison and approved updates
@@ -654,7 +662,8 @@ npm run test:visual
 Both comparisons must report **39 passed**, Functional Browser **70**. The original
 30 PNGs remain byte-identical, for **38** total. Maintainers must review all eight
 new images before P5.1.2, which must pass them unchanged. Production, style debt,
-existing P4/Hero tests and legacy `visual:guard` remain untouched.
+existing P4/Hero tests and the then-retained legacy guard were untouched by P5.1.1;
+P7.2 later retires that guard after the explicit mapping below.
 
 ### Nav Home Header (P5.2.1)
 
@@ -985,11 +994,29 @@ Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
 types/config before either test project runs. Verification must not rely on a
 previous dev server or build having generated `.nuxt/tsconfig.json`.
 
-Run `npm ci`, `npm run lint`, `npm run stylelint`, `npm run style:policy:test`,
-`npm run style:policy`, `npm run test:unit`, `npm run test:nuxt`, `npm test`,
-`npm run typecheck`, `npm run insights:semantics`, `npm run seo:recovery:test`,
-and `npm run build`, then the Chromium installation and three browser commands
-above. On Linux CI use `npx playwright install --with-deps chromium`.
+```sh
+npm ci
+npm run lint
+npm run stylelint
+npm run style:policy:test
+npm run style:policy
+npm run test:unit
+npm run test:nuxt
+npm test
+npm run typecheck
+npm run insights:semantics
+npm run seo:recovery:test
+npm run build
+npx playwright install chromium
+npm run test:browser -- --workers=1
+```
+
+This uses the existing CI worker count locally; no retries. Focused smoke and
+regression commands remain useful during development, but need not duplicate a
+completed full run without a new concern. Runner/fixture retirement acceptance
+uses two complete runs to expose state/teardown leaks. Do not compete with a
+simultaneous resource-heavy Visual build. On Linux CI install Chromium with
+`npx playwright install --with-deps chromium`.
 
 The existing Nav Web CI job has separate **Unit tests** and **Nuxt tests** steps
 before typecheck/contract guards/build. After Build succeeds it installs Chromium
@@ -1080,5 +1107,42 @@ contract (119 checks, 118 unchanged PNG). Re-run the three Search navigation
 cases five times and the gate/stale/timeout/retry cases three times, then two
 complete Browser runs. Run the existing pinned install/build/Visual compare
 without updating snapshots. Local evidence is not remote Actions acceptance.
-P7.2 still owns `visual:guard` migration/retirement and final engineering closure;
-performance and explicitly authorized cloud acceptance remain separate.
+P7.2 subsequently completes `visual:guard` retirement below. Performance and
+explicitly authorized cloud acceptance remain separate.
+
+## P7.2 visual-guard retirement
+
+Forty-six new runtime cases fill the effective gaps; the original 360 are retained.
+The [complete 90-cell mapping](../acceptance/issue-124-frontend-engineering-closure.md#legacy-visual-guard-retirement-ledger)
+records old route/theme/viewport checks and their current owners, including
+equivalent semantic replacements for obsolete selectors. It is not a new golden
+matrix or a second runner.
+
+| Added case family | Cases | Owner |
+| --- | ---: | --- |
+| zh/en Home shell/reveal | 8 | `smoke/nav-home-locales`, existing optional Nav Shell fixture |
+| English About + English Terms + zh/en Privacy | 10 | `smoke/static-locales`, thin `static-runtime` adapter |
+| English Updates | 4 | Existing `regression/updates`, optional locale preserves Chinese defaults |
+| English Search ready shell | 4 | Existing `games-search-contract`, real visible result slide and computed appearance |
+| Mobile Lottery activation success | 2 | Existing `lottery`, real success status/link and zero business requests |
+| Chinese Dark Overview / Site+Game Domain / Changes Site / three Workspaces | 2 +4 +2 +6 | Existing Insights domain specs and fixtures |
+| Site entity Light/Dark × Desktop/Mobile | 4 | Existing `insights-entity`, exact SSR detail/insights + mounted view POST |
+
+Tests use actual production SSR/hydration, Theme Store, deterministic upstream,
+fresh probe diagnostics and exact assets/failure ledgers. No fake DOM, direct Vue
+state mutation, global network-idle or fixed readiness delay. Gates release in
+teardown; browser contexts/routes remain Playwright-owned. No Visual spec or PNG
+changes. Static runtime does not inherit Visual's hidden floating controls.
+
+The existing `assertHeroHydration` defaults to `/`. Only English Home explicitly
+opts into `/en`, with the same width <768, one initial mismatch, SSR Footer absent,
+one client Footer, SSR Hero retention and other-errors-zero proof. The raw initial
+entry is retained, not erased; any later error still fails. This approved narrow
+extension tracks [RUNTIME-FOOTER-01](../acceptance/issue-124-frontend-engineering-closure.md#runtime-footer-01),
+not a generic hydration suppression or production fix.
+
+Parser-backed style policy now solely owns legacy-dark/Tailwind/deep source checks;
+its tests explicitly cover all ten retired dark class names. Exact per-file budgets
+replace the old deep allowlist. Performance tools, fixture support, Node Contract
+Guards and policy tests deliberately remain. Historical reports preserve their
+original evidence; do not restore the retired `visual:guard` command.

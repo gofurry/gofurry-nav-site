@@ -222,6 +222,20 @@ export async function openRuntime(page: Page, path: string) {
 }
 export async function settleRuntime(page: Page) { await staticReadiness.get(page)?.() }
 
+// Page-shell contract only; domain specs still assert their own ready content.
+export async function assertRuntimeSurface(page: Page, selector: string, theme: 'light' | 'dark') {
+  await settleRuntime(page)
+  await expect.poll(() => page.locator('html').evaluate(el => el.classList.contains('dark'))).toBe(theme === 'dark')
+  const root = page.locator(selector)
+  await expect(root).toHaveCount(1)
+  await expect(root).toBeVisible()
+  const box = await root.boundingBox()
+  expect(box!.width).toBeGreaterThan(0)
+  expect(box!.height).toBeGreaterThan(0)
+  expect((await root.innerText()).trim().length).toBeGreaterThan(20)
+  expect(await page.evaluate(() => Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - document.documentElement.clientWidth)).toBeLessThanOrEqual(1)
+}
+
 export async function revealImages(page: Page, selector = '.insight-entity-media') {
   for (const media of await page.locator(selector).all()) {
     await media.scrollIntoViewIfNeeded()

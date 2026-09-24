@@ -9,6 +9,17 @@ const file = 'app/components/PolicyFixture.vue';
 const fact = (kind, value, extra = {}) => ({ kind, value, file, line: 10, ...extra });
 const values = (findings, rule) => findings.filter(finding => finding.rule === rule).map(finding => finding.value);
 
+test('all ten retired visual-guard dark entries remain forbidden as classes and selectors', () => {
+  const names = ['games-page--dark', 'search-results--dark', 'is-dark-theme',
+    'spotlight-panels--dark', 'about-page--dark', 'legal-page--dark', 'updates-page--dark',
+    'nav-home-page--dark', 'gf-static-page--dark', 'lottery-page--dark'];
+  for (const name of names) {
+    assert.equal(values(detectCssFacts([fact('class', name)]), 'legacy-dark-entry').length, 1, name);
+    const css = extractCssFacts(`.${name} { display: block; }`, { file });
+    assert.equal(values(detectCssFacts(css), 'legacy-dark-entry').length, 1, name);
+  }
+});
+
 test('Tailwind compiler distinguishes actual appearance from structure and semantic classes', async () => {
   const allowed = 'flex grid gap-4 px-4 text-center truncate max-w-[2080px] z-[120] min-h-[calc(100vh-1rem)] -translate-x-1/2 bg-cover bg-center bg-no-repeat from-10% border-collapse divide-x-reverse blur-wrapper';
   assert.deepEqual(await detectTailwindFacts([fact('class', allowed)]), []);

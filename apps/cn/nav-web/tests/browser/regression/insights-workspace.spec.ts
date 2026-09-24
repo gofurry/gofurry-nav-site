@@ -1,6 +1,29 @@
 import type { Page } from '@playwright/test'
-import { settleRuntime } from '../fixtures/insights-runtime'
+import { settleRuntime, assertRuntimeSurface } from '../fixtures/insights-runtime'
 import { test, expect, workspaceMetricKeys, workspaceRegionKeys, openRuntime, revealImages, keyboardFocus } from '../fixtures/insights-workspace'
+
+for (const kind of ['players', 'prices', 'languages']) for (const width of [1440, 390]) {
+  test(`Workspace Chinese Dark ready shell ${kind} ${width}`, async ({ page, context, runtime }) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await context.addInitScript(() => localStorage.setItem('theme', 'dark'))
+    const query = kind === 'players' ? '?metric=latest_observed' : kind === 'prices' ? '?region=CN' : ''
+    await openRuntime(page, '/insights/games/' + kind + query)
+    await expect(page.locator('.insights-domain-nav[data-domain="game"]')).toBeVisible()
+    if (kind === 'languages') {
+      await expect(page.locator('[data-language]')).toHaveCount(12)
+      await expect(page.locator('.insight-workspace-disclosure')).toBeVisible()
+    } else {
+      await expect(page.locator('[data-workspace-option][aria-pressed="true"]')).toHaveAttribute('data-workspace-option', kind === 'players' ? 'latest_observed' : 'CN')
+      await expect(page.locator(kind === 'players' ? '[data-rank]' : '.insight-discount-row')).toHaveCount(kind === 'players' ? 20 : 6)
+    }
+    await revealImages(page)
+    await layout(page)
+    await assertRuntimeSurface(page, '.insights-workspace-page', 'dark')
+    expect(runtime.calls).toHaveLength(kind === 'prices' ? 2 : 1)
+    runtime.assertQuiet()
+  })
+}
+
 const routes = [
   ['/insights/games/players?metric=latest_observed', 'players', 1],
   ['/en/insights/games/players?metric=average_30d', 'players', 1],

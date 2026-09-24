@@ -144,6 +144,22 @@ test('Closing a pending Lottery submission cannot corrupt the next modal instanc
   lottery.assertQuiet({ gets: 1, upstream: 1, posts: 1 })
 })
 
+for (const theme of ['light', 'dark'] as const) {
+  test(`Lottery activation success mobile shell ${theme}`, async ({ lottery }) => {
+    await lottery.open({ activation: 'success', width: 390, theme })
+    const page = lottery.page
+    await expect(page.locator('.lottery-activation-page')).toBeVisible()
+    await expect(page.locator('.activation-card')).toBeVisible()
+    await expect(page.locator('.activation-status--success')).toBeVisible()
+    await expect(page.locator('.activation-card__title')).toHaveText('报名成功')
+    await expect(page.locator('.activation-card__link')).toHaveAttribute('href', '/games/prize')
+    await settleLottery(lottery, page.locator('.lottery-activation-page'))
+    expect(await page.locator('html').evaluate(el => el.classList.contains('dark'))).toBe(theme === 'dark')
+    expect(await page.evaluate(() => Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - document.documentElement.clientWidth)).toBeLessThanOrEqual(1)
+    lottery.assertQuiet({ gets: 0, upstream: 0, posts: 0 })
+  })
+}
+
 for (const locale of ['zh', 'en'] as const) {
   test(`Lottery activation manual return preserves locale and clears timer (${locale})`, async ({ lottery }) => {
     const message = locale === 'en' ? '<em>Activation link expired</em>' : undefined

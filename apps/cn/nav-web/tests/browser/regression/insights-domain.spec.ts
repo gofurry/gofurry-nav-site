@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test'
+import { assertRuntimeSurface } from '../fixtures/insights-runtime'
 import { test, expect, domainMetricKeys, domainDimensionKeys, openRuntime, keyboardFocus } from '../fixtures/insights-domain'
 
 const routes = [
@@ -136,3 +137,19 @@ test('Domain panel failure and gated history leave independent content and Dark 
   await expect(page.locator('html')).toHaveClass(/dark/)
   runtime.assertQuiet()
 })
+
+for (const [route, domain] of [routes[0], routes[2]]) for (const width of [1440, 390]) {
+  test(`Domain Dark ready shell ${domain} ${width}`, async ({ page, context, runtime }) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await context.addInitScript(() => localStorage.setItem('theme', 'dark'))
+    await openRuntime(page, route)
+    await expect(page.locator('.insights-trend canvas')).toBeVisible()
+    await expect(page.locator('[data-metric-rail]')).toBeVisible()
+    await expect(page.locator('[data-dimension-explorer]')).toBeVisible()
+    await expect(page.locator('.insights-data-info')).toBeVisible()
+    await assertRuntimeSurface(page, '.insights-domain-page', 'dark')
+    await layout(page, width, domain)
+    expect(runtime.calls).toHaveLength(domain === 'site' ? 3 : 4)
+    runtime.assertQuiet()
+  })
+}
