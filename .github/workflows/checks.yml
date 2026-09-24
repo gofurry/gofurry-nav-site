@@ -202,6 +202,9 @@ jobs:
       - name: Build
         working-directory: apps/cn/nav-web
         run: npm run build
+      - name: Build deployment image
+        working-directory: apps/cn/nav-web
+        run: docker build --tag gofurry-nav-web:ci .
       - name: Install Playwright Chromium
         working-directory: apps/cn/nav-web
         run: npx playwright install --with-deps chromium

@@ -1019,7 +1019,10 @@ simultaneous resource-heavy Visual build. On Linux CI install Chromium with
 `npx playwright install --with-deps chromium`.
 
 The existing Nav Web CI job has separate **Unit tests** and **Nuxt tests** steps
-before typecheck/contract guards/build. After Build succeeds it installs Chromium
+before typecheck/contract guards/build. It also builds the actual Docker deployment
+image, covering dependency-only `npm ci` followed by source copy and fresh Nuxt
+preparation; a full-checkout npm build alone does not cover that ordering.
+After both builds succeed it installs Chromium
 and runs **Browser tests** (`npm run test:browser`). A successful local run of the
 same commands is local evidence, not proof of a remote Actions run. The separate
 `nav-web-visual` job adds its own container install/build/Visual gate after this.

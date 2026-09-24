@@ -36,6 +36,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Fixed
 
+- Regenerate Nuxt paths/types after Docker copies the complete source tree, preventing the dependency-stage `postinstall` configuration from breaking imported Vue prop types; verify the deployment image in CI.
 - Make Hero fallback follow the actual displayed `<picture>/<img>` renderer, preventing an auxiliary preload failure from replacing an already visible Hero; retain per-resource routing and successful-image handoff (#121).
 - Isolate Game Search filter drafts from applied state, discard cancelled drafts, and ignore cancelled/stale requests. Distinguish empty results from failures, provide independent result/tag/simple-search retry, and preserve subsequent filter and pagination requests (#124).
 - Improve Search Filter and page-jump keyboard/focus handling, modal scroll cleanup and date interactions without changing the query contract (#124).

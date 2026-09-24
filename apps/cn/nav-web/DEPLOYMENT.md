@@ -8,9 +8,16 @@ full alpha.8 → alpha.9 upgrade also includes backend/schema changes.
 
 ## Build and run
 
-Run from `apps/cn/nav-web`. Copy the example only on first deployment; preserve
-the existing private `.env.production` on upgrades. Compose must receive that
-file explicitly (its default interpolation file is `.env`).
+Run from `apps/cn/nav-web`. Existing deployments using `.env` can keep their
+configuration and the original update command; Compose reads `.env` automatically:
+
+```bash
+./update.sh
+```
+
+Copy an example only on first deployment; never overwrite existing private
+values. If you choose the alternate filename `.env.production`, pass it explicitly
+instead of using `update.sh` (which intentionally uses Compose's default `.env`):
 
 ```bash
 test -f .env.production || cp .env.production.example .env.production
@@ -19,6 +26,11 @@ docker compose --env-file .env.production -f docker-compose.prod.yml up -d --bui
 ```
 
 The container listens on `127.0.0.1:3000` through the published port mapping.
+
+Docker caches dependency installation before copying source. The `postinstall`
+prepare in that partial tree is insufficient: the build stage runs `nuxt prepare`
+again after copying the complete app/config, then `nuxt build`. Keep both steps;
+otherwise imported Vue prop types may resolve through stale TypeScript aliases.
 
 ## nginx change for `go-furry.com`
 

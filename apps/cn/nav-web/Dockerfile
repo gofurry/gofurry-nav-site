@@ -36,7 +36,9 @@ ENV NAV_V2_API_INTERNAL_BASE=${NAV_V2_API_INTERNAL_BASE}
 ENV GAME_API_INTERNAL_BASE=${GAME_API_INTERNAL_BASE}
 
 COPY . .
-RUN npm run build
+# npm ci prepared an incomplete tree in deps. Refresh Nuxt's paths/types now
+# that app/ and nuxt.config.ts exist, before Vue loads imported prop types.
+RUN npx nuxt prepare && npm run build
 
 FROM deps AS runner
 
