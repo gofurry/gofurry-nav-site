@@ -4,10 +4,16 @@ All notable changes to this project are documented in this file.
 
 Development work that has not been released stays under `Unreleased`. Formal repository-level changelog tracking was introduced before the V3 cycle; earlier project history is reconstructed below as dated milestones from Git history rather than assigned retrospective version numbers.
 
+Versioned entries may be prepared in a release PR; Git tags and GitHub Releases record actual publication.
+
 ## Unreleased
+
+## v3.0.0-alpha.9 - 2026-09-25
 
 ### Added
 
+- Add the Nav Web engineering contract, semantic token/primitive/domain ownership, ESLint and conservative Stylelint gates, and a parser-backed, decrease-only style-debt baseline (#124).
+- Add Vitest Unit/Nuxt projects and production SSR/hydration Playwright contracts, with a separate digest-pinned Linux Visual gate. The release candidate has 406 functional Browser cases and 119 Visual checks covering 118 accepted PNGs (#124).
 - Add an opt-in Admin daily EdgeOne main-host purge configured by YAML time/timezone, with system intent/outcome audit, GFA session-lock and same-slot audit deduplication, bounded runtime shutdown, and no startup catch-up or automatic retry (#122).
 - Add Random cloud, independent desktop/mobile Fixed cloud, and Local folder Hero sources in Home preferences, with SSR-readable ID cookies, a paginated public metadata catalog, lazy single-image previews, and Save/Cancel with no blank-first transition (#112).
 - Add a bilingual Resource routing tab to page preferences with Auto/EdgeOne/Cloudflare modes for GoFurry assets and Auto/China/Global modes for Steam assets, per-route diagnostics, manual retesting, route details, and keyboard navigation across all three tabs (#107).
@@ -16,6 +22,8 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Changed
 
+- Complete Stable/Common, Nav and Games appearance ownership: Tailwind handles structure, Less handles appearance, and body-mounted dialogs/popovers retain explicit token owners. Site Groups no longer inherits the Games visual domain; Site Detail #109, Insights #108 and experimental ambient keep their separately owned debt (#124).
+- Give the shared Game Review dialog an approved Dark appearance across Home, Search and Detail, with consistent controls and validation states (#124).
 - Relicense GoFurry-owned source code and project documentation from MIT to BSD-3-Clause.
 - Add repository licensing, contribution, conduct, and security guidance.
 - Route ideas and architecture proposals to GitHub Discussions and clarify website content-license boundaries.
@@ -28,6 +36,12 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Fixed
 
+- Make Hero fallback follow the actual displayed `<picture>/<img>` renderer, preventing an auxiliary preload failure from replacing an already visible Hero; retain per-resource routing and successful-image handoff (#121).
+- Isolate Game Search filter drafts from applied state, discard cancelled drafts, and ignore cancelled/stale requests. Distinguish empty results from failures, provide independent result/tag/simple-search retry, and preserve subsequent filter and pagination requests (#124).
+- Improve Search Filter and page-jump keyboard/focus handling, modal scroll cleanup and date interactions without changing the query contract (#124).
+- Keep Lottery submissions scoped to the active dialog, reject blank trimmed fields and duplicate pending submissions, restore modal focus/scroll on close, and preserve locale during activation return (#124).
+- Add keyboard-safe Game Detail tabs, NSFW confirmation and Gallery lightbox; keep review/recommendation failures distinct from zero/empty data, allow targeted retries, and reject stale comment-page responses (#124).
+- Prerender the `/about/faolan` payload so real NuxtLink prefetch no longer produces a missing-payload error.
 - Snapshot CDN providers and Steam candidate chains per resource so automatic/manual probes and saved route changes never replace loaded image URLs; new keys/sources adopt the latest policy, and real loading failures still advance fallback. Include Gallery video posters in the same behavior (#121).
 - Match Game group placeholder rating heights to real cards so accumulated row-height differences no longer clip the bottom cards on small and medium screens; preserve pagination overflow and existing hover styling.
 - Restore debounced primary/secondary tag search and selection-preserving local tag filtering in React Admin; honor tag option pagination and keyword filtering (#113).
@@ -38,16 +52,24 @@ Development work that has not been released stays under `Unreleased`. Formal rep
 
 ### Removed
 
+- Retire migrated ad hoc browser runners and `visual:guard` after mapping their effective assertions into the formal Browser, Visual and style-policy gates. Keep direct Playwright, performance tools and the Insights/SEO Contract Guards (#124).
+- Remove proven-unused common State components, SiteIconStrip and the dead Nav content-loading selector without replacing their consumers (#124).
 - Remove News carousel edge decorations while retaining overflow clipping, pagination, and progress indicators (#118).
 - Remove current `gfg_tag.prefix`, `gfg_tag_map`, and physical `gfg_game.primary_tag` / `secondary_tag` columns, along with the legacy Admin Tag Map editor/API; retain historical tag dimensions and derive supported primary/secondary response fields from the new relations (#116).
 
 ### Upgrade notes
 
+- For the complete alpha.8 → alpha.9 service matrix, migration/configuration order and release checks, use the [alpha.9 release guide](docs/releases/v3.0.0-alpha.9.md). Upgrading the whole release is broader than deploying the latest frontend-only #124 changes.
+- The #124 runtime fixes and appearance/test consolidation require a Nav Web rebuild only, with no additional database migration or runtime configuration. Use Node 24 for local/CI builds; `npm ci` runs `nuxt prepare`. The frontend manual acceptance passed on 2026-09-25; automated evidence and remaining closure checks are in [the #124 record](docs/acceptance/issue-124-frontend-engineering-closure.md).
 - Rebuild and redeploy Admin for scheduled EdgeOne main-host purge (#122). Scheduling remains disabled until explicitly enabled in YAML; production may use `05:30 Asia/Shanghai`. No frontend update, new dependency or database migration is required. See [Admin CloudOps operations](docs/operations/admin-cloudops.md).
 - Deploy Nav Backend before Nav Web for Hero source selection (#112). This adds read-only Hero catalog and request-time fixed-ID resolution; no database migration, new dependency, or environment variable is required.
 - The #118 visual cleanup, responsive Game card clipping fix, and #107/#121 resource routing changes require only rebuilding and redeploying Nav Web. They introduce no backend/Admin update, database migration, dependency, or environment-variable requirement; earlier Tag domain upgrade requirements below remain separate.
 - The irreversible `20260916020000_game_tag_domain.sql` migration requires a verified backup and coordinated updates to Game Backend, Game Collector, Admin with its embedded React build, and Nav Web. Stop old runtime clients before migrating; rollback requires restoring the database and compatible binaries rather than running Goose Down. The migration clears old recommendation rows; rebuild them with the new private command (#116).
 - Record isolated regressions, populated development-clone acceptance, and the authorized shared-development migration in [the Tag domain acceptance record](docs/acceptance/issue-116-local-tag-domain.md).
+
+### Known limitations
+
+- Mobile Home `/` and `/en` retain the known initial Footer SSR/client mismatch, tracked as [RUNTIME-FOOTER-01](docs/acceptance/issue-124-frontend-engineering-closure.md#runtime-footer-01). Tests require the retained SSR Hero and exactly the documented initial mismatch; this release does not claim to fix it.
 
 ## v3.0.0-alpha.8 - 2026-09-15
 

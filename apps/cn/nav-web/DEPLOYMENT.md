@@ -1,12 +1,21 @@
-# Production migration for `gofurry-nav-web`
+# Production deployment for `gofurry-nav-web`
 
 This frontend is designed to run inside Docker, so the production host does not need Node.js installed.
 
+For the alpha.9 release, use the [cross-service upgrade guide](../../../docs/releases/v3.0.0-alpha.9.md).
+The frontend-only engineering changes require no new runtime variables, but the
+full alpha.8 → alpha.9 upgrade also includes backend/schema changes.
+
 ## Build and run
 
+Run from `apps/cn/nav-web`. Copy the example only on first deployment; preserve
+the existing private `.env.production` on upgrades. Compose must receive that
+file explicitly (its default interpolation file is `.env`).
+
 ```bash
-cp .env.production.example .env.production
-docker compose -f docker-compose.prod.yml up -d --build
+test -f .env.production || cp .env.production.example .env.production
+# Adjust private deployment values before the first start.
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
 
 The container listens on `127.0.0.1:3000` through the published port mapping.
@@ -69,17 +78,19 @@ Required values:
 
 - `NUXT_PUBLIC_SITE_URL=https://go-furry.com`
 - `NUXT_PUBLIC_NAV_API_BASE=https://nav.go-furry.com/api/v1`
+- `NUXT_PUBLIC_NAV_V2_API_BASE=https://nav.go-furry.com/api/v2`
 - `NUXT_PUBLIC_GAME_API_BASE=https://game.go-furry.com/api/v1`
 - `NUXT_PUBLIC_UPTIME_URL=https://status.go-furry.com`
-- `NAV_API_INTERNAL_BASE=http://10.6.0.11:9999/api/v1`
-- `GAME_API_INTERNAL_BASE=http://10.6.0.11:9998/api/v1`
+- `NAV_API_INTERNAL_BASE`: Nav V1 address reachable from the container
+- `NAV_V2_API_INTERNAL_BASE`: Nav V2 address reachable from the container
+- `GAME_API_INTERNAL_BASE`: Game API address reachable from the container
 
-Managed object keys use `NUXT_PUBLIC_ASSET_PRIMARY_BASE=https://assets.go-furry.com` (COS / EdgeOne) and `NUXT_PUBLIC_ASSET_MIRROR_BASE=https://assets.gofurry.com` (R2 / Cloudflare). Fixed platform icons, About portraits, tool covers and error illustrations are bundled with Nuxt. Follow [the managed asset cutover runbook](../../../docs/managed-assets-cutover.md) when upgrading from the old CDN model.
+Managed object keys use `NUXT_PUBLIC_ASSET_PRIMARY_BASE=https://assets.go-furry.com` (COS / EdgeOne) and `NUXT_PUBLIC_ASSET_MIRROR_BASE=https://assets.gofurry.com` (R2 / Cloudflare). Fixed platform icons, About portraits, tool covers and error illustrations are bundled with Nuxt. The [managed asset cutover runbook](../../../docs/managed-assets-cutover.md) is only for first deployment from the old model or historical recovery; do not rerun initial cutover SQL on an already-migrated installation.
 
 ## Notes
 
 - `robots.txt` and `sitemap.xml` are served from Nuxt `server/routes`.
 - `GET /healthz` returns a dependency-free HTTP 200 response for CDN/Nginx/Nuxt reachability checks.
 - The Footer status link uses the independent status service; it no longer points at Nav Backend.
-- Deploy the Go nav/game backends and the Nuxt frontend together during a maintenance window. The public nav/game APIs now live under `/api/v1`, and the old non-versioned API aliases are intentionally removed.
+- Deploy backend contract changes before the dependent Nuxt frontend; use the release guide to determine which services actually changed. Preserve the existing versioned `/api/v1` and `/api/v2` proxy configuration and authoritative Nuxt 404/503 responses.
 - The old Vue frontend can stay in the repository as a legacy reference, but it is no longer the production entrypoint.

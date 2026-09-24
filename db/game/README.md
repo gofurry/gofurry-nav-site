@@ -17,17 +17,16 @@ Migration `20260916010000` widens only `gfg_game.info` and `info_en` from
 snapshot remain unchanged; the final schema snapshot records 400. Rollback
 refuses to narrow columns while values longer than 300 characters exist.
 
-From the repository root on the deployment host, with the intended GFG migrator
-URL in the private `.env`, apply only through this release's summary migration:
+Migration `20260916020000` subsequently replaces current Tag storage with
+`gfg_tag_category`, `gfg_tag` and `gfg_game_tag`, retaining reviewed leaf IDs and
+deriving primary/secondary compatibility fields from relation roles. It removes
+the legacy map/prefix/physical role columns, clears old recommendation rows and
+advances current projection semantics without rewriting historical facts.
+Its Down rejects rollback; recovery requires a verified backup and matching runtimes.
 
-```bash
-set -a
-. ./.env
-set +a
-cd tools
-GOOSE_DRIVER=postgres GOOSE_DBSTRING="$GOFURRY_GFG_MIGRATOR_URL" go tool goose -dir ../db/game/migrations status
-GOOSE_DRIVER=postgres GOOSE_DBSTRING="$GOFURRY_GFG_MIGRATOR_URL" go tool goose -dir ../db/game/migrations up-to 20260916010000
-```
-
-Use `gofurry_migrator`; deploy the schema before the Admin binary that accepts
-400-character summaries. Already-applied migrations are not executed again.
+The alpha.9 target is `20260916020000`, not the earlier summary-only
+`20260916010000`. Follow the [alpha.9 upgrade guide](../../docs/releases/v3.0.0-alpha.9.md)
+for status checks, coordinated shutdown, migration and recommendation rebuild.
+Use `gofurry_migrator` only for Goose; applications keep `gofurry_app`.
+Already-applied migrations are not executed again. Never rerun baseline adoption
+or edit Goose history to replay an applied migration.

@@ -4,8 +4,9 @@ Implementation base: `074f73af58c2702c54a54b3b921f26856894d3d6` (local dev).
 Validation dates: 2026-09-24–25. Candidate: the P7.2 commit that introduces this record;
 resolve its exact SHA with `git log --diff-filter=A --format=%H -- docs/acceptance/issue-124-frontend-engineering-closure.md`.
 
-Status: P7.2 implementation and local validation complete. Remote final-SHA gates
-and complete maintainer UI acceptance are **Pending**. This record does not close #124.
+Status: P7.2 implementation and local validation complete. The maintainer reported
+manual UI acceptance **PASS** on 2026-09-25 for `ea3d4a1`. Final release/merge-SHA
+CI and the remaining Issue closure steps are **Pending**. This record does not close #124.
 
 ## Scope and immutable evidence
 
@@ -153,25 +154,41 @@ assertion, retry or timeout increase was used.
 Remote at audit time: dev `620ac7c92dd3e2c086bbb25258c6da65fb17f378`, successful
 [run 35894423663](https://github.com/gofurry/gofurry-nav-site/actions/runs/35894423663).
 That run predates four local implementation commits and cannot accept P7.2.
-No push/production/cloud operation or Issue closure is implicit in this record.
 
-## Maintainer acceptance — Pending
+Release-preparation check on 2026-09-25: remote dev now matches the implementation
+candidate `ea3d4a1402d4edebafc090f2ae65063bcd747d37`.
+[Run 36029345965](https://github.com/gofurry/gofurry-nav-site/actions/runs/36029345965)
+completed successfully: `nav-web` and `nav-web-visual` both actually ran and passed,
+with logs confirming Browser **406/406** (11.4m) and Visual **119/119** (3.2m).
+The subsequent alpha.9 PR/merge commit needs
+its own affected-service gates. Skipped Go/database jobs on
+this frontend-only push are not full-release validation. See the
+[release guide](../releases/v3.0.0-alpha.9.md).
+No production/cloud operation or Issue closure is implicit in this record.
 
-Record candidate SHA, environment, date, reviewer and findings here after actual
-review. Existing golden approval is retained; no image changed in P7.2.
+## Maintainer acceptance — PASS; publication checks pending
 
-- [ ] Same final SHA: local complete checks; remote nav-web and nav-web-visual
-  actually execute and PASS (skipped jobs are not evidence).
-- [ ] Light/Dark and 1440/390: shell/menu/locale/BottomTab/Footer, Static/Legal,
+On 2026-09-25 the repository maintainer explicitly reported “人工审核通过” after
+the frontend acceptance checklist, for candidate
+`ea3d4a1402d4edebafc090f2ae65063bcd747d37`. The checked UI items below record that
+maintainer attestation; no additional automated run or production deployment is
+implied. Existing golden approval is retained; no image changed in P7.2 or the
+subsequent documentation-only alpha.9 preparation.
+
+- [x] Implementation candidate `ea3d4a1`: local complete checks and remote
+  nav-web / nav-web-visual actually execute and PASS in run 36029345965.
+- [ ] Alpha.9 PR/merge commit: its affected-service gates execute and PASS;
+  skipped jobs or the earlier candidate's green status do not replace this check.
+- [x] Light/Dark and 1440/390: shell/menu/locale/BottomTab/Footer, Static/Legal,
   Updates, real 404 and ScrollDock; keyboard focus remains usable.
-- [ ] Preferences three tabs, Save/Cancel, Random/Fixed/Local Hero, page background,
+- [x] Preferences three tabs, Save/Cancel, Random/Fixed/Local Hero, page background,
   Resource Routing pin/probe/snapshot/fallback without reloading displayed assets.
-- [ ] Nav Header search/Quick Sites, real reveal, Cards/Popovers/Spotlight/ToolDock,
+- [x] Nav Header search/Quick Sites, real reveal, Cards/Popovers/Spotlight/ToolDock,
   Site Groups; English long-text paths included.
-- [ ] Games Home groups/Stats/News/Sidebar, ReviewDialog, Search drafts/results/
+- [x] Games Home groups/Stats/News/Sidebar, ReviewDialog, Search drafts/results/
   filters/date/Jump/retry, Lottery and activation in an isolated development flow.
-- [ ] Detail tabs, NSFW/Lightbox/focus, gallery containment, 75/25 and narrow layouts.
-- [ ] Insights/Site excluded surfaces navigate/render/theme correctly; existing
+- [x] Detail tabs, NSFW/Lightbox/focus, gallery containment, 75/25 and narrow layouts.
+- [x] Insights/Site excluded surfaces navigate/render/theme correctly; existing
   redesign requests remain #108/#109, not silently reassigned to #124.
 - [ ] RUNTIME-FOOTER-01 has explicit maintainer follow-up disposition/Issue link;
   no unassigned blocking regression remains.

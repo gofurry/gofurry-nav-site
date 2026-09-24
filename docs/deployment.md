@@ -1,5 +1,7 @@
 # Cross-service deployment
 
+For alpha.8 → alpha.9, follow the [release-specific upgrade guide](releases/v3.0.0-alpha.9.md), including the irreversible Game Tag migration and coordinated runtime replacement.
+
 ## Build ownership
 
 From a Windows release workspace, `build.bat all` builds only the six active Linux/amd64 Go binaries:
@@ -23,7 +25,7 @@ Treat binary deployment and schema migration as separate operator actions:
 
 1. Build and verify release artifacts.
 2. Back up the current binary, configuration, and systemd unit.
-3. If the release contains Goose migrations, back up the affected database and run Goose explicitly from the matching root `db/*/migrations` directory.
+3. If the release contains Goose migrations, back up the affected database and run Goose explicitly from the matching root `db/*/migrations` directory. For incompatible/destructive schema changes, stop all old runtime clients and writes **before** Goose; the release-specific cutover order takes precedence.
 4. Stop the affected service.
 5. Apply the release's documented configuration changes and replace the binary.
 6. Install or replace systemd registration as documented in [systemd operations](operations/systemd.md).
