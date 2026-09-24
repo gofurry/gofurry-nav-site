@@ -1,5 +1,5 @@
 <template>
-  <div ref="pagination" class="gf-pagination game-search-pagination flex items-center justify-center gap-2 select-none">
+  <div ref="pagination" class="gf-pagination gf-pagination--plain game-search-pagination flex items-center justify-center gap-2 select-none">
 
     <!-- 页码 -->
     <div class="game-search-pagination-pages">

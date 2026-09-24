@@ -898,8 +898,29 @@ Site capability and shared Insights debt remain #109/#108 work. Preserve native
 button inheritance and unitless typography ratios rather than utility intent.
 
 The accepted 179 Browser / 119 Visual contracts and all 118 PNGs stay unchanged.
-P6.5 removes only its nineteen rule/file debt entries or budgets; legacy Games
-root cleanup remains P6.6, not authorization to migrate other surfaces.
+P6.5 removes only its nineteen rule/file debt entries or budgets; P6.6 separately
+closes the audited legacy Games root cleanup.
+
+### Games completion boundary (P6.6)
+
+The existing `.games-page` scope MUST remain on Home/Search/Detail while its
+audited shared consumers depend on it. Its fourteen retained compatibility roles
+and distinct root `--games-text-body` belong to `pages/games.less`; new surfaces
+MUST use their explicit domain owner, not extend this compatibility palette.
+Preserve Dark root specificity, asymmetric Detail aliases and higher-priority
+shared SidebarSearch rules. The layout owns the transparent canvas.
+
+Plain Pagination's transparent border/fill and square corners belong to the
+explicit primitive modifier `.gf-pagination--plain`. Search's domain adapter
+retains text emphasis, underline and its accepted typography/motion/geometry;
+it MUST NOT reset the shared `.gf-pagination__button*` appearance again.
+
+P6 completion means no unassigned Games appearance debt, not removal of every
+shared root or private scoped style. Site #109, experimental Ambient and the
+five shared/domain Insights `!important` declarations keep their documented
+owners. The accepted 179 Browser / 119 Visual / 118 PNG contracts stay frozen.
+Legacy runner retirement requires P7 assertion/consumer mapping; P6 closure
+does not authorize deleting tools or migrating #108/#109.
 
 ### P1 enforcement and maintenance
 

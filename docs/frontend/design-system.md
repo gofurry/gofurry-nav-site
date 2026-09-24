@@ -228,18 +228,10 @@ ratio and build result rather than rounding the rendered value. Authored alpha
 values likewise remain distinct from browser serialization. News card typography,
 clipping, motion and hover semantics remain frozen by the P6.1.3 contracts.
 
-Home closure excludes shared ReviewDialog and SidebarSearch. P6.3.2 subsequently
-retires the shared SidebarSearch block's 13 raw occurrences. The remaining
-20 raw occurrences in `games.less` have explicit future owners:
-
-| Remaining surface | Raw occurrences | Owner |
-| --- | ---: | --- |
-| Shared Dark Games root color | 1 | P6.6, after auditing all Games consumers |
-| Detail and BlurWrapper notice | 19 | P6.5 Detail/Common |
-
-Do not delete legacy `--games-*` declarations while those consumers still need
-them. ReviewDialog belongs to P6.2 and Lottery to P6.4; Home completion does not
-close the whole Games programme or authorize unrelated debt cleanup.
+Home closure originally excluded shared ReviewDialog and SidebarSearch. P6.3.2
+retired the latter's 13 raw occurrences, P6.5.2 retired the 19 Detail/BlurWrapper
+occurrences, and P6.6 resolves the final shared Dark root occurrence. Their
+separate runtime and visual contracts remain authoritative after Games closure.
 
 ## Search and shared SidebarSearch appearance
 
@@ -253,7 +245,7 @@ Shared SidebarSearch stays in `pages/games.less`: eight
 `--games-sidebar-search-*` roles cover input/focus, panel and card/hover states
 on the existing Games roots. Keep its higher-specificity Dark consumer selectors;
 merely moving all theme differences into root variables would let later Search
-rules change accepted pixels. The Search `games-page` bridge remains P6.6 work.
+rules change accepted pixels. P6.6 retains the audited Search `games-page` bridge.
 
 Input `text-sm` did not own the rendered typography: Sidebar/Jump inputs inherit
 16px/24px through the existing reset. Jump title remains 14px/20px, while Datepicker
@@ -313,7 +305,50 @@ without a second JS palette, and keeps ECharts instances shallow.
 
 Only Game-specific Insights appearance is included. Site capability and shared
 Insights styles keep their #109/#108 owners. All 118 goldens and runtime contracts
-remain fixed; the legacy Games bridge and remaining root raw belong to P6.6.
+remain fixed; P6.6 audits and retains the live Games compatibility bridge.
+
+## Games completion and retained compatibility (P6.6)
+
+Home, Search and Detail retain `.games-page`; it is an audited compatibility
+scope, not permission to grow a new shared palette. `pages/games.less` and its
+existing Light/Dark roots retain these roles (names below omit `--games-`):
+
+| Roles | Actual consumers |
+| --- | --- |
+| `item-hover-bg`, `item-border`, `item-hover-border`, `text-main`, `focus-ring` | Shared SidebarSearch |
+| `text-title`, `accent`, `accent-strong`, `badge-bg`, `shadow-soft` | Detail headings, links, tags, media and cards |
+| `text-muted`, `text-soft`, `accent-muted`, `shadow-popover` | Detail and shared SidebarSearch; supporting Detail overlays |
+| `text-body` | Root text, preserving the distinct Dark body contrast |
+
+Light Detail's text aliases and Dark Detail's reverse reads remain deliberately
+asymmetric. Keep the explicit Dark root color consumer and its specificity;
+muted text is not the root body role. The layout owns the transparent canvas and
+the existing root color/background transitions remain unchanged.
+
+P6.6 removes 26 unreferenced legacy roles plus `shell-bg`, whose only dependent
+was the dead `sidebar-bg`. It also removes the shell-overridden `page-bg` and its
+two consumers: 28 names / 56 theme declarations in total. Legacy ToolDock panel
+transition rules and its unused active branch are removed; real hover and the
+dynamic InfoGroup/Sidebar transitions remain. Chart tokens are live dynamic
+readers, not dead just because they lack literal CSS `var()` consumers.
+
+`primitives/pagination.less` owns the explicit `.gf-pagination--plain` variant's
+transparent border/fill and square corners. Search selects that variant instead
+of resetting `.gf-pagination__button*`. Its existing domain adapter still owns
+text emphasis, active underline, geometry, typography and motion. Default
+Pagination and the accepted Search computed appearance remain unchanged.
+
+The six remaining Games SFC scoped blocks retain private layout, containment,
+spacers and runtime geometry. Review/Filter/Jump/Lightbox remain body-owned;
+NSFW and Rating retain their existing primitives. No global Common palette or
+file relocation is needed to close P6.
+
+Remaining baseline ownership is explicit: Site #109 owns Tailwind 632, arbitrary
+5, deep 33 and raw 388 (382 in Site SFCs, 6 Site capability values in
+`insights.less`). Ambient's 75 raw values remain experimental. The three shared
+Insights foundation `!important` declarations and two Insights domain declarations
+remain #108/shared-boundary work; shared consumers do not authorize Game-only
+removal. P6 closure does not authorize #108/#109 changes or P7 runner retirement.
 
 ## Preserve semantic identity
 

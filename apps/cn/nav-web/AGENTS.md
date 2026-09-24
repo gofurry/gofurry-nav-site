@@ -73,8 +73,15 @@ while the body-mounted `.game-detail-lightbox` / Dark owns only its local palett
 BlurWrapper/LinkTag remain Detail consumers; scoped Similar styles keep geometry.
 Charts read resolved Detail CSS tokens after the real theme update and retain
 `shallowRef` instances. Game-only Insights rules may consume these tokens; #108/#109
-remain excluded. Freeze the accepted runtime/PNG contracts; the legacy Games
-root bridge and final cleanup remain P6.6 work.
+remain excluded. Freeze the accepted runtime/PNG contracts.
+
+P6.6 closes Games appearance cleanup while retaining the audited Home/Search/Detail
+`.games-page` compatibility scope and its fifteen roles. New surfaces use their
+own domain tokens; preserve Dark root specificity and shared SidebarSearch rules.
+Search chooses the primitive `.gf-pagination--plain` variant instead of resetting
+shared pagination appearance. Remaining Site/Ambient/Insights debt retains its
+explicit owner. No opportunistic #108/#109 cleanup or P7 runner retirement follows
+from P6 closure; preserve all 179 Browser / 119 Visual / 118 PNG contracts.
 
 After P4, do not opportunistically clear remaining debt: Nav/MobileBottomTabBar
 belong to P5, Game plus BlurWrapper/LinkTag to P6, Site to #109, Insights page/domain

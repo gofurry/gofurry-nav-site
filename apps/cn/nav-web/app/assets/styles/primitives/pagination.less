@@ -30,6 +30,15 @@
   font-weight: 750;
 }
 
+// Plain pagination keeps the border geometry while leaving emphasis to its consumer.
+.gf-pagination--plain .gf-pagination__button,
+.gf-pagination--plain .gf-pagination__button:hover,
+.gf-pagination--plain .gf-pagination__button--active {
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+}
+
 .gf-pagination__total {
   color: var(--gf-text-soft);
   font-size: 0.75rem;
