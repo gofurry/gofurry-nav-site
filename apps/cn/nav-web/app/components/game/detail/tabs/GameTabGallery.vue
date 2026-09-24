@@ -68,7 +68,7 @@
         <SteamAssetImage
             :src="item.thumb"
             :alt="mediaAlt(item)"
-            class="h-full w-full object-cover transition-transform duration-200"
+            class="h-full w-full object-cover"
             loading="lazy"
             decoding="async"
         />
@@ -101,7 +101,7 @@
           class="max-h-full max-w-full object-contain"
       />
       <button
-          class="game-detail-lightbox__close absolute right-4 top-4 text-2xl"
+          class="game-detail-lightbox__close absolute right-4 top-4"
           @click="openFullscreen = false"
           :aria-label="t('common.close')"
       >

@@ -294,6 +294,27 @@ the measured 12px backdrop blur and complete transition property sets. Accepted
 runtime tests and all 98 images are unchanged. P6.4 is closed; Detail/Common and
 Games-wide final cleanup remain separate P6.5/P6.6 work.
 
+## Detail and Common consumer ownership (P6.5.2)
+
+The maintainer accepted P6.5.1's twenty Detail images before appearance migration.
+`pages/games.less` owns Detail tokens under `.game-detail-page` / Dark and
+`--games-detail-*`. The body-mounted Lightbox declares only its own required
+palette on its existing exact roots. BlurWrapper and LinkTag stay in `common/`
+but inherit Detail appearance; they do not establish a global Common palette.
+Similar's scoped styles retain geometry/containment, while domain Less owns
+typography, cover treatment and paging motion.
+
+Preserve accepted computed appearance: native buttons may inherit fonts despite
+old Tailwind typography, and Similar's smaller reason text inherits its parent's
+unitless line-height ratio. Do not round those ratios or rewrite authored colors
+from browser-serialized values. Game chart roles live in the Detail palette;
+the Canvas bridge reads resolved element tokens after real theme application,
+without a second JS palette, and keeps ECharts instances shallow.
+
+Only Game-specific Insights appearance is included. Site capability and shared
+Insights styles keep their #109/#108 owners. All 118 goldens and runtime contracts
+remain fixed; the legacy Games bridge and remaining root raw belong to P6.6.
+
 ## Preserve semantic identity
 
 Equal values do not mean equal tokens. `--gf-accent` describes emphasis;

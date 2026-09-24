@@ -881,6 +881,26 @@ The approved runtime correction fixes Header's reporting zone to Asia/Shanghai
 across SSR/client and keeps ECharts instances outside Vue's deep proxy graph;
 it does not authorize a chart palette or data-flow migration.
 
+### Game Detail appearance boundary (P6.5.2)
+
+After maintainer approval of the twenty Detail goldens, Detail appearance belongs
+to `pages/games.less` with exact `.game-detail-page` / `html.dark .game-detail-page`
+declaration roots and `--games-detail-*`. The body Lightbox keeps its separate
+exact roots; it MUST NOT depend on page inheritance. BlurWrapper and LinkTag are
+Detail consumers, not global visual primitives. Similar keeps private geometry
+scoped; its typography and motion belong to the domain Less owner.
+
+Player/Price charts read resolved inherited CSS palette values from their real
+elements after theme application, retaining shallow ECharts instances and existing
+data/request/tooltip behavior. Game-only discount/platform appearance and the two
+Game-specific cascade overrides in `insights.less` stay within this boundary;
+Site capability and shared Insights debt remain #109/#108 work. Preserve native
+button inheritance and unitless typography ratios rather than utility intent.
+
+The accepted 179 Browser / 119 Visual contracts and all 118 PNGs stay unchanged.
+P6.5 removes only its nineteen rule/file debt entries or budgets; legacy Games
+root cleanup remains P6.6, not authorization to migrate other surfaces.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

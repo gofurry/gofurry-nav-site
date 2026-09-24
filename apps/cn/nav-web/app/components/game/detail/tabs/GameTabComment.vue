@@ -1,5 +1,5 @@
 <template>
-  <div class="game-detail-comments space-y-4 text-sm">
+  <div class="game-detail-comments space-y-4">
     <div v-if="unavailable || pageFailed" data-detail-reviews-error role="status" :aria-busy="loading || isLoading">
       <p>{{ t('game.detail.reviewsUnavailable') }}</p>
       <button class="game-detail-load-more px-4 py-1" :disabled="loading || isLoading" @click="unavailable ? emit('retry') : loadMore()">
@@ -13,7 +13,7 @@
         :key="`${remark.create_time}-${remark.ip}-${index}`"
         class="game-detail-comment mt-1 space-y-1 p-4"
       >
-        <div class="game-detail-comment-meta flex flex-col text-xs">
+        <div class="game-detail-comment-meta flex flex-col">
           <div class="flex justify-between">
             <span><strong>{{ t("game.detail.commenter") }}:</strong> {{ remark.name }}</span>
             <span><strong>{{ t("game.detail.region") }}:</strong> {{ remark.region }}</span>
@@ -27,7 +27,7 @@
         <div class="mt-1 flex items-center gap-1">
           <img v-for="i in fullStars(remark.score)" :key="`full-${i}-${index}`" :src="starSvg" class="h-4 w-4" alt="" />
           <img v-if="hasHalfStar(remark.score)" :src="starHalfSvg" class="h-4 w-4" alt="" />
-          <img v-for="i in emptyStars(remark.score)" :key="`empty-${i}-${index}`" :src="starSvg" class="h-4 w-4 opacity-30" alt="" />
+          <img v-for="i in emptyStars(remark.score)" :key="`empty-${i}-${index}`" :src="starSvg" class="h-4 w-4 game-detail-star--empty" alt="" />
           <span class="game-detail-comment-score ml-2">{{ remark.score.toFixed(1) }}</span>
         </div>
 
@@ -44,11 +44,11 @@
           v-if="hasMore && !pageFailed"
           :disabled="isLoading"
           @click="loadMore"
-          class="game-detail-load-more px-4 py-1 disabled:opacity-60"
+          class="game-detail-load-more px-4 py-1 game-detail-load-more--pending"
         >
           {{ isLoading ? t("common.loading") : t("common.loadMore") }}
         </button>
-        <span v-else-if="!hasMore" class="game-detail-empty text-sm">{{ t("game.detail.allCommentsLoaded") }}</span>
+        <span v-else-if="!hasMore" class="game-detail-empty">{{ t("game.detail.allCommentsLoaded") }}</span>
       </div>
     </div>
 

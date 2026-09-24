@@ -27,6 +27,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { readGameDetailChartPalette } from '@/utils/gameDetailChartPalette'
 import type { GameDetailInsightRange, GameInsightPlayerPoint } from '@/types/insights'
 import { formatGameInsightAxisDate } from '@/utils/insightHistoryRanges'
 
@@ -56,17 +57,7 @@ async function renderChart() {
   if (!active || !chartRef.value) return
   if (!chart.value) chart.value = echarts.init(chartRef.value, undefined, { renderer: 'canvas' })
 
-  const dark = isDark.value
-  const colors = {
-    peak: dark ? '#7dd3fc' : '#2563eb',
-    average: dark ? '#94a3b8' : '#64748b',
-    axis: dark ? '#94a3b8' : '#786f68',
-    split: dark ? 'rgba(148, 163, 184, .20)' : 'rgba(126, 92, 58, .14)',
-    tooltip: dark ? 'rgba(15, 23, 42, .96)' : 'rgba(255, 250, 242, .98)',
-    border: dark ? 'rgba(125, 211, 252, .28)' : 'rgba(217, 119, 6, .22)',
-    text: dark ? '#e2e8f0' : '#292524',
-    area: dark ? 'rgba(125, 211, 252, .12)' : 'rgba(37, 99, 235, .10)',
-  }
+  const colors = readGameDetailChartPalette(chartRef.value)
   const peakSeries = props.points.map(point => ({ value: point.max, point }))
   const averageSeries = props.points.map(point => ({ value: point.avg, point }))
 
@@ -84,9 +75,9 @@ async function renderChart() {
     tooltip: {
       trigger: 'axis',
       confine: true,
-      backgroundColor: colors.tooltip,
-      borderColor: colors.border,
-      textStyle: { color: colors.text },
+      backgroundColor: colors.tooltipBackground,
+      borderColor: colors.playerTooltipBorder,
+      textStyle: { color: colors.tooltipText },
       formatter(params: { axisValue?: string, data?: { value: number | null, point: GameInsightPlayerPoint } } | Array<{ axisValue?: string, data?: { value: number | null, point: GameInsightPlayerPoint } }>) {
         const entries = Array.isArray(params) ? params : [params]
         const axisDate = entries.find(item => item.axisValue)?.axisValue
@@ -126,9 +117,9 @@ async function renderChart() {
         symbol: 'circle',
         symbolSize: 6,
         showSymbol: props.points.length <= 31,
-        lineStyle: { width: 3, color: colors.peak },
-        itemStyle: { color: colors.peak },
-        areaStyle: { color: colors.area },
+        lineStyle: { width: 3, color: colors.playerPeak },
+        itemStyle: { color: colors.playerPeak },
+        areaStyle: { color: colors.playerArea },
       },
       {
         name: t('insights.entity.dailyAverage'),
@@ -138,8 +129,8 @@ async function renderChart() {
         symbol: 'circle',
         symbolSize: 5,
         showSymbol: props.points.length <= 31,
-        lineStyle: { width: 2, color: colors.average },
-        itemStyle: { color: colors.average },
+        lineStyle: { width: 2, color: colors.playerAverage },
+        itemStyle: { color: colors.playerAverage },
       },
     ],
   }, true)

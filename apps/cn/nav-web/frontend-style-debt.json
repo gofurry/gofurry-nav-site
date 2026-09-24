@@ -2,17 +2,6 @@
   "schema_version": 1,
   "baseline": {
     "tailwind-appearance": {
-      "app/components/common/BlurWrapper.vue": 5,
-      "app/components/common/LinkTag.vue": 1,
-      "app/components/game/detail/GameDetailHeader.vue": 18,
-      "app/components/game/detail/GameDetailMain.vue": 2,
-      "app/components/game/detail/GameSidebarLinks.vue": 4,
-      "app/components/game/detail/GameSidebarSimilar.vue": 23,
-      "app/components/game/detail/tabs/GameTabComment.vue": 5,
-      "app/components/game/detail/tabs/GameTabDetail.vue": 22,
-      "app/components/game/detail/tabs/GameTabGallery.vue": 3,
-      "app/components/game/detail/tabs/GameTabIntro.vue": 1,
-      "app/components/game/detail/tabs/GameTabNews.vue": 5,
       "app/components/site/SiteDetailHero.vue": 53,
       "app/components/site/SiteDetailPage.vue": 7,
       "app/components/site/SiteDnsPanel.vue": 84,
@@ -25,20 +14,15 @@
       "app/components/site/SiteSignalCards.vue": 20
     },
     "tailwind-arbitrary-appearance": {
-      "app/components/game/detail/GameDetailHeader.vue": 1,
-      "app/components/game/detail/GameSidebarSimilar.vue": 3,
       "app/components/site/SiteHealthSummaryPanel.vue": 1,
       "app/components/site/SiteObservationOverviewPanel.vue": 2,
       "app/components/site/SiteOverview.vue": 1,
       "app/components/site/SitePerformance.vue": 1
     },
     "raw-visual-value": {
-      "app/assets/styles/pages/games.less": 20,
-      "app/assets/styles/pages/insights.less": 10,
+      "app/assets/styles/pages/games.less": 1,
+      "app/assets/styles/pages/insights.less": 6,
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
-      "app/components/game/detail/GameSidebarSimilar.vue": 1,
-      "app/components/game/detail/insights/GamePlayerTrend.vue": 16,
-      "app/components/game/detail/insights/GamePriceHistory.vue": 12,
       "app/components/site/SiteChangeEvents.vue": 22,
       "app/components/site/SiteDetailHero.vue": 42,
       "app/components/site/SiteDetailPage.vue": 9,
@@ -55,7 +39,7 @@
       "app/components/site/SiteSignalCards.vue": 11
     },
     "important": {
-      "app/assets/styles/pages/insights.less": 5,
+      "app/assets/styles/pages/insights.less": 3,
       "app/assets/styles/pages/insights/domain.less": 2
     },
     "deep-selector": {

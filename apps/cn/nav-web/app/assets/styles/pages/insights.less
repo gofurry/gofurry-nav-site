@@ -598,14 +598,11 @@ html.dark .site-insights-state--negative {
 }
 
 .game-insights-price-list__discount {
-  color: #15803d;
+  color: var(--games-detail-insights-discount);
   font-size: 12px;
   font-weight: 750;
 }
 
-html.dark .game-insights-price-list__discount {
-  color: #86efac;
-}
 
 .game-insights-price-list p {
   margin: 5px 0 0;
@@ -614,8 +611,8 @@ html.dark .game-insights-price-list__discount {
   line-height: 1.45;
 }
 
-.game-insights-price-list__low {
-  color: var(--gf-text-soft) !important;
+.game-insights-price-list .game-insights-price-list__low {
+  color: var(--gf-text-soft);
 }
 
 .game-insights-platform-list > li {
@@ -634,12 +631,9 @@ html.dark .game-insights-price-list__discount {
 }
 
 .game-insights-platform-list__state--supported {
-  color: #15803d;
+  color: var(--games-detail-insights-platform-supported);
 }
 
-html.dark .game-insights-platform-list__state--supported {
-  color: #86efac;
-}
 
 .game-insights-platform-list__state--unsupported,
 .game-insights-platform-list__state--unknown {
@@ -903,7 +897,10 @@ html.dark .game-insights-platform-list__state--supported {
   .game-insights-overview__state {
     grid-column: 1 / -1;
     border-top: 1px solid var(--gf-border);
-    border-left: 0 !important;
+  }
+
+  .game-insights-overview__section.game-insights-overview__state {
+    border-left: 0;
   }
 }
 

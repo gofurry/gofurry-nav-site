@@ -27,7 +27,7 @@
             @keydown="onTabKey($event, tab.key)"
             class="game-detail-tab flex-shrink-0"
             :class="[
-              'px-4 py-3 text-sm cursor-pointer select-none whitespace-nowrap',
+              'px-4 py-3 cursor-pointer select-none whitespace-nowrap',
               tab.mobileOnly ? 'xl:hidden' : '',
               activeTab === tab.key
                 ? 'game-detail-tab--active'
@@ -39,7 +39,7 @@
       </div>
 
       <!-- Tab Content -->
-      <div :id="`${tabId}-panel`" role="tabpanel" :aria-labelledby="`${tabId}-${activeTab}`" class="game-detail-tab-panel min-w-0 max-w-full p-5 text-sm">
+      <div :id="`${tabId}-panel`" role="tabpanel" :aria-labelledby="`${tabId}-${activeTab}`" class="game-detail-tab-panel min-w-0 max-w-full p-5">
 
         <GameTabInsights
             v-if="insightsVisited"

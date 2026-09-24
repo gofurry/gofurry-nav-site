@@ -1,6 +1,6 @@
 <template>
   <div class="game-detail-sidebar-card p-4">
-    <h3 class="game-detail-sidebar-title mb-3 font-semibold">{{ t("game.detail.similarGames") }}</h3>
+    <h3 class="game-detail-sidebar-title mb-3">{{ t("game.detail.similarGames") }}</h3>
 
     <div v-if="unavailable" data-detail-recommend-error role="status" :aria-busy="loading">
       <p>{{ t('game.detail.recommendUnavailable') }}</p>
@@ -19,12 +19,12 @@
             :key="`spacer-${index}`"
             class="game-detail-similar-item flex gap-3 p-2"
         >
-          <div class="h-16 w-12 flex-shrink-0 rounded-md" />
-          <div class="game-detail-similar-body min-w-0 flex-1 text-sm">
-            <div class="game-detail-similar-title truncate font-medium">placeholder</div>
-            <div class="game-detail-similar-summary line-clamp-2 text-xs">placeholder</div>
-            <div class="game-detail-similar-score mt-1 text-xs">placeholder</div>
-            <div class="game-detail-similar-reason truncate text-[11px]">placeholder</div>
+          <div class="h-16 w-12 flex-shrink-0 game-detail-similar-cover" />
+          <div class="game-detail-similar-body min-w-0 flex-1">
+            <div class="game-detail-similar-title truncate">placeholder</div>
+            <div class="game-detail-similar-summary line-clamp-2">placeholder</div>
+            <div class="game-detail-similar-score mt-1">placeholder</div>
+            <div class="game-detail-similar-reason truncate">placeholder</div>
           </div>
         </div>
       </div>
@@ -56,20 +56,20 @@
             <SteamAssetImage
                 v-if="coverOf(game)"
                 :src="coverOf(game)"
-                class="w-12 h-16 rounded-md object-cover flex-shrink-0"
+                class="w-12 h-16 game-detail-similar-cover object-cover flex-shrink-0"
                 :alt="game.name"
                 @error="hideBrokenCover"
             />
-            <div v-else class="game-detail-similar-cover-empty w-12 h-16 rounded-md flex-shrink-0" />
+            <div v-else class="game-detail-similar-cover-empty w-12 h-16 game-detail-similar-cover flex-shrink-0" />
 
             <!-- 游戏信息 -->
-            <div class="game-detail-similar-body min-w-0 flex-1 text-sm">
-              <div class="game-detail-similar-title truncate font-medium">{{ game.name }}</div>
-              <div class="game-detail-similar-summary line-clamp-2 break-words text-xs">{{ game.summary }}</div>
-              <div class="game-detail-similar-score mt-1 text-xs">
+            <div class="game-detail-similar-body min-w-0 flex-1">
+              <div class="game-detail-similar-title truncate">{{ game.name }}</div>
+              <div class="game-detail-similar-summary line-clamp-2 break-words">{{ game.summary }}</div>
+              <div class="game-detail-similar-score mt-1">
                 {{ t("game.detail.similarity") }}: {{ formatSimilarity(game.display_score) }}
               </div>
-              <div v-if="formatReason(game)" class="game-detail-similar-reason truncate text-[11px]">
+              <div v-if="formatReason(game)" class="game-detail-similar-reason truncate">
                 {{ formatReason(game) }}
               </div>
             </div>
@@ -81,12 +81,12 @@
               class="game-detail-similar-item game-detail-similar-item--placeholder flex gap-3 p-2"
               aria-hidden="true"
           >
-            <div class="w-12 h-16 rounded-md flex-shrink-0" />
-            <div class="game-detail-similar-body min-w-0 flex-1 text-sm">
-              <div class="game-detail-similar-title truncate font-medium">placeholder</div>
-              <div class="game-detail-similar-summary line-clamp-2 text-xs">placeholder</div>
-              <div class="game-detail-similar-score mt-1 text-xs">placeholder</div>
-              <div class="game-detail-similar-reason truncate text-[11px]">placeholder</div>
+            <div class="w-12 h-16 game-detail-similar-cover flex-shrink-0" />
+            <div class="game-detail-similar-body min-w-0 flex-1">
+              <div class="game-detail-similar-title truncate">placeholder</div>
+              <div class="game-detail-similar-summary line-clamp-2">placeholder</div>
+              <div class="game-detail-similar-score mt-1">placeholder</div>
+              <div class="game-detail-similar-reason truncate">placeholder</div>
             </div>
           </div>
             </div>
@@ -95,7 +95,7 @@
       </div>
 
       <!-- 没有数据 -->
-      <div v-if="!unavailable && !recommendList.length" class="game-detail-empty py-4 text-center text-sm">
+      <div v-if="!unavailable && !recommendList.length" class="game-detail-empty py-4 text-center">
         {{ t("game.panel.none") }}
       </div>
     </div>
@@ -110,7 +110,7 @@
           :key="page"
           @click="changePage(page)"
           :class="[
-          'game-detail-page-button px-3 py-1 text-sm font-medium',
+          'game-detail-page-button px-3 py-1',
           currentPage === page
             ? 'game-detail-page-button--active'
             : 'game-detail-page-button--idle'
@@ -344,19 +344,6 @@ onBeforeUnmount(() => {
   will-change: transform;
 }
 
-.game-detail-similar-track--instant {
-  animation: none;
-  transition: none;
-}
-
-.game-detail-similar-track--next {
-  animation: game-detail-similar-next 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.game-detail-similar-track--prev {
-  animation: game-detail-similar-prev 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
 .game-detail-similar-slide {
   width: 100%;
   min-width: 100%;
@@ -375,10 +362,6 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-.game-detail-similar-cover-empty {
-  background: rgba(148, 163, 184, 0.16);
-}
-
 .game-detail-similar-title,
 .game-detail-similar-reason {
   max-width: 100%;
@@ -387,30 +370,11 @@ onBeforeUnmount(() => {
 
 .game-detail-similar-summary {
   max-height: 2rem;
-  line-height: 1rem;
 }
 
 .game-detail-similar-item--placeholder {
   visibility: hidden;
   pointer-events: none;
-}
-
-@keyframes game-detail-similar-next {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(-100%, 0, 0);
-  }
-}
-
-@keyframes game-detail-similar-prev {
-  from {
-    transform: translate3d(-100%, 0, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
 }
 
 </style>

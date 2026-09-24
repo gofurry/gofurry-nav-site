@@ -10,7 +10,7 @@
 
     <div
       v-if="!game?.about_the_game"
-      class="game-detail-content-card game-detail-empty text-sm"
+      class="game-detail-content-card game-detail-empty"
     >
       {{ t("game.panel.none") }}
     </div>

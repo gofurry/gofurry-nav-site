@@ -1,5 +1,5 @@
 <template>
-  <div class="game-detail-sidebar-card space-y-3 p-4 text-sm">
+  <div class="game-detail-sidebar-card game-detail-sidebar-links space-y-3 p-4">
     <div class="flex justify-between gap-x-2">
       <!-- Steam -->
       <button
@@ -21,7 +21,7 @@
 
     <!-- 资源 -->
     <div v-if="game?.resources?.length">
-      <h3 class="game-detail-sidebar-title mb-2 font-semibold">{{t("game.detail.resources")}}</h3>
+      <h3 class="game-detail-sidebar-title mb-2">{{t("game.detail.resources")}}</h3>
       <div class="flex flex-wrap gap-2">
         <LinkTag
             v-for="(item, i) in game.resources"
@@ -33,13 +33,13 @@
 
     <!-- 社群 -->
     <div v-if="safeGroups.length">
-      <h3 class="game-detail-sidebar-title mb-2 font-semibold">{{t("game.detail.community")}}</h3>
+      <h3 class="game-detail-sidebar-title mb-2">{{t("game.detail.community")}}</h3>
       <SiteIconList :items="safeGroups" />
     </div>
 
     <!-- 相关链接 -->
     <div v-if="safeLinks.length">
-      <h3 class="game-detail-sidebar-title mb-2 font-semibold">{{t("game.detail.relatedLinks")}}</h3>
+      <h3 class="game-detail-sidebar-title mb-2">{{t("game.detail.relatedLinks")}}</h3>
       <SiteIconList :items="safeLinks" />
     </div>
   </div>

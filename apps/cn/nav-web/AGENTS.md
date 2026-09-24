@@ -67,9 +67,14 @@ belong in semantic variables under the existing `html.dark` model, not new
 P6.5.1 Detail contracts retain the original 24 cases and add populated runtime
 and twenty initial visual scenarios. Keep Lightbox/NSFW focus and scroll cleanup,
 locked-slot inertness, manual keyboard tabs and slice-local Retry boundaries.
-Only the body-mounted `.game-detail-lightbox` / Dark root may declare its narrow
-`--games-detail-*` overlay value here; this is not permission to migrate Detail
-appearance. Preserve existing PNGs and debt, and await golden review for P6.5.2.
+The maintainer accepted the twenty images before P6.5.2. Detail appearance now
+belongs to `pages/games.less`: `.game-detail-page` / Dark owns `--games-detail-*`,
+while the body-mounted `.game-detail-lightbox` / Dark owns only its local palette.
+BlurWrapper/LinkTag remain Detail consumers; scoped Similar styles keep geometry.
+Charts read resolved Detail CSS tokens after the real theme update and retain
+`shallowRef` instances. Game-only Insights rules may consume these tokens; #108/#109
+remain excluded. Freeze the accepted runtime/PNG contracts; the legacy Games
+root bridge and final cleanup remain P6.6 work.
 
 After P4, do not opportunistically clear remaining debt: Nav/MobileBottomTabBar
 belong to P5, Game plus BlurWrapper/LinkTag to P6, Site to #109, Insights page/domain
