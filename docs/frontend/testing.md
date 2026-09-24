@@ -942,6 +942,44 @@ Visual suite twice without update flags. Expected totals: **161 Browser / 99
 Visual / 98 PNG**, with the previous 86 hashes and style debt unchanged. Stop
 for maintainer review of the twelve new images; no appearance migration yet.
 
+### Game Detail runtime and initial visuals (P6.5.1)
+
+`fixtures/game-detail-contract.ts` adds populated Detail data alongside the
+unchanged original fixture and 24 cases. The worker owns production Nitro and
+local upstream; scenarios own identities, faults, history points and finite
+gates. Initial SSR reads info, reviews, recommendations and Insights once each;
+hydration adds only the view POST. History loads on Insights activation. Exact
+queries, media and click-driven popups are accounted for; injected 503 responses
+are paired with their raw browser diagnostics. No hydration error is allowed.
+
+Populated Linux acceptance exposed two additional defects approved for this
+phase: Header's online timestamp now uses explicit Asia/Shanghai formatting
+instead of the server's local timezone, and the two ECharts instances use
+`shallowRef` rather than deep reactive proxies. The same real-hover assertion
+failed before the instance correction; chart data/options/palettes are unchanged.
+SSR and hydrated Header text must both report the fixed observation time.
+
+The eighteen new cases cover identity/locale changes, tags and links, reviews
+and recommendations with local Retry, pagination, News/Detail facts, keyboard
+tabs, Desktop/Mobile Lightbox, adult-content isolation, real WebM readiness and
+failure, history caching/races, null/zero/unknown facts and real chart hover.
+The small original WebM and its provenance live in `tests/fixtures`. ReviewDialog
+keeps its separate full contract; legacy Insights/performance runners remain.
+
+Twenty initial visuals cover overview (both devices), Gallery, Comments, News,
+Detail facts, Insights (both devices), mobile Lightbox and locked adult content,
+each in Light/Dark. They use real images and ECharts canvas. Overview excludes
+NavBar; tall mobile Insights captures the history region rather than shrinking
+the product. Computed assertions supplement clipped regions and preserve actual
+inherited typography, including Similar reason line-height rounding.
+
+Generate only missing `visual/game-detail.spec.ts` snapshots in the existing
+pinned Linux/Node24 environment after install/build and the baseline guard.
+Existing 98 PNGs must remain byte-identical; then compare the complete Visual
+suite twice without update flags. Acceptance targets are **179 Browser / 119
+Visual / 118 PNG**. Stop for review of the twenty new images before P6.5.2;
+this phase does not migrate appearance or reduce style debt.
+
 ### Full verification
 
 Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`

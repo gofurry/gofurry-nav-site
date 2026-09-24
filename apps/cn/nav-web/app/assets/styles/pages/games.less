@@ -2059,11 +2059,18 @@ html.dark .games-page .game-detail-media-image {
   fill: rgba(255, 255, 255, 0.96);
 }
 
-.games-page .game-detail-lightbox {
+.game-detail-lightbox {
+  /* This body-mounted renderer cannot inherit the page's overlay token. */
+  --games-detail-overlay: rgba(0, 0, 0, 0.86);
+
   background: var(--games-detail-overlay);
 }
 
-.games-page .game-detail-lightbox__close {
+html.dark .game-detail-lightbox {
+  --games-detail-overlay: rgba(0, 0, 0, 0.90);
+}
+
+.game-detail-lightbox__close {
   color: rgba(255, 255, 255, 0.96);
 }
 

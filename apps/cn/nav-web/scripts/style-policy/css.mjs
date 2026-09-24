@@ -12,6 +12,7 @@ const tokenLocations = [
   ['app/assets/styles/components/page-scroll-dock.less', ['.page-scroll-dock'], '--gf-scroll-dock-'],
   ['app/assets/styles/primitives/rating.less', ['.gf-rating', 'html.dark .gf-rating'], '--gf-rating-'],
   ['app/assets/styles/pages/games.less', ['.games-page', 'html.dark .games-page'], '--games-'],
+  ['app/assets/styles/pages/games.less', ['.game-detail-lightbox', 'html.dark .game-detail-lightbox'], '--games-detail-'],
   ['app/assets/styles/pages/games-search.less', ['.games-search-page', 'html.dark .games-search-page'], '--games-search-'],
   // Filter is body-mounted; share only the existing Search token declarations.
   ['app/assets/styles/pages/games-search.less', ['.games-search-page,.games-search-overlay-scope', 'html.dark .games-search-page,html.dark .games-search-overlay-scope'], '--games-search-'],

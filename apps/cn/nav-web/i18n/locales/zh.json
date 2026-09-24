@@ -481,6 +481,10 @@
       "noTags": "暂无可用标签"
     },
     "detail": {
+      "reviewsUnavailable": "评论暂时无法加载",
+      "recommendUnavailable": "相似游戏暂时无法加载",
+      "retry": "重试",
+      "openImage": "全屏查看图片",
       "commentCountSuffix": "条评论",
       "share": "分享",
       "introduction": "介绍",

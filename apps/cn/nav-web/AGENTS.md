@@ -64,6 +64,13 @@ belong in semantic variables under the existing `html.dark` model, not new
 
 ## Historical debt and phase boundaries
 
+P6.5.1 Detail contracts retain the original 24 cases and add populated runtime
+and twenty initial visual scenarios. Keep Lightbox/NSFW focus and scroll cleanup,
+locked-slot inertness, manual keyboard tabs and slice-local Retry boundaries.
+Only the body-mounted `.game-detail-lightbox` / Dark root may declare its narrow
+`--games-detail-*` overlay value here; this is not permission to migrate Detail
+appearance. Preserve existing PNGs and debt, and await golden review for P6.5.2.
+
 After P4, do not opportunistically clear remaining debt: Nav/MobileBottomTabBar
 belong to P5, Game plus BlurWrapper/LinkTag to P6, Site to #109, Insights page/domain
 to #108, and ambient effects remain intentionally preserved experimental code.

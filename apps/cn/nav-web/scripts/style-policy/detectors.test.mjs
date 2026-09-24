@@ -307,3 +307,12 @@ test('CSS and Less parser failures fail closed', () => {
     assert.throws(() => extractCssFacts('.card { color #fff; }', { file, less }), /Unknown word/);
   }
 });
+
+test('Detail Lightbox owns only its exact body-mounted token roots', () => {
+  const file = 'app/assets/styles/pages/games.less';
+  const source = '.game-detail-lightbox { --games-detail-overlay: rgba(0,0,0,.86); } html.dark .game-detail-lightbox { --games-detail-overlay: rgba(0,0,0,.90); }';
+  assert.deepEqual(detectCssFacts(extractCssFacts(source, { file, less: true })), []);
+  assert.equal(detectCssFacts(extractCssFacts(source, { file: 'app/assets/styles/pages/insights.less', less: true })).length, 2);
+  const invalid = '.game-detail-lightbox { background: #111; --other-overlay: #222; } .game-detail-lightbox .child { --games-detail-overlay: #333; } .parent { .game-detail-lightbox { --games-detail-overlay: #444; } }';
+  assert.deepEqual(values(detectCssFacts(extractCssFacts(invalid, { file, less: true })), 'raw-visual-value'), ['#111', '#222', '#333', '#444']);
+});

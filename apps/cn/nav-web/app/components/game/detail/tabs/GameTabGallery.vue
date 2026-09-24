@@ -40,7 +40,12 @@
           :src="activeMedia.src"
           :alt="mediaAlt(activeMedia)"
           class="game-detail-media-image h-full w-full cursor-pointer object-contain"
-          @click="openFullscreen = true"
+          tabindex="0"
+          role="button"
+          :aria-label="t('game.detail.openImage')"
+          @click="openLightbox"
+          @keydown.enter.prevent="openLightbox"
+          @keydown.space.prevent="openLightbox"
       />
 
       <!-- 无内容 -->
@@ -80,8 +85,13 @@
     </div>
 
     <!-- 图片全屏弹窗 -->
-    <div
+    <Teleport to="body"><div
         v-if="openFullscreen && activeMedia?.type === 'screenshot'"
+        ref="lightbox"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="t('game.detail.gallery')"
+        tabindex="-1"
         class="game-detail-lightbox fixed inset-0 z-50 flex items-center justify-center p-4"
         @click.self="openFullscreen = false"
     >
@@ -93,10 +103,11 @@
       <button
           class="game-detail-lightbox__close absolute right-4 top-4 text-2xl"
           @click="openFullscreen = false"
+          :aria-label="t('common.close')"
       >
         ×
       </button>
-    </div>
+    </div></Teleport>
 
   </div>
 </template>
@@ -106,6 +117,7 @@ import {ref, computed, watch, onMounted, onBeforeUnmount, nextTick} from 'vue'
 import { i18n } from '@/main'
 import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import { steamSharedAssetCandidates } from '@/utils/steamAssets'
+import { useGameDetailDialog } from '@/composables/useGameDetailDialog'
 
 const { t, locale } = i18n.global
 const steamRoute = useNuxtApp().$steamAssetRoute
@@ -173,6 +185,14 @@ const activeMedia = computed(() =>
 )
 const { src: poster } = useSteamAsset(() => activeMedia.value?.type === 'movie' ? activeMedia.value.thumb : null, true)
 const openFullscreen = ref(false)
+const lightbox = ref<HTMLElement | null>(null)
+useGameDetailDialog(lightbox, () => { openFullscreen.value = false })
+function openLightbox(event: Event) {
+  if (isBlocked.value) return
+  if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus({ preventScroll: true })
+  openFullscreen.value = true
+}
+watch(isBlocked, blocked => { if (blocked) openFullscreen.value = false })
 const videoReady = ref(false)
 const videoLoadError = ref(false)
 const showVideoPlaceholder = computed(() =>

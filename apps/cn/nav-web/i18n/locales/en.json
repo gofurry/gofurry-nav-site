@@ -481,6 +481,10 @@
       "noTags": "No tags available"
     },
     "detail": {
+      "reviewsUnavailable": "Reviews are temporarily unavailable",
+      "recommendUnavailable": "Similar games are temporarily unavailable",
+      "retry": "Retry",
+      "openImage": "View image fullscreen",
       "commentCountSuffix": "comments",
       "share": "Share",
       "introduction": "Intro",

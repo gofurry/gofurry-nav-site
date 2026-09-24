@@ -2,6 +2,11 @@
   <div class="game-detail-sidebar-card p-4">
     <h3 class="game-detail-sidebar-title mb-3 font-semibold">{{ t("game.detail.similarGames") }}</h3>
 
+    <div v-if="unavailable" data-detail-recommend-error role="status" :aria-busy="loading">
+      <p>{{ t('game.detail.recommendUnavailable') }}</p>
+      <button class="game-detail-load-more px-4 py-1" :disabled="loading" @click="emit('retry')">{{ loading ? t('common.loading') : t('game.detail.retry') }}</button>
+    </div>
+
     <!-- 游戏列表 -->
     <div class="game-detail-similar-list-shell" :class="{ 'game-detail-similar-list-shell--paged': totalPages > 1 }">
       <div
@@ -90,7 +95,7 @@
       </div>
 
       <!-- 没有数据 -->
-      <div v-if="!recommendList.length" class="game-detail-empty py-4 text-center text-sm">
+      <div v-if="!unavailable && !recommendList.length" class="game-detail-empty py-4 text-center text-sm">
         {{ t("game.panel.none") }}
       </div>
     </div>
@@ -129,7 +134,10 @@ const localePath = useLocalePath()
 
 const props = defineProps<{
   recommend: RecommendedModel[] | null
+  unavailable?: boolean
+  loading?: boolean
 }>()
+const emit = defineEmits<{ retry: [] }>()
 
 const recommendList = computed(() => props.recommend ?? [])
 

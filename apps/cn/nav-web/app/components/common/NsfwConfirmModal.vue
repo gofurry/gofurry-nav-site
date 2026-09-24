@@ -4,10 +4,10 @@
         v-if="show"
         class="gf-modal-backdrop fixed inset-0 z-50 flex items-center justify-center px-4 py-5"
     >
-      <div class="gf-modal gf-modal--compact">
+      <div ref="panel" class="gf-modal gf-modal--compact" role="dialog" aria-modal="true" :aria-labelledby="titleId" tabindex="-1">
         <div class="gf-modal__body">
 
-          <h2 class="gf-modal__title">
+          <h2 :id="titleId" class="gf-modal__title">
             {{t("common.modal.adultConfirmTitle")}}
           </h2>
 
@@ -44,6 +44,8 @@
 
 <script setup lang="ts">
 import { i18n } from '@/main'
+import { ref, useId } from 'vue'
+import { useGameDetailDialog } from '@/composables/useGameDetailDialog'
 
 const { t } = i18n.global
 
@@ -55,4 +57,7 @@ const emit = defineEmits<{
   (e: 'confirm'): void
   (e: 'cancel'): void
 }>()
+const panel = ref<HTMLElement | null>(null)
+const titleId = useId()
+useGameDetailDialog(panel, () => emit('cancel'))
 </script>

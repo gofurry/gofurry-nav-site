@@ -77,7 +77,7 @@
       </div>
 
       <div class="flex items-center gap-2 flex-wrap">
-        <div class="flex items-center gap-1">
+        <div v-if="!remarkUnavailable" class="flex items-center gap-1">
           <img
             v-for="i in fullStars"
             :key="'full-' + i"
@@ -100,9 +100,9 @@
           />
         </div>
 
-        <span class="game-detail-score font-bold">{{ avgScore.toFixed(1) }}</span>
+        <span v-if="!remarkUnavailable" class="game-detail-score font-bold">{{ avgScore.toFixed(1) }}</span>
         <span class="game-detail-score-meta text-sm">
-          ( {{ remark?.total ?? 0 }} {{ t('game.detail.commentCountSuffix') }} )
+          {{ remarkUnavailable ? t('game.detail.reviewsUnavailable') : `( ${remark?.total ?? 0} ${t('game.detail.commentCountSuffix')} )` }}
         </span>
       </div>
 
@@ -145,6 +145,7 @@ const { t } = i18n.global
 const props = defineProps<{
   game: GameBaseInfoResponse | null
   remark: RemarkResponse | null
+  remarkUnavailable?: boolean
 }>()
 
 const expanded = ref(false)
@@ -201,14 +202,16 @@ function share(type: string) {
   window.open(shareUrl, '_blank')
 }
 
+// Use the same reporting zone in SSR and the browser, regardless of host TZ.
+const onlineTimeFormat = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric',
+  hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+})
 function formatTime(time: string | number) {
   const date = new Date(time)
   if (isNaN(date.getTime())) return ''
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const hour = date.getHours().toString().padStart(2, '0')
-  const minute = date.getMinutes().toString().padStart(2, '0')
-  return `${month}/${day} ${hour}:${minute}`
+  const parts = Object.fromEntries(onlineTimeFormat.formatToParts(date).map(part => [part.type, part.value]))
+  return `${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`
 }
 
 watch(

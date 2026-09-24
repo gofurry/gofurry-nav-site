@@ -6,6 +6,8 @@
         class="blur-wrapper__content transition"
         :class="enable ? 'blur-xl select-none' : ''"
         :style="enable ? 'pointer-events: none;' : ''"
+        :inert="enable"
+        :aria-hidden="enable || undefined"
     >
       <slot />
     </div>

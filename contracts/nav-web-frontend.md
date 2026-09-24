@@ -865,6 +865,22 @@ reduced-motion behavior. The seven Lottery debt entries are retired without
 policy exceptions or ownership expansion. All 161 Browser / 99 Visual contracts
 and 98 PNGs stay unchanged. Detail/Common and final Games cleanup remain P6.5/P6.6.
 
+### Game Detail runtime boundary (P6.5.1)
+
+P6.5.1 establishes populated Game Detail behavior and initial visuals without
+appearance migration. Lightbox owns its body Teleport, focus/Escape/scroll
+lifetime and the exact `.game-detail-lightbox` / Dark `--games-detail-*` overlay
+declaration root in `games.less`. BlurWrapper's locked content is inert; NSFW
+confirmation keeps cancel/confirm semantics and local dialog isolation. Tabs use
+manual activation, and unavailable reviews/recommendations remain distinct from
+successful empty data with generation-safe slice Retry. Keep the original Detail
+tests, earlier PNGs and style debt unchanged. Twenty new goldens require review
+before P6.5.2; Game-only Insights appearance remains Detail-owned, distinct from
+#108 Insights and #109 Site capability styles.
+The approved runtime correction fixes Header's reporting zone to Asia/Shanghai
+across SSR/client and keeps ECharts instances outside Vue's deep proxy graph;
+it does not authorize a chart palette or data-flow migration.
+
 ### P1 enforcement and maintenance
 
 ESLint uses the official Nuxt static flat-config factory without a runtime module

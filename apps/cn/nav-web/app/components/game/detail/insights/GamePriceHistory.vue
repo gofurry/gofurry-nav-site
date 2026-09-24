@@ -25,7 +25,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { GameDetailInsightRange, GameInsightPricePoint, GameInsightRegion } from '@/types/insights'
 import { formatGameInsightAxisDate } from '@/utils/insightHistoryRanges'
@@ -44,7 +44,8 @@ const props = defineProps<{
 defineEmits<{ retry: [] }>()
 
 const chartRef = ref<HTMLElement | null>(null)
-const chart = ref<EChartsInstance | null>(null)
+// ECharts owns its internal identity; deep Vue proxies break tooltip dispatch.
+const chart = shallowRef<EChartsInstance | null>(null)
 const themeStore = useThemeStore()
 const { locale, t } = useI18n()
 const isDark = computed(() => themeStore.theme === 'dark')
