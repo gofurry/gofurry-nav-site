@@ -28,17 +28,24 @@
             :total-pages="totalPages"
             :total="total"
             :loading="isSearching"
+            :status="searchStatus"
             @page-change="onPageChange"
+            @retry="retrySearch"
         />
       </section>
 
-      <GameSearchFilter
-          v-if="showFilter"
-          :tag-groups="tagGroups"
-          :query="query"
-          @close="showFilter = false"
-          @search="onSearch"
-      />
+      <Teleport v-if="showFilter" to="body">
+        <div class="games-search-overlay-scope">
+          <GameSearchFilter
+              :tag-groups="tagGroups"
+              :tags-status="tagsStatus"
+              :query="query"
+              @close="showFilter = false"
+              @search="onSearch"
+              @retry-tags="retryTags"
+          />
+        </div>
+      </Teleport>
     </div>
   </div>
 </template>
@@ -49,15 +56,16 @@ import { useI18n } from 'vue-i18n'
 import GameSidebarSearch from '@/components/game/main/sidebar/GameSidebarSearch.vue'
 import GameSearchFilter from '@/components/game/search/GameSearchFilter.vue'
 import GameSearchResult from '@/components/game/search/GameSearchResult.vue'
-import { searchGameAdvanced, getTagList } from '@/utils/api/game'
+import { searchGameAdvanced, getTagCategories } from '@/utils/api/game'
 import type {
   GameSearchAvailability,
   SearchPageResponseItem,
-  GameTagRecord,
+  GameTagCategory,
   SearchPageQueryRequest
 } from '@/types/game'
 import { useThemeStore } from '@/stores/theme'
 import { i18n } from '@/main'
+import { ApiError } from '@/types/api'
 
 const { t } = i18n.global
 const { locale } = useI18n()
@@ -103,6 +111,8 @@ const gameList = ref<SearchPageResponseItem[]>([])
 const total = ref(0)
 const totalPages = ref(1)
 const isSearching = ref(false)
+const searchStatus = ref<'idle' | 'pending' | 'success' | 'empty' | 'error'>('idle')
+const tagsStatus = ref<'idle' | 'pending' | 'success' | 'empty' | 'error'>('idle')
 const pageDirection = ref<1 | -1>(1)
 
 const createDefaultQuery = (): SearchPageQueryRequest => ({
@@ -118,7 +128,7 @@ const createDefaultQuery = (): SearchPageQueryRequest => ({
 
 const query = reactive<SearchPageQueryRequest>(createDefaultQuery())
 
-const tagGroups = ref<GameTagRecord[]>([])
+const tagGroups = ref<GameTagCategory[]>([])
 let tagRequestController: AbortController | null = null
 let searchRequestController: AbortController | null = null
 let tagRequestToken = 0
@@ -270,23 +280,26 @@ const normalizeRouteQuery = (routeQuery: LocationQuery | LocationQueryRaw) => {
   return JSON.stringify(normalized)
 }
 
-const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === 'AbortError'
-
 const loadTags = async () => {
   tagRequestController?.abort()
   const controller = new AbortController()
   const currentToken = ++tagRequestToken
   tagRequestController = controller
+  tagsStatus.value = 'pending'
 
   try {
-    const result = await getTagList(lang.value, { signal: controller.signal })
-    if (currentToken !== tagRequestToken) {
+    const result = await getTagCategories(lang.value, { signal: controller.signal })
+    if (controller.signal.aborted || currentToken !== tagRequestToken) {
       return
     }
     tagGroups.value = result
+    tagsStatus.value = result.length ? 'success' : 'empty'
   } catch (error) {
-    if (isAbortError(error)) {
+    if (controller.signal.aborted || currentToken !== tagRequestToken) {
+      return
+    }
+    if (error instanceof ApiError || (error instanceof Error && error.name === 'FetchError')) {
+      tagsStatus.value = 'error'
       return
     }
     throw error
@@ -300,10 +313,11 @@ const fetchData = async () => {
   const pageSize = query.pageSize
   searchRequestController = controller
   isSearching.value = true
+  searchStatus.value = 'pending'
 
   try {
     const res = await searchGameAdvanced(query, lang.value, { signal: controller.signal })
-    if (currentToken !== searchRequestToken) {
+    if (controller.signal.aborted || currentToken !== searchRequestToken) {
       return
     }
 
@@ -313,8 +327,13 @@ const fetchData = async () => {
         1,
         Math.ceil(total.value / pageSize)
     )
+    searchStatus.value = res.list.length ? 'success' : 'empty'
   } catch (error) {
-    if (isAbortError(error)) {
+    if (controller.signal.aborted || currentToken !== searchRequestToken) {
+      return
+    }
+    if (error instanceof ApiError || (error instanceof Error && error.name === 'FetchError')) {
+      searchStatus.value = 'error'
       return
     }
     throw error
@@ -323,6 +342,14 @@ const fetchData = async () => {
       isSearching.value = false
     }
   }
+}
+
+const retrySearch = () => {
+  if (!isSearching.value) return fetchData()
+}
+
+const retryTags = () => {
+  if (tagsStatus.value !== 'pending') return loadTags()
 }
 
 const syncRouteWithQuery = async () => {
@@ -345,9 +372,9 @@ const onPageChange = async (page: number) => {
   await syncRouteWithQuery()
 }
 
-const onSearch = async () => {
+const onSearch = async (snapshot: SearchPageQueryRequest) => {
+  Object.assign(query, snapshot, { tag_list: [...(snapshot.tag_list ?? [])], pageNum: 1 })
   pageDirection.value = 1
-  query.pageNum = 1
   showFilter.value = false
   await syncRouteWithQuery()
 }
@@ -380,11 +407,14 @@ watch(
 onMounted(async () => {
   themeStore.initTheme()
   applyRouteQuery(route.query)
-  await Promise.all([loadTags(), fetchData()])
+  // Route readiness must not depend on either remote resource succeeding.
   initialized.value = true
+  await Promise.all([loadTags(), fetchData()])
 })
 
 onBeforeUnmount(() => {
+  tagRequestToken++
+  searchRequestToken++
   tagRequestController?.abort()
   searchRequestController?.abort()
 })

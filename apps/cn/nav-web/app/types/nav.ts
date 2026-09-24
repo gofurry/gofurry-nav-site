@@ -321,6 +321,17 @@ export interface ManagedHeroAsset {
     id: string;
     object_key: string;
 }
+
+export interface HeroCatalogItem extends ManagedHeroAsset { name: string }
+export interface HeroCatalog {
+    schema_version: number;
+    variant: 'desktop' | 'mobile';
+    page_num: number;
+    page_size: number;
+    total: number;
+    items: HeroCatalogItem[];
+    selected: HeroCatalogItem | null;
+}
 export interface NavHomeHero {
     desktop: ManagedHeroAsset | null;
     mobile: ManagedHeroAsset | null;

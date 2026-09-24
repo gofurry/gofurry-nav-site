@@ -1,40 +1,44 @@
 <template>
-  <div ref="searchShellRef" class="search-shell relative">
+  <div ref="searchShellRef" class="search-shell relative" @focusin="onFocus" @focusout="onBlur" @keydown.esc.stop="dismissResults">
     <!-- 搜索框 -->
     <div class="relative">
       <img
           src="../../../../assets/svgs/search.svg"
-          class="game-sidebar-search-icon absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-60"
+          class="game-sidebar-search-icon absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
           alt=""
       />
       <input
           v-model="keyword"
           type="text"
           :placeholder="t('game.search.simple')"
-          class="game-sidebar-search-input w-full rounded-lg py-2 pl-9 pr-3 text-sm transition focus:outline-none"
-          @focus="onFocus"
-          @blur="onBlur"
+          class="game-sidebar-search-input w-full py-2 pl-9 pr-3"
+          :aria-busy="status === 'pending' || status === 'debouncing'"
       />
     </div>
 
     <!-- 搜索结果提示框 -->
     <Transition
-        enter-active-class="transition duration-200 ease-out"
-        enter-from-class="opacity-0 translate-y-1"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition duration-150 ease-in"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 translate-y-1"
+        enter-active-class="game-sidebar-search-enter-active"
+        enter-from-class="game-sidebar-search-enter-from translate-y-1"
+        enter-to-class="game-sidebar-search-enter-to translate-y-0"
+        leave-active-class="game-sidebar-search-leave-active"
+        leave-from-class="game-sidebar-search-leave-from translate-y-0"
+        leave-to-class="game-sidebar-search-leave-to translate-y-1"
     >
       <div
-          v-if="showResults && results.length > 0"
-          class="search-results-panel"
+          v-if="showResults && status !== 'idle'"
+          :class="status === 'success' ? 'search-results-panel' : 'search-status-panel'"
+          :data-state="status"
           :style="{ gridTemplateColumns: `repeat(${resultColumnCount}, minmax(0, 1fr))` }"
           @mouseenter="hovering = true"
-          @mouseleave="hovering = false"
+          @mouseleave="onPanelLeave"
       >
+        <div v-if="status !== 'success'" class="search-status-content col-span-full flex flex-wrap items-center gap-3 p-2" :role="status === 'error' ? 'alert' : 'status'">
+          <p>{{ t(status === 'error' ? 'game.search.unavailable' : status === 'empty' ? 'game.search.noSuggestions' : 'game.search.loading') }}</p>
+          <button v-if="status === 'error'" type="button" class="gf-button gf-button--surface" @click="retrySearch">{{ t('game.search.retry') }}</button>
+        </div>
         <div
-            v-for="item in results"
+            v-for="item in status === 'success' ? results : []"
             :key="item.id"
             class="search-result-card"
             @click="goToGame(item.id)"
@@ -58,6 +62,7 @@ import { getSearchSimple } from "@/utils/api/game";
 import type { SearchItemModel } from "@/types/game";
 import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import { useI18n } from 'vue-i18n'
+import { ApiError } from '@/types/api'
 
 const { t, locale } = useI18n()
 
@@ -68,6 +73,8 @@ const lang = computed<'zh' | 'en'>(() => locale.value === 'en' ? 'en' : 'zh')
 const keyword = ref("");
 const results = ref<SearchItemModel[]>([]);
 const showResults = ref(false);
+const status = ref<'idle' | 'debouncing' | 'pending' | 'success' | 'empty' | 'error'>('idle');
+const focused = ref(false);
 const hovering = ref(false);
 const searchShellRef = ref<HTMLElement | null>(null)
 const resultColumnCount = ref(2)
@@ -77,9 +84,6 @@ let blurTimer: number | null = null;
 let searchController: AbortController | null = null;
 let searchRequestToken = 0;
 let resizeObserver: ResizeObserver | null = null;
-
-const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === 'AbortError'
 
 // 监听语言变化
 watch(
@@ -94,13 +98,19 @@ watch(keyword, (val) => {
   if (timer) clearTimeout(timer);
 
   if (!val.trim()) {
+    status.value = 'idle';
+    searchRequestToken++;
     searchController?.abort();
     results.value = [];
     showResults.value = false;
     return;
   }
 
+  results.value = [];
+  status.value = 'debouncing';
+  showResults.value = focused.value || hovering.value;
   timer = window.setTimeout(() => {
+    timer = null;
     fetchResults(val.trim());
   }, 500);
 });
@@ -110,20 +120,36 @@ async function fetchResults(val: string) {
   const controller = new AbortController();
   const currentToken = ++searchRequestToken;
   searchController = controller;
+  const requestLang = lang.value;
+  status.value = 'pending';
 
   try {
     const res = await getSearchSimple(lang.value, val, { signal: controller.signal });
-    if (currentToken !== searchRequestToken) {
+    if (controller.signal.aborted || currentToken !== searchRequestToken || val !== keyword.value || requestLang !== lang.value) {
       return;
     }
     results.value = res;
-    showResults.value = res.length > 0;
+    status.value = res.length > 0 ? 'success' : 'empty';
   } catch (e) {
-    if (isAbortError(e)) {
+    if (controller.signal.aborted || currentToken !== searchRequestToken || val !== keyword.value || requestLang !== lang.value) {
       return;
     }
-    console.error("搜索失败", e);
+    if (e instanceof ApiError || (e instanceof Error && e.name === 'FetchError')) {
+      results.value = [];
+      status.value = 'error';
+      return;
+    }
+    throw e;
   }
+}
+
+function retrySearch() {
+  if (status.value !== 'error' || !keyword.value.trim()) return;
+  if (timer) clearTimeout(timer);
+  timer = null;
+  // The retry button leaves the DOM while pending; retain a real focus owner.
+  searchShellRef.value?.querySelector('input')?.focus();
+  return fetchResults(keyword.value);
 }
 
 // 点击跳转
@@ -136,16 +162,28 @@ function goToGame(id: string) {
 
 // 输入框获得焦点
 function onFocus() {
-  if (results.value.length > 0) showResults.value = true;
+  focused.value = true;
+  showResults.value = !!keyword.value.trim();
   if (blurTimer) clearTimeout(blurTimer);
 }
 
 // 输入框失去焦点
-function onBlur() {
+function onBlur(event?: FocusEvent) {
+  if (event?.relatedTarget instanceof Node && searchShellRef.value?.contains(event.relatedTarget)) return;
+  focused.value = false;
   // 延迟隐藏
   blurTimer = window.setTimeout(() => {
-    if (!hovering.value) showResults.value = false;
+    if (!hovering.value && !searchShellRef.value?.contains(document.activeElement)) showResults.value = false;
   }, 200);
+}
+
+function onPanelLeave() {
+  hovering.value = false;
+  if (!focused.value) onBlur();
+}
+
+function dismissResults() {
+  showResults.value = false;
 }
 
 function syncResultColumns(width: number) {
@@ -181,6 +219,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  searchRequestToken++;
   if (timer) clearTimeout(timer);
   if (blurTimer) clearTimeout(blurTimer);
   searchController?.abort();
@@ -189,7 +228,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.search-results-panel {
+.search-results-panel,
+.search-status-panel {
   pointer-events: auto;
   position: absolute;
   z-index: 50;
@@ -197,10 +237,6 @@ onBeforeUnmount(() => {
   display: grid;
   width: 100%;
   gap: 0.55rem;
-}
-
-:global(html.dark .game-sidebar-search-icon) {
-  filter: brightness(0) invert(1);
 }
 
 .search-result-card {
@@ -218,8 +254,6 @@ onBeforeUnmount(() => {
 .search-result-title {
   margin-top: 0.38rem;
   overflow: hidden;
-  font-size: 0.82rem;
-  line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -227,8 +261,6 @@ onBeforeUnmount(() => {
 .search-result-desc {
   margin-top: 0.18rem;
   overflow: hidden;
-  font-size: 0.72rem;
-  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

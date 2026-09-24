@@ -22,3 +22,7 @@ go tool goose -dir ../db/game/migrations postgres "$GOFURRY_DATABASE_URL" up
 Substitute `nav` or `admin` for the other databases. Never run a baseline on an
 existing pre-Goose database; follow the adoption runbook and use
 `tools/db-baseline` only after an exact structural match.
+
+The irreversible Game Tag domain migration and disposable-development acceptance
+checkpoint are documented in [Tag domain acceptance](../docs/operations/tag-domain-development-acceptance.md).
+Do not run it against shared development `gfg` as an ad-hoc test.

@@ -13,7 +13,7 @@ export async function compareFixtureResponse(url, media, body, state = {}) {
   }
   if (path.endsWith('/game/search/simple')) {
     state.searches?.push(body?.txt)
-    if (body?.txt === 'slow') await delay(650)
+    if (body?.txt === 'slow' && !state.controlledTiming) await delay(650)
     if (state.searchFailure) return { status: 503 }
     return { data: order.map(id => ({ id: String(id), name: body?.txt === 'slow' ? 'Stale result ' + id : names[id], info: 'A short public search description / 公开简介', cover: id === 1 ? '' : media + '/game-' + id + '.svg' })) }
   }

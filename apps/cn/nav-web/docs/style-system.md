@@ -1,3 +1,9 @@
+> **Historical documentation / 历史文档（非当前规范）**
+>
+> 当前前端工程规范以 [frontend contract](../../../../contracts/nav-web-frontend.md)、
+> [Nav Web AGENTS](../AGENTS.md) 和 [design-system guide](../../../../docs/frontend/design-system.md) 为准。
+> 下文保留历史迁移事实；“v2.2.x 样式迁移完成”不代表 #124 Frontend Engineering Foundation 已完成。
+
 # GoFurry Nav Web 样式系统规范
 
 `gofurry-nav-web` 的样式主线采用 Less + Tailwind v4 分层方案。Tailwind 保留为布局工具，Less 承担主题 token、语义组件、复杂视觉、状态、暗色入口和局部第三方组件重写。

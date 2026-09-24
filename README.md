@@ -107,8 +107,10 @@ Nav Web 使用 [前端部署说明](./apps/cn/nav-web/DEPLOYMENT.md) 中的 Dock
 
 ## 贡献
 
-欢迎提交 Issue 和 Pull Request。请将改动限定在所属服务，遵循 [协作指南](./AGENTS.md)、[兼容性契约](./contracts/compatibility.md) 和 [已接受的架构决策](./docs/decisions/README.md)。
+问题咨询、想法和架构提案请先到 [Discussions](https://github.com/gofurry/gofurry-nav-site/discussions)；可复现的 Bug 和已接受的工作项使用 [Issues](https://github.com/gofurry/gofurry-nav-site/issues) 跟踪，代码改动通过 Pull Request 提交。安全漏洞请按 [SECURITY.md](./SECURITY.md) 私下报告。
+
+详见 [贡献指南](./CONTRIBUTING.md) 和 [行为准则](./CODE_OF_CONDUCT.md)。请将改动限定在所属服务，遵循 [协作指南](./AGENTS.md)、[兼容性契约](./contracts/compatibility.md) 和 [已接受的架构决策](./docs/decisions/README.md)。
 
 ## 许可
 
-本仓库采用 [MIT License](./LICENSE)。
+除另有注明外，GoFurry 自有源码和项目文档采用 [BSD-3-Clause](./LICENSE)。第三方组件、网站内容、媒体资源与品牌标识可能适用不同条款，详见 [许可边界说明](./LICENSING.md)。

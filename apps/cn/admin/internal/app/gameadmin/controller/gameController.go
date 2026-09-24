@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v3"
 	env "github.com/gofurry/gofurry-admin/config"
@@ -508,194 +509,10 @@ func (api *GameAPI) DeletePrize(c fiber.Ctx) error {
 	return common.NewResponse(c).Success()
 }
 
-func (api *GameAPI) ListTags(c fiber.Ctx) error {
-	page := adminutil.ParsePageQuery(c)
-	total, rows, err := api.store.listTags(c.Context(), page)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, rows))
-}
-
-func (api *GameAPI) CreateTag(c fiber.Ctx) error {
-	var req models.TagPayload
-	if err := adminutil.DecodeBody(c, &req); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	if req.ID <= 0 || strings.TrimSpace(req.Name) == "" {
-		return common.NewResponse(c).Error(common.NewValidationError("id and name are required"))
-	}
-	row, txErr := api.store.createTag(c.Context(), audit.MetaFromFiber(c), gamesqlc.InsertTagParams{
-		ID:     req.ID,
-		Name:   strings.TrimSpace(req.Name),
-		NameEn: strings.TrimSpace(req.NameEn),
-		Info:   strings.TrimSpace(req.Info),
-		InfoEn: strings.TrimSpace(req.InfoEn),
-		Prefix: req.Prefix,
-	})
-	if txErr != nil {
-		return common.NewResponse(c).Error(txErr)
-	}
-	return common.NewResponse(c).SuccessWithData(row)
-}
-
-func (api *GameAPI) GetTag(c fiber.Ctx) error {
-	id, err := adminutil.ParseIDParam(c)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	row, daoErr := api.store.getTag(c.Context(), id)
-	if daoErr != nil {
-		return common.NewResponse(c).Error(daoErr)
-	}
-	return common.NewResponse(c).SuccessWithData(row)
-}
-
-func (api *GameAPI) UpdateTag(c fiber.Ctx) error {
-	id, err := adminutil.ParseIDParam(c)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	var req models.TagPayload
-	if err := adminutil.DecodeBody(c, &req); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	if strings.TrimSpace(req.Name) == "" {
-		return common.NewResponse(c).Error(common.NewValidationError("name is required"))
-	}
-	txErr := api.store.updateTag(c.Context(), audit.MetaFromFiber(c), gamesqlc.UpdateTagParams{
-		ID: id, Name: strings.TrimSpace(req.Name), NameEn: strings.TrimSpace(req.NameEn), Info: strings.TrimSpace(req.Info), InfoEn: strings.TrimSpace(req.InfoEn), Prefix: req.Prefix,
-	})
-	if txErr != nil {
-		return common.NewResponse(c).Error(txErr)
-	}
-	return api.GetTag(c)
-}
-
-func (api *GameAPI) DeleteTag(c fiber.Ctx) error {
-	id, err := adminutil.ParseIDParam(c)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	if err := api.store.deleteTag(c.Context(), audit.MetaFromFiber(c), id); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	return common.NewResponse(c).Success()
-}
-
-func (api *GameAPI) ListTagMaps(c fiber.Ctx) error {
-	page := adminutil.ParsePageQuery(c)
-	total, rows, err := api.store.listTagMaps(c.Context(), page)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	return common.NewResponse(c).SuccessWithData(adminutil.BuildPageResponse(total, rows))
-}
-
-func (api *GameAPI) CreateTagMap(c fiber.Ctx) error {
-	var req models.TagMapPayload
-	if err := adminutil.DecodeBody(c, &req); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	if req.GameID <= 0 || req.TagID <= 0 {
-		return common.NewResponse(c).Error(common.NewValidationError("game_id and tag_id are required"))
-	}
-	created, err := api.store.createTagMap(c.Context(), audit.MetaFromFiber(c), req.GameID, req.TagID)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	return common.NewResponse(c).SuccessWithData(created)
-}
-
-func (api *GameAPI) GetTagMap(c fiber.Ctx) error {
-	id, err := adminutil.ParseIDParam(c)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	row, daoErr := api.store.getTagMap(c.Context(), id)
-	if daoErr != nil {
-		return common.NewResponse(c).Error(daoErr)
-	}
-	return common.NewResponse(c).SuccessWithData(row)
-}
-
-func (api *GameAPI) UpdateTagMap(c fiber.Ctx) error {
-	id, err := adminutil.ParseIDParam(c)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	var req models.TagMapPayload
-	if err := adminutil.DecodeBody(c, &req); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	if req.GameID <= 0 || req.TagID <= 0 {
-		return common.NewResponse(c).Error(common.NewValidationError("game_id and tag_id are required"))
-	}
-	txErr := api.store.updateTagMap(c.Context(), audit.MetaFromFiber(c), gamesqlc.UpdateTagMapParams{ID: id, GameID: req.GameID, TagID: req.TagID})
-	if txErr != nil {
-		return common.NewResponse(c).Error(txErr)
-	}
-	return api.GetTagMap(c)
-}
-
-func (api *GameAPI) DeleteTagMap(c fiber.Ctx) error {
-	id, err := adminutil.ParseIDParam(c)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	if err := api.store.deleteTagMap(c.Context(), audit.MetaFromFiber(c), id); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	return common.NewResponse(c).Success()
-}
-
-func (api *GameAPI) BulkReplaceTagMaps(c fiber.Ctx) error {
-	var req adminutil.BulkReplaceRequest
-	if err := adminutil.DecodeBody(c, &req); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	if req.OwnerID <= 0 {
-		return common.NewResponse(c).Error(common.NewValidationError("owner_id is required"))
-	}
-	req.IDs = uniqueInt64s(req.IDs)
-	err := api.store.replaceGameTags(c.Context(), audit.MetaFromFiber(c), req.OwnerID, req.IDs)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	return common.NewResponse(c).Success()
-}
-
-func (api *GameAPI) ListTagMapGameIDs(c fiber.Ctx) error {
-	tagID, err := adminutil.ParseIDParam(c)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-
-	gameIDs, daoErr := api.store.listGameIDsByTag(c.Context(), tagID)
-	if daoErr != nil {
-		return common.NewResponse(c).Error(daoErr)
-	}
-	return common.NewResponse(c).SuccessWithData(gameIDs)
-}
-
-func (api *GameAPI) BulkReplaceTagGameMaps(c fiber.Ctx) error {
-	var req adminutil.BulkReplaceRequest
-	if err := adminutil.DecodeBody(c, &req); err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	if req.OwnerID <= 0 {
-		return common.NewResponse(c).Error(common.NewValidationError("owner_id is required"))
-	}
-	req.IDs = uniqueInt64s(req.IDs)
-
-	err := api.store.replaceTagGames(c.Context(), audit.MetaFromFiber(c), req.OwnerID, req.IDs)
-	if err != nil {
-		return common.NewResponse(c).Error(err)
-	}
-	return common.NewResponse(c).Success()
-}
-
 func validateGamePayload(req models.GamePayload) common.Error {
+	if utf8.RuneCountInString(req.Info) > 400 || utf8.RuneCountInString(req.InfoEn) > 400 {
+		return common.NewValidationError("info and info_en must each be at most 400 characters")
+	}
 	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.NameEn) == "" {
 		return common.NewValidationError("name and name_en are required")
 	}
@@ -708,7 +525,7 @@ func gameInsertParams(req models.GamePayload) gamesqlc.InsertGameParams {
 		Resources: []byte(adminutil.MustJSON(normalizeKV(req.Resources))), Groups: []byte(adminutil.MustJSON(normalizeKV(req.Groups))),
 		Developers: []byte(adminutil.MustJSON(normalizeStringArray(req.Developers))),
 		Publishers: []byte(adminutil.MustJSON(normalizeStringArray(req.Publishers))), Appid: req.Appid, Header: strings.TrimSpace(req.Header),
-		Links: []byte(adminutil.MustJSON(normalizeGameLinks(req.Appid, req.Links))), Weight: req.Weight, PrimaryTag: req.PrimaryTag, SecondaryTag: req.SecondaryTag,
+		Links: []byte(adminutil.MustJSON(normalizeGameLinks(req.Appid, req.Links))), Weight: req.Weight,
 	}
 }
 
@@ -717,7 +534,7 @@ func gameUpdateParams(req models.GamePayload) gamesqlc.UpdateGameParams {
 	return gamesqlc.UpdateGameParams{
 		Name: insert.Name, NameEn: insert.NameEn, Info: insert.Info, InfoEn: insert.InfoEn, Resources: insert.Resources, Groups: insert.Groups,
 		Developers: insert.Developers, Publishers: insert.Publishers, Appid: insert.Appid, Header: insert.Header,
-		Links: insert.Links, Weight: insert.Weight, PrimaryTag: insert.PrimaryTag, SecondaryTag: insert.SecondaryTag,
+		Links: insert.Links,
 	}
 }
 

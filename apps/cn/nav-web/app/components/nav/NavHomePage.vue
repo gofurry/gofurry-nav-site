@@ -39,6 +39,7 @@ import NavTransitionBar from '@/components/nav/NavTransitionBar.vue'
 import NavContent from '@/components/nav/NavContent.vue'
 import { debounce, throttle } from '@/utils/util'
 import { dispatchNavPageReveal, isNavPageRevealLocked } from '@/utils/navPageReveal'
+import { heroPreferenceKey } from '~/utils/heroPreferences'
 
 interface NavPageData {
   desktopObjectKey: string | null
@@ -80,14 +81,18 @@ function parsePingData(data: Record<string, string | undefined>) {
 }
 
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
+// Capture the SSR selection. Save applies Hero alone, never refetches Home.
+const heroSettings = useHeroPreferences()
+const initialHeroPreference = { ...heroSettings.preference.value }
 const { data } = await useAsyncData<NavPageData>(
-  () => `nav-page:${lang.value}`,
+  () => `nav-page:${lang.value}:${heroPreferenceKey(initialHeroPreference)}`,
   async () => {
-    const home = await getNavHome(lang.value)
+    const selection = { ...heroSettings.preference.value }
+    const home = await getNavHome(lang.value, selection)
 
     return {
-      desktopObjectKey: home.hero.desktop?.object_key ?? null,
-      mobileObjectKey: home.hero.mobile?.object_key ?? null,
+      desktopObjectKey: selection.mode === 'local' ? null : home.hero.desktop?.object_key ?? null,
+      mobileObjectKey: selection.mode === 'local' ? null : home.hero.mobile?.object_key ?? null,
       saying: home.saying,
       groups: home.groups.sort((a, b) => Number(a.priority) - Number(b.priority)),
       spotlight: home.spotlight,

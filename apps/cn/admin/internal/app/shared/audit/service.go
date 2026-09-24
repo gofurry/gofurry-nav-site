@@ -59,6 +59,12 @@ func (logger *Logger) LogTx(ctx context.Context, tx pgx.Tx, meta Meta, action, r
 	return logger.log(ctx, logger.queries.WithTx(tx), meta, action, resource, targetID, before, after)
 }
 
+// LogConn keeps an audited operation on its session-lock-owning connection,
+// without acquiring a second pool connection or delaying intent until commit.
+func (logger *Logger) LogConn(ctx context.Context, conn *pgxpool.Conn, meta Meta, action, resource string, targetID any, before, after any) common.Error {
+	return logger.log(ctx, adminsqlc.New(conn), meta, action, resource, targetID, before, after)
+}
+
 func (logger *Logger) log(ctx context.Context, queries *adminsqlc.Queries, meta Meta, action, resource string, targetID any, before, after any) common.Error {
 	action = strings.TrimSpace(action)
 	resource = strings.TrimSpace(resource)

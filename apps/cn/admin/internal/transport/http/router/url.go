@@ -120,6 +120,7 @@ func optionsRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Get("/site-groups", authmw.Require(authorization.ContentRead), runtime.OptionsAPI.SiteGroupOptions)
 	root.Get("/games", authmw.Require(authorization.ContentRead), runtime.OptionsAPI.GameOptions)
 	root.Get("/tags", authmw.Require(authorization.ContentRead), runtime.OptionsAPI.TagOptions)
+	root.Get("/tag-categories", authmw.Require(authorization.ContentRead), runtime.OptionsAPI.TagCategoryOptions)
 }
 
 func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
@@ -210,18 +211,17 @@ func gameRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Put("/prizes/:id", authmw.Require(authorization.ContentWrite), api.UpdatePrize)
 	root.Delete("/prizes/:id", authmw.Require(authorization.ContentWrite), api.DeletePrize)
 
+	root.Put("/games/:id/classification", authmw.Require(authorization.ContentWrite), api.SaveClassification)
+	root.Get("/tag-categories", authmw.Require(authorization.ContentRead), api.ListTagCategories)
+	root.Post("/tag-categories", authmw.Require(authorization.ContentWrite), api.CreateTagCategory)
+	root.Get("/tag-categories/:id", authmw.Require(authorization.ContentRead), api.GetTagCategory)
+	root.Put("/tag-categories/:id", authmw.Require(authorization.ContentWrite), api.UpdateTagCategory)
+	root.Delete("/tag-categories/:id", authmw.Require(authorization.ContentWrite), api.ArchiveTagCategory)
+	root.Post("/tag-categories/:id/restore", authmw.Require(authorization.ContentWrite), api.RestoreTagCategory)
 	root.Get("/tags", authmw.Require(authorization.ContentRead), api.ListTags)
 	root.Post("/tags", authmw.Require(authorization.ContentWrite), api.CreateTag)
 	root.Get("/tags/:id", authmw.Require(authorization.ContentRead), api.GetTag)
 	root.Put("/tags/:id", authmw.Require(authorization.ContentWrite), api.UpdateTag)
-	root.Delete("/tags/:id", authmw.Require(authorization.ContentWrite), api.DeleteTag)
-
-	root.Get("/tag-maps", authmw.Require(authorization.ContentRead), api.ListTagMaps)
-	root.Post("/tag-maps", authmw.Require(authorization.ContentWrite), api.CreateTagMap)
-	root.Put("/tag-maps/bulk-replace", authmw.Require(authorization.ContentWrite), api.BulkReplaceTagMaps)
-	root.Get("/tag-maps/by-tag/:id", authmw.Require(authorization.ContentRead), api.ListTagMapGameIDs)
-	root.Put("/tag-maps/bulk-replace-by-tag", authmw.Require(authorization.ContentWrite), api.BulkReplaceTagGameMaps)
-	root.Get("/tag-maps/:id", authmw.Require(authorization.ContentRead), api.GetTagMap)
-	root.Put("/tag-maps/:id", authmw.Require(authorization.ContentWrite), api.UpdateTagMap)
-	root.Delete("/tag-maps/:id", authmw.Require(authorization.ContentWrite), api.DeleteTagMap)
+	root.Delete("/tags/:id", authmw.Require(authorization.ContentWrite), api.ArchiveTag)
+	root.Post("/tags/:id/restore", authmw.Require(authorization.ContentWrite), api.RestoreTag)
 }

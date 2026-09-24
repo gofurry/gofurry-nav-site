@@ -107,8 +107,10 @@ Database migration and binary deployment are separate operator actions. Applicat
 
 ## Contributing
 
-Issues and pull requests are welcome. Keep changes within the owning service and follow the [collaboration guide](./AGENTS.md), [compatibility contract](./contracts/compatibility.md), and [accepted architecture decisions](./docs/decisions/README.md).
+Start questions, ideas, and architecture proposals in [Discussions](https://github.com/gofurry/gofurry-nav-site/discussions). Track reproducible bugs and accepted work in [Issues](https://github.com/gofurry/gofurry-nav-site/issues), and submit code changes through Pull Requests. Report security vulnerabilities privately through [SECURITY.md](./SECURITY.md).
+
+See the [contribution guide](./CONTRIBUTING.md) and [Code of Conduct](./CODE_OF_CONDUCT.md). Keep changes within the owning service and follow the [collaboration guide](./AGENTS.md), [compatibility contract](./contracts/compatibility.md), and [accepted architecture decisions](./docs/decisions/README.md).
 
 ## License
 
-This repository is released under the [MIT License](./LICENSE).
+Unless otherwise noted, GoFurry-owned source code and project documentation are licensed under [BSD-3-Clause](./LICENSE). Third-party components, website content, media, and branding may have different terms; see [LICENSING.md](./LICENSING.md) for the boundaries.

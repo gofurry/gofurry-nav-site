@@ -1,14 +1,14 @@
 <template>
-  <div class="games-page game-detail-page relative isolate min-h-screen overflow-hidden">
+  <div class="site-group-page relative isolate min-h-full overflow-hidden">
 
     <main class="site-group-content relative z-10 mx-auto w-full max-w-[1880px] px-4 pb-16 pt-6 sm:px-6 lg:pt-8 xl:px-8">
       <header class="site-group-header mb-6">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 class="site-group-title truncate text-3xl font-semibold">
+            <h1 class="site-group-title truncate">
               {{ groupInfo?.name || route.params.id }}
             </h1>
-            <span class="site-group-total text-sm font-semibold">
+            <span class="site-group-total">
               {{ total }} {{ t('common.record') }}
             </span>
           </div>
@@ -18,24 +18,24 @@
           </button>
         </div>
 
-        <p class="site-group-summary mt-3 text-sm leading-6">
+        <p class="site-group-summary mt-3">
           {{ groupInfo?.info || fallbackDescription }}
         </p>
       </header>
 
-      <section class="game-detail-tabs p-4 sm:p-5">
+      <section class="site-group-panel p-4 sm:p-5">
         <NavSiteGrid :sites="items" :ping-data="pingData" />
 
-        <div v-if="state === 'missing'" class="game-detail-empty mt-8 rounded-xl px-4 py-3 text-sm">
+        <div v-if="state === 'missing'" class="site-group-empty mt-8 px-4 py-3">
           {{ missingText }}
         </div>
 
-        <div v-else-if="!items.length" class="game-detail-empty mt-8 rounded-xl px-4 py-3 text-sm">
+        <div v-else-if="!items.length" class="site-group-empty mt-8 px-4 py-3">
           {{ emptyText }}
         </div>
 
         <div v-if="hasMore" ref="sentinelRef" class="mt-10 flex justify-center">
-          <button type="button" class="game-detail-load-more px-5 py-2 text-sm font-semibold" :disabled="isLoadingMore" @click="loadMore">
+          <button type="button" class="site-group-load-more px-5 py-2" :disabled="isLoadingMore" @click="loadMore">
             {{ isLoadingMore ? t('common.loading') : t('common.loadMore') }}
           </button>
         </div>

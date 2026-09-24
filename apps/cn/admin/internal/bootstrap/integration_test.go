@@ -135,6 +135,18 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	protected.Get("/options/sites", optionsAPI.SiteOptions)
 	protected.Get("/options/site-targets", optionsAPI.SiteTargetOptions)
 	protected.Get("/options/games", optionsAPI.GameOptions)
+	protected.Get("/options/tags", optionsAPI.TagOptions)
+	protected.Put("/game/games/:id/classification", gameAPI.SaveClassification)
+	protected.Get("/game/tags", gameAPI.ListTags)
+	protected.Post("/game/tags", gameAPI.CreateTag)
+	protected.Get("/game/tags/:id", gameAPI.GetTag)
+	protected.Put("/game/tags/:id", gameAPI.UpdateTag)
+	protected.Delete("/game/tags/:id", gameAPI.ArchiveTag)
+	protected.Post("/game/tags/:id/restore", gameAPI.RestoreTag)
+	protected.Post("/game/tag-categories", gameAPI.CreateTagCategory)
+	protected.Put("/game/tag-categories/:id", gameAPI.UpdateTagCategory)
+	protected.Delete("/game/tag-categories/:id", gameAPI.ArchiveTagCategory)
+	protected.Post("/game/tag-categories/:id/restore", gameAPI.RestoreTagCategory)
 	protected.Get("/metrics/overview", metricAPI.Overview)
 	protected.Get("/metrics/registry", metricAPI.Registry)
 	protected.Get("/metrics/checkpoints", metricAPI.Checkpoints)
@@ -307,6 +319,8 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	if secondGameID <= gameID {
 		t.Fatalf("Game sequence reused or regressed id: first=%d second=%d", gameID, secondGameID)
 	}
+	testGameEditingRegression(t, ctx, app, cookie, gamePool, secondGameID, secondGamePayload)
+	testTagDomainRegression(t, ctx, app, cookie, gamePool, secondGameID, gameID)
 	testCollectionCenterOperations(t, ctx, app, cookie, gamePool, navPool, secondGameID)
 	if count := queryInt64(t, ctx, adminPool, `SELECT COUNT(*) FROM gfa_admin_audit_log`); count < 10 {
 		t.Fatalf("expected auth and CRUD audit entries, got %d", count)

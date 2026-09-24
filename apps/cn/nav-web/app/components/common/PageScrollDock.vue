@@ -3,7 +3,7 @@
     v-if="shouldRenderDock"
     class="page-scroll-dock"
     :class="{ 'page-scroll-dock--visible': isVisible }"
-    :style="{ '--scroll-progress': `${progressLabel}%` }"
+    :style="{ '--gf-scroll-dock-progress': `${progressLabel}%` }"
     :title="t('common.scrollStep')"
     :aria-label="t('common.scrollProgress', { percent: progressLabel })"
     type="button"
@@ -233,63 +233,14 @@ onUnmounted(() => {
   z-index: 85;
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  border: none;
-  border-radius: 999px;
-  background:
-    conic-gradient(from 220deg, rgba(122, 228, 255, 0.88) var(--scroll-progress), rgba(255, 255, 255, 0.08) 0),
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.14), transparent 48%);
-  box-shadow:
-    0 12px 32px rgba(8, 14, 20, 0.2),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 180ms ease, box-shadow 180ms ease, filter 180ms ease;
-}
-
-.page-scroll-dock--visible {
-  opacity: 0.78;
-  pointer-events: auto;
-}
-
-.page-scroll-dock::before {
-  content: '';
-  position: absolute;
-  inset: 4px;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(13, 22, 30, 0.78), rgba(17, 28, 36, 0.64));
-}
-
-.page-scroll-dock::after {
-  content: '';
-  position: absolute;
-  inset: 11px;
-  border-radius: inherit;
-  border: 1px solid rgba(132, 226, 255, 0.16);
-  opacity: 0.7;
-}
-
-.page-scroll-dock:hover {
-  opacity: 0.93;
-  box-shadow:
-    0 14px 34px rgba(8, 14, 20, 0.24),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-  filter: saturate(1.06);
 }
 
 .page-scroll-dock__core {
   position: relative;
   z-index: 1;
-  font-size: 0.64rem;
-  font-weight: 600;
-  color: rgba(235, 248, 255, 0.88);
-  letter-spacing: 0;
 }
 
 @media (max-width: 767px) {
-  .page-scroll-dock {
-    display: none;
-  }
+  .page-scroll-dock { display: none; }
 }
 </style>

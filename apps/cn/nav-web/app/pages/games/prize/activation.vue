@@ -16,29 +16,29 @@
         </svg>
       </div>
 
-      <p class="activation-card__eyebrow text-xs font-semibold uppercase tracking-[0.28em]">
+      <p class="activation-card__eyebrow">
         GoFurry Lottery
       </p>
       <h1
-        class="activation-card__title mt-4 text-3xl font-semibold tracking-normal sm:text-4xl"
+        class="activation-card__title mt-4"
         :class="isSuccess ? 'activation-card__title--success' : 'activation-card__title--fail'"
       >
         {{ title }}
       </h1>
 
-      <p class="activation-card__message mt-4 text-sm leading-7">
+      <p class="activation-card__message mt-4">
         {{ displayMessage }}
       </p>
 
-      <div class="activation-card__countdown mt-7 rounded-lg px-4 py-3 text-sm">
-        <span class="font-semibold">{{ countdown }}</span>
+      <div class="activation-card__countdown mt-7 px-4 py-3">
+        <span class="activation-card__countdown-value">{{ countdown }}</span>
         {{ t('game.lottery.activation.autoReturnIn') }}
       </div>
 
       <div class="mt-7 flex flex-wrap gap-3">
         <RouterLink
-          to="/games/prize"
-          class="activation-card__link inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold transition"
+          :to="prizePath"
+          class="activation-card__link inline-flex min-h-11 items-center justify-center px-4"
         >
           {{ t('game.lottery.activation.returnNow') }}
         </RouterLink>
@@ -55,6 +55,8 @@ const { t } = i18n.global
 
 const route = useRoute()
 const router = useRouter()
+const localePath = useLocalePath()
+const prizePath = computed(() => localePath('/games/prize'))
 
 useHead({
   meta: [
@@ -81,7 +83,7 @@ onMounted(() => {
   timer = window.setInterval(() => {
     countdown.value -= 1
     if (countdown.value <= 0) {
-      router.push('/games/prize')
+      router.push(prizePath.value)
     }
   }, 1000)
 })

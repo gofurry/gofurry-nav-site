@@ -150,6 +150,30 @@
       "cycle": false,
       "owned_table": "gfg_game_tracking_periods",
       "owned_column": "id"
+    },
+    {
+      "name": "gfg_tag_category_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_tag_category",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfg_tag_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_tag",
+      "owned_column": "id"
     }
   ],
   "tables": [
@@ -1823,14 +1847,14 @@
         },
         {
           "name": "info",
-          "data_type": "character varying(300)",
+          "data_type": "character varying(400)",
           "not_null": true,
           "has_default": false,
           "comment": "游戏简介"
         },
         {
           "name": "info_en",
-          "data_type": "character varying(300)",
+          "data_type": "character varying(400)",
           "not_null": true,
           "has_default": false,
           "comment": "游戏英文简介"
@@ -1914,20 +1938,6 @@
           "comment": "权重"
         },
         {
-          "name": "primary_tag",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false,
-          "comment": "主标签"
-        },
-        {
-          "name": "secondary_tag",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false,
-          "comment": "次标签"
-        },
-        {
           "name": "view_count",
           "data_type": "bigint",
           "not_null": true,
@@ -1977,20 +1987,12 @@
           "definition": "PRIMARY KEY (id)"
         },
         {
-          "name": "gfg_game_primary_tag_not_null",
-          "definition": "NOT NULL primary_tag"
-        },
-        {
           "name": "gfg_game_publishers_not_null",
           "definition": "NOT NULL publishers"
         },
         {
           "name": "gfg_game_release_date_not_null",
           "definition": "NOT NULL release_date"
-        },
-        {
-          "name": "gfg_game_secondary_tag_not_null",
-          "definition": "NOT NULL secondary_tag"
         },
         {
           "name": "gfg_game_update_time_not_null",
@@ -2027,16 +2029,8 @@
           "definition": "CREATE INDEX idx_gfg_game_name_trgm ON public.gfg_game USING gin (name gin_trgm_ops)"
         },
         {
-          "name": "idx_gfg_game_primary_tag",
-          "definition": "CREATE INDEX idx_gfg_game_primary_tag ON public.gfg_game USING btree (primary_tag)"
-        },
-        {
           "name": "idx_gfg_game_publishers_jsonb",
           "definition": "CREATE INDEX idx_gfg_game_publishers_jsonb ON public.gfg_game USING gin (publishers)"
-        },
-        {
-          "name": "idx_gfg_game_secondary_tag",
-          "definition": "CREATE INDEX idx_gfg_game_secondary_tag ON public.gfg_game USING btree (secondary_tag)"
         },
         {
           "name": "idx_gfg_game_update_time",
@@ -5607,6 +5601,94 @@
       "triggers": null
     },
     {
+      "name": "gfg_game_tag",
+      "columns": [
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "tag_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "role",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "create_time",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "update_time",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_tag_create_time_not_null",
+          "definition": "NOT NULL create_time"
+        },
+        {
+          "name": "gfg_game_tag_game_id_fkey",
+          "definition": "FOREIGN KEY (game_id) REFERENCES gfg_game(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_game_tag_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_tag_pkey",
+          "definition": "PRIMARY KEY (game_id, tag_id)"
+        },
+        {
+          "name": "gfg_game_tag_role_check",
+          "definition": "CHECK (role = ANY (ARRAY['normal'::text, 'primary'::text, 'secondary'::text]))"
+        },
+        {
+          "name": "gfg_game_tag_role_not_null",
+          "definition": "NOT NULL role"
+        },
+        {
+          "name": "gfg_game_tag_tag_id_fkey",
+          "definition": "FOREIGN KEY (tag_id) REFERENCES gfg_tag(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_game_tag_tag_id_not_null",
+          "definition": "NOT NULL tag_id"
+        },
+        {
+          "name": "gfg_game_tag_update_time_not_null",
+          "definition": "NOT NULL update_time"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_gfg_game_tag_primary",
+          "definition": "CREATE UNIQUE INDEX idx_gfg_game_tag_primary ON public.gfg_game_tag USING btree (game_id) WHERE (role = 'primary'::text)"
+        },
+        {
+          "name": "idx_gfg_game_tag_secondary",
+          "definition": "CREATE UNIQUE INDEX idx_gfg_game_tag_secondary ON public.gfg_game_tag USING btree (game_id) WHERE (role = 'secondary'::text)"
+        },
+        {
+          "name": "idx_gfg_game_tag_tag_game",
+          "definition": "CREATE INDEX idx_gfg_game_tag_tag_game ON public.gfg_game_tag USING btree (tag_id, game_id)"
+        }
+      ],
+      "triggers": null
+    },
+    {
       "name": "gfg_game_tracking_periods",
       "comment": "Immutable Game/AppID eligibility periods used by historical facts; no FK to current gfg_game.",
       "columns": [
@@ -6610,6 +6692,7 @@
           "data_type": "bigint",
           "not_null": true,
           "has_default": false,
+          "identity": "d",
           "comment": "标签表id"
         },
         {
@@ -6641,13 +6724,6 @@
           "comment": "标签英文简介"
         },
         {
-          "name": "prefix",
-          "data_type": "bigint",
-          "not_null": true,
-          "has_default": false,
-          "comment": "父标签 没有为-1"
-        },
-        {
           "name": "create_time",
           "data_type": "timestamp(0) without time zone",
           "not_null": true,
@@ -6660,9 +6736,47 @@
           "not_null": true,
           "has_default": false,
           "comment": "修改时间"
+        },
+        {
+          "name": "code",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "category_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "archived_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": false,
+          "has_default": false
         }
       ],
       "constraints": [
+        {
+          "name": "gfg_tag_category_id_fkey",
+          "definition": "FOREIGN KEY (category_id) REFERENCES gfg_tag_category(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_tag_category_id_not_null1",
+          "definition": "NOT NULL category_id"
+        },
+        {
+          "name": "gfg_tag_code_check",
+          "definition": "CHECK (length(code) \u003e= 1 AND length(code) \u003c= 64 AND code ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text)"
+        },
+        {
+          "name": "gfg_tag_code_key",
+          "definition": "UNIQUE (code)"
+        },
+        {
+          "name": "gfg_tag_code_not_null",
+          "definition": "NOT NULL code"
+        },
         {
           "name": "gfg_tag_create_time_not_null",
           "definition": "NOT NULL create_time"
@@ -6688,10 +6802,6 @@
           "definition": "NOT NULL name"
         },
         {
-          "name": "gfg_tag_prefix_not_null",
-          "definition": "NOT NULL prefix"
-        },
-        {
           "name": "gfg_tag_update_time_not_null",
           "definition": "NOT NULL update_time"
         },
@@ -6702,88 +6812,128 @@
       ],
       "indexes": [
         {
-          "name": "idx_gfg_tag_prefix",
-          "definition": "CREATE INDEX idx_gfg_tag_prefix ON public.gfg_tag USING btree (prefix)"
+          "name": "idx_gfg_tag_category_id",
+          "definition": "CREATE INDEX idx_gfg_tag_category_id ON public.gfg_tag USING btree (category_id)"
         }
       ],
       "triggers": null
     },
     {
-      "name": "gfg_tag_map",
-      "comment": "游戏标签映射表",
+      "name": "gfg_tag_category",
       "columns": [
         {
           "name": "id",
           "data_type": "bigint",
           "not_null": true,
           "has_default": false,
-          "comment": "游戏标签映射表id"
+          "identity": "d"
         },
         {
-          "name": "game_id",
-          "data_type": "bigint",
+          "name": "code",
+          "data_type": "text",
           "not_null": true,
-          "has_default": false,
-          "comment": "游戏id"
+          "has_default": false
         },
         {
-          "name": "tag_id",
-          "data_type": "bigint",
+          "name": "name",
+          "data_type": "character varying(255)",
           "not_null": true,
-          "has_default": false,
-          "comment": "标签id"
+          "has_default": false
+        },
+        {
+          "name": "name_en",
+          "data_type": "character varying(255)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "info",
+          "data_type": "character varying(255)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "info_en",
+          "data_type": "character varying(255)",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "sort_order",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "archived_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": false,
+          "has_default": false
         },
         {
           "name": "create_time",
           "data_type": "timestamp(0) without time zone",
           "not_null": true,
-          "has_default": false,
-          "comment": "创建时间"
+          "has_default": false
         },
         {
           "name": "update_time",
           "data_type": "timestamp(0) without time zone",
           "not_null": true,
-          "has_default": false,
-          "comment": "修改时间"
+          "has_default": false
         }
       ],
       "constraints": [
         {
-          "name": "gfg_tag_map_create_time_not_null",
+          "name": "gfg_tag_category_code_check",
+          "definition": "CHECK (length(code) \u003e= 1 AND length(code) \u003c= 64 AND code ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text)"
+        },
+        {
+          "name": "gfg_tag_category_code_key",
+          "definition": "UNIQUE (code)"
+        },
+        {
+          "name": "gfg_tag_category_code_not_null",
+          "definition": "NOT NULL code"
+        },
+        {
+          "name": "gfg_tag_category_create_time_not_null",
           "definition": "NOT NULL create_time"
         },
         {
-          "name": "gfg_tag_map_game_id_not_null",
-          "definition": "NOT NULL game_id"
-        },
-        {
-          "name": "gfg_tag_map_id_not_null",
+          "name": "gfg_tag_category_id_not_null",
           "definition": "NOT NULL id"
         },
         {
-          "name": "gfg_tag_map_pkey",
+          "name": "gfg_tag_category_info_en_not_null",
+          "definition": "NOT NULL info_en"
+        },
+        {
+          "name": "gfg_tag_category_info_not_null",
+          "definition": "NOT NULL info"
+        },
+        {
+          "name": "gfg_tag_category_name_en_not_null",
+          "definition": "NOT NULL name_en"
+        },
+        {
+          "name": "gfg_tag_category_name_not_null",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "gfg_tag_category_pkey",
           "definition": "PRIMARY KEY (id)"
         },
         {
-          "name": "gfg_tag_map_tag_id_not_null",
-          "definition": "NOT NULL tag_id"
+          "name": "gfg_tag_category_sort_order_not_null",
+          "definition": "NOT NULL sort_order"
         },
         {
-          "name": "gfg_tag_map_update_time_not_null",
+          "name": "gfg_tag_category_update_time_not_null",
           "definition": "NOT NULL update_time"
         }
       ],
-      "indexes": [
-        {
-          "name": "idx_gfg_tag_map_game_id",
-          "definition": "CREATE INDEX idx_gfg_tag_map_game_id ON public.gfg_tag_map USING btree (game_id)"
-        },
-        {
-          "name": "idx_gfg_tag_map_tag_id",
-          "definition": "CREATE INDEX idx_gfg_tag_map_tag_id ON public.gfg_tag_map USING btree (tag_id)"
-        }
-      ],
+      "indexes": null,
       "triggers": null
     }
   ],
@@ -6814,11 +6964,11 @@
     },
     {
       "identity": "gfg_project_state_fact_day(target_date date)",
-      "definition": "CREATE OR REPLACE FUNCTION public.gfg_project_state_fact_day(target_date date)\n RETURNS TABLE(game_rows bigint, price_rows bigint)\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    day_start timestamp with time zone := target_date::timestamp AT TIME ZONE 'UTC';\n    day_end timestamp with time zone := (target_date + 1)::timestamp AT TIME ZONE 'UTC';\n    eligible_count bigint;\nBEGIN\n    WITH eligible AS (\n        SELECT period.*,\n               LEAST(day_end, COALESCE(period.tracked_until, day_end)) AS terminal_at,\n               period.tracked_until IS NULL OR period.tracked_until \u003e day_end AS tracked_at_end\n        FROM public.gfg_game_tracking_periods period\n        WHERE period.tracked_from \u003c day_end\n          AND (period.tracked_until IS NULL OR period.tracked_until \u003e day_start)\n          AND period.tracking_basis = 'explicit'\n    ), materialized AS (\n        SELECT eligible.*,\n               prior.game_id AS prior_game_id\n        FROM eligible\n        LEFT JOIN LATERAL (\n            SELECT daily.*\n            FROM public.gfg_game_daily daily\n            WHERE daily.tracking_period_id = eligible.id\n              AND daily.fact_date \u003c= target_date\n            ORDER BY daily.fact_date DESC\n            LIMIT 1\n        ) prior ON true\n    )\n    SELECT count(*), count(prior_game_id) INTO eligible_count, game_rows\n    FROM materialized;\n\n    IF game_rows \u003c\u003e eligible_count THEN\n        RAISE EXCEPTION 'Game state source unavailable for %, expected %, materialized %', target_date, eligible_count, game_rows;\n    END IF;\n\n    WITH eligible AS (\n        SELECT period.*,\n               LEAST(day_end, COALESCE(period.tracked_until, day_end)) AS terminal_at,\n               period.tracked_until IS NULL OR period.tracked_until \u003e day_end AS tracked_at_end\n        FROM public.gfg_game_tracking_periods period\n        WHERE period.tracked_from \u003c day_end\n          AND (period.tracked_until IS NULL OR period.tracked_until \u003e day_start)\n          AND period.tracking_basis = 'explicit'\n    ), latest AS (\n        SELECT eligible.id AS target_tracking_period_id,\n               eligible.appid AS target_appid,\n               eligible.terminal_at AS terminal_snapshot_at,\n               eligible.tracked_at_end AS terminal_tracked_at_end,\n               prior.*\n        FROM eligible\n        JOIN LATERAL (\n            SELECT daily.*\n            FROM public.gfg_game_daily daily\n            WHERE daily.tracking_period_id = eligible.id\n              AND daily.fact_date \u003c= target_date\n            ORDER BY daily.fact_date DESC\n            LIMIT 1\n        ) prior ON true\n    )\n    INSERT INTO public.gfg_game_daily (\n        game_id, fact_date, tracking_period_id, appid, snapshot_at, tracked_at_end,\n        name, name_en, view_count, game_type, is_free, windows, mac, linux,\n        release_availability, release_precision, release_exact_date, release_year,\n        release_month, release_quarter, release_window_start, release_window_end,\n        release_observed_at, first_available_precision, first_available_exact_date,\n        first_available_year, first_available_month, first_available_quarter,\n        first_available_window_start, first_available_window_end,\n        first_available_source, first_available_inferred, language_codes,\n        unknown_language_names, full_audio_language_codes, languages_observed_at,\n        developers, publishers, primary_tag_id, secondary_tag_id, tag_ids,\n        details_observed_at, materialization_source, projection_version,\n        finalized_at, created_at, updated_at\n    )\n    SELECT latest.game_id, target_date, latest.target_tracking_period_id, latest.target_appid,\n           latest.terminal_snapshot_at, latest.terminal_tracked_at_end,\n           latest.name, latest.name_en, latest.view_count, latest.game_type,\n           latest.is_free, latest.windows, latest.mac, latest.linux,\n           latest.release_availability, latest.release_precision,\n           latest.release_exact_date, latest.release_year, latest.release_month,\n           latest.release_quarter, latest.release_window_start,\n           latest.release_window_end, latest.release_observed_at,\n           latest.first_available_precision, latest.first_available_exact_date,\n           latest.first_available_year, latest.first_available_month,\n           latest.first_available_quarter, latest.first_available_window_start,\n           latest.first_available_window_end, latest.first_available_source,\n           latest.first_available_inferred, latest.language_codes,\n           latest.unknown_language_names, latest.full_audio_language_codes,\n           latest.languages_observed_at, latest.developers, latest.publishers,\n           latest.primary_tag_id, latest.secondary_tag_id, latest.tag_ids,\n           latest.details_observed_at,\n           CASE WHEN latest.fact_date = target_date THEN latest.materialization_source\n                ELSE 'carried_forward' END,\n           1, transaction_timestamp(), latest.created_at, transaction_timestamp()\n    FROM latest\n    ON CONFLICT (game_id, fact_date) DO UPDATE\n    SET tracking_period_id = EXCLUDED.tracking_period_id,\n        appid = EXCLUDED.appid,\n        snapshot_at = EXCLUDED.snapshot_at,\n        tracked_at_end = EXCLUDED.tracked_at_end,\n        name = EXCLUDED.name,\n        name_en = EXCLUDED.name_en,\n        view_count = EXCLUDED.view_count,\n        game_type = EXCLUDED.game_type,\n        is_free = EXCLUDED.is_free,\n        windows = EXCLUDED.windows,\n        mac = EXCLUDED.mac,\n        linux = EXCLUDED.linux,\n        release_availability = EXCLUDED.release_availability,\n        release_precision = EXCLUDED.release_precision,\n        release_exact_date = EXCLUDED.release_exact_date,\n        release_year = EXCLUDED.release_year,\n        release_month = EXCLUDED.release_month,\n        release_quarter = EXCLUDED.release_quarter,\n        release_window_start = EXCLUDED.release_window_start,\n        release_window_end = EXCLUDED.release_window_end,\n        release_observed_at = EXCLUDED.release_observed_at,\n        first_available_precision = EXCLUDED.first_available_precision,\n        first_available_exact_date = EXCLUDED.first_available_exact_date,\n        first_available_year = EXCLUDED.first_available_year,\n        first_available_month = EXCLUDED.first_available_month,\n        first_available_quarter = EXCLUDED.first_available_quarter,\n        first_available_window_start = EXCLUDED.first_available_window_start,\n        first_available_window_end = EXCLUDED.first_available_window_end,\n        first_available_source = EXCLUDED.first_available_source,\n        first_available_inferred = EXCLUDED.first_available_inferred,\n        language_codes = EXCLUDED.language_codes,\n        unknown_language_names = EXCLUDED.unknown_language_names,\n        full_audio_language_codes = EXCLUDED.full_audio_language_codes,\n        languages_observed_at = EXCLUDED.languages_observed_at,\n        developers = EXCLUDED.developers,\n        publishers = EXCLUDED.publishers,\n        primary_tag_id = EXCLUDED.primary_tag_id,\n        secondary_tag_id = EXCLUDED.secondary_tag_id,\n        tag_ids = EXCLUDED.tag_ids,\n        details_observed_at = EXCLUDED.details_observed_at,\n        materialization_source = EXCLUDED.materialization_source,\n        projection_version = EXCLUDED.projection_version,\n        finalized_at = transaction_timestamp(),\n        updated_at = transaction_timestamp();\n\n    GET DIAGNOSTICS game_rows = ROW_COUNT;\n\n    WITH eligible AS (\n        SELECT period.*\n        FROM public.gfg_game_tracking_periods period\n        WHERE period.tracked_from \u003c day_end\n          AND (period.tracked_until IS NULL OR period.tracked_until \u003e day_start)\n          AND period.tracking_basis = 'explicit'\n    ), candidates AS (\n        SELECT period.id AS tracking_period_id,\n               period.game_id,\n               period.appid,\n               region.region,\n               COALESCE(today.price_state, prior.price_state, current.price_state, 'unknown') AS price_state,\n               COALESCE(today.currency, prior.currency, NULLIF(current.currency, '')) AS currency,\n               COALESCE(today.initial_amount, prior.initial_amount, current.initial_amount) AS initial_amount,\n               COALESCE(today.final_amount, prior.final_amount, current.final_amount) AS final_amount,\n               COALESCE(today.discount_percent, prior.discount_percent, current.discount_percent::integer) AS discount_percent,\n               COALESCE(today.observed_at, prior.observed_at, current.collected_at) AS observed_at,\n               CASE WHEN today.tracking_period_id IS NOT NULL THEN today.materialization_source\n                    WHEN prior.tracking_period_id IS NOT NULL THEN 'carried_forward'\n                    ELSE 'bootstrap' END AS source_kind\n        FROM eligible period\n        CROSS JOIN (VALUES ('CN'::text), ('US'::text), ('HK'::text)) region(region)\n        LEFT JOIN public.gfg_game_price_daily today\n          ON today.tracking_period_id = period.id\n         AND today.region = region.region\n         AND today.fact_date = target_date\n        LEFT JOIN LATERAL (\n            SELECT daily.*\n            FROM public.gfg_game_price_daily daily\n            WHERE daily.tracking_period_id = period.id\n              AND daily.region = region.region\n              AND daily.fact_date \u003c target_date\n            ORDER BY daily.fact_date DESC\n            LIMIT 1\n        ) prior ON today.tracking_period_id IS NULL\n        LEFT JOIN public.gfg_game_prices current\n          ON current.game_id = period.game_id\n         AND current.appid = period.appid\n         AND current.region = region.region\n         AND today.tracking_period_id IS NULL\n         AND prior.tracking_period_id IS NULL\n    )\n    INSERT INTO public.gfg_game_price_daily (\n        tracking_period_id, game_id, appid, region, fact_date, price_state,\n        currency, initial_amount, final_amount, discount_percent, observed_at,\n        materialization_source, projection_version, finalized_at,\n        created_at, updated_at\n    )\n    SELECT tracking_period_id, game_id, appid, region, target_date, price_state,\n           CASE WHEN price_state = 'priced' THEN currency END,\n           CASE WHEN price_state = 'priced' THEN initial_amount END,\n           CASE WHEN price_state = 'priced' THEN final_amount END,\n           CASE WHEN price_state = 'priced' THEN discount_percent END,\n           observed_at, source_kind, 1, transaction_timestamp(),\n           transaction_timestamp(), transaction_timestamp()\n    FROM candidates\n    ON CONFLICT (tracking_period_id, region, fact_date) DO UPDATE\n    SET game_id = EXCLUDED.game_id,\n        appid = EXCLUDED.appid,\n        price_state = EXCLUDED.price_state,\n        currency = EXCLUDED.currency,\n        initial_amount = EXCLUDED.initial_amount,\n        final_amount = EXCLUDED.final_amount,\n        discount_percent = EXCLUDED.discount_percent,\n        observed_at = EXCLUDED.observed_at,\n        materialization_source = EXCLUDED.materialization_source,\n        projection_version = EXCLUDED.projection_version,\n        finalized_at = transaction_timestamp(),\n        updated_at = transaction_timestamp();\n\n    GET DIAGNOSTICS price_rows = ROW_COUNT;\n    RETURN NEXT;\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.gfg_project_state_fact_day(target_date date)\n RETURNS TABLE(game_rows bigint, price_rows bigint)\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n    day_start timestamp with time zone := target_date::timestamp AT TIME ZONE 'UTC';\n    day_end timestamp with time zone := (target_date + 1)::timestamp AT TIME ZONE 'UTC';\n    eligible_count bigint;\nBEGIN\n    WITH eligible AS (\n        SELECT period.*,\n               LEAST(day_end, COALESCE(period.tracked_until, day_end)) AS terminal_at,\n               period.tracked_until IS NULL OR period.tracked_until \u003e day_end AS tracked_at_end\n        FROM public.gfg_game_tracking_periods period\n        WHERE period.tracked_from \u003c day_end\n          AND (period.tracked_until IS NULL OR period.tracked_until \u003e day_start)\n          AND period.tracking_basis = 'explicit'\n    ), materialized AS (\n        SELECT eligible.*,\n               prior.game_id AS prior_game_id\n        FROM eligible\n        LEFT JOIN LATERAL (\n            SELECT daily.*\n            FROM public.gfg_game_daily daily\n            WHERE daily.tracking_period_id = eligible.id\n              AND daily.fact_date \u003c= target_date\n            ORDER BY daily.fact_date DESC\n            LIMIT 1\n        ) prior ON true\n    )\n    SELECT count(*), count(prior_game_id) INTO eligible_count, game_rows\n    FROM materialized;\n\n    IF game_rows \u003c\u003e eligible_count THEN\n        RAISE EXCEPTION 'Game state source unavailable for %, expected %, materialized %', target_date, eligible_count, game_rows;\n    END IF;\n\n    WITH eligible AS (\n        SELECT period.*,\n               LEAST(day_end, COALESCE(period.tracked_until, day_end)) AS terminal_at,\n               period.tracked_until IS NULL OR period.tracked_until \u003e day_end AS tracked_at_end\n        FROM public.gfg_game_tracking_periods period\n        WHERE period.tracked_from \u003c day_end\n          AND (period.tracked_until IS NULL OR period.tracked_until \u003e day_start)\n          AND period.tracking_basis = 'explicit'\n    ), latest AS (\n        SELECT eligible.id AS target_tracking_period_id,\n               eligible.appid AS target_appid,\n               eligible.terminal_at AS terminal_snapshot_at,\n               eligible.tracked_at_end AS terminal_tracked_at_end,\n               prior.*\n        FROM eligible\n        JOIN LATERAL (\n            SELECT daily.*\n            FROM public.gfg_game_daily daily\n            WHERE daily.tracking_period_id = eligible.id\n              AND daily.fact_date \u003c= target_date\n            ORDER BY daily.fact_date DESC\n            LIMIT 1\n        ) prior ON true\n    )\n    INSERT INTO public.gfg_game_daily (\n        game_id, fact_date, tracking_period_id, appid, snapshot_at, tracked_at_end,\n        name, name_en, view_count, game_type, is_free, windows, mac, linux,\n        release_availability, release_precision, release_exact_date, release_year,\n        release_month, release_quarter, release_window_start, release_window_end,\n        release_observed_at, first_available_precision, first_available_exact_date,\n        first_available_year, first_available_month, first_available_quarter,\n        first_available_window_start, first_available_window_end,\n        first_available_source, first_available_inferred, language_codes,\n        unknown_language_names, full_audio_language_codes, languages_observed_at,\n        developers, publishers, primary_tag_id, secondary_tag_id, tag_ids,\n        details_observed_at, materialization_source, projection_version,\n        finalized_at, created_at, updated_at\n    )\n    SELECT latest.game_id, target_date, latest.target_tracking_period_id, latest.target_appid,\n           latest.terminal_snapshot_at, latest.terminal_tracked_at_end,\n           latest.name, latest.name_en, latest.view_count, latest.game_type,\n           latest.is_free, latest.windows, latest.mac, latest.linux,\n           latest.release_availability, latest.release_precision,\n           latest.release_exact_date, latest.release_year, latest.release_month,\n           latest.release_quarter, latest.release_window_start,\n           latest.release_window_end, latest.release_observed_at,\n           latest.first_available_precision, latest.first_available_exact_date,\n           latest.first_available_year, latest.first_available_month,\n           latest.first_available_quarter, latest.first_available_window_start,\n           latest.first_available_window_end, latest.first_available_source,\n           latest.first_available_inferred, latest.language_codes,\n           latest.unknown_language_names, latest.full_audio_language_codes,\n           latest.languages_observed_at, latest.developers, latest.publishers,\n           latest.primary_tag_id, latest.secondary_tag_id, latest.tag_ids,\n           latest.details_observed_at,\n           CASE WHEN latest.fact_date = target_date THEN latest.materialization_source\n                ELSE 'carried_forward' END,\n           latest.projection_version, transaction_timestamp(), latest.created_at, transaction_timestamp()\n    FROM latest\n    ON CONFLICT (game_id, fact_date) DO UPDATE\n    SET tracking_period_id = EXCLUDED.tracking_period_id,\n        appid = EXCLUDED.appid,\n        snapshot_at = EXCLUDED.snapshot_at,\n        tracked_at_end = EXCLUDED.tracked_at_end,\n        name = EXCLUDED.name,\n        name_en = EXCLUDED.name_en,\n        view_count = EXCLUDED.view_count,\n        game_type = EXCLUDED.game_type,\n        is_free = EXCLUDED.is_free,\n        windows = EXCLUDED.windows,\n        mac = EXCLUDED.mac,\n        linux = EXCLUDED.linux,\n        release_availability = EXCLUDED.release_availability,\n        release_precision = EXCLUDED.release_precision,\n        release_exact_date = EXCLUDED.release_exact_date,\n        release_year = EXCLUDED.release_year,\n        release_month = EXCLUDED.release_month,\n        release_quarter = EXCLUDED.release_quarter,\n        release_window_start = EXCLUDED.release_window_start,\n        release_window_end = EXCLUDED.release_window_end,\n        release_observed_at = EXCLUDED.release_observed_at,\n        first_available_precision = EXCLUDED.first_available_precision,\n        first_available_exact_date = EXCLUDED.first_available_exact_date,\n        first_available_year = EXCLUDED.first_available_year,\n        first_available_month = EXCLUDED.first_available_month,\n        first_available_quarter = EXCLUDED.first_available_quarter,\n        first_available_window_start = EXCLUDED.first_available_window_start,\n        first_available_window_end = EXCLUDED.first_available_window_end,\n        first_available_source = EXCLUDED.first_available_source,\n        first_available_inferred = EXCLUDED.first_available_inferred,\n        language_codes = EXCLUDED.language_codes,\n        unknown_language_names = EXCLUDED.unknown_language_names,\n        full_audio_language_codes = EXCLUDED.full_audio_language_codes,\n        languages_observed_at = EXCLUDED.languages_observed_at,\n        developers = EXCLUDED.developers,\n        publishers = EXCLUDED.publishers,\n        primary_tag_id = EXCLUDED.primary_tag_id,\n        secondary_tag_id = EXCLUDED.secondary_tag_id,\n        tag_ids = EXCLUDED.tag_ids,\n        details_observed_at = EXCLUDED.details_observed_at,\n        materialization_source = EXCLUDED.materialization_source,\n        projection_version = EXCLUDED.projection_version,\n        finalized_at = transaction_timestamp(),\n        updated_at = transaction_timestamp();\n\n    GET DIAGNOSTICS game_rows = ROW_COUNT;\n\n    WITH eligible AS (\n        SELECT period.*\n        FROM public.gfg_game_tracking_periods period\n        WHERE period.tracked_from \u003c day_end\n          AND (period.tracked_until IS NULL OR period.tracked_until \u003e day_start)\n          AND period.tracking_basis = 'explicit'\n    ), candidates AS (\n        SELECT period.id AS tracking_period_id,\n               period.game_id,\n               period.appid,\n               region.region,\n               COALESCE(today.price_state, prior.price_state, current.price_state, 'unknown') AS price_state,\n               COALESCE(today.currency, prior.currency, NULLIF(current.currency, '')) AS currency,\n               COALESCE(today.initial_amount, prior.initial_amount, current.initial_amount) AS initial_amount,\n               COALESCE(today.final_amount, prior.final_amount, current.final_amount) AS final_amount,\n               COALESCE(today.discount_percent, prior.discount_percent, current.discount_percent::integer) AS discount_percent,\n               COALESCE(today.observed_at, prior.observed_at, current.collected_at) AS observed_at,\n               CASE WHEN today.tracking_period_id IS NOT NULL THEN today.materialization_source\n                    WHEN prior.tracking_period_id IS NOT NULL THEN 'carried_forward'\n                    ELSE 'bootstrap' END AS source_kind\n        FROM eligible period\n        CROSS JOIN (VALUES ('CN'::text), ('US'::text), ('HK'::text)) region(region)\n        LEFT JOIN public.gfg_game_price_daily today\n          ON today.tracking_period_id = period.id\n         AND today.region = region.region\n         AND today.fact_date = target_date\n        LEFT JOIN LATERAL (\n            SELECT daily.*\n            FROM public.gfg_game_price_daily daily\n            WHERE daily.tracking_period_id = period.id\n              AND daily.region = region.region\n              AND daily.fact_date \u003c target_date\n            ORDER BY daily.fact_date DESC\n            LIMIT 1\n        ) prior ON today.tracking_period_id IS NULL\n        LEFT JOIN public.gfg_game_prices current\n          ON current.game_id = period.game_id\n         AND current.appid = period.appid\n         AND current.region = region.region\n         AND today.tracking_period_id IS NULL\n         AND prior.tracking_period_id IS NULL\n    )\n    INSERT INTO public.gfg_game_price_daily (\n        tracking_period_id, game_id, appid, region, fact_date, price_state,\n        currency, initial_amount, final_amount, discount_percent, observed_at,\n        materialization_source, projection_version, finalized_at,\n        created_at, updated_at\n    )\n    SELECT tracking_period_id, game_id, appid, region, target_date, price_state,\n           CASE WHEN price_state = 'priced' THEN currency END,\n           CASE WHEN price_state = 'priced' THEN initial_amount END,\n           CASE WHEN price_state = 'priced' THEN final_amount END,\n           CASE WHEN price_state = 'priced' THEN discount_percent END,\n           observed_at, source_kind, 1, transaction_timestamp(),\n           transaction_timestamp(), transaction_timestamp()\n    FROM candidates\n    ON CONFLICT (tracking_period_id, region, fact_date) DO UPDATE\n    SET game_id = EXCLUDED.game_id,\n        appid = EXCLUDED.appid,\n        price_state = EXCLUDED.price_state,\n        currency = EXCLUDED.currency,\n        initial_amount = EXCLUDED.initial_amount,\n        final_amount = EXCLUDED.final_amount,\n        discount_percent = EXCLUDED.discount_percent,\n        observed_at = EXCLUDED.observed_at,\n        materialization_source = EXCLUDED.materialization_source,\n        projection_version = EXCLUDED.projection_version,\n        finalized_at = transaction_timestamp(),\n        updated_at = transaction_timestamp();\n\n    GET DIAGNOSTICS price_rows = ROW_COUNT;\n    RETURN NEXT;\nEND;\n$function$\n"
     },
     {
       "identity": "gfg_refresh_current_game_daily(target_game_id bigint, source_kind text)",
-      "definition": "CREATE OR REPLACE FUNCTION public.gfg_refresh_current_game_daily(target_game_id bigint, source_kind text)\n RETURNS void\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n    IF source_kind NOT IN ('bootstrap', 'observed', 'carried_forward') THEN\n        RAISE EXCEPTION 'invalid Game Daily materialization source: %', source_kind;\n    END IF;\n\n    WITH current_game AS (\n        SELECT g.*, p.id AS tracking_period_id\n        FROM public.gfg_game g\n        JOIN public.gfg_game_tracking_periods p\n          ON p.game_id = g.id\n         AND p.appid = g.appid\n         AND p.tracking_basis = 'explicit'\n         AND p.tracked_until IS NULL\n        WHERE g.id = target_game_id\n    ), languages AS (\n        SELECT l.game_id,\n               array_agg(l.language_code ORDER BY l.sort_order, l.id)\n                   FILTER (WHERE l.language_code IS NOT NULL) AS language_codes,\n               array_agg(l.steam_name ORDER BY l.sort_order, l.id)\n                   FILTER (WHERE l.language_code IS NULL) AS unknown_language_names,\n               array_agg(l.language_code ORDER BY l.sort_order, l.id)\n                   FILTER (WHERE l.language_code IS NOT NULL AND l.full_audio_supported) AS full_audio_language_codes,\n               max(l.observed_at) AS languages_observed_at\n        FROM public.gfg_game_languages l\n        WHERE l.game_id = target_game_id\n        GROUP BY l.game_id\n    ), tags AS (\n        SELECT m.game_id, array_agg(DISTINCT m.tag_id ORDER BY m.tag_id) AS tag_ids\n        FROM public.gfg_tag_map m\n        WHERE m.game_id = target_game_id\n        GROUP BY m.game_id\n    ), snapshot AS (\n        SELECT g.id AS game_id,\n               (transaction_timestamp() AT TIME ZONE 'UTC')::date AS fact_date,\n               g.tracking_period_id,\n               g.appid,\n               transaction_timestamp() AS snapshot_at,\n               g.name::text AS name,\n               g.name_en::text AS name_en,\n               g.view_count,\n               NULLIF(d.type, '') AS game_type,\n               d.is_free,\n               CASE WHEN d.game_id IS NULL THEN NULL ELSE (d.platforms -\u003e\u003e 'windows')::boolean END AS windows,\n               CASE WHEN d.game_id IS NULL THEN NULL ELSE (d.platforms -\u003e\u003e 'mac')::boolean END AS mac,\n               CASE WHEN d.game_id IS NULL THEN NULL ELSE (d.platforms -\u003e\u003e 'linux')::boolean END AS linux,\n               r.availability AS release_availability,\n               r.precision AS release_precision,\n               r.exact_date AS release_exact_date,\n               r.release_year,\n               r.release_month,\n               r.release_quarter,\n               r.window_start AS release_window_start,\n               r.window_end AS release_window_end,\n               r.observed_at AS release_observed_at,\n               f.precision AS first_available_precision,\n               f.exact_date AS first_available_exact_date,\n               f.release_year AS first_available_year,\n               f.release_month AS first_available_month,\n               f.release_quarter AS first_available_quarter,\n               f.window_start AS first_available_window_start,\n               f.window_end AS first_available_window_end,\n               f.source AS first_available_source,\n               f.inferred AS first_available_inferred,\n               l.language_codes,\n               l.unknown_language_names,\n               l.full_audio_language_codes,\n               l.languages_observed_at,\n               CASE WHEN jsonb_typeof(g.developers) = 'array'\n                    THEN ARRAY(SELECT jsonb_array_elements_text(g.developers))\n                    ELSE ARRAY[]::text[] END AS developers,\n               CASE WHEN jsonb_typeof(g.publishers) = 'array'\n                    THEN ARRAY(SELECT jsonb_array_elements_text(g.publishers))\n                    ELSE ARRAY[]::text[] END AS publishers,\n               NULLIF(g.primary_tag, 0) AS primary_tag_id,\n               NULLIF(g.secondary_tag, 0) AS secondary_tag_id,\n               COALESCE(t.tag_ids, ARRAY[]::bigint[]) AS tag_ids,\n               d.collected_at AS details_observed_at\n        FROM current_game g\n        LEFT JOIN public.gfg_game_details d ON d.game_id = g.id AND d.appid = g.appid\n        LEFT JOIN public.gfg_game_release_state r ON r.game_id = g.id\n        LEFT JOIN public.gfg_game_first_available f ON f.game_id = g.id\n        LEFT JOIN languages l ON l.game_id = g.id\n        LEFT JOIN tags t ON t.game_id = g.id\n    )\n    INSERT INTO public.gfg_game_daily (\n        game_id, fact_date, tracking_period_id, appid, snapshot_at, tracked_at_end,\n        name, name_en, view_count, game_type, is_free, windows, mac, linux,\n        release_availability, release_precision, release_exact_date, release_year,\n        release_month, release_quarter, release_window_start, release_window_end,\n        release_observed_at, first_available_precision, first_available_exact_date,\n        first_available_year, first_available_month, first_available_quarter,\n        first_available_window_start, first_available_window_end,\n        first_available_source, first_available_inferred, language_codes,\n        unknown_language_names, full_audio_language_codes, languages_observed_at,\n        developers, publishers, primary_tag_id, secondary_tag_id, tag_ids,\n        details_observed_at, materialization_source, projection_version,\n        finalized_at, created_at, updated_at\n    )\n    SELECT game_id, fact_date, tracking_period_id, appid, snapshot_at, true,\n           name, name_en, view_count, game_type, is_free, windows, mac, linux,\n           release_availability, release_precision, release_exact_date, release_year,\n           release_month, release_quarter, release_window_start, release_window_end,\n           release_observed_at, first_available_precision, first_available_exact_date,\n           first_available_year, first_available_month, first_available_quarter,\n           first_available_window_start, first_available_window_end,\n           first_available_source, first_available_inferred, language_codes,\n           unknown_language_names, full_audio_language_codes, languages_observed_at,\n           developers, publishers, primary_tag_id, secondary_tag_id, tag_ids,\n           details_observed_at, source_kind, 1,\n           NULL, transaction_timestamp(), transaction_timestamp()\n    FROM snapshot\n    ON CONFLICT (game_id, fact_date) DO UPDATE\n    SET tracking_period_id = EXCLUDED.tracking_period_id,\n        appid = EXCLUDED.appid,\n        snapshot_at = EXCLUDED.snapshot_at,\n        tracked_at_end = EXCLUDED.tracked_at_end,\n        name = EXCLUDED.name,\n        name_en = EXCLUDED.name_en,\n        view_count = EXCLUDED.view_count,\n        game_type = EXCLUDED.game_type,\n        is_free = EXCLUDED.is_free,\n        windows = EXCLUDED.windows,\n        mac = EXCLUDED.mac,\n        linux = EXCLUDED.linux,\n        release_availability = EXCLUDED.release_availability,\n        release_precision = EXCLUDED.release_precision,\n        release_exact_date = EXCLUDED.release_exact_date,\n        release_year = EXCLUDED.release_year,\n        release_month = EXCLUDED.release_month,\n        release_quarter = EXCLUDED.release_quarter,\n        release_window_start = EXCLUDED.release_window_start,\n        release_window_end = EXCLUDED.release_window_end,\n        release_observed_at = EXCLUDED.release_observed_at,\n        first_available_precision = EXCLUDED.first_available_precision,\n        first_available_exact_date = EXCLUDED.first_available_exact_date,\n        first_available_year = EXCLUDED.first_available_year,\n        first_available_month = EXCLUDED.first_available_month,\n        first_available_quarter = EXCLUDED.first_available_quarter,\n        first_available_window_start = EXCLUDED.first_available_window_start,\n        first_available_window_end = EXCLUDED.first_available_window_end,\n        first_available_source = EXCLUDED.first_available_source,\n        first_available_inferred = EXCLUDED.first_available_inferred,\n        language_codes = EXCLUDED.language_codes,\n        unknown_language_names = EXCLUDED.unknown_language_names,\n        full_audio_language_codes = EXCLUDED.full_audio_language_codes,\n        languages_observed_at = EXCLUDED.languages_observed_at,\n        developers = EXCLUDED.developers,\n        publishers = EXCLUDED.publishers,\n        primary_tag_id = EXCLUDED.primary_tag_id,\n        secondary_tag_id = EXCLUDED.secondary_tag_id,\n        tag_ids = EXCLUDED.tag_ids,\n        details_observed_at = EXCLUDED.details_observed_at,\n        materialization_source = EXCLUDED.materialization_source,\n        projection_version = EXCLUDED.projection_version,\n        updated_at = transaction_timestamp()\n    WHERE public.gfg_game_daily.finalized_at IS NULL;\nEND;\n$function$\n"
+      "definition": "CREATE OR REPLACE FUNCTION public.gfg_refresh_current_game_daily(target_game_id bigint, source_kind text)\n RETURNS void\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n    IF source_kind NOT IN ('bootstrap', 'observed', 'carried_forward') THEN\n        RAISE EXCEPTION 'invalid Game Daily materialization source: %', source_kind;\n    END IF;\n\n    WITH current_game AS (\n        SELECT g.*, p.id AS tracking_period_id\n        FROM public.gfg_game g\n        JOIN public.gfg_game_tracking_periods p\n          ON p.game_id = g.id\n         AND p.appid = g.appid\n         AND p.tracking_basis = 'explicit'\n         AND p.tracked_until IS NULL\n        WHERE g.id = target_game_id\n    ), languages AS (\n        SELECT l.game_id,\n               array_agg(l.language_code ORDER BY l.sort_order, l.id)\n                   FILTER (WHERE l.language_code IS NOT NULL) AS language_codes,\n               array_agg(l.steam_name ORDER BY l.sort_order, l.id)\n                   FILTER (WHERE l.language_code IS NULL) AS unknown_language_names,\n               array_agg(l.language_code ORDER BY l.sort_order, l.id)\n                   FILTER (WHERE l.language_code IS NOT NULL AND l.full_audio_supported) AS full_audio_language_codes,\n               max(l.observed_at) AS languages_observed_at\n        FROM public.gfg_game_languages l\n        WHERE l.game_id = target_game_id\n        GROUP BY l.game_id\n    ), tags AS (\n        SELECT m.game_id, array_agg(m.tag_id ORDER BY m.tag_id) AS tag_ids,\n               max(m.tag_id) FILTER (WHERE m.role='primary') AS primary_tag_id,\n               max(m.tag_id) FILTER (WHERE m.role='secondary') AS secondary_tag_id\n        FROM public.gfg_game_tag m\n        WHERE m.game_id = target_game_id\n        GROUP BY m.game_id\n    ), snapshot AS (\n        SELECT g.id AS game_id,\n               (transaction_timestamp() AT TIME ZONE 'UTC')::date AS fact_date,\n               g.tracking_period_id,\n               g.appid,\n               transaction_timestamp() AS snapshot_at,\n               g.name::text AS name,\n               g.name_en::text AS name_en,\n               g.view_count,\n               NULLIF(d.type, '') AS game_type,\n               d.is_free,\n               CASE WHEN d.game_id IS NULL THEN NULL ELSE (d.platforms -\u003e\u003e 'windows')::boolean END AS windows,\n               CASE WHEN d.game_id IS NULL THEN NULL ELSE (d.platforms -\u003e\u003e 'mac')::boolean END AS mac,\n               CASE WHEN d.game_id IS NULL THEN NULL ELSE (d.platforms -\u003e\u003e 'linux')::boolean END AS linux,\n               r.availability AS release_availability,\n               r.precision AS release_precision,\n               r.exact_date AS release_exact_date,\n               r.release_year,\n               r.release_month,\n               r.release_quarter,\n               r.window_start AS release_window_start,\n               r.window_end AS release_window_end,\n               r.observed_at AS release_observed_at,\n               f.precision AS first_available_precision,\n               f.exact_date AS first_available_exact_date,\n               f.release_year AS first_available_year,\n               f.release_month AS first_available_month,\n               f.release_quarter AS first_available_quarter,\n               f.window_start AS first_available_window_start,\n               f.window_end AS first_available_window_end,\n               f.source AS first_available_source,\n               f.inferred AS first_available_inferred,\n               l.language_codes,\n               l.unknown_language_names,\n               l.full_audio_language_codes,\n               l.languages_observed_at,\n               CASE WHEN jsonb_typeof(g.developers) = 'array'\n                    THEN ARRAY(SELECT jsonb_array_elements_text(g.developers))\n                    ELSE ARRAY[]::text[] END AS developers,\n               CASE WHEN jsonb_typeof(g.publishers) = 'array'\n                    THEN ARRAY(SELECT jsonb_array_elements_text(g.publishers))\n                    ELSE ARRAY[]::text[] END AS publishers,\n               t.primary_tag_id AS primary_tag_id,\n               t.secondary_tag_id AS secondary_tag_id,\n               COALESCE(t.tag_ids, ARRAY[]::bigint[]) AS tag_ids,\n               d.collected_at AS details_observed_at\n        FROM current_game g\n        LEFT JOIN public.gfg_game_details d ON d.game_id = g.id AND d.appid = g.appid\n        LEFT JOIN public.gfg_game_release_state r ON r.game_id = g.id\n        LEFT JOIN public.gfg_game_first_available f ON f.game_id = g.id\n        LEFT JOIN languages l ON l.game_id = g.id\n        LEFT JOIN tags t ON t.game_id = g.id\n    )\n    INSERT INTO public.gfg_game_daily (\n        game_id, fact_date, tracking_period_id, appid, snapshot_at, tracked_at_end,\n        name, name_en, view_count, game_type, is_free, windows, mac, linux,\n        release_availability, release_precision, release_exact_date, release_year,\n        release_month, release_quarter, release_window_start, release_window_end,\n        release_observed_at, first_available_precision, first_available_exact_date,\n        first_available_year, first_available_month, first_available_quarter,\n        first_available_window_start, first_available_window_end,\n        first_available_source, first_available_inferred, language_codes,\n        unknown_language_names, full_audio_language_codes, languages_observed_at,\n        developers, publishers, primary_tag_id, secondary_tag_id, tag_ids,\n        details_observed_at, materialization_source, projection_version,\n        finalized_at, created_at, updated_at\n    )\n    SELECT game_id, fact_date, tracking_period_id, appid, snapshot_at, true,\n           name, name_en, view_count, game_type, is_free, windows, mac, linux,\n           release_availability, release_precision, release_exact_date, release_year,\n           release_month, release_quarter, release_window_start, release_window_end,\n           release_observed_at, first_available_precision, first_available_exact_date,\n           first_available_year, first_available_month, first_available_quarter,\n           first_available_window_start, first_available_window_end,\n           first_available_source, first_available_inferred, language_codes,\n           unknown_language_names, full_audio_language_codes, languages_observed_at,\n           developers, publishers, primary_tag_id, secondary_tag_id, tag_ids,\n           details_observed_at, source_kind, 2,\n           NULL, transaction_timestamp(), transaction_timestamp()\n    FROM snapshot\n    ON CONFLICT (game_id, fact_date) DO UPDATE\n    SET tracking_period_id = EXCLUDED.tracking_period_id,\n        appid = EXCLUDED.appid,\n        snapshot_at = EXCLUDED.snapshot_at,\n        tracked_at_end = EXCLUDED.tracked_at_end,\n        name = EXCLUDED.name,\n        name_en = EXCLUDED.name_en,\n        view_count = EXCLUDED.view_count,\n        game_type = EXCLUDED.game_type,\n        is_free = EXCLUDED.is_free,\n        windows = EXCLUDED.windows,\n        mac = EXCLUDED.mac,\n        linux = EXCLUDED.linux,\n        release_availability = EXCLUDED.release_availability,\n        release_precision = EXCLUDED.release_precision,\n        release_exact_date = EXCLUDED.release_exact_date,\n        release_year = EXCLUDED.release_year,\n        release_month = EXCLUDED.release_month,\n        release_quarter = EXCLUDED.release_quarter,\n        release_window_start = EXCLUDED.release_window_start,\n        release_window_end = EXCLUDED.release_window_end,\n        release_observed_at = EXCLUDED.release_observed_at,\n        first_available_precision = EXCLUDED.first_available_precision,\n        first_available_exact_date = EXCLUDED.first_available_exact_date,\n        first_available_year = EXCLUDED.first_available_year,\n        first_available_month = EXCLUDED.first_available_month,\n        first_available_quarter = EXCLUDED.first_available_quarter,\n        first_available_window_start = EXCLUDED.first_available_window_start,\n        first_available_window_end = EXCLUDED.first_available_window_end,\n        first_available_source = EXCLUDED.first_available_source,\n        first_available_inferred = EXCLUDED.first_available_inferred,\n        language_codes = EXCLUDED.language_codes,\n        unknown_language_names = EXCLUDED.unknown_language_names,\n        full_audio_language_codes = EXCLUDED.full_audio_language_codes,\n        languages_observed_at = EXCLUDED.languages_observed_at,\n        developers = EXCLUDED.developers,\n        publishers = EXCLUDED.publishers,\n        primary_tag_id = EXCLUDED.primary_tag_id,\n        secondary_tag_id = EXCLUDED.secondary_tag_id,\n        tag_ids = EXCLUDED.tag_ids,\n        details_observed_at = EXCLUDED.details_observed_at,\n        materialization_source = EXCLUDED.materialization_source,\n        projection_version = EXCLUDED.projection_version,\n        updated_at = transaction_timestamp()\n    WHERE public.gfg_game_daily.finalized_at IS NULL;\nEND;\n$function$\n"
     }
   ]
 }

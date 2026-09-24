@@ -1,15 +1,15 @@
 <template>
-  <div class="game-detail-news space-y-6 text-sm">
+  <div class="game-detail-news space-y-6">
 
     <!-- 新闻列表 -->
     <div v-for="(item, index) in displayedNews" :key="index" class="game-detail-news-item space-y-2 p-4">
       <!-- 标题 & 原文链接 -->
       <div class="flex items-start justify-between gap-4">
-        <h3 class="game-detail-news-title flex-1 break-words text-lg font-bold">
+        <h3 class="game-detail-news-title flex-1 break-words">
           {{ item.headline }}
         </h3>
 
-        <div class="game-detail-source-link flex shrink-0 items-center justify-center px-3 py-1 font-bold">
+        <div class="game-detail-source-link flex shrink-0 items-center justify-center px-3 py-1">
           <a
               v-if="item.url"
               :href="item.url"
@@ -21,7 +21,7 @@
       </div>
 
       <!-- 作者 & 发布时间 -->
-      <div class="game-detail-news-meta mb-1 flex justify-between text-xs">
+      <div class="game-detail-news-meta mb-1 flex justify-between">
         <span>{{t("game.detail.author")}}: {{ item.author }}</span>
         <span>{{t("game.detail.time")}}: {{ formatNewsTime(item.post_time) }}</span>
       </div>

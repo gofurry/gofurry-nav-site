@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
@@ -192,25 +193,15 @@ func (dao *ReadModelDAO) ListTags(ctx context.Context, lang string) ([]v2models.
 	if err := dao.ready(); err != nil {
 		return nil, common.NewDaoError(err.Error())
 	}
-	nameColumn := "COALESCE(NULLIF(t.name, ''), t.name_en)"
-	if normalizeDAOLang(lang) == "en" {
-		nameColumn = "COALESCE(NULLIF(t.name_en, ''), t.name)"
-	}
-	sql := fmt.Sprintf(`SELECT t.id::text AS id, %s AS name, t.prefix::text AS prefix,
-COALESCE(tc.game_count, 0)::integer AS game_count
-FROM gfg_tag t
-LEFT JOIN (
-    SELECT tm.tag_id, COUNT(DISTINCT tm.game_id) AS game_count
-    FROM gfg_tag_map tm
-    JOIN gfg_game_details d ON d.game_id = tm.game_id
-    GROUP BY tm.tag_id
-) tc ON t.id = tc.tag_id
-ORDER BY game_count DESC, t.id ASC`, nameColumn)
-	rows, err := queryMany[v2models.GameV2TagRecord](ctx, dao.pool, sql)
+	rows, err := dao.q.ListPublicTags(ctx, normalizeDAOLang(lang))
 	if err != nil {
-		return nil, common.NewDaoError(fmt.Sprintf("查询游戏 v2 标签失败: %v", err))
+		return nil, common.NewDaoError(fmt.Sprintf("查询游戏标签失败: %v", err))
 	}
-	return rows, nil
+	tags := make([]v2models.GameV2TagRecord, 0, len(rows))
+	for _, row := range rows {
+		tags = append(tags, v2models.GameV2TagRecord{ID: row.ID, Code: row.Code, Name: row.Name, CategoryID: row.CategoryID, CategoryCode: row.CategoryCode, CategoryName: row.CategoryName, GameCount: int(row.GameCount)})
+	}
+	return tags, nil
 }
 
 func (dao *ReadModelDAO) GetGameReviews(ctx context.Context, query v2models.GameV2ReviewQuery) (v2models.GameV2ReviewList, common.GFError) {
@@ -389,4 +380,29 @@ func listOrder(sort string) string {
 	default:
 		return "g.weight ASC, g.id ASC"
 	}
+}
+
+func (dao *ReadModelDAO) ListTagCategories(ctx context.Context, lang string) ([]v2models.GameV2TagCategory, common.GFError) {
+	if err := dao.ready(); err != nil {
+		return nil, common.NewDaoError(err.Error())
+	}
+	rows, err := dao.q.ListPublicTagCategories(ctx, normalizeDAOLang(lang))
+	if err != nil {
+		return nil, common.NewDaoError(err.Error())
+	}
+	tags, e := dao.ListTags(ctx, lang)
+	if e != nil {
+		return nil, e
+	}
+	groups := make([]v2models.GameV2TagCategory, 0, len(rows))
+	for _, row := range rows {
+		group := v2models.GameV2TagCategory{ID: strconv.FormatInt(row.ID, 10), Code: row.Code, Name: row.Name, Tags: []v2models.GameV2TagRecord{}}
+		for _, tag := range tags {
+			if tag.CategoryID == group.ID {
+				group.Tags = append(group.Tags, tag)
+			}
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
 }

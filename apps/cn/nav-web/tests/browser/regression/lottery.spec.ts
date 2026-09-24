@@ -1,0 +1,191 @@
+import { test, expect, lotteryDraft, lotteryRejection, assertLotteryAppearance, assertLotteryModal, settleLottery } from '../fixtures/lottery'
+
+for (const locale of ['zh', 'en'] as const) test(`Lottery CSR data and computed contract (${locale})`, async ({ lottery }) => {
+  await lottery.open({ locale, theme: locale === 'en' ? 'dark' : 'light', elapsed: locale === 'en' })
+  await settleLottery(lottery, lottery.root)
+  await expect(lottery.page.locator('.lottery-page__title')).toHaveText(locale === 'zh' ? '兽游喜加一' : 'gofurry Lottery')
+  await expect(lottery.page.locator('.lottery-summary__value')).toHaveText(['2', '9'])
+  await expect(lottery.page.locator('.lottery-history__row')).toHaveCount(2)
+  await expect(lottery.page.locator('.lottery-winner')).toHaveCount(2)
+  await expect(lottery.page.locator('.lottery-history__empty')).toHaveCount(1)
+  await expect(lottery.page.locator('.lottery-progress__bar').first()).toHaveAttribute('style', /width: 50%/)
+  await expect(lottery.page.locator('.lottery-progress__bar').nth(1)).toHaveAttribute('style', locale === 'en' ? /width: 100%/ : /width: 0%/)
+  await expect(lottery.page.locator('.lottery-progress__time').first()).toContainText('2026-09-17 12:40:00')
+  await assertLotteryAppearance(lottery)
+  await lottery.openModal(1); await expect(lottery.dialog.locator('.lottery-modal__empty')).toHaveText(locale === 'zh' ? '暂无参与者' : 'No participants yet')
+  await lottery.dialog.locator('.lottery-modal__close').click()
+  lottery.assertQuiet()
+})
+
+test('Lottery valid empty response differs from unavailable data', async ({ lottery }) => {
+  lottery.planReads(['empty']); await lottery.open({ ready: false })
+  await expect(lottery.page.locator('.lottery-empty')).toHaveText(['当前暂无活跃抽奖', '暂无历史抽奖记录'])
+  await expect(lottery.page.locator('.lottery-summary__value')).toHaveText(['0', '0'])
+  await expect(lottery.page.locator('.lottery-pool')).toHaveCount(0)
+  await expect(lottery.page.getByRole('alert')).toHaveCount(0)
+  lottery.assertQuiet()
+})
+
+test('Lottery business rejection is recoverable without false empty state', async ({ lottery }) => {
+  lottery.planReads(['rejected', 'success']); await lottery.open({ ready: false })
+  const alert = lottery.page.getByRole('alert'), retry = lottery.page.locator('.lottery-retry')
+  await expect(alert).toBeVisible(); await expect(lottery.page.getByText('当前暂无活跃抽奖', { exact: true })).toHaveCount(0)
+  await expect(lottery.page.locator('.lottery-summary__value')).toHaveText(['—', '—'])
+  const gate = lottery.holdRead(); await retry.click(); await gate.waitReceived()
+  await expect(retry).toBeDisabled()
+  await expect(lottery.page.locator('.lottery-page__loading')).toBeVisible()
+  const box = (await retry.boundingBox())!; await lottery.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  expect(lottery.reads).toHaveLength(2)
+  gate.release(); await lottery.ready(); await expect(alert).toHaveCount(0)
+  lottery.assertQuiet({ gets: 2, upstream: 2 })
+})
+
+test('Lottery HTTP failure retains bounded transport retries and user recovery', async ({ lottery }) => {
+  lottery.planReads(['unavailable', 'success']); await lottery.open({ ready: false })
+  await expect(lottery.page.getByRole('alert')).toBeVisible()
+  expect(lottery.reads).toHaveLength(4)
+  await expect(lottery.page.getByText('暂无历史抽奖记录', { exact: true })).toHaveCount(0)
+  await lottery.page.locator('.lottery-retry').click(); await lottery.ready()
+  lottery.assertQuiet({ gets: 3, upstream: 5 })
+})
+
+test('Lottery pending GET is cancelled when its page unmounts', async ({ lottery }) => {
+  const gate = lottery.holdRead(); await lottery.open({ ready: false }); await gate.waitReceived()
+  await expect(lottery.page.locator('.lottery-page__loading')).toBeVisible()
+  lottery.expectAbort(gate)
+  await lottery.page.locator('a[href="/terms"]').first().click()
+  await expect(lottery.page).toHaveURL(/\/terms$/); await lottery.waitAborted(gate)
+  gate.release(); await gate.waitCompleted()
+  await expect(lottery.root).toHaveCount(0); await expect(lottery.page.locator('.gf-static-page')).toBeVisible()
+  lottery.assertQuiet()
+})
+
+test('Lottery Desktop modal owns focus, participants paging and reset', async ({ lottery }) => {
+  await lottery.open(); const page = lottery.page, trigger = page.locator('.lottery-pool').first()
+  await lottery.openModal(); await assertLotteryModal(lottery)
+  await expect(lottery.inputs.first()).toBeFocused(); await expect(lottery.inputs.first()).toHaveAccessibleName('请输入抽奖密钥')
+  await expect(page.locator('#__nuxt')).toHaveAttribute('inert', '')
+  const position = await page.evaluate(() => scrollY)
+  await page.mouse.move(2, 100); await page.mouse.wheel(0, 700)
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(position)
+  await lottery.inputs.first().focus(); await expect(lottery.inputs.first()).not.toHaveCSS('box-shadow', 'none')
+  const close = lottery.dialog.locator('.lottery-modal__close')
+  await close.focus(); await page.keyboard.press('Shift+Tab'); await expect(lottery.submit).toBeFocused()
+  await page.keyboard.press('Tab'); await expect(close).toBeFocused()
+  await expect(lottery.dialog.locator('.lottery-modal__chip')).toHaveCount(5)
+  await lottery.dialog.locator('.lottery-modal__load-more').click(); await expect(lottery.dialog.locator('.lottery-modal__chip')).toHaveCount(10)
+  await lottery.dialog.locator('.lottery-modal__load-more').click(); await expect(lottery.dialog.locator('.lottery-modal__chip')).toHaveCount(12)
+  await expect(lottery.dialog.locator('.lottery-modal__load-more')).toHaveCount(0)
+  await expect(lottery.dialog.getByText('已全部加载')).toBeVisible()
+  await lottery.fill(); await page.keyboard.press('Escape')
+  await expect(lottery.dialog).toHaveCount(0); await expect(trigger).toBeFocused()
+  await expect(page.locator('#__nuxt')).not.toHaveAttribute('inert', '')
+  expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe('')
+  await lottery.openModal(); await expect(lottery.inputs.first()).toHaveValue('')
+  await expect(lottery.dialog.locator('.lottery-modal__chip')).toHaveCount(5)
+  await lottery.dialog.locator('.lottery-modal__button--secondary').click(); await expect(trigger).toBeFocused()
+  lottery.assertQuiet()
+})
+
+test('Lottery Mobile modal stays above Nav and restores background on route exit', async ({ lottery }) => {
+  await lottery.open({ theme: 'dark', width: 390 })
+  await lottery.page.locator('a[href="/terms"]').first().click(); await expect(lottery.page).toHaveURL(/\/terms$/)
+  await lottery.page.goBack(); await lottery.ready(); await lottery.openModal()
+  for (const width of [390, 320]) {
+    await lottery.page.setViewportSize({ width, height: 844 }); await assertLotteryModal(lottery)
+    for (const input of await lottery.inputs.all()) { await input.focus(); await expect(input).toBeFocused(); await expect(input).toBeInViewport() }
+    await lottery.submit.focus(); await expect(lottery.submit).toBeInViewport()
+    expect(await lottery.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+  await lottery.page.keyboard.press('Escape'); await expect(lottery.dialog).toHaveCount(0)
+  expect(await lottery.page.evaluate(() => document.documentElement.style.overflow)).toBe('')
+  await lottery.openModal()
+  // Native history is a real route exit while the background is intentionally inert.
+  await lottery.page.goForward(); await expect(lottery.page).toHaveURL(/\/terms$/)
+  await expect(lottery.dialog).toHaveCount(0)
+  expect(await lottery.page.evaluate(() => document.documentElement.style.overflow)).toBe('')
+  await expect(lottery.page.locator('#__nuxt')).not.toHaveAttribute('inert', '')
+  lottery.assertQuiet({ gets: 2, upstream: 2 })
+})
+
+test('Lottery submission validates the trimmed snapshot and recovers through outcomes', async ({ lottery }) => {
+  await lottery.open(); await lottery.openModal()
+  const feedback = lottery.dialog.locator('.lottery-modal__message')
+  await lottery.submit.click(); await expect(feedback).toHaveText('请填写完整信息')
+  await lottery.fill({ name: '   ', key: '   ' }); await lottery.submit.click(); await expect(feedback).toHaveText('请填写完整信息')
+  await lottery.fill({ email: 'invalid' }); await lottery.submit.click(); await expect(feedback).toHaveText('邮箱格式不正确')
+  expect(lottery.submissions).toHaveLength(0)
+  await lottery.fill({ name: ' Audit Member ', key: ' fixture-key ', email: ' audit@example.test ' })
+  const rejected = lottery.queueSubmit('rejected'); await lottery.submit.click(); await rejected.waitReceived()
+  expect(rejected.body).toEqual(lotteryDraft); await expect(lottery.submit).toBeDisabled(); await expect(lottery.submit).toHaveCSS('opacity', '0.5')
+  const box = (await lottery.submit.boundingBox())!; await lottery.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  expect(lottery.submissions).toHaveLength(1)
+  rejected.release(); await expect(feedback).toHaveText(lotteryRejection)
+  const network = lottery.queueSubmit('unavailable'); await lottery.submit.click(); await network.waitReceived(); network.release()
+  await expect(feedback).toHaveText('网络异常，请稍后重试'); await expect(lottery.inputs.nth(1)).toHaveValue(' Audit Member ')
+  const success = lottery.queueSubmit(); await lottery.submit.click(); await success.waitReceived(); success.release()
+  await expect(feedback).toHaveText('报名成功，激活邮件已发送，请查收邮箱')
+  for (const input of await lottery.inputs.all()) await expect(input).toHaveValue('')
+  await expect(lottery.submit).toBeEnabled(); await expect(lottery.dialog).toBeVisible()
+  await expect(lottery.dialog.locator('.lottery-modal__chip')).toHaveCount(5)
+  lottery.assertQuiet({ gets: 1, upstream: 1, posts: 3 })
+})
+
+test('Closing a pending Lottery submission cannot corrupt the next modal instance', async ({ lottery }) => {
+  await lottery.open(); await lottery.openModal(); await lottery.fill()
+  const gate = lottery.queueSubmit(); await lottery.submit.click(); await gate.waitReceived()
+  await lottery.dialog.locator('.lottery-modal__button--secondary').click(); await expect(lottery.dialog).toHaveCount(0)
+  await lottery.openModal(); await lottery.fill({ name: 'Fresh draft' })
+  const response = lottery.page.waitForResponse(r => r.request() === gate.request)
+  gate.release(); await (await response).finished(); await gate.waitCompleted()
+  await settleLottery(lottery, lottery.modal)
+  await expect(lottery.inputs.nth(1)).toHaveValue('Fresh draft'); await expect(lottery.inputs.first()).toHaveValue(lotteryDraft.key)
+  await expect(lottery.dialog.locator('.lottery-modal__message')).toHaveCount(0); await expect(lottery.submit).toBeEnabled()
+  lottery.assertQuiet({ gets: 1, upstream: 1, posts: 1 })
+})
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`Lottery activation success mobile shell ${theme}`, async ({ lottery }) => {
+    await lottery.open({ activation: 'success', width: 390, theme })
+    const page = lottery.page
+    await expect(page.locator('.lottery-activation-page')).toBeVisible()
+    await expect(page.locator('.activation-card')).toBeVisible()
+    await expect(page.locator('.activation-status--success')).toBeVisible()
+    await expect(page.locator('.activation-card__title')).toHaveText('报名成功')
+    await expect(page.locator('.activation-card__link')).toHaveAttribute('href', '/games/prize')
+    await settleLottery(lottery, page.locator('.lottery-activation-page'))
+    expect(await page.locator('html').evaluate(el => el.classList.contains('dark'))).toBe(theme === 'dark')
+    expect(await page.evaluate(() => Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - document.documentElement.clientWidth)).toBeLessThanOrEqual(1)
+    lottery.assertQuiet({ gets: 0, upstream: 0, posts: 0 })
+  })
+}
+
+for (const locale of ['zh', 'en'] as const) {
+  test(`Lottery activation manual return preserves locale and clears timer (${locale})`, async ({ lottery }) => {
+    const message = locale === 'en' ? '<em>Activation link expired</em>' : undefined
+    await lottery.open({ activation: 'fail', locale, message })
+    const page = lottery.page, link = page.locator('.activation-card__link'), path = `${locale === 'en' ? '/en' : ''}/games/prize`
+    await expect(page.locator('.activation-card__title')).toHaveText(locale === 'zh' ? '报名失败' : 'Registration Failed')
+    if (message) { await expect(page.locator('.activation-card__message')).toHaveText(message); await expect(page.locator('.activation-card__message em')).toHaveCount(0) }
+    else await expect(page.locator('.activation-card__message')).toContainText('激活链接无效')
+    await expect(link).toHaveAttribute('href', path)
+    await link.click(); await lottery.ready(); await expect(page).toHaveURL(new RegExp(`${path}$`))
+    await page.locator(`a[href="${locale === 'en' ? '/en' : ''}/terms"]`).first().click()
+    await expect(page).toHaveURL(/\/terms$/); await page.clock.runFor(16000)
+    await expect(page).toHaveURL(/\/terms$/)
+    lottery.assertQuiet({ gets: 1, upstream: 1 })
+  })
+  test(`Lottery activation automatic return keeps the 15 second deadline (${locale})`, async ({ lottery }) => {
+    await lottery.open({ activation: 'success', locale })
+    const countdown = lottery.page.locator('.activation-card__countdown span')
+    await expect(countdown).toHaveText('15'); await expect(lottery.page.locator('.activation-status--success')).toBeVisible()
+    await lottery.page.clock.runFor(14000); await expect(countdown).toHaveText('1')
+    expect(lottery.reads).toHaveLength(0)
+    await lottery.page.clock.runFor(1000)
+    // The deadline has fired; let Nuxt's asynchronous route work and frames run.
+    await lottery.page.clock.resume()
+    await lottery.ready()
+    await expect(lottery.page).toHaveURL(new RegExp(`${locale === 'en' ? '/en' : ''}/games/prize$`))
+    lottery.assertQuiet({ gets: 1, upstream: 1 })
+  })
+}

@@ -22,6 +22,11 @@ This architecture entered production on 2026-09-14. Initial cutover is complete;
 `docs/managed-assets-cutover.md` is historical/rollback context and a first-deployment
 runbook for other environments. Never rerun initial cutover SQL on migrated production.
 
+Nav Web's frontend contract assigns structural composition to Tailwind and visual
+appearance to the GoFurry Less/token foundation. Stable rules live in
+`contracts/nav-web-frontend.md`; `apps/cn/nav-web/frontend-style-debt.json` records
+historical noncompliance, not alternative patterns for new code.
+
 `db/game`, `db/nav`, and `db/admin` exclusively own schema through Goose. Applications open bounded pgxpool connections and never execute migrations. Root `sqlc.yaml` generates service-local packages; normal business SQL is static sqlc SQL.
 
 Admin identity is multi-account and database-backed. The HTTPOnly JWT carries account/session identity only; every request reloads the active account and builds a Principal. The fixed `owner`, `developer`, and `operator` roles map to a compiled capability policy, and business routes authorize capabilities rather than roles. See `contracts/authorization.md`.

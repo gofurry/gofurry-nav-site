@@ -1,9 +1,9 @@
 <template>
-  <section class="gf-modal__section background-preferences" data-background-preferences>
+  <section ref="root" class="gf-modal__section background-preferences" data-background-preferences>
     <div class="gf-modal__copy"><h3 class="gf-modal__label">{{ label('页面背景', 'Page background') }}</h3><p class="gf-modal__help">{{ label('预览后点击“保存”应用。本地图片只保存在此浏览器。', 'Preview, then save to apply. Local images stay in this browser.') }}</p></div>
     <div class="background-preferences__field">
       <span :id="`${fieldId}-source`">{{ label('背景来源', 'Source') }}</span>
-      <div class="background-preferences__sources" role="group" :aria-labelledby="`${fieldId}-source`">
+      <div class="preferences-sources" role="group" :aria-labelledby="`${fieldId}-source`">
         <button v-for="source in (['default', 'server', 'local'] as const)" :key="source" type="button" :aria-pressed="draft.source === source" @click="changeSource(source)">
           {{ source === 'default' ? label('默认图案', 'Default') : source === 'server' ? label('服务端图案', 'Server patterns') : label('本地图片', 'Local image') }}
         </button>
@@ -11,12 +11,12 @@
     </div>
     <div v-if="draft.source === 'server' && patterns.length" class="background-preferences__field">
       <span :id="`${fieldId}-patterns`">{{ label('选择图案', 'Choose a pattern') }}</span>
-      <div class="background-preferences__carousel">
-        <button type="button" class="background-preferences__arrow" :disabled="!canPrevious" :aria-label="label('上一组图案', 'Previous patterns')" @click="scrollPatterns(-1)"><PhCaretLeft :size="18" /></button>
+      <div class="preferences-carousel">
+        <button type="button" class="preferences-arrow" :disabled="!canPrevious" :aria-label="label('上一组图案', 'Previous patterns')" @click="scrollPatterns(-1)"><PhCaretLeft :size="18" /></button>
         <div ref="strip" class="background-preferences__strip" role="group" :aria-labelledby="`${fieldId}-patterns`" @scroll="syncStrip">
           <BackgroundPatternOption v-for="pattern in patterns" :key="pattern.id" :pattern="pattern" :selected="draft.pattern_id === pattern.id" @select="selectPattern(pattern.id)" />
         </div>
-        <button type="button" class="background-preferences__arrow" :disabled="!canNext" :aria-label="label('下一组图案', 'Next patterns')" @click="scrollPatterns(1)"><PhCaretRight :size="18" /></button>
+        <button type="button" class="preferences-arrow" :disabled="!canNext" :aria-label="label('下一组图案', 'Next patterns')" @click="scrollPatterns(1)"><PhCaretRight :size="18" /></button>
       </div>
     </div>
     <p v-if="draft.source === 'server' && !patterns.length" class="gf-modal__help">{{ label('暂无可用图案，将使用默认背景。', 'No patterns available. The bundled background will be used.') }}</p>
@@ -57,7 +57,33 @@ const api = useApi('navV2')
 const fieldId = useId()
 const colorOpen = ref(false)
 const colorText = ref('')
-const colors = ['#9c846a', '#ac9680', '#7c2d12', '#c17c54', '#6b7c62', '#627e8f', '#8b7a96', '#333333', '#777777', '#aaaaaa', '#dddddd', '#ffffff']
+const root = ref<HTMLElement | null>(null)
+const backgroundPresetTokens = [
+  '--gf-preferences-background-preset-01',
+  '--gf-preferences-background-preset-02',
+  '--gf-preferences-background-preset-03',
+  '--gf-preferences-background-preset-04',
+  '--gf-preferences-background-preset-05',
+  '--gf-preferences-background-preset-06',
+  '--gf-preferences-background-preset-07',
+  '--gf-preferences-background-preset-08',
+  '--gf-preferences-background-preset-09',
+  '--gf-preferences-background-preset-10',
+  '--gf-preferences-background-preset-11',
+  '--gf-preferences-background-preset-12',
+] as const
+const colors = ref<string[]>([])
+function syncPresetColors() {
+  if (!root.value) return
+  const css = getComputedStyle(root.value)
+  colors.value = backgroundPresetTokens
+    .map(token => {
+      // Production CSS may shorten hex tokens; the color input stores six digits.
+      const value = css.getPropertyValue(token).trim().toLowerCase()
+      return value.replace(/^#([a-f\d])([a-f\d])([a-f\d])$/, '#$1$1$2$2$3$3')
+    })
+    .filter(value => /^#[a-f\d]{6}$/i.test(value))
+}
 const strip = ref<HTMLElement | null>(null)
 const canPrevious = ref(false)
 const canNext = ref(false)
@@ -92,16 +118,23 @@ const pendingFile = ref<LocalBackground | null>(null)
 const removeLocal = ref(false)
 const busy = ref(true)
 const error = ref('')
-const defaults = ref<PatternDefaults>({ light_color: '#000000', dark_color: '#000000', light_opacity: 0, dark_opacity: 0, default_size_px: 1 })
+const defaults = ref<PatternDefaults>(readPatternDefaults())
 let selectionVersion = 0
 let disposed = false
-function syncDefaults() {
+function readPatternDefaults(): PatternDefaults {
+  if (!import.meta.client) return { light_color: '', dark_color: '', light_opacity: 0, dark_opacity: 0, default_size_px: 1 }
   const css = getComputedStyle(document.documentElement)
   const color = css.getPropertyValue('--gf-page-pattern-color').trim()
   const opacity = Number(css.getPropertyValue('--gf-page-pattern-opacity'))
   const size = Number.parseFloat(css.getPropertyValue('--gf-page-pattern-size'))
-  defaults.value = { light_color: color, dark_color: color, light_opacity: opacity, dark_opacity: opacity, default_size_px: size }
+  return {
+    light_color: color, dark_color: color,
+    light_opacity: Number.isFinite(opacity) ? opacity : 0,
+    dark_opacity: Number.isFinite(opacity) ? opacity : 0,
+    default_size_px: Number.isFinite(size) ? size : 1,
+  }
 }
+function syncDefaults() { defaults.value = readPatternDefaults() }
 watch(() => theme.theme, () => { if (import.meta.client) syncDefaults() }, { flush: 'post' })
 const selected = computed(() => draft.value.source === 'server' ? patterns.value.find((pattern) => pattern.id === draft.value.pattern_id) : undefined)
 const raster = computed(() => draft.value.source === 'local' && local.value?.kind === 'raster')
@@ -138,6 +171,7 @@ async function save() {
 defineExpose({ save })
 onMounted(async () => {
   syncDefaults()
+  syncPresetColors()
   const version = ++selectionVersion
   draft.value = readBackgroundPreference()
   try { const stored = await readLocalBackground(); if (version === selectionVersion) setLocal(stored) } catch { /* Local storage may be unavailable; default/server still work. */ }
@@ -150,43 +184,24 @@ onUnmounted(() => { stripObserver?.disconnect(); disposed = true; selectionVersi
 
 <style scoped>
 .background-preferences { display: grid; gap: 1.1rem; }
-.background-preferences__field { display: grid; min-width: 0; gap: .5rem; font-size: .82rem; line-height: 1.4; color: var(--gf-text-main); }
-.background-preferences__sources { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
-.background-preferences__sources button { padding: .65rem .3rem; border: 1px solid var(--gf-border); border-radius: var(--gf-radius-sm); background: transparent; color: var(--gf-text-muted); cursor: pointer; transition: background 160ms, border-color 160ms; }
-.background-preferences__sources button:hover { background: var(--gf-surface-hover); }
-.background-preferences__sources button[aria-pressed='true'] { border-color: var(--gf-accent); background: var(--gf-accent-soft); color: var(--gf-accent); }
-.background-preferences__carousel { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) 1.5rem; gap: .4rem; align-items: center; }
+.background-preferences__field { display: grid; min-width: 0; gap: .5rem; }
 .background-preferences__strip { display: flex; gap: .6rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; padding: 3px; }
 .background-preferences__strip::-webkit-scrollbar { display: none; }
-.background-preferences__arrow { display: grid; place-items: center; height: 2.5rem; border: 0; border-radius: 6px; background: transparent; color: var(--gf-text-main); cursor: pointer; }
-.background-preferences__arrow:hover:not(:disabled) { background: var(--gf-accent-soft); color: var(--gf-accent); }
-.background-preferences__arrow:disabled { opacity: .25; cursor: default; }
 .background-preferences__controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; align-items: start; }
 .background-preferences__controls:has(> :nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .background-preferences__label-row { display: flex; align-items: baseline; justify-content: space-between; gap: .25rem; }
-.background-preferences__label-row output { color: var(--gf-text-muted); font-size: .75rem; font-variant-numeric: tabular-nums; }
 .background-preferences__color { position: relative; }
-.background-preferences__color-input { display: flex; align-items: center; height: 42px; min-width: 0; border: 1px solid var(--gf-border-strong); border-radius: var(--gf-radius-sm); background: var(--gf-input-bg); }
-.background-preferences__color-input button { display: flex; flex-shrink: 0; align-items: center; gap: 2px; padding: 8px 4px 8px 8px; border: 0; background: transparent; color: var(--gf-text-muted); cursor: pointer; }
-.background-preferences__color-input button span { width: 19px; height: 19px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .1); }
-.background-preferences__color-input input { width: 100%; min-width: 0; padding: 0 5px; border: 0; background: transparent; color: var(--gf-text-main); font-size: .74rem; font-variant-numeric: tabular-nums; outline: none; }
-.background-preferences__color-input:focus-within { outline: 2px solid var(--gf-focus-ring); }
-.background-preferences__palette { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; display: grid; grid-template-columns: repeat(6, 24px); gap: 8px; padding: 12px; border: 1px solid var(--gf-border-strong); border-radius: var(--gf-radius-sm); background: var(--gf-modal-bg); box-shadow: var(--gf-shadow-soft); }
-.background-preferences__palette button { width: 24px; height: 24px; border: 1px solid var(--gf-border-strong); border-radius: 50%; cursor: pointer; }
-.background-preferences__palette button:hover, .background-preferences__palette button[aria-pressed='true'] { outline: 2px solid var(--gf-accent); outline-offset: 2px; }
-.background-preferences__slider-box { display: flex; align-items: center; height: 42px; padding: 0 5px; }
-.background-preferences__slider { appearance: none; width: 100%; height: 5px; margin: 0; border-radius: 10px; background: linear-gradient(to right, var(--gf-accent) var(--range-progress), var(--gf-border-strong) var(--range-progress)); cursor: pointer; }
-.background-preferences__slider::-webkit-slider-thumb { appearance: none; width: 15px; height: 15px; border: 3px solid var(--gf-modal-bg); border-radius: 50%; background: var(--gf-accent); box-shadow: 0 0 0 1px var(--gf-accent); }
-.background-preferences__slider::-moz-range-thumb { width: 10px; height: 10px; border: 3px solid var(--gf-modal-bg); border-radius: 50%; background: var(--gf-accent); box-shadow: 0 0 0 1px var(--gf-accent); }
-.background-preferences__slider:hover { filter: brightness(1.15); }
-.background-preferences__size { position: relative; height: 42px; }
-.background-preferences__size .gf-input { width: 100%; height: 42px; padding: 0 30px 0 12px; font-size: .85rem; }
-.background-preferences__size > span { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: .72rem; color: var(--gf-text-muted); pointer-events: none; }
-.background-preferences__preview { position: relative; height: 130px; overflow: hidden; border: 1px solid var(--gf-border); border-radius: var(--gf-radius-sm); background: var(--gf-page-background); }
+.background-preferences__color-input { display: flex; align-items: center; min-width: 0; }
+.background-preferences__color-input button { display: flex; flex-shrink: 0; align-items: center; gap: 2px; }
+.background-preferences__color-input input { width: 100%; min-width: 0; }
+.background-preferences__palette { position: absolute; z-index: 5; top: calc(100% + 6px); left: 0; display: grid; grid-template-columns: repeat(6, 24px); gap: 8px; }
+.background-preferences__slider-box { display: flex; align-items: center; }
+.background-preferences__slider { width: 100%; margin: 0; }
+.background-preferences__size { position: relative; }
+.background-preferences__size .gf-input { width: 100%; }
+.background-preferences__size > span { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+.background-preferences__preview { position: relative; height: 130px; overflow: hidden; }
 .background-preferences__footer { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-end; }
 .background-preferences__footer .gf-modal__help { padding-bottom: .15rem; }
-.background-preferences__error { color: var(--gf-danger); font-size: .8rem; }
-.background-preferences button:focus-visible, .background-preferences__slider:focus-visible { outline: 2px solid var(--gf-accent); outline-offset: 3px; }
-@media (max-width: 400px) { .background-preferences__controls { gap: .55rem; } .background-preferences__color-input button { padding: 4px; } .background-preferences__color-input button svg { display: none; } .background-preferences__color-input button span { width: 15px; height: 15px; } .background-preferences__color-input input { font-size: .68rem; } }
-@media (prefers-reduced-motion: reduce) { .background-preferences__sources button { transition: none; } }
+@media (max-width: 400px) { .background-preferences__controls { gap: .55rem; } .background-preferences__color-input button svg { display: none; } }
 </style>

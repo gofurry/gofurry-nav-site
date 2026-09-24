@@ -3,14 +3,14 @@
     <header class="relative z-[1]">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
-          <h2 class="game-stats-card__title text-lg font-bold">
+          <h2 class="game-stats-card__title">
             {{ title }}
           </h2>
-          <span class="game-stats-card__badge px-2 py-0.5 text-xs font-bold">
+          <span class="game-stats-card__badge px-2 py-0.5">
             {{ listToShow.length }}
           </span>
         </div>
-        <p v-if="desc" class="game-stats-card__desc mt-1 truncate text-sm">
+        <p v-if="desc" class="game-stats-card__desc mt-1 truncate">
           {{ desc }}
         </p>
       </div>
@@ -20,39 +20,39 @@
       v-if="topItem"
       class="game-stats-feature relative z-[1] mt-3 grid min-h-[3.9rem] grid-cols-[2rem_minmax(0,1fr)_5.4rem] items-center gap-2 py-1 sm:grid-cols-[2.2rem_minmax(0,1fr)_5.2rem_5.2rem_4.5rem]"
     >
-      <div class="game-stats-rank game-stats-rank--top grid h-7 w-7 place-items-center rounded-full text-xs font-extrabold">
+      <div class="game-stats-rank game-stats-rank--top grid h-7 w-7 place-items-center">
         1
       </div>
 
       <div class="flex min-w-0 items-center gap-3">
         <SteamAssetImage
           :src="topItem.header"
-          class="stats-feature-cover h-12 w-24 shrink-0 rounded-lg object-cover"
+          class="stats-feature-cover h-12 w-24 shrink-0 object-cover"
           :alt="topItem.name"
         />
         <div class="min-w-0">
-          <div class="game-stats-feature__title truncate text-sm font-bold">
+          <div class="game-stats-feature__title truncate">
             {{ topItem.name }}
           </div>
-          <div class="game-stats-feature__desc mt-0.5 line-clamp-1 text-xs">
+          <div class="game-stats-feature__desc mt-0.5 line-clamp-1">
             {{ topItem.desc }}
           </div>
-          <div class="game-stats-feature__meta mt-0.5 text-xs">
+          <div class="game-stats-feature__meta mt-0.5">
             {{ t('game.panel.global') }} {{ formatPrice(topItem.global_price, true) }} · {{ t('game.panel.discount') }} {{ discountLabel(topItem) }}
           </div>
         </div>
       </div>
 
-      <div class="game-stats-row__value game-stats-row__value--secondary hidden text-right text-sm font-semibold sm:block">
+      <div class="game-stats-row__value game-stats-row__value--secondary hidden text-right sm:block">
         {{ formatPrice(topItem.global_price, true) }}
       </div>
 
-      <div class="game-stats-feature__value text-right text-sm font-bold">
+      <div class="game-stats-feature__value text-right">
         {{ formatPrice(topItem.china_price, false) }}
       </div>
 
       <div
-        class="hidden text-right text-sm font-bold sm:block"
+        class="hidden text-right sm:block"
         :class="topItem.discount > 0 ? 'game-stats-row__discount--deal' : 'game-stats-row__discount--idle'"
       >
         {{ discountLabel(topItem) }}
@@ -64,8 +64,8 @@
       aria-hidden="true"
     />
 
-    <div class="game-stats-table relative z-[1] mt-4 overflow-hidden rounded-xl">
-      <div class="game-stats-table-head grid grid-cols-[2rem_minmax(0,1fr)_5.4rem] items-center gap-2 px-2 py-2 text-xs font-bold sm:grid-cols-[2.2rem_minmax(0,1fr)_5.2rem_5.2rem_4.5rem]">
+    <div class="game-stats-table relative z-[1] mt-4 overflow-hidden">
+      <div class="game-stats-table-head grid grid-cols-[2rem_minmax(0,1fr)_5.4rem] items-center gap-2 px-2 py-2 sm:grid-cols-[2.2rem_minmax(0,1fr)_5.2rem_5.2rem_4.5rem]">
         <span class="text-center">#</span>
         <span class="text-left">{{ t('common.game') }}</span>
         <span class="hidden text-right sm:block">{{ t('game.panel.global') }}</span>
@@ -82,7 +82,7 @@
           :style="{ '--activity': `${activityPercent(item)}%` }"
         >
           <div
-            class="game-stats-rank grid h-7 w-7 place-items-center rounded-full text-xs font-extrabold"
+            class="game-stats-rank grid h-7 w-7 place-items-center"
             :class="{ 'game-stats-rank--top': index < 3 }"
           >
             {{ index + 1 }}
@@ -91,29 +91,29 @@
           <div class="flex min-w-0 items-center gap-3">
             <SteamAssetImage
               :src="item.header"
-              class="stats-row-cover h-11 w-20 rounded-md object-cover"
+              class="stats-row-cover h-11 w-20 object-cover"
               :alt="item.name"
             />
             <div class="min-w-0">
-              <div class="game-stats-row__title truncate text-sm font-bold">
+              <div class="game-stats-row__title truncate">
                 {{ item.name }}
               </div>
-              <div class="game-stats-row__meta mt-0.5 text-xs sm:hidden">
+              <div class="game-stats-row__meta mt-0.5 sm:hidden">
                 {{ discountLabel(item) }}
               </div>
             </div>
           </div>
 
-          <div class="game-stats-row__value game-stats-row__value--secondary hidden text-right text-sm font-semibold sm:block">
+          <div class="game-stats-row__value game-stats-row__value--secondary hidden text-right sm:block">
             {{ formatPrice(item.global_price, true) }}
           </div>
 
-          <div class="game-stats-row__value text-right text-sm font-bold">
+          <div class="game-stats-row__value text-right">
             {{ formatPrice(item.china_price, false) }}
           </div>
 
           <div
-            class="hidden text-right text-sm font-bold sm:block"
+            class="hidden text-right sm:block"
             :class="item.discount > 0 ? 'game-stats-row__discount--deal' : 'game-stats-row__discount--idle'"
           >
             {{ discountLabel(item) }}

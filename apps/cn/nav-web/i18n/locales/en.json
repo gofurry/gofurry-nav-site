@@ -168,7 +168,7 @@
       "privacy": "Privacy"
     },
     "rights": "All rights reserved",
-    "license": "Content licensed under CC-BY-NC-SA 4.0",
+    "license": "Original GoFurry content is licensed under CC BY-NC-SA 4.0",
     "icp": "ICP No. 2025158691-2 (China)"
   },
   "home": {
@@ -466,9 +466,25 @@
       "latestInfo": "Latest Info",
       "plannedReleaseOrder": "Planned Release First",
       "comment": "Comment",
-      "jumpPage": "Jump To Page"
+      "jumpPage": "Jump To Page",
+      "invalidPage": "Enter a whole page number from 1 to {max}",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "loading": "Searching…",
+      "unavailable": "Search is temporarily unavailable. Please retry.",
+      "retry": "Retry",
+      "noResults": "No games match your filters",
+      "noSuggestions": "No matching games found",
+      "tagsLoading": "Loading tags…",
+      "tagsUnavailable": "Tags could not be loaded. Other filters are still available.",
+      "retryTags": "Reload tags",
+      "noTags": "No tags available"
     },
     "detail": {
+      "reviewsUnavailable": "Reviews are temporarily unavailable",
+      "recommendUnavailable": "Similar games are temporarily unavailable",
+      "retry": "Retry",
+      "openImage": "View image fullscreen",
       "commentCountSuffix": "comments",
       "share": "Share",
       "introduction": "Intro",
@@ -540,6 +556,8 @@
         "title": "gofurry Lottery",
         "activePool": "Active Pools",
         "noActiveLottery": "No active lotteries currently",
+        "unavailable": "Lottery information is temporarily unavailable. Please try again.",
+        "retry": "Retry",
         "clickToJoin": "Click to Join",
         "prize": "Prize",
         "prizeQuantity": "Quantity",
@@ -1085,5 +1103,31 @@
       "trendOne": "Historical data is still accumulating",
       "changesEmpty": "No recent public changes"
     }
+  },
+  "resourceRouting": {
+    "title": "Resource routing",
+    "gofurry": "GoFurry assets",
+    "steam": "Steam game assets",
+    "auto": "Automatic",
+    "primary": "EdgeOne",
+    "mirror": "Cloudflare",
+    "china": "China route",
+    "global": "Global route",
+    "preferred": "Preferred for new assets",
+    "recommendation": "Test recommendation",
+    "pinned": "Pinned",
+    "checked": "Last tested",
+    "retest": "Test again",
+    "probing": "Testing…",
+    "never": "Not tested",
+    "timeout": "Timed out",
+    "failed": "Test failed",
+    "stale": "Expired",
+    "latency": "{ms} ms",
+    "cooldown": "Retry in {seconds}s",
+    "details": "Route details",
+    "help": "Save to apply to new assets. Loaded images stay unchanged. Test recommendations update independently and survive Cancel.",
+    "steamProbeHint": "Reference latency uses a small image on one node per group. A failed test does not mean the whole route is unavailable.",
+    "pinnedWarning": "The pinned route did not pass this test. Assets will still try fallback routes if loading actually fails."
   }
 }

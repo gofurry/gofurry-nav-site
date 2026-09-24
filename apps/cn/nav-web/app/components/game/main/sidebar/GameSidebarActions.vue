@@ -23,7 +23,7 @@
         {{ t("game.action.relatedWebsites") }}
       </h3>
 
-      <div class="flex flex-col gap-2 text-sm">
+      <div class="game-sidebar-links flex flex-col gap-2">
         <!-- 默认网站 -->
         <slot name="default-sites" />
 

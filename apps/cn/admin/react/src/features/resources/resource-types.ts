@@ -12,6 +12,7 @@ export type ResourceField = {
   placeholder?: string
   options?: ResourceOption[]
   optionEndpoint?: string
+  createOnly?: boolean
   section?: string
 }
 
@@ -23,6 +24,7 @@ export type ResourceColumn<T extends ResourceRecord> = {
 }
 
 export type ResourceDefinition<T extends ResourceRecord = ResourceRecord> = {
+  archive?: boolean
   key: string
   section: 'nav' | 'game'
   title: string

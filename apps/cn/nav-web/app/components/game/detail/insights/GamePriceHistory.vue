@@ -25,8 +25,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { readGameDetailChartPalette } from '@/utils/gameDetailChartPalette'
 import type { GameDetailInsightRange, GameInsightPricePoint, GameInsightRegion } from '@/types/insights'
 import { formatGameInsightAxisDate } from '@/utils/insightHistoryRanges'
 import { formatMinorAmount, priceSegmentKey, publicPriceDisplay } from '@/utils/insightPrices'
@@ -44,7 +45,8 @@ const props = defineProps<{
 defineEmits<{ retry: [] }>()
 
 const chartRef = ref<HTMLElement | null>(null)
-const chart = ref<EChartsInstance | null>(null)
+// ECharts owns its internal identity; deep Vue proxies break tooltip dispatch.
+const chart = shallowRef<EChartsInstance | null>(null)
 const themeStore = useThemeStore()
 const { locale, t } = useI18n()
 const isDark = computed(() => themeStore.theme === 'dark')
@@ -79,15 +81,7 @@ async function renderChart() {
   if (!active || !chartRef.value) return
   if (!chart.value) chart.value = echarts.init(chartRef.value, undefined, { renderer: 'canvas' })
 
-  const dark = isDark.value
-  const colors = {
-    line: dark ? '#a7f3d0' : '#15803d',
-    axis: dark ? '#94a3b8' : '#786f68',
-    split: dark ? 'rgba(148, 163, 184, .20)' : 'rgba(126, 92, 58, .14)',
-    tooltip: dark ? 'rgba(15, 23, 42, .96)' : 'rgba(255, 250, 242, .98)',
-    border: dark ? 'rgba(167, 243, 208, .28)' : 'rgba(21, 128, 61, .22)',
-    text: dark ? '#e2e8f0' : '#292524',
-  }
+  const colors = readGameDetailChartPalette(chartRef.value)
   const segments: Array<{ key: string, indexes: number[] }> = []
   let current: { key: string, indexes: number[] } | null = null
   props.points.forEach((point, index) => {
@@ -109,9 +103,9 @@ async function renderChart() {
     tooltip: {
       trigger: 'axis',
       confine: true,
-      backgroundColor: colors.tooltip,
-      borderColor: colors.border,
-      textStyle: { color: colors.text },
+      backgroundColor: colors.tooltipBackground,
+      borderColor: colors.priceTooltipBorder,
+      textStyle: { color: colors.tooltipText },
       formatter(params: { axisValue?: string, data?: { value: number | null, point: GameInsightPricePoint } | null } | Array<{ axisValue?: string, data?: { value: number | null, point: GameInsightPricePoint } | null }>) {
         const entries = Array.isArray(params) ? params : [params]
         const axisDate = entries.find(item => item.axisValue)?.axisValue
@@ -151,8 +145,8 @@ async function renderChart() {
         symbol: 'circle',
         symbolSize: 6,
         showSymbol: props.points.length <= 31,
-        lineStyle: { width: 3, color: colors.line },
-        itemStyle: { color: colors.line },
+        lineStyle: { width: 3, color: colors.priceLine },
+        itemStyle: { color: colors.priceLine },
       })),
       {
         type: 'scatter',

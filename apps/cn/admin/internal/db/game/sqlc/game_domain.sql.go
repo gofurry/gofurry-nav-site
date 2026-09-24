@@ -14,31 +14,29 @@ import (
 const lockGameForUpdate = `-- name: LockGameForUpdate :one
 SELECT id, name, name_en, info, info_en, create_time, update_time,
        resources, groups, developers, publishers, appid, header, links,
-       weight, primary_tag, secondary_tag, view_count
+       weight, view_count
 FROM gfg_game
 WHERE id = $1
 FOR UPDATE
 `
 
 type LockGameForUpdateRow struct {
-	ID           int64            `json:"id"`
-	Name         string           `json:"name"`
-	NameEn       string           `json:"name_en"`
-	Info         string           `json:"info"`
-	InfoEn       string           `json:"info_en"`
-	CreateTime   pgtype.Timestamp `json:"create_time"`
-	UpdateTime   pgtype.Timestamp `json:"update_time"`
-	Resources    []byte           `json:"resources"`
-	Groups       []byte           `json:"groups"`
-	Developers   []byte           `json:"developers"`
-	Publishers   []byte           `json:"publishers"`
-	Appid        int64            `json:"appid"`
-	Header       string           `json:"header"`
-	Links        []byte           `json:"links"`
-	Weight       int64            `json:"weight"`
-	PrimaryTag   int64            `json:"primary_tag"`
-	SecondaryTag int64            `json:"secondary_tag"`
-	ViewCount    int64            `json:"view_count"`
+	ID         int64            `json:"id"`
+	Name       string           `json:"name"`
+	NameEn     string           `json:"name_en"`
+	Info       string           `json:"info"`
+	InfoEn     string           `json:"info_en"`
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+	Resources  []byte           `json:"resources"`
+	Groups     []byte           `json:"groups"`
+	Developers []byte           `json:"developers"`
+	Publishers []byte           `json:"publishers"`
+	Appid      int64            `json:"appid"`
+	Header     string           `json:"header"`
+	Links      []byte           `json:"links"`
+	Weight     int64            `json:"weight"`
+	ViewCount  int64            `json:"view_count"`
 }
 
 func (q *Queries) LockGameForUpdate(ctx context.Context, id int64) (LockGameForUpdateRow, error) {
@@ -60,8 +58,6 @@ func (q *Queries) LockGameForUpdate(ctx context.Context, id int64) (LockGameForU
 		&i.Header,
 		&i.Links,
 		&i.Weight,
-		&i.PrimaryTag,
-		&i.SecondaryTag,
 		&i.ViewCount,
 	)
 	return i, err

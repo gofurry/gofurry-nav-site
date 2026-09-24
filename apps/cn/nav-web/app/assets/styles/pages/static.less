@@ -1,7 +1,19 @@
 .gf-static-page {
   min-height: 100svh;
-  background: var(--gf-bg-page);
   color: var(--gf-text-main);
+  transition-property:
+    color,
+    background-color,
+    border-color,
+    outline-color,
+    text-decoration-color,
+    fill,
+    stroke,
+    --tw-gradient-from,
+    --tw-gradient-via,
+    --tw-gradient-to;
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .gf-static-page__top-veil {
@@ -62,7 +74,7 @@
 .about-panel,
 .legal-panel {
   border-radius: 1.25rem;
-  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.10);
+  box-shadow: var(--gf-static-panel-shadow);
   backdrop-filter: blur(14px);
   transition:
     background-color 500ms ease,
@@ -571,13 +583,11 @@
 
 .about-page {
   --about-surface: rgba(255, 249, 241, 0.72);
-  --about-surface-strong: rgba(255, 252, 247, 0.88);
   --about-border: rgba(168, 112, 46, 0.18);
   --about-rule: rgba(168, 112, 46, 0.18);
   --about-heading: rgb(15 23 42);
   --about-muted: rgb(71 85 105);
   --about-accent: rgb(190 112 28);
-  --about-accent-soft: rgb(180 83 9);
   --about-chip-bg: rgba(255, 255, 255, 0.58);
   --about-chip-border: rgba(168, 112, 46, 0.18);
   --about-chip-text: rgb(51 65 85);
@@ -607,13 +617,11 @@
 
 html.dark .about-page {
   --about-surface: rgba(9, 16, 27, 0.74);
-  --about-surface-strong: rgba(8, 13, 22, 0.84);
   --about-border: rgba(123, 154, 189, 0.2);
   --about-rule: rgba(123, 154, 189, 0.18);
   --about-heading: rgb(239 246 255);
   --about-muted: rgb(179 195 214);
   --about-accent: rgb(142 214 255);
-  --about-accent-soft: rgb(176 227 255);
   --about-chip-bg: rgba(255, 255, 255, 0.05);
   --about-chip-border: rgba(148, 163, 184, 0.14);
   --about-chip-text: rgb(226 232 240);

@@ -263,7 +263,7 @@
 
 #### Notes
 
-`apps/recommend` 空壳包已在 `v2.6.0` 删除。标签读取由 v2 read model 直接访问站内 `gfg_tag` 与 `gfg_tag_map` 表，不再依赖旧 recommend 包模型。
+`apps/recommend` 空壳包已在 `v2.6.0` 删除。标签读取由 v2 read model 直接访问站内 `gfg_tag_category`、`gfg_tag` 与 `gfg_game_tag` 表，不再依赖旧 recommend 包模型。
 
 ---
 

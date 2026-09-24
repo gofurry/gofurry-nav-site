@@ -1,4 +1,5 @@
-.games-search-page {
+.games-search-page,
+.games-search-overlay-scope {
   --games-search-bg: #f9fafb;
   --games-search-border: rgba(126, 92, 58, 0.14);
   --games-search-border-strong: rgba(126, 92, 58, 0.20);
@@ -31,12 +32,24 @@
   --games-search-shadow-popover: 0 12px 30px rgba(91, 62, 28, 0.08);
   --games-search-shadow-dialog: 0 24px 70px rgba(91, 62, 28, 0.14);
 
+  // Search body text and the two controls floating over a result cover.
+  --games-search-text-body: var(--games-search-text-muted);
+  --games-search-media-overlay-border: rgba(255, 255, 255, 0.48);
+  // Datepicker adapter semantics; retain the same feedback palette in both themes.
+  --games-search-date-success: #16a34a;
+  --games-search-date-success-disabled: #a3d9b1;
+  --games-search-date-danger: #dc2626;
+
+  color: var(--games-search-text-body);
+}
+
+.games-search-page {
   background: var(--games-search-bg);
-  color: var(--games-search-text-muted);
   transition: background-color 500ms ease, color 500ms ease;
 }
 
-html.dark .games-search-page {
+html.dark .games-search-page,
+html.dark .games-search-overlay-scope {
   --games-search-bg: #07111f;
   --games-search-border: rgba(226, 232, 240, 0.15);
   --games-search-border-strong: rgba(226, 232, 240, 0.24);
@@ -68,8 +81,10 @@ html.dark .games-search-page {
   --games-search-shadow-soft: none;
   --games-search-shadow-popover: 0 14px 34px rgba(0, 0, 0, 0.28);
   --games-search-shadow-dialog: 0 24px 70px rgba(0, 0, 0, 0.38);
+  --games-search-text-body: rgba(226, 232, 240, 0.88);
+  --games-search-media-overlay-border: rgba(255, 255, 255, 0.16);
 
-  color: rgba(226, 232, 240, 0.88);
+  color: var(--games-search-text-body);
 }
 
 .games-search-page .search-filter-button {
@@ -112,13 +127,30 @@ html.dark .games-search-page {
   box-shadow: 0 0 0 1px var(--games-search-focus-ring);
 }
 
-.games-search-page .search-shell .search-results-panel {
+.games-search-page .search-shell .search-results-panel,
+.games-search-page .search-shell .search-status-panel {
   border: 1px solid var(--games-search-border);
   border-radius: 0.82rem;
   background: var(--games-search-surface-strong);
   padding: 0.62rem;
   box-shadow: var(--games-search-shadow-popover);
   backdrop-filter: blur(8px);
+}
+
+.games-search-page .search-shell .search-status-content {
+  color: var(--games-search-text-muted);
+}
+
+.games-search-page .game-search-state {
+  border: 1px solid var(--games-search-border);
+  border-radius: var(--gf-radius-md);
+  background: var(--games-search-surface);
+  color: var(--games-search-text-muted);
+  text-align: center;
+}
+
+:is(.games-search-page, .games-search-overlay-scope) .game-search-tag-state {
+  color: var(--games-search-text-muted);
 }
 
 .games-search-page .search-shell .search-result-card {
@@ -174,7 +206,7 @@ html.dark .games-search-page {
   top: 0.5rem;
   max-width: calc(100% - 3.5rem);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  border: 1px solid var(--games-search-media-overlay-border);
   border-radius: 999px;
   background: color-mix(in srgb, var(--games-search-surface-strong) 86%, transparent);
   color: var(--games-search-accent);
@@ -195,7 +227,7 @@ html.dark .games-search-page {
 }
 
 html.dark .games-search-page .search-release-badge {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--games-search-media-overlay-border);
 }
 
 .games-search-page .search-page-card:hover .search-release-badge,
@@ -212,7 +244,7 @@ html.dark .games-search-page .search-release-badge {
   width: 2rem;
   height: 2rem;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  border: 1px solid var(--games-search-media-overlay-border);
   border-radius: 999px;
   background: color-mix(in srgb, var(--games-search-surface-strong) 86%, transparent);
   color: var(--games-search-accent);
@@ -232,7 +264,7 @@ html.dark .games-search-page .search-release-badge {
 }
 
 html.dark .games-search-page .search-review-button {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--games-search-media-overlay-border);
 }
 
 .games-search-page .search-page-card:hover .search-review-button,
@@ -296,24 +328,15 @@ html.dark .games-search-page .search-page-steam-icon {
 }
 
 .games-search-page .game-search-page-button {
+  // Native buttons retain the original span's computed line height.
+  line-height: 1.5;
   position: relative;
   min-width: 2rem;
-  border: 1px solid transparent;
-  border-radius: 0;
-  background: transparent;
   padding: 0.28rem 0.72rem;
   cursor: pointer;
   text-align: center;
   font-size: 0.84rem;
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
-}
-
-.games-search-page .gf-pagination__button,
-.games-search-page .gf-pagination__button:hover,
-.games-search-page .gf-pagination__button--active {
-  border-color: transparent;
-  border-radius: 0;
-  background: transparent;
 }
 
 .games-search-page .game-search-pagination-pages {
@@ -325,20 +348,14 @@ html.dark .games-search-page .search-page-steam-icon {
 }
 
 .games-search-page .game-search-page-button--idle {
-  border: 1px solid transparent;
-  background: transparent;
   color: var(--games-search-accent);
 }
 
 .games-search-page .game-search-page-button--idle:hover {
-  border-color: transparent;
-  background: transparent;
   color: var(--games-search-accent-strong);
 }
 
 .games-search-page .game-search-page-button--active {
-  border: 1px solid transparent;
-  background: transparent;
   color: var(--games-search-accent-strong);
   font-weight: 750;
 }
@@ -359,12 +376,12 @@ html.dark .games-search-page .search-page-steam-icon {
   font-size: 0.75rem;
 }
 
-.games-search-page .game-search-jump-overlay,
-.games-search-page .game-search-filter-overlay {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-overlay,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-overlay {
   background: var(--games-search-overlay);
 }
 
-.games-search-page .game-search-jump-dialog {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-dialog {
   border: 1px solid var(--games-search-border);
   border-radius: 0.65rem;
   background: var(--games-search-surface-strong);
@@ -372,27 +389,30 @@ html.dark .games-search-page .search-page-steam-icon {
   box-shadow: var(--games-search-shadow-popover);
 }
 
-.games-search-page .game-search-jump-title {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-title {
   color: var(--games-search-text-title);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
 }
 
-.games-search-page .game-search-jump-input,
-.games-search-page .game-search-filter-input {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-input,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-input {
   border: 1px solid transparent;
   background: var(--games-search-input-bg);
   color: var(--games-search-text-title);
   box-shadow: none;
 }
 
-.games-search-page .game-search-jump-input:focus,
-.games-search-page .game-search-filter-input:focus {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-input:focus,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-input:focus {
   border-color: var(--games-search-border-hover);
   outline: none;
   box-shadow: none;
 }
 
-.games-search-page .game-search-jump-action,
-.games-search-page .game-search-filter-action {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-action,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-action {
   cursor: pointer;
   border-radius: 0.65rem;
   padding: 0.38rem 0.75rem;
@@ -400,30 +420,30 @@ html.dark .games-search-page .search-page-steam-icon {
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
 }
 
-.games-search-page .game-search-jump-action--ghost,
-.games-search-page .game-search-filter-action--ghost {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-action--ghost,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-action--ghost {
   color: var(--games-search-text-muted);
 }
 
-.games-search-page .game-search-jump-action--ghost:hover,
-.games-search-page .game-search-filter-action--ghost:hover {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-action--ghost:hover,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-action--ghost:hover {
   background: var(--games-search-surface-hover);
   color: var(--games-search-text-title);
 }
 
-.games-search-page .game-search-jump-action--primary,
-.games-search-page .game-search-filter-action--primary {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-action--primary,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-action--primary {
   background: var(--games-search-accent-fill);
   color: var(--games-search-accent-text);
 }
 
-.games-search-page .game-search-jump-action--primary:hover,
-.games-search-page .game-search-filter-action--primary:hover {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-jump-action--primary:hover,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-action--primary:hover {
   background: var(--games-search-accent-fill-hover);
   color: var(--games-search-accent-text);
 }
 
-.games-search-page .game-search-filter-panel {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel {
   max-height: 80vh;
   border: 1px solid transparent;
   border-radius: 1rem;
@@ -433,7 +453,7 @@ html.dark .games-search-page .search-page-steam-icon {
   backdrop-filter: blur(18px);
 }
 
-.games-search-page .game-search-filter-title {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-title {
   color: var(--games-search-text-title);
   font-size: 1.08rem;
   font-weight: 800;
@@ -441,7 +461,7 @@ html.dark .games-search-page .search-page-steam-icon {
   line-height: 1.25;
 }
 
-.games-search-page .game-search-filter-label {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-label {
   display: inline-flex;
   color: var(--games-search-text-muted);
   font-size: 0.75rem;
@@ -449,7 +469,7 @@ html.dark .games-search-page .search-page-steam-icon {
   line-height: 1.25;
 }
 
-.games-search-page .game-search-filter-group-title {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-group-title {
   margin-bottom: 0.25rem;
   color: var(--games-search-text-title);
   font-size: 0.88rem;
@@ -457,7 +477,7 @@ html.dark .games-search-page .search-page-steam-icon {
   line-height: 1.35;
 }
 
-.games-search-page .game-search-filter-expand {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-expand {
   margin-top: 0.25rem;
   display: inline-flex;
   cursor: pointer;
@@ -468,26 +488,26 @@ html.dark .games-search-page .search-page-steam-icon {
   transition: color 180ms ease;
 }
 
-.games-search-page .game-search-filter-expand:hover {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-expand:hover {
   color: var(--games-search-text-title);
 }
 
-.games-search-page .game-search-filter-input {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-input {
   border-radius: 0.65rem;
 }
 
-.games-search-page .game-search-filter-panel .game-search-filter-input {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-search-filter-input {
   background: var(--games-search-filter-field-bg);
 }
 
-.games-search-page .game-search-filter-panel .game-search-filter-input:focus {
-  border-color: var(--games-search-border-hover) !important;
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-search-filter-input:focus {
+  border-color: var(--games-search-border-hover);
   background: var(--games-search-filter-field-focus-bg);
-  outline: none !important;
-  box-shadow: none !important;
+  outline: none;
+  box-shadow: none;
 }
 
-.games-search-page .game-search-filter-chip {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-chip {
   position: relative;
   cursor: pointer;
   border: 1px solid transparent;
@@ -498,31 +518,31 @@ html.dark .games-search-page .search-page-steam-icon {
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
-.games-search-page .game-search-filter-chip--idle {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-chip--idle {
   border-color: transparent;
   background: var(--games-search-chip-bg);
   color: var(--games-search-accent);
 }
 
-.games-search-page .game-search-filter-chip--idle:hover {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-chip--idle:hover {
   border-color: transparent;
   background: var(--games-search-chip-hover-bg);
   color: var(--games-search-accent-strong);
 }
 
-.games-search-page .game-search-filter-chip--active {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-chip--active {
   border-color: transparent;
   background: var(--games-search-accent-fill);
   color: var(--games-search-accent-text);
   font-weight: 550;
 }
 
-.games-search-page .game-search-filter-chip--active::after {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-chip--active::after {
   display: none;
   content: "";
 }
 
-.games-search-page .dp-custom-theme {
+:is(.games-search-page, .games-search-overlay-scope) .dp-custom-theme {
   --dp-background-color: var(--games-search-surface-strong);
   --dp-text-color: var(--games-search-text-title);
   --dp-hover-color: var(--games-search-chip-hover-bg);
@@ -539,10 +559,10 @@ html.dark .games-search-page .search-page-steam-icon {
   --dp-disabled-color: var(--games-search-chip-bg);
   --dp-scroll-bar-background: var(--games-search-surface-strong);
   --dp-scroll-bar-color: color-mix(in srgb, var(--games-search-border-hover) 84%, transparent);
-  --dp-success-color: #16a34a;
-  --dp-success-color-disabled: #a3d9b1;
+  --dp-success-color: var(--games-search-date-success);
+  --dp-success-color-disabled: var(--games-search-date-success-disabled);
   --dp-icon-color: var(--games-search-accent);
-  --dp-danger-color: #dc2626;
+  --dp-danger-color: var(--games-search-date-danger);
   --dp-marker-color: var(--games-search-accent);
   --dp-tooltip-color: var(--games-search-surface-strong);
   --dp-disabled-color-text: var(--games-search-text-soft);
@@ -552,21 +572,21 @@ html.dark .games-search-page .search-page-steam-icon {
   --dp-range-between-border-color: var(--dp-hover-color);
 }
 
-.games-search-page .game-search-date-range {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-date-range {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.5rem;
 }
 
-.games-search-page .game-search-date-range .game-date-picker {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-date-range .game-date-picker {
   width: 100%;
 }
 
-.games-search-page .game-date-picker .dp__input_wrap {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__input_wrap {
   border-radius: 0.78rem;
 }
 
-.games-search-page .game-date-picker .dp__input {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__input {
   min-height: 2.35rem;
   border-color: transparent;
   border-radius: 0.78rem;
@@ -577,48 +597,48 @@ html.dark .games-search-page .search-page-steam-icon {
   box-shadow: none;
 }
 
-html.dark .games-search-page .game-date-picker .dp__input {
+html.dark :is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__input {
   box-shadow: none;
 }
 
-.games-search-page .game-date-picker .dp__input:focus,
-.games-search-page .game-date-picker.dp__main:focus-within .dp__input {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__input:focus,
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker.dp__main:focus-within .dp__input {
   border-color: var(--games-search-border-hover);
   outline: none;
   box-shadow: none;
 }
 
-html.dark .games-search-page .game-date-picker .dp__input:focus,
-html.dark .games-search-page .game-date-picker.dp__main:focus-within .dp__input {
+html.dark :is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__input:focus,
+html.dark :is(.games-search-page, .games-search-overlay-scope) .game-date-picker.dp__main:focus-within .dp__input {
   box-shadow: none;
 }
 
-.games-search-page .game-search-filter-panel .game-date-picker .dp__input {
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker .dp__input {
   background: var(--games-search-filter-field-bg);
 }
 
-.games-search-page .game-search-filter-panel .game-date-picker .dp__input:focus,
-.games-search-page .game-search-filter-panel .game-date-picker.dp__main:focus-within .dp__input {
-  border-color: var(--games-search-border-hover) !important;
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker .dp__input:focus,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker.dp__main:focus-within .dp__input {
+  border-color: var(--games-search-border-hover);
   background: var(--games-search-filter-field-focus-bg);
-  outline: none !important;
-  box-shadow: none !important;
+  outline: none;
+  box-shadow: none;
 }
 
-.games-search-page .game-search-filter-panel .game-date-picker,
-.games-search-page .game-search-filter-panel .game-date-picker .dp__input_wrap,
-.games-search-page .game-search-filter-panel .game-date-picker .dp__input_wrap:focus,
-.games-search-page .game-search-filter-panel .game-date-picker .dp__input_wrap:focus-within {
-  outline: none !important;
-  box-shadow: none !important;
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker .dp__input_wrap,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker .dp__input_wrap:focus,
+:is(.games-search-page, .games-search-overlay-scope) .game-search-filter-panel .game-date-picker .dp__input_wrap:focus-within {
+  outline: none;
+  box-shadow: none;
 }
 
-.games-search-page .game-date-picker .dp__input_icon,
-.games-search-page .game-date-picker .dp__clear_icon {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__input_icon,
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__clear_icon {
   color: var(--games-search-accent);
 }
 
-.games-search-page .game-date-picker .dp__menu {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__menu {
   overflow: hidden;
   border: 1px solid transparent;
   border-radius: 1rem;
@@ -626,78 +646,177 @@ html.dark .games-search-page .game-date-picker.dp__main:focus-within .dp__input 
   box-shadow: var(--games-search-shadow-popover);
 }
 
-.games-search-page .game-date-picker .dp__calendar_header {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__calendar_header {
   color: var(--games-search-text-muted);
   font-size: 0.76rem;
   font-weight: 800;
 }
 
-.games-search-page .game-date-picker .dp__month_year_select {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__month_year_select {
   border-radius: 0.65rem;
   color: var(--games-search-text-title);
   font-weight: 800;
 }
 
-.games-search-page .game-date-picker .dp__month_year_select:hover,
-.games-search-page .game-date-picker .dp__inner_nav:hover,
-.games-search-page .game-date-picker .dp__cell_inner:hover {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__month_year_select:hover,
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__inner_nav:hover,
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__cell_inner:hover {
   background: var(--games-search-chip-hover-bg);
 }
 
-.games-search-page .game-date-picker .dp__cell_inner {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__cell_inner {
   border-radius: 0.62rem;
   color: var(--games-search-text-title);
   font-size: 0.82rem;
   font-weight: 650;
 }
 
-.games-search-page .game-date-picker .dp__cell_offset {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__cell_offset {
   color: color-mix(in srgb, var(--games-search-text-soft) 66%, transparent);
 }
 
-.games-search-page .game-date-picker .dp__today {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__today {
   border-color: var(--games-search-border-hover);
 }
 
-.games-search-page .game-date-picker .dp__active_date {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__active_date {
   background: var(--games-search-accent-fill);
   color: var(--games-search-accent-text);
 }
 
-.games-search-page .game-date-picker .dp__time_display,
-.games-search-page .game-date-picker .dp__time_input {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__time_display,
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__time_input {
   border-color: transparent;
   color: var(--games-search-text-title);
   font-weight: 700;
 }
 
-.games-search-page .game-date-picker .dp__action_row {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__action_row {
   border-top: 1px solid color-mix(in srgb, var(--games-search-border) 82%, transparent);
   padding: 0.55rem 0.75rem;
 }
 
-.games-search-page .game-date-picker .dp__selection_preview {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__selection_preview {
   color: var(--games-search-text-muted);
   font-size: 0.78rem;
 }
 
-.games-search-page .game-date-picker .dp__action_button {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__action_button {
   border-radius: 0.62rem;
   font-weight: 750;
 }
 
-.games-search-page .game-date-picker .dp__action_cancel {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__action_cancel {
   border-color: var(--games-search-border);
   color: var(--games-search-accent);
 }
 
-.games-search-page .game-date-picker .dp__action_select {
+:is(.games-search-page, .games-search-overlay-scope) .game-date-picker .dp__action_select {
   background: var(--games-search-accent-fill);
   color: var(--games-search-accent-text);
 }
 
 @media (min-width: 640px) {
-  .games-search-page .game-search-date-range {
+  :is(.games-search-page, .games-search-overlay-scope) .game-search-date-range {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+// Native keyboard controls retain the existing span/div typography and geometry.
+:is(.games-search-page, .games-search-overlay-scope) {
+  .game-search-filter-action,
+  .game-search-filter-chip,
+  .game-search-filter-expand { line-height: 1.5; }
+
+  .game-search-page-button:focus-visible,
+  .game-search-filter-action:focus-visible,
+  .game-search-filter-chip:focus-visible,
+  .game-search-filter-expand:focus-visible,
+  .game-search-jump-action:focus-visible { .gf-focus-ring(); }
+}
+
+// Steam remains a result action; preserve the former utility's opacity and motion.
+.games-search-page .search-page-steam-icon {
+  opacity: 0.7;
+  transition-property:
+    color, background-color, border-color, outline-color, text-decoration-color,
+    fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to,
+    opacity, box-shadow, transform, translate, scale, rotate,
+    filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.games-search-page .search-page-steam-icon:hover {
+  opacity: 1;
+}
+
+// Result typography, pending/skeleton treatment and motion. Vue retains the
+// track geometry, inline transform and existing request/timer lifecycle.
+.games-search-page .search-result-page-track--instant {
+  animation: none;
+  transition: none;
+}
+
+.games-search-page .search-result-page-track--next {
+  animation: search-result-page-next 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.games-search-page .search-result-page-track--prev {
+  animation: search-result-page-prev 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.games-search-page .search-result-grid {
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.games-search-page .search-results--pending:not(.search-results--sliding) .search-result-page-slide .search-result-grid {
+  opacity: 0.72;
+  filter: saturate(0.92);
+}
+
+.games-search-page .search-page-title-row {
+  font-size: 0.875rem;
+}
+
+.games-search-page .search-page-skeleton-cover,
+.games-search-page .search-page-skeleton-title,
+.games-search-page .search-page-skeleton-line,
+.games-search-page .search-page-skeleton-meta {
+  border-radius: 0.52rem;
+  background: linear-gradient(
+    110deg,
+    color-mix(in srgb, var(--games-search-surface-strong) 70%, transparent) 0%,
+    color-mix(in srgb, var(--games-search-surface-hover) 82%, transparent) 46%,
+    color-mix(in srgb, var(--games-search-surface-strong) 70%, transparent) 100%
+  );
+  background-size: 220% 100%;
+  animation: search-card-skeleton 1.35s ease-in-out infinite;
+}
+
+@keyframes search-card-skeleton {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@keyframes search-result-page-next {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes search-result-page-prev {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
   }
 }

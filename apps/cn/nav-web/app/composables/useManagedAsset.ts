@@ -1,15 +1,27 @@
 import { computed, onBeforeUnmount, onMounted, ref, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import { assetCandidate, type AssetCDN } from '~/utils/managedAssets'
 
-export function useManagedAsset(key: MaybeRefOrGetter<string | null | undefined>, fallback = '', preload: MaybeRefOrGetter<boolean> = false) {
+export interface ManagedAssetSnapshot {
+  key: string | null | undefined
+  provider: AssetCDN
+  failed: Set<AssetCDN>
+  failedFallback: boolean
+}
+
+export function useManagedAsset(key: MaybeRefOrGetter<string | null | undefined>, fallback = '', preload: MaybeRefOrGetter<boolean> = false, previous?: ManagedAssetSnapshot) {
   const cdn = useNuxtApp().$assetCDN
-  const failed = ref(new Set<AssetCDN>())
-  const failedFallback = ref(false)
-  const candidate = computed(() => assetCandidate(cdn.origins, cdn.provider.value, toValue(key), failed.value, failedFallback.value ? '' : fallback))
+  // A Hero handoff can retain the other viewport's unchanged resource. Carry
+  // its route/failure snapshot across frames, but never across different keys.
+  const retained = previous?.key === toValue(key) ? previous : undefined
+  const provider = ref<AssetCDN>(retained?.provider ?? cdn.resolvePreferred())
+  const failed = ref(new Set<AssetCDN>(retained?.failed))
+  const failedFallback = ref(retained?.failedFallback ?? false)
+  const candidate = computed(() => assetCandidate(cdn.origins, provider.value, toValue(key), failed.value, failedFallback.value ? '' : fallback))
   const src = computed(() => candidate.value.url)
-  watch(() => toValue(key), () => { failed.value = new Set(); failedFallback.value = false })
+  // Route updates apply only to a new key, never to the current resource.
+  watch(() => toValue(key), () => { provider.value = cdn.resolvePreferred(); failed.value = new Set(); failedFallback.value = false }, { flush: 'sync' })
   const onError = () => {
-    if (candidate.value.provider) { failed.value = new Set([...failed.value, candidate.value.provider]); cdn.invalidate() }
+    if (candidate.value.provider) { failed.value = new Set([...failed.value, candidate.value.provider]); cdn.reportFailure() }
     else failedFallback.value = true
   }
   let stop: (() => void) | undefined
@@ -26,5 +38,6 @@ export function useManagedAsset(key: MaybeRefOrGetter<string | null | undefined>
     }, { immediate: true })
   })
   onBeforeUnmount(() => stop?.())
-  return { src, onError }
+  const snapshot = (): ManagedAssetSnapshot => ({ key: toValue(key), provider: provider.value, failed: new Set(failed.value), failedFallback: failedFallback.value })
+  return { src, onError, snapshot }
 }

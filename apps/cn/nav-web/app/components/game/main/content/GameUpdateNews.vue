@@ -2,12 +2,12 @@
   <div class="game-news-panel mb-8">
     <div class="mb-4 flex items-center justify-between gap-4">
       <div class="min-w-0">
-        <h2 class="game-news-title text-lg font-bold">{{ t('game.news.title') }}</h2>
-        <div class="game-news-desc hidden text-sm sm:block">{{ t('game.news.desc') }}</div>
+        <h2 class="game-news-title">{{ t('game.news.title') }}</h2>
+        <div class="game-news-desc hidden sm:block">{{ t('game.news.desc') }}</div>
       </div>
 
       <div v-if="showControls" class="news-pager">
-        <span class="news-pager__count hidden text-xs font-semibold sm:block">
+        <span class="news-pager__count hidden sm:block">
           {{ activeIndex + 1 }}/{{ newsList.length }}
         </span>
         <button
@@ -36,9 +36,6 @@
     </div>
 
     <div class="relative">
-      <div class="news-edge news-edge--left" :class="{ 'news-edge--visible': canMovePrev }"></div>
-      <div class="news-edge news-edge--right" :class="{ 'news-edge--visible': canMoveNext }"></div>
-
       <div
         ref="viewportRef"
         class="news-viewport"

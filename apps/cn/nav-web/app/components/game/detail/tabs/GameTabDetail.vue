@@ -1,5 +1,5 @@
 <template>
-  <div class="game-detail-info space-y-6 text-sm">
+  <div class="game-detail-info space-y-6">
 
     <section class="game-detail-info-summary grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
       <div class="flex gap-2">
@@ -44,38 +44,38 @@
     </section>
 
     <section v-if="game?.short_description" class="space-y-2">
-      <h4 class="game-detail-subtitle font-bold">{{ t("game.detail.shortDescription") }}</h4>
-      <p class="leading-relaxed break-words">{{ game.short_description }}</p>
+      <h4 class="game-detail-subtitle">{{ t("game.detail.shortDescription") }}</h4>
+      <p class="game-detail-info-copy break-words">{{ game.short_description }}</p>
     </section>
 
     <section class="space-y-3">
       <div>
-        <h4 class="game-detail-subtitle mb-1 font-bold">{{ t("game.detail.developer") }}</h4>
+        <h4 class="game-detail-subtitle mb-1">{{ t("game.detail.developer") }}</h4>
         <div class="flex flex-wrap gap-2">
           <span
             v-for="(developer, index) in game?.developers || []"
             :key="`developer-${index}`"
-            class="game-detail-chip px-2 py-0.5 text-xs"
+            class="game-detail-chip px-2 py-0.5"
           >
             {{ developer }}
           </span>
-          <span v-if="!game?.developers?.length" class="game-detail-empty text-sm">
+          <span v-if="!game?.developers?.length" class="game-detail-empty">
             {{ t("game.panel.none") }}
           </span>
         </div>
       </div>
 
       <div>
-        <h4 class="game-detail-subtitle mb-1 font-bold">{{ t("game.detail.publisher") }}</h4>
+        <h4 class="game-detail-subtitle mb-1">{{ t("game.detail.publisher") }}</h4>
         <div class="flex flex-wrap gap-2">
           <span
             v-for="(publisher, index) in game?.publishers || []"
             :key="`publisher-${index}`"
-            class="game-detail-chip px-2 py-0.5 text-xs"
+            class="game-detail-chip px-2 py-0.5"
           >
             {{ publisher }}
           </span>
-          <span v-if="!game?.publishers?.length" class="game-detail-empty text-sm">
+          <span v-if="!game?.publishers?.length" class="game-detail-empty">
             {{ t("game.panel.none") }}
           </span>
         </div>
@@ -83,14 +83,14 @@
     </section>
 
     <section v-if="priceList.length" class="space-y-2">
-      <h4 class="game-detail-subtitle font-bold">{{ t("game.detail.priceInfo") }}</h4>
+      <h4 class="game-detail-subtitle">{{ t("game.detail.priceInfo") }}</h4>
       <div class="flex gap-x-1 sm:grid-cols-3 gap-2">
         <div
           v-for="(price, index) in priceList"
           :key="`price-${index}`"
           class="game-detail-price-chip flex items-center justify-center px-3 py-1"
         >
-          <span class="font-medium">
+          <span class="game-detail-price-value">
             <strong>{{ countryMap[price.country] || price.country }}</strong>
             {{ price.price }}
           </span>
@@ -99,7 +99,7 @@
     </section>
 
     <section v-if="supportEntries.length" class="space-y-3">
-      <h4 class="game-detail-subtitle font-bold">{{ t("game.detail.supportInfo") }}</h4>
+      <h4 class="game-detail-subtitle">{{ t("game.detail.supportInfo") }}</h4>
       <div class="space-y-2">
         <div
           v-for="entry in supportEntries"
@@ -122,7 +122,7 @@
     </section>
 
     <section v-if="game?.website" class="space-y-1">
-      <h4 class="game-detail-subtitle font-bold">{{ t("game.detail.officialWebsite") }}</h4>
+      <h4 class="game-detail-subtitle">{{ t("game.detail.officialWebsite") }}</h4>
       <div class="game-detail-link break-all">
         <a
           :href="game.website"
@@ -139,29 +139,29 @@
       :key="section.key"
       class="space-y-4"
     >
-      <h4 class="game-detail-subtitle font-bold">{{ section.title }}</h4>
+      <h4 class="game-detail-subtitle">{{ section.title }}</h4>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="game-detail-requirement-card p-4 space-y-2">
-          <div class="game-detail-info-label text-xs">{{ t("game.detail.minimum") }}</div>
+          <div class="game-detail-info-label">{{ t("game.detail.minimum") }}</div>
           <div
             v-html="section.requirement.minimum || t('game.panel.none')"
-            class="leading-relaxed"
+            class="game-detail-info-copy"
           />
         </div>
 
         <div class="game-detail-requirement-card p-4 space-y-2">
-          <div class="game-detail-info-label text-xs">{{ t("game.detail.recommended") }}</div>
+          <div class="game-detail-info-label">{{ t("game.detail.recommended") }}</div>
           <div
             v-html="section.requirement.recommended || t('game.panel.none')"
-            class="leading-relaxed"
+            class="game-detail-info-copy"
           />
         </div>
       </div>
     </section>
 
     <section v-if="contentDescriptorItems.length" class="space-y-3">
-      <h4 class="game-detail-subtitle font-bold">{{ t("game.detail.contentDescriptors") }}</h4>
+      <h4 class="game-detail-subtitle">{{ t("game.detail.contentDescriptors") }}</h4>
       <div class="space-y-2">
         <div
           v-for="item in contentDescriptorItems"
@@ -174,13 +174,13 @@
           >
             {{ item.label }}:
           </span>
-          <span class="break-words leading-relaxed">{{ item.value }}</span>
+          <span class="break-words game-detail-info-copy">{{ item.value }}</span>
         </div>
       </div>
     </section>
 
     <section v-if="ratingCards.length || ratingItems.length" class="space-y-3">
-      <h4 class="game-detail-subtitle font-bold">{{ t("game.detail.ratings") }}</h4>
+      <h4 class="game-detail-subtitle">{{ t("game.detail.ratings") }}</h4>
       <div v-if="ratingCards.length" class="game-detail-rating-grid">
         <article
           v-for="card in ratingCards"
@@ -229,7 +229,7 @@
           >
             {{ item.label }}:
           </span>
-          <span class="break-words leading-relaxed">{{ item.value }}</span>
+          <span class="break-words game-detail-info-copy">{{ item.value }}</span>
         </div>
       </div>
     </section>

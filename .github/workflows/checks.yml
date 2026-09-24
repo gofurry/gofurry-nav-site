@@ -95,7 +95,7 @@ jobs:
           if affected "^apps/cn/game-backend/|^db/game/|${shared}"; then add_module apps/cn/game-backend; fi
           if affected "^apps/cn/nav-collector/|^db/nav/|${shared}"; then add_module apps/cn/nav-collector; fi
           if affected "^apps/cn/nav-backend/|^db/nav/|${shared}"; then add_module apps/cn/nav-backend; fi
-          if affected "^apps/cn/admin/|^db/(admin|game|nav)/|${shared}"; then add_module apps/cn/admin; fi
+          if affected "^apps/cn/admin/|^apps/cn/nav-web/app/data/platform-icons\.json$|^db/(admin|game|nav)/|${shared}"; then add_module apps/cn/admin; fi
           if affected "^apps/cn/uptime/|${shared}"; then add_module apps/cn/uptime; fi
           echo "modules=${modules}" >> "${GITHUB_OUTPUT}"
           if [[ "${modules}" == "[]" ]]; then
@@ -172,6 +172,24 @@ jobs:
           cache-dependency-path: apps/cn/nav-web/package-lock.json
       - working-directory: apps/cn/nav-web
         run: npm ci
+      - name: Lint
+        working-directory: apps/cn/nav-web
+        run: npm run lint
+      - name: Stylelint
+        working-directory: apps/cn/nav-web
+        run: npm run stylelint
+      - name: Style policy tests
+        working-directory: apps/cn/nav-web
+        run: npm run style:policy:test
+      - name: Style policy
+        working-directory: apps/cn/nav-web
+        run: npm run style:policy
+      - name: Unit tests
+        working-directory: apps/cn/nav-web
+        run: npm run test:unit
+      - name: Nuxt tests
+        working-directory: apps/cn/nav-web
+        run: npm run test:nuxt
       - name: Typecheck
         working-directory: apps/cn/nav-web
         run: npm run typecheck
@@ -184,6 +202,62 @@ jobs:
       - name: Build
         working-directory: apps/cn/nav-web
         run: npm run build
+      - name: Build deployment image
+        working-directory: apps/cn/nav-web
+        run: docker build --tag gofurry-nav-web:ci .
+      - name: Install Playwright Chromium
+        working-directory: apps/cn/nav-web
+        run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        id: browser-tests
+        working-directory: apps/cn/nav-web
+        run: npm run test:browser
+      - name: Browser failure artifacts
+        if: ${{ failure() && steps.browser-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: nav-web-browser-failure
+          path: |
+            apps/cn/nav-web/playwright-report/
+            apps/cn/nav-web/test-results/
+          retention-days: 7
+          if-no-files-found: warn
+
+  nav-web-visual:
+    needs: [detect-changes, nav-web]
+    if: needs.detect-changes.outputs.nav_web == 'true' && needs.nav-web.result == 'success'
+    runs-on: ubuntu-latest
+    container:
+      # Verified against the MCR manifest list; upgrade with Playwright and baselines.
+      image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
+      options: --ipc=host
+    env:
+      GOFURRY_VISUAL_ENV: pinned
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/cn/nav-web/package-lock.json
+      - working-directory: apps/cn/nav-web
+        run: npm ci
+      - name: Build
+        working-directory: apps/cn/nav-web
+        run: npm run build
+      - name: Visual tests
+        working-directory: apps/cn/nav-web
+        run: npm run test:visual
+      - name: Visual failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nav-web-visual-failure
+          path: |
+            apps/cn/nav-web/playwright-visual-report/
+            apps/cn/nav-web/visual-test-results/
+          retention-days: 7
+          if-no-files-found: warn
 
   repository-policy:
     needs: detect-changes

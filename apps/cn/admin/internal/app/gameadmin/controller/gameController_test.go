@@ -3,7 +3,9 @@ package controller
 import (
 	"context"
 	"errors"
+	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/gofurry/gofurry-admin/internal/app/gameadmin/models"
@@ -118,5 +120,27 @@ func TestSteamGamePrefillMapsRequestedFields(t *testing.T) {
 	}
 	if len(dto.Links) != 2 || dto.Links[0].Key != "steamdb" || dto.Links[1].Key != "gamalytic" {
 		t.Fatalf("unexpected links: %#v", dto.Links)
+	}
+}
+
+func TestGameSummaryValidation(t *testing.T) {
+	for _, char := range []string{"a", "中", "🐺"} {
+		for _, size := range []int{400, 401} {
+			for _, english := range []bool{false, true} {
+				req := models.GamePayload{Name: "游戏", NameEn: "Game"}
+				if english {
+					req.InfoEn = strings.Repeat(char, size)
+				} else {
+					req.Info = strings.Repeat(char, size)
+				}
+				err := validateGamePayload(req)
+				if size == 400 && err != nil {
+					t.Fatalf("400 characters rejected: %v", err)
+				}
+				if size == 401 && (err == nil || err.GetHTTPStatus() != http.StatusBadRequest) {
+					t.Fatalf("401 characters must return validation error: %v", err)
+				}
+			}
+		}
 	}
 }

@@ -2,20 +2,19 @@
   <div class="updates-year-group">
     <button
       type="button"
-      class="year-divider year-toggle"
+      class="updates-year-group__divider updates-year-group__toggle"
       :class="{ 'is-expanded': expanded }"
       @click="$emit('toggle')"
     >
-      <span class="year-divider-text">{{ group.year }}</span>
-      <span class="year-divider-meta">{{ yearSummary }}</span>
-      <span class="year-divider-chevron" aria-hidden="true" />
+      <span class="updates-year-group__label">{{ group.year }}</span>
+      <span class="updates-year-group__meta">{{ yearSummary }}</span>
+      <span class="updates-year-group__chevron" aria-hidden="true" />
     </button>
 
-    <ol v-if="expanded" class="year-entries">
+    <ol v-if="expanded" class="updates-year-group__entries">
       <li
         v-for="item in visibleItems"
         :key="item.id"
-        class="timeline-entry-wrap"
       >
         <UpdatesTimelineEntry
           :item="item"
@@ -26,8 +25,8 @@
         />
       </li>
 
-      <li v-if="hasMore" class="year-load-more-wrap">
-        <button type="button" class="year-load-more" @click="$emit('loadMore')">
+      <li v-if="hasMore" class="updates-year-group__load-more-wrap">
+        <button type="button" class="updates-year-group__load-more" @click="$emit('loadMore')">
           {{ loadMoreLabel }}
         </button>
       </li>

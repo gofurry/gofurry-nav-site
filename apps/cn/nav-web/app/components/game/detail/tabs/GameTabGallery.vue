@@ -1,8 +1,8 @@
 <template>
-  <div class="game-detail-gallery space-y-3">
+  <div class="game-detail-gallery min-w-0 w-full max-w-full space-y-3">
 
     <!-- 主展示区 -->
-    <div class="game-detail-media-stage relative aspect-video w-full overflow-hidden">
+    <div class="game-detail-media-stage relative aspect-video min-w-0 w-full max-w-full overflow-hidden">
       <!-- 视频 -->
       <video
           v-if="activeMedia?.type === 'movie'"
@@ -10,7 +10,7 @@
           controls
           :muted="isBlocked"
           :autoplay="false"
-          :poster="steamAssetUrl(activeMedia.thumb)"
+          :poster="poster"
           preload="metadata"
           playsinline
           class="game-detail-video h-full w-full object-contain"
@@ -40,7 +40,12 @@
           :src="activeMedia.src"
           :alt="mediaAlt(activeMedia)"
           class="game-detail-media-image h-full w-full cursor-pointer object-contain"
-          @click="openFullscreen = true"
+          tabindex="0"
+          role="button"
+          :aria-label="t('game.detail.openImage')"
+          @click="openLightbox"
+          @keydown.enter.prevent="openLightbox"
+          @keydown.space.prevent="openLightbox"
       />
 
       <!-- 无内容 -->
@@ -50,7 +55,7 @@
     </div>
 
     <!-- 缩略图轮播 -->
-    <div class="game-detail-thumb-grid flex gap-2 overflow-x-auto overflow-y-hidden py-2">
+    <div class="game-detail-thumb-grid min-w-0 w-full max-w-full flex gap-2 overflow-x-auto overflow-y-hidden py-2">
       <div
           v-for="item in mediaList"
           :key="item.key"
@@ -63,7 +68,7 @@
         <SteamAssetImage
             :src="item.thumb"
             :alt="mediaAlt(item)"
-            class="h-full w-full object-cover transition-transform duration-200"
+            class="h-full w-full object-cover"
             loading="lazy"
             decoding="async"
         />
@@ -80,8 +85,13 @@
     </div>
 
     <!-- 图片全屏弹窗 -->
-    <div
+    <Teleport to="body"><div
         v-if="openFullscreen && activeMedia?.type === 'screenshot'"
+        ref="lightbox"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="t('game.detail.gallery')"
+        tabindex="-1"
         class="game-detail-lightbox fixed inset-0 z-50 flex items-center justify-center p-4"
         @click.self="openFullscreen = false"
     >
@@ -91,12 +101,13 @@
           class="max-h-full max-w-full object-contain"
       />
       <button
-          class="game-detail-lightbox__close absolute right-4 top-4 text-2xl"
+          class="game-detail-lightbox__close absolute right-4 top-4"
           @click="openFullscreen = false"
+          :aria-label="t('common.close')"
       >
         ×
       </button>
-    </div>
+    </div></Teleport>
 
   </div>
 </template>
@@ -105,9 +116,11 @@
 import {ref, computed, watch, onMounted, onBeforeUnmount, nextTick} from 'vue'
 import { i18n } from '@/main'
 import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
-import { preferredSteamSharedAssetUrl } from '@/utils/steamAssets'
+import { steamSharedAssetCandidates } from '@/utils/steamAssets'
+import { useGameDetailDialog } from '@/composables/useGameDetailDialog'
 
 const { t, locale } = i18n.global
+const steamRoute = useNuxtApp().$steamAssetRoute
 
 export interface MoviesModel {
   id: number
@@ -170,7 +183,16 @@ const activeKey = ref<string | null>(null)
 const activeMedia = computed(() =>
     mediaList.value.find(m => m.key === activeKey.value) ?? null
 )
+const { src: poster } = useSteamAsset(() => activeMedia.value?.type === 'movie' ? activeMedia.value.thumb : null, true)
 const openFullscreen = ref(false)
+const lightbox = ref<HTMLElement | null>(null)
+useGameDetailDialog(lightbox, () => { openFullscreen.value = false })
+function openLightbox(event: Event) {
+  if (isBlocked.value) return
+  if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus({ preventScroll: true })
+  openFullscreen.value = true
+}
+watch(isBlocked, blocked => { if (blocked) openFullscreen.value = false })
 const videoReady = ref(false)
 const videoLoadError = ref(false)
 const showVideoPlaceholder = computed(() =>
@@ -275,7 +297,7 @@ function playableMovieSource(movie: MoviesModel) {
 }
 
 function steamAssetUrl(url?: string | null) {
-  return preferredSteamSharedAssetUrl(url, locale.value) || url || ''
+  return steamSharedAssetCandidates(url, steamRoute.resolvePreferred(locale.value))[0] || ''
 }
 
 function resetVideoState() {

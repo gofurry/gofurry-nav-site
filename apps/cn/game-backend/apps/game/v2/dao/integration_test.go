@@ -89,6 +89,22 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	if detail.Site.ID != 91001 || detail.Localized == nil || detail.Localized.Name != "English Game" || len(detail.Prices) != 1 || len(detail.Tags) != 1 {
 		t.Fatalf("unexpected detail aggregate: %+v", detail)
 	}
+	if detail.Tags[0].Code != "adventure" || detail.Tags[0].CategoryCode != "classification" || detail.Tags[0].Role != "primary" {
+		t.Fatalf("tag semantics missing: %+v", detail.Tags)
+	}
+	categories, ce := readDAO.ListTagCategories(ctx, "en")
+	if ce != nil || len(categories) != 4 || len(categories[0].Tags) != 1 {
+		t.Fatalf("explicit categories=%+v err=%v", categories, ce)
+	}
+	rebuild, re := v2service.NewReadModelServiceWithReader(readDAO).RebuildRecommendations(ctx)
+	if re != nil || rebuild.Total != 2 || rebuild.Rebuilt != 2 || rebuild.Failed != 0 {
+		t.Fatalf("rebuild=%+v err=%v", rebuild, re)
+	}
+	var versions int
+	if err := pool.QueryRow(ctx, `SELECT count(DISTINCT algorithm_version) FROM gfg_game_recommendations WHERE algorithm_version='similar-v2.4.0-hybrid-cbf'`).Scan(&versions); err != nil || versions != 1 {
+		t.Fatalf("rebuilt version=%d err=%v", versions, err)
+	}
+
 	if detail.ReleaseState == nil || detail.ReleaseState.Availability != "available" || detail.ReleaseState.ExactDate == nil || *detail.ReleaseState.ExactDate != "2026-08-01" {
 		t.Fatalf("unexpected structured release state: %+v", detail.ReleaseState)
 	}
@@ -190,7 +206,9 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 		SourceGameID: 91001, TargetGameID: 91002, Score: .8, DisplayScore: .8,
 		Rank: 1, ReasonJSON: `[{"type":"tag"}]`, AlgorithmVersion: "test-v1", ComputedAt: now,
 	}}
-	if gfErr := readDAO.SaveSimilarRecommendations(ctx, 91001, recommendations); gfErr != nil {
+	if gfErr := readDAO.RecomputeRecommendation(ctx, 91001, "en", "CN", func([]v2models.GameV2RecommendationFeature) ([]v2models.GfgGameV2Recommendation, common.GFError) {
+		return recommendations, nil
+	}); gfErr != nil {
 		t.Fatalf("save recommendations: %s", gfErr.GetMsg())
 	}
 	recRows, gfErr := readDAO.ListSimilarRecommendations(ctx, v2models.GameV2SimilarRecommendationQuery{
@@ -206,7 +224,9 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	if gfErr != nil || len(features) != 2 {
 		t.Fatalf("recommendation features: %d err=%v", len(features), gfErr)
 	}
-	if gfErr := readDAO.SaveSimilarRecommendations(ctx, 91001, nil); gfErr != nil {
+	if gfErr := readDAO.RecomputeRecommendation(ctx, 91001, "en", "CN", func([]v2models.GameV2RecommendationFeature) ([]v2models.GfgGameV2Recommendation, common.GFError) {
+		return nil, nil
+	}); gfErr != nil {
 		t.Fatalf("clear recommendations: %s", gfErr.GetMsg())
 	}
 	if recRows, gfErr = readDAO.ListSimilarRecommendations(ctx, v2models.GameV2SimilarRecommendationQuery{GameID: 91001, AlgorithmVersion: "test-v1"}); gfErr != nil || len(recRows) != 0 {
@@ -459,10 +479,10 @@ func seedGameCompare(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now 
 	_, err := pool.Exec(ctx, `
 INSERT INTO gfg_game
     (id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,
-     appid,header,links,weight,primary_tag,secondary_tag,view_count)
+     appid,header,links,weight,view_count)
 VALUES
-    (93001,'比较游戏一','Compare Game One','','',$4,$4,'[]','[]','', '[]','[]',93101,'','[]',1,0,0,0),
-    (93002,'比较游戏二','Compare Game Two','','',$4,$4,'[]','[]','', '[]','[]',93102,'','[]',1,0,0,0);
+    (93001,'比较游戏一','Compare Game One','','',$4,$4,'[]','[]','', '[]','[]',93101,'','[]',1,0),
+    (93002,'比较游戏二','Compare Game Two','','',$4,$4,'[]','[]','', '[]','[]',93102,'','[]',1,0);
 INSERT INTO gfg_game_tracking_periods
     (id,game_id,appid,tracked_from,tracking_basis,opened_reason)
 VALUES
@@ -554,11 +574,11 @@ func assertGameExplainAnalyze(t *testing.T, ctx context.Context, pool *pgxpool.P
 func seedReadModel(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {
 	t.Helper()
 	statements := []string{
-		`INSERT INTO gfg_tag (id,name,name_en,info,info_en,prefix,create_time,update_time) VALUES (1,'冒险','Adventure','冒险','Adventure',0,$1,$1)`,
-		`INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count) VALUES
-(91001,'中文游戏','English Game','中文简介','English summary',$1,$1,'[]','[]','2026-08-01','["Dev"]','["Pub"]',92001,'header-1','[]',1,1,0,3),
-(91002,'第二游戏','Second Game','第二简介','Second summary',$1,$1,'[]','[]','2026-08-02','["Dev"]','["Pub"]',92002,'header-2','[]',2,1,0,1)`,
-		`INSERT INTO gfg_tag_map (id,game_id,tag_id,create_time,update_time) VALUES (1,91001,1,$1,$1),(2,91002,1,$1,$1)`,
+		`INSERT INTO gfg_tag (id,name,name_en,info,info_en,code,category_id,create_time,update_time) VALUES (1,'冒险','Adventure','冒险','Adventure','adventure',1,$1,$1)`,
+		`INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,release_date,developers,publishers,appid,header,links,weight,view_count) VALUES
+(91001,'中文游戏','English Game','中文简介','English summary',$1,$1,'[]','[]','2026-08-01','["Dev"]','["Pub"]',92001,'header-1','[]',1,3),
+(91002,'第二游戏','Second Game','第二简介','Second summary',$1,$1,'[]','[]','2026-08-02','["Dev"]','["Pub"]',92002,'header-2','[]',2,1)`,
+		`INSERT INTO gfg_game_tag (game_id,tag_id,role,create_time,update_time) VALUES (91001,1,'primary',$1,$1),(91002,1,'primary',$1,$1)`,
 		`INSERT INTO gfg_game_details (game_id,appid,source,type,name,is_free,developers,publishers,release_date_text,platforms,collected_at,updated_at) VALUES
 (91001,92001,'steam','game','English Game',false,'["Dev"]','["Pub"]','2026-08-01','{"windows":true}',$1,$1),
 (91002,92002,'steam','game','Second Game',false,'["Dev"]','["Pub"]','2026-08-02','{"windows":true}',$1,$1)`,

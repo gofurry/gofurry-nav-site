@@ -204,9 +204,12 @@ type GameV2SiteRecord struct {
 }
 
 type GameV2Tag struct {
-	ID   string `db:"id" json:"id"`
-	Name string `db:"name" json:"name"`
-	Desc string `db:"desc" json:"desc"`
+	Code         string `db:"code" json:"code"`
+	CategoryCode string `db:"category_code" json:"category_code"`
+	Role         string `db:"role" json:"role"`
+	ID           string `db:"id" json:"id"`
+	Name         string `db:"name" json:"name"`
+	Desc         string `db:"desc" json:"desc"`
 }
 
 type GameV2Aggregate struct {
@@ -312,10 +315,13 @@ type GameV2SearchPageItem struct {
 }
 
 type GameV2TagRecord struct {
-	ID        string `db:"id" json:"id"`
-	Name      string `db:"name" json:"name"`
-	Prefix    string `db:"prefix" json:"prefix"`
-	GameCount int    `db:"game_count" json:"game_count"`
+	ID           string `db:"id" json:"id"`
+	Name         string `db:"name" json:"name"`
+	Code         string `db:"code" json:"code"`
+	CategoryID   string `db:"category_id" json:"category_id"`
+	CategoryCode string `db:"category_code" json:"category_code"`
+	CategoryName string `db:"category_name" json:"category_name"`
+	GameCount    int    `db:"game_count" json:"game_count"`
 }
 
 type GameV2SearchPageQuery struct {
@@ -406,8 +412,6 @@ type GameV2RecommendationFeature struct {
 	Developers        *string    `db:"developers"`
 	Publishers        *string    `db:"publishers"`
 	Platforms         *string    `db:"platforms"`
-	PrimaryTagID      int64      `db:"primary_tag_id"`
-	SecondaryTagID    int64      `db:"secondary_tag_id"`
 	Tags              *string    `db:"tags"`
 	PriceRegion       string     `db:"price_region"`
 	PriceAvailable    bool       `db:"price_available"`
@@ -756,4 +760,11 @@ type GameV2ReadModelExtraPayload struct {
 type GameV2ViewTouchResponse struct {
 	GameID    int64 `json:"game_id"`
 	ViewCount int64 `json:"view_count"`
+}
+
+type GameV2TagCategory struct {
+	ID   string            `json:"id"`
+	Code string            `json:"code"`
+	Name string            `json:"name"`
+	Tags []GameV2TagRecord `json:"tags"`
 }

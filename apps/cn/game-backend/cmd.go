@@ -38,6 +38,7 @@ func newRootCommand() *cobra.Command {
 	root.PersistentFlags().StringVar(&options.configFile, "config", "", "path to the YAML configuration file")
 	root.AddCommand(
 		newServeCommand(options),
+		newRecommendationsCommand(options),
 		newInstallCommand(options),
 		newUninstallCommand(),
 		newVersionCommand(),

@@ -10,7 +10,7 @@
       />
       <div
         v-else
-        class="game-detail-cover game-detail-cover--empty flex h-[240px] w-[180px] items-center justify-center text-sm"
+        class="game-detail-cover game-detail-cover--empty flex h-[240px] w-[180px] items-center justify-center"
       >
         {{ t('game.panel.none') }}
       </div>
@@ -18,13 +18,13 @@
 
     <div class="min-w-0 flex-1 flex flex-col gap-3">
       <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <h1 class="game-detail-title break-words text-2xl font-bold">
+        <h1 class="game-detail-title break-words">
           {{ game?.name || t('game.panel.none') }}
         </h1>
 
         <div class="flex items-center gap-2 shrink-0">
           <span
-            class="game-detail-metric flex shrink-0 items-center gap-1 text-xs"
+            class="game-detail-metric flex shrink-0 items-center gap-1"
           >
             <strong>{{ t('common.visits') }}: </strong>
             <div>{{ (game?.view_count ?? 0).toLocaleString() }}</div>
@@ -32,7 +32,7 @@
 
           <span
             v-if="game?.online_count"
-            class="game-detail-metric flex shrink-0 items-center gap-1 text-xs"
+            class="game-detail-metric flex shrink-0 items-center gap-1"
           >
             <span class="whitespace-nowrap">
               <strong>{{ t('game.detail.onlineNow') }}: </strong>
@@ -41,7 +41,7 @@
 
             <span
               v-if="game.count_collect_time"
-              class="game-detail-time whitespace-nowrap text-[11px]"
+              class="game-detail-time whitespace-nowrap"
             >
               &nbsp;&nbsp;{{ formatTime(game.count_collect_time) }}
             </span>
@@ -53,14 +53,14 @@
         <span
           v-for="tag in displayTags"
           :key="tag.id"
-          class="game-detail-tag relative cursor-default px-2 py-0.5 text-xs"
+          class="game-detail-tag relative cursor-default px-2 py-0.5"
         >
           <span class="relative group">
             {{ tag.name }}
 
             <div
               v-if="tag.desc"
-              class="game-detail-tag-tip pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap px-2 py-1 text-xs opacity-0 transition group-hover:opacity-100"
+              class="game-detail-tag-tip pointer-events-none absolute left-1/2 top-full z-10 mt-1 -translate-x-1/2 whitespace-nowrap px-2 py-1"
             >
               {{ tag.desc }}
             </div>
@@ -69,7 +69,7 @@
 
         <span
           v-if="tags.length > 8"
-          class="game-detail-tag game-detail-tag--more cursor-pointer px-2 py-0.5 text-xs"
+          class="game-detail-tag game-detail-tag--more cursor-pointer px-2 py-0.5"
           @click="expanded = !expanded"
         >
           {{ expanded ? t('common.collapse') : t('common.expand') }}
@@ -77,7 +77,7 @@
       </div>
 
       <div class="flex items-center gap-2 flex-wrap">
-        <div class="flex items-center gap-1">
+        <div v-if="!remarkUnavailable" class="flex items-center gap-1">
           <img
             v-for="i in fullStars"
             :key="'full-' + i"
@@ -96,22 +96,22 @@
             :key="'empty-' + i"
             :src="starSvg"
             alt=""
-            class="h-4 w-4 opacity-30"
+            class="h-4 w-4 game-detail-star--empty"
           />
         </div>
 
-        <span class="game-detail-score font-bold">{{ avgScore.toFixed(1) }}</span>
-        <span class="game-detail-score-meta text-sm">
-          ( {{ remark?.total ?? 0 }} {{ t('game.detail.commentCountSuffix') }} )
+        <span v-if="!remarkUnavailable" class="game-detail-score">{{ avgScore.toFixed(1) }}</span>
+        <span class="game-detail-score-meta">
+          {{ remarkUnavailable ? t('game.detail.reviewsUnavailable') : `( ${remark?.total ?? 0} ${t('game.detail.commentCountSuffix')} )` }}
         </span>
       </div>
 
-      <p class="game-detail-summary break-words text-sm leading-relaxed line-clamp-3">
+      <p class="game-detail-summary break-words line-clamp-3">
         {{ game?.info || t('game.panel.none') }}
       </p>
 
       <div class="mt-auto flex items-center gap-3">
-        <span class="game-detail-share-label text-sm">{{ t('game.detail.share') }}:</span>
+        <span class="game-detail-share-label">{{ t('game.detail.share') }}:</span>
 
         <button
           v-for="item in shareList"
@@ -145,6 +145,7 @@ const { t } = i18n.global
 const props = defineProps<{
   game: GameBaseInfoResponse | null
   remark: RemarkResponse | null
+  remarkUnavailable?: boolean
 }>()
 
 const expanded = ref(false)
@@ -201,14 +202,16 @@ function share(type: string) {
   window.open(shareUrl, '_blank')
 }
 
+// Use the same reporting zone in SSR and the browser, regardless of host TZ.
+const onlineTimeFormat = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric',
+  hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+})
 function formatTime(time: string | number) {
   const date = new Date(time)
   if (isNaN(date.getTime())) return ''
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const hour = date.getHours().toString().padStart(2, '0')
-  const minute = date.getMinutes().toString().padStart(2, '0')
-  return `${month}/${day} ${hour}:${minute}`
+  const parts = Object.fromEntries(onlineTimeFormat.formatToParts(date).map(part => [part.type, part.value]))
+  return `${parts.month}/${parts.day} ${parts.hour}:${parts.minute}`
 }
 
 watch(

@@ -151,26 +151,12 @@ watch(
   display: flex;
   align-items: center;
   gap: 4px;
-  border: 0;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.18);
-  box-shadow: none;
-  opacity: 0;
   padding: 5px;
   pointer-events: none;
   transform: translate(-50%, 14px) scale(0.96);
-  backdrop-filter: blur(10px) saturate(1.04);
-  transition:
-    opacity 220ms ease,
-    transform 220ms ease;
-}
-
-html.dark .mobile-bottom-tabs {
-  background: rgba(255, 255, 255, 0.14);
 }
 
 .mobile-bottom-tabs--visible {
-  opacity: 0.88;
   pointer-events: auto;
   transform: translate(-50%, 0) scale(1);
 }
@@ -180,25 +166,11 @@ html.dark .mobile-bottom-tabs {
   width: 32px;
   height: 30px;
   place-items: center;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  text-decoration: none;
-  transition:
-    background-color 420ms ease,
-    border-color 420ms ease;
 }
 
 .mobile-bottom-tabs__item svg {
   width: 17px;
   height: 17px;
-  color: rgba(248, 250, 252, 0.98);
-}
-
-.mobile-bottom-tabs__item--active,
-.mobile-bottom-tabs__item:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.2);
 }
 
 .mobile-bottom-tabs__label {

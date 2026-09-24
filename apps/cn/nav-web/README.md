@@ -35,12 +35,17 @@ The public Ecosystem product is SSR-rendered at `/insights`, `/insights/sites`, 
 
 Primary public system navigation icons use Phosphor. The default layout owns the theme background and exposes `--gf-page-pattern` as its replaceable asset slot. The shared mask-friendly `gofurry-pattern.svg` is repeated at 160px by default and receives its light/dark color and opacity from CSS; pages must not instantiate or cover their own background.
 
-After starting a production preview, run the focused route and interaction smoke plus the visual guard:
+Run the deterministic route and interaction regressions against the production build:
 
 ```bash
-npm run insights:smoke -- --base-url http://localhost:3000
-npm run visual:guard -- --base-url http://localhost:3000
+npm run build
+npm run test:browser -- insights
 ```
+
+The legacy visual report guard is retired. Run `npm run test:browser` for runtime
+contracts and `npm run test:visual` in the pinned Linux environment for accepted
+pixel comparisons. See [testing](../../../docs/frontend/testing.md) for all gates;
+performance tools retain their separate scope.
 
 ## Production
 

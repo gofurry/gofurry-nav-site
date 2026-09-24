@@ -10,31 +10,39 @@ SELECT COUNT(*)::bigint FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name I
  OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';
 
 -- name: ListGames :many
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game
+SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag FROM gfg_game
 WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%'
  OR info ILIKE '%'||sqlc.arg(keyword)||'%' OR info_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
 ORDER BY id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: GetGame :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game WHERE id=sqlc.arg(id);
+SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag FROM gfg_game WHERE id=sqlc.arg(id);
 
 -- name: ListGameWorkspaceTags :many
-SELECT m.id,m.game_id,m.tag_id,COALESCE(t.name,'')::text AS tag_name
-FROM gfg_tag_map m LEFT JOIN gfg_tag t ON t.id=m.tag_id
-WHERE m.game_id=sqlc.arg(game_id) ORDER BY m.id ASC;
+SELECT m.game_id,m.tag_id,t.name::text AS tag_name,t.code,c.code AS category_code,m.role
+FROM gfg_game_tag m JOIN gfg_tag t ON t.id=m.tag_id JOIN gfg_tag_category c ON c.id=t.category_id
+WHERE m.game_id=sqlc.arg(game_id) ORDER BY m.tag_id;
 
 -- name: FindGameByAppIDExcluding :one
 SELECT id,name,appid FROM gfg_game WHERE appid=sqlc.arg(appid) AND id<>sqlc.arg(exclude_id) LIMIT 1;
 
 -- name: InsertGame :one
-INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count)
-VALUES (sqlc.arg(id),sqlc.arg(name),sqlc.arg(name_en),sqlc.arg(info),sqlc.arg(info_en),NOW()::timestamp(0),NOW()::timestamp(0),sqlc.arg(resources),sqlc.arg(groups),sqlc.arg(developers),sqlc.arg(publishers),sqlc.arg(appid),sqlc.arg(header),sqlc.arg(links),sqlc.arg(weight),sqlc.arg(primary_tag),sqlc.arg(secondary_tag),0)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count;
+INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count)
+VALUES (sqlc.arg(id),sqlc.arg(name),sqlc.arg(name_en),sqlc.arg(info),sqlc.arg(info_en),NOW()::timestamp(0),NOW()::timestamp(0),sqlc.arg(resources),sqlc.arg(groups),sqlc.arg(developers),sqlc.arg(publishers),sqlc.arg(appid),sqlc.arg(header),sqlc.arg(links),sqlc.arg(weight),0)
+RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag;
 
 -- name: UpdateGame :one
-UPDATE gfg_game SET name=sqlc.arg(name),name_en=sqlc.arg(name_en),info=sqlc.arg(info),info_en=sqlc.arg(info_en),resources=sqlc.arg(resources),groups=sqlc.arg(groups),developers=sqlc.arg(developers),publishers=sqlc.arg(publishers),appid=sqlc.arg(appid),header=sqlc.arg(header),links=sqlc.arg(links),weight=sqlc.arg(weight),primary_tag=sqlc.arg(primary_tag),secondary_tag=sqlc.arg(secondary_tag),update_time=NOW()::timestamp(0)
+UPDATE gfg_game SET name=sqlc.arg(name),name_en=sqlc.arg(name_en),info=sqlc.arg(info),info_en=sqlc.arg(info_en),resources=sqlc.arg(resources),groups=sqlc.arg(groups),developers=sqlc.arg(developers),publishers=sqlc.arg(publishers),appid=sqlc.arg(appid),header=sqlc.arg(header),links=sqlc.arg(links),update_time=NOW()::timestamp(0)
 WHERE id=sqlc.arg(id)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count;
+RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag;
 
 -- name: DeleteGame :execrows
 DELETE FROM gfg_game WHERE id=sqlc.arg(id);
@@ -93,80 +101,6 @@ WHERE id=sqlc.arg(id) RETURNING id,title,"desc",prize,"key",start_time,end_time,
 -- name: DeletePrize :execrows
 DELETE FROM gfg_prize WHERE id=sqlc.arg(id);
 
--- name: CountTags :one
-SELECT COUNT(*)::bigint FROM gfg_tag WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%'
- OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR info ILIKE '%'||sqlc.arg(keyword)||'%' OR info_en ILIKE '%'||sqlc.arg(keyword)||'%'
- OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';
-
--- name: ListTags :many
-SELECT id,name,name_en,info,info_en,prefix,create_time,update_time FROM gfg_tag
-WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%'
- OR info ILIKE '%'||sqlc.arg(keyword)||'%' OR info_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
-ORDER BY id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
-
--- name: GetTag :one
-SELECT id,name,name_en,info,info_en,prefix,create_time,update_time FROM gfg_tag WHERE id=sqlc.arg(id);
-
--- name: InsertTag :one
-INSERT INTO gfg_tag (id,name,name_en,info,info_en,prefix,create_time,update_time)
-VALUES (sqlc.arg(id),sqlc.arg(name),sqlc.arg(name_en),sqlc.arg(info),sqlc.arg(info_en),sqlc.arg(prefix),NOW()::timestamp(0),NOW()::timestamp(0))
-RETURNING id,name,name_en,info,info_en,prefix,create_time,update_time;
-
--- name: UpdateTag :one
-UPDATE gfg_tag SET name=sqlc.arg(name),name_en=sqlc.arg(name_en),info=sqlc.arg(info),info_en=sqlc.arg(info_en),prefix=sqlc.arg(prefix),update_time=NOW()::timestamp(0)
-WHERE id=sqlc.arg(id) RETURNING id,name,name_en,info,info_en,prefix,create_time,update_time;
-
--- name: DeleteTag :execrows
-DELETE FROM gfg_tag WHERE id=sqlc.arg(id);
-
--- name: NextTagMapID :one
-WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfg_tag_map')::bigint))
-SELECT (COALESCE(MAX(id),0)+1)::bigint FROM gfg_tag_map CROSS JOIN lock_row;
-
--- name: CountTagMaps :one
-SELECT COUNT(*)::bigint FROM gfg_tag_map m LEFT JOIN gfg_game g ON g.id=m.game_id LEFT JOIN gfg_tag t ON t.id=m.tag_id
-WHERE sqlc.arg(keyword)::text='' OR m.id::text ILIKE '%'||sqlc.arg(keyword)||'%' OR m.game_id::text ILIKE '%'||sqlc.arg(keyword)||'%'
- OR m.tag_id::text ILIKE '%'||sqlc.arg(keyword)||'%' OR COALESCE(g.name,'') ILIKE '%'||sqlc.arg(keyword)||'%'
- OR COALESCE(t.name,'') ILIKE '%'||sqlc.arg(keyword)||'%';
-
--- name: ListTagMaps :many
-SELECT m.id,m.game_id,m.tag_id,m.create_time,m.update_time,COALESCE(g.name,'')::text AS game_name,COALESCE(t.name,'')::text AS tag_name
-FROM gfg_tag_map m LEFT JOIN gfg_game g ON g.id=m.game_id LEFT JOIN gfg_tag t ON t.id=m.tag_id
-WHERE sqlc.arg(keyword)::text='' OR m.id::text ILIKE '%'||sqlc.arg(keyword)||'%' OR m.game_id::text ILIKE '%'||sqlc.arg(keyword)||'%'
- OR m.tag_id::text ILIKE '%'||sqlc.arg(keyword)||'%' OR COALESCE(g.name,'') ILIKE '%'||sqlc.arg(keyword)||'%'
- OR COALESCE(t.name,'') ILIKE '%'||sqlc.arg(keyword)||'%' ORDER BY m.id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
-
--- name: GetTagMap :one
-SELECT id,game_id,tag_id,create_time,update_time FROM gfg_tag_map WHERE id=sqlc.arg(id);
-
--- name: ListTagMapsByGame :many
-SELECT id,game_id,tag_id,create_time,update_time FROM gfg_tag_map WHERE game_id=sqlc.arg(game_id) ORDER BY id ASC;
-
--- name: ListTagMapsByTag :many
-SELECT id,game_id,tag_id,create_time,update_time FROM gfg_tag_map WHERE tag_id=sqlc.arg(tag_id) ORDER BY id ASC;
-
--- name: ListGameIDsByTag :many
-SELECT game_id FROM gfg_tag_map WHERE tag_id=sqlc.arg(tag_id) ORDER BY id ASC;
-
--- name: InsertTagMap :one
-INSERT INTO gfg_tag_map (id,game_id,tag_id,create_time,update_time)
-VALUES (sqlc.arg(id),sqlc.arg(game_id),sqlc.arg(tag_id),NOW()::timestamp(0),NOW()::timestamp(0))
-RETURNING id,game_id,tag_id,create_time,update_time;
-
--- name: UpdateTagMap :one
-UPDATE gfg_tag_map SET game_id=sqlc.arg(game_id),tag_id=sqlc.arg(tag_id),update_time=NOW()::timestamp(0)
-WHERE id=sqlc.arg(id) RETURNING id,game_id,tag_id,create_time,update_time;
-
--- name: DeleteTagMap :execrows
-DELETE FROM gfg_tag_map WHERE id=sqlc.arg(id);
-
--- name: DeleteTagMapsByGame :execrows
-DELETE FROM gfg_tag_map WHERE game_id=sqlc.arg(game_id);
-
--- name: DeleteTagMapsByTagExceptGames :execrows
-DELETE FROM gfg_tag_map WHERE tag_id=sqlc.arg(tag_id)
-AND (cardinality(sqlc.arg(game_ids)::bigint[]) = 0 OR NOT (game_id = ANY(sqlc.arg(game_ids)::bigint[])));
-
 -- name: CountGameOptions :one
 SELECT COUNT(*)::bigint FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR appid::text ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';
 
@@ -174,6 +108,13 @@ SELECT COUNT(*)::bigint FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name I
 SELECT id,name,name_en,appid FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR appid::text ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
 ORDER BY id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
+-- name: CountTagOptions :one
+SELECT count(*) FROM gfg_tag t JOIN gfg_tag_category c ON c.id=t.category_id
+WHERE t.archived_at IS NULL AND c.archived_at IS NULL AND
+(sqlc.arg(keyword)::text='' OR t.name ILIKE '%'||sqlc.arg(keyword)||'%' OR t.name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR t.code ILIKE '%'||sqlc.arg(keyword)||'%' OR t.id::text ILIKE '%'||sqlc.arg(keyword)||'%');
+
 -- name: ListTagOptions :many
-SELECT id,name,name_en FROM gfg_tag WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%'
-ORDER BY id DESC;
+SELECT t.id,t.name,t.name_en FROM gfg_tag t JOIN gfg_tag_category c ON c.id=t.category_id
+WHERE t.archived_at IS NULL AND c.archived_at IS NULL AND
+(sqlc.arg(keyword)::text='' OR t.name ILIKE '%'||sqlc.arg(keyword)||'%' OR t.name_en ILIKE '%'||sqlc.arg(keyword)||'%' OR t.code ILIKE '%'||sqlc.arg(keyword)||'%' OR t.id::text ILIKE '%'||sqlc.arg(keyword)||'%')
+ORDER BY t.id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);

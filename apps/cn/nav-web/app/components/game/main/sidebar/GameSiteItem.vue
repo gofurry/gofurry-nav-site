@@ -5,10 +5,10 @@
       class="game-site-item"
   >
     <div class="flex items-center gap-2 min-w-0">
-      <img :src="icon" class="w-5 h-5 rounded" :alt="title" />
-      <span class="game-site-item__title truncate font-medium">{{ title }}</span>
+      <img :src="icon" class="w-5 h-5" :alt="title" />
+      <span class="game-site-item__title truncate">{{ title }}</span>
     </div>
-    <span class="game-site-item__subtitle truncate text-xs">{{ subtitleText }}</span>
+    <span class="game-site-item__subtitle truncate">{{ subtitleText }}</span>
   </a>
 </template>
 

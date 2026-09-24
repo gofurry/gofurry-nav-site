@@ -17,6 +17,7 @@ func gameV2Api(g fiber.Router, gameAPI *gamev2.GameV2API, prizeAPI *prize.PrizeA
 	g.Get("/list", gameAPI.GetGameList)
 	g.Get("/info", gameAPI.GetGameInfo)
 	g.Get("/tags", gameAPI.GetTags)
+	g.Get("/tag-categories", gameAPI.GetTagCategories)
 	g.Get("/news", gameAPI.GetGameNews)
 	g.Get("/news/latest", gameAPI.GetLatestGameNews)
 	g.Get("/home", gameAPI.GetHome)

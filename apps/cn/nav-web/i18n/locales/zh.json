@@ -168,7 +168,7 @@
       "privacy": "隐私政策"
     },
     "rights": "保留所有权利",
-    "license": "本网站内容采用 CC-BY-NC-SA 4.0 授权协议",
+    "license": "GoFurry 原创内容采用 CC BY-NC-SA 4.0 授权",
     "icp": "蜀ICP备2025158691号-2"
   },
   "home": {
@@ -466,9 +466,25 @@
       "latestInfo": "最新情报",
       "plannedReleaseOrder": "预计发售优先",
       "comment": "评论",
-      "jumpPage": "跳转到页"
+      "jumpPage": "跳转到页",
+      "invalidPage": "请输入 1 到 {max} 之间的整数页码",
+      "startDate": "开始时间",
+      "endDate": "结束时间",
+      "loading": "搜索中…",
+      "unavailable": "搜索暂时不可用，请重试",
+      "retry": "重试",
+      "noResults": "没有找到符合条件的游戏",
+      "noSuggestions": "没有找到相关游戏",
+      "tagsLoading": "正在加载标签…",
+      "tagsUnavailable": "标签加载失败，其他筛选条件仍可使用",
+      "retryTags": "重新加载标签",
+      "noTags": "暂无可用标签"
     },
     "detail": {
+      "reviewsUnavailable": "评论暂时无法加载",
+      "recommendUnavailable": "相似游戏暂时无法加载",
+      "retry": "重试",
+      "openImage": "全屏查看图片",
       "commentCountSuffix": "条评论",
       "share": "分享",
       "introduction": "介绍",
@@ -540,6 +556,8 @@
         "title": "兽游喜加一",
         "activePool": "活跃奖池",
         "noActiveLottery": "当前暂无活跃抽奖",
+        "unavailable": "抽奖信息暂时无法加载，请稍后重试。",
+        "retry": "重试",
         "clickToJoin": "点击参与",
         "prize": "奖品",
         "prizeQuantity": "奖品数量",
@@ -1085,5 +1103,31 @@
       "trendOne": "正在积累历史数据",
       "changesEmpty": "近期暂无可展示变化"
     }
+  },
+  "resourceRouting": {
+    "title": "资源线路",
+    "gofurry": "GoFurry 资源",
+    "steam": "Steam 游戏资源",
+    "auto": "自动优选",
+    "primary": "EdgeOne",
+    "mirror": "Cloudflare",
+    "china": "中国线路",
+    "global": "全球线路",
+    "preferred": "新资源优先线路",
+    "recommendation": "测速建议",
+    "pinned": "已固定",
+    "checked": "上次测速",
+    "retest": "重新测速",
+    "probing": "测速中…",
+    "never": "未测速",
+    "timeout": "超时",
+    "failed": "测速失败",
+    "stale": "已过期",
+    "latency": "{ms} ms",
+    "cooldown": "{seconds} 秒后可重测",
+    "details": "线路详情",
+    "help": "保存后应用于新资源，当前已加载的图片保持不变。测速建议独立更新，取消不会撤销测速结果。",
+    "steamProbeHint": "延迟来自代表节点的小图测速，仅供参考；失败不代表整条线路不可用。",
+    "pinnedWarning": "固定线路本次测速未成功。资源实际加载失败时仍会自动尝试备用线路。"
   }
 }

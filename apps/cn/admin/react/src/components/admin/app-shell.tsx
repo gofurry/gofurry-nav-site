@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui/react/menu'
-import { CaretLeft, CaretRight, Chats, ClockCounterClockwise, Database, GameController, Gauge, Key, ListBullets, MagnifyingGlass, Megaphone, Moon, PencilSimple, Pulse, Quotes, ShieldCheck, SignOut, GlobeHemisphereWest, ImageSquare, PaintBrushBroad, Gift, Cloud, SquaresFour, Sun, Tag, UserCircle } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, Chats, ClockCounterClockwise, Database, GameController, Gauge, Key, ListBullets, MagnifyingGlass, Megaphone, Moon, PencilSimple, Pulse, Quotes, ShieldCheck, SignOut, GlobeHemisphereWest, ImageSquare, PaintBrushBroad, Gift, Cloud, SquaresFour, Sun, Tag, TreeStructure, UserCircle } from '@phosphor-icons/react'
 import { Suspense, useEffect, useState, type ComponentType } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../../app/theme'
@@ -38,6 +38,7 @@ export const navigationGroups: NavGroup[] = [
   { label: '游戏内容', entries: [
     { label: '游戏', href: '/game/games', icon: GameController, capability: 'content.read' },
     { label: '标签', href: '/game/tags', icon: Tag, capability: 'content.read' },
+    { label: '标签类别', href: '/game/tag-categories', icon: TreeStructure, capability: 'content.read' },
     { label: '评论', href: '/game/comments', icon: Chats, capability: 'content.read' },
     { label: '抽奖', href: '/game/prizes', icon: Gift, capability: 'content.read' },
   ] },

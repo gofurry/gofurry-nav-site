@@ -1,25 +1,33 @@
 <template>
-  <section class="game-detail-main space-y-4">
+  <section class="game-detail-main min-w-0 w-full max-w-full space-y-4">
 
     <!-- 顶部信息 -->
     <GameDetailHeader
         :game="game"
         :remark="remark"
+        :remark-unavailable="remarkUnavailable"
     />
 
     <!-- Tabs -->
-    <div class="game-detail-tabs">
+    <div class="game-detail-tabs min-w-0 w-full max-w-full">
 
       <!-- Tab Header -->
-      <div class="game-detail-tab-list flex overflow-x-auto scrollbar-hide">
+      <div ref="tabList" class="game-detail-tab-list flex overflow-x-auto scrollbar-hide" role="tablist" :aria-label="t('game.detail.details')">
         <div
             v-for="tab in tabs"
             :key="tab.key"
             :data-game-tab="tab.key"
-            @click="activeTab = tab.key"
+            :id="`${tabId}-${tab.key}`"
+            role="tab"
+            :aria-selected="activeTab === tab.key"
+            :aria-controls="`${tabId}-panel`"
+            :tabindex="focusedTab === tab.key ? 0 : -1"
+            @click="activateTab(tab.key)"
+            @focus="focusedTab = tab.key"
+            @keydown="onTabKey($event, tab.key)"
             class="game-detail-tab flex-shrink-0"
             :class="[
-              'px-4 py-3 text-sm cursor-pointer select-none whitespace-nowrap',
+              'px-4 py-3 cursor-pointer select-none whitespace-nowrap',
               tab.mobileOnly ? 'xl:hidden' : '',
               activeTab === tab.key
                 ? 'game-detail-tab--active'
@@ -31,7 +39,7 @@
       </div>
 
       <!-- Tab Content -->
-      <div class="game-detail-tab-panel p-5 text-sm">
+      <div :id="`${tabId}-panel`" role="tabpanel" :aria-labelledby="`${tabId}-${activeTab}`" class="game-detail-tab-panel min-w-0 max-w-full p-5">
 
         <GameTabInsights
             v-if="insightsVisited"
@@ -56,6 +64,8 @@
         <!-- Gallery -->
         <BlurWrapper
             v-else-if="activeTab === 'gallery'"
+            class="game-detail-gallery-wrapper min-w-0 w-full max-w-full"
+            :class="{ 'overflow-clip': needBlur }"
             :enable="needBlur"
             :tip='t("common.modal.galleryBlur")'
             @unlock="openNsfwConfirm"
@@ -72,13 +82,16 @@
             v-else-if="activeTab === 'comment'"
             :game-id="gameId"
             :remark="remark"
+            :unavailable="remarkUnavailable"
+            :loading="remarkLoading"
+            @retry="emit('retry-reviews')"
         />
 
         <div
             v-else-if="activeTab === 'similar' && !isDesktop"
             class="xl:hidden"
         >
-          <GameSidebarSimilar :recommend="recommend" />
+          <GameSidebarSimilar :recommend="recommend" :unavailable="recommendUnavailable" :loading="recommendLoading" @retry="emit('retry-recommendations')" />
         </div>
 
         <!-- News -->
@@ -110,7 +123,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { hasAdultTag } from '@/utils/gameTagDomain'
+import { ref, computed, onMounted, onUnmounted, watch, useId } from 'vue'
 import type { GameBaseInfoResponse, RecommendedModel, RemarkResponse } from '@/types/game'
 import type { GameInsights } from '@/types/insights'
 
@@ -144,9 +158,14 @@ const props = defineProps<{
   gameId: string
   insights: GameInsights | null
   insightsUnavailable?: boolean
+  remarkUnavailable?: boolean
+  remarkLoading?: boolean
+  recommendUnavailable?: boolean
+  recommendLoading?: boolean
 }>()
+const emit = defineEmits<{ 'retry-reviews': [], 'retry-recommendations': [] }>()
 
-const hasSimilarRecommend = computed(() => (props.recommend?.length ?? 0) > 0)
+const hasSimilarRecommend = computed(() => props.recommendUnavailable || (props.recommend?.length ?? 0) > 0)
 
 interface DetailTabItem {
   key: 'intro' | 'insights' | 'gallery' | 'comment' | 'news' | 'similar' | 'detail'
@@ -159,7 +178,7 @@ const tabs = computed<DetailTabItem[]>(() => ([
   { key: 'intro', label: t('game.detail.introduction') },
   { key: 'insights', label: t('game.detail.insights') },
   { key: 'gallery', label: t('game.detail.gallery') },
-  { key: 'comment', label: t('game.detail.comments') + `(${props.remark?.total ?? 0})` },
+  { key: 'comment', label: t('game.detail.comments') + (props.remarkUnavailable ? '' : `(${props.remark?.total ?? 0})`) },
   { key: 'news', label: t('game.detail.news') },
   ...(hasSimilarRecommend.value ? [{ key: 'similar', label: t('game.detail.similarGames'), mobileOnly: true } satisfies DetailTabItem] : []),
   { key: 'detail', label: t('game.detail.details') }
@@ -167,6 +186,21 @@ const tabs = computed<DetailTabItem[]>(() => ([
 
 type TabKey = typeof tabs.value[number]['key']
 const activeTab = ref<TabKey>('intro')
+const focusedTab = ref<TabKey>('intro')
+const tabList = ref<HTMLElement | null>(null)
+const tabId = useId()
+function activateTab(key: TabKey) { activeTab.value = key; focusedTab.value = key }
+function onTabKey(event: KeyboardEvent, key: TabKey) {
+  if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activateTab(key); return }
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+  event.preventDefault()
+  const available = tabs.value.filter(tab => !tab.mobileOnly || !isDesktop.value)
+  const index = available.findIndex(tab => tab.key === key)
+  const next = event.key === 'Home' ? 0 : event.key === 'End' ? available.length - 1
+    : (index + (event.key === 'ArrowRight' ? 1 : -1) + available.length) % available.length
+  const target = available[next]
+  if (target) tabList.value?.querySelector<HTMLElement>(`[data-game-tab="${target.key}"]`)?.focus()
+}
 const insightsVisited = ref(false)
 
 // ---------- mode 逻辑 ----------
@@ -178,7 +212,7 @@ const nsfwEnabled = computed(() => {
 
 // 判断是否成人游戏
 const isAdultGame = computed<boolean>(() => {
-  return props.game?.tags?.some(tag => tag.id === '1014') ?? false
+  return hasAdultTag(props.game?.tags)
 })
 
 // 是否需要模糊处理
@@ -223,8 +257,15 @@ onUnmounted(() => {
 
 watch([isDesktop, activeTab], ([desktop, tabKey]) => {
   if (desktop && tabKey === 'similar') {
-    activeTab.value = 'intro'
+    activateTab('intro')
+  } else if (desktop && focusedTab.value === 'similar') {
+    focusedTab.value = tabKey
   }
+})
+
+watch(tabs, available => {
+  if (!available.some(tab => tab.key === activeTab.value)) activateTab('intro')
+  if (!available.some(tab => tab.key === focusedTab.value)) focusedTab.value = activeTab.value
 })
 
 watch(activeTab, (tabKey) => {

@@ -106,6 +106,11 @@ try {
   const icon = normal.page.locator('.nav-site-card__logo img').first()
   await loadedImage(normal.page, icon)
   await normal.page.waitForFunction(selector => getComputedStyle(document.querySelector(selector)).maskImage.includes('/nav/patterns/'), background)
+  // A tiny probe finishing does not imply that the original Hero request has
+  // finished; route selection now deliberately leaves that request unchanged.
+  if (!normal.assets.some(r => r.url().endsWith('/' + desktopKey) && r.ok())) {
+    await normal.page.waitForResponse(response => response.url().endsWith('/' + desktopKey) && response.ok(), { timeout: 15000 })
+  }
   assert(normal.assets.some(r => r.url().endsWith('/' + desktopKey) && r.ok()))
   assert(normal.assets.some(r => r.url().endsWith('/' + patternKey) && r.ok()))
   assert.equal(normal.errors.length, 0, normal.errors.join('\n'))
@@ -191,7 +196,7 @@ try {
   console.log('[assets real] Actual Vue local SVG/raster editor, zero opacity, reload persistence, clearing and no upload PASS')
 
   const failPrimary = await newPage({ blocked: ['primary'] })
-  await failPrimary.page.waitForFunction(selector => getComputedStyle(document.querySelector(selector)).backgroundImage.includes('assets-dev.gofurry.com'), hero, { timeout: 15000 })
+  await failPrimary.page.waitForFunction(selector => document.querySelector(selector + ' img')?.currentSrc.includes('assets-dev.gofurry.com'), hero, { timeout: 15000 })
   await failPrimary.page.mouse.wheel(0, 950)
   const mirrorIcon = failPrimary.page.locator('.nav-site-card__logo img').first()
   await loadedImage(failPrimary.page, mirrorIcon)
@@ -201,7 +206,7 @@ try {
   console.log('[assets real] Primary failure -> real R2 CDN Hero / pattern / icon reads PASS')
 
   const failBoth = await newPage({ blocked: ['primary', 'mirror'] })
-  await failBoth.page.waitForFunction(selector => getComputedStyle(document.querySelector(selector)).backgroundImage === 'none', hero, { timeout: 15000 })
+  await failBoth.page.waitForFunction(selector => document.querySelector(selector + ' img')?.currentSrc.startsWith('data:'), hero, { timeout: 15000 })
   await failBoth.page.waitForSelector('[data-pattern-status="default"]')
   await failBoth.page.mouse.wheel(0, 950)
   const defaultIcon = failBoth.page.locator('.nav-site-card__logo img').first()
@@ -212,7 +217,7 @@ try {
   console.log('[assets real] Both CDNs fail -> bundled icon / no Hero / bundled pattern PASS')
 
   const mobile = await newPage({ mobile: true })
-  await mobile.page.waitForFunction(selector => getComputedStyle(document.querySelector(selector)).backgroundImage.includes('/mobile/'), hero)
+  await mobile.page.waitForFunction(selector => document.querySelector(selector + ' img')?.currentSrc.includes('/mobile/'), hero)
   if (!mobile.assets.some(r => r.url().endsWith('/' + mobileKey) && r.ok())) await mobile.page.waitForResponse(response => response.url().endsWith('/' + mobileKey) && response.ok(), { timeout: 15000 })
   assert(!mobile.assets.some(r => r.url().endsWith('/' + desktopKey)), 'mobile fetched desktop pool')
   await mobile.page.waitForSelector('[data-pattern-status="server"]')
@@ -225,7 +230,7 @@ try {
   await settleTab(mobile.page, 1)
   await mobile.page.locator('[data-pattern-id="1"]').waitFor()
   await mobile.page.screenshot({ path: join(artifactDir, 'preferences-mobile-background.png') })
-  const overflow = await mobile.page.locator('.preferences-page').last().evaluate(el => el.scrollWidth > el.clientWidth + 1)
+  const overflow = await mobile.page.locator('.preferences-page').nth(1).evaluate(el => el.scrollWidth > el.clientWidth + 1)
   assert.equal(overflow, false, 'Mobile panel overflows horizontally')
   await mobile.page.locator('.gf-modal__header-actions .gf-button--ghost').click()
   await mobile.page.evaluate(() => localStorage.setItem('theme', 'dark'))
@@ -244,7 +249,7 @@ try {
   await closeContext(mobile.context)
   mobileEnabled = false; patternsEnabled = false
   const emptyMobile = await newPage({ mobile: true })
-  await emptyMobile.page.waitForFunction(selector => getComputedStyle(document.querySelector(selector)).backgroundImage === 'none', hero)
+  await emptyMobile.page.waitForFunction(selector => document.querySelector(selector + ' img')?.currentSrc.startsWith('data:'), hero)
   await emptyMobile.page.waitForSelector('[data-pattern-status="default"]')
   assert(!emptyMobile.assets.some(r => r.url().includes('/nav/hero/')), 'empty mobile pool borrowed desktop')
   // Explicit CORS GET must work for each provider, even if fallback hid an

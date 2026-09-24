@@ -17,6 +17,37 @@ type HeroAsset struct {
 	ID        int64  `json:"id,string"`
 	ObjectKey string `json:"object_key"`
 }
+
+// Hero preferences belong to the browser. Only these request-time selectors
+// enter the resolver; they are never stored in the derived home cache.
+type HeroSelection struct {
+	DesktopID int64
+	MobileID  int64
+	Local     bool
+}
+
+type HeroCatalogQuery struct {
+	Variant    string
+	PageNum    int32
+	PageSize   int32
+	SelectedID int64
+}
+
+type HeroCatalogItem struct {
+	ID        int64  `json:"id,string"`
+	Name      string `json:"name"`
+	ObjectKey string `json:"object_key"`
+}
+
+type HeroCatalog struct {
+	SchemaVersion int               `json:"schema_version"`
+	Variant       string            `json:"variant"`
+	PageNum       int32             `json:"page_num"`
+	PageSize      int32             `json:"page_size"`
+	Total         int64             `json:"total"`
+	Items         []HeroCatalogItem `json:"items"`
+	Selected      *HeroCatalogItem  `json:"selected"`
+}
 type HomeHero struct {
 	Desktop *HeroAsset `json:"desktop"`
 	Mobile  *HeroAsset `json:"mobile"`

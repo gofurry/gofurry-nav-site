@@ -60,31 +60,17 @@ func (q *Queries) CountPrizes(ctx context.Context, keyword string) (int64, error
 	return column_1, err
 }
 
-const countTagMaps = `-- name: CountTagMaps :one
-SELECT COUNT(*)::bigint FROM gfg_tag_map m LEFT JOIN gfg_game g ON g.id=m.game_id LEFT JOIN gfg_tag t ON t.id=m.tag_id
-WHERE $1::text='' OR m.id::text ILIKE '%'||$1||'%' OR m.game_id::text ILIKE '%'||$1||'%'
- OR m.tag_id::text ILIKE '%'||$1||'%' OR COALESCE(g.name,'') ILIKE '%'||$1||'%'
- OR COALESCE(t.name,'') ILIKE '%'||$1||'%'
+const countTagOptions = `-- name: CountTagOptions :one
+SELECT count(*) FROM gfg_tag t JOIN gfg_tag_category c ON c.id=t.category_id
+WHERE t.archived_at IS NULL AND c.archived_at IS NULL AND
+($1::text='' OR t.name ILIKE '%'||$1||'%' OR t.name_en ILIKE '%'||$1||'%' OR t.code ILIKE '%'||$1||'%' OR t.id::text ILIKE '%'||$1||'%')
 `
 
-func (q *Queries) CountTagMaps(ctx context.Context, keyword string) (int64, error) {
-	row := q.db.QueryRow(ctx, countTagMaps, keyword)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const countTags = `-- name: CountTags :one
-SELECT COUNT(*)::bigint FROM gfg_tag WHERE $1::text='' OR name ILIKE '%'||$1||'%'
- OR name_en ILIKE '%'||$1||'%' OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%'
- OR id::text ILIKE '%'||$1||'%'
-`
-
-func (q *Queries) CountTags(ctx context.Context, keyword string) (int64, error) {
-	row := q.db.QueryRow(ctx, countTags, keyword)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
+func (q *Queries) CountTagOptions(ctx context.Context, keyword string) (int64, error) {
+	row := q.db.QueryRow(ctx, countTagOptions, keyword)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const deleteGame = `-- name: DeleteGame :execrows
@@ -117,60 +103,6 @@ DELETE FROM gfg_prize WHERE id=$1
 
 func (q *Queries) DeletePrize(ctx context.Context, id int64) (int64, error) {
 	result, err := q.db.Exec(ctx, deletePrize, id)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const deleteTag = `-- name: DeleteTag :execrows
-DELETE FROM gfg_tag WHERE id=$1
-`
-
-func (q *Queries) DeleteTag(ctx context.Context, id int64) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteTag, id)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const deleteTagMap = `-- name: DeleteTagMap :execrows
-DELETE FROM gfg_tag_map WHERE id=$1
-`
-
-func (q *Queries) DeleteTagMap(ctx context.Context, id int64) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteTagMap, id)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const deleteTagMapsByGame = `-- name: DeleteTagMapsByGame :execrows
-DELETE FROM gfg_tag_map WHERE game_id=$1
-`
-
-func (q *Queries) DeleteTagMapsByGame(ctx context.Context, gameID int64) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteTagMapsByGame, gameID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const deleteTagMapsByTagExceptGames = `-- name: DeleteTagMapsByTagExceptGames :execrows
-DELETE FROM gfg_tag_map WHERE tag_id=$1
-AND (cardinality($2::bigint[]) = 0 OR NOT (game_id = ANY($2::bigint[])))
-`
-
-type DeleteTagMapsByTagExceptGamesParams struct {
-	TagID   int64   `json:"tag_id"`
-	GameIds []int64 `json:"game_ids"`
-}
-
-func (q *Queries) DeleteTagMapsByTagExceptGames(ctx context.Context, arg DeleteTagMapsByTagExceptGamesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteTagMapsByTagExceptGames, arg.TagID, arg.GameIds)
 	if err != nil {
 		return 0, err
 	}
@@ -211,7 +143,9 @@ func (q *Queries) FoundationPing(ctx context.Context) (int64, error) {
 }
 
 const getGame = `-- name: GetGame :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game WHERE id=$1
+SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag FROM gfg_game WHERE id=$1
 `
 
 type GetGameRow struct {
@@ -230,9 +164,9 @@ type GetGameRow struct {
 	Header       string           `json:"header"`
 	Links        []byte           `json:"links"`
 	Weight       int64            `json:"weight"`
+	ViewCount    int64            `json:"view_count"`
 	PrimaryTag   int64            `json:"primary_tag"`
 	SecondaryTag int64            `json:"secondary_tag"`
-	ViewCount    int64            `json:"view_count"`
 }
 
 func (q *Queries) GetGame(ctx context.Context, id int64) (GetGameRow, error) {
@@ -254,9 +188,9 @@ func (q *Queries) GetGame(ctx context.Context, id int64) (GetGameRow, error) {
 		&i.Header,
 		&i.Links,
 		&i.Weight,
+		&i.ViewCount,
 		&i.PrimaryTag,
 		&i.SecondaryTag,
-		&i.ViewCount,
 	)
 	return i, err
 }
@@ -302,65 +236,28 @@ func (q *Queries) GetPrize(ctx context.Context, id int64) (GfgPrize, error) {
 	return i, err
 }
 
-const getTag = `-- name: GetTag :one
-SELECT id,name,name_en,info,info_en,prefix,create_time,update_time FROM gfg_tag WHERE id=$1
-`
-
-func (q *Queries) GetTag(ctx context.Context, id int64) (GfgTag, error) {
-	row := q.db.QueryRow(ctx, getTag, id)
-	var i GfgTag
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.NameEn,
-		&i.Info,
-		&i.InfoEn,
-		&i.Prefix,
-		&i.CreateTime,
-		&i.UpdateTime,
-	)
-	return i, err
-}
-
-const getTagMap = `-- name: GetTagMap :one
-SELECT id,game_id,tag_id,create_time,update_time FROM gfg_tag_map WHERE id=$1
-`
-
-func (q *Queries) GetTagMap(ctx context.Context, id int64) (GfgTagMap, error) {
-	row := q.db.QueryRow(ctx, getTagMap, id)
-	var i GfgTagMap
-	err := row.Scan(
-		&i.ID,
-		&i.GameID,
-		&i.TagID,
-		&i.CreateTime,
-		&i.UpdateTime,
-	)
-	return i, err
-}
-
 const insertGame = `-- name: InsertGame :one
-INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count)
-VALUES ($1,$2,$3,$4,$5,NOW()::timestamp(0),NOW()::timestamp(0),$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,0)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
+INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count)
+VALUES ($1,$2,$3,$4,$5,NOW()::timestamp(0),NOW()::timestamp(0),$6,$7,$8,$9,$10,$11,$12,$13,0)
+RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag
 `
 
 type InsertGameParams struct {
-	ID           int64  `json:"id"`
-	Name         string `json:"name"`
-	NameEn       string `json:"name_en"`
-	Info         string `json:"info"`
-	InfoEn       string `json:"info_en"`
-	Resources    []byte `json:"resources"`
-	Groups       []byte `json:"groups"`
-	Developers   []byte `json:"developers"`
-	Publishers   []byte `json:"publishers"`
-	Appid        int64  `json:"appid"`
-	Header       string `json:"header"`
-	Links        []byte `json:"links"`
-	Weight       int64  `json:"weight"`
-	PrimaryTag   int64  `json:"primary_tag"`
-	SecondaryTag int64  `json:"secondary_tag"`
+	ID         int64  `json:"id"`
+	Name       string `json:"name"`
+	NameEn     string `json:"name_en"`
+	Info       string `json:"info"`
+	InfoEn     string `json:"info_en"`
+	Resources  []byte `json:"resources"`
+	Groups     []byte `json:"groups"`
+	Developers []byte `json:"developers"`
+	Publishers []byte `json:"publishers"`
+	Appid      int64  `json:"appid"`
+	Header     string `json:"header"`
+	Links      []byte `json:"links"`
+	Weight     int64  `json:"weight"`
 }
 
 type InsertGameRow struct {
@@ -379,9 +276,9 @@ type InsertGameRow struct {
 	Header       string           `json:"header"`
 	Links        []byte           `json:"links"`
 	Weight       int64            `json:"weight"`
+	ViewCount    int64            `json:"view_count"`
 	PrimaryTag   int64            `json:"primary_tag"`
 	SecondaryTag int64            `json:"secondary_tag"`
-	ViewCount    int64            `json:"view_count"`
 }
 
 func (q *Queries) InsertGame(ctx context.Context, arg InsertGameParams) (InsertGameRow, error) {
@@ -399,8 +296,6 @@ func (q *Queries) InsertGame(ctx context.Context, arg InsertGameParams) (InsertG
 		arg.Header,
 		arg.Links,
 		arg.Weight,
-		arg.PrimaryTag,
-		arg.SecondaryTag,
 	)
 	var i InsertGameRow
 	err := row.Scan(
@@ -419,9 +314,9 @@ func (q *Queries) InsertGame(ctx context.Context, arg InsertGameParams) (InsertG
 		&i.Header,
 		&i.Links,
 		&i.Weight,
+		&i.ViewCount,
 		&i.PrimaryTag,
 		&i.SecondaryTag,
-		&i.ViewCount,
 	)
 	return i, err
 }
@@ -509,69 +404,6 @@ func (q *Queries) InsertPrize(ctx context.Context, arg InsertPrizeParams) (GfgPr
 	return i, err
 }
 
-const insertTag = `-- name: InsertTag :one
-INSERT INTO gfg_tag (id,name,name_en,info,info_en,prefix,create_time,update_time)
-VALUES ($1,$2,$3,$4,$5,$6,NOW()::timestamp(0),NOW()::timestamp(0))
-RETURNING id,name,name_en,info,info_en,prefix,create_time,update_time
-`
-
-type InsertTagParams struct {
-	ID     int64  `json:"id"`
-	Name   string `json:"name"`
-	NameEn string `json:"name_en"`
-	Info   string `json:"info"`
-	InfoEn string `json:"info_en"`
-	Prefix int64  `json:"prefix"`
-}
-
-func (q *Queries) InsertTag(ctx context.Context, arg InsertTagParams) (GfgTag, error) {
-	row := q.db.QueryRow(ctx, insertTag,
-		arg.ID,
-		arg.Name,
-		arg.NameEn,
-		arg.Info,
-		arg.InfoEn,
-		arg.Prefix,
-	)
-	var i GfgTag
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.NameEn,
-		&i.Info,
-		&i.InfoEn,
-		&i.Prefix,
-		&i.CreateTime,
-		&i.UpdateTime,
-	)
-	return i, err
-}
-
-const insertTagMap = `-- name: InsertTagMap :one
-INSERT INTO gfg_tag_map (id,game_id,tag_id,create_time,update_time)
-VALUES ($1,$2,$3,NOW()::timestamp(0),NOW()::timestamp(0))
-RETURNING id,game_id,tag_id,create_time,update_time
-`
-
-type InsertTagMapParams struct {
-	ID     int64 `json:"id"`
-	GameID int64 `json:"game_id"`
-	TagID  int64 `json:"tag_id"`
-}
-
-func (q *Queries) InsertTagMap(ctx context.Context, arg InsertTagMapParams) (GfgTagMap, error) {
-	row := q.db.QueryRow(ctx, insertTagMap, arg.ID, arg.GameID, arg.TagID)
-	var i GfgTagMap
-	err := row.Scan(
-		&i.ID,
-		&i.GameID,
-		&i.TagID,
-		&i.CreateTime,
-		&i.UpdateTime,
-	)
-	return i, err
-}
-
 const listGameComments = `-- name: ListGameComments :many
 SELECT id,region,content,score,create_time,game_id,ip,name FROM gfg_game_comment
 WHERE $1::text='' OR content ILIKE '%'||$1||'%' OR region ILIKE '%'||$1||'%'
@@ -607,30 +439,6 @@ func (q *Queries) ListGameComments(ctx context.Context, arg ListGameCommentsPara
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listGameIDsByTag = `-- name: ListGameIDsByTag :many
-SELECT game_id FROM gfg_tag_map WHERE tag_id=$1 ORDER BY id ASC
-`
-
-func (q *Queries) ListGameIDsByTag(ctx context.Context, tagID int64) ([]int64, error) {
-	rows, err := q.db.Query(ctx, listGameIDsByTag, tagID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []int64{}
-	for rows.Next() {
-		var game_id int64
-		if err := rows.Scan(&game_id); err != nil {
-			return nil, err
-		}
-		items = append(items, game_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -682,16 +490,18 @@ func (q *Queries) ListGameOptions(ctx context.Context, arg ListGameOptionsParams
 }
 
 const listGameWorkspaceTags = `-- name: ListGameWorkspaceTags :many
-SELECT m.id,m.game_id,m.tag_id,COALESCE(t.name,'')::text AS tag_name
-FROM gfg_tag_map m LEFT JOIN gfg_tag t ON t.id=m.tag_id
-WHERE m.game_id=$1 ORDER BY m.id ASC
+SELECT m.game_id,m.tag_id,t.name::text AS tag_name,t.code,c.code AS category_code,m.role
+FROM gfg_game_tag m JOIN gfg_tag t ON t.id=m.tag_id JOIN gfg_tag_category c ON c.id=t.category_id
+WHERE m.game_id=$1 ORDER BY m.tag_id
 `
 
 type ListGameWorkspaceTagsRow struct {
-	ID      int64  `json:"id"`
-	GameID  int64  `json:"game_id"`
-	TagID   int64  `json:"tag_id"`
-	TagName string `json:"tag_name"`
+	GameID       int64  `json:"game_id"`
+	TagID        int64  `json:"tag_id"`
+	TagName      string `json:"tag_name"`
+	Code         string `json:"code"`
+	CategoryCode string `json:"category_code"`
+	Role         string `json:"role"`
 }
 
 func (q *Queries) ListGameWorkspaceTags(ctx context.Context, gameID int64) ([]ListGameWorkspaceTagsRow, error) {
@@ -704,10 +514,12 @@ func (q *Queries) ListGameWorkspaceTags(ctx context.Context, gameID int64) ([]Li
 	for rows.Next() {
 		var i ListGameWorkspaceTagsRow
 		if err := rows.Scan(
-			&i.ID,
 			&i.GameID,
 			&i.TagID,
 			&i.TagName,
+			&i.Code,
+			&i.CategoryCode,
+			&i.Role,
 		); err != nil {
 			return nil, err
 		}
@@ -720,7 +532,9 @@ func (q *Queries) ListGameWorkspaceTags(ctx context.Context, gameID int64) ([]Li
 }
 
 const listGames = `-- name: ListGames :many
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count FROM gfg_game
+SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag FROM gfg_game
 WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%'
  OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
 ORDER BY id DESC LIMIT $3 OFFSET $2
@@ -748,9 +562,9 @@ type ListGamesRow struct {
 	Header       string           `json:"header"`
 	Links        []byte           `json:"links"`
 	Weight       int64            `json:"weight"`
+	ViewCount    int64            `json:"view_count"`
 	PrimaryTag   int64            `json:"primary_tag"`
 	SecondaryTag int64            `json:"secondary_tag"`
-	ViewCount    int64            `json:"view_count"`
 }
 
 func (q *Queries) ListGames(ctx context.Context, arg ListGamesParams) ([]ListGamesRow, error) {
@@ -778,9 +592,9 @@ func (q *Queries) ListGames(ctx context.Context, arg ListGamesParams) ([]ListGam
 			&i.Header,
 			&i.Links,
 			&i.Weight,
+			&i.ViewCount,
 			&i.PrimaryTag,
 			&i.SecondaryTag,
-			&i.ViewCount,
 		); err != nil {
 			return nil, err
 		}
@@ -834,122 +648,18 @@ func (q *Queries) ListPrizes(ctx context.Context, arg ListPrizesParams) ([]GfgPr
 	return items, nil
 }
 
-const listTagMaps = `-- name: ListTagMaps :many
-SELECT m.id,m.game_id,m.tag_id,m.create_time,m.update_time,COALESCE(g.name,'')::text AS game_name,COALESCE(t.name,'')::text AS tag_name
-FROM gfg_tag_map m LEFT JOIN gfg_game g ON g.id=m.game_id LEFT JOIN gfg_tag t ON t.id=m.tag_id
-WHERE $1::text='' OR m.id::text ILIKE '%'||$1||'%' OR m.game_id::text ILIKE '%'||$1||'%'
- OR m.tag_id::text ILIKE '%'||$1||'%' OR COALESCE(g.name,'') ILIKE '%'||$1||'%'
- OR COALESCE(t.name,'') ILIKE '%'||$1||'%' ORDER BY m.id DESC LIMIT $3 OFFSET $2
+const listTagOptions = `-- name: ListTagOptions :many
+SELECT t.id,t.name,t.name_en FROM gfg_tag t JOIN gfg_tag_category c ON c.id=t.category_id
+WHERE t.archived_at IS NULL AND c.archived_at IS NULL AND
+($1::text='' OR t.name ILIKE '%'||$1||'%' OR t.name_en ILIKE '%'||$1||'%' OR t.code ILIKE '%'||$1||'%' OR t.id::text ILIKE '%'||$1||'%')
+ORDER BY t.id DESC LIMIT $3 OFFSET $2
 `
 
-type ListTagMapsParams struct {
+type ListTagOptionsParams struct {
 	Keyword   string `json:"keyword"`
 	RowOffset int32  `json:"row_offset"`
 	RowLimit  int32  `json:"row_limit"`
 }
-
-type ListTagMapsRow struct {
-	ID         int64            `json:"id"`
-	GameID     int64            `json:"game_id"`
-	TagID      int64            `json:"tag_id"`
-	CreateTime pgtype.Timestamp `json:"create_time"`
-	UpdateTime pgtype.Timestamp `json:"update_time"`
-	GameName   string           `json:"game_name"`
-	TagName    string           `json:"tag_name"`
-}
-
-func (q *Queries) ListTagMaps(ctx context.Context, arg ListTagMapsParams) ([]ListTagMapsRow, error) {
-	rows, err := q.db.Query(ctx, listTagMaps, arg.Keyword, arg.RowOffset, arg.RowLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListTagMapsRow{}
-	for rows.Next() {
-		var i ListTagMapsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.GameID,
-			&i.TagID,
-			&i.CreateTime,
-			&i.UpdateTime,
-			&i.GameName,
-			&i.TagName,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listTagMapsByGame = `-- name: ListTagMapsByGame :many
-SELECT id,game_id,tag_id,create_time,update_time FROM gfg_tag_map WHERE game_id=$1 ORDER BY id ASC
-`
-
-func (q *Queries) ListTagMapsByGame(ctx context.Context, gameID int64) ([]GfgTagMap, error) {
-	rows, err := q.db.Query(ctx, listTagMapsByGame, gameID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GfgTagMap{}
-	for rows.Next() {
-		var i GfgTagMap
-		if err := rows.Scan(
-			&i.ID,
-			&i.GameID,
-			&i.TagID,
-			&i.CreateTime,
-			&i.UpdateTime,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listTagMapsByTag = `-- name: ListTagMapsByTag :many
-SELECT id,game_id,tag_id,create_time,update_time FROM gfg_tag_map WHERE tag_id=$1 ORDER BY id ASC
-`
-
-func (q *Queries) ListTagMapsByTag(ctx context.Context, tagID int64) ([]GfgTagMap, error) {
-	rows, err := q.db.Query(ctx, listTagMapsByTag, tagID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GfgTagMap{}
-	for rows.Next() {
-		var i GfgTagMap
-		if err := rows.Scan(
-			&i.ID,
-			&i.GameID,
-			&i.TagID,
-			&i.CreateTime,
-			&i.UpdateTime,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listTagOptions = `-- name: ListTagOptions :many
-SELECT id,name,name_en FROM gfg_tag WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
-ORDER BY id DESC
-`
 
 type ListTagOptionsRow struct {
 	ID     int64  `json:"id"`
@@ -957,8 +667,8 @@ type ListTagOptionsRow struct {
 	NameEn string `json:"name_en"`
 }
 
-func (q *Queries) ListTagOptions(ctx context.Context, keyword string) ([]ListTagOptionsRow, error) {
-	rows, err := q.db.Query(ctx, listTagOptions, keyword)
+func (q *Queries) ListTagOptions(ctx context.Context, arg ListTagOptionsParams) ([]ListTagOptionsRow, error) {
+	rows, err := q.db.Query(ctx, listTagOptions, arg.Keyword, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -967,48 +677,6 @@ func (q *Queries) ListTagOptions(ctx context.Context, keyword string) ([]ListTag
 	for rows.Next() {
 		var i ListTagOptionsRow
 		if err := rows.Scan(&i.ID, &i.Name, &i.NameEn); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listTags = `-- name: ListTags :many
-SELECT id,name,name_en,info,info_en,prefix,create_time,update_time FROM gfg_tag
-WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%'
- OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
-ORDER BY id DESC LIMIT $3 OFFSET $2
-`
-
-type ListTagsParams struct {
-	Keyword   string `json:"keyword"`
-	RowOffset int32  `json:"row_offset"`
-	RowLimit  int32  `json:"row_limit"`
-}
-
-func (q *Queries) ListTags(ctx context.Context, arg ListTagsParams) ([]GfgTag, error) {
-	rows, err := q.db.Query(ctx, listTags, arg.Keyword, arg.RowOffset, arg.RowLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GfgTag{}
-	for rows.Next() {
-		var i GfgTag
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.NameEn,
-			&i.Info,
-			&i.InfoEn,
-			&i.Prefix,
-			&i.CreateTime,
-			&i.UpdateTime,
-		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1042,40 +710,27 @@ func (q *Queries) NextPrizeID(ctx context.Context) (int64, error) {
 	return column_1, err
 }
 
-const nextTagMapID = `-- name: NextTagMapID :one
-WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfg_tag_map')::bigint))
-SELECT (COALESCE(MAX(id),0)+1)::bigint FROM gfg_tag_map CROSS JOIN lock_row
-`
-
-func (q *Queries) NextTagMapID(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, nextTagMapID)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
 const updateGame = `-- name: UpdateGame :one
-UPDATE gfg_game SET name=$1,name_en=$2,info=$3,info_en=$4,resources=$5,groups=$6,developers=$7,publishers=$8,appid=$9,header=$10,links=$11,weight=$12,primary_tag=$13,secondary_tag=$14,update_time=NOW()::timestamp(0)
-WHERE id=$15
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,primary_tag,secondary_tag,view_count
+UPDATE gfg_game SET name=$1,name_en=$2,info=$3,info_en=$4,resources=$5,groups=$6,developers=$7,publishers=$8,appid=$9,header=$10,links=$11,update_time=NOW()::timestamp(0)
+WHERE id=$12
+RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
+ COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag
 `
 
 type UpdateGameParams struct {
-	Name         string `json:"name"`
-	NameEn       string `json:"name_en"`
-	Info         string `json:"info"`
-	InfoEn       string `json:"info_en"`
-	Resources    []byte `json:"resources"`
-	Groups       []byte `json:"groups"`
-	Developers   []byte `json:"developers"`
-	Publishers   []byte `json:"publishers"`
-	Appid        int64  `json:"appid"`
-	Header       string `json:"header"`
-	Links        []byte `json:"links"`
-	Weight       int64  `json:"weight"`
-	PrimaryTag   int64  `json:"primary_tag"`
-	SecondaryTag int64  `json:"secondary_tag"`
-	ID           int64  `json:"id"`
+	Name       string `json:"name"`
+	NameEn     string `json:"name_en"`
+	Info       string `json:"info"`
+	InfoEn     string `json:"info_en"`
+	Resources  []byte `json:"resources"`
+	Groups     []byte `json:"groups"`
+	Developers []byte `json:"developers"`
+	Publishers []byte `json:"publishers"`
+	Appid      int64  `json:"appid"`
+	Header     string `json:"header"`
+	Links      []byte `json:"links"`
+	ID         int64  `json:"id"`
 }
 
 type UpdateGameRow struct {
@@ -1094,9 +749,9 @@ type UpdateGameRow struct {
 	Header       string           `json:"header"`
 	Links        []byte           `json:"links"`
 	Weight       int64            `json:"weight"`
+	ViewCount    int64            `json:"view_count"`
 	PrimaryTag   int64            `json:"primary_tag"`
 	SecondaryTag int64            `json:"secondary_tag"`
-	ViewCount    int64            `json:"view_count"`
 }
 
 func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (UpdateGameRow, error) {
@@ -1112,9 +767,6 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (UpdateG
 		arg.Appid,
 		arg.Header,
 		arg.Links,
-		arg.Weight,
-		arg.PrimaryTag,
-		arg.SecondaryTag,
 		arg.ID,
 	)
 	var i UpdateGameRow
@@ -1134,9 +786,9 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (UpdateG
 		&i.Header,
 		&i.Links,
 		&i.Weight,
+		&i.ViewCount,
 		&i.PrimaryTag,
 		&i.SecondaryTag,
-		&i.ViewCount,
 	)
 	return i, err
 }
@@ -1218,67 +870,6 @@ func (q *Queries) UpdatePrize(ctx context.Context, arg UpdatePrizeParams) (GfgPr
 		&i.EndTime,
 		&i.CreateTime,
 		&i.Status,
-	)
-	return i, err
-}
-
-const updateTag = `-- name: UpdateTag :one
-UPDATE gfg_tag SET name=$1,name_en=$2,info=$3,info_en=$4,prefix=$5,update_time=NOW()::timestamp(0)
-WHERE id=$6 RETURNING id,name,name_en,info,info_en,prefix,create_time,update_time
-`
-
-type UpdateTagParams struct {
-	Name   string `json:"name"`
-	NameEn string `json:"name_en"`
-	Info   string `json:"info"`
-	InfoEn string `json:"info_en"`
-	Prefix int64  `json:"prefix"`
-	ID     int64  `json:"id"`
-}
-
-func (q *Queries) UpdateTag(ctx context.Context, arg UpdateTagParams) (GfgTag, error) {
-	row := q.db.QueryRow(ctx, updateTag,
-		arg.Name,
-		arg.NameEn,
-		arg.Info,
-		arg.InfoEn,
-		arg.Prefix,
-		arg.ID,
-	)
-	var i GfgTag
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.NameEn,
-		&i.Info,
-		&i.InfoEn,
-		&i.Prefix,
-		&i.CreateTime,
-		&i.UpdateTime,
-	)
-	return i, err
-}
-
-const updateTagMap = `-- name: UpdateTagMap :one
-UPDATE gfg_tag_map SET game_id=$1,tag_id=$2,update_time=NOW()::timestamp(0)
-WHERE id=$3 RETURNING id,game_id,tag_id,create_time,update_time
-`
-
-type UpdateTagMapParams struct {
-	GameID int64 `json:"game_id"`
-	TagID  int64 `json:"tag_id"`
-	ID     int64 `json:"id"`
-}
-
-func (q *Queries) UpdateTagMap(ctx context.Context, arg UpdateTagMapParams) (GfgTagMap, error) {
-	row := q.db.QueryRow(ctx, updateTagMap, arg.GameID, arg.TagID, arg.ID)
-	var i GfgTagMap
-	err := row.Scan(
-		&i.ID,
-		&i.GameID,
-		&i.TagID,
-		&i.CreateTime,
-		&i.UpdateTime,
 	)
 	return i, err
 }

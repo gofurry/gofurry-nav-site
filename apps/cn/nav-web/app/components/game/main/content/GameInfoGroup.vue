@@ -1,7 +1,7 @@
 <template>
   <div class="game-info-group">
     <div class="mb-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h3 class="game-group-title text-2xl font-bold">
+      <h3 class="game-group-title">
         {{ group.title }}
       </h3>
 
@@ -44,7 +44,9 @@
           <div class="game-card__media"></div>
           <p class="h-[1.25rem]"></p>
           <p class="mt-1 h-[2rem]"></p>
-          <div class="mt-2 h-[1.25rem]"></div>
+          <div class="mt-2">
+            <RatingStar :score="0" :count="0" />
+          </div>
         </div>
       </div>
 
@@ -89,11 +91,11 @@
               </button>
             </div>
 
-            <p class="game-card__title line-clamp-1 text-sm font-semibold">
+            <p class="game-card__title line-clamp-1">
               {{ item.name }}
             </p>
 
-            <p class="game-card__desc mt-1 h-[2rem] overflow-hidden text-xs">
+            <p class="game-card__desc mt-1 h-[2rem] overflow-hidden">
               {{ item.desc }}
             </p>
 
@@ -215,41 +217,11 @@ function openReview(item: GameItem) {
   width: 100%;
 }
 
-.game-page-next-enter-active,
-.game-page-next-leave-active,
-.game-page-prev-enter-active,
-.game-page-prev-leave-active {
-  transition:
-    opacity 360ms ease,
-    transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform, opacity;
-}
-
 .game-page-next-leave-active,
 .game-page-prev-leave-active {
   position: absolute;
   inset: 0;
   width: 100%;
-}
-
-.game-page-next-enter-from {
-  opacity: 0;
-  transform: translateX(2.75rem);
-}
-
-.game-page-next-leave-to {
-  opacity: 0;
-  transform: translateX(-2.75rem);
-}
-
-.game-page-prev-enter-from {
-  opacity: 0;
-  transform: translateX(-2.75rem);
-}
-
-.game-page-prev-leave-to {
-  opacity: 0;
-  transform: translateX(2.75rem);
 }
 
 @media (min-width: 640px) {

@@ -203,12 +203,8 @@ type GfgGame struct {
 	// 三方网站链接
 	Links []byte `json:"links"`
 	// 权重
-	Weight int64 `json:"weight"`
-	// 主标签
-	PrimaryTag int64 `json:"primary_tag"`
-	// 次标签
-	SecondaryTag int64 `json:"secondary_tag"`
-	ViewCount    int64 `json:"view_count"`
+	Weight    int64 `json:"weight"`
+	ViewCount int64 `json:"view_count"`
 }
 
 type GfgGameAsset struct {
@@ -609,6 +605,14 @@ type GfgGameRequirement struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type GfgGameTag struct {
+	GameID     int64            `json:"game_id"`
+	TagID      int64            `json:"tag_id"`
+	Role       string           `json:"role"`
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+}
+
 // Immutable Game/AppID eligibility periods used by historical facts; no FK to current gfg_game.
 type GfgGameTrackingPeriod struct {
 	ID            int64              `json:"id"`
@@ -746,24 +750,38 @@ type GfgTag struct {
 	Info string `json:"info"`
 	// 标签英文简介
 	InfoEn string `json:"info_en"`
-	// 父标签 没有为-1
-	Prefix int64 `json:"prefix"`
 	// 创建时间
 	CreateTime pgtype.Timestamp `json:"create_time"`
 	// 修改时间
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+	Code       string           `json:"code"`
+	CategoryID int64            `json:"category_id"`
+	ArchivedAt pgtype.Timestamp `json:"archived_at"`
+}
+
+type GfgTagCategory struct {
+	ID         int64            `json:"id"`
+	Code       string           `json:"code"`
+	Name       string           `json:"name"`
+	NameEn     string           `json:"name_en"`
+	Info       string           `json:"info"`
+	InfoEn     string           `json:"info_en"`
+	SortOrder  int32            `json:"sort_order"`
+	ArchivedAt pgtype.Timestamp `json:"archived_at"`
+	CreateTime pgtype.Timestamp `json:"create_time"`
 	UpdateTime pgtype.Timestamp `json:"update_time"`
 }
 
-// 游戏标签映射表
-type GfgTagMap struct {
-	// 游戏标签映射表id
-	ID int64 `json:"id"`
-	// 游戏id
-	GameID int64 `json:"game_id"`
-	// 标签id
-	TagID int64 `json:"tag_id"`
-	// 创建时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 修改时间
-	UpdateTime pgtype.Timestamp `json:"update_time"`
+type TagCodeMapping struct {
+	ID   int64  `json:"id"`
+	Code string `json:"code"`
+}
+
+type TagRefactorCount struct {
+	Leaves           int64 `json:"leaves"`
+	MapPairs         int64 `json:"map_pairs"`
+	Primaries        int64 `json:"primaries"`
+	Secondaries      int64 `json:"secondaries"`
+	MissingPrimary   int64 `json:"missing_primary"`
+	MissingSecondary int64 `json:"missing_secondary"`
 }

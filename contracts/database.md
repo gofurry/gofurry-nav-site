@@ -21,3 +21,23 @@
 - Canonical Change events use deterministic text identity plus a unique detector/version/source-event key. They read only canonical domain history, Historical Facts, Metric Entity Daily, or effective-dated periods; they never FK current Game/Site rows or use Raw, acquisition ledgers, Redis, current catalogs, or legacy Nav Change as canonical sources.
 - Metric, price, and TLS certificate changes preserve semantic memory across unknown/noisy days and never cross their historical tracking-period identity. Change rebuild always propagates from the requested day through the detector's `processed_through` and never moves the checkpoint. Change events have no automatic retention.
 - Destructive raw retention is disabled by default and runs only in a separate batched transaction after checkpoint commit. Game Player Raw is gated by `game.player_facts` plus configured age. Nav Observation Raw is gated by `nav.target_facts` and preserves `keep_count` independently per `(site_id,target,protocol)`. Missing checkpoints always delete zero rows. Historical Facts have no automatic retention.
+
+## Game tag domain
+
+`gfg_tag_category` owns immutable application codes and display order; `gfg_tag`
+contains assignable identities only. `gfg_game_tag(game_id,tag_id)` with role
+`normal`, `primary`, or `secondary` is the sole current classification source.
+Future Tag IDs are database-generated and carry no business semantics. Codes are
+required lowercase kebab-case (1..64), unique, and immutable through ordinary APIs.
+Tag/category deletion is archive/restore; assigned Tags cannot be archived and
+Categories with active Tags cannot be archived. Restoring a Tag requires an active
+Category. Admin serializes these transitions and classification with the
+`gfg.tag-domain` transaction advisory lock, before locking a Game.
+
+Membership, role, Tag category, archive and restore changes invalidate all SQL
+recommendations. Label edits preserve scores. Recalculation takes the same lock,
+so a pre-edit calculation cannot resurrect stale cache rows.
+Current Game Daily uses projection version 2; carry-forward retains its source
+fact version. Historical primary/secondary/tag IDs and Metric dimensions remain
+valid historical facts and must not be rewritten. The tag-domain migration is
+irreversible; test recovery uses disposable database restore/recreation.
