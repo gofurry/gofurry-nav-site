@@ -477,7 +477,7 @@ for newly added files or script-generated styles.
 | Pure TS/domain/utility logic | Vitest `unit` project, Node environment, `tests/unit/*.test.ts` |
 | Nuxt runtime/composables | Vitest `nuxt` project with `@nuxt/test-utils`, happy-dom, `tests/nuxt/*.nuxt.test.ts` |
 | Repository/source/config/semantic contracts | Existing Node Insights/SEO Contract Guards, outside Vitest |
-| Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`: Game Detail, Resource Routing/Managed/Steam, Hero lifecycle/Local, Preferences foundation, Fixed/BigInt, Catalog and handoff |
+| Migrated browser behavior, SSR, hydration and historical regressions | Playwright Test in `tests/browser`: Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO HTTP/SSR and background IndexedDB |
 | Stable pixel appearance | `playwright.visual.config.ts` / `test:visual`; P3.3.1 establishes only the pinned environment sentinel, no golden baselines |
 | Legacy broad page visual/report checks | Retained `scripts/perf/visual-guard.mjs` / `visual:guard`; independent of Visual snapshots and static `style:policy` |
 | Performance budget | Existing `perf:guard`, separate from visual correctness |
@@ -494,6 +494,16 @@ Keep `scripts/perf/visual-guard.mjs` and current regression harnesses intact.
 P1's detector reproduces the P0 baseline on the unchanged app tree. P2 owns token/primitive organization;
 P3 owns the testing foundation; P4+ owns staged, visually equivalent migrations.
 Each phase MUST finish in a stable, independently deployable state.
+
+P7.1 consolidates the eight remaining background/SEO/Insights runtime runners
+into this single Browser Gate. Worker fixtures own only stable Nitro/upstream
+transport; each test owns state, request/error ledgers and releasable gates.
+Fault allowances MUST match injected request instances/counts, never generic
+hydration or console-error suppression. Real debounce/timeout behavior remains.
+Search-to-Detail acceptance waits for the exact mounted view POST response before
+comparing ledgers. [Testing guidance](../docs/frontend/testing.md#p71-runtime-consolidation)
+records the coverage mapping. This phase changes no production code, style debt
+or Visual baseline; `visual:guard` retirement remains P7.2, not implicit cleanup.
 
 P3.1 uses Vitest `projects` with separate `test:unit` and `test:nuxt` commands;
 `npm test` runs both. CI MUST execute separate Unit tests and Nuxt tests steps

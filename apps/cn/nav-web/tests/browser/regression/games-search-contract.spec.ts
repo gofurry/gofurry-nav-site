@@ -70,11 +70,21 @@ for (const home of [true, false]) {
       await expect(search.input).toBeHidden()
       await search.page.setViewportSize({ width: 1440, height: 900 })
       await expect(search.input).toBeVisible()
+      // Hiding the input can blur it; resume the real search interaction after resizing.
+      await search.input.focus()
+      await expect(panel.locator('.search-result-card')).toHaveCount(4)
     }
     search.allowDetail()
+    const viewResponse = search.page.waitForResponse(response => {
+      const url = new URL(response.url())
+      return url.origin === new URL(search.page.url()).origin
+        && url.pathname === '/api/v2/game/games/7100/view'
+        && response.request().method() === 'POST' && response.status() === 200
+    })
     await panel.locator('.search-result-card').first().click()
     await expect(search.page).toHaveURL(/\/games\/7100$/)
     await expect(search.page.locator('.game-detail-page')).toBeVisible()
+    await (await viewResponse).finished()
     search.assertQuiet()
   })
 }
@@ -92,8 +102,16 @@ test('Search review and Steam actions do not trigger card navigation; the card r
   const popup = await popupEvent
   await expect(popup).toHaveURL(url); await popup.close()
   expect(new URL(page.url()).pathname).toBe('/en/games/search')
-  search.allowDetail(); await card.locator('.search-page-title').click()
+  search.allowDetail()
+  const viewResponse = page.waitForResponse(response => {
+    const url = new URL(response.url())
+    return url.origin === new URL(page.url()).origin
+      && url.pathname === '/api/v2/game/games/7100/view'
+      && response.request().method() === 'POST' && response.status() === 200
+  })
+  await card.locator('.search-page-title').click()
   await expect(page).toHaveURL(/\/en\/games\/7100$/)
   await expect(page.locator('.game-detail-page')).toBeVisible()
+  await (await viewResponse).finished()
   search.assertQuiet()
 })

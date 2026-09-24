@@ -141,7 +141,11 @@ Fixed/BigInt, Catalog and handoff now belong to Playwright Test. Do not recreate
 their retired smoke scripts or `assets:routing-smoke`. Keep the two Hero domain
 fixtures separate, with fresh test scenarios and gate teardown. Only the narrow
 Hero assertion may acknowledge the known mobile Footer hydration debt; never
-globally suppress hydration errors. Insights and other smokes keep their runners.
+globally suppress hydration errors. P7.1 also owns Insights, SEO HTTP/SSR and
+background IndexedDB regressions in Playwright Test; their eight legacy runners
+and three aliases are retired. Preserve domain-local scenarios, exact failure
+ledgers and unconditional gate release. Keep `visual:guard` for P7.2, direct
+`playwright` for retained tools, and external acceptance separate from CI.
 Chromium is the browser gate; retries are zero and CI
 uses one worker. Domain fixtures own servers and reset state per case; Playwright
 owns contexts/pages. Failure artifacts are diagnostics, not visual baselines.

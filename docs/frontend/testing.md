@@ -12,10 +12,9 @@ the commands below run from `apps/cn/nav-web`.
 | Nuxt composables and runtime | `tests/nuxt/*.nuxt.test.ts`, `npm run test:nuxt` | Vitest `nuxt` project, real Nuxt app/context through `@nuxt/test-utils`, happy-dom |
 | Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
 | Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
-| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Game Detail, Resource Routing/Managed/Steam and Hero/Preferences are migrated |
+| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO and background storage |
 | Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel; Foundation, Preferences and Error locator baselines; Static/Legal and Updates viewport baselines; Dock expanded clips |
 | Legacy visual/report guard | `npm run visual:guard` | Broad page/selector/theme/overflow reports and historical checks; retained independently of Visual and `style:policy` |
-| Legacy Browser Smoke | Existing non-migrated `*:smoke` scripts, after `npm run build` | Insights and unrelated domains retain their runners until scoped migration |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
 
 `npm test` runs both Vitest projects once. `vitest.config.ts` uses `projects`, not
@@ -23,7 +22,7 @@ the deprecated workspace model. Nuxt configuration is loaded by the test-utils
 project; the test module is **not** added to production `nuxt.config.ts`.
 Dependencies are pinned in package/lockfiles. No coverage provider or Testing
 Library is introduced. Playwright Test and the retained direct `playwright` use
-matching 1.60.x versions; legacy smoke/performance still import `playwright`.
+matching 1.60.x versions; external acceptance/performance still import `playwright`.
 Nuxt cases have a 30-second budget for the first mount's cold app/router transform;
 unit cases retain Vitest's default timeout. Nuxt's generated `.nuxtrc` module setup
 marker is local and ignored, like `.nuxt/`.
@@ -74,8 +73,8 @@ after each case. Pure probes use injected measurements/fetch responses, never
 real CDN or backend endpoints.
 
 happy-dom does not prove browser rendering, SSR/hydration or actual image loading.
-Keep other non-migrated smoke commands. P6.3.1 retires `game:tags:smoke` after
-moving its four cases into the Search Browser contract.
+P6.3.1 retired `game:tags:smoke` after moving its four cases into the Search
+Browser contract; P7.1 retires the remaining deterministic runtime smoke runners.
 Unrelated screenshots and `visual:guard` remain; this phase does not introduce
 visual baselines or external acceptance runs.
 
@@ -1008,3 +1007,78 @@ baselines additionally requires the focused maintainer visual review above.
 
 Configuration references: [Nuxt testing](https://nuxt.com/docs/4.x/getting-started/testing)
 and [Vitest projects](https://vitest.dev/guide/projects).
+
+## P7.1 runtime consolidation
+
+The remaining deterministic background/SEO/Insights runtime checks now use the
+existing single Browser Gate: 179 retained cases plus 181 migrated cases (360).
+Run `npm run build` then `npm run test:browser`; a focused run accepts a spec
+path. The three aliases `background:smoke`, `seo:recovery:smoke` and
+`insights:smoke` and the eight runners below are retired. Historical acceptance
+records retain their original command evidence.
+
+All destinations below are in `tests/browser/regression/`. The zh/en and
+1440/1024/390 matrices remain independent cases, not one oversized scenario.
+
+| Retired runner / assertion group | Executable owner and cases |
+| --- | --- |
+| `background-storage-smoke.mjs`: original SVG declaration/DOCTYPE/comment/style/path; Proxy persistence; explicit color/zero opacity/200 size; reload/clear; metadata-only localStorage; no upload | `background-storage.spec.ts`: SVG UI save/reload/clear; raster decode; server-pattern metadata cases. Real `/terms` → Preferences → file input/Save; read-only IDB inspection of `gofurry-page-background/local-background/selected`, never the Local Hero DB |
+| Same: PNG decode, kind discrimination, server ID/default-versus-override storage | Raster and server-pattern cases; `createImageBitmap`, original Blob bytes and no binary/data/blob URL in preference storage; all three reject HTTP mutations |
+| `seo-recovery-smoke.mjs`: Search/Prize/Activation robots headers; Home canonical/hreflang; Site redirects/entity-target canonical; Site/Game SSR; Site Group metadata | `seo-recovery.spec.ts`: localized noindex/canonical/redirect cases. Group title/description are explicitly asserted here: the existing Site Groups pagination contract did not cover metadata |
+| Same: invalid/missing/foreign-domain 404, Steam 404, noindex, sitemap inventories/exclusions, upstream 503 | Localized authoritative-missing cases; canonical sitemap case; three independent Site/Game/sitemap failure cases. HTTP checks use the real Nitro response and `maxRedirects: 0` for redirects |
+| `insights-overview-smoke.mjs`: three-source SSR, earlier generated_at, independent 238/213/47 stats, five sections, locale links, activity/pulse/progress/media/layout/focus | `insights-overview.spec.ts`: SSR/hydration/media/layout matrix; exact three-source budget, no entity lookups, native progress semantics and Site/default/Game fallback |
+| Same: nav/game/panel/all failure, optional panel timeout, Site hero size, failed image identity, Dark | Four independent-failure cases; bounded optional-panel timeout (real 8 seconds, under 11 seconds, one request); Site hero/media/Dark case |
+| `insights-domain-smoke.mjs`: Site 3/Game 4 SSR requests, selected slice, complete metric/dimension data, first eight bars/full ten rows, query normalization, raw overflow/focus | `insights-domain.spec.ts`: SSR matrix, selected-slice/deferred-all cases, query/slice/locale cases. Site metric ratio and Game population denominator retain their distinct meaning |
+| Same: deferred main/slice histories, independent panel failure, empty/one/zero/error/loading, Dark | Deferred-all gates; independent history-state cases; panel-failure/gated-history/Dark case. Mac and Linux are exercised through real Game metric controls |
+| `insights-workspace-smoke.mjs`: Players/Prices/Languages/Certificates SSR, 1/2/1/1 budgets, media, locale, options, raw table, mobile overflow and focus | `insights-workspace.spec.ts`: four-workspace localized viewport matrix; 20 players/leading three/real zero, regional minor units/observed-low, 12/full14 languages and share/audio semantics, certificate 4/3/2 counts |
+| Same: independent Prices sources, empty/error, image fallback, Dark persistence | Workspace failure/empty/media cases and twelve Dark viewport/reload cases; fresh scenario per case |
+| `insights-compare-smoke.mjs`: 0/1/2/4/duplicate/invalid/>4 SSR selection, noindex, first-seen order, Site directory/Game search budgets, facts/zero/missing, keyboard/add/remove/max4, region/locale/Reset | `insights-compare.spec.ts`: Site/Game × locale SSR matrix; builder interaction cases. Site hydrate directory is counted separately from SSR; Game does not acquire an unrelated directory request |
+| Same: debounce, stale search, reverse upstream order, search/directory/compare failures, insufficient data, mobile sticky/scroll/focus, media and Dark | Held-stale search case; fault/insufficient/order cases; responsive and Dark cases. Request-instance cancellation proves the superseded request cannot overwrite the newer result |
+| `insights-changes-smoke.mjs`: four events/two days/repeated entity, day-only time, #ID identity, exact SSR budget, categories/ranges/domain/keep/locale | `insights-changes.spec.ts`: SSR matrix and filter/cursor/locale cases |
+| Same: failed pagination preserves rows, Retry appends six in order, cursor API-only, stale range, empty/error/retry, media, Dark/focus/overflow | Cursor failure/retry, held stale range, empty/real Retry, failed media and Dark cases. Gates release old responses only after new state is visible |
+| `insights-smoke.mjs`: five fixture-mode dispatch branches | The five domain suites above replace dispatch, without retaining a second CLI runner |
+| Same: common shell/H1/locale, no old hero, default SVG canvas/color/opacity/160px repeat, plain two-level nav, keyboard/mobile Ecosystem | `insights-navigation.spec.ts` plus each domain SSR matrix. Real Theme button switches canvas; mobile English nested Game route proves active Ecosystem and last-link focus visibility |
+| Same: Site entity versus target Insights, capability unknown/unavailable/unsupported, same-day labels/timeline, independent failed summary | `insights-entity.spec.ts`: two localized SSR cases and real Overview → Site 41/42 link cases |
+| Same: real Overview → Game navigation and independent unavailable Game summary | Entity link cases for Game 82/83 await actual view POST; the same hydrated app/router performs navigation |
+| Same: Game missing/zero/priced-zero/Mac/regions/history cache/ranges/independent failures/timeline | Existing `game-detail-insights.spec.ts` cases retain ownership. The region/cache case additionally checks HK alongside CN/US, each once; independent price/player failure cases protect the same partial-failure boundary without duplicating a Detail simulator |
+| Same: eight removed Workshop routes and Compare sitemap exclusion | Localized missing-route and sitemap cases in `seo-recovery.spec.ts` |
+
+`insights-runtime.ts` shares only transport, diagnostics and readiness; domain
+fixtures own data. A worker owns stable production Nitro/local upstream. Each
+test owns its scenario, storage, gates and request/error ledgers. The resolver
+captures that scenario before waiting, and teardown unconditionally releases
+gates before clearing it. Playwright owns contexts and route registration cleanup;
+there is no `unrouteAll(wait)` or manual browser launch.
+
+The shared harness seeds fresh Managed/Steam diagnostics but leaves production
+plugins active. Assets are exact URLs derived from deterministic fixture data.
+Only injected real image failures may trigger the exact local Managed recovery
+probe (at most four requests); ordinary success has none. Raw console and failed
+request evidence is retained and compared with injected request instances/counts.
+No hydration mismatch or application error is ignored. HTTP-only SEO checks make
+no claim about browser asset traffic.
+
+Readiness uses semantic DOM/API completion and observed local Nuxt chunk/font
+completion before reload/navigation; it does not use `networkidle` or sleeps.
+The Compare stale case acknowledges only its captured request's actual
+`ERR_ABORTED`. Domain/Changes late responses and the optional-source timeout use
+explicit release gates, preserving real product timers. Search-to-Detail's three
+navigation cases now register the exact view POST waiter before clicking, then
+await response completion before comparing the original request ledgers. The
+Home case also refocuses the real input after its mobile-hidden/desktop-visible
+resize check: hiding it can trigger the existing delayed blur, so continued
+selection must not depend on completing the resize within 200ms.
+
+The old dynamic TypeScript/data-URL background import, temporary empty HTML
+server, manual browser lifecycle, fixed readiness delays, success screenshots
+and computed JSON reports are retired. Keep `scripts/fixtures/**` as reusable
+test support (including the shared Overview data builder). Compare's old delay
+retains its default; only the new adapter opts into controlled gates.
+
+P7.1 changes no production code, style debt, CI job architecture or Visual
+contract (119 checks, 118 unchanged PNG). Re-run the three Search navigation
+cases five times and the gate/stale/timeout/retry cases three times, then two
+complete Browser runs. Run the existing pinned install/build/Visual compare
+without updating snapshots. Local evidence is not remote Actions acceptance.
+P7.2 still owns `visual:guard` migration/retirement and final engineering closure;
+performance and explicitly authorized cloud acceptance remain separate.

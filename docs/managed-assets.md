@@ -260,9 +260,9 @@ Blob; missing/disabled patterns, missing local files and exhausted CDN retries
 fall back to the bundled pattern. SSR always renders the bundled background
 before browser-only preferences are loaded.
 
-Run `npm run background:smoke` for real Chromium IndexedDB persistence,
-SVG preservation/raster decoding, clearing and verification that local images cause no
-network mutations.
+After `npm run build`, run `npm run test:browser -- tests/browser/regression/background-storage.spec.ts`
+for real Preferences UI, Chromium IndexedDB persistence, original SVG bytes,
+raster decoding, reload/clear, metadata-only storage and zero network mutations.
 
 ## CloudOps
 
