@@ -16,7 +16,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Fixed
 
-- Run frontend Task builds from each package's actual directory so Corepack selects its pinned pnpm version before execution; report how to align an outdated root-level pnpm default in `task doctor` (#129, #130).
+- Run frontend Task builds and `task doctor` pnpm checks from each package's actual directory so Corepack selects its pinned version; allow a different global pnpm default while retaining pnpm 12.6.0 for both frontends, CI and Docker (#129, #130).
 
 ### Upgrade notes
 

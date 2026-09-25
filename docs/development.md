@@ -15,13 +15,15 @@ installation explicit; `task doctor` only reports versions. For a workstation
 bootstrap, `npm install --global pnpm@12.6.0` installs the package manager itself;
 all project dependencies and scripts use pnpm. Corepack is not required.
 
-If pnpm is already provided by Corepack, use
-`corepack install --global pnpm@12.6.0` to set its default, then verify
-`pnpm --version` at the repository root. The root has no `package.json`, so a
-frontend's `packageManager` does not select that root default. Task runs frontend
-commands inside their owning directory: passing `pnpm --dir` from the root is not
-enough, because Corepack selects its version before pnpm processes that option.
-`task doctor` reports a mismatch and never installs or changes the default itself.
+If pnpm is provided by Corepack, its global default may be a different version:
+each frontend's `packageManager` selects pnpm 12.6.0 inside that project. If this
+manager is not cached yet, run `corepack install` from each frontend directory to
+prepare it without changing the global default. `task doctor` checks the effective
+pnpm version separately in both frontend directories, not at the repository root;
+it reports missing/mismatched tools without downloading a manager or changing
+defaults. Task also runs frontend commands inside their owning directory: passing
+`pnpm --dir` from the root is not enough, because Corepack selects its version
+before pnpm processes that option.
 
 ## Repository commands
 
