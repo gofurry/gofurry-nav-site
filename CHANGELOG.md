@@ -8,6 +8,17 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ## Unreleased
 
+### Changed
+
+- Replace `build.bat` with root `Taskfile.yml` (Task >=3.45.3) as the engineering entrypoint for toolchain checks, dependencies, development, formatting, lint/type checks, tests, sqlc/policy verification, release builds, Nav Web image builds and cleanup. Preserve the six Linux/amd64 Go artifact paths and build flags, plus Admin's embedded frontend and companion `dist` (#129).
+- Migrate only Nav Web and React Admin to pnpm 12.6.0 with independent frozen lockfiles and narrowly approved dependency build scripts; update CI, Docker and current engineering documentation without adding a root workspace or upgrading dependency ranges. Keep Vue and its SSR renderer aligned at the original production version to preserve SSR under pnpm's isolated resolution (#130).
+- Make sqlc drift checks generate into temporary storage instead of rewriting repository files, and enforce the Task/pnpm build boundaries through repository policy tests (#129, #130).
+
+### Upgrade notes
+
+- Workstations use Task >=3.45.3, Go 1.26.7, Node 24 and pnpm 12.6.0. Move aside any old npm `node_modules` directories in the two active frontends once, then run `task doctor`, `task verify` and `task build` from the root. See [local development](docs/development.md) for the command surface and separate Browser/Visual gates.
+- For #129/#130 alone, existing Nav Web deployments retain their configuration and `cd apps/cn/nav-web` / `./update.sh` flow; pnpm runs inside Docker, with no new host tooling requirement. No database migration, runtime configuration change or coordinated Go-service redeployment is required. Task does not load root `.env` or perform deployment/database operations. See [Nav Web deployment](apps/cn/nav-web/DEPLOYMENT.md).
+
 ## v3.0.0-alpha.9 - 2026-09-25
 
 ### Added
