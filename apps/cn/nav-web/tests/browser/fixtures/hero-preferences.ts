@@ -192,7 +192,13 @@ export const test = base.extend<{ preferences: HeroPreferences }, { preferenceAp
         })
         return navigate(page.goto('/', { waitUntil: 'networkidle' }))
       },
-      reload: () => navigate(page.reload({ waitUntil: 'networkidle' })),
+      async reload() {
+        // Navigation/network bookkeeping can remain busy after a reload. The
+        // contract is hydrated SSR plus a loaded Hero, not whole-page network idle.
+        const result = await navigate(page.reload({ waitUntil: 'load' }))
+        await expectHeroLoaded(page)
+        return result
+      },
       holdHeroAPI() { expect(state.apiGate).toBeNull(); state.apiGate = newGate() },
       releaseHeroAPI() { state.apiGate?.release(); state.apiGate = null },
       holdHeroImages() { expect(state.imageGate).toBeNull(); state.imageGate = newGate() },

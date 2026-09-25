@@ -17,7 +17,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Fixed
 
-- Inspect Task release structure without evaluating missing Admin embed preconditions on clean CI checkouts. Wait for the lightbox test's images to decode before testing dismissal, avoiding navigation-cancelled image requests while retaining strict failure assertions.
+- Inspect Task release structure without evaluating missing Admin embed preconditions on clean CI checkouts. Wait for the lightbox test's images to decode before testing dismissal, and for the rendered Hero after reload instead of whole-page network idle; retain strict failure assertions and zero retries.
 - Run frontend Task builds and `task doctor` pnpm checks from each package's actual directory so Corepack selects its pinned version; allow a different global pnpm default while retaining pnpm 12.6.0 for both frontends, CI and Docker (#129, #130).
 
 ### Upgrade notes
