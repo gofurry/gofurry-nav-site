@@ -229,8 +229,10 @@ tasks:
   verify:frontend-build:
     desc: Build both frontends using their installed locked dependencies
     cmds:
-      - cmd: pnpm --dir apps/cn/admin/react run build
-      - cmd: pnpm --dir apps/cn/nav-web run build
+      - task: _frontend-build
+        vars: {FRONTEND: admin/react}
+      - task: _frontend-build
+        vars: {FRONTEND: nav-web}
 
   verify:go-build:
     desc: Build all Go packages for the workstation (no release artifacts)
@@ -277,7 +279,8 @@ tasks:
     desc: Install/build React, embed Admin and copy its dist companion
     cmds:
       - task: deps:admin
-      - pnpm --dir apps/cn/admin/react run build
+      - task: _frontend-build
+        vars: {FRONTEND: admin/react}
       - task: _admin-embed-present
       - task: _release
         vars: {MODULE: admin, ARTIFACT: gofurry-admin}
@@ -294,7 +297,8 @@ tasks:
     desc: Install and build Nav Web separately from the Go release
     cmds:
       - task: deps:nav-web
-      - pnpm --dir apps/cn/nav-web run build
+      - task: _frontend-build
+        vars: {FRONTEND: nav-web}
 
   build:nav-web-image:
     desc: Build the Nav Web production Docker image without starting containers
@@ -320,8 +324,15 @@ tasks:
     internal: true
     preconditions:
       - sh: test -f apps/cn/admin/internal/transport/http/webui/dist/index.html
-        msg: Admin embed output is missing. Run task deps:admin and pnpm --dir apps/cn/admin/react run build, or task verify.
+        msg: Admin embed output is missing. Run task build:admin or task verify.
     cmds: []
+
+  _frontend-build:
+    internal: true
+    # Corepack selects packageManager before pnpm parses --dir; set the actual cwd.
+    dir: 'apps/cn/{{.FRONTEND}}'
+    cmds:
+      - pnpm run build
 
   _release:
     internal: true

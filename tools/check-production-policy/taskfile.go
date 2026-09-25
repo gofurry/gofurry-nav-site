@@ -107,11 +107,23 @@ func validateTaskfile(data []byte) []string {
 		problems = append(problems, "incomplete Admin frontend/embed/companion build")
 	} else {
 		first, _ := admin[0].(map[string]any)
-		build, _ := admin[1].(string)
 		last, _ := admin[len(admin)-1].(string)
-		if first["task"] != "deps:admin" || !strings.Contains(build, "pnpm --dir apps/cn/admin/react run build") || !strings.Contains(last, "webui/dist/. build/gofurry-admin/dist/") {
+		if first["task"] != "deps:admin" || !callsFrontendBuild(admin[1], "admin/react") || !strings.Contains(last, "webui/dist/. build/gofurry-admin/dist/") {
 			problems = append(problems, "Admin must install, build and preserve the dist companion")
 		}
+	}
+	// Corepack resolves packageManager from cwd before pnpm processes --dir.
+	frontendBuild := document.Tasks["_frontend-build"]
+	if !frontendBuild.Internal || frontendBuild.Dir != "apps/cn/{{.FRONTEND}}" || len(frontendBuild.Cmds) != 1 || frontendBuild.Cmds[0] != "pnpm run build" {
+		problems = append(problems, "frontend builds must run in the owning package directory")
+	}
+	verifyBuilds := document.Tasks["verify:frontend-build"].Cmds
+	if len(verifyBuilds) != 2 || !callsFrontendBuild(verifyBuilds[0], "admin/react") || !callsFrontendBuild(verifyBuilds[1], "nav-web") {
+		problems = append(problems, "frontend verification must build both owning packages")
+	}
+	navBuild := document.Tasks["build:nav-web"].Cmds
+	if len(navBuild) != 2 || !callsFrontendBuild(navBuild[1], "nav-web") {
+		problems = append(problems, "Nav Web must build in its owning package directory")
 	}
 	for _, frontend := range []string{"admin", "nav-web"} {
 		commands := document.Tasks["deps:"+frontend].Cmds
@@ -120,4 +132,10 @@ func validateTaskfile(data []byte) []string {
 		}
 	}
 	return problems
+}
+
+func callsFrontendBuild(command any, frontend string) bool {
+	call, _ := command.(map[string]any)
+	vars, _ := call["vars"].(map[string]any)
+	return call["task"] == "_frontend-build" && vars["FRONTEND"] == frontend
 }

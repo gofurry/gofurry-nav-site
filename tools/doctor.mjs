@@ -25,5 +25,9 @@ for (const [name, actual, accepts, required] of checks) {
   const ok = Boolean(accepts(actual))
   console.log(`${ok ? 'OK' : 'FAIL'} ${name}: ${actual || 'not available'} (required: ${required})`)
   if (!ok) process.exitCode = 1
+  if (!ok && name === 'pnpm') {
+    console.log('The repository-root pnpm must resolve to 12.6.0. If using Corepack, run: corepack install --global pnpm@12.6.0')
+    console.log('Otherwise install the pinned manager with: npm install --global pnpm@12.6.0. See docs/development.md.')
+  }
 }
 console.log('Docker is optional for local checks; use task doctor:docker before image builds.')

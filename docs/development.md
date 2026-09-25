@@ -15,6 +15,14 @@ installation explicit; `task doctor` only reports versions. For a workstation
 bootstrap, `npm install --global pnpm@12.6.0` installs the package manager itself;
 all project dependencies and scripts use pnpm. Corepack is not required.
 
+If pnpm is already provided by Corepack, use
+`corepack install --global pnpm@12.6.0` to set its default, then verify
+`pnpm --version` at the repository root. The root has no `package.json`, so a
+frontend's `packageManager` does not select that root default. Task runs frontend
+commands inside their owning directory: passing `pnpm --dir` from the root is not
+enough, because Corepack selects its version before pnpm processes that option.
+`task doctor` reports a mismatch and never installs or changes the default itself.
+
 ## Repository commands
 
 Run `task` or `task --list` from the root for the public commands. Commands also
@@ -43,7 +51,7 @@ work with Task's root-file discovery from a subdirectory.
 
 On a fresh checkout use `task verify`: Admin assets must exist before Go vet,
 tests or builds compile `go:embed`. For focused `task check` / `task test`, first
-run `task deps` and `pnpm --dir apps/cn/admin/react run build` if embed output is
+run `task deps`, then `pnpm run build` from `apps/cn/admin/react` if embed output is
 missing. Checks do not silently build it. Typechecks may update ignored compiler
 caches; they do not edit source. No Task starts the whole stack, loads root `.env`,
 runs Goose, operates systemd/cloud resources or deploys an image.

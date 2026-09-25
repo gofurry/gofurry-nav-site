@@ -14,6 +14,10 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 - Migrate only Nav Web and React Admin to pnpm 12.6.0 with independent frozen lockfiles and narrowly approved dependency build scripts; update CI, Docker and current engineering documentation without adding a root workspace or upgrading dependency ranges. Keep Vue and its SSR renderer aligned at the original production version to preserve SSR under pnpm's isolated resolution (#130).
 - Make sqlc drift checks generate into temporary storage instead of rewriting repository files, and enforce the Task/pnpm build boundaries through repository policy tests (#129, #130).
 
+### Fixed
+
+- Run frontend Task builds from each package's actual directory so Corepack selects its pinned pnpm version before execution; report how to align an outdated root-level pnpm default in `task doctor` (#129, #130).
+
 ### Upgrade notes
 
 - Workstations use Task >=3.45.3, Go 1.26.7, Node 24 and pnpm 12.6.0. Move aside any old npm `node_modules` directories in the two active frontends once, then run `task doctor`, `task verify` and `task build` from the root. See [local development](docs/development.md) for the command surface and separate Browser/Visual gates.

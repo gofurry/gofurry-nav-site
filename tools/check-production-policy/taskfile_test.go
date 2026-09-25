@@ -23,6 +23,9 @@ func TestTaskfileReleaseContract(t *testing.T) {
 		{"flags lost", "-trimpath", ""},
 		{"artifact renamed", "ARTIFACT: gf-nav}", "ARTIFACT: other}"},
 		{"unfrozen install", "pnpm install --frozen-lockfile", "pnpm install"},
+		{"frontend build in root", "dir: 'apps/cn/{{.FRONTEND}}'", "dir: '.'"},
+		{"frontend verify bypasses package cwd", "- task: _frontend-build", "- cmd: pnpm --dir apps/cn/admin/react run build"},
+		{"wrong frontend build target", "vars: {FRONTEND: nav-web}", "vars: {FRONTEND: admin/react}"},
 	} {
 		t.Run(mutation.name, func(t *testing.T) {
 			changed := strings.Replace(string(data), mutation.from, mutation.to, 1)
