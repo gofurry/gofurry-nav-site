@@ -173,6 +173,8 @@ jobs:
       options: --ipc=host
     steps:
       - uses: actions/checkout@v6
+      - name: Trust this container checkout for tracked-file policy checks
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: pnpm/action-setup@v6
         with:
           package_json_file: apps/cn/nav-web/package.json
