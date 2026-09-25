@@ -96,7 +96,7 @@ pnpm run test:browser
 ```
 
 `pnpm test` remains Vitest-only. Browser commands use `playwright.config.ts`:
-Chromium only, zero retries, one worker in CI, normal isolated contexts/pages.
+Chromium only, zero retries, one worker per CI shard, normal isolated contexts/pages.
 There is no global `webServer`: `tests/browser/fixtures/game-detail.ts` starts
 one production Nitro app and loopback API per worker via the unchanged
 `scripts/fixtures/insights-app.mjs`. `app.close()` runs in worker teardown.
@@ -257,11 +257,13 @@ The image contains Node 24 and browser/system dependencies; CI still explicitly
 selects Node 24 with `actions/setup-node@v6`. The [Playwright Docker guidance](https://playwright.dev/docs/docker)
 describes the matching-package/image requirement and `--ipc=host`.
 
-`nav-web-visual` runs only for Nav Web changes after `nav-web` succeeds. It uses
-that tag **and** immutable digest with `--ipc=host` and `GOFURRY_VISUAL_ENV=pinned`,
-then independently runs `pnpm install --frozen-lockfile`, `pnpm run build`, `pnpm run test:visual`. It neither
-installs browsers nor transfers `.output` from the functional job. On failure,
-`nav-web-visual-failure` contains the distinct Visual report/results for seven days.
+`nav-web-build` runs the cheap checks and builds once using that tag **and**
+immutable digest with Node 24 and `--ipc=host`. Its same-run, commit-named tar
+artifact preserves `.output` symlinks/permissions. Three Browser shards and
+`nav-web-visual` restore that artifact in the identical image after frozen installs;
+Visual also sets `GOFURRY_VISUAL_ENV=pinned`. They run in parallel without another
+build or browser installation. On failure, shard-specific Browser artifacts and
+`nav-web-visual-failure` retain the distinct reports/results for seven days.
 
 The environment sentinel uses a real Chromium page to check browser type,
 viewport, DPR, language, timezone, reduced motion and light theme; CI/pinned runs
@@ -1022,21 +1024,22 @@ This uses the existing CI worker count locally; no retries. Focused smoke and
 regression commands remain useful during development, but need not duplicate a
 completed full run without a new concern. Runner/fixture retirement acceptance
 uses two complete runs to expose state/teardown leaks. Do not compete with a
-simultaneous resource-heavy Visual build. On Linux CI install Chromium with
-`pnpm exec playwright install --with-deps chromium`.
+simultaneous resource-heavy Visual build. For an uncontainerized Linux workstation,
+install Chromium with `pnpm exec playwright install --with-deps chromium`.
 
-The existing Nav Web CI job has separate **Unit tests** and **Nuxt tests** steps
-before typecheck/contract guards/build. It also builds the actual Docker deployment
-image, covering dependency-only `pnpm install --frozen-lockfile` followed by source copy and fresh Nuxt
-preparation; a full-checkout pnpm build alone does not cover that ordering.
-After both builds succeed it installs Chromium
-and runs **Browser tests** (`pnpm run test:browser`). A successful local run of the
-same commands is local evidence, not proof of a remote Actions run. The separate
-`nav-web-visual` job adds its own container install/build/Visual gate after this.
-Run those three commands in the pinned container as well. After an authorized
-push verify that both `nav-web` and `nav-web-visual` actually ran and passed; a
-skipped Visual job is not acceptance. When instructed not to push, report remote
-gate acceptance as unverified.
+`nav-web-build` waits for repository policy, then runs separate **Unit tests** and
+**Nuxt tests** steps before typecheck/contract guards/build. Its pinned Linux build
+is shared by all three **Browser tests** shards (`--shard=1/3`, `2/3`, `3/3`, each
+with `--workers=1`) and Visual. File-level sharding preserves all cases and zero
+retries. `nav-web-image` runs alongside those tests and independently builds the
+actual Docker deployment image with cached layers, covering dependency-only frozen
+install followed by source copy and fresh Nuxt preparation. A full-checkout build
+alone does not cover that ordering; image context remains `apps/cn/nav-web`.
+The original `nav-web` check now aggregates build, all Browser shards, Visual and
+Docker: failed or unexpectedly skipped dependencies cannot make it pass.
+After an authorized push verify every selected job actually passed; local results
+or skipped jobs are not remote acceptance. When instructed not to push, report
+remote gate acceptance as unverified.
 
 Ordinary test-only migrations with unchanged production/runtime and smoke
 behavior need no manual UI review once guards pass. Creating or changing golden

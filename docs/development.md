@@ -78,6 +78,23 @@ causes SSR 500 responses. Keep the runtime/renderer pair aligned when a future
 Vue upgrade is explicitly scoped. This migration changes no dependency ranges
 and introduces no newer frontend dependency versions.
 
+## CI change selection
+
+`.github/scripts/detect-changes.mjs` owns the tested dependency matrix. Standalone
+doctor/policy/formatting-tool changes run tooling checks without all Go/database
+suites; frontend README/AGENTS/docs changes do not run Browser/Visual. Runtime,
+dependency, test, Docker and Task changes retain the applicable complete gates.
+Admin React changes still rebuild/test the Go embed owner, but do not by themselves
+start PostgreSQL integration tests. SQL contracts/migrations retain their explicit
+consumer matrix, including Admin; unknown tooling changes remain conservative.
+
+Push checks run on `dev` and `main`; other branches use pull requests. If a branch
+already has an open PR, its PR run owns validation and the duplicate push skips
+heavy jobs. Failure to query PRs falls back to running push checks. Superseded runs
+are still cancelled. Nav Web's pinned build feeds three one-worker Browser shards
+and Visual, alongside the independently cached Docker build. The stable `nav-web`
+check requires every frontend gate; see [frontend testing](frontend/testing.md).
+
 ## Configuration
 
 Every runtime command requires an explicit YAML file:

@@ -10,12 +10,14 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Changed
 
+- Run the full Nav Web Browser suite in three isolated CI shards alongside Visual and Docker after one shared build in the pinned Linux environment. Preserve all checks behind the `nav-web` gate, cache Docker layers, narrow documentation/tooling change selection, and avoid duplicate branch-push checks when an open PR owns validation.
 - Replace `build.bat` with root `Taskfile.yml` (Task >=3.45.3) as the engineering entrypoint for toolchain checks, dependencies, development, formatting, lint/type checks, tests, sqlc/policy verification, release builds, Nav Web image builds and cleanup. Preserve the six Linux/amd64 Go artifact paths and build flags, plus Admin's embedded frontend and companion `dist` (#129).
 - Migrate only Nav Web and React Admin to pnpm 12.6.0 with independent frozen lockfiles and narrowly approved dependency build scripts; update CI, Docker and current engineering documentation without adding a root workspace or upgrading dependency ranges. Keep Vue and its SSR renderer aligned at the original production version to preserve SSR under pnpm's isolated resolution (#130).
 - Make sqlc drift checks generate into temporary storage instead of rewriting repository files, and enforce the Task/pnpm build boundaries through repository policy tests (#129, #130).
 
 ### Fixed
 
+- Inspect Task release structure without evaluating missing Admin embed preconditions on clean CI checkouts. Wait for the lightbox test's images to decode before testing dismissal, avoiding navigation-cancelled image requests while retaining strict failure assertions.
 - Run frontend Task builds and `task doctor` pnpm checks from each package's actual directory so Corepack selects its pinned version; allow a different global pnpm default while retaining pnpm 12.6.0 for both frontends, CI and Docker (#129, #130).
 
 ### Upgrade notes

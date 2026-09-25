@@ -535,8 +535,9 @@ records their assertion ownership. Style-policy's Node runner, Contract Guards,
 Browser tests and external acceptance retain independent scope.
 
 P3.2.1 establishes a Chromium-only Playwright Test gate against the production
-Nitro build, never `nuxt dev`. CI MUST build successfully before installing
-Chromium and running `test:browser`; retries are zero and CI has one worker.
+Nitro build, never `nuxt dev`. CI MUST build successfully before running
+`test:browser`; retries are zero and each of the three CI shards has one worker.
+All shards MUST run, without reducing the selected suite or enabling retries.
 Domain fixtures own worker-scoped production servers, close them at teardown,
 and reset mutable state for every case. Playwright owns per-test browser contexts
 and pages; do not introduce a global `webServer` or order-dependent serial suites.
@@ -582,10 +583,15 @@ Authoritative Visual CI MUST use the official Playwright image matching the
 package version, pinned by a verified immutable digest, with `--ipc=host` and
 Node 24. The exact identity and local commands live in
 [testing guidance](../docs/frontend/testing.md#visual-runner-and-pinned-environment-p331).
-The separate `nav-web-visual` job MUST depend on successful `nav-web` and a Nav Web
-change, install packages and rebuild inside that container, then run `test:visual`.
-It MUST NOT install browsers, reuse the functional job's `.output`, or update
-snapshots. Failure artifacts retain the distinct Visual report/results for seven days.
+For Nav Web changes, `nav-web-build` MUST pass policy/static/unit/type checks and
+build inside this pinned container. It archives `.output` with its symlinks and
+permissions under the current commit SHA. Separate Browser shards and
+`nav-web-visual` MUST install their frozen dependencies and restore that same-run
+artifact inside the identical pinned image, then run their full suites in parallel.
+They MUST NOT reuse output from a different commit/environment, install browsers,
+or update snapshots. Docker retains an independent real image build. The stable
+`nav-web` check MUST fail unless the build, every Browser shard, Visual and Docker
+all succeed. Failure artifacts retain separate reports/results for seven days.
 
 Baseline update is an explicit visual-change review action, not a test-fix
 command. Agents MUST NOT update baselines just to make CI green. Updates require

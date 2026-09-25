@@ -192,6 +192,7 @@ tasks:
     desc: Check production repository boundaries and build contracts
     dir: tools
     cmds:
+      - node --test ../.github/scripts/detect-changes.test.mjs
       - go run ./check-production-policy
 
   check:sqlc:

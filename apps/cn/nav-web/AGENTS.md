@@ -87,7 +87,8 @@ Browser tests use the real production Nitro build, deterministic local upstream
 and exact network/error accounting. Each worker owns stable servers; each test
 owns fresh mutable scenario/gates. Playwright owns contexts/pages. Release gates
 unconditionally; do not use `unrouteAll(wait)` or fixed sleeps for readiness.
-Chromium only, retries zero, CI workers one. Use `--workers=1` locally for the
+Chromium only, retries zero, CI workers one per shard. All three Browser shards
+are required; the stable `nav-web` check also requires Visual and Docker. Use `--workers=1` locally for the
 complete acceptance run; focused smoke/regression commands remain available.
 
 `assertHeroHydration` is the sole narrow mobile Home Footer-debt check. It defaults
@@ -105,7 +106,9 @@ Insights/SEO Contract Guards. External/cloud acceptance requires explicit scope
 and credentials and is not a normal gate.
 
 Visual is separate from Functional Browser. Only the current digest-pinned Linux
-Playwright image with Node 24 is authoritative; CI rebuilds and only compares.
+Playwright image with Node 24 is authoritative. CI builds once in that image;
+Browser and Visual consume the same commit's archived output in matching containers
+and only compare. Docker separately builds the deployment image with its original context.
 Never update snapshots to make a test pass. Approved visual changes require
 explicit authorization, pinned generation and maintainer review. Treat package,
 image digest, browser revision and baselines as one upgrade unit.

@@ -118,4 +118,4 @@ Run the pinned vulnerability scanner from `tools` for every active module. CI pe
 
 Availability smoke checks include Nav Web `/healthz`, backend/Admin readiness, both enabled collector readiness listeners, and the standalone uptime service `/livez`, `/readyz`, and `/uptime`. Uptime does not participate in sqlc, Goose, or PostgreSQL integration jobs.
 
-The CI dependency matrix remains: `db/game` runs both Game services and Admin; `db/nav` runs both Nav services and Admin; `db/admin` runs Admin; sqlc/tools changes run all SQL consumers. Archive and experiment trees are never production CI inputs.
+The tested CI matrix in `.github/scripts/detect-changes.mjs` keeps `db/game` on both Game services and Admin, `db/nav` on both Nav services and Admin, and `db/admin` on Admin. SQL/runtime tooling changes run all SQL consumers; standalone doctor/policy/formatting checks do not start application/database suites. Archive and experiment trees are never production CI inputs. The `nav-web` check requires the pinned build, all three Browser shards, Visual and the independent Docker image build.

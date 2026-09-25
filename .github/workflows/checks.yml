@@ -2,6 +2,7 @@ name: engineering-foundation
 
 on:
   push:
+    branches: [dev, main]
     paths:
       - 'apps/cn/**'
       - 'db/**'
@@ -15,6 +16,7 @@ on:
       - 'ops/**'
       - '.github/workflows/checks.yml'
       - '.github/workflows/security.yml'
+      - '.github/scripts/**'
   pull_request:
     paths:
       - 'apps/cn/**'
@@ -29,9 +31,11 @@ on:
       - 'ops/**'
       - '.github/workflows/checks.yml'
       - '.github/workflows/security.yml'
+      - '.github/scripts/**'
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   GOPROXY: "https://proxy.golang.org|direct"
@@ -54,63 +58,57 @@ jobs:
       admin_integration: ${{ steps.detect.outputs.admin_integration }}
       vulnerability: ${{ steps.detect.outputs.vulnerability }}
     steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Build dependency matrix
-        id: detect
+      - name: Prefer the PR check when this branch has an open PR
+        id: scheduling
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          BRANCH: ${{ github.ref_name }}
+          HEAD_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            base_sha="${{ github.event.pull_request.base.sha }}"
+          if count="$(gh api --method GET "repos/${GH_REPO}/pulls" -f state=open -f "head=${REPO_OWNER}:${BRANCH}" --jq '[.[] | select(.head.repo.full_name == env.GH_REPO and .head.sha == env.HEAD_SHA)] | length')"; then
+            if [[ "${count}" -gt 0 ]]; then
+              echo "skip=true" >> "${GITHUB_OUTPUT}"
+              echo 'The pull_request workflow validates this branch; skip duplicate push jobs.'
+            fi
           else
-            base_sha="${{ github.event.before }}"
+            echo '::warning::Could not check open PRs; run the full push checks.'
+          fi
+      - uses: actions/checkout@v6
+        if: steps.scheduling.outputs.skip != 'true'
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        if: steps.scheduling.outputs.skip != 'true'
+        with:
+          node-version: 24
+
+      - name: Build dependency matrix
+        id: detect
+        if: steps.scheduling.outputs.skip != 'true'
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            base_sha="${PR_BASE}"
+          else
+            base_sha="${PUSH_BASE}"
           fi
           if [[ -z "${base_sha}" || "${base_sha}" == "0000000000000000000000000000000000000000" ]]; then
-            changed_files="$(git ls-files)"
+            git ls-files -z > "${RUNNER_TEMP}/changed-files"
           else
-            changed_files="$(git diff --name-only "${base_sha}" "${{ github.sha }}")"
+            git diff --name-only -z "${base_sha}" "${HEAD_SHA}" > "${RUNNER_TEMP}/changed-files"
           fi
-          printf '%s\n' "${changed_files}"
-
-          affected() {
-            printf '%s\n' "${changed_files}" | grep -Eq "$1"
-          }
-          set_bool() {
-            if affected "$2"; then
-              echo "$1=true" >> "${GITHUB_OUTPUT}"
-            else
-              echo "$1=false" >> "${GITHUB_OUTPUT}"
-            fi
-          }
-
-          shared='^(Taskfile\.yml$|sqlc\.yaml$|tools/|\.github/workflows/(checks|security)\.yml$)'
-          modules='[]'
-          add_module() {
-            modules="$(printf '%s' "${modules}" | jq -c --arg module "$1" '. + [$module]')"
-          }
-          if affected "^apps/cn/game-collector/|^db/game/|${shared}"; then add_module apps/cn/game-collector; fi
-          if affected "^apps/cn/game-backend/|^db/game/|${shared}"; then add_module apps/cn/game-backend; fi
-          if affected "^apps/cn/nav-collector/|^db/nav/|${shared}"; then add_module apps/cn/nav-collector; fi
-          if affected "^apps/cn/nav-backend/|^db/nav/|${shared}"; then add_module apps/cn/nav-backend; fi
-          if affected "^apps/cn/admin/|^apps/cn/nav-web/app/data/platform-icons\.json$|^db/(admin|game|nav)/|${shared}"; then add_module apps/cn/admin; fi
-          if affected "^apps/cn/uptime/|${shared}"; then add_module apps/cn/uptime; fi
-          echo "modules=${modules}" >> "${GITHUB_OUTPUT}"
-          if [[ "${modules}" == "[]" ]]; then
-            echo "has_modules=false" >> "${GITHUB_OUTPUT}"
-          else
-            echo "has_modules=true" >> "${GITHUB_OUTPUT}"
-          fi
-
-          set_bool policy '^(Taskfile\.yml$|apps/cn/(nav-web|admin|game-backend|game-collector|nav-backend|nav-collector|uptime)/|db/|tools/|sqlc\.yaml$|AGENTS\.md$|\.agents/|contracts/|\.github/workflows/(checks|security)\.yml$)'
-          set_bool foundation '^(db/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$|apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector)/internal/db/.*/queries/)'
-          set_bool nav_web '^(Taskfile\.yml$|apps/cn/nav-web/|\.github/workflows/checks\.yml$)'
-          set_bool game_integration '^(apps/cn/(admin|game-backend|game-collector)/|db/game/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
-          set_bool nav_integration '^(apps/cn/(admin|nav-backend|nav-collector)/|db/nav/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
-          set_bool admin_integration '^(apps/cn/admin/|db/(admin|game|nav)/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
-          set_bool vulnerability '^(apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector|uptime)/go\.(mod|sum)$|tools/go\.(mod|sum)$|\.github/workflows/(checks|security)\.yml$)'
+          node .github/scripts/detect-changes.mjs < "${RUNNER_TEMP}/changed-files"
 
   production-go:
     needs: detect-changes
@@ -165,10 +163,14 @@ jobs:
         working-directory: ${{ matrix.module }}
         run: go build ./...
 
-  nav-web:
-    needs: detect-changes
+  nav-web-build:
+    needs: [detect-changes, repository-policy]
     if: needs.detect-changes.outputs.nav_web == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
+      options: --ipc=host
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
@@ -212,21 +214,59 @@ jobs:
       - name: Build
         working-directory: apps/cn/nav-web
         run: pnpm run build
-      - name: Build deployment image
+      - name: Archive the pinned Linux build
         working-directory: apps/cn/nav-web
-        run: docker build --tag gofurry-nav-web:ci .
-      - name: Install Playwright Chromium
+        run: tar -czf "$RUNNER_TEMP/nav-web-output.tar.gz" .output
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nav-web-output-${{ github.sha }}
+          path: ${{ runner.temp }}/nav-web-output.tar.gz
+          overwrite: true
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+  nav-web-browser:
+    needs: nav-web-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/cn/nav-web/package.json
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
+      - working-directory: apps/cn/nav-web
+        run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v8
+        with:
+          name: nav-web-output-${{ github.sha }}
+          path: ${{ runner.temp }}
+      - name: Restore the pinned Linux build
         working-directory: apps/cn/nav-web
-        run: pnpm exec playwright install --with-deps chromium
+        run: tar -xzf "$RUNNER_TEMP/nav-web-output.tar.gz"
       - name: Browser tests
         id: browser-tests
         working-directory: apps/cn/nav-web
-        run: pnpm run test:browser
+        run: pnpm run test:browser --shard=${{ matrix.shard }}/3 --workers=1
       - name: Browser failure artifacts
         if: ${{ failure() && steps.browser-tests.outcome == 'failure' }}
         uses: actions/upload-artifact@v7
         with:
-          name: nav-web-browser-failure
+          name: nav-web-browser-failure-${{ matrix.shard }}
+          overwrite: true
           path: |
             apps/cn/nav-web/playwright-report/
             apps/cn/nav-web/test-results/
@@ -234,9 +274,9 @@ jobs:
           if-no-files-found: warn
 
   nav-web-visual:
-    needs: [detect-changes, nav-web]
-    if: needs.detect-changes.outputs.nav_web == 'true' && needs.nav-web.result == 'success'
+    needs: nav-web-build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     container:
       # Verified against the MCR manifest list; upgrade with Playwright and baselines.
       image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
@@ -256,9 +296,13 @@ jobs:
           cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
       - working-directory: apps/cn/nav-web
         run: pnpm install --frozen-lockfile
-      - name: Build
+      - uses: actions/download-artifact@v8
+        with:
+          name: nav-web-output-${{ github.sha }}
+          path: ${{ runner.temp }}
+      - name: Restore the pinned Linux build
         working-directory: apps/cn/nav-web
-        run: pnpm run build
+        run: tar -xzf "$RUNNER_TEMP/nav-web-output.tar.gz"
       - name: Visual tests
         working-directory: apps/cn/nav-web
         run: pnpm run test:visual
@@ -267,11 +311,49 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: nav-web-visual-failure
+          overwrite: true
           path: |
             apps/cn/nav-web/playwright-visual-report/
             apps/cn/nav-web/visual-test-results/
           retention-days: 7
           if-no-files-found: warn
+
+  nav-web-image:
+    needs: nav-web-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - name: Build deployment image
+        uses: docker/build-push-action@v7
+        with:
+          context: apps/cn/nav-web
+          push: false
+          load: true
+          tags: gofurry-nav-web:ci
+          cache-from: type=gha,scope=nav-web
+          cache-to: type=gha,scope=nav-web,mode=max
+
+  # Keep the original check name as a gate for every frontend result.
+  nav-web:
+    needs: [detect-changes, nav-web-build, nav-web-browser, nav-web-visual, nav-web-image]
+    if: ${{ always() && !cancelled() && (needs.detect-changes.result != 'success' || needs.detect-changes.outputs.nav_web == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every frontend gate
+        env:
+          DETECT: ${{ needs.detect-changes.result }}
+          BUILD: ${{ needs.nav-web-build.result }}
+          BROWSER: ${{ needs.nav-web-browser.result }}
+          VISUAL: ${{ needs.nav-web-visual.result }}
+          IMAGE: ${{ needs.nav-web-image.result }}
+        run: |
+          test "$DETECT" = success
+          test "$BUILD" = success
+          test "$BROWSER" = success
+          test "$VISUAL" = success
+          test "$IMAGE" = success
 
   repository-policy:
     needs: detect-changes
@@ -279,16 +361,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
       - uses: actions/setup-go@v6
         with:
           go-version-file: tools/go.mod
           cache-dependency-path: tools/go.sum
       - name: Install minimum supported Task
         run: go install github.com/go-task/task/v3/cmd/task@v3.45.3
-      - name: Parse Taskfile and inspect release commands
+      - name: Parse Taskfile and inspect release contract
         run: |
           task --list
-          task --dry build
+          task --summary build build:admin
+      - name: Test change selection
+        run: node --test .github/scripts/detect-changes.test.mjs
       - name: Tooling contract tests
         working-directory: tools
         run: go test ./check-production-policy ./check-sqlc ./check-gofmt

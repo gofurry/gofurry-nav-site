@@ -174,7 +174,9 @@ export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>(
       points(count) { state.historyPoints = count },
       count(path, query = {}) { return state.reads.filter(call => call.path === path && Object.entries(query).every(([k, v]) => call.query[k] === v)).length },
       assertQuiet() {
-        expect(errors).toEqual([]); expect(external).toEqual([]); expect(failed).toEqual([]); expect(state.unexpected).toEqual([])
+        expect(errors).toEqual([]); expect(external).toEqual([])
+        expect(failed.map(request => ({ url: request.url(), error: request.failure()?.errorText }))).toEqual([])
+        expect(state.unexpected).toEqual([])
         for (const request of httpFailures) expect(expectedURLs.has(request.url())).toBe(true)
         for (const entry of rawErrors) {
           expect(expectedURLs.has(entry.url)).toBe(true)

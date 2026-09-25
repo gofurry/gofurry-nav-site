@@ -22,18 +22,25 @@ for (const width of [1440, 390]) test(`${width}px lightbox closes above Nav and 
   const image = detail.page.locator('.game-detail-media-image'), box = detail.page.locator('.game-detail-lightbox')
   await expect(image).toBeVisible(); await detail.page.locator('.game-detail-thumb').last().click()
   await expect(image).toHaveAttribute('src', /detail-shot-11/)
-  await image.click(); const close = box.locator('button')
+  // This case tests dismissal/focus, not cancellation of an in-flight image.
+  // Finish each image load before unmounting it; keep requestfailed checks strict.
+  await image.evaluate(el => (el as HTMLImageElement).decode())
+  const openLightbox = async () => {
+    await image.click()
+    await box.locator('img').evaluate(el => (el as HTMLImageElement).decode())
+  }
+  await openLightbox(); const close = box.locator('button')
   await expect(close).toBeFocused(); await expect(box).toHaveAttribute('role', 'dialog')
   expect(await box.evaluate(el => el.parentElement === document.body)).toBe(true)
   await box.locator('img').click(); await expect(box).toBeVisible()
   await detail.page.keyboard.press('Tab'); await expect(close).toBeFocused()
   await detail.page.keyboard.press('Shift+Tab'); await expect(close).toBeFocused()
   await close.click(); await expect(box).toHaveCount(0); await expect(image).toBeFocused()
-  await image.click(); await detail.page.keyboard.press('Escape'); await expect(box).toHaveCount(0)
-  await image.click(); await box.click({ position: { x: 2, y: 120 } }); await expect(box).toHaveCount(0)
+  await openLightbox(); await detail.page.keyboard.press('Escape'); await expect(box).toHaveCount(0)
+  await openLightbox(); await box.click({ position: { x: 2, y: 120 } }); await expect(box).toHaveCount(0)
   expect(await detail.page.locator('#__nuxt').evaluate(el => (el as HTMLElement).inert)).toBe(false)
   expect(await detail.page.evaluate(() => document.documentElement.style.overflow)).toBe('')
-  await image.click(); await detail.page.goBack(); await expect(box).toHaveCount(0)
+  await openLightbox(); await detail.page.goBack(); await expect(box).toHaveCount(0)
   detail.assertQuiet()
 })
 

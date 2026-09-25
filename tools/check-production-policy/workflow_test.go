@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -62,7 +62,7 @@ func TestEngineeringFoundationWorkflowParses(t *testing.T) {
 	if !ok {
 		t.Fatal("checks workflow has no jobs mapping")
 	}
-	for _, name := range []string{"detect-changes", "production-go", "nav-web", "nav-web-visual", "repository-policy", "active-vulnerability", "foundation", "postgres-integration"} {
+	for _, name := range []string{"detect-changes", "production-go", "nav-web", "nav-web-build", "nav-web-browser", "nav-web-visual", "nav-web-image", "repository-policy", "active-vulnerability", "foundation", "postgres-integration"} {
 		if _, ok := jobs[name]; !ok {
 			t.Fatalf("checks workflow is missing %s", name)
 		}
@@ -108,11 +108,79 @@ func TestTaskfileChangesReachQualityGates(t *testing.T) {
 			t.Fatalf("%s ignores Taskfile changes", event)
 		}
 	}
-	for _, expression := range []string{`shared='([^']+)'`, `set_bool policy '([^']+)'`, `set_bool nav_web '([^']+)'`} {
-		match := regexp.MustCompile(expression).FindSubmatch(data)
-		if len(match) != 2 || !regexp.MustCompile(string(match[1])).MatchString("Taskfile.yml") {
-			t.Fatalf("Taskfile changes do not reach matrix rule %s", expression)
+	for _, command := range []string{"node .github/scripts/detect-changes.mjs", "node --test .github/scripts/detect-changes.test.mjs"} {
+		if !strings.Contains(string(data), command) {
+			t.Fatalf("change selection and its Taskfile regression tests must run: %s", command)
 		}
+	}
+}
+
+func TestFrontendCIPreservesAllGatesAndPinnedBuildProvenance(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join(repositoryRootForTest(t), ".github/workflows/checks.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow struct {
+		Jobs map[string]struct {
+			Needs     any
+			If        string
+			Container struct{ Image string }
+			Strategy  struct {
+				Matrix struct{ Shard []int }
+			}
+			Steps []struct {
+				Run  string
+				Uses string
+				With map[string]any
+			}
+		}
+	}
+	if err := yaml.Unmarshal(data, &workflow); err != nil {
+		t.Fatal(err)
+	}
+	jobs := workflow.Jobs
+	image := jobs["nav-web-build"].Container.Image
+	if !strings.Contains(image, "playwright:v1.60.0-noble@sha256:") {
+		t.Fatal("the shared frontend build must use the pinned Visual environment")
+	}
+	for _, name := range []string{"nav-web-browser", "nav-web-visual", "nav-web-image"} {
+		if jobs[name].Needs != "nav-web-build" {
+			t.Fatalf("%s must start after the common build, not another test job", name)
+		}
+	}
+	for _, name := range []string{"nav-web-browser", "nav-web-visual"} {
+		job := jobs[name]
+		if job.Container.Image != image {
+			t.Fatalf("%s differs from the build environment", name)
+		}
+		download := false
+		for _, step := range job.Steps {
+			if strings.HasPrefix(step.Uses, "actions/download-artifact@") && step.With["name"] == "nav-web-output-${{ github.sha }}" {
+				download = true
+			}
+			if strings.Contains(step.Run, "pnpm run build") || strings.Contains(step.Run, "--update-snapshots") {
+				t.Fatalf("%s must compare the shared build without accepting baselines", name)
+			}
+		}
+		if !download {
+			t.Fatalf("%s must consume this commit's build", name)
+		}
+	}
+	if !slices.Equal(jobs["nav-web-browser"].Strategy.Matrix.Shard, []int{1, 2, 3}) {
+		t.Fatal("Browser CI must run every shard")
+	}
+	gate := jobs["nav-web"]
+	needs, ok := gate.Needs.([]any)
+	if !ok || !strings.Contains(gate.If, "always()") {
+		t.Fatal("the stable nav-web gate must report upstream failures")
+	}
+	for _, name := range []string{"nav-web-build", "nav-web-browser", "nav-web-visual", "nav-web-image"} {
+		if !slices.Contains(needs, any(name)) {
+			t.Fatalf("nav-web no longer requires %s", name)
+		}
+	}
+	if strings.Contains(string(data), "task --dry build") {
+		t.Fatal("policy inspection must not evaluate embed preconditions on a clean checkout")
 	}
 }
 
