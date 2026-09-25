@@ -7,21 +7,21 @@
 快速测量可以直接启动本地前端：
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 然后在另一个终端运行：
 
 ```bash
-npm run perf:measure -- --base-url http://localhost:3000
+pnpm run perf:measure --base-url http://localhost:3000
 ```
 
 正式回归守卫建议使用构建后的 preview，避免开发模式 chunk 让客户端页面产生不稳定的 JS 请求数：
 
 ```bash
-npm run build
-npm run preview -- --port 3001
-npm run perf:guard -- --base-url http://localhost:3001
+pnpm run build
+pnpm run preview --port 3001
+pnpm run perf:guard --base-url http://localhost:3001
 ```
 
 脚本会测量以下场景：
@@ -38,7 +38,7 @@ npm run perf:guard -- --base-url http://localhost:3001
 
 ```bash
 $env:PERF_SITE_PATH="/site/123"
-npm run perf:measure -- --base-url http://localhost:3000
+pnpm run perf:measure --base-url http://localhost:3000
 ```
 
 ## 性能守卫
@@ -48,7 +48,7 @@ npm run perf:measure -- --base-url http://localhost:3000
 运行，建议指向构建后的 preview 地址：
 
 ```bash
-npm run perf:guard -- --base-url http://localhost:3001
+pnpm run perf:guard --base-url http://localhost:3001
 ```
 
 守卫会读取 `docs/performance/budget.json`，检查：
@@ -82,7 +82,7 @@ Visual 不是性能预算；性能 measure/guard/trace/baseline 工具和当前�
 当你确认当前性能表现是可接受版本后，运行：
 
 ```bash
-npm run perf:baseline -- --base-url http://localhost:3000
+pnpm run perf:baseline --base-url http://localhost:3000
 ```
 
 这会刷新 `docs/performance/baseline.json`。只有在明确接受性能变化时才应该刷新基线。
@@ -92,13 +92,13 @@ npm run perf:baseline -- --base-url http://localhost:3000
 如果任务管理器里仍然看到 GPU 占用异常，可以生成 Chrome trace：
 
 ```bash
-npm run perf:trace -- --base-url http://localhost:3000 --path /games --wait 8000
+pnpm run perf:trace --base-url http://localhost:3000 --path /games --wait 8000
 ```
 
 首页需要 reveal 后观察时：
 
 ```bash
-npm run perf:trace -- --base-url http://localhost:3000 --path / --reveal --wait 8000
+pnpm run perf:trace --base-url http://localhost:3000 --path / --reveal --wait 8000
 ```
 
 Trace 文件会输出到 `docs/performance/reports/`，可以用 Playwright Trace Viewer 或 Chrome DevTools 辅助分析 paint、composite 和 long task。

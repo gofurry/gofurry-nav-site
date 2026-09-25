@@ -63,12 +63,22 @@ GoFurry 是一个面向兽圈文化内容发现、站点导航、兽游资料和
 
 ## 快速开始
 
-前端开发：
+在仓库根目录使用 Task >=3.45.3、Go 1.26.7、Node.js 24 和 pnpm 12.6.0：
+
+```bash
+task
+task doctor
+task deps
+task dev:nav-web
+# Admin 前端使用 task dev:admin-web，在另一终端独立启动 API。
+```
+
+也可以直接在所属前端目录开发：
 
 ```bash
 cd apps/cn/nav-web
-npm install
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 Go 服务开发：
@@ -88,11 +98,18 @@ go run . serve --config conf/server.yaml
 
 ## 构建与验证
 
-```bat
-build.bat all
+```bash
+task check
+task test
+task verify
+task build
 ```
 
-脚本仅构建六个活跃 Go 应用，产物输出到根目录 `build/`。Nav Web 使用其独立的 Node/Docker 流程。完整的开发和验证命令见 [本地开发文档](./docs/development.md) 和 [Agent playbook](./.agents/playbook.md)。
+首次检出使用 `task verify`，它会先准备 Admin embed 产物，再执行检查和测试。
+`task build` 仅构建六个活跃 Go 应用，产物输出到根目录 `build/`，Admin 保留配套 `dist/`。
+Nav Web 使用独立的 `task build:nav-web` / `task build:nav-web-image`。
+两个前端各有 pnpm lockfile，没有根 workspace；Task 不加载根 `.env`，也不提供部署或数据库操作。
+完整命令见 [本地开发文档](./docs/development.md) 和 [Agent playbook](./.agents/playbook.md)。
 
 ## 部署与运维
 

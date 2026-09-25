@@ -37,13 +37,13 @@ var forbidden = []struct {
 }
 
 var productionTooling = []string{
-	"build.bat",
+	"Taskfile.yml",
 	"sqlc.yaml",
 	".github/workflows/checks.yml",
 	".github/workflows/security.yml",
 }
 
-var archiveToolingPath = regexp.MustCompile(`(?i)(^|[/\\])(legacy|experimental|third-party|apps[/\\]intl)([/\\]|$)`)
+var archiveToolingPath = regexp.MustCompile(`(?i)(^|[\s"'/\\])(legacy|experimental|third-party|apps[/\\]intl)([\s"'/\\]|$)`)
 
 var adminDatabaseDrivers = []struct {
 	name    string
@@ -112,6 +112,11 @@ func main() {
 		fatal(err)
 	}
 	findings = append(findings, toolingFindings...)
+	taskFindings, err := checkTaskfile(repositoryRoot)
+	if err != nil {
+		fatal(err)
+	}
+	findings = append(findings, taskFindings...)
 	versionFindings, err := checkGoVersions(repositoryRoot)
 	if err != nil {
 		fatal(err)

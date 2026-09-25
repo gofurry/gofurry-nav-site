@@ -155,7 +155,7 @@ export async function launchPerfBrowser() {
     }
   }
 
-  throw new Error(`无法启动浏览器。请设置 PERF_BROWSER_CHANNEL=chrome，或运行 npx playwright install chromium。\n${errors.join('\n')}`)
+  throw new Error(`无法启动浏览器。请设置 PERF_BROWSER_CHANNEL=chrome，或运行 pnpm exec playwright install chromium。\n${errors.join('\n')}`)
 }
 
 function parseContentLength(headers) {
@@ -532,7 +532,7 @@ export function renderMarkdownReport(measurement, guardResult = null) {
     '',
     '## 说明',
     '',
-    '- GPU 占用不做自动硬阈值；如需排查 paint/composite，请运行 `npm run perf:trace`。',
+    '- GPU 占用不做自动硬阈值；如需排查 paint/composite，请运行 `pnpm run perf:trace`。',
     '- JS transfer size 优先使用 PerformanceResourceTiming，缺失时使用响应头或脚本文本大小兜底。',
     '- 动态详情页依赖本地后端数据，失败会进入 warning，不会阻断核心页面测量。'
   )

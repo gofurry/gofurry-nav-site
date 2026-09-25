@@ -2,6 +2,12 @@
 
 Active production applications live under `apps/cn`: six independent Go modules and the Nuxt frontend. `apps/intl` is placeholder-only. `legacy`, `experimental`, and `third-party` are excluded from the active runtime, default build, CI, vulnerability scan, sqlc, and deployment graph.
 
+Root Task owns local engineering operations; pnpm 12.6.0 owns the two independent
+frontend dependency graphs. Their project-local `pnpm-workspace.yaml` files only
+configure that frontend, with no shared packages or root workspace. Go CLI owns
+service lifecycle, Docker owns Nav Web packaging and Goose alone owns migrations.
+Task has no deployment or database operations and does not load `.env`.
+
 | Runtime | PostgreSQL | Other state |
 |---|---|---|
 | Game Collector | `gfg` durable acquisition ledger, historical eligibility/facts, metric and change registries/results, and per-pipeline/version checkpoints | Redis realtime progress and existing read caches |

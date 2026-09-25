@@ -2,6 +2,12 @@
 
 ## Scope and authority
 
+Tooling uses Node 24 and `packageManager: pnpm@12.6.0`, with this frontend's own
+`pnpm-lock.yaml` and single-project `pnpm-workspace.yaml`. No repository-root
+workspace or shared lock is used. Frozen installs and narrowly reviewed dependency
+script permissions apply in local work, CI and Docker. Root Task is the repository
+engineering entrypoint; its default tests/verify do not replace Browser/Visual.
+
 This contract governs `apps/cn/nav-web` under
 [#124](https://github.com/gofurry/gofurry-nav-site/issues/124#issuecomment-5740012423).
 MUST/MUST NOT are requirements; SHOULD permits a reasoned, documented departure;
@@ -491,9 +497,9 @@ for newly added files or script-generated styles.
 | Real external services | Explicit development acceptance, not a default PR gate |
 
 P0 introduced no runners, dependencies or CI gates. P1's local/CI sequence is
-`npm ci`, `npm run lint`, `npm run stylelint`, `npm run style:policy:test`,
-`npm run style:policy`, `npm run typecheck`, `npm run insights:semantics`,
-`npm run seo:recovery:test`, `npm run build`, from `apps/cn/nav-web`.
+`pnpm install --frozen-lockfile`, `pnpm run lint`, `pnpm run stylelint`, `pnpm run style:policy:test`,
+`pnpm run style:policy`, `pnpm run typecheck`, `pnpm run insights:semantics`,
+`pnpm run seo:recovery:test`, `pnpm run build`, from `apps/cn/nav-web`.
 For runtime changes, run relevant existing focused scripts from `package.json`
 as well. A skipped external acceptance test is not a pass.
 
@@ -513,7 +519,7 @@ records the coverage mapping. This phase changes no production code, style debt
 or Visual baseline. P7.2 completes the separate legacy visual-guard retirement.
 
 P3.1 uses Vitest `projects` with separate `test:unit` and `test:nuxt` commands;
-`npm test` runs both. CI MUST execute separate Unit tests and Nuxt tests steps
+`pnpm test` runs both. CI MUST execute separate Unit tests and Nuxt tests steps
 before typecheck, retained Insights/SEO guards and build. Choose the lowest-cost
 environment that faithfully represents the tested behavior. Browser-like globals
 alone do not require Nuxt; pure tests SHOULD use Vitest-controlled stubs/cleanup.
@@ -556,7 +562,7 @@ for the owned follow-up and removal condition; no generic capture exemption exis
 Generic error capture MUST NOT ignore hydration. Same-run clipped paint Buffer
 and computed-style equality MAY remain runtime invariants; success screenshots,
 computed audit JSON and golden baselines MUST NOT be introduced in P3.2.3.
-P7.1 migrated the remaining Insights/background/SEO runtime runners. `npm test`
+P7.1 migrated the remaining Insights/background/SEO runtime runners. `pnpm test`
 remains Vitest-only; Visual keeps its separate pinned runner.
 
 P0 MUST NOT change production Vue, CSS/Less, runtime behavior, package/lockfiles,
@@ -964,7 +970,7 @@ ESLint uses the official Nuxt static flat-config factory without a runtime modul
 or formatting policy. `eslint-suppressions.json` is the one-time historical
 bootstrap, not a license to suppress new code. Contributors MUST fix new lint
 findings, MUST NOT rerun bulk suppress-all to grant debt, and MUST NOT use
-`--pass-on-unpruned-suppressions`. Use `npm run lint:prune` when removing debt;
+`--pass-on-unpruned-suppressions`. Use `pnpm run lint:prune` when removing debt;
 unused suppressions fail the normal lint command.
 
 Stylelint owns correctness only. Its config documents narrow Less/Tailwind/Vue
@@ -980,7 +986,7 @@ detectors and exact exceptions, then compares every rule/file budget:
 - `actual < baseline`: stale budget, fail.
 - `actual == baseline`: pass.
 
-`npm run style:policy:update` can only lower budgets or remove zero entries. If
+`pnpm run style:policy:update` can only lower budgets or remove zero entries. If
 any pair increased, it refuses every write. It preserves exceptions and refuses
 to overwrite a manifest changed during the scan. New files default to zero;
 moving debt never transfers its budget automatically.

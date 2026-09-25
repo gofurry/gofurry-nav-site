@@ -71,6 +71,13 @@ be regenerated to hide new findings; prune them only after fixing their debt.
 
 ## Verification and test ownership
 
+Use Node 24 and pnpm 12.6.0, pinned in `packageManager`. Install this project's
+independent lock with `pnpm install --frozen-lockfile`; use `pnpm run` / `pnpm exec`.
+Its `pnpm-workspace.yaml` contains only local settings and script permissions;
+there is no root workspace. Root Task offers `deps:nav-web`, `lint:nav-web`,
+`typecheck:nav-web`, `test:nav-web`, `test:nav-web:browser`, `build:nav-web` and
+`build:nav-web-image`. Browser/Visual remain outside default `task test`/`verify`.
+
 Use the [current verification sequence](../../../docs/frontend/testing.md#full-verification).
 Pure logic uses Vitest unit; real Nuxt state/composables use the Nuxt project.
 Reset cookies/useState per case and mock only business injection boundaries.

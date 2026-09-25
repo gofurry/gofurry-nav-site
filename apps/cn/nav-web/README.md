@@ -6,11 +6,16 @@ This project replaces the legacy Vue SPA frontend for the public site. It uses t
 
 ## Scripts
 
+Use Node 24 and pnpm 12.6.0 from `packageManager`. This project owns its lockfile
+and local script permissions, without a root workspace. Root `task deps:nav-web`,
+`task dev:nav-web`, `task test:nav-web` and `task build:nav-web` are convenience
+entrypoints; Docker image building is separate via `task build:nav-web-image`.
+
 ```bash
-npm install
-npm run dev
-npm run typecheck
-npm run build
+pnpm install --frozen-lockfile
+pnpm run dev
+pnpm run typecheck
+pnpm run build
 ```
 
 ## Runtime Config
@@ -38,12 +43,12 @@ Primary public system navigation icons use Phosphor. The default layout owns the
 Run the deterministic route and interaction regressions against the production build:
 
 ```bash
-npm run build
-npm run test:browser -- insights
+pnpm run build
+pnpm run test:browser insights
 ```
 
-The legacy visual report guard is retired. Run `npm run test:browser` for runtime
-contracts and `npm run test:visual` in the pinned Linux environment for accepted
+The legacy visual report guard is retired. Run `pnpm run test:browser` for runtime
+contracts and `pnpm run test:visual` in the pinned Linux environment for accepted
 pixel comparisons. See [testing](../../../docs/frontend/testing.md) for all gates;
 performance tools retain their separate scope.
 

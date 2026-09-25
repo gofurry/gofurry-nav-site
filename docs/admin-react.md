@@ -13,8 +13,8 @@ Then start Vite in another terminal:
 
 ~~~text
 cd apps/cn/admin/react
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ~~~
 
 Open `http://127.0.0.1:5178`. Vite proxies `/api` and `/csrf` to `http://127.0.0.1:10099`.
@@ -22,12 +22,12 @@ Open `http://127.0.0.1:5178`. Vite proxies `/api` and `/csrf` to `http://127.0.0
 Validation:
 
 ~~~text
-npm run typecheck
-npm test
-npm run build
+pnpm run typecheck
+pnpm test
+pnpm run build
 ~~~
 
-`npm run build` clears and writes `apps/cn/admin/internal/transport/http/webui/dist`. The root `build.bat admin` target performs this React build before compiling the Go binary and copying the deployment `dist/` companion artifact. No manual asset copy or runtime Node process is used.
+`pnpm run build` clears and writes `apps/cn/admin/internal/transport/http/webui/dist`. The root `task build:admin` target performs this React build before compiling the Go binary and copying the deployment `dist/` companion artifact. No manual asset copy or runtime Node process is used.
 
 The App Shell consumes the current principal from `/api/v1/auth/state`. Missing navigation or actions should first be checked against returned capabilities and backend authorization; never patch around the contract with role comparisons.
 

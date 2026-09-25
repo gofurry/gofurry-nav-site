@@ -28,6 +28,15 @@ If documentation and implementation conflict, report the conflict explicitly. Do
 
 ## Shared development infrastructure
 
+The root `Taskfile.yml` (Task >=3.45.3) is the repository engineering entrypoint;
+`task` lists commands, `task verify` installs/builds/checks/tests locally, and
+`task build` produces only the six Linux/amd64 Go artifacts. Task never loads
+the root `.env` or runs deployment, migration, systemd or cloud operations.
+Use Go 1.26.7, Node 24 and pnpm 12.6.0. Both active frontends pin `packageManager`
+and own independent `pnpm-lock.yaml` plus single-project script-permission settings;
+there is no root pnpm workspace. Use frozen installs; do not relax build-script
+permissions or upgrade dependencies as a side effect of tooling work.
+
 The shared development server is infrastructure-only. Run Go, Nuxt, React, collectors, tests, and Goose from the developer workstation; reach shared PostgreSQL `:5432` and Redis `:6379` through Tailscale. Do not use the server as a remote workstation or clone this repository there merely to run applications or migrations.
 
 The ignored root `.env` is the developer's private credential source for Codex, Goose, and maintaining ignored local `server.yaml` files. Applications never load it automatically; preserve the explicit YAML configuration contract and do not add dotenv loading or Viper `AutomaticEnv`.

@@ -15,16 +15,16 @@ not authorization to update an accepted golden.
 
 | Category | Owner / command | Boundary |
 | --- | --- | --- |
-| Pure TS/domain/utility logic | `tests/unit/*.test.ts`, `npm run test:unit` | Vitest `unit` project, Node environment; no Nuxt boot in test cases |
-| Nuxt composables and runtime | `tests/nuxt/*.nuxt.test.ts`, `npm run test:nuxt` | Vitest `nuxt` project, real Nuxt app/context through `@nuxt/test-utils`, happy-dom |
-| Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
-| Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
-| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO and background storage |
-| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel; Foundation, Preferences and Error locator baselines; Static/Legal and Updates viewport baselines; Dock expanded clips |
+| Pure TS/domain/utility logic | `tests/unit/*.test.ts`, `pnpm run test:unit` | Vitest `unit` project, Node environment; no Nuxt boot in test cases |
+| Nuxt composables and runtime | `tests/nuxt/*.nuxt.test.ts`, `pnpm run test:nuxt` | Vitest `nuxt` project, real Nuxt app/context through `@nuxt/test-utils`, happy-dom |
+| Repository Contract Guards | `pnpm run insights:semantics`, `pnpm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
+| Style Policy Tooling Tests | `pnpm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
+| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `pnpm run test:browser` | Production SSR/hydration/interactions; Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO and background storage |
+| Playwright Visual | `tests/browser/visual/*.spec.ts`, `pnpm run test:visual` | Pinned sentinel; Foundation, Preferences and Error locator baselines; Static/Legal and Updates viewport baselines; Dock expanded clips |
 | Broad route/theme/overflow checks | Domain Browser/Visual contracts, including P7.2 locale/theme gaps | The legacy visual report runner is retired; no second browser lifecycle or success screenshot inventory |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
 
-`npm test` runs both Vitest projects once. `vitest.config.ts` uses `projects`, not
+`pnpm test` runs both Vitest projects once. `vitest.config.ts` uses `projects`, not
 the deprecated workspace model. Nuxt configuration is loaded by the test-utils
 project; the test module is **not** added to production `nuxt.config.ts`.
 Dependencies are pinned in package/lockfiles. No coverage provider or Testing
@@ -49,7 +49,7 @@ The single `tests/fixtures/cdn-probe.bin` serves Unit and the existing Hero/rout
 browser fixtures; its size/digest are checked by the managed-assets suite.
 
 The four legacy test implementations and unused `assets:test` / `game:tags:test`
-aliases are removed. Use the two project commands or `npm test`; do not recreate
+aliases are removed. Use the two project commands or `pnpm test`; do not recreate
 parallel test implementations. Node Contract Guards and style-policy tests are
 intentionally not discovered by Vitest.
 
@@ -88,14 +88,14 @@ test migrations introduce no new Visual baselines or external acceptance runs.
 ## Game Detail browser gate (P3.2.1)
 
 ```sh
-npm run build
-npx playwright install chromium
-npm run test:browser:smoke
-npm run test:browser:regression
-npm run test:browser
+pnpm run build
+pnpm exec playwright install chromium
+pnpm run test:browser:smoke
+pnpm run test:browser:regression
+pnpm run test:browser
 ```
 
-`npm test` remains Vitest-only. Browser commands use `playwright.config.ts`:
+`pnpm test` remains Vitest-only. Browser commands use `playwright.config.ts`:
 Chromium only, zero retries, one worker in CI, normal isolated contexts/pages.
 There is no global `webServer`: `tests/browser/fixtures/game-detail.ts` starts
 one production Nitro app and loopback API per worker via the unchanged
@@ -259,7 +259,7 @@ describes the matching-package/image requirement and `--ipc=host`.
 
 `nav-web-visual` runs only for Nav Web changes after `nav-web` succeeds. It uses
 that tag **and** immutable digest with `--ipc=host` and `GOFURRY_VISUAL_ENV=pinned`,
-then independently runs `npm ci`, `npm run build`, `npm run test:visual`. It neither
+then independently runs `pnpm install --frozen-lockfile`, `pnpm run build`, `pnpm run test:visual`. It neither
 installs browsers nor transfers `.output` from the functional job. On failure,
 `nav-web-visual-failure` contains the distinct Visual report/results for seven days.
 
@@ -275,7 +275,7 @@ Static architecture/debt remains `style:policy`'s responsibility.
 
 ### Comparison and approved updates
 
-Local `npm run test:visual` is diagnostic only outside the pinned environment.
+Local `pnpm run test:visual` is diagnostic only outside the pinned environment.
 Comparisons use `updateSnapshots: 'none'`, so missing baselines also fail instead
 of being created. Snapshots belong in tracked
 `tests/browser/visual/__snapshots__/{testFilePath}/{explicit-name}.png`; do not
@@ -306,14 +306,14 @@ docker run --rm --init --ipc=host --platform linux/amd64 \
   --workdir /work/apps/cn/nav-web \
   --env GOFURRY_VISUAL_ENV=pinned \
   mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948 \
-  sh -lc 'npm ci && npm run build && npm run test:visual'
+  sh -lc 'npm install --global pnpm@12.6.0 && pnpm install --frozen-lockfile && pnpm run build && pnpm run test:visual'
 ```
 
 Only for an explicitly approved baseline change, use the same command
 with its last line replaced by:
 
 ```sh
-  sh -lc 'npm ci && npm run build && npm run test:visual:update'
+  sh -lc 'npm install --global pnpm@12.6.0 && pnpm install --frozen-lockfile && pnpm run build && pnpm run test:visual:update'
 ```
 
 Review the resulting snapshot diff before committing. P3.3.1 does not run this
@@ -352,7 +352,7 @@ Real Preferences/backdrop composition belongs to P3.3.3; business surfaces to
 P4+. Do not turn Foundation into a page gallery.
 
 Initial baseline creation is an approved visual-contract action. Use the pinned
-container/update guard above, then run `npm run test:visual` **twice consecutively**
+container/update guard above, then run `pnpm run test:visual` **twice consecutively**
 without updating. Both comparisons must pass. Investigate any difference rather
 than regenerating it away. Maintainers must review all four PNGs for correct
 primitive states, independent Generic Modal/Toggle scope and mobile fit before
@@ -442,12 +442,12 @@ rule advertised a payload that the build did not emit. Keep the zero-error check
 for real NuxtLink prefetch rather than hiding missing-payload errors in fixtures.
 
 Initial creation is explicitly authorized only for these six images. In the
-pinned Linux/Node 24 container above, after `npm ci` and `npm run build`, run:
+pinned Linux/Node 24 container above, after `pnpm install --frozen-lockfile` and `pnpm run build`, run:
 
 ```sh
-npm run test:visual:update -- -- static-pages.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- static-pages.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 The extra separator keeps the file filter out of Playwright's optional update
@@ -487,9 +487,9 @@ Initial creation is authorized only for the four Updates images. After install
 and build in the pinned environment, run:
 
 ```sh
-npm run test:visual:update -- -- updates-page.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- updates-page.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Both comparisons must report **23 passed**; Functional Browser is **65**.
@@ -530,9 +530,9 @@ Initial creation is authorized only for these four Error images in the pinned
 Linux/Node 24 environment, after install/build:
 
 ```sh
-npm run test:visual:update -- -- error-experience.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- error-experience.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Both comparisons must report **27 passed**; Functional Browser is **67**.
@@ -570,9 +570,9 @@ Initial creation is authorized only for these two images in the pinned
 Linux/Node 24 environment, after install/build:
 
 ```sh
-npm run test:visual:update -- -- page-scroll-dock.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- page-scroll-dock.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Both comparisons must report **29 passed**; Functional Browser is **68**.
@@ -601,9 +601,9 @@ Create only `footer-light-desktop.png` and `footer-dark-desktop.png` in the pinn
 Linux/Node 24 environment after install/build:
 
 ```sh
-npm run test:visual:update -- -- footer-shell.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- footer-shell.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Both comparisons must report **31 passed**; Functional Browser stays **68**.
@@ -654,9 +654,9 @@ geometry/quiet checks. No global Home animation wait, mask or tolerance is added
 Only these eight initial images are authorized, in the existing pinned environment:
 
 ```sh
-npm run test:visual:update -- -- nav-shell.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- nav-shell.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Both comparisons must report **39 passed**, Functional Browser **70**. The original
@@ -705,9 +705,9 @@ candidate; its five raw debts are not live Header coverage.
 Only these four initial snapshots may be created in the pinned environment:
 
 ```sh
-npm run test:visual:update -- -- nav-home-header.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- nav-home-header.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Acceptance is **72 Functional / 43 Visual / 42 PNG**, with the existing 38 PNGs,
@@ -754,9 +754,9 @@ sleep, network-idle, mask, tolerance or full-page snapshot is used.
 Only the eight new baselines may be created in the existing pinned environment:
 
 ```sh
-npm run test:visual:update -- -- nav-revealed-content.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- nav-revealed-content.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Acceptance is **76 Functional / 51 Visual / 50 PNG**, with two consecutive full
@@ -907,9 +907,9 @@ Only these fourteen initial snapshots may be created in the existing pinned
 Linux/Node24 environment, after its own clean install/build:
 
 ```sh
-npm run test:visual:update -- missing games-search.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update missing games-search.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Playwright's `missing` mode writes absent images but reports their first creation
@@ -990,25 +990,32 @@ this phase does not migrate appearance or reduce style debt.
 
 ### Full verification
 
-Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
+Use Node 24 and pnpm 12.6.0. Root `task verify` includes the local Unit/Nuxt,
+contract, static and build gates; Browser and pinned Linux Visual remain explicit.
+The two frontends keep independent locks and project-local script permissions.
+For an old npm checkout, remove or move aside its `node_modules` once before the
+first pnpm install so stale hoisted packages cannot mask the new dependency graph.
+The container examples bootstrap pnpm itself with npm; project execution uses pnpm.
+
+Fresh `pnpm install --frozen-lockfile` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
 types/config before either test project runs. Verification must not rely on a
 previous dev server or build having generated `.nuxt/tsconfig.json`.
 
 ```sh
-npm ci
-npm run lint
-npm run stylelint
-npm run style:policy:test
-npm run style:policy
-npm run test:unit
-npm run test:nuxt
-npm test
-npm run typecheck
-npm run insights:semantics
-npm run seo:recovery:test
-npm run build
-npx playwright install chromium
-npm run test:browser -- --workers=1
+pnpm install --frozen-lockfile
+pnpm run lint
+pnpm run stylelint
+pnpm run style:policy:test
+pnpm run style:policy
+pnpm run test:unit
+pnpm run test:nuxt
+pnpm test
+pnpm run typecheck
+pnpm run insights:semantics
+pnpm run seo:recovery:test
+pnpm run build
+pnpm exec playwright install chromium
+pnpm run test:browser --workers=1
 ```
 
 This uses the existing CI worker count locally; no retries. Focused smoke and
@@ -1016,14 +1023,14 @@ regression commands remain useful during development, but need not duplicate a
 completed full run without a new concern. Runner/fixture retirement acceptance
 uses two complete runs to expose state/teardown leaks. Do not compete with a
 simultaneous resource-heavy Visual build. On Linux CI install Chromium with
-`npx playwright install --with-deps chromium`.
+`pnpm exec playwright install --with-deps chromium`.
 
 The existing Nav Web CI job has separate **Unit tests** and **Nuxt tests** steps
 before typecheck/contract guards/build. It also builds the actual Docker deployment
-image, covering dependency-only `npm ci` followed by source copy and fresh Nuxt
-preparation; a full-checkout npm build alone does not cover that ordering.
+image, covering dependency-only `pnpm install --frozen-lockfile` followed by source copy and fresh Nuxt
+preparation; a full-checkout pnpm build alone does not cover that ordering.
 After both builds succeed it installs Chromium
-and runs **Browser tests** (`npm run test:browser`). A successful local run of the
+and runs **Browser tests** (`pnpm run test:browser`). A successful local run of the
 same commands is local evidence, not proof of a remote Actions run. The separate
 `nav-web-visual` job adds its own container install/build/Visual gate after this.
 Run those three commands in the pinned container as well. After an authorized
@@ -1042,7 +1049,7 @@ and [Vitest projects](https://vitest.dev/guide/projects).
 
 The remaining deterministic background/SEO/Insights runtime checks now use the
 existing single Browser Gate: 179 retained cases plus 181 migrated cases (360).
-Run `npm run build` then `npm run test:browser`; a focused run accepts a spec
+Run `pnpm run build` then `pnpm run test:browser`; a focused run accepts a spec
 path. The three aliases `background:smoke`, `seo:recovery:smoke` and
 `insights:smoke` and the eight runners below are retired. Historical acceptance
 records retain their original command evidence.

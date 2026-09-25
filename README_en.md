@@ -63,12 +63,22 @@ Admin publishes managed assets to COS Primary and an R2 best-effort Mirror, deli
 
 ## Quick Start
 
-Frontend development:
+Use Task >=3.45.3, Go 1.26.7, Node.js 24 and pnpm 12.6.0 from the repository root:
+
+```bash
+task
+task doctor
+task deps
+task dev:nav-web
+# Use task dev:admin-web for React; start the API in a separate terminal.
+```
+
+Direct frontend development remains available:
 
 ```bash
 cd apps/cn/nav-web
-npm install
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 Go service development:
@@ -88,11 +98,20 @@ See [Local development](./docs/development.md) and [Shared development infrastru
 
 ## Build and Validation
 
-```bat
-build.bat all
+```bash
+task check
+task test
+task verify
+task build
 ```
 
-The script builds only the six active Go applications and writes artifacts to the root `build/` directory. Nav Web retains its separate Node/Docker workflow. See [Local development](./docs/development.md) and the [Agent playbook](./.agents/playbook.md) for the complete validation commands.
+Use `task verify` on a fresh checkout: it prepares Admin embed output before Go
+checks/tests. `task build` produces only the six Go artifacts under `build/`,
+including Admin's `dist/` companion. Nav Web has separate `task build:nav-web`
+and `task build:nav-web-image` commands. Each frontend owns a pnpm lockfile;
+there is no root workspace. Task never loads root `.env` or operates deployments
+or databases. See [Local development](./docs/development.md) and the
+[Agent playbook](./.agents/playbook.md) for the complete commands.
 
 ## Deployment and Operations
 

@@ -4,8 +4,10 @@ WORKDIR /app
 ENV NUXT_TELEMETRY_DISABLED=1
 
 FROM base AS deps
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# npm only bootstraps the exact pnpm declared by this standalone project.
+RUN npm install --global "$(node -p 'require("./package.json").packageManager')" \
+    && pnpm install --frozen-lockfile
 
 FROM deps AS build
 
@@ -36,9 +38,9 @@ ENV NAV_V2_API_INTERNAL_BASE=${NAV_V2_API_INTERNAL_BASE}
 ENV GAME_API_INTERNAL_BASE=${GAME_API_INTERNAL_BASE}
 
 COPY . .
-# npm ci prepared an incomplete tree in deps. Refresh Nuxt's paths/types now
+# The frozen install prepared an incomplete tree in deps. Refresh Nuxt's paths/types now
 # that app/ and nuxt.config.ts exist, before Vue loads imported prop types.
-RUN npx nuxt prepare && npm run build
+RUN pnpm exec nuxt prepare && pnpm run build
 
 FROM deps AS runner
 

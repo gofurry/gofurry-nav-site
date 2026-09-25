@@ -2,6 +2,16 @@
 
 Run commands from the named module unless stated otherwise.
 
+From the root, start with `task doctor` (Task >=3.45.3, Go 1.26.7, Node 24,
+pnpm 12.6.0), then `task verify` for frozen dependencies, frontend builds, checks,
+local tests and native Go builds. Building Admin first supplies its embed files
+on a clean checkout. `task check` never formats or generates source; it requires
+installed dependencies and the Admin embed output. `task fmt` and
+`task generate:sqlc` are explicit mutations. `task test` excludes Browser/Visual;
+use the frontend guide for those gates. `task build` creates the six Linux/amd64
+artifacts; `task build:nav-web-image` only builds the separate image. See
+`docs/development.md` for the complete task surface and boundaries.
+
 ## Task lifecycle
 
 ### Before editing
@@ -52,11 +62,11 @@ Do not run `install` or `uninstall` against a real host as a routine test. Unit 
 Frontend checks:
 
 ~~~text
-cd apps/cn/admin/react && npm ci && npm run typecheck && npm test && npm run build
-cd apps/cn/nav-web && npm ci && npm run typecheck && npm run build
+cd apps/cn/admin/react && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm test && pnpm run build
+cd apps/cn/nav-web && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build
 ~~~
 
-For local React Admin work, run the Go Admin API on `127.0.0.1:10099` and `npm run dev` from `apps/cn/admin/react`; Vite proxies `/api` and `/csrf`. `npm run build` clears and writes the canonical Go embed directory. The root `build.bat admin` target runs that React build before compiling the self-contained production binary.
+For local React Admin work, run the Go Admin API on `127.0.0.1:10099` and `pnpm run dev` from `apps/cn/admin/react`; Vite proxies `/api` and `/csrf`. `pnpm run build` clears and writes the canonical Go embed directory. The root `task build:admin` target runs that React build before compiling the self-contained production binary.
 
 ## Repository and database checks
 

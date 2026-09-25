@@ -19,13 +19,13 @@ Owner。详见[托管资产说明](../../../docs/managed-assets.md)与[资产契
 
 ## 本地开发
 
-需要 Go 1.26.7、Node.js/npm、PostgreSQL 和 Redis。
+需要 Go 1.26.7、Node.js 24 / pnpm 12.6.0、PostgreSQL 和 Redis。
 
 ~~~bash
 # React Admin（开发端口 5178，API 代理到 10099）
 cd react
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 cd ..
 
 cp config/server.example.yaml config/server.yaml
@@ -45,7 +45,7 @@ go run . reset-password --config config/server.yaml --username owner --password 
 
 ## 生产构建与 systemd
 
-根目录 `build.bat admin` 会先将 React 构建到 embed 目录，再生成自包含 Linux 二进制和配套 `dist/`。必须使用最终部署位置的二进制，并从预期工作目录执行安装：
+根目录 `task build:admin` 会先将 React 构建到 embed 目录，再生成自包含 Linux 二进制和配套 `dist/`。必须使用最终部署位置的二进制，并从预期工作目录执行安装：
 
 ~~~bash
 cd /srv/gofurry/gofurry-admin
@@ -70,10 +70,10 @@ go test ./...
 go build ./...
 
 cd react
-npm ci
-npm run typecheck
-npm test
-npm run build
+pnpm install --frozen-lockfile
+pnpm run typecheck
+pnpm test
+pnpm run build
 ~~~
 
 详见 [React Admin 本地开发](../../../docs/admin-react.md)、[前端 parity](../../../docs/admin-frontend-parity.md)、[角色运维指南](../../../docs/operations/admin-roles.md)、[数据与系统运维](../../../docs/admin-data-system-operations.md)与[前端契约](../../../contracts/admin-frontend.md)。

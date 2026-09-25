@@ -1,0 +1,5 @@
+# Single-project settings; no packages are shared with Nav Web.
+verifyDepsBeforeRun: error
+allowBuilds:
+  # Optional macOS watcher; tests/builds use the published packages without rebuilding it.
+  fsevents: false

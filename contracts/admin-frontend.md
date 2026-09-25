@@ -4,6 +4,13 @@
 
 ## Architecture boundaries
 
+Node 24 and the exact `packageManager: pnpm@12.6.0` own frontend tooling.
+This project has an independent `pnpm-lock.yaml` and single-project
+`pnpm-workspace.yaml`; no root workspace or shared lockfile is used. Local/CI
+release installs use `pnpm install --frozen-lockfile`. Dependency build scripts
+require explicit package-level review. Root `task build:admin` installs and
+builds React before Go compilation and preserves the deployment `dist/` companion.
+
 UI layers flow in one direction:
 
 ~~~text

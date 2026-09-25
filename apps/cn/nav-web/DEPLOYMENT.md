@@ -1,6 +1,7 @@
 # Production deployment for `gofurry-nav-web`
 
-This frontend is designed to run inside Docker, so the production host does not need Node.js installed.
+This frontend runs inside Docker; the production host needs Docker and Compose,
+not Node.js, pnpm or Task. The build context remains `apps/cn/nav-web`.
 
 For the alpha.9 release, use the [cross-service upgrade guide](../../../docs/releases/v3.0.0-alpha.9.md).
 The frontend-only engineering changes require no new runtime variables, but the
@@ -31,6 +32,12 @@ Docker caches dependency installation before copying source. The `postinstall`
 prepare in that partial tree is insufficient: the build stage runs `nuxt prepare`
 again after copying the complete app/config, then `nuxt build`. Keep both steps;
 otherwise imported Vue prop types may resolve through stale TypeScript aliases.
+
+The dependency stage bootstraps the exact pnpm version from `packageManager`,
+then installs `pnpm-lock.yaml` with `--frozen-lockfile` and project-local script
+permissions. The complete-source stage runs `pnpm exec nuxt prepare` and
+`pnpm run build`. For a local image-only check use root `task doctor:docker` and
+`task build:nav-web-image`; neither starts containers nor invokes `update.sh`.
 
 ## nginx change for `go-furry.com`
 

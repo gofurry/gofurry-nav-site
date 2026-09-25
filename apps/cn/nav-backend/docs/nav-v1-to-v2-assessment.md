@@ -394,8 +394,8 @@ go test -race ./apps/nav/...
 
 ```bash
 cd apps/cn/nav-web
-npm run typecheck
-npm run build
+pnpm run typecheck
+pnpm run build
 ```
 
 性能验证：

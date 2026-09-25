@@ -1,0 +1,332 @@
+version: '3.45.3'
+
+# Commands are sequential. No dotenv, service orchestration or production operations.
+vars:
+  GO_MODULES:
+    - apps/cn/nav-backend
+    - apps/cn/nav-collector
+    - apps/cn/game-backend
+    - apps/cn/game-collector
+    - apps/cn/admin
+    - apps/cn/uptime
+    - tools
+
+tasks:
+  default:
+    desc: List repository engineering commands
+    cmds:
+      - task --list
+
+  doctor:
+    desc: Check Task, Go, Node, pnpm and Git versions (no installation)
+    cmds:
+      - node tools/doctor.mjs
+
+  doctor:docker:
+    desc: Check Docker engine and Compose availability
+    cmds:
+      - docker version
+      - docker compose version
+
+  deps:
+    desc: Install both independent frontend lockfiles, sequentially
+    cmds:
+      - task: deps:admin
+      - task: deps:nav-web
+
+  deps:admin:
+    desc: Install the frozen Admin frontend dependencies
+    dir: apps/cn/admin/react
+    cmds:
+      - pnpm install --frozen-lockfile
+
+  deps:nav-web:
+    desc: Install the frozen Nav Web dependencies and prepare Nuxt
+    dir: apps/cn/nav-web
+    cmds:
+      - pnpm install --frozen-lockfile
+
+  dev:admin-web:
+    desc: Start the Admin Vite development server
+    dir: apps/cn/admin/react
+    cmds:
+      - pnpm run dev
+
+  dev:nav-web:
+    desc: Start the Nav Web Nuxt development server
+    dir: apps/cn/nav-web
+    cmds:
+      - pnpm run dev
+
+  dev:nav-backend:
+    desc: Serve Nav Backend with its explicit local YAML
+    cmds:
+      - task: _serve
+        vars: {MODULE: nav-backend, CONFIG: conf/server.yaml}
+
+  dev:nav-collector:
+    desc: Serve Nav Collector with its explicit local YAML
+    cmds:
+      - task: _serve
+        vars: {MODULE: nav-collector, CONFIG: conf/server.yaml}
+
+  dev:game-backend:
+    desc: Serve Game Backend with its explicit local YAML
+    cmds:
+      - task: _serve
+        vars: {MODULE: game-backend, CONFIG: conf/server.yaml}
+
+  dev:game-collector:
+    desc: Serve Game Collector with its explicit local YAML
+    cmds:
+      - task: _serve
+        vars: {MODULE: game-collector, CONFIG: conf/server.yaml}
+
+  dev:admin-api:
+    desc: Serve Admin API with its explicit local YAML
+    cmds:
+      - task: _admin-embed-present
+      - task: _serve
+        vars: {MODULE: admin, CONFIG: config/server.yaml}
+
+  dev:uptime:
+    desc: Serve standalone Uptime with its explicit local YAML
+    cmds:
+      - task: _serve
+        vars: {MODULE: uptime, CONFIG: conf/server.yaml}
+
+  fmt:
+    desc: Format the six Go modules and tools
+    cmds:
+      - for: {var: GO_MODULES}
+        cmd: gofmt -w '{{.ITEM}}'
+
+  check:fmt:
+    desc: Check Go formatting without modifying files
+    cmds:
+      - go -C tools run ./check-gofmt {{range .GO_MODULES}}"../{{.}}" {{end}}
+
+  lint:
+    desc: Run Go, Admin and Nav Web static checks
+    cmds:
+      - task: lint:go
+      - task: lint:admin
+      - task: lint:nav-web
+
+  lint:go:
+    desc: Vet the six Go modules and tools (requires Admin embed output)
+    cmds:
+      - task: _admin-embed-present
+      - for: {var: GO_MODULES}
+        cmd: go -C '{{.ITEM}}' vet ./...
+
+  lint:admin:
+    desc: Lint Admin React
+    dir: apps/cn/admin/react
+    cmds:
+      - pnpm run lint
+
+  lint:nav-web:
+    desc: Run Nav Web ESLint, Stylelint and style policy gates
+    dir: apps/cn/nav-web
+    cmds:
+      - pnpm run lint
+      - pnpm run stylelint
+      - pnpm run style:policy:test
+      - pnpm run style:policy
+
+  typecheck:
+    desc: Typecheck both frontends
+    cmds:
+      - task: typecheck:admin
+      - task: typecheck:nav-web
+
+  typecheck:admin:
+    desc: Typecheck Admin React
+    dir: apps/cn/admin/react
+    cmds:
+      - pnpm run typecheck
+
+  typecheck:nav-web:
+    desc: Typecheck Nav Web
+    dir: apps/cn/nav-web
+    cmds:
+      - pnpm run typecheck
+
+  test:
+    desc: Run local Go, Admin and Nav Web tests (no Browser or database setup)
+    cmds:
+      - task: test:go
+      - task: test:admin
+      - task: test:nav-web
+
+  test:go:
+    desc: Test the six Go modules and tools without enabling integration configs
+    cmds:
+      - task: _admin-embed-present
+      - for: {var: GO_MODULES}
+        cmd: go -C '{{.ITEM}}' test ./...
+
+  test:admin:
+    desc: Run Admin Vitest
+    dir: apps/cn/admin/react
+    cmds:
+      - pnpm test
+
+  test:nav-web:
+    desc: Run Nav Web Unit, Nuxt, Insights and SEO contract tests
+    dir: apps/cn/nav-web
+    cmds:
+      - pnpm run test:unit
+      - pnpm run test:nuxt
+      - pnpm run insights:semantics
+      - pnpm run seo:recovery:test
+
+  test:nav-web:browser:
+    desc: Run production Browser tests serially (build and Chromium required)
+    dir: apps/cn/nav-web
+    cmds:
+      - pnpm run test:browser --workers=1
+
+  check:policy:
+    desc: Check production repository boundaries and build contracts
+    dir: tools
+    cmds:
+      - go run ./check-production-policy
+
+  check:sqlc:
+    desc: Vet SQL and compare generated contracts in a temporary directory
+    dir: tools
+    cmds:
+      - go tool sqlc vet -f ../sqlc.yaml
+      - go run ./check-sqlc
+
+  generate:sqlc:
+    desc: Explicitly regenerate committed service-local SQL code
+    dir: tools
+    cmds:
+      - go tool sqlc generate -f ../sqlc.yaml
+
+  check:
+    desc: Check formatting, lint, types, policy and SQL without rewriting sources
+    cmds:
+      - task: check:fmt
+      - task: lint
+      - task: typecheck
+      - task: check:policy
+      - task: check:sqlc
+
+  verify:
+    desc: Install, build frontends, check, test and build Go locally
+    # A fresh checkout has no embedded Admin assets; prepare them before Go vet/test.
+    cmds:
+      - task: deps
+      - task: verify:frontend-build
+      - task: check
+      - task: test
+      - task: verify:go-build
+
+  verify:frontend-build:
+    desc: Build both frontends using their installed locked dependencies
+    cmds:
+      - cmd: pnpm --dir apps/cn/admin/react run build
+      - cmd: pnpm --dir apps/cn/nav-web run build
+
+  verify:go-build:
+    desc: Build all Go packages for the workstation (no release artifacts)
+    cmds:
+      - task: _admin-embed-present
+      - for: {var: GO_MODULES}
+        cmd: go -C '{{.ITEM}}' build ./...
+
+  build:
+    desc: Build the six Linux/amd64 Go release artifacts
+    cmds:
+      - task: build:nav-backend
+      - task: build:nav-collector
+      - task: build:game-backend
+      - task: build:game-collector
+      - task: build:admin
+      - task: build:uptime
+
+  build:nav-backend:
+    desc: Build build/gf-nav/gf-nav
+    cmds:
+      - task: _release
+        vars: {MODULE: nav-backend, ARTIFACT: gf-nav}
+
+  build:nav-collector:
+    desc: Build build/gf-nav-collector/gf-nav-collector
+    cmds:
+      - task: _release
+        vars: {MODULE: nav-collector, ARTIFACT: gf-nav-collector}
+
+  build:game-backend:
+    desc: Build build/gf-game/gf-game
+    cmds:
+      - task: _release
+        vars: {MODULE: game-backend, ARTIFACT: gf-game}
+
+  build:game-collector:
+    desc: Build build/gf-game-collector/gf-game-collector
+    cmds:
+      - task: _release
+        vars: {MODULE: game-collector, ARTIFACT: gf-game-collector}
+
+  build:admin:
+    desc: Install/build React, embed Admin and copy its dist companion
+    cmds:
+      - task: deps:admin
+      - pnpm --dir apps/cn/admin/react run build
+      - task: _admin-embed-present
+      - task: _release
+        vars: {MODULE: admin, ARTIFACT: gofurry-admin}
+      - mkdir -p build/gofurry-admin/dist
+      - cp -R apps/cn/admin/internal/transport/http/webui/dist/. build/gofurry-admin/dist/
+
+  build:uptime:
+    desc: Build build/gf-uptime/gf-uptime
+    cmds:
+      - task: _release
+        vars: {MODULE: uptime, ARTIFACT: gf-uptime}
+
+  build:nav-web:
+    desc: Install and build Nav Web separately from the Go release
+    cmds:
+      - task: deps:nav-web
+      - pnpm --dir apps/cn/nav-web run build
+
+  build:nav-web-image:
+    desc: Build the Nav Web production Docker image without starting containers
+    dir: apps/cn/nav-web
+    cmds:
+      - docker build --tag gofurry-nav-web:latest .
+
+  clean:
+    desc: Remove only the root release artifact directory
+    cmds:
+      - rm -rf build
+
+  _serve:
+    internal: true
+    dir: 'apps/cn/{{.MODULE}}'
+    preconditions:
+      - sh: test -f '{{.CONFIG}}'
+        msg: Local config not found. Copy the matching server.example.yaml and configure development credentials first.
+    cmds:
+      - go run . serve --config '{{.CONFIG}}'
+
+  _admin-embed-present:
+    internal: true
+    preconditions:
+      - sh: test -f apps/cn/admin/internal/transport/http/webui/dist/index.html
+        msg: Admin embed output is missing. Run task deps:admin and pnpm --dir apps/cn/admin/react run build, or task verify.
+    cmds: []
+
+  _release:
+    internal: true
+    cmds:
+      - rm -rf 'build/{{.ARTIFACT}}'
+      - mkdir -p 'build/{{.ARTIFACT}}'
+      # Inline assignments override the caller even on Task 3.45.3.
+      - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go -C 'apps/cn/{{.MODULE}}' build -trimpath -ldflags="-s -w" -o '{{.ROOT_DIR}}/build/{{.ARTIFACT}}/{{.ARTIFACT}}' .

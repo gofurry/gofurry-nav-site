@@ -2,6 +2,7 @@
   "name": "gofurry-nav-web",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@12.6.0",
   "scripts": {
     "postinstall": "nuxt prepare",
     "dev": "nuxt dev",

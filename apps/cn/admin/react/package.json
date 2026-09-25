@@ -3,10 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@12.6.0",
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc -b --pretty false",
-    "build": "npm run typecheck && vite build",
+    "build": "pnpm run typecheck && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "oxlint",

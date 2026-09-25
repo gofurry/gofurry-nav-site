@@ -119,8 +119,8 @@ reselect Hero, and background routing probes/Save retain #121 snapshot semantics
 
 Hero normalization lives in `tests/unit/hero-preferences.test.ts`; the real Nuxt
 cookie/state composable runs in `tests/nuxt/use-hero-preferences.nuxt.test.ts`.
-Use `npm run test:unit` and `npm run test:nuxt`. Production Hero/Preferences browser
-regressions run in `npm run test:browser` alongside #121. The two Hero fixtures
+Use `pnpm run test:unit` and `pnpm run test:nuxt`. Production Hero/Preferences browser
+regressions run in `pnpm run test:browser` alongside #121. The two Hero fixtures
 cover SSR/hydration, bigint and independent pins, current metadata, Local/legacy
 behavior, lazy previews and pagination, selected IDs outside the page, Save under
 gated API/image latency, Cancel, themes and keyboard focus. Backend controller,
@@ -193,7 +193,7 @@ An explicit home data refresh/new navigation may select a new key; crossing the
 the explicit Hero source contract above, including its one-time legacy migration.
 Saving resource routes never reselects a local image or cloud Hero.
 
-The Hero lifecycle regression in `npm run test:browser` injects a late
+The Hero lifecycle regression in `pnpm run test:browser` injects a late
 failure into independently constructed Hero Images while allowing the actual
 renderer to paint, compares the displayed source and pixels, verifies one home
 request using a different-key second-response fixture, and tests explicit new
@@ -229,11 +229,11 @@ Save-Data browsers. Manual tests start immediately and have a persisted 60-secon
 cooldown; explicit tests may still be attempted offline. No continuous probing,
 backend API, database state, cloud mutation or dependency is introduced.
 
-`npm run test:unit` covers resolver, fixed-probe, legacy migration, scheduling,
-TTL and cooldown regressions. `npm run test:nuxt` covers actual Nuxt composable
+`pnpm run test:unit` covers resolver, fixed-probe, legacy migration, scheduling,
+TTL and cooldown regressions. `pnpm run test:nuxt` covers actual Nuxt composable
 snapshots/fallback and Hero cookie/state behavior. See
 [frontend testing](frontend/testing.md) for the runner boundaries.
-After `npm run build`, `npm run test:browser` runs Resource Routing against the production Nuxt
+After `pnpm run build`, `pnpm run test:browser` runs Resource Routing against the production Nuxt
 application with isolated API/CDN fixtures to check SSR, actual loaded image
 stability, changed resources, failures, Save/Cancel, three-tab keyboard navigation
 and mobile/light/dark interaction. Playwright keeps traces/screenshots only on
@@ -242,8 +242,8 @@ Hero lifecycle and Hero Preferences now share the same Browser Gate; their old
 scripts and `assets:routing-smoke` alias are retired. This deterministic
 suite does not depend on real CDN availability or substitute for cloud acceptance.
 
-Run Nav Web `npm run test:unit`, `npm run test:nuxt`, `npm run insights:semantics`,
-`npm run seo:recovery:test`, `npm run typecheck`, and `npm run build`.
+Run Nav Web `pnpm run test:unit`, `pnpm run test:nuxt`, `pnpm run insights:semantics`,
+`pnpm run seo:recovery:test`, `pnpm run typecheck`, and `pnpm run build`.
 Nav Backend's opt-in `TestRealDevAppearanceQueries` uses only transaction-local
 temporary tables copied from the Goose schema to verify pool isolation,
 disabled/deleted filtering and pattern order on real PostgreSQL.
@@ -260,7 +260,7 @@ Blob; missing/disabled patterns, missing local files and exhausted CDN retries
 fall back to the bundled pattern. SSR always renders the bundled background
 before browser-only preferences are loaded.
 
-After `npm run build`, run `npm run test:browser -- tests/browser/regression/background-storage.spec.ts`
+After `pnpm run build`, run `pnpm run test:browser tests/browser/regression/background-storage.spec.ts`
 for real Preferences UI, Chromium IndexedDB persistence, original SVG bytes,
 raster decoding, reload/clear, metadata-only storage and zero network mutations.
 
@@ -342,7 +342,7 @@ the maintainer configured EdgeOne response headers for the development asset
 hostname and the HTTP plus production-Nuxt browser suites then passed. Runtime
 COS CAM permissions stayed unchanged; bucket configuration is not a runtime duty.
 
-The final browser suite (`npm run assets:cloud-smoke` after a production build)
+The final browser suite (`pnpm run assets:cloud-smoke` after a production build)
 also verifies live catalog-default updates without copying defaults into browser
 overrides, local SVG/raster editing and clearing, 12-hour preference cookies,
 independent desktop/mobile AVIF reads and terminal icon/Hero/pattern fallbacks.

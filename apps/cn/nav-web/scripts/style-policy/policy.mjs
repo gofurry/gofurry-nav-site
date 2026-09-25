@@ -41,7 +41,7 @@ export function formatReport(result) {
   for (const difference of result.differences) {
     const { rule, file, baseline, actual, kind } = difference
     lines.push(`\n${kind}: ${rule}\n  ${file}\n  baseline: ${baseline}; actual: ${actual}`)
-    if (kind === 'stale') lines.push(result.ok ? '  Stored budget lowered.' : '  Lower the stored budget with npm run style:policy:update.')
+    if (kind === 'stale') lines.push(result.ok ? '  Stored budget lowered.' : '  Lower the stored budget with pnpm run style:policy:update.')
     else for (const finding of result.findings.filter(item => item.rule === rule && item.file === file)) {
       lines.push(`  line ${finding.line}: ${finding.value} — ${finding.message}`)
     }

@@ -10,7 +10,7 @@ on:
       - 'AGENTS.md'
       - '.agents/**'
       - 'contracts/**'
-      - 'build.bat'
+      - 'Taskfile.yml'
       - 'docs/**'
       - 'ops/**'
       - '.github/workflows/checks.yml'
@@ -24,7 +24,7 @@ on:
       - 'AGENTS.md'
       - '.agents/**'
       - 'contracts/**'
-      - 'build.bat'
+      - 'Taskfile.yml'
       - 'docs/**'
       - 'ops/**'
       - '.github/workflows/checks.yml'
@@ -86,7 +86,7 @@ jobs:
             fi
           }
 
-          shared='^(sqlc\.yaml$|tools/|\.github/workflows/(checks|security)\.yml$)'
+          shared='^(Taskfile\.yml$|sqlc\.yaml$|tools/|\.github/workflows/(checks|security)\.yml$)'
           modules='[]'
           add_module() {
             modules="$(printf '%s' "${modules}" | jq -c --arg module "$1" '. + [$module]')"
@@ -104,9 +104,9 @@ jobs:
             echo "has_modules=true" >> "${GITHUB_OUTPUT}"
           fi
 
-          set_bool policy '^(apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector|uptime)/|db/|tools/|sqlc\.yaml$|AGENTS\.md$|\.agents/|contracts/|\.github/workflows/(checks|security)\.yml$)'
+          set_bool policy '^(Taskfile\.yml$|apps/cn/(nav-web|admin|game-backend|game-collector|nav-backend|nav-collector|uptime)/|db/|tools/|sqlc\.yaml$|AGENTS\.md$|\.agents/|contracts/|\.github/workflows/(checks|security)\.yml$)'
           set_bool foundation '^(db/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$|apps/cn/(admin|game-backend|game-collector|nav-backend|nav-collector)/internal/db/.*/queries/)'
-          set_bool nav_web '^(apps/cn/nav-web/|\.github/workflows/checks\.yml$)'
+          set_bool nav_web '^(Taskfile\.yml$|apps/cn/nav-web/|\.github/workflows/checks\.yml$)'
           set_bool game_integration '^(apps/cn/(admin|game-backend|game-collector)/|db/game/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
           set_bool nav_integration '^(apps/cn/(admin|nav-backend|nav-collector)/|db/nav/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
           set_bool admin_integration '^(apps/cn/admin/|db/(admin|game|nav)/|tools/|sqlc\.yaml$|\.github/workflows/checks\.yml$)'
@@ -126,20 +126,26 @@ jobs:
         with:
           go-version-file: ${{ matrix.module }}/go.mod
           cache-dependency-path: ${{ matrix.module }}/go.sum
+      - uses: pnpm/action-setup@v6
+        if: matrix.module == 'apps/cn/admin'
+        with:
+          package_json_file: apps/cn/admin/react/package.json
+          run_install: false
       - uses: actions/setup-node@v6
         if: matrix.module == 'apps/cn/admin'
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: apps/cn/admin/react/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/cn/admin/react/pnpm-lock.yaml
       - name: Validate React Admin
         if: matrix.module == 'apps/cn/admin'
         working-directory: apps/cn/admin/react
         run: |
-          npm ci
-          npm run typecheck
-          npm test
-          npm run build
+          pnpm install --frozen-lockfile
+          pnpm run lint
+          pnpm run typecheck
+          pnpm test
+          pnpm run build
       - name: Check gofmt
         working-directory: ${{ matrix.module }}
         shell: bash
@@ -165,53 +171,57 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/cn/nav-web/package.json
+          run_install: false
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: apps/cn/nav-web/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
       - working-directory: apps/cn/nav-web
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Lint
         working-directory: apps/cn/nav-web
-        run: npm run lint
+        run: pnpm run lint
       - name: Stylelint
         working-directory: apps/cn/nav-web
-        run: npm run stylelint
+        run: pnpm run stylelint
       - name: Style policy tests
         working-directory: apps/cn/nav-web
-        run: npm run style:policy:test
+        run: pnpm run style:policy:test
       - name: Style policy
         working-directory: apps/cn/nav-web
-        run: npm run style:policy
+        run: pnpm run style:policy
       - name: Unit tests
         working-directory: apps/cn/nav-web
-        run: npm run test:unit
+        run: pnpm run test:unit
       - name: Nuxt tests
         working-directory: apps/cn/nav-web
-        run: npm run test:nuxt
+        run: pnpm run test:nuxt
       - name: Typecheck
         working-directory: apps/cn/nav-web
-        run: npm run typecheck
+        run: pnpm run typecheck
       - name: Insights semantic guards
         working-directory: apps/cn/nav-web
-        run: npm run insights:semantics
+        run: pnpm run insights:semantics
       - name: SEO recovery contract guards
         working-directory: apps/cn/nav-web
-        run: npm run seo:recovery:test
+        run: pnpm run seo:recovery:test
       - name: Build
         working-directory: apps/cn/nav-web
-        run: npm run build
+        run: pnpm run build
       - name: Build deployment image
         working-directory: apps/cn/nav-web
         run: docker build --tag gofurry-nav-web:ci .
       - name: Install Playwright Chromium
         working-directory: apps/cn/nav-web
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
       - name: Browser tests
         id: browser-tests
         working-directory: apps/cn/nav-web
-        run: npm run test:browser
+        run: pnpm run test:browser
       - name: Browser failure artifacts
         if: ${{ failure() && steps.browser-tests.outcome == 'failure' }}
         uses: actions/upload-artifact@v7
@@ -235,19 +245,23 @@ jobs:
       GOFURRY_VISUAL_ENV: pinned
     steps:
       - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/cn/nav-web/package.json
+          run_install: false
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: apps/cn/nav-web/package-lock.json
+          cache: pnpm
+          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
       - working-directory: apps/cn/nav-web
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Build
         working-directory: apps/cn/nav-web
-        run: npm run build
+        run: pnpm run build
       - name: Visual tests
         working-directory: apps/cn/nav-web
-        run: npm run test:visual
+        run: pnpm run test:visual
       - name: Visual failure artifacts
         if: failure()
         uses: actions/upload-artifact@v7
@@ -269,6 +283,15 @@ jobs:
         with:
           go-version-file: tools/go.mod
           cache-dependency-path: tools/go.sum
+      - name: Install minimum supported Task
+        run: go install github.com/go-task/task/v3/cmd/task@v3.45.3
+      - name: Parse Taskfile and inspect release commands
+        run: |
+          task --list
+          task --dry build
+      - name: Tooling contract tests
+        working-directory: tools
+        run: go test ./check-production-policy ./check-sqlc ./check-gofmt
       - working-directory: tools
         run: go run ./check-production-policy
 

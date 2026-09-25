@@ -1,0 +1,17 @@
+# Single-project settings; no packages are shared with Admin.
+verifyDepsBeforeRun: error
+# npm's production graph used Vue + its SSR renderer at 3.5.33; only test-utils
+# nested 3.5.43. Keep one runtime after pnpm's isolated peer resolution, otherwise
+# Nitro can mix Vue instances and return SSR 500 (reading current instance.ce).
+overrides:
+  vue: 3.5.33
+  '@vue/server-renderer': 3.5.33
+allowBuilds:
+  # Validate/select the platform binary used by Vite and Nitro.
+  esbuild: true
+  # Generate the Vue 3 bridge consumed by @floating-ui/vue.
+  vue-demi: true
+  # These use published optional platform binaries; no local rebuild is needed.
+  '@parcel/watcher': false
+  unrs-resolver: false
+  fsevents: false
