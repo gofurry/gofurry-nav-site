@@ -95,7 +95,7 @@ GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/o
 GOFURRY_GAME_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/changes -count=1
 GOFURRY_NAV_COLLECTOR_INTEGRATION_CONFIG=/path/config.yaml go test ./collector/changes -count=1
 GOFURRY_NAV_BACKEND_INTEGRATION_CONFIG=/path/config.yaml go test ./apps/nav/navPage/dao -run TestPostgresNavBackendPersistenceSemantics -count=1
-GOFURRY_ADMIN_INTEGRATION_CONFIG=/path/server.yaml go test ./internal/bootstrap -run 'TestAdmin(ThreeDatabasePersistence|IdentityAuthorizationPersistence|LegacyIdentityUpgrade)' -count=1
+GOFURRY_ADMIN_INTEGRATION_CONFIG=/path/server.yaml go test ./internal/bootstrap -run 'TestAdmin(ThreeDatabasePersistence|IdentityAuthorizationPersistence|LegacyIdentityUpgrade|CollaborationThreeDatabase)' -count=1
 ~~~
 
 Historical Fact smoke checks use the Collector CLI against the same isolated config: `facts status`, `facts backfill --dry-run`, `facts backfill`, and a bounded `facts rebuild --pipeline ... --from ... --through ...`. Keep `facts.retention_enabled=false` until checkpoints and fact row counts are verified.
@@ -119,3 +119,5 @@ Run the pinned vulnerability scanner from `tools` for every active module. CI pe
 Availability smoke checks include Nav Web `/healthz`, backend/Admin readiness, both enabled collector readiness listeners, and the standalone uptime service `/livez`, `/readyz`, and `/uptime`. Uptime does not participate in sqlc, Goose, or PostgreSQL integration jobs.
 
 The tested CI matrix in `.github/scripts/detect-changes.mjs` keeps `db/game` on both Game services and Admin, `db/nav` on both Nav services and Admin, and `db/admin` on Admin. SQL/runtime tooling changes run all SQL consumers; standalone doctor/policy/formatting checks do not start application/database suites. Archive and experiment trees are never production CI inputs. The `nav-web` check requires the pinned build, all three Browser shards, Visual and the independent Docker image build.
+
+Collaboration changes must preserve GFA-only inventory, bounded batch queries, HTTP 409 on stale versions, create-success/link-failure recovery, and pointerup-only drag persistence. Run the isolated three-database Collaboration test and the Vitest feature suite; follow `docs/collaboration-center.md` for two-account manual acceptance and GFA migration order.

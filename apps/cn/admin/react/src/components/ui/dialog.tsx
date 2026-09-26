@@ -16,7 +16,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
           <BaseDialog.Close aria-label="关闭" className="rounded p-1 hover:bg-surface-muted"><X className="size-4" /></BaseDialog.Close>
         </div>
         <div data-admin-dialog-scroll className="admin-scroll min-h-0 overflow-x-hidden overflow-y-auto p-5">{children}</div>
-        {footer && <div className="flex shrink-0 justify-end gap-2 border-t p-4">{footer}</div>}
+        {footer && <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t p-4">{footer}</div>}
       </BaseDialog.Popup>
     </BaseDialog.Portal>
   </BaseDialog.Root>

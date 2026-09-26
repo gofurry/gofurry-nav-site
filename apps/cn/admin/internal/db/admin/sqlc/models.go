@@ -39,3 +39,38 @@ type GfaAdminAuditLog struct {
 	OperatorName      string           `json:"operator_name"`
 	OperatorRole      string           `json:"operator_role"`
 }
+
+type GfaCollaborationBoardNote struct {
+	ID                 int64            `json:"id"`
+	Body               string           `json:"body"`
+	X                  int32            `json:"x"`
+	Y                  int32            `json:"y"`
+	Width              int32            `json:"width"`
+	Height             int32            `json:"height"`
+	ZIndex             int32            `json:"z_index"`
+	CreatedByAccountID int64            `json:"created_by_account_id"`
+	UpdatedByAccountID int64            `json:"updated_by_account_id"`
+	Version            int64            `json:"version"`
+	CreatedAt          pgtype.Timestamp `json:"created_at"`
+	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
+}
+
+type GfaContentIdea struct {
+	ID                     int64            `json:"id"`
+	Kind                   string           `json:"kind"`
+	Title                  *string          `json:"title"`
+	Source                 *string          `json:"source"`
+	SourceKey              *string          `json:"source_key"`
+	Note                   string           `json:"note"`
+	Priority               string           `json:"priority"`
+	Status                 string           `json:"status"`
+	CreatedByAccountID     int64            `json:"created_by_account_id"`
+	ResearchingByAccountID *int64           `json:"researching_by_account_id"`
+	LinkedKind             *string          `json:"linked_kind"`
+	LinkedResourceID       *int64           `json:"linked_resource_id"`
+	Version                int64            `json:"version"`
+	CreatedAt              pgtype.Timestamp `json:"created_at"`
+	UpdatedAt              pgtype.Timestamp `json:"updated_at"`
+	ResearchingAt          pgtype.Timestamp `json:"researching_at"`
+	LandedAt               pgtype.Timestamp `json:"landed_at"`
+}

@@ -84,3 +84,7 @@ Routine deployments must preserve:
 ## Rollback
 
 Keep the previous binary and unit backup until post-deployment checks pass. For a binary-only rollback, stop the service, restore the previous binary/unit, reload systemd, and start it. Database rollback must follow the migration-specific runbook; never improvise destructive down migrations against production.
+
+## Admin Collaboration Center (#117)
+
+Back up GFA, coordinate/stop Admin writes, manually apply Goose migrations from `db/admin/migrations` with `gofurry_migrator`, then deploy the new Admin binary with embedded React. Migration `20260926000000` adds only GFA collaboration tables. No GFG/GFN migration or Game/Nav Backend/Collector/Nav Web deployment is required for #117. Verify ideas, Board, capabilities, Audit and create-success/link-failure recovery using the [acceptance guide](collaboration-center.md).

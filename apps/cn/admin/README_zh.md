@@ -77,3 +77,5 @@ pnpm run build
 ~~~
 
 详见 [React Admin 本地开发](../../../docs/admin-react.md)、[前端 parity](../../../docs/admin-frontend-parity.md)、[角色运维指南](../../../docs/operations/admin-roles.md)、[数据与系统运维](../../../docs/admin-data-system-operations.md)与[前端契约](../../../contracts/admin-frontend.md)。
+
+[协作中心](../../../docs/collaboration-center.md)提供仅存 GFA 的内容想法池与全局文本画板。正式 Game/Site 创建仍走原 API，关联失败可在正式 Workspace 恢复，不回滚正式内容。升级须先备份 GFA、手工运行新 Goose migration，再部署新版 Admin binary。

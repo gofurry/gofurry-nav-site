@@ -25,6 +25,30 @@
       "cycle": false,
       "owned_table": "gfa_admin_audit_log",
       "owned_column": "id"
+    },
+    {
+      "name": "gfa_collaboration_board_note_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfa_collaboration_board_note",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfa_content_idea_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfa_content_idea",
+      "owned_column": "id"
     }
   ],
   "tables": [
@@ -324,6 +348,411 @@
         {
           "name": "idx_gfa_admin_audit_operator_account_created",
           "definition": "CREATE INDEX idx_gfa_admin_audit_operator_account_created ON public.gfa_admin_audit_log USING btree (operator_account_id, created_at DESC) WHERE (operator_account_id IS NOT NULL)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfa_collaboration_board_note",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "nextval('gfa_collaboration_board_note_id_seq'::regclass)"
+        },
+        {
+          "name": "body",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "x",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "y",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "width",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "280"
+        },
+        {
+          "name": "height",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "200"
+        },
+        {
+          "name": "z_index",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "created_by_account_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "updated_by_account_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "version",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "1"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfa_collaboration_board_note_body_check",
+          "definition": "CHECK (btrim(body) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfa_collaboration_board_note_body_not_null",
+          "definition": "NOT NULL body"
+        },
+        {
+          "name": "gfa_collaboration_board_note_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfa_collaboration_board_note_created_by_account_id_fkey",
+          "definition": "FOREIGN KEY (created_by_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfa_collaboration_board_note_created_by_account_id_not_null",
+          "definition": "NOT NULL created_by_account_id"
+        },
+        {
+          "name": "gfa_collaboration_board_note_height_check",
+          "definition": "CHECK (height \u003e 0)"
+        },
+        {
+          "name": "gfa_collaboration_board_note_height_not_null",
+          "definition": "NOT NULL height"
+        },
+        {
+          "name": "gfa_collaboration_board_note_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfa_collaboration_board_note_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfa_collaboration_board_note_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfa_collaboration_board_note_updated_by_account_id_fkey",
+          "definition": "FOREIGN KEY (updated_by_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfa_collaboration_board_note_updated_by_account_id_not_null",
+          "definition": "NOT NULL updated_by_account_id"
+        },
+        {
+          "name": "gfa_collaboration_board_note_version_check",
+          "definition": "CHECK (version \u003e 0)"
+        },
+        {
+          "name": "gfa_collaboration_board_note_version_not_null",
+          "definition": "NOT NULL version"
+        },
+        {
+          "name": "gfa_collaboration_board_note_width_check",
+          "definition": "CHECK (width \u003e 0)"
+        },
+        {
+          "name": "gfa_collaboration_board_note_width_not_null",
+          "definition": "NOT NULL width"
+        },
+        {
+          "name": "gfa_collaboration_board_note_x_check",
+          "definition": "CHECK (x \u003e= 0)"
+        },
+        {
+          "name": "gfa_collaboration_board_note_x_not_null",
+          "definition": "NOT NULL x"
+        },
+        {
+          "name": "gfa_collaboration_board_note_y_check",
+          "definition": "CHECK (y \u003e= 0)"
+        },
+        {
+          "name": "gfa_collaboration_board_note_y_not_null",
+          "definition": "NOT NULL y"
+        },
+        {
+          "name": "gfa_collaboration_board_note_z_index_check",
+          "definition": "CHECK (z_index \u003e= 0)"
+        },
+        {
+          "name": "gfa_collaboration_board_note_z_index_not_null",
+          "definition": "NOT NULL z_index"
+        }
+      ],
+      "indexes": null,
+      "triggers": null
+    },
+    {
+      "name": "gfa_content_idea",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "nextval('gfa_content_idea_id_seq'::regclass)"
+        },
+        {
+          "name": "kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "title",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "source",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "source_key",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "note",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "priority",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'normal'::text"
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'idea'::text"
+        },
+        {
+          "name": "created_by_account_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "researching_by_account_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "linked_kind",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "linked_resource_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "version",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "1"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "researching_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "landed_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": false,
+          "has_default": false
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfa_content_idea_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfa_content_idea_created_by_account_id_fkey",
+          "definition": "FOREIGN KEY (created_by_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfa_content_idea_created_by_account_id_not_null",
+          "definition": "NOT NULL created_by_account_id"
+        },
+        {
+          "name": "gfa_content_idea_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfa_content_idea_kind_check",
+          "definition": "CHECK (kind = ANY (ARRAY['game'::text, 'site'::text, 'other'::text]))"
+        },
+        {
+          "name": "gfa_content_idea_kind_not_null",
+          "definition": "NOT NULL kind"
+        },
+        {
+          "name": "gfa_content_idea_linked_kind_check",
+          "definition": "CHECK (linked_kind = ANY (ARRAY['game'::text, 'site'::text]))"
+        },
+        {
+          "name": "gfa_content_idea_linked_resource_id_check",
+          "definition": "CHECK (linked_resource_id \u003e 0)"
+        },
+        {
+          "name": "gfa_content_idea_note_not_null",
+          "definition": "NOT NULL note"
+        },
+        {
+          "name": "gfa_content_idea_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfa_content_idea_priority_check",
+          "definition": "CHECK (priority = ANY (ARRAY['normal'::text, 'high'::text]))"
+        },
+        {
+          "name": "gfa_content_idea_priority_not_null",
+          "definition": "NOT NULL priority"
+        },
+        {
+          "name": "gfa_content_idea_researching_by_account_id_fkey",
+          "definition": "FOREIGN KEY (researching_by_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfa_content_idea_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['idea'::text, 'researching'::text, 'landed'::text, 'shelved'::text]))"
+        },
+        {
+          "name": "gfa_content_idea_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfa_content_idea_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfa_content_idea_version_check",
+          "definition": "CHECK (version \u003e 0)"
+        },
+        {
+          "name": "gfa_content_idea_version_not_null",
+          "definition": "NOT NULL version"
+        },
+        {
+          "name": "idea_content_check",
+          "definition": "CHECK (COALESCE(btrim(title), ''::text) \u003c\u003e ''::text OR COALESCE(btrim(source), ''::text) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "idea_link_check",
+          "definition": "CHECK (status \u003c\u003e 'landed'::text AND linked_kind IS NULL AND linked_resource_id IS NULL AND landed_at IS NULL OR status = 'landed'::text AND landed_at IS NOT NULL AND ((kind = ANY (ARRAY['game'::text, 'site'::text])) AND linked_kind IS NOT NULL AND linked_kind = kind AND linked_resource_id IS NOT NULL OR kind = 'other'::text AND (linked_kind IS NULL AND linked_resource_id IS NULL OR linked_kind IS NOT NULL AND linked_resource_id IS NOT NULL)))"
+        },
+        {
+          "name": "idea_research_check",
+          "definition": "CHECK (status = 'researching'::text AND researching_by_account_id IS NOT NULL AND researching_at IS NOT NULL OR status \u003c\u003e 'researching'::text AND researching_by_account_id IS NULL AND researching_at IS NULL)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_idea_created",
+          "definition": "CREATE INDEX idx_idea_created ON public.gfa_content_idea USING btree (created_at DESC, id DESC)"
+        },
+        {
+          "name": "idx_idea_kind_status_updated",
+          "definition": "CREATE INDEX idx_idea_kind_status_updated ON public.gfa_content_idea USING btree (kind, status, updated_at DESC, id DESC)"
+        },
+        {
+          "name": "idx_idea_landed",
+          "definition": "CREATE INDEX idx_idea_landed ON public.gfa_content_idea USING btree (landed_at DESC) WHERE (status = 'landed'::text)"
+        },
+        {
+          "name": "idx_idea_researcher_status",
+          "definition": "CREATE INDEX idx_idea_researcher_status ON public.gfa_content_idea USING btree (researching_by_account_id, status)"
+        },
+        {
+          "name": "idx_idea_source_key",
+          "definition": "CREATE INDEX idx_idea_source_key ON public.gfa_content_idea USING btree (source_key) WHERE (source_key IS NOT NULL)"
+        },
+        {
+          "name": "idx_idea_status_updated",
+          "definition": "CREATE INDEX idx_idea_status_updated ON public.gfa_content_idea USING btree (status, updated_at DESC, id DESC)"
         }
       ],
       "triggers": null

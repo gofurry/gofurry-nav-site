@@ -37,9 +37,10 @@ sync percentage, or frontend reconstruction of the role policy is exposed.
 
 ## Product structure
 
-Top-level groups are Workbench, Nav Content, Game Content, Data Operations, and System. Content and operational routes are native React:
+Top-level groups are Workbench, Collaboration, Nav Content, Game Content, Data Operations, and System. Content and operational routes are native React:
 
 ~~~text
+/collaboration
 /nav/sites
 /nav/sites/:id
 /nav/site-groups
@@ -92,3 +93,11 @@ normal removal is visibly archive/restore. Game classification saves weight,
 nullable primary/secondary IDs and the complete Tag set in one
 `PUT /api/v1/game/games/:id/classification` request; content saves do not overwrite
 classification. The returned workspace includes the role union and resets the form.
+
+## Collaboration Center
+
+`/collaboration` has exactly two internal tabs: content ideas and one shared text Board, guarded by independent `collaboration.read/write`. Inventory lives only in GFA; formal content must never be created by batch import. The browser parses explicit `title | source | note` lines, while Go owns canonicalization and soft duplicate checks (maximum 500 candidates). All updates carry the displayed version; HTTP 409 requires explicit reload.
+
+Game/Site create and formal workspaces preserve `?idea=`. Prefill only reliable Steam AppID or Site title/name, with no automatic Steam call or Collector Target/classification guess. Formal success survives GFA link failure; the workspace offers recovery using the existing resource. Existing options APIs own manual link search. Workbench inventory counts are neutral, never Attention backlog. The Board uses native pointer events and persists movement on pointerup, with 12-second polling and no additional board framework. See [the domain guide](../docs/collaboration-center.md).
+
+Collaboration idea create/edit share a dialog. Long list cells truncate, narrow containers hide secondary columns, and secondary actions use a row menu. Confirmed idea deletion uses `collaboration.write` and the displayed version, records a GFA audit snapshot, and never deletes linked formal content. Existing-content options render in the link dialog’s scroll flow to avoid clipping. Batch paste uses visible pipe separators with examples, separate preview columns and line-numbered format errors; it does not parse Excel/TSV cells.

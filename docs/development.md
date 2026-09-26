@@ -212,3 +212,5 @@ go tool govulncheck -C ../apps/cn/nav-backend ./...
 Database integration checks require explicitly configured, isolated development databases. Never point them at production.
 
 The standalone uptime service has no PostgreSQL integration suite. Its tests use temporary Bbolt files. Collector health listeners are disabled when `health` is omitted; example configs bind them to loopback addresses.
+
+For Admin Collaboration Center development, run the isolated `TestAdminCollaborationThreeDatabase` test in addition to React lint/typecheck/test/build and Admin Go/sqlc checks. Migration `20260926000000` changes only GFA; regenerate the expected-final fixture through db-baseline, never rewrite the historical baseline. See [Collaboration Center verification](collaboration-center.md).

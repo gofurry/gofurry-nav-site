@@ -14,7 +14,7 @@ describe('content workspace routing', () => {
   })
 
   it.each([
-    ['/collection', 'collection'], ['/metrics', 'metrics'], ['/changes', 'changes'],
+    ['/collaboration', 'collaboration'], ['/collection', 'collection'], ['/metrics', 'metrics'], ['/changes', 'changes'],
     ['/system/data-operations', 'system/data-operations'], ['/system/audit', 'system/audit'], ['/system/accounts', 'system/accounts'],
   ])('matches operational route %s natively', (pathname, expected) => {
     const matches = matchRoutes(router.routes, pathname)
@@ -42,4 +42,9 @@ describe('content workspace routing', () => {
     expect(capability).toBe(DATAOPS_READ_CAPABILITY)
     expect(capability).not.toBe('data_ops.read')
   })
+})
+
+it('guards Collaboration independently from content', () => {
+ const matches = matchRoutes(router.routes, '/collaboration')
+ expect(matches?.some(({ route }) => isValidElement<{ capability?: string }>(route.element) && route.element.props.capability === 'collaboration.read')).toBe(true)
 })

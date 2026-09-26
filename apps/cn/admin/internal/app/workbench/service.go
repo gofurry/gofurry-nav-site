@@ -9,27 +9,39 @@ import (
 	"github.com/gofurry/gofurry-admin/internal/app/auth/authorization"
 	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
 	"github.com/gofurry/gofurry-admin/internal/app/changeadmin"
+	"github.com/gofurry/gofurry-admin/internal/app/collaboration"
 	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
 	"github.com/gofurry/gofurry-admin/internal/app/dataops"
 	"github.com/gofurry/gofurry-admin/internal/app/metricadmin"
 )
 
 type Service struct {
-	collection *collectionservice.Service
-	metrics    *metricadmin.Service
-	changes    *changeadmin.Service
-	data       *dataops.Service
-	audit      *auditadmin.Service
-	accounts   *authservice.AuthService
+	collaboration *collaboration.Service
+	collection    *collectionservice.Service
+	metrics       *metricadmin.Service
+	changes       *changeadmin.Service
+	data          *dataops.Service
+	audit         *auditadmin.Service
+	accounts      *authservice.AuthService
 }
 
 func New(collection *collectionservice.Service, metrics *metricadmin.Service, changes *changeadmin.Service, data *dataops.Service, audit *auditadmin.Service, accounts *authservice.AuthService) *Service {
 	return &Service{collection: collection, metrics: metrics, changes: changes, data: data, audit: audit, accounts: accounts}
 }
 
+func (service *Service) WithCollaboration(value *collaboration.Service) *Service {
+	service.collaboration = value
+	return service
+}
+
 func (service *Service) Summary(ctx context.Context, principal *authorization.Principal) Summary {
 	result := Summary{Attention: []AttentionItem{}, RecentChanges: []RecentChange{}, RecentOperations: []RecentOperation{}, SystemStatus: []SystemStatus{}}
 	flags := featuresFor(principal)
+	if flags.collaboration && service.collaboration != nil {
+		if summary, err := service.collaboration.Summary(ctx); err == nil {
+			result.Collaboration = &summary
+		}
+	}
 	if flags.collection {
 		service.collectionSummary(ctx, &result)
 	}
@@ -52,7 +64,7 @@ func (service *Service) Summary(ctx context.Context, principal *authorization.Pr
 }
 
 type featureFlags struct {
-	collection, metrics, metricTechnical, changes, changeTechnical, dataOps, audit, accounts bool
+	collection, metrics, metricTechnical, changes, changeTechnical, dataOps, audit, accounts, collaboration bool
 }
 
 func featuresFor(principal *authorization.Principal) featureFlags {
@@ -60,7 +72,8 @@ func featuresFor(principal *authorization.Principal) featureFlags {
 		return featureFlags{}
 	}
 	return featureFlags{
-		collection: principal.Has(authorization.CollectionRead), metrics: principal.Has(authorization.MetricsRead),
+		collaboration: principal.Has(authorization.CollaborationRead),
+		collection:    principal.Has(authorization.CollectionRead), metrics: principal.Has(authorization.MetricsRead),
 		metricTechnical: principal.Has(authorization.MetricsTechnical), changes: principal.Has(authorization.ChangesRead),
 		changeTechnical: principal.Has(authorization.ChangesTechnical), dataOps: principal.Has(authorization.DataOpsRead),
 		audit: principal.Has(authorization.AuditRead), accounts: principal.Has(authorization.AccountManage),

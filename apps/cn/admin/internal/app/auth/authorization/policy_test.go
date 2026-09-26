@@ -11,12 +11,12 @@ func TestRoleCapabilityPolicy(t *testing.T) {
 	}{
 		{name: "owner", role: RoleOwner, allowed: AllCapabilities()},
 		{name: "developer", role: RoleDeveloper, allowed: []Capability{
-			ContentRead, ContentWrite, CollectionRead, CollectionExecute, CollectionControl,
+			CollaborationRead, CollaborationWrite, ContentRead, ContentWrite, CollectionRead, CollectionExecute, CollectionControl,
 			MetricsRead, MetricsTechnical, ChangesRead, ChangesTechnical, DataOpsRead, AuditRead,
 			CloudOpsRead, CloudOpsManage,
 		}, denied: []Capability{AccountManage, SystemManage, CloudOpsPurgeAll}},
 		{name: "operator", role: RoleOperator, allowed: []Capability{
-			ContentRead, ContentWrite, CollectionRead, CollectionExecute, MetricsRead, ChangesRead,
+			CollaborationRead, CollaborationWrite, ContentRead, ContentWrite, CollectionRead, CollectionExecute, MetricsRead, ChangesRead,
 		}, denied: []Capability{
 			CloudOpsRead, CloudOpsManage, CloudOpsPurgeAll,
 			CollectionControl, MetricsTechnical, ChangesTechnical, DataOpsRead, AuditRead, AccountManage, SystemManage,

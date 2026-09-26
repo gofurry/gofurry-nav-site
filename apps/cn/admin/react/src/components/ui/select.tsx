@@ -9,9 +9,9 @@ export function Select({ value, onValueChange, options, placeholder = '请选择
   placeholder?: string; disabled?: boolean; name?: string; className?: string; positionerClassName?: string; popupClassName?: string; ariaLabel?: string
 }) {
   return <BaseSelect.Root value={value ?? ''} onValueChange={(next) => next !== null && onValueChange(next)} disabled={disabled} name={name}>
-    <BaseSelect.Trigger aria-label={ariaLabel} className={cn('flex h-9 w-full items-center justify-between gap-2 rounded-md border bg-surface px-3 text-left text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-60', className)}>
-      <BaseSelect.Value placeholder={placeholder}>{(selected: string) => options.find((item) => item.value === selected)?.label ?? placeholder}</BaseSelect.Value>
-      <BaseSelect.Icon><ChevronDown className="size-4 text-muted-foreground" /></BaseSelect.Icon>
+    <BaseSelect.Trigger aria-label={ariaLabel} className={cn('flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border bg-surface px-3 text-left text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-60', className)}>
+      <BaseSelect.Value className="min-w-0 flex-1 truncate" placeholder={placeholder}>{(selected: string) => options.find((item) => item.value === selected)?.label ?? placeholder}</BaseSelect.Value>
+      <BaseSelect.Icon className="shrink-0"><ChevronDown className="size-4 text-muted-foreground" /></BaseSelect.Icon>
     </BaseSelect.Trigger>
     <BaseSelect.Portal>
       <BaseSelect.Positioner className={cn('z-[80] outline-none', positionerClassName)} side="bottom" align="start" alignItemWithTrigger={false} sideOffset={4}>

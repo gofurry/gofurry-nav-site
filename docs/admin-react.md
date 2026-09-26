@@ -40,3 +40,5 @@ Collection, Metrics, and Changes are under `src/features/operations`; Cloud Reso
 Authenticated self-service username/password actions use `/api/v1/auth/self/*` with current-password verification and no `account.manage` requirement. Username changes refresh identity without ending the session; password changes clear authentication and require login again.
 
 See [the cutover parity matrix](admin-frontend-parity.md) and [the role operator guide](operations/admin-roles.md) for production acceptance boundaries.
+
+`src/features/collaboration` owns `/collaboration` (ideas/board), visible pipe-delimited line parsing, version conflicts and shared idea context. Creation pages prefill only Steam AppID or Site name; never auto-fetch Steam or create targets. Link failure preserves successful creation and the `?idea=` recovery banner. Use Vitest/Testing Library for these flows; see [Collaboration Center](collaboration-center.md).

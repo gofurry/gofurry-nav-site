@@ -25,6 +25,7 @@ func v1(root fiber.Router, runtime *bootstrap.Runtime) {
 	metricRoutes(protected.Group("/metrics"), runtime)
 	changeRoutes(protected.Group("/changes"), runtime)
 	workbenchRoutes(protected.Group("/workbench"), runtime)
+	collaborationRoutes(protected.Group("/collaboration"), runtime)
 	dataOpsRoutes(protected.Group("/dataops"), runtime)
 	auditRoutes(protected.Group("/audit"), runtime)
 	cloudRoutes(protected.Group("/system/cloud"), runtime)
@@ -224,4 +225,27 @@ func gameRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Put("/tags/:id", authmw.Require(authorization.ContentWrite), api.UpdateTag)
 	root.Delete("/tags/:id", authmw.Require(authorization.ContentWrite), api.ArchiveTag)
 	root.Post("/tags/:id/restore", authmw.Require(authorization.ContentWrite), api.RestoreTag)
+}
+
+func collaborationRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	api := runtime.CollaborationAPI
+	root.Get("/summary", authmw.Require(authorization.CollaborationRead), api.Summary)
+	root.Get("/ideas", authmw.Require(authorization.CollaborationRead), api.List)
+	root.Get("/ideas/:id", authmw.Require(authorization.CollaborationRead), api.Get)
+	root.Post("/ideas", authmw.Require(authorization.CollaborationWrite), api.Create)
+	root.Put("/ideas/:id", authmw.Require(authorization.CollaborationWrite), api.Update)
+	root.Delete("/ideas/:id", authmw.Require(authorization.CollaborationWrite), api.Delete)
+	root.Post("/ideas/batch-preview", authmw.Require(authorization.CollaborationRead), api.Preview)
+	root.Post("/ideas/batch", authmw.Require(authorization.CollaborationWrite), api.Batch)
+	root.Get("/board/notes", authmw.Require(authorization.CollaborationRead), api.Board)
+	root.Post("/board/notes", authmw.Require(authorization.CollaborationWrite), api.CreateBoard)
+	root.Put("/board/notes/:id", authmw.Require(authorization.CollaborationWrite), api.UpdateBoard)
+	root.Delete("/board/notes/:id", authmw.Require(authorization.CollaborationWrite), api.DeleteBoard)
+	root.Post("/ideas/:id/research", authmw.Require(authorization.CollaborationWrite), api.Transition("research"))
+	root.Post("/ideas/:id/release", authmw.Require(authorization.CollaborationWrite), api.Transition("release"))
+	root.Post("/ideas/:id/shelve", authmw.Require(authorization.CollaborationWrite), api.Transition("shelve"))
+	root.Post("/ideas/:id/restore", authmw.Require(authorization.CollaborationWrite), api.Transition("restore"))
+	root.Post("/ideas/:id/link", authmw.Require(authorization.CollaborationWrite), api.Transition("link"))
+	root.Post("/ideas/:id/land", authmw.Require(authorization.CollaborationWrite), api.Transition("land"))
+	root.Post("/ideas/:id/reopen", authmw.Require(authorization.CollaborationWrite), api.Transition("reopen"))
 }

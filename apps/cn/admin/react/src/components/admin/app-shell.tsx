@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui/react/menu'
-import { CaretLeft, CaretRight, Chats, ClockCounterClockwise, Database, GameController, Gauge, Key, ListBullets, MagnifyingGlass, Megaphone, Moon, PencilSimple, Pulse, Quotes, ShieldCheck, SignOut, GlobeHemisphereWest, ImageSquare, PaintBrushBroad, Gift, Cloud, SquaresFour, Sun, Tag, TreeStructure, UserCircle } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, Chats, ClockCounterClockwise, Database, GameController, Gauge, Key, ListBullets, MagnifyingGlass, Megaphone, Moon, PencilSimple, Pulse, Quotes, ShieldCheck, SignOut, GlobeHemisphereWest, ImageSquare, PaintBrushBroad, Gift, Cloud, SquaresFour, Sun, Tag, TreeStructure, UserCircle, UsersThree } from '@phosphor-icons/react'
 import { Suspense, useEffect, useState, type ComponentType } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTheme } from '../../app/theme'
@@ -26,7 +26,7 @@ export function capabilityAwareHeaderActions(can: (capability: string) => boolea
 }
 
 export const navigationGroups: NavGroup[] = [
-  { label: '', entries: [{ label: '工作台', href: '/', icon: SquaresFour, capability: 'content.read' }] },
+  { label: '', entries: [{ label: '工作台', href: '/', icon: SquaresFour, capability: 'content.read' }, { label: '协作中心', href: '/collaboration', icon: UsersThree, capability: 'collaboration.read' }] },
   { label: '导航内容', entries: [
     { label: '网站', href: '/nav/sites', icon: GlobeHemisphereWest, capability: 'content.read' },
     { label: '网站分组', href: '/nav/site-groups', icon: ListBullets, capability: 'content.read' },
@@ -59,7 +59,7 @@ export function capabilityAwareNavigation(can: (capability: string) => boolean) 
   return navigationGroups.map((group) => ({ ...group, entries: group.entries.filter((entry) => !entry.capability || can(entry.capability)) })).filter((group) => group.entries.length > 0)
 }
 
-const breadcrumbLabels: Record<string, string> = { nav: '导航内容', game: '游戏内容', sites: '网站', games: '游戏', 'site-groups': '网站分组', 'hero-assets': '首页 Hero', 'background-patterns': '背景图案', 'update-notices': '更新公告', sayings: '金句', tags: '标签', comments: '评论', prizes: '抽奖', collection: '采集', metrics: '数据指标', changes: '变化事件', system: '系统', cloud: '云资源', 'data-operations': '数据运维', audit: '操作审计', accounts: '账号与权限' }
+const breadcrumbLabels: Record<string, string> = { collaboration: '协作中心', nav: '导航内容', game: '游戏内容', sites: '网站', games: '游戏', 'site-groups': '网站分组', 'hero-assets': '首页 Hero', 'background-patterns': '背景图案', 'update-notices': '更新公告', sayings: '金句', tags: '标签', comments: '评论', prizes: '抽奖', collection: '采集', metrics: '数据指标', changes: '变化事件', system: '系统', cloud: '云资源', 'data-operations': '数据运维', audit: '操作审计', accounts: '账号与权限' }
 
 function Breadcrumbs() {
   const location = useLocation()
@@ -109,7 +109,7 @@ export function AppShell() {
         {group.label && <div className="admin-nav-group-heading"><span className="admin-sidebar-label" aria-hidden={collapsed}>{group.label}</span></div>}
         {group.entries.map((entry) => <NavLink key={entry.href} to={entry.href} end={entry.href === '/'} aria-label={entry.label} title={collapsed ? entry.label : undefined} className={({ isActive }) => cn('admin-nav-link mb-0.5 rounded-md text-sm text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring', isActive && 'bg-primary/10 font-medium text-primary')}><span className="admin-nav-icon"><entry.icon className="size-[18px]" /></span><span className="admin-sidebar-label" aria-hidden={collapsed}>{entry.label}</span></NavLink>)}
       </div>)}</nav>
-      <button type="button" onClick={toggleSidebar} className="admin-sidebar-toggle flex h-11 shrink-0 items-center overflow-hidden border-t text-muted-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'} aria-expanded={!collapsed} aria-controls="admin-sidebar-navigation"><span className="grid w-16 shrink-0 place-items-center">{collapsed ? <CaretRight className="size-4" /> : <CaretLeft className="size-4" />}</span><span className="admin-sidebar-label text-xs" aria-hidden={collapsed}>收起导航</span></button>
+      <button type="button" onClick={toggleSidebar} className="admin-sidebar-toggle flex h-11 shrink-0 items-center overflow-hidden border-t px-2 text-left text-muted-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'} aria-expanded={!collapsed} aria-controls="admin-sidebar-navigation"><span className="admin-nav-icon">{collapsed ? <CaretRight className="size-4" /> : <CaretLeft className="size-4" />}</span><span className="admin-sidebar-label text-xs" aria-hidden={collapsed}>收起导航</span></button>
     </aside>
     <div data-admin-workspace className="admin-workspace flex h-dvh min-w-0 flex-col overflow-hidden">
       <header className="z-20 flex h-14 min-w-0 shrink-0 items-center justify-between gap-3 border-b bg-background/92 px-3 backdrop-blur sm:px-6"><Breadcrumbs /><div className="flex shrink-0 items-center gap-1 sm:gap-2">

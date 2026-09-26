@@ -89,3 +89,9 @@ it('assigns distinct Phosphor icons to each sidebar destination', () => {
   const entries = navigationGroups.flatMap(group => group.entries)
   expect(new Set(entries.map(entry => entry.icon)).size).toBe(entries.length)
 })
+
+it('shows one collaboration entry only through collaboration.read', () => {
+ const paths = (cap: string) => capabilityAwareNavigation((value) => value === cap).flatMap((group) => group.entries.map((entry) => entry.href))
+ expect(paths('collaboration.read')).toEqual(['/collaboration'])
+ expect(paths('content.read')).not.toContain('/collaboration')
+})

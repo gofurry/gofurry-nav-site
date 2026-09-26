@@ -14,6 +14,7 @@ import (
 	authservice "github.com/gofurry/gofurry-admin/internal/app/auth/service"
 	changeadmin "github.com/gofurry/gofurry-admin/internal/app/changeadmin"
 	cloudapi "github.com/gofurry/gofurry-admin/internal/app/cloudops"
+	"github.com/gofurry/gofurry-admin/internal/app/collaboration"
 	collectioncontroller "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/controller"
 	collectionservice "github.com/gofurry/gofurry-admin/internal/app/collectionadmin/service"
 	"github.com/gofurry/gofurry-admin/internal/app/dataops"
@@ -32,20 +33,21 @@ import (
 )
 
 type Runtime struct {
-	Pools         *db.Pools
-	Audit         *audit.Logger
-	AuthService   *authservice.AuthService
-	AuthAPI       *authcontroller.AuthAPI
-	NavAPI        *navadmin.NavAPI
-	CloudAPI      *cloudapi.API
-	GameAPI       *gameadmin.GameAPI
-	OptionsAPI    *options.OptionsAPI
-	CollectionAPI *collectioncontroller.API
-	MetricAPI     *metricadmin.API
-	ChangeAPI     *changeadmin.API
-	DataOpsAPI    *dataops.API
-	AuditAPI      *auditadmin.API
-	WorkbenchAPI  *workbench.API
+	Pools            *db.Pools
+	Audit            *audit.Logger
+	AuthService      *authservice.AuthService
+	AuthAPI          *authcontroller.AuthAPI
+	NavAPI           *navadmin.NavAPI
+	CloudAPI         *cloudapi.API
+	GameAPI          *gameadmin.GameAPI
+	OptionsAPI       *options.OptionsAPI
+	CollectionAPI    *collectioncontroller.API
+	MetricAPI        *metricadmin.API
+	ChangeAPI        *changeadmin.API
+	DataOpsAPI       *dataops.API
+	AuditAPI         *auditadmin.API
+	WorkbenchAPI     *workbench.API
+	CollaborationAPI *collaboration.API
 
 	EdgeOneScheduler interface{ Stop() }
 
@@ -103,6 +105,7 @@ func Start() (*Runtime, error) {
 	changeService := changeadmin.New(pools.Game, pools.Nav)
 	dataOpsService := dataops.New(pools)
 	auditService := auditadmin.New(pools.Admin)
+	collaborationService := collaboration.New(pools.Admin, pools.Game, pools.Nav, auditLogger)
 	runtime := &Runtime{
 		Pools: pools, Audit: auditLogger, AuthService: auth, EdgeOneScheduler: scheduler,
 		CloudAPI: cloudapi.New(cloudService, auditLogger),
@@ -111,7 +114,8 @@ func Start() (*Runtime, error) {
 		CollectionAPI: collectioncontroller.New(collectionService),
 		MetricAPI:     metricadmin.NewAPI(metricService), ChangeAPI: changeadmin.NewAPI(changeService),
 		DataOpsAPI: dataops.NewAPI(dataOpsService), AuditAPI: auditadmin.NewAPI(auditService),
-		WorkbenchAPI: workbench.NewAPI(workbench.New(collectionService, metricService, changeService, dataOpsService, auditService, auth)),
+		CollaborationAPI: collaboration.NewAPI(collaborationService),
+		WorkbenchAPI:     workbench.NewAPI(workbench.New(collectionService, metricService, changeService, dataOpsService, auditService, auth).WithCollaboration(collaborationService)),
 	}
 	scheduler.Start()
 	runtime.started.Store(true)

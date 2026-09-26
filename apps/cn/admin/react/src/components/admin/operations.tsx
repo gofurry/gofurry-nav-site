@@ -64,7 +64,7 @@ export function OperationsChart({ points, unit, label, loading, error, className
   return <div ref={ref} className={cn('h-64 w-full', className)} role="img" aria-label={label} />
 }
 
-export function RemoteSelect({ endpoint, value, onChange, placeholder = '搜索并选择…', disabled, pageSize = 50, debounceMs = 0 }: { endpoint: string; value: OptionItem | string | null; onChange: (value: OptionItem | null) => void; placeholder?: string; disabled?: boolean; pageSize?: number; debounceMs?: number }) {
+export function RemoteSelect({ endpoint, value, onChange, placeholder = '搜索并选择…', disabled, pageSize = 50, debounceMs = 0, resultsLayout = 'popover' }: { endpoint: string; value: OptionItem | string | null; onChange: (value: OptionItem | null) => void; placeholder?: string; disabled?: boolean; pageSize?: number; debounceMs?: number; resultsLayout?: 'popover' | 'inline' }) {
   const listID = useId()
   const selectedID = typeof value === 'string' ? value : value?.id
   const [inputValue, setInputValue] = useState(() => typeof value === 'object' && value !== null ? value.label : typeof value === 'string' ? value : '')
@@ -82,6 +82,7 @@ export function RemoteSelect({ endpoint, value, onChange, placeholder = '搜索�
   const selected = typeof value === 'object' && value !== null
     ? value
     : options.find((option) => String(option.id) === String(selectedID)) ?? null
+  const showingOptions = resultsLayout === 'inline' || open
   const displayedInputValue = open ? inputValue : selected?.label ?? (selectedID ? inputValue : '')
   const choose = (option: OptionItem) => { onChange(option); setInputValue(option.label); setSearch(debounceMs ? '' : option.label); setOpen(false) }
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -92,9 +93,9 @@ export function RemoteSelect({ endpoint, value, onChange, placeholder = '搜索�
   }
   return <div className="relative">
     <Search className="pointer-events-none absolute left-3 top-[18px] z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-    <input role="combobox" autoComplete="off" aria-autocomplete="list" aria-expanded={open} aria-controls={listID} aria-activedescendant={open && options[activeIndex] ? `${listID}-${options[activeIndex].id}` : undefined} className="h-9 w-full rounded-md border bg-surface pl-9 pr-9 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring disabled:opacity-60" value={displayedInputValue} disabled={disabled} placeholder={placeholder} onFocus={(event) => { setInputValue(selected?.label ?? ''); if (debounceMs) setSearch(''); setOpen(true); event.currentTarget.select() }} onBlur={() => window.setTimeout(() => setOpen(false), 0)} onChange={(event) => { setInputValue(event.target.value); setSearch(event.target.value); setActiveIndex(0); setOpen(true) }} onKeyDown={handleKeyDown} />
+    <input role="combobox" autoComplete="off" aria-autocomplete="list" aria-expanded={showingOptions && !disabled} aria-controls={listID} aria-activedescendant={open && options[activeIndex] ? `${listID}-${options[activeIndex].id}` : undefined} className="h-9 w-full rounded-md border bg-surface pl-9 pr-9 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring disabled:opacity-60" value={displayedInputValue} disabled={disabled} placeholder={placeholder} onFocus={(event) => { setInputValue(selected?.label ?? ''); if (debounceMs) setSearch(''); setOpen(true); event.currentTarget.select() }} onBlur={() => window.setTimeout(() => setOpen(false), 0)} onChange={(event) => { setInputValue(event.target.value); setSearch(event.target.value); setActiveIndex(0); setOpen(true) }} onKeyDown={handleKeyDown} />
     {selectedID && <button type="button" aria-label="清除选择" className="absolute right-2 top-[18px] grid size-6 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:bg-surface-muted hover:text-foreground" onClick={() => { onChange(null); setInputValue(''); setSearch(''); setOpen(false) }}><X className="size-3.5" /></button>}
-    {open && !disabled && <div id={listID} role="listbox" className="admin-scroll absolute inset-x-0 top-full z-[90] mt-1 max-h-64 overflow-auto rounded-md border bg-surface p-1 shadow-xl">
+    {showingOptions && !disabled && <div id={listID} role="listbox" className={cn("admin-scroll mt-1 max-h-64 overflow-auto rounded-md border bg-surface p-1", resultsLayout === 'inline' ? 'relative min-h-32' : 'absolute inset-x-0 top-full z-[90] shadow-xl')}>
       {query.isLoading || keyword !== search ? <p className="p-3 text-sm text-muted-foreground">加载中…</p> : query.error ? <p className="p-3 text-sm text-danger">{query.error.message}</p> : options.length === 0 ? <p className="p-3 text-sm text-muted-foreground">无匹配项</p> : options.map((option, index) => <button id={`${listID}-${option.id}`} key={option.id} type="button" role="option" aria-selected={String(selectedID) === String(option.id)} onMouseDown={(event) => event.preventDefault()} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(option)} className={cn('grid w-full grid-cols-[1rem_minmax(0,1fr)] items-center gap-2 rounded px-2 py-2 text-left outline-none', index === activeIndex && 'bg-surface-muted')}><span className="grid size-4 place-items-center">{String(selectedID) === String(option.id) && <Check className="size-4 text-primary" />}</span><span className="min-w-0"><span className="block truncate text-sm font-medium">{option.label}</span>{option.extra && <span className="block truncate text-xs text-muted-foreground">{option.extra}</span>}</span></button>)}
     </div>}
   </div>

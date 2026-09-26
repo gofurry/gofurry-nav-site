@@ -27,6 +27,7 @@ func (principal Principal) Has(capability Capability) bool {
 var rolePolicy = map[Role][]Capability{
 	RoleOwner: AllCapabilities(),
 	RoleDeveloper: {
+		CollaborationRead, CollaborationWrite,
 		CloudOpsRead,
 		CloudOpsManage,
 		ContentRead,
@@ -42,6 +43,7 @@ var rolePolicy = map[Role][]Capability{
 		AuditRead,
 	},
 	RoleOperator: {
+		CollaborationRead, CollaborationWrite,
 		ContentRead,
 		ContentWrite,
 		CollectionRead,

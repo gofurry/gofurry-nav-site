@@ -27,6 +27,7 @@ export type AuditLog = { id: number; action: string; resource: string; target_id
 export type Account = { id: number; username: string; display_name: string; role: 'owner' | 'developer' | 'operator'; status: 'active' | 'disabled'; session_version: number; last_login_at?: string; created_at: string; updated_at: string; password_updated_at?: string }
 
 export type WorkbenchSummary = {
+  collaboration?: { reserve_count: number; researching_count: number; landed_30d: number }
   attention: Array<{ key: string; tone: string; title: string; summary: string; href: string }>
   recent_changes: Array<{ domain: string; event_key: string; historical_name: string; event_code: string; event_at?: string; projection_date: string }>
   recent_operations: Array<{ id: number; action: string; resource: string; target_id: string; operator_name: string; operator_role: string; created_at: string }>

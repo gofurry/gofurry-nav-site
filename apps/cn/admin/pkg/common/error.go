@@ -35,6 +35,10 @@ func NewValidationError(msg string) *appError {
 	return NewError(RETURN_FAILED, http.StatusBadRequest, msg)
 }
 
+func NewConflictError(msg string) *appError {
+	return NewError(RETURN_FAILED, http.StatusConflict, msg)
+}
+
 func (ae appError) Error() string {
 	return ae.msg
 }

@@ -13,3 +13,5 @@ snapshots. Zero-account databases remain bootstrap-ready. A single legacy row
 becomes the initial active Owner without changing its password, session, or
 timestamps; more than one legacy row aborts migration rather than guessing
 privilege.
+
+Migration `20260926000000` adds GFA-only content ideas and global shared Board text notes. Version checks, account foreign keys and status/link constraints protect collaboration state. Source-key duplicates are intentionally allowed. Back up GFA and manually apply Goose before deploying the upgraded Admin; see [Collaboration Center](../../docs/collaboration-center.md).

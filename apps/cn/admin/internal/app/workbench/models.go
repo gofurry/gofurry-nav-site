@@ -1,12 +1,14 @@
 package workbench
 
 import "time"
+import "github.com/gofurry/gofurry-admin/internal/app/collaboration"
 
 type Summary struct {
-	Attention        []AttentionItem   `json:"attention"`
-	RecentChanges    []RecentChange    `json:"recent_changes"`
-	RecentOperations []RecentOperation `json:"recent_operations"`
-	SystemStatus     []SystemStatus    `json:"system_status"`
+	Collaboration    *collaboration.Summary `json:"collaboration,omitempty"`
+	Attention        []AttentionItem        `json:"attention"`
+	RecentChanges    []RecentChange         `json:"recent_changes"`
+	RecentOperations []RecentOperation      `json:"recent_operations"`
+	SystemStatus     []SystemStatus         `json:"system_status"`
 }
 
 type AttentionItem struct {

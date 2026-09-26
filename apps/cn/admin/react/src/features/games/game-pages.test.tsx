@@ -8,6 +8,8 @@ import type { Game } from '../../lib/types'
 import { GameClassificationForm, GameContentForm } from './game-pages'
 
 vi.mock('../../lib/api', async (original) => ({ ...await original<typeof import('../../lib/api')>(), listJSON: vi.fn(), sendJSON: vi.fn() }))
+vi.mock('../auth/auth-context', () => ({ useAuth: () => ({ can: () => true }) }))
+
 afterEach(() => { cleanup(); vi.resetAllMocks() })
 const game: Game = { id: 1, name: '游戏', name_en: 'Game', info: '', info_en: '', create_time: '', update_time: '', resources: [], groups: [], developers: [], publishers: [], appid: 82, header: '', links: [], weight: 1, primary_tag: 1, secondary_tag: 0 }
 

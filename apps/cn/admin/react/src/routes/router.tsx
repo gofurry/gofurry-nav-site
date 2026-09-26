@@ -6,6 +6,7 @@ import { BootstrapPage, LoginPage } from '../features/auth/auth-pages'
 import { DATAOPS_READ_CAPABILITY } from '../lib/capabilities'
 import { NotFoundPage } from '../pages/not-found-page'
 
+const CollaborationPage = lazy(() => import('../features/collaboration/collaboration-page').then((module) => ({ default: module.CollaborationPage })))
 const WorkbenchPage = lazy(() => import('../features/workbench/workbench-page').then((module) => ({ default: module.WorkbenchPage })))
 const SiteListPage = lazy(() => import('../features/sites/site-pages').then((module) => ({ default: module.SiteListPage })))
 const SiteWorkspacePage = lazy(() => import('../features/sites/site-pages').then((module) => ({ default: module.SiteWorkspacePage })))
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
           { path: 'game/games/:id', element: <GameWorkspacePage /> },
           { path: 'game/:resource', element: <ResourceEngineBoundary section="game" /> },
         ] },
+        { element: <CapabilityGuard capability="collaboration.read" />, children: [{ path: 'collaboration', element: <CollaborationPage /> }] },
         { element: <CapabilityGuard capability="collection.read" />, children: [{ path: 'collection', element: <CollectionPage /> }] },
         { element: <CapabilityGuard capability="metrics.read" />, children: [{ path: 'metrics', element: <MetricsPage /> }] },
         { element: <CapabilityGuard capability="changes.read" />, children: [{ path: 'changes', element: <ChangesPage /> }] },

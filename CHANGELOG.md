@@ -8,6 +8,11 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ## Unreleased
 
+### Added
+
+- Add Admin Collaboration Center with GFA-only content ideas, up to 500-row imports with visible pipe separators, soft duplicate checks against GFA/GFG/GFN, optimistic locking, transactional Audit and a single shared text Board (#117).
+- Add capability-shaped neutral Workbench inventory and Game/Site idea handoff, preserving formal creation success and providing Workspace recovery when GFA linking fails (#117).
+
 ### Changed
 
 - Run the full Nav Web Browser suite in three isolated CI shards alongside Visual and Docker after one shared build in the pinned Linux environment. Preserve all checks behind the `nav-web` gate, cache Docker layers, narrow documentation/tooling change selection, and avoid duplicate branch-push checks when an open PR owns validation.
@@ -17,10 +22,14 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Fixed
 
+- Align the expanded Admin sidebar collapse label with navigation labels. Replace ambiguous Excel/Tab batch input with `name | source | note`, line-numbered format errors and separate preview columns (#117).
+- Fix Collaboration Center narrow-screen overflow and clipped link search results; reuse the idea editor dialog, add versioned/audited idea deletion that preserves formal content, and provide delimited text examples (#117).
 - Inspect Task release structure without evaluating missing Admin embed preconditions on clean CI checkouts. Wait for the lightbox test's images to decode before testing dismissal, and for the rendered Hero after reload instead of whole-page network idle; retain strict failure assertions and zero retries.
 - Run frontend Task builds and `task doctor` pnpm checks from each package's actual directory so Corepack selects its pinned version; allow a different global pnpm default while retaining pnpm 12.6.0 for both frontends, CI and Docker (#129, #130).
 
 ### Upgrade notes
+
+- For #117, back up GFA, coordinate Admin writes and manually run Goose migration `20260926000000` before deploying the new Admin binary with embedded React. No GFG/GFN migration or public runtime change is required. See [Collaboration Center](docs/collaboration-center.md).
 
 - Workstations use Task >=3.45.3, Go 1.26.7, Node 24 and pnpm 12.6.0. Move aside any old npm `node_modules` directories in the two active frontends once, then run `task doctor`, `task verify` and `task build` from the root. See [local development](docs/development.md) for the command surface and separate Browser/Visual gates.
 - For #129/#130 alone, existing Nav Web deployments retain their configuration and `cd apps/cn/nav-web` / `./update.sh` flow; pnpm runs inside Docker, with no new host tooling requirement. No database migration, runtime configuration change or coordinated Go-service redeployment is required. Task does not load root `.env` or perform deployment/database operations. See [Nav Web deployment](apps/cn/nav-web/DEPLOYMENT.md).

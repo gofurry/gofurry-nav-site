@@ -11,3 +11,5 @@
 - Disabling or demoting the last active Owner is forbidden under transaction-safe PostgreSQL row locking. Concurrent mutations must never leave zero active Owners.
 - Account deletion is not exposed. Disable preserves audit identity.
 - Audit rows retain the legacy `operator` field and also snapshot `operator_account_id`, `operator_name`, and `operator_role`. Snapshots remain interpretable after later account changes and never contain password hashes, tokens, cookies, or secrets.
+
+- Collaboration uses independent `collaboration.read` and `collaboration.write`; all three fixed roles currently receive both. Source actors always come from Principal. These capabilities do not substitute for `content.write` when entering formal Game/Site creation.

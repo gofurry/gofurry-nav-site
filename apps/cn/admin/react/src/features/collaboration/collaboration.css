@@ -1,0 +1,35 @@
+.idea-inventory { container: ideas / inline-size; min-width: 0; }
+.idea-filters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .75rem; }
+.idea-table { width: 100%; table-layout: fixed; }
+.idea-table th, .idea-table td { padding: .75rem; overflow: hidden; }
+.idea-table th { white-space: nowrap; }
+.idea-cell { display: block; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.idea-kind { width: 4.5rem; }
+.idea-source { width: 20%; }
+.idea-note { width: 15%; }
+.idea-priority { width: 4.5rem; }
+.idea-status { width: 6rem; }
+.idea-researcher, .idea-creator { width: 6rem; }
+.idea-created { width: 10rem; }
+.idea-actions { width: 13rem; }
+@container ideas (width < 1440px) {
+  .idea-creator, .idea-created { display: none; }
+}
+@container ideas (width < 1200px) {
+  .idea-priority, .idea-researcher { display: none; }
+}
+@container ideas (width < 960px) {
+  .idea-note, .idea-primary-action { display: none; }
+  .idea-source { width: 30%; }
+  .idea-actions { width: 7.5rem; }
+  .idea-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .idea-filters > :first-child { grid-column: 1 / -1; }
+}
+@container ideas (width < 640px) {
+  .idea-kind, .idea-source { display: none; }
+}
+@container ideas (width < 360px) {
+  .idea-status, .idea-edit-action { display: none; }
+  .idea-actions { width: 4rem; }
+  .idea-filters { grid-template-columns: minmax(0, 1fr); }
+}
