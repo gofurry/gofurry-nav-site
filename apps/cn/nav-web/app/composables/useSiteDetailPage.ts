@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { CollectorEnvelope, DnsRecord, HttpRecord, PingRecord, SiteHealthSummary, SiteInfo, SiteV2DetailResponse, SiteV2Info, TargetHealthSummary, TargetLatestResponse } from '~/types/nav'
 import { authoritativePageStatus } from '~/utils/authoritativePageError'
+import { parseSiteDetailRouteState } from '~/utils/siteDetailRouteState'
 
 export interface SiteDetailPageData {
   siteInfo: SiteInfo | null
@@ -15,35 +16,18 @@ export interface SiteDetailPageData {
   lightProbeState: TargetLatestResponse | null
 }
 
-function extractRouteParam(value: unknown): string {
-  const rawValue = Array.isArray(value) ? value[0] : value
-  if (typeof rawValue !== 'string') {
-    return ''
-  }
-
-  try {
-    return decodeURIComponent(rawValue).trim()
-  } catch {
-    return rawValue.trim()
-  }
-}
-
 export async function useSiteDetailPage() {
   const route = useRoute()
   const { locale } = useI18n()
   const navV2Api = useApi('navV2')
 
   const siteId = computed(() => String(route.params.id ?? ''))
-  const pathDomain = computed(() => extractRouteParam(route.params.domain))
-  const queryDomain = computed(() => {
-    const value = route.query.domain
-    return typeof value === 'string' ? value : ''
-  })
-  const selectedDomain = computed(() => pathDomain.value || queryDomain.value)
+  const routeState = computed(() => parseSiteDetailRouteState(route.query))
+  const selectedDomain = computed(() => routeState.value.domain)
   const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
 
   const asyncData = await useAsyncData<SiteDetailPageData>(
-    () => `site-detail:${route.path}:${siteId.value}:${selectedDomain.value}:${lang.value}:v2`,
+    () => `site-detail:${siteId.value}:${selectedDomain.value}:${lang.value}:v2`,
     async () => {
       if (!siteId.value) {
         throw new Error('invalid site id')
@@ -71,7 +55,6 @@ export async function useSiteDetailPage() {
       }
     },
     {
-      watch: [siteId, selectedDomain, lang],
       default: () => ({
         siteInfo: null,
         domain: '',
@@ -98,8 +81,7 @@ export async function useSiteDetailPage() {
   return {
     ...asyncData,
     siteId,
-    queryDomain,
-    pathDomain,
+    routeState,
     lang,
   }
 }

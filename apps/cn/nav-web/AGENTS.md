@@ -57,6 +57,14 @@ contracts remain authoritative; completion does not authorize redesign or more c
 
 ## Debt and exceptions
 
+Site Detail #109 P1 runtime follows the contract's Site/Target ownership section.
+Use `siteDetailRouteState.ts` for UI query and `siteRoutes.ts` for links; keep
+Insights keyed only by Site ID and View counted once per hydrated Site session.
+Use the complete `siteCapabilityRegistry.ts`, not its existing three-item preview,
+as the catalog. `site-detail-contract.spec.ts` owns Target-switch request counts
+and failure isolation; SEO remains Entity-only. P1 grants no appearance/debt or
+Visual baseline changes; P2–P8 and #108 require their own scope.
+
 [frontend-style-debt.json](frontend-style-debt.json) is measured state, never an
 example or permission. Remaining style debt belongs to Site Detail #109, Insights
 #108 and intentionally preserved ambient effects. No opportunistic migration of

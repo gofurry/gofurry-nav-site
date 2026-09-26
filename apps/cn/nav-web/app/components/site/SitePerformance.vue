@@ -1,5 +1,5 @@
 <template>
-  <section class="">
+  <section class="" :data-site-history-points="currentPing?.DelayModel?.length ?? 0">
     <!-- 核心指标 -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <div
@@ -91,6 +91,7 @@
             <button
               v-for="option in sampleOptions"
               :key="option.value"
+              :data-site-history-sample="option.value"
               @click="changeSample(option.value)"
               :class="[
                 'rounded-lg px-4 py-2 text-sm transition-colors',
@@ -154,6 +155,8 @@ let echartsModule: EChartsModule | null = null
 let isChartActive = false
 const sampleType = ref<'twenty' | 'sixty' | 'hundred'>('twenty')
 const v2PingRecord = ref<PingRecord | null>(null)
+let pingHistoryPending = false
+let pingHistoryVersion = 0
 const httpPayload = computed(() => asRecord(props.targetLatestCore?.protocols?.http?.payload))
 const isDarkTheme = computed(() => themeStore.theme === 'dark')
 const yesText = computed(() => i18n.global.locale.value === 'en' ? 'Yes' : '是')
@@ -533,6 +536,7 @@ function bindChartHover(pointCount: number) {
 // 切换抽样类型
 function changeSample(type: 'twenty' | 'sixty' | 'hundred') {
   sampleType.value = type
+  void loadV2PingHistory()
   void updateChart()
 }
 
@@ -551,11 +555,11 @@ onMounted(async () => {
     resizeObserver = new ResizeObserver(() => chart.value?.resize())
     resizeObserver.observe(latencyChartRef.value)
   }
-  void loadV2PingHistory()
 })
 
 onBeforeUnmount(() => {
   isChartActive = false
+  pingHistoryVersion++
   if (chart.value) {
     const zr = chart.value.getZr()
     if (chartMouseMoveHandler) {
@@ -575,17 +579,23 @@ onBeforeUnmount(() => {
 // 监听 ping 数据变化
 watch(() => props.pingRecord, () => void updateChart(), { deep: true })
 watch(() => [props.siteId, props.domain], () => {
+  pingHistoryVersion++
+  pingHistoryPending = false
   v2PingRecord.value = null
-  void loadV2PingHistory()
+  void updateChart()
 })
 watch(sampleType, () => void updateChart())
 watch(isDarkTheme, () => void updateChart())
 
 async function loadV2PingHistory() {
-  if (props.pingRecord || !props.siteId || !props.domain) {
+  // Detail already supplies current observations. History is opt-in through
+  // the existing sample controls, never part of initial/Target-switch loading.
+  if (props.pingRecord || v2PingRecord.value || pingHistoryPending || !props.siteId || !props.domain) {
     return
   }
 
+  const version = ++pingHistoryVersion
+  pingHistoryPending = true
   try {
     const response = await navV2Api<TargetObservationsResponse>(`/nav/sites/${props.siteId}/targets/${encodeURIComponent(props.domain)}/observations`, {
       query: {
@@ -594,11 +604,14 @@ async function loadV2PingHistory() {
         payload_mode: 'preview',
       },
     })
+    if (!isChartActive || version !== pingHistoryVersion) return
     v2PingRecord.value = buildPingRecordFromObservations(response.items ?? [])
     await nextTick()
     void updateChart()
   } catch {
-    v2PingRecord.value = emptyPingRecord()
+    if (isChartActive && version === pingHistoryVersion) v2PingRecord.value = emptyPingRecord()
+  } finally {
+    if (version === pingHistoryVersion) pingHistoryPending = false
   }
 }
 

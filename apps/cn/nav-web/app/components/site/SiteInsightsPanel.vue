@@ -1,5 +1,5 @@
 <template>
-  <section class="site-insights-panel" data-site-insights>
+  <section class="site-insights-panel" data-site-insights :data-site-insights-state="unavailable || !insights ? 'unavailable' : insights.capabilities.length || insights.recent_changes.length ? 'ready' : 'empty'">
     <div class="entity-insights-heading">
       <div>
         <p class="entity-insights-eyebrow">{{ $t('insights.entity.siteEyebrow') }}</p>
@@ -24,7 +24,7 @@
           :data-capability-state="capability.state ?? 'missing'"
         >
           <div class="site-insights-capability__heading">
-            <h3>{{ $t(`insights.metrics.${capability.key}.name`) }}</h3>
+            <h3>{{ $t(capability.labelKey) }}</h3>
             <span :class="`site-insights-state site-insights-state--${stateTone(capability.state)}`">
               {{ capability.state ? $t(`insights.entity.states.${capability.state}`) : $t('insights.emptyStates.unavailable') }}
             </span>
@@ -52,9 +52,11 @@
 import { computed } from 'vue'
 import InsightsEntityTimeline from '@/components/insights/InsightsEntityTimeline.vue'
 import type { SiteInsightCapabilityKey, SiteInsightCapabilityState, SiteInsights } from '@/types/insights'
+import { siteCapabilityRegistry } from '~/utils/siteCapabilityRegistry'
 
 interface CapabilityView {
   key: SiteInsightCapabilityKey
+  labelKey: string
   as_of: string | null
   state: SiteInsightCapabilityState | null
   ecosystem: {
@@ -69,15 +71,16 @@ const props = defineProps<{
 }>()
 
 const localePath = useLocalePath()
-const orderedKeys: SiteInsightCapabilityKey[] = ['ipv6', 'tls13', 'security_txt']
+const previewCapabilities = siteCapabilityRegistry.filter(capability => capability.preview)
 const capabilities = computed<CapabilityView[]>(() => {
   const byKey = new Map((props.insights?.capabilities ?? []).map(capability => [capability.key, capability]))
-  return orderedKeys.map(key => byKey.get(key) ?? {
-    key,
+  return previewCapabilities.map(({ key, labelKey }) => ({
+    key, labelKey,
     as_of: null,
     state: null,
     ecosystem: { value: null, coverage: null },
-  })
+    ...byKey.get(key),
+  }))
 })
 
 function stateTone(state: SiteInsightCapabilityState | null) {

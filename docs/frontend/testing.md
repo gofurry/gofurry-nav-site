@@ -4,7 +4,8 @@ Use the lowest-cost environment that faithfully represents the behavior under
 test. The [frontend contract](../../contracts/nav-web-frontend.md) owns this rule;
 the commands below run from `apps/cn/nav-web`.
 
-Current P7.2 inventory: **406 Functional Browser /119 Visual /118 PNG**. The
+P7.2 established **406 Functional Browser /119 Visual /118 PNG**; #109 P1 adds
+17 independent Site Detail cases for **423 Functional Browser /119 Visual /118 PNG**. The
 phase-labelled sections preserve earlier acceptance matrices/counts; use
 [Full verification](#full-verification) for current commands and the
 [closure record](../acceptance/issue-124-frontend-engineering-closure.md) for
@@ -33,6 +34,48 @@ matching 1.60.x versions; external acceptance/performance still import `playwrig
 Nuxt cases have a 30-second budget for the first mount's cold app/router transform;
 unit cases retain Vitest's default timeout. Nuxt's generated `.nuxtrc` module setup
 marker is local and ignored, like `.nuxt/`.
+
+## Site Detail #109 P1
+
+`tests/browser/regression/site-detail-contract.spec.ts` owns Site/Target SSR,
+hydrated Target switching and error isolation. Its thin `site-detail.ts` fixture
+reuses `insights-runtime.ts` / `startInsightsFixtureApp`, including request
+instances, gates and strict browser-error accounting. No new runner or Visual
+baseline is introduced. The existing `insights-entity` 1440/390 × Light/Dark
+matrix and Ecosystem-to-Entity semantics remain; its old Target-hides-Insights
+assertion is replaced by Site-level Insights on both SSR entries.
+
+The new contract checks zh/en Entity and Target SSR, all four normalized workspace
+states through real existing Target links, exact Detail/Insights/View request
+counts and unchanged capability semantics. The fixture includes real HTTP payload
+data so the existing performance chart mounts; the former empty HTTP fixture
+could not detect eager Ping history loading. Existing sample controls still load
+history on demand, with no history re-fetch after Target selection.
+Target selection adds one Detail GET,
+zero Insights GETs and zero View POSTs. It verifies no extra data APIs, no
+hydration/console/request errors and no horizontal overflow. Invalid UI query
+falls back without 404; foreign Target/missing Site 404 and Detail 503 fail the
+page. Optional Insights 503 leaves a 200 page; success-empty and unavailable
+remain distinct. View POST 503 does not fail or replace the page. Existing GET
+transport retry on injected 503 is counted explicitly, not hidden as hydration.
+
+`tests/unit/site-detail-route-state.test.ts` owns defaults, exact vocabularies,
+normalization, repeated/null query values, encoding, Target preservation, tab
+cleanup and default omission. `site-capability-registry.test.ts` checks all seven
+keys, stable order, valid categories and existing zh/en translation metadata;
+the current three-item preview remains a presentation subset only. The
+`seo-recovery` Browser contract covers Domain and all UI query keys in both
+locales and requires query-free Site sitemap inventory.
+
+Use [Full verification](#full-verification), including the entire Functional
+Browser suite. P1 must leave style debt, suppressions and all Visual files/PNGs
+unchanged; do not run `style:policy:update` or snapshot generation. Remote CI is
+unverified until this change's own selected gates run. Maintainer confirmation is
+limited to normal/Target Insights visibility, actual Target data switching,
+absence of routing failure and Entity canonical. P2–P8 retain their separate
+UI/appearance/Visual owners; this does not close #109 or modify #124's history.
+Current audit and verification evidence lives in the
+[#109 phase ledger](../acceptance/issue-109-site-detail.md).
 
 ## Migrated regression knowledge
 

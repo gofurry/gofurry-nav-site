@@ -1,5 +1,5 @@
 <template>
-  <div ref="pageRoot" class="site-detail-page min-h-full overflow-x-hidden text-slate-900 transition-colors duration-500 dark:text-slate-100">
+  <div ref="pageRoot" data-site-detail :data-site-target="sitePageData.domain" :data-site-tab="routeState.tab" class="site-detail-page min-h-full overflow-x-hidden text-slate-900 transition-colors duration-500 dark:text-slate-100">
 
     <div v-if="pending" class="relative flex min-h-[68vh] items-center justify-center text-slate-500 dark:text-slate-400">
       {{ t('common.loading') }}
@@ -19,14 +19,13 @@
         :site-id="siteId"
         :site-name="siteName"
         :switchable-domains="switchableDomains"
-        :view-count="sitePageData.siteInfo?.view_count ?? 0"
+        :view-count="siteViewCount"
         :visit-url="visitUrl"
       />
 
       <SiteSignalCards :cards="signalCards" />
 
       <SiteInsightsPanel
-        v-if="showInsights"
         :insights="siteInsightsSnapshot.insights"
         :unavailable="siteInsightsSnapshot.unavailable"
       />
@@ -85,17 +84,12 @@ import { getSiteInsights } from '@/services/nav'
 import type { SiteInsights } from '@/types/insights'
 import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
 import { buildSiteDetailSeo } from '~/utils/seo'
+import { authoritativePageStatus } from '~/utils/authoritativePageError'
 
 interface SiteInsightsSnapshot {
   insights: SiteInsights | null
   unavailable: boolean
 }
-
-const props = withDefaults(defineProps<{
-  showInsights?: boolean
-}>(), {
-  showInsights: false,
-})
 
 const route = useRoute()
 const { locale, t } = useI18n()
@@ -104,10 +98,6 @@ const detailRequest = useSiteDetailPage()
 const insightsRequest = useAsyncData<SiteInsightsSnapshot>(
   () => `site-insights:${requestedSiteId.value}`,
   async () => {
-    if (!props.showInsights || !requestedSiteId.value) {
-      return { insights: null, unavailable: false }
-    }
-
     try {
       return { insights: await getSiteInsights(requestedSiteId.value), unavailable: false }
     } catch {
@@ -115,17 +105,29 @@ const insightsRequest = useAsyncData<SiteInsightsSnapshot>(
     }
   },
   {
-    watch: [requestedSiteId],
-    default: () => ({ insights: null, unavailable: props.showInsights }),
+    default: () => ({ insights: null, unavailable: false }),
   },
 )
 const [detailState, insightsState] = await Promise.all([detailRequest, insightsRequest])
-const { data, pending, error, siteId } = detailState
+const { data, pending, error, siteId, routeState } = detailState
 const siteInsightsSnapshot = computed(() => insightsState.data.value)
-const showInsights = computed(() => props.showInsights)
 const navV2Api = useApi('navV2')
 const pageRoot = ref<HTMLElement | null>(null)
 const sitePageData = computed(() => data.value!)
+const countedView = ref<{ siteId: string; count: number } | null>(null)
+const siteViewCount = computed(() => countedView.value?.siteId === siteId.value
+  ? countedView.value.count : sitePageData.value.siteInfo?.view_count ?? 0)
+
+// Async key changes must preserve the same authoritative boundary as SSR.
+watch(error, (failure) => {
+  if (!failure) return
+  const statusCode = authoritativePageStatus(failure, 'site')
+  showError(createError({
+    statusCode,
+    statusMessage: statusCode === 404 ? 'Site not found' : 'Site service temporarily unavailable',
+    cause: failure,
+  }))
+})
 const siteName = computed(() => sitePageData.value.siteInfo?.name?.trim() || 'GoFurry')
 const loadFailedText = computed(() => (t('common.loading') === 'Loading...' ? 'Failed to load site data.' : '站点数据加载失败。'))
 const httpPayload = computed(() => asRecord(sitePageData.value.targetLatestCore?.protocols?.http?.payload))
@@ -376,8 +378,8 @@ async function touchSiteView(value: string) {
 
   try {
     const response = await navV2Api<{ site_id: number; view_count: number }>(`/nav/sites/${value}/view`, { method: 'POST' })
-    if (data.value?.siteInfo && Number.isFinite(response.view_count)) {
-      data.value.siteInfo.view_count = response.view_count
+    if (siteId.value === value && Number.isFinite(response.view_count)) {
+      countedView.value = { siteId: value, count: response.view_count }
     }
   } catch {
     // 浏览量统计是旁路副作用，失败不影响详情页展示。

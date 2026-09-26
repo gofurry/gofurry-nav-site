@@ -32,6 +32,7 @@
               >
                 <button
                   type="button"
+                  data-site-target-trigger
                   class="flex items-center font-mono text-sm text-slate-500 transition-colors duration-500 hover:text-orange-500 dark:text-slate-400 dark:hover:text-orange-300"
                   @click="copyToClipboard(domain)"
                 >
@@ -54,6 +55,7 @@
                         v-for="item in switchableDomains"
                         :key="item"
                         :to="domainLink(item)"
+                        :data-site-target-option="item"
                         class="rounded-lg px-3 py-2 font-mono text-xs text-slate-700 transition-colors duration-500 hover:bg-orange-100/80 hover:text-orange-700 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-100"
                         :class="{ 'bg-orange-100/80 text-orange-700 dark:bg-orange-500/20 dark:text-orange-100': item === domain }"
                       >
@@ -135,6 +137,7 @@ const props = defineProps<{
 
 const copied = ref(false)
 const localePath = useLocalePath()
+const route = useRoute()
 
 function copyToClipboard(text: string) {
   if (!text) {
@@ -151,7 +154,7 @@ function copyToClipboard(text: string) {
 }
 
 function domainLink(domain: string) {
-  return localePath(siteTargetPath(props.siteId, domain))
+  return localePath(siteTargetPath(props.siteId, domain, route.query))
 }
 
 

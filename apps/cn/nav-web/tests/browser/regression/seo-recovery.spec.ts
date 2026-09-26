@@ -35,7 +35,9 @@ for (const prefix of ['', '/en']) {
       expect(target.searchParams.get('domain') || '').toBe(domain)
       if (!domain) expect(target.search).toBe('')
     }
-    for (const suffix of ['', '?domain=target.example']) {
+    for (const suffix of ['', '?domain=target.example', '?domain=alt.example&tab=observation&view=dns',
+      '?tab=security&view=tls', '?domain=alt.example&tab=insights&metric=certificate_verified&range=90d',
+      '?tab=banana&view=banana&metric=banana&range=banana']) {
       const response = await request.get(prefix + '/site/41' + suffix), html = await response.text()
       expect(response.status()).toBe(200); expect(html).toContain('site-detail-page')
       const pageLinks = links(html), canonical = pageLinks.filter(link => link.rel === 'canonical')
@@ -69,6 +71,7 @@ test('SEO sitemap serializes only canonical localized public inventory', async (
   expect(paths).toEqual(expect.arrayContaining(['/site/41', '/en/site/41', '/games/82', '/en/games/82', '/site-groups/12', '/en/site-groups/12']))
   expect(new Set(paths).size).toBe(paths.length)
   for (const path of paths) {
+    if (/^\/(en\/)?site\//.test(path)) expect(new URL(path, runtime.app.base).search).toBe('')
     expect(path).not.toMatch(/^\/(en\/)?sites\/|^\/(en\/)?site\/[^/]+\/.+|\?domain=/)
     expect(path).not.toMatch(/^\/(en\/)?(?:games\/(?:search|prize(?:\/activation)?)|steam|insights\/(?:sites|games)\/compare)$/)
   }

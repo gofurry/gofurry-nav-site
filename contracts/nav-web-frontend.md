@@ -42,6 +42,62 @@ debt, not precedent that overrides the new-code contract. Repository-wide and
 API, SSR, hydration, routing, cookies, local backgrounds or resource fallback.
 React Admin follows its separate [frontend contract](admin-frontend.md).
 
+## Site Detail runtime and route ownership (#109 P1)
+
+Site identity, view count and Site Insights belong to `siteId`. Current Target
+observations belong to `siteId + selectedDomain + lang`. `useSiteDetailPage`
+loads `/nav/sites/:id/detail` under that identity; `SiteDetailPage` loads
+`/nav/sites/:id/insights` under Site ID alone. Domain and workspace query MUST NOT
+hide Insights or enter its fetch key. A normal hydrated visit has exactly one
+Detail GET, one Insights GET and one View POST. Switching Target within the same
+hydrated Site session MUST fetch only Detail and MUST NOT recount View. UI-only
+state MUST NOT introduce trend/history, comparison or other data requests.
+The legacy Ping history chart fetches only after its existing sample controls
+are used; mounting a populated HTTP detail or switching Target must not fetch
+history. Its prior eager history load conflicted with P1's initial budget.
+
+Detail 404 (missing Site or foreign Target) and Detail 503 are authoritative page
+failures, including a failed client Target switch. Insights failure is optional:
+the Site page remains 200 and the slice is unavailable. Successful empty
+capabilities/changes are distinct from unavailable. View failure is a side effect
+and MUST NOT replace Site/Target data or fail the page.
+
+`app/utils/siteDetailRouteState.ts` is the sole query parser/normalizer/builder.
+`siteRoutes.ts` delegates Target links to it and separately owns the query-free
+Entity path. Vue components MUST NOT create competing query preservation rules.
+
+| State | Vocabulary | Default |
+| --- | --- | --- |
+| `tab` | `overview`, `observation`, `security`, `insights` | `overview` |
+| Observation `view` | `overview`, `performance`, `http`, `dns`, `web` | `overview` |
+| Security `view` | `overview`, `tls`, `web`, `exposure` | `overview` |
+| Insights `metric` | `ipv6`, `tls13`, `http2`, `hsts`, `csp`, `security_txt`, `certificate_verified` | `ipv6` |
+| Insights `range` | `30d`, `90d`, `all` | `30d` |
+
+Invalid UI values fall back; they never cause 404. Query values use the first
+array entry, trim whitespace and are not decoded again after Vue Router. Target
+membership remains an authoritative backend decision; unknown nonempty domains
+MUST NOT silently become the primary Target. Normalization need not rewrite an
+incoming URL. Builders omit defaults and unrelated query: Overview keeps only
+Domain, Observation/Security keep Domain/tab/view, Insights keeps
+Domain/tab/metric/range. Target switches retain the active valid workspace;
+primary-tab changes reset the previous workspace's secondary state, even shared
+view names. Canonical, hreflang and sitemap always use localized `/site/:id`
+Entity URLs without Domain or UI query. Existing SEO copy remains unchanged.
+
+`siteCapabilityRegistry.ts` owns the seven-capability presentation catalog,
+stable order, categories and translation keys, never API facts or coverage.
+Its explicit three-item `preview` preserves the current panel presentation;
+that subset MUST NOT be used as the full catalog in P3/P6.
+
+P1 is runtime-only. Its Browser owner is `site-detail-contract.spec.ts`, using
+the existing deterministic Nitro/upstream fixture and strict request/error
+ledgers; `insights-entity` retains the Ecosystem-to-Entity bridge. P1 MUST NOT
+change style-debt budgets, ESLint suppressions or Visual specs/PNGs. No new
+workspace UI is implied by route vocabulary. P2 owns Shell/Target Context, P3
+Overview, P4 Observation, P5 Security, P6 Insights workspace, P7 appearance/debt
+migration and P8 Visual/closure. #108 remains separate.
+
 ## Styling ownership
 
 **Tailwind owns structure; Less owns appearance.**
