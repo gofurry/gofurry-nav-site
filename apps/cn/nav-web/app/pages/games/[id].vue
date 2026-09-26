@@ -96,6 +96,8 @@ const detailRequest = useAsyncData<GameDetailPageData>(
     }
   },
   {
+    // Locale navigation can mount a second consumer of the same pending identity.
+    dedupe: 'defer',
     watch: [gameId, lang],
     default: () => ({
       gameBaseInfo: null,
