@@ -21,6 +21,12 @@ Owner-only. See [Managed assets](../../../docs/managed-assets.md) and the
 
 ## Development
 
+Steam prefill resolves AppDetails by the verified internal `steam_appid` through
+steam-go's `GetResolvedAppDetails`, since Steam's outer response key can differ.
+Usable partial data remains available with optional `warnings` for incomplete
+Chinese/English details or a missing cover. React shows those warnings and only
+applies nonempty content fields; an entirely unavailable lookup remains an error.
+
 Requirements: Go 1.26.7, Node.js 24 / pnpm 12.6.0, PostgreSQL, and Redis.
 
 ~~~bash

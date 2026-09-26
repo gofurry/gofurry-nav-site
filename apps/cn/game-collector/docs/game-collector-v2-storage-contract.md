@@ -16,6 +16,8 @@ US 请求失败、release field 缺失、或 languages observation 为空/不可
 
 Steam 资产按本轮显式成功观察到的 `(source, lang)` scope 替换。Storefront appdetails 与 zh/en StoreBrowse 分别授权自己的 scope；失败或缺少竖版封面的 StoreBrowse 响应不授权替换，因此保留 PostgreSQL Last Known Good。缓存刷新使用事务提交后重新读取的合并资产集，绝不使用缺失失败 scope 的本轮内存切片覆盖旧资产。
 
+AppDetails 的外层对象键不是应用身份。采集器保留 `GetAppDetailsRaw` 的原始字节用于快照和哈希，解码后由 steam-go v1.3.12 `ResolveAppDetails` 按内部 `data.steam_appid` 严格匹配请求 AppID；身份缺失、冲突、重复匹配或 `success=false` 都视为失败，不取第一项、不改写响应键。现有 CN/US/HK 观察与部分失败策略不变；新观察记录使用 `steam-go/v1.3.12` normalizer 标记，历史记录不回写。
+
 当前存储与控制边界：
 
 - PostgreSQL：结构化详情、新闻、在线人数、raw snapshot，以及 durable Schedule / Job / Run / Task Result / Collector Instance。

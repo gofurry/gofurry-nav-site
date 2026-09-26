@@ -16,4 +16,8 @@ describe('Steam partial prefill', () => {
     const result = { ...current, ...steamPrefillValues({ name: '', header: null, developers: [], info: '  ', name_en: 'English' } as never) }
     expect(result).toEqual({ ...current, name_en: 'English' })
   })
+
+  it('never copies response warnings or identity metadata into the game form', () => {
+    expect(steamPrefillValues({ header: 'cover.jpg', warnings: ['中文详情未获取到'], appid: 550 } as never)).toEqual({ header: 'cover.jpg' })
+  })
 })

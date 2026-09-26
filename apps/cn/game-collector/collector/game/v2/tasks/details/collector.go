@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -264,14 +263,13 @@ func (c *Collector) fetchAppDetails(ctx context.Context, appID uint32, plan requ
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return storefront.AppDetailsData{}, raw, fmt.Errorf("decode appdetails appid=%d region=%s lang=%s: %w", appID, plan.region, plan.lang, err)
 	}
-	result, ok := envelope[strconv.FormatUint(uint64(appID), 10)]
-	if !ok {
-		return storefront.AppDetailsData{}, raw, fmt.Errorf("appdetails appid=%d missing envelope entry", appID)
+	// Steam's envelope key can drift; verify data.steam_appid without rewriting
+	// the original response used by the raw snapshot and its content hash.
+	match, err := storefront.ResolveAppDetails(envelope, appID)
+	if err != nil {
+		return storefront.AppDetailsData{}, raw, fmt.Errorf("resolve appdetails appid=%d region=%s lang=%s: %w", appID, plan.region, plan.lang, err)
 	}
-	if !result.Success {
-		return storefront.AppDetailsData{}, raw, fmt.Errorf("appdetails appid=%d region=%s lang=%s success=false", appID, plan.region, plan.lang)
-	}
-	return result.Data, raw, nil
+	return match.Result.Data, raw, nil
 }
 
 type steamRequestError struct {

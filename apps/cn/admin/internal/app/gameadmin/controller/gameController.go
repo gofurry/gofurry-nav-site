@@ -53,6 +53,7 @@ type steamGamePrefillDTO struct {
 	Publishers []string            `json:"publishers"`
 	Header     string              `json:"header"`
 	Links      []pkgmodels.KvModel `json:"links"`
+	Warnings   []string            `json:"warnings,omitempty"`
 }
 
 func (api *GameAPI) ListGames(c fiber.Ctx) error {
@@ -192,10 +193,11 @@ func (api *GameAPI) ResolveSteamGameAsset(c fiber.Ctx) error {
 }
 
 func (api *GameAPI) ResolveSteamGamePrefill(c fiber.Ctx) error {
-	appid, err := strconv.ParseInt(strings.TrimSpace(c.Query("appid", "")), 10, 64)
-	if err != nil || appid <= 0 {
-		return common.NewResponse(c).Error(common.NewValidationError("appid must be a positive integer"))
+	parsedID, err := strconv.ParseUint(strings.TrimSpace(c.Query("appid", "")), 10, 32)
+	if err != nil || parsedID == 0 {
+		return common.NewResponse(c).Error(common.NewValidationError("appid must be a positive 32-bit integer"))
 	}
+	appid := int64(parsedID)
 
 	client, timeout, err := newAdminSteamClient()
 	if err != nil {
@@ -248,6 +250,17 @@ func resolveSteamPrefill(ctx context.Context, appid int64, details func(context.
 	if data.Name == "" && data.NameEn == "" && data.Info == "" && data.InfoEn == "" && data.Header == "" && len(data.Groups)+len(data.Developers)+len(data.Publishers) == 0 {
 		return data, fmt.Errorf("no usable Steam prefill data: %w", errors.Join(errors.New("empty upstream data"), zhErr, enErr, assetErr))
 	}
+	// Keep useful partial data, but never present an asset-only lookup as complete.
+	// These messages intentionally exclude upstream errors and proxy details.
+	if zhErr != nil || data.Name == "" || data.Info == "" {
+		data.Warnings = append(data.Warnings, "中文详情未完整获取，请检查名称和简介，重试或手动填写。")
+	}
+	if enErr != nil || data.NameEn == "" || data.InfoEn == "" {
+		data.Warnings = append(data.Warnings, "英文详情未完整获取，请检查名称和简介，重试或手动填写。")
+	}
+	if data.Header == "" {
+		data.Warnings = append(data.Warnings, "封面未获取到，请重试或手动填写。")
+	}
 	return data, nil
 }
 
@@ -256,7 +269,7 @@ func fetchSteamAppDetails(ctx context.Context, client *steam.Client, appid int64
 	if language == "english" {
 		country = "US"
 	}
-	envelope, err := client.Web.Storefront.GetAppDetails(ctx, uint32(appid), &storefront.GetAppDetailsOptions{
+	match, err := client.Web.Storefront.GetResolvedAppDetails(ctx, uint32(appid), &storefront.GetAppDetailsOptions{
 		CountryCode: country,
 		Language:    language,
 	})
@@ -264,11 +277,7 @@ func fetchSteamAppDetails(ctx context.Context, client *steam.Client, appid int64
 		return storefront.AppDetailsData{}, err
 	}
 
-	result, ok := envelope[strconv.FormatInt(appid, 10)]
-	if !ok || !result.Success {
-		return storefront.AppDetailsData{}, errors.New("steam app details not found")
-	}
-	return result.Data, nil
+	return match.Result.Data, nil
 }
 
 func steamGamePrefill(appid int64, zhData, enData storefront.AppDetailsData, header string) steamGamePrefillDTO {

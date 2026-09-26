@@ -19,6 +19,8 @@ Owner。详见[托管资产说明](../../../docs/managed-assets.md)与[资产契
 
 ## 本地开发
 
+Steam 预填使用 steam-go 的 `GetResolvedAppDetails`，按内部 `steam_appid` 验证身份，兼容 Steam 外层响应键错位。中文/英文详情不完整或封面缺失时，响应保留可用数据并附带 `warnings`；React 显示提示，只应用非空内容字段。完全没有可用数据时仍返回失败。
+
 需要 Go 1.26.7、Node.js 24 / pnpm 12.6.0、PostgreSQL 和 Redis。
 
 ~~~bash

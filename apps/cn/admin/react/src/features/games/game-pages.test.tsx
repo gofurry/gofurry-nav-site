@@ -3,11 +3,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../app/toast'
-import { listJSON, sendJSON } from '../../lib/api'
+import { getJSON, listJSON, sendJSON } from '../../lib/api'
 import type { Game } from '../../lib/types'
 import { GameClassificationForm, GameContentForm } from './game-pages'
 
-vi.mock('../../lib/api', async (original) => ({ ...await original<typeof import('../../lib/api')>(), listJSON: vi.fn(), sendJSON: vi.fn() }))
+vi.mock('../../lib/api', async (original) => ({ ...await original<typeof import('../../lib/api')>(), getJSON: vi.fn(), listJSON: vi.fn(), sendJSON: vi.fn() }))
 vi.mock('../auth/auth-context', () => ({ useAuth: () => ({ can: () => true }) }))
 
 afterEach(() => { cleanup(); vi.resetAllMocks() })
@@ -18,6 +18,41 @@ function setup(element: React.ReactNode) {
   const router = createMemoryRouter([{ path: '/', element }])
   render(<QueryClientProvider client={client}><ToastProvider><RouterProvider router={router} /></ToastProvider></QueryClientProvider>)
 }
+
+it('shows partial Steam warnings, preserves manual fields, and clears warnings after a complete retry', async () => {
+  const warning = '中文详情未完整获取，请检查名称和简介，重试或手动填写。'
+  vi.mocked(getJSON)
+    .mockResolvedValueOnce({ name: '', info: '', header: 'https://example.test/header.jpg', warnings: [warning] })
+    .mockResolvedValueOnce({ name: 'Steam 中文名称', info: 'Steam 中文简介', name_en: 'Steam name', info_en: 'Steam description', header: 'https://example.test/header.jpg' })
+  vi.mocked(sendJSON).mockResolvedValue(game)
+  setup(<GameContentForm game={{ ...game, info: '手工简介' }} />)
+  fireEvent.click(screen.getByRole('button', { name: '从 Steam 预填' }))
+  expect(await screen.findByText(warning)).toBeInTheDocument()
+  expect(screen.getByText('已加载部分 Steam 内容，请检查提示')).toBeInTheDocument()
+  expect(screen.queryByText('已加载 Steam 预填内容')).not.toBeInTheDocument()
+  expect(screen.getByRole('textbox', { name: /^中文名称/ })).toHaveValue('游戏')
+  expect(screen.getByRole('textbox', { name: '中文简介' })).toHaveValue('手工简介')
+  expect(screen.getByRole('textbox', { name: '封面 / Header URL' })).toHaveValue('https://example.test/header.jpg')
+  expect(getJSON).toHaveBeenCalledWith('/api/v1/game/games/steam-prefill?appid=82')
+
+  fireEvent.click(screen.getByRole('button', { name: '从 Steam 预填' }))
+  await waitFor(() => expect(screen.getByRole('textbox', { name: /^中文名称/ })).toHaveValue('Steam 中文名称'))
+  expect(screen.queryByText(warning)).not.toBeInTheDocument()
+  expect(screen.getByText('已加载 Steam 预填内容')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '保存内容' }))
+  await waitFor(() => expect(sendJSON).toHaveBeenCalled())
+  expect(vi.mocked(sendJSON).mock.calls[0][2]).not.toHaveProperty('warnings')
+})
+
+it('preserves the content form and reports a failed Steam lookup', async () => {
+  vi.mocked(getJSON).mockRejectedValue(new Error('Steam 暂时不可用'))
+  setup(<GameContentForm game={game} />)
+  fireEvent.click(screen.getByRole('button', { name: '从 Steam 预填' }))
+  expect(await screen.findByText('Steam 暂时不可用')).toBeInTheDocument()
+  expect(screen.getByRole('textbox', { name: /^中文名称/ })).toHaveValue('游戏')
+  expect(screen.queryByText('已加载 Steam 预填内容')).not.toBeInTheDocument()
+  expect(sendJSON).not.toHaveBeenCalled()
+})
 
 it.each(['中文简介', '英文简介'])('blocks overlong %s on the actual content form, then saves 400 characters', async (label) => {
   vi.mocked(sendJSON).mockResolvedValue(game)

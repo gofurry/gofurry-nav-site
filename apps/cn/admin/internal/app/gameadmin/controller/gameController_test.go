@@ -16,13 +16,14 @@ func TestResolveSteamPrefillPartialSuccess(t *testing.T) {
 	for _, tc := range []struct {
 		name          string
 		zh, en, asset bool
+		warnings      int
 	}{
-		{"bilingual", true, true, true},
-		{"Chinese unavailable", false, true, true},
-		{"English unavailable", true, false, true},
-		{"assets unavailable", true, true, false},
-		{"assets only", false, false, true},
-		{"fully unavailable", false, false, false},
+		{"bilingual", true, true, true, 0},
+		{"Chinese unavailable", false, true, true, 1},
+		{"English unavailable", true, false, true, 1},
+		{"assets unavailable", true, true, false, 0},
+		{"assets only", false, false, true, 2},
+		{"fully unavailable", false, false, false, 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			data, err := resolveSteamPrefill(context.Background(), 550, func(_ context.Context, lang string) (storefront.AppDetailsData, error) {
@@ -47,6 +48,9 @@ func TestResolveSteamPrefillPartialSuccess(t *testing.T) {
 			}
 			if !tc.asset && (tc.zh || tc.en) && data.Header != "fallback.jpg" {
 				t.Fatalf("header fallback lost: %+v", data)
+			}
+			if len(data.Warnings) != tc.warnings || strings.Contains(strings.Join(data.Warnings, " "), "unavailable") {
+				t.Fatalf("partial status missing or upstream error exposed: %+v", data.Warnings)
 			}
 		})
 	}

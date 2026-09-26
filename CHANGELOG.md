@@ -23,6 +23,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Fixed
 
+- Fix Admin Steam prefill and Game Collector AppDetails after Steam response keys drift from the requested AppID. Upgrade both consumers to steam-go v1.3.12 and verify internal application identity; reject missing/conflicting/ambiguous identities while preserving Collector raw snapshots, region semantics and historical provenance. Show explicit Admin partial-prefill warnings instead of treating cover-only results as complete, and reject overflowing prefill AppIDs.
 - Restore Collaboration idea transition routes (research/release/shelve/restore/link/land/reopen) lost during the canvas rewrite, with HTTP regression coverage through production route registration. Highlight canvas selection on the element border without an offset outline or rectangular resize frame (#117).
 
 - Align the expanded Admin sidebar collapse label with navigation labels. Replace ambiguous Excel/Tab batch input with `name | source | note`, line-numbered format errors and separate preview columns (#117).
@@ -32,6 +33,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Upgrade notes
 
+- For the Steam AppDetails fix, rebuild and redeploy Admin (including its embedded React frontend) and Game Collector. No new database migration, runtime configuration, manual backfill or public frontend deployment is required; existing collection schedules refresh affected observations normally.
 - For #117, back up GFA, coordinate Admin writes and manually run Goose migrations through `20260926010000` before deploying the new Admin binary with embedded React. No GFG/GFN migration or public runtime change is required. See [Collaboration Center](docs/collaboration-center.md).
 
 - Workstations use Task >=3.45.3, Go 1.26.7, Node 24 and pnpm 12.6.0. Move aside any old npm `node_modules` directories in the two active frontends once, then run `task doctor`, `task verify` and `task build` from the root. See [local development](docs/development.md) for the command surface and separate Browser/Visual gates.
