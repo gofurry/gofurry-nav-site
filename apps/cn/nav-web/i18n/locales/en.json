@@ -1,4 +1,46 @@
 {
+  "siteDetail": {
+    "tabs": {
+      "overview": "Overview",
+      "observation": "Observation",
+      "security": "Security",
+      "insights": "Ecosystem"
+    },
+    "navigation": "Site workspaces",
+    "currentTarget": "Current target",
+    "selectTarget": "Select target",
+    "status": "Status",
+    "latency": "Latency",
+    "certificate": "Certificate",
+    "observed": "Observed",
+    "days": "days left",
+    "notObserved": "Not observed",
+    "verified": "Verified",
+    "notVerified": "Not verified",
+    "views": "Views",
+    "welfare": "Nonprofit",
+    "visit": "Visit site",
+    "country": "Country",
+    "health": "Current target health",
+    "infrastructure": "Infrastructure hints",
+    "noInfrastructure": "No infrastructure hints observed.",
+    "confidence": "confidence",
+    "loadingTarget": "Loading {target}. Showing the last observed target until it is ready.",
+    "siteScope": "These signals describe this Site across its targets.",
+    "securityEvidence": "Current transport evidence",
+    "checks": "Current checks",
+    "states": {
+      "healthy": "Healthy",
+      "warning": "Warning",
+      "degraded": "Degraded",
+      "unknown": "Unknown",
+      "down": "Down",
+      "stale": "Stale",
+      "success": "Success",
+      "failure": "Failed",
+      "skipped": "Skipped"
+    }
+  },
   "errorPage": {
     "notFound": {
       "title": "Only the unknown lies ahead",

@@ -30,10 +30,10 @@ for (const query of ['', '?tab=observation&view=dns', '?tab=security&view=tls', 
     await (await view).finished()
     await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'target.example')
     await expect(page.getByText('HTTP 200', { exact: true }).first()).toBeVisible()
-    const insightsBefore = await page.locator('[data-site-insights]').innerText()
+    const insightsBefore = await page.locator('[data-site-insights]').textContent()
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(initialPaths)
 
-    await page.locator('[data-site-target-trigger]').hover()
+    await page.locator('[data-site-target-trigger]').click()
     const option = page.locator('[data-site-target-option="alt.example"]')
     await expect(option).toBeVisible()
     const detail = page.waitForResponse(response => {
@@ -49,7 +49,7 @@ for (const query of ['', '?tab=observation&view=dns', '?tab=security&view=tls', 
     const expected = new URLSearchParams(query)
     expected.set('domain', 'alt.example')
     expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual(Object.fromEntries(expected))
-    await expect(page.locator('[data-site-insights]')).toHaveText(insightsBefore, { useInnerText: true })
+    await expect(page.locator('[data-site-insights]')).toHaveText(insightsBefore!)
     await assertRuntimeSurface(page, '[data-site-detail]', 'light')
     expect(runtime.calls.slice(3).map(call => [call.url.pathname, call.url.searchParams.get('target')])).toEqual([
       ['/api/v2/nav/sites/41/detail', 'alt.example'],
@@ -123,7 +123,7 @@ test('a failed hydrated Target switch reaches the authoritative page error', asy
   await openRuntime(page, '/site/41')
   await (await view).finished()
   runtime.state.failure = 'site'
-  await page.locator('[data-site-target-trigger]').hover()
+  await page.locator('[data-site-target-trigger]').click()
   await page.locator('[data-site-target-option="alt.example"]').click()
   await expect(page).toHaveTitle('503 - GoFurry')
   await expect(page.locator('[data-site-detail]')).toHaveCount(0)
@@ -138,7 +138,7 @@ test('a failed hydrated Target switch reaches the authoritative page error', asy
 
 test('existing Ping history loads only on sample interaction and is not refetched by Target selection', async ({ page, runtime }) => {
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
-  await openRuntime(page, '/site/41')
+  await openRuntime(page, '/site/41?tab=observation')
   await (await view).finished()
   await expect(page.locator('[data-site-history-points]')).toHaveAttribute('data-site-history-points', '0')
   expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(initialPaths)
@@ -148,7 +148,7 @@ test('existing Ping history loads only on sample interaction and is not refetche
   await (await history).finished()
   await expect(page.locator('[data-site-history-points]')).toHaveAttribute('data-site-history-points', '1')
   await page.locator('[data-site-history-sample="sixty"]').click()
-  await page.locator('[data-site-target-trigger]').hover()
+  await page.locator('[data-site-target-trigger]').click()
   await page.locator('[data-site-target-option="alt.example"]').click()
   await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'alt.example')
   await expect(page.locator('[data-site-history-points]')).toHaveAttribute('data-site-history-points', '0')

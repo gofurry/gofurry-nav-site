@@ -98,6 +98,49 @@ workspace UI is implied by route vocabulary. P2 owns Shell/Target Context, P3
 Overview, P4 Observation, P5 Security, P6 Insights workspace, P7 appearance/debt
 migration and P8 Visual/closure. #108 remains separate.
 
+## Site Detail shell and Target context (#109 P2)
+
+`SiteDetailPage` owns the responsive shell. Its identity-only Hero contains icon,
+name, display domain, description, country, SFW/NSFW, welfare, views and Visit.
+Technical/edge evidence and Target selection belong to the Target Context, not
+the Hero. The former domain hover popover and large signal-card path are retired.
+
+`siteTargetPresentation.ts` is the shared Current Target adapter for the six-item
+Health Strip and the responsive Target Context. It reads only matching Target
+summary/latest evidence for health, preserves unknown/absent versus zero/false,
+and carries infrastructure hint confidence. Site summary supplies Target catalog
+and relation hints only; Site aggregate status MUST NOT stand in for Target health.
+Visit uses observed HTTP final URL, falling back to the selected Target over HTTPS.
+
+Four primary tabs use the P1 route-state helpers and router history, with roving
+focus and ArrowLeft/ArrowRight/Home/End support. No secondary navigation or new
+data endpoint is introduced. Only the tabs stick at the viewport top: the public
+NavBar remains in normal flow. At `xl` the workspace/context tracks are 3:1 with
+a bounded minimum sidebar; smaller viewports place compact context before the
+workspace, retaining Target/protocol/time while infrastructure detail stays in
+the desktop sidebar. Mobile Health Strip is two columns by three rows. One Context/selector
+instance serves all widths; it supports pointer/touch, keyboard selection,
+Escape/outside dismissal and focus return.
+
+Pending Target requests preserve Hero, tabs and shell, retaining the explicitly
+labelled last resolved Target evidence until the next result is ready. A late
+response MUST NOT overwrite a newer Target. Site Insights stays mounted once and
+Site-owned across tab/Target changes; the existing preview appears in Overview
+and Insights. Observation and Security use thin transitional content adapters;
+their final workspaces and secondary navigation remain P4/P5 scope.
+
+`app/assets/styles/pages/site-detail.less` owns new appearance under the exact
+`.site-detail-page` / `html.dark .site-detail-page` / `--site-detail-*` token roots.
+P2 removes only the old Hero/popover/root appearance debt. Other legacy panels,
+#108, accepted Visual configuration/specs/PNGs and P8 golden creation are outside
+scope. `site-detail-shell.spec.ts` owns interaction/layout/pending/race coverage;
+P1 request, failure and SEO contracts remain required. Maintainer visual review
+at 1440/390 Light/Dark (and preferably 768 Light) is required before P3; local
+Functional passes are not that approval or remote CI acceptance.
+
+The internal `insights` tab value is unchanged; public copy follows the accepted
+“生态观测 / Ecosystem” naming contract rather than reviving retired product names.
+
 ## Styling ownership
 
 **Tailwind owns structure; Less owns appearance.**

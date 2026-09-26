@@ -31,6 +31,7 @@ const tokenLocations = [
   ['app/assets/styles/pages/static.less', ['.about-page', 'html.dark .about-page'], '--about-'],
   ['app/assets/styles/pages/static.less', ['.legal-page', 'html.dark .legal-page'], '--legal-'],
   ['app/assets/styles/pages/insights/foundation.less', ['.insights-page'], '--insights-'],
+  ['app/assets/styles/pages/site-detail.less', ['.site-detail-page', 'html.dark .site-detail-page'], '--site-detail-'],
 ];
 
 const legacyClasses = [

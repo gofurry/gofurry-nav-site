@@ -5,7 +5,8 @@ test. The [frontend contract](../../contracts/nav-web-frontend.md) owns this rul
 the commands below run from `apps/cn/nav-web`.
 
 P7.2 established **406 Functional Browser /119 Visual /118 PNG**; #109 P1 adds
-17 independent Site Detail cases for **423 Functional Browser /119 Visual /118 PNG**. The
+17 independent Site Detail cases for 423 Functional Browser; #109 P2 adds 12
+shell/context cases for **435 Functional Browser /119 Visual /118 PNG**. The
 phase-labelled sections preserve earlier acceptance matrices/counts; use
 [Full verification](#full-verification) for current commands and the
 [closure record](../acceptance/issue-124-frontend-engineering-closure.md) for
@@ -76,6 +77,26 @@ absence of routing failure and Entity canonical. P2–P8 retain their separate
 UI/appearance/Visual owners; this does not close #109 or modify #124's history.
 Current audit and verification evidence lives in the
 [#109 phase ledger](../acceptance/issue-109-site-detail.md).
+
+## Site Detail #109 P2
+
+`site-detail-shell.spec.ts` extends the same deterministic fixture with 390/768/1440
+Light/Dark runtime geometry, long hostnames, four router tabs, reload/history,
+roving keyboard focus, selector pointer/touch/keyboard/dismissal/focus return,
+keyboard visibility within a long scrollable Target list,
+unknown Target evidence and sticky geometry. An explicit upstream gate holds
+Target A while B completes; it asserts retained Hero/tabs, local pending state,
+the latest Target's evidence after A releases, and exact Detail/Insights/View
+counts. No sleeps, network-idle waits, retries, diagnostic exceptions or new
+runner are used. P1's 17 cases now click the selector and open Observation for
+the existing sample-history controls; all request/failure assertions remain.
+
+`site-target-presentation.test.ts` owns nullable evidence, matching Target identity,
+Site aggregate exclusion, staleness, deterministic timestamps, relations and hint
+confidence. Style-policy tests enforce the exact P2 token declaration locations.
+P2's style-budget decrease is restricted to removed Hero/popover/root appearance;
+the ledger records actual verification and required manual visual review. Existing
+Visual specs/PNGs remain unchanged, and no P8 golden is created.
 
 ## Migrated regression knowledge
 

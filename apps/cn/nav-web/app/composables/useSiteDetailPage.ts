@@ -33,14 +33,16 @@ export async function useSiteDetailPage() {
         throw new Error('invalid site id')
       }
 
+      // Capture this request's identity; a later route must not relabel its result.
+      const requestedTarget = selectedDomain.value
       const detail = await navV2Api<SiteV2DetailResponse>(`/nav/sites/${siteId.value}/detail`, {
         query: {
           lang: lang.value,
-          target: selectedDomain.value || undefined,
+          target: requestedTarget || undefined,
           payload_mode: 'preview',
         },
       })
-      const resolvedDomain = detail.selected_target || selectedDomain.value
+      const resolvedDomain = detail.selected_target || requestedTarget
 
       return {
         siteInfo: toSiteInfo(detail.site),

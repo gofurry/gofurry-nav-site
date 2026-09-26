@@ -1,0 +1,235 @@
+import type { Page } from '@playwright/test'
+import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface, longTarget } from '../fixtures/site-detail'
+
+const tab = (page: Page, key: string) => page.locator('[data-site-primary-tab="' + key + '"]')
+const trigger = (page: Page) => page.locator('[data-site-target-trigger]')
+const option = (page: Page, target: string) => page.locator('[data-site-target-option="' + target + '"]')
+async function openSite(page: Page, path = '/en/site/41') {
+  const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
+  await openRuntime(page, path)
+  await (await view).finished()
+}
+async function activeTab(page: Page, key: string) {
+  await expect(tab(page, key)).toHaveAttribute('aria-selected', 'true')
+  await expect(tab(page, key)).toHaveAttribute('tabindex', '0')
+  await expect(page.locator('[data-site-primary-tab][tabindex="0"]')).toHaveCount(1)
+  await expect(page.locator('[data-site-workspace]')).toHaveAttribute('data-site-workspace-tab', key)
+  const id = await tab(page, key).getAttribute('aria-controls')
+  await expect(page.locator('#' + id)).toBeVisible()
+}
+
+for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as const) {
+  test('responsive Target shell ' + width + ' ' + theme, async ({ page, context, runtime }) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await context.addInitScript(theme => localStorage.setItem('theme', theme), theme)
+    runtime.state.longTarget = true
+    await openSite(page, '/en/site/41?domain=' + longTarget)
+    await assertRuntimeSurface(page, '[data-site-detail]', theme)
+    await expect(page.locator('[data-site-hero] h1')).toHaveText('Site fixture 41')
+    await expect(page.locator('[data-site-hero] [data-site-target-trigger]')).toHaveCount(0)
+    await expect(page.locator('[data-site-health]')).toHaveCount(6)
+    await expect(page.locator('[data-site-health="status"]')).toContainText('Warning')
+    await expect(page.locator('[data-site-health="certificate"]')).toContainText('Not observed')
+    await expect(page.locator('[data-site-target-context]')).toContainText(longTarget)
+    await expect(page.locator('[data-site-target-context]')).toContainText('confidence: medium')
+    for (const protocol of ['ping', 'http', 'dns']) await expect(page.locator('[data-site-protocol="' + protocol + '"]')).toBeVisible()
+    const geometry = await page.evaluate(() => {
+      const box = (hook: string) => {
+        const rect = document.querySelector<HTMLElement>('[' + hook + ']')!.getBoundingClientRect()
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height, bottom: rect.bottom }
+      }
+      return { hero: box('data-site-hero'), health: box('data-site-health-strip'), tabs: box('data-site-primary-tabs'),
+        context: box('data-site-target-context'), workspace: box('data-site-workspace'),
+        columns: getComputedStyle(document.querySelector('[data-site-health-strip]')!).gridTemplateColumns.split(' ').length }
+    })
+    expect(geometry.hero.bottom).toBeLessThan(geometry.health.y)
+    expect(geometry.health.bottom).toBeLessThanOrEqual(geometry.tabs.y)
+    if (width === 1440) {
+      await expect(page.locator('[data-site-infrastructure]')).toBeVisible()
+      expect(geometry.context.x).toBeGreaterThan(geometry.workspace.x + geometry.workspace.width)
+      expect(geometry.workspace.width / geometry.context.width).toBeCloseTo(3, 0)
+      expect(geometry.columns).toBe(6)
+    } else {
+      await expect(page.locator('[data-site-infrastructure]')).toBeHidden()
+      expect(geometry.context.y).toBeGreaterThanOrEqual(geometry.tabs.bottom)
+      expect(geometry.workspace.y).toBeGreaterThan(geometry.context.bottom)
+      if (width === 390) {
+        expect(geometry.columns).toBe(2)
+        expect(geometry.hero.height).toBeLessThan(310)
+      }
+    }
+    await trigger(page).click()
+    await expect(option(page, 'target.example')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(trigger(page)).toBeFocused()
+    await assertRuntimeSurface(page, '[data-site-detail]', theme)
+    expect(runtime.count('/sites/41/detail')).toBe(1)
+    expect(runtime.count('/sites/41/insights')).toBe(1)
+    expect(runtime.count('/sites/41/view')).toBe(1)
+    runtime.assertQuiet()
+  })
+}
+
+test('router tabs survive history/reload, clear foreign state and support roving keyboard focus', async ({ page, runtime }) => {
+  await openSite(page, '/en/site/41?domain=alt.example&tab=insights&metric=tls13&range=90d')
+  await activeTab(page, 'insights')
+  await expect(page.locator('[data-site-insights-scope]')).toBeVisible()
+  await tab(page, 'observation').click()
+  await activeTab(page, 'observation')
+  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'alt.example', tab: 'observation' })
+  await page.goBack()
+  await activeTab(page, 'insights')
+  expect(new URL(page.url()).searchParams.get('metric')).toBe('tls13')
+  expect(new URL(page.url()).searchParams.get('range')).toBe('90d')
+  await page.goForward()
+  await activeTab(page, 'observation')
+  await tab(page, 'observation').focus()
+  for (const [key, expected] of [['ArrowRight', 'security'], ['End', 'insights'], ['Home', 'overview'], ['ArrowLeft', 'insights']]) {
+    await page.keyboard.press(key!)
+    await activeTab(page, expected!)
+    await expect(tab(page, expected!)).toBeFocused()
+  }
+  await settleRuntime(page)
+  expect(runtime.calls).toHaveLength(3)
+  const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
+  expect((await page.reload({ waitUntil: 'domcontentloaded' }))?.status()).toBe(200)
+  await (await view).finished()
+  await activeTab(page, 'insights')
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://go-furry.com/en/site/41')
+  expect(runtime.count('/sites/41/detail')).toBe(2)
+  expect(runtime.count('/sites/41/insights')).toBe(2)
+  expect(runtime.count('/sites/41/view')).toBe(2)
+  runtime.assertQuiet()
+})
+
+test('selector supports Enter, Space, arrows, Home/End, Escape, outside click and focus return', async ({ page, runtime }) => {
+  await openSite(page, '/en/site/41?tab=security&view=tls')
+  await trigger(page).focus()
+  await page.keyboard.press('Enter')
+  await expect(option(page, 'target.example')).toBeFocused()
+  await page.keyboard.press('End')
+  await expect(option(page, 'alt.example')).toBeFocused()
+  await page.keyboard.press('Home')
+  await expect(option(page, 'target.example')).toBeFocused()
+  await page.keyboard.press('ArrowUp')
+  await expect(option(page, 'alt.example')).toBeFocused()
+  await page.keyboard.press(' ')
+  await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'alt.example')
+  await expect(trigger(page)).toBeFocused()
+  await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false')
+  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'alt.example', tab: 'security', view: 'tls' })
+  await page.keyboard.press(' ')
+  await expect(option(page, 'alt.example')).toBeFocused()
+  await page.keyboard.press('ArrowDown')
+  await expect(option(page, 'target.example')).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(trigger(page)).toBeFocused()
+  await trigger(page).click()
+  await page.locator('[data-site-hero] h1').click()
+  await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false')
+  await expect(trigger(page)).toBeFocused()
+  await trigger(page).focus()
+  await page.keyboard.press('ArrowDown')
+  await expect(option(page, 'alt.example')).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(trigger(page)).toHaveAttribute('aria-expanded', 'false')
+  expect(runtime.count('/sites/41/detail')).toBe(2)
+  expect(runtime.count('/sites/41/insights')).toBe(1)
+  expect(runtime.count('/sites/41/view')).toBe(1)
+  runtime.assertQuiet()
+})
+
+test('long Target lists reveal keyboard focus inside the scrollable listbox', async ({ page, runtime }) => {
+  runtime.state.extraTargets = Array.from({ length: 16 }, (_, index) => `target-${index}.example`)
+  await openSite(page)
+  await trigger(page).focus()
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('End')
+  await expect(option(page, 'target-15.example')).toBeFocused()
+  await expect(option(page, 'target-15.example')).toBeInViewport({ ratio: 1 })
+  await page.keyboard.press('ArrowUp')
+  await expect(option(page, 'target-14.example')).toBeFocused()
+  await expect(option(page, 'target-14.example')).toBeInViewport({ ratio: 1 })
+  await page.keyboard.press('Home')
+  await expect(option(page, 'target.example')).toBeFocused()
+  await expect(option(page, 'target.example')).toBeInViewport({ ratio: 1 })
+  await page.keyboard.press('Escape')
+  await expect(trigger(page)).toBeFocused()
+  expect(runtime.calls).toHaveLength(3)
+  runtime.assertQuiet()
+})
+
+test.describe('touch selector', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } })
+  test('touch selection preserves Insights metric/range and request ownership', async ({ page, runtime }) => {
+    await openSite(page, '/en/site/41?tab=insights&metric=certificate_verified&range=all')
+    const before = await page.locator('[data-site-insights]').textContent()
+    await trigger(page).tap()
+    await option(page, 'alt.example').tap()
+    await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'alt.example')
+    expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'alt.example', tab: 'insights', metric: 'certificate_verified', range: 'all' })
+    await expect(page.locator('[data-site-insights]')).toHaveText(before!)
+    await expect(trigger(page)).toBeFocused()
+    expect(runtime.count('/sites/41/detail')).toBe(2)
+    expect(runtime.count('/sites/41/insights')).toBe(1)
+    expect(runtime.count('/sites/41/view')).toBe(1)
+    runtime.assertQuiet()
+  })
+})
+
+test('pending Target preserves shell and a late response cannot overwrite a newer target', async ({ page, runtime }) => {
+  await openSite(page, '/en/site/41?tab=insights&metric=tls13&range=90d')
+  const hero = await page.locator('[data-site-hero]').elementHandle()
+  const tabs = await page.locator('[data-site-primary-tabs]').elementHandle()
+  const insights = await page.locator('[data-site-insights]').textContent()
+  const held = runtime.hold(url => url.pathname.endsWith('/sites/41/detail') && url.searchParams.get('target') === 'alt.example')
+  try {
+    await trigger(page).click()
+    await option(page, 'alt.example').click()
+    await held.wait()
+    await expect(page.locator('[data-site-target-pending]')).toContainText('alt.example')
+    await expect(page.locator('[data-site-health-strip]')).toHaveAttribute('aria-busy', 'true')
+    await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'target.example')
+    expect(await hero!.evaluate(node => node.isConnected)).toBe(true)
+    expect(await tabs!.evaluate(node => node.isConnected)).toBe(true)
+    await activeTab(page, 'insights')
+    runtime.state.primaryStatus = 202
+    await trigger(page).click()
+    await option(page, 'target.example').click()
+    await expect(page.locator('[data-site-health="http"]')).toContainText('HTTP 202')
+    await expect(page.locator('[data-site-target-pending]')).toHaveCount(0)
+    held.release()
+    await held.done()
+    await settleRuntime(page)
+    await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'target.example')
+    await expect(page.locator('[data-site-health="http"]')).toContainText('HTTP 202')
+    await expect(page.locator('[data-site-insights]')).toHaveText(insights!)
+    expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'target.example', tab: 'insights', metric: 'tls13', range: '90d' })
+    expect(runtime.count('/sites/41/detail')).toBe(3)
+    expect(runtime.count('/sites/41/insights')).toBe(1)
+    expect(runtime.count('/sites/41/view')).toBe(1)
+    expect(runtime.calls.every(call => call.completed)).toBe(true)
+    runtime.assertQuiet()
+  } finally { held.release() }
+})
+
+test('missing Target evidence stays unknown and sticky tabs leave Hero/health in normal flow', async ({ page, runtime }) => {
+  runtime.state.noTargetEvidence = true
+  runtime.state.missingSummary = true
+  await page.setViewportSize({ width: 1440, height: 700 })
+  await openSite(page)
+  await expect(page.locator('[data-site-health="status"]')).toContainText('Unknown')
+  await expect(page.locator('[data-site-health="certificate"]')).toContainText('Not observed')
+  for (const field of ['latency', 'http', 'tls', 'observed']) await expect(page.locator('[data-site-health="' + field + '"]')).toContainText('—')
+  await page.evaluate(() => {
+    const row = document.querySelector('[data-site-primary-tabs]')!
+    window.scrollTo(0, row.getBoundingClientRect().top + window.scrollY + 100)
+  })
+  await expect.poll(() => page.locator('[data-site-primary-tabs]').evaluate(node => Math.round(node.getBoundingClientRect().top))).toBe(0)
+  expect(await page.locator('[data-site-hero]').evaluate(node => node.getBoundingClientRect().bottom)).toBeLessThan(0)
+  expect(await page.locator('[data-site-health-strip]').evaluate(node => node.getBoundingClientRect().bottom)).toBeLessThan(0)
+  expect(await page.locator('[data-site-target-context]').evaluate(node => node.getBoundingClientRect().top)).toBeGreaterThanOrEqual(56)
+  await assertRuntimeSurface(page, '[data-site-detail]', 'light')
+  expect(runtime.calls).toHaveLength(3)
+  runtime.assertQuiet()
+})

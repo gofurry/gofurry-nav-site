@@ -1,0 +1,205 @@
+.site-detail-page {
+  --site-detail-surface: var(--gf-surface);
+  --site-detail-border: var(--gf-border);
+  --site-detail-tabs-surface: var(--gf-page-background);
+  --site-detail-tabs-height: 3.5rem;
+  --site-detail-positive: #216b4b;
+  --site-detail-warning: #875510;
+
+  color: var(--gf-text-main);
+}
+
+html.dark .site-detail-page {
+  --site-detail-positive: #93dabb;
+  --site-detail-warning: #f2c47a;
+}
+
+.site-detail-hero {
+  padding: 0.5rem 0;
+}
+
+.site-detail-hero__icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--gf-radius-md);
+  background: var(--site-detail-surface);
+}
+
+.site-detail-hero__name {
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.site-detail-hero__domain {
+  color: var(--gf-text-muted);
+  font-family: ui-monospace, monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.site-detail-hero__meta,
+.site-detail-note {
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.site-detail-hero__description {
+  max-width: 72ch;
+  color: var(--gf-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+
+.site-detail-health {
+  border: 1px solid var(--site-detail-border);
+  border-radius: var(--gf-radius-md);
+  background: var(--site-detail-surface);
+}
+
+.site-detail-health__item {
+  padding: 0.85rem 1rem;
+}
+
+.site-detail-label {
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.site-detail-health__value {
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-detail-health__item[data-site-health="observed"] .site-detail-health__value {
+  font-size: 0.75rem;
+}
+
+.site-detail-page [data-tone="good"] {
+  color: var(--site-detail-positive);
+}
+
+.site-detail-page [data-tone="warning"] {
+  color: var(--site-detail-warning);
+}
+
+.site-detail-page [data-tone="bad"] {
+  color: var(--gf-danger);
+}
+
+// Public NavBar is in normal flow, so it scrolls away. Only this tab row sticks
+// at the viewport top; the Context offset tracks its fixed internal height.
+.site-detail-tabs {
+  height: var(--site-detail-tabs-height);
+  border-bottom: 1px solid var(--gf-border-strong);
+  background: var(--site-detail-tabs-surface);
+}
+
+.site-detail-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.85rem 1rem;
+  background: transparent;
+  color: var(--gf-text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: color var(--gf-motion-fast), background-color var(--gf-motion-fast);
+}
+
+.site-detail-tab:hover {
+  background: var(--gf-surface-hover);
+  color: var(--gf-text-main);
+}
+
+.site-detail-tab[aria-selected="true"] {
+  border-bottom-color: var(--gf-accent);
+  color: var(--gf-accent);
+}
+
+.site-detail-tab:focus-visible,
+.site-detail-target-option:focus-visible,
+.site-detail-workspace:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-detail-context {
+  top: calc(var(--site-detail-tabs-height) + 1.25rem);
+  border: 1px solid var(--site-detail-border);
+  border-radius: var(--gf-radius-md);
+  padding: 1rem;
+  background: var(--site-detail-surface);
+}
+
+.site-detail-target-name {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.site-detail-status {
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.site-detail-protocol-value {
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.site-detail-target-list {
+  max-height: 18rem;
+  border: 1px solid var(--gf-border-strong);
+  border-radius: var(--gf-radius-sm);
+  padding: 0.35rem;
+  background: var(--gf-modal-bg);
+  box-shadow: var(--gf-modal-shadow);
+}
+
+.site-detail-target-option {
+  border: 0;
+  border-radius: var(--gf-radius-sm);
+  padding: 0.65rem;
+  background: transparent;
+  color: var(--gf-text-main);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.site-detail-target-option:hover,
+.site-detail-target-option[aria-selected="true"] {
+  background: var(--gf-surface-hover);
+  color: var(--gf-accent);
+}
+
+.site-detail-scope {
+  border-top: 1px solid var(--site-detail-border);
+  padding-top: 0.75rem;
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.site-detail-workspace-title {
+  font-size: 1.125rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+@media (min-width: 640px) {
+  .site-detail-hero__icon {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+}

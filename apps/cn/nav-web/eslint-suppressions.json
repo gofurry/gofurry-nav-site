@@ -58,11 +58,6 @@
       "count": 1
     }
   },
-  "app/components/site/SiteDetailPage.vue": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 2
-    }
-  },
   "app/components/site/SiteDnsPanel.vue": {
     "@typescript-eslint/no-explicit-any": {
       "count": 6

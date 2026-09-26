@@ -112,6 +112,16 @@ html.dark .games-page { --games-bg: #000; }
   assert.deepEqual(values(detectCssFacts(outsideFile), 'raw-visual-value'), ['#fff']);
 });
 
+test('Site Detail tokens are confined to the P2 page owner and canonical dark root', () => {
+  const source = '.site-detail-page { --site-detail-positive: #216b4b; color: #111; --other: #222; }\n'
+    + 'html.dark .site-detail-page { --site-detail-positive: #93dabb; }\n'
+    + '.site-detail-page .child { --site-detail-positive: #333; }';
+  const owned = extractCssFacts(source, { file: 'app/assets/styles/pages/site-detail.less', less: true });
+  assert.deepEqual(values(detectCssFacts(owned), 'raw-visual-value'), ['#111', '#222', '#333']);
+  const foreign = extractCssFacts(source, { file, less: true });
+  assert.equal(values(detectCssFacts(foreign), 'raw-visual-value').length, 5);
+});
+
 test('global and page tokens share the canonical tokens.less root and dark owner', () => {
   const facts = extractCssFacts(`:root {
   --gf-surface: rgba(1, 2, 3, .5);

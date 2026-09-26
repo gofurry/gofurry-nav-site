@@ -1,4 +1,46 @@
 {
+  "siteDetail": {
+    "tabs": {
+      "overview": "概览",
+      "observation": "观测",
+      "security": "安全",
+      "insights": "生态观测"
+    },
+    "navigation": "站点工作区",
+    "currentTarget": "当前目标",
+    "selectTarget": "选择目标",
+    "status": "状态",
+    "latency": "延迟",
+    "certificate": "证书",
+    "observed": "观测时间",
+    "days": "天剩余",
+    "notObserved": "尚未观测",
+    "verified": "校验通过",
+    "notVerified": "校验未通过",
+    "views": "浏览量",
+    "welfare": "公益网站",
+    "visit": "访问网站",
+    "country": "国家／地区",
+    "health": "当前目标健康摘要",
+    "infrastructure": "基础设施线索",
+    "noInfrastructure": "尚未观测到基础设施线索。",
+    "confidence": "置信度",
+    "loadingTarget": "正在加载 {target}，就绪前保留上次目标的观测。",
+    "siteScope": "生态观测描述整个站点，涵盖其所有目标。",
+    "securityEvidence": "当前传输安全证据",
+    "checks": "当前观测",
+    "states": {
+      "healthy": "健康",
+      "warning": "警告",
+      "degraded": "降级",
+      "unknown": "未知",
+      "down": "不可用",
+      "stale": "已过期",
+      "success": "成功",
+      "failure": "失败",
+      "skipped": "已跳过"
+    }
+  },
   "errorPage": {
     "notFound": {
       "title": "前方只有一片未知",

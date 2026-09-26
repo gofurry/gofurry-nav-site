@@ -65,6 +65,13 @@ as the catalog. `site-detail-contract.spec.ts` owns Target-switch request counts
 and failure isolation; SEO remains Entity-only. P1 grants no appearance/debt or
 Visual baseline changes; P2–P8 and #108 require their own scope.
 
+P2 Shell/Target Context follows the contract's separate P2 section. New Target
+surfaces consume `siteTargetPresentation.ts`; primary tabs/selector use the P1
+route owner. `site-detail.less` owns appearance, `site-detail-shell.spec.ts` owns
+responsive/keyboard/pending/race behavior. Only P2's replaced Hero/popover/root
+debt may decrease; remaining panels keep their later-phase owners. P2 requires
+maintainer visual review before P3 and does not create a Visual golden.
+
 [frontend-style-debt.json](frontend-style-debt.json) is measured state, never an
 example or permission. Remaining style debt belongs to Site Detail #109, Insights
 #108 and intentionally preserved ambient effects. No opportunistic migration of
