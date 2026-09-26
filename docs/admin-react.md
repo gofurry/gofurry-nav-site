@@ -42,3 +42,5 @@ Authenticated self-service username/password actions use `/api/v1/auth/self/*` w
 See [the cutover parity matrix](admin-frontend-parity.md) and [the role operator guide](operations/admin-roles.md) for production acceptance boundaries.
 
 `src/features/collaboration` owns `/collaboration` (ideas/board), visible pipe-delimited line parsing, version conflicts and shared idea context. Creation pages prefill only Steam AppID or Site name; never auto-fetch Steam or create targets. Link failure preserves successful creation and the `?idea=` recovery banner. Use Vitest/Testing Library for these flows; see [Collaboration Center](collaboration-center.md).
+
+The Board tab lazy-loads React Flow for the shared canvas. Node/edge records and Audit remain in GFA; reference cards reuse existing idea/options reads. Drag/resize saves once at gesture end, multiple selected nodes save atomically, and conflicts require explicit reload. The frontend keeps a local movement draft across polling, including remote deletion; it never retries with a newer version automatically.

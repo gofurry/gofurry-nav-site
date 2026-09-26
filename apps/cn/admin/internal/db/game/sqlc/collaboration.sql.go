@@ -32,6 +32,35 @@ func (q *Queries) GetGameForCollaborationLink(ctx context.Context, id int64) (Ge
 	return i, err
 }
 
+const listBoardGameReferences = `-- name: ListBoardGameReferences :many
+SELECT id,name FROM gfg_game WHERE id=ANY($1::bigint[])
+`
+
+type ListBoardGameReferencesRow struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+func (q *Queries) ListBoardGameReferences(ctx context.Context, ids []int64) ([]ListBoardGameReferencesRow, error) {
+	rows, err := q.db.Query(ctx, listBoardGameReferences, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListBoardGameReferencesRow{}
+	for rows.Next() {
+		var i ListBoardGameReferencesRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGamesByAppIDsForCollaboration = `-- name: ListGamesByAppIDsForCollaboration :many
 SELECT id, name, name_en, appid FROM gfg_game WHERE appid = ANY($1::bigint[]) ORDER BY id
 `

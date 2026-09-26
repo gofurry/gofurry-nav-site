@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { PageLayout, PageHeader } from '../../components/admin/page'
 import { LoadingState, ErrorState } from '../../components/admin/states'
@@ -11,16 +11,17 @@ import { getJSON } from '../../lib/api'
 import type { PageResult } from '../../lib/types'
 import { useAuth } from '../auth/auth-context'
 import { base } from './api'
-import { SharedBoard } from './board'
 import { IdeaEditorDialog, BatchIdeaDialog } from './idea-dialogs'
 import { IdeaTableRow } from './idea-table'
 import './collaboration.css'
 import { kindOptions, priorityOptions, statusLabels, type Idea, type Inventory } from './types'
 
+const SharedBoard = lazy(() => import('./board').then((module) => ({ default: module.SharedBoard })))
+
 export function CollaborationPage() {
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') === 'board' ? 'board' : 'ideas'
-  return <PageLayout className="min-w-0"><PageHeader title="协作中心" description="储备内容线索，协作整理与落地。" /><WorkspaceTabs tabs={[{ key: 'ideas', label: '内容想法池' }, { key: 'board', label: '共享画板' }]} active={tab} onChange={(next) => { const value = new URLSearchParams(params); value.set('tab', next); setParams(value) }} />{tab === 'board' ? <SharedBoard /> : <Ideas />}</PageLayout>
+  return <PageLayout className="min-w-0"><PageHeader title="协作中心" description="储备内容线索，协作整理与落地。" /><WorkspaceTabs tabs={[{ key: 'ideas', label: '内容想法池' }, { key: 'board', label: '共享画板' }]} active={tab} onChange={(next) => { const value = new URLSearchParams(params); value.set('tab', next); setParams(value) }} />{tab === 'board' ? <Suspense fallback={<LoadingState />}><SharedBoard /></Suspense> : <Ideas />}</PageLayout>
 }
 function Ideas() {
   const auth = useAuth()

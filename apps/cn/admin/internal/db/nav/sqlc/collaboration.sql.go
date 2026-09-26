@@ -26,6 +26,35 @@ func (q *Queries) GetSiteForCollaborationLink(ctx context.Context, id int64) (Ge
 	return i, err
 }
 
+const listBoardSiteReferences = `-- name: ListBoardSiteReferences :many
+SELECT id,name FROM gfn_site WHERE id=ANY($1::bigint[]) AND deleted IS NOT TRUE
+`
+
+type ListBoardSiteReferencesRow struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+func (q *Queries) ListBoardSiteReferences(ctx context.Context, ids []int64) ([]ListBoardSiteReferencesRow, error) {
+	rows, err := q.db.Query(ctx, listBoardSiteReferences, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListBoardSiteReferencesRow{}
+	for rows.Next() {
+		var i ListBoardSiteReferencesRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSitesByNormalizedHostsForCollaboration = `-- name: ListSitesByNormalizedHostsForCollaboration :many
 SELECT DISTINCT site.id, site.name, site.name_en,
     regexp_replace(rtrim(regexp_replace(lower(btrim(COALESCE(target.prefix, '') || target.name)), ':[0-9]+$', ''), '.'), '^www\.', '')::text AS host

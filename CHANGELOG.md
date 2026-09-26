@@ -10,17 +10,20 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Added
 
-- Add Admin Collaboration Center with GFA-only content ideas, up to 500-row imports with visible pipe separators, soft duplicate checks against GFA/GFG/GFN, optimistic locking, transactional Audit and a single shared text Board (#117).
+- Add Admin Collaboration Center with GFA-only content ideas, up to 500-row imports with visible pipe separators, soft duplicate checks against GFA/GFG/GFN, optimistic locking, transactional Audit and a single shared canvas (#117).
 - Add capability-shaped neutral Workbench inventory and Game/Site idea handoff, preserving formal creation success and providing Workspace recovery when GFA linking fails (#117).
 
 ### Changed
 
+- Rebuild the Admin shared canvas with React Flow: notes, reference cards, text/shapes/arrows, labeled connections, pan/zoom/minimap/fullscreen, and per-node/edge optimistic locking. Save grouped movement atomically at gesture end; keep canvas writes and audited content changes in GFA. Remove the batch help panels and sample-fill button (#117).
 - Run the full Nav Web Browser suite in three isolated CI shards alongside Visual and Docker after one shared build in the pinned Linux environment. Preserve all checks behind the `nav-web` gate, cache Docker layers, narrow documentation/tooling change selection, and avoid duplicate branch-push checks when an open PR owns validation.
 - Replace `build.bat` with root `Taskfile.yml` (Task >=3.45.3) as the engineering entrypoint for toolchain checks, dependencies, development, formatting, lint/type checks, tests, sqlc/policy verification, release builds, Nav Web image builds and cleanup. Preserve the six Linux/amd64 Go artifact paths and build flags, plus Admin's embedded frontend and companion `dist` (#129).
 - Migrate only Nav Web and React Admin to pnpm 12.6.0 with independent frozen lockfiles and narrowly approved dependency build scripts; update CI, Docker and current engineering documentation without adding a root workspace or upgrading dependency ranges. Keep Vue and its SSR renderer aligned at the original production version to preserve SSR under pnpm's isolated resolution (#130).
 - Make sqlc drift checks generate into temporary storage instead of rewriting repository files, and enforce the Task/pnpm build boundaries through repository policy tests (#129, #130).
 
 ### Fixed
+
+- Restore Collaboration idea transition routes (research/release/shelve/restore/link/land/reopen) lost during the canvas rewrite, with HTTP regression coverage through production route registration. Highlight canvas selection on the element border without an offset outline or rectangular resize frame (#117).
 
 - Align the expanded Admin sidebar collapse label with navigation labels. Replace ambiguous Excel/Tab batch input with `name | source | note`, line-numbered format errors and separate preview columns (#117).
 - Fix Collaboration Center narrow-screen overflow and clipped link search results; reuse the idea editor dialog, add versioned/audited idea deletion that preserves formal content, and provide delimited text examples (#117).
@@ -29,7 +32,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Upgrade notes
 
-- For #117, back up GFA, coordinate Admin writes and manually run Goose migration `20260926000000` before deploying the new Admin binary with embedded React. No GFG/GFN migration or public runtime change is required. See [Collaboration Center](docs/collaboration-center.md).
+- For #117, back up GFA, coordinate Admin writes and manually run Goose migrations through `20260926010000` before deploying the new Admin binary with embedded React. No GFG/GFN migration or public runtime change is required. See [Collaboration Center](docs/collaboration-center.md).
 
 - Workstations use Task >=3.45.3, Go 1.26.7, Node 24 and pnpm 12.6.0. Move aside any old npm `node_modules` directories in the two active frontends once, then run `task doctor`, `task verify` and `task build` from the root. See [local development](docs/development.md) for the command surface and separate Browser/Visual gates.
 - For #129/#130 alone, existing Nav Web deployments retain their configuration and `cd apps/cn/nav-web` / `./update.sh` flow; pnpm runs inside Docker, with no new host tooling requirement. No database migration, runtime configuration change or coordinated Go-service redeployment is required. Task does not load root `.env` or perform deployment/database operations. See [Nav Web deployment](apps/cn/nav-web/DEPLOYMENT.md).

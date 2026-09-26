@@ -11,3 +11,6 @@ ORDER BY site.id;
 
 -- name: GetSiteForCollaborationLink :one
 SELECT id, name, name_en FROM gfn_site WHERE id = $1 AND deleted IS NOT TRUE;
+
+-- name: ListBoardSiteReferences :many
+SELECT id,name FROM gfn_site WHERE id=ANY(sqlc.arg(ids)::bigint[]) AND deleted IS NOT TRUE;

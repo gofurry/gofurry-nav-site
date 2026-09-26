@@ -62,35 +62,6 @@ func (q *Queries) CountContentIdeas(ctx context.Context, arg CountContentIdeasPa
 	return count, err
 }
 
-const deleteBoardNoteVersioned = `-- name: DeleteBoardNoteVersioned :one
-DELETE FROM gfa_collaboration_board_note WHERE id = $1 AND version = $2 RETURNING id, body, x, y, width, height, z_index, created_by_account_id, updated_by_account_id, version, created_at, updated_at
-`
-
-type DeleteBoardNoteVersionedParams struct {
-	ID      int64 `json:"id"`
-	Version int64 `json:"version"`
-}
-
-func (q *Queries) DeleteBoardNoteVersioned(ctx context.Context, arg DeleteBoardNoteVersionedParams) (GfaCollaborationBoardNote, error) {
-	row := q.db.QueryRow(ctx, deleteBoardNoteVersioned, arg.ID, arg.Version)
-	var i GfaCollaborationBoardNote
-	err := row.Scan(
-		&i.ID,
-		&i.Body,
-		&i.X,
-		&i.Y,
-		&i.Width,
-		&i.Height,
-		&i.ZIndex,
-		&i.CreatedByAccountID,
-		&i.UpdatedByAccountID,
-		&i.Version,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const deleteContentIdeaVersioned = `-- name: DeleteContentIdeaVersioned :one
 DELETE FROM gfa_content_idea WHERE id = $1 AND version = $2 RETURNING id, kind, title, source, source_key, note, priority, status, created_by_account_id, researching_by_account_id, linked_kind, linked_resource_id, version, created_at, updated_at, researching_at, landed_at
 `
@@ -121,30 +92,6 @@ func (q *Queries) DeleteContentIdeaVersioned(ctx context.Context, arg DeleteCont
 		&i.UpdatedAt,
 		&i.ResearchingAt,
 		&i.LandedAt,
-	)
-	return i, err
-}
-
-const getBoardNote = `-- name: GetBoardNote :one
-SELECT id, body, x, y, width, height, z_index, created_by_account_id, updated_by_account_id, version, created_at, updated_at FROM gfa_collaboration_board_note WHERE id = $1
-`
-
-func (q *Queries) GetBoardNote(ctx context.Context, id int64) (GfaCollaborationBoardNote, error) {
-	row := q.db.QueryRow(ctx, getBoardNote, id)
-	var i GfaCollaborationBoardNote
-	err := row.Scan(
-		&i.ID,
-		&i.Body,
-		&i.X,
-		&i.Y,
-		&i.Width,
-		&i.Height,
-		&i.ZIndex,
-		&i.CreatedByAccountID,
-		&i.UpdatedByAccountID,
-		&i.Version,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -200,49 +147,6 @@ func (q *Queries) GetContentIdea(ctx context.Context, id int64) (GetContentIdeaR
 		&i.LandedAt,
 		&i.CreatorName,
 		&i.ResearcherName,
-	)
-	return i, err
-}
-
-const insertBoardNote = `-- name: InsertBoardNote :one
-INSERT INTO gfa_collaboration_board_note (body, x, y, width, height, z_index, created_by_account_id, updated_by_account_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $7) RETURNING id, body, x, y, width, height, z_index, created_by_account_id, updated_by_account_id, version, created_at, updated_at
-`
-
-type InsertBoardNoteParams struct {
-	Body      string `json:"body"`
-	X         int32  `json:"x"`
-	Y         int32  `json:"y"`
-	Width     int32  `json:"width"`
-	Height    int32  `json:"height"`
-	ZIndex    int32  `json:"z_index"`
-	AccountID int64  `json:"account_id"`
-}
-
-func (q *Queries) InsertBoardNote(ctx context.Context, arg InsertBoardNoteParams) (GfaCollaborationBoardNote, error) {
-	row := q.db.QueryRow(ctx, insertBoardNote,
-		arg.Body,
-		arg.X,
-		arg.Y,
-		arg.Width,
-		arg.Height,
-		arg.ZIndex,
-		arg.AccountID,
-	)
-	var i GfaCollaborationBoardNote
-	err := row.Scan(
-		&i.ID,
-		&i.Body,
-		&i.X,
-		&i.Y,
-		&i.Width,
-		&i.Height,
-		&i.ZIndex,
-		&i.CreatedByAccountID,
-		&i.UpdatedByAccountID,
-		&i.Version,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -382,43 +286,6 @@ func (q *Queries) LinkContentIdeaVersioned(ctx context.Context, arg LinkContentI
 		&i.LandedAt,
 	)
 	return i, err
-}
-
-const listBoardNotes = `-- name: ListBoardNotes :many
-SELECT id, body, x, y, width, height, z_index, created_by_account_id, updated_by_account_id, version, created_at, updated_at FROM gfa_collaboration_board_note ORDER BY z_index, id
-`
-
-func (q *Queries) ListBoardNotes(ctx context.Context) ([]GfaCollaborationBoardNote, error) {
-	rows, err := q.db.Query(ctx, listBoardNotes)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GfaCollaborationBoardNote{}
-	for rows.Next() {
-		var i GfaCollaborationBoardNote
-		if err := rows.Scan(
-			&i.ID,
-			&i.Body,
-			&i.X,
-			&i.Y,
-			&i.Width,
-			&i.Height,
-			&i.ZIndex,
-			&i.CreatedByAccountID,
-			&i.UpdatedByAccountID,
-			&i.Version,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listContentIdeas = `-- name: ListContentIdeas :many
@@ -727,53 +594,6 @@ func (q *Queries) ShelveContentIdeaVersioned(ctx context.Context, arg ShelveCont
 		&i.UpdatedAt,
 		&i.ResearchingAt,
 		&i.LandedAt,
-	)
-	return i, err
-}
-
-const updateBoardNoteVersioned = `-- name: UpdateBoardNoteVersioned :one
-UPDATE gfa_collaboration_board_note SET body = $1, x = $2, y = $3, width = $4, height = $5, z_index = $6,
-updated_by_account_id = $7, version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE id = $8 AND version = $9 RETURNING id, body, x, y, width, height, z_index, created_by_account_id, updated_by_account_id, version, created_at, updated_at
-`
-
-type UpdateBoardNoteVersionedParams struct {
-	Body               string `json:"body"`
-	X                  int32  `json:"x"`
-	Y                  int32  `json:"y"`
-	Width              int32  `json:"width"`
-	Height             int32  `json:"height"`
-	ZIndex             int32  `json:"z_index"`
-	UpdatedByAccountID int64  `json:"updated_by_account_id"`
-	ID                 int64  `json:"id"`
-	Version            int64  `json:"version"`
-}
-
-func (q *Queries) UpdateBoardNoteVersioned(ctx context.Context, arg UpdateBoardNoteVersionedParams) (GfaCollaborationBoardNote, error) {
-	row := q.db.QueryRow(ctx, updateBoardNoteVersioned,
-		arg.Body,
-		arg.X,
-		arg.Y,
-		arg.Width,
-		arg.Height,
-		arg.ZIndex,
-		arg.UpdatedByAccountID,
-		arg.ID,
-		arg.Version,
-	)
-	var i GfaCollaborationBoardNote
-	err := row.Scan(
-		&i.ID,
-		&i.Body,
-		&i.X,
-		&i.Y,
-		&i.Width,
-		&i.Height,
-		&i.ZIndex,
-		&i.CreatedByAccountID,
-		&i.UpdatedByAccountID,
-		&i.Version,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }

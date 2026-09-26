@@ -27,7 +27,7 @@
       "owned_column": "id"
     },
     {
-      "name": "gfa_collaboration_board_note_id_seq",
+      "name": "gfa_collaboration_board_edge_id_seq",
       "data_type": "bigint",
       "start": 1,
       "increment": 1,
@@ -35,7 +35,19 @@
       "maximum": 9223372036854775807,
       "cache": 1,
       "cycle": false,
-      "owned_table": "gfa_collaboration_board_note",
+      "owned_table": "gfa_collaboration_board_edge",
+      "owned_column": "id"
+    },
+    {
+      "name": "gfa_collaboration_board_node_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfa_collaboration_board_node",
       "owned_column": "id"
     },
     {
@@ -353,20 +365,235 @@
       "triggers": null
     },
     {
-      "name": "gfa_collaboration_board_note",
+      "name": "gfa_collaboration_board_edge",
       "columns": [
         {
           "name": "id",
           "data_type": "bigint",
           "not_null": true,
           "has_default": true,
-          "default": "nextval('gfa_collaboration_board_note_id_seq'::regclass)"
+          "default": "nextval('gfa_collaboration_board_edge_id_seq'::regclass)"
+        },
+        {
+          "name": "source_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "target_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "source_handle",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "target_handle",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "routing",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'curve'::text"
+        },
+        {
+          "name": "label",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "color",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'slate'::text"
+        },
+        {
+          "name": "arrow",
+          "data_type": "boolean",
+          "not_null": true,
+          "has_default": true,
+          "default": "true"
+        },
+        {
+          "name": "created_by_account_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "updated_by_account_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false
+        },
+        {
+          "name": "version",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "1"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp(0) without time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "board_edge_connection_key",
+          "definition": "UNIQUE (source_id, source_handle, target_id, target_handle)"
+        },
+        {
+          "name": "board_edge_endpoints_check",
+          "definition": "CHECK (source_id \u003c\u003e target_id)"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_arrow_not_null",
+          "definition": "NOT NULL arrow"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_color_check",
+          "definition": "CHECK (color = ANY (ARRAY['sand'::text, 'blue'::text, 'green'::text, 'rose'::text, 'slate'::text]))"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_color_not_null",
+          "definition": "NOT NULL color"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_created_by_account_id_fkey",
+          "definition": "FOREIGN KEY (created_by_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_created_by_account_id_not_null",
+          "definition": "NOT NULL created_by_account_id"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_label_check",
+          "definition": "CHECK (char_length(label) \u003c= 200)"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_label_not_null",
+          "definition": "NOT NULL label"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_routing_check",
+          "definition": "CHECK (routing = ANY (ARRAY['curve'::text, 'step'::text]))"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_routing_not_null",
+          "definition": "NOT NULL routing"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_source_handle_check",
+          "definition": "CHECK (source_handle = ANY (ARRAY['top'::text, 'right'::text, 'bottom'::text, 'left'::text]))"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_source_handle_not_null",
+          "definition": "NOT NULL source_handle"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_source_id_fkey",
+          "definition": "FOREIGN KEY (source_id) REFERENCES gfa_collaboration_board_node(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_source_id_not_null",
+          "definition": "NOT NULL source_id"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_target_handle_check",
+          "definition": "CHECK (target_handle = ANY (ARRAY['top'::text, 'right'::text, 'bottom'::text, 'left'::text]))"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_target_handle_not_null",
+          "definition": "NOT NULL target_handle"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_target_id_fkey",
+          "definition": "FOREIGN KEY (target_id) REFERENCES gfa_collaboration_board_node(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_target_id_not_null",
+          "definition": "NOT NULL target_id"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_updated_by_account_id_fkey",
+          "definition": "FOREIGN KEY (updated_by_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_updated_by_account_id_not_null",
+          "definition": "NOT NULL updated_by_account_id"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_version_check",
+          "definition": "CHECK (version \u003e 0)"
+        },
+        {
+          "name": "gfa_collaboration_board_edge_version_not_null",
+          "definition": "NOT NULL version"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_board_edge_target",
+          "definition": "CREATE INDEX idx_board_edge_target ON public.gfa_collaboration_board_edge USING btree (target_id)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfa_collaboration_board_node",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "nextval('gfa_collaboration_board_node_id_seq'::regclass)"
         },
         {
           "name": "body",
           "data_type": "text",
           "not_null": true,
-          "has_default": false
+          "has_default": true,
+          "default": "''::text"
         },
         {
           "name": "x",
@@ -435,12 +662,120 @@
           "not_null": true,
           "has_default": true,
           "default": "CURRENT_TIMESTAMP"
+        },
+        {
+          "name": "kind",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'note'::text"
+        },
+        {
+          "name": "title",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "color",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'sand'::text"
+        },
+        {
+          "name": "rotation",
+          "data_type": "integer",
+          "not_null": true,
+          "has_default": true,
+          "default": "0"
+        },
+        {
+          "name": "reference_kind",
+          "data_type": "text",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "reference_id",
+          "data_type": "bigint",
+          "not_null": false,
+          "has_default": false
         }
       ],
       "constraints": [
         {
-          "name": "gfa_collaboration_board_note_body_check",
-          "definition": "CHECK (btrim(body) \u003c\u003e ''::text)"
+          "name": "board_node_body_check",
+          "definition": "CHECK (char_length(body) \u003c= 10000)"
+        },
+        {
+          "name": "board_node_content_check",
+          "definition": "CHECK ((kind = ANY (ARRAY['rectangle'::text, 'ellipse'::text, 'arrow'::text])) OR btrim(title) \u003c\u003e ''::text OR btrim(body) \u003c\u003e ''::text OR reference_id IS NOT NULL)"
+        },
+        {
+          "name": "board_node_geometry_check",
+          "definition": "CHECK (x \u003e= '-100000'::integer AND x \u003c= 100000 AND y \u003e= '-100000'::integer AND y \u003c= 100000 AND width \u003e= 48 AND width \u003c= 1600 AND height \u003e= 40 AND height \u003c= 1600 AND z_index \u003e= 0 AND z_index \u003c= 1000000)"
+        },
+        {
+          "name": "board_node_reference_check",
+          "definition": "CHECK (reference_kind IS NULL AND reference_id IS NULL OR kind = 'card'::text AND reference_kind IS NOT NULL AND reference_id IS NOT NULL)"
+        },
+        {
+          "name": "gfa_collaboration_board_node_color_check",
+          "definition": "CHECK (color = ANY (ARRAY['sand'::text, 'blue'::text, 'green'::text, 'rose'::text, 'slate'::text]))"
+        },
+        {
+          "name": "gfa_collaboration_board_node_color_not_null",
+          "definition": "NOT NULL color"
+        },
+        {
+          "name": "gfa_collaboration_board_node_created_by_account_id_fkey",
+          "definition": "FOREIGN KEY (created_by_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfa_collaboration_board_node_kind_check",
+          "definition": "CHECK (kind = ANY (ARRAY['note'::text, 'card'::text, 'text'::text, 'rectangle'::text, 'ellipse'::text, 'arrow'::text]))"
+        },
+        {
+          "name": "gfa_collaboration_board_node_kind_not_null",
+          "definition": "NOT NULL kind"
+        },
+        {
+          "name": "gfa_collaboration_board_node_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfa_collaboration_board_node_reference_id_check",
+          "definition": "CHECK (reference_id \u003e 0)"
+        },
+        {
+          "name": "gfa_collaboration_board_node_reference_kind_check",
+          "definition": "CHECK (reference_kind = ANY (ARRAY['idea'::text, 'game'::text, 'site'::text]))"
+        },
+        {
+          "name": "gfa_collaboration_board_node_rotation_check",
+          "definition": "CHECK (rotation = ANY (ARRAY[0, 90, 180, 270]))"
+        },
+        {
+          "name": "gfa_collaboration_board_node_rotation_not_null",
+          "definition": "NOT NULL rotation"
+        },
+        {
+          "name": "gfa_collaboration_board_node_title_check",
+          "definition": "CHECK (char_length(title) \u003c= 200)"
+        },
+        {
+          "name": "gfa_collaboration_board_node_title_not_null",
+          "definition": "NOT NULL title"
+        },
+        {
+          "name": "gfa_collaboration_board_node_updated_by_account_id_fkey",
+          "definition": "FOREIGN KEY (updated_by_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfa_collaboration_board_node_version_check",
+          "definition": "CHECK (version \u003e 0)"
         },
         {
           "name": "gfa_collaboration_board_note_body_not_null",
@@ -451,16 +786,8 @@
           "definition": "NOT NULL created_at"
         },
         {
-          "name": "gfa_collaboration_board_note_created_by_account_id_fkey",
-          "definition": "FOREIGN KEY (created_by_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
-        },
-        {
           "name": "gfa_collaboration_board_note_created_by_account_id_not_null",
           "definition": "NOT NULL created_by_account_id"
-        },
-        {
-          "name": "gfa_collaboration_board_note_height_check",
-          "definition": "CHECK (height \u003e 0)"
         },
         {
           "name": "gfa_collaboration_board_note_height_not_null",
@@ -471,63 +798,40 @@
           "definition": "NOT NULL id"
         },
         {
-          "name": "gfa_collaboration_board_note_pkey",
-          "definition": "PRIMARY KEY (id)"
-        },
-        {
           "name": "gfa_collaboration_board_note_updated_at_not_null",
           "definition": "NOT NULL updated_at"
-        },
-        {
-          "name": "gfa_collaboration_board_note_updated_by_account_id_fkey",
-          "definition": "FOREIGN KEY (updated_by_account_id) REFERENCES gfa_admin_account(id) ON DELETE RESTRICT"
         },
         {
           "name": "gfa_collaboration_board_note_updated_by_account_id_not_null",
           "definition": "NOT NULL updated_by_account_id"
         },
         {
-          "name": "gfa_collaboration_board_note_version_check",
-          "definition": "CHECK (version \u003e 0)"
-        },
-        {
           "name": "gfa_collaboration_board_note_version_not_null",
           "definition": "NOT NULL version"
-        },
-        {
-          "name": "gfa_collaboration_board_note_width_check",
-          "definition": "CHECK (width \u003e 0)"
         },
         {
           "name": "gfa_collaboration_board_note_width_not_null",
           "definition": "NOT NULL width"
         },
         {
-          "name": "gfa_collaboration_board_note_x_check",
-          "definition": "CHECK (x \u003e= 0)"
-        },
-        {
           "name": "gfa_collaboration_board_note_x_not_null",
           "definition": "NOT NULL x"
-        },
-        {
-          "name": "gfa_collaboration_board_note_y_check",
-          "definition": "CHECK (y \u003e= 0)"
         },
         {
           "name": "gfa_collaboration_board_note_y_not_null",
           "definition": "NOT NULL y"
         },
         {
-          "name": "gfa_collaboration_board_note_z_index_check",
-          "definition": "CHECK (z_index \u003e= 0)"
-        },
-        {
           "name": "gfa_collaboration_board_note_z_index_not_null",
           "definition": "NOT NULL z_index"
         }
       ],
-      "indexes": null,
+      "indexes": [
+        {
+          "name": "idx_board_node_order",
+          "definition": "CREATE INDEX idx_board_node_order ON public.gfa_collaboration_board_node USING btree (z_index, id)"
+        }
+      ],
       "triggers": null
     },
     {

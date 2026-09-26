@@ -25,7 +25,7 @@ func TestCanonicalSource(t *testing.T) {
 		})
 	}
 }
-func TestInputAndBoardLimits(t *testing.T) {
+func TestInputLimits(t *testing.T) {
 	for _, in := range []Input{{Kind: "draft", Title: "x"}, {Kind: "game"}, {Kind: "game", Title: "x", Priority: "urgent"}, {Kind: "game", Title: strings.Repeat("a", 501)}} {
 		if _, _, err := normalize(in); err == nil {
 			t.Fatalf("accepted %+v", in)
@@ -34,16 +34,5 @@ func TestInputAndBoardLimits(t *testing.T) {
 	in, key, err := normalize(Input{Kind: "game", Source: " 123 "})
 	if err != nil || in.Priority != "normal" || text(key) != "steam:123" {
 		t.Fatalf("normalize=%+v %v", in, err)
-	}
-	valid := BoardInput{Body: "note", Width: 280, Height: 200}
-	if err := validateBoard(valid); err != nil {
-		t.Fatal(err)
-	}
-	for _, change := range []func(*BoardInput){func(in *BoardInput) { in.Body = " " }, func(in *BoardInput) { in.X = -1 }, func(in *BoardInput) { in.Height = 0 }, func(in *BoardInput) { in.Width = 1601 }, func(in *BoardInput) { in.ZIndex = 1000001 }} {
-		in := valid
-		change(&in)
-		if validateBoard(in) == nil {
-			t.Fatalf("accepted %+v", in)
-		}
 	}
 }

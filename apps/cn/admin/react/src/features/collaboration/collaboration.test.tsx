@@ -14,14 +14,12 @@ import { CollaborationPage } from './collaboration-page'
 import { BatchIdeaDialog, LinkIdeaDialog } from './idea-dialogs'
 import { IdeaTableRow } from './idea-table'
 import { IdeaContextBanner } from './idea-context'
-import { SharedBoard, BoardNoteCard } from './board'
-import type { BoardNote, Idea, IdeaInput, PreviewRow } from './types'
+import type { Idea, IdeaInput, PreviewRow } from './types'
 
 vi.mock('../../lib/api', async (original) => ({ ...await original<typeof import('../../lib/api')>(), getJSON: vi.fn(), listJSON: vi.fn(), sendJSON: vi.fn() }))
 const auth = vi.hoisted(() => ({ capabilities: ['content.read', 'content.write', 'collaboration.read', 'collaboration.write'] }))
 vi.mock('../auth/auth-context', () => ({ useAuth: () => ({ can: (value: string) => auth.capabilities.includes(value), state: { identity: { account_id: 1 } } }) }))
 const idea: Idea = { id: 7, kind: 'game', title: '线索', source: 'Steam:82', source_key: 'steam:82', note: '先确认详情', priority: 'normal', status: 'idea', version: 3, created_by_account_id: 1, researching_by_account_id: null, creator_name: '成员', researcher_name: '', linked_kind: null, linked_resource_id: null, created_at: '2026-09-26T00:00:00Z' }
-const note: BoardNote = { id: 5, body: '共享文字', x: 0, y: 0, width: 320, height: 260, z_index: 0, version: 2, updated_by_account_id: 1 }
 function setup(element: ReactNode, path = '/', routes: { path: string; element: ReactNode }[] = []) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const router = createMemoryRouter([{ path: path.split('?')[0].replace(/\/new$/, '/:id'), element }, ...routes], { initialEntries: [path] })
@@ -44,14 +42,12 @@ it('previews batches and defaults to skipping known rows on create', async () =>
   expect(await screen.findByText('已加入 1 条，跳过 1 条。')).toBeInTheDocument()
 })
 
-it('provides a visible-delimiter example without replacing user input', async () => {
+it('keeps the batch dialog compact without help blocks or a sample button', () => {
   setup(<BatchIdeaDialog close={vi.fn()} />)
-  fireEvent.click(screen.getByRole('button', { name: '填入示例' }))
-  expect(screen.getByLabelText('粘贴内容')).toHaveValue('求生之路 2 | steam:550 | 核对介绍\n传送门 2 | steam:620 | 补充资料')
-  expect(screen.getByRole('button', { name: '填入示例' })).toBeDisabled()
-  fireEvent.change(screen.getByLabelText('粘贴内容'), { target: { value: '我的内容' } })
-  expect(screen.getByRole('button', { name: '填入示例' })).toBeDisabled()
-  expect(sendJSON).not.toHaveBeenCalled()
+  expect(screen.queryByRole('button', { name: '填入示例' })).not.toBeInTheDocument()
+  expect(screen.queryByText(/空格属于内容/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/先预览检查结果/)).not.toBeInTheDocument()
+  expect(screen.getByLabelText('粘贴内容')).toHaveAttribute('placeholder', expect.stringContaining('steam:550'))
 })
 
 it('blocks malformed space-separated rows before server preview and exposes parsed columns', async () => {
@@ -182,54 +178,4 @@ it('shows neutral Workbench inventory only with collaboration.read', async () =>
   cleanup(); auth.capabilities = ['content.read']; setup(<WorkbenchPage />)
   await screen.findByText('当前没有对你可见的待处理异常。')
   expect(screen.queryByText('内容储备')).not.toBeInTheDocument()
-})
-
-it('creates and edits a text note with versioned saves', async () => {
-  vi.mocked(getJSON).mockResolvedValue([note]); vi.mocked(sendJSON).mockResolvedValue({ ...note, version: 3 })
-  setup(<SharedBoard />)
-  fireEvent.change(await screen.findByLabelText('新便笺正文'), { target: { value: '新便笺' } })
-  fireEvent.click(screen.getByRole('button', { name: '新建便笺' }))
-  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`${base}/board/notes`, 'POST', expect.objectContaining({ body: '新便笺' })))
-  fireEvent.change(screen.getByLabelText('便笺正文 5'), { target: { value: '修改正文' } })
-  fireEvent.click(screen.getByRole('button', { name: '保存正文' }))
-  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`${base}/board/notes/5`, 'PUT', expect.objectContaining({ body: '修改正文', version: 2 })))
-})
-
-it.each(['移动便笺 5', '调整便笺尺寸 5'])('persists %s only on pointerup, then handles conflict and versioned deletion', async (label) => {
-  class TestPointerEvent extends MouseEvent { pointerId = 1 }
-  const previous = window.PointerEvent
-  window.PointerEvent = TestPointerEvent as unknown as typeof PointerEvent
-  if (!HTMLElement.prototype.setPointerCapture) Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', { configurable: true, value: () => {} })
-  if (!HTMLElement.prototype.hasPointerCapture) Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', { configurable: true, value: () => false })
-  const capture = vi.spyOn(HTMLElement.prototype, 'setPointerCapture').mockImplementation(() => {})
-  const has = vi.spyOn(HTMLElement.prototype, 'hasPointerCapture').mockReturnValue(false)
-  try {
-    vi.mocked(sendJSON).mockRejectedValue(new ApiError('stale', 409))
-    setup(<BoardNoteCard note={note} topZ={0} writable />)
-    const handle = screen.getByLabelText(label)
-    fireEvent.pointerDown(handle, { button: 0, clientX: 0, clientY: 0 })
-    fireEvent.pointerMove(handle, { clientX: 30, clientY: 40 })
-    expect(sendJSON).not.toHaveBeenCalled()
-    fireEvent.pointerUp(handle, { clientX: 30, clientY: 40 })
-    await waitFor(() => expect(sendJSON).toHaveBeenCalledTimes(1))
-    expect(sendJSON).toHaveBeenCalledWith(`${base}/board/notes/5`, 'PUT', expect.objectContaining(label.startsWith('移动') ? { version: 2, x: 30, y: 40 } : { version: 2, width: 350, height: 300 }))
-    await screen.findByText('此内容刚刚被其他成员修改，请重新加载后重试。')
-    fireEvent.click(screen.getByRole('button', { name: '重新加载' }))
-    vi.mocked(sendJSON).mockResolvedValue(note)
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
-    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
-    await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`${base}/board/notes/5`, 'DELETE', { version: 2 }))
-  } finally { window.PointerEvent = previous; capture.mockRestore(); has.mockRestore() }
-})
-
-it('keeps unsaved Board text mounted when a background refresh fails', async () => {
- vi.mocked(getJSON).mockResolvedValue([note])
- const { client } = setup(<SharedBoard />)
- const input = await screen.findByLabelText('便笺正文 5')
- fireEvent.change(input, { target: { value: '尚未保存的正文' } })
- vi.mocked(getJSON).mockRejectedValue(new Error('temporary network failure'))
- await client.invalidateQueries({ queryKey: ['collaboration', 'board'] })
- await screen.findByText('刷新失败，保留当前便笺与未保存的编辑。')
- expect(screen.getByLabelText('便笺正文 5')).toHaveValue('尚未保存的正文')
- expect(sendJSON).not.toHaveBeenCalled()
 })

@@ -20,3 +20,5 @@ pnpm run build
 The development server listens on `127.0.0.1:5178` and proxies `/api` and `/csrf` to the Go Admin API on `127.0.0.1:10099`.
 
 Architecture and migration boundaries are defined in `../../../../contracts/admin-frontend.md` and `../../../../docs/admin-react.md`.
+
+The Collaboration Board lazy-loads React Flow (`@xyflow/react`) for notes, reference cards, annotations and connections. Board nodes/edges persist only in GFA with individual versions; save layout at gesture end and preserve drafts on HTTP 409. See [Collaboration Center](../../../../docs/collaboration-center.md) for the schema/API and acceptance checks.

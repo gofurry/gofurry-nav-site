@@ -9,13 +9,17 @@ capabilities independently from content creation and account management.
 ## Ownership and persistence
 
 Goose migration `db/admin/migrations/20260926000000_collaboration_center.sql`
-adds `gfa_content_idea` and `gfa_collaboration_board_note`. Account references use
+adds content ideas and the initial note table. Migration
+`20260926010000_collaboration_canvas.sql` renames/extends the note table into
+`gfa_collaboration_board_node` and adds `gfa_collaboration_board_edge`. There is no
+old-note API or dual persistence path. Account references use
 GFA foreign keys with RESTRICT; formal resource references are logical links.
 The historical baseline is unchanged; `tools/db-baseline/expected-final/gfa.json`
-records the migrated schema. Data Operations expects this migration version.
+records the migrated schema. Data Operations expects all four GFA migrations,
+ending at `20260926010000`; earlier migrations/baseline stay unchanged.
 
 Collaboration writes only GFA. Its Game/Nav sqlc queries are read-only, checking
-Steam AppIDs, Collector Target hostnames and link existence. Site duplicate
+Steam AppIDs, Collector Target hostnames, link existence and card reference titles. Site duplicate
 detection is best effort: a Site without a Collector Target cannot match by host.
 There is no fuzzy name match, network lookup or cross-database transaction.
 Formal resource deletion after a link check remains possible; links describe the
@@ -24,9 +28,11 @@ resource verified at the time of linking, not a cross-database foreign key.
 Each single mutation and its Audit row commit in one GFA transaction. Batch
 creation uses one GFA transaction, sqlc CopyFrom and one summary Audit row.
 Audit failure rolls back the GFA write. Board position/size/z-index-only changes
-increment version/updater/time without Audit; create, body changes and delete
-are audited. Audit actions use `collaboration.idea.*` and
-`collaboration.board_note.*`, with the corresponding resource names.
+increment version/updater/time without Audit. Node create/content/style/reference
+updates/delete and edge create/update/delete are audited. Audit actions use
+`collaboration.idea.*`, `collaboration.board_node.*` and
+`collaboration.board_edge.*`. Node deletion audits its incident edges in the
+same transaction before their foreign-key cascade.
 
 ## Ideas and batch import
 
@@ -52,8 +58,9 @@ physical input line number and block preview until corrected.
 test | steam:666 | 测试
 ```
 
-“填入示例” supplies a kind-specific example when input is empty. Preview exposes
+The input placeholder contains a compact kind-specific example. Preview exposes
 separate title/source/note columns so mistakes are visible before submission.
+The explanatory panels and sample-fill button have been removed.
 Select the batch kind explicitly. Preview and create accept 1–500 candidates.
 The browser parses structure; Go canonicalizes and performs at most one duplicate
 query in each database. Create always repeats the check. “只加入新内容” sends
@@ -90,10 +97,15 @@ formal resource to land; Other can land without a link. Reopen clears the link.
 ## API
 
 Under `/api/v1/collaboration`, read capability protects `GET /summary`,
-`GET /ideas`, `GET /ideas/:id`, `POST /ideas/batch-preview`, `GET /board/notes`.
+`GET /ideas`, `GET /ideas/:id`, `POST /ideas/batch-preview`, `GET /board`.
 Write capability protects `POST /ideas`, `PUT /ideas/:id`, `DELETE /ideas/:id`, `POST /ideas/batch`,
 `POST /ideas/:id/{research,release,shelve,restore,link,land,reopen}`, and
-`POST /board/notes`, `PUT /board/notes/:id`, `DELETE /board/notes/:id`.
+`POST /board/nodes`, `PUT /board/nodes/:id`, `DELETE /board/nodes/:id`,
+`PUT /board/nodes/layout`, and `POST/PUT/DELETE /board/edges[/:id]`.
+`GET /board` returns `{nodes, edges, references}`. Layout accepts
+`{nodes: [{id, version, x, y, width, height, z_index}]}` with 1–500 unique IDs.
+The entire gesture commits or returns 409/rolls back; unknown fields are rejected.
+Node content updates cannot change geometry; edge updates cannot change endpoints.
 
 Batch bodies are `{items: [...], skip_known: true|false}`. Transitions carry
 `{version}`; link additionally carries `{kind: "game"|"site", resource_id}`.
@@ -121,15 +133,33 @@ Inventory volume does not create Attention entries or backlog warnings.
 
 ## Shared Board
 
-One global scrollable canvas starts at 4000 × 3000. Text notes support create,
-explicit body save, drag, resize, bring-to-front and confirmed delete. Native
-pointer events keep movement local until pointerup; pointer cancellation sends
-no write. Arrow keys on the move/resize handles support 10-pixel steps. The board
-polls every 12 seconds; local edits retain their original version until saved or
-explicitly reloaded. Conflicts require reloading instead of automatic retries.
-Positions are bounded to 0–20000, dimensions to 160–1600 × 120–1600, z-index to
-0–1000000 and bodies to 10000 characters. There are no files, images, connectors,
-multiple boards, comments, realtime protocol or external board framework.
+The single global canvas uses `@xyflow/react` 12.11.2 (React Flow), matching the
+SagaFlow canvas library. It loads only when the Board tab is opened. The expanded
+canvas scope supersedes the initial #117 text-only/no-connectors restriction.
+
+- Nodes: notes, free/reference cards, text labels, rectangles, ellipses and arrows.
+  Card references point to an existing idea, Game or Site; they do not land an
+  idea or create/change formal content. Existing options APIs choose Game/Site;
+  the existing idea list selects an idea. Referenced titles/status are live read
+  projections, batched once per database, with a missing-content indication.
+- Interaction: select/multi-select, pan/zoom, fit view, minimap, fullscreen,
+  drag, resize, bring to front, double-click editor and confirmed deletion.
+  Notes/cards have four connection handles; edges support curve/step routing,
+  labels, colors and arrowheads. Node deletion removes its incident edges only.
+- Saving: movement/resizing stays local until the gesture ends; keyboard node
+  movement also persists. Multiple selected nodes save in one GFA transaction.
+  Nodes and edges each own an optimistic version; unrelated edits do not share
+  a global board revision. HTTP 409 preserves local drafts for explicit reload.
+- Refresh: 12-second polling merges untouched nodes; a local movement remains
+  protected even if another member removes its node. Referenced content is not
+  a cross-database foreign key. No WebSocket, CRDT, image/file upload, multiple
+  boards, comments or workflow engine is introduced.
+
+Coordinates allow −100000 to 100000, dimensions 48–1600 × 40–1600, z-index
+0–1000000, titles 200 characters and bodies 10000. Shape annotations can have
+empty titles; notes/text/free cards need a title or body. Colors are a fixed
+palette; arrow annotations rotate by quarter turns. Board node/edge styles,
+content and references are audited; geometry is not.
 
 ## Verification and maintainer acceptance
 
@@ -142,7 +172,8 @@ GOFURRY_ADMIN_INTEGRATION_CONFIG=/path/to/isolated.yaml go test ./internal/boots
 
 The integration covers 100-row inventory creation, duplicate reads through
 read-only business connections, batch limits/skip behavior, links, transitions,
-two simultaneous editors, HTTP 409, versioned idea deletion without deleting formal resources, Board versions/Audit and audit rollback (including idea deletion).
+two simultaneous editors, HTTP 409, versioned idea deletion without deleting formal resources, Board node/edge versions, grouped movement rollback, bounded reference reads,
+cascading edge deletion, Audit inclusion/exclusion and audit-failure rollback.
 CI includes this test in its Admin three-database gate. React retains Vitest and
 Testing Library; no Admin Playwright system is introduced.
 
@@ -158,15 +189,16 @@ acceptance environment with two accounts:
 | Two accounts research/edit the same displayed version | Research ownership hint or HTTP 409; no silent overwrite |
 | Delete duplicate or landed idea | Confirmation and Audit; formal resources retained; stale deletion returns 409 |
 | Resize the window, edit an idea, search/link existing content | Ellipsis without table expansion; modal editor and visible search results |
-| Board create/body edit/drag/resize/raise/delete across accounts | Pointerup persistence, version conflicts, correct Audit inclusion/exclusion |
+| Canvas notes/reference cards/labels/shapes, drag/resize/multi-select, connect/edit/delete, fullscreen across accounts | One layout save per gesture, per-node/edge conflicts, cascading edge removal, formal resources retained, correct Audit inclusion/exclusion |
 
 ## Production upgrade
 
 This change upgrades only Admin and GFA. **Back up GFA first**, coordinate/stop
 Admin writes, **manually run Goose** from `db/admin/migrations` with the GFA
-`gofurry_migrator` credential, then **deploy the new Admin binary** containing the
+`gofurry_migrator` credential through `20260926010000`, then **deploy the new Admin binary** containing the
 built React frontend. Start Admin and verify capabilities, ideas, board, handoff
 and Audit. Do not run migration from Task or application startup. Game/Nav Backend,
 Collectors, public Nav Web, GFG and GFN do not need a #117 deployment/migration.
-Rollback of the binary should retain the additive GFA tables and their data;
-do not improvise a destructive Down migration.
+The canvas migration renames the old note table, so the previous text-board binary
+is not compatible with the upgraded schema. A rollback needs a coordinated GFA
+backup restore and matching binary; do not improvise a destructive Down migration.

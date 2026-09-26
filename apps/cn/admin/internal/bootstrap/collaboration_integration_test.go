@@ -88,9 +88,6 @@ func TestAdminCollaborationThreeDatabase(t *testing.T) {
 	app.Delete("/ideas/:id", api.Delete)
 	app.Post("/ideas/:id/research", api.Transition("research"))
 	app.Post("/ideas/batch", api.Batch)
-	app.Post("/board", api.CreateBoard)
-	app.Put("/board/:id", api.UpdateBoard)
-	app.Delete("/board/:id", api.DeleteBoard)
 	must := func(err error) {
 		t.Helper()
 		if err != nil {
@@ -211,28 +208,9 @@ func TestAdminCollaborationThreeDatabase(t *testing.T) {
 	if winners.Load() != 1 || conflicts.Load() != 1 {
 		t.Fatal("concurrent update silently overwrote")
 	}
-	note, e := s.SaveBoard(ctx, meta, 0, collaboration.BoardInput{Body: "shared", Width: 320, Height: 240})
-	must(e)
-	auditCount := queryInt64(t, ctx, admin, `SELECT count(*) FROM gfa_admin_audit_log WHERE resource='collaboration.board_note'`)
-	moved, e := s.SaveBoard(ctx, other, note.ID, collaboration.BoardInput{Body: note.Body, X: 200, Y: 100, Width: 400, Height: 300, ZIndex: 3, Version: note.Version})
-	must(e)
-	if moved.Version != 2 || moved.UpdatedByAccountID != 2 || queryInt64(t, ctx, admin, `SELECT count(*) FROM gfa_admin_audit_log WHERE resource='collaboration.board_note'`) != auditCount {
-		t.Fatal("geometry update audit/version incorrect")
-	}
-	closeResponse(requestJSON(t, app, "PUT", fmt.Sprintf("/board/%d", note.ID), `{"body":"stale","x":0,"y":0,"width":320,"height":240,"version":1}`, nil, 409))
-	edited, e := s.SaveBoard(ctx, meta, note.ID, collaboration.BoardInput{Body: "changed", Width: 320, Height: 240, Version: moved.Version})
-	must(e)
-	if e = s.DeleteBoard(ctx, meta, note.ID, 1); e == nil || e.GetHTTPStatus() != 409 {
-		t.Fatal("stale delete accepted")
-	}
-	must(s.DeleteBoard(ctx, meta, note.ID, edited.Version))
-	if queryInt64(t, ctx, admin, `SELECT count(*) FROM gfa_admin_audit_log WHERE resource='collaboration.board_note'`) != auditCount+2 {
-		t.Fatal("body/delete audits missing")
-	}
+	testCollaborationCanvas(t, ctx, admin, s, app, meta, other, idea.ID, gameID, siteID, trace)
 	// Force audit failure and prove all writes roll back on the GFA transaction.
 	current, e := s.Get(ctx, idea.ID)
-	must(e)
-	retainedNote, e := s.SaveBoard(ctx, meta, 0, collaboration.BoardInput{Body: "retain me", Width: 320, Height: 240})
 	must(e)
 	_, err := admin.Exec(ctx, `ALTER TABLE gfa_admin_audit_log ADD CONSTRAINT collaboration_test_audit_failure CHECK (action NOT LIKE 'collaboration.%') NOT VALID`)
 	must(err)
@@ -243,28 +221,19 @@ func TestAdminCollaborationThreeDatabase(t *testing.T) {
 	if _, e = s.Batch(ctx, meta, collaboration.BatchInput{Items: []collaboration.Input{{Kind: "other", Title: "batch rollback"}}}); e == nil {
 		t.Fatal("batch audit failure ignored")
 	}
-	if _, e = s.SaveBoard(ctx, meta, 0, collaboration.BoardInput{Body: "rollback", Width: 320, Height: 240}); e == nil {
-		t.Fatal("board audit failure ignored")
-	}
 	if _, e = s.Update(ctx, meta, current.ID, collaboration.Input{Kind: "game", Title: "must rollback update", Version: current.Version}); e == nil {
 		t.Fatal("update audit failure ignored")
 	}
 	if _, e = s.Transition(ctx, meta, current.ID, "link", collaboration.Transition{Version: current.Version, Kind: "game", ResourceID: gameID}); e == nil {
 		t.Fatal("link audit failure ignored")
 	}
-	if _, e = s.SaveBoard(ctx, meta, retainedNote.ID, collaboration.BoardInput{Body: "must rollback body", Width: 320, Height: 240, Version: retainedNote.Version}); e == nil {
-		t.Fatal("body audit failure ignored")
-	}
 	if e = s.Delete(ctx, meta, current.ID, current.Version); e == nil {
 		t.Fatal("idea delete audit failure ignored")
 	}
-	if e = s.DeleteBoard(ctx, meta, retainedNote.ID, retainedNote.Version); e == nil {
-		t.Fatal("delete audit failure ignored")
-	}
-	if queryInt64(t, ctx, admin, `SELECT version FROM gfa_content_idea WHERE id=$1`, current.ID) != current.Version || queryInt64(t, ctx, admin, `SELECT version FROM gfa_collaboration_board_note WHERE id=$1`, retainedNote.ID) != retainedNote.Version {
+	if queryInt64(t, ctx, admin, `SELECT version FROM gfa_content_idea WHERE id=$1`, current.ID) != current.Version {
 		t.Fatal("audit failure changed an existing row")
 	}
-	if queryInt64(t, ctx, admin, `SELECT count(*) FROM gfa_content_idea`) != before || queryInt64(t, ctx, admin, `SELECT count(*) FROM gfa_collaboration_board_note`) != 1 {
+	if queryInt64(t, ctx, admin, `SELECT count(*) FROM gfa_content_idea`) != before {
 		t.Fatal("audit failure left partial writes")
 	}
 	_, err = admin.Exec(ctx, `ALTER TABLE gfa_admin_audit_log DROP CONSTRAINT collaboration_test_audit_failure`)

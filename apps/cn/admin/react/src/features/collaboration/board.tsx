@@ -1,77 +1,111 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState, type PointerEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Background, BackgroundVariant, ConnectionMode, Controls, MarkerType, MiniMap, ReactFlow, ReactFlowProvider, applyNodeChanges, useReactFlow, type Connection, type NodeChange, type ResizeParams } from '@xyflow/react'
+import { ArrowRight, ArrowsInSimple, ArrowsOutSimple, Cards, Circle, Cursor, Hand, Note, Rectangle, TextT } from '@phosphor-icons/react'
+import '@xyflow/react/dist/style.css'
+import { useTheme } from '../../app/theme'
 import { Alert } from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
 import { ConfirmAction } from '../../components/ui/dialog'
-import { Textarea } from '../../components/ui/input'
 import { ErrorState, LoadingState } from '../../components/admin/states'
 import { getJSON, sendJSON } from '../../lib/api'
 import { useAuth } from '../auth/auth-context'
 import { base, collaborationError } from './api'
-import type { BoardNote } from './types'
+import { BoardActions } from './board-context'
+import { BoardEdgeDialog, BoardNodeDialog } from './board-dialogs'
+import { CanvasEdgeView, CanvasNodeView } from './board-elements'
+import { boardKinds, canvasNode, colorValues, layoutInput, mergeBoardNodes, newNode, nodeInput, type BoardDocument, type BoardEdge, type BoardKind, type BoardLayout, type BoardNode, type BoardNodeInput, type BoardReference, type CanvasEdge, type CanvasNode } from './board-types'
+import './board.css'
 
-function payload(note: BoardNote) { return { body: note.body, x: note.x, y: note.y, width: note.width, height: note.height, z_index: note.z_index, version: note.version } }
-export function boardGeometry(note: BoardNote, mode: 'drag' | 'resize', dx: number, dy: number): BoardNote {
-  const clamp = (value: number, min: number, max: number) => Math.round(Math.max(min, Math.min(max, value)))
-  return mode === 'drag' ? { ...note, x: clamp(note.x + dx, 0, 20000), y: clamp(note.y + dy, 0, 20000) } : { ...note, width: clamp(note.width + dx, 160, 1600), height: clamp(note.height + dy, 120, 1600) }
-}
+const nodeTypes = { canvas: CanvasNodeView }, edgeTypes = { relationship: CanvasEdgeView }
+const boardKey = ['collaboration', 'board']
+const tools = [{ kind: 'note', icon: Note }, { kind: 'card', icon: Cards }, { kind: 'text', icon: TextT }, { kind: 'rectangle', icon: Rectangle }, { kind: 'ellipse', icon: Circle }, { kind: 'arrow', icon: ArrowRight }] as const
+const empty: BoardDocument = { nodes: [], edges: [], references: [] }
+export function SharedBoard() { return <ReactFlowProvider><BoardCanvas /></ReactFlowProvider> }
 
-export function BoardNoteCard({ note, topZ, writable }: { note: BoardNote; topZ: number; writable: boolean }) {
-  const client = useQueryClient()
-  const [draft, setDraft] = useState<BoardNote | null>(null)
-  const [deleting, setDeleting] = useState(false)
-  const gesture = useRef<{ start: BoardNote; current: BoardNote; mode: 'drag' | 'resize'; x: number; y: number; pointer: number; previous: BoardNote | null } | null>(null)
-  const mutation = useMutation({ mutationFn: ({ value, remove = false }: { value: BoardNote; remove?: boolean }) => sendJSON<BoardNote>(`${base}/board/notes/${note.id}`, remove ? 'DELETE' : 'PUT', remove ? { version: value.version } : payload(value)), onSuccess: async (saved, variables) => {
-    client.setQueryData<BoardNote[]>(['collaboration', 'board'], (notes) => notes?.flatMap((item) => item.id === note.id ? variables.remove ? [] : [saved] : [item]))
-    setDraft(null); setDeleting(false)
-    await client.invalidateQueries({ queryKey: ['collaboration', 'board'] })
-  } })
-  const value = draft ?? note
-  const start = (event: PointerEvent<HTMLButtonElement>, mode: 'drag' | 'resize') => {
-    if (!writable || mutation.isPending || event.button !== 0) return
-    event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId)
-    const initial = { ...value, z_index: Math.min(topZ + 1, 1000000) }
-    gesture.current = { start: initial, current: initial, mode, x: event.clientX, y: event.clientY, pointer: event.pointerId, previous: draft }; setDraft(initial)
-  }
-  const move = (event: PointerEvent<HTMLButtonElement>) => {
-    const state = gesture.current; if (!state || state.pointer !== event.pointerId) return
-    state.current = boardGeometry(state.start, state.mode, event.clientX - state.x, event.clientY - state.y); setDraft(state.current)
-  }
-  const finish = (event: PointerEvent<HTMLButtonElement>, canceled = false) => {
-    const state = gesture.current; if (!state || state.pointer !== event.pointerId) return
-    gesture.current = null
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-    if (canceled) { setDraft(state.previous); return }
-    mutation.mutate({ value: state.current })
-  }
-  const handlers = { onPointerMove: move, onPointerUp: (event: PointerEvent<HTMLButtonElement>) => finish(event), onPointerCancel: (event: PointerEvent<HTMLButtonElement>) => finish(event, true) }
-  return <article aria-label={`便笺 ${note.id}`} className="absolute flex flex-col gap-2 rounded-md border bg-surface p-3 shadow-sm" style={{ left: value.x, top: value.y, width: value.width, height: value.height, zIndex: value.z_index }}>
-    <button type="button" aria-label={`移动便笺 ${note.id}`} disabled={!writable || mutation.isPending} className="touch-none cursor-move rounded bg-surface-muted p-1 text-left text-xs focus:ring-2 focus:ring-ring" onPointerDown={(event) => start(event, 'drag')} {...handlers} onKeyDown={(event) => {
-      const movement: Record<string, [number, number]> = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] }
-      if (movement[event.key]) { event.preventDefault(); mutation.mutate({ value: boardGeometry(value, 'drag', ...movement[event.key]) }) }
-    }}>拖动 · #{note.id}（方向键移动）</button>
-    <Textarea aria-label={`便笺正文 ${note.id}`} className="min-h-0 flex-1 resize-none" value={value.body} maxLength={10000} readOnly={!writable} disabled={mutation.isPending} onChange={(e) => setDraft({ ...value, body: e.target.value })} />
-    {mutation.error && <div role="alert" className="max-h-24 overflow-auto text-xs text-danger">{collaborationError(mutation.error)}<button type="button" className="underline" onClick={() => { setDraft(null); mutation.reset(); void client.invalidateQueries({ queryKey: ['collaboration', 'board'] }) }}>重新加载</button></div>}
-    {writable && <div className="flex flex-wrap gap-1 text-xs"><Button variant="secondary" disabled={!draft || mutation.isPending} onClick={() => mutation.mutate({ value })}>保存正文</Button><Button variant="secondary" disabled={mutation.isPending} onClick={() => mutation.mutate({ value: { ...value, z_index: Math.min(topZ + 1, 1000000) } })}>置顶</Button><Button variant="secondary" disabled={mutation.isPending} onClick={() => setDeleting(true)}>删除</Button></div>}
-    {writable && <button type="button" aria-label={`调整便笺尺寸 ${note.id}`} disabled={mutation.isPending} className="absolute bottom-0 right-0 size-5 touch-none cursor-se-resize text-muted-foreground" onPointerDown={(event) => start(event, 'resize')} {...handlers} onKeyDown={(event) => {
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) { event.preventDefault(); mutation.mutate({ value: boardGeometry(value, 'resize', event.key === 'ArrowRight' ? 10 : event.key === 'ArrowLeft' ? -10 : 0, event.key === 'ArrowDown' ? 10 : event.key === 'ArrowUp' ? -10 : 0) }) }
-    }}>◢</button>}
-    <ConfirmAction open={deleting} onOpenChange={setDeleting} title="删除共享便笺" description="其他成员也会看到删除结果。" busy={mutation.isPending} onConfirm={() => mutation.mutate({ value, remove: true })} />
-  </article>
-}
+function BoardCanvas() {
+  const auth = useAuth(), client = useQueryClient(), navigate = useNavigate(), flow = useReactFlow<CanvasNode, CanvasEdge>(), theme = useTheme()
+  const query = useQuery({ queryKey: boardKey, queryFn: () => getJSON<BoardDocument>(`${base}/board`), refetchInterval: 12000, refetchOnWindowFocus: false })
+  const [nodes, setNodes] = useState<CanvasNode[]>([]), nodesRef = useRef<CanvasNode[]>([])
+  const dirty = useRef(new Set<string>()), saving = useRef(false), framed = useRef(false)
+  const [selectedEdge, setSelectedEdge] = useState<string | null>(null)
+  const [mode, setMode] = useState<'select' | 'pan'>('select'), [expanded, setExpanded] = useState(false)
+  const [editor, setEditor] = useState<{ node?: BoardNode; initial: BoardNodeInput } | null>(null), [edgeEditor, setEdgeEditor] = useState<BoardEdge | null>(null)
+  const [deleting, setDeleting] = useState<{ type: 'nodes' | 'edges'; id: number; version: number } | null>(null)
+  const host = useRef<HTMLDivElement>(null)
+  const replaceNodes = useCallback((next: CanvasNode[]) => { nodesRef.current = next; setNodes(next) }, [])
+  useEffect(() => { if (query.data) replaceNodes(mergeBoardNodes(query.data, nodesRef.current, dirty.current)) }, [query.data, replaceNodes])
+  useEffect(() => { if (query.data && !framed.current) { framed.current = true; void flow.fitView({ duration: 0, padding: .2, maxZoom: 1 }) } }, [query.data, flow])
+  useEffect(() => { if (!expanded) return; const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !document.querySelector('[role="dialog"]')) setExpanded(false) }; window.addEventListener('keydown', escape); return () => window.removeEventListener('keydown', escape) }, [expanded])
 
-export function SharedBoard() {
-  const auth = useAuth(), client = useQueryClient()
-  const query = useQuery({ queryKey: ['collaboration', 'board'], queryFn: () => getJSON<BoardNote[]>(`${base}/board/notes`), refetchInterval: 12000 })
-  const [body, setBody] = useState('')
-  const create = useMutation({ mutationFn: () => sendJSON<BoardNote>(`${base}/board/notes`, 'POST', { body, x: 40, y: 40, width: 320, height: 260, z_index: Math.min(Math.max(0, ...(query.data ?? []).map((note) => note.z_index)) + 1, 1000000) }), onSuccess: async () => { setBody(''); await client.invalidateQueries({ queryKey: ['collaboration', 'board'] }) } })
+  const layout = useMutation({ mutationFn: (items: BoardLayout[]) => sendJSON<BoardNode[]>(`${base}/board/nodes/layout`, 'PUT', { nodes: items }), onSuccess: async (saved) => {
+    const updated = new Map(saved.map((node) => [String(node.id), node]))
+    saved.forEach((node) => dirty.current.delete(String(node.id)))
+    replaceNodes(nodesRef.current.map((node) => updated.has(node.id) ? canvasNode(updated.get(node.id)!, query.data?.references, node) : node))
+    client.setQueryData<BoardDocument>(boardKey, (current) => current && ({ ...current, nodes: current.nodes.map((node) => updated.get(String(node.id)) ?? node) }))
+    await client.invalidateQueries({ queryKey: boardKey })
+  }, onSettled: () => { saving.current = false } })
+  const createEdge = useMutation({ mutationFn: (connection: Connection) => sendJSON<BoardEdge>(`${base}/board/edges`, 'POST', { source_id: Number(connection.source), target_id: Number(connection.target), source_handle: connection.sourceHandle, target_handle: connection.targetHandle, routing: 'curve', label: '', color: 'slate', arrow: true }), onSuccess: async () => { await client.invalidateQueries({ queryKey: boardKey }) } })
+  const remove = useMutation({ mutationFn: () => sendJSON(`${base}/board/${deleting!.type}/${deleting!.id}`, 'DELETE', { version: deleting!.version }), onSuccess: async () => { setDeleting(null); setSelectedEdge(null); await client.invalidateQueries({ queryKey: boardKey }) } })
+  const busy = layout.isPending || createEdge.isPending || remove.isPending
+  const writable = auth.can('collaboration.write') && !busy && !layout.error
+  const commitLayout = (items: BoardLayout[]) => {
+    if (!items.length || saving.current || !writable) return
+    saving.current = true
+    items.forEach((item) => dirty.current.add(String(item.id)))
+    layout.mutate(items)
+  }
+  const onNodesChange = (changes: NodeChange<CanvasNode>[]) => {
+    const allowed = changes.filter((change) => change.type !== 'remove' && (!saving.current || change.type === 'select' || change.type === 'dimensions'))
+    const next = applyNodeChanges(allowed, nodesRef.current)
+    const finalIDs = new Set<string>()
+    for (const change of allowed) if (change.type === 'position' && change.position) {
+      dirty.current.add(change.id)
+      // React Flow emits dragging=false on pointer release and keyboard moves.
+      if (change.dragging === false) finalIDs.add(change.id)
+    }
+    replaceNodes(next)
+    if (finalIDs.size) commitLayout(next.filter((node) => finalIDs.has(node.id)).map((node) => layoutInput(node)))
+  }
+  const resize = (id: string, params: ResizeParams) => {
+    const node = nodesRef.current.find((item) => item.id === id); if (!node) return
+    const geometry = { x: Math.round(params.x), y: Math.round(params.y), width: Math.round(params.width), height: Math.round(params.height) }
+    replaceNodes(nodesRef.current.map((item) => item.id === id ? { ...item, position: { x: geometry.x, y: geometry.y }, width: geometry.width, height: geometry.height } : item))
+    commitLayout([layoutInput(node, geometry)])
+  }
+  const raise = (id: string) => { const node = nodesRef.current.find((item) => item.id === id); if (node) commitLayout([layoutInput(node, { z_index: Math.min(Math.max(0, ...nodesRef.current.map((item) => item.zIndex ?? 0)) + 1, 1000000) })]) }
+  const openReference = (ref: BoardReference) => {
+    if (ref.kind === 'idea') navigate(`/collaboration?tab=ideas&status=all&keyword=${encodeURIComponent(ref.title)}`)
+    else if (auth.can('content.read')) navigate(ref.kind === 'game' ? `/game/games/${ref.id}` : `/nav/sites/${ref.id}`)
+  }
+  const add = (kind: BoardKind) => {
+    const rect = host.current?.getBoundingClientRect(); if (!rect) return
+    const position = flow.screenToFlowPosition({ x: rect.left + rect.width / 2 - 120, y: rect.top + rect.height / 2 - 100 })
+    const z = ['rectangle', 'ellipse', 'arrow'].includes(kind) ? 0 : Math.min(Math.max(0, ...nodes.map((node) => node.zIndex ?? 0)) + 1, 1000000)
+    setEditor({ initial: newNode(kind, position, z) })
+  }
+  const reload = () => { dirty.current.clear(); layout.reset(); createEdge.reset(); replaceNodes(mergeBoardNodes(query.data ?? empty, [], dirty.current)); void query.refetch() }
+  const edges = useMemo<CanvasEdge[]>(() => (query.data?.edges ?? []).map((record) => ({ id: String(record.id), type: 'relationship', source: String(record.source_id), target: String(record.target_id), sourceHandle: record.source_handle, targetHandle: record.target_handle, selected: String(record.id) === selectedEdge, data: { record }, markerEnd: record.arrow ? { type: MarkerType.ArrowClosed, color: colorValues[record.color] } : undefined })), [query.data?.edges, selectedEdge])
   if (query.isLoading) return <LoadingState />
   if (query.error && !query.data) return <ErrorState message={query.error.message} onRetry={() => void query.refetch()} />
-  const notes = query.data ?? []
-  return <div className="grid gap-4"><p className="text-sm text-muted-foreground">全局共享文本便笺，每 12 秒刷新。拖动或调整尺寸后松开保存；正文使用保存按钮。</p>
-    {query.error && <Alert tone="warning">刷新失败，保留当前便笺与未保存的编辑。<Button variant="secondary" onClick={() => void query.refetch()}>重试刷新</Button></Alert>}
-    {auth.can('collaboration.write') && <div className="flex items-start gap-3"><Textarea aria-label="新便笺正文" value={body} maxLength={10000} onChange={(e) => setBody(e.target.value)} /><Button disabled={!body.trim() || create.isPending} onClick={() => create.mutate()}>新建便笺</Button></div>}
-    {create.error && <Alert tone="danger">{collaborationError(create.error)}</Alert>}
-    <div className="relative h-[65vh] isolate overflow-auto rounded-md border bg-surface-muted"><div className="relative" style={{ width: Math.max(4000, ...notes.map((note) => note.x + note.width + 200)), height: Math.max(3000, ...notes.map((note) => note.y + note.height + 200)) }}>{notes.map((note) => <BoardNoteCard key={note.id} note={note} topZ={Math.max(0, ...notes.map((item) => item.z_index))} writable={auth.can('collaboration.write')} />)}</div></div>
-  </div>
+  const error = layout.error || createEdge.error
+  return <BoardActions.Provider value={{ writable, openReference, editNode: (node) => setEditor({ node, initial: nodeInput(node) }), editEdge: setEdgeEditor, deleteNode: (node) => { remove.reset(); setDeleting({ type: 'nodes', id: node.id, version: node.version }) }, deleteEdge: (edge) => { remove.reset(); setDeleting({ type: 'edges', id: edge.id, version: edge.version }) }, raise, beginResize: (id) => dirty.current.add(id), resize }}>
+    <section className={`collaboration-canvas${expanded ? ' is-expanded' : ''}`} aria-label="共享画布">
+      <div className="canvas-topbar"><div className="flex flex-wrap items-center gap-1" role="toolbar" aria-label="画布工具">
+        <Button size="icon" variant={mode === 'select' ? 'primary' : 'ghost'} aria-label="选择工具" title="选择 / 框选" onClick={() => setMode('select')}><Cursor className="size-4" /></Button><Button size="icon" variant={mode === 'pan' ? 'primary' : 'ghost'} aria-label="平移工具" title="平移（按住空格）" onClick={() => setMode('pan')}><Hand className="size-4" /></Button>
+        {auth.can('collaboration.write') && <><span className="mx-1 h-5 border-l" />{tools.map(({ kind, icon: Icon }) => <Button key={kind} size="icon" variant="ghost" disabled={!writable} aria-label={`新建${boardKinds[kind]}`} title={`新建${boardKinds[kind]}`} onClick={() => add(kind)}><Icon className="size-4" /></Button>)}</>}
+      </div><div className="flex items-center gap-2"><span className="canvas-save-state" role="status">{busy ? '保存中…' : error ? '未保存' : nodes.some((node) => node.dragging || node.resizing) ? '调整中…' : query.error ? '刷新失败' : '已同步'}</span><Button size="icon" variant="ghost" aria-label={expanded ? '退出全屏画布' : '全屏画布'} title={expanded ? '退出全屏' : '全屏画布'} onClick={() => setExpanded(!expanded)}>{expanded ? <ArrowsInSimple className="size-4" /> : <ArrowsOutSimple className="size-4" />}</Button></div></div>
+      {(error || query.error) && <Alert tone="warning"><div>{error ? collaborationError(error) : '刷新失败，保留当前画布和草稿。'}<Button variant="secondary" size="sm" className="ml-2" onClick={reload}>{layout.error ? '放弃本地移动并重新加载' : '重新加载'}</Button></div></Alert>}
+      <div className="canvas-stage" ref={host}>
+        <ReactFlow<CanvasNode, CanvasEdge> nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={onNodesChange} onEdgesChange={(changes) => { const selection = changes.find((change) => change.type === 'select' && change.selected); if (selection?.type === 'select') setSelectedEdge(selection.id) }} onNodeDoubleClick={(_event, node) => writable && setEditor({ node: node.data.record, initial: nodeInput(node.data.record) })} onEdgeDoubleClick={(_event, edge) => writable && setEdgeEditor(edge.data!.record)} onConnect={(connection) => writable && createEdge.mutate(connection)} isValidConnection={(connection) => connection.source !== connection.target && !edges.some((edge) => edge.source === connection.source && edge.target === connection.target && edge.sourceHandle === connection.sourceHandle && edge.targetHandle === connection.targetHandle)} onNodeClick={() => setSelectedEdge(null)} onPaneClick={() => setSelectedEdge(null)} connectionMode={ConnectionMode.Loose} nodesDraggable={writable && mode === 'select'} nodesConnectable={writable && mode === 'select'} edgesReconnectable={false} deleteKeyCode={null} selectionOnDrag={mode === 'select'} panOnDrag={mode === 'pan' ? true : [1, 2]} panActivationKeyCode="Space" selectionKeyCode="Shift" snapToGrid snapGrid={[10, 10]} nodeExtent={[[-100000, -100000], [100000, 100000]]} minZoom={.15} maxZoom={2} fitView fitViewOptions={{ maxZoom: 1, padding: .2 }} colorMode={theme.resolvedTheme} proOptions={{ hideAttribution: true }} ariaLabelConfig={{ 'controls.zoomIn.ariaLabel': '放大画布', 'controls.zoomOut.ariaLabel': '缩小画布', 'controls.fitView.ariaLabel': '适应全部内容', 'minimap.ariaLabel': '画布小地图' }}>
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--border)" /><Controls showInteractive={false} /><MiniMap nodeColor={(node) => colorValues[(node as CanvasNode).data.record.color]} pannable zoomable />
+          {!nodes.length && <div className="canvas-empty nodrag nopan"><p>从一张便签开始</p><span>{auth.can('collaboration.write') ? '添加便签或内容卡片，拖动连接点建立联系。' : '这里还没有共享内容。'}</span>{auth.can('collaboration.write') && <Button disabled={!writable} onClick={() => add('note')}>添加第一张便签</Button>}</div>}
+        </ReactFlow>
+      </div>
+    </section>
+    {editor && <BoardNodeDialog node={editor.node} initial={editor.initial} close={() => setEditor(null)} />}
+    {edgeEditor && <BoardEdgeDialog edge={edgeEditor} close={() => setEdgeEditor(null)} />}
+    <ConfirmAction open={Boolean(deleting)} onOpenChange={(open) => !open && !remove.isPending && setDeleting(null)} title={deleting?.type === 'nodes' ? '删除画布元素' : '删除连线'} description={deleting?.type === 'nodes' ? '该元素及相连的连线将从共享画布移除，引用的想法、游戏或网站会保留。' : '这条连线将从共享画布移除。'} busy={remove.isPending} onConfirm={() => remove.mutate()}>{remove.error && <Alert tone="warning">{collaborationError(remove.error)}<Button variant="secondary" onClick={() => { setDeleting(null); remove.reset(); void query.refetch() }}>重新加载</Button></Alert>}</ConfirmAction>
+  </BoardActions.Provider>
 }

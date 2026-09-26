@@ -3,7 +3,6 @@ package collaboration
 import adminsqlc "github.com/gofurry/gofurry-admin/internal/db/admin/sqlc"
 
 type Idea = adminsqlc.GetContentIdeaRow
-type BoardNote = adminsqlc.GfaCollaborationBoardNote
 type Summary = adminsqlc.CountContentIdeaSummaryRow
 
 type Input struct {
@@ -51,13 +50,4 @@ type Filters struct {
 type IdeaPage struct {
 	Total int64                           `json:"total"`
 	List  []adminsqlc.ListContentIdeasRow `json:"list"`
-}
-type BoardInput struct {
-	Body    string `json:"body"`
-	X       int32  `json:"x"`
-	Y       int32  `json:"y"`
-	Width   int32  `json:"width"`
-	Height  int32  `json:"height"`
-	ZIndex  int32  `json:"z_index"`
-	Version int64  `json:"version"`
 }

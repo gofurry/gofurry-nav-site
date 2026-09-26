@@ -40,7 +40,24 @@ type GfaAdminAuditLog struct {
 	OperatorRole      string           `json:"operator_role"`
 }
 
-type GfaCollaborationBoardNote struct {
+type GfaCollaborationBoardEdge struct {
+	ID                 int64            `json:"id"`
+	SourceID           int64            `json:"source_id"`
+	TargetID           int64            `json:"target_id"`
+	SourceHandle       string           `json:"source_handle"`
+	TargetHandle       string           `json:"target_handle"`
+	Routing            string           `json:"routing"`
+	Label              string           `json:"label"`
+	Color              string           `json:"color"`
+	Arrow              bool             `json:"arrow"`
+	CreatedByAccountID int64            `json:"created_by_account_id"`
+	UpdatedByAccountID int64            `json:"updated_by_account_id"`
+	Version            int64            `json:"version"`
+	CreatedAt          pgtype.Timestamp `json:"created_at"`
+	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
+}
+
+type GfaCollaborationBoardNode struct {
 	ID                 int64            `json:"id"`
 	Body               string           `json:"body"`
 	X                  int32            `json:"x"`
@@ -53,6 +70,12 @@ type GfaCollaborationBoardNote struct {
 	Version            int64            `json:"version"`
 	CreatedAt          pgtype.Timestamp `json:"created_at"`
 	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
+	Kind               string           `json:"kind"`
+	Title              string           `json:"title"`
+	Color              string           `json:"color"`
+	Rotation           int32            `json:"rotation"`
+	ReferenceKind      *string          `json:"reference_kind"`
+	ReferenceID        *int64           `json:"reference_id"`
 }
 
 type GfaContentIdea struct {

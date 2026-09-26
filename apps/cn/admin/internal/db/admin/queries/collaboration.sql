@@ -77,20 +77,3 @@ count(*) FILTER (WHERE status = 'landed' AND landed_at >= CURRENT_TIMESTAMP - in
 
 -- name: DeleteContentIdeaVersioned :one
 DELETE FROM gfa_content_idea WHERE id = $1 AND version = $2 RETURNING *;
-
--- name: ListBoardNotes :many
-SELECT * FROM gfa_collaboration_board_note ORDER BY z_index, id;
-
--- name: GetBoardNote :one
-SELECT * FROM gfa_collaboration_board_note WHERE id = $1;
-
--- name: InsertBoardNote :one
-INSERT INTO gfa_collaboration_board_note (body, x, y, width, height, z_index, created_by_account_id, updated_by_account_id)
-VALUES ($1, $2, $3, $4, $5, $6, sqlc.arg(account_id), sqlc.arg(account_id)) RETURNING *;
-
--- name: UpdateBoardNoteVersioned :one
-UPDATE gfa_collaboration_board_note SET body = $1, x = $2, y = $3, width = $4, height = $5, z_index = $6,
-updated_by_account_id = $7, version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE id = $8 AND version = $9 RETURNING *;
-
--- name: DeleteBoardNoteVersioned :one
-DELETE FROM gfa_collaboration_board_note WHERE id = $1 AND version = $2 RETURNING *;

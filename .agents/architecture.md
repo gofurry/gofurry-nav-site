@@ -14,7 +14,7 @@ Task has no deployment or database operations and does not load `.env`.
 | Game Backend | `gfg` | existing Redis cache and non-acquisition maintenance schedules |
 | Nav Collector | `gfn` durable acquisition ledger, target/Primary history, historical facts, metric and change registries/results, and per-pipeline/version checkpoints | Redis realtime progress, existing read caches, and the compatible legacy Nav Change path |
 | Nav Backend | `gfn` | existing Nav V1 and V2 behavior remains supported |
-| Admin | explicit `gfa`, `gfn`, `gfg` pools | `gfa` auth/audit/collaboration inventory and text board; no cross-DB transaction claim |
+| Admin | explicit `gfa`, `gfn`, `gfg` pools | `gfa` auth/audit/collaboration inventory and shared canvas; no cross-DB transaction claim |
 | Uptime | none | local Bbolt availability history; no business Redis |
 
 Admin owns managed Site icons, independent desktop/mobile Hero pools and SVG
@@ -51,4 +51,4 @@ All six binaries use explicit Cobra subcommands and typed Viper file loading. Th
 
 `apps/cn/uptime` owns the public status page. Nav Backend no longer hosts uptime. Nav Web exposes `/healthz`; backends/Admin keep their existing health routes; scheduled collectors may expose optional loopback/private `/livez` and `/readyz` listeners. Collector probes check only PostgreSQL, Redis, scheduler readiness, and shutdown state.
 
-Collaboration owns only GFA ideas and text notes. GFG/GFN sqlc access in this domain is read-only for duplicates and link existence. Versioned mutations and Audit share one GFA transaction; geometry-only Board updates omit Audit. Formal Game/Site APIs stay independent and successful creation survives link failures. See `docs/collaboration-center.md`.
+Collaboration owns only GFA ideas, canvas nodes and edges. GFG/GFN sqlc access in this domain is read-only for duplicates, link existence and reference-card projections. Versioned mutations and Audit share one GFA transaction; geometry-only Board updates omit Audit. Formal Game/Site APIs stay independent and successful creation survives link failures. See `docs/collaboration-center.md`.

@@ -118,40 +118,6 @@ func (api *API) Transition(action string) fiber.Handler {
 		return response(c, data, e)
 	}
 }
-func (api *API) Board(c fiber.Ctx) error {
-	data, e := api.service.Board(c.Context())
-	return response(c, data, e)
-}
-func (api *API) CreateBoard(c fiber.Ctx) error { return api.saveBoard(c, 0) }
-func (api *API) UpdateBoard(c fiber.Ctx) error {
-	id, e := adminutil.ParseIDParam(c)
-	if e != nil {
-		return response(c, nil, e)
-	}
-	return api.saveBoard(c, id)
-}
-func (api *API) saveBoard(c fiber.Ctx, id int64) error {
-	var in BoardInput
-	if e := decode(c, &in); e != nil {
-		return response(c, nil, e)
-	}
-	data, e := api.service.SaveBoard(c.Context(), audit.MetaFromFiber(c), id, in)
-	return response(c, data, e)
-}
-func (api *API) DeleteBoard(c fiber.Ctx) error {
-	var in struct {
-		Version int64 `json:"version"`
-	}
-	if e := decode(c, &in); e != nil {
-		return response(c, nil, e)
-	}
-	id, e := adminutil.ParseIDParam(c)
-	if e != nil {
-		return response(c, nil, e)
-	}
-	return response(c, nil, api.service.DeleteBoard(c.Context(), audit.MetaFromFiber(c), id, in.Version))
-}
-
 func (api *API) Summary(c fiber.Ctx) error {
 	data, err := api.service.Summary(c.Context())
 	return response(c, data, databaseError(err))

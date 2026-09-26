@@ -80,4 +80,4 @@ pnpm run build
 
 See [React Admin development](../../../docs/admin-react.md), [frontend parity](../../../docs/admin-frontend-parity.md), [role operations](../../../docs/operations/admin-roles.md), [Data and System Operations](../../../docs/admin-data-system-operations.md), and the [frontend contract](../../../contracts/admin-frontend.md).
 
-The [Collaboration Center](../../../docs/collaboration-center.md) adds GFA-only content ideas and one shared text board. Game/Site handoff keeps formal creation in the existing APIs and offers recovery when linking fails. Upgrade GFA with the new Goose migration before deploying this Admin binary.
+The [Collaboration Center](../../../docs/collaboration-center.md) adds GFA-only content ideas and one shared canvas. Game/Site handoff keeps formal creation in the existing APIs and offers recovery when linking fails. Upgrade GFA with the new Goose migration before deploying this Admin binary.
