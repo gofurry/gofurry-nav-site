@@ -9,23 +9,10 @@
     <SiteOverviewWorkspace v-if="active === 'overview'" :presentation="overview" :insights-to="insightsTo" />
     <!-- Fetch ownership stays on the Site page, independent of visible panels. -->
     <SiteInsightsPanel v-if="active === 'insights'" :insights="insights" :unavailable="insightsUnavailable" />
-    <!-- Transitional panels retain their owners until P4/P5. A resolved Target
-         change resets their local history/tab state without remounting the shell. -->
+    <!-- Target evidence remounts after a resolved switch; history cache stays on the page. -->
     <div :key="data.domain" :aria-busy="pending" class="min-w-0">
-      <div v-if="active === 'observation'" class="space-y-5">
-        <SitePerformancePanel
-          v-if="data.siteHttpRecord" :domain="data.domain" :site-id="siteId"
-          :http-record="data.siteHttpRecord" :ping-record="data.sitePingRecord" :target-latest-core="data.targetLatestCore"
-        />
-        <SiteObservationTabs
-          :dns-record="data.siteDnsRecord" :http-record="data.siteHttpRecord"
-          :ping-record="data.sitePingRecord" :target-latest-core="data.targetLatestCore"
-        />
-        <SiteMetadataProbePanel
-          :http-record="data.siteHttpRecord" :light-probe-state="data.lightProbeState"
-          :site-id="siteId" :target="data.domain" :target-latest-core="data.targetLatestCore"
-        />
-      </div>
+      <SiteObservationWorkspace v-if="active === 'observation'" :view="observationView" :presentation="observation" :history="history"
+        @select="emit('observationView', $event)" @sample="emit('historySample', $event)" @retry="emit('historyRetry')" />
       <div v-else-if="active === 'security'">
         <h3 class="site-detail-label mb-3">{{ t('siteDetail.securityEvidence') }}</h3>
         <SiteObservationMetricGrid :items="security" />
@@ -39,21 +26,23 @@ import { computed } from 'vue'
 import SiteInsightsPanel from '../SiteInsightsPanel.vue'
 import SiteOverviewWorkspace from './SiteOverviewWorkspace.vue'
 import SiteObservationMetricGrid from '../SiteObservationMetricGrid.vue'
-import SitePerformancePanel from '../SitePerformancePanel.vue'
-import SiteObservationTabs from '../SiteObservationTabs.vue'
-import SiteMetadataProbePanel from '../SiteMetadataProbePanel.vue'
+import SiteObservationWorkspace from './observation/SiteObservationWorkspace.vue'
 import type { SiteDetailPageData } from '~/composables/useSiteDetailPage'
-import type { SiteDetailTab } from '~/utils/siteDetailRouteState'
+import type { SiteDetailTab, SiteObservationView } from '~/utils/siteDetailRouteState'
 import type { SiteTargetPresentation } from '~/utils/siteTargetPresentation'
 import type { SiteInsights } from '~/types/insights'
 import type { SiteOverviewPresentation } from '~/utils/siteOverviewPresentation'
 import type { RouteLocationRaw } from 'vue-router'
 import type { ObservationMetricItem } from '../detailTypes'
+import type { SiteObservationPresentation } from '~/utils/siteObservationPresentation'
+import type { SiteHistoryPresentation, SiteHistorySample } from '~/composables/useSiteObservationHistory'
 const props = defineProps<{
   data: SiteDetailPageData; siteId: string; active: SiteDetailTab; presentation: SiteTargetPresentation
   insights: SiteInsights | null; insightsUnavailable: boolean; pending: boolean
   overview: SiteOverviewPresentation; insightsTo: RouteLocationRaw
+  observationView: SiteObservationView; observation: SiteObservationPresentation; history: SiteHistoryPresentation
 }>()
+const emit = defineEmits<{ observationView: [view: SiteObservationView]; historySample: [sample: SiteHistorySample]; historyRetry: [] }>()
 const { t } = useI18n()
 const security = computed<ObservationMetricItem[]>(() => [
   { label: 'TLS', value: props.presentation.tlsVersion || '—', tone: 'normal' },

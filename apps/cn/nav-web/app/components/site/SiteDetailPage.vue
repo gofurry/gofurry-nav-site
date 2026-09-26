@@ -18,6 +18,9 @@
           :presentation="targetPresentation" :insights="siteInsightsSnapshot.insights"
           :insights-unavailable="siteInsightsSnapshot.unavailable" :pending="pending"
           :overview="overviewPresentation" :insights-to="insightsTo"
+          :observation-view="routeState.tab === 'observation' ? routeState.view : 'overview'"
+          :observation="observationPresentation" :history="historyPresentation"
+          @observation-view="changeObservationView" @history-sample="observationHistory.selectSample" @history-retry="observationHistory.retry"
         />
       </div>
     </main>
@@ -36,9 +39,11 @@ import type { SiteInsights } from '@/types/insights'
 import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
 import { buildSiteDetailSeo } from '~/utils/seo'
 import { authoritativePageStatus } from '~/utils/authoritativePageError'
-import { buildSiteDetailQuery, selectSiteDetailTab, selectSiteDetailTarget, type SiteDetailTab } from '~/utils/siteDetailRouteState'
+import { buildSiteDetailQuery, selectSiteDetailTab, selectSiteDetailTarget, selectSiteObservationView, type SiteDetailTab, type SiteObservationView } from '~/utils/siteDetailRouteState'
 import { presentSiteTarget } from '~/utils/siteTargetPresentation'
 import { presentSiteOverview } from '~/utils/siteOverviewPresentation'
+import { presentSiteObservation } from '~/utils/siteObservationPresentation'
+import { useSiteObservationHistory } from '~/composables/useSiteObservationHistory'
 
 interface SiteInsightsSnapshot {
   insights: SiteInsights | null
@@ -81,6 +86,12 @@ const lastResolved = shallowRef(data.value!)
 watch(data, value => { if (value?.siteInfo) lastResolved.value = value })
 const sitePageData = computed(() => data.value?.siteInfo ? data.value : lastResolved.value)
 const targetPresentation = computed(() => presentSiteTarget(sitePageData.value, t))
+const observationPresentation = computed(() => presentSiteObservation(sitePageData.value, t))
+const observationHistory = useSiteObservationHistory({ siteId, target: () => sitePageData.value.domain,
+  active: () => routeState.value.tab === 'observation' && routeState.value.view === 'performance'
+    && !pending.value && !error.value && Boolean(data.value?.siteInfo) })
+const historyPresentation = computed(() => ({ state: observationHistory.state.value, rows: observationHistory.rows.value,
+  sample: observationHistory.sample.value, total: observationHistory.total.value }))
 const countedView = ref<{ siteId: string; count: number } | null>(null)
 const siteViewCount = computed(() => countedView.value?.siteId === siteId.value
   ? countedView.value.count : sitePageData.value.siteInfo?.view_count ?? 0)
@@ -103,6 +114,9 @@ function tabLocation(tab: SiteDetailTab) {
 }
 function changeTarget(target: string) {
   void router.push({ query: buildSiteDetailQuery(selectSiteDetailTarget(routeState.value, target)) })
+}
+function changeObservationView(view: SiteObservationView) {
+  void router.push({ path: route.path, query: buildSiteDetailQuery(selectSiteObservationView(routeState.value, view)) })
 }
 const seo = computed(() => buildSiteDetailSeo({
   name: sitePageData.value.siteInfo?.name,

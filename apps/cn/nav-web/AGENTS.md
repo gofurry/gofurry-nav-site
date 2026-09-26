@@ -80,6 +80,14 @@ protocol checks. `site-overview.spec.ts` owns this contract using the shared
 fixture. P3 adds no appearance debt or Visual golden and requires maintainer
 visual acceptance before P4.
 
+P4 Observation uses `siteObservationPresentation.ts` for Target evidence and the
+P1 route owner for its five secondary views. Page-owned `useSiteObservationHistory`
+auto-loads only hydrated Performance, caches by Site/Target/Ping, slices one 100-row
+response and isolates late results. Other views add no fetch. Keep Security probes
+out of Web, raw timings unsummed and collector loss percentages unscaled. Use
+`site-observation.spec.ts` plus pure/Nuxt contracts; only removed Observation debt
+may decrease. P4 requires manual review before P5 and no accepted Visual updates.
+
 [frontend-style-debt.json](frontend-style-debt.json) is measured state, never an
 example or permission. Remaining style debt belongs to Site Detail #109, Insights
 #108 and intentionally preserved ambient effects. No opportunistic migration of

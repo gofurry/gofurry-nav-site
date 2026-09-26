@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildSiteDetailQuery, parseSiteDetailRouteState, selectSiteDetailTab, selectSiteDetailTarget,
+  buildSiteDetailQuery, parseSiteDetailRouteState, selectSiteDetailTab, selectSiteDetailTarget, selectSiteObservationView,
 } from '../../app/utils/siteDetailRouteState'
 import { siteEntityPath, siteTargetPath } from '../../app/utils/siteRoutes'
 
 describe('Site Detail route state', () => {
+  it('selects Observation views through the owner while retaining Target and clearing foreign state', () => {
+    const state = parseSiteDetailRouteState({ domain: 'a.example', tab: 'insights', metric: 'csp', range: 'all' })
+    expect(buildSiteDetailQuery(selectSiteObservationView(state, 'http'))).toEqual({ domain: 'a.example', tab: 'observation', view: 'http' })
+    expect(buildSiteDetailQuery(selectSiteObservationView(state, 'overview'))).toEqual({ domain: 'a.example', tab: 'observation' })
+  })
   it('defaults to the entity overview and omits default query values', () => {
     expect(parseSiteDetailRouteState({})).toEqual({ domain: '', tab: 'overview' })
     for (const query of [{}, { tab: 'overview' }, { tab: 'banana', view: 'dns', metric: 'csp', range: 'all' }]) {

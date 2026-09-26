@@ -58,32 +58,9 @@
       "count": 1
     }
   },
-  "app/components/site/SiteDnsPanel.vue": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 6
-    },
-    "vue/no-template-shadow": {
-      "count": 1
-    }
-  },
-  "app/components/site/SiteObservationTabs.vue": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 3
-    }
-  },
-  "app/components/site/SitePerformance.vue": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 6
-    }
-  },
   "app/composables/useSiteDetailPage.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 2
-    }
-  },
-  "app/composables/useSiteMetadataProbePanel.ts": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 7
     }
   },
   "app/layouts/empty.vue": {

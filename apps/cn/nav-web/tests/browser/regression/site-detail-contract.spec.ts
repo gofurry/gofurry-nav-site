@@ -92,7 +92,7 @@ for (const scenario of ['missing-site', 'invalid-target', 'detail-failure'] as c
   test('detail is authoritative: ' + scenario, async ({ request, runtime }) => {
     if (scenario === 'detail-failure') runtime.state.failure = 'site'
     const path = scenario === 'missing-site' ? '/site/999999999'
-      : scenario === 'invalid-target' ? '/site/41?domain=not-owned.example&tab=banana' : '/site/41'
+      : scenario === 'invalid-target' ? '/site/41?domain=not-owned.example&tab=banana' : '/site/41?tab=observation&view=performance'
     const response = await request.get(path)
     expect(response.status()).toBe(scenario === 'detail-failure' ? 503 : 404)
     expect(await response.text()).not.toContain('data-site-detail')
@@ -144,22 +144,23 @@ test('a failed hydrated Target switch reaches the authoritative page error', asy
   runtime.assertQuiet()
 })
 
-test('existing Ping history loads only on sample interaction and is not refetched by Target selection', async ({ page, runtime }) => {
+test('Ping history loads only in Performance and non-Performance Target selection does not refetch it', async ({ page, runtime }) => {
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
   await openRuntime(page, '/site/41?tab=observation')
   await (await view).finished()
-  await expect(page.locator('[data-site-history-points]')).toHaveAttribute('data-site-history-points', '0')
+  await expect(page.locator('[data-site-performance]')).toHaveCount(0)
   expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(initialPaths)
   const history = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/observations'))
-  await page.locator('[data-site-history-sample="twenty"]').click()
+  await page.locator('[data-site-observation-tab="performance"]').click()
   expect((await history).status()).toBe(200)
   await (await history).finished()
-  await expect(page.locator('[data-site-history-points]')).toHaveAttribute('data-site-history-points', '1')
-  await page.locator('[data-site-history-sample="sixty"]').click()
+  await expect(page.locator('[data-site-performance-points]')).toHaveAttribute('data-site-performance-points', '1')
+  await page.locator('[data-site-performance-sample="60"]').click()
+  await page.locator('[data-site-observation-tab="overview"]').click()
   await page.locator('[data-site-target-trigger]').click()
   await page.locator('[data-site-target-option="alt.example"]').click()
   await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'alt.example')
-  await expect(page.locator('[data-site-history-points]')).toHaveAttribute('data-site-history-points', '0')
+  await expect(page.locator('[data-site-performance]')).toHaveCount(0)
   await settleRuntime(page)
   expect(runtime.calls.slice(3).map(call => call.url.pathname)).toEqual([
     '/api/v2/nav/sites/41/targets/target.example/observations', '/api/v2/nav/sites/41/detail',

@@ -49,12 +49,13 @@ observations belong to `siteId + selectedDomain + lang`. `useSiteDetailPage`
 loads `/nav/sites/:id/detail` under that identity; `SiteDetailPage` loads
 `/nav/sites/:id/insights` under Site ID alone. Domain and workspace query MUST NOT
 hide Insights or enter its fetch key. A normal hydrated visit has exactly one
-Detail GET, one Insights GET and one View POST. Switching Target within the same
-hydrated Site session MUST fetch only Detail and MUST NOT recount View. UI-only
-state MUST NOT introduce trend/history, comparison or other data requests.
-The legacy Ping history chart fetches only after its existing sample controls
-are used; mounting a populated HTTP detail or switching Target must not fetch
-history. Its prior eager history load conflicted with P1's initial budget.
+Detail GET, one Insights GET and one View POST. Outside P4 Performance, switching
+Target within the same hydrated Site session MUST fetch only Detail; no Target
+switch may recount View. UI-only
+state MUST NOT introduce trend/history, comparison or other data requests except
+the explicit P4 Performance history slice below. P1 initially made the legacy Ping
+chart sample-triggered. P4 replaces that behavior with hydration-only lazy history
+on entering Performance; every other workspace retains the original budget.
 
 Detail 404 (missing Site or foreign Target) and Detail 503 are authoritative page
 failures, including a failed client Target switch. Insights failure is optional:
@@ -113,8 +114,8 @@ and relation hints only; Site aggregate status MUST NOT stand in for Target heal
 Visit uses observed HTTP final URL, falling back to the selected Target over HTTPS.
 
 Four primary tabs use the P1 route-state helpers and router history, with roving
-focus and ArrowLeft/ArrowRight/Home/End support. No secondary navigation or new
-data endpoint is introduced. Only the tabs stick at the viewport top: the public
+focus and ArrowLeft/ArrowRight/Home/End support. P2 introduced no secondary
+navigation; P4 owns Observation's secondary views. Only primary tabs stick at the viewport top: the public
 NavBar remains in normal flow. At `xl` the workspace/context tracks are 3:1 with
 a bounded minimum sidebar; smaller viewports place compact context before the
 workspace, retaining Target/protocol/time while infrastructure detail stays in
@@ -126,8 +127,8 @@ Pending Target requests preserve Hero, tabs and shell, retaining the explicitly
 labelled last resolved Target evidence until the next result is ready. A late
 response MUST NOT overwrite a newer Target. Site Insights fetching stays Site-owned
 across tab/Target changes. P2 initially showed the preview in Overview and Insights;
-P3 replaces Overview and confines that legacy panel to Insights. Observation and Security use thin transitional content adapters;
-their final workspaces and secondary navigation remain P4/P5 scope.
+P3 replaces Overview and confines that legacy panel to Insights. P4 replaces the
+Observation transition; Security retains its thin adapter until P5.
 
 `app/assets/styles/pages/site-detail.less` owns new appearance under the exact
 `.site-detail-page` / `html.dark .site-detail-page` / `--site-detail-*` token roots.
@@ -185,6 +186,58 @@ Appearance extends `site-detail.less` with existing tokens and no new debt. P4â€
 #108 and final P8 Visual goldens remain out of scope. P3 needs maintainer review
 of 1440/390 Light/Dark and preferably 768 Light before P4; local Functional passes
 and review screenshots do not constitute that approval or remote CI acceptance.
+
+## Site Observation workspace (#109 P4)
+
+Observation owns Current Target evidence and five non-sticky secondary tabs:
+Overview, Performance, HTTP, DNS and Web. `selectSiteObservationView` extends the
+existing route-state owner; it retains Target, clears foreign tab state and omits
+the default Overview value. Tabs use router history/reload, roving tabindex and
+ArrowLeft/ArrowRight/Home/End; mobile navigation scrolls within its own row.
+
+`siteObservationPresentation.ts` is the only raw-payload projection for these
+views. Match Target identity before reading summary, core or light-probe evidence.
+Overview protocol rows retain status, duration, observed time and freshness as
+separate fields; human reason messages precede code fallback. Only observed
+endpoint facts appear. HTTP shows summary, conditional redirect chain and common
+headers plus native disclosure for all headers, without Security interpretation.
+DNS groups actual A/AAAA/CNAME/MX/NS/TXT/CAA/SOA records, follows collected children
+for resolution chains, and discloses infrastructure/DNSSEC/PTR and reported risk
+evidence. Web is an allowlist: metadata, robots, llms.txt, page assets and RDAP.
+Security probes never enter that projection.
+
+Performance's default 20 samples MUST auto-load on first hydrated activation,
+including a direct Performance URL. SSR still requests only Detail + Insights.
+`useSiteObservationHistory` lives on the page and owns the Site/Target/Ping cache,
+loading/ready/empty/unavailable states, explicit slice-local retry and local
+20/60/100 slicing of one `limit=100&protocol=ping&payload_mode=preview` request.
+All outcomes, including empty/unavailable, stay cached until explicit retry or a
+new page session. Captured keys isolate late responses; they may populate their
+own cache but MUST NOT replace the selected Target. Browser history requests use
+zero automatic client retries; the existing Nitro GET retry on 503 remains counted.
+
+Entering/leaving other views adds no request. Performance Target changes add
+Detail plus one history request only for an uncached Target; all other Target
+changes add only Detail. No action repeats Site Insights or View. Detail failure
+remains authoritative and suppresses history activation; history failure is local.
+The P3 Site snapshot stays unchanged across these Target/view transitions.
+
+The timing waterfall displays independent measured stage lengths on a common
+scale and explicitly warns that they may overlap; Total is the collected value,
+not a stage sum. Ping loss_rate is already a collector percentage (0â€“100), never
+an inferred ratio. Missing RTT/loss is not zero. ECharts mounts only with visible,
+ready numeric evidence, shows preparation/no-RTT copy when needed, reads resolved
+theme tokens, resizes and disposes its shallow instance, and has no double-update
+workaround. History rows expose time/status/RTT/loss without raw payload.
+
+P4 removes consumer-free Observation components and their measured debt only.
+Security's remaining renderer, the old light-probe renderer, Site Changes/Insights,
+#108 and later-phase cleanup retain their own owners. Appearance stays in
+`site-detail.less`; no parent deep overrides, transferred budgets or final P8
+goldens are allowed. `site-observation.spec.ts`, the pure presentation unit tests
+and real Nuxt history tests own verification. Maintainer visual acceptance of
+navigation, timing/chart density, HTTP/DNS/Web and mobile/themes is required before
+P5; local tests and screenshots do not grant that approval or remote acceptance.
 
 ## Styling ownership
 

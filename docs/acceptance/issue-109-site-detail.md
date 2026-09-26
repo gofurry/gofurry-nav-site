@@ -243,3 +243,106 @@ conditional Attention prominence, seven-capability density, four-change density,
 desktop 60/40 balance, mobile flow and Light/Dark consistency. Review screenshots
 support this decision but do not constitute maintainer approval. P3 exit criterion
 29 remains pending until the maintainer accepts the Overview; do not enter P4.
+
+## P4: Current Target Observation workspace
+
+Scope: [P4 Observation contract](../../contracts/nav-web-frontend.md#site-observation-workspace-109-p4).
+The maintainer explicitly requested P4 against current `dev`; the historical P3
+manual-review record above is preserved. P5/P6, #108, backend APIs, migrations,
+dependencies and final P8 goldens remain out of scope.
+
+### Runtime and evidence ownership
+
+- Added route-owned Overview/Performance/HTTP/DNS/Web secondary tabs with
+  back/forward/reload, roving keyboard focus and bounded mobile horizontal scroll.
+  The default view is omitted; the secondary row is not sticky.
+- `siteObservationPresentation.ts` owns raw evidence parsing and Target identity.
+  Protocol rows separate status/duration/observed/freshness; reported human reasons
+  precede raw code fallback. HTTP presents raw headers with native disclosure and
+  only actual redirects. DNS groups collected records/children and retains reported
+  risks and secondary infrastructure details. Web admits only metadata, robots,
+  llms.txt, page assets and RDAP; security probes are excluded.
+- Replaced the selected-but-unrequested Ping chart with page-owned history state.
+  Performance hydration auto-loads one `limit=100` Ping request; Overview/HTTP/DNS/
+  Web and SSR do not. Sample 20/60/100 changes are local. Page-session cache keys
+  include Site/Target/protocol; all outcomes are retained until explicit retry or
+  a new page session. A late A response can fill A's cache without replacing B.
+- Non-Performance Target changes add only Detail. Performance adds Detail plus
+  one request for uncached Target history, while Site Insights/View and the P3
+  Site snapshot remain stable. Detail failure remains authoritative; history and
+  Insights failures remain local and View failure remains harmless.
+- Independent timing bars preserve collected stages and Total, explicitly noting
+  overlap instead of inventing summed timing. Collector source inspection showed
+  `loss_rate` is already a 0–100 percentage: even 0.1 remains 0.1%, not 10%.
+  Missing RTT/loss is not fabricated as zero. ECharts is visible/ready only,
+  shallow, theme-token-driven, resize-aware and disposed without double-update.
+  Loading, empty, unavailable and available-without-RTT all have explicit copy.
+
+### Replacement and measured debt
+
+Consumer audit retired ten Observation components: SitePerformancePanel,
+SitePerformance, SiteObservationTabs, SiteMetadataProbePanel,
+SiteObservationOverviewPanel, SiteDnsPanel, SiteHttpPanel, SiteMetadataRows,
+SiteObservationHistoryPanel and SiteObservationInfoList, plus the unused
+useSiteMetadataProbePanel composable. No Legacy/Old clones remain. Security's
+metric renderer, light-probe renderer, Site Changes/Insights and P7 leftovers keep
+their later-phase ownership; this does not claim total Site debt closure.
+
+Style policy first reported only stale budgets for those real deletions, with no
+regressions. Only then did `style:policy:update` lower them, followed by a clean
+policy run. Tailwind appearance **572 → 147**, arbitrary appearance **5 → 2**,
+raw visual values **412 → 246**, deep selectors **25 → 0**. Important remains 5,
+legacy dark entries 0. All other per-file budgets are unchanged; none was raised,
+transferred or hidden. ESLint pruning removed exactly 23 obsolete suppressions
+from four deleted files and left all other entries intact.
+
+### Executable verification
+
+- Fourteen added Unit cases cover the route helper and evidence projection:
+  protocol priority, identity, null/zero/false, percentages, independent timing,
+  header normalization, nested DNS, strict Web allowlist and history precision.
+- Five real Nuxt cases mock only the API boundary and cover activation, sample
+  slicing, empty/failure/ready states, explicit retry, view/Target cache reuse,
+  late-A/ready-B isolation and distinct Site identities.
+- Thirty new Functional Browser contracts use the shared deterministic fixture.
+  They verify five SSR views without history, keyboard/router navigation, gated
+  default-sample loading, exact request budgets, cache/race/error behavior, HTTP
+  disclosures, DNS groups/chains and Web security exclusion. 390/768/1440 ×
+  Light/Dark cover long evidence wrapping, waterfall, Canvas readiness/height and
+  history rows. No fixed sleeps, networkidle, retries or diagnostic exemptions.
+- P1's history test now activates Performance and checks non-Performance Target
+  switching. This intentionally replaces its earlier sample-click trigger with
+  P4's auto-lazy contract; P1–P3 runtime, SEO and failure coverage remains required.
+
+### Local and remote acceptance
+
+Windows / Node 24.15.0 / pnpm 12.6.0 passed frozen install, lint, stylelint,
+style-policy tooling (75), exact style policy, Unit (128), Nuxt (11), combined
+Vitest (139), typecheck, Insights semantics, SEO recovery and production build.
+Chromium installation succeeded. After the final P4 UI changes, the focused
+P4 run passed 30 contracts plus ten temporary review captures. The capture test
+was removed before complete acceptance; it is not a runner or Visual baseline.
+The first full Functional run passed 480/481 in 14.0 minutes and exposed an
+existing Game Detail locale-transition race: two successful Info requests for
+the same identity. The unchanged test passed alone; holding that Info response
+then reproduced the duplicate deterministically. A separate minimal repair makes
+concurrent consumers defer to the same pending request. Its existing Browser
+contract now holds that response and still requires exactly one request; no
+assertion, diagnostic or retry policy was weakened. After rebuilding, all nine
+Game content cases and 139 Vitest cases passed. The final full
+`pnpm run test:browser --workers=1` passed **481 cases in 14.6 minutes**, with no
+failures, skips or retries. P1–P4, Entity, SEO and failure boundaries all passed
+against this final production build.
+
+All accepted Visual files and 118 PNGs remain unchanged; Visual inventory stays
+119 tests. No final P8 golden was generated. Remote CI and pinned Linux Visual
+comparison are unverified; earlier CI runs do not count as this change's acceptance.
+
+### Required maintainer review before P5
+
+Review Observation Overview, desktop/mobile Performance, desktop HTTP/DNS/Web
+and representative Dark views. Confirm secondary navigation hierarchy, automatic
+default loading, timing interpretation, chart height, evidence/disclosure density,
+resolution-chain readability, mobile flow and theme consistency. Local screenshots
+support review but are not maintainer approval. P4 exit criterion 38 remains
+pending until that review; do not enter P5 automatically.

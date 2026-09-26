@@ -7,7 +7,8 @@ the commands below run from `apps/cn/nav-web`.
 P7.2 established **406 Functional Browser /119 Visual /118 PNG**; #109 P1 adds
 17 independent Site Detail cases for 423 Functional Browser; #109 P2 adds 12
 shell/context cases for 435 Functional Browser. #109 P3 adds 16 Overview cases
-for **451 Functional Browser /119 Visual /118 PNG**. The
+for 451 Functional Browser. #109 P4 adds 30 Observation cases for
+**481 Functional Browser /119 Visual /118 PNG**. The
 phase-labelled sections preserve earlier acceptance matrices/counts; use
 [Full verification](#full-verification) for current commands and the
 [closure record](../acceptance/issue-124-frontend-engineering-closure.md) for
@@ -116,6 +117,28 @@ projection, registry categories, meaningful Target fallback, reason deduplicatio
 all backend capability states versus frontend missing, locale and time precision.
 Shared Nitro/upstream infrastructure and strict diagnostics remain unchanged.
 The phase ledger distinguishes actual local passes from CI and manual acceptance.
+
+## Site Detail #109 P4
+
+`site-observation.spec.ts` covers five SSR views without history, router/reload/
+keyboard navigation, default sample auto-loading, explicit history states and
+retry, local sample slicing, view/Target cache reuse and deterministic late-A/
+ready-B isolation. Exact ledgers require only Detail on non-Performance switches,
+Detail + uncached Target history in Performance, and no repeated Insights/View.
+HTTP header disclosure, conditional redirect/CNAME, DNS groups and record details,
+Web's probe allowlist and security exclusion run at 390/768/1440 Light/Dark.
+Canvas readiness and height, table wrapping, zero values, independent Total and
+percentage units are asserted. Generic browser diagnostics and zero retries stay.
+
+P1's history case now enters Performance to auto-load, then proves non-Performance
+Target switching does not refetch it. This intentionally supersedes P1's earlier
+sample-click trigger while retaining all other request/failure/SEO assertions.
+`site-observation-presentation.test.ts` owns nullable facts, identity, headers,
+timings, collector percentage units, DNS trees, Web exclusion and history precision.
+`site-observation-history.nuxt.test.ts` mounts the real composable, mocking only
+the API boundary, and covers activation, cache, states, retry and captured identity.
+Style-budget updates may only remove audited Observation entries; the phase ledger
+records the actual delta and current local/remote/manual acceptance separately.
 
 ## Migrated regression knowledge
 

@@ -197,6 +197,112 @@ html.dark .site-detail-page {
   line-height: 1.4;
 }
 
+.site-observation {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.site-observation-nav {
+  border-bottom: 1px solid var(--site-detail-border);
+}
+
+.site-observation-tab,
+.site-observation-sample {
+  border-bottom: 2px solid transparent;
+  padding: 0.6rem 0.85rem;
+  color: var(--gf-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.site-observation-tab[aria-selected="true"],
+.site-observation-sample[aria-pressed="true"] {
+  border-bottom-color: var(--gf-text-main);
+  color: var(--gf-text-main);
+  font-weight: 650;
+}
+
+.site-observation-tab:hover,
+.site-observation-sample:hover {
+  background: var(--site-detail-surface);
+}
+
+.site-observation-tab:focus-visible,
+.site-observation-sample:focus-visible,
+.site-observation-disclosure > summary:focus-visible,
+.site-observation-panel:focus-visible {
+  outline: 2px solid var(--gf-text-main);
+  outline-offset: -2px;
+}
+
+.site-observation-facts > div,
+.site-observation-record {
+  border-bottom: 1px solid var(--site-detail-border);
+  padding: 0.55rem 0;
+}
+
+.site-observation-protocols > div {
+  border-bottom: 1px solid var(--site-detail-border);
+  padding: 0.85rem 0;
+}
+
+.site-observation-disclosure > summary {
+  padding: 0.35rem 0;
+  color: var(--gf-text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.site-observation-probe {
+  border-top: 1px solid var(--site-detail-border);
+  padding-top: 1rem;
+}
+
+.site-observation-chain {
+  color: var(--gf-text-main);
+  font-size: 0.8rem;
+}
+
+.site-observation-empty {
+  padding: 1.25rem 0;
+  color: var(--gf-text-muted);
+}
+
+.site-observation-timing-track {
+  height: 0.65rem;
+  border-radius: var(--gf-radius-sm);
+  background: var(--site-detail-surface);
+}
+
+.site-observation-timing-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--site-detail-positive);
+}
+
+.site-observation-timing-bar[data-total="true"] {
+  background: var(--gf-text-muted);
+}
+
+.site-observation-chart {
+  height: 15rem;
+}
+
+.site-observation-history-table {
+  font-size: 0.75rem;
+}
+
+.site-observation-history-table th,
+.site-observation-history-table td {
+  border-bottom: 1px solid var(--site-detail-border);
+  padding: 0.5rem 0.3rem;
+}
+
+.site-observation-history-table th {
+  color: var(--gf-text-muted);
+  font-weight: 550;
+}
+
 .site-overview {
   color: var(--gf-text-main);
 }

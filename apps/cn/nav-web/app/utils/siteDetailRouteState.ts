@@ -5,6 +5,7 @@ export const siteObservationViews = ['overview', 'performance', 'http', 'dns', '
 export const siteSecurityViews = ['overview', 'tls', 'web', 'exposure'] as const
 export const siteInsightRanges = ['30d', '90d', 'all'] as const
 export type SiteDetailTab = typeof siteDetailTabs[number]
+export type SiteObservationView = typeof siteObservationViews[number]
 type SiteDetailQuery = Readonly<Record<string, unknown>>
 type DomainState = { domain: string }
 export type SiteDetailRouteState = DomainState & (
@@ -61,4 +62,8 @@ export function selectSiteDetailTarget(state: SiteDetailRouteState, domain: stri
 export function selectSiteDetailTab(state: SiteDetailRouteState, tab: SiteDetailTab): SiteDetailRouteState {
   // Even a shared view name (e.g. web) belongs to its workspace, not the next tab.
   return parseSiteDetailRouteState(state.tab === tab ? state : { domain: state.domain, tab })
+}
+
+export function selectSiteObservationView(state: SiteDetailRouteState, view: SiteObservationView): SiteDetailRouteState {
+  return parseSiteDetailRouteState({ domain: state.domain, tab: 'observation', view })
 }
