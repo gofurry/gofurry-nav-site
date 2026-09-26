@@ -46,7 +46,7 @@ export function insightChangeOrder(change: InsightChange) {
   return Number.isFinite(timestamp) ? timestamp : 0
 }
 
-export function formatInsightChangeWhen(change: InsightChange, locale: string) {
+export function formatInsightChangeWhen(change: InsightChange, locale: string, timeZone?: string) {
   if (!change.occurred_at) {
     return change.date
   }
@@ -59,5 +59,6 @@ export function formatInsightChangeWhen(change: InsightChange, locale: string) {
   return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'zh-CN', {
     dateStyle: 'medium',
     timeStyle: 'short',
+    ...(timeZone ? { timeZone } : {}),
   }).format(value)
 }

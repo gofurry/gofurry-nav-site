@@ -124,9 +124,9 @@ Escape/outside dismissal and focus return.
 
 Pending Target requests preserve Hero, tabs and shell, retaining the explicitly
 labelled last resolved Target evidence until the next result is ready. A late
-response MUST NOT overwrite a newer Target. Site Insights stays mounted once and
-Site-owned across tab/Target changes; the existing preview appears in Overview
-and Insights. Observation and Security use thin transitional content adapters;
+response MUST NOT overwrite a newer Target. Site Insights fetching stays Site-owned
+across tab/Target changes. P2 initially showed the preview in Overview and Insights;
+P3 replaces Overview and confines that legacy panel to Insights. Observation and Security use thin transitional content adapters;
 their final workspaces and secondary navigation remain P4/P5 scope.
 
 `app/assets/styles/pages/site-detail.less` owns new appearance under the exact
@@ -140,6 +140,51 @@ Functional passes are not that approval or remote CI acceptance.
 
 The internal `insights` tab value is unchanged; public copy follows the accepted
 “生态观测 / Ecosystem” naming contract rather than reviving retired product names.
+
+## Site Overview workspace (#109 P3)
+
+`SiteOverviewWorkspace` replaces the Overview protocol checks and legacy preview
+with Site Health, conditional Attention, a full seven-capability snapshot and at
+most four recent changes. Current Target evidence remains in the Health Strip,
+Target Context and Observation/Security. The outer P2 shell is unchanged; the
+Overview's capability/change columns use 3:2 at desktop and stack below `xl`.
+
+`siteOverviewPresentation.ts` is the pure Site-only presentation owner. Health
+uses `site_summary`, never Target summary or latest protocols. The first resolved
+Site/language summary is retained for the hydrated page session; Target detail
+refreshes cannot replace it. Reload or a different Site/language adopts a new
+snapshot. Summary `state` (ready/stale/missing) and health `status` are independent;
+stale healthy remains visibly stale and missing is not backend unknown. Show
+nonzero distribution counts and `generated_at`, never Target observed time.
+
+Attention is absent for a healthy, fresh, reason-free Site. Human reason messages
+take priority over raw codes. Affected Target fallback preserves uncovered
+problems, deduplicates already-explained reasons, and excludes healthy or unknown
+Targets without meaningful evidence. It does not repeat Current Target cards.
+
+Capability rows come from the P1 registry, including grouping: Network owns IPv6
+and HTTP/2, Transport owns TLS 1.3 and certificate verification, Web policy owns
+HSTS, CSP and security.txt. P3 corrected HTTP/2's earlier Transport assignment.
+All seven rows remain present for success-empty. Backend states are preserved;
+frontend `missing` means a successful response lacks that fact. Unsupported is
+neutral, not a health failure. No ecosystem percentage or coverage appears here.
+
+Changes use the shared detector labels/order/precision helpers, a four-item cap
+and an explicit UTC zone for exact times so SSR and hydration agree. Day-only
+events remain dates. The full Ecosystem link uses the P1 route builder and keeps
+Target context. Public copy retains the accepted Ecosystem naming.
+
+Site Insights remains fetched once by Site ID, regardless of which tab mounts.
+Overview introduces no fetch, retry UI, metric/range control or history/trend
+request. Detail failures remain authoritative; Insights failure makes only
+capabilities/changes unavailable, distinct from successful empty facts/changes.
+View failure remains harmless. `site-overview.spec.ts` owns the additional runtime
+contract and `site-overview-presentation.test.ts` owns the pure projection.
+
+Appearance extends `site-detail.less` with existing tokens and no new debt. P4–P6,
+#108 and final P8 Visual goldens remain out of scope. P3 needs maintainer review
+of 1440/390 Light/Dark and preferably 768 Light before P4; local Functional passes
+and review screenshots do not constitute that approval or remote CI acceptance.
 
 ## Styling ownership
 

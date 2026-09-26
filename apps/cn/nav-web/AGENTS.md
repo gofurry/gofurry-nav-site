@@ -72,6 +72,14 @@ responsive/keyboard/pending/race behavior. Only P2's replaced Hero/popover/root
 debt may decrease; remaining panels keep their later-phase owners. P2 requires
 maintainer visual review before P3 and does not create a Visual golden.
 
+P3 Overview consumes `siteOverviewPresentation.ts`, a pure Site-only projection.
+Keep the first Site/language summary for the page session, use all seven registry
+capabilities, and preserve empty/unavailable plus day/exact precision. The legacy
+Insights panel now belongs only to its tab; Overview owns no fetch or Target
+protocol checks. `site-overview.spec.ts` owns this contract using the shared
+fixture. P3 adds no appearance debt or Visual golden and requires maintainer
+visual acceptance before P4.
+
 [frontend-style-debt.json](frontend-style-debt.json) is measured state, never an
 example or permission. Remaining style debt belongs to Site Detail #109, Insights
 #108 and intentionally preserved ambient effects. No opportunistic migration of

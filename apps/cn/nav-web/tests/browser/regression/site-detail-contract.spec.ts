@@ -8,10 +8,10 @@ for (const prefix of ['', '/en']) for (const query of ['', '?domain=target.examp
     expect(response.status()).toBe(200)
     const html = await response.text()
     expect(html).toContain('data-site-detail')
-    expect(html).toContain('data-site-insights-state="ready"')
-    expect(html).toContain('data-capability-state="unknown"')
-    expect(html).toContain('data-capability-state="unavailable"')
-    expect(html).toContain('data-capability-state="unsupported"')
+    expect(html).toContain('data-site-capabilities-state="ready"')
+    expect(html).toContain('data-site-capability-state="unknown"')
+    expect(html).toContain('data-site-capability-state="unavailable"')
+    expect(html).toContain('data-site-capability-state="unsupported"')
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(initialPaths.slice(0, 2))
     const detail = runtime.calls.find(call => call.url.pathname.endsWith('/detail'))!
     expect(detail.url.searchParams.get('lang')).toBe(prefix ? 'en' : 'zh')
@@ -30,7 +30,13 @@ for (const query of ['', '?tab=observation&view=dns', '?tab=security&view=tls', 
     await (await view).finished()
     await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'target.example')
     await expect(page.getByText('HTTP 200', { exact: true }).first()).toBeVisible()
+    const startsInInsights = query.includes('tab=insights')
+    if (!startsInInsights) await page.locator('[data-site-primary-tab="insights"]').click()
     const insightsBefore = await page.locator('[data-site-insights]').textContent()
+    if (!startsInInsights) {
+      await page.goBack()
+      await expect(page).toHaveURL('/site/41' + query)
+    }
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(initialPaths)
 
     await page.locator('[data-site-target-trigger]').click()
@@ -49,6 +55,7 @@ for (const query of ['', '?tab=observation&view=dns', '?tab=security&view=tls', 
     const expected = new URLSearchParams(query)
     expected.set('domain', 'alt.example')
     expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual(Object.fromEntries(expected))
+    if (!startsInInsights) await page.locator('[data-site-primary-tab="insights"]').click()
     await expect(page.locator('[data-site-insights]')).toHaveText(insightsBefore!)
     await assertRuntimeSurface(page, '[data-site-detail]', 'light')
     expect(runtime.calls.slice(3).map(call => [call.url.pathname, call.url.searchParams.get('target')])).toEqual([
@@ -72,7 +79,8 @@ test('invalid UI query falls back without becoming a business target or issuing 
     const html = await response.text()
     expect(html).toContain('data-site-target="alt.example"')
     expect(html).toContain(`data-site-tab="${tab}"`)
-    expect(html).toContain('data-site-insights-state="ready"')
+    if (tab === 'overview') expect(html).toContain('data-site-capabilities-state="ready"')
+    if (tab === 'insights') expect(html).toContain('data-site-insights-state="ready"')
     expect(runtime.calls.slice(start).map(call => call.url.pathname).sort()).toEqual(initialPaths.slice(0, 2))
     const detail = runtime.calls.slice(start).find(call => call.url.pathname.endsWith('/detail'))!
     expect([...detail.url.searchParams.keys()].sort()).toEqual(['lang', 'payload_mode', 'target'])
@@ -99,7 +107,7 @@ for (const scenario of ['empty', 'unavailable', 'view-failure'] as const) {
     runtime.state.siteInsightsFailure = scenario === 'unavailable'
     runtime.state.viewFailure = scenario === 'view-failure'
     const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
-    const html = await openRuntime(page, '/site/41?domain=alt.example')
+    const html = await openRuntime(page, '/site/41?domain=alt.example&tab=insights')
     const state = scenario === 'view-failure' ? 'ready' : scenario
     expect(html).toContain(`data-site-insights-state="${state}"`)
     expect((await view).status()).toBe(scenario === 'view-failure' ? 503 : 200)

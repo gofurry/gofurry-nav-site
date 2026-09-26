@@ -7,7 +7,7 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const)
     await context.addInitScript(theme => localStorage.setItem('theme', theme), theme)
     const view = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v2/nav/sites/41/view'
       && res.request().method() === 'POST' && res.status() === 200)
-    const html = await openRuntime(page, '/site/41')
+    const html = await openRuntime(page, '/site/41?tab=insights')
     expect(html).toContain('data-site-insights')
     await expect(page.locator('[data-site-insights]')).toBeVisible()
     await expect(page.locator('[data-entity-timeline]')).toBeVisible()
@@ -23,10 +23,10 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const)
 }
 
 for (const prefix of ['', '/en']) test('Entity SSR keeps Site-level Insights separate from target observations ' + (prefix || 'zh'), async ({ request, runtime }) => {
-  const entity = await request.get(prefix + '/site/41')
+  const entity = await request.get(prefix + '/site/41?tab=insights')
   expect(entity.status()).toBe(200); expect(await entity.text()).toContain('data-site-insights')
   const before = runtime.count('/sites/41/insights')
-  const target = await request.get(prefix + '/site/41?domain=target.example')
+  const target = await request.get(prefix + '/site/41?domain=target.example&tab=insights')
   expect(target.status()).toBe(200); expect(await target.text()).toContain('data-site-insights')
   expect(runtime.count('/sites/41/insights')).toBe(before + 1)
   const game = await request.get(prefix + '/games/82'), html = await game.text()
@@ -46,6 +46,8 @@ for (const id of [41, 42, 82, 83]) test('Overview real change link preserves ind
   await expect(page.locator(site ? '.site-detail-page' : '.game-detail-page')).toBeVisible()
   await (await view).finished()
   if (site) {
+    await expect(page.locator('[data-site-overview]')).toBeVisible()
+    await page.locator('[data-site-primary-tab="insights"]').click()
     if (id === 42) await expect(page.locator('[data-site-insights-unavailable]')).toBeVisible()
     else {
       await expect(page.locator('[data-site-insights]')).toBeVisible()

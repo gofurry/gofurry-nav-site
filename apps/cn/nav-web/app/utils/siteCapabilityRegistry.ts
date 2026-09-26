@@ -14,7 +14,7 @@ interface SiteCapabilityPresentation {
 export const siteCapabilityRegistry = [
   { key: 'ipv6', category: 'network', order: 0, labelKey: 'insights.metrics.ipv6.name', preview: true },
   { key: 'tls13', category: 'transport', order: 1, labelKey: 'insights.metrics.tls13.name', preview: true },
-  { key: 'http2', category: 'transport', order: 2, labelKey: 'insights.metrics.http2.name', preview: false },
+  { key: 'http2', category: 'network', order: 2, labelKey: 'insights.metrics.http2.name', preview: false },
   { key: 'hsts', category: 'web_policy', order: 3, labelKey: 'insights.metrics.hsts.name', preview: false },
   { key: 'csp', category: 'web_policy', order: 4, labelKey: 'insights.metrics.csp.name', preview: false },
   { key: 'security_txt', category: 'web_policy', order: 5, labelKey: 'insights.metrics.security_txt.name', preview: true },

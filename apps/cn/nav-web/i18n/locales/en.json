@@ -1,4 +1,32 @@
 {
+  "siteOverview": {
+    "health": "Site health",
+    "scope": "Site-wide",
+    "updated": "Updated",
+    "summaryMissing": "No complete site health summary",
+    "summaryStale": "Summary may be stale",
+    "noTargets": "No collected targets",
+    "countUnavailable": "Target count unavailable",
+    "healthyTargets": "{healthy} / {total} targets healthy",
+    "targetCount": "{count} targets",
+    "attention": "Attention",
+    "missingAttention": "Site-wide health cannot be assessed yet.",
+    "staleAttention": "The site summary may no longer reflect the latest conditions.",
+    "statusAttention": "Site-wide status needs attention: {status}.",
+    "reasonCode": "Reported signal: {code}",
+    "capabilities": "Capability snapshot",
+    "categories": {
+      "network": "Network",
+      "transport": "Transport",
+      "web_policy": "Web policy"
+    },
+    "capabilityMissing": "No fact available",
+    "unavailable": "Site ecosystem data is temporarily unavailable.",
+    "changes": "Recent changes",
+    "changesEmpty": "No recent changes",
+    "fullEcosystem": "View full site ecosystem",
+    "utc": "UTC"
+  },
   "siteDetail": {
     "tabs": {
       "overview": "Overview",

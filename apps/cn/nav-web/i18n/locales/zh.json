@@ -1,4 +1,32 @@
 {
+  "siteOverview": {
+    "health": "站点健康",
+    "scope": "整个站点",
+    "updated": "更新于",
+    "summaryMissing": "暂无完整站点级健康摘要",
+    "summaryStale": "摘要可能已过期",
+    "noTargets": "尚无采集目标",
+    "countUnavailable": "目标总数暂不可用",
+    "healthyTargets": "{healthy} / {total} 个目标健康",
+    "targetCount": "{count} 个目标",
+    "attention": "需要关注",
+    "missingAttention": "目前还无法判断整个站点的健康状况。",
+    "staleAttention": "站点摘要可能已无法反映最新状况。",
+    "statusAttention": "站点整体状态需要关注：{status}。",
+    "reasonCode": "已报告信号：{code}",
+    "capabilities": "能力摘要",
+    "categories": {
+      "network": "网络",
+      "transport": "传输安全",
+      "web_policy": "Web 策略"
+    },
+    "capabilityMissing": "暂无事实",
+    "unavailable": "站点生态观测数据暂时不可用。",
+    "changes": "近期变化",
+    "changesEmpty": "暂无近期变化记录",
+    "fullEcosystem": "查看完整站点生态观测",
+    "utc": "UTC"
+  },
   "siteDetail": {
     "tabs": {
       "overview": "概览",

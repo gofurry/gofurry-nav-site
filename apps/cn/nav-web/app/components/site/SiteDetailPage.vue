@@ -17,6 +17,7 @@
           :data="sitePageData" :site-id="siteId" :active="routeState.tab"
           :presentation="targetPresentation" :insights="siteInsightsSnapshot.insights"
           :insights-unavailable="siteInsightsSnapshot.unavailable" :pending="pending"
+          :overview="overviewPresentation" :insights-to="insightsTo"
         />
       </div>
     </main>
@@ -37,6 +38,7 @@ import { buildSiteDetailSeo } from '~/utils/seo'
 import { authoritativePageStatus } from '~/utils/authoritativePageError'
 import { buildSiteDetailQuery, selectSiteDetailTab, selectSiteDetailTarget, type SiteDetailTab } from '~/utils/siteDetailRouteState'
 import { presentSiteTarget } from '~/utils/siteTargetPresentation'
+import { presentSiteOverview } from '~/utils/siteOverviewPresentation'
 
 interface SiteInsightsSnapshot {
   insights: SiteInsights | null
@@ -61,6 +63,17 @@ const insightsRequest = useAsyncData<SiteInsightsSnapshot>(
 const [detailState, insightsState] = await Promise.all([detailRequest, insightsRequest])
 const { data, pending, error, siteId, routeState } = detailState
 const siteInsightsSnapshot = computed(() => insightsState.data.value)
+// Overview keeps the first authoritative Site/language snapshot for this page
+// session. A Target detail refresh cannot replace it; reload starts a new one.
+const siteSnapshot = shallowRef({ identity: data.value.siteIdentity, summary: data.value.siteHealthSummary })
+watch(data, value => {
+  if (value?.siteInfo && value.siteIdentity !== siteSnapshot.value.identity) {
+    siteSnapshot.value = { identity: value.siteIdentity, summary: value.siteHealthSummary }
+  }
+})
+const overviewPresentation = computed(() => presentSiteOverview(siteSnapshot.value.summary, siteInsightsSnapshot.value.insights,
+  siteInsightsSnapshot.value.unavailable, (key, values = {}) => t(key, values), locale.value))
+const insightsTo = computed(() => tabLocation('insights'))
 const navV2Api = useApi('navV2')
 // The reactive async key owns cancellation/stale-result isolation. Preserve the
 // last resolved presentation while the next key is pending, without relabeling it.
@@ -83,7 +96,10 @@ watch(error, failure => {
   }))
 })
 function changeTab(tab: SiteDetailTab) {
-  void router.push({ query: buildSiteDetailQuery(selectSiteDetailTab(routeState.value, tab)) })
+  void router.push(tabLocation(tab))
+}
+function tabLocation(tab: SiteDetailTab) {
+  return { path: route.path, query: buildSiteDetailQuery(selectSiteDetailTab(routeState.value, tab)) }
 }
 function changeTarget(target: string) {
   void router.push({ query: buildSiteDetailQuery(selectSiteDetailTarget(routeState.value, target)) })

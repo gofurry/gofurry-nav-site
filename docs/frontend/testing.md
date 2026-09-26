@@ -6,7 +6,8 @@ the commands below run from `apps/cn/nav-web`.
 
 P7.2 established **406 Functional Browser /119 Visual /118 PNG**; #109 P1 adds
 17 independent Site Detail cases for 423 Functional Browser; #109 P2 adds 12
-shell/context cases for **435 Functional Browser /119 Visual /118 PNG**. The
+shell/context cases for 435 Functional Browser. #109 P3 adds 16 Overview cases
+for **451 Functional Browser /119 Visual /118 PNG**. The
 phase-labelled sections preserve earlier acceptance matrices/counts; use
 [Full verification](#full-verification) for current commands and the
 [closure record](../acceptance/issue-124-frontend-engineering-closure.md) for
@@ -97,6 +98,24 @@ confidence. Style-policy tests enforce the exact P2 token declaration locations.
 P2's style-budget decrease is restricted to removed Hero/popover/root appearance;
 the ledger records actual verification and required manual visual review. Existing
 Visual specs/PNGs remain unchanged, and no P8 golden is created.
+
+## Site Detail #109 P3
+
+`site-overview.spec.ts` owns Site Health/Attention, seven capability states,
+success-empty versus unavailable, four-change ordering and precise/day-only
+timestamps. Six 390/768/1440 Light/Dark cases assert overflow and inner 3:2/stacked
+geometry. A held Target request verifies the retained Site snapshot even when the
+next Detail response changes its Site aggregate, then checks tab remount/history,
+full Ecosystem navigation, reload adoption and exact request accounting. A browser
+in a different time zone verifies deterministic hydration of precise timestamps.
+
+P1 and `insights-entity` retain their prior capability/error assertions on the
+Insights tab; SSR Overview now asserts the new snapshot. No hidden legacy preview
+is retained to satisfy tests. `site-overview-presentation.test.ts` covers the pure
+projection, registry categories, meaningful Target fallback, reason deduplication,
+all backend capability states versus frontend missing, locale and time precision.
+Shared Nitro/upstream infrastructure and strict diagnostics remain unchanged.
+The phase ledger distinguishes actual local passes from CI and manual acceptance.
 
 ## Migrated regression knowledge
 

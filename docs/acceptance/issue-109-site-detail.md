@@ -162,3 +162,84 @@ Local fixture screenshots support this review; they are not a final golden or
 maintainer approval. Also confirm a real multi-Target Site's Visit URL and Target
 switch behavior. P2 exit criterion 30 remains pending until the maintainer accepts
 the visual direction. Do not enter P3 before that acceptance.
+
+## P3: Site Overview workspace
+
+Scope: [P3 Overview contract](../../contracts/nav-web-frontend.md#site-overview-workspace-109-p3).
+The maintainer explicitly requested P3 on current `dev`; the historical P2 review
+record above is preserved rather than retrospectively marked approved. P4–P8,
+#108, backend/API/schema changes and dependency changes remain outside this work.
+
+### Implementation and ownership
+
+- Replaced Overview's Target protocol checks and old Insights preview with Site
+  Health, conditional Attention, seven capability rows and up to four changes.
+  The old panel now renders only on the Insights tab; its fetch remains Site-owned.
+- Added a pure `siteOverviewPresentation.ts` projection and four small components.
+  Site Health reads only the first Site/language summary of the page session.
+  Target changes retain that snapshot; reload adopts the next summary. State and
+  status remain separate, zero counts are omitted, and Site generated time is UTC.
+- Attention prefers human messages, deduplicates described Target problems and
+  keeps meaningful uncovered fallback. A healthy fresh Site has no Attention block.
+- All capabilities use the registry; HTTP/2's earlier Transport category was
+  corrected to Network to match P3. Unsupported stays neutral; backend unknown,
+  missing successful facts and unavailable are separate. No ecosystem percentages
+  or coverage appear. Empty success still displays seven missing rows.
+- Changes reuse shared labels/order/time precision. Exact timestamps use explicit
+  UTC for SSR/client agreement; day-only events stay dates. Other callers retain
+  the shared formatter's existing default. The full Ecosystem link uses P1 route state.
+- The outer P2 shell stays intact. Overview uses a desktop 3:2 capability/change
+  layout and stacked tablet/mobile sections, extending `site-detail.less` with
+  existing tokens. Current Target evidence remains outside Overview.
+
+### Executable verification
+
+- Twenty-six new pure unit cases cover health states, missing versus unknown,
+  reason priority/deduplication/fallback, all capability states, seven-item grouping,
+  unavailable/empty, four-item order, exact/day precision and Chinese copy.
+- Sixteen `site-overview.spec.ts` cases use the existing deterministic runtime.
+  They cover 390/768/1440 Light/Dark geometry/overflow, SSR markup, Attention and
+  capability/changes states. A held Target request returns a changed Site summary:
+  the Overview remains unchanged, while Current Target changes. Tab remount,
+  history and full Ecosystem navigation add no requests; reload adopts the summary.
+  A different browser time zone exercises precise timestamp hydration.
+- P1 and `insights-entity` assertions were migrated to the appropriate Overview or
+  Insights surface without weakening capability/timeline/error/request checks.
+  P2 tests, strict diagnostics and zero retries remain unchanged.
+
+### Style and Visual boundaries
+
+The style debt baseline is byte-for-byte unchanged: Tailwind appearance 572,
+arbitrary appearance 5, raw visual values 412, important 5, deep selectors 25,
+legacy dark entries 0. No updater or suppression pruning ran. The still-active
+legacy panel's debt remains for P6; it was not moved, hidden or re-budgeted.
+
+Protected file hashes, all 118 accepted PNGs and the 119-test Visual inventory
+remain unchanged. Five local manual-review screenshots cover 1440 Light/Dark,
+390 Light/Dark and 768 Light using the existing fixture. Their temporary capture
+test was removed; no runner, Visual spec or final P8 golden was introduced.
+
+### Local and remote acceptance
+
+Local Windows / Node 24.15.0 / pnpm 12.6.0 passed frozen installation, lint,
+stylelint, style-policy tooling (75), exact style policy, Unit (114), Nuxt (6),
+combined Vitest (120), typecheck, Insights semantics, SEO recovery guard and
+production build. Chromium installation succeeded. The final focused Overview
+run passed 16 contracts plus five temporary manual captures. A precise timestamp
+spacing issue found in the first focused run was fixed and verified on the rebuilt
+production output; it is not counted as a passing initial run.
+
+The complete current `pnpm run test:browser --workers=1` run passed **451 cases in
+14.3 minutes**, with no failures, skips or retries. P1/P2, Entity, SEO and P3
+contracts all passed against the final production build. Remote CI and pinned
+Linux Visual comparison remain unverified; no push was requested, and earlier
+CI runs are not acceptance. Technical exit criteria are locally verified; the
+manual criterion below remains outstanding.
+
+### Required maintainer review before P4
+
+Confirm Site-wide versus Current Target clarity, Health hierarchy/height,
+conditional Attention prominence, seven-capability density, four-change density,
+desktop 60/40 balance, mobile flow and Light/Dark consistency. Review screenshots
+support this decision but do not constitute maintainer approval. P3 exit criterion
+29 remains pending until the maintainer accepts the Overview; do not enter P4.

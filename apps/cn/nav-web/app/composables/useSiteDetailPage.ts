@@ -5,6 +5,7 @@ import { authoritativePageStatus } from '~/utils/authoritativePageError'
 import { parseSiteDetailRouteState } from '~/utils/siteDetailRouteState'
 
 export interface SiteDetailPageData {
+  siteIdentity: string
   siteInfo: SiteInfo | null
   domain: string
   sitePingRecord: PingRecord | null
@@ -35,9 +36,11 @@ export async function useSiteDetailPage() {
 
       // Capture this request's identity; a later route must not relabel its result.
       const requestedTarget = selectedDomain.value
-      const detail = await navV2Api<SiteV2DetailResponse>(`/nav/sites/${siteId.value}/detail`, {
+      const requestedSiteId = siteId.value
+      const requestedLang = lang.value
+      const detail = await navV2Api<SiteV2DetailResponse>(`/nav/sites/${requestedSiteId}/detail`, {
         query: {
-          lang: lang.value,
+          lang: requestedLang,
           target: requestedTarget || undefined,
           payload_mode: 'preview',
         },
@@ -45,6 +48,7 @@ export async function useSiteDetailPage() {
       const resolvedDomain = detail.selected_target || requestedTarget
 
       return {
+        siteIdentity: `${requestedSiteId}:${requestedLang}`,
         siteInfo: toSiteInfo(detail.site),
         domain: resolvedDomain,
         sitePingRecord: null,
@@ -58,6 +62,7 @@ export async function useSiteDetailPage() {
     },
     {
       default: () => ({
+        siteIdentity: '',
         siteInfo: null,
         domain: '',
         sitePingRecord: null,
