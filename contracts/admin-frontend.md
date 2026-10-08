@@ -183,11 +183,19 @@ classification. The returned workspace includes the role union and resets the fo
 `/game/collections`, `/game/collections/new`, `/game/collections/:id` and
 `/game/collections/home-curation` are native content workspaces, separate from
 the singular `/collection` Collector Control Plane. Use backend `content.read/write`
-and `audit.read`; no new capability. Existing Code is read-only. Members are an
-unordered complete set selected through the existing games RemoteSelect, with
-code-based Adult badges for inspection only. No upload, NSFW setting or item order.
+and `audit.read`; no new capability. Existing Code is read-only. Members are configured as
+a hybrid Composition through existing Tag/Game RemoteSelect owners.
+GET/PUT `/:id/composition` owns full Tag rules, manual pins and exclusions; never
+copy effective members into the manual payload or call the legacy members API
+from this Workspace. Paused rules remain visible and removable, but cannot be
+newly selected. Show automatic/manual/both sources and Backend counts. Pin removes
+an exclusion; exclude removes a pin; unpin preserves any known automatic match.
+Draft preview overlays explicit overrides on known matches only. Tag changes and
+restored exclusions need Backend confirmation after saving; label pending state
+and keep saved counts clearly distinct. Adult badges are inspection only.
+No upload, NSFW setting, item order, sync scheduling/status/action or cache prose.
 
-Content and membership share a baseVersion. Own successful writes advance it while
+Content and Composition share a baseVersion. Own successful writes advance it while
 preserving other local edits; background updates cannot overwrite dirty drafts or
 silently rebase them. HTTP 409 retains the draft, presents an Alert and requires
 explicit reload. All lifecycle writes require ConfirmAction and are disabled while
@@ -196,7 +204,10 @@ content, members and Home drafts with useUnsavedChanges. Home sends all five slo
 and its original placement revision; the fixed sixth entry is never in the payload.
 Home pickers request published + home_eligible=true and exclude duplicate selections.
 Keep all search owners IME-safe. Membership search/pagination are local (20 per page);
-retain the complete draft and always submit the full canonical member ID set.
+retain the complete draft and always submit all three canonical ID sets. More than
+100 members is an informational hint, never a truncation or save limit. Games,
+Tags and local member search remain independent. Existing ineligible Home slots
+are visibly marked and kept in their original positions until explicitly changed.
 Keep reload in header actions; clean reload is immediate, dirty discard requires
 confirmation and reloads both drafts plus the server version. Conflicts never
 auto-reload. Success toasts say only “已保存”; Home removal is reflected by home_slot.

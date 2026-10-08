@@ -95,7 +95,7 @@ Public Home/Index/Detail、q/phase/count sort、预览与 Admin 数量/首页资
 Collection 配置与派生成员分离：独立 Tag 变更不改变 Collection version/status/published_at/Audit/Home placement。
 因此 version 只保护运营配置，不冻结 Effective。Tag Domain 与 Collection Domain 保持各自事务锁，不建立全局锁、定时同步或物化成员副本。
 
-本阶段仅提供 DB 与 Backend；#144-B 的混合成员 Admin Workspace 尚未实施。现有 React 成员编辑仍通过兼容接口只管理 Manual，不显示或写回 Auto。
+#144-A 提供 DB 与 Backend；#144-B 已接入现有 Admin Workspace，使用 Composition 管理完整规则与覆盖，旧 Members 接口仅保留兼容，不由新 UI 调用。
 
 ## Public API
 
@@ -266,14 +266,17 @@ PUT 三个数组必须显式提供（允许空，不允许 null/缺失），正�
 
 路由：`/game/collections`、`/new`、`/:id`、`/home-curation`（后三者均在相同前缀下）。
 列表搜索使用 IME-safe helper 并将 keyword/status/page_num 保存在 URL。Desktop 搜索、固定宽度状态筛选与列菜单处于同一工具行；窄屏可换行。
-单页 Workspace 只保留基本内容与收录游戏；成员只做添加/移除，不提供顺序编辑或 Timeline Preview。
-成员完整加载并保留本地 draft；已收录游戏搜索按 name/name_en/appid 本地 IME-safe 匹配，每页 20 条，搜索回第 1 页，增删夹到合法页。远程“搜索并添加游戏”独立，跨页编辑最终仍 PUT 完整 canonical game_ids。
-Game options 与 Home eligibility 搜索复用 RemoteSelect，不消费 IME 确认键。
+单页 Workspace 保留基本内容与收录游戏，不提供顺序编辑或 Timeline Preview。
+收录游戏通过 GET/PUT `/:id/composition` 管理完整 `tag_ids/manual_game_ids/excluded_game_ids`。自动标签复用 `/api/v1/options/tags`；多个规则为 OR，已有失效规则保留标记并可解绑，新选项只来自有效 Tag/Category。
+有效成员显示自动/人工/自动+人工来源。固定保留同时撤销同 ID 排除；移除固定不影响已知自动命中；排除同时撤销人工固定；取消排除只移除该配置。任何操作都不把 effective_members 整批复制到 manual_members。
+数量以 Backend 的已保存 Composition 为准。草稿预览仅对已知自动匹配叠加本地固定/排除；变更标签及取消原有排除后的真实结果在保存成功后采用 Backend 响应，页面明确标注尚未保存，不推导未知标签命中。
+完整草稿保留在 Workspace；已收录与已排除列表各自按 name/name_en/appid 本地 IME-safe 搜索，每页 20 条，搜索回第 1 页，增删夹到合法页。超过 100 个成员只提示，不截断配置；跨页操作最终 PUT 完整 canonical 三数组。
+远程标签、远程“搜索并固定游戏”和本地成员搜索独立。Game/Tag/Home eligibility 搜索复用 RemoteSelect，不消费 IME 确认键。
 
-内容与成员草稿共享 baseVersion；本页保存成功可推进版本并保留另一份草稿，背景刷新不得覆盖脏草稿或提升其版本。
+内容与 Composition 三组配置草稿共享 baseVersion；本页保存成功可推进版本并保留另一份草稿，背景刷新不得覆盖脏草稿或提升其版本。
 409 保留草稿并要求显式重新加载。Header 的“重新加载”在干净状态直接取最新 workspace；dirty 时显示“放弃修改并重新加载”，确认后同时丢弃内容/成员草稿并采用新 version，取消则原样保留；成功 reload 清除 error/conflict。草稿通过 useUnsavedChanges 保护导航，生命周期操作在 dirty 时禁用且全部要求确认。
 只读用户可查看完整内容；归档后仅 Restore 可写。Audit 入口仅对 audit.read 显示，使用 resource 过滤而不假装支持 target_id。
-Home 草稿同样绑定原 revision，背景刷新不会覆盖它。
+Home 草稿同样绑定原 revision，背景刷新不会覆盖它。已配置但当前不 eligible 的 Slot 显示“已配置 · 当前不符合展示条件”，不自动删除；编辑其他位置时仍提交原位映射。已发布但 Effective 少于两个的 Workspace 提供诊断，纯文案仍可编辑，显式成员/发布校验以 Backend 为准。
 
 Stage B 没有新迁移，也不变更 Stage A cache：不 purge Redis、不新增内部失效接口或 Pub/Sub。
 所有 Collection 成功 Toast 只显示“已保存”。自动撤下首页以返回的 home_slot 状态为准，不重复解释缓存或刷新时限。Workspace 不设公开刷新说明；首页编排只保留选择资格提示。
@@ -283,3 +286,5 @@ Stage B 没有新迁移，也不变更 Stage A cache：不 purge Redis、不新�
 集成测试接入既有 postgres-integration gate，不对共享开发或生产库执行 Goose。
 
 #144-A 追加覆盖 OR/角色/去重、固定与排除、归档规则恢复、SFW 搜索/phase/count 隐私、被动 Home 保留与显式移除、Composition 409/no-op/Audit 回滚和旧 Members 兼容。3/30/100/300 成员的 Detail 与 Index 均维持 8 次 SQL，Home 1 次；诊断执行时间不设 CI 毫秒门槛。
+
+#144-B 验证覆盖 Composition 来源/覆盖、失效规则、独立远程 IME 搜索、100+ 成员完整保存、共享版本/409/Dirty、只读与归档、首页暂时失效提示；沿用 React 正式测试和既有 Go Composition contract。维护者仍需进行简短 Admin 人工创建、维护与发布验收，代码完成不自动关闭 #144。

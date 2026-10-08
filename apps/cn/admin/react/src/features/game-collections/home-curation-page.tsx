@@ -55,6 +55,7 @@ export function CollectionHomeEditor({ data, reload }: { data: CollectionHome; r
     {error && <Alert tone="danger">{error}{conflict && ' 编排草稿已保留，请重新加载。'}</Alert>}
     {current.slots.map(slot => <Section key={slot.slot} title={`#${slot.slot}`} actions={canWrite && <Button variant="ghost" disabled={busy || !slot.collection} onClick={() => select(slot.slot, null)}>清空第 {slot.slot} 位</Button>}>
       {slot.collection ? <Link className="text-primary" to={`/game/collections/${slot.collection.id}`}>{slot.collection.name}</Link> : <p className="text-sm text-muted-foreground">空位</p>}
+      {slot.collection && (slot.collection.status !== 'published' || slot.collection.sfw_member_count === 0) && <p className="mt-2 text-sm text-warning">已配置 · 当前不符合展示条件。位置保留，可更换或清空。</p>}
       {canWrite && <div className="mt-3"><RemoteSelect endpoint={eligibleCollectionEndpoint} loadOptions={loadEligibleCollections} value={slot.collection ? { id: String(slot.collection.id), label: slot.collection.name } : null} disabled={busy} debounceMs={300} placeholder={`选择或更换第 ${slot.slot} 位分区…`} excludeIDs={current.slots.filter(s => s.slot !== slot.slot && s.collection).map(s => String(s.collection!.id))} onChange={async option => {
         if (!option) { select(slot.slot, null); return }
         setLoading(true); setError('')

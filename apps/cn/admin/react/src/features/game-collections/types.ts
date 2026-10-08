@@ -7,6 +7,15 @@ export type GameCollection = CollectionContent & {
 }
 export type CollectionMember = { game_id: number; name: string; name_en: string; appid: number; adult: boolean }
 export type CollectionMembers = { collection_id: number; version: number; members: CollectionMember[] }
-export type CollectionWorkspace = { collection: GameCollection; members: CollectionMember[] }
+export type CollectionRuleTag = { tag_id: number; code: string; name: string; name_en: string; active: boolean }
+export type EffectiveCollectionMember = CollectionMember & { source: 'automatic' | 'manual' | 'both' }
+export type CollectionComposition = {
+  collection_id: number; version: number; home_slot: number | null
+  rule_tags: CollectionRuleTag[]; manual_members: CollectionMember[]; excluded_members: CollectionMember[]
+  effective_members: EffectiveCollectionMember[]
+  counts: { auto_matched: number; manual_pinned: number; excluded: number; effective: number; sfw_visible: number }
+}
+export type CompositionDraft = Pick<CollectionComposition, 'rule_tags' | 'manual_members' | 'excluded_members'>
+export type CollectionWorkspace = { collection: GameCollection; composition: CollectionComposition }
 export type CollectionHome = { revision: string; slots: { slot: number; collection: GameCollection | null }[] }
 export const collectionStatusLabels: Record<CollectionStatus, string> = { draft: '草稿', published: '已发布', archived: '已归档' }
