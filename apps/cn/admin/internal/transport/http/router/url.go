@@ -239,6 +239,8 @@ func gameCollectionRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Put("/home-curation", authmw.Require(authorization.ContentWrite), api.ReplaceGameCollectionHome)
 	root.Get("/:id", authmw.Require(authorization.ContentRead), api.GetGameCollection)
 	root.Put("/:id", authmw.Require(authorization.ContentWrite), api.UpdateGameCollection)
+	root.Get("/:id/composition", authmw.Require(authorization.ContentRead), api.GetGameCollectionComposition)
+	root.Put("/:id/composition", authmw.Require(authorization.ContentWrite), api.ReplaceGameCollectionComposition)
 	root.Get("/:id/members", authmw.Require(authorization.ContentRead), api.GetGameCollectionMembers)
 	root.Put("/:id/members", authmw.Require(authorization.ContentWrite), api.ReplaceGameCollectionMembers)
 	for _, action := range []string{"publish", "unpublish", "archive", "restore"} {

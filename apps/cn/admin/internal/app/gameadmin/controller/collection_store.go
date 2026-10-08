@@ -132,9 +132,18 @@ func lockCollection(ctx context.Context, q *gamesqlc.Queries, id, version int64)
 func collectionContent(c models.GameCollection) models.CollectionContent {
 	return models.CollectionContent{Name: c.Name, NameEn: c.NameEn, Info: c.Info, InfoEn: c.InfoEn}
 }
+func requireCollectionContent(c models.CollectionContent) error {
+	if strings.TrimSpace(c.Name) == "" || strings.TrimSpace(c.NameEn) == "" || strings.TrimSpace(c.Info) == "" || strings.TrimSpace(c.InfoEn) == "" {
+		return common.NewValidationError("已发布游戏分区须有完整双语名称与简介")
+	}
+	return nil
+}
 func requirePublishable(c models.CollectionContent, count int64) error {
-	if strings.TrimSpace(c.Name) == "" || strings.TrimSpace(c.NameEn) == "" || strings.TrimSpace(c.Info) == "" || strings.TrimSpace(c.InfoEn) == "" || count < 2 {
-		return common.NewValidationError("已发布游戏分区须有完整双语名称、简介，并至少收录两个游戏")
+	if err := requireCollectionContent(c); err != nil {
+		return err
+	}
+	if count < 2 {
+		return common.NewValidationError("已发布游戏分区须至少有效收录两个游戏")
 	}
 	return nil
 }
@@ -161,7 +170,7 @@ func (s *gameStore) updateCollection(ctx context.Context, meta audit.Meta, id in
 			return id, nil, nil, common.NewConflictError("已归档游戏分区只允许恢复")
 		}
 		if before.Status == "published" {
-			if err = requirePublishable(in.CollectionContent, before.MemberCount); err != nil {
+			if err = requireCollectionContent(in.CollectionContent); err != nil {
 				return id, nil, nil, err
 			}
 		}
@@ -222,8 +231,12 @@ func (s *gameStore) replaceCollectionMembers(ctx context.Context, meta audit.Met
 		if before.Status == "archived" {
 			return id, nil, nil, common.NewConflictError("已归档游戏分区只允许恢复")
 		}
-		if before.Status == "published" && len(in.GameIDs) < 2 {
-			return id, nil, nil, common.NewValidationError("已发布游戏分区须至少收录两个游戏")
+		excluded, err := q.GetCollectionExcludedIDs(ctx, id)
+		if err != nil {
+			return id, nil, nil, err
+		}
+		if err = disjointCollectionOverrides(in.GameIDs, excluded); err != nil {
+			return id, nil, nil, err
 		}
 		existing, err := q.ExistingCuratedCollectionGameIDs(ctx, in.GameIDs)
 		if err != nil {
@@ -257,7 +270,12 @@ func (s *gameStore) replaceCollectionMembers(ctx context.Context, meta audit.Met
 		if err != nil {
 			return id, nil, nil, err
 		}
-		if result.Status == "published" && result.SFWMemberCount == 0 && result.HomeSlot != nil {
+		if result.Status == "published" {
+			if err = requirePublishable(collectionContent(result), result.MemberCount); err != nil {
+				return id, nil, nil, err
+			}
+		}
+		if result.SFWMemberCount == 0 && result.HomeSlot != nil {
 			if err = q.RemoveCollectionHomeSlot(ctx, id); err != nil {
 				return id, nil, nil, err
 			}
@@ -394,8 +412,14 @@ func (s *gameStore) replaceCollectionHome(ctx context.Context, meta audit.Meta, 
 		if len(rows) != len(ids) {
 			return 0, nil, nil, common.NewValidationError("所选游戏分区不存在")
 		}
+		unchanged := map[int64]bool{}
+		for i, slot := range before.Slots {
+			if slot.Collection != nil && placements[i] == slot.Collection.ID {
+				unchanged[slot.Collection.ID] = true
+			}
+		}
 		for _, r := range rows {
-			if r.GfgGameCollection.Status != "published" || r.SfwMemberCount == 0 {
+			if !unchanged[r.GfgGameCollection.ID] && (r.GfgGameCollection.Status != "published" || r.SfwMemberCount == 0) {
 				return 0, nil, nil, common.NewValidationError("首页仅可选择已发布且有 SFW 可见游戏的分区")
 			}
 		}

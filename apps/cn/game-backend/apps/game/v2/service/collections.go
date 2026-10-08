@@ -100,7 +100,7 @@ func (s *CollectionService) metadata() v2models.CollectionMetadata {
 }
 
 func collectionCacheKey(endpoint string, meta v2models.CollectionMetadata, query v2models.CollectionQuery) string {
-	return "game:v2:collections:v2:" + endpoint + ":" + meta.AsOfDate + ":" + query.Lang + ":" + query.Mode
+	return "game:v2:collections:v3:" + endpoint + ":" + meta.AsOfDate + ":" + query.Lang + ":" + query.Mode
 }
 
 func (s *CollectionService) Home(ctx context.Context, query v2models.CollectionQuery) (v2models.CollectionHome, error) {

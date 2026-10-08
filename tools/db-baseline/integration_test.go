@@ -79,6 +79,9 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 		{label: "gfn", owner: "nav", driftTable: "gfn_site"},
 		{label: "gfa", owner: "admin", driftTable: "gfa_admin_account"},
 	}
+	t.Run("hybrid membership upgrade preserves manual data and rejects destructive Down", func(t *testing.T) {
+		assertHybridCollectionMigration(t, ctx, adminDB, adminDSN, repositoryRoot)
+	})
 	for _, test := range tests {
 		t.Run(test.label, func(t *testing.T) {
 			freshName := temporaryDatabaseName(test.label, "fresh")

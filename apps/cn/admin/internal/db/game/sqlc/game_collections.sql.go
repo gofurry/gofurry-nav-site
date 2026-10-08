@@ -28,11 +28,26 @@ func (q *Queries) ClearCollectionHomePlacements(ctx context.Context) error {
 }
 
 const countCuratedCollections = `-- name: CountCuratedCollections :one
+WITH selected_collections AS (SELECT id FROM gfg_game_collection WHERE ($2::text='' OR status=$2)),
+candidate_members AS (
+    SELECT i.collection_id, i.game_id FROM gfg_game_collection_item i
+    JOIN selected_collections c ON c.id = i.collection_id
+    UNION
+    SELECT rule.collection_id, gt.game_id FROM gfg_game_collection_tag rule
+    JOIN selected_collections c ON c.id = rule.collection_id
+    JOIN gfg_tag t ON t.id = rule.tag_id AND t.archived_at IS NULL
+    JOIN gfg_tag_category cat ON cat.id = t.category_id AND cat.archived_at IS NULL
+    JOIN gfg_game_tag gt ON gt.tag_id = t.id
+), effective_members AS (
+    SELECT m.collection_id, m.game_id FROM candidate_members m
+    WHERE NOT EXISTS (SELECT 1 FROM gfg_game_collection_exclusion x
+        WHERE x.collection_id = m.collection_id AND x.game_id = m.game_id)
+)
 SELECT count(*) FROM gfg_game_collection c
 WHERE ($1::text='' OR c.code ILIKE '%'||$1||'%' OR c.name ILIKE '%'||$1||'%' OR c.name_en ILIKE '%'||$1||'%')
 AND ($2::text='' OR c.status=$2)
 AND (NOT $3::boolean OR (c.status='published' AND EXISTS (
- SELECT 1 FROM gfg_game_collection_item i WHERE i.collection_id=c.id
+ SELECT 1 FROM effective_members i WHERE i.collection_id=c.id
  AND NOT EXISTS (SELECT 1 FROM gfg_game_tag gt JOIN gfg_tag t ON t.id=gt.tag_id WHERE gt.game_id=i.game_id AND t.code='adult')
 )))
 `
@@ -50,6 +65,20 @@ func (q *Queries) CountCuratedCollections(ctx context.Context, arg CountCuratedC
 	return count, err
 }
 
+const deleteRemovedCollectionExclusions = `-- name: DeleteRemovedCollectionExclusions :exec
+DELETE FROM gfg_game_collection_exclusion WHERE collection_id=$1 AND NOT(game_id=ANY($2::bigint[]))
+`
+
+type DeleteRemovedCollectionExclusionsParams struct {
+	CollectionID int64   `json:"collection_id"`
+	GameIds      []int64 `json:"game_ids"`
+}
+
+func (q *Queries) DeleteRemovedCollectionExclusions(ctx context.Context, arg DeleteRemovedCollectionExclusionsParams) error {
+	_, err := q.db.Exec(ctx, deleteRemovedCollectionExclusions, arg.CollectionID, arg.GameIds)
+	return err
+}
+
 const deleteRemovedCollectionMembers = `-- name: DeleteRemovedCollectionMembers :exec
 DELETE FROM gfg_game_collection_item WHERE collection_id=$1 AND NOT(game_id=ANY($2::bigint[]))
 `
@@ -61,6 +90,20 @@ type DeleteRemovedCollectionMembersParams struct {
 
 func (q *Queries) DeleteRemovedCollectionMembers(ctx context.Context, arg DeleteRemovedCollectionMembersParams) error {
 	_, err := q.db.Exec(ctx, deleteRemovedCollectionMembers, arg.CollectionID, arg.GameIds)
+	return err
+}
+
+const deleteRemovedCollectionRules = `-- name: DeleteRemovedCollectionRules :exec
+DELETE FROM gfg_game_collection_tag WHERE collection_id=$1 AND NOT(tag_id=ANY($2::bigint[]))
+`
+
+type DeleteRemovedCollectionRulesParams struct {
+	CollectionID int64   `json:"collection_id"`
+	TagIds       []int64 `json:"tag_ids"`
+}
+
+func (q *Queries) DeleteRemovedCollectionRules(ctx context.Context, arg DeleteRemovedCollectionRulesParams) error {
+	_, err := q.db.Exec(ctx, deleteRemovedCollectionRules, arg.CollectionID, arg.TagIds)
 	return err
 }
 
@@ -88,6 +131,91 @@ func (q *Queries) ExistingCuratedCollectionGameIDs(ctx context.Context, ids []in
 	return items, nil
 }
 
+const getCollectionCompositionMembers = `-- name: GetCollectionCompositionMembers :many
+WITH sources AS (
+ SELECT gt.game_id, true AS automatic, false AS manual, false AS excluded
+ FROM gfg_game_collection_tag rule
+ JOIN gfg_tag t ON t.id=rule.tag_id AND t.archived_at IS NULL
+ JOIN gfg_tag_category cat ON cat.id=t.category_id AND cat.archived_at IS NULL
+ JOIN gfg_game_tag gt ON gt.tag_id=t.id
+ WHERE rule.collection_id=$1
+ UNION ALL
+ SELECT game_id, false, true, false FROM gfg_game_collection_item WHERE collection_id=$1
+ UNION ALL
+ SELECT game_id, false, false, true FROM gfg_game_collection_exclusion WHERE collection_id=$1
+), membership AS (
+ SELECT game_id, bool_or(automatic)::boolean AS automatic, bool_or(manual)::boolean AS manual, bool_or(excluded)::boolean AS excluded
+ FROM sources GROUP BY game_id
+)
+SELECT g.id AS game_id, g.name, g.name_en, g.appid, m.automatic, m.manual, m.excluded,
+ EXISTS(SELECT 1 FROM gfg_game_tag gt JOIN gfg_tag t ON t.id=gt.tag_id WHERE gt.game_id=g.id AND t.code='adult')::boolean AS adult
+FROM membership m JOIN gfg_game g ON g.id=m.game_id ORDER BY g.id
+`
+
+type GetCollectionCompositionMembersRow struct {
+	GameID    int64  `json:"game_id"`
+	Name      string `json:"name"`
+	NameEn    string `json:"name_en"`
+	Appid     int64  `json:"appid"`
+	Automatic bool   `json:"automatic"`
+	Manual    bool   `json:"manual"`
+	Excluded  bool   `json:"excluded"`
+	Adult     bool   `json:"adult"`
+}
+
+func (q *Queries) GetCollectionCompositionMembers(ctx context.Context, collectionID int64) ([]GetCollectionCompositionMembersRow, error) {
+	rows, err := q.db.Query(ctx, getCollectionCompositionMembers, collectionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCollectionCompositionMembersRow{}
+	for rows.Next() {
+		var i GetCollectionCompositionMembersRow
+		if err := rows.Scan(
+			&i.GameID,
+			&i.Name,
+			&i.NameEn,
+			&i.Appid,
+			&i.Automatic,
+			&i.Manual,
+			&i.Excluded,
+			&i.Adult,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCollectionExcludedIDs = `-- name: GetCollectionExcludedIDs :many
+SELECT game_id FROM gfg_game_collection_exclusion WHERE collection_id=$1 ORDER BY game_id
+`
+
+func (q *Queries) GetCollectionExcludedIDs(ctx context.Context, collectionID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, getCollectionExcludedIDs, collectionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var game_id int64
+		if err := rows.Scan(&game_id); err != nil {
+			return nil, err
+		}
+		items = append(items, game_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCollectionHomePlacements = `-- name: GetCollectionHomePlacements :many
 SELECT slot,collection_id FROM gfg_game_collection_home_slot ORDER BY slot
 `
@@ -107,6 +235,48 @@ func (q *Queries) GetCollectionHomePlacements(ctx context.Context) ([]GetCollect
 	for rows.Next() {
 		var i GetCollectionHomePlacementsRow
 		if err := rows.Scan(&i.Slot, &i.CollectionID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCollectionRuleTags = `-- name: GetCollectionRuleTags :many
+SELECT t.id AS tag_id, t.code, t.name, t.name_en,
+ (t.archived_at IS NULL AND cat.archived_at IS NULL)::boolean AS active
+FROM gfg_game_collection_tag rule JOIN gfg_tag t ON t.id=rule.tag_id
+JOIN gfg_tag_category cat ON cat.id=t.category_id
+WHERE rule.collection_id=$1 ORDER BY t.id
+`
+
+type GetCollectionRuleTagsRow struct {
+	TagID  int64  `json:"tag_id"`
+	Code   string `json:"code"`
+	Name   string `json:"name"`
+	NameEn string `json:"name_en"`
+	Active bool   `json:"active"`
+}
+
+func (q *Queries) GetCollectionRuleTags(ctx context.Context, collectionID int64) ([]GetCollectionRuleTagsRow, error) {
+	rows, err := q.db.Query(ctx, getCollectionRuleTags, collectionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCollectionRuleTagsRow{}
+	for rows.Next() {
+		var i GetCollectionRuleTagsRow
+		if err := rows.Scan(
+			&i.TagID,
+			&i.Code,
+			&i.Name,
+			&i.NameEn,
+			&i.Active,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -159,9 +329,24 @@ func (q *Queries) GetCuratedCollectionMembers(ctx context.Context, collectionID 
 }
 
 const getCuratedCollectionSnapshots = `-- name: GetCuratedCollectionSnapshots :many
+WITH selected_collections AS (SELECT id FROM gfg_game_collection WHERE id=ANY($1::bigint[])),
+candidate_members AS (
+    SELECT i.collection_id, i.game_id FROM gfg_game_collection_item i
+    JOIN selected_collections c ON c.id = i.collection_id
+    UNION
+    SELECT rule.collection_id, gt.game_id FROM gfg_game_collection_tag rule
+    JOIN selected_collections c ON c.id = rule.collection_id
+    JOIN gfg_tag t ON t.id = rule.tag_id AND t.archived_at IS NULL
+    JOIN gfg_tag_category cat ON cat.id = t.category_id AND cat.archived_at IS NULL
+    JOIN gfg_game_tag gt ON gt.tag_id = t.id
+), effective_members AS (
+    SELECT m.collection_id, m.game_id FROM candidate_members m
+    WHERE NOT EXISTS (SELECT 1 FROM gfg_game_collection_exclusion x
+        WHERE x.collection_id = m.collection_id AND x.game_id = m.game_id)
+)
 SELECT c.id, c.code, c.name, c.name_en, c.info, c.info_en, c.status, c.version, c.published_at, c.archived_at, c.created_at, c.updated_at, h.slot AS home_slot,
- (SELECT count(*) FROM gfg_game_collection_item i WHERE i.collection_id=c.id)::bigint AS member_count,
- (SELECT count(*) FROM gfg_game_collection_item i WHERE i.collection_id=c.id
+ (SELECT count(*) FROM effective_members i WHERE i.collection_id=c.id)::bigint AS member_count,
+ (SELECT count(*) FROM effective_members i WHERE i.collection_id=c.id
   AND NOT EXISTS (SELECT 1 FROM gfg_game_tag gt JOIN gfg_tag t ON t.id=gt.tag_id WHERE gt.game_id=i.game_id AND t.code='adult'))::bigint AS sfw_member_count
 FROM gfg_game_collection c LEFT JOIN gfg_game_collection_home_slot h ON h.collection_id=c.id
 WHERE c.id=ANY($1::bigint[]) ORDER BY c.updated_at DESC,c.id DESC
@@ -210,6 +395,22 @@ func (q *Queries) GetCuratedCollectionSnapshots(ctx context.Context, ids []int64
 	return items, nil
 }
 
+const insertCollectionExclusions = `-- name: InsertCollectionExclusions :exec
+INSERT INTO gfg_game_collection_exclusion(collection_id,game_id)
+SELECT $1::bigint,unnest($2::bigint[])
+ON CONFLICT(collection_id,game_id) DO NOTHING
+`
+
+type InsertCollectionExclusionsParams struct {
+	CollectionID int64   `json:"collection_id"`
+	GameIds      []int64 `json:"game_ids"`
+}
+
+func (q *Queries) InsertCollectionExclusions(ctx context.Context, arg InsertCollectionExclusionsParams) error {
+	_, err := q.db.Exec(ctx, insertCollectionExclusions, arg.CollectionID, arg.GameIds)
+	return err
+}
+
 const insertCollectionHomePlacements = `-- name: InsertCollectionHomePlacements :exec
 INSERT INTO gfg_game_collection_home_slot(slot,collection_id)
 SELECT unnest($1::smallint[]),unnest($2::bigint[])
@@ -241,6 +442,22 @@ func (q *Queries) InsertCollectionMembers(ctx context.Context, arg InsertCollect
 	return err
 }
 
+const insertCollectionRules = `-- name: InsertCollectionRules :exec
+INSERT INTO gfg_game_collection_tag(collection_id,tag_id)
+SELECT $1::bigint,unnest($2::bigint[])
+ON CONFLICT(collection_id,tag_id) DO NOTHING
+`
+
+type InsertCollectionRulesParams struct {
+	CollectionID int64   `json:"collection_id"`
+	TagIds       []int64 `json:"tag_ids"`
+}
+
+func (q *Queries) InsertCollectionRules(ctx context.Context, arg InsertCollectionRulesParams) error {
+	_, err := q.db.Exec(ctx, insertCollectionRules, arg.CollectionID, arg.TagIds)
+	return err
+}
+
 const insertCuratedCollection = `-- name: InsertCuratedCollection :one
 INSERT INTO gfg_game_collection(code,name,name_en,info,info_en)
 VALUES($1,$2,$3,$4,$5) RETURNING id
@@ -268,11 +485,26 @@ func (q *Queries) InsertCuratedCollection(ctx context.Context, arg InsertCurated
 }
 
 const listCuratedCollectionIDs = `-- name: ListCuratedCollectionIDs :many
+WITH selected_collections AS (SELECT id FROM gfg_game_collection WHERE ($2::text='' OR status=$2)),
+candidate_members AS (
+    SELECT i.collection_id, i.game_id FROM gfg_game_collection_item i
+    JOIN selected_collections c ON c.id = i.collection_id
+    UNION
+    SELECT rule.collection_id, gt.game_id FROM gfg_game_collection_tag rule
+    JOIN selected_collections c ON c.id = rule.collection_id
+    JOIN gfg_tag t ON t.id = rule.tag_id AND t.archived_at IS NULL
+    JOIN gfg_tag_category cat ON cat.id = t.category_id AND cat.archived_at IS NULL
+    JOIN gfg_game_tag gt ON gt.tag_id = t.id
+), effective_members AS (
+    SELECT m.collection_id, m.game_id FROM candidate_members m
+    WHERE NOT EXISTS (SELECT 1 FROM gfg_game_collection_exclusion x
+        WHERE x.collection_id = m.collection_id AND x.game_id = m.game_id)
+)
 SELECT c.id FROM gfg_game_collection c
 WHERE ($1::text='' OR c.code ILIKE '%'||$1||'%' OR c.name ILIKE '%'||$1||'%' OR c.name_en ILIKE '%'||$1||'%')
 AND ($2::text='' OR c.status=$2)
 AND (NOT $3::boolean OR (c.status='published' AND EXISTS (
- SELECT 1 FROM gfg_game_collection_item i WHERE i.collection_id=c.id
+ SELECT 1 FROM effective_members i WHERE i.collection_id=c.id
  AND NOT EXISTS (SELECT 1 FROM gfg_game_tag gt JOIN gfg_tag t ON t.id=gt.tag_id WHERE gt.game_id=i.game_id AND t.code='adult')
 )))
 ORDER BY c.updated_at DESC,c.id DESC LIMIT $5 OFFSET $4
@@ -393,4 +625,42 @@ func (q *Queries) UpdateCuratedCollectionContent(ctx context.Context, arg Update
 		arg.ID,
 	)
 	return err
+}
+
+const validateCollectionRuleTags = `-- name: ValidateCollectionRuleTags :many
+SELECT t.id, (t.archived_at IS NULL AND cat.archived_at IS NULL)::boolean AS active,
+ EXISTS(SELECT 1 FROM gfg_game_collection_tag rule WHERE rule.collection_id=$1 AND rule.tag_id=t.id)::boolean AS already_bound
+FROM gfg_tag t JOIN gfg_tag_category cat ON cat.id=t.category_id
+WHERE t.id=ANY($2::bigint[]) ORDER BY t.id FOR KEY SHARE OF t
+`
+
+type ValidateCollectionRuleTagsParams struct {
+	CollectionID int64   `json:"collection_id"`
+	TagIds       []int64 `json:"tag_ids"`
+}
+
+type ValidateCollectionRuleTagsRow struct {
+	ID           int64 `json:"id"`
+	Active       bool  `json:"active"`
+	AlreadyBound bool  `json:"already_bound"`
+}
+
+func (q *Queries) ValidateCollectionRuleTags(ctx context.Context, arg ValidateCollectionRuleTagsParams) ([]ValidateCollectionRuleTagsRow, error) {
+	rows, err := q.db.Query(ctx, validateCollectionRuleTags, arg.CollectionID, arg.TagIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ValidateCollectionRuleTagsRow{}
+	for rows.Next() {
+		var i ValidateCollectionRuleTagsRow
+		if err := rows.Scan(&i.ID, &i.Active, &i.AlreadyBound); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

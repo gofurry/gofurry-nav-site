@@ -55,13 +55,29 @@ irreversible; test recovery uses disposable database restore/recreation.
 
 ## Game Collection domain
 
-`gfg_game_collection` owns curated collection metadata and lifecycle;
-`gfg_game_collection_item(collection_id,game_id)` alone owns manual membership;
-`gfg_game_collection_home_slot` owns five distinct homepage slots. Items have no
-position/weight/sort_order, and neither collections nor items store NSFW.
-Public chronology is derived by Game Backend from canonical First Available
-(highest priority) and Release State; SFW uses only related Tag code `adult`,
-including archived Tags. Public counts and previews are computed after filtering.
-Migration `20261006020000` creates these objects with Chinese comments and no seed;
-its Down rejects destructive rollback. Stage A adds read-only published APIs,
-not Admin mutation or frontend work. See [Game Collections](../docs/game-collections.md).
+`gfg_game_collection` owns curated metadata and lifecycle; `gfg_game_collection_item`
+continues to own only manual pins. `gfg_game_collection_tag` binds Tag rules and
+`gfg_game_collection_exclusion` owns explicit exclusions. Effective membership is
+`(manual UNION active Tag matches) MINUS exclusions`, deduplicated by Game ID.
+All normal/primary/secondary roles match by OR; a Tag or Category archive pauses
+matching without deleting the rule. Manual pins survive rule changes; write APIs
+reject overlapping manual and excluded IDs. No automatic members are materialized.
+
+`gfg_game_collection_home_slot` owns five distinct homepage slots. Passive Tag
+changes do not mutate Collection version, lifecycle, Audit or placement; Public
+Home only omits currently ineligible slots. Explicit composition/member changes
+remove a slot transactionally when no Effective SFW member remains. Existing
+ineligible placements may be retained in the same position during curation.
+The Collection and Tag domains retain separate advisory transaction locks.
+
+There is no position/weight/sort_order or Collection NSFW field. Chronology remains
+canonical First Available (highest priority) then Release State. SFW uses related
+Tag code `adult`, including archived Tags; all search, counts, filters and previews
+operate on mode-visible Effective members. New rule bindings require an active
+Tag and Category; existing paused bindings may be retained.
+
+Migration `20261006020000` creates the original three tables; `20261008010000`
+adds only rules/exclusions with composite keys, FKs, reverse indexes and Chinese
+comments. Neither seeds data; both reject destructive Down. Historical migrations
+and baseline snapshots remain immutable. See [Game Collections](../docs/game-collections.md)
+for Composition/legacy Members APIs, lifecycle and bounded read/cache contracts.

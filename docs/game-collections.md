@@ -1,7 +1,7 @@
 # Game Collection：数据域与公开时间线
 
 Stage A（#140-A）建立人工策展游戏分区及 Game Backend 公开读模型。
-人工只决定成员，公开顺序由 Canonical First Available / Release Facts 派生。
+当前 #144-A 将成员扩展为人工定义标签规则、固定与排除；公开顺序仍由 Canonical First Available / Release Facts 派生。
 Collection 不是 Tag、Showcase、Recommendation；成员关系与 `gfg_game.groups` 社群字段独立，Detail 仅将社群入口数量作为卡片元数据。
 
 ## Stage C：Public Discovery 与 Timeline
@@ -30,7 +30,7 @@ Detail 保持 `useGameCollectionModeRefresh`。Index 由 `useGameCollectionDisco
 Detail 初始/刷新 404 使用真实 Nuxt 404；初始服务失败返回 HTTP 503 与可重试 surface，不伪装空分区。
 adult-only 的 SFW Detail 仍为 200，零作品使用中性空态。所有图片复用 SteamAssetImage。
 
-前序 Stage C 收口分别简化了 Home 读取与 Index/Detail 轻量投影，并将缓存 TTL 调整为 1 小时。最终数据收口将内部缓存 revision 提升到 v2，Public schema_version 仍为 1。数据库结构与 Admin mutation 不变。Functional、固定环境 Visual 比对和维护者人工验收分别记录；
+前序 Stage C 收口分别简化了 Home 读取与 Index/Detail 轻量投影，并将缓存 TTL 调整为 1 小时。当时的数据收口将内部缓存 revision 提升到 v2，Public schema_version 保持 1。#144-A 的新增结构与当前 v3 缓存见下文。Functional、固定环境 Visual 比对和维护者人工验收分别记录；
 新增六张分区截图与首页四张变更须人工接受后才构成 Visual PASS，代码完成不代表 #140 已关闭。
 
 2026-10-07 Detail Timeline Closure：新增 Detail-only 单次装饰批量读取，3/30 成员均为固定 8 次 SQL，保留原 chronology、SFW 和 Redis 1h 合同。
@@ -64,6 +64,38 @@ Down 明确拒绝删除策展数据；恢复需经过验证的备份或重建隔
 `published_at` 是最近一次成功发布时刻，draft 可保留；只有 archived 必须有 `archived_at`。
 `version` 从 1 开始。Stage B 才实现版本校验、code 创建后不可变及这些写入转换；
 Stage A 没有 Admin mutation、Membership editor、Home curation 或 Audit 功能。
+
+## Hybrid Membership Foundation（#144-A）
+
+`20261008010000_game_collection_hybrid_membership.sql` 新增两张 GFG 表：
+
+| 表 | 事实与约束 |
+| --- | --- |
+| `gfg_game_collection_tag` | `(collection_id,tag_id)` 复合主键；分区删除级联，Tag 删除 RESTRICT；`(tag_id,collection_id)` 反向索引 |
+| `gfg_game_collection_exclusion` | `(collection_id,game_id)` 复合主键；分区/游戏删除级联；`(game_id,collection_id)` 反向索引 |
+
+两表及六个字段在同一迁移中写中文 COMMENT；`created_at` 记录人工配置时刻，不参与 chronology。
+原 item 表继续只存人工固定，不回填自动成员，不新增 source/position/nsfw。Down 明确拒绝破坏配置数据。
+迁移只在隔离 PostgreSQL 验证并生成 expected-final；历史迁移及 expected 不变。部署需先由维护者应用该 GFG 迁移，再更新 Game Backend/Admin；本阶段不操作共享开发库或生产库。
+
+```text
+ActiveTags = 绑定的 Tag 与所属 Category 均未归档的规则
+Auto       = 任一 ActiveTags 命中的去重游戏（normal/primary/secondary 均参与，OR）
+Manual     = gfg_game_collection_item
+Excluded   = gfg_game_collection_exclusion
+Effective  = (Auto ∪ Manual) − Excluded
+Visible    = Effective 经当前 mode 的 Adult 过滤
+```
+
+绑定的是 Tag，不是 Category；类别归档会暂停其下标签规则。归档规则保留，恢复后重新命中。
+人工固定不依赖标签继续有效；排除最高优先，可保留当前未命中的游戏。写入禁止人工固定与排除重叠。
+未配置规则/排除的旧分区与原人工成员结果一致。规则有效性不影响 Adult 安全判断：归档 adult 标签关系仍具有成人语义。
+Public Home/Index/Detail、q/phase/count sort、预览与 Admin 数量/首页资格统一使用 Effective；Public 不公开来源、规则、排除或隐藏成人数。
+
+Collection 配置与派生成员分离：独立 Tag 变更不改变 Collection version/status/published_at/Audit/Home placement。
+因此 version 只保护运营配置，不冻结 Effective。Tag Domain 与 Collection Domain 保持各自事务锁，不建立全局锁、定时同步或物化成员副本。
+
+本阶段仅提供 DB 与 Backend；#144-B 的混合成员 Admin Workspace 尚未实施。现有 React 成员编辑仍通过兼容接口只管理 Manual，不显示或写回 Auto。
 
 ## Public API
 
@@ -107,7 +139,7 @@ Detail schema v1 additive 字段：`primary_tag/secondary_tag: {code,name}|null`
 即使标签已归档，只要关系仍存在就保持成人语义；数字 Tag ID 1014 和名称不参与判断。
 sfw 在 Backend 先过滤成人成员，再解析时间线、计数和选 Preview；nsfw 返回完整有效成员。
 成人专属分区在 sfw Index/Detail 仍存在，`visible_game_count=0,preview_games/items=[]`。
-Home 对当前 mode 下零可见成员的槽位直接省略，也省略非 published 分区。
+Home 对当前 mode 下零可见成员的槽位直接省略，也省略非 published 分区；只读跳过不删除 placement，标签恢复后可在缓存重建时重新展示。
 
 Preview 从过滤后的完整有序时间线选取：0 项为 []，1 项取首项，2 项取首尾，
 3 项及以上取 `[0, floor(n/2), n-1]`。最多三个不同游戏，不维护 Banner 或手工排序。
@@ -134,7 +166,7 @@ First Available 的 inferred 原样保留，内部 legacy_manual/steam_backfill/
 
 ## Batch 与 Cache
 
-固定 sqlc 查询负责公开 Collection、count、page、slots 和批量 Membership。
+固定 sqlc 查询负责公开 Collection、count、page、slots 和批量 Effective Membership：按 Collection IDs 限定 `(manual UNION active-tag matches) anti-join exclusions`，不逐游戏/逐标签查询。默认 Browse 仍先分页，只投影当前页成员。
 Home 使用单条 sqlc 查询读取 published 槽位、Collection 双语元数据和按 adult code 过滤的可见数量，不加载任何 Game Aggregate 或时间线。
 Home schema v1 保留 CollectionSummary 结构，preview_games 固定为空数组；Index/Detail 仍保留完整 preview/timeline。
 Index/Detail 使用 `LoadCollectionProjectionGames`：一次批量 Membership，去重 game IDs，随后固定批量读取站内双语文案、localized name/summary、detail name/header、仅 header 类型的 media/assets、First Available 和 Release State。
@@ -148,12 +180,12 @@ Redis 是 Origin Read Model acceleration，TTL **1 hour**，不是内容发布�
 仅默认 Browse（空 q、phase=all、sort=published_desc）、Home、Detail 使用以下命名空间；任何非默认 Discovery query 直接走轻量 DB read，不读写长期结果缓存，避免任意关键词高基数 key。
 
 ```text
-game:v2:collections:v2:home:{asOfDate}:{lang}:{mode}
-game:v2:collections:v2:list:{asOfDate}:{lang}:{mode}:{page}:{pageSize}
-game:v2:collections:v2:detail:{asOfDate}:{lang}:{mode}:{code}
+game:v2:collections:v3:home:{asOfDate}:{lang}:{mode}
+game:v2:collections:v3:list:{asOfDate}:{lang}:{mode}:{page}:{pageSize}
+game:v2:collections:v3:detail:{asOfDate}:{lang}:{mode}:{code}
 ```
 
-内部 revision v2 避免读取旧 community_count 错误 payload；Public schema_version 仍为 1。旧 v1 keys 自然过期，不扫描、不主动删除。
+内部 revision v3 避免读取 v2 的人工-only 旧结果；Public schema_version 仍为 1。旧键自然过期，不扫描、不主动删除。Tag 变化在下一次 Origin cache miss/rebuild 生效，不承诺最终公开时限。
 UTC 日期切换立即换 key。有效缓存命中直接返回；miss/error/malformed 回 DB，成功后 best-effort 写缓存。
 数据库错误和 404 不缓存。每个 Service 实例用 singleflight 合并同 key 的并发 miss；不同 key 独立。
 缓存序列化结果按调用方解码，避免共享可变 slices。单个调用方取消不终止其他等待者，构建有 8 秒总预算。
@@ -182,8 +214,10 @@ Admin 独立拥有 `/api/v1/game/collections`，与 `/api/v1/collection` 的采�
 | POST / | 创建 version=1 的草稿；双语名称必填，简介及 0/1 个成员允许暂缺 |
 | GET /:id | 完整 Admin DTO：基本内容、状态、版本、生命周期时间、总成员/SFW 数、home_slot |
 | PUT /:id | 携带 version 更新双语名称/简介；Code 不可更改 |
-| GET /:id/members | 同一只读快照内返回 collection_id、version、完整成员及 Adult 标记 |
-| PUT /:id/members | 携带 version 与完整 game_ids 集合；正整数、去重、数值排序、批量检查存在性后替换 |
+| GET /:id/members | 同一只读快照内返回 collection_id、version、完整人工固定成员及 Adult 标记 |
+| PUT /:id/members | 携带 version 与完整人工 game_ids；去重、数值排序、存在性及与 Excluded 互斥校验后替换，不写自动派生成员 |
+| GET /:id/composition | 同一只读快照返回规则/人工/排除/有效成员、来源、计数、version 与 home_slot |
+| PUT /:id/composition | 携带 version 与完整 tag_ids/manual_game_ids/excluded_game_ids 原子替换配置 |
 | POST /:id/publish、unpublish、archive、restore | 携带 version 执行显式生命周期转换 |
 | GET /home-curation | 固定五位及 canonical placement revision；空位 collection=null |
 | PUT /home-curation | 携带 revision，完整提交第 1–5 位各一次；非空分区不可重复 |
@@ -197,26 +231,36 @@ Admin 独立拥有 `/api/v1/game/collections`，与 `/api/v1/collection` 的采�
 内容、成员及生命周期成功后 version+1；真正相同的内容/成员集合不改变 version，也不写 Audit。
 旧 version 返回 409：`此游戏分区已被其他操作修改，请重新加载后重试。`；客户端不得自动重试 mutation。
 
-- Publish：draft→published；双语名称/简介非空、总成员至少两个；published_at=now。
+- Publish：draft→published；双语名称/简介非空、当次 Effective 至少两个；published_at=now。
 - Unpublish：published→draft；保留 published_at，同事务移除首页入口。
 - Archive：draft/published→archived；archived_at=now，保留 published_at/成员并移除入口。
 - Restore：archived→draft；清空 archived_at，保留 published_at，不恢复发布或首页入口。
-- Archived 拒绝内容及成员修改；Published 直接编辑仍须满足双语内容和至少两个成员的不变量。
+- Archived 拒绝内容、成员及 Composition 修改；Published 显式 Composition/Members 修改后 Effective 须至少两个，纯文案编辑仅要求双语完整，不因被动标签变化造成成员不足而阻塞。
 
 Adult 唯一按 Tag code=`adult`，包括已归档 Tag 的现有关系；ID 1014 不具有特殊意义。
 成人限定分区可发布，但首页资格必须是 published 且 sfw_member_count>0。
-Published 成员保存移除最后一个 SFW 游戏时，同一 GFG 事务自动移除 Home Slot；分区仍可维持 Published。
+显式 Composition/Members 保存后 Effective SFW=0 时，同一 GFG 事务自动移除 Home Slot；满足总 Effective 至少两个的分区仍可 Published。独立 Tag 变化不删除 Slot、不自动改变生命周期。
 
 ### 首页与 Audit
 
 revision 只对第 1–5 位 Collection ID/null 的 canonical placement 计算 SHA-256；名称、version、count 不影响 revision。
-完整替换在领域锁下校验旧 revision 和当前资格，原子删除/插入；显式首页编排不增加 Collection.version。
+完整替换在领域锁下校验旧 revision：新增/移动 Slot 必须符合当前资格，位置未变的暂时失效 Slot 可保留，允许编辑其他位置。原子删除/插入；显式首页编排不增加 Collection.version。
 第六个“全部分区”是固定产品入口，只在 Admin 说明，不进入 API 或数据库。
 
-Collection Audit resource 为 `gfg_game_collection`，action 为 create/update/members_update/publish/unpublish/archive/restore。
+Collection Audit resource 为 `gfg_game_collection`，action 为 create/update/members_update/composition_update/publish/unpublish/archive/restore。
 快照仅含有界业务字段，成员保存附带 canonical game ID 集合；自动撤下入口体现在同条记录的 home_slot before→null。
 首页显式编排使用 `gfg_game_collection_home_slot` / `home_curation_update`，记录五个 placement。
 沿用现有 GFG business transaction + 独立 GFA Audit；审计失败阻止 GFG 提交，但这不是跨库 ACID。
+
+### Composition 写入合同
+
+GET 的 `rule_tags` 含 Tag ID/code/双语名称/active；`manual_members`、`excluded_members` 与 `effective_members` 是完整授权运营数据，Effective 的 source 为 automatic/manual/both。空数组为 `[]`。
+`counts.auto_matched` 是排除前 Auto 去重数，manual_pinned/excluded 是配置记录数，effective/sfw_visible 是实际成员数，不能简单相加。响应包含同一版 version 和 home_slot。
+
+PUT 三个数组必须显式提供（允许空，不允许 null/缺失），正整数去重并数值排序，所有 IDs 必须存在，Manual 与 Excluded 交集返回 400。
+新绑标签必须 Tag/Category 均有效；之前已绑定但后来失效的规则可原样保留或移除，移除后不能重新绑定失效标签。
+沿用领域事务锁→行锁→version 比较→set-based replace→状态校验→version+1→Audit；全相同配置 no-op，无版本或 Audit 写入。
+`composition_update` Audit 仅存前后版本、配置 IDs、计数及 home_slot：每组 IDs 最多 256 个 canonical 前缀，超出时 ids_truncated=true，并保存三组完整配置的 SHA-256；不保存海量自动派生成员。不限制或截断请求和 GET 成员数组。
 
 ### React Workspace 与刷新
 
@@ -237,3 +281,5 @@ Stage B 没有新迁移，也不变更 Stage A cache：不 purge Redis、不新�
 验证包含 Controller/route 单测、`TestAdminGameCollectionThreeDatabase` 的隔离 PG18 并发/约束/Audit 集成测试，
 以及 React 列表 IME、共享版本、冲突保留、生命周期、只读、五位完整编排和未保存保护测试。
 集成测试接入既有 postgres-integration gate，不对共享开发或生产库执行 Goose。
+
+#144-A 追加覆盖 OR/角色/去重、固定与排除、归档规则恢复、SFW 搜索/phase/count 隐私、被动 Home 保留与显式移除、Composition 409/no-op/Audit 回滚和旧 Members 兼容。3/30/100/300 成员的 Detail 与 Index 均维持 8 次 SQL，Home 1 次；诊断执行时间不设 CI 毫秒门槛。

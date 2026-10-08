@@ -70,3 +70,39 @@ type ReplaceCollectionHome struct {
 	Revision string                `json:"revision"`
 	Slots    []CollectionPlacement `json:"slots"`
 }
+
+// Composition is separate from the legacy manual-only members API.
+type CollectionRuleTag struct {
+	TagID  int64  `json:"tag_id"`
+	Code   string `json:"code"`
+	Name   string `json:"name"`
+	NameEn string `json:"name_en"`
+	Active bool   `json:"active"`
+}
+type EffectiveCollectionMember struct {
+	CollectionMember
+	Source string `json:"source"`
+}
+type CollectionCompositionCounts struct {
+	AutoMatched  int64 `json:"auto_matched"`
+	ManualPinned int64 `json:"manual_pinned"`
+	Excluded     int64 `json:"excluded"`
+	Effective    int64 `json:"effective"`
+	SFWVisible   int64 `json:"sfw_visible"`
+}
+type CollectionComposition struct {
+	CollectionID     int64                       `json:"collection_id"`
+	Version          int64                       `json:"version"`
+	HomeSlot         *int16                      `json:"home_slot"`
+	RuleTags         []CollectionRuleTag         `json:"rule_tags"`
+	ManualMembers    []CollectionMember          `json:"manual_members"`
+	ExcludedMembers  []CollectionMember          `json:"excluded_members"`
+	EffectiveMembers []EffectiveCollectionMember `json:"effective_members"`
+	Counts           CollectionCompositionCounts `json:"counts"`
+}
+type ReplaceCollectionComposition struct {
+	Version         int64   `json:"version"`
+	TagIDs          []int64 `json:"tag_ids"`
+	ManualGameIDs   []int64 `json:"manual_game_ids"`
+	ExcludedGameIDs []int64 `json:"excluded_game_ids"`
+}

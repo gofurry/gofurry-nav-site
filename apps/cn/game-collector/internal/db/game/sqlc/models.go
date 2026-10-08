@@ -410,6 +410,16 @@ type GfgGameCollection struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// 分区人工排除规则；优先于自动命中与人工固定，未命中的游戏也可保留规则供未来匹配时排除。
+type GfgGameCollectionExclusion struct {
+	// 排除规则所属的策展分区；删除分区时级联清理规则。
+	CollectionID int64 `json:"collection_id"`
+	// 在本分区排除的游戏；不删除游戏或修改标签，应用写入层禁止同时人工固定。
+	GameID int64 `json:"game_id"`
+	// 运营设置排除的时刻；解除后按当前自动规则与人工固定重新派生成员。
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 // 首页人工策展分区的五个固定槽位；公开读取仅保留已发布且当前浏览模式有可见成员的分区。
 type GfgGameCollectionHomeSlot struct {
 	// 首页展示槽位，范围 1 至 5 并按升序展示；全部分区入口不入库。
@@ -432,6 +442,16 @@ type GfgGameCollectionItem struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	// 成员关系最近一次维护时刻，由运营写入层维护，不改变发行事实。
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 分区自动收录的人工标签规则；任一有效标签命中即可收录，标签或类别归档时规则保留但暂停匹配。
+type GfgGameCollectionTag struct {
+	// 所属策展分区；删除分区时级联移除规则，不删除标签或游戏。
+	CollectionID int64 `json:"collection_id"`
+	// 自动匹配的正式标签；normal、primary、secondary 关系均参与，删除标签前必须显式解绑。
+	TagID int64 `json:"tag_id"`
+	// 运营绑定此规则的时刻，不代表自动成员加入时间，也不影响公开时间线排序。
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 // GoFurry 用户游戏评论及评分；来源位置与上游 Steam 评价分别持有

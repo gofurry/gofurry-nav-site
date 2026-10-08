@@ -35,6 +35,7 @@ func TestGameCollectionRouteCapabilities(t *testing.T) {
 			}{
 				{"GET", "?status=invalid", tc.readStatus}, {"POST", "", tc.writeStatus},
 				{"GET", "/invalid", tc.readStatus}, {"PUT", "/invalid", tc.writeStatus},
+				{"GET", "/invalid/composition", tc.readStatus}, {"PUT", "/invalid/composition", tc.writeStatus},
 				{"GET", "/invalid/members", tc.readStatus}, {"PUT", "/invalid/members", tc.writeStatus},
 				{"PUT", "/home-curation", tc.writeStatus}, {"POST", "/invalid/publish", tc.writeStatus}, {"POST", "/invalid/unpublish", tc.writeStatus}, {"POST", "/invalid/archive", tc.writeStatus}, {"POST", "/invalid/restore", tc.writeStatus},
 			} {

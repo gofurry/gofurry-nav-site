@@ -2659,6 +2659,67 @@
       "triggers": null
     },
     {
+      "name": "gfg_game_collection_exclusion",
+      "comment": "分区人工排除规则；优先于自动命中与人工固定，未命中的游戏也可保留规则供未来匹配时排除。",
+      "columns": [
+        {
+          "name": "collection_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "comment": "排除规则所属的策展分区；删除分区时级联清理规则。"
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "comment": "在本分区排除的游戏；不删除游戏或修改标签，应用写入层禁止同时人工固定。"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()",
+          "comment": "运营设置排除的时刻；解除后按当前自动规则与人工固定重新派生成员。"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_collection_exclusion_collection_id_fkey",
+          "definition": "FOREIGN KEY (collection_id) REFERENCES gfg_game_collection(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_game_collection_exclusion_collection_id_not_null",
+          "definition": "NOT NULL collection_id"
+        },
+        {
+          "name": "gfg_game_collection_exclusion_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_game_collection_exclusion_game_id_fkey",
+          "definition": "FOREIGN KEY (game_id) REFERENCES gfg_game(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_game_collection_exclusion_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_collection_exclusion_pkey",
+          "definition": "PRIMARY KEY (collection_id, game_id)"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "gfg_game_collection_exclusion_game_index",
+          "definition": "CREATE INDEX gfg_game_collection_exclusion_game_index ON public.gfg_game_collection_exclusion USING btree (game_id, collection_id)"
+        }
+      ],
+      "triggers": null
+    },
+    {
       "name": "gfg_game_collection_home_slot",
       "comment": "首页人工策展分区的五个固定槽位；公开读取仅保留已发布且当前浏览模式有可见成员的分区。",
       "columns": [
@@ -2799,6 +2860,67 @@
         {
           "name": "gfg_game_collection_item_game_index",
           "definition": "CREATE INDEX gfg_game_collection_item_game_index ON public.gfg_game_collection_item USING btree (game_id, collection_id)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_collection_tag",
+      "comment": "分区自动收录的人工标签规则；任一有效标签命中即可收录，标签或类别归档时规则保留但暂停匹配。",
+      "columns": [
+        {
+          "name": "collection_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "comment": "所属策展分区；删除分区时级联移除规则，不删除标签或游戏。"
+        },
+        {
+          "name": "tag_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "comment": "自动匹配的正式标签；normal、primary、secondary 关系均参与，删除标签前必须显式解绑。"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()",
+          "comment": "运营绑定此规则的时刻，不代表自动成员加入时间，也不影响公开时间线排序。"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_collection_tag_collection_id_fkey",
+          "definition": "FOREIGN KEY (collection_id) REFERENCES gfg_game_collection(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_game_collection_tag_collection_id_not_null",
+          "definition": "NOT NULL collection_id"
+        },
+        {
+          "name": "gfg_game_collection_tag_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_game_collection_tag_pkey",
+          "definition": "PRIMARY KEY (collection_id, tag_id)"
+        },
+        {
+          "name": "gfg_game_collection_tag_tag_id_fkey",
+          "definition": "FOREIGN KEY (tag_id) REFERENCES gfg_tag(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "gfg_game_collection_tag_tag_id_not_null",
+          "definition": "NOT NULL tag_id"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "gfg_game_collection_tag_tag_index",
+          "definition": "CREATE INDEX gfg_game_collection_tag_tag_index ON public.gfg_game_collection_tag USING btree (tag_id, collection_id)"
         }
       ],
       "triggers": null

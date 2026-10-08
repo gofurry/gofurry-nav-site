@@ -289,6 +289,7 @@ VALUES(140101,140101,'header','store','store_browse','en','header','https://exam
 	assertCollectionDiscovery(t, ctx, pool)
 	assertCollectionConstraints(t, ctx, pool)
 	assertCollectionTimelineDecorations(t, ctx, pool)
+	assertHybridCollectionReads(t, ctx, pool)
 }
 
 type collectionQueryTrace struct {

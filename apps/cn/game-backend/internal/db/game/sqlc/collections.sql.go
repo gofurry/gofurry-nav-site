@@ -83,8 +83,22 @@ func (q *Queries) BatchCollectionHeaderMedia(ctx context.Context, gameIds []int6
 }
 
 const batchCollectionMemberships = `-- name: BatchCollectionMemberships :many
-SELECT collection_id, game_id FROM gfg_game_collection_item
-WHERE collection_id = ANY($1::bigint[])
+WITH selected_collections AS (SELECT id FROM gfg_game_collection WHERE id = ANY($1::bigint[])),
+candidate_members AS (
+    SELECT i.collection_id, i.game_id FROM gfg_game_collection_item i
+    JOIN selected_collections c ON c.id = i.collection_id
+    UNION
+    SELECT rule.collection_id, gt.game_id FROM gfg_game_collection_tag rule
+    JOIN selected_collections c ON c.id = rule.collection_id
+    JOIN gfg_tag t ON t.id = rule.tag_id AND t.archived_at IS NULL
+    JOIN gfg_tag_category cat ON cat.id = t.category_id AND cat.archived_at IS NULL
+    JOIN gfg_game_tag gt ON gt.tag_id = t.id
+), effective_members AS (
+    SELECT m.collection_id, m.game_id FROM candidate_members m
+    WHERE NOT EXISTS (SELECT 1 FROM gfg_game_collection_exclusion x
+        WHERE x.collection_id = m.collection_id AND x.game_id = m.game_id)
+)
+SELECT collection_id, game_id FROM effective_members
 ORDER BY collection_id, game_id
 `
 
@@ -278,11 +292,25 @@ func (q *Queries) CountCollectionBrowse(ctx context.Context) (int64, error) {
 }
 
 const countPublishedCollections = `-- name: CountPublishedCollections :one
-WITH visible_members AS (
+WITH selected_collections AS (SELECT id FROM gfg_game_collection WHERE status = 'published'),
+candidate_members AS (
+    SELECT i.collection_id, i.game_id FROM gfg_game_collection_item i
+    JOIN selected_collections c ON c.id = i.collection_id
+    UNION
+    SELECT rule.collection_id, gt.game_id FROM gfg_game_collection_tag rule
+    JOIN selected_collections c ON c.id = rule.collection_id
+    JOIN gfg_tag t ON t.id = rule.tag_id AND t.archived_at IS NULL
+    JOIN gfg_tag_category cat ON cat.id = t.category_id AND cat.archived_at IS NULL
+    JOIN gfg_game_tag gt ON gt.tag_id = t.id
+), effective_members AS (
+    SELECT m.collection_id, m.game_id FROM candidate_members m
+    WHERE NOT EXISTS (SELECT 1 FROM gfg_game_collection_exclusion x
+        WHERE x.collection_id = m.collection_id AND x.game_id = m.game_id)
+), visible_members AS (
     SELECT i.collection_id, g.name, g.name_en,
         (fa.game_id IS NOT NULL OR r.availability = 'available') AS released,
         (fa.game_id IS NULL AND r.availability = 'upcoming') AS upcoming
-    FROM gfg_game_collection_item i
+    FROM effective_members i
     JOIN gfg_game g ON g.id = i.game_id
     LEFT JOIN gfg_game_first_available fa ON fa.game_id = g.id
     LEFT JOIN gfg_game_release_state r ON r.game_id = g.id
@@ -408,8 +436,23 @@ func (q *Queries) ListCollectionBrowse(ctx context.Context, arg ListCollectionBr
 }
 
 const listPublishedCollectionHomeSlots = `-- name: ListPublishedCollectionHomeSlots :many
+WITH selected_collections AS (SELECT c.id FROM gfg_game_collection c JOIN gfg_game_collection_home_slot h ON h.collection_id=c.id WHERE c.status='published'),
+candidate_members AS (
+    SELECT i.collection_id, i.game_id FROM gfg_game_collection_item i
+    JOIN selected_collections c ON c.id = i.collection_id
+    UNION
+    SELECT rule.collection_id, gt.game_id FROM gfg_game_collection_tag rule
+    JOIN selected_collections c ON c.id = rule.collection_id
+    JOIN gfg_tag t ON t.id = rule.tag_id AND t.archived_at IS NULL
+    JOIN gfg_tag_category cat ON cat.id = t.category_id AND cat.archived_at IS NULL
+    JOIN gfg_game_tag gt ON gt.tag_id = t.id
+), effective_members AS (
+    SELECT m.collection_id, m.game_id FROM candidate_members m
+    WHERE NOT EXISTS (SELECT 1 FROM gfg_game_collection_exclusion x
+        WHERE x.collection_id = m.collection_id AND x.game_id = m.game_id)
+)
 SELECT s.slot, c.id, c.code, c.name, c.name_en, c.info, c.info_en, c.published_at,
-    (SELECT count(*) FROM gfg_game_collection_item i
+    (SELECT count(*) FROM effective_members i
      WHERE i.collection_id = c.id
        AND ($1::boolean OR NOT EXISTS (
            SELECT 1 FROM gfg_game_tag gt JOIN gfg_tag t ON t.id = gt.tag_id
@@ -464,11 +507,25 @@ func (q *Queries) ListPublishedCollectionHomeSlots(ctx context.Context, includeA
 }
 
 const listPublishedCollections = `-- name: ListPublishedCollections :many
-WITH visible_members AS (
+WITH selected_collections AS (SELECT id FROM gfg_game_collection WHERE status = 'published'),
+candidate_members AS (
+    SELECT i.collection_id, i.game_id FROM gfg_game_collection_item i
+    JOIN selected_collections c ON c.id = i.collection_id
+    UNION
+    SELECT rule.collection_id, gt.game_id FROM gfg_game_collection_tag rule
+    JOIN selected_collections c ON c.id = rule.collection_id
+    JOIN gfg_tag t ON t.id = rule.tag_id AND t.archived_at IS NULL
+    JOIN gfg_tag_category cat ON cat.id = t.category_id AND cat.archived_at IS NULL
+    JOIN gfg_game_tag gt ON gt.tag_id = t.id
+), effective_members AS (
+    SELECT m.collection_id, m.game_id FROM candidate_members m
+    WHERE NOT EXISTS (SELECT 1 FROM gfg_game_collection_exclusion x
+        WHERE x.collection_id = m.collection_id AND x.game_id = m.game_id)
+), visible_members AS (
     SELECT i.collection_id, g.name, g.name_en,
         (fa.game_id IS NOT NULL OR r.availability = 'available') AS released,
         (fa.game_id IS NULL AND r.availability = 'upcoming') AS upcoming
-    FROM gfg_game_collection_item i
+    FROM effective_members i
     JOIN gfg_game g ON g.id = i.game_id
     LEFT JOIN gfg_game_first_available fa ON fa.game_id = g.id
     LEFT JOIN gfg_game_release_state r ON r.game_id = g.id

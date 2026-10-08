@@ -59,6 +59,8 @@ func TestAdminGameCollectionThreeDatabase(t *testing.T) {
 	app.Put("/collections/home-curation", write, api.ReplaceGameCollectionHome)
 	app.Get("/collections/:id", read, api.GetGameCollection)
 	app.Put("/collections/:id", write, api.UpdateGameCollection)
+	app.Get("/collections/:id/composition", read, api.GetGameCollectionComposition)
+	app.Put("/collections/:id/composition", write, api.ReplaceGameCollectionComposition)
 	app.Get("/collections/:id/members", read, api.GetGameCollectionMembers)
 	app.Put("/collections/:id/members", write, api.ReplaceGameCollectionMembers)
 	for _, action := range []string{"publish", "unpublish", "archive", "restore"} {
@@ -397,4 +399,6 @@ func TestAdminGameCollectionThreeDatabase(t *testing.T) {
 			t.Fatal(latest)
 		}
 	})
+
+	assertHybridCollectionOperations(t, ctx, pools, call, race)
 }

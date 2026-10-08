@@ -268,7 +268,7 @@ func TestCollectionCacheKeysAndTTL(t *testing.T) {
 		"detail:2026-10-06:zh:sfw:mixed", "detail:2026-10-06:en:sfw:mixed", "detail:2026-10-06:zh:nsfw:mixed", "detail:2026-10-06:zh:sfw:empty",
 		"list:2026-10-06:zh:sfw:1:24", "list:2026-10-06:zh:sfw:2:24", "list:2026-10-06:zh:sfw:1:1", "home:2026-10-06:zh:sfw",
 	} {
-		if _, ok := c.entries["game:v2:collections:v2:"+key]; !ok {
+		if _, ok := c.entries["game:v2:collections:v3:"+key]; !ok {
 			t.Fatal("missing key", key)
 		}
 	}
@@ -296,7 +296,7 @@ func TestCollectionCacheKeysAndTTL(t *testing.T) {
 	if r.reads.Load() != before+1 {
 		t.Fatal("new UTC day reused previous cache")
 	}
-	if _, ok := c.entries["game:v2:collections:v2:detail:2026-10-07:zh:sfw:mixed"]; !ok {
+	if _, ok := c.entries["game:v2:collections:v3:detail:2026-10-07:zh:sfw:mixed"]; !ok {
 		t.Fatal("missing new date key")
 	}
 }
@@ -304,7 +304,7 @@ func TestCollectionCacheKeysAndTTL(t *testing.T) {
 func TestCollectionCacheFailureFallback(t *testing.T) {
 	for _, body := range []string{"broken json", "null", "{}", `{"schema_version":99,"as_of_date":"2026-10-06","items":[]}`, `{"schema_version":1,"generated_at":"2026-10-06T00:00:00Z","as_of_date":"2026-10-05","items":[]}`} {
 		r, c, s := collectionFixture()
-		c.entries["game:v2:collections:v2:detail:2026-10-06:zh:sfw:mixed"] = collectionCacheEntry{body, c.now.Add(time.Hour)}
+		c.entries["game:v2:collections:v3:detail:2026-10-06:zh:sfw:mixed"] = collectionCacheEntry{body, c.now.Add(time.Hour)}
 		if _, e := s.Detail(context.Background(), "mixed", v2models.CollectionQuery{}); e != nil || r.reads.Load() != 1 || c.writes != 1 {
 			t.Fatalf("malformed fallback %q: %v", body, e)
 		}
@@ -486,7 +486,7 @@ func TestCollectionHomeRebuildsLegacyPreviewCacheInSameNamespace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	key := "game:v2:collections:v2:home:2026-10-06:en:sfw"
+	key := "game:v2:collections:v3:home:2026-10-06:en:sfw"
 	if _, ok := c.entries[key]; !ok {
 		t.Fatal("Home cache namespace changed")
 	}
@@ -602,22 +602,22 @@ func TestCollectionDecorationFailureNotCached(t *testing.T) {
 	}
 }
 
-func TestCollectionCacheRevisionRetiresIncorrectDetailPayload(t *testing.T) {
+func TestCollectionCacheRevisionRetiresManualOnlyDetailPayload(t *testing.T) {
 	r, cache, service := collectionFixture()
 	r.decorations = map[int64]v2models.CollectionTimelineDecoration{1: {CommunityCount: 2}}
 	detail, err := service.Detail(context.Background(), "mixed", v2models.CollectionQuery{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	const oldKey = "game:v2:collections:v1:detail:2026-10-06:zh:sfw:mixed"
-	const newKey = "game:v2:collections:v2:detail:2026-10-06:zh:sfw:mixed"
-	detail.Items[0].CommunityCount = 17
+	const oldKey = "game:v2:collections:v2:detail:2026-10-06:zh:sfw:mixed"
+	const newKey = "game:v2:collections:v3:detail:2026-10-06:zh:sfw:mixed"
+	detail.Items = nil // The old manual-only cache omitted the effective members.
 	encoded, _ := json.Marshal(detail)
 	cache.entries[oldKey] = collectionCacheEntry{string(encoded), cache.now.Add(time.Hour)}
 	delete(cache.entries, newKey)
 	reads, loads := r.reads.Load(), r.decorationLoads.Load()
 	fresh, err := service.Detail(context.Background(), "mixed", v2models.CollectionQuery{})
-	if err != nil || fresh.Items[0].CommunityCount != 2 || r.reads.Load() != reads+1 || r.decorationLoads.Load() != loads+1 {
+	if err != nil || len(fresh.Items) == 0 || fresh.Items[0].CommunityCount != 2 || r.reads.Load() != reads+1 || r.decorationLoads.Load() != loads+1 {
 		t.Fatalf("old payload reused: %+v %v", fresh, err)
 	}
 	if _, ok := cache.entries[oldKey]; !ok {
