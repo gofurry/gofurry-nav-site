@@ -1133,6 +1133,27 @@
       "fullData": "查看完整数据",
       "continue": "继续观测"
     },
+    "overviewHero": {
+      "title": "看见生态的另一面。",
+      "description": "从真实的观测数据中，发现 Furry 游戏与网站生态正在发生的变化。",
+      "label": "生态观测摘要",
+      "gameKicker": "游戏观察站",
+      "siteKicker": "网站观察站",
+      "observedSample": "比例基于已有明确结果的观测样本。",
+      "coverage": "统计覆盖率",
+      "sample": "已知结果 / 适用样本",
+      "change30d": "30 日变化",
+      "percentagePoints": "{value} 个百分点",
+      "factDate": "指标事实日期",
+      "dateUnavailable": "日期暂不可用",
+      "gameFallbackTitle": "从作品出发，理解游戏生态。",
+      "gameFallbackDescription": "沿着已有观测，探索平台支持与免费游戏在生态中的分布。",
+      "siteFallbackTitle": "观察网站与开放技术的连接。",
+      "siteFallbackDescription": "探索 Furry 网站的公共能力，以及这些观测背后的依据。",
+      "gameLink": "探索游戏观测",
+      "siteLink": "探索网站观测",
+      "playerObservation": "已记录的玩家观测"
+    },
     "editorial": {
       "description": "从公开数据中，看见兽圈正在发生什么。",
       "snapshot": "快照生成于",

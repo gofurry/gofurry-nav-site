@@ -5,10 +5,10 @@ export function mockOverview(domain, mediaBase = 'https://media.example') {
     entity_count: domain === 'site' ? 238 : 213,
     changes_7d: domain === 'site' ? 20 : 27,
     metrics: domain === 'site' ? [
-      { key: 'tls13', value: 0.824, delta_30d: 0.042 },
-      { key: 'ipv6', value: 0.63, delta_30d: -0.011 },
-      { key: 'security_txt', value: null, delta_30d: null },
-    ] : [],
+      { key: 'tls13', value: 0.824, delta_30d: 0.042, coverage: .9, known: 180, eligible: 200, as_of: '2026-08-30' },
+      { key: 'ipv6', value: 0.63, delta_30d: -0.011, coverage: .95, known: 190, eligible: 200, as_of: '2026-08-31' },
+      { key: 'security_txt', value: null, delta_30d: null, coverage: null, known: 0, eligible: 200, as_of: '' },
+    ] : [{ key: 'free', value: .25, delta_30d: .042, coverage: .8, known: 160, eligible: 200, as_of: '2026-08-29' }],
     recent_changes: domain === 'site' ? [
       { type: 'site.ipv6.enabled', date: '2026-09-01', occurred_at: null, entity: { id: 41, name: 'Site fixture', visual: { kind: 'site_icon', asset: 'nav/sites/41/icon/' + 'a'.repeat(32) + '.svg' } }, detail: null },
       { type: 'site.tls13.disabled', date: '2026-08-31', occurred_at: null, entity: { id: 42, name: 'Site failure fixture' }, detail: null },
@@ -21,7 +21,7 @@ export function mockOverview(domain, mediaBase = 'https://media.example') {
 
 export function mockGamePanel(mediaBase = 'https://media.example') {
   const game = (id, name) => ({
-    id: String(id), appid: String(id), name, header_url: `${mediaBase}/game-${id}.svg`, capsule_url: '',
+    id: String(id), appid: String(id), name, header_url: `${mediaBase}/game-${id}.svg`, capsule_url: '', tags: [],
     release_date: '2026-08-28', online_count: { count: 1240, peak_count: 2800, status: 'success', collected_at: '2026-09-01T09:00:00Z' },
     price: { region: 'CN', currency: 'CNY', final_amount: 3800, available: true, is_free: false, discount_percent: 20 },
     prices: [{ region: 'US', currency: 'USD', final_amount: 599, initial_amount: 1198, available: true, is_free: false, discount_percent: 50 }],

@@ -1133,6 +1133,27 @@
       "fullData": "View complete data",
       "continue": "Continue observing"
     },
+    "overviewHero": {
+      "title": "A Closer Look at the Furry World.",
+      "description": "Explore how furry games and websites are changing through public observations.",
+      "label": "Ecosystem observations",
+      "gameKicker": "GAME OBSERVATORY",
+      "siteKicker": "WEB OBSERVATORY",
+      "observedSample": "Share among samples with known results.",
+      "coverage": "Statistical coverage",
+      "sample": "Known / eligible samples",
+      "change30d": "Change over 30 days",
+      "percentagePoints": "{value} percentage points",
+      "factDate": "Metric fact date",
+      "dateUnavailable": "Date unavailable",
+      "gameFallbackTitle": "Follow the games. Find the context.",
+      "gameFallbackDescription": "Explore platform support and the share of free games through recorded observations.",
+      "siteFallbackTitle": "An open web, observed.",
+      "siteFallbackDescription": "Explore the public capabilities of furry websites and the evidence behind them.",
+      "gameLink": "Explore game observations",
+      "siteLink": "Explore website observations",
+      "playerObservation": "Recorded player observation"
+    },
     "editorial": {
       "description": "A view of the furry community through public data.",
       "snapshot": "Snapshot generated",

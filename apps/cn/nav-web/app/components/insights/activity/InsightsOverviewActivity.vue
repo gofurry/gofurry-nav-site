@@ -5,11 +5,8 @@
       <NuxtLink :to="localePath(overviewChangesPath)" class="overview-text-link">{{ $t('insights.editorial.allChanges') }} <span aria-hidden="true">↗</span></NuxtLink>
     </div>
     <p v-if="!items.length" class="overview-unavailable">{{ $t(unavailable ? 'insights.emptyStates.unavailable' : 'insights.emptyStates.changesEmpty') }}</p>
-    <div v-else class="overview-activity__layout" :class="{ 'overview-activity__layout--single': items.length === 1 }">
-      <InsightActivityItem v-if="items[0]" :item="items[0]" hero />
-      <div v-if="items.length > 1" class="overview-activity__list">
-        <InsightActivityItem v-for="item in items.slice(1, 5)" :key="`${item.domain}:${item.entity.id}:${item.type}`" :item="item" />
-      </div>
+    <div v-else class="overview-activity__list grid grid-cols-1 min-[768px]:grid-cols-2 gap-x-6">
+      <InsightActivityItem v-for="(item, index) in items.slice(0, 5)" :key="`${item.domain}:${item.entity.id}:${item.type}:${index}`" :item="overviewActivityWithoutGameArt(item)" />
     </div>
   </section>
 </template>
@@ -17,6 +14,7 @@
 <script setup lang="ts">
 import type { InsightFeedItem } from '@/types/insights'
 import { overviewChangesPath } from '@/utils/insightOverview'
+import { overviewActivityWithoutGameArt } from '@/utils/insightOverviewPresentation'
 import InsightActivityItem from './InsightActivityItem.vue'
 defineProps<{ items: InsightFeedItem[], unavailable: boolean }>()
 const localePath = useLocalePath()

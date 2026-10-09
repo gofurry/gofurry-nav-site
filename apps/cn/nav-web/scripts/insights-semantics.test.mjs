@@ -35,7 +35,7 @@ const overviewNav = { generated_at: '2026-09-01T10:00:00Z', recent_changes: [
 const overviewGame = { generated_at: '2026-09-01T12:00:00Z', recent_changes: Array.from({ length: 6 }, (_, id) => ({ date: '2026-09-01', occurred_at: `2026-09-01T0${id}:00:00Z`, entity: { id } })) }
 assert(overviewGeneratedAt(overviewNav, overviewGame) === '2026-09-01T10:00:00.000Z', 'snapshot time did not conservatively use the earlier response')
 assert(overviewGeneratedAt(null, overviewGame) === '2026-09-01T12:00:00.000Z' && overviewGeneratedAt(null, null) === null, 'independent snapshot availability failed')
-assert(overviewActivity(overviewNav, overviewGame).length === 5 && overviewActivity(overviewNav, overviewGame)[0].entity.id === 5, 'activity lost its one hero plus four limit or event ordering')
+assert(overviewActivity(overviewNav, overviewGame).length === 5 && overviewActivity(overviewNav, overviewGame)[0].entity.id === 5, 'activity lost its five-event limit or event ordering')
 assert(overviewActivity(overviewNav, null).every(item => item.domain === 'site') && overviewSiteIdentities(overviewNav).length === 1, 'one-source activity or site identity deduplication failed')
 const usPrice = { region: 'US', available: true, currency: 'USD', final_amount: 599, discount_percent: 50 }
 const pulseGame = id => ({ id, online_count: { status: 'success', count: 0 }, prices: [usPrice], price: { ...usPrice, region: 'CN', currency: 'CNY' } })
@@ -122,9 +122,20 @@ for (const domain of ['site', 'game']) {
 }
 assert(overviewChangesPath === '/insights/changes', 'Overview Changes destination changed')
 const overviewSource = readFileSync(new URL('../app/pages/insights/index.vue', import.meta.url), 'utf8')
-assert(overviewSource.includes("<h1>{{ $t('insights.overview.title') }}</h1>"), 'Overview lost its visible localized H1')
+assert(overviewSource.includes("<h1>{{ $t('insights.overviewHero.title') }}</h1>"), 'Overview lost its visible localized H1')
 assert(overviewSource.includes('EcosystemNavigation') && !overviewSource.includes('InsightsStats'), 'Overview navigation or typography statistics regressed')
 assert(overviewSource.includes('Promise.allSettled') && overviewSource.includes('getGameHomePanel(locale.value)'), 'Overview lost independent sources or reused Panel request')
+assert(overviewSource.includes("buildInsightsSeo('overview', locale.value)") && !overviewSource.includes('overviewGeneratedAt('), 'Overview SEO or per-fact time ownership regressed')
+assert(zh.insights.overviewHero.title === '看见生态的另一面。' && en.insights.overviewHero.title === 'A Closer Look at the Furry World.', 'frozen editorial H1 changed')
+const overviewHero = readFileSync(new URL('../app/components/insights/overview/InsightsOverviewHero.vue', import.meta.url), 'utf8')
+assert(overviewHero.includes('data-hero-mode="data"') && overviewHero.includes('percentagePoints') && overviewHero.includes('side.metric.as_of'), 'Overview data Hero lost its safety or metric semantics')
+assert(!/<img\b|InsightEntityMedia|<canvas\b/.test(overviewHero), 'unqualified artwork or fabricated chart entered the data Hero')
+const overviewActivitySource = readFileSync(new URL('../app/components/insights/activity/InsightsOverviewActivity.vue', import.meta.url), 'utf8')
+assert(overviewActivitySource.includes('items.slice(0, 5)') && overviewActivitySource.includes('overviewActivityWithoutGameArt') && !overviewActivitySource.includes(' hero'), 'Overview restored a competing event Hero or unqualified artwork')
+for (const file of readdirSync(new URL('../app/components/insights/overview/', import.meta.url)).filter(name => name.endsWith('.vue'))) {
+  const source = readFileSync(new URL(`../app/components/insights/overview/${file}`, import.meta.url), 'utf8')
+  assert(!/\b(?:fetch|useFetch|useAsyncData)\s*\(|from ['"]@\/services\//.test(source), `${file} added presentation-level requests`)
+}
 const sitePage = readFileSync(new URL('../app/pages/insights/sites/index.vue', import.meta.url), 'utf8')
 const gamePage = readFileSync(new URL('../app/pages/insights/games/index.vue', import.meta.url), 'utf8')
 for (const [page, domain, metrics, dimensions, defaultMetric, defaultDimension] of [

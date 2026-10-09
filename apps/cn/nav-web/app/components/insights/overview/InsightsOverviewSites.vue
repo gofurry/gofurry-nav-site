@@ -11,7 +11,7 @@
         <div class="overview-signal__label"><span :id="`overview-metric-${metric.key}`">{{ $t(`insights.metrics.${metric.key}.name`) }}</span><strong>{{ formatInsightRatio(metric.value) }}</strong></div>
         <progress v-if="metric.signal !== null" :value="metric.signal" max="1" :aria-labelledby="`overview-metric-${metric.key}`" />
         <span v-else class="overview-signal__missing">{{ $t('insights.emptyStates.unavailable') }}</span>
-        <p>{{ formatOverviewDelta(metric.delta) }} <span>{{ $t('insights.editorial.deltaWindow') }}</span></p>
+        <p>{{ metric.delta === null ? '—' : $t('insights.overviewHero.percentagePoints', { value: metric.delta }) }} <span>{{ $t('insights.editorial.deltaWindow') }}</span></p>
       </div>
     </div>
     <div v-if="identities.length" class="overview-site-identities">
@@ -29,15 +29,18 @@
 import { computed } from 'vue'
 import type { InsightOverview } from '@/types/insights'
 import { formatInsightRatio } from '@/utils/insightDimensions'
-import { formatOverviewDelta, overviewSignal, overviewSiteIdentities, overviewSiteMetricKeys } from '@/utils/insightOverview'
+import { overviewSignal, overviewSiteIdentities, overviewSiteMetricKeys } from '@/utils/insightOverview'
+import { formatOverviewPercentagePoints } from '@/utils/insightOverviewPresentation'
+import { useI18n } from 'vue-i18n'
 import { siteEntityPath } from '@/utils/siteRoutes'
 import InsightEntityMedia from '../entity/InsightEntityMedia.vue'
 
 const props = defineProps<{ overview: InsightOverview | null }>()
+const { locale } = useI18n()
 const localePath = useLocalePath()
 const identities = computed(() => overviewSiteIdentities(props.overview))
 const metrics = computed(() => overviewSiteMetricKeys.map(key => {
   const metric = props.overview?.metrics.find(item => item.key === key)
-  return { key, value: metric?.value ?? null, signal: overviewSignal(metric?.value), delta: metric?.delta_30d }
+  return { key, value: metric?.value ?? null, signal: overviewSignal(metric?.value), delta: formatOverviewPercentagePoints(metric?.delta_30d, locale.value) }
 }))
 </script>
