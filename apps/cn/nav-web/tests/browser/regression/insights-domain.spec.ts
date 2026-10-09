@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { assertRuntimeSurface } from '../fixtures/insights-runtime'
+import { assertRuntimeSurface, revealImages } from '../fixtures/insights-runtime'
 import { test, expect, domainMetricKeys, domainDimensionKeys, openRuntime, keyboardFocus } from '../fixtures/insights-domain'
 
 const routes = [
@@ -31,6 +31,12 @@ for (const [route, domain] of routes) for (const width of [1440, 1024, 390]) {
     expect(html).toContain('data-domain-count>' + (domain === 'site' ? 238 : 213))
     expect(html).toContain('insights-domain-nav')
     await expect(page.locator('.insights-trend canvas')).toBeVisible()
+    await expect(page.locator('.insight-domain-activity .insight-activity-item')).toHaveCount(2)
+    await expect(page.locator('.insight-domain-activity .insight-entity-media')).toHaveCount(2)
+    await expect(page.locator('.overview-event, [data-activity-icon]')).toHaveCount(0)
+    const prefix = route.startsWith('/en/') ? '/en' : ''
+    expect(await page.locator('.insight-domain-continue a').evaluateAll(elements => elements.map(el => el.getAttribute('href'))))
+      .toEqual((domain === 'game' ? ['/insights/games/players', '/insights/games/prices', '/insights/games/languages', '/insights/games/compare'] : ['/insights/sites/certificates', '/insights/sites/compare']).map(path => prefix + path))
     await expect(page.locator('[data-metric-key]')).toHaveCount(domainMetricKeys[domain].length)
     await expect(page.locator('[data-dimension]')).toHaveCount(domainDimensionKeys[domain].length)
     await expect(page.locator('[data-slice]')).toHaveCount(8)
@@ -52,6 +58,17 @@ for (const [route, domain] of routes) for (const width of [1440, 1024, 390]) {
     runtime.assertQuiet()
   })
 }
+test('Domain Site artwork failure retains shared identity and entity links', async ({ page, runtime }) => {
+  runtime.failImages = true
+  await openRuntime(page, '/insights/sites')
+  await revealImages(page, '.insight-domain-activity .insight-entity-media')
+  await expect(page.locator('.insight-domain-activity img')).toHaveCount(0)
+  await expect(page.locator('.insight-domain-activity [role="img"][aria-label]')).toHaveCount(2)
+  await expect(page.locator('.insight-domain-activity [data-change-link]').first()).toHaveAttribute('href', '/site/41')
+  await expect(page.locator('.insight-domain-activity [data-change-link]').first()).toContainText('Site fixture')
+  await keyboardFocus(page.locator('.insight-domain-activity [data-change-link]').first())
+  runtime.assertQuiet()
+})
 for (const domain of ['site', 'game'] as const) {
   test('Domain selected slice SSR and deferred all-history ' + domain, async ({ page, request, runtime }) => {
     const path = '/insights/' + (domain === 'site' ? 'sites' : 'games')

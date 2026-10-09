@@ -8,7 +8,7 @@ export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCas
     if (state.failure === source || state.failure === 'all') return { status: 503 }
     const data = mockOverview(source === 'nav' ? 'site' : 'game', media)
     if (state.siteHero && source === 'nav') data.recent_changes[0].occurred_at = '2026-09-02T12:00:00Z'
-    if (state.eventCount >= 0) data.recent_changes = Array.from({ length: state.eventCount }, (_, i) => ({
+    if (state.eventCount >= 0) data.recent_changes = Array.from({ length: source === 'nav' ? Math.ceil(state.eventCount / 2) : Math.floor(state.eventCount / 2) }, (_, i) => ({
       ...data.recent_changes[i % 2], entity: { ...data.recent_changes[i % 2].entity, id: (source === 'nav' ? 41 : 81) + i },
     }))
     if (state.metricCase === 'empty') data.metrics = []

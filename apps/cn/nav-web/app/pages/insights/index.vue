@@ -13,24 +13,9 @@
 
       <InsightsOverviewEcosystems :nav="data.nav" :game="data.game" />
 
-      <dl class="overview-stats mb-[var(--insights-section-gap)] flex flex-wrap gap-x-8 gap-y-3" data-overview-summary>
-        <div v-for="stat in stats" :key="stat.label" class="flex items-baseline gap-2"><dt>{{ stat.label }}</dt><dd>{{ stat.value === null ? '—' : number(stat.value) }}</dd></div>
-      </dl>
+      <InsightsOverviewActivity :items="recentChanges" :summary="activitySummary" />
 
-      <InsightsOverviewActivity :items="recentChanges" :unavailable="!data.nav && !data.game" />
-
-      <section class="overview-explore" aria-labelledby="overview-explore-title" data-overview-explore>
-        <div class="overview-section-heading"><div><p class="overview-kicker">{{ $t('insights.editorial.exploreKicker') }}</p><h2 id="overview-explore-title">{{ $t('insights.editorial.exploreTitle') }}</h2></div></div>
-        <div class="overview-explore__groups">
-          <div v-for="(items, domain) in overviewExploreGroups" :key="domain">
-            <h3>{{ $t(`insights.editorial.${domain === 'site' ? 'sitesTitle' : 'gamesTitle'}`) }}</h3>
-            <NuxtLink v-for="item in items" :key="item.path" :to="localePath(item.path)" class="overview-explore__link">
-              <span><strong>{{ $t(`insights.editorial.links.${item.key}.title`) }}</strong><span>{{ $t(`insights.editorial.links.${item.key}.description`) }}</span></span><span aria-hidden="true">↗</span>
-            </NuxtLink>
-          </div>
-        </div>
-        <NuxtLink :to="localePath(overviewChangesPath)" class="overview-explore__all"><span>{{ $t('insights.editorial.allChanges') }}</span><span aria-hidden="true">↗</span></NuxtLink>
-      </section>
+      <InsightsOverviewDirectory />
     </main>
   </div>
 </template>
@@ -42,10 +27,12 @@ import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import InsightsOverviewActivity from '@/components/insights/activity/InsightsOverviewActivity.vue'
 import InsightsOverviewEcosystems from '@/components/insights/overview/InsightsOverviewEcosystems.vue'
 import InsightsOverviewHero from '@/components/insights/overview/InsightsOverviewHero.vue'
+import InsightsOverviewDirectory from '@/components/insights/overview/InsightsOverviewDirectory.vue'
 import { getGameInsightsOverview } from '@/services/game'
 import { getNavInsightsOverview } from '@/services/nav'
 import type { InsightOverview } from '@/types/insights'
-import { overviewActivity, overviewChangesPath, overviewExploreGroups } from '@/utils/insightOverview'
+import { overviewActivity } from '@/utils/insightOverview'
+import { overviewActivitySummary } from '@/utils/insightOverviewPresentation'
 import { buildInsightsSeo } from '@/utils/seo'
 
 interface OverviewSnapshot {
@@ -53,8 +40,7 @@ interface OverviewSnapshot {
   game: InsightOverview | null
 }
 
-const { locale, t } = useI18n()
-const localePath = useLocalePath()
+const { locale } = useI18n()
 const { data } = await useAsyncData<OverviewSnapshot>(() => `insights:overview:${locale.value}`, async () => {
   const [navResult, gameResult] = await Promise.allSettled([
     getNavInsightsOverview(),
@@ -68,15 +54,7 @@ const { data } = await useAsyncData<OverviewSnapshot>(() => `insights:overview:$
   default: () => ({ nav: null, game: null }),
 })
 
-const stats = computed(() => [
-  {
-    label: t('insights.overview.changesCount'),
-    value: data.value.nav && data.value.game
-      ? data.value.nav.changes_7d + data.value.game.changes_7d
-      : null,
-  },
-])
-const number = (value: number) => new Intl.NumberFormat(locale.value === 'en' ? 'en-US' : 'zh-CN').format(value)
+const activitySummary = computed(() => overviewActivitySummary(data.value.nav, data.value.game))
 const recentChanges = computed(() => overviewActivity(data.value.nav, data.value.game))
 const seo = computed(() => buildInsightsSeo('overview', locale.value))
 

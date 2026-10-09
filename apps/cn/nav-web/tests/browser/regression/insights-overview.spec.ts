@@ -5,9 +5,8 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
 function stats(html: string) {
-  const dl = html.match(/<dl[^>]*data-overview-summary[^>]*>([\s\S]*?)<\/dl>/)?.[1] || ''
   return ['site', 'game'].map(domain => html.match(new RegExp(`<dd data-ecosystem-count="${domain}">(.*?)</dd>`))?.[1] ?? '')
-    .concat([...dl.matchAll(/<dd>(.*?)<\/dd>/g)].map(match => match[1]))
+    .concat(html.match(/<dd data-activity-total>(.*?)<\/dd>/)?.[1] ?? '')
 }
 
 test('Overview two SSR sources start independently', async ({ request, runtime }) => {
@@ -112,12 +111,42 @@ for (const countCase of ['missing', 'invalid']) test('Overview unavailable ecosy
   await expect(page.locator('[data-overview-ecosystems] [data-ecosystem-link]')).toHaveCount(2)
   runtime.assertQuiet()
 })
-for (const count of [0, 1, 3]) test('Overview merged ordinary events stay bounded ' + count, async ({ page, runtime }) => {
+for (const count of [0, 1, 2, 3, 4, 5, 8]) test('Overview merged ordinary events stay bounded ' + count, async ({ page, runtime }) => {
   runtime.state.eventCount = count
   await openRuntime(page, '/insights')
-  await expect(page.locator('[data-overview-activity] [data-change-link]')).toHaveCount(Math.min(count * 2, 5))
-  await expect(page.locator('[data-overview-activity] > .overview-section-heading a')).toHaveAttribute('href', '/insights/changes')
+  await expect(page.locator('[data-overview-activity] [data-change-link]')).toHaveCount(Math.min(count, 5))
+  await expect(page.locator('[data-activity-all]')).toHaveAttribute('href', '/insights/changes')
+  await expect(page.locator('[data-activity-empty]')).toHaveCount(count === 0 ? 1 : 0)
+  await expect(page.locator('[data-activity-total]')).toHaveText('47')
+  await expect(page.locator('[data-overview-activity]')).toHaveAttribute('data-activity-state', 'complete')
   runtime.assertQuiet()
+})
+for (const prefix of ['', '/en']) for (const source of ['nav', 'game']) test(`Overview partial empty feed is distinct ${prefix} ${source}`, async ({ page, runtime }) => {
+  runtime.state.failure = source
+  runtime.state.eventCount = 0
+  await openRuntime(page, prefix + '/insights')
+  await expect(page.locator('[data-activity-partial]')).toContainText(prefix ? (source === 'nav' ? 'Website observations are unavailable' : 'Game observations are unavailable') : (source === 'nav' ? '网站观测暂不可用' : '游戏观测暂不可用'))
+  await expect(page.locator('[data-activity-empty]')).toHaveText(prefix ? 'The available source has no recent public changes.' : '可用来源近期暂无可展示变化。')
+  await expect(page.locator('[data-activity-unavailable]')).toHaveCount(0)
+  await expect(page.locator('[data-activity-total]')).toHaveText('—')
+  await expect(page.locator('[data-activity-all]')).toHaveAttribute('href', prefix + '/insights/changes')
+  await expect(page.locator('[data-directory-link]')).toHaveCount(6)
+  runtime.assertQuiet()
+})
+test.describe('Overview event precision across browser timezones', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' })
+  for (const prefix of ['', '/en']) test('Overview day and exact events preserve SSR text ' + prefix, async ({ page, runtime }) => {
+    const html = await openRuntime(page, prefix + '/insights')
+    const exact = page.locator(`[data-change-link][href="${prefix}/games/82"] time`)
+    const day = page.locator(`[data-change-link][href="${prefix}/site/41"] time`)
+    await expect(exact).toHaveAttribute('datetime', '2026-09-01T12:00:00Z')
+    await expect(exact).toContainText(prefix ? '12:00 PM UTC' : '12:00 UTC')
+    await expect(day).toHaveAttribute('datetime', '2026-09-01')
+    await expect(day).toHaveText('2026-09-01')
+    expect(html).toContain(await exact.innerText())
+    expect(html).not.toContain('datetime="2026-09-01T00:00:00')
+    runtime.assertQuiet()
+  })
 })
 async function layout(page: Page, width: number) {
   const result = await page.evaluate(() => {
@@ -126,23 +155,36 @@ async function layout(page: Page, width: number) {
     const heroGame = document.querySelector('[data-hero-domain="game"]')!.getBoundingClientRect()
     const heroSite = document.querySelector('[data-hero-domain="site"]')!.getBoundingClientRect()
     const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON()
-    return { overflow: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - innerWidth, site: site.toJSON(), game: game.toJSON(), heroGame: heroGame.toJSON(), heroSite: heroSite.toJSON(), header: box('[data-overview-header]'), hero: box('[data-overview-hero]'), ecosystems: box('[data-overview-ecosystems]'), summary: box('[data-overview-summary]'), activity: box('[data-overview-activity]') }
+    return { overflow: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - innerWidth, site: site.toJSON(), game: game.toJSON(), heroGame: heroGame.toJSON(), heroSite: heroSite.toJSON(), header: box('[data-overview-header]'), hero: box('[data-overview-hero]'), ecosystems: box('[data-overview-ecosystems]'), activity: box('[data-overview-activity]'), activityHeading: box('[data-activity-heading]'), activityContent: box('[data-activity-content]'), explore: box('[data-overview-explore]'), gameDirectory: box('[data-directory-domain="game"]'), siteDirectory: box('[data-directory-domain="site"]'), events: [...document.querySelectorAll('[data-change-link]')].map(el => el.getBoundingClientRect().toJSON()) }
   })
   expect(result.overflow).toBeLessThanOrEqual(0)
   expect(result.hero.top).toBeGreaterThanOrEqual(result.header.bottom)
   expect(result.ecosystems.top).toBeGreaterThanOrEqual(result.hero.bottom)
-  expect(result.summary.top).toBeGreaterThanOrEqual(result.ecosystems.bottom)
-  expect(result.activity.top).toBeGreaterThanOrEqual(result.summary.bottom)
+  expect(result.activity.top).toBeGreaterThanOrEqual(result.ecosystems.bottom)
+  expect(result.explore.top).toBeGreaterThanOrEqual(result.activity.bottom)
   if (width >= 1200) {
     expect(result.heroGame.width / result.heroSite.width).toBeGreaterThan(1.9)
     expect(result.heroGame.width / result.heroSite.width).toBeLessThan(2.2)
     expect(Math.abs(result.heroGame.top - result.heroSite.top)).toBeLessThan(2)
-  } else expect(result.heroSite.top).toBeGreaterThanOrEqual(result.heroGame.bottom)
+    expect(result.activityContent.width / result.activityHeading.width).toBeGreaterThan(2.8)
+    expect(result.activityContent.width / result.activityHeading.width).toBeLessThan(3.5)
+    expect(Math.abs(result.activityHeading.top - result.activityContent.top)).toBeLessThan(2)
+  } else {
+    expect(result.heroSite.top).toBeGreaterThanOrEqual(result.heroGame.bottom)
+    expect(result.activityContent.top).toBeGreaterThanOrEqual(result.activityHeading.bottom)
+  }
   if (width >= 960) {
     expect(result.game.width / result.site.width).toBeCloseTo(1, 1)
     expect(Math.abs(result.site.top - result.game.top)).toBeLessThan(2)
     expect(result.site.left).toBeGreaterThan(result.game.left)
-  } else expect(result.site.top).toBeGreaterThanOrEqual(result.game.bottom)
+    expect(result.gameDirectory.width / result.siteDirectory.width).toBeCloseTo(1, 1)
+    expect(Math.abs(result.gameDirectory.top - result.siteDirectory.top)).toBeLessThan(2)
+    expect(result.siteDirectory.left).toBeGreaterThan(result.gameDirectory.left)
+  } else {
+    expect(result.site.top).toBeGreaterThanOrEqual(result.game.bottom)
+    expect(result.siteDirectory.top).toBeGreaterThanOrEqual(result.gameDirectory.bottom)
+  }
+  for (let index = 1; index < result.events.length; index++) expect(result.events[index]!.top).toBeGreaterThanOrEqual(result.events[index - 1]!.bottom)
 }
 for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const) for (const width of [1440, 1024, 768, 390]) {
   test(`Overview SSR, hydration, media and layout ${prefix} ${theme} ${width}`, async ({ page, context, runtime }) => {
@@ -159,8 +201,8 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
     for (const path of ['/insights/sites', '/insights/games', '/insights/changes', '/insights/sites/certificates', '/insights/sites/compare', '/insights/games/players', '/insights/games/prices', '/insights/games/languages', '/insights/games/compare']) expect(html).toContain('href="' + prefix + path + '"')
     for (const path of ['/site/41', '/site/42', '/games/82', '/games/83']) expect(html).toContain('href="' + prefix + path + '"')
     for (const id of [91, 92, 93]) expect(html).not.toContain(`href="${prefix}/games/${id}"`)
-    expect(html).toContain('/nav/sites/41/icon/' + 'a'.repeat(32) + '.svg')
-    expect(html).toContain('/defaultLogo.svg'); expect(html).toContain('data-media-state="fallback"')
+    // Remote artwork may remain in the DTO; it must not enter the homepage UI.
+    expect(html.match(/<main[\s\S]*?<\/main>/)?.[0]).not.toContain('<img')
     expect(html).not.toContain('datetime="2026-09-01T10:00:00.000Z"')
     await expect(page.locator('[data-hero-domain="site"]')).toHaveAttribute('data-hero-metric', 'ipv6')
     await expect(page.locator('[data-hero-domain="site"]')).toContainText('63.0%')
@@ -174,7 +216,17 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
     await expect(page.locator('.insight-activity-item--hero')).toHaveCount(0)
     await expect(page.locator('[data-overview-activity] [data-change-link]')).toHaveCount(4)
     await expect(page.getByRole('heading', { level: 2, name: prefix ? 'Explore the ecosystems' : '探索生态', exact: true })).toBeVisible()
-    await expect(page.locator('[data-overview-summary] dd')).toHaveCount(1)
+    await expect(page.locator('[data-overview-summary]')).toHaveCount(0)
+    await expect(page.locator('[data-activity-heading] [data-activity-total]')).toHaveText('47')
+    await expect(page.locator('[data-activity-total]')).toHaveCount(1)
+    await expect(page.locator('[data-activity-icon] svg')).toHaveCount(4)
+    expect(await page.locator('[data-change-link]').evaluateAll(elements => elements.map(el => el.getAttribute('href')))).toEqual(['/games/82', '/site/41', '/games/83', '/site/42'].map(path => prefix + path))
+    await expect(page.locator('[data-overview-explore] h2')).toHaveText(prefix ? 'Explore deeper' : '深入探索')
+    await expect(page.locator('[data-directory-domain="game"] [data-directory-link]')).toHaveCount(4)
+    await expect(page.locator('[data-directory-domain="site"] [data-directory-link]')).toHaveCount(2)
+    expect(await page.locator('[data-directory-link]').evaluateAll(elements => elements.map(el => el.getAttribute('href')))).toEqual(['/insights/games/players', '/insights/games/prices', '/insights/games/languages', '/insights/games/compare', '/insights/sites/certificates', '/insights/sites/compare'].map(path => prefix + path))
+    for (const path of ['/insights/games', '/insights/sites', '/insights/changes']) await expect(page.locator(`[data-overview-explore] a[href="${prefix}${path}"]`)).toHaveCount(0)
+    await expect(page.locator('[data-activity-all]')).toHaveAttribute('href', prefix + '/insights/changes')
     await expect(page.locator('[data-overview-games] [data-ecosystem-count="game"]')).toHaveText('213')
     await expect(page.locator('[data-overview-sites] [data-ecosystem-count="site"]')).toHaveText('238')
     await expect(page.locator('[data-ecosystem-count]')).toHaveCount(2)
@@ -197,6 +249,9 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
     await keyboardFocus(page.locator('[data-hero-domain="site"] a'))
     await keyboardFocus(page.locator('[data-overview-games] [data-ecosystem-link]'))
     await keyboardFocus(page.locator('[data-overview-sites] [data-ecosystem-link]'))
+    await keyboardFocus(page.locator('[data-change-link]').first())
+    await keyboardFocus(page.locator('[data-activity-all]'))
+    for (const link of await page.locator('[data-directory-link]').all()) await keyboardFocus(link)
     await assertRuntimeSurface(page, '.insights-overview-page', theme)
     expect(await page.locator('a a').count()).toBe(0)
     expect(gameArt).toEqual([])
@@ -205,6 +260,7 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
       await page.mouse.click(0, 0); await page.evaluate(() => window.scrollTo(0, 0))
       await page.screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `${prefix ? 'en' : 'zh'}-${theme}-${width}.png`), fullPage: true })
       if (width === 1440 || width === 390) await page.locator('[data-overview-ecosystems]').screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `ecosystems-${prefix ? 'en' : 'zh'}-${theme}-${width}.png`) })
+      if (width === 1440 || width === 390) for (const section of ['activity', 'explore']) await page.locator(`[data-overview-${section}]`).screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `${section}-${prefix ? 'en' : 'zh'}-${theme}-${width}.png`) })
     }
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
     runtime.assertQuiet()
@@ -220,6 +276,11 @@ for (const [source, values] of [['nav', ['—', '213', '—']], ['game', ['238',
     expect(html.includes('data-ecosystem-metric="windows"')).toBe(source !== 'game' && source !== 'all')
     expect(html.includes('data-ecosystem-metric="tls13"')).toBe(source !== 'nav' && source !== 'all')
     expect(html.includes('data-change-link')).toBe(source !== 'all')
+    await expect(page.locator('[data-overview-activity]')).toHaveAttribute('data-activity-state', source === 'all' ? 'unavailable' : source === 'nav' ? 'game-only' : 'site-only')
+    await expect(page.locator('[data-activity-total]')).toHaveText('—')
+    await expect(page.locator('[data-activity-partial]')).toHaveCount(source === 'all' ? 0 : 1)
+    await expect(page.locator('[data-activity-unavailable]')).toHaveCount(source === 'all' ? 1 : 0)
+    await expect(page.locator('[data-activity-all]')).toHaveAttribute('href', '/insights/changes')
     await expect(page.locator('[data-hero-domain="game"] [data-hero-unavailable]')).toHaveCount(source === 'game' || source === 'all' ? 1 : 0)
     await expect(page.locator('[data-hero-domain="site"] [data-hero-unavailable]')).toHaveCount(source === 'nav' || source === 'all' ? 1 : 0)
     await expect(page.locator('[data-overview-hero] a')).toHaveCount(2)
@@ -260,18 +321,23 @@ for (const [prefix, locale] of [['', 'zh'], ['/en', 'en']]) test('Overview has n
   expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
   runtime.assertQuiet()
 })
-test('Overview ordinary Site event and real media failures preserve identity and data Hero', async ({ page, runtime }) => {
+test('Overview neutral Site events ignore failing artwork and preserve identity and data Hero', async ({ page, runtime }) => {
   runtime.state.siteHero = true
   await page.setViewportSize({ width: 390, height: 1000 })
+  const art: string[] = []
+  page.on('request', request => { if (request.resourceType() === 'image' && (/\/media\/game|\/nav\/sites\/|\/defaultLogo\.svg/.test(request.url()))) art.push(request.url()) })
   await openRuntime(page, '/insights')
   await expect(page.locator('[data-change-link]').first()).toHaveAttribute('data-domain', 'site')
   await expect(page.locator('.insight-activity-item--hero')).toHaveCount(0)
-  expect((await page.locator('[data-change-link]').first().locator('img').boundingBox())!.width).toBeLessThanOrEqual(72)
-  await revealImages(page)
+  await expect(page.locator('[data-change-link]').first()).toHaveAttribute('href', '/site/41')
+  await expect(page.locator('[data-activity-icon] svg')).toHaveCount(4)
+  await expect(page.locator('[data-overview-activity] img')).toHaveCount(0)
   runtime.failImages = true
   await openRuntime(page, '/insights'); await revealImages(page)
   await expect(page.locator('main .insight-entity-media img')).toHaveCount(0)
-  expect(await page.locator('main [role="img"][aria-label]').count()).toBeGreaterThan(0)
+  await expect(page.locator('[data-change-link]').first()).toContainText('Site fixture')
+  await expect(page.locator('[data-change-link]').first().locator('time')).toHaveAttribute('datetime', '2026-09-02T12:00:00Z')
+  expect(art).toEqual([])
   await expect(page.locator('[data-hero-domain="site"]')).toContainText('63.0%')
   await page.getByRole('button', { name: '切换明暗主题图标', exact: true }).click()
   await expect(page.locator('html')).toHaveClass(/dark/)

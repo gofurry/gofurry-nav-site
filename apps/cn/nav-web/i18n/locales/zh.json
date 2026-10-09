@@ -1133,6 +1133,26 @@
       "fullData": "查看完整数据",
       "continue": "继续观测"
     },
+    "overviewActivity": {
+      "description": "来自游戏与网站的近期公开变化，最多展示五条。",
+      "siteUnavailable": "网站观测暂不可用，当前仅展示游戏变化；近七日合计暂不可用。",
+      "gameUnavailable": "游戏观测暂不可用，当前仅展示网站变化；近七日合计暂不可用。",
+      "availableEmpty": "可用来源近期暂无可展示变化。",
+      "allChanges": "查看全部变化"
+    },
+    "overviewDirectory": {
+      "title": "深入探索",
+      "game": "游戏分析",
+      "site": "网站分析",
+      "links": {
+        "players": "玩家观测",
+        "prices": "价格与折扣",
+        "languages": "语言覆盖",
+        "gameCompare": "游戏对比",
+        "certificates": "证书观测",
+        "siteCompare": "网站对比"
+      }
+    },
     "overviewEcosystems": {
       "gameTitle": "游戏生态",
       "siteTitle": "网站生态",

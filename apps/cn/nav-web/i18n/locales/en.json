@@ -1133,6 +1133,26 @@
       "fullData": "View complete data",
       "continue": "Continue observing"
     },
+    "overviewActivity": {
+      "description": "Recent public changes across games and websites, showing up to five events.",
+      "siteUnavailable": "Website observations are unavailable. Only game changes are shown; the seven-day total is unavailable.",
+      "gameUnavailable": "Game observations are unavailable. Only website changes are shown; the seven-day total is unavailable.",
+      "availableEmpty": "The available source has no recent public changes.",
+      "allChanges": "View all changes"
+    },
+    "overviewDirectory": {
+      "title": "Explore deeper",
+      "game": "Game analysis",
+      "site": "Website analysis",
+      "links": {
+        "players": "Player observations",
+        "prices": "Prices and discounts",
+        "languages": "Language coverage",
+        "gameCompare": "Compare games",
+        "certificates": "Certificate observations",
+        "siteCompare": "Compare websites"
+      }
+    },
     "overviewEcosystems": {
       "gameTitle": "Game ecosystem",
       "siteTitle": "Website ecosystem",

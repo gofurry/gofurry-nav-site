@@ -1,6 +1,21 @@
 import type { GameV2ListItem, GameV2PanelRecord } from '@/types/game'
 import type { InsightFeedItem, InsightMetric, InsightMetricKey, InsightOverview } from '@/types/insights'
 import { selectGamePulse } from './insightGamePulse'
+import { overviewExploreGroups } from './insightOverview'
+
+// The shared groups also serve Domain pages; only the homepage directory drops
+// their primary entries and puts Game first.
+export const overviewDirectoryGroups = {
+  game: overviewExploreGroups.game.slice(1),
+  site: overviewExploreGroups.site.slice(1),
+} as const
+
+export function overviewActivitySummary(nav: InsightOverview | null, game: InsightOverview | null) {
+  const availability = nav && game ? 'complete' : nav ? 'site-only' : game ? 'game-only' : 'unavailable'
+  const navCount = overviewEntityCount(nav?.changes_7d), gameCount = overviewEntityCount(game?.changes_7d)
+  const total = navCount !== null && gameCount !== null ? overviewEntityCount(navCount + gameCount) : null
+  return { availability, total } as const
+}
 
 export const overviewHeroSiteKeys = ['ipv6', 'tls13', 'http2', 'hsts', 'csp', 'security_txt', 'certificate_verified'] as const
 export const overviewHeroGameKeys = ['free', 'windows', 'mac', 'linux'] as const

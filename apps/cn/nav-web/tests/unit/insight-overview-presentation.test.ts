@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { GameV2ListItem, GameV2PanelRecord } from '../../app/types/game'
 import type { InsightFeedItem, InsightMetric, InsightOverview } from '../../app/types/insights'
-import { auditOverviewGameCover, formatOverviewPercentagePoints, overviewActivityWithoutGameArt, overviewEntityCount, overviewFactDate, overviewHeroGameKeys, overviewHeroSiteKeys, overviewPlayerObservation, overviewRatio, overviewSample, selectOverviewEcosystemMetrics, selectOverviewMetric, selectOverviewPulse } from '../../app/utils/insightOverviewPresentation'
+import { auditOverviewGameCover, formatOverviewPercentagePoints, overviewActivitySummary, overviewActivityWithoutGameArt, overviewDirectoryGroups, overviewEntityCount, overviewFactDate, overviewHeroGameKeys, overviewHeroSiteKeys, overviewPlayerObservation, overviewRatio, overviewSample, selectOverviewEcosystemMetrics, selectOverviewMetric, selectOverviewPulse } from '../../app/utils/insightOverviewPresentation'
+import { overviewActivity, overviewExploreGroups } from '../../app/utils/insightOverview'
 
 const now = Date.parse('2026-09-04T09:00:00Z')
 const proposedWindow = 72 * 60 * 60 * 1000
@@ -13,6 +14,41 @@ const metric = (extra: Partial<InsightMetric> = {}): InsightMetric => ({
   key: 'ipv6', value: 0, coverage: .8, known: 8, eligible: 10, as_of: '2026-09-01', delta_30d: .042, available_from: null, ...extra,
 })
 const overview = (metrics: InsightMetric[]): InsightOverview => ({ metrics, entity_count: 10, changes_7d: 0, generated_at: '2026-09-02T00:00:00Z', recent_changes: [] })
+
+describe('Overview activity and directory ownership', () => {
+  it('sums only two complete reliable sources, keeping real zero and independent availability', () => {
+    const nav = { ...overview([]), changes_7d: 20 }, game = { ...overview([]), changes_7d: 27 }
+    expect(overviewActivitySummary(nav, game)).toEqual({ availability: 'complete', total: 47 })
+    expect(overviewActivitySummary(overview([]), overview([]))).toEqual({ availability: 'complete', total: 0 })
+    expect(overviewActivitySummary(nav, null)).toEqual({ availability: 'site-only', total: null })
+    expect(overviewActivitySummary(null, game)).toEqual({ availability: 'game-only', total: null })
+    expect(overviewActivitySummary(null, null)).toEqual({ availability: 'unavailable', total: null })
+    for (const changes_7d of [NaN, Infinity, -1, .5, Number.MAX_SAFE_INTEGER]) {
+      expect(overviewActivitySummary({ ...nav, changes_7d }, game).total).toBeNull()
+      expect(overviewActivitySummary(nav, { ...game, changes_7d }).total).toBeNull()
+    }
+  })
+  it('keeps the newest five real events and their original day/exact precision without mutating either feed', () => {
+    const event = (id: number, date: string, occurred_at: string | null) => ({ entity: { id, name: `Entity ${id}` }, type: 'unknown', date, occurred_at, detail: null })
+    const nav = { ...overview([]), recent_changes: [event(1, '2026-09-01', null), event(2, '2026-08-31', null)] }
+    const game = { ...overview([]), recent_changes: [event(3, '2026-09-01', '2026-09-01T01:00:00Z'), event(4, '2026-09-02', null), event(5, '2026-08-30', null), event(6, '2026-09-01', '2026-09-01T02:00:00Z')] }
+    const before = JSON.stringify([nav, game])
+    const items = overviewActivity(nav, game)
+    expect(items.map(item => item.entity.id)).toEqual([4, 6, 3, 1, 2])
+    expect(items.find(item => item.entity.id === 1)).toMatchObject({ date: '2026-09-01', occurred_at: null, domain: 'site' })
+    expect(items.find(item => item.entity.id === 3)?.occurred_at).toBe('2026-09-01T01:00:00Z')
+    expect(overviewActivity(nav, null)).toHaveLength(2)
+    expect(overviewActivity(null, null)).toEqual([])
+    expect(JSON.stringify([nav, game])).toBe(before)
+  })
+  it('derives six homepage topics without changing the shared Domain destinations', () => {
+    expect(Object.keys(overviewDirectoryGroups)).toEqual(['game', 'site'])
+    expect(overviewDirectoryGroups.game.map(item => item.path)).toEqual(['/insights/games/players', '/insights/games/prices', '/insights/games/languages', '/insights/games/compare'])
+    expect(overviewDirectoryGroups.site.map(item => item.path)).toEqual(['/insights/sites/certificates', '/insights/sites/compare'])
+    expect(overviewExploreGroups.game.map(item => item.path)).toEqual(['/insights/games', ...overviewDirectoryGroups.game.map(item => item.path)])
+    expect(overviewExploreGroups.site.map(item => item.path)).toEqual(['/insights/sites', ...overviewDirectoryGroups.site.map(item => item.path)])
+  })
+})
 
 describe('Overview dual ecosystem projection', () => {
   it('selects at most three game metrics in stable priority, keeping zero and skipping unknown keys', () => {

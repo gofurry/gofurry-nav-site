@@ -22,6 +22,7 @@ const tsImports = registerHooks({ resolve(specifier, context, nextResolve) {
 } })
 const { overviewActivity, overviewSiteIdentities, overviewGeneratedAt, overviewSignal, formatOverviewDelta, overviewSiteMetricKeys, overviewExploreGroups, overviewChangesPath } = await import('../app/utils/insightOverview.ts')
 const { selectGamePulse, pulseDiscountPrice } = await import('../app/utils/insightGamePulse.ts')
+const { overviewDirectoryGroups } = await import('../app/utils/insightOverviewPresentation.ts')
 tsImports.deregister()
 
 assert(overviewSiteMetricKeys.join(',') === 'tls13,ipv6,security_txt', 'Overview site signal contract changed')
@@ -116,6 +117,7 @@ const domainPaths = {
 }
 for (const domain of ['site', 'game']) {
   assert(overviewExploreGroups[domain].map(item => item.path).join('|') === domainPaths[domain].join('|'), `Overview ${domain} destinations changed`)
+  assert(overviewDirectoryGroups[domain].map(item => item.path).join('|') === domainPaths[domain].slice(1).join('|'), `Overview ${domain} directory lost its topics or restored duplicate primary links`)
   for (const item of overviewExploreGroups[domain]) {
     for (const messages of [zh, en]) assert(messages.insights.editorial.links[item.key]?.description, `Overview ${item.path} lost its localized description`)
   }
@@ -133,7 +135,15 @@ const overviewHero = readFileSync(new URL('../app/components/insights/overview/I
 assert(overviewHero.includes('data-hero-mode="data"') && overviewHero.includes('percentagePoints') && overviewHero.includes('side.metric.as_of'), 'Overview data Hero lost its safety or metric semantics')
 assert(!/<img\b|InsightEntityMedia|<canvas\b/.test(overviewHero), 'unqualified artwork or fabricated chart entered the data Hero')
 const overviewActivitySource = readFileSync(new URL('../app/components/insights/activity/InsightsOverviewActivity.vue', import.meta.url), 'utf8')
-assert(overviewActivitySource.includes('items.slice(0, 5)') && overviewActivitySource.includes('overviewActivityWithoutGameArt') && !overviewActivitySource.includes(' hero'), 'Overview restored a competing event Hero or unqualified artwork')
+assert(overviewActivitySource.includes('items.slice(0, 5)') && overviewActivitySource.includes('overviewActivityWithoutGameArt') && overviewActivitySource.includes('<InsightsOverviewActivityItem') && !overviewActivitySource.includes('<InsightActivityItem '), 'Overview lost its bounded homepage-only activity rows')
+assert(overviewActivitySource.includes('data-activity-total') && overviewActivitySource.includes('data-activity-partial') && overviewActivitySource.includes('data-activity-empty') && overviewActivitySource.includes('data-activity-unavailable') && overviewActivitySource.includes('data-activity-all'), 'Overview activity lost total, independent states or its changes entry')
+assert(!overviewSource.includes('data-overview-summary') && overviewSource.includes(':summary="activitySummary"'), 'Overview retained a duplicate total or lost its activity summary')
+const overviewRow = readFileSync(new URL('../app/components/insights/overview/InsightsOverviewActivityItem.vue', import.meta.url), 'utf8')
+assert(overviewRow.includes('PhGameController') && overviewRow.includes('PhGlobe') && overviewRow.includes('insightChangeI18nKey') && overviewRow.includes("formatInsightChangeWhen(item, locale, 'UTC')") && overviewRow.includes('siteEntityPath'), 'Homepage activity lost neutral identities, public event copy, exact time or entity routing')
+assert(!/<img\b|InsightEntityMedia|insight-activity-item--hero/.test(overviewRow), 'Homepage activity restored remote artwork or a competing Hero')
+const overviewDirectory = readFileSync(new URL('../app/components/insights/overview/InsightsOverviewDirectory.vue', import.meta.url), 'utf8')
+assert(overviewDirectory.includes('overviewDirectoryGroups') && overviewDirectory.includes('localePath(item.path)') && !overviewDirectory.includes('overviewChangesPath'), 'Overview directory lost localized topics or duplicates the changes entry')
+assert(zh.insights.overviewDirectory.title === '深入探索' && en.insights.overviewDirectory.title === 'Explore deeper', 'Overview directory title changed')
 for (const file of readdirSync(new URL('../app/components/insights/overview/', import.meta.url)).filter(name => name.endsWith('.vue'))) {
   const source = readFileSync(new URL(`../app/components/insights/overview/${file}`, import.meta.url), 'utf8')
   assert(!/\b(?:fetch|useFetch|useAsyncData)\s*\(|from ['"]@\/services\//.test(source), `${file} added presentation-level requests`)
