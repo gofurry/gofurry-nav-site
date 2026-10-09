@@ -60,6 +60,7 @@ var insightChangeContracts = []insightChangeContract{
 }
 
 type InsightsStore interface {
+	ListInsightVisualCandidates(context.Context, string) ([]v2models.InsightVisualCandidateRecord, error)
 	CountInsightEntities(context.Context) (int64, error)
 	GetInsightGame(context.Context, int64) (*v2models.InsightGameRecord, error)
 	GetInsightMetricSummary(context.Context, v2models.InsightMetricContract) (*v2models.InsightMetricSummaryRecord, error)
@@ -101,7 +102,7 @@ func NewInsightsService(store InsightsStore) *InsightsService {
 }
 
 func (s *InsightsService) GetInsightsOverview(ctx context.Context) (v2models.InsightOverview, error) {
-	result := v2models.InsightOverview{GeneratedAt: s.now().UTC(), Metrics: []v2models.InsightMetric{}, RecentChanges: []v2models.InsightChange{}}
+	result := v2models.InsightOverview{GeneratedAt: s.now().UTC(), Metrics: []v2models.InsightMetric{}, RecentChanges: []v2models.InsightChange{}, FeaturedVisuals: []v2models.InsightFeaturedVisual{}}
 	var err error
 	if result.EntityCount, err = s.store.CountInsightEntities(ctx); err != nil {
 		return result, err
@@ -124,6 +125,7 @@ func (s *InsightsService) GetInsightsOverview(ctx context.Context) (v2models.Ins
 		return result, err
 	}
 	result.RecentChanges = insightPublicChanges(changes)
+	result.FeaturedVisuals = s.featuredVisuals(ctx, result.GeneratedAt)
 	return result, nil
 }
 

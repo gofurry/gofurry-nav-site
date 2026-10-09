@@ -59,6 +59,9 @@ type fakeInsightsStore struct {
 }
 
 func (f *fakeInsightsStore) CountInsightEntities(context.Context) (int64, error) { return 1, nil }
+func (f *fakeInsightsStore) ListInsightVisualCandidates(context.Context, string) ([]v2models.InsightVisualCandidateRecord, error) {
+	return nil, nil
+}
 func (f *fakeInsightsStore) GetInsightGame(_ context.Context, id int64) (*v2models.InsightGameRecord, error) {
 	if f.games != nil {
 		return f.games[id], nil

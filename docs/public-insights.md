@@ -33,6 +33,94 @@ Game:
 
 Normal and empty results return 200. Invalid metric keys or ranges return 400, missing entities return 404, and genuine backend failures return 500.
 
+## Game Overview visual source contract (#108-A2.2-A)
+
+Only Game Overview adds `featured_visuals`, always an array of 0–3 items, never
+`null` or omitted. Existing statistics, changes, timestamps and errors retain
+their contracts. Example of one structurally qualified item (illustrative only,
+not an approval record):
+
+```json
+{
+  "featured_visuals": [{
+    "game_id": 100,
+    "name": "作品名称",
+    "name_en": "",
+    "visual": {
+      "kind": "game_header",
+      "asset": "https://shared.steamstatic.com/store_item_assets/steam/apps/570840/header.jpg"
+    }
+  }]
+}
+```
+
+`game_id` is the real Game ID, not the Steam AppID. Names are trimmed; an empty
+Chinese name falls back to a real `name_en`, but no English translation is
+invented. Both names empty means exclusion. This is current metadata, not an
+observed fact, popularity signal or recommendation score.
+
+Admission requires positive Game/Steam/asset IDs, `showcase_eligible=true`, no
+related `adult` tag (including archived tags), and an existing header row whose
+`game_id` and `appid` both match the current Game. An explicit `exists=false`
+excludes the resource; unknown existence is not a claim of current availability.
+There is no remote fetch, image decoding, image proxy or live availability check.
+The selected asset must be `header` or `header_2x`, with language `zh`, `en` or
+unlocalized. Asset priority is header before header_2x, then zh/en/unlocalized,
+then `asset_family`, `sort_order`, `id`, ascending. No media/details/game-header
+fallback with unverifiable ownership is accepted.
+
+URLs must use HTTPS and one exact lowercase host: `shared.steamstatic.com`,
+`shared.akamai.steamstatic.com`, `cdn.akamai.steamstatic.com`,
+`cdn.cloudflare.steamstatic.com`, `cdn.steamstatic.com`, or
+`steamcdn-a.akamaihd.net`. Credentials, explicit ports, fragments, escapes,
+whitespace, unknown hosts and unknown paths are rejected. Recognized paths are
+`/steam/apps/<AppID>/<filename>` and
+`/store_item_assets/steam/apps/<AppID>/[<40 lowercase hexadecimal characters>/]<filename>`.
+AppID must exactly equal the current Steam identity with no leading zero.
+Filenames follow `header[_alt_assets_<1–4 digits>][_schinese][_2x].jpg`;
+only the optional numeric cache-buster `?t=<1–20 digits>` is accepted.
+These finite forms are provenance checks, not evidence about image pixels.
+
+The dedicated sqlc `ListGameInsightVisualCandidates` query filters all admission
+conditions before its outer `LIMIT 3`, chooses one asset per game, and orders by
+`md5(UTC_DATE + ':' + decimal_game_id)`, then Game ID. The service uses the UTC day
+of its existing `generated_at` clock, validates the result again and deduplicates
+Game IDs. MD5 is only a deterministic ordering key, not a security primitive.
+Identical day/candidates/assets produce identical output; midnight may rotate
+selection but does not guarantee different games. Weight, paid promotion,
+players, price and Showcase ranking do not participate.
+
+There is one additional read-only database call, returning at most three rows,
+after all existing Overview reads succeed. It has a 500ms child-context deadline
+and propagates service-context cancellation through pgx; sqlc closes result rows
+and releases the pool connection. Failure or timeout logs only a reason class
+and returns `featured_visuals: []`. Original Overview failures still return their
+original errors. The existing controller context lifecycle is unchanged.
+The query filters in PostgreSQL instead of transferring an unbounded asset pool;
+its hash selection still evaluates eligible games, so performance claims require
+an actual query plan at the relevant data size.
+
+There is no new positive cache or Redis key. Permission withdrawal, an adult tag
+or an updated URL affects the next backend read. The existing route has no
+application response cache; external CDN/platform propagation is an operational
+boundary whose effective TTL is not verified by repository tests. Do not promise
+instant removal from browser/CDN caches or change global caching in this phase.
+
+**This is game-level display permission plus asset identity validation, not
+per-asset human review or a positive SFW image certificate.** Missing adult tags
+alone are insufficient. Tag omissions, replacement pixels at the same URL,
+metadata changes and daily rotation remain content-review risks. Before A2.2-B
+publishes images, maintainers must confirm review scope, who reviews new/rotated
+assets, and withdrawal/cache handling. A2.2-A adds no image UI.
+
+Nav Web declares `featured_visuals?` for compatibility with older backends and
+does not consume it. Empty and populated fixtures assert no image DOM, Steam
+image request, new link, Home request or hydration fetch, in both languages.
+The two independent parallel SSR sources remain unchanged. The shared URL corpus
+is exercised by both Go parser tests and the existing disposable PostgreSQL
+integration harness; permission/tag/URL revocation, result bounds and daily
+ordering are integration-tested without writing to shared development data.
+
 ## Metric contracts
 
 Public keys are deliberately mapped to one reviewed internal version:

@@ -16,6 +16,24 @@ type InsightsDAO struct{ queries *gamesqlc.Queries }
 
 func NewInsightsDAO(queries *gamesqlc.Queries) *InsightsDAO { return &InsightsDAO{queries: queries} }
 
+func (d *InsightsDAO) ListInsightVisualCandidates(ctx context.Context, utcDay string) ([]v2models.InsightVisualCandidateRecord, error) {
+	rows, err := d.queries.ListGameInsightVisualCandidates(ctx, utcDay)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]v2models.InsightVisualCandidateRecord, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, v2models.InsightVisualCandidateRecord{
+			GameID: row.GameID, AppID: row.Appid, Name: row.GameName, NameEn: row.GameNameEn,
+			ShowcaseEligible: row.ShowcaseEligible, HasAdult: row.GameHasAdult,
+			AssetID: row.AssetID, AssetGameID: row.AssetGameID, AssetAppID: row.AssetAppid,
+			AssetType: row.AssetType, Lang: row.Lang, AssetFamily: row.AssetFamily,
+			SortOrder: row.SortOrder, Exists: row.Exists, Asset: row.Url,
+		})
+	}
+	return result, nil
+}
+
 func (d *InsightsDAO) CountInsightEntities(ctx context.Context) (int64, error) {
 	return d.queries.CountGameInsightGames(ctx)
 }

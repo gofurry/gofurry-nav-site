@@ -9,6 +9,21 @@ function stats(html: string) {
     .concat(html.match(/<dd data-activity-total>(.*?)<\/dd>/)?.[1] ?? '')
 }
 
+for (const prefix of ['', '/en']) for (const visualCase of ['empty', 'populated']) test(`Overview ignores optional visual data ${prefix || 'zh'} ${visualCase}`, async ({ page, runtime }) => {
+  runtime.state.visualCase = visualCase
+  const mediaRequests: string[] = []
+  page.on('request', request => { if (/steamstatic|akamaihd/.test(request.url())) mediaRequests.push(request.url()) })
+  const html = await openRuntime(page, prefix + '/insights')
+  expect(stats(html)).toEqual(['238', '213', '47'])
+  await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', 'data')
+  await expect(page.locator('[data-overview-hero] img, [data-overview-ecosystems] img, [data-overview-activity] img')).toHaveCount(0)
+  expect((await page.locator('[data-overview-hero], [data-overview-ecosystems], [data-overview-activity]').allTextContents()).join(' ')).not.toContain('Visual candidate')
+  await expect(page.locator('a[href$="/games/91"], a[href$="/games/92"], a[href$="/games/93"]')).toHaveCount(0)
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  expect(mediaRequests).toEqual([])
+  runtime.assertQuiet()
+})
+
 for (const [prefix, title, description] of [
   ['', 'Furry 生态观测 - GoFurry', '查看 Furry 网站与游戏生态的公开指标、近期变化、统计覆盖和可靠历史数据，了解生态正在发生什么。'],
   ['/en', 'Furry Ecosystem - GoFurry', 'Explore public metrics and recent changes across the Furry website and game ecosystems, with transparent coverage and historical data availability.'],

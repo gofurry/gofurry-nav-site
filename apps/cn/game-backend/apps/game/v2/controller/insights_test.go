@@ -16,7 +16,7 @@ import (
 type fakeInsightsReader struct{}
 
 func (fakeInsightsReader) GetInsightsOverview(context.Context) (v2models.InsightOverview, error) {
-	return v2models.InsightOverview{Metrics: []v2models.InsightMetric{}, RecentChanges: []v2models.InsightChange{}}, nil
+	return v2models.InsightOverview{Metrics: []v2models.InsightMetric{}, RecentChanges: []v2models.InsightChange{}, FeaturedVisuals: []v2models.InsightFeaturedVisual{}}, nil
 }
 func (fakeInsightsReader) GetInsightsMetricTrend(_ context.Context, key, requestedRange string) (v2models.InsightMetricTrend, error) {
 	if key == "bad" {
@@ -169,6 +169,9 @@ func TestGameInsightsHTTPContract(t *testing.T) {
 		resp.Body.Close()
 		if resp.StatusCode != tc.want {
 			t.Fatalf("%s status=%d body=%s", tc.path, resp.StatusCode, body)
+		}
+		if tc.path == "/api/v2/game/insights/overview" && !strings.Contains(string(body), `"featured_visuals":[]`) {
+			t.Fatalf("Overview must expose an empty visual array: %s", body)
 		}
 		for _, forbidden := range []string{"detector_key", "metric_version", "internal_key", "old_value", "new_value"} {
 			if strings.Contains(string(body), forbidden) {

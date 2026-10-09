@@ -1685,3 +1685,94 @@ func (q *Queries) ListGameInsightRegionalPrices(ctx context.Context, arg ListGam
 	}
 	return items, nil
 }
+
+const listGameInsightVisualCandidates = `-- name: ListGameInsightVisualCandidates :many
+WITH named_games AS (
+    SELECT game.id, game.appid, game.showcase_eligible,
+           BTRIM(game.name, U&'\0020\0009\000A\000D\000B\000C\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000') AS name,
+           BTRIM(game.name_en, U&'\0020\0009\000A\000D\000B\000C\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000') AS name_en,
+           EXISTS(SELECT 1 FROM public.gfg_game_tag membership JOIN public.gfg_tag tag ON tag.id=membership.tag_id
+                  WHERE membership.game_id=game.id AND tag.code='adult') AS has_adult
+    FROM public.gfg_game game
+    WHERE game.showcase_eligible IS TRUE AND game.id>0 AND game.appid>0
+)
+SELECT game.id AS game_id, game.appid, game.name::text, game.name_en::text, game.showcase_eligible, game.has_adult::boolean,
+       asset.id AS asset_id, asset.game_id AS asset_game_id, asset.appid AS asset_appid,
+       asset.asset_type, asset.lang, asset.asset_family, asset.sort_order, asset.exists, asset.url
+FROM named_games game
+JOIN LATERAL (
+    SELECT a.id,a.game_id,a.appid,a.asset_type,a.lang,a.asset_family,a.sort_order,a.exists,a.url
+    FROM public.gfg_game_assets a
+    WHERE a.game_id=game.id AND a.appid=game.appid AND a.id>0
+      AND a.asset_type IN ('header','header_2x') AND a.lang IN ('zh','en','')
+      AND a.exists IS DISTINCT FROM false
+      AND a.url !~ '[[:space:][:cntrl:]]'
+      AND a.url ~ ('^https://(shared[.]steamstatic[.]com|shared[.]akamai[.]steamstatic[.]com|cdn[.]akamai[.]steamstatic[.]com|cdn[.]cloudflare[.]steamstatic[.]com|cdn[.]steamstatic[.]com|steamcdn-a[.]akamaihd[.]net)/(steam/apps/'
+          || game.appid::text || '/|store_item_assets/steam/apps/' || game.appid::text
+          || '/([0-9a-f]{40}/)?)header(_alt_assets_[0-9]{1,4})?(_schinese)?(_2x)?[.]jpg([?]t=[0-9]{1,20})?$')
+    ORDER BY CASE a.asset_type WHEN 'header' THEN 0 ELSE 1 END,
+             CASE a.lang WHEN 'zh' THEN 0 WHEN 'en' THEN 1 ELSE 2 END,
+             a.asset_family,a.sort_order,a.id
+    LIMIT 1
+) asset ON TRUE
+WHERE NOT game.has_adult AND (game.name<>'' OR game.name_en<>'')
+ORDER BY md5($1::text || ':' || game.id::text),game.id
+LIMIT 3
+`
+
+type ListGameInsightVisualCandidatesRow struct {
+	GameID           int64  `json:"game_id"`
+	Appid            int64  `json:"appid"`
+	GameName         string `json:"game_name"`
+	GameNameEn       string `json:"game_name_en"`
+	ShowcaseEligible bool   `json:"showcase_eligible"`
+	GameHasAdult     bool   `json:"game_has_adult"`
+	AssetID          int64  `json:"asset_id"`
+	AssetGameID      int64  `json:"asset_game_id"`
+	AssetAppid       int64  `json:"asset_appid"`
+	AssetType        string `json:"asset_type"`
+	Lang             string `json:"lang"`
+	AssetFamily      string `json:"asset_family"`
+	SortOrder        int32  `json:"sort_order"`
+	Exists           *bool  `json:"exists"`
+	Url              string `json:"url"`
+}
+
+// Game permission and URL identity do not establish per-image content approval.
+// Filter all supported evidence BEFORE selecting the daily three: invalid URLs
+// cannot fill an arbitrary oversampling window and hide a later eligible game.
+func (q *Queries) ListGameInsightVisualCandidates(ctx context.Context, utcDay string) ([]ListGameInsightVisualCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listGameInsightVisualCandidates, utcDay)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListGameInsightVisualCandidatesRow{}
+	for rows.Next() {
+		var i ListGameInsightVisualCandidatesRow
+		if err := rows.Scan(
+			&i.GameID,
+			&i.Appid,
+			&i.GameName,
+			&i.GameNameEn,
+			&i.ShowcaseEligible,
+			&i.GameHasAdult,
+			&i.AssetID,
+			&i.AssetGameID,
+			&i.AssetAppid,
+			&i.AssetType,
+			&i.Lang,
+			&i.AssetFamily,
+			&i.SortOrder,
+			&i.Exists,
+			&i.Url,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

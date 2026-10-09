@@ -1,12 +1,20 @@
 import { mockOverview } from '../../../scripts/fixtures/insights-overview.mjs'
 import { runtimeTest } from './insights-runtime'
+import type { InsightFeaturedVisual } from '../../../app/types/insights'
 export const sources = ['/api/v2/nav/insights/overview', '/api/v2/game/insights/overview']
-export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCase: '', sampleCase: '', candidateCase: '', eventCount: -1, countCase: '' }),
+export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCase: '', sampleCase: '', candidateCase: '', visualCase: '', eventCount: -1, countCase: '' }),
   url => sources.includes(url.pathname),
   (url, media, _body, state) => {
     const source = url.pathname === sources[0] ? 'nav' : 'game'
     if (state.failure === source || state.failure === 'all') return { status: 503 }
     const data = mockOverview(source === 'nav' ? 'site' : 'game', media)
+    if (source === 'game' && state.visualCase) {
+      const featured: InsightFeaturedVisual[] = state.visualCase === 'empty' ? [] : [91, 92, 93].map(gameId => ({
+        game_id: gameId, name: '候选作品', name_en: 'Visual candidate',
+        visual: { kind: 'game_header', asset: `https://shared.steamstatic.com/steam/apps/${gameId}/header.jpg` },
+      }))
+      Object.assign(data, { featured_visuals: featured })
+    }
     if (state.siteHero && source === 'nav') data.recent_changes[0].occurred_at = '2026-09-02T12:00:00Z'
     if (state.eventCount >= 0) data.recent_changes = Array.from({ length: source === 'nav' ? Math.ceil(state.eventCount / 2) : Math.floor(state.eventCount / 2) }, (_, i) => ({
       ...data.recent_changes[i % 2], entity: { ...data.recent_changes[i % 2].entity, id: (source === 'nav' ? 41 : 81) + i },

@@ -1,0 +1,172 @@
+[
+  {
+    "name": "modern",
+    "url": "https://shared.steamstatic.com/store_item_assets/steam/apps/12345/header.jpg",
+    "valid": true
+  },
+  {
+    "name": "classic",
+    "url": "https://cdn.akamai.steamstatic.com/steam/apps/12345/header.jpg?t=123",
+    "valid": true
+  },
+  {
+    "name": "hash",
+    "url": "https://shared.steamstatic.com/store_item_assets/steam/apps/12345/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/header_alt_assets_10_schinese_2x.jpg",
+    "valid": true
+  },
+  {
+    "name": "chinese",
+    "url": "https://shared.steamstatic.com/store_item_assets/steam/apps/12345/header_schinese.jpg",
+    "valid": true
+  },
+  {
+    "name": "2x",
+    "url": "https://steamcdn-a.akamaihd.net/steam/apps/12345/header_2x.jpg",
+    "valid": true
+  },
+  {
+    "name": "shared.akamai.steamstatic.com",
+    "url": "https://shared.akamai.steamstatic.com/steam/apps/12345/header.jpg",
+    "valid": true
+  },
+  {
+    "name": "cdn.cloudflare.steamstatic.com",
+    "url": "https://cdn.cloudflare.steamstatic.com/steam/apps/12345/header.jpg",
+    "valid": true
+  },
+  {
+    "name": "cdn.steamstatic.com",
+    "url": "https://cdn.steamstatic.com/steam/apps/12345/header.jpg",
+    "valid": true
+  },
+  {
+    "name": "empty",
+    "url": "",
+    "valid": false
+  },
+  {
+    "name": "http",
+    "url": "http://shared.steamstatic.com/steam/apps/12345/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "wrong-app",
+    "url": "https://shared.steamstatic.com/steam/apps/999/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "unknown-path",
+    "url": "https://shared.steamstatic.com/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "short-hash",
+    "url": "https://shared.steamstatic.com/store_item_assets/steam/apps/12345/abc/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "classic-hash",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "uppercase-hash",
+    "url": "https://shared.steamstatic.com/store_item_assets/steam/apps/12345/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "capsule",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/capsule.jpg",
+    "valid": false
+  },
+  {
+    "name": "encoded-app",
+    "url": "https://shared.steamstatic.com/steam/apps/%31%32%33%34%35/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "dot",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/../header.jpg",
+    "valid": false
+  },
+  {
+    "name": "nested-app",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/steam/apps/999/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "leading-zero",
+    "url": "https://shared.steamstatic.com/steam/apps/012345/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "port",
+    "url": "https://shared.steamstatic.com:443/steam/apps/12345/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "userinfo",
+    "url": "https://user@shared.steamstatic.com/steam/apps/12345/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "suffix",
+    "url": "https://shared.steamstatic.com.evil.test/steam/apps/12345/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "uppercase-host",
+    "url": "https://SHARED.steamstatic.com/steam/apps/12345/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "trailing-dot",
+    "url": "https://shared.steamstatic.com./steam/apps/12345/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "fragment",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/header.jpg#x",
+    "valid": false
+  },
+  {
+    "name": "empty-fragment",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/header.jpg#",
+    "valid": false
+  },
+  {
+    "name": "query",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/header.jpg?redirect=evil",
+    "valid": false
+  },
+  {
+    "name": "empty-query",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/header.jpg?",
+    "valid": false
+  },
+  {
+    "name": "double-query",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/header.jpg?t=1&t=2",
+    "valid": false
+  },
+  {
+    "name": "newline",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/header.jpg\n",
+    "valid": false
+  },
+  {
+    "name": "space",
+    "url": " https://shared.steamstatic.com/steam/apps/12345/header.jpg",
+    "valid": false
+  },
+  {
+    "name": "backslash",
+    "url": "https://shared.steamstatic.com/steam/apps/12345\\header.jpg",
+    "valid": false
+  },
+  {
+    "name": "unknown-file",
+    "url": "https://shared.steamstatic.com/steam/apps/12345/header_custom.jpg",
+    "valid": false
+  }
+]

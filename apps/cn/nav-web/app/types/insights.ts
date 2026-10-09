@@ -111,12 +111,22 @@ export interface InsightChange {
   detail: unknown | null
 }
 
+// Game-level permission and Steam resource identity are not per-asset human review.
+// A2.2-A only transports this optional field; the homepage stays data-only.
+export interface InsightFeaturedVisual {
+  game_id: number
+  name: string
+  name_en: string
+  visual: { kind: 'game_header', asset: string }
+}
+
 export interface InsightOverview {
   generated_at: string
   entity_count: number
   changes_7d: number
   metrics: InsightMetric[]
   recent_changes: InsightChange[]
+  featured_visuals?: InsightFeaturedVisual[]
 }
 
 export interface InsightFeedItem extends InsightChange {

@@ -116,11 +116,30 @@ type InsightChangeExplorerQuery struct {
 }
 
 type InsightOverview struct {
-	GeneratedAt   time.Time       `json:"generated_at"`
-	EntityCount   int64           `json:"entity_count"`
-	Changes7D     int64           `json:"changes_7d"`
-	Metrics       []InsightMetric `json:"metrics"`
-	RecentChanges []InsightChange `json:"recent_changes"`
+	GeneratedAt     time.Time               `json:"generated_at"`
+	EntityCount     int64                   `json:"entity_count"`
+	Changes7D       int64                   `json:"changes_7d"`
+	Metrics         []InsightMetric         `json:"metrics"`
+	RecentChanges   []InsightChange         `json:"recent_changes"`
+	FeaturedVisuals []InsightFeaturedVisual `json:"featured_visuals"`
+}
+
+// InsightFeaturedVisual carries game-level permission and resource identity,
+// not per-asset human review. A2.2-A does not enable frontend image rendering.
+type InsightFeaturedVisual struct {
+	GameID int64               `json:"game_id"`
+	Name   string              `json:"name"`
+	NameEn string              `json:"name_en"`
+	Visual InsightEntityVisual `json:"visual"`
+}
+
+// InsightVisualCandidateRecord is a private read model, never a public approval DTO.
+type InsightVisualCandidateRecord struct {
+	GameID, AppID, AssetGameID, AssetAppID, AssetID   int64
+	ShowcaseEligible, HasAdult                        bool
+	Name, NameEn, AssetType, Lang, AssetFamily, Asset string
+	SortOrder                                         int32
+	Exists                                            *bool
 }
 
 type InsightGameState struct {
