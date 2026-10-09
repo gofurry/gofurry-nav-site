@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GameV2ListItem, GameV2PanelRecord } from '../../app/types/game'
 import type { InsightFeedItem, InsightMetric, InsightOverview } from '../../app/types/insights'
-import { auditOverviewGameCover, formatOverviewPercentagePoints, overviewActivityWithoutGameArt, overviewFactDate, overviewHeroGameKeys, overviewHeroSiteKeys, overviewPlayerObservation, overviewRatio, overviewSample, selectOverviewMetric, selectOverviewPulse } from '../../app/utils/insightOverviewPresentation'
+import { auditOverviewGameCover, formatOverviewPercentagePoints, overviewActivityWithoutGameArt, overviewEntityCount, overviewFactDate, overviewHeroGameKeys, overviewHeroSiteKeys, overviewPlayerObservation, overviewRatio, overviewSample, selectOverviewEcosystemMetrics, selectOverviewMetric, selectOverviewPulse } from '../../app/utils/insightOverviewPresentation'
 
 const now = Date.parse('2026-09-04T09:00:00Z')
 const proposedWindow = 72 * 60 * 60 * 1000
@@ -13,6 +13,47 @@ const metric = (extra: Partial<InsightMetric> = {}): InsightMetric => ({
   key: 'ipv6', value: 0, coverage: .8, known: 8, eligible: 10, as_of: '2026-09-01', delta_30d: .042, available_from: null, ...extra,
 })
 const overview = (metrics: InsightMetric[]): InsightOverview => ({ metrics, entity_count: 10, changes_7d: 0, generated_at: '2026-09-02T00:00:00Z', recent_changes: [] })
+
+describe('Overview dual ecosystem projection', () => {
+  it('selects at most three game metrics in stable priority, keeping zero and skipping unknown keys', () => {
+    const data = overview([metric({ key: 'linux', value: .3 }), metric({ key: 'mac', value: .4 }), metric({ key: 'windows', value: .9 }), metric({ key: 'free', value: 0 }), metric()])
+    const before = JSON.stringify(data)
+    expect(selectOverviewEcosystemMetrics(data, 'game').map(item => item.key)).toEqual(['free', 'windows', 'mac'])
+    expect(selectOverviewEcosystemMetrics(data, 'game')[0]?.value).toBe(0)
+    expect(JSON.stringify(data)).toBe(before)
+  })
+  it('fills missing game metrics from the existing catalog without inventing a minimum count', () => {
+    const data = overview([metric({ key: 'free', value: null }), metric({ key: 'windows', value: NaN }), metric({ key: 'mac', value: 0 }), metric({ key: 'linux', value: .3 })])
+    expect(selectOverviewEcosystemMetrics(data, 'game').map(item => item.key)).toEqual(['mac', 'linux'])
+    expect(selectOverviewEcosystemMetrics(overview([metric({ key: 'linux' })]), 'game').map(item => item.key)).toEqual(['linux'])
+  })
+  it('excludes the exact Hero Site metric, even when zero or a fallback, and deduplicates source keys', () => {
+    const rows = overviewHeroSiteKeys.map(key => metric({ key }))
+    const data = overview([...rows].reverse().concat(rows))
+    expect(selectOverviewEcosystemMetrics(data, 'site').map(item => item.key)).toEqual(['tls13', 'http2', 'hsts'])
+    for (const row of data.metrics) if (row.key === 'ipv6') row.value = null
+    expect(selectOverviewEcosystemMetrics(data, 'site').map(item => item.key)).toEqual(['http2', 'hsts', 'csp'])
+    expect(selectOverviewEcosystemMetrics(overview([metric()]), 'site')).toEqual([])
+  })
+  it('preserves each metric date and coverage, without borrowing the Hero or generated time', () => {
+    const data = overview([metric(), metric({ key: 'tls13', as_of: '2026-08-30', coverage: .75 }), metric({ key: 'http2', as_of: '', coverage: 2 })])
+    const result = selectOverviewEcosystemMetrics(data, 'site')
+    expect(result[0]).toMatchObject({ key: 'tls13', as_of: '2026-08-30', coverage: .75 })
+    expect(result[1]).toMatchObject({ key: 'http2', as_of: null, coverage: null })
+  })
+  it('uses empty lists for unavailable or invalid metrics without manufacturing zero', () => {
+    for (const domain of ['game', 'site'] as const) {
+      expect(selectOverviewEcosystemMetrics(null, domain)).toEqual([])
+      expect(selectOverviewEcosystemMetrics(overview([]), domain)).toEqual([])
+      expect(selectOverviewEcosystemMetrics(overview([metric({ key: domain === 'game' ? 'free' : 'ipv6', value: -1 }), metric({ key: domain === 'game' ? 'linux' : 'http2', value: Infinity })]), domain)).toEqual([])
+    }
+  })
+  it('keeps real zero entity counts and rejects missing, fractional or negative counts', () => {
+    expect(overviewEntityCount(0)).toBe(0)
+    expect(overviewEntityCount(213)).toBe(213)
+    for (const value of [null, undefined, -1, .5, NaN, Infinity, '213', Number.MAX_SAFE_INTEGER + 1]) expect(overviewEntityCount(value)).toBeNull()
+  })
+})
 
 describe('Overview metric evidence', () => {
   it('selects in stable configured order, keeps zero, and rejects invalid ratios', () => {

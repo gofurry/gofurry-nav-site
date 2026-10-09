@@ -23,6 +23,21 @@ export function selectOverviewMetric(overview: InsightOverview | null, keys: rea
   return null
 }
 
+export function overviewEntityCount(value: unknown): number | null {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null
+}
+
+export function selectOverviewEcosystemMetrics(overview: InsightOverview | null, domain: 'game' | 'site') {
+  const keys = domain === 'game' ? overviewHeroGameKeys : overviewHeroSiteKeys
+  // Use the Hero's exact selector, including valid zero and fallback priority.
+  // If its metric is the only reliable Site metric, leave this list empty.
+  const heroKey = domain === 'site' ? selectOverviewMetric(overview, overviewHeroSiteKeys)?.key : null
+  return keys.filter(key => key !== heroKey).flatMap(key => {
+    const metric = selectOverviewMetric(overview, [key])
+    return metric ? [metric] : []
+  }).slice(0, 3)
+}
+
 export function overviewSample(metric: Pick<InsightMetric, 'known' | 'eligible'>): string | null {
   return Number.isSafeInteger(metric.known) && Number.isSafeInteger(metric.eligible)
     && metric.known >= 0 && metric.eligible >= metric.known ? `${metric.known} / ${metric.eligible}` : null

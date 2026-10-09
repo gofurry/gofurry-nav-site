@@ -136,6 +136,11 @@ for (const file of readdirSync(new URL('../app/components/insights/overview/', i
   const source = readFileSync(new URL(`../app/components/insights/overview/${file}`, import.meta.url), 'utf8')
   assert(!/\b(?:fetch|useFetch|useAsyncData)\s*\(|from ['"]@\/services\//.test(source), `${file} added presentation-level requests`)
 }
+const ecosystemsSource = readFileSync(new URL('../app/components/insights/overview/InsightsOverviewEcosystems.vue', import.meta.url), 'utf8')
+assert(overviewSource.includes('<InsightsOverviewEcosystems :nav="data.nav" :game="data.game" />'), 'Overview lost its independent ecosystem data owners')
+assert(ecosystemsSource.includes('selectOverviewEcosystemMetrics') && ecosystemsSource.includes('data-ecosystem-count') && ecosystemsSource.includes('metric.as_of') && ecosystemsSource.includes('metric.coverage'), 'Ecosystems lost count, selection or evidence metadata')
+assert(!/<img\b|InsightEntityMedia|InsightsGamePulse|<canvas\b/.test(ecosystemsSource), 'unqualified artwork, shared Pulse layout or invented charts entered the ecosystems')
+assert(zh.insights.overviewEcosystems.title === '探索生态' && en.insights.overviewEcosystems.title === 'Explore the ecosystems', 'Ecosystems lost their localized chapter title')
 const sitePage = readFileSync(new URL('../app/pages/insights/sites/index.vue', import.meta.url), 'utf8')
 const gamePage = readFileSync(new URL('../app/pages/insights/games/index.vue', import.meta.url), 'utf8')
 for (const [page, domain, metrics, dimensions, defaultMetric, defaultDimension] of [
@@ -170,7 +175,7 @@ assert(gameBars[0].value === 10 && gameBars[0].maximum === 10 && gameBars[1].val
 const mediaSource = readFileSync(new URL('../app/components/insights/entity/InsightEntityMedia.vue', import.meta.url), 'utf8')
 assert(mediaSource.includes(':alt="entity.name"') && mediaSource.includes(':aria-label="entity.name"') && mediaSource.includes('@error="onError"'), 'entity media lost accessible identity or error fallback')
 assert(mediaSource.includes('useManagedAsset(') && mediaSource.includes("'lazy'"), 'entity media lost managed Site resolution or native lazy loading')
-for (const path of ['activity/InsightActivityItem.vue', 'overview/InsightsOverviewSites.vue', 'domain/InsightsGamePulse.vue']) {
+for (const path of ['activity/InsightActivityItem.vue', 'overview/InsightsOverviewEcosystems.vue', 'domain/InsightsGamePulse.vue']) {
   const source = readFileSync(new URL(`../app/components/insights/${path}`, import.meta.url), 'utf8')
   assert(source.includes('localePath('), `${path} lost localized entity links`)
   assert(!/\b(?:fetch|useFetch|useAsyncData|onMounted)\s*\(|from ['"]@\/services\//.test(source), `${path} added per-entity fetching`)

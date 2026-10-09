@@ -8,7 +8,16 @@ export function mockOverview(domain, mediaBase = 'https://media.example') {
       { key: 'tls13', value: 0.824, delta_30d: 0.042, coverage: .9, known: 180, eligible: 200, as_of: '2026-08-30' },
       { key: 'ipv6', value: 0.63, delta_30d: -0.011, coverage: .95, known: 190, eligible: 200, as_of: '2026-08-31' },
       { key: 'security_txt', value: null, delta_30d: null, coverage: null, known: 0, eligible: 200, as_of: '' },
-    ] : [{ key: 'free', value: .25, delta_30d: .042, coverage: .8, known: 160, eligible: 200, as_of: '2026-08-29' }],
+      { key: 'http2', value: .9, delta_30d: .01, coverage: .85, known: 170, eligible: 200, as_of: '2026-08-28' },
+      { key: 'hsts', value: 0, delta_30d: 0, coverage: .75, known: 150, eligible: 200, as_of: '2026-08-27' },
+      { key: 'csp', value: .5, delta_30d: null, coverage: .9, known: 180, eligible: 200, as_of: '2026-08-26' },
+      { key: 'certificate_verified', value: .99, delta_30d: .01, coverage: .95, known: 190, eligible: 200, as_of: '2026-08-25' },
+    ] : [
+      { key: 'free', value: .25, delta_30d: .042, coverage: .8, known: 160, eligible: 200, as_of: '2026-08-29' },
+      { key: 'windows', value: .95, delta_30d: .01, coverage: .85, known: 170, eligible: 200, as_of: '2026-08-28' },
+      { key: 'mac', value: .4, delta_30d: null, coverage: .9, known: 180, eligible: 200, as_of: '2026-08-27' },
+      { key: 'linux', value: .3, delta_30d: 0, coverage: .9, known: 180, eligible: 200, as_of: '2026-08-26' },
+    ],
     recent_changes: domain === 'site' ? [
       { type: 'site.ipv6.enabled', date: '2026-09-01', occurred_at: null, entity: { id: 41, name: 'Site fixture', visual: { kind: 'site_icon', asset: 'nav/sites/41/icon/' + 'a'.repeat(32) + '.svg' } }, detail: null },
       { type: 'site.tls13.disabled', date: '2026-08-31', occurred_at: null, entity: { id: 42, name: 'Site failure fixture' }, detail: null },

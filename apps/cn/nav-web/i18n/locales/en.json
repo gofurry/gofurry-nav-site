@@ -1133,6 +1133,14 @@
       "fullData": "View complete data",
       "continue": "Continue observing"
     },
+    "overviewEcosystems": {
+      "gameTitle": "Game ecosystem",
+      "siteTitle": "Website ecosystem",
+      "title": "Explore the ecosystems",
+      "gameDescription": "Explore platform support and the share of free games in the catalog.",
+      "siteDescription": "Follow public web capabilities, their adoption and observation coverage.",
+      "metricsUnavailable": "No additional reliable metrics are available."
+    },
     "overviewHero": {
       "title": "A Closer Look at the Furry World.",
       "description": "Explore how furry games and websites are changing through public observations.",

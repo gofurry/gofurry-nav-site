@@ -11,16 +11,13 @@
 
       <InsightsOverviewHero :nav="data.nav" :game="data.game" />
 
+      <InsightsOverviewEcosystems :nav="data.nav" :game="data.game" />
+
       <dl class="overview-stats mb-[var(--insights-section-gap)] flex flex-wrap gap-x-8 gap-y-3" data-overview-summary>
         <div v-for="stat in stats" :key="stat.label" class="flex items-baseline gap-2"><dt>{{ stat.label }}</dt><dd>{{ stat.value === null ? '—' : number(stat.value) }}</dd></div>
       </dl>
 
       <InsightsOverviewActivity :items="recentChanges" :unavailable="!data.nav && !data.game" />
-
-      <div class="overview-ecosystems">
-        <InsightsOverviewSites :overview="data.nav" />
-        <InsightsOverviewGamePulse :panel="data.panel" :evaluated-at="data.evaluatedAt" />
-      </div>
 
       <section class="overview-explore" aria-labelledby="overview-explore-title" data-overview-explore>
         <div class="overview-section-heading"><div><p class="overview-kicker">{{ $t('insights.editorial.exploreKicker') }}</p><h2 id="overview-explore-title">{{ $t('insights.editorial.exploreTitle') }}</h2></div></div>
@@ -43,8 +40,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import InsightsOverviewActivity from '@/components/insights/activity/InsightsOverviewActivity.vue'
-import InsightsOverviewSites from '@/components/insights/overview/InsightsOverviewSites.vue'
-import InsightsOverviewGamePulse from '@/components/insights/overview/InsightsOverviewGamePulse.vue'
+import InsightsOverviewEcosystems from '@/components/insights/overview/InsightsOverviewEcosystems.vue'
 import InsightsOverviewHero from '@/components/insights/overview/InsightsOverviewHero.vue'
 import { getGameInsightsOverview, getGameHomePanel } from '@/services/game'
 import { getNavInsightsOverview } from '@/services/nav'
@@ -80,8 +76,6 @@ const { data } = await useAsyncData<OverviewSnapshot>(() => `insights:overview:$
 })
 
 const stats = computed(() => [
-  { label: t('insights.overview.sitesCount'), value: data.value.nav?.entity_count ?? null },
-  { label: t('insights.overview.gamesCount'), value: data.value.game?.entity_count ?? null },
   {
     label: t('insights.overview.changesCount'),
     value: data.value.nav && data.value.game

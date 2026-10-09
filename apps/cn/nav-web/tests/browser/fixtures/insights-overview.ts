@@ -1,7 +1,7 @@
 import { mockOverview, mockGameHome } from '../../../scripts/fixtures/insights-overview.mjs'
 import { runtimeTest } from './insights-runtime'
 export const sources = ['/api/v2/nav/insights/overview', '/api/v2/game/insights/overview', '/api/v2/game/home']
-export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCase: '', candidateCase: '', eventCount: -1 }),
+export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCase: '', candidateCase: '', eventCount: -1, countCase: '' }),
   url => sources.includes(url.pathname),
   (url, media, _body, state) => {
     const source = url.pathname === sources[0] ? 'nav' : url.pathname === sources[1] ? 'game' : 'panel'
@@ -16,6 +16,15 @@ export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCas
       if (state.metricCase === 'zero') { data.entity_count = 0; data.changes_7d = 0; data.metrics.forEach((metric: { value: number; delta_30d: number }) => { metric.value = 0; metric.delta_30d = 0 }) }
       if (source === 'nav' && state.metricCase === 'fallback') data.metrics.find((metric: { key: string }) => metric.key === 'ipv6').value = null
       if (state.metricCase === 'missing-date') data.metrics.forEach((metric: { as_of: string; coverage: null; delta_30d: null }) => { metric.as_of = ''; metric.coverage = null; metric.delta_30d = null })
+      if (state.metricCase === 'hero-only') data.metrics = data.metrics.filter((metric: { key: string }) => metric.key === (source === 'nav' ? 'ipv6' : 'free'))
+      if (state.metricCase === 'sparse') {
+        for (const metric of data.metrics) {
+          if (['free', 'windows', 'tls13', 'http2', 'hsts', 'security_txt'].includes(metric.key)) metric.value = metric.key === 'tls13' ? 2 : metric.key === 'hsts' ? -1 : null
+          if (metric.key === 'mac' || metric.key === 'csp') metric.value = 0
+        }
+      }
+      if (state.metricCase === 'duplicate') data.metrics = [...data.metrics.slice().reverse(), ...data.metrics]
+      if (state.countCase) data.entity_count = state.countCase === 'missing' ? null : -1
     } else {
       const games = [...data.panel.top_online, ...data.panel.highest_discount, ...data.panel.latest_games]
       for (const game of games) {

@@ -1133,6 +1133,14 @@
       "fullData": "查看完整数据",
       "continue": "继续观测"
     },
+    "overviewEcosystems": {
+      "gameTitle": "游戏生态",
+      "siteTitle": "网站生态",
+      "title": "探索生态",
+      "gameDescription": "从平台支持与免费游戏比例，了解已收录作品的分布。",
+      "siteDescription": "观察网站公共技术能力的采用与统计覆盖。",
+      "metricsUnavailable": "暂无更多可靠指标。"
+    },
     "overviewHero": {
       "title": "看见生态的另一面。",
       "description": "从真实的观测数据中，发现 Furry 游戏与网站生态正在发生的变化。",
