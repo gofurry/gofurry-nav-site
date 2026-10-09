@@ -10,7 +10,7 @@ function stats(html: string) {
     .concat([...dl.matchAll(/<dd>(.*?)<\/dd>/g)].map(match => match[1]))
 }
 
-test('Overview three SSR sources start independently', async ({ request, runtime }) => {
+test('Overview two SSR sources start independently', async ({ request, runtime }) => {
   const gates = sources.map(source => runtime.hold(url => url.pathname === source))
   const pending = request.get('/insights')
   try { await Promise.all(gates.map(gate => gate.wait())) } finally { gates.forEach(gate => gate.release()) }
@@ -21,18 +21,20 @@ test('Overview three SSR sources start independently', async ({ request, runtime
 })
 
 for (const candidateCase of ['adult', 'tagged', 'missing-tags', 'no-image', 'stale', 'invalid-time', 'invalid-count', 'zero', 'long-title']) {
-  test('Overview safe data cover with ' + candidateCase, async ({ page, runtime }) => {
+  test('Overview rejects unqualified event evidence with ' + candidateCase, async ({ page, runtime }) => {
     runtime.state.candidateCase = candidateCase
     await page.setViewportSize({ width: 390, height: 900 })
     await openRuntime(page, '/insights')
     await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', 'data')
     await expect(page.locator('[data-overview-games] img, [data-overview-activity] [data-domain="game"] img')).toHaveCount(0)
-    // No positive cover qualification exists, so neither artwork nor an old
-    // Panel observation is substituted for the ecosystem's metric snapshot.
+    // Even injected, uncontracted evidence cannot qualify Overview event art
+    // or replace either ecosystem's authoritative metric snapshot.
     await expect(page.locator('[data-overview-games] [data-ecosystem-count]')).toHaveText('213')
     await expect(page.locator('[data-overview-games] [data-ecosystem-metric]')).toHaveCount(3)
     await expect(page.locator('[data-overview-games]')).not.toContainText('game fixture')
     await expect(page.locator('[data-overview-ecosystems] a[href*="/games/91"], [data-overview-ecosystems] [data-pulse]')).toHaveCount(0)
+    await expect(page.locator('[data-overview-activity] [data-domain="game"]')).toHaveCount(2)
+    await expect(page.locator('[data-overview-activity] [data-domain="game"]').first()).toHaveAttribute('href', '/games/82')
     await layout(page, 390)
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
     runtime.assertQuiet()
@@ -46,13 +48,18 @@ for (const metricCase of ['zero', 'fallback', 'missing-date', 'empty', 'hero-onl
       expect(stats(html)).toEqual(['0', '0', '0'])
       await expect(page.locator('[data-hero-domain="site"] progress')).toHaveAttribute('value', '0')
       await expect(page.locator('[data-hero-domain="site"] [data-hero-delta]')).toHaveText('0.0 percentage points')
-      await expect(page.locator('[data-ecosystem-metric="free"] [data-ecosystem-value]')).toHaveText('0.0%')
+      await expect(page.locator('[data-hero-domain="game"]')).toHaveAttribute('data-hero-metric', 'free')
+      await expect(page.locator('[data-hero-domain="game"] progress')).toHaveAttribute('value', '0')
+      await expect(page.locator('[data-ecosystem-metric="windows"] [data-ecosystem-value]')).toHaveText('0.0%')
       await expect(page.locator('[data-ecosystem-metric="tls13"] [data-ecosystem-value]')).toHaveText('0.0%')
     }
     if (metricCase === 'fallback') {
       await expect(page.locator('[data-hero-domain="site"]')).toHaveAttribute('data-hero-metric', 'tls13')
       await expect(page.locator('[data-hero-domain="site"] a')).toHaveAttribute('href', '/en/insights/sites?metric=tls13')
       expect(await page.locator('[data-overview-sites] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['http2', 'hsts', 'csp'])
+      await expect(page.locator('[data-hero-domain="game"]')).toHaveAttribute('data-hero-metric', 'windows')
+      await expect(page.locator('[data-hero-domain="game"] a')).toHaveAttribute('href', '/en/insights/games?metric=windows')
+      expect(await page.locator('[data-overview-games] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['mac', 'linux'])
     }
     if (metricCase === 'missing-date') {
       await expect(page.locator('[data-overview-hero] time')).toHaveCount(0)
@@ -73,16 +80,23 @@ for (const metricCase of ['zero', 'fallback', 'missing-date', 'empty', 'hero-onl
       await expect(page.locator('[data-hero-domain="site"]')).toHaveAttribute('data-hero-metric', 'ipv6')
       await expect(page.locator('[data-overview-sites] [data-ecosystem-empty]')).toHaveCount(1)
       await expect(page.locator('[data-overview-sites] [data-ecosystem-metric]')).toHaveCount(0)
-      await expect(page.locator('[data-overview-games] [data-ecosystem-metric]')).toHaveCount(1)
+      await expect(page.locator('[data-overview-games] [data-ecosystem-empty]')).toHaveCount(1)
+      await expect(page.locator('[data-overview-games] [data-ecosystem-metric]')).toHaveCount(0)
+      expect(stats(html)).toEqual(['238', '213', '47'])
     }
     if (metricCase === 'sparse') {
-      expect(await page.locator('[data-overview-games] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['mac', 'linux'])
+      expect(await page.locator('[data-overview-games] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['linux'])
       expect(await page.locator('[data-overview-sites] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['csp', 'certificate_verified'])
-      await expect(page.locator('[data-ecosystem-metric="mac"] [data-ecosystem-value]')).toHaveText('0.0%')
+      await expect(page.locator('[data-hero-domain="game"]')).toHaveAttribute('data-hero-metric', 'mac')
+      await expect(page.locator('[data-hero-domain="game"] progress')).toHaveAttribute('value', '0')
     }
     if (metricCase === 'duplicate') {
-      expect(await page.locator('[data-overview-games] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['free', 'windows', 'mac'])
+      expect(await page.locator('[data-overview-games] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['windows', 'mac', 'linux'])
       expect(await page.locator('[data-overview-sites] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['tls13', 'http2', 'hsts'])
+    }
+    for (const [domain, section] of [['game', 'games'], ['site', 'sites']]) {
+      const heroKey = await page.locator(`[data-hero-domain="${domain}"]`).getAttribute('data-hero-metric')
+      if (heroKey) await expect(page.locator(`[data-overview-${section}] [data-ecosystem-metric="${heroKey}"]`)).toHaveCount(0)
     }
     await expect(page.locator('[data-overview-hero] a')).toHaveCount(2)
     await expect(page.locator('[data-overview-ecosystems] [data-ecosystem-link]')).toHaveCount(2)
@@ -167,9 +181,10 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
     for (const [domain, path] of [['games', '/insights/games'], ['sites', '/insights/sites']]) {
       await expect(page.locator(`[data-overview-${domain}] [data-ecosystem-link]`)).toHaveAttribute('href', prefix + path)
     }
-    expect(await page.locator('[data-overview-games] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['free', 'windows', 'mac'])
+    expect(await page.locator('[data-overview-games] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['windows', 'mac', 'linux'])
     expect(await page.locator('[data-overview-sites] [data-ecosystem-metric]').evaluateAll(elements => elements.map(el => el.getAttribute('data-ecosystem-metric')))).toEqual(['tls13', 'http2', 'hsts'])
     await expect(page.locator('[data-overview-sites] [data-ecosystem-metric="ipv6"]')).toHaveCount(0)
+    await expect(page.locator('[data-overview-games] [data-ecosystem-metric="free"]')).toHaveCount(0)
     await expect(page.locator('[data-ecosystem-metric="hsts"] [data-ecosystem-value]')).toHaveText('0.0%')
     await expect(page.locator('[data-ecosystem-metric="tls13"] [data-ecosystem-coverage]')).toHaveText('90.0%')
     await expect(page.locator('[data-ecosystem-metric="tls13"] time')).toHaveAttribute('datetime', '2026-08-30')
@@ -195,14 +210,14 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
     runtime.assertQuiet()
   })
 }
-for (const [source, values] of [['nav', ['—', '213', '—']], ['game', ['238', '—', '—']], ['panel', ['238', '213', '47']], ['all', ['—', '—', '—']]] as const) {
+for (const [source, values] of [['nav', ['—', '213', '—']], ['game', ['238', '—', '—']], ['all', ['—', '—', '—']]] as const) {
   test('Overview independent failure ' + source, async ({ page, runtime }) => {
     runtime.state.failure = source
     const browserSources: string[] = []
     page.on('request', request => { if (sources.includes(new URL(request.url()).pathname)) browserSources.push(request.url()) })
     const html = await openRuntime(page, '/insights')
     expect(stats(html)).toEqual(values)
-    expect(html.includes('data-ecosystem-metric="free"')).toBe(source !== 'game' && source !== 'all')
+    expect(html.includes('data-ecosystem-metric="windows"')).toBe(source !== 'game' && source !== 'all')
     expect(html.includes('data-ecosystem-metric="tls13"')).toBe(source !== 'nav' && source !== 'all')
     expect(html.includes('data-change-link')).toBe(source !== 'all')
     await expect(page.locator('[data-hero-domain="game"] [data-hero-unavailable]')).toHaveCount(source === 'game' || source === 'all' ? 1 : 0)
@@ -211,8 +226,8 @@ for (const [source, values] of [['nav', ['—', '213', '—']], ['game', ['238',
     await expect(page.locator('[data-overview-ecosystems] [data-ecosystem-link]')).toHaveCount(2)
     await expect(page.locator('[data-overview-games] [data-ecosystem-unavailable]')).toHaveCount(source === 'game' || source === 'all' ? 1 : 0)
     await expect(page.locator('[data-overview-sites] [data-ecosystem-unavailable]')).toHaveCount(source === 'nav' || source === 'all' ? 1 : 0)
-    // The unchanged Overview services retain ofetch's one retry on 503. Only
-    // Home explicitly disables retries; hydration must add no source request.
+    // The unchanged Overview services retain ofetch's one retry on 503;
+    // hydration must add no source request.
     const expected = [...sources]
     if (source === 'nav' || source === 'all') expected.push(sources[0]!)
     if (source === 'game' || source === 'all') expected.push(sources[1]!)
@@ -226,17 +241,24 @@ for (const [source, values] of [['nav', ['—', '213', '—']], ['game', ['238',
     runtime.assertQuiet()
   })
 }
-test('Overview optional panel timeout is bounded without retry or loss of independent facts', async ({ request, runtime }) => {
-  const gate = runtime.hold(url => url.pathname === sources[2])
-  const start = performance.now(), pending = request.get('/insights')
-  await gate.wait()
-  const response = await pending, html = await response.text()
-  expect(performance.now() - start).toBeLessThan(11000)
-  expect(response.status()).toBe(200); expect(gate.completed).toBe(false)
+for (const [prefix, locale] of [['', 'zh'], ['/en', 'en']]) test('Overview has no Game Home dependency or unused payload state ' + locale, async ({ page, runtime }) => {
+  // An absent dependency cannot delay SSR. Any attempt to read Home is rejected
+  // by the fixture allowlist and fails assertQuiet, including after hydration.
+  const gate = runtime.hold(url => url.pathname === '/api/v2/game/home')
+  const html = await openRuntime(page, prefix + '/insights')
+  expect(gate.received).toBe(false)
   expect(stats(html)).toEqual(['238', '213', '47']); expect(html).not.toContain('data-pulse="players"')
-  expect(html).toContain('data-ecosystem-metric="free"'); expect(html).toContain('data-ecosystem-metric="tls13"')
-  expect(runtime.count('/game/home')).toBe(1)
-  gate.release(); await gate.done(); runtime.assertQuiet()
+  expect(html).toContain('data-ecosystem-metric="windows"'); expect(html).toContain('data-ecosystem-metric="tls13"')
+  const snapshots = await page.evaluate(() => {
+    const root = document.querySelector('#__nuxt') as Element & { __vue_app__: { $nuxt: { payload: { data: Record<string, object> } } } }
+    return Object.entries(root.__vue_app__.$nuxt.payload.data)
+      .filter(([key]) => key.startsWith('insights:overview:'))
+      .map(([key, value]) => [key, Object.keys(value).sort()])
+  })
+  expect(snapshots).toEqual([[`insights:overview:${locale}`, ['game', 'nav']]])
+  expect(runtime.count('/game/home')).toBe(0)
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  runtime.assertQuiet()
 })
 test('Overview ordinary Site event and real media failures preserve identity and data Hero', async ({ page, runtime }) => {
   runtime.state.siteHero = true

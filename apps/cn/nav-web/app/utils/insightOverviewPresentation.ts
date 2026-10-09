@@ -30,8 +30,8 @@ export function overviewEntityCount(value: unknown): number | null {
 export function selectOverviewEcosystemMetrics(overview: InsightOverview | null, domain: 'game' | 'site') {
   const keys = domain === 'game' ? overviewHeroGameKeys : overviewHeroSiteKeys
   // Use the Hero's exact selector, including valid zero and fallback priority.
-  // If its metric is the only reliable Site metric, leave this list empty.
-  const heroKey = domain === 'site' ? selectOverviewMetric(overview, overviewHeroSiteKeys)?.key : null
+  // If its metric is the domain's only reliable metric, leave this list empty.
+  const heroKey = selectOverviewMetric(overview, keys)?.key
   return keys.filter(key => key !== heroKey).flatMap(key => {
     const metric = selectOverviewMetric(overview, [key])
     return metric ? [metric] : []
@@ -51,8 +51,8 @@ export function formatOverviewPercentagePoints(value: unknown, locale: string) {
   return `${rounded > 0 ? '+' : ''}${number}`
 }
 
-// The request owner serializes now into the SSR payload. A freshness window is
-// optional evidence policy, not an assumption about the collector's cadence.
+// Pure evidence audit with an explicit clock; the data-only Overview does not
+// fetch player observations. A freshness window never assumes collector cadence.
 export function overviewPlayerObservation(game: GameV2ListItem, now: number, maxAgeMs: number | null = null) {
   const observation = game.online_count
   if (observation?.status !== 'success' || !Number.isFinite(observation.count) || observation.count < 0) return null

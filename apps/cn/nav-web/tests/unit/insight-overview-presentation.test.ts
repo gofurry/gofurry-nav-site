@@ -16,24 +16,28 @@ const overview = (metrics: InsightMetric[]): InsightOverview => ({ metrics, enti
 
 describe('Overview dual ecosystem projection', () => {
   it('selects at most three game metrics in stable priority, keeping zero and skipping unknown keys', () => {
-    const data = overview([metric({ key: 'linux', value: .3 }), metric({ key: 'mac', value: .4 }), metric({ key: 'windows', value: .9 }), metric({ key: 'free', value: 0 }), metric()])
+    const data = overview([metric({ key: 'linux', value: .3 }), metric({ key: 'mac', value: .4 }), metric({ key: 'windows', value: 0 }), metric({ key: 'free', value: 0 }), metric()])
     const before = JSON.stringify(data)
-    expect(selectOverviewEcosystemMetrics(data, 'game').map(item => item.key)).toEqual(['free', 'windows', 'mac'])
+    expect(selectOverviewEcosystemMetrics(data, 'game').map(item => item.key)).toEqual(['windows', 'mac', 'linux'])
     expect(selectOverviewEcosystemMetrics(data, 'game')[0]?.value).toBe(0)
     expect(JSON.stringify(data)).toBe(before)
   })
   it('fills missing game metrics from the existing catalog without inventing a minimum count', () => {
     const data = overview([metric({ key: 'free', value: null }), metric({ key: 'windows', value: NaN }), metric({ key: 'mac', value: 0 }), metric({ key: 'linux', value: .3 })])
-    expect(selectOverviewEcosystemMetrics(data, 'game').map(item => item.key)).toEqual(['mac', 'linux'])
-    expect(selectOverviewEcosystemMetrics(overview([metric({ key: 'linux' })]), 'game').map(item => item.key)).toEqual(['linux'])
+    expect(selectOverviewMetric(data, overviewHeroGameKeys)?.key).toBe('mac')
+    expect(selectOverviewEcosystemMetrics(data, 'game').map(item => item.key)).toEqual(['linux'])
+    expect(selectOverviewEcosystemMetrics(overview([metric({ key: 'linux' })]), 'game')).toEqual([])
   })
-  it('excludes the exact Hero Site metric, even when zero or a fallback, and deduplicates source keys', () => {
-    const rows = overviewHeroSiteKeys.map(key => metric({ key }))
-    const data = overview([...rows].reverse().concat(rows))
-    expect(selectOverviewEcosystemMetrics(data, 'site').map(item => item.key)).toEqual(['tls13', 'http2', 'hsts'])
-    for (const row of data.metrics) if (row.key === 'ipv6') row.value = null
-    expect(selectOverviewEcosystemMetrics(data, 'site').map(item => item.key)).toEqual(['http2', 'hsts', 'csp'])
-    expect(selectOverviewEcosystemMetrics(overview([metric()]), 'site')).toEqual([])
+  it.each(['game', 'site'] as const)('excludes the exact %s Hero for every fallback, keeps zero and deduplicates source keys', domain => {
+    const keys = domain === 'game' ? overviewHeroGameKeys : overviewHeroSiteKeys
+    for (let selected = 0; selected < keys.length; selected++) {
+      const rows = keys.map((key, index) => metric({ key, value: index < selected ? null : 0 }))
+      const data = overview([...rows].reverse().concat(rows))
+      expect(selectOverviewMetric(data, keys)?.key).toBe(keys[selected])
+      const result = selectOverviewEcosystemMetrics(data, domain)
+      expect(result.map(item => item.key)).toEqual(keys.slice(selected + 1, selected + 4))
+      expect(result.every(item => item.value === 0)).toBe(true)
+    }
   })
   it('preserves each metric date and coverage, without borrowing the Hero or generated time', () => {
     const data = overview([metric(), metric({ key: 'tls13', as_of: '2026-08-30', coverage: .75 }), metric({ key: 'http2', as_of: '', coverage: 2 })])

@@ -42,9 +42,8 @@ import EcosystemNavigation from '@/components/insights/EcosystemNavigation.vue'
 import InsightsOverviewActivity from '@/components/insights/activity/InsightsOverviewActivity.vue'
 import InsightsOverviewEcosystems from '@/components/insights/overview/InsightsOverviewEcosystems.vue'
 import InsightsOverviewHero from '@/components/insights/overview/InsightsOverviewHero.vue'
-import { getGameInsightsOverview, getGameHomePanel } from '@/services/game'
+import { getGameInsightsOverview } from '@/services/game'
 import { getNavInsightsOverview } from '@/services/nav'
-import type { GameV2PanelRecord } from '@/types/game'
 import type { InsightOverview } from '@/types/insights'
 import { overviewActivity, overviewChangesPath, overviewExploreGroups } from '@/utils/insightOverview'
 import { buildInsightsSeo } from '@/utils/seo'
@@ -52,27 +51,21 @@ import { buildInsightsSeo } from '@/utils/seo'
 interface OverviewSnapshot {
   nav: InsightOverview | null
   game: InsightOverview | null
-  panel: GameV2PanelRecord | null
-  evaluatedAt: number
 }
 
 const { locale, t } = useI18n()
 const localePath = useLocalePath()
 const { data } = await useAsyncData<OverviewSnapshot>(() => `insights:overview:${locale.value}`, async () => {
-  const evaluatedAt = Date.now()
-  const [navResult, gameResult, panelResult] = await Promise.allSettled([
+  const [navResult, gameResult] = await Promise.allSettled([
     getNavInsightsOverview(),
     getGameInsightsOverview(),
-    getGameHomePanel(locale.value),
   ])
   return {
-    evaluatedAt,
     nav: navResult.status === 'fulfilled' ? navResult.value : null,
     game: gameResult.status === 'fulfilled' ? gameResult.value : null,
-    panel: panelResult.status === 'fulfilled' ? panelResult.value : null,
   }
 }, {
-  default: () => ({ nav: null, game: null, panel: null, evaluatedAt: 0 }),
+  default: () => ({ nav: null, game: null }),
 })
 
 const stats = computed(() => [
