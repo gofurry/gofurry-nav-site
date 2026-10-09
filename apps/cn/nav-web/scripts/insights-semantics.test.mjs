@@ -132,7 +132,11 @@ assert(!/getGameHomePanel|GameV2PanelRecord|\bpanel\b|evaluatedAt|Date\.now\(/.t
 assert(overviewSource.includes("buildInsightsSeo('overview', locale.value)") && !overviewSource.includes('overviewGeneratedAt('), 'Overview SEO or per-fact time ownership regressed')
 assert(zh.insights.overviewHero.title === '看见生态的另一面。' && en.insights.overviewHero.title === 'A Closer Look at the Furry World.', 'frozen editorial H1 changed')
 const overviewHero = readFileSync(new URL('../app/components/insights/overview/InsightsOverviewHero.vue', import.meta.url), 'utf8')
-assert(overviewHero.includes('data-hero-mode="data"') && overviewHero.includes('percentagePoints') && overviewHero.includes('side.metric.as_of'), 'Overview data Hero lost its safety or metric semantics')
+assert(overviewHero.includes('data-hero-mode="data"'), 'Overview data Hero lost its safety mode')
+for (const domain of ['game', 'site']) {
+  assert(overviewHero.includes(`${domain}Metric.as_of`) && overviewHero.includes(`:datetime="${domain}Metric.as_of"`), `${domain} Hero lost its own metric fact date`)
+  assert(overviewHero.includes(`formatOverviewPercentagePoints(${domain}Metric.value?.delta_30d, locale.value)`) && overviewHero.includes(`{ value: ${domain}Delta }`), `${domain} Hero lost its localized percentage-point semantics`)
+}
 assert(!/<img\b|InsightEntityMedia|<canvas\b/.test(overviewHero), 'unqualified artwork or fabricated chart entered the data Hero')
 const overviewActivitySource = readFileSync(new URL('../app/components/insights/activity/InsightsOverviewActivity.vue', import.meta.url), 'utf8')
 assert(overviewActivitySource.includes('items.slice(0, 5)') && overviewActivitySource.includes('overviewActivityWithoutGameArt') && overviewActivitySource.includes('<InsightsOverviewActivityItem') && !overviewActivitySource.includes('<InsightActivityItem '), 'Overview lost its bounded homepage-only activity rows')

@@ -176,8 +176,8 @@ async function layout(page: Page, width: number) {
     return { overflow: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - innerWidth, site: site.toJSON(), game: game.toJSON(), heroGame: heroGame.toJSON(), heroSite: heroSite.toJSON(), header: box('[data-overview-header]'), hero: box('[data-overview-hero]'), ecosystems: box('[data-overview-ecosystems]'), activity: box('[data-overview-activity]'), activityHeading: box('[data-activity-heading]'), activityContent: box('[data-activity-content]'), explore: box('[data-overview-explore]'), gameDirectory: box('[data-directory-domain="game"]'), siteDirectory: box('[data-directory-domain="site"]'), events: [...document.querySelectorAll('[data-change-link]')].map(el => el.getBoundingClientRect().toJSON()) }
   })
   expect(result.overflow).toBeLessThanOrEqual(0)
-  expect(result.hero.top).toBeGreaterThanOrEqual(result.header.bottom)
-  expect(result.ecosystems.top).toBeGreaterThanOrEqual(result.hero.bottom)
+  expect(result.hero.top - result.header.bottom).toBeCloseTo(width >= 1200 ? 28 : 24, 0)
+  expect(result.ecosystems.top - result.hero.bottom).toBeCloseTo(56, 0)
   expect(result.activity.top).toBeGreaterThanOrEqual(result.ecosystems.bottom)
   expect(result.explore.top).toBeGreaterThanOrEqual(result.activity.bottom)
   if (width >= 1200) {
@@ -204,6 +204,105 @@ async function layout(page: Page, width: number) {
   }
   for (let index = 1; index < result.events.length; index++) expect(result.events[index]!.top).toBeGreaterThanOrEqual(result.events[index - 1]!.bottom)
 }
+async function heroAppearance(page: Page, width: number) {
+  const result = await page.locator('[data-overview-hero]').evaluate(hero => {
+    const rect = (el: Element) => el.getBoundingClientRect().toJSON()
+    const game = hero.querySelector('[data-hero-domain="game"]')!, site = hero.querySelector('[data-hero-domain="site"]')!
+    const primary = game.querySelector('[data-hero-primary]')!, evidence = game.querySelector('[data-hero-evidence]')!
+    const gameValue = game.querySelector('[data-hero-value]')!, siteValue = site.querySelector('[data-hero-value]')!
+    return {
+      primary: rect(primary), evidence: rect(evidence), facts: [...evidence.children].map(rect),
+      sitePrimary: rect(site.querySelector('[data-hero-primary]')!), siteEvidence: rect(site.querySelector('[data-hero-evidence]')!),
+      gameSize: parseFloat(getComputedStyle(gameValue).fontSize), siteSize: parseFloat(getComputedStyle(siteValue).fontSize),
+      distinctSurface: getComputedStyle(game).backgroundColor !== getComputedStyle(site).backgroundColor,
+      shadows: [game, site].map(el => getComputedStyle(el).boxShadow),
+      textFits: [gameValue, siteValue].every(el => {
+        const range = document.createRange(); range.selectNodeContents(el)
+        const text = range.getBoundingClientRect(), box = el.getBoundingClientRect()
+        const panel = el.closest('[data-hero-domain]')!.getBoundingClientRect()
+        // Font ascenders/descenders can exceed the CSS line box without clipping.
+        // Require the complete text width and its vertical extent inside the panel.
+        return text.width <= box.width + 1 && text.left >= panel.left && text.right <= panel.right
+          && text.top >= panel.top && text.bottom <= panel.bottom
+      }),
+      evidenceFits: [...hero.querySelectorAll('[data-hero-evidence], [data-hero-fact], dd')].every(el => el.scrollWidth <= el.clientWidth + 1),
+      linksBelow: [game, site].every(el => el.querySelector('a')!.getBoundingClientRect().top >= el.querySelector('[data-hero-evidence]')!.getBoundingClientRect().bottom),
+    }
+  })
+  expect(result).toMatchObject({ distinctSurface: true, shadows: ['none', 'none'], textFits: true, evidenceFits: true, linksBelow: true })
+  expect(result.gameSize).toBeGreaterThan(result.siteSize)
+  if (width >= 1200) {
+    expect(result.primary.width / result.evidence.width).toBeCloseTo(65 / 35, 1)
+    expect(Math.abs(result.primary.top - result.evidence.top)).toBeLessThan(2)
+    expect(result.evidence.left).toBeGreaterThanOrEqual(result.primary.right)
+    expect(result.gameSize).toBeGreaterThanOrEqual(86)
+    expect(result.siteSize).toBeGreaterThanOrEqual(58)
+    expect(result.facts[1]!.top).toBeGreaterThanOrEqual(result.facts[0]!.bottom)
+  } else {
+    expect(result.evidence.top).toBeGreaterThanOrEqual(result.primary.bottom)
+    expect(Math.abs(result.facts[0]!.top - result.facts[1]!.top)).toBeLessThan(2)
+    expect(result.facts[1]!.left).toBeGreaterThanOrEqual(result.facts[0]!.right)
+    if (width === 390) {
+      expect(result.gameSize).toBeGreaterThanOrEqual(56); expect(result.gameSize).toBeLessThanOrEqual(68)
+      expect(result.siteSize).toBeGreaterThanOrEqual(48); expect(result.siteSize).toBeLessThanOrEqual(56)
+    }
+  }
+  expect(result.siteEvidence.top).toBeGreaterThanOrEqual(result.sitePrimary.bottom)
+  for (const panel of await page.locator('[data-hero-domain]').all()) {
+    await expect(panel.locator('h2')).toHaveCount(1)
+    await expect(panel.locator('progress')).toHaveAttribute('aria-labelledby', await panel.locator('h2').getAttribute('id') as string)
+    expect(await panel.locator('[data-hero-fact]').evaluateAll(elements => elements.map(el => el.getAttribute('data-hero-fact')))).toEqual(['delta', 'coverage', 'sample', 'date'])
+    await expect(panel.locator('dt')).toHaveCount(4); await expect(panel.locator('dd')).toHaveCount(4)
+  }
+}
+
+for (const prefix of ['', '/en']) for (const width of [1440, 390]) test(`Overview full ratio and long evidence remain readable ${prefix} ${width}`, async ({ page, runtime }) => {
+  runtime.state.metricCase = 'full-long'
+  await page.setViewportSize({ width, height: 1000 })
+  const html = await openRuntime(page, prefix + '/insights')
+  for (const [domain, path, metric] of [['game', 'games', 'windows'], ['site', 'sites', 'certificate_verified']]) {
+    const panel = page.locator(`[data-hero-domain="${domain}"]`)
+    await expect(panel.locator('[data-hero-value]')).toHaveText('100.0%')
+    await expect(panel.locator('progress')).toHaveAttribute('value', '1')
+    await expect(panel.locator('[data-hero-delta]')).toHaveText('—')
+    await expect(panel.locator('[data-hero-fact="sample"] dd')).toHaveText('9007199254740991 / 9007199254740991')
+    expect(html).toContain('9007199254740991 / 9007199254740991')
+    await expect(panel.locator('a')).toHaveAttribute('href', `${prefix}/insights/${path}?metric=${metric}`)
+  }
+  await heroAppearance(page, width); await layout(page, width)
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  runtime.assertQuiet()
+})
+
+for (const sampleCase of ['zero', 'negative', 'fraction', 'over-eligible']) test('Overview evidence only displays valid samples ' + sampleCase, async ({ page, runtime }) => {
+  runtime.state.sampleCase = sampleCase
+  await openRuntime(page, '/en/insights')
+  const samples = page.locator('[data-overview-hero] [data-hero-fact="sample"] dd')
+  await expect(samples).toHaveCount(sampleCase === 'zero' ? 2 : 0)
+  if (sampleCase === 'zero') for (const sample of await samples.all()) await expect(sample).toHaveText('0 / 0')
+  await expect(page.locator('[data-overview-hero] progress')).toHaveCount(2)
+  runtime.assertQuiet()
+})
+
+for (const failure of ['nav', 'game', 'all']) for (const width of [1440, 390]) test(`Overview missing Hero shrinks naturally ${failure} ${width}`, async ({ page, runtime }) => {
+  await page.setViewportSize({ width, height: 1000 })
+  await openRuntime(page, '/en/insights')
+  const panels = page.locator('[data-hero-domain]')
+  const ready = await panels.evaluateAll(elements => elements.map(el => el.getBoundingClientRect().height))
+  runtime.state.failure = failure
+  await openRuntime(page, '/en/insights')
+  for (const [index, domain, source, path] of [[0, 'game', 'game', 'games'], [1, 'site', 'nav', 'sites']] as const) {
+    if (failure !== 'all' && failure !== source) continue
+    const panel = page.locator(`[data-hero-domain="${domain}"]`)
+    expect((await panel.boundingBox())!.height).toBeLessThan(ready[index]! * .85)
+    await expect(panel.locator('[data-hero-unavailable]')).toBeVisible()
+    await expect(panel.locator('progress, [data-hero-value], [data-hero-evidence]')).toHaveCount(0)
+    await expect(panel.locator('a')).toHaveAttribute('href', '/en/insights/' + path)
+    await keyboardFocus(panel.locator('a'))
+  }
+  await layout(page, width); runtime.assertQuiet()
+})
+
 for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const) for (const width of [1440, 1024, 768, 390]) {
   test(`Overview SSR, hydration, media and layout ${prefix} ${theme} ${width}`, async ({ page, context, runtime }) => {
     await page.setViewportSize({ width, height: 1000 })
@@ -261,10 +360,29 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
     await expect(page.locator('[data-ecosystem-metric="windows"] time')).toHaveAttribute('datetime', '2026-08-28')
     await expect(page.locator('[data-overview-activity] time').filter({ hasText: /^2026-09-01$/ })).toHaveAttribute('datetime', '2026-09-01')
     expect(await page.locator('progress').evaluateAll(elements => elements.every(el => el.value >= 0 && el.value <= 1 && el.max === 1 && el.getAttribute('aria-labelledby')))).toBe(true)
-    await layout(page, width); await revealImages(page)
+    await layout(page, width); await heroAppearance(page, width); await revealImages(page)
+    if (process.env.GOFURRY_OVERVIEW_REVIEW_DIR && (width === 1440 || width === 390)) {
+      await mkdir(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, { recursive: true })
+      const name = `${prefix ? 'en' : 'zh'}-${theme}-${width}`
+      await page.screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `cover-${name}.png`) })
+      await page.locator('[data-overview-hero]').screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `hero-${name}.png`) })
+    }
     await keyboardFocus(page.locator('.insights-primary-nav a').last())
     await keyboardFocus(page.locator('[data-hero-domain="game"] a'))
     await keyboardFocus(page.locator('[data-hero-domain="site"] a'))
+    for (const link of await page.locator('[data-overview-hero] a').all()) {
+      await link.scrollIntoViewIfNeeded()
+      const before = await link.boundingBox()
+      await link.hover()
+      await expect(link).toHaveCSS('text-decoration-line', 'underline')
+      await expect(link).toHaveCSS('transform', 'none')
+      expect(await link.boundingBox()).toEqual(before)
+      await keyboardFocus(link)
+      expect(await link.evaluate(el => {
+        const css = getComputedStyle(el)
+        return el.matches(':focus-visible') && css.outlineStyle === 'solid' && css.boxShadow !== 'none'
+      })).toBe(true)
+    }
     await keyboardFocus(page.locator('[data-overview-games] [data-ecosystem-link]'))
     await keyboardFocus(page.locator('[data-overview-sites] [data-ecosystem-link]'))
     await keyboardFocus(page.locator('[data-change-link]').first())
@@ -273,13 +391,6 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
     await assertRuntimeSurface(page, '.insights-overview-page', theme)
     expect(await page.locator('a a').count()).toBe(0)
     expect(gameArt).toEqual([])
-    if (process.env.GOFURRY_OVERVIEW_REVIEW_DIR) {
-      await mkdir(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, { recursive: true })
-      await page.mouse.click(0, 0); await page.evaluate(() => window.scrollTo(0, 0))
-      await page.screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `${prefix ? 'en' : 'zh'}-${theme}-${width}.png`), fullPage: true })
-      if (width === 1440 || width === 390) await page.locator('[data-overview-ecosystems]').screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `ecosystems-${prefix ? 'en' : 'zh'}-${theme}-${width}.png`) })
-      if (width === 1440 || width === 390) for (const section of ['activity', 'explore']) await page.locator(`[data-overview-${section}]`).screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `${section}-${prefix ? 'en' : 'zh'}-${theme}-${width}.png`) })
-    }
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
     runtime.assertQuiet()
   })
@@ -315,7 +426,7 @@ for (const [source, values] of [['nav', ['—', '213', '—']], ['game', ['238',
     await layout(page, 1440)
     if (process.env.GOFURRY_OVERVIEW_REVIEW_DIR) {
       await mkdir(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, { recursive: true })
-      await page.screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `failure-${source}.png`), fullPage: true })
+      await page.locator('[data-overview-hero]').screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `hero-failure-${source}.png`) })
     }
     runtime.assertQuiet()
   })

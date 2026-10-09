@@ -1,7 +1,7 @@
 import { mockOverview } from '../../../scripts/fixtures/insights-overview.mjs'
 import { runtimeTest } from './insights-runtime'
 export const sources = ['/api/v2/nav/insights/overview', '/api/v2/game/insights/overview']
-export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCase: '', candidateCase: '', eventCount: -1, countCase: '' }),
+export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCase: '', sampleCase: '', candidateCase: '', eventCount: -1, countCase: '' }),
   url => sources.includes(url.pathname),
   (url, media, _body, state) => {
     const source = url.pathname === sources[0] ? 'nav' : 'game'
@@ -23,6 +23,16 @@ export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCas
       }
     }
     if (state.metricCase === 'duplicate') data.metrics = [...data.metrics.slice().reverse(), ...data.metrics]
+    if (state.metricCase === 'full-long') {
+      data.metrics = data.metrics.filter((metric: { key: string }) => metric.key === (source === 'nav' ? 'certificate_verified' : 'windows'))
+      Object.assign(data.metrics[0], { value: 1, delta_30d: null, known: Number.MAX_SAFE_INTEGER, eligible: Number.MAX_SAFE_INTEGER })
+    }
+    if (state.sampleCase) for (const metric of data.metrics) {
+      Object.assign(metric, state.sampleCase === 'zero' ? { known: 0, eligible: 0 }
+        : state.sampleCase === 'negative' ? { known: -1, eligible: 200 }
+          : state.sampleCase === 'fraction' ? { known: 1.5, eligible: 200 }
+            : { known: 201, eligible: 200 })
+    }
     if (state.countCase) data.entity_count = state.countCase === 'missing' ? null : -1
     if (source === 'game' && state.candidateCase) {
       // Exercise the still-consumed Overview events. Uncontracted tags, SFW
