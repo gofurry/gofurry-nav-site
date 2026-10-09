@@ -116,11 +116,26 @@ type ChangeExplorerQuery struct {
 }
 
 type Overview struct {
-	GeneratedAt   time.Time `json:"generated_at"`
-	EntityCount   int64     `json:"entity_count"`
-	Changes7D     int64     `json:"changes_7d"`
-	Metrics       []Metric  `json:"metrics"`
-	RecentChanges []Change  `json:"recent_changes"`
+	GeneratedAt   time.Time    `json:"generated_at"`
+	EntityCount   int64        `json:"entity_count"`
+	Changes7D     int64        `json:"changes_7d"`
+	Metrics       []Metric     `json:"metrics"`
+	RecentChanges []Change     `json:"recent_changes"`
+	SiteVisuals   []SiteVisual `json:"site_visuals"`
+}
+
+// SiteVisual is current identity decoration, never pixel-level SFW certification.
+type SiteVisual struct {
+	SiteID int64        `json:"site_id"`
+	Name   string       `json:"name"`
+	Visual EntityVisual `json:"visual"`
+}
+
+// SiteVisualRecord is private to the optional Overview projection.
+type SiteVisualRecord struct {
+	SiteID                    int64
+	Name, NameEn, Asset, NSFW string
+	Deleted                   bool
 }
 
 type Ecosystem struct {

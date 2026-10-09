@@ -3,19 +3,22 @@ SELECT count(*)::bigint
 FROM public.gfg_game;
 
 -- name: ListGameInsightVisualCandidates :many
--- Game permission and URL identity do not establish per-image content approval.
+-- Current classification and URL identity do not establish per-image content approval.
 -- Filter all supported evidence BEFORE selecting the daily three: invalid URLs
 -- cannot fill an arbitrary oversampling window and hide a later eligible game.
 WITH named_games AS (
-    SELECT game.id, game.appid, game.showcase_eligible,
+    SELECT game.id, game.appid,
            BTRIM(game.name, U&'\0020\0009\000A\000D\000B\000C\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000') AS name,
            BTRIM(game.name_en, U&'\0020\0009\000A\000D\000B\000C\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000') AS name_en,
            EXISTS(SELECT 1 FROM public.gfg_game_tag membership JOIN public.gfg_tag tag ON tag.id=membership.tag_id
-                  WHERE membership.game_id=game.id AND tag.code='adult') AS has_adult
+                  WHERE membership.game_id=game.id AND tag.code='adult') AS has_adult,
+           EXISTS(SELECT 1 FROM public.gfg_game_tag membership JOIN public.gfg_tag tag ON tag.id=membership.tag_id
+                  WHERE membership.game_id=game.id AND tag.archived_at IS NULL
+                    AND BTRIM(tag.code)<>'' AND tag.code<>'adult') AS has_classification
     FROM public.gfg_game game
-    WHERE game.showcase_eligible IS TRUE AND game.id>0 AND game.appid>0
+    WHERE game.id>0 AND game.appid>0
 )
-SELECT game.id AS game_id, game.appid, game.name::text, game.name_en::text, game.showcase_eligible, game.has_adult::boolean,
+SELECT game.id AS game_id, game.appid, game.name::text, game.name_en::text, game.has_classification::boolean, game.has_adult::boolean,
        asset.id AS asset_id, asset.game_id AS asset_game_id, asset.appid AS asset_appid,
        asset.asset_type, asset.lang, asset.asset_family, asset.sort_order, asset.exists, asset.url
 FROM named_games game
@@ -34,7 +37,7 @@ JOIN LATERAL (
              a.asset_family,a.sort_order,a.id
     LIMIT 1
 ) asset ON TRUE
-WHERE NOT game.has_adult AND (game.name<>'' OR game.name_en<>'')
+WHERE game.has_classification AND NOT game.has_adult AND (game.name<>'' OR game.name_en<>'')
 ORDER BY md5(sqlc.arg(utc_day)::text || ':' || game.id::text),game.id
 LIMIT 3;
 

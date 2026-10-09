@@ -1,24 +1,35 @@
 import { mockOverview } from '../../../scripts/fixtures/insights-overview.mjs'
 import { runtimeTest } from './insights-runtime'
 import type { InsightFeaturedVisual } from '../../../app/types/insights'
+import { steamSharedAssetCandidates } from '../../../app/utils/steamAssets'
 export const sources = ['/api/v2/nav/insights/overview', '/api/v2/game/insights/overview']
-export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCase: '', sampleCase: '', candidateCase: '', visualCase: '', eventCount: -1, countCase: '' }),
+const overviewRuntime = runtimeTest(() => ({ failure: '', siteHero: false, metricCase: '', sampleCase: '', candidateCase: '', visualCase: '', siteVisualCase: '', brokenGame: 0, eventCount: -1, countCase: '' }),
   url => sources.includes(url.pathname),
   (url, media, _body, state) => {
     const source = url.pathname === sources[0] ? 'nav' : 'game'
     if (state.failure === source || state.failure === 'all') return { status: 503 }
     const data = mockOverview(source === 'nav' ? 'site' : 'game', media)
     if (source === 'game' && state.visualCase) {
-      const featured: InsightFeaturedVisual[] = state.visualCase === 'empty' ? [] : [91, 92, 93].map(gameId => ({
-        game_id: gameId, name: '候选作品', name_en: 'Visual candidate',
+      const ids = state.visualCase === 'empty' ? [] : state.visualCase === 'one' ? [91] : state.visualCase === 'two' ? [91, 92] : [91, 92, 93]
+      const featured: InsightFeaturedVisual[] = ids.map((gameId, i) => ({
+        game_id: gameId, name: ['林间旅人', '星光来信', '远方的河谷'][i]!, name_en: ['Forest Traveller', 'Letters from the Stars', ''][i]!,
         visual: { kind: 'game_header', asset: `https://shared.steamstatic.com/steam/apps/${gameId}/header.jpg` },
       }))
+      if (state.visualCase === 'long') featured.forEach(item => { item.name = '超长作品标题'.repeat(12); item.name_en = 'LongUnbrokenGameTitle'.repeat(8) })
+      if (state.visualCase === 'invalid') featured.forEach((item, i) => { if (i === 0) item.game_id = -1; if (i === 1) item.name = item.name_en = ''; if (i === 2) item.visual.asset = 'https://example.test/unverified.jpg' })
+      if (state.visualCase === 'duplicate') featured.splice(1, 0, featured[0]!)
       Object.assign(data, { featured_visuals: featured })
     }
     if (state.siteHero && source === 'nav') data.recent_changes[0].occurred_at = '2026-09-02T12:00:00Z'
     if (state.eventCount >= 0) data.recent_changes = Array.from({ length: source === 'nav' ? Math.ceil(state.eventCount / 2) : Math.floor(state.eventCount / 2) }, (_, i) => ({
       ...data.recent_changes[i % 2], entity: { ...data.recent_changes[i % 2].entity, id: (source === 'nav' ? 41 : 81) + i },
     }))
+    if (source === 'nav' && state.siteVisualCase) {
+      const ids = state.siteVisualCase === 'empty' ? [] : [...new Set<number>(data.recent_changes.map((event: { entity: { id: number } }) => event.entity.id))]
+      const siteVisuals = ids.map(id => ({ site_id: id, name: `Site ${id}`, visual: { kind: 'site_icon', asset: `nav/sites/${id}/icon/${'a'.repeat(32)}.png` } }))
+      if (state.siteVisualCase === 'invalid') siteVisuals.forEach(item => { item.visual.asset = `nav/sites/999/icon/${'a'.repeat(32)}.png` })
+      Object.assign(data, { site_visuals: siteVisuals })
+    }
     if (state.metricCase === 'empty') data.metrics = []
     if (state.metricCase === 'zero') { data.entity_count = 0; data.changes_7d = 0; data.metrics.forEach((metric: { value: number; delta_30d: number }) => { metric.value = 0; metric.delta_30d = 0 }) }
     if (state.metricCase === 'fallback') data.metrics.find((metric: { key: string }) => metric.key === (source === 'nav' ? 'ipv6' : 'free')).value = null
@@ -64,4 +75,19 @@ export const test = runtimeTest(() => ({ failure: '', siteHero: false, metricCas
     return { data }
   },
 )
+
+// Overview-only media interception: stable layout substitutes, never product
+// artwork or evidence of production qualification. Shared fixtures stay intact.
+export const test = overviewRuntime.extend({
+  page: async ({ page, context, runtime }, use) => {
+    const approved = new Set([91, 92, 93].flatMap(id => steamSharedAssetCandidates(`https://shared.steamstatic.com/steam/apps/${id}/header.jpg`)))
+    for (const url of approved) runtime.assets.add(url)
+    await context.route(url => approved.has(url.href), route => {
+      if (runtime.failImages) return route.fallback()
+      if (runtime.state.brokenGame && route.request().url().includes(`/apps/${runtime.state.brokenGame}/`)) return route.fulfill({ contentType: 'image/svg+xml', body: 'invalid image fixture' })
+      return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="460" height="215" viewBox="0 0 460 215"><rect width="460" height="215" fill="#394b44"/><circle cx="350" cy="62" r="28" fill="#c8b398"/><path d="M0 215V155L110 58l120 157M190 215l125-123 145 110v13" fill="#778978"/><text x="28" y="180" fill="#fff" font-family="sans-serif" font-size="18">GAME · FIXTURE</text></svg>' })
+    })
+    await use(page)
+  },
+})
 export { expect, openRuntime, revealImages, keyboardFocus } from './insights-runtime'

@@ -1,5 +1,5 @@
 import { test, expect, sources, openRuntime, revealImages, keyboardFocus } from '../fixtures/insights-overview'
-import type { Page } from '@playwright/test'
+import type { Page, Request } from '@playwright/test'
 import { assertRuntimeSurface } from '../fixtures/insights-runtime'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -9,19 +9,172 @@ function stats(html: string) {
     .concat(html.match(/<dd data-activity-total>(.*?)<\/dd>/)?.[1] ?? '')
 }
 
-for (const prefix of ['', '/en']) for (const visualCase of ['empty', 'populated']) test(`Overview ignores optional visual data ${prefix || 'zh'} ${visualCase}`, async ({ page, runtime }) => {
+for (const prefix of ['', '/en']) for (const visualCase of ['', 'empty', 'one', 'two', 'populated', 'invalid', 'duplicate', 'long']) test(`Overview dedicated visual contract ${prefix || 'zh'} ${visualCase || 'missing'}`, async ({ page, runtime }) => {
   runtime.state.visualCase = visualCase
+  await page.setViewportSize({ width: 390, height: 900 })
   const mediaRequests: string[] = []
-  page.on('request', request => { if (/steamstatic|akamaihd/.test(request.url())) mediaRequests.push(request.url()) })
+  page.on('request', request => { if (/\/steam\/apps\/(91|92|93)\/header/.test(request.url())) mediaRequests.push(request.url()) })
   const html = await openRuntime(page, prefix + '/insights')
   expect(stats(html)).toEqual(['238', '213', '47'])
-  await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', 'data')
-  await expect(page.locator('[data-overview-hero] img, [data-overview-ecosystems] img, [data-overview-activity] img')).toHaveCount(0)
-  expect((await page.locator('[data-overview-hero], [data-overview-ecosystems], [data-overview-activity]').allTextContents()).join(' ')).not.toContain('Visual candidate')
-  await expect(page.locator('a[href$="/games/91"], a[href$="/games/92"], a[href$="/games/93"]')).toHaveCount(0)
+  const count = ['', 'empty', 'invalid'].includes(visualCase) ? 0 : visualCase === 'one' ? 1 : visualCase === 'two' ? 2 : 3
+  await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', count ? 'visual' : 'data')
+  await expect(page.locator('[data-overview-game-visual]')).toHaveCount(count)
+  await expect(page.locator('[data-overview-activity] img, [data-overview-site-logos]')).toHaveCount(0)
+  await revealImages(page, '[data-overview-game-visual]')
+  expect(new Set(await page.locator('[data-overview-game-visual]').evaluateAll(elements => elements.map(el => el.getAttribute('data-game-id')))).size).toBe(count)
+  if (count) {
+    expect(html.match(/<main[\s\S]*?<\/main>/)?.[0]).toContain(`href="${prefix}/games/91"`)
+    await expect(page.locator('[data-hero-domain="game"] .overview-hero__link')).toHaveAttribute('href', prefix + '/insights/games?metric=free')
+    expect(mediaRequests).toHaveLength(count)
+  } else expect(mediaRequests).toEqual([])
+  await layout(page, 390)
   expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
-  expect(mediaRequests).toEqual([])
   runtime.assertQuiet()
+})
+
+for (const siteVisualCase of ['', 'empty', 'invalid', 'populated']) test(`Overview site logo projection ${siteVisualCase || 'missing'}`, async ({ page, runtime }) => {
+  runtime.state.siteVisualCase = siteVisualCase
+  runtime.state.eventCount = 10
+  await openRuntime(page, '/en/insights')
+  await expect(page.locator('[data-overview-site-visual]')).toHaveCount(siteVisualCase === 'populated' ? 5 : 0)
+  await revealImages(page, '[data-overview-site-visual]')
+  for (const link of await page.locator('[data-overview-site-visual]').all()) await expect(link).toHaveAttribute('href', new RegExp('^/en/site/4[1-5]$'))
+  await expect(page.locator('[data-overview-activity] img')).toHaveCount(0)
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  runtime.assertQuiet()
+})
+
+for (const scenario of ['images-fail', 'nav-fails', 'game-fails', 'metric-missing', 'zero']) test(`Overview visual failure isolation ${scenario}`, async ({ page, runtime }) => {
+  runtime.state.visualCase = 'populated'; runtime.state.siteVisualCase = 'populated'
+  if (scenario === 'images-fail') {
+    runtime.failImages = true
+    // Isolate renderer fallback from the unchanged global idle CDN probes.
+    await page.addInitScript(() => Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true } }))
+  }
+  if (scenario === 'nav-fails') runtime.state.failure = 'nav'
+  if (scenario === 'game-fails') runtime.state.failure = 'game'
+  if (scenario === 'metric-missing') runtime.state.metricCase = 'empty'
+  if (scenario === 'zero') runtime.state.metricCase = 'zero'
+  await openRuntime(page, '/insights')
+  if (scenario === 'images-fail') {
+    await page.locator('[data-overview-sites]').scrollIntoViewIfNeeded()
+    await expect(page.locator('[data-overview-game-visual]')).toHaveCount(0)
+    await expect(page.locator('[data-site-logo-fallback]')).toHaveCount(2)
+    await expect(page.locator('[data-overview-sites] img')).toHaveCount(0)
+  }
+  await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', ['images-fail', 'game-fails', 'metric-missing'].includes(scenario) ? 'data' : 'visual')
+  if (scenario === 'game-fails') { await expect(page.locator('[data-overview-game-visual]')).toHaveCount(0); await expect(page.locator('[data-overview-site-visual]')).toHaveCount(2) }
+  if (scenario === 'nav-fails') await expect(page.locator('[data-overview-site-visual]')).toHaveCount(0)
+  if (scenario === 'metric-missing') {
+    await expect(page.locator('[data-overview-hero] img')).toHaveCount(0)
+    await expect(page.locator('[data-overview-game-previews] img')).toHaveCount(2)
+    await expect(page.locator('[data-hero-unavailable]')).toHaveCount(2)
+  }
+  if (scenario === 'zero') await expect(page.locator('[data-hero-domain="game"] progress')).toHaveAttribute('value', '0')
+  await expect(page.locator('[data-overview-activity] img')).toHaveCount(0)
+  if (scenario !== 'nav-fails' && scenario !== 'game-fails') expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  else for (const source of sources) expect(runtime.calls.filter(call => call.url.pathname === source)).toHaveLength(runtime.state.failure === (source === sources[0] ? 'nav' : 'game') ? 2 : 1)
+  runtime.assertQuiet()
+})
+
+test('Overview exhausted Hero preserves other game previews and site logos', async ({ page, runtime }) => {
+  runtime.state.visualCase = 'populated'; runtime.state.siteVisualCase = 'populated'; runtime.state.brokenGame = 91
+  await page.addInitScript(() => Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true } }))
+  await openRuntime(page, '/en/insights')
+  await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', 'data')
+  await expect(page.locator('[data-overview-hero] img')).toHaveCount(0)
+  await expect(page.locator('[data-overview-game-previews] img')).toHaveCount(2)
+  await expect(page.locator('[data-overview-site-visual] img')).toHaveCount(2)
+  await revealImages(page, '[data-overview-game-visual], [data-overview-site-visual]')
+  expect(await page.locator('[data-overview-game-previews] [data-overview-game-visual]').evaluateAll(elements => elements.map(el => el.getAttribute('data-game-id')))).toEqual(['92', '93'])
+  await expect(page.locator('[data-hero-domain="game"] progress')).toHaveAttribute('value', '0.25')
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  runtime.assertQuiet()
+})
+
+for (const width of [1440, 1024, 768, 390]) test(`Overview visual maximum values and long titles ${width}`, async ({ page, runtime }) => {
+  runtime.state.visualCase = 'long'; runtime.state.metricCase = 'full-long'
+  await page.setViewportSize({ width, height: 1000 })
+  await openRuntime(page, '/en/insights')
+  await expect(page.locator('[data-hero-domain="game"] progress')).toHaveAttribute('value', '1')
+  await revealImages(page, '[data-overview-game-visual]')
+  await layout(page, width)
+  expect(await page.locator('[data-hero-domain="game"] [data-hero-value], [data-hero-domain="game"] dd, [data-overview-game-visual]').evaluateAll(elements => elements.every(el => el.scrollWidth <= el.clientWidth + 1))).toBe(true)
+  runtime.assertQuiet()
+})
+
+for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const) for (const width of [1440, 1024, 768, 390]) test(`Overview visual composition ${prefix || 'zh'} ${theme} ${width}`, async ({ page, context, runtime }) => {
+  runtime.state.visualCase = 'populated'; runtime.state.siteVisualCase = 'populated'; runtime.state.eventCount = 10
+  await page.setViewportSize({ width, height: 1000 })
+  await context.addInitScript(value => localStorage.setItem('theme', value), theme)
+  const html = await openRuntime(page, prefix + '/insights')
+  expect(stats(html)).toEqual(['238', '213', '47'])
+  expect(html.match(/<main[\s\S]*?<\/main>/)?.[0]).toContain('data-hero-mode="visual"')
+  await expect(page.locator('[data-overview-hero] img')).toHaveCount(1)
+  await expect(page.locator('[data-overview-game-previews] img')).toHaveCount(2)
+  await expect(page.locator('[data-overview-site-logos] img')).toHaveCount(5)
+  await expect(page.locator('[data-overview-activity] img')).toHaveCount(0)
+  await expect(page.locator('[data-hero-domain="game"] [data-hero-fact]')).toHaveCount(4)
+  await expect(page.locator('[data-hero-domain="game"] [data-hero-delta]')).toHaveText(prefix ? '+4.2 percentage points' : '+4.2 个百分点')
+  await expect(page.locator('[data-hero-domain="game"] time')).toHaveAttribute('datetime', '2026-08-29')
+  await expect(page.locator('[data-overview-hero] [data-overview-game-visual]')).toHaveAttribute('href', prefix + '/games/91')
+  await expect(page.locator('[data-hero-domain="game"] .overview-hero__link')).toHaveAttribute('href', prefix + '/insights/games?metric=free')
+  await expect(page.locator('[data-overview-game-previews] [data-game-id="91"]')).toHaveCount(0)
+  await expect(page.locator('[data-overview-games] [data-ecosystem-metric="free"], [data-overview-sites] [data-ecosystem-metric="ipv6"]')).toHaveCount(0)
+  await revealImages(page, '[data-overview-game-visual], [data-overview-site-visual]')
+  await layout(page, width)
+  const bounds = await page.locator('[data-hero-domain="game"]').evaluate(panel => {
+    const box = (selector: string) => panel.querySelector(selector)!.getBoundingClientRect().toJSON()
+    return { data: box('[data-hero-primary]'), art: box('[data-overview-game-visual]'), image: box('img'), evidence: box('[data-hero-evidence]'), fits: [...panel.querySelectorAll('[data-hero-value], dd')].every(el => el.scrollWidth <= el.clientWidth + 1) }
+  })
+  expect(bounds.fits).toBe(true)
+  expect(bounds.image.width / bounds.image.height).toBeCloseTo(460 / 215, 1)
+  expect(bounds.evidence.top).toBeGreaterThanOrEqual(Math.max(bounds.data.bottom, bounds.art.bottom))
+  if (width > 760) expect(bounds.data.width / bounds.art.width).toBeCloseTo(56 / 44, 1)
+  else { expect(bounds.art.bottom).toBeLessThanOrEqual(bounds.data.top); expect(bounds.image.height).toBeGreaterThanOrEqual(140); expect(bounds.image.height).toBeLessThanOrEqual(165) }
+  for (const image of await page.locator('[data-overview-site-visual] img').all()) { const rect = await image.boundingBox(); expect(rect!.width).toBe(48); expect(rect!.height).toBe(48) }
+  for (const link of await page.locator('[data-overview-game-visual], [data-overview-site-visual]').all()) await keyboardFocus(link)
+  await assertRuntimeSurface(page, '.insights-overview-page', theme)
+  await expect(page.locator('a a')).toHaveCount(0)
+  if (process.env.GOFURRY_OVERVIEW_REVIEW_DIR) {
+    await mkdir(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, { recursive: true })
+    const name = `${prefix ? 'en' : 'zh'}-${theme}-${width}`
+    await page.screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `visual-full-${name}.png`), fullPage: true })
+    await page.locator('[data-overview-hero]').screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `visual-hero-${name}.png`) })
+    await page.locator('[data-overview-ecosystems]').screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `visual-ecosystems-${name}.png`) })
+  }
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  runtime.assertQuiet()
+})
+
+test.describe('Overview non-JavaScript projection', () => {
+  test.use({ javaScriptEnabled: false })
+  test('renders qualified images and independent links in server HTML', async ({ page, runtime }) => {
+    runtime.state.visualCase = 'populated'; runtime.state.siteVisualCase = 'populated'
+    const blocked: Request[] = [], errors: string[] = [], http: number[] = []
+    page.on('requestfailed', request => blocked.push(request))
+    page.on('pageerror', error => errors.push(error.message))
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+    page.on('response', response => { if (response.status() >= 400) http.push(response.status()) })
+    const response = await page.goto('/en/insights')
+    expect(response?.status()).toBe(200)
+    await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', 'visual')
+    await expect(page.locator('[data-overview-game-visual]')).toHaveCount(3)
+    await expect(page.locator('[data-hero-domain="game"] progress')).toHaveAttribute('value', '0.25')
+    await expect(page.locator('[data-hero-domain="game"] .overview-hero__link')).toHaveAttribute('href', '/en/insights/games?metric=free')
+    expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+    // Chromium blocks Nuxt module preloads with "csp" when JS is disabled.
+    // Account for that exact no-JS boundary without relaxing shared error guards.
+    expect(blocked.length).toBeGreaterThan(0)
+    for (const request of blocked) {
+      expect(request.failure()?.errorText).toBe('csp')
+      expect(request.resourceType()).toBe('script')
+      const url = new URL(request.url())
+      expect(url.origin).toBe(runtime.app.base)
+      expect(url.pathname).toMatch(/^\/_nuxt\/[\w-]+\.js$/)
+    }
+    expect(errors).toEqual([]); expect(http).toEqual([]); expect(runtime.unexpected).toEqual([])
+  })
 })
 
 for (const [prefix, title, description] of [

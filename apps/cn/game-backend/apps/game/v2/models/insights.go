@@ -124,8 +124,8 @@ type InsightOverview struct {
 	FeaturedVisuals []InsightFeaturedVisual `json:"featured_visuals"`
 }
 
-// InsightFeaturedVisual carries game-level permission and resource identity,
-// not per-asset human review. A2.2-A does not enable frontend image rendering.
+// InsightFeaturedVisual carries automatic classification and resource identity,
+// not per-asset human review or guaranteed SFW pixels. Showcase is independent.
 type InsightFeaturedVisual struct {
 	GameID int64               `json:"game_id"`
 	Name   string              `json:"name"`
@@ -136,7 +136,7 @@ type InsightFeaturedVisual struct {
 // InsightVisualCandidateRecord is a private read model, never a public approval DTO.
 type InsightVisualCandidateRecord struct {
 	GameID, AppID, AssetGameID, AssetAppID, AssetID   int64
-	ShowcaseEligible, HasAdult                        bool
+	HasClassification, HasAdult                       bool
 	Name, NameEn, AssetType, Lang, AssetFamily, Asset string
 	SortOrder                                         int32
 	Exists                                            *bool

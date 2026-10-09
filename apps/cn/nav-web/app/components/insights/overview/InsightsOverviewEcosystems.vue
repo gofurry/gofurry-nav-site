@@ -31,23 +31,38 @@
             </li>
           </ul>
         </template>
+        <div v-if="side.domain === 'game' && previews.length" class="overview-ecosystem__visuals mt-6 grid grid-cols-2 gap-4" data-overview-game-previews>
+          <InsightsOverviewGameVisual v-for="item in previews" :key="`${item.game_id}:${item.visual.asset}`" :item="item" @failed="failedAssets.add(item.visual.asset)" />
+        </div>
+        <div v-if="side.domain === 'site' && siteVisuals.length" class="overview-ecosystem__visuals mt-6" data-overview-site-logos>
+          <p class="overview-site-visuals__label">{{ $t('insights.overviewVisuals.recentSites') }}</p>
+          <ul class="m-0 flex list-none flex-wrap gap-5 p-0">
+            <li v-for="item in siteVisuals" :key="`${item.site_id}:${item.visual.asset}`" class="min-w-0">
+              <InsightsOverviewSiteVisual :item="item" />
+            </li>
+          </ul>
+        </div>
       </article>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { InsightOverview } from '@/types/insights'
 import { formatInsightRatio } from '@/utils/insightDimensions'
 import { overviewEntityCount, selectOverviewEcosystemMetrics } from '@/utils/insightOverviewPresentation'
+import { overviewGameVisuals, overviewSiteVisuals } from './visuals'
 
 const props = defineProps<{ nav: InsightOverview | null, game: InsightOverview | null }>()
 const { locale } = useI18n()
 const localePath = useLocalePath()
-// Current DTOs cannot establish positive SFW approval. Keep this Overview-only
-// showcase data-only; Home observations are not the ecosystem metric snapshot.
+// Reserve candidate zero for Hero even when its metric/image is unavailable.
+// Only dedicated Overview projections qualify decoration; events never do.
+const failedAssets = reactive(new Set<string>())
+const previews = computed(() => overviewGameVisuals(props.game?.featured_visuals).slice(1).filter(item => !failedAssets.has(item.visual.asset)))
+const siteVisuals = computed(() => overviewSiteVisuals(props.nav))
 const sides = computed(() => [
   { domain: 'game' as const, overview: props.game, path: '/insights/games' },
   { domain: 'site' as const, overview: props.nav, path: '/insights/sites' },

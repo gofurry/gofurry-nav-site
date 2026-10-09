@@ -25,7 +25,7 @@ func (d *InsightsDAO) ListInsightVisualCandidates(ctx context.Context, utcDay st
 	for _, row := range rows {
 		result = append(result, v2models.InsightVisualCandidateRecord{
 			GameID: row.GameID, AppID: row.Appid, Name: row.GameName, NameEn: row.GameNameEn,
-			ShowcaseEligible: row.ShowcaseEligible, HasAdult: row.GameHasAdult,
+			HasClassification: row.GameHasClassification, HasAdult: row.GameHasAdult,
 			AssetID: row.AssetID, AssetGameID: row.AssetGameID, AssetAppID: row.AssetAppid,
 			AssetType: row.AssetType, Lang: row.Lang, AssetFamily: row.AssetFamily,
 			SortOrder: row.SortOrder, Exists: row.Exists, Asset: row.Url,

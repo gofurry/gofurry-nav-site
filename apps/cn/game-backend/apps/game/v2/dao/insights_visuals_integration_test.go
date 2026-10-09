@@ -34,7 +34,8 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 			t.Fatal(err)
 		}
 	}
-	exec(`UPDATE gfg_game SET showcase_eligible=false`)
+	exec(`DELETE FROM gfg_game_tag`)
+	exec(`INSERT INTO gfg_tag(id,code,name,name_en,info,info_en,category_id,create_time,update_time) VALUES(1082199,'insights-classification','分类','Classification','','',1,now(),now())`)
 	dao := v2dao.NewInsightsDAO(gamesqlc.New(tx))
 	read := func(day string) []v2models.InsightVisualCandidateRecord {
 		t.Helper()
@@ -49,14 +50,23 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 	}
 	const day = "2026-10-09"
 	if len(read(day)) != 0 {
-		t.Fatal("no permission must mean no candidates")
+		t.Fatal("no classification must mean no candidates")
 	}
 	seed := func(id, app int64) {
 		t.Helper()
-		exec(`INSERT INTO gfg_game(id,name,name_en,info,info_en,appid,header,developers,publishers,weight,create_time,update_time,showcase_eligible) VALUES($1,' 标题 ',' Title ','','',$2,'','[]','[]',0,now(),now(),true)`, id, app)
+		exec(`INSERT INTO gfg_game(id,name,name_en,info,info_en,appid,header,developers,publishers,weight,create_time,update_time,showcase_eligible) VALUES($1,' 标题 ',' Title ','','',$2,'','[]','[]',0,now(),now(),false)`, id, app)
+		exec(`INSERT INTO gfg_game_tag(game_id,tag_id,role,create_time,update_time) VALUES($1,1082199,'normal',now(),now())`, id)
 		exec(`INSERT INTO gfg_game_assets(game_id,appid,asset_type,asset_family,source,lang,media_key,url,exists,collected_at,updated_at) VALUES($1,$2,'header','store','store_browse','zh','insight-header',$3,true,now(),now())`, id, app, fmt.Sprintf("https://shared.steamstatic.com/steam/apps/%d/header.jpg", app))
 	}
 	seed(1082200, 12345)
+	// Only disposable fixture writes: changing the commercial flag has no effect
+	// on Insights, while the existing Showcase suite keeps its own permission gate.
+	withoutShowcase := read(day)
+	exec(`UPDATE gfg_game SET showcase_eligible=true WHERE id=1082200`)
+	if len(withoutShowcase) != 1 || !reflect.DeepEqual(withoutShowcase, read(day)) {
+		t.Fatal("Insights depends on Showcase approval")
+	}
+	exec(`UPDATE gfg_game SET showcase_eligible=false WHERE id=1082200`)
 	data, err := os.ReadFile(filepath.Join(integrationRepositoryRoot(t), "apps/cn/game-backend/apps/game/v2/service/testdata/insight-header-urls.json"))
 	if err != nil {
 		t.Fatal(err)
@@ -84,8 +94,9 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 	url := "https://shared.steamstatic.com/steam/apps/12345/header.jpg"
 	exec(`UPDATE gfg_game_assets SET url=$1 WHERE game_id=1082200`, url)
 	for _, tc := range []struct{ Name, Mutation, Restore string }{
-		{"permission withdrawal", `UPDATE gfg_game SET showcase_eligible=false WHERE id=1082200`, `UPDATE gfg_game SET showcase_eligible=true WHERE id=1082200`},
-		{"adult including archived", `INSERT INTO gfg_game_tag(game_id,tag_id,role,create_time,update_time) SELECT 1082200,id,'normal',now(),now() FROM gfg_tag WHERE code='adult'`, `DELETE FROM gfg_game_tag WHERE game_id=1082200`},
+		{"no classification", `DELETE FROM gfg_game_tag WHERE game_id=1082200`, `INSERT INTO gfg_game_tag(game_id,tag_id,role,create_time,update_time) VALUES(1082200,1082199,'normal',now(),now())`},
+		{"only archived classification", `UPDATE gfg_tag SET archived_at=now() WHERE id=1082199`, `UPDATE gfg_tag SET archived_at=NULL WHERE id=1082199`},
+		{"adult including archived", `INSERT INTO gfg_game_tag(game_id,tag_id,role,create_time,update_time) SELECT 1082200,id,'normal',now(),now() FROM gfg_tag WHERE code='adult'`, `DELETE FROM gfg_game_tag WHERE game_id=1082200 AND tag_id IN (SELECT id FROM gfg_tag WHERE code='adult')`},
 		{"asset app identity", `UPDATE gfg_game_assets SET appid=999 WHERE game_id=1082200`, `UPDATE gfg_game_assets SET appid=12345 WHERE game_id=1082200`},
 		{"asset absent", `UPDATE gfg_game_assets SET exists=false WHERE game_id=1082200`, `UPDATE gfg_game_assets SET exists=true WHERE game_id=1082200`},
 		{"blank unicode names", `UPDATE gfg_game SET name=U&'\0085\00A0\3000',name_en=E'\t\n' WHERE id=1082200`, `UPDATE gfg_game SET name='标题',name_en='' WHERE id=1082200`},
@@ -136,6 +147,7 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 	// Invalid records exceed any plausible small oversampling window. SQL must
 	// filter before LIMIT, so none can displace the three valid games.
 	exec(`INSERT INTO gfg_game(id,name,name_en,info,info_en,appid,header,developers,publishers,weight,create_time,update_time,showcase_eligible) SELECT n,'Invalid','','','',n,'','[]','[]',0,now(),now(),true FROM generate_series(1082300,1082599) n`)
+	exec(`INSERT INTO gfg_game_tag(game_id,tag_id,role,create_time,update_time) SELECT n,1082199,'normal',now(),now() FROM generate_series(1082300,1082599) n`)
 	exec(`INSERT INTO gfg_game_assets(game_id,appid,asset_type,asset_family,source,lang,media_key,url,exists,collected_at,updated_at) SELECT id,appid,'header','store','store_browse','zh','invalid','https://shared.steamstatic.com/header.jpg',true,now(),now() FROM gfg_game WHERE id BETWEEN 1082300 AND 1082599`)
 	if !reflect.DeepEqual(first, read(day)) {
 		t.Fatal("invalid candidate window starved valid results")

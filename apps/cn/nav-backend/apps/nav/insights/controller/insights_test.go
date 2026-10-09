@@ -16,7 +16,7 @@ import (
 type fakeReader struct{}
 
 func (fakeReader) GetOverview(context.Context) (models.Overview, error) {
-	return models.Overview{Metrics: []models.Metric{}, RecentChanges: []models.Change{}}, nil
+	return models.Overview{Metrics: []models.Metric{}, RecentChanges: []models.Change{}, SiteVisuals: []models.SiteVisual{}}, nil
 }
 func (fakeReader) GetMetricTrend(_ context.Context, key, requestedRange string) (models.MetricTrend, error) {
 	if key == "bad" {
@@ -110,6 +110,9 @@ func TestNavInsightsHTTPContract(t *testing.T) {
 		resp.Body.Close()
 		if resp.StatusCode != tc.want {
 			t.Fatalf("%s status=%d body=%s", tc.path, resp.StatusCode, body)
+		}
+		if tc.path == "/api/v2/nav/insights/overview" && !strings.Contains(string(body), `"site_visuals":[]`) {
+			t.Fatalf("site visuals must be an array: %s", body)
 		}
 		for _, forbidden := range []string{"detector_key", "metric_version", "internal_key"} {
 			if strings.Contains(string(body), forbidden) {

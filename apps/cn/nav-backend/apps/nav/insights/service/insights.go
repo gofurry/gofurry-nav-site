@@ -60,6 +60,7 @@ var changeContracts = []changeContract{
 }
 
 type Store interface {
+	ListOverviewSiteVisuals(context.Context, []int64) ([]models.SiteVisualRecord, error)
 	CountEntities(context.Context) (int64, error)
 	GetSite(context.Context, int64) (*models.SiteRecord, error)
 	GetMetricSummary(context.Context, models.MetricContract) (*models.MetricSummaryRecord, error)
@@ -90,7 +91,7 @@ func New(store Store) *InsightsService {
 }
 
 func (s *InsightsService) GetOverview(ctx context.Context) (models.Overview, error) {
-	result := models.Overview{GeneratedAt: s.now().UTC(), Metrics: []models.Metric{}, RecentChanges: []models.Change{}}
+	result := models.Overview{GeneratedAt: s.now().UTC(), Metrics: []models.Metric{}, RecentChanges: []models.Change{}, SiteVisuals: []models.SiteVisual{}}
 	var err error
 	if result.EntityCount, err = s.store.CountEntities(ctx); err != nil {
 		return result, err
@@ -113,6 +114,7 @@ func (s *InsightsService) GetOverview(ctx context.Context) (models.Overview, err
 		return result, err
 	}
 	result.RecentChanges = publicChanges(changes)
+	result.SiteVisuals = s.overviewSiteVisuals(ctx, result.RecentChanges)
 	return result, nil
 }
 

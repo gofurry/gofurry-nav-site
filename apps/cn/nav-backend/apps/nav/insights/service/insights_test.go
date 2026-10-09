@@ -36,6 +36,9 @@ type fakeStore struct {
 }
 
 func (f *fakeStore) CountEntities(context.Context) (int64, error) { return 2, nil }
+func (f *fakeStore) ListOverviewSiteVisuals(context.Context, []int64) ([]models.SiteVisualRecord, error) {
+	return nil, nil
+}
 func (f *fakeStore) GetSite(_ context.Context, id int64) (*models.SiteRecord, error) {
 	if f.sites != nil {
 		return f.sites[id], nil

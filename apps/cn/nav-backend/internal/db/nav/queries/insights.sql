@@ -3,6 +3,18 @@ SELECT count(*)::bigint
 FROM public.gfn_site
 WHERE deleted IS NOT TRUE;
 
+-- name: ListNavInsightSiteVisualCandidates :many
+-- Only IDs already returned by this Overview; the service caps the batch at 8.
+-- GFN's explicit non-adult value is the string '0', not a boolean or 'false'.
+SELECT id,name,name_en,icon::text,nsfw,deleted
+FROM public.gfn_site
+WHERE id=ANY(sqlc.arg(site_ids)::bigint[]) AND id>0
+  AND deleted IS NOT TRUE AND nsfw='0'
+  AND icon ~ ('^nav/sites/' || id::text || '/icon/[a-f0-9]{32}([.][a-z0-9]{1,16})?$')
+  AND icon !~ '[[:space:][:cntrl:]]'
+ORDER BY array_position(sqlc.arg(site_ids)::bigint[],id)
+LIMIT 8;
+
 -- name: GetNavInsightSite :one
 SELECT id, name, name_en, COALESCE(icon, '')::text AS icon
 FROM public.gfn_site

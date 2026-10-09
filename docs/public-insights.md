@@ -33,7 +33,7 @@ Game:
 
 Normal and empty results return 200. Invalid metric keys or ranges return 400, missing entities return 404, and genuine backend failures return 500.
 
-## Game Overview visual source contract (#108-A2.2-A)
+## Game Overview visual source contract (#108-A2.2-A/B)
 
 Only Game Overview adds `featured_visuals`, always an array of 0–3 items, never
 `null` or omitted. Existing statistics, changes, timestamps and errors retain
@@ -59,8 +59,14 @@ Chinese name falls back to a real `name_en`, but no English translation is
 invented. Both names empty means exclusion. This is current metadata, not an
 observed fact, popularity signal or recommendation score.
 
-Admission requires positive Game/Steam/asset IDs, `showcase_eligible=true`, no
-related `adult` tag (including archived tags), and an existing header row whose
+Stage A originally required the commercial `showcase_eligible` permission.
+Stage B explicitly replaces that dependency only inside Insights: Showcase,
+Collections, Admin and all flag writes/defaults remain unchanged.
+
+Admission requires positive Game/Steam/asset IDs, at least one current non-adult
+classification (`gfg_game_tag` joined to an unarchived `gfg_tag` with nonempty
+code other than `adult`), no related `adult` tag (including archived tags), and
+an existing header row whose
 `game_id` and `appid` both match the current Game. An explicit `exists=false`
 excludes the resource; unknown existence is not a claim of current availability.
 There is no remote fetch, image decoding, image proxy or live availability check.
@@ -100,26 +106,84 @@ The query filters in PostgreSQL instead of transferring an unbounded asset pool;
 its hash selection still evaluates eligible games, so performance claims require
 an actual query plan at the relevant data size.
 
-There is no new positive cache or Redis key. Permission withdrawal, an adult tag
+There is no new positive cache or Redis key. Classification withdrawal, an adult tag
 or an updated URL affects the next backend read. The existing route has no
 application response cache; external CDN/platform propagation is an operational
 boundary whose effective TTL is not verified by repository tests. Do not promise
 instant removal from browser/CDN caches or change global caching in this phase.
 
-**This is game-level display permission plus asset identity validation, not
+**This is automatic conservative classification plus asset identity validation, not
 per-asset human review or a positive SFW image certificate.** Missing adult tags
 alone are insufficient. Tag omissions, replacement pixels at the same URL,
-metadata changes and daily rotation remain content-review risks. Before A2.2-B
-publishes images, maintainers must confirm review scope, who reviews new/rotated
-assets, and withdrawal/cache handling. A2.2-A adds no image UI.
+metadata changes and daily rotation remain content risks. Stage B explicitly
+accepts this automated boundary with image failure fallback, superseding Stage
+A's proposed per-asset review gate. It introduces no daily review, manual picks,
+approval table, switch or image analysis service; it cannot guarantee SFW pixels.
 
 Nav Web declares `featured_visuals?` for compatibility with older backends and
-does not consume it. Empty and populated fixtures assert no image DOM, Steam
-image request, new link, Home request or hydration fetch, in both languages.
+Stage B consumes only this dedicated projection for homepage game artwork.
+Empty, absent and malformed fields remain data-only without game image requests;
+event artwork and uncontracted classification flags cannot qualify images.
 The two independent parallel SSR sources remain unchanged. The shared URL corpus
 is exercised by both Go parser tests and the existing disposable PostgreSQL
-integration harness; permission/tag/URL revocation, result bounds and daily
+integration harness; classification/tag/URL revocation, Showcase independence, result bounds and daily
 ordering are integration-tested without writing to shared development data.
+
+## Nav Overview logo source contract (#108-A2.2-B)
+
+Only Nav Overview adds `site_visuals`, always an array of 0–5 items shaped as
+`{site_id: number, name: string, visual: {kind: "site_icon", asset: string}}`.
+Nav Web's optional type supports older backends. Game Overview does not add it.
+
+Candidates must belong to the actual `recent_changes` returned by this Overview.
+One sqlc batch accepts at most its eight distinct positive Site IDs; it requires
+`deleted IS NOT TRUE` and **`nsfw='0'`**. The implementation document's literal
+`'false'` conflicts with the real GFN `NOT NULL varchar(4)` contract: migrations
+and Admin encode explicit non-adult/adult as `'0'`/`'1'`. The maintainer confirmed
+using only `'0'`; empty, unknown and every other value remain excluded. No schema,
+Admin normalization or existing event mapping is changed.
+
+An icon must match `nav/sites/<same positive Site ID>/icon/<32 lowercase hex>`
+with an optional `.<1–16 lowercase alphanumeric characters>` extension, following
+the existing Managed Asset grammar. Absolute URLs, foreign IDs, missing keys,
+whitespace and unrecognized paths are rejected. A real trimmed name is required,
+falling back to a real English name. The service preserves event order,
+deduplicates Site IDs and takes at most five, independently of SQL row order.
+There is no query for an empty event set, directory-wide selection or N+1.
+
+The optional batch follows the original successful metrics/events reads, has a
+500ms child-context deadline, and returns `site_visuals: []` on failure with only
+a reason-class log. Original failures remain errors; `recent_changes` is not
+rewritten. Domain, Changes, Compare and Detail projections retain their contracts.
+Explicit non-adult classification and a content-addressed icon reference are not
+pixel-level review; incorrect classification and third-party content remain risks.
+
+## Homepage automatic composition (#108-A2.2-B)
+
+The Header, metric selection, evidence, links and four-section order are retained.
+At >=1200px Hero stays Game:Site 8:4. With a reliable Game metric and candidate
+zero, Game uses a 56:44 data/art row with its full evidence below; <=760px places
+art before data. Without that metric/candidate, or after all shared image routes
+fail, the accepted A2.1 data-only layout returns without a vacant frame. Site
+Hero stays data-only. Artwork links to its localized Game; metric navigation is
+separate. No artwork implies that Game is the aggregate statistic's subject.
+
+The 1:1 ecosystems retain counts, priority and own-Hero metric exclusion. Game
+uses candidates one/two only, reserving zero even when Hero is unavailable;
+exhausted thumbnails disappear independently. Site uses only `site_visuals`,
+labelled recently observed websites, with `siteEntityPath` plus `localePath`.
+Logo exhaustion displays neutral name initials, never a substitute brand.
+Both consume unchanged shared Steam/Managed renderers and routing. Artwork is
+460:215 with contain fit; Hero is eager/high priority, thumbnails and 48px logos
+are lazy. No API, image preload pool, animation or tracking is introduced.
+
+Overview-only unit/browser fixtures cover legacy and malformed payloads, counts,
+deduplication, no-JS SSR, hydration, source/metric/image failures, keyboard links,
+zero/unknown values and zh/en × Light/Dark × 1440/1024/768/390. Set
+`GOFURRY_OVERVIEW_REVIEW_DIR` for full-page, Hero and ecosystem review PNGs using
+stable local test art; these are not production qualification evidence or accepted
+Visual Goldens. Existing unqualified-event safety checks and shared-page suites
+remain required. A2.3 event artwork and #139 animation remain separate work.
 
 ## Metric contracts
 
@@ -213,7 +277,7 @@ The editorial `/insights` entry and `/en/insights` use exactly two parallel SSR 
 
 The existing data Hero and equal-width ecosystem showcases consume these two snapshots. Each ecosystem excludes its own Hero's currently selected metric, using the same stable key priority (`free/windows/mac/linux` for Game; `ipv6/tls13/http2/hsts/csp/security_txt/certificate_verified` for Site), keeps at most three remaining reliable values, and preserves real zero. If only the Hero metric is reliable, the ecosystem retains its entity count and localized entry with an empty metric state. Missing counts, metric values, coverage and fact dates never become zero or borrow another metric's evidence. `metric.as_of` owns each fact date; `generated_at` is only snapshot generation, not an observation timestamp or shared backend snapshot.
 
-Neither Overview DTO establishes positive SFW cover approval. Hero and Game ecosystem therefore remain data-only. In #108-A1.3, homepage events use neutral domain icons and text for both domains, preserving identity, public event wording and localized entity links without rendering remote artwork. Absent adult tags or uncontracted SFW flags cannot qualify images. Shared Domain/Changes media behavior is unchanged.
+Neither Overview DTO establishes per-asset SFW approval. A1/A2.1 remained data-only; A2.2-B now uses only the dedicated automatic projections described above. Homepage events retain A1.3's neutral domain icons and text, preserving identity, public wording and localized entity links without remote artwork. Absent adult tags or uncontracted SFW flags cannot qualify images. Shared Domain/Changes media behavior is unchanged.
 
 The homepage activity section uses a 3:9 heading/list layout on wide screens and stacks on smaller screens. Its seven-day total has moved into the heading and is available only when both Overview sources succeed with valid counts; zero stays zero. The merged feed still sorts by real event time and contains at most five ordinary rows. Exact timestamps display in explicit UTC consistently across SSR/hydration; day-precision events display only their date. Complete-empty, source-specific partial failure (including an empty surviving feed), and total failure remain distinct. The section always owns a localized Changes entry.
 

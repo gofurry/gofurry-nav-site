@@ -1161,6 +1161,13 @@
       "siteDescription": "观察网站公共技术能力的采用与统计覆盖。",
       "metricsUnavailable": "暂无更多可靠指标。"
     },
+    "overviewVisuals": {
+      "collectedGame": "收录作品",
+      "recentSites": "近期观测网站",
+      "viewGame": "查看作品：{name}",
+      "viewSite": "查看网站：{name}",
+      "iconUnavailable": "{name} 的图标暂不可用"
+    },
     "overviewHero": {
       "title": "看见生态的另一面。",
       "description": "从真实的观测数据中，发现 Furry 游戏与网站生态正在发生的变化。",

@@ -1161,6 +1161,13 @@
       "siteDescription": "Follow public web capabilities, their adoption and observation coverage.",
       "metricsUnavailable": "No additional reliable metrics are available."
     },
+    "overviewVisuals": {
+      "collectedGame": "Collected work",
+      "recentSites": "Recently observed websites",
+      "viewGame": "View game: {name}",
+      "viewSite": "View website: {name}",
+      "iconUnavailable": "Icon unavailable for {name}"
+    },
     "overviewHero": {
       "title": "A Closer Look at the Furry World.",
       "description": "Explore how furry games and websites are changing through public observations.",

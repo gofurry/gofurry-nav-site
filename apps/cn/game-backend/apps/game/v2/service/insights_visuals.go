@@ -67,7 +67,7 @@ func insightSteamHeader(raw string, appID int64) bool {
 func selectInsightVisuals(rows []v2models.InsightVisualCandidateRecord, day string) []v2models.InsightFeaturedVisual {
 	eligible := make([]v2models.InsightVisualCandidateRecord, 0, len(rows))
 	for _, row := range rows {
-		if row.GameID <= 0 || row.AppID <= 0 || !row.ShowcaseEligible || row.HasAdult || row.AssetGameID != row.GameID || row.AssetAppID != row.AppID || row.AssetID <= 0 || (row.Exists != nil && !*row.Exists) {
+		if row.GameID <= 0 || row.AppID <= 0 || !row.HasClassification || row.HasAdult || row.AssetGameID != row.GameID || row.AssetAppID != row.AppID || row.AssetID <= 0 || (row.Exists != nil && !*row.Exists) {
 			continue
 		}
 		if row.AssetType != "header" && row.AssetType != "header_2x" {

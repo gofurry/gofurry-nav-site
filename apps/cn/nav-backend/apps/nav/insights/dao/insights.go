@@ -15,6 +15,18 @@ type InsightsDAO struct{ queries *navsqlc.Queries }
 
 func New(queries *navsqlc.Queries) *InsightsDAO { return &InsightsDAO{queries: queries} }
 
+func (d *InsightsDAO) ListOverviewSiteVisuals(ctx context.Context, ids []int64) ([]models.SiteVisualRecord, error) {
+	rows, err := d.queries.ListNavInsightSiteVisualCandidates(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]models.SiteVisualRecord, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, models.SiteVisualRecord{SiteID: row.ID, Name: row.Name, NameEn: row.NameEn, Asset: row.Icon, NSFW: row.Nsfw, Deleted: row.Deleted})
+	}
+	return result, nil
+}
+
 func (d *InsightsDAO) CountEntities(ctx context.Context) (int64, error) {
 	return d.queries.CountNavInsightSites(ctx)
 }

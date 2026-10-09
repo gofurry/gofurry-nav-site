@@ -15,7 +15,7 @@ import (
 )
 
 func visualFixture(id int64) v2models.InsightVisualCandidateRecord {
-	return v2models.InsightVisualCandidateRecord{GameID: id, AppID: id + 10000, AssetGameID: id, AssetAppID: id + 10000, AssetID: id, ShowcaseEligible: true, Name: " 标题 ", NameEn: " Title ", AssetType: "header", Lang: "zh", Asset: fmt.Sprintf("https://shared.steamstatic.com/store_item_assets/steam/apps/%d/header.jpg", id+10000)}
+	return v2models.InsightVisualCandidateRecord{GameID: id, AppID: id + 10000, AssetGameID: id, AssetAppID: id + 10000, AssetID: id, HasClassification: true, Name: " 标题 ", NameEn: " Title ", AssetType: "header", Lang: "zh", Asset: fmt.Sprintf("https://shared.steamstatic.com/store_item_assets/steam/apps/%d/header.jpg", id+10000)}
 }
 
 func TestInsightSteamHeaderIdentity(t *testing.T) {
@@ -41,18 +41,18 @@ func TestInsightSteamHeaderIdentity(t *testing.T) {
 
 func TestInsightVisualAdmissionAndEmptyArrays(t *testing.T) {
 	cases := map[string]func(*v2models.InsightVisualCandidateRecord){
-		"permission":           func(r *v2models.InsightVisualCandidateRecord) { r.ShowcaseEligible = false },
-		"adult":                func(r *v2models.InsightVisualCandidateRecord) { r.HasAdult = true },
-		"game id":              func(r *v2models.InsightVisualCandidateRecord) { r.GameID = 0 },
-		"app id":               func(r *v2models.InsightVisualCandidateRecord) { r.AppID = -1 },
-		"asset id":             func(r *v2models.InsightVisualCandidateRecord) { r.AssetID = 0 },
-		"foreign game":         func(r *v2models.InsightVisualCandidateRecord) { r.AssetGameID++ },
-		"foreign app":          func(r *v2models.InsightVisualCandidateRecord) { r.AssetAppID++ },
-		"absent":               func(r *v2models.InsightVisualCandidateRecord) { v := false; r.Exists = &v },
-		"capsule":              func(r *v2models.InsightVisualCandidateRecord) { r.AssetType = "capsule" },
-		"unsupported language": func(r *v2models.InsightVisualCandidateRecord) { r.Lang = "fr" },
-		"unnamed":              func(r *v2models.InsightVisualCandidateRecord) { r.Name = "\t\u0085\u00a0\u3000"; r.NameEn = "\n" },
-		"missing asset":        func(r *v2models.InsightVisualCandidateRecord) { r.Asset = "" },
+		"no current classification": func(r *v2models.InsightVisualCandidateRecord) { r.HasClassification = false },
+		"adult":                     func(r *v2models.InsightVisualCandidateRecord) { r.HasAdult = true },
+		"game id":                   func(r *v2models.InsightVisualCandidateRecord) { r.GameID = 0 },
+		"app id":                    func(r *v2models.InsightVisualCandidateRecord) { r.AppID = -1 },
+		"asset id":                  func(r *v2models.InsightVisualCandidateRecord) { r.AssetID = 0 },
+		"foreign game":              func(r *v2models.InsightVisualCandidateRecord) { r.AssetGameID++ },
+		"foreign app":               func(r *v2models.InsightVisualCandidateRecord) { r.AssetAppID++ },
+		"absent":                    func(r *v2models.InsightVisualCandidateRecord) { v := false; r.Exists = &v },
+		"capsule":                   func(r *v2models.InsightVisualCandidateRecord) { r.AssetType = "capsule" },
+		"unsupported language":      func(r *v2models.InsightVisualCandidateRecord) { r.Lang = "fr" },
+		"unnamed":                   func(r *v2models.InsightVisualCandidateRecord) { r.Name = "\t\u0085\u00a0\u3000"; r.NameEn = "\n" },
+		"missing asset":             func(r *v2models.InsightVisualCandidateRecord) { r.Asset = "" },
 	}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {

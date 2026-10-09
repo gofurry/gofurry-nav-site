@@ -1039,3 +1039,52 @@ func (q *Queries) ListNavInsightSiteChanges(ctx context.Context, arg ListNavInsi
 	}
 	return items, nil
 }
+
+const listNavInsightSiteVisualCandidates = `-- name: ListNavInsightSiteVisualCandidates :many
+SELECT id,name,name_en,icon::text,nsfw,deleted
+FROM public.gfn_site
+WHERE id=ANY($1::bigint[]) AND id>0
+  AND deleted IS NOT TRUE AND nsfw='0'
+  AND icon ~ ('^nav/sites/' || id::text || '/icon/[a-f0-9]{32}([.][a-z0-9]{1,16})?$')
+  AND icon !~ '[[:space:][:cntrl:]]'
+ORDER BY array_position($1::bigint[],id)
+LIMIT 8
+`
+
+type ListNavInsightSiteVisualCandidatesRow struct {
+	ID      int64  `json:"id"`
+	Name    string `json:"name"`
+	NameEn  string `json:"name_en"`
+	Icon    string `json:"icon"`
+	Nsfw    string `json:"nsfw"`
+	Deleted bool   `json:"deleted"`
+}
+
+// Only IDs already returned by this Overview; the service caps the batch at 8.
+// GFN's explicit non-adult value is the string '0', not a boolean or 'false'.
+func (q *Queries) ListNavInsightSiteVisualCandidates(ctx context.Context, siteIds []int64) ([]ListNavInsightSiteVisualCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listNavInsightSiteVisualCandidates, siteIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListNavInsightSiteVisualCandidatesRow{}
+	for rows.Next() {
+		var i ListNavInsightSiteVisualCandidatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NameEn,
+			&i.Icon,
+			&i.Nsfw,
+			&i.Deleted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
