@@ -8,6 +8,15 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ## Unreleased
 
+### Added
+
+- Add hybrid Game Collection membership: effective members combine OR-matched active Tag rules and manual pins, minus explicit exclusions. Share this read model across Public and Admin, preserving Adult filtering, chronology and paused rules without materializing automatic members (#144).
+- Add Admin automation controls for Tag bindings, member sources, pin/exclude overrides and complete Composition saves. Preserve shared-version conflict protection, IME-safe search, 20-item local pagination and existing temporarily ineligible Home placements (#144).
+
+### Upgrade notes
+
+- Apply pending GFG migration `20261008010000_game_collection_hybrid_membership.sql` before deploying Game Backend and Admin with its rebuilt embedded React frontend. No GFA/GFN migration, runtime configuration change, Nav Web or Collector update is required. The internal Collection Redis namespace advances to v3; old keys expire naturally (#144).
+
 ## v3.0.0-alpha.11 - 2026-10-07
 
 ### Changed
