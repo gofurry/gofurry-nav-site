@@ -9,6 +9,24 @@ function stats(html: string) {
     .concat(html.match(/<dd data-activity-total>(.*?)<\/dd>/)?.[1] ?? '')
 }
 
+for (const [prefix, title, description] of [
+  ['', 'Furry 生态观测 - GoFurry', '查看 Furry 网站与游戏生态的公开指标、近期变化、统计覆盖和可靠历史数据，了解生态正在发生什么。'],
+  ['/en', 'Furry Ecosystem - GoFurry', 'Explore public metrics and recent changes across the Furry website and game ecosystems, with transparent coverage and historical data availability.'],
+] as const) test('Overview localized SEO survives SSR and hydration ' + (prefix || 'zh'), async ({ page, runtime }) => {
+  const html = await openRuntime(page, prefix + '/insights')
+  const head = html.match(/<head>([\s\S]*?)<\/head>/)?.[1] ?? ''
+  expect(head).toContain(`<title>${title}</title>`)
+  await expect(page).toHaveTitle(title)
+  for (const [attribute, key, content] of [['name', 'description', description], ['property', 'og:description', description], ['property', 'og:title', title]] as const) {
+    expect(head).toContain(`<meta ${attribute}="${key}" content="${content}">`)
+    const selector = `meta[${attribute}="${key}"]`
+    await expect(page.locator(selector)).toHaveCount(1)
+    await expect(page.locator(selector)).toHaveAttribute('content', content)
+  }
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  runtime.assertQuiet()
+})
+
 test('Overview two SSR sources start independently', async ({ request, runtime }) => {
   const gates = sources.map(source => runtime.hold(url => url.pathname === source))
   const pending = request.get('/insights')
