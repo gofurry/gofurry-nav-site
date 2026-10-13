@@ -91,8 +91,10 @@ test('a real video becomes ready and stops when Gallery is unmounted', async ({ 
   await expect.poll(() => reloading.completed).toBe(true)
   expect(await handle!.evaluate(el => (el as HTMLVideoElement).paused)).toBe(true)
   await expect(video).toHaveCount(0)
-  detail.failMovie(); await detail.tab('gallery'); await detail.page.locator('.game-detail-thumb').first().click()
+  const rejected = detail.failMovie()
+  await detail.tab('gallery'); await detail.page.locator('.game-detail-thumb').first().click()
   await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).error?.code)).toBe(4)
   await expect(detail.page.locator('.game-detail-video-loading')).toHaveCount(0)
+  await rejected
   detail.assertQuiet()
 })

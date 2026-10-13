@@ -2,11 +2,19 @@
 
 ## Prerequisites
 
-- Go 1.26.7 for all six active Go modules and `tools`
+- Go 1.26.9 for all six active Go modules and `tools`
 - Task >=3.45.3 (built-in file utilities on Windows)
 - Node.js 24 and pnpm 12.6.0 for `apps/cn/nav-web` and `apps/cn/admin/react`
 - development PostgreSQL and Redis matching the selected app configuration
 - sqlc and govulncheck through the pinned Go tools in `tools/go.mod`
+
+Root `.go-version` (`1.26.9`) and `.node-version` (`24`) provide development
+tool discovery. They do not create a workspace or override module ownership:
+each Go module still declares its version in `go.mod`, and Actions setup-go
+continues to read those files. Actions setup-node and `task doctor` read the
+root declarations; production policy rejects drift between the declared Go
+versions and the pinned toolchain requirements. Frontend pnpm versions remain
+owned by each `packageManager` field.
 
 The repository has no `go.work` or root pnpm workspace. Each frontend pins
 `packageManager: pnpm@12.6.0`, owns its `pnpm-lock.yaml`, and uses its local

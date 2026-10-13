@@ -73,3 +73,17 @@ test('archived and placeholder trees never select production gates', () => {
     else assert.equal(value, false, name)
   }
 })
+
+test('root version declarations select their consumers without database suites', () => {
+  const go = detectChanges(['.go-version'])
+  assert.equal(go.modules.length, 6)
+  assert.equal(go.policy && go.vulnerability, true)
+  assert.equal(go.nav_web, false)
+  const node = detectChanges(['.node-version'])
+  assert.deepEqual(node.modules, ['apps/cn/admin'])
+  assert.equal(node.policy && node.nav_web, true)
+  assert.equal(node.vulnerability, false)
+  for (const gates of [go, node]) {
+    assert.equal(gates.foundation || gates.game_integration || gates.nav_integration || gates.admin_integration, false)
+  }
+})

@@ -20,6 +20,8 @@ var productionModules = []string{
 	"apps/cn/uptime",
 }
 
+const requiredGoVersion = "1.26.9"
+
 var forbidden = []struct {
 	name    string
 	pattern *regexp.Regexp
@@ -126,6 +128,11 @@ func main() {
 		fatal(err)
 	}
 	findings = append(findings, versionFindings...)
+	declarationFindings, err := checkToolchainDeclarations(repositoryRoot)
+	if err != nil {
+		fatal(err)
+	}
+	findings = append(findings, declarationFindings...)
 	if _, err := os.Stat(filepath.Join(repositoryRoot, "go.work")); err == nil {
 		findings = append(findings, finding{"go.work", "root Go workspace", "1"})
 	} else if !os.IsNotExist(err) {
@@ -172,13 +179,27 @@ func checkGoVersions(repositoryRoot string) ([]finding, error) {
 		for number, line := range lines {
 			if strings.HasPrefix(line, "go ") {
 				found = true
-				if line != "go 1.26.7" {
-					findings = append(findings, finding{relative, "Go version other than 1.26.7", fmt.Sprintf("%d", number+1)})
+				if line != "go "+requiredGoVersion {
+					findings = append(findings, finding{relative, "Go version other than " + requiredGoVersion, fmt.Sprintf("%d", number+1)})
 				}
 			}
 		}
 		if !found {
 			findings = append(findings, finding{relative, "missing Go version", "1"})
+		}
+	}
+	return findings, nil
+}
+
+func checkToolchainDeclarations(repositoryRoot string) ([]finding, error) {
+	var findings []finding
+	for _, declaration := range []struct{ file, version string }{{".go-version", requiredGoVersion}, {".node-version", "24"}} {
+		data, err := os.ReadFile(filepath.Join(repositoryRoot, declaration.file))
+		if err != nil {
+			return nil, err
+		}
+		if strings.TrimSpace(string(data)) != declaration.version {
+			findings = append(findings, finding{declaration.file, "toolchain version other than " + declaration.version, "1"})
 		}
 	}
 	return findings, nil

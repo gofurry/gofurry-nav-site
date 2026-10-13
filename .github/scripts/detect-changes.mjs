@@ -11,12 +11,14 @@ export function detectChanges(paths) {
   const changed = paths.filter(path => !documentation(path))
   const has = pattern => changed.some(path => pattern.test(path))
   const ci = has(/^\.github\/(scripts\/|workflows\/[^/]+\.ya?ml$)/)
+  const goVersion = has(/^\.go-version$/)
+  const nodeVersion = has(/^\.node-version$/)
   const runtimeTools = changed.some(path => path.startsWith('tools/')
     && !/^tools\/(doctor\.mjs$|check-gofmt\/|check-production-policy\/)/.test(path))
   const sql = ci || runtimeTools || has(/^sqlc\.yaml$/)
   const shared = sql || has(/^Taskfile\.yml$/)
   const adminBackend = changed.some(path => path.startsWith('apps/cn/admin/') && !path.startsWith('apps/cn/admin/react/'))
-  const selected = modules.filter(module => shared
+  const selected = modules.filter(module => shared || goVersion || (nodeVersion && module === 'admin')
     || has(new RegExp(`^apps/cn/${module}/`))
     || (module.startsWith('game-') && has(/^db\/game\//))
     || (module.startsWith('nav-') && has(/^db\/nav\//))
@@ -25,13 +27,13 @@ export function detectChanges(paths) {
   return {
     modules: selected,
     has_modules: selected.length > 0,
-    policy: paths.some(path => /^(Taskfile\.yml$|apps\/cn\/|db\/|tools\/|sqlc\.yaml$|AGENTS\.md$|\.agents\/|contracts\/|\.github\/(scripts\/|workflows\/[^/]+\.ya?ml$))/.test(path)),
+    policy: goVersion || nodeVersion || paths.some(path => /^(Taskfile\.yml$|apps\/cn\/|db\/|tools\/|sqlc\.yaml$|AGENTS\.md$|\.agents\/|contracts\/|\.github\/(scripts\/|workflows\/[^/]+\.ya?ml$))/.test(path)),
     foundation: sql || has(/^(db\/|apps\/cn\/[^/]+\/internal\/db\/.*\/queries\/)/),
-    nav_web: ci || has(/^(Taskfile\.yml$|apps\/cn\/nav-web\/)/),
+    nav_web: ci || nodeVersion || has(/^(Taskfile\.yml$|apps\/cn\/nav-web\/)/),
     game_integration: sql || adminBackend || has(/^(apps\/cn\/game-(backend|collector)\/|db\/game\/)/),
     nav_integration: sql || adminBackend || has(/^(apps\/cn\/nav-(backend|collector)\/|db\/nav\/)/),
     admin_integration: sql || adminBackend || has(/^db\/(admin|game|nav)\//),
-    vulnerability: ci || has(/^(apps\/cn\/(admin|game-backend|game-collector|nav-backend|nav-collector|uptime)\/go\.(mod|sum)$|tools\/go\.(mod|sum)$)/),
+    vulnerability: ci || goVersion || has(/^(apps\/cn\/(admin|game-backend|game-collector|nav-backend|nav-collector|uptime)\/go\.(mod|sum)$|tools\/go\.(mod|sum)$)/),
   }
 }
 

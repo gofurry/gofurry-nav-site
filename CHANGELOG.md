@@ -13,6 +13,16 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 - Add hybrid Game Collection membership: effective members combine OR-matched active Tag rules and manual pins, minus explicit exclusions. Share this read model across Public and Admin, preserving Adult filtering, chronology and paused rules without materializing automatic members (#144).
 - Add Admin automation controls for Tag bindings, member sources, pin/exclude overrides and complete Composition saves. Preserve shared-version conflict protection, IME-safe search, 20-item local pagination and existing temporarily ineligible Home placements (#144).
 
+### Changed
+
+- Align all six production Go modules and the tools module on Go 1.26.9, with `golang.org/x/net` v0.60.0 and its required transitive updates to address security findings.
+- Add root `.go-version` and `.node-version` discovery hints, validate them through repository tooling, and share the Node 24 declaration across GitHub Actions while preserving module-owned Go versions and independent pnpm projects.
+
+### Fixed
+
+- Run vulnerability checks for all six production modules even when an earlier scan fails, then report every result and retain a nonzero exit status for failures.
+- Model the game trailer fixture's HTTP 503 media cancellation by exact request identity and terminal event, preserving successful playback, Gallery unmount cancellation and error recovery checks without broadly ignoring browser errors.
+
 ### Upgrade notes
 
 - Apply pending GFG migration `20261008010000_game_collection_hybrid_membership.sql` before deploying Game Backend and Admin with its rebuilt embedded React frontend. No GFA/GFN migration, runtime configuration change, Nav Web or Collector update is required. The internal Collection Redis namespace advances to v3; old keys expire naturally (#144).

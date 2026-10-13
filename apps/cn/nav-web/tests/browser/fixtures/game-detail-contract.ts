@@ -97,7 +97,7 @@ export type DetailScene = {
   tab(key: string): Promise<void>, fail(path: string, query?: Record<string, string>): () => void,
   hold(path: string, query?: Record<string, string>): Gate, points(count: number): void,
   count(path: string, query?: Record<string, string>): number, assertQuiet(): void, assertInitialReads(): void,
-  popup(action: () => Promise<unknown>, url: string): Promise<void>, movieGate(): Gate, expectMovieAbort(): Promise<void>, failMovie(): void, average(value: number | null): void,
+  popup(action: () => Promise<unknown>, url: string): Promise<void>, movieGate(): Gate, expectMovieAbort(): Promise<void>, failMovie(): Promise<void>, average(value: number | null): void,
   missingChartEvidence(): void,
   settle(target?: Locator): Promise<void>, clip(target: Locator, margin?: number): Promise<{ x: number, y: number, width: number, height: number }>,
 }
@@ -128,6 +128,7 @@ export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>(
     let movie: Gate | undefined, movieFailed = false, opened = false
     let activeMovieRequest: Request | undefined, expectedMovieAbort: Request | undefined, intentionalUnmount = false, abortWasIntentional = false
     const finished = new Set<Request>()
+    const injectedMovieFailures = new Set<Request>()
     context.on('requestfinished', request => finished.add(request))
     page.on('console', message => { if (message.type() === 'error') rawErrors.push({ text: message.text(), url: message.location().url }) })
     context.on('requestfailed', request => {
@@ -145,7 +146,11 @@ export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>(
       if (allowedPopups.has(url.href) && request.isNavigationRequest()) { popups.push(url.href); return route.fulfill({ contentType: 'text/html', body: '<p>Detail popup fixture</p>' }) }
       if (url.origin === app.upstreamUrl && assetNames.some(name => url.pathname === `/media/detail-${name}.svg`)) return route.fulfill({ contentType: 'image/svg+xml', body: image })
       if (url.origin === app.upstreamUrl && url.pathname === '/media/detail-trailer.webm') {
-        if (movieFailed) { expectedURLs.add(url.href); return route.fulfill({ status: 503, body: 'Injected media failure' }) }
+        if (movieFailed) {
+          injectedMovieFailures.add(request)
+          expectedURLs.add(url.href)
+          return route.fulfill({ status: 503, body: 'Injected media failure' })
+        }
         const held = movie
         if (held) { held.received = true; await held.promise }
         if (request === expectedMovieAbort && request.failure()?.errorText === 'net::ERR_ABORTED') {
@@ -200,7 +205,15 @@ export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>(
           expect(expectedMovieAbort.failure()?.errorText).toBe('net::ERR_ABORTED')
           expect(failed.filter(request => request === expectedMovieAbort)).toHaveLength(1)
         }
-        expect(failed.filter(request => request !== expectedMovieAbort).map(request => ({ url: request.url(), error: request.failure()?.errorText }))).toEqual([])
+        // Chromium may cancel consumption of a rejected HTTP 503 media body.
+        // Only the exact injected request may do so, never another same-URL load.
+        expect(injectedMovieFailures.size).toBe(movieFailed ? 1 : 0)
+        for (const request of injectedMovieFailures) {
+          expect(httpFailures).toContain(request)
+          expect(Number(finished.has(request)) + failed.filter(item => item === request).length).toBe(1)
+          if (failed.includes(request)) expect(request.failure()?.errorText).toBe('net::ERR_ABORTED')
+        }
+        expect(failed.filter(request => request !== expectedMovieAbort && !injectedMovieFailures.has(request)).map(request => ({ url: request.url(), error: request.failure()?.errorText }))).toEqual([])
         expect(state.unexpected).toEqual([])
         for (const request of httpFailures) expect(expectedURLs.has(request.url())).toBe(true)
         for (const entry of rawErrors) {
@@ -230,7 +243,14 @@ export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>(
       },
       average(value) { state.average = value },
       missingChartEvidence() { state.missingChartEvidence = true },
-      failMovie() { movie = undefined; movieFailed = true },
+      async failMovie() {
+        movie = undefined; movieFailed = true
+        await expect.poll(() => injectedMovieFailures.size).toBe(1)
+        const [request] = injectedMovieFailures
+        expect(request!.resourceType()).toBe('media')
+        expect((await request!.response())?.status()).toBe(503)
+        await expect.poll(() => finished.has(request!) || failed.includes(request!)).toBe(true)
+      },
       async settle(target = scene.root) {
         await target.evaluate(async root => {
           await Promise.all([...root.querySelectorAll('img')].filter(img => img.getBoundingClientRect().bottom > 0 && img.getBoundingClientRect().top < innerHeight).map(img => img.decode()))

@@ -1,8 +1,11 @@
 // Read-only checks; installation and shell configuration remain explicit choices.
 import { spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const repositoryRoot = fileURLToPath(new URL('../', import.meta.url))
+const goVersion = readFileSync(new URL('../.go-version', import.meta.url), 'utf8').trim()
+const nodeVersion = readFileSync(new URL('../.node-version', import.meta.url), 'utf8').trim()
 const frontends = [
   ['Admin', 'apps/cn/admin/react'],
   ['Nav Web', 'apps/cn/nav-web'],
@@ -32,8 +35,8 @@ const checks = [
     const parts = text.match(/(\d+)\.(\d+)\.(\d+)/)?.slice(1).map(Number)
     return parts && (parts[0] > 3 || (parts[0] === 3 && (parts[1] > 45 || (parts[1] === 45 && parts[2] >= 3))))
   }, '>=3.45.3'],
-  ['Go', version('go', ['version']), text => /^go version go1\.26\.7\s/.test(text), '1.26.7'],
-  ['Node.js', process.version, text => /^v24\./.test(text), '24.x'],
+  ['Go', version('go', ['version']), text => text.startsWith(`go version go${goVersion} `), goVersion],
+  ['Node.js', process.version, text => text.startsWith(`v${nodeVersion}.`), `${nodeVersion}.x`],
   ...frontends.map(([name, dir]) => [
     `pnpm (${name})`, version('pnpm', ['--version'], new URL(`../${dir}/`, import.meta.url)),
     text => text === '12.6.0', '12.6.0', dir,

@@ -32,7 +32,7 @@ The root `Taskfile.yml` (Task >=3.45.3) is the repository engineering entrypoint
 `task` lists commands, `task verify` installs/builds/checks/tests locally, and
 `task build` produces only the six Linux/amd64 Go artifacts. Task never loads
 the root `.env` or runs deployment, migration, systemd or cloud operations.
-Use Go 1.26.7, Node 24 and pnpm 12.6.0. Both active frontends pin `packageManager`
+Use Go 1.26.9, Node 24 and pnpm 12.6.0. Both active frontends pin `packageManager`
 and own independent `pnpm-lock.yaml` plus single-project script-permission settings;
 there is no root pnpm workspace. Use frozen installs; do not relax build-script
 permissions or upgrade dependencies as a side effect of tooling work.

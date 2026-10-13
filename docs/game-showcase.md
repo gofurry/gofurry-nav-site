@@ -202,7 +202,7 @@ falls back to overview without a redirect. See
 [Admin frontend contract](../contracts/admin-frontend.md) and
 [React Admin acceptance](admin-react.md#showcase-operations-119-b).
 
-Go/sqlc/schema checks follow the root playbook with Go 1.26.7. Pure Composer,
+Go/sqlc/schema checks follow the root playbook with Go 1.26.9. Pure Composer,
 Trending, token, proxy and asset tests run in normal Go suites. Explicit
 `GOFURRY_SHOWCASE_REDIS_ADDR=127.0.0.1:<disposable-port>` enables actual Redis tests
 on disposable DBs 12/13/14. Never point these tests at shared or production Redis.

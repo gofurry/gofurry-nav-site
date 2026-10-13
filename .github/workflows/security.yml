@@ -22,7 +22,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          failed=0
+          results=()
           for module in admin game-backend game-collector nav-backend nav-collector uptime; do
             echo "govulncheck apps/cn/${module}"
-            go tool govulncheck -C "../apps/cn/${module}" ./...
+            if go tool govulncheck -C "../apps/cn/${module}" ./...; then
+              results+=("${module}: PASS")
+            else
+              code=$?
+              results+=("${module}: FAIL (exit ${code})")
+              failed=1
+            fi
           done
+          printf '\nScan summary:\n%s\n' "${results[@]}"
+          exit "$failed"
