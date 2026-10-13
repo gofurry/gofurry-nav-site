@@ -1,9 +1,9 @@
 <template>
-  <section class="overview-activity mb-[var(--insights-section-gap)] grid grid-cols-1 gap-8 min-[1200px]:grid-cols-4 min-[1200px]:gap-12" aria-labelledby="overview-activity-title" :data-activity-state="summary.availability" data-overview-activity>
+  <section class="overview-activity mb-[var(--insights-section-gap)] grid grid-cols-1 gap-6 min-[1200px]:grid-cols-4 min-[1200px]:gap-12" aria-labelledby="overview-activity-title" :data-activity-state="summary.availability" data-overview-activity>
     <header class="min-w-0" data-activity-heading>
-      <h2 id="overview-activity-title" class="overview-heading">{{ $t('insights.editorial.activityTitle') }}</h2>
-      <p class="overview-activity__intro">{{ $t('insights.overviewActivity.description') }}</p>
-      <dl class="overview-activity__total flex flex-wrap items-baseline gap-3">
+      <h2 id="overview-activity-title" class="overview-heading overview-activity__title m-0">{{ $t('insights.editorial.activityTitle') }}</h2>
+      <p class="overview-activity__intro mt-3 mb-0 max-w-[48ch]">{{ $t('insights.overviewActivity.description') }}</p>
+      <dl class="overview-activity__total m-0 mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <dt>{{ $t('insights.overview.changesCount') }}</dt>
         <dd data-activity-total>{{ summary.total === null ? '—' : number(summary.total) }}</dd>
       </dl>

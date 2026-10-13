@@ -9,6 +9,68 @@ function stats(html: string) {
     .concat(html.match(/<dd data-activity-total>(.*?)<\/dd>/)?.[1] ?? '')
 }
 
+async function reviewEditorial(page: Page, name: string) {
+  const directory = process.env.GOFURRY_OVERVIEW_REVIEW_DIR
+  if (!directory) return
+  await mkdir(directory, { recursive: true })
+  for (const section of ['activity', 'explore']) await page.locator(`[data-overview-${section}]`).screenshot({ path: join(directory, `${section}-${name}.png`) })
+}
+
+async function editorialAppearance(page: Page) {
+  const activity = page.locator('[data-overview-activity]')
+  await expect(activity.locator('h2')).toHaveCount(1)
+  await expect(activity.locator('ol > li > a[data-change-link]')).toHaveCount(await activity.locator('[data-change-link]').count())
+  expect(await activity.locator('[data-change-link]').count()).toBeLessThanOrEqual(5)
+  await expect(activity.locator('img')).toHaveCount(0)
+  await expect(page.locator('[data-overview-explore] h2')).toHaveCount(1)
+  await expect(page.locator('[data-directory-domain] h3')).toHaveCount(2)
+  await expect(page.locator('[data-directory-domain] h3 svg[aria-hidden="true"]')).toHaveCount(2)
+  await expect(page.locator('[data-directory-domain] ul > li > a[data-directory-link]')).toHaveCount(6)
+  const rows = await page.locator('[data-change-link], [data-directory-link]').evaluateAll(elements => elements.map(el => {
+    const title = el.querySelector('strong')!, description = el.querySelector('.overview-event__description, .overview-explore__description')!
+    const body = title.parentElement!, arrow = el.lastElementChild!, meta = el.querySelector('.overview-event__meta')
+    const box = el.getBoundingClientRect(), titleBox = title.getBoundingClientRect()
+    return {
+      fits: [el, body, title, description, ...(meta ? [meta] : [])].every(node => node.scrollWidth <= node.clientWidth + 1),
+      separateArrow: body.getBoundingClientRect().right <= arrow.getBoundingClientRect().left,
+      readingOrder: (!meta || meta.getBoundingClientRect().bottom <= titleBox.top) && titleBox.bottom <= description.getBoundingClientRect().top,
+      touchHeight: box.height >= 44,
+      titleLeads: parseFloat(getComputedStyle(title).fontSize) > parseFloat(getComputedStyle(description).fontSize),
+      titleWeight: getComputedStyle(title).fontWeight,
+      descriptionWeight: getComputedStyle(description).fontWeight,
+      interactiveChildren: el.querySelectorAll('a, button, [tabindex]').length,
+      arrowHidden: arrow.getAttribute('aria-hidden'),
+    }
+  }))
+  for (const row of rows) expect(row).toEqual({ fits: true, separateArrow: true, readingOrder: true, touchHeight: true, titleLeads: true, titleWeight: '600', descriptionWeight: '400', interactiveChildren: 0, arrowHidden: 'true' })
+  for (const selector of ['[data-change-link]', '[data-directory-link]']) {
+    const links = await page.locator(selector).all()
+    for (const [index, link] of links.entries()) {
+      // Real Tab traversal stays on whole rows; decorative arrows never take focus.
+      if (index === 0) await keyboardFocus(link)
+      else await page.keyboard.press('Tab')
+      await expect(link).toBeFocused()
+      expect(await link.evaluate(el => {
+        const css = getComputedStyle(el)
+        return el.matches(':focus-visible') && css.outlineStyle === 'solid' && parseFloat(css.outlineWidth) > 0 && css.boxShadow !== 'none'
+      })).toBe(true)
+    }
+    const first = links[0]
+    if (!first) continue
+    await first.scrollIntoViewIfNeeded()
+    await page.mouse.move(0, 0)
+    const background = await first.evaluate(el => getComputedStyle(el).backgroundColor)
+    const before = await first.boundingBox()
+    await first.hover()
+    expect(await first.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(background)
+    await expect(first).toHaveCSS('transform', 'none')
+    await expect(first).toHaveCSS('animation-name', 'none')
+    expect(await first.boundingBox()).toEqual(before)
+  }
+  await page.locator('[data-overview-explore] h2').click()
+  await page.mouse.move(0, 0)
+}
+
 for (const prefix of ['', '/en']) for (const visualCase of ['', 'empty', 'one', 'two', 'populated', 'invalid', 'duplicate', 'long']) test(`Overview dedicated visual contract ${prefix || 'zh'} ${visualCase || 'missing'}`, async ({ page, runtime }) => {
   runtime.state.visualCase = visualCase
   await page.setViewportSize({ width: 390, height: 900 })
@@ -134,6 +196,9 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
   else { expect(bounds.art.bottom).toBeLessThanOrEqual(bounds.data.top); expect(bounds.image.height).toBeGreaterThanOrEqual(140); expect(bounds.image.height).toBeLessThanOrEqual(165) }
   for (const image of await page.locator('[data-overview-site-visual] img').all()) { const rect = await image.boundingBox(); expect(rect!.width).toBe(48); expect(rect!.height).toBe(48) }
   for (const link of await page.locator('[data-overview-game-visual], [data-overview-site-visual]').all()) await keyboardFocus(link)
+  await editorialAppearance(page)
+  await expect(page.locator('[data-activity-total]')).toHaveText('47')
+  await expect(page.locator('[data-change-link]')).toHaveCount(5)
   await assertRuntimeSurface(page, '.insights-overview-page', theme)
   await expect(page.locator('a a')).toHaveCount(0)
   if (process.env.GOFURRY_OVERVIEW_REVIEW_DIR) {
@@ -142,6 +207,7 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
     await page.screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `visual-full-${name}.png`), fullPage: true })
     await page.locator('[data-overview-hero]').screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `visual-hero-${name}.png`) })
     await page.locator('[data-overview-ecosystems]').screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `visual-ecosystems-${name}.png`) })
+    await reviewEditorial(page, name)
   }
   expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
   runtime.assertQuiet()
@@ -220,6 +286,11 @@ for (const candidateCase of ['adult', 'tagged', 'missing-tags', 'no-image', 'sta
     await expect(page.locator('[data-overview-ecosystems] a[href*="/games/91"], [data-overview-ecosystems] [data-pulse]')).toHaveCount(0)
     await expect(page.locator('[data-overview-activity] [data-domain="game"]')).toHaveCount(2)
     await expect(page.locator('[data-overview-activity] [data-domain="game"]').first()).toHaveAttribute('href', '/games/82')
+    if (candidateCase === 'long-title') {
+      await expect(page.locator('[data-change-link][data-domain="game"] strong').first()).toHaveText('超长作品标题 LongTitleWithoutBreaks'.repeat(20))
+      await editorialAppearance(page)
+      await reviewEditorial(page, 'long-title-390')
+    }
     await layout(page, 390)
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
     runtime.assertQuiet()
@@ -299,17 +370,24 @@ for (const countCase of ['missing', 'invalid']) test('Overview unavailable ecosy
 })
 for (const count of [0, 1, 2, 3, 4, 5, 8]) test('Overview merged ordinary events stay bounded ' + count, async ({ page, runtime }) => {
   runtime.state.eventCount = count
+  await page.setViewportSize({ width: 390, height: 1000 })
   await openRuntime(page, '/insights')
   await expect(page.locator('[data-overview-activity] [data-change-link]')).toHaveCount(Math.min(count, 5))
   await expect(page.locator('[data-activity-all]')).toHaveAttribute('href', '/insights/changes')
   await expect(page.locator('[data-activity-empty]')).toHaveCount(count === 0 ? 1 : 0)
   await expect(page.locator('[data-activity-total]')).toHaveText('47')
   await expect(page.locator('[data-overview-activity]')).toHaveAttribute('data-activity-state', 'complete')
+  await expect(page.locator('[data-activity-list]')).toHaveCount(count === 0 ? 0 : 1)
+  // Grid items default to auto; neither auto nor zero forces an empty feed height.
+  await expect(page.locator('[data-activity-content]')).toHaveCSS('min-height', /^(auto|0px)$/)
+  await layout(page, 390)
+  await reviewEditorial(page, `events-${count}-390`)
   runtime.assertQuiet()
 })
 for (const prefix of ['', '/en']) for (const source of ['nav', 'game']) test(`Overview partial empty feed is distinct ${prefix} ${source}`, async ({ page, runtime }) => {
   runtime.state.failure = source
   runtime.state.eventCount = 0
+  await page.setViewportSize({ width: 390, height: 1000 })
   await openRuntime(page, prefix + '/insights')
   await expect(page.locator('[data-activity-partial]')).toContainText(prefix ? (source === 'nav' ? 'Website observations are unavailable' : 'Game observations are unavailable') : (source === 'nav' ? '网站观测暂不可用' : '游戏观测暂不可用'))
   await expect(page.locator('[data-activity-empty]')).toHaveText(prefix ? 'The available source has no recent public changes.' : '可用来源近期暂无可展示变化。')
@@ -317,6 +395,9 @@ for (const prefix of ['', '/en']) for (const source of ['nav', 'game']) test(`Ov
   await expect(page.locator('[data-activity-total]')).toHaveText('—')
   await expect(page.locator('[data-activity-all]')).toHaveAttribute('href', prefix + '/insights/changes')
   await expect(page.locator('[data-directory-link]')).toHaveCount(6)
+  await expect(page.locator('[data-activity-list]')).toHaveCount(0)
+  await layout(page, 390)
+  await reviewEditorial(page, `${prefix ? 'en' : 'zh'}-partial-empty-${source}-390`)
   runtime.assertQuiet()
 })
 test.describe('Overview event precision across browser timezones', () => {
@@ -564,8 +645,9 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
   })
 }
 for (const [source, values] of [['nav', ['—', '213', '—']], ['game', ['238', '—', '—']], ['all', ['—', '—', '—']]] as const) {
-  test('Overview independent failure ' + source, async ({ page, runtime }) => {
+  for (const width of [1440, 390]) test(`Overview independent failure ${source} ${width}`, async ({ page, runtime }) => {
     runtime.state.failure = source
+    await page.setViewportSize({ width, height: 1000 })
     const browserSources: string[] = []
     page.on('request', request => { if (sources.includes(new URL(request.url()).pathname)) browserSources.push(request.url()) })
     const html = await openRuntime(page, '/insights')
@@ -591,10 +673,11 @@ for (const [source, values] of [['nav', ['—', '213', '—']], ['game', ['238',
     if (source === 'game' || source === 'all') expected.push(sources[1]!)
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(expected.sort())
     expect(browserSources).toEqual([])
-    await layout(page, 1440)
+    await layout(page, width)
+    await reviewEditorial(page, `failure-${source}-${width}`)
     if (process.env.GOFURRY_OVERVIEW_REVIEW_DIR) {
       await mkdir(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, { recursive: true })
-      await page.locator('[data-overview-hero]').screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `hero-failure-${source}.png`) })
+      await page.locator('[data-overview-hero]').screenshot({ path: join(process.env.GOFURRY_OVERVIEW_REVIEW_DIR, `hero-failure-${source}-${width}.png`) })
     }
     runtime.assertQuiet()
   })
