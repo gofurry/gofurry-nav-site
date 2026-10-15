@@ -4,7 +4,6 @@
       <EcosystemNavigation />
 
       <header class="overview-header mb-6 min-[1200px]:mb-7" data-overview-header>
-        <p class="overview-kicker">GOFURRY / INSIGHTS</p>
         <h1>{{ $t('insights.overviewHero.title') }}</h1>
         <p class="overview-header__intro max-w-[680px]">{{ $t('insights.overviewHero.description') }}</p>
       </header>

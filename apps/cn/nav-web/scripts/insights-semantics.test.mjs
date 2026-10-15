@@ -138,7 +138,7 @@ for (const domain of ['game', 'site']) {
   assert(overviewHero.includes(`formatOverviewPercentagePoints(${domain}Metric.value?.delta_30d, locale.value)`) && overviewHero.includes(`{ value: ${domain}Delta }`), `${domain} Hero lost its localized percentage-point semantics`)
 }
 assert(!/<img\b|InsightEntityMedia|<canvas\b/.test(overviewHero), 'unqualified artwork or fabricated chart entered the data Hero')
-assert(overviewHero.includes('overviewGameVisuals(props.game?.featured_visuals)[0]') && overviewHero.includes('<InsightsOverviewGameVisual'), 'Hero must use only the dedicated first visual candidate')
+assert(overviewHero.includes('overviewHeroVisual(props.game)') && overviewHero.includes('<InsightsOverviewGameVisual'), 'Hero must require dedicated metric/date proof')
 const overviewActivitySource = readFileSync(new URL('../app/components/insights/activity/InsightsOverviewActivity.vue', import.meta.url), 'utf8')
 assert(overviewActivitySource.includes('items.slice(0, 5)') && overviewActivitySource.includes('overviewActivityWithoutGameArt') && overviewActivitySource.includes('<InsightsOverviewActivityItem') && !overviewActivitySource.includes('<InsightActivityItem '), 'Overview lost its bounded homepage-only activity rows')
 assert(overviewActivitySource.includes('data-activity-total') && overviewActivitySource.includes('data-activity-partial') && overviewActivitySource.includes('data-activity-empty') && overviewActivitySource.includes('data-activity-unavailable') && overviewActivitySource.includes('data-activity-all'), 'Overview activity lost total, independent states or its changes entry')
@@ -157,7 +157,7 @@ const ecosystemsSource = readFileSync(new URL('../app/components/insights/overvi
 assert(overviewSource.includes('<InsightsOverviewEcosystems :nav="data.nav" :game="data.game" />'), 'Overview lost its independent ecosystem data owners')
 assert(ecosystemsSource.includes('selectOverviewEcosystemMetrics') && ecosystemsSource.includes('data-ecosystem-count') && ecosystemsSource.includes('metric.as_of') && ecosystemsSource.includes('metric.coverage'), 'Ecosystems lost count, selection or evidence metadata')
 assert(!/<img\b|InsightEntityMedia|InsightsGamePulse|<canvas\b/.test(ecosystemsSource), 'unqualified artwork, shared Pulse layout or invented charts entered the ecosystems')
-assert(ecosystemsSource.includes('overviewGameVisuals(props.game?.featured_visuals).slice(1)') && ecosystemsSource.includes('overviewSiteVisuals(props.nav)'), 'Ecosystems lost dedicated projections or reserved Hero identity')
+assert(ecosystemsSource.includes('overviewGamePreviews(props.game)') && ecosystemsSource.includes('overviewSiteVisuals(props.nav)'), 'Ecosystems lost dedicated projections or reserved Hero identity')
 const overviewGameVisual = readFileSync(new URL('../app/components/insights/overview/InsightsOverviewGameVisual.vue', import.meta.url), 'utf8')
 const overviewSiteVisual = readFileSync(new URL('../app/components/insights/overview/InsightsOverviewSiteVisual.vue', import.meta.url), 'utf8')
 assert(overviewGameVisual.includes('<SteamAssetImage') && overviewGameVisual.includes('@error=') && overviewGameVisual.includes('localePath(`/games/${item.game_id}`)'), 'Overview artwork bypassed shared routing, local links or failure isolation')

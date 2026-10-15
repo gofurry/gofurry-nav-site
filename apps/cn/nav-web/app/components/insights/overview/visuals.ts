@@ -1,4 +1,5 @@
-import type { InsightFeaturedVisual, InsightOverview, InsightSiteVisual } from '@/types/insights'
+import type { InsightFeaturedVisual, InsightHeroVisual, InsightOverview, InsightSiteVisual } from '@/types/insights'
+import { overviewFactDate, overviewHeroGameKeys, overviewRatio, selectOverviewMetric } from '../../../utils/insightOverviewPresentation'
 
 const positiveID = (value: unknown): value is number => typeof value === 'number' && Number.isSafeInteger(value) && value > 0
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null
@@ -22,6 +23,21 @@ export function overviewGameVisuals(input: unknown): InsightFeaturedVisual[] {
     if (result.length === 3) break
   }
   return result
+}
+
+// Ordinary candidates never grant Hero eligibility. The dedicated proof must
+// agree with the selected metric's own date, not response generation time.
+export function overviewHeroVisual(overview: InsightOverview | null): InsightHeroVisual | null {
+  const metric = selectOverviewMetric(overview, overviewHeroGameKeys), proof = overview?.hero_visual
+  if (!metric || overviewRatio(metric.value) === null || !record(proof)
+    || proof.metric_key !== metric.key || !overviewFactDate(proof.as_of) || proof.as_of !== metric.as_of) return null
+  const visual = overviewGameVisuals([proof])[0]
+  return visual ? { ...visual, metric_key: proof.metric_key, as_of: proof.as_of } : null
+}
+
+export function overviewGamePreviews(overview: InsightOverview | null): InsightFeaturedVisual[] {
+  const heroID = overviewHeroVisual(overview)?.game_id
+  return overviewGameVisuals(overview?.featured_visuals).filter(item => item.game_id !== heroID).slice(0, 2)
 }
 
 export function overviewSiteVisuals(overview: InsightOverview | null): InsightSiteVisual[] {

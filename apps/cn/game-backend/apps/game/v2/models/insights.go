@@ -122,6 +122,7 @@ type InsightOverview struct {
 	Metrics         []InsightMetric         `json:"metrics"`
 	RecentChanges   []InsightChange         `json:"recent_changes"`
 	FeaturedVisuals []InsightFeaturedVisual `json:"featured_visuals"`
+	HeroVisual      *InsightHeroVisual      `json:"hero_visual"`
 }
 
 // InsightFeaturedVisual carries automatic classification and resource identity,
@@ -133,8 +134,26 @@ type InsightFeaturedVisual struct {
 	Visual InsightEntityVisual `json:"visual"`
 }
 
+// InsightHeroVisual proves a positive observation on this metric's own fact date,
+// not ongoing eligibility, statistical representativeness or pixel-level safety.
+type InsightHeroVisual struct {
+	InsightFeaturedVisual
+	MetricKey string `json:"metric_key"`
+	AsOf      string `json:"as_of"`
+}
+
+// InsightVisualQuery uses the service's controlled metric contract, never HTTP input.
+// A zero fact date disables Hero matching while retaining ordinary candidates.
+type InsightVisualQuery struct {
+	UTCDay        string
+	MetricKey     string
+	MetricVersion int32
+	FactDate      time.Time
+}
+
 // InsightVisualCandidateRecord is a private read model, never a public approval DTO.
 type InsightVisualCandidateRecord struct {
+	HeroMatch                                         bool
 	GameID, AppID, AssetGameID, AssetAppID, AssetID   int64
 	HasClassification, HasAdult                       bool
 	Name, NameEn, AssetType, Lang, AssetFamily, Asset string

@@ -39,7 +39,7 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 	dao := v2dao.NewInsightsDAO(gamesqlc.New(tx))
 	read := func(day string) []v2models.InsightVisualCandidateRecord {
 		t.Helper()
-		rows, err := dao.ListInsightVisualCandidates(ctx, day)
+		rows, err := dao.ListInsightVisualCandidates(ctx, v2models.InsightVisualQuery{UTCDay: day})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -49,6 +49,19 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 		return rows
 	}
 	const day = "2026-10-09"
+	factDate := time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC)
+	proofQuery := v2models.InsightVisualQuery{UTCDay: day, MetricKey: "free_game_share", MetricVersion: 1, FactDate: factDate}
+	readProof := func(query v2models.InsightVisualQuery) []v2models.InsightVisualCandidateRecord {
+		t.Helper()
+		rows, err := dao.ListInsightVisualCandidates(ctx, query)
+		if err != nil || len(rows) > 3 {
+			t.Fatalf("proof query: %v rows=%d", err, len(rows))
+		}
+		return rows
+	}
+	seedFact := func(key string, id int64) {
+		exec(`INSERT INTO gfg_metric_entity_daily(metric_key,metric_version,fact_date,game_id,state,reason_code,source_observed_at,evaluated_at) VALUES($1,1,$2,$3,'positive','fixture',now(),now())`, key, factDate, id)
+	}
 	if len(read(day)) != 0 {
 		t.Fatal("no classification must mean no candidates")
 	}
@@ -59,6 +72,7 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 		exec(`INSERT INTO gfg_game_assets(game_id,appid,asset_type,asset_family,source,lang,media_key,url,exists,collected_at,updated_at) VALUES($1,$2,'header','store','store_browse','zh','insight-header',$3,true,now(),now())`, id, app, fmt.Sprintf("https://shared.steamstatic.com/steam/apps/%d/header.jpg", app))
 	}
 	seed(1082200, 12345)
+	seedFact("free_game_share", 1082200)
 	// Only disposable fixture writes: changing the commercial flag has no effect
 	// on Insights, while the existing Showcase suite keeps its own permission gate.
 	withoutShowcase := read(day)
@@ -85,6 +99,10 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 			if (len(rows) == 1) != tc.Valid {
 				t.Fatalf("SQL/parser admission mismatch: %+v valid=%v", rows, tc.Valid)
 			}
+			proof := readProof(proofQuery)
+			if (len(proof) == 1 && proof[0].HeroMatch) != tc.Valid {
+				t.Fatal("positive fact bypassed URL identity")
+			}
 			got, err := v2service.NewInsightsService(dao).GetInsightsOverview(ctx)
 			if err != nil || (len(got.FeaturedVisuals) == 1) != tc.Valid {
 				t.Fatalf("mapped admission mismatch: %+v %v", got.FeaturedVisuals, err)
@@ -108,9 +126,15 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 			if len(read(day)) != 0 {
 				t.Fatal("revocation not effective on next read")
 			}
+			if len(readProof(proofQuery)) != 0 {
+				t.Fatal("positive fact bypassed safety revocation")
+			}
 			exec(tc.Restore)
 			if len(read(day)) != 1 {
 				t.Fatal("valid row lost")
+			}
+			if proof := readProof(proofQuery); len(proof) != 1 || !proof[0].HeroMatch {
+				t.Fatal("valid proof lost")
 			}
 		})
 	}
@@ -152,6 +176,50 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 	if !reflect.DeepEqual(first, read(day)) {
 		t.Fatal("invalid candidate window starved valid results")
 	}
+	// Match beyond the old top-three window, for every controlled metric. A fact
+	// for another key/version/date or a non-positive state cannot grant proof.
+	exec(`DELETE FROM gfg_metric_entity_daily WHERE game_id=1082200`)
+	target := want[len(want)-1]
+	for _, key := range []string{"free_game_share", "windows_support", "mac_support", "linux_support"} {
+		t.Run("hero-"+key, func(t *testing.T) {
+			seedFact(key, target)
+			q := proofQuery
+			q.MetricKey = key
+			rows := readProof(q)
+			if len(rows) != 3 || !rows[0].HeroMatch || rows[0].GameID != target || !reflect.DeepEqual(rows, readProof(q)) {
+				t.Fatalf("matching before LIMIT/determinism: %+v", rows)
+			}
+			q.UTCDay = "2026-10-10"
+			if next := readProof(q); !next[0].HeroMatch || next[0].GameID != target || !reflect.DeepEqual(next, readProof(q)) {
+				t.Fatal("UTC rotation lost proof/determinism")
+			}
+			for _, mismatch := range []string{"metric", "version", "date", "negative", "stale", "unknown", "not_probed", "probe_failed", "not_applicable"} {
+				wrong := q
+				switch mismatch {
+				case "metric":
+					wrong.MetricKey = "other_metric"
+				case "version":
+					wrong.MetricVersion = 2
+				case "date":
+					wrong.FactDate = factDate.AddDate(0, 0, 1)
+				default:
+					exec(`UPDATE gfg_metric_entity_daily SET state=$1 WHERE game_id=$2`, mismatch, target)
+				}
+				ordinary := readProof(wrong)
+				if len(ordinary) != 3 {
+					t.Fatal("no Hero removed ordinary candidates")
+				}
+				for _, row := range ordinary {
+					if row.HeroMatch {
+						t.Fatalf("%s accepted a wrong positive fact", mismatch)
+					}
+				}
+				exec(`UPDATE gfg_metric_entity_daily SET state='positive' WHERE game_id=$1`, target)
+			}
+			exec(`DELETE FROM gfg_metric_entity_daily WHERE game_id=$1`, target)
+		})
+	}
+	seedFact("free_game_share", target)
 	query, err := os.ReadFile(filepath.Join(integrationRepositoryRoot(t), "apps/cn/game-backend/internal/db/game/queries/insights.sql"))
 	if err != nil {
 		t.Fatal(err)
@@ -161,7 +229,8 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 		t.Fatal("candidate query not found")
 	}
 	selected, _, _ := strings.Cut(tail, "-- name: GetGameInsightGame")
-	plan, err := tx.Query(ctx, "EXPLAIN (ANALYZE, BUFFERS) "+strings.ReplaceAll(selected, "sqlc.arg(utc_day)", "$1"), day)
+	selected = strings.NewReplacer("sqlc.arg(utc_day)", "$1", "sqlc.arg(hero_metric_key)", "$2", "sqlc.arg(hero_metric_version)", "$3", "sqlc.arg(hero_fact_date)", "$4").Replace(selected)
+	plan, err := tx.Query(ctx, "EXPLAIN (ANALYZE, BUFFERS) "+selected, day, proofQuery.MetricKey, proofQuery.MetricVersion, factDate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +247,7 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 	plan.Close()
 	short, cancel := context.WithCancel(ctx)
 	cancel()
-	if _, err := dao.ListInsightVisualCandidates(short, day); err == nil {
+	if _, err := dao.ListInsightVisualCandidates(short, v2models.InsightVisualQuery{UTCDay: day}); err == nil {
 		t.Fatal("cancellation was ignored")
 	}
 	// Rollback releases the transaction's connection, even after cancellation.
@@ -200,7 +269,7 @@ func assertInsightVisuals(t *testing.T, ctx context.Context, pool *pgxpool.Pool)
 	}
 	blocked, cancelBlocked := context.WithTimeout(ctx, 50*time.Millisecond)
 	defer cancelBlocked()
-	_, err = v2dao.NewInsightsDAO(gamesqlc.New(pool)).ListInsightVisualCandidates(blocked, day)
+	_, err = v2dao.NewInsightsDAO(gamesqlc.New(pool)).ListInsightVisualCandidates(blocked, v2models.InsightVisualQuery{UTCDay: day})
 	if err == nil || blocked.Err() != context.DeadlineExceeded {
 		t.Fatalf("blocked query did not honor deadline: %v", err)
 	}

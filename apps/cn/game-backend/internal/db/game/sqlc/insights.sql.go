@@ -1701,7 +1701,12 @@ WITH named_games AS (
 )
 SELECT game.id AS game_id, game.appid, game.name::text, game.name_en::text, game.has_classification::boolean, game.has_adult::boolean,
        asset.id AS asset_id, asset.game_id AS asset_game_id, asset.appid AS asset_appid,
-       asset.asset_type, asset.lang, asset.asset_family, asset.sort_order, asset.exists, asset.url
+       asset.asset_type, asset.lang, asset.asset_family, asset.sort_order, asset.exists, asset.url,
+       EXISTS(SELECT 1 FROM public.gfg_metric_entity_daily fact
+              WHERE fact.metric_key=$1::text
+                AND fact.metric_version=$2::integer
+                AND fact.fact_date=$3::date
+                AND fact.game_id=game.id AND fact.state='positive') AS hero_match
 FROM named_games game
 JOIN LATERAL (
     SELECT a.id,a.game_id,a.appid,a.asset_type,a.lang,a.asset_family,a.sort_order,a.exists,a.url
@@ -1719,9 +1724,16 @@ JOIN LATERAL (
     LIMIT 1
 ) asset ON TRUE
 WHERE game.has_classification AND NOT game.has_adult AND (game.name<>'' OR game.name_en<>'')
-ORDER BY md5($1::text || ':' || game.id::text),game.id
+ORDER BY hero_match DESC,md5($4::text || ':' || game.id::text),game.id
 LIMIT 3
 `
+
+type ListGameInsightVisualCandidatesParams struct {
+	HeroMetricKey     string      `json:"hero_metric_key"`
+	HeroMetricVersion int32       `json:"hero_metric_version"`
+	HeroFactDate      pgtype.Date `json:"hero_fact_date"`
+	UtcDay            string      `json:"utc_day"`
+}
 
 type ListGameInsightVisualCandidatesRow struct {
 	GameID                int64  `json:"game_id"`
@@ -1739,13 +1751,20 @@ type ListGameInsightVisualCandidatesRow struct {
 	SortOrder             int32  `json:"sort_order"`
 	Exists                *bool  `json:"exists"`
 	Url                   string `json:"url"`
+	HeroMatch             bool   `json:"hero_match"`
 }
 
 // Current classification and URL identity do not establish per-image content approval.
 // Filter all supported evidence BEFORE selecting the daily three: invalid URLs
 // cannot fill an arbitrary oversampling window and hide a later eligible game.
-func (q *Queries) ListGameInsightVisualCandidates(ctx context.Context, utcDay string) ([]ListGameInsightVisualCandidatesRow, error) {
-	rows, err := q.db.Query(ctx, listGameInsightVisualCandidates, utcDay)
+// Positive facts must precede LIMIT, including games outside the ordinary top three.
+func (q *Queries) ListGameInsightVisualCandidates(ctx context.Context, arg ListGameInsightVisualCandidatesParams) ([]ListGameInsightVisualCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listGameInsightVisualCandidates,
+		arg.HeroMetricKey,
+		arg.HeroMetricVersion,
+		arg.HeroFactDate,
+		arg.UtcDay,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1769,6 +1788,7 @@ func (q *Queries) ListGameInsightVisualCandidates(ctx context.Context, utcDay st
 			&i.SortOrder,
 			&i.Exists,
 			&i.Url,
+			&i.HeroMatch,
 		); err != nil {
 			return nil, err
 		}

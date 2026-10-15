@@ -119,6 +119,12 @@ export interface InsightFeaturedVisual {
   visual: { kind: 'game_header', asset: string }
 }
 
+// Positive observation at this metric's fact date; not an ongoing recommendation.
+export interface InsightHeroVisual extends InsightFeaturedVisual {
+  metric_key: 'free' | 'windows' | 'mac' | 'linux'
+  as_of: string
+}
+
 export interface InsightSiteVisual {
   site_id: number
   name: string
@@ -132,6 +138,7 @@ export interface InsightOverview {
   metrics: InsightMetric[]
   recent_changes: InsightChange[]
   featured_visuals?: InsightFeaturedVisual[]
+  hero_visual?: InsightHeroVisual | null
   site_visuals?: InsightSiteVisual[]
 }
 

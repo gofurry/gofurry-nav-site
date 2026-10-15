@@ -60,7 +60,7 @@ var insightChangeContracts = []insightChangeContract{
 }
 
 type InsightsStore interface {
-	ListInsightVisualCandidates(context.Context, string) ([]v2models.InsightVisualCandidateRecord, error)
+	ListInsightVisualCandidates(context.Context, v2models.InsightVisualQuery) ([]v2models.InsightVisualCandidateRecord, error)
 	CountInsightEntities(context.Context) (int64, error)
 	GetInsightGame(context.Context, int64) (*v2models.InsightGameRecord, error)
 	GetInsightMetricSummary(context.Context, v2models.InsightMetricContract) (*v2models.InsightMetricSummaryRecord, error)
@@ -125,7 +125,7 @@ func (s *InsightsService) GetInsightsOverview(ctx context.Context) (v2models.Ins
 		return result, err
 	}
 	result.RecentChanges = insightPublicChanges(changes)
-	result.FeaturedVisuals = s.featuredVisuals(ctx, result.GeneratedAt)
+	result.FeaturedVisuals, result.HeroVisual = s.overviewVisuals(ctx, result.GeneratedAt, result.Metrics)
 	return result, nil
 }
 

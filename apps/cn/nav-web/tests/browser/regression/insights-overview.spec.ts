@@ -78,8 +78,8 @@ for (const prefix of ['', '/en']) for (const visualCase of ['', 'empty', 'one', 
   page.on('request', request => { if (/\/steam\/apps\/(91|92|93)\/header/.test(request.url())) mediaRequests.push(request.url()) })
   const html = await openRuntime(page, prefix + '/insights')
   expect(stats(html)).toEqual(['238', '213', '47'])
-  const count = ['', 'empty', 'invalid'].includes(visualCase) ? 0 : visualCase === 'one' ? 1 : visualCase === 'two' ? 2 : 3
-  await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', count ? 'visual' : 'data')
+  const count = ['', 'empty', 'invalid'].includes(visualCase) ? 0 : visualCase === 'one' ? 1 : 2
+  await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', 'data')
   await expect(page.locator('[data-overview-game-visual]')).toHaveCount(count)
   await expect(page.locator('[data-overview-activity] img, [data-overview-site-logos]')).toHaveCount(0)
   await revealImages(page, '[data-overview-game-visual]')
@@ -90,6 +90,35 @@ for (const prefix of ['', '/en']) for (const visualCase of ['', 'empty', 'one', 
     expect(mediaRequests).toHaveLength(count)
   } else expect(mediaRequests).toEqual([])
   await layout(page, 390)
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  runtime.assertQuiet()
+})
+
+for (const prefix of ['', '/en']) for (const heroCase of ['null', 'wrong-metric', 'wrong-date', 'invalid-date', 'bad-url', 'bad-kind', 'third']) test(`Overview Hero proof ${prefix || 'zh'} ${heroCase}`, async ({ page, runtime }) => {
+  runtime.state.visualCase = 'populated'; runtime.state.heroCase = heroCase
+  await page.setViewportSize({ width: 390, height: 900 })
+  const html = await openRuntime(page, prefix + '/insights')
+  const qualified = heroCase === 'third'
+  expect(html.match(/<main[\s\S]*?<\/main>/)?.[0]).toContain(`data-hero-mode="${qualified ? 'visual' : 'data'}"`)
+  await expect(page.locator('[data-overview-hero] img')).toHaveCount(qualified ? 1 : 0)
+  expect(await page.locator('[data-overview-game-previews] [data-game-id]').evaluateAll(elements => elements.map(el => el.getAttribute('data-game-id')))).toEqual(['91', '92'])
+  if (qualified) {
+    await expect(page.locator('[data-overview-hero] [data-game-id]')).toHaveAttribute('data-game-id', '93')
+    await expect(page.locator('[data-overview-hero] .overview-game-visual__label')).toHaveText(prefix ? 'Observed example' : '该指标的观测作品')
+  }
+  await revealImages(page, '[data-overview-game-visual]')
+  await heroSurface(page)
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
+  runtime.assertQuiet()
+})
+
+for (const metric of ['free', 'windows', 'mac', 'linux', 'zero', 'missing-date']) test(`Overview Hero fact context ${metric}`, async ({ page, runtime }) => {
+  runtime.state.visualCase = 'populated'; runtime.state.heroCase = 'qualified'; runtime.state.metricCase = metric
+  await openRuntime(page, '/insights')
+  await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', metric === 'missing-date' ? 'data' : 'visual')
+  await expect(page.locator('[data-hero-domain="game"]')).toHaveAttribute('data-hero-metric', ['zero', 'missing-date'].includes(metric) ? 'free' : metric)
+  await expect(page.locator('[data-overview-game-previews] img')).toHaveCount(2)
+  if (metric === 'zero') await expect(page.locator('[data-hero-domain="game"] progress')).toHaveAttribute('value', '0')
   expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...sources].sort())
   runtime.assertQuiet()
 })
@@ -107,7 +136,7 @@ for (const siteVisualCase of ['', 'empty', 'invalid', 'populated']) test(`Overvi
 })
 
 for (const scenario of ['images-fail', 'nav-fails', 'game-fails', 'metric-missing', 'zero']) test(`Overview visual failure isolation ${scenario}`, async ({ page, runtime }) => {
-  runtime.state.visualCase = 'populated'; runtime.state.siteVisualCase = 'populated'
+  runtime.state.visualCase = 'populated'; runtime.state.heroCase = 'qualified'; runtime.state.siteVisualCase = 'populated'
   if (scenario === 'images-fail') {
     runtime.failImages = true
     // Isolate renderer fallback from the unchanged global idle CDN probes.
@@ -140,7 +169,7 @@ for (const scenario of ['images-fail', 'nav-fails', 'game-fails', 'metric-missin
 })
 
 test('Overview exhausted Hero preserves other game previews and site logos', async ({ page, runtime }) => {
-  runtime.state.visualCase = 'populated'; runtime.state.siteVisualCase = 'populated'; runtime.state.brokenGame = 91
+  runtime.state.visualCase = 'populated'; runtime.state.heroCase = 'qualified'; runtime.state.siteVisualCase = 'populated'; runtime.state.brokenGame = 91
   await page.addInitScript(() => Object.defineProperty(navigator, 'connection', { configurable: true, value: { saveData: true } }))
   await openRuntime(page, '/en/insights')
   await expect(page.locator('[data-overview-hero]')).toHaveAttribute('data-hero-mode', 'data')
@@ -155,7 +184,7 @@ test('Overview exhausted Hero preserves other game previews and site logos', asy
 })
 
 for (const width of [1440, 1024, 768, 390]) test(`Overview visual maximum values and long titles ${width}`, async ({ page, runtime }) => {
-  runtime.state.visualCase = 'long'; runtime.state.metricCase = 'full-long'
+  runtime.state.visualCase = 'long'; runtime.state.heroCase = 'qualified'; runtime.state.metricCase = 'full-long'
   await page.setViewportSize({ width, height: 1000 })
   await openRuntime(page, '/en/insights')
   await expect(page.locator('[data-hero-domain="game"] progress')).toHaveAttribute('value', '1')
@@ -166,7 +195,7 @@ for (const width of [1440, 1024, 768, 390]) test(`Overview visual maximum values
 })
 
 for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const) for (const width of [1440, 1024, 768, 390]) test(`Overview visual composition ${prefix || 'zh'} ${theme} ${width}`, async ({ page, context, runtime }) => {
-  runtime.state.visualCase = 'populated'; runtime.state.siteVisualCase = 'populated'; runtime.state.eventCount = 10
+  runtime.state.visualCase = 'populated'; runtime.state.heroCase = 'qualified'; runtime.state.siteVisualCase = 'populated'; runtime.state.eventCount = 10
   await page.setViewportSize({ width, height: 1000 })
   await context.addInitScript(value => localStorage.setItem('theme', value), theme)
   const html = await openRuntime(page, prefix + '/insights')
@@ -185,6 +214,7 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
   await expect(page.locator('[data-overview-games] [data-ecosystem-metric="free"], [data-overview-sites] [data-ecosystem-metric="ipv6"]')).toHaveCount(0)
   await revealImages(page, '[data-overview-game-visual], [data-overview-site-visual]')
   await layout(page, width)
+  await heroSurface(page)
   const bounds = await page.locator('[data-hero-domain="game"]').evaluate(panel => {
     const box = (selector: string) => panel.querySelector(selector)!.getBoundingClientRect().toJSON()
     return { data: box('[data-hero-primary]'), art: box('[data-overview-game-visual]'), image: box('img'), evidence: box('[data-hero-evidence]'), fits: [...panel.querySelectorAll('[data-hero-value], dd')].every(el => el.scrollWidth <= el.clientWidth + 1) }
@@ -216,7 +246,7 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
 test.describe('Overview non-JavaScript projection', () => {
   test.use({ javaScriptEnabled: false })
   test('renders qualified images and independent links in server HTML', async ({ page, runtime }) => {
-    runtime.state.visualCase = 'populated'; runtime.state.siteVisualCase = 'populated'
+    runtime.state.visualCase = 'populated'; runtime.state.heroCase = 'qualified'; runtime.state.siteVisualCase = 'populated'
     const blocked: Request[] = [], errors: string[] = [], http: number[] = []
     page.on('requestfailed', request => blocked.push(request))
     page.on('pageerror', error => errors.push(error.message))
@@ -453,7 +483,29 @@ async function layout(page: Page, width: number) {
   }
   for (let index = 1; index < result.events.length; index++) expect(result.events[index]!.top).toBeGreaterThanOrEqual(result.events[index - 1]!.bottom)
 }
+async function heroSurface(page: Page) {
+  const surfaces = await page.locator('[data-hero-domain]').evaluateAll(panels => panels.map(el => {
+    const css = getComputedStyle(el)
+    // Resolve the inherited token through CSS, including theme alpha values.
+    const probe = document.createElement('span')
+    probe.style.backgroundColor = 'var(--gf-surface)'; el.append(probe)
+    const token = getComputedStyle(probe).backgroundColor; probe.remove()
+    return { background: css.backgroundColor, token, borders: [css.borderTopWidth, css.borderRightWidth, css.borderBottomWidth, css.borderLeftWidth], shadow: css.boxShadow }
+  }))
+  expect(surfaces).toHaveLength(2)
+  expect(surfaces[0]!.background).toBe(surfaces[1]!.background)
+  for (const surface of surfaces) {
+    expect(surface.background).toBe(surface.token)
+    expect(surface.borders).toEqual(['0px', '0px', '0px', '0px'])
+    expect(surface.shadow).toBe('none')
+  }
+  await expect(page.locator('.overview-header .overview-kicker')).toHaveCount(0)
+  await expect(page.locator('.overview-header h1')).toHaveCSS('margin-top', '0px')
+  await expect(page.locator('[data-overview-hero] .overview-kicker')).toHaveCount(2)
+}
+
 async function heroAppearance(page: Page, width: number) {
+  await heroSurface(page)
   const result = await page.locator('[data-overview-hero]').evaluate(hero => {
     const rect = (el: Element) => el.getBoundingClientRect().toJSON()
     const game = hero.querySelector('[data-hero-domain="game"]')!, site = hero.querySelector('[data-hero-domain="site"]')!
@@ -463,8 +515,6 @@ async function heroAppearance(page: Page, width: number) {
       primary: rect(primary), evidence: rect(evidence), facts: [...evidence.children].map(rect),
       sitePrimary: rect(site.querySelector('[data-hero-primary]')!), siteEvidence: rect(site.querySelector('[data-hero-evidence]')!),
       gameSize: parseFloat(getComputedStyle(gameValue).fontSize), siteSize: parseFloat(getComputedStyle(siteValue).fontSize),
-      distinctSurface: getComputedStyle(game).backgroundColor !== getComputedStyle(site).backgroundColor,
-      shadows: [game, site].map(el => getComputedStyle(el).boxShadow),
       textFits: [gameValue, siteValue].every(el => {
         const range = document.createRange(); range.selectNodeContents(el)
         const text = range.getBoundingClientRect(), box = el.getBoundingClientRect()
@@ -478,7 +528,7 @@ async function heroAppearance(page: Page, width: number) {
       linksBelow: [game, site].every(el => el.querySelector('a')!.getBoundingClientRect().top >= el.querySelector('[data-hero-evidence]')!.getBoundingClientRect().bottom),
     }
   })
-  expect(result).toMatchObject({ distinctSurface: true, shadows: ['none', 'none'], textFits: true, evidenceFits: true, linksBelow: true })
+  expect(result).toMatchObject({ textFits: true, evidenceFits: true, linksBelow: true })
   expect(result.gameSize).toBeGreaterThan(result.siteSize)
   if (width >= 1200) {
     expect(result.primary.width / result.evidence.width).toBeCloseTo(65 / 35, 1)

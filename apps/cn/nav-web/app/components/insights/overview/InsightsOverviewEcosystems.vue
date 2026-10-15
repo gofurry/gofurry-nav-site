@@ -53,15 +53,15 @@ import { useI18n } from 'vue-i18n'
 import type { InsightOverview } from '@/types/insights'
 import { formatInsightRatio } from '@/utils/insightDimensions'
 import { overviewEntityCount, selectOverviewEcosystemMetrics } from '@/utils/insightOverviewPresentation'
-import { overviewGameVisuals, overviewSiteVisuals } from './visuals'
+import { overviewGamePreviews, overviewSiteVisuals } from './visuals'
 
 const props = defineProps<{ nav: InsightOverview | null, game: InsightOverview | null }>()
 const { locale } = useI18n()
 const localePath = useLocalePath()
-// Reserve candidate zero for Hero even when its metric/image is unavailable.
+// Reserve only a qualified Hero ID, including when its image fails to load.
 // Only dedicated Overview projections qualify decoration; events never do.
 const failedAssets = reactive(new Set<string>())
-const previews = computed(() => overviewGameVisuals(props.game?.featured_visuals).slice(1).filter(item => !failedAssets.has(item.visual.asset)))
+const previews = computed(() => overviewGamePreviews(props.game).filter(item => !failedAssets.has(item.visual.asset)))
 const siteVisuals = computed(() => overviewSiteVisuals(props.nav))
 const sides = computed(() => [
   { domain: 'game' as const, overview: props.game, path: '/insights/games' },

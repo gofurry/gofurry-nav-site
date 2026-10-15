@@ -89,18 +89,36 @@ These finite forms are provenance checks, not evidence about image pixels.
 
 The dedicated sqlc `ListGameInsightVisualCandidates` query filters all admission
 conditions before its outer `LIMIT 3`, chooses one asset per game, and orders by
+the selected metric's positive fact match first, then
 `md5(UTC_DATE + ':' + decimal_game_id)`, then Game ID. The service uses the UTC day
 of its existing `generated_at` clock, validates the result again and deduplicates
 Game IDs. MD5 is only a deterministic ordering key, not a security primitive.
 Identical day/candidates/assets produce identical output; midnight may rotate
 selection but does not guarantee different games. Weight, paid promotion,
-players, price and Showcase ranking do not participate.
+players, current price and Showcase ranking do not participate.
+
+`hero_visual` is an independent, nullable proof added by the Overview consistency
+fix. Its shape extends one featured item with `metric_key` (public key) and
+`as_of` (that metric's own UTC fact date). The service selects the first finite
+ratio in [0,1], including zero, in `free → windows → mac → linux` order. The
+controlled internal mappings are `free_game_share/1`, `windows_support/1`,
+`mac_support/1`, and `linux_support/1`. Missing/invalid selected fact dates do not
+fall through to a different metric or use `generated_at`.
+
+The same optional query marks `hero_match` using `EXISTS` on
+`gfg_metric_entity_daily(metric_key,metric_version,fact_date,game_id)` and requires
+`state='positive'`. This match precedes LIMIT, so an eligible game beyond the old
+daily top three can become Hero. No second query or per-game read is introduced.
+The service revalidates candidates and emits the first matching item, or `null`.
+Negative/stale/unknown states, another version/key/date and absent facts grant no
+proof. A historical positive observation is neither an ongoing free/platform
+promise nor a statistically representative example or a pixel safety approval.
 
 There is one additional read-only database call, returning at most three rows,
 after all existing Overview reads succeed. It has a 500ms child-context deadline
 and propagates service-context cancellation through pgx; sqlc closes result rows
 and releases the pool connection. Failure or timeout logs only a reason class
-and returns `featured_visuals: []`. Original Overview failures still return their
+and returns `featured_visuals: []`, `hero_visual: null`. Original Overview failures still return their
 original errors. The existing controller context lifecycle is unchanged.
 The query filters in PostgreSQL instead of transferring an unbounded asset pool;
 its hash selection still evaluates eligible games, so performance claims require
@@ -120,10 +138,18 @@ accepts this automated boundary with image failure fallback, superseding Stage
 A's proposed per-asset review gate. It introduces no daily review, manual picks,
 approval table, switch or image analysis service; it cannot guarantee SFW pixels.
 
-Nav Web declares `featured_visuals?` for compatibility with older backends and
-Stage B consumes only this dedicated projection for homepage game artwork.
-Empty, absent and malformed fields remain data-only without game image requests;
-event artwork and uncontracted classification flags cannot qualify images.
+Nav Web declares `featured_visuals?` and `hero_visual?` for compatibility with
+older backends. Hero requires a structurally valid proof, an admitted URL and an
+exact match to the selected metric's public key and valid `as_of`. Missing/null,
+malformed or mismatched proof keeps Hero data-only, even when ordinary artwork
+exists. The ecosystem filters the qualified Hero ID from `featured_visuals` and
+shows at most two ordinary collected works; without Hero it shows the first two.
+An exhausted Hero image retains that ID reservation without promoting another
+candidate. Hero's label is “该指标的观测作品” / “Observed example”; ordinary
+previews remain “收录作品” / “Collected work”. Event artwork and uncontracted
+classification flags cannot qualify images. For separate releases, update this
+strict frontend before the backend; an old backend then safely gives data-only
+Hero with ordinary previews retained.
 The two independent parallel SSR sources remain unchanged. The shared URL corpus
 is exercised by both Go parser tests and the existing disposable PostgreSQL
 integration harness; classification/tag/URL revocation, Showcase independence, result bounds and daily

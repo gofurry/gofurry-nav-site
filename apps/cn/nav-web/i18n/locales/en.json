@@ -1163,6 +1163,7 @@
     },
     "overviewVisuals": {
       "collectedGame": "Collected work",
+      "observedExample": "Observed example",
       "recentSites": "Recently observed websites",
       "viewGame": "View game: {name}",
       "viewSite": "View website: {name}",

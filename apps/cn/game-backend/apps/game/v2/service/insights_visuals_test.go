@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"reflect"
 	"slices"
@@ -131,16 +132,16 @@ func TestInsightVisualDailyOrderLimitAndPreference(t *testing.T) {
 
 type visualStore struct {
 	fakeInsightsStore
-	read  func(context.Context, string) ([]v2models.InsightVisualCandidateRecord, error)
+	read  func(context.Context, v2models.InsightVisualQuery) ([]v2models.InsightVisualCandidateRecord, error)
 	calls int
 	fail  string
 }
 
 var visualBaseError = errors.New("original overview read failed")
 
-func (s *visualStore) ListInsightVisualCandidates(ctx context.Context, day string) ([]v2models.InsightVisualCandidateRecord, error) {
+func (s *visualStore) ListInsightVisualCandidates(ctx context.Context, query v2models.InsightVisualQuery) ([]v2models.InsightVisualCandidateRecord, error) {
 	s.calls++
-	return s.read(ctx, day)
+	return s.read(ctx, query)
 }
 func (s *visualStore) CountInsightEntities(ctx context.Context) (int64, error) {
 	if s.fail == "count" {
@@ -172,9 +173,9 @@ func TestOverviewVisualReadIsolationAndUTC(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			store := &visualStore{fakeInsightsStore: fakeInsightsStore{summaries: map[string]*v2models.InsightMetricSummaryRecord{"free": {FactDate: time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC), EligibleCount: 1}}}}
 			store.changes = []v2models.InsightChangeRecord{{EntityID: 82, EntityName: "Game", DetectorKey: "mac_support_transition", DetectorVersion: 1, EventCode: "mac_support_added", ProjectionDate: time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC), TimeBasis: "day"}}
-			store.read = func(ctx context.Context, day string) ([]v2models.InsightVisualCandidateRecord, error) {
-				if day != "2026-10-08" {
-					t.Fatalf("not UTC: %s", day)
+			store.read = func(ctx context.Context, query v2models.InsightVisualQuery) ([]v2models.InsightVisualCandidateRecord, error) {
+				if query.UTCDay != "2026-10-08" {
+					t.Fatalf("not UTC: %s", query.UTCDay)
 				}
 				deadline, ok := ctx.Deadline()
 				if !ok || time.Until(deadline) > insightVisualQueryTimeout {
@@ -219,6 +220,9 @@ func TestOverviewVisualReadIsolationAndUTC(t *testing.T) {
 			data, _ := json.Marshal(got)
 			var shape map[string]json.RawMessage
 			_ = json.Unmarshal(data, &shape)
+			if string(shape["hero_visual"]) != "null" {
+				t.Fatalf("missing facts must serialize null: %s", data)
+			}
 			if mode != "success" && string(shape["featured_visuals"]) != "[]" {
 				t.Fatalf("not always array: %s", data)
 			}
@@ -235,13 +239,86 @@ func TestOverviewVisualReadIsolationAndUTC(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	store := &visualStore{read: func(ctx context.Context, _ string) ([]v2models.InsightVisualCandidateRecord, error) {
+	store := &visualStore{read: func(ctx context.Context, _ v2models.InsightVisualQuery) ([]v2models.InsightVisualCandidateRecord, error) {
 		if ctx.Err() != context.Canceled {
 			t.Fatal("parent cancellation lost")
 		}
 		return nil, ctx.Err()
 	}}
-	if got := NewInsightsService(store).featuredVisuals(ctx, time.Now()); got == nil || len(got) != 0 {
+	if got, hero := NewInsightsService(store).overviewVisuals(ctx, time.Now(), nil); got == nil || len(got) != 0 || hero != nil {
 		t.Fatal("cancellation fallback")
+	}
+}
+
+func TestInsightHeroMetricContext(t *testing.T) {
+	date := time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC)
+	keys := []string{"free", "windows", "mac", "linux"}
+	internal := []string{"free_game_share", "windows_support", "mac_support", "linux_support"}
+	for i, key := range keys {
+		t.Run(key, func(t *testing.T) {
+			zero := 0.0
+			metrics := []v2models.InsightMetric{{Key: key, Value: &zero, AsOf: "2026-10-07"}}
+			for _, other := range keys[i+1:] {
+				metrics = append(metrics, v2models.InsightMetric{Key: other, Value: &zero, AsOf: "2026-10-08"})
+			}
+			for _, bad := range []float64{-1, 2, math.NaN(), math.Inf(1)} {
+				// Invalid earlier keys (including a duplicate of the chosen key)
+				// must not hide the first reliable value, matching Nav Web.
+				input := append([]v2models.InsightMetric{{Key: "free", Value: &bad}}, metrics...)
+				contract, gotDate := insightHeroContext(input)
+				if contract.PublicKey != key || contract.InternalKey != internal[i] || contract.Version != 1 || !gotDate.Equal(date) {
+					t.Fatalf("controlled mapping/zero/priority: %+v %s", contract, gotDate)
+				}
+			}
+			for _, badDate := range []string{"", "2026-02-30", "2026-10-07T00:00:00Z", "2026-1-07"} {
+				metrics[0].AsOf = badDate
+				contract, gotDate := insightHeroContext(metrics)
+				if contract.PublicKey != "" || !gotDate.IsZero() {
+					t.Fatal("invalid selected date fell through to another metric")
+				}
+			}
+		})
+	}
+}
+
+func TestInsightHeroProofAndOrdinaryCandidates(t *testing.T) {
+	value := 0.25
+	metrics := []v2models.InsightMetric{{Key: "free", Value: &value, AsOf: "2026-10-07"}}
+	for _, mode := range []string{"positive", "no match", "unsafe positive", "no context", "read failure"} {
+		t.Run(mode, func(t *testing.T) {
+			store := &visualStore{read: func(_ context.Context, q v2models.InsightVisualQuery) ([]v2models.InsightVisualCandidateRecord, error) {
+				if mode != "no context" && (q.MetricKey != "free_game_share" || q.MetricVersion != 1 || q.FactDate.Format(time.DateOnly) != "2026-10-07" || q.UTCDay != "2026-10-09") {
+					t.Fatalf("wrong query context: %+v", q)
+				}
+				if mode == "read failure" {
+					return nil, errors.New("optional failure")
+				}
+				candidate := visualFixture(3)
+				candidate.HeroMatch = mode != "no match"
+				candidate.HasAdult = mode == "unsafe positive"
+				return []v2models.InsightVisualCandidateRecord{visualFixture(1), visualFixture(2), candidate}, nil
+			}}
+			input := metrics
+			if mode == "no context" {
+				input = nil
+			}
+			visuals, hero := NewInsightsService(store).overviewVisuals(context.Background(), time.Date(2026, 10, 9, 0, 0, 0, 0, time.UTC), input)
+			if store.calls != 1 || (hero != nil) != (mode == "positive") {
+				t.Fatalf("proof/query isolation: %+v calls=%d", hero, store.calls)
+			}
+			if hero != nil && (hero.GameID != 3 || hero.MetricKey != "free" || hero.AsOf != "2026-10-07" || visuals[0].GameID != 3) {
+				t.Fatalf("wrong proof: %+v", hero)
+			}
+			want := 3
+			if mode == "unsafe positive" {
+				want = 2
+			}
+			if mode == "read failure" {
+				want = 0
+			}
+			if visuals == nil || len(visuals) != want {
+				t.Fatalf("ordinary candidates lost: %+v", visuals)
+			}
+		})
 	}
 }

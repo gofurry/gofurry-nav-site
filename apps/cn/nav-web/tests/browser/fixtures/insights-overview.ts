@@ -3,7 +3,7 @@ import { runtimeTest } from './insights-runtime'
 import type { InsightFeaturedVisual } from '../../../app/types/insights'
 import { steamSharedAssetCandidates } from '../../../app/utils/steamAssets'
 export const sources = ['/api/v2/nav/insights/overview', '/api/v2/game/insights/overview']
-const overviewRuntime = runtimeTest(() => ({ failure: '', siteHero: false, metricCase: '', sampleCase: '', candidateCase: '', visualCase: '', siteVisualCase: '', brokenGame: 0, eventCount: -1, countCase: '' }),
+const overviewRuntime = runtimeTest(() => ({ failure: '', siteHero: false, metricCase: '', sampleCase: '', candidateCase: '', visualCase: '', heroCase: '', siteVisualCase: '', brokenGame: 0, eventCount: -1, countCase: '' }),
   url => sources.includes(url.pathname),
   (url, media, _body, state) => {
     const source = url.pathname === sources[0] ? 'nav' : 'game'
@@ -45,6 +45,18 @@ const overviewRuntime = runtimeTest(() => ({ failure: '', siteHero: false, metri
     if (state.metricCase === 'full-long') {
       data.metrics = data.metrics.filter((metric: { key: string }) => metric.key === (source === 'nav' ? 'certificate_verified' : 'windows'))
       Object.assign(data.metrics[0], { value: 1, delta_30d: null, known: Number.MAX_SAFE_INTEGER, eligible: Number.MAX_SAFE_INTEGER })
+    }
+    if (source === 'game' && ['free', 'windows', 'mac', 'linux'].includes(state.metricCase)) data.metrics = data.metrics.filter((metric: { key: string }) => metric.key === state.metricCase)
+    if (source === 'game' && state.heroCase) {
+      const metric = ['free', 'windows', 'mac', 'linux'].map(key => data.metrics.find((item: { key: string; value: number | null }) => item.key === key && item.value !== null && item.value >= 0 && item.value <= 1)).find(Boolean)
+      const featured = data.featured_visuals?.[state.heroCase === 'third' ? 2 : 0]
+      const proof = metric && featured ? { ...featured, metric_key: metric.key, as_of: metric.as_of } : null
+      if (proof && state.heroCase === 'wrong-metric') proof.metric_key = 'linux'
+      if (proof && state.heroCase === 'wrong-date') proof.as_of = data.generated_at.slice(0, 10)
+      if (proof && state.heroCase === 'invalid-date') proof.as_of = '2026-02-30'
+      if (proof && state.heroCase === 'bad-url') proof.visual = { kind: 'game_header', asset: 'https://evil.test/header.jpg' }
+      if (proof && state.heroCase === 'bad-kind') proof.visual = { ...proof.visual, kind: 'site_icon' }
+      Object.assign(data, { hero_visual: state.heroCase === 'null' ? null : proof })
     }
     if (state.sampleCase) for (const metric of data.metrics) {
       Object.assign(metric, state.sampleCase === 'zero' ? { known: 0, eligible: 0 }

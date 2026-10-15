@@ -20,7 +20,12 @@ WITH named_games AS (
 )
 SELECT game.id AS game_id, game.appid, game.name::text, game.name_en::text, game.has_classification::boolean, game.has_adult::boolean,
        asset.id AS asset_id, asset.game_id AS asset_game_id, asset.appid AS asset_appid,
-       asset.asset_type, asset.lang, asset.asset_family, asset.sort_order, asset.exists, asset.url
+       asset.asset_type, asset.lang, asset.asset_family, asset.sort_order, asset.exists, asset.url,
+       EXISTS(SELECT 1 FROM public.gfg_metric_entity_daily fact
+              WHERE fact.metric_key=sqlc.arg(hero_metric_key)::text
+                AND fact.metric_version=sqlc.arg(hero_metric_version)::integer
+                AND fact.fact_date=sqlc.arg(hero_fact_date)::date
+                AND fact.game_id=game.id AND fact.state='positive') AS hero_match
 FROM named_games game
 JOIN LATERAL (
     SELECT a.id,a.game_id,a.appid,a.asset_type,a.lang,a.asset_family,a.sort_order,a.exists,a.url
@@ -38,7 +43,8 @@ JOIN LATERAL (
     LIMIT 1
 ) asset ON TRUE
 WHERE game.has_classification AND NOT game.has_adult AND (game.name<>'' OR game.name_en<>'')
-ORDER BY md5(sqlc.arg(utc_day)::text || ':' || game.id::text),game.id
+-- Positive facts must precede LIMIT, including games outside the ordinary top three.
+ORDER BY hero_match DESC,md5(sqlc.arg(utc_day)::text || ':' || game.id::text),game.id
 LIMIT 3;
 
 -- name: GetGameInsightGame :one

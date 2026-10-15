@@ -10,7 +10,7 @@
           <p class="overview-hero__scope">{{ $t('insights.overviewHero.observedSample') }}</p>
           <progress class="overview-hero__track block w-full" :value="gameMetric.value!" max="1" aria-labelledby="overview-hero-game" />
         </div>
-        <InsightsOverviewGameVisual v-if="heroVisual" :key="heroVisual.visual.asset" :item="heroVisual" priority class="order-1 self-start min-[761px]:order-2" @failed="failedAsset = heroVisual.visual.asset" />
+        <InsightsOverviewGameVisual v-if="heroVisual" :key="heroVisual.visual.asset" :item="heroVisual" priority observed class="order-1 self-start min-[761px]:order-2" @failed="failedAsset = heroVisual.visual.asset" />
         <dl class="overview-hero__evidence grid min-w-0 grid-cols-2 content-start gap-x-6 gap-y-4" :class="heroVisual ? 'order-3 min-[761px]:col-span-2 min-[761px]:grid-cols-4' : 'min-[1200px]:grid-cols-1'" data-hero-evidence>
           <div data-hero-fact="delta"><dt>{{ $t('insights.overviewHero.change30d') }}</dt><dd data-hero-delta>{{ gameDelta === null ? '—' : $t('insights.overviewHero.percentagePoints', { value: gameDelta }) }}</dd></div>
           <div data-hero-fact="coverage"><dt>{{ $t('insights.overviewHero.coverage') }}</dt><dd>{{ formatInsightRatio(gameMetric.coverage) }}</dd></div>
@@ -59,7 +59,7 @@ import { useI18n } from 'vue-i18n'
 import type { InsightOverview } from '@/types/insights'
 import { formatInsightRatio } from '@/utils/insightDimensions'
 import { formatOverviewPercentagePoints, overviewHeroGameKeys, overviewHeroSiteKeys, overviewSample, selectOverviewMetric } from '@/utils/insightOverviewPresentation'
-import { overviewGameVisuals } from './visuals'
+import { overviewHeroVisual } from './visuals'
 
 const props = defineProps<{ nav: InsightOverview | null, game: InsightOverview | null }>()
 const { locale } = useI18n()
@@ -67,7 +67,7 @@ const localePath = useLocalePath()
 const gameMetric = computed(() => selectOverviewMetric(props.game, overviewHeroGameKeys))
 const failedAsset = ref<string | null>(null)
 const heroVisual = computed(() => {
-  const item = overviewGameVisuals(props.game?.featured_visuals)[0]
+  const item = overviewHeroVisual(props.game)
   return gameMetric.value && item && item.visual.asset !== failedAsset.value ? item : null
 })
 const siteMetric = computed(() => selectOverviewMetric(props.nav, overviewHeroSiteKeys))

@@ -16,15 +16,19 @@ type InsightsDAO struct{ queries *gamesqlc.Queries }
 
 func NewInsightsDAO(queries *gamesqlc.Queries) *InsightsDAO { return &InsightsDAO{queries: queries} }
 
-func (d *InsightsDAO) ListInsightVisualCandidates(ctx context.Context, utcDay string) ([]v2models.InsightVisualCandidateRecord, error) {
-	rows, err := d.queries.ListGameInsightVisualCandidates(ctx, utcDay)
+func (d *InsightsDAO) ListInsightVisualCandidates(ctx context.Context, query v2models.InsightVisualQuery) ([]v2models.InsightVisualCandidateRecord, error) {
+	rows, err := d.queries.ListGameInsightVisualCandidates(ctx, gamesqlc.ListGameInsightVisualCandidatesParams{
+		UtcDay: query.UTCDay, HeroMetricKey: query.MetricKey, HeroMetricVersion: query.MetricVersion,
+		HeroFactDate: pgtype.Date{Time: query.FactDate, Valid: !query.FactDate.IsZero()},
+	})
 	if err != nil {
 		return nil, err
 	}
 	result := make([]v2models.InsightVisualCandidateRecord, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, v2models.InsightVisualCandidateRecord{
-			GameID: row.GameID, AppID: row.Appid, Name: row.GameName, NameEn: row.GameNameEn,
+			HeroMatch: row.HeroMatch,
+			GameID:    row.GameID, AppID: row.Appid, Name: row.GameName, NameEn: row.GameNameEn,
 			HasClassification: row.GameHasClassification, HasAdult: row.GameHasAdult,
 			AssetID: row.AssetID, AssetGameID: row.AssetGameID, AssetAppID: row.AssetAppid,
 			AssetType: row.AssetType, Lang: row.Lang, AssetFamily: row.AssetFamily,

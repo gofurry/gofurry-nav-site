@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/md5"
 	"errors"
+	"math"
 	"net/url"
 	"regexp"
 	"slices"
@@ -21,11 +22,35 @@ const insightVisualQueryTimeout = 500 * time.Millisecond
 var insightHeaderPath = regexp.MustCompile(`^/(steam/apps/([1-9][0-9]*)/|store_item_assets/steam/apps/([1-9][0-9]*)/([0-9a-f]{40}/)?)header(_alt_assets_[0-9]{1,4})?(_schinese)?(_2x)?[.]jpg$`)
 var insightHeaderQuery = regexp.MustCompile(`^t=[0-9]{1,20}$`)
 
-func (s *InsightsService) featuredVisuals(ctx context.Context, now time.Time) []v2models.InsightFeaturedVisual {
+// Match Nav Web's first finite [0,1] ratio, including zero. An invalid date on
+// that selected metric cannot authorize falling through to a different metric.
+func insightHeroContext(metrics []v2models.InsightMetric) (v2models.InsightMetricContract, time.Time) {
+	for _, contract := range insightMetricContracts {
+		for _, metric := range metrics {
+			if metric.Key != contract.PublicKey {
+				continue
+			}
+			if metric.Value == nil || math.IsNaN(*metric.Value) || math.IsInf(*metric.Value, 0) || *metric.Value < 0 || *metric.Value > 1 {
+				continue
+			}
+			date, err := time.Parse(time.DateOnly, metric.AsOf)
+			if err != nil {
+				return v2models.InsightMetricContract{}, time.Time{}
+			}
+			return contract, date
+		}
+	}
+	return v2models.InsightMetricContract{}, time.Time{}
+}
+
+func (s *InsightsService) overviewVisuals(ctx context.Context, now time.Time, metrics []v2models.InsightMetric) ([]v2models.InsightFeaturedVisual, *v2models.InsightHeroVisual) {
 	day := now.UTC().Format(time.DateOnly)
+	contract, date := insightHeroContext(metrics)
 	readCtx, cancel := context.WithTimeout(ctx, insightVisualQueryTimeout)
 	defer cancel()
-	rows, err := s.store.ListInsightVisualCandidates(readCtx, day)
+	rows, err := s.store.ListInsightVisualCandidates(readCtx, v2models.InsightVisualQuery{
+		UTCDay: day, MetricKey: contract.InternalKey, MetricVersion: contract.Version, FactDate: date,
+	})
 	if err != nil || readCtx.Err() != nil {
 		reason := "read_failed"
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(readCtx.Err(), context.DeadlineExceeded) {
@@ -36,9 +61,19 @@ func (s *InsightsService) featuredVisuals(ctx context.Context, now time.Time) []
 		}
 		// Never log the raw driver error, SQL parameters, names, URLs or credentials.
 		log.Warn("[insights] featured visuals unavailable", "reason", reason)
-		return []v2models.InsightFeaturedVisual{}
+		return []v2models.InsightFeaturedVisual{}, nil
 	}
-	return selectInsightVisuals(rows, day)
+	visuals := selectInsightVisuals(rows, day)
+	if !date.IsZero() {
+		for _, visual := range visuals {
+			for _, row := range rows {
+				if row.HeroMatch && row.GameID == visual.GameID && row.Asset == visual.Visual.Asset {
+					return visuals, &v2models.InsightHeroVisual{InsightFeaturedVisual: visual, MetricKey: contract.PublicKey, AsOf: date.Format(time.DateOnly)}
+				}
+			}
+		}
+	}
+	return visuals, nil
 }
 
 // This validates provenance/identity only, never pixel content or human approval.
@@ -101,6 +136,12 @@ func selectInsightVisuals(rows []v2models.InsightVisualCandidateRecord, day stri
 		return 2
 	}
 	slices.SortFunc(eligible, func(a, b v2models.InsightVisualCandidateRecord) int {
+		if a.HeroMatch != b.HeroMatch {
+			if a.HeroMatch {
+				return -1
+			}
+			return 1
+		}
 		for _, order := range []int{cmp.Compare(rank(a.GameID), rank(b.GameID)), cmp.Compare(a.GameID, b.GameID), cmp.Compare(a.AssetType, b.AssetType), cmp.Compare(langRank(a.Lang), langRank(b.Lang)), cmp.Compare(a.AssetFamily, b.AssetFamily), cmp.Compare(a.SortOrder, b.SortOrder), cmp.Compare(a.AssetID, b.AssetID), cmp.Compare(a.Asset, b.Asset), cmp.Compare(a.Name, b.Name), cmp.Compare(a.NameEn, b.NameEn)} {
 			if order != 0 {
 				return order

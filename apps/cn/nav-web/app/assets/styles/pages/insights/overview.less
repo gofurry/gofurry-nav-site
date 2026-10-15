@@ -1,7 +1,7 @@
 .insights-overview-page {
   .overview-header {
     h1 {
-      margin: 12px 0 0;
+      margin: 0;
       font-size: clamp(32px, 3.4vw, 46px);
       font-weight: 700;
       letter-spacing: -.035em;
@@ -20,15 +20,11 @@
 
   .overview-hero__panel {
     padding: 20px;
+    border: 0;
     border-radius: var(--gf-radius-lg);
-    overflow-wrap: anywhere;
-  }
-  .overview-hero__game {
-    background: var(--gf-surface-strong);
-  }
-  .overview-hero__site {
-    border: 1px solid var(--gf-border);
     background: var(--gf-surface);
+    box-shadow: none;
+    overflow-wrap: anywhere;
   }
   .overview-hero__title { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.3; }
   .overview-hero__value { margin: 8px 0 12px; color: var(--gf-accent); font-size: 64px; font-weight: 700; letter-spacing: -.04em; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; }
