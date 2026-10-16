@@ -1,4 +1,6 @@
 import type { Page } from '@playwright/test'
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
 import { assertRuntimeSurface, revealImages } from '../fixtures/insights-runtime'
 import { test, expect, domainMetricKeys, domainDimensionKeys, openRuntime, keyboardFocus } from '../fixtures/insights-domain'
 
@@ -13,14 +15,80 @@ async function layout(page: Page, width: number, domain: string) {
     overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth,
     chart: document.querySelector('.insights-trend')!.getBoundingClientRect().toJSON(),
     context: document.querySelector('.insight-trend-context')!.getBoundingClientRect().toJSON(),
+    tracks: getComputedStyle(document.querySelector('.insight-trend-workspace')!).gridTemplateColumns.split(' ').map(Number.parseFloat),
   }))
   expect(data.overflow).toBeLessThanOrEqual(1)
-  if (width === 1440) expect(data.chart.width / data.context.width).toBeGreaterThan(domain === 'site' ? 1.8 : 4.5)
-  if (width === 390) expect(data.context.top).toBeGreaterThan(data.chart.top)
+  if (domain === 'site' ? width > 760 : width > 1100) {
+    expect(data.tracks).toHaveLength(2)
+    // Grid tracks measure the available columns, including the context's own
+    // internal padding. Do not compare chart width to only the sidebar text box.
+    const ratio = domain === 'site' ? 2 : 3
+    expect(data.tracks[0]! / data.tracks[1]!).toBeGreaterThan(ratio - .15)
+    expect(data.tracks[0]! / data.tracks[1]!).toBeLessThan(ratio + .15)
+    expect(Math.abs(data.chart.width - data.tracks[0]!)).toBeLessThan(1)
+    expect(Math.abs(data.context.width - data.tracks[1]!)).toBeLessThan(1)
+    expect(data.context.left).toBeGreaterThanOrEqual(data.chart.right)
+  } else {
+    expect(data.tracks).toHaveLength(1)
+    expect(data.context.top).toBeGreaterThanOrEqual(data.chart.bottom)
+  }
 }
-for (const [route, domain] of routes) for (const width of [1440, 1024, 390]) {
-  test('Domain SSR/hydration, full raw data, focus ' + route + ' ' + width, async ({ page, request, runtime }) => {
+
+async function foundationAppearance(page: Page, width: number, domain: string) {
+  const result = await page.evaluate(() => {
+    const css = (selector: string) => getComputedStyle(document.querySelector(selector)!)
+    const rail = document.querySelector('[data-metric-rail]')!, railBox = rail.getBoundingClientRect()
+    const items = [...rail.querySelectorAll('button')]
+    return {
+      title: { weight: css('h1').fontWeight, size: parseFloat(css('h1').fontSize) },
+      intro: { weight: css('.insights-domain-header__intro').fontWeight, size: parseFloat(css('.insights-domain-header__intro').fontSize) },
+      count: { weight: css('[data-domain-count]').fontWeight, size: parseFloat(css('[data-domain-count]').fontSize) },
+      snapshot: css('.insights-domain-header__snapshot').fontSize,
+      headings: [...document.querySelectorAll('.insights-trend h2, [data-dimension-explorer] h2')].map(el => getComputedStyle(el).fontWeight),
+      values: [...rail.querySelectorAll('strong')].map(el => getComputedStyle(el).fontWeight),
+      labels: [...document.querySelectorAll('.insight-dimension-bars__label strong')].map(el => getComputedStyle(el).fontWeight),
+      scrollable: rail.scrollWidth > rail.clientWidth,
+      scrollbar: css('[data-metric-rail]').scrollbarWidth,
+      partialItem: items.some(el => { const box = el.getBoundingClientRect(); return box.left < railBox.right && box.right > railBox.right + 1 }),
+      controls: [...items, ...document.querySelectorAll('[data-dimension]')].map(el => ({ height: el.getBoundingClientRect().height, background: getComputedStyle(el).backgroundColor, shadow: getComputedStyle(el).boxShadow })),
+      selectedLine: getComputedStyle(rail.querySelector('[aria-pressed="true"]')!, '::after').height,
+      textFits: [...document.querySelectorAll('[data-domain-header] p, [data-metric-key] > *, .insight-trend-context dd, .insight-dimension-bars__label')].every(el => el.scrollWidth <= el.clientWidth + 1),
+      surfaces: ['[data-domain-header]', '[data-metric-rail]', '.insight-trend-workspace', '.insights-trend', '[data-dimension-explorer]'].map(selector => {
+        const style = css(selector)
+        return { background: style.backgroundColor, shadow: style.boxShadow, left: style.borderLeftWidth, right: style.borderRightWidth }
+      }),
+    }
+  })
+  expect(result.title.weight).toBe('700'); expect(result.title.size).toBeGreaterThanOrEqual(30); expect(result.title.size).toBeLessThanOrEqual(46)
+  expect(result.intro.weight).toBe('400'); expect(result.intro.size).toBeGreaterThanOrEqual(14); expect(result.intro.size).toBeLessThanOrEqual(15)
+  expect(result.count.weight).toBe('600'); expect(result.count.size).toBeGreaterThanOrEqual(25); expect(result.count.size).toBeLessThanOrEqual(28)
+  expect(result.snapshot).toBe('12px')
+  for (const weight of [...result.headings, ...result.values, ...result.labels]) expect(weight).toBe('600')
+  expect(result.scrollbar).toBe('thin'); expect(result.selectedLine).toBe('2px'); expect(result.textFits).toBe(true)
+  await expect(page.locator('[data-dimension][aria-pressed="true"]')).toHaveCSS('font-weight', '600')
+  await expect(page.locator('[data-dimension][aria-pressed="true"]')).toHaveCSS('border-bottom-width', '2px')
+  if (width === 390) { expect(result.scrollable).toBe(true); expect(result.partialItem).toBe(true) }
+  if (width === 1440) expect(result.scrollable).toBe(false)
+  for (const control of result.controls) {
+    expect(control.height).toBeGreaterThanOrEqual(44)
+    expect(control.background).toBe('rgba(0, 0, 0, 0)'); expect(control.shadow).toBe('none')
+  }
+  for (const surface of result.surfaces) expect(surface).toEqual({ background: 'rgba(0, 0, 0, 0)', shadow: 'none', left: '0px', right: '0px' })
+  await expect(page.locator('[data-domain-header] time')).toHaveAttribute('datetime', '2026-09-09T04:00:00Z')
+  await expect(page.locator('.insight-trend-context')).toContainText('2026-09-08')
+  await expect(page.locator('.insight-trend-context')).not.toContainText('2026-09-09')
+  await expect(page.locator('.insight-trend-context__delta')).toContainText('+4.2%')
+  if (domain === 'site') {
+    await expect(page.locator('.insight-trend-context')).toContainText('2026-06-01')
+    await expect(page.locator('[data-metric-key="certificate_verified"] strong')).toHaveText('0.0%')
+    await expect(page.locator('[data-metric-key="security_txt"] strong')).toHaveText('—')
+  }
+}
+
+for (const [route, domain] of routes) for (const theme of ['light', 'dark'] as const) for (const width of [1440, 1024, 768, 390]) {
+  test('Domain SSR/hydration, full raw data, focus ' + route + ' ' + theme + ' ' + width, async ({ page, context, request, runtime }) => {
     await page.setViewportSize({ width, height: 1000 })
+    await context.addInitScript(value => localStorage.setItem('theme', value), theme)
     const ssr = await request.get(route), ssrHTML = await ssr.text()
     expect(ssr.status()).toBe(200)
     expect(ssrHTML).toMatch(/<h1>[^<]+<\/h1>/)
@@ -47,12 +115,36 @@ for (const [route, domain] of routes) for (const width of [1440, 1024, 390]) {
     await expect(page.locator('[data-dimension-raw] tbody tr')).toHaveCount(10)
     if (width === 390) expect(await page.locator('.insight-dimension-raw__scroll').evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
     await layout(page, width, domain)
+    await foundationAppearance(page, width, domain)
+    await assertRuntimeSurface(page, '.insights-domain-page', theme)
     const last = page.locator('[data-metric-key]').last()
     await keyboardFocus(last)
     expect(await last.evaluate(el => {
       const box = el.getBoundingClientRect(), rail = el.closest('[data-metric-rail]')!.getBoundingClientRect()
+      const css = getComputedStyle(el)
       return box.left >= rail.left - 1 && box.right <= rail.right + 1
+        && el.matches(':focus-visible') && css.outlineStyle === 'solid' && parseFloat(css.outlineWidth) >= 2
     })).toBe(true)
+    await expect(page.locator('[data-metric-key][aria-pressed="true"]')).toHaveAttribute('data-metric-key', new URL(route, 'http://fixture.test').searchParams.get('metric')!)
+    // A few review images from this existing fixture, never accepted goldens.
+    const reviewDir = process.env.GOFURRY_DOMAIN_REVIEW_DIR
+    const representative = (domain === 'game' && !prefix && theme === 'light' && [1440, 390].includes(width))
+      || (domain === 'site' && !prefix && theme === 'light' && width === 1440)
+      || (domain === 'site' && prefix && theme === 'dark' && width === 768)
+    const alternate = (domain === 'game' && prefix && theme === 'dark' && width === 1440)
+      || (domain === 'site' && !prefix && theme === 'dark' && width === 390)
+    if (reviewDir && (representative || alternate)) {
+      await mkdir(reviewDir, { recursive: true })
+      await page.locator('[data-dimension-raw] summary').click()
+      await page.locator('[data-domain-header] h1').click()
+      await page.locator('[data-metric-rail]').evaluate(el => { el.scrollLeft = 0 })
+      await revealImages(page)
+      const name = `${domain}-${prefix ? 'en' : 'zh'}-${theme}-${width}`
+      if (representative) await page.screenshot({ path: join(reviewDir, `full-${name}.png`), fullPage: true })
+      await page.locator('[data-metric-rail]').screenshot({ path: join(reviewDir, `rail-${name}.png`) })
+      await page.locator('.insight-trend-workspace').screenshot({ path: join(reviewDir, `trend-${name}.png`) })
+      await page.locator('[data-dimension-explorer]').screenshot({ path: join(reviewDir, `dimensions-${name}.png`) })
+    }
     expect(runtime.calls.slice(offset)).toHaveLength(domain === 'site' ? 3 : 4)
     expect(runtime.count('/game/home')).toBe(domain === 'game' ? 2 : 0)
     runtime.assertQuiet()
@@ -70,6 +162,23 @@ test('Domain Site artwork failure retains shared identity and entity links', asy
   runtime.assertQuiet()
 })
 for (const domain of ['site', 'game'] as const) {
+  test('Domain missing overview and breakdown stay independent ' + domain, async ({ page, runtime }) => {
+    const path = '/insights/' + (domain === 'site' ? 'sites' : 'games')
+    runtime.state.overviewFailure = true
+    await openRuntime(page, path)
+    await expect(page.locator('[data-domain-count]')).toHaveText('—')
+    await expect(page.locator('[data-domain-header] time')).toHaveCount(0)
+    await expect(page.locator('.insight-trend-context__value')).toHaveText('—')
+    await expect(page.locator('.insights-trend canvas')).toBeVisible()
+    await expect(page.locator('[data-slice]')).toHaveCount(8)
+    runtime.state.overviewFailure = false; runtime.state.breakdownFailure = true
+    await openRuntime(page, path)
+    await expect(page.locator('[data-domain-count]')).toHaveText(domain === 'site' ? '238' : '213')
+    await expect(page.locator('.insights-trend canvas')).toBeVisible()
+    await expect(page.locator('[data-dimension-explorer] .insights-empty-state')).toHaveText('生态观测数据暂不可用')
+    await expect(page.locator('[data-slice], [data-dimension-raw]')).toHaveCount(0)
+    runtime.assertQuiet()
+  })
   test('Domain selected slice SSR and deferred all-history ' + domain, async ({ page, request, runtime }) => {
     const path = '/insights/' + (domain === 'site' ? 'sites' : 'games')
     const metric = domain === 'site' ? 'tls13' : 'linux', dimension = domain === 'site' ? 'group' : 'tag'
@@ -112,6 +221,8 @@ for (const domain of ['site', 'game'] as const) {
     await expect(page.locator('[data-overlapping]')).toBeVisible()
     await page.locator('[data-slice="31"]').click()
     await expect(page.locator('.insights-slice-trend canvas')).toBeVisible()
+    await expect(page.locator('[data-slice="31"] strong')).toHaveCSS('text-decoration-line', 'underline')
+    await expect(page.locator('[data-slice="31"] strong')).toHaveCSS('text-decoration-thickness', '2px')
     await page.locator('[data-slice="31"]').click()
     await expect(page.locator('.insights-slice-trend')).toHaveCount(0)
     await page.locator('[data-slice="31"]').click()

@@ -1,7 +1,7 @@
 <template>
-  <div class="insight-trend-workspace" :data-trend-domain="domain">
+  <div class="insight-trend-workspace grid grid-cols-1 gap-6" :class="domain === 'game' ? 'min-[1101px]:grid-cols-[minmax(0,9fr)_minmax(0,3fr)] min-[761px]:gap-8' : 'min-[761px]:grid-cols-[minmax(0,8fr)_minmax(0,4fr)] min-[761px]:gap-10'" :data-trend-domain="domain">
     <InsightMetricTrend :metric-key="metricKey" :range="range" :points="points" :loading="loading" :unavailable="unavailable" @range="$emit('range', $event)" />
-    <aside class="insight-trend-context" :aria-label="$t('insights.domain.current')">
+    <aside class="insight-trend-context min-w-0" :aria-label="$t('insights.domain.current')">
       <p class="insight-domain-kicker">{{ $t('insights.domain.current') }}</p>
       <strong class="insight-trend-context__value">{{ formatInsightRatio(metric?.value ?? null) }}</strong>
       <p class="insight-trend-context__delta">{{ formatOverviewDelta(metric?.delta_30d) }} <span>{{ $t('insights.editorial.deltaWindow') }}</span></p>

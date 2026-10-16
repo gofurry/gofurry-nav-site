@@ -13,7 +13,7 @@
       <p v-else-if="!bars.length" class="insights-empty-state">{{ $t('insights.dimensions.empty') }}</p>
       <div v-else class="insight-dimension-bars">
         <button v-for="bar in bars" :key="bar.item.value" type="button" :data-slice="bar.item.value" :aria-pressed="selectedSlice === bar.item.value" @click="$emit('slice', bar.item.value)">
-          <span class="insight-dimension-bars__label"><strong>{{ sliceLabel(bar.item) }}</strong><b>{{ domain === 'site' ? formatInsightRatio(bar.value) : integer(bar.item.population) }}</b></span>
+          <span class="insight-dimension-bars__label items-baseline"><strong>{{ sliceLabel(bar.item) }}</strong><b>{{ domain === 'site' ? formatInsightRatio(bar.value) : integer(bar.item.population) }}</b></span>
           <progress v-if="bar.signal !== null" :value="bar.signal" :max="bar.maximum" aria-hidden="true" />
           <span v-else class="insight-dimension-bars__missing" aria-hidden="true" />
           <span class="insight-dimension-bars__context">
