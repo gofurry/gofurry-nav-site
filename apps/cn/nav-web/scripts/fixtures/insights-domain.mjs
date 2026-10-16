@@ -2,10 +2,35 @@ import { mockOverview, mockGameHome } from './insights-overview.mjs'
 
 export const domainMetricKeys = { site: ['ipv6', 'tls13', 'http2', 'hsts', 'csp', 'security_txt', 'certificate_verified'], game: ['free', 'windows', 'mac', 'linux'] }
 export const domainDimensionKeys = { site: ['country', 'group', 'nsfw', 'public_interest'], game: ['primary_tag', 'tag'] }
+export const domainPulseCapsuleSizes = { 91: [231, 326], 92: [616, 353], 93: [184, 69] }
+
+function pulseFixture(mediaBase, state) {
+  const home = mockGameHome(mediaBase)
+  // Opt-in Domain-only variants. Other owners and the default response are unchanged.
+  if (state.pulseRoles) {
+    const lists = { players: 'top_online', discount: 'highest_discount', latest: 'latest_games' }
+    const ids = { players: '91', discount: '92', latest: '93' }
+    const selected = new Set(state.pulseRoles.map(role => ids[role]))
+    for (const [role, list] of Object.entries(lists)) {
+      home.panel[list] = state.pulseRoles.includes(role) ? home.panel[list].filter(game => selected.has(game.id)) : []
+    }
+  }
+  for (const game of new Set(Object.values(home.panel).flat())) {
+    if (state.pulseLongNames) game.name = state.pulseLongNames === 'en'
+      ? `An extraordinarily long journey through the forest and the stars — game ${game.id}`
+      : `漫长旅途中的森林与群星：和伙伴们一起探索遥远世界的故事与冒险 · 作品 ${game.id}`
+    if (state.pulseZero) game.online_count.count = 0
+    if (state.pulseMedia) {
+      game.header_url = ['capsule', 'missing'].includes(state.pulseMedia) ? '' : `${mediaBase}/game-pulse-${game.id}-header.svg`
+      game.capsule_url = state.pulseMedia === 'missing' ? '' : `${mediaBase}/game-pulse-${game.id}-capsule.svg`
+    }
+  }
+  return home
+}
 
 export async function domainFixtureResponse(url, mediaBase, state) {
   const path = url.pathname
-  if (path === '/api/v2/game/home') return state.panelFailure ? { status: 503 } : { data: mockGameHome(mediaBase) }
+  if (path === '/api/v2/game/home') return state.panelFailure ? { status: 503 } : { data: pulseFixture(mediaBase, state) }
   const domain = path.startsWith('/api/v2/nav/') ? 'site' : 'game'
   if (path.endsWith('/insights/overview')) {
     if (state.overviewFailure) return { status: 503 }

@@ -88,11 +88,6 @@
   .insights-data-info summary { padding: 20px 0; color: var(--gf-text-muted); font-size: 12px; font-weight: 500; }
   .insights-data-info__content { padding: 0 0 20px; font-size: 13px; }
 
-  .insight-domain-pulse .insights-game-pulse { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); grid-template-rows: 1fr 1fr; gap: 24px 40px; }
-  .insight-domain-pulse .insights-game-pulse__item--lead { grid-row: span 2; padding-bottom: 0; border: 0; }
-  .insight-domain-pulse .insights-game-pulse__item--lead > .insight-entity-media { max-height: 300px; }
-  .insight-domain-pulse .insights-game-pulse__item:not(.insights-game-pulse__item--lead) { align-self: center; }
-  .insight-domain-pulse .insights-game-pulse__item:not(.insights-game-pulse__item--lead) > .insight-entity-media { width: 144px; }
 }
 
 .insights-game-domain .insight-metric-rail__group:first-child { flex: 0 0 22%; min-width: 130px; }
@@ -101,8 +96,6 @@
   .insights-domain-page {
     [data-trend-domain='game'] .insight-trend-context { padding: 20px 0 0; border: 0; border-top: 1px solid var(--gf-border); }
     [data-trend-domain='game'] .insight-trend-context dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .insight-domain-pulse .insights-game-pulse { gap: 24px; }
-    .insight-domain-pulse .insights-game-pulse__item:not(.insights-game-pulse__item--lead) { align-items: flex-start; flex-direction: column; }
     .insight-domain-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
   }
 }
@@ -118,10 +111,6 @@
     .insights-ranges { margin-top: 0; }
     .insights-chart-shell { min-height: 290px; }
     .insight-dimension-bars, .insight-domain-activity__items, .insight-domain-continue > div:last-child { grid-template-columns: 1fr; }
-    .insight-domain-pulse .insights-game-pulse { grid-template-columns: 1fr; grid-template-rows: auto; gap: 20px; }
-    .insight-domain-pulse .insights-game-pulse__item--lead { grid-row: auto; padding-bottom: 20px; border-bottom: 1px solid var(--gf-border); }
-    .insight-domain-pulse .insights-game-pulse__item:not(.insights-game-pulse__item--lead) { flex-direction: row; align-items: center; }
-    .insight-domain-pulse .insights-game-pulse__item:not(.insights-game-pulse__item--lead) > .insight-entity-media { width: 88px; }
     .insight-domain-activity .insight-activity-item > .insight-entity-media--game { width: 76px; }
   }
 }
