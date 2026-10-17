@@ -2,7 +2,7 @@
   <div class="insights-page insights-workspace-page" data-regional-price-intelligence>
     <main class="insights-container">
       <EcosystemNavigation context="game" />
-      <InsightsWorkspaceHeader :eyebrow="$t('insights.games.title')" :title="$t('insights.priceIntelligence.title')" :description="$t('insights.priceIntelligence.description')" />
+      <InsightsWorkspaceHeader :title="$t('insights.priceIntelligence.title')" />
       <InsightWorkspaceSelector :items="regions.map(value => ({ value, label: $t('insights.regions.' + value) }))" :selected="selectedRegion" :label="$t('insights.workspace.region')" @select="selectRegion" />
       <p v-if="overviewError" class="insights-empty-state" data-price-overview-error>{{ $t('insights.emptyStates.unavailable') }}</p>
       <section v-else-if="overview" class="insights-workspace-summary" :aria-busy="overviewPending">

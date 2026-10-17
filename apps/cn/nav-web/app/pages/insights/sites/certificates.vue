@@ -2,11 +2,11 @@
   <div class="insights-page insights-workspace-page" data-certificate-intelligence>
     <main class="insights-container">
       <EcosystemNavigation context="site" />
-      <InsightsWorkspaceHeader :eyebrow="$t('insights.sites.title')" :title="$t('insights.certificateIntelligence.title')" :description="$t('insights.certificateIntelligence.description')" />
+      <InsightsWorkspaceHeader :title="$t('insights.certificateIntelligence.title')" visually-hidden />
       <p v-if="error" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
       <p v-else-if="!overview?.as_of" class="insights-empty-state">{{ $t('insights.certificateIntelligence.empty') }}</p>
       <template v-else>
-        <div class="insights-certificate-status">
+        <div class="insights-certificate-status -mt-2 min-[1101px]:-mt-4">
           <section class="insights-workspace-summary">
             <h2>{{ $t('insights.certificateIntelligence.verificationTitle') }}</h2>
             <p class="insights-certificate-verification"><strong>{{ overview.verification.verified }}</strong><span>/ {{ overview.verification.known }} {{ $t('insights.certificateIntelligence.known') }}</span></p>

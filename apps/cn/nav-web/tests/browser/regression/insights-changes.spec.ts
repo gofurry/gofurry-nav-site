@@ -24,11 +24,22 @@ async function layout(page: Page) {
   expect(await page.locator('.insights-change-explorer-filters, .insights-changes-day, .insights-change-explorer-item').evaluateAll(els => els.every(el => el.scrollWidth <= el.clientWidth + 1))).toBe(true)
   await expect(page.locator('.insights-change-explorer-filters')).toHaveCSS('box-shadow', 'none')
 }
-for (const domain of ['site', 'game']) for (const locale of ['zh', 'en']) for (const width of [1440, 1024, 390]) {
-  test('Changes SSR/hydration, time precision and layout ' + domain + ' ' + locale + ' ' + width, async ({ page, runtime }) => {
+for (const domain of ['site', 'game']) for (const locale of ['zh', 'en']) for (const width of [1440, 1024, 768, 390]) for (const theme of ['light', 'dark']) {
+  test('Changes SSR/hydration, time precision and layout ' + domain + ' ' + locale + ' ' + width + ' ' + theme, async ({ page, context, runtime }) => {
     await page.setViewportSize({ width, height: 1000 })
+    await context.addInitScript(value => localStorage.setItem('theme', value), theme)
     const html = await openRuntime(page, pathFor(domain, locale))
-    expect(html).toContain('<h1>' + (locale === 'en' ? 'Change Explorer' : '变化探索') + '</h1>')
+    const title = locale === 'en' ? 'Change Explorer' : '变化探索'
+    expect([...html.matchAll(/<h1\b[^>]*>([^<]+)<\/h1>/g)].map(match => match[1])).toEqual([title])
+    await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toHaveCount(1)
+    await expect(page.locator('h1')).toHaveClass('sr-only')
+    await expect(page.locator('h1')).toHaveCSS('clip-path', 'inset(50%)')
+    await expect(page.locator('.insights-workspace-header p')).toHaveCount(0)
+    expect((await page.locator('.insights-workspace-header').boundingBox())!.height).toBe(0)
+    expect(await page.locator('.insights-change-explorer-filters').evaluate(el => {
+      const nav = document.querySelector('.ecosystem-navigation')!, gap = el.getBoundingClientRect().top - nav.getBoundingClientRect().bottom
+      return gap >= 0 && gap <= parseFloat(getComputedStyle(nav).marginBottom) + 1
+    })).toBe(true)
     expect(html).toContain('insights-primary-nav'); expect(html).not.toContain('insights-domain-nav')
     expect(html).toContain('2026-09-09T13:32:00Z')
     expect(html).toContain('href="' + (locale === 'en' ? '/en' : '') + '/' + (domain === 'site' ? 'site' : 'games') + '/31"')

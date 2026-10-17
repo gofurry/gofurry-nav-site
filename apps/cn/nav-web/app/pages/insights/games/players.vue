@@ -2,7 +2,7 @@
   <div class="insights-page insights-workspace-page" data-player-intelligence>
     <main class="insights-container">
       <EcosystemNavigation context="game" />
-      <InsightsWorkspaceHeader :eyebrow="$t('insights.games.title')" :title="$t('insights.playerIntelligence.title')" :description="$t('insights.playerIntelligence.description')" />
+      <InsightsWorkspaceHeader :title="$t('insights.playerIntelligence.title')" />
       <InsightWorkspaceSelector :items="metrics.map(value => ({ value, label: $t('insights.playerIntelligence.metrics.' + value) }))" :selected="selectedMetric" :label="$t('insights.workspace.rankingMetric')" @select="selectMetric" />
       <p v-if="error" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
       <template v-else-if="ranking">

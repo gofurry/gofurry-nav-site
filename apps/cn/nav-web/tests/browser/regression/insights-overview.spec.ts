@@ -452,10 +452,11 @@ async function layout(page: Page, width: number) {
     const heroGame = document.querySelector('[data-hero-domain="game"]')!.getBoundingClientRect()
     const heroSite = document.querySelector('[data-hero-domain="site"]')!.getBoundingClientRect()
     const box = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON()
-    return { overflow: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - innerWidth, site: site.toJSON(), game: game.toJSON(), heroGame: heroGame.toJSON(), heroSite: heroSite.toJSON(), header: box('[data-overview-header]'), hero: box('[data-overview-hero]'), ecosystems: box('[data-overview-ecosystems]'), activity: box('[data-overview-activity]'), activityHeading: box('[data-activity-heading]'), activityContent: box('[data-activity-content]'), explore: box('[data-overview-explore]'), gameDirectory: box('[data-directory-domain="game"]'), siteDirectory: box('[data-directory-domain="site"]'), events: [...document.querySelectorAll('[data-change-link]')].map(el => el.getBoundingClientRect().toJSON()) }
+    return { overflow: Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - innerWidth, site: site.toJSON(), game: game.toJSON(), heroGame: heroGame.toJSON(), heroSite: heroSite.toJSON(), header: box('[data-overview-header]'), navigation: box('.ecosystem-navigation'), navigationGap: parseFloat(getComputedStyle(document.querySelector('.ecosystem-navigation')!).marginBottom), hero: box('[data-overview-hero]'), ecosystems: box('[data-overview-ecosystems]'), activity: box('[data-overview-activity]'), activityHeading: box('[data-activity-heading]'), activityContent: box('[data-activity-content]'), explore: box('[data-overview-explore]'), gameDirectory: box('[data-directory-domain="game"]'), siteDirectory: box('[data-directory-domain="site"]'), events: [...document.querySelectorAll('[data-change-link]')].map(el => el.getBoundingClientRect().toJSON()) }
   })
   expect(result.overflow).toBeLessThanOrEqual(0)
-  expect(result.hero.top - result.header.bottom).toBeCloseTo(width >= 1200 ? 28 : 24, 0)
+  expect(result.header.height).toBe(0)
+  expect(result.hero.top - result.navigation.bottom).toBeCloseTo(result.navigationGap, 0)
   expect(result.ecosystems.top - result.hero.bottom).toBeCloseTo(56, 0)
   expect(result.activity.top).toBeGreaterThanOrEqual(result.ecosystems.bottom)
   expect(result.explore.top).toBeGreaterThanOrEqual(result.activity.bottom)
@@ -500,7 +501,10 @@ async function heroSurface(page: Page) {
     expect(surface.shadow).toBe('none')
   }
   await expect(page.locator('.overview-header .overview-kicker')).toHaveCount(0)
-  await expect(page.locator('.overview-header h1')).toHaveCSS('margin-top', '0px')
+  await expect(page.locator('.overview-header h1')).toHaveClass('sr-only')
+  await expect(page.locator('.overview-header h1')).toHaveCSS('position', 'absolute')
+  await expect(page.locator('.overview-header h1')).toHaveCSS('clip-path', 'inset(50%)')
+  await expect(page.locator('.overview-header p')).toHaveCount(0)
   await expect(page.locator('[data-overview-hero] .overview-kicker')).toHaveCount(2)
 }
 
@@ -612,7 +616,9 @@ for (const prefix of ['', '/en']) for (const theme of ['light', 'dark'] as const
     expect(stats(html)).toEqual(['238', '213', '47'])
     for (const section of ['header', 'hero', 'ecosystems', 'activity', 'sites', 'games', 'explore']) expect(html).toContain('data-overview-' + section)
     await expect(page.locator('h1')).toHaveCount(1)
-    await expect(page.locator('h1')).toHaveText(prefix ? 'A Closer Look at the Furry World.' : '看见生态的另一面。')
+    const heading = prefix ? 'Ecosystem' : '生态观测'
+    expect([...html.matchAll(/<h1\b[^>]*>([^<]+)<\/h1>/g)].map(match => match[1])).toEqual([heading])
+    await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toHaveCount(1)
     expect(html).toContain('<meta name="description"')
     for (const path of ['/insights/sites', '/insights/games', '/insights/changes', '/insights/sites/certificates', '/insights/sites/compare', '/insights/games/players', '/insights/games/prices', '/insights/games/languages', '/insights/games/compare']) expect(html).toContain('href="' + prefix + path + '"')
     for (const path of ['/site/41', '/site/42', '/games/82', '/games/83']) expect(html).toContain('href="' + prefix + path + '"')
@@ -779,7 +785,13 @@ for (const width of [1440, 390]) test(`Overview Dark ready shell ${width}`, asyn
   await context.addInitScript(() => localStorage.setItem('theme', 'dark'))
   const html = await openRuntime(page, '/insights')
   expect(stats(html)).toEqual(['238', '213', '47'])
-  for (const part of ['header', 'activity', 'sites', 'games', 'explore']) await expect(page.locator('[data-overview-' + part + ']')).toBeVisible()
+  expect([...html.matchAll(/<h1\b[^>]*>([^<]+)<\/h1>/g)].map(match => match[1])).toEqual(['生态观测'])
+  await expect(page.getByRole('heading', { level: 1, name: '生态观测', exact: true })).toHaveCount(1)
+  await expect(page.locator('[data-overview-header]')).toHaveCount(1)
+  expect((await page.locator('[data-overview-header]').boundingBox())!.height).toBe(0)
+  await expect(page.locator('[data-overview-header] h1')).toHaveClass('sr-only')
+  await expect(page.locator('[data-overview-header] h1')).toHaveCSS('clip-path', 'inset(50%)')
+  for (const part of ['hero', 'activity', 'sites', 'games', 'explore']) await expect(page.locator('[data-overview-' + part + ']')).toBeVisible()
   await expect(page.locator('.insights-primary-nav')).toBeVisible()
   await revealImages(page)
   await assertRuntimeSurface(page, '.insights-overview-page', 'dark')

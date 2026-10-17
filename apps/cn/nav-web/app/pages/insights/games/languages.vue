@@ -2,7 +2,7 @@
   <div class="insights-page insights-workspace-page" data-language-intelligence>
     <main class="insights-container">
       <EcosystemNavigation context="game" />
-      <InsightsWorkspaceHeader :eyebrow="$t('insights.games.title')" :title="$t('insights.languageIntelligence.title')" :description="$t('insights.languageIntelligence.description')" />
+      <InsightsWorkspaceHeader :title="$t('insights.languageIntelligence.title')" />
       <p v-if="error" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
       <template v-else-if="overview">
         <section class="insights-workspace-summary">

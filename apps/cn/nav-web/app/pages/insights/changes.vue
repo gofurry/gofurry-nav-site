@@ -2,13 +2,9 @@
   <div class="insights-page insights-workspace-page insights-change-explorer" :data-domain="selectedDomain" :data-range="selectedRange">
     <main class="insights-container">
       <EcosystemNavigation />
-      <InsightsWorkspaceHeader
-        :eyebrow="$t('insights.overview.title')"
-        :title="$t('insights.changeExplorer.title')"
-        :description="$t('insights.changeExplorer.description')"
-      />
+      <InsightsWorkspaceHeader :title="$t('insights.changeExplorer.title')" visually-hidden />
 
-      <section class="insights-change-explorer-filters" :aria-label="$t('insights.changeExplorer.filters')">
+      <section class="insights-change-explorer-filters -mt-2 mb-6 min-[1101px]:-mt-4 min-[768px]:mb-8" :aria-label="$t('insights.changeExplorer.filters')">
         <div class="insights-change-explorer-filters__group" role="group" aria-labelledby="changes-domain-label">
           <span id="changes-domain-label">{{ $t('insights.changeExplorer.domain') }}</span>
           <button

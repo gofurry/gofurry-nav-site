@@ -124,13 +124,14 @@ for (const domain of ['site', 'game']) {
 }
 assert(overviewChangesPath === '/insights/changes', 'Overview Changes destination changed')
 const overviewSource = readFileSync(new URL('../app/pages/insights/index.vue', import.meta.url), 'utf8')
-assert(overviewSource.includes("<h1>{{ $t('insights.overviewHero.title') }}</h1>"), 'Overview lost its visible localized H1')
+assert(overviewSource.includes("<h1 class=\"sr-only\">{{ $t('insights.overview.title') }}</h1>") && (overviewSource.match(/<h1\b/g) || []).length === 1, 'Overview lost its unique localized semantic H1')
+assert(!overviewSource.includes('overview-header__intro') && !overviewSource.includes('overviewHero.title'), 'Overview restored redundant visible copy')
 assert(overviewSource.includes('EcosystemNavigation') && !overviewSource.includes('InsightsStats'), 'Overview navigation or typography statistics regressed')
 assert(/const \[navResult, gameResult\] = await Promise\.allSettled\(\[\s*getNavInsightsOverview\(\),\s*getGameInsightsOverview\(\),\s*\]\)/.test(overviewSource), 'Overview lost its two parallel SSR sources')
 for (const source of ['nav', 'game']) assert(overviewSource.includes(`${source}Result.status === 'fulfilled' ? ${source}Result.value : null`), `Overview lost independent ${source} failure handling`)
 assert(!/getGameHomePanel|GameV2PanelRecord|\bpanel\b|evaluatedAt|Date\.now\(/.test(overviewSource), 'Overview restored unused Home requests or observation state')
 assert(overviewSource.includes("buildInsightsSeo('overview', locale.value)") && !overviewSource.includes('overviewGeneratedAt('), 'Overview SEO or per-fact time ownership regressed')
-assert(zh.insights.overviewHero.title === '看见生态的另一面。' && en.insights.overviewHero.title === 'A Closer Look at the Furry World.', 'frozen editorial H1 changed')
+assert(zh.insights.overviewHero.title === '看见生态的另一面。' && en.insights.overviewHero.title === 'A Closer Look at the Furry World.', 'retained editorial translation changed')
 const overviewHero = readFileSync(new URL('../app/components/insights/overview/InsightsOverviewHero.vue', import.meta.url), 'utf8')
 assert(overviewHero.includes(":data-hero-mode=\"heroVisual ? 'visual' : 'data'\"") && overviewHero.includes('gameMetric.value && item') && overviewHero.includes('failedAsset.value'), 'Overview lost metric-qualified artwork or data-only failure fallback')
 for (const domain of ['game', 'site']) {
@@ -178,7 +179,8 @@ for (const [page, domain, metrics, dimensions, defaultMetric, defaultDimension] 
 }
 assert(!sitePage.includes('getGameHomePanel') && gamePage.includes('getGameHomePanel(locale.value)') && gamePage.includes('Promise.allSettled'), 'Game Panel source lost its independent Game-only boundary')
 const domainHeader = readFileSync(new URL('../app/components/insights/domain/InsightsDomainHeader.vue', import.meta.url), 'utf8')
-assert(/<h1>\{\{ \$t\(/.test(domainHeader) && domainHeader.includes('insights.sites.title') && domainHeader.includes('insights.games.title'), 'Domain visible H1 lost existing locale semantics')
+assert(/<h1 class="sr-only">\{\{ \$t\(/.test(domainHeader) && (domainHeader.match(/<h1\b/g) || []).length === 1 && domainHeader.includes('insights.sites.title') && domainHeader.includes('insights.games.title'), 'Domain lost its unique localized semantic H1')
+assert(!domainHeader.includes('insights-domain-header__intro') && domainHeader.includes('data-domain-count') && domainHeader.includes(':datetime="generatedAt"'), 'Domain lost compact facts or restored redundant copy')
 for (const file of readdirSync(new URL('../app/components/insights/domain/', import.meta.url)).filter(name => name.endsWith('.vue'))) {
   const source = readFileSync(new URL(`../app/components/insights/domain/${file}`, import.meta.url), 'utf8')
   assert(!/\b(?:fetch|useFetch|useAsyncData)\s*\(|from ['"]@\/services\//.test(source), `${file} added presentation-level API requests`)
@@ -295,14 +297,17 @@ const workspaceSource = path => readFileSync(new URL('../app/' + path, import.me
 const workspacePages = Object.fromEntries(['players', 'prices', 'languages', 'certificates'].map(name => [name, workspaceSource('pages/insights/' + (name === 'certificates' ? 'sites/' : 'games/') + name + '.vue')]))
 for (const [name, source] of Object.entries(workspacePages)) {
   const key = { players: 'playerIntelligence', prices: 'priceIntelligence', languages: 'languageIntelligence', certificates: 'certificateIntelligence' }[name]
-  assert(source.includes('InsightsWorkspaceHeader') && source.includes("$t('insights." + key + ".title')"), name + ' lost its visible localized H1')
+  assert(source.includes('InsightsWorkspaceHeader') && source.includes("$t('insights." + key + ".title')"), name + ' lost its localized semantic H1')
   assert(source.includes('<EcosystemNavigation context="' + (name === 'certificates' ? 'site' : 'game') + '"'), name + ' lost Domain navigation')
   assert(source.includes('InsightWorkspaceDisclosure'), name + ' lost data disclosure')
   assert(!source.includes('intelligence-panel') && !source.includes('intelligence-stats'), name + ' restored KPI cards')
   assert(!/get(?:GameDetail|SiteDetail|GameInfo|NavSite)|fetch\(/.test(source), name + ' added entity lookups')
 }
 const workspaceHeader = workspaceSource('components/insights/workspace/InsightsWorkspaceHeader.vue')
-assert(workspaceHeader.includes('<h1>{{ title }}</h1>'), 'Workspace header hid its H1')
+assert((workspaceHeader.match(/<h1\b/g) || []).length === 1 && workspaceHeader.includes('<h1 :class="{ \'sr-only\': visuallyHidden }">{{ title }}</h1>') && workspaceHeader.includes('visuallyHidden?: boolean'), 'Workspace lost its semantic H1 or explicit visibility contract')
+assert(!/eyebrow|description/.test(workspaceHeader), 'Workspace restored redundant template copy')
+for (const [name, source] of Object.entries(workspacePages)) assert(/<InsightsWorkspaceHeader[^>]*\bvisually-hidden/.test(source) === (name === 'certificates'), name + ' changed its F1 H1 visibility')
+for (const name of ['games/compare', 'sites/compare', 'changes']) assert(/<InsightsWorkspaceHeader[^>]*\bvisually-hidden/.test(workspaceSource('pages/insights/' + name + '.vue')), name + ' lost the SR-only H1 opt-in')
 for (const file of readdirSync(new URL('../app/components/insights/workspace/', import.meta.url))) {
   const source = workspaceSource('components/insights/workspace/' + file)
   assert(!/\b(?:fetch|useFetch|useAsyncData)\s*\(|from ['"]@\/services\//.test(source), file + ' added per-entity API requests')

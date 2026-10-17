@@ -3,20 +3,20 @@
     :data-compare-status="invalidURL ? 'invalid' : error ? 'error' : compare?.status || (ready ? 'loading' : 'builder')">
     <main class="insights-container">
       <EcosystemNavigation context="game" />
-      <InsightsWorkspaceHeader :eyebrow="$t('insights.games.title')" :title="$t('insights.gameCompare.title')" :description="$t('insights.gameCompare.description')" />
+      <InsightsWorkspaceHeader :title="$t('insights.gameCompare.title')" visually-hidden />
       <div v-if="invalidURL" class="insight-compare-invalid" role="alert">
         <p>{{ $t('insights.compare.invalid') }}</p><button type="button" @click="updateSelection([])">{{ $t('insights.comparePicker.reset') }}</button>
       </div>
-      <InsightComparePicker domain="game" :selected-ids="selectedIDs" :entities="entities" @change="updateSelection" />
+      <InsightComparePicker class="-mt-2 mb-5 min-[1101px]:-mt-4 min-[1101px]:mb-6" domain="game" :selected-ids="selectedIDs" :entities="entities" @change="updateSelection" />
       <InsightWorkspaceSelector :items="regions.map(value => ({ value, label: $t('insights.regions.' + value) }))" :selected="selectedRegion" :label="$t('insights.gameCompare.region')" @select="selectRegion" />
-      <section class="insight-compare-result" :aria-busy="pending" aria-live="polite">
+      <section class="insight-compare-result mt-8 min-[768px]:mt-10" :aria-busy="pending" aria-live="polite">
         <p v-if="invalidURL" class="insights-workspace-note">{{ $t('insights.comparePicker.restart') }}</p>
         <p v-else-if="error" class="insights-empty-state">{{ $t('insights.emptyStates.unavailable') }}</p>
         <p v-else-if="pending && ready" class="insights-empty-state">{{ $t('insights.comparePicker.loadingComparison') }}</p>
         <p v-else-if="compare?.status === 'insufficient_data'" class="insights-empty-state">{{ $t('insights.compare.insufficientData') }}</p>
         <template v-else-if="compare?.status === 'ready'">
           <h2>{{ $t('insights.comparePicker.resultsTitle') }}</h2>
-          <div class="insight-compare-horizons">
+          <div class="insight-compare-horizons -mt-2 mb-4">
             <span>{{ $t('insights.gameCompare.stateSnapshot', { date: compare.state_as_of || '—' }) }}</span>
             <span>{{ $t('insights.gameCompare.playerSnapshot', { date: shortTimestamp(compare.player_snapshot_scheduled_for) }) }}</span>
             <span>{{ $t('insights.gameCompare.playerWindow', { date: compare.player_fact_through || '—' }) }}</span>

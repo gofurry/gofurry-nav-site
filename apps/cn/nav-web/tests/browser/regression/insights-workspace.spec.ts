@@ -32,21 +32,54 @@ const routes = [
   ['/insights/games/languages', 'languages', 1], ['/en/insights/games/languages', 'languages', 1],
   ['/insights/sites/certificates', 'certificates', 1], ['/en/insights/sites/certificates', 'certificates', 1],
 ] as const
+const headings = {
+  players: ['玩家生态观测', 'Player Intelligence'], prices: ['区域价格生态观测', 'Regional Price Intelligence'],
+  languages: ['语言生态观测', 'Language Intelligence'], certificates: ['TLS 证书生态观测', 'TLS Certificate Intelligence'],
+} as const
+async function workspaceHeader(page: Page, kind: keyof typeof headings, html: string) {
+  const title = headings[kind][new URL(page.url()).pathname.startsWith('/en/') ? 1 : 0]
+  expect([...html.matchAll(/<h1\b[^>]*>([^<]+)<\/h1>/g)].map(match => match[1])).toEqual([title])
+  const heading = page.getByRole('heading', { level: 1, name: title, exact: true })
+  await expect(heading).toHaveCount(1)
+  await expect(page.locator('h1')).toHaveCount(1)
+  await expect(page.locator('.insights-workspace-header p')).toHaveCount(0)
+  const hidden = kind === 'certificates'
+  expect(await heading.evaluate(el => el.classList.contains('sr-only'))).toBe(hidden)
+  const geometry = await page.evaluate(() => {
+    const header = document.querySelector('.insights-workspace-header')!, h1 = header.querySelector('h1')!
+    const nav = document.querySelector('.ecosystem-navigation')!, first = document.querySelector('.insights-certificate-status, .insight-workspace-selector, .insights-workspace-summary')!
+    return { height: header.getBoundingClientRect().height, title: h1.getBoundingClientRect().height,
+      clip: getComputedStyle(h1).clipPath, position: getComputedStyle(h1).position,
+      firstGap: first.getBoundingClientRect().top - nav.getBoundingClientRect().bottom, navGap: parseFloat(getComputedStyle(nav).marginBottom) }
+  })
+  if (hidden) {
+    expect(geometry.height).toBe(0); expect(geometry.title).toBeLessThanOrEqual(1)
+    expect(geometry.clip).toBe('inset(50%)'); expect(geometry.position).toBe('absolute')
+    expect(geometry.firstGap).toBeGreaterThanOrEqual(0); expect(geometry.firstGap).toBeLessThanOrEqual(geometry.navGap)
+  } else {
+    expect(geometry.height).toBeCloseTo(geometry.title, 0)
+    expect(geometry.title).toBeGreaterThan(20); expect(geometry.clip).toBe('none')
+    await expect(heading).toBeVisible()
+  }
+}
 async function layout(page: Page) {
   expect(await page.evaluate(() => ({
     page: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) <= innerWidth + 1,
     rows: [...document.querySelectorAll('[data-workspace-entity], .insights-workspace-summary, .insights-workspace-header')].every(el => el.scrollWidth <= el.clientWidth + 1),
   }))).toEqual({ page: true, rows: true })
 }
-for (const [route, kind, count] of routes) for (const width of [1440, 1024, 390]) {
-  test('Workspace SSR/hydration, identity and layout ' + route + ' ' + width, async ({ page, request, runtime }) => {
+for (const [route, kind, count] of routes) for (const width of [1440, 1024, 768, 390]) for (const theme of ['light', 'dark']) {
+  test('Workspace SSR/hydration, identity and layout ' + route + ' ' + width + ' ' + theme, async ({ page, context, request, runtime }) => {
     await page.setViewportSize({ width, height: 1000 })
+    await context.addInitScript(value => localStorage.setItem('theme', value), theme)
     const ssr = await request.get(route)
     expect(ssr.status()).toBe(200)
-    expect(await ssr.text()).toMatch(/<h1>[^<]+<\/h1>/)
+    const ssrHTML = await ssr.text()
+    expect([...ssrHTML.matchAll(/<h1\b[^>]*>([^<]+)<\/h1>/g)].map(match => match[1])).toEqual([headings[kind][route.startsWith('/en/') ? 1 : 0]])
     expect(runtime.calls).toHaveLength(count)
     const offset = runtime.calls.length
     const html = await openRuntime(page, route)
+    await workspaceHeader(page, kind, html)
     expect(html).toContain('insights-domain-nav')
     if (kind !== 'languages') {
       expect(html).toContain('href="' + (route.startsWith('/en/') ? '/en' : '') + (kind === 'certificates' ? '/site/201' : '/games/101') + '"')

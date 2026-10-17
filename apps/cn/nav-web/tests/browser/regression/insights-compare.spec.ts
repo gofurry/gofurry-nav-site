@@ -3,6 +3,19 @@ import { test, expect, pathFor, compareGroups, openRuntime, revealImages, keyboa
 const columns = (page: Page) => page.locator('[data-compare-entity-id]').evaluateAll(els => els.map(el => Number(el.getAttribute('data-compare-entity-id'))))
 const selected = (page: Page) => page.locator('[data-selected-entity]').evaluateAll(els => els.map(el => Number(el.getAttribute('data-selected-entity'))))
 async function layout(page: Page, matrix = true) {
+  const english = new URL(page.url()).pathname.startsWith('/en/'), site = new URL(page.url()).pathname.includes('/sites/')
+  const title = site ? (english ? 'Site Capability Compare' : '网站能力对比') : (english ? 'Game Fact Compare' : '游戏事实对比')
+  await expect(page.getByRole('heading', { level: 1, name: title, exact: true })).toHaveCount(1)
+  await expect(page.locator('h1')).toHaveClass('sr-only')
+  await expect(page.locator('h1')).toHaveCSS('clip-path', 'inset(50%)')
+  await expect(page.locator('.insights-workspace-header p')).toHaveCount(0)
+  const header = await page.locator('.insights-workspace-header').boundingBox()
+  expect(header!.height).toBe(0)
+  expect(await page.locator('.insight-compare-picker').evaluate(el => {
+    const nav = document.querySelector('.ecosystem-navigation')!, gap = el.getBoundingClientRect().top - nav.getBoundingClientRect().bottom
+    return gap >= 0 && gap <= parseFloat(getComputedStyle(nav).marginBottom) + 1
+  })).toBe(true)
+
   expect(await page.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth)).toBeLessThanOrEqual(1)
   if (!matrix) return
   const pane = page.locator('.insight-compare-matrix-scroll')
@@ -24,7 +37,9 @@ for (const domain of ['site', 'game'] as const) for (const locale of ['zh', 'en'
     for (const ids of ['', '1', '2,1', '2,1,4,3', '2,1,2', '1,bad', '1,2,3,4,5']) {
       const before = runtime.calls.length
       const response = await request.get(pathFor(domain, locale, ids, 'US')), html = await response.text()
-      expect(response.status()).toBe(200); expect(html).toMatch(/<h1>[^<]+<\/h1>/)
+      expect(response.status()).toBe(200)
+      const title = domain === 'site' ? (locale === 'en' ? 'Site Capability Compare' : '网站能力对比') : (locale === 'en' ? 'Game Fact Compare' : '游戏事实对比')
+      expect([...html.matchAll(/<h1\b[^>]*>([^<]+)<\/h1>/g)].map(match => match[1])).toEqual([title])
       expect(html).toMatch(/<meta[^>]*name="robots"[^>]*content="noindex, follow"/)
       const ready = ['2,1', '2,1,4,3', '2,1,2'].includes(ids)
       expect(runtime.calls.length - before).toBe(Number(ready))
@@ -37,7 +52,7 @@ for (const domain of ['site', 'game'] as const) for (const locale of ['zh', 'en'
     }
     runtime.assertQuiet()
   })
-  for (const width of [1440, 1024, 390]) for (const ids of ['', '2,1', '2,1,4,3']) {
+  for (const width of [1440, 1024, 768, 390]) for (const ids of ['', '2,1', '2,1,4,3']) {
     test('Compare hydration and matrix ' + domain + ' ' + locale + ' ' + width + ' ' + (ids || 'builder'), async ({ page, runtime }) => {
       await page.setViewportSize({ width, height: 1000 })
       await openRuntime(page, pathFor(domain, locale, ids, 'US'))
@@ -157,10 +172,10 @@ for (const domain of ['site', 'game']) {
     await expect(page.locator('.insight-compare-matrix [role="img"][aria-label]')).toHaveCount(2)
     runtime.assertQuiet()
   })
-  for (const width of [1440, 1024, 390]) test('Compare Dark matrix ' + domain + ' ' + width, async ({ page, runtime }) => {
+  for (const locale of ['zh', 'en']) for (const width of [1440, 1024, 768, 390]) test('Compare Dark matrix ' + domain + ' ' + width + ' ' + locale, async ({ page, runtime }) => {
     await page.setViewportSize({ width, height: 1000 })
-    await openRuntime(page, pathFor(domain, 'en', '2,1,4,3'))
-    await page.getByRole('button', { name: 'Toggle theme icon', exact: true }).click()
+    await openRuntime(page, pathFor(domain, locale, '2,1,4,3'))
+    await page.getByRole('button', { name: locale === 'en' ? 'Toggle theme icon' : '切换明暗主题图标', exact: true }).click()
     await expect(page.locator('html')).toHaveClass(/dark/)
     await layout(page); runtime.assertQuiet()
   })

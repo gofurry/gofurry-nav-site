@@ -125,8 +125,12 @@ async function foundationAppearance(page: Page, width: number, domain: string) {
     const rail = document.querySelector('[data-metric-rail]')!, railBox = rail.getBoundingClientRect()
     const items = [...rail.querySelectorAll('button')]
     return {
-      title: { weight: css('h1').fontWeight, size: parseFloat(css('h1').fontSize) },
-      intro: { weight: css('.insights-domain-header__intro').fontWeight, size: parseFloat(css('.insights-domain-header__intro').fontSize) },
+      title: { position: css('h1').position, clip: css('h1').clipPath },
+      header: document.querySelector('[data-domain-header]')!.getBoundingClientRect().toJSON(),
+      facts: document.querySelector('.insights-domain-header__facts')!.getBoundingClientRect().toJSON(),
+      headerPadding: parseFloat(css('[data-domain-header]').paddingBottom) + parseFloat(css('[data-domain-header]').borderBottomWidth),
+      nav: document.querySelector('.ecosystem-navigation')!.getBoundingClientRect().toJSON(),
+      navigationGap: parseFloat(css('.ecosystem-navigation').marginBottom),
       count: { weight: css('[data-domain-count]').fontWeight, size: parseFloat(css('[data-domain-count]').fontSize) },
       snapshot: css('.insights-domain-header__snapshot').fontSize,
       headings: [...document.querySelectorAll('.insights-trend h2, [data-dimension-explorer] h2')].map(el => getComputedStyle(el).fontWeight),
@@ -144,8 +148,11 @@ async function foundationAppearance(page: Page, width: number, domain: string) {
       }),
     }
   })
-  expect(result.title.weight).toBe('700'); expect(result.title.size).toBeGreaterThanOrEqual(30); expect(result.title.size).toBeLessThanOrEqual(46)
-  expect(result.intro.weight).toBe('400'); expect(result.intro.size).toBeGreaterThanOrEqual(14); expect(result.intro.size).toBeLessThanOrEqual(15)
+  expect(result.title).toEqual({ position: 'absolute', clip: 'inset(50%)' })
+  expect(result.header.height - result.facts.height).toBeCloseTo(result.headerPadding, 0)
+  expect(result.facts.top - result.nav.bottom).toBeGreaterThanOrEqual(0)
+  expect(result.facts.top - result.nav.bottom).toBeLessThanOrEqual(result.navigationGap)
+  await expect(page.locator('.insights-domain-header__intro')).toHaveCount(0)
   expect(result.count.weight).toBe('600'); expect(result.count.size).toBeGreaterThanOrEqual(25); expect(result.count.size).toBeLessThanOrEqual(28)
   expect(result.snapshot).toBe('12px')
   for (const weight of [...result.headings, ...result.values, ...result.labels]) expect(weight).toBe('600')
@@ -176,11 +183,15 @@ for (const [route, domain] of routes) for (const theme of ['light', 'dark'] as c
     await context.addInitScript(value => localStorage.setItem('theme', value), theme)
     const ssr = await request.get(route), ssrHTML = await ssr.text()
     expect(ssr.status()).toBe(200)
-    expect(ssrHTML).toMatch(/<h1>[^<]+<\/h1>/)
+    const english = route.startsWith('/en/')
+    const heading = domain === 'site' ? (english ? 'Website Ecosystem' : '网站生态观测') : (english ? 'Game Ecosystem' : '游戏生态观测')
+    expect([...ssrHTML.matchAll(/<h1\b[^>]*>([^<]+)<\/h1>/g)].map(match => match[1])).toEqual([heading])
     for (const key of domainMetricKeys[domain]) expect(ssrHTML).toContain('data-metric-key="' + key + '"')
     expect(runtime.calls).toHaveLength(domain === 'site' ? 3 : 4)
     const offset = runtime.calls.length
     const html = await openRuntime(page, route)
+    await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toHaveCount(1)
+    await expect(page.locator('h1')).toHaveClass('sr-only')
     expect(html).toContain('data-domain-count>' + (domain === 'site' ? 238 : 213))
     expect(html).toContain('insights-domain-nav')
     await expect(page.locator('.insights-trend canvas')).toBeVisible()
@@ -246,7 +257,7 @@ for (const [route, domain] of routes) for (const theme of ['light', 'dark'] as c
     if (reviewDir && (representative || alternate)) {
       await mkdir(reviewDir, { recursive: true })
       await page.locator('[data-dimension-raw] summary').click()
-      await page.locator('[data-domain-header] h1').click()
+      await page.locator('[data-domain-count]').click()
       await page.locator('[data-metric-rail]').evaluate(el => { el.scrollLeft = 0 })
       await revealImages(page)
       const name = `${domain}-${prefix ? 'en' : 'zh'}-${theme}-${width}`

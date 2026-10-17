@@ -3,9 +3,8 @@
     <main class="insights-container">
       <EcosystemNavigation />
 
-      <header class="overview-header mb-6 min-[1200px]:mb-7" data-overview-header>
-        <h1>{{ $t('insights.overviewHero.title') }}</h1>
-        <p class="overview-header__intro max-w-[680px]">{{ $t('insights.overviewHero.description') }}</p>
+      <header class="overview-header" data-overview-header>
+        <h1 class="sr-only">{{ $t('insights.overview.title') }}</h1>
       </header>
 
       <InsightsOverviewHero :nav="data.nav" :game="data.game" />
