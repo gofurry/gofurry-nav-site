@@ -18,11 +18,48 @@ for (const width of [1440, 390]) test(`Changes Site Dark ready shell ${width}`, 
 })
 
 const events = (page: Page) => page.locator('.insights-change-explorer-item')
+const colorAlpha = (color: string) => Number(color.match(/\/\s*([\d.]+)\s*\)$/)?.[1] ?? color.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)$/)?.[1] ?? (color === 'transparent' ? 0 : 1))
 async function ready(page: Page) { await expect(page.locator('.insights-change-explorer-feed')).toHaveAttribute('aria-busy', 'false') }
 async function layout(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   expect(await page.locator('.insights-change-explorer-filters, .insights-changes-day, .insights-change-explorer-item').evaluateAll(els => els.every(el => el.scrollWidth <= el.clientWidth + 1))).toBe(true)
   await expect(page.locator('.insights-change-explorer-filters')).toHaveCSS('box-shadow', 'none')
+  const surfaces = await page.locator('.insights-change-explorer-filters, .insights-change-explorer-item').evaluateAll(els => els.map(el => {
+    const style = getComputedStyle(el)
+    return { color: style.backgroundColor, border: style.borderTopWidth, radius: parseFloat(style.borderRadius), shadow: style.boxShadow, transform: style.transform }
+  }))
+  const dark = await page.locator('html').evaluate(el => el.classList.contains('dark'))
+  for (const surface of surfaces) {
+    expect(colorAlpha(surface.color)).toBeGreaterThanOrEqual(dark ? .1 : .3)
+    expect(colorAlpha(surface.color)).toBeLessThanOrEqual(dark ? .14 : .4)
+    expect(surface.border).toBe('1px'); expect(surface.shadow).toBe('none'); expect(surface.transform).toBe('none')
+    expect(surface.radius).toBeGreaterThanOrEqual(12); expect(surface.radius).toBeLessThanOrEqual(16)
+  }
+  expect(await page.locator('.insights-changes-day, .insights-changes-events, .insights-changes-events > li, .insights-change-explorer-filters__group').evaluateAll(els => els.every(el => {
+    const s = getComputedStyle(el)
+    return s.backgroundColor === 'rgba(0, 0, 0, 0)' && s.boxShadow === 'none'
+  }))).toBe(true)
+  const timeline = await page.locator('.insights-changes-events').evaluateAll(lists => lists.map(list => {
+    const rect = list.getBoundingClientRect(), style = getComputedStyle(list), date = list.parentElement!.querySelector('h3')!.getBoundingClientRect()
+    return { line: style.borderLeftWidth, indent: parseFloat(style.paddingLeft), dateAbove: date.bottom <= rect.top,
+      dateWidth: date.width, nodes: [...list.children].map(li => {
+        const node = getComputedStyle(li, '::before'), box = li.getBoundingClientRect(), card = li.querySelector('a')!.getBoundingClientRect()
+        return { visible: node.content !== 'none' && node.display !== 'none', axisOffset: box.left + parseFloat(node.left) + parseFloat(node.width) / 2 - rect.left,
+          centerOffset: parseFloat(node.top) + parseFloat(node.height) / 2 - box.height / 2, cardWidth: card.width }
+      }) }
+  }))
+  for (const group of timeline) {
+    expect(group.line).toBe('1px')
+    if (page.viewportSize()!.width <= 600) {
+      expect(group.dateAbove).toBe(true); expect(group.indent).toBeGreaterThanOrEqual(12); expect(group.indent).toBeLessThanOrEqual(20)
+    } else { expect(group.dateWidth).toBeGreaterThanOrEqual(130); expect(group.dateWidth).toBeLessThanOrEqual(170) }
+    for (const node of group.nodes) {
+      expect(node.visible).toBe(true); expect(Math.abs(node.axisOffset - .5)).toBeLessThanOrEqual(1)
+      expect(Math.abs(node.centerOffset)).toBeLessThanOrEqual(1)
+      if (page.viewportSize()!.width === 390) expect(node.cardWidth).toBeGreaterThan(300)
+    }
+  }
+  await keyboardFocus(events(page).first())
 }
 for (const domain of ['site', 'game']) for (const locale of ['zh', 'en']) for (const width of [1440, 1024, 768, 390]) for (const theme of ['light', 'dark']) {
   test('Changes SSR/hydration, time precision and layout ' + domain + ' ' + locale + ' ' + width + ' ' + theme, async ({ page, context, runtime }) => {
@@ -46,6 +83,7 @@ for (const domain of ['site', 'game']) for (const locale of ['zh', 'en']) for (c
     expect(html).toContain(domain === 'site' ? '/nav/sites/31/icon/' : 'change-header.svg')
     expect(html).toContain(domain === 'site' ? '/defaultLogo.svg' : 'data-media-state="fallback"')
     await expect(events(page)).toHaveCount(4)
+    expect(await events(page).nth(0).getAttribute('href')).toBe(await events(page).nth(1).getAttribute('href'))
     await expect(events(page).nth(2).locator('strong')).toHaveText('#32')
     expect(await events(page).nth(2).locator('.insight-entity-media img, .insight-entity-media [role="img"]').evaluate(el => el.getAttribute('alt') ?? el.getAttribute('aria-label'))).toBe('#32')
     await expect(page.locator('[data-change-date]')).toHaveCount(2)

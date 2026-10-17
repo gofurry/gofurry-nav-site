@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 import { test, expect, pathFor, compareGroups, openRuntime, revealImages, keyboardFocus } from '../fixtures/insights-compare'
 const columns = (page: Page) => page.locator('[data-compare-entity-id]').evaluateAll(els => els.map(el => Number(el.getAttribute('data-compare-entity-id'))))
 const selected = (page: Page) => page.locator('[data-selected-entity]').evaluateAll(els => els.map(el => Number(el.getAttribute('data-selected-entity'))))
+const colorAlpha = (color: string) => Number(color.match(/\/\s*([\d.]+)\s*\)$/)?.[1] ?? color.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)$/)?.[1] ?? (color === 'transparent' ? 0 : 1))
 async function layout(page: Page, matrix = true) {
   const english = new URL(page.url()).pathname.startsWith('/en/'), site = new URL(page.url()).pathname.includes('/sites/')
   const title = site ? (english ? 'Site Capability Compare' : '网站能力对比') : (english ? 'Game Fact Compare' : '游戏事实对比')
@@ -17,18 +18,51 @@ async function layout(page: Page, matrix = true) {
   })).toBe(true)
 
   expect(await page.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth)).toBeLessThanOrEqual(1)
+  const material = await page.locator('.insight-compare-picker').evaluate(el => {
+    const style = getComputedStyle(el)
+    return { background: style.backgroundColor, border: style.borderTopWidth, radius: parseFloat(style.borderRadius), shadow: style.boxShadow,
+      width: el.getBoundingClientRect().width, overflow: style.overflow, dark: document.documentElement.classList.contains('dark') }
+  })
+  expect(colorAlpha(material.background)).toBeGreaterThanOrEqual(material.dark ? .1 : .3)
+  expect(colorAlpha(material.background)).toBeLessThanOrEqual(material.dark ? .14 : .4)
+  expect(material.border).toBe('1px'); expect(material.shadow).toBe('none')
+  expect(material.radius).toBeGreaterThanOrEqual(12); expect(material.radius).toBeLessThanOrEqual(16)
+  expect(material.width).toBeLessThanOrEqual(960)
+  expect(material.overflow).toBe('visible')
+  await expect(page.locator('.insight-compare-result')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(page.locator('.insight-compare-result')).toHaveCSS('box-shadow', 'none')
+  await expect(page.locator('.insight-compare-selected li').first()).toHaveCount(matrix ? 1 : 0)
+  if (matrix) await expect(page.locator('.insight-compare-selected li').first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   if (!matrix) return
   const pane = page.locator('.insight-compare-matrix-scroll')
+  await expect(pane).toHaveCSS('background-color', material.background)
+  await expect(pane).toHaveCSS('border-top-width', '1px')
+  await expect(pane).toHaveCSS('box-shadow', 'none')
+  await expect(pane).toHaveCSS('border-radius', material.radius + 'px')
+  await expect(page.locator('.insight-compare-matrix')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  const padding = await page.locator('.insight-compare-matrix td').first().evaluate(el => parseFloat(getComputedStyle(el).paddingTop))
+  expect(padding).toBeGreaterThanOrEqual(10); expect(padding).toBeLessThanOrEqual(14)
   await pane.scrollIntoViewIfNeeded()
   if (page.viewportSize()!.width === 390) expect(await pane.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
   await pane.evaluate(el => { el.scrollLeft = 180; el.scrollTop = 230 })
   const box = await pane.evaluate(el => {
     const rect = el.getBoundingClientRect(), corner = el.querySelector('thead th')!.getBoundingClientRect(), fact = el.querySelector('th[scope="row"]')!.getBoundingClientRect()
+    const cornerCell = el.querySelector('thead th')!, topCell = el.querySelector('thead th:nth-child(2)')!, factCell = el.querySelector('th[scope="row"]')!
     return { left: corner.left - rect.left, top: corner.top - rect.top, fact: fact.left - rect.left,
+      x: el.scrollLeft, y: el.scrollTop, canX: el.scrollWidth > el.clientWidth, canY: el.scrollHeight > el.clientHeight,
+      cornerZ: Number(getComputedStyle(cornerCell).zIndex), topZ: Number(getComputedStyle(topCell).zIndex), factZ: Number(getComputedStyle(factCell).zIndex),
+      cornerOwnsPoint: cornerCell.contains(document.elementFromPoint(rect.left + 16, rect.top + 16)),
+      factBackground: getComputedStyle(factCell).backgroundColor, topBackground: getComputedStyle(topCell).backgroundColor,
       background: getComputedStyle(el.querySelector('thead th')!).backgroundColor }
   })
   for (const value of [box.left, box.top, box.fact]) expect(Math.abs(value - 1)).toBeLessThanOrEqual(1)
   expect(box.background).not.toMatch(/^rgba/)
+  if (box.canX) expect(box.x).toBeGreaterThan(0)
+  if (box.canY) expect(box.y).toBeGreaterThan(0)
+  if (page.viewportSize()!.width === 390) { expect(box.x).toBeGreaterThan(0); expect(box.y).toBeGreaterThan(0) }
+  expect(box.cornerOwnsPoint).toBe(true)
+  expect(box.cornerZ).toBeGreaterThan(box.topZ); expect(box.topZ).toBeGreaterThan(box.factZ)
+  for (const color of [box.background, box.factBackground, box.topBackground]) expect(colorAlpha(color)).toBe(1)
   await keyboardFocus(pane)
   await pane.evaluate(el => { el.scrollLeft = 0; el.scrollTop = 0 })
 }
@@ -82,6 +116,13 @@ for (const domain of ['site', 'game']) test('Compare keyboard picker, max four, 
   const input = page.getByRole('combobox')
   await input.fill('f'); await input.fill('fo'); await input.fill('fox')
   await expect(page.getByRole('option').first()).toBeVisible()
+  // Measure the populated popup; after all matching Sites are selected, the
+  // legitimate empty message is shorter than the picker and need not overlap it.
+  expect(await page.locator('.insight-compare-picker__popup').evaluate(el => {
+    const rect = el.getBoundingClientRect(), picker = el.closest('.insight-compare-picker')!.getBoundingClientRect()
+    const y = Math.min(rect.bottom - 8, innerHeight - 8)
+    return rect.bottom > picker.bottom && el.contains(document.elementFromPoint(rect.left + 12, y))
+  })).toBe(true)
   const first = Number(await page.getByRole('option').first().getAttribute('data-picker-result'))
   expect(first).toBe(domain === 'site' ? 3 : 2)
   if (domain === 'game') expect(runtime.state.searches).toEqual(['fox'])
@@ -105,6 +146,7 @@ for (const domain of ['site', 'game']) test('Compare keyboard picker, max four, 
   await input.press('Enter'); expect(await selected(page)).toEqual(chosen)
   await input.press('Escape'); await expect(input).toHaveAttribute('aria-expanded', 'false')
   const removed = chosen.splice(1, 1)[0]
+  await keyboardFocus(page.locator('[data-selected-entity="' + removed + '"] button'))
   await page.locator('[data-selected-entity="' + removed + '"] button').click()
   await expect.poll(() => columns(page)).toEqual(chosen)
   if (domain === 'game') {

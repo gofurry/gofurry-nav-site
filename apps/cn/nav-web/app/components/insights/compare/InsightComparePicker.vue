@@ -1,5 +1,5 @@
 <template>
-  <section class="insight-compare-picker" :aria-label="$t('insights.compare.builderTitle')">
+  <section class="insight-compare-picker max-w-[960px]" :aria-label="$t('insights.compare.builderTitle')">
     <div class="insight-compare-picker__search">
       <label :for="inputID">{{ $t('insights.comparePicker.' + domain + 'Label') }}</label>
       <input :id="inputID" ref="input" v-model="keyword" type="search" autocomplete="off" role="combobox"
