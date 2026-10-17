@@ -737,9 +737,6 @@ html.dark .nav-home-page {
   backdrop-filter: blur(40px);
   scrollbar-width: none;
   -ms-overflow-style: none;
-  transition:
-    opacity 500ms ease,
-    transform 500ms ease;
 }
 
 .search-suggestion-list::-webkit-scrollbar {
@@ -748,8 +745,26 @@ html.dark .nav-home-page {
   height: 0;
 }
 
-.search-suggestion-list--entering {
-  animation: navSearchFadeIn 0.5s ease-out forwards;
+.search-suggestions-enter-active {
+  transition:
+    opacity var(--gf-motion-base) cubic-bezier(0.22, 1, 0.36, 1),
+    transform var(--gf-motion-base) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.search-suggestions-enter-from {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-suggestions-enter-active {
+    transition: none;
+  }
+
+  .search-suggestions-enter-from {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .search-suggestion-header {
@@ -1964,8 +1979,7 @@ html.dark .nav-tool-empty {
   .spotlight-panel__track--next,
   .spotlight-panel__track--prev,
   .nav-header__scroll-dot,
-  .search-suggestion-spinner,
-  .search-suggestion-list--entering {
+  .search-suggestion-spinner {
     animation: none;
   }
 }
@@ -2119,18 +2133,6 @@ html.dark .nav-tool-empty {
 
   to {
     transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes navSearchFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 

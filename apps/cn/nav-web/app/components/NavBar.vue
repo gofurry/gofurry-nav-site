@@ -90,7 +90,7 @@
             type="button"
             class="gf-nav__icon-button gf-nav__mode-button hidden h-8 w-8 items-center justify-center xl:flex"
             :aria-label="t('navbar.mode')"
-            @click.stop="showModeModal = true"
+            @click.stop="openModeModal"
         >
           <PhGearSix :size="16" weight="regular" aria-hidden="true" />
         </button>
@@ -98,6 +98,7 @@
         <button
             type="button"
             class="gf-nav__mobile-toggle inline-flex h-10 w-10 items-center justify-center xl:hidden"
+            ref="mobileMenuToggle"
             :class="{ 'gf-nav__mobile-toggle--open': mobileMenuOpen }"
             :aria-expanded="mobileMenuOpen"
             :aria-label="t(mobileMenuOpen ? 'navbar.closeNav' : 'navbar.expandNav')"
@@ -176,6 +177,7 @@
     <ModeSettingModal
         :show="showModeModal"
         :mode="mode"
+        :return-focus="modeReturnFocus"
         @cancel="showModeModal = false"
         @save="saveMode"
     />
@@ -205,6 +207,8 @@ defineProps<{
 }>()
 
 const showModeModal = ref(false)
+const mobileMenuToggle = ref<HTMLElement | null>(null)
+const modeReturnFocus = ref<HTMLElement | null>(null)
 const mobileMenuOpen = ref(false)
 const mode = ref('')
 let stopModeSubscription: (() => void) | null = null
@@ -285,7 +289,13 @@ async function switchLang(lang: 'zh' | 'en') {
 }
 
 function openModeModalFromMobile() {
+  modeReturnFocus.value = mobileMenuToggle.value
   mobileMenuOpen.value = false
+  showModeModal.value = true
+}
+
+function openModeModal(event: MouseEvent) {
+  modeReturnFocus.value = event.currentTarget as HTMLElement
   showModeModal.value = true
 }
 

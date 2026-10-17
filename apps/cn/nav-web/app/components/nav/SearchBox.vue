@@ -42,10 +42,11 @@
       />
 
       <!-- 下拉建议框 -->
+      <Transition name="search-suggestions" @leave="(_element, done) => done()">
       <ul
           ref="dropdownRef"
           v-if="(keyword.trim() && dropdownVisible) || isLoading"
-          class="search-suggestion-list search-suggestion-list--entering absolute left-0 top-[calc(100%+0.5rem)] z-[999] max-h-60 w-full origin-top-left overflow-y-auto overscroll-contain"
+          class="search-suggestion-list absolute left-0 top-[calc(100%+0.5rem)] z-[999] max-h-60 w-full origin-top-left overflow-y-auto overscroll-contain"
           @wheel.stop
           @touchmove.stop
       >
@@ -80,6 +81,7 @@
           {{ t('searchBox.noSuggest') }}
         </li>
       </ul>
+      </Transition>
     </div>
 
     <!-- 搜索平台 -->

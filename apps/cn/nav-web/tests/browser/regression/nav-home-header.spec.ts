@@ -1,20 +1,54 @@
 import { test, expect, customSeed, searchPopupURL } from '../fixtures/nav-home-header'
 import { mkdir } from 'node:fs/promises'
 
-test('Normal motion baseline retains Header loops and suggestion entry', async ({ page, header }) => {
+test('Suggestions own one 220ms entry, instant exit and live Reduced loading without replay', async ({ page, header }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await header.open()
+  let interruptedOpacity = 1
+  await page.exposeFunction('reduceSuggestionsDuringEntry', async (opacity: number) => {
+    interruptedOpacity = opacity
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+  })
+  await page.evaluate(() => {
+    const entries: object[] = []
+    new MutationObserver(() => {
+      const list = document.querySelector<HTMLElement>('.search-suggestions-enter-active')
+      if (!list || list.dataset.entryObserved) return
+      list.dataset.entryObserved = 'true'
+      const style = getComputedStyle(list)
+      entries.push({ duration: style.transitionDuration, property: style.transitionProperty,
+        animation: style.animationName, transform: style.transform, opacity: style.opacity })
+      document.documentElement.dataset.suggestionEntries = JSON.stringify(entries)
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+    // Trigger the real media change at transitionrun; observe, never pause or
+    // replace, the browser's animation (which would override CSS cancellation).
+    let interrupted = false
+    document.addEventListener('transitionrun', event => {
+      const target = event.target
+      if (target instanceof HTMLElement && target.matches('.search-suggestions-enter-active')) {
+        target.dataset.entryInProgress = 'true'
+        if (!interrupted) {
+          interrupted = true
+          const bridge = window as Window & { reduceSuggestionsDuringEntry?: (opacity: number) => Promise<void> }
+          void bridge.reduceSuggestionsDuringEntry!(Number(getComputedStyle(target).opacity))
+            .then(() => { target.dataset.reducedDuringEntry = 'true' })
+        }
+      }
+    })
+  })
   await expect(page.locator('.nav-header__scroll-dot')).toHaveCSS('animation-name', 'navHeaderBounce')
   await expect(page.locator('.nav-header__scroll-dot')).toHaveCSS('animation-duration', '1s')
   header.holdSuggestions()
   await header.input.fill('wolf'); await header.expectSuggestionRequest('wolf')
-  await expect(header.suggestions.locator('.search-suggestion-spinner')).toHaveCSS('animation-name', 'navSearchSpin')
-  await expect(header.suggestions.locator('.search-suggestion-spinner')).toHaveCSS('animation-duration', '1s')
-  await expect(header.suggestions).toHaveCSS('animation-name', 'navSearchFadeIn')
-  await expect(header.suggestions).toHaveCSS('animation-duration', '0.5s')
-  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(header.suggestions).toHaveAttribute('data-reduced-during-entry', 'true')
+  expect(interruptedOpacity).toBeLessThan(1)
+  const entries = () => page.evaluate(() => JSON.parse(document.documentElement.dataset.suggestionEntries!))
+  expect(await entries()).toEqual([{ duration: '0.22s, 0.22s', property: 'opacity, transform',
+    animation: 'none', transform: 'matrix(1, 0, 0, 1, 0, -6)', opacity: '0' }])
   await expect(page.locator('.nav-header__scroll-dot')).toHaveCSS('animation-name', 'none')
   await expect(header.suggestions).toHaveCSS('animation-name', 'none')
+  await expect(header.suggestions).toHaveCSS('opacity', '1')
+  await expect(header.suggestions).toHaveCSS('transform', 'none')
   const spinner = header.suggestions.locator('.search-suggestion-spinner')
   await expect(spinner).toHaveCSS('animation-name', 'none')
   await expect(spinner).toBeVisible()
@@ -26,8 +60,22 @@ test('Normal motion baseline retains Header loops and suggestion entry', async (
   }
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await expect(spinner).toHaveCSS('animation-name', 'navSearchSpin')
+  await expect(spinner).toHaveCSS('animation-duration', '1s')
   header.releaseSuggestions()
   await expect(header.items).toHaveCount(3)
+  await expect(header.suggestions).toHaveAttribute('data-entry-observed', 'true')
+  expect(await entries()).toHaveLength(1)
+  if (process.env.GOFURRY_B1_REVIEW === '1') {
+    await mkdir('.cache/139-b1-review', { recursive: true })
+    await header.suggestions.screenshot({ path: '.cache/139-b1-review/search-ready.png' })
+  }
+  await header.input.press('Escape')
+  expect(await header.suggestions.count()).toBe(0)
+  await header.input.fill(''); await header.input.fill('wolf')
+  await expect(header.suggestions).toHaveAttribute('data-entry-in-progress', 'true')
+  expect(await entries()).toHaveLength(2)
+  await page.mouse.click(20, 400)
+  expect(await header.suggestions.count()).toBe(0)
   header.assertQuiet()
 })
 
@@ -40,6 +88,9 @@ test('Reduced mobile Home retains automatic reveal and a static loading suggesti
   await header.input.fill('wolf'); await header.expectSuggestionRequest('wolf')
   await expect(header.suggestions.locator('.search-suggestion-spinner')).toHaveCSS('animation-name', 'none')
   await expect(header.suggestions.locator('.search-suggestion-loading')).toBeVisible()
+  await expect(header.suggestions).toHaveCSS('opacity', '1')
+  await expect(header.suggestions).toHaveCSS('transform', 'none')
+  await expect(header.suggestions).toHaveCSS('transition-duration', '0s')
   header.releaseSuggestions(); await expect(header.items).toHaveCount(3)
   header.assertQuiet()
 })

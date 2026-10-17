@@ -1,3 +1,55 @@
+// Only this Teleported surface owns these transitions; generic Modal is unchanged.
+.preferences-modal-enter-active,
+.preferences-modal-leave-active {
+  transition: opacity var(--gf-motion-fast) ease;
+}
+
+.preferences-modal-enter-active .gf-preferences-modal {
+  transition:
+    opacity var(--gf-motion-base) cubic-bezier(0.22, 1, 0.36, 1),
+    transform var(--gf-motion-base) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.preferences-modal-leave-active {
+  pointer-events: none;
+}
+
+.preferences-modal-leave-active .gf-preferences-modal {
+  transition:
+    opacity var(--gf-motion-fast) ease,
+    transform var(--gf-motion-fast) ease;
+}
+
+.preferences-modal-enter-from,
+.preferences-modal-leave-to {
+  opacity: 0;
+}
+
+.preferences-modal-enter-from .gf-preferences-modal,
+.preferences-modal-leave-to .gf-preferences-modal {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preferences-modal-enter-active,
+  .preferences-modal-leave-active,
+  .preferences-modal-enter-active .gf-preferences-modal,
+  .preferences-modal-leave-active .gf-preferences-modal {
+    transition: none;
+  }
+
+  .preferences-modal-enter-from,
+  .preferences-modal-enter-from .gf-preferences-modal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .preferences-modal-leave-to .gf-preferences-modal {
+    transform: none;
+  }
+}
+
 .gf-preferences-modal {
   /* Input treatment belongs to this compound: its quiet inset field and focus
    * states differ from the generic input. Light values reuse global semantics. */

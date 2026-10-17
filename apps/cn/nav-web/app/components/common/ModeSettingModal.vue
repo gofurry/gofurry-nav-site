@@ -1,7 +1,11 @@
 <template>
   <Teleport to="body">
+    <Transition name="preferences-modal" :css="!reducedMotion" @before-leave="deactivateLeaving"
+        @enter="trackTransition" @leave="trackTransition"
+        @enter-cancelled="cancelTransition?.()" @leave-cancelled="cancelTransition?.()">
     <div
         v-if="show"
+        ref="backdrop"
         class="gf-modal-backdrop fixed inset-0 z-[120] flex items-center justify-center px-3 py-4 sm:px-4"
     >
       <div class="gf-modal gf-preferences-modal">
@@ -14,7 +18,7 @@
             <button
                 type="button"
                 class="gf-button gf-button--ghost"
-                @click="emit('cancel')"
+                @click="cancel"
             >
               {{ t("common.cancel") }}
             </button>
@@ -83,15 +87,17 @@
         </div>
       </div>
     </div>
+    </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, useId, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, useId, watch } from 'vue'
 import HeroPreferencesEditor from './HeroPreferencesEditor.vue'
 import BackgroundPreferencesEditor from './BackgroundPreferencesEditor.vue'
 import ResourceRoutingPreferencesEditor from './ResourceRoutingPreferencesEditor.vue'
 import { i18n } from '@/main'
+import { useReducedMotion } from '@/composables/useReducedMotion'
 import {
   readShowQuickAccess,
   writeShowQuickAccess,
@@ -99,10 +105,11 @@ import {
 
 const { t } = i18n.global
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   show: boolean
   mode: string
-}>()
+  returnFocus?: HTMLElement | null
+}>(), { returnFocus: null })
 
 const emit = defineEmits<{
   (e: 'save', value: string): void
@@ -110,6 +117,60 @@ const emit = defineEmits<{
 }>()
 
 const panelId = useId()
+const reducedMotion = useReducedMotion()
+const backdrop = ref<HTMLElement | null>(null)
+let opener: HTMLElement | null = null
+let finishTransition: (() => void) | undefined
+let cancelTransition: (() => void) | undefined
+
+// Await only this surface's CSS transitions, never an Editor's work. Observe
+// Vue's to-class rather than racing its frames; no delayed-unmount timer owns show.
+function trackTransition(element: Element, done: () => void) {
+  cancelTransition?.()
+  let active = true
+  const observer = new MutationObserver(() => {
+    if (!element.matches('.preferences-modal-enter-to, .preferences-modal-leave-to')) return
+    observer.disconnect()
+    const panel = element.querySelector('.gf-preferences-modal')
+    const motion = element.getAnimations({ subtree: true }).filter(animation => {
+      const target = (animation.effect as KeyframeEffect | null)?.target
+      return animation instanceof CSSTransition && (target === element || target === panel)
+        && ['opacity', 'transform'].includes(animation.transitionProperty)
+    })
+    void Promise.all(motion.map(animation => animation.finished.catch(() => {}))).then(finish)
+  })
+  const cancel = () => {
+    active = false
+    observer.disconnect()
+    if (cancelTransition === cancel) { cancelTransition = undefined; finishTransition = undefined }
+  }
+  const finish = () => { if (active) { cancel(); done() } }
+  cancelTransition = cancel
+  finishTransition = finish
+  if (reducedMotion.value) { finish(); return }
+  observer.observe(element, { attributes: true, attributeFilter: ['class'] })
+}
+watch(reducedMotion, reduced => { if (reduced) finishTransition?.() }, { flush: 'sync' })
+
+// Vue owns the leave lifetime. The closed surface must stop accepting input
+// immediately, including while its final opacity frame is still on screen.
+function deactivateLeaving(element: Element) {
+  const root = element as HTMLElement
+  if (root.contains(document.activeElement)) {
+    if (opener?.isConnected && !opener.closest('[inert]')) opener.focus({ preventScroll: true })
+    if (root.contains(document.activeElement)) (document.activeElement as HTMLElement | null)?.blur()
+  }
+  root.inert = true
+  root.setAttribute('aria-hidden', 'true')
+  clearTimeout(tabScrollTimer)
+}
+function cancel() {
+  if (props.show) emit('cancel')
+}
+onBeforeUnmount(() => {
+  cancelTransition?.()
+  if (backdrop.value) deactivateLeaving(backdrop.value)
+})
 const activeTab = ref(0)
 const pages = ref<HTMLElement | null>(null)
 const tabs = computed(() => [t('navbar.homePreferences'), t('navbar.pageBackground'), t('resourceRouting.title')])
@@ -156,6 +217,7 @@ watch(
     () => props.show,
     visible => {
       if (visible) {
+        opener = props.returnFocus ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null)
         activeTab.value = 0
         localMode.value = props.mode
         nextTick(() => { pages.value?.scrollTo({ left: 0, behavior: 'instant' }) })
@@ -169,6 +231,7 @@ onMounted(() => {
 })
 
 const save = async () => {
+  if (!props.show) return
   if (heroEditor.value && !heroEditor.value.validate()) { selectTab(0); return }
   if (backgroundEditor.value && !(await backgroundEditor.value.save())) { selectTab(1); return }
   localMode.value = localMode.value.trim().slice(0, 32)
