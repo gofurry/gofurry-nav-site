@@ -12,16 +12,25 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 - Add hybrid Game Collection membership: effective members combine OR-matched active Tag rules and manual pins, minus explicit exclusions. Share this read model across Public and Admin, preserving Adult filtering, chronology and paused rules without materializing automatic members (#144).
 - Add Admin automation controls for Tag bindings, member sources, pin/exclude overrides and complete Composition saves. Preserve shared-version conflict protection, IME-safe search, 20-item local pagination and existing temporarily ineligible Home placements (#144).
+- Add backward-compatible Insights visual projections for automatically qualified Game artwork and Site logos, with conservative content filtering, asset identity checks and deterministic daily Game rotation. Keep data-only and image-failure fallbacks; qualification does not imply manual review of individual assets (#108).
 
 ### Changed
 
 - Align all six production Go modules and the tools module on Go 1.26.9, with `golang.org/x/net` v0.60.0 and its required transitive updates to address security findings.
 - Add root `.go-version` and `.node-version` discovery hints, validate them through repository tooling, and share the Node 24 declaration across GitHub Actions while preserving module-owned Go versions and independent pnpm projects.
+- Recompose the Insights Overview into an editorial data Hero, paired ecosystem showcases, compact activity feed and six-topic exploration directory. Retain two independently handled parallel Overview SSR requests, localized routes, metric coverage, fact dates and percentage-point changes (#108).
+- Refine Game and Site Domain typography, metric rails, trend/sidebar proportions and dimension controls. Tighten Game Pulse artwork composition without cropping or stretching, preserving image fallbacks and existing data interactions (#108).
+- Remove redundant Insights page introductions and headings while retaining one semantic SSR H1 per page, the concise visible workspace titles, SEO metadata and accessible controls (#108).
+- Give Compare selectors and matrices separate lightweight surfaces with opaque sticky headers and fact columns. Refine Change Explorer filters and individual event cards with a responsive date axis, preserving selection, URL, scrolling, event precision, pagination and retry contracts (#108).
+- Complete consumer-audited Insights style ownership cleanup, remove all five legacy `!important` declarations and retire the temporary font-weight exception. Reduce the corresponding style-debt budgets while preserving Game Detail consumers and unrelated ambient debt (#108).
 
 ### Fixed
 
 - Run vulnerability checks for all six production modules even when an earlier scan fails, then report every result and retain a nonzero exit status for failures.
 - Model the game trailer fixture's HTTP 503 media cancellation by exact request identity and terminal event, preserving successful playback, Gallery unmount cancellation and error recovery checks without broadly ignoring browser errors.
+- Bind Overview Game Hero artwork to positive entity facts for the exact selected metric, version and fact date; fall back to data-only presentation when proof is absent or mismatched. Keep ordinary ecosystem artwork independent and exclude the displayed Hero game from its thumbnails (#108).
+- Deduplicate ecosystem metrics against their respective Hero selections, retain real zero values and unknown states, and remove the unused Overview Game Home Panel request (#108).
+- Unify the two Overview Hero surfaces and remove excess borders and whitespace above the Site Domain and certificate data disclosures, retaining native disclosure controls, explanatory content and the Footer (#108).
 
 ### Upgrade notes
 
