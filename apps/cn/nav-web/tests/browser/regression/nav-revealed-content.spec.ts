@@ -1,4 +1,74 @@
 import { test, expect, quote, weatherURL } from '../fixtures/nav-revealed-content'
+import { mkdir } from 'node:fs/promises'
+
+test('Reduced Reveal and Spotlight settle the selected target through live preference changes', async ({ revealed }) => {
+  const scene = await revealed.open({ theme: 'dark' })
+  const { page, featured } = scene
+  // Change after hydration: Reveal must read the current setting at the scroll.
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await scene.shell.evaluate(element => {
+    const scroll = element.scrollIntoView.bind(element)
+    element.scrollIntoView = options => {
+      element.setAttribute('data-observed-scroll', typeof options === 'object' ? options.behavior || 'auto' : 'auto')
+      scroll(options)
+    }
+  })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await scene.reveal()
+  await expect(scene.shell).toHaveAttribute('data-observed-scroll', 'instant')
+  const next = featured.getByRole('button', { name: '精选站点 下一页', exact: true })
+  const prev = featured.getByRole('button', { name: '精选站点 上一页', exact: true })
+  const track = featured.locator('.spotlight-panel__track')
+  const settled = async (names: string[]) => {
+    await expect(track.locator('.spotlight-panel__slide')).toHaveCount(1)
+    await expect(track).not.toHaveClass(/--(?:next|prev|instant)/)
+    await expect(track.locator('.spotlight-site strong')).toHaveText(names)
+    await expect(track.locator('.spotlight-panel__slide')).toHaveAttribute('aria-hidden', 'false')
+  }
+  const first = scene.data.featured.slice(0, 6).map(site => site.name)
+  const last = scene.data.featured.slice(6).map(site => site.name)
+  await next.focus(); await next.press('Enter'); await settled(last)
+  await expect(next).toBeFocused()
+  await prev.press('Enter'); await settled(first)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await prev.press('Enter') // Normal wrap to last.
+  await expect(track).toHaveCSS('animation-name', 'spotlight-panel-prev')
+  await next.press('Enter') // Interrupt with the latest selected page.
+  await expect(track).toHaveCSS('animation-name', 'spotlight-panel-next')
+  await page.emulateMedia({ reducedMotion: 'reduce' }); await settled(first)
+  await next.press('Enter'); await settled(last)
+  if (process.env.GOFURRY_MOTION_REVIEW === '1') {
+    await mkdir('.cache/139-a-review', { recursive: true })
+    await page.screenshot({ path: '.cache/139-a-review/nav-reveal-spotlight-dark.png', clip: await scene.clip([scene.bar, scene.spotlight]) })
+  }
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await next.press('Enter')
+  await expect(track).toHaveCSS('animation-duration', '0.52s')
+  await settled(first)
+  // Real SPA navigation disposes the local media subscription and paging work.
+  await next.press('Enter')
+  await expect(track).toHaveClass(/spotlight-panel__track--next/)
+  await page.locator('a[href="/about"]').first().click()
+  await expect(scene.shell).toHaveCount(0)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  scene.assertQuiet()
+})
+
+test('Normal motion baseline retains smooth Reveal and its final content position', async ({ revealed }) => {
+  const scene = await revealed.open()
+  await scene.page.emulateMedia({ reducedMotion: 'no-preference' })
+  await scene.shell.evaluate(element => {
+    const scroll = element.scrollIntoView.bind(element)
+    element.scrollIntoView = options => {
+      element.setAttribute('data-observed-scroll', typeof options === 'object' ? options.behavior || 'auto' : 'auto')
+      scroll(options)
+    }
+  })
+  await scene.reveal()
+  await expect(scene.shell).toHaveAttribute('data-observed-scroll', 'smooth')
+  scene.assertQuiet()
+})
 
 test('Core cards, TransitionBar and real group/site popovers retain their runtime contract', async ({ revealed }) => {
   const scene = await revealed.open({ width: 1000 })
@@ -64,6 +134,7 @@ test('ToolDock caches its real directory, filters SFW search and opens a result 
 
 test('Spotlight pages animate, wrap and mark real site visits with the exact view request', async ({ revealed }) => {
   const scene = await revealed.open()
+  await scene.page.emulateMedia({ reducedMotion: 'no-preference' })
   await scene.reveal()
   await expect(scene.content.locator('.spotlight-panel:visible')).toHaveCount(4)
   const pager = scene.featured.locator('.spotlight-panel__pager span')
@@ -78,6 +149,8 @@ test('Spotlight pages animate, wrap and mark real site visits with the exact vie
   const move = async (direction: '下一页' | '上一页', page: string) => {
     await scene.featured.getByRole('button', { name: `精选站点 ${direction}`, exact: true }).click()
     await expect(track).toHaveClass(direction === '下一页' ? /spotlight-panel__track--next/ : /spotlight-panel__track--prev/)
+    await expect(track).toHaveCSS('animation-name', direction === '下一页' ? 'spotlight-panel-next' : 'spotlight-panel-prev')
+    await expect(track).toHaveCSS('animation-duration', '0.52s')
     await expect(pager).toHaveText(page)
     await expect(track).not.toHaveClass(/spotlight-panel__track--(?:next|prev|instant)/)
     await expect(track.locator('.spotlight-panel__slide')).toHaveCount(1)

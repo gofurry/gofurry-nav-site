@@ -2189,6 +2189,12 @@ html.dark .games-page .site-icon-image--official {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .games-page .game-detail-video-loading__spinner {
+    animation: none;
+  }
+}
+
 .games-page .game-detail-media-image {
   background: var(--games-detail-media-bg);
 }

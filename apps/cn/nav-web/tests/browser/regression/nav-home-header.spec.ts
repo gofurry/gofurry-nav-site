@@ -1,4 +1,48 @@
 import { test, expect, customSeed, searchPopupURL } from '../fixtures/nav-home-header'
+import { mkdir } from 'node:fs/promises'
+
+test('Normal motion baseline retains Header loops and suggestion entry', async ({ page, header }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await header.open()
+  await expect(page.locator('.nav-header__scroll-dot')).toHaveCSS('animation-name', 'navHeaderBounce')
+  await expect(page.locator('.nav-header__scroll-dot')).toHaveCSS('animation-duration', '1s')
+  header.holdSuggestions()
+  await header.input.fill('wolf'); await header.expectSuggestionRequest('wolf')
+  await expect(header.suggestions.locator('.search-suggestion-spinner')).toHaveCSS('animation-name', 'navSearchSpin')
+  await expect(header.suggestions.locator('.search-suggestion-spinner')).toHaveCSS('animation-duration', '1s')
+  await expect(header.suggestions).toHaveCSS('animation-name', 'navSearchFadeIn')
+  await expect(header.suggestions).toHaveCSS('animation-duration', '0.5s')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(page.locator('.nav-header__scroll-dot')).toHaveCSS('animation-name', 'none')
+  await expect(header.suggestions).toHaveCSS('animation-name', 'none')
+  const spinner = header.suggestions.locator('.search-suggestion-spinner')
+  await expect(spinner).toHaveCSS('animation-name', 'none')
+  await expect(spinner).toBeVisible()
+  await expect(header.suggestions.locator('.search-suggestion-loading')).toBeVisible()
+  await expect(header.input).toBeFocused()
+  if (process.env.GOFURRY_MOTION_REVIEW === '1') {
+    await mkdir('.cache/139-a-review', { recursive: true })
+    await header.suggestions.screenshot({ path: '.cache/139-a-review/nav-static-loading.png' })
+  }
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(spinner).toHaveCSS('animation-name', 'navSearchSpin')
+  header.releaseSuggestions()
+  await expect(header.items).toHaveCount(3)
+  header.assertQuiet()
+})
+
+test('Reduced mobile Home retains automatic reveal and a static loading suggestion', async ({ page, header }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await header.open(390)
+  await expect(page.locator('.nav-tool-dock')).toHaveCount(1)
+  await expect(page.locator('.nav-content-shell')).toBeVisible()
+  header.holdSuggestions()
+  await header.input.fill('wolf'); await header.expectSuggestionRequest('wolf')
+  await expect(header.suggestions.locator('.search-suggestion-spinner')).toHaveCSS('animation-name', 'none')
+  await expect(header.suggestions.locator('.search-suggestion-loading')).toBeVisible()
+  header.releaseSuggestions(); await expect(header.items).toHaveCount(3)
+  header.assertQuiet()
+})
 
 test('Search keeps typography, theme parity, debounce, keyboard selection and reveal lock', async ({ page, header }) => {
   await header.open()

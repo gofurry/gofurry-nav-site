@@ -803,6 +803,19 @@ html.dark :is(.games-search-page, .games-search-overlay-scope) .game-date-picker
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .games-search-page {
+    .search-result-page-track--next,
+    .search-result-page-track--prev,
+    .search-page-skeleton-cover,
+    .search-page-skeleton-title,
+    .search-page-skeleton-line,
+    .search-page-skeleton-meta {
+      animation: none;
+    }
+  }
+}
+
 @keyframes search-result-page-next {
   from {
     transform: translate3d(0, 0, 0);

@@ -1,4 +1,5 @@
 import { test, expect, type SearchScene } from '../fixtures/games-search'
+import { mkdir } from 'node:fs/promises'
 
 const committed = {
   content: 'committed', tagList: '812345',
@@ -29,6 +30,89 @@ async function editDraft(scene: SearchScene, content: string) {
 async function query(scene: SearchScene, content: string) {
   await scene.openFilter(); await scene.keyword.fill(content); await scene.apply()
 }
+
+for (const [width, locale, theme] of [[1440, 'zh', 'light'], [390, 'en', 'dark']] as const) {
+  test(`Reduced Search keeps real loading and the latest request at ${width} ${locale} ${theme}`, async ({ search }) => {
+    const { page } = search
+    await page.setViewportSize({ width, height: 900 })
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await search.open({ locale, theme })
+    const track = page.locator('.search-result-page-track')
+    const results = page.locator('.search-results')
+    const pending = async () => {
+      await expect(results).toHaveAttribute('aria-busy', 'true')
+      await expect(results).not.toHaveClass(/search-results--sliding/)
+      await expect(track.locator('.search-result-page-slide')).toHaveCount(1)
+      await expect(track.locator('.search-page-title')).toHaveCount(0)
+      await expect(track.locator('.search-page-card--skeleton')).toHaveCount(4)
+      await expect(track.locator('.search-page-skeleton-cover').first()).toHaveCSS('animation-name', 'none')
+      await expect(results.getByRole('status')).toHaveText(locale === 'en' ? 'Searching…' : '搜索中…')
+    }
+    const second = search.hold('advanced', '')
+    const secondButton = page.locator('.game-search-page-button').filter({ hasText: /^2$/ })
+    await secondButton.focus(); await secondButton.press('Enter'); await second.waitReceived()
+    await pending()
+    await expect(secondButton).toBeFocused()
+    if (process.env.GOFURRY_MOTION_REVIEW === '1') {
+      await mkdir('.cache/139-a-review', { recursive: true })
+      await results.screenshot({ path: `.cache/139-a-review/search-static-${width}-${theme}.png` })
+    }
+    // A newer page supersedes the exact pending request, under the existing owner.
+    search.expectAbort(second)
+    const third = search.hold('advanced', '')
+    await page.locator('.game-search-page-button').filter({ hasText: /^3$/ }).click()
+    await third.waitReceived(); await search.waitAborted(second)
+    second.release(); await second.waitCompleted(); await pending()
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await expect(results).not.toHaveClass(/search-results--sliding/)
+    await expect(track.locator('.search-page-title')).toHaveCount(0)
+    third.release(); await third.waitCompleted(); await search.waitResults('Result 9')
+    // The next interaction resumes Normal direction; reduce interrupts its visual wait.
+    const first = search.hold('advanced', '')
+    await page.locator('.game-search-page-button').filter({ hasText: /^1$/ }).click()
+    await first.waitReceived()
+    await expect(track).toHaveCSS('animation-name', 'search-result-page-prev')
+    await page.emulateMedia({ reducedMotion: 'reduce' }); await pending()
+    first.release(); await first.waitCompleted(); await search.waitResults('Result 1')
+    await expect(track.locator('.search-result-page-slide')).toHaveCount(1)
+    expect(search.calls('advanced').map(call => call.body?.pageNum)).toEqual([1, 2, 3, 1])
+    search.assertQuiet()
+  })
+}
+
+test('Search unmount during a Normal slide followed by media changes leaves no stale target', async ({ search }) => {
+  await search.page.emulateMedia({ reducedMotion: 'no-preference' })
+  await search.open()
+  const held = search.hold('advanced', '')
+  await search.page.locator('.game-search-page-button').filter({ hasText: /^2$/ }).click()
+  await held.waitReceived(); search.expectAbort(held)
+  await expect(search.page.locator('.search-result-page-track')).toHaveClass(/--next/)
+  await search.leaveForHome(); await search.waitAborted(held)
+  await search.page.emulateMedia({ reducedMotion: 'reduce' })
+  held.release(); await held.waitCompleted()
+  await search.page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(search.page.locator('.search-results')).toHaveCount(0)
+  search.assertQuiet()
+})
+
+test('Normal motion baseline retains Search direction, skeleton and result identity', async ({ search }) => {
+  await search.page.emulateMedia({ reducedMotion: 'no-preference' })
+  await search.open()
+  const track = search.page.locator('.search-result-page-track')
+  for (const [page, direction, first] of [[2, 'next', 'Result 5'], [1, 'prev', 'Result 1']] as const) {
+    const held = search.hold('advanced', '')
+    await search.page.locator('.game-search-page-button').filter({ hasText: new RegExp(`^${page}$`) }).click()
+    await held.waitReceived()
+    await expect(track).toHaveCSS('animation-name', `search-result-page-${direction}`)
+    await expect(track).toHaveCSS('animation-duration', '0.42s')
+    await expect(track.locator('.search-page-card--skeleton').first()).toBeVisible()
+    await expect(track.locator('.search-page-skeleton-cover').last()).toHaveCSS('animation-name', 'search-card-skeleton')
+    await expect(track.locator('.search-page-skeleton-cover').last()).toHaveCSS('animation-duration', '1.35s')
+    held.release(); await held.waitCompleted(); await search.waitResults(first)
+  }
+  expect(search.calls('advanced').map(call => call.body?.pageNum)).toEqual([1, 2, 1])
+  search.assertQuiet()
+})
 
 test('Cancel discards every edited filter field and the next page uses only committed criteria', async ({ search }) => {
   await search.open({ query: committed })

@@ -196,6 +196,7 @@ import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
 import type { SearchPageResponseItem } from '@/types/game'
 import { resolveGameReleaseDisplay } from '@/utils/gameDomain'
 import { i18n } from '@/main'
+import { useReducedMotion } from '@/composables/useReducedMotion'
 
 const { t } = i18n.global
 
@@ -266,10 +267,20 @@ const displayPageSize = computed(() => Math.max(1, props.pageSize || 20))
 let slideTimer: ReturnType<typeof setTimeout> | null = null
 let frameId = 0
 let initialized = false
+let motionRevision = 0
+// The route can publish a page before its request marks loading=true.
+let acceptedListPage = props.currentPage
+const reducedMotion = useReducedMotion()
+// Keep the pending target static even if Normal is restored before its response.
+const staticPending = ref(false)
+
+watch(reducedMotion, reduced => {
+  if (reduced) settleWithoutMotion()
+}, { flush: 'sync' })
 
 const renderedSlides = computed<SearchSlide[]>(() => {
   if (!trackActive.value) {
-    return [{ key: `page-${props.currentPage}`, games: currentGames.value, loading: props.loading && !currentGames.value.length }]
+    return [{ key: `page-${props.currentPage}`, games: currentGames.value, loading: staticPending.value || (props.loading && !currentGames.value.length) }]
   }
 
   const sourceSlide: SearchSlide = {
@@ -300,6 +311,7 @@ const renderedSlides = computed<SearchSlide[]>(() => {
 const placeholderCountFor = (games: SearchPageResponseItem[]) => Math.max(0, displayPageSize.value - games.length)
 
 function clearSlideTimer() {
+  motionRevision += 1
   if (slideTimer) {
     clearTimeout(slideTimer)
     slideTimer = null
@@ -311,10 +323,21 @@ function clearSlideTimer() {
   }
 }
 
+function settleWithoutMotion() {
+  clearSlideTimer()
+  currentGames.value = [...props.gameList]
+  staticPending.value = !!props.loading || (props.currentPage !== acceptedListPage && props.status !== 'error')
+  sourceGames.value = []
+  targetGames.value = []
+  targetLoading.value = false
+  trackActive.value = false
+  trackOffset.value = 0
+  instantTrack.value = false
+}
+
 function scheduleCleanup(delay = SLIDE_DURATION_MS + 80) {
-  if (slideTimer) {
-    clearTimeout(slideTimer)
-  }
+  clearSlideTimer()
+  const revision = motionRevision
 
   slideTimer = setTimeout(() => {
     instantTrack.value = true
@@ -327,7 +350,9 @@ function scheduleCleanup(delay = SLIDE_DURATION_MS + 80) {
     slideTimer = null
 
     void nextTick().then(() => {
+      if (revision !== motionRevision) return
       frameId = requestAnimationFrame(() => {
+        if (revision !== motionRevision) return
         instantTrack.value = false
         frameId = 0
       })
@@ -363,6 +388,13 @@ watch(
   () => props.gameList,
   (nextList) => {
     const nextGames = [...nextList]
+    acceptedListPage = props.currentPage
+
+    if (reducedMotion.value || staticPending.value) {
+      initialized = true
+      settleWithoutMotion()
+      return
+    }
 
     if (!initialized) {
       initialized = true
@@ -390,6 +422,10 @@ watch(
 watch(
   () => props.currentPage,
   (page, previousPage) => {
+    if (reducedMotion.value || staticPending.value) {
+      settleWithoutMotion()
+      return
+    }
     if (!initialized || page === previousPage || !currentGames.value.length || trackActive.value) {
       return
     }
@@ -401,6 +437,10 @@ watch(
 watch(
   () => props.loading,
   (loading) => {
+    if (reducedMotion.value || staticPending.value) {
+      settleWithoutMotion()
+      return
+    }
     if (loading) {
       if (!currentGames.value.length || trackActive.value) {
         return

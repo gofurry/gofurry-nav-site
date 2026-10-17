@@ -88,6 +88,7 @@ import type { NavHomeSpotlight, Site } from '~/types/nav'
 import { touchSiteView } from '~/services/nav'
 import { loadRecentSites, recordRecentSite, RECENT_SITES_EVENT, toExternalUrl } from '@/utils/recentSites'
 import type { DisplayMode } from '@/utils/modeStorage'
+import { useReducedMotion } from '@/composables/useReducedMotion'
 
 type PanelKey = 'featured' | 'popular' | 'latest' | 'random'
 
@@ -121,6 +122,12 @@ const pageSize = computed(() => spotlightPageSize)
 const panelKeys: PanelKey[] = ['featured', 'popular', 'latest', 'random']
 const slideTimers: Partial<Record<PanelKey, ReturnType<typeof setTimeout>>> = {}
 const slideFrames: Partial<Record<PanelKey, number>> = {}
+const slideRevisions = { featured: 0, popular: 0, latest: 0, random: 0 }
+const reducedMotion = useReducedMotion()
+
+watch(reducedMotion, reduced => {
+  if (reduced) panelKeys.forEach(settleReducedSlide)
+}, { flush: 'sync' })
 
 const panelConfigs = computed<Array<{
   key: PanelKey
@@ -241,6 +248,8 @@ function trackKeyFor(key: PanelKey, totalPages: number) {
 }
 
 function clearSlideTimer(key: PanelKey) {
+  // Invalidate nextTick work even before its RAF has been registered.
+  slideRevisions[key] += 1
   const timer = slideTimers[key]
   if (timer) {
     clearTimeout(timer)
@@ -254,7 +263,18 @@ function clearSlideTimer(key: PanelKey) {
   }
 }
 
+function settleReducedSlide(key: PanelKey) {
+  clearSlideTimer(key)
+  const motion = panelMotion.value[key]
+  motion.renderedPage = pages.value[key]
+  motion.sourcePage = pages.value[key]
+  motion.targetPage = pages.value[key]
+  motion.isSliding = false
+  motion.instantTrack = false
+}
+
 function finishSlide(key: PanelKey) {
+  const revision = slideRevisions[key]
   const motion = panelMotion.value[key]
   motion.instantTrack = true
   motion.renderedPage = motion.targetPage
@@ -262,7 +282,9 @@ function finishSlide(key: PanelKey) {
   delete slideTimers[key]
 
   void nextTick().then(() => {
+    if (revision !== slideRevisions[key]) return
     slideFrames[key] = requestAnimationFrame(() => {
+      if (revision !== slideRevisions[key]) return
       motion.instantTrack = false
       delete slideFrames[key]
     })
@@ -292,6 +314,11 @@ function changePage(key: PanelKey, delta: number) {
   motion.isSliding = true
   motion.nonce += 1
   pages.value[key] = nextPage
+
+  if (reducedMotion.value) {
+    settleReducedSlide(key)
+    return
+  }
 
   slideTimers[key] = setTimeout(() => finishSlide(key), 560)
 }

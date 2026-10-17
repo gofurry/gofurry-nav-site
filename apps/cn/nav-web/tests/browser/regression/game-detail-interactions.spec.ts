@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/game-detail-contract'
+import { mkdir } from 'node:fs/promises'
 
 test('manual keyboard tabs do not load history until activation', async ({ detail }) => {
   await detail.open()
@@ -68,10 +69,23 @@ test('blocked adult content is inert and only confirmed mode unlocks it', async 
 })
 
 test('a real video becomes ready and stops when Gallery is unmounted', async ({ detail }) => {
+  await detail.page.emulateMedia({ reducedMotion: 'no-preference' })
   await detail.open(); await detail.tab('gallery')
   const held = detail.movieGate()
   await detail.page.locator('.game-detail-thumb').first().click(); await held.wait()
   await expect(detail.page.locator('.game-detail-video-loading')).toBeVisible()
+  await expect(detail.page.locator('.game-detail-video-loading__spinner')).toHaveCSS('animation-name', 'games-video-loading-spin')
+  await expect(detail.page.locator('.game-detail-video-loading__spinner')).toHaveCSS('animation-duration', '0.82s')
+  await detail.page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(detail.page.locator('.game-detail-video-loading__spinner')).toHaveCSS('animation-name', 'none')
+  await expect(detail.page.locator('.game-detail-video-loading__spinner')).toBeVisible()
+  await expect(detail.page.locator('.game-detail-video-loading')).toBeVisible()
+  if (process.env.GOFURRY_MOTION_REVIEW === '1') {
+    await mkdir('.cache/139-a-review', { recursive: true })
+    await detail.page.locator('.game-detail-video-loading').screenshot({ path: '.cache/139-a-review/video-static-loading.png' })
+  }
+  await detail.page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(detail.page.locator('.game-detail-video-loading__spinner')).toHaveCSS('animation-name', 'games-video-loading-spin')
   const loaded = detail.page.waitForResponse(response => response.url().endsWith('/media/detail-trailer.webm'))
   held.release()
   await (await loaded).finished()

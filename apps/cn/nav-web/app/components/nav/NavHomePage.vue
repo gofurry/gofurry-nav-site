@@ -201,7 +201,7 @@ async function revealContent(shouldScroll = true, force = false) {
     }
 
     contentRef.value?.scrollIntoView({
-      behavior: 'smooth',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
       block: 'start',
     })
   } finally {
