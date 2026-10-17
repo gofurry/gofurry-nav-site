@@ -1,5 +1,92 @@
 import { test, expect, customSeed, searchPopupURL } from '../fixtures/nav-home-header'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
+
+test('B2 Quick Modal preserves the Normal 180/220ms contract', async ({ page, header }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await header.open()
+  await page.evaluate(() => {
+    new MutationObserver(() => {
+      const root = document.querySelector('.quick-modal-enter-active')
+      if (!root) return
+      const panel = root.querySelector('.quick-modal-panel')!
+      document.documentElement.dataset.quickEntry = JSON.stringify({ backdrop: getComputedStyle(root).transitionDuration,
+        panel: getComputedStyle(panel).transitionDuration, transform: getComputedStyle(panel).transform })
+    }).observe(document.body, { subtree: true, childList: true })
+  })
+  await header.quick.getByRole('button', { name: '管理快捷站点', exact: true }).click()
+  await expect(header.modal).toHaveCSS('opacity', '1')
+  expect(await page.evaluate(() => JSON.parse(document.documentElement.dataset.quickEntry!)))
+    .toEqual({ backdrop: '0.18s', panel: '0.22s, 0.18s', transform: 'matrix(0.985, 0, 0, 0.985, 0, 8)' })
+  await header.modal.locator('.quick-modal-close').click()
+  await expect(header.modal).toHaveCount(0)
+  header.assertQuiet()
+})
+
+test('B2 Quick Modal live Reduced exit and rapid reopen leave no interactive ghost', async ({ page, header }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await header.open()
+  await page.exposeFunction('reduceQuickMotion', async () => { await page.emulateMedia({ reducedMotion: 'reduce' }) })
+  await page.evaluate(() => {
+    document.addEventListener('transitionrun', event => {
+      const root = event.target
+      if (!(root instanceof HTMLElement) || !root.matches('.quick-modal-backdrop')) return
+      const phase = root.classList.contains('quick-modal-leave-active') ? 'leave' : 'enter'
+      if (document.documentElement.dataset.quickRestored) {
+        if (phase === 'enter') document.documentElement.dataset.quickRestored = getComputedStyle(root).transitionDuration
+        return
+      }
+      if (root.dataset[phase + 'Reduced']) return
+      root.dataset[phase + 'Reduced'] = 'true'
+      const bridge = window as Window & { reduceQuickMotion?: () => Promise<void> }
+      void bridge.reduceQuickMotion!().then(() => {
+        if (phase === 'leave') {
+          root.querySelector<HTMLInputElement>('input')!.focus()
+          document.documentElement.dataset.quickExit = JSON.stringify({ connected: root.isConnected,
+            visibility: getComputedStyle(root).visibility, focused: root.contains(document.activeElement),
+            hit: root.contains(document.elementFromPoint(3, 400)) })
+        }
+        document.documentElement.dataset.quickReduced = phase
+      })
+    })
+  })
+  const manage = header.quick.getByRole('button', { name: '管理快捷站点', exact: true })
+  const root = page.locator('.quick-modal-backdrop')
+  await manage.click()
+  await expect(page.locator('html')).toHaveAttribute('data-quick-reduced', 'enter')
+  await expect(root).toHaveCSS('opacity', '1'); await expect(header.modal).toHaveCSS('transform', 'none')
+  await header.modal.locator('#custom-site-name').fill('discarded draft')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await header.modal.locator('.quick-modal-close').click()
+  await expect(page.locator('html')).toHaveAttribute('data-quick-reduced', 'leave')
+  const exit = await page.evaluate(() => JSON.parse(document.documentElement.dataset.quickExit!))
+  expect(exit).toMatchObject({ focused: false, hit: false })
+  if (exit.connected) expect(exit.visibility).toBe('hidden')
+  if (process.env.GOFURRY_B2_REVIEW === '1') {
+    await mkdir('.cache/139-b2-review', { recursive: true })
+    await writeFile('.cache/139-b2-review/quick-leave-state.json', JSON.stringify(exit))
+  }
+  await manage.click(); await expect(root).toHaveCount(1)
+  await expect(header.modal.locator('#custom-site-name')).toHaveValue('')
+  await expect(header.modal).toHaveCSS('opacity', '1')
+  await expect(header.modal).toHaveCSS('transform', 'none')
+  if (process.env.GOFURRY_B2_REVIEW === '1') {
+    await mkdir('.cache/139-b2-review', { recursive: true })
+    await header.modal.screenshot({ path: '.cache/139-b2-review/quick-modal.png' })
+  }
+  await root.click({ position: { x: 3, y: 400 } }); await expect(root).toHaveCount(0)
+  await manage.click(); await header.modal.locator('.quick-modal-close').click(); await expect(root).toHaveCount(0)
+  await page.evaluate(() => { document.documentElement.dataset.quickRestored = 'waiting' })
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await manage.click()
+  await expect(page.locator('html')).toHaveAttribute('data-quick-restored', '0.18s')
+  await header.modal.locator('.quick-modal-close').click(); await expect(root).toHaveCount(0)
+  // Real route unload after repeated close must not revive an old overlay.
+  await page.mouse.move(20, 400); await page.mouse.wheel(0, 700)
+  await page.getByRole('link', { name: '服务条款', exact: true }).click()
+  await expect(page).toHaveURL(/\/terms$/)
+  await page.emulateMedia({ reducedMotion: 'reduce' }); await expect(root).toHaveCount(0)
+  header.assertQuiet()
+})
 
 test('Suggestions own one 220ms entry, instant exit and live Reduced loading without replay', async ({ page, header }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -237,6 +324,8 @@ test('Quick Access exposes all slots and persists real Manage add/delete actions
   await expect(modal.locator('.quick-modal-item')).toHaveCount(2)
   await expect(modal.getByText('Example Site', { exact: true })).toHaveCount(0)
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('navCustomSites')!))).toEqual(customSeed)
+  await modal.locator('.quick-modal-item').first().dragTo(modal.locator('.quick-modal-item').nth(1))
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('navCustomSites')!))).toEqual([...customSeed].reverse())
   header.assertQuiet()
 })
 

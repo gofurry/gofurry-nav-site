@@ -1,6 +1,90 @@
 import { test, expect, quote, weatherURL } from '../fixtures/nav-revealed-content'
 import { mkdir } from 'node:fs/promises'
 
+test('B2 Site Popover keeps directional motion, geometry and live Reduced state', async ({ revealed }) => {
+  const scene = await revealed.open({ width: 1000 })
+  const { page, sitePopover } = scene
+  await scene.reveal()
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.exposeFunction('reducePopoverMotion', async () => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const hidden = await sitePopover.evaluate(root => {
+      const style = getComputedStyle(root)
+      return { opacity: style.opacity, transform: style.transform, pointer: style.pointerEvents }
+    })
+    // Re-enter through the actual target before the existing 320ms cleanup;
+    // assertions must not rely on a later polling interval finding that node.
+    await scene.card(scene.data.community.name).hover()
+    return hidden
+  })
+  await page.evaluate(() => {
+    document.addEventListener('transitionend', event => {
+      const root = event.target
+      if (!(root instanceof HTMLElement) || !root.matches('.site-popover--hidden-top, .site-popover--hidden-bottom')) return
+      const style = getComputedStyle(root)
+      const placement = root.classList.contains('site-popover--hidden-top') ? 'top' : 'bottom'
+      document.documentElement.dataset['popoverExit' + placement] = JSON.stringify({
+        opacity: style.opacity, transform: style.transform, filter: style.filter, pointer: style.pointerEvents,
+      })
+    })
+    document.addEventListener('transitionrun', event => {
+      const root = event.target
+      if (document.documentElement.dataset.reducePopover !== 'true' || !(root instanceof HTMLElement)
+        || !root.matches('.site-popover--hidden-top, .site-popover--hidden-bottom')) return
+      document.documentElement.dataset.reducePopover = 'requested'
+      const bridge = window as Window & { reducePopoverMotion?: () => Promise<object> }
+      void bridge.reducePopoverMotion!().then(hidden => {
+        document.documentElement.dataset.popoverReducedState = JSON.stringify(hidden)
+        document.documentElement.dataset.reducePopover = 'done'
+      })
+    })
+  })
+  const card = await scene.hoverTopCard()
+  await expect(sitePopover).toHaveCSS('transition-property', 'opacity, transform')
+  await expect(sitePopover).toHaveCSS('transition-duration', '0.22s, 0.22s')
+  await expect(sitePopover).toHaveCSS('will-change', 'auto')
+  await expect(sitePopover).toHaveCSS('filter', 'none')
+  await expect(sitePopover).toHaveCSS('backdrop-filter', 'blur(12px)')
+  await expect(sitePopover).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(sitePopover.locator('.site-popover__domain-metrics')).toHaveText(['0% / 32', '100% / -'])
+  if (process.env.GOFURRY_B2_REVIEW === '1') {
+    await mkdir('.cache/139-b2-review', { recursive: true })
+    await page.screenshot({ path: '.cache/139-b2-review/site-popover-top.png', clip: await scene.clip([card, sitePopover]) })
+  }
+  await page.mouse.move(1, 1)
+  await expect.poll(() => page.evaluate(() => JSON.parse(document.documentElement.dataset.popoverExittop || 'null')))
+    .toEqual({ opacity: '0', transform: 'matrix(1, 0, 0, 1, 0, -6)', filter: 'none', pointer: 'none' })
+  await expect(sitePopover).toHaveCount(0)
+  await card.evaluate(el => window.scrollBy({ top: el.getBoundingClientRect().top - 200, behavior: 'instant' }))
+  await card.hover(); await expect(sitePopover).toHaveClass(/site-popover--visible/)
+  await scene.settle(sitePopover); await scene.inside(sitePopover)
+  expect((await sitePopover.boundingBox())!.y).toBeGreaterThanOrEqual((await card.boundingBox())!.y + (await card.boundingBox())!.height)
+  await sitePopover.locator('.site-popover__domain').first().hover()
+  await expect(sitePopover).toHaveCSS('pointer-events', 'auto')
+  await page.mouse.move(1, 1)
+  await expect.poll(() => page.evaluate(() => JSON.parse(document.documentElement.dataset.popoverExitbottom || 'null')))
+    .toEqual({ opacity: '0', transform: 'matrix(1, 0, 0, 1, 0, 6)', filter: 'none', pointer: 'none' })
+  await expect(sitePopover).toHaveCount(0)
+
+  await card.hover(); await expect(sitePopover).toHaveClass(/site-popover--visible/)
+  await page.evaluate(() => { document.documentElement.dataset.reducePopover = 'true' })
+  await page.mouse.move(1, 1)
+  await expect(page.locator('html')).toHaveAttribute('data-reduce-popover', 'done')
+  expect(await page.evaluate(() => JSON.parse(document.documentElement.dataset.popoverReducedState!)))
+    .toEqual({ opacity: '0', transform: 'none', pointer: 'none' })
+  await expect(sitePopover).toHaveCount(1); await expect(sitePopover).toHaveCSS('opacity', '1')
+  await expect(sitePopover).toHaveCSS('transition-duration', '0s')
+  // Position stays tied to the target immediately; left/top never transition.
+  await page.evaluate(() => window.scrollBy({ top: 40, behavior: 'instant' }))
+  await scene.inside(sitePopover)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(sitePopover).toHaveCSS('transition-duration', '0.22s, 0.22s')
+  await page.locator('a[href="/about"]').first().click()
+  await expect(scene.shell).toHaveCount(0); await expect(sitePopover).toHaveCount(0)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  scene.assertQuiet()
+})
+
 test('Reduced Reveal and Spotlight settle the selected target through live preference changes', async ({ revealed }) => {
   const scene = await revealed.open({ theme: 'dark' })
   const { page, featured } = scene

@@ -212,6 +212,25 @@ html.dark .gf-nav {
   transform: translateY(-8px);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .gf-nav .mobile-menu-enter-active,
+  .gf-nav .mobile-menu-leave-active {
+    transition: none;
+  }
+
+  .gf-nav .mobile-menu-enter-from {
+    opacity: 1;
+    transform: none;
+  }
+
+  // Vue may still own a native leave callback after a live preference change.
+  // Exclude that closed surface from hit testing and keyboard navigation now.
+  .gf-nav .mobile-menu-leave-active {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
 .mobile-bottom-tabs {
   /* Compact mobile navigation shares the shell owner, not the desktop canvas.
    * Active outline and fill are separate roles despite their current equality.
@@ -246,8 +265,8 @@ html.dark .mobile-bottom-tabs {
   background: transparent;
   text-decoration: none;
   transition:
-    background-color 420ms ease,
-    border-color 420ms ease;
+    background-color var(--gf-motion-fast) ease,
+    border-color var(--gf-motion-fast) ease;
 }
 
 .mobile-bottom-tabs__item svg {
@@ -258,4 +277,12 @@ html.dark .mobile-bottom-tabs {
 .mobile-bottom-tabs__item:hover {
   border-color: var(--gf-nav-bottom-tabs-active-border);
   background: var(--gf-nav-bottom-tabs-active-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-bottom-tabs,
+  .mobile-bottom-tabs__item {
+    // The scoped transform also owns horizontal centering; keep its final value.
+    transition: none;
+  }
 }

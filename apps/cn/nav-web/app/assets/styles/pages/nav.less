@@ -604,6 +604,30 @@ html.dark .nav-home-page {
   transform: translateY(8px) scale(0.985);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .quick-modal-enter-active,
+  .quick-modal-leave-active,
+  .quick-modal-enter-active .quick-modal-panel,
+  .quick-modal-leave-active .quick-modal-panel {
+    transition: none;
+  }
+
+  .quick-modal-enter-from,
+  .quick-modal-enter-from .quick-modal-panel {
+    opacity: 1;
+    transform: none;
+  }
+
+  .quick-modal-leave-active {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .quick-modal-leave-to .quick-modal-panel {
+    transform: none;
+  }
+}
+
 .search-chip {
   border-radius: 0.75rem;
   font-weight: 500;
@@ -1253,10 +1277,8 @@ html.dark .site-group-page .nav-group-toggle:hover {
   font-size: 0.875rem;
   backdrop-filter: blur(12px);
   transition:
-    opacity 300ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 300ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform, filter;
+    opacity var(--gf-motion-base) cubic-bezier(0.22, 1, 0.36, 1),
+    transform var(--gf-motion-base) cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html.dark .site-popover {
@@ -1272,24 +1294,32 @@ html.dark .site-popover {
 .site-popover--visible {
   pointer-events: auto;
   opacity: 1;
-  filter: blur(0);
-  transform: translateY(0) scale(1);
+  transform: translateY(0);
 }
 
 .site-popover--hidden-bottom,
 .site-popover--hidden-top {
   pointer-events: none;
   opacity: 0;
-  filter: blur(1.5px);
-  transform: scale(0.988);
 }
 
 .site-popover--hidden-bottom {
-  transform: translateY(0.5rem) scale(0.988);
+  transform: translateY(6px);
 }
 
 .site-popover--hidden-top {
-  transform: translateY(-0.5rem) scale(0.988);
+  transform: translateY(-6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-popover {
+    transition: none;
+  }
+
+  .site-popover--hidden-top,
+  .site-popover--hidden-bottom {
+    transform: none;
+  }
 }
 
 .site-popover__title {
