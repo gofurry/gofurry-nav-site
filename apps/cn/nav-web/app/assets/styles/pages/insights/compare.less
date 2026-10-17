@@ -15,6 +15,17 @@
   .insight-compare-picker input:focus-visible { border-color: var(--gf-accent); outline: 2px solid var(--gf-accent); outline-offset: -2px; }
   .insight-compare-picker__popup { position: absolute; z-index: 10; width: 100%; max-height: 360px; overflow-y: auto; margin-top: 8px; border: 1px solid var(--gf-border-strong); border-radius: var(--insights-radius-sm); background: var(--gf-page-background); box-shadow: 0 12px 24px var(--gf-border); }
   .insight-compare-picker__popup > p { padding: 16px; margin: 0; font-size: 13px; color: var(--gf-text-muted); }
+  // Enter only: Vue completes leave synchronously, preserving live picker actions.
+  .compare-popup-enter-active { transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1), transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .compare-popup-enter-from { opacity: 0; transform: translateY(-4px); }
+  // No move/transform rule: existing selected items and matrix columns stay still.
+  .compare-selected-enter-active { transition: opacity var(--gf-motion-fast) cubic-bezier(0.22, 1, 0.36, 1); }
+  .compare-selected-enter-from { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .compare-popup-enter-active, .compare-selected-enter-active { transition: none; }
+    .compare-popup-enter-from, .compare-selected-enter-from { opacity: 1; }
+    .compare-popup-enter-from { transform: none; }
+  }
   .insight-compare-picker ul { list-style: none; padding: 0; margin: 0; }
   .insight-compare-picker [role='option'] {
     display: flex; align-items: center; gap: 14px; padding: 12px 16px; cursor: pointer;

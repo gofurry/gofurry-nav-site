@@ -6,29 +6,31 @@
         :placeholder="$t('insights.comparePicker.' + domain + 'Placeholder')" :aria-expanded="open"
         :aria-controls="listID" :aria-activedescendant="open && active >= 0 ? listID + '-' + active : undefined"
         aria-autocomplete="list" @focus="open = true" @blur="open = false" @keydown="onKey" @input="open = true" />
-      <div v-if="open" class="insight-compare-picker__popup">
-        <p v-if="loading" role="status">{{ $t('insights.comparePicker.loading') }}</p>
-        <p v-else-if="failed" role="status">{{ $t('insights.comparePicker.failed') }}</p>
-        <p v-else-if="!results.length" role="status">{{ $t(domain === 'game' && !keyword.trim() ? 'insights.comparePicker.startSearch' : 'insights.comparePicker.noResults') }}</p>
-        <ul :id="listID" role="listbox" :aria-label="$t('insights.comparePicker.results')" :aria-busy="loading">
-          <li v-for="(item, index) in results" :id="listID + '-' + index" :key="item.id" role="option"
-            :aria-selected="active === index" :aria-disabled="selectedIds.length >= 4" :data-picker-result="item.id"
-            @mousedown.prevent @click="add(item)" @mousemove="active = index">
-            <InsightEntityMedia :domain="domain" :entity="item" />
-            <span><strong>{{ item.name }}</strong><small>{{ item.subtitle }}</small></span>
-            <span class="insight-compare-picker__add" aria-hidden="true">+</span>
-          </li>
-        </ul>
-      </div>
+      <Transition name="compare-popup" @leave="(_element, done) => done()">
+        <div v-if="open" class="insight-compare-picker__popup">
+          <p v-if="loading" role="status">{{ $t('insights.comparePicker.loading') }}</p>
+          <p v-else-if="failed" role="status">{{ $t('insights.comparePicker.failed') }}</p>
+          <p v-else-if="!results.length" role="status">{{ $t(domain === 'game' && !keyword.trim() ? 'insights.comparePicker.startSearch' : 'insights.comparePicker.noResults') }}</p>
+          <ul :id="listID" role="listbox" :aria-label="$t('insights.comparePicker.results')" :aria-busy="loading">
+            <li v-for="(item, index) in results" :id="listID + '-' + index" :key="item.id" role="option"
+              :aria-selected="active === index" :aria-disabled="selectedIds.length >= 4" :data-picker-result="item.id"
+              @mousedown.prevent @click="add(item)" @mousemove="active = index">
+              <InsightEntityMedia :domain="domain" :entity="item" />
+              <span><strong>{{ item.name }}</strong><small>{{ item.subtitle }}</small></span>
+              <span class="insight-compare-picker__add" aria-hidden="true">+</span>
+            </li>
+          </ul>
+        </div>
+      </Transition>
     </div>
     <p class="insight-compare-picker__count" aria-live="polite">{{ $t('insights.comparePicker.count', { count: selectedIds.length }) }} · {{ $t(selectedIds.length >= 4 ? 'insights.comparePicker.maximum' : selectedIds.length === 1 ? 'insights.compare.oneHint' : selectedIds.length === 0 ? 'insights.compare.emptyHint' : 'insights.compare.readyHint', { count: selectedIds.length }) }}</p>
-    <ul class="insight-compare-selected" :aria-label="$t('insights.comparePicker.selected')">
+    <TransitionGroup tag="ul" name="compare-selected" class="insight-compare-selected" :aria-label="$t('insights.comparePicker.selected')" @leave="(_element, done) => done()">
       <li v-for="entity in selected" :key="entity.id" :data-selected-entity="entity.id">
         <InsightEntityMedia :domain="domain" :entity="entity" />
         <span>{{ entity.name }}</span>
         <button type="button" :aria-label="$t('insights.comparePicker.remove', { name: entity.name })" @click="$emit('change', selectedIds.filter(id => id !== entity.id))">×</button>
       </li>
-    </ul>
+    </TransitionGroup>
   </section>
 </template>
 

@@ -1,8 +1,216 @@
 import type { Page } from '@playwright/test'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { test, expect, pathFor, compareGroups, openRuntime, revealImages, keyboardFocus } from '../fixtures/insights-compare'
 const columns = (page: Page) => page.locator('[data-compare-entity-id]').evaluateAll(els => els.map(el => Number(el.getAttribute('data-compare-entity-id'))))
 const selected = (page: Page) => page.locator('[data-selected-entity]').evaluateAll(els => els.map(el => Number(el.getAttribute('data-selected-entity'))))
 const colorAlpha = (color: string) => Number(color.match(/\/\s*([\d.]+)\s*\)$/)?.[1] ?? color.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)$/)?.[1] ?? (color === 'transparent' ? 0 : 1))
+
+async function observePickerMotion(page: Page) {
+  await page.locator('.insight-compare-picker').evaluate(root => {
+    const seen = new WeakSet<Element>()
+    const entries: { kind: string; id: string | null; opacity: string; transform: string; duration: string; property: string }[] = []
+    new MutationObserver(() => {
+      for (const node of root.querySelectorAll('.compare-popup-enter-from, .compare-selected-enter-from')) {
+        if (seen.has(node)) continue
+        seen.add(node)
+        const css = getComputedStyle(node)
+        entries.push({ kind: node.matches('.compare-popup-enter-from') ? 'popup' : 'selected', id: node.getAttribute('data-selected-entity'),
+          opacity: css.opacity, transform: css.transform, duration: css.transitionDuration, property: css.transitionProperty })
+      }
+      root.setAttribute('data-c2-entries', JSON.stringify(entries))
+    }).observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] })
+  })
+}
+async function pickerEntries(page: Page) {
+  return JSON.parse((await page.locator('.insight-compare-picker').getAttribute('data-c2-entries')) || '[]') as {
+    kind: string; id: string | null; opacity: string; transform: string; duration: string; property: string
+  }[]
+}
+async function screenshotPicker(page: Page, name: string) {
+  if (!process.env.GOFURRY_C2_REVIEW) return
+  const picker = page.locator('.insight-compare-picker')
+  await picker.evaluate(async root => {
+    await document.fonts.ready
+    await Promise.all([...root.querySelectorAll('img')].map(img => img.decode()))
+    await Promise.all(root.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {})))
+  })
+  await mkdir('.cache/139-c2-review', { recursive: true })
+  await page.screenshot({ path: `.cache/139-c2-review/${name}.png` })
+}
+
+test('C2 Motion Normal popup enters once through Loading and only new selections fade', async ({ page, runtime }) => {
+  const warnings: string[] = []
+  page.on('console', message => { if (message.type() === 'warning') warnings.push(message.text()) })
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  const html = await openRuntime(page, pathFor('game', 'en', '2,1', 'US'))
+  expect([...html.matchAll(/data-selected-entity="(\d+)"/g)].map(match => Number(match[1]))).toEqual([2, 1])
+  const picker = page.locator('.insight-compare-picker'), input = page.getByRole('combobox')
+  const popup = page.locator('.insight-compare-picker__popup')
+  await expect(picker.locator('.insight-compare-selected')).toHaveJSProperty('tagName', 'UL')
+  await expect(picker.locator('[data-selected-entity="2"]')).toHaveCSS('opacity', '1')
+  await expect(picker.locator('[data-selected-entity="2"]')).toHaveCSS('transition-duration', '0s')
+  await observePickerMotion(page)
+  const gate = runtime.hold((url, body) => url.pathname.endsWith('/search/simple') && (body as { txt?: string })?.txt === 'fox')
+  await input.fill('fox'); await gate.wait()
+  expect(await pickerEntries(page)).toEqual([{ kind: 'popup', id: null, opacity: '0', transform: 'matrix(1, 0, 0, 1, 0, -4)',
+    duration: '0.18s, 0.18s', property: 'opacity, transform' }])
+  const original = await popup.elementHandle()
+  await expect(popup.getByRole('listbox')).toHaveAttribute('aria-busy', 'true')
+  gate.release(); await gate.done()
+  await expect(page.getByRole('option').first()).toBeVisible()
+  expect(await original!.evaluate(el => el === document.querySelector('.insight-compare-picker__popup'))).toBe(true)
+  expect((await pickerEntries(page)).filter(entry => entry.kind === 'popup')).toHaveLength(1)
+  await screenshotPicker(page, 'compare-normal-1440-light')
+  await input.press('ArrowDown'); await input.press('Enter')
+  await expect(page).toHaveURL(url => url.searchParams.get('ids') === '2,1,4')
+  expect(await popup.count()).toBe(0)
+  expect(await original!.evaluate(el => el.isConnected)).toBe(false)
+  await expect(input).toHaveAttribute('aria-expanded', 'false')
+  await expect(input).toBeFocused()
+  expect((await pickerEntries(page)).filter(entry => entry.kind === 'selected')).toEqual([
+    { kind: 'selected', id: '4', opacity: '0', transform: 'none', duration: '0.16s', property: 'opacity' },
+  ])
+  const added = await picker.locator('[data-selected-entity="4"]').elementHandle()
+  await expect.poll(() => columns(page)).toEqual([2, 1, 4])
+  await picker.locator('[data-selected-entity="4"] button').click()
+  await expect(page).toHaveURL(url => url.searchParams.get('ids') === '2,1')
+  expect(await picker.locator('[data-selected-entity="4"]').count()).toBe(0)
+  expect(await added!.evaluate(el => el.isConnected)).toBe(false)
+  await expect.poll(() => columns(page)).toEqual([2, 1])
+  expect(runtime.state.searches).toEqual(['fox'])
+  expect(await picker.locator('.insight-compare-selected li').evaluateAll(nodes => nodes.every(node =>
+    getComputedStyle(node).transform === 'none' && !(node as HTMLElement).style.transform && !node.className.includes('-move')))).toBe(true)
+  expect(await page.locator('.insight-compare-matrix').evaluate(root => root.getAnimations({ subtree: true }).length)).toBe(0)
+  await input.focus()
+  const closing = await popup.elementHandle()
+  await input.press('Escape')
+  expect(await closing!.evaluate(el => el.isConnected)).toBe(false)
+  expect(await popup.count()).toBe(0)
+  expect(warnings).toEqual([])
+  if (process.env.GOFURRY_C2_REVIEW) await writeFile('.cache/139-c2-review/normal-entries.json', JSON.stringify(await pickerEntries(page), null, 2))
+  runtime.assertQuiet()
+})
+
+test('C2 Motion initial Reduced and live interruptions restore without replay at 390 Dark', async ({ page, runtime }) => {
+  await page.setViewportSize({ width: 390, height: 1000 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await openRuntime(page, pathFor('site', 'en', '2,1'))
+  await page.getByRole('button', { name: 'Toggle theme icon', exact: true }).click()
+  await expect(page.locator('html')).toHaveClass(/dark/)
+  const picker = page.locator('.insight-compare-picker'), input = page.getByRole('combobox')
+  const popup = page.locator('.insight-compare-picker__popup')
+  await observePickerMotion(page)
+  await input.focus()
+  await expect(page.getByRole('option').first()).toBeVisible()
+  await input.press('ArrowDown')
+  await expect(popup).toHaveCSS('opacity', '1')
+  await expect(popup).toHaveCSS('transform', 'none')
+  expect((await pickerEntries(page))[0]).toMatchObject({ kind: 'popup', opacity: '1', transform: 'none', duration: '0s' })
+  await input.press('Enter')
+  await expect(page).toHaveURL(url => url.searchParams.get('ids') === '2,1,4')
+  expect(await popup.count()).toBe(0)
+  expect((await pickerEntries(page)).find(entry => entry.kind === 'selected')).toMatchObject({ id: '4', opacity: '1', duration: '0s' })
+  await expect(input).toBeFocused()
+  await picker.locator('[data-selected-entity="4"] button').click()
+  await expect(page).toHaveURL(url => url.searchParams.get('ids') === '2,1')
+
+  await page.exposeFunction('c2Reduce', () => page.emulateMedia({ reducedMotion: 'reduce' }))
+  for (const kind of ['popup', 'selected'] as const) {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await picker.evaluate((root, kind) => {
+      const onRun = (event: Event) => {
+        const target = event.target as HTMLElement
+        if (!target.matches(`.compare-${kind}-enter-active`)) return
+        root.removeEventListener('transitionrun', onRun)
+        root.setAttribute(`data-c2-${kind}-duration`, getComputedStyle(target).transitionDuration)
+        void (window as unknown as { c2Reduce(): Promise<void> }).c2Reduce().then(() => root.setAttribute(`data-c2-${kind}-reduced`, 'true'))
+      }
+      root.addEventListener('transitionrun', onRun)
+    }, kind)
+    if (kind === 'popup') await input.focus()
+    else { await input.press('ArrowDown'); await input.press('Enter') }
+    await expect(picker).toHaveAttribute(`data-c2-${kind}-reduced`, 'true')
+    await expect(picker).toHaveAttribute(`data-c2-${kind}-duration`, kind === 'popup' ? '0.18s, 0.18s' : '0.16s')
+    const target = kind === 'popup' ? popup : picker.locator('[data-selected-entity="4"]')
+    await expect(target).toHaveCSS('opacity', '1')
+    await expect(target).toHaveCSS('transform', 'none')
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    expect(await target.evaluate(el => el.getAnimations().length)).toBe(0)
+    if (kind === 'selected') {
+      await expect.poll(() => columns(page)).toEqual([2, 1, 4])
+      await picker.locator('[data-selected-entity="4"] button').click()
+      await expect(page).toHaveURL(url => url.searchParams.get('ids') === '2,1')
+      expect(await target.count()).toBe(0)
+    }
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await input.focus()
+  await screenshotPicker(page, 'compare-reduced-390-dark')
+  await input.press('Escape')
+  expect(await popup.count()).toBe(0)
+  expect(runtime.count('/sites/directory')).toBe(1)
+  expect(runtime.state.searches).toEqual([])
+  await expect.poll(() => columns(page)).toEqual([2, 1])
+  runtime.assertQuiet()
+})
+
+test('C2 Motion rapid add remove and route departure leave no stale interactive DOM', async ({ page, runtime }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await openRuntime(page, pathFor('game', 'en'))
+  const picker = page.locator('.insight-compare-picker'), input = page.getByRole('combobox')
+  const popup = page.locator('.insight-compare-picker__popup')
+  await input.fill('fox')
+  await expect(page.getByRole('option').first()).toBeVisible()
+  // Remove from the real button during the new item's opacity transition.
+  await picker.evaluate(root => root.addEventListener('transitionrun', function removeDuringEnter(event) {
+    const target = event.target as HTMLElement
+    if (!target.matches('.compare-selected-enter-active')) return
+    root.removeEventListener('transitionrun', removeDuringEnter)
+    root.setAttribute('data-c2-added', target.getAttribute('data-selected-entity')!)
+    target.querySelector('button')!.click()
+  }))
+  await input.press('ArrowDown'); await input.press('Enter')
+  await expect(picker).toHaveAttribute('data-c2-added', '2')
+  await expect(page).toHaveURL(url => !url.searchParams.has('ids'))
+  expect(await selected(page)).toEqual([])
+  expect(await picker.locator('.compare-selected-leave-active').count()).toBe(0)
+  for (let index = 0; index < 2; index++) {
+    await input.press('ArrowDown'); await input.press('Enter')
+    await expect(page).toHaveURL(url => url.searchParams.get('ids') === '2')
+    expect(await selected(page)).toEqual([2])
+    expect(await popup.count()).toBe(0)
+    await expect(input).toBeFocused()
+    await picker.locator('[data-selected-entity="2"] button').click()
+    await expect(page).toHaveURL(url => !url.searchParams.has('ids'))
+    expect(await selected(page)).toEqual([])
+  }
+  // Escape also interrupts entry synchronously, including rapid reopen.
+  for (let index = 0; index < 2; index++) {
+    await input.press('ArrowDown')
+    const old = await popup.elementHandle()
+    await input.press('Escape')
+    expect(await old!.evaluate(el => el.isConnected)).toBe(false)
+    expect(await popup.count()).toBe(0)
+  }
+  const oldPicker = await picker.elementHandle()
+  await picker.evaluate(root => root.addEventListener('transitionrun', event => {
+    if ((event.target as Element).matches('.compare-popup-enter-active')) {
+      document.querySelector<HTMLAnchorElement>('a[href="/en/about"]')!.click()
+    }
+  }, { once: true }))
+  await input.press('ArrowDown')
+  await expect(page).toHaveURL(/\/en\/about$/)
+  expect(await oldPicker!.evaluate(el => el.isConnected)).toBe(false)
+  expect(await popup.count()).toBe(0)
+  await page.locator('.about-avatar').evaluate(img => (img as HTMLImageElement).decode())
+  await page.goBack()
+  await expect(page.getByRole('combobox')).toBeVisible()
+  expect(await selected(page)).toEqual([])
+  expect(await popup.count()).toBe(0)
+  expect(runtime.state.searches).toEqual(['fox'])
+  runtime.assertQuiet()
+})
+
 async function layout(page: Page, matrix = true) {
   const english = new URL(page.url()).pathname.startsWith('/en/'), site = new URL(page.url()).pathname.includes('/sites/')
   const title = site ? (english ? 'Site Capability Compare' : '网站能力对比') : (english ? 'Game Fact Compare' : '游戏事实对比')
