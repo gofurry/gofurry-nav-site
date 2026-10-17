@@ -90,6 +90,21 @@ for (const [route, kind, count] of routes) for (const width of [1440, 1024, 768,
     if (kind === 'players') { expect(html).toContain('189'); expect(html).toContain('213'); expect(html).toContain('88.7%') }
     await expect(page.locator('.insights-domain-nav [aria-current="page"]')).toHaveCount(1)
     await expect(page.locator('.insight-workspace-disclosure')).not.toHaveAttribute('open')
+    const disclosure = page.locator('.insight-workspace-disclosure')
+    if (kind === 'certificates') {
+      await expect(disclosure).toHaveCSS('border-top-width', '0px')
+      const gap = await disclosure.evaluate(el => el.getBoundingClientRect().top - el.previousElementSibling!.getBoundingClientRect().bottom)
+      expect(gap).toBeGreaterThanOrEqual(12); expect(gap).toBeLessThanOrEqual(16)
+      await keyboardFocus(disclosure.locator('summary')); await page.keyboard.press('Enter')
+      await expect(disclosure).toHaveAttribute('open', '')
+      await expect(disclosure.locator('p')).toHaveCount(2)
+      expect(await disclosure.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+      await page.keyboard.press('Enter'); await expect(disclosure).not.toHaveAttribute('open')
+      await expect(page.locator('footer')).toHaveCount(1)
+    } else {
+      await expect(disclosure).toHaveCSS('border-top-width', '1px')
+      expect(await disclosure.evaluate(el => parseFloat(getComputedStyle(el).marginTop))).toBeGreaterThanOrEqual(48)
+    }
     if (kind === 'players' || kind === 'prices') {
       expect(await page.locator('[data-workspace-option]').evaluateAll(els => els.map(el => (el as HTMLElement).dataset.workspaceOption)))
         .toEqual(kind === 'players' ? workspaceMetricKeys : workspaceRegionKeys)

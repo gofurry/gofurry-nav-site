@@ -86,11 +86,11 @@ Existing standard weights outside the normalization scope retain their hierarchy
 Do not alter size, line height, tracking or layout to imitate earlier screenshots.
 
 Stylelint owns the authored CSS/Less family, weight and shorthand guard. Preserve
-native controls' `font: inherit`; other font shorthand is prohibited. The only
-temporary legacy-weight boundary is #108's exact Insights appearance paths in the
-[contract](../../contracts/nav-web-frontend.md#typography-family-and-weight-contract-126).
-It does not relax family/shorthand or authorize Insights compensation. Tailwind's
-existing appearance policy remains the only utility-side guard.
+native controls' `font: inherit`; other font shorthand is prohibited. #108 F3
+retires the temporary Insights weight override after auditing its Game Detail
+consumers too. The standard [contract](../../contracts/nav-web-frontend.md#typography-family-and-weight-contract-126)
+now applies without that exception. Tailwind's existing appearance policy remains
+the only utility-side guard.
 
 The phase-specific appearance notes below remain historical evidence. #126 Batch B
 supersedes their nonstandard weight values, without changing recorded font metrics
@@ -399,6 +399,18 @@ Site components and their private styles. Site Tailwind/arbitrary/raw debt is
 now zero, as are deep selectors and legacy dark entries. All active Site selectors
 and tokens remain unchanged. Ambient raw 75 and #108 important 5 remain owned
 exactly as before; historical Site dark/deep exceptions are retired.
+
+## Insights closure (#108 F3)
+
+#108 F3 removes the five important declarations recorded in the historical
+inventory above; ambient raw 75 remains untouched. Domain's flat range buttons
+and Game Detail's segmented controls retain their computed themes under disjoint
+owners. `insights.less` still owns live Game widgets and shared chart states;
+only proven dead or overridden rules are retired. Trend/header/disclosure grid
+structure uses the existing Vue templates, while Domain owns disclosure appearance.
+The compact Sites/Certificate endings do not change other Workspace disclosures.
+The [F3 acceptance record](../acceptance/108-f3-frontend-engineering-closure.md)
+maps consumers, role normalization and the existing Browser test owners.
 
 ## Preserve semantic identity
 

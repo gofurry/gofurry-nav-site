@@ -40,8 +40,8 @@ Typography families use `--gf-font-sans` / `--gf-font-mono`; the frozen Sans is
 Manrope Variable + Noto Sans SC Variable. Normal authored weights are only
 400/500/600/700/800, with 800 reserved for Display. Keep `font: inherit` for native
 controls; no other `font:` shorthand may bypass the family/weight guard.
-`primitives/rating.less` alone retains the Arial star-glyph exception. Stylelint's
-exact #108 Insights legacy-weight override is temporary and must not expand.
+`primitives/rating.less` alone retains the Arial star-glyph exception. #108 F3
+retires the Insights legacy-weight override, including its Game Detail consumers.
 See the contract and design system for role mapping; do not compensate with metrics.
 
 ## Preserve product boundaries
@@ -97,9 +97,9 @@ out of Web, raw timings unsummed and collector loss percentages unscaled. Use
 may decrease. P4 requires manual review before P5 and no accepted Visual updates.
 
 [frontend-style-debt.json](frontend-style-debt.json) is measured state, never an
-example or permission. After #109 P7, remaining style debt belongs to Insights
-#108 and intentionally preserved ambient effects. No opportunistic migration of
-these areas; their new code still follows the contract.
+example or permission. After #108 F3, only intentionally preserved ambient raw
+debt remains. Earlier phase notes below record their original boundaries, not
+current budgets. No opportunistic ambient migration; new code follows the contract.
 
 P5 Security consumes only Current Target Detail evidence through
 `siteSecurityPresentation.ts`; four secondary views use `selectSiteSecurityView`.

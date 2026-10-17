@@ -120,6 +120,25 @@ async function layout(page: Page, width: number, domain: string) {
 }
 
 async function foundationAppearance(page: Page, width: number, domain: string) {
+  const selectedRange = page.locator('.insights-trend .insights-ranges [aria-pressed="true"]')
+  await expect(selectedRange).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  expect(await selectedRange.evaluate(el => getComputedStyle(el).color === getComputedStyle(el).borderBottomColor)).toBe(true)
+  const idleRange = page.locator('.insights-trend .insights-ranges [aria-pressed="false"]').first()
+  await idleRange.hover()
+  await expect(idleRange).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await keyboardFocus(idleRange)
+  await page.mouse.move(0, 0)
+  const info = page.locator('.insights-data-info'), summary = info.locator('summary')
+  const spacing = await info.evaluate(el => ({ border: getComputedStyle(el).borderTopWidth, gap: el.getBoundingClientRect().top - el.previousElementSibling!.getBoundingClientRect().bottom }))
+  if (domain === 'site') { expect(spacing.border).toBe('0px'); expect(spacing.gap).toBeGreaterThanOrEqual(8); expect(spacing.gap).toBeLessThanOrEqual(16) }
+  else { expect(spacing.border).toBe('1px'); expect(spacing.gap).toBe(36) }
+  await keyboardFocus(summary); await page.keyboard.press('Enter')
+  await expect(info).toHaveAttribute('open', '')
+  await expect(info.locator('dl > div')).toHaveCount(3)
+  expect(await info.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+  expect(await info.locator('dl').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(width <= 760 ? 1 : 3)
+  await page.keyboard.press('Enter'); await expect(info).not.toHaveAttribute('open')
+  await expect(page.locator('footer')).toHaveCount(1)
   const result = await page.evaluate(() => {
     const css = (selector: string) => getComputedStyle(document.querySelector(selector)!)
     const rail = document.querySelector('[data-metric-rail]')!, railBox = rail.getBoundingClientRect()

@@ -24,13 +24,12 @@
   .insight-metric-rail button small { font-size: 11px; line-height: 1.6; font-variant-numeric: tabular-nums; }
   .insight-metric-rail button small span { color: var(--gf-text-soft); }
 
-  .insights-trend { min-width: 0; padding: 0; }
-  .insights-trend__heading { align-items: flex-end; }
-  .insights-ranges { flex: none; gap: 12px; padding: 0; border: 0; border-radius: 0; background: transparent; }
-  .insights-ranges button { flex: 0 0 auto; padding: 8px 2px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent !important; font-weight: 500; white-space: nowrap; }
-  .insights-ranges button[aria-pressed='true'] { border-bottom-color: var(--gf-accent); color: var(--gf-accent) !important; }
-  .insights-chart-shell { min-width: 0; min-height: 340px; margin-top: 24px; }
+  // Domain tabs and Game Detail segmented controls have disjoint visual owners.
+  .insights-ranges button { padding: 8px 2px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; color: var(--gf-text-muted); background: transparent; font-size: 12px; font-weight: 500; cursor: pointer; }
+  .insights-ranges button:hover { color: var(--gf-text-main); background: var(--gf-accent-soft); }
+  .insights-ranges button[aria-pressed='true'] { border-bottom-color: var(--gf-accent); color: var(--gf-accent); }
   .insights-chart-loading { background: var(--gf-surface); backdrop-filter: none; }
+  .insights-trend__heading .insights-eyebrow { margin-bottom: 6px; }
   .insight-trend-context { padding-left: 28px; border-left: 1px solid var(--gf-border); }
   .insight-trend-context__value { display: block; margin-top: 14px; font-size: clamp(32px, 3.5vw, 44px); font-weight: 600; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
   .insight-trend-context__delta { margin: 8px 0 24px; font-size: 13px; }
@@ -62,8 +61,8 @@
   .insights-slice-trend { margin-top: 32px; padding: 24px 0 0; border-top: 1px solid var(--gf-border); }
   .insights-slice-trend h3 { margin: 6px 0 0; font-size: 21px; font-weight: 600; }
   .insights-slice-trend__range, .insights-slice-trend__availability { color: var(--gf-text-muted); font-size: 12px; line-height: 1.7; }
+  .insights-slice-trend__range { margin: 4px 0 0; font-weight: 700; }
   .insights-slice-trend__availability { margin: 12px 0 0; }
-  .insights-slice-trend .insights-chart-shell { min-height: 260px; }
   .insight-dimension-raw { margin-top: 24px; }
   .insight-dimension-raw summary { padding: 12px 0; color: var(--gf-text-muted); font-size: 13px; cursor: pointer; }
   .insight-dimension-raw__scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
@@ -81,9 +80,17 @@
   .insight-domain-continue strong { display: block; font-size: 15px; font-weight: 600; }
   .insight-domain-continue a > span:first-child > span { display: block; margin-top: 7px; color: var(--gf-text-muted); font-size: 12px; line-height: 1.6; }
   .insight-domain-continue a:hover strong { color: var(--gf-accent); }
-  .insights-data-info { margin-top: 36px; border: 0; border-top: 1px solid var(--gf-border); border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
-  .insights-data-info summary { padding: 20px 0; color: var(--gf-text-muted); font-size: 12px; font-weight: 500; }
-  .insights-data-info__content { padding: 0 0 20px; font-size: 13px; }
+  .insights-data-info { margin-top: 36px; border-top: 1px solid var(--gf-border); }
+  .insights-data-info summary { padding: 20px 0; color: var(--gf-text-muted); font-size: 12px; font-weight: 500; cursor: pointer; }
+  .insights-data-info__content { padding: 0 0 20px; color: var(--gf-text-muted); font-size: 13px; line-height: 1.65; }
+  .insights-data-info__content > p { margin: 0; }
+  .insights-data-info__content dl > div { padding: 13px; border-radius: var(--gf-radius-sm); background: var(--gf-surface-strong); }
+  .insights-data-info dt { color: var(--gf-text-soft); font-size: 12px; }
+  .insights-data-info dd { margin: 5px 0 0; color: var(--gf-text-main); font-weight: 600; }
+
+  // The Sites continuation links already provide the closing divider.
+  &.insights-site-domain .insights-data-info { margin-top: 12px; border-top: 0; }
+  &.insights-site-domain .insights-data-info summary { padding-block: 12px; }
 
 }
 
@@ -103,9 +110,6 @@
     .insight-trend-context { padding: 20px 0 0; border: 0; border-top: 1px solid var(--gf-border); }
     .insight-trend-context dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .insight-trend-context dl > div { flex-direction: column; }
-    .insights-trend__heading { display: flex; align-items: flex-start; flex-direction: column; gap: 12px; }
-    .insights-ranges { margin-top: 0; }
-    .insights-chart-shell { min-height: 290px; }
     .insight-dimension-bars, .insight-domain-activity__items, .insight-domain-continue > div:last-child { grid-template-columns: 1fr; }
     .insight-domain-activity .insight-activity-item > .insight-entity-media--game { width: 76px; }
   }

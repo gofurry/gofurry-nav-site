@@ -1,6 +1,6 @@
 .insights-workspace-page {
-  .insights-workspace-header h1 { margin: 0; font-size: clamp(28px, 3.2vw, 42px); font-weight: 650; letter-spacing: -.035em; line-height: 1.2; overflow-wrap: anywhere; }
-  h2 { margin: 0 0 24px; font-size: 19px; font-weight: 650; line-height: 1.5; }
+  .insights-workspace-header h1 { margin: 0; font-size: clamp(28px, 3.2vw, 42px); font-weight: 700; letter-spacing: -.035em; line-height: 1.2; overflow-wrap: anywhere; }
+  h2 { margin: 0 0 24px; font-size: 19px; font-weight: 600; line-height: 1.5; }
   a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--gf-accent); outline-offset: -2px; border-radius: 4px; }
 
   .insight-workspace-selector {
@@ -17,7 +17,7 @@
     display: flex; flex-wrap: wrap; gap: 24px clamp(32px, 5vw, 72px); margin: 0;
     > div { min-width: 100px; }
     dt { color: var(--gf-text-muted); font-size: 12px; line-height: 1.6; }
-    dd { margin: 8px 0 0; font-size: clamp(26px, 3vw, 36px); font-weight: 550; line-height: 1.15; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+    dd { margin: 8px 0 0; font-size: clamp(26px, 3vw, 36px); font-weight: 600; line-height: 1.15; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
   }
   .insights-workspace-stats--compact { gap: 20px 32px; dd { font-size: 24px; } }
   .insights-workspace-secondary {
@@ -79,7 +79,7 @@
     th { color: var(--gf-text-muted); font-weight: 500; }
   }
   .insights-certificate-status { display: grid; grid-template-columns: 5fr 7fr; gap: 56px; }
-  .insights-certificate-verification { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; margin: 0 0 28px; strong { font-size: 56px; font-weight: 550; line-height: 1; letter-spacing: -.045em; } span { font-size: 13px; color: var(--gf-text-muted); } }
+  .insights-certificate-verification { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; margin: 0 0 28px; strong { font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -.045em; } span { font-size: 13px; color: var(--gf-text-muted); } }
   .insights-expiry-risk {
     margin: 0;
     > div { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; padding: 10px 0; border-bottom: 1px solid var(--gf-border); }
@@ -91,6 +91,10 @@
   .insight-risk-row__identity strong, .insight-risk-row__status strong { font-size: 14px; }
   .insight-workspace-disclosure { margin-top: var(--insights-section-gap); border-top: 1px solid var(--gf-border); color: var(--gf-text-muted); font-size: 13px; line-height: 1.9; > div { max-width: 900px; } p { margin: 8px 0; } }
   summary { padding: 20px 0; cursor: pointer; font-size: 13px; color: var(--gf-text-muted); }
+
+  // Certificate risk rows already close the section; other workspaces retain their spacing.
+  &[data-certificate-intelligence] .insight-workspace-disclosure { margin-top: 16px; border-top: 0; }
+  &[data-certificate-intelligence] .insight-workspace-disclosure summary { padding-block: 12px; }
 
   @media (max-width: 1100px) {
     .insight-ranking-row { grid-template-columns: 24px 96px minmax(120px, 1fr) 100px minmax(140px, .7fr); gap: 14px; }

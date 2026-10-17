@@ -866,19 +866,35 @@ The existing Stylelint `declaration-property-value-allowed-list` enforces famili
 weights and `font: inherit` as the only allowed font shorthand. Do not introduce
 another typography scanner, plugin, debt manifest or Style Policy rule family.
 
-Issue #108 temporarily retains only its existing weight vocabulary:
-400/500/550/600/620/650/680/700/720/730/740/750/760/800. This override applies solely
-to `app/assets/styles/pages/insights.less` and
-`app/assets/styles/pages/insights/**/*.less`; it MUST be removed when #108 performs
-its semantic weight normalization. It grants no family or shorthand exception,
-no new intermediate values and no permission to compensate for shared primitive
-changes. Batch B does not directly edit those appearance files.
+Issue #108 F3 retires its temporary legacy-weight override after auditing both
+Insights pages and Game Detail consumers. `app/assets/styles/pages/insights.less`
+and `app/assets/styles/pages/insights/**/*.less` now follow the standard roles
+above, with no family, weight or shorthand exception. Batch B's original exclusion
+does not authorize restoring intermediate weights or compensating with metrics.
 
 Batch B changes weights only: the Gate A Fontsource packages/delivery, authored
 font size, line height, tracking, spacing/layout, style debt and Visual goldens
 remain unchanged. Historical migration pixel/weight notes below describe their
 original acceptance; this section supersedes their nonstandard weight values.
 Role examples belong in the [design system](../docs/frontend/design-system.md#typography-roles-126).
+
+### Insights style ownership after #108 F3
+
+`insights.less` remains a mixed consumer owner: Game Detail widgets and shared
+chart/loading/empty behavior are live, not removable merely because Insights
+pages have their own styles. Domain range controls belong to `insights/domain.less`;
+the segmented Game controls retain their shared class within `.game-insights-tab`.
+Their active/hover/focus states must not depend on competing `!important` rules.
+Trend header/chart-shell and disclosure-grid composition belongs to the existing
+Vue templates' Tailwind classes. Domain disclosure appearance has one Domain owner;
+the compact Sites and Certificate endings are local exceptions, not a global reset.
+
+F3 lowers important debt from five to zero through the existing updater; ambient
+raw 75 is unchanged. Historical phase inventories above are not current budgets.
+Existing Insights Browser owners plus `game-detail-insights` and `insights-entity`
+protect shared consumers. See the [F3 record](../docs/acceptance/108-f3-frontend-engineering-closure.md)
+for measured compatibility and pending manual/remote acceptance; no Golden or
+runtime ownership change follows from this cleanup.
 
 ## Shared visual primitives and compound components
 

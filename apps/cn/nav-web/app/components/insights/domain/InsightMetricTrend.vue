@@ -1,15 +1,16 @@
 <template>
-  <section class="insights-trend" aria-labelledby="insights-trend-title">
-    <div class="insights-section__heading insights-trend__heading">
+  <section class="insights-trend min-w-0" aria-labelledby="insights-trend-title">
+    <div class="insights-section__heading insights-trend__heading flex flex-col items-start justify-between gap-3 min-[761px]:flex-row min-[761px]:items-end min-[761px]:gap-5">
       <div>
         <p class="insights-eyebrow">{{ $t(`insights.metrics.${metricKey}.name`) }}</p>
         <h2 id="insights-trend-title">{{ $t('insights.trend.title') }}</h2>
       </div>
-      <div class="insights-ranges" :aria-label="$t('insights.trend.title')">
+      <div class="insights-ranges inline-flex shrink-0 gap-3" :aria-label="$t('insights.trend.title')">
         <button
           v-for="option in ranges"
           :key="option"
           type="button"
+          class="shrink-0 whitespace-nowrap"
           :class="{ 'insights-ranges__button--active': option === range }"
           :aria-pressed="option === range"
           :data-range="option"
@@ -20,7 +21,7 @@
       </div>
     </div>
 
-    <div class="insights-chart-shell" :aria-busy="loading">
+    <div class="insights-chart-shell relative mx-[-10px] mt-6 min-h-[290px] min-w-0 min-[761px]:mx-0 min-[761px]:min-h-[340px]" :aria-busy="loading">
       <div ref="chartRef" class="insights-chart" :class="{ 'insights-chart--visible': points.length >= 2 && !unavailable }" />
       <p v-if="unavailable" class="insights-empty-state insights-chart-state">
         {{ $t('insights.emptyStates.unavailable') }}

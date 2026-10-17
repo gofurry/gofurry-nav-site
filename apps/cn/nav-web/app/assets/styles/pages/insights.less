@@ -8,45 +8,7 @@
 @import './insights/compare.less';
 @import './insights/changes.less';
 
-.insights-section,
-.insights-data-info {
-  border: 1px solid var(--gf-border);
-  background: var(--gf-surface);
-  box-shadow: var(--gf-shadow-soft);
-  backdrop-filter: blur(var(--gf-blur-surface));
-}
-
-.insights-section {
-  border-radius: var(--gf-radius-lg);
-}
-
-.insights-section__heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.insights-section__heading h2 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 730;
-  letter-spacing: -.025em;
-}
-
-.insights-trend {
-  padding: 26px;
-}
-
-.insights-trend__heading {
-  align-items: center;
-}
-
-.insights-trend__heading .insights-eyebrow {
-  margin-bottom: 6px;
-}
-
-.insights-ranges {
+:where(.game-insights-tab) .insights-ranges {
   display: inline-flex;
   flex: none;
   gap: 3px;
@@ -56,7 +18,7 @@
   background: var(--gf-surface-strong);
 }
 
-.insights-ranges button {
+:where(.game-insights-tab) .insights-ranges button {
   padding: 7px 13px;
   border: 0;
   border-radius: 999px;
@@ -67,16 +29,9 @@
   cursor: pointer;
 }
 
-.insights-ranges button:hover,
-.insights-ranges__button--active {
-  color: var(--gf-text-main) !important;
-  background: var(--gf-accent-soft) !important;
-}
-
-.insights-chart-shell {
-  position: relative;
-  min-height: 360px;
-  margin-top: 18px;
+:where(.game-insights-tab) .insights-ranges button:is(:hover, .insights-ranges__button--active) {
+  color: var(--gf-text-main);
+  background: var(--gf-accent-soft);
 }
 
 .insights-chart {
@@ -103,8 +58,6 @@
   gap: 10px;
   color: var(--gf-text-muted);
   font-size: 14px;
-  background: color-mix(in srgb, var(--gf-surface) 82%, transparent);
-  backdrop-filter: blur(4px);
 }
 
 .insights-chart-loading__dot {
@@ -126,128 +79,6 @@
   text-align: center;
 }
 
-.insights-data-info {
-  margin-top: 20px;
-  border-radius: var(--gf-radius-md);
-}
-
-.insights-slice-trend {
-  margin-top: 20px;
-  padding: 26px;
-}
-
-.insights-slice-trend__availability,
-.insights-slice-trend__range {
-  color: var(--gf-text-muted);
-  font-size: 12px;
-}
-
-.insights-slice-trend__range {
-  margin: 4px 0 0;
-  font-weight: 700;
-}
-
-.insights-slice-trend__availability {
-  margin: 14px 0 0;
-}
-
-.insights-data-info summary {
-  padding: 18px 22px;
-  font-weight: 720;
-  cursor: pointer;
-}
-
-.insights-data-info__content {
-  padding: 0 22px 22px;
-  color: var(--gf-text-muted);
-  line-height: 1.65;
-}
-
-.insights-data-info__content > p {
-  margin: 0;
-}
-
-.insights-data-info__content dl {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin: 18px 0;
-}
-
-.insights-data-info__content dl > div {
-  padding: 13px;
-  border-radius: var(--gf-radius-sm);
-  background: var(--gf-surface-strong);
-}
-
-.insights-data-info dt {
-  color: var(--gf-text-soft);
-  font-size: 12px;
-}
-
-.insights-data-info dd {
-  margin: 5px 0 0;
-  color: var(--gf-text-main);
-  font-weight: 680;
-}
-
-.insights-data-info__caveat {
-  font-size: 13px;
-}
-
-.insights-change-list {
-  margin-top: 20px;
-  border-top: 1px solid var(--gf-border);
-}
-
-.insights-change {
-  display: grid;
-  grid-template-columns: 68px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 4px;
-  border-bottom: 1px solid var(--gf-border);
-  color: var(--gf-text-main);
-  text-decoration: none;
-}
-
-.insights-change:hover .insights-change__body strong {
-  color: var(--gf-accent);
-}
-
-.insights-change__domain {
-  padding: 4px 8px;
-  border-radius: 999px;
-  color: var(--gf-accent);
-  background: var(--gf-accent-soft);
-  font-size: 11px;
-  font-weight: 750;
-  text-align: center;
-}
-
-.insights-change__body {
-  display: flex;
-  min-width: 0;
-  gap: 8px;
-}
-
-.insights-change__body strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: color var(--gf-motion-fast);
-}
-
-.insights-change__body span,
-.insights-change time {
-  color: var(--gf-text-muted);
-}
-
-.insights-change time {
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 .game-insights-tab {
   color: var(--gf-text-main);
 }
@@ -259,36 +90,11 @@
   gap: 22px;
 }
 
-.entity-insights-heading h2,
-.entity-insights-heading h3,
-.entity-insights-heading p {
-  margin: 0;
-}
-
 .entity-insights-heading h2 {
+  margin: 0;
   font-size: 24px;
-  font-weight: 760;
+  font-weight: 700;
   letter-spacing: -.025em;
-}
-
-.entity-insights-heading h3 {
-  font-size: 18px;
-  font-weight: 730;
-}
-
-.entity-insights-heading > div > p:last-child:not(.entity-insights-eyebrow) {
-  margin-top: 7px;
-  color: var(--gf-text-muted);
-  line-height: 1.6;
-}
-
-.entity-insights-eyebrow {
-  margin-bottom: 6px !important;
-  color: var(--gf-accent);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .13em;
-  text-transform: uppercase;
 }
 
 .entity-insights-back-link {
@@ -299,7 +105,7 @@
   color: var(--gf-accent);
   background: var(--gf-surface-strong);
   font-size: 12px;
-  font-weight: 720;
+  font-weight: 600;
   text-decoration: none;
 }
 
@@ -350,7 +156,7 @@
   margin: 0;
   color: var(--gf-text-main);
   font-size: 17px;
-  font-weight: 740;
+  font-weight: 600;
 }
 
 .game-insights-overview__primary-stat {
@@ -391,7 +197,7 @@
 .game-insights-overview__metrics dd {
   margin-top: 5px;
   font-size: 16px;
-  font-weight: 720;
+  font-weight: 600;
 }
 
 .game-insights-overview__quality {
@@ -433,7 +239,7 @@
 .game-insights-price-list__heading > span:first-child {
   color: var(--gf-text-soft);
   font-size: 13px;
-  font-weight: 680;
+  font-weight: 500;
 }
 
 .game-insights-price-list__heading strong {
@@ -443,7 +249,7 @@
 .game-insights-price-list__discount {
   color: var(--games-detail-insights-discount);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 
@@ -653,7 +459,7 @@
 .game-insights-timeline__category {
   color: var(--gf-accent);
   font-size: 10px;
-  font-weight: 760;
+  font-weight: 500;
 }
 
 .game-insights-timeline__item strong {
@@ -749,54 +555,13 @@
 
 @media (max-width: 760px) {
 
-  .insights-trend,
-  .insights-slice-trend {
-    padding: 20px;
-  }
-
-  .insights-trend__heading {
-    display: block;
-  }
-
-  .insights-ranges {
+  :where(.game-insights-tab) .insights-ranges {
     display: flex;
     margin-top: 15px;
   }
 
-  .insights-ranges button {
+  :where(.game-insights-tab) .insights-ranges button {
     flex: 1;
-  }
-
-  .insights-chart-shell {
-    min-height: 300px;
-    margin-inline: -10px;
-  }
-
-  .insights-data-info__content dl {
-    grid-template-columns: 1fr;
-  }
-
-  .insights-change {
-    grid-template-columns: 58px minmax(0, 1fr);
-    gap: 10px;
-  }
-
-  .insights-change__body {
-    display: block;
-  }
-
-  .insights-change__body strong,
-  .insights-change__body span {
-    display: block;
-  }
-
-  .insights-change__body span {
-    margin-top: 3px;
-    font-size: 13px;
-  }
-
-  .insights-change time {
-    grid-column: 2;
   }
 
   .entity-insights-heading {

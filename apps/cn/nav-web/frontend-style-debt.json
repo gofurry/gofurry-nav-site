@@ -6,10 +6,7 @@
     "raw-visual-value": {
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75
     },
-    "important": {
-      "app/assets/styles/pages/insights.less": 3,
-      "app/assets/styles/pages/insights/domain.less": 2
-    },
+    "important": {},
     "deep-selector": {},
     "legacy-dark-entry": {}
   },

@@ -1,6 +1,6 @@
 <template>
   <section v-if="slice" class="insights-slice-trend" aria-labelledby="insights-slice-trend-title">
-    <div class="insights-section__heading">
+    <div class="insights-section__heading flex items-start justify-between gap-5">
       <div>
         <p class="insights-eyebrow">{{ $t('insights.dimensions.selectedSlice') }}</p>
         <h3 id="insights-slice-trend-title">{{ label }} · {{ $t(`insights.metrics.${metricKey}.name`) }}</h3>
@@ -13,7 +13,7 @@
         through: trend?.available_through || '—',
       }) }}
     </p>
-    <div class="insights-chart-shell" :aria-busy="loading">
+    <div class="insights-chart-shell relative mx-[-10px] mt-6 min-h-[260px] min-w-0 min-[761px]:mx-0" :aria-busy="loading">
       <div ref="chartRef" class="insights-chart" :class="{ 'insights-chart--visible': points.length >= 2 && !unavailable }" />
       <p v-if="unavailable" class="insights-empty-state insights-chart-state">{{ $t('insights.emptyStates.unavailable') }}</p>
       <p v-else-if="!loading && points.length === 0" class="insights-empty-state insights-chart-state">{{ $t('insights.dimensions.sliceEmpty') }}</p>

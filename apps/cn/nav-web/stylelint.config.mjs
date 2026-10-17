@@ -13,13 +13,6 @@ const ratingTypographyValues = {
   'font-family': [...typographyValues['font-family'], 'Arial, sans-serif'],
 }
 
-// Temporary #108 typography exception. Freeze the existing Insights weight
-// vocabulary until its dedicated UI/UX work performs semantic normalization.
-const insightsTypographyValues = {
-  ...typographyValues,
-  'font-weight': ['400', '500', '550', '600', '620', '650', '680', '700', '720', '730', '740', '750', '760', '800'],
-}
-
 export default {
   extends: ['stylelint-config-recommended', 'stylelint-config-recommended-vue'],
   overrides: [
@@ -44,13 +37,6 @@ export default {
       files: ['app/assets/styles/primitives/rating.less'],
       // Arial is the star glyph implementation, not a business text family.
       rules: { 'declaration-property-value-allowed-list': ratingTypographyValues },
-    },
-    {
-      files: [
-        'app/assets/styles/pages/insights.less',
-        'app/assets/styles/pages/insights/**/*.less',
-      ],
-      rules: { 'declaration-property-value-allowed-list': insightsTypographyValues },
     },
     {
       files: ['app/components/common/MobileBottomTabBar.vue'],

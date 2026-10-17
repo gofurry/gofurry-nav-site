@@ -3,7 +3,7 @@
     <summary>{{ $t('insights.dataInfo.title') }}</summary>
     <div class="insights-data-info__content">
       <p>{{ $t(`insights.metrics.${metricKey}.description`) }}</p>
-      <dl>
+      <dl class="my-[18px] grid grid-cols-1 gap-3 min-[761px]:grid-cols-3">
         <div>
           <dt>{{ $t('insights.dataInfo.asOf') }}</dt>
           <dd>{{ metric?.as_of || unavailable }}</dd>
