@@ -4,8 +4,9 @@ import { renderToString } from 'vue/server-renderer'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import NavSpotlightPanels from '../../app/components/nav/NavSpotlightPanels.vue'
 import GameSearchResult from '../../app/components/game/search/GameSearchResult.vue'
+import GameSidebarSimilar from '../../app/components/game/detail/GameSidebarSimilar.vue'
 import { useReducedMotion } from '../../app/composables/useReducedMotion'
-import type { SearchPageResponseItem } from '../../app/types/game'
+import type { RecommendedModel, SearchPageResponseItem } from '../../app/types/game'
 import type { Site } from '../../app/types/nav'
 
 let media: MediaQueryList
@@ -30,6 +31,15 @@ const games = (start: number): SearchPageResponseItem[] => [start, start + 1].ma
 }))
 const searchProps = { gameList: games(1), currentPage: 1, pageSize: 2, pageDirection: 1 as const,
   totalPages: 3, total: 6, loading: false, status: 'success' as const }
+const recommendations: RecommendedModel[] = Array.from({ length: 9 }, (_, i) => ({
+  id: String(i + 1), appid: String(i + 1), name: `Similar ${i + 1}`, summary: 'Story',
+  header_url: '', capsule_url: '', library_cover_url: '', library_cover_2x_url: '',
+  score: .9, display_score: .9, rank: i + 1, reasons: [], algorithm_version: '', computed_at: '', tags: [],
+  price: { region: 'CN', available: true, is_free: true, currency: 'CNY', initial_amount: 0, final_amount: 0,
+    discount_percent: 0, initial_formatted: '', final_formatted: '', collected_at: '', updated_at: '' },
+  online_count: { count: 0, status: 'success', collected_at: '' },
+}))
+const similarTitles = '.game-detail-similar-viewport .game-detail-similar-item:not([aria-hidden]) .game-detail-similar-title'
 
 it('keeps SSR deterministic and releases each mounted preference subscription', async () => {
   const harness = defineComponent({ setup() {
@@ -152,4 +162,109 @@ it.each(['reduce', 'unmount'] as const)('invalidates Search nextTick before it c
     expect(raf).not.toHaveBeenCalled()
     if (action === 'reduce') expect(view.findAll('.search-page-title').map(node => node.text())).toEqual(['Game 3', 'Game 4'])
   } finally { if (action !== 'unmount') view.unmount() }
+})
+
+it('Similar settles initial Reduced and latest interrupted selection, then restores Normal 560ms completion', async () => {
+  reduce(true)
+  const view = await mountSuspended(GameSidebarSimilar, { props: { recommend: recommendations } })
+  vi.useFakeTimers()
+  const select = (page: number) => view.findAll('.game-detail-page-button')[page - 1]!.trigger('click')
+  try {
+    await select(2)
+    expect(view.findAll(similarTitles).map(node => node.text())).toEqual(['Similar 5', 'Similar 6', 'Similar 7', 'Similar 8'])
+    expect(view.findAll('.game-detail-similar-slide')).toHaveLength(1)
+    await select(3); await select(1)
+    expect(view.findAll(similarTitles).map(node => node.text())).toEqual(['Similar 1', 'Similar 2', 'Similar 3', 'Similar 4'])
+    reduce(false); await nextTick(); await select(2)
+    expect(view.find('.game-detail-similar-track').classes()).toContain('game-detail-similar-track--next')
+    await vi.advanceTimersByTimeAsync(559)
+    expect(view.findAll('.game-detail-similar-slide')).toHaveLength(2)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(view.findAll('.game-detail-similar-slide')).toHaveLength(1)
+    await select(1)
+    expect(view.find('.game-detail-similar-track').classes()).toContain('game-detail-similar-track--prev')
+    await select(3); reduce(true); await nextTick()
+    expect(view.findAll(similarTitles).map(node => node.text())).toEqual(['Similar 9'])
+    expect(view.findAll('.game-detail-similar-slide')).toHaveLength(1)
+    expect(view.findAll('.game-detail-similar-item--placeholder')).toHaveLength(3)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(view.findAll(similarTitles).map(node => node.text())).toEqual(['Similar 9'])
+  } finally { view.unmount() }
+})
+
+it.each(['reduce', 'unmount', 'reselect', 'data'] as const)('invalidates Similar nextTick before registering RAF on %s', async action => {
+  const view = await mountSuspended(GameSidebarSimilar, { props: { recommend: recommendations } })
+  vi.useFakeTimers()
+  try {
+    await view.findAll('.game-detail-page-button')[1]!.trigger('click')
+    const raf = vi.spyOn(globalThis, 'requestAnimationFrame')
+    vi.advanceTimersByTime(560)
+    if (action === 'reduce') reduce(true)
+    else if (action === 'unmount') view.unmount()
+    else if (action === 'data') void view.setProps({ recommend: recommendations.slice(0, 3) })
+    else view.findAll('.game-detail-page-button')[2]!.element.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await nextTick()
+    expect(raf).not.toHaveBeenCalled()
+    if (action !== 'unmount') {
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(view.findAll('.game-detail-similar-slide')).toHaveLength(1)
+      expect(view.findAll(similarTitles).map(node => node.text())).toEqual(action === 'reselect'
+        ? ['Similar 9'] : action === 'data' ? ['Similar 1', 'Similar 2', 'Similar 3'] : ['Similar 5', 'Similar 6', 'Similar 7', 'Similar 8'])
+    }
+  } finally { if (action !== 'unmount') view.unmount() }
+})
+
+it.each(['reduce', 'unmount'] as const)('cancels an already registered Similar RAF on %s', async action => {
+  const view = await mountSuspended(GameSidebarSimilar, { props: { recommend: recommendations } })
+  vi.useFakeTimers()
+  try {
+    await view.findAll('.game-detail-page-button')[1]!.trigger('click')
+    let staleFrame: FrameRequestCallback | undefined
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(callback => { staleFrame = callback; return 731 })
+    const cancel = vi.spyOn(globalThis, 'cancelAnimationFrame')
+    await vi.advanceTimersByTimeAsync(560)
+    expect(staleFrame).toBeDefined()
+    if (action === 'reduce') reduce(true)
+    else view.unmount()
+    expect(cancel).toHaveBeenCalledWith(731)
+    staleFrame!(0) // Even an already-delivered callback is invalidated.
+    await nextTick()
+    if (action === 'reduce') {
+      expect(view.findAll('.game-detail-similar-slide')).toHaveLength(1)
+      expect(view.find('.game-detail-similar-track').classes()).toContain('game-detail-similar-track--instant')
+    }
+  } finally { if (action !== 'unmount') view.unmount() }
+})
+
+it('Similar clamps invalid pages and sources, preserves same-length refreshes and real empty/error states', async () => {
+  const view = await mountSuspended(GameSidebarSimilar, { props: { recommend: recommendations } })
+  vi.useFakeTimers()
+  try {
+    await view.findAll('.game-detail-page-button')[2]!.trigger('click')
+    await view.setProps({ recommend: recommendations.slice(0, 6) })
+    expect(view.find('.game-detail-page-button--active').text()).toBe('2')
+    expect(view.findAll('.game-detail-similar-slide')).toHaveLength(1)
+    await vi.advanceTimersByTimeAsync(1000)
+    await view.setProps({ recommend: recommendations.slice(0, 6).map(item => ({ ...item, name: `${item.name} refreshed` })) })
+    expect(view.find('.game-detail-page-button--active').text()).toBe('2')
+    expect(view.findAll(similarTitles).map(node => node.text())).toEqual(['Similar 5 refreshed', 'Similar 6 refreshed'])
+    await view.findAll('.game-detail-page-button')[0]!.trigger('click') // source 2, target 1
+    await view.setProps({ recommend: recommendations.slice(0, 3) })
+    expect(view.findAll('.game-detail-similar-slide')).toHaveLength(1)
+    expect(view.findAll(similarTitles)).toHaveLength(3)
+    await view.setProps({ recommend: [] })
+    expect(view.find('.game-detail-empty').exists()).toBe(true)
+    expect(view.findAll('.game-detail-similar-track')).toHaveLength(0)
+    await view.setProps({ unavailable: true, loading: true })
+    expect(view.find('.game-detail-empty').exists()).toBe(false)
+    expect(view.find('[data-detail-recommend-error]').attributes('aria-busy')).toBe('true')
+    expect(view.find('[data-detail-recommend-error] button').attributes('disabled')).toBeDefined()
+    await view.setProps({ loading: false })
+    await view.find('[data-detail-recommend-error] button').trigger('click')
+    expect(view.emitted('retry')).toHaveLength(1)
+    await view.setProps({ unavailable: false, recommend: recommendations })
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(view.find('.game-detail-page-button--active').text()).toBe('1')
+    expect(view.findAll(similarTitles).map(node => node.text())).toEqual(['Similar 1', 'Similar 2', 'Similar 3', 'Similar 4'])
+  } finally { view.unmount() }
 })

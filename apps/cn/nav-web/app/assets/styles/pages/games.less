@@ -1321,6 +1321,30 @@ html.dark .games-page .game-stats-table {
   transform: translateX(-2.75rem);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .games-page .game-page-next-enter-active,
+  .games-page .game-page-next-leave-active,
+  .games-page .game-page-prev-enter-active,
+  .games-page .game-page-prev-leave-active,
+  .games-page .game-stats-page-track,
+  .games-page .news-track {
+    transition: none;
+  }
+
+  .games-page .game-page-next-enter-from,
+  .games-page .game-page-prev-enter-from {
+    opacity: 1;
+    transform: none;
+  }
+
+  // Vue can retain a leaving page until its original completion callback runs.
+  .games-page .game-page-next-leave-active,
+  .games-page .game-page-prev-leave-active {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
 /* Home typography keeps the effective Tailwind line-height ratios. In particular,
  * the table head's existing 650 weight and zero table radius beat the old utilities.
  * Rating owns its own typography/colors; no Home override is added to that primitive.
@@ -2576,7 +2600,7 @@ html.dark .games-page .search-shell .search-result-card:hover {
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-// Similar paging is appearance-owned; SFC geometry and its timer remain unchanged.
+// Similar timing stays local to the component; Less owns its visual motion.
 .game-detail-similar-track--instant {
   animation: none;
   transition: none;
@@ -2588,6 +2612,13 @@ html.dark .games-page .search-shell .search-result-card:hover {
 
 .game-detail-similar-track--prev {
   animation: game-detail-similar-prev 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .games-page .game-detail-similar-track--next,
+  .games-page .game-detail-similar-track--prev {
+    animation: none;
+  }
 }
 
 @keyframes game-detail-similar-next {

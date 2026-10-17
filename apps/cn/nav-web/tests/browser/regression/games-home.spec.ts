@@ -1,4 +1,137 @@
 import { test, expect, groupNames, assertGamesHomeAppearance, assertCardHover, assertStatsAppearance } from '../fixtures/games-home'
+import { mkdir, writeFile } from 'node:fs/promises'
+
+test('C1 Home Normal motion keeps card directions and track geometry', async ({ gamesHome, page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  const scene = await gamesHome.open({ dataset: 'news-populated' })
+  const group = scene.group(0), shell = group.locator('.game-group-page-shell')
+  const height = (await shell.boundingBox())!.height
+  for (const direction of ['next', 'prev'] as const) {
+    await group.locator('.game-group-pager button').nth(direction === 'next' ? 1 : 0).click()
+    const entering = group.locator(`.game-page-${direction}-enter-active`)
+    await expect(entering).toHaveCSS('transition-duration', '0.36s, 0.42s')
+    await expect(entering).toHaveCSS('transition-property', 'opacity, transform')
+    await expect(group.locator('.game-group-page-live')).toHaveCount(1)
+    await expect(scene.cards(0)).toHaveCount(direction === 'next' ? 1 : 8)
+    expect((await shell.boundingBox())!.height).toBe(height)
+  }
+  const stats = scene.stats.locator('.game-stats-page-track')
+  await expect(stats).toHaveCSS('transition-duration', '0.36s')
+  await scene.stats.locator('.stats-type-tab').last().click()
+  await scene.stats.locator('.stats-page-tab').nth(1).click()
+  await expect(stats).toHaveAttribute('style', /translate3d\(-100%/)
+  await scene.settle(stats)
+  expect(await stats.evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m41)).toBeCloseTo(-(await stats.boundingBox())!.width, 1)
+  const news = scene.news.locator('.news-track')
+  await expect(news).toHaveCSS('transition-duration', '0.34s')
+  await scene.news.locator('.news-nav-button').last().click()
+  await expect(scene.news.locator('.news-pager__count')).toHaveText('2/3')
+  await scene.settle(news)
+  expect(await news.evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m41)).toBeLessThan(0)
+  scene.assertQuiet()
+})
+
+for (const config of [{ width: 1440, theme: 'light', locale: 'zh' }, { width: 390, theme: 'dark', locale: 'en' }] as const) {
+  test(`C1 Home initial Reduced, live interruption and restoration (${config.width})`, async ({ gamesHome, page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const scene = await gamesHome.open({ ...config, dataset: 'news-populated' })
+    const group = scene.group(0), next = group.locator('.game-group-pager button').last()
+    const firstNames = await scene.cards(0).locator('.game-card__title').allTextContents()
+    const shell = group.locator('.game-group-page-shell'), height = (await shell.boundingBox())!.height
+    await next.focus(); await page.keyboard.press('Enter')
+    await expect(group.locator('.game-group-page-live')).toHaveCount(1)
+    await expect(scene.cards(0)).toHaveCount(1)
+    await expect(next).toBeFocused()
+    await expect(group.locator('.game-group-page-live')).toHaveCSS('opacity', '1')
+    // Fast wrap still follows the latest real keyboard action.
+    await page.keyboard.press('Enter'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter')
+    await expect(group.locator('.game-group-pager > span')).toHaveText('1/2')
+    await expect(scene.cards(0).locator('.game-card__title')).toHaveText(firstNames)
+    expect((await shell.boundingBox())!.height).toBe(height)
+
+    await page.exposeFunction('c1ReduceHome', () => page.emulateMedia({ reducedMotion: 'reduce' }))
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await group.evaluate(root => {
+      const onRun = (event: Event) => {
+        const target = event.target as HTMLElement
+        if (!target.matches('.game-page-next-enter-active')) return
+        root.removeEventListener('transitionrun', onRun)
+        const old = root.querySelector<HTMLElement>('.game-page-next-leave-active')!
+        void (window as unknown as { c1ReduceHome(): Promise<void> }).c1ReduceHome().then(() => {
+          old.querySelector<HTMLButtonElement>('button')!.focus()
+          const box = old.getBoundingClientRect()
+          root.setAttribute('data-c1-leave', JSON.stringify({ connected: old.isConnected,
+            visibility: getComputedStyle(old).visibility, focused: old.contains(document.activeElement),
+            hit: old.contains(document.elementFromPoint(box.x + 10, box.y + 10)) }))
+        })
+      }
+      root.addEventListener('transitionrun', onRun)
+    })
+    await next.click()
+    await expect(group).toHaveAttribute('data-c1-leave', /"focused":false,"hit":false/)
+    const leave = JSON.parse((await group.getAttribute('data-c1-leave'))!)
+    expect(!leave.connected || leave.visibility === 'hidden').toBe(true)
+    await expect(scene.cards(0).filter({ visible: true })).toHaveCount(1)
+    await expect(group.locator('.game-group-page-live')).toHaveCount(1)
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await group.locator('.game-group-pager button').first().click()
+    await expect(group.locator('.game-page-prev-enter-active')).toHaveCSS('transition-duration', '0.36s, 0.42s')
+    await expect(scene.cards(0)).toHaveCount(8)
+    await scene.settle(group)
+    if (process.env.GOFURRY_C1_REVIEW && config.width === 1440) {
+      await mkdir('.cache/139-c1-review', { recursive: true })
+      await writeFile('.cache/139-c1-review/home-leave-state.json', JSON.stringify(leave))
+      await page.screenshot({ path: '.cache/139-c1-review/home-normal.png', clip: await scene.closureClip(group) })
+    }
+
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await scene.stats.locator('.stats-type-tab').last().click()
+    const stats = scene.stats.locator('.game-stats-page-track')
+    const news = scene.news.locator('.news-track')
+    for (const owner of ['stats', 'news'] as const) {
+      const track = owner === 'stats' ? stats : news
+      const forward = owner === 'stats' ? scene.stats.locator('.stats-page-tab').nth(1) : scene.news.locator('.news-nav-button').last()
+      const backward = owner === 'stats' ? scene.stats.locator('.stats-page-tab').first() : scene.news.locator('.news-nav-button').first()
+      await expect(track).toHaveCSS('transition-duration', '0s')
+      await forward.click()
+      const target = await track.evaluate(el => el instanceof HTMLElement ? el.style.transform : '')
+      expect(target).not.toMatch(/translate3d\(0(?:%|px),/)
+      const atTarget = () => track.evaluate(el => {
+        const node = el as HTMLElement
+        const offset = Number.parseFloat(node.style.transform.match(/translate3d\(([-\d.]+)/)![1]!)
+        const expected = node.style.transform.includes('%') ? offset / 100 * node.offsetWidth : offset
+        return Math.abs(new DOMMatrix(getComputedStyle(node).transform).m41 - expected) < 1
+      })
+      expect(await atTarget()).toBe(true)
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
+      await track.evaluate(el => {
+        el.addEventListener('transitionrun', () => {
+          void (window as unknown as { c1ReduceHome(): Promise<void> }).c1ReduceHome().then(() => el.setAttribute('data-c1-interrupted', 'true'))
+        }, { once: true })
+      })
+      await backward.click()
+      await expect(track).toHaveAttribute('data-c1-interrupted', 'true')
+      await expect(track).toHaveCSS('transition-duration', '0s')
+      expect(await atTarget()).toBe(true)
+      await expect(track).toHaveAttribute('style', /translate3d\(0(?:%|px),/)
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
+      await forward.click()
+      await expect(track).toHaveCSS('transition-duration', owner === 'stats' ? '0.36s' : '0.34s')
+      await scene.settle(track)
+      expect(await atTarget()).toBe(true)
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+    }
+    await expect(scene.stats.locator('.stats-page-tab--active')).toHaveText('2')
+    await expect(scene.stats.locator('.game-stats-page-slide[aria-hidden="false"]')).toHaveCount(1)
+    await expect(scene.news.locator('.news-pager__count')).toHaveText('2/3')
+    expect(await scene.news.locator('.news-progress-fill').evaluate(el => Number.parseFloat((el as HTMLElement).style.width))).toBeCloseTo(200 / 3, 4)
+    if (process.env.GOFURRY_C1_REVIEW && config.width === 390) {
+      await mkdir('.cache/139-c1-review', { recursive: true })
+      await page.screenshot({ path: '.cache/139-c1-review/news-reduced-mobile.png', clip: await scene.closureClip(scene.news) })
+    }
+    scene.assertQuiet()
+  })
+}
 
 for (const width of [390, 1024, 1440]) {
   test(`Collection shortcuts follow Sidebar only at ${width}`, async ({ gamesHome }) => {

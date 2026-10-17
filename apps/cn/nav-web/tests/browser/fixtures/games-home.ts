@@ -487,8 +487,11 @@ export async function assertNewsAppearance(scene: GamesHomeScene) {
   await css(news.locator('.game-news-desc'), { 'font-size': '14px', 'line-height': '20px', 'font-weight': '400', color: muted })
   await css(news.locator('.news-pager__count'), { 'font-size': '12px', 'line-height': '16px', 'font-weight': '600', color: muted })
   await css(news.locator('.news-viewport'), { 'overflow-x': 'hidden' })
-  await css(news.locator('.news-track'), { 'transition-property': 'transform', 'transition-duration': '0.34s',
-    'transition-timing-function': 'cubic-bezier(0.22, 1, 0.36, 1)' })
+  const reduced = await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
+  await css(news.locator('.news-track'), reduced
+    ? { 'transition-property': 'none', 'transition-duration': '0s' }
+    : { 'transition-property': 'transform', 'transition-duration': '0.34s',
+        'transition-timing-function': 'cubic-bezier(0.22, 1, 0.36, 1)' })
   const card = news.locator('.news-card').first()
   const normal = dark ? 'rgba(226, 232, 240, 0.067)' : 'rgba(255, 250, 242, 0.4)'
   const shadow = dark ? 'none' : 'rgba(91, 62, 28, 0.03) 0px 4px 12px 0px'

@@ -126,11 +126,13 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue"
 import type { RecommendedModel } from "@/types/game"
 import SteamAssetImage from '@/components/common/SteamAssetImage.vue'
+import { useReducedMotion } from '~/composables/useReducedMotion'
 import { i18n } from '@/main'
 
 const { t } = i18n.global
 const router = useRouter()
 const localePath = useLocalePath()
+const reducedMotion = useReducedMotion()
 
 const props = defineProps<{
   recommend: RecommendedModel[] | null
@@ -152,6 +154,7 @@ const instantTrack = ref(false)
 const slideNonce = ref(0)
 let slideTimer: ReturnType<typeof setTimeout> | null = null
 let frameId = 0
+let slideRevision = 0
 
 // 总页数
 const totalPages = computed(() => {
@@ -211,7 +214,9 @@ const similarTrackKey = computed(() => {
 
 const placeholderCountFor = (games: RecommendedModel[]) => Math.max(0, PAGE_SIZE - games.length)
 
-function clearSlideTimer() {
+function clearSlideWork() {
+  // Also invalidate a completion whose nextTick has not registered its RAF yet.
+  slideRevision += 1
   if (slideTimer) {
     clearTimeout(slideTimer)
     slideTimer = null
@@ -223,14 +228,27 @@ function clearSlideTimer() {
   }
 }
 
-function finishSlide() {
+function settleWithoutMotion() {
+  clearSlideWork()
+  currentPage.value = Math.min(Math.max(currentPage.value, 1), Math.max(totalPages.value, 1))
+  renderedPage.value = currentPage.value
+  sourcePage.value = currentPage.value
+  targetPage.value = currentPage.value
+  isSliding.value = false
+  instantTrack.value = true
+}
+
+function finishSlide(revision: number) {
+  if (revision !== slideRevision) return
   instantTrack.value = true
   renderedPage.value = targetPage.value
   isSliding.value = false
   slideTimer = null
 
   void nextTick().then(() => {
+    if (revision !== slideRevision) return
     frameId = requestAnimationFrame(() => {
+      if (revision !== slideRevision) return
       instantTrack.value = false
       frameId = 0
     })
@@ -242,16 +260,22 @@ function changePage(page: number) {
     return
   }
 
-  clearSlideTimer()
+  currentPage.value = page
+  if (reducedMotion.value) {
+    settleWithoutMotion()
+    return
+  }
+
+  clearSlideWork()
   instantTrack.value = false
   pageDirection.value = page > renderedPage.value ? 1 : -1
   sourcePage.value = renderedPage.value
   targetPage.value = page
-  currentPage.value = page
   isSliding.value = true
   slideNonce.value += 1
 
-  slideTimer = setTimeout(finishSlide, 560)
+  const revision = slideRevision
+  slideTimer = setTimeout(() => finishSlide(revision), 560)
 }
 
 // 格式化相似度
@@ -284,23 +308,19 @@ function goGameDetail(gameId: string) {
 watch(
     totalPages,
     (pages) => {
-      if (pages === 0) {
-        currentPage.value = 1
-        renderedPage.value = 1
-        sourcePage.value = 1
-        targetPage.value = 1
-      } else if (currentPage.value > pages) {
-        currentPage.value = pages
-        renderedPage.value = pages
-        sourcePage.value = pages
-        targetPage.value = pages
+      if (pages === 0 || [currentPage.value, renderedPage.value, sourcePage.value, targetPage.value].some(page => page > pages)) {
+        settleWithoutMotion()
       }
     },
-    { immediate: true }
+    { immediate: true, flush: 'sync' }
 )
 
+watch(reducedMotion, (reduced) => {
+  if (reduced) settleWithoutMotion()
+}, { flush: 'sync' })
+
 onBeforeUnmount(() => {
-  clearSlideTimer()
+  clearSlideWork()
 })
 </script>
 

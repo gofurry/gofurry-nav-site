@@ -1,4 +1,5 @@
 import { test, expect } from '../fixtures/game-detail-contract'
+import { mkdir } from 'node:fs/promises'
 
 test('populated detail is rendered by SSR with one hydration view side effect', async ({ detail }) => {
   await detail.open(); detail.assertInitialReads()
@@ -75,13 +76,19 @@ test('comment pagination has bounded pending, failure recovery and no skipped pa
 })
 
 test('similar games preserve four-slot paging and the mobile-only consumer', async ({ detail }) => {
+  await detail.page.emulateMedia({ reducedMotion: 'no-preference' })
   await detail.open(); const sidebar = detail.page.locator('aside .game-detail-similar-list-shell')
   const height = (await sidebar.boundingBox())!.height
   await detail.page.locator('aside .game-detail-page-button').last().click()
   await expect(detail.page.locator('aside .game-detail-similar-track')).toHaveClass(/--next/)
+  await expect(detail.page.locator('aside .game-detail-similar-track')).toHaveCSS('animation-duration', '0.52s')
   await expect(detail.page.locator('aside .game-detail-similar-track')).not.toHaveClass(/--next/)
   await expect(detail.page.locator('aside .game-detail-similar-viewport .game-detail-similar-item--placeholder')).toHaveCount(2)
   expect((await sidebar.boundingBox())!.height).toBe(height)
+  if (process.env.GOFURRY_C1_REVIEW) {
+    await mkdir('.cache/139-c1-review', { recursive: true })
+    await detail.page.screenshot({ path: '.cache/139-c1-review/similar-normal-desktop.png', clip: await detail.clip(sidebar.locator('..')) })
+  }
   await detail.page.setViewportSize({ width: 390, height: 844 })
   await detail.page.locator('[data-game-tab="similar"]').focus()
   await detail.page.setViewportSize({ width: 1440, height: 900 })
@@ -93,6 +100,81 @@ test('similar games preserve four-slot paging and the mobile-only consumer', asy
   await expect(detail.page.locator('.game-detail-tab--active')).toHaveAttribute('data-game-tab', 'intro')
   detail.assertQuiet()
 })
+
+for (const config of [{ width: 1440, theme: 'light', locale: 'zh' }, { width: 390, theme: 'dark', locale: 'en' }] as const) {
+  test(`C1 Similar Reduced, live interruption, restoration and unmount (${config.width})`, async ({ detail }) => {
+    const { page } = detail
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await detail.open(config)
+    if (config.width === 390) await detail.tab('similar')
+    const root = page.locator(config.width === 390 ? '.game-detail-tab-panel' : 'aside')
+    const shell = root.locator('.game-detail-similar-list-shell'), track = root.locator('.game-detail-similar-track')
+    const buttons = root.locator('.game-detail-page-button'), slides = root.locator('.game-detail-similar-slide')
+    const titles = root.locator('.game-detail-similar-viewport .game-detail-similar-item:not([aria-hidden]) .game-detail-similar-title')
+    const name = (id: number) => `${config.locale === 'zh' ? '林间旅途' : 'Forest Journey'} ${id}`
+    const height = (await shell.boundingBox())!.height, reads = detail.reads.length
+    await buttons.last().focus(); await page.keyboard.press('Enter')
+    await expect(buttons.last()).toBeFocused()
+    await expect(slides).toHaveCount(1)
+    await expect(track).toHaveCSS('animation-name', 'none')
+    await expect(titles).toHaveText([name(87), name(88)])
+    await expect(root.locator('.game-detail-similar-item--placeholder')).toHaveCount(2)
+    expect((await shell.boundingBox())!.height).toBe(height)
+
+    await page.exposeFunction('c1ReduceSimilar', () => page.emulateMedia({ reducedMotion: 'reduce' }))
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await shell.evaluate(el => el.addEventListener('animationstart', event => {
+      const target = event.target as HTMLElement
+      if (!target.matches('.game-detail-similar-track')) return
+      el.setAttribute('data-c1-normal', `${getComputedStyle(target).animationName}:${getComputedStyle(target).animationDuration}`)
+      void (window as unknown as { c1ReduceSimilar(): Promise<void> }).c1ReduceSimilar().then(() => el.setAttribute('data-c1-interrupted', 'true'))
+    }, { once: true }))
+    await buttons.first().click()
+    await expect(shell).toHaveAttribute('data-c1-normal', 'game-detail-similar-prev:0.52s')
+    await expect(shell).toHaveAttribute('data-c1-interrupted', 'true')
+    await expect(slides).toHaveCount(1)
+    await expect(track).toHaveCSS('animation-name', 'none')
+    await expect(titles).toHaveText([83, 84, 85, 86].map(name))
+    await buttons.last().click(); await buttons.first().click(); await buttons.last().click()
+    await expect(titles).toHaveText([name(87), name(88)])
+    await expect(slides).toHaveCount(1)
+    if (process.env.GOFURRY_C1_REVIEW && config.width === 390) {
+      await mkdir('.cache/139-c1-review', { recursive: true })
+      await page.screenshot({ path: '.cache/139-c1-review/similar-reduced-mobile.png', clip: await detail.clip(shell.locator('..')) })
+    }
+
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await expect(track).toHaveCSS('animation-name', 'none') // Restoration does not replay.
+    await buttons.first().click()
+    await expect(track).toHaveCSS('animation-name', 'game-detail-similar-prev')
+    await expect(track).toHaveCSS('animation-duration', '0.52s')
+    await expect(slides).toHaveCount(1)
+    await expect(titles).toHaveText([83, 84, 85, 86].map(name))
+    expect(detail.reads).toHaveLength(reads)
+
+    // Leave through a real rendered action at animationstart, before the 560ms completion.
+    await shell.evaluate((el, mobile) => el.addEventListener('animationstart', () => {
+      const action = mobile ? document.querySelector<HTMLElement>('[data-game-tab="intro"]')
+        : el.querySelector<HTMLElement>('.game-detail-similar-viewport .game-detail-similar-item')
+      action!.click()
+    }, { once: true }), config.width === 390)
+    await buttons.last().click()
+    if (config.width === 390) {
+      await expect(page.locator('.game-detail-tab--active')).toHaveAttribute('data-game-tab', 'intro')
+      await expect(root.locator('.game-detail-similar-track')).toHaveCount(0)
+      await detail.tab('similar')
+      await expect(titles).toHaveText([83, 84, 85, 86].map(name))
+    } else {
+      await expect(page).toHaveURL(/\/games\/83$/)
+      await expect(page.locator('h1')).toHaveText(name(83))
+      await expect(slides).toHaveCount(1)
+      await expect(titles).toHaveText([83, 84, 85, 86].map(name))
+    }
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await detail.settle(root)
+    detail.assertQuiet()
+  })
+}
 
 test('News pagination is local and Detail metadata and links remain meaningful', async ({ detail }) => {
   await detail.open(); const reads = detail.reads.length
