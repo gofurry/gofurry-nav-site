@@ -202,6 +202,22 @@ for (const width of [1440, 1024, 900, 768, 767, 640, 430, 390, 375]) {
     expect(await page.locator('.gf-static-page').evaluate(el => el.getBoundingClientRect().top)).toBe(0)
     expect(await page.locator('.legal-panel').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(width >= 768 ? 88 : 76)
     await expect(nav.locator('.gf-nav__island')).toHaveCount(2)
+    const seams = await nav.locator('.gf-nav__seam-edge').evaluateAll(nodes => {
+      const [left, right] = nodes as SVGPathElement[]
+      const fills = [...document.querySelectorAll<SVGGeometryElement>('.gf-nav__seam-fill')]
+      const points = Array.from({ length: 25 }, (_, index) => index / 24).map(t => {
+        const a = left!.getPointAtLength(t * left!.getTotalLength()), b = right!.getPointAtLength(t * right!.getTotalLength())
+        const am = left!.getScreenCTM()!, bm = right!.getScreenCTM()!
+        return Math.max(Math.abs(a.x * am.a - b.x * bm.a), Math.abs(a.y * am.d - b.y * bm.d))
+      })
+      const complement = Array.from({ length: 24 }, (_, y) => Array.from({ length: 12 }, (_, x) => {
+        const point = new DOMPoint(x + 0.37, y * 2.25 + 0.7)
+        return Number(fills[0]!.isPointInFill(point)) + Number(fills[1]!.isPointInFill(point)) === 1
+      })).flat().every(Boolean)
+      return { sameCurve: left!.getAttribute('d') === right!.getAttribute('d'), error: Math.max(...points), complement,
+        depth: left!.getBBox().width, width: left!.ownerSVGElement!.getBoundingClientRect().width }
+    })
+    expect(seams).toEqual({ sameCurve: true, error: 0, complement: true, depth: 12, width: 12 })
     const geometry = await nav.evaluate(root => {
       const [brand, actions] = [...root.querySelectorAll('.gf-nav__island')].map(el => el.getBoundingClientRect())
       const hit = document.elementFromPoint((brand!.right + actions!.left) / 2, brand!.top + 16)
@@ -251,9 +267,9 @@ for (const width of [1440, 1024, 900, 768, 767, 640, 430, 390, 375]) {
     }
     await navShell.scrollTo(0)
     if (process.env.GOFURRY_145_REVIEW === '1') {
-      await mkdir('../../../.cache/145-a1-review', { recursive: true })
+      await mkdir('../../../.cache/145-a2-review', { recursive: true })
       await navShell.settle(nav)
-      await page.screenshot({ path: `../../../.cache/145-a1-review/shell-${width}.png` })
+      await page.screenshot({ path: `../../../.cache/145-a2-review/shell-${width}.png` })
     }
     navShell.assertQuiet()
   })
@@ -274,8 +290,8 @@ for (const width of [375, 390, 430, 640, 767]) {
     await navShell.scrollTo(start + 2)
     await navShell.assertBottomTabs(true)
     if (width === 390 && process.env.GOFURRY_145_REVIEW === '1') {
-      await mkdir('../../../.cache/145-a1-review', { recursive: true })
-      await page.screenshot({ path: '../../../.cache/145-a1-review/mobile-body-handoff.png' })
+      await mkdir('../../../.cache/145-a2-review', { recursive: true })
+      await page.screenshot({ path: '../../../.cache/145-a2-review/mobile-body-handoff.png' })
     }
     await navShell.scrollTo(40)
     await navShell.assertBottomTabs(true)
@@ -285,8 +301,8 @@ for (const width of [375, 390, 430, 640, 767]) {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await expect(navShell.bottomTabs).toHaveCSS('transition-duration', '0s')
     if (process.env.GOFURRY_145_REVIEW === '1') {
-      await mkdir('../../../.cache/145-a1-review', { recursive: true })
-      await page.screenshot({ path: `../../../.cache/145-a1-review/home-${width}.png` })
+      await mkdir('../../../.cache/145-a2-review', { recursive: true })
+      await page.screenshot({ path: `../../../.cache/145-a2-review/home-${width}.png` })
     }
     navShell.assertQuiet()
   })
@@ -321,9 +337,9 @@ for (const theme of ['light', 'dark'] as const) {
     expect(search!.y).toBeGreaterThanOrEqual(island!.y + island!.height + 4)
     await navShell.assertLinks('zh')
     if (process.env.GOFURRY_145_REVIEW === '1') {
-      await mkdir('../../../.cache/145-a1-review', { recursive: true })
+      await mkdir('../../../.cache/145-a2-review', { recursive: true })
       await navShell.settle(navShell.nav)
-      await page.screenshot({ path: `../../../.cache/145-a1-review/home-desktop-${theme}.png` })
+      await page.screenshot({ path: `../../../.cache/145-a2-review/home-desktop-${theme}.png` })
     }
     await page.mouse.move(10, 400)
     await page.mouse.wheel(0, 1000)
@@ -343,9 +359,9 @@ test('145-A short mobile menu stays reachable with a visible keyboard target', a
   await navShell.menu.getByRole('button', { name: /模式/ }).focus()
   await expect(navShell.menu.getByRole('button', { name: /模式/ })).toBeFocused()
   if (process.env.GOFURRY_145_REVIEW === '1') {
-    await mkdir('../../../.cache/145-a1-review', { recursive: true })
+    await mkdir('../../../.cache/145-a2-review', { recursive: true })
     await navShell.settle(navShell.menu)
-    await page.screenshot({ path: '../../../.cache/145-a1-review/mobile-menu-short.png' })
+    await page.screenshot({ path: '../../../.cache/145-a2-review/mobile-menu-short.png' })
   }
   await navShell.toggle.click()
   await expect(navShell.menu).toHaveCount(0)
@@ -367,27 +383,37 @@ test('145-A rotating an open Bottom Tabs Preferences returns focus to the deskto
 })
 
 for (const route of ['/', '/en'] as const) {
-  test(`145-A1 platform sheet keyboard trap and rotation cleanup (${route})`, async ({ page, navShell }) => {
+  test(`145-A2 inline picker has natural Tab order and responsive cleanup (${route})`, async ({ page, navShell }) => {
     await navShell.open({ width: 390, theme: 'dark', route })
     const trigger = page.locator('.search-platform-trigger')
-    const sheet = page.locator('.search-platform-sheet')
-    await trigger.click()
-    await expect(sheet).toBeVisible()
-    await expect(sheet.locator('.search-platform-sheet__option')).toHaveCount(8)
-    const first = sheet.locator('.search-platform-sheet__close')
-    const last = sheet.locator('.search-platform-sheet__option').last()
-    await first.focus(); await page.keyboard.press('Shift+Tab'); await expect(last).toBeFocused()
-    await page.keyboard.press('Tab'); await expect(first).toBeFocused()
+    const picker = page.locator('.search-platform-picker')
+    const options = picker.locator('button')
+    await trigger.click(); await expect(options).toHaveCount(8)
+    await options.first().focus()
+    for (let index = 1; index < 8; index++) { await page.keyboard.press('Tab'); await expect(options.nth(index)).toBeFocused() }
+    await page.keyboard.press('Tab'); await expect(options).toHaveCount(1)
+    await trigger.click(); await expect(options).toHaveCount(8)
     await page.setViewportSize({ width: 768, height: 600 })
-    await expect(sheet).toHaveCount(0)
     await expect(trigger).toBeHidden()
+    await expect(options).toHaveCount(1)
     await expect(page.locator('.search-platform-row')).toBeVisible()
     await expect(page.locator('.search-category-row [aria-pressed="true"]')).toBeFocused()
-    await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden')
-    await page.setViewportSize({ width: 390, height: 844 })
-    await expect(trigger).toHaveAttribute('aria-expanded', 'false')
-    await trigger.click(); await page.keyboard.press('Escape')
-    await expect(trigger).toBeFocused()
+    const google = route === '/' ? '谷歌' : 'Google'
+    await page.locator('.search-platform-row .search-chip').filter({ hasText: google }).click()
+    await page.setViewportSize({ width: 320, height: 844 })
+    await expect(trigger).toHaveText(google)
+    const track = page.locator('.search-category-track')
+    const row = page.locator('.search-category-items')
+    expect(await track.evaluate(el => el.scrollWidth >= el.clientWidth)).toBe(true)
+    if (route === '/en') expect(await track.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true)
+    await row.locator('button').last().click()
+    expect(await page.evaluate(() => scrollY)).toBe(0)
+    expect(await row.locator('button').last().evaluate(el => {
+      const item = el.getBoundingClientRect(), frame = el.closest('.search-category-track')!.getBoundingClientRect()
+      return item.left >= frame.left - 1 && item.right <= frame.right + 1
+    })).toBe(true)
+    await trigger.click(); await expect(options).toHaveCount(2)
+    await page.keyboard.press('Escape'); await expect(trigger).toBeFocused()
     await navShell.scrollTo(180); await navShell.assertBottomTabs(true)
     await navShell.scrollTo(0); await navShell.assertBottomTabs(false)
     navShell.assertQuiet()

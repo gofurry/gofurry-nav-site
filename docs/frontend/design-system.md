@@ -167,21 +167,28 @@ replaces flags. At >=768px islands are fixed, with compact spacing below 1024px;
 after #145-A1 mobile uses an absolute overlay that scrolls away and hands navigation
 to the existing four Bottom Tabs. Both modes leave the document flow; only actual
 page content owners provide local clearance, while backgrounds start at the top.
-The layout retains mobile bottom clearance. Rounded shallow inner cuts affect only
-the island material, with a rounded fallback; active icons use color, not inner cards.
+The layout retains mobile bottom clearance. #145-A2 uses one continuous 12px SVG
+interface for both inner ends: the brand fills its left side, the actions its exact
+complement. It scales with island height without a browser-specific clip fallback;
+native controls and their focus rings stay outside the decorative geometry.
+Active icons use color, not inner cards.
 Site tabs and Context respect the fixed desktop header; the Home Reveal target
 only gains a local scroll margin. Hero loading/SSR/reveal decisions remain separate (#145-B).
 Menu exit is inert immediately, and Reduced Motion retains #139's local rules.
 The prior P5 appearance statements above describe that migration's baseline;
 new pixels require #145-C review, not an automatic Golden update.
 
-#145-A1 mobile Search uses a single horizontally scrollable row of native category
-buttons, the unchanged input, and a current-platform trigger. Its body-mounted native
-modal dialog traps focus and uses global modal surface semantics. Selection only
-changes the provider; Escape/backdrop/close/route/resize/unmount release the sheet,
-scroll lock and Reveal lock. Suggestions are cancelled before entry. Vue Transition
-owns only a short entry, with instant exit and live Reduced Motion; desktop Search
-retains its existing platform list. No new global Sheet abstraction is introduced.
+#145-A2 centers the single row of native category buttons within the input width;
+only overflowing labels scroll horizontally. Mobile Search uses an inline platform
+grid, right-aligned below the unchanged input, with at most two rows/four columns.
+The first row's last slot combines the selected provider and SVG toggle; choosing
+another provider swaps slots and leaves the grid open. Stable provider IDs own order.
+Only the main button remains when collapsed; there is no dialog, backdrop, focus
+trap or body lock. Escape returns focus to that button; outside click, input focus,
+category/locale/route/breakpoint changes and unmount close the grid. Opening cancels
+suggestions and shares the existing Search Reveal lock. Local Vue Transition + Less
+owns 180ms opacity/4px entry, instant exit and live Reduced Motion. Desktop Search
+retains its existing provider list. No global Picker abstraction is introduced.
 
 ## Nav Home Header appearance
 

@@ -4,10 +4,18 @@
     <div class="gf-nav__inner relative mx-auto flex w-full max-w-[1700px] items-center justify-between gap-3 px-3 py-3 md:px-5 md:py-4 lg:px-6">
       <NuxtLink :to="localePath('/')" class="gf-nav__island gf-nav__brand pointer-events-auto flex shrink-0 items-center gap-2 px-3 md:px-4"
         aria-label="GoFurry" @click="closeMenus()">
+        <svg class="gf-nav__seam" viewBox="0 0 12 56" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <path class="gf-nav__seam-fill" :d="islandSeam + ' Z'" />
+          <path class="gf-nav__seam-edge" :d="islandSeam" />
+        </svg>
         <img :src="logo" alt="" class="h-8 w-8" />
         <span class="gf-nav__brand-text">GoFurry</span>
       </NuxtLink>
       <div class="gf-nav__island gf-nav__actions pointer-events-auto flex shrink-0 items-center gap-0.5 px-2 lg:gap-1 lg:px-3">
+        <svg class="gf-nav__seam" viewBox="0 0 12 56" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <path class="gf-nav__seam-fill" :d="islandSeam + ' L12 56 L12 0 Z'" />
+          <path class="gf-nav__seam-edge" :d="islandSeam" />
+        </svg>
         <nav class="gf-nav__links hidden items-center gap-0.5 md:flex lg:gap-1" :aria-label="t('navbar.expandNav')">
           <template v-for="link in navLinks" :key="link.label">
             <a v-if="link.external" :href="link.href" target="_blank" rel="noopener noreferrer"
@@ -89,6 +97,10 @@ import { useI18n } from 'vue-i18n'
 import logo from '@/assets/svgs/logo-mini.svg'
 import ModeSettingModal from '@/components/common/ModeSettingModal.vue'
 import { readMode, subscribeModeChange, writeMode } from '@/utils/modeStorage'
+
+// One continuous interface: the brand fills its left side, actions its exact complement.
+// Coordinates describe a 12px-deep short face, with a blunt middle and tangent end joins.
+const islandSeam = 'M0 0 C4 0 5 3 7 8 L11 19 Q12 22 12 25 L12 31 Q12 34 11 37 L7 48 C5 53 4 56 0 56'
 
 const { t, locale } = useI18n()
 const route = useRoute()

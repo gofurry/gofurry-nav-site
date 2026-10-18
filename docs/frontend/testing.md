@@ -26,10 +26,12 @@ not authorization to update an accepted golden.
 Home Hero/absolute-header handoff with top-reset hysteresis, and browser history.
 Preferences retains actual opener focus; Home Header checks Quick Modal layering;
 Site Shell checks sticky clearance. These use the existing Nitro fixtures and
-request ledgers. After #145-A1, Header also covers the mobile platform sheet,
-cancellation, focus,
-rapid closing and live Reduced Motion; Shell checks rotation and both locales.
-Review captures may be written to root `.cache/145-a1-review/`
+request ledgers. #145-A2 replaces the Sheet assertions with actual inline Picker
+slot order/exchange, category centering/overflow, provider URLs, cancellation,
+instant removal, natural Tab order and live Reduced Motion. Shell also verifies
+both SVG edges share one curve and their fills are complementary, alongside
+responsive cleanup and both locales.
+Review captures may be written to root `.cache/145-a2-review/`
 with `GOFURRY_145_REVIEW=1`; they are not Golden or human acceptance.
 Existing Nav Shell/full-page Visual pixels and old flag/control assertions await
 #145-C; #145-A does not authorize snapshot updates or broader Reveal/SSR changes.

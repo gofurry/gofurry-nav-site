@@ -2194,60 +2194,30 @@ html.dark .nav-tool-empty {
   .nav-content-shell { scroll-margin-top: 88px; }
 }
 
-// Mobile search keeps one horizontal category row and a lightweight platform entry.
+// The category group is centered inside the input's own width; only its track scrolls.
 .search-category-track { scrollbar-width: none; }
 .search-category-track::-webkit-scrollbar { display: none; }
 .search-category-row button { border: 0; }
 .search-category-row button:focus-visible,
-.search-platform-trigger:focus-visible { outline: 2px solid var(--nav-home-search-chip-text); outline-offset: -2px; }
-.search-platform-trigger {
+.search-platform-option:focus-visible { outline: 2px solid var(--nav-home-search-chip-text); outline-offset: -2px; }
+
+// Inline buttons inherit Hero glass semantics; there is no panel, backdrop or body lock.
+.search-platform-option {
   min-height: 44px;
   border: 0;
-  border-radius: var(--gf-radius-sm);
+  border-radius: 0.375rem;
   background: var(--nav-home-search-chip-bg);
   color: var(--nav-home-search-chip-text);
-  font-size: 0.8125rem;
-  backdrop-filter: blur(12px);
+  font-size: 0.75rem;
+  line-height: 1.33333;
+  backdrop-filter: blur(10px);
 }
-
-// Body-mounted native dialog consumes global modal semantics, never Hero-inherited tokens.
-.search-platform-sheet {
-  border: 0;
-  background: transparent;
-  color: var(--gf-text-main);
-}
-.search-platform-sheet::backdrop { background: var(--gf-modal-overlay); }
-.search-platform-sheet__panel {
-  border: 1px solid var(--gf-modal-border);
-  border-bottom: 0;
-  border-radius: var(--gf-radius-lg) var(--gf-radius-lg) 0 0;
-  background: var(--gf-modal-bg);
-  box-shadow: var(--gf-modal-shadow);
-  backdrop-filter: blur(var(--gf-blur-surface));
-}
-.search-platform-sheet h2 { font-size: 1rem; font-weight: 600; }
-.search-platform-sheet__close,
-.search-platform-sheet__option {
-  min-height: 44px;
-  border: 1px solid var(--gf-border);
-  border-radius: var(--gf-radius-sm);
-  background: var(--gf-surface);
-  color: var(--gf-text-main);
-  font-size: 0.875rem;
-}
-.search-platform-sheet__close { width: 44px; border-color: transparent; background: transparent; }
-.search-platform-sheet__option[aria-pressed='true'],
-.search-platform-sheet__option:hover { background: var(--gf-surface-hover); border-color: var(--gf-border-strong); }
-.search-platform-sheet button:focus-visible { outline: 2px solid var(--gf-focus-ring); outline-offset: -2px; }
-.search-platform-sheet-enter-active,
-.search-platform-sheet-enter-active .search-platform-sheet__panel { transition: opacity 180ms ease, transform 180ms ease; }
-.search-platform-sheet-enter-from { opacity: 0; }
-.search-platform-sheet-enter-from .search-platform-sheet__panel { transform: translateY(8px); }
+.search-platform-option:hover { background: var(--nav-home-search-chip-bg-hover); color: var(--nav-home-search-chip-text-hover); }
+.search-platform-option-enter-active { transition: opacity 180ms ease, transform 180ms ease; }
+.search-platform-option-enter-from { opacity: 0; transform: translateY(-4px); }
 @media (prefers-reduced-motion: reduce) {
-  .search-platform-sheet-enter-active,
-  .search-platform-sheet-enter-active .search-platform-sheet__panel { transition: none; }
-  .search-platform-sheet-enter-from { opacity: 1; }
-  .search-platform-sheet-enter-from .search-platform-sheet__panel { transform: none; }
+  .search-platform-option-enter-active { transition: none; }
+  .search-platform-option-enter-from { opacity: 1; transform: none; }
 }
 
 @media (max-width: 767px) {

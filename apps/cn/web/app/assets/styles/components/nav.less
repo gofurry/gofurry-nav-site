@@ -25,8 +25,6 @@ html.dark .gf-nav {
   position: relative;
   isolation: isolate;
   min-height: 52px;
-  border-radius: 18px;
-  box-shadow: var(--gf-nav-shadow);
 }
 
 .gf-nav__island::before {
@@ -35,50 +33,28 @@ html.dark .gf-nav {
   z-index: -1;
   inset: 0;
   border: 1px solid var(--gf-nav-border);
-  border-radius: inherit;
   background: var(--gf-nav-bg);
   backdrop-filter: blur(10px);
   pointer-events: none;
 }
 
-// Matched 10px oblique faces with rounded joins. Only the material is clipped;
-// controls retain their full hit area and focus outline. Older engines keep rounded islands.
-@supports (clip-path: shape(from 0 0, line to 1px 1px, close)) {
-  .gf-nav__island { box-shadow: none; }
-  .gf-nav__island::before { border: 0; background: var(--gf-nav-border); }
-  .gf-nav__island::after {
-    content: '';
-    position: absolute;
-    z-index: -1;
-    inset: 1px;
-    background: var(--gf-nav-bg);
-    backdrop-filter: blur(10px);
-    pointer-events: none;
-  }
-
-  .gf-nav__brand::before,
-  .gf-nav__brand::after {
-    clip-path: shape(from 18px 0,
-      hline to calc(100% - 24px),
-      curve to calc(100% - 14px) 4px with calc(100% - 18px) 0 / calc(100% - 17px) 1px,
-      line to calc(100% - 4px) 14px,
-      curve to 100% 24px with calc(100% - 1px) 17px / 100% 18px,
-      vline to calc(100% - 18px),
-      curve to calc(100% - 18px) 100% with 100% 100%,
-      hline to 18px, curve to 0 calc(100% - 18px) with 0 100%,
-      vline to 18px, curve to 18px 0 with 0 0, close);
-  }
-
-  .gf-nav__actions::before,
-  .gf-nav__actions::after {
-    clip-path: shape(from 24px 0,
-      hline to calc(100% - 18px), curve to 100% 18px with 100% 0,
-      vline to calc(100% - 18px), curve to calc(100% - 18px) 100% with 100% 100%,
-      hline to 18px, curve to 0 calc(100% - 18px) with 0 100%,
-      vline to 24px, curve to 4px 14px with 0 18px / 1px 17px,
-      line to 14px 4px, curve to 24px 0 with 17px 1px / 18px 0, close);
-  }
+// The rectangular material meets the same SVG interface at x=0 in each cap.
+// Only the outer ends are rounded; no browser-dependent shape() fallback is needed.
+.gf-nav__brand::before { right: 12px; border-right: 0; border-radius: 18px 0 0 18px; }
+.gf-nav__actions::before { left: 12px; border-left: 0; border-radius: 0 18px 18px 0; }
+.gf-nav__seam {
+  position: absolute;
+  z-index: -1;
+  top: 0.5px;
+  width: 12px;
+  height: calc(100% - 1px);
+  overflow: visible;
+  pointer-events: none;
 }
+.gf-nav__brand > .gf-nav__seam { right: 0; }
+.gf-nav__actions > .gf-nav__seam { left: 0; }
+.gf-nav__seam-fill { fill: var(--gf-nav-bg); }
+.gf-nav__seam-edge { fill: none; stroke: var(--gf-nav-border); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 
 @media (min-width: 768px) {
   .gf-nav__island { min-height: 56px; }
