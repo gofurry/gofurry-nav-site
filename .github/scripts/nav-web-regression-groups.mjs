@@ -36,6 +36,13 @@ export const regressionGroups = Object.freeze({
     'site-security.spec.ts',
     'updates.spec.ts',
   ]),
+  'insights-core': Object.freeze([
+    'insights-changes.spec.ts',
+    'insights-compare.spec.ts',
+    'insights-domain.spec.ts',
+    'insights-entity.spec.ts',
+    'insights-navigation.spec.ts',
+  ]),
   'insights-nav': Object.freeze([
     'background-storage.spec.ts',
     'hero-catalog.spec.ts',
@@ -43,11 +50,6 @@ export const regressionGroups = Object.freeze({
     'hero-lifecycle.spec.ts',
     'hero-local-background.spec.ts',
     'hero-preference-modes.spec.ts',
-    'insights-changes.spec.ts',
-    'insights-compare.spec.ts',
-    'insights-domain.spec.ts',
-    'insights-entity.spec.ts',
-    'insights-navigation.spec.ts',
     'insights-overview.spec.ts',
     'insights-workspace.spec.ts',
     'managed-asset-routing.spec.ts',
@@ -87,7 +89,7 @@ export function regressionFiles(group) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    if (process.argv.length !== 3) throw new Error('Usage: node nav-web-regression-groups.mjs <games|sites-other|insights-nav>')
+    if (process.argv.length !== 3) throw new Error('Usage: node nav-web-regression-groups.mjs <games|sites-other|insights-core|insights-nav>')
     console.log(regressionFiles(process.argv[2]).join('\n'))
   } catch (error) {
     console.error(error.message)

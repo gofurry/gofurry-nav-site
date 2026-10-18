@@ -203,7 +203,7 @@ owns fresh mutable scenario/gates. Playwright owns contexts/pages. Release gates
 unconditionally; do not use `unrouteAll(wait)` or fixed sleeps for readiness.
 Chromium only, retries zero, CI workers one. Daily dev/PR `nav-web` requires Fast
 static/unit/Nuxt/build plus the seven Smoke owners in one job. Full runs on main,
-manual dispatch and nightly dev through three explicit inventory-checked groups;
+manual dispatch and nightly dev through four explicit inventory-checked groups;
 deployment image verification runs on main/manual Full only. Visual is manual-only.
 Use `--workers=1` locally; do not run Full locally merely to validate CI wiring.
 See the testing guide's #134 tier contract and measured acceptance record.
@@ -224,7 +224,7 @@ and credentials and is not a normal gate.
 
 Visual is separate from Functional Browser. Only the current digest-pinned Linux
 Playwright image with Node 24 is authoritative. Fast builds and runs Smoke in one
-job. Full archives one build for all three groups, pinning their checkout to its
+job. Full archives one build for all four groups, pinning their checkout to its
 resolved source SHA (nightly resolves dev once). Manual Visual builds and compares
 in its own pinned job. Docker separately verifies main/manual Full deployment images.
 Never update snapshots to make a test pass. Approved visual changes require

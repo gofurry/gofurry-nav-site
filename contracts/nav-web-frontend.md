@@ -1248,7 +1248,7 @@ Browser tests and external acceptance retain independent scope.
 P3.2.1 establishes a Chromium-only Playwright Test gate against the production
 Nitro build, never `nuxt dev`. CI MUST build successfully before running
 Browser tests; retries are zero and each CI job has one worker. #134 separates
-daily Smoke from Full Regression; Full MUST run all three explicitly inventoried
+daily Smoke from Full Regression; Full MUST run all four explicitly inventoried
 groups without reducing coverage or enabling retries/fullyParallel.
 Domain fixtures own worker-scoped production servers, close them at teardown,
 and reset mutable state for every case. Playwright owns per-test browser contexts
@@ -1303,7 +1303,7 @@ The #134 CI tiers supersede the earlier every-push Browser/Visual/Image topology
   depends only on change detection and `nav-web-fast`; it MUST report their failure.
 - Full (`nav-web-full.yml`) runs on main push, manual selected ref and nightly dev.
   Build once, archive `.output` preserving symlinks/permissions, then restore it
-  inside the identical pinned image in three fixed groups. The explicit lists in
+  inside the identical pinned image in four fixed groups. The explicit lists in
   `.github/scripts/nav-web-regression-groups.mjs` MUST cover every regression spec
   exactly once and fail on stale/missing/duplicate membership. Resolve scheduled
   dev HEAD once and pin all consumer checkouts/artifacts to that SHA. No numerical

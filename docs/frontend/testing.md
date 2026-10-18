@@ -135,7 +135,7 @@ pnpm exec playwright test tests/browser/regression/games-home-showcase.spec.ts -
 | Tier | Trigger | Required work |
 | --- | --- | --- |
 | Fast | Selected `dev` pushes / PRs | Frozen install, lint/stylelint, policy tests/scan, Unit/Nuxt, typecheck, Insights/SEO guards, production build, Browser Smoke |
-| Full | `main` push / manual selected ref / nightly `dev` | One build, three fixed regression groups; deployment image on main/manual only |
+| Full | `main` push / manual selected ref / nightly `dev` | One build, four fixed regression groups; deployment image on main/manual only |
 | Visual | Manual selected ref only | One pinned build and the complete Visual comparison suite; no baseline updates |
 
 Fast uses one `nav-web-fast` job, so Smoke repeats no setup/install/artifact restore.
@@ -153,11 +153,16 @@ their existing owners. `pnpm run test:browser:smoke --workers=1` runs this tier 
 after a production build; do not use the dev fixture for CI acceptance.
 
 Full uses `.github/scripts/nav-web-regression-groups.mjs` as the authoritative
-explicit inventory: Games 14 specs (including Showcase and Collections; the previous 12-spec estimate was ~298s), Sites + Other
-15 (~277s), Insights + Nav 18 (~252s). These are planning estimates, not measured
-new job durations. The inventory guard rejects unassigned/new, missing and duplicate
-specs. Workflows run the CLI-produced file list with one worker; no `--shard`,
-automatic filename grouping, `fullyParallel` or retries. Reclassify new specs in
+explicit inventory: Games 14 specs (including Showcase and Collections), Sites + Other
+15, Insights Core 5 and Insights + Nav 13, each assigned exactly once. #139-C3-R1
+rebalances capacity by moving only Changes, Compare, Domain, Entity and Navigation
+from Insights + Nav to Insights Core; all 47 specs and their business coverage remain.
+Historical three-group timing is not a measurement of these four groups; actual
+counts and durations belong to the [C3 acceptance record](../acceptance/139-c3-final-motion-acceptance.md).
+The inventory guard rejects unassigned/new, missing, duplicate and empty membership.
+Workflows run the CLI-produced file list with one worker and a 10-minute job budget
+including setup; no `--shard`, automatic filename grouping, `fullyParallel` or
+retries. Reclassify new specs in
 that owner and run `node --test .github/scripts/nav-web-regression-groups.test.mjs`.
 
 Nightly is scheduled at 20:17 UTC, resolves `dev` once and exports the checkout SHA.
@@ -165,7 +170,7 @@ All groups restore that run's one-day `.output` archive and check out that exact
 SHA; a newer dev push cannot mix fixtures and output. Manual uses the selected
 workflow ref, with no separate custom ref input. Main/manual Full also builds the
 real deployment image with the existing Buildx/GHA cache; nightly skips it. The
-final Full gate verifies the expected image success/skip and all three groups.
+final Full gate verifies the expected image success/skip and all four groups.
 
 Per [GitHub's trigger rules](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows), new manual/scheduled workflows must first exist on the repository's default branch
 (`main`) to receive those GitHub events. This is an enablement prerequisite, not
@@ -607,7 +612,7 @@ describes the matching-package/image requirement and `--ipc=host`.
 
 All three CI tiers use that tag **and** immutable digest with Node 24 and
 `--ipc=host`. Fast builds and runs Smoke in one job. Full's same-run, source-named
-tar preserves `.output` symlinks/permissions for its three regression groups.
+tar preserves `.output` symlinks/permissions for its four regression groups.
 Manual Visual builds and compares in its own job with `GOFURRY_VISUAL_ENV=pinned`.
 No tier installs browsers or restores another run's output. See [CI tiers](#ci-tiers-134)
 for triggers, group inventory and failure artifacts.
