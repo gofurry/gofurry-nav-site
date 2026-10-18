@@ -231,8 +231,8 @@ for (const width of [1440, 1024, 900, 768, 767, 640, 430, 390, 375]) {
     }))
     expect(outlines).toHaveLength(2)
     for (const shape of outlines) {
-      expect(shape.drop, 'Full-height cut runs from upper right to lower left').toBeGreaterThanOrEqual(28)
-      expect(shape.drop).toBeLessThanOrEqual(36)
+      expect(shape.drop, 'Compact full-height cut runs from upper right to lower left').toBeGreaterThanOrEqual(14)
+      expect(shape.drop).toBeLessThanOrEqual(22)
       expect(shape.straightError, 'Middle 80% remains a diagonal straight line').toBeLessThan(0.15)
       expect(shape.fullHeight).toBeGreaterThan(0.97)
       expect(shape).toMatchObject({ sized: true, clipped: true, blur: 'blur(10px)', controlsUnclipped: true, cutPassesHits: true })

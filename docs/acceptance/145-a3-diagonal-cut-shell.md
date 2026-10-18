@@ -30,3 +30,11 @@
 - **HUMAN VISUAL PENDING**：是否真正呈现“一刀从右上到左下切开后拉开”，而非鼓包/尖嘴/角落小裁切；上下柔角是否克制，整片材质、边线是否连续；三个宽度与两类背景下图标、焦点环、透明间隙是否自然。
 - NOT RUN：全量 Browser/Visual、远端 Full/Visual、非 Chromium 与真实移动设备、生产访问/部署。没有更新 Golden；本批自动测试结果不构成视觉批准。
 - 保留原 fixture 的窄范围手机 Footer hydration 债务守卫，未新增错误忽略规则。不进入 #145-B，不合并 main、不部署、不关闭 Issue。
+
+## 截图反馈：尖角柔化（2026-10-19）
+
+基线 `22e94d2`。维护者先指出左岛右上、右岛左下偏尖，随后要求收窄两块空白三角并平衡内容间距，快速修改、减少检查。本次将两处尖角替换为相切的约 4px 圆弧；斜切横向位移由 32px 收窄到 18px，左岛保持原右侧留白以增加下端点与文字的距离，右岛左内边距由 32px 收紧为 20px。其余轮廓、内容与交互不改。
+
+- 圆角修改后 `style:policy`、Typecheck、Build PASS；该 Build 早于最终 18px 切口/留白修改，不作为最终源码 Browser 证据。
+- PASS：最终参数定向 ESLint（`NavBar.vue`、`nav-shell.spec.ts`）与 `git diff --check`；对应形状断言由 32±4px 调整为 18±4px，检查区间宽度不变，其他断言不改。按维护者最新检查预算不再重建或运行 Browser/Visual，标记 NOT RUN。
+- `.cache/145-a3-soft-corners/before/` 仅保存修改前截图，本次没有最终截图。人工视觉仍为 **HUMAN VISUAL PENDING**，不更新 Golden。

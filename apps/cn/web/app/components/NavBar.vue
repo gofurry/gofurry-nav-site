@@ -15,7 +15,7 @@
         <img :src="logo" alt="" class="h-8 w-8" />
         <span class="gf-nav__brand-text">GoFurry</span>
       </NuxtLink>
-      <div class="gf-nav__island gf-nav__actions pointer-events-none flex shrink-0 items-center gap-0.5 pl-8 pr-2 lg:gap-1 lg:pr-3">
+      <div class="gf-nav__island gf-nav__actions pointer-events-none flex shrink-0 items-center gap-0.5 pl-5 pr-2 lg:gap-1 lg:pr-3">
         <span class="gf-nav__shell" :style="{ clipPath: `url(#${shellId}-actions)` }" aria-hidden="true">
           <svg :viewBox="`0 0 ${shellSizes[1].width} ${shellSizes[1].height}`" preserveAspectRatio="none" focusable="false">
             <defs><clipPath :id="`${shellId}-actions`" clipPathUnits="objectBoundingBox">
@@ -125,11 +125,15 @@ let shellObserver: ResizeObserver | undefined
 function shellPath(width: number, height: number, brand: boolean) {
   const left = 0.5, right = width - 0.5, top = 0.5, bottom = height - 0.5
   const radius = 18, scale = (height - 1) / 55
-  const cut = 32 * scale, corner = 4 * scale, end = 5 * scale, dx = cut * 5 / 55
-  // Both straight edges follow x(y) = x_top - 32*y/55. Only their joins differ.
+  const cut = 18 * scale, corner = 4 * scale, end = 5 * scale, dx = cut * 5 / 55
+  // Circular fillets soften the two acute tips without bending the straight cut.
+  const tipRadius = 4 * scale, diagonal = Math.hypot(cut, bottom - top)
+  const tipY = tipRadius * (1 + cut / diagonal), tipX = tipY * cut / (bottom - top)
+  const tangent = tipRadius * (diagonal + cut) / (bottom - top)
+  // Both straight edges follow x(y) = x_top - 18*y/55. Only their joins differ.
   return brand
-    ? `M${left + radius} ${top} H${right - corner} Q${right} ${top} ${right - dx} ${top + end} L${right - cut + dx} ${bottom - end} Q${right - cut} ${bottom} ${right - cut - corner} ${bottom} H${left + radius} Q${left} ${bottom} ${left} ${bottom - radius} V${top + radius} Q${left} ${top} ${left + radius} ${top} Z`
-    : `M${left + cut + corner} ${top} H${right - radius} Q${right} ${top} ${right} ${top + radius} V${bottom - radius} Q${right} ${bottom} ${right - radius} ${bottom} H${left + corner} Q${left} ${bottom} ${left + dx} ${bottom - end} L${left + cut - dx} ${top + end} Q${left + cut} ${top} ${left + cut + corner} ${top} Z`
+    ? `M${left + radius} ${top} H${right - tangent} A${tipRadius} ${tipRadius} 0 0 1 ${right - tipX} ${top + tipY} L${right - cut + dx} ${bottom - end} Q${right - cut} ${bottom} ${right - cut - corner} ${bottom} H${left + radius} Q${left} ${bottom} ${left} ${bottom - radius} V${top + radius} Q${left} ${top} ${left + radius} ${top} Z`
+    : `M${left + cut + corner} ${top} H${right - radius} Q${right} ${top} ${right} ${top + radius} V${bottom - radius} Q${right} ${bottom} ${right - radius} ${bottom} H${left + tangent} A${tipRadius} ${tipRadius} 0 0 1 ${left + tipX} ${bottom - tipY} L${left + cut - dx} ${top + end} Q${left + cut} ${top} ${left + cut + corner} ${top} Z`
 }
 const shellPaths = computed(() => shellSizes.value.map((size, index) => shellPath(size.width, size.height, index === 0)))
 onMounted(() => {
