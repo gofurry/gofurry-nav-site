@@ -658,6 +658,10 @@ type GfnSite struct {
 	ViewCount int64 `json:"view_count"`
 	// 网站软删除的 UTC 边界；未删除时为 NULL，旧本地时间按 Asia/Shanghai 解释
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+	// 网站软归档原因：unreachable 无法访问、closed 确认停运、migrated 网站迁移、duplicate 重复收录、owner_request 站长要求移除、other 其他原因；历史归档允许 NULL，未归档必须为 NULL，新归档由 Admin 强制显式选择。
+	DeletionReasonCode *string `json:"deletion_reason_code"`
+	// 网站软归档的可选人工说明，Admin 去除首尾空白后最多 1000 个字符；NULL 表示未填写，不回填历史原因，不作为 Target 时段关闭原因。
+	DeletionReason *string `json:"deletion_reason"`
 }
 
 // 网站每日历史维度和主目标快照；当前日可变，已完成历史日供指标读取

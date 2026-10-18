@@ -16,6 +16,7 @@ export type OptionItem = { id: string; label: string; extra?: string }
 export type KeyValue = { key: string; value: string }
 
 export type Site = {
+  deleted_at?: string | null; deletion_reason_code?: string | null; deletion_reason?: string | null
 	icon_primary_url?: string; icon_mirror_url?: string
   id: number; name: string; name_en: string; info: string; info_en: string
   create_time: string; update_time: string; country: string | null
@@ -26,14 +27,14 @@ export type CollectorTarget = {
   id: number; site_id: number; name: string; proxy: string; prefix: string | null; tls: string; primary: boolean
 }
 
-export type SiteSummary = { id: number; name: string; name_en: string; update_time: string; primary_target: string; group_names: string[]; featured: boolean }
+export type SiteSummary = { deleted: boolean; deleted_at: string | null; deletion_reason_code: string | null; deletion_reason: string | null; id: number; name: string; name_en: string; update_time: string; primary_target: string; group_names: string[]; featured: boolean }
 
 export type SiteGroupRelation = {
   id: number; site_id: number; group_id: number; group_name: string; weight: number
 }
 
 export type FeaturedSite = { id: number; site_id: number; weight: number }
-export type SiteWorkspace = { site: Site; targets: CollectorTarget[]; groups: SiteGroupRelation[]; featured: FeaturedSite | null }
+export type SiteWorkspace = { former_primary_target?: string; site: Site; targets: CollectorTarget[]; groups: SiteGroupRelation[]; featured: FeaturedSite | null }
 
 export type Game = {
   showcase_eligible: boolean

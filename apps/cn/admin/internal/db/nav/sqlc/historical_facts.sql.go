@@ -235,7 +235,7 @@ func (q *Queries) LockCollectorDomainForUpdate(ctx context.Context, id int64) (G
 
 const lockSiteForUpdate = `-- name: LockSiteForUpdate :one
 SELECT id, name, name_en, info, info_en, create_time, update_time, country,
-       nsfw, welfare, icon, deleted, view_count, deleted_at
+       nsfw, welfare, icon, deleted, view_count, deleted_at, deletion_reason_code, deletion_reason
 FROM gfn_site
 WHERE id = $1
 FOR UPDATE
@@ -259,6 +259,8 @@ func (q *Queries) LockSiteForUpdate(ctx context.Context, id int64) (GfnSite, err
 		&i.Deleted,
 		&i.ViewCount,
 		&i.DeletedAt,
+		&i.DeletionReasonCode,
+		&i.DeletionReason,
 	)
 	return i, err
 }

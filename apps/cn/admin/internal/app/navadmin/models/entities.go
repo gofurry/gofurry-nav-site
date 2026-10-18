@@ -60,6 +60,10 @@ type CollectorDomainDTO struct {
 }
 
 type Site struct {
+	DeletedAt          *time.Time `json:"deleted_at"`
+	DeletionReasonCode *string    `json:"deletion_reason_code"`
+	DeletionReason     *string    `json:"deletion_reason"`
+
 	ID         int64               `json:"id"`
 	Name       string              `json:"name"`
 	NameEn     string              `json:"name_en"`
@@ -137,6 +141,11 @@ type CollectorDomainPayload struct {
 	TLS    string  `json:"tls"`
 }
 
+type SiteArchivalPayload struct {
+	DeletionReasonCode string  `json:"deletion_reason_code"`
+	DeletionReason     *string `json:"deletion_reason"`
+}
+
 type SitePayload struct {
 	Name    string  `json:"name"`
 	NameEn  string  `json:"name_en"`
@@ -148,6 +157,10 @@ type SitePayload struct {
 }
 
 type SiteDTO struct {
+	DeletedAt          *time.Time `json:"deleted_at"`
+	DeletionReasonCode *string    `json:"deletion_reason_code"`
+	DeletionReason     *string    `json:"deletion_reason"`
+
 	IconPrimaryURL string              `json:"icon_primary_url"`
 	IconMirrorURL  string              `json:"icon_mirror_url"`
 	ID             int64               `json:"id"`
@@ -175,6 +188,11 @@ type SiteWorkspaceTarget struct {
 }
 
 type SiteWorkspaceSummary struct {
+	Deleted            bool       `json:"deleted"`
+	DeletedAt          *time.Time `json:"deleted_at"`
+	DeletionReasonCode *string    `json:"deletion_reason_code"`
+	DeletionReason     *string    `json:"deletion_reason"`
+
 	ID            int64               `json:"id"`
 	Name          string              `json:"name"`
 	NameEn        string              `json:"name_en"`
@@ -199,10 +217,11 @@ type SiteWorkspaceFeatured struct {
 }
 
 type SiteWorkspace struct {
-	Site     SiteDTO                `json:"site"`
-	Targets  []SiteWorkspaceTarget  `json:"targets"`
-	Groups   []SiteWorkspaceGroup   `json:"groups"`
-	Featured *SiteWorkspaceFeatured `json:"featured"`
+	FormerPrimaryTarget string                 `json:"former_primary_target"`
+	Site                SiteDTO                `json:"site"`
+	Targets             []SiteWorkspaceTarget  `json:"targets"`
+	Groups              []SiteWorkspaceGroup   `json:"groups"`
+	Featured            *SiteWorkspaceFeatured `json:"featured"`
 }
 
 type SiteGroupPayload struct {

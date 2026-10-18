@@ -179,7 +179,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 		t.Fatal("ordinary Site update did not preserve its managed icon and update content")
 	}
 	requestJSON(t, app, http.MethodGet, fmt.Sprintf("/nav/sites/%d", siteID), "", cookie, http.StatusOK)
-	requestJSON(t, app, http.MethodDelete, fmt.Sprintf("/nav/sites/%d", siteID), "", cookie, http.StatusOK)
+	requestJSON(t, app, http.MethodDelete, fmt.Sprintf("/nav/sites/%d", siteID), `{"deletion_reason_code":"other","deletion_reason":"integration fixture cleanup"}`, cookie, http.StatusOK)
 	if got := queryBool(t, ctx, navPool, `SELECT deleted FROM gfn_site WHERE id=$1`, siteID); !got {
 		t.Fatal("Nav delete did not preserve soft-delete behavior")
 	}
@@ -219,7 +219,7 @@ func TestAdminThreeDatabasePersistence(t *testing.T) {
 	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_site_primary_target_periods p JOIN gfn_target_tracking_periods t ON t.id=p.target_tracking_period_id WHERE p.site_id=$1 AND p.effective_until IS NULL AND t.collector_domain_id=$2`, trackedSiteID, rootDomainID); count != 1 {
 		t.Fatal("deleting Primary Target did not select deterministic replacement")
 	}
-	requestJSON(t, app, http.MethodDelete, fmt.Sprintf("/nav/sites/%d", trackedSiteID), "", cookie, http.StatusOK)
+	requestJSON(t, app, http.MethodDelete, fmt.Sprintf("/nav/sites/%d", trackedSiteID), `{"deletion_reason_code":"other","deletion_reason":"integration fixture cleanup"}`, cookie, http.StatusOK)
 	if count := queryInt64(t, ctx, navPool, `SELECT COUNT(*) FROM gfn_target_tracking_periods WHERE site_id=$1 AND tracked_until IS NULL`, trackedSiteID); count != 0 {
 		t.Fatal("deleting Site left active target periods")
 	}

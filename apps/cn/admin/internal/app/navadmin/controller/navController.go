@@ -263,7 +263,7 @@ func (api *navAPI) ListSites(c fiber.Ctx) error {
 }
 
 func (api *navAPI) ListSiteWorkspaceSummaries(c fiber.Ctx) error {
-	total, items, err := api.store.listSiteWorkspaceSummaries(c.Context(), adminutil.ParsePageQuery(c))
+	total, items, err := api.store.listSiteWorkspaceSummaries(c.Context(), adminutil.ParsePageQuery(c), c.Query("status", "active"))
 	if err != nil {
 		return common.NewResponse(c).Error(err)
 	}
@@ -326,11 +326,19 @@ func (api *navAPI) UpdateSite(c fiber.Ctx) error {
 }
 
 func (api *navAPI) DeleteSite(c fiber.Ctx) error {
-	if err := api.delete(c, api.store.deleteSite); err != nil {
-		return err
+	id, err := adminutil.ParseIDParam(c)
+	if err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	var req models.SiteArchivalPayload
+	if err := adminutil.DecodeBody(c, &req); err != nil {
+		return common.NewResponse(c).Error(err)
+	}
+	if err := api.store.deleteSite(c.Context(), audit.MetaFromFiber(c), id, req); err != nil {
+		return common.NewResponse(c).Error(err)
 	}
 	invalidateNavSiteListCache()
-	return nil
+	return common.NewResponse(c).Success()
 }
 
 func (api *navAPI) ListSiteGroups(c fiber.Ctx) error {
@@ -647,7 +655,7 @@ func normalizeStringPtr(value *string) *string {
 func siteDTO(item models.Site) models.SiteDTO {
 	return models.SiteDTO{ID: item.ID, Name: item.Name, NameEn: item.NameEn, Info: item.Info, InfoEn: item.InfoEn,
 		CreateTime: item.CreateTime, UpdateTime: item.UpdateTime, Country: item.Country, Nsfw: item.Nsfw,
-		Welfare: item.Welfare, Icon: item.Icon, Deleted: item.Deleted}
+		Welfare: item.Welfare, Icon: item.Icon, Deleted: item.Deleted, DeletedAt: item.DeletedAt, DeletionReasonCode: item.DeletionReasonCode, DeletionReason: item.DeletionReason}
 }
 
 func uniqueInt64s(input []int64) []int64 {

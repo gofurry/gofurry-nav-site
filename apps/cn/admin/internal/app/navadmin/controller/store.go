@@ -199,14 +199,7 @@ func (store *navStore) getCollectorDomain(ctx context.Context, id int64) (models
 }
 
 func validateCollectorDomainQuery(ctx context.Context, q *navsqlc.Queries, req models.CollectorDomainPayload) error {
-	count, err := q.CountActiveSiteByID(ctx, req.SiteID)
-	if err != nil {
-		return err
-	}
-	if count == 0 {
-		return common.NewValidationError("site_id must reference an existing site")
-	}
-	return nil
+	return requireActiveSite(ctx, q, req.SiteID)
 }
 
 func collectorTarget(name string, prefix *string) string {
@@ -263,10 +256,7 @@ func (store *navStore) createCollectorDomain(ctx context.Context, meta audit.Met
 
 func (store *navStore) updateCollectorDomain(ctx context.Context, meta audit.Meta, id int64, req models.CollectorDomainPayload) common.Error {
 	return store.mutate(ctx, meta, "update", "gfn_collector_domain", func(q *navsqlc.Queries) (int64, any, any, error) {
-		if err := validateCollectorDomainQuery(ctx, q, req); err != nil {
-			return id, nil, nil, err
-		}
-		before, err := q.LockCollectorDomainForUpdate(ctx, id)
+		before, err := lockActiveCollectorDomain(ctx, q, id, req.SiteID)
 		if err != nil {
 			return id, nil, nil, err
 		}
@@ -330,7 +320,7 @@ func (store *navStore) updateCollectorDomain(ctx context.Context, meta audit.Met
 
 func (store *navStore) deleteCollectorDomain(ctx context.Context, meta audit.Meta, id int64) common.Error {
 	return store.mutate(ctx, meta, "delete", "gfn_collector_domain", func(q *navsqlc.Queries) (int64, any, any, error) {
-		before, err := q.LockCollectorDomainForUpdate(ctx, id)
+		before, err := lockActiveCollectorDomain(ctx, q, id)
 		if err != nil {
 			return id, nil, nil, err
 		}
@@ -367,7 +357,7 @@ func (store *navStore) deleteCollectorDomain(ctx context.Context, meta audit.Met
 
 func (store *navStore) setPrimaryCollectorDomain(ctx context.Context, meta audit.Meta, id int64) common.Error {
 	return store.mutate(ctx, meta, "set_primary", "gfn_site_primary_target_periods", func(q *navsqlc.Queries) (int64, any, any, error) {
-		domain, err := q.LockCollectorDomainForUpdate(ctx, id)
+		domain, err := lockActiveCollectorDomain(ctx, q, id)
 		if err != nil {
 			return id, nil, nil, err
 		}
@@ -424,9 +414,17 @@ func (store *navStore) getSite(ctx context.Context, id int64) (models.SiteDTO, c
 }
 
 func (store *navStore) getSiteWorkspace(ctx context.Context, id int64) (models.SiteWorkspace, common.Error) {
-	site, storeErr := store.getSite(ctx, id)
-	if storeErr != nil {
-		return models.SiteWorkspace{}, storeErr
+	siteRow, err := store.q.GetSiteAny(ctx, id)
+	if err != nil {
+		return models.SiteWorkspace{}, navDAOError(err)
+	}
+	site := siteDTO(siteModel(siteRow))
+	formerPrimary := ""
+	if site.Deleted {
+		formerPrimary, err = store.q.GetSiteFormerPrimaryTarget(ctx, id)
+		if err != nil {
+			return models.SiteWorkspace{}, navDAOError(err)
+		}
 	}
 	targetRows, err := store.q.ListSiteWorkspaceTargets(ctx, &id)
 	if err != nil {
@@ -455,17 +453,21 @@ func (store *navStore) getSiteWorkspace(ctx context.Context, id int64) (models.S
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return models.SiteWorkspace{}, navDAOError(err)
 	}
-	return models.SiteWorkspace{Site: site, Targets: targets, Groups: groups, Featured: featured}, nil
+	return models.SiteWorkspace{Site: site, Targets: targets, Groups: groups, Featured: featured, FormerPrimaryTarget: formerPrimary}, nil
 }
 
-func (store *navStore) listSiteWorkspaceSummaries(ctx context.Context, page adminutil.PageQuery) (int64, []models.SiteWorkspaceSummary, common.Error) {
-	total, err := store.q.CountSites(ctx, page.Keyword)
+func (store *navStore) listSiteWorkspaceSummaries(ctx context.Context, page adminutil.PageQuery, status string) (int64, []models.SiteWorkspaceSummary, common.Error) {
+	if status != "active" && status != "archived" {
+		return 0, nil, common.NewValidationError("status must be active or archived")
+	}
+	archived := status == "archived"
+	total, err := store.q.CountSiteWorkspaceSummaries(ctx, navsqlc.CountSiteWorkspaceSummariesParams{Keyword: page.Keyword, Archived: archived})
 	if err != nil {
 		return 0, nil, navDAOError(err)
 	}
 	limit, offset := pageArgs(page)
 	rows, err := store.q.ListSiteWorkspaceSummaries(ctx, navsqlc.ListSiteWorkspaceSummariesParams{
-		Keyword: page.Keyword, RowLimit: limit, RowOffset: offset,
+		Archived: archived, Keyword: page.Keyword, RowLimit: limit, RowOffset: offset,
 	})
 	if err != nil {
 		return 0, nil, navDAOError(err)
@@ -474,7 +476,7 @@ func (store *navStore) listSiteWorkspaceSummaries(ctx context.Context, page admi
 	for _, row := range rows {
 		items = append(items, models.SiteWorkspaceSummary{
 			ID: row.ID, Name: row.Name, NameEn: row.NameEn, UpdateTime: pkgmodels.LocalTime(row.UpdateTime.Time),
-			PrimaryTarget: row.PrimaryTarget, GroupNames: row.GroupNames, Featured: row.Featured,
+			Deleted: row.Deleted, DeletedAt: siteDeletedAt(row.DeletedAt), DeletionReasonCode: row.DeletionReasonCode, DeletionReason: row.DeletionReason, PrimaryTarget: row.PrimaryTarget, GroupNames: row.GroupNames, Featured: row.Featured,
 		})
 	}
 	return total, items, nil
@@ -499,9 +501,12 @@ func (store *navStore) createSite(ctx context.Context, meta audit.Meta, req mode
 
 func (store *navStore) updateSite(ctx context.Context, meta audit.Meta, id int64, req models.SitePayload) common.Error {
 	return store.mutate(ctx, meta, "update", "gfn_site", func(q *navsqlc.Queries) (int64, any, any, error) {
-		before, err := q.GetSiteAny(ctx, id)
+		before, err := q.LockSiteForUpdate(ctx, id)
 		if err != nil {
 			return id, nil, nil, err
+		}
+		if before.Deleted {
+			return id, before, nil, common.NewValidationError("archived site is read-only")
 		}
 		after, err := q.UpdateSite(ctx, navsqlc.UpdateSiteParams{ID: id, Name: req.Name, NameEn: req.NameEn, Info: req.Info, InfoEn: req.InfoEn, Country: req.Country, Nsfw: req.Nsfw, Welfare: req.Welfare})
 		if err == nil {
@@ -511,14 +516,19 @@ func (store *navStore) updateSite(ctx context.Context, meta audit.Meta, id int64
 	})
 }
 
-func (store *navStore) deleteSite(ctx context.Context, meta audit.Meta, id int64) common.Error {
+func (store *navStore) deleteSite(ctx context.Context, meta audit.Meta, id int64, req models.SiteArchivalPayload) common.Error {
+	var validationErr common.Error
+	req, validationErr = normalizeSiteArchival(req)
+	if validationErr != nil {
+		return validationErr
+	}
 	return store.mutate(ctx, meta, "delete", "gfn_site", func(q *navsqlc.Queries) (int64, any, any, error) {
 		before, err := q.LockSiteForUpdate(ctx, id)
 		if err != nil {
 			return id, nil, nil, err
 		}
 		if before.Deleted {
-			return id, before, nil, pgx.ErrNoRows
+			return id, before, nil, common.NewValidationError("site is already archived")
 		}
 		if _, err = q.ClosePrimaryTargetBySite(ctx, id); err != nil {
 			return id, before, nil, err
@@ -527,7 +537,7 @@ func (store *navStore) deleteSite(ctx context.Context, meta audit.Meta, id int64
 		if _, err = q.CloseTargetTrackingPeriodsBySite(ctx, navsqlc.CloseTargetTrackingPeriodsBySiteParams{SiteID: id, ClosedReason: &closedReason}); err != nil {
 			return id, before, nil, err
 		}
-		after, err := q.SoftDeleteSite(ctx, id)
+		after, err := q.SoftDeleteSite(ctx, navsqlc.SoftDeleteSiteParams{ID: id, DeletionReasonCode: &req.DeletionReasonCode, DeletionReason: req.DeletionReason})
 		if err == nil {
 			err = q.RefreshCurrentSiteDaily(ctx, id)
 		}
@@ -620,6 +630,9 @@ func (store *navStore) createSiteGroupMap(ctx context.Context, meta audit.Meta, 
 		if err := q.LockSiteGroupCuration(ctx); err != nil {
 			return 0, nil, nil, err
 		}
+		if err := requireActiveSite(ctx, q, req.SiteID); err != nil {
+			return 0, nil, nil, err
+		}
 		id, err := q.NextSiteGroupMapID(ctx)
 		if err != nil {
 			return 0, nil, nil, err
@@ -643,6 +656,12 @@ func (store *navStore) updateSiteGroupMap(ctx context.Context, meta audit.Meta, 
 		if err != nil {
 			return id, nil, nil, err
 		}
+		if err := requireActiveSite(ctx, q, before.SiteID); err != nil {
+			return id, before, nil, err
+		}
+		if err := requireActiveSite(ctx, q, req.SiteID); err != nil {
+			return id, before, nil, err
+		}
 		after, err := q.UpdateSiteGroupMap(ctx, navsqlc.UpdateSiteGroupMapParams{ID: id, SiteID: req.SiteID, GroupID: req.GroupID, Weight: req.Weight})
 		if err == nil {
 			err = q.RefreshCurrentSiteDaily(ctx, before.SiteID)
@@ -661,6 +680,9 @@ func (store *navStore) deleteSiteGroupMap(ctx context.Context, meta audit.Meta, 
 		}
 		before, err := q.GetSiteGroupMap(ctx, id)
 		if err == nil {
+			err = requireActiveSite(ctx, q, before.SiteID)
+		}
+		if err == nil {
 			_, err = q.DeleteSiteGroupMap(ctx, id)
 		}
 		if err == nil {
@@ -674,6 +696,9 @@ func (store *navStore) replaceSiteGroupMaps(ctx context.Context, meta audit.Meta
 	return store.mutate(ctx, meta, "bulk_replace", "gfn_site_group_map", func(q *navsqlc.Queries) (int64, any, any, error) {
 		if err := q.LockSiteGroupCuration(ctx); err != nil {
 			return 0, nil, nil, err
+		}
+		if err := requireActiveSite(ctx, q, siteID); err != nil {
+			return siteID, nil, nil, err
 		}
 		before, err := q.ListSiteGroupMapsBySite(ctx, siteID)
 		if err != nil {
@@ -728,12 +753,8 @@ func (store *navStore) getFeaturedSite(ctx context.Context, id int64) (models.Fe
 }
 
 func validateFeaturedQuery(ctx context.Context, q *navsqlc.Queries, req models.FeaturedSitePayload, currentID int64) error {
-	sites, err := q.CountActiveSiteByID(ctx, req.SiteID)
-	if err != nil {
+	if err := requireActiveSite(ctx, q, req.SiteID); err != nil {
 		return err
-	}
-	if sites == 0 {
-		return common.NewValidationError("site_id must reference an existing site")
 	}
 	existing, err := q.CountFeaturedSiteBySite(ctx, navsqlc.CountFeaturedSiteBySiteParams{SiteID: req.SiteID, ExcludeID: currentID})
 	if err != nil {
@@ -771,6 +792,9 @@ func (store *navStore) updateFeaturedSite(ctx context.Context, meta audit.Meta, 
 		if err != nil {
 			return id, nil, nil, err
 		}
+		if err := requireActiveSite(ctx, q, before.SiteID); err != nil {
+			return id, before, nil, err
+		}
 		after, err := q.UpdateFeaturedSite(ctx, navsqlc.UpdateFeaturedSiteParams{ID: id, SiteID: req.SiteID, Weight: req.Weight})
 		return id, before, after, err
 	})
@@ -779,6 +803,9 @@ func (store *navStore) updateFeaturedSite(ctx context.Context, meta audit.Meta, 
 func (store *navStore) deleteFeaturedSite(ctx context.Context, meta audit.Meta, id int64) common.Error {
 	return store.mutate(ctx, meta, "delete", "gfn_featured_site", func(q *navsqlc.Queries) (int64, any, any, error) {
 		before, err := q.GetFeaturedSiteAny(ctx, id)
+		if err == nil {
+			err = requireActiveSite(ctx, q, before.SiteID)
+		}
 		if err == nil {
 			_, err = q.DeleteFeaturedSite(ctx, id)
 		}
@@ -837,7 +864,7 @@ func collectorDomainDTO(id, siteID int64, siteName, name, proxy string, prefix *
 func siteModel(row navsqlc.GfnSite) models.Site {
 	return models.Site{ID: row.ID, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn,
 		CreateTime: pkgmodels.LocalTime(row.CreateTime.Time), UpdateTime: pkgmodels.LocalTime(row.UpdateTime.Time),
-		Country: row.Country, Nsfw: row.Nsfw, Welfare: row.Welfare, Icon: row.Icon, Deleted: row.Deleted}
+		Country: row.Country, Nsfw: row.Nsfw, Welfare: row.Welfare, Icon: row.Icon, Deleted: row.Deleted, DeletedAt: siteDeletedAt(row.DeletedAt), DeletionReasonCode: row.DeletionReasonCode, DeletionReason: row.DeletionReason}
 }
 
 func siteGroupModel(row navsqlc.GfnSiteGroup) models.SiteGroup {

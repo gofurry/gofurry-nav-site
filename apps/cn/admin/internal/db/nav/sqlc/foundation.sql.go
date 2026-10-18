@@ -153,6 +153,27 @@ func (q *Queries) CountSiteTargetOptions(ctx context.Context, arg CountSiteTarge
 	return column_1, err
 }
 
+const countSiteWorkspaceSummaries = `-- name: CountSiteWorkspaceSummaries :one
+SELECT COUNT(*)::bigint FROM gfn_site site
+WHERE (site.deleted IS TRUE)=$1::boolean AND ($2::text='' OR site.name ILIKE '%'||$2||'%'
+ OR site.name_en ILIKE '%'||$2||'%' OR site.info ILIKE '%'||$2||'%'
+ OR site.info_en ILIKE '%'||$2||'%' OR site.id::text ILIKE '%'||$2||'%'
+ OR EXISTS (SELECT 1 FROM gfn_target_tracking_periods history WHERE history.site_id=site.id
+            AND history.target ILIKE '%'||$2||'%'))
+`
+
+type CountSiteWorkspaceSummariesParams struct {
+	Archived bool   `json:"archived"`
+	Keyword  string `json:"keyword"`
+}
+
+func (q *Queries) CountSiteWorkspaceSummaries(ctx context.Context, arg CountSiteWorkspaceSummariesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSiteWorkspaceSummaries, arg.Archived, arg.Keyword)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countSites = `-- name: CountSites :one
 SELECT COUNT(*)::bigint FROM gfn_site WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%'
  OR name_en ILIKE '%'||$1||'%' OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%'
@@ -364,7 +385,7 @@ func (q *Queries) GetSaying(ctx context.Context, id int64) (GfnSaying, error) {
 }
 
 const getSite = `-- name: GetSite :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at FROM gfn_site
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at,deletion_reason_code,deletion_reason FROM gfn_site
 WHERE id=$1 AND deleted IS NOT TRUE
 `
 
@@ -386,12 +407,14 @@ func (q *Queries) GetSite(ctx context.Context, id int64) (GfnSite, error) {
 		&i.Deleted,
 		&i.ViewCount,
 		&i.DeletedAt,
+		&i.DeletionReasonCode,
+		&i.DeletionReason,
 	)
 	return i, err
 }
 
 const getSiteAny = `-- name: GetSiteAny :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at FROM gfn_site WHERE id=$1
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at,deletion_reason_code,deletion_reason FROM gfn_site WHERE id=$1
 `
 
 func (q *Queries) GetSiteAny(ctx context.Context, id int64) (GfnSite, error) {
@@ -412,8 +435,26 @@ func (q *Queries) GetSiteAny(ctx context.Context, id int64) (GfnSite, error) {
 		&i.Deleted,
 		&i.ViewCount,
 		&i.DeletedAt,
+		&i.DeletionReasonCode,
+		&i.DeletionReason,
 	)
 	return i, err
+}
+
+const getSiteFormerPrimaryTarget = `-- name: GetSiteFormerPrimaryTarget :one
+SELECT COALESCE((
+    SELECT target_period.target FROM gfn_site_primary_target_periods primary_period
+    JOIN gfn_target_tracking_periods target_period ON target_period.id=primary_period.target_tracking_period_id
+    WHERE primary_period.site_id=$1 AND primary_period.effective_until IS NOT NULL
+    ORDER BY primary_period.effective_until DESC,primary_period.id DESC LIMIT 1
+), '')::text AS target
+`
+
+func (q *Queries) GetSiteFormerPrimaryTarget(ctx context.Context, siteID int64) (string, error) {
+	row := q.db.QueryRow(ctx, getSiteFormerPrimaryTarget, siteID)
+	var target string
+	err := row.Scan(&target)
+	return target, err
 }
 
 const getSiteGroup = `-- name: GetSiteGroup :one
@@ -594,7 +635,7 @@ func (q *Queries) InsertSaying(ctx context.Context, arg InsertSayingParams) (Gfn
 const insertSite = `-- name: InsertSite :one
 INSERT INTO gfn_site (id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count)
 VALUES ($1,$2,$3,$4,$5,NOW()::timestamp(0),NOW()::timestamp(0),$6,$7,$8,NULL,false,0)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at,deletion_reason_code,deletion_reason
 `
 
 type InsertSiteParams struct {
@@ -635,6 +676,8 @@ func (q *Queries) InsertSite(ctx context.Context, arg InsertSiteParams) (GfnSite
 		&i.Deleted,
 		&i.ViewCount,
 		&i.DeletedAt,
+		&i.DeletionReasonCode,
+		&i.DeletionReason,
 	)
 	return i, err
 }
@@ -1207,7 +1250,7 @@ func (q *Queries) ListSiteWorkspaceGroups(ctx context.Context, siteID int64) ([]
 }
 
 const listSiteWorkspaceSummaries = `-- name: ListSiteWorkspaceSummaries :many
-SELECT site.id,site.name,site.name_en,site.update_time,
+SELECT site.id,site.name,site.name_en,site.update_time,site.deleted,site.deleted_at,site.deletion_reason_code,site.deletion_reason,
        COALESCE(primary_target.target,'')::text AS primary_target,
        COALESCE(site_groups.group_names,ARRAY[]::text[])::text[] AS group_names,
        EXISTS (SELECT 1 FROM gfn_featured_site featured WHERE featured.site_id=site.id) AS featured
@@ -1216,8 +1259,10 @@ LEFT JOIN LATERAL (
     SELECT target_period.target
     FROM gfn_site_primary_target_periods primary_period
     JOIN gfn_target_tracking_periods target_period ON target_period.id=primary_period.target_tracking_period_id
-    WHERE primary_period.site_id=site.id AND primary_period.effective_until IS NULL
-    LIMIT 1
+    WHERE primary_period.site_id=site.id AND (
+        (site.deleted IS NOT TRUE AND primary_period.effective_until IS NULL)
+        OR (site.deleted IS TRUE AND primary_period.effective_until IS NOT NULL))
+    ORDER BY primary_period.effective_until DESC,primary_period.id DESC LIMIT 1
 ) primary_target ON true
 LEFT JOIN LATERAL (
     SELECT array_agg(site_group.name ORDER BY site_group.priority DESC,site_group.id DESC)::text[] AS group_names
@@ -1225,30 +1270,43 @@ LEFT JOIN LATERAL (
     JOIN gfn_site_group site_group ON site_group.id=site_map.group_id
     WHERE site_map.site_id=site.id
 ) site_groups ON true
-WHERE site.deleted IS NOT TRUE AND ($1::text='' OR site.name ILIKE '%'||$1||'%'
- OR site.name_en ILIKE '%'||$1||'%' OR site.info ILIKE '%'||$1||'%'
- OR site.info_en ILIKE '%'||$1||'%' OR site.id::text ILIKE '%'||$1||'%')
-ORDER BY site.update_time DESC,site.id DESC LIMIT $3 OFFSET $2
+WHERE (site.deleted IS TRUE)=$1::boolean AND ($2::text='' OR site.name ILIKE '%'||$2||'%'
+ OR site.name_en ILIKE '%'||$2||'%' OR site.info ILIKE '%'||$2||'%'
+ OR site.info_en ILIKE '%'||$2||'%' OR site.id::text ILIKE '%'||$2||'%'
+ OR EXISTS (SELECT 1 FROM gfn_target_tracking_periods history WHERE history.site_id=site.id
+            AND history.target ILIKE '%'||$2||'%'))
+ORDER BY CASE WHEN site.deleted IS TRUE THEN site.deleted_at END DESC,
+ CASE WHEN site.deleted IS NOT TRUE THEN site.update_time END DESC,site.id DESC LIMIT $4 OFFSET $3
 `
 
 type ListSiteWorkspaceSummariesParams struct {
+	Archived  bool   `json:"archived"`
 	Keyword   string `json:"keyword"`
 	RowOffset int32  `json:"row_offset"`
 	RowLimit  int32  `json:"row_limit"`
 }
 
 type ListSiteWorkspaceSummariesRow struct {
-	ID            int64            `json:"id"`
-	Name          string           `json:"name"`
-	NameEn        string           `json:"name_en"`
-	UpdateTime    pgtype.Timestamp `json:"update_time"`
-	PrimaryTarget string           `json:"primary_target"`
-	GroupNames    []string         `json:"group_names"`
-	Featured      bool             `json:"featured"`
+	ID                 int64              `json:"id"`
+	Name               string             `json:"name"`
+	NameEn             string             `json:"name_en"`
+	UpdateTime         pgtype.Timestamp   `json:"update_time"`
+	Deleted            bool               `json:"deleted"`
+	DeletedAt          pgtype.Timestamptz `json:"deleted_at"`
+	DeletionReasonCode *string            `json:"deletion_reason_code"`
+	DeletionReason     *string            `json:"deletion_reason"`
+	PrimaryTarget      string             `json:"primary_target"`
+	GroupNames         []string           `json:"group_names"`
+	Featured           bool               `json:"featured"`
 }
 
 func (q *Queries) ListSiteWorkspaceSummaries(ctx context.Context, arg ListSiteWorkspaceSummariesParams) ([]ListSiteWorkspaceSummariesRow, error) {
-	rows, err := q.db.Query(ctx, listSiteWorkspaceSummaries, arg.Keyword, arg.RowOffset, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listSiteWorkspaceSummaries,
+		arg.Archived,
+		arg.Keyword,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1261,6 +1319,10 @@ func (q *Queries) ListSiteWorkspaceSummaries(ctx context.Context, arg ListSiteWo
 			&i.Name,
 			&i.NameEn,
 			&i.UpdateTime,
+			&i.Deleted,
+			&i.DeletedAt,
+			&i.DeletionReasonCode,
+			&i.DeletionReason,
 			&i.PrimaryTarget,
 			&i.GroupNames,
 			&i.Featured,
@@ -1284,7 +1346,8 @@ SELECT domain.id,domain.site_id,domain.name,domain.proxy,domain.prefix,domain.tl
              AND target_period.collector_domain_id=domain.id
        ) AS is_primary
 FROM gfn_collector_domain domain
-WHERE domain.site_id=$1 AND domain.deleted IS NOT TRUE ORDER BY domain.id ASC
+WHERE domain.site_id=$1 AND (domain.deleted IS NOT TRUE
+ OR EXISTS (SELECT 1 FROM gfn_site WHERE id=domain.site_id AND deleted IS TRUE)) ORDER BY domain.id ASC
 `
 
 type ListSiteWorkspaceTargetsRow struct {
@@ -1326,7 +1389,7 @@ func (q *Queries) ListSiteWorkspaceTargets(ctx context.Context, siteID *int64) (
 }
 
 const listSites = `-- name: ListSites :many
-SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at FROM gfn_site
+SELECT id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at,deletion_reason_code,deletion_reason FROM gfn_site
 WHERE deleted IS NOT TRUE AND ($1::text='' OR name ILIKE '%'||$1||'%'
  OR name_en ILIKE '%'||$1||'%' OR info ILIKE '%'||$1||'%' OR info_en ILIKE '%'||$1||'%'
  OR id::text ILIKE '%'||$1||'%') ORDER BY update_time DESC,id DESC LIMIT $3 OFFSET $2
@@ -1362,6 +1425,8 @@ func (q *Queries) ListSites(ctx context.Context, arg ListSitesParams) ([]GfnSite
 			&i.Deleted,
 			&i.ViewCount,
 			&i.DeletedAt,
+			&i.DeletionReasonCode,
+			&i.DeletionReason,
 		); err != nil {
 			return nil, err
 		}
@@ -1587,13 +1652,20 @@ func (q *Queries) SoftDeleteCollectorDomain(ctx context.Context, id int64) (GfnC
 
 const softDeleteSite = `-- name: SoftDeleteSite :one
 UPDATE gfn_site
-SET deleted=true,deleted_at=transaction_timestamp(),update_time=NOW()::timestamp(0)
-WHERE id=$1
-RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at
+SET deleted=true,deleted_at=transaction_timestamp(),update_time=NOW()::timestamp(0),
+    deletion_reason_code=$1,deletion_reason=$2
+WHERE id=$3 AND deleted IS NOT TRUE
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at,deletion_reason_code,deletion_reason
 `
 
-func (q *Queries) SoftDeleteSite(ctx context.Context, id int64) (GfnSite, error) {
-	row := q.db.QueryRow(ctx, softDeleteSite, id)
+type SoftDeleteSiteParams struct {
+	DeletionReasonCode *string `json:"deletion_reason_code"`
+	DeletionReason     *string `json:"deletion_reason"`
+	ID                 int64   `json:"id"`
+}
+
+func (q *Queries) SoftDeleteSite(ctx context.Context, arg SoftDeleteSiteParams) (GfnSite, error) {
+	row := q.db.QueryRow(ctx, softDeleteSite, arg.DeletionReasonCode, arg.DeletionReason, arg.ID)
 	var i GfnSite
 	err := row.Scan(
 		&i.ID,
@@ -1610,6 +1682,8 @@ func (q *Queries) SoftDeleteSite(ctx context.Context, id int64) (GfnSite, error)
 		&i.Deleted,
 		&i.ViewCount,
 		&i.DeletedAt,
+		&i.DeletionReasonCode,
+		&i.DeletionReason,
 	)
 	return i, err
 }
@@ -1763,7 +1837,7 @@ func (q *Queries) UpdateSaying(ctx context.Context, arg UpdateSayingParams) (Gfn
 const updateSite = `-- name: UpdateSite :one
 UPDATE gfn_site SET name=$1,name_en=$2,info=$3,info_en=$4,country=$5,nsfw=$6,welfare=$7,update_time=NOW()::timestamp(0)
 WHERE id=$8 AND deleted IS NOT TRUE
-RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at
+RETURNING id,name,name_en,info,info_en,create_time,update_time,country,nsfw,welfare,icon,deleted,view_count,deleted_at,deletion_reason_code,deletion_reason
 `
 
 type UpdateSiteParams struct {
@@ -1804,6 +1878,8 @@ func (q *Queries) UpdateSite(ctx context.Context, arg UpdateSiteParams) (GfnSite
 		&i.Deleted,
 		&i.ViewCount,
 		&i.DeletedAt,
+		&i.DeletionReasonCode,
+		&i.DeletionReason,
 	)
 	return i, err
 }

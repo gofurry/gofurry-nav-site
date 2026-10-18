@@ -179,7 +179,7 @@ func TestRealDevManagedAssetAPI(t *testing.T) {
 		t.Fatal(storeErr)
 	}
 	defer func() {
-		if err := api.store.deleteSite(context.Background(), audit.SystemMeta("managed-assets-dev-acceptance"), site.ID); err != nil {
+		if err := api.store.deleteSite(context.Background(), audit.SystemMeta("managed-assets-dev-acceptance"), site.ID, models.SiteArchivalPayload{DeletionReasonCode: "other"}); err != nil {
 			t.Error(err)
 		}
 	}()

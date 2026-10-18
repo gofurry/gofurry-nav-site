@@ -6,7 +6,7 @@ FOR UPDATE;
 
 -- name: LockSiteForUpdate :one
 SELECT id, name, name_en, info, info_en, create_time, update_time, country,
-       nsfw, welfare, icon, deleted, view_count, deleted_at
+       nsfw, welfare, icon, deleted, view_count, deleted_at, deletion_reason_code, deletion_reason
 FROM gfn_site
 WHERE id = sqlc.arg(id)
 FOR UPDATE;
