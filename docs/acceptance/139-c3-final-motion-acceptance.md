@@ -419,3 +419,87 @@ R2 追加段；**门禁实际验证版本是 T，不是 D2**。D2 的路径选�
 > [基础门禁](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107076666)
 > 因旧三组 Go 守卫与四组矩阵不一致失败，远端 Visual NOT RUN，当前仍 BLOCKED。
 > 待明确授权处理阻断并完成后续远端 Visual 后，再取得独立关闭授权；#139 保持 Open。
+
+## C3 最终阻断修复与验收（R2 后续）
+
+日期：2026-10-18（Asia/Shanghai）。本节依据维护者本次明确授权更新当前结论；
+上文 C3、R1、R2 的失败和 BLOCKED 均保留为历史，不代表本节完成后的状态。
+
+### 最小修复与本地验证
+
+开始时现有 dev 工作区干净，本地和远端均为
+`5dde3dfb9b77532c4f7268072ba6769777d36627`。修复提交
+**F = `f6ef4919583e0d97eaa9dce217fe9a8bfd9613b9`** 已推回 dev，仅修改
+`tools/check-production-policy/frontend_ci_test.go:166` 的一行预期值：
+`games, sites-other, insights-core, insights-nav`。仍用 `slices.Equal` 检查精确
+成员及顺序；未删除守卫、改动其余逻辑或降低检查强度。
+
+在 `tools/` 使用 Go 1.26.9（进程级 `GOTOOLCHAIN=go1.26.9`）：
+
+```sh
+go test ./check-production-policy -run '^TestFrontendFullCIKeepsCompleteGroupsAndExactBuildSource$' -count=1
+go test ./check-production-policy
+```
+
+两项分别 **PASS**（0.369s / 3.857s），`git diff --check` PASS。未修改产品、
+Visual Golden、测试容差、CI 超时、依赖或其他测试逻辑；没有本地全仓库 Go/DB 检查。
+日志与远端元数据留在忽略的 `.cache/139-c3-final-review/`。
+
+### Full 证据复用的精确边界
+
+本次维护者明确授权：相关源码未变时复用已完成 Full，不要求为此 Go 测试预期值
+再次运行 Full。因此复用 T=`449276518267a8acf1652e490180b2ea6d3b7b71` 的
+[Full 39107101290](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290)：
+**1016/1016 PASS**（Games 217 / Sites 293 / Core 214 / Nav 292），构建、镜像和 Gate PASS。
+**该 run 的实际 headSha 是 T，不是 F**；本次未重新触发 Full。
+
+`git diff --name-status T F` 仅有本验收文档（R2 追加）和上述 Go 测试文件；
+`apps/cn/nav-web`、`.github/workflows`、`.github/scripts`、`.node-version`
+差异为空。T 与 F 的整个 Nav Web Git tree 均为
+`9b64310864ace297f3d65f4d94ef217df11e5f0e`，含产品、Functional/Visual、Golden、
+构建配置与依赖。Full 分组、单次构建及执行规则完全相同，符合本次复用条件。
+
+### F 的远端结果
+
+| 门禁 | 真实结果与版本 |
+| --- | --- |
+| [engineering-foundation 39108634018](https://github.com/gofurry/gofurry-nav-site/actions/runs/39108634018) | PASS，headSha=F，2026-10-18 07:41:50–07:42:31Z |
+| [repository-policy job 117619845122](https://github.com/gofurry/gofurry-nav-site/actions/runs/39108634018/job/117619845122) | PASS，07:42:09–07:42:31Z，含 tooling contract tests 和 production policy |
+| Nav Web Fast | F 的路径选择为 SKIPPED，不冒充重新执行；T 的 [nav-web-fast](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107076666/job/117615203456) PASS，前端/执行配置相同 |
+| [Visual 39108733509](https://github.com/gofurry/gofurry-nav-site/actions/runs/39108733509) | PASS，headSha=F，2026-10-18 07:43:26–07:48:15Z |
+| [nav-web-visual job 117620089811](https://github.com/gofurry/gofurry-nav-site/actions/runs/39108733509/job/117620089811) | Build PASS；**137/137 PASS**（日志 137 passed，3.3m），作业耗时 4m46s |
+
+先确认 F 的 repository-policy 成功和远端 dev=F，再仅触发一次
+`gh workflow run nav-web-visual.yml --repo gofurry/gofurry-nav-site --ref dev`；
+完成后再次确认远端仍为 F。Visual 使用原 pinned Linux / Node 24 / Playwright
+环境与非更新型 `pnpm run test:visual`，单 worker、零 retry，137 项全部完成。
+没有重试失败用例、改 Golden、加容差或改超时。远端 foundation 按路径跳过的
+其他 job 不记为执行通过。
+
+### 最新结论与文档提交
+
+**ENGINEERING ACCEPTED / HUMAN VISUAL REVIEW ACKNOWLEDGED /
+ISSUE CLOSE AUTHORIZATION PENDING。**
+
+旧三组断言阻断已解除，远端 Visual 已实际通过；本节取代此前 BLOCKED 作为
+**当前结论**。Full 按本次明确授权复用，版本边界如上，不声称 Full 与 Visual
+运行在同一 SHA。维护者于 2026-10-18 认可当前本地外观的事实沿用 R2；
+未明确反馈的逐项动态操作不由 Agent 代签。既有 Hero、通用 Modal、移动 Footer
+边界仍如前文，不属于本次新增工程阻断。
+
+本节单独以 documentation-only 提交追加，父提交为 F，唯一修改为本文件。
+后续文档 HEAD 不同于 F；实际 repository-policy/Visual 验证版本为 F，
+Full 验证版本为 T。可用 `git diff --name-only f6ef4919583e0d97eaa9dce217fe9a8bfd9613b9 HEAD`
+核对文档提交边界。#139 保持 Open；没有 PR、合并 main、生产部署或发布关闭评论。
+
+### 最终关闭评论草稿（未发布；等待明确关闭授权）
+
+> #139 的 A–C2 动效治理与 Reduced Motion 修复完成，继续使用 Vue Transition +
+> Less + 局部 useReducedMotion，未引入新动画库。维护者已于 2026-10-18 认可
+> 当前本地外观；C3-R2 在 pinned 环境协调 13 张获准 Golden。
+> 三组/四组 Go 守卫已以最小修复 f6ef4919583e0d97eaa9dce217fe9a8bfd9613b9 同步；
+> [repository-policy](https://github.com/gofurry/gofurry-nav-site/actions/runs/39108634018)
+> PASS，[Visual](https://github.com/gofurry/gofurry-nav-site/actions/runs/39108733509)
+> 137/137 PASS。经精确源码差异核对，按维护者授权复用 4492765 的
+> [Full](https://github.com/gofurry/gofurry-nav-site/actions/runs/39107101290) 1016/1016 PASS。
+> 当前工程验收通过；待维护者另行明确授权后关闭，不涉及合并 main 或部署。
