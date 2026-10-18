@@ -1,8 +1,8 @@
 <template>
-  <img v-if="localSrc" ref="image" class="nav-header__background nav-header__background--local" :src="localSrc" alt="" aria-hidden="true" @load="ready" @error="emit('failed')" />
+  <img v-if="localSrc" ref="image" draggable="false" class="nav-header__background nav-header__background--local" :src="localSrc" alt="" aria-hidden="true" @load="ready" @error="emit('failed')" />
   <picture v-else class="nav-header__background nav-header__background--managed" aria-hidden="true">
     <source media="(min-width: 768px)" :srcset="desktop.src.value || emptyImage" />
-    <img ref="image" :src="mobile.src.value || emptyImage" alt="" @load="ready" @error="failed" />
+    <img ref="image" draggable="false" :src="mobile.src.value || emptyImage" alt="" @load="ready" @error="failed" />
   </picture>
 </template>
 

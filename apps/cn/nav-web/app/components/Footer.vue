@@ -117,7 +117,7 @@
       </div>
 
       <div class="gf-footer__meta flex flex-col justify-end gap-3">
-        <div>{{ currentYear }} GoFurry {{ t('footer.rights') }}</div>
+        <div>© 2025–{{ currentYear }} GoFurry {{ t('footer.rights') }}</div>
         <div>{{ t('footer.license') }}</div>
         <a
             href="https://beian.miit.gov.cn/"

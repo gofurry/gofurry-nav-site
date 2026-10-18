@@ -7,6 +7,10 @@ and [testing guide](../../../docs/frontend/testing.md). Managed assets, Hero and
 routing also follow [assets](../../../contracts/assets.md) and
 [managed-assets](../../../docs/managed-assets.md).
 
+Motion and animation changes MUST follow [Motion Contract V1](../../../docs/frontend/motion.md).
+Preserve Reduced Motion, SSR, focus, and cleanup of stale timers/RAFs; prefer the
+existing Vue Transition + Less owners. New animation libraries need explicit approval.
+
 ## Choose the existing owner
 
 **Tailwind owns structure; Less owns appearance.**
