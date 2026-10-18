@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Check, Plus, Trash2 } from 'lucide-react'
 import { z } from 'zod'
-import platformIcons from '../../../../../nav-web/app/data/platform-icons.json'
+import platformIcons from '../../../../../web/app/data/platform-icons.json'
 import { FormField } from '../../components/admin/page'
 import { Button } from '../../components/ui/button'
 import { Input, Textarea } from '../../components/ui/input'

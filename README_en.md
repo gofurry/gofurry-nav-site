@@ -27,7 +27,7 @@ GoFurry is an open-source, multi-service repository for furry culture discovery,
 
 ## Project Scope
 
-- `apps/cn/nav-web`: public Nuxt frontend
+- `apps/cn/web`: public Nuxt frontend
 - `apps/cn/nav-backend`: navigation API
 - `apps/cn/nav-collector`: navigation data collection
 - `apps/cn/game-backend`: game API
@@ -76,7 +76,7 @@ task dev:nav-web
 Direct frontend development remains available:
 
 ```bash
-cd apps/cn/nav-web
+cd apps/cn/web
 pnpm install --frozen-lockfile
 pnpm run dev
 ```
@@ -115,7 +115,7 @@ or databases. See [Local development](./docs/development.md) and the
 
 ## Deployment and Operations
 
-Nav Web follows the Docker workflow in its [deployment guide](./apps/cn/nav-web/DEPLOYMENT.md). The six Go binaries provide built-in Linux/systemd `install --config <file>` and `uninstall` commands; installation enables the unit but never starts it.
+Nav Web follows the Docker workflow in its [deployment guide](./apps/cn/web/DEPLOYMENT.md). The six Go binaries provide built-in Linux/systemd `install --config <file>` and `uninstall` commands; installation enables the unit but never starts it.
 
 Database migration and binary deployment are separate operator actions. Applications never run Goose at startup. See:
 

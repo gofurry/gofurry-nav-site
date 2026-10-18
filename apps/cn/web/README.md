@@ -1,5 +1,8 @@
 # gofurry-nav-web
 
+The source workspace is `apps/cn/web`. The package, Task entrypoints, CI checks
+and production Compose project retain their existing `nav-web` identities.
+
 Nuxt 4 frontend for gofurry navigation and game discovery.
 
 This project replaces the legacy Vue SPA frontend for the public site. It uses the versioned Go API path under `/api/v1` and focuses on SSR, prerendering, and SEO-friendly public pages.

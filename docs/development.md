@@ -4,7 +4,7 @@
 
 - Go 1.26.9 for all six active Go modules and `tools`
 - Task >=3.45.3 (built-in file utilities on Windows)
-- Node.js 24 and pnpm 12.6.0 for `apps/cn/nav-web` and `apps/cn/admin/react`
+- Node.js 24 and pnpm 12.6.0 for `apps/cn/web` and `apps/cn/admin/react`
 - development PostgreSQL and Redis matching the selected app configuration
 - sqlc and govulncheck through the pinned Go tools in `tools/go.mod`
 
@@ -196,7 +196,7 @@ pnpm run typecheck
 pnpm test
 pnpm run build
 
-cd ../../nav-web
+cd ../../web
 pnpm install --frozen-lockfile
 pnpm run typecheck
 pnpm run build

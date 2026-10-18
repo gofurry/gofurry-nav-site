@@ -14,7 +14,7 @@ test('doctor and standalone policy checks do not start application/database suit
 })
 
 test('frontend documentation does not start builds or browser suites', () => {
-  for (const path of ['apps/cn/nav-web/README.md', 'apps/cn/nav-web/AGENTS.md', 'apps/cn/nav-web/docs/roadmap.md', 'apps/cn/admin/README_zh.md']) {
+  for (const path of ['apps/cn/web/README.md', 'apps/cn/web/AGENTS.md', 'apps/cn/web/docs/roadmap.md', 'apps/cn/admin/README_zh.md']) {
     const gates = detectChanges([path])
     assert.equal(gates.nav_web, false)
     assert.deepEqual(gates.modules, [])
@@ -25,7 +25,7 @@ test('frontend documentation does not start builds or browser suites', () => {
 
 test('Nav Web code, locks, tests and Docker select the daily Fast frontend gate', () => {
   for (const path of ['app/pages/index.vue', 'pnpm-lock.yaml', 'tests/browser/smoke/example.spec.ts', 'Dockerfile', 'app/content/example.md']) {
-    const gates = detectChanges([`apps/cn/nav-web/${path}`])
+    const gates = detectChanges([`apps/cn/web/${path}`])
     assert.equal(gates.nav_web, true, path)
     assert.equal(gates.policy, true)
     assert.deepEqual(gates.modules, [])
@@ -36,7 +36,15 @@ test('Admin frontend builds its embed owner without database integrations', () =
   const gates = detectChanges(['apps/cn/admin/react/src/main.tsx'])
   assert.deepEqual(gates.modules, ['apps/cn/admin'])
   assert.equal(gates.game_integration || gates.nav_integration || gates.admin_integration, false)
-  assert.deepEqual(detectChanges(['apps/cn/nav-web/app/data/platform-icons.json']).modules, ['apps/cn/admin'])
+  assert.deepEqual(detectChanges(['apps/cn/web/app/data/platform-icons.json']).modules, ['apps/cn/admin'])
+})
+
+test('workspace rename delete/add paths retain frontend and shared-icon consumers', () => {
+  const gates = detectChanges(['apps/cn/nav-web/app/data/platform-icons.json', 'apps/cn/web/app/data/platform-icons.json'])
+  assert.equal(gates.nav_web, true)
+  assert.equal(gates.policy, true)
+  assert.deepEqual(gates.modules, ['apps/cn/admin'])
+  assert.equal(gates.game_integration || gates.nav_integration || gates.admin_integration, false)
 })
 
 test('database ownership includes Admin and the correct consumers', () => {

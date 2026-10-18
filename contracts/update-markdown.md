@@ -11,7 +11,7 @@ pnpm projects. This contract does not prescribe preview/public-page pixels.
 Both applications use `markdown-it` **15.0.2** and `sanitize-html` **2.17.7**. The single rendering
 entry point in each application is `renderUpdateMarkdown()`: Admin owns
 `apps/cn/admin/react/src/features/release-notes/markdown.ts`, and Nav Web owns
-`apps/cn/nav-web/app/utils/updateMarkdown.ts`. Each always performs
+`apps/cn/web/app/utils/updateMarkdown.ts`. Each always performs
 Markdown parsing followed by final sanitization. No component calls the parser
 directly or inserts untrusted HTML into `dangerouslySetInnerHTML` / `v-html`.
 

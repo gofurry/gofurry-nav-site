@@ -218,7 +218,7 @@ func TestFrontendCIRunnerAndSmokeBoundaries(t *testing.T) {
 		}
 	}
 	root := repositoryRootForTest(t)
-	entries, err := os.ReadDir(filepath.Join(root, "apps/cn/nav-web/tests/browser/smoke"))
+	entries, err := os.ReadDir(filepath.Join(root, "apps/cn/web/tests/browser/smoke"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +233,7 @@ func TestFrontendCIRunnerAndSmokeBoundaries(t *testing.T) {
 		t.Fatalf("Smoke owners changed: %v", names)
 	}
 	for _, file := range []string{"playwright.config.ts", "playwright.visual.config.ts"} {
-		data, err := os.ReadFile(filepath.Join(root, "apps/cn/nav-web", file))
+		data, err := os.ReadFile(filepath.Join(root, "apps/cn/web", file))
 		if err != nil {
 			t.Fatal(err)
 		}

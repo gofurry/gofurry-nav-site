@@ -1,3 +1,5 @@
+name: nav-web
+
 services:
   gofurry-nav-web:
     container_name: gofurry-nav-web
@@ -6,6 +8,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        NODE_BUILD_HEAP_MB: ${NODE_BUILD_HEAP_MB:-4096}
         NUXT_PUBLIC_SITE_URL: ${NUXT_PUBLIC_SITE_URL:-https://go-furry.com}
         NUXT_PUBLIC_NAV_API_BASE: ${NUXT_PUBLIC_NAV_API_BASE:-https://nav.go-furry.com/api/v1}
         NUXT_PUBLIC_NAV_V2_API_BASE: ${NUXT_PUBLIC_NAV_V2_API_BASE:-https://nav.go-furry.com/api/v2}

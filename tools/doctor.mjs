@@ -8,7 +8,7 @@ const goVersion = readFileSync(new URL('../.go-version', import.meta.url), 'utf8
 const nodeVersion = readFileSync(new URL('../.node-version', import.meta.url), 'utf8').trim()
 const frontends = [
   ['Admin', 'apps/cn/admin/react'],
-  ['Nav Web', 'apps/cn/nav-web'],
+  ['Nav Web', 'apps/cn/web'],
 ]
 
 function version(command, args, cwd = repositoryRoot) {

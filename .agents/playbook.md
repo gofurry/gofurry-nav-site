@@ -63,7 +63,7 @@ Frontend checks:
 
 ~~~text
 cd apps/cn/admin/react && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm test && pnpm run build
-cd apps/cn/nav-web && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build
+cd apps/cn/web && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run build
 ~~~
 
 For local React Admin work, run the Go Admin API on `127.0.0.1:10099` and `pnpm run dev` from `apps/cn/admin/react`; Vite proxies `/api` and `/csrf`. `pnpm run build` clears and writes the canonical Go embed directory. The root `task build:admin` target runs that React build before compiling the self-contained production binary.

@@ -1,11 +1,11 @@
 # Frontend engineering
 
 - [Contract](../../contracts/nav-web-frontend.md): normative ownership, debt and verification rules.
-- [Agent entry](../../apps/cn/nav-web/AGENTS.md): concise working instructions.
+- [Agent entry](../../apps/cn/web/AGENTS.md): concise working instructions.
 - [Design system](design-system.md): implemented token/primitive/domain ownership and accepted cascade decisions; literals stay in source.
 - [Motion contract](motion.md): motion roles, live Reduced Motion behavior, lifecycle and accessibility boundaries.
 - [Testing](testing.md): current Vitest, Browser, pinned Visual and Contract Guard commands, isolation and migration mapping.
-- [Style debt](../../apps/cn/nav-web/frontend-style-debt.json): exact rule/file budgets; never overrides the contract.
+- [Style debt](../../apps/cn/web/frontend-style-debt.json): exact rule/file budgets; never overrides the contract.
 - [#124 closure record](../acceptance/issue-124-frontend-engineering-closure.md): final evidence, remaining owners, runtime follow-up and manual/remote sign-off status.
 
 P4–P6 appearance migration is complete. P7 replaces the old ad hoc browser and

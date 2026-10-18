@@ -11,7 +11,7 @@ error_page 404 /404.html;
 location = /404.html { internal; }
 ```
 
-Nuxt now provides `apps/cn/nav-web/app/error.vue`, so unknown frontend routes render the GoFurry `Page Not Found` page while preserving the HTTP 404 status.
+Nuxt now provides `apps/cn/web/app/error.vue`, so unknown frontend routes render the GoFurry `Page Not Found` page while preserving the HTTP 404 status.
 
 ## Maintenance Mode
 

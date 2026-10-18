@@ -118,11 +118,11 @@ func validateTaskfile(data []byte) []string {
 		problems = append(problems, "frontend builds must run in the owning package directory")
 	}
 	verifyBuilds := document.Tasks["verify:frontend-build"].Cmds
-	if len(verifyBuilds) != 2 || !callsFrontendBuild(verifyBuilds[0], "admin/react") || !callsFrontendBuild(verifyBuilds[1], "nav-web") {
+	if len(verifyBuilds) != 2 || !callsFrontendBuild(verifyBuilds[0], "admin/react") || !callsFrontendBuild(verifyBuilds[1], "web") {
 		problems = append(problems, "frontend verification must build both owning packages")
 	}
 	navBuild := document.Tasks["build:nav-web"].Cmds
-	if len(navBuild) != 2 || !callsFrontendBuild(navBuild[1], "nav-web") {
+	if len(navBuild) != 2 || !callsFrontendBuild(navBuild[1], "web") {
 		problems = append(problems, "Nav Web must build in its owning package directory")
 	}
 	for _, frontend := range []string{"admin", "nav-web"} {

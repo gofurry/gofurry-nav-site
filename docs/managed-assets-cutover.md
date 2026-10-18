@@ -67,7 +67,7 @@ regenerates SQL offline from an already-staged manifest; it makes no cloud calls
 
 ## Maintenance window
 
-1. Enable the existing [Nginx maintenance page](../apps/cn/nav-web/DEPLOYMENT.md#maintenance-page).
+1. Enable the existing [Nginx maintenance page](../apps/cn/web/DEPLOYMENT.md#maintenance-page).
    Stop old Nav Backend, Admin and frontend/content writers. Keep production
    backups of the old binaries, frontend, explicit configs and a full GFN dump.
 2. Apply the Goose migration `20260913010000_nav_managed_assets.sql` with the

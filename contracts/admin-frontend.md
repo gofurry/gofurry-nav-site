@@ -162,7 +162,7 @@ Every authenticated account may change its own username or password through `/ap
 The React production build is the only writer of `apps/cn/admin/internal/transport/http/webui/dist`. It clears stale output before building, and the Go binary embeds that directory. Production must not require Node, a Vite server, a separate frontend service, manual asset copying, or a second Admin frontend implementation. The completed parity audit is recorded in `docs/admin-frontend-parity.md`.
 
 Game content `groups` and `links` choose platform keys from Nav Web's data-only
-`apps/cn/nav-web/app/data/platform-icons.json`, also consumed by `SiteIconList.vue`.
+`apps/cn/web/app/data/platform-icons.json`, also consumed by `SiteIconList.vue`.
 Keys cannot be chosen twice within one editor; existing key spelling is retained.
 `resources` keeps free-text keys. Both Game summary fields accept at most 400
 Unicode characters, with the same business validation in Admin and PostgreSQL.

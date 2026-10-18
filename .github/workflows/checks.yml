@@ -179,48 +179,48 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: pnpm/action-setup@v6
         with:
-          package_json_file: apps/cn/nav-web/package.json
+          package_json_file: apps/cn/web/package.json
           run_install: false
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           cache: pnpm
-          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
-      - working-directory: apps/cn/nav-web
+          cache-dependency-path: apps/cn/web/pnpm-lock.yaml
+      - working-directory: apps/cn/web
         run: pnpm install --frozen-lockfile
       - name: Lint
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run lint
       - name: Stylelint
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run stylelint
       - name: Style policy tests
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run style:policy:test
       - name: Style policy
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run style:policy
       - name: Unit tests
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run test:unit
       - name: Nuxt tests
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run test:nuxt
       - name: Typecheck
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run typecheck
       - name: Insights semantic guards
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run insights:semantics
       - name: SEO recovery contract guards
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run seo:recovery:test
       - name: Build
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run build
       - name: Browser Smoke
         id: smoke
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run test:browser:smoke --workers=1
       - name: Smoke failure artifacts
         if: ${{ failure() && steps.smoke.outcome == 'failure' }}
@@ -229,8 +229,8 @@ jobs:
           name: nav-web-smoke-failure
           overwrite: true
           path: |
-            apps/cn/nav-web/playwright-report/
-            apps/cn/nav-web/test-results/
+            apps/cn/web/playwright-report/
+            apps/cn/web/test-results/
           retention-days: 7
           if-no-files-found: warn
 

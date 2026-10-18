@@ -35,22 +35,22 @@ jobs:
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - uses: pnpm/action-setup@v6
         with:
-          package_json_file: apps/cn/nav-web/package.json
+          package_json_file: apps/cn/web/package.json
           run_install: false
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           cache: pnpm
-          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
+          cache-dependency-path: apps/cn/web/pnpm-lock.yaml
       - name: Validate regression inventory
         run: node --test .github/scripts/nav-web-regression-groups.test.mjs
-      - working-directory: apps/cn/nav-web
+      - working-directory: apps/cn/web
         run: pnpm install --frozen-lockfile
       - name: Build once
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run build
       - name: Archive the pinned Linux build
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: tar -czf "$RUNNER_TEMP/nav-web-output.tar.gz" .output
       - uses: actions/upload-artifact@v7
         with:
@@ -79,25 +79,25 @@ jobs:
           ref: ${{ needs.nav-web-build.outputs.source_sha }}
       - uses: pnpm/action-setup@v6
         with:
-          package_json_file: apps/cn/nav-web/package.json
+          package_json_file: apps/cn/web/package.json
           run_install: false
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           cache: pnpm
-          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
-      - working-directory: apps/cn/nav-web
+          cache-dependency-path: apps/cn/web/pnpm-lock.yaml
+      - working-directory: apps/cn/web
         run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with:
           name: nav-web-full-output-${{ needs.nav-web-build.outputs.source_sha }}
           path: ${{ runner.temp }}
       - name: Restore this run's production build
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: tar -xzf "$RUNNER_TEMP/nav-web-output.tar.gz"
       - name: Full regression group
         id: regression
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         env:
           REGRESSION_GROUP: ${{ matrix.group }}
         shell: bash
@@ -113,8 +113,8 @@ jobs:
           name: nav-web-full-failure-${{ matrix.group }}
           overwrite: true
           path: |
-            apps/cn/nav-web/playwright-report/
-            apps/cn/nav-web/test-results/
+            apps/cn/web/playwright-report/
+            apps/cn/web/test-results/
           retention-days: 7
           if-no-files-found: warn
 
@@ -131,7 +131,7 @@ jobs:
       - name: Build deployment image
         uses: docker/build-push-action@v7
         with:
-          context: apps/cn/nav-web
+          context: apps/cn/web
           push: false
           load: true
           tags: gofurry-nav-web:ci

@@ -30,7 +30,7 @@ runbook for other environments. Never rerun initial cutover SQL on migrated prod
 
 Nav Web's frontend contract assigns structural composition to Tailwind and visual
 appearance to the GoFurry Less/token foundation. Stable rules live in
-`contracts/nav-web-frontend.md`; `apps/cn/nav-web/frontend-style-debt.json` records
+`contracts/nav-web-frontend.md`; `apps/cn/web/frontend-style-debt.json` records
 historical noncompliance, not alternative patterns for new code.
 
 `db/game`, `db/nav`, and `db/admin` exclusively own schema through Goose. Applications open bounded pgxpool connections and never execute migrations. Root `sqlc.yaml` generates service-local packages; normal business SQL is static sqlc SQL.

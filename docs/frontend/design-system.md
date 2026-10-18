@@ -13,7 +13,7 @@ remaining owners are recorded in [#124 closure](../acceptance/issue-124-frontend
 
 ## Visual layers
 
-The [Less entry](../../apps/cn/nav-web/app/assets/styles/index.less) composes
+The [Less entry](../../apps/cn/web/app/assets/styles/index.less) composes
 `tokens → mixins → primitives → components → pages`:
 
 | Layer | Responsibility |
@@ -30,9 +30,9 @@ building blocks into product UI. Navigation's `--gf-nav-*` and Footer's
 `--gf-footer-*` therefore remain with their compound owners; reuse across routes
 does not make them primitives or global tokens.
 
-[modal.less](../../apps/cn/nav-web/app/assets/styles/primitives/modal.less) owns
+[modal.less](../../apps/cn/web/app/assets/styles/primitives/modal.less) owns
 generic `.gf-modal*` appearance for both Preferences and NSFW confirmation.
-[preferences.less](../../apps/cn/nav-web/app/assets/styles/components/preferences.less)
+[preferences.less](../../apps/cn/web/app/assets/styles/components/preferences.less)
 composes Modal/Input/Button/Chip and shared tabs, sources and carousel controls.
 `components/` is an intentional layer, not a directory awaiting wholesale renaming.
 The existing page/domain files remain canonical; `domains/` is not a mandatory
@@ -42,10 +42,10 @@ follow-up or a reason to move files without a concrete product need.
 
 | Meaning | Owner | Current example |
 | --- | --- | --- |
-| Product/theme semantics shared across domains and primitives | [tokens.less](../../apps/cn/nav-web/app/assets/styles/tokens.less) | `--gf-surface`, `--gf-text-main`, `--gf-focus-ring` |
-| Semantics specific to a reusable primitive | Its stylesheet under `styles/primitives/` | [rating.less](../../apps/cn/nav-web/app/assets/styles/primitives/rating.less) owns `--gf-rating-empty` and `--gf-rating-fill` |
+| Product/theme semantics shared across domains and primitives | [tokens.less](../../apps/cn/web/app/assets/styles/tokens.less) | `--gf-surface`, `--gf-text-main`, `--gf-focus-ring` |
+| Semantics specific to a reusable primitive | Its stylesheet under `styles/primitives/` | [rating.less](../../apps/cn/web/app/assets/styles/primitives/rating.less) owns `--gf-rating-empty` and `--gf-rating-fill` |
 | State semantics of a product composition | Its exact compound stylesheet/root | `preferences.less` owns local `--gf-preferences-*` input/toggle states |
-| Business/domain semantics | Its existing page/domain stylesheet | [games.less](../../apps/cn/nav-web/app/assets/styles/pages/games.less) owns `--games-*` |
+| Business/domain semantics | Its existing page/domain stylesheet | [games.less](../../apps/cn/web/app/assets/styles/pages/games.less) owns `--games-*` |
 
 Component-private geometry, such as a cover ratio or a title line count, can stay
 in scoped styles. It does not justify a separate local palette, elevation or
@@ -56,8 +56,8 @@ business rationale; historical values are not automatically approved examples.
 
 The layout-owned canvas defaults (`--gf-page-background` and
 `--gf-page-pattern*`) now live in `tokens.less`. Their consumer,
-[PublicPageBackground.vue](../../apps/cn/nav-web/app/components/common/PublicPageBackground.vue),
-keeps its existing behavior. [main.css](../../apps/cn/nav-web/app/assets/css/main.css)
+[PublicPageBackground.vue](../../apps/cn/web/app/components/common/PublicPageBackground.vue),
+keeps its existing behavior. [main.css](../../apps/cn/web/app/assets/css/main.css)
 owns Tailwind bootstrap, browser reset and base helpers, not global theme tokens.
 
 ## Typography roles (#126)
@@ -120,7 +120,7 @@ styles. #108/#109 consumers remain excluded from proactive migration.
 ## Footer, App Shell and global browser chrome
 
 P4.6.2 completes Footer's compound appearance in
-[footer.less](../../apps/cn/nav-web/app/assets/styles/components/footer.less).
+[footer.less](../../apps/cn/web/app/assets/styles/components/footer.less).
 Its local `--gf-footer-*` tokens own canvas, text/link hierarchy and brand hover
 glows; Dark overrides only theme-sensitive values. Vue retains structural
 Tailwind and business link data, with `data-brand` identifying social icons.
@@ -132,7 +132,7 @@ kept ordinary and meta links at their resting color on hover. Dark therefore
 aliases `--gf-footer-link-hover` to `--gf-footer-link`, preserving that verified
 behavior rather than introducing the plan's assumed cross-theme white hover.
 
-[shell.less](../../apps/cn/nav-web/app/assets/styles/components/shell.less) owns
+[shell.less](../../apps/cn/web/app/assets/styles/components/shell.less) owns
 the App Shell's full color-transition contract. The global scrollbar consumes
 foundation `--gf-scrollbar-*` browser-chrome semantics in `main.css`, retaining
 selectors, geometry and the shared Light/Dark treatment. Accepted Footer/Shell
@@ -141,7 +141,7 @@ tests and goldens remain the authority; this migration adds no new visual design
 ## Navigation shell appearance
 
 P5.1.2 gives NavBar and MobileBottomTabBar one compound appearance owner in
-[nav.less](../../apps/cn/nav-web/app/assets/styles/components/nav.less).
+[nav.less](../../apps/cn/web/app/assets/styles/components/nav.less).
 Local `--gf-nav-*` semantics belong to `.gf-nav` and `.mobile-bottom-tabs`, with
 their exact `html.dark` counterparts. BottomTab's physical `common/` location
 does not create a new visual owner or require a separate stylesheet.
@@ -164,7 +164,7 @@ button typography override or otherwise-unused theme-button hook is needed.
 ## Nav Home Header appearance
 
 P5.2.2 keeps Header, Search, QuickAccess and Quick Sites in
-[pages/nav.less](../../apps/cn/nav-web/app/assets/styles/pages/nav.less), using
+[pages/nav.less](../../apps/cn/web/app/assets/styles/pages/nav.less), using
 `--nav-home-*` on `.nav-home-page`; there is no separate Header stylesheet.
 Hero-backed surfaces remain theme-independent. Mobile shadows/backgrounds are
 root-declared semantics consumed by media rules, not Dark overrides. Compound
@@ -223,13 +223,13 @@ effects must not be deleted merely to lower totals.
 ## Error and PageScrollDock appearance
 
 P4.5.3 moves Error appearance into
-[error.less](../../apps/cn/nav-web/app/assets/styles/components/error.less),
+[error.less](../../apps/cn/web/app/assets/styles/components/error.less),
 including its local `--gf-error-*` canvas/text/action semantics, artwork mask,
 typography and motion. Its scoped SFC retains private layout. No-JS visibility
 uses normal declarations with greater specificity; keyboard focus cancels the
 staged action animation before revealing controls, without `!important`.
 
-[page-scroll-dock.less](../../apps/cn/nav-web/app/assets/styles/components/page-scroll-dock.less)
+[page-scroll-dock.less](../../apps/cn/web/app/assets/styles/components/page-scroll-dock.less)
 owns Dock ring/core/shadow/text and hover appearance through compound local
 `--gf-scroll-dock-*` tokens. Placement, grid and mobile unmount/display structure
 stay in the SFC. The step-delay and progress properties remain dynamic Vue
@@ -419,9 +419,9 @@ Equal values do not mean equal tokens. `--gf-accent` describes emphasis;
 content surface; `--gf-input-bg` describes a form surface. These pairs already
 diverge in dark mode, so replacing one with the other would erase meaning.
 
-The existing [button primitive](../../apps/cn/nav-web/app/assets/styles/primitives/button.less)
+The existing [button primitive](../../apps/cn/web/app/assets/styles/primitives/button.less)
 uses action fill/contrast tokens for its primary variant, while the
-[input primitive](../../apps/cn/nav-web/app/assets/styles/primitives/input.less)
+[input primitive](../../apps/cn/web/app/assets/styles/primitives/input.less)
 uses form background/focus tokens. Choose a token for the role it serves, not
 because its current color happens to match a screenshot.
 
@@ -440,7 +440,7 @@ tokens inherit the root value; section labels need not repeat full explanations.
 Individual comments are useful for exceptions, rather than describing syntax or
 naming a color. A domain exception should explain why global meaning does not fit.
 
-[mixins.less](../../apps/cn/nav-web/app/assets/styles/mixins.less) consumes this
+[mixins.less](../../apps/cn/web/app/assets/styles/mixins.less) consumes this
 foundation through `.gf-surface`, `.gf-focus-ring`, `.gf-interactive-motion` and
 `.gf-hover-surface`. Mixins express reusable behavior; their existence does not
 create another source of token values. This phase leaves them unchanged.
@@ -460,7 +460,7 @@ removed unused `--gf-bg-grid-line` from both themes.
 P4.3.2 retired `--gf-bg-page` after the real Static/Legal visual contract proved
 the roots transparent under the shell. Do not reintroduce that fallback or a
 replacement canvas token: the layout and `PublicPageBackground` own the canvas.
-[static.less](../../apps/cn/nav-web/app/assets/styles/pages/static.less) owns the
+[static.less](../../apps/cn/web/app/assets/styles/pages/static.less) owns the
 full migrated color transition, retaining its duration and easing. Shared
 `--gf-static-panel-shadow` was promoted to global Elevation & Blur only after
 About and Legal demonstrated real shared usage; Dark inherits the same value.
@@ -477,7 +477,7 @@ future debt-bearing file move needs reviewed policy migration: the old path woul
 have a stale baseline and the new path would have zero budget. Do not raise
 budgets or use a structural move to change selectors, values or behavior.
 
-Run the existing checks listed in the [Agent entry](../../apps/cn/nav-web/AGENTS.md).
+Run the existing checks listed in the [Agent entry](../../apps/cn/web/AGENTS.md).
 For token-owner work, compare declarations by theme selector and token name before
 and after, including inherited dark values. A green debt check alone does not
 prove preservation of active visual values.

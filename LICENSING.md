@@ -22,8 +22,8 @@ sourced images or data remain subject to their respective rights holders' terms.
 Neither BSD-3-Clause nor the website's CC notice automatically licenses them.
 
 Historical assets with separate or incomplete provenance are not relicensed by
-the root license. In particular, `apps/cn/nav-web/app/assets/js/china.js` and
-`apps/cn/nav-web/app/assets/json/china.json` appear to derive from legacy ECharts
+the root license. In particular, `apps/cn/web/app/assets/js/china.js` and
+`apps/cn/web/app/assets/json/china.json` appear to derive from legacy ECharts
 China map data; their provenance and applicable terms still need verification.
 
 ## GoFurry branding

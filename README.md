@@ -27,7 +27,7 @@ GoFurry 是一个面向兽圈文化内容发现、站点导航、兽游资料和
 
 ## 项目范围
 
-- `apps/cn/nav-web`：Nuxt 公开前端
+- `apps/cn/web`：Nuxt 公开前端
 - `apps/cn/nav-backend`：导航 API
 - `apps/cn/nav-collector`：导航数据采集
 - `apps/cn/game-backend`：兽游 API
@@ -76,7 +76,7 @@ task dev:nav-web
 也可以直接在所属前端目录开发：
 
 ```bash
-cd apps/cn/nav-web
+cd apps/cn/web
 pnpm install --frozen-lockfile
 pnpm run dev
 ```
@@ -113,7 +113,7 @@ Nav Web 使用独立的 `task build:nav-web` / `task build:nav-web-image`。
 
 ## 部署与运维
 
-Nav Web 使用 [前端部署说明](./apps/cn/nav-web/DEPLOYMENT.md) 中的 Docker 流程。六个 Go 二进制使用内置的 Linux/systemd `install --config <file>` 和 `uninstall`；`install` 只 enable，不会启动服务。
+Nav Web 使用 [前端部署说明](./apps/cn/web/DEPLOYMENT.md) 中的 Docker 流程。六个 Go 二进制使用内置的 Linux/systemd `install --config <file>` 和 `uninstall`；`install` 只 enable，不会启动服务。
 
 数据库 migration 与二进制部署是独立的运维操作，应用启动时不执行 Goose。详见：
 

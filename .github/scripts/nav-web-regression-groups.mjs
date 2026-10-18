@@ -61,7 +61,7 @@ export const regressionGroups = Object.freeze({
 })
 
 export function regressionInventory() {
-  const directory = fileURLToPath(new URL('../../apps/cn/nav-web/tests/browser/regression/', import.meta.url))
+  const directory = fileURLToPath(new URL('../../apps/cn/web/tests/browser/regression/', import.meta.url))
   return readdirSync(directory, { withFileTypes: true })
     .filter(entry => entry.isFile() && entry.name.endsWith('.spec.ts'))
     .map(entry => entry.name).sort()

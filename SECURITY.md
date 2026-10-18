@@ -13,7 +13,7 @@
 
 Do not publish unresolved vulnerabilities in public Issues or Discussions.
 Email [2660621624@qq.com](mailto:2660621624@qq.com), the contact published in
-[security.txt](apps/cn/nav-web/public/.well-known/security.txt).
+[security.txt](apps/cn/web/public/.well-known/security.txt).
 
 Please include, when available:
 

@@ -8,7 +8,7 @@ workspace or shared lock is used. Frozen installs and narrowly reviewed dependen
 script permissions apply in local work, CI and Docker. Root Task is the repository
 engineering entrypoint; its default tests/verify do not replace Browser/Visual.
 
-This contract governs `apps/cn/nav-web` under
+This contract governs `apps/cn/web` under
 [#124](https://github.com/gofurry/gofurry-nav-site/issues/124#issuecomment-5740012423).
 MUST/MUST NOT are requirements; SHOULD permits a reasoned, documented departure;
 MAY denotes an allowed choice. P0 established governance and a one-time debt
@@ -28,9 +28,9 @@ For frontend decisions, resolve evidence in this order:
 
 1. Executable code and tests for actual behavior and compatibility.
 2. This contract for intended frontend architecture.
-3. `apps/cn/nav-web/AGENTS.md` for operational guidance.
+3. `apps/cn/web/AGENTS.md` for operational guidance.
 4. `docs/frontend/*` for explanation and usage.
-5. Historical `apps/cn/nav-web/docs/*` for past migration context only.
+5. Historical `apps/cn/web/docs/*` for past migration context only.
 
 `frontend-style-debt.json` records migration state; it is not design authority.
 Historical completion claims such as the `v2.2.x` style migration MUST NOT be
@@ -1023,7 +1023,8 @@ baseline: reliable low-false-positive detection belongs to later review.
 The initial inventory audits the unchanged application tree at
 `f5576f6bfe1981a7c1b3a2d58f0287bf13d2a15a` on 2026-09-19. This section freezes
 the one-time counting semantics so P1 can reproduce them; no policy scanner is
-installed by P0. Paths below are relative to `apps/cn/nav-web`.
+installed by P0. Paths below are relative to the frontend workspace (`apps/cn/nav-web`
+at that audited SHA; now `apps/cn/web`).
 
 ### Source scope and occurrence unit
 
@@ -1210,7 +1211,7 @@ for newly added files or script-generated styles.
 P0 introduced no runners, dependencies or CI gates. P1's local/CI sequence is
 `pnpm install --frozen-lockfile`, `pnpm run lint`, `pnpm run stylelint`, `pnpm run style:policy:test`,
 `pnpm run style:policy`, `pnpm run typecheck`, `pnpm run insights:semantics`,
-`pnpm run seo:recovery:test`, `pnpm run build`, from `apps/cn/nav-web`.
+`pnpm run seo:recovery:test`, `pnpm run build`, from `apps/cn/web`.
 For runtime changes, run relevant existing focused scripts from `package.json`
 as well. A skipped external acceptance test is not a pass.
 

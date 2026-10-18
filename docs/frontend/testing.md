@@ -2,7 +2,7 @@
 
 Use the lowest-cost environment that faithfully represents the behavior under
 test. The [frontend contract](../../contracts/nav-web-frontend.md) owns this rule;
-the commands below run from `apps/cn/nav-web`.
+the commands below run from `apps/cn/web`.
 
 P7.2 established **406 Functional Browser /119 Visual /118 PNG**; #109 P1 adds
 17 independent Site Detail cases for 423 Functional Browser; #109 P2 adds 12
@@ -656,8 +656,8 @@ do not mount `.output` itself, because Nitro removes and recreates it on build.
 ```sh
 docker run --rm --init --ipc=host --platform linux/amd64 \
   --mount type=bind,source="$(pwd)",target=/work \
-  --mount type=volume,destination=/work/apps/cn/nav-web/node_modules,volume-nocopy \
-  --workdir /work/apps/cn/nav-web \
+  --mount type=volume,destination=/work/apps/cn/web/node_modules,volume-nocopy \
+  --workdir /work/apps/cn/web \
   --env GOFURRY_VISUAL_ENV=pinned \
   mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948 \
   sh -lc 'npm install --global pnpm@12.6.0 && pnpm install --frozen-lockfile && pnpm run build && pnpm run test:visual'
@@ -1399,7 +1399,7 @@ default. #134's [three tiers](#ci-tiers-134) keep daily Fast, Full regression an
 manual Visual independently visible. The main/manual Full image check still covers
 dependency-only frozen install followed by source copy and fresh Nuxt preparation;
 a full-checkout build alone does not cover that ordering. Image context remains
-`apps/cn/nav-web`. Gates fail on required dependencies that fail or unexpectedly skip.
+`apps/cn/web`. Gates fail on required dependencies that fail or unexpectedly skip.
 After an authorized push/dispatch verify the selected tier actually passed; Fast
 success, local results or skipped jobs are not Full/Visual acceptance. When remote
 execution is unavailable or not authorized, report that tier as unverified.

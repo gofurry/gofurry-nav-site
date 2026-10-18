@@ -7,7 +7,7 @@ Production code is limited to six Go modules plus one frontend:
 - `apps/cn/admin` uses explicit `gfa`, `gfn`, and `gfg` PostgreSQL pools.
 - `apps/cn/admin/react` is the sole Admin frontend and owns content workspaces plus Data/System operations.
 - `apps/cn/uptime` is the independent Fiber/Bbolt availability service and has no business PostgreSQL or Redis dependency.
-- `apps/cn/nav-web` is the production Nuxt frontend.
+- `apps/cn/web` is the production Nuxt frontend.
 - `apps/intl` is placeholder-only; `legacy`, `experimental`, and `third-party` are outside the active build and production tooling.
 - `db/game`, `db/nav`, and `db/admin` own Goose migrations for `gfg`, `gfn`, and `gfa`.
 
@@ -57,4 +57,4 @@ Collaboration Center stores ideas and its single shared canvas only in GFA; its 
 
 Admin frontend work follows `contracts/admin-frontend.md`. React business UI checks capabilities returned by the backend and never reconstructs the Role-to-Capability policy. Its production build is embedded into the Go binary; do not introduce a runtime Node/Vite frontend service.
 
-Nav Web frontend work also follows `apps/cn/nav-web/AGENTS.md` and `contracts/nav-web-frontend.md`.
+Nav Web frontend work also follows `apps/cn/web/AGENTS.md` and `contracts/nav-web-frontend.md`.

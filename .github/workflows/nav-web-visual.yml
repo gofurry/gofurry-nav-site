@@ -23,21 +23,21 @@ jobs:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v6
         with:
-          package_json_file: apps/cn/nav-web/package.json
+          package_json_file: apps/cn/web/package.json
           run_install: false
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           cache: pnpm
-          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
-      - working-directory: apps/cn/nav-web
+          cache-dependency-path: apps/cn/web/pnpm-lock.yaml
+      - working-directory: apps/cn/web
         run: pnpm install --frozen-lockfile
       - name: Build
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run build
       - name: Compare all Visual baselines
         id: visual
-        working-directory: apps/cn/nav-web
+        working-directory: apps/cn/web
         run: pnpm run test:visual
       - name: Visual failure artifacts
         if: ${{ failure() && steps.visual.outcome == 'failure' }}
@@ -46,7 +46,7 @@ jobs:
           name: nav-web-visual-failure
           overwrite: true
           path: |
-            apps/cn/nav-web/playwright-visual-report/
-            apps/cn/nav-web/visual-test-results/
+            apps/cn/web/playwright-visual-report/
+            apps/cn/web/visual-test-results/
           retention-days: 7
           if-no-files-found: warn

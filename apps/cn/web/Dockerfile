@@ -11,6 +11,9 @@ RUN npm install --global "$(node -p 'require("./package.json").packageManager')"
 
 FROM deps AS build
 
+ARG NODE_BUILD_HEAP_MB=4096
+ENV NODE_OPTIONS=--max-old-space-size=${NODE_BUILD_HEAP_MB}
+
 ARG NUXT_PUBLIC_SITE_URL=https://go-furry.com
 ARG NUXT_PUBLIC_NAV_API_BASE=https://nav.go-furry.com/api/v1
 ARG NUXT_PUBLIC_NAV_V2_API_BASE=https://nav.go-furry.com/api/v2

@@ -1,15 +1,92 @@
 # Production deployment for `gofurry-nav-web`
 
 This frontend runs inside Docker; the production host needs Docker and Compose,
-not Node.js, pnpm or Task. The build context remains `apps/cn/nav-web`.
+not Node.js, pnpm or Task. The build context remains `apps/cn/web`.
 
 For the alpha.9 release, use the [cross-service upgrade guide](../../../docs/releases/v3.0.0-alpha.9.md).
 The frontend-only engineering changes require no new runtime variables, but the
 full alpha.8 → alpha.9 upgrade also includes backend/schema changes.
 
+## Existing installation: workspace rename (maintainer only)
+
+The source moved from `apps/cn/nav-web` to `apps/cn/web`. The maintainer confirmed
+the existing container's `com.docker.compose.project` label is **`nav-web`**.
+Compose now explicitly declares `name: nav-web`; service, container, image,
+port, runtime defaults and `update.sh` remain unchanged. Do not start a second
+project named `web`. `COMPOSE_PROJECT_NAME` or `docker compose -p` can override
+the file, so verify the rendered project name before starting any container.
+
+These are production instructions for the maintainer, not operations for Codex.
+Before updating, check the deployed branch and working tree; the accepted commit
+must already belong to that deployment branch (do not assume `dev`). Preserve any
+local Dockerfile changes. Record the current container's project label, back up
+the old `.env` and `.env.next` securely without printing their contents, and check
+`free -h` plus container/BuildKit memory limits.
+
+```bash
+docker inspect gofurry-nav-web \
+  --format '{{ index .Config.Labels "com.docker.compose.project" }}'
+# Must be nav-web.
+
+cd /home/gofurry/gfs/gofurry-repo/gofurry-nav-site
+# Only after the branch/working-tree checks, use the approved release workflow;
+# if appropriate for that deployment branch:
+git pull --ff-only || exit 1
+test -f apps/cn/web/docker-compose.prod.yml || exit 1
+
+# Stop and review if destination private files already exist; never overwrite them.
+test ! -e apps/cn/web/.env && test ! -e apps/cn/web/.env.next || exit 1
+install -m 600 apps/cn/nav-web/.env apps/cn/web/.env || exit 1
+if test -f apps/cn/nav-web/.env.next; then
+  install -m 600 apps/cn/nav-web/.env.next apps/cn/web/.env.next || exit 1
+fi
+```
+
+Git moves tracked files only; ignored private files can remain in the old
+directory. Copy these files individually and retain the old copies for rollback.
+Do not move the entire directory, replace private files with examples, or delete
+old configuration during this migration. Do not publish complete `compose config`
+output because it may expose private values.
+
+```bash
+cd /home/gofurry/gfs/gofurry-repo/gofurry-nav-site/apps/cn/web
+docker compose -f docker-compose.prod.yml config -q || exit 1
+project_name=$(docker compose -f docker-compose.prod.yml config | grep '^name:')
+printf '%s\n' "$project_name"
+test "$project_name" = 'name: nav-web' || exit 1
+# Build first; only proceed to up after a successful build and adequate memory.
+docker compose -f docker-compose.prod.yml build || exit 1
+docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans || exit 1
+docker inspect gofurry-nav-web \
+  --format '{{ index .Config.Labels "com.docker.compose.project" }}'
+docker compose -f docker-compose.prod.yml ps
+curl -fsS http://127.0.0.1:3000/healthz
+```
+
+The label must remain `nav-web`. On config/build/memory failure, do not run `up`,
+`down` or `prune`; keep the old container, image and private files. If the replaced
+container fails health checks, restore the verified prior image/deployment using
+the retained configuration. A Git checkout alone does not restore an overwritten
+image. After successful migration, run `./update.sh` only from the new directory;
+clean up old private files only after the maintainer confirms stability and that
+no operational scripts still depend on their old paths.
+
+## Build memory
+
+Only Docker's `build` stage sets `NODE_OPTIONS=--max-old-space-size=...`, from
+`NODE_BUILD_HEAP_MB` (default `4096`). Compose passes this as a **build argument**,
+not a runtime environment variable. `runner` starts independently from `deps`
+and does not inherit the build heap setting. An adequately provisioned build host
+may override it, for example `NODE_BUILD_HEAP_MB=6144 docker compose -f docker-compose.prod.yml build`.
+
+4096 MiB is a V8 heap limit, not reserved memory or proof of sufficient host RAM.
+Nuxt/Nitro and other processes also consume memory. Check host and cgroup limits;
+when memory is insufficient, build the compatible image elsewhere rather than
+repeatedly forcing builds on a low-memory production host.
+
 ## Build and run
 
-Run from `apps/cn/nav-web`. Existing deployments using `.env` can keep their
+Run from `apps/cn/web`. Existing deployments using `.env` can keep their
 configuration and the original update command; Compose reads `.env` automatically:
 
 ```bash

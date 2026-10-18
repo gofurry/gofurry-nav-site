@@ -23,7 +23,7 @@ func TestArchiveToolingPathBoundaries(t *testing.T) {
 			t.Errorf("archive path escaped policy: %s", line)
 		}
 	}
-	for _, line := range []string{"dir: apps/cn/nav-web", "cmd: check-legacy-compatibility", "dir: tools"} {
+	for _, line := range []string{"dir: apps/cn/web", "cmd: check-legacy-compatibility", "dir: tools"} {
 		if archiveToolingPath.MatchString(line) {
 			t.Errorf("non-archive path rejected: %s", line)
 		}

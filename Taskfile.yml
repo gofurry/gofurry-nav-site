@@ -42,7 +42,7 @@ tasks:
 
   deps:nav-web:
     desc: Install the frozen Nav Web dependencies and prepare Nuxt
-    dir: apps/cn/nav-web
+    dir: apps/cn/web
     cmds:
       - pnpm install --frozen-lockfile
 
@@ -54,7 +54,7 @@ tasks:
 
   dev:nav-web:
     desc: Start the Nav Web Nuxt development server
-    dir: apps/cn/nav-web
+    dir: apps/cn/web
     cmds:
       - pnpm run dev
 
@@ -128,7 +128,7 @@ tasks:
 
   lint:nav-web:
     desc: Run Nav Web ESLint, Stylelint and style policy gates
-    dir: apps/cn/nav-web
+    dir: apps/cn/web
     cmds:
       - pnpm run lint
       - pnpm run stylelint
@@ -149,7 +149,7 @@ tasks:
 
   typecheck:nav-web:
     desc: Typecheck Nav Web
-    dir: apps/cn/nav-web
+    dir: apps/cn/web
     cmds:
       - pnpm run typecheck
 
@@ -175,7 +175,7 @@ tasks:
 
   test:nav-web:
     desc: Run Nav Web Unit, Nuxt, Insights and SEO contract tests
-    dir: apps/cn/nav-web
+    dir: apps/cn/web
     cmds:
       - pnpm run test:unit
       - pnpm run test:nuxt
@@ -184,7 +184,7 @@ tasks:
 
   test:nav-web:browser:
     desc: Run production Browser tests serially (build and Chromium required)
-    dir: apps/cn/nav-web
+    dir: apps/cn/web
     cmds:
       - pnpm run test:browser --workers=1
 
@@ -239,7 +239,7 @@ tasks:
       - task: _frontend-build
         vars: {FRONTEND: admin/react}
       - task: _frontend-build
-        vars: {FRONTEND: nav-web}
+        vars: {FRONTEND: web}
 
   verify:go-build:
     desc: Build all Go packages for the workstation (no release artifacts)
@@ -305,11 +305,11 @@ tasks:
     cmds:
       - task: deps:nav-web
       - task: _frontend-build
-        vars: {FRONTEND: nav-web}
+        vars: {FRONTEND: web}
 
   build:nav-web-image:
     desc: Build the Nav Web production Docker image without starting containers
-    dir: apps/cn/nav-web
+    dir: apps/cn/web
     cmds:
       - docker build --tag gofurry-nav-web:latest .
 

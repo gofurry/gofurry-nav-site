@@ -1,5 +1,8 @@
 # Nav Web engineering
 
+Source lives in `apps/cn/web`; public Task/CI names and the Compose project remain
+`nav-web`. Directory naming does not change product or deployment identity.
+
 Read [the frontend contract](../../../contracts/nav-web-frontend.md) first.
 Root `AGENTS.md` and `.agents/` apply. This is the working router; detailed
 ownership is in the contract, [design system](../../../docs/frontend/design-system.md)
