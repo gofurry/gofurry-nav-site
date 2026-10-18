@@ -164,13 +164,24 @@ button typography override or otherwise-unused theme-button hook is needed.
 #145-A supersedes the old full-width shell with two independent matte islands.
 Main entries use Phosphor icons in both locales; one target-language text button
 replaces flags. At >=768px islands are fixed, with compact spacing below 1024px;
-mobile keeps a flow header and hands navigation to the existing four Bottom Tabs.
-The layout owns the 88px desktop clearance and mobile bottom clearance. Site tabs
-and Context respect that fixed header; the Home Reveal target only gains a local
-scroll margin. Hero loading/SSR/reveal decisions remain separate (#145-B).
+after #145-A1 mobile uses an absolute overlay that scrolls away and hands navigation
+to the existing four Bottom Tabs. Both modes leave the document flow; only actual
+page content owners provide local clearance, while backgrounds start at the top.
+The layout retains mobile bottom clearance. Rounded shallow inner cuts affect only
+the island material, with a rounded fallback; active icons use color, not inner cards.
+Site tabs and Context respect the fixed desktop header; the Home Reveal target
+only gains a local scroll margin. Hero loading/SSR/reveal decisions remain separate (#145-B).
 Menu exit is inert immediately, and Reduced Motion retains #139's local rules.
 The prior P5 appearance statements above describe that migration's baseline;
 new pixels require #145-C review, not an automatic Golden update.
+
+#145-A1 mobile Search uses a single horizontally scrollable row of native category
+buttons, the unchanged input, and a current-platform trigger. Its body-mounted native
+modal dialog traps focus and uses global modal surface semantics. Selection only
+changes the provider; Escape/backdrop/close/route/resize/unmount release the sheet,
+scroll lock and Reveal lock. Suggestions are cancelled before entry. Vue Transition
+owns only a short entry, with instant exit and live Reduced Motion; desktop Search
+retains its existing platform list. No new global Sheet abstraction is introduced.
 
 ## Nav Home Header appearance
 

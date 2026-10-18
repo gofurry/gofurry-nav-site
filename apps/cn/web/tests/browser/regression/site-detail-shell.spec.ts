@@ -43,6 +43,8 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
         context: box('data-site-target-context'), workspace: box('data-site-workspace'),
         columns: getComputedStyle(document.querySelector('[data-site-health-strip]')!).gridTemplateColumns.split(' ').length }
     })
+    expect(await page.locator('[data-site-detail]').evaluate(el => el.getBoundingClientRect().top)).toBe(0)
+    expect(geometry.hero.y).toBeGreaterThanOrEqual(width >= 768 ? 88 : 76)
     expect(geometry.hero.bottom).toBeLessThan(geometry.health.y)
     expect(geometry.health.bottom).toBeLessThanOrEqual(geometry.tabs.y)
     if (width === 1440) {

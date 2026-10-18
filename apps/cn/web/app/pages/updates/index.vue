@@ -23,7 +23,7 @@ useSeoMeta({
 
 <template>
   <div class="updates-page" data-updates-index :data-updates-state="state">
-    <div class="updates-main mx-auto w-full max-w-[1080px] px-5 py-8 md:px-10 md:py-10">
+    <div class="updates-main mx-auto w-full max-w-[1080px] px-5 pb-8 pt-[88px] md:px-10 md:pb-10 md:pt-[104px]">
       <header class="updates-header mb-6 md:mb-8">
         <h1 class="updates-title">{{ copy.heading }}</h1>
         <div v-if="state === 'ready' && latest" class="updates-index-meta mt-3 flex flex-wrap gap-x-4 gap-y-1">

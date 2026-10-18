@@ -257,11 +257,15 @@ test('Search keeps typography, theme parity, debounce, keyboard selection and re
   // window listener while Search owns its reveal lock. Only observe the event.
   await page.evaluate(() => {
     document.documentElement.dataset.headerWheelObserved = 'false'
-    window.addEventListener('wheel', () => { document.documentElement.dataset.headerWheelObserved = 'true' }, { once: true, passive: true })
+    window.addEventListener('wheel', event => {
+      document.documentElement.dataset.headerWheelObserved = 'true'
+      document.documentElement.dataset.headerWheelCancelled = String(event.defaultPrevented)
+    }, { once: true, passive: true })
   })
   await page.mouse.move(20, 400)
   await page.mouse.wheel(0, 180)
   await expect(page.locator('html')).toHaveAttribute('data-header-wheel-observed', 'true')
+  await expect(page.locator('html')).toHaveAttribute('data-header-wheel-cancelled', 'false')
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
   await expect(page.locator('.nav-tool-dock')).toHaveCount(0)
   await input.press('Escape')
@@ -407,8 +411,9 @@ for (const failure of ['unavailable', 503, 429, 'network'] as const) {
   })
 }
 
-test('IME owns confirmation and navigation keys; only final Chinese text starts one debounce', async ({ page, context, header }) => {
-  await header.open()
+for (const width of [1440, 390]) {
+test(`IME owns confirmation and navigation keys; only final Chinese text starts one debounce (${width})`, async ({ page, context, header }) => {
+  await header.open(width)
   header.suggestion('兽人', { items: ['兽人 游戏'] })
   await page.clock.install()
   await page.clock.pauseAt(new Date())
@@ -448,6 +453,7 @@ test('IME owns confirmation and navigation keys; only final Chinese text starts 
   await expect(header.suggestions).toHaveCount(0)
   header.assertQuiet()
 })
+}
 
 test('Provider HTML remains literal text with safe keyword segments; other categories never fetch', async ({ page, header }) => {
   await header.open()
@@ -468,5 +474,144 @@ test('Provider HTML remains literal text with safe keyword segments; other categ
   await page.clock.runFor(1200)
   await expect(header.suggestions).toHaveCount(0)
   expect(header.requestQueries()).toEqual(['wolf'])
+  header.assertQuiet()
+})
+
+for (const width of [375, 390, 430]) {
+  test(`145-A1 mobile platform sheet preserves compact geometry and all platforms at ${width}`, async ({ page, context, header }) => {
+    await header.open(width)
+    const trigger = page.locator('.search-platform-trigger')
+    const sheet = page.getByRole('dialog', { name: '选择搜索平台' })
+    const categories = header.search.locator('.search-category-row button')
+    await expect(categories).toHaveCount(5)
+    await expect(header.search.locator('.search-platform-row')).toBeHidden()
+    const geometry = await categories.evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().top))
+    expect(new Set(geometry).size).toBe(1)
+    expect(await header.root.evaluate(el => el.getBoundingClientRect().top)).toBe(0)
+    expect((await categories.first().boundingBox())!.y).toBeGreaterThanOrEqual(76)
+    expect((await trigger.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    expect((await trigger.boundingBox())!.y + (await trigger.boundingBox())!.height).toBeLessThan((await header.root.boundingBox())!.height)
+    await header.input.fill('wolf furry')
+    // Opening before debounce cancels the scheduled request without clearing the keyword.
+    await trigger.click()
+    await expect(sheet).toBeVisible()
+    expect(await sheet.evaluate(el => el.parentElement === document.body && el.matches(':modal'))).toBe(true)
+    await expect(sheet.locator('[aria-pressed="true"]')).toBeFocused()
+    await expect(page.locator('body')).toHaveCSS('overflow', 'hidden')
+    await page.locator('.gf-nav__brand').evaluate((el: HTMLElement) => el.focus())
+    expect(await sheet.evaluate(el => el.contains(document.activeElement))).toBe(true)
+    const options = sheet.locator('.search-platform-sheet__option')
+    await expect(options).toHaveCount(8)
+    const names = await options.allTextContents()
+    for (const name of names) {
+      await sheet.getByRole('button', { name, exact: true }).click()
+      await expect(sheet).toHaveCount(0)
+      await expect(trigger).toBeFocused()
+      await expect(trigger).toContainText(name)
+      await expect(header.input).toHaveValue('wolf furry')
+      expect(context.pages()).toHaveLength(1)
+      await trigger.click()
+      await expect(sheet.locator('[aria-pressed="true"]')).toHaveText(name)
+    }
+    await page.keyboard.press('Escape')
+    await expect(sheet).toHaveCount(0)
+    await expect(trigger).toBeFocused()
+    // Native category buttons select without scrolling the page; switching resets the platform.
+    await categories.last().click()
+    expect(await page.evaluate(() => scrollY)).toBe(0)
+    await trigger.click()
+    await expect(sheet.locator('.search-platform-sheet__option')).toHaveCount(2)
+    await sheet.getByRole('button', { name: '关闭平台选择' }).click()
+    await categories.first().click()
+    await expect(trigger).toContainText(names[0]!)
+    await trigger.click()
+    await sheet.getByRole('button', { name: names[7]!, exact: true }).click()
+    const destination = 'https://x.com/search?q=wolf%20furry&src=typed_query'
+    header.allowSearchPopup(destination)
+    const popupPromise = page.waitForEvent('popup')
+    await header.search.locator('.search-icon').click()
+    const popup = await popupPromise
+    await popup.waitForLoadState('load')
+    await expect(popup).toHaveURL(destination)
+    expect(header.requestQueries()).toEqual([])
+    await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden')
+    if (process.env.GOFURRY_145_REVIEW === '1') {
+      await mkdir('../../../.cache/145-a1-review', { recursive: true })
+      await page.screenshot({ path: `../../../.cache/145-a1-review/search-${width}.png` })
+      await trigger.click()
+      await page.screenshot({ path: `../../../.cache/145-a1-review/platform-${width}.png` })
+      await page.keyboard.press('Escape')
+    }
+    header.assertQuiet()
+  })
+}
+
+test('145-A1 mobile sheet cancels an active suggestion, handles live Reduced and closes without ghosts', async ({ page, header }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await header.open(390)
+  header.holdSuggestions()
+  await header.input.fill('wolf')
+  await header.expectSuggestionRequest('wolf')
+  const trigger = page.locator('.search-platform-trigger')
+  const sheet = page.locator('.search-platform-sheet')
+  // Catch the actual enter phase, not a guessed timeout.
+  await page.exposeFunction('reducePlatformMotion', () => page.emulateMedia({ reducedMotion: 'reduce' }))
+  await page.evaluate(() => {
+    document.addEventListener('transitionrun', event => {
+      if (!(event.target instanceof Element) || !event.target.matches('.search-platform-sheet') || document.documentElement.dataset.platformEntry) return
+      document.documentElement.dataset.platformEntry = getComputedStyle(event.target).transitionDuration
+      void (window as Window & { reducePlatformMotion(): Promise<void> }).reducePlatformMotion()
+    })
+  })
+  // Opening remains possible while the actual loading dropdown is present.
+  await trigger.click()
+  await header.expectAborted('wolf')
+  await expect(header.suggestions).toHaveCount(0)
+  header.releaseSuggestions()
+  await expect(page.locator('html')).toHaveAttribute('data-platform-entry', '0.18s, 0.18s')
+  await expect(sheet).toHaveCSS('opacity', '1')
+  await expect(sheet.locator('.search-platform-sheet__panel')).toHaveCSS('transform', 'none')
+  await expect(sheet).not.toHaveClass(/enter-active/)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.keyboard.press('Escape')
+  await expect(sheet).toHaveCount(0)
+  await expect(trigger).toBeFocused()
+  for (let index = 0; index < 3; index++) {
+    await trigger.click()
+    await sheet.getByRole('button', { name: '关闭平台选择' }).click()
+    await expect(sheet).toHaveCount(0)
+  }
+  await trigger.click()
+  await sheet.click({ position: { x: 3, y: 10 } })
+  await expect(sheet).toHaveCount(0)
+  await expect(trigger).toBeFocused()
+  await expect(header.suggestions).toHaveCount(0)
+  expect(header.requestQueries()).toEqual(['wolf'])
+  await trigger.click()
+  await page.setViewportSize({ width: 390, height: 320 })
+  expect((await sheet.locator('.search-platform-sheet__panel').boundingBox())!.height).toBeLessThanOrEqual(224)
+  await sheet.getByRole('button', { name: '关闭平台选择' }).focus()
+  await page.keyboard.press('Shift+Tab')
+  const lastOption = sheet.locator('.search-platform-sheet__option').last()
+  await expect(lastOption).toBeFocused()
+  expect(await lastOption.evaluate(el => {
+    const item = el.getBoundingClientRect(), list = el.parentElement!.getBoundingClientRect()
+    return item.top >= list.top && item.bottom <= list.bottom + 1
+  })).toBe(true)
+  expect(await page.evaluate(() => scrollY)).toBe(0)
+  await lastOption.click()
+  await trigger.click()
+  await expect(lastOption).toBeFocused()
+  expect(await lastOption.evaluate(el => el.getBoundingClientRect().bottom <= el.parentElement!.getBoundingClientRect().bottom + 1)).toBe(true)
+  await sheet.getByRole('button', { name: '关闭平台选择' }).click()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await trigger.click()
+  // Unmount through a real route while open must restore body scroll and release the modal top layer.
+  await page.evaluate(() => history.pushState({}, '', '/terms'))
+  await page.evaluate(() => dispatchEvent(new PopStateEvent('popstate')))
+  await expect(page).toHaveURL(/\/terms$/)
+  await expect(page.locator('.legal-panel')).toBeVisible()
+  await expect(sheet).toHaveCount(0)
+  await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden')
   header.assertQuiet()
 })

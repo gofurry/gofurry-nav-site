@@ -2,7 +2,7 @@
   <div
     class="games-page game-detail-page relative isolate min-h-full w-full overflow-hidden"
   >
-    <div class="game-detail-layout relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 p-6">
+    <div class="game-detail-layout relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 px-6 pb-6 pt-[88px] md:pt-[104px]">
       <section class="min-w-0 w-full max-w-full xl:w-[75%]">
         <GameDetailMain
           :game="gameDetailData.gameBaseInfo"

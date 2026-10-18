@@ -194,6 +194,8 @@ async function revealContent(shouldScroll = true, force = false) {
     await waitForFrames()
 
     isContentRevealed.value = true
+    // The first reveal is the only time this page needs to own a wheel event.
+    window.removeEventListener('wheel', handleWheel)
     dispatchNavPageReveal(true)
 
     if (!shouldScroll) {
@@ -242,6 +244,12 @@ function handleResize() {}
 
 function handleWheel(event: WheelEvent) {
   if (event.deltaY > 8) {
+    // An instant reveal must not be followed by this same event's native delta.
+    // Normal scrolling and search/dialog locks retain their existing behavior.
+    if (!isContentRevealed.value && !isNavPageRevealLocked()
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      event.preventDefault()
+    }
     void revealContent()
   }
 }
@@ -272,7 +280,7 @@ onMounted(() => {
   mobileMediaQuery.addEventListener('change', handleViewportChange)
   window.addEventListener('scroll', handleScroll, { passive: true })
   window.addEventListener('resize', handleResize)
-  window.addEventListener('wheel', handleWheel, { passive: true })
+  window.addEventListener('wheel', handleWheel, { passive: false })
   window.addEventListener('touchstart', handleTouchStart, { passive: true })
   window.addEventListener('touchmove', handleTouchMove, { passive: true })
   window.addEventListener('keydown', handleKeydown)

@@ -281,7 +281,9 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
             await expect(dock).toHaveCount(1)
             await expect(content).toBeVisible()
             await expect.poll(() => shell.evaluate(element => {
-              const target = Math.min(element.getBoundingClientRect().top + scrollY, document.documentElement.scrollHeight - innerHeight)
+              // #145-A's fixed shell clearance is part of scrollIntoView's target.
+              const margin = parseFloat(getComputedStyle(element).scrollMarginTop) || 0
+              const target = Math.max(0, Math.min(element.getBoundingClientRect().top + scrollY - margin, document.documentElement.scrollHeight - innerHeight))
               return Math.abs(scrollY - target)
             })).toBeLessThanOrEqual(1)
             await expect.poll(() => state.weather.length).toBe(1)
@@ -290,7 +292,11 @@ export const test = base.extend<{ revealed: { open(options?: OpenOptions): Promi
           },
           async alignContent() {
             await shell.evaluate(element => element.scrollIntoView({ behavior: 'instant', block: 'start' }))
-            await expect.poll(() => shell.evaluate(element => Math.abs(element.getBoundingClientRect().top))).toBeLessThanOrEqual(1)
+            await expect.poll(() => shell.evaluate(element => {
+              const margin = parseFloat(getComputedStyle(element).scrollMarginTop) || 0
+              const target = Math.max(0, Math.min(element.getBoundingClientRect().top + scrollY - margin, document.documentElement.scrollHeight - innerHeight))
+              return Math.abs(scrollY - target)
+            })).toBeLessThanOrEqual(1)
           },
           async openSearch() {
             state.directoryAllowed = true

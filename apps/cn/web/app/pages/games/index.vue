@@ -6,7 +6,7 @@
       class="relative isolate flex-1 overflow-hidden"
     >
       <h1 class="sr-only">{{ gamesPageSeo.heading }}</h1>
-      <div class="relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 p-6">
+      <div class="relative z-10 mx-auto flex w-full max-w-[1700px] gap-4 px-6 pb-6 pt-[88px] md:pt-[104px]">
         <section class="w-full xl:w-[75%]">
           <GameInfoPanel
             :initial-raw-data="gamesPageData.mainInfo"

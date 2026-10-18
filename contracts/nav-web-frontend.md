@@ -124,7 +124,8 @@ Four primary tabs use the P1 route-state helpers and router history, with roving
 focus and ArrowLeft/ArrowRight/Home/End support. P2 introduced no secondary
 navigation; P4 owns Observation's secondary views. After #145-A, primary tabs
 stick below the floating NavBar at widths >=768px; on mobile the public NavBar
-remains in normal flow and primary tabs stick at the viewport top.
+is an absolute overlay that scrolls away (#145-A1); primary tabs still stick at
+the viewport top.
 At `xl` the workspace/context tracks are 3:1 with
 a bounded minimum sidebar; smaller viewports place compact context before the
 workspace, retaining Target/protocol/time while infrastructure detail stays in

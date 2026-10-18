@@ -3,7 +3,7 @@
     <div class="lottery-page__wash absolute inset-0 z-0" aria-hidden="true" />
     <div class="lottery-page__top-line absolute inset-x-0 top-0 h-px" aria-hidden="true" />
 
-    <div class="relative z-10 mx-auto flex min-h-[calc(100svh-3.5rem)] w-full max-w-6xl flex-col px-5 py-10 sm:px-8 lg:py-14">
+    <div class="relative z-10 mx-auto flex min-h-[calc(100svh-3.5rem)] w-full max-w-6xl flex-col px-5 pb-10 pt-[88px] sm:px-8 md:pt-[104px] lg:pb-14">
       <header class="lottery-hero grid gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end">
         <div class="max-w-3xl">
           <p class="lottery-page__eyebrow mb-4">

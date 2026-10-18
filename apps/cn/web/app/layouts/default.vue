@@ -2,7 +2,7 @@
   <div class="gf-app-shell relative isolate flex min-h-screen flex-col">
     <PublicPageBackground />
     <NavBar :nav-overlay-desktop="isNavPage" :inactive="mobileNavigationActive" @busy="navigationBusy = $event" />
-    <main class="relative flex min-w-0 flex-1 flex-col pb-20 md:pb-0" :class="{ 'md:pt-[88px]': !isNavPage }">
+    <main class="relative flex min-w-0 flex-1 flex-col pb-20 md:pb-0">
       <slot />
       <div v-if="showFooter" class="gf-footer-shell relative mt-auto">
         <Footer />

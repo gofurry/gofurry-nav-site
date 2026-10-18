@@ -1,6 +1,6 @@
 <template>
   <div data-site-detail :data-site-target="sitePageData.domain" :data-site-tab="routeState.tab" class="site-detail-page relative isolate min-h-full min-w-0">
-    <main class="relative mx-auto w-full min-w-0 max-w-[1560px] px-4 pb-10 pt-5 sm:px-8 sm:pt-8 lg:px-10">
+    <main class="relative mx-auto w-full min-w-0 max-w-[1560px] px-4 pb-10 pt-[88px] sm:px-8 md:pt-[104px] lg:px-10">
       <div data-site-identity-note class="site-detail-identity-note min-w-0">
         <SiteDetailHero
           :site="sitePageData.siteInfo" :name="siteName" :domain="sitePageData.domain"

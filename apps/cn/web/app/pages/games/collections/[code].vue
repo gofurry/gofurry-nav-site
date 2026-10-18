@@ -1,5 +1,5 @@
 <template>
-  <section class="games-page game-collections-page mx-auto w-full max-w-[1200px] px-6 py-10">
+  <section class="games-page game-collections-page mx-auto w-full max-w-[1200px] px-6 pb-10 pt-[88px] md:pt-[104px]">
     <header class="game-collection-detail-header mb-6">
       <div class="flex flex-wrap items-baseline gap-x-4 gap-y-2">
         <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">

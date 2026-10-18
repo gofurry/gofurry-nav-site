@@ -1,7 +1,7 @@
 <template>
   <div class="site-group-page relative isolate min-h-full overflow-hidden">
 
-    <main class="site-group-content relative z-10 mx-auto w-full max-w-[1880px] px-4 pb-16 pt-6 sm:px-6 lg:pt-8 xl:px-8">
+    <main class="site-group-content relative z-10 mx-auto w-full max-w-[1880px] px-4 pb-16 pt-[88px] sm:px-6 md:pt-[104px] xl:px-8">
       <header class="site-group-header mb-6">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">

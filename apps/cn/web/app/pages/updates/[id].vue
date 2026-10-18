@@ -33,7 +33,7 @@ useSeoMeta({
 
 <template>
   <article class="updates-page" data-update-detail>
-    <div class="updates-article mx-auto w-full max-w-[960px] px-5 py-8 md:px-10 md:py-10">
+    <div class="updates-article mx-auto w-full max-w-[960px] px-5 pb-8 pt-[88px] md:px-10 md:pb-10 md:pt-[104px]">
       <NuxtLink :to="localePath('/updates')" class="updates-action inline-flex items-center gap-2"><PhArrowLeft aria-hidden="true" />{{ copy.all }}</NuxtLink>
       <header class="updates-article-header mt-6 md:mt-8">
         <div v-if="release.version">

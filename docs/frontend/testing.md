@@ -23,10 +23,13 @@ not authorization to update an accepted golden.
 
 `nav-shell` owns independent island geometry/hit testing, icon accessibility,
 768/1024 breakpoints, target-language switching with query/hash, menu teardown,
-Home Hero/flow-header handoff with top-reset hysteresis, and browser history.
+Home Hero/absolute-header handoff with top-reset hysteresis, and browser history.
 Preferences retains actual opener focus; Home Header checks Quick Modal layering;
 Site Shell checks sticky clearance. These use the existing Nitro fixtures and
-request ledgers. Review captures may be written to root `.cache/145-a-review/`
+request ledgers. After #145-A1, Header also covers the mobile platform sheet,
+cancellation, focus,
+rapid closing and live Reduced Motion; Shell checks rotation and both locales.
+Review captures may be written to root `.cache/145-a1-review/`
 with `GOFURRY_145_REVIEW=1`; they are not Golden or human acceptance.
 Existing Nav Shell/full-page Visual pixels and old flag/control assertions await
 #145-C; #145-A does not authorize snapshot updates or broader Reveal/SSR changes.

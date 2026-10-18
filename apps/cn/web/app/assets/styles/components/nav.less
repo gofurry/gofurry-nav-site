@@ -41,13 +41,43 @@ html.dark .gf-nav {
   pointer-events: none;
 }
 
-// Only the inward end receives a shallow cut; controls/focus rings are not clipped.
-.gf-nav__brand::before {
-  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
-}
+// Matched 10px oblique faces with rounded joins. Only the material is clipped;
+// controls retain their full hit area and focus outline. Older engines keep rounded islands.
+@supports (clip-path: shape(from 0 0, line to 1px 1px, close)) {
+  .gf-nav__island { box-shadow: none; }
+  .gf-nav__island::before { border: 0; background: var(--gf-nav-border); }
+  .gf-nav__island::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 1px;
+    background: var(--gf-nav-bg);
+    backdrop-filter: blur(10px);
+    pointer-events: none;
+  }
 
-.gf-nav__actions::before {
-  clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%, 0 12px);
+  .gf-nav__brand::before,
+  .gf-nav__brand::after {
+    clip-path: shape(from 18px 0,
+      hline to calc(100% - 24px),
+      curve to calc(100% - 14px) 4px with calc(100% - 18px) 0 / calc(100% - 17px) 1px,
+      line to calc(100% - 4px) 14px,
+      curve to 100% 24px with calc(100% - 1px) 17px / 100% 18px,
+      vline to calc(100% - 18px),
+      curve to calc(100% - 18px) 100% with 100% 100%,
+      hline to 18px, curve to 0 calc(100% - 18px) with 0 100%,
+      vline to 18px, curve to 18px 0 with 0 0, close);
+  }
+
+  .gf-nav__actions::before,
+  .gf-nav__actions::after {
+    clip-path: shape(from 24px 0,
+      hline to calc(100% - 18px), curve to 100% 18px with 100% 0,
+      vline to calc(100% - 18px), curve to calc(100% - 18px) 100% with 100% 100%,
+      hline to 18px, curve to 0 calc(100% - 18px) with 0 100%,
+      vline to 24px, curve to 4px 14px with 0 18px / 1px 17px,
+      line to 14px 4px, curve to 24px 0 with 17px 1px / 18px 0, close);
+  }
 }
 
 @media (min-width: 768px) {
@@ -90,7 +120,10 @@ html.dark .gf-nav {
 .gf-nav__link:hover,
 .gf-nav__github-link:hover,
 .gf-nav__icon-button:hover,
-.gf-nav__mobile-toggle:hover,
+.gf-nav__mobile-toggle:hover {
+  color: var(--gf-nav-active-text);
+}
+
 .gf-nav__mobile-link:hover,
 .gf-nav__mobile-action:hover {
   background: var(--gf-nav-hover-bg);
@@ -98,8 +131,11 @@ html.dark .gf-nav {
 }
 
 .gf-nav__link--active,
-.gf-nav__mobile-link--active,
 .gf-nav__mobile-toggle--open {
+  color: var(--gf-nav-active-text);
+}
+
+.gf-nav__mobile-link--active {
   background: var(--gf-nav-active-bg);
   color: var(--gf-nav-active-text);
 }

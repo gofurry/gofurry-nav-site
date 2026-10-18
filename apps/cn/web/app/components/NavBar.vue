@@ -1,5 +1,5 @@
 <template>
-  <header ref="navigation" class="gf-nav pointer-events-none relative z-[70] w-full md:fixed md:inset-x-0 md:top-0"
+  <header ref="navigation" class="gf-nav pointer-events-none absolute inset-x-0 top-0 z-[70] w-full md:fixed"
     :class="{ 'gf-nav--overlay': navOverlayDesktop }" :inert="inactive" :aria-hidden="inactive || undefined">
     <div class="gf-nav__inner relative mx-auto flex w-full max-w-[1700px] items-center justify-between gap-3 px-3 py-3 md:px-5 md:py-4 lg:px-6">
       <NuxtLink :to="localePath('/')" class="gf-nav__island gf-nav__brand pointer-events-auto flex shrink-0 items-center gap-2 px-3 md:px-4"

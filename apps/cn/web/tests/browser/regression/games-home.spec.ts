@@ -275,6 +275,8 @@ for (const theme of ['light', 'dark'] as const) {
 
   test(`Games Home mobile layout and pagination (${theme})`, async ({ gamesHome }) => {
     const scene = await gamesHome.open({ theme, width: 390 })
+    expect(await scene.page.locator('.games-page').evaluate(el => el.getBoundingClientRect().top)).toBe(0)
+    expect(await scene.group(0).evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(76)
     await assertGamesHomeAppearance(scene)
     await expect(scene.sidebar).toBeHidden()
     await expect(scene.dock).toBeHidden()

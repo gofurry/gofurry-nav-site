@@ -1,5 +1,5 @@
 <template>
-  <div class="lottery-activation-page relative isolate flex min-h-[calc(100svh-3.5rem)] items-center justify-center overflow-hidden px-4 py-8">
+  <div class="lottery-activation-page relative isolate flex min-h-[calc(100svh-3.5rem)] items-center justify-center overflow-hidden px-4 pb-8 pt-[88px] md:pt-[104px]">
     <div class="lottery-activation-page__wash absolute inset-0 z-0" aria-hidden="true" />
 
     <main class="activation-card relative z-10 w-full max-w-xl">

@@ -266,7 +266,7 @@ html.dark .nav-home-page {
   align-items: center;
   justify-content: flex-start;
   overflow: hidden;
-  padding: 1.5rem 1rem 0;
+  padding: 5rem 1rem 0;
   box-shadow: var(--nav-home-header-shadow);
   transition: background 0.4s ease-in-out;
 }
@@ -2192,4 +2192,65 @@ html.dark .nav-tool-empty {
 @media (min-width: 768px) {
   // The existing Reveal scroll targets this element; keep that behavior below the islands.
   .nav-content-shell { scroll-margin-top: 88px; }
+}
+
+// Mobile search keeps one horizontal category row and a lightweight platform entry.
+.search-category-track { scrollbar-width: none; }
+.search-category-track::-webkit-scrollbar { display: none; }
+.search-category-row button { border: 0; }
+.search-category-row button:focus-visible,
+.search-platform-trigger:focus-visible { outline: 2px solid var(--nav-home-search-chip-text); outline-offset: -2px; }
+.search-platform-trigger {
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--gf-radius-sm);
+  background: var(--nav-home-search-chip-bg);
+  color: var(--nav-home-search-chip-text);
+  font-size: 0.8125rem;
+  backdrop-filter: blur(12px);
+}
+
+// Body-mounted native dialog consumes global modal semantics, never Hero-inherited tokens.
+.search-platform-sheet {
+  border: 0;
+  background: transparent;
+  color: var(--gf-text-main);
+}
+.search-platform-sheet::backdrop { background: var(--gf-modal-overlay); }
+.search-platform-sheet__panel {
+  border: 1px solid var(--gf-modal-border);
+  border-bottom: 0;
+  border-radius: var(--gf-radius-lg) var(--gf-radius-lg) 0 0;
+  background: var(--gf-modal-bg);
+  box-shadow: var(--gf-modal-shadow);
+  backdrop-filter: blur(var(--gf-blur-surface));
+}
+.search-platform-sheet h2 { font-size: 1rem; font-weight: 600; }
+.search-platform-sheet__close,
+.search-platform-sheet__option {
+  min-height: 44px;
+  border: 1px solid var(--gf-border);
+  border-radius: var(--gf-radius-sm);
+  background: var(--gf-surface);
+  color: var(--gf-text-main);
+  font-size: 0.875rem;
+}
+.search-platform-sheet__close { width: 44px; border-color: transparent; background: transparent; }
+.search-platform-sheet__option[aria-pressed='true'],
+.search-platform-sheet__option:hover { background: var(--gf-surface-hover); border-color: var(--gf-border-strong); }
+.search-platform-sheet button:focus-visible { outline: 2px solid var(--gf-focus-ring); outline-offset: -2px; }
+.search-platform-sheet-enter-active,
+.search-platform-sheet-enter-active .search-platform-sheet__panel { transition: opacity 180ms ease, transform 180ms ease; }
+.search-platform-sheet-enter-from { opacity: 0; }
+.search-platform-sheet-enter-from .search-platform-sheet__panel { transform: translateY(8px); }
+@media (prefers-reduced-motion: reduce) {
+  .search-platform-sheet-enter-active,
+  .search-platform-sheet-enter-active .search-platform-sheet__panel { transition: none; }
+  .search-platform-sheet-enter-from { opacity: 1; }
+  .search-platform-sheet-enter-from .search-platform-sheet__panel { transform: none; }
+}
+
+@media (max-width: 767px) {
+  // Suggestions must not cover the new platform trigger or escape the 360px Hero.
+  .search-suggestion-list { top: calc(100% + 3.75rem); max-height: 6rem; }
 }

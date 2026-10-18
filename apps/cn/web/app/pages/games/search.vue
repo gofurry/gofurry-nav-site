@@ -3,7 +3,7 @@
       class="games-search-page games-page relative isolate flex min-h-full w-full flex-col overflow-hidden"
   >
     <h1 class="sr-only">{{ searchPageSeo.heading }}</h1>
-    <div class="relative z-10 mx-auto flex w-full max-w-[1720px] flex-1 flex-col gap-5 p-6">
+    <div class="relative z-10 mx-auto flex w-full max-w-[1720px] flex-1 flex-col gap-5 px-6 pb-6 pt-[88px] md:pt-[104px]">
 
       <div class="search-toolbar relative flex w-full items-center gap-3">
         <div class="flex-1">

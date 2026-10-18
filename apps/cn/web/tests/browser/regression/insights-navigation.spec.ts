@@ -37,6 +37,8 @@ test('Insights mobile nested route keeps Ecosystem active and keyboard links vis
   await page.setViewportSize({ width: 390, height: 844 })
   const html = await openRuntime(page, '/en/insights/games?metric=free&range=90d')
   expect(html).toContain('Ecosystem')
+  expect(await page.locator('.insights-page').evaluate(el => el.getBoundingClientRect().top)).toBe(0)
+  expect(await page.locator('.ecosystem-navigation').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(76)
   await expect(page.locator('.ecosystem-navigation')).toHaveCSS('flex-direction', 'column')
   await expect(page.locator('.insights-container')).not.toContainText(/undefined|NaN|null%/)
   await page.evaluate(() => window.scrollTo({ top: 240, behavior: 'instant' }))

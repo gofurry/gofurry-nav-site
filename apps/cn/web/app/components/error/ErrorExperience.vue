@@ -146,7 +146,7 @@ onBeforeUnmount(() => {
   flex: 1;
   align-items: center;
   overflow: hidden;
-  padding: 64px clamp(28px, 7vw, 120px) 100px;
+  padding: 104px clamp(28px, 7vw, 120px) 100px;
 }
 
 .error-page__artwork,

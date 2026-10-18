@@ -22,5 +22,9 @@
   max-width: calc(var(--insights-content-max) + 2 * var(--insights-page-gutter));
   min-width: 0;
   margin-inline: auto;
-  padding: clamp(24px, 3vw, 48px) var(--insights-page-gutter) var(--insights-section-gap);
+  padding: 88px var(--insights-page-gutter) var(--insights-section-gap);
+}
+
+@media (min-width: 768px) {
+  .insights-page .insights-container { padding-top: 104px; }
 }

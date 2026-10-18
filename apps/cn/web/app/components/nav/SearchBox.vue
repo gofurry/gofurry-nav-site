@@ -5,18 +5,20 @@
   >
     <!-- 搜索类别 -->
     <div class="search-category-row mb-3 w-full max-w-[620px] px-3 py-2.5">
-      <div class="flex flex-wrap justify-center gap-2 sm:gap-3">
-        <div
+      <div class="search-category-track flex flex-nowrap gap-2 overflow-x-auto md:flex-wrap md:justify-center md:gap-3">
+        <button
             v-for="item in categories"
+            type="button"
+            :aria-pressed="selectedCategory === item"
             :key="item"
-            @click="selectedCategory = item"
+            @click="selectCategory(item, $event)"
             :class="[
-              'search-chip cursor-pointer px-3 py-1.5',
+              'search-chip shrink-0 cursor-pointer whitespace-nowrap px-3 py-1.5',
               selectedCategory === item ? 'search-chip-active' : ''
             ]"
         >
           {{ item }}
-        </div>
+        </button>
       </div>
     </div>
 
@@ -84,8 +86,34 @@
       </Transition>
     </div>
 
+    <button ref="platformTrigger" type="button" class="search-platform-trigger mt-2 inline-flex items-center justify-center gap-2 px-3 md:hidden"
+      aria-haspopup="dialog" :aria-expanded="platformSheetOpen" aria-controls="search-platform-sheet" @click="openPlatformSheet">
+      {{ selectedPlatform.name }} <PhCaretDown :size="16" aria-hidden="true" />
+    </button>
+    <Teleport to="body">
+      <Transition name="search-platform-sheet" :css="!reducedMotion" @enter="activatePlatformSheet" @leave="(_element, done) => done()">
+        <dialog v-if="platformSheetOpen" id="search-platform-sheet" ref="platformDialog"
+          class="search-platform-sheet fixed inset-0 m-0 flex h-dvh max-h-none w-full max-w-none items-end justify-center p-0"
+          aria-modal="true" aria-labelledby="search-platform-title" @cancel.prevent="closePlatformSheet()"
+          @click.self="closePlatformSheet()" @keydown="handlePlatformKeydown">
+          <div class="search-platform-sheet__panel flex max-h-[min(70dvh,30rem)] w-full max-w-lg flex-col overflow-hidden px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+            <div class="mb-3 flex shrink-0 items-center justify-between gap-3">
+              <h2 id="search-platform-title">{{ platformTitle }}</h2>
+              <button type="button" class="search-platform-sheet__close inline-flex shrink-0 items-center justify-center"
+                :aria-label="currentLang === 'en' ? 'Close platform selector' : '关闭平台选择'" @click="closePlatformSheet()"><PhX :size="20" aria-hidden="true" /></button>
+            </div>
+            <div class="grid grid-cols-2 gap-2 overflow-y-auto overscroll-contain">
+              <button v-for="platform in platforms[selectedCategory]" :key="platform.name" type="button"
+                class="search-platform-sheet__option px-3 py-2" :aria-pressed="selectedPlatform.name === platform.name"
+                @click="choosePlatform(platform)">{{ platform.name }}</button>
+            </div>
+          </div>
+        </dialog>
+      </Transition>
+    </Teleport>
+
     <!-- 搜索平台 -->
-    <div class="search-platform-row mt-1 w-full max-w-[620px] px-3 py-2.5">
+    <div class="search-platform-row mt-1 hidden w-full md:block max-w-[620px] px-3 py-2.5">
       <div class="grid grid-cols-2 justify-center gap-2 md:flex md:flex-wrap md:gap-2">
         <div
             v-for="platform in platforms[selectedCategory]"
@@ -105,11 +133,15 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
+import { PhCaretDown, PhX } from '@phosphor-icons/vue'
 import { getSearchSuggestion } from '@/services/nav'
 import { useI18n } from 'vue-i18n'
+import { useReducedMotion } from '@/composables/useReducedMotion'
 import { setNavPageRevealLock } from '@/utils/navPageReveal'
 
 const { t, locale } = useI18n()
+const route = useRoute()
+const reducedMotion = useReducedMotion()
 const currentLang = computed(() => locale.value === 'en' ? 'en' : 'zh')
 const searchActionLabel = computed(() => currentLang.value === 'en' ? 'Search GoFurry resources' : '搜索 GoFurry 资源')
 
@@ -195,6 +227,81 @@ const dropdownRef = ref<HTMLElement | null>(null)
 const dropdownVisible = ref(false)
 const isInputFocused = ref(false)
 
+const platformSheetOpen = ref(false)
+const platformTrigger = ref<HTMLButtonElement | null>(null)
+const platformDialog = ref<HTMLDialogElement | null>(null)
+const platformTitle = computed(() => currentLang.value === 'en' ? 'Search platform' : '选择搜索平台')
+let mobileQuery: MediaQueryList | undefined
+let savedOverflow: string | undefined
+let blurTimer: number | undefined
+
+function selectCategory(category: string, event: MouseEvent) {
+  selectedCategory.value = category
+  const button = event.currentTarget as HTMLElement
+  const track = button.parentElement!
+  const item = button.getBoundingClientRect(), bounds = track.getBoundingClientRect()
+  // Only move the horizontal strip, never scroll the Hero/page to the focused button.
+  if (item.left < bounds.left) track.scrollLeft -= bounds.left - item.left
+  else if (item.right > bounds.right) track.scrollLeft += item.right - bounds.right
+}
+
+function openPlatformSheet() {
+  if (!mobileQuery?.matches) return
+  cancelSuggestions()
+  isInputFocused.value = false
+  if (platformSheetOpen.value) return
+  savedOverflow = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
+  platformSheetOpen.value = true
+}
+
+function activatePlatformSheet(element: Element) {
+  if (!platformSheetOpen.value) return
+  const dialog = element as HTMLDialogElement
+  dialog.showModal()
+  // The fixed dialog may have a short scrollable list (software keyboard/landscape).
+  dialog.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus()
+}
+
+function handlePlatformKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Tab') return
+  const buttons = platformDialog.value?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
+  const first = buttons?.[0], last = buttons?.[buttons.length - 1]
+  if (!first || !last) return
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
+function closePlatformSheet(restoreFocus = true) {
+  if (!platformSheetOpen.value) return
+  platformDialog.value?.close()
+  platformSheetOpen.value = false
+  if (savedOverflow !== undefined) document.body.style.overflow = savedOverflow
+  savedOverflow = undefined
+  isInputFocused.value = false
+  if (restoreFocus) platformTrigger.value?.focus({ preventScroll: true })
+}
+
+function choosePlatform(platform: Platform) {
+  selectedPlatform.value = platform
+  closePlatformSheet()
+}
+
+function handleBreakpoint() {
+  if (!mobileQuery?.matches && platformSheetOpen.value) {
+    closePlatformSheet(false)
+    // Desktop has no platform trigger; focus the persistent category without refetching suggestions.
+    searchBoxRef.value?.querySelector<HTMLButtonElement>('.search-category-row [aria-pressed="true"]')?.focus({ preventScroll: true })
+  }
+}
+
+watch(() => route.fullPath, () => closePlatformSheet(false))
+
 // 重置默认选中逻辑
 const resetSelection = () => {
   cancelSuggestions()
@@ -219,7 +326,7 @@ const highlightSegments = (item: string) => {
 const fetchSuggestions = async () => {
   const searchLabel = t('searchBox.platformCate.search')
   const requestKeyword = keyword.value.trim()
-  if (composing || !requestKeyword || selectedCategory.value !== searchLabel) {
+  if (platformSheetOpen.value || composing || !requestKeyword || selectedCategory.value !== searchLabel) {
     abortSuggestionRequest()
     suggestions.value = []
     dropdownVisible.value = false
@@ -259,7 +366,7 @@ const fetchSuggestions = async () => {
 }
 
 function scheduleSuggestions() {
-  if (composing || scheduledKeyword === keyword.value) return
+  if (platformSheetOpen.value || composing || scheduledKeyword === keyword.value) return
   cancelSuggestions()
   if (!keyword.value.trim() || selectedCategory.value !== t('searchBox.platformCate.search')) return
   scheduledKeyword = keyword.value
@@ -386,10 +493,11 @@ const handleInputFocus = () => {
 }
 
 const handleInputBlur = () => {
-  window.setTimeout(() => {
+  window.clearTimeout(blurTimer)
+  blurTimer = window.setTimeout(() => {
     const activeElement = document.activeElement
     isInputFocused.value = !!(
-      activeElement &&
+      !platformSheetOpen.value && activeElement &&
       searchBoxRef.value?.contains(activeElement)
     )
   }, 0)
@@ -424,19 +532,24 @@ function abortSuggestionRequest() {
 }
 
 watch(
-    [dropdownVisible, isInputFocused],
-    ([visible, focused]) => {
-      setNavPageRevealLock('search-box', visible || focused)
+    [dropdownVisible, isInputFocused, platformSheetOpen],
+    ([visible, focused, sheetOpen]) => {
+      setNavPageRevealLock('search-box', visible || focused || sheetOpen)
     },
-    { immediate: true }
+    { immediate: true, flush: 'sync' }
 )
 
 onMounted(() => {
+  mobileQuery = window.matchMedia('(max-width: 767px)')
+  mobileQuery.addEventListener('change', handleBreakpoint)
   document.addEventListener('click', handleClickOutside)
   resetSelection() // 🟧 初始化默认选中项
 })
 
 onBeforeUnmount(() => {
+  closePlatformSheet(false)
+  window.clearTimeout(blurTimer)
+  mobileQuery?.removeEventListener('change', handleBreakpoint)
   cancelSuggestions()
   document.removeEventListener('click', handleClickOutside)
   setNavPageRevealLock('search-box', false)

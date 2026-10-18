@@ -91,6 +91,7 @@ test('Reduced Reveal and Spotlight settle the selected target through live prefe
   // Change after hydration: Reveal must read the current setting at the scroll.
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await scene.shell.evaluate(element => {
+    window.addEventListener('wheel', event => element.setAttribute('data-observed-wheel-cancelled', String(event.defaultPrevented)), { once: true })
     const scroll = element.scrollIntoView.bind(element)
     element.scrollIntoView = options => {
       element.setAttribute('data-observed-scroll', typeof options === 'object' ? options.behavior || 'auto' : 'auto')
@@ -100,6 +101,7 @@ test('Reduced Reveal and Spotlight settle the selected target through live prefe
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await scene.reveal()
   await expect(scene.shell).toHaveAttribute('data-observed-scroll', 'instant')
+  await expect(scene.shell).toHaveAttribute('data-observed-wheel-cancelled', 'true')
   const next = featured.getByRole('button', { name: '精选站点 下一页', exact: true })
   const prev = featured.getByRole('button', { name: '精选站点 上一页', exact: true })
   const track = featured.locator('.spotlight-panel__track')
@@ -143,6 +145,7 @@ test('Normal motion baseline retains smooth Reveal and its final content positio
   const scene = await revealed.open()
   await scene.page.emulateMedia({ reducedMotion: 'no-preference' })
   await scene.shell.evaluate(element => {
+    window.addEventListener('wheel', event => element.setAttribute('data-observed-wheel-cancelled', String(event.defaultPrevented)), { once: true })
     const scroll = element.scrollIntoView.bind(element)
     element.scrollIntoView = options => {
       element.setAttribute('data-observed-scroll', typeof options === 'object' ? options.behavior || 'auto' : 'auto')
@@ -151,6 +154,7 @@ test('Normal motion baseline retains smooth Reveal and its final content positio
   })
   await scene.reveal()
   await expect(scene.shell).toHaveAttribute('data-observed-scroll', 'smooth')
+  await expect(scene.shell).toHaveAttribute('data-observed-wheel-cancelled', 'false')
   scene.assertQuiet()
 })
 
