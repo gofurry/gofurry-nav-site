@@ -19,6 +19,18 @@ phase-labelled sections preserve earlier acceptance matrices/counts; use
 actual local/remote/manual status. Earlier baseline-creation instructions are
 not authorization to update an accepted golden.
 
+## Floating navigation shell (#145-A)
+
+`nav-shell` owns independent island geometry/hit testing, icon accessibility,
+768/1024 breakpoints, target-language switching with query/hash, menu teardown,
+Home Hero/flow-header handoff with top-reset hysteresis, and browser history.
+Preferences retains actual opener focus; Home Header checks Quick Modal layering;
+Site Shell checks sticky clearance. These use the existing Nitro fixtures and
+request ledgers. Review captures may be written to root `.cache/145-a-review/`
+with `GOFURRY_145_REVIEW=1`; they are not Golden or human acceptance.
+Existing Nav Shell/full-page Visual pixels and old flag/control assertions await
+#145-C; #145-A does not authorize snapshot updates or broader Reveal/SSR changes.
+
 ## Games Home optional recovery (#140-C follow-up)
 
 The shared Games Home fixture gates all three SSR reads. Slow optional slices

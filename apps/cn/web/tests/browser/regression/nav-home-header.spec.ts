@@ -15,6 +15,10 @@ test('B2 Quick Modal preserves the Normal 180/220ms contract', async ({ page, he
   })
   await header.quick.getByRole('button', { name: '管理快捷站点', exact: true }).click()
   await expect(header.modal).toHaveCSS('opacity', '1')
+  expect(await page.locator('.gf-nav__actions').evaluate(el => {
+    const box = el.getBoundingClientRect()
+    return !!document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest('.quick-modal-backdrop')
+  })).toBe(true)
   expect(await page.evaluate(() => JSON.parse(document.documentElement.dataset.quickEntry!)))
     .toEqual({ backdrop: '0.18s', panel: '0.22s, 0.18s', transform: 'matrix(0.985, 0, 0, 0.985, 0, 8)' })
   await header.modal.locator('.quick-modal-close').click()
@@ -55,7 +59,9 @@ test('B2 Quick Modal live Reduced exit and rapid reopen leave no interactive gho
   await expect(page.locator('html')).toHaveAttribute('data-quick-reduced', 'enter')
   await expect(root).toHaveCSS('opacity', '1'); await expect(header.modal).toHaveCSS('transform', 'none')
   await header.modal.locator('#custom-site-name').fill('discarded draft')
+  await expect(root).not.toHaveClass(/quick-modal-enter-active/)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(root).toHaveCSS('opacity', '1')
   await header.modal.locator('.quick-modal-close').click()
   await expect(page.locator('html')).toHaveAttribute('data-quick-reduced', 'leave')
   const exit = await page.evaluate(() => JSON.parse(document.documentElement.dataset.quickExit!))
@@ -266,7 +272,7 @@ test('Search keeps typography, theme parity, debounce, keyboard selection and re
   // Let the real reveal's scrollIntoView finish before returning to Search;
   // otherwise its pending smooth scroll can race a one-shot scrollTo(0).
   await expect.poll(() => page.locator('.nav-content-shell').evaluate(element => {
-    const target = Math.min(element.getBoundingClientRect().top + scrollY,
+    const target = Math.min(element.getBoundingClientRect().top + scrollY - parseFloat(getComputedStyle(element).scrollMarginTop || '0'),
       document.documentElement.scrollHeight - innerHeight)
     return Math.abs(scrollY - target)
   })).toBeLessThanOrEqual(1)

@@ -161,6 +161,17 @@ and navigation links retain their effective 14px/20px typography. Migration
 preserves accepted computed appearance, not an overridden utility's intent; no
 button typography override or otherwise-unused theme-button hook is needed.
 
+#145-A supersedes the old full-width shell with two independent matte islands.
+Main entries use Phosphor icons in both locales; one target-language text button
+replaces flags. At >=768px islands are fixed, with compact spacing below 1024px;
+mobile keeps a flow header and hands navigation to the existing four Bottom Tabs.
+The layout owns the 88px desktop clearance and mobile bottom clearance. Site tabs
+and Context respect that fixed header; the Home Reveal target only gains a local
+scroll margin. Hero loading/SSR/reveal decisions remain separate (#145-B).
+Menu exit is inert immediately, and Reduced Motion retains #139's local rules.
+The prior P5 appearance statements above describe that migration's baseline;
+new pixels require #145-C review, not an automatic Golden update.
+
 ## Nav Home Header appearance
 
 P5.2.2 keeps Header, Search, QuickAccess and Quick Sites in

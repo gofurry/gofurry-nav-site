@@ -119,7 +119,7 @@ test('Preferences interrupts only its own motion; close is inert, restores focus
   expect(preferences.errors).toEqual([])
 })
 
-test('Initial Reduced mobile Preferences closes immediately and returns to the persistent menu trigger', async ({ page, preferences }) => {
+test('Initial Reduced mobile Preferences closes immediately and returns to its actual menu action', async ({ page, preferences }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await preferences.open({ width: 390, theme: 'dark', seedSteamDiagnostics: true })
   await preferences.openPreferences()
@@ -138,10 +138,10 @@ test('Initial Reduced mobile Preferences closes immediately and returns to the p
   }
   await modal.getByRole('button', { name: '取消', exact: true }).click()
   expect(await modal.count()).toBe(0)
-  await expect(page.locator('.gf-nav__mobile-toggle')).toBeFocused()
+  await expect(page.locator('.gf-nav__mobile-action')).toBeFocused()
   await preferences.openPreferences()
   await preferences.cancelPreferences()
-  await expect(page.locator('.gf-nav__mobile-toggle')).toBeFocused()
+  await expect(page.locator('.gf-nav__mobile-action')).toBeFocused()
   expect(preferences.errors).toEqual([])
 })
 

@@ -1,17 +1,15 @@
 <template>
   <div class="gf-app-shell relative isolate flex min-h-screen flex-col">
     <PublicPageBackground />
-    <div :class="navBarWrapperClass">
-      <NavBar :nav-overlay-desktop="isNavPage" />
-    </div>
-    <main class="relative z-[1] flex min-w-0 flex-1 flex-col">
+    <NavBar :nav-overlay-desktop="isNavPage" :inactive="mobileNavigationActive" @busy="navigationBusy = $event" />
+    <main class="relative flex min-w-0 flex-1 flex-col pb-20 md:pb-0" :class="{ 'md:pt-[88px]': !isNavPage }">
       <slot />
       <div v-if="showFooter" class="gf-footer-shell relative mt-auto">
         <Footer />
       </div>
     </main>
     <ClientOnly>
-      <MobileBottomTabBar />
+      <MobileBottomTabBar :navigation-busy="navigationBusy" @handoff="mobileNavigationActive = $event" />
     </ClientOnly>
   </div>
 </template>
@@ -25,11 +23,8 @@ const route = useRoute()
 const navPageRevealed = ref(true)
 const normalizedPath = computed(() => route.path.replace(/^\/(zh|en)(?=\/|$)/, '') || '/')
 const isNavPage = computed(() => normalizedPath.value === '/')
-const navBarWrapperClass = computed(() => (
-  isNavPage.value
-    ? 'md:absolute md:inset-x-0 md:top-0 md:z-[70] md:w-full'
-    : ''
-))
+const mobileNavigationActive = ref(false)
+const navigationBusy = ref(false)
 
 const showFooter = computed(() => {
   if (isNavPage.value) {

@@ -388,7 +388,7 @@ html.dark .nav-home-page {
 .quick-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 95;
   display: none;
   align-items: center;
   justify-content: center;
@@ -2187,4 +2187,9 @@ html.dark .nav-tool-empty {
     transform: translateY(0);
     animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
   }
+}
+
+@media (min-width: 768px) {
+  // The existing Reveal scroll targets this element; keep that behavior below the islands.
+  .nav-content-shell { scroll-margin-top: 88px; }
 }

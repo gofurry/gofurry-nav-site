@@ -190,8 +190,7 @@ html.dark .site-detail-page {
   color: var(--gf-text-muted);
 }
 
-// Public NavBar is in normal flow, so it scrolls away. Only this tab row sticks
-// at the viewport top; the Context offset tracks its fixed internal height.
+// Tabs stick below the desktop floating shell; mobile NavBar remains in flow.
 .site-detail-tabs {
   height: var(--site-detail-tabs-height);
   scrollbar-width: none;
@@ -994,4 +993,9 @@ html.dark .site-detail-page {
   color: var(--gf-text-muted);
   font-size: 0.7rem;
   line-height: 1.5;
+}
+
+@media (min-width: 768px) {
+  .site-detail-context,
+  .site-detail-aside { top: calc(88px + var(--site-detail-tabs-height) + 1.25rem); }
 }

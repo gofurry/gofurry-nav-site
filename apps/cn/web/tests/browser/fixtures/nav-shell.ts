@@ -77,8 +77,8 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
     const menu = nav.locator('.gf-nav__mobile-panel')
     const toggle = nav.locator('.gf-nav__mobile-toggle')
     const bottomTabs = page.locator('.mobile-bottom-tabs')
-    const language = (locale: 'CN' | 'EN', mobile = false) => nav.locator(mobile ? '.gf-nav__mobile-language' : '.gf-nav__icon-button')
-      .filter({ has: page.getByRole('img', { name: locale, exact: true }) })
+    const language = (locale: 'CN' | 'EN', _mobile = false) => nav.locator('.gf-nav__language')
+      .filter({ hasText: locale === 'CN' ? '中' : 'EN' })
     const assertQuiet = () => {
       const upstream = shellApp.requests.slice(upstreamStart)
       const expected = home ? ['/api/v2/nav/home', '/api/v2/nav/home/saying'] : []
@@ -178,11 +178,11 @@ export const test = base.extend<{ navShell: NavShell }, { shellApp: ShellApp }>(
           for (const name of names) await expect(scope.getByRole('link', { name, exact: true })).toBeVisible()
         },
         async assertLanguage(locale, mobile = false) {
-          const active = mobile ? /\bgf-nav__mobile-language--active\b/ : /\bgf-nav__icon-button--active\b/
-          await expect(language(locale, mobile)).toBeVisible()
-          await expect(language(locale, mobile)).toHaveClass(active)
-          await expect(language(locale === 'CN' ? 'EN' : 'CN', mobile)).toBeVisible()
-          await expect(language(locale === 'CN' ? 'EN' : 'CN', mobile)).not.toHaveClass(active)
+          const target = language(locale === 'CN' ? 'EN' : 'CN', mobile)
+          await expect(target).toBeVisible()
+          await expect(target).toHaveAttribute('aria-label', locale === 'CN' ? 'Switch to English' : '切换至中文')
+          await expect(nav.locator('.gf-nav__language')).toHaveCount(1)
+          await expect(nav.locator('img[src*="flags"]')).toHaveCount(0)
         },
         async assertBottomTabs(visible) {
           await expect(bottomTabs).toHaveCount(1)

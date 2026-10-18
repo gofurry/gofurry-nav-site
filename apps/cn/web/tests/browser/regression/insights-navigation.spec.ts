@@ -5,6 +5,8 @@ test('Insights navigation retains its plain hierarchy and real Light/Dark public
   expect(html).toContain('insights-page'); expect(html).not.toContain('insights-hero')
   expect(html).toContain('data-public-background'); expect(html).toContain('data-pattern-status="default"')
   expect(html).toContain('生态观测')
+  await expect(page.locator('.gf-nav__links [aria-current="page"]')).toHaveAttribute('href', '/insights')
+  expect(await page.locator('.ecosystem-navigation').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(88)
   const pattern = await request.get('/web/background/gofurry-pattern.svg')
   expect(pattern.status()).toBe(200); expect(pattern.headers()['content-type']).toContain('image/svg+xml')
   const background = () => page.locator('.gf-public-background__pattern').evaluate(el => {
@@ -53,5 +55,34 @@ test('Insights mobile nested route keeps Ecosystem active and keyboard links vis
     })).toBe(true)
   }
   expect(await page.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth)).toBeLessThanOrEqual(2)
+  runtime.assertQuiet()
+})
+
+
+test('145-A Insights keyboard reveal keeps a partially visible link below the floating shell', async ({ page, runtime }) => {
+  await openRuntime(page, '/insights/sites?metric=ipv6&range=30d&dimension=country')
+  for (const selector of ['.insights-primary-nav a', '.insights-domain-nav a']) {
+    const link = page.locator(selector).first()
+    await link.evaluate(el => window.scrollTo({ top: el.getBoundingClientRect().top + scrollY - 24, behavior: 'instant' }))
+    await link.focus()
+    await expect(link).toBeFocused()
+    expect(await link.evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(88)
+  }
+  runtime.assertQuiet()
+})
+
+
+test('145-A same-page metric query keeps a completed mobile handoff latched', async ({ page, runtime }) => {
+  await page.setViewportSize({ width: 640, height: 844 })
+  await openRuntime(page, '/insights/sites?metric=ipv6&range=30d&dimension=country')
+  const tabs = page.locator('.mobile-bottom-tabs')
+  await page.evaluate(() => window.scrollTo({ top: 180, behavior: 'instant' }))
+  await expect(tabs).toHaveAttribute('aria-hidden', 'false')
+  await page.evaluate(() => window.scrollTo({ top: 40, behavior: 'instant' }))
+  await expect(tabs).toHaveAttribute('aria-hidden', 'false')
+  await page.locator('[data-metric-key="http2"]').click()
+  await expect(page).toHaveURL(/metric=http2/)
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(40)
+  await expect(tabs).toHaveAttribute('aria-hidden', 'false')
   runtime.assertQuiet()
 })

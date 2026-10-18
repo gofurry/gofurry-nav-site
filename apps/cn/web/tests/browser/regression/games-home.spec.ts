@@ -212,6 +212,9 @@ for (const theme of ['light', 'dark'] as const) {
   test(`Games Home SSR, local pagination, statistics and consumers (${theme})`, async ({ gamesHome }) => {
     const scene = await gamesHome.open({ theme })
     const { page, stats, sidebar, dock } = scene
+    await expect(page.locator('.gf-nav')).toHaveCSS('position', 'fixed')
+    await expect(page.locator('.gf-nav__links [aria-current="page"]')).toHaveAttribute('href', '/games')
+    expect(await scene.group(0).evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(88)
     await assertGamesHomeAppearance(scene)
     await assertCardHover(scene)
     await expect(sidebar).toBeVisible()

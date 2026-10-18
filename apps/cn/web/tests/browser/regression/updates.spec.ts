@@ -141,7 +141,7 @@ test('Legacy plain text detail omits optional metadata and has only the availabl
 test('Locale switch preserves article identity and requests only the new locale detail', async ({ page, runtime }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await openRuntime(page, '/updates/108')
-  await page.getByRole('button', { name: 'EN', exact: true }).click()
+  await page.getByRole('button', { name: 'Switch to English', exact: true }).click()
   await expect(page).toHaveURL(/\/en\/updates\/108$/)
   await expect(page.locator('[data-update-detail] h1')).toHaveText(releaseItems('en')[1]!.title)
   await expect(page.locator('[data-update-markdown] h2')).toHaveText('A clearer path through GoFurry')

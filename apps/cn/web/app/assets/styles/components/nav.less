@@ -1,206 +1,139 @@
 .gf-nav {
-  /* Navigation shell and controls keep their existing translucent treatment. */
-  --gf-nav-bg: rgba(10, 16, 28, 0.88);
-  --gf-nav-bg-overlay: rgba(18, 24, 37, 0.70);
+  // Shared, opaque-enough material stays legible over arbitrary Hero images.
+  --gf-nav-bg: rgba(24, 33, 47, 0.96);
   --gf-nav-border: rgba(255, 255, 255, 0.15);
-  --gf-nav-border-overlay: rgba(255, 255, 255, 0.10);
-  --gf-nav-text: rgba(243, 244, 246, 0.96);
-  --gf-nav-text-muted: rgba(229, 231, 235, 0.84);
-  --gf-nav-active-bg: rgba(255, 255, 255, 0.20);
-  --gf-nav-hover-bg: rgba(255, 255, 255, 0.10);
-  --gf-nav-control-bg: rgba(255, 255, 255, 0.08);
-  --gf-nav-control-border: rgba(255, 255, 255, 0.10);
-  --gf-nav-control-hover-bg: rgba(255, 255, 255, 0.14);
-  --gf-nav-shadow: 0 10px 28px rgba(15, 23, 42, 0.28);
+  --gf-nav-text: #f3f4f6;
+  --gf-nav-text-muted: #cbd5e1;
+  --gf-nav-active-bg: rgba(255, 255, 255, 0.12);
+  --gf-nav-hover-bg: rgba(255, 255, 255, 0.07);
+  --gf-nav-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
   --gf-nav-active-text: #ffffff;
-  --gf-nav-control-active-bg: rgba(255, 255, 255, 0.25);
-  /* The expanded menu is a distinct surface, not the desktop overlay canvas. */
-  --gf-nav-mobile-panel-bg: rgba(18, 24, 37, 0.96);
-  --gf-nav-mobile-panel-shadow: 0 24px 52px rgba(2, 6, 23, 0.30);
-  --gf-nav-mobile-item-bg: rgba(255, 255, 255, 0.05);
-  --gf-nav-mobile-item-text: rgba(209, 213, 219, 0.94);
+  --gf-nav-mobile-panel-bg: rgba(24, 33, 47, 0.98);
   --gf-nav-mobile-action-value: #fdba74;
 
-  border-bottom: 1px solid var(--gf-nav-border);
-  background: var(--gf-nav-bg);
   color: var(--gf-nav-text);
-  box-shadow: var(--gf-nav-shadow);
-  backdrop-filter: blur(24px);
-}
-
-.gf-nav,
-.gf-nav__inner,
-.gf-nav__center,
-.gf-nav__actions {
-  transition-property: all;
-  transition-duration: 300ms;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.gf-nav__links {
-  opacity: 1;
-  transition-property: all;
-  transition-duration: 200ms;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html.dark .gf-nav {
-  --gf-nav-bg: rgba(5, 7, 13, 0.94);
-  --gf-nav-bg-overlay: rgba(5, 7, 13, 0.76);
-  --gf-nav-border: rgba(255, 255, 255, 0.08);
-  --gf-nav-border-overlay: rgba(255, 255, 255, 0.06);
-  --gf-nav-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
-  --gf-nav-mobile-panel-bg: rgba(5, 7, 13, 0.97);
+  --gf-nav-bg: rgba(15, 22, 33, 0.97);
+  --gf-nav-border: rgba(255, 255, 255, 0.12);
+  --gf-nav-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+  --gf-nav-mobile-panel-bg: rgba(15, 22, 33, 0.98);
+}
+
+.gf-nav__island {
+  position: relative;
+  isolation: isolate;
+  min-height: 52px;
+  border-radius: 18px;
+  box-shadow: var(--gf-nav-shadow);
+}
+
+.gf-nav__island::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border: 1px solid var(--gf-nav-border);
+  border-radius: inherit;
+  background: var(--gf-nav-bg);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+// Only the inward end receives a shallow cut; controls/focus rings are not clipped.
+.gf-nav__brand::before {
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+}
+
+.gf-nav__actions::before {
+  clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%, 0 12px);
 }
 
 @media (min-width: 768px) {
-  .gf-nav--overlay {
-    border-bottom-color: var(--gf-nav-border-overlay);
-    background: var(--gf-nav-bg-overlay);
-  }
-}
-
-.gf-nav__brand-text,
-.gf-nav__link,
-.gf-nav__mobile-link,
-.gf-nav__mobile-action {
-  color: var(--gf-nav-text);
+  .gf-nav__island { min-height: 56px; }
 }
 
 .gf-nav__brand-text {
+  color: var(--gf-nav-text);
   font-size: 0.875rem;
   line-height: 1.25rem;
   font-weight: 600;
   letter-spacing: 0.025em;
 }
 
+.gf-nav__separator {
+  width: 1px;
+  height: 20px;
+  background: var(--gf-nav-border);
+}
+
 .gf-nav__link,
-.gf-nav__mobile-link {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 500;
-}
-
-.gf-nav__link {
+.gf-nav__github-link,
+.gf-nav__icon-button,
+.gf-nav__mobile-toggle {
+  width: 40px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 0;
   border-radius: var(--gf-radius-sm);
-  transition:
-    background-color var(--gf-motion-fast) ease,
-    color var(--gf-motion-fast) ease;
+  background: transparent;
+  color: var(--gf-nav-text-muted);
+  transition: background-color var(--gf-motion-fast) ease, color var(--gf-motion-fast) ease;
 }
 
-.gf-nav__link--idle {
-  color: var(--gf-nav-text);
+.gf-nav__language {
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
 
-.gf-nav__link--idle:hover,
-.gf-nav__link--active {
+.gf-nav__link:hover,
+.gf-nav__github-link:hover,
+.gf-nav__icon-button:hover,
+.gf-nav__mobile-toggle:hover,
+.gf-nav__mobile-link:hover,
+.gf-nav__mobile-action:hover {
+  background: var(--gf-nav-hover-bg);
+  color: var(--gf-nav-active-text);
+}
+
+.gf-nav__link--active,
+.gf-nav__mobile-link--active,
+.gf-nav__mobile-toggle--open {
   background: var(--gf-nav-active-bg);
   color: var(--gf-nav-active-text);
 }
 
-.gf-nav__link--idle:hover {
-  background: var(--gf-nav-hover-bg);
-}
-
-.gf-nav__github-link,
-.gf-nav__icon-button,
-.gf-nav__mobile-toggle,
-.gf-nav__mobile-action,
-.gf-nav__mobile-language,
-.gf-nav__mobile-link {
-  border-radius: var(--gf-radius-sm);
-  transition:
-    background-color var(--gf-motion-fast) ease,
-    border-color var(--gf-motion-fast) ease,
-    color var(--gf-motion-fast) ease;
-}
-
-.gf-nav__github-link:hover,
-.gf-nav__icon-button:hover,
-.gf-nav__mobile-toggle:hover {
-  background: var(--gf-nav-control-hover-bg);
-}
-
-.gf-nav__icon-button {
-  color: var(--gf-nav-text-muted);
-}
-
-.gf-nav__icon-button--active {
-  background: var(--gf-nav-control-active-bg);
-  color: var(--gf-nav-active-text);
-}
-
-.gf-nav__mobile-toggle {
-  border: 0;
-  background: transparent;
-  color: var(--gf-nav-text-muted);
-}
-
-.gf-nav__mode-button {
-  border-color: transparent;
-  background: transparent;
-}
-
-.gf-nav__mode-button:hover {
-  background: var(--gf-nav-control-hover-bg);
-}
-
-.gf-nav__mobile-toggle--open {
-  background: var(--gf-nav-control-bg);
-}
-
-.gf-nav__mobile-toggle:focus-visible {
-  outline: 2px solid currentColor;
+.gf-nav a:focus-visible,
+.gf-nav button:focus-visible {
+  outline: 2px solid var(--gf-nav-active-text);
   outline-offset: 2px;
 }
 
-.gf-nav__settings-icon {
-  filter: brightness(0) saturate(100%) invert(98%) sepia(4%) saturate(734%) hue-rotate(180deg) brightness(102%) contrast(97%);
-}
-
 .gf-nav__mobile-panel {
-  border: 1px solid var(--gf-nav-control-border);
+  border: 1px solid var(--gf-nav-border);
   border-radius: var(--gf-radius-md);
   background: var(--gf-nav-mobile-panel-bg);
   color: var(--gf-nav-text);
-  box-shadow: var(--gf-nav-mobile-panel-shadow);
-  backdrop-filter: blur(24px);
-  transition-property: color, background-color, border-color, outline-color,
-    text-decoration-color, fill, stroke,
-    --tw-gradient-from, --tw-gradient-via, --tw-gradient-to;
-  transition-duration: 500ms;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--gf-nav-shadow);
+  backdrop-filter: blur(10px);
 }
 
-.gf-nav__mobile-divider {
-  border-top: 1px solid var(--gf-nav-control-border);
-}
+.gf-nav__mobile-divider { border-top: 1px solid var(--gf-nav-border); }
 
 .gf-nav__mobile-link,
-.gf-nav__mobile-action,
-.gf-nav__mobile-language {
-  background: var(--gf-nav-mobile-item-bg);
-  color: var(--gf-nav-mobile-item-text);
+.gf-nav__mobile-action {
+  border: 0;
+  border-radius: var(--gf-radius-sm);
+  background: transparent;
+  color: var(--gf-nav-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
 }
 
-.gf-nav__mobile-link:hover,
-.gf-nav__mobile-action:hover,
-.gf-nav__mobile-language:hover {
-  background: var(--gf-nav-hover-bg);
-  color: var(--gf-nav-active-text);
-}
+.gf-nav__mobile-action-value { color: var(--gf-nav-mobile-action-value); }
 
-.gf-nav__mobile-link--active,
-.gf-nav__mobile-language--active {
-  background: var(--gf-nav-active-bg);
-  color: var(--gf-nav-active-text);
-}
-
-.gf-nav__mobile-action-value {
-  color: var(--gf-nav-mobile-action-value);
-}
-
-/* Keep menu enter/leave above the panel's ordinary color transition. */
 .gf-nav .mobile-menu-enter-active,
 .gf-nav .mobile-menu-leave-active {
   transition: opacity 200ms ease, transform 200ms ease;
@@ -212,23 +145,24 @@ html.dark .gf-nav {
   transform: translateY(-8px);
 }
 
+.gf-nav .mobile-menu-leave-active {
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .gf-nav__link,
+  .gf-nav__github-link,
+  .gf-nav__icon-button,
+  .gf-nav__mobile-toggle,
   .gf-nav .mobile-menu-enter-active,
-  .gf-nav .mobile-menu-leave-active {
-    transition: none;
-  }
+  .gf-nav .mobile-menu-leave-active { transition: none; }
 
   .gf-nav .mobile-menu-enter-from {
     opacity: 1;
     transform: none;
   }
 
-  // Vue may still own a native leave callback after a live preference change.
-  // Exclude that closed surface from hit testing and keyboard navigation now.
-  .gf-nav .mobile-menu-leave-active {
-    visibility: hidden;
-    pointer-events: none;
-  }
+  .gf-nav .mobile-menu-leave-active { visibility: hidden; }
 }
 
 .mobile-bottom-tabs {

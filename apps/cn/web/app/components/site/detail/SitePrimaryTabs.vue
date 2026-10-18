@@ -1,5 +1,5 @@
 <template>
-  <div data-site-primary-tabs role="tablist" :aria-label="t('siteDetail.navigation')" class="site-detail-tabs sticky top-0 z-30 flex" :class="{ 'overflow-x-auto': hasSimilar }">
+  <div data-site-primary-tabs role="tablist" :aria-label="t('siteDetail.navigation')" class="site-detail-tabs sticky top-0 md:top-[88px] z-30 flex" :class="{ 'overflow-x-auto': hasSimilar }">
     <button
       v-for="(tab, index) in siteDetailTabs"
       :id="'site-tab-' + tab"

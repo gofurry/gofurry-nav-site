@@ -109,7 +109,7 @@ test('Real Index to Detail and locale navigation use independent route identitie
   await expect(page).toHaveURL(/\/games\/collections\/collection-3$/)
   await expect(page.locator('.game-collection-timeline')).toBeVisible()
   await settleRuntime(page)
-  await page.getByRole('button', { name: 'EN', exact: true }).click()
+  await page.getByRole('button', { name: 'Switch to English', exact: true }).click()
   await expect(page).toHaveURL(/\/en\/games\/collections\/collection-3$/)
   await expect(page.locator('h1')).toHaveText('Forest stories 3')
   await expect(page.getByTestId('collection-now')).toContainText('October 6, 2026')

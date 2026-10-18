@@ -233,10 +233,10 @@ test('missing Target evidence stays unknown and sticky tabs leave Hero/health in
     const row = document.querySelector('[data-site-primary-tabs]')!
     window.scrollTo(0, row.getBoundingClientRect().top + window.scrollY + 100)
   })
-  await expect.poll(() => page.locator('[data-site-primary-tabs]').evaluate(node => Math.round(node.getBoundingClientRect().top))).toBe(0)
+  await expect.poll(() => page.locator('[data-site-primary-tabs]').evaluate(node => Math.round(node.getBoundingClientRect().top))).toBe(88)
   expect(await page.locator('[data-site-hero]').evaluate(node => node.getBoundingClientRect().bottom)).toBeLessThan(0)
   expect(await page.locator('[data-site-health-strip]').evaluate(node => node.getBoundingClientRect().bottom)).toBeLessThan(0)
-  expect(await page.locator('[data-site-target-context]').evaluate(node => node.getBoundingClientRect().top)).toBeGreaterThanOrEqual(56)
+  expect(await page.locator('[data-site-target-context]').evaluate(node => node.getBoundingClientRect().top)).toBeGreaterThanOrEqual(144)
   await assertRuntimeSurface(page, '[data-site-detail]', 'light')
   expect(runtime.calls).toHaveLength(4)
   runtime.assertQuiet()

@@ -19,7 +19,7 @@ test('B2 Mobile Menu and Bottom Tabs motion contract', async ({ page, navShell }
     .toEqual({ duration: '0.2s, 0.2s', transform: 'matrix(1, 0, 0, 1, 0, -8)' })
   await navShell.assertLinks('zh', true)
   await toggle.click(); await expect(menu).toHaveCount(0)
-  await navShell.scrollTo(73); await navShell.assertBottomTabs(true)
+  await navShell.scrollTo(100); await navShell.assertBottomTabs(true)
   await expect(bottomTabs).toHaveCSS('transition-duration', '0.22s, 0.22s')
   await expect(bottomTabs.locator('.mobile-bottom-tabs__item').first()).toHaveCSS('transition-duration', '0.16s, 0.16s')
   await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -30,7 +30,7 @@ test('B2 Mobile Menu and Bottom Tabs motion contract', async ({ page, navShell }
   })).toBeLessThan(1)
   await centered()
   await navShell.scrollTo(0); await navShell.assertBottomTabs(false); await centered()
-  await navShell.scrollTo(73); await navShell.assertBottomTabs(true); await centered()
+  await navShell.scrollTo(100); await navShell.assertBottomTabs(true); await centered()
   await bottomTabs.getByRole('link').first().focus()
   await expect(bottomTabs.getByRole('link').first()).toBeFocused()
   if (process.env.GOFURRY_B2_REVIEW === '1') {
@@ -38,10 +38,11 @@ test('B2 Mobile Menu and Bottom Tabs motion contract', async ({ page, navShell }
     await page.screenshot({ path: '.cache/139-b2-review/bottom-tabs.png', clip: await navShell.bottomClip() })
   }
   await page.emulateMedia({ reducedMotion: 'no-preference' })
-  const read = () => page.locator('.gf-nav, .gf-nav__inner, .gf-nav__center, .gf-nav__actions, .gf-nav__links').evaluateAll(nodes =>
+  const read = () => page.locator('.gf-nav, .gf-nav__inner, .gf-nav__brand, .gf-nav__actions, .gf-nav__links').evaluateAll(nodes =>
     nodes.map(node => { const style = getComputedStyle(node); return { owner: node.classList[0],
       values: Object.fromEntries(['transition-property', 'background-color', 'border-bottom-color', 'box-shadow', 'color',
         'width', 'height', 'max-width', 'padding', 'margin', 'gap', 'left', 'top', 'opacity', 'transform'].map(key => [key, style.getPropertyValue(key)])) } }))
+  await navShell.scrollTo(0)
   const mobileLight = await read()
   await navShell.nav.getByRole('button', { name: '切换明暗主题图标', exact: true }).click()
   await navShell.assertTheme('dark'); await navShell.settle(navShell.nav)
@@ -168,8 +169,8 @@ test('Mobile Nav Shell keeps menu, locale and BottomTab state tied to real contr
 
   await navShell.scrollTo(0)
   await navShell.assertBottomTabs(false)
-  await navShell.scrollTo(73)
-  // Observable production state includes both scroll listeners and the 160ms sync path.
+  await navShell.scrollTo(100)
+  // The measured top shell has left the viewport; the handoff is latched.
   await navShell.assertBottomTabs(true)
   const mode = bottomTabs.getByRole('button', { name: 'Mode', exact: true })
   await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -185,8 +186,178 @@ test('Mobile Nav Shell keeps menu, locale and BottomTab state tied to real contr
   await expect(modal).toHaveCount(0)
   await expect(mode).toBeFocused()
   await expect(mode).not.toHaveClass(/\bmobile-bottom-tabs__item--active\b/)
-  await page.setViewportSize({ width: 640, height: 844 })
+  await page.setViewportSize({ width: 768, height: 844 })
   await navShell.assertBottomTabs(false)
   await expect(bottomTabs).toHaveCSS('display', 'none')
+  navShell.assertQuiet()
+})
+
+
+for (const width of [1440, 1024, 900, 768, 767, 640, 390]) {
+  test(`145-A floating islands and responsive handoff at ${width}`, async ({ page, navShell }) => {
+    await navShell.open({ width })
+    const { nav, toggle, menu } = navShell
+    await expect(nav).toHaveCSS('position', width >= 768 ? 'fixed' : 'relative')
+    await expect(nav.locator('.gf-nav__island')).toHaveCount(2)
+    const geometry = await nav.evaluate(root => {
+      const [brand, actions] = [...root.querySelectorAll('.gf-nav__island')].map(el => el.getBoundingClientRect())
+      const hit = document.elementFromPoint((brand!.right + actions!.left) / 2, brand!.top + 16)
+      return { gap: actions!.left - brand!.right, through: !root.contains(hit),
+        overflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth,
+        hitSizes: [...root.querySelectorAll<HTMLElement>('.gf-nav__actions a, .gf-nav__actions button')]
+          .filter(el => el.getClientRects().length).every(el => el.offsetWidth >= 40 && el.offsetHeight >= 44) }
+    })
+    expect(geometry.gap).toBeGreaterThanOrEqual(12)
+    expect(geometry).toMatchObject({ through: true, overflow: 0, hitSizes: true })
+    if (width >= 768) {
+      await navShell.assertLinks('zh')
+      await expect(toggle).toBeHidden()
+      for (const link of await nav.locator('.gf-nav__links a').all()) {
+        await expect(link.locator('svg')).toHaveCount(1)
+        await expect(link).toHaveText('')
+        await expect(link).toHaveAttribute('title', /.+/)
+      }
+      const before = await nav.boundingBox()
+      await navShell.scrollTo(300)
+      expect((await nav.boundingBox())!.y).toBe(before!.y)
+      await navShell.assertBottomTabs(false)
+    } else {
+      await toggle.click()
+      await navShell.assertLinks('zh', true)
+      await expect(menu.getByRole('link', { name: 'GitHub', exact: true })).toHaveAttribute('rel', 'noopener noreferrer')
+      await menu.getByRole('link').first().focus()
+      await page.keyboard.press('Escape')
+      await expect(menu).toHaveCount(0)
+      await expect(toggle).toBeFocused()
+      await navShell.scrollTo(110)
+      await navShell.assertBottomTabs(true)
+      await expect(nav).toHaveAttribute('inert')
+      await navShell.scrollTo(40)
+      await navShell.assertBottomTabs(true)
+      await navShell.scrollTo(20)
+      await navShell.assertBottomTabs(false)
+      await expect(nav).not.toHaveAttribute('inert')
+      await navShell.scrollTo(0)
+      await toggle.click()
+      await menu.getByRole('link').first().focus()
+      await page.setViewportSize({ width: 768, height: 600 })
+      await expect(menu).toHaveCount(0)
+      await expect(nav.locator('.gf-nav__brand')).toBeFocused()
+      await page.setViewportSize({ width, height: 844 })
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    }
+    await navShell.scrollTo(0)
+    if (process.env.GOFURRY_145_REVIEW === '1') {
+      await mkdir('../../../.cache/145-a-review', { recursive: true })
+      await navShell.settle(nav)
+      await page.screenshot({ path: `../../../.cache/145-a-review/shell-${width}.png` })
+    }
+    navShell.assertQuiet()
+  })
+}
+
+for (const width of [390, 640, 767]) {
+  test(`145-A Home handoff follows the Hero and persists until top at ${width}`, async ({ page, navShell }) => {
+    await navShell.open({ width, route: '/' })
+    await navShell.assertBottomTabs(false)
+    await navShell.scrollTo(30)
+    await navShell.assertBottomTabs(false)
+    const start = await page.evaluate(() => {
+      const hero = document.querySelector('.nav-header')!.getBoundingClientRect()
+      const nav = document.querySelector('.gf-nav')!.getBoundingClientRect()
+      return Math.ceil(Math.max(nav.bottom + scrollY + 8, hero.bottom + scrollY - innerHeight / 2))
+    })
+    await navShell.scrollTo(start + 2)
+    await navShell.assertBottomTabs(true)
+    if (width === 390 && process.env.GOFURRY_145_REVIEW === '1') {
+      await mkdir('../../../.cache/145-a-review', { recursive: true })
+      await page.screenshot({ path: '../../../.cache/145-a-review/mobile-body-handoff.png' })
+    }
+    await navShell.scrollTo(40)
+    await navShell.assertBottomTabs(true)
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await navShell.scrollTo(0)
+    await navShell.assertBottomTabs(false)
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect(navShell.bottomTabs).toHaveCSS('transition-duration', '0s')
+    if (process.env.GOFURRY_145_REVIEW === '1') {
+      await mkdir('../../../.cache/145-a-review', { recursive: true })
+      await page.screenshot({ path: `../../../.cache/145-a-review/home-${width}.png` })
+    }
+    navShell.assertQuiet()
+  })
+}
+
+test('145-A locale keeps query/hash and history restores mobile handoff without moving the page', async ({ page, navShell }) => {
+  await navShell.open({ width: 640 })
+  await page.goto('/terms?source=shell#review')
+  await navShell.language('EN').click()
+  await expect(page).toHaveURL(/\/en\/terms\?source=shell#review$/)
+  await navShell.toggle.click()
+  await navShell.assertLinks('en', true)
+  await navShell.toggle.click()
+  await navShell.scrollTo(300)
+  await navShell.assertBottomTabs(true)
+  await page.goBack()
+  await expect(page).toHaveURL(/\/terms\?source=shell#review$/)
+  await navShell.assertBottomTabs(false)
+  await page.goForward()
+  await expect(page).toHaveURL(/\/en\/terms\?source=shell#review$/)
+  await expect.poll(() => page.evaluate(() => scrollY)).toBe(300)
+  await navShell.assertBottomTabs(true)
+  navShell.assertQuiet()
+})
+
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`145-A desktop Hero keeps Search clear of fixed islands (${theme})`, async ({ page, navShell }) => {
+    await navShell.open({ theme, route: '/' })
+    const island = await navShell.nav.locator('.gf-nav__actions').boundingBox()
+    const search = await page.locator('.nav-header__search').boundingBox()
+    expect(search!.y).toBeGreaterThanOrEqual(island!.y + island!.height + 4)
+    await navShell.assertLinks('zh')
+    if (process.env.GOFURRY_145_REVIEW === '1') {
+      await mkdir('../../../.cache/145-a-review', { recursive: true })
+      await navShell.settle(navShell.nav)
+      await page.screenshot({ path: `../../../.cache/145-a-review/home-desktop-${theme}.png` })
+    }
+    await page.mouse.move(10, 400)
+    await page.mouse.wheel(0, 1000)
+    await expect(page.locator('.nav-tool-dock')).toHaveCount(1)
+    await expect(navShell.nav).toHaveCSS('position', 'fixed')
+    expect((await navShell.nav.boundingBox())!.y).toBe(0)
+    expect(await page.locator('.nav-tool-dock').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(88)
+    navShell.assertQuiet()
+  })
+}
+
+test('145-A short mobile menu stays reachable with a visible keyboard target', async ({ page, navShell }) => {
+  await navShell.open({ width: 390, theme: 'dark' })
+  await page.setViewportSize({ width: 390, height: 320 })
+  await navShell.toggle.click()
+  expect(await navShell.menu.evaluate(el => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(320)
+  await navShell.menu.getByRole('button', { name: /模式/ }).focus()
+  await expect(navShell.menu.getByRole('button', { name: /模式/ })).toBeFocused()
+  if (process.env.GOFURRY_145_REVIEW === '1') {
+    await mkdir('../../../.cache/145-a-review', { recursive: true })
+    await navShell.settle(navShell.menu)
+    await page.screenshot({ path: '../../../.cache/145-a-review/mobile-menu-short.png' })
+  }
+  await navShell.toggle.click()
+  await expect(navShell.menu).toHaveCount(0)
+  navShell.assertQuiet()
+})
+
+
+test('145-A rotating an open Bottom Tabs Preferences returns focus to the desktop shell', async ({ page, navShell }) => {
+  await navShell.open({ width: 390 })
+  await navShell.scrollTo(150)
+  await navShell.assertBottomTabs(true)
+  await navShell.openBottomMode()
+  await page.locator('#mode-setting-input').focus()
+  await page.setViewportSize({ width: 900, height: 600 })
+  await expect(page.locator('.gf-preferences-modal')).toHaveCount(0)
+  await navShell.assertBottomTabs(false)
+  await expect(navShell.nav.locator('.gf-nav__brand')).toBeFocused()
   navShell.assertQuiet()
 })

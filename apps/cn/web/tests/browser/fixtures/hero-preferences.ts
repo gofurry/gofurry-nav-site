@@ -216,7 +216,7 @@ export const test = base.extend<{ preferences: HeroPreferences }, { preferenceAp
         const desktopButton = page.locator('.gf-nav__mode-button')
         if (await desktopButton.isVisible()) await desktopButton.click()
         else {
-          await page.locator('.gf-nav__mobile-toggle').click()
+          if (await page.locator('.gf-nav__mobile-toggle').getAttribute('aria-expanded') !== 'true') await page.locator('.gf-nav__mobile-toggle').click()
           await page.locator('.gf-nav__mobile-action').click()
         }
         await expect(page.locator('[data-hero-preferences]')).toBeVisible()

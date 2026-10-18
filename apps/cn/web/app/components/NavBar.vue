@@ -1,198 +1,92 @@
 <template>
-  <header
-    class="gf-nav relative z-[70] w-full"
-    :class="{ 'gf-nav--overlay': navOverlayDesktop }"
-  >
-    <div
-        class="gf-nav__inner relative mx-auto flex w-full max-w-[1700px] items-center gap-3 px-4 py-2 sm:px-6"
-    >
-      <NuxtLink
-          :to="localePath('/')"
-          class="relative z-10 flex shrink-0 items-center gap-2 px-2 py-1"
-          @click.stop="closeMenus"
-      >
-        <img :src="logo" alt="GoFurry" class="h-10 w-10" />
-        <span class="gf-nav__brand-text hidden sm:inline">GoFurry</span>
+  <header ref="navigation" class="gf-nav pointer-events-none relative z-[70] w-full md:fixed md:inset-x-0 md:top-0"
+    :class="{ 'gf-nav--overlay': navOverlayDesktop }" :inert="inactive" :aria-hidden="inactive || undefined">
+    <div class="gf-nav__inner relative mx-auto flex w-full max-w-[1700px] items-center justify-between gap-3 px-3 py-3 md:px-5 md:py-4 lg:px-6">
+      <NuxtLink :to="localePath('/')" class="gf-nav__island gf-nav__brand pointer-events-auto flex shrink-0 items-center gap-2 px-3 md:px-4"
+        aria-label="GoFurry" @click="closeMenus()">
+        <img :src="logo" alt="" class="h-8 w-8" />
+        <span class="gf-nav__brand-text">GoFurry</span>
       </NuxtLink>
-
-      <div class="gf-nav__center pointer-events-none absolute left-1/2 top-1/2 z-0 flex max-w-[calc(100vw-10rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden sm:max-w-[calc(100vw-14rem)] md:max-w-[760px]">
-        <nav class="gf-nav__links pointer-events-auto flex min-w-0 items-center justify-center gap-1 md:min-w-max md:max-w-[760px]">
-          <template v-for="(link, index) in navLinks" :key="link.label">
-            <a
-                v-if="link.external"
-                :href="link.href"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="gf-nav__link gf-nav__link--idle px-2 py-2 whitespace-nowrap sm:px-3 md:px-4"
-                :class="index > 1 ? 'hidden md:inline-flex' : 'inline-flex'"
-                @click.stop
-            >
-              {{ link.label }}
+      <div class="gf-nav__island gf-nav__actions pointer-events-auto flex shrink-0 items-center gap-0.5 px-2 lg:gap-1 lg:px-3">
+        <nav class="gf-nav__links hidden items-center gap-0.5 md:flex lg:gap-1" :aria-label="t('navbar.expandNav')">
+          <template v-for="link in navLinks" :key="link.label">
+            <a v-if="link.external" :href="link.href" target="_blank" rel="noopener noreferrer"
+              class="gf-nav__link inline-flex items-center justify-center" :aria-label="link.label" :title="link.label">
+              <component :is="link.icon" :size="20" weight="regular" aria-hidden="true" />
             </a>
-            <NuxtLink
-                v-else
-                :to="link.to"
-                class="gf-nav__link px-2 py-2 whitespace-nowrap sm:px-3 md:px-4"
-                :class="[
-                  index > 1 ? 'hidden md:inline-flex' : 'inline-flex',
-                  isActive(link)
-                    ? 'gf-nav__link--active'
-                    : 'gf-nav__link--idle'
-                ]"
-                @click.stop="closeMenus"
-            >
-              {{ link.label }}
+            <NuxtLink v-else :to="link.to" class="gf-nav__link inline-flex items-center justify-center"
+              :class="{ 'gf-nav__link--active': isActive(link) }" :aria-current="isActive(link) ? 'page' : undefined"
+              :aria-label="link.label" :title="link.label" @click="closeMenus()">
+              <component :is="link.icon" :size="20" weight="regular" aria-hidden="true" />
             </NuxtLink>
           </template>
         </nav>
-      </div>
-
-      <div class="gf-nav__actions relative z-10 ml-auto flex shrink-0 items-center gap-2">
-        <a
-            href="https://github.com/gofurry/gofurry-nav-site"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="gf-nav__github-link hidden h-8 w-16 items-center justify-center xl:inline-flex"
-            aria-label="GitHub"
-            title="GitHub"
-            @click.stop
-        >
-          <img :src="githubIconSrc" class="h-auto w-12 object-contain" alt="" />
+        <span class="gf-nav__separator mx-1 hidden md:block" aria-hidden="true" />
+        <a href="https://github.com/gofurry/gofurry-nav-site" target="_blank" rel="noopener noreferrer"
+          class="gf-nav__github-link hidden items-center justify-center md:inline-flex" aria-label="GitHub" title="GitHub">
+          <PhGithubLogo :size="20" weight="regular" aria-hidden="true" />
         </a>
-
-        <div class="hidden items-center gap-1 xl:flex">
-          <button
-              v-for="option in languageOptions"
-              :key="option.value"
-              type="button"
-              class="gf-nav__icon-button flex h-8 w-8 items-center justify-center"
-              :class="currentLang === option.value
-                ? 'gf-nav__icon-button--active'
-                : ''"
-              @click.stop="switchLang(option.value)"
-          >
-            <img :src="option.flag" class="h-4 w-4" :alt="option.label" />
-          </button>
-        </div>
-
-        <button
-            type="button"
-            class="gf-nav__icon-button inline-flex h-10 w-10 items-center justify-center xl:h-8 xl:w-8"
-            :aria-label="themeToggleLabel"
-            :title="themeToggleLabel"
-            @click.stop="toggleThemeIcon"
-        >
-          <PhSun v-if="themeStore.theme === 'light'" :size="16" weight="regular" aria-hidden="true" />
-          <PhMoon v-else :size="16" weight="regular" aria-hidden="true" />
+        <button type="button" class="gf-nav__icon-button inline-flex items-center justify-center"
+          :aria-label="themeToggleLabel" :title="themeToggleLabel" @click="toggleThemeIcon">
+          <PhSun v-if="themeStore.theme === 'light'" :size="20" weight="regular" aria-hidden="true" />
+          <PhMoon v-else :size="20" weight="regular" aria-hidden="true" />
         </button>
-
-        <button
-            type="button"
-            class="gf-nav__icon-button gf-nav__mode-button hidden h-8 w-8 items-center justify-center xl:flex"
-            :aria-label="t('navbar.mode')"
-            @click.stop="openModeModal"
-        >
-          <PhGearSix :size="16" weight="regular" aria-hidden="true" />
+        <button type="button" class="gf-nav__icon-button gf-nav__mode-button hidden items-center justify-center md:inline-flex"
+          :aria-label="t('navbar.mode')" :title="t('navbar.mode')" @click="openModeModal">
+          <PhGearSix :size="20" weight="regular" aria-hidden="true" />
         </button>
-
-        <button
-            type="button"
-            class="gf-nav__mobile-toggle inline-flex h-10 w-10 items-center justify-center xl:hidden"
-            ref="mobileMenuToggle"
-            :class="{ 'gf-nav__mobile-toggle--open': mobileMenuOpen }"
-            :aria-expanded="mobileMenuOpen"
-            :aria-label="t(mobileMenuOpen ? 'navbar.closeNav' : 'navbar.expandNav')"
-            @click.stop="mobileMenuOpen = !mobileMenuOpen"
-        >
-          <PhCaretDown v-if="!mobileMenuOpen" :size="18" weight="regular" aria-hidden="true" />
-          <PhCaretUp v-else :size="18" weight="regular" aria-hidden="true" />
+        <button type="button" class="gf-nav__icon-button gf-nav__language inline-flex items-center justify-center"
+          :aria-label="currentLang === 'zh' ? 'Switch to English' : '切换至中文'" :title="currentLang === 'zh' ? 'English' : '中文'"
+          @click="switchLang">
+          {{ currentLang === 'zh' ? 'EN' : '中' }}
+        </button>
+        <button ref="mobileMenuToggle" type="button" class="gf-nav__mobile-toggle inline-flex items-center justify-center md:hidden"
+          :class="{ 'gf-nav__mobile-toggle--open': mobileMenuOpen }" :aria-expanded="mobileMenuOpen" :aria-controls="menuId"
+          :aria-label="t(mobileMenuOpen ? 'navbar.closeNav' : 'navbar.expandNav')" @click="mobileMenuOpen = !mobileMenuOpen">
+          <PhList v-if="!mobileMenuOpen" :size="20" weight="regular" aria-hidden="true" />
+          <PhX v-else :size="20" weight="regular" aria-hidden="true" />
         </button>
       </div>
     </div>
-
-    <transition name="mobile-menu">
-      <div
-          v-if="mobileMenuOpen"
-          class="gf-nav__mobile-panel absolute left-3 right-3 top-full z-[90] mt-2 px-4 pb-4 pt-3 xl:hidden"
-          @click.stop
-      >
-        <div class="mx-auto flex w-full max-w-[1700px] flex-col gap-2">
+    <Transition name="mobile-menu" @before-leave="deactivateMenu" @before-enter="activateMenu">
+      <div v-if="mobileMenuOpen" :id="menuId" ref="menuPanel"
+        class="gf-nav__mobile-panel pointer-events-auto absolute left-3 right-3 top-full z-[90] -mt-1 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain p-4 md:hidden">
+        <nav class="grid grid-cols-4 gap-2" :aria-label="t('navbar.expandNav')">
           <template v-for="link in navLinks" :key="link.label">
-            <a
-                v-if="link.external"
-                :href="link.href"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="gf-nav__mobile-link px-4 py-3"
-                @click="mobileMenuOpen = false"
-            >
-              {{ link.label }}
+            <a v-if="link.external" :href="link.href" target="_blank" rel="noopener noreferrer"
+              class="gf-nav__mobile-link flex items-center justify-center py-3" :aria-label="link.label" :title="link.label" @click="closeMenus(true)">
+              <component :is="link.icon" :size="20" weight="regular" aria-hidden="true" />
             </a>
-            <NuxtLink
-                v-else
-                :to="link.to"
-                class="gf-nav__mobile-link px-4 py-3"
-                :class="isActive(link)
-                  ? 'gf-nav__mobile-link--active'
-                  : ''"
-                @click="closeMenus"
-            >
-              {{ link.label }}
+            <NuxtLink v-else :to="link.to" class="gf-nav__mobile-link flex items-center justify-center py-3"
+              :class="{ 'gf-nav__mobile-link--active': isActive(link) }" :aria-current="isActive(link) ? 'page' : undefined"
+              :aria-label="link.label" :title="link.label" @click="closeMenus(true)">
+              <component :is="link.icon" :size="20" weight="regular" aria-hidden="true" />
             </NuxtLink>
           </template>
-
-          <div class="gf-nav__mobile-divider mt-2 flex flex-col gap-3 pt-4">
-            <button
-                type="button"
-                class="gf-nav__mobile-action flex items-center justify-between px-4 py-3"
-                @click="openModeModalFromMobile"
-            >
-              <span class="flex items-center gap-2">
-                <PhGearSix :size="16" weight="regular" aria-hidden="true" />
-                {{ t('navbar.mode') }}
-              </span>
-              <span class="gf-nav__mobile-action-value">{{ mode || '--' }}</span>
-            </button>
-
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                  v-for="option in languageOptions"
-                  :key="option.value"
-                  type="button"
-                  class="gf-nav__mobile-language flex items-center justify-center gap-2 px-4 py-3"
-                  :class="currentLang === option.value
-                    ? 'gf-nav__mobile-language--active'
-                    : ''"
-                  @click="switchLang(option.value)"
-              >
-                <img :src="option.flag" class="h-4 w-4" :alt="option.label" />
-                <span>{{ option.label }}</span>
-              </button>
-            </div>
-          </div>
+        </nav>
+        <div class="gf-nav__mobile-divider mt-3 flex flex-col gap-2 pt-3">
+          <a href="https://github.com/gofurry/gofurry-nav-site" target="_blank" rel="noopener noreferrer"
+            class="gf-nav__mobile-link flex items-center gap-3 px-3 py-3" @click="closeMenus(true)">
+            <PhGithubLogo :size="20" weight="regular" aria-hidden="true" />GitHub
+          </a>
+          <button type="button" class="gf-nav__mobile-action flex items-center justify-between gap-3 px-3 py-3" @click="openModeModal">
+            <span class="flex items-center gap-3"><PhGearSix :size="20" weight="regular" aria-hidden="true" />{{ t('navbar.mode') }}</span>
+            <span class="gf-nav__mobile-action-value truncate">{{ mode || '--' }}</span>
+          </button>
         </div>
       </div>
-    </transition>
-
-    <ModeSettingModal
-        :show="showModeModal"
-        :mode="mode"
-        :return-focus="modeReturnFocus"
-        @cancel="showModeModal = false"
-        @save="saveMode"
-    />
+    </Transition>
+    <ModeSettingModal :show="showModeModal" :mode="mode" :return-focus="modeReturnFocus"
+      @cancel="showModeModal = false" @save="saveMode" />
   </header>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { PhCaretDown, PhCaretUp, PhGearSix, PhMoon, PhSun } from '@phosphor-icons/vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
+import { PhBinoculars, PhFlask, PhGameController, PhGearSix, PhGithubLogo, PhHouse, PhList, PhMoon, PhSun, PhX } from '@phosphor-icons/vue'
 import { useThemeStore } from '@/stores/theme'
 import { useI18n } from 'vue-i18n'
-import cnFlag from '@/assets/flags/cn.svg'
-import usFlag from '@/assets/flags/us.svg'
 import logo from '@/assets/svgs/logo-mini.svg'
-import githubLightIcon from '@/assets/svgs/logo-github-light.svg'
 import ModeSettingModal from '@/components/common/ModeSettingModal.vue'
 import { readMode, subscribeModeChange, writeMode } from '@/utils/modeStorage'
 
@@ -202,108 +96,97 @@ const router = useRouter()
 const localePath = useLocalePath()
 const switchLocalePath = useSwitchLocalePath()
 const themeStore = useThemeStore()
-defineProps<{
-  navOverlayDesktop?: boolean
-}>()
-
-const showModeModal = ref(false)
+defineProps<{ navOverlayDesktop?: boolean, inactive?: boolean }>()
+const emit = defineEmits<{ busy: [value: boolean] }>()
+const menuId = useId()
+const navigation = ref<HTMLElement | null>(null)
+const menuPanel = ref<HTMLElement | null>(null)
 const mobileMenuToggle = ref<HTMLElement | null>(null)
 const modeReturnFocus = ref<HTMLElement | null>(null)
+const showModeModal = ref(false)
 const mobileMenuOpen = ref(false)
 const mode = ref('')
 let stopModeSubscription: (() => void) | null = null
+let mobileQuery: MediaQueryList | null = null
 const currentLang = computed<'zh' | 'en'>(() => locale.value === 'en' ? 'en' : 'zh')
-
-type NavLink = {
-  label: string
-  to?: string
-  activePath?: string
-  href?: string
-  external?: boolean
-}
-
+type NavLink = { label: string, icon: Component, to?: string, activePath?: string, href?: string, external?: boolean }
 const navLinks = computed<NavLink[]>(() => [
-  { label: t('sidebar.nav'), to: localePath('/'), activePath: '/' },
-  { label: t('sidebar.games'), to: localePath('/games'), activePath: '/games' },
-  { label: t('sidebar.insights'), to: localePath('/insights'), activePath: '/insights' },
-  { label: currentLang.value === 'zh' ? '深度兽研' : 'DeepFurry', href: 'https://www.deepfurry.com', external: true },
+  { label: t('sidebar.nav'), icon: PhHouse, to: localePath('/'), activePath: '/' },
+  { label: t('sidebar.games'), icon: PhGameController, to: localePath('/games'), activePath: '/games' },
+  { label: t('sidebar.insights'), icon: PhBinoculars, to: localePath('/insights'), activePath: '/insights' },
+  { label: currentLang.value === 'zh' ? '深度兽研' : 'DeepFurry', icon: PhFlask, href: 'https://www.deepfurry.com', external: true },
 ])
-
-const languageOptions = [
-  { value: 'zh' as const, label: 'CN', flag: cnFlag },
-  { value: 'en' as const, label: 'EN', flag: usFlag },
-]
-const githubIconSrc = githubLightIcon
-const themeToggleLabel = computed(() => (
-  currentLang.value === 'zh' ? '切换明暗主题图标' : 'Toggle theme icon'
-))
-
-const normalizeRoutePath = (path: string) =>
-    path.replace(/^\/(zh|en)(?=\/|$)/, '') || '/'
-
-const isActive = (link: NavLink) => {
+const themeToggleLabel = computed(() => currentLang.value === 'zh' ? '切换明暗主题图标' : 'Toggle theme icon')
+const normalizeRoutePath = (path: string) => path.replace(/^\/(zh|en)(?=\/|$)/, '') || '/'
+function isActive(link: NavLink) {
   if (!link.to) return false
-
-  const currentPath = normalizeRoutePath(route.path)
-  const activePath = link.activePath || normalizeRoutePath(link.to)
-
-  if (activePath === '/') {
-    return currentPath === '/'
-  }
-
-  return currentPath === activePath || currentPath.startsWith(`${activePath}/`)
+  const current = normalizeRoutePath(route.path)
+  return link.activePath === '/' ? current === '/' : current === link.activePath || current.startsWith(`${link.activePath}/`)
 }
-
+function closeMenus(restoreFocus = false) {
+  if (restoreFocus && mobileMenuOpen.value) mobileMenuToggle.value?.focus({ preventScroll: true })
+  mobileMenuOpen.value = false
+}
+function activateMenu(element: Element) {
+  const panel = element as HTMLElement
+  panel.inert = false
+  panel.removeAttribute('aria-hidden')
+}
+function deactivateMenu(element: Element) {
+  const panel = element as HTMLElement
+  if (panel.contains(document.activeElement)) mobileMenuToggle.value?.focus({ preventScroll: true })
+  panel.inert = true
+  panel.setAttribute('aria-hidden', 'true')
+}
+function handleKey(event: KeyboardEvent) {
+  if (event.key === 'Escape' && mobileMenuOpen.value && !showModeModal.value) {
+    event.preventDefault()
+    closeMenus(true)
+  }
+}
+function outsideClick(event: MouseEvent) {
+  if (event.target instanceof Element && event.target.closest('.gf-modal-backdrop')) return
+  // A toggle replaces its icon before document bubbling; the original path is stable.
+  if (!showModeModal.value && navigation.value && !event.composedPath().includes(navigation.value)) closeMenus()
+}
+async function handleBreakpoint() {
+  const focused = document.activeElement instanceof HTMLElement && navigation.value?.contains(document.activeElement)
+  const modalWasOpen = showModeModal.value
+  const menuWasOpen = mobileMenuOpen.value
+  showModeModal.value = false
+  closeMenus()
+  await nextTick()
+  if (focused || modalWasOpen || menuWasOpen) navigation.value?.querySelector<HTMLElement>('.gf-nav__brand')?.focus({ preventScroll: true })
+}
 onMounted(() => {
   mode.value = readMode()
   themeStore.initTheme()
-
-  stopModeSubscription = subscribeModeChange(({ mode: nextMode }) => {
-    mode.value = nextMode
-  })
+  stopModeSubscription = subscribeModeChange(({ mode: next }) => { mode.value = next })
+  mobileQuery = window.matchMedia('(max-width: 767px)')
+  mobileQuery.addEventListener('change', handleBreakpoint)
+  document.addEventListener('keydown', handleKey)
+  document.addEventListener('click', outsideClick)
 })
-
 onUnmounted(() => {
   stopModeSubscription?.()
+  mobileQuery?.removeEventListener('change', handleBreakpoint)
+  document.removeEventListener('keydown', handleKey)
+  document.removeEventListener('click', outsideClick)
 })
-
-watch(
-    () => route.fullPath,
-    () => {
-      mobileMenuOpen.value = false
-    }
-)
-
-function saveMode(value: string) {
-  showModeModal.value = false
-  const trimmed = value.trim().slice(0, 32)
-  writeMode(trimmed)
-}
-
-async function switchLang(lang: 'zh' | 'en') {
-  const nextPath = switchLocalePath(lang)
-  if (nextPath && nextPath !== route.fullPath) {
-    await router.push({ path: nextPath, query: route.query, hash: route.hash })
+watch(() => route.fullPath, () => { closeMenus(true); showModeModal.value = false })
+watch([mobileMenuOpen, showModeModal], () => emit('busy', mobileMenuOpen.value || showModeModal.value), { flush: 'sync' })
+function saveMode(value: string) { showModeModal.value = false; writeMode(value.trim().slice(0, 32)) }
+async function switchLang() {
+  const nextPath = switchLocalePath(currentLang.value === 'zh' ? 'en' : 'zh')
+  if (nextPath) {
+    const target = router.resolve(nextPath)
+    await router.push({ path: target.path, query: route.query, hash: route.hash })
   }
-  mobileMenuOpen.value = false
+  closeMenus(true)
 }
-
-function openModeModalFromMobile() {
-  modeReturnFocus.value = mobileMenuToggle.value
-  mobileMenuOpen.value = false
-  showModeModal.value = true
-}
-
 function openModeModal(event: MouseEvent) {
   modeReturnFocus.value = event.currentTarget as HTMLElement
   showModeModal.value = true
 }
-
-function toggleThemeIcon() {
-  themeStore.setTheme(themeStore.theme === 'light' ? 'dark' : 'light')
-}
-
-function closeMenus() {
-  mobileMenuOpen.value = false
-}
+function toggleThemeIcon() { themeStore.setTheme(themeStore.theme === 'light' ? 'dark' : 'light') }
 </script>

@@ -3,6 +3,8 @@ import { mkdir } from 'node:fs/promises'
 
 test('populated detail is rendered by SSR with one hydration view side effect', async ({ detail }) => {
   await detail.open(); detail.assertInitialReads()
+  await expect(detail.page.locator('.gf-nav__links [aria-current="page"]')).toHaveAttribute('href', '/games')
+  expect(await detail.page.locator('.game-detail-hero').evaluate(el => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(88)
   const body = detail.html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '')
   expect(body).toContain('林间旅途 82'); expect(body).toContain('探索森林中的故事')
   expect(body).toContain('9/18 12:00')
@@ -32,7 +34,7 @@ test('real recommended and locale navigation reset identity without accepting ol
   await detail.tab('comment'); await expect(detail.page.locator('.game-detail-comment')).toHaveCount(5)
   await expect(detail.page.locator('.game-detail-comment-body').first()).toContainText('83')
   const localeInfo = detail.hold('/info', { id: '83', lang: 'en' })
-  await detail.page.locator('.gf-nav__actions').getByRole('button', { name: 'EN', exact: true }).click()
+  await detail.page.locator('.gf-nav__actions').getByRole('button', { name: 'Switch to English', exact: true }).click()
   await localeInfo.wait(); await expect(detail.page).toHaveURL(/\/en\/games\/83$/)
   expect(detail.count('/info', { id: '83', lang: 'en' })).toBe(1)
   localeInfo.release(); await expect.poll(() => localeInfo.completed).toBe(true)

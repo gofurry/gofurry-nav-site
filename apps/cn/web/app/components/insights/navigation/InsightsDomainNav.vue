@@ -5,7 +5,7 @@
       :key="item.path"
       :to="localePath(item.path)"
       :aria-current="isInsightsDomainActive(route.path, item.path) ? 'page' : undefined"
-      class="insights-domain-nav__link"
+      class="insights-domain-nav__link md:scroll-mt-[88px]"
       @focus="revealInsightsNavigationLink"
     >
       {{ $t(item.label) }}

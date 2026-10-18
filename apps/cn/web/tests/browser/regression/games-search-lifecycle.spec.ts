@@ -245,7 +245,7 @@ test('Locale navigation cancels old categories and late metadata preserves curre
   await search.open({ query: { content: 'committed', tagList: '812345' } })
   const departingResult = search.hold('advanced', 'committed'), freshResult = search.hold('advanced', 'committed')
   await old.waitReceived(); search.expectAbort(old)
-  await search.page.locator('.gf-nav').getByRole('button', { name: 'EN', exact: true }).click()
+  await search.page.locator('.gf-nav').getByRole('button', { name: 'Switch to English', exact: true }).click()
   await expect(search.page).toHaveURL(/\/en\/games\/search/)
   await departing.waitReceived(); search.expectAbort(departing)
   await departingResult.waitReceived(); search.expectAbort(departingResult)
