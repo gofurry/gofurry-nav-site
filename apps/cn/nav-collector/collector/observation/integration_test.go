@@ -274,8 +274,13 @@ SET source_start_date=$1::date,processed_through=NULL,updated_at=$2;
 	if err := engine.ValidateCatalog(ctx); err != nil {
 		t.Fatalf("Nav registry/evaluator drift: %v", err)
 	}
-	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_registry`, 9)
-	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints`, 9)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_registry`, 10)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints`, 10)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_registry WHERE metric_key='http2_adoption' AND metric_version=1 AND status='retired' AND retired_at IS NOT NULL`, 1)
+	assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_registry WHERE metric_key='http2_adoption' AND metric_version=2 AND status='active' AND retired_at IS NULL`, 1)
+	for _, version := range []int{1, 2} {
+		assertNavCount(t, ctx, pool, `SELECT count(*) FROM gfn_metric_checkpoints WHERE metric_key='http2_adoption' AND metric_version=$1`, 1, version)
+	}
 	for _, metric := range []struct {
 		key     string
 		version int32

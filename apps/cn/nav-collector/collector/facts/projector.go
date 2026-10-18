@@ -53,7 +53,7 @@ func projectKnownState(protocol string, payload []byte) ([]byte, error) {
 	case "robots":
 		projected = pick(raw, "exists", "status_code", "sitemap_count", "global_disallow_all")
 	case "security_txt":
-		projected = pick(raw, "exists", "recognition", "validation_errors", "path_used", "status_code", "content_type", "contact", "expires", "policy", "canonical")
+		projected = pick(raw, "exists", "recognition", "validation_errors", "path_used", "status_code", "content_type", "body_truncated", "contact", "expires", "policy", "canonical")
 	case "llms_txt":
 		projected = pick(raw, "exists", "status_code", "title", "heading_count", "link_count", "optional_section_present")
 	case "page_assets":

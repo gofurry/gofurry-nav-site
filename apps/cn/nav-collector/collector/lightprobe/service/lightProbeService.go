@@ -521,6 +521,22 @@ func probeSecurityTXT(target models.GfnCollectorDomain, timeout time.Duration, m
 
 	payload := parseSecurityTXTPayload(resp.Body)
 	recognition, validationErrors := classifySecurityTXTResponse(resp, payload, time.Now().UTC())
+	mediaType, _, mediaTypeErr := mime.ParseMediaType(resp.ContentType)
+	if pathUsed == "/.well-known/security.txt" && resp.StatusCode == http.StatusOK && recognition != "present_valid" && mediaTypeErr == nil &&
+		(strings.EqualFold(mediaType, "text/html") || strings.EqualFold(mediaType, "application/xhtml+xml")) {
+		// A site's HTML catch-all is inconclusive. Only a fully valid root document
+		// may replace it; failed or invalid fallback evidence must not imply absence.
+		fallback, fallbackErr := probeHTTPGet(target, "/security.txt", timeout, maxBytes)
+		if fallbackErr == nil {
+			fallbackPayload := parseSecurityTXTPayload(fallback.Body)
+			fallbackRecognition, fallbackErrors := classifySecurityTXTResponse(fallback, fallbackPayload, time.Now().UTC())
+			if fallbackRecognition == "present_valid" {
+				resp, payload = fallback, fallbackPayload
+				recognition, validationErrors = fallbackRecognition, fallbackErrors
+				pathUsed = "/security.txt"
+			}
+		}
+	}
 	payload["exists"] = resp.StatusCode >= 200 && resp.StatusCode < 300
 	payload["recognition"] = recognition
 	payload["validation_errors"] = validationErrors

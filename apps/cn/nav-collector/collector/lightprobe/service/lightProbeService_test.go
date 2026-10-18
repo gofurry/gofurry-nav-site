@@ -7,7 +7,9 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -222,6 +224,178 @@ func TestProbeSecurityTXTAbsentAndNetworkFailure(t *testing.T) {
 	failure := probeSecurityTXT(targetFromTestServer("http://127.0.0.1:1"), 100*time.Millisecond, 4096)
 	if failure.Status != "failure" || failure.ErrorCode != "security_txt_request_failed" {
 		t.Fatalf("network failure = %+v", failure)
+	}
+}
+
+func TestProbeSecurityTXTHTMLFallbackRequiresValidDocument(t *testing.T) {
+	validBody := "Contact: mailto:security@example.com\nExpires: " + time.Now().UTC().Add(24*time.Hour).Format(time.RFC3339) + "\n"
+	for _, tt := range []struct {
+		name, primaryType, fallbackType, body, failure string
+		status                                         int
+		valid, primaryTruncated                        bool
+	}{
+		{name: "HTML to valid", status: 200, fallbackType: "text/plain; charset=utf-8", body: validBody, valid: true},
+		{name: "XHTML to valid", primaryType: "application/xhtml+xml; charset=utf-8", status: 200, fallbackType: "text/plain", body: validBody, valid: true},
+		{name: "root missing", status: 404},
+		{name: "root gone", status: 410},
+		{name: "root HTML", status: 200, fallbackType: "text/html", body: validBody},
+		{name: "root invalid", status: 200, fallbackType: "text/plain", body: "hello"},
+		{name: "root missing Contact", status: 200, fallbackType: "text/plain", body: "Expires: 2099-01-01T00:00:00Z\n"},
+		{name: "root expired", status: 200, fallbackType: "text/plain", body: "Contact: mailto:security@example.com\nExpires: 2000-01-01T00:00:00Z\n"},
+		{name: "root truncated", status: 200, fallbackType: "text/plain", body: validBody + strings.Repeat("#", 256)},
+		{name: "root failure status", status: 500},
+		{name: "root connection failure", failure: "connection"},
+		{name: "root timeout", failure: "timeout"},
+		{name: "retain primary truncation", status: 404, primaryTruncated: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			primaryType := tt.primaryType
+			if primaryType == "" {
+				primaryType = "text/html; charset=utf-8"
+			}
+			var primaryRequests, fallbackRequests atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/.well-known/security.txt":
+					primaryRequests.Add(1)
+					w.Header().Set("Content-Type", primaryType)
+					body := "<html>primary catch-all</html>"
+					if tt.primaryTruncated {
+						body += strings.Repeat("x", 256)
+					}
+					_, _ = w.Write([]byte(body))
+				case "/security.txt":
+					fallbackRequests.Add(1)
+					if tt.failure == "connection" {
+						panic(http.ErrAbortHandler)
+					}
+					if tt.failure == "timeout" {
+						<-r.Context().Done()
+						return
+					}
+					w.Header().Set("Content-Type", tt.fallbackType)
+					w.WriteHeader(tt.status)
+					_, _ = w.Write([]byte(tt.body))
+				default:
+					t.Errorf("unexpected path %q", r.URL.Path)
+					http.NotFound(w, r)
+				}
+			}))
+			defer server.Close()
+			timeout := time.Second
+			if tt.failure == "timeout" {
+				timeout = 150 * time.Millisecond
+			}
+			result := probeSecurityTXT(targetFromTestServer(server.URL), timeout, 128)
+			if primaryRequests.Load() != 1 || fallbackRequests.Load() != 1 {
+				t.Fatalf("requests primary=%d fallback=%d", primaryRequests.Load(), fallbackRequests.Load())
+			}
+			if result.Status != "success" || result.ErrorCode != "" || result.ErrorMessage != "" || result.Payload["exists"] != true || result.Payload["status_code"] != 200 {
+				t.Fatalf("fallback changed primary success evidence: %+v", result)
+			}
+			if tt.valid {
+				if result.Payload["recognition"] != "present_valid" || result.Payload["path_used"] != "/security.txt" || result.Payload["content_type"] != tt.fallbackType || result.Payload["body_truncated"] != false || len(result.Payload["validation_errors"].([]string)) != 0 || !reflect.DeepEqual(result.Payload["contact"], []string{"mailto:security@example.com"}) {
+					t.Fatalf("valid root not adopted: %+v", result)
+				}
+				return
+			}
+			wantErrors := []string{"content_type_not_text_plain"}
+			if tt.primaryTruncated {
+				wantErrors = append(wantErrors, "body_truncated")
+			}
+			wantErrors = append(wantErrors, "contact_missing_or_invalid", "expires_missing_or_invalid")
+			if result.Payload["recognition"] != "present_invalid" || result.Payload["path_used"] != "/.well-known/security.txt" || result.Payload["content_type"] != primaryType || result.Payload["body_truncated"] != tt.primaryTruncated || !reflect.DeepEqual(result.Payload["validation_errors"], wantErrors) || len(result.Payload["contact"].([]string)) != 0 || result.Payload["expires"] != "" {
+				t.Fatalf("original HTML evidence replaced: %+v", result)
+			}
+		})
+	}
+}
+
+func TestProbeSecurityTXTFallbackRequestBoundary(t *testing.T) {
+	validBody := "Contact: mailto:security@example.com\nExpires: " + time.Now().UTC().Add(24*time.Hour).Format(time.RFC3339) + "\n"
+	for _, tt := range []struct {
+		name, contentType, body, wantRecognition string
+		status, fallbackCount                    int
+		fallbackFailure                          bool
+	}{
+		{name: "valid primary", status: 200, contentType: "text/plain", body: validBody, wantRecognition: "present_valid"},
+		{name: "plain missing Contact", status: 200, contentType: "text/plain", body: "Expires: 2099-01-01T00:00:00Z", wantRecognition: "present_invalid"},
+		{name: "plain expired", status: 200, contentType: "text/plain", body: "Contact: mailto:a@example.com\nExpires: 2000-01-01T00:00:00Z", wantRecognition: "present_invalid"},
+		{name: "other media type", status: 200, contentType: "application/json", body: "{}", wantRecognition: "present_invalid"},
+		{name: "malformed HTML media type", status: 200, contentType: "text/html; charset", body: "<html/>", wantRecognition: "present_invalid"},
+		{name: "forbidden", status: 403, contentType: "text/html", wantRecognition: "unavailable"},
+		{name: "server error", status: 500, contentType: "text/html", wantRecognition: "unavailable"},
+		{name: "gone primary", status: 410, contentType: "text/html", wantRecognition: "absent"},
+		{name: "non-200 HTML", status: 202, contentType: "text/html", body: "<html/>", wantRecognition: "present_invalid"},
+		{name: "404 root HTML has no third attempt", status: 404, contentType: "text/html", fallbackCount: 1, wantRecognition: "present_invalid"},
+		{name: "404 root network failure unchanged", status: 404, fallbackCount: 1, fallbackFailure: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var primaryRequests, fallbackRequests atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/.well-known/security.txt" {
+					primaryRequests.Add(1)
+					w.Header().Set("Content-Type", tt.contentType)
+					w.WriteHeader(tt.status)
+					_, _ = w.Write([]byte(tt.body))
+					return
+				}
+				fallbackRequests.Add(1)
+				if tt.fallbackFailure {
+					panic(http.ErrAbortHandler)
+				}
+				w.Header().Set("Content-Type", "text/html")
+				_, _ = w.Write([]byte("<html>root catch-all</html>"))
+			}))
+			defer server.Close()
+			result := probeSecurityTXT(targetFromTestServer(server.URL), time.Second, 4096)
+			if primaryRequests.Load() != 1 || int(fallbackRequests.Load()) != tt.fallbackCount {
+				t.Fatalf("requests primary=%d fallback=%d", primaryRequests.Load(), fallbackRequests.Load())
+			}
+			path := "/.well-known/security.txt"
+			if tt.fallbackCount == 1 {
+				path = "/security.txt"
+			}
+			if result.Payload["path_used"] != path {
+				t.Fatalf("unexpected path: %+v", result)
+			}
+			if tt.fallbackFailure {
+				if result.Status != "failure" || result.ErrorCode != "security_txt_request_failed" {
+					t.Fatalf("404 fallback error changed: %+v", result)
+				}
+			} else if result.Payload["recognition"] != tt.wantRecognition {
+				t.Fatalf("recognition changed: %+v", result)
+			}
+		})
+	}
+}
+
+func TestProbeSecurityTXTHTMLFallbackUsesTargetProxy(t *testing.T) {
+	var requests atomic.Int32
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		if !r.URL.IsAbs() || r.URL.Host != "security-proxy.example.invalid" {
+			t.Errorf("unexpected proxy destination: %s", r.URL)
+		}
+		if r.URL.Path == "/.well-known/security.txt" {
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte("<html/>"))
+		} else {
+			if r.URL.Path != "/security.txt" {
+				t.Errorf("unexpected fallback path: %s", r.URL.Path)
+			}
+			w.Header().Set("Content-Type", "text/plain")
+			_, _ = fmt.Fprintf(w, "Contact: mailto:a@example.com\nExpires: %s\n", time.Now().UTC().Add(24*time.Hour).Format(time.RFC3339))
+		}
+	}))
+	defer proxy.Close()
+	cfg := env.GetServerConfig()
+	previous := cfg.Collector.Proxy
+	cfg.Collector.Proxy = proxy.URL
+	t.Cleanup(func() { cfg.Collector.Proxy = previous })
+	result := probeSecurityTXT(models.GfnCollectorDomain{SiteID: 1, Name: "security-proxy.example.invalid", TLS: "0", Proxy: "1"}, time.Second, 4096)
+	if requests.Load() != 2 || result.Status != "success" || result.Payload["recognition"] != "present_valid" || result.Payload["path_used"] != "/security.txt" {
+		t.Fatalf("proxy fallback requests=%d result=%+v", requests.Load(), result)
 	}
 }
 

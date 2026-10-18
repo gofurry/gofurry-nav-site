@@ -129,3 +129,29 @@ func TestProjectKnownStatePreservesSecurityTXTRecognition(t *testing.T) {
 		t.Fatalf("raw security.txt body escaped whitelist: %#v", state)
 	}
 }
+
+func TestProjectKnownStatePreservesSecurityTXTBodyTruncated(t *testing.T) {
+	for _, suffix := range []string{`,"body_truncated":true`, `,"body_truncated":false`, ""} {
+		t.Run(suffix, func(t *testing.T) {
+			projected, err := projectKnownState("security_txt", []byte(`{"recognition":"present_invalid","validation_errors":["content_type_not_text_plain"],"body":"private"`+suffix+`}`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var state map[string]any
+			if err := json.Unmarshal(projected, &state); err != nil {
+				t.Fatal(err)
+			}
+			value, present := state["body_truncated"]
+			if present != (suffix != "") || (present && value != (suffix == `,"body_truncated":true`)) {
+				t.Fatalf("truncation evidence invented/dropped: %s", projected)
+			}
+			errors, ok := state["validation_errors"].([]any)
+			if state["recognition"] != "present_invalid" || !ok || len(errors) != 1 || errors[0] != "content_type_not_text_plain" {
+				t.Fatalf("recognition evidence dropped: %s", projected)
+			}
+			if _, ok := state["body"]; ok {
+				t.Fatalf("raw body escaped whitelist: %s", projected)
+			}
+		})
+	}
+}
